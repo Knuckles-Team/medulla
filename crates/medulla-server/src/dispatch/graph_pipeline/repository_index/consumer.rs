@@ -379,7 +379,7 @@ pub(crate) trait PageActions {
     type AuthorityFuture: Future<
         Output = Result<
             (
-                medulla_server_api::auth::VerifiedRequestContext,
+                medulla_server_api::authority_context::VerifiedRequestContext,
                 RequestContext,
             ),
             String,
@@ -396,7 +396,7 @@ pub(crate) trait PageActions {
     ) -> Self::AuthorityFuture;
     fn submit(
         &mut self,
-        verified: medulla_server_api::auth::VerifiedRequestContext,
+        verified: medulla_server_api::authority_context::VerifiedRequestContext,
         request: SubmitWorkItemsRequest,
     ) -> Self::SubmitFuture;
     fn park_source(
@@ -413,13 +413,13 @@ where
     AF: Future<
         Output = Result<
             (
-                medulla_server_api::auth::VerifiedRequestContext,
+                medulla_server_api::authority_context::VerifiedRequestContext,
                 RequestContext,
             ),
             String,
         >,
     >,
-    S: FnMut(medulla_server_api::auth::VerifiedRequestContext, SubmitWorkItemsRequest) -> F,
+    S: FnMut(medulla_server_api::authority_context::VerifiedRequestContext, SubmitWorkItemsRequest) -> F,
     F: Future<Output = Result<(), String>>,
     P: FnMut(MutationOutboxLease, EnrichmentBudgetPark) -> PF,
     PF: Future<Output = Result<(), String>>,
@@ -434,7 +434,7 @@ where
 
     fn submit(
         &mut self,
-        verified: medulla_server_api::auth::VerifiedRequestContext,
+        verified: medulla_server_api::authority_context::VerifiedRequestContext,
         request: SubmitWorkItemsRequest,
     ) -> F {
         (self.submit)(verified, request)
@@ -645,7 +645,7 @@ async fn process_held_lease<C: PageActions>(
 /// bind this exact page and remain valid at the authoritative sweep time.
 #[cfg(feature = "blob")]
 fn verify_page_service_authority(
-    verified: &medulla_server_api::auth::VerifiedRequestContext,
+    verified: &medulla_server_api::authority_context::VerifiedRequestContext,
     wire: &RequestContext,
     page_key: &str,
     now_ms: u64,
@@ -892,13 +892,13 @@ mod tests {
     fn service_authority_minted_after_cas_uses_current_validation_clock() {
         let page_key = "repository-index:page-one";
         let fixture =
-            medulla_server_api::auth::VerifiedRequestContext::verified_for_test_with_scopes(
+            medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test_with_scopes(
                 "repository-enrichment",
                 "tenant",
                 &["work:submit", "repository:enrichment:submit"],
             );
         let verified =
-            medulla_server_api::auth::VerifiedRequestContext::from_verified_claims_with_nonce(
+            medulla_server_api::authority_context::VerifiedRequestContext::from_verified_claims_with_nonce(
                 fixture.claims().clone(),
                 page_key.to_string(),
                 Some(medulla_types::contract::Nonce::minted()),

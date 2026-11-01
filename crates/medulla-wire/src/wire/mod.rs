@@ -39,6 +39,7 @@
 //! NOTHING in the classify/dispatch/exec/txn/durability path is reimplemented — the
 //! new wire only adds framing + encoding. This is the MEDULLA-074 promise.
 
+use medulla_server_api::api::query_txn::ForeignStateExt;
 use std::path::Path;
 use std::sync::Arc;
 
@@ -123,7 +124,7 @@ use medulla_sql::sql::WhereEq;
 
 use medulla_isolation::isolation::AccessLevel;
 use medulla_protocol_types::protocol::Request;
-use medulla_server_api::access::CarrierAuthority;
+use medulla_server_api::carrier::CarrierAuthority;
 use medulla_server_api::state::ServerState;
 
 mod seam;
@@ -880,7 +881,7 @@ pub fn committed_sql_replay_receipt(
     // The identity already carries the actor, so an equal digest proves the same
     // caller. This is the POSITIVE check RF-RULING-004's application note also
     // requires: a refusal must NAME the owner rather than be anonymous.
-    let caller = medulla_server_api::mutation_batch::principal_fingerprint(authority.actor_scope())?;
+    let caller = medulla_server_api::batch_compile::principal_fingerprint(authority.actor_scope())?;
     if record.committing_actor()? != caller {
         return Err(SQL_REPLAY_OWNER_CONFLICT.to_string());
     }
@@ -973,8 +974,8 @@ fn commit_table_txn_under_source(
     // the commit, which is the property it needs.
     let created_at_ms = medulla_server_api::txn::now_ms();
     let expected_version = store.mutation_version(tenant, graph)?;
-    let batch = medulla_server_api::mutation_batch::compile_opaque_method(
-        medulla_server_api::mutation_batch::CompileBatch {
+    let batch = medulla_server_api::batch_compile::compile_opaque_method(
+        medulla_server_api::batch_compile::CompileBatch {
             batch_id,
             request_id: *request_id,
             attempt_nonce: *attempt_nonce,
@@ -1480,7 +1481,7 @@ impl WireSession {
         actor: &str,
     ) -> WireResult<()> {
         let secret = self.state.read().await.auth_secret.clone();
-        let context = medulla_server_api::auth::VerifiedRequestContext::authenticated_sql_wire_actor(
+        let context = medulla_server_api::authority_context::VerifiedRequestContext::authenticated_sql_wire_actor(
             &secret, protocol, actor,
         )
         .map_err(|message| WireError {
@@ -4209,7 +4210,7 @@ impl WireSession {
         } else {
             operation_id.simple().to_string()
         };
-        let coordinator_id = medulla_server_api::mutation_batch::opaque_coordinator_key(
+        let coordinator_id = medulla_server_api::batch_compile::opaque_coordinator_key(
             "wire-graph-owner",
             authority.owner_scope(),
             &coordinator_seed,
@@ -4367,7 +4368,7 @@ impl WireSession {
         } else {
             operation_id.simple().to_string()
         };
-        let batch_id = medulla_server_api::mutation_batch::opaque_coordinator_key(
+        let batch_id = medulla_server_api::batch_compile::opaque_coordinator_key(
             "wire-sql-owner",
             authority.owner_scope(),
             &batch_seed,
@@ -4765,7 +4766,7 @@ impl WireSession {
         let foreign = {
             let carrier = self.carrier_authority().ok();
             let s = self.state.read().await;
-            s.foreign_sources
+            s.foreign_sources()
                 .resolve_for_plan(&plan.ops, carrier.as_ref(), &s.isolation)
                 .map_err(user_err)?
         };
@@ -4869,7 +4870,7 @@ impl WireSession {
     #[cfg(feature = "query")]
     async fn commit_txn_state(&self, ts: medulla_server_api::txn::GraphTxnState) -> WireResult<()> {
         let authority = self.carrier_authority()?;
-        let coordinator_id = medulla_server_api::mutation_batch::opaque_coordinator_key(
+        let coordinator_id = medulla_server_api::batch_compile::opaque_coordinator_key(
             "wire-crossmodal-owner",
             authority.owner_scope(),
             &uuid::Uuid::new_v4().simple().to_string(),

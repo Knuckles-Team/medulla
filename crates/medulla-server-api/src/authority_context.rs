@@ -6,10 +6,10 @@
 //! re-exported there so existing server call sites cannot construct a trusted
 //! context through an alternate path.
 
-use crate::auth::coarse_kg_admin_only;
+use crate::authority_context::coarse_kg_admin_only;
 #[cfg(feature = "oidc")]
-use crate::auth::iceberg_bearer_scopes;
-use crate::auth::request_context_policy;
+use crate::authority_context::iceberg_bearer_scopes;
+use crate::authority_context::request_context_policy;
 use hmac::{Hmac, Mac};
 use medulla_types::acl::RequestContextClaims;
 use medulla_types::contract::{Digest256, Nonce};
@@ -600,4 +600,112 @@ mod catalog_partition_tests {
             .tenant_local_catalog_partition_digest("invalid/name")
             .is_err());
     }
+}
+
+/// Recognized Iceberg-REST bearer scope vocabulary (NE-048). Deliberately
+/// narrower than the primitive capability-ledger scopes
+/// [`VerifiedRequestContext::allows_action`] understands: an Iceberg-REST
+/// bearer is minted from a THIRD-PARTY-issued OAuth2 token whose issuer this
+/// deployment does not control, so this projection only ever honors the two
+/// coarse aggregate scopes the served API already treats as stable
+/// (mirroring [`VerifiedRequestContext::allows_method`]'s own
+/// `kg:read`/`kg:write` interpretation) — never `kg:admin` or `*`, which stay
+/// reserved for this deployment's OWN internally-minted identities (broker,
+/// native-SQL, replicated-mutation). Granting admin-level authority to an
+/// externally-issued Iceberg bearer would be a NEW privilege this surface
+/// never had before NE-048, not a fix to the one it lost — out of scope here.
+///
+/// `claimed` is the bearer's own verified `scope`/`scp` claim, already parsed
+/// into discrete tokens by `oidc::JwtValidator::validate_claims` (handling
+/// both the space-delimited-string `scope` and `scp` shapes — see that
+/// function). Fails closed rather than defaulting or partially granting:
+///
+/// * an empty claim (missing entirely, or present but empty) denies —
+///   a bearer's own issuer choosing to grant it nothing is not this
+///   deployment's cue to grant it `kg:read`+`kg:write` anyway;
+/// * a claim containing ANY token outside `{kg:read, kg:write}` denies the
+///   WHOLE bearer rather than silently dropping the unrecognized token and
+///   granting whatever recognized remainder is left — an issuer minting a
+///   scope this deployment does not understand needs a hard failure it can
+///   act on, not an ambiguous partial grant (the "ambiguous mapping — deny"
+///   posture).
+#[cfg(feature = "oidc")]
+pub fn iceberg_bearer_scopes(claimed: &HashSet<String>) -> Result<Vec<String>, String> {
+    const RECOGNIZED: [&str; 2] = ["kg:read", "kg:write"];
+    if claimed.is_empty() {
+        return Err("scope claim is missing or empty".to_string());
+    }
+    if claimed
+        .iter()
+        .any(|scope| !RECOGNIZED.contains(&scope.as_str()))
+    {
+        return Err("scope claim contains an unrecognized scope".to_string());
+    }
+    Ok(RECOGNIZED
+        .iter()
+        .filter(|scope| claimed.contains(**scope))
+        .map(|scope| scope.to_string())
+        .collect())
+}
+
+/// Actions that a coarse ``kg:write`` grant must never authorize.
+///
+/// Exact fine-grained scopes still work, and ``kg:admin`` remains the explicit
+/// aggregate grant. The string classification is over MethodPolicy's canonical
+/// action, not method names, so new methods inherit the correct posture when
+/// they declare an ``*:admin``/``*:control``/``admin:*`` capability.
+pub fn coarse_kg_admin_only(action: &str) -> bool {
+    action.starts_with("admin:")
+        || action.starts_with("security:")
+        || action.ends_with(":admin")
+        || action.ends_with(":control")
+        // A shared-namespace write reaches every principal of the tenant+graph:
+        // only its own action or kg:admin grants it, never coarse kg:write.
+        || action.ends_with(":shared:write")
+}
+
+/// Deployment policy used to turn signed v2 claims into a trusted context.
+/// The explicit constructor is intentionally test/adapter friendly; production
+/// builds resolve the same fields from environment configuration.
+#[derive(Debug, Clone)]
+pub struct RequestContextPolicy {
+    pub expected_audience: String,
+    pub expected_tenant: String,
+    pub expected_policy_version: String,
+}
+
+impl RequestContextPolicy {
+    pub fn from_env() -> Result<Self, String> {
+        fn configured(name: &str) -> Result<String, String> {
+            std::env::var(name)
+                .ok()
+                .map(|v| v.trim().to_string())
+                .filter(|v| !v.is_empty())
+                .ok_or_else(|| format!("secure request context requires {name}"))
+        }
+        Ok(RequestContextPolicy {
+            expected_audience: configured("MEDULLA_AUDIENCE")?,
+            expected_tenant: configured("MEDULLA_TENANT")?,
+            expected_policy_version: configured("MEDULLA_POLICY_VERSION")?,
+        })
+    }
+}
+
+#[cfg(not(test))]
+pub fn request_context_policy() -> Result<&'static RequestContextPolicy, String> {
+    static POLICY: OnceLock<Result<RequestContextPolicy, String>> = OnceLock::new();
+    match POLICY.get_or_init(RequestContextPolicy::from_env) {
+        Ok(policy) => Ok(policy),
+        Err(message) => Err(message.clone()),
+    }
+}
+
+#[cfg(test)]
+pub fn request_context_policy() -> Result<&'static RequestContextPolicy, String> {
+    static POLICY: OnceLock<RequestContextPolicy> = OnceLock::new();
+    Ok(POLICY.get_or_init(|| RequestContextPolicy {
+        expected_audience: "medulla-test".to_string(),
+        expected_tenant: "tenant-shared".to_string(),
+        expected_policy_version: "policy-test".to_string(),
+    }))
 }

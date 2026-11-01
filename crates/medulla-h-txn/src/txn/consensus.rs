@@ -392,7 +392,7 @@ pub(super) fn consensus_participant_child_id(
     participant_id: u64,
     graph_name: &str,
 ) -> String {
-    medulla_server_api::mutation_batch::opaque_coordinator_key(
+    medulla_server_api::batch_compile::opaque_coordinator_key(
         "consensus-transaction-child",
         graph_name,
         &format!("{coordinator_id}:{participant_id}"),
@@ -408,7 +408,7 @@ pub(super) fn consensus_participant_receipt_id(
 ) -> String {
     let child = consensus_participant_child_id(coordinator_id, participant_id, graph_name);
     if txn.graph == graph_name && txn.is_cross_modal() {
-        medulla_server_api::mutation_batch::opaque_coordinator_key("crossmodal", graph_name, &child)
+        medulla_server_api::batch_compile::opaque_coordinator_key("crossmodal", graph_name, &child)
     } else {
         child
     }
@@ -572,7 +572,7 @@ pub async fn apply_consensus_participant_commit(
         participant_id,
         plan_bytes,
     } = participant;
-    let principal = medulla_server_api::mutation_batch::principal_fingerprint(
+    let principal = medulla_server_api::batch_compile::principal_fingerprint(
         &authority.principal_fingerprint,
     )?;
     let (plan, txn) = decode_consensus_participant(plan_bytes, coordinator_id, participant_id)?;

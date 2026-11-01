@@ -5,6 +5,7 @@
 //! grant themselves budget or name a model. This module does not drain a queue
 //! or run a worker; the outbox intent is committed with the source rows.
 
+use medulla_server_api::blob::BlobStateExt;
 use std::collections::{BTreeMap, BTreeSet};
 
 use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
@@ -264,8 +265,8 @@ async fn committed_input_refs(
         .state
         .read()
         .await
-        .blob
-        .clone()
+        .blob_cursors()
+        .cloned()
         .ok_or("CONFLICT: repository source CAS is unavailable")?;
     let tenant = ctx.verified_context.tenant().to_string();
     tokio::task::spawn_blocking(move || {

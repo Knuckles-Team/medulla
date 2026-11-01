@@ -3,7 +3,7 @@
 //! never projected, the namespace reserved.
 
 use super::*;
-use crate::auth::VerifiedRequestContext;
+use crate::authority_context::VerifiedRequestContext;
 use crate::sql_tables::test_persist_dir;
 use medulla_identity_types::identity::*;
 

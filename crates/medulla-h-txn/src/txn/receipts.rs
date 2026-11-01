@@ -43,7 +43,7 @@ impl Drop for TxnRestoreGuard {
 }
 
 pub(super) fn transaction_receipt_id(txn_id: &str) -> String {
-    medulla_server_api::mutation_batch::opaque_coordinator_key(
+    medulla_server_api::batch_compile::opaque_coordinator_key(
         "transaction-receipt",
         "transaction",
         txn_id,
@@ -72,18 +72,18 @@ pub(super) fn commit_receipt_id(
             let tenant = tenant_scope
                 .filter(|value| !value.trim().is_empty())
                 .unwrap_or("unknown");
-            let scoped_key = medulla_server_api::mutation_batch::opaque_coordinator_key(
+            let scoped_key = medulla_server_api::batch_compile::opaque_coordinator_key(
                 "transaction-receipt-tenant",
                 tenant,
                 key,
             );
-            medulla_server_api::mutation_batch::opaque_coordinator_key(
+            medulla_server_api::batch_compile::opaque_coordinator_key(
                 "transaction-receipt",
                 "idempotency",
                 &scoped_key,
             )
         }
-        None => medulla_server_api::mutation_batch::opaque_coordinator_key(
+        None => medulla_server_api::batch_compile::opaque_coordinator_key(
             "transaction-receipt-tenant",
             tenant_scope.unwrap_or("unknown"),
             &transaction_receipt_id(txn_id),
@@ -93,7 +93,7 @@ pub(super) fn commit_receipt_id(
 }
 
 fn tenant_bound_receipt_id(tenant_scope: &str, operation_id: &str) -> String {
-    let binding = medulla_server_api::mutation_batch::opaque_coordinator_key(
+    let binding = medulla_server_api::batch_compile::opaque_coordinator_key(
         "transaction-receipt-scope",
         tenant_scope,
         operation_id,
@@ -171,14 +171,14 @@ pub(super) fn txn_receipt_principal(caller: Option<&str>) -> Result<String, Stri
     if let Ok(authority) = medulla_server_api::api::admin::saga::current_admin_saga_authority() {
         return Ok(authority.actor_scope().to_string());
     }
-    medulla_server_api::mutation_batch::principal_fingerprint(
+    medulla_server_api::batch_compile::principal_fingerprint(
         caller.ok_or_else(|| "transaction receipt requires a verified principal".to_string())?,
     )
 }
 
 pub(super) fn txn_owner_scope(tenant_scope: &str, principal: &str) -> Result<String, String> {
     let actor_scope = txn_receipt_principal(Some(principal))?;
-    Ok(medulla_server_api::mutation_batch::opaque_coordinator_key(
+    Ok(medulla_server_api::batch_compile::opaque_coordinator_key(
         "carrier-owner",
         tenant_scope,
         &actor_scope,

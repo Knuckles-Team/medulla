@@ -60,7 +60,7 @@ pub trait QueryApi: Send + Sync {
         plan: &crate::mutation::MutationPlan,
         method: &medulla_protocol_types::protocol::Method,
         graph_name: &str,
-        read_authority: Option<&crate::access::GraphReadAuthority>,
+        read_authority: Option<&crate::carrier::GraphReadAuthority>,
         #[cfg(all(feature = "query", feature = "tsdb"))] tsdb_store: Option<
             &Arc<medulla_tsdb::store::SeriesStore>,
         >,
@@ -76,7 +76,7 @@ pub trait TxnApi: Send + Sync {
         state: &Arc<RwLock<ServerState>>,
         req_id: u64,
         caller: &str,
-        verified_context: &crate::auth::VerifiedRequestContext,
+        verified_context: &crate::authority_context::VerifiedRequestContext,
         method: medulla_protocol_types::protocol::Method,
     ) -> Result<medulla_protocol_types::protocol::Response, medulla_protocol_types::protocol::Method>;
 
@@ -86,7 +86,7 @@ pub trait TxnApi: Send + Sync {
         &self,
         state: &Arc<RwLock<ServerState>>,
         req_id: u64,
-        authority: &crate::access::CarrierAuthority,
+        authority: &crate::carrier::CarrierAuthority,
         graph: &str,
         placement_epoch: u64,
         fencing_token: Option<u64>,
@@ -118,7 +118,7 @@ pub trait TxnApi: Send + Sync {
         state: &Arc<RwLock<ServerState>>,
         req_id: u64,
         caller: &str,
-        authority: &crate::access::CarrierAuthority,
+        authority: &crate::carrier::CarrierAuthority,
         method: &medulla_protocol_types::protocol::Method,
     ) -> Result<txn_support::GraphQlLifecycleAdmission, String>;
 
@@ -154,7 +154,102 @@ pub trait WireApi: Send + Sync {
     fn committed_sql_replay_receipt(
         &self,
         store: &medulla_table_store::tables::TableStore,
-        authority: &crate::access::CarrierAuthority,
+        authority: &crate::carrier::CarrierAuthority,
         batch: &medulla_protocol_types::mutation_batch::MutationBatch,
     ) -> Result<Option<medulla_protocol_types::mutation_batch::MutationBatchRecord>, String>;
+}
+
+/// The installed query seam of `state`, or `None` before installation.
+pub async fn query_seam(state: &Arc<RwLock<ServerState>>) -> Option<Arc<dyn QueryApi>> {
+    state
+        .read()
+        .await
+        .seams
+        .query
+        .get()
+        .and_then(|h| h.downcast_ref::<Arc<dyn QueryApi>>())
+        .cloned()
+}
+
+/// Install the query seam; `false` when it was already installed.
+pub fn install_query_seam(reg: &crate::api::registry::SeamRegistry, api: Arc<dyn QueryApi>) -> bool {
+    reg.query.set(Arc::new(api) as crate::state::ErasedHandle).is_ok()
+}
+
+/// The installed txn seam of `state`, or `None` before installation.
+pub async fn txn_seam(state: &Arc<RwLock<ServerState>>) -> Option<Arc<dyn TxnApi>> {
+    state
+        .read()
+        .await
+        .seams
+        .txn
+        .get()
+        .and_then(|h| h.downcast_ref::<Arc<dyn TxnApi>>())
+        .cloned()
+}
+
+/// Install the txn seam; `false` when it was already installed.
+pub fn install_txn_seam(reg: &crate::api::registry::SeamRegistry, api: Arc<dyn TxnApi>) -> bool {
+    reg.txn.set(Arc::new(api) as crate::state::ErasedHandle).is_ok()
+}
+
+/// The installed wire seam of `state`, or `None` before installation.
+pub async fn wire_seam(state: &Arc<RwLock<ServerState>>) -> Option<Arc<dyn WireApi>> {
+    state
+        .read()
+        .await
+        .seams
+        .wire
+        .get()
+        .and_then(|h| h.downcast_ref::<Arc<dyn WireApi>>())
+        .cloned()
+}
+
+/// Install the wire seam; `false` when it was already installed.
+pub fn install_wire_seam(reg: &crate::api::registry::SeamRegistry, api: Arc<dyn WireApi>) -> bool {
+    reg.wire.set(Arc::new(api) as crate::state::ErasedHandle).is_ok()
+}
+
+/// Typed access to the foreign-source catalog and read sessions `ServerState`
+/// holds type-erased (MEDULLA-CONTRACT-R056.8). An untouched slot lazily
+/// becomes an empty catalog or session table.
+#[cfg(feature = "federation")]
+pub trait ForeignStateExt {
+    /// The registered foreign-source catalog.
+    fn foreign_sources(&self) -> Arc<foreign_catalog::ForeignSourceCatalog>;
+    /// The host-driven foreign-read page buffers.
+    fn foreign_reads(&self) -> Arc<foreign_read::ForeignReadSessions>;
+}
+
+#[cfg(feature = "federation")]
+impl ForeignStateExt for ServerState {
+    fn foreign_sources(&self) -> Arc<foreign_catalog::ForeignSourceCatalog> {
+        Arc::clone(self.foreign_sources.get_or_init(|| {
+            Arc::new(foreign_catalog::ForeignSourceCatalog::default())
+                as crate::state::ErasedHandle
+        }))
+        .downcast::<foreign_catalog::ForeignSourceCatalog>()
+        .expect("foreign_sources slot holds ForeignSourceCatalog")
+    }
+
+    fn foreign_reads(&self) -> Arc<foreign_read::ForeignReadSessions> {
+        Arc::clone(self.foreign_reads.get_or_init(|| {
+            Arc::new(foreign_read::ForeignReadSessions::default()) as crate::state::ErasedHandle
+        }))
+        .downcast::<foreign_read::ForeignReadSessions>()
+        .expect("foreign_reads slot holds ForeignReadSessions")
+    }
+}
+
+#[cfg(all(test, feature = "federation"))]
+mod foreign_state_tests {
+    use super::ForeignStateExt;
+    use crate::state::ServerState;
+    use medulla_isolation::isolation::IsolationLayer;
+
+    #[test]
+    fn untouched_state_has_an_empty_catalog() {
+        let state = ServerState::new("secret", IsolationLayer::new());
+        assert!(state.foreign_sources().is_empty());
+    }
 }

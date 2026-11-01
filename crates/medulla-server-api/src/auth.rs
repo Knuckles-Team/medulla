@@ -34,7 +34,7 @@
 //! which restores the pre-2026-07-22 HMAC-only-permitted posture. Nothing
 //! defaults into that downgrade; an operator must type it.
 
-pub use crate::authority_context::VerifiedRequestContext;
+use crate::authority_context::{request_context_policy, RequestContextPolicy, VerifiedRequestContext};
 use crate::request_replay::durable_replay_ledger;
 use crate::request_replay::PresentedNonce;
 use crate::request_replay::ReplayLedger;
@@ -78,59 +78,13 @@ pub fn mint_fixed_service_carrier(
     credential_verified: bool,
     service: &str,
     scopes: &[&str],
-) -> Option<crate::access::CarrierAuthority> {
+) -> Option<crate::carrier::CarrierAuthority> {
     if !credential_verified {
         return None;
     }
     VerifiedRequestContext::authenticated_fixed_service_actor(service, scopes)
         .ok()
-        .and_then(|context| crate::access::CarrierAuthority::from_verified(&context).ok())
-}
-
-/// Recognized Iceberg-REST bearer scope vocabulary (NE-048). Deliberately
-/// narrower than the primitive capability-ledger scopes
-/// [`VerifiedRequestContext::allows_action`] understands: an Iceberg-REST
-/// bearer is minted from a THIRD-PARTY-issued OAuth2 token whose issuer this
-/// deployment does not control, so this projection only ever honors the two
-/// coarse aggregate scopes the served API already treats as stable
-/// (mirroring [`VerifiedRequestContext::allows_method`]'s own
-/// `kg:read`/`kg:write` interpretation) — never `kg:admin` or `*`, which stay
-/// reserved for this deployment's OWN internally-minted identities (broker,
-/// native-SQL, replicated-mutation). Granting admin-level authority to an
-/// externally-issued Iceberg bearer would be a NEW privilege this surface
-/// never had before NE-048, not a fix to the one it lost — out of scope here.
-///
-/// `claimed` is the bearer's own verified `scope`/`scp` claim, already parsed
-/// into discrete tokens by `oidc::JwtValidator::validate_claims` (handling
-/// both the space-delimited-string `scope` and `scp` shapes — see that
-/// function). Fails closed rather than defaulting or partially granting:
-///
-/// * an empty claim (missing entirely, or present but empty) denies —
-///   a bearer's own issuer choosing to grant it nothing is not this
-///   deployment's cue to grant it `kg:read`+`kg:write` anyway;
-/// * a claim containing ANY token outside `{kg:read, kg:write}` denies the
-///   WHOLE bearer rather than silently dropping the unrecognized token and
-///   granting whatever recognized remainder is left — an issuer minting a
-///   scope this deployment does not understand needs a hard failure it can
-///   act on, not an ambiguous partial grant (the "ambiguous mapping — deny"
-///   posture).
-#[cfg(feature = "oidc")]
-pub(crate) fn iceberg_bearer_scopes(claimed: &HashSet<String>) -> Result<Vec<String>, String> {
-    const RECOGNIZED: [&str; 2] = ["kg:read", "kg:write"];
-    if claimed.is_empty() {
-        return Err("scope claim is missing or empty".to_string());
-    }
-    if claimed
-        .iter()
-        .any(|scope| !RECOGNIZED.contains(&scope.as_str()))
-    {
-        return Err("scope claim contains an unrecognized scope".to_string());
-    }
-    Ok(RECOGNIZED
-        .iter()
-        .filter(|scope| claimed.contains(**scope))
-        .map(|scope| scope.to_string())
-        .collect())
+        .and_then(|context| crate::carrier::CarrierAuthority::from_verified(&context).ok())
 }
 
 /// Mint a `CarrierAuthority` for the Iceberg-REST catalog surface (BUG-222,
@@ -145,11 +99,11 @@ pub(crate) fn iceberg_bearer_scopes(claimed: &HashSet<String>) -> Result<Vec<Str
 #[cfg(feature = "oidc")]
 pub fn mint_iceberg_carrier(
     verified: Option<&crate::oidc::VerifiedTokenClaims>,
-) -> Option<crate::access::CarrierAuthority> {
+) -> Option<crate::carrier::CarrierAuthority> {
     let verified = verified?;
     VerifiedRequestContext::authenticated_iceberg_bearer(verified)
         .ok()
-        .and_then(|context| crate::access::CarrierAuthority::from_verified(&context).ok())
+        .and_then(|context| crate::carrier::CarrierAuthority::from_verified(&context).ok())
 }
 
 /// A configured bearer credential for an auxiliary HTTP surface that
@@ -209,68 +163,6 @@ impl BearerCredential {
             BearerCredential::Jwt(validator) => validator.validate(token),
         }
     }
-}
-
-/// Actions that a coarse ``kg:write`` grant must never authorize.
-///
-/// Exact fine-grained scopes still work, and ``kg:admin`` remains the explicit
-/// aggregate grant. The string classification is over MethodPolicy's canonical
-/// action, not method names, so new methods inherit the correct posture when
-/// they declare an ``*:admin``/``*:control``/``admin:*`` capability.
-pub(crate) fn coarse_kg_admin_only(action: &str) -> bool {
-    action.starts_with("admin:")
-        || action.starts_with("security:")
-        || action.ends_with(":admin")
-        || action.ends_with(":control")
-        // A shared-namespace write reaches every principal of the tenant+graph:
-        // only its own action or kg:admin grants it, never coarse kg:write.
-        || action.ends_with(":shared:write")
-}
-
-/// Deployment policy used to turn signed v2 claims into a trusted context.
-/// The explicit constructor is intentionally test/adapter friendly; production
-/// builds resolve the same fields from environment configuration.
-#[derive(Debug, Clone)]
-pub struct RequestContextPolicy {
-    pub expected_audience: String,
-    pub expected_tenant: String,
-    pub expected_policy_version: String,
-}
-
-impl RequestContextPolicy {
-    pub fn from_env() -> Result<Self, String> {
-        fn configured(name: &str) -> Result<String, String> {
-            std::env::var(name)
-                .ok()
-                .map(|v| v.trim().to_string())
-                .filter(|v| !v.is_empty())
-                .ok_or_else(|| format!("secure request context requires {name}"))
-        }
-        Ok(RequestContextPolicy {
-            expected_audience: configured("MEDULLA_AUDIENCE")?,
-            expected_tenant: configured("MEDULLA_TENANT")?,
-            expected_policy_version: configured("MEDULLA_POLICY_VERSION")?,
-        })
-    }
-}
-
-#[cfg(not(test))]
-pub fn request_context_policy() -> Result<&'static RequestContextPolicy, String> {
-    static POLICY: OnceLock<Result<RequestContextPolicy, String>> = OnceLock::new();
-    match POLICY.get_or_init(RequestContextPolicy::from_env) {
-        Ok(policy) => Ok(policy),
-        Err(message) => Err(message.clone()),
-    }
-}
-
-#[cfg(test)]
-pub fn request_context_policy() -> Result<&'static RequestContextPolicy, String> {
-    static POLICY: OnceLock<RequestContextPolicy> = OnceLock::new();
-    Ok(POLICY.get_or_init(|| RequestContextPolicy {
-        expected_audience: "medulla-test".to_string(),
-        expected_tenant: "tenant-shared".to_string(),
-        expected_policy_version: "policy-test".to_string(),
-    }))
 }
 
 /// Allowed clock-skew window (seconds) for an envelope's `timestamp`, read
@@ -3757,6 +3649,33 @@ mod tests {
             // would be a NEW privilege NE-048 never intended to add.
             let claims = verified("agent:wouldbeadmin", Some("tenant-shared"), &["kg:admin"]);
             assert!(crate::auth::mint_iceberg_carrier(Some(&claims)).is_none());
+        }
+    }
+}
+
+/// Request authentication for a [`crate::state::ServerState`]: the anonymous local
+/// authority or the verified `eg2.` envelope (MEDULLA-CONTRACT-R056.8).
+pub trait RequestAuthorityExt {
+    /// The trusted authority context of `request`.
+    fn request_authority(
+        &self,
+        request: &medulla_protocol_types::protocol::Request,
+    ) -> Result<VerifiedRequestContext, String>;
+}
+
+impl RequestAuthorityExt for crate::state::ServerState {
+    fn request_authority(
+        &self,
+        request: &medulla_protocol_types::protocol::Request,
+    ) -> Result<VerifiedRequestContext, String> {
+        if self.local_anonymous {
+            crate::anonymous::request_authority(request)
+        } else {
+            verify_request_with_security_dir(
+                &self.auth_secret,
+                request,
+                self.persist_dir.as_deref(),
+            )
         }
     }
 }

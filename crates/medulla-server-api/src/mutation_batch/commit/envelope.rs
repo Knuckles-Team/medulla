@@ -83,7 +83,7 @@ fn stage_operation<'a>(
         other => {
             return Err(format!(
                 "ChangeEnvelope contains a non-projectable operation in domain {:?}",
-                crate::mutation_batch::domain_for(other, operation.surface)
+                crate::batch_compile::domain_for(other, operation.surface)
             ));
         }
     }

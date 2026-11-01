@@ -47,7 +47,7 @@ use medulla_sql::sql::UpdateNodes;
 use medulla_sql::sql::UpdateNodesJoin;
 use medulla_sql::sql::UpdateTable;
 use medulla_sql::sql::WhereEq;
-use medulla_server_api::access::CarrierAuthority;
+use medulla_server_api::carrier::CarrierAuthority;
 use medulla_server_api::state::ServerState;
 use medulla_wire::wire::*;
 
@@ -829,7 +829,7 @@ pub mod wired_catalog_tests {
     use super::*;
     use medulla_protocol_types::protocol::GraphType;
     use medulla_protocol_types::protocol::Method;
-    use medulla_server_api::auth::VerifiedRequestContext;
+    use medulla_server_api::authority_context::VerifiedRequestContext;
     use medulla_server_api::sql_catalog_acl;
     use medulla_server_api::sql_catalog_acl::SqlPrivilege;
 
@@ -1283,7 +1283,7 @@ pub mod wired_catalog_tests {
                 .try_into()
                 .expect("UUID prefix is eight bytes"),
         );
-        let batch_id = medulla_server_api::mutation_batch::opaque_coordinator_key(
+        let batch_id = medulla_server_api::batch_compile::opaque_coordinator_key(
             "wire-sql-owner",
             owner.owner_scope(),
             &operation_id.simple().to_string(),
@@ -1303,8 +1303,8 @@ pub mod wired_catalog_tests {
         let expected_version = store
             .mutation_version(owner.tenant_scope(), graph)
             .expect("read SQL mutation version");
-        let batch = medulla_server_api::mutation_batch::compile_opaque_method(
-            medulla_server_api::mutation_batch::CompileBatch {
+        let batch = medulla_server_api::batch_compile::compile_opaque_method(
+            medulla_server_api::batch_compile::CompileBatch {
                 batch_id: &batch_id,
                 request_id,
                 attempt_nonce: None,
@@ -1433,7 +1433,7 @@ pub mod wired_catalog_tests {
             query: "CREATE TABLE actor_header_target (id TEXT PRIMARY KEY)".to_string(),
             params_msgpack: Vec::new(),
         };
-        let batch_id = medulla_server_api::mutation_batch::opaque_coordinator_key(
+        let batch_id = medulla_server_api::batch_compile::opaque_coordinator_key(
             "wire-sql-owner",
             owner.owner_scope(),
             "actor-header-receipt",
@@ -1443,8 +1443,8 @@ pub mod wired_catalog_tests {
         let expected_version = store
             .mutation_version(&tenant_scope, graph)
             .expect("read SQL mutation version");
-        let batch = medulla_server_api::mutation_batch::compile_opaque_method(
-            medulla_server_api::mutation_batch::CompileBatch {
+        let batch = medulla_server_api::batch_compile::compile_opaque_method(
+            medulla_server_api::batch_compile::CompileBatch {
                 batch_id: &batch_id,
                 request_id,
                 attempt_nonce: None,
@@ -1467,7 +1467,7 @@ pub mod wired_catalog_tests {
         .expect("compile the SQL receipt");
 
         let owner_fingerprint =
-            medulla_server_api::mutation_batch::principal_fingerprint(owner.actor_scope())
+            medulla_server_api::batch_compile::principal_fingerprint(owner.actor_scope())
                 .expect("fingerprint the owner");
         // The ledger principal is the SQL owner file's, not the caller's.
         assert_eq!(

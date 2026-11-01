@@ -5,7 +5,7 @@ use tokio::sync::RwLock;
 use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
-use medulla_server_api::access::GraphReadAuthority;
+use medulla_server_api::carrier::GraphReadAuthority;
 use medulla_server_api::api::reentry::TryHandleContext;
 use medulla_server_api::state::ServerState;
 

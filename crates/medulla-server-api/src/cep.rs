@@ -57,6 +57,7 @@
 //! so the write-path cost of this extension, whether armed or not, is exactly zero: unset
 //! (the default) means the whole section below is inert and no forwarder task ever exists.
 
+use crate::cdc::CdcStateExt;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
@@ -74,7 +75,7 @@ use medulla_stream::live::{CepEngine, CepSubscription, DEFAULT_MATCH_BUFFER};
 use medulla_stream::{AttrPredicate, CepPattern, Event, EventMatcher, Match, Window};
 
 use super::state::ServerState;
-use crate::access::CarrierAuthority;
+use crate::carrier::CarrierAuthority;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
@@ -463,7 +464,7 @@ async fn surface_of(
     req_id: u64,
 ) -> Result<Arc<CepSurface>, Response> {
     let s = state.read().await;
-    match &s.cdc {
+    match s.cdc_hub() {
         Some(hub) => Ok(hub.cep_surface()),
         None => Err(Response::err(
             req_id,
@@ -769,7 +770,7 @@ mod tests {
         assert!(matches!(again.result, Some(ResultPayload::Bool(false))));
         assert!(error_of(try_handle(&state, 8, &admin, poll(subscribed_id)).await).is_some());
 
-        state.write().await.cdc = None;
+        state.write().await.set_cdc_hub(None);
         for (req_id, method) in [
             (9, subscribe()),
             (10, poll(subscribed_id)),

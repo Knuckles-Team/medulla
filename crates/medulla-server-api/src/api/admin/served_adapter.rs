@@ -82,10 +82,10 @@ pub fn salt(adapter: Option<&ServedAdapter>, payload: &mut Vec<u8>) {
 
 /// The verified carrier tenant of a read, the partition adapter state is
 /// served from (the same scope `DecisionLog.retrieval` activates under).
-pub fn carrier_tenant(authority: Option<&crate::access::GraphReadAuthority>) -> Option<&str> {
+pub fn carrier_tenant(authority: Option<&crate::carrier::GraphReadAuthority>) -> Option<&str> {
     authority
-        .and_then(crate::access::GraphReadAuthority::carrier)
-        .map(crate::access::CarrierAuthority::tenant_scope)
+        .and_then(crate::carrier::GraphReadAuthority::carrier)
+        .map(crate::carrier::CarrierAuthority::tenant_scope)
 }
 
 /// The adapter a unified plan over `graph` runs with: only a plan that ranks
@@ -94,7 +94,7 @@ pub fn carrier_tenant(authority: Option<&crate::access::GraphReadAuthority>) -> 
 pub async fn served_plan_adapter(
     state: &Arc<tokio::sync::RwLock<ServerState>>,
     graph: &str,
-    authority: Option<&crate::access::GraphReadAuthority>,
+    authority: Option<&crate::carrier::GraphReadAuthority>,
     plan: &medulla_plan::Plan,
 ) -> Option<Arc<ServedAdapter>> {
     if !plan_ranks_by_vector(&plan.ops) {

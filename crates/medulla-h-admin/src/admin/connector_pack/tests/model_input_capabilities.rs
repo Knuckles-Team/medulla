@@ -1,5 +1,6 @@
 //! Model media declarations cross the real signed pack-import boundary as facts.
 
+use medulla_server_api::blob::BlobStateExt;
 use medulla_agent_types::agent_component::{
     AgentComponentFacts, ModelInputCapabilities, ModelInputMediaType,
 };
@@ -123,7 +124,7 @@ async fn nonvision_image_pack_refuses_without_owner_or_body_mutation() {
         index.archive.blob_digest = served.upload(&archive).await;
         let store = served.state.write().await.ensure_agent_library().unwrap();
         let before = store.connector_pack_refusal_snapshot(TENANT);
-        let blob = served.state.read().await.blob.clone().unwrap();
+        let blob = served.state.read().await.blob_cursors().cloned().unwrap();
         let counts = (
             blob.store.blob_count().unwrap(),
             blob.store.chunk_count().unwrap(),

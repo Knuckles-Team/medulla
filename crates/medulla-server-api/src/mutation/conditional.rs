@@ -127,7 +127,7 @@ where
     // Mutating path: stage against a complete authoritative image. Query/RDF
     // handlers never receive the live serving core, so an execution or durable
     // commit failure cannot leak a partial mutation into RAM.
-    let _mutation_guard = crate::mutation_batch::lock_graph(ctx.graph_name).await;
+    let _mutation_guard = crate::routed_write_coalescer::lock_graph(ctx.graph_name).await;
     let prep = match commit_prepare(ctx, plan, method) {
         Ok(p) => p,
         Err(short_circuit) => return short_circuit,
@@ -158,7 +158,7 @@ where
     };
 
     let fname = medulla_kernel::persist::sanitize(ctx.graph_name);
-    let batch_id = crate::mutation_batch::opaque_idempotency_key_for_context(
+    let batch_id = crate::batch_compile::opaque_idempotency_key_for_context(
         "rpc-async",
         ctx.tenant_scope,
         ctx.graph_name,

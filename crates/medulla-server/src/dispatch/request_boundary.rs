@@ -1,4 +1,5 @@
 #[cfg(feature = "raft")]
+use medulla_server_api::auth::RequestAuthorityExt;
 use super::change_envelope::multi_graph_batch_update;
 #[cfg(feature = "raft")]
 use super::consensus::propose_native_mutation;

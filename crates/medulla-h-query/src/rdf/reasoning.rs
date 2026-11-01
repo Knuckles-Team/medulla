@@ -12,7 +12,7 @@ use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
 #[cfg(feature = "owl")]
 use medulla_server_api::access::check_graph_access;
-use medulla_server_api::access::GraphReadAuthority;
+use medulla_server_api::carrier::GraphReadAuthority;
 use medulla_server_api::compute::compute_off_lock;
 #[cfg(feature = "owl")]
 use medulla_server_api::state::ServerState;
@@ -398,7 +398,7 @@ fn validated_schema_digests(views: &[&medulla_graph_core::graph::GraphView]) -> 
     // caller Turtle remains an explicit extension, never a replacement.
     #[cfg(feature = "shacl")]
     for view in views {
-        medulla_server_api::api::admin::compose::validate_and_compose(&view.schema_sources)?;
+        medulla_server_api::schema_compose::validate_and_compose(&view.schema_sources)?;
     }
     Ok(schema_digests)
 }
@@ -466,7 +466,7 @@ fn owl_explain(
     };
     medulla_reasoner::owl::validate_supported_profile(&caller_extra)?;
     #[cfg(feature = "shacl")]
-    medulla_server_api::api::admin::compose::validate_and_compose(&view.schema_sources)?;
+    medulla_server_api::schema_compose::validate_and_compose(&view.schema_sources)?;
     let mut triples = medulla_reasoner::owl::tbox_triples_from_view(view);
     triples.extend(caller_extra);
 

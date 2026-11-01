@@ -1,3 +1,4 @@
+use medulla_server_api::cdc::CdcStateExt;
 use super::*;
 #[cfg(feature = "redb")]
 use medulla_persistence::cold_offload::ColdTrackerStateExt;
@@ -105,7 +106,7 @@ async fn capture_graph_dispatch<'a>(
         materialization_manifest: s.registry.materialization_handle(graph_name),
         persistence: s.persistence.clone(),
         #[cfg(feature = "streaming")]
-        cdc: s.cdc.clone(),
+        cdc: s.cdc_hub().cloned(),
         routed_write_coalescer: s.routed_write_coalescer.clone(),
         #[cfg(feature = "raft")]
         placement_authority: s.placement_authority(),

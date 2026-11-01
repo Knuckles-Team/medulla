@@ -34,7 +34,7 @@ const VERSION_TYPE: &str = "repository-index-sha256";
 const POLICY_VERSION: &str = "repository-index";
 
 /// The verified request coordinates one scoped commit is compiled under.
-pub type IndexCommitContext<'a> = medulla_server_api::mutation_batch::GraphWriteScope<'a>;
+pub type IndexCommitContext<'a> = medulla_server_api::batch_compile::GraphWriteScope<'a>;
 
 /// A batch that lowers past the mutation batch's operation budget is refused
 /// with this code BEFORE compilation: it commits as ONE atomic envelope or not
@@ -318,7 +318,9 @@ pub fn finish(result: IndexResult, commit: Response) -> Response {
 #[cfg(any(test, feature = "test-support"))]
 use medulla_mutation_types::mutation_scope::MutationSurface;
 #[cfg(any(test, feature = "test-support"))]
-use medulla_server_api::mutation_batch::{compile_methods, CompileBatch};
+use medulla_server_api::batch_compile::compile_methods;
+#[cfg(any(test, feature = "test-support"))]
+use medulla_server_api::batch_compile::CompileBatch;
 
 #[cfg(any(test, feature = "test-support"))]
 /// The repository-snapshot envelope the durable route commits for `result`.

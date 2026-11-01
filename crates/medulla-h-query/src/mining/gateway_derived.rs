@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
-use medulla_server_api::access::GraphReadAuthority;
+use medulla_server_api::carrier::GraphReadAuthority;
 use medulla_server_api::mutation::{self, MutationCtx, MutationPlan};
 
 /// Generate the uniform method-destructure → mining-handler → response-result

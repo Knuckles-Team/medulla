@@ -9,9 +9,10 @@ use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::ResultPayload;
 
 use super::commit::changed_work_item_ids;
-use super::digest::work_item_batch_identity;
+use crate::batch_compile::digest::work_item_batch_identity;
+use crate::routed_write_coalescer::lock_graph;
 use super::{
-    commit_work_item, compile_methods, lock_graph, publish_change_envelope_projection,
+    commit_work_item, compile_methods, publish_change_envelope_projection,
     CompileBatch, WorkItemCommitRequest,
 };
 
@@ -645,7 +646,7 @@ fn durability_domain_classification_matches_the_golden() {
 
 #[test]
 fn classifier_source_map_agrees_with_domain_for() {
-    use crate::mutation_batch::domain_for;
+    use crate::batch_compile::domain_for;
     use medulla_mutation_types::mutation_scope::DurabilityDomain;
 
     let map = classification_map_from_source();
@@ -720,7 +721,7 @@ fn classifier_source_map_agrees_with_domain_for() {
 /// this match).
 #[test]
 fn owner_domain_classifies_wire_unconditional_methods_regardless_of_this_crates_own_feature() {
-    use crate::mutation_batch::domain_for;
+    use crate::batch_compile::domain_for;
     use medulla_mutation_types::mutation_scope::DurabilityDomain;
 
     assert_eq!(
@@ -822,7 +823,7 @@ fn a_graph_batch_names_the_serving_principal_and_carries_the_caller_actor() {
         }],
     )
     .unwrap();
-    let actor = crate::mutation_batch::principal_fingerprint("agent:a").unwrap();
+    let actor = crate::batch_compile::principal_fingerprint("agent:a").unwrap();
     assert_eq!(
         batch.serving_principal(),
         medulla_kernel::kernel::persistence::ENGINE_LEDGER_PRINCIPAL,
@@ -855,7 +856,7 @@ fn a_graph_batch_names_the_serving_principal_and_carries_the_caller_actor() {
 /// the two arms that happened to be exercised above.
 #[test]
 fn no_compiled_batch_on_any_domain_carries_the_caller_as_its_context_principal() {
-    let actor = crate::mutation_batch::principal_fingerprint("agent:a").unwrap();
+    let actor = crate::batch_compile::principal_fingerprint("agent:a").unwrap();
     let compile = |batch_id: &str, methods: Vec<Method>| {
         compile_methods(
             CompileBatch {
@@ -904,7 +905,7 @@ fn no_compiled_batch_on_any_domain_carries_the_caller_as_its_context_principal()
 #[cfg(feature = "kv")]
 #[test]
 fn owner_store_batch_names_the_serving_principal_and_carries_the_caller_actor() {
-    let batch = crate::mutation_batch::compile_opaque_method(
+    let batch = crate::batch_compile::compile_opaque_method(
         CompileBatch {
             batch_id: "kv-principal",
             request_id: 1,
@@ -938,7 +939,7 @@ fn owner_store_batch_names_the_serving_principal_and_carries_the_caller_actor() 
     );
     assert_eq!(
         batch.outbox[0].headers.get("actor"),
-        Some(&crate::mutation_batch::principal_fingerprint("agent:a").unwrap()),
+        Some(&crate::batch_compile::principal_fingerprint("agent:a").unwrap()),
         "the verified caller is not lost: it is the outbox row's actor"
     );
 }
@@ -953,7 +954,7 @@ fn compile_sql_source_dirty_batch(
         query: "CREATE TABLE semantic_dirty_rows (id BIGINT PRIMARY KEY)".into(),
         params_msgpack: Vec::new(),
     };
-    let batch = crate::mutation_batch::compile_opaque_method(
+    let batch = crate::batch_compile::compile_opaque_method(
         CompileBatch {
             batch_id: "sql-source-dirty-stable-batch",
             request_id,
@@ -1028,7 +1029,7 @@ fn sql_catalog_compile_declares_one_retry_stable_typed_source_dirty_intent() {
     );
     assert_eq!(retry_source_dirty.key, source_dirty[0].key);
 
-    let non_sql = crate::mutation_batch::compile_opaque_method(
+    let non_sql = crate::batch_compile::compile_opaque_method(
         CompileBatch {
             batch_id: "non-sql-opaque",
             request_id: 13,
@@ -1156,7 +1157,7 @@ fn served_owner_store_batch_commits_and_its_actor_survives_in_the_ledger() {
         medulla_mutation_types::mutation_scope::DurabilityDomain::KvStore,
         medulla_mutation_types::mutation_scope::LogicalName::new("kv-scope-a".to_string()).unwrap(),
         medulla_mutation_types::mutation_scope::IncarnationId::new(
-            crate::mutation_batch::COMPILED_BATCH_INCARNATION,
+            crate::batch_compile::COMPILED_BATCH_INCARNATION,
         )
         .unwrap(),
     )
@@ -1172,7 +1173,7 @@ fn served_owner_store_batch_commits_and_its_actor_survives_in_the_ledger() {
     let owner = kernel.bind_serving_scope(grant, 0).unwrap();
     mutations.bootstrap_ledger(&owner).unwrap();
 
-    let batch = crate::mutation_batch::compile_opaque_method(
+    let batch = crate::batch_compile::compile_opaque_method(
         CompileBatch {
             batch_id: "kv-served",
             request_id: 7,
@@ -1228,7 +1229,7 @@ fn served_owner_store_batch_commits_and_its_actor_survives_in_the_ledger() {
     );
     assert_eq!(
         record.batch.outbox[0].headers.get("actor"),
-        Some(&crate::mutation_batch::principal_fingerprint("agent:a").unwrap()),
+        Some(&crate::batch_compile::principal_fingerprint("agent:a").unwrap()),
         "the verified caller must be recoverable from the durable record"
     );
     let _ = std::fs::remove_dir_all(&dir);

@@ -53,7 +53,7 @@ impl medulla_server_api::api::query_txn::QueryApi for QuerySeam {
         plan: &medulla_server_api::mutation::MutationPlan,
         method: &medulla_protocol_types::protocol::Method,
         graph_name: &str,
-        read_authority: Option<&medulla_server_api::access::GraphReadAuthority>,
+        read_authority: Option<&medulla_server_api::carrier::GraphReadAuthority>,
         #[cfg(all(feature = "query", feature = "tsdb"))] tsdb_store: Option<
             &Arc<medulla_tsdb::store::SeriesStore>,
         >,

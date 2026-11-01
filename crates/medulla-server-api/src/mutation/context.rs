@@ -172,7 +172,7 @@ pub(super) fn idempotency_store() -> &'static IdempotencyStore {
 /// Length-prefixed hashing via `opaque_idempotency_key_for_context`, the same
 /// derivation the durable `MutationBatch` ids use.
 pub(super) fn response_dedup_key(ctx: &MutationCtx<'_>, method: &Method) -> String {
-    crate::mutation_batch::opaque_idempotency_key_for_context(
+    crate::batch_compile::opaque_idempotency_key_for_context(
         "response-dedup",
         ctx.tenant_scope,
         ctx.graph_name,

@@ -202,7 +202,7 @@ fn malformed_operation_ids_fail_even_with_a_matching_tenant_hash() {
         "transaction-receipt:abcd",
         "transaction-receipt-tenant:",
     ] {
-        let binding = medulla_server_api::mutation_batch::opaque_coordinator_key(
+        let binding = medulla_server_api::batch_compile::opaque_coordinator_key(
             "transaction-receipt-scope",
             "tenant-a",
             malformed,
@@ -343,7 +343,7 @@ async fn store_committed_child(
     .is_err());
     foreign_authority = authority.clone();
     foreign_authority.principal_fingerprint =
-        medulla_server_api::mutation_batch::principal_fingerprint("foreign-principal").unwrap();
+        medulla_server_api::batch_compile::principal_fingerprint("foreign-principal").unwrap();
     assert!(validate_committed_participant_record(
         &result.record,
         &child_id,
@@ -479,7 +479,7 @@ async fn check_delegated_recovery(state: &Arc<RwLock<ServerState>>, backend: &Ar
             parent
         })
         .await;
-    let child = medulla_server_api::mutation_batch::opaque_coordinator_key(
+    let child = medulla_server_api::batch_compile::opaque_coordinator_key(
         "crossmodal",
         "delegated-graph",
         &parent,
@@ -492,7 +492,7 @@ async fn check_delegated_recovery(state: &Arc<RwLock<ServerState>>, backend: &Ar
     assert_eq!(record.committing_actor().unwrap(), owner.actor_scope());
     assert_ne!(
         record.committing_actor().unwrap(),
-        medulla_server_api::mutation_batch::principal_fingerprint("same-principal").unwrap()
+        medulla_server_api::batch_compile::principal_fingerprint("same-principal").unwrap()
     );
     let denied = medulla_server_api::api::admin::saga::scope_admin_saga_authority(foreign, async {
         reconcile_committed_txn(

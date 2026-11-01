@@ -105,7 +105,7 @@ async fn commit_prepublish_durable_batch(
     predicted: &ResultPayload,
 ) -> Result<medulla_protocol_types::mutation_batch::MutationBatchCommit, Response> {
     let source_version =
-        crate::mutation_batch::authoritative_graph_version(persistence, fname, ctx.core)
+        crate::batch_compile::authoritative_graph_version(persistence, fname, ctx.core)
             .await
             .map_err(|error| {
                 Response::err(
@@ -272,7 +272,7 @@ pub(super) async fn resolve_authoritative_base_snapshot(
     match persistence.read_authoritative_graph_snapshot(fname).await {
         Ok(Some(snapshot)) => Ok(snapshot),
         Ok(None) => {
-            match crate::mutation_batch::authoritative_graph_version(persistence, fname, ctx.core)
+            match crate::batch_compile::authoritative_graph_version(persistence, fname, ctx.core)
                 .await
             {
                 Ok(version) => Ok((ctx.core.snapshot(), version)),

@@ -12,6 +12,7 @@
 //! across graphs. So these route at the top of dispatch (next to the txn methods),
 //! before the per-graph chain.
 
+use medulla_server_api::blob::BlobStateExt;
 use std::sync::Arc;
 
 use tokio::sync::RwLock;
@@ -21,7 +22,7 @@ use medulla_protocol_types::mutation_batch::MutationBatch;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
-use medulla_server_api::access::CarrierAuthority;
+use medulla_server_api::carrier::CarrierAuthority;
 use medulla_server_api::blob::store;
 use medulla_server_api::blob::BlobCursors;
 use medulla_server_api::state::ServerState;
@@ -138,7 +139,7 @@ async fn resolve_cursors(
     method: &Method,
 ) -> Result<Arc<BlobCursors>, Result<Response, Method>> {
     let s = state.read().await;
-    match &s.blob {
+    match s.blob_cursors() {
         Some(cursors) => Ok(cursors.clone()),
         None if is_blob_method(method) => Err(Ok(Response::err(
             req_id,

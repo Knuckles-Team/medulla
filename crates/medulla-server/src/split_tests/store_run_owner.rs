@@ -158,7 +158,7 @@ async fn run_admission_unavailable_is_a_declared_wire_refusal() {
         let id = admit(&shard);
         change(&shard, &id, "old-evidence", |row| {
             row["run_owner_binding"]["principal"] =
-                medulla_server_api::mutation_batch::principal_fingerprint("owner")
+                medulla_server_api::batch_compile::principal_fingerprint("owner")
                     .unwrap()
                     .into();
             row.remove(ADMISSION_REQUEST);
@@ -466,9 +466,9 @@ fn ordinary_completion_native_fence_and_terminal_noop_preserve_binding() {
 fn ordinary_completion_native_ledger_outbox_restart_atomicity() {
     use medulla_protocol_types::mutation_batch::MutationBatch;
     use medulla_mutation_types::mutation_scope::MutationSurface;
-    use medulla_server_api::mutation_batch::compile_methods;
-    use medulla_server_api::mutation_batch::principal_fingerprint;
-    use medulla_server_api::mutation_batch::CompileBatch;
+    use medulla_server_api::batch_compile::compile_methods;
+    use medulla_server_api::batch_compile::principal_fingerprint;
+    use medulla_server_api::batch_compile::CompileBatch;
     use medulla_result_types::epistemic_operations::{ClaimWorkItemRequest, ClaimWorkItemResult};
     use medulla_work_types::run_completion::*;
     let compile = |shard: &Shard, tag: &str, method: Method, now| {

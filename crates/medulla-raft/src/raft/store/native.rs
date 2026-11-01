@@ -176,7 +176,7 @@ impl MedullaStore {
             .command
             .open_enrichment_top_up(&req.graph_name, req.committed_at_ms, server_secret)?
             .ok_or("replicated enrichment top-up payload is absent")?;
-        let expected_tenant_scope = medulla_server_api::mutation_batch::opaque_coordinator_key(
+        let expected_tenant_scope = medulla_server_api::batch_compile::opaque_coordinator_key(
             "carrier-tenant",
             "verified",
             &transition.revision.tenant_id,
@@ -438,7 +438,7 @@ impl MedullaStore {
             return Ok(());
         };
         if !medulla_server_api::mutation_apply::is_durable_mutation(method)
-            || medulla_server_api::mutation_batch::is_work_item_method(method)
+            || medulla_server_api::batch_compile::is_work_item_method(method)
         {
             return Err(
                 "Raft graph command is not a deterministic replicated mutation".to_string(),

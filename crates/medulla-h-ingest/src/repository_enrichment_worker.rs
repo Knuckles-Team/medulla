@@ -7,6 +7,7 @@
 //! to the deployment tenant; snapshots from another tenant fail closed.
 
 #[cfg(feature = "raft")]
+use medulla_server_api::blob::BlobStateExt;
 use medulla_raft::raft::RaftStateExt;
 use std::sync::Arc;
 
@@ -72,7 +73,7 @@ mod worker {
         epistemic_operations::RequestContextSchemaVersion,
     };
     use medulla_server_api::api::persistence::PersistenceBackend;
-    use medulla_server_api::auth::VerifiedRequestContext;
+    use medulla_server_api::authority_context::VerifiedRequestContext;
     use medulla_server_api::blob::store::ChunkStore;
     #[cfg(not(feature = "raft"))]
     use medulla_server_api::mutation_batch::CommitOrigin;
@@ -155,8 +156,7 @@ mod worker {
                 .clone()
                 .ok_or("CONFLICT: repository enrichment persistence is unavailable")?;
             let store: Arc<dyn ChunkStore> = state
-                .blob
-                .as_ref()
+                .blob_cursors()
                 .ok_or("CONFLICT: repository enrichment CAS is unavailable")?
                 .store
                 .clone();
@@ -176,7 +176,7 @@ mod worker {
             state,
             persistence.as_ref(),
             &graph_name,
-            store,
+            Arc::new(store) as medulla_server_api::state::ErasedHandle,
             Box::new(move |tenant, graph, page_key| {
                 let grant_state = Arc::clone(&grant_state);
                 Box::pin(async move {

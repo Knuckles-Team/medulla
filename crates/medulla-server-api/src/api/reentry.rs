@@ -12,7 +12,7 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use crate::auth::VerifiedRequestContext;
+use crate::authority_context::VerifiedRequestContext;
 use crate::state::ServerState;
 #[cfg(feature = "raft")]
 use medulla_protocol_types::protocol::Method;
@@ -37,7 +37,7 @@ pub type SeamFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
 pub struct TryHandleContext<'a> {
     pub req_id: u64,
     pub graph_name: &'a str,
-    pub read_authority: Option<&'a crate::access::GraphReadAuthority>,
+    pub read_authority: Option<&'a crate::carrier::GraphReadAuthority>,
     pub caller: &'a str,
 }
 
@@ -347,7 +347,7 @@ pub trait DispatchApi: Send + Sync {
         &'a self,
         persistence: &'a dyn crate::api::persistence::PersistenceBackend,
         graph_fname: &'a str,
-        store: Arc<dyn crate::blob::store::ChunkStore>,
+        store: crate::state::ErasedHandle,
         authority_for_page: PageAuthorityFn,
         submit: PageSubmitFn,
         park_source: PageParkFn,
@@ -735,7 +735,7 @@ pub async fn drain_repository_enrichment_once(
     state: &Arc<RwLock<ServerState>>,
     persistence: &dyn crate::api::persistence::PersistenceBackend,
     graph_fname: &str,
-    store: Arc<dyn crate::blob::store::ChunkStore>,
+    store: crate::state::ErasedHandle,
     authority_for_page: PageAuthorityFn,
     submit: PageSubmitFn,
     park_source: PageParkFn,

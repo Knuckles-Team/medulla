@@ -113,7 +113,7 @@ mod resolve_core_ref_tests {
 #[cfg(test)]
 mod mine_associate_submission_tests {
     use super::*;
-    use medulla_server_api::auth::VerifiedRequestContext;
+    use medulla_server_api::authority_context::VerifiedRequestContext;
 
     fn authority() -> CarrierAuthority {
         CarrierAuthority::from_verified(&VerifiedRequestContext::from_verified_claims(

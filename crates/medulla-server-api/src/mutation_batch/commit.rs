@@ -25,7 +25,7 @@ pub struct CommitOrigin<'a> {
 ))]
 pub use internal::commit_internal_graph_methods;
 pub use internal::{
-    commit_internal_graph_methods_with_nonce, lock_graph, lock_txn_coordinator,
+    commit_internal_graph_methods_with_nonce, lock_txn_coordinator,
     InternalGraphCommitRequest,
 };
 pub use lifecycle::{
@@ -44,8 +44,8 @@ pub use program::{
 };
 
 #[cfg(test)]
-use crate::mutation_batch::compile::compile_methods;
-use crate::mutation_batch::compile::CompileBatch;
+use crate::batch_compile::compile::compile_methods;
+use crate::batch_compile::compile::CompileBatch;
 #[cfg(test)]
 use medulla_graph_core::graph::GraphCore;
 use medulla_mutation_types::mutation_scope::MutationSurface;

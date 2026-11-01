@@ -85,7 +85,7 @@ use medulla_viz_export::ColumnStoreExportBackend;
 
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
-use medulla_server_api::access::CarrierAuthority;
+use medulla_server_api::carrier::CarrierAuthority;
 use medulla_server_api::state::ServerState;
 use medulla_server_api::viz_engine::render_cache_key;
 use medulla_server_api::viz_engine::CachedRender;
@@ -685,7 +685,7 @@ fn synthetic_graph_edges(node_count: u64, edge_count: u64, seed: u64) -> Vec<(u3
 #[cfg(test)]
 mod authority_tests {
     use super::*;
-    use medulla_server_api::auth::VerifiedRequestContext;
+    use medulla_server_api::authority_context::VerifiedRequestContext;
 
     fn authority(agent_id: &str, tenant: &str) -> CarrierAuthority {
         CarrierAuthority::from_verified(&VerifiedRequestContext::verified_for_test_in_tenant(

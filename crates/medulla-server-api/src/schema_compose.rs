@@ -1,5 +1,8 @@
 //! Deterministic composition and validation of keyed graph schema sources.
 
+#[cfg(feature = "shacl")]
+pub(crate) mod compiled;
+
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{Arc, OnceLock};
 
@@ -45,7 +48,7 @@ pub struct ComposedSchema {
 }
 
 /// The validated composition of `sources`, compiled at most once per content
-/// identity (`composed_digest`, see [`super::compiled`]) and shared by every graph
+/// identity (`composed_digest`, see [`compiled`]) and shared by every graph
 /// that composes the same schema.
 pub fn validate_and_compose(sources: &GraphSchemaSources) -> Result<Arc<ComposedSchema>, String> {
     sources.validate()?;
@@ -55,7 +58,7 @@ pub fn validate_and_compose(sources: &GraphSchemaSources) -> Result<Arc<Composed
             .get_or_init(|| compose_validated_sources(sources).map(Arc::new))
             .clone();
     }
-    super::compiled::compiled_schemas().get_or_compile(sources.composed_digest(), || {
+    compiled::compiled_schemas().get_or_compile(sources.composed_digest(), || {
         compose_validated_sources(sources)
     })
 }

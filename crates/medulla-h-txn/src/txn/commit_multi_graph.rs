@@ -315,7 +315,7 @@ async fn apply_authorized_slices(
                 }
             }
         };
-        let child_id = medulla_server_api::mutation_batch::opaque_coordinator_key(
+        let child_id = medulla_server_api::batch_compile::opaque_coordinator_key(
             "multi-graph-child",
             &slice.graph_name,
             coordinator_id,

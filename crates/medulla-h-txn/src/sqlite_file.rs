@@ -38,7 +38,7 @@ use medulla_protocol_types::mutation_batch::MutationBatch;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
-use medulla_server_api::access::CarrierAuthority;
+use medulla_server_api::carrier::CarrierAuthority;
 use medulla_types::contract::Nonce;
 use medulla_protocol_types::result_contract::storage as results;
 use medulla_protocol_types::storage_wire::{
@@ -349,7 +349,7 @@ fn compile_import_batch_with_nonce(
         created_at_ms: now,
     }
     .compile(store, |context| {
-        medulla_server_api::mutation_batch::compile_opaque_method(
+        medulla_server_api::batch_compile::compile_opaque_method(
             context,
             method,
             MutationSurface::Query,
@@ -788,7 +788,7 @@ mod tests {
 
     fn authority(agent: &str, tenant: &str) -> CarrierAuthority {
         CarrierAuthority::from_verified(
-            &medulla_server_api::auth::VerifiedRequestContext::verified_for_test_in_tenant(
+            &medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test_in_tenant(
                 agent, tenant,
             ),
         )

@@ -250,7 +250,7 @@ pub(in crate::dispatch) async fn handle_list_registered_servers(
     request: RegisteredServerListRequest,
 ) -> Response {
     crate::dispatch::ensure_graph_resident(state, REGISTRY_GRAPH).await;
-    let _registry_guard = medulla_server_api::mutation_batch::lock_graph(REGISTRY_GRAPH).await;
+    let _registry_guard = medulla_server_api::routed_write_coalescer::lock_graph(REGISTRY_GRAPH).await;
     let (raw_core, read_authority) = {
         let current = timed_read(state).await;
         let Some(entry) = current.registry.get(REGISTRY_GRAPH) else {

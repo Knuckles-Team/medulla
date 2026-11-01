@@ -1344,3 +1344,40 @@ mod tests {
         assert_eq!(hub.read_query("cnt").unwrap().value, 1.0);
     }
 }
+
+/// Typed access to the change-data-capture hub `ServerState` holds type-erased
+/// (MEDULLA-CONTRACT-R056.8). An untouched slot lazily becomes a default hub.
+pub trait CdcStateExt {
+    /// The installed hub, if any.
+    fn cdc_hub(&self) -> Option<&Arc<CdcHub>>;
+    /// Install or clear the hub.
+    fn set_cdc_hub(&mut self, v: Option<Arc<CdcHub>>);
+}
+
+impl CdcStateExt for crate::state::ServerState {
+    fn cdc_hub(&self) -> Option<&Arc<CdcHub>> {
+        self.cdc
+            .get_or_init(|| {
+                Some(Arc::new(Arc::new(CdcHub::default())) as crate::state::ErasedHandle)
+            })
+            .as_deref()
+            .and_then(|h| h.downcast_ref::<Arc<CdcHub>>())
+    }
+
+    fn set_cdc_hub(&mut self, v: Option<Arc<CdcHub>>) {
+        self.cdc = std::sync::OnceLock::from(v.map(|h| Arc::new(h) as crate::state::ErasedHandle));
+    }
+}
+
+#[cfg(test)]
+mod state_ext_tests {
+    use super::CdcStateExt;
+    use crate::state::ServerState;
+    use medulla_isolation::isolation::IsolationLayer;
+
+    #[test]
+    fn untouched_state_has_a_default_hub() {
+        let state = ServerState::new("secret", IsolationLayer::new());
+        assert!(state.cdc_hub().is_some());
+    }
+}

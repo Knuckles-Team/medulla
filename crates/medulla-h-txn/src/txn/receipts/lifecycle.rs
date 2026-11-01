@@ -124,7 +124,7 @@ pub(crate) fn txn_lifecycle_batch_id(
     // input.  The full method body remains in the kernel operation digest, so a
     // changed txn id, graph, or payload still conflicts under the same key.
     let operation_key = format!("{}:{}", method.tag_name(), authority.idempotency_key());
-    medulla_server_api::mutation_batch::opaque_coordinator_key(
+    medulla_server_api::batch_compile::opaque_coordinator_key(
         "transaction-lifecycle",
         authority.owner_scope(),
         &operation_key,

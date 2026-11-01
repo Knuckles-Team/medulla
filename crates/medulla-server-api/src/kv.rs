@@ -20,6 +20,7 @@
 //! `KvGet`/`KvPut`/`KvDelete`/`KvScan`/`KvCas` — the wire shape of each, and its
 //! response payload, is the `Method::Kv*` match in [`try_handle`].
 
+use crate::kv::KvStateExt;
 use std::collections::{BTreeMap, HashMap};
 use std::path::Path;
 use std::sync::Arc;
@@ -39,8 +40,8 @@ use medulla_mutation_types::mutation_scope::MutationSurface;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
-use crate::access::CarrierAuthority;
-use crate::mutation_batch::COMPILED_BATCH_INCARNATION;
+use crate::carrier::CarrierAuthority;
+use crate::batch_compile::COMPILED_BATCH_INCARNATION;
 use medulla_protocol_types::result_contract::storage as results;
 
 /// The single KV table: `(namespace, key) -> value bytes`. Composite key so one file
@@ -594,7 +595,7 @@ pub async fn try_handle(
 ) -> Result<Response, Method> {
     // The store is small + the ops are microsecond-cheap (single-key redb get/put,
     // commit fsync coalesced by redb), so they run inline like the tsdb append path.
-    let store = { state.read().await.kv.clone() };
+    let store = { state.read().await.kv_store().cloned() };
     let admitted = dispatch_handlers::resolve_kv_store(store, &method, req_id);
     let Ok(store) = admitted else {
         return *admitted.err().unwrap();
@@ -626,14 +627,14 @@ fn compile_kv_batch(
     // verified tenant scope for a shared one, so every writer of one namespace
     // advances ONE kernel version sequence.
     let scope =
-        crate::mutation_batch::opaque_coordinator_key("kv-scope", scope_owner, namespace);
+        crate::batch_compile::opaque_coordinator_key("kv-scope", scope_owner, namespace);
     // The batch id is part of the canonical outbox key.  It must identify the
     // verified operation across transport retries, while the request id and
     // nonce identify only this attempt.  Derive it from the same authenticated
     // tenant/scope/actor/idempotency tuple the mutation kernel uses for replay;
     // a fresh nonce with the same stable key therefore replays the stored KV
     // verdict instead of creating a second outbox event.
-    let batch_id = crate::mutation_batch::opaque_idempotency_key_for_context(
+    let batch_id = crate::batch_compile::opaque_idempotency_key_for_context(
         "kv",
         authority.tenant_scope(),
         &scope,
@@ -647,8 +648,8 @@ fn compile_kv_batch(
     // here so KV retries use the kernel's one operation replay authority. The
     // batch id above intentionally has the same stable operation lifetime; the
     // nonce remains the separate attempt-replay guard.
-    let batch = crate::mutation_batch::compile_opaque_method(
-        crate::mutation_batch::CompileBatch {
+    let batch = crate::batch_compile::compile_opaque_method(
+        crate::batch_compile::CompileBatch {
             batch_id: &batch_id,
             request_id: req_id,
             attempt_nonce: authority.attempt_nonce(),
@@ -733,3 +734,24 @@ mod dispatch_tests;
 #[cfg(test)]
 mod tests;
 mod wire;
+
+/// Typed access to the key-value store handle `ServerState` holds type-erased
+/// (MEDULLA-CONTRACT-R056.8).
+pub trait KvStateExt {
+    /// The installed key-value store, when this build serves it.
+    fn kv_store(&self) -> Option<&Arc<KvStore>>;
+    /// Install or clear the key-value store.
+    fn set_kv_store(&mut self, v: Option<Arc<KvStore>>);
+}
+
+impl KvStateExt for ServerState {
+    fn kv_store(&self) -> Option<&Arc<KvStore>> {
+        self.kv
+            .as_deref()
+            .and_then(|h| h.downcast_ref::<Arc<KvStore>>())
+    }
+
+    fn set_kv_store(&mut self, v: Option<Arc<KvStore>>) {
+        self.kv = v.map(|k| Arc::new(k) as crate::state::ErasedHandle);
+    }
+}

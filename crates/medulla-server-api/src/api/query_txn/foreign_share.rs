@@ -125,7 +125,7 @@ mod tests {
     use super::*;
     use medulla_types::acl::AgentIdentity;
     use medulla_types::acl::AgentRole;
-    use crate::access::CarrierAuthority;
+    use crate::carrier::CarrierAuthority;
     use crate::api::query_txn::foreign_catalog::ForeignSourceCatalog;
     use medulla_types::wire::ForeignSourceSpec;
 

@@ -1,9 +1,10 @@
 //! Re-drive the graph projection of a connector's current committed pack head.
 
+use medulla_server_api::blob::BlobStateExt;
 use medulla_protocol_types::protocol::Response;
 #[cfg(all(feature = "redb", feature = "blob", feature = "shacl"))]
 use medulla_protocol_types::protocol::ResultPayload;
-use medulla_server_api::auth::VerifiedRequestContext;
+use medulla_server_api::authority_context::VerifiedRequestContext;
 #[cfg(all(feature = "redb", feature = "blob", feature = "shacl"))]
 use medulla_persistence::connector_pack::projection::ConnectorPackProjectionPlan;
 use medulla_persistence::connector_pack::projection::PackProjectionBody;
@@ -128,8 +129,8 @@ async fn materialize_current_projection(
     let blob = state
         .read()
         .await
-        .blob
-        .clone()
+        .blob_cursors()
+        .cloned()
         .ok_or_else(|| "BODY_MISSING: Blob substrate disabled".to_string())?;
     materialize_projection_documents(blob, plan).await
 }

@@ -345,8 +345,8 @@ fn identity_payload_digest(
     identity: &WorkItemBatchIdentity,
     method: Method,
 ) -> medulla_types::contract::Digest256 {
-    use crate::mutation_batch::compile::compile_methods;
-    use crate::mutation_batch::compile::CompileBatch;
+    use crate::batch_compile::compile::compile_methods;
+    use crate::batch_compile::compile::CompileBatch;
     compile_methods(
         CompileBatch {
             batch_id: &identity.batch_id,

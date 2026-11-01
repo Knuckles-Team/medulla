@@ -44,6 +44,7 @@ mod common;
 #[path = "common/test_support.rs"]
 mod test_support;
 
+use medulla_server_api::cdc::CdcStateExt;
 use std::sync::Arc;
 
 use serde_json::json;
@@ -1411,7 +1412,7 @@ async fn streaming_cdc_matview_rebuild_eg395() {
     let state = state().await;
     let hub = {
         let s = state.read().await;
-        s.cdc.clone().expect("streaming build has a CdcHub")
+        s.cdc_hub().cloned().expect("streaming build has a CdcHub")
     };
 
     // Subscribe a live materialized view: a continuous query counting `Robot` nodes,

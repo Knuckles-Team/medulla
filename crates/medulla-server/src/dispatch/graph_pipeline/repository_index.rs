@@ -6,6 +6,7 @@
 //! parses each unique blob once, lowers the projection, and delegates the one
 //! durable commit to the existing ChangeEnvelope authority.
 
+use medulla_server_api::blob::BlobStateExt;
 use super::*;
 
 #[cfg(all(feature = "ast", feature = "redb"))]
@@ -118,7 +119,7 @@ async fn admit_repository_sources(
     files: &[(String, Vec<u8>)],
 ) -> Result<std::collections::BTreeMap<String, (String, u64)>, Response> {
     use sha2::{Digest, Sha256};
-    let Some(blob) = ctx.state.read().await.blob.clone() else {
+    let Some(blob) = ctx.state.read().await.blob_cursors().cloned() else {
         return Ok(Default::default());
     };
     let tenant = ctx.tenant_scope.to_string();

@@ -554,7 +554,7 @@ async fn txn_handle(
     // transaction-lifecycle saga key and the second was refused with
     // `IDEMPOTENCY_CONFLICT`. See `verified_for_test_with_idempotency_key`.
     let context =
-        medulla_server_api::auth::VerifiedRequestContext::verified_for_test_with_idempotency_key(
+        medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test_with_idempotency_key(
             XSHARD_HARNESS_TEST_AGENT,
             &format!("xshard-harness:{req_id}"),
         );

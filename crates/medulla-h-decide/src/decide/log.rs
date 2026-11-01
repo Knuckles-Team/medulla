@@ -5,7 +5,7 @@
 
 use super::SharedState;
 use medulla_protocol_types::protocol::Response;
-use medulla_server_api::auth::VerifiedRequestContext;
+use medulla_server_api::authority_context::VerifiedRequestContext;
 
 /// Commit, evaluate or read the decision log.
 pub async fn handle_decision_log(

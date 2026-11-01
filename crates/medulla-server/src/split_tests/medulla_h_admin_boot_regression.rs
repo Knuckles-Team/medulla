@@ -29,6 +29,7 @@
 //!    a per-boot one.
 
 #[cfg(feature = "redb")]
+use medulla_server_api::blob::BlobStateExt;
 use medulla_persistence::agent_library::AgentLibraryStateExt;
 #[cfg(feature = "redb")]
 use medulla_persistence::AsRedb;
@@ -370,7 +371,7 @@ async fn outbox_status(state: &Arc<RwLock<ServerState>>) -> Option<MutationOutbo
 /// The canonical authority-scoped series key — the same construction the
 /// durable fixture in `redb_backend.rs` uses.
 fn scoped_series_key(graph: &str, series: &str, principal: &str) -> String {
-    let tenant_scope = medulla_server_api::mutation_batch::opaque_coordinator_key(
+    let tenant_scope = medulla_server_api::batch_compile::opaque_coordinator_key(
         "carrier-tenant",
         "verified",
         TENANT,
@@ -379,12 +380,12 @@ fn scoped_series_key(graph: &str, series: &str, principal: &str) -> String {
         "principal:sha256:{}",
         hex::encode(Sha256::digest(principal.as_bytes()))
     );
-    let owner_scope = medulla_server_api::mutation_batch::opaque_coordinator_key(
+    let owner_scope = medulla_server_api::batch_compile::opaque_coordinator_key(
         "carrier-owner",
         &tenant_scope,
         &actor_scope,
     );
-    let graph_scope = medulla_server_api::mutation_batch::opaque_coordinator_key(
+    let graph_scope = medulla_server_api::batch_compile::opaque_coordinator_key(
         "timeseries-graph",
         &owner_scope,
         graph,
@@ -423,9 +424,9 @@ async fn boot_listener_binds_before_the_projection_drain_completes() {
     state.persist_dir = Some(persist.clone());
     state.persistence = Some(backend.clone());
     state.tsdb_store = Some(series_store.clone());
-    state.blob = Some(medulla_server_api::api::ingest::cursors_for_test(
+    state.set_blob_cursors(Some(medulla_server_api::api::ingest::cursors_for_test(
         blob_dir.to_str().unwrap(),
-    ));
+    )));
     let _ = state.registry.create_graph(GRAPH, GraphType::Global, None);
     let state = Arc::new(RwLock::new(state));
 

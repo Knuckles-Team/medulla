@@ -46,7 +46,7 @@ use self::features::{build_features, compute_embedding_rows, first_embedding};
 pub fn try_handle(
     req_id: u64,
     core: Arc<GraphCore>,
-    read_authority: Option<&medulla_server_api::access::GraphReadAuthority>,
+    read_authority: Option<&medulla_server_api::carrier::GraphReadAuthority>,
     method: Method,
 ) -> Result<Response, Method> {
     match method {
@@ -911,8 +911,8 @@ mod tests {
     use super::*;
     use medulla_isolation::isolation::IsolationLayer;
     use medulla_protocol_types::protocol::GraphSource;
-    use medulla_server_api::access::GraphReadAuthority;
-    use medulla_server_api::auth::VerifiedRequestContext;
+    use medulla_server_api::carrier::GraphReadAuthority;
+    use medulla_server_api::authority_context::VerifiedRequestContext;
     use medulla_types::wire::{FeatureStep, ModelSpec, SplitSpec};
 
     fn node(props: Value) -> Vec<u8> {

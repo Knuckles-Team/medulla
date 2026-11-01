@@ -5,7 +5,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Barrier};
 use std::time::Duration;
 
-use super::super::compose::{compose_validated_sources, ComposedSchema};
+use super::super::{compose_validated_sources, ComposedSchema};
 use super::CompiledCache;
 use medulla_graph_core::graph::GraphCore;
 use medulla_graph_core::graph::GraphSchemaSource;
@@ -136,7 +136,7 @@ fn a_changed_core_catalog_changes_the_identity_and_is_refused() {
     core.ontology_ttl = Some(Arc::from(document));
     assert_ne!(sources.composed_digest(), upgraded.composed_digest());
     // A catalog that is not this binary's is refused before the cache is consulted.
-    assert!(super::super::compose::validate_and_compose(&upgraded).is_err());
+    assert!(super::super::validate_and_compose(&upgraded).is_err());
 }
 
 #[test]

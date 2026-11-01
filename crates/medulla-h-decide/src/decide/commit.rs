@@ -11,7 +11,7 @@
 
 use super::SharedState;
 use medulla_protocol_types::protocol::Response;
-use medulla_server_api::auth::VerifiedRequestContext;
+use medulla_server_api::authority_context::VerifiedRequestContext;
 #[cfg(feature = "redb")]
 use medulla_persistence::agent_library::AgentLibraryStateExt;
 use medulla_decision_types::decision::DecisionCommitRequest;

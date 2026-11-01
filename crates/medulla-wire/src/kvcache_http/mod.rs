@@ -81,6 +81,7 @@
 //! The listener starts only with configured JWT validation or a runtime-injected
 //! bearer secret. Every request must authenticate or it is refused `401`.
 
+use medulla_server_api::kv::KvStateExt;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -735,7 +736,7 @@ async fn resolve_store(state: &Arc<RwLock<ServerState>>) -> std::io::Result<KvCa
     }
     #[cfg(feature = "kv")]
     {
-        let kv = { state.read().await.kv.clone() };
+        let kv = { state.read().await.kv_store().cloned() };
         let Some(kv) = kv else {
             return Err(std::io::Error::new(
                 std::io::ErrorKind::InvalidInput,

@@ -90,7 +90,7 @@ async fn check(
 }
 
 fn check_resolved_kind(
-    verified: &medulla_server_api::auth::VerifiedRequestContext,
+    verified: &medulla_server_api::authority_context::VerifiedRequestContext,
     policy: &ControlLeaseKindPolicy,
     kind: Option<&str>,
 ) -> Result<(), String> {
@@ -104,7 +104,7 @@ fn check_resolved_kind(
 /// A pending-call lease also mutates a WorkItem; lease-write alone is insufficient.
 fn require_pending_work_authority(
     kind: &str,
-    verified: &medulla_server_api::auth::VerifiedRequestContext,
+    verified: &medulla_server_api::authority_context::VerifiedRequestContext,
 ) -> Result<(), String> {
     if kind == medulla_work_types::control_lease::PENDING_CALL_KIND
         && !verified.allows_method("work:write", true)
@@ -161,7 +161,7 @@ pub(super) async fn refuse_unpermitted_lease_kind(
 
 // A generic aggregate, wildcard, or lease-writing grant cannot mint issuer records.
 fn require_host_start_issuer(
-    verified: &medulla_server_api::auth::VerifiedRequestContext,
+    verified: &medulla_server_api::authority_context::VerifiedRequestContext,
 ) -> Result<(), String> {
     if !verified
         .claims()
@@ -187,7 +187,7 @@ mod tests {
 
     #[test]
     fn host_issuer_requires_dedicated_scope_not_generic_or_wildcard_authority() {
-        use medulla_server_api::auth::VerifiedRequestContext;
+        use medulla_server_api::authority_context::VerifiedRequestContext;
         for scope in ["lease:write", "kg:write", "kg:admin", "host:*", "*"] {
             let verified = VerifiedRequestContext::verified_for_test_with_scopes(
                 "issuer",
@@ -221,7 +221,7 @@ mod tests {
     #[test]
     fn lease_write_alone_cannot_change_pending_work_item_state() {
         use medulla_work_types::control_lease::PENDING_CALL_KIND;
-        use medulla_server_api::auth::VerifiedRequestContext;
+        use medulla_server_api::authority_context::VerifiedRequestContext;
         let lease_only = VerifiedRequestContext::verified_for_test_with_scopes(
             "worker-a",
             "tenant-a",
@@ -241,7 +241,7 @@ mod tests {
     #[test]
     fn absent_lookup_returns_a_terminal_refusal_before_any_later_registration() {
         use medulla_work_types::control_lease::{ControlLeaseKindPolicy, PENDING_CALL_KIND};
-        use medulla_server_api::auth::VerifiedRequestContext;
+        use medulla_server_api::authority_context::VerifiedRequestContext;
         let verified = VerifiedRequestContext::verified_for_test_with_scopes(
             "worker-a",
             "tenant-a",

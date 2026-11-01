@@ -2,7 +2,7 @@
 //! snapshot as native SQL inserts. No source descriptor or mapping digest
 //! grants access.
 
-use medulla_server_api::access::CarrierAuthority;
+use medulla_server_api::carrier::CarrierAuthority;
 use medulla_server_api::sql_catalog_acl::SqlPrivilege;
 use medulla_server_api::sql_catalog_acl::SqlSourceAuthorityWrite;
 use medulla_server_api::sql_catalog_acl::ACCESS_DENIED;

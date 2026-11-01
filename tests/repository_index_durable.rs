@@ -19,6 +19,7 @@ mod common;
 #[path = "common/test_support.rs"]
 mod test_support;
 
+use medulla_server_api::blob::BlobStateExt;
 use medulla_types::contract::BoundedVec;
 use medulla_types::ingestion_wire::{IndexFileVersion, IndexRepositoryScope, IndexTombstone};
 use medulla_protocol_types::protocol::{GraphType, Method, Response, ResultPayload};
@@ -194,7 +195,7 @@ async fn index_with_durable_source_refs() {
 
     let (_dir, dir_s, _backend, state) = durable_graph("medulla-repoindex-cas").await;
     let store = Arc::new(RedbChunkStore::open(&dir_s).unwrap());
-    state.write().await.blob = Some(Arc::new(BlobCursors::new(store.clone())));
+    state.write().await.set_blob_cursors(Some(Arc::new(BlobCursors::new(store.clone()))));
     let result = index(
         &state,
         2,

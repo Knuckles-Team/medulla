@@ -13,7 +13,7 @@ use medulla_mutation_types::mutation_scope::MutationOutboxLease;
 use tokio::sync::RwLock;
 
 use medulla_server_api::api::persistence::PersistenceBackend;
-use medulla_server_api::auth::VerifiedRequestContext;
+use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 
 const SERVICE: &str = "repository-enrichment-v1";

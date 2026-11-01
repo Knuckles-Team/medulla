@@ -54,8 +54,6 @@ pub use update_plan::{plan_update, update_graphs, update_uses_variable_graph, Pl
 pub const DEFAULT_GRAPH_ENV: &str = "MEDULLA_SPARQL_DEFAULT_GRAPH";
 /// Env var carrying the bind address (`host:port`) when `--sparql-addr` is not passed.
 pub const SPARQL_ADDR_ENV: &str = "MEDULLA_SPARQL_ADDR";
-/// Current typed event carried by the signed `ApplyMutation` protocol method.
-pub const SPARQL_HTTP_UPDATE_EVENT: &str = "sparql_http_update_v1";
 /// SSRF allowlist for outbound `SERVICE` federation (CONCEPT:MEDULLA-KG.query.sparql-service-federation-client, feature
 /// `sparql-service`): a comma-separated set of allowed endpoint hosts / `scheme://host:port`
 /// origins. **Empty / unset ⇒ SERVICE is DISABLED (fail-closed)** — no remote client is

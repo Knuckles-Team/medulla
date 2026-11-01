@@ -1,5 +1,6 @@
 //! Served foreign-source leg resolution over the server's catalog (federation).
 
+use medulla_server_api::api::query_txn::ForeignStateExt;
 use super::*;
 #[cfg(feature = "redb")]
 use medulla_persistence::agent_library::AgentLibraryStateExt;
@@ -38,14 +39,14 @@ pub(crate) async fn served_foreign_leg(
         let plan_digest =
             medulla_server_api::api::query_txn::query_support::canonical_plan_digest(plan)?;
         return s
-            .foreign_reads
+            .foreign_reads()
             .bind_many_for_query(
                 caller,
                 executions,
                 plan,
                 plan_digest,
                 medulla_server_api::api::query_txn::foreign_read::ForeignBindingContext {
-                    catalog: &s.foreign_sources,
+                    catalog: &s.foreign_sources(),
                     store,
                     isolation: &s.isolation,
                 },
@@ -63,17 +64,17 @@ pub(crate) async fn served_foreign_leg(
         let plan_digest =
             medulla_server_api::api::query_txn::query_support::canonical_plan_digest(plan)?;
         return s
-            .foreign_reads
+            .foreign_reads()
             .bind_for_query(
                 caller,
                 *execution,
                 plan_digest,
-                &s.foreign_sources,
+                &s.foreign_sources(),
                 store,
                 &s.isolation,
             )
             .map(Some);
     }
-    s.foreign_sources
+    s.foreign_sources()
         .resolve_for_plan(&plan.ops, caller, &s.isolation)
 }

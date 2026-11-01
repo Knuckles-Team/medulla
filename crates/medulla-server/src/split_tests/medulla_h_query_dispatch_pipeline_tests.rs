@@ -24,10 +24,10 @@ use super::medulla_h_query_sql_source_read_tests::{
 use medulla_types::acl::RequestContextClaims;
 use medulla_protocol_types::protocol::Request;
 use medulla_protocol_types::protocol::{Method, Response};
-use medulla_server_api::access::CarrierAuthority;
+use medulla_server_api::carrier::CarrierAuthority;
 use medulla_server_api::auth::compute_verified_envelope_token;
 use medulla_server_api::auth::VerifiedEnvelopeParams;
-use medulla_server_api::auth::VerifiedRequestContext;
+use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::test_support::decode_raw_response as ok;
 use medulla_index_types::semantic_index::{
     SemanticBinding, SemanticBindingState, SemanticIndexCommand, SemanticIndexFilter,

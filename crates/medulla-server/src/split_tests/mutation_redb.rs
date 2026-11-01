@@ -790,7 +790,7 @@ async fn touch_nodes_commits_authoritative_state_without_audit_or_cdc() {
     );
 
     let fname = medulla_kernel::persist::sanitize(graph_name);
-    let batch_id = medulla_server_api::mutation_batch::opaque_idempotency_key_for_context(
+    let batch_id = medulla_server_api::batch_compile::opaque_idempotency_key_for_context(
         "rpc",
         "opaque-test-tenant",
         graph_name,

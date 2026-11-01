@@ -134,7 +134,7 @@ pub(super) async fn commit_prepared(
     // Serialize with ordinary graph/query/RDF gateway mutations for the entire
     // validate → durable commit → RAM publish interval.  No lock is held during
     // client think-time; it begins only after Commit consumes the staged txn.
-    let mutation_guard = medulla_server_api::mutation_batch::lock_graph(&graph_name).await;
+    let mutation_guard = medulla_server_api::routed_write_coalescer::lock_graph(&graph_name).await;
 
     // Validate under the topology write barrier, but do not publish yet.  The
     // authoritative path below commits the batch first.
@@ -283,8 +283,8 @@ pub(super) async fn compile_prepared_batch(
         }
     };
     let principal = txn_receipt_principal(caller).map_err(|error| Response::err(req_id, error))?;
-    let batch = match medulla_server_api::mutation_batch::compile_methods(
-        medulla_server_api::mutation_batch::CompileBatch {
+    let batch = match medulla_server_api::batch_compile::compile_methods(
+        medulla_server_api::batch_compile::CompileBatch {
             batch_id,
             request_id: req_id,
             attempt_nonce,
@@ -337,7 +337,7 @@ pub(super) async fn commit_prepared_durable(args: CommitPreparedDurableArgs<'_>)
         attempt_nonce,
     } = args;
     let committed_at_ms = now_ms();
-    let batch_id = medulla_server_api::mutation_batch::opaque_coordinator_key(
+    let batch_id = medulla_server_api::batch_compile::opaque_coordinator_key(
         "txn",
         &graph_name,
         &coordinator_id,

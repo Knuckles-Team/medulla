@@ -461,14 +461,14 @@ pub(super) fn replicated_graph_batch_id(
     principal_fingerprint: &str,
     idempotency_key: &str,
 ) -> String {
-    let graph_scope = medulla_server_api::mutation_batch::opaque_idempotency_key_for_context(
+    let graph_scope = medulla_server_api::batch_compile::opaque_idempotency_key_for_context(
         "raft-graph-scope",
         tenant_scope,
         graph_name,
         None,
         graph_fname,
     );
-    medulla_server_api::mutation_batch::opaque_idempotency_key_for_context(
+    medulla_server_api::batch_compile::opaque_idempotency_key_for_context(
         namespace,
         tenant_scope,
         &graph_scope,

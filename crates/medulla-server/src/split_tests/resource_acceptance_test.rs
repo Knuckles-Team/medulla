@@ -623,7 +623,7 @@ async fn seed_delegation_library(
 ) -> medulla_agent_types::agent_library::AgentLibraryEntry {
     let mut draft = delegation_library_draft();
     let policy_digest = draft.policy_digest.clone();
-    let caller_principal = medulla_server_api::mutation_batch::principal_fingerprint(AUTH_AGENT)
+    let caller_principal = medulla_server_api::batch_compile::principal_fingerprint(AUTH_AGENT)
         .expect("harness caller principal fingerprint");
     let mut retained: Option<medulla_agent_types::agent_library::AgentLibraryEntry> = None;
     for node_id in cluster.all_ids() {
@@ -713,7 +713,7 @@ async fn advance_delegation_library(
     draft.source_revision_digest =
         "sha256:8888888888888888888888888888888888888888888888888888888888888888".to_string();
     let policy_digest = draft.policy_digest.clone();
-    let caller_principal = medulla_server_api::mutation_batch::principal_fingerprint(AUTH_AGENT)
+    let caller_principal = medulla_server_api::batch_compile::principal_fingerprint(AUTH_AGENT)
         .expect("harness caller principal fingerprint");
     for node_id in cluster.all_ids() {
         let state = state_for(cluster, node_id);
@@ -760,7 +760,7 @@ async fn retire_delegation_library(
     let policy_digest =
         medulla_persistence::agent_library::current_agent_library_policy_digest()
             .expect("Agent Library policy digest for retirement");
-    let caller_principal = medulla_server_api::mutation_batch::principal_fingerprint(AUTH_AGENT)
+    let caller_principal = medulla_server_api::batch_compile::principal_fingerprint(AUTH_AGENT)
         .expect("harness caller principal fingerprint");
     let expected_revision = retained.entry_revision + 1;
     for node_id in cluster.all_ids() {

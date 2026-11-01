@@ -43,7 +43,7 @@ use super::graph_pipeline::dispatch_graph_op;
 use super::timed_read;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
-use medulla_server_api::auth::VerifiedRequestContext;
+use medulla_server_api::authority_context::VerifiedRequestContext;
 use crate::obs::ObsState;
 use medulla_server_api::state::ServerState;
 

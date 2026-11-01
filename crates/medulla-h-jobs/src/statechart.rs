@@ -38,7 +38,7 @@ use medulla_types::statechart::StatechartOp;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
-use medulla_server_api::access::CarrierAuthority;
+use medulla_server_api::carrier::CarrierAuthority;
 use medulla_server_api::state::ServerState;
 
 /// Bounded decode limits for a submitted `StatechartDef` MessagePack blob — the same
@@ -176,7 +176,7 @@ fn op_instantiate(
             context: context.clone(),
         },
     };
-    let request_batch_id = medulla_server_api::mutation_batch::opaque_request_key(
+    let request_batch_id = medulla_server_api::batch_compile::opaque_request_key(
         "statechart-instantiate",
         &authority.namespace("statechart-instances", "instantiate"),
         req_id,
@@ -302,7 +302,7 @@ mod tests {
     /// `sql_tables.rs`'s own test helper of the same shape.
     fn authority(actor: &str, tenant: &str) -> CarrierAuthority {
         CarrierAuthority::from_verified(
-            &medulla_server_api::auth::VerifiedRequestContext::verified_for_test_in_tenant(
+            &medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test_in_tenant(
                 actor, tenant,
             ),
         )

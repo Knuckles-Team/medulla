@@ -134,7 +134,7 @@ fn change_envelope_batch_authority_error(
             // `Option<String>` that could only ever have refused every
             // caller-supplied envelope; the real policy revision is inside the
             // stable replay identity, where a change conflicts.
-            || medulla_server_api::mutation_batch::batch_actor(&envelope.mutation)
+            || medulla_server_api::batch_compile::batch_actor(&envelope.mutation)
                 != Some(principal.as_str())
         {
             return Some(Response::err(
@@ -376,7 +376,7 @@ async fn try_replicate_change_envelope(
             // The CALLER, which under RF-RULING-004's application note is the outbox
             // `actor` header -- never the serving principal, which is this engine's
             // own and would compare equal for every caller.
-            medulla_server_api::mutation_batch::batch_actor(&envelope.mutation)
+            medulla_server_api::batch_compile::batch_actor(&envelope.mutation)
                 .unwrap_or_default()
                 .to_string(),
             false,
@@ -636,7 +636,7 @@ async fn apply_one_change_envelope_inner(
         return resp;
     }
 
-    let _mutation_guard = medulla_server_api::mutation_batch::lock_graph(graph_name).await;
+    let _mutation_guard = medulla_server_api::routed_write_coalescer::lock_graph(graph_name).await;
     // MEDULLA-ORCH-VOCAB-R801.3: the harness-component writes of this envelope are
     // graph-relative (a supersession must name the CURRENT version, a
     // published version must not mutate), so they are verified under the
@@ -814,7 +814,7 @@ async fn apply_change_envelope_batch(
             "CHANGE_BATCH_UNAVAILABLE_UNDER_PLACEMENT: use per-envelope ApplyChangeEnvelope",
         );
     }
-    let _mutation_guard = medulla_server_api::mutation_batch::lock_graph(graph_name).await;
+    let _mutation_guard = medulla_server_api::routed_write_coalescer::lock_graph(graph_name).await;
     for envelope in &envelopes {
         if envelope.mutation.placement_epoch != 0 || envelope.mutation.fencing_token.is_some() {
             return Response::err(

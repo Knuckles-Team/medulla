@@ -16,6 +16,7 @@
 //! connection counter that `handle_connection` increments on entry and decrements
 //! on return (RAII via [`ConnGuard`]) — that count is what the idle watcher polls.
 
+use medulla_server_api::auth::RequestAuthorityExt;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::Arc;
 use tokio::net::TcpListener;
@@ -339,7 +340,7 @@ impl AdmissionPools {
 
 #[derive(Default)]
 struct QosAdmission {
-    context: Option<medulla_server_api::auth::VerifiedRequestContext>,
+    context: Option<medulla_server_api::authority_context::VerifiedRequestContext>,
     permit: Option<super::qos::QosPermit>,
 }
 

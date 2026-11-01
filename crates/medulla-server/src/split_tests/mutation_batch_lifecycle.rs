@@ -7,10 +7,11 @@ use medulla_persistence::redb_backend::RedbBackend;
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_types::contract::Nonce;
 
-use medulla_server_api::mutation_batch::{
-    commit_lifecycle, lifecycle_batch_id, lifecycle_identity_matches, lifecycle_was_committed,
-    LifecycleCommitRequest,
-};
+use medulla_server_api::mutation_batch::commit_lifecycle;
+use medulla_server_api::batch_compile::lifecycle_batch_id;
+use medulla_server_api::mutation_batch::lifecycle_identity_matches;
+use medulla_server_api::mutation_batch::lifecycle_was_committed;
+use medulla_server_api::mutation_batch::LifecycleCommitRequest;
 
 /// The verified tenant scope every single-tenant lifecycle test commits under.
 const TENANT: &str = "carrier-tenant:lifecycle-test";

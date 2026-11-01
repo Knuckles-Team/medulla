@@ -17,7 +17,7 @@ impl medulla_server_api::api::query_txn::TxnApi for TxnSeam {
         &self,
         state: &Arc<RwLock<ServerState>>,
         req_id: u64,
-        authority: &medulla_server_api::access::CarrierAuthority,
+        authority: &medulla_server_api::carrier::CarrierAuthority,
         graph: &str,
         placement_epoch: u64,
         fencing_token: Option<u64>,
@@ -40,7 +40,7 @@ impl medulla_server_api::api::query_txn::TxnApi for TxnSeam {
         state: &Arc<RwLock<ServerState>>,
         req_id: u64,
         caller: &str,
-        verified_context: &medulla_server_api::auth::VerifiedRequestContext,
+        verified_context: &medulla_server_api::authority_context::VerifiedRequestContext,
         method: medulla_protocol_types::protocol::Method,
     ) -> Result<medulla_protocol_types::protocol::Response, medulla_protocol_types::protocol::Method> {
         super::dispatch::try_handle(state, req_id, caller, verified_context, method).await
@@ -80,7 +80,7 @@ impl medulla_server_api::api::query_txn::TxnApi for TxnSeam {
         state: &Arc<RwLock<ServerState>>,
         req_id: u64,
         caller: &str,
-        authority: &medulla_server_api::access::CarrierAuthority,
+        authority: &medulla_server_api::carrier::CarrierAuthority,
         method: &medulla_protocol_types::protocol::Method,
     ) -> Result<medulla_server_api::api::query_txn::txn_support::GraphQlLifecycleAdmission, String> {
         use medulla_server_api::api::query_txn::txn_support as api;

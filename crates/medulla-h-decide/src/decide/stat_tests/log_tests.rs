@@ -492,7 +492,7 @@ async fn assert_reputation_origin(
     });
     assert_eq!(counts, expected);
     let verified = verified();
-    let authority = medulla_server_api::access::CarrierAuthority::from_verified(&verified).unwrap();
+    let authority = medulla_server_api::carrier::CarrierAuthority::from_verified(&verified).unwrap();
     let views = super::super::stat_view::DecisionViews::of(h.store.clone(), &authority);
     let record = real.unwrap_or(synthetic);
     let StatisticalOutcome::Explored { option_id, .. } = &record.outcome else {

@@ -161,7 +161,7 @@ fn attach_refuses_an_abox_contradiction_the_terminology_scope_admits() {
             .unwrap(),
         )
         .unwrap();
-    medulla_server_api::api::admin::compose::validate_and_compose(&candidate).unwrap();
+    medulla_server_api::schema_compose::validate_and_compose(&candidate).unwrap();
 
     let error = apply(&core, "g", &attach("admin:contradiction", ontology)).unwrap_err();
     assert!(error.starts_with("ONTOLOGY_INCONSISTENT"), "{error}");

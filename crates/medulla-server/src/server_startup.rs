@@ -6,6 +6,8 @@
 //! refusal keeps its exact message and exit status; a store-open failure stays
 //! fatal at boot (loud + early).
 
+use medulla_server_api::cdc::CdcStateExt;
+use medulla_server_api::kv::KvStateExt;
 use std::net::SocketAddr;
 use std::sync::Arc;
 
@@ -611,7 +613,7 @@ pub fn compose_server_state(
 ) -> ServerState {
     crate::seams_install::install_seams(&state);
     #[cfg(all(feature = "streaming", feature = "cdc-kafka"))]
-    if let Some(hub) = &state.cdc {
+    if let Some(hub) = state.cdc_hub() {
         // CA-11 (DEC-CA-03): install the optional Kafka sink exactly once,
         // after pure state composition and before any listener can serve.
         crate::cdc_sink::install_from_env(hub);
@@ -646,7 +648,7 @@ pub fn compose_server_state(
     }
     #[cfg(feature = "kv")]
     {
-        state.kv = stores.kv;
+        state.set_kv_store(stores.kv);
     }
     state
 }

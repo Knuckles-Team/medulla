@@ -25,7 +25,7 @@ use super::agent_library::AgentLibraryStore;
 /// verified tenant id exactly as pack import writes it. Import, status and
 /// `SourceIngest` all call this, never a graph route's opaque carrier
 /// `tenant_scope` digest (MEDULLA-TYPED-PACKS-R101.9).
-pub fn pack_tenant_key(verified: &medulla_server_api::auth::VerifiedRequestContext) -> &str {
+pub fn pack_tenant_key(verified: &medulla_server_api::authority_context::VerifiedRequestContext) -> &str {
     verified.tenant()
 }
 

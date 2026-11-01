@@ -40,7 +40,7 @@ async fn collect_reconcile_context(
     for (graph, core) in graphs {
         let fname = medulla_kernel::persist::sanitize(&graph);
         for namespace in ["txn", "crossmodal"] {
-            let batch_id = medulla_server_api::mutation_batch::opaque_coordinator_key(
+            let batch_id = medulla_server_api::batch_compile::opaque_coordinator_key(
                 namespace, &graph, &parent_id,
             );
             lookups.push((graph.clone(), core.clone(), fname.clone(), batch_id));

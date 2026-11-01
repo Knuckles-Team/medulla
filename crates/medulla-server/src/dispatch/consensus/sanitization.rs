@@ -130,7 +130,7 @@ fn sanitize_channel_proposal(
                 initial_members: initial_members
                     .into_iter()
                     .map(|member| {
-                        medulla_server_api::mutation_batch::principal_fingerprint(&member)
+                        medulla_server_api::batch_compile::principal_fingerprint(&member)
                     })
                     .collect::<Result<Vec<_>, _>>()?,
             })

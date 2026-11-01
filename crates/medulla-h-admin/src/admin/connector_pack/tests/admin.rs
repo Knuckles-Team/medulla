@@ -1,6 +1,7 @@
 //! PB3 (ruling D7): the admin binding decides who may import, retirement is
 //! permanent, and the reconciler releases only what nothing holds.
 
+use medulla_server_api::blob::BlobStateExt;
 use medulla_catalog_types::connector_pack::{
     ConnectorPackOp, ConnectorPackReconcileRequest, ConnectorPackRetireRequest,
     ConnectorPackUnbindRequest, PackBodyReconcileReport, PackImportResult, PackRetireResult,
@@ -189,7 +190,7 @@ async fn the_reconciler_releases_an_orphan_body_and_keeps_every_held_one() {
     // A body copied by an import whose catalog commit then failed: stored
     // engine-owned, held by nothing the catalog knows about.
     let orphan = b"an orphaned connector body".to_vec();
-    let blob = served.state.read().await.blob.clone().unwrap();
+    let blob = served.state.read().await.blob_cursors().cloned().unwrap();
     blob.store
         .put_engine_bodies(
             TENANT,
@@ -398,7 +399,7 @@ async fn bind_unbind_and_retire_require_admin_connector_pack_and_the_head_surviv
 /// Owner rows plus exact body reads and liveness of every admitted revision.
 async fn refusal_snapshot(served: &Served, connector: &str) -> serde_json::Value {
     let store = served.state.write().await.ensure_agent_library().unwrap();
-    let blob = served.state.read().await.blob.clone().unwrap();
+    let blob = served.state.read().await.blob_cursors().cloned().unwrap();
     let mut bodies = Vec::new();
     for member in store
         .connector_pack_members(TENANT, &ResourceId::new(connector).unwrap())
@@ -515,7 +516,7 @@ async fn a_rejected_import_mutates_nothing_in_the_catalog() {
                 serde_json::from_value(serde_json::json!({field: [iri]})).unwrap();
             let pack = build_pack(connector, &[candidate]);
             served.upload(&pack.1).await;
-            let blob = served.state.read().await.blob.clone().unwrap();
+            let blob = served.state.read().await.blob_cursors().cloned().unwrap();
             let blob_counts = (
                 blob.store.blob_count().unwrap(),
                 blob.store.chunk_count().unwrap(),

@@ -278,7 +278,7 @@ pub(super) async fn admit_catalog_write(
     observed: ObservedRegistration<'_>,
 ) -> Result<CatalogWriteAdmission, String> {
     medulla_server_api::api::reentry::ensure_graph_resident(state, "__commons__").await;
-    let guard = medulla_server_api::mutation_batch::lock_graph("__commons__").await;
+    let guard = medulla_server_api::routed_write_coalescer::lock_graph("__commons__").await;
     let context = observed.context.clone();
     verify_observed_registration(state, verified, observed).await?;
     let store = state.write().await.ensure_agent_library()?;

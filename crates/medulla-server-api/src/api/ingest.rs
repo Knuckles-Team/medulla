@@ -4,7 +4,10 @@ pub mod embedder;
 pub mod graph;
 pub mod jobs;
 
-use crate::access::CarrierAuthority;
+use std::sync::Arc;
+use tokio::sync::RwLock;
+use crate::state::ServerState;
+use crate::carrier::CarrierAuthority;
 use medulla_mutation_types::mutation_scope::DurabilityDomain;
 use medulla_mutation_types::mutation_scope::MutationSurface;
 use medulla_protocol_types::mutation_batch::MutationBatch;
@@ -28,7 +31,7 @@ pub trait GraphApi: Send + Sync {
         req_id: u64,
         caller: Option<&str>,
         graph_name: &str,
-        read_authority: &crate::access::GraphReadAuthority,
+        read_authority: &crate::carrier::GraphReadAuthority,
         core: std::sync::Arc<medulla_graph_core::graph::GraphCore>,
         method: Method,
     ) -> medulla_protocol_types::protocol::Response;
@@ -137,9 +140,9 @@ pub fn compile_blob_batch_at_with_nonce(
     attempt_nonce: Option<Nonce>,
 ) -> Result<(MutationBatch, u64), String> {
     let scope = authority.namespace("blob-cas", "control");
-    let batch_id = crate::mutation_batch::opaque_request_key("blob", &scope, identity_id, method);
-    let batch = crate::mutation_batch::compile_opaque_method(
-        crate::mutation_batch::CompileBatch {
+    let batch_id = crate::batch_compile::opaque_request_key("blob", &scope, identity_id, method);
+    let batch = crate::batch_compile::compile_opaque_method(
+        crate::batch_compile::CompileBatch {
             batch_id: &batch_id,
             request_id: identity_id,
             attempt_nonce,
@@ -168,4 +171,72 @@ pub fn compile_blob_batch_at_with_nonce(
 pub fn cursors_for_test(dir: &str) -> std::sync::Arc<crate::blob::BlobCursors> {
     let store = std::sync::Arc::new(crate::blob::store::RedbChunkStore::open(dir).unwrap());
     std::sync::Arc::new(crate::blob::BlobCursors::new(store))
+}
+
+/// The installed ingest seam of `state`, or `None` before installation.
+pub async fn ingest_seam(state: &Arc<RwLock<ServerState>>) -> Option<Arc<dyn IngestApi>> {
+    state
+        .read()
+        .await
+        .seams
+        .ingest
+        .get()
+        .and_then(|h| h.downcast_ref::<Arc<dyn IngestApi>>())
+        .cloned()
+}
+
+/// Install the ingest seam; `false` when it was already installed.
+pub fn install_ingest_seam(reg: &crate::api::registry::SeamRegistry, api: Arc<dyn IngestApi>) -> bool {
+    reg.ingest.set(Arc::new(api) as crate::state::ErasedHandle).is_ok()
+}
+
+/// The installed graph seam of `state`, or `None` before installation.
+pub async fn graph_seam(state: &Arc<RwLock<ServerState>>) -> Option<Arc<dyn GraphApi>> {
+    state
+        .read()
+        .await
+        .seams
+        .graph
+        .get()
+        .and_then(|h| h.downcast_ref::<Arc<dyn GraphApi>>())
+        .cloned()
+}
+
+/// Install the graph seam; `false` when it was already installed.
+pub fn install_graph_seam(reg: &crate::api::registry::SeamRegistry, api: Arc<dyn GraphApi>) -> bool {
+    reg.graph.set(Arc::new(api) as crate::state::ErasedHandle).is_ok()
+}
+
+/// The installed jobs seam of `state`, or `None` before installation.
+pub async fn jobs_seam(state: &Arc<RwLock<ServerState>>) -> Option<Arc<dyn JobsApi>> {
+    state
+        .read()
+        .await
+        .seams
+        .jobs
+        .get()
+        .and_then(|h| h.downcast_ref::<Arc<dyn JobsApi>>())
+        .cloned()
+}
+
+/// Install the jobs seam; `false` when it was already installed.
+pub fn install_jobs_seam(reg: &crate::api::registry::SeamRegistry, api: Arc<dyn JobsApi>) -> bool {
+    reg.jobs.set(Arc::new(api) as crate::state::ErasedHandle).is_ok()
+}
+
+/// The installed compute seam of `state`, or `None` before installation.
+pub async fn compute_seam(state: &Arc<RwLock<ServerState>>) -> Option<Arc<dyn ComputeApi>> {
+    state
+        .read()
+        .await
+        .seams
+        .compute
+        .get()
+        .and_then(|h| h.downcast_ref::<Arc<dyn ComputeApi>>())
+        .cloned()
+}
+
+/// Install the compute seam; `false` when it was already installed.
+pub fn install_compute_seam(reg: &crate::api::registry::SeamRegistry, api: Arc<dyn ComputeApi>) -> bool {
+    reg.compute.set(Arc::new(api) as crate::state::ErasedHandle).is_ok()
 }

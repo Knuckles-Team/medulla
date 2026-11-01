@@ -52,7 +52,7 @@ use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::RwLock;
 
 use medulla_lake::schema::{LakeField, LakeSchema, LakeType};
-use medulla_server_api::access::CarrierAuthority;
+use medulla_server_api::carrier::CarrierAuthority;
 use medulla_server_api::blob::store::ChunkStore;
 use medulla_server_api::http1;
 use medulla_server_api::http1::HttpMessage;
@@ -1347,7 +1347,7 @@ mod tests {
 
     fn carrier_for_scopes(agent: &str, tenant: &str, scopes: &[&str]) -> CarrierAuthority {
         CarrierAuthority::from_verified(
-            &medulla_server_api::auth::VerifiedRequestContext::verified_for_test_with_scopes(
+            &medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test_with_scopes(
                 agent, tenant, scopes,
             ),
         )

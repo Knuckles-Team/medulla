@@ -23,6 +23,7 @@
 
 #![allow(clippy::result_large_err)]
 
+use medulla_server_api::cdc::CdcStateExt;
 use std::sync::Arc;
 
 use tokio::sync::RwLock;
@@ -36,7 +37,7 @@ use medulla_protocol_types::protocol::ResultPayload;
 use medulla_query_cache::result_cache::ResultCache;
 #[cfg(feature = "graphql")]
 use medulla_graphql::parser::{Field, GqlValue};
-use medulla_server_api::access::GraphReadAuthority;
+use medulla_server_api::carrier::GraphReadAuthority;
 #[cfg(feature = "federation")]
 use medulla_server_api::api::query_txn::foreign_catalog::bound_registry;
 #[cfg(feature = "query")]
@@ -645,7 +646,7 @@ mod result_cache_dispatch_tests {
         add_node(&a, 3, "p3", "Person").await;
         let hub_a = {
             let s = a.read().await;
-            s.cdc.clone().unwrap()
+            s.cdc_hub().cloned().unwrap()
         };
         // A produced at least one CDC event for the AddNode.
         let events = hub_a.read("__commons__", 0, 0).events;
@@ -1422,7 +1423,7 @@ mod dispatch_write_tests {
     /// completes`) gets this right by going through a real `CarrierAuthority`;
     /// this derives the same scope the same way production does.
     fn carrier_tenant_scope(tenant: &str) -> String {
-        medulla_server_api::mutation_batch::opaque_coordinator_key(
+        medulla_server_api::batch_compile::opaque_coordinator_key(
             "carrier-tenant",
             "verified",
             tenant,

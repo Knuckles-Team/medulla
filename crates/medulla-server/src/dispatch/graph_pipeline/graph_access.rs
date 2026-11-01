@@ -2,7 +2,7 @@ use super::*;
 #[cfg(feature = "raft")]
 use medulla_raft::raft::RaftStateExt;
 pub(super) fn stamp_resource_reservation_timestamp(method: &mut Method) {
-    if !medulla_server_api::mutation_batch::is_resource_reservation_method(method) {
+    if !medulla_server_api::batch_compile::is_resource_reservation_method(method) {
         return;
     }
     let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
@@ -18,7 +18,7 @@ pub(super) fn stamp_resource_reservation_timestamp(method: &mut Method) {
 }
 
 pub(super) fn stamp_capacity_timestamp(method: &mut Method) {
-    if !medulla_server_api::mutation_batch::is_capacity_method(method) {
+    if !medulla_server_api::batch_compile::is_capacity_method(method) {
         return;
     }
     let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();

@@ -2958,7 +2958,7 @@ mod dist_compute {
     use medulla_types::acl::{AgentIdentity, AgentRole};
     use medulla_protocol_types::protocol::{DistAlgo, GraphType};
     use medulla_raft::raft::pregel;
-    use medulla_server_api::access::GraphReadAuthority;
+    use medulla_server_api::carrier::GraphReadAuthority;
     use medulla_protocol_types::result_contract::cluster::DistResult;
 
     fn props(n: &str) -> Vec<u8> {
@@ -3044,7 +3044,7 @@ mod dist_compute {
     }
 
     async fn read_authority(state: &Arc<RwLock<ServerState>>) -> GraphReadAuthority {
-        let context = medulla_server_api::auth::VerifiedRequestContext::verified_for_test(
+        let context = medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test(
             "pregel-test-authority",
         );
         let state = state.read().await;

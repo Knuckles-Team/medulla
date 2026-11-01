@@ -34,7 +34,7 @@ use super::stat_retention::Retention;
 use super::SharedState;
 use medulla_persistence::agent_library::AgentLibraryStore;
 use medulla_persistence::decision_jobs::decode_artifact;
-use medulla_server_api::access::CarrierAuthority;
+use medulla_server_api::carrier::CarrierAuthority;
 use medulla_server_api::sql_catalog_acl::relations::ReadOnlyRelations;
 use medulla_server_api::sql_catalog_acl::relations::Relation;
 

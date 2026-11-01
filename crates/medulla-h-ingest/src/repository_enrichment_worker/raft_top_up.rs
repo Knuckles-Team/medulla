@@ -347,7 +347,7 @@ pub(crate) async fn propose_top_up(
     let attempt_nonce = verified
         .attempt_nonce()
         .ok_or("ACCESS_DENIED: repository enrichment top-up needs transport nonce")?;
-    let access = medulla_server_api::access::CarrierAuthority::from_verified(verified)?;
+    let access = medulla_server_api::carrier::CarrierAuthority::from_verified(verified)?;
     let mutation = RaftMutationContext::from_verified_request(
         prepared.transition.replacement_batch.batch_id.clone(),
         request_id,

@@ -757,7 +757,7 @@ pub(super) async fn coordinated_sparql_http_update(
         return Response::err(req_id, "ACCESS_DENIED: SPARQL update has no verified actor");
     }
     let parent_method = Method::ApplyMutation {
-        event_type: medulla_server_api::sparql_http::SPARQL_HTTP_UPDATE_EVENT.to_string(),
+        event_type: medulla_server_api::api::dispatch_support::SPARQL_HTTP_UPDATE_EVENT.to_string(),
         query: query.clone(),
     };
     let backend = timed_read(state).await.persistence.clone();
@@ -767,13 +767,13 @@ pub(super) async fn coordinated_sparql_http_update(
     let Some(redb) = backend.as_redb() else {
         return Response::err(req_id, "SPARQL HTTP update requires durable redb");
     };
-    let parent_id = medulla_server_api::mutation_batch::opaque_request_key(
+    let parent_id = medulla_server_api::batch_compile::opaque_request_key(
         "sparql-http-parent",
         default_graph,
         req_id,
         &parent_method,
     );
-    let compensation_id = medulla_server_api::mutation_batch::opaque_coordinator_key(
+    let compensation_id = medulla_server_api::batch_compile::opaque_coordinator_key(
         "sparql-http-compensation",
         default_graph,
         &parent_id,
@@ -916,8 +916,8 @@ mod coordinator_restart_tests {
         digest: &str,
         event_type: &str,
     ) -> medulla_protocol_types::mutation_batch::MutationBatch {
-        medulla_server_api::mutation_batch::compile_opaque_digest(
-            medulla_server_api::mutation_batch::CompileBatch {
+        medulla_server_api::batch_compile::compile_opaque_digest(
+            medulla_server_api::batch_compile::CompileBatch {
                 batch_id: id,
                 request_id: 41,
                 attempt_nonce: None,

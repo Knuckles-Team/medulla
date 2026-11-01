@@ -7,6 +7,7 @@
 //! which is why they are separate functions rather than one body.
 
 #[cfg(feature = "redb")]
+use medulla_server_api::blob::BlobStateExt;
 use medulla_persistence::agent_library::AgentLibraryStateExt;
 use std::sync::Arc;
 #[cfg(feature = "redb")]
@@ -18,8 +19,8 @@ use medulla_protocol_types::protocol::Response;
 #[cfg(feature = "redb")]
 use medulla_protocol_types::protocol::ResultPayload;
 #[cfg(all(feature = "redb", feature = "blob"))]
-use medulla_server_api::access::CarrierAuthority;
-use medulla_server_api::auth::VerifiedRequestContext;
+use medulla_server_api::carrier::CarrierAuthority;
+use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 
 pub(crate) mod admin;
@@ -425,8 +426,8 @@ async fn import_blob_store(
     state
         .read()
         .await
-        .blob
-        .clone()
+        .blob_cursors()
+        .cloned()
         .ok_or_else(|| "ARCHIVE_MISSING: Blob substrate disabled".to_string())
 }
 

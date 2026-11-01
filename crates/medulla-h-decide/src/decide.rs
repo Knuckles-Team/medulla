@@ -121,7 +121,7 @@ pub use statistical::handle_decide;
 #[cfg(feature = "query")]
 async fn read_only_relations(
     state: &SharedState,
-    authority: &medulla_server_api::access::CarrierAuthority,
+    authority: &medulla_server_api::carrier::CarrierAuthority,
     query: &str,
 ) -> Option<medulla_server_api::sql_catalog_acl::SharedRelations> {
     #[cfg(feature = "decide")]
@@ -143,7 +143,7 @@ async fn read_only_relations(
 #[cfg(all(feature = "decide", feature = "query"))]
 async fn decision_source(
     state: &SharedState,
-    authority: &medulla_server_api::access::CarrierAuthority,
+    authority: &medulla_server_api::carrier::CarrierAuthority,
 ) -> Option<std::sync::Arc<dyn medulla_plan::exec::DecisionSource>> {
     let views = stat_view::DecisionViews::served(state, authority).await?;
     Some(views as std::sync::Arc<dyn medulla_plan::exec::DecisionSource>)
@@ -169,7 +169,7 @@ impl medulla_server_api::api::admin::DecideApi for DecideSeam {
     async fn read_only_relations(
         &self,
         state: &SharedState,
-        authority: &medulla_server_api::access::CarrierAuthority,
+        authority: &medulla_server_api::carrier::CarrierAuthority,
         query: &str,
     ) -> Option<medulla_server_api::sql_catalog_acl::SharedRelations> {
         read_only_relations(state, authority, query).await
@@ -179,7 +179,7 @@ impl medulla_server_api::api::admin::DecideApi for DecideSeam {
     async fn decision_source(
         &self,
         state: &SharedState,
-        authority: &medulla_server_api::access::CarrierAuthority,
+        authority: &medulla_server_api::carrier::CarrierAuthority,
     ) -> Option<std::sync::Arc<dyn medulla_plan::exec::DecisionSource>> {
         decision_source(state, authority).await
     }

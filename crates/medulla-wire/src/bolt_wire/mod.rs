@@ -28,6 +28,7 @@
 //! Bolt routing / cluster discovery (`ROUTE`) and the full Bolt 5.x feature set
 //! (notifications config, element-id, etc.) are not implemented.
 
+use medulla_server_api::cdc::CdcStateExt;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
@@ -43,10 +44,10 @@ use medulla_protocol_types::protocol::QueryResult;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
 use medulla_server_api::access::check_graph_access;
-use medulla_server_api::access::CarrierAuthority;
-use medulla_server_api::access::GraphReadAuthority;
+use medulla_server_api::carrier::CarrierAuthority;
+use medulla_server_api::carrier::GraphReadAuthority;
 use medulla_server_api::auth::verify_request_with_security_dir;
-use medulla_server_api::auth::VerifiedRequestContext;
+use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::mutation::MutationCtx;
 use medulla_server_api::mutation::MutationPlan;
 use medulla_server_api::state::ServerState;
@@ -404,7 +405,7 @@ async fn graph_context(session: &BoltSession) -> Result<(String, BoltGraphContex
             isolation: state.isolation.clone(),
             persistence: state.persistence.clone(),
             #[cfg(feature = "streaming")]
-            cdc: state.cdc.clone(),
+            cdc: state.cdc_hub().cloned(),
         },
     ))
 }
@@ -716,7 +717,7 @@ async fn begin_transaction(session: &BoltSession) -> Result<BoltTransaction, Bol
     })?;
     let (graph, context) = graph_context(session).await?;
     authorize_cypher(verified, &graph, &context, false)?;
-    let _guard = medulla_server_api::mutation_batch::lock_graph(&graph).await;
+    let _guard = medulla_server_api::routed_write_coalescer::lock_graph(&graph).await;
     Ok(BoltTransaction {
         base_snapshot: context.core.snapshot(),
         base_version: context.core.version(),

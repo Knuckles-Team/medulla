@@ -74,7 +74,7 @@ fn ontology(
             authority = authority.max(authority_of(source_id));
         }
         for triple in medulla_rdf::mapping::parse_turtle(document)? {
-            triples.push(medulla_server_api::api::admin::compose::scope_blank_nodes(
+            triples.push(medulla_server_api::schema_compose::scope_blank_nodes(
                 triple,
                 &scope[..16],
             )?);
@@ -91,7 +91,7 @@ pub(super) fn entail(
     template_classes: &[String],
 ) -> Result<Entailed, String> {
     let sources = core.schema_sources();
-    medulla_server_api::api::admin::compose::validate_and_compose(&sources)?;
+    medulla_server_api::schema_compose::validate_and_compose(&sources)?;
     let (triples, authority, source_key) = ontology(&sources)?;
     let classification = medulla_reasoner::owl::classify_hybrid_weighted(&triples);
     let reach = Reach {

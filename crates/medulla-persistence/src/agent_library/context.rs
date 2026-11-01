@@ -9,7 +9,7 @@ use medulla_types::contract::Nonce;
 pub fn bind_agent_library_context(
     store: &super::AgentLibraryStore,
     req_id: u64,
-    verified: &medulla_server_api::auth::VerifiedRequestContext,
+    verified: &medulla_server_api::authority_context::VerifiedRequestContext,
     mut context: medulla_agent_types::agent_library::AgentLibraryMutationContext,
     purpose_id: &str,
     requires_nonce: bool,

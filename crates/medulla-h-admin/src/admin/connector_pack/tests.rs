@@ -6,6 +6,7 @@
 //! test can observe another's committed state.
 
 #[cfg(feature = "redb")]
+use medulla_server_api::blob::BlobStateExt;
 use medulla_agent_types::agent_library::AgentLibraryLifecycle;
 use medulla_persistence::agent_library::AgentLibraryStateExt;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -71,9 +72,9 @@ impl Served {
         state.persist_dir = Some(dir.path().to_string_lossy().into_owned());
         let blob_dir = dir.path().join("blob");
         std::fs::create_dir_all(&blob_dir).unwrap();
-        state.blob = Some(medulla_server_api::api::ingest::cursors_for_test(
+        state.set_blob_cursors(Some(medulla_server_api::api::ingest::cursors_for_test(
             blob_dir.to_str().unwrap(),
-        ));
+        )));
         Self {
             dir,
             state: Arc::new(RwLock::new(state)),
@@ -602,8 +603,7 @@ pub(super) async fn seed_server_only_import(
         .state
         .read()
         .await
-        .blob
-        .as_ref()
+        .blob_cursors()
         .unwrap()
         .store
         .put_engine_bodies(TENANT, &[body], context.created_at_ms)

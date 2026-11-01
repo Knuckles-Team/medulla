@@ -41,6 +41,7 @@
 //! header. Object versioning, ACLs / bucket policies, and multipart ETag
 //! MD5-of-MD5 semantics are outside this adapter's intentionally narrow API.
 
+use medulla_server_api::blob::BlobStateExt;
 use std::collections::{BTreeMap, HashMap};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
@@ -1138,8 +1139,7 @@ pub async fn serve(addr: &str, state: Arc<RwLock<ServerState>>) -> std::io::Resu
         state
             .read()
             .await
-            .blob
-            .as_ref()
+            .blob_cursors()
             .map(|cursors| cursors.store.clone())
     };
     serve_with_blob_store(addr, state, selected_blob).await

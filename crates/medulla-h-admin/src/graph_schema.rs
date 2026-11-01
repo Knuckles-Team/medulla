@@ -27,6 +27,7 @@ mod virtual_graph_tests;
 #[cfg(test)]
 mod world_model_tests;
 
+use medulla_server_api::cdc::CdcStateExt;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -82,7 +83,7 @@ pub fn pack_projection_graph_name(
 pub(crate) async fn commit_pack_projection(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
-    verified: &medulla_server_api::auth::VerifiedRequestContext,
+    verified: &medulla_server_api::authority_context::VerifiedRequestContext,
     connector: &medulla_types::contract::ResourceId,
     record_id: &str,
     shapes: Vec<PackSchemaDocument>,
@@ -105,7 +106,7 @@ pub(crate) async fn commit_pack_projection(
         idempotency_key,
     )
     .await?;
-    let authority = medulla_server_api::access::CarrierAuthority::from_verified(verified)?;
+    let authority = medulla_server_api::carrier::CarrierAuthority::from_verified(verified)?;
     let (entry, isolation, persistence, materialization_manifest, write_coalescer) = {
         let state = state.read().await;
         let entry = state
@@ -131,7 +132,7 @@ pub(crate) async fn commit_pack_projection(
         );
     }
     #[cfg(feature = "streaming")]
-    let cdc = state.read().await.cdc.clone();
+    let cdc = state.read().await.cdc_hub().cloned();
     let method = Method::GraphSchema {
         op: Box::new(
             medulla_catalog_types::graph_schema::GraphSchemaOp::AttachPack {
@@ -329,7 +330,7 @@ pub(crate) fn apply_pack_source(
     )?;
     let source_id = format!("pack:{}", connector.as_str());
     let changed = sources.attach_dynamic(source_id, source)?;
-    medulla_server_api::api::admin::compose::validate_entering_schema(&sources)?;
+    medulla_server_api::schema_compose::validate_entering_schema(&sources)?;
     if changed {
         core.install_schema_sources(Arc::new(sources.clone()));
     }
@@ -386,7 +387,7 @@ fn compose_pack_documents(
             },
         )?;
         for triple in triples {
-            let triple = medulla_server_api::api::admin::compose::scope_blank_nodes(triple, &scope)
+            let triple = medulla_server_api::schema_compose::scope_blank_nodes(triple, &scope)
                 .map_err(|error| {
                     format!(
                         "ATTACH_PACK_SCHEMA_INVALID: {kind} member '{}': {error}",
@@ -439,9 +440,9 @@ fn apply(
         }
     };
     if matches!(op, GraphSchemaOp::Detach { .. }) {
-        medulla_server_api::api::admin::compose::validate_and_compose(&sources)?;
+        medulla_server_api::schema_compose::validate_and_compose(&sources)?;
     } else {
-        medulla_server_api::api::admin::compose::validate_entering_schema(&sources)?;
+        medulla_server_api::schema_compose::validate_entering_schema(&sources)?;
     }
     let composed_digest = sources.composed_digest().to_hex();
     if changed {

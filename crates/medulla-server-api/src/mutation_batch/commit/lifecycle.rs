@@ -7,8 +7,8 @@ use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::ResultPayload;
 use medulla_types::contract::Nonce;
 
-use super::super::compile::{compile_methods, CompileBatch};
-use super::super::digest::{lifecycle_batch_id, principal_fingerprint};
+use crate::batch_compile::compile::{compile_methods, CompileBatch};
+use crate::batch_compile::digest::{lifecycle_batch_id, principal_fingerprint};
 
 pub struct LifecycleCommitRequest<'a> {
     pub(crate) persistence: &'a Arc<dyn PersistenceBackend>,

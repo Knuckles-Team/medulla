@@ -703,13 +703,13 @@ pub const LOCAL_ONLY_CLUSTER_REFUSAL: &str =
 /// admitted here.
 pub const COORDINATED_APPLY_MUTATION_EVENTS: &[&str] = &[
     #[cfg(feature = "sparql-http")]
-    crate::sparql_http::SPARQL_HTTP_UPDATE_EVENT,
+    crate::api::dispatch_support::SPARQL_HTTP_UPDATE_EVENT,
 ];
 
 #[cfg(feature = "sparql-http")]
 pub(crate) fn is_sparql_http_update(method: &Method) -> bool {
     matches!(method, Method::ApplyMutation { event_type, .. }
-        if event_type == crate::sparql_http::SPARQL_HTTP_UPDATE_EVENT)
+        if event_type == crate::api::dispatch_support::SPARQL_HTTP_UPDATE_EVENT)
 }
 
 pub(super) fn consensus_apply_is_authorized() -> bool {
@@ -742,8 +742,8 @@ pub fn cluster_mutation_route(method: &Method) -> ClusterMutationRoute {
         };
     }
     if crate::mutation_apply::is_durable_mutation(method)
-        && !crate::mutation_batch::is_work_item_mutation_method(method)
-        && !crate::mutation_batch::is_capacity_method(method)
+        && !crate::batch_compile::is_work_item_mutation_method(method)
+        && !crate::batch_compile::is_capacity_method(method)
     {
         ClusterMutationRoute::ConsensusGraph
     } else {

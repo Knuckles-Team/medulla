@@ -24,7 +24,7 @@ use medulla_ann_codes::semantic_index_service::{
     sql_source_deletion_proof, sql_source_revision_for_epoch, SemanticSqlSourceReadPage,
     SemanticSqlSourceReadPort, SemanticSqlSourceRecord, SemanticSqlSourceValue,
 };
-use medulla_server_api::access::CarrierAuthority;
+use medulla_server_api::carrier::CarrierAuthority;
 #[cfg(feature = "query")]
 use medulla_server_api::compute::compute_off_lock;
 #[cfg(feature = "query")]
@@ -34,9 +34,9 @@ use medulla_server_api::sql_catalog_acl::{
 use medulla_transaction::{OutboxClaimBudget, OutboxClaimOutcome};
 
 use medulla_protocol_types::protocol::Method;
-use medulla_server_api::auth::VerifiedRequestContext;
-use medulla_server_api::mutation_batch::compile_opaque_method;
-use medulla_server_api::mutation_batch::CompileBatch;
+use medulla_server_api::authority_context::VerifiedRequestContext;
+use medulla_server_api::batch_compile::compile_opaque_method;
+use medulla_server_api::batch_compile::CompileBatch;
 use medulla_server_api::sql_catalog_acl::create_owned_table;
 use medulla_server_api::sql_catalog_acl::grant;
 use medulla_server_api::sql_catalog_acl::revoke;

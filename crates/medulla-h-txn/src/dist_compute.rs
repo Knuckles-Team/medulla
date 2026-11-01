@@ -7,6 +7,7 @@
 //! views of those results. The heavy superstep loop runs off the reactor.
 
 #[cfg(feature = "redb")]
+use medulla_server_api::cdc::CdcStateExt;
 use medulla_persistence::AsRedb;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -14,7 +15,7 @@ use tokio::sync::RwLock;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
-use medulla_server_api::access::GraphReadAuthority;
+use medulla_server_api::carrier::GraphReadAuthority;
 use medulla_server_api::state::ServerState;
 // The algo-only Pregel matview lives behind `compute-dist` (it runs cross-shard
 // supersteps over multi-Raft groups). The plan-backed matview path below shares this
@@ -474,8 +475,7 @@ async fn index_matview(state: &Arc<RwLock<ServerState>>, def: PlanMatView) {
     // Watermark AFTER seeding (mirrors `cdc::register_query`): later deltas fold from here.
     let through_seq = {
         let s = state.read().await;
-        s.cdc
-            .as_ref()
+        s.cdc_hub()
             .map(|hub| hub.head_seq(&def.graph))
             .unwrap_or(0)
     };

@@ -153,7 +153,7 @@ async fn signed_issuer_is_stamped_and_retry_retains_attribution() {
     let provenance = issued.lease.unwrap().host_start_provenance.unwrap();
     assert_eq!(
         provenance.issuer_ref,
-        medulla_server_api::mutation_batch::principal_fingerprint(ISSUER).unwrap()
+        medulla_server_api::batch_compile::principal_fingerprint(ISSUER).unwrap()
     );
     assert_ne!(provenance.issuer_ref, ISSUER);
 }
@@ -238,6 +238,6 @@ async fn signed_wrong_tenant_and_forged_provenance_refuse_without_mutation() {
             .host_start_provenance
             .unwrap()
             .issuer_ref,
-        medulla_server_api::mutation_batch::principal_fingerprint(ISSUER).unwrap()
+        medulla_server_api::batch_compile::principal_fingerprint(ISSUER).unwrap()
     );
 }

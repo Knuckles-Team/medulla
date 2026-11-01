@@ -39,8 +39,8 @@ pub(super) fn compile_batch_context<'a>(
     created_at_ms: u64,
     default_surface: medulla_mutation_types::mutation_scope::MutationSurface,
     authoritative_state: Option<medulla_protocol_types::mutation_batch::MutationStateDescriptor>,
-) -> crate::mutation_batch::CompileBatch<'a> {
-    crate::mutation_batch::CompileBatch {
+) -> crate::batch_compile::CompileBatch<'a> {
+    crate::batch_compile::CompileBatch {
         batch_id,
         request_id: ctx.req_id,
         attempt_nonce: ctx.attempt_nonce,
@@ -203,7 +203,7 @@ fn compile_replay_batch(
     authoritative_state: Option<medulla_protocol_types::mutation_batch::MutationStateDescriptor>,
     methods: Vec<Method>,
 ) -> Result<medulla_protocol_types::mutation_batch::MutationBatch, Response> {
-    crate::mutation_batch::compile_methods(
+    crate::batch_compile::compile_methods(
         compile_batch_context(
             ctx,
             batch_id,
@@ -377,7 +377,7 @@ fn unexpected_fresh_replay(ctx: &MutationCtx<'_>) -> Response {
 /// [`super::conditional::commit_conditional_commit_staged`].
 pub(super) fn compile_batch_and_encode_result(
     ctx: &MutationCtx<'_>,
-    compile: crate::mutation_batch::CompileBatch<'_>,
+    compile: crate::batch_compile::CompileBatch<'_>,
     methods: Vec<Method>,
     payload: &ResultPayload,
 ) -> Result<
@@ -387,7 +387,7 @@ pub(super) fn compile_batch_and_encode_result(
     ),
     Response,
 > {
-    let batch = match crate::mutation_batch::compile_methods(compile, methods) {
+    let batch = match crate::batch_compile::compile_methods(compile, methods) {
         Ok(batch) => batch,
         Err(error) => {
             return Err(Response::err(

@@ -514,8 +514,8 @@ async fn bind_for_requires_owner_catalog_and_rechecks_approval() {
         .await,
     );
 
-    let caller = medulla_server_api::access::CarrierAuthority::from_verified(
-        &medulla_server_api::auth::VerifiedRequestContext::verified_for_test(ADMIN),
+    let caller = medulla_server_api::carrier::CarrierAuthority::from_verified(
+        &medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test(ADMIN),
     )
     .unwrap();
     let spec = medulla_types::wire::ForeignSourceSpec::Mcp {
@@ -691,8 +691,8 @@ async fn bind_for_requires_owner_catalog_and_rechecks_approval() {
         "{spec_refusal}"
     );
 
-    let other = medulla_server_api::access::CarrierAuthority::from_verified(
-        &medulla_server_api::auth::VerifiedRequestContext::verified_for_test("other-agent"),
+    let other = medulla_server_api::carrier::CarrierAuthority::from_verified(
+        &medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test("other-agent"),
     )
     .unwrap();
     let refused = match catalog.bind_for(
@@ -717,8 +717,8 @@ async fn bind_for_requires_owner_catalog_and_rechecks_approval() {
         "{refused}"
     );
 
-    let wrong_tenant = medulla_server_api::access::CarrierAuthority::from_verified(
-        &medulla_server_api::auth::VerifiedRequestContext::verified_for_test_in_tenant(
+    let wrong_tenant = medulla_server_api::carrier::CarrierAuthority::from_verified(
+        &medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test_in_tenant(
             ADMIN,
             "tenant-other",
         ),

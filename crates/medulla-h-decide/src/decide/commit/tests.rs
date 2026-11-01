@@ -26,7 +26,7 @@ use tokio::sync::RwLock;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::ResultPayload;
 use medulla_server_api::api::persistence::PersistenceBackend;
-use medulla_server_api::auth::VerifiedRequestContext;
+use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_persistence::agent_library::AgentLibraryStore;
 use medulla_persistence::decision_record::tests::commit_context;
 use medulla_persistence::decision_record::tests::decided;

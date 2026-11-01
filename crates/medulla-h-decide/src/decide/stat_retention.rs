@@ -10,6 +10,7 @@
 //! is still the attested one, but nothing can be re-derived. Summaries (the
 //! record minus its matrix) are kept for ever.
 
+use medulla_server_api::blob::BlobStateExt;
 use medulla_decision_types::{
     decision::statistical::body::canonical_body_bytes,
     decision::statistical::body::content_digest_of,
@@ -37,7 +38,7 @@ pub(super) struct Retention {
     #[cfg(feature = "blob")]
     pub(super) blob: Option<std::sync::Arc<medulla_server_api::blob::BlobCursors>>,
     #[cfg(feature = "blob")]
-    pub(super) authority: Option<medulla_server_api::access::CarrierAuthority>,
+    pub(super) authority: Option<medulla_server_api::carrier::CarrierAuthority>,
 }
 
 impl Retention {
@@ -54,15 +55,15 @@ impl Retention {
     /// The served blob store and the caller's carrier authority.
     pub(super) fn of(
         state: &medulla_server_api::state::ServerState,
-        verified: &medulla_server_api::auth::VerifiedRequestContext,
+        verified: &medulla_server_api::authority_context::VerifiedRequestContext,
     ) -> Self {
         #[cfg(not(feature = "blob"))]
         let _ = (state, verified);
         Self {
             #[cfg(feature = "blob")]
-            blob: state.blob.clone(),
+            blob: state.blob_cursors().cloned(),
             #[cfg(feature = "blob")]
-            authority: medulla_server_api::access::CarrierAuthority::from_verified(verified).ok(),
+            authority: medulla_server_api::carrier::CarrierAuthority::from_verified(verified).ok(),
         }
     }
 }

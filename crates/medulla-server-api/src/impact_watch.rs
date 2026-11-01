@@ -28,7 +28,7 @@ use std::time::{Duration, Instant};
 use dashmap::DashMap;
 use tokio::sync::RwLock;
 
-use crate::auth::VerifiedRequestContext;
+use crate::authority_context::VerifiedRequestContext;
 use crate::state::ServerState;
 
 #[cfg(feature = "security")]

@@ -21,8 +21,8 @@ use tokio::sync::RwLock;
 use medulla_protocol_types::mutation_batch::MutationBatch;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
-use medulla_server_api::access::CarrierAuthority;
-use medulla_server_api::auth::VerifiedRequestContext;
+use medulla_server_api::carrier::CarrierAuthority;
+use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 
 mod authorization;
@@ -143,7 +143,7 @@ fn compile_batch(
         created_at_ms: now_ms,
     }
     .compile(store, |context| {
-        medulla_server_api::mutation_batch::compile_sql_source_batch(context, request)
+        medulla_server_api::batch_compile::compile_sql_source_batch(context, request)
     })
 }
 

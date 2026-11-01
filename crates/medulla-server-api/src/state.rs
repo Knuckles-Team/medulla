@@ -281,7 +281,7 @@ pub struct ServerState {
     /// fall to the dispatch "not available" catch-all). The chunk bytes live in
     /// `{persist_dir}/blob.redb`, entirely off the inline node/edge KV.
     #[cfg(feature = "blob")]
-    pub blob: Option<Arc<crate::blob::BlobCursors>>,
+    pub blob: Option<ErasedHandle>,
     /// Idle TTL (seconds) after which an open blob cursor is reaped
     /// (`MEDULLA_BLOB_CURSOR_TTL_SECS`, default 300).
     #[cfg(feature = "blob")]
@@ -324,7 +324,7 @@ pub struct ServerState {
     /// streaming handler reads the feed / maintains continuous queries / serves watch
     /// + triggers off it. PURE in-memory (bounded ring + Notify) — no second redb file.
     #[cfg(feature = "streaming")]
-    pub cdc: Option<Arc<crate::cdc::CdcHub>>,
+    pub cdc: std::sync::OnceLock<Option<ErasedHandle>>,
     /// WASM-sandboxed UDF catalog (CONCEPT:MEDULLA-KG.query.rowset-execution, feature `wasm-udf`). Holds the
     /// compiled, cached `UdfModule`s an agent pushed via `RegisterUdf`, keyed by
     /// `(verified owner, id)` — tenant+principal (EH-374); `RunUdf` looks up + runs only
@@ -354,11 +354,11 @@ pub struct ServerState {
     /// RLS-filtered (they are not in the local snapshot). Not per-graph; in memory only.
     /// Always present (empty) with the feature on.
     #[cfg(feature = "federation")]
-    pub foreign_sources: Arc<crate::api::query_txn::foreign_catalog::ForeignSourceCatalog>,
+    pub foreign_sources: std::sync::OnceLock<ErasedHandle>,
     /// Bounded host-driven foreign-read page buffers.  Durable approval remains
     /// in the Agent Library; this map is only request-scoped execution state.
     #[cfg(feature = "federation")]
-    pub foreign_reads: Arc<crate::api::query_txn::foreign_read::ForeignReadSessions>,
+    pub foreign_reads: std::sync::OnceLock<ErasedHandle>,
     /// Generic namespaced Key→Value store (CONCEPT:MEDULLA-KG.storage.namespaced-kv-surface, feature `kv`). `Some` on a
     /// `kv` build: a durable `{persist_dir}/kv.redb` when a persist dir is set, else an
     /// in-memory scratch map. The `Kv*` handlers get/put/delete/scan/cas through it; it
@@ -367,7 +367,7 @@ pub struct ServerState {
     /// graph shards. `None` ⇒ the Kv* variants fall to the dispatch "not available"
     /// catch-all.
     #[cfg(feature = "kv")]
-    pub kv: Option<Arc<crate::kv::KvStore>>,
+    pub kv: Option<ErasedHandle>,
     /// LTAP lakehouse materialization manager (CONCEPT:MEDULLA-KG.storage.lsn-as-snapshot-returns engine-side seam, feature
     /// `lake`, INT-P2-3). Owns the in-process Iceberg-REST catalog + every table's
     /// [`medulla_lake::LakeTable`] (schema + durable LSN snapshot), the blob-CAS path index
@@ -505,15 +505,15 @@ impl ServerState {
             // Keep field composition side-effect-free. Production startup
             // installs the optional Kafka sink after constructing state.
             #[cfg(feature = "streaming")]
-            cdc: Some(Arc::default()),
+            cdc: std::sync::OnceLock::new(),
             #[cfg(feature = "wasm-udf")]
             udf_registry: Arc::default(),
             #[cfg(feature = "compute-dist")]
             matviews: Arc::default(),
             #[cfg(feature = "federation")]
-            foreign_sources: Arc::default(),
+            foreign_sources: Default::default(),
             #[cfg(feature = "federation")]
-            foreign_reads: Arc::default(),
+            foreign_reads: Default::default(),
             #[cfg(feature = "kv")]
             kv: None,
             #[cfg(feature = "lake")]
@@ -554,23 +554,6 @@ impl ServerState {
             roles: Vec::new(),
         });
         isolation
-    }
-}
-
-impl ServerState {
-    pub fn request_authority(
-        &self,
-        request: &medulla_protocol_types::protocol::Request,
-    ) -> Result<crate::authority_context::VerifiedRequestContext, String> {
-        if self.local_anonymous {
-            crate::anonymous::request_authority(request)
-        } else {
-            crate::auth::verify_request_with_security_dir(
-                &self.auth_secret,
-                request,
-                self.persist_dir.as_deref(),
-            )
-        }
     }
 }
 
@@ -616,10 +599,6 @@ mod construction_tests {
         );
         assert!(state.per_graph_inflight.is_empty() && state.open_txns.is_empty());
         assert!(state.persist_dir.is_none() && state.persistence.is_none());
-        #[cfg(feature = "streaming")]
-        assert!(state.cdc.is_some());
-        #[cfg(feature = "federation")]
-        assert!(state.foreign_sources.is_empty());
         #[cfg(feature = "blob")]
         assert_eq!(state.blob_cursor_ttl_secs, 300);
     }

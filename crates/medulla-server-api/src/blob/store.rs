@@ -331,7 +331,7 @@ fn blob_scope_identity(
         tenant,
         DurabilityDomain::BlobStore,
         LogicalName::new(resource.to_string())?,
-        IncarnationId::new(crate::mutation_batch::COMPILED_BATCH_INCARNATION)?,
+        IncarnationId::new(crate::batch_compile::COMPILED_BATCH_INCARNATION)?,
     )
 }
 

@@ -153,7 +153,7 @@ pub(super) fn gather_embeddings(
 #[derive(Clone, Copy)]
 pub(crate) struct MiningTsdbBind<'a> {
     pub graph_name: &'a str,
-    pub read_authority: Option<&'a medulla_server_api::access::GraphReadAuthority>,
+    pub read_authority: Option<&'a medulla_server_api::carrier::GraphReadAuthority>,
     pub tsdb_store: Option<&'a Arc<medulla_tsdb::store::SeriesStore>>,
 }
 

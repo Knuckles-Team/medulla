@@ -658,8 +658,8 @@ mod raft_response_receipt_tests {
     fn cas_receipt(replayed: bool) -> medulla_protocol_types::mutation_batch::MutationBatchCommit {
         let conditions = rmp_serde::to_vec_named(&serde_json::json!({"epoch": 0})).unwrap();
         let updates = rmp_serde::to_vec_named(&serde_json::json!({"epoch": 1})).unwrap();
-        let batch = medulla_server_api::mutation_batch::compile_methods(
-            medulla_server_api::mutation_batch::CompileBatch {
+        let batch = medulla_server_api::batch_compile::compile_methods(
+            medulla_server_api::batch_compile::CompileBatch {
                 batch_id: "raft-receipt-cas",
                 request_id: 7,
                 attempt_nonce: None,

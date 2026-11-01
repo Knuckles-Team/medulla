@@ -62,7 +62,7 @@ use medulla_program::ProgramRevisionIdentity;
 
 use medulla_protocol_types::mutation_batch::MutationBatch;
 use medulla_protocol_types::protocol::Response;
-use medulla_server_api::access::CarrierAuthority;
+use medulla_server_api::carrier::CarrierAuthority;
 use medulla_server_api::state::ServerState;
 
 /// The engine build that ran a job (CONCEPT:INT-P2-1 lineage) — `CARGO_PKG_VERSION`

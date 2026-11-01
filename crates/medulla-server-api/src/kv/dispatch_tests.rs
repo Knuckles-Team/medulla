@@ -1,5 +1,6 @@
 //! Wire-level tests: the `Method::Kv*` ops through the real `dispatch`.
 
+use crate::kv::KvStateExt;
 use crate::auth::build_shared_test_request;
 use crate::auth::compute_verified_envelope_token;
 use crate::auth::dispatch_test_on_heap as dispatch_on_heap;
@@ -22,7 +23,7 @@ fn state_with_kv(dir: &str) -> Arc<RwLock<ServerState>> {
     state.persist_dir = Some(dir.to_string());
     #[cfg(feature = "kv")]
     {
-        state.kv = Some(kv);
+        state.set_kv_store(Some(kv));
     }
     #[cfg(not(feature = "kv"))]
     let _ = kv;
@@ -447,7 +448,7 @@ async fn kv_shared_namespace_spans_principals_and_needs_kv_shared_write() {
     let kv = Arc::new(super::KvStore::open(Some(&dir.to_string_lossy())).unwrap());
     let mut state = ServerState::new_for_test(SECRET, crate::access::two_agent_isolation());
     state.persist_dir = Some(dir.to_string_lossy().to_string());
-    state.kv = Some(kv);
+    state.set_kv_store(Some(kv));
     let state = Arc::new(RwLock::new(state));
     let as_agent =
         |agent: &'static str, scopes: &'static [&'static str], nonce: &'static str| Signed {

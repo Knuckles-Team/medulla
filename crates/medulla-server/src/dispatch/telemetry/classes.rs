@@ -31,7 +31,7 @@ use medulla_stream::telemetry::EntityClass;
 use medulla_types::contract::Digest256;
 use parking_lot::Mutex;
 
-use medulla_server_api::api::admin::compose::validate_and_compose;
+use medulla_server_api::schema_compose::validate_and_compose;
 
 /// The classes telemetry binds to.
 const TARGET_CLASSES: [EntityClass; 6] = [

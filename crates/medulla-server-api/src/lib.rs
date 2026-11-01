@@ -24,10 +24,17 @@ pub mod auth;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod authority_context;
 
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod batch_compile;
+
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
+
 #[cfg(feature = "blob")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod blob;
+
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod carrier;
 
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[cfg(all(feature = "result-cache", feature = "streaming"))]
@@ -171,3 +178,7 @@ pub mod viz_engine;
 #[cfg(feature = "viz-static-export")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod viz_provenance;
+
+#[cfg(feature = "shacl")]
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod schema_compose;

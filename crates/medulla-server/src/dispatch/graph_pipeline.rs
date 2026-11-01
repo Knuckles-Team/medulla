@@ -1,4 +1,5 @@
 #[cfg(test)]
+use medulla_server_api::blob::BlobStateExt;
 use super::change_envelope::decode_multi_graph_batches;
 use super::change_envelope::route_change_envelope_ops;
 #[cfg(feature = "redb")]
@@ -1694,7 +1695,7 @@ mod blob_dispatch_tests {
         // through dispatch's real-time clock).
         let retention = BlobRetentionPolicy::new(0, DEFAULT_UPLOAD_TTL_MS)
             .expect("zero GC grace with the default upload TTL is a valid retention policy");
-        state.blob = Some(Arc::new(BlobCursors::new(store).with_retention(retention)));
+        state.set_blob_cursors(Some(Arc::new(BlobCursors::new(store).with_retention(retention))));
         state.blob_cursor_ttl_secs = 300;
         Arc::new(RwLock::new(state))
     }
@@ -1959,7 +1960,7 @@ mod blob_dispatch_tests {
             assert!(matches!(r.result, Some(ResultPayload::Count(1))));
 
             // Dedup: re-upload identical content → same digest, ZERO new chunks.
-            let store = state.read().await.blob.as_ref().unwrap().store.clone();
+            let store = state.read().await.blob_cursors().unwrap().store.clone();
             let chunks_before = store.chunk_count().unwrap();
             let digest2 = upload(&state, &mut id, &full, chunk_size).await;
             let chunks_after = store.chunk_count().unwrap();

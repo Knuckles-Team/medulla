@@ -10,6 +10,8 @@ use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::protocol::{Method, ResultPayload};
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_server_api::mutation_batch::*;
+use medulla_server_api::batch_compile::*;
+use medulla_server_api::routed_write_coalescer::*;
 use medulla_types::contract::Nonce;
 use sha2::{Digest, Sha256};
 

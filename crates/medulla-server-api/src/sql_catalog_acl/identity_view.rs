@@ -20,7 +20,7 @@ use medulla_identity_types::identity::SqlType;
 use medulla_tables::{schema::Column, schema::ColumnType, schema::TableSchema};
 
 use super::AuthorizedReadStore;
-use crate::access::CarrierAuthority;
+use crate::carrier::CarrierAuthority;
 
 /// The reserved relation-name prefix (`__identity__users`, …).
 pub(crate) const IDENTITY_RELATION_PREFIX: &str = "__identity__";

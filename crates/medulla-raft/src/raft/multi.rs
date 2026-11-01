@@ -1205,7 +1205,7 @@ impl MultiRaft {
     }
 
     async fn commit_placement_method(&self, method: &Method) -> Result<RaftResponse, String> {
-        let coordinator_id = medulla_server_api::mutation_batch::opaque_request_key(
+        let coordinator_id = medulla_server_api::batch_compile::opaque_request_key(
             "placement-operation",
             placement::PLACEMENT_GRAPH,
             0,
@@ -1221,7 +1221,7 @@ impl MultiRaft {
         ordinal: u64,
         method: &Method,
     ) -> Result<RaftResponse, String> {
-        let coordinator_id = medulla_server_api::mutation_batch::opaque_request_key(
+        let coordinator_id = medulla_server_api::batch_compile::opaque_request_key(
             "placement-plan",
             operation_id,
             ordinal,
@@ -1709,19 +1709,19 @@ mod placement_identity_tests {
     #[test]
     fn identical_methods_from_distinct_plans_get_distinct_child_keys() {
         let method = PlacementCatalog::epoch_cas_method(4, 5);
-        let first = medulla_server_api::mutation_batch::opaque_request_key(
+        let first = medulla_server_api::batch_compile::opaque_request_key(
             "placement-plan",
             "plan-a",
             0,
             &method,
         );
-        let second = medulla_server_api::mutation_batch::opaque_request_key(
+        let second = medulla_server_api::batch_compile::opaque_request_key(
             "placement-plan",
             "plan-b",
             0,
             &method,
         );
-        let later_step = medulla_server_api::mutation_batch::opaque_request_key(
+        let later_step = medulla_server_api::batch_compile::opaque_request_key(
             "placement-plan",
             "plan-a",
             1,

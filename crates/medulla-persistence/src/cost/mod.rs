@@ -463,7 +463,7 @@ fn graph_matches_tenant(graph_name: &str, verified_tenant: &str) -> bool {
 /// the served RPC always uses this authority-bearing path.
 pub async fn collect_resource_stats_authorized(
     state: &Arc<RwLock<ServerState>>,
-    authority: &medulla_server_api::access::GraphReadAuthority,
+    authority: &medulla_server_api::carrier::GraphReadAuthority,
     verified_tenant: &str,
     request: ResourceStatsRequest,
 ) -> Result<ResourceSnapshot, String> {

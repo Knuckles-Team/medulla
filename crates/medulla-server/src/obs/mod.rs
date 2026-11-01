@@ -56,6 +56,7 @@ pub(crate) mod writer;
 
 pub use writer::writer_auth_configured;
 
+use medulla_server_api::cdc::CdcStateExt;
 use std::collections::{BTreeMap, HashMap};
 use std::path::PathBuf;
 use std::sync::atomic::AtomicU64;
@@ -1388,7 +1389,7 @@ mod tests {
         // Preserve this fixture's prior omission of the optional CDC hub.
         #[cfg(feature = "streaming")]
         {
-            state.cdc = None;
+            state.set_cdc_hub(None);
         }
         std::sync::Arc::new(tokio::sync::RwLock::new(state))
     }

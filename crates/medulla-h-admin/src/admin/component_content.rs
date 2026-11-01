@@ -1,12 +1,13 @@
 //! `AgentComponent.content`: serve one component revision's verified bytes.
 
+use medulla_server_api::blob::BlobStateExt;
 use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
-use medulla_server_api::auth::VerifiedRequestContext;
+use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_persistence::agent_library::AgentLibraryStore;
 use medulla_server_api::state::ServerState;
 
@@ -81,7 +82,7 @@ async fn serve_component_content(
             Ok(pointer) => pointer,
             Err(error) => return Response::err(req_id, error),
         };
-        let blob = match state.read().await.blob.clone() {
+        let blob = match state.read().await.blob_cursors().cloned() {
             Some(blob) => blob,
             None => return Response::err(req_id, "AgentComponent.content Blob substrate disabled"),
         };

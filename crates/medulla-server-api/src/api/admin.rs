@@ -1,9 +1,5 @@
 //! Admin and decide handler seams (`AdminApi`, `DecideApi`).
 
-#[cfg(feature = "shacl")]
-pub(crate) mod compiled;
-#[cfg(feature = "shacl")]
-pub mod compose;
 #[cfg(feature = "redb")]
 pub mod saga;
 #[cfg(feature = "shacl")]
@@ -56,7 +52,7 @@ pub trait DecideApi: Send + Sync {
     async fn read_only_relations(
         &self,
         state: &Arc<RwLock<ServerState>>,
-        authority: &crate::access::CarrierAuthority,
+        authority: &crate::carrier::CarrierAuthority,
         query: &str,
     ) -> Option<crate::sql_catalog_acl::SharedRelations>;
 
@@ -65,16 +61,40 @@ pub trait DecideApi: Send + Sync {
     async fn decision_source(
         &self,
         state: &Arc<RwLock<ServerState>>,
-        authority: &crate::access::CarrierAuthority,
+        authority: &crate::carrier::CarrierAuthority,
     ) -> Option<Arc<dyn medulla_plan::exec::DecisionSource>>;
 }
 
 /// The installed decide seam of `state`, or `None` before installation.
 pub async fn decide_seam(state: &Arc<RwLock<ServerState>>) -> Option<Arc<dyn DecideApi>> {
-    state.read().await.seams.decide.get().cloned()
+    state
+        .read()
+        .await
+        .seams
+        .decide
+        .get()
+        .and_then(|h| h.downcast_ref::<Arc<dyn DecideApi>>())
+        .cloned()
+}
+
+/// Install the decide seam; `false` when it was already installed.
+pub fn install_decide_seam(reg: &crate::api::registry::SeamRegistry, api: Arc<dyn DecideApi>) -> bool {
+    reg.decide.set(Arc::new(api) as crate::state::ErasedHandle).is_ok()
 }
 
 /// The installed admin seam of `state`, or `None` before installation.
 pub async fn admin_seam(state: &Arc<RwLock<ServerState>>) -> Option<Arc<dyn AdminApi>> {
-    state.read().await.seams.admin.get().cloned()
+    state
+        .read()
+        .await
+        .seams
+        .admin
+        .get()
+        .and_then(|h| h.downcast_ref::<Arc<dyn AdminApi>>())
+        .cloned()
+}
+
+/// Install the admin seam; `false` when it was already installed.
+pub fn install_admin_seam(reg: &crate::api::registry::SeamRegistry, api: Arc<dyn AdminApi>) -> bool {
+    reg.admin.set(Arc::new(api) as crate::state::ErasedHandle).is_ok()
 }

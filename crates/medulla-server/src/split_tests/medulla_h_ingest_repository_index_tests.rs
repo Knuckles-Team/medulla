@@ -11,8 +11,8 @@ use medulla_h_ingest::repository_index::{
     lower, seal, IndexWriteSet, BATCH_TOO_LARGE, REDACTED_HOST_IDENTITY, REPOSITORY_LABELS,
 };
 use medulla_protocol_types::protocol::Method;
-use medulla_server_api::mutation_batch::compile_methods;
-use medulla_server_api::mutation_batch::CompileBatch;
+use medulla_server_api::batch_compile::compile_methods;
+use medulla_server_api::batch_compile::CompileBatch;
 
 fn node(id: &str, kind: &str, properties: &[(&str, &str)]) -> ExtractedNode {
     ExtractedNode {

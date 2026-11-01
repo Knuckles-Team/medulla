@@ -1,5 +1,7 @@
 use std::sync::{Arc, OnceLock};
 
+use crate::routed_write_coalescer::{lock_stripe, striped_lock};
+
 use sha2::{Digest, Sha256};
 use tokio::sync::{Mutex, OwnedMutexGuard};
 
@@ -11,17 +13,7 @@ use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::ResultPayload;
 use medulla_types::contract::Nonce;
 
-use super::super::compile::{authoritative_graph_version, compile_methods, CompileBatch};
-
-/// One deterministic async serialization lane for each logical graph. Transaction
-/// Commit and the ordinary mutation gateway both acquire it, so OCC validation
-/// cannot race a gateway write while its durable-before-RAM batch is in flight. A
-/// fixed number of deterministic stripes bounds memory across create/delete churn; a hash
-/// collision only serializes two unrelated graphs and cannot weaken correctness.
-pub async fn lock_graph(graph: &str) -> OwnedMutexGuard<()> {
-    static LOCKS: OnceLock<Vec<Arc<Mutex<()>>>> = OnceLock::new();
-    striped_lock(&LOCKS, graph).await
-}
+use crate::batch_compile::compile::{authoritative_graph_version, compile_methods, CompileBatch};
 
 /// The serialization lane for one transaction coordinator (a Commit parent
 /// receipt id). It is a SEPARATE stripe table from [`lock_graph`], and that is
@@ -33,30 +25,6 @@ pub async fn lock_graph(graph: &str) -> OwnedMutexGuard<()> {
 pub async fn lock_txn_coordinator(parent_id: &str) -> OwnedMutexGuard<()> {
     static LOCKS: OnceLock<Vec<Arc<Mutex<()>>>> = OnceLock::new();
     striped_lock(&LOCKS, parent_id).await
-}
-
-const LOCK_STRIPES: usize = 1024;
-
-/// The deterministic stripe a lane key maps to (FNV-1a).
-pub(crate) fn lock_stripe(key: &str) -> usize {
-    let mut hash = 0xcbf2_9ce4_8422_2325u64;
-    for byte in key.as_bytes() {
-        hash ^= u64::from(*byte);
-        hash = hash.wrapping_mul(0x0000_0100_0000_01b3);
-    }
-    (hash as usize) % LOCK_STRIPES
-}
-
-async fn striped_lock(
-    table: &'static OnceLock<Vec<Arc<Mutex<()>>>>,
-    key: &str,
-) -> OwnedMutexGuard<()> {
-    let locks = table.get_or_init(|| {
-        (0..LOCK_STRIPES)
-            .map(|_| Arc::new(Mutex::new(())))
-            .collect()
-    });
-    Arc::clone(&locks[lock_stripe(key)]).lock_owned().await
 }
 
 /// Parameters for one internal graph write. Keeping the coordinator's options
@@ -610,7 +578,8 @@ pub(super) fn apply_projectable_method(core: &GraphCore, method: &Method) -> Res
 
 #[cfg(test)]
 mod lane_tests {
-    use super::{lock_graph, lock_stripe, lock_txn_coordinator};
+    use super::lock_txn_coordinator;
+    use crate::routed_write_coalescer::{lock_graph, lock_stripe};
 
     /// A Commit holds its coordinator lane and then its graph lane. A parent id
     /// that shares the graph's stripe must not wait on that graph lane.

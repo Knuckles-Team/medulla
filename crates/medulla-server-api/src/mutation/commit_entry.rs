@@ -293,7 +293,7 @@ where
     // lock ONCE PER BATCH in the routed-write-coalescer worker and calls
     // [`commit_mutation_body`] once per queued op inside that one hold — see its
     // doc comment for the invariant this preserves and why it must.
-    let _mutation_guard = crate::mutation_batch::lock_graph(ctx.graph_name).await;
+    let _mutation_guard = crate::routed_write_coalescer::lock_graph(ctx.graph_name).await;
     commit_mutation_body(ctx, plan, method, apply).await
 }
 
@@ -363,7 +363,7 @@ where
     };
 
     let fname = medulla_kernel::persist::sanitize(ctx.graph_name);
-    let batch_id = crate::mutation_batch::opaque_idempotency_key_for_context(
+    let batch_id = crate::batch_compile::opaque_idempotency_key_for_context(
         "rpc",
         ctx.tenant_scope,
         ctx.graph_name,

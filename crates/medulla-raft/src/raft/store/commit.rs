@@ -1,3 +1,4 @@
+use medulla_server_api::cdc::CdcStateExt;
 use super::*;
 
 pub(super) struct MutationBatchCommitArgs<'a> {
@@ -69,8 +70,8 @@ impl MedullaStore {
         // policy-audited answer for the REAL replicated method must be captured
         // here or it becomes unrecoverable.
         let audited = medulla_capabilities::policy(&durable_method).audited;
-        let batch = medulla_server_api::mutation_batch::compile_methods(
-            medulla_server_api::mutation_batch::CompileBatch {
+        let batch = medulla_server_api::batch_compile::compile_methods(
+            medulla_server_api::batch_compile::CompileBatch {
                 batch_id,
                 request_id: authority.request_id,
                 attempt_nonce: authority.attempt_nonce,
@@ -384,7 +385,7 @@ impl MedullaStore {
         let Some(command) = modality_command else {
             return;
         };
-        let hub = self.ctx.state.read().await.cdc.clone();
+        let hub = self.ctx.state.read().await.cdc_hub().cloned();
         if let Some(hub) = hub.as_ref() {
             medulla_server_api::cdc::emit_served_modality(hub, &req.graph_name, command.modality);
         }

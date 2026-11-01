@@ -85,7 +85,7 @@ pub(crate) async fn handle_graphql_commit_txn(
     graph_name: &str,
     core: &Arc<GraphCore>,
     txn_id: &str,
-    carrier: &medulla_server_api::access::CarrierAuthority,
+    carrier: &medulla_server_api::carrier::CarrierAuthority,
 ) -> Result<Response, Method> {
     let committed = match txn_seam(state).await {
         Ok(api) => {
@@ -124,7 +124,7 @@ pub(crate) async fn handle_graphql_staging_mutation(
     req_id: u64,
     read_authority: Option<&GraphReadAuthority>,
     core: &Arc<GraphCore>,
-    carrier: &medulla_server_api::access::CarrierAuthority,
+    carrier: &medulla_server_api::carrier::CarrierAuthority,
     query: String,
     variables: Option<serde_json::Value>,
 ) -> Result<Response, Method> {
@@ -189,7 +189,7 @@ enum GraphQlStagingAdmission {
 async fn begin_graphql_staging_admission(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
-    carrier: &medulla_server_api::access::CarrierAuthority,
+    carrier: &medulla_server_api::carrier::CarrierAuthority,
     method: &Method,
     query: &str,
 ) -> Result<GraphQlStagingAdmission, Response> {

@@ -1,6 +1,7 @@
 //! M3 cluster-admin routing and catalog/rebalance operations.
 
 #[cfg(feature = "redb")]
+use medulla_server_api::kv::KvStateExt;
 use medulla_mutation_types::mutation_scope::DurabilityDomain;
 use medulla_persistence::agent_library::AgentLibraryStateExt;
 #[cfg(feature = "redb")]
@@ -308,7 +309,7 @@ async fn handle_backup(
             .map(medulla_persistence::durable_stores::RbacBundledStore)
     };
     #[cfg(feature = "kv")]
-    let kv_store = { state.read().await.kv.clone() };
+    let kv_store = { state.read().await.kv_store().cloned() };
     #[cfg(feature = "redb")]
     let agent_library = {
         let mut guard = state.write().await;

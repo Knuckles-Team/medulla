@@ -1,7 +1,7 @@
 //! Transaction helpers moved below the handler crates so wire can reach them (MEDULLA-CONTRACT-R056.8).
 
 #[cfg(feature = "graphql")]
-use crate::access::CarrierAuthority;
+use crate::carrier::CarrierAuthority;
 #[cfg(feature = "graphql")]
 use crate::state::ServerState;
 #[cfg(feature = "sparql")]

@@ -35,7 +35,7 @@ pub(super) fn attest(outcome: RetrievalOutcome) -> LearningWrite {
 /// One SQL statement over `who`'s authorized projection (the decision views
 /// included), as every served SQL surface reads it.
 pub(super) async fn sql(h: &Harness, who: &str, query: &str) -> Vec<Vec<Value>> {
-    use medulla_server_api::access::CarrierAuthority;
+    use medulla_server_api::carrier::CarrierAuthority;
     use medulla_server_api::sql_catalog_acl::authorized_read_store_for_query;
     let verified = VerifiedRequestContext::verified_for_test_in_tenant(who, TENANT);
     let authority = CarrierAuthority::from_verified(&verified).unwrap();

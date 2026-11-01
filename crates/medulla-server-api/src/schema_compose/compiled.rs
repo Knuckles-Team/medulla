@@ -21,7 +21,7 @@ use std::sync::{Arc, OnceLock};
 use medulla_types::contract::Digest256;
 use parking_lot::Mutex;
 
-use super::compose::ComposedSchema;
+use super::ComposedSchema;
 
 /// Distinct composed schemas kept compiled at once. The shipped core corpus alone
 /// composes to ~12.7k ontology triples, so an entry costs megabytes; sixteen bounds

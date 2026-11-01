@@ -13,7 +13,7 @@ use medulla_protocol_types::protocol::ResultPayload;
 #[cfg(feature = "obda")]
 pub(super) async fn handle_sparql_virtual(
     req_id: u64,
-    authority: medulla_server_api::access::CarrierAuthority,
+    authority: medulla_server_api::carrier::CarrierAuthority,
     persist_dir: std::path::PathBuf,
     query: String,
     mapping: String,
@@ -71,7 +71,7 @@ impl TableStoreSource {
     /// granted — no existence leak through the OBDA surface) and returns its
     /// RLS-filtered rows.
     fn load(
-        authority: &medulla_server_api::access::CarrierAuthority,
+        authority: &medulla_server_api::carrier::CarrierAuthority,
         persist_dir: &std::path::Path,
         table: &str,
     ) -> Result<Self, String> {
@@ -173,7 +173,7 @@ impl medulla_virtual_graph::obda::ObdaSource for TableStoreSource {
 /// the table scan + SPARQL evaluation are both synchronous CPU/redb-read work.
 #[cfg(feature = "obda")]
 fn sparql_virtual(
-    authority: &medulla_server_api::access::CarrierAuthority,
+    authority: &medulla_server_api::carrier::CarrierAuthority,
     persist_dir: &std::path::Path,
     query: &str,
     mapping: &str,

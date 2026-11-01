@@ -182,7 +182,7 @@ async fn reclaim_graph(
     // A budget sweep performs durable I/O outside the registry lock. Serialize
     // it with lifecycle and graph writes, then reject a stale captured handle
     // before touching either RAM or bookkeeping.
-    let _lifecycle_guard = medulla_server_api::mutation_batch::lock_graph(name).await;
+    let _lifecycle_guard = medulla_server_api::routed_write_coalescer::lock_graph(name).await;
     if !state.read().await.registry.is_current_handle(handle) {
         return None;
     }

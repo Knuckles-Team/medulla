@@ -238,7 +238,7 @@ pub(crate) async fn commit_cross_modal_txn_with_nonce(
 ) -> Result<bool, String> {
     let (core, persistence) = resolve_cross_modal_target(state, caller, &txn).await?;
 
-    let _mutation_guard = medulla_server_api::mutation_batch::lock_graph(&txn.graph).await;
+    let _mutation_guard = medulla_server_api::routed_write_coalescer::lock_graph(&txn.graph).await;
     {
         let gtxn = core.txn();
         let valid = txn.validate(&core);
@@ -310,7 +310,7 @@ struct CrossModalDurableArgs<'a> {
 async fn compile_cross_modal_batch(
     args: &CrossModalDurableArgs<'_>,
 ) -> Result<(medulla_protocol_types::mutation_batch::MutationBatch, Vec<u8>), String> {
-    let batch_id = medulla_server_api::mutation_batch::opaque_coordinator_key(
+    let batch_id = medulla_server_api::batch_compile::opaque_coordinator_key(
         "crossmodal",
         &args.txn.graph,
         args.coordinator_id,
@@ -328,8 +328,8 @@ async fn compile_cross_modal_batch(
     ))
     .map_err(|error| format!("cross-modal manifest encode failed: {error}"))?;
     let principal = txn_receipt_principal(args.caller)?;
-    let batch = medulla_server_api::mutation_batch::compile_crossmodal(
-        medulla_server_api::mutation_batch::CompileBatch {
+    let batch = medulla_server_api::batch_compile::compile_crossmodal(
+        medulla_server_api::batch_compile::CompileBatch {
             batch_id: &batch_id,
             request_id: args.request_id,
             attempt_nonce: args.attempt_nonce,

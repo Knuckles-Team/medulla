@@ -61,7 +61,8 @@
 use std::future::Future;
 use std::sync::Arc;
 
-use tokio::sync::{mpsc, oneshot};
+use tokio::sync::{mpsc, oneshot, Mutex, OwnedMutexGuard};
+use std::sync::OnceLock;
 use tracing::Instrument;
 
 use medulla_protocol_types::protocol::Response;
@@ -262,7 +263,7 @@ async fn flush_batch(graph_name: &str, batch: Vec<RoutedCommitJob>, stats: &Batc
     // mirrors). `Instrument` attaches the span to every poll of this async fn's
     // own body without holding a non-Send guard live across an await point.
     async move {
-        let _mutation_guard = crate::mutation_batch::lock_graph(graph_name).await;
+        let _mutation_guard = crate::routed_write_coalescer::lock_graph(graph_name).await;
         for job in batch {
             let RoutedCommitJob {
                 run,
@@ -542,4 +543,38 @@ mod tests {
             "a reopened worker must continue from the durable commit stream"
         );
     }
+}
+
+/// One deterministic async serialization lane for each logical graph. Transaction
+/// Commit and the ordinary mutation gateway both acquire it, so OCC validation
+/// cannot race a gateway write while its durable-before-RAM batch is in flight. A
+/// fixed number of deterministic stripes bounds memory across create/delete churn; a hash
+/// collision only serializes two unrelated graphs and cannot weaken correctness.
+pub async fn lock_graph(graph: &str) -> OwnedMutexGuard<()> {
+    static LOCKS: OnceLock<Vec<Arc<Mutex<()>>>> = OnceLock::new();
+    striped_lock(&LOCKS, graph).await
+}
+
+pub const LOCK_STRIPES: usize = 1024;
+
+/// The deterministic stripe a lane key maps to (FNV-1a).
+pub fn lock_stripe(key: &str) -> usize {
+    let mut hash = 0xcbf2_9ce4_8422_2325u64;
+    for byte in key.as_bytes() {
+        hash ^= u64::from(*byte);
+        hash = hash.wrapping_mul(0x0000_0100_0000_01b3);
+    }
+    (hash as usize) % LOCK_STRIPES
+}
+
+pub async fn striped_lock(
+    table: &'static OnceLock<Vec<Arc<Mutex<()>>>>,
+    key: &str,
+) -> OwnedMutexGuard<()> {
+    let locks = table.get_or_init(|| {
+        (0..LOCK_STRIPES)
+            .map(|_| Arc::new(Mutex::new(())))
+            .collect()
+    });
+    Arc::clone(&locks[lock_stripe(key)]).lock_owned().await
 }

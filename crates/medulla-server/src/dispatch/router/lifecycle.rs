@@ -85,7 +85,7 @@ impl GraphLifecycleRequest {
         verified: &VerifiedRequestContext,
         idempotency_key: String,
     ) -> Result<Self, String> {
-        let carrier = medulla_server_api::access::CarrierAuthority::from_verified(verified)?;
+        let carrier = medulla_server_api::carrier::CarrierAuthority::from_verified(verified)?;
         Ok(Self {
             req_id,
             req_agent_id,
@@ -159,7 +159,7 @@ async fn create_declared_graph(
     // Lifecycle shares the same per-graph serialization lane as ordinary
     // MutationBatch/txn writes.  The durable identity must land before the
     // registry publishes this incarnation.
-    let _mutation_guard = medulla_server_api::mutation_batch::lock_graph(&graph_name).await;
+    let _mutation_guard = medulla_server_api::routed_write_coalescer::lock_graph(&graph_name).await;
     let (backend, already_exists) = {
         let s = timed_read(state).await;
         (s.persistence.clone(), s.registry.exists(&graph_name))
@@ -170,7 +170,7 @@ async fn create_declared_graph(
             "ENGINE_UNAVAILABLE: graph creation requires durable persistence",
         );
     };
-    let incarnation_id = medulla_server_api::mutation_batch::lifecycle_batch_id(
+    let incarnation_id = medulla_server_api::batch_compile::lifecycle_batch_id(
         "create",
         &tenant_scope,
         &graph_name,
@@ -363,7 +363,7 @@ async fn delete_declared_graph(
     // Fence gateway/txn writes for this graph across durable purge and RAM
     // teardown.  A retry after a crash at that boundary reconciles from the
     // durable batch record.
-    let _mutation_guard = medulla_server_api::mutation_batch::lock_graph(graph_name).await;
+    let _mutation_guard = medulla_server_api::routed_write_coalescer::lock_graph(graph_name).await;
     let (backend, exists, denied) = {
         let s = timed_read(state).await;
         let record = s.registry.catalog_record(graph_name);

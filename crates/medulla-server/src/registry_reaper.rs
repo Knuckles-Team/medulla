@@ -32,6 +32,7 @@
 //! failure leaves BOTH images (memory and disk) untouched, self-healing on
 //! the next sweep instead of risking divergence.
 
+use medulla_server_api::cdc::CdcStateExt;
 use std::sync::Arc;
 
 use tokio::sync::RwLock;
@@ -101,14 +102,14 @@ pub async fn reap_expired_servers(state: &Arc<RwLock<ServerState>>, now_ms: u64)
     }
 
     #[cfg(feature = "streaming")]
-    let hub = { state.read().await.cdc.clone() };
+    let hub = { state.read().await.cdc_hub().cloned() };
     let fname = medulla_kernel::persist::sanitize("__commons__");
     let mut reaped = 0u64;
     for node_id in candidates {
         // Serialize against a concurrent RegisterServer renewal of the SAME node
         // (the same per-graph lane every routed mutation takes) and re-check
         // under the lock: a heartbeat may have renewed the lease since the scan.
-        let _guard = medulla_server_api::mutation_batch::lock_graph("__commons__").await;
+        let _guard = medulla_server_api::routed_write_coalescer::lock_graph("__commons__").await;
         let still_expired = core
             .get_node_properties(&node_id)
             .and_then(|blob| is_expired_server_node(&blob, now_ms))
@@ -272,7 +273,7 @@ mod tests {
         };
         let cdc_seq_before = {
             let s = state.read().await;
-            s.cdc.as_ref().unwrap().head_seq("__commons__")
+            s.cdc_hub().unwrap().head_seq("__commons__")
         };
 
         // The reaper's `now_ms` is an injected clock value. At the exact lease
@@ -292,8 +293,7 @@ mod tests {
         // CDC proof: a RemoveNode event landed on __commons__'s feed after the sweep.
         let events = {
             let s = state.read().await;
-            s.cdc
-                .as_ref()
+            s.cdc_hub()
                 .unwrap()
                 .read("__commons__", cdc_seq_before, 0)
                 .events
@@ -436,7 +436,7 @@ mod tests {
 
         let cdc_seq_before = {
             let s = state.read().await;
-            s.cdc.as_ref().unwrap().head_seq("__commons__")
+            s.cdc_hub().unwrap().head_seq("__commons__")
         };
 
         // "about-to-die-mcp" is killed -- it never renews. The other two keep
@@ -467,8 +467,7 @@ mod tests {
         // brain learns which server died, not merely that a reap happened.
         let events = {
             let s = state.read().await;
-            s.cdc
-                .as_ref()
+            s.cdc_hub()
                 .unwrap()
                 .read("__commons__", cdc_seq_before, 0)
                 .events

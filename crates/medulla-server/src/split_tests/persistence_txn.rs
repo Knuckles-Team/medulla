@@ -20,7 +20,7 @@ const TEST_AGENT: &str = "unit-test-agent";
 #[cfg(feature = "tsdb")]
 fn scoped_series_key(graph: &str, series: &str, principal: &str) -> String {
     use sha2::Digest;
-    let tenant_scope = medulla_server_api::mutation_batch::opaque_coordinator_key(
+    let tenant_scope = medulla_server_api::batch_compile::opaque_coordinator_key(
         "carrier-tenant",
         "verified",
         "tenant-shared",
@@ -29,12 +29,12 @@ fn scoped_series_key(graph: &str, series: &str, principal: &str) -> String {
         "principal:sha256:{}",
         hex::encode(sha2::Sha256::digest(principal.as_bytes()))
     );
-    let owner_scope = medulla_server_api::mutation_batch::opaque_coordinator_key(
+    let owner_scope = medulla_server_api::batch_compile::opaque_coordinator_key(
         "carrier-owner",
         &tenant_scope,
         &actor_scope,
     );
-    let graph_scope = medulla_server_api::mutation_batch::opaque_coordinator_key(
+    let graph_scope = medulla_server_api::batch_compile::opaque_coordinator_key(
         "timeseries-graph",
         &owner_scope,
         graph,
@@ -67,7 +67,7 @@ fn current_request(secret: &str, id: u64, graph: &str, method: Method) -> Reques
 }
 
 use medulla_h_txn::txn::try_handle as txn_try_handle;
-use medulla_server_api::auth::VerifiedRequestContext;
+use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
 

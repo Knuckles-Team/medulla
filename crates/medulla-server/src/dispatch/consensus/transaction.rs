@@ -85,12 +85,12 @@ async fn submit_consensus_transaction_command(
         graph_type,
         command,
     } = submission;
-    let route_key = medulla_server_api::mutation_batch::opaque_coordinator_key(
+    let route_key = medulla_server_api::batch_compile::opaque_coordinator_key(
         "raft-consensus-transaction-route",
         coordinator_id,
         operation,
     );
-    let batch_id = medulla_server_api::mutation_batch::opaque_coordinator_key(
+    let batch_id = medulla_server_api::batch_compile::opaque_coordinator_key(
         "raft-consensus-transaction-command",
         coordinator_id,
         operation,

@@ -176,7 +176,7 @@ async fn an_adapter_is_served_only_after_its_passing_receipt_and_rolls_back() {
     assert!(receipt.adapted_mrr_q16 > receipt.base_mrr_q16);
     assert_eq!(receipt.n_training + receipt.n_eval, 40);
 
-    let tenant = medulla_server_api::access::CarrierAuthority::from_verified(&verified())
+    let tenant = medulla_server_api::carrier::CarrierAuthority::from_verified(&verified())
         .unwrap()
         .tenant_scope()
         .to_string();

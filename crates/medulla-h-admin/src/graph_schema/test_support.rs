@@ -5,8 +5,8 @@ use std::collections::BTreeSet;
 use medulla_rdf::oxrdf::{NamedOrBlankNode, Term, Triple};
 
 use medulla_graph_core::graph::GraphSchemaSources;
-use medulla_server_api::api::admin::compose::scope_blank_nodes;
-use medulla_server_api::api::admin::compose::validate_and_compose;
+use medulla_server_api::schema_compose::scope_blank_nodes;
+use medulla_server_api::schema_compose::validate_and_compose;
 
 pub(super) const KG: &str = "http://knuckles.team/kg#";
 pub(super) const RDF_TYPE: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";

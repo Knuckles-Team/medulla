@@ -14,6 +14,7 @@
 //! source returns are not RLS-filtered. A lightweight, non-blocking insert — no
 //! off-reactor work needed.
 
+use medulla_server_api::api::query_txn::ForeignStateExt;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
@@ -50,7 +51,7 @@ pub async fn try_handle(
             ) {
                 return Ok(Response::err(req_id, error));
             }
-            if let Err(error) = s.foreign_sources.register(&owner, name.clone(), source) {
+            if let Err(error) = s.foreign_sources().register(&owner, name.clone(), source) {
                 return Ok(Response::err(req_id, error));
             }
             Ok(Response::ok(
@@ -112,7 +113,7 @@ async fn open_foreign_read(call: OwnerScopedCall<'_>, request: ForeignReadOpenRe
     } = request;
     let (execution, expires_at_ms, source_identity) = {
         let state = call.state.read().await;
-        match state.foreign_reads.open(
+        match state.foreign_reads().open(
             &owner,
             source_name.clone(),
             approval.clone(),
@@ -126,14 +127,14 @@ async fn open_foreign_read(call: OwnerScopedCall<'_>, request: ForeignReadOpenRe
     };
     let binding = {
         let state = call.state.read().await;
-        let page_source = match state.foreign_reads.page_source(execution.execution_id) {
+        let page_source = match state.foreign_reads().page_source(execution.execution_id) {
             Ok(source) => source,
             Err(error) => {
-                state.foreign_reads.remove(execution.execution_id);
+                state.foreign_reads().remove(execution.execution_id);
                 return Response::err(req_id, error);
             }
         };
-        state.foreign_sources.bind_registered_for(
+        state.foreign_sources().bind_registered_for(
             &owner,
             store.as_ref(),
             &state.isolation,
@@ -144,7 +145,7 @@ async fn open_foreign_read(call: OwnerScopedCall<'_>, request: ForeignReadOpenRe
     };
     if let Err(error) = binding {
         let state = call.state.read().await;
-        state.foreign_reads.remove(execution.execution_id);
+        state.foreign_reads().remove(execution.execution_id);
         return Response::err(req_id, error);
     }
     let result = medulla_catalog_types::foreign_read::ForeignReadOpenResult {
@@ -185,8 +186,8 @@ async fn chunk_foreign_read(
             );
         };
         state
-            .foreign_reads
-            .append(&owner, store, &state.foreign_sources, request)
+            .foreign_reads()
+            .append(&owner, store, &state.foreign_sources(), request)
     };
     match result {
         Ok(result) => Response::ok(
@@ -225,8 +226,8 @@ async fn complete_foreign_read(
             );
         };
         state
-            .foreign_reads
-            .complete(&owner, store, &state.foreign_sources, request)
+            .foreign_reads()
+            .complete(&owner, store, &state.foreign_sources(), request)
     };
     match result {
         Ok(result) => Response::ok(
@@ -262,8 +263,8 @@ async fn abort_foreign_read(
             );
         };
         state
-            .foreign_reads
-            .abort(&owner, store, &state.foreign_sources, request)
+            .foreign_reads()
+            .abort(&owner, store, &state.foreign_sources(), request)
     };
     match result {
         Ok(result) => Response::ok(
@@ -304,7 +305,7 @@ async fn query_columns(
     }
     let registry = {
         let state = call.state.read().await;
-        state.foreign_sources.registry_for(&owner, &state.isolation)
+        state.foreign_sources().registry_for(&owner, &state.isolation)
     };
     let result = tokio::task::spawn_blocking(move || {
         use medulla_plan::federation_opt::{ColumnPredicate, Comparison, FederationSession};

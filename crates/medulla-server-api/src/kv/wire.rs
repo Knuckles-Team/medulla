@@ -35,7 +35,7 @@ pub(super) fn wire_namespace(
     scoped.push('\u{1f}');
     scoped.push_str(local);
     if shared {
-        crate::mutation_batch::opaque_coordinator_key(
+        crate::batch_compile::opaque_coordinator_key(
             "kv-shared-namespace",
             authority.tenant_scope(),
             &scoped,

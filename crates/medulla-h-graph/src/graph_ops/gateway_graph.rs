@@ -388,7 +388,7 @@ fn datalog_input_from_graph_schema(core: &GraphCore) -> Result<DatalogReasoningI
     // Always reason over the validated composition. Parsing source documents
     // independently would let their local blank-node labels alias one another
     // and would bypass the conflict/import checks used at commit time.
-    let composed = medulla_server_api::api::admin::compose::validate_and_compose(&sources)?;
+    let composed = medulla_server_api::schema_compose::validate_and_compose(&sources)?;
     let ontology = medulla_reasoner::owl::parse_ontology(&composed.ontology);
     Ok(datalog_input_from_ontology(
         ontology,

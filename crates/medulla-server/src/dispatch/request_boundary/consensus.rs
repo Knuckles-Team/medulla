@@ -113,7 +113,7 @@ pub(crate) async fn route_consensus_before_gateway(
             }
             #[cfg(feature = "sparql-http")]
             Method::ApplyMutation { event_type, query }
-                if event_type == medulla_server_api::sparql_http::SPARQL_HTTP_UPDATE_EVENT =>
+                if event_type == medulla_server_api::api::dispatch_support::SPARQL_HTTP_UPDATE_EVENT =>
             {
                 coordinated_sparql_http_update(
                     state,

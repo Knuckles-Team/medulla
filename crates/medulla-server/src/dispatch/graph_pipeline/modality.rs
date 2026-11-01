@@ -477,7 +477,7 @@ pub(super) async fn replicate_served_modality(request: ModalityReplicationReques
         return stale;
     }
 
-    let _mutation_guard = medulla_server_api::mutation_batch::lock_graph(request.graph_name).await;
+    let _mutation_guard = medulla_server_api::routed_write_coalescer::lock_graph(request.graph_name).await;
     let (op, inputs) = match decode_modality_replication_inputs(request.req_id, method) {
         Ok(decoded) => decoded,
         Err(response) => return response,

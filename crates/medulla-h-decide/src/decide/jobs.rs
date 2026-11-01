@@ -6,7 +6,7 @@
 
 use super::SharedState;
 use medulla_protocol_types::protocol::Response;
-use medulla_server_api::auth::VerifiedRequestContext;
+use medulla_server_api::authority_context::VerifiedRequestContext;
 
 /// Submit or read one head-fitting job.
 pub async fn handle_decision_fit(

@@ -1907,7 +1907,7 @@ mod tests {
             )
             .expect("valid incarnation"),
         );
-        let actor = medulla_server_api::mutation_batch::principal_fingerprint(
+        let actor = medulla_server_api::batch_compile::principal_fingerprint(
             "reasoning-projection-budget-test",
         )
         .expect("test actor fingerprint");

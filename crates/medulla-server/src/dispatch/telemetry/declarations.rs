@@ -31,7 +31,7 @@ use serde_json::Value;
 use tokio::sync::RwLock;
 
 use super::super::timed_read;
-use medulla_server_api::auth::VerifiedRequestContext;
+use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 
 pub(super) const RESOLUTION_KEYS_PROPERTY: &str = "resolution_keys";

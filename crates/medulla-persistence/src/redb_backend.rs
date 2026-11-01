@@ -774,7 +774,7 @@ pub fn rehydrate_core_from_dump(core: &GraphCore, dump: &GraphDump) -> Result<()
     // projection.  Reshard/hibernate rehydration therefore has the same atomic
     // engine-upgrade rule as ordinary startup.
     #[cfg(feature = "shacl")]
-    medulla_server_api::api::admin::compose::validate_and_compose(&dump.schema_sources)?;
+    medulla_server_api::schema_compose::validate_and_compose(&dump.schema_sources)?;
     core.clear();
     core.install_schema_sources(std::sync::Arc::clone(&dump.schema_sources));
     for (id, props) in &dump.nodes {
@@ -844,7 +844,7 @@ pub mod tests {
 
     #[cfg(feature = "tsdb")]
     fn scoped_series_key(graph: &str, series: &str, principal: &str) -> String {
-        let tenant_scope = medulla_server_api::mutation_batch::opaque_coordinator_key(
+        let tenant_scope = medulla_server_api::batch_compile::opaque_coordinator_key(
             "carrier-tenant",
             "verified",
             "tenant-shared",
@@ -853,12 +853,12 @@ pub mod tests {
             "principal:sha256:{}",
             hex::encode(sha2::Sha256::digest(principal.as_bytes()))
         );
-        let owner_scope = medulla_server_api::mutation_batch::opaque_coordinator_key(
+        let owner_scope = medulla_server_api::batch_compile::opaque_coordinator_key(
             "carrier-owner",
             &tenant_scope,
             &actor_scope,
         );
-        let graph_scope = medulla_server_api::mutation_batch::opaque_coordinator_key(
+        let graph_scope = medulla_server_api::batch_compile::opaque_coordinator_key(
             "timeseries-graph",
             &owner_scope,
             graph,

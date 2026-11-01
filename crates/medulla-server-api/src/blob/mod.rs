@@ -385,3 +385,24 @@ mod tests {
         assert!(c.next_id.load(Ordering::SeqCst) > 50);
     }
 }
+
+/// Typed access to the blob cursor handle `ServerState` holds type-erased
+/// (MEDULLA-CONTRACT-R056.8).
+pub trait BlobStateExt {
+    /// The installed blob cursor state, when this build serves blobs.
+    fn blob_cursors(&self) -> Option<&Arc<BlobCursors>>;
+    /// Install or clear the blob cursor state.
+    fn set_blob_cursors(&mut self, v: Option<Arc<BlobCursors>>);
+}
+
+impl BlobStateExt for crate::state::ServerState {
+    fn blob_cursors(&self) -> Option<&Arc<BlobCursors>> {
+        self.blob
+            .as_deref()
+            .and_then(|h| h.downcast_ref::<Arc<BlobCursors>>())
+    }
+
+    fn set_blob_cursors(&mut self, v: Option<Arc<BlobCursors>>) {
+        self.blob = v.map(|b| Arc::new(b) as crate::state::ErasedHandle);
+    }
+}

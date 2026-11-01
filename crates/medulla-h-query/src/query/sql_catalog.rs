@@ -200,7 +200,7 @@ struct SqlCatalogWork<'a> {
     tenant_scope: &'a str,
     graph_name: &'a str,
     caller: Option<&'a str>,
-    authority: &'a medulla_server_api::access::CarrierAuthority,
+    authority: &'a medulla_server_api::carrier::CarrierAuthority,
     persist_dir: &'a std::path::Path,
     store: &'a medulla_table_store::tables::TableStore,
     txn: &'a mut medulla_table_store::tables::TableTxn,
@@ -225,7 +225,7 @@ fn commit_sql_catalog_work(work: SqlCatalogWork<'_>) -> Result<usize, String> {
     let Some(wire) = wire else {
         return Err("INTERNAL: wire seam is not installed".to_string());
     };
-    let batch_id = medulla_server_api::mutation_batch::opaque_coordinator_key(
+    let batch_id = medulla_server_api::batch_compile::opaque_coordinator_key(
         "sql-catalog",
         authority.owner_scope(),
         authority.idempotency_key(),
@@ -239,8 +239,8 @@ fn commit_sql_catalog_work(work: SqlCatalogWork<'_>) -> Result<usize, String> {
         authority,
         |source| {
             let expected_version = store.mutation_version(tenant_scope, graph_name)?;
-            let batch = medulla_server_api::mutation_batch::compile_opaque_method(
-                medulla_server_api::mutation_batch::CompileBatch {
+            let batch = medulla_server_api::batch_compile::compile_opaque_method(
+                medulla_server_api::batch_compile::CompileBatch {
                     batch_id: &batch_id,
                     request_id: req_id,
                     attempt_nonce: authority.attempt_nonce(),

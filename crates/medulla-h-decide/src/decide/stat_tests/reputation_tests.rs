@@ -77,7 +77,7 @@ async fn below_the_support_floor_a_reputation_has_no_numbers() {
 fn reliability(h: &Harness, who: &str) -> (Option<f64>, Option<f64>, Option<f64>) {
     use medulla_types::wire::UqlResult;
     let verified = VerifiedRequestContext::verified_for_test_in_tenant(who, TENANT);
-    let authority = medulla_server_api::access::CarrierAuthority::from_verified(&verified).unwrap();
+    let authority = medulla_server_api::carrier::CarrierAuthority::from_verified(&verified).unwrap();
     let views = super::super::stat_view::DecisionViews::of(h.store.clone(), &authority);
     let core = medulla_graph_core::graph::GraphCore::new();
     core.add_node(

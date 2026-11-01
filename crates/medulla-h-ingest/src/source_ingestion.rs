@@ -5,6 +5,7 @@
 //! there is one graph mutation path and one cursor compare-and-swap authority.
 
 #[cfg(feature = "redb")]
+use medulla_server_api::blob::BlobStateExt;
 use medulla_persistence::agent_library::AgentLibraryStateExt;
 #[cfg(all(feature = "redb", feature = "blob"))]
 use std::collections::{BTreeMap, BTreeSet};
@@ -21,8 +22,8 @@ use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
 #[cfg(all(feature = "redb", feature = "blob"))]
-use medulla_server_api::access::CarrierAuthority;
-use medulla_server_api::auth::VerifiedRequestContext;
+use medulla_server_api::carrier::CarrierAuthority;
+use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 
 pub struct PrepareContext<'a> {
@@ -375,8 +376,8 @@ async fn load_resources(ctx: &PrepareContext<'_>) -> Result<IngestionResources, 
             "SOURCE_INGESTION_UNAVAILABLE: Agent Library is not configured".to_string()
         })?,
         blob: state
-            .blob
-            .clone()
+            .blob_cursors()
+            .cloned()
             .ok_or_else(|| "SOURCE_INGESTION_UNAVAILABLE: raw CAS is not configured".to_string())?,
     })
 }
@@ -1609,7 +1610,7 @@ fn compile_mutation(
     batch_id: &str,
     methods: Vec<Method>,
 ) -> Result<medulla_protocol_types::mutation_batch::MutationBatch, String> {
-    medulla_server_api::mutation_batch::GraphWriteScope {
+    medulla_server_api::batch_compile::GraphWriteScope {
         request_id: ctx.request_id,
         graph_name: ctx.graph_name,
         tenant_scope: ctx.tenant_scope,
@@ -2706,7 +2707,7 @@ mod tests {
                 &["source:ingest", "blob:write", "kg:read", "kg:write"],
             );
         let authority =
-            medulla_server_api::access::CarrierAuthority::from_verified(&verified).unwrap();
+            medulla_server_api::carrier::CarrierAuthority::from_verified(&verified).unwrap();
         let state = Arc::new(RwLock::new(
             medulla_server_api::state::ServerState::new_for_test(
                 "source-ingest-r0092",

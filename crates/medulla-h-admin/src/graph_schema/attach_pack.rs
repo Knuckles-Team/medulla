@@ -6,6 +6,7 @@
 //! length. Caller bytes never enter this path.
 
 #[cfg(feature = "redb")]
+use medulla_server_api::blob::BlobStateExt;
 use medulla_persistence::agent_library::AgentLibraryStateExt;
 use std::sync::Arc;
 
@@ -44,7 +45,7 @@ pub(super) async fn resolve(
         let (store, blob) = {
             let mut state = state.write().await;
             let store = state.ensure_agent_library()?;
-            let blob = state.blob.as_ref().cloned().ok_or_else(|| {
+            let blob = state.blob_cursors().cloned().ok_or_else(|| {
                 "ATTACH_PACK_RESOLVER_UNAVAILABLE: Blob CAS is not configured".to_string()
             })?;
             (store, blob)

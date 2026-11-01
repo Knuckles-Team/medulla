@@ -8,7 +8,7 @@ struct SqlReadScope<'a> {
     core: &'a Arc<GraphCore>,
     graph_name: &'a str,
     caller: &'a str,
-    authority: &'a medulla_server_api::access::CarrierAuthority,
+    authority: &'a medulla_server_api::carrier::CarrierAuthority,
     persist_dir: &'a std::path::Path,
     #[cfg(feature = "security")]
     rls: &'a Arc<medulla_isolation::isolation::IsolationLayer>,
@@ -21,7 +21,7 @@ fn required_sql_authority(
 ) -> Result<
     (
         &GraphReadAuthority,
-        &medulla_server_api::access::CarrierAuthority,
+        &medulla_server_api::carrier::CarrierAuthority,
     ),
     Response,
 > {
@@ -60,7 +60,7 @@ pub(crate) async fn sql_persist_dir(
 
 #[cfg(feature = "query")]
 fn sql_tenant_store(
-    authority: &medulla_server_api::access::CarrierAuthority,
+    authority: &medulla_server_api::carrier::CarrierAuthority,
     persist_dir: &std::path::Path,
     req_id: u64,
 ) -> Result<medulla_table_store::tables::TableStore, Response> {
@@ -423,7 +423,7 @@ pub(super) async fn catalog_sql_response(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     snap: Arc<medulla_graph_core::graph::GraphView>,
-    authority: medulla_server_api::access::CarrierAuthority,
+    authority: medulla_server_api::carrier::CarrierAuthority,
     persist_dir: std::path::PathBuf,
     query: String,
     graph: medulla_server_api::sql_catalog_acl::RequestGraph,
