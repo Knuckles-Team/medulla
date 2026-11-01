@@ -59,7 +59,7 @@ pub(crate) fn normalize_submit_context(
     context.placement_epoch = None;
 }
 
-pub(crate) fn native_retry_method_key(method: &Method) -> Result<Option<Vec<u8>>, String> {
+pub fn native_retry_method_key(method: &Method) -> Result<Option<Vec<u8>>, String> {
     native_retry_method(method)
         .map(|method| rmp_serde::to_vec_named(&method).map_err(|error| error.to_string()))
         .transpose()
@@ -101,7 +101,7 @@ use medulla_kernel::projection_wakeup::projection_payload_for_operations;
 /// immutable operation is identical.  Rebuild the digest from the same
 /// normalized operation list used by the operation comparator, while keeping
 /// topic/key/header metadata exact and rejecting arbitrary payload changes.
-pub(crate) fn native_retry_outbox_match(
+pub fn native_retry_outbox_match(
     stored_operations: &[MutationOperation],
     proposed_operations: &[MutationOperation],
     stored_outbox: &[MutationOutboxIntent],
@@ -148,7 +148,7 @@ pub(crate) fn is_native_retry_method(method: &Method) -> bool {
 /// durable operation/idempotency key remains the retry identity; placement
 /// metadata is historical routing proof and may advance monotonically for that
 /// exact replay.  A backwards route is never accepted.
-pub(crate) fn native_resource_placement_replay_match(
+pub fn native_resource_placement_replay_match(
     stored: &MutationBatch,
     proposed: &MutationBatch,
     operations_match: bool,
@@ -202,7 +202,7 @@ pub(crate) fn mutation_operation_retry_match(
     }
 }
 
-pub(crate) fn mutation_operations_retry_match(
+pub fn mutation_operations_retry_match(
     stored: &[MutationOperation],
     proposed: &[MutationOperation],
 ) -> Result<bool, String> {

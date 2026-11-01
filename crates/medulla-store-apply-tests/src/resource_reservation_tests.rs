@@ -5,7 +5,7 @@
 //! the exact predicates used by the one redb transaction, so the race and restart
 //! integration suites can layer on top without duplicating policy logic.
 
-use crate::redb_store::store_cleanup::clear_graph_rows;
+use medulla_store_apply::redb_store::store_cleanup::clear_graph_rows;
 use super::*;
 use medulla_resource_store::redb_store::resource::*;
 use medulla_resource_store::redb_store::resource_rows::*;

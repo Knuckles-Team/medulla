@@ -34,7 +34,7 @@ enum GraphResidence {
 }
 
 impl GraphResidence {
-    fn is_hibernated(self) -> bool {
+    pub fn is_hibernated(self) -> bool {
         matches!(self, Self::Hibernated)
     }
 }

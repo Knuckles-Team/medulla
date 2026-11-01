@@ -1,14 +1,14 @@
 //! Readiness admission and interrupted in-place swap recovery proofs.
 
-use super::super::inplace::{
+use medulla_persistence::shard_migrate::inplace::{
     migrate_in_place_after_graph_for_test, migrate_in_place_after_install_for_test,
     migrate_in_place_after_old_move_for_test, migrate_in_place_before_swap_for_test,
 };
-use super::super::readiness::{
+use medulla_persistence::shard_migrate::readiness::{
     file_sha256, parse_ready_marker, write_ready_marker, IN_PLACE_READY_MARKER,
     READY_MARKER_VERSION,
 };
-use super::super::swap::swap_ready_shards;
+use medulla_persistence::shard_migrate::swap::swap_ready_shards;
 use super::*;
 
 /// CONCEPT:MEDULLA-KG.sharding.atomic-shard-swap — the in-place migration swaps shard files atomically and leaves the

@@ -97,9 +97,9 @@ fn authoritative_snapshot_and_row_delta_paths_refuse_orphaning_lane_work_item() 
     );
     #[cfg(feature = "security")]
     let mut orphaned_audit = medulla_store::redb_store::audit::AuditTailCache::new();
-    assert!(crate::redb_store::store_mutation::commit_mutation_batch_state(
+    assert!(medulla_store_apply::redb_store::store_mutation::commit_mutation_batch_state(
         &fixture.shard,
-        crate::redb_store::store_mutation::StateCommitInput {
+        medulla_store_apply::redb_store::store_mutation::StateCommitInput {
             graph_fname: TEST_GRAPH,
             batch: &orphaned_batch,
             authoritative_state_msgpack: &orphaned_state,
@@ -136,9 +136,9 @@ fn authoritative_snapshot_and_row_delta_paths_refuse_orphaning_lane_work_item() 
     );
     #[cfg(feature = "security")]
     let mut linked_audit = medulla_store::redb_store::audit::AuditTailCache::new();
-    assert!(crate::redb_store::store_mutation::commit_mutation_batch_state(
+    assert!(medulla_store_apply::redb_store::store_mutation::commit_mutation_batch_state(
         &fixture.shard,
-        crate::redb_store::store_mutation::StateCommitInput {
+        medulla_store_apply::redb_store::store_mutation::StateCommitInput {
             graph_fname: TEST_GRAPH,
             batch: &linked_batch,
             authoritative_state_msgpack: &linked_state,
@@ -167,9 +167,9 @@ fn authoritative_snapshot_and_row_delta_paths_refuse_orphaning_lane_work_item() 
     );
     #[cfg(feature = "security")]
     let mut delta_audit = medulla_store::redb_store::audit::AuditTailCache::new();
-    assert!(crate::redb_store::store_mutation::commit_mutation_batch_state(
+    assert!(medulla_store_apply::redb_store::store_mutation::commit_mutation_batch_state(
         &fixture.shard,
-        crate::redb_store::store_mutation::StateCommitInput {
+        medulla_store_apply::redb_store::store_mutation::StateCommitInput {
             graph_fname: TEST_GRAPH,
             batch: &delta_batch,
             authoritative_state_msgpack: &delta_state,
@@ -214,7 +214,7 @@ fn every_low_level_graph_row_path_refuses_orphaning_a_lane_work_item() {
     let mut raft_log = Vec::new();
     #[cfg(feature = "security")]
     let mut audit_tail = medulla_store::redb_store::audit::AuditTailCache::new();
-    assert!(crate::redb_store::store_control::commit_ops(
+    assert!(medulla_store_apply::redb_store::store_control::commit_ops(
         &fixture.shard,
         &mut ops,
         &mut raft_log,
@@ -228,10 +228,10 @@ fn every_low_level_graph_row_path_refuses_orphaning_a_lane_work_item() {
 
     #[cfg(feature = "security")]
     let mut crossmodal_audit = medulla_store::redb_store::audit::AuditTailCache::new();
-    assert!(crate::redb_store::crossmodal::commit_crossmodal(
+    assert!(medulla_store_apply::redb_store::crossmodal::commit_crossmodal(
         &fixture.shard,
         TEST_GRAPH,
-        crate::redb_store::crossmodal::CrossModalStaged {
+        medulla_store_apply::redb_store::crossmodal::CrossModalStaged {
             methods: std::slice::from_ref(&remove),
             ..Default::default()
         },

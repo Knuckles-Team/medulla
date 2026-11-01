@@ -52,7 +52,7 @@ impl RedbBackend {
     /// TEST-ONLY: flip a byte in the stored audit entry `(graph, seq)` to simulate
     /// tampering, so the verify path can prove detection. Routed through the owner
     /// thread (exclusive file lock).
-    #[cfg(all(test, feature = "security"))]
+    #[cfg(all(any(test, feature = "test-support"), feature = "security"))]
     pub fn test_tamper_audit_entry(&self, graph_fname: &str, seq: u64) -> Result<(), String> {
         let (reply, rx) = std::sync::mpsc::sync_channel(1);
         self.shard_for(graph_fname)

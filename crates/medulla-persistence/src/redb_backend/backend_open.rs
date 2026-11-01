@@ -207,8 +207,8 @@ impl RedbBackend {
         )
     }
 
-    #[cfg(test)]
-    pub(super) fn open_with_group_commit_config(
+    #[cfg(any(test, feature = "test-support"))]
+    pub fn open_with_group_commit_config(
         persist_dir: String,
         capacity: usize,
         group_commit: RedbGroupCommitConfig,

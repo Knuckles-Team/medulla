@@ -27,6 +27,7 @@ HERE = ROOT / "scripts" / "crate_split"
 DEFAULT_CENSUS = "/var/tmp/l9/split/census-medulla.json"
 PATH_RE = re.compile(r"(crates/medulla-[\w-]+/src/[\w/]+(?:\.rs)?|(?<![\w/.-])src/[\w/]+(?:\.rs)?)")
 ROW_RE = re.compile(r"^\| `(MEDULLA-[A-Z0-9.\-]+)` \| (.*)$")
+RETIRED_RE = re.compile(r"\s*(?:\*\*)?RETIRED\b")  # a retired row is never open work, whichever census fed us
 TITLE_RE = re.compile(r"\*\*(.*?)\*\*")
 
 
@@ -124,6 +125,9 @@ def load_rows(open_ids):
         for line in req.read_text().splitlines():
             m = ROW_RE.match(line)
             if m and m.group(1) in open_ids.get(spec, ()):
+                if RETIRED_RE.match(m.group(2)):
+                    open_ids[spec].discard(m.group(1))
+                    continue
                 rows[m.group(1)] = (spec, m.group(2))
     return rows
 

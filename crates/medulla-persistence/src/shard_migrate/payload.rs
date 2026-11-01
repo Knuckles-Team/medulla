@@ -38,7 +38,7 @@ use redb::TableDefinition;
 /// reservation.  The callback is invoked by the mutation kernel while the
 /// destination ledger transaction is still open; no pre-graft maintenance row
 /// is created.
-pub(crate) struct GraphShardPayloadTransfer<'a> {
+pub struct GraphShardPayloadTransfer<'a> {
     report: Option<&'a mut MigrationReport>,
 }
 

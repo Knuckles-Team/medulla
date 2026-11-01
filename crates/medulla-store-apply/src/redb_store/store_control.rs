@@ -172,7 +172,7 @@ pub struct NativeOperationDumpRows {
 }
 
 impl NativeOperationDumpRows {
-    pub(super) fn is_empty(&self) -> bool {
+    pub fn is_empty(&self) -> bool {
         [
             self.development_lane_holds.len(),
             self.development_lane_tenant_index.len(),

@@ -24,7 +24,7 @@ fn native_cancel_lost_ack_is_replay_safe_across_crash_and_reopen() {
     let crash = fixture.cancel_work_item_with_crash(
         "cancel-crash",
         2_000_000,
-        Some(crate::redb_store::store_mutation::MutationBatchCrashpoint::AfterCommitBeforeAck),
+        Some(medulla_store_apply::redb_store::store_mutation::MutationBatchCrashpoint::AfterCommitBeforeAck),
     );
     assert_eq!(crash.unwrap_err(), "injected crash");
     let path = fixture.close_for_reopen();

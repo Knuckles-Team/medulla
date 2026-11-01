@@ -1,4 +1,4 @@
-use super::mutation_fixtures::{
+use medulla_store_apply::redb_store::mutation_fixtures::{
     batch, commit_at, commit_at_graph, commit_native_claim, node, open, ready_work_item_method,
 };
 use super::*;

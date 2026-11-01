@@ -176,7 +176,7 @@ fn maybe_linger(writer: &WriterLoop<'_>, pending: &mut Pending) -> LingerOutcome
         return LingerOutcome::Commit(false);
     }
     stats.linger_waiting.store(true, Ordering::Release);
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     if let Some(control) = group_commit.test_control.as_ref() {
         control.wait_until_released();
     }
@@ -365,7 +365,7 @@ fn commit_and_notify(
 // nothing.
 
 /// Run `rows` in ONE control-only maintenance group: the 12 file-wide tables.
-pub(super) fn in_control_write<T>(
+pub fn in_control_write<T>(
     shard: &Shard,
     label: &str,
     rows: impl FnOnce(&ShardWrite<'_>) -> Result<T, String>,

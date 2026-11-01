@@ -44,7 +44,7 @@ pub fn shard_index(graph_fname: &str, k: usize) -> usize {
 /// makes a K-shard fan-out overlap instead of serialize (a spawn-then-await-each loop is
 /// serial). The closures run off each shard's `begin_read()` MVCC snapshot (CONCEPT:MEDULLA-KG.storage.snapshot-read-off-writer),
 /// so the fan-out never routes through a writer thread. The first error short-circuits.
-pub(super) async fn join_blocking_in_order<T, F>(tasks: Vec<F>) -> Result<Vec<T>, String>
+pub async fn join_blocking_in_order<T, F>(tasks: Vec<F>) -> Result<Vec<T>, String>
 where
     T: Send + 'static,
     F: FnOnce() -> Result<T, String> + Send + 'static,
@@ -73,7 +73,7 @@ where
 ///     group-commit tests run the byte-for-byte K=1 path unless they opt in via the env.
 ///   * Otherwise K = clamp(effective-cgroup-cpu/2, 1, 8) — mirrors the shared
 ///     `medulla_kernel::autosize::detect_capacity()` seam.
-pub(super) fn resolve_shard_count() -> usize {
+pub fn resolve_shard_count() -> usize {
     // Raft active ⇒ K == N groups (ADR-2 / W1.2), NOT the forced K=1 of the M2 spike.
     #[cfg(feature = "raft")]
     if std::env::var("MEDULLA_RAFT_NODE_ID").is_ok() {
@@ -115,7 +115,7 @@ pub(super) fn resolve_shard_count() -> usize {
 ///     but is capped by it after the hard 64..=1_048_576 validation window.
 ///   * Else ~half the authoritative writer queue depth (`capacity`, itself
 ///     hardware-auto-sized via `Capacity::writer_queue()`), clamped 256..=16384.
-pub(super) fn resolve_flush_threshold(capacity: usize) -> usize {
+pub fn resolve_flush_threshold(capacity: usize) -> usize {
     let automatic = (capacity / 2).clamp(256, 16_384);
     if let Ok(v) = std::env::var("MEDULLA_REDB_FLUSH_THRESHOLD") {
         if let Ok(n) = v.trim().parse::<usize>() {
@@ -136,7 +136,7 @@ pub(super) fn resolve_flush_threshold(capacity: usize) -> usize {
 /// kernel-owned `OwnerLayout::GraphShard` file this writer commits into and every
 /// off-writer snapshot read is issued from. This type is the thread and the queue
 /// in front of it, which is what its name says.
-pub(super) struct ShardWriter {
+pub struct ShardWriter {
     pub(super) db_path: String,
     /// `Weak` handle to THIS shard's kernel-owned store (CONCEPT:MEDULLA-KG.storage.snapshot-read-off-writer —
     /// snapshot reads off the writer). redb 4.1 is MVCC: a kernel-issued `ScopedRead`
@@ -151,9 +151,9 @@ pub(super) struct ShardWriter {
     /// database) is what is shared because it carries the bound-handle cache, so a
     /// warm graph never re-binds.
     pub(super) shard: Weak<Shard>,
-    pub(super) tx: SyncSender<Cmd>,
+    pub tx: SyncSender<Cmd>,
     /// Group-commit batch-size / linger counters (CONCEPT:MEDULLA-KG.backend.adaptive-linger-coalesce), per shard.
-    pub(super) stats: Arc<RedbCommitStats>,
+    pub stats: Arc<RedbCommitStats>,
     /// Value-blob cipher for snapshot reads off the writer (CONCEPT:MEDULLA-KG.storage.snapshot-read-off-writer). The same
     /// cipher the writer thread owns; resolved ONCE at open. `None` ⇒ encryption off ⇒
     /// the read path is byte-for-byte the plaintext path.
@@ -178,7 +178,7 @@ pub(super) struct ShardWriter {
 ///
 /// The second half of the two-phase open (see [`CanaryPlan`]): the persist dir's
 /// refusal is collective, so every shard is planned before any shard is changed.
-pub(super) struct PreparedShard {
+pub struct PreparedShard {
     db_path: String,
     shard: Arc<Shard>,
     #[cfg(feature = "security")]

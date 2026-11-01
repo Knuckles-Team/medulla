@@ -1,0 +1,101 @@
+[package]
+name = "medulla-persistence-tests"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: Persistence tests: the redb backend, shard migration, backup, cold offload and cost proofs over the persistence crate."
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_persistence_tests"
+path = "src/lib.rs"
+
+[dependencies]
+medulla-persistence = { path = "../medulla-persistence", features = ["test-support"] }
+medulla-result-types = { path = "../medulla-result-types" }
+medulla-protocol-types = { path = "../medulla-protocol-types" }
+medulla-mutation-types = { path = "../medulla-mutation-types" }
+medulla-identity-types = { path = "../medulla-identity-types" }
+medulla-decision-types = { path = "../medulla-decision-types" }
+medulla-catalog-types = { path = "../medulla-catalog-types" }
+medulla-agent-types = { path = "../medulla-agent-types" }
+tempfile = { version = "3" }
+async-trait = { version = "0.1" }
+hex = "0.4"
+medulla-capabilities = { path = "../medulla-capabilities" }
+medulla-compute = { path = "../medulla-compute" }
+medulla-core = { path = "../medulla-core" }
+medulla-kernel = { path = "../medulla-kernel" }
+medulla-rdf = { path = "../medulla-rdf" }
+medulla-server-api = { path = "../medulla-server-api" }
+medulla-storage = { path = "../medulla-storage" }
+medulla-store = { path = "../medulla-store" }
+medulla-transaction = { path = "../medulla-transaction" }
+medulla-tsdb = { path = "../medulla-tsdb" }
+medulla-types = { path = "../medulla-types" }
+parking_lot = "0.12"
+redb = { workspace = true }
+rmp-serde = "1.3"
+serde = { version = "1.0", features = ["derive", "rc"] }
+serde_json = "1.0"
+sha2 = "0.10"
+tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "signal", "macros"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3" }
+medulla-direct-state = { path = "../medulla-direct-state" }
+medulla-semantic-index = { path = "../medulla-semantic-index" }
+medulla-graph-core = { path = "../medulla-graph-core" }
+medulla-isolation = { path = "../medulla-isolation" }
+medulla-table-store = { path = "../medulla-table-store" }
+medulla-work-types = { path = "../medulla-work-types" }
+medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types" }
+medulla-store-apply = { path = "../medulla-store-apply" }
+medulla-resource-store = { path = "../medulla-resource-store" }
+medulla-work-store = { path = "../medulla-work-store" }
+medulla-lane-store = { path = "../medulla-lane-store" }
+medulla-server-ops = { path = "../medulla-server-ops" }
+medulla-server-blob = { path = "../medulla-server-blob" }
+medulla-server-auth = { path = "../medulla-server-auth" }
+
+[features]
+cold-tier = ["medulla-persistence/cold-tier"]
+cold-tier-s3 = ["medulla-persistence/cold-tier-s3"]
+compute-dist = ["medulla-persistence/compute-dist"]
+cost = ["medulla-persistence/cost"]
+cypher = ["medulla-persistence/cypher"]
+decide = ["medulla-persistence/decide"]
+kv = ["medulla-persistence/kv"]
+matview = ["medulla-persistence/matview"]
+metrics = ["medulla-persistence/metrics"]
+query = ["medulla-persistence/query"]
+raft = ["medulla-persistence/raft"]
+rdf = ["medulla-persistence/rdf"]
+redb = ["medulla-persistence/redb"]
+security = ["medulla-persistence/security"]
+server = ["medulla-persistence/server"]
+shacl = ["medulla-persistence/shacl"]
+sparql = ["medulla-persistence/sparql"]
+tsdb = ["medulla-persistence/tsdb"]
+jobs = ["medulla-persistence/jobs"]
+statechart = ["medulla-persistence/statechart"]
+viz = ["medulla-persistence/viz"]
+modality-serving = ["medulla-persistence/modality-serving"]
+asr-whisper = ["medulla-persistence/asr-whisper"]
+knowledge-batch = ["medulla-persistence/knowledge-batch"]
+quantum-agent-api = ["medulla-persistence/quantum-agent-api"]
+numeric = ["medulla-persistence/numeric"]
+cypher-plan = ["medulla-persistence/cypher-plan"]
+result-cache = ["medulla-persistence/result-cache"]
+sparql-hash = ["medulla-persistence/sparql-hash"]
+rdf-xml = ["medulla-persistence/rdf-xml"]
+json-ld = ["medulla-persistence/json-ld"]
+sparql-star = ["medulla-persistence/sparql-star"]
+geosparql = ["medulla-persistence/geosparql"]
+owl = ["medulla-persistence/owl"]
+owl-dl = ["medulla-persistence/owl-dl"]
+promql = ["medulla-persistence/promql"]
+traces = ["medulla-persistence/traces"]
+
+[dev-dependencies]
+tempfile = "3"

@@ -5,24 +5,24 @@ use sha2::{Digest, Sha256};
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
-pub(super) const IN_PLACE_READY_MARKER: &str = ".migration-ready";
-pub(super) const READY_MARKER_VERSION: &str = "medulla-shard-migration-v2";
+pub const IN_PLACE_READY_MARKER: &str = ".migration-ready";
+pub const READY_MARKER_VERSION: &str = "medulla-shard-migration-v2";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(super) struct ReadyTarget {
-    pub(super) name: String,
-    pub(super) sha256: String,
+pub struct ReadyTarget {
+    pub name: String,
+    pub sha256: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(super) struct ReadyMigration {
-    pub(super) backup: PathBuf,
-    pub(super) source_names: Vec<String>,
-    pub(super) new_k: usize,
-    pub(super) targets: Vec<ReadyTarget>,
+pub struct ReadyMigration {
+    pub backup: PathBuf,
+    pub source_names: Vec<String>,
+    pub new_k: usize,
+    pub targets: Vec<ReadyTarget>,
 }
 
-pub(super) fn file_sha256(path: &Path) -> Result<String, String> {
+pub fn file_sha256(path: &Path) -> Result<String, String> {
     let mut file = std::fs::File::open(path)
         .map_err(|error| format!("open migration artifact {} failed: {error}", path.display()))?;
     let mut digest = Sha256::new();
@@ -43,7 +43,7 @@ pub(super) fn expected_target_name(index: usize) -> String {
     shard_filename(index)
 }
 
-pub(super) fn parse_ready_marker(
+pub fn parse_ready_marker(
     path: &Path,
     requested_k: usize,
 ) -> Result<ReadyMigration, String> {
@@ -197,7 +197,7 @@ fn append_ready_target(
     Ok(())
 }
 
-pub(super) fn write_ready_marker(
+pub fn write_ready_marker(
     tmp: &Path,
     backup: &Path,
     src_paths: &[PathBuf],
