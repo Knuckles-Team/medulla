@@ -250,7 +250,7 @@ async fn dispatch_store_methods_arm_1(ctx: DispatchCtx<'_>, method: Method) -> R
                         Ok(authority) => authority,
                         Err(denied) => return Response::err(req_id, denied),
                     };
-                    match medulla_server_api::kv::try_handle(
+                    match medulla_server_blob::kv::try_handle(
                         state, req_id, &carrier, &req.graph, method,
                     )
                     .await

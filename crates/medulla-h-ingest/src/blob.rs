@@ -12,7 +12,7 @@
 //! across graphs. So these route at the top of dispatch (next to the txn methods),
 //! before the per-graph chain.
 
-use medulla_server_api::blob::BlobStateExt;
+use medulla_server_blob::blob::BlobStateExt;
 use std::sync::Arc;
 
 use tokio::sync::RwLock;
@@ -23,8 +23,8 @@ use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
 use medulla_server_api::carrier::CarrierAuthority;
-use medulla_server_api::blob::store;
-use medulla_server_api::blob::BlobCursors;
+use medulla_server_blob::blob::store;
+use medulla_server_blob::blob::BlobCursors;
 use medulla_server_api::state::ServerState;
 use medulla_types::contract::Nonce;
 

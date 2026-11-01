@@ -3,11 +3,11 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use crate::http1::HttpMessage;
-use crate::state::ServerState;
+use medulla_server_api::http1::HttpMessage;
+use medulla_server_api::state::ServerState;
 use medulla_graph_core::graph::GraphCore;
 
-use crate::api::dispatch_support::SPARQL_HTTP_UPDATE_EVENT;
+use medulla_server_api::api::dispatch_support::SPARQL_HTTP_UPDATE_EVENT;
 use super::{
     choose_ct, parse_form, percent_decode, serialize_graph, signed_request, DEFAULT_GRAPH_ENV,
     GRAPH_FORMS,
@@ -50,7 +50,7 @@ async fn graph_read(
     graph: String,
 ) -> (&'static str, &'static str, String) {
     // Unlike writes below, this leg has no verified request-carrier mechanism yet.
-    if crate::carrier::unauthenticated_carrier_denied(None) {
+    if medulla_server_api::carrier::unauthenticated_carrier_denied(None) {
         medulla_kernel::metrics::access_denied();
         return (
             "403 Forbidden",
@@ -119,7 +119,7 @@ async fn graph_write(
         Ok(request) => request,
         Err(error) => return ("401 Unauthorized", "text/plain", error),
     };
-    let response = crate::api::reentry::dispatch(state, request).await;
+    let response = medulla_server_api::api::reentry::dispatch(state, request).await;
     mutation_response(response.error, created)
 }
 
@@ -152,7 +152,7 @@ async fn graph_delete(
         Ok(request) => request,
         Err(error) => return ("401 Unauthorized", "text/plain", error),
     };
-    let response = crate::api::reentry::dispatch(state, request).await;
+    let response = medulla_server_api::api::reentry::dispatch(state, request).await;
     mutation_response(response.error, false)
 }
 

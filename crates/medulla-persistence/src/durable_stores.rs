@@ -183,7 +183,7 @@ pub(crate) fn bundled_store_authority(
         )),
         #[cfg(feature = "kv")]
         "kv.redb" => Some((
-            medulla_server_api::kv::KV_PHYSICAL_STORE,
+            medulla_server_blob::kv::KV_PHYSICAL_STORE,
             medulla_storage::OwnerLayout::Kv,
         )),
         "node_info.redb" => Some((

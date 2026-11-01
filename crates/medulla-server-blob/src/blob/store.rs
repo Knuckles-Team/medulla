@@ -331,7 +331,7 @@ fn blob_scope_identity(
         tenant,
         DurabilityDomain::BlobStore,
         LogicalName::new(resource.to_string())?,
-        IncarnationId::new(crate::batch_compile::COMPILED_BATCH_INCARNATION)?,
+        IncarnationId::new(medulla_server_api::batch_compile::COMPILED_BATCH_INCARNATION)?,
     )
 }
 
@@ -492,7 +492,7 @@ impl RedbChunkStore {
     /// the OS temp reaper; callers that want cleanup pass their own dir to `open`.
     #[cfg(any(test, feature = "test-support"))]
     pub fn open_temp() -> Result<Self, String> {
-        let dir = crate::api::dispatch_support::unique_temp_dir("medulla-blob-cas");
+        let dir = medulla_server_api::api::dispatch_support::unique_temp_dir("medulla-blob-cas");
         Self::open(&dir.to_string_lossy())
     }
 

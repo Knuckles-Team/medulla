@@ -4,7 +4,7 @@
 //! existing ChangeEnvelope commit authority owns the final IngestBatch step, so
 //! there is one graph mutation path and one cursor compare-and-swap authority.
 
-use medulla_server_api::blob::BlobStateExt;
+use medulla_server_blob::blob::BlobStateExt;
 #[cfg(feature = "redb")]
 use medulla_persistence::agent_library::AgentLibraryStateExt;
 #[cfg(all(feature = "redb", feature = "blob"))]
@@ -324,7 +324,7 @@ fn authorize_empty_reconciliation(
 #[cfg(all(feature = "redb", feature = "blob"))]
 struct IngestionResources {
     agent_library: Arc<medulla_persistence::agent_library::AgentLibraryStore>,
-    blob: Arc<medulla_server_api::blob::BlobCursors>,
+    blob: Arc<medulla_server_blob::blob::BlobCursors>,
 }
 
 #[cfg(all(feature = "redb", feature = "blob"))]
@@ -961,7 +961,7 @@ fn admit_records(
     ctx: &PrepareContext<'_>,
     batch: &medulla_source_types::source_ingestion::SourceIngestionBatch,
     authority: &CarrierAuthority,
-    blob: &Arc<medulla_server_api::blob::BlobCursors>,
+    blob: &Arc<medulla_server_blob::blob::BlobCursors>,
     resolved: &ResolvedIngestionMappings,
     policy_subject: &str,
 ) -> Result<AdmittedRecords, String> {
@@ -1011,7 +1011,7 @@ struct RelationshipAdmissionContext<'a, 'ctx> {
     ctx: &'a PrepareContext<'ctx>,
     batch: &'a medulla_source_types::source_ingestion::SourceIngestionBatch,
     authority: &'a CarrierAuthority,
-    blob: &'a Arc<medulla_server_api::blob::BlobCursors>,
+    blob: &'a Arc<medulla_server_blob::blob::BlobCursors>,
     resolved: &'a ResolvedIngestionMappings,
     policy_subject: &'a str,
     persistence: &'a dyn medulla_server_api::api::persistence::PersistenceBackend,
@@ -1462,7 +1462,7 @@ fn admit_record(
     batch: &medulla_source_types::source_ingestion::SourceIngestionBatch,
     record: &medulla_source_types::source_ingestion::SourceRecord,
     authority: &CarrierAuthority,
-    blob: &Arc<medulla_server_api::blob::BlobCursors>,
+    blob: &Arc<medulla_server_blob::blob::BlobCursors>,
     resolved: &ResolvedIngestionMappings,
     policy_subject: &str,
 ) -> Result<AdmittedRecord, String> {
@@ -1527,14 +1527,14 @@ fn admit_record(
 fn admit_raw(
     ctx: &PrepareContext<'_>,
     authority: &CarrierAuthority,
-    blob: &Arc<medulla_server_api::blob::BlobCursors>,
+    blob: &Arc<medulla_server_blob::blob::BlobCursors>,
     raw: &[u8],
 ) -> Result<String, String> {
     let (raw_digest_hex, _was_new) = blob.store.put_chunk(raw)?;
     // Admission precedes mapping/graph commit by design. The owner-scoped
     // holder is set-like, so transport retries do not leak refcounts. The
     // holder change and its native receipt commit in one blob-owner WTX.
-    let holder = medulla_server_api::blob::store::HolderChange::owner_acquire(
+    let holder = medulla_server_blob::blob::store::HolderChange::owner_acquire(
         &raw_digest_hex,
         authority.owner_scope(),
     )?;

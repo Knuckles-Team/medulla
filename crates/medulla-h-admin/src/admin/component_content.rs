@@ -1,6 +1,6 @@
 //! `AgentComponent.content`: serve one component revision's verified bytes.
 
-use medulla_server_api::blob::BlobStateExt;
+use medulla_server_blob::blob::BlobStateExt;
 use std::sync::Arc;
 
 use tokio::sync::RwLock;
@@ -88,7 +88,7 @@ async fn serve_component_content(
         };
         let tenant_id = request.tenant_id;
         let read = tokio::task::spawn_blocking(move || {
-            medulla_server_api::blob::engine_bodies::read_engine_body(
+            medulla_server_blob::blob::engine_bodies::read_engine_body(
                 blob.store.as_ref(),
                 &tenant_id,
                 &pointer.engine_manifest_digest,

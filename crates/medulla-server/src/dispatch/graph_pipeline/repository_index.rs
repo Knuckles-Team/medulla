@@ -6,7 +6,7 @@
 //! parses each unique blob once, lowers the projection, and delegates the one
 //! durable commit to the existing ChangeEnvelope authority.
 
-use medulla_server_api::blob::BlobStateExt;
+use medulla_server_blob::blob::BlobStateExt;
 use super::*;
 
 #[cfg(all(feature = "ast", feature = "redb"))]
@@ -127,7 +127,7 @@ async fn admit_repository_sources(
     let bodies: Vec<_> = files
         .iter()
         .map(
-            |(_, bytes)| medulla_server_api::blob::engine_bodies::EngineBody {
+            |(_, bytes)| medulla_server_blob::blob::engine_bodies::EngineBody {
                 sha256: medulla_types::contract::Digest256::from_bytes(
                     Sha256::digest(bytes).into(),
                 ),

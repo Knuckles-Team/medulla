@@ -259,12 +259,12 @@ pub(crate) async fn plan_held_underfunded_park(
 /// the async reactor. Source hash and manifest hash are distinct identities.
 #[cfg(feature = "blob")]
 pub(super) fn verify_page_cas(
-    store: &dyn medulla_server_api::blob::store::ChunkStore,
+    store: &dyn medulla_server_blob::blob::store::ChunkStore,
     snapshot: &EligibleSnapshot,
     page: &PagePlan,
 ) -> Result<(), String> {
     for unit in &page.units {
-        medulla_server_api::blob::engine_bodies::read_repository_content_ref(
+        medulla_server_blob::blob::engine_bodies::read_repository_content_ref(
             store,
             &snapshot.tenant_id,
             &snapshot.repository_id,
@@ -453,7 +453,7 @@ where
 pub(crate) async fn drain_once<A, S, P>(
     persistence: &dyn PersistenceBackend,
     graph_fname: &str,
-    store: Arc<dyn medulla_server_api::blob::store::ChunkStore>,
+    store: Arc<dyn medulla_server_blob::blob::store::ChunkStore>,
     authority_for_page: A,
     submit: S,
     park_source: P,
@@ -568,7 +568,7 @@ async fn classify_dead_letter(
 async fn process_held_lease<C: PageActions>(
     persistence: &dyn PersistenceBackend,
     graph_fname: &str,
-    store: Arc<dyn medulla_server_api::blob::store::ChunkStore>,
+    store: Arc<dyn medulla_server_blob::blob::store::ChunkStore>,
     lease: &MutationOutboxLease,
     callbacks: &mut C,
 ) -> Result<DrainOutcome, String> {
@@ -681,7 +681,7 @@ struct ReadyPage<'a> {
 async fn submit_ready_page<C: PageActions>(
     persistence: &dyn PersistenceBackend,
     graph_fname: &str,
-    store: &Arc<dyn medulla_server_api::blob::store::ChunkStore>,
+    store: &Arc<dyn medulla_server_blob::blob::store::ChunkStore>,
     ready: ReadyPage<'_>,
     callbacks: &mut C,
 ) -> Result<EnrichmentBudgetCheckpoint, String> {
@@ -733,7 +733,7 @@ mod tests {
         RequestContextAuthenticationMethod, RequestContextSchemaVersion,
     };
     #[cfg(feature = "blob")]
-    use medulla_server_api::blob::store::ChunkStore;
+    use medulla_server_blob::blob::store::ChunkStore;
 
     #[cfg(feature = "blob")]
     struct DeadLetterProbe {
@@ -1119,7 +1119,7 @@ mod tests {
     fn consumer_rechecks_exact_cas_holder_digest_and_length() {
         use sha2::{Digest, Sha256};
 
-        let store = medulla_server_api::blob::store::RedbChunkStore::open_temp().unwrap();
+        let store = medulla_server_blob::blob::store::RedbChunkStore::open_temp().unwrap();
         let body = b"verified repository source";
         let source_digest =
             medulla_types::contract::Digest256::from_bytes(Sha256::digest(body).into());
@@ -1127,7 +1127,7 @@ mod tests {
             .put_repository_bodies(
                 "tenant",
                 "repo",
-                &[medulla_server_api::blob::engine_bodies::EngineBody {
+                &[medulla_server_blob::blob::engine_bodies::EngineBody {
                     sha256: source_digest,
                     body: body.to_vec(),
                 }],

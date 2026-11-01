@@ -29,9 +29,6 @@ pub mod batch_compile;
 
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 
-#[cfg(feature = "blob")]
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod blob;
 
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod carrier;
@@ -81,10 +78,6 @@ pub mod identity_view;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod impact_watch;
 
-/// Moved from the facade (MEDULLA-CONTRACT-R056).
-#[cfg(feature = "kv")]
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod kv;
 
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[cfg(feature = "matview")]
@@ -136,10 +129,6 @@ pub mod routed_write_coalescer;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod service_grant;
 
-/// Moved from the facade (MEDULLA-CONTRACT-R056).
-#[cfg(feature = "sparql-http")]
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod sparql_http;
 
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[cfg(feature = "query")]

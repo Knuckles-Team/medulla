@@ -55,6 +55,7 @@ medulla-stream = { path = "../medulla-stream", optional = true }
 medulla-wasm = { path = "../medulla-wasm", optional = true }
 redb = { workspace = true, optional = true }
 ureq = { version = "3.4.2", optional = true }
+medulla-server-blob = { path = "../medulla-server-blob" }
 
 [features]
 ann-redb = ["redb", "medulla-server-api/ann-redb"]
@@ -72,14 +73,14 @@ mining = ["medulla-server-api/mining"]
 modality-serving = ["redb", "security", "streaming", "dep:medulla-modality", "dep:medulla-capabilities", "medulla-server-api/modality-serving"]
 owl = ["sparql", "dep:medulla-rdf", "medulla-server-api/owl"]
 query = ["redb", "dep:medulla-tsdb", "dep:medulla-plan", "medulla-server-api/query"]
-redb = ["dep:redb", "dep:medulla-transaction", "dep:medulla-storage", "medulla-server-api/redb"]
+redb = ["dep:redb", "dep:medulla-transaction", "dep:medulla-storage", "medulla-server-api/redb", "medulla-server-blob/redb"]
 result-cache = ["medulla-server-api/result-cache"]
-security = ["redb", "medulla-server-api/security"]
-shacl = ["dep:medulla-shacl", "medulla-server-api/shacl"]
+security = ["redb", "medulla-server-api/security", "medulla-server-blob/security"]
+shacl = ["dep:medulla-shacl", "medulla-server-api/shacl", "medulla-server-blob/shacl"]
 sparql = ["dep:medulla-rdf", "medulla-server-api/sparql"]
 stream = ["query", "dep:medulla-stream", "dep:medulla-plan", "medulla-server-api/stream"]
 streaming = ["medulla-server-api/streaming"]
-test-support = ["medulla-server-api/test-support"]
+test-support = ["medulla-server-api/test-support", "medulla-server-blob/test-support"]
 text = ["query", "dep:medulla-plan", "medulla-server-api/text"]
 tsdb = ["redb", "dep:medulla-tsdb", "dep:medulla-plan", "medulla-server-api/tsdb"]
 wasm-udf = ["dep:medulla-wasm", "dep:medulla-plan", "medulla-server-api/wasm-udf"]

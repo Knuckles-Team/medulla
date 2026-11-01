@@ -1985,9 +1985,9 @@ mod txn_ryow_dispatch_tests {
 mod evidence_resolver_wiring_tests {
     use super::explain_evidence_wire;
     use medulla_graph_core::graph::GraphCore;
-    use medulla_server_api::blob::stream::stream_blob_put;
-    use medulla_server_api::blob::ChunkStore;
-    use medulla_server_api::blob::RedbChunkStore;
+    use medulla_server_blob::blob::stream::stream_blob_put;
+    use medulla_server_blob::blob::ChunkStore;
+    use medulla_server_blob::blob::RedbChunkStore;
     use serde_json::json;
     use std::sync::Arc;
 

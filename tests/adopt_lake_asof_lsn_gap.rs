@@ -18,7 +18,7 @@
 use medulla_lake::{LakeField, LakeType};
 use medulla_tsdb::point::Point;
 use medulla_tsdb::store::SeriesStore;
-use medulla_server_api::blob::store::RedbChunkStore;
+use medulla_server_blob::blob::store::RedbChunkStore;
 use medulla_server::lake::{
     LakeManager, LakeVisibility, LoadTableAsOfError, DEFAULT_NAMESPACE,
 };

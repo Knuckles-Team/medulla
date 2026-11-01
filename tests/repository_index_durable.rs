@@ -19,7 +19,7 @@ mod common;
 #[path = "common/test_support.rs"]
 mod test_support;
 
-use medulla_server_api::blob::BlobStateExt;
+use medulla_server_blob::blob::BlobStateExt;
 use medulla_types::contract::BoundedVec;
 use medulla_types::ingestion_wire::{IndexFileVersion, IndexRepositoryScope, IndexTombstone};
 use medulla_protocol_types::protocol::{GraphType, Method, Response, ResultPayload};
@@ -189,8 +189,8 @@ fn scoped_index_pins_source_content_in_blob_cas() {
 
 #[cfg(feature = "blob")]
 async fn index_with_durable_source_refs() {
-    use medulla_server_api::blob::store::{ChunkStore, RedbChunkStore};
-    use medulla_server_api::blob::BlobCursors;
+    use medulla_server_blob::{blob::store::ChunkStore, blob::store::RedbChunkStore};
+    use medulla_server_blob::blob::BlobCursors;
     use std::sync::Arc;
 
     let (_dir, dir_s, _backend, state) = durable_graph("medulla-repoindex-cas").await;

@@ -30,10 +30,10 @@ use tokio::io::AsyncWriteExt;
 use tokio::net::TcpListener;
 use tokio::sync::RwLock;
 
-use crate::http1;
-use crate::http1::HttpMessage;
-use crate::http1::RequestLimits;
-use crate::state::ServerState;
+use medulla_server_api::http1;
+use medulla_server_api::http1::HttpMessage;
+use medulla_server_api::http1::RequestLimits;
+use medulla_server_api::state::ServerState;
 use medulla_graph_core::graph::GraphCore;
 use medulla_rdf::sparql::{Binding, Dataset, Projection, QueryOutcome, SparqlResult};
 
@@ -87,10 +87,10 @@ const HTTP_READ_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(15
 /// configuration (an issuer selected without its mandatory audience/JWKS
 /// URL) — logged, then also treated as unconfigured so a startup typo cannot
 /// crash the listener that also serves SPARQL UPDATE / Graph Store traffic.
-fn resolve_bearer_credential() -> Result<Option<crate::auth::BearerCredential>, String> {
-    match crate::oidc::JwtValidator::from_env_sparql() {
+fn resolve_bearer_credential() -> Result<Option<medulla_server_api::auth::BearerCredential>, String> {
+    match medulla_server_api::oidc::JwtValidator::from_env_sparql() {
         Ok(Some(validator)) => {
-            return Ok(Some(crate::auth::BearerCredential::Jwt(
+            return Ok(Some(medulla_server_api::auth::BearerCredential::Jwt(
                 std::sync::Arc::new(validator),
             )))
         }
@@ -100,12 +100,12 @@ fn resolve_bearer_credential() -> Result<Option<crate::auth::BearerCredential>, 
     Ok(std::env::var(SPARQL_BEARER_TOKEN_ENV)
         .ok()
         .filter(|s| !s.is_empty())
-        .map(crate::auth::BearerCredential::Static))
+        .map(medulla_server_api::auth::BearerCredential::Static))
 }
 
 /// Serve the SPARQL 1.1 HTTP protocol on `listener`, backed by the engine `state`.
 pub async fn serve(listener: TcpListener, state: Arc<RwLock<ServerState>>) {
-    if let Err(error) = crate::api::dispatch_support::require_loopback_listener(&listener) {
+    if let Err(error) = medulla_server_api::api::dispatch_support::require_loopback_listener(&listener) {
         tracing::error!("SPARQL listener refused: {error}");
         return;
     }
@@ -192,7 +192,7 @@ fn signed_request(
 /// Route + execute a request → `(status, content_type, body)`.
 pub async fn handle(
     state: &Arc<RwLock<ServerState>>,
-    bearer: &Option<crate::auth::BearerCredential>,
+    bearer: &Option<medulla_server_api::auth::BearerCredential>,
     req: HttpMessage,
 ) -> (&'static str, &'static str, String) {
     if !req.header("origin").is_empty() {
@@ -241,7 +241,7 @@ async fn handle_nl(
     // (real, not the old blanket stub) rather than silently widen this fixed,
     // read-only adapter to every local caller now that the stub is gone
     // elsewhere in this file.
-    if crate::carrier::unauthenticated_carrier_denied(None) {
+    if medulla_server_api::carrier::unauthenticated_carrier_denied(None) {
         medulla_kernel::metrics::access_denied();
         return (
             "403 Forbidden",
@@ -297,7 +297,7 @@ async fn handle_nl(
         agent_id: Some("service:local-query".to_string()),
         method: medulla_protocol_types::protocol::Method::NlQuery { text, graph },
     };
-    let resp = crate::api::reentry::dispatch_authenticated_local_query(state, request).await;
+    let resp = medulla_server_api::api::reentry::dispatch_authenticated_local_query(state, request).await;
     if let Some(err) = resp.error {
         return (
             "400 Bad Request",
@@ -329,7 +329,7 @@ async fn run_query(
     default_graph: &str,
     accept: &str,
     fmt_override: Option<&str>,
-    bearer: Option<&crate::auth::BearerCredential>,
+    bearer: Option<&medulla_server_api::auth::BearerCredential>,
     authorization_header: &str,
 ) -> (&'static str, &'static str, String) {
     // A18: a SPARQL SELECT/CONSTRUCT/ASK read can span multiple named graphs in
@@ -346,12 +346,12 @@ async fn run_query(
     // and KV-cache bearer/JWT routes: one implementation, three routes). No
     // configured credential, or an invalid one, still denies (fail closed) —
     // see AGENTS.md (A18) for the before/after across every auxiliary surface.
-    let carrier = crate::auth::mint_fixed_service_carrier(
+    let carrier = medulla_server_api::auth::mint_fixed_service_carrier(
         bearer.is_some_and(|credential| credential.verify(authorization_header)),
         "sparql-http-client",
         &["kg:read"],
     );
-    if crate::carrier::unauthenticated_carrier_denied(carrier.as_ref()) {
+    if medulla_server_api::carrier::unauthenticated_carrier_denied(carrier.as_ref()) {
         medulla_kernel::metrics::access_denied();
         return (
             "403 Forbidden",
@@ -836,7 +836,7 @@ mod tests {
         accept: &str,
         fmt_override: Option<&str>,
     ) -> (&'static str, &'static str, String) {
-        let bearer = crate::auth::BearerCredential::Static("s3cret".to_string());
+        let bearer = medulla_server_api::auth::BearerCredential::Static("s3cret".to_string());
         let header = "Bearer s3cret";
         run_query(
             state,
@@ -858,7 +858,7 @@ mod tests {
             "test",
             medulla_isolation::isolation::IsolationLayer::new(),
         )));
-        let bearer = crate::auth::BearerCredential::Static("s3cret".to_string());
+        let bearer = medulla_server_api::auth::BearerCredential::Static("s3cret".to_string());
         let select = "SELECT ?s WHERE { ?s ?p ?o }";
         let ask = "ASK { ?s ?p ?o }";
         for (credential, header) in [(None, "Bearer s3cret"), (Some(&bearer), "Bearer nope")] {

@@ -1,4 +1,4 @@
-use medulla_server_api::blob::BlobStateExt;
+use medulla_server_blob::blob::BlobStateExt;
 #[cfg(test)]
 use super::change_envelope::decode_multi_graph_batches;
 use super::change_envelope::route_change_envelope_ops;
@@ -1637,10 +1637,10 @@ mod blob_dispatch_tests {
     use medulla_protocol_types::protocol::Method;
     use medulla_protocol_types::protocol::Request;
     use medulla_server_api::auth::sign_current_test_request;
-    use medulla_server_api::blob::store::DEFAULT_UPLOAD_TTL_MS;
-    use medulla_server_api::blob::BlobCursors;
-    use medulla_server_api::blob::BlobRetentionPolicy;
-    use medulla_server_api::blob::RedbChunkStore;
+    use medulla_server_blob::blob::store::DEFAULT_UPLOAD_TTL_MS;
+    use medulla_server_blob::blob::BlobCursors;
+    use medulla_server_blob::blob::BlobRetentionPolicy;
+    use medulla_server_blob::blob::RedbChunkStore;
     use std::sync::Arc;
     use tokio::sync::RwLock;
 

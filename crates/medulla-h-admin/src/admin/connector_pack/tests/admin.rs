@@ -1,7 +1,7 @@
 //! PB3 (ruling D7): the admin binding decides who may import, retirement is
 //! permanent, and the reconciler releases only what nothing holds.
 
-use medulla_server_api::blob::BlobStateExt;
+use medulla_server_blob::blob::BlobStateExt;
 use medulla_catalog_types::connector_pack::{
     ConnectorPackOp, ConnectorPackReconcileRequest, ConnectorPackRetireRequest,
     ConnectorPackUnbindRequest, PackBodyReconcileReport, PackImportResult, PackRetireResult,
@@ -194,7 +194,7 @@ async fn the_reconciler_releases_an_orphan_body_and_keeps_every_held_one() {
     blob.store
         .put_engine_bodies(
             TENANT,
-            &[medulla_server_api::blob::engine_bodies::EngineBody {
+            &[medulla_server_blob::blob::engine_bodies::EngineBody {
                 sha256: Digest256::from_bytes(Sha256::digest(&orphan).into()),
                 body: orphan,
             }],
@@ -413,7 +413,7 @@ async fn refusal_snapshot(served: &Served, connector: &str) -> serde_json::Value
             let pointer = store
                 .connector_pack_content_pointer(TENANT, &member.component_id, Some(revision))
                 .unwrap();
-            let bytes = medulla_server_api::blob::engine_bodies::read_engine_body(
+            let bytes = medulla_server_blob::blob::engine_bodies::read_engine_body(
                 blob.store.as_ref(),
                 TENANT,
                 &pointer.engine_manifest_digest,
@@ -421,7 +421,7 @@ async fn refusal_snapshot(served: &Served, connector: &str) -> serde_json::Value
                 pointer.length,
             )
             .unwrap();
-            let holder = medulla_server_api::blob::engine_bodies::engine_body_holder(
+            let holder = medulla_server_blob::blob::engine_bodies::engine_body_holder(
                 TENANT,
                 &pointer.body_sha256,
             );

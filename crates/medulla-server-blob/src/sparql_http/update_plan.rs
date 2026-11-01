@@ -7,7 +7,7 @@ use medulla_rdf::sparql::Projection;
 use medulla_rdf::update::GraphStore;
 use tokio::sync::RwLock;
 
-use crate::state::ServerState;
+use medulla_server_api::state::ServerState;
 use medulla_graph_core::graph::GraphCore;
 
 /// A snapshot of the caller-authorized graphs at plan time: each entry's
@@ -118,7 +118,7 @@ fn plan_detached_update(
     let mut graphs = staged_by_name.clone();
     graphs.insert(String::new(), default);
     let store = EndpointStore { graphs };
-    let guard = crate::icv_guard::CoreIcvGuard::routed(&store.graphs);
+    let guard = medulla_server_api::icv_guard::CoreIcvGuard::routed(&store.graphs);
     let counts = medulla_rdf::update::execute(&parsed, &store, &Projection::raw(), &guard)
         .map_err(|error| error.to_string())?;
     let planned =

@@ -278,7 +278,7 @@ pub(crate) fn unresolved_reason_wire(reason: medulla_alignment::UnresolvedReason
 #[cfg(all(feature = "evidence-graph", feature = "alignment"))]
 pub(crate) fn evidence_citation_wire(
     c: &medulla_epistemic::EvidenceCitation,
-    resolver: Option<&medulla_server_api::blob::cas_resolver::CasEvidenceResolver<'_>>,
+    resolver: Option<&medulla_server_blob::blob::cas_resolver::CasEvidenceResolver<'_>>,
 ) -> medulla_protocol_types::protocol::EvidenceCitationWire {
     let resolved = resolver
         .and_then(|resolver| medulla_alignment::EvidenceResolver::resolve(resolver, &c.locus))
@@ -316,7 +316,7 @@ pub(crate) fn evidence_citation_wire(
 pub(crate) fn explain_evidence_wire(
     node_id: &str,
     view: &medulla_graph_core::graph::GraphView,
-    blob_store: Option<std::sync::Arc<dyn medulla_server_api::blob::ChunkStore>>,
+    blob_store: Option<std::sync::Arc<dyn medulla_server_blob::blob::ChunkStore>>,
 ) -> medulla_protocol_types::protocol::ExplainEvidenceResult {
     let bg = medulla_epistemic::BeliefGraph::from_graph_view(view);
     let citations = medulla_epistemic::evidence_citations(&bg, node_id);
@@ -352,7 +352,7 @@ pub(crate) fn explain_evidence_wire(
     .entered();
 
     let resolver = blob_store
-        .map(|store| medulla_server_api::blob::cas_resolver::CasEvidenceResolver::new(view, store));
+        .map(|store| medulla_server_blob::blob::cas_resolver::CasEvidenceResolver::new(view, store));
 
     medulla_protocol_types::protocol::ExplainEvidenceResult {
         citations: citations

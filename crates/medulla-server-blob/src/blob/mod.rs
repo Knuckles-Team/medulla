@@ -395,7 +395,7 @@ pub trait BlobStateExt {
     fn set_blob_cursors(&mut self, v: Option<Arc<BlobCursors>>);
 }
 
-impl BlobStateExt for crate::state::ServerState {
+impl BlobStateExt for medulla_server_api::state::ServerState {
     fn blob_cursors(&self) -> Option<&Arc<BlobCursors>> {
         self.blob
             .as_deref()
@@ -403,6 +403,6 @@ impl BlobStateExt for crate::state::ServerState {
     }
 
     fn set_blob_cursors(&mut self, v: Option<Arc<BlobCursors>>) {
-        self.blob = v.map(|b| Arc::new(b) as crate::state::ErasedHandle);
+        self.blob = v.map(|b| Arc::new(b) as medulla_server_api::state::ErasedHandle);
     }
 }

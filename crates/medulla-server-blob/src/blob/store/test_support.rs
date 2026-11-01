@@ -32,8 +32,8 @@ impl Operation {
         let mut nonce = Sha256::new();
         nonce.update(self.id.as_bytes());
         nonce.update(attempt.to_be_bytes());
-        crate::batch_compile::compile_opaque_method(
-            crate::batch_compile::CompileBatch {
+        medulla_server_api::batch_compile::compile_opaque_method(
+            medulla_server_api::batch_compile::CompileBatch {
                 batch_id: &self.id,
                 request_id: u64::from(attempt) + 1,
                 attempt_nonce: Some(medulla_types::contract::Nonce::from_bytes(

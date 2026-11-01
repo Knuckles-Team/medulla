@@ -1,6 +1,6 @@
 //! M3 cluster-admin routing and catalog/rebalance operations.
 
-use medulla_server_api::kv::KvStateExt;
+use medulla_server_blob::kv::KvStateExt;
 #[cfg(feature = "redb")]
 use medulla_mutation_types::mutation_scope::DurabilityDomain;
 use medulla_persistence::agent_library::AgentLibraryStateExt;

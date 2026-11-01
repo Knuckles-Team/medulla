@@ -2,11 +2,11 @@
 
 use std::sync::Arc;
 
-use crate::http1::HttpMessage;
-use crate::state::ServerState;
+use medulla_server_api::http1::HttpMessage;
+use medulla_server_api::state::ServerState;
 
 use super::{parse_form, run_query, signed_request, DEFAULT_GRAPH_ENV};
-use crate::api::dispatch_support::SPARQL_HTTP_UPDATE_EVENT;
+use medulla_server_api::api::dispatch_support::SPARQL_HTTP_UPDATE_EVENT;
 
 enum InputError {
     UnsupportedMediaType,
@@ -16,7 +16,7 @@ enum InputError {
 /// Execute a request already classified as the `/sparql` route.
 pub(super) async fn handle_sparql(
     state: &Arc<tokio::sync::RwLock<ServerState>>,
-    bearer: &Option<crate::auth::BearerCredential>,
+    bearer: &Option<medulla_server_api::auth::BearerCredential>,
     req: &HttpMessage,
     query_string: &str,
     content_type: &str,
@@ -112,7 +112,7 @@ async fn execute_update(
         Ok(request) => request,
         Err(error) => return ("401 Unauthorized", "text/plain", error),
     };
-    let response = crate::api::reentry::dispatch(state, request).await;
+    let response = medulla_server_api::api::reentry::dispatch(state, request).await;
     match response.error {
         None => ("204 No Content", "text/plain", String::new()),
         Some(error) if error.starts_with("ACCESS_DENIED") => ("403 Forbidden", "text/plain", error),

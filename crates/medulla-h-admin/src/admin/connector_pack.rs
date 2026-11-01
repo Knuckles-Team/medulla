@@ -6,7 +6,7 @@
 //! inheriting one. Each arm's target is owned by a different package after S1,
 //! which is why they are separate functions rather than one body.
 
-use medulla_server_api::blob::BlobStateExt;
+use medulla_server_blob::blob::BlobStateExt;
 #[cfg(feature = "redb")]
 use medulla_persistence::agent_library::AgentLibraryStateExt;
 use std::sync::Arc;
@@ -295,7 +295,7 @@ enum Preflight {
     Unchanged(medulla_catalog_types::connector_pack::PackImportResult),
     Ready {
         store: Arc<medulla_persistence::agent_library::AgentLibraryStore>,
-        blob: Arc<medulla_server_api::blob::BlobCursors>,
+        blob: Arc<medulla_server_blob::blob::BlobCursors>,
         archive: Vec<u8>,
     },
 }
@@ -422,7 +422,7 @@ fn replay_or_unchanged(
 async fn import_blob_store(
     state: &Arc<RwLock<ServerState>>,
     _request: &medulla_catalog_types::connector_pack::ConnectorPackImportRequest,
-) -> Result<Arc<medulla_server_api::blob::BlobCursors>, String> {
+) -> Result<Arc<medulla_server_blob::blob::BlobCursors>, String> {
     state
         .read()
         .await
@@ -433,7 +433,7 @@ async fn import_blob_store(
 
 #[cfg(all(feature = "redb", feature = "blob"))]
 async fn read_import_archive(
-    blob: &Arc<medulla_server_api::blob::BlobCursors>,
+    blob: &Arc<medulla_server_blob::blob::BlobCursors>,
     verified: &VerifiedRequestContext,
     request: &medulla_catalog_types::connector_pack::ConnectorPackImportRequest,
 ) -> Result<Vec<u8>, String> {

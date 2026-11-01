@@ -41,7 +41,7 @@
 //! header. Object versioning, ACLs / bucket policies, and multipart ETag
 //! MD5-of-MD5 semantics are outside this adapter's intentionally narrow API.
 
-use medulla_server_api::blob::BlobStateExt;
+use medulla_server_blob::blob::BlobStateExt;
 use std::collections::{BTreeMap, HashMap};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
@@ -60,11 +60,11 @@ mod calendar;
 mod route;
 
 use calendar::{iso8601, valid_amz_date};
-use medulla_server_api::blob::store::ChunkStore;
-use medulla_server_api::blob::store::RedbChunkStore;
+use medulla_server_blob::blob::store::ChunkStore;
+use medulla_server_blob::blob::store::RedbChunkStore;
 use medulla_server_api::http1;
 use medulla_server_api::http1::RequestLimits;
-use medulla_server_api::kv::KvStore;
+use medulla_server_blob::kv::KvStore;
 use medulla_server_api::state::ServerState;
 
 /// Env var: when set (and built `--features s3-api`) the S3 REST listener binds

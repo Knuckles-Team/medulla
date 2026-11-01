@@ -1,6 +1,6 @@
 //! Model media declarations cross the real signed pack-import boundary as facts.
 
-use medulla_server_api::blob::BlobStateExt;
+use medulla_server_blob::blob::BlobStateExt;
 use medulla_agent_types::agent_component::{
     AgentComponentFacts, ModelInputCapabilities, ModelInputMediaType,
 };

@@ -1,7 +1,7 @@
 //! Served decision-log tests: commit, evaluate, aggregate, fitting from the
 //! log, and retention (EH-060, EH-061, EH-062).
 
-use medulla_server_api::blob::BlobStateExt;
+use medulla_server_blob::blob::BlobStateExt;
 use super::*;
 
 /// Engine-log fitting: a bandit fit reads its labels from the decision log
@@ -222,7 +222,7 @@ fn tampered_blob(
         .store
         .put_engine_bodies(
             TENANT,
-            &[medulla_server_api::blob::engine_bodies::EngineBody { sha256, body }],
+            &[medulla_server_blob::blob::engine_bodies::EngineBody { sha256, body }],
             1,
         )
         .unwrap();

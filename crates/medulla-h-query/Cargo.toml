@@ -66,6 +66,7 @@ medulla-virtual-graph = { path = "../medulla-virtual-graph" }
 medulla-graph-algos = { path = "../medulla-graph-algos" }
 medulla-mining = { path = "../medulla-mining" }
 medulla-server-ops = { path = "../medulla-server-ops" }
+medulla-server-blob = { path = "../medulla-server-blob" }
 
 [features]
 test-support = []

@@ -5,7 +5,7 @@
 //! Library. The harness owns one temporary persist directory per test, so no
 //! test can observe another's committed state.
 
-use medulla_server_api::blob::BlobStateExt;
+use medulla_server_blob::blob::BlobStateExt;
 #[cfg(feature = "redb")]
 use medulla_agent_types::agent_library::AgentLibraryLifecycle;
 use medulla_persistence::agent_library::AgentLibraryStateExt;
@@ -595,7 +595,7 @@ pub(super) async fn seed_server_only_import(
     )
     .unwrap();
     let section = &index.server.body;
-    let body = medulla_server_api::blob::engine_bodies::EngineBody {
+    let body = medulla_server_blob::blob::engine_bodies::EngineBody {
         sha256: section.sha256,
         body: pack.1[section.offset as usize..(section.offset + section.length) as usize].to_vec(),
     };

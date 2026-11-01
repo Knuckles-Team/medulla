@@ -1,6 +1,6 @@
 //! Re-drive the graph projection of a connector's current committed pack head.
 
-use medulla_server_api::blob::BlobStateExt;
+use medulla_server_blob::blob::BlobStateExt;
 use medulla_protocol_types::protocol::Response;
 #[cfg(all(feature = "redb", feature = "blob", feature = "shacl"))]
 use medulla_protocol_types::protocol::ResultPayload;
@@ -210,7 +210,7 @@ fn record_projection_failure(
 
 #[cfg(all(feature = "redb", feature = "blob", feature = "shacl"))]
 async fn materialize_projection_documents(
-    blob: Arc<medulla_server_api::blob::BlobCursors>,
+    blob: Arc<medulla_server_blob::blob::BlobCursors>,
     plan: &ConnectorPackProjectionPlan,
 ) -> Result<PackProjectionDocuments, String> {
     let store = Arc::clone(&blob.store);
@@ -225,7 +225,7 @@ async fn materialize_projection_documents(
 
 #[cfg(all(feature = "redb", feature = "blob", feature = "shacl"))]
 fn projection_documents_from_store(
-    store: &dyn medulla_server_api::blob::store::ChunkStore,
+    store: &dyn medulla_server_blob::blob::store::ChunkStore,
     tenant_id: &str,
     bodies: &[PackProjectionBody],
 ) -> Result<PackProjectionDocuments, String> {
@@ -234,7 +234,7 @@ fn projection_documents_from_store(
     let mut shapes_length = 0usize;
     let mut ontology_length = 0usize;
     for body in bodies {
-        let bytes = medulla_server_api::blob::engine_bodies::read_engine_body(
+        let bytes = medulla_server_blob::blob::engine_bodies::read_engine_body(
             store,
             tenant_id,
             &body.engine_manifest_digest,
@@ -314,8 +314,8 @@ fn projection_error_code(error: &str) -> String {
 #[cfg(all(test, feature = "redb", feature = "blob", feature = "shacl"))]
 mod tests {
     use super::*;
-    use medulla_server_api::blob::engine_bodies::EngineBody;
-    use medulla_server_api::blob::store::ChunkStore as _;
+    use medulla_server_blob::blob::engine_bodies::EngineBody;
+    use medulla_server_blob::blob::store::ChunkStore as _;
     use medulla_types::contract::Digest256;
     use sha2::{Digest as _, Sha256};
 
@@ -328,7 +328,7 @@ mod tests {
 
     #[test]
     fn engine_owned_schema_bodies_materialize_by_kind() {
-        let store = medulla_server_api::blob::store::RedbChunkStore::open_temp().unwrap();
+        let store = medulla_server_blob::blob::store::RedbChunkStore::open_temp().unwrap();
         let ontology = body(b"<urn:Class> a <urn:Ontology> .");
         let shapes = body(b"<urn:Shape> a <urn:NodeShape> .");
         let stored = store
@@ -357,7 +357,7 @@ mod tests {
 
     #[test]
     fn missing_engine_body_fails_closed() {
-        let store = medulla_server_api::blob::store::RedbChunkStore::open_temp().unwrap();
+        let store = medulla_server_blob::blob::store::RedbChunkStore::open_temp().unwrap();
         let pointer = PackProjectionBody {
             uri: "ontology://demo/missing.ttl".into(),
             kind: PackEntryKind::Ontology,

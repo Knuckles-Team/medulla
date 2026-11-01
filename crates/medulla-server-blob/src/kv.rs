@@ -39,8 +39,8 @@ use medulla_mutation_types::mutation_scope::MutationSurface;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
-use crate::carrier::CarrierAuthority;
-use crate::batch_compile::COMPILED_BATCH_INCARNATION;
+use medulla_server_api::carrier::CarrierAuthority;
+use medulla_server_api::batch_compile::COMPILED_BATCH_INCARNATION;
 use medulla_protocol_types::result_contract::storage as results;
 
 /// The single KV table: `(namespace, key) -> value bytes`. Composite key so one file
@@ -626,14 +626,14 @@ fn compile_kv_batch(
     // verified tenant scope for a shared one, so every writer of one namespace
     // advances ONE kernel version sequence.
     let scope =
-        crate::batch_compile::opaque_coordinator_key("kv-scope", scope_owner, namespace);
+        medulla_server_api::batch_compile::opaque_coordinator_key("kv-scope", scope_owner, namespace);
     // The batch id is part of the canonical outbox key.  It must identify the
     // verified operation across transport retries, while the request id and
     // nonce identify only this attempt.  Derive it from the same authenticated
     // tenant/scope/actor/idempotency tuple the mutation kernel uses for replay;
     // a fresh nonce with the same stable key therefore replays the stored KV
     // verdict instead of creating a second outbox event.
-    let batch_id = crate::batch_compile::opaque_idempotency_key_for_context(
+    let batch_id = medulla_server_api::batch_compile::opaque_idempotency_key_for_context(
         "kv",
         authority.tenant_scope(),
         &scope,
@@ -647,8 +647,8 @@ fn compile_kv_batch(
     // here so KV retries use the kernel's one operation replay authority. The
     // batch id above intentionally has the same stable operation lifetime; the
     // nonce remains the separate attempt-replay guard.
-    let batch = crate::batch_compile::compile_opaque_method(
-        crate::batch_compile::CompileBatch {
+    let batch = medulla_server_api::batch_compile::compile_opaque_method(
+        medulla_server_api::batch_compile::CompileBatch {
             batch_id: &batch_id,
             request_id: req_id,
             attempt_nonce: authority.attempt_nonce(),
@@ -689,7 +689,7 @@ fn is_kv_method(method: &Method) -> bool {
 /// `kv.redb` holds real acknowledged user writes (`KvPut`/`KvCas`) and the fleet-shared
 /// KV-cache blocks, in its OWN durability domain off the graph shards.
 #[cfg(feature = "redb")]
-impl crate::api::persistence::BundledStoreSource for KvStore {
+impl medulla_server_api::api::persistence::BundledStoreSource for KvStore {
     fn file_name(&self) -> &'static str {
         "kv.redb"
     }
@@ -751,6 +751,6 @@ impl KvStateExt for ServerState {
     }
 
     fn set_kv_store(&mut self, v: Option<Arc<KvStore>>) {
-        self.kv = v.map(|k| Arc::new(k) as crate::state::ErasedHandle);
+        self.kv = v.map(|k| Arc::new(k) as medulla_server_api::state::ErasedHandle);
     }
 }

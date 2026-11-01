@@ -12,3 +12,47 @@ name = "medulla_server_blob"
 path = "src/lib.rs"
 
 [dependencies]
+medulla-server-api = { path = "../medulla-server-api" }
+dashmap = "6.2"
+hex = "0.4"
+medulla-alignment = { path = "../medulla-alignment", optional = true }
+medulla-capabilities = { path = "../medulla-capabilities", optional = true }
+medulla-kernel = { path = "../medulla-kernel" }
+medulla-modality = { path = "../medulla-modality", optional = true }
+medulla-plan = { path = "../medulla-plan", optional = true }
+medulla-rdf = { path = "../medulla-rdf", optional = true }
+medulla-storage = { path = "../medulla-storage", optional = true }
+medulla-store = { path = "../medulla-store" }
+medulla-transaction = { path = "../medulla-transaction", optional = true }
+medulla-types = { path = "../medulla-types" }
+parking_lot = "0.12"
+redb = { workspace = true, optional = true }
+rmp-serde = "1.3"
+serde = { version = "1.0", features = ["derive", "rc"] }
+serde_json = "1.0"
+sha2 = "0.10"
+tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "signal", "macros"], optional = true }
+tracing = "0.1"
+ureq = { version = "3.4.2", optional = true }
+medulla-agent-types = { path = "../medulla-agent-types" }
+medulla-catalog-types = { path = "../medulla-catalog-types" }
+medulla-mutation-types = { path = "../medulla-mutation-types" }
+medulla-protocol-types = { path = "../medulla-protocol-types" }
+medulla-graph-core = { path = "../medulla-graph-core" }
+medulla-isolation = { path = "../medulla-isolation" }
+
+medulla-shacl = { path = "../medulla-shacl", optional = true }
+
+[features]
+alignment = ["blob", "dep:medulla-modality", "dep:medulla-alignment", "medulla-server-api/alignment"]
+blob = ["redb", "medulla-server-api/blob"]
+blob-s3 = ["blob", "medulla-server-api/blob-s3"]
+kv = ["redb", "medulla-server-api/kv"]
+nl-query = ["dep:medulla-plan", "medulla-server-api/nl-query"]
+rdf-xml = ["dep:medulla-rdf", "medulla-server-api/rdf-xml"]
+redb = ["dep:redb", "dep:medulla-transaction", "dep:medulla-storage", "medulla-server-api/redb"]
+security = ["redb", "medulla-server-api/security"]
+shacl = ["dep:medulla-shacl", "medulla-server-api/shacl"]
+sparql-http = ["shacl", "security", "medulla-server-api/sparql-http"]
+sparql-service = ["sparql-http", "dep:ureq", "medulla-server-api/sparql-service"]
+test-support = ["medulla-server-api/test-support"]

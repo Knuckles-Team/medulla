@@ -6,7 +6,7 @@
 //! native submission route is composed here. The fixed service actor belongs
 //! to the deployment tenant; snapshots from another tenant fail closed.
 
-use medulla_server_api::blob::BlobStateExt;
+use medulla_server_blob::blob::BlobStateExt;
 #[cfg(feature = "raft")]
 use medulla_raft::raft::RaftStateExt;
 use std::sync::Arc;
@@ -74,7 +74,7 @@ mod worker {
     };
     use medulla_server_api::api::persistence::PersistenceBackend;
     use medulla_server_api::authority_context::VerifiedRequestContext;
-    use medulla_server_api::blob::store::ChunkStore;
+    use medulla_server_blob::blob::store::ChunkStore;
     #[cfg(not(feature = "raft"))]
     use medulla_server_api::mutation_batch::CommitOrigin;
     use medulla_server_api::mutation_batch::WorkItemCommitRequest;

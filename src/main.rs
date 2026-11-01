@@ -7,7 +7,7 @@
 // Parses CLI args, initializes the GraphRegistry, and starts
 // the UDS/TCP listener.
 
-use medulla_server_api::blob::BlobStateExt;
+use medulla_server_blob::blob::BlobStateExt;
 use medulla_server_api::cdc::CdcStateExt;
 use clap::Parser;
 use std::net::SocketAddr;
@@ -532,7 +532,7 @@ async fn spawn_sparql_listener(
         );
         let sparql_state = state.clone();
         tokio::spawn(async move {
-            medulla_server_api::sparql_http::serve(listener, sparql_state).await;
+            medulla_server_blob::sparql_http::serve(listener, sparql_state).await;
         });
     }
     #[cfg(not(feature = "sparql-http"))]

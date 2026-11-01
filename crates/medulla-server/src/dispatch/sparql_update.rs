@@ -123,7 +123,7 @@ const SPARQL_COMPENSATION_EVENT: &str = "sparql_http_compensation_v1";
 #[serde(deny_unknown_fields)]
 struct SparqlRecoveryPlan {
     schema_version: u8,
-    graphs: Vec<medulla_server_api::sparql_http::PlannedGraphUpdate>,
+    graphs: Vec<medulla_server_blob::sparql_http::PlannedGraphUpdate>,
     /// The planner's operation counts, sealed with the plan so a resumed saga answers
     /// the same `ApplyMutation` report as the attempt that planned it. A plan sealed
     /// before this field existed decodes with zero counts.
@@ -252,11 +252,11 @@ async fn resolve_sparql_update_graphs(
     query: &str,
     default_graph: &str,
 ) -> Result<Vec<String>, Response> {
-    let mut graphs = match medulla_server_api::sparql_http::update_graphs(query, default_graph) {
+    let mut graphs = match medulla_server_blob::sparql_http::update_graphs(query, default_graph) {
         Ok(graphs) => graphs,
         Err(error) => return Err(Response::err(coord.req_id, error)),
     };
-    if medulla_server_api::sparql_http::update_uses_variable_graph(query) {
+    if medulla_server_blob::sparql_http::update_uses_variable_graph(query) {
         graphs.extend(
             coord
                 .state
@@ -355,7 +355,7 @@ async fn build_sparql_update_plan(
             "ACCESS_DENIED: SPARQL graph creation requires graph:admin",
         ));
     }
-    let (planned, counts) = match medulla_server_api::sparql_http::plan_update(
+    let (planned, counts) = match medulla_server_blob::sparql_http::plan_update(
         coord.state,
         query,
         default_graph,
@@ -947,7 +947,7 @@ mod coordinator_restart_tests {
         let cipher = medulla_kernel::crypto::ValueCipher::from_key_material(b"restart-test-key");
         let plan = SparqlRecoveryPlan {
             schema_version: 1,
-            graphs: vec![medulla_server_api::sparql_http::PlannedGraphUpdate {
+            graphs: vec![medulla_server_blob::sparql_http::PlannedGraphUpdate {
                 graph: "graph-opaque".to_string(),
                 graph_type: medulla_protocol_types::protocol::GraphType::Global,
                 existed_before: true,

@@ -5,7 +5,7 @@
 //! grant themselves budget or name a model. This module does not drain a queue
 //! or run a worker; the outbox intent is committed with the source rows.
 
-use medulla_server_api::blob::BlobStateExt;
+use medulla_server_blob::blob::BlobStateExt;
 use std::collections::{BTreeMap, BTreeSet};
 
 use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
@@ -233,14 +233,14 @@ fn candidate_sources(
 /// rule that a background worker uses. Manifest hashes are NOT source hashes.
 #[cfg(feature = "blob")]
 fn verify_input_refs(
-    store: &dyn medulla_server_api::blob::store::ChunkStore,
+    store: &dyn medulla_server_blob::blob::store::ChunkStore,
     tenant: &str,
     repository_id: &str,
     candidates: Vec<CandidateSource>,
 ) -> Result<BTreeMap<UnitKey, (String, u64)>, String> {
     let mut refs = BTreeMap::new();
     for (unit, reference, length) in candidates {
-        medulla_server_api::blob::engine_bodies::read_repository_content_ref(
+        medulla_server_blob::blob::engine_bodies::read_repository_content_ref(
             store,
             tenant,
             repository_id,
@@ -423,7 +423,7 @@ mod tests {
     use medulla_compute::parser::enrichment_admission::EnrichmentCandidate;
     use medulla_compute::parser::enrichment_admission::EnrichmentStage;
     #[cfg(feature = "blob")]
-    use medulla_server_api::blob::store::ChunkStore;
+    use medulla_server_blob::blob::store::ChunkStore;
     #[cfg(feature = "blob")]
     use medulla_types::ingestion_wire::ExtractedNode;
     use medulla_types::ingestion_wire::{IndexFileOutcome, IndexFileStatus, NativeRungEvidence};
@@ -512,7 +512,7 @@ mod tests {
     #[test]
     fn worker_input_must_be_a_committed_cas_blob_ref() {
         use sha2::{Digest, Sha256};
-        let store = medulla_server_api::blob::store::RedbChunkStore::open_temp().unwrap();
+        let store = medulla_server_blob::blob::store::RedbChunkStore::open_temp().unwrap();
         let body = b"source bytes";
         let other = b"different source bytes";
         let source_digest =
@@ -524,11 +524,11 @@ mod tests {
                 "tenant",
                 "repo",
                 &[
-                    medulla_server_api::blob::engine_bodies::EngineBody {
+                    medulla_server_blob::blob::engine_bodies::EngineBody {
                         sha256: source_digest,
                         body: body.to_vec(),
                     },
-                    medulla_server_api::blob::engine_bodies::EngineBody {
+                    medulla_server_blob::blob::engine_bodies::EngineBody {
                         sha256: other_digest,
                         body: other.to_vec(),
                     },

@@ -53,7 +53,7 @@ use tokio::sync::RwLock;
 
 use medulla_lake::schema::{LakeField, LakeSchema, LakeType};
 use medulla_server_api::carrier::CarrierAuthority;
-use medulla_server_api::blob::store::ChunkStore;
+use medulla_server_blob::blob::store::ChunkStore;
 use medulla_server_api::http1;
 use medulla_server_api::http1::HttpMessage;
 use medulla_server_api::http1::RequestLimits;
@@ -707,7 +707,7 @@ use catalog::handle;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_server_api::blob::store::RedbChunkStore;
+    use medulla_server_blob::blob::store::RedbChunkStore;
     use medulla_tsdb::point::Point;
     use medulla_tsdb::store::SeriesStore;
     use tokio::io::AsyncReadExt as _;

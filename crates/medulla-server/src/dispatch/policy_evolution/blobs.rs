@@ -6,7 +6,7 @@
 //! that reference here rather than trusting the digest. A build without the
 //! blob store cannot hold anything, so it fails closed.
 
-use medulla_server_api::blob::BlobStateExt;
+use medulla_server_blob::blob::BlobStateExt;
 use medulla_decision_outcome_types::{policy_evolution::HeldBlobRef, policy_evolution::PolicyEvolutionRecord, policy_evolution::PolicyRefusal};
 
 use super::*;
@@ -54,7 +54,7 @@ pub(super) async fn verify_held_blobs(
 /// the declared length.
 #[cfg(feature = "blob")]
 fn check_held(
-    store: &dyn medulla_server_api::blob::ChunkStore,
+    store: &dyn medulla_server_blob::blob::ChunkStore,
     owner_scope: &str,
     blobs: &[HeldBlobRef],
 ) -> Result<(), PolicyRefusal> {

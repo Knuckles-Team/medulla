@@ -28,7 +28,7 @@
 //!    replay, no duplicates) — the full replay is a once-per-store cost, not
 //!    a per-boot one.
 
-use medulla_server_api::blob::BlobStateExt;
+use medulla_server_blob::blob::BlobStateExt;
 #[cfg(feature = "redb")]
 use medulla_persistence::agent_library::AgentLibraryStateExt;
 #[cfg(feature = "redb")]

@@ -18,7 +18,7 @@ use super::{
     table_ident_namespace, visibility_for,
 };
 use medulla_server_api::carrier::CarrierAuthority;
-use medulla_server_api::blob::store::ChunkStore;
+use medulla_server_blob::blob::store::ChunkStore;
 use medulla_server_api::http1::HttpMessage;
 
 /// Who the caller is for every routed operation: what it may see, and the

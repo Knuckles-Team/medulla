@@ -55,7 +55,7 @@ pub trait ComputeApi: Send + Sync {}
 
 /// Compile a blob mutation batch at the authoritative clock and the current native version.
 pub fn compile_blob_batch(
-    store: &dyn medulla_server_api::blob::store::ChunkStore,
+    store: &dyn medulla_server_blob::blob::store::ChunkStore,
     req_id: u64,
     authority: &CarrierAuthority,
     method: &Method,
@@ -65,7 +65,7 @@ pub fn compile_blob_batch(
 
 /// [`compile_blob_batch`] with an explicit attempt nonce.
 pub fn compile_blob_batch_with_nonce(
-    store: &dyn medulla_server_api::blob::store::ChunkStore,
+    store: &dyn medulla_server_blob::blob::store::ChunkStore,
     req_id: u64,
     authority: &CarrierAuthority,
     method: &Method,
@@ -119,7 +119,7 @@ pub fn compile_blob_batch_with_nonce(
 /// fix (allocate the cursor id BEFORE compiling the batch, then pass it here
 /// as `identity_id`).
 pub(crate) fn compile_blob_batch_at(
-    _store: &dyn medulla_server_api::blob::store::ChunkStore,
+    _store: &dyn medulla_server_blob::blob::store::ChunkStore,
     identity_id: u64,
     authority: &CarrierAuthority,
     method: &Method,
@@ -131,7 +131,7 @@ pub(crate) fn compile_blob_batch_at(
 
 /// [`compile_blob_batch_at`] with an explicit attempt nonce.
 pub fn compile_blob_batch_at_with_nonce(
-    _store: &dyn medulla_server_api::blob::store::ChunkStore,
+    _store: &dyn medulla_server_blob::blob::store::ChunkStore,
     identity_id: u64,
     authority: &CarrierAuthority,
     method: &Method,
@@ -168,9 +168,9 @@ pub fn compile_blob_batch_at_with_nonce(
 /// Convenience: build a `BlobCursors` over a fresh native CAS in `dir` (used by
 /// integration tests to drive the handler end to end).
 #[cfg(any(test, feature = "test-support"))]
-pub fn cursors_for_test(dir: &str) -> std::sync::Arc<medulla_server_api::blob::BlobCursors> {
-    let store = std::sync::Arc::new(medulla_server_api::blob::store::RedbChunkStore::open(dir).unwrap());
-    std::sync::Arc::new(medulla_server_api::blob::BlobCursors::new(store))
+pub fn cursors_for_test(dir: &str) -> std::sync::Arc<medulla_server_blob::blob::BlobCursors> {
+    let store = std::sync::Arc::new(medulla_server_blob::blob::store::RedbChunkStore::open(dir).unwrap());
+    std::sync::Arc::new(medulla_server_blob::blob::BlobCursors::new(store))
 }
 
 /// The installed ingest seam of `state`, or `None` before installation.

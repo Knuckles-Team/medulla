@@ -51,6 +51,7 @@ medulla-tables = { path = "../medulla-tables" }
 medulla-work-types = { path = "../medulla-work-types" }
 medulla-source-types = { path = "../medulla-source-types" }
 medulla-server-ops = { path = "../medulla-server-ops" }
+medulla-server-blob = { path = "../medulla-server-blob" }
 
 [features]
 test-support = []

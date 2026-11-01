@@ -7,10 +7,10 @@ use medulla_decision_outcome_types::{policy_evolution::ArrayEncoding, policy_evo
 use medulla_types::contract::Digest256;
 
 use super::*;
-use medulla_server_api::blob::store::test_support::chunked_as;
-use medulla_server_api::blob::store::test_support::reassemble;
-use medulla_server_api::blob::ChunkStore;
-use medulla_server_api::blob::RedbChunkStore;
+use medulla_server_blob::blob::store::test_support::chunked_as;
+use medulla_server_blob::blob::store::test_support::reassemble;
+use medulla_server_blob::blob::ChunkStore;
+use medulla_server_blob::blob::RedbChunkStore;
 
 const OWNER: &str = "carrier-owner:policy-test";
 

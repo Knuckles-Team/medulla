@@ -54,7 +54,7 @@ use std::sync::Arc;
 
 use medulla_kvcache::{Block, DataVersion, SharedKvBackend};
 
-use medulla_server_api::kv::KvStore;
+use medulla_server_blob::kv::KvStore;
 
 /// KV namespace for the framed KV-cache block bytes.
 const BLOCK_NS: &str = "kvcache-blocks";

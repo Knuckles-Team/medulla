@@ -13,7 +13,7 @@
 //! mistaken for orphans. A held body always keeps its holder, so `BlobGc` at
 //! any moment cannot remove a body a committed revision names.
 
-use medulla_server_api::blob::BlobStateExt;
+use medulla_server_blob::blob::BlobStateExt;
 use std::sync::Arc;
 
 use tokio::sync::RwLock;
@@ -163,12 +163,12 @@ pub(super) async fn reconcile_locked(
 pub(super) fn live_holders(
     tenant_id: &str,
     held: &std::collections::BTreeSet<medulla_types::contract::Digest256>,
-) -> Result<medulla_server_api::blob::store::HolderReconcile, String> {
-    use medulla_server_api::blob::engine_bodies::engine_body_holder;
-    use medulla_server_api::blob::engine_bodies::engine_body_holder_namespace;
-    use medulla_server_api::blob::store::HolderId;
-    use medulla_server_api::blob::store::HolderNamespace;
-    use medulla_server_api::blob::store::HolderReconcile;
+) -> Result<medulla_server_blob::blob::store::HolderReconcile, String> {
+    use medulla_server_blob::blob::engine_bodies::engine_body_holder;
+    use medulla_server_blob::blob::engine_bodies::engine_body_holder_namespace;
+    use medulla_server_blob::blob::store::HolderId;
+    use medulla_server_blob::blob::store::HolderNamespace;
+    use medulla_server_blob::blob::store::HolderReconcile;
 
     let namespace = HolderNamespace::new(&engine_body_holder_namespace(tenant_id))?;
     let live = held

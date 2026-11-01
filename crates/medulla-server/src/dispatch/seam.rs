@@ -349,7 +349,7 @@ impl DispatchApi for DispatchSeam {
         mut park_source: medulla_server_api::api::reentry::PageParkFn,
     ) -> SeamFuture<'a, Result<medulla_server_api::api::reentry::DrainOutcome, String>> {
         let Some(store) = store
-            .downcast_ref::<Arc<dyn medulla_server_api::blob::store::ChunkStore>>()
+            .downcast_ref::<Arc<dyn medulla_server_blob::blob::store::ChunkStore>>()
             .cloned()
         else {
             return Box::pin(async {

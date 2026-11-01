@@ -81,7 +81,7 @@
 //! The listener starts only with configured JWT validation or a runtime-injected
 //! bearer secret. Every request must authenticate or it is refused `401`.
 
-use medulla_server_api::kv::KvStateExt;
+use medulla_server_blob::kv::KvStateExt;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::Mutex;
