@@ -278,8 +278,8 @@ kind = "leaf"
 responsibility = "SQL execution: DataFusion context, table providers, catalogs, ANN pushdown, spill and Iceberg federation scans."
 moves = ["crates/medulla-query/src/sql", "crates/medulla-query/src/provider"]
 specs = ["engine-parity (SQL)", "federated-query-and-reasoning (SQL)"]
-current_lines = 10608
-projected_lines = 11708
+current_lines = 10731
+projected_lines = 11831
 
 [crates.medulla-sql-tests]
 level = "L4e"
@@ -287,8 +287,8 @@ kind = "tests"
 responsibility = "Integration tests of the SQL engine over tables, user tables, UDFs, PGQ and federation scans."
 moves = ["crates/medulla-sql/tests"]
 specs = []
-current_lines = 0
-projected_lines = 0
+current_lines = 7
+projected_lines = 7
 
 [crates.medulla-cypher]
 level = "L4d"
@@ -332,8 +332,8 @@ kind = "leaf"
 responsibility = "SQL language front end: statement classification, SQL/PGQ graph tables, PL/pgSQL bodies, vector and hypertable DDL, function expansion and the typed result shapes."
 moves = ["crates/medulla-sql/src/sql/classify", "crates/medulla-sql/src/sql/funcs", "crates/medulla-sql/src/sql/pgfamily", "crates/medulla-sql/src/sql/pgq", "crates/medulla-sql/src/sql/pgvector_ddl", "crates/medulla-sql/src/sql/plpgsql", "crates/medulla-sql/src/sql/typed_result"]
 specs = ["engine-parity (SQL syntax)"]
-current_lines = 10213
-projected_lines = 10213
+current_lines = 10097
+projected_lines = 10097
 
 [crates.medulla-query]
 level = "L4"

@@ -60,7 +60,7 @@ pub(crate) fn ann_query_shape(sql: &str) -> Result<AnnQueryShape, AnnDeclineReas
     let filter = select
         .selection
         .as_ref()
-        .map(super::classify::decode_predicate)
+        .map(medulla_sql_lang::sql::classify::decode_predicate)
         .transpose()
         .map_err(|_| AnnDeclineReason::UnsupportedFilter)?;
     Ok(AnnQueryShape {

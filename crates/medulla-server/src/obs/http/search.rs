@@ -251,7 +251,7 @@ fn es_search_response(hits: &[LogRecord]) -> String {
 
 /// The SQL `_search` response: columns + rows, plus row objects (`hits`) keyed by
 /// column name (the O2 SQL result shape).
-fn sql_search_response(res: &medulla_sql::sql::TypedQueryResult) -> String {
+fn sql_search_response(res: &medulla_sql_lang::sql::typed_result::TypedQueryResult) -> String {
     let cols: Vec<&str> = res.columns.iter().map(|c| c.name.as_str()).collect();
     let hits: Vec<serde_json::Value> = res
         .rows

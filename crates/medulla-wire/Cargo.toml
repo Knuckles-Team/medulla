@@ -56,6 +56,7 @@ medulla-server-cdc = { path = "../medulla-server-cdc" }
 medulla-server-auth = { path = "../medulla-server-auth" }
 medulla-exec = { path = "../medulla-exec" }
 medulla-uql = { path = "../medulla-uql" }
+medulla-sql-lang = { path = "../medulla-sql-lang" }
 
 [features]
 test-support = []

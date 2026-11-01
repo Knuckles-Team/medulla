@@ -7,9 +7,9 @@ pub(crate) async fn exec_sql_property_graph(
     store: &medulla_table_store::tables::TableStore,
     read_store: &medulla_table_store::tables::TableStore,
     read_core: &Arc<GraphCore>,
-    kind: medulla_sql::sql::StatementKind,
+    kind: medulla_sql_lang::sql::classify::StatementKind,
 ) -> Response {
-    use medulla_sql::sql::StatementKind as K;
+    use medulla_sql_lang::sql::classify::StatementKind as K;
     match kind {
         K::PropertyGraphDdlRequiresCatalogAdmission(_) => {
             exec_sql_property_graph_ddl(req_id, scope, sql_method, store).await
@@ -43,7 +43,7 @@ pub(crate) async fn exec_sql_property_graph_privilege(
                 .to_string(),
         );
     };
-    let statement = match medulla_sql::sql::parse_property_graph_privilege(query) {
+    let statement = match medulla_sql_lang::sql::pgq::parse_property_graph_privilege(query) {
         Ok(statement) => statement,
         Err(error) => return Response::err(req_id, sql_refusal(error)),
     };
@@ -83,7 +83,7 @@ pub(crate) async fn exec_sql_property_graph_ddl(
         );
     };
     let actor = scope.caller.unwrap_or(scope.tenant_scope).to_string();
-    let statement = match medulla_sql::sql::parse_property_graph_ddl(query, scope.tenant_scope) {
+    let statement = match medulla_sql_lang::sql::pgq::parse_property_graph_ddl(query, scope.tenant_scope) {
         Ok(statement) => statement,
         Err(error) => return Response::err(req_id, sql_refusal(error)),
     };
@@ -112,7 +112,7 @@ pub(crate) async fn exec_sql_graph_table_read(
     req_id: u64,
     store: medulla_table_store::tables::TableStore,
     read_core: Arc<GraphCore>,
-    query: medulla_sql::sql::GraphTableQuery,
+    query: medulla_sql_lang::sql::pgq::GraphTableQuery,
 ) -> Response {
     let rows = compute_off_lock(req_id, move || graph_table_rows(&store, &read_core, &query)).await;
     match rows {
@@ -126,8 +126,8 @@ pub(crate) async fn exec_sql_graph_table_read(
 pub(crate) fn graph_table_rows(
     store: &medulla_table_store::tables::TableStore,
     read_core: &Arc<GraphCore>,
-    query: &medulla_sql::sql::GraphTableQuery,
-) -> Result<medulla_sql::sql::TypedQueryResult, String> {
+    query: &medulla_sql_lang::sql::pgq::GraphTableQuery,
+) -> Result<medulla_sql_lang::sql::typed_result::TypedQueryResult, String> {
     // The authorized projection re-admits visible graphs under its own private
     // index scope. Resolve and lower against that scope rather than the source
     // tenant name, which intentionally is not copied into the projection.
@@ -347,16 +347,16 @@ pub(crate) async fn commit_sql_catalog_txn(
 /// evaluates the compound predicate. The matched ids are re-checked under the write
 /// guard by the caller (`compare_and_set_fields_if`/`remove_node_if`).
 #[cfg(feature = "query")]
-pub(crate) fn matched_node_ids(core: &GraphCore, selector: &medulla_sql::sql::WhereEq) -> Vec<String> {
+pub(crate) fn matched_node_ids(core: &GraphCore, selector: &medulla_sql_lang::sql::classify::WhereEq) -> Vec<String> {
     match selector {
-        medulla_sql::sql::WhereEq::Id(id) => {
+        medulla_sql_lang::sql::classify::WhereEq::Id(id) => {
             if core.has_node(id) {
                 vec![id.clone()]
             } else {
                 Vec::new()
             }
         }
-        medulla_sql::sql::WhereEq::Predicate { pred, .. } => {
+        medulla_sql_lang::sql::classify::WhereEq::Predicate { pred, .. } => {
             let mut out = Vec::new();
             for (id, blob) in core.get_nodes() {
                 if let Ok(mut obj) = medulla_types::msgpack::decode_property_object(&blob) {
@@ -383,9 +383,9 @@ pub(crate) use medulla_sql::columns_from_defs as to_store_columns;
 /// MutationBatch metadata in one redb transaction.
 #[cfg(feature = "query")]
 pub(crate) fn alter_table_txn_op(
-    plan: medulla_sql::sql::AlterTablePlan,
+    plan: medulla_sql_lang::sql::classify::AlterTablePlan,
 ) -> Result<medulla_table_store::tables::TxnOp, String> {
-    use medulla_sql::sql::AlterTableAction as A;
+    use medulla_sql_lang::sql::classify::AlterTableAction as A;
     match plan.action {
         A::AddColumn(col) => {
             let columns = to_store_columns(std::slice::from_ref(&col))?;

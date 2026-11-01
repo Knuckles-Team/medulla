@@ -34,7 +34,7 @@ pub(crate) async fn exec_sql_write_insert_nodes(
     req_id: u64,
     core: &Arc<GraphCore>,
     read_core: &Arc<GraphCore>,
-    ins: medulla_sql::sql::InsertNodes,
+    ins: medulla_sql_lang::sql::classify::InsertNodes,
 ) -> Response {
     let core = core.clone();
     let visible = read_core.clone();
@@ -65,7 +65,7 @@ pub(crate) async fn exec_sql_write_update_nodes(
     req_id: u64,
     core: &Arc<GraphCore>,
     read_core: Arc<GraphCore>,
-    upd: medulla_sql::sql::UpdateNodes,
+    upd: medulla_sql_lang::sql::classify::UpdateNodes,
 ) -> Response {
     let core = core.clone();
     let r = compute_off_lock(req_id, move || {
@@ -73,8 +73,8 @@ pub(crate) async fn exec_sql_write_update_nodes(
         let conditions = serde_json::Map::new();
         // CONCEPT:MEDULLA-KG.query.compound-predicate-decode — re-check a compound predicate under the write guard.
         let pred = match &upd.selector {
-            medulla_sql::sql::WhereEq::Predicate { pred, .. } => Some(pred.clone()),
-            medulla_sql::sql::WhereEq::Id(_) => None,
+            medulla_sql_lang::sql::classify::WhereEq::Predicate { pred, .. } => Some(pred.clone()),
+            medulla_sql_lang::sql::classify::WhereEq::Id(_) => None,
         };
         let mut n = 0usize;
         for id in ids {
@@ -99,15 +99,15 @@ pub(crate) async fn exec_sql_write_delete_nodes(
     req_id: u64,
     core: &Arc<GraphCore>,
     read_core: Arc<GraphCore>,
-    del: medulla_sql::sql::DeleteNodes,
+    del: medulla_sql_lang::sql::classify::DeleteNodes,
 ) -> Response {
     let core = core.clone();
     let r = compute_off_lock(req_id, move || {
         let ids = matched_node_ids(&read_core, &del.selector);
         // CONCEPT:MEDULLA-KG.query.compound-predicate-decode — re-check a compound predicate under the write guard.
         let pred = match &del.selector {
-            medulla_sql::sql::WhereEq::Predicate { pred, .. } => Some(pred.clone()),
-            medulla_sql::sql::WhereEq::Id(_) => None,
+            medulla_sql_lang::sql::classify::WhereEq::Predicate { pred, .. } => Some(pred.clone()),
+            medulla_sql_lang::sql::classify::WhereEq::Id(_) => None,
         };
         let mut n = 0usize;
         for id in ids {
@@ -141,9 +141,9 @@ pub(crate) async fn exec_sql_write_insert_select(
     read_core: Arc<GraphCore>,
     store: &medulla_table_store::tables::TableStore,
     read_store: &medulla_table_store::tables::TableStore,
-    ins: medulla_sql::sql::InsertSelect,
+    ins: medulla_sql_lang::sql::classify::InsertSelect,
 ) -> Response {
-    let medulla_sql::sql::InsertSelect {
+    let medulla_sql_lang::sql::classify::InsertSelect {
         table,
         columns,
         select_sql,
@@ -193,7 +193,7 @@ pub(crate) fn apply_insert_nodes_select_row(
     visible: &Arc<GraphCore>,
     id_pos: usize,
     columns: &[String],
-    on_conflict: Option<&medulla_sql::sql::OnConflict>,
+    on_conflict: Option<&medulla_sql_lang::sql::classify::OnConflict>,
     row: Vec<serde_json::Value>,
 ) -> Result<usize, String> {
     let node_id = cell_to_node_id(&row[id_pos])?;
@@ -209,8 +209,8 @@ pub(crate) fn apply_insert_nodes_select_row(
     }
     if visible.has_node(&node_id) {
         match on_conflict.map(|oc| &oc.action) {
-            Some(medulla_sql::sql::OnConflictAction::DoNothing) => return Ok(0),
-            Some(medulla_sql::sql::OnConflictAction::DoUpdate(set)) => {
+            Some(medulla_sql_lang::sql::classify::OnConflictAction::DoNothing) => return Ok(0),
+            Some(medulla_sql_lang::sql::classify::OnConflictAction::DoUpdate(set)) => {
                 let empty = serde_json::Map::new();
                 core.compare_and_set_fields(&node_id, &empty, set);
                 return Ok(1);
@@ -232,7 +232,7 @@ pub(crate) fn resolve_insert_nodes_select(
     visible: &Arc<GraphCore>,
     snap: &medulla_graph_core::graph::GraphView,
     store: &medulla_table_store::tables::TableStore,
-    ins: medulla_sql::sql::InsertNodesSelect,
+    ins: medulla_sql_lang::sql::classify::InsertNodesSelect,
 ) -> Result<usize, String> {
     let read = medulla_sql::sql::exec_sql_typed_with_tables(snap, store, &ins.select_sql)?;
     if read.columns.len() != ins.columns.len() {
@@ -267,7 +267,7 @@ pub(crate) async fn exec_sql_write_insert_nodes_select(
     core: &Arc<GraphCore>,
     read_core: Arc<GraphCore>,
     store: &medulla_table_store::tables::TableStore,
-    ins: medulla_sql::sql::InsertNodesSelect,
+    ins: medulla_sql_lang::sql::classify::InsertNodesSelect,
 ) -> Response {
     let core = core.clone();
     let store = store.clone();
@@ -288,7 +288,7 @@ pub(crate) async fn exec_sql_write_update_nodes_join(
     core: &Arc<GraphCore>,
     read_core: &Arc<GraphCore>,
     store: &medulla_table_store::tables::TableStore,
-    upd: medulla_sql::sql::UpdateNodesJoin,
+    upd: medulla_sql_lang::sql::classify::UpdateNodesJoin,
 ) -> Response {
     let core = core.clone();
     let store = store.clone();
@@ -333,7 +333,7 @@ pub(crate) async fn exec_sql_write_delete_nodes_join(
     core: &Arc<GraphCore>,
     read_core: &Arc<GraphCore>,
     store: &medulla_table_store::tables::TableStore,
-    del: medulla_sql::sql::DeleteNodesJoin,
+    del: medulla_sql_lang::sql::classify::DeleteNodesJoin,
 ) -> Response {
     let core = core.clone();
     let store = store.clone();
@@ -364,7 +364,7 @@ pub(crate) async fn exec_sql_write_create_table(
     scope: SqlWriteScope<'_>,
     sql_method: Method,
     store: &medulla_table_store::tables::TableStore,
-    plan: medulla_sql::sql::CreateTablePlan,
+    plan: medulla_sql_lang::sql::classify::CreateTablePlan,
 ) -> Response {
     let columns = match to_store_columns(&plan.columns) {
         Ok(columns) => columns,
@@ -386,7 +386,7 @@ pub(crate) async fn exec_sql_write_alter_table(
     scope: SqlWriteScope<'_>,
     sql_method: Method,
     store: &medulla_table_store::tables::TableStore,
-    plan: medulla_sql::sql::AlterTablePlan,
+    plan: medulla_sql_lang::sql::classify::AlterTablePlan,
 ) -> Response {
     let op = match alter_table_txn_op(plan) {
         Ok(op) => op,

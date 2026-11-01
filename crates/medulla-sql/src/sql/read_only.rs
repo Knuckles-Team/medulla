@@ -12,7 +12,7 @@ use datafusion::sql::sqlparser::ast::Statement;
 use datafusion::sql::sqlparser::dialect::PostgreSqlDialect;
 use datafusion::sql::sqlparser::parser::Parser;
 
-use super::classify::{classify, desugar_vector_ops, StatementKind};
+use medulla_sql_lang::{sql::classify::classify, sql::classify::desugar_vector_ops, sql::classify::StatementKind};
 
 /// Refuse `sql` unless it is exactly one read statement (`SELECT`/`WITH`/`SHOW`/
 /// `EXPLAIN <read>`). The input is classified AFTER the engine's operator desugaring

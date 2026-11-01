@@ -625,7 +625,7 @@ async fn decision_record_views_answer_only_from_visible_rows() {
         sql(&h, "decider", joined).await,
         vec![vec![json!("plan-deep")]]
     );
-    for table in medulla_sql::sql::READ_ONLY_RELATION_NAMES {
+    for table in medulla_sql_lang::sql::classify::READ_ONLY_RELATION_NAMES {
         let theirs = sql(&h, "stranger", &format!("SELECT count(*) FROM {table}")).await;
         assert_eq!(
             theirs,
@@ -635,7 +635,7 @@ async fn decision_record_views_answer_only_from_visible_rows() {
     }
     assert_eq!(
         view_names(&h, "decider"),
-        medulla_sql::sql::READ_ONLY_RELATION_NAMES
+        medulla_sql_lang::sql::classify::READ_ONLY_RELATION_NAMES
     );
 
     // UQL `DECISIONS`: the same visibility through the plan source.

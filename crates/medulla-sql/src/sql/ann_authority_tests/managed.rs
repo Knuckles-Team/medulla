@@ -183,10 +183,10 @@ fn drop_index_is_a_typed_sql_statement_over_the_same_fenced_drop() {
     let index = hnsw_l2();
     store.create_ann_index(&index).unwrap();
     refresh(&store);
-    let classified = crate::sql::classify("DROP INDEX IF EXISTS docs_emb;").unwrap();
+    let classified = medulla_sql_lang::sql::classify::classify("DROP INDEX IF EXISTS docs_emb;").unwrap();
     assert!(matches!(
         classified,
-        crate::sql::StatementKind::DropAnnIndex { ref name, if_exists: true } if name == "docs_emb"
+        medulla_sql_lang::sql::classify::StatementKind::DropAnnIndex { ref name, if_exists: true } if name == "docs_emb"
     ));
     assert_eq!(
         store.ann_index_table("docs_emb").unwrap().as_deref(),

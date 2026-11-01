@@ -76,6 +76,7 @@ medulla-federation = { path = "../medulla-federation" }
 medulla-nlq = { path = "../medulla-nlq" }
 medulla-retrieval = { path = "../medulla-retrieval" }
 medulla-uql = { path = "../medulla-uql" }
+medulla-sql-lang = { path = "../medulla-sql-lang" }
 
 [features]
 test-support = []

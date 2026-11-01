@@ -15,7 +15,7 @@ pub mod sql;
 pub mod provider;
 
 #[cfg(feature = "sql")]
-use crate::sql::ColumnDef;
+use medulla_sql_lang::sql::classify::ColumnDef;
 #[cfg(feature = "sql")]
 use medulla_tables::{schema::Column, schema::ColumnType};
 

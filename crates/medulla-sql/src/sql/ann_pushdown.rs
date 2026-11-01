@@ -25,7 +25,7 @@ use datafusion::scalar::ScalarValue;
 use medulla_result_types::row_predicate::RowPredicate;
 
 use super::ann_filter::{admissible_prefilter, ann_query_shape, AnnDeclineReason, AnnQueryShape};
-use super::pgfamily::{plan_ann_search, AnnSearchPlan};
+use medulla_sql_lang::{sql::pgfamily::plan_ann_search, sql::pgfamily::AnnSearchPlan};
 use medulla_table_store::{tables::ann_plan::AnnIndexPlan, tables::ann_plan::AnnMethod};
 use medulla_table_store::tables::ann_authority::AnnTopKRequest;
 use medulla_tables::schema::TableSchema;
@@ -79,10 +79,10 @@ pub(super) fn ann_pushdown_may_apply_with(
 /// (`embed_udf::medulla_embed_udf`) in production; an explicitly-bound one in a test, which
 /// must not claim the one-shot process binding.
 pub(super) fn ann_probe_sql_with(sql: &str, udf: &ScalarUDF) -> Option<String> {
-    if !contains_ignore_ascii_case(sql, super::embed_udf::MEDULLA_EMBED_FN) {
+    if !contains_ignore_ascii_case(sql, medulla_sql_lang::sql::pgfamily::MEDULLA_EMBED_FN) {
         return None;
     }
-    super::pgfamily::fold_const_embed_order_key(sql, &|text| embed_const_text(udf, text))
+    medulla_sql_lang::sql::pgfamily::fold_const_embed_order_key(sql, &|text| embed_const_text(udf, text))
 }
 
 /// Case-insensitive substring test, allocation-free — the cheap prefilter that keeps the

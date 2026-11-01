@@ -49,6 +49,7 @@ medulla-tsdb = { path = "../medulla-tsdb", optional = true }
 medulla-wasm = { path = "../medulla-wasm", optional = true }
 ureq = { version = "3.4.2", optional = true }
 medulla-exec = { path = "../medulla-exec" }
+medulla-sql-lang = { path = "../medulla-sql-lang" }
 
 [features]
 broker = ["medulla-server-api/broker"]

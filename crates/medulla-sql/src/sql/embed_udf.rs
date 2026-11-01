@@ -66,8 +66,7 @@ use datafusion::logical_expr::{
 };
 use datafusion::scalar::ScalarValue;
 
-/// The SQL name this function registers under.
-pub const MEDULLA_EMBED_FN: &str = "medulla_embed";
+use medulla_sql_lang::sql::pgfamily::MEDULLA_EMBED_FN;
 
 /// The server-side text→vector seam, as a closure so `medulla-query` needs no dependency on
 /// the crate that owns `TextEmbedder` (see the module doc: `medulla-plan` → `medulla-query`, so the
@@ -344,7 +343,7 @@ mod tests {
         ctx.register_udf(medulla_embed_udf_with(Some(embed)));
 
         let user_sql = "SELECT id FROM items ORDER BY emb <=> medulla_embed('leaky pump') LIMIT 1";
-        let planned = crate::sql::classify::desugar_vector_ops(user_sql);
+        let planned = medulla_sql_lang::sql::classify::desugar_vector_ops(user_sql);
         assert!(
             planned.contains("vector_cosine") && planned.contains("medulla_embed"),
             "desugar must keep the medulla_embed call inside vector_cosine: {planned}"

@@ -54,6 +54,7 @@ medulla-tsdb = { path = "../medulla-tsdb", optional = true }
 redb = { workspace = true, optional = true }
 medulla-server-cdc = { path = "../medulla-server-cdc" }
 medulla-server-auth = { path = "../medulla-server-auth" }
+medulla-sql-lang = { path = "../medulla-sql-lang" }
 
 [features]
 broker = ["medulla-server-api/broker", "medulla-server-auth/broker", "medulla-server-cdc/broker"]

@@ -1996,7 +1996,7 @@ pub fn register_owner_after_create_in(
 pub fn authorized_graph_table_sql(
     authority: &CarrierAuthority,
     persist_dir: &Path,
-    query: &medulla_sql::sql::GraphTableQuery,
+    query: &medulla_sql_lang::sql::pgq::GraphTableQuery,
 ) -> Result<String, String> {
     require_source_authority()?;
     let tenant_scope = authority.tenant_scope();
@@ -2021,7 +2021,7 @@ pub fn authorized_graph_table_sql(
     // admitted graph; this re-checks the pinned schema digests at READ time so a
     // bypass fails closed instead of lowering against a schema that moved.
     store.verify_property_graph_dependencies(&record)?;
-    medulla_sql::sql::lower_graph_table(query, &record.accepted_definition, tenant_scope)
+    medulla_sql_lang::sql::pgq::lower_graph_table(query, &record.accepted_definition, tenant_scope)
         .map(|plan| plan.to_sql())
 }
 
@@ -4140,7 +4140,7 @@ mod tests {
                    customers KEY (customer_id) LABEL customer PROPERTIES (name), \
                    orders KEY (order_id) LABEL \"order\" PROPERTIES (ordered_when))";
         let medulla_table_store::tables::PropertyGraphStatement::Create(definition) =
-            medulla_sql::sql::parse_property_graph_ddl(ddl, owner.tenant_scope()).unwrap()
+            medulla_sql_lang::sql::pgq::parse_property_graph_ddl(ddl, owner.tenant_scope()).unwrap()
         else {
             panic!("expected CREATE PROPERTY GRAPH");
         };
@@ -4151,12 +4151,12 @@ mod tests {
     }
 
     #[cfg(feature = "query")]
-    fn graph_table_query(graph: &str) -> medulla_sql::sql::GraphTableQuery {
+    fn graph_table_query(graph: &str) -> medulla_sql_lang::sql::pgq::GraphTableQuery {
         let sql = format!(
             "SELECT * FROM GRAPH_TABLE ({graph} MATCH (c:customer) COLUMNS (c.name AS customer_name))"
         );
-        match medulla_sql::sql::classify(&sql).unwrap() {
-            medulla_sql::sql::StatementKind::GraphTableReadRequiresCatalogAdmission(query) => query,
+        match medulla_sql_lang::sql::classify::classify(&sql).unwrap() {
+            medulla_sql_lang::sql::classify::StatementKind::GraphTableReadRequiresCatalogAdmission(query) => query,
             _ => panic!("expected a GRAPH_TABLE read"),
         }
     }

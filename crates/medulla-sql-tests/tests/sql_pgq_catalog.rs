@@ -4,7 +4,8 @@
 //! view DDL commits through.
 
 use medulla_graph_core::graph::GraphCore;
-use medulla_sql::{sql::classify, sql::exec_graph_table_typed_with_tables, sql::parse_property_graph_ddl, sql::StatementKind};
+use medulla_sql_lang::{sql::classify::classify, sql::pgq::parse_property_graph_ddl, sql::classify::StatementKind};
+use medulla_sql::sql::exec_graph_table_typed_with_tables;
 use medulla_tables::schema::TableConstraint;
 use medulla_table_store::tables::AlterPropertyGraphAction;
 use medulla_tables::schema::Column;
@@ -665,7 +666,7 @@ fn quoted_identifiers_in_a_persisted_graph_cannot_escape_the_emitted_sql() {
     .unwrap() else {
         panic!("expected a GRAPH_TABLE read");
     };
-    let sql = medulla_sql::sql::lower_graph_table(&query, &record.accepted_definition, TENANT)
+    let sql = medulla_sql_lang::sql::pgq::lower_graph_table(&query, &record.accepted_definition, TENANT)
         .unwrap()
         .to_sql();
 
@@ -682,7 +683,7 @@ fn quoted_identifiers_in_a_persisted_graph_cannot_escape_the_emitted_sql() {
     // statement (the lowerer rejects any other count), and re-renders the same
     // doubled identifier -- so `";drop` was one identifier, never a boundary.
     let statement =
-        medulla_sql::sql::lower_graph_table_to_datafusion(&query, &record.accepted_definition, TENANT)
+        medulla_sql_lang::sql::pgq::lower_graph_table_to_datafusion(&query, &record.accepted_definition, TENANT)
             .unwrap();
     let rendered = statement.to_string();
     assert!(rendered.contains(r#""tab"";drop""#), "{rendered}");

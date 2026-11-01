@@ -62,7 +62,7 @@ use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::net::TcpListener;
 use tokio::sync::RwLock;
 
-use medulla_sql::sql::PgColType;
+use medulla_sql_lang::sql::typed_result::PgColType;
 use serde::Deserialize;
 
 use medulla_protocol_types::protocol::Method;

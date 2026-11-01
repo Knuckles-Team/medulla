@@ -57,6 +57,7 @@ medulla-server-ops = { path = "../medulla-server-ops" }
 medulla-server-blob = { path = "../medulla-server-blob" }
 medulla-server-auth = { path = "../medulla-server-auth" }
 medulla-exec = { path = "../medulla-exec" }
+medulla-sql-lang = { path = "../medulla-sql-lang" }
 
 [features]
 ann = ["dep:medulla-ann"]

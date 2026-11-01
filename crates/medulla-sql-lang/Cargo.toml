@@ -1,0 +1,26 @@
+[package]
+name = "medulla-sql-lang"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: SQL language front end: statement classification, SQL/PGQ graph tables, PL/pgSQL bodies, vector and hypertable DDL, function expansion and the typed result shapes"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_sql_lang"
+path = "src/lib.rs"
+
+[dependencies]
+medulla-types = { path = "../medulla-types" }
+serde_json = "1.0"
+datafusion = { version = "54", default-features = false, optional = true, features = [
+    "nested_expressions",
+    "sql",
+] }
+medulla-result-types = { path = "../medulla-result-types" }
+medulla-table-store = { path = "../medulla-table-store" }
+medulla-tables = { path = "../medulla-tables" }
+
+[features]
+sql = ["dep:datafusion", "medulla-tables/sql", "medulla-table-store/sql"]
