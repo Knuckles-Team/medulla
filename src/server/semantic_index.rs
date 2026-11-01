@@ -82,6 +82,7 @@ use medulla_core::compute::semantic_index_service::{
 use medulla_transaction::{OutboxClaimBudget, OutboxClaimOutcome};
 #[cfg(feature = "query")]
 use medulla_types::mutation_scope::MutationOutboxLease;
+#[cfg(feature = "query")]
 use medulla_types::mutation_scope::MutationOutboxRecord;
 use medulla_types::semantic_index::{
     SemanticBinding, SemanticIndexCommand, SemanticIndexError, SemanticIndexRequest,

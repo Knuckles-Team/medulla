@@ -34,10 +34,13 @@ use medulla_epistemic::ProjectionPosition;
 use medulla_epistemic::{IncrementalDelta, ReasoningProjectionWakeup};
 #[cfg(feature = "redb")]
 use medulla_transaction::OutboxClaimBudget;
+#[cfg(feature = "redb")]
 use medulla_types::mutation_batch::MutationBatchStatus;
 #[cfg(feature = "redb")]
 use medulla_types::mutation_scope::CommittedVersion;
+#[cfg(feature = "redb")]
 use medulla_types::mutation_scope::MutationOutboxLease;
+#[cfg(feature = "redb")]
 use medulla_types::mutation_scope::MutationProjectionCursor;
 #[cfg(feature = "redb")]
 use std::collections::HashSet;
