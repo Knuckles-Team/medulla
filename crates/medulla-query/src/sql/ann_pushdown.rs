@@ -28,7 +28,8 @@ use super::ann_filter::{admissible_prefilter, ann_query_shape, AnnDeclineReason,
 use super::pgfamily::{plan_ann_search, AnnSearchPlan};
 use crate::tables::ann_plan::{AnnIndexPlan, AnnMethod};
 use crate::tables::ann_authority::AnnTopKRequest;
-use crate::tables::{TableSchema, TableStore};
+use crate::schema::TableSchema;
+use crate::tables::TableStore;
 
 /// Conservative predicate: could `sql` trigger an ANN pushdown against
 /// `ann_indexes`? A pushdown narrows `nodes`/a user table to a slice specific to
@@ -262,7 +263,7 @@ pub(super) fn maintained_top_k(
         UserAnnDecision::NotApplicable => return Ok(None),
     };
     let top = store.ann_top_k(&request.request(request.filter.as_ref()))?;
-    crate::tables::provider::materialize(schema, &top.rows).map(Some)
+    crate::provider::materialize(schema, &top.rows).map(Some)
 }
 
 /// Decide whether `sql` takes the ANN path against `ann_indexes` — see

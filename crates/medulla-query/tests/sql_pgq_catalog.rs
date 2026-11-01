@@ -7,13 +7,25 @@ use medulla_core::graph::GraphCore;
 use medulla_query::sql::{
     classify, exec_graph_table_typed_with_tables, parse_property_graph_ddl, StatementKind,
 };
-use medulla_query::tables::schema::TableConstraint;
-use medulla_query::tables::{
-    AlterPropertyGraphAction, Column, ColumnType, DropBehavior, ElementKind, GraphOwner,
-    LabelDefinition, PropertyGraphDefinition, PropertyGraphObjectId, PropertyGraphStatement,
-    PropertyGraphTxnOp, PropertySet, SqlIdentifier, SqlName, TableSchema, TableStore, TableTxn,
-    TxnOp,
-};
+use medulla_query::schema::TableConstraint;
+use medulla_query::tables::AlterPropertyGraphAction;
+use medulla_query::schema::Column;
+use medulla_query::schema::ColumnType;
+use medulla_query::tables::DropBehavior;
+use medulla_query::tables::ElementKind;
+use medulla_query::tables::GraphOwner;
+use medulla_query::tables::LabelDefinition;
+use medulla_query::tables::PropertyGraphDefinition;
+use medulla_query::tables::PropertyGraphObjectId;
+use medulla_query::tables::PropertyGraphStatement;
+use medulla_query::tables::PropertyGraphTxnOp;
+use medulla_query::tables::PropertySet;
+use medulla_query::tables::SqlIdentifier;
+use medulla_query::tables::SqlName;
+use medulla_query::schema::TableSchema;
+use medulla_query::tables::TableStore;
+use medulla_query::tables::TableTxn;
+use medulla_query::tables::TxnOp;
 use serde_json::json;
 
 // The store's owner scope is now the mutation TENANT of its bootstrap scope

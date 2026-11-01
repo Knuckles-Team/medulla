@@ -6,7 +6,8 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use serde::{Deserialize, Serialize};
 
-use crate::tables::schema::{ColumnType, TableSchema};
+use crate::schema::ColumnType;
+use crate::schema::TableSchema;
 
 use super::model::{
     digest_value, require, validate_bounded_text, validate_digest, validate_revision,

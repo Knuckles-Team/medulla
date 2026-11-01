@@ -26,7 +26,7 @@ use std::collections::HashSet;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
-use super::schema::{Column, ColumnType, TableConstraint, TableSchema};
+use crate::schema::{Column, ColumnType, TableConstraint, TableSchema};
 
 /// Version of the serialized migration contract.
 pub const SCHEMA_MIGRATION_FORMAT_VERSION: u16 = 1;

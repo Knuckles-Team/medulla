@@ -5,7 +5,10 @@ use std::collections::{BTreeMap, BTreeSet};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
-use crate::tables::schema::{Column, ColumnType, TableConstraint, TableSchema};
+use crate::schema::Column;
+use crate::schema::ColumnType;
+use crate::schema::TableConstraint;
+use crate::schema::TableSchema;
 
 use super::model::*;
 use super::{DropBehavior, ElementKind, GraphOwner};

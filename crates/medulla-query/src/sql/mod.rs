@@ -75,11 +75,6 @@ mod funcs;
 /// Gated `iceberg-federation` (implied by `sql`, see that feature's Cargo.toml comment).
 #[cfg(feature = "iceberg-federation")]
 mod iceberg_federation;
-/// CONCEPT:MEDULLA-KG.query.surface-b-numeric-operators — Analytics-Program Surface-B numeric SQL operators (`cosine_sim`,
-/// `l2_normalize`, `zscore`, `covariance`) backed by the `medulla-numeric` kernel. Feature
-/// `numeric` (out of `pi`); no pyo3 in the engine build.
-#[cfg(feature = "numeric")]
-mod numeric;
 /// Postgres-family extension parity: pgvector ANN index pushdown, TimescaleDB hypertables/continuous-aggregates, and
 /// ParadeDB `@@@` BM25 — the pure parse/plan/project layer.
 mod pgfamily;
@@ -92,9 +87,6 @@ mod pgvector_ddl;
 /// FOR, RETURN, RAISE, `SELECT … INTO`) against a variable environment, running embedded
 /// SQL back through the same read path. Pure Rust — no new deps (folds into `sql`).
 mod plpgsql;
-/// EH-522 — `eg_<func>(…) OVER (…)` window functions over the series kernels.
-#[cfg(feature = "numeric")]
-mod series_udwf;
 // `pub(crate)` (not `mod providers;`) so `crate::tables::provider::UserTableProvider`
 // (CONCEPT:MEDULLA-KG.query.register-each-user-table) can reuse `NodesTableProvider`'s generic equality-index
 // pushdown for its own full-scan fallback, instead of duplicating that machinery.
@@ -102,18 +94,11 @@ mod series_udwf;
 // a module path directly — external consumers only ever see the explicit `pub use`
 // re-exports below (`SqlCache`), unchanged.
 pub(crate) mod providers;
-/// Sketch-backed SQL aggregate UDFs (CONCEPT:MEDULLA-KG.query.approx-distinct-cardinality, W4.5/N5):
-/// `approx_distinct`/`approx_frequency`/`minhash_signature` + the `minhash_similarity` scalar.
-/// Always-on under base `sql` — the underlying sketches (`medulla_compute::sketch`) are pure-Rust
-/// with zero heavy deps, already-linked `medulla-compute` unconditionally carries them.
-mod sketch_udfs;
 mod spill;
 // The catalog objects of one table store a SQL read registers (EH-352 status rows).
 mod store_catalog;
 // `information_schema.medulla_index_status` (EH-352), synthesized like the other catalogs.
 mod index_status;
-mod tablefuncs;
-mod udfs;
 // EH-387: the read-only gate of the graph-free SQL path.
 mod read_only;
 pub use read_only::require_single_read;

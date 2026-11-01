@@ -57,7 +57,7 @@ use datafusion::logical_expr::{
 use datafusion::scalar::ScalarValue;
 use ndarray::{Array1, Array2};
 
-use super::udfs::row_to_vector;
+use crate::udfs::row_to_vector;
 
 /// Build a 1-D `ndarray` view-owning array from an f32 vector for the kernel (the kernel
 /// operates on `f64`; embeddings arrive as `f32`).

@@ -18,7 +18,7 @@ use redb::{ReadableTable, TableDefinition};
 
 use crate::tables::store::{SqlRead, SqlWrite};
 
-use crate::tables::schema::TableSchema;
+use crate::schema::TableSchema;
 
 use super::alter::apply_alter_action;
 use super::{

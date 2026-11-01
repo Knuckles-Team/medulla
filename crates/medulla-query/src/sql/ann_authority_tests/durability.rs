@@ -6,6 +6,7 @@
 use std::sync::Arc;
 
 use super::*;
+use medulla_core::index::ManagedIndexState;
 use crate::tables::ann_authority::durable::{encode, verified_manifest, Encoding};
 
 /// Far outside every fixture cluster (their coordinates stay within ±3).

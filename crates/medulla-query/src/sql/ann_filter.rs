@@ -20,7 +20,8 @@ use medulla_result_types::row_predicate::RowPredicate;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::tables::{ColumnType, TableSchema};
+use crate::schema::ColumnType;
+use crate::schema::TableSchema;
 
 /// Why a recognised nearest-neighbour query cannot take the maintained path.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -194,7 +195,7 @@ impl ScalarKind {
 #[cfg(test)]
 mod prefilter_precision_tests {
     use super::*;
-    use crate::tables::Column;
+    use crate::schema::Column;
     use medulla_result_types::row_predicate::CmpOp;
     use serde_json::json;
 

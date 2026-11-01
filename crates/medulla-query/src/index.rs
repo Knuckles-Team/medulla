@@ -4,7 +4,7 @@
 //! deliberately narrower: it describes ordinary B-tree-like indexes over scalar
 //! user-table columns and supplies the deterministic key encoding used by the
 //! redb catalog and entry directory.  The catalog is owner-scoped by the
-//! [`TableStore`](super::store::TableStore) handle; the scope is still part of
+//! [`TableStore`](crate::tables::store::TableStore) handle; the scope is still part of
 //! every durable key so a shared physical store cannot accidentally resolve an
 //! index belonging to another tenant.
 //!
@@ -15,7 +15,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::schema::{Cell, ColumnType, TableSchema};
+use crate::schema::{Cell, ColumnType, TableSchema};
 
 /// Version of the durable secondary-index definition and key encoding.
 pub const SECONDARY_INDEX_SCHEMA_VERSION: u16 = 1;

@@ -19,7 +19,9 @@ use medulla_query::{
 // crate's top-level re-export list in `tables/mod.rs`, a file this track does not
 // own — see the final report's "files touched outside the owned list" note).
 use medulla_query::sql::parse_property_graph_ddl;
-use medulla_query::tables::schema::{ArrayElemType, RefAction, TableConstraint};
+use medulla_query::schema::ArrayElemType;
+use medulla_query::schema::RefAction;
+use medulla_query::schema::TableConstraint;
 use medulla_query::tables::PropertyGraphStatement;
 use serde_json::{json, Value};
 
@@ -1910,7 +1912,7 @@ fn ne002_column_types_round_trip_through_insert_select_arrow() {
         rows[0][3],
         Cell::Json(Value::Array(vec![json!("a"), json!("b")]))
     );
-    let arrow = medulla_query::tables::provider::arrow_schema(&schema);
+    let arrow = medulla_query::provider::arrow_schema(&schema);
     assert!(matches!(
         arrow.field(0).data_type(),
         arrow::datatypes::DataType::FixedSizeBinary(16)

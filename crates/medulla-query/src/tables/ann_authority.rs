@@ -34,8 +34,8 @@
 //!
 //! [`TableStore::refresh_ann_generations`]: crate::tables::TableStore::refresh_ann_generations
 
-mod durable;
-mod generation;
+pub mod durable;
+pub mod generation;
 mod lifecycle;
 mod maintain;
 mod serve;
@@ -294,11 +294,11 @@ impl UserAnnAuthority {
         receipts.push_back(receipt);
     }
 
-    fn existing_slot(&self, index: &str) -> Option<Arc<AnnSlot>> {
+    pub fn existing_slot(&self, index: &str) -> Option<Arc<AnnSlot>> {
         read(&self.slots).get(index).cloned()
     }
 
-    fn slot(&self, index: &str) -> Arc<AnnSlot> {
+    pub fn slot(&self, index: &str) -> Arc<AnnSlot> {
         if let Some(slot) = self.existing_slot(index) {
             return slot;
         }

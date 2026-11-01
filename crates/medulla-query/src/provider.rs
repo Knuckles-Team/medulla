@@ -27,9 +27,9 @@ use datafusion::datasource::MemTable;
 use datafusion::error::Result as DfResult;
 use datafusion::logical_expr::{Expr, Operator, TableProviderFilterPushDown, TableType};
 
-use super::index::SecondaryIndexLookup;
-use super::schema::{ArrayElemType, Cell, ColumnType, TableSchema};
-use super::store::TableStore;
+use crate::index::SecondaryIndexLookup;
+use crate::schema::{ArrayElemType, Cell, ColumnType, TableSchema};
+use crate::tables::store::TableStore;
 use crate::sql::filter_shape::{classify_pushdown, column_eq_literal, ScanPlan};
 use crate::sql::providers::NodesTableProvider;
 
@@ -187,7 +187,7 @@ fn materialize_uuid(rows: &[Vec<Cell>], ci: usize) -> Result<ArrayRef, String> {
             // Legacy WIP rows used canonical UUID text. Decode them
             // on read so persisted rows survive the representation fix.
             Some(Cell::Text(text)) => {
-                let bytes = super::schema::uuid_bytes(text)?;
+                let bytes = crate::schema::uuid_bytes(text)?;
                 builder
                     .append_value(&bytes)
                     .map_err(|e| format!("UUID Arrow value: {e}"))?;
@@ -764,7 +764,8 @@ impl TableProvider for UserTableProvider {
 #[cfg(test)]
 mod user_table_provider_tests {
     use super::*;
-    use crate::tables::schema::{ArrayElemType, Column};
+    use crate::schema::ArrayElemType;
+    use crate::schema::Column;
     use medulla_core::graph::GraphView;
     use serde_json::json;
 

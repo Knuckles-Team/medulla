@@ -29,8 +29,8 @@ use crate::tables::ann_plan::AnnIndexPlan;
 use super::providers::{infer_nodes, EdgesTableProvider, NodesTableProvider, SqlCache};
 use super::spill::CancellationToken;
 use super::store_catalog::{reads_index_status, StoreCatalog};
-use super::tablefuncs::{BetweennessFunc, GenerateSeriesFunc, PagerankFunc};
-use super::udfs::{
+use crate::tablefuncs::{BetweennessFunc, GenerateSeriesFunc, PagerankFunc};
+use crate::udfs::{
     base64_decode_udf, base64_encode_udf, bm25_match_udf, bm25_score_udf, bm25_snippet_udf,
     epistemic_decay_udf, greatest_udf, int4range_udf, ipcontains_udf, ipfamily_udf, iphost_udf,
     ipmasklen_udf, json_get_f64_udf, json_get_i64_udf, json_get_udf, least_udf, md5_udf,
@@ -38,7 +38,9 @@ use super::udfs::{
     sha1_udf, sha256_udf, time_bucket_udf, tsrange_udf, vector_cosine_udf, vector_ip_udf,
     vector_l2_udf,
 };
-use crate::tables::{StoredFunction, TableSchema, TableStore};
+use crate::schema::StoredFunction;
+use crate::schema::TableSchema;
+use crate::tables::TableStore;
 
 /// One user table's registration plan for `build_ctx` (CONCEPT:MEDULLA-KG.query.register-user-tables-alongside):
 /// [`materialize_user_tables`] chooses PER TABLE between the two variants below.
@@ -98,7 +100,7 @@ fn register_pg_common(ctx: &SessionContext) {
 /// tables-only obs path so both expose the identical operator set.
 #[cfg(feature = "numeric")]
 fn register_numeric(ctx: &SessionContext) {
-    use super::numeric::{
+    use crate::numeric::{
         cosine_sim_udf, covariance_udaf, kmeans_udaf, l2_normalize_udf, pca_udaf, svd_udaf,
         zscore_udf,
     };
@@ -114,7 +116,7 @@ fn register_numeric(ctx: &SessionContext) {
     ctx.register_udaf(kmeans_udaf());
     // EH-522 — `medulla_zscore(v, 60) OVER (PARTITION BY series ORDER BY ts)` and the rest of
     // the `DERIVE` table, on the same kernels as UQL `DERIVE`.
-    for udwf in super::series_udwf::series_window_udfs() {
+    for udwf in crate::series_udwf::series_window_udfs() {
         ctx.register_udwf(udwf);
     }
 }
@@ -197,10 +199,10 @@ pub fn exec_sql_over_tables(
         register_pg_common(&ctx);
         // CONCEPT:MEDULLA-KG.query.approx-distinct-cardinality (W4.5/N5) — sketch-backed aggregates over the obs
         // Arrow tables too (e.g. `SELECT approx_distinct(trace_id) FROM logs`).
-        ctx.register_udaf(super::sketch_udfs::approx_distinct_udaf());
-        ctx.register_udaf(super::sketch_udfs::approx_frequency_udaf());
-        ctx.register_udaf(super::sketch_udfs::minhash_signature_udaf());
-        ctx.register_udf(super::sketch_udfs::minhash_similarity_udf());
+        ctx.register_udaf(crate::sketch_udfs::approx_distinct_udaf());
+        ctx.register_udaf(crate::sketch_udfs::approx_frequency_udaf());
+        ctx.register_udaf(crate::sketch_udfs::minhash_signature_udaf());
+        ctx.register_udf(crate::sketch_udfs::minhash_similarity_udf());
         // CONCEPT:MEDULLA-KG.query.surface-b-numeric-operators — Surface-B numeric operators over the obs Arrow tables too.
         #[cfg(feature = "numeric")]
         register_numeric(&ctx);
@@ -882,8 +884,8 @@ fn build_ctx(
                 user_relations.push((name, schema));
             }
             UserTable::Lazy(name, schema, store) => {
-                let arrow_schema = crate::tables::provider::arrow_schema(&schema);
-                let table = crate::tables::provider::UserTableProvider::new(store, schema);
+                let arrow_schema = crate::provider::arrow_schema(&schema);
+                let table = crate::provider::UserTableProvider::new(store, schema);
                 ctx.register_table(name.as_str(), Arc::new(table))
                     .map_err(|e| format!("register user table `{name}`: {e}"))?;
                 user_relations.push((name, arrow_schema));
@@ -920,17 +922,17 @@ fn build_ctx(
     // CONCEPT:MEDULLA-KG.query.approx-distinct-cardinality (W4.5/N5) — sketch-backed aggregates
     // (HyperLogLog/Count-Min-Sketch/MinHash). Always-on: pure-Rust, no heavy dep beyond what
     // `sql` already links.
-    ctx.register_udaf(super::sketch_udfs::approx_distinct_udaf());
-    ctx.register_udaf(super::sketch_udfs::approx_frequency_udaf());
-    ctx.register_udaf(super::sketch_udfs::minhash_signature_udaf());
-    ctx.register_udf(super::sketch_udfs::minhash_similarity_udf());
+    ctx.register_udaf(crate::sketch_udfs::approx_distinct_udaf());
+    ctx.register_udaf(crate::sketch_udfs::approx_frequency_udaf());
+    ctx.register_udaf(crate::sketch_udfs::minhash_signature_udaf());
+    ctx.register_udf(crate::sketch_udfs::minhash_similarity_udf());
     // CONCEPT:MEDULLA-KG.query.surface-b-numeric-operators — Surface-B numeric operators over the graph's resident columns.
     #[cfg(feature = "numeric")]
     register_numeric(&ctx);
     #[cfg(feature = "finance")]
     {
-        ctx.register_udaf(super::udfs::var_udaf());
-        ctx.register_udaf(super::udfs::cvar_udaf());
+        ctx.register_udaf(crate::udfs::var_udaf());
+        ctx.register_udaf(crate::udfs::cvar_udaf());
     }
     // CONCEPT:MEDULLA-KG.query.route-create-view-create: the `pg_catalog` + `information_schema` system views are registered
     // by the caller via `register_system_catalogs` AFTER `register_views`, so views are

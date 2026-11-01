@@ -16,14 +16,18 @@ use serde_json::{json, Value};
 
 use crate::tables::ann_authority::generation::AnnGeneration;
 use crate::tables::ann_authority::*;
+use medulla_core::index::ManagedIndexState;
 use crate::tables::ann_plan::metric_to_ann;
 use crate::tables::ann_plan::AnnIndexPlan;
 use crate::tables::ann_plan::AnnMethod;
 use crate::tables::ann_plan::VectorMetric;
-use crate::tables::schema::Cell;
+use crate::schema::Cell;
 use crate::tables::store::dev_scope_grant::{dev_verifier, DEV_PRINCIPAL, DEV_PROOF};
 use crate::tables::store::AnnSourceRows;
-use crate::tables::{Column, ColumnType, TableSchema, TableStore};
+use crate::schema::Column;
+use crate::schema::ColumnType;
+use crate::schema::TableSchema;
+use crate::tables::TableStore;
 
 const DIM: usize = 8;
 

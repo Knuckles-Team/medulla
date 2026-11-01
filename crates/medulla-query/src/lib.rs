@@ -57,21 +57,99 @@ pub use sql::{
 };
 
 #[cfg(feature = "sql")]
-pub use tables::{
-    AnnIndexPlan, AnnMethod, HypertablePlan, VectorMetric,
-    migration::{
-        conversion_may_be_lossy, MigrationPolicy, MigrationState, RollbackMetadata,
-        SchemaMigration, SchemaMigrationApply, SchemaMigrationOperation, SchemaMigrationRecord,
-        SchemaSnapshot, SecondaryIndexPolicy,
-    },
-    AnnFallbackReason, AnnIndexStatus, AnnLimits, AnnRefreshOutcome, AnnRefreshPolicy,
-    AnnServeReceipt, AnnServingPath, AnnTopK, AnnTopKRequest, Cell, CmpOp, ColCheck, Column,
-    ColumnType, ConflictAction, FunctionArg, FunctionReturns, IndexCatalogTxnOp,
-    PropertyGraphGrantee, PropertyGraphPrivilegeOperation, PropertyGraphPrivilegeStatement,
-    PropertyGraphTxnOp, SecondaryIndexColumn, SecondaryIndexKind, SecondaryIndexLookup,
-    SecondaryIndexOrder, SecondaryIndexSpec, StoredFunction, TableSchema, TableStore, TableTxn,
-    TxnOp, UserAnnAuthority,
-};
+pub use tables::AnnIndexPlan;
+#[cfg(feature = "sql")]
+pub use tables::AnnMethod;
+#[cfg(feature = "sql")]
+pub use tables::HypertablePlan;
+#[cfg(feature = "sql")]
+pub use tables::VectorMetric;
+#[cfg(feature = "sql")]
+pub use migration::conversion_may_be_lossy;
+#[cfg(feature = "sql")]
+pub use migration::MigrationPolicy;
+#[cfg(feature = "sql")]
+pub use migration::MigrationState;
+#[cfg(feature = "sql")]
+pub use migration::RollbackMetadata;
+#[cfg(feature = "sql")]
+pub use migration::SchemaMigration;
+#[cfg(feature = "sql")]
+pub use migration::SchemaMigrationApply;
+#[cfg(feature = "sql")]
+pub use migration::SchemaMigrationOperation;
+#[cfg(feature = "sql")]
+pub use migration::SchemaMigrationRecord;
+#[cfg(feature = "sql")]
+pub use migration::SchemaSnapshot;
+#[cfg(feature = "sql")]
+pub use migration::SecondaryIndexPolicy;
+#[cfg(feature = "sql")]
+pub use tables::AnnFallbackReason;
+#[cfg(feature = "sql")]
+pub use tables::AnnIndexStatus;
+#[cfg(feature = "sql")]
+pub use tables::AnnLimits;
+#[cfg(feature = "sql")]
+pub use tables::AnnRefreshOutcome;
+#[cfg(feature = "sql")]
+pub use tables::AnnRefreshPolicy;
+#[cfg(feature = "sql")]
+pub use tables::AnnServeReceipt;
+#[cfg(feature = "sql")]
+pub use tables::AnnServingPath;
+#[cfg(feature = "sql")]
+pub use tables::AnnTopK;
+#[cfg(feature = "sql")]
+pub use tables::AnnTopKRequest;
+#[cfg(feature = "sql")]
+pub use schema::Cell;
+#[cfg(feature = "sql")]
+pub use schema::CmpOp;
+#[cfg(feature = "sql")]
+pub use schema::ColCheck;
+#[cfg(feature = "sql")]
+pub use schema::Column;
+#[cfg(feature = "sql")]
+pub use schema::ColumnType;
+#[cfg(feature = "sql")]
+pub use tables::ConflictAction;
+#[cfg(feature = "sql")]
+pub use schema::FunctionArg;
+#[cfg(feature = "sql")]
+pub use schema::FunctionReturns;
+#[cfg(feature = "sql")]
+pub use tables::IndexCatalogTxnOp;
+#[cfg(feature = "sql")]
+pub use tables::PropertyGraphGrantee;
+#[cfg(feature = "sql")]
+pub use tables::PropertyGraphPrivilegeOperation;
+#[cfg(feature = "sql")]
+pub use tables::PropertyGraphPrivilegeStatement;
+#[cfg(feature = "sql")]
+pub use tables::PropertyGraphTxnOp;
+#[cfg(feature = "sql")]
+pub use index::SecondaryIndexColumn;
+#[cfg(feature = "sql")]
+pub use index::SecondaryIndexKind;
+#[cfg(feature = "sql")]
+pub use index::SecondaryIndexLookup;
+#[cfg(feature = "sql")]
+pub use index::SecondaryIndexOrder;
+#[cfg(feature = "sql")]
+pub use index::SecondaryIndexSpec;
+#[cfg(feature = "sql")]
+pub use schema::StoredFunction;
+#[cfg(feature = "sql")]
+pub use schema::TableSchema;
+#[cfg(feature = "sql")]
+pub use tables::TableStore;
+#[cfg(feature = "sql")]
+pub use tables::TableTxn;
+#[cfg(feature = "sql")]
+pub use tables::TxnOp;
+#[cfg(feature = "sql")]
+pub use tables::UserAnnAuthority;
 
 #[cfg(feature = "sql")]
 /// Resolve parsed SQL column declarations into the durable table-schema columns
@@ -106,3 +184,38 @@ pub use cypher::{
 
 #[cfg(all(feature = "cypher", feature = "result-cache"))]
 pub use cypher::{exec_cypher_params_indexed, IndexSource};
+
+#[cfg(feature = "sql")]
+pub mod schema;
+
+#[cfg(feature = "sql")]
+pub mod index;
+
+#[cfg(feature = "sql")]
+pub mod migration;
+
+#[cfg(feature = "sql")]
+pub mod provider;
+
+/// CONCEPT:MEDULLA-KG.query.surface-b-numeric-operators — Analytics-Program Surface-B numeric SQL operators (`cosine_sim`,
+/// `l2_normalize`, `zscore`, `covariance`) backed by the `medulla-numeric` kernel. Feature
+/// `numeric` (out of `pi`); no pyo3 in the engine build.
+#[cfg(feature = "numeric")]
+pub mod numeric;
+
+/// EH-522 — `eg_<func>(…) OVER (…)` window functions over the series kernels.
+#[cfg(feature = "numeric")]
+pub mod series_udwf;
+
+/// Sketch-backed SQL aggregate UDFs (CONCEPT:MEDULLA-KG.query.approx-distinct-cardinality, W4.5/N5):
+/// `approx_distinct`/`approx_frequency`/`minhash_signature` + the `minhash_similarity` scalar.
+/// Always-on under base `sql` — the underlying sketches (`medulla_compute::sketch`) are pure-Rust
+/// with zero heavy deps, already-linked `medulla-compute` unconditionally carries them.
+#[cfg(feature = "sql")]
+pub mod sketch_udfs;
+
+#[cfg(feature = "sql")]
+pub mod tablefuncs;
+
+#[cfg(feature = "sql")]
+pub mod udfs;

@@ -58,11 +58,18 @@ use super::pgq::GraphTableQuery;
 use crate::tables::property_graph::{
     PropertyGraphPrivilegeStatement, PropertyGraphStatement, SqlName,
 };
-use crate::tables::schema::{
-    CheckExpr, CmpOp, ColCheck, ColumnType, FunctionArg as CatalogArg, FunctionLanguage,
-    FunctionReturns, RefAction, StoredFunction, TableConstraint, MAX_TABLE_COLUMNS,
-    MAX_TABLE_CONSTRAINTS,
-};
+use crate::schema::CheckExpr;
+use crate::schema::CmpOp;
+use crate::schema::ColCheck;
+use crate::schema::ColumnType;
+use crate::schema::FunctionArg as CatalogArg;
+use crate::schema::FunctionLanguage;
+use crate::schema::FunctionReturns;
+use crate::schema::RefAction;
+use crate::schema::StoredFunction;
+use crate::schema::TableConstraint;
+use crate::schema::MAX_TABLE_COLUMNS;
+use crate::schema::MAX_TABLE_CONSTRAINTS;
 
 /// Catalog mutation requested by a parsed SQL/PGQ DDL statement. Classification
 /// intentionally carries no tenant, ACL decision, or executable SQL: the

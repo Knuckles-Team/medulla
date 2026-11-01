@@ -7,11 +7,17 @@ use medulla_query::sql::{
     parse_property_graph_ddl, parse_property_graph_privilege, PropertyGraphDdlOperation,
     StatementKind,
 };
-use medulla_query::tables::{
-    decode_property_graph, AlterPropertyGraphAction, Column, ColumnType, DropBehavior,
-    PropertyGraphDefinition, PropertyGraphPrivilegeOperation, PropertyGraphStatement, PropertySet,
-    TableSchema, TableStore,
-};
+use medulla_query::tables::decode_property_graph;
+use medulla_query::tables::AlterPropertyGraphAction;
+use medulla_query::schema::Column;
+use medulla_query::schema::ColumnType;
+use medulla_query::tables::DropBehavior;
+use medulla_query::tables::PropertyGraphDefinition;
+use medulla_query::tables::PropertyGraphPrivilegeOperation;
+use medulla_query::tables::PropertyGraphStatement;
+use medulla_query::tables::PropertySet;
+use medulla_query::schema::TableSchema;
+use medulla_query::tables::TableStore;
 use serde_json::json;
 
 const TENANT: &str = "tenant/acme";

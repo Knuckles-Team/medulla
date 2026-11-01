@@ -13,7 +13,8 @@
 
 #![cfg(feature = "sql")]
 
-use medulla_query::tables::schema::{RefAction, TableConstraint};
+use medulla_query::schema::RefAction;
+use medulla_query::schema::TableConstraint;
 use medulla_query::{Cell, Column, ColumnType, TableSchema, TableStore};
 
 fn widgets_schema() -> TableSchema {

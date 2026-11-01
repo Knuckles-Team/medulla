@@ -5,6 +5,7 @@
 use medulla_core::index::{IndexBlockReason, ManagedIndexTarget};
 
 use super::*;
+use medulla_core::index::ManagedIndexState;
 use crate::tables::ann_authority::durable::{encode, Encoding};
 use crate::tables::store::GenerationWrite;
 

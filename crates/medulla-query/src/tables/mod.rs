@@ -29,11 +29,7 @@
 pub mod ann_authority;
 pub mod ann_plan;
 pub mod embedding_binding;
-pub mod index;
-pub mod migration;
 pub mod property_graph;
-pub mod provider;
-pub mod schema;
 pub mod store;
 
 pub use ann_plan::{AnnIndexPlan, AnnMethod, HypertablePlan, VectorMetric};
@@ -49,10 +45,6 @@ pub use embedding_binding::{
     EMBEDDING_BINDING_SCHEMA_VERSION, EMBEDDING_TARGET_SUFFIX, MAX_EMBEDDING_BINDINGS_PER_TABLE,
     MAX_EMBEDDING_DIM,
 };
-pub use index::{
-    SecondaryIndexColumn, SecondaryIndexKind, SecondaryIndexLookup, SecondaryIndexOrder,
-    SecondaryIndexSpec,
-};
 pub use property_graph::{
     decode_property_graph, decode_property_graph_catalog_record, AlterElementAction,
     AlterPropertyGraphAction, CanonicalCatalogName, DropBehavior, EdgeEndpoint,
@@ -64,10 +56,6 @@ pub use property_graph::{
     ResolvedColumnDependency, SqlIdentifier, SqlName, VertexTableDefinition,
     MAX_PROPERTY_GRAPH_CATALOG_RECORD_BYTES, PROPERTY_GRAPH_CATALOG_SCHEMA_VERSION,
     PROPERTY_GRAPH_SCHEMA_VERSION,
-};
-pub use schema::{
-    Cell, CmpOp, ColCheck, Column, ColumnType, FunctionArg, FunctionLanguage, FunctionReturns,
-    StoredFunction, TableSchema,
 };
 pub use store::{
     ConflictAction, IndexCatalogTxnOp, PropertyGraphTxnOp, TableStore, TableTxn, TxnOp,

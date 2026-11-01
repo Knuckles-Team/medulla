@@ -65,8 +65,11 @@ fn supports_filters_classifies_predicates() {
 /// scan uses the index, mirroring the `nodes` provider.
 #[test]
 fn user_table_pushdown_uses_index() {
-    use crate::tables::provider::materialize;
-    use crate::tables::schema::{Cell, Column, ColumnType, TableSchema};
+    use crate::provider::materialize;
+    use crate::schema::Cell;
+    use crate::schema::Column;
+    use crate::schema::ColumnType;
+    use crate::schema::TableSchema;
     use datafusion::logical_expr::{col, lit};
 
     let schema = TableSchema::new(

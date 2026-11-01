@@ -3,11 +3,11 @@
 //! A binding is one durable declaration that a text-bearing source is
 //! semantically indexed: *"column `items.description` is embedded by model M,
 //! into vector space V, maintained automatically"*.  It is deliberately a
-//! SEPARATE catalog from the scalar secondary-index directory: [`super::index`]
+//! SEPARATE catalog from the scalar secondary-index directory: [`crate::index`]
 //! states, at its `SecondaryIndexKind` declaration, that *"keeping the enum
 //! closed prevents a vector/ANN request from silently entering this scalar
 //! directory"*.  This module honours that instruction rather than widening that
-//! enum, and otherwise mirrors [`super::index`] exactly — the same owner-scoped
+//! enum, and otherwise mirrors [`crate::index`] exactly — the same owner-scoped
 //! `tenant_scope`, the same `schema_version` + `schema_digest` bond to the
 //! source schema, and the same validate-on-CREATE-and-on-every-read discipline.
 //!
@@ -39,7 +39,7 @@
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
-use super::schema::{ColumnType, TableSchema};
+use crate::schema::{ColumnType, TableSchema};
 use crate::tables::ann_plan::AnnMethod;
 use crate::tables::ann_plan::VectorMetric;
 
@@ -709,7 +709,7 @@ fn validate_bounded_text(value: &str, kind: &str, max_bytes: usize) -> Result<()
 #[cfg(test)]
 mod embedding_binding_tests {
     use super::*;
-    use crate::tables::schema::Column;
+    use crate::schema::Column;
     use crate::tables::store::TableStore;
 
     const SCOPE: &str = "tenant-a/actor-1";

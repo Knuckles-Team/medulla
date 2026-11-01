@@ -11,7 +11,9 @@ use medulla_result_types::row_predicate::RowPredicate;
 use super::ann_durable::{changed_since, ChangedRows, DirtyReadTable};
 use super::{decode_stored, get_schema_read, map_err, row_map, RowsReadTable, TableStore, ROWS};
 use crate::tables::ann_authority::UserAnnAuthority;
-use crate::tables::schema::{Cell, ColumnType, TableSchema};
+use crate::schema::Cell;
+use crate::schema::ColumnType;
+use crate::schema::TableSchema;
 
 /// Every indexable vector of one column, read in one snapshot.
 pub(crate) struct AnnSourceRows {

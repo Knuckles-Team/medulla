@@ -27,10 +27,10 @@ use arrow::array::{Array, ArrayRef, FixedSizeListArray, Float32Array, ListArray,
 use arrow::datatypes::{DataType, SchemaRef};
 use arrow::record_batch::RecordBatch;
 
-use medulla_ann::{FlatIndex, HnswIndex, IvfPq, IvfPqParams, Metric, SearchParams};
+use medulla_ann::{FlatIndex, HnswIndex, IvfPq, IvfPqParams, SearchParams};
 use serde::{Deserialize, Serialize};
 
-use crate::tables::ann_plan::{AnnMethod, VectorMetric};
+use crate::tables::ann_plan::{isqrt, metric_to_ann, AnnMethod, VectorMetric};
 
 /// Deterministic seed for every medulla-ann index built for a pushdown (CONCEPT:MEDULLA-KG.query.real-pgvector-ann-top) —
 /// fixed so repeated runs of the same query are bit-identical.
@@ -99,7 +99,7 @@ pub(crate) fn parse_query_vector(raw: &str) -> Option<Vec<f32>> {
     if s.is_empty() || s.starts_with('$') {
         return None;
     }
-    crate::tables::schema::parse_vector_text(s)
+    crate::schema::parse_vector_text(s)
         .ok()
         .filter(|v| !v.is_empty())
 }

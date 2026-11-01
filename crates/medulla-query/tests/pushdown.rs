@@ -6,7 +6,9 @@
 
 use medulla_core::graph::GraphCore;
 use medulla_query::exec_sql;
-use medulla_query::tables::{Cell, SecondaryIndexLookup, TableStore};
+use medulla_query::schema::Cell;
+use medulla_query::index::SecondaryIndexLookup;
+use medulla_query::tables::TableStore;
 use serde_json::{json, Value};
 
 #[path = "common/query_rows.rs"]
@@ -190,7 +192,10 @@ fn pushdown_mixed_equality_and_inequality() {
 /// SQL DDL classification to the public TableStore methods.
 #[test]
 fn secondary_index_catalog_and_scalar_lookup_contract() {
-    use medulla_query::tables::{Column, ColumnType, SecondaryIndexColumn, TableSchema};
+    use medulla_query::schema::Column;
+    use medulla_query::schema::ColumnType;
+    use medulla_query::index::SecondaryIndexColumn;
+    use medulla_query::schema::TableSchema;
 
     let path = std::env::temp_dir().join(format!(
         "medulla_secondary_contract_{}_{}.redb",
@@ -264,7 +269,7 @@ fn secondary_index_catalog_and_scalar_lookup_contract() {
         .secondary_index_ordered_rows(
             "events",
             "events_score_idx",
-            medulla_query::tables::SecondaryIndexOrder::Desc,
+            medulla_query::index::SecondaryIndexOrder::Desc,
             1,
             Some(1),
         )
@@ -331,9 +336,11 @@ fn secondary_index_catalog_and_scalar_lookup_contract() {
 /// before any catalog row is written.
 #[test]
 fn secondary_index_rejects_vector_columns_without_touching_ann_catalog() {
-    use medulla_query::tables::{
-        Column, ColumnType, SecondaryIndexColumn, TableSchema, TableStore,
-    };
+    use medulla_query::schema::Column;
+    use medulla_query::schema::ColumnType;
+    use medulla_query::index::SecondaryIndexColumn;
+    use medulla_query::schema::TableSchema;
+    use medulla_query::tables::TableStore;
     let (store, _path) = TableStore::open_temp().unwrap();
     let schema = TableSchema::new(
         "embeddings",

@@ -6,7 +6,9 @@
 use medulla_core::index::ManagedIndexStatus;
 
 use crate::tables::ann_plan::AnnIndexPlan;
-use crate::tables::{PropertyGraphCatalogRecord, StoredFunction, TableStore};
+use crate::tables::PropertyGraphCatalogRecord;
+use crate::schema::StoredFunction;
+use crate::tables::TableStore;
 
 /// The name of the managed-index status relation, `information_schema.medulla_index_status`.
 pub(crate) const INDEX_STATUS_RELATION: &str = "medulla_index_status";
