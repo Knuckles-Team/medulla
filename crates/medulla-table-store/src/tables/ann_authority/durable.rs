@@ -49,7 +49,7 @@ enum Body {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub(super) struct Manifest {
+pub struct Manifest {
     generation: u64,
     method: AnnMethod,
     dim: Option<usize>,

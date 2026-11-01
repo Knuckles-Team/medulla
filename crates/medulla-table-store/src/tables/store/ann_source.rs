@@ -18,15 +18,15 @@ use medulla_tables::schema::TableSchema;
 /// Every indexable vector of one column, read in one snapshot.
 pub struct AnnSourceRows {
     /// Tenant SQL source epoch the snapshot observed.
-    pub(crate) epoch: u64,
+    pub epoch: u64,
     /// The generation's vector width: the declared width, else the first
     /// non-empty vector's.
-    pub(crate) dim: Option<usize>,
+    pub dim: Option<usize>,
     /// Highest physical row id present in the snapshot. Row ids are never
     /// reused, so a row inserted after the snapshot always lands strictly above.
-    pub(crate) max_rowid: Option<u64>,
+    pub max_rowid: Option<u64>,
     /// `(row id, vector)` for every row whose vector has `dim` elements.
-    pub(crate) rows: Vec<(u64, Vec<f32>)>,
+    pub rows: Vec<(u64, Vec<f32>)>,
 }
 
 impl AnnSourceRows {

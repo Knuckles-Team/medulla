@@ -52,14 +52,14 @@ pub struct StoredGeneration {
 /// What one activation writes: the generation, the one other generation it
 /// still depends on, and how far the changed-row log may be pruned.
 pub struct GenerationWrite<'a> {
-    pub(crate) index: &'a str,
-    pub(crate) table: &'a str,
-    pub(crate) stored: &'a StoredGeneration,
+    pub index: &'a str,
+    pub table: &'a str,
+    pub stored: &'a StoredGeneration,
     /// A full generation this one extends; every other generation is removed.
-    pub(crate) keeps: Option<u64>,
+    pub keeps: Option<u64>,
     /// Changed rows stamped at or below this epoch are covered by every live
     /// generation of the table and are removed. `None` prunes nothing.
-    pub(crate) prune_through: Option<u64>,
+    pub prune_through: Option<u64>,
 }
 
 /// Changed row ids read from one snapshot, bounded.

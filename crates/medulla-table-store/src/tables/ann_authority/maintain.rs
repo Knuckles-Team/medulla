@@ -73,7 +73,7 @@ pub(super) enum BuildRefusal {
 /// The right to build, activate and persist one slot's next generation.
 /// Dropping it releases the slot, whether the build succeeded, failed or
 /// panicked.
-pub(super) struct BuildTicket<'s> {
+pub struct BuildTicket<'s> {
     slot: &'s AnnSlot,
     generation: u64,
 }

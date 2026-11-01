@@ -36,9 +36,9 @@
 
 pub mod durable;
 pub mod generation;
-mod lifecycle;
-mod maintain;
-mod serve;
+pub mod lifecycle;
+pub mod maintain;
+pub mod serve;
 
 pub use maintain::{AnnRefreshOutcome, AnnRefreshPolicy};
 pub use serve::{AnnTopK, AnnTopKRequest};
@@ -182,7 +182,7 @@ impl Default for AnnLimits {
 /// One registration's live generation and its maintenance state. The two locks
 /// are never held together.
 #[derive(Default)]
-struct AnnSlot {
+pub struct AnnSlot {
     live: RwLock<Option<Arc<AnnGeneration>>>,
     maintenance: Mutex<SlotMaintenance>,
 }
