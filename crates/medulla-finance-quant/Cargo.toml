@@ -23,4 +23,4 @@ medulla-finance-market = { path = "../medulla-finance-market" }
 ndarray = "0.17"
 
 [features]
-analytics = ["dep:statrs", "medulla-numeric/analytics"]
+analytics = ["medulla-numeric/analytics"]
