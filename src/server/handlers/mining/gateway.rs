@@ -1,9 +1,14 @@
-use super::super::mining::{
+use super::{
     AnomalyRequest, ClassifyPredictRequest, ClusterRequest, ReduceRequest, WritebackOptions,
 };
-use super::*;
+use std::sync::Arc;
 
-use super::gateway_mining_derived::{
+use medulla_core::graph::GraphCore;
+use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
+use medulla_server_api::access::GraphReadAuthority;
+use medulla_server_api::mutation::{self, MutationCtx, MutationPlan};
+
+use super::gateway_derived::{
     apply_mine_associate, apply_mine_causal_impact, apply_mine_community,
     apply_mine_entity_resolve, apply_mine_forecast, apply_mine_process,
     apply_mine_retrieval_quality, apply_mine_risk_propagation, apply_mine_root_cause,
@@ -15,7 +20,7 @@ fn apply_mine_cluster(
     core: &Arc<GraphCore>,
     req_id: u64,
     method_owned: Method,
-    tsdb_bind: super::super::mining::MiningTsdbBind<'_>,
+    tsdb_bind: super::MiningTsdbBind<'_>,
 ) -> Result<ResultPayload, String> {
     let Method::MineCluster {
         features,
@@ -36,7 +41,7 @@ fn apply_mine_cluster(
     else {
         unreachable!()
     };
-    let resp = super::super::mining::handle_cluster(
+    let resp = super::handle_cluster(
         req_id,
         core,
         ClusterRequest {
@@ -60,7 +65,7 @@ fn apply_mine_cluster(
         #[cfg(all(feature = "query", feature = "tsdb"))]
         tsdb_bind,
     );
-    super::gateway::mining_response_to_gateway_result(resp)
+    medulla_server_api::mutation::response_to_gateway_result(resp)
 }
 
 #[cfg(feature = "mining")]
@@ -68,7 +73,7 @@ fn apply_mine_anomaly(
     core: &Arc<GraphCore>,
     req_id: u64,
     method_owned: Method,
-    tsdb_bind: super::super::mining::MiningTsdbBind<'_>,
+    tsdb_bind: super::MiningTsdbBind<'_>,
 ) -> Result<ResultPayload, String> {
     let Method::MineAnomaly {
         features,
@@ -92,7 +97,7 @@ fn apply_mine_anomaly(
     else {
         unreachable!()
     };
-    let resp = super::super::mining::handle_anomaly(
+    let resp = super::handle_anomaly(
         req_id,
         core,
         AnomalyRequest {
@@ -119,7 +124,7 @@ fn apply_mine_anomaly(
         #[cfg(all(feature = "query", feature = "tsdb"))]
         tsdb_bind,
     );
-    super::gateway::mining_response_to_gateway_result(resp)
+    medulla_server_api::mutation::response_to_gateway_result(resp)
 }
 
 #[cfg(feature = "mining")]
@@ -127,7 +132,7 @@ fn apply_mine_classify_predict(
     core: &Arc<GraphCore>,
     req_id: u64,
     method_owned: Method,
-    tsdb_bind: super::super::mining::MiningTsdbBind<'_>,
+    tsdb_bind: super::MiningTsdbBind<'_>,
 ) -> Result<ResultPayload, String> {
     let Method::MineClassifyPredict {
         model,
@@ -142,7 +147,7 @@ fn apply_mine_classify_predict(
     else {
         unreachable!()
     };
-    let resp = super::super::mining::handle_classify_predict(
+    let resp = super::handle_classify_predict(
         req_id,
         core,
         ClassifyPredictRequest {
@@ -160,7 +165,7 @@ fn apply_mine_classify_predict(
         #[cfg(all(feature = "query", feature = "tsdb"))]
         tsdb_bind,
     );
-    super::gateway::mining_response_to_gateway_result(resp)
+    medulla_server_api::mutation::response_to_gateway_result(resp)
 }
 
 #[cfg(feature = "mining")]
@@ -168,7 +173,7 @@ fn apply_mine_reduce(
     core: &Arc<GraphCore>,
     req_id: u64,
     method_owned: Method,
-    tsdb_bind: super::super::mining::MiningTsdbBind<'_>,
+    tsdb_bind: super::MiningTsdbBind<'_>,
 ) -> Result<ResultPayload, String> {
     let Method::MineReduce {
         x,
@@ -191,7 +196,7 @@ fn apply_mine_reduce(
     else {
         unreachable!()
     };
-    let resp = super::super::mining::handle_reduce(
+    let resp = super::handle_reduce(
         req_id,
         core,
         ReduceRequest {
@@ -217,7 +222,7 @@ fn apply_mine_reduce(
         #[cfg(all(feature = "query", feature = "tsdb"))]
         tsdb_bind,
     );
-    super::gateway::mining_response_to_gateway_result(resp)
+    medulla_server_api::mutation::response_to_gateway_result(resp)
 }
 
 #[cfg(feature = "mining")]
@@ -235,7 +240,7 @@ fn apply_mine_ontology_gap(
     else {
         unreachable!()
     };
-    let resp = super::super::mining::handle_ontology_gap(
+    let resp = super::handle_ontology_gap(
         req_id,
         core,
         label,
@@ -245,7 +250,7 @@ fn apply_mine_ontology_gap(
             as_claim,
         },
     );
-    super::gateway::mining_response_to_gateway_result(resp)
+    medulla_server_api::mutation::response_to_gateway_result(resp)
 }
 
 /// Dispatch one of the mining methods whose `apply` needs only the graph core (no
@@ -291,14 +296,14 @@ async fn dispatch_mining_with_tsdb(
         &Arc<GraphCore>,
         u64,
         Method,
-        super::super::mining::MiningTsdbBind<'_>,
+        super::MiningTsdbBind<'_>,
     ) -> Result<ResultPayload, String>,
 ) -> Response {
     let method_owned = method.clone();
     let req_id = ctx.req_id;
     let core_arc = ctx.core;
     #[cfg(all(feature = "query", feature = "tsdb"))]
-    let tsdb_bind = super::super::mining::MiningTsdbBind {
+    let tsdb_bind = super::MiningTsdbBind {
         graph_name: ctx.graph_name,
         read_authority,
         tsdb_store,
@@ -309,7 +314,7 @@ async fn dispatch_mining_with_tsdb(
     .await
 }
 
-pub(super) async fn try_handle(
+pub(crate) async fn try_handle(
     ctx: &MutationCtx<'_>,
     plan: &MutationPlan,
     method: &Method,

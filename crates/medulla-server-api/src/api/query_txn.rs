@@ -23,6 +23,7 @@ use tokio::sync::RwLock;
 use crate::state::ServerState;
 
 /// Query handler behaviour reachable from crates below `medulla-h-query`.
+#[async_trait::async_trait]
 pub trait QueryApi: Send + Sync {
     /// The semantic owner of an EXISTING binding, for operator reads: unlike opening a
     /// binding it never creates an owner file for a binding that was never admitted.
@@ -49,6 +50,21 @@ pub trait QueryApi: Send + Sync {
         >,
         #[cfg(feature = "tsdb")] tsdb_ctx: query_support::TsdbLegBind<'_>,
     ) -> Result<Vec<(String, Option<f32>)>, String>;
+
+    /// Route one gateway-routed data-mining method (`Mine*`) through the mining handler's
+    /// commit gateway; `None` hands a method it does not own back to the caller.
+    #[cfg(feature = "mining")]
+    async fn mining_gateway_try_handle(
+        &self,
+        ctx: &crate::mutation::MutationCtx<'_>,
+        plan: &crate::mutation::MutationPlan,
+        method: &medulla_protocol_types::protocol::Method,
+        graph_name: &str,
+        read_authority: Option<&crate::access::GraphReadAuthority>,
+        #[cfg(all(feature = "query", feature = "tsdb"))] tsdb_store: Option<
+            &Arc<medulla_tsdb::store::SeriesStore>,
+        >,
+    ) -> Option<medulla_protocol_types::protocol::Response>;
 }
 
 /// Transaction handler behaviour reachable from crates below `medulla-h-txn`.
@@ -61,6 +77,19 @@ pub trait TxnApi: Send + Sync {
         req_id: u64,
         caller: &str,
         verified_context: &crate::auth::VerifiedRequestContext,
+        method: medulla_protocol_types::protocol::Method,
+    ) -> Result<medulla_protocol_types::protocol::Response, medulla_protocol_types::protocol::Method>;
+
+    /// Route one `Ts*` method through the time-series handler.
+    #[cfg(feature = "tsdb")]
+    async fn timeseries_try_handle(
+        &self,
+        state: &Arc<RwLock<ServerState>>,
+        req_id: u64,
+        authority: &crate::access::CarrierAuthority,
+        graph: &str,
+        placement_epoch: u64,
+        fencing_token: Option<u64>,
         method: medulla_protocol_types::protocol::Method,
     ) -> Result<medulla_protocol_types::protocol::Response, medulla_protocol_types::protocol::Method>;
 

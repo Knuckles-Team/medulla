@@ -17,6 +17,11 @@ pub fn install_seams(state: &ServerState) {
         .set(std::sync::Arc::new(super::dispatch::DispatchSeam));
 
     // L3 ingest, graph, jobs, compute.
+    #[cfg(feature = "jobs")]
+    let _ = state
+        .seams
+        .jobs
+        .set(std::sync::Arc::new(super::handlers::jobs::JobsSeam));
 
     // L4 admin, decide.
     let _ = state
@@ -34,7 +39,12 @@ pub fn install_seams(state: &ServerState) {
         crate::server::handlers::mining::replay,
     );
 
-    #[cfg(any(feature = "query", feature = "cypher", feature = "graphql"))]
+    #[cfg(any(
+        feature = "query",
+        feature = "cypher",
+        feature = "graphql",
+        feature = "mining"
+    ))]
     let _ = state.seams.query.set(std::sync::Arc::new(
         crate::server::handlers::query::QuerySeam,
     ));

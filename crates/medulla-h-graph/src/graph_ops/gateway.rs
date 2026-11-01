@@ -34,14 +34,7 @@ where
 /// gated on different features). Not itself `mining`-gated since
 /// GraphLearn*/MiningPipeline* need it under their own, different features.
 pub(crate) fn mining_response_to_gateway_result(resp: Response) -> Result<ResultPayload, String> {
-    // Keep the detail with the code: the gateway re-wraps this text through
-    // `Response::err`, which would otherwise answer with a bare code.
-    match resp.refusal_text() {
-        Some(refusal) => Err(refusal),
-        None => Ok(resp
-            .result
-            .unwrap_or(ResultPayload::Json(serde_json::Value::Null))),
-    }
+    mutation::response_to_gateway_result(resp)
 }
 
 /// Route a [`mutation::GATEWAY_ROUTED`] method through the single commit gateway
@@ -164,19 +157,28 @@ pub(crate) async fn try_handle_gateway(
     if let Some(resp) = super::gateway_mining_ml::try_handle(&ctx, &plan, &method).await {
         return Ok(resp);
     }
+    // The data-mining gateway lives with the mining handler (a sibling crate): reach it
+    // through the query seam. An absent seam leaves the method to the unreachable below,
+    // the same as a build without `mining`.
     #[cfg(feature = "mining")]
-    if let Some(resp) = super::gateway_mining::try_handle(
-        &ctx,
-        &plan,
-        &method,
-        graph_name,
-        read_authority,
-        #[cfg(all(feature = "query", feature = "tsdb"))]
-        tsdb_store,
-    )
-    .await
     {
-        return Ok(resp);
+        let query = state.read().await.seams.query.get().cloned();
+        if let Some(query) = query {
+            if let Some(resp) = query
+                .mining_gateway_try_handle(
+                    &ctx,
+                    &plan,
+                    &method,
+                    graph_name,
+                    read_authority,
+                    #[cfg(all(feature = "query", feature = "tsdb"))]
+                    tsdb_store,
+                )
+                .await
+            {
+                return Ok(resp);
+            }
+        }
     }
     unreachable!("mutation::is_gateway_routed guarantees method is one of the routed variants")
 }

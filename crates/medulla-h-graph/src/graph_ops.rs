@@ -32,10 +32,6 @@ mod gateway;
 #[cfg(feature = "broker")]
 mod gateway_broker;
 mod gateway_graph;
-#[cfg(feature = "mining")]
-mod gateway_mining;
-#[cfg(feature = "mining")]
-mod gateway_mining_derived;
 #[cfg(any(feature = "graphlearn", feature = "ml-pipeline"))]
 mod gateway_mining_ml;
 mod hierarchy;

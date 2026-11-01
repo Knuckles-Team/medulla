@@ -296,20 +296,23 @@ async fn execute_time_series(
     let authority = ctx.stream.authority;
     #[cfg(feature = "tsdb")]
     {
-        let response = super::super::timeseries::try_handle(
-            state,
-            req_id,
-            carrier,
-            graph_name,
-            placement_epoch,
-            fencing_token,
-            Method::TsRange {
-                series_id: series_id.to_string(),
-                from: *from,
-                to: *to,
-            },
-        )
-        .await
+        let txn = state.read().await.seams.txn.get().cloned();
+        let response = txn
+            .ok_or_else(|| "time-series surface unavailable".to_string())?
+            .timeseries_try_handle(
+                state,
+                req_id,
+                carrier,
+                graph_name,
+                placement_epoch,
+                fencing_token,
+                Method::TsRange {
+                    series_id: series_id.to_string(),
+                    from: *from,
+                    to: *to,
+                },
+            )
+            .await
         .map_err(|_| "time-series surface unavailable".to_string())?;
         let source_result = response_result(response)?;
         let raw = raw_payload(&source_result, "time-series")?;
@@ -367,8 +370,10 @@ async fn execute_job(
     #[cfg(feature = "jobs")]
     {
         let persist_dir = state.read().await.persist_dir.clone();
-        let (_job, result) =
-            super::super::jobs::knowledge_stream_result(&persist_dir, graph_name, job_id)?;
+        let jobs = state.read().await.seams.jobs.get().cloned();
+        let result = jobs
+            .ok_or_else(|| "INTERNAL: jobs surface unavailable".to_string())?
+            .knowledge_stream_result(&persist_dir, graph_name, job_id)?;
         let rows = result
             .rows
             .iter()

@@ -7,6 +7,7 @@ use std::sync::Arc;
 /// Query handler behaviour installed on the seam registry's `query` slot.
 pub struct QuerySeam;
 
+#[async_trait::async_trait]
 impl medulla_server_api::api::query_txn::QueryApi for QuerySeam {
     #[cfg(feature = "ann-redb")]
     fn existing_semantic_service(
@@ -43,5 +44,29 @@ impl medulla_server_api::api::query_txn::QueryApi for QuerySeam {
             tsdb_ctx,
             medulla_server_api::api::query_txn::query_support::execute_rows,
         )
+    }
+
+    #[cfg(feature = "mining")]
+    async fn mining_gateway_try_handle(
+        &self,
+        ctx: &medulla_server_api::mutation::MutationCtx<'_>,
+        plan: &medulla_server_api::mutation::MutationPlan,
+        method: &medulla_protocol_types::protocol::Method,
+        graph_name: &str,
+        read_authority: Option<&medulla_server_api::access::GraphReadAuthority>,
+        #[cfg(all(feature = "query", feature = "tsdb"))] tsdb_store: Option<
+            &Arc<medulla_tsdb::store::SeriesStore>,
+        >,
+    ) -> Option<medulla_protocol_types::protocol::Response> {
+        crate::server::handlers::mining::gateway::try_handle(
+            ctx,
+            plan,
+            method,
+            graph_name,
+            read_authority,
+            #[cfg(all(feature = "query", feature = "tsdb"))]
+            tsdb_store,
+        )
+        .await
     }
 }

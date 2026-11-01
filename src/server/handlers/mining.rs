@@ -24,6 +24,10 @@ use crate::protocol::{
 
 mod association;
 mod classic;
+#[cfg(feature = "mining")]
+pub(crate) mod gateway;
+#[cfg(feature = "mining")]
+mod gateway_derived;
 mod entity;
 mod impact;
 mod input;

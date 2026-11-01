@@ -12,6 +12,29 @@ pub struct TxnSeam;
 
 #[async_trait::async_trait]
 impl medulla_server_api::api::query_txn::TxnApi for TxnSeam {
+    #[cfg(feature = "tsdb")]
+    async fn timeseries_try_handle(
+        &self,
+        state: &Arc<RwLock<ServerState>>,
+        req_id: u64,
+        authority: &medulla_server_api::access::CarrierAuthority,
+        graph: &str,
+        placement_epoch: u64,
+        fencing_token: Option<u64>,
+        method: crate::protocol::Method,
+    ) -> Result<crate::protocol::Response, crate::protocol::Method> {
+        crate::server::handlers::timeseries::try_handle(
+            state,
+            req_id,
+            authority,
+            graph,
+            placement_epoch,
+            fencing_token,
+            method,
+        )
+        .await
+    }
+
     async fn try_handle(
         &self,
         state: &Arc<RwLock<ServerState>>,

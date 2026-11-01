@@ -22,7 +22,17 @@ pub trait IngestApi: Send + Sync {}
 pub trait GraphApi: Send + Sync {}
 
 /// Jobs handler behaviour reachable from crates below `medulla-h-jobs`.
-pub trait JobsApi: Send + Sync {}
+pub trait JobsApi: Send + Sync {
+    /// Resolve a completed typed job result for the shared KnowledgeBatch stream; the graph
+    /// already passed its ACL and placement checks.
+    #[cfg(all(feature = "jobs", feature = "knowledge-batch"))]
+    fn knowledge_stream_result(
+        &self,
+        persist_dir: &Option<String>,
+        graph: &str,
+        job_id: &str,
+    ) -> Result<medulla_jobs::TypedJobResult, String>;
+}
 
 /// Compute handler behaviour reachable from crates below `medulla-h-compute`.
 pub trait ComputeApi: Send + Sync {}

@@ -97,7 +97,23 @@ mod worker_publish;
 mod worker_requests;
 mod worker_validation;
 
+#[cfg(all(feature = "jobs", feature = "knowledge-batch"))]
 pub(crate) use core::knowledge_stream_result;
+
+/// Jobs handler behaviour installed on the seam registry's `jobs` slot.
+pub struct JobsSeam;
+
+impl medulla_server_api::api::ingest::JobsApi for JobsSeam {
+    #[cfg(all(feature = "jobs", feature = "knowledge-batch"))]
+    fn knowledge_stream_result(
+        &self,
+        persist_dir: &Option<String>,
+        graph: &str,
+        job_id: &str,
+    ) -> Result<medulla_jobs::TypedJobResult, String> {
+        core::knowledge_stream_result(persist_dir, graph, job_id).map(|(_job, result)| result)
+    }
+}
 use core::{
     compile_job_batch, job_record, job_response, job_store, owned_job, parse_algorithm,
     reproducibility_manifest,

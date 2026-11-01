@@ -1169,3 +1169,20 @@ mod tests {
         }
     }
 }
+
+/// Shared conversion tail for gateway closures that wrap a handler `Response`: a handler
+/// `Response` carries its own refusal/result, so folding it into the
+/// `FnOnce(&GraphCore) -> Result<ResultPayload, String>` shape the conditional commit
+/// expects is identical work at every call site.
+pub fn response_to_gateway_result(
+    resp: medulla_protocol_types::protocol::Response,
+) -> Result<ResultPayload, String> {
+    // Keep the detail with the code: the gateway re-wraps this text through
+    // `Response::err`, which would otherwise answer with a bare code.
+    match resp.refusal_text() {
+        Some(refusal) => Err(refusal),
+        None => Ok(resp
+            .result
+            .unwrap_or(ResultPayload::Json(serde_json::Value::Null))),
+    }
+}

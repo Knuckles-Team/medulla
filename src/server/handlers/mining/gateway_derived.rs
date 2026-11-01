@@ -1,9 +1,14 @@
 #[cfg(feature = "mining")]
-use super::super::mining::{
+use super::{
     AssociationRequest, CommunityRequest, EntityResolutionRequest, ForecastRequest,
     RiskPropagationRequest, RootCauseRequest, TextRequest, WritebackOptions,
 };
-use super::*;
+use std::sync::Arc;
+
+use medulla_core::graph::GraphCore;
+use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
+use medulla_server_api::access::GraphReadAuthority;
+use medulla_server_api::mutation::{self, MutationCtx, MutationPlan};
 
 /// Generate the uniform method-destructure → mining-handler → response-result
 /// adapter used by the mining methods without duplicating that gateway glue.
@@ -23,12 +28,12 @@ macro_rules! define_mining_apply {
             else {
                 unreachable!()
             };
-            let resp = super::super::mining::$handler(
+            let resp = super::$handler(
                 req_id,
                 core,
                 $($arg)*
             );
-            super::gateway::mining_response_to_gateway_result(resp)
+            medulla_server_api::mutation::response_to_gateway_result(resp)
         }
     };
 }
