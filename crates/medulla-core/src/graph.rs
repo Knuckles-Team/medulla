@@ -371,7 +371,7 @@ pub struct GraphCore {
     /// both — never by Vec position.
     pub edge_properties: DashMap<(String, String), Vec<Arc<Vec<u8>>>>,
     pub ledger: Mutex<Vec<String>>,
-    pub semantic_store: RwLock<crate::compute::semantic::SemanticStore>,
+    pub semantic_store: RwLock<medulla_semantic_index::semantic::SemanticStore>,
     /// Authoritative keyed shapes and ontology sources for this graph. The
     /// immutable core catalog and graph-local dynamic set are one snapshot value,
     /// so rollback, recovery and Raft installation cannot mix schema versions.
@@ -2427,7 +2427,7 @@ mod tests {
                 Arc::new(Vec::new()),
             )],
             ledger: vec!["untrusted".to_string()],
-            semantic_store: crate::compute::semantic::SemanticStore::new(),
+            semantic_store: medulla_semantic_index::semantic::SemanticStore::new(),
         }
         .to_msgpack()
         .unwrap();

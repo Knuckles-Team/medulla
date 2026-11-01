@@ -23,7 +23,8 @@
 // so cosine is ONE dot product per candidate instead of two.
 
 use super::{check_embedding_dimension, EmbeddingDimensionError, SemanticQueryError};
-use crate::compute::semantic_ann::{AnnIndex, ANN_BUILD_THRESHOLD};
+use crate::semantic_ann::AnnIndex;
+use crate::semantic_ann::ANN_BUILD_THRESHOLD;
 use medulla_index_types::{embedding::EmbeddingSpaceRef, embedding::StampedVector};
 use parking_lot::RwLock;
 use rayon::prelude::*;
@@ -233,7 +234,7 @@ pub struct SemanticStore {
     state: AtomicU8,
     /// Content stamp (EH-393): restamped on every vector / space change and on every ANN
     /// generation adoption (the active generation changes what a probe returns).
-    pub(super) generation: crate::compute::semantic::GenerationStamp,
+    pub(super) generation: crate::semantic::GenerationStamp,
     /// Test-only count of completed `build_index` runs, so concurrency tests can
     /// assert that exactly one of several racing warms built the index.
     #[cfg(test)]
@@ -247,7 +248,7 @@ mod semantic_ann_persistence;
 mod semantic_ann_query;
 mod semantic_ann_shape;
 
-use crate::compute::semantic_ann::AnnIndexImage;
+use crate::semantic_ann::AnnIndexImage;
 use semantic_ann_persistence::PersistedIndexManifest as IndexManifest;
 pub use semantic_ann_persistence::SemanticGenerationImage;
 
@@ -858,7 +859,8 @@ mod tests {
     /// count and the store state, never on how long the build took.
     #[test]
     fn concurrent_warm_calls_are_race_free() {
-        use crate::test_threads::{BoundedThreads, StartGate};
+        use crate::test_threads::BoundedThreads;
+        use crate::test_threads::StartGate;
         let dim = 16;
         let n = ANN_BUILD_THRESHOLD + 50;
         let callers = 8;

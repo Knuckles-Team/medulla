@@ -539,9 +539,9 @@ pub(crate) async fn try_handle(
         Ok(batch) => match authority.validate_after() {
             Ok(()) => Response::ok(
                 req_id,
-                ResultPayload::of_ref::<medulla_protocol_types::result_contract::query::KnowledgeStream>(
-                    &batch,
-                ),
+                ResultPayload::of_ref::<
+                    medulla_protocol_types::result_contract::query::KnowledgeStream,
+                >(&batch),
             ),
             Err(error) => {
                 medulla_kernel::metrics::access_denied();

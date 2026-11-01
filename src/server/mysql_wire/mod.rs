@@ -480,8 +480,8 @@ mod tests {
     use crate::server::handlers::query::current_auth_test_support::{
         grant_commons_user, register_commons_agent,
     };
-    use medulla_server_api::state::ServerState;
     use medulla_query::{TypedColumn, TypedQueryResult};
+    use medulla_server_api::state::ServerState;
     use tokio::net::TcpStream;
 
     #[test]

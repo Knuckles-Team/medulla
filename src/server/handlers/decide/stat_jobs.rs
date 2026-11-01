@@ -47,7 +47,6 @@ use super::stat_support::{pinned_body, refusal, resolve_policy, ResolvedPolicy};
 use super::telemetry;
 use super::SharedState;
 use crate::protocol::{Response, ResultPayload};
-use medulla_server_api::auth::VerifiedRequestContext;
 use medulla_persistence::agent_library::AgentLibraryStore;
 use medulla_persistence::decision_jobs::decode_artifact;
 use medulla_persistence::decision_jobs::draft_key;
@@ -56,6 +55,7 @@ use medulla_persistence::decision_jobs::job_key;
 use medulla_persistence::decision_jobs::receipt_key;
 use medulla_persistence::decision_jobs::receipt_threshold_key;
 use medulla_persistence::decision_jobs::receipt_time_key;
+use medulla_server_api::auth::VerifiedRequestContext;
 
 /// The label a failed blocking store task names.
 const BLOCKING_TASK: &str = "decision job";
@@ -587,11 +587,11 @@ async fn serve_fit(
                 &request,
                 now_ms,
             );
-            let job =
-                medulla_server_api::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
-                    submit_job(&store, &id, || run_fit(&store, &reader, &request))
-                })
-                .await?;
+            let job = medulla_server_api::api::dispatch_support::blocking_task(
+                BLOCKING_TASK,
+                move || submit_job(&store, &id, || run_fit(&store, &reader, &request)),
+            )
+            .await?;
             ResultPayload::of::<DecisionFitSubmit>(job)
         }
         DecisionFitOp::Status { request } => ResultPayload::of::<DecisionFitStatus>(stored_job(
@@ -621,11 +621,11 @@ async fn serve_eval(
                 &request,
                 now_ms,
             );
-            let job =
-                medulla_server_api::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
-                    submit_job(&store, &id, || run_eval_job(&store, &reader, &request))
-                })
-                .await?;
+            let job = medulla_server_api::api::dispatch_support::blocking_task(
+                BLOCKING_TASK,
+                move || submit_job(&store, &id, || run_eval_job(&store, &reader, &request)),
+            )
+            .await?;
             ResultPayload::of::<DecisionEvalSubmit>(job)
         }
         DecisionEvalOp::Status { request } => ResultPayload::of::<DecisionEvalStatus>(stored_job(

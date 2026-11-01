@@ -9,10 +9,10 @@
 
 use super::SharedState;
 use crate::protocol::Response;
-use medulla_server_api::auth::VerifiedRequestContext;
+use medulla_decision_types::decision::AssemblyRequest;
 #[cfg(feature = "redb")]
 use medulla_persistence::agent_library::AgentLibraryStateExt;
-use medulla_decision_types::decision::AssemblyRequest;
+use medulla_server_api::auth::VerifiedRequestContext;
 
 /// The audit target every Decide-layer decision line is written under.
 #[cfg(feature = "decide")]

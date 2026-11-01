@@ -12,11 +12,11 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use crate::protocol::Response;
-use medulla_server_api::auth::VerifiedRequestContext;
 #[cfg(feature = "redb")]
 use medulla_persistence::agent_library::AgentLibraryStore;
 #[cfg(feature = "redb")]
 use medulla_persistence::connector_pack::admin as binding;
+use medulla_server_api::auth::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 
 /// One served admin entry point: the dispatch signature, the named refusal in

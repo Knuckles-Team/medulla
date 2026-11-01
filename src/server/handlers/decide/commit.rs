@@ -11,10 +11,10 @@
 
 use super::SharedState;
 use crate::protocol::Response;
-use medulla_server_api::auth::VerifiedRequestContext;
+use medulla_decision_types::decision::DecisionCommitRequest;
 #[cfg(feature = "redb")]
 use medulla_persistence::agent_library::AgentLibraryStateExt;
-use medulla_decision_types::decision::DecisionCommitRequest;
+use medulla_server_api::auth::VerifiedRequestContext;
 
 /// Commit one `DecisionRecord` as a component revision, idempotently.
 #[cfg(feature = "decide")]

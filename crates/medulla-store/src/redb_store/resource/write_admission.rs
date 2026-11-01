@@ -111,15 +111,21 @@ fn resource_reservation_payload(
     result: ResourceReservationResult,
 ) -> Result<medulla_protocol_types::protocol::ResultPayload, String> {
     match method {
-        Method::ReserveWorkItemResources { .. } => medulla_protocol_types::protocol::ResultPayload::of::<
-            medulla_protocol_types::result_contract::coordination::ReserveWorkItemResources,
-        >(result),
-        Method::ReleaseWorkItemResources { .. } => medulla_protocol_types::protocol::ResultPayload::of::<
-            medulla_protocol_types::result_contract::coordination::ReleaseWorkItemResources,
-        >(result),
-        Method::ReclaimWorkItemResources { .. } => medulla_protocol_types::protocol::ResultPayload::of::<
-            medulla_protocol_types::result_contract::coordination::ReclaimWorkItemResources,
-        >(result),
+        Method::ReserveWorkItemResources { .. } => {
+            medulla_protocol_types::protocol::ResultPayload::of::<
+                medulla_protocol_types::result_contract::coordination::ReserveWorkItemResources,
+            >(result)
+        }
+        Method::ReleaseWorkItemResources { .. } => {
+            medulla_protocol_types::protocol::ResultPayload::of::<
+                medulla_protocol_types::result_contract::coordination::ReleaseWorkItemResources,
+            >(result)
+        }
+        Method::ReclaimWorkItemResources { .. } => {
+            medulla_protocol_types::protocol::ResultPayload::of::<
+                medulla_protocol_types::result_contract::coordination::ReclaimWorkItemResources,
+            >(result)
+        }
         _ => Err("resource reservation result for a non-reservation method".to_string()),
     }
 }

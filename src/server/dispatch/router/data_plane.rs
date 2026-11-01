@@ -250,8 +250,10 @@ async fn dispatch_store_methods_arm_1(ctx: DispatchCtx<'_>, method: Method) -> R
                         Ok(authority) => authority,
                         Err(denied) => return Response::err(req_id, denied),
                     };
-                    match medulla_server_api::kv::try_handle(state, req_id, &carrier, &req.graph, method)
-                        .await
+                    match medulla_server_api::kv::try_handle(
+                        state, req_id, &carrier, &req.graph, method,
+                    )
+                    .await
                     {
                         Ok(resp) => resp,
                         // Unreachable: every variant matched above is a kv method.
@@ -444,7 +446,8 @@ async fn dispatch_streaming_methods_arm_1(ctx: DispatchCtx<'_>, method: Method) 
                         Ok(authority) => authority,
                         Err(denied) => return Response::err(req_id, denied),
                     };
-                    match medulla_server_api::cep::try_handle(state, req_id, &carrier, method).await {
+                    match medulla_server_api::cep::try_handle(state, req_id, &carrier, method).await
+                    {
                         Ok(resp) => resp,
                         // Unreachable: every variant matched above is a CEP method.
                         Err(_) => Response::err(req_id, "cep dispatch routing error"),
@@ -508,13 +511,14 @@ async fn dispatch_served_modality_method(ctx: DispatchCtx<'_>, method: Method) -
                 let req_graph = req.graph.clone();
                 {
                     let auth_secret = timed_read(state).await.auth_secret.clone();
-                    let authority = match medulla_h_ingest::modality::ModalityAuthority::from_verified(
-                        &auth_secret,
-                        verified_context.claims(),
-                    ) {
-                        Ok(authority) => authority,
-                        Err(error) => return Response::err(req_id, error),
-                    };
+                    let authority =
+                        match medulla_h_ingest::modality::ModalityAuthority::from_verified(
+                            &auth_secret,
+                            verified_context.claims(),
+                        ) {
+                            Ok(authority) => authority,
+                            Err(error) => return Response::err(req_id, error),
+                        };
                     dispatch_served_modality(
                         state,
                         &req_graph,

@@ -26,8 +26,10 @@ pub use node2vec::{node2vec, Node2VecConfig};
 use std::fmt::Display;
 use std::hash::Hash;
 
-use crate::compute::semantic::{check_embedding_dimension, EmbeddingDimensionError, SemanticStore};
 use crate::graph_algos::AdjacencyGraph;
+use medulla_semantic_index::semantic::check_embedding_dimension;
+use medulla_semantic_index::semantic::EmbeddingDimensionError;
+use medulla_semantic_index::semantic::SemanticStore;
 
 /// A batch of structural embeddings tied to their string node ids — the boundary
 /// object between the pure index-ordered algorithm output and the id-keyed

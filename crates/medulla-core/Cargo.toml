@@ -25,7 +25,7 @@ broker = ["medulla-types/broker", "medulla-protocol-types/broker"]
 # subscriber, so zero cost in the default build). `rayon` (CONCEPT:MEDULLA-014) drives
 # the all-core parallel brute-force fallback — the path EVERY semantic_search hits
 # until the ANN index warms (and after every restart).
-ann = ["dep:rayon"]
+ann = ["medulla-semantic-index/ann", "dep:rayon"]
 # Additionally persist the ANN codes into the engine's durable tier
 # (CONCEPT:KG-2.195) rather than only the mmap files. The codes live in the
 # `medulla_ann` owner table of `OwnerLayout::SemanticIndex`, written through the
@@ -123,6 +123,7 @@ medulla-result-types = { path = "../medulla-result-types" }
 medulla-index-types = { path = "../medulla-index-types" }
 medulla-mutation-types = { path = "../medulla-mutation-types" }
 medulla-identity-types = { path = "../medulla-identity-types" }
+medulla-semantic-index = { path = "../medulla-semantic-index" }
 
 [dev-dependencies]
 # The commercial-vocabulary contract tests (MEDULLA-SUPPLY-VOCAB-R003.13-.16) parse

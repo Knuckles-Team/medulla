@@ -131,7 +131,13 @@ pub async fn reap_expired_servers(state: &Arc<RwLock<ServerState>>, now_ms: u64)
                 core.mark_dirty();
                 #[cfg(feature = "streaming")]
                 if let Some(hub) = &hub {
-                    medulla_server_api::cdc::emit_for_method(hub, &core, "__commons__", &method, pre);
+                    medulla_server_api::cdc::emit_for_method(
+                        hub,
+                        &core,
+                        "__commons__",
+                        &method,
+                        pre,
+                    );
                 }
                 reaped += 1;
                 tracing::info!(

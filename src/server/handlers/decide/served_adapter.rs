@@ -21,9 +21,9 @@ use std::sync::{Arc, OnceLock};
 use medulla_core::graph::GraphCore;
 use medulla_decision_types::decision::statistical::retrieval_adapter::AdapterFitted;
 
-use medulla_server_api::api::admin::served_adapter::ServedAdapter;
 use medulla_persistence::agent_library::AgentLibraryStore;
 use medulla_persistence::decision_jobs::decode_artifact;
+use medulla_server_api::api::admin::served_adapter::ServedAdapter;
 use medulla_server_api::state::ServerState;
 
 /// Bodies kept decoded; the cache is cleared when it would grow past this.

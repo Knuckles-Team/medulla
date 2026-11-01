@@ -158,7 +158,9 @@ async fn serve_native(
             actor,
         } => {
             let actor = medulla_server_api::mutation_batch::principal_fingerprint(&actor)?;
-            ResultPayload::of::<medulla_protocol_types::result_contract::coordination::GetSessionUsage>(
+            ResultPayload::of::<
+                medulla_protocol_types::result_contract::coordination::GetSessionUsage,
+            >(
                 backend
                     .read_session_usage(graph, &tenant, &context_id, &actor)
                     .await?,
@@ -166,9 +168,9 @@ async fn serve_native(
         }
         WorkItemRead::Checkpoint { request, actor } => {
             let actor = medulla_server_api::mutation_batch::principal_fingerprint(&actor)?;
-            ResultPayload::of::<medulla_protocol_types::result_contract::coordination::GetRunCheckpoint>(
-                backend.read_run_checkpoint(graph, request, &actor).await?,
-            )
+            ResultPayload::of::<
+                medulla_protocol_types::result_contract::coordination::GetRunCheckpoint,
+            >(backend.read_run_checkpoint(graph, request, &actor).await?)
         }
         WorkItemRead::CurrentPlan {
             tenant,

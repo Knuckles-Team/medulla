@@ -5,8 +5,6 @@ use std::sync::mpsc::{Receiver, RecvTimeoutError};
 use tokio::sync::oneshot;
 
 use medulla_protocol_types::protocol::Method;
-use medulla_store::redb_store::shard::Shard;
-use medulla_store::redb_store::shard::ShardWrite;
 use medulla_store::redb_store::clear_xshard_decision;
 use medulla_store::redb_store::clear_xshard_prepare;
 use medulla_store::redb_store::commit_change_envelopes;
@@ -25,6 +23,8 @@ use medulla_store::redb_store::put_xshard_recoverable_pending;
 use medulla_store::redb_store::read_graph_dump;
 use medulla_store::redb_store::scan_xshard_decisions;
 use medulla_store::redb_store::scan_xshard_prepares;
+use medulla_store::redb_store::shard::Shard;
+use medulla_store::redb_store::shard::ShardWrite;
 use medulla_store::redb_store::write_graph_meta;
 use medulla_store::redb_store::RAFT_LOG;
 

@@ -7,10 +7,10 @@ use std::collections::HashMap;
 use medulla_protocol_types::{change_envelope::ChangeEnvelope, change_envelope::MaterialClass};
 use medulla_types::ingestion_wire::{ExtractedEdge, ExtractedNode, IndexResult};
 
+use crate::protocol::Method;
 use medulla_h_ingest::repository_index::{
     lower, seal, IndexWriteSet, BATCH_TOO_LARGE, REDACTED_HOST_IDENTITY, REPOSITORY_LABELS,
 };
-use crate::protocol::Method;
 use medulla_server_api::mutation_batch::compile_methods;
 use medulla_server_api::mutation_batch::CompileBatch;
 
@@ -134,7 +134,6 @@ fn code_result(extra: &[(&str, &str)]) -> IndexResult {
         ..Default::default()
     }
 }
-
 
 #[test]
 fn repository_code_passes_the_repository_content_rule() {

@@ -269,8 +269,10 @@ async fn sql_owner(
 ) -> Result<Owner, String> {
     let authority = medulla_server_api::access::CarrierAuthority::from_verified(verified)?;
     let tenant_scope = authority.tenant_scope().to_string();
-    let store =
-        medulla_server_api::sql_tables::tenant_table_store(&tenant_scope, &persist_dir(state).await?)?;
+    let store = medulla_server_api::sql_tables::tenant_table_store(
+        &tenant_scope,
+        &persist_dir(state).await?,
+    )?;
     Ok(Owner::SqlResource {
         store,
         tenant_scope,

@@ -3,9 +3,9 @@
 //! cache-KEY derivation (so define/get/refresh agree on one key), and durable (de)serialize
 //! of a definition for the disjoint `plan_matviews` redb table.
 
-use medulla_core::compute::semantic::SemanticStore;
 use medulla_core::graph::GraphView;
 use medulla_core::result_cache::ResultCache;
+use medulla_semantic_index::semantic::SemanticStore;
 
 use super::manager::PlanMatView;
 

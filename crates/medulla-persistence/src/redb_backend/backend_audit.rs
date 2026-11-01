@@ -1,7 +1,7 @@
 use super::*;
+use crate::writer_reply::await_writer_reply;
 #[cfg(feature = "security")]
 use medulla_store::redb_store::audit_writer_unavailable;
-use crate::writer_reply::await_writer_reply;
 
 impl RedbBackend {
     #[cfg(feature = "security")]

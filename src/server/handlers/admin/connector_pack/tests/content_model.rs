@@ -1,13 +1,13 @@
 //! The content model (pack design §3.5, review B3): identity follows content.
 
-#[cfg(feature = "redb")]
-use medulla_persistence::agent_library::AgentLibraryStateExt;
 use medulla_agent_types::agent_component::AgentComponentEntry;
 use medulla_agent_types::agent_library::AgentLibraryLifecycle;
 use medulla_catalog_types::connector_pack::{
     PackAnnotations, PackDispositionCounts, PackEntryKind, PackImportResult, PackRef,
     PackViolationCode, PackWarningCode,
 };
+#[cfg(feature = "redb")]
+use medulla_persistence::agent_library::AgentLibraryStateExt;
 
 use super::{
     bind, build_pack, build_pack_with_server, head_of, import, imported, ok,

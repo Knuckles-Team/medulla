@@ -60,10 +60,7 @@ use crate::exec::PlanCtx;
 /// `MEDULLA_COST_OPT=0` is set (CONCEPT:MEDULLA-KG.query.xmodal-cost-optimizer) — then
 /// [`crate::exec::plan_optimize`] is an identity passthrough.
 pub fn enabled() -> bool {
-    !matches!(
-        std::env::var("MEDULLA_COST_OPT").ok().as_deref(),
-        Some("0")
-    )
+    !matches!(std::env::var("MEDULLA_COST_OPT").ok().as_deref(), Some("0"))
 }
 
 /// Rewrite `plan` into a cheaper-but-equivalent plan (CONCEPT:MEDULLA-KG.query.xmodal-cost-optimizer).
@@ -968,8 +965,8 @@ mod tests {
     #[test]
     fn selective_numeric_range_pushed_but_broad_range_stays() {
         use crate::cost::{CostModel, Order, PlanStats, Stats};
-        use medulla_core::compute::semantic::SemanticStore;
         use medulla_core::graph::GraphCore;
+        use medulla_semantic_index::semantic::SemanticStore;
         use serde_json::json;
 
         // 1000 `Doc` nodes with year = 0..999 (a WIDE spread so a high threshold is very
@@ -1125,8 +1122,8 @@ mod tests {
     /// reorder test in this module.
     #[test]
     fn global_chain_reorders_three_op_segment_beyond_pairwise_reach() {
-        use medulla_core::compute::semantic::SemanticStore;
         use medulla_core::graph::GraphCore;
+        use medulla_semantic_index::semantic::SemanticStore;
         use serde_json::json;
 
         // 1000 `Doc` nodes with TWO independent wide numeric columns (mirrors
@@ -1231,8 +1228,8 @@ mod tests {
     #[cfg(feature = "owl")]
     #[test]
     fn global_chain_reorders_cross_modal_reason_filter_rank() {
-        use medulla_core::compute::semantic::SemanticStore;
         use medulla_core::graph::GraphCore;
+        use medulla_semantic_index::semantic::SemanticStore;
         use serde_json::json;
 
         let ttl = r#"
@@ -1449,8 +1446,8 @@ ex:p4 a ex:Paper .
     /// and the join node's own op is never touched.
     #[test]
     fn optimizer_never_reorders_across_a_branch_boundary() {
-        use medulla_core::compute::semantic::SemanticStore;
         use medulla_core::graph::GraphCore;
+        use medulla_semantic_index::semantic::SemanticStore;
         use serde_json::json;
 
         // The SAME 1000-node/0..999-year fixture the linear ablation test above uses, so

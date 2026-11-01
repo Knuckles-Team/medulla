@@ -24,11 +24,6 @@ use super::sql_source_read_tests::{
 use crate::acl::RequestContextClaims;
 use crate::protocol::Request;
 use crate::protocol::{Method, Response};
-use medulla_server_api::access::CarrierAuthority;
-use medulla_server_api::auth::compute_verified_envelope_token;
-use medulla_server_api::auth::VerifiedEnvelopeParams;
-use medulla_server_api::auth::VerifiedRequestContext;
-use medulla_server_api::test_support::decode_raw_response as ok;
 use medulla_index_types::semantic_index::{
     SemanticBinding, SemanticBindingState, SemanticIndexCommand, SemanticIndexFilter,
     SemanticIndexOp, SemanticIndexOutcome, SemanticIndexRequest, SemanticIndexResponse,
@@ -36,6 +31,11 @@ use medulla_index_types::semantic_index::{
     SemanticStageIntentDraft, SemanticStageLeasePage, SemanticStageOutcome,
     SemanticStagePredecessor, SemanticStageReceipt, SemanticStageScope, SemanticStageTransition,
 };
+use medulla_server_api::access::CarrierAuthority;
+use medulla_server_api::auth::compute_verified_envelope_token;
+use medulla_server_api::auth::VerifiedEnvelopeParams;
+use medulla_server_api::auth::VerifiedRequestContext;
+use medulla_server_api::test_support::decode_raw_response as ok;
 
 /// Synthetic HMAC fixture for `ServerState::new_for_test`: it authenticates
 /// nothing outside this process and is never a live credential.
@@ -48,7 +48,9 @@ const SECRET: &str = "semantic-index-dispatch-fixture-secret"; // sanitizer:igno
 const TENANT: &str = "tenant-shared";
 const WORKER: &str = "semantic-dispatch-worker";
 
-fn dispatch_state(persist_dir: &std::path::Path) -> Arc<RwLock<medulla_server_api::state::ServerState>> {
+fn dispatch_state(
+    persist_dir: &std::path::Path,
+) -> Arc<RwLock<medulla_server_api::state::ServerState>> {
     let mut state = medulla_server_api::state::ServerState::new_for_test(
         SECRET,
         crate::isolation::IsolationLayer::new(),

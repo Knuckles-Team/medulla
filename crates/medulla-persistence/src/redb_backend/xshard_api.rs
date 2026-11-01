@@ -1,9 +1,9 @@
 use super::*;
 #[cfg(feature = "raft")]
+use crate::writer_reply::await_writer_reply;
+#[cfg(feature = "raft")]
 use medulla_store::redb_store::XshardDecisionScan;
 use medulla_store::redb_store::XshardPrepareScan;
-#[cfg(feature = "raft")]
-use crate::writer_reply::await_writer_reply;
 #[cfg(feature = "raft")]
 use tokio::sync::oneshot;
 

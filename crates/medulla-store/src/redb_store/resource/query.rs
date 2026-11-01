@@ -5,7 +5,8 @@ pub(crate) fn resource_request_from_record(
     now_ms: u64,
 ) -> ResourceReservationRequest {
     ResourceReservationRequest {
-        schema_version: medulla_result_types::epistemic_operations::ResourceReservationRequestSchemaVersion::V1,
+        schema_version:
+            medulla_result_types::epistemic_operations::ResourceReservationRequestSchemaVersion::V1,
         tenant_ref: record.tenant_ref.clone(),
         work_item_id: record.work_item_id.clone(),
         owner_id: record.owner_id.clone(),

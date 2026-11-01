@@ -379,7 +379,7 @@ pub(crate) fn read_semantic_store(
     semantic: &ScopedOwnerTableMut<'_, &str, &[u8]>,
     graph: &str,
     crypto: DurableCrypto<'_>,
-) -> Result<Option<medulla_core::compute::semantic::SemanticStore>, String> {
+) -> Result<Option<medulla_semantic_index::semantic::SemanticStore>, String> {
     semantic
         .get(graph)
         .map_err(|error| error.to_string())?
@@ -393,7 +393,7 @@ pub(crate) fn read_semantic_store(
 pub(crate) fn write_semantic_store(
     semantic: &mut ScopedOwnerTableMut<'_, &str, &[u8]>,
     graph: &str,
-    store: &medulla_core::compute::semantic::SemanticStore,
+    store: &medulla_semantic_index::semantic::SemanticStore,
     crypto: DurableCrypto<'_>,
 ) -> Result<(), String> {
     let bytes = rmp_serde::to_vec_named(store).map_err(|error| error.to_string())?;

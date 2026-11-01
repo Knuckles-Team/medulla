@@ -101,7 +101,9 @@ fn lease_renewed(
     fencing_token: u64,
     lease_expires_at_ms: u64,
 ) -> Result<medulla_protocol_types::protocol::ResultPayload, String> {
-    medulla_protocol_types::protocol::ResultPayload::of::<medulla_protocol_types::result_contract::coordination::RenewWorkItemLease>(
+    medulla_protocol_types::protocol::ResultPayload::of::<
+        medulla_protocol_types::result_contract::coordination::RenewWorkItemLease,
+    >(
         medulla_protocol_types::result_contract::coordination::WorkItemLeaseRenewal {
             renewed: true,
             reason: None,
@@ -118,7 +120,9 @@ fn lease_renewed(
 fn lease_renewal_refused(
     reason: medulla_protocol_types::result_contract::coordination::LeaseRenewalRefusal,
 ) -> Result<medulla_protocol_types::protocol::ResultPayload, String> {
-    medulla_protocol_types::protocol::ResultPayload::of::<medulla_protocol_types::result_contract::coordination::RenewWorkItemLease>(
+    medulla_protocol_types::protocol::ResultPayload::of::<
+        medulla_protocol_types::result_contract::coordination::RenewWorkItemLease,
+    >(
         medulla_protocol_types::result_contract::coordination::WorkItemLeaseRenewal {
             renewed: false,
             reason: Some(reason),
@@ -160,9 +164,9 @@ pub(super) fn cancel_transition_result(
         medulla_protocol_types::result_contract::coordination::WorkItemCancelStatus,
     >,
 ) -> Result<medulla_protocol_types::protocol::ResultPayload, String> {
-    medulla_protocol_types::protocol::ResultPayload::of::<medulla_protocol_types::result_contract::coordination::CancelWorkItem>(
-        transition,
-    )
+    medulla_protocol_types::protocol::ResultPayload::of::<
+        medulla_protocol_types::result_contract::coordination::CancelWorkItem,
+    >(transition)
 }
 
 /// The declared status of an applied commit.

@@ -547,10 +547,6 @@ pub(super) async fn seed_server_only_import(
     pack: &(ConnectorPackIndex, Vec<u8>),
     previous: &medulla_catalog_types::connector_pack::PackImportReceipt,
 ) -> medulla_catalog_types::connector_pack::PackImportReceipt {
-    use medulla_persistence::connector_pack::commit::ConnectorPackCommitPlan;
-    use medulla_persistence::connector_pack::commit::ConnectorPackComponentCommit;
-    use medulla_persistence::connector_pack::commit::ConnectorPackHolderCommit;
-    use medulla_persistence::connector_pack::ConnectorPackBodyHolderRow;
     use medulla_agent_types::agent_component::{
         AgentComponentEntry, AgentComponentMutationKind, ComponentDependency,
     };
@@ -560,6 +556,10 @@ pub(super) async fn seed_server_only_import(
         connector_pack::PackImportResult, connector_pack::PackProjectionState,
         connector_pack::PackServerRecord, connector_pack::PACK_IMPORT_RECORD_SCHEMA_VERSION,
     };
+    use medulla_persistence::connector_pack::commit::ConnectorPackCommitPlan;
+    use medulla_persistence::connector_pack::commit::ConnectorPackComponentCommit;
+    use medulla_persistence::connector_pack::commit::ConnectorPackHolderCommit;
+    use medulla_persistence::connector_pack::ConnectorPackBodyHolderRow;
 
     let index = &pack.0;
     let donor = Served::new();

@@ -238,10 +238,12 @@ pub(crate) fn resolve_mutation_authoritative_state(
                 }
                 let state = match descriptor.algorithm.as_str() {
                     "sha256" => AuthoritativeGraphState::Snapshot(Box::new(
-                        decode_durable::<medulla_core::graph::GraphSnapshot>(bytes).map_err(|_| {
-                            "authoritative graph state is invalid or exceeds resource limits"
-                                .to_string()
-                        })?,
+                        decode_durable::<medulla_core::graph::GraphSnapshot>(bytes).map_err(
+                            |_| {
+                                "authoritative graph state is invalid or exceeds resource limits"
+                                    .to_string()
+                            },
+                        )?,
                     )),
                     medulla_kernel::graph_delta::ROW_DELTA_ALGORITHM
                     | medulla_kernel::graph_delta::LEGACY_ROW_DELTA_ALGORITHM => {

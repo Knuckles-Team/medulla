@@ -1240,8 +1240,8 @@ mod tests {
     #[cfg(feature = "query")]
     #[test]
     fn column_stats_memoized_and_snapshot_scoped() {
-        use medulla_core::compute::semantic::SemanticStore;
         use medulla_core::graph::GraphCore;
+        use medulla_semantic_index::semantic::SemanticStore;
         fn blob(v: serde_json::Value) -> Vec<u8> {
             rmp_serde::to_vec_named(&v).unwrap()
         }

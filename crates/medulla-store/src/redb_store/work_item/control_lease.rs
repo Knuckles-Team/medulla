@@ -75,11 +75,13 @@ pub(crate) fn apply_issue_control_lease_row(
 ) -> Result<Option<medulla_protocol_types::protocol::ResultPayload>, String> {
     request.validate()?;
     if load_row(nodes, graph, &request.lease_id, crypto)?.is_some() {
-        return medulla_protocol_types::protocol::ResultPayload::of::<IssueControlLease>(ControlLeaseIssued {
-            outcome: ControlLeaseIssueOutcome::Collision,
-            lease: None,
-            changed_work_item_ids: Vec::new(),
-        })
+        return medulla_protocol_types::protocol::ResultPayload::of::<IssueControlLease>(
+            ControlLeaseIssued {
+                outcome: ControlLeaseIssueOutcome::Collision,
+                lease: None,
+                changed_work_item_ids: Vec::new(),
+            },
+        )
         .map(Some);
     }
     let mut row = request.row();
@@ -143,11 +145,13 @@ pub(crate) fn apply_transition_control_lease_row(
     let mut changed = pending_call::write_pair(graph, pair, nodes, crypto)?;
     changed.extend(pending_call::write_pair(graph, plan, nodes, crypto)?);
     changed.push(request.lease_id.clone());
-    medulla_protocol_types::protocol::ResultPayload::of::<TransitionControlLease>(ControlLeaseTransition {
-        outcome: ControlLeaseTransitionOutcome::Applied,
-        lease: Some(ended),
-        changed_work_item_ids: changed,
-    })
+    medulla_protocol_types::protocol::ResultPayload::of::<TransitionControlLease>(
+        ControlLeaseTransition {
+            outcome: ControlLeaseTransitionOutcome::Applied,
+            lease: Some(ended),
+            changed_work_item_ids: changed,
+        },
+    )
     .map(Some)
 }
 
@@ -161,11 +165,13 @@ fn transition_result(
         .filter(|_| changed)
         .map(|lease| vec![lease.lease_id.clone()])
         .unwrap_or_default();
-    medulla_protocol_types::protocol::ResultPayload::of::<TransitionControlLease>(ControlLeaseTransition {
-        outcome,
-        lease,
-        changed_work_item_ids,
-    })
+    medulla_protocol_types::protocol::ResultPayload::of::<TransitionControlLease>(
+        ControlLeaseTransition {
+            outcome,
+            lease,
+            changed_work_item_ids,
+        },
+    )
     .map(Some)
 }
 

@@ -53,7 +53,7 @@ macro_rules! persistence_graph_reads {
         };
         dump.map(|dump| {
             let semantic_store = if dump.semantic.is_empty() {
-                medulla_core::compute::semantic::SemanticStore::default()
+                medulla_semantic_index::semantic::SemanticStore::default()
             } else {
                 decode_durable_semantic(&dump.semantic)?
             };

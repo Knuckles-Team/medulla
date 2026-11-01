@@ -1,10 +1,10 @@
 //! Private transaction consensus implementation.
 
 use super::*;
-#[cfg(feature = "raft")]
-use medulla_raft::raft::RaftStateExt;
 #[cfg(feature = "redb")]
 use medulla_persistence::AsRedb;
+#[cfg(feature = "raft")]
+use medulla_raft::raft::RaftStateExt;
 
 #[path = "consensus/authority.rs"]
 mod authority;
@@ -572,8 +572,9 @@ pub(crate) async fn apply_consensus_participant_commit(
         participant_id,
         plan_bytes,
     } = participant;
-    let principal =
-        medulla_server_api::mutation_batch::principal_fingerprint(&authority.principal_fingerprint)?;
+    let principal = medulla_server_api::mutation_batch::principal_fingerprint(
+        &authority.principal_fingerprint,
+    )?;
     let (plan, txn) = decode_consensus_participant(plan_bytes, coordinator_id, participant_id)?;
     let backend = state
         .read()

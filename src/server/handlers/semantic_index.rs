@@ -40,10 +40,10 @@ use medulla_index_types::{
 use tokio::sync::RwLock;
 
 use crate::protocol::{Response, ResultPayload};
-use medulla_server_api::access::CarrierAuthority;
 use crate::server::semantic_index::{
     open_semantic_service, semantic_cursor_secret, SemanticIndexServerAdapter,
 };
+use medulla_server_api::access::CarrierAuthority;
 use medulla_server_api::state::ServerState;
 
 pub(super) struct SemanticIndexContext<'a> {

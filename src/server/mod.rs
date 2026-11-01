@@ -3795,7 +3795,7 @@ mod tests {
         // threshold, with no boot-time warm task ever having run for it (there is
         // none in this harness).
         let dim = 8;
-        let n = crate::compute::semantic_ann::ANN_BUILD_THRESHOLD + 50;
+        let n = medulla_semantic_index::semantic_ann::ANN_BUILD_THRESHOLD + 50;
         let mut target = vec![0.0f32; dim];
         {
             let mut store = core.semantic_store.write();

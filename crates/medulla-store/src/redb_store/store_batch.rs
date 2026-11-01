@@ -56,7 +56,8 @@ pub(crate) fn apply_post_row_cleanup(
 /// Everything one batch's row phase needs that was resolved before the rows.
 pub(crate) struct MutationBatchPlan {
     pub(crate) staged_state: Option<AuthoritativeGraphState>,
-    pub(crate) schema_sources_update: Option<std::sync::Arc<medulla_core::graph::GraphSchemaSources>>,
+    pub(crate) schema_sources_update:
+        Option<std::sync::Arc<medulla_core::graph::GraphSchemaSources>>,
     pub(crate) lifecycle: Option<(bool, String, Option<GraphType>)>,
 }
 

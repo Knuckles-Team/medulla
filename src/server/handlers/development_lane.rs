@@ -8,8 +8,8 @@
 use std::sync::Arc;
 
 use crate::protocol::{Method, Response, ResultPayload};
-use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_protocol_types::result_contract::coordination;
+use medulla_server_api::api::persistence::PersistenceBackend;
 
 /// Already-authorized graph and placement context for one development-lane op.
 pub(crate) struct HandleContext<'a> {

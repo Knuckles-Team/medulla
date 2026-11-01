@@ -281,9 +281,9 @@ impl EmbeddingProvider for BoundedCachingEmbeddingProvider<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::compute::semantic::{
-        EmbeddingChunkRef, EmbeddingRegenerationCandidate, SemanticStore,
-    };
+    use crate::semantic::EmbeddingChunkRef;
+    use crate::semantic::EmbeddingRegenerationCandidate;
+    use crate::semantic::SemanticStore;
     use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
     use std::sync::Arc;
 

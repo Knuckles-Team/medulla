@@ -234,60 +234,64 @@ fn commit_sql_catalog_work(work: SqlCatalogWork<'_>) -> Result<usize, String> {
         .duration_since(std::time::UNIX_EPOCH)
         .map(|duration| duration.as_millis() as u64)
         .unwrap_or(0);
-    medulla_server_api::sql_catalog_acl::with_source_authority_write(persist_dir, authority, |source| {
-        let expected_version = store.mutation_version(tenant_scope, graph_name)?;
-        let batch = medulla_server_api::mutation_batch::compile_opaque_method(
-            medulla_server_api::mutation_batch::CompileBatch {
-                batch_id: &batch_id,
-                request_id: req_id,
-                attempt_nonce: authority.attempt_nonce(),
-                principal: caller,
-                tenant: tenant_scope,
-                graph: graph_name,
-                placement_epoch: 0,
-                idempotency_key: authority.idempotency_key(),
-                expected_graph_version: Some(expected_version),
-                fencing_token: None,
-                created_at_ms,
-                default_surface: medulla_mutation_types::mutation_scope::MutationSurface::Query,
-                authoritative_state: None,
-            },
-            sql_method,
-            medulla_mutation_types::mutation_scope::MutationSurface::Query,
-            medulla_mutation_types::mutation_scope::DurabilityDomain::SqlCatalog,
-            "sql_catalog_operation",
-        )?;
-        let committed_replay = wire
-            .committed_sql_replay_receipt(store, authority, &batch)?
-            .is_some();
-        let created_tables = wire.authorize_table_txn(source, store, txn, committed_replay)?;
-        let committed = match store.commit_txn_batch(txn, &batch, created_at_ms) {
-            Ok(committed) => committed.record,
-            Err(message) if message.contains("IDEMPOTENCY_CONFLICT") => wire
+    medulla_server_api::sql_catalog_acl::with_source_authority_write(
+        persist_dir,
+        authority,
+        |source| {
+            let expected_version = store.mutation_version(tenant_scope, graph_name)?;
+            let batch = medulla_server_api::mutation_batch::compile_opaque_method(
+                medulla_server_api::mutation_batch::CompileBatch {
+                    batch_id: &batch_id,
+                    request_id: req_id,
+                    attempt_nonce: authority.attempt_nonce(),
+                    principal: caller,
+                    tenant: tenant_scope,
+                    graph: graph_name,
+                    placement_epoch: 0,
+                    idempotency_key: authority.idempotency_key(),
+                    expected_graph_version: Some(expected_version),
+                    fencing_token: None,
+                    created_at_ms,
+                    default_surface: medulla_mutation_types::mutation_scope::MutationSurface::Query,
+                    authoritative_state: None,
+                },
+                sql_method,
+                medulla_mutation_types::mutation_scope::MutationSurface::Query,
+                medulla_mutation_types::mutation_scope::DurabilityDomain::SqlCatalog,
+                "sql_catalog_operation",
+            )?;
+            let committed_replay = wire
                 .committed_sql_replay_receipt(store, authority, &batch)?
-                .ok_or(message)?,
-            Err(message) => return Err(message),
-        };
-        let owner_operation_id =
-            medulla_server_api::sql_catalog_acl::stable_source_operation_id(&batch_id);
-        for schema in &created_tables {
-            medulla_server_api::sql_catalog_acl::register_owner_after_create_in(
-                source,
-                &schema.name,
-                owner_operation_id,
+                .is_some();
+            let created_tables = wire.authorize_table_txn(source, store, txn, committed_replay)?;
+            let committed = match store.commit_txn_batch(txn, &batch, created_at_ms) {
+                Ok(committed) => committed.record,
+                Err(message) if message.contains("IDEMPOTENCY_CONFLICT") => wire
+                    .committed_sql_replay_receipt(store, authority, &batch)?
+                    .ok_or(message)?,
+                Err(message) => return Err(message),
+            };
+            let owner_operation_id =
+                medulla_server_api::sql_catalog_acl::stable_source_operation_id(&batch_id);
+            for schema in &created_tables {
+                medulla_server_api::sql_catalog_acl::register_owner_after_create_in(
+                    source,
+                    &schema.name,
+                    owner_operation_id,
+                )
+                .map_err(|error| format!("SQL_OWNER_REPAIR_PENDING: {error}"))?;
+            }
+            let bytes = committed
+                .result_msgpack
+                .as_deref()
+                .ok_or_else(|| "committed SQL MutationBatch has no result".to_string())?;
+            medulla_types::msgpack::decode_bounded::<usize>(
+                bytes,
+                medulla_types::msgpack::MsgpackLimits::new(64, 1, 1),
             )
-            .map_err(|error| format!("SQL_OWNER_REPAIR_PENDING: {error}"))?;
-        }
-        let bytes = committed
-            .result_msgpack
-            .as_deref()
-            .ok_or_else(|| "committed SQL MutationBatch has no result".to_string())?;
-        medulla_types::msgpack::decode_bounded::<usize>(
-            bytes,
-            medulla_types::msgpack::MsgpackLimits::new(64, 1, 1),
-        )
-        .map_err(|_| "committed SQL result is corrupt".to_string())
-    })
+            .map_err(|_| "committed SQL result is corrupt".to_string())
+        },
+    )
 }
 
 /// SQL catalog/table native coordinator. The user-table rows/catalog, terminal

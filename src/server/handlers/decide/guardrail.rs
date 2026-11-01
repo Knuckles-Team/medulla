@@ -3,10 +3,10 @@
 
 use super::SharedState;
 use crate::protocol::Response;
-use medulla_server_api::auth::VerifiedRequestContext;
+use medulla_agent_types::agent_guardrail::GuardrailEntailmentRequest;
 #[cfg(feature = "redb")]
 use medulla_persistence::agent_library::AgentLibraryStateExt;
-use medulla_agent_types::agent_guardrail::GuardrailEntailmentRequest;
+use medulla_server_api::auth::VerifiedRequestContext;
 
 #[cfg(feature = "decide")]
 pub(crate) async fn handle_guardrail_entailment(

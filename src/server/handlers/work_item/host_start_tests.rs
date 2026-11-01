@@ -1,13 +1,15 @@
 //! Signed dispatch to native provenance. These tests need the redb server build;
 //! they do not qualify deployment identity, current sessions, or host launch.
 use super::*;
+use medulla_agent_types::control_lease::ControlLeaseIssued;
+use medulla_agent_types::host_start::{
+    HostStartBinding, HostStartInterfaces, IssueHostStartGrantRequest,
+};
+use medulla_persistence::redb_backend::RedbBackend;
 use medulla_server_api::auth::dispatch_test_on_heap;
 use medulla_server_api::auth::scoped_test_request_on;
 use medulla_server_api::auth::ScopedTestCaller;
-use medulla_persistence::redb_backend::RedbBackend;
 use medulla_server_api::state::ServerState;
-use medulla_agent_types::control_lease::ControlLeaseIssued;
-use medulla_agent_types::host_start::{HostStartBinding, HostStartInterfaces, IssueHostStartGrantRequest};
 use tokio::sync::RwLock;
 
 // spec: MEDULLA-DURABLE-KERNEL-R030.1.3

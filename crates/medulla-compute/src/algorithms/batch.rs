@@ -1,6 +1,6 @@
 //! Bounded batch decoding, validation, preview, and application.
 
-use medulla_core::compute::semantic::MAX_EMBEDDING_DIMENSION;
+use medulla_semantic_index::semantic::MAX_EMBEDDING_DIMENSION;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use crate::graph::GraphCore;
@@ -289,7 +289,7 @@ fn prepare_add_embedding_op(
     // mixed-dimension OR non-finite-component batch (e.g. op[2] matches
     // the store, op[5] doesn't, or op[5] contains a NaN) is rejected as a
     // whole, before `batch_update` applies op[0]/op[1] to the live store.
-    medulla_core::compute::semantic::check_embedding_dimension(embedding, expected_embedding_dim)
+    medulla_semantic_index::semantic::check_embedding_dimension(embedding, expected_embedding_dim)
         .map_err(|error| format!("BatchUpdate op[{index}] {error}"))
 }
 

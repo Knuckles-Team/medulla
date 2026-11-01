@@ -1102,7 +1102,7 @@ mod tests {
 
     // ── Write-path maintenance seam (CONCEPT:MEDULLA-KG.storage.write-changeset / .index-manager-seam) ──
 
-    use crate::compute::semantic::SemanticStore;
+    use medulla_semantic_index::semantic::SemanticStore;
 
     fn v3(x: f32, y: f32, z: f32) -> Vec<f32> {
         vec![x, y, z]

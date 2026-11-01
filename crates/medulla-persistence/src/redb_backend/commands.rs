@@ -2,12 +2,12 @@ use super::*;
 use medulla_transaction::{OutboxClaimBudget, OutboxClaimOutcome};
 use tokio::sync::oneshot;
 
+use medulla_mutation_types::mutation_scope::MutationOutboxLease;
+use medulla_mutation_types::mutation_scope::MutationProjectionCursor;
 use medulla_protocol_types::change_envelope::ChangeEnvelope;
 use medulla_protocol_types::change_envelope::ChangeEnvelopeCommit;
 use medulla_protocol_types::mutation_batch::MutationBatch;
 use medulla_protocol_types::mutation_batch::MutationBatchCommit;
-use medulla_mutation_types::mutation_scope::MutationOutboxLease;
-use medulla_mutation_types::mutation_scope::MutationProjectionCursor;
 use medulla_protocol_types::protocol::GraphType;
 use medulla_protocol_types::protocol::Method;
 #[cfg(any(feature = "compute-dist", feature = "matview"))]
@@ -63,7 +63,8 @@ pub(crate) struct ChangeEnvelopePayload {
     pub(crate) graph: String,
     pub(crate) envelope: ChangeEnvelope,
     pub(crate) committed_at_ms: u64,
-    pub(crate) source_budget: Option<medulla_store::redb_store::enrichment_budget::SourceBudgetAuthority>,
+    pub(crate) source_budget:
+        Option<medulla_store::redb_store::enrichment_budget::SourceBudgetAuthority>,
 }
 
 /// Payload of a [`Cmd::ChangeEnvelopesCommit`] — a batch of governed envelopes that
@@ -142,8 +143,9 @@ pub(crate) enum Cmd {
     ReadGraphDumpPage {
         graph: String,
         query: Box<PageQuery>,
-        reply:
-            std::sync::mpsc::SyncSender<Result<Option<medulla_store::redb_store::GraphDumpPage>, String>>,
+        reply: std::sync::mpsc::SyncSender<
+            Result<Option<medulla_store::redb_store::GraphDumpPage>, String>,
+        >,
     },
     /// Export ONE graph's rows VERBATIM for an online shard move (CONCEPT:MEDULLA-KG.backend.catalog-shard-resolve). Runs
     /// on the SOURCE shard's writer: flush pending first (so the snapshot is complete),
@@ -176,13 +178,17 @@ pub(crate) enum Cmd {
     #[cfg(feature = "security")]
     AuditVerify {
         graph: String,
-        reply: std::sync::mpsc::SyncSender<Result<medulla_protocol_types::protocol::AuditReport, String>>,
+        reply: std::sync::mpsc::SyncSender<
+            Result<medulla_protocol_types::protocol::AuditReport, String>,
+        >,
     },
     #[cfg(feature = "security")]
     AuditAppend {
         graph: String,
         event: medulla_store::redb_store::OperationAuditEvent,
-        reply: std::sync::mpsc::SyncSender<Result<medulla_protocol_types::protocol::AuditAppendReceipt, String>>,
+        reply: std::sync::mpsc::SyncSender<
+            Result<medulla_protocol_types::protocol::AuditAppendReceipt, String>,
+        >,
     },
     /// TEST-ONLY tamper of one audit entry (see `test_tamper_audit_entry`).
     #[cfg(all(test, feature = "security"))]
@@ -215,7 +221,9 @@ pub(crate) enum Cmd {
         graph: String,
         node_id: String,
         anchor_seq: Option<u64>,
-        reply: std::sync::mpsc::SyncSender<Result<medulla_protocol_types::protocol::MerkleInclusionReport, String>>,
+        reply: std::sync::mpsc::SyncSender<
+            Result<medulla_protocol_types::protocol::MerkleInclusionReport, String>,
+        >,
     },
     /// **Cross-modal ACID commit (CONCEPT:MEDULLA-KG.txn.reader-never-sees-node).** Land a graph, vector, blob-ref,
     /// and property write-set for ONE graph in ONE `WriteTransaction`, all-or-nothing,
@@ -256,15 +264,22 @@ pub(crate) enum Cmd {
         request: medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityMintRequest,
         authority: medulla_store::redb_store::work_item_capability::AuthenticatedAuthority,
         done: oneshot::Sender<
-            Result<medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityResult, String>,
+            Result<
+                medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityResult,
+                String,
+            >,
         >,
     },
     VerifyWorkItemClaimCapability {
         graph: String,
-        request: medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityVerifyRequest,
+        request:
+            medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityVerifyRequest,
         authority: medulla_store::redb_store::work_item_capability::AuthenticatedAuthority,
         done: oneshot::Sender<
-            Result<medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityResult, String>,
+            Result<
+                medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityResult,
+                String,
+            >,
         >,
     },
     /// Native development-lane hold/quota mutation (RMDD-28: Reserve/Renew/
@@ -345,7 +360,8 @@ pub(crate) enum Cmd {
     MutationOutboxWrite {
         graph: String,
         write: Box<medulla_server_api::outbox_operator::OutboxWrite>,
-        done: oneshot::Sender<Result<medulla_server_api::outbox_operator::OutboxWriteReply, String>>,
+        done:
+            oneshot::Sender<Result<medulla_server_api::outbox_operator::OutboxWriteReply, String>>,
     },
     Shutdown {
         reply: std::sync::mpsc::SyncSender<()>,

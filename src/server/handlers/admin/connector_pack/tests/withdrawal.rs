@@ -1,19 +1,19 @@
 //! Signed current-discovery and historical-content acceptance.
 
-use medulla_agent_types::agent_library::AgentLibraryLifecycle;
 use super::{
     bind, build_pack, context, head_of, import_uploaded_with, imported, ok, persistence_id, tool,
     Served, ADMIN, TENANT,
 };
 use crate::protocol::Method;
-#[cfg(feature = "redb")]
-use medulla_persistence::agent_library::AgentLibraryStateExt;
 use medulla_agent_types::agent_component::{
     AgentComponentContentRequest, AgentComponentContentResult, AgentComponentKind,
     AgentComponentOp, AgentComponentPublishRequest, AgentComponentSearchPage,
     AgentComponentSearchRequest, ComponentDependency,
 };
+use medulla_agent_types::agent_library::AgentLibraryLifecycle;
 use medulla_catalog_types::{connector_pack::PackImportResult, connector_pack::PackViolationCode};
+#[cfg(feature = "redb")]
+use medulla_persistence::agent_library::AgentLibraryStateExt;
 
 async fn search(served: &Served) -> Vec<String> {
     let page: AgentComponentSearchPage = ok(

@@ -54,12 +54,12 @@ use super::stat_support::{default_statistical_policy, pinned_entry, refusal};
 use super::telemetry;
 use super::SharedState;
 use crate::protocol::{Response, ResultPayload};
-use medulla_server_api::auth::VerifiedRequestContext;
 use medulla_persistence::agent_library::AgentLibraryStore;
 use medulla_persistence::decision_jobs::decode_artifact;
 use medulla_persistence::decision_jobs::encode_artifact;
 use medulla_persistence::decision_jobs::evaluation_key;
 use medulla_persistence::decision_jobs::record_key;
+use medulla_server_api::auth::VerifiedRequestContext;
 
 /// Most log rows one read walks before refusing as unbounded.
 pub(super) const MAX_LOG_ROWS: usize = 100_000;

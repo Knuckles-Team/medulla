@@ -21,7 +21,6 @@ use super::{
     corrupt, ensure, kernel_error, refused, semantic_contract_error, SemanticCodeError,
     SemanticCodeStore, SemanticMutationReceipt,
 };
-use crate::compute::semantic::SemanticGenerationImage;
 use medulla_index_types::{
     semantic_index::SemanticActivePointer, semantic_index::SemanticBinding,
     semantic_index::SemanticBindingState, semantic_index::SemanticBindingStateTransition,
@@ -31,6 +30,7 @@ use medulla_index_types::{
     semantic_index::SemanticStageScope, semantic_index::SemanticStageTransition,
 };
 use medulla_mutation_types::mutation_scope::MutationOutboxLease;
+use medulla_semantic_index::semantic::SemanticGenerationImage;
 use medulla_storage::{SemanticIndexOwner, ANN_CODES, SEMANTIC_POINTERS};
 use medulla_transaction::{AdmittedMutation, AdmittedOwnerWrite};
 use sha2::{Digest, Sha256};

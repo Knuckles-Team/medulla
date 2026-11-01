@@ -814,7 +814,8 @@ pub(crate) fn committed_sql_replay_receipt(
     // The identity already carries the actor, so an equal digest proves the same
     // caller. This is the POSITIVE check RF-RULING-004's application note also
     // requires: a refusal must NAME the owner rather than be anonymous.
-    let caller = medulla_server_api::mutation_batch::principal_fingerprint(authority.actor_scope())?;
+    let caller =
+        medulla_server_api::mutation_batch::principal_fingerprint(authority.actor_scope())?;
     if record.committing_actor()? != caller {
         return Err(SQL_REPLAY_OWNER_CONFLICT.to_string());
     }
@@ -1242,14 +1243,16 @@ pub struct WireSession {
     /// so a SQL `SERIALIZABLE` transaction gets GENUINE phantom protection for
     /// the read shape the engine's predicate machinery can express, instead of
     /// silently behaving like `Snapshot`. Reset by `begin_txn()`.
-    serializable_predicate_reads: parking_lot::Mutex<Vec<(medulla_server_api::txn::PredicateRead, u64)>>,
+    serializable_predicate_reads:
+        parking_lot::Mutex<Vec<(medulla_server_api::txn::PredicateRead, u64)>>,
     /// The OPEN transaction's table-store statement replay log (CONCEPT:MEDULLA-TXN.mixed-commit-intent — NE-004):
     /// one entry per buffered table DML/DDL statement (or decoded `COPY`
     /// batch), in order. Used ONLY when a transaction mixes graph-node ops
     /// with table ops, to durably record how to rebuild the table-side
     /// `TableTxn` on crash recovery (`medulla_query::TxnOp` is not `Serialize`).
     /// Reset by `begin_txn()`.
-    txn_replay_log: parking_lot::Mutex<Vec<medulla_server_api::api::query_txn::txn_intent::ReplayStep>>,
+    txn_replay_log:
+        parking_lot::Mutex<Vec<medulla_server_api::api::query_txn::txn_intent::ReplayStep>>,
     /// Set once this connection has swept its owner's leftover commit-intent
     /// files (CONCEPT:MEDULLA-TXN.mixed-commit-intent — NE-004 crash recovery). Checked lazily on first use rather
     /// than at connection setup so it costs nothing on a connection that never
@@ -1344,7 +1347,9 @@ impl WireSession {
             copy: Default::default(),
             #[cfg(feature = "query")]
             xmodal: Default::default(),
-            txn_isolation: parking_lot::Mutex::new(medulla_server_api::txn::IsolationLevel::Snapshot),
+            txn_isolation: parking_lot::Mutex::new(
+                medulla_server_api::txn::IsolationLevel::Snapshot,
+            ),
             txn_begin_version: Default::default(),
             session_isolation_default: Default::default(),
             pending_isolation: Default::default(),
@@ -1414,13 +1419,14 @@ impl WireSession {
         actor: &str,
     ) -> WireResult<()> {
         let secret = self.state.read().await.auth_secret.clone();
-        let context = medulla_server_api::auth::VerifiedRequestContext::authenticated_sql_wire_actor(
-            &secret, protocol, actor,
-        )
-        .map_err(|message| WireError {
-            code: "28000".to_string(),
-            message,
-        })?;
+        let context =
+            medulla_server_api::auth::VerifiedRequestContext::authenticated_sql_wire_actor(
+                &secret, protocol, actor,
+            )
+            .map_err(|message| WireError {
+                code: "28000".to_string(),
+                message,
+            })?;
         let authority = CarrierAuthority::from_verified(&context).map_err(|message| WireError {
             code: "28000".to_string(),
             message,
@@ -2627,8 +2633,12 @@ impl WireSession {
             user_err("mixed graph+table transactions require the configured persistence directory")
         })?;
         let persist_dir = std::path::Path::new(&persist_dir_buf);
-        medulla_server_api::api::query_txn::txn_intent::write_intent(&authority, persist_dir, &intent)
-            .map_err(user_err)?;
+        medulla_server_api::api::query_txn::txn_intent::write_intent(
+            &authority,
+            persist_dir,
+            &intent,
+        )
+        .map_err(user_err)?;
         // The live path already HAS the real, already-buffered `TableTxn` —
         // commit it directly rather than re-deriving it from the replay log
         // (that reconstruction is for RECOVERY, which has no live `TableTxn`
@@ -4221,9 +4231,11 @@ impl WireSession {
         let table_steps = if operation == "transaction" {
             std::mem::take(&mut *self.txn_replay_log.lock())
         } else {
-            vec![medulla_server_api::api::query_txn::txn_intent::ReplayStep::Sql(
-                operation.to_string(),
-            )]
+            vec![
+                medulla_server_api::api::query_txn::txn_intent::ReplayStep::Sql(
+                    operation.to_string(),
+                ),
+            ]
         };
         if table_steps.is_empty() {
             return Err(user_err("CREATE TABLE commit has no durable replay recipe"));
@@ -4246,8 +4258,12 @@ impl WireSession {
             .clone()
             .ok_or_else(|| user_err("CREATE TABLE recovery requires configured persistence"))?;
         let persist_dir = std::path::Path::new(&persist_dir);
-        medulla_server_api::api::query_txn::txn_intent::write_intent(&authority, persist_dir, &intent)
-            .map_err(user_err)?;
+        medulla_server_api::api::query_txn::txn_intent::write_intent(
+            &authority,
+            persist_dir,
+            &intent,
+        )
+        .map_err(user_err)?;
         self.resolve_commit_intent(
             &authority,
             persist_dir,
@@ -4529,8 +4545,10 @@ impl WireSession {
             #[cfg(feature = "sparql")]
             XmodalStmt::SparqlUpdate(update) => {
                 let (methods, schema_refs) =
-                    medulla_server_api::api::query_txn::txn_support::sparql_update_to_methods(&update)
-                        .map_err(user_err)?;
+                    medulla_server_api::api::query_txn::txn_support::sparql_update_to_methods(
+                        &update,
+                    )
+                    .map_err(user_err)?;
                 self.stage_or_commit_owl(graph, methods, schema_refs, in_txn)
                     .await
             }
@@ -4646,16 +4664,16 @@ impl WireSession {
     async fn exec_uql(&self, graph: &str, text: &str, in_txn: bool) -> WireResult<WireOutcome> {
         let plan = medulla_plan::uql::parse(text).map_err(|e| user_err(e.render(text)))?;
         #[cfg(feature = "tsdb")]
-        let tsdb_scope = if medulla_server_api::api::query_txn::query_support::plan_needs_tsdb(&plan.ops)
-        {
-            let authority = self.carrier_authority()?;
-            Some((
-                authority.tenant_scope().to_string(),
-                authority.namespace("timeseries-graph", graph),
-            ))
-        } else {
-            None
-        };
+        let tsdb_scope =
+            if medulla_server_api::api::query_txn::query_support::plan_needs_tsdb(&plan.ops) {
+                let authority = self.carrier_authority()?;
+                Some((
+                    authority.tenant_scope().to_string(),
+                    authority.namespace("timeseries-graph", graph),
+                ))
+            } else {
+                None
+            };
         let core = self.graph_core(graph).await?;
         let mut view = core.analysis_snapshot();
         let (overlay_methods, vectors) = if in_txn {
@@ -4990,7 +5008,9 @@ impl WireSession {
             let table_ops_after = self.txn.lock().as_ref().map(|t| t.ops.len()).unwrap_or(0);
             if table_ops_after > table_ops_before {
                 self.txn_replay_log.lock().push(
-                    medulla_server_api::api::query_txn::txn_intent::ReplayStep::Sql(sql.to_string()),
+                    medulla_server_api::api::query_txn::txn_intent::ReplayStep::Sql(
+                        sql.to_string(),
+                    ),
                 );
             }
         }
@@ -5630,8 +5650,12 @@ mod ne_004_ne_005_tests {
             .clone()
             .expect("persist dir configured");
         let persist_dir = std::path::Path::new(&persist_dir_buf);
-        medulla_server_api::api::query_txn::txn_intent::write_intent(&authority, persist_dir, &intent)
-            .expect("write durable intent");
+        medulla_server_api::api::query_txn::txn_intent::write_intent(
+            &authority,
+            persist_dir,
+            &intent,
+        )
+        .expect("write durable intent");
         let begin_version = session
             .require_txn_begin_version()
             .expect("BEGIN captured a real begin-time version");
@@ -5654,7 +5678,8 @@ mod ne_004_ne_005_tests {
         // The torn state is real: the graph write is durable, the table
         // write is not, and the intent survives on disk.
         assert_eq!(
-            medulla_server_api::api::query_txn::txn_intent::list_intents(&authority, persist_dir).len(),
+            medulla_server_api::api::query_txn::txn_intent::list_intents(&authority, persist_dir)
+                .len(),
             1,
             "the crashed intent must still be on disk"
         );
@@ -5728,13 +5753,19 @@ mod ne_004_ne_005_tests {
             vec![Method::RemoveNode {
                 node_id: "recovery-after-graph-fault".to_string(),
             }],
-            vec![medulla_server_api::api::query_txn::txn_intent::ReplayStep::Sql(
-                format!("CREATE TABLE {table} (id INT)"),
-            )],
+            vec![
+                medulla_server_api::api::query_txn::txn_intent::ReplayStep::Sql(format!(
+                    "CREATE TABLE {table} (id INT)"
+                )),
+            ],
             medulla_server_api::txn::now_ms(),
         );
-        medulla_server_api::api::query_txn::txn_intent::write_intent(&authority, persist_dir, &intent)
-            .expect("persist phase-1 recovery intent");
+        medulla_server_api::api::query_txn::txn_intent::write_intent(
+            &authority,
+            persist_dir,
+            &intent,
+        )
+        .expect("persist phase-1 recovery intent");
 
         // The first recovery attempt fails at graph lookup because the graph
         // is temporarily absent. The durable intent must survive this
@@ -5745,7 +5776,8 @@ mod ne_004_ne_005_tests {
             .expect_err("missing graph must fail the first recovery attempt");
         assert!(first.message.contains("graph"), "{first}");
         assert_eq!(
-            medulla_server_api::api::query_txn::txn_intent::list_intents(&authority, persist_dir).len(),
+            medulla_server_api::api::query_txn::txn_intent::list_intents(&authority, persist_dir)
+                .len(),
             1,
             "an uncertain recovery graph error must retain its intent"
         );
@@ -6375,9 +6407,11 @@ pub(crate) mod wired_catalog_tests {
         // A malformed owner table lets the physical CREATE commit but makes
         // owner registration fail. This is a deterministic storage fault at
         // the exact cross-redb boundary ordinary autocommit must recover.
-        let acl =
-            medulla_server_api::sql_tables::tenant_acl_table_store(owner.tenant_scope(), &persist_dir)
-                .expect("open tenant ACL store");
+        let acl = medulla_server_api::sql_tables::tenant_acl_table_store(
+            owner.tenant_scope(),
+            &persist_dir,
+        )
+        .expect("open tenant ACL store");
         acl.create_table(
             &TableSchema::new(
                 "__eg_sql_owners__",
@@ -6401,7 +6435,8 @@ pub(crate) mod wired_catalog_tests {
             .expect("read physical create")
             .is_some());
         assert_eq!(
-            medulla_server_api::api::query_txn::txn_intent::list_intents(&owner, &persist_dir).len(),
+            medulla_server_api::api::query_txn::txn_intent::list_intents(&owner, &persist_dir)
+                .len(),
             1,
             "ordinary CREATE keeps its durable recipe while owner repair is pending"
         );
@@ -6620,9 +6655,11 @@ pub(crate) mod wired_catalog_tests {
             operation_id,
             Vec::new(),
             Vec::new(),
-            vec![medulla_server_api::api::query_txn::txn_intent::ReplayStep::Sql(
-                "CREATE TABLE altered_replay_target (id TEXT PRIMARY KEY)".to_string(),
-            )],
+            vec![
+                medulla_server_api::api::query_txn::txn_intent::ReplayStep::Sql(
+                    "CREATE TABLE altered_replay_target (id TEXT PRIMARY KEY)".to_string(),
+                ),
+            ],
             medulla_server_api::txn::now_ms(),
         );
         let altered_error = session
@@ -7233,7 +7270,8 @@ pub(crate) mod wired_catalog_tests {
             .tenant_scope()
             .to_string();
         let store =
-            medulla_server_api::sql_tables::tenant_table_store(&canonical_tenant, &persist_dir).unwrap();
+            medulla_server_api::sql_tables::tenant_table_store(&canonical_tenant, &persist_dir)
+                .unwrap();
         assert!(store.get_schema("people").unwrap().is_some());
         assert!(store
             .property_graph(

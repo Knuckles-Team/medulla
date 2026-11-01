@@ -1,7 +1,5 @@
 //! R073.4 reads receipts produced by the signed served import, not synthetic receipts.
 
-#[cfg(feature = "redb")]
-use medulla_persistence::agent_library::AgentLibraryStateExt;
 use medulla_agent_types::agent_library::AgentLibraryMutationContext;
 use medulla_catalog_types::connector_pack::{
     PackImportRecord, PackImportResult, CONNECTOR_PACK_IMPORT_TOPIC,
@@ -9,6 +7,8 @@ use medulla_catalog_types::connector_pack::{
 };
 use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
 use medulla_mutation_types::{mutation::MutationReceipt, mutation::MutationResult};
+#[cfg(feature = "redb")]
+use medulla_persistence::agent_library::AgentLibraryStateExt;
 use medulla_protocol_types::mutation_batch::MutationBatchRecord;
 use medulla_protocol_types::mutation_batch::MutationBatchStatus;
 use medulla_types::contract::{Digest256, Nonce};

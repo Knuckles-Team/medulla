@@ -370,9 +370,8 @@ impl EmbeddedEngine {
         if let Method::AddEmbedding { embedding, .. } = &method {
             let validation = match self.core(graph, false) {
                 Ok(core) => core.semantic_store.read().validate_embedding(embedding),
-                Err(_) => {
-                    crate::compute::semantic::SemanticStore::new().validate_embedding(embedding)
-                }
+                Err(_) => medulla_semantic_index::semantic::SemanticStore::new()
+                    .validate_embedding(embedding),
             };
             validation.map_err(|error| error.to_string())?;
         }

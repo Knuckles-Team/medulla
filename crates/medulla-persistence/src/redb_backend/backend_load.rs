@@ -1,8 +1,8 @@
 use super::*;
 use medulla_protocol_types::protocol::GraphType;
+use medulla_server_api::state::ServerState;
 use medulla_store::redb_store::read_all_dumps;
 use medulla_store::redb_store::read_all_graph_meta;
-use medulla_server_api::state::ServerState;
 
 impl RedbBackend {
     /// Reconstruct every graph from the redb store into the registry. The actual
@@ -100,7 +100,8 @@ impl RedbBackend {
                 .shard
                 .upgrade()
                 .ok_or_else(|| "redb writer thread is gone".to_string())?;
-            upgrade_tasks.push(move || medulla_store::redb_store::upgrade_legacy_graph_meta(&shard));
+            upgrade_tasks
+                .push(move || medulla_store::redb_store::upgrade_legacy_graph_meta(&shard));
         }
         let upgraded: usize = join_blocking_in_order(upgrade_tasks)
             .await?
@@ -191,7 +192,10 @@ impl RedbBackend {
     pub(super) async fn read_snapshot<T, F>(&self, graph_fname: &str, read: F) -> Result<T, String>
     where
         T: Send + 'static,
-        F: for<'a> FnOnce(&'a Shard, medulla_store::redb_store::DurableCrypto<'a>) -> Result<T, String>
+        F: for<'a> FnOnce(
+                &'a Shard,
+                medulla_store::redb_store::DurableCrypto<'a>,
+            ) -> Result<T, String>
             + Send
             + 'static,
     {

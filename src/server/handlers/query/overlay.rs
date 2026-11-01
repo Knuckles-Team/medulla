@@ -281,7 +281,7 @@ pub(crate) fn run_unified_with_staged_finish<T>(
         );
     }
     let committed = core.semantic_store.read().clone();
-    let semantic = medulla_core::compute::semantic::semantic_overlay(committed, staged);
+    let semantic = medulla_semantic_index::semantic::semantic_overlay(committed, staged);
     run_unified_with(
         plan,
         view,

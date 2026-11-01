@@ -445,12 +445,12 @@ mod eg318_dispatch_tests {
     #[cfg(feature = "tsdb")]
     use crate::acl::{AgentIdentity, AgentRole};
     use crate::protocol::{Method, Request};
+    use medulla_persistence::redb_backend::RedbBackend;
     use medulla_server_api::api::persistence::PersistenceBackend;
-    #[cfg(feature = "tsdb")]
-    use medulla_server_api::auth::sign_current_test_request;
     use medulla_server_api::auth::build_shared_test_request;
     use medulla_server_api::auth::dispatch_test_on_heap as dispatch_on_heap;
-    use medulla_persistence::redb_backend::RedbBackend;
+    #[cfg(feature = "tsdb")]
+    use medulla_server_api::auth::sign_current_test_request;
     use std::ops::Deref;
     use std::path::PathBuf;
     use std::sync::Arc;
@@ -2036,7 +2036,7 @@ mod placement_route_carrier_tests {
     use crate::isolation::IsolationLayer;
     use crate::protocol::{Method, Request};
     use medulla_server_api::auth::compute_verified_envelope_token;
-use medulla_server_api::auth::VerifiedEnvelopeParams;
+    use medulla_server_api::auth::VerifiedEnvelopeParams;
     use std::sync::Arc;
     use std::time::{SystemTime, UNIX_EPOCH};
 

@@ -5,14 +5,14 @@ fn authoritative_snapshot_and_row_delta_paths_refuse_orphaning_lane_work_item() 
     use medulla_mutation_types::mutation_scope::DurabilityDomain;
     use medulla_mutation_types::mutation_scope::IncarnationId;
     use medulla_mutation_types::mutation_scope::LogicalName;
-    use medulla_protocol_types::mutation_batch::MutationOperation;
     use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
     use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
-    use medulla_protocol_types::mutation_batch::MutationStateDescriptor;
     use medulla_mutation_types::mutation_scope::MutationSurface;
     use medulla_mutation_types::mutation_scope::ScopeTenantId;
-    use medulla_protocol_types::mutation_batch::VersionExpectation;
     use medulla_mutation_types::mutation_scope::MUTATION_BATCH_VERSION;
+    use medulla_protocol_types::mutation_batch::MutationOperation;
+    use medulla_protocol_types::mutation_batch::MutationStateDescriptor;
+    use medulla_protocol_types::mutation_batch::VersionExpectation;
     use sha2::{Digest, Sha256};
 
     let fixture = NativeLaneFixture::new(policy());

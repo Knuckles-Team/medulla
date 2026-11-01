@@ -17,7 +17,7 @@ impl GraphCore {
             node_properties: DashMap::new(),
             edge_properties: DashMap::new(),
             ledger: Mutex::new(Vec::new()),
-            semantic_store: RwLock::new(crate::compute::semantic::SemanticStore::new()),
+            semantic_store: RwLock::new(medulla_semantic_index::semantic::SemanticStore::new()),
             schema_sources: RwLock::new(Arc::new(GraphSchemaSources::default())),
             dirty: std::sync::atomic::AtomicBool::new(true),
             version: std::sync::atomic::AtomicU64::new(0),

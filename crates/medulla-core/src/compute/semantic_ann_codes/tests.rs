@@ -21,7 +21,6 @@ use super::reconciliation::{compare_source_revision, validate_sql_source_revisio
 use super::rows::BoundCodeRows;
 use super::stage::stage_intent_outbox;
 use super::{ExistingTenantOwnerOpen, OperationAttribution, SemanticCodeStore};
-use crate::compute::semantic::SemanticStore;
 use crate::test_scope_grant::{TestScopeVerifier, TEST_PRINCIPAL, TEST_PROOF};
 use medulla_index_types::embedding::EmbeddingSpaceRef;
 use medulla_index_types::{
@@ -50,6 +49,7 @@ use medulla_index_types::{
     semantic_index::SqlColumnRef, semantic_index::SEMANTIC_SQL_CATALOG_ID,
 };
 use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
+use medulla_semantic_index::semantic::SemanticStore;
 use medulla_storage::{
     OwnerLayout, PhysicalStoreIdentity, ScopeGrantVerifier, ANN_CODES, SEMANTIC_ANN,
     SEMANTIC_BINDINGS, SEMANTIC_CHECKPOINTS, SEMANTIC_CHECKPOINT_HEADS, SEMANTIC_DEAD_LETTERS,
@@ -811,7 +811,7 @@ fn store_fingerprint(dir: &std::path::Path) -> Vec<(String, Vec<u8>)> {
 /// one query vector drawn from it.
 pub(super) fn warmed_store(extra: usize) -> (SemanticStore, Vec<f32>) {
     let dim = 16;
-    let n = crate::compute::semantic_ann::ANN_BUILD_THRESHOLD + 50 + extra;
+    let n = medulla_semantic_index::semantic_ann::ANN_BUILD_THRESHOLD + 50 + extra;
     let mut store = SemanticStore::new();
     let mut seed = 0x5eed_u64;
     let mut rng = || {
@@ -839,7 +839,7 @@ pub(super) fn warmed_store(extra: usize) -> (SemanticStore, Vec<f32>) {
 /// to compare the image manifest's model identity with the durable binding.
 fn warmed_store_in_space(space: EmbeddingSpaceRef, extra: usize) -> SemanticStore {
     let dim = space.dimensions;
-    let n = crate::compute::semantic_ann::ANN_BUILD_THRESHOLD + 50 + extra;
+    let n = medulla_semantic_index::semantic_ann::ANN_BUILD_THRESHOLD + 50 + extra;
     let mut store = SemanticStore::new_in_space(space).unwrap();
     let mut seed = 0x5eed_u64;
     let mut rng = || {
@@ -2802,7 +2802,7 @@ pub(super) struct S6Fixture {
     pub(super) generation_one_bytes: Vec<u8>,
     pub(super) generation_one_live: SemanticBinding,
     pub(super) generation_two: SemanticBinding,
-    pub(super) image: crate::compute::semantic::SemanticGenerationImage,
+    pub(super) image: medulla_semantic_index::semantic::SemanticGenerationImage,
     pub(super) lexical_checkpoint: SemanticGenerationCheckpoint,
     pub(super) pointer_one: SemanticActivePointer,
     pub(super) pointer_one_bytes: Vec<u8>,

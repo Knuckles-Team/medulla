@@ -46,7 +46,9 @@ pub(super) async fn dispatch_op_resource_reservation_query(
     graph_name: &str,
     verified_context: &VerifiedRequestContext,
     persistence: Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
-    #[cfg(feature = "raft")] multi_raft: Option<std::sync::Arc<medulla_raft::raft::multi::MultiRaft>>,
+    #[cfg(feature = "raft")] multi_raft: Option<
+        std::sync::Arc<medulla_raft::raft::multi::MultiRaft>,
+    >,
     #[cfg(feature = "raft")] routed_raft: Option<medulla_raft::raft::multi::RoutedRaftHandle>,
     method: Method,
 ) -> Response {
@@ -111,7 +113,8 @@ pub(super) struct NativeOpCtx<'a> {
     pub(super) req_id: u64,
     pub(super) graph_name: &'a str,
     pub(super) verified_context: &'a VerifiedRequestContext,
-    pub(super) persistence: Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
+    pub(super) persistence:
+        Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
     #[cfg(feature = "raft")]
     pub(super) multi_raft: Option<std::sync::Arc<medulla_raft::raft::multi::MultiRaft>>,
     #[cfg(feature = "raft")]
@@ -499,20 +502,22 @@ mod enrichment_budget_scope_tests {
 
     #[test]
     fn ordinary_work_submitter_cannot_debit_repository_enrichment_budget() {
-        let ordinary = medulla_server_api::auth::VerifiedRequestContext::verified_for_test_with_scopes(
-            "worker",
-            "tenant",
-            &["work:submit"],
-        );
+        let ordinary =
+            medulla_server_api::auth::VerifiedRequestContext::verified_for_test_with_scopes(
+                "worker",
+                "tenant",
+                &["work:submit"],
+            );
         assert!(require_enrichment_budget_service_scope(false, &ordinary).is_ok());
         assert!(require_enrichment_budget_service_scope(true, &ordinary)
             .unwrap_err()
             .starts_with("ACCESS_DENIED:"));
-        let service = medulla_server_api::auth::VerifiedRequestContext::verified_for_test_with_scopes(
-            "enrichment-service",
-            "tenant",
-            &["work:submit", "repository:enrichment:submit"],
-        );
+        let service =
+            medulla_server_api::auth::VerifiedRequestContext::verified_for_test_with_scopes(
+                "enrichment-service",
+                "tenant",
+                &["work:submit", "repository:enrichment:submit"],
+            );
         assert!(require_enrichment_budget_service_scope(true, &service).is_ok());
     }
 }

@@ -1,12 +1,13 @@
-use medulla_mutation_types::mutation_scope::MutationOutboxRecord;
 use medulla_index_types::semantic_index::SemanticBinding;
 use medulla_index_types::semantic_index::SemanticDigest;
 use medulla_index_types::semantic_index::SemanticSourceDirtyIntent;
 use medulla_index_types::semantic_index::SemanticStageTransition;
+use medulla_mutation_types::mutation_scope::MutationOutboxRecord;
 use std::path::Path;
 
 use super::*;
 use crate::protocol::Method;
+use medulla_query::{Column, ColumnType, TableSchema, TableStore, TableTxn, TxnOp};
 use medulla_server_api::auth::VerifiedRequestContext;
 use medulla_server_api::mutation_batch::compile_opaque_method;
 use medulla_server_api::mutation_batch::CompileBatch;
@@ -16,7 +17,6 @@ use medulla_server_api::sql_catalog_acl::revoke;
 use medulla_server_api::sql_catalog_acl::with_source_authority_write;
 use medulla_server_api::sql_tables::tenant_table_store;
 use medulla_server_api::sql_tables::test_persist_dir;
-use medulla_query::{Column, ColumnType, TableSchema, TableStore, TableTxn, TxnOp};
 // `CmpOp` exists in BOTH medulla_query and medulla_types and they are distinct types.
 // `TxnOp::Update`'s selector is an `medulla_types::RowPredicate`, so this is the
 // one that belongs here; importing medulla_query's next to it is the mistake that

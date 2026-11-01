@@ -6,8 +6,8 @@
 //! result but AGREE on the truly-relevant doc — which is exactly when fusion wins and
 //! why modern agent retrieval fuses lexical + vector instead of picking one.
 
-use medulla_core::compute::semantic::SemanticStore;
 use medulla_core::graph::{GraphCore, GraphView};
+use medulla_semantic_index::semantic::SemanticStore;
 use medulla_text::TextIndex;
 use serde_json::json;
 

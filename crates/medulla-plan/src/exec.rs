@@ -19,8 +19,8 @@
 
 use std::collections::HashSet;
 
-use medulla_core::compute::semantic::SemanticStore;
 use medulla_core::graph::GraphView;
+use medulla_semantic_index::semantic::SemanticStore;
 
 use crate::algebra::{Op, Plan, Pred};
 use crate::rowset::RowSet;

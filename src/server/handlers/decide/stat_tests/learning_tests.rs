@@ -241,7 +241,8 @@ fn a_plan_rewrite_re_aims_every_vector_rank_only() {
     )
     .unwrap();
     let adapter =
-        medulla_server_api::api::admin::served_adapter::ServedAdapter::for_body("d", &body).unwrap();
+        medulla_server_api::api::admin::served_adapter::ServedAdapter::for_body("d", &body)
+            .unwrap();
     let plan = medulla_plan::Plan::new(vec![
         medulla_plan::Op::Scan {
             label: "Doc".to_string(),

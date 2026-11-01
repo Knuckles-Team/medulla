@@ -1921,9 +1921,10 @@ mod tests {
                 properties_msgpack: rmp_serde::to_vec_named(&serde_json::json!({})).unwrap(),
             },
         };
-        let payload =
-            medulla_kernel::projection_wakeup::projection_payload_for_operations(std::slice::from_ref(&operation))
-                .expect("projection wake-up payload");
+        let payload = medulla_kernel::projection_wakeup::projection_payload_for_operations(
+            std::slice::from_ref(&operation),
+        )
+        .expect("projection wake-up payload");
         let schema_digest = Digest256::from_bytes([1_u8; 32]);
         let scope_sha256 = identity.identity_digest().to_hex();
         let mut batch = MutationBatch {
@@ -2225,8 +2226,9 @@ mod bounded_wakeup_tests {
     #[test]
     fn a_large_batch_notice_is_bounded_and_the_consumer_gets_every_change() {
         let operations = operations(24_000);
-        let payload = medulla_kernel::projection_wakeup::projection_payload_for_operations(&operations)
-            .expect("projection notice");
+        let payload =
+            medulla_kernel::projection_wakeup::projection_payload_for_operations(&operations)
+                .expect("projection notice");
         assert!(
             payload.len() < 4 * 1024,
             "notice is {} bytes",

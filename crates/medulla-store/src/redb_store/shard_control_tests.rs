@@ -11,10 +11,10 @@ use super::{
     commit_ops, purge_graph_rows, reject_reserved_graph, sanitize,
     write_graph_meta_with_incarnation, DurableCrypto, SHARD_CONTROL_GRAPH,
 };
-use medulla_protocol_types::protocol::GraphType;
-use medulla_protocol_types::protocol::Method;
 use crate::redb_store::shard::Shard;
 use crate::redb_store::shard::ShardWrite;
+use medulla_protocol_types::protocol::GraphType;
+use medulla_protocol_types::protocol::Method;
 
 fn temp_path(tag: &str) -> std::path::PathBuf {
     std::env::temp_dir().join(format!(

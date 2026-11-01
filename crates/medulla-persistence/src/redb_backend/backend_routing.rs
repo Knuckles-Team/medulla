@@ -3,10 +3,7 @@ use super::*;
 impl RedbBackend {
     /// Attach a tenant catalog to OVERRIDE graph→shard routing (CONCEPT:MEDULLA-KG.sharding.empty-catalog-routing, M3).
     /// Builder-style so the open path stays untouched; default (no call) = pure MEDULLA-026.
-    pub fn with_catalog(
-        mut self,
-        catalog: Arc<crate::tenant_catalog::TenantCatalog>,
-    ) -> Self {
+    pub fn with_catalog(mut self, catalog: Arc<crate::tenant_catalog::TenantCatalog>) -> Self {
         self.catalog = Some(catalog);
         self
     }
@@ -15,9 +12,7 @@ impl RedbBackend {
     /// admin/API surface uses this to populate/persist placements (`assign`/`reassign`/
     /// `remove`); a placement change that must also MOVE the graph's rows goes through
     /// [`Self::reshard_graph`] instead (which flips the route AND migrates the data).
-    pub fn catalog(
-        &self,
-    ) -> Option<Arc<crate::tenant_catalog::TenantCatalog>> {
+    pub fn catalog(&self) -> Option<Arc<crate::tenant_catalog::TenantCatalog>> {
         self.catalog.clone()
     }
 

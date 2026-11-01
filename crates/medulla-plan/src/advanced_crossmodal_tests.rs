@@ -38,14 +38,14 @@
     feature = "tensor",
     all(feature = "stream", feature = "timeseries"),
 ))]
-use medulla_core::compute::semantic::SemanticStore;
+use medulla_core::graph::{GraphCore, GraphView};
 #[cfg(any(
     feature = "owl",
     feature = "geo",
     feature = "tensor",
     all(feature = "stream", feature = "timeseries"),
 ))]
-use medulla_core::graph::{GraphCore, GraphView};
+use medulla_semantic_index::semantic::SemanticStore;
 #[cfg(any(
     feature = "owl",
     feature = "geo",

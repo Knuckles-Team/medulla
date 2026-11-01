@@ -32,7 +32,7 @@ impl<'de> Deserialize<'de> for SemanticStore {
             embeddings: raw.embeddings,
             space: raw.space,
             index: RwLock::new(HnswIndex::empty()),
-            generation: crate::compute::semantic::GenerationStamp::fresh(),
+            generation: crate::semantic::GenerationStamp::fresh(),
         })
     }
 }

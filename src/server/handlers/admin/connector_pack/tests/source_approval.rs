@@ -523,7 +523,8 @@ async fn bind_for_requires_owner_catalog_and_rechecks_approval() {
         tool: "list_suppliers".to_string(),
         capabilities: Default::default(),
     };
-    let catalog = medulla_server_api::api::query_txn::foreign_catalog::ForeignSourceCatalog::default();
+    let catalog =
+        medulla_server_api::api::query_txn::foreign_catalog::ForeignSourceCatalog::default();
     catalog
         .register(&caller, registration.source_id.clone(), spec.clone())
         .unwrap();

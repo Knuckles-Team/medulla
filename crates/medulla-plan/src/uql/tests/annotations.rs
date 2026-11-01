@@ -1,7 +1,7 @@
 //! Statement row annotations: `WITH KNOWLEDGE` (EH-450) and `WITH PROOF` (EH-448).
 
-use medulla_core::compute::semantic::SemanticStore;
 use medulla_core::graph::GraphCore;
+use medulla_semantic_index::semantic::SemanticStore;
 use medulla_types::wire::{UqlProofCoverage, UqlProofStep, UqlResult, UqlRow};
 use serde_json::json;
 

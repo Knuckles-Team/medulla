@@ -21,9 +21,9 @@
 //! Module-gated on `query` + `tsdb`; runs under `--features full`.
 #![cfg(all(feature = "query", feature = "tsdb"))]
 
-use medulla_core::compute::semantic::SemanticStore;
 use medulla_core::graph::{GraphCore, GraphView};
 use medulla_plan::{execute, Op, Plan, PlanCtx};
+use medulla_semantic_index::semantic::SemanticStore;
 use medulla_tsdb::point::Point;
 use medulla_tsdb::store::{SeriesKey, SeriesStore};
 use serde_json::json;

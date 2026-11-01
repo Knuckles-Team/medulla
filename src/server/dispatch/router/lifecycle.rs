@@ -239,12 +239,8 @@ async fn create_declared_graph(
     {
         let cap = medulla_persistence::cold_offload::max_resident_graphs();
         let tracker = s.ensure_cold_tracker();
-        medulla_persistence::cold_offload::admit_capacity(
-            &mut s,
-            &tracker,
-            &graph_name,
-            cap,
-        ); // `s`: &mut ServerState via RwLockWriteGuard's DerefMut
+        medulla_persistence::cold_offload::admit_capacity(&mut s, &tracker, &graph_name, cap);
+        // `s`: &mut ServerState via RwLockWriteGuard's DerefMut
     }
     // The creator (when identified) becomes the graph owner, which is
     // what peer-deny / manager-access checks resolve against.

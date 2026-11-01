@@ -4,13 +4,13 @@
 
 use super::consumer_tests::evaluate_assembly;
 use super::*;
-use medulla_persistence::decision_record::tests as v1;
 use medulla_agent_types::agent_component::ComponentDependency;
 use medulla_decision_types::decision::record::SlotAssignment;
 use medulla_decision_types::decision::statistical::log::{
     SlateAttribution, SlateAttributionMethod, SlateAttributionRequest,
 };
 use medulla_decision_types::{decision::DecisionOutcome, decision::DecisionRecord};
+use medulla_persistence::decision_record::tests as v1;
 
 /// `record` re-slotted to `components` under graph digest `graph`, committed.
 fn commit_slate(

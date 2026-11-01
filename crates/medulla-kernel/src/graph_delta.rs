@@ -10,12 +10,12 @@ use std::collections::{BTreeSet, HashMap};
 
 use serde::{Deserialize, Serialize};
 
-use crate::compute::semantic::SemanticStore;
 use crate::graph::{
     lift_v2_integrity_policy, GraphCore, GraphSchemaSources, GraphSnapshot, GraphTxn,
     LegacyIntegrityPolicy,
 };
 use crate::protocol::Method;
+use medulla_semantic_index::semantic::SemanticStore;
 
 /// The algorithm tag for row deltas that carry schema-source updates.
 pub const ROW_DELTA_ALGORITHM: &str = "sha256-row-delta-schema-sources";
@@ -693,7 +693,7 @@ mod tests {
         // Drop a's embedding while keeping the node (forced replacement that
         // must restore a->b), and remove c outright (its edge goes with it).
         let mut after_snapshot = before_snapshot.clone();
-        after_snapshot.semantic_store = crate::compute::semantic::SemanticStore::new();
+        after_snapshot.semantic_store = medulla_semantic_index::semantic::SemanticStore::new();
         after_snapshot.nodes.retain(|(id, _)| id != "c");
         after_snapshot.edges.retain(|(_, target, _)| target != "c");
         after_snapshot.ledger.push("appended".to_string());

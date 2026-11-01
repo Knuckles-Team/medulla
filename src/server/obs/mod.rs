@@ -221,10 +221,10 @@ mod tests {
         SNAPSHOT_WRITE_ERROR,
     };
     use super::*;
-    use medulla_server_api::blob::store::RedbChunkStore;
-    use medulla_server_api::http1::HttpMessage;
     use medulla_kernel::lock_recovery::LockRecovery;
     use medulla_kernel::test_rendezvous::{join_bounded, recv_within};
+    use medulla_server_api::blob::store::RedbChunkStore;
+    use medulla_server_api::http1::HttpMessage;
     use std::path::Path;
     use std::sync::atomic::Ordering;
     use tokio::io::AsyncReadExt as _;

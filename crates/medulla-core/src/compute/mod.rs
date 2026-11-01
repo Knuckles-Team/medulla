@@ -5,11 +5,6 @@
 // the native medulla-ann IVF-PQ+OPQ+SQ8-refine index (CONCEPT:MEDULLA-KG.sharding.semantic-embedding-store-backed) under the `ann`
 // feature, which reopens a persisted index WITHOUT rebuilding from raw vectors.
 
-pub mod semantic;
-
-#[cfg(feature = "ann")]
-pub mod semantic_ann;
-
 /// Durable ANN code tier: one index generation's buffers in the `medulla_ann` owner
 /// table of `OwnerLayout::SemanticIndex`, written as one admitted
 /// `Native(SemanticIndex)` mutation (RF-RULING-007).

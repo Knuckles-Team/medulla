@@ -278,7 +278,11 @@ pub(crate) async fn check_scope_and_admin_authority(
     {
         medulla_kernel::metrics::access_denied();
         #[cfg(feature = "security")]
-        medulla_server_api::denial_sample::offer(verified_context.principal(), action, "SCOPE_DENIED");
+        medulla_server_api::denial_sample::offer(
+            verified_context.principal(),
+            action,
+            "SCOPE_DENIED",
+        );
         return Err(Response::err(
             req.id,
             format!("ACCESS_DENIED: verified request context lacks required scope '{action}'"),

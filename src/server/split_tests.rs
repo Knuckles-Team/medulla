@@ -5,10 +5,30 @@
 
 #[cfg(all(test, feature = "redb"))]
 mod admin_agent_library_security;
+#[cfg(test)]
+mod impact_watch;
+#[cfg(test)]
+mod medulla_h_ingest_repository_index_tests;
+#[cfg(test)]
+mod medulla_h_ingest_web_ingest_tests;
+#[cfg(all(test, feature = "redb"))]
+mod mutation_batch_internal_replay;
+#[cfg(all(test, feature = "redb"))]
+mod mutation_batch_lifecycle;
+#[cfg(all(test, feature = "redb"))]
+mod mutation_redb;
+#[cfg(all(test, feature = "redb"))]
+mod persistence_txn;
 #[cfg(all(test, feature = "raft", feature = "harness"))]
 mod placement_harness;
 #[cfg(all(test, feature = "raft"))]
+mod raft_cluster;
+#[cfg(all(test, feature = "raft"))]
+mod raft_command;
+#[cfg(all(test, feature = "raft"))]
 mod resource_acceptance_test;
+#[cfg(test)]
+mod server_api_mutation_inventory;
 #[cfg(all(test, feature = "redb"))]
 mod server_api_saga;
 #[cfg(test)]
@@ -19,23 +39,3 @@ mod store_terminal_batch;
 mod wired_edge_index;
 #[cfg(all(test, feature = "raft", feature = "harness"))]
 mod xshard_harness;
-#[cfg(test)]
-mod impact_watch;
-#[cfg(all(test, feature = "redb"))]
-mod mutation_batch_internal_replay;
-#[cfg(all(test, feature = "redb"))]
-mod mutation_batch_lifecycle;
-#[cfg(all(test, feature = "redb"))]
-mod mutation_redb;
-#[cfg(all(test, feature = "redb"))]
-mod persistence_txn;
-#[cfg(test)]
-mod server_api_mutation_inventory;
-#[cfg(all(test, feature = "raft"))]
-mod raft_cluster;
-#[cfg(all(test, feature = "raft"))]
-mod raft_command;
-#[cfg(test)]
-mod medulla_h_ingest_repository_index_tests;
-#[cfg(test)]
-mod medulla_h_ingest_web_ingest_tests;

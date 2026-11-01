@@ -320,7 +320,7 @@ impl<'c> CoreIndexes<'c> {
 pub(crate) fn run_unified_with<T>(
     plan: medulla_plan::Plan,
     view: &crate::graph::GraphView,
-    semantic: &medulla_core::compute::semantic::SemanticStore,
+    semantic: &medulla_semantic_index::semantic::SemanticStore,
     served: ServedIndexes<'_>,
     #[cfg(feature = "tsdb")] tsdb_ctx: TsdbLegBind<'_>,
     finish: impl FnOnce(&medulla_plan::Plan, &medulla_plan::PlanCtx) -> Result<T, String>,
@@ -982,8 +982,8 @@ mod federation_served_tests;
 #[cfg(all(test, feature = "tensor"))]
 mod tensor_served_round_trip_tests {
     use super::*;
-    use medulla_core::compute::semantic::SemanticStore;
     use medulla_core::graph::GraphCore;
+    use medulla_semantic_index::semantic::SemanticStore;
     use medulla_tensor::{Buffer, Tensor};
     use medulla_types::wire::{TensorOpKind, TensorReduceKind};
 

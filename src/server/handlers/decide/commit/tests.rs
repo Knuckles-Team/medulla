@@ -27,14 +27,14 @@ use medulla_types::contract::BoundedVec;
 use tokio::sync::RwLock;
 
 use crate::protocol::{Method, ResultPayload};
-use medulla_server_api::api::persistence::PersistenceBackend;
-use medulla_server_api::auth::VerifiedRequestContext;
 use medulla_persistence::agent_library::AgentLibraryStore;
 use medulla_persistence::decision_record::tests::commit_context;
 use medulla_persistence::decision_record::tests::decided;
 use medulla_persistence::decision_record::tests::seed_library;
 use medulla_persistence::decision_record::tests::TENANT;
 use medulla_persistence::redb_backend::RedbBackend;
+use medulla_server_api::api::persistence::PersistenceBackend;
+use medulla_server_api::auth::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 
 fn topology_record(store: &AgentLibraryStore) -> DecisionRecord {

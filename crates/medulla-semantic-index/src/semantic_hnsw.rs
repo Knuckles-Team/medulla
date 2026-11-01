@@ -93,7 +93,7 @@ pub struct SemanticStore {
     /// back empty and HNSW search silently returned nothing.
     index: RwLock<HnswIndex>,
     /// Content stamp (EH-393): restamped on every vector / space change.
-    pub(super) generation: crate::compute::semantic::GenerationStamp,
+    pub(super) generation: crate::semantic::GenerationStamp,
 }
 
 mod semantic_hnsw_index;

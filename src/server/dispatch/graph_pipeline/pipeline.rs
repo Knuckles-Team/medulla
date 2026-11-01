@@ -19,7 +19,8 @@ pub(super) struct DispatchPipelineCtx<'a> {
     pub(super) core: Arc<crate::graph::GraphCore>,
     pub(super) materialization_manifest:
         Option<Arc<std::sync::RwLock<crate::registry::MaterializationManifest>>>,
-    pub(super) persistence: Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
+    pub(super) persistence:
+        Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
     #[cfg(feature = "streaming")]
     pub(super) cdc: Option<Arc<medulla_server_api::cdc::CdcHub>>,
     pub(super) routed_write_coalescer:
@@ -148,21 +149,25 @@ pub(super) async fn route_graph_scoped_domains(
     // materializes `:PredictedEdge`/`:EdgeFunction` nodes into the core. A method
     // whose feature is off falls through to the graph_ops not-available catch-all.
     #[cfg(feature = "graphlearn")]
-    let method = match medulla_server_api::handlers::graphlearn::try_handle(req_id, core.clone(), method) {
-        Ok(r) => return Ok(r),
-        Err(m) => m,
-    };
+    let method =
+        match medulla_server_api::handlers::graphlearn::try_handle(req_id, core.clone(), method) {
+            Ok(r) => return Ok(r),
+            Err(m) => m,
+        };
     // ML pipeline (CONCEPT:MEDULLA-KG.mining.ml-pipeline): the READ verbs
     // (Evaluate/Compare) route here with the graph core; Train/Serve/Predict are
     // GATEWAY_ROUTED (writeback) and never reach this fallback. A build without
     // `ml-pipeline` omits this line.
     #[cfg(feature = "ml-pipeline")]
-    let method =
-        match medulla_h_graph::pipeline::try_handle(req_id, core.clone(), read_authority.as_ref(), method)
-        {
-            Ok(r) => return Ok(r),
-            Err(m) => m,
-        };
+    let method = match medulla_h_graph::pipeline::try_handle(
+        req_id,
+        core.clone(),
+        read_authority.as_ref(),
+        method,
+    ) {
+        Ok(r) => return Ok(r),
+        Err(m) => m,
+    };
     Err(method)
 }
 

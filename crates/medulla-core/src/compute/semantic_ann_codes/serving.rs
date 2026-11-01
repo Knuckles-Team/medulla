@@ -4,11 +4,11 @@
 use super::record::{decode_valid, row_bytes};
 use super::rows::{read_part, PARTS};
 use super::{corrupt, kernel_error, refused, SemanticCodeError, SemanticCodeStore};
-use crate::compute::semantic::SemanticGenerationImage;
 use medulla_index_types::{
     semantic_index::SemanticActivePointer, semantic_index::SemanticBinding,
     semantic_index::SemanticBindingState,
 };
+use medulla_semantic_index::semantic::SemanticGenerationImage;
 use medulla_storage::{
     ScopedRead, SemanticIndexOwner, ANN_CODES, SEMANTIC_HEADS, SEMANTIC_POINTERS,
 };
@@ -97,7 +97,7 @@ impl SemanticCodeStore {
         }
         let mut take = |name: &str| parts.remove(name).unwrap_or_default();
         Ok(Some(SemanticGenerationImage {
-            index: crate::compute::semantic_ann::AnnIndexImage {
+            index: medulla_semantic_index::semantic_ann::AnnIndexImage {
                 codes: medulla_ann::durable_codes::AnnCodeArtifact {
                     meta: take("meta"),
                     codes: take("codes"),

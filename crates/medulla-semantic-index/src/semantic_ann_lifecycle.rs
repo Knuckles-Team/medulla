@@ -13,14 +13,14 @@ impl SemanticStore {
         Self::from_arena(
             EmbeddingArena::default(),
             None,
-            crate::compute::semantic::GenerationStamp::fresh(),
+            crate::semantic::GenerationStamp::fresh(),
         )
     }
 
     pub(super) fn from_arena(
         arena: EmbeddingArena,
         space: Option<EmbeddingSpaceRef>,
-        generation: crate::compute::semantic::GenerationStamp,
+        generation: crate::semantic::GenerationStamp,
     ) -> Self {
         Self {
             arena,

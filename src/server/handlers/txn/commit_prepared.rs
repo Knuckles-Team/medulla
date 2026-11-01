@@ -337,8 +337,11 @@ pub(super) async fn commit_prepared_durable(args: CommitPreparedDurableArgs<'_>)
         attempt_nonce,
     } = args;
     let committed_at_ms = now_ms();
-    let batch_id =
-        medulla_server_api::mutation_batch::opaque_coordinator_key("txn", &graph_name, &coordinator_id);
+    let batch_id = medulla_server_api::mutation_batch::opaque_coordinator_key(
+        "txn",
+        &graph_name,
+        &coordinator_id,
+    );
     let Some(authority) = persistence.as_ref() else {
         return Response::err(
             req_id,

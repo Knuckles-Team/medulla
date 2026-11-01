@@ -190,8 +190,8 @@ fn cost_reorder_picks_winner_same_result() {
 fn adaptive_reopt_auto_wires_into_ordinary_execution() {
     use crate::cost::{Cardinality, ModalityCardinality, PlanStats};
     use crate::optimizer::{self, ADAPTIVE_REOPT_THRESHOLD};
-    use medulla_core::compute::semantic::SemanticStore;
     use medulla_core::graph::GraphCore;
+    use medulla_semantic_index::semantic::SemanticStore;
     use serde_json::json;
 
     fn blob(v: serde_json::Value) -> Vec<u8> {
@@ -397,8 +397,8 @@ fn udf_op_without_registry_errs() {
 mod relationship_traverse_tests {
     use crate::algebra::{Op, Plan};
     use crate::exec::{PlanCtx, PlanExt};
-    use medulla_core::compute::semantic::SemanticStore;
     use medulla_core::graph::GraphCore;
+    use medulla_semantic_index::semantic::SemanticStore;
     use serde_json::json;
 
     fn blob(v: serde_json::Value) -> Vec<u8> {
@@ -453,8 +453,8 @@ mod relationship_traverse_tests {
 mod rank_dim_mismatch_tests {
     use crate::algebra::{Op, Plan};
     use crate::exec::{PlanCtx, PlanExt};
-    use medulla_core::compute::semantic::SemanticStore;
     use medulla_core::graph::GraphCore;
+    use medulla_semantic_index::semantic::SemanticStore;
     use serde_json::json;
 
     fn blob(v: serde_json::Value) -> Vec<u8> {
@@ -522,8 +522,8 @@ mod rank_dim_mismatch_tests {
 mod temporal_tests {
     use crate::algebra::{Op, Plan};
     use crate::exec::{PlanCtx, PlanExt};
-    use medulla_core::compute::semantic::SemanticStore;
     use medulla_core::graph::GraphCore;
+    use medulla_semantic_index::semantic::SemanticStore;
     use medulla_types::wire::TimeAxis;
     use serde_json::json;
 
@@ -822,8 +822,8 @@ mod temporal_tests {
 mod rerank_tests {
     use crate::algebra::{Op, Plan};
     use crate::exec::{PlanCtx, PlanExt};
-    use medulla_core::compute::semantic::SemanticStore;
     use medulla_core::graph::GraphCore;
+    use medulla_semantic_index::semantic::SemanticStore;
     use serde_json::json;
 
     fn blob(v: serde_json::Value) -> Vec<u8> {
@@ -1013,8 +1013,8 @@ mod rerank_tests {
 mod timeseries_tests {
     use crate::algebra::{Op, Plan};
     use crate::exec::{PlanCtx, PlanExt};
-    use medulla_core::compute::semantic::SemanticStore;
     use medulla_core::graph::GraphCore;
+    use medulla_semantic_index::semantic::SemanticStore;
     use serde_json::json;
 
     fn blob(v: serde_json::Value) -> Vec<u8> {
@@ -1078,8 +1078,8 @@ mod timeseries_tests {
 mod point_lookup_tests {
     use crate::algebra::{Op, Plan, Pred};
     use crate::exec::{PlanCtx, PlanExt};
-    use medulla_core::compute::semantic::SemanticStore;
     use medulla_core::graph::{GraphCore, GraphView};
+    use medulla_semantic_index::semantic::SemanticStore;
     use serde_json::json;
 
     fn blob(v: serde_json::Value) -> Vec<u8> {

@@ -118,8 +118,8 @@ mod tests {
     use super::*;
     use crate::algebra::{Op, Plan};
     use crate::dag::PlanNode;
-    use medulla_core::compute::semantic::SemanticStore;
     use medulla_core::graph::GraphCore;
+    use medulla_semantic_index::semantic::SemanticStore;
     use serde_json::json;
 
     fn blob(v: serde_json::Value) -> Vec<u8> {

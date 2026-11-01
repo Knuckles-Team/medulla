@@ -58,7 +58,7 @@ impl<'de> Deserialize<'de> for SemanticStore {
         Ok(Self::from_arena(
             arena,
             raw.space,
-            crate::compute::semantic::GenerationStamp::fresh(),
+            crate::semantic::GenerationStamp::fresh(),
         ))
     }
 }

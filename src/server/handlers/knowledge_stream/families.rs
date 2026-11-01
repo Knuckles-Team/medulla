@@ -316,7 +316,7 @@ async fn execute_time_series(
                 },
             )
             .await
-        .map_err(|_| "time-series surface unavailable".to_string())?;
+            .map_err(|_| "time-series surface unavailable".to_string())?;
         let source_result = response_result(response)?;
         let raw = raw_payload(&source_result, "time-series")?;
         let points: Vec<(i64, Vec<f64>)> = decode_knowledge_result(raw)

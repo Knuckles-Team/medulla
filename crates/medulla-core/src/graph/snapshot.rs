@@ -44,7 +44,7 @@ pub struct GraphSnapshot {
     pub nodes: Vec<(String, Arc<Vec<u8>>)>,
     pub edges: Vec<(String, String, Arc<Vec<u8>>)>,
     pub ledger: Vec<String>,
-    pub semantic_store: crate::compute::semantic::SemanticStore,
+    pub semantic_store: medulla_semantic_index::semantic::SemanticStore,
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -55,7 +55,7 @@ struct GraphSnapshotCurrent {
     nodes: Vec<(String, Arc<Vec<u8>>)>,
     edges: Vec<(String, String, Arc<Vec<u8>>)>,
     ledger: Vec<String>,
-    semantic_store: crate::compute::semantic::SemanticStore,
+    semantic_store: medulla_semantic_index::semantic::SemanticStore,
 }
 
 /// Exact persisted v2 layout. This is deliberately private to decoding: new
@@ -68,7 +68,7 @@ struct LegacyGraphSnapshot {
     nodes: Vec<(String, Arc<Vec<u8>>)>,
     edges: Vec<(String, String, Arc<Vec<u8>>)>,
     ledger: Vec<String>,
-    semantic_store: crate::compute::semantic::SemanticStore,
+    semantic_store: medulla_semantic_index::semantic::SemanticStore,
 }
 
 #[cfg(test)]
@@ -90,7 +90,7 @@ mod schema_migration_tests {
             nodes: vec![("n".to_string(), Arc::new(vec![1, 2, 3]))],
             edges: Vec::new(),
             ledger: vec!["event".to_string()],
-            semantic_store: crate::compute::semantic::SemanticStore::new(),
+            semantic_store: medulla_semantic_index::semantic::SemanticStore::new(),
         };
         let bytes = hex::decode(V2_SNAPSHOT_GOLDEN).unwrap();
         assert_eq!(rmp_serde::to_vec_named(&legacy).unwrap(), bytes);
@@ -165,7 +165,7 @@ mod schema_migration_tests {
             nodes: Vec::new(),
             edges: Vec::new(),
             ledger: Vec::new(),
-            semantic_store: crate::compute::semantic::SemanticStore::new(),
+            semantic_store: medulla_semantic_index::semantic::SemanticStore::new(),
         };
         let bytes = rmp_serde::to_vec_named(&legacy).unwrap();
         assert!(rmp_serde::from_slice::<GraphSnapshot>(&bytes).is_err());
@@ -261,7 +261,7 @@ struct PreparedGraphSnapshot {
     node_properties: Vec<(String, Arc<Vec<u8>>)>,
     edge_properties: HashMap<(String, String), Vec<Arc<Vec<u8>>>>,
     ledger: Vec<String>,
-    semantic_store: crate::compute::semantic::SemanticStore,
+    semantic_store: medulla_semantic_index::semantic::SemanticStore,
     schema_sources: Arc<GraphSchemaSources>,
     node_bloom: crate::bloom::NodeBloomFilter,
 }

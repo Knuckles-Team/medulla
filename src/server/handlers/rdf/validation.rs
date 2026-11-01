@@ -380,7 +380,7 @@ mod served_shapes_tests {
     fn a_stage_without_using_validates_against_the_graph_schema_shapes() {
         let core = people_with_schema();
         let view = core.analysis_snapshot();
-        let semantic = medulla_core::compute::semantic::SemanticStore::new();
+        let semantic = medulla_semantic_index::semantic::SemanticStore::new();
         let shapes = ServedShapes::new(&core);
         let ctx = medulla_plan::PlanCtx::new(&view, &semantic).with_shape_source(&shapes);
         let plan = Plan::new(vec![

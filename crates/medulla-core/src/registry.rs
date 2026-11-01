@@ -1667,7 +1667,7 @@ mod tests {
             )],
             edges: Vec::new(),
             ledger: Vec::new(),
-            semantic_store: crate::compute::semantic::SemanticStore::new(),
+            semantic_store: medulla_semantic_index::semantic::SemanticStore::new(),
         };
         let restored = reg
             .install_committed_graph(

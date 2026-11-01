@@ -164,7 +164,9 @@ fn split<R, O>(
     }
 }
 
-fn transitioned(answer: Option<Rewrite<bool>>) -> Result<medulla_protocol_types::protocol::ResultPayload, String> {
+fn transitioned(
+    answer: Option<Rewrite<bool>>,
+) -> Result<medulla_protocol_types::protocol::ResultPayload, String> {
     let (outcome, gap, changed_work_item_ids) = split(
         answer,
         GapTransitionOutcome::NotFound,
@@ -192,7 +194,9 @@ fn settled(
     })
 }
 
-fn recorded(answer: Option<Rewrite<bool>>) -> Result<medulla_protocol_types::protocol::ResultPayload, String> {
+fn recorded(
+    answer: Option<Rewrite<bool>>,
+) -> Result<medulla_protocol_types::protocol::ResultPayload, String> {
     let (outcome, gap, changed_work_item_ids) = split(
         answer,
         WorkOfferPutOutcome::NotFound,

@@ -5,8 +5,8 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use crate::protocol::{Response, ResultPayload};
-use medulla_server_api::auth::VerifiedRequestContext;
 use medulla_persistence::agent_library::AgentLibraryStore;
+use medulla_server_api::auth::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 
 /// Read one component revision through its tenant-scoped Agent Library holder,

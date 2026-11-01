@@ -5,8 +5,8 @@
 #[cfg(feature = "numeric")]
 mod served {
     use super::super::blob;
-    use medulla_core::compute::semantic::SemanticStore;
     use medulla_core::graph::GraphCore;
+    use medulla_semantic_index::semantic::SemanticStore;
     use medulla_types::wire::{UqlResult, UqlRow};
     use serde_json::json;
 

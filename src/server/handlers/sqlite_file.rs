@@ -35,13 +35,13 @@ use std::path::{Path, PathBuf};
 
 use crate::mutation_batch::MutationBatch;
 use crate::protocol::{Method, Response, ResultPayload};
-use medulla_server_api::access::CarrierAuthority;
-use medulla_types::contract::Nonce;
 use medulla_protocol_types::result_contract::storage as results;
 use medulla_protocol_types::storage_wire::{
     SqliteExportDestination, SqliteExportReport, SqliteImportReport, SqliteImportSource,
     SqliteTableRows,
 };
+use medulla_server_api::access::CarrierAuthority;
+use medulla_types::contract::Nonce;
 
 mod transfer_fs;
 
@@ -267,25 +267,37 @@ fn import_sqlite_lifecycle_with_nonce(
     now: u64,
 ) -> Result<SqliteImportReport, String> {
     medulla_server_api::sql_catalog_acl::require_source_authority()?;
-    medulla_server_api::sql_catalog_acl::with_source_authority_write(persist_dir, authority, |source| {
-        let store =
-            medulla_server_api::sql_tables::tenant_table_store(authority.tenant_scope(), persist_dir)?;
-        let batch =
-            compile_import_batch_with_nonce(&store, req_id, authority, method, now, attempt_nonce)?;
-        if let Some(committed_report) =
-            store.probe_txn_batch_replay(&batch, decode_committed_import_report)?
-        {
+    medulla_server_api::sql_catalog_acl::with_source_authority_write(
+        persist_dir,
+        authority,
+        |source| {
+            let store = medulla_server_api::sql_tables::tenant_table_store(
+                authority.tenant_scope(),
+                persist_dir,
+            )?;
+            let batch = compile_import_batch_with_nonce(
+                &store,
+                req_id,
+                authority,
+                method,
+                now,
+                attempt_nonce,
+            )?;
+            if let Some(committed_report) =
+                store.probe_txn_batch_replay(&batch, decode_committed_import_report)?
+            {
+                register_import_owners(source, &batch.batch_id, &committed_report)?;
+                return Ok(committed_report);
+            }
+            let reader = transfer_fs::open_import(logical_path, sqlite_limits()?.0)?;
+            let (txn, report) = prepare_sqlite_import(&reader)?;
+            let result = rmp_serde::to_vec_named(&report).map_err(|e| e.to_string())?;
+            let committed = store.commit_txn_batch_result(&txn, &batch, result, now)?;
+            let committed_report = decode_committed_import_report(&committed)?;
             register_import_owners(source, &batch.batch_id, &committed_report)?;
-            return Ok(committed_report);
-        }
-        let reader = transfer_fs::open_import(logical_path, sqlite_limits()?.0)?;
-        let (txn, report) = prepare_sqlite_import(&reader)?;
-        let result = rmp_serde::to_vec_named(&report).map_err(|e| e.to_string())?;
-        let committed = store.commit_txn_batch_result(&txn, &batch, result, now)?;
-        let committed_report = decode_committed_import_report(&committed)?;
-        register_import_owners(source, &batch.batch_id, &committed_report)?;
-        Ok(committed_report)
-    })
+            Ok(committed_report)
+        },
+    )
 }
 
 fn export_sqlite_lifecycle(
@@ -1026,9 +1038,11 @@ mod tests {
     fn export_version_fence_rejects_deterministic_interleaved_commit() {
         let persist_dir = medulla_server_api::sql_tables::test_persist_dir();
         let authority = authority("sqlite-exporter", "sqlite-export-fence");
-        let store =
-            medulla_server_api::sql_tables::tenant_table_store(authority.tenant_scope(), &persist_dir)
-                .unwrap();
+        let store = medulla_server_api::sql_tables::tenant_table_store(
+            authority.tenant_scope(),
+            &persist_dir,
+        )
+        .unwrap();
         let schema = TableSchema::new(
             "events",
             vec![Column::new("id", ColumnType::BigInt, false, false)],
@@ -1088,9 +1102,11 @@ mod tests {
         );
         let persist_dir = medulla_server_api::sql_tables::test_persist_dir();
         let authority = authority("sqlite-owner", "sqlite-owner-repair");
-        let store =
-            medulla_server_api::sql_tables::tenant_table_store(authority.tenant_scope(), &persist_dir)
-                .unwrap();
+        let store = medulla_server_api::sql_tables::tenant_table_store(
+            authority.tenant_scope(),
+            &persist_dir,
+        )
+        .unwrap();
         let method = Method::ImportSqliteFile {
             path: "missing-after-commit.db".to_string(),
         };

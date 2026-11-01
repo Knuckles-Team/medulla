@@ -3,9 +3,9 @@
 
 use super::*;
 use medulla_protocol_types::protocol::Method;
+use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_store::redb_store::operation_audit::tests::event;
 use medulla_store::redb_store::operation_audit::tests::TENANT;
-use medulla_server_api::api::persistence::PersistenceBackend;
 
 const GRAPH: &str = "audit_append_graph";
 const REFUSAL: &str = "AUDIT_WRITER_UNAVAILABLE: ";

@@ -416,7 +416,9 @@ pub(super) fn durable_read_lease(graph: &str, agent: &str) -> DurableReadLease {
     )
     .expect("reopen isolation layer over durable store");
     let verified_context =
-        medulla_server_api::auth::VerifiedRequestContext::verified_for_test_in_tenant(agent, "tenant");
+        medulla_server_api::auth::VerifiedRequestContext::verified_for_test_in_tenant(
+            agent, "tenant",
+        );
     let claims = verified_context.claims().clone();
     let carrier = CarrierAuthority::from_verified(&verified_context)
         .expect("derive carrier from verified context");
@@ -461,12 +463,12 @@ pub(super) fn durable_read_lease(graph: &str, agent: &str) -> DurableReadLease {
 ))]
 #[tokio::test]
 async fn knowledge_stream_sql_lists_the_request_graph_edge_indexes() {
+    use crate::server::handlers::query::{try_handle_with_policy, PolicyAwareQuery};
     use medulla_server_api::api::query_txn::edge_test_support::edge_status_row;
     use medulla_server_api::api::query_txn::edge_test_support::register_detached_edge_index;
     use medulla_server_api::api::query_txn::edge_test_support::sql_rows;
     use medulla_server_api::api::query_txn::edge_test_support::EDGE_STATUS_SQL;
     use medulla_server_api::api::reentry::TryHandleContext;
-    use crate::server::handlers::query::{try_handle_with_policy, PolicyAwareQuery};
 
     let _env_read_lock = medulla_kernel::crypto::provisioned_test_env_read_lock().await;
     let fixture = durable_read_lease("tenant-graph", "alice");
@@ -563,7 +565,9 @@ fn durable_lease_revocation_rejects_resume_before_any_cursor_metadata() {
     )
     .expect("bind exact durable lease");
     let foreign_carrier = CarrierAuthority::from_verified(
-        &medulla_server_api::auth::VerifiedRequestContext::verified_for_test_in_tenant("bob", "tenant"),
+        &medulla_server_api::auth::VerifiedRequestContext::verified_for_test_in_tenant(
+            "bob", "tenant",
+        ),
     )
     .expect("derive mismatched carrier");
     assert!(authority

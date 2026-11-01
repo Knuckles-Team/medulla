@@ -2,8 +2,8 @@
 //! EXPLAIN/PROFILE/RETURN, EH-449), budgets.
 
 use super::blob;
-use medulla_core::compute::semantic::SemanticStore;
 use medulla_core::graph::GraphCore;
+use medulla_semantic_index::semantic::SemanticStore;
 use medulla_types::wire::{UqlParam, UqlResult};
 use serde_json::json;
 

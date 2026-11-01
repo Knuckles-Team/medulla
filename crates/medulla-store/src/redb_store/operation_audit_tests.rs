@@ -2,10 +2,10 @@
 //! of a reservation whose outcome was interrupted, and what replicas hold.
 
 use super::*;
-use medulla_protocol_types::protocol::AuditAppendReceipt;
-use medulla_protocol_types::protocol::Method;
 use crate::redb_store::commit_ops;
 use crate::redb_store::DurableCrypto;
+use medulla_protocol_types::protocol::AuditAppendReceipt;
+use medulla_protocol_types::protocol::Method;
 
 pub const GRAPH: &str = "g";
 pub const TENANT: &str = "tenant-a";

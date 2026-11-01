@@ -436,6 +436,7 @@ medulla-decision-types = { path = "../medulla-decision-types", features = ["quer
 medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-agent-types = { path = "../medulla-agent-types" }
 medulla-result-types = { path = "../medulla-result-types", features = ["query"] }
+medulla-semantic-index = { path = "../medulla-semantic-index" }
 
 [dev-dependencies]
 medulla-result-types = { path = "../medulla-result-types", features = ["query"] }

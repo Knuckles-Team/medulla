@@ -1,6 +1,6 @@
 //! Regression tests for the algorithm purpose modules.
 
-use medulla_core::compute::semantic::MAX_EMBEDDING_DIMENSION;
+use medulla_semantic_index::semantic::MAX_EMBEDDING_DIMENSION;
 use petgraph::visit::EdgeRef;
 use std::collections::HashMap;
 

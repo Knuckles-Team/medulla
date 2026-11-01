@@ -75,7 +75,7 @@ impl StepMeter {
         // An interrupted completion (EH-536) stops exactly like a spent one; its
         // caller installed the probe and discards the result.
         if self.limit.is_some_and(|limit| self.steps >= limit)
-            || medulla_core::interrupt::due(self.steps)
+            || medulla_semantic_index::interrupt::due(self.steps)
         {
             self.refused = true;
             return false;
@@ -184,7 +184,7 @@ mod tests {
     #[test]
     fn an_interrupted_completion_stops_like_a_spent_budget() {
         let triples = chain(200);
-        let outcome = medulla_core::interrupt::scoped(
+        let outcome = medulla_semantic_index::interrupt::scoped(
             || true,
             || Reasoner::from_triples(&triples).classify_within(DerivationBudget::new(1_000_000)),
         );

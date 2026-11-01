@@ -1,12 +1,12 @@
+use medulla_agent_types::native_control::SubmitWorkItemRequest;
 use medulla_mutation_types::mutation_scope::MutationSurface;
+use medulla_protocol_types::protocol::Method;
 use medulla_store::redb_store::work_item::run_owner::*;
 use medulla_store::redb_store::work_item::test_shard::run_request as request;
 use medulla_store::redb_store::work_item::test_shard::{
     apply, open, with_nodes, with_write, GRAPH,
 };
 use medulla_store::redb_store::{decode_durable, write_work_item_props, DurableCrypto, Shard};
-use medulla_agent_types::native_control::SubmitWorkItemRequest;
-use medulla_protocol_types::protocol::Method;
 
 type Row = serde_json::Map<String, serde_json::Value>;
 
@@ -146,9 +146,9 @@ fn run_admission_recovery_refuses_missing_evidence() {
 #[cfg(feature = "server")]
 #[tokio::test]
 async fn run_admission_unavailable_is_a_declared_wire_refusal() {
-    use medulla_server_api::api::persistence::PersistenceBackend;
     use crate::server::handlers::work_item_read::{answer, WorkItemRead};
     use medulla_persistence::redb_backend::RedbBackend;
+    use medulla_server_api::api::persistence::PersistenceBackend;
     use std::sync::Arc;
     for (tag, evidence) in [("legacy", None), ("malformed", Some(serde_json::json!({})))] {
         let dir = medulla_store::redb_store::temp_path("medulla-run-wire-refusal", tag);
@@ -334,12 +334,12 @@ fn ordinary_completion_projection_requires_exact_committed_payload() {
 #[test]
 fn ordinary_completion_native_fence_and_terminal_noop_preserve_binding() {
     use medulla_agent_types::run_completion::*;
+    use medulla_agent_types::run_completion::*;
     use medulla_result_types::{
         epistemic_operations::ClaimWorkItemRequest,
         epistemic_operations::ClaimWorkItemRequestSchemaVersion,
         epistemic_operations::ClaimWorkItemResult,
     };
-    use medulla_agent_types::run_completion::*;
     let path = medulla_store::redb_store::temp_path("medulla-completion", "native-fence");
     let shard = Shard::open(&path).unwrap();
     let id = admit(&shard);
@@ -464,12 +464,12 @@ fn ordinary_completion_native_fence_and_terminal_noop_preserve_binding() {
 #[test]
 fn ordinary_completion_native_ledger_outbox_restart_atomicity() {
     use crate::mutation_batch::MutationBatch;
+    use medulla_agent_types::run_completion::*;
     use medulla_mutation_types::mutation_scope::MutationSurface;
+    use medulla_result_types::epistemic_operations::{ClaimWorkItemRequest, ClaimWorkItemResult};
     use medulla_server_api::mutation_batch::compile_methods;
     use medulla_server_api::mutation_batch::principal_fingerprint;
     use medulla_server_api::mutation_batch::CompileBatch;
-    use medulla_result_types::epistemic_operations::{ClaimWorkItemRequest, ClaimWorkItemResult};
-    use medulla_agent_types::run_completion::*;
     let compile = |shard: &Shard, tag: &str, method: Method, now| {
         compile_methods(
             CompileBatch {

@@ -3,8 +3,8 @@
 
 use super::blob;
 use medulla_compute::graph_algos::impact::{noisy_or, ImpactGraph, Seed};
-use medulla_core::compute::semantic::SemanticStore;
 use medulla_core::graph::GraphCore;
+use medulla_semantic_index::semantic::SemanticStore;
 use medulla_types::wire::UqlResult;
 use serde_json::json;
 

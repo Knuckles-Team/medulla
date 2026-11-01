@@ -10,13 +10,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use crate::protocol::ResultPayload;
-use medulla_server_api::auth::VerifiedRequestContext;
-use medulla_persistence::agent_component::test_component_draft;
-use medulla_persistence::agent_fixtures::mutation_context;
-use medulla_persistence::agent_library::AgentLibraryStore;
-use medulla_server_api::state::ServerState;
 use medulla_agent_types::agent_component::{AgentComponentKind, AgentComponentPublishRequest};
-use medulla_types::contract::BoundedVec;
 use medulla_decision_types::decision::coverage::{
     CapabilityCoverageOutcome, CapabilityCoverageRequest, CapabilityCoverageResult,
 };
@@ -24,6 +18,12 @@ use medulla_decision_types::decision::record::PremiseClass;
 use medulla_decision_types::{
     decision::AssemblyRequirements, decision::EvidenceClass, decision::LibraryCandidateScope,
 };
+use medulla_persistence::agent_component::test_component_draft;
+use medulla_persistence::agent_fixtures::mutation_context;
+use medulla_persistence::agent_library::AgentLibraryStore;
+use medulla_server_api::auth::VerifiedRequestContext;
+use medulla_server_api::state::ServerState;
+use medulla_types::contract::BoundedVec;
 
 const TENANT: &str = "tenant-coverage";
 const FOREIGN: &str = "tenant-foreign";

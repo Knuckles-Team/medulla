@@ -349,9 +349,9 @@ fn deferral_refused(
 fn deferral_result(
     deferral: medulla_protocol_types::result_contract::coordination::WorkItemDeferral,
 ) -> Result<medulla_protocol_types::protocol::ResultPayload, String> {
-    medulla_protocol_types::protocol::ResultPayload::of::<medulla_protocol_types::result_contract::coordination::DeferWorkItem>(
-        deferral,
-    )
+    medulla_protocol_types::protocol::ResultPayload::of::<
+        medulla_protocol_types::result_contract::coordination::DeferWorkItem,
+    >(deferral)
 }
 
 #[cfg(test)]

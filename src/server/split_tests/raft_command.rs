@@ -1,5 +1,5 @@
-use medulla_raft::raft::command::*;
 use crate::protocol::Method;
+use medulla_raft::raft::command::*;
 
 #[cfg(feature = "ast")]
 #[test]
@@ -18,8 +18,7 @@ fn sealed_repository_budget_is_bound_to_exact_source_intent() {
         }],
         ..Default::default()
     };
-    let mut envelope =
-        medulla_h_ingest::repository_index::repository_envelope(&result).unwrap();
+    let mut envelope = medulla_h_ingest::repository_index::repository_envelope(&result).unwrap();
     let snapshot = EligibleSnapshot {
         schema_version: 1,
         tenant_id: "tenant-a".into(),
@@ -146,7 +145,10 @@ fn native_command_excludes_plaintext_environment_values() {
     assert!(graph.open_graph("different-key").is_err());
 }
 
-fn graph_request(graph_name: &str, group_id: medulla_raft::raft::GroupId) -> medulla_raft::raft::RaftRequest {
+fn graph_request(
+    graph_name: &str,
+    group_id: medulla_raft::raft::GroupId,
+) -> medulla_raft::raft::RaftRequest {
     medulla_raft::raft::RaftRequest {
         graph_fname: medulla_kernel::persist::sanitize(graph_name),
         graph_name: graph_name.to_string(),

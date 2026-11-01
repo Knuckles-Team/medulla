@@ -14,7 +14,7 @@ impl SemanticStore {
             embeddings: HashMap::new(),
             space: None,
             index: RwLock::new(HnswIndex::empty()),
-            generation: crate::compute::semantic::GenerationStamp::fresh(),
+            generation: crate::semantic::GenerationStamp::fresh(),
         }
     }
 

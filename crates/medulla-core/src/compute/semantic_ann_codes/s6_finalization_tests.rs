@@ -21,7 +21,7 @@ use super::tests::{
     binding_for_generation, seeded_s6_publication, warmed_store, S6Fixture, BINDING, TENANT,
 };
 use super::SemanticCodeError;
-use crate::compute::semantic::SemanticGenerationImage;
+use medulla_semantic_index::semantic::SemanticGenerationImage;
 
 fn claim(fixture: &S6Fixture) -> MutationOutboxLease {
     let mut budget = OutboxClaimBudget::new(1, 5_000, 11).unwrap();

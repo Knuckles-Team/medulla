@@ -8,13 +8,13 @@ use super::rows::LaneRows;
 use super::types::{LaneDecision, Scope, ScopeCounter};
 use super::validation::decision_name;
 use super::{DurableLaneHold, DurableLanePolicy, MAX_COUNT, MAX_DISK_BYTES, MAX_TTL_MS};
+use medulla_protocol_types::protocol::DevelopmentLaneWorkItemKind;
 use medulla_result_types::epistemic_operations::DevelopmentLaneHold;
 use medulla_result_types::epistemic_operations::DevelopmentLaneHoldHostTargetKind;
 use medulla_result_types::epistemic_operations::DevelopmentLaneIntent;
 use medulla_result_types::epistemic_operations::DevelopmentLaneIntentHostTargetKind;
 use medulla_result_types::epistemic_operations::DevelopmentLaneQuotaPolicy;
 use medulla_result_types::epistemic_operations::DevelopmentLaneReserveRequest;
-use medulla_protocol_types::protocol::DevelopmentLaneWorkItemKind;
 use medulla_storage::ScopedOwnerTableMut;
 
 pub(super) fn work_item_kind_name(kind: DevelopmentLaneWorkItemKind) -> &'static str {

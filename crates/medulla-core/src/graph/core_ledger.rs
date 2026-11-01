@@ -10,7 +10,7 @@ impl GraphCore {
         self.node_properties.clear();
         self.edge_properties.clear();
         self.ledger.lock().clear();
-        *self.semantic_store.write() = crate::compute::semantic::SemanticStore::new();
+        *self.semantic_store.write() = medulla_semantic_index::semantic::SemanticStore::new();
         // Drop every cached query result (CONCEPT:MEDULLA-KG.coordination.distributed-cache-coherence): `clear` (and `hibernate`,
         // which reuses it) wipes the graph WITHOUT bumping `version`, so the
         // version-keyed cache must be invalidated directly or a post-wipe lookup at the

@@ -9,10 +9,10 @@
 
 use super::SharedState;
 use crate::protocol::Response;
-use medulla_server_api::auth::VerifiedRequestContext;
+use medulla_decision_types::decision::coverage::CapabilityCoverageRequest;
 #[cfg(feature = "redb")]
 use medulla_persistence::agent_library::AgentLibraryStateExt;
-use medulla_decision_types::decision::coverage::CapabilityCoverageRequest;
+use medulla_server_api::auth::VerifiedRequestContext;
 
 /// Resolve the tenant's visible candidates and A2A cards and answer their
 /// per-capability coverage of the request's closure.

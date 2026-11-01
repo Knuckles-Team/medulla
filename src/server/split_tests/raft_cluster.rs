@@ -29,6 +29,7 @@ use openraft::BasicNode;
 use tokio::sync::RwLock;
 
 use medulla_persistence::redb_backend::RedbBackend;
+use medulla_protocol_types::protocol::{GraphType, Method};
 use medulla_raft::raft::config::RaftClusterConfig;
 use medulla_raft::raft::harness::cluster::fixture;
 use medulla_raft::raft::multi::MultiRaft;
@@ -36,7 +37,6 @@ use medulla_raft::raft::node::{self, StartedNode};
 use medulla_raft::raft::{NodeId, RaftRequest};
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_server_api::state::ServerState;
-use medulla_protocol_types::protocol::{GraphType, Method};
 
 /// Build a ServerState with a redb-AUTHORITATIVE backend rooted at `dir`.
 async fn make_state(dir: &str) -> Arc<RwLock<ServerState>> {
@@ -2957,9 +2957,9 @@ mod dist_compute {
     use super::*;
     use crate::isolation::{AgentIdentity, AgentRole};
     use crate::protocol::{DistAlgo, GraphType};
+    use medulla_protocol_types::result_contract::cluster::DistResult;
     use medulla_raft::raft::pregel;
     use medulla_server_api::access::GraphReadAuthority;
-    use medulla_protocol_types::result_contract::cluster::DistResult;
 
     fn props(n: &str) -> Vec<u8> {
         rmp_serde::to_vec_named(&serde_json::json!({"type": "N", "id": n})).unwrap()
@@ -3236,8 +3236,8 @@ mod dist_compute {
 mod matview {
     use super::*;
     use crate::protocol::DistAlgo;
-    use medulla_server_api::api::persistence::MatView;
     use medulla_protocol_types::result_contract::cluster::DistResult;
+    use medulla_server_api::api::persistence::MatView;
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn matview_persists_and_reloads_from_redb() {

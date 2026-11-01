@@ -398,9 +398,9 @@ mod tests {
     //! separate physical node per CONCEPT:MEDULLA-KG.txn.harness-crash's documented
     //! cross-NODE-participant remainder).
     use super::*;
-    use medulla_core::compute::semantic::SemanticStore;
     use medulla_core::graph::GraphCore;
     use medulla_plan::{Op, PlanNode};
+    use medulla_semantic_index::semantic::SemanticStore;
     use serde_json::json;
 
     fn blob(v: serde_json::Value) -> Vec<u8> {

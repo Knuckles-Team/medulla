@@ -408,7 +408,7 @@ fn unified_query(
     let mut view = core.analysis_snapshot();
     overlay_txn(&mut view, txn);
     // Committed embeddings overlaid with the txn's staged vectors (RYOW for Rank/kNN).
-    let semantic = medulla_core::compute::semantic::semantic_overlay(
+    let semantic = medulla_semantic_index::semantic::semantic_overlay(
         core.semantic_store.read().clone(),
         &txn.vectors,
     );
@@ -426,7 +426,8 @@ fn unified_query(
     let ctx = medulla_plan::PlanCtx::new(&view, &semantic);
     #[cfg(feature = "crossmodal-tsdb")]
     let ctx = ctx.with_staged_series(&staged_series);
-    let result = medulla_plan::execute(&plan, &ctx).map_err(|e| format!("GraphQL unifiedQuery: {e}"))?;
+    let result =
+        medulla_plan::execute(&plan, &ctx).map_err(|e| format!("GraphQL unifiedQuery: {e}"))?;
 
     let rows: Vec<Value> = result
         .rows()

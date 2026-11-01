@@ -300,10 +300,7 @@ fn read_graph_core_rows(
 /// graph-scope one: [`Shard::control_read`] exists before any graph is bound,
 /// which is exactly what lets a caller ask "does this graph exist here?"
 /// WITHOUT binding it first.
-pub fn read_catalog_record(
-    shard: &Shard,
-    graph: &str,
-) -> Result<Option<GraphMetaRecord>, String> {
+pub fn read_catalog_record(shard: &Shard, graph: &str) -> Result<Option<GraphMetaRecord>, String> {
     let control = shard.control_read()?;
     let catalog = control.open_owner_table(GRAPH_META)?;
     let Some(value) = catalog.get(graph).map_err(|e| e.to_string())? else {
@@ -705,7 +702,9 @@ mod keyset_page_tests {
                 graph_type: GraphType::Global,
                 incarnation_id: "incarnation:test:keyset".to_string(),
                 source_snapshot_version: 7,
-                schema_sources: std::sync::Arc::new(medulla_core::graph::GraphSchemaSources::default()),
+                schema_sources: std::sync::Arc::new(
+                    medulla_core::graph::GraphSchemaSources::default(),
+                ),
                 nodes: nodes.clone(),
                 edges: edges.clone(),
                 ledger: Vec::new(),
@@ -773,10 +772,7 @@ mod keyset_page_tests {
 ///
 /// These views are not cross-store transfer images and are rejected by
 /// [`apply_checkpoint`].
-pub fn read_all_dumps(
-    shard: &Shard,
-    crypto: DurableCrypto<'_>,
-) -> Result<Vec<GraphDump>, String> {
+pub fn read_all_dumps(shard: &Shard, crypto: DurableCrypto<'_>) -> Result<Vec<GraphDump>, String> {
     let catalog = read_graph_catalog(shard)?;
     let mut dumps = Vec::with_capacity(catalog.len());
     for (graph, record) in catalog {
@@ -924,8 +920,10 @@ impl<'de> serde::Deserialize<'de> for GraphMetaRecord {
                 name: value.name,
                 graph_type: value.graph_type,
                 incarnation_id: value.incarnation_id,
-                schema_sources: medulla_core::graph::lift_v2_integrity_policy(value.integrity_policy)
-                    .map_err(D::Error::custom)?,
+                schema_sources: medulla_core::graph::lift_v2_integrity_policy(
+                    value.integrity_policy,
+                )
+                .map_err(D::Error::custom)?,
             }),
             GraphMetaRecordWire::Current(value) => Err(D::Error::custom(format!(
                 "unsupported graph metadata schema version {}",

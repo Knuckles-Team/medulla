@@ -204,8 +204,13 @@ async fn dispatch_cluster_admin_methods_arm_3(ctx: DispatchCtx<'_>, method: Meth
             dispatch_boxed(async {
                 let req_id = req.id;
                 {
-                    match medulla_h_graph::topology::try_handle(state, req_id, method, verified_context)
-                        .await
+                    match medulla_h_graph::topology::try_handle(
+                        state,
+                        req_id,
+                        method,
+                        verified_context,
+                    )
+                    .await
                     {
                         Ok(resp) => resp,
                         // Unreachable: the matched variant is the topology method.

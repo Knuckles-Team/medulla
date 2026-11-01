@@ -37,7 +37,7 @@ pub(crate) fn explain_snapshot(
 pub(crate) fn explain_plan(
     plan: medulla_plan::Plan,
     view: &crate::graph::GraphView,
-    semantic: &medulla_core::compute::semantic::SemanticStore,
+    semantic: &medulla_semantic_index::semantic::SemanticStore,
 ) -> Result<crate::protocol::ExplainPlanResult, String> {
     use crate::protocol::{ExplainNodeWire, ExplainPlanResult};
     use medulla_plan::{Cardinality, ModalityCardinality, PlanCtx, PlanStats};
@@ -45,7 +45,8 @@ pub(crate) fn explain_plan(
     // Keep this byte contract identical to the foreign-read query binder: a
     // host can obtain the authoritative digest from ExplainPlan without
     // implementing or guessing the Rust planner's serialization.
-    let plan_digest = medulla_server_api::api::query_txn::query_support::canonical_plan_digest(&plan)?;
+    let plan_digest =
+        medulla_server_api::api::query_txn::query_support::canonical_plan_digest(&plan)?;
 
     /// Annotate every node of `dag` with its plan-time cost/cardinality estimate, walked
     /// in topological order so a node's `estimated_rows_in` is always derived from its
@@ -273,7 +274,7 @@ pub(crate) fn explain_provenance(
     request_id: u64,
     plan: medulla_plan::Plan,
     view: &crate::graph::GraphView,
-    semantic: &medulla_core::compute::semantic::SemanticStore,
+    semantic: &medulla_semantic_index::semantic::SemanticStore,
 ) -> Result<crate::epistemic_operations::EvidenceBundle, String> {
     use medulla_plan::PlanCtx;
 
@@ -295,7 +296,7 @@ pub(crate) fn explain_provenance_by_ids(
     request_id: u64,
     ids: Vec<String>,
     view: &crate::graph::GraphView,
-    semantic: &medulla_core::compute::semantic::SemanticStore,
+    semantic: &medulla_semantic_index::semantic::SemanticStore,
 ) -> Result<crate::epistemic_operations::EvidenceBundle, String> {
     use medulla_plan::PlanCtx;
 
@@ -410,7 +411,7 @@ pub(crate) fn explain_policy(
     plan: medulla_plan::Plan,
     full_view: &crate::graph::GraphView,
     filtered_view: &crate::graph::GraphView,
-    semantic: &medulla_core::compute::semantic::SemanticStore,
+    semantic: &medulla_semantic_index::semantic::SemanticStore,
 ) -> Result<crate::protocol::ExplainPolicyResult, String> {
     use crate::protocol::ExplainPolicyResult;
     use medulla_plan::PlanCtx;
@@ -485,7 +486,7 @@ pub(crate) fn explain_belief(
     // A minimal semantic store: `explain_belief_tree` only reads `ctx.view` +
     // `ctx.belief_policy` (default, unbound on this path — no facade caller binds a
     // tenant-specific policy today, matching every other served epistemic op).
-    let semantic = medulla_core::compute::semantic::SemanticStore::new();
+    let semantic = medulla_semantic_index::semantic::SemanticStore::new();
     let ctx = medulla_plan::PlanCtx::new(view, &semantic);
     let tree = medulla_plan::explain_belief_tree(&ctx, node_id);
 

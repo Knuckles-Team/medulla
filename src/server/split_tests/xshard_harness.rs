@@ -18,9 +18,9 @@
 //! crash AFTER the COMMIT decision but BEFORE phase-2 apply. Each asserts the
 //! invariant on the durable state, not on timing.
 
-use medulla_raft::raft::RaftStateExt;
 #[cfg(feature = "redb")]
 use medulla_persistence::AsRedb;
+use medulla_raft::raft::RaftStateExt;
 use std::collections::BTreeMap;
 use std::sync::Arc;
 use std::time::Duration;
@@ -575,7 +575,10 @@ async fn txn_handle(
 
 /// Register `shardA`/`shardB` in the registry + wire `state.multi_raft` so the
 /// user-facing commit path can resolve the cross-shard span (CONCEPT:MEDULLA-KG.txn.routes-cross-shard-txn).
-async fn wire_user_graphs(state: &Arc<RwLock<medulla_server_api::state::ServerState>>, multi: &Arc<MultiRaft>) {
+async fn wire_user_graphs(
+    state: &Arc<RwLock<medulla_server_api::state::ServerState>>,
+    multi: &Arc<MultiRaft>,
+) {
     let mut s = state.write().await;
     let _ = s.registry.create_graph(GRAPH_A, GraphType::Global, None);
     let _ = s.registry.create_graph(GRAPH_B, GraphType::Global, None);
