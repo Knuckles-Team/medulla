@@ -50,6 +50,7 @@ fn nan_to_none(xs: Vec<f64>) -> Vec<Option<f64>> {
     xs.into_iter().map(|x| (!x.is_nan()).then_some(x)).collect()
 }
 
+// spec: MEDULLA-FINANCE-PRIMITIVES-R002.2.1.1
 #[test]
 fn window_functions_equal_the_derive_program_and_the_finance_entries() {
     let (core, a, b) = graph();
