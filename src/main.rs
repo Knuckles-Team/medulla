@@ -81,7 +81,7 @@ impl std::ops::DerefMut for Args {
 ///   Windows, so this path is only a stable *identifier* / lock anchor — the
 ///   actual default transport on Windows is TCP loopback (see the transport
 ///   section). Keeping the value defined preserves parity for config/logging.
-/// Run one bounded, stdin-driven exact performance probe and return.
+///   Run one bounded, stdin-driven exact performance probe and return.
 fn run_exact_performance_probe(root: Option<&std::path::Path>) -> Result<(), Box<dyn std::error::Error>> {
     let root = root.ok_or("exact performance probe root is required")?;
     #[cfg(feature = "full")]

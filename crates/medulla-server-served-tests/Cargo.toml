@@ -87,6 +87,7 @@ argon2 = { version = "0.5", optional = true, default-features = false, features 
 jsonwebtoken = { version = "11.1", optional = true, default-features = false, features = ["aws_lc_rs"] }
 
 [features]
+modality-serving = ["medulla-h-ingest/modality-serving", "medulla-server/modality-serving"]
 ann = ["medulla-server-router/ann", "medulla-server-graph/ann", "medulla-server/ann", "medulla-h-decide/ann", "medulla-wire/ann", "medulla-semantic-index/ann"]
 ann-redb = ["medulla-server-router/ann-redb", "medulla-server-graph/ann-redb", "medulla-server/ann-redb", "ann", "redb", "medulla-h-retrieve/ann-redb", "medulla-h-jobs/ann-redb", "medulla-h-query/ann-redb", "medulla-server-api/ann-redb", "medulla-wire/ann-redb", "medulla-ann-codes/ann-redb", "medulla-server-ops/ann-redb"]
 blob = ["medulla-server-router/blob", "medulla-server-graph/blob", "medulla-server/blob", "redb", "server", "medulla-h-admin/blob", "medulla-h-decide/blob", "medulla-h-ingest/blob", "medulla-protocol-types/blob", "medulla-server-api/blob", "medulla-types/blob", "medulla-server-blob/blob"]
