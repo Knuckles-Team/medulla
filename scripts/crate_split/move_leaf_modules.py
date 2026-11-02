@@ -23,6 +23,7 @@ the new dependency, forwarded features and the used third-party dependencies.
 --chain overrides the order (lowest first); a staying module is flagged only when its own target
 crate ranks below the crate being moved to.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -54,7 +55,7 @@ def load_patterns(root: Path, frm: str) -> list[tuple[str, str]]:
     for name, c in cfg["crates"].items():
         for mv in c.get("moves", []):
             if mv.startswith(pre):
-                out.append((name, mv[len(pre):].removesuffix(".rs")))
+                out.append((name, mv[len(pre) :].removesuffix(".rs")))
     return out
 
 
@@ -75,7 +76,11 @@ def list_mods(src: Path) -> dict[str, list[Path]]:
     if not src.is_dir():
         return out
     # files a top-level module includes with `#[path = "x.rs"]` belong to that module
-    included = {m for f in src.glob("*.rs") for m in re.findall(r'#\[path\s*=\s*"([^"/]+\.rs)"\]', f.read_text())}
+    included = {
+        m
+        for f in src.glob("*.rs")
+        for m in re.findall(r'#\[path\s*=\s*"([^"/]+\.rs)"\]', f.read_text())
+    }
     for e in sorted(src.iterdir()):
         if e.name == "lib.rs" or e.name in included:
             continue
@@ -90,7 +95,10 @@ def files_of(paths: list[Path]) -> list[Path]:
     fs = []
     for p in paths:
         if p.is_file():
-            fs += [p.parent / m for m in re.findall(r'#\[path\s*=\s*"([^"/]+\.rs)"\]', p.read_text())]
+            fs += [
+                p.parent / m
+                for m in re.findall(r'#\[path\s*=\s*"([^"/]+\.rs)"\]', p.read_text())
+            ]
         fs += [p] if p.is_file() else sorted(p.rglob("*.rs"))
     return fs
 
@@ -134,7 +142,12 @@ def root_names(lib_text: str) -> dict[str, str]:
         if indent:
             continue
         for segs, _l, alias in parse_use_tree(body):
-            if segs and segs[-1] != "*" and len(segs) >= 2 and segs[0] not in ("crate", "self", "super", "std"):
+            if (
+                segs
+                and segs[-1] != "*"
+                and len(segs) >= 2
+                and segs[0] not in ("crate", "self", "super", "std")
+            ):
                 out[alias or segs[-1]] = segs[0]
     return out
 
@@ -165,7 +178,13 @@ def load_chain(root: Path) -> list[str]:
     return cfg["types_split"]["chain"]
 
 
-def plan(root: Path, frm: str, to: str, chain: list[str] | None = None, bottom_up: bool = False):
+def plan(
+    root: Path,
+    frm: str,
+    to: str,
+    chain: list[str] | None = None,
+    bottom_up: bool = False,
+):
     pats = load_patterns(root, frm)
     src = root / "crates" / frm / "src"
     mods = list_mods(src)
@@ -177,7 +196,9 @@ def plan(root: Path, frm: str, to: str, chain: list[str] | None = None, bottom_u
     # modules already moved to other types crates
     for crate, _p in {(c, 0) for c, _ in pats if c != frm}:
         for m in list_mods(root / "crates" / crate / "src"):
-            if m not in mods:  # a name the source crate also holds (a split parent module) keeps staying
+            if (
+                m not in mods
+            ):  # a name the source crate also holds (a split parent module) keeps staying
                 assign[m] = crate
     allmods = set(assign)
     # deps (only modules still in frm, or L1 crates, both scanned)
@@ -197,7 +218,9 @@ def plan(root: Path, frm: str, to: str, chain: list[str] | None = None, bottom_u
     target = dict(assign)
     rank_to = rank[to]
     moving = {m for m in mods if assign[m] == to}
-    phys = {m: (to if m in moving else (frm if m in mods else assign[m])) for m in allmods}
+    phys = {
+        m: (to if m in moving else (frm if m in mods else assign[m])) for m in allmods
+    }
     pinned: dict[str, str] = {}
     for m, ds in deps.items():
         for d in ds:
@@ -205,16 +228,35 @@ def plan(root: Path, frm: str, to: str, chain: list[str] | None = None, bottom_u
                 # lowest crate first: a moving module may use only crates already moved out
                 # (below it); modules staying in <from> may use the moved ones freely.
                 if m in moving and phys[d] == frm:
-                    pinned[d] = f"VIOLATION: moving {m} needs {d}, which stays in {frm} (target {assign[d]})"
-                elif m in moving and phys[d] not in (frm, to) and rank.get(phys[d], 99) > rank_to:
+                    pinned[d] = (
+                        f"VIOLATION: moving {m} needs {d}, which stays in {frm} (target {assign[d]})"
+                    )
+                elif (
+                    m in moving
+                    and phys[d] not in (frm, to)
+                    and rank.get(phys[d], 99) > rank_to
+                ):
                     pinned[d] = f"VIOLATION: moving {m} needs {d} in higher {phys[d]}"
                 continue
-            if m in moving and phys[d] not in (frm, to) and rank.get(phys[d], 99) > rank_to:
+            if (
+                m in moving
+                and phys[d] not in (frm, to)
+                and rank.get(phys[d], 99) > rank_to
+            ):
                 pinned[d] = f"VIOLATION: moving {m} needs {d} in higher {phys[d]}"
-            if m in mods and m not in moving and d in moving and rank.get(target[m], 10**6) < rank_to:
-                pinned[m] = f"VIOLATION: {m} stays in {frm} (target {assign[m]}) but needs moving {d}"
+            if (
+                m in mods
+                and m not in moving
+                and d in moving
+                and rank.get(target[m], 10**6) < rank_to
+            ):
+                pinned[m] = (
+                    f"VIOLATION: {m} stays in {frm} (target {assign[m]}) but needs moving {d}"
+                )
             if m in moving and phys[d] == frm and rank.get(assign[d], 0) > rank_to:
-                pinned[d] = f"VIOLATION: moving {m} needs {d} whose target {assign[d]} is above {to}"
+                pinned[d] = (
+                    f"VIOLATION: moving {m} needs {d} whose target {assign[d]} is above {to}"
+                )
     assign = phys
     return assign, pinned, deps, rn, mods, lib_text
 
@@ -239,7 +281,11 @@ def attrs_above(text: str, pos: int) -> tuple[int, str]:
     start = pos
     while start > 0:
         prev = text.rfind("\n", 0, start - 1) + 1
-        line = text[prev:start - 1] if text[start - 1:start] == "\n" else text[prev:start]
+        line = (
+            text[prev : start - 1]
+            if text[start - 1 : start] == "\n"
+            else text[prev:start]
+        )
         if line.strip().startswith("#[") and line.strip().endswith("]"):
             start = prev
         else:
@@ -260,7 +306,11 @@ class Rewriter:
         h = segs[0]
         if h in self.assign and self.assign[h] != self.frm:
             return h, self.assign[h], segs
-        if h in self.rn and self.rn[h] in self.assign and self.assign[self.rn[h]] != self.frm:
+        if (
+            h in self.rn
+            and self.rn[h] in self.assign
+            and self.assign[self.rn[h]] != self.frm
+        ):
             m = self.rn[h]
             return m, self.assign[m], [m] + segs
         return None
@@ -303,7 +353,11 @@ class Rewriter:
             for segs, _l, alias in leaves:
                 nsegs = segs
                 if segs and segs[0] == head and len(segs) >= 2:
-                    new = self.new_path_inside(list(segs[1:])) if inside else self.new_path_external(list(segs[1:]))
+                    new = (
+                        self.new_path_inside(list(segs[1:]))
+                        if inside
+                        else self.new_path_external(list(segs[1:]))
+                    )
                     if new:
                         nsegs = tuple(new.split("::"))
                         hit = True
@@ -334,7 +388,11 @@ class Rewriter:
                     lines.append(f"{lead}{key}::{{{', '.join(items)}}};")
             sep = "\n" + attrs
             edits.append((s, e, sep.join(lines)))
-        pat = CRATE_PATH if inside else re.compile(r"(?<![\w:])" + snake(self.frm) + r"((?:::[A-Za-z_]\w*)+)")
+        pat = (
+            CRATE_PATH
+            if inside
+            else re.compile(r"(?<![\w:])" + snake(self.frm) + r"((?:::[A-Za-z_]\w*)+)")
+        )
         for m in pat.finditer(code):
             if any(a <= m.start() < b for a, b in spans):
                 continue
@@ -346,9 +404,17 @@ class Rewriter:
             for m in DCRATE_PATH.finditer(code):
                 segs = m.group(1).split("::")[1:]
                 if segs and segs[0] in self.assign and self.assign[segs[0]] != self.to:
-                    edits.append((m.start(), m.end(), "::" + snake(self.assign[segs[0]]) + m.group(1)))
+                    edits.append(
+                        (
+                            m.start(),
+                            m.end(),
+                            "::" + snake(self.assign[segs[0]]) + m.group(1),
+                        )
+                    )
                 elif segs and segs[0] not in self.assign:
-                    edits.append((m.start(), m.end(), "::" + snake(self.frm) + m.group(1)))
+                    edits.append(
+                        (m.start(), m.end(), "::" + snake(self.frm) + m.group(1))
+                    )
         for s, e, r in sorted(edits, reverse=True):
             text = text[:s] + r + text[e:]
         return text
@@ -359,7 +425,7 @@ def section(text: str, header: str):
     m = re.search(r"(?m)^\[" + re.escape(header) + r"\]\s*$", text)
     if not m:
         return None
-    n = re.search(r"(?m)^\[", text[m.end():])
+    n = re.search(r"(?m)^\[", text[m.end() :])
     return m.end(), (m.end() + n.start()) if n else len(text)
 
 
@@ -367,13 +433,18 @@ def add_line(text: str, header: str, line: str) -> str:
     b = section(text, header)
     if b is None:
         return text.rstrip("\n") + f"\n\n[{header}]\n{line}\n"
-    head, tail = text[: b[1]].rstrip("\n"), text[b[1]:]
-    return head + "\n" + line + "\n" + ("\n" if tail.strip() else "") + tail.lstrip("\n")
+    head, tail = text[: b[1]].rstrip("\n"), text[b[1] :]
+    return (
+        head + "\n" + line + "\n" + ("\n" if tail.strip() else "") + tail.lstrip("\n")
+    )
 
 
 def has_dep(text: str, name: str) -> bool:
     d = tomllib.loads(text)
-    return any(name in d.get(k, {}) for k in ("dependencies", "dev-dependencies", "build-dependencies"))
+    return any(
+        name in d.get(k, {})
+        for k in ("dependencies", "dev-dependencies", "build-dependencies")
+    )
 
 
 FEAT = re.compile(r'feature\s*=\s*"([A-Za-z0-9_-]+)"')
@@ -395,13 +466,17 @@ def sync_target_manifest(root: Path, frm: str, to: str):
         if dep == frm or has_dep(ct, dep):
             continue
         ident = snake(dep)
-        if re.search(r"\b" + ident + r"\b", srcs) or (dep == "schemars" and "JsonSchema" in raw) or (dep == "strum" and "strum" in raw):
+        if (
+            re.search(r"\b" + ident + r"\b", srcs)
+            or (dep == "schemars" and "JsonSchema" in raw)
+            or (dep == "strum" and "strum" in raw)
+        ):
             m = re.search(r"(?m)^" + re.escape(dep) + r"\s*=.*$", ct_text)
             spec = m.group(0)
             end = m.end()
             while spec.count("[") + spec.count("{") > spec.count("]") + spec.count("}"):
                 nl = ct_text.index("\n", end) if "\n" in ct_text[end:] else len(ct_text)
-                nxt = ct_text[end:nl + 1] if end < len(ct_text) else ""
+                nxt = ct_text[end : nl + 1] if end < len(ct_text) else ""
                 end = nl + 1
                 spec += nxt.rstrip("\n") and "\n" + nxt.rstrip("\n")
                 if end >= len(ct_text):
@@ -411,32 +486,42 @@ def sync_target_manifest(root: Path, frm: str, to: str):
     cfeat = tomllib.loads(ct).get("features", {})
     ffeat = fman.get("features", {})
     for x in sorted(names):
-        impl = [i for i in ffeat.get(x, []) if "/" not in i and not i.startswith("dep:") and i in names]
+        impl = [
+            i
+            for i in ffeat.get(x, [])
+            if "/" not in i and not i.startswith("dep:") and i in names
+        ]
         dep_items = [i for i in ffeat.get(x, []) if i.startswith("dep:")]
         items = impl + dep_items
         if x in ffeat and uses_types:
             items.append(f"{frm}/{x}")
         if x not in cfeat:
-            ct = add_line(ct, "features", f'{x} = [' + ", ".join(f'"{i}"' for i in items) + "]")
+            ct = add_line(
+                ct, "features", f"{x} = [" + ", ".join(f'"{i}"' for i in items) + "]"
+            )
     ct_p.write_text(ct)
 
 
 def forward_features(root: Path, frm: str, to: str, users: set[Path]):
     """Every manifest that depends on <to> and forwards `<frm>/X` also forwards `<to>/X`."""
-    tfeat = tomllib.loads((root / "crates" / to / "Cargo.toml").read_text()).get("features", {})
+    tfeat = tomllib.loads((root / "crates" / to / "Cargo.toml").read_text()).get(
+        "features", {}
+    )
     for mp in sorted(set(users)):
         t = mp.read_text()
         d = tomllib.loads(t)
         if not any(to in d.get(k, {}) for k in ("dependencies", "dev-dependencies")):
             continue
-        optional = (d.get("dependencies", {}).get(to) or {})
+        optional = d.get("dependencies", {}).get(to) or {}
         opt = isinstance(optional, dict) and optional.get("optional")
+
         def sub(m):
             q = m.group(0)
             x = m.group(2)
             if x in tfeat and f'"{to}/{x}"' not in t and f'"{to}?/{x}"' not in t:
                 return q + f', "{to}/{x}"'
             return q
+
         t2 = re.sub(r'"(' + re.escape(frm) + r'\??)/([A-Za-z0-9_-]+)"', sub, t)
         if t2 != t:
             mp.write_text(t2)
@@ -446,9 +531,17 @@ def manifest_for(root: Path, f: Path) -> tuple[Path, str]:
     rel = f.relative_to(root).parts
     if rel[0] == "crates":
         mp = root / "crates" / rel[1] / "Cargo.toml"
-        kind = "dev" if len(rel) > 3 and rel[2] in ("tests", "benches", "examples") else "dep"
+        kind = (
+            "dev"
+            if len(rel) > 3 and rel[2] in ("tests", "benches", "examples")
+            else "dep"
+        )
         return mp, kind
-    return root / "Cargo.toml", "dev" if rel[0] in ("tests", "benches", "examples") else "dep"
+    return root / "Cargo.toml", "dev" if rel[0] in (
+        "tests",
+        "benches",
+        "examples",
+    ) else "dep"
 
 
 # ----------------------------------------------------------------------------- main
@@ -458,18 +551,30 @@ def main() -> int:
     ap.add_argument("--to", required=True)
     ap.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[2])
     ap.add_argument("--plan", action="store_true")
-    ap.add_argument("--bottom-up", action="store_true", help="move the lowest crate first: the moved modules may not use modules still in <from>")
-    ap.add_argument("--chain", default="", help="comma list of crates, lowest first (default: [types_split].chain)")
+    ap.add_argument(
+        "--bottom-up",
+        action="store_true",
+        help="move the lowest crate first: the moved modules may not use modules still in <from>",
+    )
+    ap.add_argument(
+        "--chain",
+        default="",
+        help="comma list of crates, lowest first (default: [types_split].chain)",
+    )
     a = ap.parse_args()
     root, frm, to = a.root, a.frm, a.to
-    assign, pinned, deps, rn, mods, lib_text = plan(root, frm, to, [c for c in a.chain.split(',') if c], a.bottom_up)
+    assign, pinned, deps, rn, mods, lib_text = plan(
+        root, frm, to, [c for c in a.chain.split(",") if c], a.bottom_up
+    )
     per: dict[str, int] = {}
     for m, c in assign.items():
         paths = mods.get(m) or list_mods(root / "crates" / c / "src").get(m, [])
         per[c] = per.get(c, 0) + count_lines(paths)
     if a.plan:
         for c, n in sorted(per.items()):
-            print(f"{c}: {n} lines, {sum(1 for v in assign.values() if v == c)} modules")
+            print(
+                f"{c}: {n} lines, {sum(1 for v in assign.values() if v == c)} modules"
+            )
         for m, why in sorted(pinned.items()):
             print(f"PINNED {m}: {why}")
         return 0
@@ -510,12 +615,16 @@ def main() -> int:
             cut.append((a0, e))
     for s, e in sorted(cut, reverse=True):
         lib_new = lib_new[:s] + lib_new[e:].lstrip("\n")
-    (src_to.parent.parent.parent / "crates" / frm / "src" / "lib.rs").write_text(lib_new)
+    (src_to.parent.parent.parent / "crates" / frm / "src" / "lib.rs").write_text(
+        lib_new
+    )
     tl = (src_to / "lib.rs").read_text().rstrip("\n")
     (src_to / "lib.rs").write_text(tl + "\n\n" + "\n".join(carried) + "\n")
     # 3. rewrite
     rw = Rewriter(to, frm, assign, rn)
-    files = subprocess.run(["git", "ls-files", "*.rs"], cwd=root, capture_output=True, text=True).stdout.split()
+    files = subprocess.run(
+        ["git", "ls-files", "*.rs"], cwd=root, capture_output=True, text=True
+    ).stdout.split()
     files += [str(p.relative_to(root)) for p in src_to.rglob("*.rs")]
     changed_users: dict[Path, str] = {}
     for rel in sorted(set(files)):
@@ -545,7 +654,9 @@ def main() -> int:
         t = add_line(t, "dependencies" if kind == "dep" else "dev-dependencies", line)
         mp.write_text(t)
     forward_features(root, frm, to, set(changed_users) | {root / "Cargo.toml"})
-    print(f"moved {len(moving)} modules ({per.get(to, 0)} lines) to {to}; users: {len(changed_users)} manifests")
+    print(
+        f"moved {len(moving)} modules ({per.get(to, 0)} lines) to {to}; users: {len(changed_users)} manifests"
+    )
     for m, why in sorted(pinned.items()):
         print(f"pinned {m}: {why}")
     return 0

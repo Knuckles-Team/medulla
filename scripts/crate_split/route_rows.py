@@ -10,6 +10,7 @@ and projected lines per crate. Deterministic: same inputs, same output.
 --update rewrites current_lines/projected_lines in boundaries.toml.
 --check exits 1 when any projected crate exceeds the budget or a row is unrouted.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -25,9 +26,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 HERE = ROOT / "scripts" / "crate_split"
 DEFAULT_CENSUS = "/var/tmp/l9/split/census-medulla.json"
-PATH_RE = re.compile(r"(crates/medulla-[\w-]+/src/[\w/]+(?:\.rs)?|(?<![\w/.-])src/[\w/]+(?:\.rs)?)")
+PATH_RE = re.compile(
+    r"(crates/medulla-[\w-]+/src/[\w/]+(?:\.rs)?|(?<![\w/.-])src/[\w/]+(?:\.rs)?)"
+)
 ROW_RE = re.compile(r"^\| `(MEDULLA-[A-Z0-9.\-]+)` \| (.*)$")
-RETIRED_RE = re.compile(r"\s*(?:\*\*)?RETIRED\b")  # a retired row is never open work, whichever census fed us
+RETIRED_RE = re.compile(
+    r"\s*(?:\*\*)?RETIRED\b"
+)  # a retired row is never open work, whichever census fed us
 TITLE_RE = re.compile(r"\*\*(.*?)\*\*")
 
 
@@ -67,7 +72,10 @@ def resolve(path, moves, placement):
     if path in placement:
         return placement[path], None
     for f, c in placement.items():  # a module path: first placed file under it
-        if f.startswith(path.removesuffix(".rs") + "/") or f == path.removesuffix(".rs") + ".rs":
+        if (
+            f.startswith(path.removesuffix(".rs") + "/")
+            or f == path.removesuffix(".rs") + ".rs"
+        ):
             return c, None
     return None, None
 
@@ -80,13 +88,18 @@ def target_module(path, crate, prefix):
         parts = parts[1:]
     if prefix is not None:
         depth = len(prefix) - (3 if prefix[0] == "crates" else 1) - 1
-        parts = parts[max(depth, 0):]
+        parts = parts[max(depth, 0) :]
     return f"crates/{crate}/src/" + "/".join(parts[:2])
 
 
 def measure(moves, placement):
-    files = subprocess.run(["git", "ls-files", "*.rs"], cwd=ROOT, capture_output=True,
-                           text=True, check=True).stdout.split()
+    files = subprocess.run(
+        ["git", "ls-files", "*.rs"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.split()
     lines = collections.Counter()
     for f in files:
         p = f.split("/")
@@ -113,8 +126,12 @@ def load_open(census_path):
     for f, d in generate_at(str(ROOT), "HEAD").items():
         r = d["requirements"]
         it = r.values() if isinstance(r, dict) else r
-        out[f.split("/")[1]] = {x["id"] for x in it if not x.get("rollup_of")
-                                and x["delivery_state"] not in ("VERIFIED", "RETIRED")}
+        out[f.split("/")[1]] = {
+            x["id"]
+            for x in it
+            if not x.get("rollup_of")
+            and x["delivery_state"] not in ("VERIFIED", "RETIRED")
+        }
     return out
 
 
@@ -137,7 +154,11 @@ def route(row_id, spec, text, cfg, moves, placement):
     title = (t.group(1) if t else text[:200]).lower()
     for r in cfg.get("route", []):
         if r["spec"] == spec and re.search(r["match"], title):
-            return r["crate"], f"crates/{r['crate']}/{r['module']}", f"title~/{r['match'][:40]}/"
+            return (
+                r["crate"],
+                f"crates/{r['crate']}/{r['module']}",
+                f"title~/{r['match'][:40]}/",
+            )
     rcfg = cfg.get("routing", {})
     for m in PATH_RE.finditer(text):
         path = m.group(1).rstrip("/")
@@ -146,11 +167,19 @@ def route(row_id, spec, text, cfg, moves, placement):
         crate, prefix = resolve(path, moves, placement)
         if crate == "medulla-types" and spec in rcfg.get("types_home", {}):
             home = rcfg["types_home"][spec]
-            return home, target_module(path, home, None), f"names {path}; new type goes to the spec's types crate"
+            return (
+                home,
+                target_module(path, home, None),
+                f"names {path}; new type goes to the spec's types crate",
+            )
         if crate and crate in cfg["crates"] and crate != "medulla-engine":
             return crate, target_module(path, crate, prefix), f"names {path}"
         if crate and crate not in cfg["crates"]:  # unchanged leaf crate
-            return crate, target_module(path, crate, prefix), f"names {path} (unchanged leaf)"
+            return (
+                crate,
+                target_module(path, crate, prefix),
+                f"names {path} (unchanged leaf)",
+            )
     d = cfg["defaults"].get(spec)
     if d:
         return d[0], f"crates/{d[0]}/{d[1]}", f"spec default {spec}"
@@ -162,7 +191,9 @@ def main():
     ap.add_argument("--census", default=DEFAULT_CENSUS)
     ap.add_argument("--update", action="store_true")
     ap.add_argument("--check", action="store_true")
-    ap.add_argument("--table", action="store_true", help="rewrite the BOUNDARIES.md per-crate table")
+    ap.add_argument(
+        "--table", action="store_true", help="rewrite the BOUNDARIES.md per-crate table"
+    )
     a = ap.parse_args()
     cfg = tomllib.loads((HERE / "boundaries.toml").read_text())
     placement = tomllib.loads((HERE / "placement.toml").read_text())["files"]
@@ -183,13 +214,28 @@ def main():
             unrouted.append(rid)
         else:
             nrows[crate] += 1
-            added[crate] += est["spec_lines_per_row"].get(spec, est["default_lines_per_row"])
-        out.append({"id": rid, "spec": spec, "target_crate": crate,
-                    "target_module": module, "reason": reason})
+            added[crate] += est["spec_lines_per_row"].get(
+                spec, est["default_lines_per_row"]
+            )
+        out.append(
+            {
+                "id": rid,
+                "spec": spec,
+                "target_crate": crate,
+                "target_module": module,
+                "reason": reason,
+            }
+        )
     for rid in missing:
-        out.append({"id": rid, "spec": next(s for s, v in open_ids.items() if rid in v),
-                    "target_crate": None, "target_module": None,
-                    "reason": "row not found in requirements.md"})
+        out.append(
+            {
+                "id": rid,
+                "spec": next(s for s, v in open_ids.items() if rid in v),
+                "target_crate": None,
+                "target_module": None,
+                "reason": "row not found in requirements.md",
+            }
+        )
         unrouted.append(rid)
     with open(HERE / "row_routing.jsonl", "w") as fh:
         for o in sorted(out, key=lambda o: o["id"]):
@@ -202,24 +248,44 @@ def main():
         if proj > budget and c in cfg["crates"]:
             flag = "  OVER"
             over.append(c)
-        print(f"{c:32} current {current[c]:7} rows {nrows[c]:4} projected {proj:7}{flag}")
+        print(
+            f"{c:32} current {current[c]:7} rows {nrows[c]:4} projected {proj:7}{flag}"
+        )
     print(f"rows {len(out)} routed {len(out) - len(unrouted)} unrouted {len(unrouted)}")
     if a.update:
         text = (HERE / "boundaries.toml").read_text()
         for c in cfg["crates"]:
-            pat = re.compile(r"(\[crates\.%s\]\n(?:(?!\n\[).)*?current_lines = )\d+(\nprojected_lines = )\d+" % re.escape(c), re.S)
-            text = pat.sub(lambda m: f"{m.group(1)}{current[c]}{m.group(2)}{current[c] + added[c]}", text)
+            pat = re.compile(
+                r"(\[crates\.%s\]\n(?:(?!\n\[).)*?current_lines = )\d+(\nprojected_lines = )\d+"
+                % re.escape(c),
+                re.S,
+            )
+            text = pat.sub(
+                lambda m: (
+                    f"{m.group(1)}{current[c]}{m.group(2)}{current[c] + added[c]}"
+                ),
+                text,
+            )
         (HERE / "boundaries.toml").write_text(text)
     if a.table:
-        by_spec: dict[str, collections.Counter] = collections.defaultdict(collections.Counter)
+        by_spec: dict[str, collections.Counter] = collections.defaultdict(
+            collections.Counter
+        )
         for o in out:
             if o["target_crate"]:
                 by_spec[o["target_crate"]][o["spec"]] += 1
-        lines = ["| Crate | Level | Responsibility | Current | Projected | Open rows by spec |",
-                 "|---|---|---|---:|---:|---|"]
+        lines = [
+            "| Crate | Level | Responsibility | Current | Projected | Open rows by spec |",
+            "|---|---|---|---:|---:|---|",
+        ]
         for c, spec in cfg["crates"].items():
-            specs = ", ".join(f"{s} {n}" for s, n in sorted(by_spec[c].items(), key=lambda kv: (-kv[1], kv[0])))
-            lines.append(f"| `{c}` | {spec['level']} | {spec['responsibility']} | {current[c]:,} | {current[c] + added[c]:,} | {specs} |")
+            specs = ", ".join(
+                f"{s} {n}"
+                for s, n in sorted(by_spec[c].items(), key=lambda kv: (-kv[1], kv[0]))
+            )
+            lines.append(
+                f"| `{c}` | {spec['level']} | {spec['responsibility']} | {current[c]:,} | {current[c] + added[c]:,} | {specs} |"
+            )
         md = HERE / "BOUNDARIES.md"
         text = md.read_text()
         head = "| Crate | Level | Responsibility | Current | Projected | Open rows by spec |"

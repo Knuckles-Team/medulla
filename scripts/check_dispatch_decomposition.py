@@ -83,9 +83,13 @@ ROUTE_OWNERS = {
     "dispatch_identity_and_access_methods": (
         "crates/medulla-server-router/src/dispatch/router/identity_access.rs"
     ),
-    "dispatch_decision_plane_methods": ("crates/medulla-server-router/src/dispatch/router/decision_plane.rs"),
+    "dispatch_decision_plane_methods": (
+        "crates/medulla-server-router/src/dispatch/router/decision_plane.rs"
+    ),
     "dispatch_decision_methods": "crates/medulla-server-router/src/dispatch/router/decision_plane.rs",
-    "dispatch_catalog_admin_methods": ("crates/medulla-server-router/src/dispatch/router/decision_plane.rs"),
+    "dispatch_catalog_admin_methods": (
+        "crates/medulla-server-router/src/dispatch/router/decision_plane.rs"
+    ),
     "route_change_envelope_ops": "crates/medulla-server-graph/src/dispatch/change_envelope.rs",
     "route_graph_op_method": "crates/medulla-server-graph/src/dispatch/graph_pipeline/native_routes.rs",
     # `dispatch_op_workitem_mutation` was split in two during the decomposition
@@ -109,8 +113,12 @@ ROUTE_CALLERS = {
     "dispatch_channel_methods": "crates/medulla-server-router/src/dispatch/router.rs",
     "dispatch_identity_and_access_methods": "crates/medulla-server-router/src/dispatch/router.rs",
     "dispatch_decision_plane_methods": "crates/medulla-server-router/src/dispatch/router.rs",
-    "dispatch_decision_methods": ("crates/medulla-server-router/src/dispatch/router/decision_plane.rs"),
-    "dispatch_catalog_admin_methods": ("crates/medulla-server-router/src/dispatch/router/decision_plane.rs"),
+    "dispatch_decision_methods": (
+        "crates/medulla-server-router/src/dispatch/router/decision_plane.rs"
+    ),
+    "dispatch_catalog_admin_methods": (
+        "crates/medulla-server-router/src/dispatch/router/decision_plane.rs"
+    ),
     "route_change_envelope_ops": "crates/medulla-server-graph/src/dispatch/graph_pipeline/native_routes.rs",
     "route_graph_op_method": "crates/medulla-server-graph/src/dispatch/graph_pipeline/graph_dispatch.rs",
     "dispatch_op_workitem_claim_capability": (
@@ -269,7 +277,9 @@ def check_post_lock_route_order(native_routes: str) -> None:
 
 
 def check_legacy_coalescer(parts: dict[str, str]) -> None:
-    graph_family = family_source(parts, "crates/medulla-server-graph/src/dispatch/graph_pipeline.rs")
+    graph_family = family_source(
+        parts, "crates/medulla-server-graph/src/dispatch/graph_pipeline.rs"
+    )
     require(
         "try_coalesce_write" not in graph_family,
         "unreachable legacy coalescer fallback returned",
@@ -281,7 +291,9 @@ def check_legacy_coalescer(parts: dict[str, str]) -> None:
         ).production
     gateway = _rust_code_mask(gateway)
     mutation = _rust_comments_mask(
-        read_compiler_family(ROOT / "crates/medulla-server-mutation/src/mutation.rs", ROOT).production
+        read_compiler_family(
+            ROOT / "crates/medulla-server-mutation/src/mutation.rs", ROOT
+        ).production
     )
     routed = mutation.split("pub const GATEWAY_ROUTED: &[&str] = &[", 1)[1].split(
         "\n];", 1
@@ -301,13 +313,17 @@ def check_routing_and_coalescing(parts: dict[str, str]) -> None:
     graph = parts["crates/medulla-server-graph/src/dispatch/graph_pipeline/pipeline.rs"]
     check_route_order(graph)
     check_post_lock_route_order(
-        parts["crates/medulla-server-graph/src/dispatch/graph_pipeline/native_routes.rs"]
+        parts[
+            "crates/medulla-server-graph/src/dispatch/graph_pipeline/native_routes.rs"
+        ]
     )
     check_legacy_coalescer(parts)
 
 
 def check_consensus_exhaustiveness(parts: dict[str, str]) -> None:
-    consensus = parts["crates/medulla-server-consensus/src/dispatch/consensus/routing.rs"]
+    consensus = parts[
+        "crates/medulla-server-consensus/src/dispatch/consensus/routing.rs"
+    ]
     start = consensus.index("fn native_route_target(")
     end = consensus.index("\n}\n", start) + 2
     route = _rust_code_mask(consensus[start:end])

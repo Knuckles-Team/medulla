@@ -445,4 +445,3 @@ mod ca17_feature_stub_contract {
         }
     }
 }
-

@@ -49,7 +49,7 @@ wasm-udf = ["medulla-exec/wasm-udf", "query", "dep:medulla-wasm", "medulla-wasm/
 # inside the `query`-gated `Op` enum, beside the DataFusion FILTER leg). HEAVY-ish (a
 # TLS stack), so it is OFF by default and the facade folds it into node/cluster/full
 # but NEVER `pi` — the Pi contract: a `pi` build links no rustls/ring/ureq.
-federation = ["medulla-exec/federation", 
+federation = ["medulla-exec/federation",
     "query",
     "medulla-types/federation", "medulla-protocol-types/federation",
     "dep:ureq",
@@ -151,7 +151,7 @@ stream = ["medulla-exec/stream", "query", "medulla-stream/stream", "medulla-type
 # cycle. OFF by default; a default/Pi build links no medulla-compute reasoning here and drops
 # the arm.
 # FOLD: opt-in; deliberately NOT added to any facade tier aggregate (node/full/pi).
-probabilistic = ["medulla-exec/probabilistic", 
+probabilistic = ["medulla-exec/probabilistic",
     "query",
     "medulla-types/probabilistic",
     "dep:medulla-compute",
@@ -188,7 +188,7 @@ learned-cost = ["query", "dep:medulla-compute", "medulla-compute/graphlearn", "m
 # dependency-light type dependency below, so `KnowledgeRow::evidence_refs` has the
 # same `Vec<EvidenceLocus>` shape in every build. Without `epistemic`, the vector is
 # empty; with it, malformed or incomplete loci are rejected rather than downgraded.
-epistemic = ["medulla-exec/epistemic", 
+epistemic = ["medulla-exec/epistemic",
     "query",
     "medulla-types/epistemic", "medulla-protocol-types/epistemic",
     "dep:medulla-epistemic", "medulla-uql/epistemic", "medulla-retrieval/epistemic", "medulla-nlq/epistemic"]

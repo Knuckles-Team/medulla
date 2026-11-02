@@ -2095,4 +2095,3 @@ pub mod wired_catalog_tests {
         .is_empty());
     }
 }
-

@@ -168,4 +168,3 @@ pub fn temp_path(prefix: &str, tag: &str) -> std::path::PathBuf {
             .as_nanos()
     ))
 }
-

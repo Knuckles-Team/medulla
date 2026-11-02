@@ -1197,11 +1197,17 @@ def _graph_gateway_sources(declared_paths: set[Path]) -> tuple[str, str]:
 def mutation_inventory_sources() -> dict[str, str]:
     """Load the complete live source set consumed by the inventory proof."""
 
-    mutation_runtime = read_compiler_family("crates/medulla-server-mutation/src/mutation.rs")
-    mutation_batch = read_compiler_family("crates/medulla-server-mutation/src/mutation_batch.rs")
+    mutation_runtime = read_compiler_family(
+        "crates/medulla-server-mutation/src/mutation.rs"
+    )
+    mutation_batch = read_compiler_family(
+        "crates/medulla-server-mutation/src/mutation_batch.rs"
+    )
     graph_ops = read_compiler_family("crates/medulla-h-graph/src/graph_ops.rs")
     graph_gateway, graph_gateway_routes = _graph_gateway_sources(
-        read_module_paths("crates/medulla-h-graph/src/graph_ops.rs", include_tests=False)
+        read_module_paths(
+            "crates/medulla-h-graph/src/graph_ops.rs", include_tests=False
+        )
     )
     dispatch = read_compiler_family("crates/medulla-server-router/src/dispatch.rs")
     raft = read_compiler_family("crates/medulla-raft/src/raft/mod.rs")
@@ -1216,7 +1222,9 @@ def mutation_inventory_sources() -> dict[str, str]:
         "consistency": read_module_tree(
             "crates/medulla-capabilities/tests/consistency.rs", include_tests=True
         ),
-        "mutation_apply": read_module_tree("crates/medulla-server-api/src/mutation_apply.rs"),
+        "mutation_apply": read_module_tree(
+            "crates/medulla-server-api/src/mutation_apply.rs"
+        ),
         # Hoisted 2026-08-25 (3810eb00, "Hoist durable-mutation classify/apply +
         # single-writer guard into medulla-core"): the base graph-mutation set and the
         # `broker` family moved out of crates/medulla-server-api/src/mutation_apply.rs into
@@ -1254,7 +1262,9 @@ def mutation_inventory_sources() -> dict[str, str]:
         "sparql_execution": dispatch.production,
         "raft": raft.production,
         "raft_tests": raft.with_tests,
-        "sparql_http": read_module_tree("crates/medulla-server-blob/src/sparql_http.rs"),
+        "sparql_http": read_module_tree(
+            "crates/medulla-server-blob/src/sparql_http.rs"
+        ),
         "ros2_bridge": read("crates/medulla-wire-msg/src/ros2_bridge.rs"),
         "blob_store": blob_store.production,
         "blob_store_tests": blob_store.with_tests,

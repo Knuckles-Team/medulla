@@ -98,4 +98,3 @@ pub use statistical::{
     ScoredOption, ShortlistProvenance, StatisticalDecisionRecord, StatisticalInputs,
     StatisticalOutcome, StatisticalQuestion, TypedParam, TypedValue,
 };
-

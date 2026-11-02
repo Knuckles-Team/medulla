@@ -118,4 +118,3 @@ pub fn parse_series_expr(src: &str) -> Result<medulla_types::series_expr::Series
 pub fn parse(src: &str) -> Result<Plan, UqlError> {
     parse_with(src, &Params::new())
 }
-

@@ -129,4 +129,3 @@ pub fn property_f64(props: &serde_json::Map<String, serde_json::Value>, key: &st
         .and_then(serde_json::Value::as_f64)
         .unwrap_or(0.0)
 }
-

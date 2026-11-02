@@ -71,7 +71,3 @@ pub mod update;
 /// `medulla-geo` crate. Behind `geosparql` (implies `sparql` + pulls `medulla-geo`); OUT of `pi`.
 #[cfg(feature = "geosparql")]
 pub mod geosparql;
-
-
-
-

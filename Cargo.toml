@@ -350,7 +350,7 @@ alignment = ["medulla-server/alignment", "medulla-h-query/alignment", "medulla-h
 # `medulla-types/jobs` and `medulla-capabilities/jobs` wire/policy features (kept in LOCKSTEP —
 # see both crates' own docs on why `medulla-types/jobs` can never be forced on
 # unconditionally by `medulla-capabilities`). Included in the one main `full` build.
-jobs = ["medulla-server-store-tests/jobs", "medulla-server-served-tests/jobs", "medulla-server-consensus/jobs", "medulla-server/jobs", "medulla-server-router/jobs", "medulla-wire/jobs", "medulla-h-admin/jobs", "medulla-h-query/jobs", "medulla-h-jobs/jobs", "medulla-raft/jobs", "medulla-persistence/jobs", "medulla-server-api/jobs", "medulla-server-mutation/jobs", "medulla-server-ops/jobs", 
+jobs = ["medulla-server-store-tests/jobs", "medulla-server-served-tests/jobs", "medulla-server-consensus/jobs", "medulla-server/jobs", "medulla-server-router/jobs", "medulla-wire/jobs", "medulla-h-admin/jobs", "medulla-h-query/jobs", "medulla-h-jobs/jobs", "medulla-raft/jobs", "medulla-persistence/jobs", "medulla-server-api/jobs", "medulla-server-mutation/jobs", "medulla-server-ops/jobs",
     "server", "mining", "epistemic",
     "dep:medulla-jobs", "medulla-types/jobs", "medulla-agent-types/jobs", "medulla-work-types/jobs", "medulla-protocol-types/jobs", "medulla-capabilities/jobs"]
 # CONCEPT:INT-P2-2 -- the native finite-state-machine / statechart engine:
@@ -362,7 +362,7 @@ jobs = ["medulla-server-store-tests/jobs", "medulla-server-served-tests/jobs", "
 # LOCKSTEP, exactly like `jobs`). Unlike `jobs` it needs neither `mining` nor `epistemic`
 # -- phase-1 does not reuse a compute kernel or write claims. Included in the main `full`
 # build.
-statechart = ["medulla-work-store/statechart", "medulla-store-apply/statechart", "medulla-server/statechart", "medulla-server-router/statechart", "medulla-wire/statechart", "medulla-h-query/statechart", "medulla-h-jobs/statechart", "medulla-raft/statechart", "medulla-persistence/statechart", "medulla-server-api/statechart", "medulla-store/statechart", 
+statechart = ["medulla-work-store/statechart", "medulla-store-apply/statechart", "medulla-server/statechart", "medulla-server-router/statechart", "medulla-wire/statechart", "medulla-h-query/statechart", "medulla-h-jobs/statechart", "medulla-raft/statechart", "medulla-persistence/statechart", "medulla-server-api/statechart", "medulla-store/statechart",
     "server",
     "dep:medulla-statechart", "medulla-types/statechart", "medulla-protocol-types/statechart", "medulla-capabilities/statechart"]
 # Graph-native, provider-neutral LM programs and governed self-improvement. This
@@ -415,7 +415,7 @@ viz-gpu-export = ["viz"]
 # `cargo tree` (no ort/espeak-rs-sys hit without `--features tts-piper`). This feature
 # exposes only the internal provider library. No public synthesis method is served
 # until the accepted CAS-backed job/consent contract exists.
-tts-piper = ["medulla-h-ingest/tts-piper", 
+tts-piper = ["medulla-h-ingest/tts-piper",
     "dep:medulla-tts-piper", "dep:medulla-audio", "medulla-audio/tts"]
 # D-VZ-1 lane V1: the ColumnStore (canonical columns, zone maps, content-addressed
 # chunks, validity bitmaps, dictionary categoricals) implementing `medulla-viz-core`'s
@@ -629,7 +629,7 @@ tsdb = ["medulla-store-apply/tsdb", "medulla-server/tsdb", "medulla-wire/tsdb", 
 # `blob` (the CAS). Pulls the maintained Polars Parquet codec (+ `arrow`, which is
 # already in the tree via `query`) for columnar segment encode. The complete
 # observability surface is included in the one main build.
-obs = ["medulla-server/obs", "medulla-server-router/obs", "medulla-server-obs/obs", "medulla-wire/obs", "medulla-h-query/obs", "medulla-server-api/obs", 
+obs = ["medulla-server/obs", "medulla-server-router/obs", "medulla-server-obs/obs", "medulla-wire/obs", "medulla-h-query/obs", "medulla-server-api/obs",
     "server",
     "tsdb",
     "text",
@@ -716,7 +716,7 @@ result-cache = ["medulla-server/result-cache", "medulla-wire/result-cache", "med
 # CDC delta source) — ALL THREE already in the single-node `full` build. It no longer
 # implies `compute-dist`/`raft`, so PLAN-BACKED incremental matviews are native to the
 # single-node main build; only the UNRELATED algo-only Pregel matview stays cluster-gated.
-matview = ["medulla-server-served-tests/matview", "medulla-store-apply/matview", "medulla-server/matview", "medulla-server-graph/matview", "medulla-h-admin/matview", "medulla-h-txn/matview", "medulla-raft/matview", "medulla-persistence/matview", "medulla-server-api/matview", "medulla-store/matview", 
+matview = ["medulla-server-served-tests/matview", "medulla-store-apply/matview", "medulla-server/matview", "medulla-server-graph/matview", "medulla-h-admin/matview", "medulla-h-txn/matview", "medulla-raft/matview", "medulla-persistence/matview", "medulla-server-api/matview", "medulla-store/matview",
     "query",
     "result-cache",
     "streaming",
@@ -849,7 +849,7 @@ harness = ["medulla-server-cluster-tests/harness", "medulla-raft-xshard/harness"
 # (`WireProtocol`/`WireSession`) — is compiled by every `query` + `server` build, because
 # the native `Method::Sql` catalog path shares its authorization and replay-receipt
 # authority. It has no feature of its own; each SQL adapter names `query` + `server`.
-pgwire = ["medulla-wire/pgwire", "medulla-wire-core/pgwire", "medulla-h-txn/pgwire", "medulla-raft/pgwire", 
+pgwire = ["medulla-wire/pgwire", "medulla-wire-core/pgwire", "medulla-h-txn/pgwire", "medulla-raft/pgwire",
     "dep:pgwire",
     "dep:futures",
     "dep:rustix",
@@ -1428,7 +1428,7 @@ quantum-jobs-federation = ["quantum-jobs", "federation", "medulla-quantum-jobs/f
 # exactly like `jobs`/`statechart`). This is the ONE feature that makes the quantum
 # surface reachable from graph-os/agent-utilities at all -- `quantum`/`quantum-sim`
 # alone remain Rust-internal, no wire protocol Method, no KG concept mapping.
-quantum-agent-api = ["medulla-server/quantum-agent-api", "medulla-server-router/quantum-agent-api", "medulla-wire/quantum-agent-api", "medulla-h-query/quantum-agent-api", "medulla-h-jobs/quantum-agent-api", "medulla-h-compute/quantum-agent-api", 
+quantum-agent-api = ["medulla-server/quantum-agent-api", "medulla-server-router/quantum-agent-api", "medulla-wire/quantum-agent-api", "medulla-h-query/quantum-agent-api", "medulla-h-jobs/quantum-agent-api", "medulla-h-compute/quantum-agent-api",
     "medulla-raft/quantum-agent-api", "medulla-persistence/quantum-agent-api", "medulla-server-api/quantum-agent-api", "quantum-sim", "server", "medulla-types/quantum", "medulla-capabilities/quantum", "medulla-protocol-types/quantum"]
 
 [dependencies]

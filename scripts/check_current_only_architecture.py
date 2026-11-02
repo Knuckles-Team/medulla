@@ -134,7 +134,9 @@ def tree(relative: str) -> str:
 def protocol_source() -> str:
     """The complete compiler-declared protocol family (production view)."""
 
-    return read_compiler_family("crates/medulla-protocol-types/src/protocol.rs", ROOT).production
+    return read_compiler_family(
+        "crates/medulla-protocol-types/src/protocol.rs", ROOT
+    ).production
 
 
 def rdf_update_source() -> str:
@@ -146,7 +148,9 @@ def rdf_update_source() -> str:
 def raft_store_source() -> str:
     """The complete compiler-declared Raft storage family."""
 
-    return read_compiler_family("crates/medulla-raft/src/raft/store.rs", ROOT).production
+    return read_compiler_family(
+        "crates/medulla-raft/src/raft/store.rs", ROOT
+    ).production
 
 
 # --------------------------------------------------------------------------
@@ -531,11 +535,13 @@ def main() -> None:
         read("src/main.rs") + "\n" + read("tests/external_compute_e2e.rs"),
     )
     check_graph_fencing(
-        tree("crates/medulla-graph-core/src/graph.rs"), tree("crates/medulla-server-mutation/src/mutation.rs")
+        tree("crates/medulla-graph-core/src/graph.rs"),
+        tree("crates/medulla-server-mutation/src/mutation.rs"),
     )
     check_method_policies(load_capability_sources(ROOT))
     check_read_authority(
-        read("crates/medulla-raft-xshard/src/pregel.rs"), tree("crates/medulla-h-retrieve/src/secondary_indexes.rs")
+        read("crates/medulla-raft-xshard/src/pregel.rs"),
+        tree("crates/medulla-h-retrieve/src/secondary_indexes.rs"),
     )
     check_rdf(
         read("crates/medulla-shacl/src/policy.rs"),

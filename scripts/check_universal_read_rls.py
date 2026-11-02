@@ -29,7 +29,9 @@ def read(relative: str) -> str:
 def protocol_source() -> str:
     """Read the complete compiler-declared production protocol family."""
 
-    return read_compiler_family("crates/medulla-protocol-types/src/protocol.rs", ROOT).production
+    return read_compiler_family(
+        "crates/medulla-protocol-types/src/protocol.rs", ROOT
+    ).production
 
 
 def rdf_handler_source() -> str:
@@ -250,10 +252,16 @@ def main() -> None:
     policies = capability_inventory()
     methods, reads = require_protocol_inventory(protocol, policies)
 
-    access = read_module_tree("crates/medulla-server-auth/src/access.rs", root_dir=ROOT, include_tests=True)
+    access = read_module_tree(
+        "crates/medulla-server-auth/src/access.rs", root_dir=ROOT, include_tests=True
+    )
     isolation, can_see_row = isolation_source()
-    dispatch = read_module_tree("crates/medulla-server-router/src/dispatch.rs", root_dir=ROOT)
-    graph_ops = read_module_tree("crates/medulla-h-graph/src/graph_ops.rs", root_dir=ROOT)
+    dispatch = read_module_tree(
+        "crates/medulla-server-router/src/dispatch.rs", root_dir=ROOT
+    )
+    graph_ops = read_module_tree(
+        "crates/medulla-h-graph/src/graph_ops.rs", root_dir=ROOT
+    )
     knowledge = knowledge_stream_handler_source()
     query = read_module_tree("crates/medulla-h-query/src/query.rs", root_dir=ROOT)
     rdf = rdf_handler_source()
@@ -265,7 +273,10 @@ def main() -> None:
     # authority-context sibling after nonce extraction; include both halves
     # of the compiler-owned authority seam.
     auth = "\n".join(
-        (read("crates/medulla-server-auth/src/auth.rs"), read("crates/medulla-server-api/src/authority_context.rs"))
+        (
+            read("crates/medulla-server-auth/src/auth.rs"),
+            read("crates/medulla-server-api/src/authority_context.rs"),
+        )
     )
     jobs = read_module_tree("crates/medulla-h-jobs/src/jobs.rs", root_dir=ROOT)
     blob_handler = read("crates/medulla-h-ingest/src/blob.rs")
@@ -274,7 +285,9 @@ def main() -> None:
     # (PB4, blob CAS hardening): walk the declared tree, as `jobs` already does
     # above, so the owner-scope field the split moved into `store/manifest.rs`
     # is still seen.
-    blob_store = read_module_tree("crates/medulla-server-blob/src/blob/store.rs", root_dir=ROOT)
+    blob_store = read_module_tree(
+        "crates/medulla-server-blob/src/blob/store.rs", root_dir=ROOT
+    )
     kv = read_module_tree("crates/medulla-server-blob/src/kv.rs", root_dir=ROOT)
     channels = read("crates/medulla-kernel/src/channels.rs")
     sqlite_file = read("crates/medulla-h-txn/src/sqlite_file.rs")
@@ -294,7 +307,9 @@ def main() -> None:
     s3_http = read("crates/medulla-wire-msg/src/s3/mod.rs")
     kvcache_http = read("crates/medulla-wire-msg/src/kvcache_http/mod.rs")
     federation_http = read("crates/medulla-h-sparql/src/federation/mod.rs")
-    lake_http = read_module_tree("crates/medulla-server-lake/src/lake/rest/mod.rs", root_dir=ROOT)
+    lake_http = read_module_tree(
+        "crates/medulla-server-lake/src/lake/rest/mod.rs", root_dir=ROOT
+    )
     main_rs = read("src/main.rs")
 
     def require_tokens(

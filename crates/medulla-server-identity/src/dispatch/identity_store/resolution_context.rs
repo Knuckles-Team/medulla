@@ -174,4 +174,3 @@ pub fn compose_resolution(
     validate_policy(&claims, policy)?;
     Ok(resolution.with_request_context(claims))
 }
-

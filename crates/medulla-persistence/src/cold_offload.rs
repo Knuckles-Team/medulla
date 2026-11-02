@@ -633,4 +633,3 @@ pub async fn test_redb_state(
         Arc::new(RedbBackend::open(dir_s.to_string(), page_size).expect("open"));
     test_state_with_backend(secret, dir_s, backend, isolation).await
 }
-

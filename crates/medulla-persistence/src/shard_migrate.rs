@@ -625,4 +625,3 @@ pub enum MigrationFault {
     AfterOldMove(usize),
     AfterInstall(usize),
 }
-

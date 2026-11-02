@@ -790,4 +790,3 @@ pub fn rehydrate_core_from_dump(core: &GraphCore, dump: &GraphDump) -> Result<()
     }
     Ok(())
 }
-

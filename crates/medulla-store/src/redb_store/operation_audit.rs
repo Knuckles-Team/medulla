@@ -363,4 +363,3 @@ pub fn operation_audit_read(
         ..proof
     })
 }
-

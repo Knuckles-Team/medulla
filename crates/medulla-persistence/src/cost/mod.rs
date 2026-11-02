@@ -619,4 +619,3 @@ pub fn capacity_estimate(
         recommended_shards,
     }
 }
-

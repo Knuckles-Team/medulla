@@ -403,4 +403,3 @@ pub fn query_digest(query: &str) -> String {
         hex::encode(Sha256::digest(query.trim().as_bytes()))
     )
 }
-

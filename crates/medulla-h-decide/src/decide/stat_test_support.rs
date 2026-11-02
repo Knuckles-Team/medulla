@@ -213,4 +213,3 @@ pub fn request(
         belief_as_of: BoundedVec::default(),
     }
 }
-

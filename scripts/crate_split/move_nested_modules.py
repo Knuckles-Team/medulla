@@ -21,6 +21,7 @@ VIOLATION and stops the move (`--plan` prints them).
     move_nested_modules.py --from medulla-decision-types --to medulla-decision-outcome-types \
         --chain medulla-decision-types,medulla-decision-outcome-types [--root R] [--plan]
 """
+
 from __future__ import annotations
 
 import argparse
@@ -55,7 +56,7 @@ def units_of(root: Path, frm: str, to: str) -> list[tuple[str, ...]]:
     out = []
     for mv in cfg["crates"][to].get("moves", []):
         if mv.startswith(pre):
-            out.append(tuple(mv[len(pre):].removesuffix(".rs").split("/")))
+            out.append(tuple(mv[len(pre) :].removesuffix(".rs").split("/")))
     return sorted(out)
 
 
@@ -106,7 +107,9 @@ def resolve(segs: list[str], base: list[str], frm_s: str):
 
 
 def all_files(root: Path) -> list[Path]:
-    rel = subprocess.run(["git", "ls-files", "*.rs"], cwd=root, capture_output=True, text=True).stdout.split()
+    rel = subprocess.run(
+        ["git", "ls-files", "*.rs"], cwd=root, capture_output=True, text=True
+    ).stdout.split()
     return [root / r for r in rel]
 
 
@@ -128,9 +131,13 @@ def build(root: Path, frm: str, to: str, chain: list[str]):
                 continue
             dst_moving = under(r[1], units)
             if dst_moving and not moving_file and rank[frm] < rank[to]:
-                violations.append(f"VIOLATION: {'::'.join(mp)} stays in {frm} but needs moving {'::'.join(r[1])}")
+                violations.append(
+                    f"VIOLATION: {'::'.join(mp)} stays in {frm} but needs moving {'::'.join(r[1])}"
+                )
             if not dst_moving and moving_file and rank[to] < rank[frm]:
-                violations.append(f"VIOLATION: {'::'.join(mp)} moves to {to} but needs staying {'::'.join(r[1])}")
+                violations.append(
+                    f"VIOLATION: {'::'.join(mp)} moves to {to} but needs staying {'::'.join(r[1])}"
+                )
         if f.name == "lib.rs" and not mp:
             pass
     return units, sorted(set(violations))
@@ -152,7 +159,7 @@ class Mapper:
         for k in range(len(absp)):
             hit = self.aliases.get(tuple(absp[: k + 1]))
             if hit:
-                absp = list(hit) + absp[k + 1:]
+                absp = list(hit) + absp[k + 1 :]
                 expanded = True
                 break
         mv = under(absp, self.units)
@@ -216,15 +223,26 @@ class Mapper:
         return text
 
 
-def strip_aliases(root: Path, frm: str, units) -> dict[tuple[str, ...], tuple[str, ...]]:
+def strip_aliases(
+    root: Path, frm: str, units
+) -> dict[tuple[str, ...], tuple[str, ...]]:
     """`pub use <moved child>::{A, B}` in a staying parent module re-exports moved items under the old path.
 
     Hard cutover: the statement is removed and each alias becomes an expansion rule for callers."""
     src = root / "crates" / frm / "src"
     out: dict[tuple[str, ...], tuple[str, ...]] = {}
     for parent in sorted({u[:-1] for u in units}):
-        pf = src / "lib.rs" if not parent else next(
-            p for p in (src / Path(*parent).with_suffix(".rs"), src / Path(*parent) / "mod.rs") if p.exists()
+        pf = (
+            src / "lib.rs"
+            if not parent
+            else next(
+                p
+                for p in (
+                    src / Path(*parent).with_suffix(".rs"),
+                    src / Path(*parent) / "mod.rs",
+                )
+                if p.exists()
+            )
         )
         text = pf.read_text()
         code = blank_non_code(text)
@@ -232,13 +250,21 @@ def strip_aliases(root: Path, frm: str, units) -> dict[tuple[str, ...], tuple[st
         for s, e, indent, body in find_use_statements(code):
             leaves = parse_use_tree(body)
             heads = [tuple(parent) + (l[0][0],) for l in leaves if l[0]]
-            if leaves and all(h in units for h in heads) and text[s:e].lstrip().startswith("pub"):
+            if (
+                leaves
+                and all(h in units for h in heads)
+                and text[s:e].lstrip().startswith("pub")
+            ):
                 for segs, _l, alias in leaves:
-                    out[tuple(parent) + ((alias or segs[-1]),)] = tuple(parent) + tuple(segs)
+                    out[tuple(parent) + ((alias or segs[-1]),)] = tuple(parent) + tuple(
+                        segs
+                    )
                 a0 = s
                 while True:  # preceding single-line attributes
                     prev = text.rfind("\n", 0, a0 - 1) + 1
-                    if text[prev:a0].strip().startswith("#[") and text[prev:a0].strip().endswith("]"):
+                    if text[prev:a0].strip().startswith("#[") and text[
+                        prev:a0
+                    ].strip().endswith("]"):
                         a0 = prev
                     else:
                         break
@@ -278,10 +304,21 @@ def main() -> int:
             if cand.exists():
                 dest = src_to / cand.relative_to(src)
                 dest.parent.mkdir(parents=True, exist_ok=True)
-                subprocess.run(["git", "mv", str(cand), str(dest)], check=True, cwd=root)
+                subprocess.run(
+                    ["git", "mv", str(cand), str(dest)], check=True, cwd=root
+                )
         parent = u[:-1]
-        pf = src / "lib.rs" if not parent else next(
-            p for p in (src / Path(*parent).with_suffix(".rs"), src / Path(*parent) / "mod.rs") if p.exists()
+        pf = (
+            src / "lib.rs"
+            if not parent
+            else next(
+                p
+                for p in (
+                    src / Path(*parent).with_suffix(".rs"),
+                    src / Path(*parent) / "mod.rs",
+                )
+                if p.exists()
+            )
         )
         chunks = parse_lib(pf.read_text())
         kept = []
@@ -302,14 +339,19 @@ def main() -> int:
             body.append("\n".join(ls))
         if not parent:
             lib = src_to / "lib.rs"
-            lib.write_text(lib.read_text().rstrip("\n") + "\n\n" + "\n".join(body) + "\n")
+            lib.write_text(
+                lib.read_text().rstrip("\n") + "\n\n" + "\n".join(body) + "\n"
+            )
         else:
             pf = src_to / Path(*parent).with_suffix(".rs")
             head = f"//! Modules moved here from `{snake(frm)}::{'::'.join(parent)}` (hard cutover, no re-exports).\n\n"
             pf.write_text(head + "\n".join(body) + "\n")
             lib = src_to / "lib.rs"
             if f"mod {parent[0]};" not in lib.read_text():
-                lib.write_text(lib.read_text().rstrip("\n") + f"\n\n{ALLOW}\npub mod {parent[0]};\n")
+                lib.write_text(
+                    lib.read_text().rstrip("\n")
+                    + f"\n\n{ALLOW}\npub mod {parent[0]};\n"
+                )
     # 3. rewrite every Rust file
     mp = Mapper(frm, to, units, aliases)
     changed_users: dict[Path, str] = {}
@@ -325,7 +367,12 @@ def main() -> int:
             ctx, path = "other", []
             if snake(frm) not in text:
                 continue
-        if ctx == "staying" and not under(path, units) and "crate::" not in text and "super::" not in text:
+        if (
+            ctx == "staying"
+            and not under(path, units)
+            and "crate::" not in text
+            and "super::" not in text
+        ):
             continue
         new = mp.rewrite(text, path, ctx)
         if new != text:
@@ -341,7 +388,11 @@ def main() -> int:
         if has_dep(t, to):
             continue
         rel = Path(__import__("os").path.relpath(root / "crates" / to, m_path.parent))
-        t = add_line(t, "dependencies" if kind == "dep" else "dev-dependencies", f'{to} = {{ path = "{rel}" }}')
+        t = add_line(
+            t,
+            "dependencies" if kind == "dep" else "dev-dependencies",
+            f'{to} = {{ path = "{rel}" }}',
+        )
         m_path.write_text(t)
     forward_features(root, frm, to, set(changed_users) | {root / "Cargo.toml"})
     print(f"moved {len(units)} units to {to}; users: {len(changed_users)} manifests")
