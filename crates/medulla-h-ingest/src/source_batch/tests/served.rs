@@ -216,10 +216,12 @@ async fn clustered_placement_refuses_source_batch_before_publication() {
     let response = served
         .send(served.signed(attempt, served.fixture.request(WRITER)))
         .await;
-    assert_eq!(
-        refusal(&response),
-        medulla_server_mutation::mutation::LOCAL_ONLY_CLUSTER_REFUSAL
-    );
+    // The served response splits the typed refusal into its code and detail.
+    let (code, detail) = medulla_server_mutation::mutation::LOCAL_ONLY_CLUSTER_REFUSAL
+        .split_once(": ")
+        .unwrap();
+    assert_eq!(response.error.as_deref(), Some(code));
+    assert_eq!(refusal(&response), detail);
     assert_eq!(served.rows(), 0);
     multi.shutdown().await;
 }
