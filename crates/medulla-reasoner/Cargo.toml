@@ -41,3 +41,7 @@ sparql-star = ["medulla-rdf/sparql-star", "rdf"]
 [dev-dependencies]
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
 medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
+
+# Test-only opt-in cfg (not a feature, so `--all-features` never turns it on).
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(medulla_gpu_device_tests)"] }
