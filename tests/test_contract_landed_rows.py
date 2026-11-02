@@ -63,10 +63,13 @@ def test_constrained_gate_build_step_is_not_cpu_restricted() -> None:
 def test_wire_method_features_move_in_lockstep_with_the_facade() -> None:
     caps = tomllib.loads((ROOT / "crates/medulla-capabilities/Cargo.toml").read_text())
     root = tomllib.loads((ROOT / "Cargo.toml").read_text())["features"]
+    # `Method` lives in medulla-protocol-types, whose wire-gating features
+    # mirror medulla-types' own, so a Method-gating feature is mirrored on both.
     mirrored = {
         name: values
         for name, values in caps["features"].items()
-        if values == [f"medulla-types/{name}"]
+        if f"medulla-types/{name}" in values
+        and f"medulla-protocol-types/{name}" in values
     }
     assert mirrored, (
         "medulla-capabilities must mirror Method-gating medulla-types features"
@@ -81,6 +84,7 @@ def test_wire_method_features_move_in_lockstep_with_the_facade() -> None:
         for key in facades:
             enabled = {v.replace("?", "") for v in root[key]}
             assert f"medulla-types/{name}" in enabled, (key, name)
+            assert f"medulla-protocol-types/{name}" in enabled, (key, name)
 
 
 @pytest.mark.spec("MEDULLA-CONTRACT-R039")

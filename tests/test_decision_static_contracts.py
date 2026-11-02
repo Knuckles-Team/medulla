@@ -10,7 +10,10 @@ import pytest
 
 pytestmark = pytest.mark.no_engine
 ROOT = Path(__file__).resolve().parents[1]
-CANONICAL = "crates/medulla-types/src/solve/"
+CANONICAL = (
+    "crates/medulla-decision-types/src/solve/",
+    "crates/medulla-types/src/solve_scalar.rs",
+)
 DECLARATION = re.compile(
     r"^\s*(?:pub(?:\([^)]*\))?\s+)?(?:struct|enum|type)\s+(\w+)", re.M
 )
@@ -18,13 +21,13 @@ DECLARATION = re.compile(
 # assembly model-profile fixtures, epistemic/RDF proofs, and mining selectors.
 # Each exact file may define its homonym once; a second is still a violation.
 HOMONYMS = {
-    ("Relation", "src/server/sql_catalog_acl/relations.rs"),
+    ("Relation", "crates/medulla-server-auth/src/sql_catalog_acl/relations.rs"),
     ("ModelSpec", "crates/medulla-types/src/wire_pipeline.rs"),
     ("ModelSpec", "crates/medulla-compute/src/assemble/tests/fixture.rs"),
     ("ProofNode", "crates/medulla-epistemic/src/model.rs"),
-    ("ProofNode", "crates/medulla-rdf/src/owl.rs"),
+    ("ProofNode", "crates/medulla-reasoner/src/owl.rs"),
     *(
-        ("Algorithm", f"crates/medulla-compute/src/mining/{name}.rs")
+        ("Algorithm", f"crates/medulla-mining/src/mining/{name}.rs")
         for name in (
             "association",
             "forecast",
@@ -34,9 +37,9 @@ HOMONYMS = {
             "reduce",
             "cluster",
             "sequence",
-            "community",
         )
     ),
+    ("Algorithm", "crates/medulla-graph-algos/src/community.rs"),
 }
 
 
@@ -101,7 +104,10 @@ def test_solve_dtos_have_no_second_definition() -> None:
 def test_duplicate_scan_refuses_added_definitions(declaration: str) -> None:
     sources = {
         str(path.relative_to(ROOT)): path.read_text(encoding="utf-8")
-        for path in (ROOT / CANONICAL).glob("*.rs")
+        for path in [
+            *(ROOT / CANONICAL[0]).glob("*.rs"),
+            ROOT / CANONICAL[1],
+        ]
     }
     sources["crates/other/src/renamed.rs"] = declaration
     assert _duplicate_dtos(sources)
@@ -131,14 +137,14 @@ def _assert_kind_closure(component: str, slots: str) -> None:
 
 
 def _kind_sources() -> tuple[str, str]:
-    component = (ROOT / "crates/medulla-types/src/agent_component.rs").read_text(
+    component = (ROOT / "crates/medulla-agent-types/src/agent_component.rs").read_text(
         encoding="utf-8"
     )
     paths = [
-        ROOT / "crates/medulla-types/src/agent_library.rs",
-        ROOT / "crates/medulla-types/src/agent_graph.rs",
+        ROOT / "crates/medulla-agent-types/src/agent_library.rs",
+        ROOT / "crates/medulla-agent-types/src/agent_graph.rs",
     ]
-    paths.extend((ROOT / "crates/medulla-types/src/agent_graph").rglob("*.rs"))
+    paths.extend((ROOT / "crates/medulla-agent-types/src/agent_graph").rglob("*.rs"))
     return component, "\n".join(path.read_text(encoding="utf-8") for path in paths)
 
 

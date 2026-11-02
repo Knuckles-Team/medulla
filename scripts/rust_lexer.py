@@ -557,10 +557,16 @@ def _cfg_not(values: list[bool | None]) -> bool | None:
 _CFG_EVALUATORS = {"all": _cfg_all, "any": _cfg_any, "not": _cfg_not}
 
 
+# `cfg(test)` and the `test-support` feature are never part of a production build:
+# the split lets dependent crates' tests reach test helpers through `test-support`,
+# and the release feature resolution proves no shipped crate enables it.
+NON_PRODUCTION_CFG_ATOMS = frozenset({"test", 'feature="test-support"'})
+
+
 def _evaluate_cfg(tree: tuple, values: dict[str, bool]) -> bool | None:
     kind, payload = tree
     if kind == "atom":
-        return False if payload == "test" else values.get(payload)
+        return False if payload in NON_PRODUCTION_CFG_ATOMS else values.get(payload)
     evaluated = [_evaluate_cfg(child, values) for child in payload]
     return _CFG_EVALUATORS[kind](evaluated)
 

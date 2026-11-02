@@ -100,7 +100,7 @@ def fake_cargo(tmp_path):
     return run
 
 
-FACADE = ("cargo", "test", "-p", "medulla", "--features", "full")
+FACADE = ("cargo", "test", "-p", "medulla-engine", "--features", "full")
 
 
 def test_green_run_costs_nothing_extra(fake_cargo):
@@ -151,7 +151,7 @@ def test_filters_and_libtest_flags_carry_over_to_nextest():
         "--features",
         "full",
         "-p",
-        "medulla",
+        "medulla-engine",
         "--lib",
         "--run-ignored",
         "only",
@@ -166,7 +166,7 @@ def test_filters_and_libtest_flags_carry_over_to_nextest():
             "test",
             "--locked",
             "-p",
-            "medulla",
+            "medulla-engine",
             "--features",
             "cluster,harness,calvin",
             "--lib",

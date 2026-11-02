@@ -229,7 +229,7 @@ def test_real_tree_dispatcher_with_a_trailing_catch_all_is_not_exempt():
     `other => Err(other)` arm were missed.
     """
     module = _module()
-    path = ROOT / "src" / "server" / "handlers" / "streaming.rs"
+    path = ROOT / "crates" / "medulla-h-query" / "src" / "streaming.rs"
     line = _function_line(path, "try_handle")
     source = path.read_text(encoding="utf-8")
 
@@ -244,7 +244,7 @@ def test_real_tree_dispatcher_with_a_trailing_catch_all_is_not_exempt():
 def test_real_tree_exhaustive_dispatcher_is_exempt():
     """`wire/mod.rs::dispatch_kind`: cyclomatic 32, cognitive 1, no catch-all."""
     module = _module()
-    path = ROOT / "src" / "server" / "wire" / "mod.rs"
+    path = ROOT / "crates" / "medulla-wire-core" / "src" / "wire" / "mod.rs"
     line = _function_line(path, "dispatch_kind")
     source = path.read_text(encoding="utf-8")
 
@@ -323,11 +323,11 @@ def test_a_fallback_the_full_build_may_compile_is_still_a_catch_all(attribute):
 
 
 def test_real_tree_feature_gated_dispatcher_is_measured_as_the_full_build():
-    """`medulla-plan exec::dispatch::apply`: cccc cyclomatic 11 including a
+    """`medulla-exec exec::dispatch::apply`: cccc cyclomatic 11 including a
     `#[cfg(not(all(..)))] _` fallback the full build does not compile. With an
     extra unconditional arm planted, it fails again."""
     module = _module()
-    path = ROOT / "crates" / "medulla-plan" / "src" / "exec" / "dispatch.rs"
+    path = ROOT / "crates" / "medulla-exec" / "src" / "exec" / "dispatch.rs"
     line = _function_line(path, "apply")
     source = path.read_text(encoding="utf-8")
     shape = module.dispatch_shape(source, line)

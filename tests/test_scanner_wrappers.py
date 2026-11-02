@@ -433,7 +433,9 @@ def test_complexity_terms_keeps_accepted_dispatch_visible_and_zero_gate_passes(
 ):
     terms = load_script("report_complexity_terms")
     report = tmp_path / "cccc.json"
-    source_lines = (ROOT / "src/server/wire/mod.rs").read_text().splitlines()
+    source_lines = (
+        (ROOT / "crates/medulla-wire-core/src/wire/mod.rs").read_text().splitlines()
+    )
     line = next(
         index
         for index, text in enumerate(source_lines, 1)
@@ -459,7 +461,7 @@ def test_complexity_terms_keeps_accepted_dispatch_visible_and_zero_gate_passes(
             {
                 "files": [
                     _native_file(
-                        "src/server/wire/mod.rs",
+                        "crates/medulla-wire-core/src/wire/mod.rs",
                         functions=functions,
                         cognitive=1,
                         cyclomatic=cyclomatic,

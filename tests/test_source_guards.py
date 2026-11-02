@@ -26,10 +26,15 @@ import unittest
 from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parent.parent
-_QUERY_HANDLER = _ROOT / "src" / "server" / "handlers" / "query.rs"
-_RDF_HANDLER = _ROOT / "src" / "server" / "handlers" / "rdf.rs"
-_REDB_STORE = _ROOT / "src" / "redb_store.rs"
-_AMQP_WIRE = _ROOT / "src" / "server" / "amqp_wire" / "mod.rs"
+_QUERY_HANDLER = _ROOT / "crates" / "medulla-h-query" / "src" / "query.rs"
+_QUERY_HANDLER_CHILDREN = _QUERY_HANDLER.with_suffix("")
+_RDF_HANDLER = _ROOT / "crates" / "medulla-h-sparql" / "src" / "rdf.rs"
+_RDF_HANDLER_CHILDREN = _RDF_HANDLER.with_suffix("")
+_REDB_STORES = (
+    _ROOT / "crates" / "medulla-store" / "src" / "redb_store.rs",
+    _ROOT / "crates" / "medulla-store-apply" / "src" / "redb_store.rs",
+)
+_AMQP_WIRE = _ROOT / "crates" / "medulla-wire-msg" / "src" / "amqp_wire" / "mod.rs"
 _HOOKS = _ROOT / ".config" / "pre-commit.yaml"
 _RELEASE = _ROOT / ".github" / "workflows" / "ci.yml"
 
@@ -121,7 +126,12 @@ class RustSourceGuards(unittest.TestCase):
         the
         one fallible Raw contract: the caller must see the error.
         """
-        handlers = _rust_sources(_QUERY_HANDLER, _RDF_HANDLER)
+        handlers = _rust_sources(
+            _QUERY_HANDLER,
+            _QUERY_HANDLER_CHILDREN,
+            _RDF_HANDLER,
+            _RDF_HANDLER_CHILDREN,
+        )
         self.assertIsNone(
             re.search(
                 r"rmp_serde::to_vec_named\([^;]*?\)\.unwrap_or_default\(\)",
@@ -130,7 +140,9 @@ class RustSourceGuards(unittest.TestCase):
             ),
             "a handler silently encodes an empty Raw body on serializer failure",
         )
-        store = _REDB_STORE.read_text(encoding="utf-8")
+        store = _rust_sources(
+            *_REDB_STORES, *(path.with_suffix("") for path in _REDB_STORES)
+        )
         self.assertIsNone(
             re.search(
                 r"ResultPayload::raw\([^;]+?\)\s*\.(?:expect|unwrap)\(",
@@ -153,7 +165,7 @@ class RustSourceGuards(unittest.TestCase):
 
     def test_the_guarded_sources_still_exist(self) -> None:
         """A guard that silently reads nothing is a guard that cannot fail."""
-        for path in (_QUERY_HANDLER, _RDF_HANDLER, _REDB_STORE, _AMQP_WIRE):
+        for path in (_QUERY_HANDLER, _RDF_HANDLER, *_REDB_STORES, _AMQP_WIRE):
             self.assertTrue(path.is_file(), f"{path} is missing")
             self.assertGreater(len(path.read_text(encoding="utf-8")), 1000)
 

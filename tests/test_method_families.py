@@ -1,11 +1,11 @@
 """Named `Method` write families keep every classifier's pre-family membership.
 
-`crates/medulla-types/src/protocol/method/families.rs` declares variant families once
-(`Method::write_family`, one `MethodWriteFamily::X` arm per family) and the
-classifiers select families instead of repeating literal lists. This test
-checks, for every method ID in the generated contract catalog
-(`contract/methods.json`), that each classifier selects the ID exactly when the
-literal list it had before the families existed did. Those lists are copied
+`protocol/method/families.rs` in `medulla-protocol-types` declares variant
+families once (`Method::write_family`, one `MethodWriteFamily::X` arm per
+family) and the classifiers select families instead of repeating literal lists.
+This test checks, for every `Method` variant in the protocol enum, that each
+classifier selects the ID exactly when the literal list it had before the
+families existed did. Those lists are copied
 below from the base commit `6a59a51f0`.
 
 A classifier's selection is read from code only: the variant patterns in the
@@ -17,7 +17,6 @@ missing from every classifier that selects it.
 from __future__ import annotations
 
 import importlib.util
-import json
 import re
 from pathlib import Path
 
@@ -26,7 +25,7 @@ import pytest
 pytestmark = pytest.mark.no_engine
 
 ROOT = Path(__file__).resolve().parents[1]
-FAMILIES = "crates/medulla-types/src/protocol/method/families.rs"
+FAMILIES = "crates/medulla-protocol-types/src/protocol/method/families.rs"
 
 _BROKER_WRITES = frozenset(
     {
@@ -272,8 +271,19 @@ def _gate_module():
 
 
 def _catalog_ids() -> set[str]:
-    catalog = json.loads((ROOT / "contract" / "methods.json").read_text())
-    return {entry["id"] for entry in catalog["methods"]}
+    """Every `Method` variant, read from the enum's chunked source.
+
+    The committed contract catalog was retired; the Rust enum is the source of
+    truth. Variants sit at four-space indentation in the `method_NN.rs` chunks.
+    """
+
+    method_dir = ROOT / "crates/medulla-protocol-types/src/protocol/method"
+    variant = re.compile(r"(?m)^    ([A-Z][A-Za-z0-9_]*)\s*(?:\{|\(|,|$)")
+    return {
+        match.group(1)
+        for path in sorted(method_dir.glob("method_[0-9][0-9].rs"))
+        for match in variant.finditer(path.read_text(encoding="utf-8"))
+    }
 
 
 def _selected(module, expression: str, sources: dict[str, str]) -> set[str]:
@@ -342,9 +352,11 @@ def _sources(module) -> dict[str, str]:
     return {
         "families": (ROOT / FAMILIES).read_text(encoding="utf-8"),
         "durable_apply": module.read("crates/medulla-core/src/durable_apply.rs"),
-        "store_read": module.read("src/redb_store/store_read.rs"),
-        "access": module.read_module_tree("src/server/access.rs"),
-        "canonical": module.read("src/server/mutation_batch/canonical.rs"),
+        "store_read": module.read("crates/medulla-store/src/redb_store/store_read.rs"),
+        "access": module.read_module_tree("crates/medulla-server-auth/src/access.rs"),
+        "canonical": module.read(
+            "crates/medulla-server-api/src/batch_compile/canonical.rs"
+        ),
     }
 
 

@@ -16,7 +16,8 @@ from medulla.testing.synthetic._rng import SeededStream
 pytestmark = pytest.mark.no_engine
 
 ONTOLOGY_RS = (
-    Path(__file__).resolve().parents[2] / "crates/medulla-types/src/agent_ontology.rs"
+    Path(__file__).resolve().parents[2]
+    / "crates/medulla-agent-types/src/agent_ontology.rs"
 )
 ROOT_CONSTANTS = {
     "CAPABILITY_ROOT": vocab.CAPABILITY_ROOT,

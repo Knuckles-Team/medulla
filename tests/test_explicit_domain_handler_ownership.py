@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-HANDLERS = ROOT / "src" / "server" / "handlers"
+HANDLERS = ROOT / "crates" / "medulla-h-jobs" / "src"
 
 pytestmark = pytest.mark.no_engine
 
@@ -69,49 +69,44 @@ def test_development_lane_handler_has_six_explicit_writes_and_two_reads() -> Non
 
 
 def test_dispatch_routes_to_handlers_without_domain_classifiers() -> None:
-    split_pipeline = ROOT / "src" / "server" / "dispatch" / "graph_pipeline.rs"
-    dispatch_path = (
-        split_pipeline
-        if split_pipeline.exists()
-        else ROOT / "src" / "server" / "dispatch.rs"
-    )
-    dispatch = dispatch_path.read_text()
+    graph_dispatch = ROOT / "crates" / "medulla-server-graph" / "src" / "dispatch"
+    split_pipeline = graph_dispatch / "graph_pipeline.rs"
     # The native WorkItem/DevelopmentLane routes live in the pipeline's
     # declared child modules (e.g. `graph_pipeline/native_routes.rs`).
-    if dispatch_path == split_pipeline:
-        dispatch += "\n".join(
-            path.read_text()
-            for path in sorted((split_pipeline.parent / "graph_pipeline").glob("*.rs"))
-        )
-    split_governance = (
-        ROOT / "src" / "server" / "dispatch" / "graph_pipeline" / "work_governance.rs"
+    dispatch = split_pipeline.read_text() + "\n".join(
+        path.read_text()
+        for path in sorted((graph_dispatch / "graph_pipeline").glob("*.rs"))
     )
     routing_sources = dispatch
-    if split_governance.exists():
-        routing_sources += split_governance.read_text()
-    mutation_batch_paths = [ROOT / "src" / "server" / "mutation_batch.rs"]
+    mutation_batch_paths = [
+        ROOT / "crates" / "medulla-server-mutation" / "src" / "mutation_batch.rs"
+    ]
     mutation_batch_paths.extend(
-        sorted((ROOT / "src" / "server" / "mutation_batch").glob("*.rs"))
+        sorted(
+            (
+                ROOT / "crates" / "medulla-server-mutation" / "src" / "mutation_batch"
+            ).rglob("*.rs")
+        )
     )
     mutation_batch = "\n".join(path.read_text() for path in mutation_batch_paths)
-    handler_modules = (HANDLERS / "mod.rs").read_text()
+    handler_modules = (HANDLERS / "lib.rs").read_text()
 
-    assert "handlers::work_item::try_handle" in dispatch
-    assert "handlers::development_lane::try_handle" in dispatch
+    assert "medulla_h_jobs::work_item::try_handle" in dispatch
+    assert "medulla_h_jobs::development_lane::try_handle" in dispatch
     assert "is_work_item_mutation_method(&method)" not in dispatch
     assert "is_development_lane_method" not in dispatch
     assert "dispatch_op_workitem_mutation" not in routing_sources
     assert "dispatch_op_development_lane" not in routing_sources
     assert "is_development_lane_method" not in mutation_batch
-    assert "mod work_item;" in handler_modules
-    assert "mod development_lane;" in handler_modules
+    assert "pub mod work_item;" in handler_modules
+    assert "pub mod development_lane;" in handler_modules
 
 
 def test_deleted_lane_classifier_is_absent_from_authority_evidence() -> None:
     evidence_paths = (
-        ROOT / "src" / "raft" / "mod.rs",
-        ROOT / "src" / "server" / "access.rs",
-        ROOT / "src" / "server" / "mutation.rs",
+        ROOT / "crates" / "medulla-raft" / "src" / "raft" / "mod.rs",
+        ROOT / "crates" / "medulla-server-auth" / "src" / "access.rs",
+        ROOT / "crates" / "medulla-server-mutation" / "src" / "mutation.rs",
         ROOT
         / "crates"
         / "medulla-capabilities"
