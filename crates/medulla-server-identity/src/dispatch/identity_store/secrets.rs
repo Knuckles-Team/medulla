@@ -14,9 +14,9 @@ use sha2::{Digest, Sha256};
 
 /// argon2id parameters (§3.3): 64 MiB, 3 passes, 1 lane. Tests use a small
 /// cost so the suite stays fast; the verdicts are identical.
-#[cfg(not(test))]
+#[cfg(not(any(test, feature = "test-support")))]
 const COST: (u32, u32, u32) = (64 * 1024, 3, 1);
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 const COST: (u32, u32, u32) = (1024, 1, 1);
 
 fn hasher() -> Result<Argon2<'static>, String> {

@@ -64,7 +64,7 @@ pub async fn stamp_identity(
         .map_err(|refusal| refusal.to_string())?;
     let mut owned = op.clone();
     let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     let pause = pause::take(state);
     let derived = tokio::task::spawn_blocking(move || {
         let env = stamp::StampEnv {
@@ -77,7 +77,7 @@ pub async fn stamp_identity(
         // The derivation read `store`, a snapshot taken before this point and
         // outside the engine's write lock. A test holds it here to change the
         // live store before the verdict is applied.
-        #[cfg(test)]
+        #[cfg(any(test, feature = "test-support"))]
         pause::hold(pause);
         outcome
     })
