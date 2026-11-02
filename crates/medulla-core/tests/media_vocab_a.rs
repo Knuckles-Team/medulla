@@ -3688,7 +3688,7 @@ fn content_message_terms_reuse_team_without_redeclaration() {
 // searxng, pulselink, postiz, listmonk and mattermost, over the same harness.
 // ---------------------------------------------------------------------------
 
-const MEDIA_VOCAB_SUBJECT: &str = "urn:medulla-media-vocab";
+const MEDIA_VOCAB_SUBJECT: &str = "urn:eg-media-vocab";
 
 /// Apply one connector's mapping fixture to its recorded response.
 fn mapped_connector(connector: &str, mapping: &str, response: &str) -> Vec<Triple> {
