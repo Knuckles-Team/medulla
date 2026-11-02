@@ -69,6 +69,7 @@ struct SessionRecord {
     query_digest: Digest256,
     limits: ForeignReadLimits,
     expires_at: Instant,
+    #[allow(dead_code)] // wall-clock deadline recorded beside the monotonic expires_at
     expires_at_ms: u64,
     next_sequence: u64,
     total_rows: u64,

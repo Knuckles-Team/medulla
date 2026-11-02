@@ -190,6 +190,7 @@ pub mod tests {
         change_envelope::ContentVersionPosition, change_envelope::PrivacyAttestation,
     };
 
+    #[cfg(test)]
     fn draft() -> ChangeEnvelopeDraft {
         draft_for("tenant-a", serde_json::json!({"type": "Document"}))
     }

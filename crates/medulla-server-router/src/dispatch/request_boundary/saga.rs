@@ -1,3 +1,4 @@
+#[cfg(feature = "redb")]
 use medulla_server_graph::dispatch::shared::timed_read;
 use super::*;
 #[cfg(feature = "redb")]

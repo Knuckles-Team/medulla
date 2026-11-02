@@ -247,11 +247,6 @@ impl BackupReport {
         self.shard_counts.push(counts);
     }
 
-    /// Record one shard's cross-shard recovery boundary counts.
-    pub(crate) fn set_xshard_boundary(&mut self, boundary: XshardRecoveryBoundary) {
-        self.xshard_prepares = boundary.prepares;
-        self.xshard_decisions = boundary.decisions;
-    }
 
     /// Distinct graph scopes captured across every shard.
     pub fn graph_scopes(&self) -> u64 {

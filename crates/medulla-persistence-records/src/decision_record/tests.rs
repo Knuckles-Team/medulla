@@ -1,23 +1,31 @@
 //! `DecisionCommit`'s store half: the planted catalog-side inputs of
 //! DECIDE-LAYER-DESIGN §11.1 and the outcome link of §4.6 (EH-070).
 
+#[cfg(test)]
 use medulla_agent_types::agent_graph::AgentGraphPublishRequest;
+#[cfg(test)]
 use medulla_agent_types::agent_library::AgentLibraryPublishRequest;
 use medulla_agent_types::{
     agent_component::AgentComponentDraft, agent_component::AgentComponentFacts,
     agent_component::AgentComponentKind, agent_component::AgentComponentPublishRequest,
-    agent_component::ComponentDependency, agent_component::ModalityFacts,
+    agent_component::ModalityFacts,
     agent_component::PromptMode, agent_component::ToolEffect,
 };
 use medulla_compute::assemble::{assemble, inputs, replay_check, Assembly, RecordIdentity};
 use medulla_decision_types::{
-    decision::AssemblyRequest, decision::AssemblyRequirements, decision::DecisionOutcome,
+    decision::AssemblyRequest, decision::AssemblyRequirements,
     decision::DecisionPolicy, decision::DecisionPolicyRef, decision::LibraryCandidateScope,
 };
+#[cfg(test)]
+use medulla_agent_types::agent_component::ComponentDependency;
+#[cfg(test)]
+use medulla_decision_types::decision::DecisionOutcome;
 use medulla_types::contract::BoundedVec;
 
 use super::super::agent_component::{test_component_draft, test_tool_facts};
-use super::super::agent_fixtures::{mutation_context, open_agent_store};
+use super::super::agent_fixtures::mutation_context;
+#[cfg(test)]
+use super::super::agent_fixtures::open_agent_store;
 use super::*;
 
 pub const TENANT: &str = "tenant-a";
@@ -316,6 +324,7 @@ fn a_published_graph_resolves_to_its_decision_record_through_synthesis_evidence(
     assert!(graph_digest.starts_with("sha256:"));
 }
 
+#[cfg(test)]
 fn policy_draft(policy: &DecisionPolicy, content_digest: String) -> AgentComponentDraft {
     let mut draft = draft(
         "policy-tight",

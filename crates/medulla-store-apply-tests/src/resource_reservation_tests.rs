@@ -7,8 +7,6 @@
 
 use medulla_store_apply::redb_store::store_cleanup::clear_graph_rows;
 use super::*;
-use medulla_resource_store::redb_store::resource::*;
-use medulla_resource_store::redb_store::resource_rows::*;
 use medulla_store::redb_store::shard::Shard;
 use medulla_store::redb_store::shard::ShardWrite;
 use medulla_kernel::test_rendezvous::{join_bounded, meet};

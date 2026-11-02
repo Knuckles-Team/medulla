@@ -452,6 +452,7 @@ struct LeaseQueryCtx<'a> {
     req_id: u64,
     graph_name: &'a str,
     read_authority: Option<&'a GraphReadAuthority>,
+    #[allow(dead_code)] // read only by the security-gated lease legs
     caller: &'a str,
     core: &'a Arc<GraphCore>,
     policy_lease: &'a Arc<medulla_isolation::isolation::PolicyDecisionLease>,

@@ -1,5 +1,4 @@
 #![recursion_limit = "256"]
-#![allow(dead_code)]
 #![deny(unsafe_code)]
 // CONCEPT:MEDULLA-KG.query.wire-protocol — Medulla Service Binary
 //
@@ -7,20 +6,21 @@
 // Parses CLI args, initializes the GraphRegistry, and starts
 // the UDS/TCP listener.
 
+#[cfg(any(feature = "lake", feature = "lake-rest", feature = "obs", feature = "s3-api"))]
 use medulla_server_blob::blob::BlobStateExt;
+#[cfg(any(all(feature = "mining", feature = "query", feature = "streaming"), all(feature = "owl", feature = "streaming")))]
 use medulla_server_cdc::cdc::CdcStateExt;
 use clap::Parser;
+#[cfg(any(feature = "security", test))]
 use std::net::SocketAddr;
+#[cfg(feature = "security")]
 use std::sync::Arc;
 #[cfg(feature = "security")]
 use tokio::sync::RwLock;
-// NOT cfg-gated: `info!` is used 110 times in this file, the great majority in code
-// paths that carry no cfg of their own. Gating the import on `security` broke
-// `--no-default-features --features server` with 13 `cannot find macro `info`` errors
-// (BUG-CX-104, same shape as the dispatch.rs/graph_ops.rs fixes: an import gated more
-// narrowly than its uses).
+#[cfg(feature = "security")]
 use tracing::info;
 
+#[cfg(feature = "security")]
 use medulla_server_api::state::ServerState;
 mod offline_tools;
 
@@ -28,7 +28,9 @@ mod offline_tools;
 mod operator_command;
 #[cfg(feature = "full")]
 mod performance_probe;
-use medulla_server::server_startup::{self, run_fuseki_startup_health_check};
+use medulla_server::server_startup;
+#[cfg(feature = "security")]
+use medulla_server::server_startup::run_fuseki_startup_health_check;
 
 #[derive(Parser, Debug)]
 #[command(name = "medulla-server")]
@@ -82,6 +84,7 @@ impl std::ops::DerefMut for Args {
 ///   actual default transport on Windows is TCP loopback (see the transport
 ///   section). Keeping the value defined preserves parity for config/logging.
 ///   Run one bounded, stdin-driven exact performance probe and return.
+#[cfg(feature = "security")]
 fn run_exact_performance_probe(root: Option<&std::path::Path>) -> Result<(), Box<dyn std::error::Error>> {
     let root = root.ok_or("exact performance probe root is required")?;
     #[cfg(feature = "full")]
@@ -96,6 +99,7 @@ fn run_exact_performance_probe(root: Option<&std::path::Path>) -> Result<(), Box
     }
 }
 
+#[cfg(any(feature = "security", test))]
 fn resolve_socket_path(explicit: Option<String>) -> (String, Option<std::path::PathBuf>) {
     if let Some(p) = explicit {
         return (p, None);
@@ -186,6 +190,7 @@ async fn prepare_socket_directory(parent: Option<std::path::PathBuf>) -> std::io
 ///
 /// The address an auxiliary-listener flag names (an enable token binds
 /// `default_addr`, a bare port binds loopback), before any bind policy.
+#[cfg(any(feature = "security", test))]
 fn parse_listener_addr(value: Option<&str>, default_addr: &str) -> Option<String> {
     let v = value.map(str::trim).filter(|s| !s.is_empty())?;
     match v.to_ascii_lowercase().as_str() {
@@ -208,6 +213,7 @@ fn resolve_obs_listener_addr(value: Option<&str>) -> Option<String> {
     resolve_listener_addr(value, "127.0.0.1:5080")
 }
 
+#[cfg(any(feature = "security", test))]
 fn resolve_listener_addr(value: Option<&str>, default_addr: &str) -> Option<String> {
     let addr = parse_listener_addr(value, default_addr)?;
     let is_loopback = addr
@@ -437,6 +443,7 @@ async fn run_inner() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+#[cfg(feature = "security")]
 async fn spawn_optional_service_listeners(
     state: &Arc<tokio::sync::RwLock<ServerState>>,
     args: &Args,
@@ -479,6 +486,7 @@ async fn spawn_optional_service_listeners(
     Ok(())
 }
 
+#[cfg(feature = "security")]
 async fn spawn_metrics_listener(
     metrics_addr_arg: Option<&str>,
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -509,6 +517,7 @@ async fn spawn_metrics_listener(
     }
     Ok(())
 }
+#[cfg(feature = "security")]
 async fn spawn_sparql_listener(
     _state: &Arc<tokio::sync::RwLock<ServerState>>,
     sparql_addr_arg: Option<&str>,
@@ -541,6 +550,7 @@ async fn spawn_sparql_listener(
     }
     Ok(())
 }
+#[cfg(feature = "security")]
 async fn spawn_policy_export_listener(
     policy_export_addr_arg: Option<&str>,
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -568,6 +578,7 @@ async fn spawn_policy_export_listener(
     }
     Ok(())
 }
+#[cfg(feature = "security")]
 async fn spawn_federated_listener(
     _state: &Arc<tokio::sync::RwLock<ServerState>>,
     federated_addr_arg: Option<&str>,
@@ -602,6 +613,7 @@ async fn spawn_federated_listener(
     }
     Ok(())
 }
+#[cfg(feature = "security")]
 async fn spawn_graphql_listener(
     _state: &Arc<tokio::sync::RwLock<ServerState>>,
     graphql_addr_arg: Option<&str>,
@@ -668,6 +680,7 @@ async fn spawn_graphql_listener(
     }
     Ok(())
 }
+#[cfg(feature = "security")]
 async fn spawn_obs_listener(
     _state: &Arc<tokio::sync::RwLock<ServerState>>,
     obs_addr_arg: Option<&str>,
@@ -737,6 +750,7 @@ async fn spawn_obs_listener(
     }
     Ok(())
 }
+#[cfg(feature = "security")]
 async fn wait_for_periodic_tick(ticker: &mut tokio::time::Interval) {
     ticker.tick().await;
 }
@@ -771,6 +785,7 @@ async fn persist_traces_tick(traces_obs_state: std::sync::Arc<medulla_server_obs
     }
 }
 
+#[cfg(feature = "security")]
 fn spawn_periodic_sweep<F, Fut>(interval_secs: u64, metric_name: &'static str, sweep: F)
 where
     F: Fn() -> Fut + Send + 'static,
@@ -821,6 +836,7 @@ fn spawn_obs_trace_persist_sweep(obs_state: &std::sync::Arc<medulla_server_obs::
         }
     }
 }
+#[cfg(feature = "security")]
 async fn spawn_viz_interactive_listener(
     _state: &Arc<tokio::sync::RwLock<ServerState>>,
     viz_interactive_addr_arg: Option<&str>,
@@ -872,6 +888,7 @@ async fn spawn_viz_interactive_listener(
     }
     Ok(())
 }
+#[cfg(feature = "security")]
 async fn spawn_iceberg_listener(
     _state: &Arc<tokio::sync::RwLock<ServerState>>,
     iceberg_addr_arg: Option<&str>,
@@ -925,6 +942,7 @@ async fn spawn_iceberg_listener(
     }
     Ok(())
 }
+#[cfg(feature = "security")]
 async fn spawn_lake_materialize_sweep(_state: &Arc<tokio::sync::RwLock<ServerState>>) {
     #[cfg(feature = "lake")]
     let state = _state;
@@ -1009,6 +1027,7 @@ async fn spawn_lake_materialize_sweep(_state: &Arc<tokio::sync::RwLock<ServerSta
         }
     }
 }
+#[cfg(feature = "security")]
 async fn spawn_pgwire_listener(
     _state: &Arc<tokio::sync::RwLock<ServerState>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -1046,6 +1065,7 @@ async fn spawn_pgwire_listener(
     }
     Ok(())
 }
+#[cfg(feature = "security")]
 async fn spawn_sqlite_listener(
     _state: &Arc<tokio::sync::RwLock<ServerState>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -1082,6 +1102,7 @@ async fn spawn_sqlite_listener(
     }
     Ok(())
 }
+#[cfg(feature = "security")]
 async fn spawn_mysql_listener(
     _state: &Arc<tokio::sync::RwLock<ServerState>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -1122,6 +1143,7 @@ async fn spawn_mysql_listener(
     }
     Ok(())
 }
+#[cfg(feature = "security")]
 async fn spawn_authenticated_wire_listener<Serve, ServeFuture>(
     state: &Arc<tokio::sync::RwLock<ServerState>>,
     addr: Option<String>,
@@ -1147,6 +1169,7 @@ where
     }
     Ok(())
 }
+#[cfg(feature = "security")]
 macro_rules! define_authenticated_wire_listener {
     (
         $function:ident,
@@ -1192,6 +1215,7 @@ macro_rules! define_authenticated_wire_listener {
 // (CONCEPT:MEDULLA-OS.config.configurable-listeners): a bare enable token binds the safe localhost default
 // `127.0.0.1:1433`. Direct TDS is authenticated loopback-only; remote clients
 // terminate TLS/mTLS at an identity-binding gateway that forwards to loopback.
+#[cfg(feature = "security")]
 define_authenticated_wire_listener!(
     spawn_mssql_listener,
     "mssql-wire",
@@ -1211,6 +1235,7 @@ define_authenticated_wire_listener!(
 // `127.0.0.1:5672`. Direct AMQP is authenticated loopback-only; remote clients
 // terminate TLS/mTLS at an identity-binding gateway. Maps AMQP
 // exchange/queue/basic.* onto the `broker` primitives (KG-2.303 queue) via dispatch.
+#[cfg(feature = "security")]
 define_authenticated_wire_listener!(
     spawn_amqp_listener,
     "amqp-wire",
@@ -1231,6 +1256,7 @@ define_authenticated_wire_listener!(
 // policy. A native hand-rolled Bolt v4.4 server (PackStream v2 + chunked framing)
 // that routes RUN's Cypher straight to the medulla-query cypher engine, so a Neo4j driver
 // runs Cypher over a graph directly.
+#[cfg(feature = "security")]
 define_authenticated_wire_listener!(
     spawn_bolt_listener,
     "bolt-wire",
@@ -1241,6 +1267,7 @@ define_authenticated_wire_listener!(
     "bolt-wire",
     "bolt-wire: enabling the configured loopback listener",
 );
+#[cfg(feature = "security")]
 async fn spawn_redis_listener(
     _state: &Arc<tokio::sync::RwLock<ServerState>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -1281,6 +1308,7 @@ async fn spawn_redis_listener(
 // hand-rolled MQTT server mapping CONNECT/PUBLISH/SUBSCRIBE onto
 // the `broker` topic exchange (KG-2.303 queue) via dispatch, so an MQTT client
 // pub/subs directly against the engine.
+#[cfg(feature = "security")]
 define_authenticated_wire_listener!(
     spawn_mqtt_listener,
     "mqtt-wire",
@@ -1302,6 +1330,7 @@ define_authenticated_wire_listener!(
 // A native hand-rolled STOMP text-frame server mapping SEND/SUBSCRIBE onto
 // the `broker` primitives (destinations → exchange + per-subscription queues) via
 // dispatch, so a STOMP client pub/subs directly against the engine.
+#[cfg(feature = "security")]
 define_authenticated_wire_listener!(
     spawn_stomp_listener,
     "stomp-wire",
@@ -1312,6 +1341,7 @@ define_authenticated_wire_listener!(
     "stomp-wire",
     "stomp-wire: enabling the configured authenticated loopback listener",
 );
+#[cfg(feature = "security")]
 async fn spawn_s3_listener(
     _state: &Arc<tokio::sync::RwLock<ServerState>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -1352,6 +1382,7 @@ async fn spawn_s3_listener(
     }
     Ok(())
 }
+#[cfg(feature = "security")]
 async fn spawn_kvcache_listener(
     _state: &Arc<tokio::sync::RwLock<ServerState>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -1387,6 +1418,7 @@ async fn spawn_kvcache_listener(
     }
     Ok(())
 }
+#[cfg(feature = "security")]
 async fn recover_durable_catalog(
     state: &Arc<tokio::sync::RwLock<ServerState>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -1437,6 +1469,7 @@ async fn recover_durable_catalog(
     Ok(())
 }
 
+#[cfg(feature = "security")]
 async fn spawn_reasoning_cascade_and_ann_sweep(
     state: &Arc<tokio::sync::RwLock<ServerState>>,
     decay_interval: u64,
@@ -1646,6 +1679,7 @@ async fn spawn_reasoning_cascade_and_ann_sweep(
     }
 }
 
+#[cfg(feature = "security")]
 async fn spawn_memory_and_lifecycle_sweeps(
     state: &Arc<tokio::sync::RwLock<ServerState>>,
     host_capacity: medulla_kernel::autosize::Capacity,
@@ -1655,6 +1689,7 @@ async fn spawn_memory_and_lifecycle_sweeps(
     spawn_lifecycle_sweeps(state, txn_ttl_secs);
 }
 
+#[cfg(feature = "security")]
 async fn spawn_memory_sweeps(
     state: &Arc<tokio::sync::RwLock<ServerState>>,
     host_capacity: medulla_kernel::autosize::Capacity,
@@ -1764,6 +1799,7 @@ async fn cold_offload_tick(
     }
 }
 
+#[cfg(feature = "security")]
 fn spawn_lifecycle_sweeps(state: &Arc<tokio::sync::RwLock<ServerState>>, txn_ttl_secs: u64) {
     // ── Fleet server registry stale-lease reaper (CONCEPT:MEDULLA-KG.sharding.server-registry, W2.5) ──
     // `Method::RegisterServer` writes/renews a `:Server` node with a
@@ -1863,6 +1899,7 @@ fn spawn_lifecycle_sweeps(state: &Arc<tokio::sync::RwLock<ServerState>>, txn_ttl
 /// spawn_post_bind_maintenance`, MEDULLA-DURABLE-KERNEL-R006.4) — running it here
 /// stalled the pre-listener path behind the projection drain for minutes on
 /// a large store (G9).
+#[cfg(feature = "security")]
 async fn start_raft(
     _state: &Arc<tokio::sync::RwLock<ServerState>>,
 ) -> Result<(), Box<dyn std::error::Error>> {

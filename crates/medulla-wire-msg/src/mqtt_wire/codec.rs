@@ -475,6 +475,7 @@ pub(super) trait MqttCursorExt<'a> {
     /// Read an MQTT variable-byte integer.
     fn varint(&mut self) -> usize;
     /// Consume the remainder of the packet.
+    #[cfg(test)]
     fn rest(&mut self) -> Vec<u8>;
 }
 
@@ -559,6 +560,7 @@ impl<'a> MqttCursorExt<'a> for Cursor<'a> {
         }
     }
 
+    #[cfg(test)]
     fn rest(&mut self) -> Vec<u8> {
         let out = self.b[self.i.min(self.b.len())..].to_vec();
         self.i = self.b.len();

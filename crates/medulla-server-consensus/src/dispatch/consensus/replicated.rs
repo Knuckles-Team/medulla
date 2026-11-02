@@ -1,3 +1,4 @@
+#[cfg(feature = "raft")]
 use super::*;
 #[cfg(feature = "raft")]
 use medulla_server_api::api::reentry::ReplicatedParticipantRef;
@@ -22,20 +23,6 @@ pub fn capability_authority_unavailable(method: &Method) -> bool {
     )
 }
 
-#[cfg(not(feature = "raft"))]
-pub async fn propose_native_mutation(
-    _state: &Arc<RwLock<ServerState>>,
-    _request_graph: &str,
-    request_id: u64,
-    _verified_context: &VerifiedRequestContext,
-    _identity_bootstrap: bool,
-    _method: Method,
-) -> Response {
-    Response::err(
-        request_id,
-        "consensus routing is not available in this build",
-    )
-}
 
 /// Apply a committed bounded native command through its existing domain kernel.
 /// Authentication/authorization has already happened before proposal; the

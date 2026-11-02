@@ -70,7 +70,6 @@ pub fn seed_raw_row<'k, 'v, K, V>(
     wtx.commit().expect("commit raw seed row");
 }
 
-use medulla_persistence::AsRedb;
 // A raw `redb::Database` survives HERE and nowhere else: these fixtures plant
 // rows the production paths deliberately refuse to write, so they must reach
 // the file underneath the kernel's admission. Each opens the file only after
@@ -92,47 +91,14 @@ use medulla_protocol_types::protocol::Request;
 use medulla_server_auth::auth::build_shared_test_request;
 use medulla_server_auth::auth::dispatch_test_on_heap as dispatch_on_heap;
 #[cfg(feature = "tsdb")]
-use sha2::Digest;
-
 const TEST_AGENT: &str = "unit-test-agent";
 
 fn current_request(secret: &str, id: u64, graph: &str, method: Method) -> Request {
     build_shared_test_request(secret, id, graph, TEST_AGENT, method)
 }
 
-#[cfg(feature = "tsdb")]
-fn scoped_series_key(graph: &str, series: &str, principal: &str) -> String {
-    let tenant_scope = medulla_server_api::batch_compile::opaque_coordinator_key(
-        "carrier-tenant",
-        "verified",
-        "tenant-shared",
-    );
-    let actor_scope = format!(
-        "principal:sha256:{}",
-        hex::encode(sha2::Sha256::digest(principal.as_bytes()))
-    );
-    let owner_scope = medulla_server_api::batch_compile::opaque_coordinator_key(
-        "carrier-owner",
-        &tenant_scope,
-        &actor_scope,
-    );
-    let graph_scope = medulla_server_api::batch_compile::opaque_coordinator_key(
-        "timeseries-graph",
-        &owner_scope,
-        graph,
-    );
-    medulla_tsdb::store::SeriesKey::new(tenant_scope, graph_scope, series).encode()
-}
 
-#[cfg(feature = "tsdb")]
-fn direct_test_series_key(graph: &str, series: &str) -> String {
-    scoped_series_key(graph, series, &format!("principal:{TEST_AGENT}"))
-}
 
-#[cfg(feature = "tsdb")]
-fn envelope_test_series_key(graph: &str, series: &str) -> String {
-    scoped_series_key(graph, series, TEST_AGENT)
-}
 
 fn props(v: serde_json::Value) -> Vec<u8> {
     rmp_serde::to_vec_named(&v).unwrap()

@@ -209,6 +209,7 @@ type ReactivationStage<'a> = dyn for<'g> FnMut(&ShardWrite<'g>) -> Result<(), St
 /// budget/park CAS in the same owner-row admission as the canonical batch.
 /// The batch must contain its replacement outbox intent. This entry point is
 /// intentionally local to a graph shard: no Raft proposal is represented.
+#[cfg(test)]
 pub(crate) fn commit_mutation_batch_with_outbox_lease(
     shard: &Shard,
     input: BatchCommitInput<'_>,
@@ -233,6 +234,7 @@ pub(crate) fn commit_mutation_batch_with_outbox_lease(
 /// apply can use this on every replica; the old delivery is resolved separately
 /// by each node after the replicated supersession marker is durable. This is
 /// deliberately a storage primitive, not a served reactivation route.
+#[cfg(test)]
 pub(crate) fn commit_mutation_batch_with_reactivation_rows(
     shard: &Shard,
     input: BatchCommitInput<'_>,
@@ -251,6 +253,7 @@ pub(crate) fn commit_mutation_batch_with_reactivation_rows(
     )
 }
 
+#[cfg(test)]
 fn commit_mutation_batch_with_reactivation_effect(
     shard: &Shard,
     input: BatchCommitInput<'_>,

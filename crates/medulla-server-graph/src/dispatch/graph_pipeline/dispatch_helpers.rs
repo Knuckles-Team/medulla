@@ -1,3 +1,4 @@
+#[cfg(feature = "raft")]
 use crate::dispatch::shared::timed_read;
 use super::*;
 #[cfg(feature = "redb")]
@@ -289,6 +290,8 @@ pub async fn prove_audit_inclusion(
 /// parameter cap.
 #[cfg(feature = "modality-serving")]
 pub struct ServedModalityCtx<'a> {
+    // read only by the raft replication leg
+    #[cfg_attr(not(feature = "raft"), allow(dead_code))]
     pub state: &'a Arc<RwLock<ServerState>>,
     pub req_id: u64,
     pub graph_name: &'a str,

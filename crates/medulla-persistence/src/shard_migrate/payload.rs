@@ -29,6 +29,7 @@ use medulla_store::redb_store::SEMANTIC;
 use medulla_store::redb_store::WORK_ITEM_COMMAND_SEQUENCE;
 #[cfg(feature = "security")]
 use medulla_store::redb_store::AUDIT_REQUESTS;
+#[cfg(feature = "security")]
 use medulla_store::redb_store::PROVENANCE_ANCHOR_MEMBERS;
 use medulla_storage::{GraphShardOwner, OwnerRowScope, OwnerRowScopeStart, ScopedRead};
 use medulla_transaction::{GraftOwnerWrite, OwnerPayloadTransfer, OwnerPayloadWrite};

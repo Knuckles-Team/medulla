@@ -26,6 +26,7 @@ pub(super) fn commit_outcome(
     ResultPayload::of::<medulla_protocol_types::result_contract::transactions::Commit>(outcome)
 }
 
+#[cfg(test)]
 pub(super) async fn commit(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,

@@ -208,13 +208,6 @@ fn policy(object_id: &str, tenant: &str, labels: &EnvelopeLabels) -> Result<Poli
     })
 }
 
-/// Compile the write-set into one governed, validated ChangeEnvelope.
-pub(crate) fn build_envelope(
-    ctx: &IndexCommitContext<'_>,
-    write_set: IndexWriteSet,
-) -> Result<ChangeEnvelope, String> {
-    build_envelope_with_outbox(ctx, write_set, Vec::new())
-}
 
 /// Compile repository rows and its bounded enrichment intent as one commit.
 /// The compiler includes the outbox bytes in the canonical payload digest.

@@ -871,6 +871,7 @@ fn authorize_admin(
 /// or is absent, a residual, data-dependent timing signal this deliberately
 /// does not attempt to close (disproportionate for this system — see the
 /// module doc).
+#[cfg(test)]
 pub(crate) fn authorize(
     tenant_scope: &str,
     persist_dir: &Path,
@@ -1846,10 +1847,6 @@ impl AuthorizedTable {
         })
     }
 
-    #[cfg(test)]
-    pub(crate) fn table_name(&self) -> &str {
-        &self.table
-    }
 }
 
 // ── wire-layer entry points (CONCEPT:NE-046 — MEDULLA-WIRE-CATALOG) ─────────────

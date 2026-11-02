@@ -35,7 +35,7 @@ async fn fitted(h: &Harness) -> Fitted {
         ("tool-b-files", "write files to disk"),
         ("tool-c-mail", "send an email message"),
     ] {
-        h.publish(id, AgentComponentKind::Tool, summary, None::<&()>, None)
+        h.publish_test_component(id, AgentComponentKind::Tool, summary, None::<&()>, None)
             .unwrap();
     }
     let (schema_pin, schema_digest) = publish_route_schema(h);

@@ -1,4 +1,3 @@
-#![allow(unused_imports)]
 use medulla_mutation_types::mutation_scope::MutationOutboxRecord;
 use medulla_index_types::semantic_index::SemanticBinding;
 use medulla_index_types::semantic_index::SemanticDigest;
@@ -7,29 +6,18 @@ use medulla_index_types::semantic_index::SemanticStageTransition;
 use std::path::Path;
 
 use medulla_h_retrieve::semantic_index_runtime::*;
-#[cfg(feature = "query")]
-use medulla_mutation_types::mutation_scope::MutationOutboxLease;
-use medulla_index_types::semantic_index::SemanticIndexError;
-use medulla_index_types::semantic_index::SemanticSqlSourceIdentity;
-use medulla_index_types::semantic_index::SemanticSqlSourceManifest;
-use medulla_index_types::semantic_index::SemanticStageIntent;
-use std::path::PathBuf;
 use std::sync::Arc;
 
-#[cfg(feature = "query")]
-use medulla_protocol_types::protocol::Response;
 use medulla_ann_codes::semantic_index_service::SemanticIndexService;
 #[cfg(feature = "query")]
 use medulla_ann_codes::semantic_index_service::{
-    sql_source_deletion_proof, sql_source_revision_for_epoch, SemanticSqlSourceReadPage,
-    SemanticSqlSourceReadPort, SemanticSqlSourceRecord, SemanticSqlSourceValue,
+    sql_source_revision_for_epoch, SemanticSqlSourceReadPage,
+    SemanticSqlSourceReadPort, SemanticSqlSourceValue,
 };
 use medulla_server_api::carrier::CarrierAuthority;
 #[cfg(feature = "query")]
-use medulla_server_api::compute::compute_off_lock;
-#[cfg(feature = "query")]
 use medulla_server_auth::{sql_catalog_acl::open_authorized_table, sql_catalog_acl::SemanticTextSnapshot, sql_catalog_acl::SqlPrivilege};
-use medulla_transaction::{OutboxClaimBudget, OutboxClaimOutcome};
+use medulla_transaction::OutboxClaimBudget;
 
 use medulla_protocol_types::protocol::Method;
 use medulla_server_api::authority_context::VerifiedRequestContext;

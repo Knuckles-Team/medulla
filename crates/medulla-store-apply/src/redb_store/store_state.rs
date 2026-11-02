@@ -189,39 +189,6 @@ pub(crate) fn stage_rows_in(
     Ok(StagedMutationRows { generated_result })
 }
 
-pub(crate) fn compute_native_terminal_work_item_cas(batch: &MutationBatch) -> bool {
-    batch.authoritative_state.is_none()
-        && match batch.operations.first() {
-            Some(first)
-                if first.domain == DurabilityDomain::ControlPlane
-                    && first.surface == MutationSurface::Job
-                    && matches!(&first.method, Method::CommitWorkItemResult { .. }) =>
-            {
-                batch.operations[1..]
-                    .iter()
-                    .all(|op| matches!(&op.method, Method::AddNode { .. }))
-            }
-            Some(first) => {
-                batch.operations.len() == 1
-                    && first.domain == DurabilityDomain::ControlPlane
-                    && first.surface == MutationSurface::Job
-                    && !matches!(
-                        &first.method,
-                        Method::ClaimWorkItem { .. }
-                            | Method::RenewWorkItemLease { .. }
-                            | Method::CasWorkItemMetadata { .. }
-                    )
-                    && matches!(
-                        &first.method,
-                        medulla_store::work_item_kernel_writes!()
-                            | medulla_store::work_item_resource_writes!()
-                            | Method::SubmitWorkItem { .. }
-                            | Method::SubmitWorkItems { .. }
-                    )
-            }
-            None => false,
-        }
-}
 
 pub(crate) fn resolve_mutation_authoritative_state(
     batch: &MutationBatch,
@@ -394,39 +361,6 @@ pub(crate) fn detect_and_validate_lifecycle(
     Ok(lifecycle)
 }
 
-/// An envelope replay must reproduce the committed envelope byte-for-byte.
-pub(crate) fn check_replay_envelope_matches(
-    write: &ShardWrite<'_>,
-    graph_fname: &str,
-    change: &ChangeEnvelope,
-    graph_name: &str,
-    crypto: DurableCrypto<'_>,
-) -> Result<(), String> {
-    let envelopes = write
-        .graph(graph_fname)?
-        .open_scoped_table(CHANGE_ENVELOPES)
-        .map_err(|e| e.to_string())?;
-    let stored = envelopes
-        .get((graph_fname, change.envelope_id.as_str()))
-        .map_err(|e| e.to_string())?
-        .ok_or_else(|| {
-            format!(
-                "STALE_FENCE: committed envelope '{}' is no longer current for graph '{}'",
-                change.envelope_id, graph_name
-            )
-        })?;
-    let bytes = crypto.unseal(stored.value())?;
-    let record: ChangeEnvelopeRecord = decode_durable(&bytes)?;
-    let stored_bytes = rmp_serde::to_vec_named(&record.envelope).map_err(|e| e.to_string())?;
-    let proposed_bytes = rmp_serde::to_vec_named(change).map_err(|e| e.to_string())?;
-    if stored_bytes != proposed_bytes {
-        return Err(format!(
-            "IDEMPOTENCY_CONFLICT: envelope '{}' does not match its committed batch",
-            change.envelope_id
-        ));
-    }
-    Ok(())
-}
 
 /// Precondition 1: the envelope id must not already be committed for this graph.
 pub(crate) fn check_change_envelope_not_committed(

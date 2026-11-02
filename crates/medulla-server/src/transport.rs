@@ -45,11 +45,14 @@ use framing::{
 #[cfg(test)]
 use medulla_server_graph::dispatch::request_boundary::preflight::MAX_MSGPACK_NESTING_DEPTH;
 use framing::{
-    encode_bounded_frame, encode_frame, next_request, seconds_from_env, write_responses,
-    ConnectionLimits, IngressEnd,
+    encode_bounded_frame, encode_frame, next_request, write_responses, ConnectionLimits,
+    IngressEnd,
 };
+#[cfg(feature = "server-tls")]
+use framing::seconds_from_env;
 pub use tls::{prepare_tcp_tls, PreparedTcpTls, TcpTlsConfig};
 
+#[cfg(feature = "server-tls")]
 const DEFAULT_TLS_HANDSHAKE_TIMEOUT_SECS: u64 = 10;
 
 /// Coordinates reference-counted graceful shutdown across the listeners and the
@@ -241,6 +244,7 @@ where
     dispatch.await
 }
 
+#[cfg(feature = "server-tls")]
 fn tls_handshake_timeout() -> std::time::Duration {
     seconds_from_env(
         "MEDULLA_TLS_HANDSHAKE_TIMEOUT_SECS",

@@ -194,6 +194,7 @@ pub trait DispatchApi: Send + Sync {
     /// Apply a committed cross-shard transaction participant command.
     #[cfg(feature = "raft")]
     #[allow(unused_variables)]
+    #[allow(clippy::too_many_arguments)] // seam signature mirrors the moved handler parameters
     fn apply_replicated_transaction_participant<'a>(
         &'a self,
         state: &'a Arc<RwLock<ServerState>>,
@@ -210,6 +211,7 @@ pub trait DispatchApi: Send + Sync {
     /// Apply a committed transaction prepare.
     #[cfg(feature = "raft")]
     #[allow(unused_variables)]
+    #[allow(clippy::too_many_arguments)] // seam signature mirrors the moved handler parameters
     fn apply_replicated_transaction_prepare<'a>(
         &'a self,
         state: &'a Arc<RwLock<ServerState>>,
@@ -254,6 +256,7 @@ pub trait DispatchApi: Send + Sync {
     /// Apply a committed job-publication commit.
     #[cfg(all(feature = "raft", feature = "jobs"))]
     #[allow(unused_variables)]
+    #[allow(clippy::too_many_arguments)] // seam signature mirrors the moved handler parameters
     fn apply_replicated_job_publication_commit<'a>(
         &'a self,
         state: &'a Arc<RwLock<ServerState>>,

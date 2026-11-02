@@ -26,6 +26,7 @@ use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_protocol_types::protocol::Method;
 #[cfg(feature = "security")]
 use medulla_protocol_types::protocol::Response;
+#[cfg(feature = "security")]
 use medulla_protocol_types::protocol::ResultPayload;
 
 /// Whose actor an elevation op carries: one re-derived from this request's

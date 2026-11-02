@@ -5,8 +5,10 @@
 use std::sync::Arc;
 
 /// Query handler behaviour installed on the seam registry's `query` slot.
+#[cfg(any(feature = "query", feature = "cypher", feature = "graphql", feature = "mining"))]
 pub struct QuerySeam;
 
+#[cfg(any(feature = "query", feature = "cypher", feature = "graphql", feature = "mining"))]
 #[async_trait::async_trait]
 impl medulla_server_ops::api::query_txn::QueryApi for QuerySeam {
     #[cfg(feature = "ann-redb")]

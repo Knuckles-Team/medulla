@@ -750,18 +750,6 @@ fn decode_envelope(req: &Request) -> Result<Envelope, String> {
     serde_json::from_slice(&json).map_err(|_| "Authentication failed".to_string())
 }
 
-/// Parse a boolean-ish deployment flag from the environment. Unset or any
-/// unrecognized value ⇒ `false` (the safe default that preserves today's
-/// behavior). Accepts the common truthy spellings so an operator is not
-/// surprised by `TRUE`/`yes`/`on`. Read fresh each call: this is a coarse,
-/// process-lifetime posture switch, not a hot path.
-fn env_flag_enabled(name: &str) -> bool {
-    std::env::var(name)
-        .ok()
-        .map(|v| v.trim().to_ascii_lowercase())
-        .map(|v| matches!(v.as_str(), "1" | "true" | "yes" | "on"))
-        .unwrap_or(false)
-}
 
 /// Parse an EXPLICIT env override for a boolean-ish deployment flag:
 /// `Some(true)`/`Some(false)` for a recognized value, `None` if the variable

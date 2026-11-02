@@ -196,10 +196,8 @@ pub(crate) use sql_catalog::*;
 #[cfg(feature = "query")]
 mod uql_statement;
 
-#[cfg(any(test, feature = "test-support"))]
+#[cfg(test)]
 pub mod current_auth_test_support {
-    use medulla_types::acl::AgentIdentity;
-    use medulla_types::acl::AgentRole;
     use medulla_isolation::isolation::IsolationLayer;
     use medulla_protocol_types::protocol::Method;
     use medulla_protocol_types::protocol::Request;

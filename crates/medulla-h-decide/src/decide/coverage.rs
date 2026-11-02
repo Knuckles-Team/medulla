@@ -11,6 +11,7 @@ use super::SharedState;
 use medulla_protocol_types::protocol::Response;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 #[cfg(feature = "redb")]
+#[cfg(feature = "decide")]
 use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 use medulla_decision_outcome_types::decision::coverage::CapabilityCoverageRequest;
 

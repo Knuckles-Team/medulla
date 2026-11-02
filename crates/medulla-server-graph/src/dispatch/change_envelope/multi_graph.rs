@@ -1,5 +1,8 @@
+#[cfg(feature = "redb")]
 use crate::dispatch::shared::timed_read;
+#[cfg(any(feature = "redb", test))]
 use crate::dispatch::shared::MAX_NESTED_MSGPACK_ITEMS;
+#[cfg(any(feature = "redb", test))]
 use crate::dispatch::shared::MAX_NESTED_MSGPACK_BYTES;
 use super::*;
 #[cfg(feature = "redb")]
@@ -262,13 +265,19 @@ pub async fn multi_graph_batch_update(
     )
 }
 
+#[cfg(any(any(feature = "redb", test), test))]
 const MAX_MULTI_GRAPH_BATCHES: usize =
     medulla_protocol_types::mutation_batch::MAX_FANOUT_SUB_BATCHES;
+#[cfg(any(feature = "redb", test))]
 const MAX_MULTI_GRAPH_NAME_BYTES: usize = 512;
+#[cfg(any(feature = "redb", test))]
 const MAX_MULTI_GRAPH_OPERATIONS_BYTES: usize = 32 * 1024 * 1024;
+#[cfg(any(feature = "redb", test))]
 const MAX_MULTI_GRAPH_TOTAL_OPERATIONS_BYTES: usize = 64 * 1024 * 1024;
+#[cfg(any(feature = "redb", test))]
 const MAX_MULTI_GRAPH_OPERATION_ITEMS: usize = 500_000;
 
+#[cfg(any(feature = "redb", test))]
 pub fn decode_multi_graph_batches(
     batches_msgpack: &[u8],
 ) -> Result<Vec<(String, serde_bytes::ByteBuf)>, String> {

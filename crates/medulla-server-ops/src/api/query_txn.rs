@@ -92,6 +92,7 @@ pub trait TxnApi: Send + Sync {
     /// Route one `Ts*` method through the time-series handler.
     #[cfg(feature = "tsdb")]
     #[allow(unused_variables)]
+    #[allow(clippy::too_many_arguments)] // seam signature mirrors the moved handler parameters
     async fn timeseries_try_handle(
         &self,
         state: &Arc<RwLock<ServerState>>,

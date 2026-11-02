@@ -114,6 +114,7 @@ use medulla_store::redb_store::NODES;
 use medulla_store::redb_store::SEMANTIC;
 #[cfg(feature = "security")]
 use medulla_store::redb_store::AUDIT;
+#[cfg(feature = "security")]
 use medulla_store::redb_store::AUDIT_REQUESTS;
 use medulla_store::redb_store::RESOURCE_ANTI_AFFINITY;
 use medulla_store::redb_store::RESOURCE_CONCURRENCY;
@@ -149,7 +150,7 @@ where
 /// rather than expressed as `Option<Option<T>>`, which reads as neither and
 /// which clippy rejects.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) enum RowChange<T> {
+pub enum RowChange<T> {
     Set(T),
     Cleared,
 }
@@ -157,7 +158,7 @@ pub(crate) enum RowChange<T> {
 /// Raw governed ChangeEnvelope material; every key is graph-first on disk.
 #[derive(Debug, Default, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
-pub(crate) struct RawChangeRows {
+pub struct RawChangeRows {
     pub envelopes: Vec<(String, Vec<u8>)>,
     pub content_versions: Vec<(String, String, Vec<u8>)>,
     pub cursors: Vec<(String, String, String, Vec<u8>)>,
@@ -173,7 +174,7 @@ pub(crate) struct RawChangeRows {
 /// see this module's own doc comment for why an online move needs it too).
 #[derive(Debug, Default, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
-pub(crate) struct RawResourceRows {
+pub struct RawResourceRows {
     pub reservations: Vec<(String, Vec<u8>)>,
     pub reservation_tenant_index: Vec<(String, String, String)>,
     pub reservation_attempts: Vec<(String, u64, String)>,
@@ -188,7 +189,7 @@ pub(crate) struct RawResourceRows {
 /// `development_lane_*` rows for ONE graph, captured verbatim (BUG-CX-054/096 class).
 #[derive(Debug, Default, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
-pub(crate) struct RawDevelopmentLaneRows {
+pub struct RawDevelopmentLaneRows {
     pub holds: Vec<(String, Vec<u8>)>,
     pub tenant_index: Vec<(String, String, String)>,
     pub lane_index: Vec<(String, String, String)>,
@@ -205,7 +206,7 @@ pub(crate) struct RawDevelopmentLaneRows {
 /// same class as BUG-CX-054, found by this lane's mechanical table inventory).
 #[derive(Debug, Default, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
-pub(crate) struct RawCapacityLeaseRows {
+pub struct RawCapacityLeaseRows {
     pub cells: Vec<(String, Vec<u8>)>,
     pub leases: Vec<(String, Vec<u8>)>,
     pub usage: Vec<(String, Vec<u8>)>,
@@ -484,7 +485,7 @@ impl ReshardReport {
 /// append-only (KG-2.231), so they only ever gain rows. Bounded by the writes that landed
 /// during the unquiesced bulk copy — typically tiny, the whole point of the optimization.
 #[derive(Default)]
-pub(crate) struct RawGraphDelta {
+pub struct RawGraphDelta {
     /// `Some(blob)` to re-write `graph_meta` when it changed (rare); `None` = unchanged.
     pub meta: Option<Vec<u8>>,
     pub upsert_nodes: Vec<(String, Vec<u8>)>,
@@ -694,6 +695,7 @@ fn clear_text_sequence<V: redb::Value + 'static>(
     Ok(())
 }
 
+#[cfg(feature = "security")]
 fn clear_sequence<V: redb::Value + 'static>(
     write: &impl OwnerPayloadWrite,
     graph: &str,
@@ -838,6 +840,7 @@ fn insert_four_part_bytes(
     Ok(())
 }
 
+#[cfg(feature = "security")]
 fn insert_sequence_bytes(
     write: &impl OwnerPayloadWrite,
     graph: &str,

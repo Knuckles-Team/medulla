@@ -1030,7 +1030,7 @@ def _check_dispatch_recovery_proof(sources: Mapping[str, str]) -> None:
         "begin_named_admin_saga_with_private_payload",
         "SPARQL_RECOVERY_EVENT",
         "SPARQL_COMPENSATION_EVENT",
-        "commit_coordinated_graph_methods",
+        "commit_coordinated_graph_methods_with_nonce",
         "clear_coordinated_graph_decision",
     ):
         require(

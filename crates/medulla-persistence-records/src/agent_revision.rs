@@ -67,9 +67,10 @@ pub mod status;
 pub mod tests;
 mod write;
 
-pub use status::{committed_status, ledger_status_record, status_result_bytes};
-#[cfg(any(test, feature = "test-support"))]
-pub use status::{decode_status_result, validate_status_record};
+pub use status::ledger_status_record;
+pub(crate) use status::{committed_status, status_result_bytes};
+#[cfg(test)]
+pub(crate) use status::{decode_status_result, validate_status_record};
 pub(super) use write::{
     apply_owner_rows, finish_committed_ledger, finish_replayed, policy_admitted_context,
     require_context_tenant, retire_revision, revision_scope, stage_batch, within_write,
@@ -149,7 +150,7 @@ pub(super) struct RevisionDefinition<'a> {
 }
 
 /// What differs between the layers that share the revision protocol.
-pub(super) trait RevisionLayer {
+pub(crate) trait RevisionLayer {
     type Entry: Clone + serde::Serialize + serde::de::DeserializeOwned;
     type Kind: Copy;
     type Committed: serde::Serialize + serde::de::DeserializeOwned;

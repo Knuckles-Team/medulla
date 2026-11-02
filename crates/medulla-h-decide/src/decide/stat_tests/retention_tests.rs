@@ -2,7 +2,7 @@
 use super::*;
 
 async fn library_record(h: &Harness) -> StatisticalDecisionRecord {
-    h.publish(
+    h.publish_test_component(
         "retained-tool",
         AgentComponentKind::Tool,
         "web search",

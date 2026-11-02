@@ -59,6 +59,7 @@ fn initialize_parameters(observations: &[f64], n_states: usize) -> HmmParameters
     }
 }
 
+#[allow(clippy::needless_range_loop)] // the index also drives a second sequence in lockstep (DP recurrence); iterator zips would obscure the maths
 fn forward_log_probabilities(observations: &[f64], params: &HmmParameters) -> Vec<Vec<f64>> {
     let (t, n_states) = (observations.len(), params.means.len());
     let mut log_alpha = vec![vec![0.0_f64; n_states]; t];
@@ -117,6 +118,7 @@ fn posterior_probabilities(log_alpha: &[Vec<f64>], log_beta: &[Vec<f64>]) -> Vec
     gamma
 }
 
+#[allow(clippy::needless_range_loop)] // the index also drives a second sequence in lockstep (DP recurrence); iterator zips would obscure the maths
 fn update_initial_probabilities(gamma: &[Vec<f64>], params: &mut HmmParameters) {
     let gamma_sum_0: f64 = gamma[0].iter().sum();
     for s in 0..params.initial_probs.len() {
@@ -124,6 +126,7 @@ fn update_initial_probabilities(gamma: &[Vec<f64>], params: &mut HmmParameters) 
     }
 }
 
+#[allow(clippy::needless_range_loop)] // the index also drives a second sequence in lockstep (DP recurrence); iterator zips would obscure the maths
 fn update_transition_matrix(
     observations: &[f64],
     log_alpha: &[Vec<f64>],
@@ -339,6 +342,7 @@ fn best_predecessor(v_prev: &[f64], j: usize, trans: &[Vec<f64>], n: usize) -> (
 }
 
 /// Recover the most-likely state sequence from the Viterbi trellis.
+#[allow(clippy::needless_range_loop)] // the index also drives a second sequence in lockstep (DP recurrence); iterator zips would obscure the maths
 fn backtrack_viterbi_path(
     v: &[Vec<f64>],
     backtrack: &[Vec<usize>],

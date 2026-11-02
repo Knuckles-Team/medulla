@@ -107,7 +107,7 @@ async fn resolve(h: &Harness, op: DecisionLogOp) -> Result<StoredResolution, Str
 
 pub(super) async fn declared_abstention(h: &Harness) -> StatisticalDecisionRecord {
     let schema_pin = h
-        .publish(
+        .publish_test_component(
             "schema-declared",
             AgentComponentKind::FeatureSchema,
             "declared-option features",
@@ -308,7 +308,7 @@ async fn cost_routing_without_l5_accounting_abstains_naming_the_fact() {
         .unwrap(),
     };
     let schema_pin = h
-        .publish(
+        .publish_test_component(
             "schema-cost",
             AgentComponentKind::FeatureSchema,
             "cost routing features",
@@ -434,7 +434,7 @@ async fn graph_decide_answers_every_execution_routing_category() {
 
     let h = Harness::new().await;
     let schema_pin = h
-        .publish(
+        .publish_test_component(
             "schema-execution-routing",
             AgentComponentKind::FeatureSchema,
             "execution routing features",

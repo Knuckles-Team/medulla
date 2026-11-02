@@ -21,6 +21,7 @@
 #[cfg(feature = "raft")]
 use medulla_raft::raft::RaftStateExt;
 #[cfg(feature = "redb")]
+#[cfg(feature = "raft")]
 use medulla_persistence::AsRedb;
 use std::sync::Arc;
 

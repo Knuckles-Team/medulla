@@ -72,42 +72,6 @@ impl SemanticIndexServerAdapter {
         Ok(())
     }
 
-    /// The first callable server operation: create/admit a binding and return
-    /// its durable receipt.  Refresh/disable/drop/search/status remain routed
-    /// by the protocol integration slice and therefore cannot accidentally run
-    /// through an unverified fallback here.
-    pub(crate) fn admit_binding(
-        &self,
-        request: &SemanticIndexRequest,
-        authority: &CarrierAuthority,
-        now_ms: u64,
-    ) -> Result<medulla_ann_codes::semantic_ann_codes::SemanticMutationReceipt, String> {
-        self.authorize(request, authority, now_ms)?;
-        let SemanticIndexCommand::CreateBinding { draft } = &request.command else {
-            return Err(
-                "INVALID_ARGUMENT: semantic operation is not binding admission".to_string(),
-            );
-        };
-        let binding = SemanticBinding::create((**draft).clone())
-            .map_err(|_| "INVALID_ARGUMENT: semantic binding rejected".to_string())?;
-        request
-            .validate_against_binding(&binding, now_ms)
-            .map_err(|error| request_validation_refusal(&error).to_string())?;
-        self.service
-            .admit_binding_operation(
-                &binding,
-                now_ms,
-                authority.agent_id(),
-                authority.idempotency_key(),
-                authority.attempt_nonce().ok_or_else(|| {
-                    "ACCESS_DENIED: semantic mutation requires a verified attempt nonce".to_string()
-                })?,
-            )
-            .map_err(|error| {
-                crate::semantic_index::semantic_failure_message(&error)
-                    .to_string()
-            })
-    }
 
     /// Subscribe one authenticated semantic worker to this tenant's durable
     /// stage stream. A worker may differ from the actor whose source ACL

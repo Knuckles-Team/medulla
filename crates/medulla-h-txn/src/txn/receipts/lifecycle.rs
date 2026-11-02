@@ -20,6 +20,7 @@ pub(crate) fn is_txn_lifecycle_method(method: &Method) -> bool {
 /// process, but it cannot recreate `open_txns`; returning its old success after
 /// restart would hand the caller a dead Begin handle or claim a Stage/Rollback
 /// succeeded before the next request fails with `unknown transaction`.
+#[cfg(feature = "redb")]
 pub(crate) fn validate_txn_lifecycle_result(
     method: &Method,
     result: &ResultPayload,
@@ -61,6 +62,7 @@ pub(crate) fn validate_txn_lifecycle_result(
     }
 }
 
+#[cfg(feature = "redb")]
 fn matches_lifecycle_result(expected: &str, result: &ResultPayload) -> bool {
     match expected {
         "String" => matches!(result, ResultPayload::String(_)),
@@ -77,6 +79,7 @@ fn matches_lifecycle_result(expected: &str, result: &ResultPayload) -> bool {
     }
 }
 
+#[cfg(feature = "redb")]
 pub(crate) async fn validate_txn_lifecycle_replay(
     state: &Arc<RwLock<ServerState>>,
     method: &Method,
@@ -115,6 +118,7 @@ pub(crate) async fn validate_txn_lifecycle_replay(
     Ok(())
 }
 
+#[cfg(feature = "redb")]
 pub(crate) fn txn_lifecycle_batch_id(
     authority: &CarrierAuthority,
     method: &Method,

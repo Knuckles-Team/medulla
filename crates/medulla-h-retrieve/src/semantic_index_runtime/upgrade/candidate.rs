@@ -1,7 +1,9 @@
 //! Private candidate creation, abort, and promotion under the engine lease.
 
+#[cfg(test)]
 use super::*;
 
+#[cfg(test)]
 fn prove_single_candidate(
     candidate: &Path,
     current: &TenantOwnerUpgradeInspection,
@@ -31,6 +33,7 @@ fn prove_single_candidate(
 /// binding. This does not install the canonical v3 path or change normal
 /// serving. A tenant with multiple v2 files needs a separate ledger-key,
 /// replay and outbox merge proof and is refused here.
+#[cfg(test)]
 pub(crate) fn copy_single_binding_tenant_candidate(
     persist_dir: &Path,
     expected: &TenantOwnerUpgradeInspection,
@@ -81,6 +84,7 @@ pub(crate) fn copy_single_binding_tenant_candidate(
 /// Abort an unactivated candidate after re-proving both source and candidate.
 /// The canonical v3 path has never been installed, so this removes only the
 /// private copy and leaves the original v2 serving authority intact.
+#[cfg(test)]
 pub(crate) fn abort_single_binding_tenant_candidate(
     persist_dir: &Path,
     inspected: &TenantOwnerUpgradeInspection,
@@ -119,6 +123,7 @@ pub(crate) fn abort_single_binding_tenant_candidate(
 /// Build a private tenant candidate from two or more independent v2 owners.
 /// The kernel refuses every colliding key and proves the union of all owner,
 /// replay, ledger and outbox rows, including logical scope-binding identities.
+#[cfg(test)]
 pub(crate) fn merge_multi_binding_tenant_candidate(
     persist_dir: &Path,
     expected: &TenantOwnerUpgradeInspection,
@@ -190,6 +195,7 @@ pub(crate) fn merge_multi_binding_tenant_candidate(
     })
 }
 
+#[cfg(test)]
 fn require_candidate_headroom(persist_dir: &Path, source_bytes: u64) -> Result<(), String> {
     // A redb merge may allocate fresh pages beyond the sum of its inputs.
     // Keep at least 256 MiB of unrelated workspace headroom as well. This
@@ -208,6 +214,7 @@ fn require_candidate_headroom(persist_dir: &Path, source_bytes: u64) -> Result<(
 /// Reinspect the original complete source census while the caller holds the
 /// engine lease. Both abort and promotion must derive the binding list from
 /// the inspected set, never from a new caller-supplied subset.
+#[cfg(test)]
 fn inspect_expected_sources_under_lease(
     persist_dir: &Path,
     inspected: &TenantOwnerUpgradeInspection,
@@ -228,6 +235,7 @@ fn inspect_expected_sources_under_lease(
 
 /// Verify the complete source census and reserved destination while a
 /// candidate-producing caller still holds the exclusive engine lease.
+#[cfg(test)]
 fn inspect_unchanged_sources_under_lease(
     persist_dir: &Path,
     expected: &TenantOwnerUpgradeInspection,
@@ -246,6 +254,7 @@ fn inspect_unchanged_sources_under_lease(
 /// Remove an unactivated multi-binding candidate only after its exact source
 /// set and the candidate's reopened recovery evidence still match the copy
 /// receipt. Normal v2 serving remains the authority throughout.
+#[cfg(test)]
 pub(crate) fn abort_multi_binding_tenant_candidate(
     persist_dir: &Path,
     inspected: &TenantOwnerUpgradeInspection,
@@ -282,6 +291,7 @@ pub(crate) fn abort_multi_binding_tenant_candidate(
     std::fs::remove_file(&candidate.candidate).map_err(|error| error.to_string())
 }
 
+#[cfg(test)]
 pub(crate) fn promote_single_binding_tenant_candidate(
     persist_dir: &Path,
     inspected: &TenantOwnerUpgradeInspection,
@@ -303,6 +313,7 @@ pub(crate) fn promote_single_binding_tenant_candidate(
     )
 }
 
+#[cfg(test)]
 pub(crate) fn promote_multi_binding_tenant_candidate(
     persist_dir: &Path,
     inspected: &TenantOwnerUpgradeInspection,
@@ -329,6 +340,7 @@ pub(crate) fn promote_multi_binding_tenant_candidate(
 /// atomically and preserves the file's device/inode physical root. If the
 /// process dies between link and unlink, both names point at the same valid
 /// owner; `recover_promoted_tenant_owner` validates and removes the alias.
+#[cfg(test)]
 fn promote_checked_candidate(
     persist_dir: &Path,
     inspected: &TenantOwnerUpgradeInspection,
