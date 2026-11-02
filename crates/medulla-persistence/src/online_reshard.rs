@@ -1657,7 +1657,7 @@ pub(crate) fn graft_and_retire(
     destination: &Shard,
     graph: &str,
 ) -> Result<GraftedScope, String> {
-    let grafted = graft_graph_from(&destination, source, graph)?;
+    let grafted = graft_graph_from(destination, source, graph)?;
     drop_from_catalog(source, graph)?;
     Ok(grafted)
 }
