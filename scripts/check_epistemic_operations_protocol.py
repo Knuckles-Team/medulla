@@ -28,7 +28,9 @@ from rust_module_tree import read_compiler_family
 
 ROOT = Path(__file__).resolve().parent.parent
 MANIFEST_PATH = ROOT / "protocols" / "epistemic-operations" / "v1" / "manifest.json"
-RUST_SOURCE = ROOT / "crates" / "medulla-result-types" / "src" / "epistemic_operations.rs"
+RUST_SOURCE = (
+    ROOT / "crates" / "medulla-result-types" / "src" / "epistemic_operations.rs"
+)
 EXPECTED_RUST_SOURCES = frozenset(
     {
         "crates/medulla-result-types/src/epistemic_operations.rs",
@@ -46,7 +48,11 @@ EXPECTED_RUST_SOURCES = frozenset(
     }
 )
 RUST_GENERATED = (
-    ROOT / "crates" / "medulla-result-types" / "src" / "epistemic_operations_manifest.rs"
+    ROOT
+    / "crates"
+    / "medulla-result-types"
+    / "src"
+    / "epistemic_operations_manifest.rs"
 )
 LIB_SOURCE = ROOT / "crates" / "medulla-result-types" / "src" / "lib.rs"
 GOLDEN_VECTOR_PATH = (

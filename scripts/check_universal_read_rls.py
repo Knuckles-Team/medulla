@@ -397,7 +397,8 @@ def main() -> None:
             "core, materialization_manifest.as_ref(), read_authority.as_ref(),",
             "medulla_h_mining::mining::try_handle( req_id, core.clone(), "
             "read_authority.as_ref(),",
-            "medulla_server_api::handlers::graphlearn::try_handle(req_id, core.clone(), method)",
+            "medulla_server_api::handlers::graphlearn::try_handle("
+            "req_id, core.clone(), method)",
             "read_authority.as_ref(), method,",
             # `core.clone()` became `ctx.core.clone()` when the post-lock routers
             # took a `GraphOpRouting` context struct instead of eight loose args.
