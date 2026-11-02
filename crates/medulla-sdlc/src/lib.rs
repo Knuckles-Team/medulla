@@ -4,5 +4,6 @@
 //! on crates of a lower level. Budget: 25,000 lines of Rust. Specs that land here: development-lifecycle, public-engine-contract-and-release (release proof).
 //! Route new rows with `scripts/crate_split/route_rows.py`.
 
+#![allow(dead_code)] // moved helper code, as the facade crate did
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]

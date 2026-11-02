@@ -3,6 +3,8 @@
 //! Level F2b in `scripts/crate_split/boundaries.toml` (MEDULLA-CONTRACT-R056.11); it may depend only
 //! on crates of a lower level. Budget: 25,000 lines of Rust.
 
+#![allow(clippy::too_many_arguments)] // seam signatures mirror the moved facade functions
+#![allow(dead_code)] // moved helper code, as the facade crate did
 #![recursion_limit = "256"]
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]

@@ -1,6 +1,7 @@
 //! medulla-persistence: durable persistence backends. Split out of the `medulla-engine` facade (MEDULLA-CONTRACT-R056.11);
 //! level 3 in `scripts/crate_split/manifest.toml`.
 
+#![allow(dead_code)] // moved helper code, as the facade crate did
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
 

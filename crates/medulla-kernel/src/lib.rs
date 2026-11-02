@@ -7,6 +7,7 @@
 //! Every module keeps the feature gate it had in the facade; the facade forwards
 //! its features of the same name to this crate.
 
+#![allow(dead_code)] // moved helper code, as the facade crate did
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
 

@@ -4,6 +4,7 @@
 //! test module: the crate is empty outside the test build. It is a dev-dependency only and turns on the
 //! persistence `test-support` feature for its own test build.
 
+#![allow(dead_code)] // moved helper code, as the facade crate did
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
 #![cfg(test)]

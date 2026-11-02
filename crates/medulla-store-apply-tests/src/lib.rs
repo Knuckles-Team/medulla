@@ -3,6 +3,7 @@
 //! Level F2c in `scripts/crate_split/boundaries.toml` (MEDULLA-CONTRACT-R056.11). Every module is a
 //! test module: the crate is empty outside the test build. It is a dev-dependency only.
 
+#![allow(dead_code)] // moved helper code, as the facade crate did
 #![recursion_limit = "256"]
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]

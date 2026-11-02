@@ -4,6 +4,7 @@
 //! on crates of a lower level. Specs that land here: finance-primitives (quant kernels).
 //! Route new rows with `scripts/crate_split/route_rows.py`.
 
+#![allow(dead_code)] // moved helper code, as the facade crate did
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
 // Numeric linear-algebra/optimization code reads more clearly with explicit index loops.

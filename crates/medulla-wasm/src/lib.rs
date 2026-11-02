@@ -57,6 +57,7 @@
 //! `ModalityContract` may simply not apply, which is a legitimate outcome, not a gap"),
 //! this crate is a documented SKIP.
 
+#![allow(dead_code)] // moved helper code, as the facade crate did
 #![cfg(feature = "wasm-udf")]
 
 use std::sync::Arc;
