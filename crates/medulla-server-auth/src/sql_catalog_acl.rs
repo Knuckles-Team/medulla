@@ -92,7 +92,7 @@ type SemanticCursorMac = Hmac<Sha256>;
 /// or other cluster-wide ordering authority. Consumers that require the latter
 /// must fail closed on `LocalOnly`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum SqlSourceAuthorityOrdering {
+pub enum SqlSourceAuthorityOrdering {
     LocalOnly,
 }
 
