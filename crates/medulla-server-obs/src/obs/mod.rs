@@ -56,6 +56,7 @@ pub(crate) mod writer;
 
 pub use writer::writer_auth_configured;
 
+#[cfg(test)]
 use medulla_server_cdc::cdc::CdcStateExt;
 use std::collections::{BTreeMap, HashMap};
 use std::path::PathBuf;

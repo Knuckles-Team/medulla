@@ -33,7 +33,7 @@ async fn derived_classes_select_candidates_as_claims_under_a_pinned_rule_set() {
     model_profile(&h, "model-a-tools", true);
     model_profile(&h, "model-b-plain", false);
     let schema_pin = h
-        .publish(
+        .publish_test_component(
             "schema-models",
             AgentComponentKind::FeatureSchema,
             "model features",

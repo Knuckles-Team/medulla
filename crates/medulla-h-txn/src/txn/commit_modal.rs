@@ -170,25 +170,6 @@ pub(super) fn mirror_blob_refs_into_ram(
     }
 }
 
-/// The reusable core of the cross-modal commit (CONCEPT:MEDULLA-KG.txn.reader-never-sees-node + MEDULLA-360/361/362),
-/// factored out of [`commit_cross_modal`] so BOTH the RPC `Method::Commit` handler AND
-/// the pgwire cross-modal txn seam (CONCEPT:MEDULLA-KG.txn.isolation-ryow-begin-set) drive the IDENTICAL commit — no
-/// logic duplicated across the RPC + wire surfaces. Returns `Ok(true)` on commit,
-/// `Ok(false)` on an OCC conflict (true rollback), `Err(msg)` on an ACL denial or a
-/// durable-commit failure.
-///
-/// All modalities, MutationBatch status/result, OCC/fence, idempotency, and outbox
-/// land in one durable transaction before the in-memory projection is published. A
-/// missing backend or commit failure applies nothing.
-pub(crate) async fn commit_cross_modal_txn(
-    state: &Arc<RwLock<ServerState>>,
-    request_id: u64,
-    caller: Option<&str>,
-    coordinator_id: &str,
-    txn: GraphTxnState,
-) -> Result<bool, String> {
-    commit_cross_modal_txn_with_nonce(state, request_id, caller, coordinator_id, txn, None).await
-}
 
 async fn resolve_cross_modal_target(
     state: &Arc<RwLock<ServerState>>,
@@ -294,6 +275,8 @@ pub(crate) async fn commit_cross_modal_txn_with_nonce(
 }
 
 struct CrossModalDurableArgs<'a> {
+    // read only by the tsdb measurement projection
+    #[cfg_attr(not(feature = "tsdb"), allow(dead_code))]
     state: &'a Arc<RwLock<ServerState>>,
     core: &'a Arc<medulla_graph_core::graph::GraphCore>,
     authority: &'a dyn medulla_server_api::api::persistence::PersistenceBackend,

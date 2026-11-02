@@ -1,5 +1,6 @@
 //! Shared setup for in-process Raft harnesses.
 
+#[cfg(all(any(test, feature = "harness", feature = "compute-dist", feature = "test-support"), feature = "raft", feature = "streaming"))]
 use medulla_server_cdc::cdc::CdcStateExt;
 use std::collections::BTreeMap;
 use std::sync::atomic::{AtomicU64, Ordering};

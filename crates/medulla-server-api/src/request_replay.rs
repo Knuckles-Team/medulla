@@ -124,6 +124,13 @@ pub struct ReplayCache {
 }
 
 #[cfg(any(test, feature = "test-support"))]
+impl Default for ReplayCache {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[cfg(any(test, feature = "test-support"))]
 impl ReplayCache {
     pub fn new() -> Self {
         ReplayCache {
@@ -159,12 +166,16 @@ const HANDOFF_FLOOR_KEY: &str = "handoff_floor";
 const HANDOFF_PREFIX: &str = "handoff/";
 /// The first key after every `handoff/` key (`'0'` follows `'/'`).
 #[cfg(feature = "security")]
+#[cfg(any(test, not(feature = "request-policy-fixture")))]
 const HANDOFF_END: &str = "handoff0";
 #[cfg(feature = "security")]
+#[cfg(any(test, not(feature = "request-policy-fixture")))]
 const REPLAY_PHYSICAL_STORE: &str = "epistemic-graph:request-replay";
 #[cfg(feature = "security")]
+#[cfg(any(test, not(feature = "request-policy-fixture")))]
 const REPLAY_SCOPE_RESOURCE: &str = "request-replay";
 #[cfg(feature = "security")]
+#[cfg(any(test, not(feature = "request-policy-fixture")))]
 const REPLAY_SCOPE_INCARNATION: &str = "request-replay:v1";
 
 /// Durable replay adapter used by secure mode (EH-533).
@@ -212,6 +223,7 @@ pub struct RedbReplayLedger {
 
 #[cfg(feature = "security")]
 impl RedbReplayLedger {
+    #[cfg(any(test, not(feature = "request-policy-fixture")))]
     pub(crate) fn open(dir: &std::path::Path) -> Result<Self, String> {
         let path = dir.join("request-replay.redb");
         let durable = medulla_store::sidecar_store::SidecarStore::open(
@@ -284,6 +296,7 @@ impl RedbReplayLedger {
 /// envelope a previous incarnation could have accepted is refused. Runs as a
 /// maintenance write so a fresh file gets its table created.
 #[cfg(feature = "security")]
+#[cfg(any(test, not(feature = "request-policy-fixture")))]
 fn restore(
     durable: &medulla_store::sidecar_store::SidecarStore<medulla_storage::RequestReplayOwner>,
 ) -> Result<(u64, NonceWindow), String> {
@@ -311,6 +324,7 @@ fn restore(
 
 /// Reads the sealed handoff into a window and deletes it (rows + floor key).
 #[cfg(feature = "security")]
+#[cfg(any(test, not(feature = "request-policy-fixture")))]
 fn take_handoff(
     table: &mut redb::Table<'_, &'static str, u64>,
     floor: u64,

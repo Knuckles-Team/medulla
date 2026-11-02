@@ -301,6 +301,7 @@ pub struct HandshakeResponse {
     /// The database (graph) the client asked to connect to, if CLIENT_CONNECT_WITH_DB.
     pub database: Option<String>,
     /// The auth plugin name the client used, if CLIENT_PLUGIN_AUTH.
+    #[allow(dead_code)] // parsed handshake field retained for protocol completeness
     pub auth_plugin: Option<String>,
 }
 

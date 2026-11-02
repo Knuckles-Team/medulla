@@ -1,6 +1,6 @@
 use std::sync::{Arc, OnceLock};
 
-use medulla_server_api::{routed_write_coalescer::lock_graph, routed_write_coalescer::lock_stripe, routed_write_coalescer::striped_lock};
+use medulla_server_api::{routed_write_coalescer::lock_graph, routed_write_coalescer::striped_lock};
 
 use sha2::{Digest, Sha256};
 use tokio::sync::{Mutex, OwnedMutexGuard};

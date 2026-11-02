@@ -329,10 +329,4 @@ impl RetainedTarget {
         }
     }
 
-    pub(crate) fn as_agent(&self) -> Option<&AgentLibraryEntry> {
-        match self {
-            Self::Agent(entry) => Some(entry.as_ref()),
-            Self::Graph(_) => None,
-        }
-    }
 }

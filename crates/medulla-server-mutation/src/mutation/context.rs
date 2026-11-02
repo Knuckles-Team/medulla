@@ -142,10 +142,6 @@ impl IdempotencyStore {
         }
     }
 
-    #[cfg(test)]
-    pub fn clear(&self) {
-        self.seen.clear();
-    }
 }
 
 impl Default for IdempotencyStore {

@@ -192,6 +192,7 @@ fn nelder_mead_update_simplex(
 /// Shrink every non-best simplex vertex toward the best vertex. Split out of
 /// `nelder_mead_update_simplex` (extract-method, cx/wD8) — same terms, same
 /// order as before.
+#[allow(clippy::needless_range_loop)] // the index also drives a second sequence in lockstep (DP recurrence); iterator zips would obscure the maths
 fn nelder_mead_shrink(
     f: &dyn Fn([f64; 3]) -> f64,
     simplex: &mut [[f64; 3]; 4],

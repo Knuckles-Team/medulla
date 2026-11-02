@@ -802,14 +802,6 @@ mod foreign_query_digest_tests {
 
 #[cfg(feature = "query")]
 impl QueryHandlerCtx<'_> {
-    /// [`ServedPlanLegs::resolve`] for this request's verified read authority; `Err`
-    /// is the caller-facing refusal response.
-    pub(crate) async fn served_legs(
-        &self,
-        plan: &medulla_exec::algebra::Plan,
-    ) -> Result<ServedPlanLegs, Response> {
-        self.served_legs_with_foreign_execution(plan, None).await
-    }
 
     pub(crate) async fn served_legs_with_foreign_execution(
         &self,

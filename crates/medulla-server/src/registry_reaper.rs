@@ -32,6 +32,7 @@
 //! failure leaves BOTH images (memory and disk) untouched, self-healing on
 //! the next sweep instead of risking divergence.
 
+#[cfg(feature = "streaming")]
 use medulla_server_cdc::cdc::CdcStateExt;
 use std::sync::Arc;
 

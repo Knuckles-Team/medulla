@@ -67,7 +67,7 @@ async fn an_utterance_routes_over_templates_and_an_llm_proposal_is_only_a_claim(
         ("nl-build-agent", "build an agent about {topic}"),
         ("nl-find-owner", "who owns the service about {topic}"),
     ] {
-        h.publish(
+        h.publish_test_component(
             id,
             AgentComponentKind::NlTemplate,
             utterance,
@@ -89,7 +89,7 @@ async fn an_utterance_routes_over_templates_and_an_llm_proposal_is_only_a_claim(
         .unwrap(),
     };
     let schema_pin = h
-        .publish(
+        .publish_test_component(
             "schema-nl",
             AgentComponentKind::FeatureSchema,
             "template features",
@@ -147,7 +147,7 @@ async fn an_utterance_routes_over_templates_and_an_llm_proposal_is_only_a_claim(
 #[tokio::test]
 async fn nl_binding_text_slots_are_verbatim_substrings_never_generated_text() {
     let h = Harness::new().await;
-    h.publish(
+    h.publish_test_component(
         "nl-build-agent",
         AgentComponentKind::NlTemplate,
         "build an agent about {topic}",
@@ -168,7 +168,7 @@ async fn nl_binding_text_slots_are_verbatim_substrings_never_generated_text() {
         .unwrap(),
     };
     let schema_pin = h
-        .publish(
+        .publish_test_component(
             "schema-nl-verbatim",
             AgentComponentKind::FeatureSchema,
             "template features",

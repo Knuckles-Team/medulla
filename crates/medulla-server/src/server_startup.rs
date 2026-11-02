@@ -6,8 +6,11 @@
 //! refusal keeps its exact message and exit status; a store-open failure stays
 //! fatal at boot (loud + early).
 
+#[cfg(feature = "blob")]
 use medulla_server_blob::blob::BlobStateExt;
+#[cfg(all(feature = "cdc-kafka", feature = "streaming"))]
 use medulla_server_cdc::cdc::CdcStateExt;
+#[cfg(feature = "kv")]
 use medulla_server_blob::kv::KvStateExt;
 use std::net::SocketAddr;
 use std::sync::Arc;

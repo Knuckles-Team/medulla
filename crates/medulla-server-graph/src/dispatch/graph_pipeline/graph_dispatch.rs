@@ -1,4 +1,5 @@
 use crate::dispatch::shared::timed_read;
+#[cfg(feature = "streaming")]
 use medulla_server_cdc::cdc::CdcStateExt;
 use super::*;
 #[cfg(feature = "redb")]

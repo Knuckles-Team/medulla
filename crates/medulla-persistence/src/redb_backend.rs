@@ -40,19 +40,14 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 
-use redb::{ReadableTable, TableDefinition};
+#[cfg(feature = "security")]
+use redb::ReadableTable;
+use redb::TableDefinition;
 use tokio::sync::RwLock;
 
 use medulla_graph_core::graph::GraphCore;
 use medulla_store_apply::redb_store::store_control::GraphDump;
 
-#[cfg(test)]
-use medulla_protocol_types::mutation_batch::*;
-use medulla_protocol_types::protocol::*;
-#[cfg(test)]
-use medulla_server_api::state::ServerState;
-#[cfg(test)]
-use medulla_store::redb_layout::shard_filename;
 #[cfg(test)]
 use tokio::sync::oneshot;
 
@@ -67,8 +62,6 @@ use medulla_server_api::api::persistence::PersistenceBackend;
 // the `PersistenceBackend` async trait wiring on top.
 use medulla_store::redb_store::shard::Shard;
 
-#[cfg(test)]
-use medulla_transaction::OutboxClaimBudget;
 
 #[cfg(all(any(test, feature = "test-support"), feature = "security"))]
 pub mod audit_append_tests;

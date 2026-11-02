@@ -63,6 +63,7 @@
 #[cfg(feature = "redb")]
 use medulla_persistence::AsRedb;
 use std::sync::Arc;
+#[cfg(test)]
 use std::time::Duration;
 
 use tokio::sync::RwLock;
@@ -182,10 +183,12 @@ struct ModalityState {
 }
 
 impl ModalityState {
+    #[cfg(test)]
     const NEITHER: Self = Self {
         a_present: false,
         b_present: false,
     };
+    #[cfg(test)]
     const BOTH: Self = Self {
         a_present: true,
         b_present: true,
@@ -449,6 +452,7 @@ async fn scenario_coord_kill_pre_decision() -> Result<bool, String> {
 /// build time and therefore cannot itself construct a stale slice) so the race
 /// window can be deterministically reproduced without needing to win an actual
 /// timing race.
+#[cfg(test)]
 async fn scenario_stale_fenced_participant_rejected() -> Result<bool, String> {
     let dir = fixture::fresh_dir("medulla-xshard-modal", "stalefence");
     let backend = fixture::open_backend(&dir)?;
@@ -490,6 +494,7 @@ async fn scenario_stale_fenced_participant_rejected() -> Result<bool, String> {
 /// (auto-created by `ensure_group` on first use), which — like GROUP_A/GROUP_B
 /// in `bring_up` — needs its own election tick before `client_write_group` can
 /// find a leader. Wait for it explicitly, the same way `bring_up` does for A/B.
+#[cfg(test)]
 async fn await_default_placement_leader(multi: &MultiRaft) -> Result<(), String> {
     multi.ensure_group(medulla_raft::raft::DEFAULT_GROUP).await?;
     let default_group = multi
@@ -506,6 +511,7 @@ async fn await_default_placement_leader(multi: &MultiRaft) -> Result<(), String>
 
 /// The route a coordinator captured before a placement cutover, and the epoch
 /// the catalog moved to afterwards.
+#[cfg(test)]
 struct PlacementCutover {
     stale_epoch: u64,
     stale_fence: Option<u64>,
@@ -516,6 +522,7 @@ struct PlacementCutover {
 /// SAME group — `plan_assign` always allocates a fresh epoch even when the group
 /// is unchanged, exactly like a real move/split/merge would): the catalog is
 /// then at a STRICTLY NEWER epoch than the captured route.
+#[cfg(test)]
 async fn cut_over_modal_a_placement(multi: &MultiRaft) -> Result<PlacementCutover, String> {
     let stale_epoch = multi.placement_assign(GRAPH_A, GROUP_A).await?;
     let route1 = multi.route_graph(GRAPH_A).await;
@@ -534,6 +541,7 @@ async fn cut_over_modal_a_placement(multi: &MultiRaft) -> Result<PlacementCutove
 }
 
 /// Commit `txn` and read back both modalities.
+#[cfg(test)]
 async fn commit_and_read_back(
     coord: &CrossShardCoordinator,
     state: &Arc<RwLock<medulla_server_api::state::ServerState>>,
@@ -544,6 +552,7 @@ async fn commit_and_read_back(
 }
 
 /// The txn aborts with neither modality applied and no durable prepare leaked.
+#[cfg(test)]
 async fn commit_is_rejected_cleanly(
     coord: &CrossShardCoordinator,
     backend: &fixture::Backend,

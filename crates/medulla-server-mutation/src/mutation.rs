@@ -119,8 +119,6 @@ pub use plan::LOCAL_ONLY_CLUSTER_REFUSAL;
 #[cfg(any(feature = "raft", test, feature = "test-support"))]
 pub use plan::{cluster_mutation_route, ClusterMutationRoute};
 pub use plan::{is_gateway_routed, method_variant_name, GatewayAuthzCtx, MutationPlan};
-#[cfg(all(test, feature = "raft"))]
-use plan::{CONSENSUS_FANOUT_METHODS, SELF_ROUTED_ADMIN_METHODS};
 
 pub use context::MutationCtx;
 use context::{advance_authoritative_manifest, idempotency_store, response_dedup_key};
@@ -170,6 +168,24 @@ pub use conditional::commit_conditional_mutation_async;
 #[cfg(any(feature = "query", feature = "cypher", feature = "graphql"))]
 pub use conditional::is_query_native_coordinator;
 pub use conditional::{is_query_gateway_method, is_rdf_gateway_method};
+
+
+/// Shared conversion tail for gateway closures that wrap a handler `Response`: a handler
+/// `Response` carries its own refusal/result, so folding it into the
+/// `FnOnce(&GraphCore) -> Result<ResultPayload, String>` shape the conditional commit
+/// expects is identical work at every call site.
+pub fn response_to_gateway_result(
+    resp: medulla_protocol_types::protocol::Response,
+) -> Result<ResultPayload, String> {
+    // Keep the detail with the code: the gateway re-wraps this text through
+    // `Response::err`, which would otherwise answer with a bare code.
+    match resp.refusal_text() {
+        Some(refusal) => Err(refusal),
+        None => Ok(resp
+            .result
+            .unwrap_or(ResultPayload::Json(serde_json::Value::Null))),
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -1166,22 +1182,5 @@ mod tests {
                 "{name} must be named in LOCAL_ONLY_METHODS"
             );
         }
-    }
-}
-
-/// Shared conversion tail for gateway closures that wrap a handler `Response`: a handler
-/// `Response` carries its own refusal/result, so folding it into the
-/// `FnOnce(&GraphCore) -> Result<ResultPayload, String>` shape the conditional commit
-/// expects is identical work at every call site.
-pub fn response_to_gateway_result(
-    resp: medulla_protocol_types::protocol::Response,
-) -> Result<ResultPayload, String> {
-    // Keep the detail with the code: the gateway re-wraps this text through
-    // `Response::err`, which would otherwise answer with a bare code.
-    match resp.refusal_text() {
-        Some(refusal) => Err(refusal),
-        None => Ok(resp
-            .result
-            .unwrap_or(ResultPayload::Json(serde_json::Value::Null))),
     }
 }

@@ -449,6 +449,7 @@ pub fn encode_chunked(v: &PackValue) -> Vec<u8> {
 /// chunks directly off the socket.
 #[derive(Default)]
 pub struct Dechunker {
+    #[allow(dead_code)] // accumulated chunk payload, drained by the decoder
     body: Vec<u8>,
 }
 

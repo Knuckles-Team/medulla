@@ -2,12 +2,15 @@
 
 use medulla_isolation::isolation::IsolationLayer;
 
+#[cfg(any(test, not(feature = "raft")))]
 pub(super) const SERVICE_ACTOR: &str = "service:repository-enrichment-v1";
 
+#[cfg(any(test, not(feature = "raft")))]
 fn role_for(graph: &str) -> String {
     format!("repository-enrichment:{graph}")
 }
 
+#[cfg(any(test, not(feature = "raft")))]
 /// Grant only the graph named by a verified, held enrichment outbox lease.
 /// Idempotent across retries and restart; never consumes an unbootstrapped
 /// identity policy.

@@ -10,14 +10,19 @@ use super::{
     tenant_semantic_owner_file,
 };
 use medulla_storage::{
-    adopt_recovery, layout_digest_hex, merge_semantic_owner_files, open_read_only, open_recovery,
-    prove_scope_bindings_reanchored_read_only, prove_semantic_owner_partition_read_only,
-    prove_semantic_owner_union_read_only, strict_recovery_evidence,
-    strict_recovery_evidence_read_only, OwnerLayout, PhysicalStoreIdentity, StrictRecoveryEvidence,
+    layout_digest_hex, open_read_only, prove_semantic_owner_partition_read_only,
+    prove_semantic_owner_union_read_only, strict_recovery_evidence_read_only, OwnerLayout, PhysicalStoreIdentity, StrictRecoveryEvidence,
+};
+#[cfg(test)]
+use medulla_storage::{
+    adopt_recovery, merge_semantic_owner_files, open_recovery,
+    prove_scope_bindings_reanchored_read_only, strict_recovery_evidence,
 };
 use sha2::{Digest, Sha256};
 use std::collections::BTreeSet;
-use std::io::{Read, Write};
+use std::io::Read;
+#[cfg(test)]
+use std::io::Write;
 use std::path::{Path, PathBuf};
 
 const MAX_BINDINGS: usize = 256;
@@ -34,6 +39,7 @@ pub(super) struct InspectedBindingOwner {
 pub(super) struct TenantOwnerUpgradeInspection {
     pub tenant_id: String,
     pub sources: Vec<InspectedBindingOwner>,
+    #[allow(dead_code)] // census total reported with the inspection
     pub total_bytes: u64,
     /// Domain-separated digest of the complete, ordered source census.
     pub source_census_digest: [u8; 32],
@@ -42,6 +48,7 @@ pub(super) struct TenantOwnerUpgradeInspection {
 }
 
 #[derive(Debug)]
+#[cfg(test)]
 pub(super) struct TenantOwnerCandidate {
     pub candidate: PathBuf,
     pub source_census_digest: [u8; 32],
@@ -51,6 +58,7 @@ pub(super) struct TenantOwnerCandidate {
 }
 
 #[derive(Debug)]
+#[cfg(test)]
 pub(super) struct TenantOwnerMergedCandidate {
     pub candidate: PathBuf,
     pub source_census_digest: [u8; 32],
@@ -91,6 +99,7 @@ pub(super) struct VerifiedTenantMigrationObservation {
 /// migrate only a subset. `max_total_bytes` bounds the amount of live source
 /// state inspected. The engine must be stopped because it holds this lock for
 /// its lifetime. No source is modified by this function's own logic.
+#[cfg(test)]
 pub(super) fn inspect_tenant_owner_upgrade(
     persist_dir: &Path,
     tenant: &str,
@@ -104,6 +113,7 @@ pub(super) fn inspect_tenant_owner_upgrade(
     inspect_under_lease(persist_dir, tenant, binding_ids, max_total_bytes)
 }
 
+#[cfg(test)]
 fn inspect_under_lease(
     persist_dir: &Path,
     tenant: &str,
@@ -158,6 +168,7 @@ pub(super) use candidate::{
 /// Restart path after a candidate was linked to the canonical v3 name. The
 /// complete catalog set is required again; an omitted v2 directory is refused.
 /// This proves migration state only and never enables the serving route.
+#[cfg(test)]
 pub(super) fn recover_promoted_tenant_owner(
     persist_dir: &Path,
     tenant: &str,
@@ -609,6 +620,7 @@ fn require_migration_fence(
     Err("semantic migration fence requires Linux no-follow open".to_string())
 }
 
+#[cfg(test)]
 fn install_migration_fence(
     persist_dir: &Path,
     tenant: &str,
@@ -629,6 +641,7 @@ fn install_migration_fence(
     require_migration_fence(persist_dir, tenant, destination)
 }
 
+#[cfg(test)]
 fn copy_file_contents(source: &Path, output: &mut std::fs::File, bytes: u64) -> Result<(), String> {
     let mut input = std::fs::File::open(source).map_err(|error| error.to_string())?;
     let copied = std::io::copy(
@@ -643,6 +656,7 @@ fn copy_file_contents(source: &Path, output: &mut std::fs::File, bytes: u64) -> 
     output.sync_all().map_err(|error| error.to_string())
 }
 
+#[cfg(test)]
 fn file_sha256(path: &Path) -> Result<[u8; 32], String> {
     let mut file = std::fs::File::open(path).map_err(|error| error.to_string())?;
     hash_reader(&mut file, |_| Ok(()))
@@ -663,6 +677,7 @@ fn tenant_physical_identity(destination: &Path) -> Result<PhysicalStoreIdentity,
     PhysicalStoreIdentity::new(format!("eg-core:semantic-index:v3:{filename}"))
 }
 
+#[cfg(test)]
 fn prove_single_binding_copy(
     source: &StrictRecoveryEvidence,
     target: &StrictRecoveryEvidence,
@@ -688,17 +703,21 @@ fn prove_single_binding_copy(
     Ok(())
 }
 
+#[cfg(test)]
 struct CandidateCleanup {
     path: PathBuf,
     armed: bool,
 }
 
+#[cfg(test)]
 impl CandidateCleanup {
+    #[cfg(test)]
     pub fn new(path: PathBuf) -> Self {
         Self { path, armed: false }
     }
 }
 
+#[cfg(test)]
 impl Drop for CandidateCleanup {
     fn drop(&mut self) {
         if self.armed {

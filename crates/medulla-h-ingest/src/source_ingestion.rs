@@ -4,6 +4,7 @@
 //! existing ChangeEnvelope commit authority owns the final IngestBatch step, so
 //! there is one graph mutation path and one cursor compare-and-swap authority.
 
+#[cfg(all(feature = "blob", feature = "redb"))]
 use medulla_server_blob::blob::BlobStateExt;
 #[cfg(feature = "redb")]
 use medulla_persistence_records::agent_library::AgentLibraryStateExt;
@@ -20,6 +21,7 @@ use tokio::sync::RwLock;
 #[cfg(all(feature = "redb", feature = "blob"))]
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
+#[cfg(all(feature = "blob", feature = "redb"))]
 use medulla_protocol_types::protocol::ResultPayload;
 #[cfg(all(feature = "redb", feature = "blob"))]
 use medulla_server_api::carrier::CarrierAuthority;
@@ -37,6 +39,8 @@ pub struct PrepareContext<'a> {
     pub fencing_token: Option<u64>,
 }
 
+// The fields are read only by the durable terminal-receipt builder (redb + blob).
+#[cfg_attr(not(all(feature = "redb", feature = "blob")), allow(dead_code))]
 pub struct PreparedSourceIngestion {
     pub envelope: medulla_protocol_types::change_envelope::ChangeEnvelope,
     batch_digest: Digest256,

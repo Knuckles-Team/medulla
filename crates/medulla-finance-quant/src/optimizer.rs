@@ -29,6 +29,7 @@ fn portfolio_variance(weights: &[f64], cov: &[Vec<f64>]) -> f64 {
 }
 
 /// Project weights onto the simplex (sum=1, all >= 0).
+#[allow(clippy::needless_range_loop)] // the index also drives a second sequence in lockstep (DP recurrence); iterator zips would obscure the maths
 fn project_simplex(v: &[f64]) -> Vec<f64> {
     let n = v.len();
     let mut u: Vec<f64> = v.to_vec();

@@ -1,6 +1,7 @@
 //! Shared fixtures for the served statistical-decision tests. The in-crate stat tests and the
 //! facade tests that go through the full dispatcher both use them.
 
+#[cfg(all(any(test, feature = "test-support"), feature = "blob", feature = "redb"))]
 use medulla_server_blob::blob::BlobStateExt;
 use std::sync::Arc;
 
@@ -92,7 +93,7 @@ impl Harness {
         })
     }
 
-    pub fn publish(
+    pub fn publish_test_component(
         &self,
         id: &str,
         kind: AgentComponentKind,
@@ -162,7 +163,7 @@ pub fn schema() -> FeatureSchemaBody {
 pub fn publish_route_schema(h: &Harness) -> (ComponentDependency, String) {
     let body = schema();
     let pin = h
-        .publish(
+        .publish_test_component(
             "schema-route",
             AgentComponentKind::FeatureSchema,
             "route features",

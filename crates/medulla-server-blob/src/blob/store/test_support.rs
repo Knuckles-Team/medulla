@@ -2,10 +2,14 @@
 //! identities, and a sweep at an explicit instant.
 
 use super::{hex_digest, BlobManifest, ChunkStore, CommittedBlob, BLOB_MANIFEST_VERSION};
+#[cfg(test)]
 use medulla_protocol_types::mutation_batch::MutationBatch;
+#[cfg(test)]
 use sha2::{Digest, Sha256};
 
+#[cfg(test)]
 pub(crate) const TENANT: &str = "tenant-opaque";
+#[cfg(test)]
 pub(crate) const SCOPE: &str = "scope-opaque";
 
 /// One caller operation: a batch id bound to the scope version it was compiled
@@ -13,11 +17,13 @@ pub(crate) const SCOPE: &str = "scope-opaque";
 /// a lost acknowledgement replays the committed result instead of being refused
 /// as a reused nonce.
 #[derive(Debug, Clone)]
+#[cfg(test)]
 pub(crate) struct Operation {
     id: String,
     expected: u64,
 }
 
+#[cfg(test)]
 impl Operation {
     /// Compile `id` against the store's current scope version.
     pub fn new(store: &dyn ChunkStore, id: &str) -> Self {
@@ -68,12 +74,14 @@ impl Operation {
 }
 
 /// Compile and return the first attempt of a fresh operation `id`.
+#[cfg(test)]
 pub(crate) fn fresh(store: &dyn ChunkStore, id: &str) -> MutationBatch {
     Operation::new(store, id).batch()
 }
 
 /// Stream `data` through the in-process path one chunk at a time (bounded memory),
 /// exactly as the protocol cursor does, and commit its engine-owned manifest.
+#[cfg(test)]
 pub(crate) fn chunked(store: &dyn ChunkStore, data: &[u8], chunk_size: usize) -> CommittedBlob {
     chunked_as(store, data, chunk_size, super::ENGINE_BLOB_OWNER_SCOPE)
 }
@@ -117,6 +125,7 @@ pub fn reassemble(store: &dyn ChunkStore, manifest: &BlobManifest) -> Vec<u8> {
 
 /// One durable wire-style upload: begin `cursor` for `owner`, put `parts`, all at
 /// `at_ms`. Returns the cursor; the upload is left uncommitted.
+#[cfg(test)]
 pub(crate) fn begin_with_parts(
     store: &dyn ChunkStore,
     cursor: u64,
@@ -141,17 +150,4 @@ pub(crate) fn begin_with_parts(
             .unwrap();
     }
     cursor
-}
-
-/// [`begin_with_parts`] and commit at the same instant; returns the blob digest.
-pub(crate) fn upload_at(
-    store: &dyn ChunkStore,
-    cursor: u64,
-    owner: &str,
-    parts: &[&[u8]],
-    at_ms: u64,
-) -> String {
-    begin_with_parts(store, cursor, owner, parts, at_ms);
-    let batch = fresh(store, &format!("commit:{owner}/{cursor}/{at_ms}"));
-    store.commit_upload_batch(cursor, &batch, at_ms).unwrap()
 }

@@ -2,12 +2,15 @@
 
 use super::*;
 #[cfg(feature = "redb")]
+#[cfg(feature = "raft")]
 use medulla_persistence::AsRedb;
 #[cfg(feature = "raft")]
 use medulla_raft::raft::RaftStateExt;
 
 pub(super) struct CommitSlice {
     graph_name: String,
+    // read only by the raft commit path, like `graph_type`
+    #[cfg_attr(not(feature = "raft"), allow(dead_code))]
     graph_fname: String,
     #[cfg_attr(not(feature = "raft"), allow(dead_code))]
     graph_type: medulla_protocol_types::protocol::GraphType,
@@ -74,29 +77,6 @@ pub(super) async fn commit_multi_graph(
     }
 
     commit_recoverable_slices(state, req_id, caller, coordinator_id, slices, attempt_nonce).await
-}
-
-/// Commit an already-authorized coordinator plan through the same recoverable
-/// graph-slice authority as a staged multi-graph transaction. This is the only
-/// auxiliary-carrier entry point for complete graph images: clustered spans use
-/// the retained-decision 2PC path; local/single-group spans use deterministic
-/// child MutationBatches subordinate to the caller's durable parent receipt.
-pub(crate) async fn commit_coordinated_graph_methods(
-    state: &Arc<RwLock<ServerState>>,
-    req_id: u64,
-    caller: Option<&str>,
-    coordinator_id: &str,
-    graph_methods: Vec<(String, medulla_protocol_types::protocol::GraphType, Vec<Method>)>,
-) -> Response {
-    commit_coordinated_graph_methods_with_nonce(
-        state,
-        req_id,
-        caller,
-        coordinator_id,
-        graph_methods,
-        None,
-    )
-    .await
 }
 
 pub async fn commit_coordinated_graph_methods_with_nonce(

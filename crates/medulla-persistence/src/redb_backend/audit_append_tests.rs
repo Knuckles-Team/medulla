@@ -4,10 +4,14 @@
 use super::*;
 use medulla_protocol_types::protocol::Method;
 use medulla_server_api::api::persistence::PersistenceBackend;
+#[cfg(test)]
 use medulla_store_apply::redb_store::operation_audit_tests::event;
+#[cfg(test)]
 use medulla_store_apply::redb_store::operation_audit_tests::TENANT;
 
+#[cfg(test)]
 const GRAPH: &str = "audit_append_graph";
+#[cfg(test)]
 const REFUSAL: &str = "AUDIT_WRITER_UNAVAILABLE: ";
 
 /// A backend whose graph exists because one ordinary audited write created

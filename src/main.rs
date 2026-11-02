@@ -7,7 +7,9 @@
 // Parses CLI args, initializes the GraphRegistry, and starts
 // the UDS/TCP listener.
 
+#[cfg(any(feature = "lake", feature = "lake-rest", feature = "obs", feature = "s3-api"))]
 use medulla_server_blob::blob::BlobStateExt;
+#[cfg(any(all(feature = "mining", feature = "query", feature = "streaming"), all(feature = "owl", feature = "streaming")))]
 use medulla_server_cdc::cdc::CdcStateExt;
 use clap::Parser;
 use std::net::SocketAddr;

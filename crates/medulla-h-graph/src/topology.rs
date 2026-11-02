@@ -15,6 +15,7 @@
 #[cfg(feature = "raft")]
 use medulla_raft::raft::RaftStateExt;
 #[cfg(feature = "redb")]
+#[cfg(feature = "raft")]
 use medulla_persistence::AsRedb;
 use std::sync::Arc;
 
@@ -33,7 +34,9 @@ type HmacSha256 = Hmac<Sha256>;
 
 const DISCOVERY_SCHEMA_VERSION: u64 = 1;
 const DISCOVERY_DOMAIN: &[u8] = b"medulla-engine/cluster-discovery/v1\0";
+#[cfg(feature = "raft")]
 const MAX_DISCOVERY_GROUPS: usize = 1_024;
+#[cfg(feature = "raft")]
 const MAX_DISCOVERY_MEMBERS: usize = 4_096;
 const MAX_DISCOVERY_FIELD_BYTES: usize = 4 * 1024;
 

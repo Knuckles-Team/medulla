@@ -3,15 +3,12 @@
 //! They sit in the top server crate because they need the concrete persistence backend that
 //! `medulla-server-api` cannot depend on (R056.8).
 
-use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
 use std::sync::Arc;
 
 use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::protocol::{Method, ResultPayload};
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_server_mutation::mutation_batch::*;
-use medulla_server_api::batch_compile::*;
-use medulla_server_api::routed_write_coalescer::*;
 use medulla_types::contract::Nonce;
 use sha2::{Digest, Sha256};
 

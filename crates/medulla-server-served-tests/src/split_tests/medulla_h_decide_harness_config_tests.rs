@@ -35,7 +35,7 @@ async fn dispatch(h: &Harness, method: Method) -> Response {
 
 async fn route_fixture() -> (Harness, DecideRequest) {
     let h = Harness::with_isolation(ServerState::test_isolation("decider")).await;
-    h.publish(
+    h.publish_test_component(
         "tool-search",
         AgentComponentKind::Tool,
         "web search engine",

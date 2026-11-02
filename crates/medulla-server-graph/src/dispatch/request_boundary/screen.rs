@@ -10,7 +10,6 @@ use crate::dispatch::shared::MAX_SCREEN_OBSERVATION_ITEMS;
 use crate::dispatch::shared::MAX_SCREEN_OBSERVATION_BYTES;
 use crate::dispatch::shared::MAX_SCREEN_TOTAL_TEXT_BYTES;
 use crate::dispatch::shared::MAX_SCREEN_ELEMENTS;
-use crate::dispatch::request_boundary::*;
 
 #[derive(serde::Deserialize)]
 struct ScreenObservationWire {

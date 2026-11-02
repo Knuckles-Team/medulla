@@ -6,13 +6,9 @@
 //! fixtures that need the served path: exploration on a security question,
 //! a foreign tenant, an idempotency conflict, graph candidates.
 
-#[cfg(feature = "redb")]
-use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 use std::sync::Arc;
 
-use tokio::sync::RwLock;
 
-use medulla_protocol_types::protocol::ResultPayload;
 use medulla_agent_types::{
     agent_component::AgentComponentKind, agent_component::AgentComponentPublishRequest,
     agent_component::ComponentDependency,
@@ -65,7 +61,6 @@ use medulla_types::contract::BoundedVec;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_persistence_records::agent_component::test_component_draft;
 use medulla_persistence_records::agent_fixtures::mutation_context;
-use medulla_persistence_records::agent_library::AgentLibraryStore;
 use medulla_server_api::state::ServerState;
 use super::stat_test_support::*;
 
@@ -346,7 +341,7 @@ struct RouteFixture {
 /// head under the default (deterministic-only) policy: that abstains, records
 /// the matrix exactly, and returns it for fixtures shaped like it.
 async fn route_fixture(h: &Harness) -> RouteFixture {
-    h.publish(
+    h.publish_test_component(
         "tool-a-search",
         AgentComponentKind::Tool,
         "web search engine for pages",
@@ -354,7 +349,7 @@ async fn route_fixture(h: &Harness) -> RouteFixture {
         None,
     )
     .unwrap();
-    h.publish(
+    h.publish_test_component(
         "tool-b-files",
         AgentComponentKind::Tool,
         "write files to disk",
@@ -362,7 +357,7 @@ async fn route_fixture(h: &Harness) -> RouteFixture {
         None,
     )
     .unwrap();
-    h.publish(
+    h.publish_test_component(
         "tool-c-mail",
         AgentComponentKind::Tool,
         "send an email message",
@@ -460,7 +455,7 @@ async fn fit_evaluate_publish_and_decide_end_to_end() {
     assert!(conflict.unwrap_err().starts_with("IDEMPOTENCY_CONFLICT"));
 
     // Promotion needs a passed receipt naming exactly these bytes (EH-040).
-    let refused = h.publish(
+    let refused = h.publish_test_component(
         "head-route",
         AgentComponentKind::DecisionHead,
         "route head",
@@ -646,7 +641,7 @@ async fn fit_evaluate_publish_and_decide_end_to_end() {
     );
     assert!(foreign.unwrap_err().starts_with("ACCESS_DENIED"));
     let head_pin = h
-        .publish(
+        .publish_test_component(
             "head-route",
             AgentComponentKind::DecisionHead,
             "route head",
@@ -702,7 +697,7 @@ async fn fit_evaluate_publish_and_decide_end_to_end() {
 #[tokio::test]
 async fn exploration_on_a_security_question_is_refused_by_the_served_path() {
     let h = Harness::new().await;
-    h.publish(
+    h.publish_test_component(
         "tool-a",
         AgentComponentKind::Tool,
         "web search",
@@ -711,7 +706,7 @@ async fn exploration_on_a_security_question_is_refused_by_the_served_path() {
     )
     .unwrap();
     let schema_pin = h
-        .publish(
+        .publish_test_component(
             "schema",
             AgentComponentKind::FeatureSchema,
             "features",
@@ -758,7 +753,7 @@ async fn exploration_on_a_security_question_is_refused_by_the_served_path() {
 async fn foreign_tenants_and_graph_candidates_are_refused() {
     let h = Harness::new().await;
     let schema_pin = h
-        .publish(
+        .publish_test_component(
             "schema",
             AgentComponentKind::FeatureSchema,
             "features",
@@ -814,7 +809,7 @@ async fn foreign_tenants_and_graph_candidates_are_refused() {
 async fn graph_sourced_candidates_from_a_foreign_tenant_are_refused() {
     let h = Harness::new().await;
     let schema_pin = h
-        .publish(
+        .publish_test_component(
             "schema-foreign-graph",
             AgentComponentKind::FeatureSchema,
             "features",
@@ -872,7 +867,7 @@ async fn graph_candidates_are_read_through_acl_rls_and_a_select_only_plan() {
         .unwrap(),
     };
     let schema_pin = h
-        .publish(
+        .publish_test_component(
             "schema-graph",
             AgentComponentKind::FeatureSchema,
             "graph features",
@@ -1002,7 +997,7 @@ async fn graph_log_record(h: &Harness) -> StatisticalDecisionRecord {
         .unwrap(),
     };
     let schema_pin = h
-        .publish(
+        .publish_test_component(
             "schema-graph-log",
             AgentComponentKind::FeatureSchema,
             "graph features",

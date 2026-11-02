@@ -1061,6 +1061,7 @@ enum Resp {
     /// wire has no distinct push type, exactly how real Redis behaves.
     Push(Vec<Resp>),
     Double(f64),
+    #[allow(dead_code)] // RESP3 boolean; the encoder handles it, no server reply builds one yet
     Bool(bool),
     Null,
 }

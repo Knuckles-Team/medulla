@@ -1,3 +1,4 @@
+#[cfg(all(feature = "redb", feature = "security", feature = "sparql-http"))]
 use crate::dispatch::shared::timed_read;
 #[cfg(all(feature = "sparql-http", feature = "redb", feature = "security"))]
 #[cfg(all(feature = "sparql-http", feature = "redb", feature = "security"))]

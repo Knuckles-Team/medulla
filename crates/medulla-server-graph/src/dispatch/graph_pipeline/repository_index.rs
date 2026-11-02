@@ -6,6 +6,7 @@
 //! parses each unique blob once, lowers the projection, and delegates the one
 //! durable commit to the existing ChangeEnvelope authority.
 
+#[cfg(all(feature = "ast", feature = "blob"))]
 use medulla_server_blob::blob::BlobStateExt;
 use super::*;
 

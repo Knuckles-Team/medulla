@@ -13,6 +13,7 @@
 //! mistaken for orphans. A held body always keeps its holder, so `BlobGc` at
 //! any moment cannot remove a body a committed revision names.
 
+#[cfg(all(feature = "blob", feature = "redb"))]
 use medulla_server_blob::blob::BlobStateExt;
 use std::sync::Arc;
 

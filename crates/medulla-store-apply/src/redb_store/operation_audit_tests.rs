@@ -3,9 +3,13 @@
 
 use super::*;
 use medulla_store::redb_store::operation_audit::*;
+#[cfg(test)]
 use crate::redb_store::store_control::commit_ops;
+#[cfg(test)]
 use medulla_store::redb_store::DurableCrypto;
+#[cfg(test)]
 use medulla_protocol_types::protocol::AuditAppendReceipt;
+#[cfg(test)]
 use medulla_protocol_types::protocol::Method;
 
 pub const GRAPH: &str = "g";
@@ -17,6 +21,7 @@ pub fn open(dir: &std::path::Path) -> Shard {
 
 /// A shard whose graph exists because one ordinary audited write created it:
 /// that write is chain entry 0, so operation events start at sequence 1.
+#[cfg(test)]
 fn seeded(dir: &std::path::Path) -> (Shard, AuditTailCache) {
     let shard = open(dir);
     let mut tail = AuditTailCache::new();
@@ -54,11 +59,13 @@ pub fn event(request_id: &str, status: &str) -> OperationAuditEvent {
 
 /// One store and the audit tail its writer keeps, as the writer thread holds
 /// them.
+#[cfg(test)]
 struct Store {
     shard: Shard,
     tail: AuditTailCache,
 }
 
+#[cfg(test)]
 impl Store {
     fn seeded(dir: &std::path::Path) -> Self {
         let (shard, tail) = seeded(dir);
@@ -120,6 +127,7 @@ fn operation_audit_accepts_only_bounded_privacy_safe_fields() {
 
 /// An append refused for its audit class leaves the chain and the request
 /// index exactly as they were, for a reservation and for an outcome alike.
+#[cfg(test)]
 fn assert_class_refused(class: &str, code: &str) {
     let dir = tempfile::tempdir().unwrap();
     let mut store = Store::seeded(dir.path());

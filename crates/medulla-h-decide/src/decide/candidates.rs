@@ -60,6 +60,7 @@ pub(super) struct ReadCandidates {
     /// The library entries behind `views`; empty for graph candidates.
     pub(super) entries: Vec<AgentComponentEntry>,
     pub(super) record: CandidateSourceRecord,
+    #[allow(dead_code)] // set at every candidate construction; the record's visibility is enforced upstream, kept for the candidate's provenance
     pub(super) visibility: RecordVisibility,
     /// Rule-derived classes of library candidates (EH-200); empty for graph rows.
     pub(super) derived: DerivedClasses,

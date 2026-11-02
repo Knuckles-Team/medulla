@@ -4,6 +4,7 @@
 
 use super::*;
 
+#[cfg(test)]
 pub mod run_fixture;
 
 pub const GRAPH: &str = "graph-a";

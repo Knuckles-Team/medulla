@@ -1,5 +1,3 @@
-#![allow(non_local_definitions)]
-#![allow(dead_code)]
 // The all-features dispatch future needs query depth 130. Use the same
 // bounded compiler budget for production and test builds.
 #![recursion_limit = "256"]

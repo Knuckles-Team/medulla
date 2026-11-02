@@ -28,7 +28,7 @@ fn pretool_risk_request(schema: &ComponentDependency) -> DecideRequest {
 #[tokio::test]
 async fn a_pretool_risk_question_is_served_as_advisory_only_never_as_an_act() {
     let h = Harness::new().await;
-    h.publish(
+    h.publish_test_component(
         "tool-risky",
         AgentComponentKind::Tool,
         "a tool whose invocation is risk-scored before the call",
@@ -37,7 +37,7 @@ async fn a_pretool_risk_question_is_served_as_advisory_only_never_as_an_act() {
     )
     .unwrap();
     let schema_pin = h
-        .publish(
+        .publish_test_component(
             "schema-pretool-risk",
             AgentComponentKind::FeatureSchema,
             "pre-tool risk features",

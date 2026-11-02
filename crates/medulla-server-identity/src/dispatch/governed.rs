@@ -20,6 +20,7 @@ use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_protocol_types::protocol::Method;
 #[cfg(feature = "security")]
 use medulla_protocol_types::protocol::Response;
+#[cfg(feature = "security")]
 use medulla_protocol_types::protocol::ResultPayload;
 
 /// The actor of a verified request: its identities (hashed), whether it is

@@ -45,9 +45,11 @@ pub use program::{
 
 #[cfg(test)]
 use medulla_server_api::batch_compile::compile::compile_methods;
+#[cfg(test)]
 use medulla_server_api::batch_compile::compile::CompileBatch;
 #[cfg(test)]
 use medulla_graph_core::graph::GraphCore;
+#[cfg(test)]
 use medulla_mutation_types::mutation_scope::MutationSurface;
 #[cfg(test)]
 use medulla_protocol_types::mutation_batch::MutationStateDescriptor;
@@ -62,38 +64,6 @@ use sha2::{Digest, Sha256};
 mod internal_replay_tests {
     use super::*;
 
-    /// The opaque serving principal this test's job store is opened as.
-    /// `medulla_protocol_types::mutation_batch`'s `validate_serving_principal` requires the
-    /// `principal:sha256:<64 hex>` shape for every durable mutation authority,
-    /// exactly like `medulla_jobs::dev_scope_grant::DEV_PRINCIPAL`; a human-readable
-    /// label is refused by the jobs codec before the store ever opens.
-    #[cfg(all(feature = "redb", feature = "program-optimization"))]
-    const PROMOTION_TEST_PRINCIPAL: &str =
-        "principal:sha256:9f2c1d0e4b7a836512cd94ef0a7b61d3428f5c9e0b13a6d748ff205ce9b374a1";
-
-    #[cfg(all(feature = "redb", feature = "program-optimization"))]
-    struct PromotionJobScopeVerifier;
-
-    #[cfg(all(feature = "redb", feature = "program-optimization"))]
-    impl medulla_storage::ScopeGrantVerifier for PromotionJobScopeVerifier {
-        fn verify(
-            &self,
-            _physical: &medulla_storage::PhysicalStoreIdentity,
-            layout: medulla_storage::OwnerLayout,
-            _identity: &medulla_mutation_types::mutation_scope::MutationScopeIdentity,
-            principal: &str,
-            proof: &[u8],
-        ) -> Result<(), String> {
-            if layout == medulla_storage::OwnerLayout::Jobs
-                && principal == PROMOTION_TEST_PRINCIPAL
-                && proof == b"promotion-test-proof"
-            {
-                Ok(())
-            } else {
-                Err("promotion test scope authority rejected".to_string())
-            }
-        }
-    }
 
     #[test]
     fn internal_replay_identity_excludes_attempt_fields_but_binds_key_actor_and_payload() {

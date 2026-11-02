@@ -1,3 +1,4 @@
+#[cfg(feature = "raft")]
 use crate::dispatch::shared::timed_read;
 #[cfg(feature = "redb")]
 use super::graph_pipeline::dispatch_graph_op;

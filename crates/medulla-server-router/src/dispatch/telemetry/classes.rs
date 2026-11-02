@@ -157,6 +157,7 @@ impl ClassificationCache {
     }
 
     /// How many classifications this cache has run (its misses).
+    #[cfg(test)]
     pub fn classifications(&self) -> u64 {
         self.classifications.load(Ordering::Relaxed)
     }

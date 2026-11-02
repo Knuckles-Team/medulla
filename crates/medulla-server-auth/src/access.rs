@@ -1,14 +1,14 @@
 //! Write/read classification + isolation-ACL enforcement for graph ops.
 
-use medulla_server_api::authority_context::VerifiedRequestContext;
+#[cfg(test)]
 use medulla_graph_core::graph::GraphCore;
-use medulla_graph_core::graph::GraphView;
-#[cfg(feature = "security")]
-use medulla_graph_core::rls::row_visibility;
 use medulla_isolation::isolation::AccessLevel;
 use medulla_isolation::isolation::IsolationLayer;
-use medulla_types::contract::{Digest256, Nonce};
-use medulla_server_api::{carrier::unauthenticated_carrier_denied, carrier::CarrierAuthority, carrier::GraphReadAuthority};
+#[cfg(any(test, feature = "wasm-udf", feature = "federation"))]
+use medulla_server_api::carrier::CarrierAuthority;
+#[cfg(test)]
+use medulla_server_api::carrier::{unauthenticated_carrier_denied, GraphReadAuthority};
+#[cfg(any(test, feature = "wasm-udf", feature = "federation"))]
 use std::sync::Arc;
 
 #[cfg(all(any(test, feature = "test-support"), feature = "security"))]
@@ -1419,6 +1419,7 @@ mod universal_row_read_tests {
     }
 }
 
+#[cfg(test)]
 mod read_classification;
 
 #[cfg(test)]

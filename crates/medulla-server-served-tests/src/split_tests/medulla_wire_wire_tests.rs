@@ -1,52 +1,18 @@
-#![allow(unused_imports)]
 //! Wire tests that drive the real dispatcher; they live in the facade because dispatch does.
 
 use std::path::Path;
 use std::sync::Arc;
 
-use async_trait::async_trait;
 use tokio::sync::RwLock;
 
-use medulla_isolation::isolation::AccessLevel;
 use medulla_protocol_types::protocol::Request;
-use medulla_sql_lang::sql::classify::AlterTableAction;
-use medulla_sql_lang::sql::classify::AlterTablePlan;
-use medulla_table_store::tables::ann_plan::AnnIndexPlan;
 use medulla_tables::schema::Column;
 use medulla_tables::schema::ColumnType;
-use medulla_sql_lang::sql::pgfamily::ContinuousAggPlan;
-use medulla_sql_lang::sql::classify::CopyFormat;
-use medulla_sql_lang::sql::classify::CopyPlan;
-use medulla_sql_lang::sql::classify::CreateFunctionPlan;
-use medulla_sql_lang::sql::classify::CreateTablePlan;
-use medulla_sql_lang::sql::classify::CreateViewPlan;
-use medulla_sql_lang::sql::classify::DeleteNodes;
-use medulla_sql_lang::sql::classify::DeleteNodesJoin;
-use medulla_sql_lang::sql::classify::DeleteTable;
-use medulla_sql_lang::sql::classify::DropFunctionPlan;
-use medulla_sql_lang::sql::classify::DropTablePlan;
-use medulla_sql_lang::sql::classify::DropViewPlan;
-use medulla_table_store::tables::ann_plan::HypertablePlan;
-use medulla_table_store::tables::IndexCatalogTxnOp;
-use medulla_sql_lang::sql::classify::InsertNodes;
-use medulla_sql_lang::sql::classify::InsertNodesSelect;
-use medulla_sql_lang::sql::classify::InsertSelect;
-use medulla_sql_lang::sql::classify::InsertTable;
-use medulla_sql_lang::sql::classify::OnConflict;
-use medulla_sql_lang::sql::classify::OnConflictAction;
-use medulla_sql_lang::sql::typed_result::PgColType;
-use medulla_table_store::tables::PropertyGraphTxnOp;
-use medulla_sql_lang::sql::classify::StatementKind;
 use medulla_tables::schema::TableSchema;
 use medulla_table_store::tables::TableStore;
 use medulla_table_store::tables::TableTxn;
 use medulla_table_store::tables::TxnOp;
-use medulla_sql_lang::sql::typed_result::TypedColumn;
 use medulla_sql_lang::sql::typed_result::TypedQueryResult;
-use medulla_sql_lang::sql::classify::UpdateNodes;
-use medulla_sql_lang::sql::classify::UpdateNodesJoin;
-use medulla_sql_lang::sql::classify::UpdateTable;
-use medulla_sql_lang::sql::classify::WhereEq;
 use medulla_server_api::carrier::CarrierAuthority;
 use medulla_server_api::state::ServerState;
 use medulla_wire_core::wire::*;

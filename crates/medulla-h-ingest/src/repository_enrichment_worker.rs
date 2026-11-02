@@ -6,9 +6,8 @@
 //! native submission route is composed here. The fixed service actor belongs
 //! to the deployment tenant; snapshots from another tenant fail closed.
 
+#[cfg(all(feature = "redb", feature = "ast", feature = "blob", not(feature = "raft")))]
 use medulla_server_blob::blob::BlobStateExt;
-#[cfg(feature = "raft")]
-use medulla_raft::raft::RaftStateExt;
 use std::sync::Arc;
 
 use tokio::sync::RwLock;
@@ -24,9 +23,6 @@ use medulla_server_api::state::ServerState;
 #[path = "repository_enrichment_worker/grant.rs"]
 mod grant;
 
-#[cfg(all(feature = "redb", feature = "ast", feature = "blob", feature = "raft"))]
-#[path = "repository_enrichment_worker/raft_park.rs"]
-mod raft_park;
 #[cfg(all(
     feature = "redb",
     feature = "ast",
@@ -36,8 +32,6 @@ mod raft_park;
 ))]
 #[path = "repository_enrichment_worker/raft_top_up.rs"]
 pub(crate) mod raft_top_up;
-#[cfg(all(feature = "redb", feature = "ast", feature = "blob", feature = "raft"))]
-pub(crate) use raft_park::propose_and_release_park;
 
 /// Start one bounded graph sweep loop only when its native commit path is local.
 pub fn spawn(state: Arc<RwLock<ServerState>>) {
@@ -57,7 +51,7 @@ pub fn spawn(state: Arc<RwLock<ServerState>>) {
     drop(state);
 }
 
-#[cfg(all(feature = "redb", feature = "ast", feature = "blob"))]
+#[cfg(all(feature = "redb", feature = "ast", feature = "blob", not(feature = "raft")))]
 mod worker {
     use super::*;
     use std::time::Duration;
@@ -65,7 +59,6 @@ mod worker {
     #[cfg(feature = "security")]
     use crate::repository_enrichment_worker::grant;
     use medulla_work_types::native_control::SubmitWorkItemsRequest;
-    #[cfg(not(feature = "raft"))]
     use medulla_protocol_types::protocol::Method;
     use medulla_result_types::{
         epistemic_operations::RequestContext,
@@ -75,9 +68,9 @@ mod worker {
     use medulla_server_api::api::persistence::PersistenceBackend;
     use medulla_server_api::authority_context::VerifiedRequestContext;
     use medulla_server_blob::blob::store::ChunkStore;
-    #[cfg(not(feature = "raft"))]
     use medulla_server_mutation::mutation_batch::CommitOrigin;
     use medulla_server_mutation::mutation_batch::WorkItemCommitRequest;
+
 
     const IDLE: Duration = Duration::from_millis(500);
     const MAX_GRAPHS_PER_SWEEP: usize = 16;
@@ -134,21 +127,6 @@ mod worker {
     }
 
     async fn sweep_graph(state: &Arc<RwLock<ServerState>>, graph: &str) -> Result<bool, String> {
-        #[cfg(feature = "raft")]
-        {
-            let multi = state
-                .read()
-                .await
-                .multi_raft()
-                .ok_or("CONFLICT: repository enrichment placement is unavailable")?;
-            let routed = multi
-                .handle_for_graph(graph)
-                .await
-                .ok_or("STALE_ROUTE: repository enrichment graph group is unavailable")?;
-            if routed.handle.current_leader().await != Some(routed.handle.node_id) {
-                return Ok(false);
-            }
-        }
         let (persistence, store) = {
             let state = state.read().await;
             let persistence = state
@@ -167,9 +145,6 @@ mod worker {
         let grant_state = Arc::clone(state);
         let submit_persistence = Arc::clone(&persistence);
         let submit_state = Arc::clone(state);
-        #[cfg(feature = "raft")]
-        let park_state = Arc::clone(state);
-        #[cfg(not(feature = "raft"))]
         let park_persistence = Arc::clone(&persistence);
         let park_graph = graph_name.clone();
         let outcome = medulla_server_api::api::reentry::drain_repository_enrichment_once(
@@ -193,16 +168,8 @@ mod worker {
             }),
             Box::new(move |lease, park| {
                 let graph = park_graph.clone();
-                #[cfg(feature = "raft")]
-                let state = Arc::clone(&park_state);
-                #[cfg(not(feature = "raft"))]
                 let persistence = Arc::clone(&park_persistence);
                 Box::pin(async move {
-                    #[cfg(feature = "raft")]
-                    {
-                        super::propose_and_release_park(&state, &graph, &lease, &park).await
-                    }
-                    #[cfg(not(feature = "raft"))]
                     {
                         persistence.park_enrichment_budget(&graph, park).await?;
                         persistence.release_mutation_outbox(&graph, &lease).await
@@ -268,18 +235,6 @@ mod worker {
             return Err("ACCESS_DENIED: repository enrichment tenant mismatch".into());
         }
         let now = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
-        #[cfg(feature = "raft")]
-        let placement_epoch = if anonymous {
-            0
-        } else {
-            let multi = state
-                .read()
-                .await
-                .multi_raft()
-                .ok_or("CONFLICT: repository enrichment placement is unavailable")?;
-            multi.route_graph(graph).await.epoch
-        };
-        #[cfg(not(feature = "raft"))]
         let placement_epoch = 0;
         let wire = RequestContext {
             schema_version: RequestContextSchemaVersion::V2,
@@ -315,15 +270,6 @@ mod worker {
         verified: VerifiedRequestContext,
         request: SubmitWorkItemsRequest,
     ) -> Result<(), String> {
-        #[cfg(feature = "raft")]
-        {
-            let _ = (persistence, graph);
-            return medulla_server_api::api::reentry::submit_repository_enrichment_page(
-                &state, verified, request,
-            )
-            .await;
-        }
-        #[cfg(not(feature = "raft"))]
         {
             // This direct local commit is never compiled under Raft. A clustered
             // worker needs the leader and placement fence before it may submit.

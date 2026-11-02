@@ -258,6 +258,7 @@ impl ReplicatedMutation {
         }
     }
 
+    #[cfg(test)]
     pub(crate) fn native_method(method: Method, server_secret: &str) -> Result<Self, Box<Method>> {
         NativeMutationCommand::from_public_method(method, server_secret)
             .map(|command| Self::Native { command })

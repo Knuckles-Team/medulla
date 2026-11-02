@@ -5,6 +5,7 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
+#[cfg(feature = "raft")]
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Request;
 use medulla_protocol_types::protocol::Response;

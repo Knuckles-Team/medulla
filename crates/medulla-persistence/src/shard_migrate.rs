@@ -93,6 +93,7 @@ use medulla_store::redb_store::XSHARD_DECISION;
 use medulla_store::redb_store::XSHARD_PREPARE;
 #[cfg(feature = "matview")]
 use medulla_store::redb_store::MATVIEW_OPERATOR_STATE;
+#[cfg(feature = "matview")]
 use medulla_store::redb_store::PLAN_MATVIEWS;
 use medulla_storage::{GraphShardOwner, ScopedRead};
 use medulla_transaction::OwnerPayloadWrite;

@@ -4,7 +4,7 @@
     use medulla_server_api::state::ServerState;
     use medulla_server_ops::api::query_txn::ForeignStateExt;
     use medulla_server_cdc::cdc::CdcStateExt;
-    use medulla_h_retrieve::semantic_index_runtime::PendingRf019Activation;
+
     use medulla_types::acl::RequestContextClaims;
     use medulla_types::acl::AgentIdentity;
     use medulla_types::acl::AgentRole;
@@ -1871,17 +1871,6 @@ pub mod shex_served;
         assert_eq!(pair[1]["id"].as_str(), Some("bob"));
     }
 
-    fn assert_not_built(resp: &Response, label: &str) {
-        assert!(
-            resp.error.as_deref() == Some("METHOD_NOT_YET_SERVED")
-                && resp.error_detail.as_deref().is_some_and(|detail| {
-                    detail.contains("not available in this server build")
-                }),
-            "{label}: expected the not-built catch-all, got: ok={:?} err={:?}",
-            resp.result,
-            resp.error
-        );
-    }
 
     /// Feature-gating contract for the Cypher surface (CONCEPT:MEDULLA-KG.query.dep-free-behind): with the
     /// `cypher` feature off, `Method::CypherQuery`'s handler arm is compiled away

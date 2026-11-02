@@ -1,3 +1,4 @@
+#[cfg(all(feature = "modality-serving", feature = "raft", feature = "streaming"))]
 use medulla_server_cdc::cdc::CdcStateExt;
 use super::*;
 
