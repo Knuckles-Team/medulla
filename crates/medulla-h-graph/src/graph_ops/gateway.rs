@@ -33,7 +33,14 @@ where
 /// GraphLearn*/MiningPipeline* families (same `commit_conditional_mutation` shape,
 /// gated on different features). Not itself `mining`-gated since
 /// GraphLearn*/MiningPipeline* need it under their own, different features.
-#[cfg(any(all(any(feature = "graphlearn", feature = "ml-pipeline"), feature = "graphlearn"), all(any(feature = "graphlearn", feature = "ml-pipeline"), feature = "ml-pipeline")))]
+#[cfg(any(
+    feature = "query",
+    feature = "cypher",
+    feature = "graphql",
+    feature = "rdf",
+    feature = "graphlearn",
+    feature = "ml-pipeline"
+))]
 pub fn mining_response_to_gateway_result(resp: Response) -> Result<ResultPayload, String> {
     mutation::response_to_gateway_result(resp)
 }
