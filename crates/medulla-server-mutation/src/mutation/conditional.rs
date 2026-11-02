@@ -104,9 +104,9 @@ use super::method_variant_name;
 use super::{
     advance_authoritative_manifest, commit_finalize, commit_mutation, commit_prepare,
     commit_staged_replay_probe, commit_staged_with_receipt, consensus_apply_is_authorized,
-    diff_and_serialize_staged_mutation, resolve_authoritative_base_snapshot,
-    CommitFinalizeOptions, CommitPrep, DurableBatchAttempt, DurableBatchTarget, MutationCtx,
-    MutationPlan, StagedMutation, StagedReceipt,
+    diff_and_serialize_staged_mutation, resolve_authoritative_base_snapshot, CommitFinalizeOptions,
+    CommitPrep, DurableBatchAttempt, DurableBatchTarget, MutationCtx, MutationPlan, StagedMutation,
+    StagedReceipt,
 };
 
 /// The gateway entry point for a RUNTIME-CONDITIONAL method (CONCEPT:MEDULLA-P0-2, L11
