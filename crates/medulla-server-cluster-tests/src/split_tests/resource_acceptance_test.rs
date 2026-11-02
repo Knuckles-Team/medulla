@@ -1102,7 +1102,7 @@ fn native_work_item_batch_id(idempotency_key: &str) -> String {
     use sha2::{Digest, Sha256};
 
     let mut digest = Sha256::new();
-    digest.update(b"medulla.work-item-terminal.v1");
+    digest.update(b"epistemic-graph.work-item-terminal.v1");
     for field in [
         GRAPH.as_bytes(),
         TENANT.as_bytes(),

@@ -608,7 +608,7 @@ impl SchemaMigration {
         let encoded = rmp_serde::to_vec_named(&payload)
             .map_err(|error| format!("encode schema migration checksum payload: {error}"))?;
         let mut hasher = Sha256::new();
-        hasher.update(b"medulla/schema-migration-v1\0");
+        hasher.update(b"epistemic-graph/schema-migration-v1\0");
         hasher.update(encoded);
         Ok(hex::encode(hasher.finalize()))
     }

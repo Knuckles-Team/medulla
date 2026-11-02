@@ -159,7 +159,7 @@ pub fn build_envelope_v2_bytes(
     }
 
     let mut buf = Vec::new();
-    put(&mut buf, "medulla-envelope-v2");
+    put(&mut buf, "eg-envelope-v2");
     buf.extend_from_slice(&request_id.to_be_bytes());
     put(&mut buf, graph);
     put(&mut buf, method_name);

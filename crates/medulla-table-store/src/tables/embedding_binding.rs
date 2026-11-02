@@ -273,7 +273,7 @@ impl ModelRef {
 /// other sha256 the engine computes over similar bytes.
 pub fn model_digest(id: &str, revision: &str, dim: usize, normalize: bool) -> String {
     let mut hasher = Sha256::new();
-    hasher.update(b"medulla/embedding-model-digest\0");
+    hasher.update(b"epistemic-graph/embedding-model-digest\0");
     hasher.update(id.as_bytes());
     hasher.update(b"\0");
     hasher.update(revision.as_bytes());

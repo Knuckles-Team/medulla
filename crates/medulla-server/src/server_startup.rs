@@ -1054,7 +1054,7 @@ pub fn prepare_auth_store(mode: &str, dir: &str) -> Result<(), BoxError> {
         Ok(meta) => {
             if mode != "none"
                 || !meta.file_type().is_file()
-                || std::fs::read(&marker)? != b"medulla anonymous local store v1\n"
+                || std::fs::read(&marker)? != b"epistemic-graph anonymous local store v1\n"
             {
                 return Err(
                     "store authentication mode conflict or invalid anonymous marker".into(),
@@ -1080,7 +1080,7 @@ pub fn prepare_auth_store(mode: &str, dir: &str) -> Result<(), BoxError> {
         .write(true)
         .create_new(true)
         .open(&marker)?;
-    file.write_all(b"medulla anonymous local store v1\n")?;
+    file.write_all(b"epistemic-graph anonymous local store v1\n")?;
     file.sync_all()?;
     std::fs::File::open(root)?.sync_all()?;
     Ok(())
@@ -1141,7 +1141,7 @@ mod anonymous_store_tests {
     fn anonymous_refuses_symlink_marker() {
         let dir = tempfile::tempdir().unwrap();
         let target = dir.path().join("target");
-        std::fs::write(&target, b"medulla anonymous local store v1\n").unwrap();
+        std::fs::write(&target, b"epistemic-graph anonymous local store v1\n").unwrap();
         std::os::unix::fs::symlink(&target, dir.path().join("anonymous-store-v1")).unwrap();
         assert!(prepare_auth_store("none", dir.path().to_str().unwrap()).is_err());
     }

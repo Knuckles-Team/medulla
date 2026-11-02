@@ -171,7 +171,7 @@ const ENCRYPTION_CANARY_KEY: &str = "v1";
 #[cfg(feature = "security")]
 pub const ENCRYPTION_KEY_BINDING_KEY: &str = "key-binding-v1";
 #[cfg(feature = "security")]
-const ENCRYPTION_CANARY_PLAINTEXT: &[u8] = b"medulla-encryption-canary";
+const ENCRYPTION_CANARY_PLAINTEXT: &[u8] = b"epistemic-graph-encryption-canary";
 
 /// What [`verify_or_establish_encryption_canary`] did, so the open path can log the
 /// TRUTH rather than one undifferentiated "ENABLED" line (BUG-PE-055).

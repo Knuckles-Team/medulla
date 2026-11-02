@@ -303,7 +303,7 @@ fn scoped_work_item_identity(
         return Err("terminal WorkItem mutation requires idempotency_key".to_string());
     }
     let mut digest = Sha256::new();
-    digest.update(b"medulla.work-item-terminal.v1");
+    digest.update(b"epistemic-graph.work-item-terminal.v1");
     for field in [graph.as_bytes(), tenant.as_bytes(), terminal_key.as_bytes()] {
         digest.update((field.len() as u64).to_be_bytes());
         digest.update(field);

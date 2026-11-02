@@ -33,7 +33,7 @@ use medulla_server_api::state::ServerState;
 type HmacSha256 = Hmac<Sha256>;
 
 const DISCOVERY_SCHEMA_VERSION: u64 = 1;
-const DISCOVERY_DOMAIN: &[u8] = b"medulla-engine/cluster-discovery/v1\0";
+const DISCOVERY_DOMAIN: &[u8] = b"epistemic-graph/cluster-discovery/v1\0";
 #[cfg(feature = "raft")]
 const MAX_DISCOVERY_GROUPS: usize = 1_024;
 #[cfg(feature = "raft")]
@@ -427,7 +427,7 @@ pub async fn try_handle(
             let secret = { state.read().await.auth_secret.clone() };
             let snapshot = signed_snapshot(
                 &secret,
-                &sha256_ref("medulla/single-node-cluster/v1"),
+                &sha256_ref("epistemic-graph/single-node-cluster/v1"),
                 0,
                 0,
                 verified_context,

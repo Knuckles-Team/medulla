@@ -7578,7 +7578,7 @@ class ClusterTopologyClient:
     """
 
     _SCHEMA_VERSION = 1
-    _DISCOVERY_DOMAIN = b"medulla-engine/cluster-discovery/v1\0"
+    _DISCOVERY_DOMAIN = b"epistemic-graph/cluster-discovery/v1\0"
     _MAX_GROUPS = 1_024
     _MAX_MEMBERS = 4_096
     _MAX_FIELD_BYTES = 4 * 1024
@@ -8364,7 +8364,7 @@ class ConsensusClient:
             "roles": roles,
         }
         params["signature"] = self._client._sign_context_operation(
-            domain="medulla-register-identity-v2",
+            domain="eg-register-identity-v2",
             method="RegisterIdentity",
             params=params,
             graph="__commons__",
@@ -8493,7 +8493,7 @@ class ConsensusClient:
         }
         signatures = [
             self._client._sign_context_operation(
-                domain="medulla-multisig-mutation-v2",
+                domain="eg-multisig-mutation-v2",
                 method="ApplyMultisigMutation",
                 params=params,
                 graph="__commons__",
@@ -11079,7 +11079,7 @@ def _envelope_v2_bytes(env: _EnvelopeV2) -> bytes:
     """The canonical MAC bytes -- byte-for-byte the Rust `build_envelope_v2_bytes`."""
     context = env.context
     canonical = bytearray()
-    _put_v2_text(canonical, "medulla-envelope-v2")
+    _put_v2_text(canonical, "eg-envelope-v2")
     canonical.extend(env.request_id.to_bytes(8, "big"))
     _put_v2_text(canonical, env.graph)
     _put_v2_text(canonical, env.method)

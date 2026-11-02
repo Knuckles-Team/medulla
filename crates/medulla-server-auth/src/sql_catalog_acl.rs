@@ -230,7 +230,7 @@ fn canonical_rows(acl: &TableStore, table: &str, width: usize) -> Result<Vec<Vec
 
 fn digest_acl_state(owners: &[Vec<String>], grants: &[Vec<String>], rls: &[Vec<String>]) -> String {
     let mut digest = Sha256::new();
-    update_len_prefixed(&mut digest, b"medulla/sql-source-acl-state");
+    update_len_prefixed(&mut digest, b"epistemic-graph/sql-source-acl-state");
     for (kind, rows) in [
         (b"owners".as_slice(), owners),
         (b"grants", grants),
@@ -296,7 +296,7 @@ fn digest_acl_decision(
         .collect::<Vec<_>>()
         .join(",");
     digest_fields(
-        b"medulla/sql-source-acl-decision",
+        b"epistemic-graph/sql-source-acl-decision",
         &[
             authority.tenant_scope(),
             authority.agent_id(),
@@ -485,7 +485,7 @@ fn commit_source_acl_mutation(
             .try_into()
             .expect("UUID prefix is eight bytes"),
     );
-    let operation_digest = digest_fields(b"medulla/sql-source-acl-operation", fields);
+    let operation_digest = digest_fields(b"epistemic-graph/sql-source-acl-operation", fields);
     // One caller operation may legitimately contain several ACL effects (for
     // example, a multi-table import registering each table owner). Bind the
     // durable child identity to the canonical effect as well as the stable
@@ -558,7 +558,7 @@ fn commit_source_acl_mutation(
 /// effect is disambiguated internally by [`commit_source_acl_mutation`].
 pub fn stable_source_operation_id(operation_key: &str) -> uuid::Uuid {
     let mut digest = Sha256::new();
-    update_len_prefixed(&mut digest, b"medulla/sql-source-operation-id");
+    update_len_prefixed(&mut digest, b"epistemic-graph/sql-source-operation-id");
     update_len_prefixed(&mut digest, operation_key.as_bytes());
     let digest = digest.finalize();
     let mut bytes = [0_u8; 16];
@@ -1142,7 +1142,7 @@ pub struct SemanticTextSnapshot {
 impl std::fmt::Debug for AuthorizedTable {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut digest = Sha256::new();
-        digest.update(b"medulla/sql-catalog-debug-principal\0");
+        digest.update(b"epistemic-graph/sql-catalog-debug-principal\0");
         digest.update(self.authority.agent_id().as_bytes());
         let full_digest = hex::encode(digest.finalize());
         let principal_digest = &full_digest[..12];
@@ -1300,7 +1300,7 @@ fn semantic_record_identity_digest(
     primary_key_indexes: &[usize],
 ) -> Result<[u8; 32], String> {
     let mut digest = Sha256::new();
-    update_len_prefixed(&mut digest, b"medulla/sql-semantic-record-identity-v1");
+    update_len_prefixed(&mut digest, b"epistemic-graph/sql-semantic-record-identity-v1");
     for field in [
         tenant_scope,
         selector.catalog_id.as_str(),
@@ -1402,7 +1402,7 @@ fn semantic_cursor_position(
 ) -> Result<u64, String> {
     let mut mask = semantic_cursor_base_mac(
         cursor_auth_secret,
-        b"medulla/sql-semantic-cursor-position-v1",
+        b"epistemic-graph/sql-semantic-cursor-position-v1",
         authority,
         selector,
         acl,
@@ -1429,7 +1429,7 @@ fn semantic_cursor_tag(
 ) -> Result<SemanticCursorMac, String> {
     let mut mac = semantic_cursor_base_mac(
         cursor_auth_secret,
-        b"medulla/sql-semantic-cursor-tag-v1",
+        b"epistemic-graph/sql-semantic-cursor-tag-v1",
         authority,
         selector,
         acl,
@@ -1459,7 +1459,7 @@ fn semantic_complete_snapshot_receipt_digest(
     } = binding;
     let mut mac = semantic_cursor_base_mac(
         cursor_auth_secret,
-        b"medulla/sql-semantic-complete-snapshot-v1",
+        b"epistemic-graph/sql-semantic-complete-snapshot-v1",
         authority,
         selector,
         acl,
@@ -1529,7 +1529,7 @@ fn semantic_cursor(
     .into_bytes();
     let mut mask = semantic_cursor_base_mac(
         cursor_auth_secret,
-        b"medulla/sql-semantic-cursor-position-v1",
+        b"epistemic-graph/sql-semantic-cursor-position-v1",
         authority,
         selector,
         acl,

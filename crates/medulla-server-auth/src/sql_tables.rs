@@ -95,7 +95,7 @@ fn registry() -> &'static Mutex<HashMap<String, TableStore>> {
 #[cfg(test)]
 fn owner_filename(authority: &CarrierAuthority) -> String {
     let mut digest = Sha256::new();
-    digest.update(b"medulla/sql-catalog-owner\0");
+    digest.update(b"epistemic-graph/sql-catalog-owner\0");
     // Catalog ownership follows the verified effective actor, not the transport's
     // credential principal.  That gives the same tenant+actor one catalog through
     // Method::Sql, pgwire, MySQL, MSSQL, SQLite, and OBDA while delegated actors and
@@ -112,7 +112,7 @@ fn owner_filename(authority: &CarrierAuthority) -> String {
 /// tenant whose scope string happens to equal some agent_id's bytes.
 fn tenant_filename(tenant_scope: &str, suffix: &str) -> String {
     let mut digest = Sha256::new();
-    digest.update(b"medulla/sql-catalog-tenant\0");
+    digest.update(b"epistemic-graph/sql-catalog-tenant\0");
     digest.update(tenant_scope.as_bytes());
     format!("{}.{suffix}.redb", hex::encode(digest.finalize()))
 }
@@ -141,7 +141,7 @@ fn tenant_acl_path(tenant_scope: &str, persist_dir: &Path) -> PathBuf {
 
 fn registry_key(path: &Path) -> String {
     let mut digest = Sha256::new();
-    digest.update(b"medulla/sql-catalog-registry\0");
+    digest.update(b"epistemic-graph/sql-catalog-registry\0");
     digest.update(path.as_os_str().to_string_lossy().as_bytes());
     hex::encode(digest.finalize())
 }

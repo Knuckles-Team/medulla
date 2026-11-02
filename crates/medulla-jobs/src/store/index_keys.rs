@@ -8,13 +8,13 @@
 
 /// The tenant index key for `tenant`.
 pub(super) fn tenant_index_key(tenant: &str) -> String {
-    index_key(b"medulla-jobs.tenant-index.v1\0", tenant)
+    index_key(b"eg-jobs.tenant-index.v1\0", tenant)
 }
 
 /// The capability index key for `token` — also used for the synthetic `pool:` / `region:`
 /// placement tokens, which share the capability key space by construction.
 pub(super) fn capability_index_key(token: &str) -> String {
-    index_key(b"medulla-jobs.capability-index.v1\0", token)
+    index_key(b"eg-jobs.capability-index.v1\0", token)
 }
 
 /// A stable secondary-index key: SHA-256 over the NUL-terminated `domain` tag followed by

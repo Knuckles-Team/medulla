@@ -222,7 +222,7 @@ pub(super) fn definition_batch(
 /// opaque digest (e.g. of request id + method), so this only domain-separates it
 /// into an instance id shaped like the local-counter form (`sc-<hex>`).
 pub(super) fn instance_id_for_request(request_batch_id: &str) -> InstanceId {
-    let mut framed = b"medulla-statechart.consensus-instance-id.v1\0".to_vec();
+    let mut framed = b"eg-statechart.consensus-instance-id.v1\0".to_vec();
     framed.extend_from_slice(request_batch_id.as_bytes());
     format!("sc-{}", &Digest256::sha256(&framed).to_hex()[..32])
 }

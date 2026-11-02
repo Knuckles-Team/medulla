@@ -52,7 +52,7 @@ const NODE_INFO_SCOPE_INCARNATION: &str = "node-info:v1";
 /// this digest remains the member's immutable cluster-scoped identity.
 pub fn member_identity_for(cluster_id: &str, node_id: u64) -> String {
     let mut digest = Sha256::new();
-    digest.update(b"medulla/member-identity/v1\0");
+    digest.update(b"epistemic-graph/member-identity/v1\0");
     digest.update((cluster_id.len() as u64).to_be_bytes());
     digest.update(cluster_id.as_bytes());
     digest.update(node_id.to_be_bytes());

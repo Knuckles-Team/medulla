@@ -161,7 +161,7 @@ fn stream_storage_key(stream: &str) -> String {
     use sha2::{Digest as _, Sha256};
 
     let mut digest = Sha256::new();
-    digest.update(b"medulla/observability-stream\0");
+    digest.update(b"epistemic-graph/observability-stream\0");
     digest.update(stream.as_bytes());
     hex::encode(digest.finalize())
 }

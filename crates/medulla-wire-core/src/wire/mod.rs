@@ -1569,7 +1569,7 @@ impl WireSession {
         let authority = self.carrier_authority()?;
         use sha2::{Digest, Sha256};
         let mut digest = Sha256::new();
-        digest.update(b"medulla/wire-signed-operation\0");
+        digest.update(b"epistemic-graph/wire-signed-operation\0");
         digest.update(authority.owner_scope().as_bytes());
         digest.update([0]);
         digest.update(authority.idempotency_key().as_bytes());

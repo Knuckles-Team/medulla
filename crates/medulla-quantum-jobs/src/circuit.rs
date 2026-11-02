@@ -135,7 +135,7 @@ pub fn induced_subgraph_ghz_program(n_qubits: u32, edges: &[(u32, u32)]) -> Quan
         parameters: vec![],
         instructions,
         metadata: ProgramMetadata {
-            name: Some("medulla-quantum-jobs.induced_subgraph_ghz".to_string()),
+            name: Some("eg-quantum-jobs.induced_subgraph_ghz".to_string()),
             source: Some("medulla-quantum-jobs".to_string()),
         },
     }
@@ -331,7 +331,7 @@ mod tests {
         );
         assert_eq!(
             program.metadata.name.as_deref(),
-            Some("medulla-quantum-jobs.induced_subgraph_ghz")
+            Some("eg-quantum-jobs.induced_subgraph_ghz")
         );
         assert_eq!(program.metadata.source.as_deref(), Some("medulla-quantum-jobs"));
         assert_eq!(program.ir_version, IR_VERSION);
