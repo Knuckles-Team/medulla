@@ -5,13 +5,13 @@
 
 /// Shared test-only serialization lock for the process-global indexed-property env
 /// vars (`MEDULLA_MAX_INDEXED_PROPERTIES` / `MEDULLA_INDEXED_PROPERTIES`).
-/// The `graph` property-index tests AND the `index` manager cap test both mutate these
-/// globals, so both acquire THIS one lock — otherwise a cap-mutating test races a
-/// default-cap test under parallel `--all-features` (a torn `nodes_by_property` read).
-///
-/// Non-poisoning on purpose: it guards `()`, so a test that panicked while holding it
-/// leaves no state behind to distrust, and std's poison would carry no information.
-/// Bounded thread fan-out and start gates for this crate's concurrency tests.
+// The `graph` property-index tests AND the `index` manager cap test both mutate these
+// globals, so both acquire THIS one lock — otherwise a cap-mutating test races a
+// default-cap test under parallel `--all-features` (a torn `nodes_by_property` read).
+//
+// Non-poisoning on purpose: it guards `()`, so a test that panicked while holding it
+// leaves no state behind to distrust, and std's poison would carry no information.
+// Bounded thread fan-out and start gates for this crate's concurrency tests.
 
 // CONCEPT:MEDULLA-KG.compute.message-broker-exchanges — message-broker exchanges/routing on top of the KG-2.303 queue.
 #[cfg(feature = "broker")]
