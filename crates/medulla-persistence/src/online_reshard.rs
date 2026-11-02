@@ -87,9 +87,9 @@ use medulla_store::redb_store::shard::Shard;
 use medulla_store::redb_store::shard::ShardWrite;
 use medulla_store::redb_store::shard::SourceGraftMarker;
 use medulla_store::redb_store::shard::FOREIGN_GRAFT_MARKER;
-#[cfg(test)]
+#[cfg(all(any(test, feature = "test-support"), feature = "server"))]
 use medulla_store::redb_store::shard::take_test_barrier;
-#[cfg(all(test, feature = "server"))]
+#[cfg(all(any(test, feature = "test-support"), feature = "server"))]
 use medulla_store::redb_store::shard::GRAFT_BEFORE_PROTOCOL_LOCK;
 #[cfg(feature = "security")]
 use medulla_store::redb_store::PROVENANCE_ANCHOR_MEMBERS;
@@ -1865,7 +1865,7 @@ pub fn graft_graph_from_with_payload(
     graph_fname: &str,
     payload: Option<&mut dyn OwnerPayloadTransfer<GraphShardOwner, GraphShardOwner>>,
 ) -> Result<GraftedScope, String> {
-    #[cfg(all(test, feature = "server"))]
+    #[cfg(all(any(test, feature = "test-support"), feature = "server"))]
     if let Some(barrier) = take_test_barrier(&GRAFT_BEFORE_PROTOCOL_LOCK, graph_fname) {
         medulla_kernel::test_rendezvous::meet(&barrier, "graft before-protocol-lock rendezvous");
     }
