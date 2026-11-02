@@ -1,20 +1,23 @@
 //! `DecisionCommit`'s store half: the planted catalog-side inputs of
 //! DECIDE-LAYER-DESIGN §11.1 and the outcome link of §4.6 (EH-070).
 
+use medulla_agent_types::agent_graph::AgentGraphPublishRequest;
+use medulla_agent_types::agent_library::AgentLibraryPublishRequest;
 use medulla_agent_types::{
     agent_component::AgentComponentDraft, agent_component::AgentComponentFacts,
-    agent_component::AgentComponentKind, agent_component::AgentComponentPublishRequest, agent_component::ModalityFacts,
+    agent_component::AgentComponentKind, agent_component::AgentComponentPublishRequest,
+    agent_component::ComponentDependency, agent_component::ModalityFacts,
     agent_component::PromptMode, agent_component::ToolEffect,
 };
 use medulla_compute::assemble::{assemble, inputs, replay_check, Assembly, RecordIdentity};
 use medulla_decision_types::{
-    decision::AssemblyRequest, decision::AssemblyRequirements,
+    decision::AssemblyRequest, decision::AssemblyRequirements, decision::DecisionOutcome,
     decision::DecisionPolicy, decision::DecisionPolicyRef, decision::LibraryCandidateScope,
 };
 use medulla_types::contract::BoundedVec;
 
 use super::super::agent_component::{test_component_draft, test_tool_facts};
-use super::super::agent_fixtures::mutation_context;
+use super::super::agent_fixtures::{mutation_context, open_agent_store};
 use super::*;
 
 pub const TENANT: &str = "tenant-a";

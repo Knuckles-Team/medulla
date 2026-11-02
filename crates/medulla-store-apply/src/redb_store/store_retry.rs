@@ -1,4 +1,5 @@
 use medulla_store::redb_store::store_prelude::*;
+use super::*;
 
 /// Return a native WorkItem/resource mutation with only authority-owned
 /// lifecycle fields normalized. All other request fields remain serialized and

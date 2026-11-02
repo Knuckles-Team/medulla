@@ -712,7 +712,7 @@ async fn wire_placement_route_resolves_through_dispatch() {
     // opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
     let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
     use medulla_protocol_types::protocol::ResultPayload;
-    
+    use medulla_server_router::dispatch;
 
     let dir = fixture::fresh_dir("medulla-placement", "wire-route");
     let backend = fixture::open_backend(&dir).expect("open redb");

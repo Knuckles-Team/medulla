@@ -1,6 +1,7 @@
 //! Private transaction receipts implementation.
 
 use super::*;
+use medulla_mutation_types::mutation_scope::DurabilityDomain;
 #[cfg(feature = "redb")]
 use medulla_persistence::AsRedb;
 

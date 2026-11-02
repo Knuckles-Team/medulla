@@ -344,9 +344,9 @@ impl DispatchApi for DispatchSeam {
         persistence: &'a dyn medulla_server_api::api::persistence::PersistenceBackend,
         graph_fname: &'a str,
         store: medulla_server_api::state::ErasedHandle,
-        authority_for_page: medulla_server_api::api::reentry::PageAuthorityFn,
-        submit: medulla_server_api::api::reentry::PageSubmitFn,
-        park_source: medulla_server_api::api::reentry::PageParkFn,
+        mut authority_for_page: medulla_server_api::api::reentry::PageAuthorityFn,
+        mut submit: medulla_server_api::api::reentry::PageSubmitFn,
+        mut park_source: medulla_server_api::api::reentry::PageParkFn,
     ) -> SeamFuture<'a, Result<medulla_server_api::api::reentry::DrainOutcome, String>> {
         let Some(store) = store
             .downcast_ref::<Arc<dyn medulla_server_blob::blob::store::ChunkStore>>()
@@ -360,9 +360,9 @@ impl DispatchApi for DispatchSeam {
             persistence,
             graph_fname,
             store,
-            authority_for_page,
-            submit,
-            park_source,
+            move |tenant, graph, page_key| authority_for_page(tenant, graph, page_key),
+            move |verified, request| submit(verified, request),
+            move |lease, park| park_source(lease, park),
         ))
     }
 }

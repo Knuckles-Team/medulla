@@ -1,5 +1,6 @@
 //! Agent Library admin tests that drive the full method router.
 
+use medulla_agent_types::agent_library::AgentLibraryWriteResult;
 use medulla_types::acl::RequestContextClaims;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Request;

@@ -1,5 +1,6 @@
 //! Tests that drive the whole served chain through `request_boundary::dispatch`.
 
+use medulla_server_graph::dispatch::graph_pipeline::*;
 use crate::dispatch::request_boundary::dispatch;
 use crate::dispatch::*;
 use medulla_server_blob::blob::BlobStateExt;

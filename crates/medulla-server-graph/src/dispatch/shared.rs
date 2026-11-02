@@ -1,12 +1,25 @@
 //! Helpers shared by the dispatch modules: graph residency, graph read authority, typed responses and the request limits.
 
+use std::ops::ControlFlow;
 use std::sync::Arc;
+#[cfg(feature = "ast")]
+use std::sync::OnceLock;
 use std::time::Instant as DispatchLockInstant;
 use tokio::sync::RwLock;
+use tracing::info;
 
+use medulla_server_auth::access::check_caller_is_known;
 use medulla_server_auth::access::check_graph_access;
+use medulla_server_auth::access::is_admin_authz_action;
+use medulla_server_auth::access::require_admin_capability;
+use medulla_server_auth::access::requires_write;
+use medulla_server_api::carrier::CarrierAuthority;
 use medulla_server_api::carrier::GraphReadAuthority;
+use medulla_server_auth::auth::verify_multisig_mutation_signatures;
+use medulla_server_auth::auth::verify_register_identity_signature;
 use medulla_server_api::authority_context::VerifiedRequestContext;
+#[cfg(feature = "ast")]
+use medulla_server_api::compute::compute_off_lock;
 // NOT `#[cfg(feature = "redb")]`: `server::persistence` is an unconditional module
 // (server/mod.rs) and three ungated signatures below -- `reconcile_existing_graph_create`,
 // `read_committed_graph_version`, `reconcile_missing_graph_delete` -- name this trait
@@ -14,9 +27,12 @@ use medulla_server_api::authority_context::VerifiedRequestContext;
 // (`--no-default-features --features server`) with E0405 while the default full build,
 // which enables `redb`, stayed green. See plans/complex/lane-reports/WD10-R-DISPATCH.md.
 use medulla_isolation::isolation::AccessLevel;
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::Request;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
-use medulla_server_api::state::ServerState;
+use medulla_server_api::api::persistence::PersistenceBackend;
+use medulla_server_api::state::{timed_write, ServerState};
 
 /// Stable, privacy-safe rejection for a graph lifecycle type that this binary
 /// does not support.  The wire decoder normally rejects unknown enum strings

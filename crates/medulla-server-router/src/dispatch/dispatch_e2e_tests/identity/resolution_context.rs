@@ -1,5 +1,6 @@
 //! Source regressions only: these fixtures do not qualify a deployed broker,
 //! credential authority, generated client or mounted serving surface.
+use crate::dispatch::*;
 use medulla_server_identity::dispatch::identity_store::resolution_context::*;
 use medulla_identity_types::{
     identity::IdentityOp, identity::IdentityRefusal, identity::IdentityReply,

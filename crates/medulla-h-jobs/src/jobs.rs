@@ -99,6 +99,8 @@ mod worker_publish;
 mod worker_requests;
 mod worker_validation;
 
+#[cfg(all(feature = "jobs", feature = "knowledge-batch"))]
+pub(crate) use core::knowledge_stream_result;
 
 /// Jobs handler behaviour installed on the seam registry's `jobs` slot.
 pub struct JobsSeam;

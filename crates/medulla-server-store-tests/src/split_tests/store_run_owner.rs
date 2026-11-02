@@ -1,3 +1,4 @@
+use medulla_mutation_types::mutation_scope::MutationSurface;
 use medulla_work_store::redb_store::work_item::run_owner::*;
 use medulla_work_store::redb_store::work_item::test_shard::run_request as request;
 use medulla_work_store::{redb_store::work_item::test_shard::apply, redb_store::work_item::test_shard::open, redb_store::work_item::test_shard::with_nodes, redb_store::work_item::test_shard::with_write, redb_store::work_item::test_shard::GRAPH};
@@ -337,7 +338,7 @@ fn ordinary_completion_native_fence_and_terminal_noop_preserve_binding() {
         epistemic_operations::ClaimWorkItemRequestSchemaVersion,
         epistemic_operations::ClaimWorkItemResult,
     };
-    
+    use medulla_work_types::run_completion::*;
     let path = medulla_store::redb_store::temp_path("medulla-completion", "native-fence");
     let shard = Shard::open(&path).unwrap();
     let id = admit(&shard);

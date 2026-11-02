@@ -28,7 +28,7 @@ mod offline_tools;
 mod operator_command;
 #[cfg(feature = "full")]
 mod performance_probe;
-use medulla_server::server_startup::{self, run_fuseki_startup_health_check};
+use medulla_server::server_startup::{self, native_tcp_addr_is_loopback, run_fuseki_startup_health_check};
 
 #[derive(Parser, Debug)]
 #[command(name = "medulla-server")]

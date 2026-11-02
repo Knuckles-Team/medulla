@@ -57,6 +57,7 @@ use medulla_raft_xshard::harness::cluster::Cluster;
 use medulla_raft_xshard::harness::cluster::GRAPH;
 use medulla_raft_xshard::harness::test_env::configure_auth_test_environment;
 use medulla_raft::raft::NodeId;
+use medulla_server_router::dispatch;
 use medulla_server_auth::auth::compute_verified_envelope_token;
 use medulla_server_auth::auth::VerifiedEnvelopeParams;
 

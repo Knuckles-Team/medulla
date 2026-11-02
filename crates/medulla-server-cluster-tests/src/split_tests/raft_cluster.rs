@@ -884,7 +884,7 @@ mod placement_admin_wire_rpc {
     use super::*;
     use medulla_types::acl::{AgentIdentity, AgentRole, RequestContextClaims};
     use medulla_protocol_types::protocol::{Response, ResultPayload};
-    
+    use medulla_server_router::dispatch;
     use medulla_server_auth::auth::compute_verified_envelope_token;
     use medulla_server_auth::auth::VerifiedEnvelopeParams;
 

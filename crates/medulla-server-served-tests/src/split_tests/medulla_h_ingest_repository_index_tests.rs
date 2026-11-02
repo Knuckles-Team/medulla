@@ -1,15 +1,18 @@
 use medulla_h_ingest::repository_index::repository_envelope;
 // EH-280 — the lowered write-set is deterministic and tombstones remove.
 
+use medulla_mutation_types::mutation_scope::MutationSurface;
 use std::collections::HashMap;
 
-use medulla_protocol_types::change_envelope::MaterialClass;
+use medulla_protocol_types::{change_envelope::ChangeEnvelope, change_envelope::MaterialClass};
 use medulla_types::ingestion_wire::{ExtractedEdge, ExtractedNode, IndexResult};
 
 use medulla_h_ingest::repository_index::{
-    lower, BATCH_TOO_LARGE, REDACTED_HOST_IDENTITY,
+    lower, seal, IndexWriteSet, BATCH_TOO_LARGE, REDACTED_HOST_IDENTITY, REPOSITORY_LABELS,
 };
 use medulla_protocol_types::protocol::Method;
+use medulla_server_api::batch_compile::compile_methods;
+use medulla_server_api::batch_compile::CompileBatch;
 
 fn node(id: &str, kind: &str, properties: &[(&str, &str)]) -> ExtractedNode {
     ExtractedNode {

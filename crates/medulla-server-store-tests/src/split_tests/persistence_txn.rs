@@ -12,6 +12,7 @@ use medulla_server_auth::auth::dispatch_test_on_heap as dispatch_on_heap;
 use medulla_server_api::state::ServerState;
 use medulla_store::redb_layout::shard_filename;
 use medulla_store::redb_store::shard::Shard;
+use medulla_protocol_types::mutation_batch::*;
 use medulla_protocol_types::protocol::*;
 
 const TEST_AGENT: &str = "unit-test-agent";

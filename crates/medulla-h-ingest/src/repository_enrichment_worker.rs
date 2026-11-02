@@ -77,7 +77,7 @@ mod worker {
     use medulla_server_blob::blob::store::ChunkStore;
     #[cfg(not(feature = "raft"))]
     use medulla_server_mutation::mutation_batch::CommitOrigin;
-    
+    use medulla_server_mutation::mutation_batch::WorkItemCommitRequest;
 
     const IDLE: Duration = Duration::from_millis(500);
     const MAX_GRAPHS_PER_SWEEP: usize = 16;

@@ -6,6 +6,9 @@ use super::prelude_server::*;
 use super::prelude_std::*;
 use super::*;
 #[cfg(feature = "raft")]
+use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
+use medulla_mutation_types::mutation_scope::MutationSurface;
+#[cfg(feature = "raft")]
 use medulla_raft::raft::RaftStateExt;
 
 /// Transient scheduler-group PREPARE result. It is returned only to the trusted
