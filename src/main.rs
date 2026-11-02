@@ -1,5 +1,4 @@
 #![recursion_limit = "256"]
-#![allow(dead_code)]
 #![deny(unsafe_code)]
 // CONCEPT:MEDULLA-KG.query.wire-protocol — Medulla Service Binary
 //
