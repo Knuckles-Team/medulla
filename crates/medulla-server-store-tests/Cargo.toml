@@ -90,6 +90,11 @@ sparql = ["medulla-server-router/sparql", "medulla-server/sparql", "dep:medulla-
 streaming = ["medulla-server-router/streaming", "medulla-server/streaming", "server", "medulla-h-admin/streaming", "medulla-h-query/streaming", "medulla-protocol-types/streaming", "medulla-raft/streaming", "medulla-server-api/streaming", "medulla-types/streaming", "medulla-server-ops/streaming", "medulla-server-mutation/streaming", "medulla-server-cdc/streaming"]
 tsdb = ["medulla-server-router/tsdb", "medulla-server/tsdb", "server", "redb", "dep:medulla-tsdb", "dep:medulla-plan", "medulla-tsdb/redb-store", "medulla-plan/timeseries", "medulla-h-mining/tsdb", "medulla-h-admin/tsdb", "medulla-h-jobs/tsdb", "medulla-h-query/tsdb", "medulla-h-txn/tsdb", "medulla-persistence/tsdb", "medulla-raft/tsdb", "medulla-server-api/tsdb", "medulla-store/tsdb", "medulla-store-apply/tsdb", "medulla-server-ops/tsdb"]
 jobs = ["dep:medulla-jobs", "medulla-agent-types/jobs", "medulla-capabilities/jobs", "medulla-h-admin/jobs", "medulla-h-jobs/jobs", "medulla-h-query/jobs", "medulla-persistence/jobs", "medulla-protocol-types/jobs", "medulla-raft/jobs", "medulla-server-api/jobs", "medulla-types/jobs", "medulla-work-types/jobs", "medulla-server-ops/jobs", "medulla-server-mutation/jobs", "medulla-server-router/jobs", "medulla-server/jobs", "epistemic", "mining", "query", "redb", "server"]
+statechart = ["medulla-capabilities/statechart", "medulla-server-mutation/statechart", "medulla-raft/statechart", "medulla-protocol-types/statechart", "medulla-server-api/statechart", "medulla-types/statechart"]
+modality-serving = ["medulla-capabilities/modality-serving", "medulla-server-mutation/modality-serving", "medulla-raft/modality-serving", "medulla-protocol-types/modality-serving", "medulla-server-api/modality-serving", "medulla-types/modality-serving"]
+metrics = ["medulla-kernel/metrics", "medulla-server-mutation/metrics", "medulla-server-api/metrics", "medulla-protocol-types/metrics", "medulla-types/metrics"]
+shacl = ["medulla-server-cdc/shacl"]
+reasoning = ["medulla-server-cdc/reasoning"]
 [dev-dependencies]
 medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
 medulla-h-admin = { path = "../medulla-h-admin", features = ["test-support"] }
