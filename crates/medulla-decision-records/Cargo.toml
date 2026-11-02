@@ -3,7 +3,7 @@ name = "medulla-decision-records"
 version = "0.1.0"
 edition = "2021"
 authors = ["Repository Maintainers <maintainers@example.invalid>"]
-description = "medulla-engine: Decision records: receipts, ledger, the revision lifecycle (R805), provenance, replay and feedback"
+description = "medulla-engine: Decision records: receipts, ledger, the revision lifecycle, provenance, replay and feedback"
 license = "MIT"
 publish = false
 
