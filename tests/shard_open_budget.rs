@@ -9,6 +9,13 @@
 //!   its own load threads, so the host carries ten times that load, and the
 //!   limits are loose. It is not a regression gate.
 //!
+//! Host noise only ever adds time to a wall-clock measurement (other builds on
+//! the same machine, scheduler delay), and a slow open is what a regression
+//! looks like too. So each budget is asserted on the fastest of `ATTEMPTS`
+//! independent opens: a real regression makes every attempt slow and fails; one
+//! unlucky scheduling window does not. Every attempt is printed, and a miss
+//! prints the phase lines of each one.
+//!
 //! A tracing subscriber captures the per-store open phase lines (file open,
 //! table validation, recovery scan or skip, bind, ledger). A missed limit
 //! prints them, so a slow open is diagnosable from the test output.
@@ -31,6 +38,8 @@ const FSYNC_WRITERS: usize = 16;
 const CPU_BURNERS: usize = 32;
 const STRESS_COPIES: usize = 10;
 const STRESS_CHILD: &str = "MEDULLA_SHARD_OPEN_STRESS_CHILD";
+/// Independent opens measured per budget; the fastest one is held to the limit.
+const ATTEMPTS: usize = 3;
 
 // Each scenario owns the process-wide tracing buffer and its background load.
 static SCENARIO_LOCK: Mutex<()> = Mutex::new(());
@@ -176,6 +185,33 @@ fn check(failures: &mut Vec<String>, what: &str, took: Duration, limit: Duration
     }
 }
 
+/// One measured open: how long it took and the per-store phase lines it logged.
+struct Attempt {
+    took: Duration,
+    phases: String,
+}
+
+/// The fastest attempt (the one a budget is held to), with every attempt's time
+/// and phases listed for the failure message.
+fn best(attempts: &[Attempt]) -> (Duration, String) {
+    let fastest = attempts
+        .iter()
+        .min_by_key(|attempt| attempt.took)
+        .expect("at least one attempt");
+    let all = attempts
+        .iter()
+        .enumerate()
+        .map(|(i, attempt)| {
+            format!(
+                "attempt {i}: {:?}\n{}",
+                attempt.took, attempt.phases
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    (fastest.took, all)
+}
+
 fn finish(limits: &Limits, failures: Vec<String>) {
     if !failures.is_empty() {
         for failure in &failures {
@@ -228,76 +264,101 @@ fn record(backend: &RedbBackend, graphs: usize, nodes: usize, payload: &str) {
     });
 }
 
-/// Fresh K=8 open, then a reopen of the small store, both under load.
+/// Fresh K=8 open, then a reopen of the small store, both under load; measured
+/// `ATTEMPTS` times, each on its own new store.
 fn small_scenario(limits: &Limits) -> Vec<String> {
     let _scenario = SCENARIO_LOCK
         .lock()
         .expect("shard open scenario lock poisoned");
     let phase_log = PhaseLog::get();
     let scratch = scratch("shard-open-budget-");
-    let dir = scratch.path().join("store").to_string_lossy().to_string();
     std::env::set_var("MEDULLA_REDB_SHARDS", SHARDS.to_string());
 
     let load = Load::start(scratch.path());
+    let mut fresh_attempts = Vec::new();
+    let mut reopen_attempts = Vec::new();
+    for attempt in 0..ATTEMPTS {
+        let dir = scratch
+            .path()
+            .join(format!("store-{attempt}"))
+            .to_string_lossy()
+            .to_string();
 
-    phase_log.take();
-    let started = std::time::Instant::now();
-    let backend = RedbBackend::open(dir.clone(), 8192).expect("fresh open");
-    let fresh = started.elapsed();
-    let fresh_phases = phase_log.take();
+        phase_log.take();
+        let started = std::time::Instant::now();
+        let backend = RedbBackend::open(dir.clone(), 8192).expect("fresh open");
+        let took = started.elapsed();
+        fresh_attempts.push(Attempt {
+            took,
+            phases: phase_log.take(),
+        });
 
-    record(&backend, 16, 20, "");
-    backend.shutdown();
-    drop(backend);
+        record(&backend, 16, 20, "");
+        backend.shutdown();
+        drop(backend);
 
-    phase_log.take();
-    let started = std::time::Instant::now();
-    let backend = RedbBackend::open(dir, 8192).expect("reopen");
-    let reopen = started.elapsed();
-    let reopen_phases = phase_log.take();
-    backend.shutdown();
-    drop(backend);
+        phase_log.take();
+        let started = std::time::Instant::now();
+        let backend = RedbBackend::open(dir, 8192).expect("reopen");
+        let took = started.elapsed();
+        reopen_attempts.push(Attempt {
+            took,
+            phases: phase_log.take(),
+        });
+        backend.shutdown();
+        drop(backend);
+    }
     load.stop();
 
+    let (fresh, fresh_all) = best(&fresh_attempts);
+    let (reopen, reopen_all) = best(&reopen_attempts);
     println!(
-        "[BUDGET {}] fresh={fresh:?} (<= {:?}) reopen={reopen:?} (<= {:?}) reopen_scanned_stores={}",
+        "[BUDGET {}] fresh={:?} (<= {:?}) reopen={:?} (<= {:?}) reopen_scanned_stores={}",
         limits.label,
+        fresh_attempts.iter().map(|a| a.took).collect::<Vec<_>>(),
         limits.fresh,
+        reopen_attempts.iter().map(|a| a.took).collect::<Vec<_>>(),
         limits.small_reopen,
-        scanned(&reopen_phases)
+        reopen_attempts
+            .iter()
+            .map(|a| scanned(&a.phases))
+            .sum::<usize>()
     );
     let mut failures = Vec::new();
-    for physical_name in [
-        "epistemic-graph:admin-mutations",
-        "epistemic-graph:node-info",
-        "epistemic-graph:cluster-hierarchy",
-    ] {
-        if !fresh_phases.contains(physical_name) {
-            failures.push(format!(
-                "fresh K={SHARDS} open did not capture the R006.2 per-store phase line for {physical_name}\n--- captured phases ---\n{fresh_phases}"
-            ));
+    for attempt in &fresh_attempts {
+        for physical_name in [
+            "epistemic-graph:admin-mutations",
+            "epistemic-graph:node-info",
+            "epistemic-graph:cluster-hierarchy",
+        ] {
+            if !attempt.phases.contains(physical_name) {
+                failures.push(format!(
+                    "fresh K={SHARDS} open did not capture the R006.2 per-store phase line for {physical_name}\n--- captured phases ---\n{}",
+                    attempt.phases
+                ));
+            }
         }
     }
     check(
         &mut failures,
-        &format!("fresh K={SHARDS} open"),
+        &format!("fresh K={SHARDS} open (fastest of {ATTEMPTS})"),
         fresh,
         limits.fresh,
-        &fresh_phases,
+        &fresh_all,
     );
     check(
         &mut failures,
-        &format!("small reopen K={SHARDS}"),
+        &format!("small reopen K={SHARDS} (fastest of {ATTEMPTS})"),
         reopen,
         limits.small_reopen,
-        &reopen_phases,
+        &reopen_all,
     );
     failures
 }
 
 /// Reopen of a populated (~300 MB) K=8 store under load, first on the
-/// clean-shutdown markers, then with the markers removed (full scan, no limit:
-/// it proves the fallback still opens the store).
+/// clean-shutdown markers (`ATTEMPTS` times), then with the markers removed
+/// (full scan, no limit: it proves the fallback still opens the store).
 fn populated_scenario(limits: &Limits) -> Vec<String> {
     let _scenario = SCENARIO_LOCK
         .lock()
@@ -307,8 +368,11 @@ fn populated_scenario(limits: &Limits) -> Vec<String> {
     let dir = scratch.path().join("store");
     let dir_str = dir.to_string_lossy().to_string();
 
+    // Few large records: the store size is what the open sees, and each record
+    // costs one durable commit, so this builds the same ~300 MB in a fifth of
+    // the fsyncs.
     let backend = RedbBackend::open_with_shards(dir_str.clone(), 8192, SHARDS).expect("open");
-    record(&backend, 32, 50, &"x".repeat(100_000));
+    record(&backend, 32, 10, &"x".repeat(500_000));
     backend.shutdown();
     drop(backend);
 
@@ -324,13 +388,20 @@ fn populated_scenario(limits: &Limits) -> Vec<String> {
     );
 
     let load = Load::start(scratch.path());
-    phase_log.take();
-    let started = std::time::Instant::now();
-    let backend = RedbBackend::open_with_shards(dir_str.clone(), 8192, SHARDS).expect("reopen");
-    let fast = started.elapsed();
-    let fast_phases = phase_log.take();
-    backend.shutdown();
-    drop(backend);
+    let mut fast_attempts = Vec::new();
+    for _ in 0..ATTEMPTS {
+        phase_log.take();
+        let started = std::time::Instant::now();
+        let backend =
+            RedbBackend::open_with_shards(dir_str.clone(), 8192, SHARDS).expect("reopen");
+        let took = started.elapsed();
+        fast_attempts.push(Attempt {
+            took,
+            phases: phase_log.take(),
+        });
+        backend.shutdown();
+        drop(backend);
+    }
 
     // Forced fallback: no marker means the full recovery scan runs.
     for entry in std::fs::read_dir(&dir).unwrap().flatten() {
@@ -347,20 +418,25 @@ fn populated_scenario(limits: &Limits) -> Vec<String> {
     drop(backend);
     load.stop();
 
+    let (fast, fast_all) = best(&fast_attempts);
     println!(
-        "[BUDGET {}] populated bytes={bytes} marker_reopen={fast:?} (<= {:?}) marker_scanned_stores={} full_scan_reopen={full:?} full_scanned_stores={}",
+        "[BUDGET {}] populated bytes={bytes} marker_reopen={:?} (<= {:?}) marker_scanned_stores={} full_scan_reopen={full:?} full_scanned_stores={}",
         limits.label,
+        fast_attempts.iter().map(|a| a.took).collect::<Vec<_>>(),
         limits.populated_marker_reopen,
-        scanned(&fast_phases),
+        fast_attempts
+            .iter()
+            .map(|a| scanned(&a.phases))
+            .sum::<usize>(),
         scanned(&full_phases)
     );
     let mut failures = Vec::new();
     check(
         &mut failures,
-        "populated marker reopen",
+        &format!("populated marker reopen (fastest of {ATTEMPTS})"),
         fast,
         limits.populated_marker_reopen,
-        &fast_phases,
+        &fast_all,
     );
     failures
 }
