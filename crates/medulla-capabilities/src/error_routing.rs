@@ -123,6 +123,9 @@ const DOMAIN_PREFIXES: &[(&str, &[&str])] = &[
 const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     ("AnalyticsJob", &["INVALID_CONFIGURATION"]),
     ("GetRunWorkItem", &["RUN_ADMISSION_UNAVAILABLE"]),
+    // Local-only authority: a clustered server refuses it with the typed
+    // `LOCAL_ONLY_CLUSTER_REFUSAL` (server-mutation) instead of proposing it.
+    ("SqlSourceBatch", &["CLUSTER_MUTATION_UNAVAILABLE"]),
     (
         "AgentComponent",
         &["COMPONENT_WITHDRAWN", "MALFORMED_GUARDRAIL_RULE"],
