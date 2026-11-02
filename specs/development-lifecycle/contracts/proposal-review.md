@@ -1,6 +1,8 @@
 # Seam contract: proposal review
 
 Governing spec: [spec.md](../spec.md).
+Provider: medulla MEDULLA-SDLC-R017.6
+Consumer: arbora ARBORA-OPS-R896.5
 
 ## Provider
 

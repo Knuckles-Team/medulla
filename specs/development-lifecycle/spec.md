@@ -7,7 +7,8 @@ References: [MEDULLA-SCM](../source-changesets/spec.md), [MEDULLA-REPO-INGEST](.
 
 Cross-repo IDs: `ARBORA-OPS-R853` and `ARBORA-OPS-R896` serve the lifecycle and artifact operations. `PIPE-GATES-R004` and
 `PIPE-CONNSPEC-R009` publish gate verdicts and read the derived status. `PIPE-RELEASE-R025` computes release plans. `MERISTEM-SCM-R002` applies
-graph-native edits inside a run. Each owner files its own row.
+graph-native edits inside a run. `ARBORA-OPS-R896.7` to `R896.13`, `MERISTEM-SCM-R012`, `SCION-SCM-R003`, `CONN-GITHUB-AGENT-CONNECTOR-CONTENT-R007`,
+`CONN-GITLAB-API-R004` and `PIPE-GATES-R016.116.1` consume the delivery rows of R019. Each owner files its own row.
 Public provenance: operator decision on graph-driven development and release planning.
 
 ## User Scenarios & Testing
@@ -56,6 +57,19 @@ A maintainer lands work only when the full gates pass and the phase scenario run
 
 1. **Given** a discovered test without a verdict, **When** the landing gate runs, **Then** it fails with `SUITE_INCOMPLETE`.
 
+### User Story 6 - Autonomous delivery of a change proposal (Priority: P2)
+
+An owner lets the platform deliver open rows as pull requests. The engine opens one delivery per slice and routes check and review feedback to it. The engine decides review rounds and merge arming. The owner keeps the only merge.
+
+**Acceptance Scenarios**:
+
+1. **Given** a dispatched slice, **When** the engine opens its delivery, **Then** a second open with the same key returns the same delivery.
+2. **Given** a codebase in mode `development`, **When** the loop raises a slice unprompted, **Then** the engine records `would_dispatch` and starts no run.
+3. **Given** a delivery with an open proposal, **When** a check fails, **Then** the delivery receives the failure as an input.
+4. **Given** a ready proposal without an owner approval on its head, **When** arbora asks for arming, **Then** the verdict is `hold`.
+5. **Given** an armed proposal, **When** the head moves, **Then** the verdict is `disarm`.
+6. **Given** the last open proposal of a delivery, **When** it merges, **Then** the delivery ends as `merged`.
+
 ### Edge Cases
 
 - A direct write of a derived edge refuses, and the graph stays unchanged.
@@ -64,6 +78,9 @@ A maintainer lands work only when the full gates pass and the phase scenario run
 - A proposal with no evidence refuses.
 - A dependency cycle among tasks refuses and dispatches nothing.
 - A status read at an unknown revision refuses.
+- A bot or check event never resumes an ended delivery.
+- A fourth automated review round of one reviewer is not addressed.
+- A restart never repeats an outside effect that has no receipt.
 
 ## Requirements
 
@@ -80,10 +97,13 @@ A maintainer lands work only when the full gates pass and the phase scenario run
 - **FR-011**: Goals and typed proposals drive evolution and land only as pull requests. Rows: `MEDULLA-SDLC-R017`.
 - **FR-012**: Every codebase has a project mode, and promotion to `evolving` needs operator approval. Rows: `MEDULLA-SDLC-R012.8`.
 - **FR-013**: Release bundle plans ingest as records. Rows: `MEDULLA-SDLC-R018`.
+- **FR-014**: The engine records each autonomous delivery and routes its feedback. It decides review rounds, merge arming and supersession. Rows: `MEDULLA-SDLC-R019`.
 - **SC-001**: A rebuild of every derived edge from the changeset log reproduces the edge set byte for byte. Rows: `MEDULLA-SDLC-R001.5`.
 - **SC-002**: The derived requirement states equal the output of the shared status generator on the same revision. Rows: `MEDULLA-SDLC-R005.5`.
 - **SC-003**: A one-file spec change re-ingests in under 1 s, and a full spec set in under 30 s. Rows: `MEDULLA-SDLC-R014.2`.
 - **SC-004**: No proposal reaches a spec file except through a merged pull request. Rows: `MEDULLA-SDLC-R017.4`.
+- **SC-005**: No arming verdict is `arm` without an owner approval on the head commit. Rows: `MEDULLA-SDLC-R019.10`.
+- **SC-006**: A replay of every delivery decision from the log gives the same verdicts. Rows: `MEDULLA-SDLC-R019.15`.
 
 ## Assumptions
 
@@ -110,6 +130,7 @@ chain. Each linked record stays with its owner.
 
 In scope: spec artifact records, task dispatch and research. Also in scope: evolution proposals, project mode and release graph records. The lifecycle vocabulary, the derivation rules, and release and deployment records stay in scope.
 Also in scope: defect records and triage, derived requirement state and the lifecycle queries.
+Also in scope: the autonomous delivery records and their decisions (R019).
 
 Non-goals: changeset storage (MEDULLA-SCM), served operations (arbora), gate execution (pipelines),
 views (the UIs) and incident correlation (MEDULLA-UNIFIED-DATA-PLANE-R760).
@@ -131,5 +152,6 @@ views (the UIs) and incident correlation (MEDULLA-UNIFIED-DATA-PLANE-R760).
 | FR-011 | `MEDULLA-SDLC-R017` | plan.md "Task dispatch, research and evolution" | T-011 |  |
 | FR-012 | `MEDULLA-SDLC-R012.8` | plan.md "Project mode" | T-012 |  |
 | FR-013 | `MEDULLA-SDLC-R018` | plan.md "Spec artifact graph" | T-013 |  |
+| FR-014 | `MEDULLA-SDLC-R019` | plan.md "Autonomous delivery" | T-014 |  |
 
 A question that blocks a row carries the marker `[NEEDS CLARIFICATION: <question>]` in `spec.md`. No marker is open.
