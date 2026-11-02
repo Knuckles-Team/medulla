@@ -411,8 +411,10 @@ mod tests {
 
     #[test]
     fn malformed_msgpack_is_refused_not_truncated() {
-        let mut bytes = props(&serde_json::json!({"t": "http://epistemic-graph/owl#A"}));
-        bytes.truncate(bytes.len() - 3);
+        // The retired IRI stays whole; the cut removes the trailing value, so the
+        // document still looks migratable but its last map entry is missing.
+        let mut bytes = props(&serde_json::json!({"t": "http://epistemic-graph/owl#A", "n": 1}));
+        bytes.truncate(bytes.len() - 1);
         assert!(rewrite_msgpack(&bytes).is_err());
     }
 
