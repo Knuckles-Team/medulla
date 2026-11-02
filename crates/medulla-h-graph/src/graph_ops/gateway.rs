@@ -162,7 +162,7 @@ pub async fn try_handle_gateway(
     // the same as a build without `mining`.
     #[cfg(feature = "mining")]
     {
-        let query = medulla_server_ops::api::query_txn::query_seam(&state).await;
+        let query = medulla_server_ops::api::query_txn::query_seam(state).await;
         if let Some(query) = query {
             if let Some(resp) = query
                 .mining_gateway_try_handle(
