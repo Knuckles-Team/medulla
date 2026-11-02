@@ -360,9 +360,9 @@ impl DispatchApi for DispatchSeam {
             persistence,
             graph_fname,
             store,
-            move |tenant, graph, page_key| authority_for_page(tenant, graph, page_key),
-            move |verified, request| submit(verified, request),
-            move |lease, park| park_source(lease, park),
+            authority_for_page,
+            submit,
+            park_source,
         ))
     }
 }
