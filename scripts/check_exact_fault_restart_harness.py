@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# ruff: noqa: E501
 """Static gate for exact-binary fault/restart certification architecture."""
 
 from __future__ import annotations
@@ -329,7 +328,12 @@ def _check_store_contract() -> list[str]:
     # in its declared `store_batch`/`store_mutation` children. Read the exact
     # source family the compiler assembles so a child omission cannot make the
     # graph mutation contract look satisfied by an unrelated facade comment.
-    graph_store = _read_rust_module("crates/medulla-store/src/redb_store.rs")
+    graph_store = "\n".join(
+        (
+            _read_rust_module("crates/medulla-store/src/redb_store.rs"),
+            _read_rust_module("crates/medulla-store-apply/src/redb_store.rs"),
+        )
+    )
     sql_store = _read("crates/medulla-table-store/src/tables/store.rs")
     native_store = "\n".join(_read(path) for path in _NATIVE_STORE_COMMIT_SOURCES)
     phase_variants = {

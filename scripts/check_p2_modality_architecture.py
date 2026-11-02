@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# ruff: noqa: E501
 """Fail CI if the P2 modality/KnowledgeBatch architecture is bypassed.
 
 Kept here are only properties the compiler and the Rust suites cannot see:
@@ -57,7 +56,9 @@ def require_single_knowledge_stream_handler() -> None:
     """The KnowledgeStream handler is one module tree, not a file + directory."""
 
     require(
-        not (ROOT / "src/server/handlers/knowledge_stream.rs").exists(),
+        not (
+            ROOT / "crates/medulla-server-graph/src/handlers/knowledge_stream.rs"
+        ).exists(),
         "KnowledgeStream retains an ambiguous legacy handler module",
     )
 
@@ -215,7 +216,7 @@ def require_ingest_stream_item_bound(python_client: str) -> None:
         "Python client ingest_stream item bound is absent or inconsistent",
     )
     server = _rust_comments_mask(
-        compiler_source("crates/medulla-h-ingest/src/modality.rs")
+        compiler_source("crates/medulla-server-ops/src/api/ingest.rs")
     )
     server_bound = _SERVER_INGEST_STREAM_BOUND.search(server)
     require(server_bound is not None, "server MAX_INGEST_STREAM_ITEMS not found")
@@ -235,7 +236,7 @@ def main() -> None:
         compiler_source("crates/medulla-types/src/knowledge_stream.rs")
     )
     require_graph_dispatch_ordering(
-        read_module_tree("crates/medulla-server-router/src/dispatch.rs", root_dir=ROOT)
+        read_module_tree("crates/medulla-server-graph/src/dispatch.rs", root_dir=ROOT)
     )
     require_source_free_receipt(
         read_module_tree(

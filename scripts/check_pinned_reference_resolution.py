@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# ruff: noqa: E501
 """Fail closed when a pinned cross-record reference has no production resolver.
 
 Why this exists
@@ -59,7 +58,25 @@ from rust_module_tree import read_module_tree
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA = "eg-pinned-reference-resolution-gate/v1"
 
-SERVER_ROOT = "src/server/mod.rs"
+
+def server_source() -> str:
+    """The module trees of every served-runtime crate, joined."""
+
+    return "\n".join(read_module_tree(root, root_dir=ROOT) for root in _server_roots())
+
+
+def _server_roots() -> tuple[str, ...]:
+    """Crate roots whose module trees make up the served runtime: every
+    workspace crate that is not a test-only crate."""
+
+    crates = ROOT / "crates"
+    return tuple(
+        f"crates/{crate.name}/src/lib.rs"
+        for crate in sorted(crates.iterdir())
+        if not crate.name.endswith("-tests") and (crate / "src" / "lib.rs").is_file()
+    )
+
+
 STORAGE_REGISTRY = "crates/medulla-storage/src/owner/registry.rs"
 ADMITTED_WRITE = "open_write"
 
@@ -644,7 +661,7 @@ def _edge_anchors(
 def run_gate() -> dict:
     layers = durable_layers()
     sites = pin_sites(layers)
-    bodies = _functions(read_module_tree(SERVER_ROOT, root_dir=ROOT))
+    bodies = _functions(server_source())
     opens = _store_readers(bodies, layers)
     admission = _admitted_writes(bodies, layers)
 

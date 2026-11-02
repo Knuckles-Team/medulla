@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# ruff: noqa: E501
 """Conservatively identify documentation-only PRs; other events run full CI."""
 
 from __future__ import annotations

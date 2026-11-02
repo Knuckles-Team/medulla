@@ -18,7 +18,7 @@ def _source(path: str) -> str:
     Each needle below names a behaviour a *module* must carry. Reading only the
     facade file made every assertion silently stale the moment that module was
     decomposed into `<name>.rs` + `<name>/**`: the four consensus needles this
-    gate reported missing from `crates/medulla-server-router/src/dispatch.rs` all still exist, they
+    gate reported missing from `crates/medulla-server-consensus/src/dispatch.rs` all still exist, they
     just moved into `crates/medulla-server-consensus/src/dispatch/consensus.rs`. The test-inclusive
     view is deliberate -- it is the exact superset of the single file this gate
     used to read (one needle here, `replicated_submission_and_claim_converge_
@@ -84,7 +84,7 @@ _REQUIRED_MARKERS: dict[str, tuple[str, ...]] = {
         "apply_consensus_job_publication_commit(",
         "apply_consensus_job_publication_finalize(",
     ),
-    "crates/medulla-server-router/src/dispatch.rs": (
+    "crates/medulla-server-consensus/src/dispatch.rs": (
         "execute_consensus_job_publication(",
         "submit_consensus_job_publication_command(",
         '"target-commit"',

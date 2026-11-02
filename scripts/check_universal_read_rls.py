@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# ruff: noqa: E501
 """Fail CI if a served read bypasses row or carrier ownership isolation.
 
 The read inventory is generated from the exhaustive capability ledger and
@@ -218,7 +217,7 @@ def _check_sql_wire_read_contract(wire: str) -> None:
     # The SQL wire owns three distinct GraphView-producing read paths after
     # transaction decomposition. Keep the proof tied to each canonical body;
     # counting helper calls would treat a definition as a fourth projection.
-    wire_sql_read = rust_function(wire, "pub(crate) async fn run_read(")
+    wire_sql_read = rust_function(wire, "pub async fn run_read(")
     wire_overlay_read = rust_function(wire, "async fn overlaid_snapshot(")
     wire_uql_read = rust_function(wire, "async fn exec_uql(")
     wire_crossmodal = rust_function(wire, "async fn try_execute_crossmodal(\n")
@@ -248,23 +247,39 @@ def _check_sql_wire_read_contract(wire: str) -> None:
     )
 
 
+def served_dispatch_source() -> str:
+    """The served dispatch universe: the router tree plus the graph-dispatch
+    tree it delegates to, so the call-graph slice spans the delegation."""
+
+    return "\n".join(
+        read_module_tree(path, root_dir=ROOT)
+        for path in (
+            "crates/medulla-server-router/src/dispatch.rs",
+            "crates/medulla-server-graph/src/dispatch.rs",
+        )
+    )
+
+
 def main() -> None:
     protocol = protocol_source()
     policies = capability_inventory()
     methods, reads = require_protocol_inventory(protocol, policies)
 
     access = read_module_tree(
-        "crates/medulla-server-auth/src/access.rs", root_dir=ROOT, include_tests=True
+        "crates/medulla-server-api/src/carrier.rs", root_dir=ROOT, include_tests=True
     )
     isolation, can_see_row = isolation_source()
-    dispatch = read_module_tree(
-        "crates/medulla-server-router/src/dispatch.rs", root_dir=ROOT
-    )
+    dispatch = served_dispatch_source()
     graph_ops = read_module_tree(
         "crates/medulla-h-graph/src/graph_ops.rs", root_dir=ROOT
     )
     knowledge = knowledge_stream_handler_source()
-    query = read_module_tree("crates/medulla-h-query/src/query.rs", root_dir=ROOT)
+    query = "\n".join(
+        (
+            read_module_tree("crates/medulla-h-query/src/query.rs", root_dir=ROOT),
+            read("crates/medulla-server-ops/src/api/query_txn/query_support.rs"),
+        )
+    )
     rdf = rdf_handler_source()
     distributed = read("crates/medulla-h-txn/src/dist_compute.rs")
     pregel = read("crates/medulla-raft-xshard/src/pregel.rs")
@@ -322,11 +337,11 @@ def main() -> None:
     require_tokens(
         access,
         (
-            "pub(crate) struct GraphReadAuthority",
+            "pub struct GraphReadAuthority",
             "VerifiedRequestContext",
             "verified row-level graph read has no actor identity",
-            "pub(crate) fn verified_actor",
-            "pub(crate) fn project_core",
+            "pub fn verified_actor",
+            "pub fn project_core",
             "self.filter_view(&mut view)",
             "source.get_embedding(node_id)",
         ),
@@ -380,9 +395,9 @@ def main() -> None:
             # `&core` became `core` when the parameter type changed with the
             # extraction; the manifest and the authority still travel together.
             "core, materialization_manifest.as_ref(), read_authority.as_ref(),",
-            "handlers::mining::try_handle( req_id, core.clone(), "
+            "medulla_h_mining::mining::try_handle( req_id, core.clone(), "
             "read_authority.as_ref(),",
-            "handlers::graphlearn::try_handle(req_id, core.clone(), method)",
+            "medulla_server_api::handlers::graphlearn::try_handle(req_id, core.clone(), method)",
             "read_authority.as_ref(), method,",
             # `core.clone()` became `ctx.core.clone()` when the post-lock routers
             # took a `GraphOpRouting` context struct instead of eight loose args.
@@ -411,7 +426,10 @@ def main() -> None:
     # authority. This discovers call sites rather than maintaining a second list.
     calls = [
         call
-        for call in call_blocks(dispatch + "\n" + knowledge, "graph_ops::try_handle")
+        for call in call_blocks(
+            dispatch + "\n" + read("crates/medulla-server/src/seams_install.rs"),
+            "graph_ops::try_handle",
+        )
         if call.startswith("graph_ops::try_handle(")
     ]
     require(
@@ -595,14 +613,14 @@ def main() -> None:
     require_tokens(
         access,
         (
-            "pub(crate) struct CarrierAuthority",
+            "pub struct CarrierAuthority",
             "context.tenant()",
             "context.principal_persistence_id()",
-            "pub(crate) fn namespace",
-            "pub(crate) fn owns",
-            "pub(crate) fn is_admin",
-            "pub(crate) fn unauthenticated_carrier_denied",
-            "pub(crate) fn can_see_blob",
+            "pub fn namespace",
+            "pub fn owns",
+            "pub fn is_admin",
+            "pub fn unauthenticated_carrier_denied",
+            "pub fn can_see_blob",
         ),
         "carrier authority is missing {token!r}",
         lambda token, source: token in source,
@@ -610,10 +628,10 @@ def main() -> None:
     require(
         all(
             (
-                "pub(crate) fn tenant(&self)" in auth,
+                "pub fn tenant(&self)" in auth,
                 "verified_for_test_in_tenant" in auth,
                 "carrier_ownership_separates_same_tenant_and_cross_tenant_callers"
-                in access,
+                in read("crates/medulla-server-auth/src/access.rs"),
             )
         ),
         "verified tenant extraction or Alice/Bob/cross-tenant adversarial proof is "
@@ -769,7 +787,7 @@ def main() -> None:
                 "GraphReadAuthority::carrier" in query,
                 txn.count("read_authority.project_core(&core)") >= 3,
                 "construct_view_to_methods" in txn,
-                "construct_view_to_methods(&view" in wire,
+                re.search(r"construct_view_to_methods\(\s*&view", wire) is not None,
                 "txns: Mutex<HashMap<(String, String), CrossModalTxn>>"
                 in graphql_crossmodal,
                 "uuid::Uuid::new_v4()" in graphql_crossmodal,

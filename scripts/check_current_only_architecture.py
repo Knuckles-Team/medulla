@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# ruff: noqa: E501
 """Fail CI when audited legacy readers, fallbacks, or retired symbols return.
 
 Every check here is a *ban*: a retired symbol, a compatibility default, a
@@ -532,7 +531,7 @@ def main() -> None:
     )
     check_transport_contract(
         tree("crates/medulla-server/src/transport.rs"),
-        read("src/server/mod.rs"),
+        tree("crates/medulla-server/src/lib.rs"),
         read("src/main.rs") + "\n" + read("tests/external_compute_e2e.rs"),
     )
     check_graph_fencing(

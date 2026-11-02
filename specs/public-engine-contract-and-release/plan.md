@@ -634,10 +634,10 @@ The numbers come from `.config/kiss.toml`, `.config/pre-commit.yaml` and `[tool.
 Shapes for every move lane:
 
 - A move is re-export-free. Callers are rewritten to the new path; no `pub use` bridge stays.
-- Widen `pub(crate)` to `pub` only where `placement.toml` puts a caller in another crate.
+- Widen `pub(crate)` to `pub` only where a caller sits in another crate.
 - Move helpers, do not copy them. A copied helper fails dupehound and jscpd.
-- A lane touches the files placement assigns to its crate and the callers `rewrite_paths.py` edits.
-- `scripts/check_crate_graph.py` and `scripts/crate_split/edges.py` pass before the train is enqueued.
+- A lane touches the files of its crate and the callers it rewrites.
+- The workspace builds with no dependency cycle before the train is enqueued.
 
 ## North star
 

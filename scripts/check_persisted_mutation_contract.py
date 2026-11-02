@@ -43,6 +43,15 @@ def read_compiler_family(relative: str):
     return _read_compiler_family(relative, root_dir=ROOT)
 
 
+class _FamilyUnion:
+    """The production and test-inclusive text of several compiler families."""
+
+    def __init__(self, *relatives: str) -> None:
+        families = [read_compiler_family(relative) for relative in relatives]
+        self.production = "\n".join(family.production for family in families)
+        self.with_tests = "\n".join(family.with_tests for family in families)
+
+
 def read_module_paths(relative: str, *, include_tests: bool = True):
     return _read_module_paths(relative, root_dir=ROOT, include_tests=include_tests)
 
@@ -727,7 +736,7 @@ def _check_mutation_cluster_inventory(
     )
     event_constants = set(
         re.findall(
-            r"crate::server::sparql_http::([A-Z][A-Z0-9_]*)",
+            r"medulla_server_api::api::dispatch_support::([A-Z][A-Z0-9_]*)",
             coordinated_events,
         )
     )
@@ -760,10 +769,10 @@ def _check_mutation_dispatch_order(sources: Mapping[str, str]) -> None:
     )
     surfaces = _function(pipeline, "route_query_and_rdf_surfaces")
     terminal = _function(pipeline, "run_dispatch_pipeline")
-    gateway_at = gateway.find("handlers::graph_ops::try_handle_gateway(")
+    gateway_at = gateway.find("medulla_h_graph::graph_ops::try_handle_gateway(")
     query_at = surfaces.find("route_query_gateway(")
     rdf_at = surfaces.find("route_rdf_gateway(")
-    terminal_at = terminal.find("handlers::graph_ops::try_handle(")
+    terminal_at = terminal.find("medulla_h_graph::graph_ops::try_handle(")
     require(
         gateway_at >= 0,
         "dispatch no longer routes graph/query/RDF gateways before the terminal "
@@ -878,7 +887,7 @@ def _production_source(source: str) -> str:
 
 def _check_retired_dataset_surface(sources: Mapping[str, str]) -> None:
     for retired_path in (
-        "src/server/dataset_handle.rs",
+        "crates/medulla-server/src/dataset_handle.rs",
         "tests/dataset_handle_e2e.rs",
     ):
         require(
@@ -946,6 +955,7 @@ def _check_sparql_carrier(source: str) -> None:
         "core.add_node(",
         "core.remove_node(",
         "crate::mutation_apply::apply",
+        "medulla_server_api::mutation_apply::apply",
     ):
         require(
             forbidden not in sparql, f"SPARQL HTTP retains direct mutation: {forbidden}"
@@ -953,8 +963,8 @@ def _check_sparql_carrier(source: str) -> None:
     for required in (
         "SPARQL_HTTP_UPDATE_EVENT",
         "signed_request(",
-        "crate::server::dispatch::dispatch",
-        "pub(crate) async fn plan_update",
+        "medulla_server_api::api::reentry::dispatch",
+        "pub async fn plan_update",
         "existed_before",
     ):
         require(
@@ -968,6 +978,7 @@ def _check_ros2_carrier(source: str) -> None:
     ros2 = _production_source(source)
     for forbidden in (
         "crate::mutation_apply::apply",
+        "medulla_server_api::mutation_apply::apply",
         "core.mark_dirty()",
         "registry.create_graph(",
     ):
@@ -977,7 +988,7 @@ def _check_ros2_carrier(source: str) -> None:
     for required in (
         "publish_to_request",
         'auth_token.starts_with("eg2.")',
-        "crate::server::dispatch::dispatch",
+        "medulla_server_api::api::reentry::dispatch",
     ):
         require(
             required in ros2,
@@ -1147,33 +1158,41 @@ def check_served_carrier_mutations(sources: Mapping[str, str]) -> None:
     _check_dispatch_carrier(sources)
 
 
+_GRAPH_GATEWAY_DIR = "crates/medulla-h-graph/src/graph_ops"
+_MINING_GATEWAY_DIR = "crates/medulla-h-mining/src/mining"
+#: The reviewed gateway family: the graph-ops gateway files in `medulla-h-graph`
+#: and the mining gateway files in `medulla-h-mining` (its `gateway.rs` is the
+#: mining router, `gateway_derived.rs` the derived-mining router).
 _GRAPH_GATEWAY_FILES = (
-    "gateway.rs",
-    "gateway_broker.rs",
-    "gateway_graph.rs",
-    "gateway_graph_routes.rs",
-    "gateway_mining.rs",
-    "gateway_mining_derived.rs",
-    "gateway_mining_ml.rs",
+    f"{_GRAPH_GATEWAY_DIR}/gateway.rs",
+    f"{_GRAPH_GATEWAY_DIR}/gateway_broker.rs",
+    f"{_GRAPH_GATEWAY_DIR}/gateway_graph.rs",
+    f"{_GRAPH_GATEWAY_DIR}/gateway_graph_routes.rs",
+    f"{_MINING_GATEWAY_DIR}/gateway.rs",
+    f"{_MINING_GATEWAY_DIR}/gateway_derived.rs",
+    f"{_GRAPH_GATEWAY_DIR}/gateway_mining_ml.rs",
 )
 _GRAPH_GATEWAY_ROUTER_FILES = (
-    "gateway_graph.rs",
-    "gateway_graph_routes.rs",
-    "gateway_broker.rs",
-    "gateway_mining_ml.rs",
-    "gateway_mining.rs",
+    f"{_GRAPH_GATEWAY_DIR}/gateway_graph.rs",
+    f"{_GRAPH_GATEWAY_DIR}/gateway_graph_routes.rs",
+    f"{_GRAPH_GATEWAY_DIR}/gateway_broker.rs",
+    f"{_GRAPH_GATEWAY_DIR}/gateway_mining_ml.rs",
+    f"{_MINING_GATEWAY_DIR}/gateway.rs",
 )
 
 
 def _graph_gateway_sources(declared_paths: set[Path]) -> tuple[str, str]:
     """Return the exact gateway family and only its live router bodies."""
 
-    module_dir = (ROOT / "src/server/handlers/graph_ops").resolve()
-    expected = {module_dir / filename for filename in _GRAPH_GATEWAY_FILES}
+    expected = {(ROOT / relative).resolve() for relative in _GRAPH_GATEWAY_FILES}
+    gateway_dirs = {
+        (ROOT / _GRAPH_GATEWAY_DIR).resolve(),
+        (ROOT / _MINING_GATEWAY_DIR).resolve(),
+    }
     discovered = {
         path
         for path in declared_paths
-        if path.parent == module_dir and path.name.startswith("gateway")
+        if path.parent in gateway_dirs and path.name.startswith("gateway")
     }
     require(
         discovered == expected,
@@ -1182,17 +1201,35 @@ def _graph_gateway_sources(declared_paths: set[Path]) -> tuple[str, str]:
         f"stale={sorted(str(path) for path in discovered - expected)}",
     )
     sources = {
-        filename: (module_dir / filename).read_text(encoding="utf-8")
-        for filename in _GRAPH_GATEWAY_FILES
+        relative: (ROOT / relative).read_text(encoding="utf-8")
+        for relative in _GRAPH_GATEWAY_FILES
     }
-    gateway_source = "\n".join(sources[filename] for filename in _GRAPH_GATEWAY_FILES)
+    gateway_source = "\n".join(sources[relative] for relative in _GRAPH_GATEWAY_FILES)
     # Route classification and application may live in private helpers beside
     # `try_handle`; inspect each test-free router module in full so a structural
     # split cannot make owned methods disappear from this proof.
     router_source = "\n".join(
-        sources[filename] for filename in _GRAPH_GATEWAY_ROUTER_FILES
+        sources[relative] for relative in _GRAPH_GATEWAY_ROUTER_FILES
     )
     return gateway_source, router_source
+
+
+def persisted_contract_source(*, include_tests: bool = False) -> str:
+    """The persisted mutation contract: the batch and its validation in
+    `medulla-protocol-types`, plus the typed identity, scope and outbox structs
+    in `medulla-mutation-types`."""
+
+    return "\n".join(
+        (
+            read_module_tree(
+                "crates/medulla-protocol-types/src/mutation_batch.rs",
+                include_tests=include_tests,
+            ),
+            read_module_tree(
+                "crates/medulla-mutation-types/src/lib.rs", include_tests=include_tests
+            ),
+        )
+    )
 
 
 def mutation_inventory_sources() -> dict[str, str]:
@@ -1204,13 +1241,23 @@ def mutation_inventory_sources() -> dict[str, str]:
     mutation_batch = read_compiler_family(
         "crates/medulla-server-mutation/src/mutation_batch.rs"
     )
+    batch_compile = read_compiler_family(
+        "crates/medulla-server-api/src/batch_compile.rs"
+    )
     graph_ops = read_compiler_family("crates/medulla-h-graph/src/graph_ops.rs")
     graph_gateway, graph_gateway_routes = _graph_gateway_sources(
         read_module_paths(
             "crates/medulla-h-graph/src/graph_ops.rs", include_tests=False
         )
+        | read_module_paths(
+            "crates/medulla-h-mining/src/mining.rs", include_tests=False
+        )
     )
-    dispatch = read_compiler_family("crates/medulla-server-router/src/dispatch.rs")
+    # Served dispatch is the router tree plus the graph-dispatch tree it delegates to.
+    dispatch = _FamilyUnion(
+        "crates/medulla-server-router/src/dispatch.rs",
+        "crates/medulla-server-graph/src/dispatch.rs",
+    )
     raft = read_compiler_family("crates/medulla-raft/src/raft/mod.rs")
     blob_store = read_compiler_family("crates/medulla-server-blob/src/blob/store.rs")
     blob_shared = read_compiler_family(
@@ -1242,9 +1289,25 @@ def mutation_inventory_sources() -> dict[str, str]:
         ),
         "method_families": families_source(ROOT),
         "mutation_runtime": mutation_runtime.production,
-        "mutation_runtime_tests": mutation_runtime.with_tests,
-        "mutation_batch": mutation_batch.production,
-        "mutation_batch_tests": mutation_batch.with_tests,
+        # The cross-crate clustered-inventory test moved to `medulla-server-store-tests`
+        # (it needs `medulla-raft`); the proof reads it with the runtime's own tests.
+        "mutation_runtime_tests": "\n".join(
+            (
+                mutation_runtime.with_tests,
+                read(
+                    "crates/medulla-server-store-tests/src/split_tests/"
+                    "server_api_mutation_inventory.rs"
+                ),
+            )
+        ),
+        # The batch compiler lives in `medulla-server-api`; the committing
+        # runtime stays in `medulla-server-mutation`. The proof spans both.
+        "mutation_batch": "\n".join(
+            (mutation_batch.production, batch_compile.production)
+        ),
+        "mutation_batch_tests": "\n".join(
+            (mutation_batch.with_tests, batch_compile.with_tests)
+        ),
         # These three families may be monoliths or compiler-declared module
         # trees.  Every semantic check consumes the production view; named Rust
         # test proofs consume only the separately loaded test-inclusive view.
@@ -1272,7 +1335,7 @@ def mutation_inventory_sources() -> dict[str, str]:
         "blob_shared": blob_shared.production,
         "main": read("src/main.rs"),
         "state": read("crates/medulla-server-api/src/state.rs"),
-        "server": read("src/server/mod.rs"),
+        "server": read_compiler_family("crates/medulla-server/src/lib.rs").production,
         "external_compute_e2e": read("tests/external_compute_e2e.rs"),
     }
 
@@ -1891,11 +1954,14 @@ def main() -> None:
     # crash before it can report a contract violation whenever the module is
     # decomposed (the compiler follows the same tree).  Keep this structural
     # source union in lock-step with the live Rust module tree.
-    contract = read_module_tree("crates/medulla-protocol-types/src/mutation_batch.rs")
-    contract_with_tests = read_module_tree(
-        "crates/medulla-protocol-types/src/mutation_batch.rs", include_tests=True
+    contract = persisted_contract_source()
+    contract_with_tests = persisted_contract_source(include_tests=True)
+    graph_store = "\n".join(
+        (
+            read_module_tree("crates/medulla-store/src/redb_store.rs"),
+            read_module_tree("crates/medulla-work-store/src/redb_store.rs"),
+        )
     )
-    graph_store = read_module_tree("crates/medulla-store/src/redb_store.rs")
     native_store = mutation_kernel_source()
     native_store_with_tests = mutation_kernel_source(include_tests=True)
     sql_store = read_module_tree("crates/medulla-table-store/src/tables/store.rs")
