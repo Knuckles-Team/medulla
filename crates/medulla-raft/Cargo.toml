@@ -121,7 +121,7 @@ medulla-agent-types = { path = "../medulla-agent-types", features = ["test-suppo
 medulla-compute = { path = "../medulla-compute", features = ["test-support"] }
 medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }
 medulla-persistence = { path = "../medulla-persistence", features = ["test-support"] }
-medulla-server-api = { path = "../medulla-server-api", features = ["test-support"] }
+medulla-server-api = { path = "../medulla-server-api", features = ["test-support", "request-policy-fixture"] }
 medulla-store = { path = "../medulla-store", features = ["test-support"] }
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
 medulla-direct-state = { path = "../medulla-direct-state", features = ["test-support"] }
@@ -129,5 +129,5 @@ medulla-work-types = { path = "../medulla-work-types", features = ["test-support
 medulla-store-apply = { path = "../medulla-store-apply", features = ["test-support"] }
 medulla-server-ops = { path = "../medulla-server-ops", features = ["test-support"] }
 medulla-server-mutation = { path = "../medulla-server-mutation", features = ["test-support"] }
-medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }
+medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support", "test-ambient-auth"] }
 medulla-exec = { path = "../medulla-exec", features = ["test-support"] }

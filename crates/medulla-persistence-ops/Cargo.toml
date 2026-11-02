@@ -50,8 +50,8 @@ redb = ["dep:redb", "dep:medulla-transaction", "dep:medulla-storage", "medulla-p
 medulla-persistence = { path = "../medulla-persistence", features = ["test-support"] }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
 medulla-persistence-records = { path = "../medulla-persistence-records", features = ["test-support"] }
-medulla-server-api = { path = "../medulla-server-api", features = ["test-support"] }
-medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }
+medulla-server-api = { path = "../medulla-server-api", features = ["test-support", "request-policy-fixture"] }
+medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support", "test-ambient-auth"] }
 medulla-store-apply = { path = "../medulla-store-apply", features = ["test-support"] }
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
 medulla-direct-state = { path = "../medulla-direct-state", features = ["test-support"] }

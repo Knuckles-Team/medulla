@@ -52,7 +52,7 @@ security = ["medulla-server-graph/security", "dep:sha1", "dep:argon2", "redb", "
 medulla-identity-types = { path = "../medulla-identity-types", features = ["test-support"] }
 medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
-medulla-server-api = { path = "../medulla-server-api", features = ["test-support"] }
+medulla-server-api = { path = "../medulla-server-api", features = ["test-support", "request-policy-fixture"] }
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
 medulla-server-graph = { path = "../medulla-server-graph", features = ["test-support"] }
-medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }
+medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support", "test-ambient-auth"] }

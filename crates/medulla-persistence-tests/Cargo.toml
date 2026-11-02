@@ -105,7 +105,7 @@ medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-s
 medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
 medulla-compute = { path = "../medulla-compute", features = ["test-support"] }
 medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }
-medulla-server-api = { path = "../medulla-server-api", features = ["test-support"] }
+medulla-server-api = { path = "../medulla-server-api", features = ["test-support", "request-policy-fixture"] }
 medulla-store = { path = "../medulla-store", features = ["test-support"] }
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
 medulla-direct-state = { path = "../medulla-direct-state", features = ["test-support"] }
@@ -116,5 +116,5 @@ medulla-resource-store = { path = "../medulla-resource-store", features = ["test
 medulla-work-store = { path = "../medulla-work-store", features = ["test-support"] }
 medulla-server-ops = { path = "../medulla-server-ops", features = ["test-support"] }
 medulla-server-blob = { path = "../medulla-server-blob", features = ["test-support"] }
-medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }
+medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support", "test-ambient-auth"] }
 tempfile = "3"

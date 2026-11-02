@@ -57,8 +57,8 @@ test-support = ["harness", "dep:tracing-subscriber", "medulla-raft/test-support"
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
 medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }
 medulla-persistence = { path = "../medulla-persistence", features = ["test-support"] }
-medulla-server-api = { path = "../medulla-server-api", features = ["test-support"] }
-medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }
+medulla-server-api = { path = "../medulla-server-api", features = ["test-support", "request-policy-fixture"] }
+medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support", "test-ambient-auth"] }
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
 medulla-work-types = { path = "../medulla-work-types", features = ["test-support"] }
 medulla-exec = { path = "../medulla-exec", features = ["test-support"] }

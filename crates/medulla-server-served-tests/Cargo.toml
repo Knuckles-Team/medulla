@@ -132,7 +132,7 @@ medulla-h-query = { path = "../medulla-h-query", features = ["test-support"] }
 medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }
 medulla-persistence = { path = "../medulla-persistence", features = ["test-support"] }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
-medulla-server-api = { path = "../medulla-server-api", features = ["test-support"] }
+medulla-server-api = { path = "../medulla-server-api", features = ["test-support", "request-policy-fixture"] }
 medulla-store = { path = "../medulla-store", features = ["test-support"] }
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
 medulla-wire = { path = "../medulla-wire", features = ["test-support"] }
@@ -145,6 +145,6 @@ medulla-federation = { path = "../medulla-federation", features = ["test-support
 medulla-server-graph = { path = "../medulla-server-graph", features = ["test-support"] }
 medulla-server = { path = "../medulla-server", features = ["test-support"] }
 medulla-server-ops = { path = "../medulla-server-ops", features = ["test-support"] }
-medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }
+medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support", "test-ambient-auth"] }
 tempfile = "3"
 wat = "1"

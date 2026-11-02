@@ -214,7 +214,7 @@ fn now_secs() -> u64 {
 /// client ever bothers to mint one, always matches with zero operator
 /// configuration (ADR-3: "claim optional forever... zero friction for the
 /// published wheel's default profile").
-#[cfg(not(test))]
+#[cfg(not(any(test, feature = "test-ambient-auth")))]
 fn node_identity() -> &'static str {
     static IDENTITY: OnceLock<String> = OnceLock::new();
     IDENTITY
@@ -242,7 +242,7 @@ fn node_identity() -> &'static str {
 /// `#[cfg(test)]` overrides elsewhere in this file) -- unit tests instead
 /// vary the CLAIM's node value between a match (`"node-a"`) and a mismatch
 /// (any other string).
-#[cfg(test)]
+#[cfg(any(test, feature = "test-ambient-auth"))]
 fn node_identity() -> &'static str {
     "node-a"
 }
@@ -273,7 +273,7 @@ enum NodeBindingMode {
 /// insensitive, trimmed). Unset or unrecognized ⇒ `Warn` -- permissive
 /// enough that an un-migrated client keeps working, but visible enough that
 /// an operator preparing for the W5.2 cluster cutover can see it coming.
-#[cfg(not(test))]
+#[cfg(not(any(test, feature = "test-ambient-auth")))]
 fn require_node_binding_mode() -> NodeBindingMode {
     static MODE: OnceLock<NodeBindingMode> = OnceLock::new();
     *MODE.get_or_init(|| {
@@ -294,13 +294,13 @@ fn require_node_binding_mode() -> NodeBindingMode {
 // process-global and would race across parallel `libtest` threads, so the
 // posture is a per-thread cell each `#[test]` sets explicitly via the guard
 // functions below. Default matches production's shipped default (`Warn`).
-#[cfg(test)]
+#[cfg(any(test, feature = "test-ambient-auth"))]
 thread_local! {
     static TEST_NODE_BINDING_MODE: std::cell::Cell<NodeBindingMode> =
         const { std::cell::Cell::new(NodeBindingMode::Warn) };
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-ambient-auth"))]
 fn require_node_binding_mode() -> NodeBindingMode {
     TEST_NODE_BINDING_MODE.with(std::cell::Cell::get)
 }
@@ -782,7 +782,7 @@ fn primary_oidc_validator() -> Result<Option<&'static medulla_server_api::oidc::
 /// HMAC-only-permitted posture. An unrecognized value does NOT opt out (see
 /// [`env_flag_explicit`]) — only a clean, deliberate spelling downgrades
 /// security.
-#[cfg(not(test))]
+#[cfg(not(any(test, feature = "test-ambient-auth")))]
 fn require_oidc() -> bool {
     env_flag_explicit("MEDULLA_REQUIRE_OIDC").unwrap_or(true)
 }
@@ -810,12 +810,12 @@ fn require_oidc() -> bool {
 // and by the process-level integration tests in
 // `tests/test_auth_enforcement.py` (which spawn the real binary with a truly
 // unset environment).
-#[cfg(test)]
+#[cfg(any(test, feature = "test-ambient-auth"))]
 thread_local! {
     static TEST_REQUIRE_OIDC: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-ambient-auth"))]
 fn require_oidc() -> bool {
     TEST_REQUIRE_OIDC.with(std::cell::Cell::get)
 }
@@ -1266,7 +1266,7 @@ impl RoleAllowance {
     /// behavior is instead proven by the dedicated `signer_*` tests at the
     /// bottom of this module, which build their own narrowly-scoped
     /// `SignerKeyRegistry` values directly.
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-ambient-auth"))]
     fn match_anything() -> Self {
         RoleAllowance::Prefix(String::new())
     }
@@ -1549,7 +1549,7 @@ impl SignerRegistryStore {
     }
 }
 
-#[cfg(not(test))]
+#[cfg(not(any(test, feature = "test-ambient-auth")))]
 fn global_signer_registry_store() -> Result<&'static SignerRegistryStore, String> {
     static STORE: OnceLock<Result<SignerRegistryStore, String>> = OnceLock::new();
     match STORE.get_or_init(|| {
@@ -1565,7 +1565,7 @@ fn global_signer_registry_store() -> Result<&'static SignerRegistryStore, String
     }
 }
 
-#[cfg(not(test))]
+#[cfg(not(any(test, feature = "test-ambient-auth")))]
 fn signer_registry() -> Result<std::sync::Arc<SignerKeyRegistry>, String> {
     Ok(global_signer_registry_store()?.current())
 }
@@ -1576,7 +1576,7 @@ fn signer_registry() -> Result<std::sync::Arc<SignerKeyRegistry>, String> {
 /// rotation event (an admin RPC, a SIGHUP handler, a secret-file watch) is
 /// deployment/dispatch wiring outside this module -- this is the mechanism
 /// that trigger would call, not the trigger itself.
-#[cfg(not(test))]
+#[cfg(not(any(test, feature = "test-ambient-auth")))]
 #[allow(dead_code)] // unwired pending a dispatch-side rotation trigger (see doc comment)
 pub(crate) fn reload_signer_registry_from_json(raw: &str) -> Result<(), String> {
     global_signer_registry_store()?.reload_from_json(raw)
@@ -1585,7 +1585,7 @@ pub(crate) fn reload_signer_registry_from_json(raw: &str) -> Result<(), String> 
 /// Convenience wrapper: reload from the CURRENT value of
 /// `MEDULLA_SIGNER_KEYS_JSON` (an operator updates the env/secret
 /// source the deployment mounts it from, then triggers this).
-#[cfg(not(test))]
+#[cfg(not(any(test, feature = "test-ambient-auth")))]
 #[allow(dead_code)] // unwired pending a dispatch-side rotation trigger (see doc comment)
 pub(crate) fn reload_signer_registry_from_env() -> Result<(), String> {
     let raw = std::env::var("MEDULLA_SIGNER_KEYS_JSON")
@@ -1596,7 +1596,7 @@ pub(crate) fn reload_signer_registry_from_env() -> Result<(), String> {
 /// NE-066 rotation primitive: revoke one signer immediately. See
 /// `SignerRegistryStore::revoke`. Unwired for the same reason as
 /// `reload_signer_registry_from_json` above.
-#[cfg(not(test))]
+#[cfg(not(any(test, feature = "test-ambient-auth")))]
 #[allow(dead_code)] // unwired pending a dispatch-side rotation trigger (see doc comment)
 pub(crate) fn revoke_signer(signer_id: &str) -> Result<(), String> {
     global_signer_registry_store()?.revoke(signer_id);
@@ -1613,7 +1613,7 @@ pub(crate) fn revoke_signer(signer_id: &str) -> Result<(), String> {
 /// behavior before NE-065 — so the hundreds of pre-existing call sites that
 /// register identities through it keep their exact prior behavior rather
 /// than failing on an allowance none of them were ever written to satisfy.
-#[cfg(test)]
+#[cfg(any(test, feature = "test-ambient-auth"))]
 fn signer_registry() -> Result<std::sync::Arc<SignerKeyRegistry>, String> {
     static REGISTRY: OnceLock<std::sync::Arc<SignerKeyRegistry>> = OnceLock::new();
     Ok(std::sync::Arc::clone(REGISTRY.get_or_init(|| {

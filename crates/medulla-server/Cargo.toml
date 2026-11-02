@@ -252,7 +252,7 @@ medulla-wire-core = { path = "../medulla-wire-core", features = ["test-support"]
 medulla-server-graph = { path = "../medulla-server-graph", features = ["test-support"] }
 medulla-server-identity = { path = "../medulla-server-identity", features = ["test-support"] }
 tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "signal", "macros", "test-util"] }
-medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }
-medulla-server-api = { path = "../medulla-server-api", features = ["test-support"] }
+medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support", "test-ambient-auth"] }
+medulla-server-api = { path = "../medulla-server-api", features = ["test-support", "request-policy-fixture"] }
 tempfile = "3"
 wat = "1"

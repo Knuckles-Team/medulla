@@ -147,7 +147,7 @@ medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }
 medulla-persistence = { path = "../medulla-persistence", features = ["test-support"] }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
 medulla-raft = { path = "../medulla-raft", features = ["test-support"] }
-medulla-server-api = { path = "../medulla-server-api", features = ["test-support"] }
+medulla-server-api = { path = "../medulla-server-api", features = ["test-support", "request-policy-fixture"] }
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
 medulla-direct-state = { path = "../medulla-direct-state", features = ["test-support"] }
 medulla-work-types = { path = "../medulla-work-types", features = ["test-support"] }
@@ -156,6 +156,6 @@ medulla-server-blob = { path = "../medulla-server-blob", features = ["test-suppo
 medulla-server-mutation = { path = "../medulla-server-mutation", features = ["test-support"] }
 medulla-server-graph = { path = "../medulla-server-graph", features = ["test-support"] }
 medulla-server = { path = "../medulla-server", features = ["amqp-wire", "ann", "ann-redb", "asr-whisper", "ast", "blob", "cost", "epistemic", "federation", "federation-search", "full", "jobs", "knowledge-batch", "kv", "metrics", "mining", "modality-serving", "mqtt-wire", "mssql-wire", "nl-query", "obs", "oidc", "owl", "promql", "quantum-agent-api", "query", "raft", "rdf", "redb", "redis-wire", "security", "server", "shacl", "sparql", "sparql-http", "sqlite-file", "statechart", "stomp-wire", "stream", "streaming", "test-support", "traces", "tsdb", "viz-static-export", "wasm-udf"] }
-medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }
+medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support", "test-ambient-auth"] }
 tempfile = "3"
 medulla-server-identity = { path = "../medulla-server-identity", features = ["test-support"] }

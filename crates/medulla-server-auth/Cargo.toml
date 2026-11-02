@@ -52,6 +52,9 @@ medulla-exec = { path = "../medulla-exec" }
 medulla-sql-lang = { path = "../medulla-sql-lang" }
 
 [features]
+# Ambient test posture (OIDC off, fixed node identity, fixture signer registry) for the unit
+# tests that moved to other crates; never enabled by a release build.
+test-ambient-auth = []
 broker = ["medulla-server-api/broker", "medulla-graph-core/broker", "medulla-kernel/broker", "medulla-protocol-types/broker", "medulla-types/broker"]
 cypher = ["medulla-server-api/cypher", "medulla-cypher/cypher", "medulla-kernel/cypher"]
 epistemic = ["query", "dep:medulla-plan", "dep:medulla-modality", "dep:medulla-epistemic", "medulla-server-api/epistemic", "medulla-exec/epistemic", "medulla-kernel/epistemic", "medulla-plan?/epistemic", "medulla-protocol-types/epistemic", "medulla-types/epistemic"]

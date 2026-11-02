@@ -67,7 +67,7 @@ medulla-types = { path = "../medulla-types", features = ["test-support"] }
 medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
 medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
-medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }
+medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support", "test-ambient-auth"] }
 medulla-federation = { path = "../medulla-federation", features = ["test-support"] }
 medulla-server = { path = "../medulla-server", features = ["alignment", "blob", "blob-s3", "full", "kv", "nl-query", "rdf-xml", "redb", "security", "shacl", "sparql-http", "test-support"] }
 medulla-server-api = { path = "../medulla-server-api", features = ["test-support", "request-policy-fixture"] }

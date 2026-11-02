@@ -110,7 +110,7 @@ medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }
 medulla-persistence = { path = "../medulla-persistence", features = ["test-support"] }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
 medulla-raft = { path = "../medulla-raft", features = ["test-support"] }
-medulla-server-api = { path = "../medulla-server-api", features = ["test-support"] }
+medulla-server-api = { path = "../medulla-server-api", features = ["test-support", "request-policy-fixture"] }
 medulla-store = { path = "../medulla-store", features = ["test-support"] }
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
 medulla-raft-xshard = { path = "../medulla-raft-xshard", features = ["test-support"] }
@@ -118,5 +118,5 @@ medulla-server-ops = { path = "../medulla-server-ops", features = ["test-support
 medulla-server-mutation = { path = "../medulla-server-mutation", features = ["test-support"] }
 medulla-exec = { path = "../medulla-exec", features = ["test-support"] }
 medulla-server = { path = "../medulla-server", features = ["compute-dist", "cost-opt", "cypher", "cypher-plan", "epistemic", "epistemic-causal", "epistemic-tms", "evidence-graph", "federation", "federation-sql", "full", "geo", "geosparql", "gpu", "gpu-cuda", "graphql", "json-ld", "knowledge-batch", "matview", "metrics", "nl-query", "numeric", "owl", "owl-dl", "owl-plan", "par-runtime", "promql", "query", "raft", "rdf", "rdf-xml", "redb", "result-cache", "security", "server", "sparql", "sparql-hash", "sparql-star", "sqlite-file", "stream", "tensor", "test-support", "text", "traces", "tsdb", "wasm-udf"] }
-medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }
+medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support", "test-ambient-auth"] }
 tempfile = "3"

@@ -156,7 +156,7 @@ medulla-server-mutation = { path = "../medulla-server-mutation", features = ["te
 medulla-exec = { path = "../medulla-exec", features = ["test-support"] }
 medulla-federation = { path = "../medulla-federation", features = ["test-support"] }
 medulla-server = { path = "../medulla-server", features = ["alignment", "ann-redb", "asr-whisper", "cost-opt", "cypher", "cypher-plan", "decide", "epistemic", "epistemic-causal", "epistemic-tms", "evidence-graph", "federation", "federation-search", "federation-sql", "full", "geo", "geosparql", "gpu", "gpu-cuda", "graphql", "jobs", "json-ld", "knowledge-batch", "mining", "modality-serving", "nl-query", "numeric", "obda", "obs", "owl", "owl-dl", "owl-plan", "par-runtime", "promql", "quantum-agent-api", "query", "raft", "rdf", "rdf-xml", "redb", "result-cache", "security", "server", "shacl", "shex", "sparql", "sparql-fuseki", "sparql-hash", "sparql-star", "statechart", "stream", "streaming", "tensor", "test-support", "text", "traces", "tsdb", "viz", "wasm-udf"] }
-medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }
-medulla-server-api = { path = "../medulla-server-api", features = ["test-support"] }
+medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support", "test-ambient-auth"] }
+medulla-server-api = { path = "../medulla-server-api", features = ["test-support", "request-policy-fixture"] }
 medulla-server-ops = { path = "../medulla-server-ops", features = ["test-support"] }
 tempfile = "3"

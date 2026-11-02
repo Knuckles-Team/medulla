@@ -68,7 +68,7 @@ sparql-service = ["federation", "medulla-federation/sparql-service", "medulla-se
 medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
 medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
-medulla-server-api = { path = "../medulla-server-api", features = ["test-support"] }
+medulla-server-api = { path = "../medulla-server-api", features = ["test-support", "request-policy-fixture"] }
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
 medulla-persistence-records = { path = "../medulla-persistence-records", features = ["test-support"] }
 medulla-server-ops = { path = "../medulla-server-ops", features = ["test-support"] }
@@ -76,4 +76,4 @@ medulla-exec = { path = "../medulla-exec", features = ["test-support"] }
 medulla-federation = { path = "../medulla-federation", features = ["test-support"] }
 medulla-server = { path = "../medulla-server", features = ["federation", "federation-search", "federation-sql", "full", "nl-query", "obda", "owl", "owl-plan", "query", "rdf", "redb", "result-cache", "security", "shacl", "shex", "sparql", "sparql-fuseki", "test-support"] }
 medulla-server-blob = { path = "../medulla-server-blob", features = ["test-support"] }
-medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }
+medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support", "test-ambient-auth"] }
