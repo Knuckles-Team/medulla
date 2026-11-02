@@ -365,12 +365,26 @@ mod ca17_feature_stub_contract {
         line
     }
 
+    /// The declaration with its crate-edge forwards of the same feature removed. A
+    /// `<crate>/<feature>` entry naming the reserved feature itself in a split-out crate is the
+    /// same lane (the rule moved with the code); any other new or missing parent still differs.
+    fn lane_parents(feature: &str, parent: &str, line: &str) -> String {
+        let forward = format!("/{feature}\"");
+        let (head, list) = line.split_once(" = ").unwrap_or((line, ""));
+        let kept: Vec<&str> = list
+            .trim_matches(|c| c == '[' || c == ']')
+            .split(", ")
+            .filter(|entry| !entry.ends_with(&forward) || parent.contains(entry))
+            .collect();
+        format!("{head} = [{}]", kept.join(", "))
+    }
+
     #[test]
     fn every_reserved_feature_keeps_the_parent_its_lane_builds_on() {
         for (feature, parent) in RESERVED {
             let line = declaration(feature);
             assert_eq!(
-                line,
+                lane_parents(feature, parent, line),
                 format!("{feature} = {parent}"),
                 "reserved feature {feature:?} no longer implies exactly {parent}; a lane \
                  changing its own feature's parents must say so in its report"
