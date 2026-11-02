@@ -1612,7 +1612,7 @@ mod tests {
              — a real historical read, not the current projection"
         );
         assert_eq!(
-            current_snapshot(&historical)["summary"]["medulla-lsn"],
+            current_snapshot(&historical)["summary"]["epistemic-graph-lsn"],
             historical_lsn.to_string(),
         );
         assert_eq!(

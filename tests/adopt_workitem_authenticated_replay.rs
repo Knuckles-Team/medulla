@@ -837,7 +837,7 @@ fn current_plan_receipt_id(key: &str, revision: u64) -> String {
 fn work_item_receipt_id(fields: &[&str]) -> String {
     use sha2::{Digest, Sha256};
     let mut hash = Sha256::new();
-    hash.update(b"medulla.work-item-terminal.v1");
+    hash.update(b"epistemic-graph.work-item-terminal.v1");
     for field in fields {
         hash.update((field.len() as u64).to_be_bytes());
         hash.update(field.as_bytes());

@@ -302,7 +302,7 @@ fn content_digest(
         return Err("typed job result exceeds encoded size limits".to_string());
     }
     let mut digest = Sha256::new();
-    digest.update(b"medulla-jobs.knowledge-batch.v1\0");
+    digest.update(b"eg-jobs.knowledge-batch.v1\0");
     digest.update(&schema_bytes);
     digest.update([0]);
     digest.update(&row_bytes);

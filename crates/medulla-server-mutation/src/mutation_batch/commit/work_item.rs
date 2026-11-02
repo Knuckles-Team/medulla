@@ -32,7 +32,7 @@ fn derive_work_item_identity(
                 | Method::CasWorkItemMetadata { .. }
         ) {
             let mut digest = Sha256::new();
-            digest.update(b"medulla.authenticated-work-item.v1");
+            digest.update(b"epistemic-graph.authenticated-work-item.v1");
             for field in [graph.as_bytes(), tenant.as_bytes(), key.as_bytes()] {
                 digest.update((field.len() as u64).to_be_bytes());
                 digest.update(field);

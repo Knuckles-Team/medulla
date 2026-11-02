@@ -150,7 +150,7 @@ fn snapshot_value(
             "total-records": live.iter().map(|file| file.num_rows).sum::<u64>().to_string(),
             "total-files-size": live.iter().map(|file| file.size_bytes).sum::<u64>().to_string(),
             "total-data-files": live.len().to_string(),
-            "medulla-lsn": commit.lsn.value().to_string(),
+            "epistemic-graph-lsn": commit.lsn.value().to_string(),
         },
         "manifest-list": manifest_list_path(ctx.location, commit.lsn.value() as i64),
         "schema-id": commit.schema_id,

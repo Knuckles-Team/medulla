@@ -413,7 +413,7 @@ fn reordered_dependency_columns_are_not_a_second_canonical_record() {
         .columns
         .reverse();
     record.dependency_digest = digest_value(
-        b"medulla/sql-pgq/dependencies/v1\0",
+        b"epistemic-graph/sql-pgq/dependencies/v1\0",
         &record.dependencies,
         "property graph dependencies",
     )
@@ -441,7 +441,7 @@ fn self_consistent_forged_dependencies_fail_authoritative_reresolution() {
         .unwrap()
         .column_type = ColumnType::Text;
     record.dependency_digest = digest_value(
-        b"medulla/sql-pgq/dependencies/v1\0",
+        b"epistemic-graph/sql-pgq/dependencies/v1\0",
         &record.dependencies,
         "property graph dependencies",
     )

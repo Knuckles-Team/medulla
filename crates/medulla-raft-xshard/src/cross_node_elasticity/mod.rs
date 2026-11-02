@@ -350,7 +350,7 @@ impl MoveIdentity {
         let target_bytes = target.to_be_bytes();
         let epoch_bytes = placement_epoch.to_be_bytes();
         let move_id = medulla_work_types::work_market::scoped_digest_parts(
-            b"medulla/cross-node-move/v1\0",
+            b"epistemic-graph/cross-node-move/v1\0",
             [
                 graph.as_bytes(),
                 shard_bytes.as_slice(),
@@ -361,15 +361,15 @@ impl MoveIdentity {
             ],
         );
         let snapshot_id = medulla_work_types::work_market::scoped_digest_parts(
-            b"medulla/cross-node-snapshot/v1\0",
+            b"epistemic-graph/cross-node-snapshot/v1\0",
             [move_id.as_bytes()],
         );
         let delta_stream_id = medulla_work_types::work_market::scoped_digest_parts(
-            b"medulla/cross-node-delta/v1\0",
+            b"epistemic-graph/cross-node-delta/v1\0",
             [move_id.as_bytes(), snapshot_id.as_bytes()],
         );
         let fence_id = medulla_work_types::work_market::scoped_digest_parts(
-            b"medulla/cross-node-fence/v1\0",
+            b"epistemic-graph/cross-node-fence/v1\0",
             [move_id.as_bytes(), delta_stream_id.as_bytes()],
         );
         Self {
@@ -775,7 +775,7 @@ impl CrossNodeElasticityPlanner {
         let encoded = serde_json::to_vec(input)
             .map_err(|error| PlannerError::Fingerprint(error.to_string()))?;
         let input_digest = medulla_work_types::work_market::scoped_digest_parts(
-            b"medulla/cross-node-input/v1\0",
+            b"epistemic-graph/cross-node-input/v1\0",
             [encoded.as_slice()],
         );
         let trigger_bp = (input.policy.scale_up_threshold_bp as u64)
@@ -978,7 +978,7 @@ impl CrossNodeElasticityPlanner {
         let planning_epoch = input.planning_epoch.to_be_bytes();
         let topology_epoch = input.topology_epoch.to_be_bytes();
         let proposal_id = medulla_work_types::work_market::scoped_digest_parts(
-            b"medulla/cross-node-proposal/v1\0",
+            b"epistemic-graph/cross-node-proposal/v1\0",
             [
                 checkpoint.identity.move_id.as_bytes(),
                 planning_epoch.as_slice(),

@@ -22,7 +22,7 @@ struct PrepareRecord {
 
 fn digest(transaction: &str, participant: GroupId, payload: &[u8]) -> [u8; 32] {
     let mut hash = Sha256::new();
-    hash.update(b"medulla.graph-prepare.v1\0");
+    hash.update(b"eg.graph-prepare.v1\0");
     hash.update((transaction.len() as u64).to_be_bytes());
     hash.update(transaction.as_bytes());
     hash.update(participant.to_be_bytes());

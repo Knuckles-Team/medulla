@@ -48,7 +48,7 @@ fn envelope_v2_bytes_are_unchanged_when_node_claim_is_absent() {
             }
         }
         let mut buf = Vec::new();
-        put(&mut buf, "medulla-envelope-v2");
+        put(&mut buf, "eg-envelope-v2");
         buf.extend_from_slice(&request_id.to_be_bytes());
         put(&mut buf, graph);
         put(&mut buf, method_name);

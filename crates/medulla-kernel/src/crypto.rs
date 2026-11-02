@@ -407,7 +407,7 @@ pub const ENCRYPTION_KEY_BINDING_FORMAT_VERSION: u32 = 1;
 /// than trusting a mutable plaintext metadata row on its own.
 pub fn encryption_canary_plaintext(key_ref: &EncryptionKeyRef) -> Vec<u8> {
     format!(
-        "medulla-encryption-canary|format={}|id={}|version={}",
+        "epistemic-graph-encryption-canary|format={}|id={}|version={}",
         ENCRYPTION_KEY_BINDING_FORMAT_VERSION, key_ref.id, key_ref.version
     )
     .into_bytes()

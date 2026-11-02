@@ -255,7 +255,7 @@ impl StatechartDef {
     /// nested JSON objects) in sorted key order and preserves list order, so a given
     /// `StatechartDef` value always serializes to identical bytes within a build.
     pub fn def_id(&self) -> DefId {
-        let mut framed = b"medulla-statechart.def_id.v1\0".to_vec();
+        let mut framed = b"eg-statechart.def_id.v1\0".to_vec();
         framed.extend(serde_json::to_vec(self).unwrap_or_default());
         format!(
             "eg:statechart:{}",

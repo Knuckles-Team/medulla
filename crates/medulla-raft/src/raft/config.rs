@@ -60,7 +60,7 @@ impl RaftTransportSecret {
             ));
         }
         let mut hasher = Sha256::new();
-        hasher.update(b"medulla-engine/raft-transport-key/v1\0");
+        hasher.update(b"epistemic-graph/raft-transport-key/v1\0");
         hasher.update(material);
         let mut digest = hasher.finalize();
         let mut key = [0u8; 32];
@@ -262,7 +262,7 @@ fn parse_cluster_id(peers: &PeerMap) -> Result<String, String> {
         .map(|value| value.trim().to_string())
         .filter(|value| !value.is_empty());
     let mut hasher = Sha256::new();
-    hasher.update(b"medulla-engine/cluster-id/v1\0");
+    hasher.update(b"epistemic-graph/cluster-id/v1\0");
     if let Some(value) = configured {
         if value.len() > MAX_ADVERTISED_FIELD_BYTES {
             return Err("MEDULLA_RAFT_CLUSTER_ID exceeds resource limits".to_string());

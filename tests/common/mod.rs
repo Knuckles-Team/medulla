@@ -320,7 +320,7 @@ pub fn signed_register_identity_request(args: SignedRegisterIdentity<'_>) -> Req
         roles: roles.clone(),
     };
     let operation_bytes = build_context_operation_signature_bytes(
-        "medulla-register-identity-v2",
+        "eg-register-identity-v2",
         &context,
         &idempotency_key,
         graph,

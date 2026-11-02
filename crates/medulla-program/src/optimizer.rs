@@ -1311,7 +1311,7 @@ fn derived_ref(
     index: usize,
 ) -> Result<OpaqueRef, ProgramError> {
     let mut digest = Sha256::new();
-    digest.update(b"medulla-program.plan.v1\0");
+    digest.update(b"eg-program.plan.v1\0");
     digest.update(request.request_ref.as_str().as_bytes());
     digest.update(request.program.program_ref.as_str().as_bytes());
     digest.update(request.program.revision.to_le_bytes());
@@ -1392,7 +1392,7 @@ fn random_selections(
         for example in eligible {
             check_cancelled(cancellation)?;
             let mut digest = Sha256::new();
-            digest.update(b"medulla-program.random-search.v1\0");
+            digest.update(b"eg-program.random-search.v1\0");
             digest.update(request.budget.seed.to_le_bytes());
             digest.update((candidate_index as u64).to_le_bytes());
             digest.update(example.example_ref.as_str().as_bytes());
@@ -1473,7 +1473,7 @@ fn has_artifact(request: &OptimizationRequest, kind: OptimizerArtifactKind) -> b
 
 fn candidate_digest(request: &OptimizationRequest, spec: &CandidateSpec) -> String {
     let mut digest = Sha256::new();
-    digest.update(b"medulla-program.candidate.v3\0");
+    digest.update(b"eg-program.candidate.v3\0");
     digest.update(request.program.program_ref.as_str().as_bytes());
     digest.update(request.program.revision.to_le_bytes());
     digest.update(request.program.signature.signature_ref.as_str().as_bytes());
