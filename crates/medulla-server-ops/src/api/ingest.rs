@@ -1,5 +1,6 @@
 //! Ingest, graph, jobs and compute handler seams (`IngestApi`, `GraphApi`, `JobsApi`, `ComputeApi`).
 
+#[cfg(feature = "query")]
 pub mod embedder;
 pub mod graph;
 pub mod jobs;

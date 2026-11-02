@@ -618,7 +618,7 @@ COMPILER_CACHE_COMMANDS: dict[str, dict[str, tuple[str, ...]]] = {
         ): (
             (
                 "python3 scripts/cargo_test_rescue.py cargo test --locked "
-                "--workspace --exclude medulla-engine --exclude medulla-types "
+                "--workspace --exclude medulla-types "
                 "--exclude medulla-core --exclude medulla-compute "
                 "--exclude medulla-storage --exclude medulla-tts-piper "
                 "--exclude medulla-numeric --exclude medulla-pyengine "

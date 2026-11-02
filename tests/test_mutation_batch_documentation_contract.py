@@ -19,10 +19,9 @@ def _contract_source() -> str:
     return "\n".join(
         _read(path)
         for path in (
-            "crates/medulla-types/src/mutation_batch.rs",
-            "crates/medulla-types/src/mutation_batch/model/batch.rs",
-            "crates/medulla-types/src/mutation_batch/model/identity.rs",
-            "crates/medulla-types/src/mutation_batch/model/records.rs",
+            "crates/medulla-mutation-types/src/mutation_scope/identity.rs",
+            "crates/medulla-mutation-types/src/mutation_scope/outbox.rs",
+            "crates/medulla-protocol-types/src/mutation_batch/model/batch.rs",
         )
     )
 

@@ -235,20 +235,25 @@ Each group below describes responsibility; it does not declare a new deployable 
 | Responsibility | Existing modules |
 |---|---|
 | Composition, listeners, policy, persistence adapters | Root `src/` and its `Medulla` library and executable targets |
-| Engine kernel: metrics, tracing export, encryption at rest, audit chain, write coalescer, sealed-row rules, row deltas, lock recovery, host autosizing | `medulla-kernel` (split out of the root facade so these edits do not recompile the server; depends only on leaf crates) |
-| Shared records, policies, codecs, resources | `medulla-types`, `medulla-capabilities`, `medulla-method-codec`, `medulla-resource` |
-| Physical storage, mutation authority, graph state | `medulla-storage`, `medulla-transaction`, `medulla-core`, `medulla-durable`, `medulla-sqlite-format` |
-| Query and semantic processing | `medulla-query`, `medulla-plan`, `medulla-rdf`, `medulla-shacl`, `medulla-shex`, `medulla-graphql`, `medulla-epistemic`, `medulla-enrich` |
-| Compute and indexed data | `medulla-compute`, `medulla-numeric`, `medulla-ann`, `medulla-geo`, `medulla-tensor`, `medulla-stream`, `medulla-tsdb`, `medulla-text`, `medulla-kvcache`, `medulla-lake` |
+| Engine kernel: metrics, tracing export, encryption at rest, audit chain, write coalescer, sealed-row rules, row deltas, lock recovery, host autosizing | `medulla-kernel` (depends only on leaf crates, so these edits do not recompile the server) |
+| Wire and domain record types, codecs, resources | `medulla-types`, `medulla-protocol-types`, `medulla-identity-types`, `medulla-agent-types`, `medulla-mutation-types`, `medulla-index-types`, `medulla-result-types`, `medulla-catalog-types`, `medulla-source-types`, `medulla-work-types`, `medulla-decision-types`, `medulla-decision-outcome-types`, `medulla-capabilities`, `medulla-method-codec`, `medulla-resource` |
+| Physical storage, mutation authority, graph state | `medulla-storage`, `medulla-storage-owner`, `medulla-transaction`, `medulla-core`, `medulla-graph-core`, `medulla-isolation`, `medulla-durable`, `medulla-direct-state`, `medulla-sqlite-format`, `medulla-store`, `medulla-store-apply`, `medulla-work-store`, `medulla-resource-store`, `medulla-lane-store` |
+| Persistence services and records | `medulla-persistence`, `medulla-persistence-ops`, `medulla-persistence-records`, `medulla-placement`, `medulla-raft`, `medulla-raft-xshard` |
+| Query and semantic processing | `medulla-plan`, `medulla-exec`, `medulla-uql`, `medulla-nlq`, `medulla-sql`, `medulla-sql-lang`, `medulla-sql-udfs`, `medulla-cypher`, `medulla-tables`, `medulla-table-store`, `medulla-query-cache`, `medulla-federation`, `medulla-virtual-graph`, `medulla-rdf`, `medulla-shacl`, `medulla-shex`, `medulla-graphql`, `medulla-epistemic`, `medulla-reasoner`, `medulla-enrich`, `medulla-semantic-index`, `medulla-retrieval`, `medulla-vocab`, `medulla-catalog`, `medulla-packs` |
+| Compute and indexed data | `medulla-compute`, `medulla-numeric`, `medulla-mining`, `medulla-graph-algos`, `medulla-finance`, `medulla-finance-market`, `medulla-finance-quant`, `medulla-ann`, `medulla-ann-codes`, `medulla-geo`, `medulla-tensor`, `medulla-stream`, `medulla-tsdb`, `medulla-text`, `medulla-kvcache`, `medulla-lake` |
+| Decisions and competency | `medulla-decision-plan`, `medulla-decision-policy`, `medulla-decision-rank`, `medulla-decision-records`, `medulla-decision-eval`, `medulla-decision-memory`, `medulla-decision-stats`, `medulla-competency`, `medulla-competency-xsrc` |
 | Governed media contracts and processing | `medulla-modality`, `medulla-document`, `medulla-image`, `medulla-audio`, `medulla-video`, `medulla-alignment`, `medulla-asr-whisper`, `medulla-tts-piper` |
-| Jobs, programs, state machines, extensions | `medulla-jobs`, `medulla-program`, `medulla-statechart`, `medulla-wasm`, `medulla-pyengine` |
+| Jobs, programs, state machines, extensions, ingest | `medulla-jobs`, `medulla-program`, `medulla-statechart`, `medulla-wasm`, `medulla-pyengine`, `medulla-ingest`, `medulla-repo-index`, `medulla-sdlc`, `medulla-parity` |
+| Request handlers (domain-owned dispatch) | `medulla-h-admin`, `medulla-h-compute`, `medulla-h-decide`, `medulla-h-graph`, `medulla-h-ingest`, `medulla-h-jobs`, `medulla-h-mining`, `medulla-h-packs`, `medulla-h-query`, `medulla-h-retrieve`, `medulla-h-sparql`, `medulla-h-txn` |
+| Server runtime, wire protocols and dispatch | `medulla-server`, `medulla-server-api`, `medulla-server-auth`, `medulla-server-blob`, `medulla-server-cdc`, `medulla-server-consensus`, `medulla-server-graph`, `medulla-server-identity`, `medulla-server-lake`, `medulla-server-mutation`, `medulla-server-obs`, `medulla-server-ops`, `medulla-server-router`, `medulla-wire`, `medulla-wire-core`, `medulla-wire-msg` |
+| Test-only crates | `medulla-persistence-tests`, `medulla-server-cluster-tests`, `medulla-server-served-tests`, `medulla-server-store-tests`, `medulla-sql-tests`, `medulla-store-apply-tests`, `medulla-test-ambient-auth` |
 | Native visualization | `medulla-viz-core`, `medulla-viz-columnstore`, `medulla-viz-kernels`, `medulla-viz-export`, `medulla-viz-graph-tiles` |
 | Optional quantum processing | `medulla-quantum-core`, `medulla-quantum-gates`, `medulla-quantum-sim`, `medulla-quantum-hardware`, `medulla-quantum-jobs`, `medulla-quantum-workloads` |
 
 The root composes workspace libraries. Lower contracts do not depend on the root facade.
 For example, `medulla-types` has no internal dependency; `medulla-modality` and `medulla-capabilities` depend on `medulla-types`.
 `medulla-storage` depends on `medulla-types`; `medulla-transaction` depends on both.
-`medulla-core` uses graph primitives and optional storage/transaction adapters. `medulla-query` and `medulla-plan` compose those capabilities.
+`medulla-core` uses graph primitives and optional storage/transaction adapters. `medulla-sql` and `medulla-plan` compose those capabilities.
 These examples are manifest observations, not a strict hierarchy for every crate.
 Read normal, optional, target-specific, build, and test dependency sections separately when checking an edge.
 
@@ -281,8 +286,8 @@ The source-backend composition difference belongs to that existing packaging acc
 | Artifact identity and provenance | `medulla-modality` exports `OpaqueRef`, `ArtifactBundle`, `EvidenceLocus`, and `Provenance`. `medulla-alignment` relates evidence locations. | [MEDULLA-FEDERATED-QUERY](../federated-query-and-reasoning/requirements.md), especially R039.1; native media coverage remains separate. |
 | Epistemic provenance | `medulla-epistemic` operates on graph claims and provenance; `medulla-plan` exposes `KnowledgeSet` and knowledge batches. | [MEDULLA-FEDERATED-QUERY](../federated-query-and-reasoning/spec.md) reasoning and retrieval requirements |
 | Physical ownership and mutation | `medulla-storage` owns physical access; `medulla-transaction::MutationKernel` owns admission, ordering, replay, and commit capabilities. | [MEDULLA-DURABLE-KERNEL](../durable-graph-kernel/requirements.md), including R019, R021, and R034 |
-| Served mutation | `crates/medulla-server-mutation/src/mutation/commit_entry.rs:262` exports `commit_mutation`; conditional and coalesced routes retain their own entry paths. | [MEDULLA-DURABLE-KERNEL](../durable-graph-kernel/spec.md); MEDULLA-C-02 error projection |
-| Planned query | `crates/medulla-h-query/src/query/planning.rs:436`, `run_unified_with`, binds execution through the existing planner. | [FQR-03/04/06](../federated-query-and-reasoning/spec.md), R038–R055 |
+| Served mutation | `crates/medulla-server-mutation/src/mutation/commit_entry.rs:264` exports `commit_mutation`; conditional and coalesced routes retain their own entry paths. | [MEDULLA-DURABLE-KERNEL](../durable-graph-kernel/spec.md); MEDULLA-C-02 error projection |
+| Planned query | `crates/medulla-h-query/src/query/planning.rs:320`, `run_unified_with`, binds execution through the existing planner. | [FQR-03/04/06](../federated-query-and-reasoning/spec.md), R038–R055 |
 | Direct native access | [engine.md](../../docs/architecture/engine.md) shows dispatch reaching graph state both directly and through planning. | [MEDULLA-DURABLE-KERNEL-R032/R037](../durable-graph-kernel/requirements.md) |
 
 Repository scope is not RBAC scope: `engine-identity-and-scope` owns authorization identity.

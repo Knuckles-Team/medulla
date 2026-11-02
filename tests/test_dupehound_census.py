@@ -128,6 +128,8 @@ def test_classification_is_complete_and_precedence_is_explicit(census, contract)
     by_path = {entry.path: entry for entry in result}
     assert set(by_path) == {entry.path for entry in entries}
     assert by_path["src/main.py"].class_name == "production"
+    # The generated top-level `contract/` tree was retired, so a path named
+    # `contract/` is ordinary production code like any nested contract module.
     contract_entry = _entry(census, "contract/methods.rs")
     nested_contract_entry = _entry(
         census, "crates/medulla-types/src/contract/crypto.rs"
@@ -135,13 +137,13 @@ def test_classification_is_complete_and_precedence_is_explicit(census, contract)
     contract_result = census.classify_entries(
         [contract_entry, nested_contract_entry],
         {
-            "contract/methods.rs": b"generated\n",
+            "contract/methods.rs": b"fn methods() {}\n",
             "crates/medulla-types/src/contract/crypto.rs": b"fn digest_type() {}\n",
         },
         contract,
     )
     by_contract_path = {entry.path: entry for entry in contract_result}
-    assert by_contract_path["contract/methods.rs"].class_name == "generated"
+    assert by_contract_path["contract/methods.rs"].class_name == "production"
     assert (
         by_contract_path["crates/medulla-types/src/contract/crypto.rs"].class_name
         == "production"

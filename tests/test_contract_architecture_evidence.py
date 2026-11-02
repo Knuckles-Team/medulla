@@ -22,7 +22,7 @@ def _rows() -> list[tuple[str, str, str]]:
         if line.startswith("#"):
             break
         cells = [c.strip() for c in line.strip().strip("|").split("|")]
-        if len(cells) == 3 and cells[1].startswith("`src/"):
+        if len(cells) == 3 and cells[1].startswith(("`src/", "`crates/")):
             rows.append((cells[0], cells[1].strip("`"), cells[2]))
     return rows
 

@@ -1,5 +1,5 @@
+import importlib.util
 import re
-import sys
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
@@ -7,8 +7,13 @@ from types import SimpleNamespace
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "scripts/recovery"))
-from render_dispatch import render
+_RENDER = importlib.util.spec_from_file_location(
+    "render_dispatch", ROOT / "scripts/recovery/render_dispatch.py"
+)
+assert _RENDER is not None and _RENDER.loader is not None
+_render_module = importlib.util.module_from_spec(_RENDER)
+_RENDER.loader.exec_module(_render_module)
+render = _render_module.render
 
 
 class RecoveryBoundary(unittest.TestCase):
@@ -90,7 +95,7 @@ class RecoveryBoundary(unittest.TestCase):
             any("compare_wheel_reproducibility.py" in s.get("run", "") for s in steps)
         )
         self.assertTrue(any("medulla.engine" in s.get("run", "") for s in steps))
-        self.assertEqual(self.job["runs-on"]["group"], "medulla-release-recovery")
+        self.assertEqual(self.job["runs-on"]["group"], "eg-release-recovery")
         for step in steps:
             use = step.get("uses", "")
             if use and not use.startswith("./"):
