@@ -1787,8 +1787,8 @@ async fn spawn_memory_sweeps(
 
 #[cfg(feature = "redb")]
 async fn cold_offload_tick(
-    state: Arc<tokio::sync::RwLock<ServerState>>,
-    tracker: Arc<medulla_persistence::cold_offload::ColdTenantTracker>,
+    state: std::sync::Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
+    tracker: std::sync::Arc<medulla_persistence::cold_offload::ColdTenantTracker>,
     window: std::time::Duration,
 ) {
     let n =

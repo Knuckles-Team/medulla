@@ -11,8 +11,9 @@
 // CONCEPT:MEDULLA-KG.query.tokio-service-server - Tokio Service Layer
 //
 // The facade crate composes the engine crates: it owns the in-process embedded API, the
-// binaries and the opt-in pyo3 bindings. Every other module lives in its owning crate
-// (`medulla-core`, `medulla-server`, ...) and is reached by that crate's path.
+// binaries and the opt-in Python engine bindings (`medulla-pyengine`). Every other
+// module lives in its owning crate (`medulla-core`, `medulla-server`, ...) and is
+// reached by that crate's path.
 
 // In-process embedded library API (CONCEPT:MEDULLA-KG.backend.engine-modes) — SQLite/DuckDB-style. Drives
 // the SAME GraphCore + redb durable rows the socket dispatch does, with NO Tokio
