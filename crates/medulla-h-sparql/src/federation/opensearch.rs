@@ -491,9 +491,19 @@ mod tests {
             result.is_ok(),
             "mock server response must parse: {result:?}"
         );
-        assert!(
-            request_text.contains("authorization: bearer caller-real-token-123")
-                || request_text.contains("Authorization: Bearer caller-real-token-123"),
+        // Header names are case-insensitive (HTTP/1.1 clients send them lowercase); the
+        // credential after the name must be byte-for-byte the caller's bearer.
+        let forwarded: Vec<&str> = request_text
+            .lines()
+            .filter_map(|line| {
+                let (name, value) = line.split_once(':')?;
+                name.eq_ignore_ascii_case("authorization")
+                    .then_some(value.trim())
+            })
+            .collect();
+        assert_eq!(
+            forwarded,
+            ["Bearer caller-real-token-123"],
             "bearer must be forwarded unmodified, got headers:\n{request_text}"
         );
     }
