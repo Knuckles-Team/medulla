@@ -144,6 +144,9 @@
 //! `get_node_properties`/`has_node`) and typed error mapping (proven for all
 //! five). Durable persistence remains the explicit seam described above.
 
+#![allow(dead_code)] // moved helper code, as the facade crate did
+#![allow(unused_imports)] // glob imports carried over from the facade; the visibility pass prunes them
+
 use std::sync::Arc;
 
 use medulla_graph_core::graph::GraphCore;

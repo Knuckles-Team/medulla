@@ -27,6 +27,9 @@
 //! (`medulla-viz-core::result`), which compute the bit from `exact_bit_for` in the
 //! one place V0 defined it.
 
+#![allow(dead_code)] // moved helper code, as the facade crate did
+#![allow(unused_imports)] // glob imports carried over from the facade; the visibility pass prunes them
+
 pub mod backend;
 pub mod error;
 pub mod graph_layout;

@@ -3,6 +3,9 @@
 //! Depends only on `medulla-types`. Everything graph-mutating lives here; the wire
 //! protocol and server transport sit in higher crates.
 
+#![allow(dead_code)] // moved helper code, as the facade crate did
+#![allow(unused_imports)] // glob imports carried over from the facade; the visibility pass prunes them
+
 // Shared test-only serialization lock for the process-global indexed-property env
 // vars (`MEDULLA_MAX_INDEXED_PROPERTIES` / `MEDULLA_INDEXED_PROPERTIES`).
 // The `graph` property-index tests AND the `index` manager cap test both mutate these

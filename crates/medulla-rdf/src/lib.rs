@@ -19,6 +19,9 @@
 //! Pi contract: every dep is feature-gated OFF by default, so a `default`/`pi`
 //! build links none of oxrdf/oxttl/spargebra (all pure-Rust regardless).
 
+#![allow(dead_code)] // moved helper code, as the facade crate did
+#![allow(unused_imports)] // glob imports carried over from the facade; the visibility pass prunes them
+
 /// Re-export the oxrdf term model so callers (the engine handler) can name `Triple`
 /// etc. without taking their own oxrdf dependency.
 #[cfg(feature = "rdf")]

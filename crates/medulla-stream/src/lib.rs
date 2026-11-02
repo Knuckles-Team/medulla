@@ -44,6 +44,9 @@
 //! The batch core is dependency-light (serde + serde_json); the `stream` feature adds
 //! `tokio`. The crate is folded into the `node`/`full` serving tiers, kept OUT of `pi`.
 
+#![allow(dead_code)] // moved helper code, as the facade crate did
+#![allow(unused_imports)] // glob imports carried over from the facade; the visibility pass prunes them
+
 mod cep;
 mod event;
 #[cfg(feature = "stream")]

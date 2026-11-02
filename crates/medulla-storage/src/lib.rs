@@ -11,6 +11,9 @@
 //! once per kernel. No code outside this crate can name one otherwise, so no
 //! domain crate can obtain a write capability.
 
+#![allow(dead_code)] // moved helper code, as the facade crate did
+#![allow(unused_imports)] // glob imports carried over from the facade; the visibility pass prunes them
+
 mod backend_spec;
 mod capability;
 mod codec;

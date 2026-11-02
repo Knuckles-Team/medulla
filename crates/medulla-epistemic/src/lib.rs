@@ -23,6 +23,9 @@
 //! runs an explicit, logged "materialize belief" op — so the stored-vs-derived signals
 //! never double-count.
 
+#![allow(dead_code)] // moved helper code, as the facade crate did
+#![allow(unused_imports)] // glob imports carried over from the facade; the visibility pass prunes them
+
 mod adapter;
 #[cfg(feature = "epistemic-tms")]
 mod incremental;

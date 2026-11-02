@@ -16,6 +16,9 @@
 //! Every identifier is validated at construction, and every refusal carries a
 //! stable code.
 
+#![allow(dead_code)] // moved helper code, as the facade crate did
+#![allow(unused_imports)] // glob imports carried over from the facade; the visibility pass prunes them
+
 use serde::{Deserialize, Serialize};
 
 pub mod code;

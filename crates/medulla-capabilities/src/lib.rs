@@ -33,6 +33,9 @@
 //! turned on -- see `Cargo.toml` for why). It is not a dependency of the main
 //! `medulla` package's default build; see the root `Cargo.toml`'s `members` comment.
 
+#![allow(dead_code)] // moved helper code, as the facade crate did
+#![allow(unused_imports)] // glob imports carried over from the facade; the visibility pass prunes them
+
 pub mod catalog;
 mod descriptor;
 mod domains;

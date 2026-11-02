@@ -196,6 +196,9 @@
 //! policy-authorized `asr.result.v1` commit is future worker/AU-orchestration
 //! work (W03/W06 in the lane doc), explicitly out of scope here.
 
+#![allow(dead_code)] // moved helper code, as the facade crate did
+#![allow(unused_imports)] // glob imports carried over from the facade; the visibility pass prunes them
+
 mod abort_bridge;
 mod cpu_budget;
 mod model;

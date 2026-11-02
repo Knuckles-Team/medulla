@@ -8,6 +8,9 @@
 //! write only through an [`medulla_storage::PhysicalWriteCapability`] minted by the
 //! single [`medulla_storage::MutationOwnerAuthority`].
 
+#![allow(dead_code)] // moved helper code, as the facade crate did
+#![allow(unused_imports)] // glob imports carried over from the facade; the visibility pass prunes them
+
 use medulla_protocol_types::mutation_batch::MutationBatchRecord;
 
 /// Result of validating a proposed batch within its owner transaction.

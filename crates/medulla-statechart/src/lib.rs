@@ -56,6 +56,9 @@
 //! single-node correctness today; cluster ordering slots in where `medulla-jobs`'
 //! `mutate_job_batch` sits).
 
+#![allow(dead_code)] // moved helper code, as the facade crate did
+#![allow(unused_imports)] // glob imports carried over from the facade; the visibility pass prunes them
+
 pub mod action;
 pub mod check;
 pub mod context;

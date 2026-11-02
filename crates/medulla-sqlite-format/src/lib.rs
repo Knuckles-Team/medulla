@@ -11,6 +11,9 @@
 //! general mutable SQLite database. Format primitives reimplement the public SQLite file
 //! format (the technique used by `open-source-libraries/turso/core/storage`).
 
+#![allow(dead_code)] // moved helper code, as the facade crate did
+#![allow(unused_imports)] // glob imports carried over from the facade; the visibility pass prunes them
+
 mod error;
 mod freelist;
 mod header;

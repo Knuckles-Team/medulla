@@ -43,6 +43,9 @@
 //! that seam needs ([`LakeTable`] is the orchestration entry point) without pulling
 //! the engine into the leaf.
 
+#![allow(dead_code)] // moved helper code, as the facade crate did
+#![allow(unused_imports)] // glob imports carried over from the facade; the visibility pass prunes them
+
 // MEDULLA-UNIFIED-DATA-PLANE-R010 — the per-table acceleration policy (enabled flag +
 // declared lag objective) for the cached virtual graph / columnar replica, and its
 // validation. Unconditional (no heavy deps), so it is NOT behind the `lake` feature.

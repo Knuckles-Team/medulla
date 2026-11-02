@@ -41,6 +41,9 @@
 //! of those features is enabled. The `medulla-jobs` interop proof in [`job`] lives
 //! behind `dev-dependencies` for exactly this reason (see `Cargo.toml`).
 
+#![allow(dead_code)] // moved helper code, as the facade crate did
+#![allow(unused_imports)] // glob imports carried over from the facade; the visibility pass prunes them
+
 pub mod capability;
 pub mod job;
 pub mod result;

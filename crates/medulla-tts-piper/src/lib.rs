@@ -70,6 +70,9 @@
 //! GOC-36's manifest is the place that record is meant to live, per the lane contract's
 //! explicit call-out that "some [voices] carry restrictive terms."
 
+#![allow(dead_code)] // moved helper code, as the facade crate did
+#![allow(unused_imports)] // glob imports carried over from the facade; the visibility pass prunes them
+
 pub mod streaming;
 pub mod voice;
 

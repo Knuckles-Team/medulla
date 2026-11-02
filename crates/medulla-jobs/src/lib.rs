@@ -57,6 +57,9 @@
 //! application coordinator or pod-number dependency: the current Raft leader orders
 //! transitions and any caught-up replica can take over after leader failure.
 
+#![allow(dead_code)] // moved helper code, as the facade crate did
+#![allow(unused_imports)] // glob imports carried over from the facade; the visibility pass prunes them
+
 pub mod claim;
 pub mod intent;
 pub mod model;

@@ -50,6 +50,9 @@
 //! yet — see the module doc for the exact authority boundary and what is
 //! (and is not) proven there. No voice model was vendored or downloaded.
 
+#![allow(dead_code)] // moved helper code, as the facade crate did
+#![allow(unused_imports)] // glob imports carried over from the facade; the visibility pass prunes them
+
 mod audio;
 mod header;
 

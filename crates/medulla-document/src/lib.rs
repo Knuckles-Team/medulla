@@ -29,6 +29,9 @@
 //! [`DocumentServingRuntime`]. Commits use the universal governed artifact protocol,
 //! maintain the lexical posting index atomically, and never retain source text.
 
+#![allow(dead_code)] // moved helper code, as the facade crate did
+#![allow(unused_imports)] // glob imports carried over from the facade; the visibility pass prunes them
+
 mod decoder;
 mod document;
 mod header;

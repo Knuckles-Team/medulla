@@ -8,6 +8,9 @@
 //! deterministic, seeded, in-memory `GraphSource` proving the whole path end
 //! to end before VIZ-1 lands.
 
+#![allow(dead_code)] // moved helper code, as the facade crate did
+#![allow(unused_imports)] // glob imports carried over from the facade; the visibility pass prunes them
+
 pub mod contract;
 pub mod demo;
 pub mod wire;

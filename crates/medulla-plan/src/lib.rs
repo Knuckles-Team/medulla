@@ -53,6 +53,9 @@
 //!  * **Cross-shard** — per-shard sub-plans + a coordinator merge + traversal
 //!    frontier forwarding (the multi-quarter piece).
 
+#![allow(dead_code)] // moved helper code, as the facade crate did
+#![allow(unused_imports)] // glob imports carried over from the facade; the visibility pass prunes them
+
 // MEDULLA-UNIFIED-DATA-PLANE-R020.2.1 — warehouse federation pushdown-transport
 // dispatch: Arrow Flight SQL vs. native per WarehouseSourceKind, with a
 // refusal for an invalid config or an unmet Flight SQL preference. Pure

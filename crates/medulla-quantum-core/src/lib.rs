@@ -70,6 +70,9 @@
 //!   the FFI call) need a shape `medulla-numeric` can hold, which a `Complex64` array
 //!   extension already provides.
 
+#![allow(dead_code)] // moved helper code, as the facade crate did
+#![allow(unused_imports)] // glob imports carried over from the facade; the visibility pass prunes them
+
 pub mod backend;
 pub mod estimate;
 pub mod hash;

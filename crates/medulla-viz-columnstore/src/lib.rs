@@ -33,6 +33,9 @@
 //! there" and "what does it contain", never "how much should I draw". See
 //! `medulla-viz-export`'s backend, which is the thing that actually honors a tier.
 
+#![allow(dead_code)] // moved helper code, as the facade crate did
+#![allow(unused_imports)] // glob imports carried over from the facade; the visibility pass prunes them
+
 pub mod chunk;
 pub mod dictionary;
 pub mod error;

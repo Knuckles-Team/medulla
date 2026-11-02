@@ -46,6 +46,9 @@
 //! vLLM/LMCache connector ships in the `medulla` Python client; and the graph-os
 //! HTTP endpoint exposes both — none of which this leaf crate depends on.
 
+#![allow(dead_code)] // moved helper code, as the facade crate did
+#![allow(unused_imports)] // glob imports carried over from the facade; the visibility pass prunes them
+
 pub mod cold;
 pub mod compress;
 pub mod hash;

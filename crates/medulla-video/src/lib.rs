@@ -20,6 +20,9 @@
 //! temporal postings, and exact frame-window predicates. Governed persistence is
 //! exposed through [`VideoServingRuntime`].
 
+#![allow(dead_code)] // moved helper code, as the facade crate did
+#![allow(unused_imports)] // glob imports carried over from the facade; the visibility pass prunes them
+
 mod header;
 mod video;
 

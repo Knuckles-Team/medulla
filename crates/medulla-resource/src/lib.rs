@@ -19,6 +19,9 @@
 //! single scheduler lane; they are still bounded by the quota's floor rather than
 //! rounded up to a second lane.
 
+#![allow(dead_code)] // moved helper code, as the facade crate did
+#![allow(unused_imports)] // glob imports carried over from the facade; the visibility pass prunes them
+
 pub mod admission;
 mod cgroup;
 use cgroup::{

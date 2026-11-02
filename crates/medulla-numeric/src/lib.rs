@@ -22,6 +22,9 @@
 //! float transcendentals crate-wide), reductions are serial and ordered, and
 //! digests are taken over quantised integers.
 
+#![allow(dead_code)] // moved helper code, as the facade crate did
+#![allow(unused_imports)] // glob imports carried over from the facade; the visibility pass prunes them
+
 pub mod cluster;
 pub mod elementwise;
 pub mod error;

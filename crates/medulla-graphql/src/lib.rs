@@ -59,6 +59,9 @@
 //! GraphQL cross-modal txn stages (graph/vector/tsdb) already carry the contract in
 //! THEIR crates (`medulla-core::NodeChange`, `medulla-tensor`, `medulla-tsdb::SeriesMeta`).
 
+#![allow(dead_code)] // moved helper code, as the facade crate did
+#![allow(unused_imports)] // glob imports carried over from the facade; the visibility pass prunes them
+
 /// CONCEPT:MEDULLA-KG.query.medulla-9/380/381 — the GraphQL CROSS-MODAL transaction seam: a multi-request
 /// `txnId` handle ([`crossmodal::CrossModalTxnRegistry`]) whose `beginTransaction` /
 /// `stageEmbedding` / `addMeasurement` / `sparqlUpdate` / `sparqlConstruct` /

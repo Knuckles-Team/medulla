@@ -8,6 +8,9 @@
 //! (`pub use medulla_types::wire::Order;`) so their algorithm code is unchanged —
 //! the data lives at the bottom of the DAG, the logic stays where it belongs.
 
+#![allow(dead_code)] // moved helper code, as the facade crate did
+#![allow(unused_imports)] // glob imports carried over from the facade; the visibility pass prunes them
+
 pub mod acl;
 // MEDULLA-CQ-ORCH-R010.1 — pure data model for graph-derived architecture views.
 pub mod architecture_view;

@@ -22,6 +22,9 @@
 //! [`CODEC`] names the body format; `medulla_codec_ptr`/`medulla_codec_len` expose it so
 //! a host can refuse a module that speaks a different one.
 
+#![allow(dead_code)] // moved helper code, as the facade crate did
+#![allow(unused_imports)] // glob imports carried over from the facade; the visibility pass prunes them
+
 use std::cell::RefCell;
 
 use medulla_protocol_types::protocol::Method;

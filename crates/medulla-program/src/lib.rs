@@ -7,6 +7,9 @@
 //! injected [`ModelTransport`] contract; durable promotion must use the engine's
 //! existing [`medulla_types::ChangeEnvelope`] / `MutationBatch` authority.
 
+#![allow(dead_code)] // moved helper code, as the facade crate did
+#![allow(unused_imports)] // glob imports carried over from the facade; the visibility pass prunes them
+
 mod commit;
 mod contracts;
 pub mod optimize;

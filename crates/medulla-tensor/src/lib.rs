@@ -23,6 +23,9 @@
 //! kept OUT of `pi`. Distinct from medulla-ann (fixed-D ANN vectors): medulla-tensor is dense
 //! N-D arrays (images / sensor frames / genomics / ML features).
 
+#![allow(dead_code)] // moved helper code, as the facade crate did
+#![allow(unused_imports)] // glob imports carried over from the facade; the visibility pass prunes them
+
 mod blob;
 // ModalityContract PILOT retrofit (CONCEPT:E4): `impl ModalityContract for Tensor`,
 // behind the crate's own opt-in `contract` feature (default OFF). See module docs.

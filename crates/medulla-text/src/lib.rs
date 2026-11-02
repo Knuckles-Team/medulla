@@ -40,6 +40,9 @@
 //! a default build even though the *index* needs `tantivy`). [`TextIndex`] is the
 //! Tantivy-backed index, behind `#[cfg(feature = "tantivy")]`.
 
+#![allow(dead_code)] // moved helper code, as the facade crate did
+#![allow(unused_imports)] // glob imports carried over from the facade; the visibility pass prunes them
+
 use serde::{Deserialize, Serialize};
 
 /// One BM25 hit: a node id and its BM25 relevance score (higher = more relevant).

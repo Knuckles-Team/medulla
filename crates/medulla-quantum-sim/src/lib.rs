@@ -51,6 +51,9 @@
 //! see each backend's `run`/`submit`), no GPU, no MPS, no trajectory sampling, no
 //! distributed execution, no QuEST FFI, no hardware. Those are Q3/Q4/Q10.
 
+#![allow(dead_code)] // moved helper code, as the facade crate did
+#![allow(unused_imports)] // glob imports carried over from the facade; the visibility pass prunes them
+
 use medulla_quantum_core::ir::{ClassicalRegister, GateInstruction, ParamValue};
 use std::collections::{BTreeMap, HashMap};
 

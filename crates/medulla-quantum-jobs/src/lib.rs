@@ -53,6 +53,9 @@
 //! (`medulla-jobs`, `medulla-quantum-core`, `medulla-quantum-sim`, `medulla-numeric`, optionally
 //! `medulla-plan`) already vendored for the sibling lanes.
 
+#![allow(dead_code)] // moved helper code, as the facade crate did
+#![allow(unused_imports)] // glob imports carried over from the facade; the visibility pass prunes them
+
 pub mod circuit;
 pub mod job;
 pub mod numeric_bridge;

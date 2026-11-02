@@ -34,6 +34,9 @@
 //! ([`validate_icv`]), with a SPARQL **explain witness** per violation and a
 //! [`check_write`] guard for constraint-enforced transactions.
 
+#![allow(dead_code)] // moved helper code, as the facade crate did
+#![allow(unused_imports)] // glob imports carried over from the facade; the visibility pass prunes them
+
 mod decimal;
 
 pub mod icv;

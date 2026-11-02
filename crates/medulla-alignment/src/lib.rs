@@ -44,6 +44,9 @@
 //! pulls the concrete modality crates as dev-dependencies only — this does not
 //! change what a consumer of the published `medulla-alignment` library links.
 
+#![allow(dead_code)] // moved helper code, as the facade crate did
+#![allow(unused_imports)] // glob imports carried over from the facade; the visibility pass prunes them
+
 pub mod graph;
 pub mod resolver;
 
