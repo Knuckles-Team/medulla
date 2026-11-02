@@ -11,7 +11,7 @@ use medulla_server_blob::blob::BlobStateExt;
 #[cfg(any(all(feature = "mining", feature = "query", feature = "streaming"), all(feature = "owl", feature = "streaming")))]
 use medulla_server_cdc::cdc::CdcStateExt;
 use clap::Parser;
-#[cfg(feature = "security")]
+#[cfg(any(feature = "security", test))]
 use std::net::SocketAddr;
 #[cfg(feature = "security")]
 use std::sync::Arc;
