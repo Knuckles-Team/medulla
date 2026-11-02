@@ -2,12 +2,12 @@
 //! The owning policy gate remains the authority for enforcement.
 
 use super::SharedState;
-use medulla_protocol_types::protocol::Response;
-use medulla_server_api::authority_context::VerifiedRequestContext;
+use medulla_agent_types::agent_guardrail::GuardrailEntailmentRequest;
 #[cfg(feature = "redb")]
 #[cfg(feature = "decide")]
 use medulla_persistence_records::agent_library::AgentLibraryStateExt;
-use medulla_agent_types::agent_guardrail::GuardrailEntailmentRequest;
+use medulla_protocol_types::protocol::Response;
+use medulla_server_api::authority_context::VerifiedRequestContext;
 
 #[cfg(feature = "decide")]
 pub async fn handle_guardrail_entailment(

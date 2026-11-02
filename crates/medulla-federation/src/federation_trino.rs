@@ -94,7 +94,12 @@ impl TrinoSource {
     }
 
     fn probe(&self, transport: &dyn Transport) -> Result<(), String> {
-        let rows = self.execute("SELECT 1 AS medulla_probe", "medulla_probe", None, transport)?;
+        let rows = self.execute(
+            "SELECT 1 AS medulla_probe",
+            "medulla_probe",
+            None,
+            transport,
+        )?;
         if rows.ids() != vec!["1".to_string()] {
             return Err("federation: Trino catalog probe returned an unexpected result".into());
         }

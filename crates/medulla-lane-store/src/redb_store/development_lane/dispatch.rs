@@ -1,4 +1,3 @@
-use medulla_store::{redb_store::DurableCrypto, redb_store::NODES};
 use super::cleanup::{apply_cleanup, apply_global_quota_update, apply_tenant_quota_update};
 use super::finish::apply_finish;
 use super::identity::{hold_load, idempotency_key, method_name, normalize_now};
@@ -17,13 +16,14 @@ use super::{
     COUNTERS, GLOBAL_POLICY_KEY, HOLDS, INVOCATIONS, LANE_INDEX, POLICIES, PRESSURE_INDEX,
     REPOSITORY_BRANCH_INDEX, TENANT_INDEX, WORKTREE_INDEX, WORK_ITEM_INDEX,
 };
-use medulla_store::redb_store::shard::Shard;
-use medulla_store::redb_store::shard::ShardWrite;
 use medulla_protocol_types::protocol::Method;
 use medulla_result_types::epistemic_operations::DevelopmentLaneQueryRequest;
 use medulla_result_types::epistemic_operations::DevelopmentLaneQueryResult;
 use medulla_result_types::epistemic_operations::DevelopmentLaneQuotaUpdateRequest;
 use medulla_storage::{GraphShardOwner, ScopedOwnerTableMut, ScopedRead};
+use medulla_store::redb_store::shard::Shard;
+use medulla_store::redb_store::shard::ShardWrite;
+use medulla_store::{redb_store::DurableCrypto, redb_store::NODES};
 
 #[allow(clippy::too_many_arguments)]
 pub fn apply_quota_update(

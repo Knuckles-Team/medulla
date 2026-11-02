@@ -7,13 +7,19 @@ use std::sync::Arc;
 use std::sync::OnceLock;
 use tokio::sync::RwLock;
 
+use medulla_server_api::authority_context::VerifiedRequestContext;
+#[cfg(any(
+    feature = "blob",
+    feature = "knowledge-batch",
+    feature = "redb",
+    feature = "security",
+    feature = "tsdb"
+))]
+use medulla_server_api::carrier::CarrierAuthority;
+use medulla_server_api::carrier::GraphReadAuthority;
 use medulla_server_auth::access::check_caller_is_known;
 use medulla_server_auth::access::check_graph_access;
 use medulla_server_auth::access::requires_write;
-#[cfg(any(feature = "blob", feature = "knowledge-batch", feature = "redb", feature = "security", feature = "tsdb"))]
-use medulla_server_api::carrier::CarrierAuthority;
-use medulla_server_api::carrier::GraphReadAuthority;
-use medulla_server_api::authority_context::VerifiedRequestContext;
 // Only the ast-gated ParseFiles handler offloads to the blocking pool here; the
 // graph-op off-lock sites live in handlers/graph_ops.rs.
 // NOT `#[cfg(feature = "redb")]`: `server::persistence` is an unconditional module

@@ -55,7 +55,6 @@
 //! construction with a real encoder once Q2 lands, without touching any of this
 //! crate's trait-boundary/quota/credential machinery.
 
-
 // CRATE-BOUNDARY NOTE (established by walking every module's real consumers,
 // `git -C crates/medulla-quantum-hardware grep -n '\b<module>::'` for each of
 // credentials/error/quota/transport/registry): this whole crate exists only to

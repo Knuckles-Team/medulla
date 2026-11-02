@@ -1,8 +1,8 @@
-#[cfg(feature = "raft")]
-use crate::dispatch::shared::timed_read;
 #[cfg(feature = "redb")]
 use super::graph_pipeline::dispatch_graph_op;
 use super::graph_pipeline::GraphOpRouting;
+#[cfg(feature = "raft")]
+use crate::dispatch::shared::timed_read;
 use crate::dispatch::*;
 use medulla_protocol_types::result_contract::transactions as txn_results;
 
@@ -153,7 +153,13 @@ fn change_envelope_batch_authority_error(
 /// paired with the request indices of envelopes that had no graph to group by.
 #[cfg(feature = "redb")]
 type GroupedChangeEnvelopes = (
-    Vec<(String, Vec<(usize, medulla_protocol_types::change_envelope::ChangeEnvelope)>)>,
+    Vec<(
+        String,
+        Vec<(
+            usize,
+            medulla_protocol_types::change_envelope::ChangeEnvelope,
+        )>,
+    )>,
     Vec<usize>,
 );
 
@@ -175,7 +181,10 @@ fn group_change_envelopes_by_graph(
     let mut graph_order: Vec<String> = Vec::new();
     let mut groups: std::collections::HashMap<
         String,
-        Vec<(usize, medulla_protocol_types::change_envelope::ChangeEnvelope)>,
+        Vec<(
+            usize,
+            medulla_protocol_types::change_envelope::ChangeEnvelope,
+        )>,
     > = std::collections::HashMap::new();
     let mut ungrouped: Vec<usize> = Vec::new();
     for (index, envelope) in envelopes.into_iter().enumerate() {
@@ -502,7 +511,8 @@ fn change_envelope_applied_entry(
     let projection_error = if committed.replayed {
         None
     } else {
-        medulla_server_mutation::mutation_batch::publish_change_envelope_projection(core, envelope).err()
+        medulla_server_mutation::mutation_batch::publish_change_envelope_projection(core, envelope)
+            .err()
     };
     let entry = change_envelope_result(committed, projection_error.is_some());
     if committed.replayed {

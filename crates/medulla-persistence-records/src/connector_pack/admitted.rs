@@ -162,11 +162,8 @@ impl AgentLibraryStore {
         })?;
         let result =
             applied.ok_or_else(|| format!("{} owner rows produced no result", identity.noun))?;
-        let mutation_result = crate::agent_row::domain_result(
-            &result,
-            identity.result_schema,
-            identity.noun,
-        )?;
+        let mutation_result =
+            crate::agent_row::domain_result(&result, identity.result_schema, identity.noun)?;
         let result_bytes = medulla_storage::encode_bounded(
             &mutation_result,
             &format!("{} domain result", identity.noun),

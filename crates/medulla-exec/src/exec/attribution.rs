@@ -59,7 +59,12 @@ pub(crate) use kernel::attribute;
 mod kernel {
     use std::collections::BTreeMap;
 
-    use medulla_finance::{attribution::linear_split, attribution::owen_values, attribution::shapley_exact, attribution::shapley_sampled, attribution::Aggregate, attribution::AggregateGame, attribution::Attribution, attribution::AttributionCode, attribution::AttributionError, attribution::SampleSpec};
+    use medulla_finance::{
+        attribution::linear_split, attribution::owen_values, attribution::shapley_exact,
+        attribution::shapley_sampled, attribution::Aggregate, attribution::AggregateGame,
+        attribution::Attribution, attribution::AttributionCode, attribution::AttributionError,
+        attribution::SampleSpec,
+    };
     use medulla_types::wire::{AttributionInput, AttributionMethod, AttributionValue};
     use serde_json::Value;
 

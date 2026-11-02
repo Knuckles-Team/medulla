@@ -10,6 +10,11 @@
 //! passing receipt that qualified exactly this body; every pointer move is an
 //! audited event, and rollback returns to the adapter active before.
 
+use medulla_decision_stats::{
+    decision::adapter::directions_of, decision::adapter::evaluate, decision::adapter::fit,
+    decision::adapter::to_body, decision::adapter::to_q16, decision::adapter::JudgedItem,
+};
+use medulla_decision_stats::{decision::retrieval::hard_negatives, decision::retrieval::Verdict};
 use medulla_decision_types::decision::statistical::retrieval::RetrievalOutcome;
 use medulla_decision_types::decision::statistical::StatisticalErrorCode;
 use medulla_decision_types::{
@@ -25,8 +30,6 @@ use medulla_decision_types::{
     decision::statistical::retrieval_adapter::MAX_ADAPTER_RANK,
     decision::statistical::retrieval_adapter::QUERY_ADAPTER_SCHEMA_VERSION,
 };
-use medulla_decision_stats::{decision::adapter::directions_of, decision::adapter::evaluate, decision::adapter::fit, decision::adapter::to_body, decision::adapter::to_q16, decision::adapter::JudgedItem};
-use medulla_decision_stats::{decision::retrieval::hard_negatives, decision::retrieval::Verdict};
 use medulla_types::solve_scalar::digest_text;
 
 use super::served_adapter::{adapter_key, read_fitted};

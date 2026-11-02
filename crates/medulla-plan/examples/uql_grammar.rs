@@ -13,7 +13,10 @@
 fn blocks() -> [(&'static str, String); 2] {
     [
         ("uql-grammar", medulla_uql::grammar::ebnf()),
-        ("decide-text-grammar", medulla_nlq::decide_text::grammar::ebnf()),
+        (
+            "decide-text-grammar",
+            medulla_nlq::decide_text::grammar::ebnf(),
+        ),
     ]
 }
 

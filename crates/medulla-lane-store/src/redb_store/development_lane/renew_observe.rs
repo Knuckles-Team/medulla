@@ -1,4 +1,3 @@
-use medulla_store::redb_store::DurableCrypto;
 use super::identity::{hold_encode, hold_load, lane_intent_matches_hold};
 use super::lifecycle_shared::{
     current_policy, expire_active_hold, hold_correlations_match, hold_no_longer_active,
@@ -16,6 +15,7 @@ use medulla_result_types::epistemic_operations::DevelopmentLaneObserveRequest;
 use medulla_result_types::epistemic_operations::DevelopmentLaneQuotaPolicy;
 use medulla_result_types::epistemic_operations::DevelopmentLaneRenewRequest;
 use medulla_storage::ScopedOwnerTableMut;
+use medulla_store::redb_store::DurableCrypto;
 
 /// The renew tail: prove the lifecycle WorkItem and observation freshness,
 /// then extend the live hold in place.  `row` is the already-gated hold.

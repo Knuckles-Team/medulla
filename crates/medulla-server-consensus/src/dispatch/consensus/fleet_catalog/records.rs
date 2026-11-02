@@ -97,11 +97,7 @@ fn tenant_key(tenant_id: &str) -> String {
 
 /// The graph node holding `(tenant, server, scope)`'s observation. The tenant
 /// is digested into the id, so two tenants' records can never collide.
-pub fn discovery_node_id(
-    tenant_id: &str,
-    server_name: &str,
-    scope: &DiscoveryScope,
-) -> String {
+pub fn discovery_node_id(tenant_id: &str, server_name: &str, scope: &DiscoveryScope) -> String {
     format!(
         "fleetobs:{}:{server_name}:{}",
         tenant_key(tenant_id),
@@ -115,11 +111,7 @@ pub fn discovery_record_id(server_name: &str, scope: &DiscoveryScope) -> String 
     format!("srvobs:{server_name}:{}", scope.key())
 }
 
-pub fn override_node_id(
-    tenant_id: &str,
-    field: FleetOverrideField,
-    component_id: &str,
-) -> String {
+pub fn override_node_id(tenant_id: &str, field: FleetOverrideField, component_id: &str) -> String {
     format!(
         "fleetovr:{}:{}:{}",
         tenant_key(tenant_id),

@@ -128,20 +128,47 @@ pub use coalescer::commit_coalescable_mutation;
 pub use coalescer::{apply_coalescable_write, is_coalescable_structural_write};
 
 pub use commit_entry::commit_mutation;
-use commit_entry::{
-    commit_finalize, commit_mutation_body, commit_prepare, CommitFinalizeOptions, CommitPrep,
-};
+use commit_entry::{commit_finalize, commit_mutation_body, CommitFinalizeOptions, CommitPrep};
+#[cfg(any(
+    feature = "mining",
+    feature = "graphlearn",
+    feature = "ml-pipeline",
+    feature = "modality-serving",
+    feature = "query",
+    feature = "cypher",
+    feature = "graphql",
+    feature = "rdf"
+))]
+use commit_entry::commit_prepare;
 
 pub(super) use commit_encode::publish_committed_row_delta;
 use commit_encode::{
-    commit_mutation_body_commit_staged, commit_staged_with_receipt,
-    diff_and_serialize_staged_mutation, prepublish_success, preserves_node_derived_indexes,
-    StagedMutation, StagedReceipt,
+    commit_mutation_body_commit_staged, diff_and_serialize_staged_mutation, prepublish_success,
+    preserves_node_derived_indexes, StagedMutation,
 };
-use commit_paths::{
-    commit_mutation_body_prepublish_fast_path, commit_mutation_body_staged_path,
-    resolve_authoritative_base_snapshot,
-};
+#[cfg(any(
+    feature = "mining",
+    feature = "graphlearn",
+    feature = "ml-pipeline",
+    feature = "modality-serving",
+    feature = "query",
+    feature = "cypher",
+    feature = "graphql",
+    feature = "rdf"
+))]
+use commit_encode::{commit_staged_with_receipt, StagedReceipt};
+use commit_paths::{commit_mutation_body_prepublish_fast_path, commit_mutation_body_staged_path};
+#[cfg(any(
+    feature = "mining",
+    feature = "graphlearn",
+    feature = "ml-pipeline",
+    feature = "modality-serving",
+    feature = "query",
+    feature = "cypher",
+    feature = "graphql",
+    feature = "rdf"
+))]
+use commit_paths::resolve_authoritative_base_snapshot;
 use commit_replay::{
     commit_mutation_body_replay_response, commit_row_replay_probe, commit_staged_replay_probe,
     compile_batch_and_encode_result, compile_batch_context, DurableBatchAttempt,
@@ -168,7 +195,6 @@ pub use conditional::commit_conditional_mutation_async;
 #[cfg(any(feature = "query", feature = "cypher", feature = "graphql"))]
 pub use conditional::is_query_native_coordinator;
 pub use conditional::{is_query_gateway_method, is_rdf_gateway_method};
-
 
 /// Shared conversion tail for gateway closures that wrap a handler `Response`: a handler
 /// `Response` carries its own refusal/result, so folding it into the
@@ -1068,7 +1094,8 @@ mod tests {
         #[cfg(feature = "sparql-http")]
         assert_eq!(
             cluster_mutation_route(&Method::ApplyMutation {
-                event_type: medulla_server_api::api::dispatch_support::SPARQL_HTTP_UPDATE_EVENT.to_string(),
+                event_type: medulla_server_api::api::dispatch_support::SPARQL_HTTP_UPDATE_EVENT
+                    .to_string(),
                 query: "CLEAR DEFAULT".to_string(),
             }),
             ClusterMutationRoute::ConsensusFanout,

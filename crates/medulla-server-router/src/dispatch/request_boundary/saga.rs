@@ -1,8 +1,8 @@
-#[cfg(feature = "redb")]
-use medulla_server_graph::dispatch::shared::timed_read;
 use super::*;
 #[cfg(feature = "redb")]
 use medulla_persistence::AsRedb;
+#[cfg(feature = "redb")]
+use medulla_server_graph::dispatch::shared::timed_read;
 
 #[cfg(feature = "redb")]
 pub struct SessionControlSaga {

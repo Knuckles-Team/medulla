@@ -8,10 +8,10 @@
 
 #[cfg(feature = "blob")]
 use medulla_server_blob::blob::BlobStateExt;
-#[cfg(all(feature = "cdc-kafka", feature = "streaming"))]
-use medulla_server_cdc::cdc::CdcStateExt;
 #[cfg(feature = "kv")]
 use medulla_server_blob::kv::KvStateExt;
+#[cfg(all(feature = "cdc-kafka", feature = "streaming"))]
+use medulla_server_cdc::cdc::CdcStateExt;
 use std::net::SocketAddr;
 use std::sync::Arc;
 
@@ -192,7 +192,6 @@ fn exit_with(message: impl std::fmt::Display, code: i32) -> ! {
     std::process::exit(code);
 }
 
-
 pub fn socket_mode_or_exit(raw: &str) -> u32 {
     crate::transport::parse_unix_socket_mode(raw).unwrap_or_else(|reason| {
         exit_with(
@@ -237,8 +236,7 @@ pub async fn prepare_tcp_tls(
             2,
         ),
     };
-    let insecure_remote =
-        |addr: &str| !native_tcp_addr_is_loopback(addr) && config.is_none();
+    let insecure_remote = |addr: &str| !native_tcp_addr_is_loopback(addr) && config.is_none();
     if args.tcp_addr.as_deref().is_some_and(insecure_remote) {
         exit_with("non-loopback native TCP requires TLS", 2);
     }
@@ -495,9 +493,7 @@ pub fn open_persistence(
 /// Native time-series store (feature `tsdb`): a durable `series.redb` beside the
 /// graph shards when a persist dir is set, else a process-temp file.
 #[cfg(feature = "tsdb")]
-pub fn open_tsdb_store(
-    persist_dir: Option<&str>,
-) -> Option<Arc<medulla_tsdb::store::SeriesStore>> {
+pub fn open_tsdb_store(persist_dir: Option<&str>) -> Option<Arc<medulla_tsdb::store::SeriesStore>> {
     let path = match persist_dir {
         Some(dir) => std::path::Path::new(dir).join("series.redb"),
         None => std::env::temp_dir().join(format!("medulla-tsdb-{}.redb", std::process::id())),
@@ -540,7 +536,10 @@ pub fn open_blob_substrate(persist_dir: Option<&str>) -> BlobSubstrate {
     };
     let store = open_blob_chunk_store(dir);
     info!("Blob substrate: durable content-addressed CAS ready");
-    (Some(Arc::new(medulla_server_blob::blob::BlobCursors::new(store))), ttl)
+    (
+        Some(Arc::new(medulla_server_blob::blob::BlobCursors::new(store))),
+        ttl,
+    )
 }
 
 #[cfg(all(feature = "blob", feature = "blob-s3"))]
@@ -700,8 +699,7 @@ pub fn open_isolation_layer(
         info!("Explicit anonymous local-owner authority ACTIVE; no authentication credentials accepted");
         return isolation;
     }
-    if let Err(error) = crate::validate_verified_request_context_startup(auth_secret, persist_dir)
-    {
+    if let Err(error) = crate::validate_verified_request_context_startup(auth_secret, persist_dir) {
         exit_with(
             format_args!("invalid verified request-context configuration: {error}"),
             1,
@@ -827,7 +825,8 @@ pub async fn serve_transports(
             }
         });
     }
-    let listener = crate::transport::bind_uds(&transports.socket_path, transports.socket_mode).await?;
+    let listener =
+        crate::transport::bind_uds(&transports.socket_path, transports.socket_mode).await?;
     medulla_h_admin::boot_maintenance::spawn_post_bind_maintenance(state.clone()).await;
     crate::transport::serve_uds_listener(listener, state.clone(), shutdown.clone()).await?;
     Ok(())
@@ -916,7 +915,8 @@ pub async fn memcap_tick(state: SharedState, max_nodes_per_graph: usize) {
 
 #[cfg(feature = "cost")]
 pub async fn budget_tick(state: SharedState, config: medulla_persistence::cost::CostConfig) {
-    let (evicted, hibernated) = medulla_persistence::cost::enforce_memory_budgets(&state, config).await;
+    let (evicted, hibernated) =
+        medulla_persistence::cost::enforce_memory_budgets(&state, config).await;
     if evicted > 0 || hibernated > 0 {
         tracing::info!(
             "Memory budget: evicted {} node(s), hibernated {} graph(s) to keep \

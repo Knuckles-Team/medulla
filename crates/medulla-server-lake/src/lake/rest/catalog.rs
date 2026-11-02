@@ -18,8 +18,8 @@ use super::{
     table_ident_namespace, visibility_for,
 };
 use medulla_server_api::carrier::CarrierAuthority;
-use medulla_server_blob::blob::store::ChunkStore;
 use medulla_server_api::http1::HttpMessage;
+use medulla_server_blob::blob::store::ChunkStore;
 
 /// Who the caller is for every routed operation: what it may see, and the
 /// owner label its audit events carry.
@@ -58,10 +58,7 @@ fn record_operation(
     allowed: bool,
 ) {
     let mut event = serde_json::Map::new();
-    event.insert(
-        "ts_ms".to_string(),
-        json!(crate::lake::lineage::now_ms()),
-    );
+    event.insert("ts_ms".to_string(), json!(crate::lake::lineage::now_ms()));
     event.insert("op".to_string(), json!(op));
     for (key, value) in subject {
         event.insert((*key).to_string(), value.clone());

@@ -50,9 +50,9 @@ mod run_rules_dispatch_tests {
     use medulla_protocol_types::protocol::Request;
     use medulla_protocol_types::protocol::Response;
     use medulla_protocol_types::protocol::ResultPayload;
+    use medulla_server_api::state::ServerState;
     use medulla_server_auth::auth::build_shared_test_request;
     use medulla_server_auth::auth::dispatch_test_on_heap as dispatch_on_heap;
-    use medulla_server_api::state::ServerState;
     use std::sync::Arc;
     use tokio::sync::RwLock;
 
@@ -60,7 +60,10 @@ mod run_rules_dispatch_tests {
     const TEST_AGENT: &str = "unit-test-agent";
 
     fn state() -> Arc<RwLock<ServerState>> {
-        let mut state = medulla_server::seams_install::new_state_for_test(SECRET, ServerState::test_isolation(TEST_AGENT));
+        let mut state = medulla_server::seams_install::new_state_for_test(
+            SECRET,
+            ServerState::test_isolation(TEST_AGENT),
+        );
         state.persist_dir = Some(
             medulla_server_auth::sql_tables::test_persist_dir()
                 .to_string_lossy()
@@ -135,7 +138,10 @@ mod obda_pushdown_tests {
         rows: Vec<medulla_virtual_graph::obda::ForeignRow>,
     }
     impl ObdaSqlExecutor for MockSqlExecutor {
-        fn run_select(&self, sql: &str) -> Result<Vec<medulla_virtual_graph::obda::ForeignRow>, String> {
+        fn run_select(
+            &self,
+            sql: &str,
+        ) -> Result<Vec<medulla_virtual_graph::obda::ForeignRow>, String> {
             self.seen.lock().unwrap().push(sql.to_string());
             Ok(self.rows.clone())
         }
@@ -271,13 +277,16 @@ mod obda_pushdown_tests {
         reg.register("people", Arc::new(src));
 
         let vg = medulla_virtual_graph::obda::VirtualGraph::new().with_map(
-            medulla_virtual_graph::obda::TriplesMap::new("people", "http://example.org/person/{id}")
-                .add_column("http://example.org/name", "name")
-                .add_typed_column(
-                    "http://example.org/age",
-                    "age",
-                    "http://www.w3.org/2001/XMLSchema#integer",
-                ),
+            medulla_virtual_graph::obda::TriplesMap::new(
+                "people",
+                "http://example.org/person/{id}",
+            )
+            .add_column("http://example.org/name", "name")
+            .add_typed_column(
+                "http://example.org/age",
+                "age",
+                "http://www.w3.org/2001/XMLSchema#integer",
+            ),
         );
         let proj = medulla_rdf::sparql::Projection::raw();
         let outcome = medulla_virtual_graph::obda::run_outcome_virtual(

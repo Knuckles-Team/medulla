@@ -1,5 +1,5 @@
-use medulla_store::redb_store::store_prelude::*;
 use super::*;
+use medulla_store::redb_store::store_prelude::*;
 
 pub fn clear_graph_rows(
     graph: &str,
@@ -395,10 +395,8 @@ pub struct ResourceRowTables<'txn> {
     pub exclusivity: ScopedOwnerTableMut<'txn, (&'static str, &'static str), &'static str>,
     pub fairness: ScopedOwnerTableMut<'txn, (&'static str, &'static str), &'static [u8]>,
     pub concurrency: ScopedOwnerTableMut<'txn, (&'static str, &'static str), u64>,
-    pub anti_affinity:
-        ScopedOwnerTableMut<'txn, (&'static str, &'static str, &'static str), u64>,
-    pub disk_policies:
-        ScopedOwnerTableMut<'txn, (&'static str, &'static str), &'static [u8]>,
+    pub anti_affinity: ScopedOwnerTableMut<'txn, (&'static str, &'static str, &'static str), u64>,
+    pub disk_policies: ScopedOwnerTableMut<'txn, (&'static str, &'static str), &'static [u8]>,
 }
 
 pub struct ResourceRowTablesRef<'a, 'txn> {

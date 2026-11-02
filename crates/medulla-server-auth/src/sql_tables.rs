@@ -294,8 +294,6 @@ pub fn tenant_acl_path_for_test(tenant_scope: &str, persist_dir: &Path) -> PathB
     tenant_acl_path(tenant_scope, persist_dir)
 }
 
-
-
 #[cfg(any(test, feature = "test-support"))]
 pub fn test_persist_dir() -> PathBuf {
     static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);

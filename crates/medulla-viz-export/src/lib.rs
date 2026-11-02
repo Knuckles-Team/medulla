@@ -27,7 +27,6 @@
 //! (`medulla-viz-core::result`), which compute the bit from `exact_bit_for` in the
 //! one place V0 defined it.
 
-
 pub mod backend;
 pub mod error;
 pub mod graph_layout;

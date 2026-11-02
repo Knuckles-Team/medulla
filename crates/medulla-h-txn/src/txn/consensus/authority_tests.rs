@@ -128,7 +128,11 @@ async fn parent_only_phases_reject_foreign_tenant_with_same_principal() {
     server.persistence = Some(backend.clone());
     server
         .registry
-        .create_graph("delegated-graph", medulla_protocol_types::protocol::GraphType::Global, None)
+        .create_graph(
+            "delegated-graph",
+            medulla_protocol_types::protocol::GraphType::Global,
+            None,
+        )
         .unwrap();
     let state = Arc::new(RwLock::new(server));
     let owner = carrier("tenant-a");
@@ -311,23 +315,24 @@ async fn store_committed_child(
     .await
     .unwrap();
     assert_eq!(result.record.committing_tenant().unwrap(), txn.tenant_scope);
-    let foreign = medulla_server_mutation::mutation_batch::commit_internal_graph_methods_with_nonce(
-        medulla_server_mutation::mutation_batch::InternalGraphCommitRequest::new(
-            Some(&persistence),
-            &core,
-            medulla_server_mutation::mutation_batch::CommitOrigin {
-                request_id: 4,
-                principal: Some(actor),
-            },
-            &txn.graph,
-            &child_id,
-            txn.write_set.clone(),
-            &ResultPayload::Bool(true),
+    let foreign =
+        medulla_server_mutation::mutation_batch::commit_internal_graph_methods_with_nonce(
+            medulla_server_mutation::mutation_batch::InternalGraphCommitRequest::new(
+                Some(&persistence),
+                &core,
+                medulla_server_mutation::mutation_batch::CommitOrigin {
+                    request_id: 4,
+                    principal: Some(actor),
+                },
+                &txn.graph,
+                &child_id,
+                txn.write_set.clone(),
+                &ResultPayload::Bool(true),
+            )
+            .with_tenant_scope("foreign-tenant"),
         )
-        .with_tenant_scope("foreign-tenant"),
-    )
-    .await
-    .unwrap_err();
+        .await
+        .unwrap_err();
     assert!(foreign.contains("tenant scope"));
     let authority = phase_authority(&carrier("tenant-a"));
     let fname = medulla_kernel::persist::sanitize(&txn.graph);

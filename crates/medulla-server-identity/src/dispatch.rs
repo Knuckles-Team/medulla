@@ -2,7 +2,6 @@
 
 // GENERATED-USES: the imports the former dispatch root carried; child modules reach them through `use super::*`.
 
-
 // Only the ast-gated ParseFiles handler offloads to the blocking pool here; the
 // graph-op off-lock sites live in handlers/graph_ops.rs.
 // NOT `#[cfg(feature = "redb")]`: `server::persistence` is an unconditional module

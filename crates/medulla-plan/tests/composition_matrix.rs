@@ -10,9 +10,11 @@
 mod common;
 
 use common::*;
+use medulla_exec::{
+    algebra::Op, algebra::Plan, algebra::Pred, exec::execute, exec::PlanCtx, rowset::RowSet,
+};
 use medulla_graph_core::graph::GraphCore;
 use medulla_graph_core::graph::GraphView;
-use medulla_exec::{exec::execute, algebra::Op, algebra::Plan, exec::PlanCtx, algebra::Pred, rowset::RowSet};
 use medulla_semantic_index::semantic::SemanticStore;
 use serde_json::json;
 use std::collections::HashSet;

@@ -1,8 +1,8 @@
 //! Statements (UQL-11): version pragma, EXPLAIN/PROFILE, LET/FROM/JOIN DAGs.
 
+use medulla_types::wire::Op;
 use medulla_uql::print::{dag_to_uql, statement_to_uql};
 use medulla_uql::{parse, parse_statement, Body, DagNode, Mode, Params, UqlCode};
-use medulla_types::wire::Op;
 
 fn stmt(src: &str) -> medulla_uql::Statement {
     parse_statement(src, &Params::new()).unwrap()

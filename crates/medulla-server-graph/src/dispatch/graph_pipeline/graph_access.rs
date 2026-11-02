@@ -295,8 +295,7 @@ pub async fn finalize_graph_op_response(
     // never inline on the request path — covers them all. No-op below the threshold.
     #[cfg(feature = "ann")]
     if matches!(access, AccessLevel::Write) && response.error.is_none() {
-        crate::semantic_activation::maybe_activate_after_write(state, graph_name, core)
-            .await;
+        crate::semantic_activation::maybe_activate_after_write(state, graph_name, core).await;
     }
 
     response

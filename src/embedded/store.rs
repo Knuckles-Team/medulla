@@ -170,7 +170,12 @@ impl EmbeddedRedbStore {
     /// Snapshot the whole registry dump into redb in one durable transaction.
     pub(super) fn checkpoint(&self, dumps: Vec<GraphDump>) -> Result<usize, String> {
         let mut pending = Vec::new();
-        medulla_store_apply::redb_store::checkpoint::apply_checkpoint(&self.shard, &mut pending, dumps, self.crypto())
+        medulla_store_apply::redb_store::checkpoint::apply_checkpoint(
+            &self.shard,
+            &mut pending,
+            dumps,
+            self.crypto(),
+        )
     }
 
     /// Read the entire durable store back into per-graph dumps (boot recovery).

@@ -1,10 +1,12 @@
 //! Graph-scoped payload replacement under the admitted graft reservation.
 
 use super::MigrationReport;
-use medulla_resource_store::redb_store::capacity_lease;
 use medulla_lane_store::redb_store::development_lane;
-use medulla_work_store::redb_store::work_item_capability;
+use medulla_resource_store::redb_store::capacity_lease;
+use medulla_storage::{GraphShardOwner, OwnerRowScope, OwnerRowScopeStart, ScopedRead};
 use medulla_store::redb_store::AUDIT;
+#[cfg(feature = "security")]
+use medulla_store::redb_store::AUDIT_REQUESTS;
 use medulla_store::redb_store::CHANGE_BLOBS;
 use medulla_store::redb_store::CHANGE_CURSORS;
 use medulla_store::redb_store::CHANGE_ENVELOPES;
@@ -16,6 +18,8 @@ use medulla_store::redb_store::CONTENT_VERSIONS;
 use medulla_store::redb_store::EDGES;
 use medulla_store::redb_store::LEDGER;
 use medulla_store::redb_store::NODES;
+#[cfg(feature = "security")]
+use medulla_store::redb_store::PROVENANCE_ANCHOR_MEMBERS;
 use medulla_store::redb_store::RESOURCE_ANTI_AFFINITY;
 use medulla_store::redb_store::RESOURCE_CONCURRENCY;
 use medulla_store::redb_store::RESOURCE_DISK_POLICIES;
@@ -27,12 +31,8 @@ use medulla_store::redb_store::RESOURCE_RESERVATION_ATTEMPTS;
 use medulla_store::redb_store::RESOURCE_RESERVATION_TENANT_INDEX;
 use medulla_store::redb_store::SEMANTIC;
 use medulla_store::redb_store::WORK_ITEM_COMMAND_SEQUENCE;
-#[cfg(feature = "security")]
-use medulla_store::redb_store::AUDIT_REQUESTS;
-#[cfg(feature = "security")]
-use medulla_store::redb_store::PROVENANCE_ANCHOR_MEMBERS;
-use medulla_storage::{GraphShardOwner, OwnerRowScope, OwnerRowScopeStart, ScopedRead};
 use medulla_transaction::{GraftOwnerWrite, OwnerPayloadTransfer, OwnerPayloadWrite};
+use medulla_work_store::redb_store::work_item_capability;
 use redb::TableDefinition;
 
 /// Copy the graph-shard payload under the destination's exact graft

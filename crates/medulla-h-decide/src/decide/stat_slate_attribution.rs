@@ -14,6 +14,8 @@
 
 use std::collections::BTreeMap;
 
+use medulla_decision_stats::decision::quant::q32;
+use medulla_decision_stats::{decision::aggregate::label_use, decision::aggregate::LabelUse};
 use medulla_decision_types::{
     decision::statistical::log::ComponentContribution,
     decision::statistical::log::SlateAttribution,
@@ -22,9 +24,10 @@ use medulla_decision_types::{
     decision::statistical::log::StoredEvaluation,
 };
 use medulla_decision_types::{decision::EvidenceClass, decision::RecordWindow};
-use medulla_finance::{attribution::additive_fit, attribution::shapley_exact, attribution::Attribution, attribution::LoggedGame};
-use medulla_decision_stats::{decision::aggregate::label_use, decision::aggregate::LabelUse};
-use medulla_decision_stats::decision::quant::q32;
+use medulla_finance::{
+    attribution::additive_fit, attribution::shapley_exact, attribution::Attribution,
+    attribution::LoggedGame,
+};
 use medulla_types::contract::BoundedVec;
 use medulla_types::solve_scalar::digest_text;
 

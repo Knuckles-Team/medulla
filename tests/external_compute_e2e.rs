@@ -19,13 +19,13 @@ use std::time::Duration;
 
 use arrow::ipc::reader::StreamReader;
 
+use medulla_persistence::redb_backend::RedbBackend;
+use medulla_protocol_types::protocol::{Method, Request, Response, ResultPayload};
+use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_types::knowledge_stream::{
     KnowledgeResultFamily, KnowledgeStreamBatch, KnowledgeStreamProjection, KnowledgeStreamQuery,
     KnowledgeStreamRequest, KNOWLEDGE_STREAM_SCHEMA_VERSION,
 };
-use medulla_protocol_types::protocol::{Method, Request, Response, ResultPayload};
-use medulla_server_api::api::persistence::PersistenceBackend;
-use medulla_persistence::redb_backend::RedbBackend;
 use medulla_work_types::{jobs::JobKind, jobs::JobOp, jobs::SubmitJobSpec};
 
 const SECRET: &str = "external-compute-contract-secret";

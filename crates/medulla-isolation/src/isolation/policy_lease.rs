@@ -591,9 +591,11 @@ impl IsolationLayer {
         } else {
             let ctx = medulla_types::acl::ResourceContext::graph(resource);
             let allowed = matches!(
-                authority
-                    .policy()
-                    .evaluate(&identity.roles, &ctx, medulla_types::acl::RbacAction::Read),
+                authority.policy().evaluate(
+                    &identity.roles,
+                    &ctx,
+                    medulla_types::acl::RbacAction::Read
+                ),
                 Some(medulla_types::acl::GrantEffect::Allow)
             );
             if !allowed {

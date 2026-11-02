@@ -102,7 +102,8 @@ pub trait TxnApi: Send + Sync {
         placement_epoch: u64,
         fencing_token: Option<u64>,
         method: medulla_protocol_types::protocol::Method,
-    ) -> Result<medulla_protocol_types::protocol::Response, medulla_protocol_types::protocol::Method> {
+    ) -> Result<medulla_protocol_types::protocol::Response, medulla_protocol_types::protocol::Method>
+    {
         Err(method)
     }
 
@@ -203,8 +204,13 @@ pub async fn query_seam(state: &Arc<RwLock<ServerState>>) -> Option<Arc<dyn Quer
 }
 
 /// Install the query seam; `false` when it was already installed.
-pub fn install_query_seam(reg: &medulla_server_api::api::registry::SeamRegistry, api: Arc<dyn QueryApi>) -> bool {
-    reg.query.set(Arc::new(api) as medulla_server_api::state::ErasedHandle).is_ok()
+pub fn install_query_seam(
+    reg: &medulla_server_api::api::registry::SeamRegistry,
+    api: Arc<dyn QueryApi>,
+) -> bool {
+    reg.query
+        .set(Arc::new(api) as medulla_server_api::state::ErasedHandle)
+        .is_ok()
 }
 
 /// The installed txn seam of `state`, or `None` before installation.
@@ -220,8 +226,13 @@ pub async fn txn_seam(state: &Arc<RwLock<ServerState>>) -> Option<Arc<dyn TxnApi
 }
 
 /// Install the txn seam; `false` when it was already installed.
-pub fn install_txn_seam(reg: &medulla_server_api::api::registry::SeamRegistry, api: Arc<dyn TxnApi>) -> bool {
-    reg.txn.set(Arc::new(api) as medulla_server_api::state::ErasedHandle).is_ok()
+pub fn install_txn_seam(
+    reg: &medulla_server_api::api::registry::SeamRegistry,
+    api: Arc<dyn TxnApi>,
+) -> bool {
+    reg.txn
+        .set(Arc::new(api) as medulla_server_api::state::ErasedHandle)
+        .is_ok()
 }
 
 /// The installed wire seam of `state`, or `None` before installation.
@@ -237,8 +248,13 @@ pub async fn wire_seam(state: &Arc<RwLock<ServerState>>) -> Option<Arc<dyn WireA
 }
 
 /// Install the wire seam; `false` when it was already installed.
-pub fn install_wire_seam(reg: &medulla_server_api::api::registry::SeamRegistry, api: Arc<dyn WireApi>) -> bool {
-    reg.wire.set(Arc::new(api) as medulla_server_api::state::ErasedHandle).is_ok()
+pub fn install_wire_seam(
+    reg: &medulla_server_api::api::registry::SeamRegistry,
+    api: Arc<dyn WireApi>,
+) -> bool {
+    reg.wire
+        .set(Arc::new(api) as medulla_server_api::state::ErasedHandle)
+        .is_ok()
 }
 
 /// Typed access to the foreign-source catalog and read sessions `ServerState`
@@ -265,7 +281,8 @@ impl ForeignStateExt for ServerState {
 
     fn foreign_reads(&self) -> Arc<foreign_read::ForeignReadSessions> {
         Arc::clone(self.foreign_reads.get_or_init(|| {
-            Arc::new(foreign_read::ForeignReadSessions::default()) as medulla_server_api::state::ErasedHandle
+            Arc::new(foreign_read::ForeignReadSessions::default())
+                as medulla_server_api::state::ErasedHandle
         }))
         .downcast::<foreign_read::ForeignReadSessions>()
         .expect("foreign_reads slot holds ForeignReadSessions")
@@ -275,8 +292,8 @@ impl ForeignStateExt for ServerState {
 #[cfg(all(test, feature = "federation"))]
 mod foreign_state_tests {
     use super::ForeignStateExt;
-    use medulla_server_api::state::ServerState;
     use medulla_isolation::isolation::IsolationLayer;
+    use medulla_server_api::state::ServerState;
 
     #[test]
     fn untouched_state_has_an_empty_catalog() {

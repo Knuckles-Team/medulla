@@ -1,19 +1,11 @@
 //! Moved from the in-crate test tree of medulla-persistence (MEDULLA-CONTRACT-R056.11).
 
 #[allow(unused_imports)]
-use std::collections::BTreeMap;
-#[allow(unused_imports)]
-use std::io::{Read as _, Write as _};
-#[allow(unused_imports)]
-use std::path::{Path, PathBuf};
-#[allow(unused_imports)]
-use medulla_storage::RecoveryStoreCounts;
-#[allow(unused_imports)]
-use redb::ReadableTable;
-#[allow(unused_imports)]
-use sha2::{Digest, Sha256};
+use medulla_persistence::backup::*;
 #[allow(unused_imports)]
 use medulla_persistence::shard_migrate;
+#[allow(unused_imports)]
+use medulla_storage::RecoveryStoreCounts;
 #[allow(unused_imports)]
 use medulla_store::redb_store::shard::Shard;
 #[allow(unused_imports)]
@@ -21,15 +13,23 @@ use medulla_store::redb_store::XSHARD_DECISION;
 #[allow(unused_imports)]
 use medulla_store::redb_store::XSHARD_PREPARE;
 #[allow(unused_imports)]
-use medulla_persistence::backup::*;
+use redb::ReadableTable;
+#[allow(unused_imports)]
+use sha2::{Digest, Sha256};
+#[allow(unused_imports)]
+use std::collections::BTreeMap;
+#[allow(unused_imports)]
+use std::io::{Read as _, Write as _};
+#[allow(unused_imports)]
+use std::path::{Path, PathBuf};
 
 use crate::redb_backend_tests::seed_raw_row;
-use medulla_persistence::redb_backend::RedbBackend;
-#[cfg(feature = "security")]
-use medulla_persistence::redb_backend::ENCRYPTION_CANARY;
 use crate::shard_migrate_tests::assert_node_a_carries_graph_tag;
 use crate::shard_migrate_tests::props;
 use crate::shard_migrate_tests::seed_at_k as seed;
+use medulla_persistence::redb_backend::RedbBackend;
+#[cfg(feature = "security")]
+use medulla_persistence::redb_backend::ENCRYPTION_CANARY;
 use medulla_protocol_types::protocol::GraphType;
 use medulla_protocol_types::protocol::Method;
 use medulla_server_api::api::persistence::PersistenceBackend;
@@ -199,8 +199,7 @@ async fn restore_can_reshard() {
     // backend that must resolve the same cipher).
     #[cfg(feature = "security")]
     let _env_lock = medulla_kernel::crypto::acquire_test_env_lock().await;
-    let root =
-        std::env::temp_dir().join(format!("medulla-backup-reshard-{}", std::process::id()));
+    let root = std::env::temp_dir().join(format!("medulla-backup-reshard-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&root);
     let src = root.join("live");
     let bundle = root.join("bundle");
@@ -293,7 +292,8 @@ async fn backup_restore_carries_non_shard_durable_stores() {
 
     let backend = RedbBackend::open_with_shards(src_s.clone(), 256, 1).expect("reopen");
     // Exactly the adapter the production admin handler hands in.
-    let rbac_source = medulla_persistence::durable_stores::RbacBundledStore(std::sync::Arc::new(rbac));
+    let rbac_source =
+        medulla_persistence::durable_stores::RbacBundledStore(std::sync::Arc::new(rbac));
     let extra: Vec<&dyn medulla_server_api::api::persistence::BundledStoreSource> =
         vec![&rbac_source, &kv];
     let report = backend
@@ -360,8 +360,7 @@ async fn backup_restore_carries_non_shard_durable_stores() {
     drop(restored_rbac);
     // The restored KV surface answers the write taken before the backup.
     let restored_s = restored.to_string_lossy().to_string();
-    let restored_kv =
-        medulla_server_blob::kv::KvStore::open(Some(&restored_s)).expect("open kv");
+    let restored_kv = medulla_server_blob::kv::KvStore::open(Some(&restored_s)).expect("open kv");
     assert_eq!(
         restored_kv.get("probe", "key").expect("kv get").as_deref(),
         Some(&b"value"[..]),
@@ -385,8 +384,7 @@ async fn backup_refuses_an_unregistered_bundled_store() {
             panic!("must never be copied");
         }
     }
-    let root =
-        std::env::temp_dir().join(format!("medulla-backup-bogus-{}", std::process::id()));
+    let root = std::env::temp_dir().join(format!("medulla-backup-bogus-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&root);
     let src = root.join("live");
     std::fs::create_dir_all(&src).unwrap();
@@ -394,8 +392,7 @@ async fn backup_refuses_an_unregistered_bundled_store() {
     seed(&src_s, 1, &["alpha"]).await;
     let backend = RedbBackend::open_with_shards(src_s.clone(), 256, 1).expect("reopen");
     let bogus = Bogus;
-    let extra: Vec<&dyn medulla_server_api::api::persistence::BundledStoreSource> =
-        vec![&bogus];
+    let extra: Vec<&dyn medulla_server_api::api::persistence::BundledStoreSource> = vec![&bogus];
     let error = backend
         .backup(&root.join("bundle"), "test-engine", 7, "", &extra)
         .expect_err("unregistered store must be refused");
@@ -474,17 +471,16 @@ async fn the_declared_census_is_what_a_backup_copies() {
         medulla_kernel::crypto::ENCRYPTION_KEY_ENV,
         "backup-census-key-material",
     );
-    use medulla_store::redb_layout::shard_filename;
-    use medulla_resource_store::redb_store::capacity_lease;
     use medulla_lane_store::redb_store::development_lane;
+    use medulla_resource_store::redb_store::capacity_lease;
+    use medulla_store::redb_layout::shard_filename;
     use medulla_store::redb_store::MATVIEW_OPERATOR_STATE;
     use medulla_store::redb_store::PLAN_MATVIEWS;
     use medulla_store::redb_store::PROVENANCE_ANCHOR_MEMBERS;
     use medulla_store::redb_store::RESOURCE_RESERVATIONS;
     use medulla_store::redb_store::WORK_ITEM_COMMAND_SEQUENCE;
 
-    let root =
-        std::env::temp_dir().join(format!("medulla-backup-census-{}", std::process::id()));
+    let root = std::env::temp_dir().join(format!("medulla-backup-census-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&root);
     let src = root.join("live");
     let bundle = root.join("bundle");

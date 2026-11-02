@@ -5,29 +5,12 @@
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod server_startup;
 
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 mod query_seam;
-
 
 // ---- merged from the moved module root (src/server/mod.rs) ----
 #[cfg(feature = "ann-redb")]
@@ -38,9 +21,9 @@ use medulla_h_retrieve::semantic_index_runtime::PendingRf019Activation;
 // and serves requests over UDS or TCP with HMAC-SHA256 authentication.
 
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod seams_install;
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod issuer_trust;
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod seams_install;
 
 /// Verified minimum stack for engine Tokio workers.
 ///
@@ -167,7 +150,6 @@ pub fn validate_verified_request_context_startup(
 #[cfg(feature = "cdc-kafka")]
 pub mod cdc_sink;
 
-
 /// Validate the persisted RF-019 semantic-index activation state before the listeners bind.
 #[cfg(feature = "ann-redb")]
 pub fn preflight_rf019_activation(
@@ -211,7 +193,6 @@ pub mod registry_reaper;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod sealed_retention;
 
-
 // OBDA wire method + Python client seam (CA-13, feature `obda-wire`, off by default).
 // Reserved and EMPTY until CA-13 implements it; landed by CA-17's single feature-stub
 // commit so CA-13 never edits this shared module list. The OBDA mapping/rewrite engine
@@ -219,8 +200,6 @@ pub mod sealed_retention;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 #[cfg(feature = "obda-wire")]
 pub mod obda;
-
-
 
 // Cross-region async read-replica tier (CONCEPT:MEDULLA-KG.sharding.follower-pull-loop) + capacity guardrails
 // (CONCEPT:MEDULLA-KG.coordination.circuit-breaker): a bounded LSN replication log the primary ships over `/replicate`, an
@@ -413,7 +392,10 @@ mod ca17_feature_stub_contract {
             ),
             (
                 "crates/medulla-h-sparql/src/lib.rs",
-                include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../medulla-h-sparql/src/lib.rs")),
+                include_str!(concat!(
+                    env!("CARGO_MANIFEST_DIR"),
+                    "/../medulla-h-sparql/src/lib.rs"
+                )),
                 "sparql-fuseki",
                 "pub mod sparql_service;",
             ),
@@ -425,7 +407,10 @@ mod ca17_feature_stub_contract {
             ),
             (
                 "crates/medulla-server-lake/src/lib.rs",
-                include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../medulla-server-lake/src/lib.rs")),
+                include_str!(concat!(
+                    env!("CARGO_MANIFEST_DIR"),
+                    "/../medulla-server-lake/src/lib.rs"
+                )),
                 "policy_export",
                 "pub mod policy_export;",
             ),

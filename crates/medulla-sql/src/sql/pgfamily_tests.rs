@@ -1,8 +1,8 @@
 //! Tests of the Postgres-family extension planners (they run SQL through the executor).
 
-use medulla_sql_lang::sql::pgfamily::*;
 use datafusion::sql::sqlparser::dialect::PostgreSqlDialect;
 use datafusion::sql::sqlparser::parser::Parser;
+use medulla_sql_lang::sql::pgfamily::*;
 use medulla_table_store::tables::ann_plan::{AnnIndexPlan, AnnMethod, VectorMetric};
 use serde_json::Value;
 
@@ -70,18 +70,17 @@ fn eg117_parse_continuous_aggregate() {
 
 #[test]
 fn eg117_plain_materialized_view_is_not_continuous() {
-    assert!(parse_continuous_aggregate(
-        "CREATE MATERIALIZED VIEW v AS SELECT * FROM conditions"
-    )
-    .is_none());
+    assert!(
+        parse_continuous_aggregate("CREATE MATERIALIZED VIEW v AS SELECT * FROM conditions")
+            .is_none()
+    );
 }
 
 // ── MEDULLA-119: ParadeDB BM25 @@@ search ───────────────────────────────────────
 #[test]
 fn eg119_plan_bm25_search_filter_and_limit() {
-    let plan =
-        plan_bm25_search("SELECT id FROM docs WHERE body @@@ 'quantum computing' LIMIT 10")
-            .expect("recognized");
+    let plan = plan_bm25_search("SELECT id FROM docs WHERE body @@@ 'quantum computing' LIMIT 10")
+        .expect("recognized");
     assert_eq!(plan.table, "docs");
     assert_eq!(plan.column, "body");
     assert_eq!(plan.query, "quantum computing");

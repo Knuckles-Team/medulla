@@ -1,6 +1,6 @@
+use super::*;
 #[cfg(all(feature = "nl-query", feature = "federation"))]
 use medulla_server_ops::api::query_txn::ForeignStateExt;
-use super::*;
 
 /// `Method::TxnUql`: a UQL statement over the txn-overlaid snapshot (read your own
 /// writes) — the same statement runner `Method::Uql` uses (EH-434). Never cached.
@@ -252,13 +252,9 @@ fn plan_nl_only(
     text: &str,
     req_id: u64,
 ) -> Result<(String, medulla_exec::algebra::Plan), Response> {
-    let candidate = medulla_nlq::nl::plan_only(
-        planner,
-        text,
-        "",
-        medulla_nlq::nl::NlQueryBudget::default(),
-    )
-    .map_err(|e| Response::err(req_id, nl_refusal(&e)))?;
+    let candidate =
+        medulla_nlq::nl::plan_only(planner, text, "", medulla_nlq::nl::NlQueryBudget::default())
+            .map_err(|e| Response::err(req_id, nl_refusal(&e)))?;
     let params = UqlParams::default();
     let statement = medulla_uql::parse_statement(&candidate.uql, &params)
         .map_err(|e| Response::err(req_id, format!("{}: {}", e.code, e.render(&candidate.uql))))?;
@@ -389,7 +385,8 @@ mod nl_config_refusal_tests {
     // spec: MEDULLA-FEDERATED-QUERY-R058.5
     #[test]
     fn invalid_planner_config_is_refused_with_code_and_key() {
-        let msg = super::nl_config_refusal(&medulla_nlq::nl::NlConfigError::ReadTimeoutOutOfRange(0));
+        let msg =
+            super::nl_config_refusal(&medulla_nlq::nl::NlConfigError::ReadTimeoutOutOfRange(0));
         assert!(msg.starts_with("ENGINE_UNAVAILABLE:"), "{msg}");
         assert!(msg.contains("read_timeout_secs"), "{msg}");
         let msg = super::nl_config_refusal(&medulla_nlq::nl::NlConfigError::ExtraBodyReservedKey(

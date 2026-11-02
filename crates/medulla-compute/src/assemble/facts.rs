@@ -142,9 +142,9 @@ pub(super) fn prompt_tokens(candidate: &CandidateFacts) -> Option<u32> {
 #[cfg(all(test, feature = "decide-stats"))]
 mod cross_path_consistency_tests {
     use super::{p95_latency, per_call_cost, Declared};
+    use medulla_decision_stats::decision::candidate::CandidateView;
     use medulla_decision_types::decision::CandidateFacts;
     use medulla_decision_types::decision_fixtures::decision::tool_entry_with_cost_latency;
-    use medulla_decision_stats::decision::candidate::CandidateView;
 
     #[test]
     fn the_exact_solver_path_and_the_statistical_path_read_the_same_declared_values() {

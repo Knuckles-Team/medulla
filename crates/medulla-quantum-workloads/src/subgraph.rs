@@ -16,9 +16,9 @@
 
 use std::collections::{BTreeMap, HashSet};
 
+use medulla_exec::exec::PlanCtx;
 use medulla_graph_core::graph::GraphCore;
 use medulla_graph_core::graph::GraphView;
-use medulla_exec::exec::PlanCtx;
 use medulla_semantic_index::semantic::SemanticStore;
 
 /// The induced subgraph over a UQL-selected candidate node set: node ids in

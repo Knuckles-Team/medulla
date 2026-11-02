@@ -74,11 +74,11 @@ use medulla_protocol_types::{
 use medulla_stream::live::{CepEngine, CepSubscription, DEFAULT_MATCH_BUFFER};
 use medulla_stream::{AttrPredicate, CepPattern, Event, EventMatcher, Match, Window};
 
-use medulla_server_api::state::ServerState;
-use medulla_server_api::carrier::CarrierAuthority;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
+use medulla_server_api::carrier::CarrierAuthority;
+use medulla_server_api::state::ServerState;
 use medulla_types::wire::CdcEvent;
 use medulla_types::wire::CdcKind;
 use medulla_types::wire::CepMatcherSpec;

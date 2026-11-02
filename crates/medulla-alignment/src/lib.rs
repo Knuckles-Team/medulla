@@ -44,7 +44,6 @@
 //! pulls the concrete modality crates as dev-dependencies only — this does not
 //! change what a consumer of the published `medulla-alignment` library links.
 
-
 pub mod graph;
 pub mod resolver;
 

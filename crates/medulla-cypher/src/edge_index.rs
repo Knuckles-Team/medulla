@@ -61,8 +61,8 @@ use medulla_graph_core::index::ManagedIndexStatus;
 use medulla_graph_core::index::ManagedIndexTarget;
 use serde::{Deserialize, Serialize};
 
-use medulla_table_store::tables::ann_plan::VectorMetric;
 use generation::EdgeGeneration;
+use medulla_table_store::tables::ann_plan::VectorMetric;
 use registered::RegisteredEdgeIndex;
 
 /// The stable identity of one edge.

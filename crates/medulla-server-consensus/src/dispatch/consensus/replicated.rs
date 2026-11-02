@@ -23,7 +23,6 @@ pub fn capability_authority_unavailable(method: &Method) -> bool {
     )
 }
 
-
 /// Apply a committed bounded native command through its existing domain kernel.
 /// Authentication/authorization has already happened before proposal; the
 /// reconstructed context contains only one-way tenant/principal scopes so no raw

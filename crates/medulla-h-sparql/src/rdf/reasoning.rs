@@ -10,12 +10,12 @@ use medulla_isolation::isolation::AccessLevel;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
-#[cfg(feature = "owl")]
-use medulla_server_auth::access::check_graph_access;
 use medulla_server_api::carrier::GraphReadAuthority;
 use medulla_server_api::compute::compute_off_lock;
 #[cfg(feature = "owl")]
 use medulla_server_api::state::ServerState;
+#[cfg(feature = "owl")]
+use medulla_server_auth::access::check_graph_access;
 
 /// Run a parameterised custom-rule reasoning request over the request's graph view
 /// (CONCEPT:MEDULLA-KG.ontology.medulla-runtime-swrl-datalog / MEDULLA-023). Read-only: it reasons over an off-lock snapshot (its
@@ -386,7 +386,9 @@ fn owl_reason(
     })
 }
 
-fn validated_schema_digests(views: &[&medulla_graph_core::graph::GraphView]) -> Result<Vec<String>, String> {
+fn validated_schema_digests(
+    views: &[&medulla_graph_core::graph::GraphView],
+) -> Result<Vec<String>, String> {
     let mut schema_digests: Vec<String> = views
         .iter()
         .map(|view| view.schema_sources.composed_digest().to_hex())

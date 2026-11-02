@@ -19,17 +19,29 @@ use redb::TableDefinition;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
-use medulla_work_types::{native_control::CapacityAcquireRequest, native_control::CapacityAcquireResult, native_control::CapacityAvailability, native_control::CapacityCellUpdateRequest, native_control::CapacityCellUpdateResult, native_control::CapacityDecision, native_control::CapacityDemand, native_control::CapacityLeaseMutationRequest, native_control::CapacityMutationResult, native_control::CapacityReclaimRequest, native_control::CapacityReclaimResult, native_control::CapacityStatusRequest, native_control::CapacityStatusResult, native_control::NativeControlSchemaVersion, native_control::MAX_CAPACITY_AMOUNT, native_control::MAX_CAPACITY_BUDGET, native_control::MAX_CAPACITY_DEMANDS, native_control::MAX_CAPACITY_ID_BYTES, native_control::MAX_CAPACITY_MUTATION_BATCH, native_control::MAX_CAPACITY_RECLAIM_BATCH, native_control::MAX_CAPACITY_STATUS_ROWS, native_control::MAX_CAPACITY_TTL_MS};
 use medulla_mutation_types::{
     capacity_lease::CapacityCell, capacity_lease::CapacityLease, capacity_lease::LeaseState,
 };
 use medulla_storage::{
     GraphShardOwner, PhysicalWriteCapability, ScopedOwnerTable, ScopedOwnerTableMut,
 };
+use medulla_work_types::{
+    native_control::CapacityAcquireRequest, native_control::CapacityAcquireResult,
+    native_control::CapacityAvailability, native_control::CapacityCellUpdateRequest,
+    native_control::CapacityCellUpdateResult, native_control::CapacityDecision,
+    native_control::CapacityDemand, native_control::CapacityLeaseMutationRequest,
+    native_control::CapacityMutationResult, native_control::CapacityReclaimRequest,
+    native_control::CapacityReclaimResult, native_control::CapacityStatusRequest,
+    native_control::CapacityStatusResult, native_control::NativeControlSchemaVersion,
+    native_control::MAX_CAPACITY_AMOUNT, native_control::MAX_CAPACITY_BUDGET,
+    native_control::MAX_CAPACITY_DEMANDS, native_control::MAX_CAPACITY_ID_BYTES,
+    native_control::MAX_CAPACITY_MUTATION_BATCH, native_control::MAX_CAPACITY_RECLAIM_BATCH,
+    native_control::MAX_CAPACITY_STATUS_ROWS, native_control::MAX_CAPACITY_TTL_MS,
+};
 
-use medulla_store::{redb_store::shard::Shard, redb_store::shard::ShardWrite};
-use medulla_store::{redb_store::decode_durable, redb_store::DurableCrypto};
 use medulla_protocol_types::protocol::Method;
+use medulla_store::{redb_store::decode_durable, redb_store::DurableCrypto};
+use medulla_store::{redb_store::shard::Shard, redb_store::shard::ShardWrite};
 
 mod throttle;
 
@@ -169,7 +181,9 @@ pub fn commit(
     let staged_audit_tail = {
         let mut staged = audit_tail.clone();
         if !result_is_replay(method, &bytes)? {
-            let mut audit = write.graph(graph)?.open_scoped_table(medulla_store::redb_store::AUDIT)?;
+            let mut audit = write
+                .graph(graph)?
+                .open_scoped_table(medulla_store::redb_store::AUDIT)?;
             medulla_store::redb_store::append_audit_entry(&mut audit, &mut staged, graph, method)?;
         }
         staged

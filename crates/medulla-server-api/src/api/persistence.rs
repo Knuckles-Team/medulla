@@ -7,7 +7,6 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 
 use crate::state::ServerState;
-use medulla_work_types::native_control::CapacityStatusResult;
 use medulla_mutation_types::mutation_scope::MutationOutboxLease;
 use medulla_mutation_types::mutation_scope::MutationOutboxRecord;
 use medulla_mutation_types::mutation_scope::MutationProjectionCursor;
@@ -31,6 +30,7 @@ use medulla_result_types::epistemic_operations::ResourceReservationStatusResult;
 use medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityMintRequest;
 use medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityResult;
 use medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityVerifyRequest;
+use medulla_work_types::native_control::CapacityStatusResult;
 // The sweep-scoped claim budget carrying DESIGN.md's per-tenant weighted round
 // robin between graphs. It is a kernel type, so the claim it parameterises is
 // gated on `redb` exactly like the two WorkItem-capability methods below: the

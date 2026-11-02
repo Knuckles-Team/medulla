@@ -133,13 +133,12 @@ impl From<&EstimateOptions> for EstimateOptionsDto {
 impl From<&EstimateOptionsDto> for EstimateOptions {
     fn from(d: &EstimateOptionsDto) -> Self {
         EstimateOptions {
-            noise: d
-                .noise_model_id
-                .as_ref()
-                .map(|id| medulla_quantum_core::estimate::NoiseRequest {
+            noise: d.noise_model_id.as_ref().map(|id| {
+                medulla_quantum_core::estimate::NoiseRequest {
                     model_id: Some(id.clone()),
                     non_clifford: d.noise_non_clifford,
-                }),
+                }
+            }),
             want_exact_density_matrix: d.want_exact_density_matrix,
             shots: d.shots,
             memory_bound_bytes: d.memory_bound_bytes,

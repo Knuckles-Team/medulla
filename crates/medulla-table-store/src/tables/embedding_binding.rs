@@ -39,9 +39,9 @@
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
-use medulla_tables::{schema::ColumnType, schema::TableSchema};
 use crate::tables::ann_plan::AnnMethod;
 use crate::tables::ann_plan::VectorMetric;
+use medulla_tables::{schema::ColumnType, schema::TableSchema};
 
 /// Version of the durable binding record and of its catalog key encoding.
 pub const EMBEDDING_BINDING_SCHEMA_VERSION: u16 = 1;
@@ -709,8 +709,8 @@ fn validate_bounded_text(value: &str, kind: &str, max_bytes: usize) -> Result<()
 #[cfg(test)]
 mod embedding_binding_tests {
     use super::*;
-    use medulla_tables::schema::Column;
     use crate::tables::store::TableStore;
+    use medulla_tables::schema::Column;
 
     const SCOPE: &str = "tenant-a/actor-1";
 

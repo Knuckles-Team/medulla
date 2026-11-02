@@ -13,6 +13,10 @@
 //! * `decision_pointers` -- every governed pointer move (adapter, generation)
 //!   of the caller's tenant.
 
+use medulla_decision_stats::{
+    decision::retrieval::class_usage, decision::retrieval::hard_negatives,
+    decision::retrieval::proven_paths, decision::retrieval::Verdict,
+};
 use medulla_decision_types::decision::statistical::retrieval_pointer::PointerEvent;
 use medulla_decision_types::{
     decision::statistical::retrieval::ClassUsage, decision::statistical::retrieval::HardNegative,
@@ -20,7 +24,6 @@ use medulla_decision_types::{
     decision::statistical::retrieval::RetrievalPathTemplate,
     decision::statistical::retrieval::ReturnedEvidence,
 };
-use medulla_decision_stats::{decision::retrieval::class_usage, decision::retrieval::hard_negatives, decision::retrieval::proven_paths, decision::retrieval::Verdict};
 use medulla_tables::schema::ColumnType;
 use medulla_types::solve_scalar::digest_text;
 use serde_json::Value;

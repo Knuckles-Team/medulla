@@ -24,11 +24,11 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use medulla_types::acl::{AgentIdentity, AgentRole};
 use medulla_core::registry::GraphRegistry;
 use medulla_server_api::api::persistence::PersistenceBackend;
-use medulla_wire::pgwire;
 use medulla_server_api::state::ServerState;
+use medulla_types::acl::{AgentIdentity, AgentRole};
+use medulla_wire::pgwire;
 
 fn sql_test_persist_dir() -> String {
     test_support::sql_test_persist_dir("pgwire")
@@ -525,18 +525,20 @@ impl PersistenceBackend for RecordingBackend {
                 ))
             }
         };
-        Ok(medulla_protocol_types::mutation_batch::MutationBatchCommit {
-            record: medulla_protocol_types::mutation_batch::MutationBatchRecord {
-                batch: args.batch.clone(),
+        Ok(
+            medulla_protocol_types::mutation_batch::MutationBatchCommit {
+                record: medulla_protocol_types::mutation_batch::MutationBatchRecord {
+                    batch: args.batch.clone(),
+                    identity: args.batch.identity.clone(),
+                    status: medulla_protocol_types::mutation_batch::MutationBatchStatus::Committed,
+                    committed_version,
+                    result_msgpack: args.result_msgpack.map(|b| b.to_vec()),
+                    committed_at_ms: args.committed_at_ms,
+                },
                 identity: args.batch.identity.clone(),
-                status: medulla_protocol_types::mutation_batch::MutationBatchStatus::Committed,
-                committed_version,
-                result_msgpack: args.result_msgpack.map(|b| b.to_vec()),
-                committed_at_ms: args.committed_at_ms,
+                replayed: false,
             },
-            identity: args.batch.identity.clone(),
-            replayed: false,
-        })
+        )
     }
     fn shutdown(&self) {}
 }

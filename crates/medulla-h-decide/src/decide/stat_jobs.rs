@@ -16,6 +16,12 @@ use std::time::Instant;
 use tracing::Instrument;
 
 use medulla_agent_types::agent_component::AgentComponentKind;
+use medulla_decision_stats::{
+    decision::admission::admit, decision::admission::AdmissionRules, decision::admission::Admitted,
+    decision::admission::Regime,
+};
+use medulla_decision_stats::{decision::evaluate::evaluate, decision::evaluate::EvalSpec};
+use medulla_decision_stats::{decision::fit::fit, decision::fit::FitSpec};
 use medulla_decision_types::decision::statistical::dataset::LabelledDataset;
 use medulla_decision_types::decision::statistical::features::FeatureSchemaBody;
 use medulla_decision_types::decision::statistical::head::DecisionHeadBody;
@@ -36,9 +42,6 @@ use medulla_decision_types::{
     decision::DecisionJobOutput, decision::DecisionJobRecord, decision::DecisionJobState,
     decision::EvalCandidate, decision::StatisticalPolicy, decision::DECISION_JOB_SCHEMA_VERSION,
 };
-use medulla_decision_stats::{decision::admission::admit, decision::admission::AdmissionRules, decision::admission::Admitted, decision::admission::Regime};
-use medulla_decision_stats::{decision::evaluate::evaluate, decision::evaluate::EvalSpec};
-use medulla_decision_stats::{decision::fit::fit, decision::fit::FitSpec};
 use medulla_types::contract::BoundedVec;
 use medulla_types::solve_scalar::digest_text;
 
@@ -46,9 +49,6 @@ use super::stat_log::{logged_dataset, LogReader};
 use super::stat_support::{pinned_body, refusal, resolve_policy, ResolvedPolicy};
 use super::telemetry;
 use super::SharedState;
-use medulla_protocol_types::protocol::Response;
-use medulla_protocol_types::protocol::ResultPayload;
-use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_persistence_records::agent_library::AgentLibraryStore;
 use medulla_persistence_records::decision_jobs::decode_artifact;
 use medulla_persistence_records::decision_jobs::draft_key;
@@ -57,6 +57,9 @@ use medulla_persistence_records::decision_jobs::job_key;
 use medulla_persistence_records::decision_jobs::receipt_key;
 use medulla_persistence_records::decision_jobs::receipt_threshold_key;
 use medulla_persistence_records::decision_jobs::receipt_time_key;
+use medulla_protocol_types::protocol::Response;
+use medulla_protocol_types::protocol::ResultPayload;
+use medulla_server_api::authority_context::VerifiedRequestContext;
 
 /// The label a failed blocking store task names.
 const BLOCKING_TASK: &str = "decision job";
@@ -588,11 +591,11 @@ async fn serve_fit(
                 &request,
                 now_ms,
             );
-            let job =
-                medulla_server_api::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
-                    submit_job(&store, &id, || run_fit(&store, &reader, &request))
-                })
-                .await?;
+            let job = medulla_server_api::api::dispatch_support::blocking_task(
+                BLOCKING_TASK,
+                move || submit_job(&store, &id, || run_fit(&store, &reader, &request)),
+            )
+            .await?;
             ResultPayload::of::<DecisionFitSubmit>(job)
         }
         DecisionFitOp::Status { request } => ResultPayload::of::<DecisionFitStatus>(stored_job(
@@ -622,11 +625,11 @@ async fn serve_eval(
                 &request,
                 now_ms,
             );
-            let job =
-                medulla_server_api::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
-                    submit_job(&store, &id, || run_eval_job(&store, &reader, &request))
-                })
-                .await?;
+            let job = medulla_server_api::api::dispatch_support::blocking_task(
+                BLOCKING_TASK,
+                move || submit_job(&store, &id, || run_eval_job(&store, &reader, &request)),
+            )
+            .await?;
             ResultPayload::of::<DecisionEvalSubmit>(job)
         }
         DecisionEvalOp::Status { request } => ResultPayload::of::<DecisionEvalStatus>(stored_job(

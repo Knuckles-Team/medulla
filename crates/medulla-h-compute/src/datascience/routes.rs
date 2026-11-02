@@ -90,7 +90,9 @@ fn handle_primitives(req_id: u64, method: Method) -> Result<Response, Method> {
             x,
             y,
             params,
-        } => match medulla_compute::datascience::estimators::fit_estimator(&estimator, &x, &y, &params) {
+        } => match medulla_compute::datascience::estimators::fit_estimator(
+            &estimator, &x, &y, &params,
+        ) {
             Ok(model) => Response::ok(req_id, ResultPayload::of::<results::DsFitEstimator>(model)),
             Err(e) => Response::err(req_id, e),
         },

@@ -45,7 +45,8 @@ fn load_set_round_trips() {
         answer
     );
     assert_eq!(
-        serde_json::to_value(medulla_decision_types::decision::statistical::QuestionKind::LoadSet).unwrap(),
+        serde_json::to_value(medulla_decision_types::decision::statistical::QuestionKind::LoadSet)
+            .unwrap(),
         "load_set"
     );
 }

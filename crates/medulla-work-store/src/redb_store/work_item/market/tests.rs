@@ -4,11 +4,20 @@
 //! the engine-derived evidence write-back. Deterministic: every clock is an
 //! argument.
 
-use medulla_work_types::{work_market::evidence_digest, work_market::gap_work_item_id, work_market::BlastRadius, work_market::GapEvidenceInput, work_market::GapListRequest, work_market::GapSettleOutcome, work_market::GapSettleRequest, work_market::GapSettled, work_market::GapStatus, work_market::GapTransitionOutcome, work_market::GapTransitionRequest, work_market::GapTransitionTarget, work_market::GapTransitioned, work_market::GapUpsertOutcome, work_market::GapUpsertRequest, work_market::GapUpserted, work_market::GapWorkSpec, work_market::WorkOffer, work_market::WorkOfferPutOutcome, work_market::WorkOfferPutRequest, work_market::WorkOfferRecorded};
 use medulla_result_types::{
     epistemic_operations::ClaimWorkItemRequest,
     epistemic_operations::ClaimWorkItemRequestSchemaVersion,
     epistemic_operations::ClaimWorkItemResult,
+};
+use medulla_work_types::{
+    work_market::evidence_digest, work_market::gap_work_item_id, work_market::BlastRadius,
+    work_market::GapEvidenceInput, work_market::GapListRequest, work_market::GapSettleOutcome,
+    work_market::GapSettleRequest, work_market::GapSettled, work_market::GapStatus,
+    work_market::GapTransitionOutcome, work_market::GapTransitionRequest,
+    work_market::GapTransitionTarget, work_market::GapTransitioned, work_market::GapUpsertOutcome,
+    work_market::GapUpsertRequest, work_market::GapUpserted, work_market::GapWorkSpec,
+    work_market::WorkOffer, work_market::WorkOfferPutOutcome, work_market::WorkOfferPutRequest,
+    work_market::WorkOfferRecorded,
 };
 
 use super::super::test_shard::{apply, open, GRAPH};

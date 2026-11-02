@@ -1,19 +1,110 @@
+#[cfg(any(
+    feature = "mining",
+    feature = "graphlearn",
+    feature = "ml-pipeline",
+    feature = "modality-serving",
+    feature = "query",
+    feature = "cypher",
+    feature = "graphql",
+    feature = "rdf"
+))]
 use std::sync::Arc;
 
+#[cfg(any(
+    feature = "mining",
+    feature = "graphlearn",
+    feature = "ml-pipeline",
+    feature = "modality-serving",
+    feature = "query",
+    feature = "cypher",
+    feature = "graphql",
+    feature = "rdf"
+))]
 use medulla_capabilities::DurabilityDomain;
 
-use medulla_server_auth::access::check_graph_access;
-use medulla_server_api::api::persistence::PersistenceBackend;
+#[cfg(any(
+    feature = "mining",
+    feature = "graphlearn",
+    feature = "ml-pipeline",
+    feature = "modality-serving",
+    feature = "query",
+    feature = "cypher",
+    feature = "graphql",
+    feature = "rdf"
+))]
 use medulla_graph_core::graph::GraphCore;
+#[cfg(any(
+    feature = "mining",
+    feature = "graphlearn",
+    feature = "ml-pipeline",
+    feature = "modality-serving",
+    feature = "query",
+    feature = "cypher",
+    feature = "graphql",
+    feature = "rdf"
+))]
 use medulla_isolation::isolation::AccessLevel;
 use medulla_protocol_types::protocol::Method;
+#[cfg(any(
+    feature = "mining",
+    feature = "graphlearn",
+    feature = "ml-pipeline",
+    feature = "modality-serving",
+    feature = "query",
+    feature = "cypher",
+    feature = "graphql",
+    feature = "rdf"
+))]
 use medulla_protocol_types::protocol::Response;
+#[cfg(any(
+    feature = "mining",
+    feature = "graphlearn",
+    feature = "ml-pipeline",
+    feature = "modality-serving",
+    feature = "query",
+    feature = "cypher",
+    feature = "graphql",
+    feature = "rdf"
+))]
 use medulla_protocol_types::protocol::ResultPayload;
+#[cfg(any(
+    feature = "mining",
+    feature = "graphlearn",
+    feature = "ml-pipeline",
+    feature = "modality-serving",
+    feature = "query",
+    feature = "cypher",
+    feature = "graphql",
+    feature = "rdf"
+))]
+use medulla_server_api::api::persistence::PersistenceBackend;
+#[cfg(any(
+    feature = "mining",
+    feature = "graphlearn",
+    feature = "ml-pipeline",
+    feature = "modality-serving",
+    feature = "query",
+    feature = "cypher",
+    feature = "graphql",
+    feature = "rdf"
+))]
+use medulla_server_auth::access::check_graph_access;
 
+use super::method_variant_name;
+#[cfg(any(
+    feature = "mining",
+    feature = "graphlearn",
+    feature = "ml-pipeline",
+    feature = "modality-serving",
+    feature = "query",
+    feature = "cypher",
+    feature = "graphql",
+    feature = "rdf"
+))]
 use super::{
     advance_authoritative_manifest, commit_finalize, commit_mutation, commit_prepare,
     commit_staged_replay_probe, commit_staged_with_receipt, consensus_apply_is_authorized,
-    diff_and_serialize_staged_mutation, method_variant_name, resolve_authoritative_base_snapshot,
+    diff_and_serialize_staged_mutation, resolve_authoritative_base_snapshot,
     CommitFinalizeOptions, CommitPrep, DurableBatchAttempt, DurableBatchTarget, MutationCtx,
     MutationPlan, StagedMutation, StagedReceipt,
 };
@@ -39,6 +130,12 @@ use super::{
 ///   gated behind Write access or persisted as a phantom mutation (the bug this
 ///   whole function exists to prevent -- see the module docs' RUNTIME_CONDITIONAL
 ///   discussion).
+#[cfg(any(
+    feature = "mining",
+    feature = "graphlearn",
+    feature = "ml-pipeline",
+    feature = "modality-serving"
+))]
 pub async fn commit_conditional_mutation<F>(
     ctx: &MutationCtx<'_>,
     plan: &MutationPlan,
@@ -90,6 +187,12 @@ where
 /// read-only Cypher / GraphQL `query` is a Read-authz passthrough with NO
 /// durability/audit/CDC, while a SQL write / Cypher `CREATE|SET|DELETE` / GraphQL
 /// `mutation` goes through the full Write-authz commit.
+#[cfg(any(
+    feature = "query",
+    feature = "cypher",
+    feature = "graphql",
+    feature = "rdf"
+))]
 pub async fn commit_conditional_mutation_async<F, Fut>(
     ctx: &MutationCtx<'_>,
     plan: &MutationPlan,
@@ -109,6 +212,16 @@ where
     response
 }
 
+#[cfg(any(
+    feature = "mining",
+    feature = "graphlearn",
+    feature = "ml-pipeline",
+    feature = "modality-serving",
+    feature = "query",
+    feature = "cypher",
+    feature = "graphql",
+    feature = "rdf"
+))]
 pub(super) async fn commit_conditional_mutation_async_inner<F, Fut>(
     ctx: &MutationCtx<'_>,
     plan: &MutationPlan,
@@ -127,7 +240,8 @@ where
     // Mutating path: stage against a complete authoritative image. Query/RDF
     // handlers never receive the live serving core, so an execution or durable
     // commit failure cannot leak a partial mutation into RAM.
-    let _mutation_guard = medulla_server_api::routed_write_coalescer::lock_graph(ctx.graph_name).await;
+    let _mutation_guard =
+        medulla_server_api::routed_write_coalescer::lock_graph(ctx.graph_name).await;
     let prep = match commit_prepare(ctx, plan, method) {
         Ok(p) => p,
         Err(short_circuit) => return short_circuit,
@@ -199,6 +313,16 @@ where
 /// The `!mutates_now` arm of [`commit_conditional_mutation_async_inner`]: Read-ACL
 /// only, apply, and NOTHING durable/audited/CDC-emitted/cached — exactly what any
 /// non-mutating graph read does.
+#[cfg(any(
+    feature = "mining",
+    feature = "graphlearn",
+    feature = "ml-pipeline",
+    feature = "modality-serving",
+    feature = "query",
+    feature = "cypher",
+    feature = "graphql",
+    feature = "rdf"
+))]
 pub(super) async fn commit_conditional_read_only<F, Fut>(
     ctx: &MutationCtx<'_>,
     apply: F,
@@ -229,6 +353,16 @@ where
 /// path — the async-apply twin of [`commit_mutation_body_replay_check`]. `Some(
 /// response)` is the caller's immediate return; `None` means no prior committed
 /// batch exists.
+#[cfg(any(
+    feature = "mining",
+    feature = "graphlearn",
+    feature = "ml-pipeline",
+    feature = "modality-serving",
+    feature = "query",
+    feature = "cypher",
+    feature = "graphql",
+    feature = "rdf"
+))]
 pub(super) async fn commit_conditional_replay_check(
     ctx: &MutationCtx<'_>,
     plan: &MutationPlan,
@@ -263,6 +397,16 @@ pub(super) async fn commit_conditional_replay_check(
 /// [`super::commit_paths::commit_mutation_body_stage_and_diff`].
 /// Query handlers never receive the live serving core, so an execution or durable
 /// commit failure cannot leak a partial mutation into RAM.
+#[cfg(any(
+    feature = "mining",
+    feature = "graphlearn",
+    feature = "ml-pipeline",
+    feature = "modality-serving",
+    feature = "query",
+    feature = "cypher",
+    feature = "graphql",
+    feature = "rdf"
+))]
 pub(super) async fn commit_conditional_stage_and_diff<F, Fut>(
     ctx: &MutationCtx<'_>,
     persistence: &Arc<dyn PersistenceBackend>,
@@ -296,7 +440,8 @@ where
     // mutation lands, so this call is a fast no-op for those (no diff to find);
     // for a native Cypher write it is the ONLY enforcement point.
     #[cfg(feature = "shacl")]
-    if let Err(rejection) = medulla_server_api::icv_guard::check_native_write(ctx.graph_name, ctx.core, &staged)
+    if let Err(rejection) =
+        medulla_server_api::icv_guard::check_native_write(ctx.graph_name, ctx.core, &staged)
     {
         return Err(Response::err(
             ctx.req_id,
@@ -318,6 +463,16 @@ where
 /// [`commit_conditional_mutation_async_inner`]'s durable path — the async-apply
 /// twin of [`commit_mutation_body_commit_staged`]. The default mutation surface
 /// (RDF vs Query) is derived from `method` since this gateway serves both.
+#[cfg(any(
+    feature = "mining",
+    feature = "graphlearn",
+    feature = "ml-pipeline",
+    feature = "modality-serving",
+    feature = "query",
+    feature = "cypher",
+    feature = "graphql",
+    feature = "rdf"
+))]
 pub(super) async fn commit_conditional_commit_staged(
     ctx: &MutationCtx<'_>,
     plan: &MutationPlan,
@@ -360,6 +515,7 @@ pub fn is_query_gateway_method(m: &Method) -> bool {
 /// fences, idempotency and outbox, but they must not also be wrapped in a second
 /// graph-snapshot batch. Ordinary graph SQL/GraphQL mutations still return `false`
 /// and use the universal staged gateway.
+#[cfg(any(feature = "query", feature = "cypher", feature = "graphql"))]
 pub fn is_query_native_coordinator(m: &Method) -> bool {
     #[cfg(feature = "query")]
     if let Method::Sql { query, .. } = m {

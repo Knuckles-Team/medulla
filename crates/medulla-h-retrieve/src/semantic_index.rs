@@ -39,12 +39,12 @@ use medulla_index_types::{
 };
 use tokio::sync::RwLock;
 
-use medulla_protocol_types::protocol::Response;
-use medulla_protocol_types::protocol::ResultPayload;
-use medulla_server_api::carrier::CarrierAuthority;
 use crate::semantic_index_runtime::open_semantic_service;
 use crate::semantic_index_runtime::semantic_cursor_secret;
 use crate::semantic_index_runtime::SemanticIndexServerAdapter;
+use medulla_protocol_types::protocol::Response;
+use medulla_protocol_types::protocol::ResultPayload;
+use medulla_server_api::carrier::CarrierAuthority;
 use medulla_server_api::state::ServerState;
 
 pub(super) struct SemanticIndexContext<'a> {

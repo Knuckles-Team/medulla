@@ -2,18 +2,18 @@
 //! verified context, exact identity scopes are required, every secret is
 //! hashed and cleared before apply, and the floors refuse weak secrets.
 
-use medulla_server_identity::dispatch::identity_store::*;
-use std::sync::Arc;
+use medulla_identity_types::identity::*;
 use medulla_identity_types::{identity::IdentityOp, identity::IdentityStamp};
-use tokio::sync::RwLock;
-use medulla_server_identity::dispatch::elevation::ElevationStampAuthority;
-use medulla_server_api::state::ServerState;
-use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
+use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::identity_view::identity_actor;
-use medulla_identity_types::identity::*;
+use medulla_server_api::state::ServerState;
+use medulla_server_identity::dispatch::elevation::ElevationStampAuthority;
+use medulla_server_identity::dispatch::identity_store::*;
+use std::sync::Arc;
+use tokio::sync::RwLock;
 
 const PASSWORD: &str = "correct horse battery staple";
 const SESSION: &str = "sess-0123456789abcdefghijklmnopqrstuv";
@@ -23,8 +23,8 @@ use super::super::test_support::{
 };
 
 mod approval_keys;
-mod resolution_context;
 mod refusal_contract;
+mod resolution_context;
 mod revocation;
 mod stale_verdict;
 
@@ -423,7 +423,9 @@ async fn caller_cannot_choose_session_record_provenance() {
     };
     assert_eq!(
         stamp.session_tenant,
-        medulla_server_identity::dispatch::identity_store::resolution_context::record_tenant(&context)
+        medulla_server_identity::dispatch::identity_store::resolution_context::record_tenant(
+            &context
+        )
     );
     assert_ne!(
         stamp.minted_session_ref.as_deref(),

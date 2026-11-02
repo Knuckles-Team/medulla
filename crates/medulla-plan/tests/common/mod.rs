@@ -8,9 +8,9 @@
 
 #![allow(dead_code)] // each test binary uses a different subset of these helpers.
 
+use medulla_exec::rowset::RowSet;
 use medulla_graph_core::graph::GraphCore;
 use medulla_graph_core::graph::GraphView;
-use medulla_exec::rowset::RowSet;
 use medulla_semantic_index::semantic::SemanticStore;
 use serde_json::json;
 

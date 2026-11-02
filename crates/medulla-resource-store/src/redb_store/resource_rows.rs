@@ -1,7 +1,7 @@
 //! Durable resource row types and their snapshot projections.
+use super::resource::*;
 use medulla_store::redb_store::store_prelude::*;
 use medulla_store::redb_store::*;
-use super::resource::*;
 
 /// Authoritative reservation row.  The immutable WorkItem admission record is
 /// retained after release/reclaim; held totals and fairness debt are updated only

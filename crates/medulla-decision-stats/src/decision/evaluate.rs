@@ -29,8 +29,8 @@ use super::head_eval::{
 use super::promotion::{Observation, Protocol};
 use super::quant::{item_rows, q32, unit_wire, value_of};
 use super::refusal::{bounded, RefusalResult};
-use medulla_numeric::{calibration::metrics::reliability, calibration::metrics::BinCount};
 use medulla_numeric::detkernel::math;
+use medulla_numeric::{calibration::metrics::reliability, calibration::metrics::BinCount};
 use medulla_numeric::{risk::clopper_pearson, risk::BinomialCounts, risk::IntervalSide};
 
 /// Domain of an evaluation receipt digest.

@@ -7,8 +7,8 @@ use medulla_rdf::sparql::Projection;
 use medulla_rdf::update::GraphStore;
 use tokio::sync::RwLock;
 
-use medulla_server_api::state::ServerState;
 use medulla_graph_core::graph::GraphCore;
+use medulla_server_api::state::ServerState;
 
 /// A snapshot of the caller-authorized graphs at plan time: each entry's
 /// `(type, core)` if the graph already exists live in the registry, or `None`

@@ -6,12 +6,12 @@ use super::{
     prepublish_success, response_dedup_key, DurableBatchAttempt, DurableBatchTarget, MutationCtx,
     MutationPlan,
 };
-use medulla_server_auth::access::check_graph_access;
 use medulla_graph_core::graph::GraphCore;
 use medulla_isolation::isolation::AccessLevel;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
+use medulla_server_auth::access::check_graph_access;
 
 /// Pre-apply state carried from [`commit_prepare`] to [`commit_finalize`], so the
 /// SAME steps-1-3 / steps-5-8 logic backs BOTH the sync-apply [`commit_mutation`]
@@ -293,7 +293,8 @@ where
     // lock ONCE PER BATCH in the routed-write-coalescer worker and calls
     // [`commit_mutation_body`] once per queued op inside that one hold — see its
     // doc comment for the invariant this preserves and why it must.
-    let _mutation_guard = medulla_server_api::routed_write_coalescer::lock_graph(ctx.graph_name).await;
+    let _mutation_guard =
+        medulla_server_api::routed_write_coalescer::lock_graph(ctx.graph_name).await;
     commit_mutation_body(ctx, plan, method, apply).await
 }
 

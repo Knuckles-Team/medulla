@@ -7,8 +7,8 @@
 //! a scoped one. The control scope is the only physical mutation owner for
 //! these rows.
 
-use medulla_store::{redb_store::shard::Shard, redb_store::shard::ShardWrite};
 use super::*;
+use medulla_store::{redb_store::shard::Shard, redb_store::shard::ShardWrite};
 
 /// The maintenance claim key for ONE ATTEMPT at a control-row write.
 ///

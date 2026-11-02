@@ -6,16 +6,9 @@
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
 
-/// Structured hierarchical retrieval (CONCEPT:MEDULLA-KG.retrieval.bounded-drill) — the LeanRAG method as a
-/// library API over the MEDULLA-220 summary tier: retrieve at the summary/abstraction
-/// level, then drill down `SUMMARIZES`/`CONSOLIDATES` provenance to the supporting
-/// leaves, assembling a de-duplicated multi-level context that beats flat top-k on
-/// coverage. Pure-Rust + dep-free (Pi-tier clean): it reads the graph and ANN index
-/// through the small [`leanrag::GraphTopology`] / [`leanrag::AnnIndex`] accessor
-/// traits, so it links no DataFusion and edits no medulla-core. It is a retrieval helper
-/// a caller composes ABOVE the planner, NOT a wire `Op`.
+/// Document boosts from retrieval feedback (MEDULLA-FEDERATED-QUERY-R705).
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod leanrag;
+pub mod feedback_boost;
 /// RowSet v2, additive (CONCEPT:MEDULLA-KG.query.knowledge-set): [`knowledge::KnowledgeSet`] is the
 /// enriched shape (kind/confidence/bitemporal window/column-projection/provenance+policy
 /// frames) a caller builds from a FINISHED `RowSet` + the `GraphView` it ran over — a
@@ -37,15 +30,22 @@ pub mod knowledge;
 #[cfg(feature = "knowledge-batch")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod knowledge_batch;
-#[cfg(feature = "knowledge-batch")]
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod result_stream;
-/// Document boosts from retrieval feedback (MEDULLA-FEDERATED-QUERY-R705).
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod feedback_boost;
 /// Agent knowledge scopes applied before truncation (MEDULLA-FEDERATED-QUERY-R704).
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod knowledge_scope;
+/// Structured hierarchical retrieval (CONCEPT:MEDULLA-KG.retrieval.bounded-drill) — the LeanRAG method as a
+/// library API over the MEDULLA-220 summary tier: retrieve at the summary/abstraction
+/// level, then drill down `SUMMARIZES`/`CONSOLIDATES` provenance to the supporting
+/// leaves, assembling a de-duplicated multi-level context that beats flat top-k on
+/// coverage. Pure-Rust + dep-free (Pi-tier clean): it reads the graph and ANN index
+/// through the small [`leanrag::GraphTopology`] / [`leanrag::AnnIndex`] accessor
+/// traits, so it links no DataFusion and edits no medulla-core. It is a retrieval helper
+/// a caller composes ABOVE the planner, NOT a wire `Op`.
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod leanrag;
+#[cfg(feature = "knowledge-batch")]
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod result_stream;
 /// Retrieval sufficiency, selection and hierarchy decisions (MEDULLA-FEDERATED-QUERY-R081).
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod retrieval_verdict;

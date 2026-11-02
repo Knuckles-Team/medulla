@@ -13,9 +13,9 @@ use tokio::sync::RwLock;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
+use medulla_server_api::state::ServerState;
 use medulla_server_auth::auth::build_current_test_request;
 use medulla_server_auth::auth::dispatch_test_on_heap;
-use medulla_server_api::state::ServerState;
 
 const SECRET: &str = "eh524-derived-series";
 const TENANT: &str = "tenant-shared";
@@ -43,7 +43,10 @@ impl Fixture {
                 .unwrap()
                 .as_nanos()
         ));
-        let mut state = medulla_server::seams_install::new_state_for_test(SECRET, ServerState::test_isolation("system"));
+        let mut state = medulla_server::seams_install::new_state_for_test(
+            SECRET,
+            ServerState::test_isolation("system"),
+        );
         state.tsdb_store = Some(super::open_test_series_store(&path));
         Self {
             state: Arc::new(RwLock::new(state)),

@@ -160,7 +160,8 @@ async fn dispatch_catalog_admin_methods(
     ControlFlow::Break(match method {
         Method::ConnectorPack { op } => {
             dispatch_boxed(async {
-                medulla_h_admin::admin::handle_connector_pack(state, req.id, verified_context, *op).await
+                medulla_h_admin::admin::handle_connector_pack(state, req.id, verified_context, *op)
+                    .await
             })
             .await
         }

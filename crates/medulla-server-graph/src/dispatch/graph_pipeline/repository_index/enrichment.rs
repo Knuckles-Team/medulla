@@ -42,9 +42,7 @@ struct PendingSnapshot {
 /// Encode one complete immutable source as the only canonical pending intent
 /// shape. Source commits and authorized replacements use the same bounded
 /// format; neither may publish a partial page as a source snapshot.
-pub fn intent_for_snapshot(
-    snapshot: EligibleSnapshot,
-) -> Result<MutationOutboxIntent, String> {
+pub fn intent_for_snapshot(snapshot: EligibleSnapshot) -> Result<MutationOutboxIntent, String> {
     snapshot.validate().map_err(|error| {
         format!("CONFLICT: repository enrichment snapshot is invalid: {error:?}")
     })?;

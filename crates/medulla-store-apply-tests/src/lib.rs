@@ -8,19 +8,19 @@
 #![deny(missing_docs)]
 #![cfg(test)]
 
+use medulla_lane_store::redb_store::development_lane;
+use medulla_resource_store::redb_store::resource::*;
+use medulla_resource_store::redb_store::resource_rows::*;
 use medulla_store::redb_store::store_prelude::*;
 use medulla_store::redb_store::*;
-use medulla_store_apply::redb_store::control;
 use medulla_store_apply::redb_store::checkpoint::*;
+use medulla_store_apply::redb_store::control;
 use medulla_store_apply::redb_store::crossmodal::*;
 use medulla_store_apply::redb_store::dump::*;
 use medulla_store_apply::redb_store::store_cleanup::*;
 use medulla_store_apply::redb_store::store_control::*;
 use medulla_store_apply::redb_store::store_mutation::*;
 use medulla_store_apply::redb_store::store_retry::*;
-use medulla_lane_store::redb_store::development_lane;
-use medulla_resource_store::redb_store::resource::*;
-use medulla_resource_store::redb_store::resource_rows::*;
 use medulla_work_store::redb_store::work_item;
 
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)

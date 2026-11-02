@@ -10,12 +10,12 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
+use medulla_mutation_types::write_back::{SourceChangeSet, WriteBackOp};
+use medulla_persistence_records::agent_library::AgentLibraryStore;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
 use medulla_server_api::authority_context::VerifiedRequestContext;
-use medulla_persistence_records::agent_library::AgentLibraryStore;
 use medulla_server_api::state::ServerState;
-use medulla_mutation_types::write_back::{SourceChangeSet, WriteBackOp};
 
 pub async fn handle_write_back(
     state: &Arc<RwLock<ServerState>>,

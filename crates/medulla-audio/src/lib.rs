@@ -50,7 +50,6 @@
 //! yet — see the module doc for the exact authority boundary and what is
 //! (and is not) proven there. No voice model was vendored or downloaded.
 
-
 mod audio;
 mod header;
 

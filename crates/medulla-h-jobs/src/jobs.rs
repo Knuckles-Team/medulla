@@ -47,13 +47,13 @@ use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, OnceLock};
 use tokio::sync::RwLock;
 
-use medulla_work_types::jobs::JobKind;
-use medulla_work_types::jobs::JobOp;
-use medulla_work_types::jobs::SubmitJobSpec;
 use medulla_graph_core::graph::GraphCore;
 use medulla_jobs::model::InputSnapshotHandle;
 use medulla_jobs::store::{JobStore, SubmitSpec};
 use medulla_types::contract::Nonce;
+use medulla_work_types::jobs::JobKind;
+use medulla_work_types::jobs::JobOp;
+use medulla_work_types::jobs::SubmitJobSpec;
 
 #[cfg(feature = "program-optimization")]
 use medulla_modality::{OpaqueRef, PolicyEnvelope};
@@ -79,12 +79,12 @@ const MAX_JOB_PUBLICATION_PLAN_BYTES: usize = 16 * 1024 * 1024;
 
 #[cfg(test)]
 mod association_hash_tests;
-#[cfg(test)]
-mod graph_tests;
 mod core;
 mod executor_claim;
 mod executor_loop;
 mod executor_program;
+#[cfg(test)]
+mod graph_tests;
 mod helpers;
 #[cfg(feature = "knowledge-batch")]
 mod native_validation;
@@ -99,7 +99,6 @@ mod submit;
 mod worker_publish;
 mod worker_requests;
 mod worker_validation;
-
 
 /// Jobs handler behaviour installed on the seam registry's `jobs` slot.
 pub struct JobsSeam;
@@ -327,11 +326,14 @@ fn handle_status_op(
     }
 }
 
-
 async fn resolve_core_ref(
     state: &Arc<RwLock<ServerState>>,
     graph_ref: &str,
-) -> Option<(String, medulla_protocol_types::protocol::GraphType, Arc<GraphCore>)> {
+) -> Option<(
+    String,
+    medulla_protocol_types::protocol::GraphType,
+    Arc<GraphCore>,
+)> {
     let s = state.read().await;
     resolve_opaque_graph_ref(&s.registry, graph_ref)
 }
@@ -376,7 +378,11 @@ fn opaque_graph_ref_index() -> &'static std::sync::RwLock<HashMap<String, String
 fn resolve_opaque_graph_ref(
     registry: &medulla_core::registry::GraphRegistry,
     graph_ref: &str,
-) -> Option<(String, medulla_protocol_types::protocol::GraphType, Arc<GraphCore>)> {
+) -> Option<(
+    String,
+    medulla_protocol_types::protocol::GraphType,
+    Arc<GraphCore>,
+)> {
     let index = opaque_graph_ref_index();
 
     let cached_name = index

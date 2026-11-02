@@ -9,7 +9,9 @@ use std::time::Instant;
 use medulla_decision_outcome_types::decision::web_fetch_selection::{
     SelectWebPagesRequest, WebCandidate,
 };
-use medulla_decision_stats::{decision::web_fetch_selection::select_web_pages, decision::web_fetch_selection::HeldPage};
+use medulla_decision_stats::{
+    decision::web_fetch_selection::select_web_pages, decision::web_fetch_selection::HeldPage,
+};
 
 const NOW: u64 = 1_800_000_000_000;
 const SAMPLES: usize = 2_000;

@@ -1,5 +1,5 @@
-use medulla_server_graph::dispatch::graph_pipeline::dispatch_graph_op;
 use crate::dispatch::*;
+use medulla_server_graph::dispatch::graph_pipeline::dispatch_graph_op;
 
 mod fleet_catalog;
 #[cfg(all(feature = "raft", feature = "jobs"))]
@@ -17,9 +17,7 @@ pub use fleet_catalog::handle_fleet_catalog;
 #[cfg(all(feature = "raft", feature = "jobs"))]
 use publication::{execute_consensus_job_publication, JobPublicationExecution};
 pub use registry::verified_served_registration;
-pub use registry::{
-    handle_list_registered_servers, handle_register_server, ServerRegistration,
-};
+pub use registry::{handle_list_registered_servers, handle_register_server, ServerRegistration};
 #[cfg(feature = "raft")]
 use replicated::capability_authority_unavailable;
 #[cfg(not(feature = "raft"))]

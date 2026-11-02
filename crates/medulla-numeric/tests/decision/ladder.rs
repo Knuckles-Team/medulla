@@ -1,6 +1,12 @@
 //! The act/abstain ladder, keyed exploration and audit sampling (EH-020,
 //! EH-026), including the propensity and exploration negative fixtures.
 
+use medulla_decision_stats::decision::head_eval::Evaluated;
+use medulla_decision_stats::{
+    decision::exploration::audit, decision::exploration::permit, decision::exploration::plan,
+    decision::exploration::ExplorationPermit,
+};
+use medulla_decision_stats::{decision::ladder::decide, decision::ladder::LadderInputs};
 use medulla_decision_types::{
     decision::statistical::head::DecisionHeadBody,
     decision::statistical::head::FeatureStandardisation, decision::statistical::head::FittedRegime,
@@ -19,9 +25,6 @@ use medulla_decision_types::{
     decision::ColdStart, decision::ExplorationBudget, decision::QuantScaleTag,
     decision::QuantisedValue,
 };
-use medulla_decision_stats::{decision::exploration::audit, decision::exploration::permit, decision::exploration::plan, decision::exploration::ExplorationPermit};
-use medulla_decision_stats::decision::head_eval::Evaluated;
-use medulla_decision_stats::{decision::ladder::decide, decision::ladder::LadderInputs};
 
 use super::common::{bounded, option_ids, policy, rational, statistical};
 use super::scorer_promotion::{human_scorer, outcome};

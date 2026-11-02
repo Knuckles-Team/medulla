@@ -52,9 +52,7 @@ pub fn decode_mutation_outbox_record(bytes: &[u8]) -> Result<MutationOutboxRecor
     Ok(record)
 }
 
-pub fn decode_mutation_projection_cursor(
-    bytes: &[u8],
-) -> Result<MutationProjectionCursor, String> {
+pub fn decode_mutation_projection_cursor(bytes: &[u8]) -> Result<MutationProjectionCursor, String> {
     let cursor: MutationProjectionCursor = decode_durable(bytes)?;
     cursor.validate()?;
     if !matches!(cursor.committed_version, CommittedVersion::Graph { source, .. } if source != 0) {
@@ -63,10 +61,7 @@ pub fn decode_mutation_projection_cursor(
     Ok(cursor)
 }
 
-pub fn validate_graph_mutation_record_sizes(
-    plaintext: &[u8],
-    stored: &[u8],
-) -> Result<(), String> {
+pub fn validate_graph_mutation_record_sizes(plaintext: &[u8], stored: &[u8]) -> Result<(), String> {
     if plaintext.len() > MAX_DURABLE_MSGPACK_BYTES {
         return Err("graph mutation record exceeds durable resource limits".to_string());
     }
@@ -84,7 +79,6 @@ pub struct DurableOutboxDelivery {
     attempt: u32,
     delivered_at_ms: Option<u64>,
 }
-
 
 pub const NODES: TableDefinition<(&str, &str), &[u8]> = TableDefinition::new("nodes");
 pub const EDGES: TableDefinition<(&str, &str, &str, u32), &[u8]> = TableDefinition::new("edges");
@@ -216,7 +210,6 @@ pub const PLAN_MATVIEWS: TableDefinition<&str, &[u8]> = TableDefinition::new("pl
 pub const MATVIEW_OPERATOR_STATE: TableDefinition<&str, &[u8]> =
     TableDefinition::new("matview_operator_state");
 
-
 /// Sweep one scope-prefixed owner table for the capability's own scope.
 pub fn retire_scoped_table<K, V>(
     write: &medulla_storage::PhysicalWriteCapability<'_, GraphShardOwner>,
@@ -229,7 +222,6 @@ where
 {
     write.scoped_owner_table_mut(definition)?.purge_scope_rows()
 }
-
 
 /// In-doubt cross-shard prepare records `(txn_id, group_id, slice-blob)` returned by
 /// the recovery scan (CONCEPT:MEDULLA-KG.storage.lane-n-increment).

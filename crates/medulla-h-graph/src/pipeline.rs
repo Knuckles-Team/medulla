@@ -16,9 +16,11 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use medulla_compute::datascience::estimators;
 use medulla_graph_algos::graphlearn::edge_fn::Basis;
-use medulla_graph_algos::graphlearn::link_predict::{self, FeatureCtx, KanLinkConfig, KanLinkModel};
-use medulla_mining::mining::classify;
+use medulla_graph_algos::graphlearn::link_predict::{
+    self, FeatureCtx, KanLinkConfig, KanLinkModel,
+};
 use medulla_graph_core::graph::GraphCore;
+use medulla_mining::mining::classify;
 use medulla_protocol_types::protocol::GraphSource;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
@@ -911,8 +913,8 @@ mod tests {
     use super::*;
     use medulla_isolation::isolation::IsolationLayer;
     use medulla_protocol_types::protocol::GraphSource;
-    use medulla_server_api::carrier::GraphReadAuthority;
     use medulla_server_api::authority_context::VerifiedRequestContext;
+    use medulla_server_api::carrier::GraphReadAuthority;
     use medulla_types::wire::{FeatureStep, ModelSpec, SplitSpec};
 
     fn node(props: Value) -> Vec<u8> {

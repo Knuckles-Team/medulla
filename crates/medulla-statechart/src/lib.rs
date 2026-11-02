@@ -56,7 +56,6 @@
 //! single-node correctness today; cluster ordering slots in where `medulla-jobs`'
 //! `mutate_job_batch` sits).
 
-
 pub mod action;
 pub mod check;
 pub mod context;

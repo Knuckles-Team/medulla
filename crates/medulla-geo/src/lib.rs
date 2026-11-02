@@ -71,7 +71,6 @@
 //! latter to keep the heavy `arrow`/`parquet` crates out of medulla-geo's dep tree). KMZ (zipped KML)
 //! is a further follow-up (it needs a zip codec).
 
-
 pub mod algebra;
 // ModalityContract PILOT retrofit (CONCEPT:E4): `impl ModalityContract for Geometry`,
 // behind the crate's own opt-in `contract` feature (default OFF). See module docs.

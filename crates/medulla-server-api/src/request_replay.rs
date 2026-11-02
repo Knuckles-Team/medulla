@@ -380,10 +380,12 @@ pub fn seal_request_replay_ledger() -> Result<usize, String> {
     Ok(0)
 }
 
-#[cfg(all(feature = "security", not(test), not(feature = "request-policy-fixture")))]
-pub fn durable_replay_ledger(
-    state_dir: Option<&str>,
-) -> Result<&'static RedbReplayLedger, String> {
+#[cfg(all(
+    feature = "security",
+    not(test),
+    not(feature = "request-policy-fixture")
+))]
+pub fn durable_replay_ledger(state_dir: Option<&str>) -> Result<&'static RedbReplayLedger, String> {
     match LEDGER.get_or_init(|| {
         let dir = std::env::var("MEDULLA_SECURITY_STATE_DIR")
             .ok()
@@ -412,7 +414,11 @@ pub fn durable_replay_ledger(
     Ok(MEMORY.get_or_init(ReplayCache::new))
 }
 
-#[cfg(all(not(feature = "security"), not(test), not(feature = "request-policy-fixture")))]
+#[cfg(all(
+    not(feature = "security"),
+    not(test),
+    not(feature = "request-policy-fixture")
+))]
 pub fn durable_replay_ledger(
     _state_dir: Option<&str>,
 ) -> Result<&'static dyn ReplayLedger, String> {

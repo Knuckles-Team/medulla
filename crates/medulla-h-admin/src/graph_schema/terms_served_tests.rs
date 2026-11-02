@@ -8,6 +8,7 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
+use medulla_catalog_types::graph_schema::{GraphSchemaClassesView, GraphSchemaSourcesView};
 use medulla_graph_core::graph::GraphSchemaSource;
 use medulla_graph_core::graph::GraphSchemaSources;
 use medulla_graph_core::graph::SchemaSourceOrigin;
@@ -15,10 +16,9 @@ use medulla_protocol_types::protocol::GraphType;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
+use medulla_server_api::state::ServerState;
 use medulla_server_auth::auth::build_current_test_request;
 use medulla_server_auth::auth::dispatch_test_on_heap;
-use medulla_server_api::state::ServerState;
-use medulla_catalog_types::graph_schema::{GraphSchemaClassesView, GraphSchemaSourcesView};
 
 const SECRET: &str = "graph-schema-classes-served-secret";
 const AGENT: &str = "schema-vocabulary-reader";
@@ -40,7 +40,10 @@ fn admin_sources(name: &str, class_iri: &str) -> Arc<GraphSchemaSources> {
 }
 
 async fn state_with_two_graphs() -> Arc<RwLock<ServerState>> {
-    let state = medulla_server::seams_install::new_state_for_test(SECRET, ServerState::test_isolation(AGENT));
+    let state = medulla_server::seams_install::new_state_for_test(
+        SECRET,
+        ServerState::test_isolation(AGENT),
+    );
     let state = Arc::new(RwLock::new(state));
     {
         let mut guard = state.write().await;

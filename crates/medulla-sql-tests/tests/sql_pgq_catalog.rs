@@ -4,12 +4,11 @@
 //! view DDL commits through.
 
 use medulla_graph_core::graph::GraphCore;
-use medulla_sql_lang::{sql::classify::classify, sql::pgq::parse_property_graph_ddl, sql::classify::StatementKind};
 use medulla_sql::sql::exec_graph_table_typed_with_tables;
-use medulla_tables::schema::TableConstraint;
+use medulla_sql_lang::{
+    sql::classify::classify, sql::classify::StatementKind, sql::pgq::parse_property_graph_ddl,
+};
 use medulla_table_store::tables::AlterPropertyGraphAction;
-use medulla_tables::schema::Column;
-use medulla_tables::schema::ColumnType;
 use medulla_table_store::tables::DropBehavior;
 use medulla_table_store::tables::ElementKind;
 use medulla_table_store::tables::GraphOwner;
@@ -21,10 +20,13 @@ use medulla_table_store::tables::PropertyGraphTxnOp;
 use medulla_table_store::tables::PropertySet;
 use medulla_table_store::tables::SqlIdentifier;
 use medulla_table_store::tables::SqlName;
-use medulla_tables::schema::TableSchema;
 use medulla_table_store::tables::TableStore;
 use medulla_table_store::tables::TableTxn;
 use medulla_table_store::tables::TxnOp;
+use medulla_tables::schema::Column;
+use medulla_tables::schema::ColumnType;
+use medulla_tables::schema::TableConstraint;
+use medulla_tables::schema::TableSchema;
 use serde_json::json;
 
 // The store's owner scope is now the mutation TENANT of its bootstrap scope
@@ -666,9 +668,10 @@ fn quoted_identifiers_in_a_persisted_graph_cannot_escape_the_emitted_sql() {
     .unwrap() else {
         panic!("expected a GRAPH_TABLE read");
     };
-    let sql = medulla_sql_lang::sql::pgq::lower_graph_table(&query, &record.accepted_definition, TENANT)
-        .unwrap()
-        .to_sql();
+    let sql =
+        medulla_sql_lang::sql::pgq::lower_graph_table(&query, &record.accepted_definition, TENANT)
+            .unwrap()
+            .to_sql();
 
     // Identifiers are `"`-doubled; the ELEMENT_ID tag is a literal, so its `'`
     // is `'`-doubled. Both dangerous bytes exist ONLY inside those quotings.
@@ -682,9 +685,12 @@ fn quoted_identifiers_in_a_persisted_graph_cannot_escape_the_emitted_sql() {
     // The proof that nothing escaped: the SQL parser reads this as EXACTLY ONE
     // statement (the lowerer rejects any other count), and re-renders the same
     // doubled identifier -- so `";drop` was one identifier, never a boundary.
-    let statement =
-        medulla_sql_lang::sql::pgq::lower_graph_table_to_datafusion(&query, &record.accepted_definition, TENANT)
-            .unwrap();
+    let statement = medulla_sql_lang::sql::pgq::lower_graph_table_to_datafusion(
+        &query,
+        &record.accepted_definition,
+        TENANT,
+    )
+    .unwrap();
     let rendered = statement.to_string();
     assert!(rendered.contains(r#""tab"";drop""#), "{rendered}");
     assert!(

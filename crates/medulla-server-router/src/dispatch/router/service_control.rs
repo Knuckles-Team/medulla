@@ -1,5 +1,5 @@
-use medulla_server_graph::dispatch::shared::timed_read;
 use super::*;
+use medulla_server_graph::dispatch::shared::timed_read;
 
 /// Process-level service control: liveness, readiness, in-flight request
 /// cancellation and shutdown. None of these resolves a graph.
@@ -72,11 +72,15 @@ async fn health_response(state: &Arc<RwLock<ServerState>>, req_id: u64) -> Respo
         let complete = manifests.iter().filter(|manifest| manifest.valid).count();
         let partial = manifests
             .iter()
-            .filter(|manifest| manifest.phase == medulla_core::registry::MaterializationPhase::Partial)
+            .filter(|manifest| {
+                manifest.phase == medulla_core::registry::MaterializationPhase::Partial
+            })
             .count();
         let failed = manifests
             .iter()
-            .filter(|manifest| manifest.phase == medulla_core::registry::MaterializationPhase::Failed)
+            .filter(|manifest| {
+                manifest.phase == medulla_core::registry::MaterializationPhase::Failed
+            })
             .count();
         (
             medulla_protocol_types::result_contract::cluster::GraphLifecycleHealth {

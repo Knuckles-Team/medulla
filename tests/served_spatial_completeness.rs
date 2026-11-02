@@ -17,9 +17,9 @@ use std::sync::Arc;
 
 use serde_json::json;
 
+use medulla_core::registry::{GraphMaterial, GraphMaterializer, GraphRegistry};
 use medulla_exec::{algebra::Op, algebra::Plan};
 use medulla_protocol_types::protocol::{GraphType, Method};
-use medulla_core::registry::{GraphMaterial, GraphMaterializer, GraphRegistry};
 use medulla_server_router::dispatch::request_boundary::dispatch;
 
 const SECRET: &str = "served-spatial-completeness-secret";
@@ -239,7 +239,8 @@ fn paged_lazy_open_advertises_spatial_only_after_final_page_backfill() {
                     core.edge_count() as u64,
                 )
         }));
-    let mut hits = medulla_exec::exec::SpatialSource::query_bbox(&served, "City", [0.0, 0.0, 10.0, 10.0]);
+    let mut hits =
+        medulla_exec::exec::SpatialSource::query_bbox(&served, "City", [0.0, 0.0, 10.0, 10.0]);
     hits.sort();
     assert_eq!(hits, vec!["a".to_string(), "b".to_string()]);
 }

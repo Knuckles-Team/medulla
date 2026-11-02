@@ -11,8 +11,10 @@
 #![cfg(feature = "sql")]
 
 use medulla_graph_core::graph::{GraphCore, GraphView};
-use medulla_sql_lang::{sql::classify::classify, sql::classify::StatementKind, sql::typed_result::TypedQueryResult};
 use medulla_sql::sql::exec_sql_typed_with_tables;
+use medulla_sql_lang::{
+    sql::classify::classify, sql::classify::StatementKind, sql::typed_result::TypedQueryResult,
+};
 use medulla_table_store::tables::TableStore;
 use serde_json::{json, Value};
 

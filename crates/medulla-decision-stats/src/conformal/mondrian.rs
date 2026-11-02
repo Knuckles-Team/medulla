@@ -8,8 +8,8 @@
 
 use super::quantile::{split_conformal, ConformalQuantile};
 use super::sets::{class_row, PredictionSet};
-use medulla_numeric::{detkernel::validate, detkernel::Level, detkernel::StatResult};
 use medulla_numeric::risk::SampleGate;
+use medulla_numeric::{detkernel::validate, detkernel::Level, detkernel::StatResult};
 
 /// One class's threshold.
 #[derive(Debug, Clone, Copy, PartialEq)]

@@ -55,7 +55,10 @@ use medulla_types::wire::{JsonPathOp, Pred};
 use serde_json::{Map, Value};
 
 use super::pgq::GraphTableQuery;
-use medulla_table_store::{tables::property_graph::PropertyGraphPrivilegeStatement, tables::property_graph::PropertyGraphStatement, tables::property_graph::SqlName};
+use medulla_table_store::{
+    tables::property_graph::PropertyGraphPrivilegeStatement,
+    tables::property_graph::PropertyGraphStatement, tables::property_graph::SqlName,
+};
 use medulla_tables::schema::CheckExpr;
 use medulla_tables::schema::CmpOp;
 use medulla_tables::schema::ColCheck;

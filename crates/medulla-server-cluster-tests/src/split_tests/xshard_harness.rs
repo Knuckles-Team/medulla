@@ -30,6 +30,7 @@ use tokio::sync::RwLock;
 
 use medulla_protocol_types::protocol::GraphType;
 use medulla_protocol_types::protocol::Method;
+use medulla_raft::raft::multi::MultiRaft;
 use medulla_raft_xshard::cross_shard_txn::CrossShardCoordinator;
 use medulla_raft_xshard::cross_shard_txn::CrossShardTxn;
 use medulla_raft_xshard::cross_shard_txn::GraphSlice;
@@ -39,7 +40,6 @@ use medulla_raft_xshard::cross_shard_txn::RecordKey;
 use medulla_raft_xshard::cross_shard_txn::TxnOutcome;
 use medulla_raft_xshard::harness::cluster::fixture;
 use medulla_raft_xshard::harness::cluster::fixture::node_count;
-use medulla_raft::raft::multi::MultiRaft;
 
 const GROUP_A: u64 = 100;
 const GROUP_B: u64 = 200;

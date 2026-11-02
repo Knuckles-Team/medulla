@@ -302,10 +302,8 @@ mod tests {
                 .events
         };
         assert!(
-            events
-                .iter()
-                .any(|e| e.node_id == "srv:dead-server"
-                    && e.kind == medulla_types::wire::CdcKind::RemoveNode),
+            events.iter().any(|e| e.node_id == "srv:dead-server"
+                && e.kind == medulla_types::wire::CdcKind::RemoveNode),
             "a RemoveNode CDC event for the expired server must be observable: {events:?}"
         );
 

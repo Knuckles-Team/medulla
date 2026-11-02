@@ -6,6 +6,15 @@
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
 
+/// MEDULLA-101 — OBDA virtual graphs / R2RML (Phase Q). Expose a FOREIGN tabular source as a
+/// virtual, SPARQL-queryable RDF graph: an R2RML-style [`obda::TriplesMap`] (subject-IRI
+/// template + predicate→object maps) turns rows into triples ON DEMAND, and a SPARQL query
+/// over a [`obda::VirtualGraph`] pulls only the query-relevant predicates/columns from the
+/// backing [`obda::ObdaSource`] — never materializing the whole dataset. Behind `sparql`
+/// (needs the evaluator + oxrdf term model). CONCEPT:MEDULLA-KG.ontology.foreign-source-seam.
+#[cfg(feature = "sparql")]
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod obda;
 /// MEDULLA-FEDERATED-QUERY-R072.1 — the typed, read-only model of ontology-driven
 /// cross-source coverage: a [`source_selection::CoverageResult`] names, per
 /// queried class, the approved virtual mapping that serves it (directly or via an
@@ -23,12 +32,3 @@ pub mod source_selection;
 /// The served intent tool itself is cross-repo (owner: Arbora).
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod supply_chain_impact;
-/// MEDULLA-101 — OBDA virtual graphs / R2RML (Phase Q). Expose a FOREIGN tabular source as a
-/// virtual, SPARQL-queryable RDF graph: an R2RML-style [`obda::TriplesMap`] (subject-IRI
-/// template + predicate→object maps) turns rows into triples ON DEMAND, and a SPARQL query
-/// over a [`obda::VirtualGraph`] pulls only the query-relevant predicates/columns from the
-/// backing [`obda::ObdaSource`] — never materializing the whole dataset. Behind `sparql`
-/// (needs the evaluator + oxrdf term model). CONCEPT:MEDULLA-KG.ontology.foreign-source-seam.
-#[cfg(feature = "sparql")]
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod obda;

@@ -64,7 +64,9 @@ impl DepWalk {
         match op {
             medulla_exec::algebra::Op::Scan { label } => self.source(label),
             medulla_exec::algebra::Op::ScanAll {} => self.source(""),
-            medulla_exec::algebra::Op::Filter { .. } if self.rows_unscoped => self.dims.push(Dim::AllNodes),
+            medulla_exec::algebra::Op::Filter { .. } if self.rows_unscoped => {
+                self.dims.push(Dim::AllNodes)
+            }
             medulla_exec::algebra::Op::Filter { .. }
             | medulla_exec::algebra::Op::Limit { .. }
             | medulla_exec::algebra::Op::Project { .. } => {}
@@ -73,7 +75,8 @@ impl DepWalk {
                 self.dims.push(Dim::RowVisibility);
                 self.rows_unscoped = true;
             }
-            medulla_exec::algebra::Op::RankNodeDistance { .. } | medulla_exec::algebra::Op::RankMentions {} => {
+            medulla_exec::algebra::Op::RankNodeDistance { .. }
+            | medulla_exec::algebra::Op::RankMentions {} => {
                 self.dims.push(Dim::AllEdges);
                 self.dims.push(Dim::RowVisibility);
             }
@@ -127,7 +130,9 @@ impl DepWalk {
 pub(crate) fn plan_needs_text(ops: &[medulla_exec::algebra::Op]) -> bool {
     ops.iter().any(|op| match op {
         medulla_exec::algebra::Op::RankText { .. } => true,
-        medulla_exec::algebra::Op::FuseRrf { branches, .. } => branches.iter().any(|b| plan_needs_text(b)),
+        medulla_exec::algebra::Op::FuseRrf { branches, .. } => {
+            branches.iter().any(|b| plan_needs_text(b))
+        }
         _ => false,
     })
 }
@@ -350,8 +355,8 @@ pub fn run_unified_with<T>(
     // EH-563 — one federation-optimizer session per served query that touches a foreign
     // source: the server budget, the plan's LIMIT hints and the per-fragment trace.
     #[cfg(feature = "federation")]
-    let federation =
-        plan_touches_foreign(&ops).then(medulla_federation::federation_opt::FederationSession::from_env);
+    let federation = plan_touches_foreign(&ops)
+        .then(medulla_federation::federation_opt::FederationSession::from_env);
 
     // CONCEPT:MEDULLA-KG.query.served-text-index-binding — bind a live BM25 lexical search surface into the
     // served `PlanCtx` so a served `UnifiedQuery`/`Uql` whose plan carries
@@ -460,7 +465,8 @@ pub(crate) fn run_unified_bind_spatial<'a>(
 #[cfg(all(feature = "query", feature = "federation"))]
 fn plan_touches_foreign(ops: &[medulla_exec::algebra::Op]) -> bool {
     ops.iter().any(|op| match op {
-        medulla_exec::algebra::Op::Foreign { .. } | medulla_exec::algebra::Op::ForeignScan { .. } => true,
+        medulla_exec::algebra::Op::Foreign { .. }
+        | medulla_exec::algebra::Op::ForeignScan { .. } => true,
         medulla_exec::algebra::Op::FuseRrf { branches, .. } => {
             branches.iter().any(|b| plan_touches_foreign(b))
         }
@@ -549,7 +555,9 @@ pub(crate) fn run_unified_bind_tsdb<'a>(
 /// (disk durability across restarts) is a follow-up, tracked the same way
 /// `tsdb_store` earned its own dedicated `ServerState` wiring.
 #[cfg(feature = "tensor")]
-pub(crate) fn run_unified_bind_tensor(ctx: medulla_exec::exec::PlanCtx<'_>) -> medulla_exec::exec::PlanCtx<'_> {
+pub(crate) fn run_unified_bind_tensor(
+    ctx: medulla_exec::exec::PlanCtx<'_>,
+) -> medulla_exec::exec::PlanCtx<'_> {
     static TENSOR_STORE: std::sync::OnceLock<std::sync::Mutex<medulla_tensor::TensorStore>> =
         std::sync::OnceLock::new();
     let store =
@@ -802,7 +810,6 @@ mod foreign_query_digest_tests {
 
 #[cfg(feature = "query")]
 impl QueryHandlerCtx<'_> {
-
     pub(crate) async fn served_legs_with_foreign_execution(
         &self,
         plan: &medulla_exec::algebra::Plan,
@@ -878,7 +885,9 @@ pub(crate) async fn run_unified_off_lock_with<T, F>(
 ) -> Result<Result<T, String>, Response>
 where
     T: Send + 'static,
-    F: FnOnce(&medulla_exec::algebra::Plan, &medulla_exec::exec::PlanCtx) -> Result<T, String> + Send + 'static,
+    F: FnOnce(&medulla_exec::algebra::Plan, &medulla_exec::exec::PlanCtx) -> Result<T, String>
+        + Send
+        + 'static,
 {
     let core_for_ctx = core.clone();
     let ServedPlanLegs {
@@ -972,8 +981,8 @@ mod federation_served_tests;
 #[cfg(all(test, feature = "tensor"))]
 mod tensor_served_round_trip_tests {
     use super::*;
-    use medulla_semantic_index::semantic::SemanticStore;
     use medulla_graph_core::graph::GraphCore;
+    use medulla_semantic_index::semantic::SemanticStore;
     use medulla_tensor::{Buffer, Tensor};
     use medulla_types::wire::{TensorOpKind, TensorReduceKind};
 
@@ -1012,7 +1021,9 @@ mod tensor_served_round_trip_tests {
         }
     }
 
-    fn call_run_unified(plan: medulla_exec::algebra::Plan) -> Result<Vec<(String, Option<f32>)>, String> {
+    fn call_run_unified(
+        plan: medulla_exec::algebra::Plan,
+    ) -> Result<Vec<(String, Option<f32>)>, String> {
         let view = frames_view();
         let semantic = SemanticStore::new();
         run_unified_with(

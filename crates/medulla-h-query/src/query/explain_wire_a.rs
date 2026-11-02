@@ -39,9 +39,11 @@ pub(crate) fn explain_plan(
     view: &medulla_graph_core::graph::GraphView,
     semantic: &medulla_semantic_index::semantic::SemanticStore,
 ) -> Result<medulla_protocol_types::protocol::ExplainPlanResult, String> {
+    use medulla_exec::{
+        cost::Cardinality, cost::ModalityCardinality, cost::PlanStats, exec::PlanCtx,
+    };
     use medulla_protocol_types::protocol::ExplainNodeWire;
     use medulla_protocol_types::protocol::ExplainPlanResult;
-    use medulla_exec::{cost::Cardinality, cost::ModalityCardinality, exec::PlanCtx, cost::PlanStats};
 
     // Keep this byte contract identical to the foreign-read query binder: a
     // host can obtain the authoritative digest from ExplainPlan without
@@ -126,8 +128,8 @@ pub(crate) fn evidence_locus_wire(
 fn evidence_resource_wire(
     subject: &medulla_modality::ResourceId,
 ) -> medulla_protocol_types::protocol::EvidenceResourceWire {
-    use medulla_protocol_types::protocol::EvidenceResourceWire;
     use medulla_modality::ResourceId;
+    use medulla_protocol_types::protocol::EvidenceResourceWire;
     match subject {
         ResourceId::Artifact(id) => EvidenceResourceWire::Artifact(id.as_ref().to_string()),
         ResourceId::Occurrence(id) => EvidenceResourceWire::Occurrence(id.as_ref().to_string()),
@@ -162,8 +164,8 @@ fn evidence_address_wire(
 fn evidence_address_wire_document(
     address: &medulla_modality::EvidenceAddress,
 ) -> medulla_protocol_types::protocol::EvidenceAddressWire {
-    use medulla_protocol_types::protocol::EvidenceAddressWire;
     use medulla_modality::EvidenceAddress;
+    use medulla_protocol_types::protocol::EvidenceAddressWire;
     match address {
         EvidenceAddress::CharacterRange { start, end } => EvidenceAddressWire::CharacterRange {
             start: *start,
@@ -216,8 +218,8 @@ fn evidence_address_wire_document(
 fn evidence_address_wire_runtime(
     address: &medulla_modality::EvidenceAddress,
 ) -> medulla_protocol_types::protocol::EvidenceAddressWire {
-    use medulla_protocol_types::protocol::EvidenceAddressWire;
     use medulla_modality::EvidenceAddress;
+    use medulla_protocol_types::protocol::EvidenceAddressWire;
     match address {
         EvidenceAddress::VideoTimeRange { start_ms, end_ms } => {
             EvidenceAddressWire::VideoTimeRange {
@@ -332,9 +334,10 @@ pub(crate) fn explain_provenance_result(
         .map(|row| {
             // Reuse the SAME `Op::EvidenceFor` resolution the plan-Op surface runs, as
             // its own tiny one-op plan — no private medulla-plan access needed.
-            let evidence_plan = medulla_exec::algebra::Plan::new(vec![medulla_exec::algebra::Op::EvidenceFor {
-                claim_id: row.id.clone(),
-            }]);
+            let evidence_plan =
+                medulla_exec::algebra::Plan::new(vec![medulla_exec::algebra::Op::EvidenceFor {
+                    claim_id: row.id.clone(),
+                }]);
             let source_refs = medulla_exec::exec::execute(&evidence_plan, _ctx)
                 .map(|r| r.ids())
                 .unwrap_or_default();
@@ -415,15 +418,16 @@ pub(crate) fn explain_policy(
     filtered_view: &medulla_graph_core::graph::GraphView,
     semantic: &medulla_semantic_index::semantic::SemanticStore,
 ) -> Result<medulla_protocol_types::protocol::ExplainPolicyResult, String> {
-    use medulla_protocol_types::protocol::ExplainPolicyResult;
     use medulla_exec::exec::PlanCtx;
+    use medulla_protocol_types::protocol::ExplainPolicyResult;
 
     let full_ctx = PlanCtx::new(full_view, semantic);
     let filtered_ctx = PlanCtx::new(filtered_view, semantic);
-    let full_ids: std::collections::HashSet<String> = medulla_exec::exec::execute(&plan, &full_ctx)?
-        .ids()
-        .into_iter()
-        .collect();
+    let full_ids: std::collections::HashSet<String> =
+        medulla_exec::exec::execute(&plan, &full_ctx)?
+            .ids()
+            .into_iter()
+            .collect();
     let visible_ids: Vec<String> = medulla_exec::exec::execute(&plan, &filtered_ctx)?.ids();
     let visible_set: std::collections::HashSet<&str> =
         visible_ids.iter().map(String::as_str).collect();
@@ -621,7 +625,9 @@ pub(crate) fn disclosure_level_from_wire(
     cap: medulla_protocol_types::protocol::DisclosureLevelWire,
 ) -> medulla_epistemic::DisclosureLevel {
     match cap {
-        medulla_protocol_types::protocol::DisclosureLevelWire::Full => medulla_epistemic::DisclosureLevel::Full,
+        medulla_protocol_types::protocol::DisclosureLevelWire::Full => {
+            medulla_epistemic::DisclosureLevel::Full
+        }
         medulla_protocol_types::protocol::DisclosureLevelWire::Skeleton => {
             medulla_epistemic::DisclosureLevel::Skeleton
         }
@@ -636,7 +642,9 @@ pub(crate) fn disclosure_level_to_wire(
     level: medulla_epistemic::DisclosureLevel,
 ) -> medulla_protocol_types::protocol::DisclosureLevelWire {
     match level {
-        medulla_epistemic::DisclosureLevel::Full => medulla_protocol_types::protocol::DisclosureLevelWire::Full,
+        medulla_epistemic::DisclosureLevel::Full => {
+            medulla_protocol_types::protocol::DisclosureLevelWire::Full
+        }
         medulla_epistemic::DisclosureLevel::Skeleton => {
             medulla_protocol_types::protocol::DisclosureLevelWire::Skeleton
         }
@@ -686,7 +694,9 @@ pub(crate) fn redacted_tree_summary(
 
 /// L53 — wire-project an `medulla_epistemic::query::WhyNot` (see `WhyNotWire` docs).
 #[cfg(feature = "epistemic-tms")]
-pub(crate) fn why_not_wire(wn: &medulla_epistemic::WhyNot) -> medulla_protocol_types::protocol::WhyNotWire {
+pub(crate) fn why_not_wire(
+    wn: &medulla_epistemic::WhyNot,
+) -> medulla_protocol_types::protocol::WhyNotWire {
     use medulla_protocol_types::protocol::WhyNotWire;
     let (reason, blockers, competing) = match &wn.reason {
         medulla_epistemic::WhyNotReason::Unknown => ("Unknown", Vec::new(), Vec::new()),

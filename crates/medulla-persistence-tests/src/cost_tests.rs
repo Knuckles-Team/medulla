@@ -1,26 +1,25 @@
 //! Moved from the in-crate test tree of medulla-persistence (MEDULLA-CONTRACT-R056.11).
 
 #[allow(unused_imports)]
+use medulla_persistence::cost::budget::enforce_memory_budgets;
+#[allow(unused_imports)]
+use medulla_persistence::cost::*;
+#[allow(unused_imports)]
+use medulla_protocol_types::result_contract::coordination::{GraphResourceStats, ResourceSnapshot};
+#[allow(unused_imports)]
+use medulla_server_api::state::ServerState;
+#[allow(unused_imports)]
+use parking_lot::Mutex;
+#[allow(unused_imports)]
+use serde::{Deserialize, Serialize};
+#[allow(unused_imports)]
 use std::cmp::Ordering as CmpOrdering;
 #[allow(unused_imports)]
 use std::collections::BinaryHeap;
 #[allow(unused_imports)]
 use std::sync::Arc;
 #[allow(unused_imports)]
-use parking_lot::Mutex;
-#[allow(unused_imports)]
-use serde::{Deserialize, Serialize};
-#[allow(unused_imports)]
 use tokio::sync::RwLock;
-#[allow(unused_imports)]
-use medulla_server_api::state::ServerState;
-#[allow(unused_imports)]
-use medulla_protocol_types::result_contract::coordination::{GraphResourceStats, ResourceSnapshot};
-#[allow(unused_imports)]
-use medulla_persistence::cost::budget::enforce_memory_budgets;
-#[allow(unused_imports)]
-use medulla_persistence::cost::*;
-
 
 #[test]
 fn process_rss_parser_prefers_current_then_peak_and_rejects_bad_values() {
@@ -282,8 +281,7 @@ mod integration {
         // still for this whole body. READ guard: it excludes only a key MUTATOR, never
         // another opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
         let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-        let dir =
-            std::env::temp_dir().join(format!("medulla-cost-budget-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("medulla-cost-budget-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         let dir_s = dir.to_string_lossy().to_string();
         let state = redb_state(&dir_s).await;
@@ -420,8 +418,8 @@ mod integration {
         // still for this whole body. READ guard: it excludes only a key MUTATOR, never
         // another opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
         let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-        let dir = std::env::temp_dir()
-            .join(format!("medulla-cost-cypher-evict-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("medulla-cost-cypher-evict-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         let dir_s = dir.to_string_lossy().to_string();
         let state = redb_state(&dir_s).await;
@@ -502,7 +500,8 @@ mod integration {
             Some(ResultPayload::Raw(b)) => b.clone(),
             other => panic!("expected Raw cypher result, got {other:?}"),
         };
-        let result: medulla_protocol_types::protocol::QueryResult = rmp_serde::from_slice(&bytes).unwrap();
+        let result: medulla_protocol_types::protocol::QueryResult =
+            rmp_serde::from_slice(&bytes).unwrap();
         assert_eq!(
             result.rows.len(),
             NODE_COUNT,
@@ -526,8 +525,7 @@ mod integration {
         // still for this whole body. READ guard: it excludes only a key MUTATOR, never
         // another opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
         let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-        let dir =
-            std::env::temp_dir().join(format!("medulla-cost-fair-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("medulla-cost-fair-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         let dir_s = dir.to_string_lossy().to_string();
         let state = redb_state(&dir_s).await;
@@ -582,8 +580,7 @@ mod integration {
         // still for this whole body. READ guard: it excludes only a key MUTATOR, never
         // another opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
         let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-        let dir =
-            std::env::temp_dir().join(format!("medulla-cost-stats-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("medulla-cost-stats-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         let dir_s = dir.to_string_lossy().to_string();
         let state = redb_state(&dir_s).await;

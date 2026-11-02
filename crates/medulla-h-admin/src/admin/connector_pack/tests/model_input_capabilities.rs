@@ -1,6 +1,5 @@
 //! Model media declarations cross the real signed pack-import boundary as facts.
 
-use medulla_server_blob::blob::BlobStateExt;
 use medulla_agent_types::agent_component::{
     AgentComponentFacts, ModelInputCapabilities, ModelInputMediaType,
 };
@@ -10,6 +9,7 @@ use medulla_catalog_types::{
 };
 #[cfg(feature = "redb")]
 use medulla_persistence_records::agent_library::AgentLibraryStateExt;
+use medulla_server_blob::blob::BlobStateExt;
 
 use super::{
     bind, build_pack, head_of, import_uploaded, imported, ok, Content, Served, ADMIN, TENANT,

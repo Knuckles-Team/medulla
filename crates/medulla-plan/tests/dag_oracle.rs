@@ -14,7 +14,9 @@
 mod common;
 
 use common::*;
-use medulla_exec::{exec::execute, algebra::Op, algebra::Plan, exec::PlanCtx, dag::PlanDag, algebra::Pred};
+use medulla_exec::{
+    algebra::Op, algebra::Plan, algebra::Pred, dag::PlanDag, exec::execute, exec::PlanCtx,
+};
 use medulla_types::wire::TimeAxis;
 
 /// Run `ops` through BOTH `exec::execute` (over the linear `Plan`) and `dag_exec::execute_dag`

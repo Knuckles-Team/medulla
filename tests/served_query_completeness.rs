@@ -23,10 +23,10 @@ use serde_json::json;
 use tokio::sync::RwLock;
 
 use medulla_exec::{algebra::Op, algebra::Plan};
-use medulla_types::wire::UqlResult;
 use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
-use medulla_server_router::dispatch::request_boundary::dispatch;
 use medulla_server_api::state::ServerState;
+use medulla_server_router::dispatch::request_boundary::dispatch;
+use medulla_types::wire::UqlResult;
 
 const SECRET: &str = "served-query-completeness-secret";
 

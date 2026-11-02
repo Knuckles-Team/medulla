@@ -25,8 +25,7 @@ pub struct CommitOrigin<'a> {
 ))]
 pub use internal::commit_internal_graph_methods;
 pub use internal::{
-    commit_internal_graph_methods_with_nonce, lock_txn_coordinator,
-    InternalGraphCommitRequest,
+    commit_internal_graph_methods_with_nonce, lock_txn_coordinator, InternalGraphCommitRequest,
 };
 pub use lifecycle::{
     commit_lifecycle, lifecycle_identity_matches, lifecycle_was_committed, LifecycleCommitRequest,
@@ -44,10 +43,6 @@ pub use program::{
 };
 
 #[cfg(test)]
-use medulla_server_api::batch_compile::compile::compile_methods;
-#[cfg(test)]
-use medulla_server_api::batch_compile::compile::CompileBatch;
-#[cfg(test)]
 use medulla_graph_core::graph::GraphCore;
 #[cfg(test)]
 use medulla_mutation_types::mutation_scope::MutationSurface;
@@ -56,6 +51,10 @@ use medulla_protocol_types::mutation_batch::MutationStateDescriptor;
 #[cfg(test)]
 use medulla_protocol_types::protocol::Method;
 #[cfg(test)]
+use medulla_server_api::batch_compile::compile::compile_methods;
+#[cfg(test)]
+use medulla_server_api::batch_compile::compile::CompileBatch;
+#[cfg(test)]
 use medulla_types::contract::Nonce;
 #[cfg(test)]
 use sha2::{Digest, Sha256};
@@ -63,7 +62,6 @@ use sha2::{Digest, Sha256};
 #[cfg(test)]
 mod internal_replay_tests {
     use super::*;
-
 
     #[test]
     fn internal_replay_identity_excludes_attempt_fields_but_binds_key_actor_and_payload() {

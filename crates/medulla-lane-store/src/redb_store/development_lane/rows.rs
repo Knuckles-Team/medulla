@@ -1,17 +1,17 @@
-use medulla_resource_store::redb_store::resource::resource_decode;
-use medulla_store::redb_store::DurableCrypto;
 use super::links::{durable_hold_bounds, text};
 use super::{
     DurableLaneHold, COUNTERS, HOLDS, INVOCATIONS, LANE_INDEX, POLICIES, PRESSURE_INDEX,
     REPOSITORY_BRANCH_INDEX, TENANT_INDEX, WORKTREE_INDEX, WORK_ITEM_INDEX,
 };
-use medulla_store::redb_store::shard::Shard;
-use medulla_store::redb_store::shard::ShardWrite;
+use medulla_resource_store::redb_store::resource::resource_decode;
 use medulla_result_types::epistemic_operations::DevelopmentLaneHoldState;
 use medulla_storage::{
     GraphShardOwner, OwnerRowScope, OwnerRowScopeStart, PhysicalWriteCapability, ScopedOwnerTable,
     ScopedOwnerTableMut,
 };
+use medulla_store::redb_store::shard::Shard;
+use medulla_store::redb_store::shard::ShardWrite;
+use medulla_store::redb_store::DurableCrypto;
 use redb::{AccessGuard, Range};
 
 /// Canonical accessors for both scoped read and scoped write views.  The

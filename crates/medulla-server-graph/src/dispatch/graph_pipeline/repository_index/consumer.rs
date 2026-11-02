@@ -8,13 +8,17 @@ use std::collections::BTreeMap;
 #[cfg(feature = "blob")]
 use std::{future::Future, sync::Arc};
 
-#[cfg(feature = "blob")]
-use medulla_work_types::native_control::EnrichmentBudgetPark;
-use medulla_work_types::{native_control::EnrichmentBudgetCheckpoint as DurableBudgetCheckpoint, native_control::EnrichmentBudgetReservation, native_control::NativeControlSchemaVersion, native_control::SubmitWorkItemsRequest, native_control::MAX_SUBMIT_BATCH};
 use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
 #[cfg(feature = "blob")]
 use medulla_mutation_types::mutation_scope::MutationOutboxLease;
 use medulla_result_types::epistemic_operations::RequestContext;
+#[cfg(feature = "blob")]
+use medulla_work_types::native_control::EnrichmentBudgetPark;
+use medulla_work_types::{
+    native_control::EnrichmentBudgetCheckpoint as DurableBudgetCheckpoint,
+    native_control::EnrichmentBudgetReservation, native_control::NativeControlSchemaVersion,
+    native_control::SubmitWorkItemsRequest, native_control::MAX_SUBMIT_BATCH,
+};
 use serde::Deserialize;
 
 use medulla_compute::parser::enrichment_admission::to_native_submit_batch;
@@ -63,9 +67,7 @@ enum PendingBudgetStatus {
 
 /// Decode only the server-owned, path-free snapshot for this exact outbox key.
 /// The caller must obtain the intent from a held durable outbox lease.
-pub fn decode_pending_intent(
-    intent: &MutationOutboxIntent,
-) -> Result<EligibleSnapshot, String> {
+pub fn decode_pending_intent(intent: &MutationOutboxIntent) -> Result<EligibleSnapshot, String> {
     if intent.topic != PENDING_TOPIC || intent.payload.len() > MAX_PENDING_INTENT_BYTES {
         return Err("CONFLICT: repository enrichment outbox intent is invalid".into());
     }
@@ -420,7 +422,10 @@ where
             String,
         >,
     >,
-    S: FnMut(medulla_server_api::authority_context::VerifiedRequestContext, SubmitWorkItemsRequest) -> F,
+    S: FnMut(
+        medulla_server_api::authority_context::VerifiedRequestContext,
+        SubmitWorkItemsRequest,
+    ) -> F,
     F: Future<Output = Result<(), String>>,
     P: FnMut(MutationOutboxLease, EnrichmentBudgetPark) -> PF,
     PF: Future<Output = Result<(), String>>,
@@ -952,7 +957,8 @@ mod tests {
         source.source_commit_ref = source.source_envelope.clone();
         for (index, unit) in source.units.iter_mut().enumerate() {
             unit.parser_capability_digest = format!("{}{:012}", "p".repeat(500), index);
-            unit.content_length = medulla_compute::parser::enrichment_snapshot::MAX_REPOSITORY_CONTENT_BYTES;
+            unit.content_length =
+                medulla_compute::parser::enrichment_snapshot::MAX_REPOSITORY_CONTENT_BYTES;
             unit.compute_units = u64::MAX;
         }
         source.validate().unwrap();

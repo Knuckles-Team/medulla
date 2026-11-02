@@ -8,10 +8,10 @@
 //! change the numbers, so nothing here should ever gate a build; run it
 //! explicitly and read stderr for the phase decomposition.
 
-use medulla_store::{redb_store::DurableCrypto};
+use medulla_store::redb_store::DurableCrypto;
 
-use medulla_store_apply::redb_store::store_control::commit_ops;
 use medulla_store::redb_store::shard::Shard;
+use medulla_store_apply::redb_store::store_control::commit_ops;
 use std::time::Instant;
 
 /// Sum and sample count of one Prometheus histogram family's `_sum`/`_count`

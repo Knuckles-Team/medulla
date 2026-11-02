@@ -25,9 +25,9 @@ use medulla_catalog_types::{
 use medulla_types::contract::Digest256;
 
 use super::foreign_catalog::{ForeignSourceCatalog, OwnedForeignRegistry};
-use medulla_server_api::carrier::CarrierAuthority;
-use medulla_server_api::api::persistence::SourceApprovalStore;
 use medulla_isolation::isolation::IsolationLayer;
+use medulla_server_api::api::persistence::SourceApprovalStore;
+use medulla_server_api::carrier::CarrierAuthority;
 
 /// Owner-controlled dependencies used to revalidate and bind completed reads.
 pub struct ForeignBindingContext<'a> {
@@ -702,7 +702,9 @@ impl medulla_federation::federation::ForeignSource for PageBackedSource {
                 })
             })
             .collect::<Result<Vec<_>, String>>()?;
-        Ok(medulla_federation::federation_opt::ForeignRows::from_rows(rows))
+        Ok(medulla_federation::federation_opt::ForeignRows::from_rows(
+            rows,
+        ))
     }
 
     fn fetch_projected(
@@ -767,11 +769,11 @@ fn now_ms() -> u64 {
 mod tests {
     use super::*;
     use crate::api::query_txn::query_support::canonical_plan_digest;
-    use medulla_server_api::authority_context::VerifiedRequestContext;
     use medulla_catalog_types::connector_pack::{
         PackHeadRef, PackSourceApproval, PackSourceKind, PackSourceRegistration,
         CONNECTOR_PACK_SCHEMA_VERSION,
     };
+    use medulla_server_api::authority_context::VerifiedRequestContext;
     use medulla_types::acl::RequestContextClaims;
     use medulla_types::contract::ResourceId;
 
@@ -1129,7 +1131,10 @@ mod tests {
 
     #[test]
     fn mapped_cells_use_existing_foreign_rows_residual_and_projection() {
-        use medulla_federation::{federation_opt::ColumnPlan, federation_opt::ColumnPredicate, federation_opt::Comparison, federation_opt::PushdownSupport};
+        use medulla_federation::{
+            federation_opt::ColumnPlan, federation_opt::ColumnPredicate,
+            federation_opt::Comparison, federation_opt::PushdownSupport,
+        };
 
         let sessions = ForeignReadSessions::default();
         let owner = CarrierAuthority::verified_for_test("owner");

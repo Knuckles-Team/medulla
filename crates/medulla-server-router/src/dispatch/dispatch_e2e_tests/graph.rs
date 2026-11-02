@@ -14,18 +14,18 @@ use medulla_server_blob::blob::BlobStateExt;
 #[cfg(all(test, feature = "security"))]
 mod admin_scope_tests {
     use super::*;
+    use medulla_isolation::isolation::IsolationLayer;
+    use medulla_protocol_types::protocol::Method;
+    use medulla_protocol_types::protocol::Request;
+    use medulla_server_auth::auth::sign_current_test_request;
     use medulla_types::acl::AgentIdentity;
+    use medulla_types::acl::AgentRole;
     use medulla_types::acl::Grant;
     use medulla_types::acl::GrantEffect;
     use medulla_types::acl::RbacAction;
     use medulla_types::acl::RbacAdminOp;
     use medulla_types::acl::ResourceSelector;
     use medulla_types::acl::Role;
-    use medulla_types::acl::AgentRole;
-    use medulla_isolation::isolation::IsolationLayer;
-    use medulla_protocol_types::protocol::Method;
-    use medulla_protocol_types::protocol::Request;
-    use medulla_server_auth::auth::sign_current_test_request;
     use std::sync::Arc;
 
     const SECRET: &str = "admin-scope-test-secret";
@@ -50,7 +50,9 @@ mod admin_scope_tests {
                 roles: Vec::new(),
             });
         }
-        Arc::new(RwLock::new(crate::dispatch::test_support::new_state_for_test(SECRET, isolation)))
+        Arc::new(RwLock::new(
+            crate::dispatch::test_support::new_state_for_test(SECRET, isolation),
+        ))
     }
 
     fn req_as(id: u64, agent_id: Option<&str>, method: Method) -> Request {
@@ -461,7 +463,10 @@ mod blob_dispatch_tests {
         // Use the canonical fixture so feature-gated fields stay in one place.
         // `BlobRef` still gets the durable backend it requires, while the graph
         // state remains isolated from the chunk store's redb file.
-        let mut state = crate::dispatch::test_support::new_state_for_test(SECRET, ServerState::test_isolation("system"));
+        let mut state = crate::dispatch::test_support::new_state_for_test(
+            SECRET,
+            ServerState::test_isolation("system"),
+        );
         state.persist_dir = Some(dir.to_string());
         #[cfg(feature = "redb")]
         {
@@ -495,7 +500,9 @@ mod blob_dispatch_tests {
         // through dispatch's real-time clock).
         let retention = BlobRetentionPolicy::new(0, DEFAULT_UPLOAD_TTL_MS)
             .expect("zero GC grace with the default upload TTL is a valid retention policy");
-        state.set_blob_cursors(Some(Arc::new(BlobCursors::new(store).with_retention(retention))));
+        state.set_blob_cursors(Some(Arc::new(
+            BlobCursors::new(store).with_retention(retention),
+        )));
         state.blob_cursor_ttl_secs = 300;
         Arc::new(RwLock::new(state))
     }
@@ -850,12 +857,12 @@ mod blob_dispatch_tests {
 #[cfg(test)]
 mod placement_route_carrier_tests {
     use super::*;
-    use medulla_types::acl::RequestContextClaims;
     use medulla_isolation::isolation::IsolationLayer;
     use medulla_protocol_types::protocol::Method;
     use medulla_protocol_types::protocol::Request;
     use medulla_server_auth::auth::compute_verified_envelope_token;
-use medulla_server_auth::auth::VerifiedEnvelopeParams;
+    use medulla_server_auth::auth::VerifiedEnvelopeParams;
+    use medulla_types::acl::RequestContextClaims;
     use std::sync::Arc;
     use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -873,10 +880,9 @@ use medulla_server_auth::auth::VerifiedEnvelopeParams;
     /// (JWT scope)-only for this method, never `IsolationLayer`-registration-only
     /// (the OLD, System-only gate this closes).
     fn state_min() -> Arc<RwLock<ServerState>> {
-        Arc::new(RwLock::new(crate::dispatch::test_support::new_state_for_test(
-            SECRET,
-            IsolationLayer::new(),
-        )))
+        Arc::new(RwLock::new(
+            crate::dispatch::test_support::new_state_for_test(SECRET, IsolationLayer::new()),
+        ))
     }
 
     #[test]

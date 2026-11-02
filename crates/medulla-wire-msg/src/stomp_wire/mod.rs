@@ -34,11 +34,11 @@
 
 use std::sync::atomic::{AtomicU64, Ordering};
 
+use medulla_server_api::state::ServerState;
 use medulla_wire_core::broker_wire;
 use medulla_wire_core::broker_wire::invalid_data;
 use medulla_wire_core::broker_wire::prelude::*;
 use medulla_wire_core::broker_wire::BrokerProtocol;
-use medulla_server_api::state::ServerState;
 
 /// Env var: when set (and the binary is built `--features stomp-wire`), the STOMP wire
 /// listener binds this address (documented loopback default `127.0.0.1:61613`). Unset ⇒

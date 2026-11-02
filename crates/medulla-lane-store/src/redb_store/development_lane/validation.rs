@@ -44,9 +44,7 @@ pub fn validate_reserve_bounds(
 }
 
 /// Bounds for the renew request, including its replacement TTL.
-pub fn validate_renew_bounds(
-    request: &DevelopmentLaneRenewRequest,
-) -> Result<(), LaneDecision> {
+pub fn validate_renew_bounds(request: &DevelopmentLaneRenewRequest) -> Result<(), LaneDecision> {
     bounded_texts(&[
         (&request.tenant_ref, "renew tenant"),
         (&request.work_item_id, "renew WorkItem"),
@@ -89,9 +87,7 @@ pub fn validate_observe_bounds(
 }
 
 /// Bounds for the finish request.
-pub fn validate_finish_bounds(
-    request: &DevelopmentLaneFinishRequest,
-) -> Result<(), LaneDecision> {
+pub fn validate_finish_bounds(request: &DevelopmentLaneFinishRequest) -> Result<(), LaneDecision> {
     bounded_texts(&[
         (&request.tenant_ref, "finish tenant"),
         (&request.work_item_id, "finish WorkItem"),
@@ -148,9 +144,7 @@ pub fn validate_quota_update_bounds(
 }
 
 /// Bounds for the exact single-hold read.
-pub fn validate_query_bounds(
-    request: &DevelopmentLaneQueryRequest,
-) -> Result<(), LaneDecision> {
+pub fn validate_query_bounds(request: &DevelopmentLaneQueryRequest) -> Result<(), LaneDecision> {
     bounded_texts(&[
         (&request.tenant_ref, "query tenant"),
         (&request.hold_id, "query hold"),
@@ -159,9 +153,7 @@ pub fn validate_query_bounds(
 }
 
 /// Bounds for the bounded status page and its optional filters/cursor.
-pub fn validate_status_bounds(
-    request: &DevelopmentLaneStatusRequest,
-) -> Result<(), LaneDecision> {
+pub fn validate_status_bounds(request: &DevelopmentLaneStatusRequest) -> Result<(), LaneDecision> {
     text(&request.tenant_ref, "status tenant")?;
     if !(1..=MAX_STATUS_LIMIT).contains(&request.limit) {
         return Err(LaneDecision::Invalid);

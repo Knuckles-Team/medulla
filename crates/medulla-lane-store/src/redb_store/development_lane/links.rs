@@ -1,5 +1,3 @@
-use medulla_store::{redb_store::decode_durable, redb_store::DurableCrypto, redb_store::NODES};
-use medulla_resource_store::redb_store::resource::resource_decode;
 use super::identity::lane_intent_matches_hold;
 use super::reserve_support::work_item_kind_name;
 use super::rows::LaneRows;
@@ -10,8 +8,8 @@ use super::{
     MAX_DISK_BYTES, MAX_FINGERPRINT, MAX_TEXT, MAX_TTL_MS, REPOSITORY_WORK_ITEM_EXTENSION_KEY,
     WORK_ITEM_METADATA_KEY,
 };
-use medulla_store::redb_store::shard::ShardWrite;
 use medulla_protocol_types::protocol::DevelopmentLaneWorkItemKind;
+use medulla_resource_store::redb_store::resource::resource_decode;
 use medulla_result_types::epistemic_operations::DevelopmentLaneCleanupIntent;
 use medulla_result_types::epistemic_operations::DevelopmentLaneCleanupIntentSchemaVersion;
 use medulla_result_types::epistemic_operations::DevelopmentLaneHold;
@@ -19,6 +17,8 @@ use medulla_result_types::epistemic_operations::DevelopmentLaneHoldHostTargetKin
 use medulla_result_types::epistemic_operations::DevelopmentLaneHoldState;
 use medulla_result_types::epistemic_operations::DevelopmentLaneIntent;
 use medulla_result_types::epistemic_operations::DevelopmentLaneIntentHostTargetKind;
+use medulla_store::redb_store::shard::ShardWrite;
+use medulla_store::{redb_store::decode_durable, redb_store::DurableCrypto, redb_store::NODES};
 use std::collections::BTreeMap;
 
 /// A lifecycle WorkItem's owner is authoritative while it is live and is
@@ -36,7 +36,8 @@ pub fn lifecycle_work_item_owner_matches(
         }
         "succeeded" | "failed" | "cancelled" | "dead_letter" => {
             medulla_store::redb_store::property_string(props, "lease_owner").is_empty()
-                && medulla_store::redb_store::property_string(props, "last_lease_owner") == expected_owner
+                && medulla_store::redb_store::property_string(props, "last_lease_owner")
+                    == expected_owner
         }
         _ => false,
     }
@@ -72,7 +73,8 @@ pub fn checkpoint_lifecycle_fence_mismatch(
         || medulla_store::redb_store::property_u64(props, "attempt") != hold.attempt
         || medulla_store::redb_store::property_u64(props, "lease_epoch") != hold.lease_epoch
         || medulla_store::redb_store::property_u64(props, "fencing_token") != hold.fencing_token
-        || medulla_store::redb_store::property_string(props, "work_item_fence") != hold.work_item_fence
+        || medulla_store::redb_store::property_string(props, "work_item_fence")
+            != hold.work_item_fence
         || !lifecycle_work_item_owner_matches(props, status, &hold.owner_id)
 }
 

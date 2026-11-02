@@ -175,15 +175,16 @@ impl SanitizedModalityResult {
         {
             return Err("sanitized modality Raft result is invalid".to_string());
         }
-        let payload: medulla_protocol_types::protocol::ResultPayload = medulla_types::msgpack::decode_bounded(
-            result_msgpack,
-            medulla_types::msgpack::MsgpackLimits::new(
-                MAX_REPLICATED_MODALITY_RESULT_BYTES,
-                MAX_REPLICATED_MODALITY_RESULT_VALUES,
-                64,
-            ),
-        )
-        .map_err(|_| "sanitized modality Raft result is malformed".to_string())?;
+        let payload: medulla_protocol_types::protocol::ResultPayload =
+            medulla_types::msgpack::decode_bounded(
+                result_msgpack,
+                medulla_types::msgpack::MsgpackLimits::new(
+                    MAX_REPLICATED_MODALITY_RESULT_BYTES,
+                    MAX_REPLICATED_MODALITY_RESULT_VALUES,
+                    64,
+                ),
+            )
+            .map_err(|_| "sanitized modality Raft result is malformed".to_string())?;
         // `ResultPayload` is intentionally untagged. The canonical modality
         // contract is the bounded inner outcome schema below; all non-byte
         // payloads remain invalid.

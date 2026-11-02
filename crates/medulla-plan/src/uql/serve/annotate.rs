@@ -8,8 +8,8 @@ use medulla_types::wire::{UqlKnowledge, UqlResult, UqlRow};
 
 use super::{binding_plan, proof};
 use medulla_exec::exec::PlanCtx;
-use medulla_retrieval::knowledge::{KnowledgeRow, KnowledgeSet, ProvenanceFrame};
 use medulla_exec::rowset::RowSet;
+use medulla_retrieval::knowledge::{KnowledgeRow, KnowledgeSet, ProvenanceFrame};
 use medulla_uql::Statement;
 
 /// Attach the statement's requested annotations to `result`'s rows.

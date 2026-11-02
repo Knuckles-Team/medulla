@@ -42,13 +42,13 @@ use tokio::sync::RwLock;
 
 use medulla_sql_lang::sql::typed_result::PgColType;
 
+use medulla_server_api::state::ServerState;
 use medulla_wire_core::broker_wire;
 use medulla_wire_core::broker_wire::BrokerProtocol;
 use medulla_wire_core::wire::WireError;
 use medulla_wire_core::wire::WireOutcome;
 use medulla_wire_core::wire::WireProtocol;
 use medulla_wire_core::wire::WireSession;
-use medulla_server_api::state::ServerState;
 
 use protocol::{
     build_prelogin_response, decode_sqlbatch, encode_colmetadata, encode_done, encode_error,

@@ -19,18 +19,21 @@ use std::sync::{
 };
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use medulla_types::acl::RequestContextClaims;
+use medulla_core::registry::GraphRegistry;
+use medulla_persistence::redb_backend::RedbBackend;
+use medulla_protocol_types::protocol::{Method, Request, Response, ResultPayload};
 use medulla_result_types::epistemic_operations::{
     ClaimWorkItemRequest, ClaimWorkItemRequestSchemaVersion, ClaimWorkItemResult, RequestContext,
     RequestContextAuthenticationMethod, RequestContextSchemaVersion,
 };
-use medulla_protocol_types::protocol::{Method, Request, Response, ResultPayload};
-use medulla_core::registry::GraphRegistry;
 use medulla_server_api::api::persistence::PersistenceBackend;
-use medulla_persistence::redb_backend::RedbBackend;
 use medulla_server_auth::auth::compute_verified_envelope_token;
 use medulla_server_auth::auth::VerifiedEnvelopeParams;
-use medulla_work_types::{native_control::NativeControlSchemaVersion, native_control::SubmitWorkItemRequest, native_control::SubmitWorkItemResult};
+use medulla_types::acl::RequestContextClaims;
+use medulla_work_types::{
+    native_control::NativeControlSchemaVersion, native_control::SubmitWorkItemRequest,
+    native_control::SubmitWorkItemResult,
+};
 
 const SECRET: &str = "adopt-workitem-authenticated-replay-secret";
 const GRAPH: &str = "adoptworkitemauthreplay";
@@ -43,7 +46,11 @@ const POLICY_VERSION: &str = "integration-test-policy-v1";
 fn state_with(backend: Arc<dyn PersistenceBackend>, dir: String) -> test_support::SharedState {
     let mut registry = GraphRegistry::new();
     registry
-        .create_graph(GRAPH, medulla_protocol_types::protocol::GraphType::Commons, None)
+        .create_graph(
+            GRAPH,
+            medulla_protocol_types::protocol::GraphType::Commons,
+            None,
+        )
         .expect("create graph");
     test_support::state_with_registry(
         SECRET,
@@ -608,7 +615,10 @@ async fn claim_admitted_run(
 // spec: MEDULLA-DURABLE-KERNEL-R028.5.3
 #[tokio::test]
 async fn current_plan_native_publish_read_and_receipt_replay() {
-    use medulla_decision_outcome_types::{current_plan::CurrentPlanPublished, current_plan::CurrentPlanSnapshot, current_plan::PlanItem, current_plan::PlanStatus, current_plan::PublishCurrentPlanRequest};
+    use medulla_decision_outcome_types::{
+        current_plan::CurrentPlanPublished, current_plan::CurrentPlanSnapshot,
+        current_plan::PlanItem, current_plan::PlanStatus, current_plan::PublishCurrentPlanRequest,
+    };
     let dir = temp_dir("medulla-current-plan-native");
     let concrete = Arc::new(RedbBackend::open(dir.clone(), 8192).unwrap());
     let state = run_state_with(concrete.clone(), dir.clone()).await;
@@ -649,7 +659,8 @@ async fn current_plan_native_publish_read_and_receipt_replay() {
     );
     let mut updated = initial.clone();
     updated.snapshot.revision = 2;
-    let attachment = medulla_decision_outcome_types::current_plan::sample_task_plan_publish_request();
+    let attachment =
+        medulla_decision_outcome_types::current_plan::sample_task_plan_publish_request();
     updated.snapshot.task_plan = attachment.snapshot.task_plan;
     updated.task_plan_proposal = attachment.task_plan_proposal;
     updated.snapshot.items = vec![
@@ -852,7 +863,9 @@ async fn current_plan_expired_replay(
     published: medulla_decision_outcome_types::current_plan::PublishCurrentPlanRequest,
     receipt: medulla_decision_outcome_types::current_plan::CurrentPlanPublished,
 ) {
-    use medulla_decision_outcome_types::{current_plan::CurrentPlanPublished, current_plan::CurrentPlanSnapshot};
+    use medulla_decision_outcome_types::{
+        current_plan::CurrentPlanPublished, current_plan::CurrentPlanSnapshot,
+    };
     let renew = Method::RenewWorkItemLease {
         tenant: TENANT.into(),
         work_item_id: work_item_id.into(),
@@ -928,7 +941,11 @@ async fn current_plan_expired_replay(
 // spec: MEDULLA-DURABLE-KERNEL-R028.1.1
 #[tokio::test]
 async fn checkpoint_native_authenticated_cas_replay_and_owner_isolation() {
-    use medulla_work_types::{run_checkpoint::CheckpointContent, run_checkpoint::GetRunCheckpointRequest, run_checkpoint::PublishRunCheckpointRequest, run_checkpoint::RunCheckpointPublished, run_checkpoint::RunCheckpointRead};
+    use medulla_work_types::{
+        run_checkpoint::CheckpointContent, run_checkpoint::GetRunCheckpointRequest,
+        run_checkpoint::PublishRunCheckpointRequest, run_checkpoint::RunCheckpointPublished,
+        run_checkpoint::RunCheckpointRead,
+    };
     use sha2::{Digest, Sha256};
     let dir = temp_dir("medulla-checkpoint-native");
     let concrete = Arc::new(RedbBackend::open(dir.clone(), 8192).unwrap());

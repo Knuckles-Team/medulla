@@ -36,8 +36,12 @@ fn sample_view() -> GraphView {
 }
 
 fn run(sql: &str) -> medulla_sql::sql::QueryResult {
-    exec_sql(&sample_view(), sql, &medulla_sql::sql::CancellationToken::new())
-        .expect("sql executed and decoded")
+    exec_sql(
+        &sample_view(),
+        sql,
+        &medulla_sql::sql::CancellationToken::new(),
+    )
+    .expect("sql executed and decoded")
 }
 
 fn rows(r: &medulla_sql::sql::QueryResult) -> Vec<Vec<serde_json::Value>> {

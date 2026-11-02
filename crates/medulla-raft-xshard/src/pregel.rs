@@ -51,9 +51,9 @@ use tokio::sync::RwLock;
 
 use medulla_isolation::isolation::AccessLevel;
 use medulla_protocol_types::protocol::DistAlgo;
-use medulla_server_auth::access::check_graph_access;
 use medulla_server_api::carrier::GraphReadAuthority;
 use medulla_server_api::state::ServerState;
+use medulla_server_auth::access::check_graph_access;
 
 /// A single vertex's identity: its global id. Vertices are addressed by their string
 /// id (unique across the union — a vertex id present in two shards is the SAME logical

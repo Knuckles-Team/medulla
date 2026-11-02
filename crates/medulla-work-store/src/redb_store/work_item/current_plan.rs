@@ -1,6 +1,9 @@
 //! Private current plans share the admitted WorkItem transaction and read snapshot.
 use super::*;
-use medulla_decision_outcome_types::{current_plan::CurrentPlanPublished, current_plan::CurrentPlanSnapshot, current_plan::PublishCurrentPlanRequest};
+use medulla_decision_outcome_types::{
+    current_plan::CurrentPlanPublished, current_plan::CurrentPlanSnapshot,
+    current_plan::PublishCurrentPlanRequest,
+};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 pub const CURRENT_PLANS: redb::TableDefinition<(&str, &str), &[u8]> =

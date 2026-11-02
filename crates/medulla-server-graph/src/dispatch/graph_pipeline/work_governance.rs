@@ -1,5 +1,5 @@
-use crate::dispatch::shared::redact_resource_status_result;
 use super::*;
+use crate::dispatch::shared::redact_resource_status_result;
 #[cfg(feature = "redb")]
 use medulla_persistence::AsRedb;
 
@@ -114,8 +114,7 @@ pub struct NativeOpCtx<'a> {
     pub req_id: u64,
     pub graph_name: &'a str,
     pub verified_context: &'a VerifiedRequestContext,
-    pub persistence:
-        Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
+    pub persistence: Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
     #[cfg(feature = "raft")]
     pub multi_raft: Option<std::sync::Arc<medulla_raft::raft::multi::MultiRaft>>,
     #[cfg(feature = "raft")]
@@ -237,8 +236,7 @@ pub async fn dispatch_op_capacity_ops(
 /// The declared result a capacity status read answers `method` with.
 fn capacity_status_result(
     method: &Method,
-) -> fn(medulla_work_types::native_control::CapacityStatusResult) -> Result<ResultPayload, String>
-{
+) -> fn(medulla_work_types::native_control::CapacityStatusResult) -> Result<ResultPayload, String> {
     match method {
         Method::ReconcileCapacity { .. } => {
             ResultPayload::of::<
@@ -347,18 +345,20 @@ pub async fn dispatch_op_workitem_claim_capability(
                 "native WorkItem claim capability persistence is unavailable",
             );
         };
-        let authority = medulla_work_store::redb_store::work_item_capability::AuthenticatedAuthority {
-            tenant: verified_context.tenant().to_string(),
-            audience: verified_context.claims().audience.clone(),
-            principal: verified_context.principal_persistence_id(),
-            agent_id: verified_context.agent_id().to_string(),
-            session: verified_context.idempotency_key().to_string(),
-            authority_epoch: work_item_capability_authority_epoch(&graph_incarnation_id),
-            incarnation_id: graph_incarnation_id.clone(),
-            now_ms: medulla_kernel::kernel::dispatch_support::authoritative_now_ms(),
-        };
+        let authority =
+            medulla_work_store::redb_store::work_item_capability::AuthenticatedAuthority {
+                tenant: verified_context.tenant().to_string(),
+                audience: verified_context.claims().audience.clone(),
+                principal: verified_context.principal_persistence_id(),
+                agent_id: verified_context.agent_id().to_string(),
+                session: verified_context.idempotency_key().to_string(),
+                authority_epoch: work_item_capability_authority_epoch(&graph_incarnation_id),
+                incarnation_id: graph_incarnation_id.clone(),
+                now_ms: medulla_kernel::kernel::dispatch_support::authoritative_now_ms(),
+            };
         let fname = medulla_kernel::persist::sanitize(graph_name);
-        let _mutation_guard = medulla_server_api::routed_write_coalescer::lock_graph(graph_name).await;
+        let _mutation_guard =
+            medulla_server_api::routed_write_coalescer::lock_graph(graph_name).await;
         match method {
             Method::MintWorkItemClaimCapability { request } => redb
                 .mint_work_item_claim_capability(&fname, request, authority)

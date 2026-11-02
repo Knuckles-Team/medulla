@@ -11,8 +11,12 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_source_types::{source_ingestion::web_document::EnrichDocumentReceipt, source_ingestion::web_document::EnrichDocumentRequest, source_ingestion::web_document::FetchBackend};
 use medulla_document::processing::{chunk_text, ChunkSpan, ChunkingConfig, CHUNKER_VERSION};
+use medulla_source_types::{
+    source_ingestion::web_document::EnrichDocumentReceipt,
+    source_ingestion::web_document::EnrichDocumentRequest,
+    source_ingestion::web_document::FetchBackend,
+};
 use serde_json::{json, Map, Value};
 use sha2::{Digest, Sha256};
 
@@ -245,9 +249,7 @@ fn chunk_properties(plan: &EnrichmentPlan<'_>, span: &ChunkSpan) -> Value {
 }
 
 /// Lower a plan to its digest-keyed write-set and its receipt.
-pub fn lower(
-    plan: EnrichmentPlan<'_>,
-) -> Result<(IndexWriteSet, EnrichDocumentReceipt), String> {
+pub fn lower(plan: EnrichmentPlan<'_>) -> Result<(IndexWriteSet, EnrichDocumentReceipt), String> {
     let digest_hex = &plan.document.digest_hex;
     let record_id = enrichment_id(plan.document_id, digest_hex);
     let mut methods = Vec::new();
@@ -313,10 +315,7 @@ pub fn lower(
 }
 
 /// Chunk a held Document's text under `config`.
-pub fn chunks(
-    document: &HeldDocument,
-    config: &ChunkingConfig,
-) -> Result<Vec<ChunkSpan>, String> {
+pub fn chunks(document: &HeldDocument, config: &ChunkingConfig) -> Result<Vec<ChunkSpan>, String> {
     chunk_text(&document.text, config)
 }
 
@@ -364,7 +363,9 @@ pub fn held_pages(
     BTreeMap<String, medulla_decision_stats::decision::web_fetch_selection::HeldPage>,
     BTreeSet<String>,
 ) {
-    use medulla_decision_stats::{decision::web_fetch_selection::canonical_url, decision::web_fetch_selection::HeldPage};
+    use medulla_decision_stats::{
+        decision::web_fetch_selection::canonical_url, decision::web_fetch_selection::HeldPage,
+    };
     let mut held = BTreeMap::new();
     let mut digests = BTreeSet::new();
     for (_, bytes) in documents {

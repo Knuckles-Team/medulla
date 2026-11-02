@@ -1,12 +1,12 @@
 //! EH-028 / EH-064: NL template slot filling without a model.
 
+use medulla_decision_stats::decision::nl::fill_slots;
 use medulla_decision_types::decision::statistical::TypedValue;
 use medulla_decision_types::{
     decision::statistical::nl::NlSlot, decision::statistical::nl::NlSlotType,
     decision::statistical::nl::NlTarget, decision::statistical::nl::NlTemplateBody,
     decision::statistical::nl::NL_TEMPLATE_SCHEMA_VERSION,
 };
-use medulla_decision_stats::decision::nl::fill_slots;
 
 use super::common::bounded;
 

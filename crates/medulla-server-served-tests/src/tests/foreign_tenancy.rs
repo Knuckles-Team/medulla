@@ -97,7 +97,10 @@ fn uql(text: impl Into<String>) -> Method {
 
 /// Principal B naming principal A's source without an explicit share grant is concealed exactly
 /// like an unknown name, so the response cannot reveal another principal's registration.
-fn assert_not_registered_for_caller(resp: &medulla_protocol_types::protocol::Response, surface: &str) {
+fn assert_not_registered_for_caller(
+    resp: &medulla_protocol_types::protocol::Response,
+    surface: &str,
+) {
     let err = resp
         .error_detail
         .as_deref()
@@ -119,7 +122,10 @@ fn assert_not_registered_for_caller(resp: &medulla_protocol_types::protocol::Res
 /// A caller with an exact share grant has independently visible source identity. Naming that
 /// source through its unqualified plain name is the one refusal that may use stable ACCESS_DENIED;
 /// the caller must use the qualified shared name.
-fn assert_access_denied_for_caller(resp: &medulla_protocol_types::protocol::Response, surface: &str) {
+fn assert_access_denied_for_caller(
+    resp: &medulla_protocol_types::protocol::Response,
+    surface: &str,
+) {
     assert_eq!(
         resp.error.as_deref(),
         Some("ACCESS_DENIED"),

@@ -3,9 +3,9 @@
 //! never projected, the namespace reserved.
 
 use super::*;
-use medulla_server_api::authority_context::VerifiedRequestContext;
 use crate::sql_tables::test_persist_dir;
 use medulla_identity_types::identity::*;
+use medulla_server_api::authority_context::VerifiedRequestContext;
 
 const TENANT: &str = "tenant-identity-view";
 

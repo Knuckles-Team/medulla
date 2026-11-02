@@ -146,7 +146,12 @@ async fn handle_personalized_page_rank(
     // O(iterations·E) — snapshot topology, compute off-lock (KG-2.51).
     let snap = { core.topology_snapshot() };
     match compute_off_lock(req_id, move || {
-        medulla_graph_algos::algorithms::personalized_pagerank(&snap, &seed_nodes, damping, iterations)
+        medulla_graph_algos::algorithms::personalized_pagerank(
+            &snap,
+            &seed_nodes,
+            damping,
+            iterations,
+        )
     })
     .await
     {
@@ -371,9 +376,9 @@ pub(super) async fn try_handle_graph_algorithms(
             let g = core.topology_snapshot();
             Response::ok(
                 req_id,
-                ResultPayload::of::<results::FindCycle>(medulla_graph_algos::algorithms::find_cycle(
-                    &g,
-                )),
+                ResultPayload::of::<results::FindCycle>(
+                    medulla_graph_algos::algorithms::find_cycle(&g),
+                ),
             )
         }
         Method::GetShortestPath {

@@ -1,7 +1,6 @@
 //! medulla-store: redb store, layout and sidecar. Split out of the `medulla-engine` facade (MEDULLA-CONTRACT-R056.11);
 //! layer 1 of the crate layering (MEDULLA-CONTRACT-R056).
 #![recursion_limit = "256"]
-
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
 

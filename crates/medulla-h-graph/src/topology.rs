@@ -12,11 +12,11 @@
 //! `raft::node::start`; there is no public method that accepts caller-supplied
 //! endpoint authority.
 
-#[cfg(feature = "raft")]
-use medulla_raft::raft::RaftStateExt;
 #[cfg(feature = "redb")]
 #[cfg(feature = "raft")]
 use medulla_persistence::AsRedb;
+#[cfg(feature = "raft")]
+use medulla_raft::raft::RaftStateExt;
 use std::sync::Arc;
 
 use hmac::{Hmac, Mac};
@@ -197,9 +197,7 @@ fn project_group_members(
         })?;
         if info.cluster_id != cluster_id
             || info.member_identity
-                != medulla_persistence::node_info_store::member_identity_for(
-                    cluster_id, node_id,
-                )
+                != medulla_persistence::node_info_store::member_identity_for(cluster_id, node_id)
         {
             return Err(format!(
                 "CLUSTER_DISCOVERY_INVALID: member {node_id} identity mismatch"

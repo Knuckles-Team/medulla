@@ -1,16 +1,18 @@
-use medulla_mutation_types::mutation_scope::COMPILED_BATCH_INCARNATION;
-use medulla_mutation_types::mutation_scope::CommittedVersion;
-use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
 use medulla_compute::parser::enrichment_snapshot::EligibleUnit;
 use medulla_compute::parser::enrichment_snapshot::EnrichmentWorkStage;
+use medulla_mutation_types::mutation_scope::CommittedVersion;
+use medulla_mutation_types::mutation_scope::MutationOutboxRecord;
+use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
+use medulla_mutation_types::mutation_scope::COMPILED_BATCH_INCARNATION;
+use medulla_protocol_types::mutation_batch::RepositoryEnrichmentTopUp;
+use medulla_protocol_types::mutation_batch::{MutationBatch, MutationBatchStatus};
 use medulla_store::redb_store::enrichment_budget::RepositoryEnrichmentPolicyRevision;
 use medulla_store::redb_store::enrichment_top_up::EnrichmentTopUpTransition;
 use medulla_store::redb_store::enrichment_top_up::CONSUMER;
 use medulla_store::redb_store::enrichment_top_up::TOPIC;
-use medulla_protocol_types::mutation_batch::RepositoryEnrichmentTopUp;
-use medulla_work_types::{native_control::EnrichmentBudgetCheckpoint, native_control::EnrichmentBudgetPark};
-use medulla_mutation_types::mutation_scope::MutationOutboxRecord;
-use medulla_protocol_types::mutation_batch::{MutationBatch, MutationBatchStatus};
+use medulla_work_types::{
+    native_control::EnrichmentBudgetCheckpoint, native_control::EnrichmentBudgetPark,
+};
 
 fn transition() -> EnrichmentTopUpTransition {
     let old = medulla_compute::test_support::repository_enrichment_snapshot(

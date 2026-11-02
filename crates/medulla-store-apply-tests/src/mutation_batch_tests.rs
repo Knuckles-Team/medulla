@@ -1,6 +1,3 @@
-use medulla_store_apply::redb_store::mutation_fixtures::{
-    batch, commit_at, commit_at_graph, commit_native_claim, node, open, ready_work_item_method,
-};
 use super::*;
 use medulla_kernel::test_rendezvous::{join_bounded, meet};
 use medulla_mutation_types::mutation_scope::DurabilityDomain;
@@ -25,6 +22,9 @@ use medulla_result_types::{
     outcome_bundle::ReceiptNode, outcome_bundle::ReceiptNodeKind, outcome_bundle::RunEvent,
     outcome_bundle::TerminalOutcomeExtension, outcome_bundle::OUTCOME_BUNDLE_VERSION,
     outcome_bundle::RUN_EVENT_OUTBOX_TOPIC,
+};
+use medulla_store_apply::redb_store::mutation_fixtures::{
+    batch, commit_at, commit_at_graph, commit_native_claim, node, open, ready_work_item_method,
 };
 use medulla_transaction::OutboxClaimBudget;
 use sha2::{Digest, Sha256};
@@ -69,9 +69,7 @@ fn graph_record_decoder_validates_the_complete_receipt() {
         record.committed_version = CommittedVersion::None;
         record.validate().unwrap();
         let non_terminal = rmp_serde::to_vec_named(&record).unwrap();
-        assert!(
-            decode_mutation_batch_record(&non_terminal, "graph-a", "decode-record").is_err()
-        );
+        assert!(decode_mutation_batch_record(&non_terminal, "graph-a", "decode-record").is_err());
     }
 
     let native_identity = MutationScopeIdentity::native(
@@ -87,12 +85,13 @@ fn graph_record_decoder_validates_the_complete_receipt() {
     for operation in &mut record.batch.operations {
         operation.domain = DurabilityDomain::SqlCatalog;
     }
-    record.batch.envelope = medulla_store::redb_store::store_graph_names::fixture_operation_envelope(
-        &record.batch.identity,
-        &format!("principal:sha256:{}", "a".repeat(64)),
-        42,
-        "decode-record-key",
-    );
+    record.batch.envelope =
+        medulla_store::redb_store::store_graph_names::fixture_operation_envelope(
+            &record.batch.identity,
+            &format!("principal:sha256:{}", "a".repeat(64)),
+            42,
+            "decode-record-key",
+        );
     record
         .batch
         .reseal_envelope(medulla_types::contract::Digest256::from_bytes([1_u8; 32]))
@@ -320,8 +319,7 @@ fn terminal_extension_batch(
     } = hold;
     let mut terminal = batch(batch_id, idempotency_key);
     terminal.version_expectation = VersionExpectation::Graph(expected_graph_version);
-    let extension =
-        terminal_extension(batch_id, work_item_id, fencing_token, outcome, worker_id);
+    let extension = terminal_extension(batch_id, work_item_id, fencing_token, outcome, worker_id);
     terminal.operations = vec![MutationOperation {
         ordinal: 0,
         surface: MutationSurface::Job,
@@ -644,9 +642,7 @@ fn postcommit_crash_restarts_and_replays_idempotently() {
     let b = batch("batch-post", "idem-post");
     {
         let db = open(&path);
-        assert!(
-            commit_at(&db, &b, Some(MutationBatchCrashpoint::AfterCommitBeforeAck)).is_err()
-        );
+        assert!(commit_at(&db, &b, Some(MutationBatchCrashpoint::AfterCommitBeforeAck)).is_err());
     }
     {
         let db = open(&path);
@@ -2596,9 +2592,7 @@ fn cas_work_item_metadata_deterministic_conflict_never_silently_overwrites() {
         let bytes = match payload {
             medulla_protocol_types::protocol::ResultPayload::Raw(inner) => inner,
             other => {
-                panic!(
-                    "CasWorkItemMetadata must return a bin-encoded typed result, got {other:?}"
-                )
+                panic!("CasWorkItemMetadata must return a bin-encoded typed result, got {other:?}")
             }
         };
         decode_durable(&bytes).unwrap()
@@ -2758,9 +2752,7 @@ fn cas_work_item_metadata_real_concurrent_race_has_exactly_one_winner() {
         let bytes = match payload {
             medulla_protocol_types::protocol::ResultPayload::Raw(inner) => inner,
             other => {
-                panic!(
-                    "CasWorkItemMetadata must return a bin-encoded typed result, got {other:?}"
-                )
+                panic!("CasWorkItemMetadata must return a bin-encoded typed result, got {other:?}")
             }
         };
         decode_durable(&bytes).unwrap()
@@ -2785,9 +2777,7 @@ fn cas_work_item_metadata_real_concurrent_race_has_exactly_one_winner() {
 
     let loser_explicitly_rejected = results.iter().any(|result| match result {
         Err(message) => message.contains("STALE_VERSION"),
-        Ok(committed) => {
-            decode_result(committed).outcome == CasWorkItemMetadataOutcome::Conflict
-        }
+        Ok(committed) => decode_result(committed).outcome == CasWorkItemMetadataOutcome::Conflict,
     });
     assert!(
         loser_explicitly_rejected,
@@ -3027,8 +3017,7 @@ fn work_item_status_and_statechart_mirror_commit_atomically_across_kill9() {
         match read_one_node(shard, "graph-a", "wi", DurableCrypto::none()).unwrap() {
             None => (None, None),
             Some(b) => {
-                let props: serde_json::Map<String, serde_json::Value> =
-                    decode_durable(&b).unwrap();
+                let props: serde_json::Map<String, serde_json::Value> = decode_durable(&b).unwrap();
                 let get = |k: &str| props.get(k).and_then(|v| v.as_str()).map(str::to_string);
                 (get("status"), get("machine_state"))
             }
@@ -3548,8 +3537,8 @@ fn staged_row_delta_updates_only_affected_durable_rows() {
     );
     before.clear_ledger();
     let before_snapshot = before.snapshot();
-    let after = medulla_graph_core::graph::GraphCore::from_snapshot(before_snapshot.clone(), 0)
-        .unwrap();
+    let after =
+        medulla_graph_core::graph::GraphCore::from_snapshot(before_snapshot.clone(), 0).unwrap();
     after.add_node(
         "a".to_string(),
         rmp_serde::to_vec_named(&serde_json::json!({"value": 9})).unwrap(),
@@ -3582,11 +3571,9 @@ fn staged_row_delta_updates_only_affected_durable_rows() {
         )
         .unwrap();
     after.install_schema_sources(std::sync::Arc::new(sources));
-    let delta = medulla_kernel::graph_delta::GraphRowDelta::between(
-        &before_snapshot,
-        &after.snapshot(),
-    )
-    .unwrap();
+    let delta =
+        medulla_kernel::graph_delta::GraphRowDelta::between(&before_snapshot, &after.snapshot())
+            .unwrap();
     let state = delta.to_msgpack().unwrap();
 
     let mut mutation = batch("batch-row-delta", "idem-row-delta");
@@ -3669,8 +3656,8 @@ fn failed_row_delta_commit_does_not_publish_schema_sources() {
 
     let before = medulla_graph_core::graph::GraphCore::new();
     let before_snapshot = before.snapshot();
-    let after = medulla_graph_core::graph::GraphCore::from_snapshot(before_snapshot.clone(), 0)
-        .unwrap();
+    let after =
+        medulla_graph_core::graph::GraphCore::from_snapshot(before_snapshot.clone(), 0).unwrap();
     let mut sources = (*after.schema_sources()).clone();
     sources
         .attach_dynamic(
@@ -3687,11 +3674,9 @@ fn failed_row_delta_commit_does_not_publish_schema_sources() {
         )
         .unwrap();
     after.install_schema_sources(std::sync::Arc::new(sources));
-    let delta = medulla_kernel::graph_delta::GraphRowDelta::between(
-        &before_snapshot,
-        &after.snapshot(),
-    )
-    .unwrap();
+    let delta =
+        medulla_kernel::graph_delta::GraphRowDelta::between(&before_snapshot, &after.snapshot())
+            .unwrap();
     let state = delta.to_msgpack().unwrap();
     let mut mutation = batch("batch-policy-fail", "idem-policy-fail");
     mutation.version_expectation = VersionExpectation::Graph(4);
@@ -4137,7 +4122,9 @@ fn governed_envelope_for_tenant(
     );
     let actor = format!("principal:sha256:{}", "a".repeat(64));
     mutation.identity = identity.clone();
-    mutation.envelope = medulla_store::redb_store::store_graph_names::fixture_operation_envelope(&identity, &actor, 42, key);
+    mutation.envelope = medulla_store::redb_store::store_graph_names::fixture_operation_envelope(
+        &identity, &actor, 42, key,
+    );
     mutation.version_expectation = VersionExpectation::Graph(expected_graph_version);
     mutation.operations.truncate(1);
     mutation.outbox[0].payload = rmp_serde::to_vec_named(&serde_json::json!({
@@ -4215,14 +4202,11 @@ fn generic_change_envelope_cannot_seed_repository_budget() {
         .reseal_envelope(medulla_types::contract::Digest256::from_bytes([1_u8; 32]))
         .unwrap();
     commit_envelope_at(&db, &envelope).unwrap();
-    assert!(enrichment_budget::read(
-        &db,
-        "graph-a",
-        &envelope.envelope_id,
-        DurableCrypto::none(),
-    )
-    .unwrap()
-    .is_none());
+    assert!(
+        enrichment_budget::read(&db, "graph-a", &envelope.envelope_id, DurableCrypto::none(),)
+            .unwrap()
+            .is_none()
+    );
 }
 
 #[test]
@@ -4464,8 +4448,7 @@ fn assert_single_outbox_effect(
     assert_eq!(receipt.batch.outbox.len(), 1);
     assert_eq!(receipt.batch.outbox[0].topic, "projection.test");
     assert_eq!(receipt.batch.outbox[0].key, batch_id);
-    let expected_payload =
-        rmp_serde::to_vec_named(&serde_json::json!({ "event": event })).unwrap();
+    let expected_payload = rmp_serde::to_vec_named(&serde_json::json!({ "event": event })).unwrap();
     assert_eq!(receipt.batch.outbox[0].payload, expected_payload);
 
     let outbox = read_mutation_outbox(shard, "graph-a", batch_id).unwrap();
@@ -4691,8 +4674,7 @@ fn change_envelopes_consumed_nonce_rejects_page_without_fresh_effects() {
     operation.authority.nonce = nonce;
     operation.authority.idempotency_key =
         Some(medulla_types::contract::IdempotencyKey::new("different-page-key").unwrap());
-    operation.authority.context_digest =
-        operation.authority.recompute_context_digest().unwrap();
+    operation.authority.context_digest = operation.authority.recompute_context_digest().unwrap();
     duplicate_nonce
         .mutation
         .reseal_envelope(medulla_types::contract::Digest256::from_bytes([1_u8; 32]))
@@ -5143,8 +5125,7 @@ fn terminal_extension_commits_rows_outbox_and_replays_after_reopen() {
         panic!("terminal replay fixture needs an operation envelope");
     };
     operation.authority.nonce = medulla_types::contract::Nonce::from_bytes([0x43; 32]);
-    operation.authority.context_digest =
-        operation.authority.recompute_context_digest().unwrap();
+    operation.authority.context_digest = operation.authority.recompute_context_digest().unwrap();
     replay.created_at_ms = 200;
     replay
         .reseal_envelope(medulla_types::contract::Digest256::from_bytes([1_u8; 32]))
@@ -5170,11 +5151,8 @@ fn terminal_extension_rejects_resealed_foreign_scope_before_durable_advance() {
     let path = temp_path("terminal-extension-foreign-scope");
     let db = open(&path);
     let work_item_id = "work-terminal-extension-foreign-scope";
-    let claimed = seed_and_claim_terminal_work_item(
-        &db,
-        "terminal-extension-foreign-scope",
-        work_item_id,
-    );
+    let claimed =
+        seed_and_claim_terminal_work_item(&db, "terminal-extension-foreign-scope", work_item_id);
     let batch_id = "terminal-extension-foreign-scope-batch";
     let mut terminal = terminal_extension_batch(
         batch_id,
@@ -5667,13 +5645,11 @@ fn terminal_extension_rejects_preexisting_receipt_ids_atomically() {
     .unwrap();
     let work_item: serde_json::Value = decode_durable(&work_item).unwrap();
     assert_eq!(work_item["status"], "leased");
-    assert!(read_mutation_batch_for_graph(
-        &db,
-        "graph-a",
-        "terminal-extension-preexisting-batch",
-    )
-    .unwrap()
-    .is_none());
+    assert!(
+        read_mutation_batch_for_graph(&db, "graph-a", "terminal-extension-preexisting-batch",)
+            .unwrap()
+            .is_none()
+    );
     drop(db);
     let _ = std::fs::remove_file(path);
 }

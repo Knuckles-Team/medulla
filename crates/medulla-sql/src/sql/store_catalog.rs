@@ -7,8 +7,8 @@ use medulla_graph_core::index::ManagedIndexStatus;
 
 use medulla_table_store::tables::ann_plan::AnnIndexPlan;
 use medulla_table_store::tables::PropertyGraphCatalogRecord;
-use medulla_tables::schema::StoredFunction;
 use medulla_table_store::tables::TableStore;
+use medulla_tables::schema::StoredFunction;
 
 /// The name of the managed-index status relation, `information_schema.medulla_index_status`.
 pub(crate) const INDEX_STATUS_RELATION: &str = "medulla_index_status";

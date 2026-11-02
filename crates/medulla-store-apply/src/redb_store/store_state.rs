@@ -1,6 +1,6 @@
+use super::*;
 use crate::redb_store::store_cleanup::clear_graph_rows;
 use medulla_store::redb_store::store_prelude::*;
-use super::*;
 
 pub(crate) struct StagedMutationRows {
     pub(crate) generated_result: Option<Vec<u8>>,
@@ -189,7 +189,6 @@ pub(crate) fn stage_rows_in(
     Ok(StagedMutationRows { generated_result })
 }
 
-
 pub(crate) fn resolve_mutation_authoritative_state(
     batch: &MutationBatch,
     authoritative_state_msgpack: Option<&[u8]>,
@@ -360,7 +359,6 @@ pub(crate) fn detect_and_validate_lifecycle(
     }
     Ok(lifecycle)
 }
-
 
 /// Precondition 1: the envelope id must not already be committed for this graph.
 pub(crate) fn check_change_envelope_not_committed(

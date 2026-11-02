@@ -7,9 +7,12 @@
 //! in the set with probability at least `1 - alpha`. The rank is computed in
 //! exact integers from the rational level.
 
-use medulla_numeric::{detkernel::reduce::order_ascending, detkernel::reduce::serial_sum, detkernel::reduce::sorted_ascending};
-use medulla_numeric::{detkernel::validate, detkernel::Level, detkernel::StatResult};
 use medulla_numeric::risk::beta::beta_interval;
+use medulla_numeric::{
+    detkernel::reduce::order_ascending, detkernel::reduce::serial_sum,
+    detkernel::reduce::sorted_ascending,
+};
+use medulla_numeric::{detkernel::validate, detkernel::Level, detkernel::StatResult};
 
 /// The score cut-off of a conformal set: an option is admitted when its score
 /// is at most the threshold.

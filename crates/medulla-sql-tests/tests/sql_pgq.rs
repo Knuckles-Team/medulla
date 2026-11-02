@@ -1,19 +1,25 @@
 #![cfg(feature = "sql")]
 
 use medulla_graph_core::graph::GraphCore;
-use medulla_sql_lang::{sql::classify::classify, sql::pgq::lower_graph_table, sql::pgq::lower_graph_table_to_datafusion, sql::pgq::parse_graph_table, sql::pgq::parse_graph_table_sql, sql::pgq::parse_property_graph_ddl, sql::pgq::parse_property_graph_privilege, sql::classify::PropertyGraphDdlOperation, sql::classify::StatementKind};
 use medulla_sql::sql::exec_graph_table_typed_with_tables;
+use medulla_sql_lang::{
+    sql::classify::classify, sql::classify::PropertyGraphDdlOperation,
+    sql::classify::StatementKind, sql::pgq::lower_graph_table,
+    sql::pgq::lower_graph_table_to_datafusion, sql::pgq::parse_graph_table,
+    sql::pgq::parse_graph_table_sql, sql::pgq::parse_property_graph_ddl,
+    sql::pgq::parse_property_graph_privilege,
+};
 use medulla_table_store::tables::decode_property_graph;
 use medulla_table_store::tables::AlterPropertyGraphAction;
-use medulla_tables::schema::Column;
-use medulla_tables::schema::ColumnType;
 use medulla_table_store::tables::DropBehavior;
 use medulla_table_store::tables::PropertyGraphDefinition;
 use medulla_table_store::tables::PropertyGraphPrivilegeOperation;
 use medulla_table_store::tables::PropertyGraphStatement;
 use medulla_table_store::tables::PropertySet;
-use medulla_tables::schema::TableSchema;
 use medulla_table_store::tables::TableStore;
+use medulla_tables::schema::Column;
+use medulla_tables::schema::ColumnType;
+use medulla_tables::schema::TableSchema;
 use serde_json::json;
 
 const TENANT: &str = "tenant/acme";
@@ -237,7 +243,9 @@ fn tenant_and_structure_bounds_fail_closed() {
     assert!(lower_graph_table(&query, &definition, "tenant/other")
         .unwrap_err()
         .contains("tenant scope"));
-    assert!(parse_graph_table(&"x".repeat(medulla_sql_lang::sql::pgq::MAX_PGQ_SQL_BYTES + 1)).is_err());
+    assert!(
+        parse_graph_table(&"x".repeat(medulla_sql_lang::sql::pgq::MAX_PGQ_SQL_BYTES + 1)).is_err()
+    );
     assert!(parse_graph_table(
         "GRAPH_TABLE (shop MATCH (c IS customer) COLUMNS (c.name)); DROP TABLE users"
     )

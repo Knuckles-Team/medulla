@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
-use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
+use medulla_server_api::api::persistence::PersistenceBackend;
 
 use super::{
     commit_finalize, commit_mutation_body_replay_response, compile_batch_and_encode_result,

@@ -1,5 +1,3 @@
-use medulla_resource_store::redb_store::resource::resource_decode;
-use medulla_store::redb_store::DurableCrypto;
 use super::links::{durable_hold_bounds, fingerprint, intent_validate, text};
 use super::quota::{
     branch_key, policy_count_limits, policy_limit, policy_observed_limits, policy_predicted_limits,
@@ -10,6 +8,7 @@ use super::types::{LaneDecision, Scope, ScopeCounter};
 use super::validation::decision_name;
 use super::{DurableLaneHold, DurableLanePolicy, MAX_COUNT, MAX_DISK_BYTES, MAX_TTL_MS};
 use medulla_protocol_types::protocol::DevelopmentLaneWorkItemKind;
+use medulla_resource_store::redb_store::resource::resource_decode;
 use medulla_result_types::epistemic_operations::DevelopmentLaneHold;
 use medulla_result_types::epistemic_operations::DevelopmentLaneHoldHostTargetKind;
 use medulla_result_types::epistemic_operations::DevelopmentLaneIntent;
@@ -17,6 +16,7 @@ use medulla_result_types::epistemic_operations::DevelopmentLaneIntentHostTargetK
 use medulla_result_types::epistemic_operations::DevelopmentLaneQuotaPolicy;
 use medulla_result_types::epistemic_operations::DevelopmentLaneReserveRequest;
 use medulla_storage::ScopedOwnerTableMut;
+use medulla_store::redb_store::DurableCrypto;
 
 pub fn work_item_kind_name(kind: DevelopmentLaneWorkItemKind) -> &'static str {
     match kind {
@@ -88,10 +88,7 @@ pub fn reserve_counter_check(
     Ok(())
 }
 
-pub fn policy_pressure(
-    counters: &[ScopeCounter],
-    policy: &DevelopmentLaneQuotaPolicy,
-) -> bool {
+pub fn policy_pressure(counters: &[ScopeCounter], policy: &DevelopmentLaneQuotaPolicy) -> bool {
     counters.iter().any(|row| {
         row.value.active_count > policy_limit(policy, row.scope, Metric::Count)
             || row.value.predicted_disk_bytes > policy_limit(policy, row.scope, Metric::Predicted)

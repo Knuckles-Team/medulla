@@ -78,27 +78,27 @@ use redb::TableDefinition;
 
 use super::redb_backend::Cmd;
 use super::tenant_catalog::TenantCatalog;
+use crate::writer_reply::await_writer_reply;
+use medulla_lane_store::redb_store::development_lane;
 use medulla_protocol_types::protocol::GraphType;
+use medulla_resource_store::redb_store::capacity_lease;
+use medulla_store::redb_store::sanitize;
 use medulla_store::redb_store::shard::graph_scope_identity;
 use medulla_store::redb_store::shard::recover_retired_graft;
 use medulla_store::redb_store::shard::retiring_graft_destination;
 use medulla_store::redb_store::shard::source_graft_marker;
+#[cfg(all(any(test, feature = "test-support"), feature = "server"))]
+use medulla_store::redb_store::shard::take_test_barrier;
 use medulla_store::redb_store::shard::Shard;
 use medulla_store::redb_store::shard::ShardWrite;
 use medulla_store::redb_store::shard::SourceGraftMarker;
 use medulla_store::redb_store::shard::FOREIGN_GRAFT_MARKER;
 #[cfg(all(any(test, feature = "test-support"), feature = "server"))]
-use medulla_store::redb_store::shard::take_test_barrier;
-#[cfg(all(any(test, feature = "test-support"), feature = "server"))]
 use medulla_store::redb_store::shard::GRAFT_BEFORE_PROTOCOL_LOCK;
 #[cfg(feature = "security")]
-use medulla_store::redb_store::PROVENANCE_ANCHOR_MEMBERS;
-use medulla_resource_store::redb_store::capacity_lease;
-use medulla_lane_store::redb_store::development_lane;
-use medulla_store_apply::redb_store::store_cleanup::clear_change_material_rows_in_wtx;
-use medulla_store_apply::redb_store::store_cleanup::clear_graph_rows;
-use medulla_store_apply::redb_store::dump::decode_graph_meta_identity;
-use medulla_store::redb_store::sanitize;
+use medulla_store::redb_store::AUDIT;
+#[cfg(feature = "security")]
+use medulla_store::redb_store::AUDIT_REQUESTS;
 use medulla_store::redb_store::CHANGE_BLOBS;
 use medulla_store::redb_store::CHANGE_CURSORS;
 use medulla_store::redb_store::CHANGE_ENVELOPES;
@@ -111,11 +111,8 @@ use medulla_store::redb_store::EDGES;
 use medulla_store::redb_store::GRAPH_META;
 use medulla_store::redb_store::LEDGER;
 use medulla_store::redb_store::NODES;
-use medulla_store::redb_store::SEMANTIC;
 #[cfg(feature = "security")]
-use medulla_store::redb_store::AUDIT;
-#[cfg(feature = "security")]
-use medulla_store::redb_store::AUDIT_REQUESTS;
+use medulla_store::redb_store::PROVENANCE_ANCHOR_MEMBERS;
 use medulla_store::redb_store::RESOURCE_ANTI_AFFINITY;
 use medulla_store::redb_store::RESOURCE_CONCURRENCY;
 use medulla_store::redb_store::RESOURCE_DISK_POLICIES;
@@ -125,8 +122,11 @@ use medulla_store::redb_store::RESOURCE_HOSTS;
 use medulla_store::redb_store::RESOURCE_RESERVATIONS;
 use medulla_store::redb_store::RESOURCE_RESERVATION_ATTEMPTS;
 use medulla_store::redb_store::RESOURCE_RESERVATION_TENANT_INDEX;
+use medulla_store::redb_store::SEMANTIC;
 use medulla_store::redb_store::WORK_ITEM_COMMAND_SEQUENCE;
-use crate::writer_reply::await_writer_reply;
+use medulla_store_apply::redb_store::dump::decode_graph_meta_identity;
+use medulla_store_apply::redb_store::store_cleanup::clear_change_material_rows_in_wtx;
+use medulla_store_apply::redb_store::store_cleanup::clear_graph_rows;
 
 /// One graph's scope-bounded read of the shard's scope-prefixed owner tables.
 type GraphRead<'a> = ScopedRead<'a, GraphShardOwner>;
@@ -1458,11 +1458,7 @@ fn insert_graph_scope(
 /// destination shard's writer thread (via [`Cmd::ImportGraphRaw`]); the commit is the
 /// commit-before-ack point of the bulk pass. Idempotent — a re-run after an
 /// interrupted move replaces rather than duplicates.
-pub fn import_graph_raw(
-    shard: &Shard,
-    graph: &str,
-    rows: &RawGraphRows,
-) -> Result<(), String> {
+pub fn import_graph_raw(shard: &Shard, graph: &str, rows: &RawGraphRows) -> Result<(), String> {
     let protocol_guard = shard.graft_protocol_guard(graph)?;
     let _protocol_guard = protocol_guard
         .lock()
@@ -1852,8 +1848,7 @@ pub fn graft_graph_from(
     source: &Shard,
     graph_fname: &str,
 ) -> Result<GraftedScope, String> {
-    let mut transfer =
-        crate::shard_migrate::GraphShardPayloadTransfer::without_report();
+    let mut transfer = crate::shard_migrate::GraphShardPayloadTransfer::without_report();
     graft_graph_from_with_payload(dest_shard, source, graph_fname, Some(&mut transfer))
 }
 
@@ -1934,7 +1929,9 @@ pub fn graft_graph_from_with_payload(
         .ok_or_else(|| "graph shard graft requires an owner payload transfer".to_string())?;
     let grafted = dest_shard.mutations().graft_scope_with_payload(
         GraftSource::new(source.mutations(), source.kernel(), source_handle.as_ref())
-            .with_owner_payload(&medulla_store_apply::redb_store::store_retirement::GraphShardRetirement),
+            .with_owner_payload(
+                &medulla_store_apply::redb_store::store_retirement::GraphShardRetirement,
+            ),
         &destination,
         payload,
     )?;

@@ -7,13 +7,17 @@ use super::control::{
 };
 #[cfg(feature = "compute-dist")]
 use super::control::{put_matview, scan_matviews};
-use medulla_store::{redb_store::reject_reserved_graph, redb_store::sanitize, redb_store::write_graph_meta_with_incarnation, redb_store::DurableCrypto, redb_store::store_prelude::SHARD_CONTROL_GRAPH};
-use medulla_store_apply::redb_store::store_control::commit_ops;
-use medulla_store_apply::redb_store::store_cleanup::purge_graph_rows;
-use medulla_store::redb_store::shard::Shard;
-use medulla_store::redb_store::shard::ShardWrite;
 use medulla_protocol_types::protocol::GraphType;
 use medulla_protocol_types::protocol::Method;
+use medulla_store::redb_store::shard::Shard;
+use medulla_store::redb_store::shard::ShardWrite;
+use medulla_store::{
+    redb_store::reject_reserved_graph, redb_store::sanitize,
+    redb_store::store_prelude::SHARD_CONTROL_GRAPH, redb_store::write_graph_meta_with_incarnation,
+    redb_store::DurableCrypto,
+};
+use medulla_store_apply::redb_store::store_cleanup::purge_graph_rows;
+use medulla_store_apply::redb_store::store_control::commit_ops;
 
 fn temp_path(tag: &str) -> std::path::PathBuf {
     std::env::temp_dir().join(format!(
@@ -140,7 +144,10 @@ fn the_canonical_bootstrap_matches_the_declared_shard_census() {
     let members = shard.graph_members(&names).unwrap();
     let (group, batches) = shard.admit_maintenance(&members, "census-probe").unwrap();
     let write = ShardWrite::open(&shard, &group, &members, &batches).unwrap();
-    write.control().open_table(medulla_store::redb_store::GRAPH_META).unwrap();
+    write
+        .control()
+        .open_table(medulla_store::redb_store::GRAPH_META)
+        .unwrap();
     write
         .graph("graph-a")
         .unwrap()

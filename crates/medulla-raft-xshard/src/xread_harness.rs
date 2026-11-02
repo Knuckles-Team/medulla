@@ -22,14 +22,14 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use crate::harness::cluster::fixture;
+use medulla_protocol_types::protocol::GraphType;
+use medulla_protocol_types::protocol::Method;
 use medulla_raft::raft::multi::MultiRaft;
 use medulla_raft::raft::xread::{
     CompletionPolicy, CrossGraphReadErrorCode, CrossGraphReadRequest, CrossShardReader,
     ReadLegStatus, ReadPageErrorCode,
 };
 use medulla_raft::raft::{GroupId, RaftRequest};
-use medulla_protocol_types::protocol::GraphType;
-use medulla_protocol_types::protocol::Method;
 
 const GROUP_A: GroupId = 500;
 const GROUP_B: GroupId = 600;
@@ -190,7 +190,10 @@ async fn read_cross_shard_routes_each_leg_via_the_placement_catalog() {
     // uses), so after splitting they resolve to DIFFERENT groups via the catalog —
     // NOT the engine's unplaced policy.
     let (ws_x, ws_y) = ("ws-x", "ws-y");
-    let (h_x, h_y) = (medulla_raft::raft::multi::fnv1a(ws_x), medulla_raft::raft::multi::fnv1a(ws_y));
+    let (h_x, h_y) = (
+        medulla_raft::raft::multi::fnv1a(ws_x),
+        medulla_raft::raft::multi::fnv1a(ws_y),
+    );
     let (lo_key, lo_hash, hi_key, hi_hash) = if h_x < h_y {
         (ws_x, h_x, ws_y, h_y)
     } else {

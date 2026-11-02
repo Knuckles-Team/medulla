@@ -406,7 +406,9 @@ async fn exec_sql_catalog_drop(
                 &name,
             );
             let op = match visible {
-                Ok(Some(table)) => medulla_table_store::tables::IndexCatalogTxnOp::DropAnnIndex { table, name },
+                Ok(Some(table)) => {
+                    medulla_table_store::tables::IndexCatalogTxnOp::DropAnnIndex { table, name }
+                }
                 Ok(None) if if_exists => return sql_write_ack(req_id, "DROP INDEX", Ok(Ok(0))),
                 Ok(None) => {
                     return Response::err(
@@ -489,9 +491,9 @@ async fn exec_sql_catalog_create(
                 scope,
                 sql_method,
                 store,
-                medulla_table_store::tables::TxnOp::IndexCatalog(medulla_table_store::tables::IndexCatalogTxnOp::PutAnnIndex {
-                    plan,
-                }),
+                medulla_table_store::tables::TxnOp::IndexCatalog(
+                    medulla_table_store::tables::IndexCatalogTxnOp::PutAnnIndex { plan },
+                ),
                 "CREATE INDEX",
             )
             .await
@@ -537,7 +539,9 @@ enum SqlCatalogTerminalClass {
 }
 
 #[cfg(feature = "query")]
-fn classify_sql_catalog_terminal(kind: &medulla_sql_lang::sql::classify::StatementKind) -> SqlCatalogTerminalClass {
+fn classify_sql_catalog_terminal(
+    kind: &medulla_sql_lang::sql::classify::StatementKind,
+) -> SqlCatalogTerminalClass {
     use medulla_sql_lang::sql::classify::StatementKind as K;
     match kind {
         K::Begin | K::Commit | K::Rollback => SqlCatalogTerminalClass::TransactionControl,

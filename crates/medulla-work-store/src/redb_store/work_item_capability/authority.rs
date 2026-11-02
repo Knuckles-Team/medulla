@@ -4,10 +4,7 @@ pub fn bounded_text(value: &str, max: usize) -> bool {
     !value.trim().is_empty() && value.len() <= max
 }
 
-pub fn validate_authority(
-    graph: &str,
-    authority: &AuthenticatedAuthority,
-) -> Result<(), String> {
+pub fn validate_authority(graph: &str, authority: &AuthenticatedAuthority) -> Result<(), String> {
     if !bounded_text(graph, MAX_AUTHORITY_TEXT_BYTES)
         || !bounded_text(&authority.tenant, MAX_AUTHORITY_TEXT_BYTES)
         || !bounded_text(&authority.audience, MAX_AUTHORITY_TEXT_BYTES)

@@ -1,15 +1,15 @@
 use crate::dispatch::shared::MAX_SCREEN_COORDINATE_ABS;
-use crate::dispatch::shared::MAX_SCREEN_ELEMENT_NAME_BYTES;
-use crate::dispatch::shared::MAX_SCREEN_ROLE_BYTES;
-use crate::dispatch::shared::MAX_SCREEN_PNG_BYTES;
-use crate::dispatch::shared::MAX_SCREEN_PIXELS;
 use crate::dispatch::shared::MAX_SCREEN_DIMENSION;
-use crate::dispatch::shared::MAX_SCREEN_PREVIOUS_ID_BYTES;
-use crate::dispatch::shared::MAX_SCREEN_SESSION_ID_BYTES;
-use crate::dispatch::shared::MAX_SCREEN_OBSERVATION_ITEMS;
-use crate::dispatch::shared::MAX_SCREEN_OBSERVATION_BYTES;
-use crate::dispatch::shared::MAX_SCREEN_TOTAL_TEXT_BYTES;
 use crate::dispatch::shared::MAX_SCREEN_ELEMENTS;
+use crate::dispatch::shared::MAX_SCREEN_ELEMENT_NAME_BYTES;
+use crate::dispatch::shared::MAX_SCREEN_OBSERVATION_BYTES;
+use crate::dispatch::shared::MAX_SCREEN_OBSERVATION_ITEMS;
+use crate::dispatch::shared::MAX_SCREEN_PIXELS;
+use crate::dispatch::shared::MAX_SCREEN_PNG_BYTES;
+use crate::dispatch::shared::MAX_SCREEN_PREVIOUS_ID_BYTES;
+use crate::dispatch::shared::MAX_SCREEN_ROLE_BYTES;
+use crate::dispatch::shared::MAX_SCREEN_SESSION_ID_BYTES;
+use crate::dispatch::shared::MAX_SCREEN_TOTAL_TEXT_BYTES;
 
 #[derive(serde::Deserialize)]
 struct ScreenObservationWire {
@@ -112,7 +112,9 @@ fn screen_element_box_within_policy(element: &medulla_compute::screen::UiElement
 /// Element cardinality, then each element's own policy, then the RUNNING text
 /// budget — the running total is what bounds a request built from many small
 /// but individually legal elements.
-fn validate_screen_elements(elements: &[medulla_compute::screen::UiElementInput]) -> Result<(), String> {
+fn validate_screen_elements(
+    elements: &[medulla_compute::screen::UiElementInput],
+) -> Result<(), String> {
     if elements.len() > MAX_SCREEN_ELEMENTS {
         return Err("screen element count exceeds the resource limit".to_string());
     }

@@ -1,9 +1,13 @@
+use medulla_protocol_types::protocol::Method;
+use medulla_store::redb_store::{decode_durable, write_work_item_props, DurableCrypto, Shard};
 use medulla_work_store::redb_store::work_item::run_owner::*;
 use medulla_work_store::redb_store::work_item::test_shard::run_request as request;
-use medulla_work_store::{redb_store::work_item::test_shard::apply, redb_store::work_item::test_shard::open, redb_store::work_item::test_shard::with_nodes, redb_store::work_item::test_shard::with_write, redb_store::work_item::test_shard::GRAPH};
-use medulla_store::redb_store::{decode_durable, write_work_item_props, DurableCrypto, Shard};
+use medulla_work_store::{
+    redb_store::work_item::test_shard::apply, redb_store::work_item::test_shard::open,
+    redb_store::work_item::test_shard::with_nodes, redb_store::work_item::test_shard::with_write,
+    redb_store::work_item::test_shard::GRAPH,
+};
 use medulla_work_types::native_control::SubmitWorkItemRequest;
-use medulla_protocol_types::protocol::Method;
 
 type Row = serde_json::Map<String, serde_json::Value>;
 
@@ -143,10 +147,10 @@ fn run_admission_recovery_refuses_missing_evidence() {
 #[cfg(feature = "server")]
 #[tokio::test]
 async fn run_admission_unavailable_is_a_declared_wire_refusal() {
-    use medulla_server_api::api::persistence::PersistenceBackend;
     use medulla_h_jobs::work_item_read::answer;
     use medulla_h_jobs::work_item_read::WorkItemRead;
     use medulla_persistence::redb_backend::RedbBackend;
+    use medulla_server_api::api::persistence::PersistenceBackend;
     use std::sync::Arc;
     // The rows below are written unsealed (`DurableCrypto::none()`), so the backend must open
     // them with no at-rest key configured. Another test in this binary provisions one for the
@@ -194,7 +198,8 @@ async fn run_admission_unavailable_is_a_declared_wire_refusal() {
         )
         .await;
         let wire = rmp_serde::to_vec_named(&response).unwrap();
-        let decoded: medulla_protocol_types::protocol::Response = rmp_serde::from_slice(&wire).unwrap();
+        let decoded: medulla_protocol_types::protocol::Response =
+            rmp_serde::from_slice(&wire).unwrap();
         assert_eq!(decoded.error.as_deref(), Some("RUN_ADMISSION_UNAVAILABLE"));
         assert_eq!(
             decoded.error_detail.as_deref(),
@@ -345,12 +350,12 @@ fn ordinary_completion_projection_requires_exact_committed_payload() {
 // Row-authority regression; this does not qualify ledger/outbox integration.
 #[test]
 fn ordinary_completion_native_fence_and_terminal_noop_preserve_binding() {
-    use medulla_work_types::run_completion::*;
     use medulla_result_types::{
         epistemic_operations::ClaimWorkItemRequest,
         epistemic_operations::ClaimWorkItemRequestSchemaVersion,
         epistemic_operations::ClaimWorkItemResult,
     };
+    use medulla_work_types::run_completion::*;
 
     let path = medulla_store::redb_store::temp_path("medulla-completion", "native-fence");
     let shard = Shard::open(&path).unwrap();
@@ -370,7 +375,9 @@ fn ordinary_completion_native_fence_and_terminal_noop_preserve_binding() {
         },
     };
     let hold: ClaimWorkItemResult = match apply(&shard, "claim", claim, 2000).unwrap() {
-        medulla_protocol_types::protocol::ResultPayload::Raw(bytes) => decode_durable(&bytes).unwrap(),
+        medulla_protocol_types::protocol::ResultPayload::Raw(bytes) => {
+            decode_durable(&bytes).unwrap()
+        }
         other => panic!("unexpected claim {other:?}"),
     };
     assert!(hold.claimed);
@@ -475,12 +482,12 @@ fn ordinary_completion_native_fence_and_terminal_noop_preserve_binding() {
 #[cfg(feature = "server")]
 #[test]
 fn ordinary_completion_native_ledger_outbox_restart_atomicity() {
-    use medulla_protocol_types::mutation_batch::MutationBatch;
     use medulla_mutation_types::mutation_scope::MutationSurface;
+    use medulla_protocol_types::mutation_batch::MutationBatch;
+    use medulla_result_types::epistemic_operations::{ClaimWorkItemRequest, ClaimWorkItemResult};
     use medulla_server_api::batch_compile::compile_methods;
     use medulla_server_api::batch_compile::principal_fingerprint;
     use medulla_server_api::batch_compile::CompileBatch;
-    use medulla_result_types::epistemic_operations::{ClaimWorkItemRequest, ClaimWorkItemResult};
     use medulla_work_types::run_completion::*;
     let compile = |shard: &Shard, tag: &str, method: Method, now| {
         compile_methods(
@@ -494,7 +501,10 @@ fn ordinary_completion_native_ledger_outbox_restart_atomicity() {
                 placement_epoch: 0,
                 idempotency_key: tag,
                 expected_graph_version: Some(
-                    medulla_store::redb_store::store_read::read_mutation_graph_version(shard, GRAPH).unwrap(),
+                    medulla_store::redb_store::store_read::read_mutation_graph_version(
+                        shard, GRAPH,
+                    )
+                    .unwrap(),
                 ),
                 fencing_token: None,
                 created_at_ms: now,
@@ -518,8 +528,12 @@ fn ordinary_completion_native_ledger_outbox_restart_atomicity() {
         .unwrap()
     };
     let decode_result = |bytes: &[u8]| -> serde_json::Value {
-        match rmp_serde::from_slice::<medulla_protocol_types::protocol::ResultPayload>(bytes).unwrap() {
-            medulla_protocol_types::protocol::ResultPayload::Raw(bytes) => rmp_serde::from_slice(&bytes).unwrap(),
+        match rmp_serde::from_slice::<medulla_protocol_types::protocol::ResultPayload>(bytes)
+            .unwrap()
+        {
+            medulla_protocol_types::protocol::ResultPayload::Raw(bytes) => {
+                rmp_serde::from_slice(&bytes).unwrap()
+            }
             medulla_protocol_types::protocol::ResultPayload::Json(value) => value,
             other => panic!("unexpected native result {other:?}"),
         }

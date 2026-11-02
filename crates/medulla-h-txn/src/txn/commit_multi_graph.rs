@@ -84,7 +84,11 @@ pub async fn commit_coordinated_graph_methods_with_nonce(
     req_id: u64,
     caller: Option<&str>,
     coordinator_id: &str,
-    graph_methods: Vec<(String, medulla_protocol_types::protocol::GraphType, Vec<Method>)>,
+    graph_methods: Vec<(
+        String,
+        medulla_protocol_types::protocol::GraphType,
+        Vec<Method>,
+    )>,
     attempt_nonce: Option<Nonce>,
 ) -> Response {
     let mut slices = Vec::with_capacity(graph_methods.len());

@@ -12,8 +12,7 @@ use medulla_store::redb_store::*;
 /// what keeps the writers below inside the argument cap without threading six
 /// same-shaped handles positionally through every one of them.
 pub struct GraphRowTables<'g> {
-    pub run_checkpoints:
-        ScopedOwnerTableMut<'g, (&'static str, &'static str), &'static [u8]>,
+    pub run_checkpoints: ScopedOwnerTableMut<'g, (&'static str, &'static str), &'static [u8]>,
     pub current_plans: ScopedOwnerTableMut<'g, (&'static str, &'static str), &'static [u8]>,
     pub nodes: ScopedOwnerTableMut<'g, (&'static str, &'static str), &'static [u8]>,
     pub edges:
@@ -21,8 +20,7 @@ pub struct GraphRowTables<'g> {
     pub ledger: ScopedOwnerTableMut<'g, (&'static str, u64), &'static str>,
     pub semantic: ScopedOwnerTableMut<'g, &'static str, &'static [u8]>,
     pub command_sequences: ScopedOwnerTableMut<'g, &'static str, u64>,
-    pub native_work_items:
-        ScopedOwnerTableMut<'g, (&'static str, &'static str), &'static [u8]>,
+    pub native_work_items: ScopedOwnerTableMut<'g, (&'static str, &'static str), &'static [u8]>,
     #[cfg(feature = "security")]
     pub audit: ScopedOwnerTableMut<'g, (&'static str, u64), &'static [u8]>,
 }
@@ -66,7 +64,8 @@ impl<'g> GraphRowTables<'g> {
             ledger: member.open_scoped_table(LEDGER)?,
             semantic: member.open_scoped_table(SEMANTIC)?,
             command_sequences: member.open_scoped_table(WORK_ITEM_COMMAND_SEQUENCE)?,
-            native_work_items: member.open_scoped_table(super::work_item_capability::NATIVE_WORK_ITEMS)?,
+            native_work_items: member
+                .open_scoped_table(super::work_item_capability::NATIVE_WORK_ITEMS)?,
             #[cfg(feature = "security")]
             audit: member.open_scoped_table(AUDIT)?,
         })

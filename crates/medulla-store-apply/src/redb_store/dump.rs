@@ -15,12 +15,12 @@
 //! prefix, because a scoped read cannot see another graph's rows -- which is the
 //! point of the scoping, not an obstacle to it.
 
-use medulla_store::redb_store::store_read::*;
 use medulla_storage::{GraphShardOwner, ScopeRow, ScopedRead};
+use medulla_store::redb_store::store_read::*;
 use redb::ReadableTable;
 
-use medulla_store::{redb_store::shard::Shard, redb_store::shard::ShardWrite};
 use super::*;
+use medulla_store::{redb_store::shard::Shard, redb_store::shard::ShardWrite};
 
 /// One graph's rows in a table whose key is `(graph, key)`.
 type OnePartRows<V> = Vec<(String, V)>;
@@ -814,7 +814,6 @@ pub fn read_all_graph_meta(
         .map(|(fname, record)| (fname, record.name, record.graph_type, record.incarnation_id))
         .collect())
 }
-
 
 /// A per-ATTEMPT operation id for one control-only catalog write.
 ///

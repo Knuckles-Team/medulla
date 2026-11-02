@@ -533,7 +533,10 @@ impl SimulationKind for StabilizerKind {
 mod tableau_tests {
     use super::*;
 
-    fn measure_pair(tab: &mut Tableau, rng: &mut medulla_numeric::random::Generator) -> (bool, bool) {
+    fn measure_pair(
+        tab: &mut Tableau,
+        rng: &mut medulla_numeric::random::Generator,
+    ) -> (bool, bool) {
         let first = tab.measure(0, || rng.uniform(0.0, 1.0, 1)[0] < 0.5);
         let second = tab.measure(1, || rng.uniform(0.0, 1.0, 1)[0] < 0.5);
         (first, second)

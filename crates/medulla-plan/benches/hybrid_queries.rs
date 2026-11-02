@@ -26,10 +26,16 @@
 //! the `execute` leg is `query`-gated).
 
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use medulla_exec::{
+    algebra::Op, algebra::Plan, algebra::Pred, exec::execute, exec::PlanCtx,
+    optimizer::enabled as cost_opt_enabled, optimizer::optimize, runtime::execute_ops,
+};
 use medulla_graph_core::graph::GraphCore;
 use medulla_graph_core::graph::GraphView;
-use medulla_exec::{optimizer::enabled as cost_opt_enabled, exec::execute, runtime::execute_ops, optimizer::optimize, algebra::Op, algebra::Plan, exec::PlanCtx, algebra::Pred};
-use medulla_retrieval::{leanrag::AnnIndex, leanrag::GraphTopology, leanrag::HierarchicalRetriever, leanrag::RetrievalParams, leanrag::Scored};
+use medulla_retrieval::{
+    leanrag::AnnIndex, leanrag::GraphTopology, leanrag::HierarchicalRetriever,
+    leanrag::RetrievalParams, leanrag::Scored,
+};
 use medulla_semantic_index::semantic::SemanticStore;
 use serde_json::json;
 use std::hint::black_box;

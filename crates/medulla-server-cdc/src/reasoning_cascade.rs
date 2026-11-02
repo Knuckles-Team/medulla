@@ -54,12 +54,14 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use dashmap::DashMap;
-use medulla_reasoner::{owl::parse_ontology, owl::tbox_triples_from_view, owl::Classification, owl::Reasoner};
 use medulla_rdf::oxrdf::Triple;
+use medulla_reasoner::{
+    owl::parse_ontology, owl::tbox_triples_from_view, owl::Classification, owl::Reasoner,
+};
 use tokio::sync::RwLock;
 
-use medulla_server_api::state::ServerState;
 use medulla_graph_core::graph::GraphCore;
+use medulla_server_api::state::ServerState;
 
 /// Opt-in graph allowlist env var — comma-separated exact graph names. Absent
 /// or empty ⇒ disabled (the default; NEVER default-on).

@@ -24,9 +24,15 @@
 
 use std::collections::BTreeMap;
 
-use medulla_decision_types::{decision::record::AbstainReason, decision::record::CandidateFacts, decision::record::CoverageDerivation, decision::record::DecisionRecord, decision::record::DerivationEdge, decision::record::EdgeSource, decision::record::EvidenceClass, decision::record::PremiseClass, decision::record::PremiseProvenance, decision::record::PremiseRef};
-use medulla_decision_types::decision::request::AssemblyRequirements;
 use medulla_agent_types::agent_ontology;
+use medulla_decision_types::decision::request::AssemblyRequirements;
+use medulla_decision_types::{
+    decision::record::AbstainReason, decision::record::CandidateFacts,
+    decision::record::CoverageDerivation, decision::record::DecisionRecord,
+    decision::record::DerivationEdge, decision::record::EdgeSource,
+    decision::record::EvidenceClass, decision::record::PremiseClass,
+    decision::record::PremiseProvenance, decision::record::PremiseRef,
+};
 use medulla_types::contract::BoundedVec;
 
 /// Most edges one stored coverage chain may carry.

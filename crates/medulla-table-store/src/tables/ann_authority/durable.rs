@@ -61,10 +61,7 @@ pub struct Manifest {
 }
 
 /// Encode `generation` for the durable generation table.
-pub fn encode(
-    generation: &AnnGeneration,
-    encoding: Encoding,
-) -> Result<StoredGeneration, String> {
+pub fn encode(generation: &AnnGeneration, encoding: Encoding) -> Result<StoredGeneration, String> {
     let (body, payload) = match (encoding, generation.base) {
         (Encoding::Extension, Some(base)) => {
             (Body::Extension { base }, encode_rmp(&generation.delta)?)

@@ -83,11 +83,13 @@ pub(crate) async fn exec_sql_property_graph_ddl(
         );
     };
     let actor = scope.caller.unwrap_or(scope.tenant_scope).to_string();
-    let statement = match medulla_sql_lang::sql::pgq::parse_property_graph_ddl(query, scope.tenant_scope) {
-        Ok(statement) => statement,
-        Err(error) => return Response::err(req_id, sql_refusal(error)),
-    };
-    let (op, tag) = medulla_table_store::tables::PropertyGraphTxnOp::from_statement(statement, &actor);
+    let statement =
+        match medulla_sql_lang::sql::pgq::parse_property_graph_ddl(query, scope.tenant_scope) {
+            Ok(statement) => statement,
+            Err(error) => return Response::err(req_id, sql_refusal(error)),
+        };
+    let (op, tag) =
+        medulla_table_store::tables::PropertyGraphTxnOp::from_statement(statement, &actor);
     let mut txn = medulla_table_store::tables::TableTxn::new();
     txn.push(medulla_table_store::tables::TxnOp::PropertyGraphDdl(op));
     commit_sql_catalog_txn(req_id, scope, sql_method.clone(), store, txn, tag).await
@@ -347,7 +349,10 @@ pub(crate) async fn commit_sql_catalog_txn(
 /// evaluates the compound predicate. The matched ids are re-checked under the write
 /// guard by the caller (`compare_and_set_fields_if`/`remove_node_if`).
 #[cfg(feature = "query")]
-pub(crate) fn matched_node_ids(core: &GraphCore, selector: &medulla_sql_lang::sql::classify::WhereEq) -> Vec<String> {
+pub(crate) fn matched_node_ids(
+    core: &GraphCore,
+    selector: &medulla_sql_lang::sql::classify::WhereEq,
+) -> Vec<String> {
     match selector {
         medulla_sql_lang::sql::classify::WhereEq::Id(id) => {
             if core.has_node(id) {

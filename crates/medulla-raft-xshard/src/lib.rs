@@ -49,7 +49,12 @@ pub mod flake_budget;
 pub mod pregel;
 
 /// Shared setup helpers for in-process Raft harnesses.
-#[cfg(any(test, feature = "harness", feature = "compute-dist", feature = "test-support"))]
+#[cfg(any(
+    test,
+    feature = "harness",
+    feature = "compute-dist",
+    feature = "test-support"
+))]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod harness_support;
 

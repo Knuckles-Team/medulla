@@ -16,7 +16,9 @@
 #[cfg(feature = "owl")]
 use std::collections::HashMap;
 
-use medulla_types::wire::{op_kind, Op, ProofRole, UqlProofCoverage, UqlProofStep, UqlRow, UqlRowProof};
+use medulla_types::wire::{
+    op_kind, Op, ProofRole, UqlProofCoverage, UqlProofStep, UqlRow, UqlRowProof,
+};
 
 use super::stage_text;
 use medulla_exec::exec::PlanCtx;

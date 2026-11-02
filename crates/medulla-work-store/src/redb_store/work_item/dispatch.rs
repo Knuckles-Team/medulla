@@ -6,10 +6,8 @@ pub struct WorkItemApplyRequest<'args, 'table, 'crypto> {
     pub graph: &'args str,
     pub batch_id: &'args str,
     pub method: &'args Method,
-    pub nodes:
-        &'args mut ScopedOwnerTableMut<'table, (&'static str, &'static str), &'static [u8]>,
-    pub holds:
-        &'args mut ScopedOwnerTableMut<'table, (&'static str, &'static str), &'static [u8]>,
+    pub nodes: &'args mut ScopedOwnerTableMut<'table, (&'static str, &'static str), &'static [u8]>,
+    pub holds: &'args mut ScopedOwnerTableMut<'table, (&'static str, &'static str), &'static [u8]>,
     pub work_item_index:
         &'args ScopedOwnerTableMut<'table, (&'static str, &'static str, u64), &'static str>,
     pub counters:
@@ -26,8 +24,7 @@ pub struct WorkItemApplyRequest<'args, 'table, 'crypto> {
         ),
         u8,
     >,
-    pub policies:
-        &'args ScopedOwnerTableMut<'table, (&'static str, &'static str), &'static [u8]>,
+    pub policies: &'args ScopedOwnerTableMut<'table, (&'static str, &'static str), &'static [u8]>,
     pub native_work_items:
         &'args mut ScopedOwnerTableMut<'table, (&'static str, &'static str), &'static [u8]>,
     /// Edge and command-sequence rows, and the batch's authoritative time:

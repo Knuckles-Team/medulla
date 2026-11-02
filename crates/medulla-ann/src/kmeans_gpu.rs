@@ -399,8 +399,9 @@ mod tests {
     #[cfg(all(feature = "gpu-cuda", medulla_gpu_device_tests))]
     #[test]
     fn eg351_cuda_batch_assign_matches_cpu_ground_truth() {
-        let gpu = cuda::backend()
-            .expect("--cfg medulla_gpu_device_tests is set but no CUDA device initialised on this host");
+        let gpu = cuda::backend().expect(
+            "--cfg medulla_gpu_device_tests is set but no CUDA device initialised on this host",
+        );
         assert_eq!(gpu.name(), "cuda", "backend() returned a non-CUDA backend");
 
         // A batch that crosses several thread blocks, with well-separated clusters (avoid

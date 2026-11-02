@@ -23,7 +23,6 @@
 //! kept OUT of `pi`. Distinct from medulla-ann (fixed-D ANN vectors): medulla-tensor is dense
 //! N-D arrays (images / sensor frames / genomics / ML features).
 
-
 mod blob;
 // ModalityContract PILOT retrofit (CONCEPT:E4): `impl ModalityContract for Tensor`,
 // behind the crate's own opt-in `contract` feature (default OFF). See module docs.

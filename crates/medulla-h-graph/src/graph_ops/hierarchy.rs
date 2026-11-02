@@ -24,7 +24,12 @@ async fn handle_cluster_hierarchy_refresh(
 ) -> Response {
     let snap = { core.analysis_snapshot() };
     let computed = match compute_off_lock(req_id, move || {
-        medulla_graph_algos::algorithms::cluster_hierarchy(&snap, label.as_deref(), resolution, seed)
+        medulla_graph_algos::algorithms::cluster_hierarchy(
+            &snap,
+            label.as_deref(),
+            resolution,
+            seed,
+        )
     })
     .await
     {

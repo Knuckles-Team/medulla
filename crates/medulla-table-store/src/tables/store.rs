@@ -72,8 +72,6 @@ pub use ann_source::{AnnChangedRows, AnnRowReader, AnnSourceRows, ScanExtent};
 use authority::{sql_scope_identity, SqlAuthority, SqlMutation};
 pub(crate) use authority::{SqlRead, SqlWrite};
 
-use medulla_tables::{index::catalog_key as secondary_catalog_key, index::entry_key as secondary_entry_key, index::entry_prefix as secondary_entry_prefix, index::entry_range as secondary_entry_range, index::rowid_from_entry_key, index::validate_spec as validate_secondary_spec, index::SecondaryIndexLookup, index::SecondaryIndexOrder, index::SecondaryIndexSpec, index::MAX_SECONDARY_INDEXES_PER_TABLE, index::MAX_SECONDARY_INDEX_BUILD_ROWS, index::MAX_SECONDARY_INDEX_CANDIDATES};
-use medulla_tables::{migration::MigrationState, migration::SchemaMigration, migration::SchemaMigrationApply, migration::SchemaMigrationOperation, migration::SchemaMigrationRecord, migration::SecondaryIndexPolicy};
 use super::property_graph::persist::{
     self as property_graph_persist, AlterRequest, RelationCatalogInput,
 };
@@ -82,7 +80,23 @@ use super::property_graph::{
     PropertyGraphObjectId, PropertyGraphPrivilegeOperation, PropertyGraphPrivilegeStatement,
     SqlName,
 };
-use medulla_tables::{schema::Cell, schema::CheckExpr, schema::Column, schema::ColumnType, schema::RefAction, schema::StoredFunction, schema::TableConstraint, schema::TableSchema};
+use medulla_tables::{
+    index::catalog_key as secondary_catalog_key, index::entry_key as secondary_entry_key,
+    index::entry_prefix as secondary_entry_prefix, index::entry_range as secondary_entry_range,
+    index::rowid_from_entry_key, index::validate_spec as validate_secondary_spec,
+    index::SecondaryIndexLookup, index::SecondaryIndexOrder, index::SecondaryIndexSpec,
+    index::MAX_SECONDARY_INDEXES_PER_TABLE, index::MAX_SECONDARY_INDEX_BUILD_ROWS,
+    index::MAX_SECONDARY_INDEX_CANDIDATES,
+};
+use medulla_tables::{
+    migration::MigrationState, migration::SchemaMigration, migration::SchemaMigrationApply,
+    migration::SchemaMigrationOperation, migration::SchemaMigrationRecord,
+    migration::SecondaryIndexPolicy,
+};
+use medulla_tables::{
+    schema::Cell, schema::CheckExpr, schema::Column, schema::ColumnType, schema::RefAction,
+    schema::StoredFunction, schema::TableConstraint, schema::TableSchema,
+};
 // CONCEPT:MEDULLA-KG.query.real-ann-top-k/MEDULLA-313 — the durable pgvector ANN index registration the exec
 // pushdown consults to choose a real medulla-ann index over the brute-force scan.
 use crate::tables::ann_plan::AnnIndexPlan;
@@ -7456,7 +7470,9 @@ mod tests {
     // ── function catalog (CONCEPT:MEDULLA-KG.query.create-drop-function) ──────────────────────────────────────
 
     fn sample_add_fn() -> StoredFunction {
-        use medulla_tables::{schema::FunctionArg, schema::FunctionLanguage, schema::FunctionReturns};
+        use medulla_tables::{
+            schema::FunctionArg, schema::FunctionLanguage, schema::FunctionReturns,
+        };
         StoredFunction {
             name: "add".to_string(),
             args: vec![

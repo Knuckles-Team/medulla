@@ -159,23 +159,25 @@ pub(crate) async fn handle_sql(
         params_msgpack,
     };
     match medulla_sql_lang::sql::classify::classify(&query) {
-        Ok(kind) if !matches!(kind, medulla_sql_lang::sql::classify::StatementKind::Read) => Ok(exec_sql_write(
-            req_id,
-            SqlWriteScope {
-                graph_name: ctx.graph_name,
-                tenant_scope: authority.tenant_scope(),
-                caller: Some(authority.actor_scope()),
-                authority,
-                persist_dir: persist_path,
-                wire: wire.as_ref(),
-            },
-            read_authority,
-            sql_method,
-            ctx.core,
-            &store,
-            kind,
-        )
-        .await),
+        Ok(kind) if !matches!(kind, medulla_sql_lang::sql::classify::StatementKind::Read) => {
+            Ok(exec_sql_write(
+                req_id,
+                SqlWriteScope {
+                    graph_name: ctx.graph_name,
+                    tenant_scope: authority.tenant_scope(),
+                    caller: Some(authority.actor_scope()),
+                    authority,
+                    persist_dir: persist_path,
+                    wire: wire.as_ref(),
+                },
+                read_authority,
+                sql_method,
+                ctx.core,
+                &store,
+                kind,
+            )
+            .await)
+        }
         _ => Ok(handle_sql_read(
             SqlReadScope {
                 state: ctx.state,

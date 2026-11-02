@@ -6,7 +6,12 @@
 //! native submission route is composed here. The fixed service actor belongs
 //! to the deployment tenant; snapshots from another tenant fail closed.
 
-#[cfg(all(feature = "redb", feature = "ast", feature = "blob", not(feature = "raft")))]
+#[cfg(all(
+    feature = "redb",
+    feature = "ast",
+    feature = "blob",
+    not(feature = "raft")
+))]
 use medulla_server_blob::blob::BlobStateExt;
 use std::sync::Arc;
 
@@ -51,14 +56,18 @@ pub fn spawn(state: Arc<RwLock<ServerState>>) {
     drop(state);
 }
 
-#[cfg(all(feature = "redb", feature = "ast", feature = "blob", not(feature = "raft")))]
+#[cfg(all(
+    feature = "redb",
+    feature = "ast",
+    feature = "blob",
+    not(feature = "raft")
+))]
 mod worker {
     use super::*;
     use std::time::Duration;
 
     #[cfg(feature = "security")]
     use crate::repository_enrichment_worker::grant;
-    use medulla_work_types::native_control::SubmitWorkItemsRequest;
     use medulla_protocol_types::protocol::Method;
     use medulla_result_types::{
         epistemic_operations::RequestContext,
@@ -70,7 +79,7 @@ mod worker {
     use medulla_server_blob::blob::store::ChunkStore;
     use medulla_server_mutation::mutation_batch::CommitOrigin;
     use medulla_server_mutation::mutation_batch::WorkItemCommitRequest;
-
+    use medulla_work_types::native_control::SubmitWorkItemsRequest;
 
     const IDLE: Duration = Duration::from_millis(500);
     const MAX_GRAPHS_PER_SWEEP: usize = 16;

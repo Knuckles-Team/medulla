@@ -56,10 +56,10 @@ use tokio::net::TcpListener;
 use tokio::sync::mpsc;
 use tokio::sync::RwLock;
 
+use medulla_server_api::state::ServerState;
+use medulla_server_blob::kv::KvStore;
 use medulla_wire_core::broker_wire;
 use medulla_wire_core::broker_wire::BrokerProtocol;
-use medulla_server_blob::kv::KvStore;
-use medulla_server_api::state::ServerState;
 
 /// Env var: when set (and built `--features redis-wire`) the Redis RESP listener
 /// binds this address (documented loopback default `127.0.0.1:6379`, the Redis

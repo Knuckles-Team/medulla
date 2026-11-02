@@ -186,7 +186,9 @@ fn an_outcome_read_returns_only_digest_verified_provenance_of_the_tenants_item()
 // spec: MEDULLA-DURABLE-KERNEL-R028.2
 #[test]
 fn event_bindings_cannot_be_forged_and_missing_bound_event_is_not_legacy() {
-    use medulla_work_types::{work_item_read::WORK_ITEM_EVENT_BATCH, work_item_read::WORK_ITEM_EVENT_DIGEST};
+    use medulla_work_types::{
+        work_item_read::WORK_ITEM_EVENT_BATCH, work_item_read::WORK_ITEM_EVENT_DIGEST,
+    };
     let temp = open("terminal-binding-refusal");
     let mut item = work_item("tenant-a", "au.task", "succeeded");
     item.insert("outcome_ref".into(), "oe".into());
@@ -225,7 +227,9 @@ fn event_bindings_cannot_be_forged_and_missing_bound_event_is_not_legacy() {
 // spec: MEDULLA-DURABLE-KERNEL-R028.2
 #[test]
 fn a_bound_event_read_refuses_a_committed_batch_without_its_event() {
-    use medulla_work_types::{work_item_read::WORK_ITEM_EVENT_BATCH, work_item_read::WORK_ITEM_EVENT_DIGEST};
+    use medulla_work_types::{
+        work_item_read::WORK_ITEM_EVENT_BATCH, work_item_read::WORK_ITEM_EVENT_DIGEST,
+    };
     let temp = open("empty-terminal-event");
     let mut item = work_item("tenant-a", "au.task", "succeeded");
     item.insert("outcome_ref".into(), "oe".into());

@@ -405,7 +405,9 @@ fn extract_quoted_value(
 }
 
 /// Resolve a classify `ColumnDef` (raw SQL type spelling) into a store [`Column`].
-pub(crate) fn to_store_columns(cols: &[medulla_sql_lang::sql::classify::ColumnDef]) -> WireResult<Vec<Column>> {
+pub(crate) fn to_store_columns(
+    cols: &[medulla_sql_lang::sql::classify::ColumnDef],
+) -> WireResult<Vec<Column>> {
     medulla_sql::columns_from_defs(cols).map_err(user_err)
 }
 
@@ -613,7 +615,9 @@ fn authorize_property_graph_op(
             ..
         } => {
             if tenant_scope != authority.tenant_scope() {
-                return Err(user_err(medulla_server_auth::sql_catalog_acl::ACCESS_DENIED));
+                return Err(user_err(
+                    medulla_server_auth::sql_catalog_acl::ACCESS_DENIED,
+                ));
             }
             let record = table_store
                 .property_graph(tenant_scope, name)
@@ -623,7 +627,9 @@ fn authorize_property_graph_op(
             if authority.is_admin() || record.owner.value() == authority.agent_id() {
                 Ok(())
             } else {
-                Err(user_err(medulla_server_auth::sql_catalog_acl::ACCESS_DENIED))
+                Err(user_err(
+                    medulla_server_auth::sql_catalog_acl::ACCESS_DENIED,
+                ))
             }
         }
     }
@@ -1295,7 +1301,8 @@ pub struct WireSession {
     /// TRANSACTION ISOLATION LEVEL …` (CONCEPT:MEDULLA-KG.txn.serializable-zero-cost — NE-005). Applied to every
     /// subsequent `BEGIN` that does not name a level explicitly. `None` means
     /// the engine default (`Snapshot`).
-    pub session_isolation_default: parking_lot::Mutex<Option<medulla_server_api::txn::IsolationLevel>>,
+    pub session_isolation_default:
+        parking_lot::Mutex<Option<medulla_server_api::txn::IsolationLevel>>,
     /// A bare `SET TRANSACTION ISOLATION LEVEL …` issued OUTSIDE an open
     /// transaction (CONCEPT:MEDULLA-KG.txn.serializable-zero-cost — NE-005, matching Postgres: it applies to the
     /// NEXT transaction only). Consumed (and cleared) by the next `BEGIN`.
@@ -1310,14 +1317,16 @@ pub struct WireSession {
     /// so a SQL `SERIALIZABLE` transaction gets GENUINE phantom protection for
     /// the read shape the engine's predicate machinery can express, instead of
     /// silently behaving like `Snapshot`. Reset by `begin_txn()`.
-    pub serializable_predicate_reads: parking_lot::Mutex<Vec<(medulla_server_api::txn::PredicateRead, u64)>>,
+    pub serializable_predicate_reads:
+        parking_lot::Mutex<Vec<(medulla_server_api::txn::PredicateRead, u64)>>,
     /// The OPEN transaction's table-store statement replay log (CONCEPT:MEDULLA-TXN.mixed-commit-intent — NE-004):
     /// one entry per buffered table DML/DDL statement (or decoded `COPY`
     /// batch), in order. Used ONLY when a transaction mixes graph-node ops
     /// with table ops, to durably record how to rebuild the table-side
     /// `TableTxn` on crash recovery (`medulla_table_store::tables::TxnOp` is not `Serialize`).
     /// Reset by `begin_txn()`.
-    pub txn_replay_log: parking_lot::Mutex<Vec<medulla_server_ops::api::query_txn::txn_intent::ReplayStep>>,
+    pub txn_replay_log:
+        parking_lot::Mutex<Vec<medulla_server_ops::api::query_txn::txn_intent::ReplayStep>>,
     /// Set once this connection has swept its owner's leftover commit-intent
     /// files (CONCEPT:MEDULLA-TXN.mixed-commit-intent — NE-004 crash recovery). Checked lazily on first use rather
     /// than at connection setup so it costs nothing on a connection that never
@@ -1412,7 +1421,9 @@ impl WireSession {
             copy: Default::default(),
             #[cfg(feature = "query")]
             xmodal: Default::default(),
-            txn_isolation: parking_lot::Mutex::new(medulla_server_api::txn::IsolationLevel::Snapshot),
+            txn_isolation: parking_lot::Mutex::new(
+                medulla_server_api::txn::IsolationLevel::Snapshot,
+            ),
             txn_begin_version: Default::default(),
             session_isolation_default: Default::default(),
             pending_isolation: Default::default(),
@@ -1842,7 +1853,10 @@ impl WireSession {
 
     /// Clone the target graph's `Arc<GraphCore>` out of the registry (read lock),
     /// or a clean error if it doesn't exist.
-    pub(crate) async fn graph_core(&self, graph: &str) -> WireResult<Arc<medulla_graph_core::graph::GraphCore>> {
+    pub(crate) async fn graph_core(
+        &self,
+        graph: &str,
+    ) -> WireResult<Arc<medulla_graph_core::graph::GraphCore>> {
         let s = self.state.read().await;
         match s.registry.get(graph) {
             Some(e) => Ok(e.core.clone()),
@@ -1980,7 +1994,10 @@ impl WireSession {
     /// transaction (CONCEPT:MEDULLA-KG.compute.kg-transaction-is-pinned) — the live snapshot plus every buffered node op.
     /// Used to resolve RETURNING rows / ON CONFLICT checks against the txn's own
     /// uncommitted state.
-    async fn overlaid_snapshot(&self, graph: &str) -> WireResult<medulla_graph_core::graph::GraphView> {
+    async fn overlaid_snapshot(
+        &self,
+        graph: &str,
+    ) -> WireResult<medulla_graph_core::graph::GraphView> {
         let core = self.graph_core(graph).await?;
         let mut view = core.analysis_snapshot();
         self.apply_node_buffer(&mut view);
@@ -2591,8 +2608,12 @@ impl WireSession {
     fn method_node_id(method: &medulla_protocol_types::protocol::Method) -> Option<&str> {
         match method {
             medulla_protocol_types::protocol::Method::AddNode { node_id, .. }
-            | medulla_protocol_types::protocol::Method::CompareAndSetNodeFields { node_id, .. }
-            | medulla_protocol_types::protocol::Method::RemoveNode { node_id } => Some(node_id.as_str()),
+            | medulla_protocol_types::protocol::Method::CompareAndSetNodeFields {
+                node_id, ..
+            }
+            | medulla_protocol_types::protocol::Method::RemoveNode { node_id } => {
+                Some(node_id.as_str())
+            }
             _ => None,
         }
     }
@@ -2621,10 +2642,12 @@ impl WireSession {
                 continue;
             }
             match core.get_node_properties(node_id) {
-                Some(bytes) => compensating.push(medulla_protocol_types::protocol::Method::AddNode {
-                    node_id: node_id.to_string(),
-                    properties_msgpack: bytes,
-                }),
+                Some(bytes) => {
+                    compensating.push(medulla_protocol_types::protocol::Method::AddNode {
+                        node_id: node_id.to_string(),
+                        properties_msgpack: bytes,
+                    })
+                }
                 None => compensating.push(medulla_protocol_types::protocol::Method::RemoveNode {
                     node_id: node_id.to_string(),
                 }),
@@ -2695,8 +2718,12 @@ impl WireSession {
             user_err("mixed graph+table transactions require the configured persistence directory")
         })?;
         let persist_dir = std::path::Path::new(&persist_dir_buf);
-        medulla_server_ops::api::query_txn::txn_intent::write_intent(&authority, persist_dir, &intent)
-            .map_err(user_err)?;
+        medulla_server_ops::api::query_txn::txn_intent::write_intent(
+            &authority,
+            persist_dir,
+            &intent,
+        )
+        .map_err(user_err)?;
         // The live path already HAS the real, already-buffered `TableTxn` —
         // commit it directly rather than re-deriving it from the replay log
         // (that reconstruction is for RECOVERY, which has no live `TableTxn`
@@ -3306,11 +3333,12 @@ impl WireSession {
                 Some(OnConflictAction::DoUpdate(set)) => {
                     let upd_blob = rmp_serde::to_vec_named(&serde_json::Value::Object(set.clone()))
                         .map_err(|e| user_err(format!("encode CAS updates: {e}")))?;
-                    let method = medulla_protocol_types::protocol::Method::CompareAndSetNodeFields {
-                        node_id: node_id.clone(),
-                        conditions_msgpack: cond_blob.to_vec(),
-                        updates_msgpack: upd_blob,
-                    };
+                    let method =
+                        medulla_protocol_types::protocol::Method::CompareAndSetNodeFields {
+                            node_id: node_id.clone(),
+                            conditions_msgpack: cond_blob.to_vec(),
+                            updates_msgpack: upd_blob,
+                        };
                     view.overlay_compare_and_set_fields(&node_id, empty, set);
                     let affected = returning.then(|| (node_id, set.clone()));
                     return Ok(Some((method, affected)));
@@ -3439,11 +3467,13 @@ impl WireSession {
             }
             let upd_blob = rmp_serde::to_vec_named(&serde_json::Value::Object(updates.clone()))
                 .map_err(|e| user_err(format!("encode CAS updates: {e}")))?;
-            methods.push(medulla_protocol_types::protocol::Method::CompareAndSetNodeFields {
-                node_id: id.clone(),
-                conditions_msgpack: cond_blob.clone(),
-                updates_msgpack: upd_blob,
-            });
+            methods.push(
+                medulla_protocol_types::protocol::Method::CompareAndSetNodeFields {
+                    node_id: id.clone(),
+                    conditions_msgpack: cond_blob.clone(),
+                    updates_msgpack: upd_blob,
+                },
+            );
             if upd.returning {
                 affected.push((id, updates));
             }
@@ -4041,11 +4071,13 @@ impl WireSession {
         };
         let methods = ids
             .iter()
-            .map(|id| medulla_protocol_types::protocol::Method::CompareAndSetNodeFields {
-                node_id: id.clone(),
-                conditions_msgpack: cond_blob.clone(),
-                updates_msgpack: upd_blob.clone(),
-            })
+            .map(
+                |id| medulla_protocol_types::protocol::Method::CompareAndSetNodeFields {
+                    node_id: id.clone(),
+                    conditions_msgpack: cond_blob.clone(),
+                    updates_msgpack: upd_blob.clone(),
+                },
+            )
             .collect();
         let n = ids.len();
         self.commit_graph_methods(graph, methods).await?;
@@ -4289,9 +4321,11 @@ impl WireSession {
         let table_steps = if operation == "transaction" {
             std::mem::take(&mut *self.txn_replay_log.lock())
         } else {
-            vec![medulla_server_ops::api::query_txn::txn_intent::ReplayStep::Sql(
-                operation.to_string(),
-            )]
+            vec![
+                medulla_server_ops::api::query_txn::txn_intent::ReplayStep::Sql(
+                    operation.to_string(),
+                ),
+            ]
         };
         if table_steps.is_empty() {
             return Err(user_err("CREATE TABLE commit has no durable replay recipe"));
@@ -4314,8 +4348,12 @@ impl WireSession {
             .clone()
             .ok_or_else(|| user_err("CREATE TABLE recovery requires configured persistence"))?;
         let persist_dir = std::path::Path::new(&persist_dir);
-        medulla_server_ops::api::query_txn::txn_intent::write_intent(&authority, persist_dir, &intent)
-            .map_err(user_err)?;
+        medulla_server_ops::api::query_txn::txn_intent::write_intent(
+            &authority,
+            persist_dir,
+            &intent,
+        )
+        .map_err(user_err)?;
         self.resolve_commit_intent(
             &authority,
             persist_dir,
@@ -4454,14 +4492,18 @@ impl WireSession {
     /// the in-txn UQL overlay and the cross-modal COMMIT consume, so the NodeOp→Method
     /// mapping is never re-derived.
     #[cfg(feature = "query")]
-    pub fn node_ops_to_methods(node_ops: &[NodeOp]) -> WireResult<Vec<medulla_protocol_types::protocol::Method>> {
+    pub fn node_ops_to_methods(
+        node_ops: &[NodeOp],
+    ) -> WireResult<Vec<medulla_protocol_types::protocol::Method>> {
         let mut methods = Vec::with_capacity(node_ops.len());
         for op in node_ops {
             match op {
-                NodeOp::Add { id, blob } => methods.push(medulla_protocol_types::protocol::Method::AddNode {
-                    node_id: id.clone(),
-                    properties_msgpack: blob.clone(),
-                }),
+                NodeOp::Add { id, blob } => {
+                    methods.push(medulla_protocol_types::protocol::Method::AddNode {
+                        node_id: id.clone(),
+                        properties_msgpack: blob.clone(),
+                    })
+                }
                 NodeOp::Cas {
                     id,
                     conditions,
@@ -4473,15 +4515,19 @@ impl WireSession {
                     let upd_blob =
                         rmp_serde::to_vec_named(&serde_json::Value::Object(updates.clone()))
                             .map_err(|e| user_err(format!("encode CAS updates: {e}")))?;
-                    methods.push(medulla_protocol_types::protocol::Method::CompareAndSetNodeFields {
-                        node_id: id.clone(),
-                        conditions_msgpack: cond_blob,
-                        updates_msgpack: upd_blob,
-                    });
+                    methods.push(
+                        medulla_protocol_types::protocol::Method::CompareAndSetNodeFields {
+                            node_id: id.clone(),
+                            conditions_msgpack: cond_blob,
+                            updates_msgpack: upd_blob,
+                        },
+                    );
                 }
-                NodeOp::Remove { id } => methods.push(medulla_protocol_types::protocol::Method::RemoveNode {
-                    node_id: id.clone(),
-                }),
+                NodeOp::Remove { id } => {
+                    methods.push(medulla_protocol_types::protocol::Method::RemoveNode {
+                        node_id: id.clone(),
+                    })
+                }
             }
         }
         Ok(methods)
@@ -4597,8 +4643,10 @@ impl WireSession {
             #[cfg(feature = "sparql")]
             XmodalStmt::SparqlUpdate(update) => {
                 let (methods, schema_refs) =
-                    medulla_server_ops::api::query_txn::txn_support::sparql_update_to_methods(&update)
-                        .map_err(user_err)?;
+                    medulla_server_ops::api::query_txn::txn_support::sparql_update_to_methods(
+                        &update,
+                    )
+                    .map_err(user_err)?;
                 self.stage_or_commit_owl(graph, methods, schema_refs, in_txn)
                     .await
             }
@@ -4678,14 +4726,16 @@ impl WireSession {
 
     /// The installed transaction seam, or an internal error when none is installed.
     async fn txn_api(&self) -> WireResult<Arc<dyn medulla_server_ops::api::query_txn::TxnApi>> {
-        medulla_server_ops::api::query_txn::txn_seam(&self.state).await
+        medulla_server_ops::api::query_txn::txn_seam(&self.state)
+            .await
             .ok_or_else(|| user_err("INTERNAL: transaction seam is not installed"))
     }
 
     /// The installed query seam, or an internal error when none is installed.
     #[cfg(feature = "query")]
     async fn query_api(&self) -> WireResult<Arc<dyn medulla_server_ops::api::query_txn::QueryApi>> {
-        medulla_server_ops::api::query_txn::query_seam(&self.state).await
+        medulla_server_ops::api::query_txn::query_seam(&self.state)
+            .await
             .ok_or_else(|| user_err("INTERNAL: query seam is not installed"))
     }
 
@@ -4702,16 +4752,16 @@ impl WireSession {
     async fn exec_uql(&self, graph: &str, text: &str, in_txn: bool) -> WireResult<WireOutcome> {
         let plan = medulla_uql::parse(text).map_err(|e| user_err(e.render(text)))?;
         #[cfg(feature = "tsdb")]
-        let tsdb_scope = if medulla_server_ops::api::query_txn::query_support::plan_needs_tsdb(&plan.ops)
-        {
-            let authority = self.carrier_authority()?;
-            Some((
-                authority.tenant_scope().to_string(),
-                authority.namespace("timeseries-graph", graph),
-            ))
-        } else {
-            None
-        };
+        let tsdb_scope =
+            if medulla_server_ops::api::query_txn::query_support::plan_needs_tsdb(&plan.ops) {
+                let authority = self.carrier_authority()?;
+                Some((
+                    authority.tenant_scope().to_string(),
+                    authority.namespace("timeseries-graph", graph),
+                ))
+            } else {
+                None
+            };
         let core = self.graph_core(graph).await?;
         let mut view = core.analysis_snapshot();
         let (overlay_methods, vectors) = if in_txn {
@@ -5046,7 +5096,9 @@ impl WireSession {
             let table_ops_after = self.txn.lock().as_ref().map(|t| t.ops.len()).unwrap_or(0);
             if table_ops_after > table_ops_before {
                 self.txn_replay_log.lock().push(
-                    medulla_server_ops::api::query_txn::txn_intent::ReplayStep::Sql(sql.to_string()),
+                    medulla_server_ops::api::query_txn::txn_intent::ReplayStep::Sql(
+                        sql.to_string(),
+                    ),
                 );
             }
         }

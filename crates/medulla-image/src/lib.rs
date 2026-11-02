@@ -20,7 +20,6 @@
 //! extraction, spatial-grid postings, and exact pHash/region predicates. Governed
 //! persistence is exposed through [`ImageServingRuntime`].
 
-
 mod header;
 mod image;
 

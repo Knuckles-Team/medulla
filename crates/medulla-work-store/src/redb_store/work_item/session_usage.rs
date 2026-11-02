@@ -1,7 +1,10 @@
 //! Caller-context aggregation from the existing ordinary completion ledger.
 use super::*;
 use medulla_work_types::native_control::SubmitWorkItemRequest;
-use medulla_work_types::{run_usage::aggregate_session_usage, run_usage::SessionUsage, run_usage::SessionUsageRecord, run_usage::MAX_SESSION_USAGE_RUNS};
+use medulla_work_types::{
+    run_usage::aggregate_session_usage, run_usage::SessionUsage, run_usage::SessionUsageRecord,
+    run_usage::MAX_SESSION_USAGE_RUNS,
+};
 
 /// One graph snapshot supplies inventory, immutable admission, ledger and outbox.
 /// Bounds apply to examined node rows, not just matching or measured runs.

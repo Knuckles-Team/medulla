@@ -6,8 +6,7 @@ pub struct RenewWorkItemLeaseInput<'args, 'table, 'crypto> {
     pub fence: WorkItemFenceKey<'args>,
     pub now_ms: u64,
     pub lease_ms: u64,
-    pub nodes:
-        &'args mut ScopedOwnerTableMut<'table, (&'static str, &'static str), &'static [u8]>,
+    pub nodes: &'args mut ScopedOwnerTableMut<'table, (&'static str, &'static str), &'static [u8]>,
     pub crypto: DurableCrypto<'crypto>,
 }
 

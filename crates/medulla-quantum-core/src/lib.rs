@@ -70,7 +70,6 @@
 //!   the FFI call) need a shape `medulla-numeric` can hold, which a `Complex64` array
 //!   extension already provides.
 
-
 pub mod backend;
 pub mod estimate;
 pub mod hash;

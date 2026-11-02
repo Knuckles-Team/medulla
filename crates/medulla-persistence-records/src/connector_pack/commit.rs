@@ -447,10 +447,7 @@ fn compare_head(
         ))
         .map_err(|error| error.to_string())?
         .map(|value| {
-            crate::agent_row::decode::<ConnectorPackHeadRow>(
-                value.value(),
-                "connector pack head",
-            )
+            crate::agent_row::decode::<ConnectorPackHeadRow>(value.value(), "connector pack head")
         })
         .transpose()?;
     let actual_head = actual.as_ref().map(|row| PackHeadRef {

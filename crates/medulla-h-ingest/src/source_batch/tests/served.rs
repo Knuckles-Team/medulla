@@ -25,7 +25,10 @@ impl Served {
     fn new() -> Self {
         let fixture = Fixture::for_tenant(TENANT);
         fixture.grant_insert(WRITER);
-        let mut state = medulla_server::seams_install::new_state_for_test(SECRET, ServerState::test_isolation(WRITER));
+        let mut state = medulla_server::seams_install::new_state_for_test(
+            SECRET,
+            ServerState::test_isolation(WRITER),
+        );
         state.persist_dir = Some(fixture.directory.to_str().unwrap().into());
         Self {
             fixture,

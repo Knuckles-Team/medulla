@@ -1,16 +1,16 @@
 //! Graph authority and auxiliary payload preservation proofs.
 
 use super::*;
-#[cfg(feature = "security")]
-use medulla_store::redb_store::PROVENANCE_ANCHOR_MEMBERS;
-use medulla_resource_store::redb_store::capacity_lease;
 use medulla_lane_store::redb_store::development_lane;
-use medulla_work_store::redb_store::work_item_capability;
+use medulla_resource_store::redb_store::capacity_lease;
 #[cfg(feature = "matview")]
 use medulla_store::redb_store::MATVIEW_OPERATOR_STATE;
-use medulla_store::redb_store::PLAN_MATVIEWS;
 use medulla_store::redb_store::NODES;
+use medulla_store::redb_store::PLAN_MATVIEWS;
+#[cfg(feature = "security")]
+use medulla_store::redb_store::PROVENANCE_ANCHOR_MEMBERS;
 use medulla_store::redb_store::RESOURCE_RESERVATIONS;
+use medulla_work_store::redb_store::work_item_capability;
 
 /// Re-pinned from `migration_routes_mutation_and_change_authority_with_its_graph`:
 /// the eight private `mutation_*` tables it planted rows in are retired, and the

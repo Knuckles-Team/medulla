@@ -67,11 +67,11 @@ use super::{
     AppCtx, GroupId, NativeMutationCommand, RaftRequest, RaftResponse, ReplicatedMutation,
     TypeConfig,
 };
+use medulla_persistence::redb_backend::RedbBackend;
 use medulla_protocol_types::protocol::GraphType;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::ResultPayload;
 use medulla_server_api::api::persistence::PersistenceBackend;
-use medulla_persistence::redb_backend::RedbBackend;
 
 fn deserialize_required_option<'de, D, T>(deserializer: D) -> Result<Option<T>, D::Error>
 where
@@ -307,7 +307,9 @@ mod current_snapshot_schema_tests {
     }
 
     #[cfg(feature = "jobs")]
-    fn receipt_for_transport(replayed: bool) -> medulla_protocol_types::mutation_batch::MutationBatchCommit {
+    fn receipt_for_transport(
+        replayed: bool,
+    ) -> medulla_protocol_types::mutation_batch::MutationBatchCommit {
         let conditions = rmp_serde::to_vec_named(&serde_json::json!({"epoch": 0})).unwrap();
         let updates = rmp_serde::to_vec_named(&serde_json::json!({"epoch": 1})).unwrap();
         let batch = medulla_server_api::batch_compile::compile_methods(
@@ -342,10 +344,11 @@ mod current_snapshot_schema_tests {
                 batch,
                 identity: identity.clone(),
                 status: medulla_protocol_types::mutation_batch::MutationBatchStatus::Committed,
-                committed_version: medulla_mutation_types::mutation_scope::CommittedVersion::Graph {
-                    source: 0,
-                    target: 1,
-                },
+                committed_version:
+                    medulla_mutation_types::mutation_scope::CommittedVersion::Graph {
+                        source: 0,
+                        target: 1,
+                    },
                 result_msgpack: Some(encoded_result(ResultPayload::Bool(false))),
                 committed_at_ms: 13,
             },

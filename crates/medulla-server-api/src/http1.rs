@@ -89,10 +89,7 @@ impl HttpMessage {
 /// Read and frame one HTTP/1.1 request from `stream`. `None` means the request
 /// is unframeable — malformed, ambiguous, or over `limits` — and the caller
 /// must close the connection rather than guess at a response.
-pub async fn read_request(
-    stream: &mut TcpStream,
-    limits: RequestLimits,
-) -> Option<HttpMessage> {
+pub async fn read_request(stream: &mut TcpStream, limits: RequestLimits) -> Option<HttpMessage> {
     let mut buf = Vec::new();
     let header_end = read_head(stream, &mut buf, limits.max_head_bytes).await?;
 

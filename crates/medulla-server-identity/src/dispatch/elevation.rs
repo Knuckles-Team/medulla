@@ -22,12 +22,12 @@ use medulla_protocol_types::{
     result_contract::security::RbacElevationRevoke,
 };
 
-use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_protocol_types::protocol::Method;
 #[cfg(feature = "security")]
 use medulla_protocol_types::protocol::Response;
 #[cfg(feature = "security")]
 use medulla_protocol_types::protocol::ResultPayload;
+use medulla_server_api::authority_context::VerifiedRequestContext;
 
 /// Whose actor an elevation op carries: one re-derived from this request's
 /// verified context, or the one a leader stamped into a replicated command.

@@ -129,9 +129,7 @@ fn sanitize_channel_proposal(
                 creator: authority.actor_scope().to_string(),
                 initial_members: initial_members
                     .into_iter()
-                    .map(|member| {
-                        medulla_server_api::batch_compile::principal_fingerprint(&member)
-                    })
+                    .map(|member| medulla_server_api::batch_compile::principal_fingerprint(&member))
                     .collect::<Result<Vec<_>, _>>()?,
             })
         }

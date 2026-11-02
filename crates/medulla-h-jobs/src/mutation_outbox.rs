@@ -54,9 +54,13 @@ pub async fn handle_mutation_outbox(
 
 #[cfg(feature = "redb")]
 use medulla_server_api::outbox_operator::position;
+#[cfg(feature = "redb")]
 use medulla_server_api::outbox_operator::OutboxView;
+#[cfg(feature = "redb")]
 use medulla_server_api::outbox_operator::OutboxViewAnswer;
+#[cfg(feature = "redb")]
 use medulla_server_api::outbox_operator::OutboxWrite;
+#[cfg(feature = "redb")]
 use medulla_server_api::outbox_operator::OutboxWriteReply;
 
 /// The label a failed blocking store task names.
@@ -239,7 +243,8 @@ async fn semantic_owner(
 ) -> Result<Owner, String> {
     let authority = medulla_server_api::carrier::CarrierAuthority::from_verified(verified)?;
     let persist_dir = persist_dir(state).await?;
-    let query = medulla_server_ops::api::query_txn::query_seam(state).await
+    let query = medulla_server_ops::api::query_txn::query_seam(state)
+        .await
         .ok_or_else(|| "INTERNAL: query seam is not installed".to_string())?;
     let service =
         query.existing_semantic_service(&persist_dir, authority.tenant_scope(), binding_id)?;

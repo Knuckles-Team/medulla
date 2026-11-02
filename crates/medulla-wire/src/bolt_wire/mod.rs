@@ -43,14 +43,14 @@ use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::QueryResult;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
-use medulla_server_auth::access::check_graph_access;
+use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::carrier::CarrierAuthority;
 use medulla_server_api::carrier::GraphReadAuthority;
+use medulla_server_api::state::ServerState;
+use medulla_server_auth::access::check_graph_access;
 use medulla_server_auth::auth::verify_request_with_security_dir;
-use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_mutation::mutation::MutationCtx;
 use medulla_server_mutation::mutation::MutationPlan;
-use medulla_server_api::state::ServerState;
 
 mod auth;
 pub mod packstream;
@@ -642,15 +642,17 @@ async fn run_read(
         read_authority.filter_view(&mut view);
         view
     };
-    tokio::task::spawn_blocking(move || medulla_cypher::cypher::exec_cypher_params(&view, &query, &params))
-        .await
-        .map_err(|_| {
-            BoltFailure::client(
-                "Neo.DatabaseError.General.UnknownError",
-                "Cypher read task failed",
-            )
-        })?
-        .map_err(|error| BoltFailure::client("Neo.ClientError.Statement.SyntaxError", error))
+    tokio::task::spawn_blocking(move || {
+        medulla_cypher::cypher::exec_cypher_params(&view, &query, &params)
+    })
+    .await
+    .map_err(|_| {
+        BoltFailure::client(
+            "Neo.DatabaseError.General.UnknownError",
+            "Cypher read task failed",
+        )
+    })?
+    .map_err(|error| BoltFailure::client("Neo.ClientError.Statement.SyntaxError", error))
 }
 
 async fn run_transaction_statement(
@@ -682,7 +684,11 @@ async fn run_transaction_statement(
             medulla_cypher::cypher::exec_cypher_write_params(&staged, &write.query, &write.params)?;
         }
         if is_write {
-            medulla_cypher::cypher::exec_cypher_write_params(&staged, &current.query, &current.params)
+            medulla_cypher::cypher::exec_cypher_write_params(
+                &staged,
+                &current.query,
+                &current.params,
+            )
         } else {
             let mut view = staged.analysis_snapshot();
             read_authority.filter_view(&mut view);
@@ -970,7 +976,8 @@ mod tests {
     }
 
     fn test_state(seed_public_nodes: bool) -> Arc<RwLock<ServerState>> {
-        let mut state = medulla_server::seams_install::new_state_for_test("test", bolt_test_isolation());
+        let mut state =
+            medulla_server::seams_install::new_state_for_test("test", bolt_test_isolation());
         if seed_public_nodes {
             let core = state.registry.get("__commons__").unwrap().core.clone();
             for (id, ty) in [("n1", "Agent"), ("n2", "Agent"), ("n3", "Tool")] {
@@ -1028,8 +1035,8 @@ mod tests {
         Arc<RwLock<ServerState>>,
         Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>,
     ) {
-        use medulla_protocol_types::protocol::GraphType;
         use medulla_persistence::redb_backend::RedbBackend;
+        use medulla_protocol_types::protocol::GraphType;
 
         let backend = RedbBackend::open(dir.to_string_lossy().to_string(), 64)
             .expect("open Bolt test backend");
@@ -1113,9 +1120,9 @@ mod tests {
         // still for this whole body. READ guard: it excludes only a key MUTATOR, never
         // another opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
         let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-        use medulla_types::acl::RequestContextClaims;
         use medulla_server_auth::auth::compute_verified_envelope_token;
         use medulla_server_auth::auth::VerifiedEnvelopeParams;
+        use medulla_types::acl::RequestContextClaims;
 
         let mut request = medulla_protocol_types::protocol::Request {
             id: next_conn_id(),

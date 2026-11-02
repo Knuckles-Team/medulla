@@ -3,9 +3,9 @@ use serde::{Deserialize, Serialize};
 use medulla_protocol_types::protocol::Method;
 use medulla_server_api::api::reentry::TransactionParticipantPhase;
 
+use super::super::deserialize_required_option;
 #[cfg(feature = "modality-serving")]
 use super::super::SanitizedModalityRaftCommand;
-use super::super::deserialize_required_option;
 use medulla_server_api::api::persistence::opaque_scope_is_valid;
 
 mod catalog;
@@ -272,10 +272,7 @@ impl NativeMutationCommand {
 
     /// Convert only an explicitly inventoried public mutation into its bounded,
     /// encrypted native consensus domain. There is no raw public-method variant.
-    pub fn from_public_method(
-        method: Method,
-        server_secret: &str,
-    ) -> Result<Self, Box<Method>> {
+    pub fn from_public_method(method: Method, server_secret: &str) -> Result<Self, Box<Method>> {
         let Some(domain) = native_domain(&method) else {
             return Err(Box::new(method));
         };

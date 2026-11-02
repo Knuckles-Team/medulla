@@ -35,8 +35,12 @@ fn sample_view() -> GraphView {
 }
 
 fn run(sql: &str) -> (Vec<String>, Vec<Vec<Value>>) {
-    let r = exec_sql(&sample_view(), sql, &medulla_sql::sql::CancellationToken::new())
-        .expect("window sql executed");
+    let r = exec_sql(
+        &sample_view(),
+        sql,
+        &medulla_sql::sql::CancellationToken::new(),
+    )
+    .expect("window sql executed");
     let rows = r
         .rows
         .iter()

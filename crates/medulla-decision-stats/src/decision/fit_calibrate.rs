@@ -33,8 +33,13 @@ use super::scorer::fixed::{to_f64, to_q32};
 use super::scorer::forward::{read, served_probabilities, EXCLUDED_LOGIT};
 use super::scorer::legal::LegalSet;
 use super::targets::{audit_weight, targets};
-use crate::{conformal::acceptability_score, conformal::realised_coverage_interval, conformal::split_conformal, conformal::weighted_split_conformal, conformal::Threshold};
-use medulla_numeric::{detkernel::optimise::minimise_convex_bounded, detkernel::optimise::DEFAULT_BISECTION_STEPS};
+use crate::{
+    conformal::acceptability_score, conformal::realised_coverage_interval,
+    conformal::split_conformal, conformal::weighted_split_conformal, conformal::Threshold,
+};
+use medulla_numeric::{
+    detkernel::optimise::minimise_convex_bounded, detkernel::optimise::DEFAULT_BISECTION_STEPS,
+};
 use medulla_numeric::{risk::calibrate_selective_risk, risk::RiskTarget, risk::SampleGate};
 
 /// Inverse-temperature search bracket.

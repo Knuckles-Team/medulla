@@ -1,5 +1,5 @@
-use medulla_store::redb_store::store_prelude::*;
 use super::*;
+use medulla_store::redb_store::store_prelude::*;
 
 /// Recover the logical graph name from a durable key produced by [`sanitize`].
 ///

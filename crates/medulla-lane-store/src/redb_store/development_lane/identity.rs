@@ -1,5 +1,3 @@
-use medulla_resource_store::{redb_store::resource::resource_decode, redb_store::resource::resource_encode};
-use medulla_store::redb_store::DurableCrypto;
 use super::links::durable_hold_bounds;
 use super::quota::{
     hold_lane_identity_equal, hold_placement_equal, hold_quota_identity_equal,
@@ -9,10 +7,14 @@ use super::reserve_support::hold_target_kind;
 use super::rows::LaneRows;
 use super::DurableLaneHold;
 use medulla_protocol_types::protocol::Method;
+use medulla_resource_store::{
+    redb_store::resource::resource_decode, redb_store::resource::resource_encode,
+};
 use medulla_result_types::epistemic_operations::DevelopmentLaneHold;
 use medulla_result_types::epistemic_operations::DevelopmentLaneIntent;
 use medulla_result_types::epistemic_operations::DevelopmentLaneReserveRequest;
 use medulla_storage::ScopedOwnerTableMut;
+use medulla_store::redb_store::DurableCrypto;
 
 pub fn hold_immutable_equal(
     row: &DurableLaneHold,

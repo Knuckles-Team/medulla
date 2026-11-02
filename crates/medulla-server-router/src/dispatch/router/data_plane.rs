@@ -1,8 +1,13 @@
 //! Self-routing data-plane dispatch groups.
 
-#[cfg(any(feature = "knowledge-batch", feature = "modality-serving", feature = "owl", feature = "streaming"))]
-use medulla_server_graph::dispatch::shared::timed_read;
 use super::*;
+#[cfg(any(
+    feature = "knowledge-batch",
+    feature = "modality-serving",
+    feature = "owl",
+    feature = "streaming"
+))]
+use medulla_server_graph::dispatch::shared::timed_read;
 
 #[cfg(feature = "tsdb")]
 use super::data_plane_arms::dispatch_transaction_methods_arm_1;

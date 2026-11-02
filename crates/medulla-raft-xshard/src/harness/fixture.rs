@@ -193,7 +193,10 @@ pub async fn start_single_node_groups(
     isolation: IsolationLayer,
     auth_secret: &str,
     group_ids: &[medulla_raft::raft::GroupId],
-) -> (Arc<medulla_raft::raft::multi::MultiRaft>, Arc<RwLock<ServerState>>) {
+) -> (
+    Arc<medulla_raft::raft::multi::MultiRaft>,
+    Arc<RwLock<ServerState>>,
+) {
     crate::harness_support::start_single_node_groups(
         dir,
         backend,
@@ -213,7 +216,10 @@ pub async fn start_recovered_single_node_groups(
     isolation: IsolationLayer,
     auth_secret: &str,
     group_ids: &[medulla_raft::raft::GroupId],
-) -> (Arc<medulla_raft::raft::multi::MultiRaft>, Arc<RwLock<ServerState>>) {
+) -> (
+    Arc<medulla_raft::raft::multi::MultiRaft>,
+    Arc<RwLock<ServerState>>,
+) {
     crate::harness_support::start_recovered_single_node_groups(
         dir,
         backend,
@@ -232,7 +238,10 @@ pub async fn start_routed_groups(
     auth_secret: &str,
     group_ids: &[medulla_raft::raft::GroupId],
     assignments: &[(&str, medulla_raft::raft::GroupId)],
-) -> (Arc<medulla_raft::raft::multi::MultiRaft>, Arc<RwLock<ServerState>>) {
+) -> (
+    Arc<medulla_raft::raft::multi::MultiRaft>,
+    Arc<RwLock<ServerState>>,
+) {
     let (multi, state) =
         start_single_node_groups(dir, backend, isolation, auth_secret, group_ids).await;
     for &(graph, group) in assignments {

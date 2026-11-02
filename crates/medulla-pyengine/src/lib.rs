@@ -144,12 +144,11 @@
 //! `get_node_properties`/`has_node`) and typed error mapping (proven for all
 //! five). Durable persistence remains the explicit seam described above.
 
-
 use std::sync::Arc;
 
+use medulla_core::registry::GraphRegistry;
 use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::protocol::GraphType;
-use medulla_core::registry::GraphRegistry;
 use parking_lot::RwLock;
 
 /// A shared, cheaply-cloneable handle to one in-process engine's graph

@@ -11,13 +11,13 @@ mod common;
 
 use std::collections::BTreeSet;
 
-use medulla_source_types::supply_chain_report::ImpactKind;
-use medulla_source_types::supply_chain_report::ImpactRow;
 use medulla_graph_core::graph::GraphCore;
 use medulla_graph_core::graph::GraphView;
 use medulla_rdf::mapping::{load_triples, parse_turtle, IriStore};
-use medulla_virtual_graph::source_selection::CoverageFixture;
 use medulla_rdf::sparql::{execute, Dataset, Projection, QueryOutcome};
+use medulla_source_types::supply_chain_report::ImpactKind;
+use medulla_source_types::supply_chain_report::ImpactRow;
+use medulla_virtual_graph::source_selection::CoverageFixture;
 use medulla_virtual_graph::supply_chain_impact::supply_chain_impact;
 
 use common::parse_all;

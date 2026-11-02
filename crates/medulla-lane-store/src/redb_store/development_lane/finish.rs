@@ -1,4 +1,3 @@
-use medulla_store::redb_store::DurableCrypto;
 use super::identity::{hold_encode, hold_load, lane_intent_matches_hold};
 use super::lifecycle_shared::{
     current_policy, hold_correlations_match, terminal_source_correlations_match,
@@ -19,6 +18,7 @@ use medulla_result_types::epistemic_operations::DevelopmentLaneFinishRequestTerm
 use medulla_result_types::epistemic_operations::DevelopmentLaneHold;
 use medulla_result_types::epistemic_operations::DevelopmentLaneHoldState;
 use medulla_storage::ScopedOwnerTableMut;
+use medulla_store::redb_store::DurableCrypto;
 
 pub fn finish_state_matches(
     terminal_state: DevelopmentLaneFinishRequestTerminalState,
@@ -89,17 +89,14 @@ pub fn work_item_fence_mismatch(
         || hold.attempt != attempt
         || hold.lease_epoch != medulla_store::redb_store::property_u64(pre_props, "lease_epoch")
         || hold.fencing_token != medulla_store::redb_store::property_u64(pre_props, "fencing_token")
-        || hold.work_item_fence != medulla_store::redb_store::property_string(pre_props, "work_item_fence")
+        || hold.work_item_fence
+            != medulla_store::redb_store::property_string(pre_props, "work_item_fence")
         || medulla_store::redb_store::property_string(pre_props, "lease_owner") != hold.owner_id
 }
 
 /// A cancel advances the WorkItem lease epoch / fencing token by exactly one;
 /// every other terminal outcome keeps the pre-image's counter.
-pub fn expected_terminal_counter(
-    value: u64,
-    advance: bool,
-    overflow: &str,
-) -> Result<u64, String> {
+pub fn expected_terminal_counter(value: u64, advance: bool, overflow: &str) -> Result<u64, String> {
     if !advance {
         return Ok(value);
     }
@@ -126,7 +123,8 @@ pub fn terminal_tuple_invalid(
         || next_fencing_token == 0
         || next_fencing_token != expected_fencing_token
         || next_work_item_fence.is_empty()
-        || next_work_item_fence != medulla_store::redb_store::property_string(pre_props, "work_item_fence")
+        || next_work_item_fence
+            != medulla_store::redb_store::property_string(pre_props, "work_item_fence")
 }
 
 pub const ACTIVE_HOLD_REQUIRES_TERMINAL_WORK_ITEM: &str =

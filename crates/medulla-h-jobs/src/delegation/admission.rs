@@ -328,5 +328,4 @@ impl RetainedTarget {
             Self::Graph(graph) => &graph.tenant_id,
         }
     }
-
 }

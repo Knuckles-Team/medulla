@@ -21,8 +21,12 @@ pub fn validate_cypher_mode(method: &Method) -> Result<(), String> {
         return Ok(());
     };
     let parsed_mode = match medulla_cypher::cypher::classify_cypher(query) {
-        Ok(medulla_cypher::cypher::CypherStatementKind::Read) => medulla_protocol_types::protocol::CypherMode::Read,
-        Ok(medulla_cypher::cypher::CypherStatementKind::Write) => medulla_protocol_types::protocol::CypherMode::Write,
+        Ok(medulla_cypher::cypher::CypherStatementKind::Read) => {
+            medulla_protocol_types::protocol::CypherMode::Read
+        }
+        Ok(medulla_cypher::cypher::CypherStatementKind::Write) => {
+            medulla_protocol_types::protocol::CypherMode::Write
+        }
         Err(message) => {
             return Err(medulla_protocol_types::error_registry::classify_refusal(
                 "INVALID_ARGUMENT",

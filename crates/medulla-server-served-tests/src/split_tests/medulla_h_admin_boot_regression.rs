@@ -28,11 +28,11 @@
 //!    replay, no duplicates) — the full replay is a once-per-store cost, not
 //!    a per-boot one.
 
-use medulla_server_blob::blob::BlobStateExt;
-#[cfg(feature = "redb")]
-use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 #[cfg(feature = "redb")]
 use medulla_persistence::AsRedb;
+#[cfg(feature = "redb")]
+use medulla_persistence_records::agent_library::AgentLibraryStateExt;
+use medulla_server_blob::blob::BlobStateExt;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -60,10 +60,10 @@ use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
 use medulla_server_api::api::persistence::PersistenceBackend;
+use medulla_server_api::state::ServerState;
 use medulla_server_auth::auth::dispatch_test_on_heap;
 use medulla_server_auth::auth::scoped_test_request_on;
 use medulla_server_auth::auth::ScopedTestCaller;
-use medulla_server_api::state::ServerState;
 
 const SECRET: &str = "g9-boot-critical-fixture-secret"; // sanitizer:ignore
 /// The fixed tenant `auth::request_context_policy` expects under `cfg(test)`.
@@ -420,7 +420,10 @@ async fn boot_listener_binds_before_the_projection_drain_completes() {
     );
     let blob_dir = dir.path().join("blob");
     std::fs::create_dir_all(&blob_dir).unwrap();
-    let mut state = medulla_server::seams_install::new_state_for_test(SECRET, ServerState::test_isolation(ADMIN));
+    let mut state = medulla_server::seams_install::new_state_for_test(
+        SECRET,
+        ServerState::test_isolation(ADMIN),
+    );
     state.persist_dir = Some(persist.clone());
     state.persistence = Some(backend.clone());
     state.tsdb_store = Some(series_store.clone());
@@ -483,7 +486,8 @@ async fn boot_listener_binds_before_the_projection_drain_completes() {
     let serve_state = state.clone();
     let serve_path = socket_path.clone();
     tokio::spawn(async move {
-        let _ = medulla_server::transport::serve_uds(&serve_path, 0o600, serve_state, shutdown).await;
+        let _ =
+            medulla_server::transport::serve_uds(&serve_path, 0o600, serve_state, shutdown).await;
     });
 
     // (a) The listener is bound within the budget.

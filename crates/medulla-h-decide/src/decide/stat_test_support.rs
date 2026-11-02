@@ -1,7 +1,11 @@
 //! Shared fixtures for the served statistical-decision tests. The in-crate stat tests and the
 //! facade tests that go through the full dispatcher both use them.
 
-#[cfg(all(any(test, feature = "test-support"), feature = "blob", feature = "redb"))]
+#[cfg(all(
+    any(test, feature = "test-support"),
+    feature = "blob",
+    feature = "redb"
+))]
 use medulla_server_blob::blob::BlobStateExt;
 use std::sync::Arc;
 
@@ -48,12 +52,13 @@ impl Harness {
         server.persist_dir = Some(dir.path().to_string_lossy().into_owned());
         #[cfg(feature = "blob")]
         {
-            let cas =
-                medulla_server_blob::blob::store::RedbChunkStore::open(dir.path().to_str().unwrap())
-                    .unwrap();
-            server.set_blob_cursors(Some(Arc::new(medulla_server_blob::blob::BlobCursors::new(Arc::new(
-                cas,
-            )))));
+            let cas = medulla_server_blob::blob::store::RedbChunkStore::open(
+                dir.path().to_str().unwrap(),
+            )
+            .unwrap();
+            server.set_blob_cursors(Some(Arc::new(medulla_server_blob::blob::BlobCursors::new(
+                Arc::new(cas),
+            ))));
         }
         let state = Arc::new(RwLock::new(server));
         let store = state.write().await.ensure_agent_library().unwrap();

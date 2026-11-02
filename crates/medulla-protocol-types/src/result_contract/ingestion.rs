@@ -2,12 +2,15 @@
 
 #[cfg(feature = "modality-serving")]
 use super::Dynamic;
-use medulla_source_types::{source_ingestion::SourceIngestStatus as SourceIngestStatusBody, source_ingestion::SourceIngestionReceipt};
 use medulla_index_types::{
     semantic_index::SemanticBinding, semantic_index::SemanticBindingPage,
     semantic_index::SemanticIndexResponse, semantic_index::SemanticSqlSourceManifest,
     semantic_index::SemanticStageIntent, semantic_index::SemanticStageLeasePage,
     semantic_index::SemanticStageTransition,
+};
+use medulla_source_types::{
+    source_ingestion::SourceIngestStatus as SourceIngestStatusBody,
+    source_ingestion::SourceIngestionReceipt,
 };
 #[cfg(feature = "asr-native")]
 use medulla_types::asr_wire::AsrTranscription;

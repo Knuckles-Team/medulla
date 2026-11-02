@@ -458,8 +458,10 @@ fn datalog_input_from_ontology(
 fn datalog_subclass_relations(ontology: &medulla_reasoner::owl::Ontology) -> Vec<(String, String)> {
     let mut relations = Vec::new();
     for gci in &ontology.gcis {
-        if let ([medulla_reasoner::owl::Concept::Named(sub)], medulla_reasoner::owl::Concept::Named(sup)) =
-            (gci.lhs.as_slice(), &gci.rhs)
+        if let (
+            [medulla_reasoner::owl::Concept::Named(sub)],
+            medulla_reasoner::owl::Concept::Named(sup),
+        ) = (gci.lhs.as_slice(), &gci.rhs)
         {
             if let (Some(sub), Some(sup)) = (datalog_class(sub), datalog_class(sup)) {
                 relations.push((sub, sup));

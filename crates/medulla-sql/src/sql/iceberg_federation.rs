@@ -86,8 +86,7 @@ use iceberg_storage_opendal::OpenDalResolvingStorageFactory;
 use super::filter_shape::{classify_pushdown, ScanPlan};
 
 /// REST catalog base URI (required; unset ⇒ `iceberg(...)` errors, never silently empty).
-pub const ICEBERG_FEDERATION_CATALOG_URI_ENV: &str =
-    "MEDULLA_ICEBERG_FEDERATION_CATALOG_URI";
+pub const ICEBERG_FEDERATION_CATALOG_URI_ENV: &str = "MEDULLA_ICEBERG_FEDERATION_CATALOG_URI";
 /// Optional warehouse identifier passed to the REST catalog.
 pub const ICEBERG_FEDERATION_WAREHOUSE_ENV: &str = "MEDULLA_ICEBERG_FEDERATION_WAREHOUSE";
 /// Optional `client_id:client_secret` OAuth2 client-credentials pair.

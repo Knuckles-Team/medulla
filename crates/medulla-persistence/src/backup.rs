@@ -247,7 +247,6 @@ impl BackupReport {
         self.shard_counts.push(counts);
     }
 
-
     /// Distinct graph scopes captured across every shard.
     pub fn graph_scopes(&self) -> u64 {
         graph_scopes(&self.shard_counts)

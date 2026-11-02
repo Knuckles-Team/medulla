@@ -471,7 +471,11 @@ pub(super) struct PlanWritebackArgs {
 
 #[cfg(feature = "query")]
 impl PlanWritebackArgs {
-    pub(super) fn new(plan: medulla_exec::algebra::Plan, anchor_id: String, relationship: String) -> Self {
+    pub(super) fn new(
+        plan: medulla_exec::algebra::Plan,
+        anchor_id: String,
+        relationship: String,
+    ) -> Self {
         Self {
             plan,
             anchor_id,

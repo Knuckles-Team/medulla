@@ -3,7 +3,10 @@
 //! writer thread, never a MutationBatch.
 
 use medulla_work_types::work_market::lifecycle::validate_gap_get;
-use medulla_work_types::{work_market::gap_row_key, work_market::is_tenant_gap, work_market::GapListRequest, work_market::GapPage, work_market::GapView};
+use medulla_work_types::{
+    work_market::gap_row_key, work_market::is_tenant_gap, work_market::GapListRequest,
+    work_market::GapPage, work_market::GapView,
+};
 
 use super::*;
 

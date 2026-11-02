@@ -23,7 +23,6 @@ use arrow::datatypes::SchemaRef;
 use arrow::record_batch::RecordBatch;
 use datafusion::catalog::TableProvider;
 use datafusion::prelude::SessionContext;
-use medulla_sql::{sql::build_iceberg_provider, sql::ICEBERG_FEDERATION_CATALOG_URI_ENV};
 use iceberg::io::{
     FileIO, MemoryStorageFactory, S3_ACCESS_KEY_ID, S3_DISABLE_CONFIG_LOAD,
     S3_DISABLE_EC2_METADATA, S3_ENDPOINT, S3_PATH_STYLE_ACCESS, S3_REGION, S3_SECRET_ACCESS_KEY,
@@ -43,6 +42,7 @@ use iceberg::writer::file_writer::rolling_writer::RollingFileWriterBuilder;
 use iceberg::writer::file_writer::ParquetWriterBuilder;
 use iceberg::writer::{IcebergWriter, IcebergWriterBuilder};
 use iceberg::{Catalog, CatalogBuilder, NamespaceIdent, TableCreation};
+use medulla_sql::{sql::build_iceberg_provider, sql::ICEBERG_FEDERATION_CATALOG_URI_ENV};
 
 const BUCKET: &str = "lake";
 const TABLE_ROUTE: &str = "/v1/namespaces/sales/tables/facts";

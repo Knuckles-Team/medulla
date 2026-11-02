@@ -12,9 +12,9 @@
 //! exact-query/status dispatch is the externally visible evidence.  The direct-redb
 //! last-slot race remains a separate lower-level proof.
 
-use medulla_raft::raft::RaftStateExt;
 #[cfg(feature = "redb")]
 use medulla_persistence_records::agent_library::AgentLibraryStateExt;
+use medulla_raft::raft::RaftStateExt;
 use std::future::Future;
 use std::ops::{Deref, DerefMut};
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -23,7 +23,14 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use tokio::sync::{Barrier, RwLock};
 
-use medulla_types::acl::RequestContextClaims;
+use medulla_protocol_types::protocol::GraphType;
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::Request;
+use medulla_protocol_types::protocol::ResultPayload;
+use medulla_raft::raft::NodeId;
+use medulla_raft_xshard::harness::cluster::Cluster;
+use medulla_raft_xshard::harness::cluster::GRAPH;
+use medulla_raft_xshard::harness::test_env::configure_auth_test_environment;
 use medulla_result_types::epistemic_operations::ClaimWorkItemRequest;
 use medulla_result_types::epistemic_operations::ClaimWorkItemRequestSchemaVersion;
 use medulla_result_types::epistemic_operations::ClaimWorkItemResult;
@@ -47,18 +54,11 @@ use medulla_result_types::epistemic_operations::ResourceReservationStatusRequest
 use medulla_result_types::epistemic_operations::ResourceReservationStatusRequestSchemaVersion;
 use medulla_result_types::epistemic_operations::ResourceReservationStatusResult;
 use medulla_result_types::epistemic_operations::ResourceReservationSummaryState;
-use medulla_types::acl::AgentIdentity;
-use medulla_types::acl::AgentRole;
-use medulla_protocol_types::protocol::GraphType;
-use medulla_protocol_types::protocol::Method;
-use medulla_protocol_types::protocol::Request;
-use medulla_protocol_types::protocol::ResultPayload;
-use medulla_raft_xshard::harness::cluster::Cluster;
-use medulla_raft_xshard::harness::cluster::GRAPH;
-use medulla_raft_xshard::harness::test_env::configure_auth_test_environment;
-use medulla_raft::raft::NodeId;
 use medulla_server_auth::auth::compute_verified_envelope_token;
 use medulla_server_auth::auth::VerifiedEnvelopeParams;
+use medulla_types::acl::AgentIdentity;
+use medulla_types::acl::AgentRole;
+use medulla_types::acl::RequestContextClaims;
 
 const SECRET: &str = "harness";
 // `cfg(test)` request-context verification deliberately pins the shared harness
@@ -1201,7 +1201,10 @@ async fn ensure_commons_graph(cluster: &Cluster) {
     }
 }
 
-fn state_for(cluster: &Cluster, node_id: NodeId) -> Arc<RwLock<medulla_server_api::state::ServerState>> {
+fn state_for(
+    cluster: &Cluster,
+    node_id: NodeId,
+) -> Arc<RwLock<medulla_server_api::state::ServerState>> {
     let state = cluster
         .members
         .get(&node_id)
@@ -1227,8 +1230,11 @@ fn state_for(cluster: &Cluster, node_id: NodeId) -> Arc<RwLock<medulla_server_ap
 fn dispatch_on_heap<'a>(
     state: &'a Arc<RwLock<medulla_server_api::state::ServerState>>,
     request: Request,
-) -> std::pin::Pin<Box<dyn Future<Output = medulla_protocol_types::protocol::Response> + Send + 'a>> {
-    Box::pin(medulla_server_router::dispatch::request_boundary::dispatch(state, request))
+) -> std::pin::Pin<Box<dyn Future<Output = medulla_protocol_types::protocol::Response> + Send + 'a>>
+{
+    Box::pin(medulla_server_router::dispatch::request_boundary::dispatch(
+        state, request,
+    ))
 }
 
 async fn dispatch_bounded(
@@ -1319,7 +1325,10 @@ async fn race_public_reservation_calls(
     second_agent: &str,
     second_request_id: u64,
     second_method: Method,
-) -> (medulla_protocol_types::protocol::Response, medulla_protocol_types::protocol::Response) {
+) -> (
+    medulla_protocol_types::protocol::Response,
+    medulla_protocol_types::protocol::Response,
+) {
     let barrier = Arc::new(Barrier::new(3));
     let first_state = state_for(cluster, leader);
     let second_state = state_for(cluster, leader);
@@ -1394,7 +1403,10 @@ async fn transfer_graph_leader(cluster: &Cluster, from: NodeId, target: NodeId) 
     wait_for_node_leader(cluster, target, target).await;
 }
 
-fn decode_host_result(response: medulla_protocol_types::protocol::Response, expected_revision: u64) {
+fn decode_host_result(
+    response: medulla_protocol_types::protocol::Response,
+    expected_revision: u64,
+) {
     let result: ResourceHostUpdateResult = decode_raw(response, "native update");
     assert!(
         result.accepted,
@@ -1433,7 +1445,9 @@ fn decode_raw<T: serde::de::DeserializeOwned>(
     .unwrap_or_else(|error| panic!("decode {label} result: {error:?}"))
 }
 
-fn decode_claim_result(response: medulla_protocol_types::protocol::Response) -> ClaimWorkItemResult {
+fn decode_claim_result(
+    response: medulla_protocol_types::protocol::Response,
+) -> ClaimWorkItemResult {
     let result: ClaimWorkItemResult = decode_raw(response, "ClaimWorkItem");
     assert!(
         result.claimed,

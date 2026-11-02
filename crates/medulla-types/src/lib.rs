@@ -8,7 +8,6 @@
 //! (`pub use medulla_types::wire::Order;`) so their algorithm code is unchanged —
 //! the data lives at the bottom of the DAG, the logic stays where it belongs.
 
-
 pub mod acl;
 // MEDULLA-CQ-ORCH-R010.1 — pure data model for graph-derived architecture views.
 pub mod architecture_view;

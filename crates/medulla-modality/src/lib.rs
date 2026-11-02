@@ -65,7 +65,6 @@
 //! serving runtimes and are held to the production 12/12 rule. See this crate's
 //! `README.md` and the architecture guide for the supported feature surface.
 
-
 pub mod artifact;
 mod capability;
 mod contract;

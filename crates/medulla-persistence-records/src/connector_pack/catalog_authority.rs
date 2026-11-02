@@ -87,9 +87,7 @@ fn catalog_scope_mismatch(
 }
 
 /// The content digest a component publishes, as a bare SHA-256.
-pub fn component_content_digest(
-    component: &AgentComponentEntry,
-) -> Result<Digest256, String> {
+pub fn component_content_digest(component: &AgentComponentEntry) -> Result<Digest256, String> {
     Digest256::parse(
         component
             .content_digest
@@ -195,9 +193,7 @@ impl AgentLibraryStore {
         let row = table
             .get((tenant_id, server_name, scope_hex.as_str()))
             .map_err(|error| error.to_string())?
-            .map(|value| {
-                crate::agent_row::decode(value.value(), "MCP scoped catalog")
-            })
+            .map(|value| crate::agent_row::decode(value.value(), "MCP scoped catalog"))
             .transpose()?;
         Ok(row)
     }

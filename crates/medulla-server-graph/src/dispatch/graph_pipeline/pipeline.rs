@@ -148,21 +148,25 @@ pub async fn route_graph_scoped_domains(
     // materializes `:PredictedEdge`/`:EdgeFunction` nodes into the core. A method
     // whose feature is off falls through to the graph_ops not-available catch-all.
     #[cfg(feature = "graphlearn")]
-    let method = match medulla_server_api::handlers::graphlearn::try_handle(req_id, core.clone(), method) {
-        Ok(r) => return Ok(r),
-        Err(m) => m,
-    };
+    let method =
+        match medulla_server_api::handlers::graphlearn::try_handle(req_id, core.clone(), method) {
+            Ok(r) => return Ok(r),
+            Err(m) => m,
+        };
     // ML pipeline (CONCEPT:MEDULLA-KG.mining.ml-pipeline): the READ verbs
     // (Evaluate/Compare) route here with the graph core; Train/Serve/Predict are
     // GATEWAY_ROUTED (writeback) and never reach this fallback. A build without
     // `ml-pipeline` omits this line.
     #[cfg(feature = "ml-pipeline")]
-    let method =
-        match medulla_h_graph::pipeline::try_handle(req_id, core.clone(), read_authority.as_ref(), method)
-        {
-            Ok(r) => return Ok(r),
-            Err(m) => m,
-        };
+    let method = match medulla_h_graph::pipeline::try_handle(
+        req_id,
+        core.clone(),
+        read_authority.as_ref(),
+        method,
+    ) {
+        Ok(r) => return Ok(r),
+        Err(m) => m,
+    };
     Err(method)
 }
 
@@ -330,10 +334,11 @@ pub async fn route_process_global_domains(
     // method whose feature is off falls through to the graph_ops not-available
     // catch-all.
     #[cfg(feature = "federation")]
-    let method = match medulla_h_sparql::foreign_source_handlers::try_handle(owner_call, method).await {
-        Ok(r) => return Ok(r),
-        Err(m) => m,
-    };
+    let method =
+        match medulla_h_sparql::foreign_source_handlers::try_handle(owner_call, method).await {
+            Ok(r) => return Ok(r),
+            Err(m) => m,
+        };
     // Distributed graph compute (CONCEPT:MEDULLA-KG.storage.feature, feature `compute-dist`):
     // DistributedCompute + the matview lifecycle. Cross-shard, so it takes
     // `state` (it gathers each shard graph's snapshot from the registry).
@@ -383,10 +388,7 @@ pub async fn route_pipeline_surfaces(
 /// tried in order, each handing back a method it does not own. Stage order is
 /// unchanged, so the gateway still sees every routed mutation first and the
 /// terminal graph-op handler still owns the catch-all.
-pub async fn run_dispatch_pipeline(
-    ctx: DispatchPipelineCtx<'_>,
-    method: Method,
-) -> Response {
+pub async fn run_dispatch_pipeline(ctx: DispatchPipelineCtx<'_>, method: Method) -> Response {
     let method = match route_pipeline_compute(&ctx, method).await {
         Ok(response) => return response,
         Err(method) => method,

@@ -1,5 +1,5 @@
-use medulla_store::redb_store::store_prelude::*;
 use super::*;
+use medulla_store::redb_store::store_prelude::*;
 
 /// Deterministic failure injection points around the authoritative batch commit.
 /// Production always calls with `None`; unit tests use these boundaries to prove
@@ -743,7 +743,9 @@ mod outbox_reactivation_tests {
         let mut batch = MutationBatch {
             schema_version: MUTATION_BATCH_VERSION,
             batch_id: id.into(),
-            envelope: medulla_store::redb_store::store_graph_names::fixture_operation_envelope(&identity, &actor, 42, key),
+            envelope: medulla_store::redb_store::store_graph_names::fixture_operation_envelope(
+                &identity, &actor, 42, key,
+            ),
             identity,
             placement_epoch: 0,
             version_expectation: VersionExpectation::Graph(version),
@@ -841,7 +843,9 @@ mod outbox_reactivation_tests {
     fn has_node(shard: &Shard, node: &str) -> bool {
         let handle = shard.graph(GRAPH).unwrap();
         let read = shard.read(&handle).unwrap();
-        let nodes = read.scoped_owner_table(medulla_store::redb_store::NODES).unwrap();
+        let nodes = read
+            .scoped_owner_table(medulla_store::redb_store::NODES)
+            .unwrap();
         nodes.get((GRAPH, node)).unwrap().is_some()
     }
 

@@ -4,7 +4,6 @@
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
 
-
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod anonymous;
@@ -12,7 +11,6 @@ pub mod anonymous;
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod api;
-
 
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
@@ -24,9 +22,6 @@ pub mod batch_compile;
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod carrier;
-
-
-
 
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
@@ -53,15 +48,10 @@ pub mod icv_guard;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod identity_view;
 
-
-
-
-
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[cfg(any(feature = "server", feature = "redb"))]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod mutation_apply;
-
 
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[cfg(feature = "oidc")]
@@ -72,7 +62,6 @@ pub mod oidc;
 #[cfg(feature = "redb")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod outbox_operator;
-
 
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
@@ -90,9 +79,6 @@ pub mod routed_write_coalescer;
 #[cfg(feature = "security")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod service_grant;
-
-
-
 
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)

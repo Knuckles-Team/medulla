@@ -12,8 +12,8 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use medulla_storage::ScopedOwnerTableMut;
 
-use medulla_store::{redb_store::shard::Shard, redb_store::shard::ShardWrite};
 use super::*;
+use medulla_store::{redb_store::shard::Shard, redb_store::shard::ShardWrite};
 
 pub(crate) const CHECKPOINT_RESOURCE_REFUSAL: &str = "checkpoint resource domain validation failed";
 

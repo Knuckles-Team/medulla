@@ -1195,7 +1195,7 @@ shacl = ["medulla-server/shacl", "medulla-h-admin/shacl", "medulla-h-query/shacl
 # serde_json is workspace-wide) — and is included in the one main build alongside
 # rdf/sparql/shacl.
 shex = ["medulla-server/shex", "medulla-h-query/shex", "medulla-h-sparql/shex", "rdf", "dep:medulla-shex", "medulla-server-served-tests/shex"]
-compute = ["finance", "ast", "ast-extended", "datascience", "mining", "graphlearn", "ml-pipeline", "reasoning"]
+compute = ["finance", "ast", "ast-extended", "datascience", "mining", "graphlearn", "ml-pipeline", "reasoning", "epistemic", "blob"]
 # `full`/`all`/`default` = THE ONE MAIN BUILD (CONCEPT:MEDULLA-371). It deliberately stays
 # SINGLE-NODE: raft is NOT folded in, so a `full` build links no openraft (replication
 # is the opt-in `cluster` layer). Consequently `compute-dist` (which NEEDS raft for

@@ -9,8 +9,8 @@ use super::capability::{RemoteRequest, SourceCapabilities, SourceRate};
 use super::remote::{Identity, RemoteFetch};
 use super::run::Fragment;
 use super::stats::fingerprint;
-use medulla_exec::budget::FederationBudget;
 use super::{FederationSession, BUDGET_EXCEEDED};
+use medulla_exec::budget::FederationBudget;
 use medulla_exec::rowset::RowSet;
 
 fn identity(tag: &str) -> Identity {

@@ -145,8 +145,10 @@ async fn qos_verification_rejects_unsigned_agent_before_admission() {
 // spec: MEDULLA-CONTRACT-R014.1
 #[tokio::test]
 async fn qos_verification_names_the_audience_mismatch_cause() {
+    use medulla_server_auth::{
+        auth::compute_verified_envelope_token, auth::VerifiedEnvelopeParams,
+    };
     use medulla_types::acl::RequestContextClaims;
-    use medulla_server_auth::{auth::compute_verified_envelope_token, auth::VerifiedEnvelopeParams};
     let scheduler = Arc::new(medulla_server_obs::qos::QosScheduler::new(
         medulla_server_obs::qos::QosConfig::auto(8),
     ));
@@ -206,7 +208,10 @@ fn encode_frame_is_len_prefixed_and_decodes() {
     // CONCEPT:MEDULLA-KG.backend.framed-response — a framed response is `4-byte BE len ++ MessagePack body`,
     // and the body round-trips back to the same id/result so the client can
     // demux it out of order.
-    let resp = Response::ok(42, medulla_protocol_types::protocol::ResultPayload::String("pong".into()));
+    let resp = Response::ok(
+        42,
+        medulla_protocol_types::protocol::ResultPayload::String("pong".into()),
+    );
     let frame = encode_frame(&resp);
     assert!(frame.len() > 4);
     let declared = u32::from_be_bytes([frame[0], frame[1], frame[2], frame[3]]) as usize;

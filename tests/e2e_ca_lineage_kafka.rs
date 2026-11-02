@@ -25,11 +25,13 @@
 
 #![cfg(feature = "lineage-transport-kafka")]
 
+use medulla_server_blob::blob::store::RedbChunkStore;
+use medulla_server_lake::lake::LakeManager;
+use medulla_server_lake::{
+    lake::lineage_transport::KafkaTransport, lake::lineage_transport::LineageTransport,
+};
 use medulla_tsdb::point::Point;
 use medulla_tsdb::store::SeriesStore;
-use medulla_server_blob::blob::store::RedbChunkStore;
-use medulla_server_lake::{lake::lineage_transport::KafkaTransport, lake::lineage_transport::LineageTransport};
-use medulla_server_lake::lake::LakeManager;
 
 fn tsdb_dir(tag: &str) -> std::path::PathBuf {
     std::env::temp_dir().join(format!(
@@ -57,9 +59,8 @@ fn lake_materialize_lineage_event_reaches_the_openlineage_topic() {
     // moment the singleton first initializes in this process. Build a
     // transport directly from env instead, so a misconfigured invocation
     // fails loudly rather than reporting a false pass.
-    let kafka = KafkaTransport::from_env().expect(
-        "MEDULLA_LINEAGE_KAFKA_BROKERS must be set to a reachable broker for this test",
-    );
+    let kafka = KafkaTransport::from_env()
+        .expect("MEDULLA_LINEAGE_KAFKA_BROKERS must be set to a reachable broker for this test");
 
     let series_id = format!(
         "ca15_e2e_{}",

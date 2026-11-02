@@ -1,15 +1,15 @@
 //! Signed dispatch to native provenance. These tests need the redb server build;
 //! they do not qualify deployment identity, current sessions, or host launch.
 use super::*;
+use medulla_persistence::redb_backend::RedbBackend;
+use medulla_server_api::state::ServerState;
+use medulla_server_auth::auth::dispatch_test_on_heap;
+use medulla_server_auth::auth::scoped_test_request_on;
+use medulla_server_auth::auth::ScopedTestCaller;
 use medulla_work_types::control_lease::ControlLeaseIssued;
 use medulla_work_types::host_start::{
     HostStartBinding, HostStartInterfaces, IssueHostStartGrantRequest,
 };
-use medulla_persistence::redb_backend::RedbBackend;
-use medulla_server_auth::auth::dispatch_test_on_heap;
-use medulla_server_auth::auth::scoped_test_request_on;
-use medulla_server_auth::auth::ScopedTestCaller;
-use medulla_server_api::state::ServerState;
 use tokio::sync::RwLock;
 
 // spec: MEDULLA-DURABLE-KERNEL-R030.1.3
@@ -44,8 +44,12 @@ async fn call(
 fn decode(response: Response) -> ControlLeaseIssued {
     assert!(response.error.is_none(), "{:?}", response.error);
     match response.result.unwrap() {
-        medulla_protocol_types::protocol::ResultPayload::Json(value) => serde_json::from_value(value).unwrap(),
-        medulla_protocol_types::protocol::ResultPayload::Raw(bytes) => rmp_serde::from_slice(&bytes).unwrap(),
+        medulla_protocol_types::protocol::ResultPayload::Json(value) => {
+            serde_json::from_value(value).unwrap()
+        }
+        medulla_protocol_types::protocol::ResultPayload::Raw(bytes) => {
+            rmp_serde::from_slice(&bytes).unwrap()
+        }
         other => panic!("unexpected host-start payload {other:?}"),
     }
 }
@@ -57,7 +61,10 @@ async fn fixture() -> (
     IssueHostStartGrantRequest,
 ) {
     let dir = tempfile::tempdir().unwrap();
-    let mut state = medulla_server::seams_install::new_state_for_test(SECRET, ServerState::test_isolation(ISSUER));
+    let mut state = medulla_server::seams_install::new_state_for_test(
+        SECRET,
+        ServerState::test_isolation(ISSUER),
+    );
     state.persist_dir = Some(dir.path().to_string_lossy().into_owned());
     let backend =
         RedbBackend::open(dir.path().join("graphs").to_string_lossy().into_owned(), 64).unwrap();
