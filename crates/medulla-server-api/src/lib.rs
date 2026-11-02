@@ -2,6 +2,7 @@
 //! level 2 in `scripts/crate_split/manifest.toml`.
 
 #![allow(clippy::too_many_arguments)] // seam signatures mirror the moved facade functions
+#![allow(clippy::items_after_test_module, clippy::new_without_default)] // test-support fixtures share modules with production code
 #![allow(dead_code)] // moved helper code, as the facade crate did
 #![allow(unused_imports)] // glob imports carried over from the facade; the visibility pass prunes them
 #![forbid(unsafe_code)]
