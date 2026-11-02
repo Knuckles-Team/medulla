@@ -29,8 +29,6 @@ mod algorithms;
 mod broker;
 mod edges;
 mod gateway;
-// Consumed outside this module only by the governed GraphSchema writes.
-#[cfg(feature = "shacl")]
 #[cfg(feature = "broker")]
 mod gateway_broker;
 mod gateway_graph;
