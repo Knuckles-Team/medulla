@@ -128,7 +128,6 @@ pub use coalescer::commit_coalescable_mutation;
 pub use coalescer::{apply_coalescable_write, is_coalescable_structural_write};
 
 pub use commit_entry::commit_mutation;
-use commit_entry::{commit_finalize, commit_mutation_body, CommitFinalizeOptions, CommitPrep};
 #[cfg(any(
     feature = "mining",
     feature = "graphlearn",
@@ -140,6 +139,7 @@ use commit_entry::{commit_finalize, commit_mutation_body, CommitFinalizeOptions,
     feature = "rdf"
 ))]
 use commit_entry::commit_prepare;
+use commit_entry::{commit_finalize, commit_mutation_body, CommitFinalizeOptions, CommitPrep};
 
 pub(super) use commit_encode::publish_committed_row_delta;
 use commit_encode::{
@@ -157,7 +157,6 @@ use commit_encode::{
     feature = "rdf"
 ))]
 use commit_encode::{commit_staged_with_receipt, StagedReceipt};
-use commit_paths::{commit_mutation_body_prepublish_fast_path, commit_mutation_body_staged_path};
 #[cfg(any(
     feature = "mining",
     feature = "graphlearn",
@@ -169,6 +168,7 @@ use commit_paths::{commit_mutation_body_prepublish_fast_path, commit_mutation_bo
     feature = "rdf"
 ))]
 use commit_paths::resolve_authoritative_base_snapshot;
+use commit_paths::{commit_mutation_body_prepublish_fast_path, commit_mutation_body_staged_path};
 use commit_replay::{
     commit_mutation_body_replay_response, commit_row_replay_probe, commit_staged_replay_probe,
     compile_batch_and_encode_result, compile_batch_context, DurableBatchAttempt,
