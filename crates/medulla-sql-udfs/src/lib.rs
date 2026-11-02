@@ -16,7 +16,7 @@
 #[cfg(feature = "numeric")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod numeric;
-/// EH-522 — `eg_<func>(…) OVER (…)` window functions over the series kernels.
+/// EH-522 — `medulla_<func>(…) OVER (…)` window functions over the series kernels.
 #[cfg(feature = "numeric")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod series_udwf;

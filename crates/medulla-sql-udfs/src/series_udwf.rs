@@ -1,4 +1,4 @@
-//! SQL window functions over the series kernels (EH-522): `eg_<func>(series…, params…)
+//! SQL window functions over the series kernels (EH-522): `medulla_<func>(series…, params…)
 //! OVER (PARTITION BY series ORDER BY ts)` for every function of the `DERIVE` table
 //! (`medulla_types::series_expr::SIGNATURES`) — `medulla_zscore(v, 60)`, `medulla_ewma(v, 12)`,
 //! `medulla_rcorr(a, b, 20)`, `medulla_wsum(price, volume, 20)`, …
@@ -22,7 +22,7 @@ use datafusion::logical_expr::{
 use medulla_tsdb::derive::Program;
 use medulla_types::series_expr::{SeriesExpr, SeriesFunc, SIGNATURES};
 
-/// Every `eg_<func>` window function.
+/// Every `medulla_<func>` window function.
 pub fn series_window_udfs() -> Vec<WindowUDF> {
     SIGNATURES
         .iter()
@@ -42,7 +42,7 @@ impl SeriesWindow {
         let sig = func.signature();
         Self {
             func,
-            name: format!("eg_{}", sig.name),
+            name: format!("medulla_{}", sig.name),
             signature: Signature::any(sig.series + sig.params, Volatility::Immutable),
         }
     }
@@ -89,7 +89,7 @@ impl PartitionEvaluator for SeriesEvaluator {
             .map(|i| SeriesExpr::channel(&format!("v{i}")))
             .collect();
         let mut program = Program::compile(&SeriesExpr::call(self.func, args, params))
-            .map_err(|e| DataFusionError::Execution(format!("eg_{}: {e}", sig.name)))?;
+            .map_err(|e| DataFusionError::Execution(format!("medulla_{}: {e}", sig.name)))?;
         let out: Float64Array = (0..num_rows)
             .map(|row| program.step(&|name| channel(&columns, name, row)))
             .collect();
@@ -113,7 +113,7 @@ fn constant(column: &Float64Array, func: &str) -> DfResult<f64> {
         return Ok(v);
     }
     Err(DataFusionError::Execution(format!(
-        "eg_{func}: a numeric parameter must be a non-NULL constant"
+        "medulla_{func}: a numeric parameter must be a non-NULL constant"
     )))
 }
 

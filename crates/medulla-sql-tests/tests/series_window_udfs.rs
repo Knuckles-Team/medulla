@@ -1,4 +1,4 @@
-//! EH-522 — the `eg_<func>` SQL window functions: per-partition, in `ORDER BY`, and
+//! EH-522 — the `medulla_<func>` SQL window functions: per-partition, in `ORDER BY`, and
 //! bit-identical to the one series kernel behind UQL `DERIVE` (`medulla_tsdb::derive::Program`)
 //! and the finance entries (`medulla_finance_market::signals`). Only compiles under `numeric`.
 #![cfg(feature = "numeric")]
