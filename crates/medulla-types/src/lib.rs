@@ -8,6 +8,7 @@
 //! (`pub use medulla_types::wire::Order;`) so their algorithm code is unchanged —
 //! the data lives at the bottom of the DAG, the logic stays where it belongs.
 
+#![allow(clippy::too_many_arguments, clippy::items_after_test_module, clippy::new_without_default)] // signatures and fixtures carried over from the facade
 #![allow(dead_code)] // moved helper code, as the facade crate did
 #![allow(unused_imports)] // glob imports carried over from the facade; the visibility pass prunes them
 

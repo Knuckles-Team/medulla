@@ -1,5 +1,6 @@
 // Compute primitives built ahead of their wire exposure (e.g. parametric_var,
 // inv_norm) are kept; matches the facade's long-standing crate-level posture.
+#![allow(clippy::too_many_arguments, clippy::items_after_test_module, clippy::new_without_default)] // signatures and fixtures carried over from the facade
 #![allow(dead_code)]
 #![allow(unused_imports)] // glob imports carried over from the facade; the visibility pass prunes them
 

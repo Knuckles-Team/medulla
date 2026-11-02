@@ -25,6 +25,7 @@
 //! Pi/full tiers — serving is CPU integer-table lookups (ADC) and needs no
 //! accelerator. The default build links no GPU, no faiss, no native-ML deps.
 
+#![allow(clippy::too_many_arguments, clippy::items_after_test_module, clippy::new_without_default)] // signatures and fixtures carried over from the facade
 #![allow(dead_code)] // moved helper code, as the facade crate did
 #![allow(unused_imports)] // glob imports carried over from the facade; the visibility pass prunes them
 

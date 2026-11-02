@@ -65,6 +65,7 @@
 //! serving runtimes and are held to the production 12/12 rule. See this crate's
 //! `README.md` and the architecture guide for the supported feature surface.
 
+#![allow(clippy::too_many_arguments, clippy::items_after_test_module, clippy::new_without_default)] // signatures and fixtures carried over from the facade
 #![allow(dead_code)] // moved helper code, as the facade crate did
 #![allow(unused_imports)] // glob imports carried over from the facade; the visibility pass prunes them
 

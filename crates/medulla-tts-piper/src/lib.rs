@@ -70,6 +70,7 @@
 //! GOC-36's manifest is the place that record is meant to live, per the lane contract's
 //! explicit call-out that "some [voices] carry restrictive terms."
 
+#![allow(clippy::too_many_arguments, clippy::items_after_test_module, clippy::new_without_default)] // signatures and fixtures carried over from the facade
 #![allow(dead_code)] // moved helper code, as the facade crate did
 #![allow(unused_imports)] // glob imports carried over from the facade; the visibility pass prunes them
 

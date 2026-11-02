@@ -7,6 +7,7 @@
 //! injected [`ModelTransport`] contract; durable promotion must use the engine's
 //! existing [`medulla_types::ChangeEnvelope`] / `MutationBatch` authority.
 
+#![allow(clippy::too_many_arguments, clippy::items_after_test_module, clippy::new_without_default)] // signatures and fixtures carried over from the facade
 #![allow(dead_code)] // moved helper code, as the facade crate did
 #![allow(unused_imports)] // glob imports carried over from the facade; the visibility pass prunes them
 

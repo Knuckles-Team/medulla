@@ -51,6 +51,7 @@
 //! see each backend's `run`/`submit`), no GPU, no MPS, no trajectory sampling, no
 //! distributed execution, no QuEST FFI, no hardware. Those are Q3/Q4/Q10.
 
+#![allow(clippy::too_many_arguments, clippy::items_after_test_module, clippy::new_without_default)] // signatures and fixtures carried over from the facade
 #![allow(dead_code)] // moved helper code, as the facade crate did
 #![allow(unused_imports)] // glob imports carried over from the facade; the visibility pass prunes them
 
