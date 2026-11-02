@@ -1,4 +1,4 @@
-"""No crate root carries a crate-level lint allow; every remaining allow is scoped to one item."""
+"""No crate root carries a crate-level lint allow; each allow is scoped to one item."""
 
 from __future__ import annotations
 
