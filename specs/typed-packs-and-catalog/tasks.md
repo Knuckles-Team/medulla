@@ -336,3 +336,16 @@ R085.4–R085.7 preserve their parent obligations as rollups. Their .1 children 
 - [ ] **MEDULLA-TYPED-PACKS-R105.7:** The parent catalog declares a data-platform and machine-learning module aligned to DCAT, PROV-O and ML-Schema.
 - [ ] **MEDULLA-TYPED-PACKS-R105.8:** The parent catalog declares a media and content module aligned to schema.org media types, EBUCore, IFLA LRM and ActivityStreams.
 - [ ] **MEDULLA-TYPED-PACKS-R105.9:** The parent catalog declares a search, retrieval and information-source module aligned to OpenSearch, DCMI Terms and PROV-O.
+- [ ] T901 MEDULLA-TYPED-PACKS-R019 Admit graph reference files only as skill files.
+- [ ] T902 MEDULLA-TYPED-PACKS-R700.1 Add the graph manifest model.
+- [ ] T903 MEDULLA-TYPED-PACKS-R700.2 Validate the manifest in one pass.
+- [ ] T904 MEDULLA-TYPED-PACKS-R700.3 Call the validation from the pack import.
+- [ ] T905 MEDULLA-TYPED-PACKS-R700.4 Refuse hash, index and entry defects.
+- [ ] T906 MEDULLA-TYPED-PACKS-R700.7 Read the skill type from the `skill_type` key.
+- [ ] T907 MEDULLA-TYPED-PACKS-R700.8 Import graph reference files as skill files.
+- [ ] T908 MEDULLA-TYPED-PACKS-R701 A skill graph layers its ontology on the core (rollup).
+- [ ] T909 MEDULLA-TYPED-PACKS-R701.1 Add the layer model.
+- [ ] T910 MEDULLA-TYPED-PACKS-R701.2 Bind and check the layer.
+- [ ] T911 MEDULLA-TYPED-PACKS-R701.3 Call the layer binding from the pack import.
+- [ ] T912 MEDULLA-TYPED-PACKS-R701.4 Refuse layer defects.
+- [ ] T913 MEDULLA-TYPED-PACKS-R701.5 Prove the layered import through the served method.
