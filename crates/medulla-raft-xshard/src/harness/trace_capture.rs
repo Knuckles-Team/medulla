@@ -132,7 +132,7 @@ const CAPACITY: usize = 4096;
 /// This crate's own raft-module traces (group lifecycle, leader routing) — the other
 /// half of the causal chain alongside openraft's internal replication/heartbeat
 /// events.
-const RAFT_MODULE_TARGET: &str = "medulla::raft";
+const RAFT_MODULE_TARGET: &str = "medulla_raft::raft";
 
 /// One retained trace line.
 struct CapturedEvent {
@@ -456,7 +456,7 @@ mod tests {
                     tracing::debug!(target: "openraft::replication", "heartbeat send attempt");
                 });
             tracing::warn!(
-                target: "medulla::raft::multi",
+                target: "medulla_raft::raft::multi",
                 "placement group 4 has no current leader"
             );
             tracing::error!(target: "unrelated_module", "MARKER-SHOULD-NOT-APPEAR");
@@ -532,7 +532,7 @@ mod tests {
         );
         ring.push(
             Level::WARN,
-            "medulla::raft::multi",
+            "medulla_raft::raft::multi",
             "t".to_string(),
             "second".to_string(),
             String::new(),
