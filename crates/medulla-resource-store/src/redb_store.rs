@@ -9,6 +9,3 @@ pub mod resource_rows;
 
 use medulla_store::redb_store::store_prelude::*;
 use medulla_store::redb_store::*;
-use capacity_lease::*;
-use resource::*;
-use resource_rows::*;
