@@ -1,5 +1,7 @@
 //! Shared owner-bound run admission and live-claim fixtures for private views.
 
+#![allow(dead_code)]
+
 use super::*;
 use crate::redb_store::graph_row_tables::GraphRowTables;
 use medulla_work_types::native_control::SubmitWorkItemRequest;

@@ -125,7 +125,8 @@ pub struct AuthenticatedAuthority {
 }
 
 #[derive(Clone, Debug)]
-struct LiveLease {
+#[allow(dead_code)] // fields kept for the capability record layout
+pub struct LiveLease {
     pub tenant: String,
     pub agent_id: String,
     pub attempt: u64,
@@ -137,7 +138,7 @@ struct LiveLease {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-struct CapabilityRecord {
+pub struct CapabilityRecord {
     pub schema_version: u8,
     pub graph: String,
     pub tenant: String,
@@ -181,7 +182,7 @@ struct NativeWorkItemRecord {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-enum Refusal {
+pub enum Refusal {
     NotFound,
     Unauthorized,
     Expired,

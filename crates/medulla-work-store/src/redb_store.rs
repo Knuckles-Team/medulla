@@ -1,7 +1,6 @@
 //! Modules moved here from `medulla_store::redb_store` (hard cutover, no re-exports).
 
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-#[allow(missing_docs)]
 pub mod graph_row_tables;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod work_item;
