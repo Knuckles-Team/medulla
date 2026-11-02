@@ -157,7 +157,7 @@ pub fn append_audit_entry_with_line(
                 // The iterator is a raw `redb::Range`, so its `StorageError` still
                 // needs stringifying; the scoped table's own accessors do not.
                 let last = iter.next_back().transpose().map_err(|e| e.to_string())?;
-                #[cfg(test)]
+                #[cfg(any(test, feature = "test-support"))]
                 if last.is_some() {
                     cold_seed_rows_touched_inc(1);
                 }
