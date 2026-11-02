@@ -32,8 +32,17 @@ tracing = { version = "0.1", optional = true }
 # OFF) — a default build links none of it and `BeliefState` carries no new required
 # trait. See `src/contract.rs`.
 medulla-modality = { path = "../medulla-modality", optional = true }
+medulla-protocol-types = { path = "../medulla-protocol-types" }
+medulla-catalog-types = { path = "../medulla-catalog-types" }
+medulla-result-types = { path = "../medulla-result-types" }
+medulla-graph-core = { path = "../medulla-graph-core" }
+medulla-isolation = { path = "../medulla-isolation" }
 
 [dev-dependencies]
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-compute = { path = "../medulla-compute", features = ["test-support"] }
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
+medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
 tempfile = "3"
 
 [features]
@@ -42,14 +51,14 @@ default = []
 # semantics (grounded/preferred/stable extensions) over the bipolar support/attack
 # BeliefGraph, plus dependency-directed retraction. Opt-in and heavier (NP-hard-in-the-
 # worst-case preferred/stable search) than the default confidence-propagation core.
-epistemic-tms = ["dep:tracing", "medulla-types/epistemic"]
+epistemic-tms = ["dep:tracing", "medulla-types/epistemic", "medulla-protocol-types/epistemic"]
 # ModalityContract retrofit (CONCEPT:E4): `impl ModalityContract for BeliefState` +
 # the `modality_conformance_tests!` battery — the reference "does everything"
 # implementation (real provenance/policy_labels/analytics_ops overrides). OFF by
 # default, deliberately NOT folded into any tier aggregate (pi/node/full) — it is a
 # capability-discovery/testing seam, not a serving feature. `cargo test -p
 # medulla-epistemic --features contract` runs the suite.
-contract = ["dep:medulla-modality"]
+contract = ["dep:medulla-modality", "medulla-compute/contract", "medulla-core/contract", "medulla-graph-core/contract"]
 # EPI-P3-3 — calibrated probabilistic + causal reasoning: a linear structural
 # causal model (SCM) over named variables supporting genuine do-calculus
 # interventions (graph surgery — cut incoming edges, don't just condition),
@@ -67,7 +76,7 @@ epistemic-causal = []
 # an evidence node inside an `explain_belief` proof tree the actor cannot see. Pulls
 # in `medulla-core/security` (where `RowVisibility`/`can_see_row` live); OFF by default so
 # a plain build links neither. See `src/redact.rs`.
-epistemic-redaction = ["medulla-core/security"]
+epistemic-redaction = ["medulla-core/security", "medulla-isolation/security", "medulla-graph-core/security"]
 # X-1 (CONCEPT:MEDULLA-X1) — the multimodal evidence-graph spine + citation resolver:
 # lets an `:Evidence` node (the SAME typed-node-by-convention `:Claim`/`:Evidence`
 # shape this crate's own module docs describe) carry one complete, governed

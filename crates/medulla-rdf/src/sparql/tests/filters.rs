@@ -444,7 +444,7 @@ fn minus_vs_not_exists_distinction_eg135() {
 /// (non-GRAPH) BGP only sees `g`'s triples — not the whole registered dataset.
 #[test]
 fn from_scopes_default_graph() {
-    let core_a = medulla_core::graph::GraphCore::new();
+    let core_a = medulla_graph_core::graph::GraphCore::new();
     let mut iris = IriStore::default();
     load_triples(
         &core_a,
@@ -453,7 +453,7 @@ fn from_scopes_default_graph() {
         parse_turtle("@prefix ex: <http://ex/> . ex:a ex:p ex:b .").unwrap(),
     )
     .unwrap();
-    let core_b = medulla_core::graph::GraphCore::new();
+    let core_b = medulla_graph_core::graph::GraphCore::new();
     load_triples(
         &core_b,
         &mut iris,

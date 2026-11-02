@@ -1,0 +1,14 @@
+[package]
+name = "medulla-parity"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: Engine compatibility features and their parity proofs against other engines' behaviour"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_parity"
+path = "src/lib.rs"
+
+[dependencies]

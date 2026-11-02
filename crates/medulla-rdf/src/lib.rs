@@ -19,6 +19,11 @@
 //! Pi contract: every dep is feature-gated OFF by default, so a `default`/`pi`
 //! build links none of oxrdf/oxttl/spargebra (all pure-Rust regardless).
 
+#![allow(clippy::too_many_arguments, clippy::items_after_test_module, clippy::new_without_default)] // signatures and fixtures carried over from the facade
+#![allow(private_interfaces, private_bounds)] // visibility is narrowed by the unreachable_pub pass
+#![allow(dead_code)] // moved helper code, as the facade crate did
+#![allow(unused_imports)] // glob imports carried over from the facade; the visibility pass prunes them
+
 /// Re-export the oxrdf term model so callers (the engine handler) can name `Triple`
 /// etc. without taking their own oxrdf dependency.
 #[cfg(feature = "rdf")]
@@ -27,22 +32,7 @@ pub use oxrdf;
 #[cfg(feature = "rdf")]
 pub mod mapping;
 
-/// MEDULLA-FEDERATED-QUERY-R072.1 — the typed, read-only model of ontology-driven
-/// cross-source coverage: a [`source_selection::CoverageResult`] names, per
-/// queried class, the approved virtual mapping that serves it (directly or via an
-/// entailed `subClassOf` superclass), the class itself as uncovered, or a
-/// disconnected class outside the hop budget — with every selection's premises
-/// (label/relation/mapping facts plus source generation). No external deps, so it
-/// is not feature-gated. Plans no execution: see the module doc for the parallel
-/// R073 mapping-type lane this builds toward.
-pub mod source_selection;
 
-/// MEDULLA-CQ-XSRC-R006.5 — Medulla's side of the served supply-chain impact
-/// method: plans the question's ontology classes through
-/// [`source_selection::select_sources`] and assembles the typed
-/// `SupplyChainImpactReport` (medulla-types) from the planned rows and premises.
-/// The served intent tool itself is cross-repo (owner: Arbora).
-pub mod supply_chain_impact;
 
 /// Pure connector-pack RDF preprocessing shared with admission.
 #[cfg(feature = "rdf")]
@@ -74,14 +64,6 @@ pub use spargebra;
 #[cfg(feature = "sparql")]
 pub mod sparql;
 
-/// MEDULLA-101 — OBDA virtual graphs / R2RML (Phase Q). Expose a FOREIGN tabular source as a
-/// virtual, SPARQL-queryable RDF graph: an R2RML-style [`obda::TriplesMap`] (subject-IRI
-/// template + predicate→object maps) turns rows into triples ON DEMAND, and a SPARQL query
-/// over a [`obda::VirtualGraph`] pulls only the query-relevant predicates/columns from the
-/// backing [`obda::ObdaSource`] — never materializing the whole dataset. Behind `sparql`
-/// (needs the evaluator + oxrdf term model). CONCEPT:MEDULLA-KG.ontology.foreign-source-seam.
-#[cfg(feature = "sparql")]
-pub mod obda;
 
 /// SPARQL 1.1 UPDATE executed over the native property-graph write ops (CONCEPT:MEDULLA-KG.query.named-graph-support):
 /// INSERT/DELETE DATA, DELETE/INSERT … WHERE, CLEAR/CREATE/DROP GRAPH, with named-graph
@@ -94,42 +76,3 @@ pub mod update;
 /// `medulla-geo` crate. Behind `geosparql` (implies `sparql` + pulls `medulla-geo`); OUT of `pi`.
 #[cfg(feature = "geosparql")]
 pub mod geosparql;
-
-/// W3 — the native OWL 2 (EL⁺ + RL) reasoner (CONCEPT:MEDULLA-KG.ontology.incremental-materialization). Classification,
-/// consistency checking, incremental materialization + justifications over the
-/// oxttl-parsed ontology. Pure Rust; behind `owl` (implies `rdf`).
-#[cfg(feature = "owl")]
-pub mod owl;
-/// The wire projection of an OWL proof tree (`ProofNode` → `ProofNodeWire`), shared by
-/// `OwlExplain` and UQL `WITH PROOF`.
-#[cfg(feature = "owl")]
-pub mod owl_wire;
-
-/// ModalityContract retrofit (CONCEPT:E4): `impl ModalityContract for
-/// owl::ProofNode` — the reference non-trivial `provenance()`, mapping
-/// `owl::Justification` (reconstructed as a `ProofNode`) losslessly. Behind the
-/// crate's own opt-in `contract` feature (default OFF, implying `owl` since
-/// `ProofNode` lives there). See `src/contract.rs` module docs.
-#[cfg(feature = "contract")]
-mod contract;
-
-/// MEDULLA-021 — user-defined custom rules + instance-level (ABox) OWL 2 RL / Datalog
-/// reasoning with `owl:sameAs` equality, run in one confidence-propagating
-/// forward-chaining fixpoint. The second Stardog-parity gap (custom rules) plus the
-/// instance side of the broader OWL-2 axioms (`owl.rs` covers the TBox/concept side).
-/// [`rules::run_rule_reasoning`] / [`rules::run_rule_reasoning_on_view`] are the
-/// server-op-ready entry points (a `RunRules` op is a thin pass-through). Behind `owl`.
-#[cfg(feature = "owl")]
-pub mod rules;
-
-/// W5 — the OWL-DL **tableau** reasoner (CONCEPT:MEDULLA-KG.ontology.concept-2). A pure-Rust description-logic
-/// tableau (ALCQO + role hierarchy) that DECIDES the constructs the monotone EL⁺/RL
-/// [`owl`] path cannot: full cardinality restrictions (`≥n`/`≤n`, qualified),
-/// `complementOf`/negation (via negation-normal-form), `oneOf`/`hasValue` nominals, and
-/// reasoning-by-cases over a `unionOf` SUPERCLASS. Entry points: [`tableau::is_consistent`],
-/// [`tableau::is_subsumed`], [`tableau::is_instance`], [`tableau::classify_dl`], and the
-/// [`tableau::reason_dl`] engine-picker (EL⁺/RL fast path when the ontology is inside the
-/// tractable envelope, tableau only when a DL construct forces it). Pure Rust; behind
-/// `owl-dl` (implies `owl`). Pi contract: OUT of `pi`, folded into node/full.
-#[cfg(feature = "owl-dl")]
-pub mod tableau;

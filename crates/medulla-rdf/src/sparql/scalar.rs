@@ -273,7 +273,7 @@ pub(super) fn quoted_component(b: &Binding, idx: usize) -> Option<Binding> {
 
 #[cfg(test)]
 pub(super) fn view_of_turtle(ttl: &str) -> GraphView {
-    let core = medulla_core::graph::GraphCore::new();
+    let core = medulla_graph_core::graph::GraphCore::new();
     let mut iris = crate::mapping::IriStore::default();
     crate::mapping::load_triples(
         &core,

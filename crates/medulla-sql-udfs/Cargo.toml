@@ -1,0 +1,56 @@
+[package]
+name = "medulla-sql-udfs"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: SQL scalar, numeric, sketch, window and table functions registered into the SQL engine"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_sql_udfs"
+path = "src/lib.rs"
+
+[dependencies]
+md-5 = { version = "0.10", optional = true }
+futures-util = { version = "0.3", optional = true, default-features = false, features = ["std"] }
+medulla-ann = { path = "../medulla-ann", optional = true }
+medulla-transaction = { path = "../medulla-transaction", optional = true }
+medulla-storage = { path = "../medulla-storage", optional = true }
+redb = { workspace = true, optional = true }
+async-trait = { version = "0.1", optional = true }
+tracing = { version = "0.1", optional = true }
+petgraph = { version = "0.8.3", features = ["serde-1"], optional = true }
+tokio = { version = "1.53", features = ["rt"], optional = true }
+arrow-schema = { version = "58.4", optional = true }
+medulla-types = { path = "../medulla-types" }
+medulla-core = { path = "../medulla-core" }
+medulla-compute = { path = "../medulla-compute" }
+medulla-text = { path = "../medulla-text", optional = true }
+medulla-numeric = { path = "../medulla-numeric", optional = true }
+medulla-tsdb = { path = "../medulla-tsdb", optional = true }
+ndarray = { version = "0.17", optional = true }
+serde_json = "1.0"
+datafusion = { version = "54", default-features = false, optional = true, features = [
+    "nested_expressions",
+    "sql",
+] }
+arrow = { version = "58.4", optional = true }
+sha1 = { version = "0.10", optional = true }
+sha2 = { version = "0.10", optional = true }
+hex = { version = "0.4", optional = true }
+base64 = { version = "0.23", optional = true }
+ipnet = { version = "2.12", optional = true }
+medulla-tables = { path = "../medulla-tables" }
+medulla-finance-quant = { path = "../medulla-finance-quant" }
+medulla-graph-algos = { path = "../medulla-graph-algos" }
+medulla-graph-core = { path = "../medulla-graph-core" }
+
+[features]
+finance = ["sql", "medulla-compute/finance", "medulla-types/finance"]
+numeric = ["sql", "dep:medulla-numeric", "dep:ndarray", "dep:medulla-tsdb", "medulla-tsdb/derive"]
+sql = ["dep:datafusion", "dep:arrow", "dep:arrow-schema", "dep:tokio", "dep:petgraph", "dep:tracing", "dep:async-trait", "dep:redb", "dep:medulla-storage", "dep:medulla-transaction", "dep:medulla-text", "dep:medulla-ann", "dep:futures-util", "dep:md-5", "dep:sha1", "dep:sha2", "dep:hex", "dep:base64", "dep:ipnet", "medulla-tables/sql"]
+
+[dev-dependencies]
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-compute = { path = "../medulla-compute", features = ["test-support"] }

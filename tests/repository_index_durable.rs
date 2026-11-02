@@ -19,9 +19,10 @@ mod common;
 #[path = "common/test_support.rs"]
 mod test_support;
 
+use medulla_server_blob::blob::BlobStateExt;
 use medulla_types::contract::BoundedVec;
 use medulla_types::ingestion_wire::{IndexFileVersion, IndexRepositoryScope, IndexTombstone};
-use medulla::protocol::{GraphType, Method, Response, ResultPayload};
+use medulla_protocol_types::protocol::{GraphType, Method, Response, ResultPayload};
 use sha2::{Digest, Sha256};
 
 const SECRET: &str = "repository-index-durable-secret";
@@ -188,13 +189,13 @@ fn scoped_index_pins_source_content_in_blob_cas() {
 
 #[cfg(feature = "blob")]
 async fn index_with_durable_source_refs() {
-    use medulla::server::blob::store::{ChunkStore, RedbChunkStore};
-    use medulla::server::blob::BlobCursors;
+    use medulla_server_blob::{blob::store::ChunkStore, blob::store::RedbChunkStore};
+    use medulla_server_blob::blob::BlobCursors;
     use std::sync::Arc;
 
     let (_dir, dir_s, _backend, state) = durable_graph("medulla-repoindex-cas").await;
     let store = Arc::new(RedbChunkStore::open(&dir_s).unwrap());
-    state.write().await.blob = Some(Arc::new(BlobCursors::new(store.clone())));
+    state.write().await.set_blob_cursors(Some(Arc::new(BlobCursors::new(store.clone()))));
     let result = index(
         &state,
         2,

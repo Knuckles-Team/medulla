@@ -1,0 +1,79 @@
+[package]
+name = "medulla-server-auth"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: Request authentication, access checks and the SQL catalog ACL"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_server_auth"
+path = "src/lib.rs"
+
+[dependencies]
+medulla-server-api = { path = "../medulla-server-api" }
+hex = "0.4"
+hmac = "0.12"
+jsonwebtoken = { version = "11.1", optional = true, default-features = false, features = ["aws_lc_rs"] }
+medulla-capabilities = { path = "../medulla-capabilities" }
+medulla-graphql = { path = "../medulla-graphql", optional = true }
+medulla-kernel = { path = "../medulla-kernel" }
+medulla-plan = { path = "../medulla-plan", optional = true }
+medulla-types = { path = "../medulla-types" }
+rmp-serde = "1.3"
+serde = { version = "1.0", features = ["derive", "rc"] }
+serde_json = "1.0"
+sha2 = "0.10"
+tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "signal", "macros"] }
+tracing = "0.1"
+uuid = { version = "1.28", features = ["v4"] }
+medulla-agent-types = { path = "../medulla-agent-types" }
+medulla-catalog-types = { path = "../medulla-catalog-types" }
+medulla-identity-types = { path = "../medulla-identity-types" }
+medulla-index-types = { path = "../medulla-index-types" }
+medulla-mutation-types = { path = "../medulla-mutation-types" }
+medulla-protocol-types = { path = "../medulla-protocol-types" }
+medulla-result-types = { path = "../medulla-result-types" }
+medulla-graph-core = { path = "../medulla-graph-core" }
+medulla-isolation = { path = "../medulla-isolation" }
+medulla-graph-algos = { path = "../medulla-graph-algos" }
+medulla-cypher = { path = "../medulla-cypher" }
+medulla-sql = { path = "../medulla-sql" }
+medulla-table-store = { path = "../medulla-table-store" }
+medulla-tables = { path = "../medulla-tables" }
+
+medulla-epistemic = { path = "../medulla-epistemic", optional = true }
+medulla-modality = { path = "../medulla-modality", optional = true }
+medulla-tsdb = { path = "../medulla-tsdb", optional = true }
+medulla-wasm = { path = "../medulla-wasm", optional = true }
+ureq = { version = "3.4.2", optional = true }
+medulla-exec = { path = "../medulla-exec" }
+medulla-sql-lang = { path = "../medulla-sql-lang" }
+
+[features]
+# Ambient test posture (OIDC off, fixed node identity, fixture signer registry) for the unit
+# tests that moved to other crates; never enabled by a release build.
+test-ambient-auth = []
+broker = ["medulla-server-api/broker", "medulla-graph-core/broker", "medulla-kernel/broker", "medulla-protocol-types/broker", "medulla-types/broker"]
+cypher = ["medulla-server-api/cypher", "medulla-cypher/cypher", "medulla-kernel/cypher"]
+epistemic = ["query", "dep:medulla-plan", "dep:medulla-modality", "dep:medulla-epistemic", "medulla-server-api/epistemic", "medulla-exec/epistemic", "medulla-kernel/epistemic", "medulla-plan?/epistemic", "medulla-protocol-types/epistemic", "medulla-types/epistemic"]
+federation = ["query", "dep:medulla-plan", "medulla-server-api/federation", "medulla-exec/federation", "medulla-graphql?/federation", "medulla-plan?/federation", "medulla-protocol-types/federation", "medulla-types/federation"]
+graphql = ["security", "dep:medulla-graphql", "medulla-server-api/graphql", "medulla-kernel/graphql", "medulla-protocol-types/graphql", "medulla-types/graphql"]
+mining = ["medulla-server-api/mining", "medulla-kernel/mining", "medulla-protocol-types/mining", "medulla-result-types/mining", "medulla-types/mining"]
+modality-serving = ["security", "dep:medulla-modality", "medulla-server-api/modality-serving", "medulla-capabilities/modality-serving", "medulla-kernel/modality-serving", "medulla-protocol-types/modality-serving", "medulla-types/modality-serving"]
+oidc = ["dep:ureq", "dep:jsonwebtoken", "medulla-server-api/oidc"]
+query = ["dep:medulla-tsdb", "dep:medulla-plan", "medulla-server-api/query", "medulla-exec/query", "medulla-kernel/query", "medulla-plan?/query", "medulla-protocol-types/query", "medulla-result-types/query", "medulla-types/query"]
+raft = ["medulla-server-api/raft", "medulla-exec/raft", "medulla-kernel/raft"]
+security = ["oidc", "medulla-server-api/security", "medulla-graph-core/security", "medulla-isolation/security", "medulla-kernel/security", "medulla-protocol-types/security", "medulla-types/security"]
+test-support = ["medulla-server-api/test-support", "medulla-kernel/test-support", "medulla-types/test-support", "medulla-agent-types/test-support", "medulla-catalog-types/test-support", "medulla-identity-types/test-support", "medulla-protocol-types/test-support", "medulla-exec/test-support"]
+wasm-udf = ["dep:medulla-wasm", "dep:medulla-plan", "medulla-server-api/wasm-udf", "medulla-exec/wasm-udf", "medulla-plan?/wasm-udf", "medulla-protocol-types/wasm-udf", "medulla-types/wasm-udf", "medulla-wasm?/wasm-udf"]
+[dev-dependencies]
+medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
+medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
+medulla-identity-types = { path = "../medulla-identity-types", features = ["test-support"] }
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
+medulla-exec = { path = "../medulla-exec", features = ["test-support"] }
+medulla-server-api = { path = "../medulla-server-api", features = ["test-support", "request-policy-fixture"] }

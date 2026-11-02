@@ -6,14 +6,17 @@
 //! caller-built record whose inputs disagree with themselves is refused here
 //! rather than decided.
 
-use medulla_types::agent_component::AgentComponentKind;
-use medulla_types::decision::digest;
-use medulla_types::decision::request::{effective_solver_budget, loosened_solver_field};
-use medulla_types::decision::{
-    CandidateFacts, DecisionErrorCode, DecisionInputs, MAX_ASSEMBLY_CANDIDATES,
-    MAX_ASSEMBLY_TEMPLATES, MAX_TEMPLATE_SLOTS,
+use medulla_agent_types::agent_component::AgentComponentKind;
+use medulla_decision_types::decision::digest;
+use medulla_decision_types::solve::Algorithm;
+use medulla_decision_types::{
+    decision::request::effective_solver_budget, decision::request::loosened_solver_field,
 };
-use medulla_types::solve::Algorithm;
+use medulla_decision_types::{
+    decision::CandidateFacts, decision::DecisionErrorCode, decision::DecisionInputs,
+    decision::MAX_ASSEMBLY_CANDIDATES, decision::MAX_ASSEMBLY_TEMPLATES,
+    decision::MAX_TEMPLATE_SLOTS,
+};
 
 use super::seal::RecordIdentity;
 use super::AssembleError;
@@ -86,7 +89,7 @@ fn check_digests(inputs: &DecisionInputs) -> Result<(), AssembleError> {
             "policy_digest is not the digest of the stored policy",
         ));
     }
-    if inputs.ontology_digest != medulla_types::agent_ontology::ontology_digest() {
+    if inputs.ontology_digest != medulla_agent_types::agent_ontology::ontology_digest() {
         return Err(invalid(
             "ontology_digest names a vocabulary this build does not carry",
         ));

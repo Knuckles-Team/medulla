@@ -1,0 +1,599 @@
+//! Streamed content-addressed BLOB handler (CONCEPT:MEDULLA-KG.storage.blob-namespace).
+//!
+//! Owns the `Blob*` methods. These are STATEFUL (they drive
+//! [`ServerState::blob`](medulla_server_api::state::ServerState) — the CAS chunk store + the
+//! open upload/fetch cursors), so like the OCC-txn handler they take `state`. The
+//! CAS operations touch redb (an fsync per durable commit), so every store call
+//! runs on the BLOCKING pool — never the async reactor — so a large media transfer
+//! cannot stall unrelated requests.
+//!
+//! The blob substrate is NOT graph-scoped: a content-addressed blob is keyed by
+//! its digest, not a graph, and the same blob may be referenced by `:Media` nodes
+//! across graphs. So these route at the top of dispatch (next to the txn methods),
+//! before the per-graph chain.
+
+use medulla_server_blob::blob::BlobStateExt;
+use std::sync::Arc;
+
+use tokio::sync::RwLock;
+
+use medulla_protocol_types::result_contract::storage as results;
+use medulla_protocol_types::mutation_batch::MutationBatch;
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::Response;
+use medulla_protocol_types::protocol::ResultPayload;
+use medulla_server_api::carrier::CarrierAuthority;
+use medulla_server_blob::blob::store;
+use medulla_server_blob::blob::BlobCursors;
+use medulla_server_api::state::ServerState;
+use medulla_types::contract::Nonce;
+
+/// Handle the blob methods. Returns `Err(method)` for any non-blob method so the
+/// dispatch chain falls through (routing convention). When the engine is built
+/// `--features blob` but the substrate is disabled (no persist dir), the methods
+/// return an explicit error rather than panicking.
+pub async fn try_handle(
+    state: &Arc<RwLock<ServerState>>,
+    req_id: u64,
+    authority: &CarrierAuthority,
+    attempt_nonce: Option<Nonce>,
+    method: Method,
+) -> Result<Response, Method> {
+    // Pull the cursors handle once (cheap clone of the Arc) so we don't hold the
+    // ServerState read lock across the blocking store calls.
+    let resolved = resolve_cursors(state, req_id, &method).await;
+    let Ok(cursors) = resolved else {
+        return resolved.err().unwrap();
+    };
+
+    let original_method = method.clone();
+    match method {
+        Method::BlobBegin { chunk_size } => {
+            handle_blob_begin(
+                &cursors,
+                req_id,
+                authority,
+                attempt_nonce,
+                &original_method,
+                chunk_size,
+            )
+            .await
+        }
+
+        Method::BlobChunkPut { cursor, data } => {
+            handle_blob_chunk_put(
+                &cursors,
+                req_id,
+                authority,
+                attempt_nonce,
+                &original_method,
+                cursor,
+                data,
+            )
+            .await
+        }
+
+        Method::BlobCommit { cursor } => {
+            handle_blob_commit(
+                &cursors,
+                req_id,
+                authority,
+                attempt_nonce,
+                &original_method,
+                cursor,
+            )
+            .await
+        }
+
+        Method::BlobFetchBegin { digest } => {
+            handle_blob_fetch_begin(&cursors, req_id, authority, digest).await
+        }
+
+        Method::BlobChunkGet { cursor, idx } => {
+            handle_blob_chunk_get(&cursors, req_id, authority, cursor, idx).await
+        }
+
+        Method::BlobFetchEnd { cursor } => {
+            Ok(handle_blob_fetch_end(&cursors, req_id, authority, cursor))
+        }
+
+        Method::BlobRef { digest } => {
+            handle_blob_ref(
+                &cursors,
+                req_id,
+                authority,
+                attempt_nonce,
+                &original_method,
+                digest,
+            )
+            .await
+        }
+
+        Method::BlobUnref { digest } => {
+            handle_blob_unref(
+                &cursors,
+                req_id,
+                authority,
+                attempt_nonce,
+                &original_method,
+                digest,
+            )
+            .await
+        }
+
+        Method::BlobGc => {
+            handle_blob_gc(&cursors, req_id, authority, attempt_nonce, &original_method).await
+        }
+
+        other => Err(other),
+    }
+}
+
+/// Resolve the blob CAS cursors handle for `method`, or the final routing/error
+/// outcome when the substrate is disabled (no persist dir configured): a blob
+/// method gets an explicit error response, any other method falls through the
+/// dispatch chain via `Err(method)` (routing convention).
+async fn resolve_cursors(
+    state: &Arc<RwLock<ServerState>>,
+    req_id: u64,
+    method: &Method,
+) -> Result<Arc<BlobCursors>, Result<Response, Method>> {
+    let s = state.read().await;
+    match s.blob_cursors() {
+        Some(cursors) => Ok(cursors.clone()),
+        None if is_blob_method(method) => Err(Ok(Response::err(
+            req_id,
+            "Blob substrate disabled (no persist dir configured)",
+        ))),
+        None => Err(Err(method.clone())),
+    }
+}
+
+/// Reserve a never-used cursor id and compile the durable `BlobBegin` batch
+/// against it, in one place so `handle_blob_begin` sees ONE fallible step
+/// rather than three.
+///
+/// BUG A2 (2026-08-12): `BlobBegin`'s `Method` payload carries no upload
+/// identity of its own (it is the call that MINTS one), so the durable
+/// idempotency key must use the freshly allocated cursor id, never `req_id`.
+/// See `compile_blob_batch_at`'s doc for the full mechanism.
+fn prepare_begin_upload(
+    cursors: &BlobCursors,
+    authority: &CarrierAuthority,
+    method: &Method,
+    attempt_nonce: Option<Nonce>,
+) -> Result<(u64, MutationBatch, u64), String> {
+    let proposed = cursors.allocate_upload_id()?;
+    let expected = cursors.store.mutation_version(
+        authority.tenant_scope(),
+        &authority.namespace("blob-cas", "control"),
+    )?;
+    let now = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
+    let (batch, now) = medulla_server_ops::api::ingest::compile_blob_batch_at_with_nonce(
+        cursors.store.as_ref(),
+        proposed,
+        authority,
+        method,
+        expected,
+        now,
+        attempt_nonce,
+    )?;
+    Ok((proposed, batch, now))
+}
+
+async fn handle_blob_begin(
+    cursors: &BlobCursors,
+    req_id: u64,
+    authority: &CarrierAuthority,
+    attempt_nonce: Option<Nonce>,
+    method: &Method,
+    chunk_size: u32,
+) -> Result<Response, Method> {
+    let chunk_size = if chunk_size == 0 {
+        store::DEFAULT_CHUNK_SIZE as u32
+    } else {
+        chunk_size
+    };
+    let (proposed, batch, now) =
+        match prepare_begin_upload(cursors, authority, method, attempt_nonce) {
+            Ok(prepared) => prepared,
+            Err(error) => return Ok(Response::err(req_id, error)),
+        };
+    let store = cursors.store.clone();
+    let owner_scope = authority.owner_scope().to_string();
+    let committed = run_blocking(req_id, move || {
+        store.begin_upload_batch(proposed, chunk_size, &owner_scope, &batch, now)
+    })
+    .await;
+    let id = match committed {
+        Ok(Ok(id)) => id,
+        Ok(Err(error)) => return Ok(Response::err(req_id, error)),
+        Err(response) => return Ok(response),
+    };
+    if let Err(error) = restore_committed_upload(cursors, id) {
+        return Ok(Response::err(req_id, error));
+    }
+    Ok(Response::ok(
+        req_id,
+        ResultPayload::scalar::<results::BlobBegin>(id),
+    ))
+}
+
+async fn handle_blob_chunk_put(
+    cursors: &BlobCursors,
+    req_id: u64,
+    authority: &CarrierAuthority,
+    attempt_nonce: Option<Nonce>,
+    method: &Method,
+    cursor: u64,
+    data: Vec<u8>,
+) -> Result<Response, Method> {
+    if let Err(error) = ensure_upload_owner(cursors, cursor, authority.owner_scope()) {
+        return Ok(Response::err(req_id, error));
+    }
+    let (batch, now) = match medulla_server_ops::api::ingest::compile_blob_batch_with_nonce(
+        cursors.store.as_ref(),
+        req_id,
+        authority,
+        method,
+        attempt_nonce,
+    ) {
+        Ok(value) => value,
+        Err(error) => return Ok(Response::err(req_id, error)),
+    };
+    let store = cursors.store.clone();
+    let put = run_blocking(req_id, move || {
+        store.put_upload_chunk_batch(cursor, &data, &batch, now)
+    })
+    .await;
+    let (_digest, count) = match put {
+        Ok(Ok(result)) => result,
+        Ok(Err(error)) => return Ok(Response::err(req_id, error)),
+        Err(response) => return Ok(response),
+    };
+    Ok(chunk_put_response(cursors, req_id, cursor, count))
+}
+
+async fn handle_blob_commit(
+    cursors: &BlobCursors,
+    req_id: u64,
+    authority: &CarrierAuthority,
+    attempt_nonce: Option<Nonce>,
+    method: &Method,
+    cursor: u64,
+) -> Result<Response, Method> {
+    if let Err(error) = ensure_upload_owner(cursors, cursor, authority.owner_scope()) {
+        return Ok(Response::err(req_id, error));
+    }
+    let (batch, now) = match medulla_server_ops::api::ingest::compile_blob_batch_with_nonce(
+        cursors.store.as_ref(),
+        req_id,
+        authority,
+        method,
+        attempt_nonce,
+    ) {
+        Ok(value) => value,
+        Err(error) => return Ok(Response::err(req_id, error)),
+    };
+    let store = cursors.store.clone();
+    let committed = run_blocking(req_id, move || {
+        store.commit_upload_batch(cursor, &batch, now)
+    })
+    .await;
+    match committed {
+        Ok(Ok(digest)) => {
+            cursors.finish_upload(cursor);
+            Ok(Response::ok(
+                req_id,
+                ResultPayload::scalar::<results::BlobCommit>(digest),
+            ))
+        }
+        Ok(Err(error)) => Ok(Response::err(req_id, error)),
+        Err(response) => Ok(response),
+    }
+}
+
+async fn handle_blob_fetch_begin(
+    cursors: &BlobCursors,
+    req_id: u64,
+    authority: &CarrierAuthority,
+    digest: String,
+) -> Result<Response, Method> {
+    let store = cursors.store.clone();
+    let manifest = run_blocking(req_id, move || store.get_manifest(&digest)).await;
+    match manifest {
+        Ok(Ok(Some(manifest))) if manifest.owner_scope == authority.owner_scope() => {
+            let (cursor, chunks) = cursors.open_fetch(manifest);
+            Ok(Response::ok(
+                req_id,
+                // A two-element id list keeps the wire simple; the client splits it.
+                ResultPayload::of_ref::<results::BlobFetchBegin>(&(cursor, chunks)),
+            ))
+        }
+        Ok(Ok(Some(_))) | Ok(Ok(None)) => {
+            medulla_kernel::metrics::access_denied();
+            Ok(Response::err(req_id, "unknown blob digest"))
+        }
+        Ok(Err(error)) => Ok(Response::err(req_id, error)),
+        Err(response) => Ok(response),
+    }
+}
+
+async fn handle_blob_chunk_get(
+    cursors: &BlobCursors,
+    req_id: u64,
+    authority: &CarrierAuthority,
+    cursor: u64,
+    idx: u32,
+) -> Result<Response, Method> {
+    if let Err(error) = cursors.authorize_fetch(cursor, authority.owner_scope()) {
+        return Ok(Response::err(req_id, error));
+    }
+    let digest = match cursors.fetch_chunk_digest(cursor, idx) {
+        Ok(digest) => digest,
+        Err(error) => return Ok(Response::err(req_id, error)),
+    };
+    let store = cursors.store.clone();
+    let fetched = run_blocking(req_id, move || store.get_chunk(&digest)).await;
+    match fetched {
+        // A chunk is arbitrary binary, not a packed map. Wrap it as a Raw
+        // MessagePack `bin` so the client recovers the exact bytes.
+        Ok(Ok(Some(bytes))) => Ok(Response::ok(
+            req_id,
+            ResultPayload::of_dynamic::<results::BlobChunkGet, _>(&serde_bytes::Bytes::new(&bytes)),
+        )),
+        Ok(Ok(None)) => Ok(Response::err(req_id, "chunk missing from CAS")),
+        Ok(Err(error)) => Ok(Response::err(req_id, error)),
+        Err(response) => Ok(response),
+    }
+}
+
+// `Response`, not `Result<Response, Method>`: this handler is only ever reached for
+// `Method::BlobFetchEnd` (already matched by the caller) and never falls through the
+// dispatch chain, so an `Err(Method)` arm can never be constructed here. Clippy's
+// `result_large_err` correctly flags a `Method` (an enum whose largest variant carries
+// full request payloads) in an `Err` position that is dead weight on every call.
+fn handle_blob_fetch_end(
+    cursors: &BlobCursors,
+    req_id: u64,
+    authority: &CarrierAuthority,
+    cursor: u64,
+) -> Response {
+    if let Err(error) = cursors.authorize_fetch(cursor, authority.owner_scope()) {
+        return Response::err(req_id, error);
+    }
+    cursors.close_fetch(cursor);
+    Response::ok(req_id, ResultPayload::scalar::<results::BlobFetchEnd>(true))
+}
+
+async fn handle_blob_ref(
+    cursors: &BlobCursors,
+    req_id: u64,
+    authority: &CarrierAuthority,
+    attempt_nonce: Option<Nonce>,
+    method: &Method,
+    digest: String,
+) -> Result<Response, Method> {
+    handle_blob_ref_op::<results::BlobRef>(
+        cursors,
+        req_id,
+        authority,
+        attempt_nonce,
+        method,
+        digest,
+        store::HolderChange::owner_acquire,
+    )
+    .await
+}
+
+async fn handle_blob_unref(
+    cursors: &BlobCursors,
+    req_id: u64,
+    authority: &CarrierAuthority,
+    attempt_nonce: Option<Nonce>,
+    method: &Method,
+    digest: String,
+) -> Result<Response, Method> {
+    handle_blob_ref_op::<results::BlobUnref>(
+        cursors,
+        req_id,
+        authority,
+        attempt_nonce,
+        method,
+        digest,
+        store::HolderChange::owner_release,
+    )
+    .await
+}
+
+/// Validate ownership, resolve the caller's named holder change, and compile
+/// the durable batch for it — one fallible step for `handle_blob_ref_op`
+/// instead of three.
+///
+/// The caller's reference is held under its own owner scope, so a retry or a
+/// replay of the same reference is one holder row, never a second count.
+fn prepare_blob_ref_op(
+    cursors: &BlobCursors,
+    req_id: u64,
+    authority: &CarrierAuthority,
+    attempt_nonce: Option<Nonce>,
+    method: &Method,
+    digest: &str,
+    change: fn(&str, &str) -> Result<store::HolderChange, String>,
+) -> Result<(store::HolderChange, MutationBatch, u64), String> {
+    ensure_blob_owner(cursors, digest, authority.owner_scope())?;
+    let change = change(digest, authority.owner_scope())?;
+    let (batch, now) = medulla_server_ops::api::ingest::compile_blob_batch_with_nonce(
+        cursors.store.as_ref(),
+        req_id,
+        authority,
+        method,
+        attempt_nonce,
+    )?;
+    Ok((change, batch, now))
+}
+
+async fn handle_blob_ref_op<M>(
+    cursors: &BlobCursors,
+    req_id: u64,
+    authority: &CarrierAuthority,
+    attempt_nonce: Option<Nonce>,
+    method: &Method,
+    digest: String,
+    change: fn(&str, &str) -> Result<store::HolderChange, String>,
+) -> Result<Response, Method>
+where
+    M: medulla_protocol_types::result_contract::MethodResult<Body = u64>,
+    M::Encoding: medulla_protocol_types::result_contract::EncodeScalar<u64>,
+{
+    let (change, batch, now) = match prepare_blob_ref_op(
+        cursors,
+        req_id,
+        authority,
+        attempt_nonce,
+        method,
+        &digest,
+        change,
+    ) {
+        Ok(prepared) => prepared,
+        Err(error) => return Ok(Response::err(req_id, error)),
+    };
+    let store = cursors.store.clone();
+    ref_op::<M, _>(req_id, move || {
+        store
+            .holder_batch(&change, &batch, now)
+            .map(|outcome| outcome.holders)
+    })
+    .await
+}
+
+async fn handle_blob_gc(
+    cursors: &BlobCursors,
+    req_id: u64,
+    authority: &CarrierAuthority,
+    attempt_nonce: Option<Nonce>,
+    method: &Method,
+) -> Result<Response, Method> {
+    if let Err(error) = authority.require_admin("blob garbage collection") {
+        return Ok(Response::err(req_id, error));
+    }
+    let (batch, now) = match medulla_server_ops::api::ingest::compile_blob_batch_with_nonce(
+        cursors.store.as_ref(),
+        req_id,
+        authority,
+        method,
+        attempt_nonce,
+    ) {
+        Ok(value) => value,
+        Err(error) => return Ok(Response::err(req_id, error)),
+    };
+    let store = cursors.store.clone();
+    let request = store::SweepRequest::new(store::GcOwnerScope::AllOwners, cursors.retention());
+    let swept = run_blocking(req_id, move || store.sweep_batch(&request, &batch, now)).await;
+    match swept {
+        Ok(Ok(stats)) => Ok(Response::ok(
+            req_id,
+            ResultPayload::of_ref::<results::BlobGc>(&(
+                stats.blobs_reclaimed,
+                stats.chunks_reclaimed,
+            )),
+        )),
+        Ok(Err(error)) => Ok(Response::err(req_id, error)),
+        Err(response) => Ok(response),
+    }
+}
+
+fn restore_committed_upload(cursors: &BlobCursors, id: u64) -> Result<(), String> {
+    match cursors.store.load_upload(id)? {
+        Some(manifest) => cursors.restore_upload_manifest(id, manifest),
+        None => Err("committed blob upload cursor is missing".to_string()),
+    }
+}
+
+fn chunk_put_response(cursors: &BlobCursors, req_id: u64, cursor: u64, count: u32) -> Response {
+    match cursors.store.load_upload(cursor) {
+        Ok(Some(manifest)) => match cursors.restore_upload_manifest(cursor, manifest) {
+            Ok(()) => Response::ok(
+                req_id,
+                ResultPayload::scalar::<results::BlobChunkPut>(count as u64),
+            ),
+            Err(error) => Response::err(req_id, error),
+        },
+        Ok(None) => Response::err(req_id, "durable upload cursor is missing"),
+        Err(error) => Response::err(req_id, error),
+    }
+}
+
+/// Bind direct/replayed chunk operations to the durable upload owner. A process
+/// restart may empty the serving cursor map, so recover only a manifest whose
+/// durable owner exactly matches this verified caller.
+fn ensure_upload_owner(
+    cursors: &BlobCursors,
+    cursor: u64,
+    owner_scope: &str,
+) -> Result<(), String> {
+    if cursors.authorize_upload(cursor, owner_scope).is_ok() {
+        return Ok(());
+    }
+    let manifest = cursors
+        .store
+        .load_upload(cursor)?
+        .filter(|manifest| manifest.owner_scope == owner_scope)
+        .ok_or_else(|| "unknown upload cursor".to_string())?;
+    cursors.restore_upload_manifest(cursor, manifest)?;
+    cursors.authorize_upload(cursor, owner_scope)
+}
+
+fn ensure_blob_owner(cursors: &BlobCursors, digest: &str, owner_scope: &str) -> Result<(), String> {
+    match cursors.store.get_manifest(digest)? {
+        Some(manifest) if manifest.owner_scope == owner_scope => Ok(()),
+        _ => {
+            medulla_kernel::metrics::access_denied();
+            Err("unknown blob digest".to_string())
+        }
+    }
+}
+
+/// Run a refcount adjustment on the blocking pool, returning the new count as `M`'s
+/// declared result.
+async fn ref_op<M, F>(req_id: u64, f: F) -> Result<Response, Method>
+where
+    M: medulla_protocol_types::result_contract::MethodResult<Body = u64>,
+    M::Encoding: medulla_protocol_types::result_contract::EncodeScalar<u64>,
+    F: FnOnce() -> Result<u64, String> + Send + 'static,
+{
+    match run_blocking(req_id, f).await {
+        Ok(Ok(n)) => Ok(Response::ok(req_id, ResultPayload::scalar::<M>(n))),
+        Ok(Err(e)) => Ok(Response::err(req_id, e)),
+        Err(resp) => Ok(resp),
+    }
+}
+
+/// Run a CAS store call on the blocking pool; an `Err(Response)` is a pool-join
+/// failure surfaced as a server error.
+async fn run_blocking<T, F>(req_id: u64, f: F) -> Result<T, Response>
+where
+    T: Send + 'static,
+    F: FnOnce() -> T + Send + 'static,
+{
+    tokio::task::spawn_blocking(f)
+        .await
+        .map_err(|e| Response::err(req_id, format!("blob task join error: {e}")))
+}
+
+/// Whether `method` is one of the Blob* variants (used to decide whether a disabled
+/// substrate should error vs. fall through).
+fn is_blob_method(method: &Method) -> bool {
+    matches!(
+        method,
+        Method::BlobBegin { .. }
+            | Method::BlobChunkPut { .. }
+            | Method::BlobCommit { .. }
+            | Method::BlobFetchBegin { .. }
+            | Method::BlobChunkGet { .. }
+            | Method::BlobFetchEnd { .. }
+            | Method::BlobRef { .. }
+            | Method::BlobUnref { .. }
+            | Method::BlobGc
+    )
+}

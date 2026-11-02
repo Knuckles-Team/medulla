@@ -227,7 +227,7 @@ nodes, drop the Raft env" — no data reconstruction needed.
 ## 5. Integration follow-ups (NOT done here — flagged for the dispatch owner)
 
 The write path that routes a durable mutation through `RaftHandle::client_write` on the
-leader (and the follower `ForwardToLeader` redirect) lives in `src/server/dispatch.rs`,
+leader (and the follower `ForwardToLeader` redirect) lives in `crates/medulla-server-router/src/dispatch.rs`,
 which is owned by a sibling change — **out of scope for this branch**. Two items to
 confirm there before declaring the cluster production-live:
 
@@ -237,10 +237,10 @@ confirm there before declaring the cluster production-live:
    arbora transparently forwards). Verify this is wired for the 0.10 `client_write`
    return/`ForwardToLeader` shape.
 2. **Membership admin entrypoint — DONE.** `MultiRaft::add_group_member` was split
-   into `add_group_learner` (`src/raft/multi.rs`, add-learner only, no
+   into `add_group_learner` (`crates/medulla-raft/src/raft/multi.rs`, add-learner only, no
    promotion) + `change_group_voters` (the promotion/rebalance half), both now
    reachable at runtime as `Method::RaftAddLearner` /
-   `Method::RaftChangeMembership` (`src/server/handlers/raft_admin.rs`), gated
+   `Method::RaftChangeMembership` (`crates/medulla-h-admin/src/raft_admin.rs`), gated
    `admin:cluster` and leader-only — a follower answers `OPERATION_REDIRECTED`
    naming the current leader, exactly like `PlacementRoute`'s stale-route
    redirect. `remove_group_member` still has no wire Method (out of scope here;

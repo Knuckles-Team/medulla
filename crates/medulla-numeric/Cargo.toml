@@ -21,7 +21,7 @@ default = []
 # crates/; and this crate keeps pyo3 out of any engine-linked build). Only the
 # wheel build (maturin) turns this on. The boundary accepts/returns Python built-ins;
 # it deliberately has no NumPy runtime dependency.
-python = ["dep:pyo3", "analytics", "dep:medulla-types", "medulla-types/wire-complete"]
+python = ["dep:pyo3", "analytics", "dep:medulla-types", "medulla-types/wire-complete", "medulla-agent-types/wire-complete", "medulla-decision-types/wire-complete", "medulla-protocol-types/wire-complete"]
 # Analytics stats ops (CONCEPT:MEDULLA-357/MEDULLA-358): spearmanr / ks_2samp / normal
 # ppf+pdf. Pulls `statrs` for the distribution CDFs (Student-t, Normal). Kept OUT
 # of `default` so an engine `pi`/`node`/`full` build that links the medulla-numeric rlib
@@ -122,8 +122,16 @@ num-complex = { version = "0.4", default-features = false, optional = true }
 # FFT for `motif` only (see the feature). Adds rustfft + primal-check + transpose to the
 # lockfile (num-complex / num-integer / strength_reduce are already there).
 rustfft = { version = "6.4", optional = true }
+medulla-protocol-types = { path = "../medulla-protocol-types" }
+medulla-decision-types = { path = "../medulla-decision-types" }
+medulla-agent-types = { path = "../medulla-agent-types" }
+medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types" }
 
 [dev-dependencies]
+medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types", features = ["test-support"] }
+medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
+medulla-decision-types = { path = "../medulla-decision-types", features = ["test-support"] }
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
 libc = "0.2"
 # Shared Decide-layer fixtures (`medulla_types::test_support::decision`).
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
@@ -133,6 +141,8 @@ medulla-types = { path = "../medulla-types", features = ["test-support"] }
 serde_json = "1.0"
 # Series-kernel checkpoint round trips (`series::tests`), bit-exact. Already in the lockfile.
 rmp-serde = "1.3"
+medulla-decision-stats = { path = "../medulla-decision-stats", features = ["decision"] }
+medulla-work-types = { path = "../medulla-work-types" }
 
 [[example]]
 name = "decision_scorer_train"

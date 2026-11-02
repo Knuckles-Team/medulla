@@ -18,7 +18,7 @@
 //! (BUG-016) is a separate, deliberately decoupled cold tier: [`SpanStore::
 //! snapshot`]/[`SpanStore::recover`] give a deterministic durable-bytes
 //! representation that `src/server/obs/snapshot.rs::ObsState::persist_traces` writes on
-//! a periodic sweep (mirroring `server::persistence::provenance_anchor`'s
+//! a periodic sweep (mirroring `medulla_server::persistence::provenance_anchor`'s
 //! cadence), NOT on every ingest -- persisting the whole store per request would
 //! be BUG-017's write-amplification defect class transplanted onto traces.
 

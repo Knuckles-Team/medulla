@@ -1,0 +1,26 @@
+[package]
+name = "medulla-mining"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: Pattern and process mining over graph records"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_mining"
+path = "src/lib.rs"
+
+[dependencies]
+medulla-compute = { path = "../medulla-compute" }
+medulla-types = { path = "../medulla-types" }
+medulla-geo = { path = "../medulla-geo", default-features = false, optional = true }
+medulla-numeric = { path = "../medulla-numeric", optional = true }
+serde_json = "1.0"
+
+[features]
+mining = ["dep:medulla-geo", "dep:medulla-numeric", "medulla-compute/mining", "medulla-types/mining"]
+
+[dev-dependencies]
+medulla-compute = { path = "../medulla-compute", features = ["test-support"] }
+medulla-types = { path = "../medulla-types", features = ["test-support"] }

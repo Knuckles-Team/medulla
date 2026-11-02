@@ -292,7 +292,7 @@ authentication in every profile. Fixed credential derivations are domain-separat
 ### Migrating to OIDC-required
 
 Since 2026-07-22, `MEDULLA_REQUIRE_OIDC` defaults ON (unset ⇒ required — see
-`src/server/auth.rs`'s `require_oidc()`). This closes the primary `eg2.` protocol's
+`crates/medulla-server-auth/src/auth.rs`'s `require_oidc()`). This closes the primary `eg2.` protocol's
 Identity boundary seam: previously, the HMAC envelope alone (`GRAPH_SERVICE_AUTH_SECRET`)
 was enough to claim ANY principal/tenant/roles/scopes; OIDC verification was real but
 opt-in. Today, absent explicit configuration, **the server refuses to start** rather than

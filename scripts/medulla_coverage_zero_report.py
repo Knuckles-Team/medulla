@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: E501
 """Turn one or more ``cargo llvm-cov --lcov`` reports into a ranked,
 actionable "what is never executed" list.
 
@@ -11,7 +12,7 @@ and answers three questions the raw report can't answer by itself:
    ranked by crate/module so the worst offenders sort to the top.
 2. Which *whole files* have zero executed lines (``LH:0`` with ``LF>0``) --
    the "built but not wired" signature (`resolve_composed_graph` in
-   `src/server/persistence/agent_graph.rs` was exactly this shape before it
+   `crates/medulla-persistence-records/src/agent_graph.rs` was exactly this shape before it
    was covered).
 3. Which source files under the scanned crate roots never appear in the
    lcov output *at all*. This is NOT automatically "zero coverage" -- three
@@ -119,7 +120,7 @@ def base_function_name(demangled: str) -> str:
     "function" record PER monomorphization (often one per call site / test
     closure), which inflates a raw zero-function count with instantiation
     noise rather than real per-logical-function gaps -- confirmed on this
-    codebase's `src/server/mutation.rs::commit_mutation` (972 raw "zero
+    codebase's `crates/medulla-server-mutation/src/mutation.rs::commit_mutation` (972 raw "zero
     functions" collapsing to a handful of base functions once
     monomorphizations are grouped). See the task/report that created this
     script for the specific example.
@@ -283,7 +284,7 @@ def is_orphaned(file_path: Path) -> bool:
     workspace: `crates/medulla-types/src/lib.rs` declares `pub mod
     semantic_index;` for MEDULLA-TYPES' OWN `semantic_index/` directory, which a
     stem-only grep would wrongly count as "declaring" the unrelated,
-    actually-orphaned `src/server/semantic_index.rs`.
+    actually-orphaned `crates/medulla-h-retrieve/src/semantic_index_runtime.rs`.
     """
     stem = file_path.stem
     # A file named mod.rs or lib.rs/main.rs is never itself "mod-declared"
@@ -383,7 +384,7 @@ def compute_base_function_data(merged: dict[str, FileCov]) -> BaseFunctionData:
     one lcov FN record PER monomorphization (often one per call site or
     test closure); ranking on raw instantiation counts massively
     over-weights heavily generic dispatch functions (confirmed:
-    src/server/mutation.rs::commit_mutation alone contributed ~970 raw
+    crates/medulla-server-mutation/src/mutation.rs::commit_mutation alone contributed ~970 raw
     "zero functions" from instantiation noise). A base function counts as
     zero-coverage only if EVERY one of its monomorphizations is zero -- if
     any instantiation executed, the logical function ran.
@@ -555,8 +556,8 @@ def render_absent_files_intro() -> list[str]:
         'wired" signature as the motivating `resolve_composed_graph` '
         "defect, one level worse -- the code isn't even reachable, let "
         "alone tested. Confirmed examples in this workspace: "
-        "`crates/medulla-core/src/compute/semantic_index_service.rs` and "
-        "`src/server/semantic_index.rs` (neither has a `mod` declaration "
+        "`crates/medulla-ann-codes/src/semantic_index_service.rs` and "
+        "`crates/medulla-h-retrieve/src/semantic_index_runtime.rs` (neither has a `mod` declaration "
         "anywhere; `semantic_index.rs` imports from the other orphan, so "
         "the pair references each other while both sit outside every "
         "crate's module tree).\n"

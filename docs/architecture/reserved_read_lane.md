@@ -70,9 +70,9 @@ is exactly what the reserved lane fixes.
 ## HOW
 
 The transport admission lives in
-[`src/server/transport.rs::handle_connection`](https://github.com/Knuckles-Team/medulla/blob/main/src/server/transport.rs).
+[`crates/medulla-server/src/transport.rs::handle_connection`](https://github.com/Knuckles-Team/medulla/blob/main/crates/medulla-server/src/transport.rs).
 Each request is classified by
-[`src/server/access.rs::requires_write`](https://github.com/Knuckles-Team/medulla/blob/main/src/server/access.rs) and resolved
+[`crates/medulla-server-auth/src/access.rs::requires_write`](https://github.com/Knuckles-Team/medulla/blob/main/crates/medulla-server-auth/src/access.rs) and resolved
 through a **pure, unit-testable** `admit_request`:
 
 ```rust
@@ -194,7 +194,7 @@ pressure.
 ## Proof tests
 
 Three tests in `transport::tests`
-([`src/server/transport.rs`](https://github.com/Knuckles-Team/medulla/blob/main/src/server/transport.rs)) prove the guarantee
+([`crates/medulla-server/src/transport.rs`](https://github.com/Knuckles-Team/medulla/blob/main/crates/medulla-server/src/transport.rs)) prove the guarantee
 deterministically against the pure `admit_request`:
 
 | Test | What it proves |

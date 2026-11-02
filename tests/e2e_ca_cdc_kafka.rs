@@ -24,9 +24,9 @@
 
 use std::sync::Arc;
 
-use medulla::server::cdc::CdcHub;
-use medulla::server::cdc_sink;
-use medulla::wire::CdcKind;
+use medulla_server_cdc::cdc::CdcHub;
+use medulla_server::cdc_sink;
+use medulla_types::wire::CdcKind;
 
 #[test]
 #[ignore = "needs a live Kafka broker; see module doc for the exact invocation"]

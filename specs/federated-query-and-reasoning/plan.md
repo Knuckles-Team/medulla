@@ -42,7 +42,7 @@ The [architecture](plan.md) defines interfaces and ownership. The [test specific
 |---|---|---|
 | UQL syntax and semantic lowering | `crates/medulla-plan/src/uql/{grammar,lexer,parser,serve,print}.rs` | Add syntax at the grammar table, parser, canonical printer and execution map together. Retain one text method. |
 | Query execution and optimizer | `crates/medulla-plan/src/{exec,optimizer,federation}.rs`, `federation_opt/` | Build one remote-fragment planner and exact residual, not one optimizer per wire. |
-| Foreign security | `crates/medulla-plan/src/federation_ssrf.rs`, server owner-scoped foreign catalog | Resolve the registered grant before planning; DNS-pin and validate every outbound request. |
+| Foreign security | `crates/medulla-federation/src/federation_ssrf.rs`, server owner-scoped foreign catalog | Resolve the registered grant before planning; DNS-pin and validate every outbound request. |
 | SQL and Iceberg | `crates/medulla-query/src/sql/{mod,iceberg_federation}.rs` | Use DataFusion provider pushdown and shared SQL renderer; do not construct an independent SQL authority. |
 | RDF/OBDA | `crates/medulla-rdf/src/{sparql,obda,owl}.rs`, `src/server/handlers/rdf/` | Lower approved virtual graphs and `SERVICE` through the same grants, budgets and trace. |
 | Search and indexes | `crates/medulla-query/src/tables/{ann_authority,index}.rs`, `crates/medulla-core/src/compute/semantic_ann_*` | Keep generation authority, fences and maintenance under existing index lifecycle. |
@@ -79,7 +79,7 @@ Time-series operators preserve `series@timestamp` identity and f64 channel value
 
 #### MEDULLA-FEDERATED-QUERY-R045 / MEDULLA-FEDERATED-QUERY-R052 implementation seam
 
-Extend `crates/medulla-plan/src/federation.rs`, `federation_opt/` and the existing `ForeignSource` capability/result contract. Make `ForeignRows` carry columns through planning and execution. Keep exact residual evaluation in the shared optimizer. Project requested columns after residual, ordering and proof requirements are satisfied. Use the registered `RemoteEngineSource::fetch_uql` path and `Method::Uql` contract for pushed fragments. Resolve signed context and the owner grant in the server foreign catalog first. Do not create a second remote client, parser or source registry. Generate Python and wire shapes only from Rust contract sources.
+Extend `crates/medulla-federation/src/federation.rs`, `federation_opt/` and the existing `ForeignSource` capability/result contract. Make `ForeignRows` carry columns through planning and execution. Keep exact residual evaluation in the shared optimizer. Project requested columns after residual, ordering and proof requirements are satisfied. Use the registered `RemoteEngineSource::fetch_uql` path and `Method::Uql` contract for pushed fragments. Resolve signed context and the owner grant in the server foreign catalog first. Do not create a second remote client, parser or source registry. Generate Python and wire shapes only from Rust contract sources.
 
 The local `unified-data-plane` spec supplies `AttachedSourceIdentity`, owner grants, dialect capability evidence, source watermark, and approved named virtual-graph mapping. This spec consumes those values via the existing foreign catalog and planner. Mapping proposal approval, catalog extraction, change capture, dialect certification and native/accelerated route policy stay there. Query tests must cover an attached-source implementation without depending on a private deployment.
 
@@ -92,7 +92,7 @@ Keep generated Rust/Python/wire method contracts synchronized. A grammar or erro
 ### 2026-10-11 — MEDULLA-FEDERATED-QUERY-R056 numerical tail acceptance
 
 At main `6bf4ea1c7e80a375e7053e677b0ed28c162131ec`, the complete production
-`crates/medulla-compute/src/mining/causal_impact.rs` module and exact production
+`crates/medulla-mining/src/mining/causal_impact.rs` module and exact production
 `medulla-numeric` error, math, reduce, validate and kernels modules compiled in a
 standalone Rust 1.96.0 test harness linked to the cached real `libm` dependency.
 All five causal-impact tests passed. The acceptance test compares two-sided
@@ -133,17 +133,17 @@ not establish full facade compilation or end-to-end NL query behavior.
 ## Recovered requirement: vectorized SQL columns
 
 Data flow: SQL row write → `ColumnVectorBinding` check → queued embed → ANN index → nearest-neighbour query.
-Attach point: `crates/medulla-query/src/sql/ann.rs` and `ann_pushdown.rs`, which already own the ANN path.
+Attach point: `crates/medulla-sql/src/sql/ann.rs` and `ann_pushdown.rs`, which already own the ANN path.
 Reuses the existing ANN index and embedding call. Source data stays in the SQL table.
 Decision: opt-in binding per column. Rejected: embedding every text column, which spends embedder budget on unused columns.
 
 ## MEDULLA-FEDERATED-QUERY-R078 tenant predicate inside the plan
 
-Data flow: served UQL statement → `dispatch_query_family` (`src/server/handlers/query/dispatch.rs:66`) → `handle_uql` (`src/server/handlers/query/uql_statement.rs:17`) → `inject_scope` → scan nodes → scoped rows.
-Types: `PlanScope{tenant, clearance_labels, verified}` in `crates/medulla-query/src/plan_scope.rs`. The predicate set is closed: tenant equality and label subset.
+Data flow: served UQL statement → `dispatch_query_family` (`crates/medulla-h-query/src/query/dispatch.rs:66`) → `handle_uql` (`crates/medulla-h-query/src/query/uql_statement.rs:17`) → `inject_scope` → scan nodes → scoped rows.
+Types: `PlanScope{tenant, clearance_labels, verified}` in `crates/medulla-table-store/src/plan_scope.rs`. The predicate set is closed: tenant equality and label subset.
 Attach point: after planning, before execution, so no scan runs unscoped. Production caller is `dispatch_query_family`.
 Failure: an unverified caller gets `PLAN_SCOPE_UNVERIFIED` and no read runs.
-Reuses the scope check pattern in `src/server/semantic_index.rs:145`. New: the plan-level predicate.
+Reuses the scope check pattern in `crates/medulla-h-retrieve/src/semantic_index_runtime.rs:145`. New: the plan-level predicate.
 Decision: scope inside the plan. Rejected: filtering result rows after retrieval, which leaks through counts, timing and ranking.
 Cross-repository: `MERISTEM-SEMANTIC` rows pass the verified tenant through the request context; owner prefix `MERISTEM-SEMANTIC`, contract `VerifiedRequestContext`.
 
@@ -154,9 +154,9 @@ References
 
 Candidate EG:2 requires REST catalog schema evolution, time travel, and both reading and writing Iceberg v2 manifests. R079 defines compatibility; R080 defines write authority. The graph remains the sole authoritative write boundary. External analytic engines consume its projections.
 
-Data flow: served authoritative graph mutation -> committed graph version and source LSN -> `LakeManager::drain_series` (`src/server/lake/mod.rs:602`) -> `materialize_batch` (`:537`) -> `prepare_materialization` (`src/server/lake/catalog_ops.rs:104`) -> `LakeTable::iceberg_manifests` (`crates/medulla-lake/src/lib.rs:299`) -> `build_iceberg_manifests` (`crates/medulla-lake/src/iceberg_avro.rs:371`) -> durable engine artifact store. Read flow: committed catalog metadata -> authenticated REST load/time-travel -> external reader.
+Data flow: served authoritative graph mutation -> committed graph version and source LSN -> `LakeManager::drain_series` (`crates/medulla-server-lake/src/lake/mod.rs:602`) -> `materialize_batch` (`:537`) -> `prepare_materialization` (`crates/medulla-server-lake/src/lake/catalog_ops.rs:104`) -> `LakeTable::iceberg_manifests` (`crates/medulla-lake/src/lib.rs:299`) -> `build_iceberg_manifests` (`crates/medulla-lake/src/iceberg_avro.rs:371`) -> durable engine artifact store. Read flow: committed catalog metadata -> authenticated REST load/time-travel -> external reader.
 
-Types: extend `SchemaChangeKind` and introduce `ManifestPublication` in `crates/medulla-types/src/lake_catalog.rs`. Bind tenant, graph version and source LSN to schema and snapshot IDs. Include format version, artifact locations and digests. Schema changes preserve field IDs and retained schema history.
+Types: extend `SchemaChangeKind` and introduce `ManifestPublication` in `crates/medulla-catalog-types/src/lake_catalog.rs`. Bind tenant, graph version and source LSN to schema and snapshot IDs. Include format version, artifact locations and digests. Schema changes preserve field IDs and retained schema history.
 
 Existing code writes Avro manifests and stages Parquet, manifests, manifest lists and metadata in `prepare_materialization`. `publish_artifacts` publishes artifacts; the table builder supports add-column evolution and retained snapshots. Reuse these owners. Complete graph-version binding, drop/rename/reorder handling and independent-reader acceptance remain unverified. The current REST CommitTable handler compacts; its existence is not permission for external schema or data writes. No complete served graph-to-manifest compatibility proof is established here.
 
@@ -171,11 +171,11 @@ References
 
 ## MEDULLA-FEDERATED-QUERY-R080 read-only table projections
 
-Data flow: graph write → graph version → projection materialization (`crates/medulla-core/src/projection_catalog.rs:75`) → lake table → Iceberg REST read; a projected write → `refuse_projection_write` → `PROJECTION_READ_ONLY`.
+Data flow: graph write → graph version → projection materialization (`crates/medulla-query-cache/src/projection_catalog.rs:75`) → lake table → Iceberg REST read; a projected write → `refuse_projection_write` → `PROJECTION_READ_ONLY`.
 Types: `ProjectionAccess{ReadOnly, Authoritative}` on every `TableEntry` (`crates/medulla-lake/src/catalog.rs:27`).
-Attach point: the listener dispatch in `src/server/lake/rest/mod.rs`, before `commit_table` and `drop_table`. No production caller refuses a projection write today.
+Attach point: the listener dispatch in `crates/medulla-server-lake/src/lake/rest/mod.rs`, before `commit_table` and `drop_table`. No production caller refuses a projection write today.
 Failure: a projected write returns `PROJECTION_READ_ONLY` and the graph is unchanged.
-Existing code: `crates/medulla-lake/src/catalog.rs:27`; `crates/medulla-core/src/projection_catalog.rs:75`; `crates/medulla-plan/src/federation.rs:933`; `src/server/lake/rest/catalog.rs:318`, `:349`. Reachable today: SQL write refusal yes; projection write refusal no.
+Existing code: `crates/medulla-lake/src/catalog.rs:27`; `crates/medulla-query-cache/src/projection_catalog.rs:75`; `crates/medulla-federation/src/federation.rs:933`; `crates/medulla-server-lake/src/lake/rest/catalog.rs:318`, `:349`. Reachable today: SQL write refusal yes; projection write refusal no.
 Reuses the shared read-only SQL check pattern. New: the typed access value and the route refusal.
 Decision: one refusal at the listener. Rejected: per-route checks, which a new route may skip.
 Cross-repository: R079 may write engine-owned manifest artifacts from committed graph state. External source effects retain the Graft SDK-governed boundary described above.
@@ -185,13 +185,13 @@ References
 
 ## MEDULLA-FEDERATED-QUERY-R081 Retrieval sufficiency verdict with repair step, fallback policy and round limit
 
-Data flow: served cross-modal query -> `medulla_plan::execute` (`crates/medulla-plan/src/exec.rs:536`) -> `fuse_rrf` (`crates/medulla-plan/src/exec.rs:848`) -> `judge_sufficiency` -> `SufficiencyVerdict` with repair and fallback -> harness applies the next round.
+Data flow: served cross-modal query -> `medulla_plan::execute` (`crates/medulla-exec/src/exec.rs:536`) -> `fuse_rrf` (`crates/medulla-exec/src/exec.rs:848`) -> `judge_sufficiency` -> `SufficiencyVerdict` with repair and fallback -> harness applies the next round.
 Types: `SufficiencyVerdict`, `SufficiencyRule`, `RepairStep`, `FallbackPolicy`. The call carries `round` and `round_limit`; the harness owns the loop counter and Medulla owns the limit it is given.
-Attach point: `execute` at `crates/medulla-plan/src/exec.rs:536`. Production caller: `crates/medulla-graphql/src/crossmodal.rs:429`.
+Attach point: `execute` at `crates/medulla-exec/src/exec.rs:536`. Production caller: `crates/medulla-graphql/src/crossmodal.rs:429`.
 Failure: A missing round limit returns `RETRIEVAL_ROUND_LIMIT_REQUIRED`. A strict insufficient verdict abstains.
 Consumers: MERISTEM-RETRIEVAL (R004)
 Moves from Meristem: executable_rag.py:87 (sufficiency rule), executable_rag.py:198 (repair choice), hybrid_retriever.py:1957 (fallback policy)
-Existing code: `crates/medulla-plan/src/exec.rs:536`; `crates/medulla-plan/src/exec.rs:848`; `crates/medulla-plan/src/exec.rs:1436` (diversified ranking); `crates/medulla-plan/src/runtime.rs:61`; `crates/medulla-compute/src/assemble/conclude.rs:69` (typed abstention pattern). Reachable today: no.
+Existing code: `crates/medulla-exec/src/exec.rs:536`; `crates/medulla-exec/src/exec.rs:848`; `crates/medulla-exec/src/exec.rs:1436` (diversified ranking); `crates/medulla-exec/src/runtime.rs:61`; `crates/medulla-compute/src/assemble/conclude.rs:69` (typed abstention pattern). Reachable today: no.
 Existing-code search: no sufficiency check and no fallback policy exist in the engine. Search terms: `sufficien`, `fallback_policy`, `FallbackPolicy`, `extractive`, `round_limit`, `max_rounds`.
 Reuses: the ranked `RowSet` from `fuse_rrf` and the typed abstention pattern. New: the verdict type, the rule, the repair order.
 Decision: Medulla decides sufficiency, repair and fallback per call and hands them to the harness. Rejected alternative: keep the rule in the harness, because each harness must otherwise carry its own threshold.
@@ -202,27 +202,27 @@ References
 
 ## MEDULLA-FEDERATED-QUERY-R082 Iterative retrieval stop rule with calibrated confidence and bounded termination
 
-Data flow: served cross-modal query with round history -> `medulla_plan::execute` (`crates/medulla-plan/src/exec.rs:536`) -> `decide_stop` -> `StopVerdict` with reason -> harness stops or runs the next round.
+Data flow: served cross-modal query with round history -> `medulla_plan::execute` (`crates/medulla-exec/src/exec.rs:536`) -> `decide_stop` -> `StopVerdict` with reason -> harness stops or runs the next round.
 Types: `CalibrationTable`, `RoundCalibration`, `StopContext`, `StopVerdict`, `StopReason`. Context carries validated progress and budgets. Verdict carries a terminal or continuation reason separately from a missing-calibration refusal. Margin and threshold are absent without calibration.
-Attach point: `execute` at `crates/medulla-plan/src/exec.rs:536`, beside the sufficiency judgement. Production caller: `crates/medulla-graphql/src/crossmodal.rs:429`.
+Attach point: `execute` at `crates/medulla-exec/src/exec.rs:536`, beside the sufficiency judgement. Production caller: `crates/medulla-graphql/src/crossmodal.rs:429`.
 Failure: A round outside the table retains `ROUND_NOT_CALIBRATED`. It may continue only while progress and all limits permit. Exhaustion and validated progress termination take precedence without claiming calibrated confidence or enough evidence.
 Consumers: MERISTEM-RETRIEVAL (R005)
 Moves from Meristem: adaptive_stopping.py:151 (stop rule), adaptive_stopping.py:80 (calibration table)
-Existing code: `crates/medulla-plan/src/exec.rs:536`; `crates/medulla-compute/src/finance/market/confidence.rs:113` (calibrated confidence with abstention, a separate finance rule). Reachable today: no.
-Existing-code search: no stop rule exists in the engine. Search terms: `calibrat`, `confidence_margin`, `stop_reason`, `StopReason`, `round_limit`. The only `stop_reason` hit is the job lease cycle in `src/server/handlers/jobs/executor_claim.rs:82`, which is unrelated.
+Existing code: `crates/medulla-exec/src/exec.rs:536`; `crates/medulla-finance-market/src/market/confidence.rs:113` (calibrated confidence with abstention, a separate finance rule). Reachable today: no.
+Existing-code search: no stop rule exists in the engine. Search terms: `calibrat`, `confidence_margin`, `stop_reason`, `StopReason`, `round_limit`. The only `stop_reason` hit is the job lease cycle in `crates/medulla-h-jobs/src/jobs/executor_claim.rs:82`, which is unrelated.
 Reuses: the round history sent by the caller. New: the table, the rule, the verdict.
 Decision: One fixed rule over a calibration table with no learned part. Rejected alternative: a learned stopping classifier, because it needs labelled data and drifts without notice.
 Cross-repository: `MERISTEM-RETRIEVAL-R005` consumes the verdict and ends the loop. `MEDULLA-FEDERATED-QUERY-R081` supplies the round limit.
 
 ## MEDULLA-FEDERATED-QUERY-R083 Arbitration between model prior and evidence
 
-Data flow: harness prior probe -> served cross-modal query carrying the prior `Candidate` -> `medulla_plan::execute` (`crates/medulla-plan/src/exec.rs:536`) -> `arbitrate` -> `ArbitrationVerdict` -> harness answers or reports the abstention.
+Data flow: harness prior probe -> served cross-modal query carrying the prior `Candidate` -> `medulla_plan::execute` (`crates/medulla-exec/src/exec.rs:536`) -> `arbitrate` -> `ArbitrationVerdict` -> harness answers or reports the abstention.
 Types: `Candidate`, `EvidenceClass`, `ArbitrationVerdict`, `ArbitrationChoice`. The harness runs the probe; Medulla decides.
-Attach point: `execute` at `crates/medulla-plan/src/exec.rs:536`. Production caller: `crates/medulla-graphql/src/crossmodal.rs:429`.
+Attach point: `execute` at `crates/medulla-exec/src/exec.rs:536`. Production caller: `crates/medulla-graphql/src/crossmodal.rs:429`.
 Failure: A gap below the margin returns `ARBITRATION_ABSTAIN` with both candidates. A candidate without a class returns `CANDIDATE_CLASS_REQUIRED`.
 Consumers: MERISTEM-RETRIEVAL (R006)
 Moves from Meristem: shortcut_risks.py:42, agent_control_contracts.py:73 (prior probe and evidence classes)
-Existing code: `crates/medulla-plan/src/exec.rs:536`. The typed abstention pattern is at `crates/medulla-compute/src/assemble/conclude.rs:69`. It is not reachable today.
+Existing code: `crates/medulla-exec/src/exec.rs:536`. The typed abstention pattern is at `crates/medulla-compute/src/assemble/conclude.rs:69`. It is not reachable today.
 Existing-code search: no arbitration exists in the engine. Search terms: `arbitrat`, `abstain`, `margin`, `parametric`, `prior_probe`.
 Reuses: the typed abstention pattern and the ranked evidence side. New: the candidate type, the margin rule, the verdict.
 Decision: One margin rule in the engine over two candidates. Rejected alternative: a learned arbiter, because it needs labelled disagreement data.
@@ -232,7 +232,7 @@ Cross-repository: `MERISTEM-RETRIEVAL-R006` runs the prior probe and applies the
 
 The existing R081 verdict owns these extensions. Medulla keeps score selection, query reformulation, feedback classification and hierarchy decisions. Applications execute bounded engine decisions and read evidence. They do not gain a parallel planner or reranker. Existing R078 tenant predicates, R081 fallback and R082 stopping rules remain binding.
 
-Current production path: `crates/medulla-graphql/src/crossmodal.rs:429` invokes `medulla_plan::execute` in `crates/medulla-plan/src/exec.rs:536`. `fuse_rrf` at line 848 combines ranks. It does not carry paired cross-encoder scores, iterative expansion feedback or hierarchy-stage receipts. Add the missing operators and typed `PlanCtx` scoring/summary bindings at these owners. The served acceptance tests must exercise these bindings, not inject a finished result after execution.
+Current production path: `crates/medulla-graphql/src/crossmodal.rs:429` invokes `medulla_plan::execute` in `crates/medulla-exec/src/exec.rs:536`. `fuse_rrf` at line 848 combines ranks. It does not carry paired cross-encoder scores, iterative expansion feedback or hierarchy-stage receipts. Add the missing operators and typed `PlanCtx` scoring/summary bindings at these owners. The served acceptance tests must exercise these bindings, not inject a finished result after execution.
 
 Selection policy is versioned and benchmark-gated. Normalize scores with declared finite-domain rules; constant-score inputs require an explicit policy rather than division by zero. Define `f = w*s + (1-w)*r`, calibrated thresholds and stable ID ties. Dual-high passes; dual-low fails. The low-embedding/high-relevance region is eligible for rescue before the maximum-count cap. The remaining region uses its declared fusion threshold. Rank eligible chunks by fused score and cap the result without padding. Selection adds no inference; existing candidate scoring is measured separately. A failed activation receipt leaves the prior approved policy active or refuses the requested policy.
 
@@ -276,8 +276,8 @@ Harness evaluation uses [MERISTEM-RETRIEVAL-R001](https://github.com/Knuckles-Te
 Hosting uses [host-composition-boundary](https://github.com/Knuckles-Team/graph-os/tree/main/specs/host-composition-boundary).
 These are dependencies, not delivery claims against those owners.
 
-Common served path: `Method::UnifiedQuery` → `src/server/handlers/query/dispatch.rs:133` → `src/server/handlers/query/sql_read.rs:305` → `src/server/handlers/query/planning.rs:854`.
-Binding continues through `src/server/handlers/query/planning.rs:424` → `src/server/handlers/query/planning.rs:411` → `crates/medulla-plan/src/exec.rs:536`.
+Common served path: `Method::UnifiedQuery` → `crates/medulla-h-query/src/query/dispatch.rs:133` → `crates/medulla-h-query/src/query/sql_read.rs:305` → `crates/medulla-h-query/src/query/planning.rs:854`.
+Binding continues through `crates/medulla-h-query/src/query/planning.rs:424` → `crates/medulla-h-query/src/query/planning.rs:411` → `crates/medulla-exec/src/exec.rs:536`.
 The GraphQL caller at `crates/medulla-graphql/src/crossmodal.rs:429` must consume equivalent typed policies when enabled.
 New typed operators below are proposed additions to the structured plan contract.
 They require generated contract and client updates during implementation.
@@ -291,10 +291,10 @@ New ranking components cannot reinterpret uncalibrated continuation, progress te
 
 ### R039.1: shared multimodal retrieval
 
-Existing code: `crates/medulla-types/src/embedding.rs:47` defines EmbeddingSpaceRef.
-`crates/medulla-plan/src/exec.rs:278` defines the text-only TextEmbedder.
-`src/server/handlers/query/planning.rs:11` currently binds only an optional deterministic hash embedder.
-`crates/medulla-plan/src/exec/vector_rank.rs:65` and `crates/medulla-plan/src/exec/vector_rank.rs:97` rank authorized candidate vectors.
+Existing code: `crates/medulla-index-types/src/embedding.rs:47` defines EmbeddingSpaceRef.
+`crates/medulla-exec/src/exec.rs:278` defines the text-only TextEmbedder.
+`crates/medulla-h-query/src/query/planning.rs:11` currently binds only an optional deterministic hash embedder.
+`crates/medulla-exec/src/exec/vector_rank.rs:65` and `crates/medulla-exec/src/exec/vector_rank.rs:97` rank authorized candidate vectors.
 Reachable today: no, for the complete four-modality contract.
 The generic rank path is reachable; the hash embedder proves no semantic or cross-modal quality.
 
@@ -318,9 +318,9 @@ Acceptance must cover four same-modality and twelve cross-modality pairs with re
 
 ### R040.1 and R039.3: declared hard constraints
 
-Existing code: `crates/medulla-types/src/wire_query_core.rs:27` defines Pred; `crates/medulla-plan/src/algebra.rs:21` re-exports it.
-`crates/medulla-plan/src/exec.rs:536` invokes optimization and execution.
-`crates/medulla-plan/src/exec/vector_rank.rs:97` accepts a constrained candidate set.
+Existing code: `crates/medulla-types/src/wire_query_core.rs:27` defines Pred; `crates/medulla-exec/src/algebra.rs:21` re-exports it.
+`crates/medulla-exec/src/exec.rs:536` invokes optimization and execution.
+`crates/medulla-exec/src/exec/vector_rank.rs:97` accepts a constrained candidate set.
 Reachable today: no, for compilation of the declared entity/relationship contract.
 Generic predicates and filtered ranking exist.
 
@@ -344,9 +344,9 @@ Reject soft penalties because a highly similar prohibited candidate may still su
 
 ### R081.9.7: typed document-section hierarchy
 
-Existing code: `crates/medulla-plan/src/leanrag.rs:66` exposes GraphTopology.
-Its HierarchicalRetriever at `crates/medulla-plan/src/leanrag.rs:125` depends on AnnIndex and per-node embeddings.
-`crates/medulla-plan/src/exec.rs:84` supplies PlanCtx bindings.
+Existing code: `crates/medulla-retrieval/src/leanrag.rs:66` exposes GraphTopology.
+Its HierarchicalRetriever at `crates/medulla-retrieval/src/leanrag.rs:125` depends on AnnIndex and per-node embeddings.
+`crates/medulla-exec/src/exec.rs:84` supplies PlanCtx bindings.
 Reachable today: no, for vector-free reasoning traversal.
 R081.9.1 through R081.9.6 retain their community-summary, community-refinement and entity-search semantics.
 
@@ -373,11 +373,11 @@ Record bounded selection premises; do not request hidden reasoning traces.
 
 ### R039.2 and R040.3: document encoding policy
 
-Existing code: EmbeddingSpaceRef at `crates/medulla-types/src/embedding.rs:47` pins vector identity.
-EmbeddingBinding at `crates/medulla-query/src/tables/embedding_binding.rs:398` owns column bindings.
-`src/server/handlers/semantic_index/dispatch.rs:14` dispatches governed ingestion stages.
-`src/server/handlers/semantic_index/worker.rs:175` completes a generation stage.
-`src/server/handlers/query/planning.rs:611` binds query encoding.
+Existing code: EmbeddingSpaceRef at `crates/medulla-index-types/src/embedding.rs:47` pins vector identity.
+EmbeddingBinding at `crates/medulla-table-store/src/tables/embedding_binding.rs:398` owns column bindings.
+`crates/medulla-h-retrieve/src/semantic_index/dispatch.rs:14` dispatches governed ingestion stages.
+`crates/medulla-h-retrieve/src/semantic_index/worker.rs:175` completes a generation stage.
+`crates/medulla-h-query/src/query/planning.rs:611` binds query encoding.
 Reachable today: no, for complete independent chunk encoding and aggregate validation.
 
 DocumentEncodingPolicy must pin tokenizer digest, model revision, chunk size, overlap, position mode and aggregation revision.
@@ -405,10 +405,10 @@ The paper supports this mechanism; its benchmark gains are not acceptance eviden
 
 ### R077.6: workload-based column advice
 
-Existing code: `crates/medulla-query/src/tables/embedding_binding.rs:398` defines EmbeddingBinding.
-`src/server/handlers/query/sql_read.rs:100` handles SQL reads.
-Its catalog response at `src/server/handlers/query/sql_read.rs:379` invokes the authorized table store and typed SQL executor.
-`crates/medulla-query/src/sql/ann.rs:116` supplies ANN ranking, not a recommendation service.
+Existing code: `crates/medulla-table-store/src/tables/embedding_binding.rs:398` defines EmbeddingBinding.
+`crates/medulla-h-query/src/query/sql_read.rs:100` handles SQL reads.
+Its catalog response at `crates/medulla-h-query/src/query/sql_read.rs:379` invokes the authorized table store and typed SQL executor.
+`crates/medulla-sql/src/sql/ann.rs:116` supplies ANN ranking, not a recommendation service.
 Reachable today: no, for workload-based recommendation and recommendation-specific refusal.
 Search terms included ColumnVector, recommendation, workload and column statistics.
 
@@ -439,10 +439,10 @@ Reject a second binding registry and recommendations based only on global query 
 
 ### R040.2: topic/dense fusion
 
-Existing code: `crates/medulla-plan/src/exec.rs:84` defines PlanCtx.
-`crates/medulla-plan/src/exec.rs:848` implements fuse_rrf over ranked branches.
-`crates/medulla-plan/src/exec/vector_rank.rs:65` performs vector scoring.
-EmbeddingSpaceRef at `crates/medulla-types/src/embedding.rs:47` already defines coordinate identity.
+Existing code: `crates/medulla-exec/src/exec.rs:84` defines PlanCtx.
+`crates/medulla-exec/src/exec.rs:848` implements fuse_rrf over ranked branches.
+`crates/medulla-exec/src/exec/vector_rank.rs:65` performs vector scoring.
+EmbeddingSpaceRef at `crates/medulla-index-types/src/embedding.rs:47` already defines coordinate identity.
 Reachable today: no, for topic-backend ranking fusion.
 Search terms included topic backend, topic centroid and aggregate embedding.
 
@@ -493,7 +493,7 @@ Each residual case requires its own execution evidence to satisfy the original c
 
 ## R084: existing ShEx surface and evidence boundary
 
-The native request is [Method::ShexValidate](../../crates/medulla-types/src/protocol/method/method_07.rs#L394).
+The native request is [Method::ShexValidate](../../crates/medulla-protocol-types/src/protocol/method/method_07.rs#L394).
 The protocol stores schema text, optional data_graph text and a list of string pairs.
 Omitted data_graph and shape_map use their existing empty defaults.
 The wire result is [ShexValidationReport](../../crates/medulla-types/src/rdf_report.rs#L189).
@@ -504,10 +504,10 @@ The shape map creates IRI terms through new_unchecked; this is not evidence of s
 
 ### Existing call path and policy
 
-The RDF-family entry is [try_handle](../../src/server/handlers/rdf/dispatch.rs#L13).
+The RDF-family entry is [try_handle](../../crates/medulla-h-sparql/src/rdf/dispatch.rs#L13).
 It calls try_handle_validation, which routes ShexValidate to try_handle_shex_validation.
 That arm requires served-read authority and applies GraphReadAuthority::project_core.
-It calls [handle_shex_validate](../../src/server/handlers/rdf/validation.rs#L176).
+It calls [handle_shex_validate](../../crates/medulla-h-sparql/src/rdf/validation.rs#L176).
 The handler parses Schema::from_shexj, obtains the data graph, then builds ShapeMap::from_iri_pairs.
 It calls [medulla_shex::validate](../../crates/medulla-shex/src/validate.rs#L72).
 shex_report_wire projects the result into the existing typed response.
@@ -594,12 +594,12 @@ Verification reads the actual lease in the verified tenant and request graph, th
 
 Source inspected at Medulla `560b391592cd405f999fbc72ba8ee8ff64782bd4`:
 
-- [Foreign-query handler](https://github.com/Knuckles-Team/medulla/blob/560b391592cd405f999fbc72ba8ee8ff64782bd4/src/server/handlers/federation.rs#L21) uses `OwnerScopedCall`. Its `query_columns:66` validates read authority and resolves the owner-scoped catalog. The new methods attach beside it.
-- [Dispatch attachment](https://github.com/Knuckles-Team/medulla/blob/560b391592cd405f999fbc72ba8ee8ff64782bd4/src/server/dispatch/graph_pipeline/pipeline.rs#L333) reaches that handler under the existing federation feature.
-- [Control-lease contract](https://github.com/Knuckles-Team/medulla/blob/560b391592cd405f999fbc72ba8ee8ff64782bd4/crates/medulla-types/src/control_lease.rs#L1) already defines immutable grants, expiry and one-way CAS transitions. `src/redb_store/work_item/control_lease.rs:58` and `:130` are existing issuance and read seams. Reserved-kind producer wiring is new.
-- [SQL validation](https://github.com/Knuckles-Team/medulla/blob/560b391592cd405f999fbc72ba8ee8ff64782bd4/crates/medulla-plan/src/federation.rs#L933) rejects non-query statements, locking reads and SELECT INTO. Destination validation and database read-only transactions already exist. Complete effect checks and typed parameterized approval remain obligations.
-- [Column rendering](https://github.com/Knuckles-Team/medulla/blob/560b391592cd405f999fbc72ba8ee8ff64782bd4/crates/medulla-plan/src/federation_opt/columns.rs#L215) reuses `sql_text` helpers. Current literal rendering does not establish native parameter binding.
-- [Existing result fetch](https://github.com/Knuckles-Team/medulla/blob/560b391592cd405f999fbc72ba8ee8ff64782bd4/crates/medulla-plan/src/federation.rs#L1255) returns a vector. `handlers/federation.rs:112` collects output. `handlers/knowledge_stream/families.rs:93` also adapts a materialized SQL result. Bounded output batches do not prove flat producer memory.
+- [Foreign-query handler](https://github.com/Knuckles-Team/medulla/blob/560b391592cd405f999fbc72ba8ee8ff64782bd4/crates/medulla-h-sparql/src/foreign_source_handlers.rs#L21) uses `OwnerScopedCall`. Its `query_columns:66` validates read authority and resolves the owner-scoped catalog. The new methods attach beside it.
+- [Dispatch attachment](https://github.com/Knuckles-Team/medulla/blob/560b391592cd405f999fbc72ba8ee8ff64782bd4/crates/medulla-server-graph/src/dispatch/graph_pipeline/pipeline.rs#L333) reaches that handler under the existing federation feature.
+- [Control-lease contract](https://github.com/Knuckles-Team/medulla/blob/560b391592cd405f999fbc72ba8ee8ff64782bd4/crates/medulla-work-types/src/control_lease.rs#L1) already defines immutable grants, expiry and one-way CAS transitions. `crates/medulla-work-store/src/redb_store/work_item/control_lease.rs:58` and `:130` are existing issuance and read seams. Reserved-kind producer wiring is new.
+- [SQL validation](https://github.com/Knuckles-Team/medulla/blob/560b391592cd405f999fbc72ba8ee8ff64782bd4/crates/medulla-federation/src/federation.rs#L933) rejects non-query statements, locking reads and SELECT INTO. Destination validation and database read-only transactions already exist. Complete effect checks and typed parameterized approval remain obligations.
+- [Column rendering](https://github.com/Knuckles-Team/medulla/blob/560b391592cd405f999fbc72ba8ee8ff64782bd4/crates/medulla-federation/src/federation_opt/columns.rs#L215) reuses `sql_text` helpers. Current literal rendering does not establish native parameter binding.
+- [Existing result fetch](https://github.com/Knuckles-Team/medulla/blob/560b391592cd405f999fbc72ba8ee8ff64782bd4/crates/medulla-federation/src/federation.rs#L1255) returns a vector. `handlers/federation.rs:112` collects output. `handlers/knowledge_stream/families.rs:93` also adapts a materialized SQL result. Bounded output batches do not prove flat producer memory.
 
 ### Graft SDK handoff and evidence
 
@@ -728,7 +728,7 @@ Preserve `MEDULLA-FEDERATED-QUERY-R081.1-.4, R081.8.1-.6`. Source record `EG:25`
 
 ### `MEDULLA-FEDERATED-QUERY-R028.1`
 
-**Typed KnowledgeSet row contract.** Reuse the existing `KnowledgeSet`/`KnowledgeRow` producer in `crates/medulla-plan/src/knowledge.rs`, the `UqlKnowledge` wire carrier in `crates/medulla-types/src/wire_query_core.rs`. And the existing `WITH KNOWLEDGE` attachment in `crates/medulla-plan/src/uql/serve/annotate.rs`. Do not substitute `ForeignRows`. Each row carries its own provenance-frame state and policy-frame state alongside the existing row id, `source_refs`, `evidence_refs` and `policy_labels`. `Resolved` means row provenance and policy came from the same pinned graph snapshot. `None`/unresolved must not be treated as empty success. The KnowledgeSet remains a superset of a plain row set: id/score and requested projection preserve existing values. Structured and UQL surfaces must serialize the same carrier. If either per-row frame is absent, malformed, or from a different snapshot, return typed `KNOWLEDGE_FRAME_MISSING`/`KNOWLEDGE_FRAME_STALE` and no partially annotated result. This is a contract clarification only. The source explicitly withholds UQL implementation authorization.
+**Typed KnowledgeSet row contract.** Reuse the existing `KnowledgeSet`/`KnowledgeRow` producer in `crates/medulla-retrieval/src/knowledge.rs`, the `UqlKnowledge` wire carrier in `crates/medulla-types/src/wire_query_core.rs`. And the existing `WITH KNOWLEDGE` attachment in `crates/medulla-plan/src/uql/serve/annotate.rs`. Do not substitute `ForeignRows`. Each row carries its own provenance-frame state and policy-frame state alongside the existing row id, `source_refs`, `evidence_refs` and `policy_labels`. `Resolved` means row provenance and policy came from the same pinned graph snapshot. `None`/unresolved must not be treated as empty success. The KnowledgeSet remains a superset of a plain row set: id/score and requested projection preserve existing values. Structured and UQL surfaces must serialize the same carrier. If either per-row frame is absent, malformed, or from a different snapshot, return typed `KNOWLEDGE_FRAME_MISSING`/`KNOWLEDGE_FRAME_STALE` and no partially annotated result. This is a contract clarification only. The source explicitly withholds UQL implementation authorization.
 
 Preserve `MEDULLA-FEDERATED-QUERY-R028, MEDULLA-FEDERATED-QUERY-R045`. Source record `EG:29` SHA-256 `2eb8aadb1b6ccc2d5de77a4d1964fc04a4e944bccf9bcc1793e262f146af7583`. Status remains SPECIFIED until implementation and independently read-back evidence exist.
 
@@ -746,7 +746,7 @@ Preserve `MEDULLA-DURABLE-KERNEL-R043, MEDULLA-FEDERATED-QUERY-R078, MEDULLA-UNI
 
 ### `MEDULLA-FEDERATED-QUERY-R081.9.7.7`
 
-**Vector-free hierarchy mode with zero external model calls.** Add a read-only mode to the existing `HierarchyRetrievalPolicy`/authenticated `UnifiedQuery` section traversal. It accepts requested granularity (`document`, `section`, or `source_span`) and uses only the stored authorized section summaries and source spans already bound by R081.9.7.1-.6. It returns the selected stored summary or exact source span plus the ordered root-to-leaf path. It does not generate or rewrite summaries. In this mode external inference-call budget is exactly zero, vector index and embedding calls are forbidden. And the traversal limits from the existing section-beam policy remain enforced. Wire only at the existing `PlanCtx` section traversal before fusion in `crates/medulla-plan/src/exec.rs`, reached through `run_unified_with`. Do not create a second retriever. Refuse generated-answer requests, missing/stale summary or span, invalid trees, and external-inference dispatch attempts.
+**Vector-free hierarchy mode with zero external model calls.** Add a read-only mode to the existing `HierarchyRetrievalPolicy`/authenticated `UnifiedQuery` section traversal. It accepts requested granularity (`document`, `section`, or `source_span`) and uses only the stored authorized section summaries and source spans already bound by R081.9.7.1-.6. It returns the selected stored summary or exact source span plus the ordered root-to-leaf path. It does not generate or rewrite summaries. In this mode external inference-call budget is exactly zero, vector index and embedding calls are forbidden. And the traversal limits from the existing section-beam policy remain enforced. Wire only at the existing `PlanCtx` section traversal before fusion in `crates/medulla-exec/src/exec.rs`, reached through `run_unified_with`. Do not create a second retriever. Refuse generated-answer requests, missing/stale summary or span, invalid trees, and external-inference dispatch attempts.
 
 Preserve `MEDULLA-FEDERATED-QUERY-R081.9.7.1-.6`. Source record `GRAPHOS:24` SHA-256 `b2e5de8386b3ca72b59a81ca5fa3193eaf7736af86aca472a720b9e4511961c0`. Status remains SPECIFIED until implementation and independently read-back evidence exist.
 
@@ -764,7 +764,7 @@ Preserve `MEDULLA-FEDERATED-QUERY-R040.2.1-.3, R040.2.6`. Source record `GRAPHOS
 
 ### `MEDULLA-FEDERATED-QUERY-R086.100`
 
-**Open definition — current graph learner is binary and has a write path.** The source requires ordered n-ary hyperedge prediction and generalization to entities unseen at fit time. Hypotheses carry an evidence class and are never asserted facts. Current `Method::GraphLearnPredict`/`src/server/handlers/graphlearn.rs` scores binary `(src,dst)` pairs over a resident graph and optionally writes `PredictedEdge`. It cannot satisfy ordered n-ary tuples, unseen-entity induction, or hypothesis-only guarantees. Preserve it unchanged. Before defining a public producer, the owner must choose the n-ary model/training artifact and inference semantics. Define ordered tuple positions and unseen-entity behavior. Define the evidence-class vocabulary and source binding. Choose the read-only capability/auth action. And name the Meristem proposal consumer receipt. Only then can a separate method be attached in the existing graphlearn method family and routed through `src/server/handlers/graph_ops/gateway_mining_ml.rs`/`src/server/handlers/graphlearn.rs`. Do not route this through the binary `GraphLearnPredict` write-capable method. No model, endpoint, or authority is invented here.
+**Open definition — current graph learner is binary and has a write path.** The source requires ordered n-ary hyperedge prediction and generalization to entities unseen at fit time. Hypotheses carry an evidence class and are never asserted facts. Current `Method::GraphLearnPredict`/`crates/medulla-server-api/src/handlers/graphlearn.rs` scores binary `(src,dst)` pairs over a resident graph and optionally writes `PredictedEdge`. It cannot satisfy ordered n-ary tuples, unseen-entity induction, or hypothesis-only guarantees. Preserve it unchanged. Before defining a public producer, the owner must choose the n-ary model/training artifact and inference semantics. Define ordered tuple positions and unseen-entity behavior. Define the evidence-class vocabulary and source binding. Choose the read-only capability/auth action. And name the Meristem proposal consumer receipt. Only then can a separate method be attached in the existing graphlearn method family and routed through `crates/medulla-h-graph/src/graph_ops/gateway_mining_ml.rs`/`crates/medulla-server-api/src/handlers/graphlearn.rs`. Do not route this through the binary `GraphLearnPredict` write-capable method. No model, endpoint, or authority is invented here.
 
 Preserve `MEDULLA-FEDERATED-QUERY-R086; existing binary `GraphLearnPredict` and graph-write authorities`. Source record `EG:14` SHA-256 `7223250e7f899a187aad0b152e597c6174b772c49779ca2bdd12d3ba68f4f5ef`. Status remains SPECIFIED until implementation and independently read-back evidence exist.
 
@@ -780,7 +780,7 @@ Replaces: `agent_utilities/knowledge_graph/core/nl_planner.py`, `agent_utilities
 
 Meristem acceptance cases: `tests/unit/knowledge_graph/core/test_nl_planner.py`, `tests/unit/knowledge_graph/core/test_nl_query.py` and `tests/unit/knowledge_graph/orchestration/test_data_analyst.py`.
 
-Call path: served `NlQuery` -> `handle_nl_query_plan` (`src/server/handlers/query/nl.rs:48`) -> `medulla_plan::nl::context` -> `NlPlanner` port -> UQL, SQL, SPARQL or Cypher read pipeline.
+Call path: served `NlQuery` -> `handle_nl_query_plan` (`crates/medulla-h-query/src/query/nl.rs:48`) -> `medulla_plan::nl::context` -> `NlPlanner` port -> UQL, SQL, SPARQL or Cypher read pipeline.
 
 Crate: `medulla-plan` for linking and the loop.
 
@@ -813,7 +813,7 @@ Replaces: `QueryMixin.uql` in `agent_utilities/knowledge_graph/orchestration/eng
 
 Meristem acceptance cases: `tests/unit/mcp/test_graph_query_uql.py`, `tests/unit/test_engine_tools_uql_embed.py` and `tests/unit/knowledge_graph/orchestration/test_engine_query_surface_rls_fail_closed.py`.
 
-Call path: served `Uql` -> `handle_uql` (`src/server/handlers/query/uql_statement.rs:17`) -> `medulla_plan::uql` -> fused executor -> `row_visibility` (`crates/medulla-core/src/isolation.rs:157`) -> summary resolver.
+Call path: served `Uql` -> `handle_uql` (`crates/medulla-h-query/src/query/uql_statement.rs:17`) -> `medulla_plan::uql` -> fused executor -> `row_visibility` (`crates/medulla-isolation/src/isolation.rs:157`) -> summary resolver.
 
 Crates: `medulla-plan` for execution, `medulla-core` for visibility, `medulla-epistemic` for summaries.
 
@@ -836,7 +836,7 @@ Replaces: the quality gate in `agent_utilities/knowledge_graph/retrieval/hybrid_
 
 Meristem acceptance cases: `tests/retrieval/test_acl_context_compiler_crowd_out.py` and `tests/unit/knowledge_graph/test_hybrid_retriever_acl_before_internal_trim.py`.
 
-Call path: served `Discover` -> `try_handle_semantic_compute` -> `discover` (`src/server/handlers/graph_ops/semantic.rs:88`) -> verdict -> response.
+Call path: served `Discover` -> `try_handle_semantic_compute` -> `discover` (`crates/medulla-h-graph/src/graph_ops/semantic.rs:88`) -> verdict -> response.
 
 Crates: `medulla-core` for the semantic store counters, `medulla-types` for the verdict.
 
@@ -859,7 +859,7 @@ Replaces: `agent_utilities/knowledge_graph/retrieval/hybrid_retriever.py` (`_res
 
 Meristem acceptance case: `tests/integration/knowledge_graph/test_engine_helpers.py`.
 
-Call path: served `Discover` -> `discover` (`src/server/handlers/graph_ops/semantic.rs:88`) -> planner port -> embedding endpoint -> HNSW arms -> fusion -> recency decay -> batched hop expansion.
+Call path: served `Discover` -> `discover` (`crates/medulla-h-graph/src/graph_ops/semantic.rs:88`) -> planner port -> embedding endpoint -> HNSW arms -> fusion -> recency decay -> batched hop expansion.
 
 Crates: `medulla-ann` for the arms, `medulla-plan` for the planner port, `medulla-core` for adjacency.
 
@@ -917,7 +917,7 @@ Correctness: a candidate is kept only when its result multiset equals the baseli
 
 ## Web Document citations (R653.7)
 
-A web Document answers through the same hybrid retrieval as every other Document. `fuse_rrf` (`crates/medulla-plan/src/exec.rs:848`) fuses the vector, graph and keyword branches. The citation reads the `WebDocumentProvenance` of `MEDULLA-UNIFIED-DATA-PLANE-R651.7.1`. No second retriever exists for web content.
+A web Document answers through the same hybrid retrieval as every other Document. `fuse_rrf` (`crates/medulla-exec/src/exec.rs:848`) fuses the vector, graph and keyword branches. The citation reads the `WebDocumentProvenance` of `MEDULLA-UNIFIED-DATA-PLANE-R651.7.1`. No second retriever exists for web content.
 
 
 ## Context engine completion (R703 to R705)
@@ -937,7 +937,7 @@ maps each context-engine capability to its owning row.
 | Context assembly under a token budget | R650, R089, R090 |
 | Retrieval quality gates | R655, MEDULLA-UNIFIED-DATA-PLANE-R040 |
 
-R703 runs after fusion and before bundle compile in `crates/medulla-plan/src/exec.rs`. R704 adds its
+R703 runs after fusion and before bundle compile in `crates/medulla-exec/src/exec.rs`. R704 adds its
 prefilter beside the R078 tenant predicates. R705 adds its boost after score calibration.
 
 ## Governance query rows (R706 to R709)
@@ -949,7 +949,7 @@ adds named stored queries with materialized results. R709 adds the GeoSPARQL fun
 
 ## One plan and one RowSet algebra (R720, R721)
 
-`crates/medulla-plan/src/rowset.rs` defines `RowSet`, the one currency between plan operators. `crates/medulla-modality/src/rowset.rs` defines `RowSetShape` for each modality. The UQL grammar already holds the `CONFIDENCE`, `BELIEF AS OF`, `CONTRADICTS` and `EVIDENCE FOR` stages. R720 adds the `DECAY` and `CLUSTER BY EMBEDDING` stages and the epistemic row fields. `CLUSTER BY EMBEDDING` reuses `crates/medulla-compute/src/mining/cluster.rs`. R721 binds every modality to the contract, the planner and the redb store registry.
+`crates/medulla-exec/src/rowset.rs` defines `RowSet`, the one currency between plan operators. `crates/medulla-modality/src/rowset.rs` defines `RowSetShape` for each modality. The UQL grammar already holds the `CONFIDENCE`, `BELIEF AS OF`, `CONTRADICTS` and `EVIDENCE FOR` stages. R720 adds the `DECAY` and `CLUSTER BY EMBEDDING` stages and the epistemic row fields. `CLUSTER BY EMBEDDING` reuses `crates/medulla-mining/src/mining/cluster.rs`. R721 binds every modality to the contract, the planner and the redb store registry.
 
 <!-- spec-definition-patch:low-storage-ann-plan-20261026 -->
 ## MEDULLA-FEDERATED-QUERY-R040.5 — low-storage ANN integration plan
@@ -1015,7 +1015,7 @@ are copied.
 
 | Concern | Already wired and reused | R040.5 addition (new work) |
 |---|---|---|
-| Space and encoding identity | `EmbeddingSpaceRef` (`crates/medulla-types/src/embedding.rs`), `DocumentEncodingPolicy` obligation R039.2.1, `EmbeddingVersionStore` promotion tags | A source-text reference with source revision and digest. Admission refuses a missing id, revision, or digest. |
+| Space and encoding identity | `EmbeddingSpaceRef` (`crates/medulla-index-types/src/embedding.rs`), `DocumentEncodingPolicy` obligation R039.2.1, `EmbeddingVersionStore` promotion tags | A source-text reference with source revision and digest. Admission refuses a missing id, revision, or digest. |
 | Graph and index | `crates/medulla-ann/src/hnsw.rs`, filtered HNSW search, and `hnsw/artifact.rs`. Also `ivfpq.rs` and `persist.rs` codebooks, SQ8, and compact storage (including `durable_codes`). Also `recall.rs`, the `medulla-ann` footprint and recall benches, and `SemanticStore` incremental mutation. | The `LowStorageAnnManifest`, `StorageAccounting`, a compact topology mode, and tombstones. |
 | Lifecycle and fences | R059 semantic index lifecycle, the semantic-index worker and dispatch, the R040.3 generation check, and the restart fallback. Also the `EmbeddingVersionStore` gate. | Selective invalidation and regeneration produce a receipt. Replacement generations switch atomically. |
 | Query and embedding seam | `UnifiedQuery` → `run_unified_with` → `PlanCtx`. `medulla_plan::TextEmbedder` stays the query-text resolver. The facade functions `uql_text_embedder` and `run_unified_bind_embedder`. SQL `EmbeddingBinding` R077. | A core-owned `EmbeddingProvider` and `regenerate_eligible`. A bounded exact-rescore adapter for selected candidates. |
@@ -1082,9 +1082,9 @@ this internal seam:
    becomes an empty result or falls back to an ungoverned network call.
 
 The owner/file matrix is deliberately narrow. EG owns the registry and both
-resolution paths (`crates/medulla-plan/src/federation.rs` and
-`crates/medulla-plan/src/federation_opt/remote.rs`). EG also owns the owner-scoped
-seam at `src/server/foreign_catalog.rs`. Arbora owns the executor and gateway
+resolution paths (`crates/medulla-federation/src/federation.rs` and
+`crates/medulla-federation/src/federation_opt/remote.rs`). EG also owns the owner-scoped
+seam at `crates/medulla-server-ops/src/api/query_txn/foreign_catalog.rs`. Arbora owns the executor and gateway
 call (`arbora/fleet/source_executor.py`). SDK owns the generated receiver and
 page contract. `agent_connector_sdk/access_contract.py` and the mapped
 SDK-SOURCE-INGEST-R004.7-.12 contract cover that surface. The cross-repository

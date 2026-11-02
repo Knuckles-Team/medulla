@@ -1,0 +1,449 @@
+//! Authenticated cluster topology discovery (CONCEPT:MEDULLA-KG.sharding.cluster-topology,
+//! ADR-1 / W1.1, `reports/wave1/ADR-scale-trio.md` §ADR-1).
+//!
+//! `Method::ClusterMembers` is a bounded read, gated by
+//! `cluster:topology-read`.  It cross-references every live `MultiRaft` group's
+//! committed membership with the durable [`NodeInfoStore`].  The result is
+//! signed with the engine request secret and bound to the already verified
+//! tenant/principal/agent context.  A client therefore cannot accept a stale,
+//! cross-cluster, unsigned, or differently scoped endpoint snapshot.
+//!
+//! Node-info writes are engine-owned typed Raft commands issued by
+//! `raft::node::start`; there is no public method that accepts caller-supplied
+//! endpoint authority.
+
+#[cfg(feature = "raft")]
+use medulla_raft::raft::RaftStateExt;
+#[cfg(feature = "redb")]
+use medulla_persistence::AsRedb;
+use std::sync::Arc;
+
+use hmac::{Hmac, Mac};
+use serde_json::Value;
+use sha2::{Digest, Sha256};
+use tokio::sync::RwLock;
+
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::Response;
+use medulla_protocol_types::protocol::ResultPayload;
+use medulla_server_api::authority_context::VerifiedRequestContext;
+use medulla_server_api::state::ServerState;
+
+type HmacSha256 = Hmac<Sha256>;
+
+const DISCOVERY_SCHEMA_VERSION: u64 = 1;
+const DISCOVERY_DOMAIN: &[u8] = b"medulla-engine/cluster-discovery/v1\0";
+const MAX_DISCOVERY_GROUPS: usize = 1_024;
+const MAX_DISCOVERY_MEMBERS: usize = 4_096;
+const MAX_DISCOVERY_FIELD_BYTES: usize = 4 * 1024;
+
+#[cfg(feature = "raft")]
+fn node_info_unavailable(req_id: u64) -> Response {
+    Response::err(
+        req_id,
+        "cluster topology requires a durable redb backend (no persist dir / not a redb build)",
+    )
+}
+
+fn sha256_ref(value: &str) -> String {
+    format!("sha256:{}", hex::encode(Sha256::digest(value.as_bytes())))
+}
+
+fn context_binding(
+    context: &VerifiedRequestContext,
+) -> medulla_protocol_types::result_contract::cluster::DiscoveryAuthBinding {
+    medulla_protocol_types::result_contract::cluster::DiscoveryAuthBinding {
+        tenant_digest: sha256_ref(context.tenant()),
+        principal_digest: sha256_ref(context.principal()),
+        agent_digest: sha256_ref(context.agent_id()),
+    }
+}
+
+/// The three parallel topology projections a signed snapshot carries. Grouped so
+/// the signing function keeps a readable arity (clippy::too_many_arguments) and
+/// so the three can never be passed in the wrong order.
+struct SnapshotProjections {
+    groups: Vec<medulla_protocol_types::result_contract::cluster::ClusterGroup>,
+    canonical_groups: Vec<Value>,
+    leaders: Vec<medulla_protocol_types::result_contract::cluster::ClusterLeader>,
+}
+
+fn signed_snapshot(
+    secret: &str,
+    cluster_id: &str,
+    membership_epoch: u64,
+    placement_epoch: u64,
+    context: &VerifiedRequestContext,
+    projections: SnapshotProjections,
+) -> Result<medulla_protocol_types::result_contract::cluster::ClusterDiscoverySnapshot, String> {
+    let SnapshotProjections {
+        groups,
+        canonical_groups,
+        leaders,
+    } = projections;
+    if secret.is_empty() {
+        return Err("cluster discovery signing authority is unavailable".to_string());
+    }
+    if cluster_id.len() > MAX_DISCOVERY_FIELD_BYTES
+        || !cluster_id.strip_prefix("sha256:").is_some_and(|digest| {
+            digest.len() == 64 && digest.bytes().all(|byte| byte.is_ascii_hexdigit())
+        })
+    {
+        return Err("cluster discovery has an invalid cluster identity".to_string());
+    }
+    let leader = leaders.first().copied();
+    let payload = serde_json::to_string(&serde_json::json!([
+        "cluster-discovery-v1",
+        cluster_id,
+        membership_epoch,
+        placement_epoch,
+        context.tenant(),
+        context.principal(),
+        context.agent_id(),
+        canonical_groups,
+    ]))
+    .map_err(|_| "cluster discovery canonicalization failed".to_string())?;
+    let mut mac = HmacSha256::new_from_slice(secret.as_bytes())
+        .map_err(|_| "cluster discovery signing authority is invalid".to_string())?;
+    mac.update(DISCOVERY_DOMAIN);
+    mac.update(payload.as_bytes());
+    let signature = format!("hmac-sha256:{}", hex::encode(mac.finalize().into_bytes()));
+    Ok(
+        medulla_protocol_types::result_contract::cluster::ClusterDiscoverySnapshot {
+            schema_version: DISCOVERY_SCHEMA_VERSION,
+            cluster_id: cluster_id.to_string(),
+            membership_epoch,
+            placement_epoch,
+            leader,
+            leaders,
+            groups,
+            auth_binding: context_binding(context),
+            signature,
+        },
+    )
+}
+
+#[cfg(feature = "raft")]
+fn member_role(
+    node_id: medulla_raft::raft::NodeId,
+    leader: Option<medulla_raft::raft::NodeId>,
+    voters: &[medulla_raft::raft::NodeId],
+) -> &'static str {
+    if Some(node_id) == leader {
+        "leader"
+    } else if voters.contains(&node_id) {
+        "follower"
+    } else {
+        "learner"
+    }
+}
+
+#[cfg(feature = "raft")]
+fn certificate_value(
+    info: &medulla_persistence::node_info_store::NodeInfo,
+) -> medulla_protocol_types::result_contract::cluster::ClusterMemberCertificate {
+    medulla_protocol_types::result_contract::cluster::ClusterMemberCertificate {
+        id: info.certificate_id.clone(),
+        rotation_epoch: info.certificate_rotation_epoch,
+        not_before_ms: info.certificate_not_before_ms,
+        not_after_ms: info.certificate_not_after_ms,
+    }
+}
+
+#[cfg(feature = "raft")]
+fn member_health(leader_id: Option<medulla_raft::raft::NodeId>) -> &'static str {
+    // Membership is the only health authority available on this RPC.  Do not
+    // imply a transport heartbeat: an elected group is "healthy" from the
+    // membership authority's perspective, while a leaderless group is
+    // explicitly degraded.
+    if leader_id.is_some() {
+        "healthy"
+    } else {
+        "degraded"
+    }
+}
+
+#[cfg(feature = "raft")]
+struct GroupProjection {
+    group: medulla_protocol_types::result_contract::cluster::ClusterGroup,
+    canonical: Value,
+    leader: Option<medulla_protocol_types::result_contract::cluster::ClusterLeader>,
+    member_count: usize,
+}
+
+#[cfg(feature = "raft")]
+struct MemberProjection {
+    members: Vec<medulla_protocol_types::result_contract::cluster::ClusterMember>,
+    canonical_members: Vec<Value>,
+}
+
+#[cfg(feature = "raft")]
+fn project_group_members(
+    store: &medulla_persistence::node_info_store::NodeInfoStore,
+    cluster_id: &str,
+    ids: &[medulla_raft::raft::NodeId],
+    voters: &[medulla_raft::raft::NodeId],
+    leader_id: Option<medulla_raft::raft::NodeId>,
+    health: &str,
+) -> Result<MemberProjection, String> {
+    let mut members = Vec::with_capacity(ids.len());
+    let mut canonical_members = Vec::with_capacity(ids.len());
+    for &node_id in ids {
+        let info = store.get(node_id).ok_or_else(|| {
+            format!("CLUSTER_DISCOVERY_INCOMPLETE: member {node_id} has no durable self-report")
+        })?;
+        if info.cluster_id != cluster_id
+            || info.member_identity
+                != medulla_persistence::node_info_store::member_identity_for(
+                    cluster_id, node_id,
+                )
+        {
+            return Err(format!(
+                "CLUSTER_DISCOVERY_INVALID: member {node_id} identity mismatch"
+            ));
+        }
+        let role = member_role(node_id, leader_id, voters);
+        let certificate = certificate_value(&info);
+        canonical_members.push(serde_json::json!([
+            node_id,
+            info.member_identity,
+            role,
+            info.advertised_client_addr,
+            info.tls_server_name,
+            health,
+            info.certificate_id,
+            info.certificate_rotation_epoch,
+            info.certificate_not_before_ms,
+            info.certificate_not_after_ms,
+        ]));
+        members.push(
+            medulla_protocol_types::result_contract::cluster::ClusterMember {
+                node_id,
+                member_identity: info.member_identity.clone(),
+                role: role.to_string(),
+                client_endpoint: info.advertised_client_addr.clone(),
+                tls_name: info.tls_server_name.clone(),
+                health: health.to_string(),
+                certificate,
+            },
+        );
+    }
+    Ok(MemberProjection {
+        members,
+        canonical_members,
+    })
+}
+
+#[cfg(feature = "raft")]
+async fn collect_group_projection(
+    multi: &medulla_raft::raft::multi::MultiRaft,
+    store: &medulla_persistence::node_info_store::NodeInfoStore,
+    cluster_id: &str,
+    group_id: medulla_raft::raft::NodeId,
+    member_count: usize,
+) -> Result<GroupProjection, String> {
+    let voters = multi.group_membership(group_id).await.ok_or_else(|| {
+        format!("CLUSTER_DISCOVERY_INCOMPLETE: group {group_id} membership unavailable")
+    })?;
+    let learners = multi.group_learners(group_id).await.ok_or_else(|| {
+        format!("CLUSTER_DISCOVERY_INCOMPLETE: group {group_id} learners unavailable")
+    })?;
+    if voters.windows(2).any(|pair| pair[0] == pair[1])
+        || learners.windows(2).any(|pair| pair[0] == pair[1])
+    {
+        return Err(format!(
+            "CLUSTER_DISCOVERY_INVALID: group {group_id} repeats a member"
+        ));
+    }
+    if voters.iter().any(|node_id| learners.contains(node_id)) {
+        return Err(format!(
+            "CLUSTER_DISCOVERY_INVALID: group {group_id} overlaps voters and learners"
+        ));
+    }
+    let leader_id = multi
+        .group(group_id)
+        .await
+        .ok_or_else(|| format!("CLUSTER_DISCOVERY_INCOMPLETE: group {group_id} is unavailable"))?
+        .current_leader()
+        .await;
+    if leader_id.is_some_and(|node_id| {
+        let mut ids = voters.clone();
+        ids.extend(learners.iter().copied());
+        !ids.contains(&node_id)
+    }) {
+        return Err(format!(
+            "CLUSTER_DISCOVERY_INVALID: group {group_id} leader is not a member"
+        ));
+    }
+    let mut ids = voters.clone();
+    ids.extend(learners.iter().copied());
+    ids.sort_unstable();
+    if ids.len() > MAX_DISCOVERY_MEMBERS.saturating_sub(member_count) {
+        return Err("CLUSTER_DISCOVERY_LIMIT: too many cluster members".to_string());
+    }
+    let health = member_health(leader_id);
+    let projected_members =
+        project_group_members(store, cluster_id, &ids, &voters, leader_id, health)?;
+    Ok(GroupProjection {
+        group: medulla_protocol_types::result_contract::cluster::ClusterGroup {
+            group_id,
+            leader_id,
+            members: projected_members.members,
+        },
+        canonical: serde_json::json!([group_id, leader_id, projected_members.canonical_members,]),
+        leader: leader_id.map(|node_id| {
+            medulla_protocol_types::result_contract::cluster::ClusterLeader { group_id, node_id }
+        }),
+        member_count: voters.len() + learners.len(),
+    })
+}
+
+#[cfg(feature = "raft")]
+async fn handle_cluster_members(
+    state: &Arc<RwLock<ServerState>>,
+    req_id: u64,
+    verified_context: &VerifiedRequestContext,
+) -> Response {
+    let (backend, secret) = {
+        let current = state.read().await;
+        (current.persistence.clone(), current.auth_secret.clone())
+    };
+    let Some(store) = backend
+        .as_ref()
+        .and_then(|p| p.as_redb())
+        .map(|b| b.node_info())
+    else {
+        tracing::warn!(
+            req_id,
+            "ClusterMembers requested with no durable redb backend attached"
+        );
+        return node_info_unavailable(req_id);
+    };
+    let Some(cluster_id) = store.cluster_id() else {
+        return Response::err(
+            req_id,
+            "CLUSTER_DISCOVERY_UNAVAILABLE: no authenticated cluster identity has been self-reported",
+        );
+    };
+
+    let multi = { state.read().await.multi_raft() };
+    let Some(multi) = multi else {
+        let membership_epoch = store.generation();
+        return match signed_snapshot(
+            &secret,
+            &cluster_id,
+            membership_epoch,
+            0,
+            verified_context,
+            SnapshotProjections {
+                groups: Vec::new(),
+                canonical_groups: Vec::new(),
+                leaders: Vec::new(),
+            },
+        ) {
+            Ok(snapshot) => Response::ok(
+                req_id,
+                ResultPayload::of::<medulla_protocol_types::result_contract::cluster::ClusterMembers>(
+                    snapshot,
+                ),
+            ),
+            Err(error) => Response::err(req_id, error),
+        };
+    };
+
+    let membership_epoch = store.generation().max(multi.membership_epoch().await);
+    let placement_epoch = multi.placement().current_epoch().await;
+    let mut groups = Vec::new();
+    let mut canonical_groups = Vec::new();
+    let mut leaders = Vec::new();
+    let mut member_count = 0usize;
+
+    for group_id in multi.known_groups().await {
+        if groups.len() >= MAX_DISCOVERY_GROUPS {
+            return Response::err(req_id, "CLUSTER_DISCOVERY_LIMIT: too many Raft groups");
+        }
+        let projection =
+            match collect_group_projection(&multi, &store, &cluster_id, group_id, member_count)
+                .await
+            {
+                Ok(projection) => projection,
+                Err(error) => return Response::err(req_id, error),
+            };
+        member_count += projection.member_count;
+        if let Some(leader) = projection.leader {
+            leaders.push(leader);
+        }
+        canonical_groups.push(projection.canonical);
+        groups.push(projection.group);
+    }
+
+    match signed_snapshot(
+        &secret,
+        &cluster_id,
+        membership_epoch,
+        placement_epoch,
+        verified_context,
+        SnapshotProjections {
+            groups,
+            canonical_groups,
+            leaders,
+        },
+    ) {
+        Ok(snapshot) => Response::ok(
+            req_id,
+            ResultPayload::of::<medulla_protocol_types::result_contract::cluster::ClusterMembers>(
+                snapshot,
+            ),
+        ),
+        Err(error) => Response::err(req_id, error),
+    }
+}
+
+#[cfg(feature = "raft")]
+pub async fn try_handle(
+    state: &Arc<RwLock<ServerState>>,
+    req_id: u64,
+    method: Method,
+    verified_context: &VerifiedRequestContext,
+) -> Result<Response, Method> {
+    match method {
+        Method::ClusterMembers => Ok(handle_cluster_members(state, req_id, verified_context).await),
+        other => Err(other),
+    }
+}
+
+#[cfg(not(feature = "raft"))]
+pub async fn try_handle(
+    state: &Arc<RwLock<ServerState>>,
+    req_id: u64,
+    method: Method,
+    verified_context: &VerifiedRequestContext,
+) -> Result<Response, Method> {
+    match method {
+        Method::ClusterMembers => {
+            let secret = { state.read().await.auth_secret.clone() };
+            let snapshot = signed_snapshot(
+                &secret,
+                &sha256_ref("medulla/single-node-cluster/v1"),
+                0,
+                0,
+                verified_context,
+                SnapshotProjections {
+                    groups: Vec::new(),
+                    canonical_groups: Vec::new(),
+                    leaders: Vec::new(),
+                },
+            );
+            Ok(match snapshot {
+                Ok(snapshot) => Response::ok(
+                    req_id,
+                    ResultPayload::of::<
+                        medulla_protocol_types::result_contract::cluster::ClusterMembers,
+                    >(snapshot),
+                ),
+                Err(error) => Response::err(req_id, error),
+            })
+        }
+        other => Err(other),
+    }
+}

@@ -314,7 +314,7 @@ request carries it), so the principal is the working boundary; the tenant stays 
 key so cross-tenant stays closed if an engine ever serves more than one. Every served path that
 resolves a name — a `Named` `ForeignScan`, the UQL `FOREIGN "<name>"` marker, the in-txn and
 wire-protocol UQL paths, and `NlQuery` — builds its registry from the caller's own entries only
-(`src/server/foreign_catalog.rs`). A name another principal registered resolves exactly like an
+(`crates/medulla-server-ops/src/api/query_txn/foreign_catalog.rs`). A name another principal registered resolves exactly like an
 unregistered name, so neither the credential nor the existence of the name crosses principals.
 Two principals may register the same name independently; neither can overwrite the other's
 source. Sharing is explicit: registration provisions a `foreign-source-use:<owner agent>/<name>`

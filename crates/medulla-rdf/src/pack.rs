@@ -5,7 +5,7 @@
 //! limits, identity/order checks, base policy, class/ABox reasoning and SHACL.
 //! In particular, Turtle parsing allocates before applying the triple limit.
 
-use medulla_types::connector_pack::PackViolationCode;
+use medulla_catalog_types::connector_pack::PackViolationCode;
 use std::collections::BTreeSet;
 
 mod sources;

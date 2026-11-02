@@ -6,6 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [3.0.0] - 2026-11-01 — The engine is split into small crates
+
+### Changed
+- **The engine is a workspace of small crates.** The single `medulla-engine` crate is now a thin
+  facade over ~150 crates, each under the line cap and each owning one responsibility (types,
+  storage, persistence, raft, query, server pieces, wire protocols, compute, ...). Items live in
+  the crate that owns them; the facade no longer re-exports moved paths.
+- **Seams replace cross-crate cycles.** Dispatch re-entry, ingest, graph, jobs, admin, decide,
+  query, txn and wire handlers are installed on the state through `medulla-server`'s
+  `seams_install`; unit tests that dispatch build their state the same way.
+- **Features are forwarded down every crate edge**, so each crate builds and tests on its own with
+  `cargo check -p <crate> --all-features`.
+- **Wheels:** `medulla` ships the `medulla/` Python package and the engine extension;
+  `medulla-server` ships the server build. Release builds never enable `test-support`,
+  `request-policy-fixture` or the `*-tests` crates.
+- `sql_catalog_acl` is `pub` in `medulla-server-auth` (query-gated; the facade does not re-export it).
+- `medulla-reasoner` and `medulla-wire-msg` use `deny(unsafe_code)` with their existing scoped allows.
+
+### Fixed
+- The shard default of 1 under test builds also applies to the moved persistence tests.
+
 ## [2.27.7] - 2026-10-24 — Complete server sdist, packaged ontology and store migration at open
 
 ### Fixed

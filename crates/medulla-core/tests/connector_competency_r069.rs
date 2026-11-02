@@ -5,7 +5,8 @@
 //! module, so this test proves both the positive source and the wrong-module
 //! negative case without declaring a second class.
 
-use medulla_core::graph::{GraphSchemaSources, SchemaSourceOrigin};
+use medulla_graph_core::graph::GraphSchemaSources;
+use medulla_graph_core::graph::SchemaSourceOrigin;
 use medulla_rdf::mapping::parse_turtle;
 use medulla_rdf::oxrdf::{NamedNode, Triple};
 

@@ -3,14 +3,14 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::OnceLock;
 
-use medulla_types::connector_pack::result::PackWriteErrorCode;
+use medulla_work_types::orchestration::HarnessVocabularyErrorCode;
+use medulla_catalog_types::connector_pack::result::PackWriteErrorCode;
+use medulla_catalog_types::graph_schema::GraphSchemaErrorCode;
+use medulla_decision_types::decision::harness_contrast::HarnessContrastErrorCode;
+use medulla_decision_types::decision::statistical::StatisticalErrorCode;
+use medulla_decision_types::decision::DecisionErrorCode;
+use medulla_decision_types::solve::SolveErrorCode;
 use medulla_types::contract::{EngineErrorCode, ServerErrorCode, UqlCode};
-use medulla_types::decision::harness_contrast::HarnessContrastErrorCode;
-use medulla_types::decision::statistical::StatisticalErrorCode;
-use medulla_types::decision::DecisionErrorCode;
-use medulla_types::graph_schema::GraphSchemaErrorCode;
-use medulla_types::orchestration::HarnessVocabularyErrorCode;
-use medulla_types::solve::SolveErrorCode;
 
 use crate::MethodDescriptor;
 

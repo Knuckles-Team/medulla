@@ -1,0 +1,133 @@
+[package]
+name = "medulla-raft"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine consensus and replication"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_raft"
+path = "src/lib.rs"
+
+[dependencies]
+medulla-result-types = { path = "../medulla-result-types" }
+medulla-protocol-types = { path = "../medulla-protocol-types" }
+medulla-mutation-types = { path = "../medulla-mutation-types" }
+medulla-identity-types = { path = "../medulla-identity-types" }
+medulla-catalog-types = { path = "../medulla-catalog-types" }
+medulla-agent-types = { path = "../medulla-agent-types" }
+chacha20poly1305 = { version = "0.10", optional = true }
+dashmap = "6.2"
+futures = { version = "0.3", optional = true }
+hex = "0.4"
+hmac = "0.12"
+medulla-capabilities = { path = "../medulla-capabilities" }
+medulla-compute = { path = "../medulla-compute" }
+medulla-core = { path = "../medulla-core" }
+medulla-kernel = { path = "../medulla-kernel" }
+medulla-modality = { path = "../medulla-modality", optional = true }
+medulla-persistence = { path = "../medulla-persistence" }
+medulla-plan = { path = "../medulla-plan", optional = true }
+medulla-server-api = { path = "../medulla-server-api" }
+medulla-storage = { path = "../medulla-storage", optional = true }
+medulla-store = { path = "../medulla-store" }
+medulla-transaction = { path = "../medulla-transaction", optional = true }
+medulla-types = { path = "../medulla-types" }
+openraft = { version = "=0.10.0-alpha.26", features = ["serde"], optional = true }
+parking_lot = "0.12"
+petgraph = { version = "0.8.3", features = ["serde-1"] }
+rand = "0.8"
+rmp-serde = "1.3"
+serde = { version = "1.0", features = ["derive", "rc"] }
+serde_json = "1.0"
+sha2 = "0.10"
+thiserror = "2.0"
+tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "signal", "macros"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", optional = true }
+uuid = { version = "1.28", features = ["v4"] }
+serde_bytes = "0.11.19"
+medulla-direct-state = { path = "../medulla-direct-state" }
+medulla-semantic-index = { path = "../medulla-semantic-index" }
+medulla-graph-core = { path = "../medulla-graph-core" }
+medulla-isolation = { path = "../medulla-isolation" }
+medulla-work-types = { path = "../medulla-work-types" }
+medulla-store-apply = { path = "../medulla-store-apply" }
+medulla-persistence-ops = { path = "../medulla-persistence-ops" }
+medulla-server-ops = { path = "../medulla-server-ops" }
+medulla-server-mutation = { path = "../medulla-server-mutation" }
+medulla-server-cdc = { path = "../medulla-server-cdc", features = ["streaming"] }
+medulla-server-auth = { path = "../medulla-server-auth" }
+medulla-exec = { path = "../medulla-exec" }
+
+[features]
+blob = ["redb", "medulla-protocol-types/blob", "medulla-server-api/blob", "medulla-types/blob", "server"]
+calvin = ["nonblocking", "server"]
+compute-dist = ["raft", "medulla-persistence/compute-dist", "medulla-protocol-types/compute-dist", "medulla-result-types/compute-dist", "medulla-server-api/compute-dist", "medulla-server-ops/compute-dist", "medulla-store-apply/compute-dist", "medulla-store/compute-dist", "medulla-types/compute-dist", "server"]
+epistemic = ["dep:medulla-plan", "medulla-plan/epistemic", "medulla-exec/epistemic", "dep:medulla-modality", "query", "medulla-kernel/epistemic", "medulla-protocol-types/epistemic", "medulla-server-api/epistemic", "medulla-server-auth/epistemic", "medulla-server-cdc/epistemic", "medulla-server-mutation/epistemic", "medulla-server-ops/epistemic", "medulla-types/epistemic"]
+federation = ["dep:medulla-plan", "medulla-plan/federation", "medulla-exec/federation", "query", "medulla-protocol-types/federation", "medulla-server-api/federation", "medulla-server-auth/federation", "medulla-server-ops/federation", "medulla-types/federation", "server"]
+graphql = ["security", "medulla-kernel/graphql", "medulla-protocol-types/graphql", "medulla-server-api/graphql", "medulla-server-auth/graphql", "medulla-server-mutation/graphql", "medulla-server-ops/graphql", "medulla-types/graphql", "server"]
+harness = ["raft", "server"]
+test-support = ["harness", "dep:tracing-subscriber", "medulla-protocol-types/test-support", "medulla-identity-types/test-support", "medulla-catalog-types/test-support", "medulla-agent-types/test-support", "medulla-compute/test-support", "medulla-kernel/test-support", "medulla-persistence/test-support", "medulla-server-api/test-support", "medulla-store/test-support", "medulla-types/test-support", "medulla-direct-state/test-support", "medulla-work-types/test-support", "medulla-store-apply/test-support", "medulla-server-ops/test-support", "medulla-server-mutation/test-support", "medulla-server-auth/test-support", "medulla-exec/test-support"]
+jobs = ["medulla-capabilities/jobs", "epistemic", "medulla-agent-types/jobs", "medulla-persistence/jobs", "medulla-protocol-types/jobs", "medulla-server-api/jobs", "medulla-server-mutation/jobs", "medulla-server-ops/jobs", "medulla-types/jobs", "medulla-work-types/jobs", "server"]
+kv = ["redb", "medulla-kernel/kv", "medulla-persistence/kv", "medulla-protocol-types/kv", "medulla-server-api/kv", "medulla-server-mutation/kv", "medulla-types/kv", "server"]
+matview = ["query", "streaming", "medulla-persistence/matview", "medulla-protocol-types/matview", "medulla-server-api/matview", "medulla-server-cdc/matview", "medulla-server-ops/matview", "medulla-store-apply/matview", "medulla-store/matview", "medulla-types/matview", "server"]
+modality-serving = ["dep:medulla-modality", "medulla-capabilities/modality-serving", "redb", "security", "streaming", "medulla-kernel/modality-serving", "medulla-persistence/modality-serving", "medulla-protocol-types/modality-serving", "medulla-server-api/modality-serving", "medulla-server-auth/modality-serving", "medulla-server-cdc/modality-serving", "medulla-server-mutation/modality-serving", "medulla-server-ops/modality-serving", "medulla-types/modality-serving", "server"]
+nonblocking = ["raft", "server"]
+owl = ["sparql", "medulla-exec/owl", "medulla-persistence/owl", "medulla-plan?/owl", "medulla-protocol-types/owl", "medulla-server-api/owl", "medulla-server-cdc/owl", "medulla-server-ops/owl", "medulla-types/owl", "server"]
+query = ["dep:medulla-plan", "medulla-plan/query", "medulla-exec/query", "redb", "medulla-kernel/query", "medulla-persistence-ops/query", "medulla-persistence/query", "medulla-protocol-types/query", "medulla-result-types/query", "medulla-server-api/query", "medulla-server-auth/query", "medulla-server-cdc/query", "medulla-server-mutation/query", "medulla-server-ops/query", "medulla-store/query", "medulla-types/query"]
+raft = ["dep:openraft", "dep:futures", "dep:chacha20poly1305", "redb", "medulla-kernel/raft", "medulla-persistence/raft", "medulla-server-api/raft", "medulla-store/raft", "medulla-store-apply/raft", "medulla-persistence-ops/raft", "medulla-server-mutation/raft", "medulla-server-auth/raft", "medulla-exec/raft", "server"]
+reasoning = ["medulla-compute/reasoning", "medulla-kernel/reasoning", "medulla-server-api/reasoning", "medulla-server-cdc/reasoning", "medulla-server-mutation/reasoning"]
+redb = ["dep:medulla-transaction", "dep:medulla-storage", "medulla-kernel/redb", "medulla-persistence-ops/redb", "medulla-persistence/redb", "medulla-server-api/redb", "medulla-server-mutation/redb", "medulla-server-ops/redb", "medulla-store/redb"]
+security = ["dep:chacha20poly1305", "redb", "medulla-core/security", "medulla-graph-core/security", "medulla-isolation/security", "medulla-kernel/security", "medulla-persistence/security", "medulla-protocol-types/security", "medulla-server-api/security", "medulla-server-auth/security", "medulla-server-cdc/security", "medulla-server-ops/security", "medulla-store-apply/security", "medulla-store/security", "medulla-types/security"]
+shacl = ["medulla-kernel/shacl", "medulla-persistence/shacl", "medulla-server-api/shacl", "medulla-server-cdc/shacl", "medulla-server-mutation/shacl", "medulla-server-ops/shacl", "owl", "server", "sparql"]
+sparql = ["medulla-kernel/sparql", "medulla-persistence/sparql", "medulla-protocol-types/sparql", "medulla-server-api/sparql", "medulla-server-ops/sparql", "medulla-types/sparql", "server"]
+sqlite-file = ["query", "medulla-kernel/sqlite-file", "medulla-protocol-types/sqlite-file", "medulla-types/sqlite-file", "server"]
+statechart = ["medulla-capabilities/statechart", "medulla-persistence/statechart", "medulla-protocol-types/statechart", "medulla-server-api/statechart", "medulla-server-mutation/statechart", "medulla-store-apply/statechart", "medulla-store/statechart", "medulla-types/statechart", "server"]
+stream = ["dep:medulla-plan", "medulla-plan/stream", "medulla-exec/stream", "query", "medulla-server-api/stream", "medulla-server-cdc/stream", "medulla-server-ops/stream", "medulla-types/stream"]
+streaming = ["medulla-protocol-types/streaming", "medulla-server-api/streaming", "medulla-server-cdc/streaming", "medulla-server-mutation/streaming", "medulla-server-ops/streaming", "medulla-types/streaming", "server"]
+tsdb = ["dep:medulla-plan", "medulla-plan/timeseries", "medulla-exec/timeseries", "redb", "medulla-persistence/tsdb", "medulla-server-api/tsdb", "medulla-server-ops/tsdb", "medulla-store-apply/tsdb", "medulla-store/tsdb", "server"]
+wasm-udf = ["dep:medulla-plan", "medulla-plan?/wasm-udf", "medulla-exec/wasm-udf", "medulla-protocol-types/wasm-udf", "medulla-server-api/wasm-udf", "medulla-server-auth/wasm-udf", "medulla-server-ops/wasm-udf", "medulla-types/wasm-udf", "server"]
+pgwire = ["dep:futures", "query", "redb", "server"]
+ros2-bridge = ["dep:futures", "server", "streaming"]
+ros2-dds = ["dep:futures", "server", "streaming"]
+ros2-rmw = ["dep:futures", "server", "streaming"]
+decide = ["medulla-capabilities/decide", "medulla-compute/decide", "medulla-persistence/decide", "medulla-server-api/decide", "medulla-server-ops/decide", "epistemic", "jobs", "numeric", "owl", "query", "redb", "server", "shacl", "sparql"]
+server = ["dep:tracing-subscriber", "medulla-kernel/server", "medulla-persistence-ops/server", "medulla-persistence/server", "medulla-server-api/server", "medulla-store/server"]
+viz = ["medulla-capabilities/viz", "medulla-persistence/viz", "medulla-protocol-types/viz", "medulla-server-api/viz", "medulla-types/viz"]
+asr-whisper = ["medulla-capabilities/asr-native", "medulla-persistence/asr-whisper", "medulla-server-api/asr-whisper", "server"]
+knowledge-batch = ["dep:medulla-plan", "medulla-plan/knowledge-batch", "dep:medulla-modality", "medulla-capabilities/knowledge-batch", "medulla-kernel/knowledge-batch", "medulla-persistence/knowledge-batch", "medulla-protocol-types/knowledge-batch", "medulla-server-api/knowledge-batch", "medulla-server-ops/knowledge-batch", "medulla-types/knowledge-batch", "query", "redb"]
+quantum-agent-api = ["medulla-capabilities/quantum", "medulla-persistence/quantum-agent-api", "medulla-server-api/quantum-agent-api", "server"]
+alignment = ["dep:medulla-modality", "medulla-server-api/alignment", "blob", "redb", "server"]
+numeric = ["dep:medulla-plan", "medulla-plan?/numeric", "medulla-exec/numeric", "medulla-kernel/numeric", "medulla-persistence/numeric", "medulla-server-api/numeric"]
+cost-opt = ["dep:medulla-plan", "medulla-plan/cost-opt", "medulla-server-api/cost-opt", "query", "redb"]
+par-runtime = ["dep:medulla-plan", "medulla-plan/par-runtime", "medulla-exec/par-runtime", "medulla-server-api/par-runtime", "query", "redb"]
+text = ["dep:medulla-plan", "medulla-plan/text", "medulla-exec/text", "medulla-server-api/text", "medulla-server-ops/text", "medulla-types/text", "query", "redb"]
+federation-sql = ["dep:medulla-plan", "medulla-plan/federation-sql", "medulla-server-api/federation-sql", "medulla-server-ops/federation-sql", "federation", "query", "redb", "server"]
+geo = ["dep:medulla-plan", "medulla-plan/geo", "medulla-exec/geo", "medulla-server-api/geo", "medulla-types/geo", "query", "redb"]
+tensor = ["dep:medulla-plan", "medulla-plan/tensor", "medulla-exec/tensor", "medulla-server-api/tensor", "medulla-types/tensor", "query", "redb"]
+nl-query = ["dep:medulla-plan", "medulla-plan/nl-query", "medulla-server-api/nl-query", "query", "redb", "server"]
+gpu = ["dep:medulla-plan", "medulla-plan/tensor-gpu", "medulla-compute/gpu", "medulla-server-api/gpu", "query", "reasoning", "redb", "tensor"]
+gpu-cuda = ["dep:medulla-plan", "medulla-plan/tensor-gpu-cuda", "medulla-compute/gpu-cuda", "medulla-server-api/gpu-cuda", "gpu", "query", "reasoning", "redb", "tensor"]
+owl-plan = ["dep:medulla-plan", "medulla-plan/owl", "medulla-exec/owl", "medulla-server-api/owl-plan", "medulla-types/owl-plan", "owl", "query", "redb", "server", "sparql"]
+
+[dev-dependencies]
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
+medulla-identity-types = { path = "../medulla-identity-types", features = ["test-support"] }
+medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
+medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
+medulla-compute = { path = "../medulla-compute", features = ["test-support"] }
+medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }
+medulla-persistence = { path = "../medulla-persistence", features = ["test-support"] }
+medulla-server-api = { path = "../medulla-server-api", features = ["test-support", "request-policy-fixture"] }
+medulla-store = { path = "../medulla-store", features = ["test-support"] }
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-direct-state = { path = "../medulla-direct-state", features = ["test-support"] }
+medulla-work-types = { path = "../medulla-work-types", features = ["test-support"] }
+medulla-store-apply = { path = "../medulla-store-apply", features = ["test-support"] }
+medulla-server-ops = { path = "../medulla-server-ops", features = ["test-support"] }
+medulla-server-mutation = { path = "../medulla-server-mutation", features = ["test-support"] }
+medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support", "test-ambient-auth"] }
+medulla-exec = { path = "../medulla-exec", features = ["test-support"] }

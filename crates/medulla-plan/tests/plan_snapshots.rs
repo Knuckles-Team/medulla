@@ -13,7 +13,7 @@
 mod common;
 
 use common::{build_docs, ids_sorted, query_vec};
-use medulla_plan::{execute, optimize, Op, Plan, PlanCtx, Pred};
+use medulla_exec::{exec::execute, optimizer::optimize, algebra::Op, algebra::Plan, exec::PlanCtx, algebra::Pred};
 
 /// Render a plan's ops as a stable, reviewable multi-line string.
 fn render(ops: &[Op]) -> String {
@@ -23,7 +23,7 @@ fn render(ops: &[Op]) -> String {
 /// Assert a curated UQL query lowers to `builder`, then snapshot that shared plan under
 /// `name`. The snapshot catches a lowering drift; the equality catches a surface skew.
 fn snap(name: &str, uql: &str, builder: Vec<Op>) {
-    let parsed = medulla_plan::uql::parse(uql).unwrap_or_else(|e| panic!("UQL `{uql}`: {}", e.msg));
+    let parsed = medulla_uql::parse(uql).unwrap_or_else(|e| panic!("UQL `{uql}`: {}", e.msg));
     assert_eq!(
         parsed.ops, builder,
         "UQL and builder must lower to the same plan for `{name}`"

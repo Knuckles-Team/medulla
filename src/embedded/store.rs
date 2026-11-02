@@ -13,8 +13,10 @@
 //! server writes — so it adds no duplicate durable logic and a graph written here
 //! reopens in the server.
 
-use crate::protocol::{GraphType, Method};
-use crate::redb_store::{self, shard::Shard, GraphDump};
+use medulla_protocol_types::protocol::{GraphType, Method};
+use medulla_store::redb_store;
+use medulla_store::redb_store::shard::Shard;
+use medulla_store_apply::redb_store::store_control::GraphDump;
 
 #[cfg(test)]
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -60,13 +62,13 @@ impl EmbeddedRedbStore {
     /// table) — identical bootstrap to the server's `RedbBackend::open`.
     pub(super) fn open(persist_dir: &std::path::Path) -> Result<Self, String> {
         std::fs::create_dir_all(persist_dir).map_err(|e| e.to_string())?;
-        let shards = crate::redb_layout::reconcile_shard_layout(persist_dir, 1)?;
+        let shards = medulla_store::redb_layout::reconcile_shard_layout(persist_dir, 1)?;
         if shards != 1 {
             return Err(format!(
                 "embedded mode requires one canonical redb shard, found {shards}; run migrate-shards offline"
             ));
         }
-        let db_path = persist_dir.join(crate::redb_layout::shard_filename(0));
+        let db_path = persist_dir.join(medulla_store::redb_layout::shard_filename(0));
         let shard = Shard::open(&db_path)?;
         Ok(Self {
             shard,
@@ -109,7 +111,7 @@ impl EmbeddedRedbStore {
     /// byte-identical to the server's group-commit writer. The embedded path never
     /// appends Raft log ops, so that vector is always empty.
     pub(super) fn commit(&self, graph_fname: &str, method: &Method) -> Result<(), String> {
-        if !crate::mutation_apply::is_durable_mutation(method) {
+        if !medulla_server_api::mutation_apply::is_durable_mutation(method) {
             return Ok(());
         }
         let mut ops = vec![(graph_fname.to_string(), method.clone())];
@@ -126,7 +128,7 @@ impl EmbeddedRedbStore {
             std::process::id(),
             NEXT_ATTEMPT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
         );
-        redb_store::commit_ops(
+        medulla_store_apply::redb_store::store_control::commit_ops(
             &self.shard,
             &mut ops,
             &mut raft_log_ops,
@@ -168,12 +170,12 @@ impl EmbeddedRedbStore {
     /// Snapshot the whole registry dump into redb in one durable transaction.
     pub(super) fn checkpoint(&self, dumps: Vec<GraphDump>) -> Result<usize, String> {
         let mut pending = Vec::new();
-        redb_store::apply_checkpoint(&self.shard, &mut pending, dumps, self.crypto())
+        medulla_store_apply::redb_store::checkpoint::apply_checkpoint(&self.shard, &mut pending, dumps, self.crypto())
     }
 
     /// Read the entire durable store back into per-graph dumps (boot recovery).
     pub(super) fn load_all(&self) -> Result<Vec<GraphDump>, String> {
-        redb_store::read_all_dumps(&self.shard, self.crypto())
+        medulla_store_apply::redb_store::dump::read_all_dumps(&self.shard, self.crypto())
     }
 
     /// Durably PURGE every row for a deleted graph (nodes/edges/ledger/semantic +
@@ -186,6 +188,6 @@ impl EmbeddedRedbStore {
         if self.fail_next_purge.swap(false, Ordering::AcqRel) {
             return Err("injected embedded graph purge failure".to_string());
         }
-        redb_store::purge_graph_rows(&self.shard, graph_fname)
+        medulla_store_apply::redb_store::store_cleanup::purge_graph_rows(&self.shard, graph_fname)
     }
 }

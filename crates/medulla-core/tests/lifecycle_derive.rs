@@ -2,12 +2,12 @@
 
 use std::collections::BTreeMap;
 
+use medulla_source_types::{lifecycle::LifecycleEdgeKind as E, lifecycle::LifecycleKind as K};
 use medulla_core::lifecycle::derive::{
     derive_lifecycle_edges, CodeGraphView, Culprit, ReleaseHead, Span, SymbolFact, TestBinding,
     TestCall, RULE_VERSION,
 };
 use medulla_core::lifecycle::store::LifecycleStore;
-use medulla_types::lifecycle::{LifecycleEdgeKind as E, LifecycleKind as K};
 use medulla_types::source_changeset::{ChangedPath, Changeset, PathOp, Trailers};
 
 fn changeset(id: &str, paths: &[&str], trailers: Trailers) -> Changeset {
@@ -104,7 +104,12 @@ fn rules_emit_expected_edges() {
             "MEDULLA-X-R001",
             "implements.cited_change",
         ),
-        (E::VerifiedBy, "MEDULLA-X-R001", "test::t1", "verified.binding"),
+        (
+            E::VerifiedBy,
+            "MEDULLA-X-R001",
+            "test::t1",
+            "verified.binding",
+        ),
         (E::Exercises, "test::t1", "sym::f", "exercises.call_graph"),
         (E::FixedBy, "def-2", "c1", "fixed.trailer"),
         (E::IntroducedBy, "def-1", "c1", "introduced.bisect"),
@@ -163,7 +168,9 @@ fn manual_edge_write_is_refused() {
     let mut store = seeded_store();
     let before = store.clone();
     for kind in E::ALL.into_iter().filter(|k| k.is_derived()) {
-        let err = store.write_edge(kind, "sym::f", "MEDULLA-X-R001").unwrap_err();
+        let err = store
+            .write_edge(kind, "sym::f", "MEDULLA-X-R001")
+            .unwrap_err();
         assert_eq!(err.code(), "LIFECYCLE_EDGE_DERIVED_ONLY");
     }
     let err = store

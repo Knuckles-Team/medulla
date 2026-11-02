@@ -1,5 +1,5 @@
 use crate::codec::decode_ledger_record;
-use medulla_types::IncarnationId;
+use medulla_mutation_types::mutation_scope::IncarnationId;
 use serde::{Deserialize, Deserializer, Serialize};
 use sha2::{Digest, Sha256};
 use std::path::{Path, PathBuf};

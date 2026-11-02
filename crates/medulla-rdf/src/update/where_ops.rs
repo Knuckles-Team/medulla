@@ -1,4 +1,4 @@
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 use spargebra::term::{
     GraphNamePattern, GroundQuadPattern, NamedNodePattern, QuadPattern, TermPattern, TriplePattern,
     Variable,
@@ -29,7 +29,7 @@ pub(super) fn exec_delete_insert(
 
     // Snapshot the store's graphs and evaluate the WHERE over them (named-graph aware).
     let (default_view, named_views) = snapshot_dataset_views(store)?;
-    let named_refs: Vec<(String, &medulla_core::graph::GraphView)> =
+    let named_refs: Vec<(String, &medulla_graph_core::graph::GraphView)> =
         named_views.iter().map(|(n, v)| (n.clone(), v)).collect();
     let ds = Dataset::new(&default_view, named_refs);
 
@@ -78,8 +78,8 @@ fn snapshot_dataset_views(
     store: &dyn GraphStore,
 ) -> Result<
     (
-        medulla_core::graph::GraphView,
-        Vec<(String, medulla_core::graph::GraphView)>,
+        medulla_graph_core::graph::GraphView,
+        Vec<(String, medulla_graph_core::graph::GraphView)>,
     ),
     String,
 > {
@@ -88,7 +88,7 @@ fn snapshot_dataset_views(
         .ok_or("DELETE/INSERT WHERE: no default graph")?;
     let default_view = default_core.analysis_snapshot();
     let named_cores = store.named();
-    let named_views: Vec<(String, medulla_core::graph::GraphView)> = named_cores
+    let named_views: Vec<(String, medulla_graph_core::graph::GraphView)> = named_cores
         .iter()
         .map(|(n, c)| (n.clone(), c.analysis_snapshot()))
         .collect();

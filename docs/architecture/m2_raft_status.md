@@ -27,23 +27,23 @@ section explicitly says it is historical provenance.
   address**, reused across RPCs and across ALL groups on the node (one pool per
   `MultiRaft`, mirroring the already-shared inbound listener).
 - **Where:**
-  - `src/raft/network.rs:94` `struct PeerPool` (idle map + `opens`/`reuses` counters).
-  - `src/raft/network.rs:148` `PeerPool::round_trip` — take-warm-or-connect, with the
+  - `crates/medulla-raft/src/raft/network.rs:94` `struct PeerPool` (idle map + `opens`/`reuses` counters).
+  - `crates/medulla-raft/src/raft/network.rs:148` `PeerPool::round_trip` — take-warm-or-connect, with the
     stale-retry contract: a reused connection that fails on the first frame is
     discarded and the call retries ONCE on a fresh connection, so openraft never sees
     a spurious failure. Wire is strict request→response on one stream (no correlation
     id), so a connection is loaned out exclusively for one round-trip and only
     returned to the idle set if it SUCCEEDED.
-  - `src/raft/network.rs:220` `GroupNetworkFactory` carries `pool: Arc<PeerPool>`;
-    `src/raft/network.rs:264` `GroupNetworkClient::round_trip` now calls
+  - `crates/medulla-raft/src/raft/network.rs:220` `GroupNetworkFactory` carries `pool: Arc<PeerPool>`;
+    `crates/medulla-raft/src/raft/network.rs:264` `GroupNetworkClient::round_trip` now calls
     `self.pool.round_trip(...)` instead of `TcpStream::connect` per call.
-  - `src/raft/multi.rs:179` `MultiRaft.pool` field, created at `multi.rs:223`
+  - `crates/medulla-raft/src/raft/multi.rs:179` `MultiRaft.pool` field, created at `multi.rs:223`
     (`network::PeerPool::new()`), threaded into every group's factory at
     `multi.rs:328`; exposed via `MultiRaft::pool()` (`multi.rs:263`).
 - **Proven by:**
-  - `src/raft/tests.rs:600` `peer_pool_reuses_warm_connection` — three sequential RPCs
+  - `crates/medulla-server-cluster-tests/src/split_tests/raft_cluster.rs:600` `peer_pool_reuses_warm_connection` — three sequential RPCs
     to one echo peer pay exactly ONE TCP connect (`opens()==1`, `reuses()>=2`).
-  - `src/raft/tests.rs:642` `peer_pool_retries_on_stale_connection` — an echo server
+  - `crates/medulla-server-cluster-tests/src/split_tests/raft_cluster.rs:642` `peer_pool_retries_on_stale_connection` — an echo server
     that closes after one frame forces a reconnect; the second round-trip still
     succeeds (`opens()==2`, no hard error).
 
@@ -54,14 +54,14 @@ section explicitly says it is historical provenance.
   never persisted — NOT `RandomState`). With no ring configured (the default) every
   un-pinned graph maps to `DEFAULT_GROUP` — byte-for-byte the single-group scaffold.
 - **Where:**
-  - `src/raft/multi.rs:62` `GroupRouter.ring` field + `fnv1a` helper.
-  - `src/raft/multi.rs:86` `group_of`, `multi.rs:101` `set_group_ring`,
+  - `crates/medulla-raft/src/raft/multi.rs:62` `GroupRouter.ring` field + `fnv1a` helper.
+  - `crates/medulla-raft/src/raft/multi.rs:86` `group_of`, `multi.rs:101` `set_group_ring`,
     `multi.rs:110` `group_ring`.
-  - `src/raft/multi.rs` `MultiRaft::configure_group_ring(n, peers, bootstrap)` —
+  - `crates/medulla-raft/src/raft/multi.rs` `MultiRaft::configure_group_ring(n, peers, bootstrap)` —
     brings up groups `0..n` with the complete configured peer set and installs the
     ring; `n<=1` is a no-op (single-group). Every non-default group therefore has the
     same quorum replication and failover contract as the default group.
-- **Proven by:** `src/raft/tests.rs:678` `group_router_distributes_tenants_across_ring`
+- **Proven by:** `crates/medulla-server-cluster-tests/src/split_tests/raft_cluster.rs:678` `group_router_distributes_tenants_across_ring`
   — empty ring ⇒ all to `DEFAULT_GROUP`; a 4-group ring spreads 200 tenants across
   ≥2 groups; deterministic on repeat; `assign` override beats the ring;
   `is_cross_shard` works across real ranges; empty ring collapses back to default.
@@ -79,15 +79,15 @@ section explicitly says it is historical provenance.
   A store opened WITHOUT a router (the direct/single-store path) dumps the whole
   registry, preserving the scaffold behavior.
 - **Where:**
-  - `src/raft/mod.rs` `AppCtx.router: Option<Arc<multi::GroupRouter>>` — threaded
+  - `crates/medulla-raft/src/raft/mod.rs` `AppCtx.router: Option<Arc<multi::GroupRouter>>` — threaded
     through every `AppCtx` construction (node/harnesses/tests = `None`;
     `MultiRaft::create_group` builds a `store_ctx` carrying `Some(self.router)` at
-    `src/raft/multi.rs:311`).
-  - `src/raft/store.rs` `dump_graphs` filters the full `registry.list()` catalog by
+    `crates/medulla-raft/src/raft/multi.rs:311`).
+  - `crates/medulla-raft/src/raft/store.rs` `dump_graphs` filters the full `registry.list()` catalog by
     `router.group_of(name) == self.group_id` when a router is present.
-  - `src/raft/store.rs` `scoped_snapshot_graph_names` (`#[cfg(test)]`) — the
+  - `crates/medulla-raft/src/raft/store.rs` `scoped_snapshot_graph_names` (`#[cfg(test)]`) — the
     test seam.
-- **Proven by:** `src/raft/tests.rs` `group_snapshot_is_scoped_to_its_tenant_range`
+- **Proven by:** `crates/medulla-server-cluster-tests/src/split_tests/raft_cluster.rs` `group_snapshot_is_scoped_to_its_tenant_range`
   — two graphs pinned to non-default groups 3 and 5; group 3's snapshot carries ONLY
   resident `graphA`, group 5's ONLY catalog-only/evicted `graphB`, and the DEFAULT group
   (0) carries ONLY the un-pinned bootstrap `__commons__` (no bleed or cold-graph loss);
@@ -113,7 +113,7 @@ evidence, not a current live deployment, multi-host soak, or 1M certification.
 - **What:** a group can now be grown from a single-node bootstrap to span multiple
   NODES via the openraft add-learner → change-membership lifecycle, per group, over the
   shared listener.
-- **Where (`src/raft/multi.rs`):**
+- **Where (`crates/medulla-raft/src/raft/multi.rs`):**
   - `join_group(gid, peers)` — stand a group up on a node as an EMPTY, non-bootstrapping
     member (never `initialize`s) ready to receive replication.
   - `add_group_member(gid, new_node, addr)` — leader-side: `add_learner(.., blocking)`
@@ -121,7 +121,7 @@ evidence, not a current live deployment, multi-host soak, or 1M certification.
   - `remove_group_member(gid, node)` — leader-side `change_membership` to a reduced voter
     set; idempotent; refuses to remove the LAST voter.
   - `group_membership(gid)` — the current sorted VOTER set from the replicated metrics.
-- **Proven by:** `src/raft/tests.rs` `multi_node_group_join_then_leader_rebalance` —
+- **Proven by:** `crates/medulla-server-cluster-tests/src/split_tests/raft_cluster.rs` `multi_node_group_join_then_leader_rebalance` —
   node 1 single-member-bootstraps group 7, nodes 2/3 `join_group` it empty, the leader
   `add_group_member`s both → membership becomes `[1,2,3]`, and a write through the leader
   replicates to the two freshly-joined voters.
@@ -142,9 +142,9 @@ evidence, not a current live deployment, multi-host soak, or 1M certification.
   incumbent — the incumbent must cooperatively **yield** (stop heartbeating). That is the
   yield half above; with both halves the cluster converges to the round-robin spread
   within a two election timeouts.
-- **Where (`src/raft/multi.rs`):** `desired_leader` (pure fn), `RebalanceReport`,
+- **Where (`crates/medulla-raft/src/raft/multi.rs`):** `desired_leader` (pure fn), `RebalanceReport`,
   `MultiRaft::rebalance_leaders` + `may_trigger_elect` (cooldown), `last_elect` field.
-- **Proven by:** `src/raft/tests.rs` `desired_leader_round_robin_spreads_across_voters`
+- **Proven by:** `crates/medulla-server-cluster-tests/src/split_tests/raft_cluster.rs` `desired_leader_round_robin_spreads_across_voters`
   (unit: the selection spreads across all voters, deterministic) **and** the integration
   half of `multi_node_group_join_then_leader_rebalance` — over the 3-voter group 7 the
   target is node 2 (`7 % 3`), the first pass shows node 1 `yielded` + node 2 `elected`,
@@ -156,16 +156,16 @@ evidence, not a current live deployment, multi-host soak, or 1M certification.
   interval; the batch rides the AU-KG.ontology.manage-arbitrary `PeerPool` (one connect-amortized round-trip).
   Only heartbeats coalesce — log-bearing appends / votes / snapshots stay individual
   (latency/ordering-sensitive).
-- **Where (`src/raft/network.rs`):**
+- **Where (`crates/medulla-raft/src/raft/network.rs`):**
   - `RaftFrame { One(GroupRpc) | Batch(Vec<GroupRpc>) }` + `RaftFrameReply` — the
     top-level wire envelope; a single-RPC frame is `One`, so the existing per-group path
     is behavior-identical (and the 3-node + 2-group tests exercise it).
   - `HeartbeatCoalescer` — buffers heartbeats per peer (`offer` gates on `is_heartbeat`),
     `drain_batches()` builds one ordered batch per peer, `send_batch()` ships it over the
     pool and returns the ordered per-RPC replies; `coalesced`/`flushes` counters.
-  - `src/raft/multi.rs` `serve_conn` demuxes a `Batch` by dispatching each tagged sub-RPC
+  - `crates/medulla-raft/src/raft/multi.rs` `serve_conn` demuxes a `Batch` by dispatching each tagged sub-RPC
     to its group and replying in the SAME order.
-- **Proven by:** `src/raft/tests.rs` `heartbeat_coalescer_batches_per_peer` (unit:
+- **Proven by:** `crates/medulla-server-cluster-tests/src/split_tests/raft_cluster.rs` `heartbeat_coalescer_batches_per_peer` (unit:
   bucket-by-peer, non-heartbeats refused, counters) and
   `coalesced_batch_round_trips_on_one_connection` (a 3-heartbeat batch demuxes to 3
   ordered replies over EXACTLY ONE TCP connect on a live listener).

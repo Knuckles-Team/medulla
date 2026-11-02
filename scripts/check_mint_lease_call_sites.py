@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
+# ruff: noqa: E501
 """Fail CI when `mint_policy_decision_lease` grows a second production call site.
 
 GRAPH-POLICY-LEASE-CONTRACT.md §3 hardening (`MintAuthorization`,
-`crates/medulla-core/src/isolation.rs`) closes the caller-supplied-claims gap by
+`crates/medulla-isolation/src/isolation.rs`) closes the caller-supplied-claims gap by
 requiring a cryptographic capability token instead of a raw
 `RequestContextClaims` reference. That control is only as good as the claim
 that exactly one production code path ever calls
@@ -13,9 +14,9 @@ a copy-pasted handler) would be a NEW place that must independently get the
 `MintAuthorization` construction right, and nothing else in the build would
 notice if it didn't. This gate is the notice.
 
-The gate used to pin that path to one literal file, `src/server/dispatch.rs`.
+The gate used to pin that path to one literal file, `crates/medulla-server-router/src/dispatch.rs`.
 The dispatch decomposition moved the caller into
-`src/server/dispatch/router.rs` (the `authorize_and_route_knowledge_stream`
+`crates/medulla-server-router/src/dispatch/router.rs` (the `authorize_and_route_knowledge_stream`
 body now lives inside `dispatch_governed_stream_write_methods`) without
 changing a line of the authorization it performs, and the gate reported that
 pure relocation as a policy violation. A file path was never the invariant.
@@ -43,7 +44,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 # The one and only subsystem permitted to hold the production call site, named
 # by its module root rather than by a leaf filename.
-ALLOWED_PRODUCTION_CALL_MODULE = "src/server/dispatch.rs"
+ALLOWED_PRODUCTION_CALL_MODULE = "crates/medulla-server-router/src/dispatch.rs"
 
 # What the audit of that call site actually rests on: the enclosing function
 # builds the capability token itself, from the server auth secret and the
@@ -92,7 +93,7 @@ _SCAN_DIRS = ("src", "crates")
 
 # Path-shape conventions this repo uses for test-only Rust source (mirrors
 # what `#[cfg(test)]` actually gates in practice): a `tests.rs` leaf module
-# (e.g. `src/server/handlers/knowledge_stream/tests.rs`, wired behind
+# (e.g. `crates/medulla-h-query/src/knowledge_stream/tests.rs`, wired behind
 # `#[cfg(test)] mod tests;` in its parent `mod.rs`), anything under a `tests/`
 # directory (unit-test submodules or the top-level integration-test crate),
 # or a `..._test(s).rs` / `test_...rs` leaf filename.

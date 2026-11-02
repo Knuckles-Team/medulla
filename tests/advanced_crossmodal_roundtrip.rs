@@ -44,13 +44,14 @@ mod common;
 #[path = "common/test_support.rs"]
 mod test_support;
 
+use medulla_server_cdc::cdc::CdcStateExt;
 use std::sync::Arc;
 
 use serde_json::json;
 use tokio::sync::RwLock;
 
-use medulla::protocol::{Method, Request, Response, ResultPayload};
-use medulla::server::ServerState;
+use medulla_protocol_types::protocol::{Method, Request, Response, ResultPayload};
+use medulla_server_api::state::ServerState;
 
 const SECRET: &str = "advanced-crossmodal-secret";
 
@@ -60,13 +61,13 @@ const SECRET: &str = "advanced-crossmodal-secret";
 /// authoritative mutation fail closed the instant `dispatch()` routed it: "authoritative
 /// MutationBatch commit requires a persistence backend". That error is CORRECT (the
 /// dispatch path deliberately fail-closes durable-domain methods against a backend-less
-/// state) -- the FIXTURE was wrong. Same fix shape as `server::mod::tests::test_state` /
+/// state) -- the FIXTURE was wrong. Same fix shape as `medulla_server::mod::tests::test_state` /
 /// `bolt_wire::tests::durable_state` / every other `tests/*.rs` fixture that calls
 /// `common::tempdir_persistence()` (its unique per-call tempdir doubles as the SQL
 /// adapter's owner-scoped catalog directory, so nothing is lost).
 ///
 /// The multi-op `BeginTxn`..`Commit` path additionally seals its transaction recovery
-/// plan (`server::handlers::txn::seal_txn_recovery_plan`), which fail-closed REQUIRES
+/// plan (`medulla_h_txn::txn::seal_txn_recovery_plan`), which fail-closed REQUIRES
 /// `MEDULLA_ENCRYPTION_KEY` at the backend's `open()` call -- the same
 /// requirement `redb_backend::tests::cm_dir` provisions. Encryption is symmetric and
 /// transparent to every round-trip these tests make, so a keyed store behaves
@@ -127,15 +128,15 @@ async fn state() -> test_support::SharedState {
 /// `common::TEST_AGENT` is registered `System`-role, so it always bypasses RBAC and never
 /// needed this; but the `agent_a`/`agent_b`/etc. peers this file registers through
 /// `register_identity_req` (plain `AgentRole::Agent`) do, or every RPC they make against
-/// `__commons__` is `ACCESS_DENIED`. Same fix shape as `server::mod::multi_tenant_state`'s
+/// `__commons__` is `ACCESS_DENIED`. Same fix shape as `medulla_server::mod::multi_tenant_state`'s
 /// `"commons-user"` role (CONCEPT:MEDULLA-KG.compute.durable-rbac-identity-persistence): the role +
 /// grants live on the policy, `register_identity_req` threads the role NAME onto each
 /// registered peer's `AgentIdentity.roles`.
-fn commons_isolation() -> medulla::isolation::IsolationLayer {
+fn commons_isolation() -> medulla_isolation::isolation::IsolationLayer {
     let mut isolation = common::current_isolation();
     #[cfg(feature = "security")]
     {
-        use medulla::acl::{Grant, GrantEffect, RbacAction, ResourceSelector, Role};
+        use medulla_types::acl::{Grant, GrantEffect, RbacAction, ResourceSelector, Role};
         isolation.add_role(Role::new("commons-user"));
         let grant = |action: RbacAction| Grant {
             role: "commons-user".to_string(),
@@ -151,7 +152,7 @@ fn commons_isolation() -> medulla::isolation::IsolationLayer {
         // `RbacAction::Admin` on the `"__admin__"` resource context
         // `IsolationLayer::has_admin_capability` checks -- exactly the capability
         // `Method::RegisterIdentity`/`RbacAdmin`/etc. require of their ACTOR
-        // (`server::access::require_admin_capability`), and nothing more: unlike
+        // (`medulla_server::access::require_admin_capability`), and nothing more: unlike
         // `System`, `root` still goes through ordinary RLS/ACL for every other
         // operation.
         isolation.add_role(Role::new(common::ROOT_ADMIN_ROLE));
@@ -239,7 +240,7 @@ async fn stage_rls_overlay(state: &Arc<RwLock<ServerState>>, first_id: u64, agen
         Method::TxnAddNode {
             txn_id: txn_id.clone(),
             node_id: "stg_pub".into(),
-            // Default-deny RLS (`medulla_core::isolation::row_visibility`) hides ANY
+            // Default-deny RLS (`medulla_graph_core::rls::row_visibility`) hides ANY
             // untagged row from a non-`System` actor -- an unowned row needs an
             // EXPLICIT `_visibility: "public"` tag to be seen by `agent_b` at all.
             // BUG-064: a bare `_visibility: "public"` tag on an unowned row with
@@ -440,7 +441,7 @@ async fn five_modality_in_txn_ryow_then_commit_eg390() {
         "the staged edge must make tn BFS-reachable in-txn"
     );
     // ── 1. RYOW: native tsdb measurement via TsScan over the StagedSeries overlay ──
-    let ts_plan = medulla_plan::Plan::new(vec![medulla_plan::Op::TsScan {
+    let ts_plan = medulla_exec::algebra::Plan::new(vec![medulla_exec::algebra::Op::TsScan {
         series: vec!["sensor.temp".into()],
         from: 0.0,
         to: 10.0,
@@ -464,11 +465,11 @@ async fn five_modality_in_txn_ryow_then_commit_eg390() {
     );
     // ── 1. RYOW: OWL reasoning over the staged graph write (inline ontology — the staged
     // axiom lands in the graph at COMMIT, so in-txn the ontology is supplied to REASON). ──
-    let reason_plan = medulla_plan::Plan::new(vec![
-        medulla_plan::Op::Scan {
+    let reason_plan = medulla_exec::algebra::Plan::new(vec![
+        medulla_exec::algebra::Op::Scan {
             label: "Robot".into(),
         },
-        medulla_plan::Op::Reason {
+        medulla_exec::algebra::Op::Reason {
             target_class: "<http://ex/Machine>".into(),
             ontology: "@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n\
                        <http://ex/Robot> rdfs:subClassOf <http://ex/Machine> .\n"
@@ -548,11 +549,11 @@ async fn five_modality_in_txn_ryow_then_commit_eg390() {
     );
     // ── 4. the committed OWL axiom is in the TBox: REASON with EMPTY ontology (read from
     // the committed graph) now infers sn a Machine — the axiom modality committed atomically. ──
-    let committed_reason = medulla_plan::Plan::new(vec![
-        medulla_plan::Op::Scan {
+    let committed_reason = medulla_exec::algebra::Plan::new(vec![
+        medulla_exec::algebra::Op::Scan {
             label: "Robot".into(),
         },
-        medulla_plan::Op::Reason {
+        medulla_exec::algebra::Op::Reason {
             target_class: "<http://ex/Machine>".into(),
             ontology: String::new(),
         },
@@ -719,7 +720,7 @@ fn register_identity_req(
     id: u64,
     actor: &str,
     agent_id: &str,
-    role: medulla::acl::AgentRole,
+    role: medulla_types::acl::AgentRole,
 ) -> Request {
     common::signed_register_identity_request(common::SignedRegisterIdentity {
         secret: SECRET,
@@ -756,7 +757,7 @@ fn register_root_req(id: u64, actor: &str) -> Request {
         graph: "__commons__",
         actor,
         registered_agent: "root",
-        role: medulla::acl::AgentRole::Agent,
+        role: medulla_types::acl::AgentRole::Agent,
         teams: Vec::new(),
         // `root` never itself reads/writes `__commons__` in these fixtures -- it only
         // signs `RegisterIdentity` for the ordinary peers below, which needs admin
@@ -788,7 +789,7 @@ fn register_root_req(id: u64, actor: &str) -> Request {
 #[cfg(feature = "security")]
 #[tokio::test]
 async fn rls_per_agent_fused_reason_rank_overlay_eg391() {
-    use medulla::isolation::AgentRole;
+    use medulla_types::acl::AgentRole;
 
     let state = state().await;
 
@@ -873,17 +874,17 @@ async fn rls_per_agent_fused_reason_rank_overlay_eg391() {
     // The fused Reason→Rank plan: infer Machine members over the (RLS-filtered) view, then
     // vector-rank them. `Reason` bridges the bare `Robot` type ↔ `<http://ex/Robot>`.
     let fused = || {
-        medulla_plan::Plan::new(vec![
-            medulla_plan::Op::Reason {
+        medulla_exec::algebra::Plan::new(vec![
+            medulla_exec::algebra::Op::Reason {
                 target_class: "<http://ex/Machine>".into(),
                 ontology: "@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n\
                            <http://ex/Robot> rdfs:subClassOf <http://ex/Machine> .\n"
                     .into(),
             },
-            medulla_plan::Op::Rank {
+            medulla_exec::algebra::Op::Rank {
                 query: vec![1.0, 0.0],
             },
-            medulla_plan::Op::Limit { k: 10 },
+            medulla_exec::algebra::Op::Limit { k: 10 },
         ])
     };
     let run_as = |id: u64, agent: &'static str, txn: String| {
@@ -975,7 +976,8 @@ async fn sparql_post(addr: &str, query: &str) -> String {
 #[cfg(all(feature = "pgwire", feature = "sparql-http"))]
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn pgwire_sparql_native_consistent_snapshot_eg393() {
-    use medulla::server::{pgwire, sparql_http};
+    use medulla_wire::pgwire;
+    use medulla_server_blob::sparql_http;
 
     let state = state().await;
 
@@ -1038,7 +1040,7 @@ async fn pgwire_sparql_native_consistent_snapshot_eg393() {
         tokio::time::sleep(std::time::Duration::from_millis(20)).await;
     }
 
-    // The pgwire user "tester" IS the engine `agent_id` (`server::pgwire::auth`: "a pg
+    // The pgwire user "tester" IS the engine `agent_id` (`medulla_wire::pgwire::auth`: "a pg
     // connection's `user` IS an engine `agent_id`" -- SCRAM binds the login to that
     // `AgentIdentity` for every subsequent query's ACL check). Register it up front with
     // the `commons-user` RBAC role ([`commons_isolation`]) so its post-login queries can
@@ -1048,9 +1050,9 @@ async fn pgwire_sparql_native_consistent_snapshot_eg393() {
     {
         let mut s = state.write().await;
         s.isolation
-            .register_agent(medulla::isolation::AgentIdentity {
+            .register_agent(medulla_types::acl::AgentIdentity {
                 agent_id: "tester".to_string(),
-                role: medulla::isolation::AgentRole::Agent,
+                role: medulla_types::acl::AgentRole::Agent,
                 teams: Vec::new(),
                 roles: vec!["commons-user".to_string()],
             });
@@ -1097,7 +1099,7 @@ async fn pgwire_sparql_native_consistent_snapshot_eg393() {
     // named type". `Seed` matches neither the `:Robot` label nor the `ex/robot` subject,
     // so every before-commit "sees nothing" assertion still holds. Tagged
     // `_visibility: "public"`: default-deny RLS hides an untagged, unowned row from the
-    // pgwire "tester" actor (`server::pgwire::auth`: the pg user IS the ACL actor) --
+    // pgwire "tester" actor (`medulla_wire::pgwire::auth`: the pg user IS the ACL actor) --
     // an untagged seed would drop out of `infer_nodes`' RLS-filtered snapshot entirely,
     // reproducing the exact "no field named type" this seed exists to prevent.
     ok(
@@ -1258,9 +1260,9 @@ static ENC_ENV_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 #[cfg(all(feature = "security", feature = "redb"))]
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn encryption_at_rest_wrong_key_fails_eg394() {
+    use medulla_server_api::api::persistence::PersistenceBackend;
+    use medulla_persistence::redb_backend::RedbBackend;
     use medulla_kernel::crypto::ENCRYPTION_KEY_ENV;
-    use medulla::server::persistence::redb_backend::RedbBackend;
-    use medulla::server::persistence::PersistenceBackend;
 
     let _guard = ENC_ENV_LOCK.lock().await;
     let prev = std::env::var(ENCRYPTION_KEY_ENV).ok();
@@ -1405,12 +1407,12 @@ async fn encryption_at_rest_wrong_key_fails_eg394() {
 #[cfg(feature = "streaming")]
 #[tokio::test]
 async fn streaming_cdc_matview_rebuild_eg395() {
-    use medulla::wire::{ContinuousAgg, ContinuousQuerySpec};
+    use medulla_types::wire::{ContinuousAgg, ContinuousQuerySpec};
 
     let state = state().await;
     let hub = {
         let s = state.read().await;
-        s.cdc.clone().expect("streaming build has a CdcHub")
+        s.cdc_hub().cloned().expect("streaming build has a CdcHub")
     };
 
     // Subscribe a live materialized view: a continuous query counting `Robot` nodes,
@@ -1565,7 +1567,7 @@ async fn plan_writeback_stages_and_commits_inferred_edges_atomically_d7() {
         6,
         Method::TxnPlanWriteback {
             txn_id: txn.clone(),
-            plan: medulla_plan::Plan::new(vec![medulla_plan::Op::Scan {
+            plan: medulla_exec::algebra::Plan::new(vec![medulla_exec::algebra::Op::Scan {
                 label: "Entity".into(),
             }]),
             anchor_id: "hub".into(),
@@ -1653,15 +1655,15 @@ async fn explain_plan_surfaces_the_optimizer_rewrite() {
         )
         .await;
     }
-    let plan = medulla_plan::Plan::new(vec![
-        medulla_plan::Op::Scan {
+    let plan = medulla_exec::algebra::Plan::new(vec![
+        medulla_exec::algebra::Op::Scan {
             label: "Doc".into(),
         },
-        medulla_plan::Op::Rank {
+        medulla_exec::algebra::Op::Rank {
             query: vec![1.0, 0.0],
         },
-        medulla_plan::Op::Filter {
-            preds: vec![medulla_plan::Pred::GtNum {
+        medulla_exec::algebra::Op::Filter {
+            preds: vec![medulla_exec::algebra::Pred::GtNum {
                 prop: "year".into(),
                 n: 2045.0,
             }],
@@ -1676,7 +1678,7 @@ async fn explain_plan_surfaces_the_optimizer_rewrite() {
         Some(ResultPayload::Raw(b)) => b.clone(),
         other => panic!("expected Raw result, got {other:?}"),
     };
-    let result: medulla::protocol::ExplainPlanResult =
+    let result: medulla_protocol_types::protocol::ExplainPlanResult =
         rmp_serde::from_slice(&bytes).expect("ExplainPlanResult decodes");
     assert_eq!(
         result.plan_digest,
@@ -1757,7 +1759,7 @@ async fn explain_plan_surfaces_the_optimizer_rewrite() {
 #[cfg(feature = "security")]
 #[tokio::test]
 async fn explain_plan_cost_estimate_respects_rls_eg_goc12() {
-    use medulla::isolation::AgentRole;
+    use medulla_types::acl::AgentRole;
 
     let state = state().await;
 
@@ -1809,11 +1811,11 @@ async fn explain_plan_cost_estimate_respects_rls_eg_goc12() {
     }
 
     let plan = || {
-        medulla_plan::Plan::new(vec![
-            medulla_plan::Op::Scan {
+        medulla_exec::algebra::Plan::new(vec![
+            medulla_exec::algebra::Op::Scan {
                 label: "Robot".into(),
             },
-            medulla_plan::Op::Rank {
+            medulla_exec::algebra::Op::Rank {
                 query: vec![1.0, 0.0],
             },
         ])
@@ -1836,7 +1838,7 @@ async fn explain_plan_cost_estimate_respects_rls_eg_goc12() {
                 Some(ResultPayload::Raw(b)) => b.clone(),
                 other => panic!("expected Raw result for {agent}, got {other:?}"),
             };
-            let result: medulla::protocol::ExplainPlanResult =
+            let result: medulla_protocol_types::protocol::ExplainPlanResult =
                 rmp_serde::from_slice(&bytes).expect("ExplainPlanResult decodes");
             result
                 .before
@@ -1916,7 +1918,7 @@ async fn explain_belief_returns_full_justification_tree() {
         Some(ResultPayload::Raw(b)) => b.clone(),
         other => panic!("expected Raw result, got {other:?}"),
     };
-    let result: medulla::protocol::ExplainBeliefResult =
+    let result: medulla_protocol_types::protocol::ExplainBeliefResult =
         rmp_serde::from_slice(&bytes).expect("ExplainBeliefResult decodes");
     assert_eq!(result.root.claim, "claim1");
     assert!(
@@ -1935,15 +1937,15 @@ async fn explain_belief_returns_full_justification_tree() {
 #[cfg(feature = "epistemic-redaction")]
 #[tokio::test]
 async fn explain_belief_disclosure_level_returns_redacted_skeleton_over_rpc() {
-    use medulla::isolation::AgentRole;
-    use medulla::protocol::{DisclosureLevelWire, ExplainBeliefRedactedResult};
+    use medulla_types::acl::AgentRole;
+    use medulla_protocol_types::protocol::{DisclosureLevelWire, ExplainBeliefRedactedResult};
 
     let state = state().await;
 
     // Seed the claim/evidence/secret topology as the provisioned system identity.
     // `claim1`/`evidence1` are meant PUBLIC (visible to `stranger` too, so its earned
     // level is `Skeleton` rather than `ExistenceOnly`) -- default-deny RLS
-    // (`medulla_core::isolation::row_visibility`) hides an untagged, unowned row from a
+    // (`medulla_graph_core::rls::row_visibility`) hides an untagged, unowned row from a
     // non-`System` actor just like `filter_view` would, so they need an EXPLICIT
     // `_visibility: "public"` tag (see `medulla_epistemic::redact`'s own `untagged_hidden`).
     ok(
@@ -2105,7 +2107,7 @@ async fn explain_belief_disclosure_level_returns_redacted_skeleton_over_rpc() {
 #[cfg(feature = "epistemic-tms")]
 #[tokio::test]
 async fn epistemic_status_returns_every_facet_over_rpc() {
-    use medulla::protocol::EpistemicStatusResult;
+    use medulla_protocol_types::protocol::EpistemicStatusResult;
 
     let state = state().await;
     ok(
@@ -2190,7 +2192,7 @@ async fn epistemic_status_returns_every_facet_over_rpc() {
 #[cfg(feature = "evidence-graph")]
 #[tokio::test]
 async fn explain_evidence_resolves_a_located_citation_over_rpc() {
-    use medulla::protocol::{
+    use medulla_protocol_types::protocol::{
         EvidenceAddressWire, EvidenceLocusWire, EvidenceResourceWire, ExplainEvidenceResult,
     };
 
@@ -2302,8 +2304,8 @@ async fn explain_evidence_resolves_a_located_citation_over_rpc() {
 #[cfg(all(feature = "evidence-graph", feature = "security"))]
 #[tokio::test]
 async fn explain_evidence_hides_other_agents_private_evidence_over_rpc() {
-    use medulla::isolation::AgentRole;
-    use medulla::protocol::ExplainEvidenceResult;
+    use medulla_types::acl::AgentRole;
+    use medulla_protocol_types::protocol::ExplainEvidenceResult;
 
     let state = state().await;
     let locus = json!({
@@ -2478,9 +2480,7 @@ async fn explain_evidence_hides_other_agents_private_evidence_over_rpc() {
 #[cfg(feature = "epistemic-causal")]
 #[tokio::test]
 async fn causal_estimate_do_calculus_matches_hand_derivation_over_rpc() {
-    use medulla::protocol::{
-        CausalEstimateResult, CausalQueryModeWire, StructuralEquationWire,
-    };
+    use medulla_protocol_types::protocol::{CausalEstimateResult, CausalQueryModeWire, StructuralEquationWire};
     use std::collections::BTreeMap;
 
     let state = state().await;
@@ -2565,9 +2565,7 @@ async fn causal_estimate_do_calculus_matches_hand_derivation_over_rpc() {
 #[cfg(feature = "epistemic-causal")]
 #[tokio::test]
 async fn rank_by_provenance_favors_corroborated_evidence_over_raw_similarity_over_rpc() {
-    use medulla::protocol::{
-        CalibrationWire, RankByProvenanceResult, RetrievalCandidateWire,
-    };
+    use medulla_protocol_types::protocol::{CalibrationWire, RankByProvenanceResult, RetrievalCandidateWire};
 
     let state = state().await;
 
@@ -2637,7 +2635,7 @@ async fn rank_by_provenance_favors_corroborated_evidence_over_raw_similarity_ove
 #[cfg(feature = "epistemic-tms")]
 #[tokio::test]
 async fn resolve_conflict_matches_tms_crate_semantics_over_rpc() {
-    use medulla::protocol::ResolveConflictResult;
+    use medulla_protocol_types::protocol::ResolveConflictResult;
 
     let state = state().await;
     let mut setup_id = 0u64;
@@ -2782,8 +2780,8 @@ async fn resolve_conflict_matches_tms_crate_semantics_over_rpc() {
 #[cfg(all(feature = "epistemic-tms", feature = "security"))]
 #[tokio::test]
 async fn resolve_conflict_hides_other_agents_private_argument_over_rpc() {
-    use medulla::isolation::AgentRole;
-    use medulla::protocol::ResolveConflictResult;
+    use medulla_types::acl::AgentRole;
+    use medulla_protocol_types::protocol::ResolveConflictResult;
 
     let state = state().await;
     // `a`/`c` are meant PUBLIC (this test's own doc comment: the SAME textbook AF
@@ -2973,7 +2971,7 @@ async fn cross_shard_raft_2pc_single_decision_eg396() {
     #[cfg(all(feature = "security", feature = "redb"))]
     let _enc_env_guard = ENC_ENV_LOCK.lock().await;
     let report =
-        medulla::raft::xshard_modality_harness::prove_crossshard_modality_2pc_single_decision()
+        medulla_raft_xshard::xshard_modality_harness::prove_crossshard_modality_2pc_single_decision()
             .await
             .expect("cross-shard modality 2PC coordinator-kill proof runs");
     assert!(

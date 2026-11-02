@@ -1,4 +1,4 @@
-//! MethodPolicy: the machine-checked capability ledger for every `medulla_types::protocol::Method`
+//! MethodPolicy: the machine-checked capability ledger for every `medulla_protocol_types::protocol::Method`
 //! wire-protocol operation (CONCEPT:MEDULLA-P0-1).
 //!
 //! ## Why this exists
@@ -33,6 +33,11 @@
 //! turned on -- see `Cargo.toml` for why). It is not a dependency of the main
 //! `medulla` package's default build; see the root `Cargo.toml`'s `members` comment.
 
+#![allow(clippy::too_many_arguments, clippy::items_after_test_module, clippy::new_without_default)] // signatures and fixtures carried over from the facade
+#![allow(private_interfaces, private_bounds)] // visibility is narrowed by the unreachable_pub pass
+#![allow(dead_code)] // moved helper code, as the facade crate did
+#![allow(unused_imports)] // glob imports carried over from the facade; the visibility pass prunes them
+
 pub mod catalog;
 mod descriptor;
 mod domains;
@@ -46,7 +51,7 @@ pub use descriptor::{
     MethodId, MethodSpec, ReplayClass, Stability,
 };
 
-use medulla_types::protocol::{CypherMode, Method};
+use medulla_protocol_types::{protocol::CypherMode, protocol::Method};
 
 /// The shape EVERY runtime-conditional native owner has: a snapshot read when
 /// its op reads, and one write in its own durable domain when its op writes.
@@ -84,11 +89,11 @@ fn native_owner_policy(
     }
 }
 
-fn agent_library_policy(op: &medulla_types::agent_library::AgentLibraryOp) -> MethodPolicy {
+fn agent_library_policy(op: &medulla_agent_types::agent_library::AgentLibraryOp) -> MethodPolicy {
     let mutates = matches!(
         op,
-        medulla_types::agent_library::AgentLibraryOp::Publish { .. }
-            | medulla_types::agent_library::AgentLibraryOp::Retire { .. }
+        medulla_agent_types::agent_library::AgentLibraryOp::Publish { .. }
+            | medulla_agent_types::agent_library::AgentLibraryOp::Retire { .. }
     );
     native_owner_policy(
         mutates,
@@ -107,7 +112,7 @@ fn agent_library_policy(op: &medulla_types::agent_library::AgentLibraryOp) -> Me
 /// the authz action: composing agents into a runnable graph is a distinct
 /// privilege from publishing one agent, and collapsing them would mean anyone
 /// who can publish an agent can also wire arbitrary agents together.
-fn agent_graph_policy(op: &medulla_types::agent_graph::AgentGraphOp) -> MethodPolicy {
+fn agent_graph_policy(op: &medulla_agent_types::agent_graph::AgentGraphOp) -> MethodPolicy {
     let mutates = op.is_mutation();
     native_owner_policy(
         mutates,
@@ -126,7 +131,9 @@ fn agent_graph_policy(op: &medulla_types::agent_graph::AgentGraphOp) -> MethodPo
 /// from assembling an agent out of already-approved parts. Collapsing them
 /// would mean anyone who can publish an agent can also introduce a new
 /// side-effecting tool for it to use.
-fn agent_component_policy(op: &medulla_types::agent_component::AgentComponentOp) -> MethodPolicy {
+fn agent_component_policy(
+    op: &medulla_agent_types::agent_component::AgentComponentOp,
+) -> MethodPolicy {
     // The op owns the action mapping, because publishing a decision policy,
     // head, feature schema, rubric or NL template is administrative while
     // publishing a tool is not -- and that distinction is a property of the
@@ -142,12 +149,14 @@ fn agent_component_policy(op: &medulla_types::agent_component::AgentComponentOp)
 /// The semantic index takes the same runtime-conditional shape as the four agent
 /// layers above, but with SIX authz actions rather than two. `is_mutation` and
 /// `authz_action` both live on the op itself so this policy and
-/// `server::access::requires_write` cannot drift apart about an operation --
+/// `medulla_server::access::requires_write` cannot drift apart about an operation --
 /// and so the privilege split survives a new variant: curating what is indexed,
 /// feeding rows into an approved binding, taking work off the queue and
 /// declaring a stage durable are four different grants, and one action would
 /// hand every holder the union.
-fn semantic_index_policy(op: &medulla_types::semantic_index::SemanticIndexOp) -> MethodPolicy {
+fn semantic_index_policy(
+    op: &medulla_index_types::semantic_index::SemanticIndexOp,
+) -> MethodPolicy {
     native_owner_policy(
         op.is_mutation(),
         DurabilityDomain::SemanticIndexRedb,
@@ -416,7 +425,9 @@ fn served_modality_policy(op: &medulla_types::modality::ServedModalityOp) -> Met
 /// a draft. The separate `AgentLibrary::Publish` that stores the result is
 /// where the write privilege is spent, so nothing is admitted without a
 /// library write.
-fn agent_template_policy(op: &medulla_types::agent_template::AgentTemplateOp) -> MethodPolicy {
+fn agent_template_policy(
+    op: &medulla_agent_types::agent_template::AgentTemplateOp,
+) -> MethodPolicy {
     let mutates = op.is_mutation();
     native_owner_policy(
         mutates,
@@ -433,7 +444,9 @@ fn agent_template_policy(op: &medulla_types::agent_template::AgentTemplateOp) ->
 /// The connector pack's policy. Runtime-conditional in both axes: `status` is
 /// a read, and the authz action separates reading a connector's surface from
 /// publishing to it from administering what it may publish.
-fn connector_pack_policy(op: &medulla_types::connector_pack::ConnectorPackOp) -> MethodPolicy {
+fn connector_pack_policy(
+    op: &medulla_catalog_types::connector_pack::ConnectorPackOp,
+) -> MethodPolicy {
     native_owner_policy(
         op.is_mutation(),
         DurabilityDomain::ControlRedb,
@@ -442,7 +455,7 @@ fn connector_pack_policy(op: &medulla_types::connector_pack::ConnectorPackOp) ->
     )
 }
 
-fn write_back_policy(op: &medulla_types::write_back::WriteBackOp) -> MethodPolicy {
+fn write_back_policy(op: &medulla_mutation_types::write_back::WriteBackOp) -> MethodPolicy {
     native_owner_policy(
         op.is_mutation(),
         DurabilityDomain::ControlRedb,
@@ -465,7 +478,9 @@ fn decision_job_policy(mutates: bool, authz_action: &'static str) -> MethodPolic
 
 /// The mutation outbox's policy. `rewind` resets a durable cursor through
 /// bounded transactions, so it is a saga rather than one atomic write.
-fn mutation_outbox_policy(op: &medulla_types::mutation_outbox::MutationOutboxOp) -> MethodPolicy {
+fn mutation_outbox_policy(
+    op: &medulla_mutation_types::mutation_outbox::MutationOutboxOp,
+) -> MethodPolicy {
     native_owner_policy(
         op.is_mutation(),
         DurabilityDomain::ControlRedb,
@@ -506,7 +521,7 @@ fn connector_family_policy(method: &Method) -> Option<MethodPolicy> {
 /// self-translate into `CreateNodeIfAbsent`/`CompareAndSetNodeFields` against
 /// `__commons__`, so they are graph-durable, audited and CDC-emitted exactly as
 /// `RegisterServer` is. Its reads are snapshot reads with no state transition.
-fn fleet_catalog_policy(op: &medulla_types::fleet_catalog::FleetCatalogOp) -> MethodPolicy {
+fn fleet_catalog_policy(op: &medulla_catalog_types::fleet_catalog::FleetCatalogOp) -> MethodPolicy {
     graph_translated_policy(op.is_mutation(), op.authz_action())
 }
 

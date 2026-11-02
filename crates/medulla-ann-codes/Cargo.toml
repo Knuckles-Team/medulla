@@ -1,0 +1,33 @@
+[package]
+name = "medulla-ann-codes"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: Semantic ANN code books: quantisation, encode and decode"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_ann_codes"
+path = "src/lib.rs"
+
+[dependencies]
+medulla-types = { path = "../medulla-types" }
+medulla-ann = { path = "../medulla-ann" }
+serde = { version = "1.0", features = ["derive", "rc"] }
+hex = "0.4"
+redb = { workspace = true, optional = true }
+medulla-storage = { path = "../medulla-storage", optional = true }
+medulla-transaction = { path = "../medulla-transaction", optional = true }
+sha2 = { version = "0.10", optional = true }
+medulla-protocol-types = { path = "../medulla-protocol-types" }
+medulla-index-types = { path = "../medulla-index-types" }
+medulla-mutation-types = { path = "../medulla-mutation-types" }
+medulla-semantic-index = { path = "../medulla-semantic-index" }
+
+[features]
+ann-redb = ["medulla-semantic-index/ann", "dep:redb", "dep:sha2", "dep:medulla-storage", "dep:medulla-transaction"]
+
+[dev-dependencies]
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }

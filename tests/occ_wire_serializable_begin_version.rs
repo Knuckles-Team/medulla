@@ -48,9 +48,9 @@ mod test_support;
 
 use std::sync::Arc;
 
-use medulla::registry::GraphRegistry;
-use medulla::server::pgwire;
-use medulla::server::ServerState;
+use medulla_core::registry::GraphRegistry;
+use medulla_wire::pgwire;
+use medulla_server_api::state::ServerState;
 use tokio::sync::RwLock;
 
 const AUTH_SECRET: &str = "occ-begin-version-secret";
@@ -83,7 +83,7 @@ fn state_with_sensor_seed() -> test_support::SharedState {
         core.add_node("s0".to_string(), blob);
     }
     let (persist_dir, persistence) = common::tempdir_persistence();
-    let mut state = ServerState::new_for_test(AUTH_SECRET, ServerState::test_isolation(AGENT));
+    let mut state = medulla_server::seams_install::new_state_for_test(AUTH_SECRET, ServerState::test_isolation(AGENT));
     state.registry = registry;
     state.persist_dir = persist_dir;
     state.persistence = persistence;

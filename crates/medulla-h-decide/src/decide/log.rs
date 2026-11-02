@@ -1,0 +1,26 @@
+//! `Method::DecisionLog`: the statistical decision log.
+//!
+//! Served by [`super::stat_log`] in a build with the `decide` feature; a build
+//! without it answers a typed refusal naming the feature.
+
+use super::SharedState;
+use medulla_protocol_types::protocol::Response;
+use medulla_server_api::authority_context::VerifiedRequestContext;
+
+/// Commit, evaluate or read the decision log.
+pub async fn handle_decision_log(
+    state: &SharedState,
+    req_id: u64,
+    verified: &VerifiedRequestContext,
+    op: medulla_decision_types::decision::statistical::log::DecisionLogOp,
+) -> Response {
+    #[cfg(feature = "decide")]
+    {
+        super::stat_log::handle_log(state, req_id, verified, op).await
+    }
+    #[cfg(not(feature = "decide"))]
+    {
+        let _ = (state, verified, op);
+        Response::err(req_id, "DecisionLog requires the `decide` feature")
+    }
+}

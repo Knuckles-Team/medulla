@@ -1,0 +1,383 @@
+//! The connector-pack projection worker: the first Agent Library outbox
+//! consumer (PB1, pack design §7.2, X10).
+//!
+//! Every committed import publishes one `medulla.connector-pack.import.v1` row on
+//! its tenant's Agent Library outbox. This worker claims those rows and, for
+//! each, projects its connector's CURRENT head into the `pack__<connector>`
+//! graph and flips the head visible (the readiness gate) -- never the record
+//! it leased, so a stale worker can never roll a newer projection back, and a
+//! re-delivered row is idempotent.
+//!
+//! * A projected (or already visible) head is acknowledged.
+//! * A failed projection is recorded on the head as `failed` (shown by
+//!   `Status`, re-driven by the next import or by `ConnectorPack.Reproject`)
+//!   and the row is REJECTED at once rather than burning its bounded retries,
+//!   so it never holds the stream (X10-R2).
+//! * A row that is not a pack import record is rejected as an invalid event.
+//!
+//! The worker runs under a fixed engine service identity; it is started once,
+//! after catalog recovery, and polls the deployment tenant's outbox.
+
+use std::sync::Arc;
+
+use tokio::sync::RwLock;
+
+use medulla_server_api::state::ServerState;
+
+/// Start the singleton projection worker. A build without the Agent Library,
+/// the Blob CAS or the SHACL projection has nothing to project.
+pub fn spawn(state: Arc<RwLock<ServerState>>) {
+    #[cfg(all(feature = "redb", feature = "blob", feature = "shacl"))]
+    tokio::spawn(worker::run(state));
+    #[cfg(not(all(feature = "redb", feature = "blob", feature = "shacl")))]
+    drop(state);
+}
+
+#[cfg(all(
+    feature = "redb",
+    feature = "blob",
+    feature = "shacl",
+    feature = "security"
+))]
+mod grant;
+
+
+#[cfg(all(feature = "redb", feature = "blob", feature = "shacl"))]
+pub mod worker {
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use std::sync::Arc;
+    use std::time::Duration;
+
+    use tokio::sync::RwLock;
+
+    use medulla_catalog_types::{
+        connector_pack::PackImportRecord, connector_pack::CONNECTOR_PACK_IMPORT_TOPIC,
+    };
+    use medulla_mutation_types::mutation_scope::MutationOutboxLease;
+    use medulla_transaction::{OutboxClaimBudget, OutboxClaimOutcome, OutboxRejectReason};
+
+    use medulla_server_api::authority_context::VerifiedRequestContext;
+    use medulla_server_api::outbox_operator::OutboxWrite;
+    use medulla_persistence_records::agent_library::AgentLibraryStateExt;
+    use medulla_persistence_records::agent_library::AgentLibraryStore;
+    use medulla_server_api::state::ServerState;
+
+    /// The label a failed blocking store task names.
+    const BLOCKING_TASK: &str = "connector pack projection";
+
+    /// The worker's one durable consumer name on every tenant's outbox.
+    pub const CONSUMER: &str = "connector-pack-projection";
+    /// Rows one sweep claims.
+    const CLAIM_LIMIT: u32 = 16;
+    /// How long a claimed row stays leased: a projection reads bodies and
+    /// commits a graph, so the lease is generous.
+    const LEASE_MS: u64 = 120_000;
+    /// Idle back-off between sweeps.
+    const IDLE: Duration = Duration::from_millis(500);
+
+    pub(super) async fn run(state: Arc<RwLock<ServerState>>) {
+        let subscribed = AtomicBool::new(false);
+        loop {
+            match sweep(&state, &subscribed).await {
+                Ok(true) => {}
+                Ok(false) => tokio::time::sleep(IDLE).await,
+                Err(error) => {
+                    tracing::warn!(
+                        code = "CONNECTOR_PACK_PROJECTION_SWEEP_FAILED",
+                        %error,
+                        "connector pack projection sweep failed"
+                    );
+                    tokio::time::sleep(IDLE).await;
+                }
+            }
+        }
+    }
+
+    /// One sweep over the deployment tenant's import stream. Returns whether
+    /// it did any work, so an idle worker backs off.
+    pub(crate) async fn sweep(
+        state: &Arc<RwLock<ServerState>>,
+        subscribed: &AtomicBool,
+    ) -> Result<bool, String> {
+        let tenant = if state.read().await.local_anonymous {
+            // Deployment authority owns the namespace; no signer/OIDC policy
+            // exists (or is consulted) for an isolated anonymous store.
+            VerifiedRequestContext::anonymous_local(None)
+                .tenant()
+                .to_string()
+        } else {
+            medulla_server_api::authority_context::request_context_policy()?
+                .expected_tenant
+                .clone()
+        };
+        let store = open_agent_library(state).await?;
+        if !subscribed.load(Ordering::Acquire) {
+            let (store, tenant) = (Arc::clone(&store), tenant.clone());
+            medulla_server_api::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
+                store.outbox_subscribe(&tenant, CONSUMER, CONNECTOR_PACK_IMPORT_TOPIC)
+            })
+            .await?;
+            subscribed.store(true, Ordering::Release);
+        }
+        let drain_started = std::time::Instant::now();
+        let outcome = claim(&store, &tenant).await?;
+        report(&outcome);
+        let claimed = outcome.claims.len();
+        let progressed = claimed > 0;
+        let mut committed_graphs = 0usize;
+        for lease in outcome.claims {
+            if settle(state, &store, &tenant, lease).await? {
+                committed_graphs += 1;
+            }
+        }
+        if progressed {
+            // Bounded cadence: one INFO per non-empty sweep (a sweep claims at
+            // most CLAIM_LIMIT rows), so a multi-minute drain is never silent
+            // in the log (MEDULLA-DURABLE-KERNEL-R006.4).
+            tracing::info!(
+                rows_claimed = claimed,
+                committed_graphs,
+                elapsed_ms = drain_started.elapsed().as_millis() as u64,
+                "connector pack projection: drained one sweep of the import outbox"
+            );
+        }
+        Ok(progressed)
+    }
+
+    /// Open/ensure the Agent Library store OUTSIDE the global write lock
+    /// (MEDULLA-DURABLE-KERNEL-R006.4). The open is slow on a large store, and pre-G9
+    /// the first sweep held the `ServerState` write lock across it — queueing
+    /// the pre-listener critical path (matview reload, listener bind) behind
+    /// the whole drain. A read lock adopts an already-ensured handle; the open
+    /// itself runs unlocked, and only the publish takes a short write. The
+    /// shared open slot also serializes it with request-side initialization.
+    async fn open_agent_library(
+        state: &Arc<RwLock<ServerState>>,
+    ) -> Result<Arc<AgentLibraryStore>, String> {
+        if let Some(store) = state.read().await.agent_library() {
+            return Ok(store);
+        }
+        let (persist_dir, slot) = {
+            let guard = state.read().await;
+            let persist_dir = guard.persist_dir.clone().ok_or_else(|| {
+                "Agent Library requires a configured persist directory".to_string()
+            })?;
+            (persist_dir, Arc::clone(&guard.agent_library_open))
+        };
+        let opened = medulla_persistence_records::agent_library::open_shared_agent_library(
+            &slot,
+            &persist_dir,
+        )?;
+        let mut guard = state.write().await;
+        if let Some(existing) = guard.agent_library() {
+            return Ok(existing);
+        }
+        guard.set_agent_library(Some(Arc::clone(&opened)));
+        tracing::info!("connector pack projection: opened the Agent Library store");
+        Ok(opened)
+    }
+
+    async fn claim(
+        store: &Arc<AgentLibraryStore>,
+        tenant: &str,
+    ) -> Result<OutboxClaimOutcome, String> {
+        let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
+        let mut budget = OutboxClaimBudget::new(CLAIM_LIMIT, LEASE_MS, now_ms)?;
+        let (store, tenant) = (Arc::clone(store), tenant.to_string());
+        medulla_server_api::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
+            store.outbox_claim(&tenant, CONSUMER, &mut budget)
+        })
+        .await
+    }
+
+    fn report(outcome: &OutboxClaimOutcome) {
+        if !outcome.dead_lettered.is_empty() {
+            medulla_kernel::metrics::outbox_dead_lettered(
+                CONSUMER,
+                CONNECTOR_PACK_IMPORT_TOPIC,
+                "exhausted",
+                outcome.dead_lettered.len() as u64,
+            );
+        }
+        let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
+        let head = outcome.claims.first();
+        medulla_kernel::metrics::set_outbox_head(
+            CONSUMER,
+            CONNECTOR_PACK_IMPORT_TOPIC,
+            head.map_or(0, |lease| now_ms.saturating_sub(lease.record.created_at_ms)),
+            head.map_or(0, |lease| lease.attempt),
+        );
+    }
+
+    /// Project one leased import's connector and resolve the lease: ack on
+    /// success, reject on a failed projection or an unreadable row. Returns
+    /// whether the projection's graph commit ran (the sweep's drain log counts
+    /// it — MEDULLA-DURABLE-KERNEL-R006.4).
+    async fn settle(
+        state: &Arc<RwLock<ServerState>>,
+        store: &Arc<AgentLibraryStore>,
+        tenant: &str,
+        lease: MutationOutboxLease,
+    ) -> Result<bool, String> {
+        let (reason, projected) = match medulla_storage::decode_ledger_record::<PackImportRecord>(
+            &lease.record.intent.payload,
+        ) {
+            Err(_) => (Some(OutboxRejectReason::InvalidEvent), false),
+            Ok(record) => match project(state, store, tenant, &record).await {
+                Ok(projected) => (None, projected),
+                Err(error) => {
+                    tracing::warn!(
+                        code = "CONNECTOR_PACK_PROJECTION_FAILED",
+                        connector = record.connector.as_str(),
+                        %error,
+                        "connector pack projection failed; the head stays dark until re-driven"
+                    );
+                    (Some(OutboxRejectReason::ProjectionFailed), false)
+                }
+            },
+        };
+        resolve(store, tenant, lease, reason).await?;
+        Ok(projected)
+    }
+
+    async fn resolve(
+        store: &Arc<AgentLibraryStore>,
+        tenant: &str,
+        lease: MutationOutboxLease,
+        reason: Option<OutboxRejectReason>,
+    ) -> Result<(), String> {
+        let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
+        let (store, tenant) = (Arc::clone(store), tenant.to_string());
+        let Some(reason) = reason else {
+            return medulla_server_api::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
+                store.outbox_ack(&tenant, &lease, now_ms)
+            })
+            .await;
+        };
+        medulla_kernel::metrics::outbox_dead_lettered(
+            CONSUMER,
+            CONNECTOR_PACK_IMPORT_TOPIC,
+            reject_cause(reason),
+            1,
+        );
+        let write = OutboxWrite::Reject {
+            lease: Box::new(lease),
+            reason,
+            now_ms,
+        };
+        medulla_server_api::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
+            store.outbox_write(&tenant, write).map(drop)
+        })
+        .await
+    }
+
+    fn reject_cause(reason: OutboxRejectReason) -> &'static str {
+        match reason {
+            OutboxRejectReason::InvalidEvent => "invalid_event",
+            OutboxRejectReason::DomainRefused => "domain_refused",
+            OutboxRejectReason::ProjectionFailed => "projection_failed",
+            OutboxRejectReason::Operator => "operator",
+        }
+    }
+
+    /// Project the connector's CURRENT head, unless it is already visible.
+    /// Returns whether the projection's graph commit ran (a dark head that
+    /// projects for the first time commits; an already-visible head does not).
+    async fn project(
+        state: &Arc<RwLock<ServerState>>,
+        store: &Arc<AgentLibraryStore>,
+        tenant: &str,
+        record: &PackImportRecord,
+    ) -> Result<bool, String> {
+        let status = store.connector_pack_status(tenant, &record.connector)?;
+        let Some(head) = status.head else {
+            return Ok(false);
+        };
+        if head.visible_record_id.as_deref() == Some(head.record_id.as_str()) {
+            return Ok(false);
+        }
+        let anonymous = state.read().await.local_anonymous;
+        if !anonymous {
+            grant_projection_access(state, tenant, record).await?;
+        }
+        let plan = store.prepare_connector_pack_projection(tenant, &record.connector)?;
+        let verified = if anonymous {
+            VerifiedRequestContext::anonymous_local(Some(format!("{CONSUMER}:{}", plan.record_id)))
+        } else {
+            service_context(&plan.record_id)?
+        };
+        let context =
+            medulla_persistence_records::agent_library::context::bind_agent_library_context(
+                store,
+                0,
+                &verified,
+                unbound_context(tenant),
+                "connector-pack:reproject",
+                true,
+            )?;
+        crate::admin::connector_pack::reproject::project_head(
+            state, 0, &verified, store, context, &plan,
+        )
+        .await
+        .map(|_| true)
+    }
+
+    /// Let the projection actor write exactly this row's pack graph. A build
+    /// without the RBAC policy decides graph access by graph type alone, so
+    /// there is nothing to provision there.
+    async fn grant_projection_access(
+        state: &Arc<RwLock<ServerState>>,
+        tenant: &str,
+        record: &PackImportRecord,
+    ) -> Result<(), String> {
+        #[cfg(feature = "security")]
+        {
+            let graph =
+                crate::graph_schema::pack_projection_graph_name(tenant, &record.connector)?;
+            super::grant::ensure(&mut state.write().await.isolation, &graph)
+        }
+        #[cfg(not(feature = "security"))]
+        {
+            let _ = (state, tenant, record);
+            Ok(())
+        }
+    }
+
+    /// The engine service identity the worker projects under. Its operation
+    /// key is the record it projects, so a re-delivered row replays the
+    /// projection commit rather than writing a second one.
+    fn service_context(record_id: &str) -> Result<VerifiedRequestContext, String> {
+        let service = VerifiedRequestContext::authenticated_fixed_service_actor(
+            CONSUMER,
+            &["kg:read", "kg:write"],
+        )?;
+        Ok(VerifiedRequestContext::from_verified_claims_with_nonce(
+            service.claims().clone(),
+            format!("{CONSUMER}:{record_id}"),
+            Some(medulla_types::contract::Nonce::minted()),
+        ))
+    }
+
+    /// A context shell `bind_agent_library_context` fills in completely from
+    /// the verified service identity.
+    fn unbound_context(
+        tenant: &str,
+    ) -> medulla_agent_types::agent_library::AgentLibraryMutationContext {
+        medulla_agent_types::agent_library::AgentLibraryMutationContext {
+            request_id: 0,
+            principal: String::new(),
+            caller_principal: String::new(),
+            attempt_nonce: medulla_types::contract::Nonce::minted(),
+            tenant_id: tenant.to_string(),
+            actor_scope: String::new(),
+            purpose_id: String::new(),
+            policy_revision: String::new(),
+            policy_digest: String::new(),
+            policy_decision_id: String::new(),
+            idempotency_key: String::new(),
+            expected_revision: None,
+            trace_id: None,
+            created_at_ms: 0,
+        }
+    }
+}

@@ -126,7 +126,7 @@ reverifications:
          merely renamed, and identifies the deleting commit"
       - "git show --stat <commit> for db5ff7f3 and 427b1f77 (the two deleting commits)"
       - "grep -n 'struct SemanticIndexServerAdapter|impl SemanticIndexServerAdapter'
-         src/server/semantic_index.rs -- confirms the type still exists; only the one
+         crates/medulla-h-retrieve/src/semantic_index_runtime.rs -- confirms the type still exists; only the one
          method was deleted"
       - "python3 -c invocation of
          plans/refactor/scripts/architecture_component_registry.py's
@@ -140,12 +140,12 @@ reverifications:
       - "Confirmed and fixed: `medulla.agent-library-entry` and `medulla.agent-library-table` were
          marked UNCLAIMED with the stated reason 'no source implements a typed
          AgentLibraryEntry today' / 'the durable Agent Library table ... do not exist in
-         this repository yet'. FALSE at HEAD: crates/medulla-types/src/agent_library.rs (1912
+         this repository yet'. FALSE at HEAD: crates/medulla-agent-types/src/agent_library.rs (1912
          lines, `AgentLibraryEntry`/`AgentLibraryLifecycle`/schema-versioned digest
          domains) plus its siblings agent_component.rs (1969 lines),
          agent_graph.rs (2534 lines), agent_template.rs (1343 lines), all under
          medulla.wire-contracts' existing `crates/medulla-types/src/` root; and
-         src/server/persistence/agent_library.rs (3061 lines) plus
+         crates/medulla-persistence-records/src/agent_library.rs (3061 lines) plus
          agent_component.rs (2064), agent_graph.rs (1907), agent_template.rs (1463),
          agent_pin_resolution.rs (570), all under medulla.persistence's existing
          `src/server/persistence/` root -- both roots were ALREADY owned before this
@@ -166,7 +166,7 @@ reverifications:
          medulla.server-dispatch and medulla.observability -- each declares `owned_source_roots`
          with an empty `test_roots`. This predates this pass and is independent of the
          path-form issue below."
-      - "Noted: `crates/medulla-core/src/compute/semantic_ann_codes.rs` (6480 lines) now
+      - "Noted: `crates/medulla-ann-codes/src/semantic_ann_codes.rs` (6480 lines) now
          coexists with a `semantic_ann_codes/` subdirectory (`rows.rs`, `tests.rs`)
          already present at this lane's base commit -- a submodule split is in progress
          (concurrent lane F4/F7a per the program brief). The migration_lineage entry
@@ -274,12 +274,12 @@ reverifications:
           invent a path where none exists. None required inventing anything:
           medulla.mutation-store -> `crates/medulla-transaction/src/tests` (a real top-level directory
           under that crate's `src/`, excluded from `owned_source_roots` to avoid a duplicate
-          listing); medulla.cluster-replication -> `src/raft/tests.rs` (a real top-level sibling
+          listing); medulla.cluster-replication -> `crates/medulla-server-cluster-tests/src/split_tests/raft_cluster.rs` (a real top-level sibling
           file, likewise excluded from `owned_source_roots`); medulla.persistence ->
           `tests/sharded_startup_open_timing_d_cdx_65.rs` (its doc comment names
-          `src/server/persistence/redb_backend.rs` directly -- read, not guessed);
+          `crates/medulla-persistence/src/redb_backend.rs` directly -- read, not guessed);
           medulla.server-dispatch -> `tests/graph_scoped_operation_dispatch.rs` (its doc comment
-          names `dispatch_graph_op_inner` in `src/server/dispatch.rs` directly -- read, not
+          names `dispatch_graph_op_inner` in `crates/medulla-server-router/src/dispatch.rs` directly -- read, not
           guessed); medulla.observability -> `tests/test_audit_tamper_evidence.py` (exercises
           `AdminClient.audit_verify`/`audit_prove_inclusion` against `crates/medulla-kernel/src/audit.rs`, which
           this component already owned). The last three needed by exactly this repository's
@@ -290,7 +290,7 @@ reverifications:
           with an explicit enumeration of all 156 other top-level `tests/` entries (excluding
           `__pycache__`, which is untracked -- confirmed via `git ls-files`) plus the 3 carved
           files. `medulla.cluster-replication` did NOT need this cross-component carve (its real
-          test file, `src/raft/tests.rs`, sits inside its own already-owned directory, not
+          test file, `crates/medulla-server-cluster-tests/src/split_tests/raft_cluster.rs`, sits inside its own already-owned directory, not
           under the shared root `tests/`), which is why its fix looks different from the
           other three's.
       - reason: not_named_by_the_operator_but_discovered_while_fixing_the_above
@@ -353,8 +353,8 @@ reverifications:
       paths (would have silently misattributed ~90 findings as unowned); (2) a double-slash
       in the crate-prefix matcher (`"crates/medulla-core/" + "/"`) that made EVERY crate-owning
       component read as 0 until fixed. Fixing (2)'s fallout also surfaced 3 genuinely
-      unclaimed real files (`src/cost/mod.rs`, `src/performance_probe/storage.rs`,
-      `src/sidecar_store.rs` -- the last one a brand-new post-04 file, "the one shape every
+      unclaimed real files (`crates/medulla-persistence/src/cost/mod.rs`, `src/performance_probe/storage.rs`,
+      `crates/medulla-store/src/sidecar_store.rs` -- the last one a brand-new post-04 file, "the one shape every
       root-binary sidecar owner file takes (RF-RULING-004)", composing the medulla-transaction +
       medulla-storage kernels), now added to medulla.observability's and medulla.persistence's
       `owned_source_roots` respectively (the first two are directory siblings of files those
@@ -413,7 +413,7 @@ reverifications:
       SUPERSEDED, not relocated -- the function was deleted by commit 064f2d04 (confirmed an
       ancestor of this lane's HEAD) before the crate rename even happened, replaced by
       `crates/medulla-transaction/src/replay.rs`'s two-identity design, and its proposed
-      compensation deletions have also already happened (`src/server/handlers/admin.rs:1301`
+      compensation deletions have also already happened (`crates/medulla-h-admin/src/admin.rs:1301`
       literally reads `// `admin_saga_request_stamp` is DELETED, not moved.`, citing
       `OperationReplayIdentity` as the replacement). NEITHER decision's `status` was changed
       (`proposed` stays `proposed`) -- matching a fix's SHAPE by reading source is not the
@@ -441,7 +441,7 @@ reverifications:
       exists today. Two genuine pre-existing false claims (present since the original
       2026-09-04 authoring, NOT introduced by this lane) were found and fixed along the way,
       caught only because the audit checks EVERY path rather than the specific ones named by
-      either operator follow-up: `src/cost.rs` never existed (only `src/cost/mod.rs`, the
+      either operator follow-up: `src/cost.rs` never existed (only `crates/medulla-persistence/src/cost/mod.rs`, the
       2015-style dir-module form -- `medulla.observability`'s `owned_source_roots` entry for it is
       removed, `src/cost` -- the directory, added in reverification_id 2 -- already covers the
       real file); and a decision's TCK citation read `tests/fleet_tck.rs` (repo-root, which
@@ -524,10 +524,10 @@ capability_authority_model:
       claimed_on: '2026-09-12'
       state: implementation_component_declares_it
       evidence:
-        - "crates/medulla-types/src/agent_library.rs (1912 lines) -- AgentLibraryEntry,
+        - "crates/medulla-agent-types/src/agent_library.rs (1912 lines) -- AgentLibraryEntry,
            AgentLibraryLifecycle, AGENT_LIBRARY_ENTRY_SCHEMA_VERSION (currently 5),
            AGENT_LIBRARY_DEFINITION_DIGEST_DOMAIN / AGENT_LIBRARY_TOOL_SURFACE_DIGEST_DOMAIN"
-        - "crates/medulla-types/src/agent_component.rs (1969 lines), agent_graph.rs (2534
+        - "crates/medulla-agent-types/src/agent_component.rs (1969 lines), agent_graph.rs (2534
            lines), agent_template.rs (1343 lines) -- the identity contract's supporting
            component/graph/template types"
       reason_superseded: >-
@@ -544,8 +544,8 @@ capability_authority_model:
       claimed_on: '2026-09-12'
       state: implementation_component_declares_it
       evidence:
-        - "src/server/persistence/agent_library.rs (3061 lines)"
-        - "src/server/persistence/agent_component.rs (2064 lines),
+        - "crates/medulla-persistence-records/src/agent_library.rs (3061 lines)"
+        - "crates/medulla-persistence-records/src/agent_component.rs (2064 lines),
            agent_graph.rs (1907 lines), agent_template.rs (1463 lines),
            agent_pin_resolution.rs (570 lines) -- 9,065 lines total across the five files"
       reason_superseded: >-
@@ -584,7 +584,7 @@ components:
       nothing. See capability_delegation below.
     capability_delegation:
       - "medulla.contracts -> medulla.wire-contracts"
-      - "medulla.agent-library-entry -> medulla.wire-contracts (claimed 2026-09-12: crates/medulla-types/src/agent_library.rs + agent_component.rs/agent_graph.rs/agent_template.rs; see capability_authority_model.previously_unclaimed_now_claimed)"
+      - "medulla.agent-library-entry -> medulla.wire-contracts (claimed 2026-09-12: crates/medulla-agent-types/src/agent_library.rs + agent_component.rs/agent_graph.rs/agent_template.rs; see capability_authority_model.previously_unclaimed_now_claimed)"
     target_item_refs:
       - "tgt:contract:v1:be004ea258853b8df307958d8d3b68f8b2508665a2208df94597035b5ba8a14c"
     contract_state: target_inventory_bound
@@ -724,7 +724,7 @@ components:
       nothing. See capability_delegation below.
     capability_delegation:
       - "medulla.storage-transaction -> medulla.persistence"
-      - "medulla.agent-library-table -> medulla.persistence (claimed 2026-09-12: src/server/persistence/agent_library.rs + agent_component.rs/agent_graph.rs/agent_template.rs/agent_pin_resolution.rs; see capability_authority_model.previously_unclaimed_now_claimed)"
+      - "medulla.agent-library-table -> medulla.persistence (claimed 2026-09-12: crates/medulla-persistence-records/src/agent_library.rs + agent_component.rs/agent_graph.rs/agent_template.rs/agent_pin_resolution.rs; see capability_authority_model.previously_unclaimed_now_claimed)"
     target_item_refs:
       - "tgt:data:v1:970cee140bbe9696f255e2bbe5d32962eb421209b78b3ab9d2841756fd11aaf7"
     contract_state: target_inventory_bound
@@ -994,47 +994,47 @@ components:
       - "medulla-resource"
     owned_source_roots:
       - "crates/medulla-types/src/acl.rs"
-      - "crates/medulla-types/src/agent_component.rs"
-      - "crates/medulla-types/src/agent_graph.rs"
-      - "crates/medulla-types/src/agent_library.rs"
-      - "crates/medulla-types/src/agent_ontology.rs"
-      - "crates/medulla-types/src/agent_template.rs"
+      - "crates/medulla-agent-types/src/agent_component.rs"
+      - "crates/medulla-agent-types/src/agent_graph.rs"
+      - "crates/medulla-agent-types/src/agent_library.rs"
+      - "crates/medulla-agent-types/src/agent_ontology.rs"
+      - "crates/medulla-agent-types/src/agent_template.rs"
       - "crates/medulla-types/src/asr_wire.rs"
       - "crates/medulla-types/src/authority"
-      - "crates/medulla-types/src/authority.rs"
-      - "crates/medulla-types/src/capacity_lease.rs"
-      - "crates/medulla-types/src/change_envelope.rs"
-      - "crates/medulla-types/src/commit_descriptor.rs"
-      - "crates/medulla-types/src/consensus.rs"
+      - "crates/medulla-identity-types/src/authority.rs"
+      - "crates/medulla-mutation-types/src/capacity_lease.rs"
+      - "crates/medulla-protocol-types/src/change_envelope.rs"
+      - "crates/medulla-mutation-types/src/commit_descriptor.rs"
+      - "crates/medulla-mutation-types/src/consensus.rs"
       - "crates/medulla-types/src/contract"
       - "crates/medulla-types/src/contract.rs"
-      - "crates/medulla-types/src/delegation.rs"
-      - "crates/medulla-types/src/distribution.rs"
-      - "crates/medulla-types/src/embedding.rs"
-      - "crates/medulla-types/src/epistemic_operations.rs"
-      - "crates/medulla-types/src/epistemic_operations_ext.rs"
-      - "crates/medulla-types/src/epistemic_operations_manifest.rs"
-      - "crates/medulla-types/src/jobs.rs"
+      - "crates/medulla-agent-types/src/delegation.rs"
+      - "crates/medulla-catalog-types/src/distribution.rs"
+      - "crates/medulla-index-types/src/embedding.rs"
+      - "crates/medulla-result-types/src/epistemic_operations.rs"
+      - "crates/medulla-result-types/src/epistemic_operations_ext.rs"
+      - "crates/medulla-result-types/src/epistemic_operations_manifest.rs"
+      - "crates/medulla-work-types/src/jobs.rs"
       - "crates/medulla-types/src/knowledge_stream.rs"
-      - "crates/medulla-types/src/lake_catalog.rs"
+      - "crates/medulla-catalog-types/src/lake_catalog.rs"
       - "crates/medulla-types/src/modality.rs"
       - "crates/medulla-types/src/msgpack.rs"
       - "crates/medulla-types/src/mutation"
-      - "crates/medulla-types/src/mutation.rs"
+      - "crates/medulla-mutation-types/src/mutation.rs"
       - "crates/medulla-types/src/mutation_batch"
-      - "crates/medulla-types/src/mutation_batch.rs"
-      - "crates/medulla-types/src/native_control.rs"
-      - "crates/medulla-types/src/outbox.rs"
-      - "crates/medulla-types/src/outcome_bundle.rs"
-      - "crates/medulla-types/src/protocol.rs"
+      - "crates/medulla-protocol-types/src/mutation_batch.rs"
+      - "crates/medulla-work-types/src/native_control.rs"
+      - "crates/medulla-mutation-types/src/outbox.rs"
+      - "crates/medulla-result-types/src/outcome_bundle.rs"
+      - "crates/medulla-protocol-types/src/protocol.rs"
       - "crates/medulla-types/src/quantum.rs"
-      - "crates/medulla-types/src/row_predicate.rs"
+      - "crates/medulla-result-types/src/row_predicate.rs"
       - "crates/medulla-types/src/semantic_index"
       - "crates/medulla-types/src/statechart.rs"
       - "crates/medulla-types/src/types.rs"
       - "crates/medulla-types/src/viz.rs"
       - "crates/medulla-types/src/wire.rs"
-      - "crates/medulla-types/src/work_item_command_log.rs"
+      - "crates/medulla-work-types/src/work_item_command_log.rs"
       - "crates/medulla-capabilities/src/bin"
       - "crates/medulla-capabilities/src/catalog.rs"
       - "crates/medulla-capabilities/src/contract"
@@ -1209,11 +1209,11 @@ components:
       owned_errors: 61
       measured_at_head: "3243c3e222b133396010cb573b803d9298a717aa"
       top_files:
-        - "crates/medulla-storage/src/direct_state/filesystem.rs (16)"
-        - "crates/medulla-storage/src/direct_state/tests/filesystem.rs (9)"
-        - "crates/medulla-storage/src/direct_state/tests/publication.rs (8)"
-        - "crates/medulla-storage/src/direct_state/tests/recovery.rs (7)"
-        - "crates/medulla-storage/src/direct_state/tests/support.rs (4)"
+        - "crates/medulla-direct-state/src/direct_state/filesystem.rs (16)"
+        - "crates/medulla-direct-state/src/direct_state/tests/filesystem.rs (9)"
+        - "crates/medulla-direct-state/src/direct_state/tests/publication.rs (8)"
+        - "crates/medulla-direct-state/src/direct_state/tests/recovery.rs (7)"
+        - "crates/medulla-direct-state/src/direct_state/tests/support.rs (4)"
         - "crates/medulla-storage/src/physical/incarnation.rs (3)"
       measurement_note: >-
         RE-MEASURED 2026-09-12 (F5/F6 follow-up) with `arch-lint check --format json`
@@ -1600,7 +1600,7 @@ components:
       - "crates/medulla-ann/src/kmeans_gpu.rs"
       - "crates/medulla-ann/src/linalg"
       - "crates/medulla-ann/src/linalg.rs"
-      - "crates/medulla-ann/src/persist.rs"
+      - "crates/medulla-ann/crates/medulla-kernel/src/persist.rs"
       - "crates/medulla-ann/src/recall.rs"
       - "crates/medulla-ann/src/scatter.rs"
       - "crates/medulla-ann/src/version.rs"
@@ -1867,36 +1867,36 @@ components:
     owned_crates:
       - "medulla-core"
     owned_source_roots:
-      - "crates/medulla-core/src/bloom.rs"
+      - "crates/medulla-graph-core/src/bloom.rs"
       - "crates/medulla-core/src/broker"
       - "crates/medulla-core/src/broker.rs"
-      - "crates/medulla-core/src/cold_tier.rs"
+      - "crates/medulla-graph-core/src/cold_tier.rs"
       - "crates/medulla-core/src/compute"
-      - "crates/medulla-core/src/contract.rs"
+      - "crates/medulla-graph-core/src/contract.rs"
       - "crates/medulla-core/src/decay.rs"
-      - "crates/medulla-core/src/dep_scope.rs"
+      - "crates/medulla-query-cache/src/dep_scope.rs"
       - "crates/medulla-core/src/durable_apply.rs"
       - "crates/medulla-core/src/graph"
-      - "crates/medulla-core/src/graph.rs"
-      - "crates/medulla-core/src/index.rs"
+      - "crates/medulla-graph-core/src/graph.rs"
+      - "crates/medulla-graph-core/src/index.rs"
       - "crates/medulla-core/src/isolation"
-      - "crates/medulla-core/src/isolation.rs"
-      - "crates/medulla-core/src/jsonpath.rs"
-      - "crates/medulla-core/src/path_persist.rs"
-      - "crates/medulla-core/src/per_actor_cache.rs"
+      - "crates/medulla-isolation/src/isolation.rs"
+      - "crates/medulla-graph-core/src/jsonpath.rs"
+      - "crates/medulla-graph-core/src/path_persist.rs"
+      - "crates/medulla-graph-core/src/per_actor_cache.rs"
       - "crates/medulla-core/src/persist_lock.rs"
-      - "crates/medulla-core/src/projection_catalog.rs"
-      - "crates/medulla-core/src/rbac.rs"
+      - "crates/medulla-query-cache/src/projection_catalog.rs"
+      - "crates/medulla-isolation/src/rbac.rs"
       - "crates/medulla-core/src/rbac_persist"
-      - "crates/medulla-core/src/rbac_persist.rs"
-      - "crates/medulla-core/src/read_through.rs"
+      - "crates/medulla-isolation/src/rbac_persist.rs"
+      - "crates/medulla-graph-core/src/read_through.rs"
       - "crates/medulla-core/src/registry"
       - "crates/medulla-core/src/registry.rs"
-      - "crates/medulla-core/src/result_cache.rs"
-      - "crates/medulla-core/src/rls_projection_cache.rs"
-      - "crates/medulla-core/src/rls_view_cache.rs"
-      - "crates/medulla-core/src/scene.rs"
-      - "crates/medulla-core/src/test_scope_grant.rs"
+      - "crates/medulla-query-cache/src/result_cache.rs"
+      - "crates/medulla-graph-core/src/rls_projection_cache.rs"
+      - "crates/medulla-graph-core/src/rls_view_cache.rs"
+      - "crates/medulla-graph-core/src/scene.rs"
+      - "crates/medulla-ann-codes/src/test_scope_grant.rs"
     public_contract_roots:
       - "crates/medulla-core/src/lib.rs"
     test_roots:
@@ -1933,12 +1933,12 @@ components:
       owned_errors: 65
       measured_at_head: "3243c3e222b133396010cb573b803d9298a717aa"
       top_files:
-        - "crates/medulla-core/src/compute/semantic_ann_codes/tests.rs (36)"
-        - "crates/medulla-core/src/rbac_persist.rs (7)"
-        - "crates/medulla-core/src/compute/semantic_index_service.rs (4)"
-        - "crates/medulla-core/src/path_persist.rs (4)"
+        - "crates/medulla-ann-codes/src/semantic_ann_codes/tests.rs (36)"
+        - "crates/medulla-isolation/src/rbac_persist.rs (7)"
+        - "crates/medulla-ann-codes/src/semantic_index_service.rs (4)"
+        - "crates/medulla-graph-core/src/path_persist.rs (4)"
         - "crates/medulla-core/src/persist_lock.rs (4)"
-        - "crates/medulla-core/src/compute/semantic_arch_gate.rs (3)"
+        - "crates/medulla-ann-codes/src/semantic_arch_gate.rs (3)"
       measurement_note: >-
         RE-MEASURED 2026-09-12 (F5/F6 follow-up) with `arch-lint check --format json`
         (0.5.0, same tool/version as the 2026-09-04 baseline), attributed against this
@@ -1973,7 +1973,7 @@ components:
          SemanticActivePointer::to_canonical_cbor / from_canonical_cbor path in
          `finalize_generation` / `live_generation_in`, same module. NOTE: at this lane's
          base commit, medulla-core::compute::semantic_ann_codes exists both as
-         crates/medulla-core/src/compute/semantic_ann_codes.rs (6480 lines) and a sibling
+         crates/medulla-ann-codes/src/semantic_ann_codes.rs (6480 lines) and a sibling
          crates/medulla-core/src/compute/semantic_ann_codes/ directory (rows.rs, tests.rs) --
          a submodule split is in progress on a concurrent lane (F4/F7a per the program
          brief), so this entry cites the logical module path rather than a line range or
@@ -2129,9 +2129,9 @@ components:
       - "crates/medulla-statechart/src/store.rs"
       - "crates/medulla-statechart/src/transition"
       - "crates/medulla-statechart/src/transition.rs"
-      - "src/work_item_statechart.rs"
-      - "src/loop_statechart.rs"
-      - "src/agent_lifecycle_statechart.rs"
+      - "crates/medulla-store/src/work_item_statechart.rs"
+      - "crates/medulla-store/src/loop_statechart.rs"
+      - "crates/medulla-h-jobs/src/agent_lifecycle_statechart.rs"
     public_contract_roots:
       - "crates/medulla-jobs/src/lib.rs"
       - "crates/medulla-statechart/src/lib.rs"
@@ -2415,13 +2415,13 @@ components:
     contract_state: unknown_not_inventory_complete
     owned_crates: []
     owned_source_roots:
-      - "src/redb_store.rs"
+      - "crates/medulla-store/src/redb_store.rs"
       - "src/redb_store"
-      - "src/redb_layout.rs"
-      - "src/persist.rs"
+      - "crates/medulla-store/src/redb_layout.rs"
+      - "crates/medulla-kernel/src/persist.rs"
       - "crates/medulla-kernel/src/persist_lock.rs"
-      - "src/mutation_apply.rs"
-      - "src/sidecar_store.rs"
+      - "crates/medulla-server-api/src/mutation_apply.rs"
+      - "crates/medulla-store/src/sidecar_store.rs"
       - "crates/medulla-kernel/src/write_coalescer.rs"
       - "src/write_coalescer"
       - "crates/medulla-kernel/src/graph_delta.rs"
@@ -2448,18 +2448,18 @@ components:
       owned_errors: 378
       measured_at_head: "3243c3e222b133396010cb573b803d9298a717aa"
       top_files:
-        - "src/server/persistence/redb_backend.rs (99)"
-        - "src/server/persistence/shard_migrate.rs (82)"
-        - "src/redb_store.rs (62)"
-        - "src/server/persistence/backup.rs (38)"
-        - "src/redb_store/shard.rs (22)"
-        - "src/redb_store/resource_reservation_tests.rs (16)"
+        - "crates/medulla-persistence/src/redb_backend.rs (99)"
+        - "crates/medulla-persistence/src/shard_migrate.rs (82)"
+        - "crates/medulla-store/src/redb_store.rs (62)"
+        - "crates/medulla-persistence/src/backup.rs (38)"
+        - "crates/medulla-store/src/redb_store/shard.rs (22)"
+        - "crates/medulla-store-apply-tests/src/resource_reservation_tests.rs (16)"
       measurement_note: >-
         RE-MEASURED 2026-09-12 (F5/F6 follow-up) with `arch-lint check --format json`
         (0.5.0, same tool/version as the 2026-09-04 baseline), attributed against this
         component's CURRENT owned_source_roots/test_roots (post path-canonicalization).
         Supersedes the stale 2026-09-04/5523859a figure of 285. The top_files paths are
-        as of measured_at_head: `src/server/persistence/shard_migrate.rs` has since been
+        as of measured_at_head: `crates/medulla-persistence/src/shard_migrate.rs` has since been
         split into the `shard_migrate/` module (`inplace.rs`, `payload.rs`, `readiness.rs`,
         `swap.rs`, `tests.rs`, `tests/`), so its 82 is not re-attributed to those files
         until the next re-measurement.
@@ -2493,7 +2493,7 @@ components:
     acceptance_evidence: []
     evidence_status: not_run
     summary: >-
-      The facade's own durable persistence and transaction layer: the 20,818-line src/redb_store.rs graph store plus its submodules (capacity leases, development lane, work-item capability, resource reservations), the redb physical layout, persist locking, durability, mutation apply, the write coalescer, graph deltas, at-rest crypto, and src/server/persistence/ (redb_backend, shard_migrate, backup, cold_offload). This component is NOT modelled anywhere in the medulla-development skill's layer table and owns the single largest AL002 burden in the repository. ADDED 2026-09-12 (F5): the RF-020 Agent Library's durable table also lives here, within the existing `src/server/persistence/` root -- agent_library.rs (3061 lines), agent_component.rs (2064), agent_graph.rs (1907), agent_template.rs (1463), and agent_pin_resolution.rs (570). This was UNCLAIMED as recently as the 5523859a/2026-09-04 verification ("do not exist in this repository yet"); see `capability_authority_model.previously_unclaimed_now_claimed` for the correction record. Whether the implementation covers every RF-020 behavior (revisions/outbox/tombstones/replay/reconciliation) is NOT independently re-verified here -- `evidence_status` stays `not_run`.
+      The facade's own durable persistence and transaction layer: the 20,818-line crates/medulla-store/src/redb_store.rs graph store plus its submodules (capacity leases, development lane, work-item capability, resource reservations), the redb physical layout, persist locking, durability, mutation apply, the write coalescer, graph deltas, at-rest crypto, and src/server/persistence/ (redb_backend, shard_migrate, backup, cold_offload). This component is NOT modelled anywhere in the medulla-development skill's layer table and owns the single largest AL002 burden in the repository. ADDED 2026-09-12 (F5): the RF-020 Agent Library's durable table also lives here, within the existing `src/server/persistence/` root -- agent_library.rs (3061 lines), agent_component.rs (2064), agent_graph.rs (1907), agent_template.rs (1463), and agent_pin_resolution.rs (570). This was UNCLAIMED as recently as the 5523859a/2026-09-04 verification ("do not exist in this repository yet"); see `capability_authority_model.previously_unclaimed_now_claimed` for the correction record. Whether the implementation covers every RF-020 behavior (revisions/outbox/tombstones/replay/reconciliation) is NOT independently re-verified here -- `evidence_status` stays `not_run`.
   - component_id: medulla.cluster-replication
     component_kind: implementation_component
     parent_component_id: medulla.storage-transaction
@@ -2514,35 +2514,35 @@ components:
     owned_crates: []
     owned_source_roots:
       - "src/raft/command"
-      - "src/raft/config.rs"
+      - "crates/medulla-raft/src/raft/config.rs"
       - "src/raft/cross_node_elasticity"
       - "src/raft/cross_shard_txn"
-      - "src/raft/drain.rs"
-      - "src/raft/exchange.rs"
+      - "crates/medulla-raft-xshard/src/drain.rs"
+      - "crates/medulla-raft-xshard/src/exchange.rs"
       - "src/raft/harness"
-      - "src/raft/harness_support.rs"
-      - "src/raft/membership_shrink.rs"
-      - "src/raft/mod.rs"
+      - "crates/medulla-raft-xshard/src/harness_support.rs"
+      - "crates/medulla-raft/src/raft/membership_shrink.rs"
+      - "crates/medulla-raft/src/raft/mod.rs"
       - "src/raft/multi"
-      - "src/raft/multi.rs"
+      - "crates/medulla-raft/src/raft/multi.rs"
       - "src/raft/network"
-      - "src/raft/network.rs"
-      - "src/raft/node.rs"
+      - "crates/medulla-raft/src/raft/network.rs"
+      - "crates/medulla-raft/src/raft/node.rs"
       - "src/raft/placement"
-      - "src/raft/placement.rs"
-      - "src/raft/placement_harness.rs"
-      - "src/raft/pregel.rs"
-      - "src/raft/reshard.rs"
-      - "src/raft/reshard_harness.rs"
-      - "src/raft/store.rs"
+      - "crates/medulla-raft/src/raft/placement.rs"
+      - "crates/medulla-server-cluster-tests/src/split_tests/placement_harness.rs"
+      - "crates/medulla-raft-xshard/src/pregel.rs"
+      - "crates/medulla-raft/src/raft/reshard.rs"
+      - "crates/medulla-raft-xshard/src/reshard_harness.rs"
+      - "crates/medulla-raft/src/raft/store.rs"
       - "src/raft/xread"
-      - "src/raft/xread.rs"
-      - "src/raft/xread_harness.rs"
-      - "src/raft/xshard_harness.rs"
-      - "src/raft/xshard_modality_harness.rs"
+      - "crates/medulla-raft/src/raft/xread.rs"
+      - "crates/medulla-raft-xshard/src/xread_harness.rs"
+      - "crates/medulla-server-cluster-tests/src/split_tests/xshard_harness.rs"
+      - "crates/medulla-raft-xshard/src/xshard_modality_harness.rs"
     public_contract_roots: []
     test_roots:
-      - "src/raft/tests.rs"
+      - "crates/medulla-server-cluster-tests/src/split_tests/raft_cluster.rs"
     generated_roots: []
     shared_roots: []
     shared_files: []
@@ -2560,12 +2560,12 @@ components:
       owned_errors: 92
       measured_at_head: "3243c3e222b133396010cb573b803d9298a717aa"
       top_files:
-        - "src/raft/tests.rs (37)"
-        - "src/raft/xshard_harness.rs (23)"
-        - "src/raft/placement_harness.rs (10)"
-        - "src/raft/harness/cluster.rs (9)"
-        - "src/raft/config.rs (3)"
-        - "src/raft/reshard_harness.rs (3)"
+        - "crates/medulla-server-cluster-tests/src/split_tests/raft_cluster.rs (37)"
+        - "crates/medulla-server-cluster-tests/src/split_tests/xshard_harness.rs (23)"
+        - "crates/medulla-server-cluster-tests/src/split_tests/placement_harness.rs (10)"
+        - "crates/medulla-raft-xshard/src/harness/cluster.rs (9)"
+        - "crates/medulla-raft/src/raft/config.rs (3)"
+        - "crates/medulla-raft-xshard/src/reshard_harness.rs (3)"
       measurement_note: >-
         RE-MEASURED 2026-09-12 (F5/F6 follow-up) with `arch-lint check --format json`
         (0.5.0, same tool/version as the 2026-09-04 baseline), attributed against this
@@ -2621,7 +2621,7 @@ components:
       - "medulla-compute"
     owned_source_roots:
       - "crates/medulla-compute/src/algorithms"
-      - "crates/medulla-compute/src/algorithms.rs"
+      - "crates/medulla-graph-algos/src/algorithms.rs"
       - "crates/medulla-compute/src/ast"
       - "crates/medulla-compute/src/contract.rs"
       - "crates/medulla-compute/src/datascience"
@@ -2632,12 +2632,12 @@ components:
       - "crates/medulla-compute/src/node_labels.rs"
       - "crates/medulla-compute/src/parser"
       - "crates/medulla-compute/src/probabilistic.rs"
-      - "crates/medulla-compute/src/reasoning.rs"
+      - "crates/medulla-reasoner/src/reasoning.rs"
       - "crates/medulla-compute/src/reasoning_closure"
-      - "crates/medulla-compute/src/reasoning_closure.rs"
+      - "crates/medulla-reasoner/src/reasoning_closure.rs"
       - "crates/medulla-compute/src/screen"
       - "crates/medulla-compute/src/sketch.rs"
-      - "src/server/compute.rs"
+      - "crates/medulla-server-api/src/compute.rs"
     public_contract_roots:
       - "crates/medulla-compute/src/lib.rs"
     test_roots:
@@ -2728,38 +2728,38 @@ components:
       - "medulla-plan"
       - "medulla-wasm"
     owned_source_roots:
-      - "crates/medulla-query/src/cypher"
-      - "crates/medulla-query/src/sql"
-      - "crates/medulla-query/src/tables"
+      - "crates/medulla-cypher/src/cypher"
+      - "crates/medulla-sql/src/sql"
+      - "crates/medulla-table-store/src/tables"
       - "crates/medulla-plan/src/advanced_crossmodal_tests.rs"
-      - "crates/medulla-plan/src/algebra.rs"
-      - "crates/medulla-plan/src/cost.rs"
+      - "crates/medulla-exec/src/algebra.rs"
+      - "crates/medulla-exec/src/cost.rs"
       - "crates/medulla-plan/src/cross_modal_seam_tests.rs"
-      - "crates/medulla-plan/src/dag.rs"
-      - "crates/medulla-plan/src/dag_exec.rs"
+      - "crates/medulla-exec/src/dag.rs"
+      - "crates/medulla-exec/src/dag_exec.rs"
       - "crates/medulla-plan/src/docjson_tests.rs"
       - "crates/medulla-plan/src/embedder_tests.rs"
       - "crates/medulla-plan/src/epistemic_tests.rs"
-      - "crates/medulla-plan/src/exec.rs"
-      - "crates/medulla-plan/src/federation.rs"
-      - "crates/medulla-plan/src/federation_registry_tests.rs"
-      - "crates/medulla-plan/src/federation_sql_tests.rs"
-      - "crates/medulla-plan/src/federation_tests.rs"
-      - "crates/medulla-plan/src/fixture.rs"
+      - "crates/medulla-exec/src/exec.rs"
+      - "crates/medulla-federation/src/federation.rs"
+      - "crates/medulla-federation/src/federation_registry_tests.rs"
+      - "crates/medulla-federation/src/federation_sql_tests.rs"
+      - "crates/medulla-federation/src/federation_tests.rs"
+      - "crates/medulla-exec/src/fixture.rs"
       - "crates/medulla-plan/src/geo_tests.rs"
       - "crates/medulla-plan/src/incremental"
-      - "crates/medulla-plan/src/knowledge.rs"
-      - "crates/medulla-plan/src/knowledge_batch.rs"
-      - "crates/medulla-plan/src/leanrag.rs"
-      - "crates/medulla-plan/src/learned_cost.rs"
-      - "crates/medulla-plan/src/nl.rs"
-      - "crates/medulla-plan/src/optimizer.rs"
-      - "crates/medulla-plan/src/oracle.rs"
+      - "crates/medulla-retrieval/src/knowledge.rs"
+      - "crates/medulla-retrieval/src/knowledge_batch.rs"
+      - "crates/medulla-retrieval/src/leanrag.rs"
+      - "crates/medulla-exec/src/learned_cost.rs"
+      - "crates/medulla-nlq/src/nl.rs"
+      - "crates/medulla-exec/src/optimizer.rs"
+      - "crates/medulla-exec/src/oracle.rs"
       - "crates/medulla-plan/src/owl_tests.rs"
       - "crates/medulla-plan/src/probabilistic_tests.rs"
-      - "crates/medulla-plan/src/result_stream.rs"
-      - "crates/medulla-plan/src/rowset.rs"
-      - "crates/medulla-plan/src/runtime.rs"
+      - "crates/medulla-retrieval/src/result_stream.rs"
+      - "crates/medulla-exec/src/rowset.rs"
+      - "crates/medulla-exec/src/runtime.rs"
       - "crates/medulla-plan/src/sensor_fuse_tests.rs"
       - "crates/medulla-plan/src/stream_tests.rs"
       - "crates/medulla-plan/src/tensor_tests.rs"
@@ -2770,7 +2770,7 @@ components:
       - "crates/medulla-plan/src/vector_reasoning_tests.rs"
 
     public_contract_roots:
-      - "crates/medulla-query/src/lib.rs"
+      - "crates/medulla-sql/src/lib.rs"
       - "crates/medulla-plan/src/lib.rs"
       - "crates/medulla-wasm/src/lib.rs"
     test_roots:
@@ -2824,11 +2824,11 @@ components:
       measured_at_head: "3243c3e222b133396010cb573b803d9298a717aa"
       top_files:
         - "crates/medulla-plan/src/tsdb_scan_tests.rs (6)"
-        - "crates/medulla-query/src/sql/spill.rs (5)"
+        - "crates/medulla-sql/src/sql/spill.rs (5)"
         - "crates/medulla-plan/benches/hybrid_queries.rs (2)"
-        - "crates/medulla-query/src/sql/iceberg_federation.rs (2)"
-        - "crates/medulla-query/src/tables/property_graph/model.rs (2)"
-        - "crates/medulla-plan/src/nl.rs (1)"
+        - "crates/medulla-sql/src/sql/iceberg_federation.rs (2)"
+        - "crates/medulla-table-store/src/tables/property_graph/model.rs (2)"
+        - "crates/medulla-nlq/src/nl.rs (1)"
       measurement_note: >-
         RE-MEASURED 2026-09-12 (F5/F6 follow-up) with `arch-lint check --format json`
         (0.5.0, same tool/version as the 2026-09-04 baseline), attributed against this
@@ -2887,17 +2887,17 @@ components:
       - "medulla-shex"
       - "medulla-graphql"
     owned_source_roots:
-      - "crates/medulla-rdf/src/contract.rs"
+      - "crates/medulla-reasoner/src/contract.rs"
       - "crates/medulla-rdf/src/geosparql.rs"
       - "crates/medulla-rdf/src/guard.rs"
       - "crates/medulla-rdf/src/jsonld.rs"
       - "crates/medulla-rdf/src/mapping.rs"
-      - "crates/medulla-rdf/src/obda.rs"
-      - "crates/medulla-rdf/src/owl.rs"
+      - "crates/medulla-virtual-graph/src/obda.rs"
+      - "crates/medulla-reasoner/src/owl.rs"
       - "crates/medulla-rdf/src/rdfxml.rs"
-      - "crates/medulla-rdf/src/rules.rs"
+      - "crates/medulla-reasoner/src/rules.rs"
       - "crates/medulla-rdf/src/sparql.rs"
-      - "crates/medulla-rdf/src/tableau.rs"
+      - "crates/medulla-reasoner/src/tableau.rs"
       - "crates/medulla-rdf/src/update.rs"
       - "crates/medulla-shacl/src/contract.rs"
       - "crates/medulla-shacl/src/icv.rs"
@@ -2966,7 +2966,7 @@ components:
       owned_errors: 2
       measured_at_head: "3243c3e222b133396010cb573b803d9298a717aa"
       top_files:
-        - "crates/medulla-rdf/src/rules.rs (2)"
+        - "crates/medulla-reasoner/src/rules.rs (2)"
       measurement_note: >-
         RE-MEASURED 2026-09-12 (F5/F6 follow-up) with `arch-lint check --format json`
         (0.5.0, same tool/version as the 2026-09-04 baseline), attributed against this
@@ -3033,8 +3033,8 @@ components:
       - "crates/medulla-epistemic/src/recompute.rs"
       - "crates/medulla-epistemic/src/redact.rs"
       - "crates/medulla-epistemic/src/tms.rs"
-      - "src/server/reasoning_cascade.rs"
-      - "src/server/reasoning_projection.rs"
+      - "crates/medulla-server-cdc/src/reasoning_cascade.rs"
+      - "crates/medulla-h-retrieve/src/reasoning_projection.rs"
     public_contract_roots:
       - "crates/medulla-epistemic/src/lib.rs"
     test_roots:
@@ -3061,7 +3061,7 @@ components:
       owned_errors: 50
       measured_at_head: "3243c3e222b133396010cb573b803d9298a717aa"
       top_files:
-        - "src/server/reasoning_projection.rs (50)"
+        - "crates/medulla-h-retrieve/src/reasoning_projection.rs (50)"
       measurement_note: >-
         RE-MEASURED 2026-09-12 (F5/F6 follow-up) with `arch-lint check --format json`
         (0.5.0, same tool/version as the 2026-09-04 baseline), attributed against this
@@ -3297,12 +3297,12 @@ components:
       - "crates/medulla-viz-export/src/reduce.rs"
       - "crates/medulla-viz-export/src/render.rs"
       - "crates/medulla-viz-export/src/svg_writer.rs"
-      - "src/server/viz_engine.rs"
-      - "src/server/viz_interactive.rs"
+      - "crates/medulla-server-api/src/viz_engine.rs"
+      - "crates/medulla-h-compute/src/viz_interactive.rs"
       - "src/server/viz_interactive_client.html"
-      - "src/server/viz_provenance.rs"
-      - "src/server/graph_tile_server.rs"
-      - "src/server/graph_tile_source.rs"
+      - "crates/medulla-server-api/src/viz_provenance.rs"
+      - "crates/medulla-h-compute/src/graph_tile_server.rs"
+      - "crates/medulla-h-compute/src/graph_tile_source.rs"
     public_contract_roots:
       - "crates/medulla-viz-core/src/lib.rs"
       - "crates/medulla-viz-columnstore/src/lib.rs"
@@ -3339,7 +3339,7 @@ components:
         - "crates/medulla-viz-export/examples/render_graph_demo.rs (2)"
         - "crates/medulla-viz-export/examples/render_large_n_tier.rs (1)"
         - "crates/medulla-viz-export/examples/render_repo_commit_history.rs (1)"
-        - "src/server/viz_provenance.rs (1)"
+        - "crates/medulla-server-api/src/viz_provenance.rs (1)"
       measurement_note: >-
         RE-MEASURED 2026-09-12 (F5/F6 follow-up) with `arch-lint check --format json`
         (0.5.0, same tool/version as the 2026-09-04 baseline), attributed against this
@@ -3402,67 +3402,67 @@ components:
     owned_crates: []
     owned_source_roots:
       - "src/server/access"
-      - "src/server/access.rs"
+      - "crates/medulla-server-auth/src/access.rs"
       - "src/server/amqp_wire"
-      - "src/server/auth.rs"
-      - "src/server/authority_context.rs"
+      - "crates/medulla-server-auth/src/auth.rs"
+      - "crates/medulla-server-api/src/authority_context.rs"
       - "src/server/blob"
       - "src/server/bolt_wire"
-      - "src/server/broker_wire.rs"
-      - "src/server/cache_coherence.rs"
-      - "src/server/cdc.rs"
+      - "crates/medulla-wire-core/src/broker_wire.rs"
+      - "crates/medulla-server-cdc/src/cache_coherence.rs"
+      - "crates/medulla-server-cdc/src/cdc.rs"
       - "src/server/cdc_sink"
-      - "src/server/cep.rs"
-      - "src/server/cold_tier_impl.rs"
-      - "src/server/dds.rs"
+      - "crates/medulla-server-cdc/src/cep.rs"
+      - "crates/medulla-persistence-ops/src/cold_tier_impl.rs"
+      - "crates/medulla-wire-msg/src/dds.rs"
       - "src/server/dispatch"
-      - "src/server/dispatch.rs"
+      - "crates/medulla-server-router/src/dispatch.rs"
       - "src/server/federation"
-      - "src/server/graphql_sub.rs"
+      - "crates/medulla-server-lake/src/graphql_sub.rs"
       - "src/server/handlers"
-      - "src/server/http1.rs"
-      - "src/server/icv_guard.rs"
+      - "crates/medulla-server-api/src/http1.rs"
+      - "crates/medulla-server-api/src/icv_guard.rs"
       - "src/server/kv"
-      - "src/server/kv.rs"
+      - "crates/medulla-server-blob/src/kv.rs"
       - "src/server/kvcache_http"
       - "src/server/lake"
       - "src/server/matview"
       - "src/server/mod.rs"
       - "src/server/mqtt_wire"
       - "src/server/mssql_wire"
-      - "src/server/mutation.rs"
+      - "crates/medulla-server-mutation/src/mutation.rs"
       - "src/server/mutation_batch"
-      - "src/server/mutation_batch.rs"
+      - "crates/medulla-server-mutation/src/mutation_batch.rs"
       - "src/server/mysql_wire"
-      - "src/server/nl.rs"
+      - "crates/medulla-h-query/src/nl.rs"
       - "src/server/obda"
-      - "src/server/oidc.rs"
+      - "crates/medulla-server-api/src/oidc.rs"
       - "src/server/pgwire"
       - "src/server/policy_export"
-      - "src/server/qos.rs"
+      - "crates/medulla-server-obs/src/qos.rs"
       - "src/server/redis_wire"
-      - "src/server/registry_reaper.rs"
-      - "src/server/replica.rs"
-      - "src/server/request_cancel.rs"
-      - "src/server/request_replay.rs"
-      - "src/server/ros2_bridge.rs"
-      - "src/server/routed_write_coalescer.rs"
+      - "crates/medulla-server/src/registry_reaper.rs"
+      - "crates/medulla-server/src/replica.rs"
+      - "crates/medulla-h-query/src/request_cancel.rs"
+      - "crates/medulla-server-api/src/request_replay.rs"
+      - "crates/medulla-wire-msg/src/ros2_bridge.rs"
+      - "crates/medulla-server-api/src/routed_write_coalescer.rs"
       - "src/server/s3"
-      - "src/server/secondary_indexes.rs"
-      - "src/server/semantic_activation.rs"
-      - "src/server/semantic_index.rs"
+      - "crates/medulla-h-retrieve/src/secondary_indexes.rs"
+      - "crates/medulla-server-graph/src/semantic_activation.rs"
+      - "crates/medulla-h-retrieve/src/semantic_index_runtime.rs"
       - "src/server/sparql_http"
-      - "src/server/sparql_http.rs"
+      - "crates/medulla-server-blob/src/sparql_http.rs"
       - "src/server/sparql_service"
-      - "src/server/sql_catalog_acl.rs"
-      - "src/server/sql_tables.rs"
-      - "src/server/sql_wire_auth.rs"
+      - "crates/medulla-server-auth/src/sql_catalog_acl.rs"
+      - "crates/medulla-server-auth/src/sql_tables.rs"
+      - "crates/medulla-wire-core/src/sql_wire_auth.rs"
       - "src/server/sqlite_wire"
-      - "src/server/state.rs"
+      - "crates/medulla-server-api/src/state.rs"
       - "src/server/stomp_wire"
-      - "src/server/transport.rs"
-      - "src/server/txn.rs"
-      - "src/server/txn_intent.rs"
+      - "crates/medulla-server/src/transport.rs"
+      - "crates/medulla-server-api/src/txn.rs"
+      - "crates/medulla-server-ops/src/api/query_txn/txn_intent.rs"
       - "src/server/wire"
     public_contract_roots: []
     test_roots:
@@ -3484,12 +3484,12 @@ components:
       owned_errors: 132
       measured_at_head: "3243c3e222b133396010cb573b803d9298a717aa"
       top_files:
-        - "src/server/handlers/admin.rs (18)"
-        - "src/server/txn_intent.rs (15)"
-        - "src/server/registry_reaper.rs (12)"
-        - "src/server/transport.rs (11)"
-        - "src/server/nl.rs (9)"
-        - "src/server/sql_tables.rs (8)"
+        - "crates/medulla-h-admin/src/admin.rs (18)"
+        - "crates/medulla-server-ops/src/api/query_txn/txn_intent.rs (15)"
+        - "crates/medulla-server/src/registry_reaper.rs (12)"
+        - "crates/medulla-server/src/transport.rs (11)"
+        - "crates/medulla-h-query/src/nl.rs (9)"
+        - "crates/medulla-server-auth/src/sql_tables.rs (8)"
       measurement_note: >-
         RE-MEASURED 2026-09-12 (F5/F6 follow-up) with `arch-lint check --format json`
         (0.5.0, same tool/version as the 2026-09-04 baseline), attributed against this
@@ -3518,7 +3518,7 @@ components:
     migration_lineage:
       - "DELETED 2026-09-12 (commit 427b1f77, already on this lane's base 3243c3e2, NOT
          speculative): `SemanticIndexServerAdapter::read_sql_source_page`
-         (src/server/semantic_index.rs) -- a superseded page-read wrapper. The two
+         (crates/medulla-h-retrieve/src/semantic_index_runtime.rs) -- a superseded page-read wrapper. The two
          properties it added over calling the read port directly (`compute_off_lock`
          and an opaque logged refusal) are already supplied at a coarser, mandatory
          boundary: every op needing a page read (AdmitSourceRecord, AdmitSourcePage,
@@ -3526,7 +3526,7 @@ components:
          `blocking()` -- the same `spawn_blocking` -- and the service maps the read
          port's error in `read_reconciliation_page` before `blocking` renders it. No
          `SemanticIndexOp` returns a source page by design. `SemanticIndexServerAdapter`
-         ITSELF still exists (src/server/semantic_index.rs:208/212/690, confirmed at
+         ITSELF still exists (crates/medulla-h-retrieve/src/semantic_index_runtime.rs:208/212/690, confirmed at
          HEAD) -- only this one method was deleted, not the type. Zero grep hits for
          `read_sql_source_page` anywhere in src/ or crates/ at HEAD. Needs no
          replacement component or capability entry."
@@ -3569,7 +3569,7 @@ components:
       - "crates/medulla-pyengine/src/authority.rs"
       - "crates/medulla-pyengine/src/blob.rs"
       - "crates/medulla-pyengine/src/broker.rs"
-      - "crates/medulla-pyengine/src/channels.rs"
+      - "crates/medulla-pyengine/crates/medulla-kernel/src/channels.rs"
       - "crates/medulla-pyengine/src/cluster_ctl.rs"
       - "crates/medulla-pyengine/src/datascience.rs"
       - "crates/medulla-pyengine/src/errors.rs"
@@ -3694,7 +3694,7 @@ components:
       - "src/audit"
       - "crates/medulla-kernel/src/audit.rs"
       - "crates/medulla-kernel/src/autosize.rs"
-      - "src/channels.rs"
+      - "crates/medulla-kernel/src/channels.rs"
       - "src/server/obs"
       - "src/server/traces"
       - "src/server/promql"
@@ -3718,8 +3718,8 @@ components:
       owned_errors: 47
       measured_at_head: "3243c3e222b133396010cb573b803d9298a717aa"
       top_files:
-        - "src/server/obs/mod.rs (31)"
-        - "src/cost/mod.rs (10)"
+        - "crates/medulla-server-obs/src/obs/mod.rs (31)"
+        - "crates/medulla-persistence/src/cost/mod.rs (10)"
         - "src/performance_probe/storage.rs (4)"
         - "src/performance_probe.rs (2)"
       measurement_note: >-
@@ -3780,9 +3780,9 @@ components:
       - "Cargo.toml"
       - "src/lib.rs"
       - "src/main.rs"
-      - "src/server_startup.rs"
+      - "crates/medulla-server/src/server_startup.rs"
       - "src/bin"
-      - "src/test_support.rs"
+      - "crates/medulla-server-api/src/test_support.rs"
       - ".cargo/config.toml"
       - ".config/arch-lint.toml"
       - ".config/pre-commit.yaml"
@@ -4326,8 +4326,8 @@ wiring_decisions:
         therefore not a bypass of the store's own API; it is excluded from the 17. Counted
         together the figure is 18, which is why both numbers appear in earlier notes.
       breakdown:
-        - "src/server/kv.rs:193, :218, :328 (3) -- owner medulla.server-dispatch"
-        - "src/server/blob/store.rs:570, :643, :699, :1315 (4) -- owner medulla.server-dispatch"
+        - "crates/medulla-server-blob/src/kv.rs:193, :218, :328 (3) -- owner medulla.server-dispatch"
+        - "crates/medulla-server-blob/src/blob/store.rs:570, :643, :699, :1315 (4) -- owner medulla.server-dispatch"
         - "crates/medulla-jobs/src/store.rs:1241, :1297, :1362 (3) -- owner medulla.job-plane"
         - "crates/medulla-statechart/src/store.rs:267 (1) -- owner medulla.job-plane"
         - "crates/medulla-tsdb/src/store.rs:562, :582, :774, :812, :934, :977 (6) -- owner medulla.timeseries"
@@ -4342,7 +4342,7 @@ wiring_decisions:
         accessor, and nothing observed it. Leaving `database()` public means the next store to be
         migrated will do the same.
       test_only_sites_excluded:
-        - "crates/medulla-core/src/rbac_persist.rs:763"
+        - "crates/medulla-isolation/src/rbac_persist.rs:763"
         - "crates/medulla-tsdb/src/store.rs:1390"
         - "crates/medulla-mutation-store/src/store/tests.rs:196"
       corrections_to_the_finding:
@@ -4360,10 +4360,10 @@ wiring_decisions:
            `concrete_change` must cover it (the parameter type becomes the revalidating
            accessor's output, not `&Database`). Recorded rather than silently dropped, because
            dropping it would leave a live bypass with no owner."
-        - "src/server/blob/store.rs has TWELVE `.database()` sites (570, 612, 643, 662, 685, 699, 713,
+        - "crates/medulla-server-blob/src/blob/store.rs has TWELVE `.database()` sites (570, 612, 643, 662, 685, 699, 713,
            724, 968, 1243, 1294, 1315), not 14. Four of the twelve reach begin_write; the other eight
            are begin_read."
-        - "src/server/kv.rs:1071 and :164, :258 are begin_READ, correctly excluded from the write census."
+        - "crates/medulla-server-blob/src/kv.rs:1071 and :164, :258 are begin_READ, correctly excluded from the write census."
 
     decision: >-
       `database()` becomes `pub(crate)`, AND the bypass sites are NOT migrated to `write()`.
@@ -4371,10 +4371,10 @@ wiring_decisions:
       option, a narrow write accessor that keeps the revalidation.
     rationale: >-
       Migrating the 17 external sites to `MutationStore::write()` would be incorrect. Every one
-      of medulla-jobs, medulla-statechart, medulla-tsdb, medulla-core::rbac_persist and src/server/blob/store.rs
+      of medulla-jobs, medulla-statechart, medulla-tsdb, medulla-core::rbac_persist and crates/medulla-server-blob/src/blob/store.rs
       documents in its own source that its AUTHORITATIVE table lives beside the ledger in the
       SAME physical redb file and is deliberately opened off the raw `Database`
-      (e.g. crates/medulla-jobs/src/store.rs:368-372, crates/medulla-core/src/rbac_persist.rs:130,
+      (e.g. crates/medulla-jobs/src/store.rs:368-372, crates/medulla-isolation/src/rbac_persist.rs:130,
       crates/medulla-statechart/src/store.rs:206). `write()` returns a `MutationWrite` bound to a
       ledger batch; these writes are not ledger batches. What the bypass sites actually skip is
       only the two revalidations -- so the fix is an accessor that keeps the revalidation and
@@ -4394,7 +4394,7 @@ wiring_decisions:
          `.database().begin_read()` sites get the same treatment rather than a second exception."
       - "Migrate the 17 external write sites listed in `corrected_census.breakdown` to
          `owner_write()`, and the external read sites to `owner_read()`."
-      - "src/server/kv.rs:193, :218, :328 are the only three sites with NO separate-table reason --
+      - "crates/medulla-server-blob/src/kv.rs:193, :218, :328 are the only three sites with NO separate-table reason --
          they are plain KV mutations. Migrate those to `MutationStore::write()` proper, not to
          `owner_write()`."
       - "Cover the TRANSITIVE site too: `initialize_scheduler_indexes` takes `db: &Database`
@@ -4440,7 +4440,7 @@ wiring_decisions:
       against (1d83cf4b, well before either rename) was not re-derived; both files are named
       here as the candidate current locations rather than asserting one with false certainty.
       The five EXTERNAL bypass sites this decision's `corrected_census.breakdown` lists
-      (src/server/kv.rs, src/server/blob/store.rs, crates/medulla-jobs/src/store.rs,
+      (crates/medulla-server-blob/src/kv.rs, crates/medulla-server-blob/src/blob/store.rs, crates/medulla-jobs/src/store.rs,
       crates/medulla-statechart/src/store.rs, crates/medulla-tsdb/src/store.rs) are unaffected by the
       medulla-mutation-store retirement -- none of those paths changed -- so they are NOT
       re-verified here beyond confirming their paths still exist (see the whole-file
@@ -4653,7 +4653,7 @@ wiring_decisions:
         contributes zero because it is explicitly disabled; the other seven were selected by
         arch-lint's recommended default, not by `preset = "minimal"` (the CLI ignores preset for
         rule selection). File paths below are as of the named head:
-        `src/server/persistence/shard_migrate.rs` has since been split into the
+        `crates/medulla-persistence/src/shard_migrate.rs` has since been split into the
         `shard_migrate/` module (`inplace.rs`, `payload.rs`, `readiness.rs`, `swap.rs`,
         `tests.rs`, `tests/`), and its count is not re-attributed until a new receipt.
 
@@ -4709,18 +4709,18 @@ wiring_decisions:
         medulla.compute: 4
         medulla.modality: 1
       heaviest_files:
-        - "src/server/persistence/redb_backend.rs (97) -- medulla.persistence"
-        - "src/redb_store.rs (49) -- medulla.persistence"
-        - "src/server/persistence/shard_migrate.rs (40) -- medulla.persistence"
-        - "src/server/persistence/backup.rs (37) -- medulla.persistence"
-        - "src/raft/tests.rs (37) -- medulla.cluster-replication"
-        - "src/raft/xshard_harness.rs (21) -- medulla.cluster-replication"
-        - "src/server/reasoning_projection.rs (21) -- medulla.epistemic (counted under its owner)"
-        - "src/server/handlers/admin.rs (19) -- medulla.server-dispatch"
-        - "src/server/handlers/sqlite_file.rs (18) -- medulla.server-dispatch"
+        - "crates/medulla-persistence/src/redb_backend.rs (97) -- medulla.persistence"
+        - "crates/medulla-store/src/redb_store.rs (49) -- medulla.persistence"
+        - "crates/medulla-persistence/src/shard_migrate.rs (40) -- medulla.persistence"
+        - "crates/medulla-persistence/src/backup.rs (37) -- medulla.persistence"
+        - "crates/medulla-server-cluster-tests/src/split_tests/raft_cluster.rs (37) -- medulla.cluster-replication"
+        - "crates/medulla-server-cluster-tests/src/split_tests/xshard_harness.rs (21) -- medulla.cluster-replication"
+        - "crates/medulla-h-retrieve/src/reasoning_projection.rs (21) -- medulla.epistemic (counted under its owner)"
+        - "crates/medulla-h-admin/src/admin.rs (19) -- medulla.server-dispatch"
+        - "crates/medulla-h-txn/src/sqlite_file.rs (18) -- medulla.server-dispatch"
       note_on_eg_binary_composition: >-
         41 = 37 in tests/, benches/ and examples/ plus 4 in src/lib.rs, src/main.rs,
-        src/test_support.rs and src/bin/. The 37 in test and bench harnesses are the cheapest
+        crates/medulla-server-api/src/test_support.rs and src/bin/. The 37 in test and bench harnesses are the cheapest
         to clear and are NOT production defects; they should be separated from the production
         set before anyone quotes a burndown number.
 
@@ -4822,7 +4822,7 @@ wiring_decisions:
     severity: security
 
     verified_facts:
-      - "crates/medulla-core/src/rls_view_cache.rs:66-70 -- `struct Inner { entries: HashMap<String,
+      - "crates/medulla-graph-core/src/rls_view_cache.rs:66-70 -- `struct Inner { entries: HashMap<String,
          (u64, Arc<GraphView>)>, order: VecDeque<..>, generation: u64 }`. The key is the ACTOR
          STRING. The value carries a graph-content version. No policy, role, grant or identity
          digest appears anywhere in the key or the value."
@@ -4830,16 +4830,16 @@ wiring_decisions:
          `*version == current_version`. On a hit `rls.filter_view` is never called."
       - "rls_view_cache.rs:151 `invalidate_all()` bumps `generation` and clears. It is the only
          invalidation path."
-      - "`GraphCore::invalidate_filtered_view_cache` is defined at crates/medulla-core/src/graph.rs:3610
+      - "`GraphCore::invalidate_filtered_view_cache` is defined at crates/medulla-graph-core/src/graph.rs:3610
          and called from exactly TWO sites, graph.rs:6183 and graph.rs:6253 -- both whole-image
          graph transitions."
-      - "`grep -c invalidate_filtered_view_cache crates/medulla-core/src/isolation.rs` = 0. CONFIRMED
+      - "`grep -c invalidate_filtered_view_cache crates/medulla-isolation/src/isolation.rs` = 0. CONFIRMED
          on the current tree."
-      - "Six live read sites, all confirmed at the cited lines: src/server/access.rs:301;
-         src/server/handlers/rdf.rs:131, :162, :462; src/server/handlers/query.rs:5627, :5684."
+      - "Six live read sites, all confirmed at the cited lines: crates/medulla-server-auth/src/access.rs:301;
+         crates/medulla-h-sparql/src/rdf.rs:131, :162, :462; crates/medulla-h-query/src/query.rs:5627, :5684."
     finding_understated_the_problem: >-
       The finding names three uninvalidating mutators (try_add_grant, try_remove_grant,
-      try_register_agent). There are at least THIRTEEN, all in crates/medulla-core/src/isolation.rs
+      try_register_agent). There are at least THIRTEEN, all in crates/medulla-isolation/src/isolation.rs
       and all with zero invalidation: try_add_role:1151, try_remove_role:1171, add_grant:1186,
       try_add_grant:1191, remove_grant:1299, try_remove_grant:1304,
       try_bootstrap_system_identity:1346 and :1373, register_agent:1392, try_register_agent:1400,
@@ -4860,16 +4860,16 @@ wiring_decisions:
       the cost is acceptable -- a miss "costs exactly what every call cost before this cache
       existed."
     concrete_change:
-      - "crates/medulla-core/src/isolation.rs: add a `policy_epoch: AtomicU64` to `IsolationLayer` and a
+      - "crates/medulla-isolation/src/isolation.rs: add a `policy_epoch: AtomicU64` to `IsolationLayer` and a
          `pub fn policy_epoch(&self) -> u64`. Bump it in EVERY mutator of the grant, role or
          agent-identity tables -- all thirteen listed above -- by routing them through one private
          `fn mutate_policy<R>(&mut self, f: impl FnOnce(&mut Self) -> R) -> R` that bumps on exit,
          so a fourteenth mutator cannot be written without it."
-      - "crates/medulla-core/src/rls_view_cache.rs: change `entries` to
+      - "crates/medulla-graph-core/src/rls_view_cache.rs: change `entries` to
          `HashMap<(String, u64), (u64, Arc<GraphView>)>` keyed on (actor, policy_epoch); take
          `policy_epoch` in `get` and `put`; leave `generation` as-is (it closes the
          build-race, a different property)."
-      - "crates/medulla-core/src/graph.rs: thread the epoch through `cached_filtered_view` /
+      - "crates/medulla-graph-core/src/graph.rs: thread the epoch through `cached_filtered_view` /
          `put_cached_filtered_view` (used at graph.rs around :3610)."
       - "Update the six read sites (access.rs:301; rdf.rs:131/162/462; query.rs:5627/5684) to pass
          the epoch. They already fetch `filtered_view_cache_generation()` at the adjacent line, so
@@ -4899,14 +4899,14 @@ wiring_decisions:
          `IDEMPOTENCY_CONFLICT: key was already used by a different mutation`."
       - "Four call sites inside the crate: apply.rs:12, apply.rs:51, saga.rs:49, saga.rs:110.
          Re-exported at lib.rs:120."
-      - "Compensation 1 (production): src/server/handlers/admin.rs:607-635. `admin_saga_request_stamp`
+      - "Compensation 1 (production): crates/medulla-h-admin/src/admin.rs:607-635. `admin_saga_request_stamp`
          reuses the ORIGINAL attempt's expected_graph_version / request_id / created_at_ms when a
          record already exists, and only a genuine first attempt reads live state. Its own doc
          says re-deriving them live 'makes a legitimate replay's freshly-compiled batch
          byte-diverge from the one already on record purely on this incidental metadata,
          spuriously failing closed with IDEMPOTENCY_CONFLICT even though the intended operation
          (domain/event/payload) is identical.'"
-      - "Compensation 2 (independent): src/redb_store/development_lane.rs:6553-6570. Same fix,
+      - "Compensation 2 (independent): crates/medulla-lane-store/src/redb_store/development_lane.rs:6553-6570. Same fix,
          reached independently, and its comment says so verbatim: 'This mirrors the production fix
          in `handlers/admin.rs`. That the same correction is needed independently here is the
          evidence that the underlying validator is comparing more than identity.'"
@@ -4941,8 +4941,8 @@ wiring_decisions:
          version_expectation equals the stored one, with its own distinct error message, so a
          caller that re-derived the OCC value gets told exactly that instead of a generic
          IDEMPOTENCY_CONFLICT."
-      - "Delete src/server/handlers/admin.rs's `admin_saga_request_stamp` (:628+) and its callers'
-         use of it; delete the equivalent block at src/redb_store/development_lane.rs:6553-6570."
+      - "Delete crates/medulla-h-admin/src/admin.rs's `admin_saga_request_stamp` (:628+) and its callers'
+         use of it; delete the equivalent block at crates/medulla-lane-store/src/redb_store/development_lane.rs:6553-6570."
       - "Add a store-level test: prepare a saga, then replay it with a DIFFERENT req_id and a
          later created_at_ms, and assert it REPLAYS rather than conflicting. No such test exists
          -- both compensations exist precisely because nothing at the store level covers this."
@@ -4959,15 +4959,15 @@ wiring_decisions:
       `git merge-base --is-ancestor`, and confirmed via `git show 064f2d04 -- '*ledger*'`
       showing the function's body cut from 91 lines to 9). `grep -rn
       verify_replay_identity` across the whole tree today finds it ONLY inside a comment
-      in `src/redb_store/development_lane/test_fixture.rs:137` -- zero live call sites.
+      in `crates/medulla-store-apply-tests/src/development_lane_tests/test_fixture.rs:137` -- zero live call sites.
       SUBSTANTIVELY, this decision's finding and fix APPEAR ALREADY LANDED, verified by
-      direct reading, not inference: `src/server/handlers/admin.rs:1301` now reads
+      direct reading, not inference: `crates/medulla-h-admin/src/admin.rs:1301` now reads
       literally `// `admin_saga_request_stamp` is DELETED, not moved.`, with a comment
       explaining the replacement is `OperationReplayIdentity`, which 'structurally
       excludes' timestamp/request-id/OCC-expectation -- the exact shape this decision's
       `concrete_change` asked for (a differently-named type, not the literal
       `MutationBatch::operation_identity_digest()` method proposed, but the same
-      contract). `src/redb_store/development_lane.rs` is now 181 lines (was 6553+ at the
+      contract). `crates/medulla-lane-store/src/redb_store/development_lane.rs` is now 181 lines (was 6553+ at the
       time of this finding) and no longer contains the second compensation site by that
       description -- it appears to have been removed in the same restructuring, not
       independently re-verified line-by-line. THIS PASS DOES NOT CHANGE `status`
@@ -4998,7 +4998,7 @@ wiring_decisions:
       - "Root Cargo.toml: `default = ['graph', 'algorithms', 'metrics', 'full']` and `full`
          contains 'security'. So the 64 negative arms are reachable ONLY via
          --no-default-features, and no shipped default build compiles them."
-      - "crates/medulla-core/src/isolation.rs:1542-1545 -- under `#[cfg(not(feature = \"security\"))]`,
+      - "crates/medulla-isolation/src/isolation.rs:1542-1545 -- under `#[cfg(not(feature = \"security\"))]`,
          `check_access` (declared :1508) matches graph_type and returns
          `GraphType::Commons => true` under the comment 'Bus: all authenticated agents have full
          access', with no identity resolution on that arm."
@@ -5035,7 +5035,7 @@ wiring_decisions:
          default, and get an operator ruling on whether that build shape is still shipped. If it
          is, this decision does not proceed as written."
       - "Delete all 64 `#[cfg(not(feature = \"security\"))]` arms, starting with
-         crates/medulla-core/src/isolation.rs:1542-1545."
+         crates/medulla-isolation/src/isolation.rs:1542-1545."
       - "Delete all 636 `#[cfg(feature = \"security\")]` attributes, making the guarded code
          unconditional."
       - "Remove `security` from root Cargo.toml `full`, from `medulla-types` and `medulla-core` feature
@@ -5047,7 +5047,7 @@ wiring_decisions:
     acceptance_evidence: []
 
   - decision_id: D-MEDULLA-010
-    title: "src/server/blob/store.rs still hand-rolls the four-constructor identity form"
+    title: "crates/medulla-server-blob/src/blob/store.rs still hand-rolls the four-constructor identity form"
     owning_component: medulla.server-dispatch
     co_owning_component: medulla.contracts
     status: proposed
@@ -5055,16 +5055,16 @@ wiring_decisions:
     evidence_status: not_run
 
     verified_facts:
-      - "src/server/blob/store.rs:454 -- `fn ledger_bootstrap_identity()` calls
+      - "crates/medulla-server-blob/src/blob/store.rs:454 -- `fn ledger_bootstrap_identity()` calls
          `MutationScopeIdentity::native(TenantId::system(), MutationDomain::BlobStore,
          LogicalName::new(\"blob-ledger-root\")?, IncarnationId::new(COMPILED_BATCH_INCARNATION)?)`.
          The line number in the finding is EXACT."
       - "The collapsed helpers are used at exactly four sites, matching the A-1 record:
-         crates/medulla-core/src/rbac_persist.rs:64 (fixed_native),
+         crates/medulla-isolation/src/rbac_persist.rs:64 (fixed_native),
          crates/medulla-jobs/src/store.rs:2382 (fixed_native),
          crates/medulla-statechart/src/store.rs:738 (fixed_native),
-         src/server/persistence/redb_backend.rs:1347 (fixed_graph)."
-      - "crates/medulla-types/src/mutation_batch/model/identity.rs:228-240 --
+         crates/medulla-persistence/src/redb_backend.rs:1347 (fixed_graph)."
+      - "crates/medulla-mutation-types/src/mutation_scope/identity.rs:228-240 --
          `fixed_native(tenant: &str, domain: MutationDomain, resource: &str, incarnation_id: &str)`
          forwards to `native(TenantId::new(tenant)?, domain, LogicalName::new(resource)?,
          IncarnationId::new(incarnation_id)?)`."
@@ -5088,7 +5088,7 @@ wiring_decisions:
       TenantId is byte-identical. If the reserved literal ever changes to something with path or
       address shape, this migration silently starts failing closed at construction.
     concrete_change:
-      - "src/server/blob/store.rs:454-464: replace the body of `ledger_bootstrap_identity` with
+      - "crates/medulla-server-blob/src/blob/store.rs:454-464: replace the body of `ledger_bootstrap_identity` with
          `MutationScopeIdentity::fixed_native(
             medulla_types::mutation_batch::RESERVED_SYSTEM_TENANT,
             MutationDomain::BlobStore,
@@ -5125,7 +5125,7 @@ corrections_to_upstream_claims:
       18 production `.database().begin_write()` sites; 17 outside the owning crate. medulla-tsdb
       (6 sites) and medulla-statechart (1 site) were missed entirely.
 
-  - claim: "src/server/blob/store.rs has 14 .database() sites"
+  - claim: "crates/medulla-server-blob/src/blob/store.rs has 14 .database() sites"
     source: source_finding_1
     verdict: wrong
     actual: "12 (four of which reach begin_write)"
@@ -5218,7 +5218,7 @@ corrections_to_upstream_claims:
       Separately: arch-lint.toml's own comment claims the gate is "focused on dependency
       direction", which is false and should be corrected.
 
-  - claim: "src/server/dispatch.rs is 14,174 lines"
+  - claim: "crates/medulla-server-router/src/dispatch.rs is 14,174 lines"
     source: skill_section_1_layer_6
     verdict: confirmed_exactly
 
@@ -5235,7 +5235,7 @@ skill_gaps_found:
       The skill's layer model covers the 48 crates and `src/server/`, and NOTHING ELSE in the
       root facade. Two large subsystems have no place in it at all: `src/raft/` (23 modules --
       consensus, replication, sharding, placement, cross-shard transactions, Pregel) and the
-      persistence layer (`src/redb_store.rs` at 20,818 lines plus src/redb_store/,
+      persistence layer (`crates/medulla-store/src/redb_store.rs` at 20,818 lines plus src/redb_store/,
       src/server/persistence/, persist.rs, durability.rs, mutation_apply.rs, write_coalescer.rs,
       crypto.rs). Together they own 375 of the 687 AL002 blocking errors -- 55% of the burndown
       lives in code the skill's inventory does not mention. This manifest models them as

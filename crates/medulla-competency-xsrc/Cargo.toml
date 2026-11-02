@@ -1,0 +1,14 @@
+[package]
+name = "medulla-competency-xsrc"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: Cross-source and orchestration competency questions"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_competency_xsrc"
+path = "src/lib.rs"
+
+[dependencies]

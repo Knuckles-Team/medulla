@@ -33,9 +33,7 @@ pub fn init_tracing() -> Result<(), String> {
         #[cfg(not(feature = "otel"))]
         {
             let _ = endpoint;
-            return Err(
-                "MEDULLA_OTLP_ENDPOINT requires a build with the otel feature".to_string(),
-            );
+            return Err("MEDULLA_OTLP_ENDPOINT requires a build with the otel feature".to_string());
         }
     }
     init_fmt_only()

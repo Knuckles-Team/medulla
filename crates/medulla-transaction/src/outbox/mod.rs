@@ -51,8 +51,8 @@
 
 use crate::admitted::AdmittedMutation;
 use crate::tables::FENCES;
+use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
 use medulla_storage::{decode_ledger_record, ledger_scope_key};
-use medulla_types::MutationScopeIdentity;
 
 // Read/write scoped table guards are different types, but both outbox cursor
 // advancement and queue status must decode the same delivery row key.
@@ -105,8 +105,10 @@ pub use views::{
     OutboxViewAnswer, OutboxWrite, OutboxWriteReply,
 };
 
+use medulla_mutation_types::{
+    mutation_scope::MutationOutboxLease, mutation_scope::MutationProjectionCursor,
+};
 use medulla_storage::{OwnerDomain, ScopedRead};
-use medulla_types::{MutationOutboxLease, MutationProjectionCursor};
 
 /// How many claimed-but-unresolved rows one consumer may hold on one scope.
 ///

@@ -25,7 +25,7 @@
 //! this crate; calling up would be a dependency cycle). Instead it routes onto the SAME
 //! LOWER primitives those wrappers are themselves built on:
 //!   * **in-txn read** (`unifiedQuery`) → `GraphView::overlay_*` (the exact overlay ops
-//!     the facade's `overlay_write_set` uses) + `medulla_core::compute::semantic::semantic_overlay`
+//!     the facade's `overlay_write_set` uses) + `medulla_semantic_index::semantic::semantic_overlay`
 //!     + `medulla_plan::StagedSeries`, then `medulla_plan::execute` over an `medulla_plan::uql`-parsed
 //!     plan — byte-for-byte the executor `run_unified` wraps. Read-your-own-writes off the
 //!     overlay; off-txn / another request reads the committed store (empty overlay).
@@ -39,7 +39,7 @@
 use std::collections::HashMap;
 use std::sync::Mutex;
 
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 use serde_json::{Map, Value};
 
 use crate::parser::{parse_operation, Field, GqlValue, Operation};
@@ -396,7 +396,7 @@ fn unified_query(
 ) -> Result<Value, String> {
     let txn_id = arg_str(field, "txnId")?;
     let uql = arg_str(field, "uql")?;
-    let plan = medulla_plan::uql::parse(&uql).map_err(|e| e.render(&uql))?;
+    let plan = medulla_uql::parse(&uql).map_err(|e| e.render(&uql))?;
 
     let guard = registry.txns.lock().unwrap();
     let txn = guard
@@ -408,7 +408,7 @@ fn unified_query(
     let mut view = core.analysis_snapshot();
     overlay_txn(&mut view, txn);
     // Committed embeddings overlaid with the txn's staged vectors (RYOW for Rank/kNN).
-    let semantic = medulla_core::compute::semantic::semantic_overlay(
+    let semantic = medulla_semantic_index::semantic::semantic_overlay(
         core.semantic_store.read().clone(),
         &txn.vectors,
     );
@@ -416,17 +416,18 @@ fn unified_query(
     // before the committed store (CONCEPT:MEDULLA-KG.query.txn-tsdb-read-your parity). Absent without tsdb.
     #[cfg(feature = "crossmodal-tsdb")]
     let staged_series = {
-        let mut s = medulla_plan::StagedSeries::new();
+        let mut s = medulla_exec::exec::StagedSeries::new();
         for (series, points) in &txn.measurements {
             s.push_points(series, points.iter().cloned());
         }
         s
     };
 
-    let ctx = medulla_plan::PlanCtx::new(&view, &semantic);
+    let ctx = medulla_exec::exec::PlanCtx::new(&view, &semantic);
     #[cfg(feature = "crossmodal-tsdb")]
     let ctx = ctx.with_staged_series(&staged_series);
-    let result = medulla_plan::execute(&plan, &ctx).map_err(|e| format!("GraphQL unifiedQuery: {e}"))?;
+    let result = medulla_exec::exec::execute(&plan, &ctx)
+        .map_err(|e| format!("GraphQL unifiedQuery: {e}"))?;
 
     let rows: Vec<Value> = result
         .rows()
@@ -468,7 +469,7 @@ fn rollback_transaction(
 /// Overlay a txn's staged graph writes onto a cloned `GraphView` (CONCEPT:MEDULLA-KG.query.medulla-9), so an
 /// in-txn `unifiedQuery`'s scan/traverse legs observe the txn's own uncommitted graph
 /// writes. The SAME `GraphView::overlay_*` ops the facade's `overlay_write_set` uses.
-fn overlay_txn(view: &mut medulla_core::graph::GraphView, txn: &CrossModalTxn) {
+fn overlay_txn(view: &mut medulla_graph_core::graph::GraphView, txn: &CrossModalTxn) {
     for w in &txn.graph {
         match w {
             GraphWrite::Node { id, blob } => view.overlay_add_node(id.clone(), blob.clone()),
@@ -484,7 +485,7 @@ fn overlay_txn(view: &mut medulla_core::graph::GraphView, txn: &CrossModalTxn) {
 
 /// Lower a slice of RDF triples to staged graph writes (CONCEPT:MEDULLA-KG.query.medulla-9), mirroring the
 /// canonical `medulla_rdf::mapping::load_triples` property-graph projection (and the facade's
-/// `handlers::txn::triples_to_methods`) so the durable rows match the in-memory model:
+/// `medulla_h_txn::txn::triples_to_methods`) so the durable rows match the in-memory model:
 ///   * literal object  → a property `{predicate: literal-cell}` on the subject node;
 ///   * resource object → subject + object nodes + a typed edge
 ///     `{"relationship": predicate}`,
@@ -779,7 +780,7 @@ mod tests {
     #[cfg(feature = "crossmodal-tsdb")]
     #[test]
     fn cross_modal_txn_measurement_staged_series_ryow() {
-        use medulla_plan::{Op, Plan};
+        use medulla_exec::{algebra::Op, algebra::Plan};
 
         let core = core_fixture();
         let reg = CrossModalTxnRegistry::new();
@@ -806,7 +807,7 @@ mod tests {
         // `unified_query` does, and confirm a TsScan reads the staged point (RYOW).
         let guard = reg.txns.lock().unwrap();
         let txn = guard.get(&(OWNER.to_string(), txn_id.clone())).unwrap();
-        let mut staged = medulla_plan::StagedSeries::new();
+        let mut staged = medulla_exec::exec::StagedSeries::new();
         for (series, points) in &txn.measurements {
             staged.push_points(series, points.iter().cloned());
         }
@@ -814,13 +815,13 @@ mod tests {
 
         let view = core.analysis_snapshot();
         let semantic = core.semantic_store.read().clone();
-        let ctx = medulla_plan::PlanCtx::new(&view, &semantic).with_staged_series(&staged);
+        let ctx = medulla_exec::exec::PlanCtx::new(&view, &semantic).with_staged_series(&staged);
         let plan = Plan::new(vec![Op::TsScan {
             series: vec!["temp".to_string()],
             from: 0.0,
             to: 1000.0,
         }]);
-        let rows = medulla_plan::execute(&plan, &ctx).unwrap();
+        let rows = medulla_exec::exec::execute(&plan, &ctx).unwrap();
         assert!(
             rows.rows().iter().any(|r| r.id == "temp@100"),
             "TsScan must read the txn's own staged measurement point (RYOW)"

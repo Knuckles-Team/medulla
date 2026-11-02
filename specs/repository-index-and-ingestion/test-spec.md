@@ -24,8 +24,8 @@ Tests here are required proof, not a claim that they already pass. Each fixture 
 - `crates/medulla-compute/src/parser/branch_index_tests.rs` for branch scope, occurrence IDs and deterministic resolution.
 - `tests/repository_index_durable.rs` for graph-scoped envelope, replay, tombstone, restart and CAS holder behavior.
 - `tests/test_index_repository_result_contract.py` and generated-client tests for typed outcomes and refusal codes.
-- `crates/medulla-types/src/source_ingestion/tests.rs` and server source-ingestion tests for checkpoint and mapping rules.
-- `src/server/dispatch/graph_pipeline/repository_index/enrichment.rs` and repository worker tests for admission, lease and budget.
+- `crates/medulla-source-types/src/source_ingestion/tests.rs` and server source-ingestion tests for checkpoint and mapping rules.
+- `crates/medulla-server-graph/src/dispatch/graph_pipeline/repository_index/enrichment.rs` and repository worker tests for admission, lease and budget.
 
 ## Acceptance evidence and reporting
 

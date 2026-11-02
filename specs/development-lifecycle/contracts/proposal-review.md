@@ -31,7 +31,7 @@ Repository: arbora, row `ARBORA-OPS-R896.5` (goal, proposal list and decision op
 
 ## Authoritative code types
 
-- `crates/medulla-types/src/lifecycle.rs`: `ProposalKind`, `Proposal`, `Goal` and `ProjectMode`.
+- `crates/medulla-source-types/src/lifecycle.rs`: `ProposalKind`, `Proposal`, `Goal` and `ProjectMode`.
 
 ## Test vectors
 

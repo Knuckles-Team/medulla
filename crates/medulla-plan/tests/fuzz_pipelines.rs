@@ -29,10 +29,11 @@
 mod common;
 
 use common::*;
-use medulla_core::compute::semantic::SemanticStore;
-use medulla_core::graph::{GraphCore, GraphView};
-use medulla_plan::federation::ForeignSourceRegistry;
-use medulla_plan::{execute, PlanCtx};
+use medulla_graph_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphView;
+use medulla_federation::federation::ForeignSourceRegistry;
+use medulla_exec::{exec::execute, exec::PlanCtx};
+use medulla_semantic_index::semantic::SemanticStore;
 use proptest::prelude::*;
 use serde_json::json;
 use std::collections::HashSet;
@@ -173,8 +174,9 @@ proptest! {
     fn long_pipelines_never_panic_and_are_wellformed(q in pipeline_strategy()) {
         let (view, semantic) = build_dense(40);
         let registry = foreign_registry();
-        let plan = medulla_plan::uql::parse(&q).expect("generated UQL must be valid");
-        let ctx = PlanCtx::new(&view, &semantic).with_foreign(&registry);
+        let plan = medulla_uql::parse(&q).expect("generated UQL must be valid");
+        let federated = medulla_federation::federation_opt::FederatedExec::with_registry(&registry);
+        let ctx = PlanCtx::new(&view, &semantic).with_foreign_executor(&federated);
 
         let a = execute(&plan, &ctx).expect("a valid plan must execute without error");
 
@@ -213,10 +215,11 @@ proptest! {
         // Serial reference: each pipeline's canonical RowSet over the snapshot.
         let plans: Vec<_> = pipelines
             .iter()
-            .map(|q| medulla_plan::uql::parse(q).expect("valid UQL"))
+            .map(|q| medulla_uql::parse(q).expect("valid UQL"))
             .collect();
         let reference: Vec<Vec<(String, Option<u32>)>> = {
-            let ctx = PlanCtx::new(&view, &semantic).with_foreign(&registry);
+            let federated = medulla_federation::federation_opt::FederatedExec::with_registry(&registry);
+            let ctx = PlanCtx::new(&view, &semantic).with_foreign_executor(&federated);
             plans.iter().map(|p| stable_rows(&execute(p, &ctx).unwrap())).collect()
         };
 
@@ -232,7 +235,8 @@ proptest! {
             let handles: Vec<_> = (0..8)
                 .map(|_| {
                     scope.spawn(move || {
-                        let ctx = PlanCtx::new(view_ref, semantic_ref).with_foreign(registry_ref);
+                        let federated = medulla_federation::federation_opt::FederatedExec::with_registry(registry_ref);
+                        let ctx = PlanCtx::new(view_ref, semantic_ref).with_foreign_executor(&federated);
                         for (i, plan) in plans_ref.iter().enumerate() {
                             let got = stable_rows(&execute(plan, &ctx).unwrap());
                             assert_eq!(

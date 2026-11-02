@@ -31,4 +31,4 @@ default = []
 # No-op marker mirroring the sibling viz crates' own `viz` feature -- the facade's
 # `viz-graph-tiles` feature is the actual on/off switch for whether this crate
 # links into a given medulla-engine build.
-viz = []
+viz = ["medulla-viz-core/viz"]

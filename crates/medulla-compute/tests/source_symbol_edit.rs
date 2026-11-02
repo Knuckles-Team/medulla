@@ -2,10 +2,10 @@
 
 use std::collections::BTreeMap;
 
+use medulla_source_types::lifecycle::sha256_hex;
 use medulla_compute::source_symbol_edit::{
     project_symbol_edit, BlobAccess, ProjectionRefusal, ResolvedSymbol, SymbolResolver,
 };
-use medulla_types::lifecycle::sha256_hex;
 use medulla_types::source_symbol_edit::{SymbolEdit, SymbolEditKind, SymbolEditOp};
 
 #[derive(Default)]

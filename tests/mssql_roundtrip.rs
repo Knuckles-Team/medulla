@@ -19,7 +19,7 @@ use serde_json::Value;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 
-use medulla::server::mssql_wire::{self, derive_mssql_password, protocol};
+use medulla_wire::mssql_wire::{self, derive_mssql_password, protocol};
 
 use protocol::{
     frame_message, parse_header, utf16le_bytes, utf16le_to_string, TdsType, HEADER_LEN, PKT_LOGIN7,
@@ -35,7 +35,7 @@ fn sql_test_persist_dir() -> String {
 }
 
 /// A real tempdir-backed `RedbBackend` (mirrors `common::tempdir_persistence()` /
-/// `server::mod::tests::test_state` / `bolt_wire::tests::durable_state` / the
+/// `medulla_server::mod::tests::test_state` / `bolt_wire::tests::durable_state` / the
 /// identical helper in `tests/pgwire_roundtrip.rs`): the authoritative-commit flip
 /// means every graph-node write now routes through the universal cross-modal
 /// MutationBatch kernel, which fails closed ("cross-modal mutation requires durable

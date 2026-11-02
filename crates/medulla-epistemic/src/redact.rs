@@ -4,7 +4,7 @@
 //! believe X" with a full justification proof tree — every premise's id, inference
 //! rule, and confidence. That tree is a first-class read surface (KG-2.134, and
 //! EPI-P3-1's `proof_ids` column), so it must respect the SAME per-agent Row-Level
-//! Security every other read path enforces (`medulla_core::isolation`,
+//! Security every other read path enforces (`medulla_isolation::isolation`,
 //! CONCEPT:MEDULLA-KG.sharding.row-level-security): an agent who cannot see a given
 //! evidence NODE via [`IsolationLayer::filter_view`]/[`IsolationLayer::can_see_row`]
 //! must not learn its identity by asking `EXPLAIN BELIEF` instead.
@@ -22,7 +22,7 @@
 //!
 //! No second permission model: every visibility decision below is
 //! [`IsolationLayer::can_see_row`] evaluated against the same
-//! [`RowVisibility`](medulla_core::isolation::RowVisibility) `filter_view` reads off the
+//! [`RowVisibility`](medulla_graph_core::rls::RowVisibility) `filter_view` reads off the
 //! node's property blob ([`BeliefGraph::node_visibility`], populated by
 //! [`BeliefGraph::from_graph_view`]).
 //!
@@ -45,7 +45,8 @@
 //!   uncertain), never the raw posterior float (a leak of structural detail in its
 //!   own right at this tier).
 
-use medulla_core::isolation::{IsolationLayer, RowVisibility};
+use medulla_graph_core::rls::RowVisibility;
+use medulla_isolation::isolation::IsolationLayer;
 use serde::{Deserialize, Serialize};
 
 use crate::adapter::BeliefGraph;
@@ -308,7 +309,7 @@ pub fn explain_belief_redacted_capped(
 mod tests {
     use super::*;
     use crate::model::EdgeKind;
-    use medulla_core::isolation::{AgentIdentity, AgentRole};
+    use medulla_types::acl::{AgentIdentity, AgentRole};
 
     fn owned_private(owner: &str) -> RowVisibility {
         RowVisibility {

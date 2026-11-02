@@ -207,7 +207,7 @@ pub struct Calibration {
 }
 
 /// The inference rule that produced a [`ProofNode`] — the epistemic analogue of an
-/// OWL completion-rule name. Deliberately parallel to `medulla_rdf::owl::ProofNode` (they
+/// OWL completion-rule name. Deliberately parallel to `medulla_reasoner::owl::ProofNode` (they
 /// explain different graphs: OWL subsumption vs. epistemic support/attack).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum JustRule {

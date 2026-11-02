@@ -29,12 +29,13 @@ use crate::outbox::rows::{
 use crate::outbox::stream::{read_outbox_row_in_write, subscribed_topic};
 use crate::outbox::{claim, ensure_not_graft_fenced, index, rewind, OutboxRejectReason};
 use crate::tables::{OUTBOX, OUTBOX_CURSORS, OUTBOX_DELIVERIES};
+use medulla_mutation_types::{
+    mutation_scope::MutationOutboxLease, mutation_scope::MutationProjectionCursor,
+    mutation_scope::MutationScopeIdentity, mutation_scope::MUTATION_BATCH_VERSION,
+};
 use medulla_storage::{
     decode_outbox_record, ledger_scope_key, MutationOwnerAuthority, OwnedStoreHandle, OwnerDomain,
     ScopedRead,
-};
-use medulla_types::{
-    MutationOutboxLease, MutationProjectionCursor, MutationScopeIdentity, MUTATION_BATCH_VERSION,
 };
 
 /// Acknowledge one held lease and advance the consumer's watermark atomically.
@@ -492,7 +493,7 @@ pub(crate) fn rewind_watermark_in_write<D: OwnerDomain>(
 
 pub(crate) fn build_cursor(
     consumer: &str,
-    record: &medulla_types::MutationOutboxRecord,
+    record: &medulla_mutation_types::mutation_scope::MutationOutboxRecord,
     now_ms: u64,
 ) -> Result<MutationProjectionCursor, String> {
     let cursor = MutationProjectionCursor {

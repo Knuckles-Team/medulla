@@ -8,7 +8,8 @@
 mod common;
 
 use common::parse_all;
-use medulla_core::graph::{GraphCore, GraphView};
+use medulla_graph_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphView;
 use medulla_rdf::mapping::{load_triples, parse_turtle, IriStore};
 use medulla_rdf::sparql::{execute, Dataset, Projection, QueryOutcome};
 
@@ -103,7 +104,9 @@ f:route-admin a infra:ProxyRoute ;
     dc:date "2026-01-03T00:00:00Z"^^xsd:dateTime .
 "#;
     let view = graph(
-        &[include_str!("../../medulla-core/ontology/infrastructure-v1.ttl")],
+        &[include_str!(
+            "../../medulla-core/ontology/infrastructure-v1.ttl"
+        )],
         fixture,
     );
     let (vars, rows) = select(

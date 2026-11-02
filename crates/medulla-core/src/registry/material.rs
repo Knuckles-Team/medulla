@@ -84,9 +84,9 @@ pub(super) fn load_material(core: &Arc<GraphCore>, material: GraphMaterial) {
         let _ = core.add_edge(src, tgt, props);
     }
     if !material.semantic.is_empty() {
-        if let Ok(store) =
-            rmp_serde::from_slice::<crate::compute::semantic::SemanticStore>(&material.semantic)
-        {
+        if let Ok(store) = rmp_serde::from_slice::<medulla_semantic_index::semantic::SemanticStore>(
+            &material.semantic,
+        ) {
             *core.semantic_store.write() = store;
         }
     }
@@ -109,7 +109,7 @@ pub(super) fn apply_material_page(core: &Arc<GraphCore>, page: &MaterialPage) {
     }
     if !page.semantic.is_empty() {
         if let Ok(store) =
-            rmp_serde::from_slice::<crate::compute::semantic::SemanticStore>(&page.semantic)
+            rmp_serde::from_slice::<medulla_semantic_index::semantic::SemanticStore>(&page.semantic)
         {
             *core.semantic_store.write() = store;
         }

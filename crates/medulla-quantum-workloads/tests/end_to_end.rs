@@ -12,8 +12,8 @@
 
 use std::collections::BTreeMap;
 
-use medulla_core::graph::GraphCore;
 use medulla_epistemic::{propagate_confidence, AuthorityPolicy, BeliefGraph};
+use medulla_graph_core::graph::GraphCore;
 use medulla_quantum_workloads::{
     commit_maxcut_proposal, demo::build_concept_graph, pull_candidate_subgraph,
     run_qaoa_maxcut_local_sim, MaxCutProposal, ProposalCommitOutcome, QaoaConfig,

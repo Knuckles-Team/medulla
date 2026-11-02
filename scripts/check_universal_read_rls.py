@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: E501
 """Fail CI if a served read bypasses row or carrier ownership isolation.
 
 The read inventory is generated from the exhaustive capability ledger and
@@ -29,13 +30,15 @@ def read(relative: str) -> str:
 def protocol_source() -> str:
     """Read the complete compiler-declared production protocol family."""
 
-    return read_compiler_family("crates/medulla-types/src/protocol.rs", ROOT).production
+    return read_compiler_family(
+        "crates/medulla-protocol-types/src/protocol.rs", ROOT
+    ).production
 
 
 def rdf_handler_source() -> str:
     """Read the complete compiler-declared native RDF handler family."""
 
-    return read_compiler_family("src/server/handlers/rdf.rs", ROOT).production
+    return read_compiler_family("crates/medulla-h-sparql/src/rdf.rs", ROOT).production
 
 
 def require_query_result_cache_rls(query: str, rdf: str, dispatch: str) -> None:
@@ -73,7 +76,7 @@ def rust_function(source: str, signature: str) -> str:
 
 
 def isolation_source() -> tuple[str, str]:
-    source = read("crates/medulla-core/src/isolation/access_policy.rs")
+    source = read("crates/medulla-isolation/src/isolation/access_policy.rs")
     return source, rust_function(source, "pub fn can_see_row(")
 
 
@@ -81,9 +84,9 @@ def knowledge_stream_handler_source() -> str:
     """Return the complete declared KnowledgeStream module tree."""
 
     paths = (
-        "src/server/handlers/knowledge_stream/mod.rs",
-        "src/server/handlers/knowledge_stream/families.rs",
-        "src/server/handlers/knowledge_stream/stream.rs",
+        "crates/medulla-h-query/src/knowledge_stream/mod.rs",
+        "crates/medulla-h-query/src/knowledge_stream/families.rs",
+        "crates/medulla-h-query/src/knowledge_stream/stream.rs",
     )
     return "\n".join(map(read, paths))
 
@@ -250,51 +253,64 @@ def main() -> None:
     policies = capability_inventory()
     methods, reads = require_protocol_inventory(protocol, policies)
 
-    access = read_module_tree("src/server/access.rs", root_dir=ROOT, include_tests=True)
+    access = read_module_tree(
+        "crates/medulla-server-auth/src/access.rs", root_dir=ROOT, include_tests=True
+    )
     isolation, can_see_row = isolation_source()
-    dispatch = read_module_tree("src/server/dispatch.rs", root_dir=ROOT)
-    graph_ops = read_module_tree("src/server/handlers/graph_ops.rs", root_dir=ROOT)
+    dispatch = read_module_tree(
+        "crates/medulla-server-router/src/dispatch.rs", root_dir=ROOT
+    )
+    graph_ops = read_module_tree(
+        "crates/medulla-h-graph/src/graph_ops.rs", root_dir=ROOT
+    )
     knowledge = knowledge_stream_handler_source()
-    query = read_module_tree("src/server/handlers/query.rs", root_dir=ROOT)
+    query = read_module_tree("crates/medulla-h-query/src/query.rs", root_dir=ROOT)
     rdf = rdf_handler_source()
-    distributed = read("src/server/handlers/dist_compute.rs")
-    pregel = read("src/raft/pregel.rs")
-    wire = read("src/server/wire/mod.rs")
-    bolt = read("src/server/bolt_wire/mod.rs")
+    distributed = read("crates/medulla-h-txn/src/dist_compute.rs")
+    pregel = read("crates/medulla-raft-xshard/src/pregel.rs")
+    wire = read("crates/medulla-wire-core/src/wire/mod.rs")
+    bolt = read("crates/medulla-wire/src/bolt_wire/mod.rs")
     # The verified carrier/test identity projection lives in the declared
     # authority-context sibling after nonce extraction; include both halves
     # of the compiler-owned authority seam.
     auth = "\n".join(
-        (read("src/server/auth.rs"), read("src/server/authority_context.rs"))
+        (
+            read("crates/medulla-server-auth/src/auth.rs"),
+            read("crates/medulla-server-api/src/authority_context.rs"),
+        )
     )
-    jobs = read_module_tree("src/server/handlers/jobs.rs", root_dir=ROOT)
-    blob_handler = read("src/server/handlers/blob.rs")
-    blob_state = read("src/server/blob/mod.rs")
+    jobs = read_module_tree("crates/medulla-h-jobs/src/jobs.rs", root_dir=ROOT)
+    blob_handler = read("crates/medulla-h-ingest/src/blob.rs")
+    blob_state = read("crates/medulla-server-blob/src/blob/mod.rs")
     # `store.rs` split into holders/gc/manifest/policy/uploads/format submodules
     # (PB4, blob CAS hardening): walk the declared tree, as `jobs` already does
     # above, so the owner-scope field the split moved into `store/manifest.rs`
     # is still seen.
-    blob_store = read_module_tree("src/server/blob/store.rs", root_dir=ROOT)
-    kv = read_module_tree("src/server/kv.rs", root_dir=ROOT)
-    channels = read("src/channels.rs")
-    sqlite_file = read("src/server/handlers/sqlite_file.rs")
-    timeseries = read("src/server/handlers/timeseries.rs")
-    plan_exec = read("crates/medulla-plan/src/exec.rs")
-    plan_tsdb_dispatch = read("crates/medulla-plan/src/exec/dispatch.rs")
-    plan_tsdb_scan = read("crates/medulla-plan/src/exec/tsscan.rs")
+    blob_store = read_module_tree(
+        "crates/medulla-server-blob/src/blob/store.rs", root_dir=ROOT
+    )
+    kv = read_module_tree("crates/medulla-server-blob/src/kv.rs", root_dir=ROOT)
+    channels = read("crates/medulla-kernel/src/channels.rs")
+    sqlite_file = read("crates/medulla-h-txn/src/sqlite_file.rs")
+    timeseries = read("crates/medulla-h-txn/src/timeseries.rs")
+    plan_exec = read("crates/medulla-exec/src/exec.rs")
+    plan_tsdb_dispatch = read("crates/medulla-exec/src/exec/dispatch.rs")
+    plan_tsdb_scan = read("crates/medulla-exec/src/exec/tsscan.rs")
     plan_tsdb_tests = read("crates/medulla-plan/src/tsdb_scan_tests.rs")
-    streaming = read("src/server/handlers/streaming.rs")
-    cep = read("src/server/cep.rs")
-    txn = read_module_tree("src/server/handlers/txn.rs", root_dir=ROOT)
-    sparql_http = read("src/server/sparql_http.rs")
-    graphql_sse = read("src/server/graphql_sub.rs")
+    streaming = read("crates/medulla-h-query/src/streaming.rs")
+    cep = read("crates/medulla-server-cdc/src/cep.rs")
+    txn = read_module_tree("crates/medulla-h-txn/src/txn.rs", root_dir=ROOT)
+    sparql_http = read("crates/medulla-server-blob/src/sparql_http.rs")
+    graphql_sse = read("crates/medulla-server-lake/src/graphql_sub.rs")
     graphql_crossmodal = read("crates/medulla-graphql/src/crossmodal.rs")
-    ros2 = read("src/server/ros2_bridge.rs")
-    obs = read_module_tree("src/server/obs/mod.rs", root_dir=ROOT)
-    s3_http = read("src/server/s3/mod.rs")
-    kvcache_http = read("src/server/kvcache_http/mod.rs")
-    federation_http = read("src/server/federation/mod.rs")
-    lake_http = read_module_tree("src/server/lake/rest/mod.rs", root_dir=ROOT)
+    ros2 = read("crates/medulla-wire-msg/src/ros2_bridge.rs")
+    obs = read_module_tree("crates/medulla-server-obs/src/obs/mod.rs", root_dir=ROOT)
+    s3_http = read("crates/medulla-wire-msg/src/s3/mod.rs")
+    kvcache_http = read("crates/medulla-wire-msg/src/kvcache_http/mod.rs")
+    federation_http = read("crates/medulla-h-sparql/src/federation/mod.rs")
+    lake_http = read_module_tree(
+        "crates/medulla-server-lake/src/lake/rest/mod.rs", root_dir=ROOT
+    )
     main_rs = read("src/main.rs")
 
     def require_tokens(
@@ -473,7 +489,7 @@ def main() -> None:
         ),
         "cross-graph reads are not ACL checked and projected for the same actor",
     )
-    mining = read("src/server/handlers/mining.rs")
+    mining = read("crates/medulla-h-mining/src/mining.rs")
     require(
         all(
             (

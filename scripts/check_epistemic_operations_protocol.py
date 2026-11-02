@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: E501
 """Verify the engine projection of Epistemic Operations Protocol v1.
 
 The manifest is generated from the authoritative agent-utilities JSON Schema
@@ -31,18 +32,18 @@ MANIFEST_PATH = ROOT / "protocols" / "epistemic-operations" / "v1" / "manifest.j
 RUST_SOURCE = ROOT / "crates" / "medulla-types" / "src" / "epistemic_operations.rs"
 EXPECTED_RUST_SOURCES = frozenset(
     {
-        "crates/medulla-types/src/epistemic_operations.rs",
-        "crates/medulla-types/src/epistemic_operations/artifact_knowledge.rs",
-        "crates/medulla-types/src/epistemic_operations/common.rs",
-        "crates/medulla-types/src/epistemic_operations/context_mutation.rs",
-        "crates/medulla-types/src/epistemic_operations/development_intent.rs",
-        "crates/medulla-types/src/epistemic_operations/development_quota.rs",
-        "crates/medulla-types/src/epistemic_operations/development_state.rs",
-        "crates/medulla-types/src/epistemic_operations/development_transition.rs",
-        "crates/medulla-types/src/epistemic_operations/placement_operations.rs",
-        "crates/medulla-types/src/epistemic_operations/resource_core.rs",
-        "crates/medulla-types/src/epistemic_operations/resource_host.rs",
-        "crates/medulla-types/src/epistemic_operations/resource_status.rs",
+        "crates/medulla-result-types/src/epistemic_operations.rs",
+        "crates/medulla-result-types/src/epistemic_operations/artifact_knowledge.rs",
+        "crates/medulla-result-types/src/epistemic_operations/common.rs",
+        "crates/medulla-result-types/src/epistemic_operations/context_mutation.rs",
+        "crates/medulla-result-types/src/epistemic_operations/development_intent.rs",
+        "crates/medulla-result-types/src/epistemic_operations/development_quota.rs",
+        "crates/medulla-result-types/src/epistemic_operations/development_state.rs",
+        "crates/medulla-result-types/src/epistemic_operations/development_transition.rs",
+        "crates/medulla-result-types/src/epistemic_operations/placement_operations.rs",
+        "crates/medulla-result-types/src/epistemic_operations/resource_core.rs",
+        "crates/medulla-result-types/src/epistemic_operations/resource_host.rs",
+        "crates/medulla-result-types/src/epistemic_operations/resource_status.rs",
     }
 )
 RUST_GENERATED = (

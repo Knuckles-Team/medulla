@@ -42,6 +42,7 @@ sha2 = "0.10"
 # downstream crate are entirely unaffected; only `cargo test -p medulla-modality` pays the
 # cost of building the two pilots. See `tests/fleet_tck.rs` for the mechanism writeup.
 [dev-dependencies]
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
 medulla-tensor = { path = "../medulla-tensor", features = ["contract"] }
 medulla-geo = { path = "../medulla-geo", features = ["contract"] }
 medulla-document = { path = "../medulla-document", features = ["contract", "serving"] }

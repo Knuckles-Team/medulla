@@ -19,12 +19,12 @@
 
 [scaffold]
 # Set true once the scaffold change created every crate below (MEDULLA-CONTRACT-R056.11).
-done = false
+done = true
 
 [delete]
 # Contract machinery (plan step 0). `enforce = true` once the removal landed makes
 # check_crate_graph.py fail while any listed path still exists.
-enforce = false
+enforce = true
 
 
 [crates.medulla-kernel]
@@ -37,6 +37,7 @@ paths = [
     "src/store_authority",
     "src/mutation_apply",
     "src/channels",  # unplanned
+    "src/kernel",  # seam targets (R056.8)
 ]
 
 [crates.medulla-store]
@@ -69,6 +70,7 @@ kind = "api"
 exists = false
 level = 2
 paths = [
+    "src/server/api",  # seam traits and moved-down items (R056.8)
     "src/server/state",
     "src/server/auth",
     "src/server/access",
@@ -79,7 +81,12 @@ paths = [
     "src/server/identity_view",  # unplanned
     "src/server/service_grant",  # unplanned
     "src/server/compute",  # unplanned
+    "src/server/udf_catalog",  # seam (R056.8): depends only on access + medulla-wasm
+    "src/server/handlers/graphlearn",  # seam (R056.8): replayed from mutation_apply, depends only downward
+    "src/server/blob",  # seam (R056.8): chunk store layer only depends downward
+    "src/server/viz_engine",  # seam (R056.8): VizEngineState held by ServerState
     "src/test_support",  # unplanned
+    "src/server/kv",  # seam (R056.8): KvStore is a ServerState field
 ]
 
 [crates.medulla-persistence]
@@ -115,7 +122,6 @@ paths = [
     "src/server/handlers/quantum",
     "src/server/handlers/viz",
     "src/server/handlers/wasm_udf",  # unplanned
-    "src/server/viz_engine",  # unplanned
     "src/server/viz_interactive",  # unplanned
     "src/server/viz_provenance",  # unplanned
     "src/server/graph_tile_server",  # unplanned
@@ -139,7 +145,6 @@ exists = false
 level = 5
 paths = [
     "src/server/handlers/graph_ops",
-    "src/server/handlers/graphlearn",
     "src/server/handlers/topology",
     "src/server/handlers/placement",
     "src/server/handlers/pipeline",
@@ -161,7 +166,6 @@ paths = [
     "src/server/handlers/modality",
     "src/server/handlers/asr",
     "src/server/handlers/blob",
-    "src/server/blob",  # unplanned
     "src/server/repository_enrichment_worker",  # unplanned
 ]
 
@@ -253,6 +257,8 @@ level = 6
 paths = [
     "src/server/dispatch",
     "src/server/mod.rs",
+    "src/server/seams_install",  # seam installation (R056.8)
+    "src/server/split_tests",  # tests that need the full server (R056)
     "src/server_startup",
     "src/server/handlers/mod.rs",  # unplanned
     "src/server/boot_maintenance",  # unplanned
@@ -265,7 +271,6 @@ paths = [
     "src/server/icv_guard",  # unplanned
     "src/server/impact_watch",  # unplanned
     "src/server/issuer_trust",  # unplanned
-    "src/server/kv",  # unplanned
     "src/server/lake",  # unplanned
     "src/server/matview",  # unplanned
     "src/server/mutation",  # unplanned
@@ -292,7 +297,6 @@ paths = [
     "src/server/tests",  # unplanned
     "src/server/traces",  # unplanned
     "src/server/transport",  # unplanned
-    "src/server/udf_catalog",  # unplanned
     "src/server/graphql_sub",  # unplanned
     "src/cost",  # unplanned
 ]

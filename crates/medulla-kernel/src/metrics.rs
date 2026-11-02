@@ -747,7 +747,7 @@ mod imp {
 
     /// Observe how long a dispatched request blocked acquiring the process-wide
     /// `ServerState` lock (D-EIMG-2). `mode` is `"read"` or `"write"`. Called from the
-    /// `timed_read`/`timed_write` chokepoint helpers in `server::dispatch`, never
+    /// `timed_read`/`timed_write` chokepoint helpers in `medulla_server::dispatch`, never
     /// inline at an individual call site.
     pub fn observe_dispatch_lock_wait(mode: &str, seconds: f64) {
         DISPATCH_LOCK_WAIT

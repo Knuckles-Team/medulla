@@ -9,7 +9,7 @@
 //!    scope, and nothing outside them can appear in the answer.
 //! 2. **1b constraints** ([`eliminate`]): denies, lifecycle, external agents,
 //!    hard model facts and budgets remove candidates, each with its violation.
-//! 3. **2 entailment** (`medulla_types::decision::derivation`): the request's
+//! 3. **2 entailment** (`medulla_decision_outcome_types::decision::derivation`): the request's
 //!    typed tasks close over the native vocabulary into required capabilities,
 //!    and a candidate covers one only through a checkable `is_a` chain.
 //! 4. **3 optimisation** ([`model`], [`objective`], [`conclude`]): the legal
@@ -39,10 +39,13 @@ mod topology;
 mod validate;
 mod why_not;
 
-use medulla_types::agent_graph::AgentGraphDraft;
-use medulla_types::agent_library::AgentLibraryEntryDraft;
-use medulla_types::decision::{DecisionErrorCode, DecisionInputs, DecisionOutcome, DecisionRecord};
-use medulla_types::solve::ModelSpec;
+use medulla_agent_types::agent_graph::AgentGraphDraft;
+use medulla_agent_types::agent_library::AgentLibraryEntryDraft;
+use medulla_decision_types::solve::ModelSpec;
+use medulla_decision_types::{
+    decision::DecisionErrorCode, decision::DecisionInputs, decision::DecisionOutcome,
+    decision::DecisionRecord,
+};
 
 pub use seal::{encoded_len, RecordIdentity};
 
@@ -85,12 +88,14 @@ impl std::error::Error for AssembleError {}
 /// The complete inputs of one assembly over `candidates` (any order) under
 /// `policy`: candidates sorted, and every digest computed from what it names.
 pub fn inputs(
-    request: medulla_types::decision::AssemblyRequest,
-    mut candidates: Vec<medulla_types::decision::CandidateFacts>,
-    templates: Vec<medulla_types::decision::TemplateFacts>,
-    policy: medulla_types::decision::DecisionPolicy,
+    request: medulla_decision_types::decision::AssemblyRequest,
+    mut candidates: Vec<medulla_decision_types::decision::CandidateFacts>,
+    templates: Vec<medulla_decision_types::decision::TemplateFacts>,
+    policy: medulla_decision_types::decision::DecisionPolicy,
 ) -> Result<DecisionInputs, AssembleError> {
-    use medulla_types::decision::{digest, request::effective_solver_budget, SolverIdentity};
+    use medulla_decision_types::{
+        decision::digest, decision::request::effective_solver_budget, decision::SolverIdentity,
+    };
     candidates.sort_by(|a, b| a.component_id.cmp(&b.component_id));
     let node_budget = effective_solver_budget(&policy, &request).node_budget;
     Ok(DecisionInputs {
@@ -99,11 +104,11 @@ pub fn inputs(
         candidates: medulla_types::contract::BoundedVec::new(candidates).map_err(|error| {
             AssembleError::new(DecisionErrorCode::CandidateScopeTooLarge, error)
         })?,
-        ontology_digest: medulla_types::agent_ontology::ontology_digest(),
+        ontology_digest: medulla_agent_types::agent_ontology::ontology_digest(),
         policy_digest: digest::policy_digest(&policy),
         policy,
         solver: SolverIdentity {
-            algorithm: medulla_types::solve::Algorithm::DepthFirstDualAscent,
+            algorithm: medulla_decision_types::solve::Algorithm::DepthFirstDualAscent,
             node_budget,
         },
         templates: medulla_types::contract::BoundedVec::new(templates)
@@ -135,7 +140,7 @@ pub fn replay_check(record: &DecisionRecord) -> Result<Assembly, AssembleError> 
         .clone()
         .checked()
         .map_err(|code| AssembleError::new(code, "the record's version is not served"))?;
-    medulla_types::decision::derivation::verify_record(&record).map_err(|defect| {
+    medulla_decision_outcome_types::decision::derivation::verify_record(&record).map_err(|defect| {
         AssembleError::new(DecisionErrorCode::DerivationRejected, defect.to_string())
     })?;
     let again = assemble(record.inputs.clone(), RecordIdentity::of(&record))?;
@@ -161,10 +166,10 @@ fn verify_solved(assembly: &Assembly) -> Result<(), AssembleError> {
             "a solved record has no model",
         )
     })?;
-    let model = crate::solve::Model::try_from(spec).map_err(|error| {
+    let model = medulla_decision_policy::solve::Model::try_from(spec).map_err(|error| {
         AssembleError::new(DecisionErrorCode::AssemblyModelInvalid, error.to_string())
     })?;
-    match crate::solve::verify(&model, certificate) {
+    match medulla_decision_policy::solve::verify(&model, certificate) {
         Ok(verdict) if conclude::verdict_supports_solved(&verdict) => Ok(()),
         Ok(verdict) => Err(AssembleError::new(
             DecisionErrorCode::CertificateRejected,

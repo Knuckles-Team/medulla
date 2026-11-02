@@ -2,12 +2,17 @@
 
 use std::collections::BTreeMap;
 
-use medulla_numeric::decision::candidate::CandidateView;
-use medulla_numeric::decision::features::{feature_matrix, FeatureInputs, MatrixOutcome};
-use medulla_types::decision::statistical::features::{
-    FeatureKind, FeatureSchemaBody, FeatureSpec, MissingValue, FEATURE_SCHEMA_VERSION,
+use medulla_decision_types::{
+    decision::statistical::features::FeatureKind,
+    decision::statistical::features::FeatureSchemaBody,
+    decision::statistical::features::FeatureSpec, decision::statistical::features::MissingValue,
+    decision::statistical::features::FEATURE_SCHEMA_VERSION,
 };
-use medulla_types::decision::statistical::{TypedParam, TypedValue};
+use medulla_decision_types::{
+    decision::statistical::TypedParam, decision::statistical::TypedValue,
+};
+use medulla_decision_stats::decision::candidate::CandidateView;
+use medulla_decision_stats::{decision::features::feature_matrix, decision::features::FeatureInputs, decision::features::MatrixOutcome};
 
 use super::common::bounded;
 
@@ -32,7 +37,7 @@ fn schema(missing: MissingValue) -> FeatureSchemaBody {
                 },
                 missing: MissingValue::Abstain,
             },
-            medulla_types::test_support::decision::summary_text_feature(),
+            medulla_decision_types::decision_fixtures::decision::summary_text_feature(),
             FeatureSpec {
                 name: "cost".to_string(),
                 kind: FeatureKind::DeclaredCostMicros,
@@ -87,8 +92,8 @@ fn coverage_is_exact_and_unknown_cost_abstains_rather_than_reading_zero() {
         }
     );
     let imputed = MissingValue::Impute {
-        value: medulla_types::decision::QuantisedValue {
-            scale: medulla_types::decision::QuantScaleTag::Q32,
+        value: medulla_decision_types::decision::QuantisedValue {
+            scale: medulla_decision_types::decision::QuantScaleTag::Q32,
             value: 7 << 32,
         },
     };
@@ -168,7 +173,7 @@ fn a_missing_or_mistyped_parameter_is_a_typed_refusal() {
 // spec: MEDULLA-DECISION-ENGINE-R083.2
 #[test]
 fn scoring_width_is_bounded_by_cardinality_not_text_length() {
-    use medulla_numeric::decision::rapid_r083::MAX_OPTION_CAPABILITIES;
+    use medulla_decision_stats::decision::rapid_r083::MAX_OPTION_CAPABILITIES;
     let long_label = format!("eg:capability/retrieval/{}", "segment-".repeat(40));
     let long_summary = "web search ".repeat(2_000);
     let classes: Vec<&str> = (0..MAX_OPTION_CAPABILITIES)

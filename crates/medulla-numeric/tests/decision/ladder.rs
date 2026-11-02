@@ -1,17 +1,27 @@
 //! The act/abstain ladder, keyed exploration and audit sampling (EH-020,
 //! EH-026), including the propensity and exploration negative fixtures.
 
-use medulla_numeric::decision::exploration::{audit, permit, plan, ExplorationPermit};
-use medulla_numeric::decision::head_eval::Evaluated;
-use medulla_numeric::decision::ladder::{decide, LadderInputs};
-use medulla_types::decision::statistical::head::{
-    DecisionHeadBody, FeatureStandardisation, FittedRegime, HeadKind, DECISION_HEAD_SCHEMA_VERSION,
+use medulla_decision_types::{
+    decision::statistical::head::DecisionHeadBody,
+    decision::statistical::head::FeatureStandardisation, decision::statistical::head::FittedRegime,
+    decision::statistical::head::HeadKind,
+    decision::statistical::head::DECISION_HEAD_SCHEMA_VERSION,
 };
-use medulla_types::decision::statistical::keyed::{decision_seed, exploration_key, seed_commitment};
-use medulla_types::decision::statistical::{
-    QuestionKind, QuestionSafety, StatisticalOutcome, StatisticalQuestion,
+use medulla_decision_types::{
+    decision::statistical::keyed::decision_seed, decision::statistical::keyed::exploration_key,
+    decision::statistical::keyed::seed_commitment,
 };
-use medulla_types::decision::{ColdStart, ExplorationBudget, QuantScaleTag, QuantisedValue};
+use medulla_decision_types::{
+    decision::statistical::QuestionKind, decision::statistical::QuestionSafety,
+    decision::statistical::StatisticalOutcome, decision::statistical::StatisticalQuestion,
+};
+use medulla_decision_types::{
+    decision::ColdStart, decision::ExplorationBudget, decision::QuantScaleTag,
+    decision::QuantisedValue,
+};
+use medulla_decision_stats::{decision::exploration::audit, decision::exploration::permit, decision::exploration::plan, decision::exploration::ExplorationPermit};
+use medulla_decision_stats::decision::head_eval::Evaluated;
+use medulla_decision_stats::{decision::ladder::decide, decision::ladder::LadderInputs};
 
 use super::common::{bounded, option_ids, policy, rational, statistical};
 use super::scorer_promotion::{human_scorer, outcome};

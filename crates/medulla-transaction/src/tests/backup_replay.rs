@@ -64,7 +64,8 @@ fn commit_with_replay(
     // commit time and recovery validation re-checks on reopen. Passing `None`
     // here would record a receipt that disagrees with its own batch.
     let result_msgpack =
-        medulla_storage::encode_bounded(&attempt.receipt.result, "mutation receipt result").unwrap();
+        medulla_storage::encode_bounded(&attempt.receipt.result, "mutation receipt result")
+            .unwrap();
     fixture
         .mutations
         .finish(&write, batch, Some(result_msgpack), 2, source_version)

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: E501
 """Fail closed when a pinned cross-record reference has no production resolver.
 
 Why this exists
@@ -66,11 +67,11 @@ ADMITTED_WRITE = "open_write"
 # one is the SOURCE of.  A module here with no pin at all fails the gate
 # closed: it means the discovery stopped seeing the declarations.
 CONTRACT_LAYERS = {
-    "crates/medulla-types/src/agent_component.rs": "COMPONENT",
-    "crates/medulla-types/src/agent_library.rs": "LIBRARY",
-    "crates/medulla-types/src/agent_graph.rs": "GRAPH",
-    "crates/medulla-types/src/agent_template.rs": "TEMPLATE",
-    "crates/medulla-types/src/delegation.rs": None,
+    "crates/medulla-agent-types/src/agent_component.rs": "COMPONENT",
+    "crates/medulla-agent-types/src/agent_library.rs": "LIBRARY",
+    "crates/medulla-agent-types/src/agent_graph.rs": "GRAPH",
+    "crates/medulla-agent-types/src/agent_template.rs": "TEMPLATE",
+    "crates/medulla-agent-types/src/delegation.rs": None,
 }
 
 # What the id half of a pin names.  Derived from the FIELD, so a new pin to an

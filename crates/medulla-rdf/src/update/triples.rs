@@ -1,4 +1,4 @@
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 
 use crate::mapping::{
     cell_lexical, literal_to_cell, RDF_MULTI_VALUE_KEY, TBOX_SCHEMA_PREDICATES, TBOX_TYPE_OBJECTS,
@@ -326,7 +326,8 @@ fn remove_typed_edge(core: &GraphCore, s: &str, o: &str, p: &str) -> bool {
     let mut survivors = Vec::new();
     let mut removed = false;
     for blob in existing {
-        if !removed && medulla_types::msgpack::decode_edge_relationship(&blob).as_deref() == Some(p) {
+        if !removed && medulla_types::msgpack::decode_edge_relationship(&blob).as_deref() == Some(p)
+        {
             removed = true; // drop exactly one matching edge
         } else {
             survivors.push(blob);

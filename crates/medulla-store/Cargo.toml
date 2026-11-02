@@ -1,0 +1,69 @@
+[package]
+name = "medulla-store"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine redb store, layout and sidecar"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_store"
+path = "src/lib.rs"
+
+[dependencies]
+medulla-result-types = { path = "../medulla-result-types" }
+medulla-protocol-types = { path = "../medulla-protocol-types" }
+medulla-mutation-types = { path = "../medulla-mutation-types" }
+medulla-decision-types = { path = "../medulla-decision-types" }
+medulla-agent-types = { path = "../medulla-agent-types" }
+tempfile = { version = "3", optional = true }
+hex = "0.4"
+medulla-compute = { path = "../medulla-compute" }
+medulla-core = { path = "../medulla-core" }
+medulla-kernel = { path = "../medulla-kernel" }
+medulla-statechart = { path = "../medulla-statechart", optional = true }
+medulla-storage = { path = "../medulla-storage", optional = true }
+medulla-transaction = { path = "../medulla-transaction", optional = true }
+medulla-tsdb = { path = "../medulla-tsdb", optional = true }
+medulla-types = { path = "../medulla-types" }
+rand = "0.8"
+redb = { workspace = true, optional = true }
+rmp-serde = "1.3"
+serde = { version = "1.0", features = ["derive", "rc"] }
+serde_json = "1.0"
+sha2 = "0.10"
+tracing = "0.1"
+serde_bytes = "0.11.19"
+medulla-semantic-index = { path = "../medulla-semantic-index" }
+medulla-graph-core = { path = "../medulla-graph-core" }
+medulla-graph-algos = { path = "../medulla-graph-algos" }
+medulla-work-types = { path = "../medulla-work-types" }
+medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types" }
+
+[features]
+test-support = ["dep:tempfile", "medulla-kernel/test-support", "medulla-protocol-types/test-support", "medulla-decision-types/test-support", "medulla-agent-types/test-support", "medulla-compute/test-support", "medulla-types/test-support", "medulla-work-types/test-support", "medulla-decision-outcome-types/test-support"]
+ast = ["medulla-compute/ast"]
+compute-dist = ["raft", "medulla-protocol-types/compute-dist", "medulla-result-types/compute-dist", "medulla-types/compute-dist"]
+embedded = ["redb"]
+matview = ["medulla-protocol-types/matview", "medulla-types/matview", "query", "redb", "server"]
+metrics = ["medulla-kernel/metrics", "medulla-protocol-types/metrics", "medulla-types/metrics"]
+raft = ["server", "redb", "medulla-kernel/raft"]
+redb = ["dep:redb", "dep:medulla-transaction", "dep:medulla-storage", "medulla-kernel/redb", "ast"]
+security = ["redb", "medulla-core/security", "medulla-graph-core/security", "medulla-kernel/security", "medulla-protocol-types/security", "medulla-types/security"]
+server = ["medulla-kernel/server"]
+statechart = ["dep:medulla-statechart", "server", "medulla-protocol-types/statechart", "medulla-types/statechart"]
+tsdb = ["dep:medulla-tsdb", "medulla-tsdb/redb-store", "server", "redb"]
+query = ["dep:medulla-tsdb", "medulla-tsdb?/arrow-seg", "medulla-decision-types/query", "medulla-kernel/query", "medulla-protocol-types/query", "medulla-result-types/query", "medulla-types/query", "redb"]
+promql = ["dep:medulla-tsdb", "medulla-tsdb/promql", "query", "redb", "server", "tsdb"]
+traces = ["dep:medulla-tsdb", "medulla-tsdb/traces", "query", "redb", "server", "tsdb"]
+[dev-dependencies]
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
+medulla-decision-types = { path = "../medulla-decision-types", features = ["test-support"] }
+medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
+medulla-compute = { path = "../medulla-compute", features = ["test-support"] }
+medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-work-types = { path = "../medulla-work-types", features = ["test-support"] }
+medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types", features = ["test-support"] }
+tempfile = "3"

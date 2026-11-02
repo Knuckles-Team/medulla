@@ -1,0 +1,35 @@
+[package]
+name = "medulla-uql"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: UQL language: parser, binder and lowering to the executor"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_uql"
+path = "src/lib.rs"
+
+[dependencies]
+medulla-exec = { path = "../medulla-exec" }
+medulla-types = { path = "../medulla-types" }
+serde_json = "1.0"
+
+[features]
+query = ["medulla-exec/query", "medulla-types/query"]
+epistemic = ["query", "medulla-exec/epistemic", "medulla-types/epistemic"]
+federation = ["query", "medulla-exec/federation", "medulla-types/federation"]
+geo = ["query", "medulla-exec/geo", "medulla-types/geo"]
+numeric = ["query", "medulla-exec/numeric"]
+owl = ["query", "medulla-exec/owl", "medulla-types/owl"]
+probabilistic = ["query", "medulla-exec/probabilistic", "medulla-types/probabilistic"]
+stream = ["query", "medulla-exec/stream", "medulla-types/stream"]
+tensor = ["query", "medulla-exec/tensor", "medulla-types/tensor"]
+text = ["query", "medulla-exec/text", "medulla-types/text"]
+timeseries = ["query", "medulla-exec/timeseries", "medulla-types/timeseries"]
+wasm-udf = ["query", "medulla-exec/wasm-udf", "medulla-types/wasm-udf"]
+
+[dev-dependencies]
+medulla-exec = { path = "../medulla-exec", features = ["test-support"] }
+medulla-types = { path = "../medulla-types", features = ["test-support"] }

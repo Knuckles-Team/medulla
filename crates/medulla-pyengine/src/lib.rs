@@ -144,10 +144,15 @@
 //! `get_node_properties`/`has_node`) and typed error mapping (proven for all
 //! five). Durable persistence remains the explicit seam described above.
 
+#![allow(clippy::too_many_arguments, clippy::items_after_test_module, clippy::new_without_default)] // signatures and fixtures carried over from the facade
+#![allow(private_interfaces, private_bounds)] // visibility is narrowed by the unreachable_pub pass
+#![allow(dead_code)] // moved helper code, as the facade crate did
+#![allow(unused_imports)] // glob imports carried over from the facade; the visibility pass prunes them
+
 use std::sync::Arc;
 
-use medulla_core::graph::GraphCore;
-use medulla_core::protocol::GraphType;
+use medulla_graph_core::graph::GraphCore;
+use medulla_protocol_types::protocol::GraphType;
 use medulla_core::registry::GraphRegistry;
 use parking_lot::RwLock;
 
@@ -321,7 +326,7 @@ mod py {
         /// (`agent_utilities/knowledge_graph/core/graph_compute.py:1914-1921`).
         #[new]
         #[pyo3(signature = (persist_dir=None, agent_id=None, tenant=None))]
-        fn new(
+        pub fn new(
             persist_dir: Option<String>,
             agent_id: Option<String>,
             tenant: Option<String>,

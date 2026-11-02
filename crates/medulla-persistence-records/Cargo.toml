@@ -1,0 +1,54 @@
+[package]
+name = "medulla-persistence-records"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: Persisted agent, decision, connector pack and write-back records"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_persistence_records"
+path = "src/lib.rs"
+
+[dependencies]
+medulla-persistence = { path = "../medulla-persistence" }
+medulla-protocol-types = { path = "../medulla-protocol-types" }
+medulla-mutation-types = { path = "../medulla-mutation-types" }
+medulla-identity-types = { path = "../medulla-identity-types" }
+medulla-decision-types = { path = "../medulla-decision-types" }
+medulla-catalog-types = { path = "../medulla-catalog-types" }
+medulla-agent-types = { path = "../medulla-agent-types" }
+tempfile = { version = "3", optional = true }
+hex = "0.4"
+medulla-capabilities = { path = "../medulla-capabilities" }
+medulla-compute = { path = "../medulla-compute" }
+medulla-kernel = { path = "../medulla-kernel" }
+medulla-rdf = { path = "../medulla-rdf", optional = true }
+medulla-server-api = { path = "../medulla-server-api" }
+medulla-storage = { path = "../medulla-storage", optional = true }
+medulla-transaction = { path = "../medulla-transaction", optional = true }
+medulla-types = { path = "../medulla-types" }
+parking_lot = "0.12"
+redb = { workspace = true, optional = true }
+rmp-serde = "1.3"
+serde = { version = "1.0", features = ["derive", "rc"] }
+serde_json = "1.0"
+
+[features]
+decide = ["redb", "medulla-capabilities/decide", "medulla-compute/decide", "medulla-persistence/decide", "medulla-server-api/decide", "rdf"]
+rdf = ["dep:medulla-rdf", "medulla-kernel/rdf", "medulla-persistence/rdf", "medulla-protocol-types/rdf", "medulla-rdf?/rdf", "medulla-server-api/rdf", "medulla-types/rdf"]
+redb = ["dep:redb", "dep:medulla-transaction", "dep:medulla-storage", "medulla-kernel/redb", "medulla-persistence/redb", "medulla-server-api/redb"]
+test-support = ["dep:tempfile", "medulla-persistence/test-support", "medulla-protocol-types/test-support", "medulla-identity-types/test-support", "medulla-decision-types/test-support", "medulla-catalog-types/test-support", "medulla-agent-types/test-support", "medulla-compute/test-support", "medulla-kernel/test-support", "medulla-server-api/test-support", "medulla-types/test-support"]
+[dev-dependencies]
+medulla-persistence = { path = "../medulla-persistence", features = ["test-support"] }
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
+medulla-identity-types = { path = "../medulla-identity-types", features = ["test-support"] }
+medulla-decision-types = { path = "../medulla-decision-types", features = ["test-support"] }
+medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
+medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
+medulla-compute = { path = "../medulla-compute", features = ["test-support"] }
+medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }
+medulla-server-api = { path = "../medulla-server-api", features = ["test-support"] }
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+tempfile = "3"

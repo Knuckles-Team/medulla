@@ -20,7 +20,7 @@ use std::path::Path;
 
 use clap::Parser;
 
-use medulla::server::persistence::shard_migrate;
+use medulla_persistence::shard_migrate;
 
 #[derive(Parser, Debug)]
 #[command(name = "medulla-server migrate-shards")]

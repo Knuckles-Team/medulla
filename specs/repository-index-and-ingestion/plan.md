@@ -4,7 +4,7 @@ Governing outcome: [spec.md](spec.md). Normative data and failure contract: [arc
 
 ## Existing implementation to extend
 
-The generated/public shapes are `crates/medulla-types/src/ingestion_wire.rs` and `medulla/generated/index_repository.py`. The native parser and branch projection live in `crates/medulla-compute/src/parser/branch_index.rs`. `src/server/dispatch/graph_pipeline/repository_index.rs` applies graph scope and ACL, parses off the reactor, admits source bytes and calls `src/server/handlers/repository_index.rs`. That handler lowers to a canonical write set and one `ChangeEnvelope`, with current `REPOSITORY_BATCH_TOO_LARGE` budgeting. `src/server/repository_enrichment_worker.rs` and its dispatch consumer are the existing durable work path. `src/server/handlers/source_ingestion.rs`, `crates/medulla-types/src/source_ingestion.rs` and `docs/architecture/source_ingestion.md` implement the general source contract. These are the owners to reuse, not templates for a second service.
+The generated/public shapes are `crates/medulla-types/src/ingestion_wire.rs` and `medulla/generated/index_repository.py`. The native parser and branch projection live in `crates/medulla-compute/src/parser/branch_index.rs`. `crates/medulla-server-graph/src/dispatch/graph_pipeline/repository_index.rs` applies graph scope and ACL, parses off the reactor, admits source bytes and calls `crates/medulla-h-ingest/src/repository_index.rs`. That handler lowers to a canonical write set and one `ChangeEnvelope`, with current `REPOSITORY_BATCH_TOO_LARGE` budgeting. `crates/medulla-h-ingest/src/repository_enrichment_worker.rs` and its dispatch consumer are the existing durable work path. `crates/medulla-h-ingest/src/source_ingestion.rs`, `crates/medulla-source-types/src/source_ingestion.rs` and `docs/architecture/source_ingestion.md` implement the general source contract. These are the owners to reuse, not templates for a second service.
 
 Current evidence includes branch-aware durable tests in `tests/repository_index_durable.rs`, parser tests in `crates/medulla-compute/src/parser/branch_index_tests.rs`, generated result contract tests, and source-ingest tests. They establish parts of RI-01–RI-06 and RI-11. They do not prove full semantic bridge coverage, all failure reparse behavior, production throughput, or an accepted release. The implementation must inspect the exact current revision before claiming a gap is still present.
 
@@ -105,14 +105,14 @@ Rejected alternatives:
 Audit of revision `660ae016` found that the bindings for
 `MEDULLA-REPO-INGEST-R003.1`–`MEDULLA-REPO-INGEST-R003.11` identified typed enum
 serialization and local claim-list checks in
-`crates/medulla-types/src/source_ingestion/tests.rs`. These remain useful
+`crates/medulla-source-types/src/source_ingestion/tests.rs`. These remain useful
 supplementary unit evidence, but do not execute the migrated capabilities or
 prove that their legacy modules no longer perform the same computation.
 The child acceptance and therefore the R003 rollup remain unverified by this
 evidence. Reopening T1 and T1a–T1k records that proof gap, not a conclusion that
 all implementation is absent.
 
-The R008-bound test in `src/server/handlers/repository_index_tests.rs` constructs
+The R008-bound test in `crates/medulla-server-served-tests/src/split_tests/medulla_h_ingest_repository_index_tests.rs` constructs
 roughly 60 MB of payload, exceeds the 48 MiB write-set ceiling, and invokes
 `lower()` on the full and halved fixtures. It proves the stable refusal prefix
 and successful lowering of the smaller fixture. It does not exercise a batch
@@ -170,7 +170,7 @@ not a guessed remote HEAD. Verified caller must match the admitted publisher;
 source binding and provenance must validate against the submitted revision.
 Output = `{binding_id, binding_revision, inventory_revision, source_revision, inventory_digest, graph_revision, source_event_id}`. The proposed operation
 extends the existing SourceIngest preparation and ChangeEnvelope commit path
-in `src/server/handlers/source_ingestion.rs`. It atomically compares expected
+in `crates/medulla-h-ingest/src/source_ingestion.rs`. It atomically compares expected
 inventory revision, increments it, stores the complete manifest and receipt,
 and invalidates the prior current-map binding. No partial inventory is current.
 Identical source event/payload replays the receipt; conflicting replay, stale

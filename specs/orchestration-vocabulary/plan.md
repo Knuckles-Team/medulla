@@ -38,7 +38,7 @@ Prefixes: `:` = `http://knuckles.team/kg#`, `swarm:` = `http://knuckles.team/kg/
 
 - `grep -rn "hasStep\|handsOffTo\|AgentKind\|ModelProfile\|BestPractice\|AgentTemplate\|AgentLibrary\|needsSkill\|feeds" crates/medulla-core/ontology` finds nothing except `:precedes` (see Corrections): the terms are genuinely absent.
 - `catalog-v1.ttl` is a generated aggregate: it holds one `owl:Ontology` header and an `owl:imports` list, no class or property.
-- The concepts exist in Rust but not in the ontology: `AgentTemplate` (`crates/medulla-types/src/agent_template.rs`), `AgentLibraryEntry` (`agent_library.rs`), `AgentComponentKind::{ModelProfile, A2aAgentCard, GuardrailRule}` (`agent_component.rs`), `AgentGraphEdge` (`agent_graph.rs`). So the graph cannot be asked what the engine already stores.
+- The concepts exist in Rust but not in the ontology: `AgentTemplate` (`crates/medulla-agent-types/src/agent_template.rs`), `AgentLibraryEntry` (`agent_library.rs`), `AgentComponentKind::{ModelProfile, A2aAgentCard, GuardrailRule}` (`agent_component.rs`), `AgentGraphEdge` (`agent_graph.rs`). So the graph cannot be asked what the engine already stores.
 
 ### Architecture
 
@@ -52,7 +52,7 @@ Q5 bindings   :ModelProfile :needsSkill :stepAssignedAgent         component cat
 Q6/Q7 flow    :handsOffTo swarm:feeds swarm:loopsBackTo            template + assembled graph
 ```
 
-Writers (all existing): the Agent Library outbox projection (`MEDULLA-TYPED-PACKS-R006`; `src/server/connector_pack_projection.rs`, `src/server/persistence/agent_library/`) projects components, templates and library entries. The template projection (`MEDULLA-DECISION-ENGINE-R106`) projects topology facts. The assemble commit (`DecisionCommit` after `handle_agent_assemble`, `src/server/handlers/decide/assemble.rs`) projects the chosen assignment. Readers: the Q1-Q7 queries (federated query over the composed schema), `capability_coverage_query` (R126), `guardrail_entailment_query` (R127), and `graph.assemble()` itself for step expansion. External agent cards are fetched at query time through their A2A contract. Only the card's declaration (name, skills, declared capabilities) is held, as a claim. Nothing here copies a source's data.
+Writers (all existing): the Agent Library outbox projection (`MEDULLA-TYPED-PACKS-R006`; `crates/medulla-h-admin/src/connector_pack_projection.rs`, `src/server/persistence/agent_library/`) projects components, templates and library entries. The template projection (`MEDULLA-DECISION-ENGINE-R106`) projects topology facts. The assemble commit (`DecisionCommit` after `handle_agent_assemble`, `crates/medulla-h-decide/src/decide/assemble.rs`) projects the chosen assignment. Readers: the Q1-Q7 queries (federated query over the composed schema), `capability_coverage_query` (R126), `guardrail_entailment_query` (R127), and `graph.assemble()` itself for step expansion. External agent cards are fetched at query time through their A2A contract. Only the card's declaration (name, skills, declared capabilities) is held, as a claim. Nothing here copies a source's data.
 
 ### Vocabulary
 
@@ -214,9 +214,9 @@ This spec owns the run-trace vocabulary. `:RunTrace` is declared in `orchestrati
 
 ### Data flow
 
-Ingestion: Meristem run end → generated client RunTrace method (`MEDULLA-CONTRACT-R051.1`) → `Method::AddNode` (`crates/medulla-types/src/protocol/method/method_00.rs:6`) → `AddNode` arm (`src/server/handlers/graph_ops/gateway_graph.rs:62`) → shape check (R009.15) → graph store → Cypher read (`crates/medulla-query/src/cypher/exec.rs:4574` already reads `RunTrace` nodes by id).
+Ingestion: Meristem run end → generated client RunTrace method (`MEDULLA-CONTRACT-R051.1`) → `Method::AddNode` (`crates/medulla-protocol-types/src/protocol/method/method_00.rs:6`) → `AddNode` arm (`crates/medulla-h-graph/src/graph_ops/gateway_graph.rs:62`) → shape check (R009.15) → graph store → Cypher read (`crates/medulla-cypher/src/cypher/exec.rs:4574` already reads `RunTrace` nodes by id).
 
-Measured fact: evaluation run → `measured_fact_envelope` (R011.7) → `ApplyChangeEnvelopes` → `dispatch_change_envelopes` (`src/server/dispatch/change_envelope.rs:36`) → `ChangeEnvelope::validate` (`crates/medulla-types/src/change_envelope.rs:248`, evidence refusal R011.8) → `:MeasuredModelFact` node → `Decide` for `HarnessConfig`.
+Measured fact: evaluation run → `measured_fact_envelope` (R011.7) → `ApplyChangeEnvelopes` → `dispatch_change_envelopes` (`crates/medulla-server-graph/src/dispatch/change_envelope.rs:36`) → `ChangeEnvelope::validate` (`crates/medulla-protocol-types/src/change_envelope.rs:248`, evidence refusal R011.8) → `:MeasuredModelFact` node → `Decide` for `HarnessConfig`.
 
 ### Types and fields
 
@@ -224,7 +224,7 @@ On `:RunTrace`: `terminationReason`, `peakContextTokens`, `contextBudgetTokens`,
 
 ### Attach point and failure behaviour
 
-No dedicated run-trace wire method exists. `git grep -n "IngestRunTrace"` finds nothing, and `RunTrace` appears in the server only as a node label (`src/server/persistence/provenance_anchor.rs:55`). A client therefore writes a `RunTrace` node through `AddNode`. The only new server code is the shape check in R009.15. The code read for this plan did not show SHACL validation on `AddNode`, so R009.15 states the check as new work.
+No dedicated run-trace wire method exists. `git grep -n "IngestRunTrace"` finds nothing, and `RunTrace` appears in the server only as a node label (`crates/medulla-persistence/src/provenance_anchor.rs:55`). A client therefore writes a `RunTrace` node through `AddNode`. The only new server code is the shape check in R009.15. The code read for this plan did not show SHACL validation on `AddNode`, so R009.15 states the check as new work.
 
 A shape violation returns a typed refusal that names the shape and stores nothing. A measured fact without an evaluation-run evidence record returns `MeasuredFactWithoutEvidence`. A missing measured value never produces a guess; the `Decide` abstention belongs to the `MEDULLA-TYPED-PACKS` rows for the measured model facts.
 
@@ -238,7 +238,7 @@ Each query groups by `:runModel` and `:runTaskClass`. A solved trace has `final_
 
 ### Decisions
 
-- Reuse `ApplyChangeEnvelopes` for the governed write. Rejected: `GraphSchemaOp::AttachApproved` (`crates/medulla-types/src/graph_schema.rs:79`), because it attaches schema sources, not facts.
+- Reuse `ApplyChangeEnvelopes` for the governed write. Rejected: `GraphSchemaOp::AttachApproved` (`crates/medulla-catalog-types/src/graph_schema.rs:79`), because it attaches schema sources, not facts.
 - Keep `:costUsd` beside `:tokenCost`. Rejected: reusing `:tokenCost`, because tokens and dollars differ in unit.
 - Supersede by edge, not by deletion. Rejected: overwrite, because it loses the evidence of the earlier measurement.
 - Write traces through `AddNode`. Reject a new `IngestRunTrace` wire method. The brief forbids a second store. The contract spec also bans new wire methods here.
@@ -249,7 +249,7 @@ Depends on the `MEDULLA-DECISION-ENGINE` row for `HarnessConfig` (the committed 
 
 ## Spec-folder contents as typed nodes (R012)
 
-Data flow: `IndexRepository` wire method (`crates/medulla-types/src/protocol/method/method_03.rs:317`) reaches the source-ingest handler (`src/server/dispatch/router/source_ingest.rs:24`). The handler calls new `classify_spec_file` (`crates/medulla-core/src/spec_folder.rs`). It writes typed nodes. Cypher then shows task, goal, document, memory, and policy nodes.
+Data flow: `IndexRepository` wire method (`crates/medulla-protocol-types/src/protocol/method/method_03.rs:317`) reaches the source-ingest handler (`crates/medulla-server-router/src/dispatch/router/source_ingest.rs:24`). The handler calls new `classify_spec_file` (`crates/medulla-core/src/spec_folder.rs`). It writes typed nodes. Cypher then shows task, goal, document, memory, and policy nodes.
 
 Types: `SpecNodeKind`, `SpecFolderRefusal::UnknownKind`, and the property `:classifiedByRule`. The ontology file `crates/medulla-core/ontology/sdd-v1.ttl` already declares `:Specification`, `:Requirement` and `:ImplementationPlan` (`sdd-v1.ttl:201-216`); only four classes are new.
 
@@ -265,13 +265,13 @@ Cross-repository rows: the `AU-INGEST` rows that send a spec folder to `IndexRep
 
 ## MEDULLA-ORCH-VOCAB-R013 Run trace step record with request, argument and result digests
 
-Data flow: run write -> `Method::AddNode` (`crates/medulla-types/src/protocol/method/method_00.rs:6`) -> `AddNode` arm (`src/server/handlers/graph_ops/gateway_graph.rs:62`) -> digest validation -> ordered `StepRecord` nodes -> replay read.
+Data flow: run write -> `Method::AddNode` (`crates/medulla-protocol-types/src/protocol/method/method_00.rs:6`) -> `AddNode` arm (`crates/medulla-h-graph/src/graph_ops/gateway_graph.rs:62`) -> digest validation -> ordered `StepRecord` nodes -> replay read.
 Types: `StepRecord`, `StepKind`, the `ModelRequest` receipt kind, `step_digest`.
-Attach point: The `AddNode` arm at `src/server/handlers/graph_ops/gateway_graph.rs:62`, after the shape check of `MEDULLA-ORCH-VOCAB-R009`. The comparison loop stays in the harness.
+Attach point: The `AddNode` arm at `crates/medulla-h-graph/src/graph_ops/gateway_graph.rs:62`, after the shape check of `MEDULLA-ORCH-VOCAB-R009`. The comparison loop stays in the harness.
 Failure: A bad digest returns `STEP_DIGEST_INVALID`. A gap in the index returns `STEP_ORDER_INVALID`.
 Consumers: MERISTEM-HARNESS (R024)
 Moves from Meristem: agent_utilities/observability/replay_engine.py:81 (span digest recipe)
-Existing code: `crates/medulla-types/src/outcome_bundle.rs:130`; `crates/medulla-types/src/outcome_bundle.rs:668`; `crates/medulla-types/src/authority/replay.rs:191` (a different record). Reachable today: no.
+Existing code: `crates/medulla-result-types/src/outcome_bundle.rs:130`; `crates/medulla-result-types/src/outcome_bundle.rs:668`; `crates/medulla-identity-types/src/authority/replay.rs:191` (a different record). Reachable today: no.
 Existing-code search: the engine stores run trace nodes and one `RunEvent` digest. It holds no per-step digests and no replay compare. Search terms: `ModelRequest`, `request_digest`, `args_digest`, `result_digest`, `RunTrace`.
 Reuses: `ReceiptNodeKind` and the `AddNode` path. New: the step record and the digest recipe.
 Decision: The engine owns the record shape and digest recipe so any replay agrees with the store. Rejected alternative: each harness defines its own digest, because a replay never matches a record written by another version.
@@ -302,7 +302,7 @@ References
 
 - Existing Medulla operations: `Method::UnifiedQuery` reads revision-pinned repository relationships. `Method::AddNode` stores ordered `RunTrace` records. UQL and the content-addressed artifact read path independently confirm stored refs. No new graph writer or Medulla model executor is introduced.
 - Medulla output schema `CodeWalkthroughV1`: bind run, repository, revision, graph snapshot, query digest, and ordered section manifest. Source refs include node/revision/digest/path/line range. The schema also includes interaction edges, artifact ref/digest, and ordered trace-step/span note refs. AddNode refuses stale/cross-tenant refs, uncited sections, invalid artifact refs, invalid span/run links, or non-contiguous notes before storage.
-- Medulla test targets: `crates/medulla-types/src/outcome_bundle.rs::tests::code_walkthrough_manifest_round_trips`; `src/server/handlers/graph_ops/gateway_graph.rs::tests::add_run_trace_rejects_stale_walkthrough_source_or_artifact`; served `tests/orchestration/test_code_walkthrough_served.py::test_walkthrough_trace_and_artifact_read_back`.
+- Medulla test targets: `crates/medulla-result-types/src/outcome_bundle.rs::tests::code_walkthrough_manifest_round_trips`; `crates/medulla-h-graph/src/graph_ops/gateway_graph.rs::tests::add_run_trace_rejects_stale_walkthrough_source_or_artifact`; served `tests/orchestration/test_code_walkthrough_served.py::test_walkthrough_trace_and_artifact_read_back`.
 - Depends on `MEDULLA-REPO-INGEST-R009` and `MERISTEM-HARNESS-R024`. Meristem still needs an exact producer schema/receipt row; Overstory still needs an exact artifact-consumer/interaction row. No matching owner IDs were found; coordinator assignment and served receipts remain a closure hold.
 - Original source AU:115 SHA-256 `445704f78ae07d1c4b62f42dd23797823d91bc470f04a9dc779e3f6777fffbf0`. Status remains SPECIFIED.
 
@@ -412,7 +412,7 @@ each edge is `{child_iri, parent_iri, snapshot_digest}`. Resolve membership
 before equality. The candidate is the record task class; the requested class is the query selector. Both require membership proofs. Exact mode requires equal candidate and requested IRIs. Descendant mode accepts equality or a contiguous path from candidate child to requested ancestor within the pinned snapshots. Native matching calls `broader_chain(candidate_task_class_iri, requested_task_class_iri)` only after membership checks. Refuse reversed, disconnected or mismatched proof endpoints. Bind both endpoints and match mode in output and durable admission receipt.
 Refuse missing membership, wrong term kinds, conflicting extensions, cycles and stale bindings. Refuse unauthorized snapshots before rows, counts or cursors.
 
-Native implementation primitives are `agent_ontology::{term,is_task, is_capability,ontology_digest,broader_chain}` in `crates/medulla-types/src/agent_ontology.rs`.
+Native implementation primitives are `agent_ontology::{term,is_task, is_capability,ontology_digest,broader_chain}` in `crates/medulla-agent-types/src/agent_ontology.rs`.
 `broader_chain` equality alone is not membership. A proposed adapter resolves domains/extensions over admitted snapshots. This is not an existing resolver claim. `guardrail::guardrail_entailment_query` is advisory rule lookup;
 R127.2.1 does not make it domain authority.
 
@@ -424,7 +424,7 @@ abstention reasons do not prove absence. An enhancement instead requires a
 separate reviewed request whose immutable digest and owner are checked.
 Output = `{node_id, node_revision, graph_revision, source_event_id, source_digest, binding_id, binding_revision, taxonomy_digest, candidate_task_class_iri, requested_task_class_iri, match_mode}`.
 The proposed producer validates and lowers to the existing governed AddNode /
-ChangeEnvelope path at `src/server/handlers/graph_ops/gateway_graph.rs`.
+ChangeEnvelope path at `crates/medulla-h-graph/src/graph_ops/gateway_graph.rs`.
 It does not run during decision abstention. Atomic event deduplication uses
 (tenant, kind, source_event_id): identical payload returns the original receipt;
 a different payload conflicts. Stale revisions, mismatched capability, missing
@@ -466,7 +466,7 @@ Consumers: `MEDULLA-DECISION-ENGINE-R803` composes from the contrast. `MERISTEM-
 The spec-folder indexer already classifies each file of a spec folder (R012.1 to R012.6). R012.9
 adds one parse step for `requirements.md`. Each table row becomes a `:Requirement` node keyed by
 its row ID. MEDULLA-SDLC-R005 derives each row state from these nodes and the changeset log. The call
-site is the non-code branch of `IndexRepository` at `src/server/dispatch/router/source_ingest.rs:24`.
+site is the non-code branch of `IndexRepository` at `crates/medulla-server-router/src/dispatch/router/source_ingest.rs:24`.
 
 ## Run measurement schema implementation (2026-10-24)
 
@@ -540,7 +540,7 @@ Counter, finite-cost, termination and budget rules stay in R009.1 and R009.12 th
 
 Current source attach points differ from the old line references above.
 `gateway_graph_routes.rs::try_handle_coalescable` dispatches standalone writes.
-`src/server/mutation/coalescer.rs` applies them; `ChangeEnvelope` embeds the existing `MutationBatch`.
+`crates/medulla-server-mutation/src/mutation/coalescer.rs` applies them; `ChangeEnvelope` embeds the existing `MutationBatch`.
 Implementation must place shared validation before the durable commit for both entry paths.
 The proposal does not select a second transaction mechanism.
 

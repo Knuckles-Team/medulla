@@ -2,12 +2,12 @@
 //! random generator and on an adversarial one (many overlapping,
 //! near-equal-cost candidates), plus the latency report at 64 × 32.
 
-use medulla_types::decision::{DecisionOutcome, SolverBudget};
-use medulla_types::solve::{Relation, VarId};
+use medulla_decision_types::{decision::DecisionOutcome, decision::SolverBudget};
+use medulla_decision_types::{solve::Relation, solve::VarId};
 
 use super::super::{assemble, replay_check};
 use super::fixture::*;
-use crate::solve::Model;
+use medulla_decision_policy::solve::Model;
 // The crate's one SplitMix64 stream, so every case is replayable.
 use crate::SplitMix64 as Seeded;
 
@@ -24,7 +24,7 @@ fn library(
     rng: &mut Seeded,
     tools: usize,
     adversarial: bool,
-) -> Vec<medulla_types::decision::CandidateFacts> {
+) -> Vec<medulla_decision_types::decision::CandidateFacts> {
     let mut out = agent_basics();
     out.extend([cheap_model("m-0"), cheap_model("m-1"), prompt("p-0", 100)]);
     for index in 0..tools {

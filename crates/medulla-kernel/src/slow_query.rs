@@ -130,7 +130,7 @@ pub fn describe(method: &Method) -> Option<SlowQuery> {
 
 /// Describe a raw SQL statement on a wire path (pgwire / mysql-wire / TDS / …) for
 /// slow-query timing (CONCEPT:MEDULLA-OS.observability.slow-query-descriptor). `None` when
-/// logging is disabled. Gated with the shared `server::wire` core
+/// logging is disabled. Gated with the shared `medulla_server::wire` core
 /// (CONCEPT:MEDULLA-KG.compute.subsystems-reference) whose `WireSession::execute` path calls
 /// it, so every wire adapter links it (CONCEPT:MEDULLA-KG.query.kg-2).
 #[cfg(feature = "query")]

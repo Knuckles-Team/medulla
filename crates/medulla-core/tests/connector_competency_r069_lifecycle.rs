@@ -8,7 +8,8 @@
 //! `:Branch`, `:Repository` and `:Commit` stay declared in the registered
 //! software module; this module only references them.
 
-use medulla_core::graph::{GraphSchemaSources, SchemaSourceOrigin};
+use medulla_graph_core::graph::GraphSchemaSources;
+use medulla_graph_core::graph::SchemaSourceOrigin;
 use medulla_rdf::mapping::parse_turtle;
 use medulla_rdf::oxrdf::{NamedNode, Triple};
 

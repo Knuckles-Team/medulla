@@ -22,8 +22,10 @@
 //! lease, a cursor or a consumer-state row can be written, expired and
 //! rewritten without touching what the batch is.
 
+use medulla_mutation_types::{
+    mutation_scope::MutationScopeIdentity, mutation_scope::MUTATION_BATCH_VERSION,
+};
 use medulla_storage::{decode_ledger_record, encode_bounded};
-use medulla_types::{MutationScopeIdentity, MUTATION_BATCH_VERSION};
 use serde::{Deserialize, Serialize};
 
 /// Greatest `&str` key component in redb's byte order.
@@ -123,7 +125,7 @@ impl OutboxDelivery {
     /// Delivery-side progress for this table is written and read only by the
     /// local store owner that holds the lease: `outbox/claim.rs` and
     /// `outbox/cursor.rs` call directly into this crate's storage handle, never
-    /// through `server::dispatch::consensus::apply_replicated_native` or any
+    /// through `medulla_server::dispatch::consensus::apply_replicated_native` or any
     /// other Raft-proposed path (MEDULLA-DURABLE-KERNEL-R005). A non-owning cluster
     /// member therefore never observes this row: delivery progress is
     /// node-local, not part of the replicated multi-group log. This constant

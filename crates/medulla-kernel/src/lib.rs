@@ -7,13 +7,19 @@
 //! Every module keeps the feature gate it had in the facade; the facade forwards
 //! its features of the same name to this crate.
 
+#![allow(clippy::too_many_arguments, clippy::items_after_test_module, clippy::new_without_default)] // signatures and fixtures carried over from the facade
+#![allow(private_interfaces, private_bounds)] // visibility is narrowed by the unreachable_pub pass
+#![allow(dead_code)] // moved helper code, as the facade crate did
+#![allow(unused_imports)] // glob imports carried over from the facade; the visibility pass prunes them
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
 
 // The leaf-crate modules these files name with their historical `crate::` paths.
-pub(crate) use medulla_compute::algorithms;
-pub(crate) use medulla_core::{compute, graph, index};
-pub(crate) use medulla_types::{acl, mutation_batch, protocol};
+pub(crate) use medulla_graph_algos::algorithms;
+pub(crate) use medulla_graph_core::graph;
+pub(crate) use medulla_graph_core::index;
+pub(crate) use medulla_protocol_types::{mutation_batch, protocol};
+pub(crate) use medulla_types::acl;
 
 /// Prometheus metrics for the engine.
 pub mod metrics;
@@ -80,3 +86,23 @@ pub mod write_coalescer;
 // host. The dependency-free implementation is shared with lower provider crates
 // through `medulla-resource`; this facade module preserves the existing API path.
 pub mod autosize;
+
+/// Moved from the facade (MEDULLA-CONTRACT-R056).
+#[cfg(feature = "server")]
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod channels;
+
+/// Moved from the facade (MEDULLA-CONTRACT-R056).
+#[cfg(feature = "server")]
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod kernel;
+
+/// Moved from the facade (MEDULLA-CONTRACT-R056).
+#[cfg(feature = "server")]
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod persist;
+
+/// Moved from the facade (MEDULLA-CONTRACT-R056).
+#[cfg(feature = "redb")]
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod store_authority;

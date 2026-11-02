@@ -1,0 +1,79 @@
+[package]
+name = "medulla-h-sparql"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: SPARQL/RDF and federation handlers"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_h_sparql"
+path = "src/lib.rs"
+
+[dependencies]
+medulla-tables = { path = "../medulla-tables" }
+medulla-catalog-types = { path = "../medulla-catalog-types" }
+medulla-kernel = { path = "../medulla-kernel" }
+medulla-protocol-types = { path = "../medulla-protocol-types" }
+medulla-rdf = { path = "../medulla-rdf", optional = true }
+medulla-server-api = { path = "../medulla-server-api" }
+medulla-shacl = { path = "../medulla-shacl", optional = true }
+medulla-shex = { path = "../medulla-shex", optional = true }
+medulla-types = { path = "../medulla-types" }
+rmp-serde = "1.3"
+serde = { version = "1.0", features = ["derive", "rc"] }
+serde_json = "1.0"
+tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "signal", "macros"] }
+ureq = { version = "3.4.2", optional = true }
+medulla-graph-core = { path = "../medulla-graph-core" }
+medulla-isolation = { path = "../medulla-isolation" }
+medulla-query-cache = { path = "../medulla-query-cache" }
+medulla-semantic-index = { path = "../medulla-semantic-index" }
+medulla-reasoner = { path = "../medulla-reasoner", features = ["owl"] }
+medulla-virtual-graph = { path = "../medulla-virtual-graph" }
+medulla-persistence-records = { path = "../medulla-persistence-records" }
+medulla-server-ops = { path = "../medulla-server-ops" }
+medulla-server-blob = { path = "../medulla-server-blob" }
+medulla-server-auth = { path = "../medulla-server-auth" }
+medulla-exec = { path = "../medulla-exec" }
+medulla-federation = { path = "../medulla-federation" }
+medulla-nlq = { path = "../medulla-nlq" }
+
+medulla-plan = { path = "../medulla-plan", optional = true }
+medulla-storage = { path = "../medulla-storage", optional = true }
+medulla-transaction = { path = "../medulla-transaction", optional = true }
+medulla-tsdb = { path = "../medulla-tsdb", optional = true }
+
+[features]
+federation = ["query", "dep:medulla-plan", "medulla-exec/federation", "medulla-federation/federation", "medulla-nlq/federation", "medulla-plan?/federation", "medulla-protocol-types/federation", "medulla-server-api/federation", "medulla-server-auth/federation", "medulla-server-ops/federation", "medulla-types/federation"]
+federation-opensearch = ["federation-search"]
+federation-search = ["federation", "dep:ureq", "medulla-federation/federation-search", "medulla-server-api/federation-search", "medulla-server-ops/federation-search"]
+federation-sql = ["federation", "dep:medulla-plan", "medulla-federation/federation-sql", "medulla-plan?/federation-sql", "medulla-server-api/federation-sql", "medulla-server-ops/federation-sql"]
+nl-query = ["query", "dep:medulla-plan", "medulla-nlq/nl-query", "medulla-plan?/nl-query", "medulla-server-api/nl-query", "medulla-server-blob/nl-query"]
+obda = ["sparql", "query", "medulla-protocol-types/obda", "medulla-types/obda"]
+owl = ["sparql", "dep:medulla-rdf", "medulla-exec/owl", "medulla-nlq/owl", "medulla-plan?/owl", "medulla-protocol-types/owl", "medulla-rdf?/owl", "medulla-reasoner/owl", "medulla-server-api/owl", "medulla-server-ops/owl", "medulla-types/owl"]
+owl-plan = ["owl", "query", "dep:medulla-plan", "medulla-server-api/owl-plan", "medulla-types/owl-plan"]
+query = ["redb", "dep:medulla-tsdb", "dep:medulla-plan", "medulla-exec/query", "medulla-kernel/query", "medulla-plan?/query", "medulla-protocol-types/query", "medulla-server-api/query", "medulla-server-auth/query", "medulla-server-ops/query", "medulla-types/query"]
+rdf = ["dep:medulla-rdf", "medulla-kernel/rdf", "medulla-persistence-records/rdf", "medulla-protocol-types/rdf", "medulla-rdf?/rdf", "medulla-reasoner/rdf", "medulla-server-api/rdf", "medulla-types/rdf", "medulla-virtual-graph/rdf"]
+redb = ["dep:medulla-storage", "dep:medulla-transaction", "medulla-kernel/redb", "medulla-persistence-records/redb", "medulla-server-api/redb", "medulla-server-blob/redb", "medulla-server-ops/redb"]
+result-cache = ["medulla-graph-core/result-cache", "medulla-kernel/result-cache", "medulla-query-cache/result-cache", "medulla-server-api/result-cache", "medulla-server-ops/result-cache"]
+security = ["redb", "medulla-graph-core/security", "medulla-isolation/security", "medulla-kernel/security", "medulla-protocol-types/security", "medulla-server-api/security", "medulla-server-auth/security", "medulla-server-blob/security", "medulla-server-ops/security", "medulla-types/security"]
+shacl = ["rdf", "dep:medulla-shacl", "medulla-kernel/shacl", "medulla-server-api/shacl", "medulla-server-blob/shacl", "medulla-server-ops/shacl", "owl", "sparql"]
+shex = ["rdf", "dep:medulla-shex"]
+sparql = ["rdf", "dep:medulla-rdf", "medulla-kernel/sparql", "medulla-protocol-types/sparql", "medulla-rdf?/sparql", "medulla-server-api/sparql", "medulla-server-ops/sparql", "medulla-types/sparql", "medulla-virtual-graph/sparql"]
+sparql-fuseki = ["sparql"]
+sparql-service = ["federation", "medulla-federation/sparql-service", "medulla-server-api/sparql-service", "medulla-server-blob/sparql-service", "owl", "rdf", "security", "shacl", "sparql"]
+[dev-dependencies]
+medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
+medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
+medulla-server-api = { path = "../medulla-server-api", features = ["test-support", "request-policy-fixture"] }
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-persistence-records = { path = "../medulla-persistence-records", features = ["test-support"] }
+medulla-server-ops = { path = "../medulla-server-ops", features = ["test-support"] }
+medulla-exec = { path = "../medulla-exec", features = ["test-support"] }
+medulla-federation = { path = "../medulla-federation", features = ["test-support"] }
+medulla-server = { path = "../medulla-server", features = ["federation", "federation-search", "federation-sql", "full", "nl-query", "obda", "owl", "owl-plan", "query", "rdf", "redb", "result-cache", "security", "shacl", "shex", "sparql", "sparql-fuseki", "test-support"] }
+medulla-server-blob = { path = "../medulla-server-blob", features = ["test-support"] }
+medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support", "test-ambient-auth"] }

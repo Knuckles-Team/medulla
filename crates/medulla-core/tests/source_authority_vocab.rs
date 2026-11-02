@@ -1,7 +1,7 @@
 //! The source-authority, source-role and trust-mark terms are part of the core
 //! virtual-graph schema source (MEDULLA-SRC-AUTH-R001, R010.1, R011.1).
 
-use medulla_core::graph::GraphSchemaSources;
+use medulla_graph_core::graph::GraphSchemaSources;
 use medulla_rdf::mapping::parse_turtle;
 use medulla_rdf::oxrdf::{NamedNode, Triple};
 

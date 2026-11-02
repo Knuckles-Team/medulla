@@ -1,0 +1,158 @@
+use super::*;
+use medulla_protocol_types::protocol_fixtures::sql_source::SqlSourceTarget;
+use medulla_protocol_types::storage_wire::SqlSourceJson;
+use medulla_protocol_types::storage_wire::SqlSourceText;
+use medulla_tables::schema::Column;
+use medulla_tables::schema::ColumnType;
+use medulla_tables::schema::TableSchema;
+use medulla_server_auth::sql_catalog_acl::create_owned_table;
+use medulla_server_auth::sql_catalog_acl::grant;
+use medulla_server_auth::sql_catalog_acl::SqlPrivilege;
+use medulla_types::acl::RequestContextClaims;
+
+pub(super) struct Fixture {
+    pub(super) directory: PathBuf,
+    pub(super) owner: CarrierAuthority,
+    pub(super) schema: TableSchema,
+}
+
+impl Fixture {
+    pub(super) fn new() -> Self {
+        Self::for_tenant("tenant-a")
+    }
+
+    /// A fixture whose owner, ACL and table store belong to `tenant`. The served
+    /// path derives its tenant scope from the verified envelope's own tenant
+    /// claim, so an end-to-end test must build the catalog under the tenant the
+    /// deployment's request-context policy expects, not the direct-call default.
+    pub(super) fn for_tenant(tenant: &str) -> Self {
+        let directory = medulla_server_auth::sql_tables::test_persist_dir();
+        let owner = authority("alice", tenant, "owner", true);
+        let schema = TableSchema::new(
+            "issues",
+            vec![
+                Column::new("id", ColumnType::BigInt, false, true),
+                Column::new("owner_tag", ColumnType::Text, false, false),
+                Column::new("payload", ColumnType::Json, true, false),
+            ],
+        );
+        create_owned_table(&owner, &directory, &schema, false).unwrap();
+        Self {
+            directory,
+            owner,
+            schema,
+        }
+    }
+
+    pub(super) fn store(&self) -> TableStore {
+        medulla_server_auth::sql_tables::tenant_table_store(
+            self.owner.tenant_scope(),
+            &self.directory,
+        )
+        .unwrap()
+    }
+
+    pub(super) fn grant_insert(&self, agent: &str) {
+        grant(
+            &self.directory,
+            &self.owner,
+            "issues",
+            agent,
+            &[SqlPrivilege::Insert],
+            uuid::Uuid::new_v4(),
+        )
+        .unwrap();
+    }
+
+    pub(super) fn evict_tenant(&self, tenant: &str) {
+        use medulla_server_auth::sql_tables::evict_for_test;
+        use medulla_server_auth::sql_tables::tenant_acl_path_for_test;
+        use medulla_server_auth::sql_tables::tenant_table_path_for_test;
+        evict_for_test(&tenant_table_path_for_test(tenant, &self.directory));
+        evict_for_test(&tenant_acl_path_for_test(tenant, &self.directory));
+    }
+
+    pub(super) fn enable_rls(&self) {
+        medulla_server_auth::sql_catalog_acl::set_row_level_column(
+            &self.directory,
+            &self.owner,
+            "issues",
+            Some("owner_tag"),
+            uuid::Uuid::new_v4(),
+        )
+        .unwrap();
+    }
+
+    pub(super) fn request(&self, stamp: &str) -> SqlSourceBatchRequest {
+        let target = SqlSourceTarget {
+            table: "issues",
+            columns: &["id", "owner_tag", "payload"],
+            schema_version: self.store().schema_version("issues").unwrap(),
+            schema_digest: Digest256::parse(&self.schema.schema_digest().unwrap()).unwrap(),
+        };
+        let row = vec![
+            SqlSourceCell::Int(1),
+            SqlSourceCell::Text(SqlSourceText::new(stamp.into()).unwrap()),
+            SqlSourceCell::Json(SqlSourceJson::new(serde_json::Value::Null).unwrap()),
+        ];
+        SqlSourceBatchRequest::new(
+            medulla_protocol_types::protocol_fixtures::sql_source::batch(&target, vec![row]),
+        )
+        .unwrap()
+    }
+}
+
+impl Drop for Fixture {
+    fn drop(&mut self) {
+        use medulla_server_auth::sql_tables::evict_for_test;
+        use medulla_server_auth::sql_tables::tenant_acl_path_for_test;
+        use medulla_server_auth::sql_tables::tenant_table_path_for_test;
+        evict_for_test(&tenant_table_path_for_test(
+            self.owner.tenant_scope(),
+            &self.directory,
+        ));
+        evict_for_test(&tenant_acl_path_for_test(
+            self.owner.tenant_scope(),
+            &self.directory,
+        ));
+        std::fs::remove_dir_all(&self.directory).unwrap();
+    }
+}
+
+pub(super) fn verified(
+    agent: &str,
+    tenant: &str,
+    key: &str,
+    write: bool,
+) -> VerifiedRequestContext {
+    let template = VerifiedRequestContext::verified_for_test_with_scopes(
+        agent,
+        tenant,
+        &["kg:read", "kg:write"],
+    );
+    let mut claims: RequestContextClaims = template.claims().clone();
+    if !write {
+        claims.scopes = vec!["kg:read".into()];
+    }
+    VerifiedRequestContext::from_verified_claims(claims, key.into())
+}
+
+pub(super) fn authority(agent: &str, tenant: &str, key: &str, write: bool) -> CarrierAuthority {
+    CarrierAuthority::from_verified(&verified(agent, tenant, key, write)).unwrap()
+}
+
+pub(super) fn submit(
+    fixture: &Fixture,
+    carrier: &CarrierAuthority,
+    request: SqlSourceBatchRequest,
+    nonce: u8,
+) -> Result<SqlSourceBatchResult, String> {
+    publish(
+        10,
+        carrier,
+        Some(Nonce::from_bytes([nonce; 32])),
+        request,
+        &fixture.directory,
+        100,
+    )
+}

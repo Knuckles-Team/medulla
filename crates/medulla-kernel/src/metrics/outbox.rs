@@ -49,6 +49,7 @@ mod imp {
 }
 
 #[cfg(not(feature = "metrics"))]
+#[allow(missing_docs)] // no-op shims; the metrics build documents the same functions
 mod imp {
     pub fn outbox_dead_lettered(_consumer: &str, _topic: &str, _cause: &str, _rows: u64) {}
     pub fn set_outbox_head(_consumer: &str, _topic: &str, _age_ms: u64, _attempt: u32) {}

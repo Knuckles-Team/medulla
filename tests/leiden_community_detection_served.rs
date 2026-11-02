@@ -12,7 +12,7 @@ mod common;
 #[path = "common/test_support.rs"]
 mod test_support;
 
-use medulla::protocol::{CommunityQualityFunction, GraphType, Method, ResultPayload};
+use medulla_protocol_types::protocol::{CommunityQualityFunction, GraphType, Method, ResultPayload};
 
 const SECRET: &str = "medulla-fed-query-r060-served-secret";
 

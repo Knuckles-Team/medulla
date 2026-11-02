@@ -1,0 +1,54 @@
+[package]
+name = "medulla-federation"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: Federated planning across sources: federation optimizer, SSRF guard and remote engines"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_federation"
+path = "src/lib.rs"
+
+[dependencies]
+hex = "0.4"
+hmac = "0.12"
+medulla-exec = { path = "../medulla-exec" }
+medulla-protocol-types = { path = "../medulla-protocol-types" }
+medulla-types = { path = "../medulla-types" }
+medulla-uql = { path = "../medulla-uql" }
+parking_lot = "0.12"
+rmp-serde = "1.3"
+serde = { version = "1.0", features = ["derive", "rc"] }
+serde_json = "1.0"
+sha2 = "0.10"
+tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "signal", "macros"] }
+tracing = "0.1"
+ureq = { version = "3.4.2", optional = true }
+
+sqlx = { version = "0.9", default-features = false, features = [
+    "runtime-tokio",
+    "tls-rustls-ring-native-roots",
+    "postgres",
+    "mysql",
+], optional = true }
+futures-util = { version = "0.3", default-features = false, features = ["std"], optional = true }
+sqlparser = { version = "0.62", features = ["visitor"], optional = true }
+url = { version = "2", optional = true }
+
+[features]
+server = []
+otel-export = ["dep:ureq", "server", "text"]
+lake = ["dep:ureq", "server"]
+sparql-service = ["dep:ureq", "federation", "oidc", "server"]
+federation-search = ["dep:ureq", "federation", "server"]
+oidc = ["dep:ureq"]
+federation = ["medulla-exec/federation", "medulla-uql/federation", "medulla-types/federation", "medulla-protocol-types/federation", "dep:ureq", "server"]
+test-support = ["medulla-exec/test-support", "medulla-protocol-types/test-support", "medulla-types/test-support"]
+federation-sql = ["federation", "dep:sqlx", "dep:futures-util", "dep:sqlparser", "dep:url", "server"]
+text = ["medulla-exec/text", "medulla-types/text", "medulla-uql/text"]
+[dev-dependencies]
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-exec = { path = "../medulla-exec", features = ["test-support"] }

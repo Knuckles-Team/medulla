@@ -11,8 +11,9 @@ use crate::graft::{GraftDestination, GraftSource};
 use crate::outbox::{outbox_cursor, outbox_status, OutboxClaimBudget};
 use crate::read::{read_batches, read_class, read_fences};
 use crate::AdmittedMutation;
+use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
+use medulla_protocol_types::mutation_batch::MutationBatchRecord;
 use medulla_storage::{encode_bounded, ledger_scope_key, ScopeFence};
-use medulla_types::{MutationBatchRecord, MutationOutboxIntent};
 use std::collections::BTreeMap;
 
 const TOPIC: &str = "engine.projection.rebuild";
@@ -682,17 +683,18 @@ fn public_admission_cannot_forge_either_reserved_graft_key() {
     assert!(error.contains("kernel-owned"), "{error}");
 
     let mut reserved_maintenance = batch(identity, "ordinary-batch");
-    reserved_maintenance.envelope = medulla_types::mutation_batch::MutationEnvelope::maintenance(
-        PRINCIPAL,
-        "fixture_maintenance",
-        "ordinary-batch",
-        &format!(
-            "kernel.graft/reservation/{}/{}",
-            "b".repeat(64),
-            "c".repeat(64)
-        ),
-    )
-    .unwrap();
+    reserved_maintenance.envelope =
+        medulla_protocol_types::mutation_batch::MutationEnvelope::maintenance(
+            PRINCIPAL,
+            "fixture_maintenance",
+            "ordinary-batch",
+            &format!(
+                "kernel.graft/reservation/{}/{}",
+                "b".repeat(64),
+                "c".repeat(64)
+            ),
+        )
+        .unwrap();
     let error = match fixture.mutations.admit(&owner, &reserved_maintenance) {
         Err(error) => error,
         Ok((write, _)) => {

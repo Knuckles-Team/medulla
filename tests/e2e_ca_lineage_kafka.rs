@@ -27,9 +27,9 @@
 
 use medulla_tsdb::point::Point;
 use medulla_tsdb::store::SeriesStore;
-use medulla::server::blob::store::RedbChunkStore;
-use medulla::server::lake::lineage_transport::{KafkaTransport, LineageTransport};
-use medulla::server::lake::LakeManager;
+use medulla_server_blob::blob::store::RedbChunkStore;
+use medulla_server_lake::{lake::lineage_transport::KafkaTransport, lake::lineage_transport::LineageTransport};
+use medulla_server_lake::lake::LakeManager;
 
 fn tsdb_dir(tag: &str) -> std::path::PathBuf {
     std::env::temp_dir().join(format!(
@@ -72,9 +72,9 @@ fn lake_materialize_lineage_event_reaches_the_openlineage_topic() {
     let s = store();
     let tsdb = SeriesStore::open_in_dir(
         &tsdb_dir("tsdb"),
-        medulla::store_authority::process_verifier(),
-        medulla::store_authority::process_authority().principal(),
-        &medulla::store_authority::process_authority().proof(),
+        medulla_kernel::store_authority::process_verifier(),
+        medulla_kernel::store_authority::process_authority().principal(),
+        &medulla_kernel::store_authority::process_authority().proof(),
     )
     .unwrap();
     tsdb.append_batch(

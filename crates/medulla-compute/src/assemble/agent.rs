@@ -12,12 +12,19 @@
 //! policy digest is the decision policy's, and its actor scope names the
 //! engine's decision function rather than whoever asked.
 
-use medulla_types::agent_component::{AgentComponentKind, ComponentDependency};
-use medulla_types::agent_graph::{
-    AgentGraphDraft, AgentGraphEdge, AgentGraphNode, AgentGraphNodeKind, AgentGraphShape,
+use medulla_agent_types::{
+    agent_component::AgentComponentKind, agent_component::ComponentDependency,
 };
-use medulla_types::agent_library::{AgentLibraryEntryDraft, AgentRuntimeContract};
-use medulla_types::decision::{CandidateFacts, DecisionInputs, TemplateFacts};
+use medulla_agent_types::{
+    agent_graph::AgentGraphDraft, agent_graph::AgentGraphEdge, agent_graph::AgentGraphNode,
+    agent_graph::AgentGraphNodeKind, agent_graph::AgentGraphShape,
+};
+use medulla_agent_types::{
+    agent_library::AgentLibraryEntryDraft, agent_library::AgentRuntimeContract,
+};
+use medulla_decision_types::{
+    decision::CandidateFacts, decision::DecisionInputs, decision::TemplateFacts,
+};
 
 use super::facts;
 
@@ -186,7 +193,7 @@ fn graph_draft(
         node_id: AGENT_NODE.to_string(),
         kind: AgentGraphNodeKind::Agent {
             agent_id: agent.agent_id.clone(),
-            definition_digest: medulla_types::agent_library::draft_definition_digest(agent),
+            definition_digest: medulla_agent_types::agent_library::draft_definition_digest(agent),
         },
         deps_contract: None,
         output_contract: None,
@@ -235,7 +242,9 @@ fn template_graph(
         if let Some(agent) = agents.get(slot) {
             node.kind = AgentGraphNodeKind::Agent {
                 agent_id: agent.agent_id.clone(),
-                definition_digest: medulla_types::agent_library::draft_definition_digest(agent),
+                definition_digest: medulla_agent_types::agent_library::draft_definition_digest(
+                    agent,
+                ),
             };
         }
         slot += 1;

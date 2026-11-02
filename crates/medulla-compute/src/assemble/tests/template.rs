@@ -2,9 +2,12 @@
 //! templates are filled slot by slot, the best topology wins, and each losing
 //! template is explained with its own optimum.
 
-use medulla_types::agent_graph::{AgentGraphEdge, AgentGraphNode, AgentGraphNodeKind, AgentGraphShape};
-use medulla_types::decision::{DecisionOutcome, TemplateFacts};
-use medulla_types::delegation::AgentGraphEntryRef;
+use medulla_agent_types::delegation::AgentGraphEntryRef;
+use medulla_agent_types::{
+    agent_graph::AgentGraphEdge, agent_graph::AgentGraphNode, agent_graph::AgentGraphNodeKind,
+    agent_graph::AgentGraphShape,
+};
+use medulla_decision_types::{decision::DecisionOutcome, decision::TemplateFacts};
 
 use super::super::{assemble, inputs as build_inputs, replay_check};
 use super::fixture::*;
@@ -77,7 +80,7 @@ fn decide_over(templates: Vec<TemplateFacts>) -> super::super::Assembly {
         asked,
         research_library(),
         templates,
-        medulla_types::decision::DecisionPolicy::engine_default(),
+        medulla_decision_types::decision::DecisionPolicy::engine_default(),
     )
     .expect("inputs");
     let assembly = assemble(inputs, identity()).expect("assembles");
@@ -103,7 +106,7 @@ fn a_two_slot_template_is_filled_with_one_agent_per_slot() {
     for (agent, (id, digest)) in assembly.agents.iter().zip(&pinned) {
         assert_eq!(agent.agent_id, *id);
         assert_eq!(
-            medulla_types::agent_library::draft_definition_digest(agent),
+            medulla_agent_types::agent_library::draft_definition_digest(agent),
             *digest
         );
     }
@@ -143,12 +146,12 @@ fn a_template_that_is_not_the_named_revision_is_refused() {
         asked,
         research_library(),
         vec![solo],
-        medulla_types::decision::DecisionPolicy::engine_default(),
+        medulla_decision_types::decision::DecisionPolicy::engine_default(),
     )
     .expect("inputs");
     let error = assemble(inputs, identity()).expect_err("refused");
     assert_eq!(
         error.code,
-        medulla_types::decision::DecisionErrorCode::AssemblyInputsInvalid
+        medulla_decision_types::decision::DecisionErrorCode::AssemblyInputsInvalid
     );
 }

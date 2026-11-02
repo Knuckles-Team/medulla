@@ -1,16 +1,20 @@
 //! The typed OHLCV bar-series contract over this store (EH-413).
 //!
 //! A bar series is an ordinary series whose schema is
-//! [`medulla_compute::finance::market::codec::BAR_FIELDS`]: one point per bar
+//! [`medulla_finance_market::market::codec::BAR_FIELDS`]: one point per bar
 //! version, `ts` = the bar's open time. The store only ever appends, and
 //! several versions of one bar coexist at one timestamp (equal timestamps keep
 //! arrival order), so a correction is a new point and every earlier view stays
 //! reconstructible. Reads decode points back to validated [`BarRecord`]s and
 //! resolve the version a view needs; nothing is edited in place.
 
-use medulla_compute::finance::market::codec::{decode, encode, BAR_FIELDS};
-use medulla_compute::finance::market::resolve::resolve;
-use medulla_compute::finance::market::{BarRecord, FinalityFilter, MarketResult, SeriesPoint};
+use medulla_finance_market::market::resolve::resolve;
+use medulla_finance_market::{
+    market::codec::decode, market::codec::encode, market::codec::BAR_FIELDS,
+};
+use medulla_finance_market::{
+    market::BarRecord, market::FinalityFilter, market::MarketResult, market::SeriesPoint,
+};
 
 use crate::point::Point;
 
@@ -53,7 +57,7 @@ pub fn resolve_points(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_compute::finance::market::BarStatus;
+    use medulla_finance_market::market::BarStatus;
 
     const HOUR: i64 = 3_600_000_000_000;
 

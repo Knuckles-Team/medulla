@@ -24,11 +24,11 @@
 //! included. This test now compares the FULL `MachineInstance`, not a
 //! timestamp-excluding projection.
 
+use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
 use medulla_statechart::{
     Context, EventInput, MachineInstance, State, StatechartDef, StatechartStore, Transition,
 };
 use medulla_storage::{OwnerLayout, PhysicalStoreIdentity, ScopeGrantVerifier};
-use medulla_types::MutationScopeIdentity;
 use proptest::prelude::*;
 
 /// Stand-in composition root (RF-RULING-004): the storage kernel owns the file

@@ -1,0 +1,255 @@
+//! Explicit server owner for native WorkItem lifecycle transitions.
+//!
+//! The six transition methods are selected here rather than by dispatch's
+//! `is_work_item_mutation_method` classifier. Their authoritative effect is
+//! unchanged: `mutation_batch::commit_work_item` atomically persists the
+//! transition/result/outbox before refreshing the in-memory graph projection.
+
+#[cfg(feature = "redb")]
+use medulla_persistence::AsRedb;
+use std::sync::Arc;
+
+use medulla_graph_core::graph::GraphCore;
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::Response;
+use medulla_server_api::api::persistence::PersistenceBackend;
+use medulla_server_api::authority_context::VerifiedRequestContext;
+
+#[cfg(feature = "redb")]
+mod lease_kind_policy;
+
+/// Already-authorized graph and placement context for one WorkItem transition.
+pub struct HandleContext<'a> {
+    pub req_id: u64,
+    pub graph_name: &'a str,
+    pub caller: Option<&'a str>,
+    pub verified_context: &'a VerifiedRequestContext,
+    pub core: &'a Arc<GraphCore>,
+    pub persistence: &'a Option<Arc<dyn PersistenceBackend>>,
+    #[cfg(feature = "raft")]
+    pub routed_raft: &'a Option<medulla_raft::raft::multi::RoutedRaftHandle>,
+}
+
+/// Handle exactly the six result-producing WorkItem lifecycle transitions, the
+/// two native control-lease writes (graph-os MEDULLA-2) and the four work-market
+/// writes (EH-348), which share the same durable WorkItem MutationBatch kernel. Dispatch has already bound a lease
+/// write's tenant to the verified carrier (`route_control_lease_writes`).
+///
+/// Submission and resource-reservation methods intentionally return `Err` and
+/// remain with their distinct admission/authority routes.
+pub async fn try_handle(ctx: HandleContext<'_>, method: Method) -> Result<Response, Method> {
+    let method = match method {
+        // Enumerated, not `medulla_store::work_item_kernel_writes!()`: this is the dispatch
+        // arm `check_contract_method_reachability.py` reads by name.
+        method @ (Method::ClaimWorkItem { .. }
+        | Method::RenewWorkItemLease { .. }
+        | Method::CommitWorkItemResult { .. }
+        | Method::CancelWorkItem { .. }
+        | Method::DeferWorkItem { .. }
+        | Method::CasWorkItemMetadata { .. }
+        | Method::PublishCurrentPlan { .. }
+        | Method::IssueHostStartGrant { .. }
+        | Method::PublishRunCheckpoint { .. }
+        | Method::IssueControlLease { .. }
+        | Method::TransitionControlLease { .. }
+        | Method::PolicyEvolutionStore { .. }
+        | Method::GapUpsert { .. }
+        | Method::GapTransition { .. }
+        | Method::GapSettle { .. }
+        | Method::WorkOfferPut { .. }
+        | Method::RetireSealedRecord { .. }) => method,
+        other => return Err(other),
+    };
+    let method = match stamp_retired_by(method, ctx.caller) {
+        Ok(method) => method,
+        Err(error) => return Ok(Response::err(ctx.req_id, error)),
+    };
+
+    #[cfg(feature = "raft")]
+    let (placement_epoch, placement_fence) = if let Some(routed) = ctx.routed_raft.as_ref() {
+        let leader = routed.handle.current_leader().await;
+        if leader != Some(routed.handle.node_id) {
+            return Ok(Response::stale_route(
+                ctx.req_id,
+                ctx.graph_name,
+                routed.group_id,
+                routed.epoch,
+                leader,
+                "WorkItem transitions require the current placement leader",
+            ));
+        }
+        (routed.epoch, Some(routed.group_id))
+    } else {
+        (0, None)
+    };
+    #[cfg(not(feature = "raft"))]
+    let (placement_epoch, placement_fence) = (0, None);
+
+    #[cfg(feature = "redb")]
+    if let Some(refused) = lease_kind_policy::refuse_unpermitted_lease_kind(&ctx, &method).await {
+        return Ok(refused);
+    }
+
+    let response =
+        match commit_verified_work_item(&ctx, placement_epoch, placement_fence, method).await {
+            Ok(result) => Response::ok(ctx.req_id, result),
+            Err(error) => Response::err(ctx.req_id, error),
+        };
+    Ok(response)
+}
+
+/// Commit one native WorkItem method through the durable MutationBatch path under
+/// the request's verified idempotency key, attempt nonce and placement fence.
+/// Shared by the lifecycle transitions here and by kg-delegate admission.
+pub(crate) async fn commit_verified_work_item(
+    ctx: &HandleContext<'_>,
+    placement_epoch: u64,
+    placement_fence: Option<u64>,
+    method: Method,
+) -> Result<medulla_protocol_types::protocol::ResultPayload, String> {
+    let is_plan = matches!(
+        &method,
+        Method::PublishCurrentPlan { .. } | Method::PublishRunCheckpoint { .. }
+    );
+    let method = prepare_private_publication(ctx, method).await?;
+    let principal = if is_plan {
+        Some(ctx.verified_context.principal())
+    } else {
+        ctx.caller
+    };
+    medulla_server_mutation::mutation_batch::commit_work_item(
+        medulla_server_mutation::mutation_batch::WorkItemCommitRequest::new(
+            ctx.persistence.as_ref(),
+            ctx.core,
+            medulla_server_mutation::mutation_batch::CommitOrigin {
+                request_id: ctx.req_id,
+                principal,
+            },
+            Some(ctx.verified_context.idempotency_key()),
+            ctx.graph_name,
+            placement_epoch,
+            method,
+        )
+        .with_attempt_nonce(ctx.verified_context.attempt_nonce())
+        .with_placement_fencing_token(placement_fence),
+    )
+    .await
+}
+
+/// EH-558: the engine, not the client, names who retired a sealed record -- the
+/// verified caller's principal fingerprint replaces any client-supplied value. The
+/// fingerprint is stable per caller, so a retry keeps the same retry identity.
+fn stamp_retired_by(method: Method, caller: Option<&str>) -> Result<Method, String> {
+    let Method::RetireSealedRecord { mut request } = method else {
+        return Ok(method);
+    };
+    let caller =
+        caller.ok_or("ACCESS_DENIED: retiring a sealed record requires a verified caller")?;
+    request.retired_by = medulla_server_api::batch_compile::principal_fingerprint(caller)?;
+    Ok(Method::RetireSealedRecord { request })
+}
+
+/// Only private publications replace body retry keys with verified transport identity.
+async fn prepare_private_publication(
+    ctx: &HandleContext<'_>,
+    method: Method,
+) -> Result<Method, String> {
+    match method {
+        Method::PublishCurrentPlan { mut request } => {
+            request.idempotency_key = verified_publication_key(ctx, &request.tenant)?;
+            request.validate()?;
+            prepare_current_plan(ctx, request).await
+        }
+        Method::PublishRunCheckpoint { mut request } => {
+            request.idempotency_key = verified_publication_key(ctx, &request.tenant)?;
+            request.validate()?;
+            prepare_checkpoint(ctx, request).await
+        }
+        other => Ok(other),
+    }
+}
+
+fn verified_publication_key(ctx: &HandleContext<'_>, tenant: &str) -> Result<String, String> {
+    super::native_write_authority::require_carrier_tenant(tenant, ctx.verified_context.tenant())?;
+    Ok(ctx.verified_context.idempotency_key().to_string())
+}
+
+#[cfg(feature = "redb")]
+fn publication_authority<'a>(
+    ctx: &'a HandleContext<'_>,
+    kind: &str,
+) -> Result<
+    (
+        &'a medulla_persistence::redb_backend::RedbBackend,
+        String,
+        String,
+    ),
+    String,
+> {
+    let backend = ctx
+        .persistence
+        .as_ref()
+        .and_then(|backend| backend.as_redb())
+        .ok_or_else(|| format!("{kind} publication requires native persistence"))?;
+    let actor = medulla_server_api::batch_compile::principal_fingerprint(
+        ctx.verified_context.principal(),
+    )?;
+    Ok((
+        backend,
+        medulla_kernel::persist::sanitize(ctx.graph_name),
+        actor,
+    ))
+}
+
+/// Authorization precedes the ledger lookup even for an expired historical retry.
+async fn prepare_current_plan(
+    ctx: &HandleContext<'_>,
+    request: medulla_decision_outcome_types::current_plan::PublishCurrentPlanRequest,
+) -> Result<Method, String> {
+    #[cfg(feature = "redb")]
+    {
+        let (backend, graph, actor) = publication_authority(ctx, "current-plan")?;
+        if !backend
+            .current_plan_owner(&graph, &request.tenant, &request.snapshot.run_id, &actor)
+            .await?
+        {
+            return Err("ACCESS_DENIED: current-plan owner unavailable".into());
+        }
+        Ok(Method::PublishCurrentPlan { request })
+    }
+    #[cfg(not(feature = "redb"))]
+    {
+        let _ = (ctx, request);
+        Err("current-plan publication requires native persistence".into())
+    }
+}
+
+/// Owner authorization precedes the native retry ledger, including old receipts.
+async fn prepare_checkpoint(
+    ctx: &HandleContext<'_>,
+    request: medulla_work_types::run_checkpoint::PublishRunCheckpointRequest,
+) -> Result<Method, String> {
+    #[cfg(feature = "redb")]
+    {
+        let (backend, graph, actor) = publication_authority(ctx, "checkpoint")?;
+        let read = medulla_work_types::run_checkpoint::GetRunCheckpointRequest {
+            tenant: request.tenant.clone(),
+            work_item_id: request.work_item_id.clone(),
+            run_id: request.run_id.clone(),
+            context_id: request.context_id.clone(),
+            current_claim: None,
+        };
+        if !backend.checkpoint_owner(&graph, read, &actor).await? {
+            return Err("ACCESS_DENIED: checkpoint owner unavailable".into());
+        }
+        Ok(Method::PublishRunCheckpoint { request })
+    }
+    #[cfg(not(feature = "redb"))]
+    {
+        let _ = (ctx, request);
+        Err("checkpoint publication requires native persistence".into())
+    }
+}
+
+#[cfg(all(test, feature = "redb"))]
+mod host_start_tests;

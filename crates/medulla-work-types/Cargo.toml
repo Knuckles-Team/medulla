@@ -1,0 +1,33 @@
+[package]
+name = "medulla-work-types"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: Work items, work market, control leases, host start, jobs, worker registry, run history and orchestration record types"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_work_types"
+path = "src/lib.rs"
+
+[dependencies]
+medulla-types = { path = "../medulla-types" }
+serde = { version = "1.0", features = ["derive", "rc"] }
+serde_json = "1.0"
+thiserror = "2.0"
+sha2 = "0.10"
+hex = "0.4"
+schemars = { version = "1.2.3", optional = true }
+medulla-result-types = { path = "../medulla-result-types" }
+medulla-mutation-types = { path = "../medulla-mutation-types" }
+serde_bytes = "0.11.19"
+
+[features]
+contract-schema = ["dep:schemars", "medulla-types/contract-schema", "medulla-mutation-types/contract-schema", "medulla-result-types/contract-schema"]
+jobs = ["medulla-types/jobs"]
+program-optimization = ["jobs", "medulla-types/program-optimization"]
+test-support = ["medulla-types/test-support"]
+
+[dev-dependencies]
+medulla-types = { path = "../medulla-types", features = ["test-support"] }

@@ -27,8 +27,8 @@ mod redb_fan_in;
 use std::sync::Arc;
 
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
-use medulla::server::persistence::redb_backend::RedbBackend;
-use medulla::server::persistence::PersistenceBackend;
+use medulla_server_api::api::persistence::PersistenceBackend;
+use medulla_persistence::redb_backend::RedbBackend;
 use redb_fan_in::fan_in;
 use tokio::runtime::Builder;
 
@@ -49,10 +49,7 @@ fn bench_group_commit(c: &mut Criterion) {
     for &linger_us in &[0u64, 500, 1000, 2000] {
         // The writer reads the knob once at open, so set it BEFORE opening, and open a
         // fresh backend (its own dir) per setting.
-        std::env::set_var(
-            "MEDULLA_REDB_GROUP_LINGER_US",
-            linger_us.to_string(),
-        );
+        std::env::set_var("MEDULLA_REDB_GROUP_LINGER_US", linger_us.to_string());
         std::env::set_var("MEDULLA_REDB_GROUP_SHALLOW", "512");
         let dir = std::env::temp_dir().join(format!(
             "medulla-redb-gc-bench-{}-{linger_us}",

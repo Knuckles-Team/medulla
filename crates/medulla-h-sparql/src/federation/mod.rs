@@ -1,0 +1,1035 @@
+//! Super-cluster federated search (CONCEPT:MEDULLA-KG.ontology.federation-client).
+//!
+//! Fans a *read* query across a registry of peer engine instances, runs the SAME
+//! query locally, and MERGES the partial result sets into one answer — the
+//! multi-region / federated capability that lets a super-cluster of engines answer
+//! as one (the "surpass OpenObserve federated search" goal).
+//!
+//! Design (all feature-gated behind `federation-search`, kept OUT of the Pi tier so
+//! no `ureq`/rustls enters the slim build):
+//!
+//! * [`PeerRegistry`] — the set of peer base-URLs, seeded from the comma-separated
+//!   env var [`FEDERATION_PEERS_ENV`] plus a programmatic [`PeerRegistry::register`].
+//! * SSRF safety — every peer URL is vetted with the SAME allowlist + internal-range
+//!   guard the SPARQL `SERVICE` federation uses (CONCEPT:MEDULLA-KG.query.sparql-service-federation-client): a peer that
+//!   resolves to a loopback / link-local / RFC-1918 address is refused UNLESS the
+//!   operator opts it in via [`FEDERATION_ALLOW_ENV`]. Per-peer connect + read
+//!   timeouts bound a slow/hostile peer.
+//! * Fan-out + merge — the query runs locally AND is POSTed concurrently to each
+//!   peer's `/federated?local=1` endpoint (the `local=1` flag makes the peer run
+//!   ONLY its own store, so there is no fan-out recursion). Partials are unioned and
+//!   de-duplicated by key; ranked/search partials are re-ranked with Reciprocal Rank
+//!   Fusion (RRF, the `Op::FuseRrf` idea). A slow / dead peer is SKIPPED and noted in
+//!   `failed_peers` with `partial: true` — it never fails the whole query.
+//! * Schema-aware typed fusion for SQL + SPARQL (CONCEPT:MEDULLA-KG.query.schema-typed-fusion-sql) — the ranked-search
+//!   merge above dedups by a hash of the row payload, which is wrong for tabular
+//!   (SQL row / SPARQL solution) partials whose peers may list the SAME columns in a
+//!   DIFFERENT order, serialize the SAME value with a DIFFERENT JSON type (`30` vs
+//!   `30.0` vs `"30"`), or expose HETEROGENEOUS-but-compatible schemas (one peer has
+//!   an extra column). For `lang == "sql" | "sparql"`, [`merge_partials_typed`] instead
+//!   aligns columns/variables BY NAME across peers into one union schema, reconciles
+//!   each cell to a canonical typed value, de-duplicates by that typed tuple (not by a
+//!   hash of the JSON), and re-projects every row onto the union schema — filling a
+//!   column a given peer lacked with `null`. The ranked-search RRF path is untouched,
+//!   and a slow/dead peer still degrades to `partial: true` exactly as before.
+//! * HTTP surface — a small `/federated` POST listener (`{query, lang}` → merged
+//!   rows + a `metadata` block). Reuses the same hand-rolled HTTP framing idiom as
+//!   `sparql_http` (no new HTTP dep).
+
+// OpenSearch adapter for this fan-out (CA-14, feature `federation-opensearch`, off by
+// default). Reserved and EMPTY until CA-14 implements it; landed by CA-17's single
+// feature-stub commit so CA-14 never edits the root `Cargo.toml` or this module list.
+#[cfg(feature = "federation-opensearch")]
+pub mod opensearch;
+
+mod merge;
+pub use merge::{is_typed_lang, merge_partials, merge_partials_typed};
+
+use std::sync::Arc;
+use std::time::Duration;
+
+use tokio::io::AsyncWriteExt;
+use tokio::net::TcpListener;
+use tokio::sync::RwLock;
+
+use medulla_server_api::http1;
+use medulla_server_api::http1::HttpMessage;
+use medulla_server_api::http1::RequestLimits;
+use medulla_server_api::state::ServerState;
+
+/// Comma-separated peer engine base-URLs, e.g.
+/// `https://medulla-eu.example:7900,https://medulla-us.example:7900` (CONCEPT:MEDULLA-KG.ontology.federation-client).
+pub const FEDERATION_PEERS_ENV: &str = "MEDULLA_FEDERATION_PEERS";
+
+/// SSRF allowlist for outbound peer fan-out (CONCEPT:MEDULLA-KG.ontology.federation-client, mirrors MEDULLA-052). A
+/// comma-separated list of bare hosts or `scheme://host:port` origins that may be
+/// contacted even though they resolve to an internal (loopback / RFC-1918 / link-local)
+/// address. Empty / unset ⇒ internal peers are refused (fail-closed default).
+pub const FEDERATION_ALLOW_ENV: &str = "MEDULLA_FEDERATION_ALLOW";
+
+/// Default graph a bare federated query resolves against (shared with the SPARQL surface).
+pub const DEFAULT_GRAPH_ENV: &str = "MEDULLA_SPARQL_DEFAULT_GRAPH";
+
+/// Per-peer connect timeout (seconds) — a peer that will not connect fast degrades.
+const CONNECT_TIMEOUT_SECS: u64 = 5;
+/// Per-peer read timeout (seconds) — a peer that answers slowly is dropped from the merge.
+const READ_TIMEOUT_SECS: u64 = 20;
+/// Response-size cap per peer (bytes) — a hostile/misbehaving peer must not OOM the pool.
+const MAX_RESPONSE_BYTES: u64 = 64 * 1024 * 1024;
+
+// ── Normalized federated row ──────────────────────────────────────────────
+
+/// One normalized result row shared by the local store and every peer (CONCEPT:MEDULLA-KG.ontology.federation-client).
+/// `key` is the union/dedup identity; `score` (when present) drives re-ranking; `data`
+/// carries the opaque payload the caller cares about.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct FedRow {
+    /// De-duplication identity (a node id, an IRI, a row hash …).
+    pub key: String,
+    /// Relevance score for ranked/search queries; `None` for unordered rows.
+    #[serde(default)]
+    pub score: Option<f64>,
+    /// Opaque row payload passed through to the caller.
+    #[serde(default)]
+    pub data: serde_json::Value,
+}
+
+impl FedRow {
+    /// A ranked row with a score.
+    pub fn scored(key: impl Into<String>, score: f64, data: serde_json::Value) -> Self {
+        Self {
+            key: key.into(),
+            score: Some(score),
+            data,
+        }
+    }
+}
+
+/// The outcome of contacting ONE source (local or a peer): either its rows, or the
+/// error that made it degrade (CONCEPT:MEDULLA-KG.ontology.federation-client). A degraded peer keeps its label so the
+/// merged metadata can report it in `failed_peers`.
+#[derive(Debug, Clone)]
+pub struct PeerOutcome {
+    /// The source label — a peer base-URL, or `"<local>"` for the local store.
+    pub source: String,
+    /// The source's partial rows, or the degrade reason.
+    pub rows: Result<Vec<FedRow>, String>,
+}
+
+/// The merged federated answer + provenance metadata (CONCEPT:MEDULLA-KG.ontology.federation-client).
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct FederatedResponse {
+    /// The merged, de-duplicated (and, for ranked queries, RRF-re-ranked) rows.
+    pub rows: Vec<FedRow>,
+    /// Provenance: which peers were queried / failed, and whether the answer is partial.
+    pub metadata: FederatedMetadata,
+}
+
+/// Provenance block returned alongside the merged rows (CONCEPT:MEDULLA-KG.ontology.federation-client).
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct FederatedMetadata {
+    /// Peer base-URLs that were contacted (excludes the always-present local store).
+    pub peers_queried: Vec<String>,
+    /// Peer base-URLs that degraded (timeout / refused / SSRF-blocked / parse error).
+    pub failed_peers: Vec<String>,
+    /// `true` when at least one source degraded — the answer is a best-effort union.
+    pub partial: bool,
+    /// Total sources that contributed rows (local + healthy peers).
+    pub contributing_sources: usize,
+}
+
+// ── Peer registry ─────────────────────────────────────────────────────────
+
+/// The set of peer engine base-URLs to fan a federated query out to (CONCEPT:MEDULLA-KG.ontology.federation-client).
+#[derive(Debug, Clone, Default)]
+pub struct PeerRegistry {
+    peers: Vec<String>,
+}
+
+impl PeerRegistry {
+    /// An empty registry (local-only federation).
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Parse a comma-separated peer list (CONCEPT:MEDULLA-KG.ontology.federation-client). Blanks are dropped, each
+    /// entry is trimmed, a trailing `/` is normalized off, and duplicates are removed
+    /// (order-preserving) so the same peer is never queried twice.
+    pub fn parse(raw: &str) -> Self {
+        let mut peers: Vec<String> = Vec::new();
+        for tok in raw.split(',') {
+            let t = tok.trim().trim_end_matches('/');
+            if t.is_empty() {
+                continue;
+            }
+            let owned = t.to_string();
+            if !peers.contains(&owned) {
+                peers.push(owned);
+            }
+        }
+        Self { peers }
+    }
+
+    /// Seed from [`FEDERATION_PEERS_ENV`]; unset / empty ⇒ an empty registry.
+    pub fn from_env() -> Self {
+        std::env::var(FEDERATION_PEERS_ENV)
+            .ok()
+            .map(|raw| Self::parse(&raw))
+            .unwrap_or_default()
+    }
+
+    /// Programmatically add a peer base-URL (CONCEPT:MEDULLA-KG.ontology.federation-client). No-ops on a blank or
+    /// already-registered URL. Returns `true` when the peer was newly added.
+    pub fn register(&mut self, url: impl Into<String>) -> bool {
+        let url = url.into().trim().trim_end_matches('/').to_string();
+        if url.is_empty() || self.peers.contains(&url) {
+            return false;
+        }
+        self.peers.push(url);
+        true
+    }
+
+    /// The registered peer base-URLs.
+    pub fn peers(&self) -> &[String] {
+        &self.peers
+    }
+
+    /// `true` when there are no peers (a purely-local "federation").
+    pub fn is_empty(&self) -> bool {
+        self.peers.is_empty()
+    }
+}
+
+// ── SSRF guard (mirrors CONCEPT:MEDULLA-KG.query.sparql-service-federation-client) ──────────────────────────────────
+
+/// The SSRF allowlist for peer fan-out (CONCEPT:MEDULLA-KG.ontology.federation-client). Built from [`FEDERATION_ALLOW_ENV`];
+/// an internal-range peer is only contacted when its host is named here.
+#[derive(Debug, Clone, Default)]
+pub struct PeerAllowlist {
+    allow: Vec<String>,
+}
+
+impl PeerAllowlist {
+    /// Build from [`FEDERATION_ALLOW_ENV`] (empty / unset ⇒ no internal peers allowed).
+    pub fn from_env() -> Self {
+        let allow = std::env::var(FEDERATION_ALLOW_ENV)
+            .ok()
+            .map(|raw| {
+                raw.split(',')
+                    .map(|s| s.trim().to_ascii_lowercase())
+                    .filter(|s| !s.is_empty())
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default();
+        Self { allow }
+    }
+
+    /// Build from an explicit list (test seam).
+    pub fn from_list(list: &[&str]) -> Self {
+        Self {
+            allow: list.iter().map(|s| s.to_ascii_lowercase()).collect(),
+        }
+    }
+
+    /// Apply the shared outbound gate. Public HTTPS peers need no explicit grant;
+    /// internal peers require an exact allowlist entry.
+    pub fn check(&self, peer_url: &str) -> Result<(), String> {
+        self.check_target(peer_url).map(|_| ())
+    }
+
+    fn check_target(
+        &self,
+        peer_url: &str,
+    ) -> Result<medulla_federation::federation_ssrf::ValidatedHttpJsonTarget, String> {
+        use medulla_federation::{federation_ssrf::validate_outbound_http_target, federation_ssrf::OutboundAllowPolicy};
+        validate_outbound_http_target(peer_url, &self.allow, OutboundAllowPolicy::PublicHttps)
+    }
+}
+
+// ── Peer fan-out (ureq, blocking) ─────────────────────────────────────────
+
+/// POST the query to ONE peer's `/federated?local=1` endpoint and parse its rows
+/// (CONCEPT:MEDULLA-KG.ontology.federation-client). Runs inside a `spawn_blocking` task (the `ureq` client is blocking).
+/// SSRF-vetted first; any failure (blocked / connect / read / parse) is returned as the
+/// degrade reason so the caller records it as a failed peer.
+fn fetch_one_peer(
+    peer: &str,
+    allow: &PeerAllowlist,
+    query: &str,
+    lang: &str,
+) -> Result<Vec<FedRow>, String> {
+    use medulla_federation::federation_ssrf::pinned_agent;
+    use std::io::Read;
+    let target = allow.check_target(peer)?;
+    let endpoint = format!("{peer}/federated?local=1");
+    let body = serde_json::json!({ "query": query, "lang": lang }).to_string();
+    let builder = ureq::Agent::config_builder()
+        .timeout_connect(Some(Duration::from_secs(CONNECT_TIMEOUT_SECS)))
+        .timeout_recv_response(Some(Duration::from_secs(READ_TIMEOUT_SECS)))
+        .timeout_recv_body(Some(Duration::from_secs(READ_TIMEOUT_SECS)));
+    let agent = pinned_agent(&target, builder);
+    let resp = agent
+        .post(&endpoint)
+        .header("Content-Type", "application/json")
+        .header("Accept", "application/json")
+        .send(&body)
+        .map_err(|_| "peer POST failed".to_string())?;
+    let mut text = String::new();
+    resp.into_body()
+        .into_reader()
+        .take(MAX_RESPONSE_BYTES)
+        .read_to_string(&mut text)
+        .map_err(|e| format!("reading peer response: {e}"))?;
+    parse_peer_rows(&text)
+}
+
+/// Parse a peer's `/federated` JSON response back into rows (CONCEPT:MEDULLA-KG.ontology.federation-client). Accepts the
+/// full `{rows: [...], metadata: {...}}` envelope this module emits, or a bare `[...]`.
+fn parse_peer_rows(text: &str) -> Result<Vec<FedRow>, String> {
+    let val: serde_json::Value =
+        serde_json::from_str(text).map_err(|e| format!("invalid peer JSON: {e}"))?;
+    let rows_val = match val {
+        serde_json::Value::Array(_) => val,
+        serde_json::Value::Object(ref map) => map
+            .get("rows")
+            .cloned()
+            .ok_or_else(|| "peer response missing `rows`".to_string())?,
+        _ => return Err("peer response is neither array nor object".to_string()),
+    };
+    serde_json::from_value::<Vec<FedRow>>(rows_val)
+        .map_err(|e| format!("peer rows not FedRow-shaped: {e}"))
+}
+
+/// Fan the query out to every peer concurrently and collect the per-peer outcomes
+/// (CONCEPT:MEDULLA-KG.ontology.federation-client). Each peer runs in its own `spawn_blocking` task; a panic or join
+/// error degrades that peer rather than the whole query.
+pub async fn fetch_peers(
+    registry: &PeerRegistry,
+    allow: &PeerAllowlist,
+    query: &str,
+    lang: &str,
+) -> Vec<PeerOutcome> {
+    let mut handles = Vec::new();
+    for peer in registry.peers() {
+        let peer = peer.clone();
+        let allow = allow.clone();
+        let query = query.to_string();
+        let lang = lang.to_string();
+        handles.push(tokio::task::spawn_blocking(move || {
+            let rows = fetch_one_peer(&peer, &allow, &query, &lang);
+            PeerOutcome { source: peer, rows }
+        }));
+    }
+    let mut outcomes = Vec::with_capacity(handles.len());
+    for h in handles {
+        match h.await {
+            Ok(outcome) => outcomes.push(outcome),
+            Err(e) => outcomes.push(PeerOutcome {
+                source: "<unknown-peer>".to_string(),
+                rows: Err(format!("peer task join error: {e}")),
+            }),
+        }
+    }
+    outcomes
+}
+
+// ── Local execution ───────────────────────────────────────────────────────
+
+/// Run the query against the LOCAL store via in-process dispatch (CONCEPT:MEDULLA-KG.ontology.federation-client).
+/// Routes by `lang`: `sparql`/`sql` use their native read method when that feature is
+/// compiled; everything else (default `nl`/`search`) goes through the NL/search path.
+/// The result is normalized to [`FedRow`]s so it merges uniformly with peer rows.
+async fn local_execute(
+    state: &Arc<RwLock<ServerState>>,
+    query: &str,
+    lang: &str,
+    graph: &str,
+) -> Result<Vec<FedRow>, String> {
+    let method = build_local_method(query, lang, graph);
+    let id = 1u64;
+    let request = medulla_protocol_types::protocol::Request {
+        id,
+        graph: graph.to_string(),
+        auth_token: String::new(),
+        agent_id: Some("service:local-query".to_string()),
+        method,
+    };
+    let resp =
+        medulla_server_api::api::reentry::dispatch_authenticated_local_query(state, request).await;
+    if let Some(refusal) = resp.refusal_text() {
+        return Err(refusal);
+    }
+    let bytes = match resp.result {
+        Some(medulla_protocol_types::protocol::ResultPayload::Raw(b)) => b,
+        _ => return Ok(Vec::new()),
+    };
+    Ok(decode_local_rows(&bytes, lang))
+}
+
+/// Build the in-process read [`Method`] for a `lang` (CONCEPT:MEDULLA-KG.ontology.federation-client). SQL/SPARQL arms
+/// only compile when their feature is present; otherwise every lang uses the NL/search
+/// path so a slim build still federates over the search surface.
+fn build_local_method(query: &str, lang: &str, graph: &str) -> medulla_protocol_types::protocol::Method {
+    match lang {
+        #[cfg(feature = "sparql")]
+        "sparql" => medulla_protocol_types::protocol::Method::Sparql {
+            query: query.to_string(),
+            base_iri: String::new(),
+            type_convention: String::new(),
+            explain: false,
+        },
+        #[cfg(feature = "query")]
+        "sql" => medulla_protocol_types::protocol::Method::Sql {
+            query: query.to_string(),
+            params_msgpack: Vec::new(),
+        },
+        _ => medulla_protocol_types::protocol::Method::NlQuery {
+            text: query.to_string(),
+            graph: graph.to_string(),
+        },
+    }
+}
+
+/// Decode the local `ResultPayload::Raw` into normalized rows (CONCEPT:MEDULLA-KG.ontology.federation-client). The
+/// ranked-search path is `[(id, score)]`; SPARQL/SQL rows are flattened to a stable key
+/// + a JSON payload. Unrecognized shapes yield no local rows (peer rows still merge).
+fn decode_local_rows(bytes: &[u8], lang: &str) -> Vec<FedRow> {
+    #[cfg(feature = "sparql")]
+    if lang == "sparql" {
+        if let Ok(res) = medulla_types::msgpack::decode_bounded::<medulla_protocol_types::protocol::SparqlResult>(
+            bytes,
+            medulla_types::msgpack::MsgpackLimits::new(MAX_RESPONSE_BYTES as usize, 1_000_000, 64),
+        ) {
+            return res
+                .rows
+                .into_iter()
+                .map(|cells| {
+                    let key = cells
+                        .iter()
+                        .map(|c| c.clone().unwrap_or_default())
+                        .collect::<Vec<_>>()
+                        .join("\u{1}");
+                    let data = serde_json::json!({
+                        "vars": res.vars,
+                        "cells": cells,
+                    });
+                    FedRow {
+                        key,
+                        score: None,
+                        data,
+                    }
+                })
+                .collect();
+        }
+        return Vec::new();
+    }
+    #[cfg(feature = "query")]
+    if lang == "sql" {
+        if let Ok(res) = medulla_types::msgpack::decode_bounded::<medulla_protocol_types::protocol::QueryResult>(
+            bytes,
+            medulla_types::msgpack::MsgpackLimits::new(MAX_RESPONSE_BYTES as usize, 1_000_000, 64),
+        ) {
+            return res
+                .rows
+                .into_iter()
+                .map(|blob| {
+                    let cells: Vec<serde_json::Value> = medulla_types::msgpack::decode_bounded(
+                        &blob,
+                        medulla_types::msgpack::MsgpackLimits::new(
+                            MAX_RESPONSE_BYTES as usize,
+                            1_000_000,
+                            64,
+                        ),
+                    )
+                    .unwrap_or_default();
+                    let key = cells
+                        .iter()
+                        .map(|c| c.to_string())
+                        .collect::<Vec<_>>()
+                        .join("\u{1}");
+                    let data = serde_json::json!({
+                        "columns": res.columns,
+                        "cells": cells,
+                    });
+                    FedRow {
+                        key,
+                        score: None,
+                        data,
+                    }
+                })
+                .collect();
+        }
+        return Vec::new();
+    }
+    let _ = lang;
+    // Default ranked-search path: `[(id, score)]` rows.
+    match medulla_types::msgpack::decode_bounded::<Vec<(String, Option<f32>)>>(
+        bytes,
+        medulla_types::msgpack::MsgpackLimits::new(MAX_RESPONSE_BYTES as usize, 1_000_000, 64),
+    ) {
+        Ok(rows) => rows
+            .into_iter()
+            .map(|(id, score)| FedRow {
+                key: id.clone(),
+                score: score.map(|s| s as f64),
+                data: serde_json::json!({ "id": id, "score": score }),
+            })
+            .collect(),
+        Err(_) => Vec::new(),
+    }
+}
+
+/// Collect per-source outcomes (local store + peer fan-out) WITHOUT merging
+/// (CONCEPT:MEDULLA-KG.ontology.federation-client). Pure extraction of [`run_federated`]'s prior body — a
+/// CA-14 hook point (see `federation::opensearch::run_federated_with_opensearch`), not a
+/// behavior change: `run_federated` is now a thin wrapper over this plus its unchanged
+/// merge call, so its own outcome/return value is byte-identical to before this split
+/// and its existing test suite is unaffected. Exposed `pub` so a caller that needs to
+/// append a NON-peer source (e.g. CA-14's OpenSearch leg) can do so before running the
+/// SAME [`merge_partials`]/[`merge_partials_typed`] pipeline `run_federated` uses,
+/// instead of forking a second merge path.
+pub async fn collect_outcomes(
+    state: &Arc<RwLock<ServerState>>,
+    query: &str,
+    lang: &str,
+    local_only: bool,
+) -> Vec<PeerOutcome> {
+    let graph = std::env::var(DEFAULT_GRAPH_ENV).unwrap_or_else(|_| "__commons__".to_string());
+    let local = local_execute(state, query, lang, &graph).await;
+    let mut outcomes = vec![PeerOutcome {
+        source: "<local>".to_string(),
+        rows: local,
+    }];
+    if !local_only {
+        let registry = PeerRegistry::from_env();
+        if !registry.is_empty() {
+            let allow = PeerAllowlist::from_env();
+            let mut peer_outcomes = fetch_peers(&registry, &allow, query, lang).await;
+            outcomes.append(&mut peer_outcomes);
+        }
+    }
+    outcomes
+}
+
+/// The full federated read (CONCEPT:MEDULLA-KG.ontology.federation-client): run locally AND fan out to peers, then merge.
+/// `local_only` short-circuits the fan-out (used when a super-cluster peer calls us with
+/// `?local=1`, preventing recursion). A local-store error degrades to a partial answer
+/// rather than failing the request.
+pub async fn run_federated(
+    state: &Arc<RwLock<ServerState>>,
+    query: &str,
+    lang: &str,
+    local_only: bool,
+) -> FederatedResponse {
+    let outcomes = collect_outcomes(state, query, lang, local_only).await;
+    // Tabular SQL / SPARQL partials get schema-aware typed fusion (CONCEPT:MEDULLA-KG.query.schema-typed-fusion-sql); the
+    // ranked-search path keeps its hash-union + RRF re-rank (CONCEPT:MEDULLA-KG.ontology.federation-client) unchanged.
+    if is_typed_lang(lang) {
+        merge_partials_typed(outcomes, lang)
+    } else {
+        merge_partials(outcomes)
+    }
+}
+
+// ── HTTP surface (`/federated`) ───────────────────────────────────────────
+
+/// Serve the `/federated` POST endpoint (CONCEPT:MEDULLA-KG.ontology.federation-client) using the same hand-rolled
+/// HTTP framing idiom as `sparql_http` (no new HTTP dep). Body: `{query, lang}`; a
+/// `?local=1` query param short-circuits the fan-out (peer-to-peer, no recursion).
+pub async fn serve(listener: TcpListener, state: Arc<RwLock<ServerState>>) {
+    loop {
+        let Ok((mut stream, _)) = listener.accept().await else {
+            continue;
+        };
+        let state = state.clone();
+        tokio::spawn(async move {
+            let (status, ctype, body) = match http1::read_request(&mut stream, HTTP_LIMITS).await {
+                Some(req) => handle(&state, req).await,
+                None => (
+                    "400 Bad Request",
+                    "application/json",
+                    r#"{"error":"malformed HTTP request"}"#.to_string(),
+                ),
+            };
+            let resp = format!(
+                "HTTP/1.1 {status}\r\ncontent-type: {ctype}\r\ncontent-length: {}\r\naccess-control-allow-origin: *\r\naccess-control-allow-headers: content-type, accept\r\nconnection: close\r\n\r\n{body}",
+                body.len()
+            );
+            let _ = stream.write_all(resp.as_bytes()).await;
+            let _ = stream.shutdown().await;
+        });
+    }
+}
+
+/// The federated surface's framing bounds: a `{query, lang}` control body,
+/// never a payload.
+const HTTP_LIMITS: RequestLimits = RequestLimits {
+    max_head_bytes: 64 * 1024,
+    max_body_bytes: 1024 * 1024,
+};
+
+/// Route + execute a `/federated` request (CONCEPT:MEDULLA-KG.ontology.federation-client).
+async fn handle(
+    state: &Arc<RwLock<ServerState>>,
+    req: HttpMessage,
+) -> (&'static str, &'static str, String) {
+    let (path, query_string) = req.path_and_query();
+    if req.method == "OPTIONS" && path == "/federated" {
+        return ("204 No Content", "application/json", String::new());
+    }
+    // A18: federated-search reads carry no credential this surface can verify
+    // yet (no `eg2.` envelope, bearer token, or other proof — see
+    // reports/issue-register.md, A18), so no `CarrierAuthority` can ever be
+    // minted here today; this always denies, honestly (via the real check)
+    // rather than via the old unconditional stub.
+    if medulla_server_api::carrier::unauthenticated_carrier_denied(None) {
+        return (
+            "403 Forbidden",
+            "application/json",
+            r#"{"error":"ACCESS_DENIED: federated HTTP reads require a verified request carrier"}"#
+                .to_string(),
+        );
+    }
+    if path != "/federated" {
+        return (
+            "404 Not Found",
+            "application/json",
+            r#"{"error":"not found"}"#.to_string(),
+        );
+    }
+    if req.method != "POST" {
+        return (
+            "405 Method Not Allowed",
+            "application/json",
+            r#"{"error":"POST a JSON body {\"query\":\"…\",\"lang\":\"…\"} to /federated"}"#
+                .to_string(),
+        );
+    }
+    let local_only = query_string
+        .split('&')
+        .any(|kv| matches!(kv, "local=1" | "local=true"));
+    let body: serde_json::Value = match serde_json::from_str(&req.text()) {
+        Ok(v) => v,
+        Err(e) => {
+            return (
+                "400 Bad Request",
+                "application/json",
+                serde_json::json!({ "error": format!("invalid JSON body: {e}") }).to_string(),
+            )
+        }
+    };
+    let query = body
+        .get("query")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+    if query.trim().is_empty() {
+        return (
+            "400 Bad Request",
+            "application/json",
+            r#"{"error":"missing non-empty 'query'"}"#.to_string(),
+        );
+    }
+    let lang = body
+        .get("lang")
+        .and_then(|v| v.as_str())
+        .filter(|s| !s.is_empty())
+        .unwrap_or("nl")
+        .to_string();
+
+    let merged = run_federated(state, &query, &lang, local_only).await;
+    let out = serde_json::json!({
+        "rows": merged.rows,
+        "metadata": {
+            "peers_queried": merged.metadata.peers_queried,
+            "failed_peers": merged.metadata.failed_peers,
+            "partial": merged.metadata.partial,
+            "contributing_sources": merged.metadata.contributing_sources,
+        },
+    });
+    ("200 OK", "application/json", out.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn row(key: &str, score: Option<f64>) -> FedRow {
+        FedRow {
+            key: key.to_string(),
+            score,
+            data: serde_json::json!({ "k": key }),
+        }
+    }
+
+    #[test]
+    fn eg243_peer_registry_parse_dedups_and_trims() {
+        let reg = PeerRegistry::parse(
+            " https://a.example:7900 , https://b.example/ ,, https://a.example:7900/ ",
+        );
+        assert_eq!(
+            reg.peers(),
+            &[
+                "https://a.example:7900".to_string(),
+                "https://b.example".to_string()
+            ]
+        );
+        assert!(!reg.is_empty());
+    }
+
+    #[test]
+    fn eg243_peer_registry_register_is_idempotent() {
+        let mut reg = PeerRegistry::new();
+        assert!(reg.register("https://x.example:7900/"));
+        assert!(!reg.register("https://x.example:7900")); // already present (slash-normalized)
+        assert!(!reg.register("   ")); // blank
+        assert_eq!(reg.peers().len(), 1);
+    }
+
+    #[test]
+    fn eg243_ssrf_allowlist_rejects_loopback_by_default() {
+        let allow = PeerAllowlist::default();
+        // Loopback host + literal must be refused with an empty allowlist.
+        assert!(allow.check("http://127.0.0.1:7900").is_err());
+        assert!(allow.check("http://localhost:7900").is_err());
+        // A non-http scheme is refused outright.
+        assert!(allow.check("ftp://example.com").is_err());
+    }
+
+    #[test]
+    fn eg243_ssrf_allowlist_permits_explicitly_allowed_internal_peer() {
+        let allow = PeerAllowlist::from_list(&["127.0.0.1", "localhost"]);
+        assert!(allow.check("http://127.0.0.1:7900").is_ok());
+        assert!(allow.check("http://localhost:7900/federated").is_ok());
+    }
+
+    #[test]
+    fn fo16_peer_gate_rejects_transition_ranges_and_ambiguous_authorities() {
+        let allow = PeerAllowlist::default();
+        for peer in [
+            "https://100.64.0.1:7900",
+            "https://[2002::1]:7900",
+            "https://[2001::1]:7900",
+            "http://93.184.216.34:7900",
+            "https://user@127.0.0.1:7900",
+            "https://127.0.0.1:7900#fragment",
+        ] {
+            assert!(allow.check(peer).is_err(), "{peer}");
+        }
+    }
+
+    #[test]
+    fn eg243_merge_unions_and_dedups_by_key() {
+        // No scores anywhere ⇒ union preserving first-seen order, deduped by key.
+        let local = PeerOutcome {
+            source: "<local>".to_string(),
+            rows: Ok(vec![row("a", None), row("b", None)]),
+        };
+        let peer = PeerOutcome {
+            source: "https://p.example".to_string(),
+            rows: Ok(vec![row("b", None), row("c", None)]),
+        };
+        let merged = merge_partials(vec![local, peer]);
+        let keys: Vec<&str> = merged.rows.iter().map(|r| r.key.as_str()).collect();
+        assert_eq!(keys, vec!["a", "b", "c"]);
+        assert!(!merged.metadata.partial);
+        assert_eq!(merged.metadata.peers_queried, vec!["https://p.example"]);
+        assert!(merged.metadata.failed_peers.is_empty());
+        assert_eq!(merged.metadata.contributing_sources, 2);
+    }
+
+    #[test]
+    fn eg243_merge_reranks_ranked_results_by_rrf() {
+        // "b" is ranked highly by BOTH sources ⇒ RRF should lift it to the top.
+        let local = PeerOutcome {
+            source: "<local>".to_string(),
+            rows: Ok(vec![row("a", Some(9.0)), row("b", Some(8.0))]),
+        };
+        let peer = PeerOutcome {
+            source: "https://p.example".to_string(),
+            rows: Ok(vec![row("b", Some(5.0)), row("c", Some(4.0))]),
+        };
+        let merged = merge_partials(vec![local, peer]);
+        assert_eq!(
+            merged.rows[0].key, "b",
+            "b appears in both lists ⇒ top by RRF"
+        );
+        // Fused score is stamped onto the rows.
+        assert!(merged.rows[0].score.unwrap() > merged.rows[1].score.unwrap());
+        assert!(!merged.metadata.partial);
+    }
+
+    #[test]
+    fn eg243_failed_peer_degrades_to_partial_not_error() {
+        let local = PeerOutcome {
+            source: "<local>".to_string(),
+            rows: Ok(vec![row("a", None)]),
+        };
+        let dead = PeerOutcome {
+            source: "https://dead.example".to_string(),
+            rows: Err("connect timeout".to_string()),
+        };
+        let merged = merge_partials(vec![local, dead]);
+        // The query still succeeds with the local rows...
+        assert_eq!(merged.rows.len(), 1);
+        assert_eq!(merged.rows[0].key, "a");
+        // ...but is flagged partial with the dead peer named.
+        assert!(merged.metadata.partial);
+        assert_eq!(merged.metadata.failed_peers, vec!["https://dead.example"]);
+        assert_eq!(merged.metadata.peers_queried, vec!["https://dead.example"]);
+        assert_eq!(merged.metadata.contributing_sources, 1);
+    }
+
+    #[test]
+    fn eg243_merge_keeps_peer_error_and_source_order() {
+        let local = PeerOutcome {
+            source: "<local>".to_string(),
+            rows: Ok(vec![row("local", None)]),
+        };
+        let first_dead = PeerOutcome {
+            source: "https://first-dead.example".to_string(),
+            rows: Err("timeout".to_string()),
+        };
+        let second_dead = PeerOutcome {
+            source: "https://second-dead.example".to_string(),
+            rows: Err("refused".to_string()),
+        };
+
+        let merged = merge_partials(vec![local, first_dead, second_dead]);
+
+        assert_eq!(
+            merged
+                .rows
+                .iter()
+                .map(|r| r.key.as_str())
+                .collect::<Vec<_>>(),
+            vec!["local"]
+        );
+        assert_eq!(
+            merged.metadata.peers_queried,
+            vec![
+                "https://first-dead.example".to_string(),
+                "https://second-dead.example".to_string()
+            ]
+        );
+        assert_eq!(merged.metadata.peers_queried, merged.metadata.failed_peers);
+        assert!(merged.metadata.partial);
+    }
+
+    #[test]
+    fn eg243_parse_peer_rows_accepts_envelope_and_bare_array() {
+        let env = r#"{"rows":[{"key":"a","score":1.5,"data":{}}],"metadata":{}}"#;
+        let bare = r#"[{"key":"a","score":1.5,"data":{}}]"#;
+        assert_eq!(parse_peer_rows(env).unwrap().len(), 1);
+        assert_eq!(parse_peer_rows(bare).unwrap().len(), 1);
+        assert!(parse_peer_rows("not json").is_err());
+        assert!(parse_peer_rows(r#"{"nope":1}"#).is_err());
+    }
+
+    #[test]
+    fn eg243_decode_local_rows_search_shape() {
+        let rows = vec![("n1".to_string(), Some(0.9f32)), ("n2".to_string(), None)];
+        let bytes = rmp_serde::to_vec_named(&rows).unwrap();
+        let decoded = decode_local_rows(&bytes, "nl");
+        assert_eq!(decoded.len(), 2);
+        assert_eq!(decoded[0].key, "n1");
+        assert_eq!(decoded[0].score, Some(0.9f32 as f64));
+        assert_eq!(decoded[1].score, None);
+    }
+
+    // ── CONCEPT:MEDULLA-KG.query.schema-typed-fusion-sql — schema-aware typed fusion for SQL + SPARQL ──────────
+
+    /// Build a tabular [`FedRow`] the way [`decode_local_rows`] does for a store partial:
+    /// `field` is `"columns"` (SQL) or `"vars"` (SPARQL), paired 1:1 with `cells`.
+    fn tabular_row(field: &str, names: &[&str], cells: Vec<serde_json::Value>) -> FedRow {
+        FedRow {
+            key: String::new(), // typed fusion recomputes the key; the input key is ignored
+            score: None,
+            data: serde_json::json!({ field: names, "cells": cells }),
+        }
+    }
+
+    /// Helper: the aligned union schema from a fused row's payload.
+    fn fused_schema(row: &FedRow, field: &str) -> Vec<String> {
+        row.data[field]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|v| v.as_str().unwrap().to_string())
+            .collect()
+    }
+
+    #[test]
+    fn eg309_sql_typed_fusion_aligns_columns_and_typed_dedups() {
+        // Two peers return the SAME logical row but (a) list columns in a DIFFERENT order
+        // and (b) encode `age` as int `30` on one peer vs float `30.0` on the other.
+        // Schema-aware typed fusion must align by name + reconcile the number ⇒ ONE row.
+        let local = PeerOutcome {
+            source: "<local>".to_string(),
+            rows: Ok(vec![tabular_row(
+                "columns",
+                &["name", "age"],
+                vec![serde_json::json!("alice"), serde_json::json!(30)],
+            )]),
+        };
+        let peer = PeerOutcome {
+            source: "https://p.example".to_string(),
+            rows: Ok(vec![tabular_row(
+                "columns",
+                &["age", "name"], // reversed column order + float encoding
+                vec![serde_json::json!(30.0), serde_json::json!("alice")],
+            )]),
+        };
+        let merged = merge_partials_typed(vec![local, peer], "sql");
+        assert_eq!(
+            merged.rows.len(),
+            1,
+            "aligned + typed-equal rows dedup to one"
+        );
+        assert!(!merged.metadata.partial);
+        assert_eq!(merged.metadata.contributing_sources, 2);
+        // The union schema is stable (first-seen: name, age) and both cells are projected.
+        assert_eq!(
+            fused_schema(&merged.rows[0], "columns"),
+            vec!["name", "age"]
+        );
+        assert_eq!(
+            merged.rows[0].data["cells"],
+            serde_json::json!(["alice", 30])
+        );
+    }
+
+    #[test]
+    fn eg309_sql_typed_fusion_keeps_distinct_rows_distinct() {
+        // Same columns, genuinely different values must NOT be fused away.
+        let local = PeerOutcome {
+            source: "<local>".to_string(),
+            rows: Ok(vec![
+                tabular_row(
+                    "columns",
+                    &["name", "age"],
+                    vec![serde_json::json!("alice"), serde_json::json!(30)],
+                ),
+                tabular_row(
+                    "columns",
+                    &["name", "age"],
+                    vec![serde_json::json!("bob"), serde_json::json!(40)],
+                ),
+            ]),
+        };
+        let merged = merge_partials_typed(vec![local], "sql");
+        assert_eq!(merged.rows.len(), 2);
+    }
+
+    #[test]
+    fn eg309_sparql_variable_alignment_across_peers() {
+        // SPARQL solutions with the SAME variables bound in a DIFFERENT order align by
+        // NAME and dedup; SPARQL cells are strings/null.
+        let local = PeerOutcome {
+            source: "<local>".to_string(),
+            rows: Ok(vec![tabular_row(
+                "vars",
+                &["s", "o"],
+                vec![serde_json::json!("ex:alice"), serde_json::json!("30")],
+            )]),
+        };
+        let peer = PeerOutcome {
+            source: "https://p.example".to_string(),
+            rows: Ok(vec![tabular_row(
+                "vars",
+                &["o", "s"], // reversed
+                vec![serde_json::json!("30"), serde_json::json!("ex:alice")],
+            )]),
+        };
+        let merged = merge_partials_typed(vec![local, peer], "sparql");
+        assert_eq!(merged.rows.len(), 1, "same solution across peers ⇒ one row");
+        assert_eq!(fused_schema(&merged.rows[0], "vars"), vec!["s", "o"]);
+        assert!(!merged.metadata.partial);
+    }
+
+    #[test]
+    fn eg309_heterogeneous_schema_union_fills_nulls() {
+        // Peer A has [name, age]; peer B additionally projects `city`. The union schema is
+        // [name, age, city]; A's rows must gain a `null` city. A row that matches A on the
+        // shared columns AND has a null city (peer B's alice) fuses with A's alice; a row
+        // with a NON-null city (peer B's bob) stays distinct.
+        let peer_a = PeerOutcome {
+            source: "https://a.example".to_string(),
+            rows: Ok(vec![tabular_row(
+                "columns",
+                &["name", "age"],
+                vec![serde_json::json!("alice"), serde_json::json!(30)],
+            )]),
+        };
+        let peer_b = PeerOutcome {
+            source: "https://b.example".to_string(),
+            rows: Ok(vec![
+                tabular_row(
+                    "columns",
+                    &["name", "age", "city"],
+                    vec![
+                        serde_json::json!("alice"),
+                        serde_json::json!(30),
+                        serde_json::Value::Null, // same as A ⇒ fuses
+                    ],
+                ),
+                tabular_row(
+                    "columns",
+                    &["name", "age", "city"],
+                    vec![
+                        serde_json::json!("bob"),
+                        serde_json::json!(40),
+                        serde_json::json!("NYC"), // distinct ⇒ kept
+                    ],
+                ),
+            ]),
+        };
+        let merged = merge_partials_typed(vec![peer_a, peer_b], "sql");
+        // alice(null city) fuses across A and B; bob(NYC) is separate ⇒ 2 rows.
+        assert_eq!(merged.rows.len(), 2);
+        // Every projected row now carries the full union schema.
+        for r in &merged.rows {
+            assert_eq!(fused_schema(r, "columns"), vec!["name", "age", "city"]);
+            assert_eq!(r.data["cells"].as_array().unwrap().len(), 3);
+        }
+        // The alice row (first-seen) has city projected to null.
+        assert_eq!(
+            merged.rows[0].data["cells"],
+            serde_json::json!(["alice", 30, null])
+        );
+        assert!(!merged.metadata.partial);
+    }
+
+    #[test]
+    fn eg309_failed_peer_degrades_typed_fusion_to_partial() {
+        // A dead peer under the typed path must degrade to `partial: true` with local rows
+        // preserved — identical contract to the ranked-search path (CONCEPT:MEDULLA-KG.ontology.federation-client).
+        let local = PeerOutcome {
+            source: "<local>".to_string(),
+            rows: Ok(vec![tabular_row(
+                "columns",
+                &["name"],
+                vec![serde_json::json!("alice")],
+            )]),
+        };
+        let dead = PeerOutcome {
+            source: "https://dead.example".to_string(),
+            rows: Err("connect timeout".to_string()),
+        };
+        let merged = merge_partials_typed(vec![local, dead], "sql");
+        assert_eq!(merged.rows.len(), 1);
+        assert_eq!(merged.rows[0].data["cells"], serde_json::json!(["alice"]));
+        assert!(merged.metadata.partial);
+        assert_eq!(merged.metadata.failed_peers, vec!["https://dead.example"]);
+        assert_eq!(merged.metadata.peers_queried, vec!["https://dead.example"]);
+        assert_eq!(merged.metadata.contributing_sources, 1);
+    }
+
+    #[test]
+    fn eg309_is_typed_lang_routes_only_sql_and_sparql() {
+        assert!(is_typed_lang("sql"));
+        assert!(is_typed_lang("sparql"));
+        assert!(!is_typed_lang("nl"));
+        assert!(!is_typed_lang("search"));
+    }
+}

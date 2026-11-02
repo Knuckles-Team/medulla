@@ -13,17 +13,21 @@
 //! promotion protocol a `DecisionEval` job runs. Prints one JSON object: the
 //! head's content digest, its parameter count and the receipt.
 
-use medulla_numeric::decision::admission::{admit, AdmissionRules, Regime};
-use medulla_numeric::decision::evaluate::{evaluate, EvalSpec};
-use medulla_numeric::decision::fit::{fit, FitSpec};
-use medulla_types::contract::BoundedVec;
-use medulla_types::decision::jobs::{OptimiserSpec, RecordWindow};
-use medulla_types::decision::statistical::body::{canonical_body_bytes, content_digest_of};
-use medulla_types::decision::statistical::dataset::LabelledDataset;
-use medulla_types::decision::statistical::head::HeadKind;
-use medulla_types::decision::{
-    QuantScaleTag, QuantisedValue, StatisticalPolicy, TraceFidelityLevel, UnitRationalWire,
+use medulla_decision_types::decision::statistical::dataset::LabelledDataset;
+use medulla_decision_types::decision::statistical::head::HeadKind;
+use medulla_decision_types::{decision::jobs::OptimiserSpec, decision::jobs::RecordWindow};
+use medulla_decision_types::{
+    decision::statistical::body::canonical_body_bytes,
+    decision::statistical::body::content_digest_of,
 };
+use medulla_decision_types::{
+    decision::QuantScaleTag, decision::QuantisedValue, decision::StatisticalPolicy,
+    decision::TraceFidelityLevel, decision::UnitRationalWire,
+};
+use medulla_decision_stats::{decision::admission::admit, decision::admission::AdmissionRules, decision::admission::Regime};
+use medulla_decision_stats::{decision::evaluate::evaluate, decision::evaluate::EvalSpec};
+use medulla_decision_stats::{decision::fit::fit, decision::fit::FitSpec};
+use medulla_types::contract::BoundedVec;
 
 fn tenth() -> UnitRationalWire {
     UnitRationalWire::new(1, 10).expect("1/10 is a unit rational")

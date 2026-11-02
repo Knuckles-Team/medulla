@@ -21,7 +21,7 @@
 //! itself, prove that a node's CURRENT durable bytes still match what a past
 //! mutation wrote (a raw byte-flip of a stored row — or an ordinary later
 //! overwrite — is invisible to [`verify_chain`] alone). A periodic engine job
-//! (`server::persistence::provenance_anchor`) closes that gap for the
+//! (`medulla_server::persistence::provenance_anchor`) closes that gap for the
 //! `:ToolCall`/`:RunTrace` provenance-node window: it Merkle-hashes the window
 //! (RFC 6962 §2.1 Merkle Tree Hash — [`mth_from_hashes`]) and folds the root into
 //! THIS SAME chain as one more entry ([`provenance_anchor_line`]). A later
@@ -501,7 +501,7 @@ mod tests {
     #[test]
     fn graph_schema_mutations_have_stable_source_scoped_audit_lines() {
         let detach = Method::GraphSchema {
-            op: Box::new(medulla_types::graph_schema::GraphSchemaOp::Detach {
+            op: Box::new(medulla_catalog_types::graph_schema::GraphSchemaOp::Detach {
                 source_id: "admin:policy".to_string(),
                 if_composed_digest: None,
             }),
@@ -511,10 +511,12 @@ mod tests {
             Some("GRAPH_SCHEMA|detach|admin:policy")
         );
         let attach_pack = Method::GraphSchema {
-            op: Box::new(medulla_types::graph_schema::GraphSchemaOp::AttachPack {
-                connector: medulla_types::contract::ResourceId::new("agent-utilities").unwrap(),
-                if_composed_digest: None,
-            }),
+            op: Box::new(
+                medulla_catalog_types::graph_schema::GraphSchemaOp::AttachPack {
+                    connector: medulla_types::contract::ResourceId::new("agent-utilities").unwrap(),
+                    if_composed_digest: None,
+                },
+            ),
         };
         assert_eq!(
             audit_line(&attach_pack).as_deref(),

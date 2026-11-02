@@ -1,6 +1,6 @@
 //! Generic writers may not change, remove or forge a sealed record row (EH-558).
 //!
-//! A sealed record class ([`medulla_types::sealed_record`]) is stored as an ordinary
+//! A sealed record class ([`medulla_mutation_types::sealed_record`]) is stored as an ordinary
 //! graph node, so every generic node writer can reach its row. This guard judges one
 //! generic write `Method` against the CURRENT stored rows, read through
 //! [`StoredNodeRows`], and is called at every place a generic write is admitted:
@@ -23,7 +23,7 @@
 
 use std::borrow::Cow;
 
-use medulla_types::sealed_record::{sealed_class, SealedClass};
+use medulla_mutation_types::{sealed_record::sealed_class, sealed_record::SealedClass};
 
 use crate::graph::GraphCore;
 use crate::protocol::Method;
@@ -55,7 +55,7 @@ enum NodeWrite<'a> {
 }
 
 impl NodeWrite<'_> {
-    fn node_id(&self) -> &str {
+    pub fn node_id(&self) -> &str {
         match self {
             Self::Replace(id, _) | Self::Merge(id, _) | Self::Remove(id) => id,
             Self::Upsert(id, _) => id,

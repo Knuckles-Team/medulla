@@ -1,11 +1,9 @@
 //! Lifecycle trace walk (MEDULLA-SDLC-R006.2).
 
+use medulla_source_types::{lifecycle::LifecycleEdgeKind as E, lifecycle::LifecycleKind as K, lifecycle::LifecycleTraceRequest, lifecycle::TRACE_NODE_BUDGET};
 use medulla_core::lifecycle::derive::DerivedEdge;
 use medulla_core::lifecycle::store::LifecycleStore;
 use medulla_core::lifecycle::trace::lifecycle_trace;
-use medulla_types::lifecycle::{
-    LifecycleEdgeKind as E, LifecycleKind as K, LifecycleTraceRequest, TRACE_NODE_BUDGET,
-};
 
 fn edge(kind: E, from: &str, to: &str) -> DerivedEdge {
     DerivedEdge {

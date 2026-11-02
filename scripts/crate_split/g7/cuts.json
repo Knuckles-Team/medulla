@@ -1,0 +1,708 @@
+{
+ "medulla-query": [
+  {
+   "kind": "item",
+   "from": "sql::pgfamily",
+   "items": [
+    "VectorMetric",
+    "AnnMethod",
+    "AnnIndexPlan",
+    "HypertablePlan",
+    "DropAnnIndex"
+   ],
+   "to_module": "tables::ann_plan",
+   "to_crate": "medulla-table-store",
+   "unit": "tables::ann_plan",
+   "note": "new file crates/medulla-query/src/tables/ann_plan.rs; move the four types with their derives and impls; sql keeps `use crate::tables::ann_plan::{...}` until the move rewrites it to medulla_table_store",
+   "covers": [
+    "sql::*",
+    "sql::VectorMetric",
+    "sql::AnnMethod",
+    "sql::AnnIndexPlan",
+    "sql::HypertablePlan",
+    "sql::DropAnnIndex",
+    "sql::metric_to_ann",
+    "sql::isqrt"
+   ]
+  },
+  {
+   "kind": "item",
+   "from": "sql::ann",
+   "items": [
+    "metric_to_ann",
+    "isqrt"
+   ],
+   "to_module": "tables::ann_plan",
+   "to_crate": "medulla-table-store",
+   "note": "widen pub(crate) -> pub"
+  },
+  {
+   "kind": "file",
+   "from": "tables/ann_authority/tests.rs",
+   "to_module": "sql::ann_authority_tests",
+   "to_crate": "medulla-sql",
+   "unit": "sql::ann_authority_tests",
+   "note": "the tests call sql::exec_sql_typed_with_tables; move tests.rs and tests/managed.rs under crates/medulla-query/src/sql/ann_authority_tests/ and declare #[cfg(test)] mod ann_authority_tests in sql/mod.rs; paths to ann_authority items become crate::tables::ann_authority::.. (then medulla_table_store::..)",
+   "covers": [
+    "sql::exec::exec_sql_typed_with_tables",
+    "sql::exec_sql_typed_with_tables"
+   ]
+  },
+  {
+   "kind": "path",
+   "from": "sql::providers::EdgesTableProvider",
+   "to_module": "doc link only",
+   "note": "tables/store.rs:547 intra-doc link: replace with plain text"
+  }
+ ],
+ "medulla-compute": [
+  {
+   "kind": "file",
+   "from": "finance/quant/validation.rs",
+   "to_module": "finance::market::validation",
+   "to_crate": "medulla-finance-market",
+   "note": "re-point quant.rs `pub use validation::{..}` callers to finance::market::validation (no re-export kept)",
+   "covers": [
+    "finance::quant::*",
+    "finance::quant::CvSplit",
+    "finance::quant::deflated_sharpe_ratio",
+    "finance::quant::probability_of_backtest_overfit",
+    "finance::quant::purged_cpcv_splits"
+   ]
+  },
+  {
+   "kind": "item",
+   "from": "finance::quant::sf",
+   "items": [
+    "mod sf (whole inline module)"
+   ],
+   "to_module": "finance::market::special",
+   "to_crate": "medulla-finance-market",
+   "note": "inline `mod sf` in quant.rs becomes file finance/market/special.rs, `pub mod special`; quant and validation use it as ..market::special"
+  }
+ ],
+ "medulla-server": [
+  {
+   "kind": "item",
+   "from": "dispatch",
+   "items": [
+    "timed_read",
+    "ensure_graph_resident",
+    "authorized_graph_read",
+    "typed_response",
+    "validate_get_identity_graph",
+    "validate_graph_create_type",
+    "redact_resource_status_result",
+    "UNSUPPORTED_GRAPH_TYPE",
+    "IDENTITY_GRAPH",
+    "IDENTITY_GRAPH_SCOPE_ERROR",
+    "MAX_NESTED_MSGPACK_BYTES",
+    "MAX_NESTED_MSGPACK_ITEMS",
+    "MAX_SCREEN_OBSERVATION_BYTES",
+    "MAX_SCREEN_OBSERVATION_ITEMS",
+    "MAX_SCREEN_PNG_BYTES",
+    "MAX_SCREEN_ELEMENTS",
+    "MAX_SCREEN_SESSION_ID_BYTES",
+    "MAX_SCREEN_PREVIOUS_ID_BYTES",
+    "MAX_SCREEN_ROLE_BYTES",
+    "MAX_SCREEN_ELEMENT_NAME_BYTES",
+    "MAX_SCREEN_TOTAL_TEXT_BYTES",
+    "MAX_SCREEN_DIMENSION",
+    "MAX_SCREEN_PIXELS",
+    "MAX_SCREEN_COORDINATE_ABS",
+    "MAX_REGISTER_SERVER_URL_BYTES",
+    "MAX_REGISTER_SERVER_RESOURCES_BYTES",
+    "MAX_REGISTER_SERVER_TTL_SECS",
+    "MIN_REGISTER_SERVER_TTL_SECS",
+    "mod identity_graph_scope_tests",
+    "mod graph_create_type_validation_tests",
+    "mod resource_status_privacy_tests"
+   ],
+   "to_module": "dispatch::shared",
+   "to_crate": "medulla-server-graph",
+   "unit": "dispatch::shared",
+   "from_unit": "dispatch",
+   "lines": 426,
+   "covers": [
+    "dispatch::*",
+    "dispatch::timed_read",
+    "dispatch::ensure_graph_resident",
+    "dispatch::authorized_graph_read",
+    "dispatch::typed_response",
+    "dispatch::validate_get_identity_graph",
+    "dispatch::validate_graph_create_type",
+    "dispatch::redact_resource_status_result",
+    "dispatch::UNSUPPORTED_GRAPH_TYPE",
+    "dispatch::IDENTITY_GRAPH",
+    "dispatch::IDENTITY_GRAPH_SCOPE_ERROR",
+    "dispatch::MAX_NESTED_MSGPACK_BYTES",
+    "dispatch::MAX_NESTED_MSGPACK_ITEMS",
+    "dispatch::MAX_SCREEN_OBSERVATION_BYTES",
+    "dispatch::MAX_SCREEN_OBSERVATION_ITEMS",
+    "dispatch::MAX_SCREEN_PNG_BYTES",
+    "dispatch::MAX_SCREEN_ELEMENTS",
+    "dispatch::MAX_SCREEN_SESSION_ID_BYTES",
+    "dispatch::MAX_SCREEN_PREVIOUS_ID_BYTES",
+    "dispatch::MAX_SCREEN_ROLE_BYTES",
+    "dispatch::MAX_SCREEN_ELEMENT_NAME_BYTES",
+    "dispatch::MAX_SCREEN_TOTAL_TEXT_BYTES",
+    "dispatch::MAX_SCREEN_DIMENSION",
+    "dispatch::MAX_SCREEN_PIXELS",
+    "dispatch::MAX_SCREEN_COORDINATE_ABS",
+    "dispatch::MAX_REGISTER_SERVER_URL_BYTES",
+    "dispatch::MAX_REGISTER_SERVER_RESOURCES_BYTES",
+    "dispatch::MAX_REGISTER_SERVER_TTL_SECS",
+    "dispatch::MIN_REGISTER_SERVER_TTL_SECS"
+   ],
+   "note": "New file src/dispatch/shared.rs (`pub mod shared;` in dispatch.rs): every item dispatch.rs defines above `mod change_envelope;` (dispatch.rs:1-426: the use block, the graph-type/identity-graph checks, ensure_graph_resident, authorized_graph_read, typed_response, timed_read, redact_resource_status_result, the MAX_*/MIN_* limits) and the three inline test modules that test them. Widen each to pub. Rewrite `super::X`/`super::super::X`/`crate::dispatch::X` for these names to `crate::dispatch::shared::X` (then `medulla_server_graph::dispatch::shared::X`)."
+  },
+  {
+   "kind": "item",
+   "from": "dispatch",
+   "items": [
+    "submit_repository_enrichment_page",
+    "ensure_internal_global_graph"
+   ],
+   "to_module": "dispatch::seam",
+   "to_crate": "medulla-server-router",
+   "covers": [
+    "dispatch::submit_repository_enrichment_page",
+    "dispatch::ensure_internal_global_graph"
+   ],
+   "note": "Both call the request entry and the router; they become pub fns of dispatch/seam.rs (their only callers are seam.rs and the router)."
+  },
+  {
+   "kind": "path",
+   "from": "dispatch::propose_native_mutation",
+   "to_module": "dispatch::consensus",
+   "covers": [
+    "dispatch::propose_native_mutation"
+   ],
+   "note": "Delete the dispatch.rs wrapper (it only forwards); callers (request_boundary, seam, consensus) call consensus::propose_native_mutation directly. Delete every `pub use`/`pub(crate) use` re-export in dispatch.rs; dispatch.rs keeps only `mod` lines and then moves away empty."
+  },
+  {
+   "kind": "item",
+   "from": "transport::framing",
+   "items": [
+    "validate_nested_msgpack"
+   ],
+   "to_module": "dispatch::request_boundary::preflight",
+   "to_crate": "medulla-server-graph",
+   "covers": [
+    "transport::validate_nested_msgpack"
+   ],
+   "note": "21 lines (transport/framing.rs:136); transport keeps calling it as dispatch::request_boundary::preflight::validate_nested_msgpack."
+  },
+  {
+   "kind": "port",
+   "from": "dispatch::consensus, dispatch::sparql_update -> dispatch::request_boundary",
+   "items": [
+    "dispatch/consensus/replicated.rs:76 dispatch_with_context(state, request, Some(context))",
+    "dispatch/sparql_update.rs:434 Box::pin(dispatch_with_context(..))",
+    "dispatch/sparql_update.rs:644 Box::pin(dispatch_with_context(..))"
+   ],
+   "to_module": "medulla_server_api::api::reentry",
+   "covers": [
+    "dispatch::request_boundary::*",
+    "dispatch::request_boundary::dispatch",
+    "dispatch::request_boundary::dispatch_with_context",
+    "dispatch::request_boundary::dispatch_verified_request"
+   ],
+   "note": "The only production re-entries below the router. `dispatch_with_context(s, r, Some(c))` -> `medulla_server_api::api::reentry::dispatch_verified_request(s, r, c)`, `(s, r, None)` -> `reentry::dispatch(s, r)`, an Option variable -> a match on it. Same behaviour once the DispatchSeam is installed: test_support::bootstrapped_state/state and the served-tests state builders install `dispatch::seam::DispatchSeam` on `state.seams.dispatch` (startup already does). Drop the `use super::request_boundary::dispatch_with_context` lines in consensus.rs and sparql_update.rs; graph_pipeline.rs `use super::request_boundary::{.., dispatch, ..}` keeps only the preflight/screen names (pointing at request_boundary::preflight/screen) because its only `dispatch(` callers are the test modules the next cut moves."
+  },
+  {
+   "kind": "file",
+   "from": "dispatch/graph_pipeline.rs inline mod admin_scope_tests (1214-1626), blob_dispatch_tests (1634-2009), placement_route_carrier_tests (2050-2251)",
+   "to_module": "dispatch::dispatch_e2e_tests::graph",
+   "to_crate": "medulla-server-router",
+   "unit": "dispatch::dispatch_e2e_tests",
+   "from_unit": "dispatch::graph_pipeline",
+   "lines": 991,
+   "covers": [
+    "dispatch::request_boundary::dispatch"
+   ],
+   "note": "They drive the whole served chain through request_boundary::dispatch. New src/dispatch/dispatch_e2e_tests.rs (`#[cfg(test)] mod dispatch_e2e_tests;` in dispatch.rs, moves with the router) with `mod graph;` holding the three modules verbatim; `super::` paths to graph_pipeline items become `crate::dispatch::graph_pipeline::` (pub as needed)."
+  },
+  {
+   "kind": "file",
+   "from": "dispatch/identity_store/tests.rs + identity_store/tests/ + identity_store/resolution_context/tests.rs",
+   "to_module": "dispatch::dispatch_e2e_tests::identity",
+   "to_crate": "medulla-server-router",
+   "unit": "dispatch::dispatch_e2e_tests",
+   "from_unit": "dispatch::identity_store",
+   "lines": 1934,
+   "covers": [
+    "dispatch::test_support::*",
+    "dispatch::test_support::bootstrapped_state",
+    "dispatch::test_support::send",
+    "dispatch::test_support::state",
+    "dispatch::test_support::verified",
+    "dispatch::request_boundary::dispatch"
+   ],
+   "note": "git mv to src/dispatch/dispatch_e2e_tests/identity.rs (+ identity/ for the tests/ children) and identity/resolution_context.rs; drop the `#[cfg(test)] mod tests;` lines in identity_store.rs and resolution_context.rs; `super::*` becomes `crate::dispatch::identity_store::*` (+ `::resolution_context::*`) with the items they name widened to pub."
+  },
+  {
+   "kind": "file",
+   "from": "dispatch/elevation/tests.rs",
+   "to_module": "dispatch::dispatch_e2e_tests::elevation",
+   "to_crate": "medulla-server-router",
+   "unit": "dispatch::dispatch_e2e_tests",
+   "from_unit": "dispatch::elevation",
+   "lines": 254,
+   "covers": [
+    "dispatch::test_support::verified_as",
+    "dispatch::request_boundary::dispatch_with_context"
+   ],
+   "note": "as above; `super::*` -> `crate::dispatch::elevation::*`."
+  },
+  {
+   "kind": "file",
+   "from": "dispatch/governed/tests.rs",
+   "to_module": "dispatch::dispatch_e2e_tests::governed",
+   "to_crate": "medulla-server-router",
+   "unit": "dispatch::dispatch_e2e_tests",
+   "from_unit": "dispatch::governed",
+   "lines": 132,
+   "covers": [
+    "dispatch::test_support::refused_with"
+   ],
+   "note": "as above; `super::*` -> `crate::dispatch::governed::*`."
+  },
+  {
+   "kind": "file",
+   "from": "lib.rs inline `#[cfg(test)] mod tests { .. }` (lib.rs:538-6929)",
+   "to_module": "tests",
+   "to_crate": "medulla-server-served-tests",
+   "unit": "tests",
+   "from_unit": "@root",
+   "lines": 6391,
+   "covers": [
+    "tests::udf_tenancy::IDENTITY_WAT"
+   ],
+   "note": "Body becomes src/tests.rs (its `pub mod foreign_tenancy;` etc. already resolve to src/tests/*.rs); lib.rs keeps `#[cfg(test)] mod tests;` until the move. Its `super::*` names lib.rs root items (test_state_with_services, decode_uql_ids, ...): they are pub/doc(hidden) already and become `medulla_server::..` in the tests crate."
+  }
+ ],
+ "medulla-h-query": [
+  {
+   "kind": "path",
+   "from": "query::QuerySeam",
+   "to_module": "query::seam",
+   "covers": [
+    "query::seam::QuerySeam"
+   ],
+   "note": "Drop `pub use seam::QuerySeam` in query.rs; seams_install names medulla_server's moved query::seam::QuerySeam. QuerySeam uses query::overlay::run_unified_with_staged_finish, semantic_index_runtime::existing_semantic_service and mining::gateway::try_handle: widen them to pub."
+  }
+ ],
+ "medulla-sql": [
+  {
+   "kind": "item",
+   "from": "sql::exec",
+   "items": [
+    "PgColType",
+    "TypedColumn",
+    "TypedQueryResult"
+   ],
+   "to_module": "sql::typed_result",
+   "to_crate": "medulla-sql-lang",
+   "unit": "sql::typed_result",
+   "from_unit": "sql::exec",
+   "lines": 36,
+   "covers": [
+    "sql::exec::*",
+    "sql::exec::PgColType",
+    "sql::exec::TypedColumn",
+    "sql::exec::TypedQueryResult"
+   ],
+   "note": "New file sql/typed_result.rs (`pub mod typed_result;` in sql/mod.rs) with the three types and their derives (exec.rs:223-258); exec.rs and plpgsql.rs import them from there."
+  },
+  {
+   "kind": "item",
+   "from": "sql::embed_udf",
+   "items": [
+    "MEDULLA_EMBED_FN"
+   ],
+   "to_module": "sql::pgfamily",
+   "to_crate": "medulla-sql-lang",
+   "covers": [
+    "sql::embed_udf::MEDULLA_EMBED_FN"
+   ],
+   "note": "the UDF name const; embed_udf, ann_pushdown and pgfamily name it as sql::pgfamily::MEDULLA_EMBED_FN."
+  },
+  {
+   "kind": "file",
+   "from": "sql/pgfamily.rs inline `#[cfg(test)] mod tests` (pgfamily.rs:506-697)",
+   "to_module": "sql::pgfamily_tests",
+   "to_crate": "medulla-sql",
+   "unit": "sql::pgfamily_tests",
+   "from_unit": "sql::pgfamily",
+   "lines": 192,
+   "covers": [
+    "sql::exec::exec_sql_over_tables"
+   ],
+   "note": "two of its tests run SQL through exec_sql_over_tables; new file sql/pgfamily_tests.rs (`#[cfg(test)] mod pgfamily_tests;` in sql/mod.rs), `use super::*` -> `use crate::sql::pgfamily::*` (then medulla_sql_lang::sql::pgfamily)."
+  }
+ ],
+ "medulla-plan": [
+  {
+   "kind": "item",
+   "from": "federation_opt",
+   "items": [
+    "FederationBudget"
+   ],
+   "to_module": "budget",
+   "to_crate": "medulla-exec",
+   "note": "uql::parser::program names it; plain data struct"
+  },
+  {
+   "kind": "item",
+   "from": "knowledge",
+   "items": [
+    "ProjectionSchema"
+   ],
+   "to_module": "dag",
+   "to_crate": "medulla-exec"
+  },
+  {
+   "kind": "file",
+   "from": "federation_opt/engine_peer_tests.rs + the #[cfg(test)] mod tests of federation_opt/engine.rs",
+   "to_module": "engine_peer_tests",
+   "to_crate": "medulla-plan",
+   "unit": "engine_peer_tests",
+   "note": "they run uql::serve::run_statement; make EngineRemote and the items the tests name pub",
+   "covers": [
+    "uql::serve::run_statement"
+   ]
+  },
+  {
+   "kind": "port",
+   "from": "exec -> federation",
+   "items": [
+    "federation::ForeignSourceRegistry",
+    "federation_opt::FederationSession",
+    "federation_opt::prepare",
+    "federation_opt::foreign_scan",
+    "federation_opt::foreign_named"
+   ],
+   "to_module": "exec::foreign",
+   "to_crate": "medulla-exec",
+   "note": "add to exec: `pub trait ForeignExecutor: Sync { fn prepare(&self, ctx: &PlanCtx, ops: &[Op]); fn foreign_scan(&self, op: &Op, input: RowSet, source: &ForeignSourceSpec, join: bool, ctx: &PlanCtx) -> Result<RowSet, String>; fn foreign_named(&self, op: &Op, name: &str, ctx: &PlanCtx) -> Result<RowSet, String>; }`. Replace PlanCtx fields `foreign` and `federation` with one `pub federation: Option<&'a dyn ForeignExecutor>`; exec/dispatch.rs and exec.rs:549 call through it. In federation add `pub struct FederatedExec<'a> { pub session: Option<&'a FederationSession>, pub registry: Option<&'a ForeignSourceRegistry> }` implementing the trait with today's bodies (foreign_named reads self.registry instead of ctx.foreign), and move PlanCtx::with_foreign / with_federation into a `PlanCtxFederationExt` trait there. Every caller of with_foreign/with_federation builds one FederatedExec. Land this cut as its own commit before any move.",
+   "covers": [
+    "federation_opt::FederationSession",
+    "federation_opt::foreign_named",
+    "federation_opt::foreign_scan",
+    "federation_opt::prepare",
+    "federation::ForeignSourceRegistry"
+   ]
+  }
+ ],
+ "medulla-agent-types": [
+  {
+   "kind": "file",
+   "from": "agent_fixtures/host_start.rs",
+   "to_module": "host_start::fixtures",
+   "to_crate": "medulla-work-types",
+   "unit": "host_start::fixtures",
+   "note": "host_start/tests.rs calls agent_fixtures::host_start::host_start_request"
+  }
+ ],
+ "medulla-catalog-types": [
+  {
+   "kind": "file",
+   "from": "catalog_fixtures/source_ingestion.rs",
+   "to_module": "source_ingestion::fixtures",
+   "to_crate": "medulla-source-types",
+   "unit": "source_ingestion::fixtures",
+   "note": "catalog_fixtures/contract_pack.rs and contract_control.rs stay (connector_pack tests use them)"
+  }
+ ],
+ "medulla-store": [
+  {
+   "kind": "file",
+   "from": "redb_store.rs `mod security_tests` (lines 233-939)",
+   "to_module": "redb_store::security_tests",
+   "to_crate": "medulla-lane-store",
+   "unit": "redb_store::security_tests",
+   "note": "it opens development_lane tables; cut to its own file first; its apply_checkpoint calls (lines ~2324-2391) go with it",
+   "covers": [
+    "redb_store::development_lane::COUNTERS",
+    "redb_store::development_lane::HOLDS",
+    "redb_store::development_lane::INVOCATIONS",
+    "redb_store::development_lane::LANE_INDEX",
+    "redb_store::development_lane::POLICIES",
+    "redb_store::development_lane::PRESSURE_INDEX",
+    "redb_store::development_lane::REPOSITORY_BRANCH_INDEX",
+    "redb_store::development_lane::TENANT_INDEX",
+    "redb_store::development_lane::WORKTREE_INDEX",
+    "redb_store::development_lane::WORK_ITEM_INDEX",
+    "redb_store::checkpoint::apply_checkpoint"
+   ]
+  },
+  {
+   "kind": "file",
+   "from": "redb_store.rs `mod mutation_batch_tests` (line 940 to end)",
+   "to_module": "redb_store::mutation_batch_tests",
+   "to_crate": "medulla-store-apply",
+   "unit": "redb_store::mutation_batch_tests",
+   "note": "it reads work_item outcomes; widen every pub(crate) item of the store core it names to pub (compiler lists them)",
+   "covers": [
+    "redb_store::work_item::read_work_item_outcome"
+   ]
+  },
+  {
+   "kind": "path",
+   "from": "redb_store.rs pub(crate) use resource::{..} / work_item::{..} / checkpoint::apply_checkpoint",
+   "to_module": "drop",
+   "note": "delete these root re-exports; callers name the owning crate (hard cutover)"
+  }
+ ],
+ "medulla-server-api": [
+  {
+   "kind": "path",
+   "from": "auth::VerifiedRequestContext",
+   "to_module": "authority_context",
+   "to_crate": "medulla-server-api",
+   "note": "drop the auth.rs re-export; callers use authority_context"
+  },
+  {
+   "kind": "module",
+   "from": "mutation_batch/{canonical.rs,compile.rs,compile/,digest.rs,terminal_outcome.rs} + mutation_batch.rs::GraphWriteScope",
+   "to_module": "batch_compile",
+   "to_crate": "medulla-server-api",
+   "unit": "batch_compile",
+   "covers": [
+    "mutation_batch::is_work_item_method",
+    "mutation_batch::domain_for",
+    "mutation_batch::is_capacity_method",
+    "mutation_batch::is_resource_reservation_method",
+    "mutation_batch::is_resource_reservation_query_method",
+    "mutation_batch::is_work_item_mutation_method",
+    "mutation_batch::compile_opaque_digest",
+    "mutation_batch::compile_opaque_method",
+    "mutation_batch::compile_opaque_method_in_scope",
+    "mutation_batch::compile_sql_source_batch",
+    "mutation_batch::effective_policy_digest",
+    "mutation_batch::COMPILED_BATCH_INCARNATION",
+    "mutation_batch::authoritative_graph_version",
+    "mutation_batch::compile_crossmodal",
+    "mutation_batch::compile_methods",
+    "mutation_batch::compile_methods_with_outbox",
+    "mutation_batch::CompileBatch",
+    "mutation_batch::opaque_request_key",
+    "mutation_batch::work_item_batch_identity",
+    "mutation_batch::batch_actor",
+    "mutation_batch::lifecycle_batch_id",
+    "mutation_batch::opaque_coordinator_key",
+    "mutation_batch::opaque_idempotency_key_for_context",
+    "mutation_batch::principal_fingerprint",
+    "mutation_batch::GraphWriteScope"
+   ],
+   "note": "The batch compiler lane depends only on api::persistence and authority_context. git mv canonical.rs, compile.rs, compile/ (finish_helpers.rs, sql_source_tests.rs), digest.rs, terminal_outcome.rs from src/mutation_batch/ to src/batch_compile/. New src/batch_compile.rs: the four `mod` lines plus every `pub use canonical::…/compile::…/digest::…` line of mutation_batch.rs with its #[cfg] (moved, not copied), plus `GraphWriteScope` and its impl (moved verbatim from mutation_batch.rs). lib.rs: `pub mod batch_compile;` next to `pub mod mutation_batch;` with the same cfg. Rewrite `crate::mutation_batch::<item>` / `medulla_server_api::mutation_batch::<item>` for every item in covers to `batch_compile::<item>` workspace-wide (itemmove.py map); `crate::mutation_batch::compile::` and `::digest::` paths inside the moved files become `crate::batch_compile::compile::`/`::digest::`. mutation_batch.rs keeps `mod commit;`, the commit re-exports and `mod tests;` (tests.rs imports batch_compile items via `crate::batch_compile::*`).",
+   "lines": 3361,
+   "from_unit": "mutation_batch"
+  },
+  {
+   "kind": "item",
+   "from": "auth",
+   "items": [
+    "coarse_kg_admin_only",
+    "iceberg_bearer_scopes",
+    "request_context_policy",
+    "RequestContextPolicy"
+   ],
+   "to_module": "authority_context",
+   "to_crate": "medulla-server-api"
+  },
+  {
+   "kind": "item",
+   "from": "access",
+   "items": [
+    "CarrierAuthority",
+    "GraphReadAuthority"
+   ],
+   "to_module": "carrier",
+   "to_crate": "medulla-server-api",
+   "unit": "carrier",
+   "note": "with their impls; cep, api and auth use them"
+  },
+  {
+   "kind": "item",
+   "from": "mutation_batch::commit::internal",
+   "items": [
+    "lock_graph"
+   ],
+   "to_module": "routed_write_coalescer",
+   "to_crate": "medulla-server-api",
+   "covers": [
+    "mutation_batch::lock_graph"
+   ],
+   "note": "also drop `lock_graph` from mutation_batch.rs `pub use commit::{…}`; callers use routed_write_coalescer::lock_graph"
+  },
+  {
+   "kind": "item",
+   "from": "sparql_http",
+   "items": [
+    "SPARQL_HTTP_UPDATE_EVENT"
+   ],
+   "to_module": "api::dispatch_support",
+   "to_crate": "medulla-server-api"
+  },
+  {
+   "kind": "file",
+   "from": "api/admin/compose.rs + api/admin/compiled.rs + api/admin/compiled_tests.rs",
+   "to_module": "schema_compose",
+   "to_crate": "medulla-server-api",
+   "unit": "schema_compose",
+   "covers": [
+    "api::admin::compose",
+    "api::admin::compiled",
+    "api::admin::compose::validate_and_compose"
+   ],
+   "note": "compose/compiled depend only on medulla-rdf/medulla-core. git mv api/admin/compose.rs -> src/schema_compose.rs; git mv api/admin/compiled.rs -> src/schema_compose/compiled.rs; compiled_tests.rs follows compiled.rs (keep its #[path] relative). In schema_compose.rs add `pub(crate) mod compiled;` (#[cfg(feature=\"shacl\")] already on the lib.rs line); `super::compiled::` -> `compiled::`, compiled.rs `super::compose::` -> `super::`. lib.rs: `#[cfg(feature = \"shacl\")] pub mod schema_compose;`. Drop `compiled`/`compose` mod lines from api/admin.rs. Rewrite `crate::api::admin::compose::` and `medulla_server_api::api::admin::compose::` -> `…::schema_compose::` (icv_guard.rs, api/admin/terms.rs, medulla-h-graph gateway_graph.rs, medulla-persistence redb_backend.rs + backend_load.rs, and 10 files under src/server: graph_schema*.rs, dispatch/telemetry/classes.rs, handlers/decide/topology_schema.rs, handlers/rdf/reasoning.rs, handlers/rdf/validation.rs); `api::admin::compiled::` -> `schema_compose::compiled::`.",
+   "lines": 1477,
+   "from_unit": "api::admin"
+  },
+  {
+   "kind": "handle",
+   "from": "state",
+   "to_module": "state",
+   "to_crate": "medulla-server-api",
+   "covers": [
+    "blob::BlobCursors",
+    "cdc::CdcHub",
+    "kv::KvStore",
+    "api::query_txn::foreign_catalog::ForeignSourceCatalog",
+    "api::query_txn::foreign_read::ForeignReadSessions",
+    "auth::verify_request_with_security_dir"
+   ],
+   "fields": {
+    "blob": {
+     "was": "Option<Arc<crate::blob::BlobCursors>>",
+     "now": "Option<ErasedHandle>",
+     "init": "None",
+     "holds": "Arc::new(Arc<BlobCursors>)",
+     "ext": "blob::BlobStateExt { fn blob_cursors(&self) -> Option<&Arc<BlobCursors>>; fn set_blob_cursors(&mut self, v: Option<Arc<BlobCursors>>); }",
+     "get": "self.blob.as_deref().and_then(|h| h.downcast_ref::<Arc<BlobCursors>>())",
+     "set": "self.blob = v.map(|b| Arc::new(b) as ErasedHandle)",
+     "sites": [
+      "crates/medulla-h-ingest/src/blob.rs:141 `&s.blob` -> `s.blob_cursors()`",
+      "crates/medulla-h-ingest/src/repository_enrichment_worker.rs:157-158 `state.blob.as_ref()` -> `state.blob_cursors()`",
+      "crates/medulla-h-ingest/src/source_ingestion.rs:391-393 `state.blob.clone()` -> `state.blob_cursors().cloned()`",
+      "src/main.rs:1024 and :1096 `s.blob.as_ref()` -> `s.blob_cursors()`",
+      "src/server/connector_pack_projection/boot_regression.rs:420 and src/server/handlers/admin/connector_pack/tests.rs:72 `state.blob = Some(x)` -> `state.set_blob_cursors(Some(x))`",
+      "src/server/dispatch/graph_pipeline.rs:1680 `state.blob = Some(..)` -> `state.set_blob_cursors(Some(..))`",
+      "src/server/graph_schema/attach_pack.rs:47 `state.blob.as_ref().cloned()` -> `state.blob_cursors().cloned()`",
+      "src/server/handlers/decide/stat_retention.rs:63 `state.blob.clone()` -> `state.blob_cursors().cloned()`",
+      "src/server_startup.rs:490 destructure: `let (blob, ttl) = stores.blob; state.set_blob_cursors(blob); state.blob_cursor_ttl_secs = ttl;`"
+     ]
+    },
+    "cdc": {
+     "was": "Option<Arc<crate::cdc::CdcHub>> (init Some(Arc::default()))",
+     "now": "std::sync::OnceLock<Option<ErasedHandle>>",
+     "init": "OnceLock::new()",
+     "holds": "Some(Arc::new(Arc<CdcHub>)); an untouched slot lazily becomes Some(default hub), preserving today's default",
+     "ext": "cdc::CdcStateExt { fn cdc_hub(&self) -> Option<&Arc<CdcHub>>; fn set_cdc_hub(&mut self, v: Option<Arc<CdcHub>>); }",
+     "get": "self.cdc.get_or_init(|| Some(Arc::new(Arc::new(CdcHub::default())) as ErasedHandle)).as_deref().and_then(|h| h.downcast_ref::<Arc<CdcHub>>())",
+     "set": "self.cdc = std::sync::OnceLock::from(v.map(|h| Arc::new(h) as ErasedHandle))",
+     "sites": [
+      "crates/medulla-raft/src/raft/harness_support.rs:47 and :62 assignments -> set_cdc_hub(..)",
+      "crates/medulla-raft/src/raft/store/commit.rs:379 `.cdc.clone()` -> `.cdc_hub().cloned()`",
+      "crates/medulla-server-api/src/cep.rs:459 `&s.cdc` -> `s.cdc_hub()`; :765 `= None` -> `.set_cdc_hub(None)`",
+      "crates/medulla-server-api/src/state.rs:620 test -> moves to cdc crate as `state.cdc_hub().is_some()`",
+      "src/server/bolt_wire/mod.rs:403, dispatch/graph_pipeline/graph_dispatch.rs:108, handlers/query.rs:673 `s.cdc.clone()` -> `s.cdc_hub().cloned()`",
+      "src/server/handlers/dist_compute.rs:475, registry_reaper.rs:269,289,433,464 `s.cdc` chains -> `s.cdc_hub()` (`.as_ref()` dropped)",
+      "src/server/handlers/streaming.rs:36 `&s.cdc` -> `s.cdc_hub()`",
+      "src/server/obs/mod.rs:1391 `state.cdc = None` -> `state.set_cdc_hub(None)`",
+      "src/server_startup.rs:463 `&state.cdc` -> `state.cdc_hub()`",
+      "tests/advanced_crossmodal_roundtrip.rs:1414 `s.cdc.clone()` -> `s.cdc_hub().cloned()`",
+      "every `cdc: s.cdc.as_ref()` MutationCtx literal -> `cdc: s.cdc_hub()` (executor: rg -n '\\.cdc\\b' after the field type change; the compiler lists the rest)"
+     ]
+    },
+    "kv": {
+     "was": "Option<Arc<crate::kv::KvStore>>",
+     "now": "Option<ErasedHandle>",
+     "init": "None",
+     "holds": "Arc::new(Arc<KvStore>)",
+     "ext": "kv::KvStateExt { fn kv_store(&self) -> Option<&Arc<KvStore>>; fn set_kv_store(&mut self, v: Option<Arc<KvStore>>); }",
+     "get": "self.kv.as_deref().and_then(|h| h.downcast_ref::<Arc<KvStore>>())",
+     "set": "self.kv = v.map(|k| Arc::new(k) as ErasedHandle)",
+     "sites": [
+      "crates/medulla-server-api/src/kv.rs:597 `.kv.clone()` -> `.kv_store().cloned()`",
+      "crates/medulla-server-api/src/kv/dispatch_tests.rs:25 and :450 `state.kv = Some(kv)` -> `state.set_kv_store(Some(kv))`",
+      "src/server_startup.rs:498 `state.kv = stores.kv` -> `state.set_kv_store(stores.kv)`"
+     ]
+    },
+    "foreign_sources": {
+     "was": "Arc<ForeignSourceCatalog> (init Arc::default())",
+     "now": "std::sync::OnceLock<ErasedHandle>",
+     "init": "OnceLock::new()",
+     "holds": "Arc<ForeignSourceCatalog> as ErasedHandle (single Arc; Arc::downcast)",
+     "ext": "api::query_txn::ForeignStateExt { fn foreign_sources(&self) -> Arc<ForeignSourceCatalog>; fn foreign_reads(&self) -> Arc<ForeignReadSessions>; } (#[cfg(feature=\"federation\")], in api/query_txn.rs)",
+     "get": "Arc::clone(self.foreign_sources.get_or_init(|| Arc::new(ForeignSourceCatalog::default()) as ErasedHandle)).downcast::<ForeignSourceCatalog>().expect(\"foreign_sources slot holds ForeignSourceCatalog\")",
+     "sites": [
+      "crates/medulla-server-api/src/state.rs:514 init -> `foreign_sources: Default::default()`",
+      "crates/medulla-server-api/src/state.rs:622 test -> moves to api/query_txn tests as `state.foreign_sources().is_empty()`"
+     ]
+    },
+    "foreign_reads": {
+     "was": "Arc<ForeignReadSessions> (init Arc::default())",
+     "now": "std::sync::OnceLock<ErasedHandle>",
+     "init": "OnceLock::new()",
+     "holds": "Arc<ForeignReadSessions> as ErasedHandle",
+     "ext": "ForeignStateExt::foreign_reads (same trait)",
+     "get": "as foreign_sources with ForeignReadSessions",
+     "sites": [
+      "crates/medulla-server-api/src/state.rs:516 init -> `foreign_reads: Default::default()`"
+     ]
+    },
+    "request_authority": {
+     "was": "inherent `impl ServerState { pub fn request_authority(..) }` in state.rs calling crate::auth::verify_request_with_security_dir",
+     "now": "extension trait auth::RequestAuthorityExt { fn request_authority(&self, request: &Request) -> Result<VerifiedRequestContext, String>; } impl for ServerState in auth.rs, body moved verbatim",
+     "sites": [
+      "the 7 `.request_authority(` call sites keep their text and add `use medulla_server_auth::auth::RequestAuthorityExt;` (inside medulla-server-api before the move: `use crate::auth::RequestAuthorityExt;`)"
+     ]
+    }
+   },
+   "note": "Same pattern as the raft/persistence handles (MEDULLA-CONTRACT-R056.8): ServerState names no type above rank 1. Each ext trait is pub, documented, defined in the owner module (it moves with it) and impl'd for crate::state::ServerState. Keep the field cfgs. Executor: change the field type, add the ext trait, then fix each listed site; `cargo check -p medulla-server-api --all-features` and the root crate list any site missed; the fix is always the accessor/setter named here."
+  },
+  {
+   "kind": "handle",
+   "from": "api::registry",
+   "to_module": "api::registry",
+   "to_crate": "medulla-server-api",
+   "covers": [
+    "api::admin::*",
+    "api::ingest::*",
+    "api::query_txn::*",
+    "blob::store::ChunkStore"
+   ],
+   "fields": {
+    "SeamRegistry.{admin,decide,ingest,graph,jobs,compute,query,txn,wire}": {
+     "was": "OnceLock<Arc<dyn XApi>>",
+     "now": "OnceLock<ErasedHandle>",
+     "holds": "Arc::new(Arc<dyn XApi>) as ErasedHandle",
+     "get": "slot.get().and_then(|h| h.downcast_ref::<Arc<dyn XApi>>()).cloned()",
+     "set": "slot.set(Arc::new(api) as ErasedHandle)",
+     "accessors": "api/admin.rs admin_seam/decide_seam bodies use the get form; add in api/ingest.rs `ingest_seam, graph_seam, jobs_seam, compute_seam` and in api/query_txn.rs `query_seam, txn_seam, wire_seam` (`pub async fn x_seam(state: &Arc<RwLock<ServerState>>) -> Option<Arc<dyn XApi>>`), plus one `pub fn install_x_seam(reg: &SeamRegistry, api: Arc<dyn XApi>) -> bool` per slot next to its accessor (returns slot.set(..).is_ok())",
+     "sites": [
+      "crates/medulla-h-graph/src/graph_ops/gateway.rs:165 `state.read().await.seams.query.get().cloned()` -> `medulla_server_ops::api::query_txn::query_seam(state).await`",
+      "registry.rs: drop the `use super::admin/ingest/query_txn` lines; import super::super::state::ErasedHandle"
+     ]
+    },
+    "SeamRegistry.dispatch": {
+     "was": "OnceLock<Arc<dyn DispatchApi>>",
+     "now": "unchanged (DispatchApi stays in medulla-server-api with api::reentry)"
+    },
+    "DispatchApi::drain_repository_enrichment_once + reentry::drain_repository_enrichment_once param `store`": {
+     "was": "Arc<dyn crate::blob::store::ChunkStore>",
+     "now": "ErasedHandle holding Arc::new(Arc<dyn ChunkStore>); the implementer downcasts with `store.downcast_ref::<Arc<dyn ChunkStore>>()`, error `\"CONFLICT: repository enrichment CAS handle has the wrong type\"`",
+     "sites": [
+      "crates/medulla-server-api/src/api/reentry.rs:350 and :738 signatures",
+      "crates/medulla-h-ingest/src/repository_enrichment_worker.rs:175 caller passes `Arc::new(store) as medulla_server_api::state::ErasedHandle`",
+      "the DispatchApi impl (installed by the server; rg 'impl .*DispatchApi for') downcasts at entry"
+     ]
+    }
+   },
+   "note": "api::reentry and api::registry stay in medulla-server-api (rules: residual); the other seam traits stay in their api::admin/api::ingest/api::query_txn module files and move with them to medulla-server-ops, so no rank-1 code names a trait whose signature mentions mutation/sql_catalog_acl/query_txn types."
+  }
+ ]
+}

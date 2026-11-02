@@ -281,8 +281,8 @@ The source-backend composition difference belongs to that existing packaging acc
 | Artifact identity and provenance | `medulla-modality` exports `OpaqueRef`, `ArtifactBundle`, `EvidenceLocus`, and `Provenance`. `medulla-alignment` relates evidence locations. | [MEDULLA-FEDERATED-QUERY](../federated-query-and-reasoning/requirements.md), especially R039.1; native media coverage remains separate. |
 | Epistemic provenance | `medulla-epistemic` operates on graph claims and provenance; `medulla-plan` exposes `KnowledgeSet` and knowledge batches. | [MEDULLA-FEDERATED-QUERY](../federated-query-and-reasoning/spec.md) reasoning and retrieval requirements |
 | Physical ownership and mutation | `medulla-storage` owns physical access; `medulla-transaction::MutationKernel` owns admission, ordering, replay, and commit capabilities. | [MEDULLA-DURABLE-KERNEL](../durable-graph-kernel/requirements.md), including R019, R021, and R034 |
-| Served mutation | `src/server/mutation/commit_entry.rs:262` exports `commit_mutation`; conditional and coalesced routes retain their own entry paths. | [MEDULLA-DURABLE-KERNEL](../durable-graph-kernel/spec.md); MEDULLA-C-02 error projection |
-| Planned query | `src/server/handlers/query/planning.rs:436`, `run_unified_with`, binds execution through the existing planner. | [FQR-03/04/06](../federated-query-and-reasoning/spec.md), R038–R055 |
+| Served mutation | `crates/medulla-server-mutation/src/mutation/commit_entry.rs:262` exports `commit_mutation`; conditional and coalesced routes retain their own entry paths. | [MEDULLA-DURABLE-KERNEL](../durable-graph-kernel/spec.md); MEDULLA-C-02 error projection |
+| Planned query | `crates/medulla-h-query/src/query/planning.rs:436`, `run_unified_with`, binds execution through the existing planner. | [FQR-03/04/06](../federated-query-and-reasoning/spec.md), R038–R055 |
 | Direct native access | [engine.md](../../docs/architecture/engine.md) shows dispatch reaching graph state both directly and through planning. | [MEDULLA-DURABLE-KERNEL-R032/R037](../durable-graph-kernel/requirements.md) |
 
 Repository scope is not RBAC scope: `engine-identity-and-scope` owns authorization identity.
@@ -332,7 +332,7 @@ For runtime rows, name the actual production call site and its served integratio
 | Decision engine and federated query | [native-program-optimization.md](../../docs/architecture/native-program-optimization.md), `crates/medulla-program/` | Confirm one semantic owner for `ProgramOptimize`; link the other owner. Preserve UQL and compiled-run contracts separately. |
 | Unified data plane | R040 and federation R039.1 | Resolve video promotion scope without silently expanding the existing acceptance. |
 | Federated query and durable kernel | `crates/medulla-stream/`, `crates/medulla-tsdb/`, existing stream dispatch | Define runtime windows, watermarks, state recovery, and refusal separately from stream grammar. |
-| Durable graph kernel | [engine.md](../../docs/architecture/engine.md), `crates/medulla-core/src/read_through.rs`, `src/redb_store/` | The durability owner covers safe eviction and read-through. Add cache-miss and restart observations. |
+| Durable graph kernel | [engine.md](../../docs/architecture/engine.md), `crates/medulla-graph-core/src/read_through.rs`, `src/redb_store/` | The durability owner covers safe eviction and read-through. Add cache-miss and restart observations. |
 
 No follow-on above asserts a passed test or changes a subsystem's acceptance in this batch.
 

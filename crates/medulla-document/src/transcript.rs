@@ -6,8 +6,8 @@
 //! per producer.  Checkpoint identity is deliberately reused from `medulla-types`;
 //! this module does not create a second cursor contract.
 
+pub use medulla_source_types::source_ingestion::SourceCheckpoint;
 use medulla_types::contract::{Digest256, UtcUnixNanos};
-pub use medulla_types::source_ingestion::SourceCheckpoint;
 use serde::{Deserialize, Serialize};
 
 /// The closed set of roles accepted by a transcript parser.
@@ -255,7 +255,7 @@ mod tests {
         // checkpoint with a subtly different cursor or digest contract.
         let checkpoint = SourceCheckpoint {
             stream: ResourceId::new("transcript:session-42").unwrap(),
-            position: medulla_types::source_ingestion::SourceJson::new(
+            position: medulla_source_types::source_ingestion::SourceJson::new(
                 serde_json::json!({"ordinal": 7}),
             )
             .unwrap(),

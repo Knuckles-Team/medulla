@@ -1,0 +1,14 @@
+[package]
+name = "medulla-sdlc"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: Graph-native development lifecycle: spec rows, gates, verdicts and releases as records"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_sdlc"
+path = "src/lib.rs"
+
+[dependencies]

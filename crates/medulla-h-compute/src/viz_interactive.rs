@@ -1,0 +1,701 @@
+//! Interactive rendering (D-VZ-1 lane V3b), feature `viz-interactive`.
+//!
+//! A browser cannot speak this engine's primary transport (length-prefixed
+//! MessagePack over UDS/TCP, `eg2.`-enveloped) — so V3b is its own small,
+//! **loopback-only, dependency-free HTTP/1.1 listener** (the SAME hand-rolled
+//! idiom `--metrics-addr`/`--obs-addr`/`lake/rest.rs` already use — no axum/
+//! hyper/websocket dependency), serving:
+//!
+//! - `GET /` — a self-contained reference client: feature-detects WebGPU
+//!   (`navigator.gpu`), falls back to WebGL2, and if NEITHER is available
+//!   shows a visible "cannot accelerate this view" message and stops —
+//!   **never a silently blank canvas** (see [`CLIENT_HTML`] /
+//!   `src/server/viz_interactive_client.html`).
+//! - `GET /tile` — one viewport's worth of REAL geometry for the requested
+//!   dataset, in a small binary format (see [`encode_tile`]) a WebGPU/WebGL2
+//!   client decodes straight into a GPU vertex buffer, no JSON parsing.
+//!
+//! ## Transport/format choice, and why
+//!
+//! A plain per-request `GET /tile?...` (not a WebSocket / long-lived stream)
+//! is the standard, well-understood shape every tile server (map tiles, this
+//! program's own `xy` reference dossier's tile-pyramid design) already uses:
+//! the browser's own `fetch()` cache/coalescing/cancellation semantics apply
+//! for free, no new protocol framing to hand-roll, and pan/zoom naturally
+//! becomes "issue a new GET for the new viewport" (see the client's debounced
+//! viewport-change handler) — never a full-series re-download, satisfying the
+//! "pan/zoom re-requests the appropriate LOD tier" requirement directly. A
+//! persistent WebSocket would need this crate to hand-roll RFC 6455 framing
+//! (this codebase's existing WS precedent, `ros2_bridge`, pulls
+//! `tokio-tungstenite` — a real dependency this lane does not need to add for
+//! a request/response tile fetch) for a benefit (lower per-request overhead)
+//! that does not matter at human pan/zoom interaction rates.
+//!
+//! ## LOD selection over the SAME `medulla_viz_core::select_tier` rule
+//!
+//! [`resolve_tile`] calls `select_tier` exactly like the static-export path
+//! (`medulla-viz-export::render::resolve`) does — one tier-selection rule for the
+//! whole engine, never a second parallel one for this transport. The frame
+//! budget is derived directly from `width_px` (`2 * width_px` primitives — the
+//! Line/Area `primitives_per_row` cost — `8 * width_px` bytes), so Direct wins
+//! exactly when the viewport's row count already fits one point per pixel
+//! column, and Decimate (via [`medulla_viz_kernels::lttb_reduce`], `threshold =
+//! width_px`) applies otherwise — **never more points than `width_px` pixels
+//! can show**, by construction.
+//!
+//! **Deliberately different reduction choice than the static-export path.**
+//! `medulla-viz-export::render::resolve` uses [`medulla_viz_kernels::m4_reduce`] for
+//! Line/Area (a smooth full-shape overview) and refuses Decimate for Scatter
+//! entirely (`mark_supports_tier`: "unordered decimation lies", routing
+//! Scatter to a Density surface instead). This endpoint uses LTTB
+//! unconditionally for every mark it serves, INCLUDING Scatter — and that is
+//! honest specifically because LTTB never aggregates: every returned point is
+//! a real row, so "here are some of the real points, zoom in for more" carries
+//! no synthetic-aggregate lie the way a min/max marker would for a scatter
+//! series. Density/Tiled-tier interactive tiles (a mean-color/heatmap surface
+//! for the still-too-large-after-LTTB case) remain a documented gap for a
+//! later lane — see this module's own tests for the exact row-count ceiling
+//! (`MAX_TILE_ROWS`) this V1 refuses beyond, honestly, rather than silently
+//! truncating.
+
+use std::collections::HashMap;
+use std::sync::Arc;
+
+use tokio::io::AsyncWriteExt;
+use tokio::net::TcpListener;
+
+use medulla_viz_core::{
+    select_tier, ColumnStoreIngest, Encodings, FrameBudget, LodTier, MarkKind, TierInput,
+};
+use medulla_viz_kernels::lttb_reduce;
+
+use medulla_server_api::http1;
+use medulla_server_api::http1::HttpMessage;
+use medulla_server_api::http1::RequestLimits;
+use medulla_server_api::viz_engine::VizEngineState;
+
+/// This surface serves GET tile reads only; it never accepts a request body.
+const HTTP_LIMITS: RequestLimits = RequestLimits {
+    max_head_bytes: 16 * 1024,
+    max_body_bytes: 0,
+};
+/// Bound on the row count this endpoint will read+filter+reduce per tile
+/// request — independent of (and far below) the static-export path's
+/// `MAX_SYNTHETIC_SCATTER_ROWS`/`MAX_INLINE_COLUMN_ROWS` ingest caps. A
+/// dataset larger than this can still be RENDERED via static export or a
+/// narrower viewport; a single interactive tile request refuses to scan more
+/// than this many rows rather than let one request stall the loopback
+/// listener for other callers.
+const MAX_TILE_ROWS: u64 = 200_000_000;
+
+const TILE_PROTOCOL_VERSION: u8 = 1;
+
+#[repr(u8)]
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum TileStatus {
+    Ok = 0,
+    /// No usable data: an unknown `dataset_ref`, or a viewport that overlaps
+    /// none of it — the "degrade honestly, never fabricate" signal (see
+    /// module doc). The client renders a visible "no data" state for this,
+    /// never an empty-but-plausible-looking chart.
+    Unavailable = 1,
+}
+
+const CLIENT_HTML: &str = include_str!("viz_interactive_client.html");
+
+/// Serve the interactive viz surface on `listener`, sharing `engine`'s
+/// persistent ColumnStore/render-cache/provenance with the RPC path (see
+/// `handlers::viz::engine_state`'s doc for why this is the SAME engine, not a
+/// second one).
+pub async fn serve(
+    listener: TcpListener,
+    engine: Arc<VizEngineState>,
+    // VIZ-1/VIZ-2 bridge: `graph_tile_server`'s routes need the graph
+    // registry + persistence backend to resolve a real cluster hierarchy
+    // (see `graph_tile_source`'s doc); every other route on this listener
+    // ignores it. `None` ⇒ every `/graph_tile/*` request not opting into
+    // `?demo=1` degrades to an honest empty tile (no registry to resolve a
+    // graph against) -- `main.rs` always passes `Some`; `None` is for a
+    // caller (e.g. an external integration test) with no `ServerState` to
+    // hand in, per that type's own `pub(crate)`/`#[cfg(test)]` construction
+    // boundary.
+    state: Option<Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>>,
+) {
+    loop {
+        let Ok((mut stream, _)) = listener.accept().await else {
+            continue;
+        };
+        let engine = engine.clone();
+        // Only `graph_tile_server`'s routes (below) read this -- avoid an
+        // unused-clone/unused-param warning in a build without `viz-graph-tiles`.
+        #[cfg(feature = "viz-graph-tiles")]
+        let state = state.clone();
+        #[cfg(not(feature = "viz-graph-tiles"))]
+        let _ = &state;
+        tokio::spawn(async move {
+            let Some(request) = http1::read_request(&mut stream, HTTP_LIMITS).await else {
+                return;
+            };
+            // VIZ-2: `/graph_tile/*` needs genuine async chunked-transfer
+            // streaming (see `graph_tile_server`'s doc) that this function's
+            // own buffered `(status, content_type, Vec<u8>)` `route()` below
+            // cannot express -- dispatch to it first, before falling back to
+            // the synchronous single-buffer path every other route here uses.
+            #[cfg(feature = "viz-graph-tiles")]
+            if crate::graph_tile_server::handles(&request.target) {
+                crate::graph_tile_server::serve(
+                    &mut stream,
+                    &request.method,
+                    &request.target,
+                    state.as_ref(),
+                )
+                .await;
+                return;
+            }
+            let (status_line, content_type, body) = route(&engine, &request);
+            let mut head = format!(
+                "HTTP/1.1 {status_line}\r\ncontent-type: {content_type}\r\ncontent-length: {}\r\nconnection: close\r\n",
+                body.len()
+            );
+            if content_type == TILE_CONTENT_TYPE {
+                head.push_str("cache-control: no-store\r\n");
+            }
+            head.push_str("\r\n");
+            let _ = stream.write_all(head.as_bytes()).await;
+            let _ = stream.write_all(&body).await;
+            let _ = stream.shutdown().await;
+        });
+    }
+}
+
+const TILE_CONTENT_TYPE: &str = "application/octet-stream";
+
+fn hex_val(b: u8) -> Option<u8> {
+    match b {
+        b'0'..=b'9' => Some(b - b'0'),
+        b'a'..=b'f' => Some(b - b'a' + 10),
+        b'A'..=b'F' => Some(b - b'A' + 10),
+        _ => None,
+    }
+}
+
+fn percent_decode(s: &str) -> String {
+    let bytes = s.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'%' && i + 2 < bytes.len() {
+            if let (Some(h), Some(l)) = (hex_val(bytes[i + 1]), hex_val(bytes[i + 2])) {
+                out.push(h * 16 + l);
+                i += 3;
+                continue;
+            }
+        }
+        out.push(bytes[i]);
+        i += 1;
+    }
+    String::from_utf8_lossy(&out).to_string()
+}
+
+pub(crate) fn parse_query(target: &str) -> (&str, HashMap<String, String>) {
+    let (path, query) = target.split_once('?').unwrap_or((target, ""));
+    let mut params = HashMap::new();
+    for pair in query.split('&').filter(|p| !p.is_empty()) {
+        let mut it = pair.splitn(2, '=');
+        if let Some(k) = it.next() {
+            let v = it.next().unwrap_or("");
+            params.insert(
+                percent_decode(&k.replace('+', " ")),
+                percent_decode(&v.replace('+', " ")),
+            );
+        }
+    }
+    (path, params)
+}
+
+fn route(engine: &VizEngineState, request: &HttpMessage) -> (&'static str, &'static str, Vec<u8>) {
+    if request.method != "GET" {
+        return ("405 Method Not Allowed", "text/plain", b"GET only".to_vec());
+    }
+    let (path, params) = parse_query(&request.target);
+    match path {
+        "/" | "/index.html" => (
+            "200 OK",
+            "text/html; charset=utf-8",
+            CLIENT_HTML.as_bytes().to_vec(),
+        ),
+        "/tile" => match resolve_tile(engine, &params) {
+            Ok(bytes) => ("200 OK", TILE_CONTENT_TYPE, bytes),
+            Err(message) => (
+                "400 Bad Request",
+                "application/json",
+                format!("{{\"error\":{:?}}}", message).into_bytes(),
+            ),
+        },
+        _ => ("404 Not Found", "text/plain", b"not found".to_vec()),
+    }
+}
+
+pub(crate) fn parse_param<T: std::str::FromStr>(
+    params: &HashMap<String, String>,
+    key: &str,
+) -> Option<T> {
+    params.get(key).and_then(|v| v.parse::<T>().ok())
+}
+
+/// Resolve one `GET /tile` request: read the requested columns, filter to the
+/// requested viewport (or the whole column range on a first request), select
+/// the LOD tier via `medulla_viz_core::select_tier`, and encode the result. Returns
+/// `Err` only for a malformed/invalid REQUEST (missing params, unknown mark,
+/// row count over [`MAX_TILE_ROWS`]) — an unknown dataset or an empty
+/// viewport-filtered result is `Ok` with [`TileStatus::Unavailable`], per the
+/// module doc's "never fabricate, degrade honestly" contract.
+fn resolve_tile(
+    engine: &VizEngineState,
+    params: &HashMap<String, String>,
+) -> Result<Vec<u8>, String> {
+    let request = parse_tile_request(params)?;
+    let dataset_ref = request.dataset_ref;
+    let store = engine.store.read();
+    if store.content_fingerprint(dataset_ref).is_none() {
+        return Ok(encode_unavailable());
+    }
+    let row_count = store.row_count(dataset_ref).map_err(|e| e.to_string())?;
+    if row_count > MAX_TILE_ROWS {
+        return Err(format!(
+            "dataset `{dataset_ref}` has {row_count} rows, exceeding this endpoint's \
+             per-request bound ({MAX_TILE_ROWS}); use a narrower viewport or the static \
+             export path instead"
+        ));
+    }
+
+    let xs_full = store
+        .materialize_f64(dataset_ref, request.x_col)
+        .map_err(|e| e.to_string())?;
+    let ys_full = store
+        .materialize_f64(dataset_ref, request.y_col)
+        .map_err(|e| e.to_string())?;
+    let (xs, ys) = visible_rows(&xs_full, &ys_full, request.viewport);
+    if xs.is_empty() {
+        return Ok(encode_unavailable());
+    }
+
+    let (tier, points, exact) = level_of_detail(&xs, &ys, request.width_px);
+    Ok(encode_tile(
+        TileStatus::Ok,
+        tier,
+        exact,
+        point_domain(&points),
+        &points,
+    ))
+}
+
+/// A validated `GET /tile` request.
+struct TileRequest<'a> {
+    dataset_ref: &'a str,
+    x_col: &'a str,
+    y_col: &'a str,
+    width_px: u32,
+    /// `Some((x0, x1))` for a pan/zoom re-request; `None` for the whole column range.
+    viewport: Option<(f64, f64)>,
+}
+
+/// Validate a `GET /tile` query: `dataset_ref` and a positive `width_px` are
+/// required; `x`/`y` default to the `x`/`y` columns; `x0`/`x1` come as a finite,
+/// increasing pair or not at all.
+fn parse_tile_request(params: &HashMap<String, String>) -> Result<TileRequest<'_>, String> {
+    let dataset_ref = params
+        .get("dataset_ref")
+        .ok_or_else(|| "missing required query param `dataset_ref`".to_string())?;
+    let width_px: u32 = parse_param(params, "width_px")
+        .ok_or_else(|| "missing or invalid required query param `width_px`".to_string())?;
+    if width_px == 0 {
+        return Err("`width_px` must be positive".to_string());
+    }
+    let viewport = match (
+        parse_param::<f64>(params, "x0"),
+        parse_param::<f64>(params, "x1"),
+    ) {
+        (Some(x0), Some(x1)) if x0.is_finite() && x1.is_finite() && x0 < x1 => Some((x0, x1)),
+        (None, None) => None,
+        _ => return Err("`x0`/`x1` must both be provided, finite, and x0 < x1".to_string()),
+    };
+    Ok(TileRequest {
+        dataset_ref,
+        x_col: params.get("x").map(String::as_str).unwrap_or("x"),
+        y_col: params.get("y").map(String::as_str).unwrap_or("y"),
+        width_px,
+        viewport,
+    })
+}
+
+/// The rows whose `x` and `y` are both finite and whose `x` lies inside the
+/// (inclusive) viewport, if one was requested.
+fn visible_rows(xs: &[f64], ys: &[f64], viewport: Option<(f64, f64)>) -> (Vec<f64>, Vec<f64>) {
+    let in_view = |x: f64| viewport.is_none_or(|(x0, x1)| x >= x0 && x <= x1);
+    xs.iter()
+        .zip(ys)
+        .filter(|&(&x, &y)| x.is_finite() && y.is_finite() && in_view(x))
+        .map(|(&x, &y)| (x, y))
+        .unzip()
+}
+
+/// Pick the LOD tier for `xs.len()` rows at a frame budget derived from `width_px`,
+/// returning the tier, the points to send, and whether they are the exact rows.
+fn level_of_detail(xs: &[f64], ys: &[f64], width_px: u32) -> (LodTier, Vec<(f64, f64)>, bool) {
+    let budget = FrameBudget::new(
+        (width_px as u64).saturating_mul(2),
+        (width_px as u64).saturating_mul(8),
+    );
+    let decision = select_tier(&TierInput {
+        mark: MarkKind::Line,
+        row_count: xs.len() as u64,
+        encodings: Encodings::default(),
+        budget,
+        out_of_core: false,
+    });
+    match decision.tier {
+        LodTier::Direct => {
+            let pts = xs.iter().zip(ys).map(|(&x, &y)| (x, y)).collect();
+            (decision.tier, pts, true)
+        }
+        _ => (decision.tier, lttb_reduce(xs, ys, width_px as usize), false),
+    }
+}
+
+/// `(x_min, x_max, y_min, y_max)` over the points sent.
+fn point_domain(points: &[(f64, f64)]) -> (f64, f64, f64, f64) {
+    let x_min = points.iter().map(|p| p.0).fold(f64::INFINITY, f64::min);
+    let x_max = points.iter().map(|p| p.0).fold(f64::NEG_INFINITY, f64::max);
+    let y_min = points.iter().map(|p| p.1).fold(f64::INFINITY, f64::min);
+    let y_max = points.iter().map(|p| p.1).fold(f64::NEG_INFINITY, f64::max);
+    (x_min, x_max, y_min, y_max)
+}
+
+/// Encode the fixed 48-byte header + interleaved `f32` `(x,y)` payload — see
+/// the module doc's "binary format" description. Every offset is 8-byte
+/// aligned so a client can `new Float64Array`/`new Float32Array` any field
+/// directly without a copy.
+fn encode_tile(
+    status: TileStatus,
+    tier: LodTier,
+    exact: bool,
+    domain: (f64, f64, f64, f64),
+    points: &[(f64, f64)],
+) -> Vec<u8> {
+    let mut out = Vec::with_capacity(48 + points.len() * 8);
+    out.push(TILE_PROTOCOL_VERSION);
+    out.push(status as u8);
+    out.push(tier as u8);
+    out.push(exact as u8);
+    out.push(MarkKind::Line as u8); // reserved mark slot; V1 always serves point-pair geometry
+    out.extend_from_slice(&[0u8; 3]); // padding to the u32 count field
+    out.extend_from_slice(&(points.len() as u32).to_le_bytes());
+    out.extend_from_slice(&[0u8; 4]); // padding to the f64-aligned domain fields
+    out.extend_from_slice(&domain.0.to_le_bytes());
+    out.extend_from_slice(&domain.1.to_le_bytes());
+    out.extend_from_slice(&domain.2.to_le_bytes());
+    out.extend_from_slice(&domain.3.to_le_bytes());
+    debug_assert_eq!(out.len(), 48);
+    for &(x, y) in points {
+        out.extend_from_slice(&(x as f32).to_le_bytes());
+        out.extend_from_slice(&(y as f32).to_le_bytes());
+    }
+    out
+}
+
+fn encode_unavailable() -> Vec<u8> {
+    encode_tile(
+        TileStatus::Unavailable,
+        LodTier::Direct,
+        false,
+        (0.0, 0.0, 0.0, 0.0),
+        &[],
+    )
+}
+
+/// Bridge so a fresh `ColumnStore` (used only by this module's own unit
+/// tests, which do not need the full `VizEngineState`) can exercise
+/// [`resolve_tile`]'s inner logic without spinning up the engine/HTTP stack.
+#[cfg(test)]
+fn test_store_with(
+    dataset_ref: &str,
+    xs: Vec<f64>,
+    ys: Vec<f64>,
+) -> medulla_viz_columnstore::ColumnStore {
+    use medulla_viz_columnstore::{ColumnData, ColumnInput, ColumnStore};
+    let mut store = ColumnStore::new();
+    store
+        .ingest_columns(
+            dataset_ref,
+            vec![
+                ColumnInput::new("x", ColumnData::F64(xs)),
+                ColumnInput::new("y", ColumnData::F64(ys)),
+            ],
+        )
+        .unwrap();
+    store
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use medulla_server_api::viz_engine::VizEngineState;
+
+    fn params(pairs: &[(&str, &str)]) -> HashMap<String, String> {
+        pairs
+            .iter()
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .collect()
+    }
+
+    /// Resolve a tile that must not be refused.
+    fn tile(engine: &VizEngineState, pairs: &[(&str, &str)]) -> Vec<u8> {
+        resolve_tile(engine, &params(pairs)).unwrap()
+    }
+
+    fn engine_with(dataset_ref: &str, xs: Vec<f64>, ys: Vec<f64>) -> VizEngineState {
+        let engine = VizEngineState::new(None);
+        *engine.store.write() = test_store_with(dataset_ref, xs, ys);
+        engine
+    }
+
+    fn decode_header(bytes: &[u8]) -> (u8, u8, u8, u8, u32, (f64, f64, f64, f64)) {
+        let status = bytes[1];
+        let tier = bytes[2];
+        let exact = bytes[3];
+        let mark = bytes[4];
+        let count = u32::from_le_bytes(bytes[8..12].try_into().unwrap());
+        let x_min = f64::from_le_bytes(bytes[16..24].try_into().unwrap());
+        let x_max = f64::from_le_bytes(bytes[24..32].try_into().unwrap());
+        let y_min = f64::from_le_bytes(bytes[32..40].try_into().unwrap());
+        let y_max = f64::from_le_bytes(bytes[40..48].try_into().unwrap());
+        (
+            status,
+            tier,
+            exact,
+            mark,
+            count,
+            (x_min, x_max, y_min, y_max),
+        )
+    }
+
+    #[test]
+    fn unknown_dataset_returns_unavailable_not_an_error() {
+        let engine = VizEngineState::new(None);
+        let bytes = tile(
+            &engine,
+            &[("dataset_ref", "ds:missing"), ("width_px", "800")],
+        );
+        let (status, ..) = decode_header(&bytes);
+        assert_eq!(status, TileStatus::Unavailable as u8);
+        assert_eq!(
+            bytes.len(),
+            48,
+            "an unavailable tile carries no point payload"
+        );
+    }
+
+    #[test]
+    fn small_series_resolves_direct_and_exact() {
+        let xs: Vec<f64> = (0..50).map(|i| i as f64).collect();
+        let ys: Vec<f64> = (0..50).map(|i| (i as f64).sin()).collect();
+        let engine = engine_with("ds:1", xs, ys);
+        let bytes = tile(&engine, &[("dataset_ref", "ds:1"), ("width_px", "800")]);
+        let (status, tier, exact, _mark, count, _domain) = decode_header(&bytes);
+        assert_eq!(status, TileStatus::Ok as u8);
+        assert_eq!(tier, LodTier::Direct as u8);
+        assert_eq!(exact, 1);
+        assert_eq!(count, 50);
+        assert_eq!(bytes.len(), 48 + 50 * 8);
+    }
+
+    #[test]
+    fn large_series_resolves_decimate_bounded_by_width_px() {
+        let n = 2_000_000;
+        let xs: Vec<f64> = (0..n).map(|i| i as f64).collect();
+        let ys: Vec<f64> = (0..n).map(|i| (i as f64 * 0.001).sin()).collect();
+        let engine = engine_with("ds:1", xs, ys);
+        let bytes = tile(&engine, &[("dataset_ref", "ds:1"), ("width_px", "400")]);
+        let (status, tier, exact, _mark, count, _domain) = decode_header(&bytes);
+        assert_eq!(status, TileStatus::Ok as u8);
+        assert_eq!(tier, LodTier::Decimate as u8);
+        assert_eq!(exact, 0);
+        assert!(
+            count as u64 <= 400,
+            "must never send more points than width_px pixels can show, got {count}"
+        );
+        assert_eq!(bytes.len(), 48 + count as usize * 8);
+    }
+
+    #[test]
+    fn viewport_narrows_the_row_count_and_can_flip_the_tier() {
+        let n = 2_000_000;
+        let xs: Vec<f64> = (0..n).map(|i| i as f64).collect();
+        let ys: Vec<f64> = vec![1.0; n as usize];
+        let engine = engine_with("ds:1", xs, ys);
+        // Full series -> Decimate.
+        let full = tile(&engine, &[("dataset_ref", "ds:1"), ("width_px", "400")]);
+        let (_, full_tier, ..) = decode_header(&full);
+        assert_eq!(full_tier, LodTier::Decimate as u8);
+
+        // A narrow viewport (100 rows) at the SAME width_px -> Direct, exact --
+        // pan/zoom re-requesting a viewport gets a genuinely different tier,
+        // never the full series re-sent.
+        let narrow = tile(
+            &engine,
+            &[
+                ("dataset_ref", "ds:1"),
+                ("width_px", "400"),
+                ("x0", "0"),
+                ("x1", "99"),
+            ],
+        );
+        let (status, narrow_tier, exact, _mark, count, _domain) = decode_header(&narrow);
+        assert_eq!(status, TileStatus::Ok as u8);
+        assert_eq!(narrow_tier, LodTier::Direct as u8);
+        assert_eq!(exact, 1);
+        assert_eq!(count, 100);
+    }
+
+    #[test]
+    fn a_viewport_disjoint_from_the_data_is_unavailable_not_an_empty_chart() {
+        let xs: Vec<f64> = (0..1000).map(|i| i as f64).collect();
+        let ys: Vec<f64> = vec![1.0; 1000];
+        let engine = engine_with("ds:1", xs, ys);
+        let bytes = tile(
+            &engine,
+            &[
+                ("dataset_ref", "ds:1"),
+                ("width_px", "400"),
+                ("x0", "5000"),
+                ("x1", "6000"),
+            ],
+        );
+        let (status, ..) = decode_header(&bytes);
+        assert_eq!(status, TileStatus::Unavailable as u8);
+    }
+
+    #[test]
+    fn nan_and_infinite_rows_are_excluded_from_the_tile() {
+        let xs = vec![1.0, 2.0, 3.0, 4.0];
+        let ys = vec![1.0, f64::NAN, f64::INFINITY, 4.0];
+        let engine = engine_with("ds:1", xs, ys);
+        let bytes = tile(&engine, &[("dataset_ref", "ds:1"), ("width_px", "800")]);
+        let (status, _tier, _exact, _mark, count, _domain) = decode_header(&bytes);
+        assert_eq!(status, TileStatus::Ok as u8);
+        assert_eq!(count, 2, "only rows 0 and 3 are fully finite on both axes");
+    }
+
+    #[test]
+    fn missing_dataset_ref_param_is_a_clear_error() {
+        let engine = VizEngineState::new(None);
+        let err = resolve_tile(&engine, &params(&[("width_px", "800")])).unwrap_err();
+        assert!(err.contains("dataset_ref"));
+    }
+
+    #[test]
+    fn missing_width_px_param_is_a_clear_error() {
+        let engine = engine_with("ds:1", vec![1.0], vec![1.0]);
+        let err = resolve_tile(&engine, &params(&[("dataset_ref", "ds:1")])).unwrap_err();
+        assert!(err.contains("width_px"));
+    }
+
+    /// Pins the request refusals (exact messages) and an exact Direct tile: header
+    /// domain and the interleaved `f32` point payload, viewport bounds inclusive.
+    #[test]
+    fn tile_refusals_and_direct_payload_are_pinned() {
+        let engine = engine_with("ds:1", vec![0.0, 1.0, 2.0, 3.0], vec![5.0, -1.0, 7.5, 2.0]);
+        const VIEWPORT: &str = "`x0`/`x1` must both be provided, finite, and x0 < x1";
+        let refusals: [(&[(&str, &str)], &str); 7] = [
+            (
+                &[("dataset_ref", "ds:1"), ("width_px", "0")],
+                "`width_px` must be positive",
+            ),
+            (
+                &[("dataset_ref", "ds:1"), ("width_px", "-3")],
+                "missing or invalid required query param `width_px`",
+            ),
+            (
+                &[("dataset_ref", "ds:1"), ("width_px", "8"), ("x0", "1")],
+                VIEWPORT,
+            ),
+            (
+                &[("dataset_ref", "ds:1"), ("width_px", "8"), ("x1", "1")],
+                VIEWPORT,
+            ),
+            (
+                &[
+                    ("dataset_ref", "ds:1"),
+                    ("width_px", "8"),
+                    ("x0", "2"),
+                    ("x1", "2"),
+                ],
+                VIEWPORT,
+            ),
+            (
+                &[
+                    ("dataset_ref", "ds:1"),
+                    ("width_px", "8"),
+                    ("x0", "NaN"),
+                    ("x1", "2"),
+                ],
+                VIEWPORT,
+            ),
+            (
+                &[("width_px", "0")],
+                "missing required query param `dataset_ref`",
+            ),
+        ];
+        for (pairs, message) in refusals {
+            assert_eq!(
+                resolve_tile(&engine, &params(pairs)).unwrap_err(),
+                message,
+                "{pairs:?}"
+            );
+        }
+
+        let bytes = tile(
+            &engine,
+            &[
+                ("dataset_ref", "ds:1"),
+                ("width_px", "800"),
+                ("x0", "1"),
+                ("x1", "2"),
+            ],
+        );
+        let (status, tier, exact, mark, count, domain) = decode_header(&bytes);
+        assert_eq!(bytes[0], TILE_PROTOCOL_VERSION);
+        assert_eq!(
+            (status, tier, exact, mark, count),
+            (
+                TileStatus::Ok as u8,
+                LodTier::Direct as u8,
+                1,
+                MarkKind::Line as u8,
+                2
+            )
+        );
+        assert_eq!(domain, (1.0, 2.0, -1.0, 7.5));
+        let payload: Vec<u8> = [1.0f32, -1.0, 2.0, 7.5]
+            .iter()
+            .flat_map(|v| v.to_le_bytes())
+            .collect();
+        assert_eq!(&bytes[48..], &payload[..]);
+    }
+
+    #[test]
+    fn query_string_is_parsed_and_percent_decoded() {
+        let (path, params) = parse_query("/tile?dataset_ref=ds%3A1&width_px=800");
+        assert_eq!(path, "/tile");
+        assert_eq!(params.get("dataset_ref").unwrap(), "ds:1");
+        assert_eq!(params.get("width_px").unwrap(), "800");
+    }
+
+    #[test]
+    fn path_without_a_query_string_parses_cleanly() {
+        let (path, params) = parse_query("/");
+        assert_eq!(path, "/");
+        assert!(params.is_empty());
+    }
+}

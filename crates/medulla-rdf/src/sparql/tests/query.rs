@@ -344,7 +344,7 @@ fn au_proj() -> Projection {
 /// `knows`. `alice` is an `agent`, `bob` a `world_model` (a multi-word type, to
 /// exercise CamelCase). `alice knows bob`.
 fn native_view() -> GraphView {
-    let core = medulla_core::graph::GraphCore::new();
+    let core = medulla_graph_core::graph::GraphCore::new();
     let mut txn = core.txn();
     txn.add_node(
         "alice".into(),
@@ -634,7 +634,7 @@ fn describe_returns_resource_triples() {
 /// `GRAPH <B>` form scopes to graph B.
 #[test]
 fn named_graph_query_isolation() {
-    let core_a = medulla_core::graph::GraphCore::new();
+    let core_a = medulla_graph_core::graph::GraphCore::new();
     let mut iris = IriStore::default();
     load_triples(
         &core_a,
@@ -643,7 +643,7 @@ fn named_graph_query_isolation() {
         parse_turtle("@prefix ex: <http://ex/> . ex:a ex:p ex:b .").unwrap(),
     )
     .unwrap();
-    let core_b = medulla_core::graph::GraphCore::new();
+    let core_b = medulla_graph_core::graph::GraphCore::new();
     load_triples(
         &core_b,
         &mut iris,

@@ -4,12 +4,12 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
 use super::{allocation_bytes, timed, Observation, ProbeError};
-use medulla_core::result_cache::ResultCache;
+use medulla_query_cache::result_cache::ResultCache;
 use medulla_epistemic::{ChangeEvent as TmsEvent, TruthMaintenance};
 use medulla_jobs::store::{JobStore, SubmitSpec, TenantJobQuota};
 use medulla_jobs::{AlgoVersion, InputSnapshotHandle, JobPolicy};
-use medulla::graph::GraphCore;
-use medulla::server::qos::{plan_admissions, QosClass, QosRequest};
+use medulla_graph_core::graph::GraphCore;
+use medulla_server_obs::{qos::plan_admissions, qos::QosClass, qos::QosRequest};
 
 fn job_spec(index: usize) -> SubmitSpec {
     SubmitSpec {
@@ -58,9 +58,9 @@ pub(super) fn probe_analytics(
     let result = (|| -> Result<Observation, ProbeError> {
         let store = JobStore::open(
             &path,
-            medulla::store_authority::process_authority().as_ref(),
-            medulla::store_authority::process_authority().principal(),
-            &medulla::store_authority::process_authority().proof(),
+            medulla_kernel::store_authority::process_authority().as_ref(),
+            medulla_kernel::store_authority::process_authority().principal(),
+            &medulla_kernel::store_authority::process_authority().proof(),
         )?;
         let mut last = None;
         for index in 0..scale {
@@ -76,9 +76,9 @@ pub(super) fn probe_analytics(
                 drop(store);
                 let reopened = JobStore::open(
                     &path,
-                    medulla::store_authority::process_authority().as_ref(),
-                    medulla::store_authority::process_authority().principal(),
-                    &medulla::store_authority::process_authority().proof(),
+                    medulla_kernel::store_authority::process_authority().as_ref(),
+                    medulla_kernel::store_authority::process_authority().principal(),
+                    &medulla_kernel::store_authority::process_authority().proof(),
                 )?;
                 let (next, latency) = timed(|| reopened.submit(job_spec(scale)));
                 let next = next?;
@@ -652,7 +652,7 @@ fn probe_recovery_edge_ordinal(
     let path = probe_file(root, row_id, scale, seed, repetition);
     let _ = std::fs::remove_file(&path);
     let (result, latency) =
-        timed(|| medulla::redb_store::exact_performance_probe_edge_ordinal(&path, scale));
+        timed(|| medulla_store::redb_store::exact_performance_probe_edge_ordinal(&path, scale));
     let _ = std::fs::remove_file(path);
     let (cold, hot, reseeded) = result?;
     Ok(Observation {

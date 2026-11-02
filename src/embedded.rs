@@ -62,9 +62,9 @@ use std::sync::Arc;
 
 use parking_lot::{Mutex, RwLock};
 
-use crate::graph::{GraphCore, GraphView};
-use crate::protocol::{GraphType, Method};
-use crate::registry::GraphRegistry;
+use medulla_graph_core::graph::{GraphCore, GraphView};
+use medulla_protocol_types::protocol::{GraphType, Method};
+use medulla_core::registry::GraphRegistry;
 
 #[cfg(feature = "redb")]
 mod replay;
@@ -135,7 +135,7 @@ struct Inner {
     /// runs CREATE TABLE / INSERT / SELECT against it WITHOUT a server — the embedded
     /// half of the user-table SQL surface the pgwire shim serves out-of-process.
     #[cfg(feature = "query")]
-    tables: medulla_query::TableStore,
+    tables: medulla_table_store::tables::TableStore,
 }
 
 impl EmbeddedEngine {
@@ -212,7 +212,7 @@ impl EmbeddedEngine {
     fn open_table_store(
         persist_dir: Option<&Path>,
         durable: bool,
-    ) -> Result<medulla_query::TableStore, String> {
+    ) -> Result<medulla_table_store::tables::TableStore, String> {
         match (persist_dir, durable) {
             (Some(dir), true) => {
                 std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
@@ -220,10 +220,10 @@ impl EmbeddedEngine {
                 // bytes -- the composition root decides which principal may
                 // serve this file's scopes, and for the embedded API this
                 // library IS that root.
-                let authority = crate::store_authority::process_authority();
-                medulla_query::TableStore::open(
+                let authority = medulla_kernel::store_authority::process_authority();
+                medulla_table_store::tables::TableStore::open(
                     dir.join("sql_tables.redb"),
-                    crate::store_authority::process_verifier(),
+                    medulla_kernel::store_authority::process_verifier(),
                     authority.principal(),
                     &authority.proof(),
                 )
@@ -231,7 +231,8 @@ impl EmbeddedEngine {
             // The `:memory:` analogue is still opened by the composition root,
             // not by `medulla-query`'s `dev-scope-grant` stand-in: ephemeral is a
             // lifetime, not a weaker authority.
-            _ => crate::store_authority::open_ephemeral_sql_store().map(|(store, _path)| store),
+            _ => medulla_kernel::store_authority::open_ephemeral_sql_store()
+                .map(|(store, _path)| store),
         }
     }
 
@@ -270,7 +271,7 @@ impl EmbeddedEngine {
         #[cfg(feature = "redb")]
         if let Some(store) = &self.inner.store {
             if let Err(error) = store.register_graph(
-                &crate::redb_store::sanitize(name),
+                &medulla_store::redb_store::sanitize(name),
                 name,
                 graph_type,
                 &incarnation_id,
@@ -316,7 +317,7 @@ impl EmbeddedEngine {
         }
         #[cfg(feature = "redb")]
         if let Some(store) = &self.inner.store {
-            store.purge(&crate::redb_store::sanitize(name))?;
+            store.purge(&medulla_store::redb_store::sanitize(name))?;
         }
         self.inner.registry.write().delete_graph(name)
     }
@@ -370,7 +371,7 @@ impl EmbeddedEngine {
             let validation = match self.core(graph, false) {
                 Ok(core) => core.semantic_store.read().validate_embedding(embedding),
                 Err(_) => {
-                    crate::compute::semantic::SemanticStore::new().validate_embedding(embedding)
+                    medulla_semantic_index::semantic::SemanticStore::new().validate_embedding(embedding)
                 }
             };
             validation.map_err(|error| error.to_string())?;
@@ -390,12 +391,12 @@ impl EmbeddedEngine {
         // its authoritative Graph(version) while the kernel write is held.
         #[cfg(feature = "redb")]
         if let Some(store) = &self.inner.store {
-            store.commit(&crate::redb_store::sanitize(graph), &method)?;
+            store.commit(&medulla_store::redb_store::sanitize(graph), &method)?;
         }
         // 2) Publish only after the durable commit succeeds. This is the
         // canonical durable Method → GraphCore applier used by WAL replay and
         // the Raft state machine, so a failed admission never becomes visible.
-        crate::mutation_apply::apply(&core, &method);
+        medulla_server_api::mutation_apply::apply(&core, &method);
         // The replay applier deliberately only applies rows to a core; it does
         // not advance the serving OCC clock. The embedded write gate owns the
         // publication boundary, so advance that clock exactly once after the
@@ -530,7 +531,7 @@ impl EmbeddedEngine {
 
     /// Topological sort (DAG order); `Err` on a cycle.
     pub fn topological_sort(&self, graph: &str) -> Result<Vec<String>, String> {
-        crate::algorithms::topological_sort(&self.topology_view(graph)?)
+        medulla_graph_algos::algorithms::topological_sort(&self.topology_view(graph)?)
     }
 
     /// PageRank over `graph`.
@@ -540,7 +541,7 @@ impl EmbeddedEngine {
         damping: f64,
         iterations: usize,
     ) -> Result<Vec<(String, f64)>, String> {
-        Ok(crate::algorithms::pagerank(
+        Ok(medulla_graph_algos::algorithms::pagerank(
             &self.topology_view(graph)?,
             damping,
             iterations,
@@ -549,7 +550,7 @@ impl EmbeddedEngine {
 
     /// Weakly-connected components of `graph`.
     pub fn connected_components(&self, graph: &str) -> Result<Vec<Vec<String>>, String> {
-        Ok(crate::algorithms::connected_components(
+        Ok(medulla_graph_algos::algorithms::connected_components(
             &self.topology_view(graph)?,
         ))
     }
@@ -557,25 +558,25 @@ impl EmbeddedEngine {
     // ── gated query surface ──────────────────────────────────────────────
 
     /// Run read-only SQL (`SELECT … FROM nodes/edges …`) over `graph` via the SAME
-    /// DataFusion path the server's `Sql` handler uses (`medulla_query::exec_sql` over an
+    /// DataFusion path the server's `Sql` handler uses (`medulla_sql::sql::exec_sql` over an
     /// off-lock `analysis_snapshot`). Available with the `query` feature.
     #[cfg(feature = "query")]
-    pub fn sql(&self, graph: &str, sql: &str) -> Result<crate::protocol::QueryResult, String> {
+    pub fn sql(&self, graph: &str, sql: &str) -> Result<medulla_protocol_types::protocol::QueryResult, String> {
         let snap = self.core(graph, false)?.analysis_snapshot();
-        medulla_query::exec_sql(&snap, sql, &medulla_query::CancellationToken::new())
+        medulla_sql::sql::exec_sql(&snap, sql, &medulla_sql::sql::CancellationToken::new())
     }
 
     /// Run read-only Cypher (`MATCH … RETURN …`, dep-free) over `graph` via the SAME
-    /// path the server's `CypherQuery` handler uses (`medulla_query::exec_cypher`).
+    /// path the server's `CypherQuery` handler uses (`medulla_cypher::cypher::exec_cypher`).
     /// Available with the `cypher` feature (the lean-Pi query surface).
     #[cfg(feature = "cypher")]
     pub fn cypher(
         &self,
         graph: &str,
         cypher: &str,
-    ) -> Result<crate::protocol::QueryResult, String> {
+    ) -> Result<medulla_protocol_types::protocol::QueryResult, String> {
         let snap = self.core(graph, false)?.analysis_snapshot();
-        medulla_query::exec_cypher(&snap, cypher)
+        medulla_cypher::cypher::exec_cypher(&snap, cypher)
     }
 
     /// Build or refresh the maintained ANN generation of every registered pgvector
@@ -583,10 +584,10 @@ impl EmbeddedEngine {
     /// bulk writes; until a generation is live, a nearest-neighbour read takes the
     /// bounded exact path (and says so in the index status).
     #[cfg(feature = "query")]
-    pub fn refresh_ann_indexes(&self) -> Result<Vec<medulla_query::AnnRefreshOutcome>, String> {
+    pub fn refresh_ann_indexes(&self) -> Result<Vec<medulla_table_store::tables::AnnRefreshOutcome>, String> {
         self.inner
             .tables
-            .refresh_ann_generations(medulla_query::AnnRefreshPolicy::Immediate)
+            .refresh_ann_generations(medulla_table_store::tables::AnnRefreshPolicy::Immediate)
     }
 
     /// Execute a SQL statement SQLite-style, in-process, WITHOUT a server
@@ -605,20 +606,24 @@ impl EmbeddedEngine {
     /// handled here — use the typed `add_node`/`add_edge`/`remove_*` methods for the
     /// graph. Available with the `query` feature.
     #[cfg(feature = "query")]
-    pub fn sql_exec(&self, graph: &str, sql: &str) -> Result<medulla_query::TypedQueryResult, String> {
-        use medulla_query::StatementKind;
+    pub fn sql_exec(
+        &self,
+        graph: &str,
+        sql: &str,
+    ) -> Result<medulla_sql_lang::sql::typed_result::TypedQueryResult, String> {
+        use medulla_sql_lang::sql::classify::StatementKind;
         let store = &self.inner.tables;
-        match medulla_query::classify(sql)? {
+        match medulla_sql_lang::sql::classify::classify(sql)? {
             // SELECT / WITH: the read path over the graph snapshot + the user tables.
             // Auto-create the (possibly empty) graph so a table-only SELECT works
             // without a pre-existing graph, matching the firehose write path.
             StatementKind::Read => {
                 let snap = self.core(graph, true)?.analysis_snapshot();
-                medulla_query::exec_sql_typed_with_tables(&snap, store, sql)
+                medulla_sql::sql::exec_sql_typed_with_tables(&snap, store, sql)
             }
             StatementKind::CreateTable(plan) => {
-                let columns = medulla_query::columns_from_defs(&plan.columns)?;
-                let schema = medulla_query::TableSchema::new(plan.name, columns);
+                let columns = medulla_sql::columns_from_defs(&plan.columns)?;
+                let schema = medulla_tables::schema::TableSchema::new(plan.name, columns);
                 store.create_table(&schema, plan.if_not_exists)?;
                 Ok(status_result("CREATE TABLE"))
             }
@@ -667,9 +672,9 @@ impl EmbeddedEngine {
                 reg.all_entries()
                     .iter()
                     .map(|e| {
-                        crate::redb_store::GraphDump::in_place_core_checkpoint(
-                            crate::redb_store::InPlaceCoreCheckpoint {
-                                graph: crate::redb_store::sanitize(&e.name),
+                        medulla_store_apply::redb_store::store_control::GraphDump::in_place_core_checkpoint(
+                            medulla_store_apply::redb_store::store_control::InPlaceCoreCheckpoint {
+                                graph: medulla_store::redb_store::sanitize(&e.name),
                                 name: e.name.clone(),
                                 graph_type: e.graph_type,
                                 incarnation_id: e.incarnation_id.clone(),
@@ -715,13 +720,13 @@ impl EmbeddedEngine {
 /// COLUMN TYPE, DROP CONSTRAINT). The single facade mapping the embedded path reuses.
 #[cfg(feature = "query")]
 fn apply_alter_table(
-    store: &medulla_query::TableStore,
-    plan: medulla_query::AlterTablePlan,
+    store: &medulla_table_store::tables::TableStore,
+    plan: medulla_sql_lang::sql::classify::AlterTablePlan,
 ) -> Result<(), String> {
-    use medulla_query::AlterTableAction as A;
+    use medulla_sql_lang::sql::classify::AlterTableAction as A;
     match plan.action {
         A::AddColumn(col) => {
-            let columns = medulla_query::columns_from_defs(std::slice::from_ref(&col))?;
+            let columns = medulla_sql::columns_from_defs(std::slice::from_ref(&col))?;
             let column = columns.into_iter().next().expect("one column");
             store.add_column(&plan.name, column)
         }
@@ -729,7 +734,7 @@ fn apply_alter_table(
         A::RenameColumn { from, to } => store.rename_column(&plan.name, &from, &to),
         A::RenameTable { new_name } => store.rename_table(&plan.name, &new_name),
         A::AlterColumnType { column, new_type } => {
-            let ty = medulla_query::ColumnType::parse(&new_type)?;
+            let ty = medulla_tables::schema::ColumnType::parse(&new_type)?;
             store.alter_column_type(&plan.name, &column, ty)
         }
         A::DropConstraint {
@@ -741,11 +746,11 @@ fn apply_alter_table(
 
 /// A one-row `status` result for a DDL statement (CREATE/ALTER/DROP TABLE).
 #[cfg(feature = "query")]
-fn status_result(tag: &str) -> medulla_query::TypedQueryResult {
-    medulla_query::TypedQueryResult {
-        columns: vec![medulla_query::TypedColumn {
+fn status_result(tag: &str) -> medulla_sql_lang::sql::typed_result::TypedQueryResult {
+    medulla_sql_lang::sql::typed_result::TypedQueryResult {
+        columns: vec![medulla_sql_lang::sql::typed_result::TypedColumn {
             name: "status".to_string(),
-            ty: medulla_query::PgColType::Text,
+            ty: medulla_sql_lang::sql::typed_result::PgColType::Text,
         }],
         rows: vec![vec![serde_json::Value::String(tag.to_string())]],
     }
@@ -753,11 +758,11 @@ fn status_result(tag: &str) -> medulla_query::TypedQueryResult {
 
 /// A one-row `inserted` count result for an INSERT statement.
 #[cfg(feature = "query")]
-fn count_result(n: usize) -> medulla_query::TypedQueryResult {
-    medulla_query::TypedQueryResult {
-        columns: vec![medulla_query::TypedColumn {
+fn count_result(n: usize) -> medulla_sql_lang::sql::typed_result::TypedQueryResult {
+    medulla_sql_lang::sql::typed_result::TypedQueryResult {
+        columns: vec![medulla_sql_lang::sql::typed_result::TypedColumn {
             name: "inserted".to_string(),
-            ty: medulla_query::PgColType::Int8,
+            ty: medulla_sql_lang::sql::typed_result::PgColType::Int8,
         }],
         rows: vec![vec![serde_json::Value::from(n as i64)]],
     }
@@ -775,7 +780,7 @@ mod lifecycle_failure_tests {
     use std::thread;
 
     fn temp_dir(tag: &str) -> PathBuf {
-        crate::test_support::temp_dir("medulla-embedded-lifecycle", tag)
+        medulla_kernel::kernel::persistence::temp_dir("medulla-embedded-lifecycle", tag)
     }
 
     /// Hold the ambient encryption environment still for a durable test's body.

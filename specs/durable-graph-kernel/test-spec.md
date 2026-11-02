@@ -40,7 +40,7 @@ R076.1 and MEDULLA-PLACEMENT-R002.2 bind native tests in `crates/medulla-types/s
 
 ## T-KG-15 association submission schema
 
-R082.2 binds the table-driven tests in `src/server/handlers/jobs/graph_tests.rs`.
+R082.2 binds the table-driven tests in `crates/medulla-h-jobs/src/jobs/graph_tests.rs`.
 Fifteen malformed outer-list, transaction-list and item shapes go through the
 actual native request-body decoder and return `INVALID_ARGUMENT`, correlation
 id 82, a bounded encoding detail and no result. The decoder submits a matching valid full request to the real governor.
@@ -75,18 +75,18 @@ The producer children retain their current evidence. Neither producer proves run
 
 | Requirement | Proving tests and source | Acceptance |
 |---|---|---|
-| MEDULLA-DURABLE-KERNEL-R011.2 | `crates/medulla-types/src/pre_merge_test_module.rs`: `required_manifest_covers_runtime_categories`, `required_manifest_rejects_empty_selection`, and `required_manifest_anchors_exist_in_source`. | Eight source-module tests passed with Rust 1.96.0. Runtime acceptance remains open under R011.3 and R011.4. |
+| MEDULLA-DURABLE-KERNEL-R011.2 | `crates/medulla-source-types/src/pre_merge_test_module.rs`: `required_manifest_covers_runtime_categories`, `required_manifest_rejects_empty_selection`, and `required_manifest_anchors_exist_in_source`. | Eight source-module tests passed with Rust 1.96.0. Runtime acceptance remains open under R011.3 and R011.4. |
 | MEDULLA-DURABLE-KERNEL-R011.3 | Planned tests in `tests/test_required_runtime_gate.py`: `test_pull_request_executes_required_categories` and `test_failed_or_empty_category_blocks_acceptance`. | Pending runtime acceptance. |
 | MEDULLA-DURABLE-KERNEL-R011.4 | CI receipts must name `published-full`, `workspace-all-features`, and every selected runtime test. R011.2 and R011.3 test names define the gate checks. | Pending runtime acceptance. |
 | MEDULLA-DURABLE-KERNEL-R014.2 | Process tests in `tests/test_validate_raft_cluster.py`: `test_cpu_load_runs_during_cluster_test`, `test_zero_load_workers_refused`, and `test_load_workers_stop_on_failure`. | Process lifecycle tested; loaded Rust acceptance remains in R014.4 and R014.5. |
 | MEDULLA-DURABLE-KERNEL-R014.3 | Planned tests in `tests/test_validate_raft_cluster.py`: `test_repeats_both_cluster_tests`, `test_retry_budget_is_bounded`, and `test_retry_preserves_failure_and_trace`. | Pending runtime acceptance. |
-| MEDULLA-DURABLE-KERNEL-R014.4 | `src/raft/tests.rs::multi_node_group_join_then_leader_rebalance` must pass every recorded loaded repetition without flaky failures. The record must include at least two repetitions. | Pending runtime acceptance. |
-| MEDULLA-DURABLE-KERNEL-R014.5 | `src/raft/tests.rs::placement_admin_wire_rpc::placement_admin_wire_rpcs_move_data_across_a_real_three_node_cluster` must pass every recorded loaded repetition without flaky failures. The record must include at least two repetitions. | Pending runtime acceptance. |
+| MEDULLA-DURABLE-KERNEL-R014.4 | `crates/medulla-server-cluster-tests/src/split_tests/raft_cluster.rs::multi_node_group_join_then_leader_rebalance` must pass every recorded loaded repetition without flaky failures. The record must include at least two repetitions. | Pending runtime acceptance. |
+| MEDULLA-DURABLE-KERNEL-R014.5 | `crates/medulla-server-cluster-tests/src/split_tests/raft_cluster.rs::placement_admin_wire_rpc::placement_admin_wire_rpcs_move_data_across_a_real_three_node_cluster` must pass every recorded loaded repetition without flaky failures. The record must include at least two repetitions. | Pending runtime acceptance. |
 
 R011.2 must list each selected module and its feature flags before R011.3 execution.
-Existing runtime anchors include `src/raft/tests.rs::durable_log_replays_from_redb_after_restart`.
+Existing runtime anchors include `crates/medulla-server-cluster-tests/src/split_tests/raft_cluster.rs::durable_log_replays_from_redb_after_restart`.
 Backup anchors include `crates/medulla-transaction/src/tests/backup_replay.rs::a_coordinator_backup_preserves_every_consumed_nonce_and_receipt`.
-Persistence anchors include `src/raft/tests.rs::fault_injection_no_committed_log_entry_lost_on_restart`.
+Persistence anchors include `crates/medulla-server-cluster-tests/src/split_tests/raft_cluster.rs::fault_injection_no_committed_log_entry_lost_on_restart`.
 These anchors do not replace the complete three-category manifest.
 R011.4 receipts must link passing logs for every manifest entry and both clippy profiles.
 R014.4 and R014.5 depend on R014.2 and R014.3.
@@ -107,7 +107,7 @@ Each command uses `test --locked --lib --no-default-features`.
 Source inspection confirmed the module paths, package names, and feature gates.
 The source-binding test checks existing runtime test names in each selected module.
 The discovery-refusal test uses fixtures; it is not a compiled runtime inventory.
-Portable reproduction from the checkout root: `mkdir -p target && rustc --edition 2021 --test crates/medulla-types/src/pre_merge_test_module.rs -o target/required-manifest-tests && target/required-manifest-tests`.
+Portable reproduction from the checkout root: `mkdir -p target && rustc --edition 2021 --test crates/medulla-source-types/src/pre_merge_test_module.rs -o target/required-manifest-tests && target/required-manifest-tests`.
 Result: eight tests passed, zero failed, zero ignored.
 No raft, backup, persistence, or clippy runtime gate ran for this slice.
 R011.3 must obtain test names from compiled library targets and run every selected test.
@@ -142,7 +142,7 @@ Native facade execution remains pending; this record does not establish R049 acc
 The original EG318 database-lock failure remains unreproduced.
 
 Run `mkdir -p target-isolated/tmp` from the checkout.
-Run `TMPDIR="$PWD/target-isolated/tmp" rustc --edition 2021 --test src/test_support.rs -o target-isolated/fixture-path-tests`.
+Run `TMPDIR="$PWD/target-isolated/tmp" rustc --edition 2021 --test crates/medulla-server-api/src/test_support.rs -o target-isolated/fixture-path-tests`.
 Run `target-isolated/fixture-path-tests`.
 The standalone helper test checks 2,048 distinct paths across eight threads.
 This helper test does not establish native facade acceptance.
@@ -347,13 +347,13 @@ Hot-path proof for `MEDULLA-DURABLE-KERNEL-R101`: `tests/scheduler/test_downtime
 
 | Case | Row | Proving test and observation |
 |---|---|---|
-| Served contract | `MEDULLA-DURABLE-KERNEL-R102.1` | `src/server/kv/dispatch_tests.rs::kv_dispatch_put_get_scan_delete_cas`: every KV method answers its typed result through the real dispatch. |
-| Scope and authorization | `MEDULLA-DURABLE-KERNEL-R102.2` | `src/server/kv/dispatch_tests.rs::kv_keys_are_scoped_by_graph_and_writes_need_kv_write`: another graph sees nothing; a `kv:read` caller is refused a write. |
-| CAS and scan | `MEDULLA-DURABLE-KERNEL-R102.3` | `src/server/kv/dispatch_tests.rs::kv_scan_pages_are_bounded_and_resume_from_the_cursor`: 25 keys arrive in bounded pages in order; a foreign cursor refuses. |
-| Durable mutations | `MEDULLA-DURABLE-KERNEL-R102.4` | `src/server/kv/dispatch_tests.rs::kv_fresh_nonce_replays_stable_operation_without_duplicate_write`: the retried CAS returns the stored verdict and writes once. |
-| Hot-path proof | `MEDULLA-DURABLE-KERNEL-R102.5` | `src/server/kv/dispatch_tests.rs::kv_served_hot_path_meets_latency_budgets`: measured p50/p99 within the budgets. |
-| Shared namespace | `MEDULLA-DURABLE-KERNEL-R102.6` | `src/server/kv/dispatch_tests.rs::kv_shared_namespace_spans_principals_and_needs_kv_shared_write`: private keys never cross principals; a shared key does, and a coarse-write principal is refused. |
-- **MEDULLA-DURABLE-KERNEL-R028.3:** `src/redb_store/work_item/lease/tests.rs` tests live, expired and missing worker lease expiry against engine time, unchanged refused rows and unfenced compatibility. Runtime execution pending hosted CI.
+| Served contract | `MEDULLA-DURABLE-KERNEL-R102.1` | `crates/medulla-server-blob/src/kv/dispatch_tests.rs::kv_dispatch_put_get_scan_delete_cas`: every KV method answers its typed result through the real dispatch. |
+| Scope and authorization | `MEDULLA-DURABLE-KERNEL-R102.2` | `crates/medulla-server-blob/src/kv/dispatch_tests.rs::kv_keys_are_scoped_by_graph_and_writes_need_kv_write`: another graph sees nothing; a `kv:read` caller is refused a write. |
+| CAS and scan | `MEDULLA-DURABLE-KERNEL-R102.3` | `crates/medulla-server-blob/src/kv/dispatch_tests.rs::kv_scan_pages_are_bounded_and_resume_from_the_cursor`: 25 keys arrive in bounded pages in order; a foreign cursor refuses. |
+| Durable mutations | `MEDULLA-DURABLE-KERNEL-R102.4` | `crates/medulla-server-blob/src/kv/dispatch_tests.rs::kv_fresh_nonce_replays_stable_operation_without_duplicate_write`: the retried CAS returns the stored verdict and writes once. |
+| Hot-path proof | `MEDULLA-DURABLE-KERNEL-R102.5` | `crates/medulla-server-blob/src/kv/dispatch_tests.rs::kv_served_hot_path_meets_latency_budgets`: measured p50/p99 within the budgets. |
+| Shared namespace | `MEDULLA-DURABLE-KERNEL-R102.6` | `crates/medulla-server-blob/src/kv/dispatch_tests.rs::kv_shared_namespace_spans_principals_and_needs_kv_shared_write`: private keys never cross principals; a shared key does, and a coarse-write principal is refused. |
+- **MEDULLA-DURABLE-KERNEL-R028.3:** `crates/medulla-work-store/src/redb_store/work_item/lease/tests.rs` tests live, expired and missing worker lease expiry against engine time, unchanged refused rows and unfenced compatibility. Runtime execution pending hosted CI.
 
 ## Pending envelope storage
 
@@ -389,9 +389,9 @@ Hot-path proof for `MEDULLA-DURABLE-KERNEL-R101`: `tests/scheduler/test_downtime
 | Listener refusals | `MEDULLA-DURABLE-KERNEL-R860.5` | `tests/wire_listeners_one_store.rs::unauthenticated_sessions_refuse` |
 | Hot-path proof: one store behind four protocols | `MEDULLA-DURABLE-KERNEL-R860.6` | `tests/wire_listeners_one_store.rs::write_one_protocol_read_all` |
 | Lifecycle replay and listing survive a patch upgrade (rollup) | `MEDULLA-DURABLE-KERNEL-R861` | Rollup: satisfied when the test of every child passes. |
-| Lifecycle replay compares the stored identity | `MEDULLA-DURABLE-KERNEL-R861.1` | `src/server/mutation_batch/lifecycle_tests.rs::lifecycle_replay_compares_identity_not_recompiled_bytes` |
+| Lifecycle replay compares the stored identity | `MEDULLA-DURABLE-KERNEL-R861.1` | `crates/medulla-server-store-tests/src/split_tests/mutation_batch_lifecycle.rs::lifecycle_replay_compares_identity_not_recompiled_bytes` |
 | Graph listing survives a restart and a patch upgrade | `MEDULLA-DURABLE-KERNEL-R861.2` | `tests/test_upgrade_store_listing.py::test_reopened_store_lists_graphs_for_the_stored_policy` |
-| Engine migrates an older supported store at open | `MEDULLA-DURABLE-KERNEL-R070.1` | `src/server/persistence/store_upgrade/auto_migrate_tests.rs::an_interrupted_migration_resumes_at_the_next_open` and the other tests of that file |
+| Engine migrates an older supported store at open | `MEDULLA-DURABLE-KERNEL-R070.1` | `crates/medulla-persistence-ops/src/store_upgrade/auto_migrate_tests.rs::an_interrupted_migration_resumes_at_the_next_open` and the other tests of that file |
 | Previous-patch store migrates and serves at open | `MEDULLA-DURABLE-KERNEL-R070.2` | `tests/test_store_auto_migrate.py::test_open_migrates_a_previous_patch_store_and_serves` |
 | Copied store or bundle restores onto new files (rollup) | `MEDULLA-DURABLE-KERNEL-R862` | Rollup: satisfied when the test of every child passes. |
 | Restore reads bundle sources by content | `MEDULLA-DURABLE-KERNEL-R862.1` | Copied-bundle restore unit test (not yet written; see #709). |
@@ -438,7 +438,7 @@ They drive the served MutationBatch path with authenticated requests.
 
 ## Ordered conversation admission (MEDULLA-DURABLE-KERNEL-R028.4.3)
 
-Source tests live in `src/redb_store/work_item/conversation/tests.rs`.
+Source tests live in `crates/medulla-work-store/src/redb_store/work_item/conversation/tests.rs`.
 They use the existing native row applier inside a maintenance transaction.
 They do not prove the server MutationBatch replay path or model continuation.
 Each distinct fixture write uses a distinct maintenance operation ID. Reusing a

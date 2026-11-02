@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: E501
 """Fail closed when the behavior-preserving dispatch module cut drifts."""
 
 from __future__ import annotations
@@ -75,49 +76,57 @@ REDUNDANT_WRAPPERS = {
 }
 
 ROUTE_OWNERS = {
-    "dispatch_service_control_methods": "src/server/dispatch/router/service_control.rs",
-    "dispatch_source_ingest_methods": "src/server/dispatch/router/source_ingest.rs",
-    "dispatch_resource_cost_methods": "src/server/dispatch/router/resource_cost.rs",
-    "dispatch_graph_lifecycle_methods": "src/server/dispatch/router/graph_lifecycle.rs",
-    "dispatch_channel_methods": "src/server/dispatch/router/channels.rs",
+    "dispatch_service_control_methods": "crates/medulla-server-router/src/dispatch/router/service_control.rs",
+    "dispatch_source_ingest_methods": "crates/medulla-server-router/src/dispatch/router/source_ingest.rs",
+    "dispatch_resource_cost_methods": "crates/medulla-server-router/src/dispatch/router/resource_cost.rs",
+    "dispatch_graph_lifecycle_methods": "crates/medulla-server-router/src/dispatch/router/graph_lifecycle.rs",
+    "dispatch_channel_methods": "crates/medulla-server-router/src/dispatch/router/channels.rs",
     "dispatch_identity_and_access_methods": (
-        "src/server/dispatch/router/identity_access.rs"
+        "crates/medulla-server-router/src/dispatch/router/identity_access.rs"
     ),
-    "dispatch_decision_plane_methods": ("src/server/dispatch/router/decision_plane.rs"),
-    "dispatch_decision_methods": "src/server/dispatch/router/decision_plane.rs",
-    "dispatch_catalog_admin_methods": ("src/server/dispatch/router/decision_plane.rs"),
-    "route_change_envelope_ops": "src/server/dispatch/change_envelope.rs",
-    "route_graph_op_method": "src/server/dispatch/graph_pipeline/native_routes.rs",
+    "dispatch_decision_plane_methods": (
+        "crates/medulla-server-router/src/dispatch/router/decision_plane.rs"
+    ),
+    "dispatch_decision_methods": "crates/medulla-server-router/src/dispatch/router/decision_plane.rs",
+    "dispatch_catalog_admin_methods": (
+        "crates/medulla-server-router/src/dispatch/router/decision_plane.rs"
+    ),
+    "route_change_envelope_ops": "crates/medulla-server-graph/src/dispatch/change_envelope.rs",
+    "route_graph_op_method": "crates/medulla-server-graph/src/dispatch/graph_pipeline/native_routes.rs",
     # `dispatch_op_workitem_mutation` was split in two during the decomposition
     # and this map was never updated, so the gate asserted ownership of a
     # function that exists in neither this tree nor EG main b2ac7b93 -- it had
     # been failing on both. Assert the two real successors instead of dropping
     # the check.
     "dispatch_op_workitem_claim_capability": (
-        "src/server/dispatch/graph_pipeline/work_governance.rs"
+        "crates/medulla-server-graph/src/dispatch/graph_pipeline/work_governance.rs"
     ),
     "dispatch_op_workitem_submission_or_resources": (
-        "src/server/dispatch/graph_pipeline/work_governance.rs"
+        "crates/medulla-server-graph/src/dispatch/graph_pipeline/work_governance.rs"
     ),
 }
 
 ROUTE_CALLERS = {
-    "dispatch_service_control_methods": "src/server/dispatch/router.rs",
-    "dispatch_source_ingest_methods": "src/server/dispatch/router.rs",
-    "dispatch_resource_cost_methods": "src/server/dispatch/router.rs",
-    "dispatch_graph_lifecycle_methods": "src/server/dispatch/router.rs",
-    "dispatch_channel_methods": "src/server/dispatch/router.rs",
-    "dispatch_identity_and_access_methods": "src/server/dispatch/router.rs",
-    "dispatch_decision_plane_methods": "src/server/dispatch/router.rs",
-    "dispatch_decision_methods": ("src/server/dispatch/router/decision_plane.rs"),
-    "dispatch_catalog_admin_methods": ("src/server/dispatch/router/decision_plane.rs"),
-    "route_change_envelope_ops": "src/server/dispatch/graph_pipeline/native_routes.rs",
-    "route_graph_op_method": "src/server/dispatch/graph_pipeline/graph_dispatch.rs",
+    "dispatch_service_control_methods": "crates/medulla-server-router/src/dispatch/router.rs",
+    "dispatch_source_ingest_methods": "crates/medulla-server-router/src/dispatch/router.rs",
+    "dispatch_resource_cost_methods": "crates/medulla-server-router/src/dispatch/router.rs",
+    "dispatch_graph_lifecycle_methods": "crates/medulla-server-router/src/dispatch/router.rs",
+    "dispatch_channel_methods": "crates/medulla-server-router/src/dispatch/router.rs",
+    "dispatch_identity_and_access_methods": "crates/medulla-server-router/src/dispatch/router.rs",
+    "dispatch_decision_plane_methods": "crates/medulla-server-router/src/dispatch/router.rs",
+    "dispatch_decision_methods": (
+        "crates/medulla-server-router/src/dispatch/router/decision_plane.rs"
+    ),
+    "dispatch_catalog_admin_methods": (
+        "crates/medulla-server-router/src/dispatch/router/decision_plane.rs"
+    ),
+    "route_change_envelope_ops": "crates/medulla-server-graph/src/dispatch/graph_pipeline/native_routes.rs",
+    "route_graph_op_method": "crates/medulla-server-graph/src/dispatch/graph_pipeline/graph_dispatch.rs",
     "dispatch_op_workitem_claim_capability": (
-        "src/server/dispatch/graph_pipeline/native_routes.rs"
+        "crates/medulla-server-graph/src/dispatch/graph_pipeline/native_routes.rs"
     ),
     "dispatch_op_workitem_submission_or_resources": (
-        "src/server/dispatch/graph_pipeline/native_routes.rs"
+        "crates/medulla-server-graph/src/dispatch/graph_pipeline/native_routes.rs"
     ),
 }
 
@@ -269,19 +278,23 @@ def check_post_lock_route_order(native_routes: str) -> None:
 
 
 def check_legacy_coalescer(parts: dict[str, str]) -> None:
-    graph_family = family_source(parts, "src/server/dispatch/graph_pipeline.rs")
+    graph_family = family_source(
+        parts, "crates/medulla-server-graph/src/dispatch/graph_pipeline.rs"
+    )
     require(
         "try_coalesce_write" not in graph_family,
         "unreachable legacy coalescer fallback returned",
     )
-    gateway = parts.get("src/server/handlers/graph_ops/gateway_graph.rs")
+    gateway = parts.get("crates/medulla-h-graph/src/graph_ops/gateway_graph.rs")
     if gateway is None:
         gateway = read_compiler_family(
-            ROOT / "src/server/handlers/graph_ops/gateway_graph.rs", ROOT
+            ROOT / "crates/medulla-h-graph/src/graph_ops/gateway_graph.rs", ROOT
         ).production
     gateway = _rust_code_mask(gateway)
     mutation = _rust_comments_mask(
-        read_compiler_family(ROOT / "src/server/mutation.rs", ROOT).production
+        read_compiler_family(
+            ROOT / "crates/medulla-server-mutation/src/mutation.rs", ROOT
+        ).production
     )
     routed = mutation.split("pub const GATEWAY_ROUTED: &[&str] = &[", 1)[1].split(
         "\n];", 1
@@ -298,16 +311,20 @@ def check_legacy_coalescer(parts: dict[str, str]) -> None:
 
 
 def check_routing_and_coalescing(parts: dict[str, str]) -> None:
-    graph = parts["src/server/dispatch/graph_pipeline/pipeline.rs"]
+    graph = parts["crates/medulla-server-graph/src/dispatch/graph_pipeline/pipeline.rs"]
     check_route_order(graph)
     check_post_lock_route_order(
-        parts["src/server/dispatch/graph_pipeline/native_routes.rs"]
+        parts[
+            "crates/medulla-server-graph/src/dispatch/graph_pipeline/native_routes.rs"
+        ]
     )
     check_legacy_coalescer(parts)
 
 
 def check_consensus_exhaustiveness(parts: dict[str, str]) -> None:
-    consensus = parts["src/server/dispatch/consensus/routing.rs"]
+    consensus = parts[
+        "crates/medulla-server-consensus/src/dispatch/consensus/routing.rs"
+    ]
     start = consensus.index("fn native_route_target(")
     end = consensus.index("\n}\n", start) + 2
     route = _rust_code_mask(consensus[start:end])

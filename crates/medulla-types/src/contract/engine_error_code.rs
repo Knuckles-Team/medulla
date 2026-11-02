@@ -1,7 +1,7 @@
 //! Shared wire refusal codes. Domain-specific vocabularies remain beside their
 //! result types and are included in the generated error catalog.
 
-use super::closed_error_codes;
+use crate::closed_error_codes;
 
 closed_error_codes! {
     /// Refusals emitted before a request reaches its domain handler.

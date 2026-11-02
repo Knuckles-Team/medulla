@@ -1,5 +1,5 @@
 #![cfg(feature = "server")]
-use medulla::protocol::Request;
+use medulla_protocol_types::protocol::Request;
 #[test]
 fn test_parse() {
     // `agent_id` is a REQUIRED-present (possibly-null) field on the wire `Request`

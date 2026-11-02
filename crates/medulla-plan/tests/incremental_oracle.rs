@@ -21,7 +21,7 @@
 
 use std::collections::BTreeMap;
 
-use medulla_plan::{Circuit, Delta, ZRow};
+use medulla_exec::{incremental::Circuit, incremental::Delta, incremental::ZRow};
 use medulla_types::wire::{Op, Plan, Pred, TimeAxis};
 use proptest::prelude::*;
 use serde_json::{json, Map, Value};

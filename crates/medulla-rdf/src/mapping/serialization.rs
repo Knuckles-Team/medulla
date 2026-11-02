@@ -22,13 +22,15 @@ pub fn export_triples(core: &GraphCore, graph_name: &str) -> Result<Vec<Triple>,
     Ok(out)
 }
 
-/// Project an off-lock [`medulla_core::graph::GraphView`] snapshot to RDF triples — the
+/// Project an off-lock [`medulla_graph_core::graph::GraphView`] snapshot to RDF triples — the
 /// snapshot twin of [`export_triples`] over the same node/edge encodings (EH-196: the
 /// data graph a query-time shape validation reads). Only resources are projected: a node
 /// or edge endpoint whose id is not an RDF term (`<iri>` / `_:b`) is a plain property-
 /// graph element with no RDF identity, so it contributes no triple rather than failing
 /// the whole projection.
-pub fn export_view_triples(view: &medulla_core::graph::GraphView) -> Result<Vec<Triple>, String> {
+pub fn export_view_triples(
+    view: &medulla_graph_core::graph::GraphView,
+) -> Result<Vec<Triple>, String> {
     let mut out: Vec<Triple> = Vec::new();
     for ((s, o), blobs) in &view.edge_properties {
         if !is_rdf_term(s) || !is_rdf_term(o) {
@@ -258,7 +260,7 @@ pub fn to_jsonld(triples: &[Triple], graph: Option<&str>) -> Result<String, Stri
 /// RDF terms retain their identity; conflicting projected identities are refused.
 #[cfg(feature = "sparql")]
 pub fn export_view_projected(
-    view: &medulla_core::graph::GraphView,
+    view: &medulla_graph_core::graph::GraphView,
     projection: &crate::sparql::Projection,
 ) -> Result<Vec<Triple>, String> {
     use std::collections::HashMap;
@@ -338,7 +340,7 @@ fn projected_literal(
     if let Some(datatype) = datatype {
         let datatype = datatype
             .as_str()
-            .filter(|value| medulla_types::connector_pack::source_datatype_supported(value))
+            .filter(|value| medulla_catalog_types::connector_pack::source_datatype_supported(value))
             .ok_or("invalid source datatype")?;
         let lexical = match cell {
             serde_json::Value::String(value) => value.clone(),

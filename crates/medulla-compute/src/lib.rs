@@ -1,6 +1,9 @@
 // Compute primitives built ahead of their wire exposure (e.g. parametric_var,
 // inv_norm) are kept; matches the facade's long-standing crate-level posture.
+#![allow(clippy::too_many_arguments, clippy::items_after_test_module, clippy::new_without_default)] // signatures and fixtures carried over from the facade
+#![allow(private_interfaces, private_bounds)] // visibility is narrowed by the unreachable_pub pass
 #![allow(dead_code)]
+#![allow(unused_imports)] // glob imports carried over from the facade; the visibility pass prunes them
 
 //! medulla-compute — the compute domains layered above the graph core: always-on graph
 //! `algorithms` + `ast`/`parser` (their tree-sitter parts gated by `ast`), plus the
@@ -9,12 +12,15 @@
 //!
 //! Re-export the lower crates under the historical `crate::` paths so the moved
 //! bodies (`crate::graph::`, `crate::types::`, `crate::wire::`) resolve unchanged.
-pub use medulla_core::{compute, graph, isolation, registry};
-pub use medulla_types::{acl, protocol, types, wire};
+pub use medulla_core::registry;
+pub use medulla_graph_core::graph;
+pub use medulla_isolation::isolation;
+pub use medulla_protocol_types::protocol;
+pub use medulla_types::{acl, types, wire};
 
 /// Find a disjoint-set root while halving each traversed path. Both entity
 /// resolution clusters and impact polytree detection use this exact rule.
-pub(crate) fn union_find_root(parent: &mut [usize], mut node: usize) -> usize {
+pub fn union_find_root(parent: &mut [usize], mut node: usize) -> usize {
     while parent[node] != node {
         parent[node] = parent[parent[node]];
         node = parent[node];
@@ -42,38 +48,40 @@ pub fn splitmix64_next(state: &mut u64) -> u64 {
 /// [`splitmix64_next`], so each caller's stream is bit-for-bit what its local
 /// copy produced — the seeded reproducibility those algorithms document is
 /// preserved exactly.
-pub(crate) struct SplitMix64 {
+pub struct SplitMix64 {
     state: u64,
 }
 
 impl SplitMix64 {
-    pub(crate) fn new(seed: u64) -> Self {
+    pub fn new(seed: u64) -> Self {
         Self { state: seed }
     }
 
-    pub(crate) fn next_u64(&mut self) -> u64 {
+    pub fn next_u64(&mut self) -> u64 {
         splitmix64_next(&mut self.state)
     }
 
     /// A uniform `f64` in `[0, 1)`, via the top 53 bits (the standard
     /// integer-to-double technique — full `f64` mantissa precision).
-    pub(crate) fn next_f64(&mut self) -> f64 {
+    pub fn next_f64(&mut self) -> f64 {
         (self.next_u64() >> 11) as f64 * (1.0 / (1u64 << 53) as f64)
     }
 
     /// Uniform integer in `[0, bound)`; `bound` must be positive.
-    pub(crate) fn below(&mut self, bound: usize) -> usize {
+    pub fn below(&mut self, bound: usize) -> usize {
         (self.next_u64() % bound as u64) as usize
     }
 }
 
-pub mod algorithms;
-pub(crate) mod node_labels;
+pub mod node_labels;
 // CONCEPT:MEDULLA-KG.compute.graph-data-science-algorithms — standalone graph data-science algorithms (Neo4j GDS parity).
 // Pure-Rust, deterministic, generic over node id; decoupled from the live engine
 // graph so it is unit-testable in isolation. Always-on (no heavy deps).
 pub mod ast;
-pub mod graph_algos;
+
+// ModalityContract retrofit for `ast::symbol::Symbol` (CONCEPT:E4/X1), opt-in `contract` feature.
+#[cfg(feature = "contract")]
+mod contract;
 pub mod parser;
 pub mod screen;
 // MEDULLA-SCM-R013.2 — projection of a graph-native symbol edit to file bytes and one changeset.
@@ -88,50 +96,15 @@ pub mod test_support;
 // UDFs), which is why it lives here rather than in either consumer. Always-on (no heavy deps).
 pub mod sketch;
 
-// ModalityContract retrofit (CONCEPT:E4): `impl ModalityContract for MergeProposal`,
-// behind the crate's own opt-in `contract` feature (default OFF). See `src/contract.rs`.
-#[cfg(feature = "contract")]
-mod contract;
-
 #[cfg(feature = "datascience")]
 pub mod datascience;
-#[cfg(feature = "finance")]
-pub mod finance;
-// CONCEPT:MEDULLA-KG.mining.frequent-itemset-mining — descriptive data-mining domain
-// (frequent itemsets + association rules). Pure-Rust, dependency-light, batch;
-// graph-agnostic (works over interned item ids), so it is unit-testable in
-// isolation. Feature-gated like finance/datascience so a slim build drops it.
-#[cfg(feature = "mining")]
-pub mod mining;
-// CONCEPT:MEDULLA-KG.graphlearn.link-predictor — graph-learning / neuro-symbolic domain.
-// A pure-Rust KAN (Kolmogorov-Arnold) link-predictor over the resident graph: a
-// polynomial-basis learnable edge function (`edge_fn`), a 1–2 layer KAN link-scorer
-// over structural features (`link_predict`), and 1-hop neighbor aggregation
-// (`neighbor_aggregate`). Graph-agnostic (works over `graph_algos::AdjacencyGraph`),
-// so it is unit-testable in isolation. Feature-gated like mining; implies
-// `datascience` for the shared Adam/SGD training kernels.
-#[cfg(feature = "graphlearn")]
-pub mod graphlearn;
 // CONCEPT:MEDULLA-KG.compute.bayesian-fusion-helpers — Bayesian-update / mixture / fusion helpers over the
 // `medulla_types::Distribution` value. Conjugate posteriors are closed-form (no
 // sampling), so this rides the pure `reasoning` feature (no heavy dep).
 #[cfg(feature = "reasoning")]
 pub mod probabilistic;
-#[cfg(feature = "reasoning")]
-pub mod reasoning;
-// Decide layer package A3 — general bounded 0-1 integer programming: validated
-// models, deterministic node-budgeted branch-and-bound, Lagrangian leaf-bound
-// certificates and an independent verifier. Integer-only, no heavy deps.
-#[cfg(feature = "solve")]
-pub mod solve;
 // Decide layer packages A2/A5 — the assembly decision function: step-1b
 // eliminations, the typed model over the legal remainder, the solve with its
 // no-good loop, why-not re-solves and the sealed, replayable record.
 #[cfg(feature = "decide")]
 pub mod assemble;
-// CONCEPT:MEDULLA-KG.compute.reasoning-closure-gpu — semi-naive integer-interned rewrite of
-// the `reasoning` fixpoint, with the transitive-closure join factored behind a
-// `ClosureBackend` seam (CPU always-on + feature-gated CUDA kernel). Rides `reasoning`;
-// the CUDA leg is further gated by `gpu-cuda`.
-#[cfg(feature = "reasoning")]
-pub mod reasoning_closure;

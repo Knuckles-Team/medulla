@@ -55,9 +55,9 @@ mod test_support;
 
 use serde_json::json;
 
-use medulla::isolation::AgentRole;
-use medulla::protocol::{Method, Request, Response, ResultPayload};
-use medulla::server::dispatch;
+use medulla_types::acl::AgentRole;
+use medulla_protocol_types::protocol::{Method, Request, Response, ResultPayload};
+use medulla_server_router::dispatch::request_boundary::dispatch;
 
 const SECRET: &str = "served-semantic-search-discover-rls-secret";
 
@@ -78,9 +78,9 @@ async fn state() -> test_support::SharedState {
 /// `System`-role and bypasses RBAC, but the `alice`/`bob` peers this file registers
 /// (plain `AgentRole::Agent`) do not, or every RPC they make is `ACCESS_DENIED` before
 /// row-level RLS is ever reached.
-fn commons_isolation() -> medulla::isolation::IsolationLayer {
+fn commons_isolation() -> medulla_isolation::isolation::IsolationLayer {
     let mut isolation = common::current_isolation();
-    use medulla::acl::{Grant, GrantEffect, RbacAction, ResourceSelector, Role};
+    use medulla_types::acl::{Grant, GrantEffect, RbacAction, ResourceSelector, Role};
     isolation.add_role(Role::new(COMMONS_USER_ROLE));
     let grant = |action: RbacAction| Grant {
         role: COMMONS_USER_ROLE.to_string(),

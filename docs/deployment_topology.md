@@ -14,7 +14,7 @@ flowchart TD
 
     subgraph Optional["Optional — enhance, never required"]
         AU["agent-utilities<br/>orchestrator + KG hub (arbora)"]
-        WEBUI["agent-webui<br/>web visualization of the DB"]
+        WEBUI["overstory<br/>web visualization of the DB"]
         TUI["agent-terminal-ui<br/>terminal client"]
         GBOT["geniusbot<br/>desktop cockpit"]
     end
@@ -35,7 +35,7 @@ flowchart TD
 |-----------|------|------------|-------|-------------------------|-----------|
 | **Medulla** | `medulla` | The durable multi-modal database engine — the whole product. | nothing | *is* the engine | **Always** |
 | **agent-utilities** | `agent-utilities` | The orchestrator + Knowledge-Graph hub (`arbora`). Uses **every** engine feature — ontology/OWL reasoning, ingestion, agents, the loop engine — and exposes it to the fleet over MCP. | Medulla | MessagePack RPC (`GRAPH_SERVICE_TCP_ADDR`) or UDS + the native `medulla` client | Optional |
-| **agent-webui** | `agent-webui` | A web UI to **visualize and explore the database** (graphs, tables, query results). | agent-utilities (and/or direct engine reads) | through agent-utilities; can also read the DB directly | Optional |
+| **overstory** | `overstory` | A web UI to **visualize and explore the database** (graphs, tables, query results). | agent-utilities (and/or direct engine reads) | through agent-utilities; can also read the DB directly | Optional |
 | **agent-terminal-ui** | `agent-terminal-ui` | A terminal client for the fleet. | agent-utilities | through agent-utilities | Optional |
 | **geniusbot** | `geniusbot` | A desktop "cockpit" (PySide6/Qt) — visual command centre over the fleet. | agent-utilities | through agent-utilities | Optional |
 
@@ -76,9 +76,9 @@ present; agent-utilities simply points its `GRAPH_SERVICE_TCP_ADDR` /
 
 ### 3. Engine + agent-utilities + UIs
 
-Add any of **agent-webui** (visualize the database in a browser),
+Add any of **overstory** (visualize the database in a browser),
 **agent-terminal-ui**, or **geniusbot** (desktop cockpit). These are front-ends over
-the orchestrator; **agent-webui** is the visualization tool for the database.
+the orchestrator; **overstory** is the visualization tool for the database.
 
 → agent-utilities [ecosystem / frontends docs](#interlinks-with-agent-utilities).
 
@@ -120,7 +120,7 @@ reading (paths are in the `agent-utilities` repo under `docs/`):
 - **`docs/recipes/enterprise.md`** — multi-host Swarm; the engine deployed as a
   shared/remote database.
 - **`docs/pillars/6_geniusbot_cockpit.md`** — the geniusbot desktop cockpit.
-- **`docs/ecosystem.md`** — how agent-webui / agent-terminal-ui / geniusbot fit as
+- **`docs/ecosystem.md`** — how overstory / agent-terminal-ui / geniusbot fit as
   peripherals to the platform.
 
 > **Reverse links wanted.** The agent-utilities docs above currently reference the

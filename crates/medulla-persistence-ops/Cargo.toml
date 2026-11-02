@@ -1,0 +1,60 @@
+[package]
+name = "medulla-persistence-ops"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: Backup, cold offload, online reshard, shard migration and store upgrade"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_persistence_ops"
+path = "src/lib.rs"
+
+[dependencies]
+medulla-persistence = { path = "../medulla-persistence" }
+medulla-protocol-types = { path = "../medulla-protocol-types" }
+medulla-transaction = { path = "../medulla-transaction", optional = true }
+medulla-persistence-records = { path = "../medulla-persistence-records" }
+tempfile = { version = "3", optional = true }
+hex = "0.4"
+medulla-kernel = { path = "../medulla-kernel" }
+medulla-server-api = { path = "../medulla-server-api" }
+medulla-server-auth = { path = "../medulla-server-auth" }
+medulla-storage = { path = "../medulla-storage", optional = true }
+medulla-store = { path = "../medulla-store" }
+medulla-store-apply = { path = "../medulla-store-apply" }
+medulla-types = { path = "../medulla-types" }
+redb = { workspace = true, optional = true }
+rmp-serde = "1.3"
+serde = { version = "1.0", features = ["derive", "rc"] }
+serde_json = "1.0"
+sha2 = "0.10"
+tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "signal", "macros"] }
+tracing = "0.1"
+medulla-direct-state = { path = "../medulla-direct-state" }
+medulla-graph-core = { path = "../medulla-graph-core" }
+medulla-table-store = { path = "../medulla-table-store" }
+
+object_store = { version = "0.14.2", optional = true, features = ["aws"] }
+
+[features]
+cold-tier = ["medulla-persistence/cold-tier", "medulla-graph-core/cold-tier"]
+cold-tier-s3 = ["cold-tier", "medulla-persistence/cold-tier-s3", "dep:object_store", "redb", "server"]
+metrics = ["medulla-persistence/metrics", "medulla-kernel/metrics", "medulla-protocol-types/metrics", "medulla-server-api/metrics", "medulla-store-apply/metrics", "medulla-store/metrics", "medulla-types/metrics"]
+query = ["redb", "medulla-persistence/query", "medulla-kernel/query", "medulla-protocol-types/query", "medulla-server-api/query", "medulla-server-auth/query", "medulla-store/query", "medulla-types/query"]
+raft = ["redb", "medulla-persistence/raft", "medulla-kernel/raft", "medulla-server-api/raft", "medulla-server-auth/raft", "medulla-store-apply/raft", "medulla-store/raft", "server"]
+server = ["medulla-persistence/server", "medulla-kernel/server", "medulla-server-api/server", "medulla-store/server"]
+redb = ["dep:redb", "dep:medulla-transaction", "dep:medulla-storage", "medulla-persistence/redb", "medulla-persistence-records/redb", "medulla-kernel/redb", "medulla-server-api/redb", "medulla-store/redb"]
+[dev-dependencies]
+medulla-persistence = { path = "../medulla-persistence", features = ["test-support"] }
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
+medulla-persistence-records = { path = "../medulla-persistence-records", features = ["test-support"] }
+medulla-server-api = { path = "../medulla-server-api", features = ["test-support", "request-policy-fixture"] }
+medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support", "test-ambient-auth"] }
+medulla-store-apply = { path = "../medulla-store-apply", features = ["test-support"] }
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-direct-state = { path = "../medulla-direct-state", features = ["test-support"] }
+medulla-store = { path = "../medulla-store", features = ["test-support", "server"] }
+medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }
+tempfile = "3"

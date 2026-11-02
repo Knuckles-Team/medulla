@@ -19,7 +19,7 @@ use crate::scoped::{
     OwnerReadTable, ScopedOwnerTable, ScopedOwnerTableMut, ScopedTable, ScopedTableMut,
 };
 use crate::tables::LedgerRowScope;
-use medulla_types::MutationScopeIdentity;
+use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
 use redb::{ReadOnlyTable, ReadTransaction, Table, TableDefinition, TableHandle};
 use std::marker::PhantomData;
 use std::sync::Arc;
