@@ -1,4 +1,4 @@
-//! EH-522 — the `eg_<func>` SQL window functions: per-partition, in `ORDER BY`, and
+//! EH-522 — the `medulla_<func>` SQL window functions: per-partition, in `ORDER BY`, and
 //! bit-identical to the one series kernel behind UQL `DERIVE` (`medulla_tsdb::derive::Program`)
 //! and the finance entries (`medulla_finance_market::signals`). Only compiles under `numeric`.
 #![cfg(feature = "numeric")]
@@ -50,6 +50,7 @@ fn nan_to_none(xs: Vec<f64>) -> Vec<Option<f64>> {
     xs.into_iter().map(|x| (!x.is_nan()).then_some(x)).collect()
 }
 
+// spec: MEDULLA-FINANCE-PRIMITIVES-R002.2.1.1
 #[test]
 fn window_functions_equal_the_derive_program_and_the_finance_entries() {
     let (core, a, b) = graph();

@@ -1,0 +1,16 @@
+[package]
+name = "medulla-test-ambient-auth"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "Test harness: switches a test binary to the ambient auth posture before any test runs. A dev-dependency only."
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_test_ambient_auth"
+path = "src/lib.rs"
+
+[dependencies]
+ctor = "1"
+medulla-server-auth = { path = "../medulla-server-auth", features = ["test-ambient-auth"] }

@@ -122,12 +122,13 @@ fn live_service_query_returns_real_filtered_rows_from_fuseki() {
     }
 }
 
-/// Negative P1/D1: a host NOT on the allowlist is refused by NAME (SSRF guard), never a
-/// silent empty solution -- proven directly against the client used in production. Uses an
-/// RFC 2606 `.example` placeholder host (never resolvable, never a real internal endpoint)
-/// since `check_endpoint` rejects on the allowlist-membership STRING check before any DNS
-/// resolution or network I/O happens, so the target need not be reachable, or even
-/// Fuseki-shaped, to prove the guard fires.
+/// Negative P1/D1: a host NOT on the allowlist is refused by the SSRF guard with its typed
+/// refusal, never a silent empty solution -- proven directly against the client used in
+/// production. The refusal does not echo the destination (endpoints are redacted from
+/// errors, 70c542166). Uses an RFC 2606 `.example` placeholder host (never resolvable,
+/// never a real internal endpoint) since the guard rejects on the allowlist-membership
+/// check before any DNS resolution or network I/O happens, so the target need not be
+/// reachable, or even Fuseki-shaped, to prove the guard fires.
 // spec: MEDULLA-FEDERATED-QUERY-R050
 #[test]
 fn disallowed_host_is_refused_by_name_not_silently_emptied() {
@@ -138,9 +139,13 @@ fn disallowed_host_is_refused_by_name_not_silently_emptied() {
             "SELECT * WHERE { ?s ?p ?o }",
         )
         .expect_err("unallowed-target.example is not on this allowlist; must be refused");
+    assert_eq!(
+        err, "federation: destination is not allowed",
+        "refusal must be the SSRF guard's typed refusal, not another failure"
+    );
     assert!(
-        err.contains("not in allowlist"),
-        "refusal must name the SSRF guard, not fail some other way: {err}"
+        !err.contains("unallowed-target"),
+        "the refusal must not echo the refused destination: {err}"
     );
 }
 

@@ -282,7 +282,7 @@ rrank zscore` (window `w`), `ewma` (span), `ewma_halflife`, `abs sign neg clip(x
 `v0..vk`, `score` and earlier aliases, and writes its alias as a value channel; each column
 keeps its own warm-up (no value until its window fills). `rstd`/`zscore` use the population
 deviation, `ewma` is the recursive form seeded with the first value. The kernels are
-`medulla_numeric::series` — the same ones the SQL `eg_<func>(…) OVER (PARTITION BY … ORDER BY …)`
+`medulla_numeric::series` — the same ones the SQL `medulla_<func>(…) OVER (PARTITION BY … ORDER BY …)`
 window functions and a materialised derived series (`TsDefineSeries`) run.
 
 ```uql

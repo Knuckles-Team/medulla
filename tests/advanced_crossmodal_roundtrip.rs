@@ -341,6 +341,7 @@ async fn off_txn_text(state: &Arc<RwLock<ServerState>>, id: u64, text: &str) -> 
 /// (The staged measurement is durable-only; on this in-memory-tier engine it is dropped at
 /// commit by design — its RYOW visibility in step 1 is the in-txn proof. The redb-durable
 /// atomic-commit-of-measurement path is exercised by the durability suite.)
+// spec: MEDULLA-CONTRACT-R056.18
 #[tokio::test]
 async fn five_modality_in_txn_ryow_then_commit_eg390() {
     let state = state().await;

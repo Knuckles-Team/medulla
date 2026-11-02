@@ -149,6 +149,20 @@ async fn run_admission_unavailable_is_a_declared_wire_refusal() {
     use medulla_h_jobs::work_item_read::WorkItemRead;
     use medulla_persistence::redb_backend::RedbBackend;
     use std::sync::Arc;
+    // The rows below are written unsealed (`DurableCrypto::none()`), so the backend must open
+    // them with no at-rest key configured. Another test in this binary provisions one for the
+    // whole process, so hold the environment exclusively, unset the key, and put it back.
+    struct KeyRestore(Option<String>);
+    impl Drop for KeyRestore {
+        fn drop(&mut self) {
+            if let Some(key) = self.0.take() {
+                std::env::set_var(medulla_kernel::crypto::ENCRYPTION_KEY_ENV, key);
+            }
+        }
+    }
+    let _env_lock = medulla_kernel::crypto::acquire_test_env_lock().await;
+    let _restore = KeyRestore(std::env::var(medulla_kernel::crypto::ENCRYPTION_KEY_ENV).ok());
+    std::env::remove_var(medulla_kernel::crypto::ENCRYPTION_KEY_ENV);
     for (tag, evidence) in [("legacy", None), ("malformed", Some(serde_json::json!({})))] {
         let dir = medulla_store::redb_store::temp_path("medulla-run-wire-refusal", tag);
         std::fs::create_dir_all(&dir).unwrap();

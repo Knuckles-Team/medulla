@@ -119,5 +119,6 @@ medulla-server-mutation = { path = "../medulla-server-mutation", features = ["te
 medulla-exec = { path = "../medulla-exec", features = ["test-support"] }
 medulla-federation = { path = "../medulla-federation", features = ["test-support"] }
 medulla-server = { path = "../medulla-server", features = ["blob", "compute-dist", "cost-opt", "epistemic", "federation", "federation-sql", "full", "geo", "geosparql", "gpu", "gpu-cuda", "jobs", "json-ld", "knowledge-batch", "kv", "matview", "nl-query", "numeric", "owl", "owl-dl", "owl-plan", "par-runtime", "promql", "query", "raft", "rdf", "rdf-xml", "redb", "security", "server", "server-tls", "shacl", "sparql", "sparql-hash", "sparql-star", "stream", "streaming", "tensor", "test-support", "text", "traces", "tsdb", "wasm-udf"] }
-medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support", "test-ambient-auth"] }
+medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }
+medulla-test-ambient-auth = { path = "../medulla-test-ambient-auth" }
 tempfile = "3"

@@ -109,5 +109,6 @@ medulla-persistence-records = { path = "../medulla-persistence-records", feature
 medulla-server-ops = { path = "../medulla-server-ops", features = ["test-support"] }
 medulla-server-mutation = { path = "../medulla-server-mutation", features = ["test-support"] }
 medulla-server = { path = "../medulla-server", features = ["test-support"] }
-medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support", "test-ambient-auth"] }
+medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }
+medulla-test-ambient-auth = { path = "../medulla-test-ambient-auth" }
 tempfile = "3"
