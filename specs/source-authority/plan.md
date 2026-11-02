@@ -3,7 +3,7 @@
 ## Problem and evidence
 
 - `crates/medulla-core/ontology/virtual_graph-v1.ttl` defines `vg:SourceConnection`, `vg:MetadataContract`, `vg:VirtualMapping`, `vg:PredicateFieldPair` and the properties `vg:mapsOntologyClass`, `vg:mapsEntity`, `vg:keyField`, `vg:approved`. A grep of the file and of `virtual_graph-v1.shapes.ttl` for `authority`, `rank`, `priority`, `fresh` finds nothing. There is no statement that a source is the authority for a concept.
-- `vg:approved` is a plain `xsd:boolean` on a `vg:VirtualMapping`, `maxCount 1`, with no shape tying it to who set it. In Rust code outside tests nothing reads it (grep `vg:approved` over `crates`, `src`: one hit, the fixture `src/server/graph_schema/virtual_graph_tests.rs:35`). "Only an approved mapping serves reads" (`MEDULLA-UNIFIED-DATA-PLANE-R037`) is therefore a stated rule with no enforcing reader yet.
+- `vg:approved` is a plain `xsd:boolean` on a `vg:VirtualMapping`, `maxCount 1`, with no shape tying it to who set it. In Rust code outside tests nothing reads it (grep `vg:approved` over `crates`, `src`: one hit, the fixture `crates/medulla-h-admin/src/graph_schema/virtual_graph_tests.rs:35`). "Only an approved mapping serves reads" (`MEDULLA-UNIFIED-DATA-PLANE-R037`) is therefore a stated rule with no enforcing reader yet.
 - Competency specs need it: `specs/orchestration-competency/requirements.md` rows `.3` of `R001` to `R007` say "declaring which connected source is the authority ... (`vg:mapsOntologyClass` plus the MISSING authority statement)"; `specs/cross-source-competency/plan.md` line 9 lists "any authority term" as MISSING.
 
 ## Architecture
@@ -29,15 +29,15 @@ answer rows + provenance (source, record id, as-of) + "sources used and why" (fr
 
 | Component | Repository, module |
 |---|---|
-| Vocabulary and shapes | Medulla, `crates/medulla-core/ontology/virtual_graph-v1.ttl`, `virtual_graph-v1.shapes.ttl` (already loaded as core sources by `crates/medulla-core/src/graph/schema_sources.rs` lines 809 to 817) |
-| Authority-aware selection, abstention and audit types | Medulla, `crates/medulla-rdf/src/source_selection.rs` (extend; no new planner) |
-| Approval of authority | Medulla, governed-change ledger `crates/medulla-types/src/governed_change.rs` plus `GraphSchema.AttachApproved` (`src/server/graph_schema/approved.rs`) |
+| Vocabulary and shapes | Medulla, `crates/medulla-core/ontology/virtual_graph-v1.ttl`, `virtual_graph-v1.shapes.ttl` (already loaded as core sources by `crates/medulla-graph-core/src/graph/schema_sources.rs` lines 809 to 817) |
+| Authority-aware selection, abstention and audit types | Medulla, `crates/medulla-virtual-graph/src/source_selection.rs` (extend; no new planner) |
+| Approval of authority | Medulla, governed-change ledger `crates/medulla-mutation-types/src/governed_change.rs` plus `GraphSchema.AttachApproved` (`crates/medulla-h-admin/src/graph_schema/approved.rs`) |
 | Registered, connected source lookup | Medulla, owner-scoped foreign catalog (`MEDULLA-FEDERATED-QUERY-R013`), variants in `crates/medulla-types/src/wire_query_modalities.rs` |
 | Printing the audit block | Arbora (cross-repo row) |
 
 ### What R072/R073 already read (D2, CONFIRMED)
 
-I opened `crates/medulla-rdf/src/source_selection.rs` (384 lines) and the federated rows.
+I opened `crates/medulla-virtual-graph/src/source_selection.rs` (384 lines) and the federated rows.
 
 - `select_sources(fixture, roots, hop_budget)` returns one `CoverageResult` per class: `Covered { class, mapping_name, path, premises }`, `Uncovered`, `Disconnected`. The `Premise` enum has `Label`, `Relation`, `Subclass`, `Mapping { served_class, mapping_name }`, `SourceGeneration { source, generation }`. Nothing authority-like: no rank, scope, freshness, connection-state or approval-origin.
 - The input is `CoverageFixture`, whose `mappings` field is `BTreeMap<String, (mapping name, source, generation)>` keyed by class and filled by `with_mapping` through `insert`. **Two sources mapping one class silently overwrite each other: the last insert wins.** The module doc says the live ontology and mapping catalog search is "a later child". So R072 today has no tie-breaking and no live read; the fixture is the whole implementation (`R072.1` only).
@@ -84,10 +84,10 @@ All terms go in `crates/medulla-core/ontology/virtual_graph-v1.ttl` (namespace `
 
 ## Wiring
 
-- **Read path:** `medulla-rdf::source_selection` gains `AuthorityRow` (parsed from the composed graph schema sources: `GraphSchemaSources` in `crates/medulla-core/src/graph/schema_sources.rs`). It also gains a `ConnectedSources` view built from the owner-scoped foreign catalog of the calling tenant and actor. `select_sources` takes both. The fixture type stays for unit tests; the live read is the "later child" the module doc names, and it is where this spec plugs in.
+- **Read path:** `medulla-rdf::source_selection` gains `AuthorityRow` (parsed from the composed graph schema sources: `GraphSchemaSources` in `crates/medulla-graph-core/src/graph/schema_sources.rs`). It also gains a `ConnectedSources` view built from the owner-scoped foreign catalog of the calling tenant and actor. `select_sources` takes both. The fixture type stays for unit tests; the live read is the "later child" the module doc names, and it is where this spec plugs in.
 - **Connected check:** a row is *connected* when its connection's `vg:foreignSourceName` resolves in the caller's catalog scope (R013) to a spec whose kind matches `vg:authorityContract` (R073 variants `Api`, `Mcp`, `A2a`, `GraphQl`; the existing SQL, Iceberg, Spark and SPARQL source kinds map to `virtual-graph`). A name that exists only under another principal counts as unconnected for this caller, with the R013 refusal kept for execution.
 - **Scopes:** only existing scopes: `kg:read` style read scope of the select method; `governance:propose` for proposing. One new approver scope, `governance:approve-source-authority`, is a BLOCKED dependency below (owner: engine identity, `MEDULLA-IDENTITY-R004` generated scope registry; it cannot be hand-added).
-- **Approval path:** `GOVERNED_KINDS` in `crates/medulla-types/src/governed_change.rs` holds one kind. A second kind `governed.source-authority` (proposer `governance:propose`, approver `governance:approve-source-authority`, two-person rule already built in) is the approval record. `GraphSchema.AttachApproved` (`src/server/graph_schema/approved.rs`) currently renders repair shapes only (`render_repair_shapes`, error "needs a repair operation"); it gains a second candidate type "authority" whose candidate bytes are the authority Turtle and whose digest the approval lease binds (`verify_schema_approval` already binds kind, target and `candidate_digest`).
+- **Approval path:** `GOVERNED_KINDS` in `crates/medulla-mutation-types/src/governed_change.rs` holds one kind. A second kind `governed.source-authority` (proposer `governance:propose`, approver `governance:approve-source-authority`, two-person rule already built in) is the approval record. `GraphSchema.AttachApproved` (`crates/medulla-h-admin/src/graph_schema/approved.rs`) currently renders repair shapes only (`render_repair_shapes`, error "needs a repair operation"); it gains a second candidate type "authority" whose candidate bytes are the authority Turtle and whose digest the approval lease binds (`verify_schema_approval` already binds kind, target and `candidate_digest`).
 - **Pack entry:** a connector pack's ontology section is bounded Turtle (`MEDULLA-TYPED-PACKS-R033`), SHACL cross-validated (`R035`), and attaches as a `pack:<connector>` schema source (`SchemaSourceOrigin::Pack`, `schema_sources.rs` line 410). A new attach-time check refuses `vg:approved true` inside a `Pack` or `Ingestion` origin source (D3).
 
 ## Decisions
@@ -95,7 +95,7 @@ All terms go in `crates/medulla-core/ontology/virtual_graph-v1.ttl` (namespace `
 **D1. Per class or per facet: DECIDED, class-level with an optional facet override.**
 Reasoning: the mapping (`vg:VirtualMapping`) is one class bound to one entity with many predicate-field pairs, and R072 selects per class. A purely class-level authority covers the common case ("ServiceNow for `:Incident`") and keeps the tie-break simple. But the competency specs need facets: `MEDULLA-CQ-XSRC-R003.1` assumes them and its `spec.md` leaves the choice open; host identity comes from a CMDB while host temperature comes from a hardware-management connector, and both describe `:Host`. A facet-only model would force one row per property for every class (the exit gate has dozens of properties). Decision: the default row has no `vg:authorityFacet` and governs the whole class; a row with `vg:authorityFacet` overrides it for that one property, and SHACL item 6 forces the facet to be projected by the mapping. Alternative rejected: facet-only (verbose, no gain); class-only (cannot express the host case, would force splitting `:Host` into artificial subclasses).
 
-**D2. Does R072 read anything authority-like: CONFIRMED no.** Evidence in Architecture above: `crates/medulla-rdf/src/source_selection.rs` `Premise` and `CoverageResult` carry no rank, scope, freshness, approval origin or connection state, and `CoverageFixture::with_mapping` overwrites on duplicate class. The foreign catalog (R013, R073) records capability and grant, which is necessary for "connected" but says nothing about preference. Everything in this spec is therefore additive to a fixture-only slice.
+**D2. Does R072 read anything authority-like: CONFIRMED no.** Evidence in Architecture above: `crates/medulla-virtual-graph/src/source_selection.rs` `Premise` and `CoverageResult` carry no rank, scope, freshness, approval origin or connection state, and `CoverageFixture::with_mapping` overwrites on duplicate class. The foreign catalog (R013, R073) records capability and grant, which is necessary for "connected" but says nothing about preference. Everything in this spec is therefore additive to a fixture-only slice.
 
 **D3. Who may assert authority: DECIDED, operator approval only; connectors propose.**
 Rules:
@@ -160,11 +160,11 @@ Executing the fetch, pushdown and the copy pipeline (R073, R046, R069, R038); en
 
 ## Source trust role (R010)
 
-Data flow: served cross-source report -> federated plan builder (`crates/medulla-plan/src/federation.rs`) -> `select_sources` (`crates/medulla-rdf/src/source_selection.rs:172`) -> `role_order` -> verdict, premises and audit.
+Data flow: served cross-source report -> federated plan builder (`crates/medulla-federation/src/federation.rs`) -> `select_sources` (`crates/medulla-virtual-graph/src/source_selection.rs:172`) -> `role_order` -> verdict, premises and audit.
 
 Types: `SourceRole`, `Premise::Role`, reason `RoleInsufficient`. Attach point: `select_sources` candidate ordering. Production caller: the Wiring row creates the call site in `federation.rs`. Failure behavior: an inspiration-only source abstains for a current-state question.
 
-Existing code: `crates/medulla-rdf/src/source_selection.rs:26`, `source_selection.rs:65`, `source_selection.rs:102`, `source_selection.rs:172`. Reachable today: no; `select_sources` has no production caller. Search terms used with no match: live_truth, LiveTruth, historical, inspiration, SourceRole, trust_level.
+Existing code: `crates/medulla-virtual-graph/src/source_selection.rs:26`, `source_selection.rs:65`, `source_selection.rs:102`, `source_selection.rs:172`. Reachable today: no; `select_sources` has no production caller. Search terms used with no match: live_truth, LiveTruth, historical, inspiration, SourceRole, trust_level.
 
 Decision: store the role on the connection and order by it before rank, so one declaration governs every mapped class. Rejected alternative: encode the role as a low rank number, because rank is per class and cannot express trust.
 
@@ -175,12 +175,12 @@ References
 
 ## MEDULLA-SRC-AUTH-R011 Untrusted taint mark on content that enters a run
 
-Data flow: run writes content -> `Method::AddNode` (`crates/medulla-types/src/protocol/method/method_00.rs:6`) -> `AddNode` arm (`src/server/handlers/graph_ops/gateway_graph.rs:62`) -> `mark_for_origin` (`crates/medulla-rdf/src/source_selection.rs`) -> `vg:trustMark` stored -> content read returns the mark -> harness carries it.
+Data flow: run writes content -> `Method::AddNode` (`crates/medulla-protocol-types/src/protocol/method/method_00.rs:6`) -> `AddNode` arm (`crates/medulla-h-graph/src/graph_ops/gateway_graph.rs:62`) -> `mark_for_origin` (`crates/medulla-virtual-graph/src/source_selection.rs`) -> `vg:trustMark` stored -> content read returns the mark -> harness carries it.
 Types: `TrustMark{trusted, untrusted}`, `vg:trustMark`, `:markedBy`, `:markedAtGeneration`.
-Attach point: The `AddNode` arm at `src/server/handlers/graph_ops/gateway_graph.rs:62` and `select_sources` at `crates/medulla-rdf/src/source_selection.rs:172`.
+Attach point: The `AddNode` arm at `crates/medulla-h-graph/src/graph_ops/gateway_graph.rs:62` and `select_sources` at `crates/medulla-virtual-graph/src/source_selection.rs:172`.
 Failure: A downgrade without approval returns `TRUST_MARK_DOWNGRADE_REFUSED`.
 Consumers: MERISTEM-SEC (R012)
-Existing code: `crates/medulla-rdf/src/source_selection.rs:172` (`select_sources`); `crates/medulla-rdf/src/source_selection.rs:26` (`Premise`); `crates/medulla-core/src/isolation.rs:1058` (an untrusted visibility key is ignored, a separate rule). Reachable today: no.
+Existing code: `crates/medulla-virtual-graph/src/source_selection.rs:172` (`select_sources`); `crates/medulla-virtual-graph/src/source_selection.rs:26` (`Premise`); `crates/medulla-isolation/src/isolation.rs:1058` (an untrusted visibility key is ignored, a separate rule). Reachable today: no.
 Existing-code search: the engine has no trust mark on content. Search terms: `taint`, `untrusted`, `trust_mark`, `TrustMark`. No existing Meristem code moves for this row.
 Reuses: `SourceRole` of `MEDULLA-SRC-AUTH-R010` as an input to the default rule. New: the mark, the propagation rule, the downgrade refusal.
 Decision: The mark is a stored fact with inheritance. Rejected alternative: a per-run flag in the harness, because it is lost when content is stored and read back by another run.

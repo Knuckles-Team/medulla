@@ -14,12 +14,12 @@ change. No behaviour changed by this document.**
   Plain `#[derive(..., Serialize, Deserialize)]`, no `#[serde(rename..)]`. Consumed
   by `Grant { role, resource: ResourceSelector, action: RbacAction, effect:
   GrantEffect }` (`acl.rs:217-223`), evaluated by `RbacPolicy::evaluate` in
-  `crates/medulla-core/src/rbac.rs:93-122`: default-deny, most-specific-`ResourceSelector`-wins,
+  `crates/medulla-isolation/src/rbac.rs:93-122`: default-deny, most-specific-`ResourceSelector`-wins,
   deny-overrides-allow at a tie. `ResourceSelector` (`acl.rs:119-129`) is
   `All | Pattern(glob) | Label(String) | Graph(String)` — i.e. it addresses **graph
   resources only**; it has no notion of a SQL table, a row, or an owner.
 - A second, narrower, **2-valued** enum sits in front of it purely for graph
-  read/write requests: `AccessLevel { Read, Write }` (`crates/medulla-core/src/isolation.rs:14-17`).
+  read/write requests: `AccessLevel { Read, Write }` (`crates/medulla-isolation/src/isolation.rs:14-17`).
   `IsolationLayer::check_access` (`isolation.rs:873-905`) maps
   `AccessLevel::Read → RbacAction::Read`, `AccessLevel::Write → RbacAction::Write`
   1:1, then calls `self.rbac.evaluate(&identity.roles, &ctx, action)`.
@@ -29,7 +29,7 @@ change. No behaviour changed by this document.**
 
 ### 1.2 NE-003 SQL catalog ACL (5-valued, independent)
 
-`src/server/sql_catalog_acl.rs` — **not a workspace crate**; it lives in the root
+`crates/medulla-server-auth/src/sql_catalog_acl.rs` — **not a workspace crate**; it lives in the root
 `medulla` package (`Cargo.toml:88`), a different Cargo package from
 `medulla-core` (`crates/medulla-core`, workspace member).
 
@@ -72,20 +72,20 @@ resource model are structurally different**:
 
 Files touching `RbacAction`:
 ```
-src/server/sql_catalog_acl.rs        (doc comment only, cross-reference — 1 hit)
-src/server/graphql_sub.rs            (test-only)
-src/server/mysql_wire/mod.rs         (test-only)
+crates/medulla-server-auth/src/sql_catalog_acl.rs        (doc comment only, cross-reference — 1 hit)
+crates/medulla-server-lake/src/graphql_sub.rs            (test-only)
+crates/medulla-wire/src/mysql_wire/mod.rs         (test-only)
 src/server/mod.rs                    (test-only)
-src/server/mqtt_wire/mod.rs          (test-only)
-src/server/bolt_wire/mod.rs          (test-only)
-src/server/dispatch.rs               (test-only)
-src/server/stomp_wire/mod.rs         (test-only)
-src/server/persistence/cold_offload.rs (test-only)
-src/server/handlers/query.rs         (test-only)
-crates/medulla-core/src/rbac_persist.rs   (test-only)
-crates/medulla-core/src/isolation.rs      (2 production call sites + tests)
+crates/medulla-wire-msg/src/mqtt_wire/mod.rs          (test-only)
+crates/medulla-wire/src/bolt_wire/mod.rs          (test-only)
+crates/medulla-server-router/src/dispatch.rs               (test-only)
+crates/medulla-wire-msg/src/stomp_wire/mod.rs         (test-only)
+crates/medulla-persistence/src/cold_offload.rs (test-only)
+crates/medulla-h-query/src/query.rs         (test-only)
+crates/medulla-isolation/src/rbac_persist.rs   (test-only)
+crates/medulla-isolation/src/isolation.rs      (2 production call sites + tests)
 crates/medulla-capabilities/src/lib.rs    (comment cross-reference only)
-crates/medulla-core/src/rbac.rs           (type owner + its own tests)
+crates/medulla-isolation/src/rbac.rs           (type owner + its own tests)
 crates/medulla-types/src/acl.rs           (type definition + its own tests)
 ```
 
@@ -94,12 +94,12 @@ crates/medulla-types/src/acl.rs           (type definition + its own tests)
 tests start `:1153`, `rbac_persist.rs` tests start `:450`): every `RbacAction`
 reference in `src/server/{mysql_wire,graphql_sub,mqtt_wire,mod,bolt_wire,
 dispatch,stomp_wire,persistence/cold_offload,handlers/query}.rs` and in
-`crates/medulla-core/src/rbac_persist.rs` sits **inside** those test modules — they
+`crates/medulla-isolation/src/rbac_persist.rs` sits **inside** those test modules — they
 are wire-protocol test fixtures that provision `Grant`s to exercise
 `IsolationLayer` end to end, not independent production logic.
 
 **Production call sites of `RbacAction` — exactly two, both in
-`crates/medulla-core/src/isolation.rs`, both above its `mod tests` boundary at
+`crates/medulla-isolation/src/isolation.rs`, both above its `mod tests` boundary at
 `:1153`:**
 
 | Site | What it does |
@@ -109,11 +109,11 @@ are wire-protocol test fixtures that provision `Grant`s to exercise
 
 Consumers of `check_access`/`has_admin_capability` (the next layer out — these
 never see `RbacAction` directly, only `AccessLevel`/`bool`):
-- `src/server/access.rs:813`
-- `src/server/wire/mod.rs:1409-1419` (`WireSession::check_access` wrapper), called
+- `crates/medulla-server-auth/src/access.rs:813`
+- `crates/medulla-wire-core/src/wire/mod.rs:1409-1419` (`WireSession::check_access` wrapper), called
   from `wire/mod.rs:2475`, `:4318`, `:4402`
 - 2 call sites for `has_admin_capability` outside `isolation.rs` (in
-  `src/server/access.rs`, gating `require_admin_capability`).
+  `crates/medulla-server-auth/src/access.rs`, gating `require_admin_capability`).
 
 **Conclusion: widening `RbacAction`'s variant set is, mechanically, a
 single-file change** (`crates/medulla-types/src/acl.rs`'s enum definition) with
@@ -124,7 +124,7 @@ the SQL-ACL rewiring described in §1.2 and §4.
 
 ### 2.2 `RbacPolicy::evaluate` (or equivalent)
 
-- Definition + only production caller path: `crates/medulla-core/src/rbac.rs:93-122`
+- Definition + only production caller path: `crates/medulla-isolation/src/rbac.rs:93-122`
   (`evaluate`), `:128-138` (`is_allowed`, thin wrapper).
 - Production callers: **isolation.rs:904, isolation.rs:1118** (the same two
   sites as above — `evaluate` has no other production caller anywhere in the
@@ -132,25 +132,25 @@ the SQL-ACL rewiring described in §1.2 and §4.
 - Test callers: `rbac.rs`'s own `mod tests` (7 tests, lines 155-297),
   `rbac_persist.rs::tests` (roundtrip test, line 502), `isolation.rs::tests`
   (line 2276).
-- `src/raft/network.rs:184,337` calls a *different* `is_allowed` (on a raft
+- `crates/medulla-raft/src/raft/network.rs:184,337` calls a *different* `is_allowed` (on a raft
   peer-auth type, unrelated to `RbacPolicy` — confirmed by reading the call
   site; false positive from the initial grep, noted here so the count is
   auditable).
 
 ### 2.3 `SqlPrivilege` / SQL ACL consumer surface
 
-- Definition + all internal machinery: `src/server/sql_catalog_acl.rs` (58
+- Definition + all internal machinery: `crates/medulla-server-auth/src/sql_catalog_acl.rs` (58
   references, the module itself — `authorize`, `authorize_ddl`,
   `authorize_insert`, `authorize_update`, `authorize_delete`, `grant`, `revoke`,
   `owner_of`, `grant_exists`, RLS get/set).
 - External consumers (all outside `medulla-core`, inside the root `medulla`
   package):
-  - `src/server/wire/mod.rs` — ~26 references: DDL gating (`:447-500`),
+  - `crates/medulla-wire-core/src/wire/mod.rs` — ~26 references: DDL gating (`:447-500`),
     `authorize_insert`/`authorize_update`/`authorize_delete` on the DML path
     (`:513,534,551`), `SqlPrivilege::Select` for reads (`:1527`),
     `SqlPrivilege::Insert` for writes (`:2294`), plus the admin `grant()` calls
     at `:5591-5940` (tests).
-  - `src/server/handlers/rdf.rs:821` — one `SqlPrivilege::Select` check (RDF
+  - `crates/medulla-h-sparql/src/rdf.rs:821` — one `SqlPrivilege::Select` check (RDF
     materialized-over-SQL read path).
 
 **This entire consumer surface (`sql_catalog_acl.rs`, `wire/mod.rs`,
@@ -166,12 +166,12 @@ Two independent codecs both use vanilla `#[derive(Serialize, Deserialize)]`
 with no custom variant naming, so both use serde's default **externally-tagged,
 variant-name-string** representation for a unit-only enum:
 
-1. **Durable store** — `crates/medulla-core/src/rbac_persist.rs`. One redb table
+1. **Durable store** — `crates/medulla-isolation/src/rbac_persist.rs`. One redb table
    `rbac` in `{persist_dir}/rbac.redb`, three keys (`policy`, `identities`,
    `bootstrap`); `policy` is `serde_json::to_vec(&RbacPolicy)`
    (`rbac_persist.rs:12-19`). A `Grant.action: RbacAction` therefore lands in
    that JSON blob as the literal string `"Read"`, `"Write"`, or `"Admin"`.
-2. **Wire protocol** — `crates/medulla-types/src/protocol.rs:1-5`: *"Length-prefixed
+2. **Wire protocol** — `crates/medulla-protocol-types/src/protocol.rs:1-5`: *"Length-prefixed
    MessagePack framing"*, confirmed by `rmp_serde::to_vec`/`to_vec_named` /
    `from_slice` call sites throughout `src/server/mod.rs`. `Method::RbacAdmin {
    op: RbacAdminOp }` (`protocol.rs:2299-2305`) carries `Grant`/`RbacAction`

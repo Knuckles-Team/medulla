@@ -37,7 +37,7 @@ CRATEP = re.compile(r"(?<![\w:])\$?crate::([A-Za-z_]\w*(?:::[A-Za-z_]\w*)*)")
 BARE = re.compile(r"(?<![\w:$.])([a-z_]\w*)::([A-Za-z_]\w*(?:::[A-Za-z_]\w*)*)")
 
 mods = {(): {"file": src / "lib.rs", "children": set()}}  # module path -> info
-file_mod = {}  # file -> module path of the file
+file_mod: dict[str, str] = {}  # file -> module path of the file
 inline_spans = defaultdict(list)  # file -> [(start, end, inline module path)]
 inline_mods = set()  # module paths of inline `mod x { }` blocks
 

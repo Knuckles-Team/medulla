@@ -365,7 +365,9 @@ class Rewriter:
             if not hit:
                 continue
             stmt = text[s:e]
-            lead = re.match(r"([ \t]*(?:pub(?:\([^)]*\))?\s+)?use\s+)", stmt).group(1)
+            lead_match = re.match(r"([ \t]*(?:pub(?:\([^)]*\))?\s+)?use\s+)", stmt)
+            assert lead_match is not None
+            lead = lead_match.group(1)
             a_start, attrs = attrs_above(text, s)
             groups: dict[str, list[str]] = {}
             order = []
@@ -459,7 +461,7 @@ def sync_target_manifest(root: Path, frm: str, to: str):
     raw = "\n".join(f.read_text() for f in cdir.rglob("*.rs"))
     uses_types = re.search(r"\b" + snake(frm) + r"\b", srcs) is not None
     if uses_types and not has_dep(ct, frm):
-        feats_needed = "test-support" if False else None
+        feats_needed = None
         ct = add_line(ct, "dependencies", f'{frm} = {{ path = "../{frm}" }}')
     ct_text = open(root / "crates" / frm / "Cargo.toml").read()
     for dep, spec in fman.get("dependencies", {}).items():
@@ -472,6 +474,7 @@ def sync_target_manifest(root: Path, frm: str, to: str):
             or (dep == "strum" and "strum" in raw)
         ):
             m = re.search(r"(?m)^" + re.escape(dep) + r"\s*=.*$", ct_text)
+            assert m is not None
             spec = m.group(0)
             end = m.end()
             while spec.count("[") + spec.count("{") > spec.count("]") + spec.count("}"):
@@ -649,7 +652,7 @@ def main() -> int:
         t = mp.read_text()
         if has_dep(t, to):
             continue
-        rel = Path(__import__("os").path.relpath(root / "crates" / to, mp.parent))
+        rel = __import__("os").path.relpath(root / "crates" / to, mp.parent)
         line = f'{to} = {{ path = "{rel}" }}'
         t = add_line(t, "dependencies" if kind == "dep" else "dev-dependencies", line)
         mp.write_text(t)

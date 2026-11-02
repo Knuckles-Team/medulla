@@ -1,6 +1,6 @@
 # Bounded shard/Raft drain contract (NE-167)
 
-`src/raft/drain.rs` owns the small, side-effect-free state machine used by a
+`crates/medulla-raft-xshard/src/drain.rs` owns the small, side-effect-free state machine used by a
 shard/Raft membership owner before it removes a node. It is a contract, not a
 second autoscaler: the caller still decides when to propose a drain and the
 live owner still performs the admission and membership operations.
@@ -39,7 +39,7 @@ Proposed
 The state machine does not spawn tasks, alter Raft membership, or bypass the
 authoritative writer. A runtime integration must persist/replay the operation
 through the existing durable authority and must supply fresh observations after
-restart. The focused unit fixtures in `src/raft/drain.rs` cover happy-path
+restart. The focused unit fixtures in `crates/medulla-raft-xshard/src/drain.rs` cover happy-path
 ordering, stale acknowledgements, writer/quorum/health gates, rollback, and
 restart recovery. Root validation should run the feature-gated module tests,
 then the existing Raft/cluster test selectors and the repository's normal

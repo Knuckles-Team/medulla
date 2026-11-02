@@ -7,7 +7,7 @@
 ## The contention point
 
 Every structural write to a graph (`add_node` / `add_edge` / `compare_and_set` /
-`remove_*`) opens a one-shot [`GraphTxn`](https://github.com/Knuckles-Team/medulla/blob/main/crates/medulla-core/src/graph.rs), which
+`remove_*`) opens a one-shot [`GraphTxn`](https://github.com/Knuckles-Team/medulla/blob/main/crates/medulla-graph-core/src/graph.rs), which
 holds that graph's single `topo.write()` lock for the op's duration
 (`GraphCore::topo`, `graph.rs`). DIFFERENT graphs already isolate — each has its own
 `GraphCore` with its own lock, so `__control__` vs `__commons__` never contend (proved
@@ -68,7 +68,7 @@ outcome. The authoritative redb commit, size gauges, audit, and CDC emission rem
 centralized in `dispatch::dispatch_graph_op`, run per operation against the returned
 `Response`. A saturated queue returns `BUSY` before any mutation is attempted; there
 is no inline overflow path that can overtake an accepted ticket. The routed gateway
-(`src/server/routed_write_coalescer.rs`) uses the same ordered admission model for
+(`crates/medulla-server-api/src/routed_write_coalescer.rs`) uses the same ordered admission model for
 the complete prepare→durable-commit→RAM-publish sequence, including
 `AddNode`/`RemoveNode`/`AddEdge`/`RemoveEdge` and CAS.
 
@@ -150,10 +150,10 @@ reduction (the contention property), not a fixed wall-clock multiple.
 
 - `crates/medulla-kernel/src/write_coalescer.rs` — `WriteOp`, `WriteOutcome`, `GraphWriter`,
   `WriteCoalescerRegistry`, `BatchStats`, `CoalescerConfig`.
-- `src/server/routed_write_coalescer.rs` — the durable routed-write queue,
+- `crates/medulla-server-api/src/routed_write_coalescer.rs` — the durable routed-write queue,
   ticket admission, cancellation/crash boundaries, and per-graph ordered drain.
-- `src/server/state.rs` — `ServerState.write_coalescer` field.
-- `src/server/dispatch.rs` — `try_coalesce_write` fast path in `dispatch_graph_op`.
+- `crates/medulla-server-api/src/state.rs` — `ServerState.write_coalescer` field.
+- `crates/medulla-server-router/src/dispatch.rs` — `try_coalesce_write` fast path in `dispatch_graph_op`.
 - `crates/medulla-kernel/src/metrics.rs` — `write_batch_committed` + the two counters.
 
 ---

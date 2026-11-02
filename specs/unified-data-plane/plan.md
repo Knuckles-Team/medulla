@@ -8,7 +8,7 @@ Use the existing Medulla foreign catalog and `medulla-plan::ForeignSourceSpec`, 
 
 ## Module ownership and request path
 
-`src/server/foreign_catalog.rs` is the server-side source-record boundary. `crates/medulla-plan` owns planning of bound foreign sources. `src/server/handlers/rdf/obda.rs` and `crates/medulla-rdf/src/obda.rs` own virtual graph rewriting. `src/server/cdc.rs` and `src/server/cdc_sink/` own change envelopes and sinks; `crates/medulla-lake` owns accelerated columnar copies. `crates/medulla-query/src/tables/` owns native user-table storage. Wire listeners authenticate and classify requests before planning. Keep one registry, one source ID and one policy path across these modules.
+`crates/medulla-server-ops/src/api/query_txn/foreign_catalog.rs` is the server-side source-record boundary. `crates/medulla-plan` owns planning of bound foreign sources. `crates/medulla-h-sparql/src/rdf/obda.rs` and `crates/medulla-virtual-graph/src/obda.rs` own virtual graph rewriting. `crates/medulla-server-cdc/src/cdc.rs` and `src/server/cdc_sink/` own change envelopes and sinks; `crates/medulla-lake` owns accelerated columnar copies. `crates/medulla-query/src/tables/` owns native user-table storage. Wire listeners authenticate and classify requests before planning. Keep one registry, one source ID and one policy path across these modules.
 
 The request envelope carries tenant, actor, source grant, consistency mode, last committed source position (if any), timeout and trace ID. The server checks these before selecting a path. An attached table plan carries a bound source ID and catalog version, never a raw caller DSN. EXPLAIN can show route, pushdown fragments, source/copy position and fallback reason, with credentials and sensitive predicate values redacted. A prepared plan is invalidated on schema-version or grant change.
 
@@ -114,7 +114,7 @@ Data flow: served row write -> re-embed worker (`MEDULLA-FEDERATED-QUERY-R077.3`
 
 Types: `ModalityCheck`, `PromotionVerdict`, `PromotionBlocked`. Attach point: before `tag_batch`. Production caller: the Wiring row creates the call site in the re-embed worker. Failure behavior: a block keeps the prior version active and tags nothing.
 
-Existing code: `crates/medulla-ann/src/version.rs:32`, `version.rs:54`, `version.rs:129`, `crates/medulla-ann/src/recall.rs:28`, `crates/medulla-query/src/tables/embedding_binding.rs:526`, `crates/medulla-modality/src/lib.rs`. Reachable today: no; `EmbeddingVersionStore` has no production caller. Search terms used: embedder_digest, model_digest, promot, projector, modality, recall_at, retrieval_check.
+Existing code: `crates/medulla-ann/src/version.rs:32`, `version.rs:54`, `version.rs:129`, `crates/medulla-ann/src/recall.rs:28`, `crates/medulla-table-store/src/tables/embedding_binding.rs:526`, `crates/medulla-modality/src/lib.rs`. Reachable today: no; `EmbeddingVersionStore` has no production caller. Search terms used: embedder_digest, model_digest, promot, projector, modality, recall_at, retrieval_check.
 
 Decision: gate on each modality separately, so an average cannot hide one regression. Rejected alternative: gate on mean recall, because it passes a candidate that breaks a single modality.
 
@@ -138,7 +138,7 @@ Cross-repository: none.
 
 These rows extend the existing virtual-graph rollups. They add no second planner. Entity rows stay at the source (`MEDULLA-UNIFIED-DATA-PLANE-R038`). Mappings are R2RML-style (`MEDULLA-UNIFIED-DATA-PLANE-R005`). Pushdown reuses the federation optimizer (`MEDULLA-FEDERATED-QUERY-R038`, `MEDULLA-FEDERATED-QUERY-R041`). Connection protocols form the second axis in `MEDULLA-FEDERATED-QUERY-R073.2`.
 
-Call path: served query -> planner -> `foreign_scan` (`crates/medulla-plan/src/federation_opt/run.rs:26`) -> source session -> pushed fragment -> local residual.
+Call path: served query -> planner -> `foreign_scan` (`crates/medulla-federation/src/federation_opt/run.rs:26`) -> source session -> pushed fragment -> local residual.
 
 ### Source-category coverage matrix (R022.4)
 
@@ -178,7 +178,7 @@ Search results stay virtual. A web metasearch pattern returns a `WebCandidateSet
 
 A fetched page is the only web content that the engine stores. It enters as one Document through `SourceIngest` (`MEDULLA-UNIFIED-DATA-PLANE-R651.7`). The source connector is `webarchiver`; `archivebox` is the secondary backend. Both produce the same Document shape.
 
-Call path: arbora `research.web` (`ARBORA-OPS-R067`) -> Graft SDK fetch through `webarchiver` or `archivebox` -> served `SourceIngest` (one Document) -> served `EnrichDocument` -> `src/server/dispatch/graph_pipeline/web_ingest.rs` -> one ChangeEnvelope through `ApplyChangeEnvelope`.
+Call path: arbora `research.web` (`ARBORA-OPS-R067`) -> Graft SDK fetch through `webarchiver` or `archivebox` -> served `SourceIngest` (one Document) -> served `EnrichDocument` -> `crates/medulla-server-graph/src/dispatch/graph_pipeline/web_ingest.rs` -> one ChangeEnvelope through `ApplyChangeEnvelope`.
 
 `EnrichDocument` chunks with `medulla_document::processing` (`MEDULLA-REPO-INGEST-R652`). It embeds through the configured `/v1/embeddings` wire endpoint (`MEDULLA_EMBEDDING_URL`, `_MODEL`, `_DIMS`, optional `_API_KEY`), or through the hash embedder, which it records as `embedder = hash`. The vectors use the `AddEmbedding` path, so `SemanticSearch` and hybrid retrieval find them. Extraction is `MEDULLA-INGEST-WORKER-R701` (`R651.7.7`). Citations are `MEDULLA-FEDERATED-QUERY-R653.7`. Refresh is `MEDULLA-DECISION-ENGINE-R174.9.7`.
 

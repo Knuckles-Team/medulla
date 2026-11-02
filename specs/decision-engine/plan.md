@@ -74,9 +74,9 @@ arbora (admission, auth, principal) ──► medulla dispatch
 
 | Stage | Owning code | Contract |
 |---|---|---|
-| 0 Admit | `src/server/handlers/decide/served_adapter.rs` | Typed request parse. Size caps: 64 KiB, 64 candidates, 32 capabilities. Principal and tenant come from the verified context only. |
-| 1 Visibility | `src/server/handlers/decide/candidates.rs` | Tenant and row visibility apply before any feature or count (R013). |
-| 2 Candidates | `src/server/handlers/decide/candidates.rs` | Only published, tenant-visible component revisions enter. Pack facts enter as claims. |
+| 0 Admit | `crates/medulla-h-decide/src/decide/served_adapter.rs` | Typed request parse. Size caps: 64 KiB, 64 candidates, 32 capabilities. Principal and tenant come from the verified context only. |
+| 1 Visibility | `crates/medulla-h-decide/src/decide/candidates.rs` | Tenant and row visibility apply before any feature or count (R013). |
+| 2 Candidates | `crates/medulla-h-decide/src/decide/candidates.rs` | Only published, tenant-visible component revisions enter. Pack facts enter as claims. |
 | 3 Policy and constraints | `guardrail.rs`, `decision/limit_guard.rs`, the invariant gate | Pins, denials, guardrails and limits remove options. Each removal is an eliminated-constraint premise. |
 | 4 Entailment | `crates/medulla-types/src/decision/derivation*` | Ontology derivation records back entailed answers. |
 | 5 Exact solve | `crates/medulla-compute/src/{solve,assemble}` | Bounded 0-1 model, certificate and node budget. |
@@ -209,9 +209,9 @@ Typed question adapters translate these requests into the same legal-set/evidenc
 Expose metrics for resolution kind, evidence class, abstention reason, solver nodes and gap, stale catalog refusals, record replay failures, calibration coverage, drift, ESS and latency. Do not put raw tenant facts in metric labels. Contract generation, CCCC, KISS, Dupehound and zero-new-pair jscpd are repository quality checks; Rust formatting, Clippy and focused unit/served tests validate behavior. Hosted CI should create its own local tenant, seed fixtures and, when needed, start an ephemeral Medulla server. A pre-existing deployment, identity provider or secret is not a baseline PR prerequisite.
 ## MEDULLA-DECISION-ENGINE-R118 and MEDULLA-DECISION-ENGINE-R119 implementation seam
 
-Reuse `crates/medulla-numeric/src/risk/reputation.rs` for posterior estimation, `crates/medulla-epistemic/src/ranking.rs` for evidence-aware ranking, and `crates/medulla-plan/src/exec/reliability.rs` for UQL consumption. The server materialization joins approved, independently labeled decision outcomes under tenant/RLS scope before these pure kernels run. It stores the input revision and calibration policy with the view. Replace request-only reliability authority rather than adding a parallel score table.
+Reuse `crates/medulla-numeric/src/risk/reputation.rs` for posterior estimation, `crates/medulla-epistemic/src/ranking.rs` for evidence-aware ranking, and `crates/medulla-exec/src/exec/reliability.rs` for UQL consumption. The server materialization joins approved, independently labeled decision outcomes under tenant/RLS scope before these pure kernels run. It stores the input revision and calibration policy with the view. Replace request-only reliability authority rather than adding a parallel score table.
 
-Reuse `crates/medulla-numeric/src/decision/replay/` for fold construction and shared-cap arithmetic, `src/server/handlers/decide/stat_walk_forward.rs` and `stat_jobs.rs` for persisted execution, and the typed `EvaluationRun` contract in `medulla-types`. The same record sealer and no-look-ahead verifier should serve finance specialization. Generated method/client contracts follow the Rust DTOs. Fold checkpoints contain immutable digests and resume only when all source revisions and policy versions still match. They never turn a partial run into a sealed result.
+Reuse `crates/medulla-numeric/src/decision/replay/` for fold construction and shared-cap arithmetic, `crates/medulla-h-decide/src/decide/stat_walk_forward.rs` and `stat_jobs.rs` for persisted execution, and the typed `EvaluationRun` contract in `medulla-types`. The same record sealer and no-look-ahead verifier should serve finance specialization. Generated method/client contracts follow the Rust DTOs. Fold checkpoints contain immutable digests and resume only when all source revisions and policy versions still match. They never turn a partial run into a sealed result.
 
 ## Coverage
 
@@ -317,8 +317,8 @@ This register inventories all 118 decision-owned obligations. `Historical label`
 | MEDULLA-DECISION-ENGINE-R093 | T4 | BUILT | NOT_RUN | **Train the resident scorer from the FX-SYNTH corpus.** cua-s1 trained on 10k synthetic episodes in ~30 minutes. Our synthetic e2e generator (landed, 105 tests) already produces seeded, ground-truth-bearing episodes through the REAL served path, which is a better training source than hand-built synthetic forms — the labels come from the same engine the scorer will run inside. Split: `.1` below is net-new and built; `.2` (wiring `export_gold_corpus` through a served client) remains unbuilt |
 | MEDULLA-DECISION-ENGINE-R093.1 | T4 | BUILT | NOT_RUN | Typed `SOURCE_SERVED`/`SOURCE_IN_PROCESS` provenance on gold-corpus items plus `verify_ground_truth`, which refuses a `SOURCE_SERVED` item with an empty or candidate-leaking acceptable set |
 | MEDULLA-DECISION-ENGINE-R094 | T4 | BUILT | NOT_RUN | **Operational consequence: a CPU-resident decision plane deploys everywhere the engine does.** A scorer needing a GPU sidecar cannot run in every k8s pod; one compiled into the binary can. 706k params at 2.8 MB needs no GPU, no vLLM, no model server, and retraining a specialist is a ~30-minute job rather than a cluster activity. This is a deployment-topology argument, not a modelling one, and it is why resident beats sidecar even at equal accuracy |
-| MEDULLA-DECISION-ENGINE-R095 | T3 | LANDED | NOT_RUN | **The solver's committed replay contract is BROKEN on main, and no publication gate runs the test that proves it.** crates/medulla-compute/tests/solve/determinism.rs::the_certificate_digest_matches_the_committed_golden_vector fails on clean main @ be0f1acb0: computed 1bc99ac3ed5d12211a9074b23cafde1f35f7ed90d70608f7e47c4a0429f4ea88 vs committed GOLDEN_DIGEST = 71a64f581943d7cadfaecbcba26644c7d2fd2176ff714a9c1b840dc6659d8f4e. The other two tests in the file PASS, including repeated_solves_are_byte_identical (4 solves compared), so the solver is stable **within** a run — what moved is the value relative to the committed constant. Bit-reproducible certificates are the whole reason decisions are recorded as graph objects (cf. MEDULLA-DECISION-ENGINE-R091), and FX-SOLVER shipped in 2.27.x. **Discovered incidentally** by an unrelated grammar change's batched cargo test -p medulla-compute; ruled out as that change's own regression by an authoritative Cargo.lock package-set diff (5 added, 0 removed, **0 version-changed**) and confirmed by running the test on clean main. cargo check --locked passes on base |
-| MEDULLA-DECISION-ENGINE-R096 | T2 | LANDED | NOT_RUN | **The dominant community-detection wire method cannot carry edge weights or a quality function, so MEDULLA-REPO-INGEST-R011 and related rows (see `repository-index-and-ingestion/requirements.md`) are unreachable in production as built.** CommunityDetectEphemeral (crates/medulla-types/src/protocol/method/method_02.rs:115-119) is { node_ids: Vec<String>, edges: Vec<(String, String)>, resolution: f64 } — the edge tuple has **no weight/properties slot** and there is **no quality-function selector**, only a modularity resolution. This is the stateless path tried FIRST and taken almost always in production. Consequence: MEDULLA-DECISION-ENGINE-R081's confidence weighting and MEDULLA-FEDERATED-QUERY-R060's CPM both land correctly in the kernel but are reachable only through the rarer tenant-load fallback branch. **This corrects MEDULLA-DECISION-ENGINE-R081's own premise** — the register says "the kernel change is zero, only the weight supply changes", and the weight supply turns out to require a wire change as well as the Meristem-side change. The Meristem half is done and correct: confidence was already extracted into EnrichmentEdge.props by enrichment/extractors/code_test.py:274-279 and was being discarded by enrichment/features.py's cluster_features(); the fix now carries it as (source, target, confidence) and never fabricates a value for the Python name-only fallback resolver, which has no tiered confidence model. similar_to is confirmed MOOT on this path — cluster_features/resolve_call_edges only ever build CALLS edges |
+| MEDULLA-DECISION-ENGINE-R095 | T3 | LANDED | NOT_RUN | **The solver's committed replay contract is BROKEN on main, and no publication gate runs the test that proves it.** crates/medulla-decision-policy/tests/solve/determinism.rs::the_certificate_digest_matches_the_committed_golden_vector fails on clean main @ be0f1acb0: computed 1bc99ac3ed5d12211a9074b23cafde1f35f7ed90d70608f7e47c4a0429f4ea88 vs committed GOLDEN_DIGEST = 71a64f581943d7cadfaecbcba26644c7d2fd2176ff714a9c1b840dc6659d8f4e. The other two tests in the file PASS, including repeated_solves_are_byte_identical (4 solves compared), so the solver is stable **within** a run — what moved is the value relative to the committed constant. Bit-reproducible certificates are the whole reason decisions are recorded as graph objects (cf. MEDULLA-DECISION-ENGINE-R091), and FX-SOLVER shipped in 2.27.x. **Discovered incidentally** by an unrelated grammar change's batched cargo test -p medulla-compute; ruled out as that change's own regression by an authoritative Cargo.lock package-set diff (5 added, 0 removed, **0 version-changed**) and confirmed by running the test on clean main. cargo check --locked passes on base |
+| MEDULLA-DECISION-ENGINE-R096 | T2 | LANDED | NOT_RUN | **The dominant community-detection wire method cannot carry edge weights or a quality function, so MEDULLA-REPO-INGEST-R011 and related rows (see `repository-index-and-ingestion/requirements.md`) are unreachable in production as built.** CommunityDetectEphemeral (crates/medulla-protocol-types/src/protocol/method/method_02.rs:115-119) is { node_ids: Vec<String>, edges: Vec<(String, String)>, resolution: f64 } — the edge tuple has **no weight/properties slot** and there is **no quality-function selector**, only a modularity resolution. This is the stateless path tried FIRST and taken almost always in production. Consequence: MEDULLA-DECISION-ENGINE-R081's confidence weighting and MEDULLA-FEDERATED-QUERY-R060's CPM both land correctly in the kernel but are reachable only through the rarer tenant-load fallback branch. **This corrects MEDULLA-DECISION-ENGINE-R081's own premise** — the register says "the kernel change is zero, only the weight supply changes", and the weight supply turns out to require a wire change as well as the Meristem-side change. The Meristem half is done and correct: confidence was already extracted into EnrichmentEdge.props by enrichment/extractors/code_test.py:274-279 and was being discarded by enrichment/features.py's cluster_features(); the fix now carries it as (source, target, confidence) and never fabricates a value for the Python name-only fallback resolver, which has no tiered confidence model. similar_to is confirmed MOOT on this path — cluster_features/resolve_call_edges only ever build CALLS edges |
 | MEDULLA-DECISION-ENGINE-R097 | T1 | LANDED | NOT_RUN | **CORRECTED: these are DETERMINISTIC stale-test-assumption defects, NOT load-sensitive races.** Filed originally as MEDULLA-DURABLE-KERNEL-R014's family because they surfaced in the constrained gate; A6 root-caused both statically and an independent main-verify run on be0f1acb0 reproduced them unconstrained (1936 passed, 3 failed). **(a)** every_declared_surface_reaches_its_stub — the test's signed() helper hardcoded ONE literal nonce ("05".repeat(32)) for every request while looping over contract_wave_samples(); the transport replay record is a single global OnceLock in test builds and correctly rejects the second non-mutating request presenting that nonce. AgentAssemble records it first, Decide collides. 100% deterministic, present since the test's introduction in a4804f87c. **(b)** roundtrip_dedup_bounded_memory_and_gc — the X2 blob-GC hardening commit 62a2471e1 introduced a default **24-hour GC grace period** and never updated this dispatch-level test, which uses the real wall clock and asserts immediate reclaim after BlobUnref; grace cannot elapse inside a millisecond test, so blobs_reclaimed is always 0. Neither shares any mechanism with MEDULLA-DURABLE-KERNEL-R014. Original text follows. ~~Two --lib tests fail under 2-core constrained execution, shape-consistent with MEDULLA-DURABLE-KERNEL-R014's load-sensitive family.~~ (a) server::contract_wave::dispatch_reachability_tests::every_declared_surface_reaches_its_stub panics "Decide must reach its contract-wave stub, got nonce already used (replay rejected)" (src/server/contract_wave.rs:184); (b) server::dispatch::graph_pipeline::blob_dispatch_tests::roundtrip_dedup_bounded_memory_and_gc fails "unreferenced blob reclaimed, left: 0, right: 1" (graph_pipeline.rs:2028). Both are exactly what the GOC-70 constrained-parallelism gate exists to catch. **Neither was diagnosed** — the review that found them correctly flagged rather than guessed |
 | MEDULLA-DECISION-ENGINE-R098 | — | DEFERRED | NOT_RUN | Defer a Rust microgpt, in-engine autograd, generative UQL model and KLPO loss in Medulla. Each needs a separate canonical Gap and frozen held-out evidence. Reuse the approved typed Decide ladder for legal-option derivation, calibrated probabilities, cost-sensitive optimal choice, provenance, abstention, NlTemplate and constrained DecideText/UQL; the bounded resident scorer is non-generative and does not authorize a GPT |
 | MEDULLA-DECISION-ENGINE-R099 | T3 | LANDED | NOT_RUN | Wikidata alignment connector (wikidataId, skos:exactMatch) feeding MEDULLA-DECISION-ENGINE-R032 entity resolution keys for Region/Country/Taxon/Food/Nutrient. MEDULLA-DECISION-ENGINE-R033 proposes connector schema_mappings against world_model-v1 properties with the world-model SHACL shapes as acceptance |
@@ -329,12 +329,12 @@ This register inventories all 118 decision-owned obligations. `Historical label`
 | MEDULLA-DECISION-ENGINE-R104 | T4 | BUILT | NOT_RUN | DecideText joins the UQL lexer/grammar family ($param, quote-aware candidate block, structured errors, grammar table) |
 | MEDULLA-DECISION-ENGINE-R105 | T6 | BUILT | NOT_RUN | **ST-1** — swarm-topology TBox + shapes. Publisher through GraphSchema.attach. SHACL positive/negative fixtures — Meristem agent_utilities/knowledge_graph/ontology/swarm_topology/{topology.ttl,shapes.ttl}, decide/topology/schema_source.py |
 | MEDULLA-DECISION-ENGINE-R106 | T6 | BUILT | NOT_RUN | **ST-2** — Reference templates (single, pipeline, fan-out/join, supervisor→workers, critique loop, council) as AgentGraph templates with TopologyFacts — Meristem decide/topology/templates.py |
-| MEDULLA-DECISION-ENGINE-R107 | T6 | BUILT | NOT_RUN | **ST-3** — Contract: topology.rs types (≤12), AssemblyRequirements.topology, TopologyFacts on template facts, record version increment + v1 goldens, generated Python, one pin move — Medulla crates/medulla-types/src/decision/topology.rs (new), decision/request.rs, decision/record/outcome.rs, agent_component.rs; medulla-capabilities pins |
-| MEDULLA-DECISION-ENGINE-R108 | T6 | BUILT | NOT_RUN | **ST-4** — Publish-time TemplateTopologyShape validation, programmatic and fail-closed — Medulla src/server/handlers/admin/agent.rs hook + src/server/handlers/decide/topology_shape.rs (new) |
+| MEDULLA-DECISION-ENGINE-R107 | T6 | BUILT | NOT_RUN | **ST-3** — Contract: topology.rs types (≤12), AssemblyRequirements.topology, TopologyFacts on template facts, record version increment + v1 goldens, generated Python, one pin move — Medulla crates/medulla-agent-types/src/agent_topology.rs (new), decision/request.rs, decision/record/outcome.rs, agent_component.rs; medulla-capabilities pins |
+| MEDULLA-DECISION-ENGINE-R108 | T6 | BUILT | NOT_RUN | **ST-4** — Publish-time TemplateTopologyShape validation, programmatic and fail-closed — Medulla crates/medulla-h-admin/src/admin/agent.rs hook + crates/medulla-server-ops/src/api/admin/topology_shape.rs (new) |
 | MEDULLA-DECISION-ENGINE-R109 | T6 | BUILT | NOT_RUN | **ST-5** — Admissibility entailment stage: composed-schema digest in inputs, OWL derivation, TopologyAdmissible derivation, elimination — Medulla crates/medulla-compute/src/assemble/topology/admissible.rs (new) |
 | MEDULLA-DECISION-ENGINE-R110 | T6 | BUILT | NOT_RUN | **ST-6** — Model rows: one-hot width/rounds, lease/deadline/demand/verify/cap rows, precomputed tables, brute-force oracle ≤20 vars — Medulla crates/medulla-compute/src/assemble/topology/{model.rs,tables.rs} (new), assemble/template.rs (call site) |
 | MEDULLA-DECISION-ENGINE-R111 | T6 | BUILT | NOT_RUN | **ST-7** — Meristem convergence: topology.py asks the topology question; delete TopologyEngine.record_outcome/EMA and KGTeamComposer success-rate reuse; build ElasticTopologyAdmission from the plan; source gate bans Cypher TopologyTemplate writes — Meristem decide/consumers/topology.py, graph/{subagent_patterns,topology_engine,team_composer}.py, scripts/ gate |
-| MEDULLA-DECISION-ENGINE-R112 | T6 | BUILT | NOT_RUN | **ST-8** — Capacity premise: CapacityStatus → headroom observations at the request priority. Infeasible{lease:*} naming — Medulla src/server/handlers/decide/capacity_premise.rs (new) |
+| MEDULLA-DECISION-ENGINE-R112 | T6 | BUILT | NOT_RUN | **ST-8** — Capacity premise: CapacityStatus → headroom observations at the request priority. Infeasible{lease:*} naming — Medulla crates/medulla-h-decide/src/decide/capacity_premise.rs (new) |
 | MEDULLA-DECISION-ENGINE-R113 | T6 | BUILT | NOT_RUN | **ST-9** — Arbora orchestration: evaluate → commit → publish with synthesis_evidence → all-or-nothing AcquireCapacity → KgDelegate. One re-decide on denial. Release on stop — Arbora graph_os/a2a/{routing,composition}.py, control_plane/runs/admission.py |
 | MEDULLA-DECISION-ENGINE-R114 | T6 | BUILT | NOT_RUN | **ST-10** — Harness allowance: RunSpec.subagents: SubagentAllowance, a negotiation rule, adapter enforcement flags — Meristem agent_utilities/layers/{contracts,negotiation}.py, adapters/* descriptors |
 | MEDULLA-DECISION-ENGINE-R115 | T6 | BUILT | NOT_RUN | **ST-11** — Continuation/stop: au.swarm.continue evaluate-only point, narrow-only options, StopRule evaluator over L5, ReleaseCapacity on narrow — Meristem decide/consumers/continuation.py (new), decide/points.py |
@@ -547,13 +547,13 @@ The query-enabled pipeline fixture checks forecaster metrics, reputation counts,
 ### R118.1.2 source reliability consumers
 
 `crates/medulla-epistemic/src/model.rs::AuthorityPolicy` stores a global `f64` reliability multiplier.
-`src/server/handlers/query/explain_wire_a.rs::epistemic_status_wire` selects the default policy without reading source reputation.
+`crates/medulla-h-query/src/query/explain_wire_a.rs::epistemic_status_wire` selects the default policy without reading source reputation.
 `crates/medulla-epistemic/src/ranking.rs::RetrievalCandidate` also requires a scalar reliability.
-`src/server/handlers/query/explain_wire_b.rs::rank_by_provenance_wire` copies that scalar from the caller's request.
+`crates/medulla-h-query/src/query/explain_wire_b.rs::rank_by_provenance_wire` copies that scalar from the caller's request.
 Neither served consumer resolves a governed source identity through the visible decision log.
 
-`src/server/handlers/decide/stat_reputation.rs::learned_reliability` discards `Reputation::InsufficientHistory` and returns `None`.
-`crates/medulla-plan/src/exec/reliability.rs::reliability_of` interprets `None` as permission to retain the graph prior.
+`crates/medulla-h-decide/src/decide/stat_reputation.rs::learned_reliability` discards `Reputation::InsufficientHistory` and returns `None`.
+`crates/medulla-exec/src/exec/reliability.rs::reliability_of` interprets `None` as permission to retain the graph prior.
 The result therefore loses the distinction between absent evidence and a visible sparse pool's abstention.
 Dense UQL results also use `anchored_reliability` with the graph prior instead of the materialized pooled estimate.
 
@@ -561,13 +561,13 @@ A source-identity adapter must resolve subject kind, subject identity, and calle
 The read contract must distinguish absent evidence, insufficient history, and an estimated reliability.
 Each consumer must propagate the optional or typed result without coercing abstention into a scalar.
 The consumers must share the materialized estimate instead of recomputing it from different priors.
-`crates/medulla-types/src/protocol/support_02.rs::AuthorityPolicyWire` and `support_03.rs::RetrievalCandidateWire` currently require scalar reliability fields.
+`crates/medulla-protocol-types/src/protocol/support_02.rs::AuthorityPolicyWire` and `support_03.rs::RetrievalCandidateWire` currently require scalar reliability fields.
 Any public contract change must preserve compatibility and regenerate its derived artifacts.
 Whole-query refusal, a NaN sentinel, and a helper-only test do not establish cross-surface abstention.
 
 ## HarnessConfig decision (R128)
 
-Data flow: `Method::Decide` (`src/server/dispatch/router/decision_plane.rs:95`) → `handle_decide` (`src/server/handlers/decide/statistical.rs:11`) → `stat_decide::handle_decide` (`stat_decide.rs:48`) → `harness_config_outcome` (new, beside the `tool_subset_outcome` match at `stat_decide.rs:134`) → `seal` (`stat_decide.rs:372`) → `handle_decision_commit` → committed record.
+Data flow: `Method::Decide` (`crates/medulla-server-router/src/dispatch/router/decision_plane.rs:95`) → `handle_decide` (`crates/medulla-h-decide/src/decide/statistical.rs:11`) → `stat_decide::handle_decide` (`stat_decide.rs:48`) → `harness_config_outcome` (new, beside the `tool_subset_outcome` match at `stat_decide.rs:134`) → `seal` (`stat_decide.rs:372`) → `handle_decision_commit` → committed record.
 
 Types, from the cross-repository brief:
 
@@ -631,7 +631,7 @@ The fixture checks that shortcut separately.
 
 ### Production open and withdrawal acceptance
 
-R073.3 uses `AgentLibraryStore::open`, the production entry point in `src/server/persistence/agent_library.rs`.
+R073.3 uses `AgentLibraryStore::open`, the production entry point in `crates/medulla-persistence-records/src/agent_library.rs`.
 The current Agent Library registry declares 21 owner tables, including five ConnectorPack tables.
 Those tables are heads, members, imports, body holders, and bindings.
 The registry, layout digest, and declared predecessors govern compatibility; a standalone format-v3 label does not.
@@ -660,7 +660,7 @@ pack Import admission does not establish a production Blob CAS fix.
 ## Invariant gate on promoted rules (R129)
 
 Current delivery is limited to MEDULLA-DECISION-ENGINE-R129.2: the typed
-`RulePromotionVerdict` in `crates/medulla-types/src/decision/guardrail.rs` contains
+`RulePromotionVerdict` in `crates/medulla-agent-types/src/agent_guardrail.rs` contains
 `Promotable` and `RejectedInvariant { invariant_iri: String }`. It follows the
 existing string IRI convention and snake_case serde representation. Positive
 roundtrips and malformed-payload refusals bind to the literal child spec ID.
@@ -669,7 +669,7 @@ This enum-only delivery does not implement the invariant gate.
 The proposed R034 attach point is not established. The current R034 test at
 `crates/medulla-epistemic/src/query.rs:661` proves a read-only evidence-removal
 `MinimalFlipSet` proposal; it does not promote a rule. `GuardrailRule` in
-`crates/medulla-types/src/decision/guardrail.rs:62` contains task applicability
+`crates/medulla-agent-types/src/agent_guardrail.rs:62` contains task applicability
 metadata (`rule_id`, `applies_to_class`, `source_generation`), with no rule
 predicate or contradiction semantics. `entailed_guardrails` establishes task
 applicability only, so it cannot implement an invariant contradiction check.
@@ -714,7 +714,7 @@ Cross-repository: `AU-` rows may show the premises; they own no ranking rule.
 
 ## Limit guard pipeline (R131)
 
-Data flow: `Decide` wire method -> `conclude.rs` chokepoint -> `check_limits` (`crates/medulla-types/src/decision/limit_guard.rs`) -> abstention `limit_breach` plus an observation node linked to the signal.
+Data flow: `Decide` wire method -> `conclude.rs` chokepoint -> `check_limits` (`crates/medulla-decision-outcome-types/src/decision/limit_guard.rs`) -> abstention `limit_breach` plus an observation node linked to the signal.
 
 Types: `LimitRule`, `LimitBreach`. Attach point: the stored-rule read at `guardrail.rs:201`, plus the chokepoint in `conclude.rs`. Production caller: the Wiring row creates the second call site. Failure behavior: a breach abstains; a missing rule set admits nothing new.
 
@@ -738,11 +738,11 @@ launch-dependent difference is observed; its precise cause is not established.
 
 ## Retrieved-entry trust (R132)
 
-Data flow: `Decide` wire method -> `handle_decide` (`src/server/handlers/decide/stat_decide.rs:48`) -> `decide_one` (`crates/medulla-compute/src/assemble/conclude.rs:93`) -> `admit_entries` at `conclude.rs:180` -> premises -> record with refused entries.
+Data flow: `Decide` wire method -> `handle_decide` (`crates/medulla-h-decide/src/decide/stat_decide.rs:48`) -> `decide_one` (`crates/medulla-compute/src/assemble/conclude.rs:93`) -> `admit_entries` at `conclude.rs:180` -> premises -> record with refused entries.
 
 Types: `TrustTier`, `EntryTrust`, `AbstainReason::PoisonedEntry`. Attach point: premise construction at `conclude.rs:180`. Production caller: the Wiring row creates the call site. Failure behavior: a refused entry never becomes a premise; no admitted entry for a required premise abstains.
 
-Existing code: `crates/medulla-types/src/decision/record/premise.rs:17`, `premise.rs:49`, `premise.rs:89`, `crates/medulla-types/src/decision/ingestion_ladder.rs:46`, `crates/medulla-types/src/decision/derivation.rs:310`, `crates/medulla-modality/src/provenance.rs:22`. Reachable today: no for tier and poison check; `weakest` at `conclude.rs:192` is reachable but grades premise class only. Search terms used with no match: trust_tier, TrustTier, trust_level, poison, quarantine, untrusted.
+Existing code: `crates/medulla-decision-types/src/decision/record/premise.rs:17`, `premise.rs:49`, `premise.rs:89`, `crates/medulla-decision-outcome-types/src/decision/ingestion_ladder.rs:46`, `crates/medulla-decision-outcome-types/src/decision/derivation.rs:310`, `crates/medulla-modality/src/provenance.rs:22`. Reachable today: no for tier and poison check; `weakest` at `conclude.rs:192` is reachable but grades premise class only. Search terms used with no match: trust_tier, TrustTier, trust_level, poison, quarantine, untrusted.
 
 Decision: gate entries before they become premises, so the record never cites a refused entry. Rejected alternative: filter after the solver, because a refused entry must not shape the shortlist.
 
@@ -755,11 +755,11 @@ References
 
 Consumers: MERISTEM-CONTROL-R040 (run trace), MERISTEM-CONTROL-R041 (runtime quota).
 
-Data flow: `Decide` wire method -> `handle_decide` (`src/server/handlers/decide/stat_decide.rs:48`) -> `runtime_quota_outcome` at `stat_decide.rs:134` -> `decide_runtime_quota` (`crates/medulla-types/src/decision/run_governance.rs`, new). The result is a sealed `Advisory` with one option per value. Trace: harness run end -> new `RunTraceRecord` adapter -> served `CommitWorkItemResult` terminal outcome extension -> `lower_terminal_outcome_extensions` (`src/server/mutation_batch/terminal_outcome.rs:22`). The trace continues through `apply_commit_work_item_result_row` (`src/redb_store/work_item/commit.rs:211`) -> receipt materialization after the successful fenced terminal CAS (`commit.rs:343`) in the same transaction. New produced-link materialization reuses the pure descriptors from `project` (`crates/medulla-durable/src/project.rs:68`); that function performs no writes. `Decide` remains read-only and cannot persist the trace. `outcome_bundle.rs:56` declares participant domains, not a write call.
+Data flow: `Decide` wire method -> `handle_decide` (`crates/medulla-h-decide/src/decide/stat_decide.rs:48`) -> `runtime_quota_outcome` at `stat_decide.rs:134` -> `decide_runtime_quota` (`crates/medulla-types/src/decision/run_governance.rs`, new). The result is a sealed `Advisory` with one option per value. Trace: harness run end -> new `RunTraceRecord` adapter -> served `CommitWorkItemResult` terminal outcome extension -> `lower_terminal_outcome_extensions` (`crates/medulla-server-api/src/batch_compile/terminal_outcome.rs:22`). The trace continues through `apply_commit_work_item_result_row` (`crates/medulla-work-store/src/redb_store/work_item/commit.rs:211`) -> receipt materialization after the successful fenced terminal CAS (`commit.rs:343`) in the same transaction. New produced-link materialization reuses the pure descriptors from `project` (`crates/medulla-durable/src/project.rs:68`); that function performs no writes. `Decide` remains read-only and cannot persist the trace. `outcome_bundle.rs:56` declares participant domains, not a write call.
 
 Types: `RunTraceRecord`, `RuntimeQuota`, `QuotaDefaults`, `QuestionKind::RuntimeQuota`. Attach point: the dispatch match at `stat_decide.rs:134`. Production caller: the Wiring row creates the match arm. Failure behavior: resolve each effective default D and hard tenant ceiling C with D <= C. `decide_runtime_quota(task_class, policy, request)` first refuses any requested R > C, then returns min(D, R), or D on omission. Increases above D through C are ignored; lower requests tighten. A missing task class abstains to effective defaults under C only after the ceiling check.
 
-Existing code: `crates/medulla-types/src/outcome_bundle.rs:56`, `crates/medulla-durable/src/project.rs:68`, `crates/medulla-core/ontology/orchestration-v1.ttl:250`, `crates/medulla-types/src/decision/topology.rs:75`. Reachable today: the fenced terminal outcome extension and receipt writes already exist. RuntimeQuota dispatch, RunTraceRecord adaptation, and produced-link materialization are new work. The end-to-end fixture queries Decide first, commits the summary through CommitWorkItemResult second, then queries the persisted produced link; it also proves invalid fences write neither trace nor link. Search terms used with no match: `quota`, `wall_time`, `process_limit`, `memory_limit`, `RuntimeQuota`. Moves from Meristem: none named.
+Existing code: `crates/medulla-result-types/src/outcome_bundle.rs:56`, `crates/medulla-durable/src/project.rs:68`, `crates/medulla-core/ontology/orchestration-v1.ttl:250`, `crates/medulla-agent-types/src/agent_topology.rs:75`. Reachable today: the fenced terminal outcome extension and receipt writes already exist. RuntimeQuota dispatch, RunTraceRecord adaptation, and produced-link materialization are new work. The end-to-end fixture queries Decide first, commits the summary through CommitWorkItemResult second, then queries the persisted produced link; it also proves invalid fences write neither trace nor link. Search terms used with no match: `quota`, `wall_time`, `process_limit`, `memory_limit`, `RuntimeQuota`. Moves from Meristem: none named.
 
 Decision: the engine fixes the numbers and the harness enforces them. A tenant policy changes limits without a harness release. Rejected alternative: constants in the harness, because they cannot differ per tenant or task class.
 
@@ -772,13 +772,13 @@ References
 
 Consumers: MERISTEM-CONTROL-R042 (tool selection), MERISTEM-CONTROL-R043 (decomposition and routing). The skill-library plan has no named consumer yet.
 
-Data flow: `Decide` wire method -> `handle_decide` (`src/server/handlers/decide/stat_decide.rs:48`) -> `task_plan_outcome` / `tool_relevance_outcome` at `stat_decide.rs:134` -> `plan_over_skills`, `decompose_task`, `rank_tools_by_relevance` (`crates/medulla-types/src/decision/task_plan.rs`, new) -> `smallest_covering_subset` (`tool_subset.rs:58`) -> sealed answer.
+Data flow: `Decide` wire method -> `handle_decide` (`crates/medulla-h-decide/src/decide/stat_decide.rs:48`) -> `task_plan_outcome` / `tool_relevance_outcome` at `stat_decide.rs:134` -> `plan_over_skills`, `decompose_task`, `rank_tools_by_relevance` (`crates/medulla-decision-types/src/decision/task_plan.rs`, new) -> `smallest_covering_subset` (`tool_subset.rs:58`) -> sealed answer.
 
 Types: `Subtask`, `AggregationOp`, `SkillStep`, `TaskPlan`. Attach point: the dispatch match at `stat_decide.rs:134`. Production caller: the Wiring row creates the arms. Failure behavior: an uncovered subtask or empty catalog abstains; a cycle refuses.
 
 Moves from Meristem: `agent_utilities/capabilities/fleet_tool_search.py:54`, `agent_utilities/graph/planning/__init__.py:165`, `agent_utilities/decide/consumers/task_planner.py:211`.
 
-Existing code: `crates/medulla-types/src/decision/statistical/tool_subset.rs:58`, `crates/medulla-types/src/decision/topology.rs:110`, `crates/medulla-compute/src/assemble/topology.rs:54`, `crates/medulla-compute/src/assemble/conclude.rs:99`, `src/server/handlers/decide/stat_tool_subset.rs:33`. Reachable today: yes for the covering subset (`tool_subset_outcome` is matched at `stat_decide.rs:134`) and for topology `pose`; no for relevance search, decomposition with an independence flag and the skill plan. Search terms used with no match: `skill_plan`, `SkillPlan`, `plan_skills`, `decompose`, `aggregation`. The existing `MEDULLA-DECISION-ENGINE-R045` owns the covering subset and is reused unchanged. `rank_tools_by_relevance(query, catalog, required_capabilities, context_budget_tokens, policy)` first applies relevance_floor, descending relevance with tool-id ties, and top_k. It passes the retained candidates and explicit capability/budget inputs to R045, which selects by uncovered-capability gain per token, then lower token cost and tool id. It preserves coverage/budget refusals; it does not optimize relevance. Acceptance includes a retained lower-relevance coverage winner and loss of required coverage after filtering.
+Existing code: `crates/medulla-decision-types/src/decision/statistical/tool_subset.rs:58`, `crates/medulla-agent-types/src/agent_topology.rs:110`, `crates/medulla-compute/src/assemble/topology.rs:54`, `crates/medulla-compute/src/assemble/conclude.rs:99`, `crates/medulla-h-decide/src/decide/stat_tool_subset.rs:33`. Reachable today: yes for the covering subset (`tool_subset_outcome` is matched at `stat_decide.rs:134`) and for topology `pose`; no for relevance search, decomposition with an independence flag and the skill plan. Search terms used with no match: `skill_plan`, `SkillPlan`, `plan_skills`, `decompose`, `aggregation`. The existing `MEDULLA-DECISION-ENGINE-R045` owns the covering subset and is reused unchanged. `rank_tools_by_relevance(query, catalog, required_capabilities, context_budget_tokens, policy)` first applies relevance_floor, descending relevance with tool-id ties, and top_k. It passes the retained candidates and explicit capability/budget inputs to R045, which selects by uncovered-capability gain per token, then lower token cost and tool id. It preserves coverage/budget refusals; it does not optimize relevance. Acceptance includes a retained lower-relevance coverage winner and loss of required coverage after filtering.
 
 Decision: one `TaskPlan` question kind returns subtasks, skills and operator together, so the harness applies one record. Rejected alternative: separate kinds per step, because the harness must stitch plans and loses the shared premises.
 
@@ -788,13 +788,13 @@ Cross-repository: `MERISTEM-CONTROL-R042` and `MERISTEM-CONTROL-R043` receive th
 
 Consumers: MERISTEM-HARNESS-R023.
 
-Data flow: harness run end -> `compile_program` (`crates/medulla-types/src/decision/program_store.rs`, new) -> commit through `handle_decision_commit` -> `AgentLibraryStore`; later `Decide` wire method -> `handle_decide` (`src/server/handlers/decide/stat_decide.rs:48`) -> `program_lookup_outcome` at `stat_decide.rs:134` -> `lookup_program` -> stored program.
+Data flow: harness run end -> `compile_program` (`crates/medulla-types/src/decision/program_store.rs`, new) -> commit through `handle_decision_commit` -> `AgentLibraryStore`; later `Decide` wire method -> `handle_decide` (`crates/medulla-h-decide/src/decide/stat_decide.rs:48`) -> `program_lookup_outcome` at `stat_decide.rs:134` -> `lookup_program` -> stored program.
 
 Types: `CompiledProgram`, `ProgramStep`, `MAX_PROGRAM_STEPS`. Attach point: the dispatch match at `stat_decide.rs:134`. Production caller: the Wiring row creates the arm. Failure behavior: an unsuccessful run or an overlong trace refuses; a missing program abstains.
 
 Moves from Meristem: `agent_utilities/observability/replay_engine.py:48`.
 
-Existing code: `src/server/handlers/decide/candidates.rs:415`, `src/server/handlers/decide/stat_tool_subset.rs:33`. Reachable today: no. `crates/medulla-tsdb/src/derive/mod.rs:152` defines a `Program` for derived series, which is a different type. Search terms used with no match: `task_signature`, `TaskSignature`, `compiled_program`, `store_program`, `lookup_program`, `MAX_PROGRAM_STEPS`.
+Existing code: `crates/medulla-h-decide/src/decide/candidates.rs:415`, `crates/medulla-h-decide/src/decide/stat_tool_subset.rs:33`. Reachable today: no. `crates/medulla-tsdb/src/derive/mod.rs:152` defines a `Program` for derived series, which is a different type. Search terms used with no match: `task_signature`, `TaskSignature`, `compiled_program`, `store_program`, `lookup_program`, `MAX_PROGRAM_STEPS`.
 
 Decision: the engine owns the program store, so every harness replica shares one program per signature. Rejected alternative: a harness-local cache, because replicas compile and store duplicates.
 
@@ -804,13 +804,13 @@ Cross-repository: `MERISTEM-HARNESS-R023` replays the returned program; it does 
 
 Consumers: MERISTEM-HARNESS-R025 (round verdict), MERISTEM-SEMANTIC-R029 (stage allocation).
 
-Data flow: `Decide` wire method -> `handle_decide` (`src/server/handlers/decide/stat_decide.rs:48`) -> `round_verdict_outcome` / `stage_allocation_outcome` at `stat_decide.rs:134` -> `decide_round_verdict` / `allocate_stage_models` (`crates/medulla-types/src/decision/evolution_round.rs`, new) -> sealed answer.
+Data flow: `Decide` wire method -> `handle_decide` (`crates/medulla-h-decide/src/decide/stat_decide.rs:48`) -> `round_verdict_outcome` / `stage_allocation_outcome` at `stat_decide.rs:134` -> `decide_round_verdict` / `allocate_stage_models` (`crates/medulla-decision-outcome-types/src/decision/evolution_round.rs`, new) -> sealed answer.
 
 Types: `PredictionDeclaration`, `RoundVerdict`, `EvolutionDefaults`, `StageAllocation`, `RunBudget`. Attach point: the dispatch match at `stat_decide.rs:134`. Production caller: the Wiring row creates the arms. Failure behavior: an empty prediction abstains; an unaffordable budget refuses. Evaluate declared-direction and opposite-direction thresholds independently. Only the declared threshold met gives `verified`; only the opposite threshold met gives `falsified`; both or neither gives `unverified`. At flip_fraction 0.5 a five/five split is `unverified`, with an explicit simultaneous-threshold test.
 
 Moves from Meristem: `agent_utilities/decide/consumers/routing.py:58` (allocation). The verdict has no code to move.
 
-Existing code: `src/server/handlers/decide/stat_tool_subset.rs:33`, `src/server/handlers/decide/candidates.rs:415`. Reachable today: no. `MEDULLA-DECISION-ENGINE-R035` owns routing among models, but it chooses one option per request and has no budget across stages, so this rollup is separate. Search terms used with no match: `falsified`, `flip_fraction`, `PredictionVerdict`, `stage_budget`, `ModelAllocation`, `model_per_stage`.
+Existing code: `crates/medulla-h-decide/src/decide/stat_tool_subset.rs:33`, `crates/medulla-h-decide/src/decide/candidates.rs:415`. Reachable today: no. `MEDULLA-DECISION-ENGINE-R035` owns routing among models, but it chooses one option per request and has no budget across stages, so this rollup is separate. Search terms used with no match: `falsified`, `flip_fraction`, `PredictionVerdict`, `stage_budget`, `ModelAllocation`, `model_per_stage`.
 
 Decision: the engine returns a verdict and an allocation as records, so the harness keeps or reverts a change by reading one field. Rejected alternative: the harness compares outcomes itself, because each harness applies a different threshold.
 
@@ -820,13 +820,13 @@ Cross-repository: `MERISTEM-HARNESS-R025` keeps or reverts on the verdict; `MERI
 
 Consumers: MERISTEM-CONTEXT-R004 (context budget and plan), MERISTEM-HARNESS-R026 (parallel-map limits).
 
-Data flow: `Decide` wire method -> `handle_decide` (`src/server/handlers/decide/stat_decide.rs:48`) -> `context_budget_outcome` at `stat_decide.rs:134` -> `decide_over_window` (`crates/medulla-types/src/decision/context_budget.rs`, new) -> sealed answer carrying policy, budget, limits and plan.
+Data flow: `Decide` wire method -> `handle_decide` (`crates/medulla-h-decide/src/decide/stat_decide.rs:48`) -> `context_budget_outcome` at `stat_decide.rs:134` -> `decide_over_window` (`crates/medulla-decision-outcome-types/src/decision/context_budget.rs`, new) -> sealed answer carrying policy, budget, limits and plan.
 
 Types: `ParallelMapLimits`, `WindowBudget`, `OverWindowPlan`; `ContextPolicy` is reused. Attach point: the dispatch match at `stat_decide.rs:134`. Production caller: the Wiring row creates the arm. Failure behavior: an exhausted budget or an item count over the limit refuses; a missing window abstains to the default.
 
 Moves from Meristem: `agent_utilities/rlm/config.py:60`, `agent_utilities/knowledge_graph/retrieval/context_knapsack.py:422`.
 
-Existing code: `crates/medulla-types/src/decision/statistical/harness_config.rs:81`, `crates/medulla-compute/src/assemble/eliminate.rs:97`, `crates/medulla-compute/src/assemble/eliminate.rs:138`, `src/server/handlers/decide/candidates.rs:415`. Window elimination in `eliminate.rs:97` is reachable today and discards candidates with insufficient windows. The over-window plan and limits are not reachable. `MEDULLA-DECISION-ENGINE-R128` owns the context policy and thresholds. This rollup reuses them and adds the recursive plan and remaining limits. Search terms used with no match: `over_window`, `window_fraction`, `max_items`, `OverWindow`.
+Existing code: `crates/medulla-decision-types/src/decision/statistical/harness_config.rs:81`, `crates/medulla-compute/src/assemble/eliminate.rs:97`, `crates/medulla-compute/src/assemble/eliminate.rs:138`, `crates/medulla-h-decide/src/decide/candidates.rs:415`. Window elimination in `eliminate.rs:97` is reachable today and discards candidates with insufficient windows. The over-window plan and limits are not reachable. `MEDULLA-DECISION-ENGINE-R128` owns the context policy and thresholds. This rollup reuses them and adds the recursive plan and remaining limits. Search terms used with no match: `over_window`, `window_fraction`, `max_items`, `OverWindow`.
 
 Decision: the engine returns the plan and the limits together, so the harness never exceeds a budget it did not receive. Rejected alternative: limits set in harness configuration, because they cannot follow the task class.
 
@@ -840,13 +840,13 @@ R137.13 binds the MERISTEM-CONTEXT-R004 consumer: Meristem applies exact selecte
 
 Consumers: MERISTEM-QUAL-R009.
 
-Data flow: `Decide` wire method -> `handle_decide` (`src/server/handlers/decide/stat_decide.rs:48`) -> `probe_verdict_outcome` at `stat_decide.rs:134` -> `select_scorers`, `decide_probe_verdict` (`crates/medulla-types/src/decision/red_team.rs`, new) -> sealed answer.
+Data flow: `Decide` wire method -> `handle_decide` (`crates/medulla-h-decide/src/decide/stat_decide.rs:48`) -> `probe_verdict_outcome` at `stat_decide.rs:134` -> `select_scorers`, `decide_probe_verdict` (`crates/medulla-decision-outcome-types/src/decision/red_team.rs`, new) -> sealed answer.
 
 Types: `RedTeamAttack`, `RedTeamTransform`, `RedTeamScorer`, `ProbeVerdict`. Attach point: the dispatch match at `stat_decide.rs:134`. Production caller: the Wiring row creates the arm. Failure behavior: a category with no scorer abstains; a missing score is inconclusive.
 
 Moves from Meristem: `agent_utilities/harness/reliability_scorers.py:1`.
 
-Existing code: `src/server/handlers/decide/candidates.rs:415`, `src/server/handlers/decide/stat_tool_subset.rs:33`. Reachable today: no. Search terms used with no match: `red_team`, `redteam`, `RedTeam`, `jailbreak`, `prompt_injection`, `attack`, `score_probe`.
+Existing code: `crates/medulla-h-decide/src/decide/candidates.rs:415`, `crates/medulla-h-decide/src/decide/stat_tool_subset.rs:33`. Reachable today: no. Search terms used with no match: `red_team`, `redteam`, `RedTeam`, `jailbreak`, `prompt_injection`, `attack`, `score_probe`.
 
 Decision: the engine decides the verdict from stored records, so every harness reads one result for one probe. Rejected alternative: scoring in the harness, because the records and thresholds differ per harness.
 
@@ -889,8 +889,8 @@ Source inventory (Medulla `fe6982b29d0b60ad2a10092c959c238eeb74e919`, Meristem `
 
 - Meristem [Capacity.tokens, context_knapsack.py:98](https://github.com/Knuckles-Team/agent-utilities/blob/50c313ab01871ff7e10aee2a9d0254fa55d71f07/agent_utilities/knowledge_graph/retrieval/context_knapsack.py#L98) computes window minus reserved output, money/price, latency times throughput and caller ceiling. Its current truthiness checks omit unknown/zero rates. The certified contract explicitly distinguishes known zero from unknown under R018. Capacity rounding must stay within the original physical ceilings. Source `_whole` uses a float tolerance. That tolerance cannot permit exceeding a ceiling.
 - Meristem [knapsack_model:161](https://github.com/Knuckles-Team/agent-utilities/blob/50c313ab01871ff7e10aee2a9d0254fa55d71f07/agent_utilities/knowledge_graph/retrieval/context_knapsack.py#L161) emits at-most-one resolution groups, token capacity and lexicographic net-value/token objectives. `_net_value:157` uses scale 1,000,000 and ties-to-even integer rounding. [fit_to_budget:422](https://github.com/Knuckles-Team/agent-utilities/blob/50c313ab01871ff7e10aee2a9d0254fa55d71f07/agent_utilities/knowledge_graph/retrieval/context_knapsack.py#L422), called at `context_compiler.py:1128`, builds full/summary slices and applies their selected resolutions. `select_slices:272` can currently use an explicitly uncertified greedy fallback; that path is not proof of the new producer contract.
-- Medulla [stat_decide.rs:134](https://github.com/Knuckles-Team/medulla/blob/fe6982b29d0b60ad2a10092c959c238eeb74e919/src/server/handlers/decide/stat_decide.rs#L134) dispatches `tool_subset_outcome`; it has no `ContextBudget` arm. `QuestionKind` at `crates/medulla-types/src/decision/statistical.rs:58` also lacks that variant. The planned records extend the already specified `context_budget.rs`, not a second selector/store.
-- Medulla [solve/mod.rs:1](https://github.com/Knuckles-Team/medulla/blob/fe6982b29d0b60ad2a10092c959c238eeb74e919/crates/medulla-compute/src/solve/mod.rs#L1) exposes integer model/constraint primitives, `solve` and independent `verify`. R014's existing assembly lowering at `crates/medulla-compute/src/assemble/model.rs:96` is assembly-specific: reuse its constraint model/primitives, not an assumed generic package call. R004/R049 verification is `crates/medulla-compute/src/solve/verify/mod.rs:23`; R011 bounds deterministic work, and R018 prevents false confidence from unknown facts. None of these reuse dependencies proves package wiring.
+- Medulla [stat_decide.rs:134](https://github.com/Knuckles-Team/medulla/blob/fe6982b29d0b60ad2a10092c959c238eeb74e919/crates/medulla-h-decide/src/decide/stat_decide.rs#L134) dispatches `tool_subset_outcome`; it has no `ContextBudget` arm. `QuestionKind` at `crates/medulla-decision-types/src/decision/statistical.rs:58` also lacks that variant. The planned records extend the already specified `context_budget.rs`, not a second selector/store.
+- Medulla [solve/mod.rs:1](https://github.com/Knuckles-Team/medulla/blob/fe6982b29d0b60ad2a10092c959c238eeb74e919/crates/medulla-decision-policy/src/solve/mod.rs#L1) exposes integer model/constraint primitives, `solve` and independent `verify`. R014's existing assembly lowering at `crates/medulla-compute/src/assemble/model.rs:96` is assembly-specific: reuse its constraint model/primitives, not an assumed generic package call. R004/R049 verification is `crates/medulla-decision-policy/src/solve/verify/mod.rs:23`; R011 bounds deterministic work, and R018 prevents false confidence from unknown facts. None of these reuse dependencies proves package wiring.
 
 The planned flow starts at authorized served `Decide(ContextBudget, package)` with existing tenant/policy/candidate checks. Package lowering produces Medulla's bounded 0-1 model. `solve` and independent `verify` produce a sealed package result. MERISTEM-CONTEXT-R004 applies the result with citations intact. Keep package token totals distinct from the whole serialized prompt. Package certification cannot assert full-prompt fit, a latency service guarantee, or completion of recursive decomposition. Monetary/latency totals mean input-token cost and processing estimates under the bound rates. They do not silently absorb other charges or runtime overhead. Optional absent ceilings do not invent limits; active ceilings require their rate facts. A known zero price imposes no monetary token restriction. Known zero throughput with an active latency ceiling allows zero tokens. Reservations above the window clamp capacity to zero.
 
@@ -901,7 +901,7 @@ Certification requires an independently verified optimal, zero-gap result. R011 
 
 The Medulla producer consumes only caller-supplied, revision-pinned `UnifiedQuery` results and vectors. It filters to caller-visible candidates, caps the universe at 64, and emits stable order. Versioned default importance thresholds are 0.50 for selective synthesis and 0.80 for deep extraction. Stage budgets are exactly 0 discovery, 1 or 2 synthesis calls, and 0–64 extraction calls; the explicit total must cover their sum. No stage retries outside budget. The plan contains no model-generated text.
 
-The real Medulla path is public `Method::Decide` through `src/server/handlers/decide/statistical.rs::handle_decide` and `src/server/handlers/decide/stat_decide.rs::handle_decide`; add the `ComparativeAnalysisPlan` arm and make zero model calls. The Meristem consumer may invoke only after receiving the plan, through `agent_utilities/knowledge_graph/retrieval/context_compiler_serving.py::compiled_chat_completion`; Meristem binds actual calls, run ID and request/result digests to a separate receipt. `MERISTEM-HARNESS-R024.3` is trace-digest support only. The Meristem consumer contract and served receipt remain an explicit external dependency, not covered by Medulla changes.
+The real Medulla path is public `Method::Decide` through `crates/medulla-h-decide/src/decide/statistical.rs::handle_decide` and `crates/medulla-h-decide/src/decide/stat_decide.rs::handle_decide`; add the `ComparativeAnalysisPlan` arm and make zero model calls. The Meristem consumer may invoke only after receiving the plan, through `agent_utilities/knowledge_graph/retrieval/context_compiler_serving.py::compiled_chat_completion`; Meristem binds actual calls, run ID and request/result digests to a separate receipt. `MERISTEM-HARNESS-R024.3` is trace-digest support only. The Meristem consumer contract and served receipt remain an explicit external dependency, not covered by Medulla changes.
 
 Dependency order: typed request/plan/refusal/evidence round trip; deterministic threshold and budget behavior; real Decide wiring; served stale-input and budget refusals; then independent Meristem served consumer and receipt. Keep R080.1, R136.3, R137, R138 and existing producer obligations intact.
 <!-- /spec-definition-patch -->
@@ -1367,7 +1367,7 @@ Dependency order: typed request/plan/refusal/evidence round trip; deterministic 
 
 ### `MEDULLA-DECISION-ENGINE-R140.104` — Wiring row
 
-- Production call sites: src/server/dispatch/router/decision_plane.rs:107 -> src/server/handlers/decide/stat_decide.rs:48.
+- Production call sites: crates/medulla-server-router/src/dispatch/router/decision_plane.rs:107 -> crates/medulla-h-decide/src/decide/stat_decide.rs:48.
 - Bind every R140 decision digest and policy/source revision into the existing TaskPlan result. Do not move Meristem model or trajectory execution into Medulla.
 - Owner dependency. Meristem's exact decision-digest/K, projection, breadth and pairwise execution receipt fields remain pending; R140.103 policy selection remains pending.
 - Planned proving test. tests/decide/test_trajectory_refinement_served.py::test_real_decide_route_emits_pinned_refinement_decisions.
@@ -1398,7 +1398,7 @@ Dependency order: typed request/plan/refusal/evidence round trip; deterministic 
 
 ### `MEDULLA-DECISION-ENGINE-R141.102` — Wiring row
 
-- Production call sites: src/server/dispatch/router/decision_plane.rs:119 -> src/server/handlers/decide/jobs.rs:30.
+- Production call sites: crates/medulla-server-router/src/dispatch/router/decision_plane.rs:119 -> crates/medulla-h-decide/src/decide/jobs.rs:30.
 - Bind R141.100/.101 evidence into DecisionEval receipts before any active-memory mutation.
 - Explicit owner dependency. no authoritative memory store, full write-entrypoint list, or atomic receipt/CAS check is identified. Do not claim the current evaluation handler universally gates writes.
 - Planned proving test. tests/decide/test_memory_change_admission_served.py::test_real_decision_eval_binds_memory_candidate_and_metrics.
@@ -1424,7 +1424,7 @@ Dependency order: typed request/plan/refusal/evidence round trip; deterministic 
 - **Operational wiring / exact open dependency:** Bind Meristem’s local-model evaluation receipt to Medulla DecisionEval, then bind the resulting attestation to Arbora R034.7-.12. Keep Meristem producer and Arbora consumer evidence pending. Do not claim that the existing identity checks consume a Medulla attestation.
 ### `MEDULLA-DECISION-ENGINE-R142.101` — Wiring row
 
-- Production call sites: src/server/dispatch/router/decision_plane.rs:119 -> src/server/handlers/decide/jobs.rs:30.
+- Production call sites: crates/medulla-server-router/src/dispatch/router/decision_plane.rs:119 -> crates/medulla-h-decide/src/decide/jobs.rs:30.
 - The Medulla attestation must bind the Meristem evaluation receipt and exact skill/model/dataset/criteria revisions; Arbora consumption is at ARBORA-FLEET-R034.7-.12.
 - Explicit owner dependencies: Meristem has not defined its per-criterion evaluation receipt. Arbora has not defined its attestation-consumer operation. R034 identity checks do not close this dependency.
 - Planned proving test. tests/decide/test_local_skill_certification_served.py::test_decision_eval_attestation_binds_au_receipt.
@@ -1700,7 +1700,7 @@ References
 
 ## MEDULLA-DECISION-ENGINE-R172.12: designation over connector-pack relationships
 
-Capability designation reads the surface triples that `MEDULLA-TYPED-PACKS-R102` projects from each connector pack. Call path: `ConnectorPack.Import` → `project_head` (`src/server/handlers/admin/connector_pack/reproject.rs:72`) → capability index upsert (`crates/medulla-compute/src/capability_index/`) → `handle_decide` (`src/server/handlers/decide/stat_decide.rs:137`) → `capability_designation_outcome`. Subclass matching over `cp:appliesTo` and `cp:executes` answers which method and which tool apply to a target class.
+Capability designation reads the surface triples that `MEDULLA-TYPED-PACKS-R102` projects from each connector pack. Call path: `ConnectorPack.Import` → `project_head` (`crates/medulla-h-admin/src/admin/connector_pack/reproject.rs:72`) → capability index upsert (`crates/medulla-compute/src/capability_index/`) → `handle_decide` (`crates/medulla-h-decide/src/decide/stat_decide.rs:137`) → `capability_designation_outcome`. Subclass matching over `cp:appliesTo` and `cp:executes` answers which method and which tool apply to a target class.
 
 ## MEDULLA-DECISION-ENGINE-R176 and R177 — job-scoped load set and usage guidance
 
@@ -1749,9 +1749,9 @@ Arbora retains served admission and authentication. Medulla supplies durable
 transaction validation and persistence under verified authority.
 
 Reuse `Method::DecisionCommit`, its handler in
-`src/server/handlers/decide/commit.rs`, and
+`crates/medulla-h-decide/src/decide/commit.rs`, and
 `AgentLibraryStore::commit_decision_record` in
-`src/server/persistence/decision_record.rs` as the decision-record owner.
+`crates/medulla-persistence-records/src/decision_record.rs` as the decision-record owner.
 `Method::AgentAssemble` remains a read-only derivation. The current commit
 transaction checks catalog/component snapshots and stores a decision; it does
 not admit a task or establish profile-use authority.
@@ -1803,7 +1803,7 @@ R036 and the Arbora requirement remain open for these acceptance obligations.
 
 The engine decides which web candidates to ingest. arbora `research.web` (`ARBORA-OPS-R067`) sends the search rows, the query and a page budget as one served `SelectWebPages` call. arbora computes no ranking.
 
-Call path: served `SelectWebPages` -> `src/server/dispatch/graph_pipeline/web_ingest.rs` -> RLS-visible held `Document` rows -> `medulla_decision_stats::decision::web_fetch_selection::select_web_pages` -> ordered selection with reasons, and one skip entry per other candidate.
+Call path: served `SelectWebPages` -> `crates/medulla-server-graph/src/dispatch/graph_pipeline/web_ingest.rs` -> RLS-visible held `Document` rows -> `medulla_decision_stats::decision::web_fetch_selection::select_web_pages` -> ordered selection with reasons, and one skip entry per other candidate.
 
 The selection is deterministic and runs no model. It is a dedicated method, not a `Decide` question kind, because it needs no feature schema, head or decision policy. Selected pages enter through `MEDULLA-UNIFIED-DATA-PLANE-R651.7`. Near-duplicate content by the index of `MEDULLA-INGEST-WORKER-R702` is not yet used.
 
@@ -1878,7 +1878,7 @@ necessary; a thin adapter over today's independent commits is insufficient.
 
 Before enabling profile admission, inventory every writer for the migrated
 facts. This includes session revoke, expiry and mode-epoch changes through
-`src/server/dispatch/identity_store.rs`, profile/capability eligibility changes
+`crates/medulla-server-identity/src/dispatch/identity_store.rs`, profile/capability eligibility changes
 through Agent Library, and the profile decision receipt write through
 `AgentLibraryStore::commit_decision_record`. Preserve unrelated operations.
 Ultimately fence the old authoritative write paths for migrated records.
@@ -1934,7 +1934,7 @@ not existing runtime support. No deployment or new privilege is authorized.
 
 `MutationKernel::admit_group_current` commits members within one physical file.
 `src/raft/cross_shard_txn/` supplies graph-slice prepare, decision and recovery
-machinery. `src/server/handlers/txn/consensus.rs` supplies graph participant
+machinery. `crates/medulla-h-txn/src/txn/consensus.rs` supplies graph participant
 commands and placement fencing. Neither supplies the heterogeneous RBAC,
 Agent Library and task transaction required here.
 
@@ -1948,9 +1948,9 @@ must not be described as already satisfying the obligations below.
 ### Record keys and authoritative participants
 
 The inspected baseline is cd7dcc16313fb060c4a6c7d8a042455eef8d11ef. Source owners
-are `crates/medulla-core/src/rbac_persist.rs`, `crates/medulla-types/src/identity/model.rs`,
+are `crates/medulla-isolation/src/rbac_persist.rs`, `crates/medulla-identity-types/src/identity/model.rs`,
 `crates/medulla-storage/src/owner/registry.rs` and
-`src/redb_store/work_item_capability.rs`.
+`crates/medulla-work-store/src/redb_store/work_item_capability.rs`.
 
 | Record and key | Owner and required participation |
 | --- | --- |
@@ -2172,21 +2172,21 @@ This section completes the self-improvement loop beside R803. It does not repeat
 | Round verdict | R136 |
 
 R804 binds code that exists today: `crates/medulla-program` and the `JobKind::ProgramOptimize` arm at
-`src/server/handlers/jobs/submit.rs:419`. R805 composes the promotion compare-and-swap at
-`src/server/mutation_batch/commit/program.rs:64`. Rollback re-promotes the parent revision. A
+`crates/medulla-h-jobs/src/jobs/submit.rs:419`. R805 composes the promotion compare-and-swap at
+`crates/medulla-server-mutation/src/mutation_batch/commit/program.rs:64`. Rollback re-promotes the parent revision. A
 model-judge-only test split never drives promotion, per R016.
 
 ## Memory consolidation and contradiction tracking (R651.7, R651.8, R700.7)
 
-The served `Consolidate`, `Reinforce` and `DecayMemories` methods exist and route through `src/server/handlers/graph_ops/gateway_graph_routes.rs`. R651.7 adds episodic-to-semantic promotion on that route. R651.8 puts reinforce and decay on one salience function. R700.7 persists each contradiction that the truth-maintenance code in `crates/medulla-epistemic/src/tms.rs` detects. UQL `CONTRADICTS` reads the records.
+The served `Consolidate`, `Reinforce` and `DecayMemories` methods exist and route through `crates/medulla-h-graph/src/graph_ops/gateway_graph_routes.rs`. R651.7 adds episodic-to-semantic promotion on that route. R651.8 puts reinforce and decay on one salience function. R700.7 persists each contradiction that the truth-maintenance code in `crates/medulla-epistemic/src/tms.rs` detects. UQL `CONTRADICTS` reads the records.
 
 ## Program optimization and champion promotion (R810 to R813)
 
 The engine already holds the program compiler, the policy evolution receipts and the promotion compare-and-set. These rows bind that code to IDs and serve it. Most of the work is wiring.
 
-- R810 serves `ProgramOptimize`. The job path is `submit_job_program_optimize` in `src/server/handlers/jobs/submit.rs`, then `executor_program.rs`.
-- R811 binds `PolicyEvolution` capture, training and held-out evaluation. The dispatch path is `src/server/dispatch/policy_evolution/gate.rs`.
-- R812 names the champion as the active `ProgramRevisionIdentity`. A rollback re-promotes `parent_ref` through `program_promotion_methods` in `src/server/mutation_batch/commit/program.rs`.
+- R810 serves `ProgramOptimize`. The job path is `submit_job_program_optimize` in `crates/medulla-h-jobs/src/jobs/submit.rs`, then `executor_program.rs`.
+- R811 binds `PolicyEvolution` capture, training and held-out evaluation. The dispatch path is `crates/medulla-server-graph/src/dispatch/policy_evolution/gate.rs`.
+- R812 names the champion as the active `ProgramRevisionIdentity`. A rollback re-promotes `parent_ref` through `program_promotion_methods` in `crates/medulla-server-mutation/src/mutation_batch/commit/program.rs`.
 - R813 turns trace-store scores into training examples with a grader kind. A model-judge score never decides a promotion, per R016.
 
 arbora serves the optimize, promote and rollback operations through ARBORA-OPS-R860. The trace-store connector imports scores through CONN-LANGFUSE-AGENT-TRACE-INGEST-R001. Self-healing stays in R161 and R704. Evaluation gates stay in R006 and R060.
@@ -2320,7 +2320,7 @@ The values come from `.config/kiss.toml` and `.config/pre-commit.yaml`.
 - A function takes at most one boolean. A second flag becomes an enum such as `ObserverRef`.
 - Each new concern has its own file. The files are `participant.rs`, `memory_scope.rs`, `participant_memory.rs`, `memory_events.rs`, `assistant_profile.rs` in `crates/medulla-types/src`. The handler files are `participant_surface.rs`, `participant_derive.rs`, `participant_ask.rs`, `participant_card.rs` and `assistant_profile.rs` in `src/server/handlers/graph_ops`. The numeric files are `participant_derive.rs` and `participant_card.rs` in `crates/medulla-numeric/src/decision`.
 - Reuse these helpers and write no near-copy: the batch builder of `remember_thread`, `TaskEnqueue::with_lane`, `Claims` handler writers, `handle_nl_query_plan`, `claim_mutation_outbox`, `tool_subset_body`, the `Grant` evaluator of `medulla-core::rbac` and the tenant-filtered `GraphView` reader.
-- Register each module where the reachability gate sees it. Types modules go in `lib.rs`. Handler modules go in `src/server/handlers/graph_ops.rs`. Numeric modules go in `crates/medulla-numeric/src/decision.rs`.
+- Register each module where the reachability gate sees it. Types modules go in `lib.rs`. Handler modules go in `crates/medulla-h-graph/src/graph_ops.rs`. Numeric modules go in `crates/medulla-numeric/src/decision.rs`.
 
 ### Dependency order
 

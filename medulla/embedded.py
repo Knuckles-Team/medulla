@@ -19,9 +19,10 @@ use to accept either transport -- not made here, by design.
 
 ## Persist-dir contract (plan §1.9, §9.2 Gate A -- data-loss-critical)
 
-``medulla`` MUST NOT import ``meristem`` or any component that depends on it (that would
-invert the repo dependency direction), so this module reads the persist directory from the
-environment variable the platform sets, instead of calling a platform configuration helper:
+``medulla`` MUST NOT import ``meristem`` or any component that depends on it
+(that would invert the repo dependency direction), so this module reads the
+persist directory from the environment variable the platform sets, instead of
+calling a platform configuration helper:
 
     GRAPH_SERVICE_PERSIST_DIR
 

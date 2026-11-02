@@ -224,7 +224,7 @@ cross-store window and is fully atomic.
 
 ## Authentication Protocol
 
-`eg2.` is the only request envelope accepted by `src/server/auth.rs`. It binds
+`eg2.` is the only request envelope accepted by `crates/medulla-server-auth/src/auth.rs`. It binds
 the request id, graph, canonical method/body digest, timestamp, nonce,
 idempotency key, authenticated principal, tenant, audience, effective agent,
 roles, scopes, policy version, and delegation path under HMAC-SHA256. Tokens are

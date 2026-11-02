@@ -148,7 +148,7 @@ Composition is the engine's decision functionality: `graph.assemble()` (`MEDULLA
 
 ## Architecture views derived from the graph (R010)
 
-Data flow: served impact operation → `handle_impact` (`src/server/handlers/mining/impact.rs:264`) → `derive_architecture_view` (new, `crates/medulla-core/src/architecture_view.rs`) → `ArchitectureView` with containers, edges and support ids.
+Data flow: served impact operation → `handle_impact` (`crates/medulla-h-mining/src/mining/impact.rs:264`) → `derive_architecture_view` (new, `crates/medulla-core/src/architecture_view.rs`) → `ArchitectureView` with containers, edges and support ids.
 
 Types: `ArchitectureView`, `ViewContainer { name, technology, support }`, `ViewEdge { from, to, kind, call_count }`, and `ViewAbstained::NoSupportingSource`.
 

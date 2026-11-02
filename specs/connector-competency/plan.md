@@ -255,7 +255,7 @@ creates and registers its companion. Shape children therefore have a home.
 
 #### Wiring
 
-- Ontology files: `crates/medulla-core/ontology/<file>.ttl`; registration: `CoreSpec` entries in `crates/medulla-core/src/graph/schema_sources.rs` (precedent `governance-shapes`, `personal`, `government`).
+- Ontology files: `crates/medulla-core/ontology/<file>.ttl`; registration: `CoreSpec` entries in `crates/medulla-graph-core/src/graph/schema_sources.rs` (precedent `governance-shapes`, `personal`, `government`).
 - `catalog-v1.ttl` is generated; it is never hand-edited. The `commercial` module appears in it by regeneration.
 - Connector mappings to the new terms are `vg:VirtualMapping` rows (`virtual_graph-v1.ttl`: `mapsOntologyClass`, `mapsEntity`, `hasPredicateFieldPair`); they belong to the connector lanes, not here.
 - Reassignment rows change the Coverage table and `Vocabulary:` text in `specs/connector-competency` after their producer terms land. They carry exact row-level assertions in both documents.
@@ -309,7 +309,7 @@ Vocabulary declarations alone do not prove runtime competency.
 
 ## Connector-pack competency questions (R084)
 
-Every connector ships an OWL/RDF ontology pack with its domain ontology, ingest contract and surface. The engine imports it as native relationships (`MEDULLA-TYPED-PACKS-R101`, `MEDULLA-TYPED-PACKS-R102`). R084 states the acceptance questions for that design. The engine answers each by SPARQL over imported packs. The method-selection question also runs through `Decide` (`MEDULLA-DECISION-ENGINE-R172.12`). Call path: `ConnectorPack.Import` → pack graph → `SourceIngest` → served SPARQL handler (`src/server/handlers/rdf/sparql.rs:30`) and `handle_decide` (`src/server/handlers/decide/stat_decide.rs:50`).
+Every connector ships an OWL/RDF ontology pack with its domain ontology, ingest contract and surface. The engine imports it as native relationships (`MEDULLA-TYPED-PACKS-R101`, `MEDULLA-TYPED-PACKS-R102`). R084 states the acceptance questions for that design. The engine answers each by SPARQL over imported packs. The method-selection question also runs through `Decide` (`MEDULLA-DECISION-ENGINE-R172.12`). Call path: `ConnectorPack.Import` → pack graph → `SourceIngest` → served SPARQL handler (`crates/medulla-h-sparql/src/rdf/sparql.rs:30`) and `handle_decide` (`crates/medulla-h-decide/src/decide/stat_decide.rs:50`).
 
 ## Amendments
 
@@ -344,7 +344,7 @@ FILTER comparison over a dateTime lexical silently drops the row. The tests
 express windows with the `YEAR()`, `MONTH()`, `DAY()`, `HOURS()` and
 `MINUTES()` accessors instead. The typed abstention is the source-selection
 `Abstained { reason: Unconnected }` verdict. The function `question_abstention`
-(`crates/medulla-rdf/src/source_selection.rs`) selects each `(source, concept)` a
+(`crates/medulla-virtual-graph/src/source_selection.rs`) selects each `(source, concept)` a
 question reads. It checks them against the sources that
 `connected_sources_from_turtle` finds connected: an approved `vg:VirtualMapping`
 under a `vg:MetadataContract`. It returns the `AuthorityAudit` naming each

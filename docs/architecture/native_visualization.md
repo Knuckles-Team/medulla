@@ -384,11 +384,11 @@ edges, debug numbers below — see the example for a release run):
 | `crates/medulla-viz-columnstore/` | V1 — ColumnStore, `content_fingerprint` |
 | `crates/medulla-viz-kernels/` | V2 — M4, LTTB, SIMD |
 | `crates/medulla-viz-export/` | V3a — static PNG/SVG/PDF |
-| `src/server/handlers/viz.rs` | RPC entry point (`Method::Viz`) |
-| `src/server/viz_engine.rs` | V4 — persistent state, render cache |
-| `src/server/viz_provenance.rs` | V4 — durable provenance |
-| `src/server/viz_interactive.rs` | V3b — HTTP listener, tile protocol |
+| `crates/medulla-h-compute/src/viz.rs` | RPC entry point (`Method::Viz`) |
+| `crates/medulla-server-api/src/viz_engine.rs` | V4 — persistent state, render cache |
+| `crates/medulla-server-api/src/viz_provenance.rs` | V4 — durable provenance |
+| `crates/medulla-h-compute/src/viz_interactive.rs` | V3b — HTTP listener, tile protocol |
 | `src/server/viz_interactive_client.html` | V3b — reference WebGPU/WebGL2 client |
 | `crates/medulla-viz-graph-tiles/` | VIZ-2 — contract types, binary tile encoder/decoder, streaming frames, demo `GraphSource` |
-| `src/server/graph_tile_source.rs` | VIZ-1/VIZ-2 bridge — `RealClusterSource`, the real `GraphCore`-backed `GraphSource` |
-| `src/server/graph_tile_server.rs` | VIZ-2 — `/graph_tile/{clusters,expand,stream}` routes on the V3b listener |
+| `crates/medulla-h-compute/src/graph_tile_source.rs` | VIZ-1/VIZ-2 bridge — `RealClusterSource`, the real `GraphCore`-backed `GraphSource` |
+| `crates/medulla-h-compute/src/graph_tile_server.rs` | VIZ-2 — `/graph_tile/{clusters,expand,stream}` routes on the V3b listener |

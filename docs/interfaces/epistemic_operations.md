@@ -52,7 +52,7 @@ characters or newline. Other existing lane admission checks, including host
 kind/alias agreement, positive bounded TTL and disk demand, remain in force.
 
 These are the current rules implemented by
-`src/redb_store/development_lane/links.rs`; generated schema/client checks must
+`crates/medulla-lane-store/src/redb_store/development_lane/links.rs`; generated schema/client checks must
 represent the same semantics. JSON Schema `maxLength` alone cannot express a
 UTF-8 byte limit and must not substitute a character bound.
 
@@ -62,7 +62,7 @@ UTF-8 byte limit and must not substitute a character bound.
 `max_tenant_in_flight` is an integer in the inclusive range **1 through 4096**.
 `tenant_ref` and `worker_ref` must not be empty after trimming whitespace.
 Generated request validation must reject invalid values before transport,
-consistently with `src/redb_store/work_item/claim.rs`. It must not normalize an
+consistently with `crates/medulla-work-store/src/redb_store/work_item/claim.rs`. It must not normalize an
 invalid request into a different valid request.
 
 Nullable does not mean optional presence. Claim selectors `work_item_id`,

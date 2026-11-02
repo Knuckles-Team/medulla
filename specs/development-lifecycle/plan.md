@@ -1,7 +1,7 @@
 # MEDULLA-SDLC — Design and implementation plan
 
 Governing spec: [spec.md](spec.md).
-Code: ../../crates/medulla-compute/src/parser/tree_sitter.rs ../../src/server/dispatch/router/source_ingest.rs
+Code: ../../crates/medulla-compute/src/parser/tree_sitter.rs ../../crates/medulla-server-router/src/dispatch/router/source_ingest.rs
 
 ## Summary
 
@@ -30,7 +30,7 @@ The engine holds the whole software lifecycle as typed records. This plan extend
 ```text
 crates/medulla-compute/src/parser/spec_artifacts.rs   new   deterministic parser (R014.1)
 crates/medulla-core/ontology/sdd-spec-v1.ttl          new   ontology pack (R014.5)
-crates/medulla-types/src/lifecycle.rs                 existing  Proposal, Goal, ProjectMode types
+crates/medulla-source-types/src/lifecycle.rs                 existing  Proposal, Goal, ProjectMode types
 src/server/handlers/source_ingestion/spec_projection.rs   existing  incremental ingest and linking
 src/server/handlers/lifecycle.rs                      existing  mode, goal and proposal methods
 src/server/handlers/decide/family/task_context.rs     new   run-context assembly (R015.2)
@@ -200,10 +200,10 @@ The ingest budget gates are the bench groups `lifecycle/spec_parse` and `lifecyc
 
 1. MEDULLA-SCM-R003 accepts a changeset. The accept path calls the re-index hook of MEDULLA-SCM-R006.
 2. The re-index hook calls `derive_lifecycle_edges` in `crates/medulla-core/src/lifecycle/derive.rs`.
-3. For an ingested git repository, `IndexRepository` at `src/server/dispatch/router/source_ingest.rs:24` calls the same function.
+3. For an ingested git repository, `IndexRepository` at `crates/medulla-server-router/src/dispatch/router/source_ingest.rs:24` calls the same function.
 4. `RecordGateVerdict` of MEDULLA-SCM-R008 calls the defect intake on a failed verdict.
 5. arbora serves the methods above through `ARBORA-OPS-R853`.
-6. The repository-manager ingest job calls `SourceIngest`. `index_repository` in `src/server/dispatch/router/source_ingest.rs` calls `reingest_changed_artifacts`, which parses and links the spec artifacts (R014.8).
+6. The repository-manager ingest job calls `SourceIngest`. `index_repository` in `crates/medulla-server-router/src/dispatch/router/source_ingest.rs` calls `reingest_changed_artifacts`, which parses and links the spec artifacts (R014.8).
 7. arbora serves the artifact reads, the run dispatch, the mode and the proposal operations through `ARBORA-OPS-R896`.
 8. `run.dispatch` calls `Decide` with `TaskPlan`. The engine hands each task to a run through the MERISTEM-SCM task-run row. The result returns through `SubmitChangeset` and the gates.
 

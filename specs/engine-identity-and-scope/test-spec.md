@@ -18,7 +18,7 @@
 
 **OPEN — clustered tenant provisioning and identity-store ordering.** The
 inherited replicated `CreateGraph` path receives a principal fingerprint rather
-than the original principal ID (`src/server/authority_context.rs`,
+than the original principal ID (`crates/medulla-server-api/src/authority_context.rs`,
 `VerifiedRequestContext::replicated_mutation`). The request boundary copies that
 verified identity into the request, and lifecycle provisioning looks it up as an
 identity ID. Local tenant provisioning tests do not establish correct clustered
@@ -37,7 +37,7 @@ cross-group ordering or close this acceptance gap.
 
 Managed tenant provisioning also mutates the identity store.
 It must preserve route ownership and ordering against Identity mutations. `CreateGraph` follows the named graph route, while Identity mutations
-use `__commons__` (`src/server/dispatch/consensus/routing.rs`). The local store
+use `__commons__` (`crates/medulla-server-consensus/src/dispatch/consensus/routing.rs`). The local store
 transaction and focused Identity routing regression do not establish ordering
 between these routes.
 
@@ -66,10 +66,10 @@ Hosted facade execution must establish R005 acceptance; source inspection alone 
 
 ### MEDULLA-IDENTITY-R023 tests
 
-- `MEDULLA-IDENTITY-R023.1`: `crates/medulla-types/src/identity/segment.rs::tests::unit_round_trips`.
-- `MEDULLA-IDENTITY-R023.2`: `crates/medulla-types/src/identity/segment.rs::tests::superseded_and_foreign_units_hidden`.
+- `MEDULLA-IDENTITY-R023.1`: `crates/medulla-identity-types/src/identity/segment.rs::tests::unit_round_trips`.
+- `MEDULLA-IDENTITY-R023.2`: `crates/medulla-identity-types/src/identity/segment.rs::tests::superseded_and_foreign_units_hidden`.
 - `MEDULLA-IDENTITY-R023.3`: `tests/identity/test_segment_retrieval_served.py::test_retrieve_filters_by_principal`.
-- `MEDULLA-IDENTITY-R023.4`: `crates/medulla-types/src/identity/segment.rs::tests::out_of_scope_names_id_only`.
+- `MEDULLA-IDENTITY-R023.4`: `crates/medulla-identity-types/src/identity/segment.rs::tests::out_of_scope_names_id_only`.
 - `MEDULLA-IDENTITY-R023.5`: `crates/medulla-types/src/identity/tests/segment_audit.rs::read_audit_counts_hidden`.
 - `MEDULLA-IDENTITY-R023.6`: `tests/identity/test_segment_retrieval_served.py::test_shared_unit_visible_only_in_scope`.
 

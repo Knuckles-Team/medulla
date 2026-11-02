@@ -30,7 +30,7 @@ R076 spans pure data and the served setting/admission boundary, so the SPEC-SIZI
 
 ### Existing path to extend
 
-`src/server/mutation_batch.rs` compiles and commits the request, `crates/medulla-types/src/mutation_batch/` defines its persisted envelope, `crates/medulla-transaction` admits it, `crates/medulla-storage/src/owner/` binds a store owner, and `src/redb_store/` applies it. `src/raft/store/` handles replicated log/state-machine commits. `src/server/{auth,authority_context,sql_catalog_acl,kv,cdc}.rs` and the wire directories feed that same kernel. `crates/medulla-tsdb/src/store.rs` and `crates/medulla-stream/` are existing series and stream owners. These are extension points, not proposals to replace them.
+`crates/medulla-server-mutation/src/mutation_batch.rs` compiles and commits the request, `crates/medulla-types/src/mutation_batch/` defines its persisted envelope, `crates/medulla-transaction` admits it, `crates/medulla-storage/src/owner/` binds a store owner, and `src/redb_store/` applies it. `src/raft/store/` handles replicated log/state-machine commits. `src/server/{auth,authority_context,sql_catalog_acl,kv,cdc}.rs` and the wire directories feed that same kernel. `crates/medulla-tsdb/src/store.rs` and `crates/medulla-stream/` are existing series and stream owners. These are extension points, not proposals to replace them.
 
 ```mermaid
 flowchart LR
@@ -174,15 +174,15 @@ Boundary cases cover ceiling support, minimum count, confidence tolerance, and z
 ### 2026-10-11: runtime source audit
 
 Audited revision: `2a2f9498863250c71827cf56ecbcb9307940cff0`.
-`crates/medulla-types/src/pre_merge_test_module.rs` explicitly defers the concrete manifest and pre-merge gate.
+`crates/medulla-source-types/src/pre_merge_test_module.rs` explicitly defers the concrete manifest and pre-merge gate.
 `.github/workflows/ci.yml` excludes `gates-variants` from pull requests.
 The same workflow declares `published-full` and `workspace-all-features` clippy profiles with Kafka dependencies.
 Configuration presence does not supply passing exact-head CI receipts.
-`src/raft/flake_budget.rs` explicitly defers the representative-load generator and repeated-run harness.
+`crates/medulla-raft-xshard/src/flake_budget.rs` explicitly defers the representative-load generator and repeated-run harness.
 `scripts/validate-raft-cluster.sh` selects leader rebalance but omits the named placement-admin test.
 That script records no representative-load generator or repeated-load evidence.
-`src/raft/tests.rs` contains both named cluster tests.
-`src/raft/harness/trace_capture.rs` owns existing causal trace capture.
+`crates/medulla-server-cluster-tests/src/split_tests/raft_cluster.rs` contains both named cluster tests.
+`crates/medulla-raft-xshard/src/harness/trace_capture.rs` owns existing causal trace capture.
 No runtime suite ran during this spec-only repair.
 
 ### 2026-10-11: concrete runtime manifest
@@ -228,7 +228,7 @@ Data flow: served `ApplyMutation` → mutation envelope with `VersionExpectation
 Types: `WriteConflict` and `MergeStrategy` in `crates/medulla-types/src/write_conflict.rs`. The default strategy is `Refuse`.
 Attach point: the version check at `crates/medulla-jobs/src/store.rs:2537`; the caller is the served mutation path.
 Failure: a stale write under `Refuse` changes nothing and returns `WRITE_CONFLICT`.
-Reuses `VersionExpectation` (`crates/medulla-core/src/rbac_persist/durable_write.rs:105`). New: the strategy and the typed conflict.
+Reuses `VersionExpectation` (`crates/medulla-isolation/src/rbac_persist/durable_write.rs:105`). New: the strategy and the typed conflict.
 Decision: refuse by default. Rejected: last-write-wins, which loses data without a record.
 Cross-repository: `AU-DECISIONS` callers read the conflict code; owner prefix `AU-DECISIONS`, contract `WriteConflict`.
 
@@ -247,20 +247,20 @@ They do not define memory snapshots, file listings or synchronization.
 ### Existing production boundaries
 
 The reviewed base is `3477a5da33d4593b0248558d0501c40685f6c9f7`.
-`crates/medulla-types/src/protocol.rs::Request` binds graph and verified request context.
-`src/server/access.rs::check_graph_access` owns graph authority checks.
-`src/server/handlers/graph_ops/gateway.rs::try_handle_gateway` routes durable mutations.
+`crates/medulla-protocol-types/src/protocol.rs::Request` binds graph and verified request context.
+`crates/medulla-server-auth/src/access.rs::check_graph_access` owns graph authority checks.
+`crates/medulla-h-graph/src/graph_ops/gateway.rs::try_handle_gateway` routes durable mutations.
 Its `commit_gateway` is an existing commit entry point.
-`src/server/mutation_batch/compile.rs::authoritative_graph_version` reads the durable version.
+`crates/medulla-server-api/src/batch_compile/compile.rs::authoritative_graph_version` reads the durable version.
 `CompileBatch::expected_graph_version` carries the existing optimistic concurrency condition.
 `compile_methods_with_outbox` compiles mutation and outbox changes together.
 `src/server/mutation_batch/commit/` owns durable commit and projection publication.
-`src/server/handlers/graph_ops/memory.rs` serves existing memory maintenance and summary operations.
+`crates/medulla-h-graph/src/graph_ops/memory.rs` serves existing memory maintenance and summary operations.
 Its mutation arms explicitly require gateway routing. They do not implement this contract.
 
 Reuse `crates/medulla-types/src/contract/crypto.rs::Digest256` for content digests.
 Reuse `MutationScopeIdentity` and `MutationBatch` in `crates/medulla-types/src/mutation_batch/`.
-Reuse named holders in `src/server/blob/store/holders.rs`.
+Reuse named holders in `crates/medulla-server-blob/src/blob/store/holders.rs`.
 R050 and R051 retain their garbage-collection and holder guarantees.
 Do not add another persistent write envelope or an agent-owned memory store.
 
@@ -387,8 +387,8 @@ R086 makes its proof obligations explicit without changing that document or the 
 
 ### Model and reuse
 
-The core owns [ReadThrough and ReadThroughFactory](../../crates/medulla-core/src/read_through.rs).
-The facade implements them in [read_through.rs](../../src/server/persistence/read_through.rs).
+The core owns [ReadThrough and ReadThroughFactory](../../crates/medulla-graph-core/src/read_through.rs).
+The facade implements them in [read_through.rs](../../crates/medulla-persistence/src/read_through.rs).
 The dependency remains from facade to core. The core does not depend on PersistenceBackend.
 The factory binds a logical graph name to its existing sanitized durable key.
 Node identity is interpreted within that graph; sanitization is not authorization.
@@ -401,14 +401,14 @@ Evidence must preserve that distinction without proposing a replacement public t
 | Boundary | Existing source | Required observation |
 |---|---|---|
 | Factory installation | [main.rs:1547](../../src/main.rs#L1547), [registry.rs:553](../../crates/medulla-core/src/registry.rs#L553) | Already loaded graphs and graphs created later receive their own read-through. |
-| Resident hit and miss | [core_readthrough.rs:11](../../crates/medulla-core/src/graph/core_readthrough.rs#L11) | A hit avoids durable storage access. A miss serves bytes without growing residency. An incomplete Bloom filter cannot hide a durable node. |
-| Durable point lookup | [trait_graph.rs:94](../../src/server/persistence/redb_backend/trait_graph.rs#L94), [store_read.rs:336](../../src/redb_store/store_read.rs#L336) | The selected shard supplies a scoped NODES read and node unseal. The read requires no writer commit. |
-| Presence guard | [store_read.rs:356](../../src/redb_store/store_read.rs#L356) | One snapshot returns aligned presence entries. Presence alone does not prove successful decryption or content equality. |
-| Periodic node cap | [persist.rs:78](../../src/persist.rs#L78) | Only confirmed candidates reach resident eviction. |
-| Tenant budget | [budget.rs:264](../../src/cost/budget.rs#L264) | The budget caller retains candidates when durability is unconfirmed. |
-| Served eviction | [gateway_graph.rs:111](../../src/server/handlers/graph_ops/gateway_graph.rs#L111) | EvictLRU retains its admission/commit gateway before resident removal. The result reports actual removals. |
-| Resident removal | [core_node_mutation.rs:60](../../crates/medulla-core/src/graph/core_node_mutation.rs#L60) | The primitive produces no logical REMOVE_NODE record. Durable bytes remain readable. |
-| Served scoped read | [nodes.rs:85](../../src/server/handlers/graph_ops/nodes.rs#L85) | GetNodeProperties can reach raw-core read-through, then checks row visibility before returning it. |
+| Resident hit and miss | [core_readthrough.rs:11](../../crates/medulla-graph-core/src/graph/core_readthrough.rs#L11) | A hit avoids durable storage access. A miss serves bytes without growing residency. An incomplete Bloom filter cannot hide a durable node. |
+| Durable point lookup | [trait_graph.rs:94](../../crates/medulla-persistence/src/redb_backend/trait_graph.rs#L94), [store_read.rs:336](../../crates/medulla-store/src/redb_store/store_read.rs#L336) | The selected shard supplies a scoped NODES read and node unseal. The read requires no writer commit. |
+| Presence guard | [store_read.rs:356](../../crates/medulla-store/src/redb_store/store_read.rs#L356) | One snapshot returns aligned presence entries. Presence alone does not prove successful decryption or content equality. |
+| Periodic node cap | [persist.rs:78](../../crates/medulla-kernel/src/persist.rs#L78) | Only confirmed candidates reach resident eviction. |
+| Tenant budget | [budget.rs:264](../../crates/medulla-persistence/src/cost/budget.rs#L264) | The budget caller retains candidates when durability is unconfirmed. |
+| Served eviction | [gateway_graph.rs:111](../../crates/medulla-h-graph/src/graph_ops/gateway_graph.rs#L111) | EvictLRU retains its admission/commit gateway before resident removal. The result reports actual removals. |
+| Resident removal | [core_node_mutation.rs:60](../../crates/medulla-graph-core/src/graph/core_node_mutation.rs#L60) | The primitive produces no logical REMOVE_NODE record. Durable bytes remain readable. |
+| Served scoped read | [nodes.rs:85](../../crates/medulla-h-graph/src/graph_ops/nodes.rs#L85) | GetNodeProperties can reach raw-core read-through, then checks row visibility before returning it. |
 
 The core primitive does not independently certify durability. Its production caller owns that guard.
 A cap is conditional on confirmed durability. Retained candidates can leave residency above it.
@@ -430,12 +430,12 @@ Preserve a contradictory interleaving as a failure for a separate runtime change
 
 ### Existing evidence candidates, not execution receipts
 
-[redb_backend.rs](../../src/server/persistence/redb_backend.rs) contains
+[redb_backend.rs](../../crates/medulla-persistence/src/redb_backend.rs) contains
 `authoritative_eviction_bounds_memory_and_reads_through`,
 `authoritative_eviction_never_drops_undurable_node` and
 `read_through_snapshot_triggers_no_writer_commit`.
 Their source is useful coverage evidence. None ran in this definition batch.
-The core seam tests in [graph.rs](../../crates/medulla-core/src/graph.rs) use stub or counting stores.
+The core seam tests in [graph.rs](../../crates/medulla-graph-core/src/graph.rs) use stub or counting stores.
 They cannot replace real durable, scoped, served or restart evidence.
 R086.9 requires the served entry points and the observations in test-spec.md.
 
@@ -508,7 +508,7 @@ R086.9 requires the served entry points and the observations in test-spec.md.
 
 ### MEDULLA-DURABLE-KERNEL-R087 — EG:46
 
-- `.1`: Define five changeset-review flaw classes (injection, auth, exposure, crypto, logic) with impact policy and finding-to-code evidence in `crates/medulla-types/src/changeset_review.rs`.
+- `.1`: Define five changeset-review flaw classes (injection, auth, exposure, crypto, logic) with impact policy and finding-to-code evidence in `crates/medulla-source-types/src/changeset_review.rs`.
 - `.2`: Serve `ChangesetReview` endpoint routed from Arbora producer through Medulla review logic. Regenerate public contracts.
 - Tests: all flaw classes, positive/negative acceptance, evidence-to-location tracing.
 
@@ -551,7 +551,7 @@ Replaces: the harness-side proof of shard parallelism. The harness only submits 
 
 Meristem acceptance case: `tests/integration/knowledge_graph/test_shard_write_parallelism.py::test_cross_graph_writes_fan_across_shard_writers`.
 
-Call path: served `MultiGraphBatchUpdate` -> `src/server/dispatch/router/data_plane.rs:770` -> `multi_graph_batch_update` (`src/server/dispatch/change_envelope/multi_graph.rs:19`) -> `shard_for` (`backend_shard_routes.rs:12`) -> writer thread (`writer_thread.rs`).
+Call path: served `MultiGraphBatchUpdate` -> `crates/medulla-server-router/src/dispatch/router/data_plane.rs:770` -> `multi_graph_batch_update` (`crates/medulla-server-graph/src/dispatch/change_envelope/multi_graph.rs:19`) -> `shard_for` (`backend_shard_routes.rs:12`) -> writer thread (`writer_thread.rs`).
 
 Crate: the root `medulla` server package and `medulla-types` for the report.
 
@@ -574,7 +574,7 @@ Replaces: `agent_utilities/knowledge_graph/backends/contrib/` (three backend mod
 
 Meristem acceptance cases: `tests/unit/knowledge_graph/test_neo4j_transport_security.py`, `tests/unit/knowledge_graph/test_backend_contrib.py`, `tests/unit/knowledge_graph/test_falkordb_param_sanitize.py` and the three `test_ladybug_*.py` files.
 
-Call path: served `ApplyMutation` -> outbox row -> `MirrorTargetSpec::Outbox` consumer (`MEDULLA-DURABLE-KERNEL-R024.5`) -> `MirrorTargetRegistry` (`crates/medulla-plan/src/mirror_target.rs`) -> sink driver -> target acknowledgement -> `MirrorCursor` advance (`crates/medulla-types/src/mirror_sink.rs`).
+Call path: served `ApplyMutation` -> outbox row -> `MirrorTargetSpec::Outbox` consumer (`MEDULLA-DURABLE-KERNEL-R024.5`) -> `MirrorTargetRegistry` (`crates/medulla-federation/src/mirror_target.rs`) -> sink driver -> target acknowledgement -> `MirrorCursor` advance (`crates/medulla-types/src/mirror_sink.rs`).
 
 Crates: `medulla-types` for the kinds, `medulla-plan` for the drivers, `medulla-lake` for the Parquet writer.
 
@@ -710,10 +710,10 @@ this no-effect replay path. It cannot authorize a new write or make readback
 available. A caller that no longer has authority cannot obtain the receipt.
 
 Existing attachment points, reviewed at Medulla `11a1aa62`:
-`src/server/mutation_batch/commit/work_item.rs::derive_work_item_identity`,
-`src/server/mutation_batch/digest.rs::work_item_batch_identity` and
+`crates/medulla-server-mutation/src/mutation_batch/commit/work_item.rs::derive_work_item_identity`,
+`crates/medulla-server-api/src/batch_compile/digest.rs::work_item_batch_identity` and
 `terminal_work_item_identity`, and the native durable `MutationBatch` replay
-receipt. `crates/medulla-types/src/work_item_command_log.rs` documents same-key,
+receipt. `crates/medulla-work-types/src/work_item_command_log.rs` documents same-key,
 same-digest replay and changed-digest conflict, but its reference map is not
 itself durable evidence. Reuse the native writer, not that map as a new store.
 
@@ -1032,7 +1032,7 @@ Fresh native exports and final-head parity remain required before merge.
 ## Store migration at open and copied-store restore (R070.1, R070.2, R862)
 
 **Migration at open.** The entry point is `main.rs`, which calls `server_startup::acquire_persist_lock`.
-That function takes the exclusive lock and then calls `migrate_stores_on_open` (`src/server_startup.rs:155`).
+That function takes the exclusive lock and then calls `migrate_stores_on_open` (`crates/medulla-server/src/server_startup.rs:155`).
 `store_upgrade::migrate_on_open` reuses `discover`, `classify_owner_store_format`, `Staging` and `apply_store` of R070.
 It adds no second upgrade path. `open_persistence` keeps the R070 refusal; it fires only with the switch off.
 The journal is evidence and a resume signal. The store manifests stay the authority on format.

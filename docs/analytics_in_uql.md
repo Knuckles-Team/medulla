@@ -30,7 +30,7 @@ CTEs and window frames — and they run **wherever the engine speaks SQL**.
 
 The analytical functions are registered on **every** DataFusion `SessionContext` the query
 surface builds, through a single shared function (`exec::register_numeric`,
-`crates/medulla-query/src/sql/exec.rs`). There is no privileged path:
+`crates/medulla-sql/src/sql/exec.rs`). There is no privileged path:
 
 | SQL entry point | How it reaches the functions |
 |---|---|
@@ -41,7 +41,7 @@ surface builds, through a single shared function (`exec::register_numeric`,
 
 So a JDBC/ODBC/DBI client — DBeaver, `psql`, a BI tool — issuing `SELECT pca(...)` hits the
 exact same in-engine kernel as the native RPC path. This is proven end-to-end in
-`crates/medulla-query/tests/analytics_through_uql.rs`, which drives every operator below through
+`crates/medulla-sql-tests/tests/analytics_through_uql.rs`, which drives every operator below through
 `exec_sql_typed_with_tables` (the wire read path) **and** `exec_sql` (the RPC path) and
 asserts identical results.
 
@@ -110,7 +110,7 @@ JOIN ts ON n.id = ts.nid;
 This joins the resident `nodes` table (a relational scalar `x` + a per-node vector `emb`) to
 a per-node timeseries aggregate and computes statistics that **span two modalities aligned
 by the join** — all compute-near-data, in-engine. See
-`crates/medulla-query/tests/cross_modal_analytics.rs` and the
+`crates/medulla-sql-tests/tests/cross_modal_analytics.rs` and the
 `cross_modal_join_then_analytics_through_wire_eg353` test.
 
 ## Example queries
@@ -193,5 +193,5 @@ needs neither: it is an ordinary O(1) incremental kernel, always built.
 - `docs/architecture/numeric-kernel.md` — the `medulla-numeric` kernel internals.
 - `docs/architecture/analytics-program.md` — the Analytics Program (Surface-A Python wheel
   + Surface-B SQL).
-- `crates/medulla-query/src/sql/numeric.rs` — the UDF/UDAF implementations.
-- `crates/medulla-query/src/sql/exec.rs` — `register_numeric` + the shared `build_ctx`.
+- `crates/medulla-sql-udfs/src/numeric.rs` — the UDF/UDAF implementations.
+- `crates/medulla-sql/src/sql/exec.rs` — `register_numeric` + the shared `build_ctx`.

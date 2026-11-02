@@ -1,16 +1,16 @@
 # D-OP-1: cache `project_core()`'s RLS projection per (actor, graph version)
 
 Status: **IMPLEMENTED** (D-OB-20, medulla-perf lane, 2026-08-01) — option (a) below,
-exactly as designed: `crates/medulla-core/src/rls_projection_cache.rs` (new, bounded
+exactly as designed: `crates/medulla-graph-core/src/rls_projection_cache.rs` (new, bounded
 per-actor cache on `GraphCore`) + `GraphReadAuthority::project_core` in
-`src/server/access.rs` split into a cache-checking wrapper and the original
+`crates/medulla-server-auth/src/access.rs` split into a cache-checking wrapper and the original
 (expensive) materialization, now named `build_projection`. Option (b)
 (narrowing `is_active()` itself) was investigated and NOT implemented — see
 "is_active() disposition" below for why.
 Originally filed as design-only by the orchestrator lane (2026-07-31) sweeping
 `lane-orchestrator-perf`, with a failing regression test
 (`project_core_of_a_single_has_node_call_must_not_rebuild_the_whole_graph`,
-`src/server/access.rs`, `universal_row_read_tests` module) pinning the
+`crates/medulla-server-auth/src/access.rs`, `universal_row_read_tests` module) pinning the
 pre-fix behavior; that test now passes (cache-hit path, microsecond cost), and
 two more were added alongside it: a write-then-reread invalidation proof
 (`project_core_reflects_a_mutation_after_the_previous_projection_was_cached`)
@@ -77,7 +77,7 @@ between writes) is exactly the shape this fix targets and fixes.
 
 ## The problem, precisely
 
-`src/server/handlers/graph_ops.rs::try_handle` (the terminal handler every
+`crates/medulla-h-graph/src/graph_ops.rs::try_handle` (the terminal handler every
 non-gateway-routed graph method reaches) runs, unconditionally, before its
 `match`:
 
@@ -85,7 +85,7 @@ non-gateway-routed graph method reaches) runs, unconditionally, before its
 let core = read_authority.project_core(&core);
 ```
 
-`GraphReadAuthority::project_core` (`src/server/access.rs`) is a no-op when
+`GraphReadAuthority::project_core` (`crates/medulla-server-auth/src/access.rs`) is a no-op when
 `!self.is_active()`, but `is_active()` (same file) is:
 
 ```rust
@@ -290,7 +290,7 @@ so a whole-image transition landing while a build is in flight can still
 publish a now-stale result microseconds after a bare "clear the map"
 invalidation ran.
 
-Fix (`crates/medulla-core/src/rls_projection_cache.rs`): a monotonic `generation`
+Fix (`crates/medulla-graph-core/src/rls_projection_cache.rs`): a monotonic `generation`
 counter lives inside the SAME mutex as the cache entries. A caller captures
 `generation()` immediately before starting its unlocked rebuild and passes it
 back to `put`, which only stores if that captured value is still current —
@@ -305,7 +305,7 @@ alongside their existing `result_cache.invalidate_all()`. See
 tests for the exact race this closes.
 
 U-148's memory-pressure eviction (`src/cost.rs::enforce_memory_budgets`,
-`src/server/persistence/cold_offload.rs::offload_cold_tenants`) turned out to
+`crates/medulla-persistence/src/cold_offload.rs::offload_cold_tenants`) turned out to
 be a second, independent instance of the U-142 SYMPTOM produced by a
 different mechanism (the registry never transitioning a fully-reclaimed
 graph to catalog-only, so dispatch's lazy-open never re-fires) — see

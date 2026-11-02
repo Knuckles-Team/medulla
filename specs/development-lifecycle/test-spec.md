@@ -26,8 +26,8 @@ Governing spec: [spec.md](spec.md).
 | `MEDULLA-SDLC-R003.5` | Evidence | `tests/test_sdlc_defect_served.py::test_symptom_evidence_reads_back` |
 | `MEDULLA-SDLC-R003.6` | Hot-path proof | `cargo bench --bench defect_intake` |
 | `MEDULLA-SDLC-R004` | Defect triage decision (rollup) | See each child. |
-| `MEDULLA-SDLC-R004.1` | Model | `crates/medulla-types/src/decision/defect_triage.rs::tests::decision_round_trips` |
-| `MEDULLA-SDLC-R004.2` | Behavior | `crates/medulla-types/src/decision/defect_triage.rs::tests::culprit_outranks_blame` |
+| `MEDULLA-SDLC-R004.1` | Model | `crates/medulla-decision-outcome-types/src/decision/defect_triage.rs::tests::decision_round_trips` |
+| `MEDULLA-SDLC-R004.2` | Behavior | `crates/medulla-decision-outcome-types/src/decision/defect_triage.rs::tests::culprit_outranks_blame` |
 | `MEDULLA-SDLC-R004.3` | Wiring | `tests/decide/test_defect_triage_served.py::test_triage_records_decision` |
 | `MEDULLA-SDLC-R004.4` | Refusal | `tests/decide/test_defect_triage_served.py::test_triage_refusals` |
 | `MEDULLA-SDLC-R004.5` | Evidence | `tests/decide/test_defect_triage_served.py::test_triage_replays` |
@@ -46,7 +46,7 @@ Governing spec: [spec.md](spec.md).
 | `MEDULLA-SDLC-R006.4` | Refusal | `tests/test_sdlc_trace_served.py::test_trace_refusals` |
 | `MEDULLA-SDLC-R006.5` | Evidence | `tests/test_sdlc_trace_served.py::test_edges_name_rules` |
 | `MEDULLA-SDLC-R006.6` | Hot-path proof | `cargo bench --bench lifecycle_trace` |
-| `MEDULLA-SDLC-R004.7` | Model: triage knobs | `crates/medulla-types/src/decision/defect_triage.rs::tests::knob_specs_lie_within_bounds_and_codes_map_abstain_reasons` ; `src/server/handlers/decide/stat_tests/defect_triage_tests.rs::triage_journey` |
+| `MEDULLA-SDLC-R004.7` | Model: triage knobs | `crates/medulla-decision-outcome-types/src/decision/defect_triage.rs::tests::knob_specs_lie_within_bounds_and_codes_map_abstain_reasons` ; `src/server/handlers/decide/stat_tests/defect_triage_tests.rs::triage_journey` |
 | `MEDULLA-SDLC-R004.8` | Behaviour: kernel in the numeric crate, bounded by knobs | `crates/medulla-numeric/src/decision/defect_triage.rs::tests::window_cap_escalation_and_duplicate_follow_the_knobs` ; `src/server/handlers/decide/stat_tests/defect_triage_tests.rs::triage_journey` |
 | `MEDULLA-SDLC-R005.7` | Task state computed from task records | `tests/sdlc/test_task_state_served.py::test_task_state_follows_checkbox_and_blockers` |
 | `MEDULLA-SDLC-R006.7` | Model: trace limits are knobs | `crates/medulla-types/tests/lifecycle_records.rs::trace_limits_come_from_knobs` ; `tests/test_sdlc_trace_served.py::test_competency_questions_answer` |

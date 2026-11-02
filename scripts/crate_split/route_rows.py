@@ -100,7 +100,7 @@ def measure(moves, placement):
         text=True,
         check=True,
     ).stdout.split()
-    lines = collections.Counter()
+    lines: collections.Counter[str] = collections.Counter()
     for f in files:
         p = f.split("/")
         if not ((p[0] == "crates" and len(p) > 3 and p[2] == "src") or f in placement):
@@ -203,8 +203,8 @@ def main():
     est = cfg["estimates"]
     budget = est["budget_lines"]
     current = measure(moves, placement)
-    added = collections.Counter()
-    nrows = collections.Counter()
+    added: collections.Counter[str] = collections.Counter()
+    nrows: collections.Counter[str] = collections.Counter()
     out, unrouted = [], []
     missing = sorted(i for s in open_ids.values() for i in s if i not in rows)
     for rid in sorted(rows):

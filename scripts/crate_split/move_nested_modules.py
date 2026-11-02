@@ -192,7 +192,9 @@ class Mapper:
             if not hit:
                 continue
             stmt = text[s:e]
-            lead = re.match(r"([ \t]*(?:pub(?:\([^)]*\))?\s+)?use\s+)", stmt).group(1)
+            lead_match = re.match(r"([ \t]*(?:pub(?:\([^)]*\))?\s+)?use\s+)", stmt)
+            assert lead_match is not None
+            lead = lead_match.group(1)
             groups: dict[str, list[str]] = {}
             order = []
             for segs, alias in out:
