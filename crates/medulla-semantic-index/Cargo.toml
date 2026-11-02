@@ -1,0 +1,29 @@
+[package]
+name = "medulla-semantic-index"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: Semantic ANN codes and the semantic index service"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_semantic_index"
+path = "src/lib.rs"
+
+[dependencies]
+medulla-types = { path = "../medulla-types" }
+medulla-ann = { path = "../medulla-ann" }
+serde = { version = "1.0", features = ["derive", "rc"] }
+serde_json = "1.0"
+rmp-serde = "1.3"
+parking_lot = "0.12"
+tracing = { version = "0.1" }
+rayon = { version = "1.12", optional = true }
+medulla-index-types = { path = "../medulla-index-types" }
+
+[features]
+ann = ["dep:rayon"]
+
+[dev-dependencies]
+medulla-types = { path = "../medulla-types", features = ["test-support"] }

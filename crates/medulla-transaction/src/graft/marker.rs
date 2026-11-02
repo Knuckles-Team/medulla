@@ -9,7 +9,7 @@ use super::*;
 /// its batch's.
 pub(super) fn receipt_identity_matches(
     identity: &MutationScopeIdentity,
-    record: &medulla_types::MutationBatchRecord,
+    record: &medulla_protocol_types::mutation_batch::MutationBatchRecord,
 ) -> bool {
     record.status == MutationBatchStatus::Committed
         && record.identity == *identity
@@ -23,7 +23,7 @@ pub(super) fn receipt_identity_matches(
 /// [`super::Marker::from_record`]'s own statement count down for the KISS file budget.
 pub(super) fn batch_keys_match(
     identity: &MutationScopeIdentity,
-    record: &medulla_types::MutationBatchRecord,
+    record: &medulla_protocol_types::mutation_batch::MutationBatchRecord,
     intent: &GraftIntent,
 ) -> Result<bool, String> {
     let expected_envelope = MutationEnvelope::maintenance_for_scope(
@@ -46,7 +46,7 @@ pub(super) fn batch_keys_match(
 pub(super) fn operation_shape_matches(
     identity: &MutationScopeIdentity,
     operation: &MutationOperation,
-    record: &medulla_types::MutationBatchRecord,
+    record: &medulla_protocol_types::mutation_batch::MutationBatchRecord,
 ) -> bool {
     operation.ordinal == 0
         && record.batch.operations.len() == 1
@@ -62,7 +62,7 @@ pub(super) fn marker_content_matches(
     committed: u64,
     event_type: &str,
     query: &str,
-    record: &medulla_types::MutationBatchRecord,
+    record: &medulla_protocol_types::mutation_batch::MutationBatchRecord,
 ) -> bool {
     event_type == GRAFT_MARKER
         && query == intent.encode().as_str()

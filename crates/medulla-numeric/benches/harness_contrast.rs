@@ -7,8 +7,11 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::hint::black_box;
 use std::time::Instant;
 
-use medulla_types::decision::harness_contrast::{decide_contrast, ContrastCandidate, ContrastEvidence};
-use medulla_types::orchestration::improvement::{HarnessContrast, HarnessProbeRun};
+use medulla_work_types::{orchestration::improvement::HarnessContrast, orchestration::improvement::HarnessProbeRun};
+use medulla_decision_types::{
+    decision::harness_contrast::decide_contrast, decision::harness_contrast::ContrastCandidate,
+    decision::harness_contrast::ContrastEvidence,
+};
 
 const CONDITIONS: &str = "sha256:0000000000000000000000000000000000000000000000000000000000000000";
 const TASK_REF: &str = "task:deploy";

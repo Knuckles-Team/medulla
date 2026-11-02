@@ -14,21 +14,26 @@
 //! * the framed digest layout depends on the rules it claims to, which is
 //!   proved by planting a violation of each rule and watching the digest move.
 
-use medulla_types::agent_component::{
-    is_reserved_component_id, AgentComponentEntry, AgentComponentKind, AgentComponentOp,
-    AGENT_COMPONENT_DIGEST_DOMAIN, AGENT_COMPONENT_DIGEST_DOMAIN_V3,
-    AGENT_COMPONENT_SCHEMA_VERSION,
+use medulla_agent_types::{
+    agent_component::is_reserved_component_id, agent_component::AgentComponentEntry,
+    agent_component::AgentComponentKind, agent_component::AgentComponentOp,
+    agent_component::AGENT_COMPONENT_DIGEST_DOMAIN,
+    agent_component::AGENT_COMPONENT_DIGEST_DOMAIN_V3,
+    agent_component::AGENT_COMPONENT_SCHEMA_VERSION,
 };
-use medulla_types::agent_library::{refuse_withdrawn, AgentLibraryLifecycle};
-use medulla_types::connector_pack::digest as pack_digests;
-use medulla_types::decision::{
-    DecisionErrorCode, DecisionPolicy, DecisionRecord, UnitRationalWire,
-    MAX_UNIT_RATIONAL_DENOMINATOR,
+use medulla_agent_types::{agent_library::refuse_withdrawn, agent_library::AgentLibraryLifecycle};
+use medulla_catalog_types::catalog_fixtures::contract_control as control;
+use medulla_catalog_types::catalog_fixtures::contract_pack as pack;
+use medulla_catalog_types::connector_pack::digest as pack_digests;
+use medulla_decision_types::decision_fixtures::contract_decision as decision;
+use medulla_decision_types::decision_fixtures::contract_solver as solver;
+use medulla_decision_types::decision_fixtures::contract_statistical as statistical;
+use medulla_decision_types::{
+    decision::DecisionErrorCode, decision::DecisionPolicy, decision::DecisionRecord,
+    decision::UnitRationalWire, decision::MAX_UNIT_RATIONAL_DENOMINATOR,
 };
-use medulla_types::protocol::Method;
-use medulla_types::test_support::contract_wave::{
-    contract_wave_samples, control, decision, pack, solver, statistical,
-};
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol_fixtures::contract_wave::contract_wave_samples;
 
 /// Every sample survives both codecs and keeps its wire tag.
 ///
@@ -141,7 +146,10 @@ fn a_newer_record_version_is_a_typed_refusal() {
         .next()
         .expect("the acted outcome is first");
     assert!(
-        matches!(acted, medulla_types::decision::StatisticalOutcome::Acted { .. }),
+        matches!(
+            acted,
+            medulla_decision_types::decision::StatisticalOutcome::Acted { .. }
+        ),
         "the first statistical sample must be the acted one"
     );
 }
@@ -192,7 +200,8 @@ fn a_bounded_collection_refuses_one_item_past_its_maximum() {
         .expect("tasks is an array")
         .push(serde_json::Value::String("eg:task/overflow".to_string()));
     assert!(
-        serde_json::from_value::<medulla_types::decision::AssemblyRequest>(encoded).is_err(),
+        serde_json::from_value::<medulla_decision_types::decision::AssemblyRequest>(encoded)
+            .is_err(),
         "the wire decoder must refuse a collection past its bound"
     );
 }
@@ -261,7 +270,7 @@ fn the_method_enum_did_not_grow() {
         "a contract-wave variant is unboxed and has grown every Method value"
     );
     assert!(
-        std::mem::size_of::<medulla_types::agent_template::AgentTemplateOp>()
+        std::mem::size_of::<medulla_agent_types::agent_template::AgentTemplateOp>()
             <= std::mem::size_of::<AgentComponentOp>(),
         "AgentTemplateOp must stay no larger than AgentComponentOp"
     );
@@ -272,7 +281,7 @@ fn the_method_enum_did_not_grow() {
 /// MEASURED on the build host against BOTH trees, not chosen: 616 bytes on
 /// this wave tree, and 616 bytes again on a detached checkout of the wave's
 /// base commit (build-host run id ending `b4fd1a64b`, `PRE_WAVE_METHOD_SIZE`
-/// printed directly from `size_of::<medulla_types::protocol::Method>()`). The two
+/// printed directly from `size_of::<medulla_protocol_types::protocol::Method>()`). The two
 /// measurements agree, proving the wave's claim that every new contract-wave
 /// `Method` variant is boxed and therefore never the largest one -- adding
 /// ten variants did not grow the enum.
@@ -349,9 +358,9 @@ fn the_pack_digest_layout_depends_on_every_rule_it_states() {
 /// The component id escape set is exactly the one the contract documents.
 #[test]
 fn a_pack_component_id_escapes_every_byte_outside_its_unreserved_set() {
-    let escaped = medulla_types::connector_pack::pack_component_id(
+    let escaped = medulla_catalog_types::connector_pack::pack_component_id(
         "connector-a",
-        medulla_types::connector_pack::PackEntryKind::Tool,
+        medulla_catalog_types::connector_pack::PackEntryKind::Tool,
         "search files/~ 100%",
     );
     assert_eq!(
@@ -359,7 +368,7 @@ fn a_pack_component_id_escapes_every_byte_outside_its_unreserved_set() {
         "the escape set must cover the separator, tilde, space and percent"
     );
     assert_eq!(
-        medulla_types::connector_pack::escape_pack_name("model-1.0_x"),
+        medulla_catalog_types::connector_pack::escape_pack_name("model-1.0_x"),
         "model-1.0_x",
         "an unreserved name must survive unchanged"
     );
@@ -368,7 +377,7 @@ fn a_pack_component_id_escapes_every_byte_outside_its_unreserved_set() {
 /// The decision digest scheme is domain-separated and self-excluding.
 #[test]
 fn the_decision_digest_is_domain_separated_and_excludes_itself() {
-    use medulla_types::decision::digest;
+    use medulla_decision_types::decision::digest;
 
     let solved = decision::every_decision_outcome()
         .into_iter()
@@ -382,10 +391,12 @@ fn the_decision_digest_is_domain_separated_and_excludes_itself() {
         digest::record_digest(&record),
         "the record digest must not depend on the field that carries it"
     );
-    assert!(first.starts_with(digest::DIGEST_TEXT_PREFIX));
+    assert!(first.starts_with(medulla_types::solve_scalar::DIGEST_TEXT_PREFIX));
 
-    let policy_under_record_domain =
-        digest::digest_text(digest::DECISION_RECORD_DIGEST_DOMAIN, &decision::policy());
+    let policy_under_record_domain = medulla_types::solve_scalar::digest_text(
+        digest::DECISION_RECORD_DIGEST_DOMAIN,
+        &decision::policy(),
+    );
     assert_ne!(
         policy_under_record_domain,
         digest::policy_digest(&decision::policy()),
@@ -396,7 +407,7 @@ fn the_decision_digest_is_domain_separated_and_excludes_itself() {
 /// The catalog digest is independent of the order the store yielded rows in.
 #[test]
 fn the_catalog_digest_does_not_depend_on_read_order() {
-    use medulla_types::decision::digest::catalog_digest;
+    use medulla_decision_types::decision::digest::catalog_digest;
 
     let forward = [
         ("component-a", "sha256:aa", AgentLibraryLifecycle::Published),
@@ -424,8 +435,9 @@ fn the_certificate_digest_covers_the_whole_certificate() {
 
 /// One published component entry in the wave's shape.
 fn sample_entry() -> AgentComponentEntry {
-    use medulla_types::agent_component::{
-        AgentComponentDraft, AgentComponentFacts, ComponentProvenance,
+    use medulla_agent_types::{
+        agent_component::AgentComponentDraft, agent_component::AgentComponentFacts,
+        agent_component::ComponentProvenance,
     };
 
     let draft = AgentComponentDraft {
@@ -454,7 +466,7 @@ fn sample_entry() -> AgentComponentEntry {
 }
 
 fn digest_text(seed: u8) -> String {
-    medulla_types::test_support::contract_wave::digest_text(seed)
+    medulla_types::test_support::wave::digest_text(seed)
 }
 
 /// Unused imports would be a compile error, so these keep the sample modules

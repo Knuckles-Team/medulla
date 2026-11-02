@@ -22,7 +22,7 @@ use std::sync::Arc;
 // is intentionally multi-owner (e.g. `medulla_tsdb::store::SeriesStore::open` binds an
 // `medulla-mutation-store` scope directly onto a shard path so a measurement lands in
 // the SAME `WriteTransaction` as the graph rows -- see
-// `medulla::server::persistence::redb_backend::tests::five_modality_atomic_commit`),
+// `medulla_server::persistence::redb_backend::tests::five_modality_atomic_commit`),
 // so any table `reject_prototype_names` treats as disqualifying must be a name
 // ONLY a genuinely-retired `medulla-mutation-store` schema would ever have produced.
 // Listing a name some OTHER live subsystem's table can also legitimately hold

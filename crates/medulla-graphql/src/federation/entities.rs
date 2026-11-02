@@ -10,7 +10,7 @@ use std::collections::HashMap;
 
 use serde_json::{Map, Value};
 
-use medulla_core::graph::GraphView;
+use medulla_graph_core::graph::GraphView;
 
 use super::FederatedSchema;
 use crate::parser::{gql_to_json, Directive, Field, Fragment, RawField, RawSelection};

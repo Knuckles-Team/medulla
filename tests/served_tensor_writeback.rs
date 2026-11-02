@@ -21,11 +21,11 @@ mod test_support;
 
 use serde_json::json;
 
-use medulla_plan::{Op, Plan};
+use medulla_exec::{algebra::Op, algebra::Plan};
 use medulla_tensor::{Buffer, Tensor};
 use medulla_types::wire::{TensorElementwiseOp, TensorOpKind, TensorReduceKind};
-use medulla::protocol::Method;
-use medulla::server::dispatch;
+use medulla_protocol_types::protocol::Method;
+use medulla_server_router::dispatch::request_boundary::dispatch;
 
 const SECRET: &str = "served-tensor-writeback-secret";
 

@@ -1,7 +1,7 @@
 use crate::owner::domain::OwnerDomain;
 use crate::owner::identity::PhysicalStoreIdentity;
 use crate::owner::layout::OwnerLayout;
-use medulla_types::MutationScopeIdentity;
+use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
 use std::marker::PhantomData;
 
 /// Composition-root proof authority. Proof bytes are interpreted only here.

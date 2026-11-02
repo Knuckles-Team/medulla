@@ -9,7 +9,7 @@
 
 use std::collections::HashMap;
 
-use medulla_core::graph::GraphView;
+use medulla_graph_core::graph::GraphView;
 
 use crate::model::{classify_relationship, BiTemporalRecord, EdgeKind, TimeAxis};
 
@@ -24,7 +24,7 @@ pub struct BeliefGraph {
     /// The bitemporal instant this projection was pinned at (set when the caller
     /// composed an `AS OF` filter before building it); `None` = as of now.
     pub as_of: Option<(TimeAxis, u64)>,
-    /// node id → its RLS [`RowVisibility`](medulla_core::isolation::RowVisibility)
+    /// node id → its RLS [`RowVisibility`](medulla_graph_core::rls::RowVisibility)
     /// (CONCEPT:MEDULLA-KG.sharding.row-level-security), decoded from the SAME property blob
     /// `filter_view` reads on every other read path. Consulted ONLY by
     /// [`crate::redact::explain_belief_redacted`] (EPI-P3-4) to decide, per proof-tree
@@ -33,7 +33,7 @@ pub struct BeliefGraph {
     /// the same default-deny rule `filter_view` applies. Behind `epistemic-redaction` so a plain
     /// build carries no extra dependency or per-node decode cost.
     #[cfg(feature = "epistemic-redaction")]
-    pub node_visibility: HashMap<String, medulla_core::isolation::RowVisibility>,
+    pub node_visibility: HashMap<String, medulla_graph_core::rls::RowVisibility>,
     /// node id → its stored bitemporal window (EPI-P3-5, CONCEPT:MEDULLA-KG.epistemic.bitemporal-reasoning).
     /// Populated from the SAME `valid_from`/`valid_until`/`tx_from`/`tx_to` property
     /// keys `medulla-plan::exec::live_at` reads for `Op::AsOf` — a node absent from this map
@@ -124,7 +124,7 @@ impl BeliefGraph {
             .node_properties
             .iter()
             .map(|(id, blob)| {
-                let mut vis = medulla_core::isolation::row_visibility(blob);
+                let mut vis = medulla_graph_core::rls::row_visibility(blob);
                 vis.schema = view.schema_node_ids.contains(id);
                 (id.clone(), vis)
             })
@@ -255,14 +255,14 @@ impl BeliefGraph {
         }
     }
 
-    /// Attach explicit per-node [`RowVisibility`](medulla_core::isolation::RowVisibility)
+    /// Attach explicit per-node [`RowVisibility`](medulla_graph_core::rls::RowVisibility)
     /// (EPI-P3-4 test/utility constructor — a real caller builds this from a
     /// `GraphView` via [`Self::from_graph_view`]). Any id not given here defaults to
     /// untagged/hidden, exactly like a node with no property blob at all.
     #[cfg(feature = "epistemic-redaction")]
     pub fn with_visibility<'a, V>(mut self, visibility: V) -> Self
     where
-        V: IntoIterator<Item = (&'a str, medulla_core::isolation::RowVisibility)>,
+        V: IntoIterator<Item = (&'a str, medulla_graph_core::rls::RowVisibility)>,
     {
         for (id, vis) in visibility {
             self.node_visibility.insert(id.to_string(), vis);

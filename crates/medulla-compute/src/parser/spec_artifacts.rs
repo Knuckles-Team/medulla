@@ -72,7 +72,9 @@ enum LineKind<'a> {
 }
 
 /// Prefix dispatch table: the first matching prefix decides the line kind.
-const PREFIXES: &[(&str, fn(&str) -> LineKind<'_>)] = &[
+type PrefixParser = fn(&str) -> LineKind<'_>;
+
+const PREFIXES: &[(&str, PrefixParser)] = &[
     ("- [ ] ", open_task),
     ("- [x] ", ticked_task),
     ("- [X] ", ticked_task),

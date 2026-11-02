@@ -18,7 +18,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
-use medulla::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 use medulla_kernel::write_coalescer::{fan_in_add_nodes, CoalescerConfig, GraphWriter};
 use tokio::runtime::Builder;
 

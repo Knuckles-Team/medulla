@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import importlib.util
+import os
 import re
 from pathlib import Path
 
@@ -31,11 +32,9 @@ def _m1_sources(module):
     # and medulla-transaction's MutationKernel module trees). See that helper's
     # docstring in scripts/check_persisted_mutation_contract.py.
     return (
-        module.read_module_tree("crates/medulla-types/src/mutation_batch.rs"),
+        module.persisted_contract_source(),
         module.mutation_kernel_source(),
-        module.read_module_tree(
-            "crates/medulla-types/src/mutation_batch.rs", include_tests=True
-        ),
+        module.persisted_contract_source(include_tests=True),
         module.mutation_kernel_source(include_tests=True),
         module.read_module_tree("crates/medulla-kernel/src/graph_delta.rs"),
     )
@@ -56,7 +55,7 @@ def _remove_all_gateway_router_occurrences(module, sources, arm: str) -> None:
     assembled_count = assembled.count(arm)
     occurrence_count = 0
     for filename in module._GRAPH_GATEWAY_ROUTER_FILES:
-        child = module.read(f"src/server/handlers/graph_ops/{filename}")
+        child = module.read(filename)
         count = child.count(arm)
         if count == 0:
             continue
@@ -77,7 +76,9 @@ def test_persisted_mutation_contract_gate() -> None:
 
 def test_persisted_contract_follows_mutation_batch_facade_tree() -> None:
     module = _gate_module()
-    source = module.read_module_tree("crates/medulla-types/src/mutation_batch.rs")
+    source = module.read_module_tree(
+        "crates/medulla-protocol-types/src/mutation_batch.rs"
+    )
 
     assert "pub struct MutationOperation" in source
     assert "pub domain: DurabilityDomain" in source
@@ -94,7 +95,7 @@ def test_graph_ops_facade_declares_complete_non_orphan_module_tree() -> None:
     """
 
     module = _gate_module()
-    facade_path = "src/server/handlers/graph_ops.rs"
+    facade_path = "crates/medulla-h-graph/src/graph_ops.rs"
     facade = module.read(facade_path)
     family = module.read_compiler_family(facade_path)
 
@@ -112,7 +113,10 @@ def test_graph_ops_gateway_families_contribute_real_method_arms() -> None:
             "commit_gateway_coalescable",
         ),
         "gateway_broker.rs": ("Method::Publish", "commit_gateway"),
-        "gateway_mining.rs": ("Method::MineAssociate", "commit_conditional_mutation"),
+        "../../../medulla-h-mining/src/mining/gateway.rs": (
+            "Method::MineAssociate",
+            "commit_conditional_mutation",
+        ),
         "gateway_mining_ml.rs": (
             "Method::GraphLearnFit",
             "Method::MiningPipelineTrain",
@@ -120,7 +124,9 @@ def test_graph_ops_gateway_families_contribute_real_method_arms() -> None:
     }
     for filename, required in markers.items():
         source = module._rust_code_mask(
-            module.read(f"src/server/handlers/graph_ops/{filename}")
+            module.read(
+                os.path.normpath(f"crates/medulla-h-graph/src/graph_ops/{filename}")
+            )
         )
         assert all(marker in source for marker in required)
 
@@ -128,20 +134,20 @@ def test_graph_ops_gateway_families_contribute_real_method_arms() -> None:
 def test_graph_ops_domain_router_order_is_pinned() -> None:
     module = _gate_module()
     gateway = module._rust_code_mask(
-        module.read("src/server/handlers/graph_ops/gateway.rs")
+        module.read("crates/medulla-h-graph/src/graph_ops/gateway.rs")
     )
     gateway_order = (
         "gateway_graph::try_handle",
         "gateway_broker::try_handle",
         "gateway_mining_ml::try_handle",
-        "gateway_mining::try_handle",
+        "mining_gateway_try_handle",
     )
     assert [gateway.index(marker) for marker in gateway_order] == sorted(
         gateway.index(marker) for marker in gateway_order
     )
 
     terminal = module._rust_code_mask(
-        module.read("src/server/handlers/graph_ops/terminal.rs")
+        module.read("crates/medulla-h-graph/src/graph_ops/terminal.rs")
     )
     terminal_order = (
         "try_handle_node_gateway_writes",
@@ -188,37 +194,37 @@ def test_terminal_gateway_guards_have_reachable_control_flow() -> None:
         "memory.rs": ("try_handle_memory_maintenance",),
     }
     for filename, functions in guarded.items():
-        source = module.read(f"src/server/handlers/graph_ops/{filename}")
+        source = module.read(f"crates/medulla-h-graph/src/graph_ops/{filename}")
         for function in functions:
             body = module._rust_code_mask(module._function(source, function))
             assert "ControlFlow::Break(match" not in body
             assert "other => ControlFlow::Continue(other)" in body
 
     broker = module._rust_code_mask(
-        module.read("src/server/handlers/graph_ops/broker.rs")
+        module.read("crates/medulla-h-graph/src/graph_ops/broker.rs")
     )
     assert "ControlFlow::Break(match $method" not in broker
     assert "match $method" in broker
     assert (
         "allow(unreachable_code)"
         not in module.read_compiler_family(
-            "src/server/handlers/graph_ops.rs"
+            "crates/medulla-h-graph/src/graph_ops.rs"
         ).with_tests
     )
 
 
 def test_decode_json_object_has_one_visible_owner_and_two_consumers() -> None:
     module = _gate_module()
-    family = module.read_compiler_family("src/server/handlers/graph_ops.rs")
+    family = module.read_compiler_family("crates/medulla-h-graph/src/graph_ops.rs")
     family_code = module._rust_code_mask(family.production)
     gateway = module._rust_code_mask(
-        module.read("src/server/handlers/graph_ops/gateway_graph.rs")
+        module.read("crates/medulla-h-graph/src/graph_ops/gateway_graph.rs")
     )
     routes = module._rust_code_mask(
-        module.read("src/server/handlers/graph_ops/gateway_graph_routes.rs")
+        module.read("crates/medulla-h-graph/src/graph_ops/gateway_graph_routes.rs")
     )
     semantic = module._rust_code_mask(
-        module.read("src/server/handlers/graph_ops/semantic.rs")
+        module.read("crates/medulla-h-graph/src/graph_ops/semantic.rs")
     )
 
     assert len(re.findall(r"\bfn\s+decode_json_object\s*\(", family_code)) == 1
@@ -244,7 +250,7 @@ def test_mutation_receipts_bind_typed_scope_identity() -> None:
 
 def test_semantic_coordinator_has_one_closed_native_domain() -> None:
     module = _gate_module()
-    contract = module.read_module_tree("crates/medulla-types/src/mutation_batch.rs")
+    contract = module.persisted_contract_source()
 
     assert "SemanticIndex = 8" in contract
     assert '"analytics_job",\n    "semantic_index",\n    "broker"' in contract
@@ -449,7 +455,7 @@ def test_internal_graph_commit_carries_state_msgpack_to_authority() -> None:
 
 def test_mutation_batch_source_tree_contains_decomposed_authorities() -> None:
     module = _gate_module()
-    source = module.read_module_tree("src/server/mutation_batch.rs")
+    source = module.mutation_inventory_sources()["mutation_batch"]
     for marker in (
         "fn lower_canonical_operation(",
         "fn commit_internal_graph_methods(",
@@ -501,7 +507,9 @@ def test_durable_classifier_reads_family_variants_from_code_only() -> None:
 
 def test_native_command_catalog_rejects_drift_and_comment_spoofs() -> None:
     module = _gate_module()
-    source = module.read_compiler_family("src/raft/mod.rs").production
+    source = module.read_compiler_family(
+        "crates/medulla-raft/src/raft/mod.rs"
+    ).production
     entry = "            record EvictLRU => GraphState,\n"
     assert entry in source
     catalog = module._native_method_catalog(source)
@@ -795,7 +803,9 @@ def test_row_delta_retired_identities_cannot_hide_in_production(stale: str) -> N
 
 
 def _blob_sources(module):
-    blob_store = module.read_compiler_family("src/server/blob/store.rs")
+    blob_store = module.read_compiler_family(
+        "crates/medulla-server-blob/src/blob/store.rs"
+    )
     blob_shared = module.read_compiler_family(
         "crates/medulla-storage/src/owner/blob_shared.rs"
     )
@@ -1606,15 +1616,15 @@ def test_balanced_span_rejects_unterminated_rust_block() -> None:
         ),
         (
             "graph_pipeline",
-            "handlers::graph_ops::try_handle_gateway(",
-            "handlers::graph_ops::removed_gateway(",
+            "medulla_h_graph::graph_ops::try_handle_gateway(",
+            "medulla_h_graph::graph_ops::removed_gateway(",
             "dispatch no longer routes graph/query/RDF gateways before the terminal "
             "handler",
         ),
         (
             "mutation_runtime",
-            "crate::server::sparql_http::SPARQL_HTTP_UPDATE_EVENT,",
-            "crate::server::sparql_http::REMOVED_SPARQL_HTTP_UPDATE_EVENT,",
+            "medulla_server_api::api::dispatch_support::SPARQL_HTTP_UPDATE_EVENT,",
+            "medulla_server_api::api::dispatch_support::REMOVED_SPARQL_HTTP_UPDATE_EVENT,",
             "coordinated ApplyMutation event inventory differs",
         ),
         (

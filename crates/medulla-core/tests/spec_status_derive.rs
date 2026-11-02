@@ -1,8 +1,8 @@
 //! Requirement state derived from the changeset log (MEDULLA-SDLC-R005.2).
 
+use medulla_source_types::{lifecycle::SpecRowState, lifecycle::SpecState};
 use medulla_core::lifecycle::derive::TestBinding;
 use medulla_core::lifecycle::status::derive_spec_status;
-use medulla_types::lifecycle::{SpecRowState, SpecState};
 use medulla_types::source_changeset::{Changeset, Trailers};
 
 fn cs(id: &str, spec: &[&str], withdraw: &[&str]) -> Changeset {

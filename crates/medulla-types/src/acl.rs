@@ -38,7 +38,7 @@ pub struct RequestContextClaims {
     /// that predates node binding, or one that has not yet learned a target
     /// node id; a single-node deployment never needs to set this. When
     /// `Some(id)`, the server exact-matches it against the receiving node's
-    /// own identity before dispatch (`server::auth::validate_context_claims`)
+    /// own identity before dispatch (`medulla_server::auth::validate_context_claims`)
     /// — a mismatch means the envelope was captured and replayed against a
     /// different cluster member. `#[serde(default)]` so an envelope minted by
     /// a client that has never heard of this claim deserializes exactly as
@@ -51,7 +51,7 @@ pub struct RequestContextClaims {
     /// `"background_ingestion"`; any other or absent value is treated as the
     /// orchestration default (high, never starved — matching au's
     /// untagged-context semantics). Mapped to a [`crate`]-independent admission
-    /// class by the server's QoS scheduler (`server::qos::QosClass`).
+    /// class by the server's QoS scheduler (`medulla_server::qos::QosClass`).
     ///
     /// It is **MAC-covered** (appended to `build_envelope_v2_bytes` as a
     /// distinct tag-`2` optional trailer, after the tag-`1` node trailer) so a

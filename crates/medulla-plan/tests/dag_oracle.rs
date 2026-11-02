@@ -14,7 +14,7 @@
 mod common;
 
 use common::*;
-use medulla_plan::{execute, Op, Plan, PlanCtx, PlanDag, Pred};
+use medulla_exec::{exec::execute, algebra::Op, algebra::Plan, exec::PlanCtx, dag::PlanDag, algebra::Pred};
 use medulla_types::wire::TimeAxis;
 
 /// Run `ops` through BOTH `exec::execute` (over the linear `Plan`) and `dag_exec::execute_dag`
@@ -24,7 +24,7 @@ fn assert_dag_matches_linear(ops: Vec<Op>, ctx: &PlanCtx) {
     let plan = Plan::new(ops);
     let via_linear = execute(&plan, ctx).expect("linear exec must succeed");
     let dag = PlanDag::from(plan.clone());
-    let via_dag = medulla_plan::execute_dag(&dag, ctx).expect("dag exec must succeed");
+    let via_dag = medulla_exec::dag_exec::execute_dag(&dag, ctx).expect("dag exec must succeed");
     assert_eq!(
         stable_rows(&via_linear),
         stable_rows(&via_dag),
@@ -46,7 +46,7 @@ fn assert_dag_matches_linear_as_set(ops: Vec<Op>, ctx: &PlanCtx) {
     let plan = Plan::new(ops);
     let via_linear = execute(&plan, ctx).expect("linear exec must succeed");
     let dag = PlanDag::from(plan.clone());
-    let via_dag = medulla_plan::execute_dag(&dag, ctx).expect("dag exec must succeed");
+    let via_dag = medulla_exec::dag_exec::execute_dag(&dag, ctx).expect("dag exec must succeed");
     assert_eq!(
         ids_sorted(&via_linear),
         ids_sorted(&via_dag),
@@ -326,11 +326,11 @@ fn epistemic_ops_dag_matches_linear() {
 /// contradicted by `counter1`, attacked by `attacker1`, supporting `derived1`.
 #[cfg(feature = "epistemic")]
 fn build_beliefs() -> (
-    medulla_core::graph::GraphView,
-    medulla_core::compute::semantic::SemanticStore,
+    medulla_graph_core::graph::GraphView,
+    medulla_semantic_index::semantic::SemanticStore,
 ) {
-    use medulla_core::compute::semantic::SemanticStore;
-    use medulla_core::graph::GraphCore;
+    use medulla_graph_core::graph::GraphCore;
+    use medulla_semantic_index::semantic::SemanticStore;
     use serde_json::json;
 
     let core = GraphCore::new();

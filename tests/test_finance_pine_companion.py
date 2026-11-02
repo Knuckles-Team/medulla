@@ -1,6 +1,6 @@
 """EH-517: the Pine companion of the finance-market SuperTrend/ATR kernels.
 
-The companion (``crates/medulla-compute/tests/fixtures/finance_market/
+The companion (``crates/medulla-finance-market/tests/fixtures/finance_market/
 supertrend_companion.pine``) replays the engine's integer recurrence on a
 TradingView chart. TradingView is the only runtime for it, so these static
 checks pin what can drift silently here: its defaults are the golden fixture's

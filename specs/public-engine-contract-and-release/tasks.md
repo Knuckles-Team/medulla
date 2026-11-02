@@ -91,3 +91,5 @@ The linked requirement rows retain the full contract, hashes, acceptance, and ow
 
 - [ ] **MEDULLA-CONTRACT-R006.1:** Qualify fresh WASM exports without inferring native reproducibility.
 - [ ] **MEDULLA-CONTRACT-R006.2:** Complete independent native builds, measured size and cross-language acceptance.
+- [ ] **MEDULLA-CONTRACT-R056.17:** Remove the crate-level lint allows the split added and clear the roughly 400 findings behind them.
+- [ ] **MEDULLA-CONTRACT-R056.18:** Move the ambient test auth posture behind a test-only dev-dependency path or a runtime test hook so workspace feature unification cannot change auth behaviour.

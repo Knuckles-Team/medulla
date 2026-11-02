@@ -4,7 +4,7 @@
 //! value cannot be constructed generically for every variant (most carry required,
 //! non-`Default` fields), so no runtime enumeration exists. This file closes the loop
 //! the way the deleted `tests/test_protocol_parity.py` did — by reading the wire truth,
-//! `crates/medulla-types/src/protocol.rs`, as text — but with NO baseline file: a variant
+//! `crates/medulla-protocol-types/src/protocol.rs`, as text — but with NO baseline file: a variant
 //! without a descriptor, or a descriptor without a variant, is a hard failure.
 
 use std::collections::BTreeSet;
@@ -31,20 +31,20 @@ fn repo_root() -> PathBuf {
 }
 
 /// The chunk files that build `pub enum Method { .. }`, discovered from
-/// `crates/medulla-types/src/protocol/method/mod.rs` rather than hardcoded.
+/// `crates/medulla-protocol-types/src/protocol/method/mod.rs` rather than hardcoded.
 ///
-/// `crates/medulla-types/src/protocol.rs` is now a facade (`mod method;`): the enum is
+/// `crates/medulla-protocol-types/src/protocol.rs` is now a facade (`mod method;`): the enum is
 /// assembled by a `__eg_method_chunk_0..N` macro chain, each chunk file appending its
 /// own variants to an `@acc` token-tree accumulator before handing off to the next, with
 /// `__eg_method_finish` wrapping the final accumulator in `pub enum Method { $($variants)* }`
-/// (`crates/medulla-types/src/protocol/method/method_finish.rs`). That means the literal text
+/// (`crates/medulla-protocol-types/src/protocol/method/method_finish.rs`). That means the literal text
 /// `pub enum Method {` still exists, but its body there is only the macro placeholder
 /// `$($variants)*` -- reading just that file finds the wrapper and none of the variants.
 /// Discovering the chunk list from `mod.rs`'s own `mod method_NN;` declarations (instead
 /// of hardcoding `method_00..method_10`) means a future chunk added to the chain is
 /// picked up automatically rather than silently skipped.
 fn method_chunk_files() -> Vec<PathBuf> {
-    let dir = repo_root().join("crates/medulla-types/src/protocol/method");
+    let dir = repo_root().join("crates/medulla-protocol-types/src/protocol/method");
     let mod_path = dir.join("mod.rs");
     let text = std::fs::read_to_string(&mod_path)
         .unwrap_or_else(|e| panic!("failed to read {}: {e}", mod_path.display()));

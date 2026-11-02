@@ -38,7 +38,7 @@
 
 use std::collections::{BTreeSet, HashSet};
 
-use medulla_types::Distribution;
+use medulla_catalog_types::distribution::Distribution;
 
 use crate::adapter::BeliefGraph;
 use crate::model::{AuthorityPolicy, BiTemporalRecord, JustificationGraph, ProofNode};

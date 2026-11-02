@@ -1,7 +1,7 @@
 //! Lexer (UQL-02): comments, numbers, unicode, quoted identifiers, JSONPath/params.
 
-use crate::uql::lexer::{lex, Tok};
-use crate::uql::parse;
+use medulla_uql::lexer::{lex, Tok};
+use medulla_uql::parse;
 use medulla_types::wire::{Op, Pred};
 
 fn kinds(src: &str) -> Vec<Tok> {

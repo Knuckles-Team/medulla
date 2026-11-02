@@ -1,6 +1,8 @@
 //! No-op shims for a build without the `metrics` feature: call sites stay
 //! free of `#[cfg]` guards and the optimizer erases these.
 
+#![allow(missing_docs)] // no-op shims; the metrics build documents the same functions
+
 pub fn record_request(_op: &str, _seconds: f64) {}
 pub fn connection_request_started(_permits_available: usize) {}
 pub fn connection_request_finished(_permits_available: usize) {}

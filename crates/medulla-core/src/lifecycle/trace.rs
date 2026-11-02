@@ -3,9 +3,7 @@
 
 use std::collections::{BTreeSet, VecDeque};
 
-use medulla_types::lifecycle::{
-    LifecycleTraceAnswer, LifecycleTraceRequest, TraceEdge, TraceRecord, TRACE_NODE_BUDGET,
-};
+use medulla_source_types::{lifecycle::LifecycleTraceAnswer, lifecycle::LifecycleTraceRequest, lifecycle::TraceEdge, lifecycle::TraceRecord, lifecycle::TRACE_NODE_BUDGET};
 
 use super::store::LifecycleStore;
 

@@ -273,7 +273,7 @@
       "scales": [64, 256, 1024],
       "repetitions": 5,
       "resource_bounds": {"maximum_elapsed_ms": 120000, "maximum_peak_rss_mib": 2048, "maximum_output_bytes": 1048576},
-      "implementation_refs": ["crates/medulla-query/src/sql/exec.rs", "crates/medulla-query/src/sql/catalog.rs"],
+      "implementation_refs": ["crates/medulla-sql/src/sql/exec.rs", "crates/medulla-sql/src/sql/catalog.rs"],
       "rows": [
         {"row_id": "G37-HP-039", "equivalence_checks": ["conflict_outcomes_match_scan_reference", "rollback_preserves_table"], "thresholds": {"maximum_work_units": 100000000, "maximum_work_growth_ratio": 24, "maximum_peak_memory_bytes": 2147483648, "maximum_memory_growth_ratio": 24, "maximum_latency_p99_ms": 60000, "maximum_latency_growth_ratio": 45}},
         {"row_id": "G37-HP-040", "equivalence_checks": ["warm_lookup_matches_linear_reference", "invalid_schema_rejected"], "thresholds": {"maximum_work_units": 100000, "maximum_work_growth_ratio": 3, "maximum_peak_memory_bytes": 2147483648, "maximum_memory_growth_ratio": 20, "maximum_latency_p99_ms": 60000, "maximum_latency_growth_ratio": 20}}

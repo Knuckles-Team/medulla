@@ -5,7 +5,7 @@
 mod common;
 
 use common::{has_iri, parse_all, KG, RDFS};
-use medulla_rdf::owl::Reasoner;
+use medulla_reasoner::owl::Reasoner;
 use medulla_rdf::oxrdf::{NamedNode, Term, Triple};
 
 const INFRA: &str = "http://knuckles.team/kg/infrastructure#";

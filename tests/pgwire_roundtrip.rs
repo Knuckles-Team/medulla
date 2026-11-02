@@ -24,11 +24,11 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use medulla::isolation::{AgentIdentity, AgentRole};
-use medulla::registry::GraphRegistry;
-use medulla::server::persistence::PersistenceBackend;
-use medulla::server::pgwire;
-use medulla::server::ServerState;
+use medulla_types::acl::{AgentIdentity, AgentRole};
+use medulla_core::registry::GraphRegistry;
+use medulla_server_api::api::persistence::PersistenceBackend;
+use medulla_wire::pgwire;
+use medulla_server_api::state::ServerState;
 
 fn sql_test_persist_dir() -> String {
     test_support::sql_test_persist_dir("pgwire")
@@ -49,7 +49,7 @@ fn state_with_dir(
 
 /// The cache-only default state (no durable tier) the original round-trip tests use.
 /// A real tempdir-backed `RedbBackend` (mirrors `common::tempdir_persistence()`,
-/// `server::mod::tests::test_state`, `bolt_wire::tests::durable_state`, and every
+/// `medulla_server::mod::tests::test_state`, `bolt_wire::tests::durable_state`, and every
 /// other `tests/*.rs` fixture that needs one): the authoritative-commit flip means
 /// EVERY graph-node write now routes through the universal cross-modal MutationBatch
 /// kernel (`commit_cross_modal_txn`), which fails closed ("cross-modal mutation
@@ -78,8 +78,8 @@ fn seeded_state() -> test_support::SharedState {
 fn reopen_redb_with_retry(
     dir: &str,
     cache: usize,
-) -> medulla::server::persistence::redb_backend::RedbBackend {
-    use medulla::server::persistence::redb_backend::RedbBackend;
+) -> medulla_persistence::redb_backend::RedbBackend {
+    use medulla_persistence::redb_backend::RedbBackend;
     let mut last_err = None;
     for attempt in 0..50 {
         match RedbBackend::open(dir.to_string(), cache) {
@@ -95,7 +95,7 @@ fn reopen_redb_with_retry(
 
 #[cfg(feature = "redb")]
 fn interval_backend(label: &str) -> (String, Arc<dyn PersistenceBackend>) {
-    use medulla::server::persistence::redb_backend::RedbBackend;
+    use medulla_persistence::redb_backend::RedbBackend;
     use std::sync::atomic::{AtomicU64, Ordering};
 
     static NEXT: AtomicU64 = AtomicU64::new(1);
@@ -116,7 +116,7 @@ async fn reopened_node(
     dir: &str,
     node_id: &str,
 ) -> (
-    medulla::server::persistence::redb_backend::RedbBackend,
+    medulla_persistence::redb_backend::RedbBackend,
     Option<Vec<u8>>,
 ) {
     let reopened = reopen_redb_with_retry(dir, 64);
@@ -471,11 +471,11 @@ impl PersistenceBackend for RecordingBackend {
     async fn record_durable(
         &self,
         graph_fname: &str,
-        method: &medulla::protocol::Method,
+        method: &medulla_protocol_types::protocol::Method,
     ) -> Result<(), String> {
         self.durable
             .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-        if let medulla::protocol::Method::AddNode { node_id, .. } = method {
+        if let medulla_protocol_types::protocol::Method::AddNode { node_id, .. } = method {
             self.recorded
                 .lock()
                 .unwrap()
@@ -484,7 +484,7 @@ impl PersistenceBackend for RecordingBackend {
         Ok(())
     }
     // Wire graph-node writes now route through the universal cross-modal
-    // MutationBatch kernel (`server::handlers::txn::commit_cross_modal_txn`), not
+    // MutationBatch kernel (`medulla_h_txn::txn::commit_cross_modal_txn`), not
     // a bare `record_durable` call — the trait's default `commit_mutation_batch_crossmodal`
     // fails closed ("persistence backend does not support atomic cross-modal
     // MutationBatch commits"), which would defeat this backend's whole purpose
@@ -494,12 +494,12 @@ impl PersistenceBackend for RecordingBackend {
     // authoritative-commit-flip seam this mock must speak now.
     async fn commit_mutation_batch_crossmodal(
         &self,
-        args: medulla::server::persistence::CrossModalCommitArgs<'_>,
-    ) -> Result<medulla::mutation_batch::MutationBatchCommit, String> {
+        args: medulla_server_api::api::persistence::CrossModalCommitArgs<'_>,
+    ) -> Result<medulla_protocol_types::mutation_batch::MutationBatchCommit, String> {
         self.durable
             .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         for method in args.methods {
-            if let medulla::protocol::Method::AddNode { node_id, .. } = method {
+            if let medulla_protocol_types::protocol::Method::AddNode { node_id, .. } = method {
                 self.recorded
                     .lock()
                     .unwrap()
@@ -516,8 +516,8 @@ impl PersistenceBackend for RecordingBackend {
         // `VersionExpectation::Graph`, and production fails closed on anything
         // else, so this mock does too rather than stubbing a default.
         let committed_version = match args.batch.version_expectation {
-            medulla::mutation_batch::VersionExpectation::Graph(expected) => {
-                medulla::mutation_batch::CommittedVersion::checked_graph(expected)?
+            medulla_protocol_types::mutation_batch::VersionExpectation::Graph(expected) => {
+                medulla_mutation_types::mutation_scope::CommittedVersion::checked_graph(expected)?
             }
             other => {
                 return Err(format!(
@@ -525,11 +525,11 @@ impl PersistenceBackend for RecordingBackend {
                 ))
             }
         };
-        Ok(medulla::mutation_batch::MutationBatchCommit {
-            record: medulla::mutation_batch::MutationBatchRecord {
+        Ok(medulla_protocol_types::mutation_batch::MutationBatchCommit {
+            record: medulla_protocol_types::mutation_batch::MutationBatchRecord {
                 batch: args.batch.clone(),
                 identity: args.batch.identity.clone(),
-                status: medulla::mutation_batch::MutationBatchStatus::Committed,
+                status: medulla_protocol_types::mutation_batch::MutationBatchStatus::Committed,
                 committed_version,
                 result_msgpack: args.result_msgpack.map(|b| b.to_vec()),
                 committed_at_ms: args.committed_at_ms,
@@ -763,7 +763,7 @@ async fn catalog_introspection_then_select() {
 // one, and post-login queries run under the mapped engine AgentIdentity/ACL.
 // ───────────────────────────────────────────────────────────────────────────
 
-use medulla::server::pgwire::derive_pg_password;
+use medulla_wire::pgwire::derive_pg_password;
 
 /// A SCRAM-auth state: a known engine secret + a registered identity so the
 /// IsolationLayer has rules (the ACL is enforced once any identity exists). The
@@ -776,14 +776,14 @@ fn scram_state(secret: &str) -> Arc<RwLock<ServerState>> {
     registry
         .create_graph(
             "agent:worker",
-            medulla::protocol::GraphType::Agent,
+            medulla_protocol_types::protocol::GraphType::Agent,
             Some("worker".to_string()),
         )
         .unwrap();
     registry
         .create_graph(
             "agent:peer",
-            medulla::protocol::GraphType::Agent,
+            medulla_protocol_types::protocol::GraphType::Agent,
             Some("peer".to_string()),
         )
         .unwrap();
@@ -793,12 +793,12 @@ fn scram_state(secret: &str) -> Arc<RwLock<ServerState>> {
     // `commons-user` role (there is no more pre-RBAC "Commons is open to all"
     // fall-through under `feature = "security"`).
     // Each agent additionally owns its own private `agent:*` graph — granted
-    // explicitly (mirrors `server::mod::tests::multi_tenant_state`'s `owner-{w}`
+    // explicitly (mirrors `medulla_server::mod::tests::multi_tenant_state`'s `owner-{w}`
     // pattern) so `scram_identity_drives_acl` can prove `worker` reaches its own
     // graph while still being denied `peer`'s.
     #[cfg(feature = "security")]
     {
-        use medulla::acl::{Grant, GrantEffect, RbacAction, ResourceSelector, Role};
+        use medulla_types::acl::{Grant, GrantEffect, RbacAction, ResourceSelector, Role};
         for (owner, graph) in [("worker", "agent:worker"), ("peer", "agent:peer")] {
             let role = format!("owner-{owner}");
             isolation.add_role(Role::new(role.clone()));
@@ -865,7 +865,7 @@ async fn scram_login_succeeds_with_correct_password() {
     // `wire_select_returns_seeded_rows`/`extended_prepared_parameterized_select`
     // rely on elsewhere in this file) — no JSON deep-index accessor is needed. The
     // `props->>'k'` operator form is only wired for the narrow graph-node
-    // UPDATE/DELETE selector decoder (`medulla_query::sql::classify`), not the general
+    // UPDATE/DELETE selector decoder (`medulla_sql::sql::classify`), not the general
     // DataFusion-planned SELECT path this query runs on, so using it here panicked
     // with "Operator ->> is not yet supported".
     let rows = client
@@ -1433,7 +1433,7 @@ async fn wire_reason_iri_bridges_string_typed_node() {
     // never saw the axiom for the pgwire "tester" actor. `medulla_rdf::update::insert_triple`
     // (and `mapping::lower_triples` for bulk RDF load) now stamps BOTH endpoints of a
     // recognized RDFS/OWL schema predicate (`rdfs:subClassOf` here) with
-    // `medulla_core::isolation::RLS_SCHEMA_KEY`, and `can_see_row` treats a schema-marked row
+    // `medulla_graph_core::rls::RLS_SCHEMA_KEY`, and `can_see_row` treats a schema-marked row
     // as visible -- narrowly: ONLY rows the RDF/OWL lowering structurally identified as
     // schema, never merely because they are untagged. Graph-level ACL
     // (`check_graph_access`, exercised in the SECOND connection below) is completely

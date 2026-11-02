@@ -143,15 +143,15 @@ def test_required_marker_table_shape_is_pinned() -> None:
         [
             "Cargo.toml",
             "crates/medulla-epistemic/src/incremental.rs",
+            "crates/medulla-h-jobs/src/jobs.rs",
+            "crates/medulla-h-query/src/query.rs",
+            "crates/medulla-h-retrieve/src/reasoning_projection.rs",
             "crates/medulla-jobs/src/model.rs",
             "crates/medulla-jobs/src/store.rs",
-            "crates/medulla-types/src/jobs.rs",
-            "src/raft/mod.rs",
-            "src/server/authority_context.rs",
-            "src/server/dispatch.rs",
-            "src/server/handlers/jobs.rs",
-            "src/server/handlers/query.rs",
-            "src/server/reasoning_projection.rs",
+            "crates/medulla-raft/src/raft/mod.rs",
+            "crates/medulla-server-api/src/authority_context.rs",
+            "crates/medulla-server-consensus/src/dispatch.rs",
+            "crates/medulla-work-types/src/jobs.rs",
         ]
     )
     assert all(markers and all(markers) for markers in table.values())

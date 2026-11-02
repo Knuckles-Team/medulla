@@ -1,6 +1,8 @@
 # Seam contract: spec artifact graph
 
 Governing spec: [spec.md](../spec.md).
+Provider: medulla MEDULLA-SDLC-R014.6
+Consumer: arbora ARBORA-OPS-R896.1
 
 ## Provider
 
@@ -33,7 +35,7 @@ Every answer carries the record digests it came from. The caller's tenant and vi
 
 ## Authoritative code types
 
-- `crates/medulla-types/src/lifecycle.rs`: `SpecStatusAnswer`, `SpecRowState`, and the task and plan record types.
+- `crates/medulla-source-types/src/lifecycle.rs`: `SpecStatusAnswer`, `SpecRowState`, and the task and plan record types.
 - `crates/medulla-core/ontology/sdd-spec-v1.ttl`: the classes and properties of the pack.
 
 ## Test vectors

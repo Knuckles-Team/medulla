@@ -4,7 +4,7 @@ use super::outbox::{bind_scope, budget};
 use super::*;
 use crate::admitted::AdmittedMutation;
 use crate::outbox::{outbox_cursor, outbox_status, OutboxDelivery, OutboxRejectReason};
-use medulla_types::MutationOutboxIntent;
+use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
 use std::collections::BTreeMap;
 
 const CONSUMER: &str = "repository-enrichment-v1";
@@ -32,7 +32,7 @@ fn source_record(
     fixture: &Fixture,
     owner: &OwnedStoreHandle<LedgerOnlyOwner>,
     batch_id: &str,
-) -> medulla_types::MutationOutboxRecord {
+) -> medulla_mutation_types::mutation_scope::MutationOutboxRecord {
     let read = fixture.kernel.read_scope(owner).unwrap();
     read_outbox(&read, batch_id).unwrap().remove(0)
 }

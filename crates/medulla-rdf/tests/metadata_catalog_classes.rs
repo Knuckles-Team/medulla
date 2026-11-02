@@ -6,7 +6,7 @@
 mod common;
 
 use common::{has_iri, parse_all, BFO, KG, RDFS};
-use medulla_rdf::owl::Reasoner;
+use medulla_reasoner::owl::Reasoner;
 use medulla_rdf::oxrdf::Triple;
 
 const RDF: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";

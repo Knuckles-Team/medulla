@@ -1,0 +1,47 @@
+[package]
+name = "medulla-reasoner"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: OWL, tableau and rule reasoning plus reasoning closure"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_reasoner"
+path = "src/lib.rs"
+
+[dependencies]
+medulla-rdf = { path = "../medulla-rdf" }
+medulla-core = { path = "../medulla-core" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+rmp-serde = "1.3"
+medulla-types = { path = "../medulla-types" }
+oxrdf = { version = "0.3", optional = true }
+medulla-modality = { path = "../medulla-modality", optional = true }
+medulla-agent-types = { path = "../medulla-agent-types" }
+medulla-graph-core = { path = "../medulla-graph-core" }
+medulla-semantic-index = { path = "../medulla-semantic-index" }
+
+rand = "0.8"
+tracing = "0.1"
+rand_chacha = "0.3"
+cudarc = { version = "0.17", optional = true, default-features = false, features = ["driver", "nvrtc", "dynamic-loading", "cuda-12060"] }
+
+[features]
+gpu-cuda = ["dep:cudarc", "reasoning"]
+reasoning = []
+contract = ["owl", "dep:medulla-modality", "medulla-rdf/contract", "medulla-core/contract", "medulla-graph-core/contract"]
+owl = ["rdf", "medulla-rdf/owl", "medulla-types/owl"]
+owl-dl = ["owl", "medulla-rdf/owl-dl"]
+rdf = ["dep:oxrdf", "medulla-rdf/rdf", "medulla-types/rdf"]
+sparql-star = ["medulla-rdf/sparql-star", "rdf"]
+
+[dev-dependencies]
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
+
+# Test-only opt-in cfg (not a feature, so `--all-features` never turns it on).
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(medulla_gpu_device_tests)"] }

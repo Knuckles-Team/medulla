@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 
 /// How an UPDATE resolves a SPARQL graph name to a writable [`GraphCore`], so the
 /// executor is decoupled from the engine's graph registry. The default graph is `None`;

@@ -7,12 +7,13 @@
 //! the underlying capability.
 
 use crate::admission::AdmissionState;
+use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
+use medulla_protocol_types::mutation_batch::MutationBatch;
 use medulla_storage::{
     decode_ledger_record, BlobOwner, BlobSharedServiceHandle, BlobSharedWrite, LedgerRowScope,
     MutationOwnerAuthority, OwnedStoreHandle, OwnerDomain, OwnerLayout, OwnerReadTable,
     OwnerRowScope, PhysicalWriteCapability, ScopedOwnerTableMut, ScopedTableMut,
 };
-use medulla_types::{MutationBatch, MutationScopeIdentity};
 use redb::{Table, TableDefinition};
 use std::cell::RefCell;
 use std::marker::PhantomData;
@@ -190,8 +191,8 @@ impl<'a, D: OwnerDomain> AdmittedMutation<'a, D> {
     pub fn begin_with_replay_identity(
         &self,
         batch: &MutationBatch,
-        operation: &medulla_types::authority::OperationReplayIdentity,
-        nonce: &medulla_types::authority::NonceReplayKey,
+        operation: &medulla_identity_types::authority::OperationReplayIdentity,
+        nonce: &medulla_identity_types::authority::NonceReplayKey,
     ) -> Result<crate::Begin, String> {
         crate::commit::begin_with_replay_identity(self, batch, operation, nonce)
     }

@@ -6,7 +6,8 @@
 //! where the row carries a SHACL requirement — the registered shapes
 //! companion rejects a violating fixture.
 
-use medulla_core::graph::{GraphSchemaSources, SchemaSourceOrigin};
+use medulla_graph_core::graph::GraphSchemaSources;
+use medulla_graph_core::graph::SchemaSourceOrigin;
 use medulla_rdf::mapping::parse_turtle;
 use medulla_rdf::oxrdf::{NamedNode, NamedOrBlankNode, Term, Triple};
 

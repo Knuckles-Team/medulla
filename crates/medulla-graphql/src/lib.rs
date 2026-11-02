@@ -59,6 +59,11 @@
 //! GraphQL cross-modal txn stages (graph/vector/tsdb) already carry the contract in
 //! THEIR crates (`medulla-core::NodeChange`, `medulla-tensor`, `medulla-tsdb::SeriesMeta`).
 
+#![allow(clippy::too_many_arguments, clippy::items_after_test_module, clippy::new_without_default)] // signatures and fixtures carried over from the facade
+#![allow(private_interfaces, private_bounds)] // visibility is narrowed by the unreachable_pub pass
+#![allow(dead_code)] // moved helper code, as the facade crate did
+#![allow(unused_imports)] // glob imports carried over from the facade; the visibility pass prunes them
+
 /// CONCEPT:MEDULLA-KG.query.medulla-9/380/381 — the GraphQL CROSS-MODAL transaction seam: a multi-request
 /// `txnId` handle ([`crossmodal::CrossModalTxnRegistry`]) whose `beginTransaction` /
 /// `stageEmbedding` / `addMeasurement` / `sparqlUpdate` / `sparqlConstruct` /
@@ -110,7 +115,7 @@ pub use subscription::{poll as subscribe, poll_versioned as subscribe_versioned,
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_core::graph::GraphCore;
+    use medulla_graph_core::graph::GraphCore;
     use serde_json::{json, Value};
 
     fn pbytes(v: Value) -> Vec<u8> {
@@ -152,7 +157,7 @@ mod tests {
     /// shape medulla-query/cypher's fixture uses, so the equivalence comparison is honest.
     ///
     /// Regression note: this MUST key the label on `node_type`, not the legacy
-    /// `type` field. `medulla_query::cypher`'s label matcher (`build_cypher_label_index`/
+    /// `type` field. `medulla_cypher::cypher`'s label matcher (`build_cypher_label_index`/
     /// `node_has_label`, see `exec.rs`) deliberately treats Cypher's `(n:Label)`
     /// contract as narrower than `GraphCore`'s general label index -- "a legacy
     /// payload `type`/`label` must never satisfy a Cypher node label" (see
@@ -165,7 +170,7 @@ mod tests {
     /// a key Cypher is documented to ignore. `medulla-query/cypher`'s own fixtures already
     /// use `node_type` (see `exec.rs`'s `MATCH`/`MERGE` test fixtures) -- matching
     /// that here is what makes "the SAME shape" claim above actually true.
-    fn fixture() -> medulla_core::graph::GraphView {
+    fn fixture() -> medulla_graph_core::graph::GraphView {
         let core = GraphCore::new();
         core.add_node(
             "alice".into(),
@@ -266,7 +271,7 @@ mod tests {
             .collect();
         gql_names.sort();
 
-        let cy = medulla_query::exec_cypher(&view, "MATCH (p:Person) RETURN p.name").unwrap();
+        let cy = medulla_cypher::cypher::exec_cypher(&view, "MATCH (p:Person) RETURN p.name").unwrap();
         let mut cy_names: Vec<String> = cy
             .rows
             .iter()
@@ -293,7 +298,7 @@ mod tests {
             .map(|n| n["name"].as_str().unwrap().to_string())
             .collect();
 
-        let cy2 = medulla_query::exec_cypher(
+        let cy2 = medulla_cypher::cypher::exec_cypher(
             &view,
             "MATCH (a:Person)-[:KNOWS]->(b:Person) WHERE a.name = 'Alice' RETURN b.name",
         )
@@ -477,7 +482,8 @@ mod tests {
     /// medulla-graphql re-resolve wiring the server carrier drives (minus the transport).
     #[test]
     fn live_query_re_resolves_on_change_event() {
-        use medulla_core::graph::{ChangeEvent, ChangeSink};
+        use medulla_graph_core::graph::ChangeEvent;
+        use medulla_graph_core::graph::ChangeSink;
         use std::sync::{Arc, Mutex as StdMutex};
 
         let core = Arc::new(core_fixture());

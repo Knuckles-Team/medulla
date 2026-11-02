@@ -7,14 +7,17 @@
 //! the no-neighbours `continue` for an isolated node mid-graph, and the
 //! `max_iterations` sweep cap stopping propagation before full convergence.
 
-use medulla_compute::graph_algos::{label_propagation, AdjacencyGraph, LabelPropagationConfig};
+use medulla_graph_algos::{
+    graph_algos::label_propagation, graph_algos::AdjacencyGraph,
+    graph_algos::LabelPropagationConfig,
+};
 
 /// Sorted community membership as plain strings, for order-independent
 /// comparison (communities and their internal member order are already a
 /// documented sorted convention, but we don't re-assert that convention
 /// here -- only membership).
 fn communities_as_sets<'a>(
-    result: &medulla_compute::graph_algos::LabelPropagationResult<&'a str>,
+    result: &medulla_graph_algos::graph_algos::LabelPropagationResult<&'a str>,
 ) -> Vec<Vec<&'a str>> {
     let mut v: Vec<Vec<&str>> = result.communities.clone();
     for c in v.iter_mut() {

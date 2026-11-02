@@ -29,7 +29,8 @@
 //! `resolve` runs the SAME
 //! resolution as the poll path, so a live tick and a poll return identical shapes.
 
-use medulla_core::graph::{GraphCore, GraphView};
+use medulla_graph_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphView;
 use serde_json::Value;
 
 use crate::parser::{parse_operation, Operation, Query};

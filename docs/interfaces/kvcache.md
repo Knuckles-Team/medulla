@@ -66,7 +66,7 @@ same token-hash store the bytes **once** — the LMCache dedup / prefix-cache wi
 ## Networked (durable, fleet-shared) backend — `SharedKvStoreBackend`
 
 The `SharedKvIndex` above is **in-process + ephemeral**. `SharedKvStoreBackend`
-(`src/server/kvcache_http/shared_store.rs`) is the SAME `SharedKvBackend` seam over the engine's
+(`crates/medulla-wire-msg/src/kvcache_http/shared_store.rs`) is the SAME `SharedKvBackend` seam over the engine's
 **durable, mutation-store-backed KV store** (`kv.redb`, the store the `KvGet`/`KvPut` wire methods own).
 Select it with `MEDULLA_KVCACHE_BACKEND=durable`. Then:
 

@@ -4,7 +4,7 @@
 mod common;
 
 use common::{has_iri, parse_all};
-use medulla_rdf::owl::Reasoner;
+use medulla_reasoner::owl::Reasoner;
 use medulla_rdf::oxrdf::Triple;
 
 const SWARM: &str = "http://knuckles.team/kg/swarm#";

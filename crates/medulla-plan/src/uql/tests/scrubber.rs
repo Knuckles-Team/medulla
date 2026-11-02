@@ -5,7 +5,7 @@
 //! plus negative fixtures for the two shapes the grammar must reject with a typed parse
 //! error rather than silently misinterpret: Cypher-shaped text, and an ISO-8601 timestamp.
 
-use crate::uql::parse;
+use medulla_uql::parse;
 use medulla_types::wire::{Op, TimeAxis};
 
 /// The exact text a temporal-scrubber control's query template emits when the user drags

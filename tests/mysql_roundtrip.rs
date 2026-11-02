@@ -31,7 +31,7 @@ mod test_support;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 
-use medulla::server::mysql_wire::{self, MysqlAuthMode};
+use medulla_wire::mysql_wire::{self, MysqlAuthMode};
 
 fn sql_test_persist_dir() -> String {
     test_support::sql_test_persist_dir("mysql")
@@ -40,7 +40,7 @@ fn sql_test_persist_dir() -> String {
 // ── the seeded server state (mirrors the pgwire round-trip test's `seeded_state`) ──
 
 /// A real tempdir-backed `RedbBackend` (mirrors `common::tempdir_persistence()` /
-/// `server::mod::tests::test_state` / `bolt_wire::tests::durable_state` / the
+/// `medulla_server::mod::tests::test_state` / `bolt_wire::tests::durable_state` / the
 /// identical helper in `tests/pgwire_roundtrip.rs`): the authoritative-commit flip
 /// means every graph-node write now routes through the universal cross-modal
 /// MutationBatch kernel, which fails closed ("cross-modal mutation requires durable
@@ -83,7 +83,7 @@ const CLIENT_PROTOCOL_41: u32 = 0x0000_0200;
 const CLIENT_SECURE_CONNECTION: u32 = 0x0000_8000;
 const CLIENT_PLUGIN_AUTH: u32 = 0x0008_0000;
 // The server's handshake-response handler now mandates this capability
-// (`server::mysql_wire::mod::handle_connection`: "current MySQL result-set framing
+// (`medulla_wire::mysql_wire::mod::handle_connection`: "current MySQL result-set framing
 // requires CLIENT_DEPRECATE_EOF") and rejects the login before password
 // verification when it is absent. Mirrors `mysql_wire::mod::tests::client_connect`'s
 // negotiated capability set.

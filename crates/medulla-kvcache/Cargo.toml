@@ -42,6 +42,10 @@ medulla-modality = { path = "../medulla-modality", optional = true }
 # PageRank/centrality over an `medulla-compute::GraphView`. OFF by default — the base/pi build
 # and the core `TieredCache::set_importance` mechanism it feeds stay dependency-free.
 medulla-compute = { path = "../medulla-compute", optional = true }
+medulla-protocol-types = { path = "../medulla-protocol-types" }
+medulla-mutation-types = { path = "../medulla-mutation-types" }
+medulla-graph-algos = { path = "../medulla-graph-algos" }
+medulla-graph-core = { path = "../medulla-graph-core", optional = true }
 
 [features]
 default = []
@@ -61,14 +65,17 @@ lz4 = ["dep:lz4_flex"]
 # into any tier aggregate (pi/durable/compression/lz4) — a base/pi build must stay
 # dependency-free (no serde). `cargo test -p medulla-kvcache --features contract` runs the
 # suite; only this feature pulls serde in.
-contract = ["dep:medulla-modality", "dep:serde"]
+contract = ["dep:medulla-modality", "dep:serde", "medulla-compute?/contract", "medulla-graph-algos/contract", "medulla-graph-core?/contract"]
 # Graph-guided KV/context paging (CONCEPT:MEDULLA-KG.memory.graph-guided-paging): the
 # `graph_importance` adapter module, computing PageRank/centrality importance over an
 # `medulla-compute::GraphView` for `TieredCache::apply_importance_scores`. OFF by default so
 # the base/pi build stays dependency-free (`TieredCache::set_importance` itself needs no
 # feature — it takes a caller-supplied `f64` either way). Pulls `medulla-compute`.
-graph = ["dep:medulla-compute"]
+graph = ["dep:medulla-compute", "dep:medulla-graph-core"]
 
 [dev-dependencies]
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-compute = { path = "../medulla-compute", features = ["test-support"] }
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
 # Only the `durable` redb cold-tier test touches the filesystem.
 tempfile = "3.27"

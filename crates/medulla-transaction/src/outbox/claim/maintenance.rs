@@ -10,8 +10,11 @@ use crate::outbox::rows::{
 use crate::outbox::stream::subscribed_topic;
 use crate::outbox::{ensure_not_graft_fenced, index};
 use crate::tables::{OUTBOX_CLAIM_CURSORS, OUTBOX_DELIVERIES};
+use medulla_mutation_types::{
+    mutation_scope::MutationOutboxLease, mutation_scope::MutationScopeIdentity,
+    mutation_scope::MUTATION_BATCH_VERSION,
+};
 use medulla_storage::{ledger_scope_key, MutationOwnerAuthority, OwnedStoreHandle, OwnerDomain};
-use medulla_types::{MutationOutboxLease, MutationScopeIdentity, MUTATION_BATCH_VERSION};
 
 const EXPIRY_CURSOR_PREFIX: &str = "\u{1}kernel-outbox-expiry/";
 const PRUNE_CURSOR_PREFIX: &str = "\u{1}kernel-outbox-prune/";

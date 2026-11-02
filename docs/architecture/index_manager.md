@@ -52,7 +52,7 @@ registry.
 
 medulla-query's `nodes` SQL provider works on row positions over a materialized Arrow
 batch (a different data shape than node ids), so it has its own registry —
-`PushdownRegistry` in `crates/medulla-query/src/sql/providers.rs` — mirroring the same
+`PushdownRegistry` in `crates/medulla-sql/src/sql/providers.rs` — mirroring the same
 seam at the relational boundary. `NodesTableProvider::supports_filters_pushdown`
 and `::scan` consult **one** `PushdownRegistry` (`indexable_eq` /  `lookup`)
 instead of bespoke per-column checks scattered across provider methods. The
@@ -117,7 +117,7 @@ when no such index is registered). `apply_delta` reads content ONLY from that ca
 blob — NEVER by calling back into `core` under the held topology lock — so it can't
 deadlock. `full_rebuild`, which does re-read every live node, is available only as
 an explicit out-of-lock operator repair action; served writes always maintain deltas.
-The adapters live in `src/server/secondary_indexes.rs`.
+The adapters live in `crates/medulla-h-retrieve/src/secondary_indexes.rs`.
 
 The text (`CONCEPT:MEDULLA-KG.storage.incremental-text`), temporal
 (`CONCEPT:MEDULLA-KG.storage.incremental-temporal`), and derived-OWL

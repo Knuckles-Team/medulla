@@ -8,7 +8,9 @@
 //! exact golden sequence for a fixed seed since the whole point of this
 //! function is seeded, bit-reproducible randomness.
 
-use medulla_compute::graph_algos::{random_walk, AdjacencyGraph, RandomWalkConfig};
+use medulla_graph_algos::{
+    graph_algos::random_walk, graph_algos::AdjacencyGraph, graph_algos::RandomWalkConfig,
+};
 
 #[test]
 fn dead_end_stops_walk_early_when_restart_probability_is_zero() {

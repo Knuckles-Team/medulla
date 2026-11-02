@@ -22,7 +22,7 @@
 
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
-use medulla_core::graph::GraphView;
+use medulla_graph_core::graph::GraphView;
 use serde_json::{Map, Value};
 
 use crate::parser::{Fragment, RawDocument, RawSelection};
@@ -697,7 +697,7 @@ mod tests {
     use super::*;
     use crate::parser::parse_raw;
     use crate::resolver::execute;
-    use medulla_core::graph::GraphCore;
+    use medulla_graph_core::graph::GraphCore;
     use serde_json::json;
 
     fn pbytes(v: Value) -> Vec<u8> {
@@ -706,7 +706,7 @@ mod tests {
 
     /// alice/bob/carol People (+ a Doc); alice-KNOWS->bob — same shape as the crate's
     /// query fixtures, so federation resolves over the SAME substrate.
-    fn view() -> medulla_core::graph::GraphView {
+    fn view() -> medulla_graph_core::graph::GraphView {
         let core = GraphCore::new();
         core.add_node(
             "alice".into(),

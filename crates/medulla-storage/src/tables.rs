@@ -25,9 +25,9 @@
 //! bindings were keyed by the *binding* digest, so the lookup could never
 //! succeed and any store with one committed batch failed validation.
 
+use medulla_mutation_types::mutation::MutationReceipt;
+use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
 use medulla_types::contract::Digest256;
-use medulla_types::mutation::MutationReceipt;
-use medulla_types::MutationScopeIdentity;
 use redb::{TableDefinition, TableHandle};
 use serde::{Deserialize, Serialize};
 
@@ -96,7 +96,7 @@ pub struct ScopeFence {
 #[serde(rename_all = "snake_case")]
 pub enum MutationClass {
     /// A caller-originated operation. It may carry an
-    /// [`medulla_types::authority::OperationReplayIdentity`] and participates in
+    /// [`medulla_identity_types::authority::OperationReplayIdentity`] and participates in
     /// operation-replay resolution.
     Operation,
     /// An owner-maintenance write with no caller operation identity. It is
@@ -130,7 +130,7 @@ pub struct MutationClassRow {
 /// Keyed by `(ledger_scope_key, idempotency_key)` so that a *changed* payload,
 /// scope, policy or method under the same idempotency key is a conflict rather
 /// than a second row: the stored `operation_replay_digest` is compared against
-/// the digest of the proposed [`medulla_types::authority::OperationReplayIdentity`].
+/// the digest of the proposed [`medulla_identity_types::authority::OperationReplayIdentity`].
 /// `mutation_replay_nonces` maps one attempt nonce digest to the idempotency
 /// key it consumed, so the same nonce is always rejected while a fresh nonce
 /// over the same stable identity replays `recorded`.

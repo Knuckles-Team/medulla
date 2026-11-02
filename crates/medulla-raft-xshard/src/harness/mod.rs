@@ -1,0 +1,258 @@
+//! Correctness + load harness (CONCEPT:AU-KG.ontology.emits-database-ontology-entities) — the standing proof-engine.
+//!
+//! The authoritative-flip migration deadlock proved correctness-tests-passing ≠
+//! scale/fault-proven. This harness is the standing proof-engine that gates every
+//! distributed/durability claim in the Waves-4-8 program: multi-raft (A), M2
+//! durability, distributed txns (N), PITR/replication (E). It does NOT unit-test the
+//! happy path — it INJECTS faults against a live cluster and asserts invariants over
+//! the resulting history.
+//!
+//! ## The pieces
+//!
+//! * [`cluster::Cluster`] — a managed N-node in-process redb-AUTHORITATIVE Raft
+//!   cluster with kill/restart/partition controls.
+//! * [`nemesis::Nemesis`] — the four fault primitives (kill / partition / skew-pause /
+//!   saturate), schedulable and seeded.
+//! * [`loadgen`] — concurrent writers recording an op [`history::History`].
+//! * [`checker`] — the invariant model (acked-write-survives, single-leader-per-term,
+//!   no-phantom) over the history + final cluster state.
+//! * [`run_gauntlet`] — wires them: elect → load → fault → heal → assert.
+//!
+//! ## How a FUTURE distributed lane plugs in
+//!
+//! * **A new invariant** (e.g. lane N cross-shard atomicity, or E PITR-recovers-to-T):
+//!   add a check arm in [`checker::check`] reading the relevant final state, and an
+//!   accumulator like [`checker::LeadershipLog`] if it needs run-time samples. The
+//!   load gen already records a full timestamped history to assert against.
+//! * **A new nemesis** (e.g. lane resharding: split a group mid-write; E: kill a
+//!   replication follower): add a [`nemesis::Fault`] variant + an arm in
+//!   [`nemesis::Nemesis::inject`]. The partition gate ([`medulla_raft::raft::network::partition`])
+//!   and the kill/restart cluster controls are reusable primitives.
+//! * **A new gauntlet**: compose `Cluster::start` → `loadgen::run` → `Nemesis::inject`
+//!   → `checker::check` exactly as [`run_gauntlet`] does, with the new fault schedule.
+//!
+//! ## Deliberately deferred (documented)
+//!
+//! * Full Knossos-style linearizability (per-key register history + a wall-clock
+//!   real-time order check). This increment asserts the weaker but high-value
+//!   acked-survives + single-leader-per-term + no-phantom set.
+//! * Real monotonic-clock skew of one node (we model a paused/skewed node as a
+//!   network isolation — peers see missed heartbeats, which is the observable effect).
+//! * Multi-PROCESS (not in-process) nodes — this is a single-process harness; a true
+//!   `kill -9` of a separate OS process is a later increment (the in-process kill drops
+//!   the node's Raft + redb backend, leaving the on-disk redb a crash would leave).
+
+pub mod checker;
+pub mod cluster;
+pub mod history;
+pub mod loadgen;
+pub mod nemesis;
+
+/// Shared test guard for harnesses that exercise the signed public dispatch
+/// boundary. The request verifier reads these values from process-global
+/// environment, so every harness using this helper must hold the guard for the
+/// complete test lifetime, including its async cluster work.
+#[cfg(any(test, feature = "test-support"))]
+pub mod test_env {
+    use std::ffi::OsString;
+    use std::sync::atomic::{AtomicU64, Ordering};
+    use std::sync::{Mutex, MutexGuard};
+
+    use medulla_kernel::lock_recovery::LockRecovery;
+
+    static AUTH_ENV_LOCK: Mutex<()> = Mutex::new(());
+    static AUTH_ENV_SEQUENCE: AtomicU64 = AtomicU64::new(1);
+
+    pub struct AuthEnvGuard {
+        _lock: MutexGuard<'static, ()>,
+        previous: Vec<(&'static str, Option<OsString>)>,
+    }
+
+    impl Drop for AuthEnvGuard {
+        fn drop(&mut self) {
+            for (name, value) in self.previous.drain(..) {
+                match value {
+                    Some(value) => std::env::set_var(name, value),
+                    None => std::env::remove_var(name),
+                }
+            }
+        }
+    }
+
+    pub fn configure_auth_test_environment(
+        tenant: &str,
+        state_dir_tag: &str,
+    ) -> AuthEnvGuard {
+        let lock = AUTH_ENV_LOCK.lock_recovering("raft harness auth env guard");
+        let names = [
+            "MEDULLA_AUDIENCE",
+            "MEDULLA_TENANT",
+            "MEDULLA_POLICY_VERSION",
+            "MEDULLA_SECURITY_STATE_DIR",
+        ];
+        let previous = names
+            .into_iter()
+            .map(|name| (name, std::env::var_os(name)))
+            .collect();
+        let sequence = AUTH_ENV_SEQUENCE.fetch_add(1, Ordering::Relaxed);
+        std::env::set_var("MEDULLA_AUDIENCE", "medulla-test");
+        std::env::set_var("MEDULLA_TENANT", tenant);
+        std::env::set_var("MEDULLA_POLICY_VERSION", "policy-test");
+        std::env::set_var(
+            "MEDULLA_SECURITY_STATE_DIR",
+            std::env::temp_dir().join(format!(
+                "medulla-{state_dir_tag}-{}-{sequence}",
+                std::process::id()
+            )),
+        );
+        AuthEnvGuard {
+            _lock: lock,
+            previous,
+        }
+    }
+}
+
+#[cfg(test)]
+mod gauntlet_test;
+
+#[cfg(test)]
+mod catchup_test;
+
+/// EH-286: automatic openraft/raft-module trace capture on cluster-test failure.
+/// `pub(crate)` (not `mod`) because `medulla_raft::raft::tests::cluster_cfg_with_groups` calls
+/// [`trace_capture::init`] directly; `#[cfg(test)]` because it depends on the
+/// `tracing-subscriber` DEV-dependency, which is not linked into non-test builds.
+#[cfg(any(test, feature = "test-support"))]
+pub mod trace_capture;
+
+/// EH-534: per-process cap on concurrently running cluster tests.
+#[cfg(any(test, feature = "test-support"))]
+pub mod cluster_slots;
+
+use std::sync::Arc;
+use std::time::Duration;
+
+use tokio::sync::Mutex;
+
+use checker::{LeadershipLog, Verdict};
+use cluster::Cluster;
+use history::History;
+use loadgen::LoadConfig;
+use nemesis::{Fault, FaultReport, Nemesis};
+
+/// The outcome of a full gauntlet run.
+pub struct GauntletOutcome {
+    pub verdict: Verdict,
+    pub fault_reports: Vec<FaultReport>,
+}
+
+/// Run a bounded fault gauntlet against a fresh `n`-node cluster:
+/// elect → start load → inject each fault in `faults` (while load runs) → heal →
+/// assert the invariants. Returns the verdict + per-fault reports. Used by both the
+/// deterministic test and the soak bin.
+pub async fn run_gauntlet(
+    n: usize,
+    tag: &str,
+    seed: u64,
+    load: LoadConfig,
+    faults: Vec<Fault>,
+) -> Result<GauntletOutcome, String> {
+    // The partition controller is process-global. Hold its test guard across
+    // cluster startup, fault injection, healing, checking, and teardown so a
+    // concurrent harness cannot clear this run's partition mid-RPC.
+    let _partition_guard = medulla_raft::raft::network::partition::test_guard();
+
+    // ── Elect ──────────────────────────────────────────────────────────────
+    let cluster = Cluster::start(n, tag).await?;
+    let cluster = Arc::new(Mutex::new(cluster));
+    let initial_leader = {
+        let c = cluster.lock().await;
+        c.wait_for_leader(Duration::from_secs(15)).await
+    };
+    if initial_leader.is_none() {
+        let cleanup = cluster.lock().await.shutdown_in_place().await;
+        return Err(match cleanup {
+            Ok(()) => "no initial leader elected".to_string(),
+            Err(error) => format!("no initial leader elected; {error}"),
+        });
+    }
+
+    let history = Arc::new(History::new());
+    let leadership = Arc::new(Mutex::new(LeadershipLog::new()));
+    let all_ids = cluster.lock().await.all_ids();
+
+    // ── Start the load gen (background) ─────────────────────────────────────
+    let load_handle = {
+        let cluster = cluster.clone();
+        let history = history.clone();
+        tokio::spawn(async move { loadgen::run(cluster, load, history).await })
+    };
+
+    // ── Start the leadership sampler (background) — feeds the split-brain check ─
+    let sampler_stop = Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let sampler_handle = {
+        let cluster = cluster.clone();
+        let leadership = leadership.clone();
+        let stop = sampler_stop.clone();
+        tokio::spawn(async move {
+            while !stop.load(std::sync::atomic::Ordering::Relaxed) {
+                let view = {
+                    let c = cluster.lock().await;
+                    c.leadership_view().await
+                };
+                leadership.lock().await.push(view);
+                tokio::time::sleep(Duration::from_millis(100)).await;
+            }
+        })
+    };
+
+    // ── Inject the fault schedule (concurrently with load) ──────────────────
+    let mut nemesis = Nemesis::new(seed);
+    let mut fault_reports = Vec::new();
+    // Let some writes land first so the no-loss bar has acked writes to lose.
+    tokio::time::sleep(Duration::from_millis(500)).await;
+    for fault in faults {
+        let report = nemesis.inject(&cluster, fault).await;
+        fault_reports.push(report);
+        tokio::time::sleep(Duration::from_millis(300)).await;
+    }
+
+    // ── Heal + drain ────────────────────────────────────────────────────────
+    medulla_raft::raft::network::partition::heal();
+    let _ = load_handle.await;
+    sampler_stop.store(true, std::sync::atomic::Ordering::Relaxed);
+    let _ = sampler_handle.await;
+
+    // ── Wait for a final stable leader on the fully-healed cluster ──────────
+    let final_leader = {
+        let c = cluster.lock().await;
+        c.wait_for_leader(Duration::from_secs(20)).await
+    };
+    // Give followers a beat to apply the last committed entries before reading.
+    tokio::time::sleep(Duration::from_millis(800)).await;
+
+    // ── Check invariants ────────────────────────────────────────────────────
+    let verdict = {
+        let c = cluster.lock().await;
+        let l = leadership.lock().await;
+        checker::check(&c, &history, &l, final_leader).await
+    };
+
+    // ── Teardown ────────────────────────────────────────────────────────────
+    let _ = all_ids;
+    match Arc::try_unwrap(cluster) {
+        Ok(cluster) => cluster.into_inner().teardown().await,
+        Err(cluster) => {
+            let cleanup = cluster.lock().await.shutdown_in_place().await;
+            return Err(match cleanup {
+                Ok(()) => "cluster still shared at teardown".to_string(),
+                Err(error) => format!("cluster still shared at teardown; {error}"),
+            });
+        }
+    }
+
+    Ok(GauntletOutcome {
+        verdict,
+        fault_reports,
+    })
+}

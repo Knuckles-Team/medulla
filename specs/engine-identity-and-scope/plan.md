@@ -14,8 +14,8 @@ The first implementation slice should land issuer verification with negative tes
 
 | Component | Reuse |
 |---|---|
-| `JwtValidator::from_env_primary`, `decode_with`, `validate_claims` in `src/server/oidc.rs` | Evolve single primary issuer into an ordered validated issuer registry; retain network-free `from_parts` for tests. |
-| `primary_oidc_validator`, `bind_verified_identity` in `src/server/auth.rs` | Keep envelope subject/tenant binding after cryptographic verification. |
+| `JwtValidator::from_env_primary`, `decode_with`, `validate_claims` in `crates/medulla-server-api/src/oidc.rs` | Evolve single primary issuer into an ordered validated issuer registry; retain network-free `from_parts` for tests. |
+| `primary_oidc_validator`, `bind_verified_identity` in `crates/medulla-server-auth/src/auth.rs` | Keep envelope subject/tenant binding after cryptographic verification. |
 | `identity_access.rs`, `IsolationLayer::try_register_agent` | Route typed identity mutations through one ControlRedb transaction. |
 | `rbac_persist.rs` | Store complete role set, mode singleton and epoch under one owner; migration is versioned and restart-safe. |
 | `crates/medulla-kernel/src/audit.rs` | Reuse chain hash/verification pattern. Add identity audit rows to the RBAC control transaction, because graph audit currently covers a different store. |
@@ -70,11 +70,11 @@ Handoff: Arbora must check the same bound when work enters; Meristem only applie
 
 ## Principal-scoped knowledge segments (R023)
 
-Data flow: content-read wire method -> the retrieval function -> `visible_units` (`crates/medulla-types/src/identity/segment.rs`) -> permitted current units plus an audit entry.
+Data flow: content-read wire method -> the retrieval function -> `visible_units` (`crates/medulla-identity-types/src/identity/segment.rs`) -> permitted current units plus an audit entry.
 
 Types: `KnowledgeUnit`, `share_scope`. Attach point: the retrieval function in the content-read path. Production caller: the content-read handler, created by the Wiring row. Failure behavior: out-of-scope reads return `OutOfScope` with the id only.
 
-Reused: the visibility pattern at `crates/medulla-types/src/rbac_elevation/ledger.rs:268` and the audit append from R002. New: version lineage and share scope on stored units.
+Reused: the visibility pattern at `crates/medulla-identity-types/src/rbac_elevation/ledger.rs:268` and the audit append from R002. New: version lineage and share scope on stored units.
 
 Decision: access labels live in the unit itself, so every reader enforces them. Rejected alternative: a separate access table, because it can diverge from the unit it guards.
 
@@ -85,14 +85,14 @@ Decision: access labels live in the unit itself, so every reader enforces them. 
 
 Medulla owns typed preferences, client descriptions and interaction networks as graph records.
 The canonical identity store remains the sole principal, credential and grant authority.
-`crates/medulla-types/src/identity/model.rs:41` defines UserRecord and its stable principal_id.
-`crates/medulla-types/src/identity.rs:1` documents that authority and its RBAC projection.
+`crates/medulla-identity-types/src/identity/model.rs:41` defines UserRecord and its stable principal_id.
+`crates/medulla-identity-types/src/identity.rs:1` documents that authority and its RBAC projection.
 Metadata references exact canonical principal IDs. It never infers identity from an alias, hash or display name.
 A client description references its controlling principal. It does not register a principal or confer a credential.
 Interaction links describe observed relationships. They never create membership, sharing grants or trust.
 R023 sharing still requires an explicit authorized scope. Private scope is the default.
 
-Extend the proposed `crates/medulla-types/src/identity/segment.rs` model from R023.1.
+Extend the proposed `crates/medulla-identity-types/src/identity/segment.rs` model from R023.1.
 Its metadata payload is a closed union: Preference, ClientMetadata or InteractionNetwork.
 Common fields are node ID, owner principal, tenant, graph incarnation, revision, schema digest and provenance.
 Preference contains a registered preference key and a value matching that key's declared type.
@@ -123,14 +123,14 @@ Metadata reads use the graph authority and R023 principal scope; metadata cannot
 ### Existing code and production wiring
 
 The reviewed source is c0b952776129fd509b9f87b411a298593c2591ec.
-Existing code: `src/server/auth.rs:901` binds the verified caller; `src/server/access.rs:702` checks graph access.
-`src/server/handlers/graph_ops/gateway.rs:72` routes structural graph mutations through the existing commit gateway.
-`src/server/handlers/graph_ops/gateway_graph.rs:151` handles ApplyMutation application.
-`src/server/mutation_batch/compile.rs:126` defines compile_methods_with_outbox for the canonical write set.
+Existing code: `crates/medulla-server-auth/src/auth.rs:901` binds the verified caller; `crates/medulla-server-auth/src/access.rs:702` checks graph access.
+`crates/medulla-h-graph/src/graph_ops/gateway.rs:72` routes structural graph mutations through the existing commit gateway.
+`crates/medulla-h-graph/src/graph_ops/gateway_graph.rs:151` handles ApplyMutation application.
+`crates/medulla-server-api/src/batch_compile/compile.rs:126` defines compile_methods_with_outbox for the canonical write set.
 `src/server/mutation_batch/commit/` owns durable commit and projection publication.
-`src/server/handlers/graph_ops/nodes.rs:85` serves GetNodeProperties through the authorized read path.
-`src/server/graph_schema/compose.rs` uses validate_and_compose for existing named schema sources.
-`src/server/handlers/rdf/validation.rs:21` calls medulla_shacl::validate through the served ShaclValidate boundary.
+`crates/medulla-h-graph/src/graph_ops/nodes.rs:85` serves GetNodeProperties through the authorized read path.
+`crates/medulla-server-api/src/schema_compose.rs` uses validate_and_compose for existing named schema sources.
+`crates/medulla-h-sparql/src/rdf/validation.rs:21` calls medulla_shacl::validate through the served ShaclValidate boundary.
 ShaclValidate is read-only inspection. It is not a mandatory metadata admission gate today.
 Reachable today: no. The mandatory metadata domain, typed variants and common admission predicate remain proposed.
 
@@ -198,7 +198,7 @@ Replaces: `agent_utilities/knowledge_graph/core/tenant_sharing.py` (`share_with_
 
 Meristem acceptance case: `tests/integration/knowledge_graph/test_goc61_commons_sharing_live.py::test_org_share_revocation_persists_across_a_real_restart`.
 
-Call path: served `RbacAdmin` -> `src/server/dispatch/router/identity_access.rs:47` -> `share_transition` (`crates/medulla-core/src/isolation/share.rs`, new) -> mutation gateway commit -> `row_visibility` (`crates/medulla-core/src/isolation.rs:157`) on every read.
+Call path: served `RbacAdmin` -> `crates/medulla-server-router/src/dispatch/router/identity_access.rs:47` -> `share_transition` (`crates/medulla-core/src/isolation/share.rs`, new) -> mutation gateway commit -> `row_visibility` (`crates/medulla-isolation/src/isolation.rs:157`) on every read.
 
 Crate: `medulla-core` for the transition, `medulla-types` for the wire operations.
 
@@ -225,4 +225,4 @@ The native local boundary supports explicit `--tcp-only --tcp-addr 127.0.0.1:POR
 
 Native scheduled consumers derive the same server-owned anonymous origin and fixed tenant before subscribing, claiming or projecting work. They never read authenticated signer policy in explicit anonymous mode. Served coverage in `tests/test_native_no_auth_served.py` imports a real connector pack and requires its committed head to become visible in a nonempty projected graph-schema source, in addition to checking background health. The optional AST repository enrichment branch has mode-aware source coverage but is not included in the scoped local runtime receipt.
 
-R003.1 call path: `src/main.rs` CLI mode selection -> `src/server_startup.rs::validate_auth_mode` and store-marker check under the existing persistence lock -> `ServerState.local_anonymous` -> `src/server/anonymous.rs::request_authority` -> the existing dispatch, ACL and mutation gateways. `AuthorityOrigin::AnonymousLocal` is a server-owned discriminator, never wire data. Storage stays in the existing redb/transaction paths; only an isolated store marker is added. Per-request metadata is bounded to 2 KiB, with a 256-byte correlation key; no per-principal unbounded cache is added. Transient replay keys include the method-body digest, while durable replay/conflict semantics remain in the existing kernel. Startup sets the mode once before listener/background tasks; request admission reads it without a new global lock. R003.2 owns measurement rather than inferring a latency budget from the functional fixture.
+R003.1 call path: `src/main.rs` CLI mode selection -> `crates/medulla-server/src/server_startup.rs::validate_auth_mode` and store-marker check under the existing persistence lock -> `ServerState.local_anonymous` -> `crates/medulla-server-api/src/anonymous.rs::request_authority` -> the existing dispatch, ACL and mutation gateways. `AuthorityOrigin::AnonymousLocal` is a server-owned discriminator, never wire data. Storage stays in the existing redb/transaction paths; only an isolated store marker is added. Per-request metadata is bounded to 2 KiB, with a 256-byte correlation key; no per-principal unbounded cache is added. Transient replay keys include the method-body digest, while durable replay/conflict semantics remain in the existing kernel. Startup sets the mode once before listener/background tasks; request admission reads it without a new global lock. R003.2 owns measurement rather than inferring a latency budget from the functional fixture.

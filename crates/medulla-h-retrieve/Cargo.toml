@@ -1,0 +1,66 @@
+[package]
+name = "medulla-h-retrieve"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: Discover, semantic index and reasoning projection handlers"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_h_retrieve"
+path = "src/lib.rs"
+
+[dependencies]
+async-trait = "0.1"
+hex = "0.4"
+medulla-core = { path = "../medulla-core" }
+medulla-epistemic = { path = "../medulla-epistemic", optional = true }
+medulla-geo = { path = "../medulla-geo", optional = true }
+medulla-index-types = { path = "../medulla-index-types" }
+medulla-kernel = { path = "../medulla-kernel" }
+medulla-mutation-types = { path = "../medulla-mutation-types" }
+medulla-persistence = { path = "../medulla-persistence" }
+medulla-protocol-types = { path = "../medulla-protocol-types" }
+medulla-server-api = { path = "../medulla-server-api" }
+medulla-text = { path = "../medulla-text", optional = true }
+medulla-transaction = { path = "../medulla-transaction", optional = true }
+medulla-tsdb = { path = "../medulla-tsdb", optional = true }
+medulla-types = { path = "../medulla-types" }
+rmp-serde = "1.3"
+serde = { version = "1.0", features = ["derive", "rc"] }
+serde_json = "1.0"
+sha2 = "0.10"
+tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "signal", "macros"] }
+tracing = "0.1"
+fs4 = "1.1"
+medulla-storage = { path = "../medulla-storage", optional = true }
+uuid = { version = "1.28", features = ["v4"] }
+medulla-ann-codes = { path = "../medulla-ann-codes" }
+medulla-graph-core = { path = "../medulla-graph-core" }
+medulla-graph-algos = { path = "../medulla-graph-algos" }
+medulla-server-auth = { path = "../medulla-server-auth" }
+medulla-exec = { path = "../medulla-exec" }
+
+medulla-plan = { path = "../medulla-plan", optional = true }
+medulla-rdf = { path = "../medulla-rdf", optional = true }
+
+[features]
+ann-redb = ["redb", "medulla-ann-codes/ann-redb", "medulla-core/ann-redb", "medulla-server-api/ann-redb"]
+epistemic-tms = ["dep:medulla-epistemic", "medulla-epistemic?/epistemic-tms", "medulla-kernel/epistemic-tms", "medulla-server-api/epistemic-tms", "query", "redb"]
+geo = ["query", "dep:medulla-plan", "dep:medulla-geo", "medulla-exec/geo", "medulla-plan?/geo", "medulla-server-api/geo", "medulla-types/geo"]
+owl = ["dep:medulla-rdf", "medulla-exec/owl", "medulla-persistence/owl", "medulla-plan?/owl", "medulla-protocol-types/owl", "medulla-rdf?/owl", "medulla-server-api/owl", "medulla-types/owl"]
+query = ["redb", "dep:medulla-tsdb", "dep:medulla-plan", "medulla-exec/query", "medulla-kernel/query", "medulla-persistence/query", "medulla-plan?/query", "medulla-protocol-types/query", "medulla-server-api/query", "medulla-server-auth/query", "medulla-types/query"]
+redb = ["dep:medulla-storage", "dep:medulla-transaction", "medulla-kernel/redb", "medulla-persistence/redb", "medulla-server-api/redb"]
+text = ["query", "dep:medulla-plan", "dep:medulla-text", "medulla-exec/text", "medulla-plan?/text", "medulla-server-api/text", "medulla-types/text"]
+tsdb = ["redb", "dep:medulla-tsdb", "dep:medulla-plan", "medulla-persistence/tsdb", "medulla-server-api/tsdb"]
+[dev-dependencies]
+medulla-persistence = { path = "../medulla-persistence", features = ["test-support"] }
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
+medulla-server-api = { path = "../medulla-server-api", features = ["test-support", "request-policy-fixture"] }
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support", "test-ambient-auth"] }
+medulla-exec = { path = "../medulla-exec", features = ["test-support"] }
+medulla-kernel = { path = "../medulla-kernel", features = ["test-support", "security"] }
+tempfile = "3"
+medulla-capabilities = { path = "../medulla-capabilities" }

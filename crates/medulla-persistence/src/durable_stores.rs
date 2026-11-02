@@ -1,0 +1,746 @@
+//! The canonical registry of every durable redb store the engine opens directly under
+//! a persist dir, and each store's BACKUP SCOPE (CONCEPT:MEDULLA-KG.sharding.reshard-on-restore).
+//!
+//! ## Why this exists
+//!
+//! [`RedbBackend::backup`](super::redb_backend::RedbBackend::backup) can only snapshot
+//! stores it holds a live `redb::Database` handle for — redb takes an exclusive per-file
+//! lock, so a second in-process open of a sibling store is impossible. Before this module
+//! the bundle therefore held ONLY the graph shards plus `admin-mutations.redb`, and the
+//! manifest said nothing about that scope. A restore came up with **no RBAC/identity
+//! state at all**, silently, from a bundle that looked complete.
+//!
+//! The fix has two halves:
+//!
+//! 1. Stores that a backup CAN reach are bundled. Some are owned by `RedbBackend`
+//!    itself (`node_info.redb`, `catalog.redb`); the rest are handed in by the caller
+//!    as [`BundledStoreSource`]s (`rbac.redb` from the isolation layer, `kv.redb` from
+//!    the server state). Each is copied verbatim, digested into the manifest, and
+//!    restored back into the persist dir.
+//! 2. Stores that are deliberately NOT bundled are declared, WITH THEIR REASON, in the
+//!    manifest's `excluded_stores` map. A bundle that documents its own scope cannot
+//!    silently mislead an operator into trusting a restore it cannot perform.
+//!
+//! ## Keeping the registry honest
+//!
+//! [`DURABLE_STORES`] is the single list. `backup.rs`'s `registry_covers_every_redb_store`
+//! test scans this crate's `src/` **and every workspace crate under `crates/`** (both live
+//! under this package's `CARGO_MANIFEST_DIR`, the workspace root) for `*.redb` filename
+//! literals and fails if any is unclassified, so a NEW durable store — wherever in the
+//! workspace it is opened — cannot be silently forgotten by a future change.
+
+use std::collections::BTreeMap;
+use std::path::Path;
+
+use medulla_server_api::api::persistence::BundledStoreSource;
+
+/// Whether a durable store is captured by the online backup bundle.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BackupScope {
+    /// Copied verbatim into the bundle and restored into the persist dir.
+    Bundled,
+    /// Deliberately NOT captured. The reason is recorded in the manifest so the
+    /// bundle is self-describing about what a restore will not bring back.
+    ExcludedByDesign(&'static str),
+    /// A file a persist dir may still contain, but that no current build opens.
+    /// Not captured and not a gap — recorded so the coverage test stays exhaustive.
+    Retired(&'static str),
+}
+
+/// One durable store the engine can open directly under a persist dir.
+#[derive(Debug, Clone, Copy)]
+pub struct DurableStore {
+    /// Bundle-local / persist-dir-local file name. Never a host path.
+    pub file_name: &'static str,
+    pub scope: BackupScope,
+}
+
+/// Stable physical identity of the Agent Library store, used by staged backup adoption.
+pub const AGENT_LIBRARY_PHYSICAL_STORE: &str = "epistemic-graph:agent-library";
+
+const fn bundled(file_name: &'static str) -> DurableStore {
+    DurableStore {
+        file_name,
+        scope: BackupScope::Bundled,
+    }
+}
+
+const fn excluded(file_name: &'static str, reason: &'static str) -> DurableStore {
+    DurableStore {
+        file_name,
+        scope: BackupScope::ExcludedByDesign(reason),
+    }
+}
+
+const fn retired(file_name: &'static str, reason: &'static str) -> DurableStore {
+    DurableStore {
+        file_name,
+        scope: BackupScope::Retired(reason),
+    }
+}
+
+/// Every durable store the engine opens directly under a persist dir.
+///
+/// The authoritative graph shards (`graph-<n>.redb`) are NOT listed here: they are
+/// discovered by index (`redb_layout::discover_current_shards`) and are always bundled.
+pub const DURABLE_STORES: &[DurableStore] = &[
+    // ── bundled ─────────────────────────────────────────────────────────────────
+    bundled("admin-mutations.redb"),
+    bundled("catalog.redb"),
+    bundled("kv.redb"),
+    bundled("node_info.redb"),
+    bundled("agent_library.redb"),
+    bundled("rbac.redb"),
+    // ── deliberately excluded, declared in the manifest ─────────────────────────
+    excluded(
+        "blob.redb",
+        "content-addressed blob bytes are unbounded in size and are not copied into a \
+         bundle; a restore leaves blob references dangling until blob.redb is copied \
+         alongside the bundle by the operator",
+    ),
+    excluded(
+        "request-replay.redb",
+        "anti-replay nonce window only; entries expire with the request window and \
+         carry no recovery value, so they are deliberately not restored",
+    ),
+    excluded(
+        "cluster_hierarchy.redb",
+        "VIZ-1 Leiden cluster hierarchy is DERIVED from the graph's own nodes and \
+         edges and is fully recomputable by ClusterHierarchyRefresh (measured 23.5s \
+         for 1M nodes / 7.8M edges), so it is a cache rather than a source of truth; \
+         a restore rebuilds it on the next refresh instead of carrying it",
+    ),
+    excluded(
+        "series.redb",
+        "timeseries store (feature `tsdb`) is a separate durability domain with its own \
+         retention policy and is not captured by the graph bundle",
+    ),
+    excluded(
+        "jobs.redb",
+        "analytics-job plane (feature `jobs`) is a separate durability domain and is not \
+         captured by the graph bundle",
+    ),
+    excluded(
+        "statecharts.redb",
+        "statechart engine (feature `statechart`) is a separate durability domain and is \
+         not captured by the graph bundle",
+    ),
+    excluded(
+        "cold.redb",
+        "cold-tier cache is a rebuildable projection of authoritative shard state",
+    ),
+    excluded(
+        "viz_provenance.redb",
+        "visualization provenance is a rebuildable projection of authoritative shard state",
+    ),
+    excluded(
+        "sql_tables.redb",
+        "embedded-mode SQL table store; never present beside a served engine's shards",
+    ),
+    excluded(
+        "path_index.redb",
+        "path index is a rebuildable projection of authoritative shard state",
+    ),
+    // ── retired / never opened by a current build ───────────────────────────────
+    retired(
+        "graph.redb",
+        "retired unindexed K=1 shard filename; only the offline migrator consumes it",
+    ),
+    retired(
+        "rdf_quads.redb",
+        "removed with the opt-in `rdf-redb` quad table; no current build opens it, so a \
+         persist dir holding one carries an orphan from an earlier engine version",
+    ),
+];
+
+/// The kernel owner authority of one bundled store: the exact
+/// `PhysicalStoreIdentity` name its owner opens the file under, and the
+/// `OwnerLayout` that owner declares.
+///
+/// A restore copies a bundled file, which always allocates a NEW inode, so the
+/// copy's `StoreIncarnation` can never match the one the bundle was stamped
+/// with and an ordinary open fails closed
+/// (SEC-FINDING-V1-INCARNATION-BREAKS-RESTORE-20260903). Staged adoption is the
+/// kernel's explicit substitution path, and it requires the caller to DECLARE
+/// what it expects the file to be — `medulla_storage` no longer infers it. This
+/// registry already owns the bundled file-name list, so the declaration belongs
+/// here rather than being re-derived at the restore site.
+///
+/// `rbac.redb`'s identity string is `medulla-core`'s (`RBAC_PHYSICAL_STORE`, a
+/// private const in `crates/medulla-core/src/rbac_persist.rs`); it is restated here
+/// because that crate exports no accessor for it. The guard against the two
+/// drifting is `backup.rs`'s `backup_restore_carries_non_shard_durable_stores`,
+/// which reopens the restored `rbac.redb` through `RbacStore::open` — a
+/// mismatched identity fails that adoption closed.
+pub fn bundled_store_authority(
+    file_name: &str,
+) -> Option<(&'static str, medulla_storage::OwnerLayout)> {
+    match file_name {
+        "admin-mutations.redb" => Some((
+            super::redb_backend::ADMIN_MUTATIONS_STORE,
+            medulla_storage::OwnerLayout::LedgerOnly,
+        )),
+        "catalog.redb" => Some((
+            super::tenant_catalog::CATALOG_PHYSICAL_STORE,
+            medulla_storage::OwnerLayout::TenantCatalog,
+        )),
+        #[cfg(feature = "kv")]
+        "kv.redb" => Some((
+            medulla_server_blob::kv::KV_PHYSICAL_STORE,
+            medulla_storage::OwnerLayout::Kv,
+        )),
+        "node_info.redb" => Some((
+            super::node_info_store::NODE_INFO_PHYSICAL_STORE,
+            medulla_storage::OwnerLayout::NodeInfo,
+        )),
+        "agent_library.redb" => Some((
+            AGENT_LIBRARY_PHYSICAL_STORE,
+            medulla_storage::OwnerLayout::AgentLibrary,
+        )),
+        "rbac.redb" => Some((
+            "eg-core:rbac-security-control",
+            medulla_storage::OwnerLayout::Rbac,
+        )),
+        _ => None,
+    }
+}
+
+/// The registry entry for `file_name`, or `None` when it is not a known durable store.
+pub fn lookup(file_name: &str) -> Option<&'static DurableStore> {
+    DURABLE_STORES
+        .iter()
+        .find(|store| store.file_name == file_name)
+}
+
+/// Every store that is deliberately not captured, as `file name → reason`. Written into
+/// the manifest so a bundle states its own scope.
+pub fn excluded_store_reasons() -> BTreeMap<String, String> {
+    DURABLE_STORES
+        .iter()
+        .filter_map(|store| match store.scope {
+            BackupScope::ExcludedByDesign(reason) => {
+                Some((store.file_name.to_string(), reason.to_string()))
+            }
+            BackupScope::Bundled | BackupScope::Retired(_) => None,
+        })
+        .collect()
+}
+
+/// Adapter that presents the isolation layer's durable RBAC/identity store as a
+/// [`BundledStoreSource`].
+///
+/// `rbac.redb` is the omission that made a restore dangerous rather than merely
+/// incomplete: the bundle carried graph shards and coordinator receipts but NO roles,
+/// grants or registered identities, so a restored engine came up default-deny with an
+/// already-`Consumed` bootstrap — unrecoverable through the normal admission path.
+#[cfg(feature = "security")]
+pub struct RbacBundledStore(
+    pub std::sync::Arc<dyn medulla_isolation::rbac_persist::RbacPolicyStore>,
+);
+
+#[cfg(feature = "security")]
+impl BundledStoreSource for RbacBundledStore {
+    fn file_name(&self) -> &'static str {
+        "rbac.redb"
+    }
+
+    fn copy_into(&self, destination: &Path) -> Result<u64, String> {
+        self.0
+            .backup_into(destination)
+            .unwrap_or_else(|| Err("RBAC store is in-memory; nothing to bundle".to_string()))
+    }
+
+    fn is_durable(&self) -> bool {
+        self.0.has_durable_file()
+    }
+}
+
+#[cfg(test)]
+pub mod tests {
+    use super::*;
+
+    /// Every bundled store must declare the kernel authority a restore adopts it
+    /// under. A new bundled file with no entry would be copied and then silently
+    /// left un-adopted, which is the failure `bundled_store_authority`'s `None`
+    /// arm exists to make impossible.
+    #[test]
+    fn every_bundled_store_declares_its_restore_authority() {
+        for store in DURABLE_STORES
+            .iter()
+            .filter(|store| store.scope == BackupScope::Bundled)
+        {
+            assert!(
+                bundled_store_authority(store.file_name).is_some(),
+                "bundled store {} declares no restore authority",
+                store.file_name
+            );
+        }
+    }
+
+    /// `*.redb` file names that appear in this crate's sources but are NOT durable
+    /// stores under a served persist dir. Every entry is a deliberate classification,
+    /// so `registry_covers_every_redb_store` can treat ANY other name as an
+    /// unclassified new store and fail.
+    const NOT_A_PERSIST_DIR_STORE: &[(&str, &str)] = &[
+        (
+            "candidate.redb",
+            "extension suffix of the transient semantic-tenant upgrade candidate \
+             (`<tenant store>.candidate.redb`), renamed over its destination or removed",
+        ),
+        (
+            "control-plane.redb",
+            "medulla-transaction outbox lease unit-test fixture (tempdir)",
+        ),
+        (
+            "dest.redb",
+            "medulla-transaction graft destination unit-test fixture (tempdir)",
+        ),
+        (
+            "durability-admission.redb",
+            "medulla-storage physical-store durability admission unit-test fixture (tempdir)",
+        ),
+        (
+            "loser.redb",
+            "medulla-transaction competing graft loser unit-test fixture (tempdir)",
+        ),
+        (
+            "native-current.redb",
+            "medulla-transaction mixed current/scoped group unit-test fixture (tempdir)",
+        ),
+        (
+            "nonce-only.redb",
+            "medulla-transaction replay unit-test fixture (tempdir): a batch whose only difference \
+             from its predecessor is a fresh attempt nonce",
+        ),
+        (
+            "outbox-key.redb",
+            "medulla-transaction replay unit-test fixture (tempdir): outbox idempotency-key reuse",
+        ),
+        (
+            "replay-concurrent.redb",
+            "medulla-transaction replay unit-test fixture (tempdir): two concurrent replays of one \
+             admitted batch",
+        ),
+        (
+            "replay-finalize.redb",
+            "medulla-transaction replay unit-test fixture (tempdir): replay sealed by the commit \
+             finalizer without reapplying owner rows",
+        ),
+        (
+            "same.redb",
+            "medulla-transaction same-root graft refusal unit-test fixture (tempdir)",
+        ),
+        (
+            "scope.redb",
+            "medulla-transaction graft scope-fence unit-test fixture (tempdir)",
+        ),
+        (
+            "typed-replay.redb",
+            "medulla-transaction fault/restart unit-test fixture (tempdir): a typed result survives \
+             restart and replays once",
+        ),
+        (
+            "typed-replay-missing-result.redb",
+            "medulla-transaction fault/restart unit-test fixture (tempdir): replay of a typed batch \
+             whose stored result is absent",
+        ),
+        (
+            "winner.redb",
+            "medulla-transaction competing graft winner unit-test fixture (tempdir)",
+        ),
+        (
+            "native.redb",
+            "storage/mutation kernel unit-test fixture (tempdir)",
+        ),
+        (
+            "prototype.redb",
+            "storage/mutation kernel unit-test fixture (tempdir): a deliberately hand-built \
+             legacy-named table used to prove reject_prototype_names quarantines it",
+        ),
+        (
+            "source.redb",
+            "storage/mutation kernel unit-test fixture (tempdir): the pre-backup store in the \
+             backup_derives_a_distinct_physical_root_and_rebinds_scopes round-trip test",
+        ),
+        (
+            "backup.redb",
+            "storage/mutation kernel unit-test fixture (tempdir): the backup destination in the \
+             backup_derives_a_distinct_physical_root_and_rebinds_scopes round-trip test",
+        ),
+        ("coordinator.redb", "dispatch unit-test fixture (tempdir)"),
+        ("compensation.redb", "dispatch unit-test fixture (tempdir)"),
+        ("ts.redb", "medulla-tsdb unit-test fixture (tempdir)"),
+        ("persist.redb", "medulla-tsdb unit-test fixture (tempdir)"),
+        ("ann.redb", "medulla-ann unit-test fixture (tempdir)"),
+        (
+            "not-in-the-registry.redb",
+            "backup.rs's negative fixture proving an unregistered store is refused",
+        ),
+        (
+            "absent.redb",
+            "medulla-storage owner-manifest layout-predecessor unit-test fixture (tempdir): a path \
+             that is never created, used to prove a missing file is left to the normal open",
+        ),
+        (
+            "copied.redb",
+            "medulla-storage sql_checkpoint_upgrade unit-test fixture (tempdir): a byte-for-byte \
+             copy of a wrong-owner source, used to prove the copy is refused identically",
+        ),
+        (
+            "copy.redb",
+            "medulla-storage sql_checkpoint_upgrade unit-test fixture (tempdir): the live copy in \
+             opened_copy_cannot_borrow_restored_original_path_authority's path-swap proof",
+        ),
+        (
+            "current.redb",
+            "medulla-storage owner-manifest layout-predecessor unit-test fixture (tempdir): a \
+             freshly created current-layout owner file, used to prove it is left to the \
+             normal open",
+        ),
+        (
+            "original.redb",
+            "medulla-storage sql_checkpoint_upgrade unit-test fixture (tempdir): the renamed-aside \
+             source in opened_copy_cannot_borrow_restored_original_path_authority's path-swap \
+             proof",
+        ),
+        (
+            "preview.redb",
+            "medulla-storage sql_checkpoint_upgrade BoundedPreviewBackend unit-test fixture \
+             (tempdir): caps I/O during preview writes",
+        ),
+        (
+            "replacement.redb",
+            "medulla-storage sql_checkpoint_upgrade unit-test fixture (tempdir): a swapped-in copy \
+             used to prove a replaced inode is refused before creating a checkpoint",
+        ),
+        (
+            "sql.redb",
+            "medulla-storage sql_checkpoint_upgrade unit-test fixture (tempdir), and the same \
+             tempdir-local name reused by medulla-query's source_batch table-store test fixture \
+             (crates/medulla-query/src/tables/store/source_batch/tests/support.rs)",
+        ),
+        (
+            "changed-after-inspection.redb",
+            "medulla-storage physical-backup unit-test fixture (tempdir)",
+        ),
+        (
+            "closed-world.redb",
+            "medulla-storage owner-adoption unit-test fixture (tempdir)",
+        ),
+        (
+            "decide-then-write.redb",
+            "medulla-transaction atomic-commit unit-test fixture (tempdir)",
+        ),
+        (
+            "destination-kv-epoch-two.redb",
+            "medulla-storage physical-backup unit-test fixture (tempdir)",
+        ),
+        (
+            "destination-kv.redb",
+            "medulla-storage physical-backup unit-test fixture (tempdir)",
+        ),
+        (
+            "destination-many-bindings.redb",
+            "medulla-storage physical-backup unit-test fixture (tempdir)",
+        ),
+        (
+            "destination.redb",
+            "medulla-storage physical-backup unit-test fixture (tempdir)",
+        ),
+        (
+            "empty-private-source.redb",
+            "medulla-storage physical-backup unit-test fixture (tempdir)",
+        ),
+        (
+            "empty-private-target.redb",
+            "medulla-storage physical-backup unit-test fixture (tempdir)",
+        ),
+        (
+            "ledger.redb",
+            "medulla-transaction atomic-commit unit-test fixture (tempdir)",
+        ),
+        (
+            "missing-owner.redb",
+            "medulla-storage physical-backup negative unit-test fixture (tempdir)",
+        ),
+        (
+            "other.redb",
+            "medulla-storage owner/blob-sharing unit-test fixture (tempdir)",
+        ),
+        (
+            "owner-backup.redb",
+            "medulla-transaction atomic-commit unit-test fixture (tempdir)",
+        ),
+        (
+            "owner-rows.redb",
+            "medulla-transaction atomic-commit unit-test fixture (tempdir)",
+        ),
+        (
+            "owner-source.redb",
+            "medulla-transaction atomic-commit unit-test fixture (tempdir)",
+        ),
+        (
+            "replay.redb",
+            "medulla-transaction atomic-commit unit-test fixture (tempdir)",
+        ),
+        (
+            "semantic.redb",
+            "medulla-storage owner-adoption unit-test fixture (tempdir)",
+        ),
+        (
+            "shared-read-tamper.redb",
+            "medulla-storage physical-backup negative unit-test fixture (tempdir)",
+        ),
+        (
+            "shared.redb",
+            "medulla-transaction atomic-commit unit-test fixture (tempdir)",
+        ),
+        (
+            "source-kv.redb",
+            "medulla-storage physical-backup unit-test fixture (tempdir)",
+        ),
+        (
+            "source-many-bindings.redb",
+            "medulla-storage physical-backup unit-test fixture (tempdir)",
+        ),
+        (
+            "staged-source.redb",
+            "medulla-transaction atomic-commit unit-test fixture (tempdir)",
+        ),
+        (
+            "staged-target.redb",
+            "medulla-transaction atomic-commit unit-test fixture (tempdir)",
+        ),
+        (
+            "stale-manifest.redb",
+            "medulla-storage physical-backup negative unit-test fixture (tempdir)",
+        ),
+        (
+            "statechart-staged.redb",
+            "medulla-storage physical-backup unit-test fixture (tempdir)",
+        ),
+        (
+            "strict.redb",
+            "medulla-storage/medulla-transaction strict-authority unit-test fixture (tempdir)",
+        ),
+        (
+            "wrong-table.redb",
+            "medulla-storage owner-adoption negative unit-test fixture (tempdir)",
+        ),
+        (
+            "aborted.redb",
+            "medulla-storage clean-shutdown marker unit-test fixture (tempdir): an aborted write keeps the marker",
+        ),
+        (
+            "bound.redb",
+            "medulla-storage clean-shutdown marker unit-test fixture (tempdir): a reopened bound store writes nothing",
+        ),
+        (
+            "clean.redb",
+            "medulla-storage clean-shutdown marker unit-test fixture (tempdir): a graceful close skips the next scan",
+        ),
+        (
+            "cleared.redb",
+            "medulla-storage clean-shutdown marker unit-test fixture (tempdir): the first write removes the marker",
+        ),
+        (
+            "fence.redb",
+            "medulla-storage clean-shutdown marker unit-test fixture (tempdir): a skipped scan still refuses a foreign fence",
+        ),
+        (
+            "killed.redb",
+            "medulla-storage clean-shutdown marker unit-test fixture (tempdir): a kill after a write leaves no marker",
+        ),
+        (
+            "killed-ro.redb",
+            "medulla-storage clean-shutdown marker unit-test fixture (tempdir): a kill before any write keeps the marker",
+        ),
+        (
+            "nomarker.redb",
+            "medulla-storage clean-shutdown marker unit-test fixture (tempdir): a missing marker runs the full scan",
+        ),
+        (
+            "orig.redb",
+            "medulla-storage clean-shutdown marker unit-test fixture (tempdir): a copied marker is rejected",
+        ),
+        (
+            "outside.redb",
+            "medulla-storage clean-shutdown marker unit-test fixture (tempdir): an outside commit invalidates the marker",
+        ),
+        (
+            "torn.redb",
+            "medulla-storage clean-shutdown marker unit-test fixture (tempdir): a torn marker is rejected",
+        ),
+    ];
+
+    /// THE anti-rot gate for the backup set (BUG-PE-054).
+    ///
+    /// A file-list change alone rots: the next durable store someone adds is silently
+    /// left out of every bundle, exactly as `rbac.redb`, `kv.redb` and `node_info.redb`
+    /// were. So scan this package's `src/` AND every workspace crate under `crates/` for
+    /// `*.redb` filename literals and require each one to be classified — bundled,
+    /// deliberately excluded (with a reason), retired, or explicitly not a persist-dir
+    /// store. The scan is workspace-wide, not crate-local: this package's
+    /// `CARGO_MANIFEST_DIR` is the workspace root, so `crates/` is a sibling of `src/`
+    /// under it, and a store opened by any workspace crate (e.g. `medulla-storage`,
+    /// `medulla-query`) is just as reachable here as one opened by this package itself. An
+    /// unclassified name fails here, at the point the store is introduced, instead of
+    /// at a restore years later.
+    /// Extract `*.redb` filename literals from one source file's text into `names`
+    /// (the `".redb\""` scan half of [`scan_redb_store_names`]).
+    fn collect_redb_literals(text: &str, names: &mut std::collections::BTreeSet<String>) {
+        let mut rest = text;
+        while let Some(end) = rest.find(".redb\"") {
+            let head = &rest[..end];
+            rest = &rest[end + 6..];
+            let Some(start) = head.rfind('"') else {
+                continue;
+            };
+            let stem = &head[start + 1..];
+            if stem.is_empty() {
+                // This scanner's own search literal, `".redb\""`.
+                continue;
+            }
+            let name = format!("{stem}.redb");
+            // `graph-<n>.redb` shards are discovered by index, never by name.
+            if name.starts_with("graph-") {
+                continue;
+            }
+            // Only a bare file name is a candidate. This filters interpolated
+            // temp names (`format!("medulla-tsdb-{}.redb", ...)`) and prose that
+            // happens to end a string literal with a store name.
+            if !name
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '-'))
+            {
+                continue;
+            }
+            names.insert(name);
+        }
+    }
+
+    /// Walk `src/` and `crates/` under `root`, collecting every `*.redb` filename
+    /// literal found in `.rs` source files — the directory-walk half of
+    /// [`registry_covers_every_redb_store`]'s anti-rot scan.
+    fn scan_redb_store_names(root: &Path) -> std::collections::BTreeSet<String> {
+        let mut names: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+        let mut stack = vec![root.join("src"), root.join("crates")];
+        while let Some(dir) = stack.pop() {
+            let Ok(entries) = std::fs::read_dir(&dir) else {
+                continue;
+            };
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_dir() {
+                    // `target*` holds build output, not this crate's sources.
+                    if !path
+                        .file_name()
+                        .and_then(|name| name.to_str())
+                        .is_some_and(|name| name.starts_with("target"))
+                    {
+                        stack.push(path);
+                    }
+                    continue;
+                }
+                if path.extension().and_then(|value| value.to_str()) != Some("rs") {
+                    continue;
+                }
+                let Ok(text) = std::fs::read_to_string(&path) else {
+                    continue;
+                };
+                collect_redb_literals(&text, &mut names);
+            }
+        }
+        names
+    }
+
+    // spec: MEDULLA-DURABLE-KERNEL-R055
+    #[test]
+    fn registry_covers_every_redb_store() {
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+        let names = scan_redb_store_names(root);
+        assert!(
+            names.len() > 5,
+            "the source scan found almost nothing ({names:?}); it is not doing its job"
+        );
+        let fixtures: std::collections::BTreeSet<&str> = NOT_A_PERSIST_DIR_STORE
+            .iter()
+            .map(|(name, _)| *name)
+            .collect();
+        let unclassified: Vec<&String> = names
+            .iter()
+            .filter(|name| lookup(name).is_none() && !fixtures.contains(name.as_str()))
+            .collect();
+        assert!(
+            unclassified.is_empty(),
+            "unclassified durable redb store(s) {unclassified:?} — add each to \
+             DURABLE_STORES (Bundled, or ExcludedByDesign with a reason that the backup \
+             manifest will carry) or to NOT_A_PERSIST_DIR_STORE. A new store must never \
+             be silently left out of the backup set."
+        );
+        // The registry must not accumulate entries for stores nobody opens any more,
+        // except the ones deliberately marked Retired.
+        for store in DURABLE_STORES {
+            if matches!(store.scope, BackupScope::Retired(_)) {
+                continue;
+            }
+            assert!(
+                names.contains(store.file_name),
+                "{} is registered but no source opens it; mark it Retired or remove it",
+                store.file_name
+            );
+        }
+    }
+
+    /// Every registry entry is unique and sorted-lookup-safe, and every bundled entry
+    /// names a real file (no empty/placeholder names).
+    #[test]
+    fn registry_entries_are_well_formed() {
+        let mut seen = std::collections::BTreeSet::new();
+        for store in DURABLE_STORES {
+            assert!(
+                store.file_name.ends_with(".redb"),
+                "{} is not a redb file name",
+                store.file_name
+            );
+            assert!(
+                seen.insert(store.file_name),
+                "duplicate registry entry {}",
+                store.file_name
+            );
+            if let BackupScope::ExcludedByDesign(reason) | BackupScope::Retired(reason) =
+                store.scope
+            {
+                assert!(
+                    reason.len() > 20,
+                    "{} needs a real reason, got {reason:?}",
+                    store.file_name
+                );
+            }
+        }
+    }
+
+    /// Every deliberately-excluded store reaches the manifest with its reason.
+    #[test]
+    fn excluded_reasons_cover_every_excluded_store() {
+        let reasons = excluded_store_reasons();
+        for store in DURABLE_STORES {
+            match store.scope {
+                BackupScope::ExcludedByDesign(_) => {
+                    assert!(
+                        reasons.contains_key(store.file_name),
+                        "{} missing from the manifest exclusion map",
+                        store.file_name
+                    );
+                }
+                BackupScope::Bundled | BackupScope::Retired(_) => {
+                    assert!(
+                        !reasons.contains_key(store.file_name),
+                        "{} must not be declared as excluded-by-design",
+                        store.file_name
+                    );
+                }
+            }
+        }
+    }
+}

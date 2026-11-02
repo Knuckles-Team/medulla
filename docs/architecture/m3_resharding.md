@@ -42,7 +42,7 @@
 Builds on MEDULLA-KG.backend.sharded-k-way-durable (sharded K-way durable writer) — see
 [`engine.md` § Sharded K-way durable writer](engine.md). The whole point of MEDULLA-KG.backend.sharded-k-way-durable is that
 a graph routes to `graph-<FNV-1a(name) % K>.redb` and the on-disk layout is HONORED at open
-(`reconcile_shard_layout`, `src/redb_layout.rs`). That makes K
+(`reconcile_shard_layout`, `crates/medulla-store/src/redb_layout.rs`). That makes K
 immutable per persist-dir without a migration — which is exactly what M3 removes.
 
 ---
@@ -55,14 +55,14 @@ repository-scoped and does not assert a live deployment or 1M certification.
 ### 1. Offline K-shard migration tool (`CONCEPT:MEDULLA-KG.sharding.atomic-shard-swap`)
 
 **Files:**
-- `src/server/persistence/shard_migrate.rs` — the engine, with its children in
+- `crates/medulla-persistence/src/shard_migrate.rs` — the engine, with its children in
   `src/server/persistence/shard_migrate/`: `payload.rs` (graph-scoped payload
   replacement), `inplace.rs` (immutable snapshots and in-place migration), `readiness.rs`
   (digest-bound readiness manifests) and `swap.rs` (preflight and resumable installation).
 - `src/offline_tools/migrate_shards.rs` — the `medulla-server migrate-shards` subcommand (gated
   by the `redb` feature).
-- Shared layout helpers live in server-independent `src/redb_layout.rs`; routing and
-  Raft metadata stay in `src/server/persistence/redb_backend.rs`.
+- Shared layout helpers live in server-independent `crates/medulla-store/src/redb_layout.rs`; routing and
+  Raft metadata stay in `crates/medulla-persistence/src/redb_backend.rs`.
 
 **What it does.** OFFLINE (engine stopped — redb holds an exclusive per-file lock), reads a
 contiguous current `graph-<n>.redb` set or the retired unindexed K=1 `graph.redb`, then
@@ -104,7 +104,7 @@ medulla-server migrate-shards --persist-dir "${GRAPH_SERVICE_PERSIST_DIR:?}" --s
 **Round-trip proof.** `retired_k1_layout_migrates_to_canonical_k1` proves the retired
 file is readable only by the offline tool and becomes `graph-0.redb` before startup.
 `roundtrip_k1_to_k4_preserves_all_graphs`
-(`src/server/persistence/shard_migrate/tests/layout.rs`, `#[tokio::test]`): seeds 7 graphs
+(`crates/medulla-persistence-tests/src/shard_migrate_tests/layout.rs`, `#[tokio::test]`): seeds 7 graphs
 (each 2 nodes + 1 edge) through a real K=1 `RedbBackend`, migrates K=1→K=4, reopens at K=4
 (`shard_count() == 4`), and asserts every graph reads back with its exact nodes/edges AND the
 graph-tagged node proves no cross-graph mixing. Also `in_place_migration_swaps_and_backs_up`
@@ -114,8 +114,8 @@ graph-tagged node proves no cross-graph mixing. Also `in_place_migration_swaps_a
 
 ### 2. Tenant catalog core (`CONCEPT:MEDULLA-KG.sharding.empty-catalog-routing`)
 
-**File:** `src/server/persistence/tenant_catalog.rs`. Seam wired into
-`src/server/persistence/redb_backend.rs` (`RedbBackend.catalog: Option<Arc<TenantCatalog>>`,
+**File:** `crates/medulla-persistence/src/tenant_catalog.rs`. Seam wired into
+`crates/medulla-persistence/src/redb_backend.rs` (`RedbBackend.catalog: Option<Arc<TenantCatalog>>`,
 builder `with_catalog`, consulted in `shard_for`).
 
 **What it is.** A durable, rebalanceable `graph/tenant → ShardAssignment { shard, node }` map
@@ -159,7 +159,7 @@ Move ONE graph's rows between shards on the same node without stopping the
 engine, then flip the catalog route. The moved graph has a bounded quiesce; the
 offline tool has no online write path.
 
-> **Current implementation.** `src/server/persistence/online_reshard.rs` (`export_graph_raw`/`import_graph_raw`
+> **Current implementation.** `crates/medulla-persistence/src/online_reshard.rs` (`export_graph_raw`/`import_graph_raw`
 > verbatim raw-blob copy — encryption + MEDULLA-KG.sharding.row-level-security audit chain preserved — + `execute_online_reshard`)
 > driven by `RedbBackend::reshard_graph` (`redb_backend.rs`). New `Cmd::ExportGraphRaw`/
 > `ImportGraphRaw` run on the two shard writer threads. **Quiesce:** a backend `routing_epoch`
@@ -174,7 +174,7 @@ offline tool has no online write path.
 > durable ordering `import(dst) → catalog flip → purge(src)`.
 
 Original design sketch (superseded by the current snapshot-plus-delta implementation):
-- **Module:** new `src/server/persistence/online_reshard.rs`. Composes the MEDULLA-030 verbatim
+- **Module:** new `crates/medulla-persistence/src/online_reshard.rs`. Composes the MEDULLA-030 verbatim
   row-copy (extract the per-graph copy include `shard_migrate.rs` into a reusable
   `copy_graph_rows(src_shard, dst_shard, graph_fname)` helper) with the MEDULLA-031 catalog.
 - **Algorithm:** (1) `catalog.assign(g, dst, node)` is NOT flipped yet; (2) snapshot-copy the
@@ -194,7 +194,7 @@ Original design sketch (superseded by the current snapshot-plus-delta implementa
 ### R2 — Cross-NODE tenant distribution **[P0, MUST sequence behind M2] — `DESIGNED`**
 Make `ShardAssignment.node` real: move a tenant to a shard owned by a *different* cluster node.
 - **Module:** `online_reshard.rs` (cross-node arm) + a transport for shipping rows.
-- **Deps:** REQUIRES M2 multi-Raft landed (`src/raft/multi.rs` `MultiRaft`, `CONCEPT:MEDULLA-KG.sharding.raft-resharding`;
+- **Deps:** REQUIRES M2 multi-Raft landed (`crates/medulla-raft/src/raft/multi.rs` `MultiRaft`, `CONCEPT:MEDULLA-KG.sharding.raft-resharding`;
   leader transfer/membership `CONCEPT:MEDULLA-KG.sharding.semantic-embedding-store-backed`). Cross-node row movement must replicate through
   the destination node's Raft group, not a raw file copy, or the move isn't consensus-durable.
 - **`I/O`:** Raft `propose` of the migrated rows on the destination group; catalog `node` flip.
@@ -203,7 +203,7 @@ Make `ShardAssignment.node` real: move a tenant to a shard owned by a *different
 
 ### R3 — Rebalancing planner **[`UNIT-PROVEN` — `CONCEPT:MEDULLA-KG.sharding.even-load-rebalance`]**
 Decide *which* tenants to move and *where*, from live shard load — the policy layer over R1/R2.
-- **Module:** `src/server/persistence/rebalance.rs` (NEW, landed). A PURE, deterministic
+- **Module:** `crates/medulla-persistence/src/rebalance.rs` (NEW, landed). A PURE, deterministic
   `plan_rebalance(&[ShardLoad], RebalanceOptions) -> RebalancePlan` emitting an ordered
   `Vec<ReshardMove { graph, from_shard, to_shard }>`. Greedy hottest→coldest: each step moves
   the ONE graph off the most-loaded shard onto the least-loaded that most shrinks the
@@ -233,14 +233,14 @@ Content-addressed, chunked, streamed large-object store off the inline KV path (
 property blob is wrong). Listed as its own P0 in the gaps report (Wave 5).
 - **Substrate (`CONCEPT:MEDULLA-KG.storage.blob-namespace`, landed on `main` — commit `6734607`):** the `blob` feature
   ships `blob.redb` + the full begin/chunk/commit/fetch/ref/unref/gc protocol END-TO-END:
-  `src/server/blob/store.rs` (`RedbChunkStore` CAS — group-commit, dedup, mark-and-sweep
-  refcount GC, capped page cache for bounded RSS), `src/server/blob/mod.rs` (`BlobCursors` +
-  TTL reaper), `src/server/handlers/blob.rs` (handler on the blocking pool), and the
-  `Blob*` dispatch routing in `src/server/dispatch.rs`. Bounded-memory proven by
+  `crates/medulla-server-blob/src/blob/store.rs` (`RedbChunkStore` CAS — group-commit, dedup, mark-and-sweep
+  refcount GC, capped page cache for bounded RSS), `crates/medulla-server-blob/src/blob/mod.rs` (`BlobCursors` +
+  TTL reaper), `crates/medulla-h-ingest/src/blob.rs` (handler on the blocking pool), and the
+  `Blob*` dispatch routing in `crates/medulla-server-router/src/dispatch.rs`. Bounded-memory proven by
   `store::tests::bounded_memory_large_blob_group_commit` and the dispatch-level streamed-blob
   test. `blob-s3` fronts the SAME `ChunkStore` trait with an object-store backend.
 - **In-process streaming facade (`CONCEPT:MEDULLA-KG.sharding.m3-r4`, current `main`):**
-  `src/server/blob/stream.rs` — `stream_blob_put<R: Read>` / `stream_blob_get<W: Write>` stream
+  `crates/medulla-server-blob/src/blob/stream.rs` — `stream_blob_put<R: Read>` / `stream_blob_get<W: Write>` stream
   a multi-GB blob between an arbitrary byte source/sink (a local media file, a decompressor, an
   embedding writer) and the CAS WITHOUT buffering the whole blob (one chunk resident). The
   in-process twin of the wire upload/fetch cursor; composes `ChunkStore` verbatim, so it is the
@@ -273,7 +273,7 @@ Wire the catalog into the live open path and expose assign/reassign over the pro
 The RAM-bounding half of the "scalable tenant catalog" is implemented in the
 redb tier; colder-than-redb object storage remains a separate design.
 
-> **Current implementation (no object tier dependency).** `src/server/persistence/cold_offload.rs`:
+> **Current implementation (no object tier dependency).** `crates/medulla-persistence/src/cold_offload.rs`:
 > a `ColdTenantTracker` (`touch`/`cold_graphs(window)`/offload bookkeeping) + `offload_cold_tenants`
 > which hibernates every graph idle longer than a window via `GraphCore::hibernate` (MEDULLA-KG.storage.100m-tenant),
 > retaining the durable redb rows so reads serve through the MEDULLA-KG.storage.read-through-seam-exercised node read-through (extends

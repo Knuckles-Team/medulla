@@ -3,13 +3,9 @@
 //! measurable-improvement retention gate, the confidence-ranked bitemporal
 //! query, the supersession behavior and the typed refusals.
 
+use medulla_work_types::orchestration::HarnessComponentKind;
+use medulla_work_types::{orchestration::improvement::current_adopted_harness, orchestration::improvement::register_adoption, orchestration::improvement::register_lesson, orchestration::improvement::retrieve_lessons, orchestration::improvement::AdoptedHarness, orchestration::improvement::HarnessContrast, orchestration::improvement::HarnessLesson, orchestration::improvement::HarnessProbeRun, orchestration::improvement::ImprovementLibraryRefusal, orchestration::improvement::LessonEvidence, orchestration::improvement::LessonSupersession};
 use medulla_types::contract::BoundedVec;
-use medulla_types::orchestration::improvement::{
-    current_adopted_harness, register_adoption, register_lesson, retrieve_lessons, AdoptedHarness,
-    HarnessContrast, HarnessLesson, HarnessProbeRun, ImprovementLibraryRefusal, LessonEvidence,
-    LessonSupersession,
-};
-use medulla_types::orchestration::HarnessComponentKind;
 
 fn bounded<const MAXIMUM: usize>(values: Vec<String>) -> BoundedVec<String, MAXIMUM> {
     BoundedVec::new(values).unwrap()

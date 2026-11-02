@@ -84,10 +84,7 @@ impl ServiceBudget {
         let wall_ms = u64::try_from(d.max_wall.as_millis()).unwrap_or(u64::MAX);
         Self {
             max_keys: positive_from_env("MEDULLA_FEDERATION_MAX_BIND_KEYS", d.max_keys),
-            max_requests: positive_from_env(
-                "MEDULLA_FEDERATION_MAX_REQUESTS",
-                d.max_requests,
-            ),
+            max_requests: positive_from_env("MEDULLA_FEDERATION_MAX_REQUESTS", d.max_requests),
             max_rows: positive_from_env("MEDULLA_FEDERATION_MAX_ROWS", d.max_rows),
             max_wall: Duration::from_millis(positive_from_env(
                 "MEDULLA_FEDERATION_MAX_WALL_MS",
@@ -242,7 +239,9 @@ impl<'q> ServiceCall<'q> {
     /// fail-closed.
     fn target<'a>(&'a self, ctx: &Ctx<'a>) -> Result<Target<'a>, String> {
         let NamedNodePattern::NamedNode(endpoint) = self.name else {
-            return Err("medulla-rdf SPARQL: SERVICE with a variable endpoint is unsupported".into());
+            return Err(
+                "medulla-rdf SPARQL: SERVICE with a variable endpoint is unsupported".into(),
+            );
         };
         let client = ctx
             .service

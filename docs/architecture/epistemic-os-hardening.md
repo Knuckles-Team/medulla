@@ -50,7 +50,7 @@ classifiers agreeing with each other by convention.
 ### The generated capability ledger (`medulla-capabilities`)
 
 - **What it is:** a complete, mechanically enforced `MethodPolicy` for every variant of
-  the wire-protocol `Method` enum (`crates/medulla-types/src/protocol.rs`). The crate
+  the wire-protocol `Method` enum (`crates/medulla-protocol-types/src/protocol.rs`). The crate
   `crates/medulla-capabilities` (workspace member, `crates/medulla-capabilities/src/lib.rs`)
   declares:
   ```rust
@@ -87,7 +87,7 @@ classifiers agreeing with each other by convention.
   `mutates`/`durability_domain` (cross-checked against `access.rs` and the canonical commit gateway) and
   `audited`/`emits_cdc` (cross-checked against `audit.rs`/`cdc.rs`).
 
-### The `MutationPlan` commit gateway (`src/server/mutation.rs`)
+### The `MutationPlan` commit gateway (`crates/medulla-server-mutation/src/mutation.rs`)
 
 - **What it is:** the single place a routed mutation's authz + durable write + CDC
   emission happen together, driven by `medulla_capabilities::policy()` rather than a
@@ -160,7 +160,7 @@ classifiers agreeing with each other by convention.
   pass every gate while silently absent.
 - **Default-on:** part of the `redb`-backed durable server; not a separate feature flag.
 
-### Fail-secure checked request context (`src/server/auth.rs`)
+### Fail-secure checked request context (`crates/medulla-server-auth/src/auth.rs`)
 
 - **Only posture:** a served engine accepts only the `eg2.` envelope. It
   binds principal, tenant, audience, effective agent, roles, scopes, policy
@@ -178,7 +178,7 @@ classifiers agreeing with each other by convention.
   request with the same context. Empty secret, missing claims, invalid delegation,
   or a routable target without TLS fails before dialing.
 
-### Default-deny RLS (`crates/medulla-core/src/isolation.rs`)
+### Default-deny RLS (`crates/medulla-isolation/src/isolation.rs`)
 
 `IsolationLayer` filters every served `GraphView` before query execution. An
 unowned, undecodable, or untagged row is denied unless it is explicitly
@@ -253,7 +253,7 @@ RLS context so a filtered result cannot cross an authority boundary.
 
 - **What it is:** a third `RowSet` projection (alongside the row-oriented `RowSet` and
   the graph-native `KnowledgeSet`) laying results out as a real Arrow `RecordBatch`
-  (`crates/medulla-plan/src/knowledge_batch.rs`). Columns
+  (`crates/medulla-retrieval/src/knowledge_batch.rs`). Columns
   (`arrow_schema()`/`to_record_batch()`/`from_record_batch()`, round-trip tested): `id`
   (Utf8), `kind` (Utf8), one `score_<name>` (Float32) per named score, `confidence`
   (Float64), `evidence_kind` (Utf8 — a filterable summary spanning the governed
@@ -298,7 +298,7 @@ RLS context so a filtered result cannot cross an authority boundary.
   derivation. Its validated `OpaqueRef` cannot encode source paths, endpoints, email
   addresses, or display names. See [governed modality serving](modality_serving.md).
 - **The one facade-reachable piece: `CasEvidenceResolver`**
-  (`src/server/blob/cas_resolver.rs:52`, implements `medulla_alignment::EvidenceResolver`).
+  (`crates/medulla-server-blob/src/blob/cas_resolver.rs:52`, implements `medulla_alignment::EvidenceResolver`).
   Gated by the **`alignment`** feature
   (`alignment = ["blob", "dep:medulla-alignment", "dep:medulla-modality"]`, Cargo.toml, included
   in `full`). It resolves a governed text/table `EvidenceLocus` to a **real
@@ -333,13 +333,13 @@ RLS context so a filtered result cannot cross an authority boundary.
 
 ## Phase 2 — Distributed planes
 
-### `PlacementCatalog` (`src/raft/placement.rs`)
+### `PlacementCatalog` (`crates/medulla-raft/src/raft/placement.rs`)
 
 - **What it is:** an epoch'd catalog (`PlacementCatalog` struct, `src/raft/
   placement.rs:217`) tracking which `(group, epoch)` a graph — or a split
   partition-key range (`split_tenant_key`, `PartitionState` enum) — currently belongs
   to. Online split/merge/move runs a prepare-then-fenced-cutover sequence:
-  `MultiRaft::placement_fence_cutover` (`src/raft/multi.rs:724`) bumps the epoch so any
+  `MultiRaft::placement_fence_cutover` (`crates/medulla-raft/src/raft/multi.rs:724`) bumps the epoch so any
   caller still presenting a pre-cutover epoch is redirected, never served stale data.
   The catalog takes **priority over the hash-ring router** for any graph with an
   explicit placement entry (an unpinned graph still falls back to the ring).
@@ -365,7 +365,7 @@ RLS context so a filtered result cannot cross an authority boundary.
   Rust (tests/harnesses) — there was no way for an external caller, on a real
   multi-node cluster, to trigger a placement decision or drive an online move. It is
   a thin RPC entry point over the SAME already-proven `MultiRaft`/`TenantManager` API
-  (`src/server/handlers/placement.rs`), admin-scoped (`"admin:cluster"`, the same
+  (`crates/medulla-h-graph/src/placement.rs`), admin-scoped (`"admin:cluster"`, the same
   tier as `Reshard`/`CatalogAssign`), returning a typed "not available" error on a
   non-`raft` build, and classified `ClusterMutationRoute::VolatileControl` (not
   `ConsensusNative`) since it replicates via its own internal `commit_placement`
@@ -373,7 +373,7 @@ RLS context so a filtered result cannot cross an authority boundary.
   a REAL three-node
   cluster (three independent tokio-spawned nodes, real openraft consensus — not the
   one-node/two-group simplification below) by
-  `src/raft/tests.rs::placement_admin_wire_rpc::
+  `crates/medulla-server-cluster-tests/src/split_tests/raft_cluster.rs::placement_admin_wire_rpc::
   placement_admin_wire_rpcs_move_data_across_a_real_three_node_cluster`: assign the
   decision, write data, move it to the other group, and read it back — from a
   DIFFERENT physical node at every step — asserting the data is actually placed and
@@ -386,10 +386,10 @@ RLS context so a filtered result cannot cross an authority boundary.
 
 ### Multi-group production startup + cross-shard read fan-out (DIST-P2-2)
 
-- **Env var:** `MEDULLA_RAFT_GROUPS` (`src/raft/config.rs:90`,
+- **Env var:** `MEDULLA_RAFT_GROUPS` (`crates/medulla-raft/src/raft/config.rs:90`,
   `parse_groups` at `:126`), **default `1`** — unset/empty/`"0"` all collapse to the
   single-group path, byte-for-byte unchanged from before this workstream.
-- **Cross-shard reads:** `CrossShardReader::read` (`src/raft/xread.rs`) first takes a
+- **Cross-shard reads:** `CrossShardReader::read` (`crates/medulla-raft/src/raft/xread.rs`) first takes a
   linearizable placement-catalog barrier, then fans bounded keyset pages to each
   owning group's current leader through the authenticated shared Raft peer channel.
   Requests cap graph count, fan-out, rows, an aggregate response-byte budget, and the
@@ -404,8 +404,8 @@ RLS context so a filtered result cannot cross an authority boundary.
 - **Deterministic pagination:** the coordinator performs a keyset K-way merge ordered
   by `(node_id, input-leg-order)` and consumes duplicate ids from every leg before a
   page boundary, preventing duplicate reappearance on continuation.
-- **Proven by live harnesses (not just unit tests):** `src/raft/xread_harness.rs`,
-  `src/raft/xshard_harness.rs`, `src/raft/placement_harness.rs` (a one-node/two-group
+- **Proven by live harnesses (not just unit tests):** `crates/medulla-raft-xshard/src/xread_harness.rs`,
+  `crates/medulla-server-cluster-tests/src/split_tests/xshard_harness.rs`, `crates/medulla-server-cluster-tests/src/split_tests/placement_harness.rs` (a one-node/two-group
   live setup).
 
 ### Lazy graph lifecycle + bounded hot-context cache (DIST-P2-3)
@@ -424,18 +424,18 @@ RLS context so a filtered result cannot cross an authority boundary.
   memory. Now: `medulla_core::registry::GraphMaterializer::materialize_page` (a seam that
   already existed, unit-tested in isolation, but was never called by the facade/
   server) is wired end to end:
-  - **`MEDULLA_LAZY_OPEN_PAGE_SIZE`** (`src/server/persistence/cold_offload.rs::lazy_open_page_size`)
+  - **`MEDULLA_LAZY_OPEN_PAGE_SIZE`** (`crates/medulla-persistence/src/cold_offload.rs::lazy_open_page_size`)
     — a positive value switches `cold_offload::lazy_open` from a full rehydrate to a
     source-bounded paged load. The unset production default is **4096** records;
     development retains **0**. Incomplete graphs are intentionally not queryable:
     graph operations receive typed `PARTIAL_MATERIALIZATION` metadata and can retry
     once the background continuation completes.
-  - **`RedbBackend::read_graph_material_page_blocking`** (`src/server/persistence/redb_backend.rs`)
+  - **`RedbBackend::read_graph_material_page_blocking`** (`crates/medulla-persistence/src/redb_backend.rs`)
     overrides the trait's default (full-fetch-then-slice) with a genuinely
     SOURCE-bounded scan — `redb_store::read_graph_dump_page` skips/takes a bounded
     window of the per-graph `nodes`/`edges` table range directly, never collecting
     the whole graph's rows into memory first. `BackendGraphMaterializer::materialize_page`
-    (`src/server/persistence/read_through.rs`) routes to it.
+    (`crates/medulla-persistence/src/read_through.rs`) routes to it.
   - **Lifecycle correctness:** every catalog entry has an immutable incarnation id
     and cancellation token. Create/delete/evict/open serialize on the graph's
     lifecycle lock. Durable pages carry the source incarnation and version captured
@@ -458,7 +458,7 @@ RLS context so a filtered result cannot cross an authority boundary.
 ### Durable analytics-job plane (`medulla-jobs`, INT-P2-1)
 
 - **What it is:** `Method::AnalyticsJob { op }` (async submit/status/cancel/resume,
-  `src/server/handlers/jobs.rs`) over a redb-backed `AnalyticsJob` state machine
+  `crates/medulla-h-jobs/src/jobs.rs`) over a redb-backed `AnalyticsJob` state machine
   (`crates/medulla-jobs/src/model.rs`):
   ```rust
   pub struct AnalyticsJob {
@@ -503,11 +503,11 @@ RLS context so a filtered result cannot cross an authority boundary.
 ### Change-ledger → lake materialization + Iceberg-REST catalog + OpenLineage (INT-P2-3, `lake`)
 
 - **What it is:** `LakeManager` materialize/compact/delete runs emit a real OpenLineage
-  `RunEvent` (`src/server/lake/lineage.rs`) — job/run/input-dataset/output-dataset with
+  `RunEvent` (`crates/medulla-server-lake/src/lake/lineage.rs`) — job/run/input-dataset/output-dataset with
   schema/datasource/output-statistics facets plus an engine-specific LSN/Iceberg-snapshot
   custom facet (schema URL `https://openlineage.io/spec/1-0-5/OpenLineage.json#/$defs/RunEvent`).
 - **Optional push:** env var `MEDULLA_OPENLINEAGE_URL`
-  (`OPENLINEAGE_URL_ENV` constant, `src/server/lake/lineage.rs:36`) — unset means a
+  (`OPENLINEAGE_URL_ENV` constant, `crates/medulla-server-lake/src/lake/lineage.rs:36`) — unset means a
   silent no-op; lineage export **never blocks or fails** a materialization run.
 - **Default-on or opt-in:** `lake = ["server", "blob", "tsdb", "dep:medulla-lake",
   "medulla-lake/lake", "dep:ureq"]` — as of W4.8, folded into `full` (the maintained Polars
@@ -569,7 +569,7 @@ outbox records incrementally and advances a durable projection cursor.
   model/ontology retirement proportional to the affected closure rather than the
   complete materialization registry.
 - **The served authority (`crates/medulla-epistemic/src/incremental.rs` and
-  `src/server/reasoning_projection.rs`):** one compact, per-graph projection consumes
+  `crates/medulla-h-retrieve/src/reasoning_projection.rs`):** one compact, per-graph projection consumes
   authoritative MutationBatch outbox records in graph-version order. It indexes
   epistemic/causal edges, provenance dependencies, generators, stale/retracted state,
   and recompute fence epochs. State-backed batches carry a digest-bound, privacy-safe
@@ -613,7 +613,7 @@ outbox records incrementally and advances a durable projection cursor.
     implementation.
   - The **facade** feature `epistemic-causal = ["epistemic", "medulla-epistemic/epistemic-causal"]`
     turns on the wire `Method::CausalEstimate`/`Method::RankByProvenance` handler arms
-    (`#[cfg(feature = "epistemic-causal")]` in `src/server/handlers/query.rs`).
+    (`#[cfg(feature = "epistemic-causal")]` in `crates/medulla-h-query/src/query.rs`).
 
 ### Provenance-aware retrieval ranking (`ranking.rs`)
 
@@ -622,7 +622,7 @@ outbox records incrementally and advances a durable projection cursor.
   `evidence_quality` (reliability, corroboration, calibration precision, freshness) in
   addition to similarity, not similarity alone.
 - **Wire exposure:** `Method::RankByProvenance` (handler `rank_by_provenance_wire`,
-  `src/server/handlers/query.rs`), a pure function over request-carried candidates — no
+  `crates/medulla-h-query/src/query.rs`), a pure function over request-carried candidates — no
   graph snapshot needed.
 - **Default-on or opt-in:** same composable facade `epistemic-causal` feature as
   `CausalEstimate`; included in `full`.
@@ -635,10 +635,10 @@ outbox records incrementally and advances a durable projection cursor.
   coarse "is this believed at all" signal surfaced even at `ExistenceOnly`, deliberately
   never a raw float confidence). `explain_belief_redacted`/
   `explain_belief_redacted_capped` (`:238`/`:299`) reuse the **exact same**
-  `RowVisibility`/`can_see_row` check (`crates/medulla-core/src/isolation.rs`) every other
+  `RowVisibility`/`can_see_row` check (`crates/medulla-isolation/src/isolation.rs`) every other
   RLS-aware read path enforces — masking (never silently dropping) an evidence node the
   caller's RLS context cannot see.
-- **The dual-arm handler (`src/server/handlers/query.rs`, both checked by direct
+- **The dual-arm handler (`crates/medulla-h-query/src/query.rs`, both checked by direct
   read):**
   - `#[cfg(feature = "epistemic-redaction")]` arm: `disclosure_level: None` takes the
     byte-for-byte classic `explain_belief` path; `Some(cap)` routes through
@@ -683,7 +683,7 @@ outbox records incrementally and advances a durable projection cursor.
   returns every transitively-cited node's `EvidenceLocus` plus its
   `AssetOccurrence`/`Blob` identity chain.
 - **Wire exposure:** `Method::ExplainEvidence { node_id }` (handler
-  `explain_evidence_wire`, `src/server/handlers/query.rs`).
+  `explain_evidence_wire`, `crates/medulla-h-query/src/query.rs`).
 - **Feature gating and resolution:**
   - The wire `Method::ExplainEvidence` variant itself is gated only by the base
     `epistemic` feature (already in `full`).

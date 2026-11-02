@@ -7,6 +7,8 @@
 // Parses CLI args, initializes the GraphRegistry, and starts
 // the UDS/TCP listener.
 
+use medulla_server_blob::blob::BlobStateExt;
+use medulla_server_cdc::cdc::CdcStateExt;
 use clap::Parser;
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -19,16 +21,14 @@ use tokio::sync::RwLock;
 // narrowly than its uses).
 use tracing::info;
 
-use medulla::server;
-use medulla::server::ServerState;
+use medulla_server_api::state::ServerState;
 mod offline_tools;
 
 #[cfg(feature = "security")]
 mod operator_command;
 #[cfg(feature = "full")]
 mod performance_probe;
-mod server_startup;
-use server_startup::run_fuseki_startup_health_check;
+use medulla_server::server_startup::{self, run_fuseki_startup_health_check};
 
 #[derive(Parser, Debug)]
 #[command(name = "medulla-server")]
@@ -52,159 +52,22 @@ struct Args {
     )]
     exact_performance_probe_root: Option<std::path::PathBuf>,
 
-    /// Unix Domain Socket path.
-    /// Falls back to $GRAPH_SERVICE_SOCKET, then $XDG_RUNTIME_DIR/medulla.sock,
-    /// then /tmp/medulla.sock.
-    #[arg(long, env = "GRAPH_SERVICE_SOCKET")]
-    socket_path: Option<String>,
+    /// Service configuration shared with the startup steps.
+    #[command(flatten)]
+    server: server_startup::ServerArgs,
+}
 
-    /// Octal file-mode applied to the UDS socket right after bind (e.g. `0600`,
-    /// `0660`). **Default `0600`** (owner-only) — byte-for-byte today's
-    /// hardcoded behavior; set this instead of relying on an external `chmod`
-    /// watcher when a non-root client container needs group access (e.g. a
-    /// `fsGroup`-owned socket directory under `readOnlyRootFilesystem`).
-    /// Validated at startup and REFUSED if it would be world-writable or
-    /// world-readable — this can loosen who may `connect()`, never who may
-    /// read the graph over that connection (`eg2.` auth still applies), but a
-    /// world-open UDS is refused outright rather than accepted and footgunned.
-    #[arg(long, default_value = "0600", env = "GRAPH_SERVICE_SOCKET_MODE")]
-    socket_mode: String,
+impl std::ops::Deref for Args {
+    type Target = server_startup::ServerArgs;
+    fn deref(&self) -> &Self::Target {
+        &self.server
+    }
+}
 
-    /// Serve only native TCP instead of also binding a Unix socket.
-    #[arg(long, env = "GRAPH_SERVICE_TCP_ONLY", requires = "tcp_addr")]
-    tcp_only: bool,
-
-    /// Optional TCP address (e.g., 0.0.0.0:9100). If set, TCP listener is started.
-    #[arg(long, env = "GRAPH_SERVICE_TCP_ADDR")]
-    tcp_addr: Option<String>,
-
-    /// PEM certificate chain for native TCP TLS.
-    #[arg(long, env = "GRAPH_SERVICE_TLS_CERT")]
-    tcp_tls_cert: Option<String>,
-
-    /// PEM private key for native TCP TLS.
-    #[arg(long, env = "GRAPH_SERVICE_TLS_KEY")]
-    tcp_tls_key: Option<String>,
-
-    /// Optional PEM CA bundle for required client-certificate authentication.
-    #[arg(long, env = "GRAPH_SERVICE_TLS_CLIENT_CA")]
-    tcp_tls_client_ca: Option<String>,
-
-    /// Explicit isolated local anonymous mode. Defaults to authenticated.
-    #[arg(long, env = "GRAPH_SERVICE_AUTH_MODE", default_value = "authenticated", value_parser = ["authenticated", "none"])]
-    auth_mode: String,
-
-    /// HMAC-SHA256 shared secret for authentication.
-    #[arg(long, env = "GRAPH_SERVICE_AUTH_SECRET", default_value = "")]
-    auth_secret: String,
-
-    /// Directory for the authoritative durable store.
-    #[arg(long, env = "GRAPH_SERVICE_PERSIST_DIR")]
-    persist_dir: Option<String>,
-
-    /// Ebbinghaus decay sweep interval in seconds (0 = disabled).
-    #[arg(long, default_value = "0", env = "GRAPH_SERVICE_DECAY_INTERVAL")]
-    decay_interval: u64,
-
-    /// Half-life (seconds) for the periodic decay sweep. Default: 7 days.
-    #[arg(long, default_value = "604800", env = "GRAPH_SERVICE_DECAY_HALF_LIFE")]
-    decay_half_life: f64,
-
-    /// Prune nodes/edges whose decayed confidence falls below this floor
-    /// (0 = decay only, never prune).
-    #[arg(long, default_value = "0.0", env = "GRAPH_SERVICE_DECAY_FLOOR")]
-    decay_floor: f64,
-
-    /// Prometheus /metrics HTTP listener address (e.g. 127.0.0.1:9101).
-    /// Disabled when unset. Separate from the MessagePack RPC transports.
-    #[arg(long, env = "GRAPH_SERVICE_METRICS_ADDR")]
-    metrics_addr: Option<String>,
-
-    /// W3C SPARQL 1.1 Protocol HTTP listener address (e.g. 127.0.0.1:7878), feature
-    /// `sparql-http`. Disabled when unset. Lets existing Stardog/Jena/rdflib SPARQL
-    /// clients query + update the engine unchanged. Separate from the RPC transports.
-    #[arg(long, env = "MEDULLA_SPARQL_ADDR")]
-    sparql_addr: Option<String>,
-
-    /// CA-16 (DEC-CA-04) `/policy/export` HTTP listener address (e.g.
-    /// 127.0.0.1:7879), feature `policy_export`. Disabled when unset. Serves the
-    /// M1 row-visibility policy bundle as JSON; admin-gated by an OIDC bearer
-    /// token (`kg:admin`/`policy:export`) via the SAME primary-protocol OIDC
-    /// validator as the `eg2.` RPC surface (`oidc::JwtValidator::from_env_primary`)
-    /// -- no separate credential shape. Separate from the RPC transports.
-    #[arg(long, env = "MEDULLA_POLICY_EXPORT_ADDR")]
-    policy_export_addr: Option<String>,
-
-    /// Loopback address for the authenticated GraphQL subscription SSE carrier
-    /// (e.g. 127.0.0.1:7879), feature `graphql`. Non-loopback binds are refused;
-    /// remote access must use a same-host TLS reverse proxy. Every subscription
-    /// requires a current eg2 envelope, graph ACL, and RLS projection.
-    #[arg(long, env = "MEDULLA_GRAPHQL_ADDR")]
-    graphql_addr: Option<String>,
-
-    /// Maximum concurrent GraphQL SSE handshakes and sessions.
-    #[arg(
-        long,
-        env = "MEDULLA_GRAPHQL_MAX_CONNECTIONS",
-        default_value_t = 128
-    )]
-    graphql_max_connections: usize,
-
-    /// Maximum GraphQL SSE session lifetime before a fresh eg2 envelope is required.
-    #[arg(
-        long,
-        env = "MEDULLA_GRAPHQL_MAX_SESSION_SECS",
-        default_value_t = 300
-    )]
-    graphql_max_session_secs: u64,
-
-    /// Observability log-ingestion HTTP listener address (e.g. 127.0.0.1:5080),
-    /// feature `obs` (CONCEPT:AU-KG.ingest.self-ingest/161). Disabled when unset. Accepts OTLP/HTTP
-    /// (`/v1/logs`), Elasticsearch `_bulk`/`_doc`, and JSON-lines log records, landing
-    /// them in medulla-tsdb series + medulla-text full-text indices and rolling Parquet segments
-    /// into the blob CAS. Separate from the RPC transports.
-    #[arg(long, env = "MEDULLA_OBS_ADDR")]
-    obs_addr: Option<String>,
-
-    /// Interactive native-visualization HTTP listener address (e.g.
-    /// 127.0.0.1:5090), feature `viz-interactive` (D-VZ-1 lane V3b). Disabled
-    /// when unset. Serves the reference WebGPU/WebGL2 client (`GET /`) and the
-    /// binary viewport-tile protocol (`GET /tile`) a browser cannot reach over
-    /// the length-prefixed MessagePack RPC transports — separate from those and
-    /// from every other auxiliary HTTP surface. Loopback-only, like every
-    /// auxiliary listener; a remote client goes through a same-host reverse
-    /// proxy (this fleet's `edge-ingress`), never a direct non-loopback bind.
-    #[arg(long, env = "MEDULLA_VIZ_INTERACTIVE_ADDR")]
-    viz_interactive_addr: Option<String>,
-
-    /// Iceberg-REST catalog HTTP listener address (e.g. 127.0.0.1:8181), feature
-    /// `lake-rest` (INT-P2-3, `iceberg.apache.org/rest-catalog-spec`). Disabled when
-    /// unset. Serves list/load (+ a compaction-bridged commit) over the tables the
-    /// `lake` materialization tier writes, so a standard Iceberg REST client (PyIceberg/
-    /// Spark/Trino) can list + load them. Separate from the RPC transports and the
-    /// `/sparql`/`/obs` surfaces.
-    #[arg(long, env = "MEDULLA_ICEBERG_ADDR")]
-    iceberg_addr: Option<String>,
-
-    /// Super-cluster federated-search HTTP listener address (e.g. 127.0.0.1:7900),
-    /// feature `federation-search` (CONCEPT:MEDULLA-KG.ontology.federation-client). Disabled when unset. Serves a
-    /// `/federated` POST (`{query, lang}`) that fans the read query across the peers in
-    /// `MEDULLA_FEDERATION_PEERS` AND the local store, then unions/de-dups +
-    /// RRF-re-ranks the partials (a slow/dead peer degrades to `partial: true`). Separate
-    /// from the RPC transports and the `/sparql` surface.
-    #[arg(long, env = "MEDULLA_FEDERATED_ADDR")]
-    federated_addr: Option<String>,
-
-    /// Self-terminate after N seconds with ZERO active connections (reference-
-    /// counted idle shutdown). 0 or absent ⇒ NEVER self-terminate on idle: the
-    /// engine is long-living/persistent and runs forever like a normal server.
-    /// N>0 ⇒ a shared tiny daemon shuts itself down (checkpointing cleanly) N
-    /// seconds after its last client disconnects; a new connection during the
-    /// grace period cancels the timer. SIGTERM/SIGINT graceful shutdown works in
-    /// BOTH modes. agent-utilities' EngineResolver passes this to its autostarted
-    /// tiny daemon.
-    #[arg(long, default_value = "0", env = "MEDULLA_IDLE_SHUTDOWN_SECS")]
-    idle_shutdown_secs: u64,
+impl std::ops::DerefMut for Args {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.server
+    }
 }
 
 /// Resolve the default UDS path per-platform. Explicit > $GRAPH_SERVICE_SOCKET
@@ -218,6 +81,21 @@ struct Args {
 ///   Windows, so this path is only a stable *identifier* / lock anchor — the
 ///   actual default transport on Windows is TCP loopback (see the transport
 ///   section). Keeping the value defined preserves parity for config/logging.
+///   Run one bounded, stdin-driven exact performance probe and return.
+fn run_exact_performance_probe(root: Option<&std::path::Path>) -> Result<(), Box<dyn std::error::Error>> {
+    let root = root.ok_or("exact performance probe root is required")?;
+    #[cfg(feature = "full")]
+    {
+        performance_probe::run_stdio(root)?;
+        Ok(())
+    }
+    #[cfg(not(feature = "full"))]
+    {
+        let _ = root;
+        Err("exact performance probes require the full server binary".into())
+    }
+}
+
 fn resolve_socket_path(explicit: Option<String>) -> (String, Option<std::path::PathBuf>) {
     if let Some(p) = explicit {
         return (p, None);
@@ -294,20 +172,6 @@ async fn prepare_socket_directory(parent: Option<std::path::PathBuf>) -> std::io
         })
 }
 
-fn native_tcp_addr_is_loopback(addr: &str) -> bool {
-    addr.parse::<SocketAddr>()
-        .map(|value| value.ip().is_loopback())
-        .unwrap_or_else(|_| {
-            addr.rsplit_once(':')
-                .map(|(host, port)| {
-                    host.trim_matches(|character| character == '[' || character == ']')
-                        .eq_ignore_ascii_case("localhost")
-                        && !port.is_empty()
-                        && port.chars().all(|character| character.is_ascii_digit())
-                })
-                .unwrap_or(false)
-        })
-}
 
 /// Resolve an optional listener bind address from a deploy-supplied value
 /// (CONCEPT:MEDULLA-OS.config.configurable-listeners — deploy-configurable listeners). The auxiliary HTTP listeners
@@ -338,7 +202,7 @@ fn parse_listener_addr(value: Option<&str>, default_addr: &str) -> Option<String
 /// other auxiliary listener.
 #[cfg(feature = "obs")]
 fn resolve_obs_listener_addr(value: Option<&str>) -> Option<String> {
-    if medulla::server::obs::writer_auth_configured() {
+    if medulla_server_obs::obs::writer_auth_configured() {
         return parse_listener_addr(value, "127.0.0.1:5080");
     }
     resolve_listener_addr(value, "127.0.0.1:5080")
@@ -378,10 +242,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cores = medulla_kernel::autosize::detect_capacity().reserved_cpus();
     let worker_threads = cores.max(1);
     let max_blocking = cores.max(1);
-    let driver = server::spawn_engine_driver(move || {
+    let driver = medulla_server::spawn_engine_driver(move || {
         let runtime = tokio::runtime::Builder::new_multi_thread()
             .worker_threads(worker_threads)
-            .thread_stack_size(server::ENGINE_WORKER_STACK_BYTES)
+            .thread_stack_size(medulla_server::ENGINE_WORKER_STACK_BYTES)
             .max_blocking_threads(max_blocking)
             .enable_all()
             .build()
@@ -401,7 +265,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             })
         })
     })?;
-    match server::join_engine_driver(driver)? {
+    match medulla_server::join_engine_driver(driver)? {
         Ok(()) => Ok(()),
         Err(()) => Err(std::io::Error::other("engine runtime driver failed").into()),
     }
@@ -431,7 +295,7 @@ async fn run_inner() -> Result<(), Box<dyn std::error::Error>> {
     let mut args = Args::parse();
 
     if args.exact_performance_probe {
-        return server_startup::run_exact_performance_probe(
+        return run_exact_performance_probe(
             args.exact_performance_probe_root.as_deref(),
         );
     }
@@ -463,7 +327,7 @@ async fn run_inner() -> Result<(), Box<dyn std::error::Error>> {
     // global signed receipts and each tenant claim before returning bounded
     // handoff facts. With no manifest, v2 startup continues and v3 stays closed.
     #[cfg(feature = "ann-redb")]
-    let rf019_pending = server::preflight_rf019_activation(std::path::Path::new(
+    let rf019_pending = medulla_server::preflight_rf019_activation(std::path::Path::new(
         args.persist_dir
             .as_deref()
             .expect("persist dir was required"),
@@ -482,7 +346,7 @@ async fn run_inner() -> Result<(), Box<dyn std::error::Error>> {
     )?;
 
     #[cfg(feature = "ann-redb")]
-    server::install_rf019_activation(
+    medulla_server::install_rf019_activation(
         rf019_pending,
         std::path::Path::new(
             args.persist_dir
@@ -494,7 +358,7 @@ async fn run_inner() -> Result<(), Box<dyn std::error::Error>> {
 
     let limits = server_startup::admission_limits(&host_capacity);
     // OCC ACID transaction limits (CONCEPT:MEDULLA-KG.txn.multi-op-occ-acid).
-    let txn_limits = medulla::server::txn_limits_from_env();
+    let txn_limits = medulla_server_api::state::txn_limits_from_env();
     // Every store is opened BEFORE `persist_dir` is moved into the state; each
     // open failure is fatal at boot (loud + early).
     let stores = server_startup::open_durable_stores(args.persist_dir.as_deref(), &host_capacity);
@@ -553,7 +417,7 @@ async fn run_inner() -> Result<(), Box<dyn std::error::Error>> {
     // BREAK and the main listener returns, so we fall through to the persistence
     // flush below. An acknowledged write is already committed; shutdown only
     // drains the writer's bounded in-flight tail.
-    let shutdown = server::ShutdownCoordinator::new();
+    let shutdown = medulla_server::transport::ShutdownCoordinator::new();
     server_startup::spawn_shutdown_signal_handler(shutdown.clone());
     server_startup::spawn_idle_shutdown_watcher(&shutdown, args.idle_shutdown_secs);
 
@@ -605,13 +469,13 @@ async fn spawn_optional_service_listeners(
     spawn_s3_listener(state).await?;
     spawn_kvcache_listener(state).await?;
     recover_durable_catalog(state).await?;
-    medulla::server::connector_pack_projection::spawn(state.clone());
-    medulla::server::repository_enrichment_worker::spawn(state.clone());
+    medulla_h_admin::connector_pack_projection::spawn(state.clone());
+    medulla_h_ingest::repository_enrichment_worker::spawn(state.clone());
     #[cfg(feature = "epistemic-tms")]
-    medulla::server::reasoning_projection::spawn(state.clone());
+    medulla_h_retrieve::reasoning_projection::spawn(state.clone());
     // Sampled authorization denials reach the identity audit trail.
     #[cfg(feature = "security")]
-    medulla::server::spawn_denial_sample_flusher(state.clone());
+    medulla_server_api::denial_sample::spawn_flusher(state.clone());
     Ok(())
 }
 
@@ -668,7 +532,7 @@ async fn spawn_sparql_listener(
         );
         let sparql_state = state.clone();
         tokio::spawn(async move {
-            medulla::server::sparql_http::serve(listener, sparql_state).await;
+            medulla_server_blob::sparql_http::serve(listener, sparql_state).await;
         });
     }
     #[cfg(not(feature = "sparql-http"))]
@@ -693,7 +557,7 @@ async fn spawn_policy_export_listener(
             policy_export_addr
         );
         tokio::spawn(async move {
-            medulla::server::policy_export::serve(listener).await;
+            medulla_server_lake::policy_export::serve(listener).await;
         });
     }
     #[cfg(not(feature = "policy_export"))]
@@ -727,7 +591,7 @@ async fn spawn_federated_listener(
         );
         let fed_state = state.clone();
         tokio::spawn(async move {
-            medulla::server::federation::serve(listener, fed_state).await;
+            medulla_h_sparql::federation::serve(listener, fed_state).await;
         });
     }
     #[cfg(not(feature = "federation-search"))]
@@ -776,7 +640,7 @@ async fn spawn_graphql_listener(
     }
     #[cfg(feature = "graphql")]
     if let Some(ref graphql_addr) = graphql_addr {
-        let graphql_config = medulla::server::graphql_sub::GraphQlSubscriptionConfig::new(
+        let graphql_config = medulla_server_lake::graphql_sub::GraphQlSubscriptionConfig::new(
             graphql_max_connections,
             graphql_max_session_secs,
         )
@@ -795,7 +659,7 @@ async fn spawn_graphql_listener(
         );
         let gql_state = state.clone();
         tokio::spawn(async move {
-            medulla::server::graphql_sub::serve(listener, gql_state, graphql_config).await;
+            medulla_server_lake::graphql_sub::serve(listener, gql_state, graphql_config).await;
         });
     }
     #[cfg(not(feature = "graphql"))]
@@ -824,9 +688,7 @@ async fn spawn_obs_listener(
     let obs_addr = resolve_listener_addr(obs_addr_arg, "127.0.0.1:5080");
     #[cfg(feature = "obs")]
     if let Some(ref obs_addr) = obs_addr {
-        use medulla::server::obs::{
-            ObsState, DEFAULT_FLUSH_RECORDS, OBS_FLUSH_RECORDS_ENV,
-        };
+        use medulla_server_obs::{obs::ObsState, obs::DEFAULT_FLUSH_RECORDS, obs::OBS_FLUSH_RECORDS_ENV};
         let flush = std::env::var(OBS_FLUSH_RECORDS_ENV)
             .ok()
             .and_then(|v| v.parse().ok())
@@ -836,7 +698,7 @@ async fn spawn_obs_listener(
             let server = state.read().await;
             (
                 server.persist_dir.clone(),
-                server.blob.as_ref().map(|cursors| cursors.store.clone()),
+                server.blob_cursors().map(|cursors| cursors.store.clone()),
             )
         };
         match ObsState::open_with_blob_store(persist_dir.as_deref(), flush, selected_blob).await {
@@ -854,7 +716,7 @@ async fn spawn_obs_listener(
 
                 let obs_security_state = state.clone();
                 tokio::spawn(async move {
-                    medulla::server::obs::serve_with_security(
+                    medulla_server_obs::obs::serve_with_security(
                         listener,
                         obs_state,
                         obs_security_state,
@@ -882,14 +744,12 @@ async fn wait_for_periodic_tick(ticker: &mut tokio::time::Interval) {
 /// EH-410: browser RUM series are kept 30 days; the sweep runs hourly whenever
 /// the observability listener is on (RUM is on by default, so its retention is too).
 #[cfg(feature = "obs")]
-fn spawn_obs_rum_retention_sweep(
-    obs_state: &std::sync::Arc<medulla::server::obs::ObsState>,
-) {
+fn spawn_obs_rum_retention_sweep(obs_state: &std::sync::Arc<medulla_server_obs::obs::ObsState>) {
     let rum_obs_state = obs_state.clone();
     spawn_periodic_sweep(3600, "obs_rum_retention", move || {
         let obs = rum_obs_state.clone();
         async move {
-            let now_ns = i64::try_from(medulla::server::txn::now_ms())
+            let now_ns = i64::try_from(medulla_server_api::txn::now_ms())
                 .unwrap_or(i64::MAX)
                 .saturating_mul(1_000_000);
             let swept =
@@ -902,9 +762,7 @@ fn spawn_obs_rum_retention_sweep(
 }
 
 #[cfg(feature = "traces")]
-async fn persist_traces_tick(
-    traces_obs_state: std::sync::Arc<medulla::server::obs::ObsState>,
-) {
+async fn persist_traces_tick(traces_obs_state: std::sync::Arc<medulla_server_obs::obs::ObsState>) {
     if let Err(error) = traces_obs_state.persist_traces().await {
         tracing::warn!(
             %error,
@@ -934,9 +792,7 @@ where
 }
 
 #[cfg(feature = "traces")]
-fn spawn_obs_trace_persist_sweep(
-    obs_state: &std::sync::Arc<medulla::server::obs::ObsState>,
-) {
+fn spawn_obs_trace_persist_sweep(obs_state: &std::sync::Arc<medulla_server_obs::obs::ObsState>) {
     // ── Trace durable-tier sweep (BUG-016, CONCEPT:MEDULLA-OS.observability.trace-assembly) ─────
     // Periodically snapshot the native span store to durable storage
     // (`ObsState::persist_traces`) so a restart does not silently drop
@@ -976,7 +832,7 @@ async fn spawn_viz_interactive_listener(
     // viz-interactive` AND --viz-interactive-addr /
     // MEDULLA_VIZ_INTERACTIVE_ADDR is set. Eagerly constructs the
     // shared `VizEngineState` (rather than leaving it to lazy-init on the
-    // first `Method::Viz` RPC call, `handlers::viz::engine_state`) and installs
+    // first `Method::Viz` RPC call, `medulla_h_compute::viz::engine_state`) and installs
     // it on `ServerState` BEFORE spawning the listener, so the RPC render path
     // and this HTTP path always share the SAME persistent ColumnStore/render
     // cache/provenance -- never two independent engines silently diverging.
@@ -984,7 +840,7 @@ async fn spawn_viz_interactive_listener(
     #[cfg(feature = "viz-interactive")]
     if let Some(ref viz_interactive_addr) = viz_interactive_addr {
         let viz_persist_dir = state.read().await.persist_dir.clone();
-        let engine = std::sync::Arc::new(medulla::server::viz_engine::VizEngineState::new(
+        let engine = std::sync::Arc::new(medulla_server_api::viz_engine::VizEngineState::new(
             viz_persist_dir.as_deref(),
         ));
         state.write().await.viz_engine = Some(engine.clone());
@@ -997,12 +853,8 @@ async fn spawn_viz_interactive_listener(
                 );
                 let viz_state = state.clone();
                 tokio::spawn(async move {
-                    medulla::server::viz_interactive::serve(
-                        listener,
-                        engine,
-                        Some(viz_state),
-                    )
-                    .await;
+                    medulla_h_compute::viz_interactive::serve(listener, engine, Some(viz_state))
+                        .await;
                 });
             }
             Err(e) => tracing::error!(
@@ -1039,8 +891,9 @@ async fn spawn_iceberg_listener(
         // `lake-rest` implies `lake` implies `blob`, so the CAS is always configured
         // (`Some`) in any build reaching this arm — `blob` is never independently off.
         let (lake_handle, blob_store) = {
+            use medulla_server_lake::lake::LakeStateExt;
             let s = state.read().await;
-            (s.lake.clone(), s.blob.as_ref().map(|b| b.store.clone()))
+            (s.lake(), s.blob_cursors().map(|b| b.store.clone()))
         };
         match blob_store {
             Some(store) => {
@@ -1051,7 +904,7 @@ async fn spawn_iceberg_listener(
                 );
                 let lake_security_state = state.clone();
                 tokio::spawn(async move {
-                    medulla::server::lake::rest::serve_with_security(
+                    medulla_server_lake::lake::rest::serve_with_security(
                         listener,
                         lake_handle,
                         store,
@@ -1087,7 +940,7 @@ async fn spawn_lake_materialize_sweep(_state: &Arc<tokio::sync::RwLock<ServerSta
     #[cfg(feature = "lake")]
     {
         let interval_secs: u64 =
-            std::env::var(medulla::server::lake::LAKE_MATERIALIZE_INTERVAL_ENV)
+            std::env::var(medulla_server_lake::lake::LAKE_MATERIALIZE_INTERVAL_ENV)
                 .ok()
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(0);
@@ -1100,18 +953,19 @@ async fn spawn_lake_materialize_sweep(_state: &Arc<tokio::sync::RwLock<ServerSta
                     // (`Some`) here — neither is ever independently off in this build.
                     // A18: this is engine-internal system maintenance, not a client
                     // request — no caller identity, no signed envelope to check, the
-                    // SAME precedent `server::registry_reaper`'s stale-lease reaper and
+                    // SAME precedent `medulla_server::registry_reaper`'s stale-lease reaper and
                     // the cold-offload sweep already establish for a periodic interval
                     // task that reads `ServerState` directly rather than minting a
                     // synthetic signed `Request` and re-entering `dispatch()`. The old
                     // client-carrier gate here was always the WRONG check for a task
                     // with no carrier at all, not a security boundary being relaxed.
                     let (lake_handle, tsdb, store) = {
+                        use medulla_server_lake::lake::LakeStateExt;
                         let s = sweep_state.read().await;
                         (
-                            s.lake.clone(),
+                            s.lake(),
                             s.tsdb_store.clone(),
-                            s.blob.as_ref().map(|b| b.store.clone()),
+                            s.blob_cursors().map(|b| b.store.clone()),
                         )
                     };
                     let (Some(tsdb), Some(store)) = (tsdb, store) else {
@@ -1170,26 +1024,21 @@ async fn spawn_pgwire_listener(
     // when pgwire's own startup policy proves native TLS is configured. The other
     // auxiliary listeners continue using the loopback-only resolver below.
     #[cfg(feature = "pgwire")]
-    if let Some(addr) = medulla::server::pgwire::resolve_listener_addr(
-        std::env::var(medulla::server::pgwire::PGWIRE_ADDR_ENV)
+    if let Some(addr) = medulla_wire::pgwire::resolve_listener_addr(
+        std::env::var(medulla_wire::pgwire::PGWIRE_ADDR_ENV)
             .ok()
             .as_deref(),
         "127.0.0.1:5433",
     ) {
         let pg_auth_secret = state.read().await.auth_secret.clone();
-        let pg_auth_mode =
-            medulla::server::pgwire::PgWireAuthMode::resolve(&pg_auth_secret)?;
-        let prepared_pgwire = medulla::server::pgwire::prepare_startup_policy(
-            &addr,
-            pg_auth_secret,
-            pg_auth_mode,
-        )
-        .await?;
+        let pg_auth_mode = medulla_wire::pgwire::PgWireAuthMode::resolve(&pg_auth_secret)?;
+        let prepared_pgwire =
+            medulla_wire::pgwire::prepare_startup_policy(&addr, pg_auth_secret, pg_auth_mode)
+                .await?;
         let pg_state = state.clone();
         info!("pgwire: enabling the configured listener (TLS policy applies)");
         tokio::spawn(async move {
-            if let Err(e) =
-                medulla::server::pgwire::serve_prepared(pg_state, prepared_pgwire).await
+            if let Err(e) = medulla_wire::pgwire::serve_prepared(pg_state, prepared_pgwire).await
             {
                 tracing::error!("pgwire server error: {}", e);
             }
@@ -1212,7 +1061,7 @@ async fn spawn_sqlite_listener(
     // default `127.0.0.1:5461`; non-loopback requires the protected-ingress policy.
     #[cfg(feature = "sqlite-wire")]
     if let Some(addr) = resolve_listener_addr(
-        std::env::var(medulla::server::sqlite_wire::SQLITE_ADDR_ENV)
+        std::env::var(medulla_wire::sqlite_wire::SQLITE_ADDR_ENV)
             .ok()
             .as_deref(),
         "127.0.0.1:5461",
@@ -1225,7 +1074,7 @@ async fn spawn_sqlite_listener(
                 );
                 let sq_state = state.clone();
                 tokio::spawn(async move {
-                    medulla::server::sqlite_wire::serve(listener, sq_state).await;
+                    medulla_wire::sqlite_wire::serve(listener, sq_state).await;
                 });
             }
             Err(e) => tracing::error!("sqlite-wire bind {} failed: {}", addr, e),
@@ -1248,15 +1097,15 @@ async fn spawn_mysql_listener(
     // core as pgwire (CONCEPT:MEDULLA-KG.compute.subsystems-reference), so a MySQL driver/ORM runs SQL over `nodes`/`edges`.
     #[cfg(feature = "mysql-wire")]
     if let Some(addr) = resolve_listener_addr(
-        std::env::var(medulla::server::mysql_wire::MYSQL_ADDR_ENV)
+        std::env::var(medulla_wire::mysql_wire::MYSQL_ADDR_ENV)
             .ok()
             .as_deref(),
         "127.0.0.1:3306",
     ) {
         let mysql_auth_secret = state.read().await.auth_secret.clone();
         let mysql_auth_mode =
-            medulla::server::mysql_wire::MysqlAuthMode::resolve(&mysql_auth_secret)?;
-        medulla::server::mysql_wire::validate_startup_policy(
+            medulla_wire::mysql_wire::MysqlAuthMode::resolve(&mysql_auth_secret)?;
+        medulla_wire::mysql_wire::validate_startup_policy(
             &addr,
             &mysql_auth_secret,
             mysql_auth_mode,
@@ -1264,12 +1113,8 @@ async fn spawn_mysql_listener(
         let my_state = state.clone();
         info!("mysql-wire: enabling the configured loopback listener");
         tokio::spawn(async move {
-            if let Err(e) = medulla::server::mysql_wire::serve_with_auth(
-                &addr,
-                my_state,
-                mysql_auth_mode,
-            )
-            .await
+            if let Err(e) =
+                medulla_wire::mysql_wire::serve_with_auth(&addr, my_state, mysql_auth_mode).await
             {
                 tracing::error!("mysql-wire server error: {}", e);
             }
@@ -1306,6 +1151,7 @@ macro_rules! define_authenticated_wire_listener {
     (
         $function:ident,
         $feature:literal,
+        $krate:ident,
         $module:ident,
         $addr_env:ident,
         $default_addr:literal,
@@ -1318,21 +1164,21 @@ macro_rules! define_authenticated_wire_listener {
             #[cfg(feature = $feature)]
             {
                 spawn_authenticated_wire_listener(
-                    _state,
-                    resolve_listener_addr(
-                        std::env::var(medulla::server::$module::$addr_env)
-                            .ok()
-                            .as_deref(),
-                        $default_addr,
-                    ),
-                    $service_name,
-                    $enable_message,
-                    medulla::server::$module::validate_startup_policy,
-                    |addr, state| async move {
-                        medulla::server::$module::serve(&addr, state).await
-                    },
-                )
-                .await?;
+                            _state,
+                            resolve_listener_addr(
+                                std::env::var($krate::$module::$addr_env)
+                                    .ok()
+                                    .as_deref(),
+                                $default_addr,
+                            ),
+                            $service_name,
+                            $enable_message,
+                            $krate::$module::validate_startup_policy,
+                            |addr, state| async move {
+                                $krate::$module::serve(&addr, state).await
+                            },
+                        )
+                        .await?;
             }
             Ok(())
         }
@@ -1349,6 +1195,7 @@ macro_rules! define_authenticated_wire_listener {
 define_authenticated_wire_listener!(
     spawn_mssql_listener,
     "mssql-wire",
+    medulla_wire,
     mssql_wire,
     MSSQL_ADDR_ENV,
     "127.0.0.1:1433",
@@ -1367,6 +1214,7 @@ define_authenticated_wire_listener!(
 define_authenticated_wire_listener!(
     spawn_amqp_listener,
     "amqp-wire",
+    medulla_wire_msg,
     amqp_wire,
     AMQP_ADDR_ENV,
     "127.0.0.1:5672",
@@ -1386,6 +1234,7 @@ define_authenticated_wire_listener!(
 define_authenticated_wire_listener!(
     spawn_bolt_listener,
     "bolt-wire",
+    medulla_wire,
     bolt_wire,
     BOLT_ADDR_ENV,
     "127.0.0.1:7687",
@@ -1407,7 +1256,7 @@ async fn spawn_redis_listener(
     // gateway. Each verified principal receives a pseudonymous isolated keyspace.
     #[cfg(feature = "redis-wire")]
     if let Some(addr) = resolve_listener_addr(
-        std::env::var(medulla::server::redis_wire::REDIS_ADDR_ENV)
+        std::env::var(medulla_wire_msg::redis_wire::REDIS_ADDR_ENV)
             .ok()
             .as_deref(),
         "127.0.0.1:6379",
@@ -1415,7 +1264,7 @@ async fn spawn_redis_listener(
         let redis_state = state.clone();
         info!("redis-wire: serving Redis RESP protocol on {}", addr);
         tokio::spawn(async move {
-            if let Err(e) = medulla::server::redis_wire::serve(&addr, redis_state).await {
+            if let Err(e) = medulla_wire_msg::redis_wire::serve(&addr, redis_state).await {
                 tracing::error!("redis-wire server error: {}", e);
             }
         });
@@ -1435,6 +1284,7 @@ async fn spawn_redis_listener(
 define_authenticated_wire_listener!(
     spawn_mqtt_listener,
     "mqtt-wire",
+    medulla_wire_msg,
     mqtt_wire,
     MQTT_ADDR_ENV,
     "127.0.0.1:1883",
@@ -1455,6 +1305,7 @@ define_authenticated_wire_listener!(
 define_authenticated_wire_listener!(
     spawn_stomp_listener,
     "stomp-wire",
+    medulla_wire_msg,
     stomp_wire,
     STOMP_ADDR_ENV,
     "127.0.0.1:61613",
@@ -1477,7 +1328,7 @@ async fn spawn_s3_listener(
     // closed unless both access and secret credentials are runtime-injected.
     #[cfg(feature = "s3-api")]
     if let Some(addr) = resolve_listener_addr(
-        std::env::var(medulla::server::s3::S3_ADDR_ENV)
+        std::env::var(medulla_wire_msg::s3::S3_ADDR_ENV)
             .ok()
             .as_deref(),
         "127.0.0.1:9000",
@@ -1487,15 +1338,13 @@ async fn spawn_s3_listener(
             state
                 .read()
                 .await
-                .blob
-                .as_ref()
+                .blob_cursors()
                 .map(|cursors| cursors.store.clone())
         };
         info!("s3-api: serving S3-compatible REST surface on {}", addr);
         tokio::spawn(async move {
             if let Err(e) =
-                medulla::server::s3::serve_with_blob_store(&addr, s3_state, selected_blob)
-                    .await
+                medulla_wire_msg::s3::serve_with_blob_store(&addr, s3_state, selected_blob).await
             {
                 tracing::error!("s3-api server error: {}", e);
             }
@@ -1518,7 +1367,7 @@ async fn spawn_kvcache_listener(
     // validation or a runtime-injected bearer secret is configured.
     #[cfg(feature = "kvcache-server")]
     if let Some(addr) = resolve_listener_addr(
-        std::env::var(medulla::server::kvcache_http::KVCACHE_ADDR_ENV)
+        std::env::var(medulla_wire_msg::kvcache_http::KVCACHE_ADDR_ENV)
             .ok()
             .as_deref(),
         "127.0.0.1:9130",
@@ -1530,8 +1379,7 @@ async fn spawn_kvcache_listener(
         );
         tokio::spawn(async move {
             if let Err(e) =
-                medulla::server::kvcache_http::serve_with_security(&addr, kvcache_state)
-                    .await
+                medulla_wire_msg::kvcache_http::serve_with_security(&addr, kvcache_state).await
             {
                 tracing::error!("kvcache-server error: {}", e);
             }
@@ -1559,15 +1407,13 @@ async fn recover_durable_catalog(
         p.register_graph(
             "__commons__",
             "__commons__",
-            medulla::protocol::GraphType::Commons,
+            medulla_protocol_types::protocol::GraphType::Commons,
         )
         .await
         .map_err(|error| format!("failed to register the mandatory commons graph: {error}"))?;
 
         let factory = std::sync::Arc::new(
-            medulla::server::persistence::read_through::BackendReadThroughFactory::new(
-                p.clone(),
-            ),
+            medulla_persistence::read_through::BackendReadThroughFactory::new(p.clone()),
         );
         state
             .write()
@@ -1575,9 +1421,7 @@ async fn recover_durable_catalog(
             .registry
             .set_read_through_factory(factory);
         let materializer = std::sync::Arc::new(
-            medulla::server::persistence::read_through::BackendGraphMaterializer::new(
-                p.clone(),
-            ),
+            medulla_persistence::read_through::BackendGraphMaterializer::new(p.clone()),
         );
         state.write().await.registry.set_materializer(materializer);
         info!("durable read-through and bounded lazy materialization enabled");
@@ -1585,7 +1429,7 @@ async fn recover_durable_catalog(
         // The time-series startup reconciliation (CONCEPT:MEDULLA-KG.backend.ts-
         // startup-reconcile, L16) no longer runs here: it is crash-window
         // residual closing, not a serving precondition, so it runs as post-bind
-        // background maintenance (`server::boot_maintenance::
+        // background maintenance (`medulla_h_admin::boot_maintenance::
         // spawn_post_bind_maintenance`, MEDULLA-DURABLE-KERNEL-R006.4) — running it
         // pre-listener is exactly what stalled the boot for minutes on a
         // legacy store (G9).
@@ -1608,18 +1452,17 @@ async fn spawn_reasoning_cascade_and_ann_sweep(
     // byte-for-byte what it was before this feature existed.
     #[cfg(all(feature = "owl", feature = "streaming"))]
     {
-        let cascade = std::sync::Arc::new(
-            medulla::server::reasoning_cascade::ReasoningCascade::from_env(),
-        );
+        let cascade =
+            std::sync::Arc::new(medulla_server_cdc::reasoning_cascade::ReasoningCascade::from_env());
         if cascade.is_active() {
-            if let Some(hub) = state.read().await.cdc.as_ref() {
+            if let Some(hub) = state.read().await.cdc_hub() {
                 hub.install_reasoning_cascade(cascade.clone());
             }
             info!(
                 "Reasoning cascade (REASON_ON_WRITE) armed: debounce {}ms",
                 cascade.debounce_window().as_millis()
             );
-            medulla::server::reasoning_cascade::spawn(state.clone(), cascade);
+            medulla_server_cdc::reasoning_cascade::spawn(state.clone(), cascade);
         }
     }
     // EH-526 standing impact watches (opt-in, `MEDULLA_IMPACT_ON_WRITE`): a
@@ -1627,14 +1470,13 @@ async fn spawn_reasoning_cascade_and_ann_sweep(
     // ordinary `MineRiskPropagation` writeback path. Unset ⇒ nothing installed/spawned.
     #[cfg(all(feature = "streaming", feature = "mining", feature = "query"))]
     {
-        let hub =
-            std::sync::Arc::new(medulla::server::impact_watch::ImpactWatchHub::from_env());
+        let hub = std::sync::Arc::new(medulla_server_cdc::impact_watch::ImpactWatchHub::from_env());
         if hub.is_active() {
-            if let Some(cdc) = state.read().await.cdc.as_ref() {
+            if let Some(cdc) = state.read().await.cdc_hub() {
                 cdc.install_impact_watch(hub.clone());
             }
             info!("Impact watches (MEDULLA_IMPACT_ON_WRITE) armed");
-            medulla::server::impact_watch::spawn(state.clone(), hub);
+            medulla_server_cdc::impact_watch::spawn(state.clone(), hub);
         }
     }
     // CONCEPT:MEDULLA-KG.storage.incremental-text / .incremental-temporal / .incremental-derived-owl —
@@ -1645,7 +1487,7 @@ async fn spawn_reasoning_cascade_and_ann_sweep(
     // future `create_graph`. A build without text/tsdb/owl links none of this.
     #[cfg(any(feature = "text", feature = "tsdb", feature = "owl"))]
     {
-        let mut factory = server::secondary_indexes::ServerIndexFactory::new();
+        let mut factory = medulla_h_retrieve::secondary_indexes::ServerIndexFactory::new();
         #[cfg(feature = "tsdb")]
         {
             if let Some(series) = state.read().await.tsdb_store.clone() {
@@ -1685,7 +1527,7 @@ async fn spawn_reasoning_cascade_and_ann_sweep(
     // durable generation so subsequent restarts reopen it in milliseconds.
     // Feature-gated: a non-`ann` build is byte-for-byte unchanged.
     //
-    // This is trigger 1 of the three in `server::semantic_activation`, and it runs
+    // This is trigger 1 of the three in `medulla_server_graph::semantic_activation`, and it runs
     // that module's `activate_one` rather than its own copy of the body: the boot
     // task, the dispatch write-path tail and the periodic sweep below must reopen,
     // build and activate identically or a graph's index depends on which trigger
@@ -1697,7 +1539,7 @@ async fn spawn_reasoning_cascade_and_ann_sweep(
         tokio::spawn(async move {
             // Snapshot (name, core) under a brief read lock; the heavy build runs
             // OFF the async runtime on a blocking thread.
-            let cores: Vec<(String, std::sync::Arc<medulla::graph::GraphCore>)> = {
+            let cores: Vec<(String, std::sync::Arc<medulla_graph_core::graph::GraphCore>)> = {
                 let s = warm_state.read().await;
                 s.registry
                     .all_entries()
@@ -1708,7 +1550,7 @@ async fn spawn_reasoning_cascade_and_ann_sweep(
             let _ = tokio::task::spawn_blocking(move || {
                 let mut warmed = 0usize;
                 for (name, core) in cores {
-                    if medulla::server::semantic_activation::activate_one(
+                    if medulla_server_graph::semantic_activation::activate_one(
                         &name,
                         &core,
                         warm_dir.as_deref(),
@@ -1744,10 +1586,8 @@ async fn spawn_reasoning_cascade_and_ann_sweep(
             loop {
                 ticker.tick().await;
                 let __loop_tick_started = std::time::Instant::now();
-                let n = medulla::server::semantic_activation::sweep_resident_graphs(
-                    &sweep_state,
-                )
-                .await;
+                let n =
+                    medulla_server_graph::semantic_activation::sweep_resident_graphs(&sweep_state).await;
                 if n > 0 {
                     tracing::info!(
                         "Semantic ANN warm re-check: spawned {} warm(s) for resident graph(s)",
@@ -1771,7 +1611,7 @@ async fn spawn_reasoning_cascade_and_ann_sweep(
     spawn_periodic_sweep(
         30,
         "sql_ann_generation_sweep",
-        medulla::server::sql_tables::sweep_ann_generations,
+        medulla_server_auth::sql_tables::sweep_ann_generations,
     );
 
     // Periodic Ebbinghaus decay sweep (CONCEPT:MEDULLA-KG.compute.graph-compute-engine) — opt-in. Confidence on
@@ -1789,8 +1629,7 @@ async fn spawn_reasoning_cascade_and_ann_sweep(
             loop {
                 ticker.tick().await;
                 let __loop_tick_started = std::time::Instant::now();
-                let stats =
-                    medulla::persist::decay_all(&dk_state, half_life, floor, prune).await;
+                let stats = medulla_kernel::persist::decay_all(&dk_state, half_life, floor, prune).await;
                 tracing::info!(
                     "Decay sweep: {} nodes / {} edges decayed, {} nodes / {} edges pruned",
                     stats.nodes_decayed,
@@ -1864,7 +1703,7 @@ async fn spawn_memory_sweeps(
     // byte dimension on top).
     #[cfg(feature = "cost")]
     {
-        let cost_config = medulla::cost::CostConfig::from_env().unwrap_or_else(|error| {
+        let cost_config = medulla_persistence::cost::CostConfig::from_env().unwrap_or_else(|error| {
             eprintln!("error: {error}");
             std::process::exit(2);
         });
@@ -1894,7 +1733,10 @@ async fn spawn_memory_sweeps(
         let window_secs = server_startup::optional_sweep_secs("MEDULLA_COLD_OFFLOAD_SECS");
         if window_secs > 0 {
             let cold_state = state.clone();
-            let tracker = { cold_state.read().await.cold_tracker.clone() };
+            let tracker = {
+                use medulla_persistence::cold_offload::ColdTrackerStateExt;
+                cold_state.write().await.ensure_cold_tracker()
+            };
             let window = std::time::Duration::from_secs(window_secs);
             info!(
                 "Cold-tenant offload: hibernate graphs idle > {}s, swept every {}s \
@@ -1911,13 +1753,12 @@ async fn spawn_memory_sweeps(
 #[cfg(feature = "redb")]
 async fn cold_offload_tick(
     state: Arc<tokio::sync::RwLock<ServerState>>,
-    tracker: Arc<medulla::server::persistence::cold_offload::ColdTenantTracker>,
+    tracker: Arc<medulla_persistence::cold_offload::ColdTenantTracker>,
     window: std::time::Duration,
 ) {
-    let n = medulla::server::persistence::cold_offload::offload_cold_tenants(
-        &state, &tracker, window,
-    )
-    .await;
+    let n =
+        medulla_persistence::cold_offload::offload_cold_tenants(&state, &tracker, window)
+            .await;
     if n > 0 {
         tracing::info!("Cold-tenant offload: hibernated {} idle graph(s)", n);
     }
@@ -1934,7 +1775,7 @@ fn spawn_lifecycle_sweeps(state: &Arc<tokio::sync::RwLock<ServerState>>, txn_ttl
     // an unreaped dead registration is a correctness/staleness concern, not
     // a resource-usage opt-in) at a short default interval so even the
     // minimum 1s `ttl_secs` lease is reaped promptly.
-    let reap_interval = medulla::server::registry_reaper::reap_interval_secs();
+    let reap_interval = medulla_server::registry_reaper::reap_interval_secs();
     info!(
         "Server registry: reaping expired :Server leases every {}s (CONCEPT:MEDULLA-KG.sharding.server-registry)",
         reap_interval
@@ -1948,9 +1789,9 @@ fn spawn_lifecycle_sweeps(state: &Arc<tokio::sync::RwLock<ServerState>>, txn_ttl
     // Retires every sealed record past its class's configured retention through
     // the owning op, `RetireSealedRecord` -- an audited tombstone, never a generic
     // delete. Armed only when `MEDULLA_SEALED_RETENTION` names a policy.
-    let sealed_policy = medulla::server::sealed_retention::configured_policy();
+    let sealed_policy = medulla_server::sealed_retention::configured_policy();
     if !sealed_policy.is_empty() {
-        let interval = medulla::server::sealed_retention::sweep_interval_secs();
+        let interval = medulla_server::sealed_retention::sweep_interval_secs();
         info!(
             "Sealed records: expiring by retention policy every {}s (EH-558)",
             interval
@@ -1971,11 +1812,10 @@ fn spawn_lifecycle_sweeps(state: &Arc<tokio::sync::RwLock<ServerState>>, txn_ttl
     // `MEDULLA_PROVENANCE_ANCHOR_SECS=N` (the sweep then runs every `N`
     // seconds). Overhead is bounded regardless of `N`: the window-size-dependent
     // work runs off the writer thread, and an unchanged window commits nothing
-    // (see `server::persistence::provenance_anchor`'s module doc).
+    // (see `medulla_persistence::provenance_anchor`'s module doc).
     #[cfg(feature = "security")]
     {
-        let interval_secs =
-            server_startup::optional_sweep_secs("MEDULLA_PROVENANCE_ANCHOR_SECS");
+        let interval_secs = server_startup::optional_sweep_secs("MEDULLA_PROVENANCE_ANCHOR_SECS");
         if interval_secs > 0 {
             info!(
                 "Provenance anchoring: Merkle-anchoring :ToolCall/:RunTrace windows every {}s \
@@ -1997,7 +1837,7 @@ fn spawn_lifecycle_sweeps(state: &Arc<tokio::sync::RwLock<ServerState>>, txn_ttl
     {
         let scrub_state = state.clone();
         spawn_periodic_sweep(
-            server::persistence::storage_scrub::interval_secs(),
+            medulla_persistence_ops::storage_scrub::interval_secs(),
             "storage_scrub",
             move || server_startup::storage_scrub_tick(scrub_state.clone()),
         );
@@ -2019,7 +1859,7 @@ fn spawn_lifecycle_sweeps(state: &Arc<tokio::sync::RwLock<ServerState>>, txn_ttl
 /// before serving (writes route through consensus). The materialized-view
 /// reload that used to sit in this function (hence the old name) is RAM
 /// re-hydration, not a serving precondition, and moved to post-bind
-/// background maintenance (`server::boot_maintenance::
+/// background maintenance (`medulla_h_admin::boot_maintenance::
 /// spawn_post_bind_maintenance`, MEDULLA-DURABLE-KERNEL-R006.4) — running it here
 /// stalled the pre-listener path behind the projection drain for minutes on
 /// a large store (G9).
@@ -2036,7 +1876,7 @@ async fn start_raft(
     // (the redb store) — refuse to start a half-configured cluster loudly.
     #[cfg(feature = "raft")]
     {
-        match medulla::raft::config::RaftClusterConfig::from_env() {
+        match medulla_raft::raft::config::RaftClusterConfig::from_env() {
             Ok(Some(cluster_cfg)) => {
                 let persist_dir = match state.read().await.persist_dir.clone() {
                     Some(d) => d,
@@ -2057,7 +1897,7 @@ async fn start_raft(
                 // persist_dir is validated above (Raft requires the redb store); the
                 // MultiRaft opens its durable log over the SAME backend in ServerState.
                 let _ = &persist_dir;
-                match medulla::raft::node::start(cluster_cfg, state.clone()).await {
+                match medulla_raft::raft::node::start(cluster_cfg, state.clone()).await {
                     Ok(started) => {
                         // `raft::node::start` atomically installed the routing handle
                         // and durable MultiRaft placement authority into ServerState.
@@ -2071,10 +1911,11 @@ async fn start_raft(
                         {
                             let backend = state.read().await.persistence.clone();
                             if let Some(backend) = backend {
-                                let coord = medulla::raft::cross_shard_txn::CrossShardCoordinator::new(
-                                    started.multi.clone(),
-                                    backend,
-                                );
+                                let coord =
+                                    medulla_raft_xshard::cross_shard_txn::CrossShardCoordinator::new(
+                                        started.multi.clone(),
+                                        backend,
+                                    );
                                 match coord.recover_in_doubt().await {
                                     Ok(0) => {}
                                     Ok(n) => info!(

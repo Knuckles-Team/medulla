@@ -12,7 +12,7 @@
 //!
 //! **What did NOT move, and why (a real DAG constraint, not a style choice):** four
 //! `Method` families' *application* genuinely requires a crate that sits ABOVE
-//! `medulla-core` — `BatchUpdate` calls `medulla_compute::algorithms::batch_update`
+//! `medulla-core` — `BatchUpdate` calls `medulla_graph_algos::algorithms::batch_update`
 //! (`medulla-compute` depends on `medulla-core`, not the reverse: pulling it in here would
 //! cycle the workspace DAG); `AddTriples`/`RemoveTriples`/`DropNamedGraph` call
 //! `medulla_rdf::mapping`/`medulla_rdf::update` (same direction: `medulla-rdf` depends on
@@ -34,8 +34,8 @@
 //! implementation for the set of methods classified here: a committed `Method`
 //! produces the same graph state on every path.
 
-use crate::graph::GraphCore;
-use crate::protocol::{Method, MethodWriteFamily};
+use medulla_protocol_types::protocol::{Method, MethodWriteFamily};
+use medulla_graph_core::graph::GraphCore;
 
 const MAX_DURABLE_PAYLOAD_BYTES: usize = 64 * 1024 * 1024;
 const MAX_DURABLE_PAYLOAD_ITEMS: usize = 1_000_000;
@@ -684,9 +684,9 @@ fn durable_json_object(blob: &[u8]) -> Option<serde_json::Map<String, serde_json
 /// Decode a MessagePack-encoded pose blob for canonical replay (CONCEPT:MEDULLA-KG.memory.medulla-batch-decay-caller/MEDULLA-087).
 /// `None` only if the blob is not a decodable JSON object — matching the dispatch
 /// handler's `decode_pose` so replay reconstructs the identical scene node.
-fn durable_pose(blob: &[u8]) -> Option<crate::scene::Pose> {
+fn durable_pose(blob: &[u8]) -> Option<medulla_graph_core::scene::Pose> {
     let val = decode_durable_payload::<serde_json::Value>(blob)?;
-    crate::scene::Pose::from_json(&val)
+    medulla_graph_core::scene::Pose::from_json(&val)
 }
 
 #[cfg(test)]

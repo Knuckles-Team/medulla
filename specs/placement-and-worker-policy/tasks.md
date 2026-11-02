@@ -42,7 +42,7 @@ Governing spec: [spec.md](spec.md). Design: [plan.md](plan.md).
 
 Order: R003 (independent, smallest), R002.1-R002.5 with the durable-kernel rows, then R002 rewordings; R001.1 (decision-engine R111.1) before R001.2-R001.11; R001.12-R001.14 last.
 - [ ] **MEDULLA-PLACEMENT-R004:** Heavy compute routes to the host that declares the capability.
-- [ ] **MEDULLA-PLACEMENT-R004.1:** Model. Add `HostCapability{host_iri, capability, headroom}` and `RoutingFact{job_class, required_capability}` in `crates/medulla-types/src/decision/statistical/placement.rs`. The capability set is closed and declared by the host.
+- [ ] **MEDULLA-PLACEMENT-R004.1:** Model. Add `HostCapability{host_iri, capability, headroom}` and `RoutingFact{job_class, required_capability}` in `crates/medulla-decision-types/src/decision/statistical/placement.rs`. The capability set is closed and declared by the host.
 - [ ] **MEDULLA-PLACEMENT-R004.2:** Behavior. Add `route_heavy_job(job_class, hosts)` returning hosts that declare the required capability, ordered by headroom. Ordering is a named replaceable default `most_headroom_first`.
 - [ ] **MEDULLA-PLACEMENT-R004.3:** Wiring. The behavior attaches at `crates/medulla-jobs/src/store.rs:773` inside `claim_next` (`store.rs:736`), where worker capabilities already filter the ready queue. The production caller `crates/medulla-quantum-jobs/src/job.rs:275` passes an empty capability list, so this row passes the declared capabilities from the topology facts.
 - [ ] **MEDULLA-PLACEMENT-R004.4:** Refusal. When no host declares the capability, the engine must refuse with `no_capable_host` naming the capability. It must not fall back to any host.

@@ -16,7 +16,7 @@
 //!
 //! - the request schema is always the `Method` variant's own subschema, keyed by the
 //!   row's id -- a variant's inline fields ARE its request schema.
-//! - the RESULT is not authored here at all: it is the `medulla_types::result_contract`
+//! - the RESULT is not authored here at all: it is the `medulla_protocol_types::result_contract`
 //!   marker the handler encodes through, so the compiler, not a row, fixes its type.
 //! - `error_set` follows [`error_set_for`] (policy-shaped, not per-method prose).
 //! - `replay_class` follows [`replay_class_for`] (RF-RULING-004's two replay identities).

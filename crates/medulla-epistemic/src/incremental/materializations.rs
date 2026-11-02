@@ -1,6 +1,6 @@
 use std::collections::BTreeSet;
 
-use medulla_core::graph::GraphView;
+use medulla_graph_core::graph::GraphView;
 
 use super::{decode, opaque_identity, remove_value, IncrementalReasoningIndex};
 

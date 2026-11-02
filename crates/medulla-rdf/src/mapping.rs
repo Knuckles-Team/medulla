@@ -23,7 +23,7 @@
 
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 use oxrdf::{BlankNode, GraphName, Literal, NamedNode, NamedOrBlankNode, Quad, Term, Triple};
 use oxttl::{
     NQuadsParser, NQuadsSerializer, NTriplesParser, NTriplesSerializer, TriGParser, TriGSerializer,
@@ -43,7 +43,7 @@ const RDF_TYPE: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 
 // ── A18 TBox/ABox RLS distinction (CONCEPT:MEDULLA-KG.sharding.row-level-security) ──────────
 //
-// Row-level default-deny (`medulla_core::isolation::can_see_row`) protects ABox rows -- a
+// Row-level default-deny (`medulla_isolation::isolation::can_see_row`) protects ABox rows -- a
 // row ABOUT someone/something whose owner controls its visibility. An OWL axiom /
 // class / property-definition node is SCHEMA (TBox), not a row about anyone, and is
 // already protected at the correct granularity by GRAPH-level ACL. Applying row-level
@@ -200,8 +200,8 @@ mod parsing;
 mod serialization;
 
 pub use canonical::{quad_set_key, triple_set_key};
-pub use medulla_types::rdf_report::LoadReport;
 pub use lowering::{load_triples, lower_triples, register_named_graph, LoweredTripleGraph};
+pub use medulla_types::rdf_report::LoadReport;
 #[cfg(feature = "json-ld")]
 pub use parsing::parse_jsonld;
 pub use parsing::{

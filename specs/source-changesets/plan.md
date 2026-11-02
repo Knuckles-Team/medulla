@@ -4,9 +4,9 @@
 
 A repository's source has exactly two homes in the engine. Both are existing surfaces.
 
-1. **Blob store** — the existing content-addressed chunk store (`src/server/blob/store.rs`). Each
+1. **Blob store** — the existing content-addressed chunk store (`crates/medulla-server-blob/src/blob/store.rs`). Each
    file version stores once, keyed by its SHA-256 digest. The bounded streaming facade
-   (`src/server/blob/stream.rs`) moves the bytes without buffering the whole file.
+   (`crates/medulla-server-blob/src/blob/stream.rs`) moves the bytes without buffering the whole file.
 2. **Changeset chain** — the append-only branch chain of MEDULLA-BRANCH-MERGE. Each changeset names
    its target branch, its parents, and the paths it changed against the first parent. The chain
    is the source of truth for the repository files.
@@ -19,8 +19,8 @@ changed files. Gate verdicts and bisect decisions record against changeset ids.
 
 | Need | Existing owner |
 |---|---|
-| Content-addressed store, dedup, refcount GC, S3 backend | blob CAS (`src/server/blob/store.rs`) |
-| Bounded streaming of a blob to and from the CAS | streaming facade (`src/server/blob/stream.rs`) |
+| Content-addressed store, dedup, refcount GC, S3 backend | blob CAS (`crates/medulla-server-blob/src/blob/store.rs`) |
+| Bounded streaming of a blob to and from the CAS | streaming facade (`crates/medulla-server-blob/src/blob/stream.rs`) |
 | Sealed create-only record guard | sealed record classes (MEDULLA-DURABLE-KERNEL-R057) |
 | Append-only branch chain, commit-before-ack | branch commit path (MEDULLA-BRANCH-MERGE-R002) |
 | File and line granularity three-way merge | merge pass (MEDULLA-BRANCH-MERGE-R004) |

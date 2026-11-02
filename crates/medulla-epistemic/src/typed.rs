@@ -2,14 +2,17 @@
 //!
 //! [`BeliefGraph`] projects the confidence/support topology and never looks at what a
 //! node *is*. This index is the typed half: every `:Claim`/`:Evidence` node in the
-//! snapshot decoded as an [`medulla_types::epistemic_node::Claim`] or
-//! [`medulla_types::epistemic_node::Evidence`], and every node that is labelled as one but
+//! snapshot decoded as an [`medulla_result_types::epistemic_node::Claim`] or
+//! [`medulla_result_types::epistemic_node::Evidence`], and every node that is labelled as one but
 //! does not have the shape reported with its typed error rather than dropped.
 
 use std::collections::BTreeMap;
 
-use medulla_core::graph::GraphView;
-use medulla_types::epistemic_node::{Claim, EpistemicNode, EpistemicNodeError, Evidence};
+use medulla_graph_core::graph::GraphView;
+use medulla_result_types::{
+    epistemic_node::Claim, epistemic_node::EpistemicNode, epistemic_node::EpistemicNodeError,
+    epistemic_node::Evidence,
+};
 
 use crate::adapter::BeliefGraph;
 use crate::model::EdgeKind;

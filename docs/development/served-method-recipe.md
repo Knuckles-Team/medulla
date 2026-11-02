@@ -33,16 +33,16 @@ only through `medulla-compute`:
 ## 2. Declare the method and its result (medulla-types)
 
 1. Request: add a variant to the `Method` enum in
-   `crates/medulla-types/src/protocol/method/method_04.rs` (finance methods live there; any
+   `crates/medulla-protocol-types/src/protocol/method/method_04.rs` (finance methods live there; any
    `method_NN.rs` chunk works). Use flat, serde-friendly fields. Use
    `#[serde(default)] Option<T>` for a field with a kernel default. Never change an
    existing variant: that breaks the wire contract.
 2. Result body type, when the result is not a scalar: add a struct to
-   `crates/medulla-types/src/compute_result/finance.rs` with
+   `crates/medulla-result-types/src/compute_result/finance.rs` with
    `#[derive(Serialize, Deserialize, Debug, Clone)]` and
    `#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]`. Mirror the
    kernel struct; the kernel crate stays free of `schemars`. Render closed enums as `String`.
-3. Result contract: add one line to `crates/medulla-types/src/result_contract/compute.rs`:
+3. Result contract: add one line to `crates/medulla-protocol-types/src/result_contract/compute.rs`:
    - scalar: `FinanceX(FinanceX) => Float<f64>;`, answered with
      `ResultPayload::scalar::<results::FinanceX>(v)`.
    - struct or list: `FinanceX(FinanceX) => Raw<finance::Body>;`, answered with
@@ -56,10 +56,10 @@ Every new method name needs all of these, or the descriptor registry or the rout
 | Where | What |
 |-------|------|
 | `crates/medulla-capabilities/src/domains/compute.rs` | one registry tuple per method. Copy the `FinanceKellyFraction` line and rename it (pure compute, `compute:finance`, `DurabilityDomain::None`, idempotent). |
-| `src/server/access/read_classification.rs` | `("FinanceX", REASON_PURE_COMPUTE),` |
-| `src/server/mutation_batch/canonical.rs` | `\| Method::FinanceX { .. }` in the pure-read list, next to `FinanceKellyFraction`. |
-| `src/server/handlers/finance/routes.rs` | map the variant to a `FinanceRoute` in a `route_for_*` match. |
-| `src/server/handlers/finance/route_families.rs` or a new file | the handler arm (below). |
+| `crates/medulla-server-auth/src/access/read_classification.rs` | `("FinanceX", REASON_PURE_COMPUTE),` |
+| `crates/medulla-server-api/src/batch_compile/canonical.rs` | `\| Method::FinanceX { .. }` in the pure-read list, next to `FinanceKellyFraction`. |
+| `crates/medulla-h-compute/src/finance/routes.rs` | map the variant to a `FinanceRoute` in a `route_for_*` match. |
+| `crates/medulla-h-compute/src/finance/route_families.rs` or a new file | the handler arm (below). |
 | `crates/medulla-capabilities/tests/contract_registry.rs` | bump the exact wire-method census and add one comment line. |
 
 Rules for the handler:
@@ -71,7 +71,7 @@ Rules for the handler:
   `.4` refusal child.
 - `route_families.rs` is large. For a new family of methods add a file such as
   `finance/numeric_kernels.rs`, a `FinanceRoute::<Name>` variant and its `try_handle` arm in
-  `routes.rs`, and `mod <name>;` in `src/server/handlers/finance.rs`.
+  `routes.rs`, and `mod <name>;` in `crates/medulla-h-compute/src/finance.rs`.
 
 Check that it compiles before the slow steps (about 3 minutes when warm):
 
@@ -135,7 +135,7 @@ cargo test --locked --features "server,security,finance" --test finance_served_<
 Rows whose served half is stateful, or whose caller is another engine layer, need design
 first. The federated rows are of this kind:
 
-- `MEDULLA-FEDERATED-QUERY-R703.3` changes `ContextCompile` in `crates/medulla-plan/src/exec.rs` to call
+- `MEDULLA-FEDERATED-QUERY-R703.3` changes `ContextCompile` in `crates/medulla-exec/src/exec.rs` to call
   an access-check port that the Graft SDK answers.
 - `MEDULLA-FEDERATED-QUERY-R704.3` makes `Discover` and `ContextCompile` read a stored agent scope.
 - `MEDULLA-FEDERATED-QUERY-R705.3` adds `RetrievalFeedbackRecord`, a write that needs a durable

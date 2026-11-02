@@ -8,7 +8,7 @@ online **backup/restore**, and **NL→query** surfaces.
 Network clients use out-of-process **framed MessagePack** over UDS/TCP. For
 that deployment shape, the wire is the API: Python, JavaScript, and Go mirror
 the serde-tagged `Method` enum in
-[`crates/medulla-types/src/protocol.rs`](https://github.com/Knuckles-Team/medulla/blob/main/crates/medulla-types/src/protocol.rs) by sending the
+[`crates/medulla-protocol-types/src/protocol.rs`](https://github.com/Knuckles-Team/medulla/blob/main/crates/medulla-protocol-types/src/protocol.rs) by sending the
 variant name and its exact parameter fields. The separate
 `medulla.engine` binding embeds the Rust graph core directly for
 single-process use and does not traverse the wire.
@@ -199,9 +199,9 @@ flowchart LR
   JS -- "framed msgpack" --> T
   GO -- "framed msgpack" --> T
 
-  T["Transport\nsrc/server/transport.rs\n(UDS / TCP, pipelined, id-demux)"] --> D["dispatch\nsrc/server/dispatch.rs"]
+  T["Transport\ncrates/medulla-server/src/transport.rs\n(UDS / TCP, pipelined, id-demux)"] --> D["dispatch\ncrates/medulla-server-router/src/dispatch.rs"]
 
-  subgraph methods["Method enum · crates/medulla-types/src/protocol.rs"]
+  subgraph methods["Method enum · crates/medulla-protocol-types/src/protocol.rs"]
     M_BROKER["Publish* / DeclareExchange /\nDeclareQueue / BindQueue /\nBrokerConsume / BrokerAck / BrokerReject /\nBrokerAckTag / BrokerNackTag / BrokerRenewTag / SweepExpired"]
     M_STREAM["StreamDeclare / StreamPublish /\nStreamRead / StreamTrim /\nStreamCommitOffset / StreamCommittedOffset"]
     M_RBAC["RbacAdmin{op}"]

@@ -1,7 +1,10 @@
 //! Closed projection of SDK access contracts; admission approval is never a claim.
 
 use crate::oxrdf::{NamedOrBlankNode, Term};
-use medulla_types::connector_pack::{PackSourceApproval, PackSourceKind, PackSourceRegistration};
+use medulla_catalog_types::{
+    connector_pack::PackSourceApproval, connector_pack::PackSourceKind,
+    connector_pack::PackSourceRegistration,
+};
 use medulla_types::contract::ResourceId;
 use std::collections::BTreeMap;
 
@@ -28,7 +31,7 @@ pub fn declared_sources(
             contracts.insert(subject.as_str().to_string());
         }
     }
-    if contracts.len() > medulla_types::connector_pack::MAX_PACK_ENTRIES {
+    if contracts.len() > medulla_catalog_types::connector_pack::MAX_PACK_ENTRIES {
         return Err("MALFORMED_BODY: too many access contracts".into());
     }
     let mut out = Vec::new();

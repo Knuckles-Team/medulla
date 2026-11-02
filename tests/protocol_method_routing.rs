@@ -25,8 +25,8 @@ mod common;
 #[path = "common/test_support.rs"]
 mod test_support;
 
-use medulla::acl::AgentRole;
-use medulla::protocol::{ChannelType, GraphType, Method, Request, Response, ResultPayload};
+use medulla_types::acl::AgentRole;
+use medulla_protocol_types::protocol::{ChannelType, GraphType, Method, Request, Response, ResultPayload};
 
 const SECRET: &str = "cx-medulla-06-dispatch-inner-secret";
 

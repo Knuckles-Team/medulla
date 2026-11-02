@@ -8,7 +8,7 @@
 //! requires NO live Oracle/Db2 server. Reading the live catalog through the
 //! driver/ODBC and wiring change capture through the Debezium bridge is the live
 //! slice `MEDULLA-UNIFIED-DATA-PLANE-R018.2.2`, mirroring the loopback-only refusal
-//! gate already used by `connect_remote_engine` in `crate::federation`.
+//! gate already used by `connect_remote_engine` in `medulla_federation::federation`.
 
 use std::net::ToSocketAddrs;
 
@@ -96,7 +96,7 @@ impl RelationalDriverConfig {
 
 /// Resolve the configured destination and refuse (never dial) anything that is
 /// not a local verified endpoint. Mirrors `connect_remote_engine`'s loopback-only
-/// gate in `crate::federation`; actually opening the driver/ODBC session and
+/// gate in `medulla_federation::federation`; actually opening the driver/ODBC session and
 /// reading the catalog is the live slice `MEDULLA-UNIFIED-DATA-PLANE-R018.2.2`.
 pub fn connect(
     config: &RelationalDriverConfig,

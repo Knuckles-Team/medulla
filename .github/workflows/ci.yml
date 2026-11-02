@@ -1135,9 +1135,24 @@ jobs:
           save-if: ${{ github.ref == 'refs/heads/main' }}
           key: clippy-${{ matrix.profile.name }}
 
+      # Clippy reads `clippy.toml` from each package's own directory only (it does not
+      # walk up to the workspace root), so the workspace policy (the disallowed-methods
+      # rules for unbounded waits and queues) reaches the crates under `crates/` only
+      # through CLIPPY_CONF_DIR. `medulla-numeric` has its own `clippy.toml`, a superset
+      # of the root one (it adds the float transcendental bans), so it is linted
+      # separately without the override.
       - name: Clippy (${{ matrix.profile.name }})
+        env:
+          CLIPPY_CONF_DIR: ${{ github.workspace }}
         # --keep-going: one crate's lint errors must not stop the others being linted.
-        run: cargo clippy --locked --keep-going ${{ matrix.profile.flags }} --all-targets -- -D warnings
+        run: |
+          set -euo pipefail
+          if [[ "${{ matrix.profile.flags }}" == --workspace* ]]; then
+            cargo clippy --locked --keep-going ${{ matrix.profile.flags }} --exclude medulla-numeric --all-targets -- -D warnings
+            env -u CLIPPY_CONF_DIR cargo clippy --locked --keep-going -p medulla-numeric --all-features --all-targets -- -D warnings
+          else
+            cargo clippy --locked --keep-going ${{ matrix.profile.flags }} --all-targets -- -D warnings
+          fi
 
   clippy-release-profiles:
     timeout-minutes: 60

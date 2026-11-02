@@ -2,7 +2,7 @@
 //! materialize the induced subgraph over it.
 //!
 //! This is deliberately a THIN wrapper over the engine's EXISTING query surface
-//! (`medulla_plan::uql::parse` + `medulla_plan::execute`) — no new query language, no new
+//! (`medulla_uql::parse` + `medulla_plan::execute`) — no new query language, no new
 //! executor. A caller hands a UQL string (e.g. `"MATCH (:Concept) |> LIMIT 12"`); this
 //! module runs it against one `GraphCore::analysis_snapshot()` (an OCC-consistent
 //! point-in-time view, per `medulla-plan`'s own snapshot-isolation guarantee) and reads
@@ -16,9 +16,10 @@
 
 use std::collections::{BTreeMap, HashSet};
 
-use medulla_core::compute::semantic::SemanticStore;
-use medulla_core::graph::{GraphCore, GraphView};
-use medulla_plan::exec::PlanCtx;
+use medulla_graph_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphView;
+use medulla_exec::exec::PlanCtx;
+use medulla_semantic_index::semantic::SemanticStore;
 
 /// The induced subgraph over a UQL-selected candidate node set: node ids in
 /// selection order (order matters — it fixes the qubit index each node maps to
@@ -62,11 +63,11 @@ pub fn pull_candidate_subgraph(
     uql: &str,
     max_qubits: u32,
 ) -> Result<CandidateSubgraph, SubgraphError> {
-    let plan = medulla_plan::uql::parse(uql).map_err(|e| SubgraphError::Parse(e.render(uql)))?;
+    let plan = medulla_uql::parse(uql).map_err(|e| SubgraphError::Parse(e.render(uql)))?;
     let view: GraphView = core.analysis_snapshot();
     let semantic = SemanticStore::new();
     let ctx = PlanCtx::new(&view, &semantic);
-    let rowset = medulla_plan::execute(&plan, &ctx).map_err(SubgraphError::Exec)?;
+    let rowset = medulla_exec::exec::execute(&plan, &ctx).map_err(SubgraphError::Exec)?;
 
     let node_ids = rowset.ids();
     if node_ids.is_empty() {
@@ -135,7 +136,7 @@ pub fn materialize_induced_subgraph(view: &GraphView, node_ids: Vec<String>) -> 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_core::graph::GraphCore;
+    use medulla_graph_core::graph::GraphCore;
     use serde_json::json;
 
     fn blob(v: serde_json::Value) -> Vec<u8> {

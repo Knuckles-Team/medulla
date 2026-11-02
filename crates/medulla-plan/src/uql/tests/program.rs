@@ -1,10 +1,10 @@
 //! Statements (UQL-11): version pragma, EXPLAIN/PROFILE, LET/FROM/JOIN DAGs.
 
-use crate::uql::print::{dag_to_uql, statement_to_uql};
-use crate::uql::{parse, parse_statement, Body, DagNode, Mode, Params, UqlCode};
+use medulla_uql::print::{dag_to_uql, statement_to_uql};
+use medulla_uql::{parse, parse_statement, Body, DagNode, Mode, Params, UqlCode};
 use medulla_types::wire::Op;
 
-fn stmt(src: &str) -> crate::uql::Statement {
+fn stmt(src: &str) -> medulla_uql::Statement {
     parse_statement(src, &Params::new()).unwrap()
 }
 
@@ -32,7 +32,7 @@ fn version_pragma_and_modes() {
 #[cfg(feature = "federation")]
 #[test]
 fn federation_budget_hint_is_typed_and_cannot_disappear_in_pipeline_parse() {
-    use crate::federation_opt::FederationBudget;
+    use medulla_exec::budget::FederationBudget;
     let text =
         "PROFILE FEDERATION BUDGET (REQUESTS=2, ROWS=9, BIND_KEYS=3, WALL_MS=40) FOREIGN 'safe'";
     let parsed = stmt(text);
@@ -123,7 +123,7 @@ fn fuse_inlines_named_bindings_as_branches() {
         }
     );
     assert_eq!(
-        crate::uql::print::statement_to_uql(&s).map(|t| stmt(&t).body),
+        medulla_uql::print::statement_to_uql(&s).map(|t| stmt(&t).body),
         Ok(s.body.clone())
     );
 }

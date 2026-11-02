@@ -30,7 +30,7 @@ impl ScopeGrantVerifier for DevScopeVerifier {
         &self,
         _physical: &PhysicalStoreIdentity,
         layout: OwnerLayout,
-        _identity: &medulla_types::MutationScopeIdentity,
+        _identity: &medulla_mutation_types::mutation_scope::MutationScopeIdentity,
         principal: &str,
         proof: &[u8],
     ) -> Result<(), String> {

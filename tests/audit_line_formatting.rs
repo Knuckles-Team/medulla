@@ -9,7 +9,7 @@
 #![cfg(feature = "security")]
 
 use medulla_kernel::audit::audit_line;
-use medulla::protocol::Method;
+use medulla_protocol_types::protocol::Method;
 
 /// Plain CRUD arm: no guard, no branching -- a sanity baseline.
 #[test]

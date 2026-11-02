@@ -203,13 +203,15 @@ fn source_control_audit_line(method: &Method) -> Option<String> {
     }
 }
 
-fn write_back_operation(op: &medulla_types::write_back::WriteBackOp) -> &'static str {
+fn write_back_operation(op: &medulla_mutation_types::write_back::WriteBackOp) -> &'static str {
     match op {
-        medulla_types::write_back::WriteBackOp::Create { .. } => "create",
-        medulla_types::write_back::WriteBackOp::Get { .. } => "get",
-        medulla_types::write_back::WriteBackOp::RecordAttempt { .. } => "record_attempt",
-        medulla_types::write_back::WriteBackOp::RecordReconciliation { .. } => "record_reconciliation",
-        medulla_types::write_back::WriteBackOp::Receipts { .. } => "receipts",
+        medulla_mutation_types::write_back::WriteBackOp::Create { .. } => "create",
+        medulla_mutation_types::write_back::WriteBackOp::Get { .. } => "get",
+        medulla_mutation_types::write_back::WriteBackOp::RecordAttempt { .. } => "record_attempt",
+        medulla_mutation_types::write_back::WriteBackOp::RecordReconciliation { .. } => {
+            "record_reconciliation"
+        }
+        medulla_mutation_types::write_back::WriteBackOp::Receipts { .. } => "receipts",
     }
 }
 
@@ -246,7 +248,7 @@ fn modality_kind_name(modality: medulla_types::ServedModalityKind) -> &'static s
 
 #[cfg(feature = "modality-serving")]
 pub(super) fn modality_audit_line(method: &Method) -> Option<String> {
-    let medulla_types::protocol::Method::ServedModality { op } = method else {
+    let medulla_protocol_types::protocol::Method::ServedModality { op } = method else {
         return None;
     };
     let (operation, modality) = modality_operation_name(op)?;
@@ -486,7 +488,7 @@ fn work_market_audit_line(method: &Method) -> Option<String> {
         Method::WorkOfferPut { .. } => "WORK_OFFER_PUT",
         _ => return None,
     };
-    let (tenant, key) = medulla_types::work_market::market_write_scope(method)?;
+    let (tenant, key) = medulla_protocol_types::protocol::market_write_scope(method)?;
     Some(format!("{operation}|{tenant}|{key}"))
 }
 

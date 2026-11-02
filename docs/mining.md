@@ -27,7 +27,7 @@ The surface exposes seventeen actions today:
 - **`entity_resolve`, `causal_impact`, `process`, `root_cause`,
   `risk_propagation`, `ontology_gap`, `retrieval_quality`, `community`** — eight
   more families rounding out the surface (`Method::MineEntityResolve` through
-  `Method::MineCommunity` in `crates/medulla-types/src/protocol.rs`), each following the
+  `Method::MineCommunity` in `crates/medulla-protocol-types/src/protocol.rs`), each following the
   SAME shape: explicit-or-graph-derived input, optional `writeback` of a typed
   node, optional `as_claim` epistemic writeback gated `all(mining, epistemic)`.
 
@@ -45,8 +45,8 @@ algorithm", not "add a surface".
 | Layer | Where |
 |-------|-------|
 | Engine impl | `crates/medulla-compute/src/mining/{association,cluster,anomaly}.rs` — pure-Rust, dependency-light, deterministic |
-| Protocol | `Method::Mine{Associate,Cluster,Anomaly}` in the `// ── Mining ──` section of `crates/medulla-types/src/protocol.rs` (feature `mining`) |
-| Handler | `src/server/handlers/mining.rs` — graph-derived rows + write-back over the live `GraphCore` |
+| Protocol | `Method::Mine{Associate,Cluster,Anomaly}` in the `// ── Mining ──` section of `crates/medulla-protocol-types/src/protocol.rs` (feature `mining`) |
+| Handler | `crates/medulla-h-mining/src/mining.rs` — graph-derived rows + write-back over the live `GraphCore` |
 | Client | `client.mining.{associate,cluster,anomaly}(...)` (`medulla/client.py`) |
 | arbora MCP | `graph_mine action="associate\|cluster\|anomaly"` (agent-utilities `engine_surface_tools.py`) — plus the granular `engine_mining` verb |
 | REST twin | `POST /api/mining/{associate,cluster,anomaly}` (agent-utilities `kg_server.py`, same `_execute_tool` core — surface parity is a build gate) |

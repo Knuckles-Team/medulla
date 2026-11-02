@@ -67,7 +67,7 @@
 
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
-use medulla_core::graph::GraphView;
+use medulla_graph_core::graph::GraphView;
 use serde::{Deserialize, Serialize};
 
 use crate::adapter::BeliefGraph;
@@ -855,7 +855,7 @@ mod tests {
     // subsequent base change must invalidate (stale) the derived materialization.
     #[test]
     fn register_from_provenance_reads_derived_from_edge_and_invalidates_on_base_change() {
-        let core = medulla_core::graph::GraphCore::new();
+        let core = medulla_graph_core::graph::GraphCore::new();
         core.add_node(
             "base".to_string(),
             node_blob(serde_json::json!({ "type": "Claim" })),
@@ -897,7 +897,7 @@ mod tests {
     // `ChangeEvent::ModelRetired` on it invalidates the claim too.
     #[test]
     fn register_from_provenance_reads_invalidation_deps_and_generated_by_edge() {
-        let core = medulla_core::graph::GraphCore::new();
+        let core = medulla_graph_core::graph::GraphCore::new();
         core.add_node(
             "jobclaim:x".to_string(),
             node_blob(serde_json::json!({
@@ -947,7 +947,7 @@ mod tests {
     // edge registers with an EMPTY `depends_on` — a legitimate answer, not an error.
     #[test]
     fn register_from_provenance_with_no_provenance_registers_empty_deps() {
-        let core = medulla_core::graph::GraphCore::new();
+        let core = medulla_graph_core::graph::GraphCore::new();
         core.add_node(
             "solo".to_string(),
             node_blob(serde_json::json!({ "type": "Claim" })),

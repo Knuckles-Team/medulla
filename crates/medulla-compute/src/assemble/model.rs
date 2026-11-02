@@ -24,11 +24,16 @@
 //!   over every slot, within the request's budgets;
 //! * **cardinality** and **pins** (a pin must be selected in some slot).
 
-use medulla_types::agent_component::AgentComponentKind;
-use medulla_types::agent_ontology::is_capability;
-use medulla_types::decision::derivation::RequiredCapability;
-use medulla_types::decision::{AbstainReason, CandidateFacts, DecisionInputs};
-use medulla_types::solve::{ConstraintBody, ConstraintSpec, ModelSpec, Relation, Term, VarId};
+use medulla_agent_types::agent_component::AgentComponentKind;
+use medulla_agent_types::agent_ontology::is_capability;
+use medulla_decision_outcome_types::decision::derivation::RequiredCapability;
+use medulla_decision_types::{
+    decision::AbstainReason, decision::CandidateFacts, decision::DecisionInputs,
+};
+use medulla_decision_types::{
+    solve::ConstraintBody, solve::ConstraintSpec, solve::ModelSpec, solve::Relation, solve::Term,
+    solve::VarId,
+};
 
 use super::facts::{self, Declared};
 use super::{objective, AssembleError};

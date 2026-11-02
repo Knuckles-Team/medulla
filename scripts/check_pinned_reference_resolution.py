@@ -58,7 +58,25 @@ from rust_module_tree import read_module_tree
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA = "eg-pinned-reference-resolution-gate/v1"
 
-SERVER_ROOT = "src/server/mod.rs"
+
+def server_source() -> str:
+    """The module trees of every served-runtime crate, joined."""
+
+    return "\n".join(read_module_tree(root, root_dir=ROOT) for root in _server_roots())
+
+
+def _server_roots() -> tuple[str, ...]:
+    """Crate roots whose module trees make up the served runtime: every
+    workspace crate that is not a test-only crate."""
+
+    crates = ROOT / "crates"
+    return tuple(
+        f"crates/{crate.name}/src/lib.rs"
+        for crate in sorted(crates.iterdir())
+        if not crate.name.endswith("-tests") and (crate / "src" / "lib.rs").is_file()
+    )
+
+
 STORAGE_REGISTRY = "crates/medulla-storage/src/owner/registry.rs"
 ADMITTED_WRITE = "open_write"
 
@@ -66,11 +84,11 @@ ADMITTED_WRITE = "open_write"
 # one is the SOURCE of.  A module here with no pin at all fails the gate
 # closed: it means the discovery stopped seeing the declarations.
 CONTRACT_LAYERS = {
-    "crates/medulla-types/src/agent_component.rs": "COMPONENT",
-    "crates/medulla-types/src/agent_library.rs": "LIBRARY",
-    "crates/medulla-types/src/agent_graph.rs": "GRAPH",
-    "crates/medulla-types/src/agent_template.rs": "TEMPLATE",
-    "crates/medulla-types/src/delegation.rs": None,
+    "crates/medulla-agent-types/src/agent_component.rs": "COMPONENT",
+    "crates/medulla-agent-types/src/agent_library.rs": "LIBRARY",
+    "crates/medulla-agent-types/src/agent_graph.rs": "GRAPH",
+    "crates/medulla-agent-types/src/agent_template.rs": "TEMPLATE",
+    "crates/medulla-agent-types/src/delegation.rs": None,
 }
 
 # What the id half of a pin names.  Derived from the FIELD, so a new pin to an
@@ -643,7 +661,7 @@ def _edge_anchors(
 def run_gate() -> dict:
     layers = durable_layers()
     sites = pin_sites(layers)
-    bodies = _functions(read_module_tree(SERVER_ROOT, root_dir=ROOT))
+    bodies = _functions(server_source())
     opens = _store_readers(bodies, layers)
     admission = _admitted_writes(bodies, layers)
 

@@ -1,0 +1,29 @@
+[package]
+name = "medulla-finance-quant"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: Finance quantitative math"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_finance_quant"
+path = "src/lib.rs"
+
+[dependencies]
+medulla-compute = { path = "../medulla-compute" }
+medulla-numeric = { path = "../medulla-numeric" }
+serde = { version = "1.0", features = ["derive", "rc"] }
+serde_json = "1.0"
+rand = "0.8"
+nalgebra = { version = "0.35", features = ["serde"] }
+medulla-result-types = { path = "../medulla-result-types" }
+medulla-finance-market = { path = "../medulla-finance-market" }
+ndarray = "0.17"
+
+[features]
+analytics = ["medulla-numeric/analytics"]
+
+[dev-dependencies]
+medulla-compute = { path = "../medulla-compute", features = ["test-support"] }

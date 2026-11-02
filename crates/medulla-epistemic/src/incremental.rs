@@ -160,7 +160,7 @@ pub(crate) fn remove_value(index: &mut BTreeMap<String, BTreeSet<String>>, key: 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_types::protocol::Method;
+    use medulla_protocol_types::protocol::Method;
 
     fn edge(source: &str, target: &str, relationship: &str) -> Method {
         Method::AddEdge {
@@ -269,7 +269,7 @@ mod tests {
 
     #[test]
     fn privacy_safe_wakeup_invalidates_from_authoritative_post_image() {
-        let core = medulla_core::graph::GraphCore::new();
+        let core = medulla_graph_core::graph::GraphCore::new();
         core.add_node(
             "derived".into(),
             rmp_serde::to_vec_named(&serde_json::json!({
@@ -308,7 +308,7 @@ mod tests {
 
     #[test]
     fn committed_recompute_wakeup_survives_same_batch_operation_ordinal() {
-        let core = medulla_core::graph::GraphCore::new();
+        let core = medulla_graph_core::graph::GraphCore::new();
         core.add_node(
             "base".into(),
             rmp_serde::to_vec_named(&serde_json::json!({"type": "fact"})).unwrap(),
@@ -583,7 +583,7 @@ mod tests {
 
     #[test]
     fn generated_by_dependency_semantics_match_graph_bootstrap() {
-        let core = medulla_core::graph::GraphCore::new();
+        let core = medulla_graph_core::graph::GraphCore::new();
         core.add_node(
             "derived".into(),
             rmp_serde::to_vec_named(&serde_json::json!({})).unwrap(),
@@ -632,7 +632,7 @@ mod tests {
 
     #[test]
     fn multiple_generated_by_edges_match_bootstrap_and_incremental_projection() {
-        let core = medulla_core::graph::GraphCore::new();
+        let core = medulla_graph_core::graph::GraphCore::new();
         for node_id in ["derived", "model-a", "model-z"] {
             core.add_node(
                 node_id.into(),

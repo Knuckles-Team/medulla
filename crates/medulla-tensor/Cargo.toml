@@ -43,8 +43,7 @@ gpu-cuda = ["gpu", "dep:cudarc"]
 # the `modality_conformance_tests!` battery. OFF by default, deliberately NOT folded
 # into any tier aggregate (pi/node/full) — it is a capability-discovery/testing seam,
 # not a serving feature. `cargo test -p medulla-tensor --features contract` runs the suite.
-contract = ["dep:medulla-modality"]
-
+contract = ["dep:medulla-modality", "medulla-tsdb/contract"]
 [dev-dependencies]
 # The serde round-trip test proves a `Tensor` survives the typed-property codec (the
 # non-blob persistence form). The compact byte-blob round-trip needs no dep at all.

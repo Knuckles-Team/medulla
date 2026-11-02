@@ -26,12 +26,11 @@
 //! the `execute` leg is `query`-gated).
 
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
-use medulla_core::compute::semantic::SemanticStore;
-use medulla_core::graph::{GraphCore, GraphView};
-use medulla_plan::{
-    cost_opt_enabled, execute, execute_ops, optimize, AnnIndex, GraphTopology,
-    HierarchicalRetriever, Op, Plan, PlanCtx, Pred, RetrievalParams, Scored,
-};
+use medulla_graph_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphView;
+use medulla_exec::{optimizer::enabled as cost_opt_enabled, exec::execute, runtime::execute_ops, optimizer::optimize, algebra::Op, algebra::Plan, exec::PlanCtx, algebra::Pred};
+use medulla_retrieval::{leanrag::AnnIndex, leanrag::GraphTopology, leanrag::HierarchicalRetriever, leanrag::RetrievalParams, leanrag::Scored};
+use medulla_semantic_index::semantic::SemanticStore;
 use serde_json::json;
 use std::hint::black_box;
 
@@ -285,7 +284,7 @@ ex:p1 a ex:Paper . ex:p2 a ex:Article . ex:p3 a ex:Topic . ex:p4 a ex:Paper .
 
 #[cfg(feature = "timeseries")]
 fn bench_tsscan_window(c: &mut Criterion) {
-    use medulla_plan::StagedSeries;
+    use medulla_exec::exec::StagedSeries;
     // Stage a dense series (RYOW overlay — no redb file needed) so `TsScan` seeds real
     // rows a tumbling `WINDOW` then aggregates. (RANK after WINDOW is a no-op — the
     // bucket rows carry no embeddings — so the vector leg's recall is proven by the

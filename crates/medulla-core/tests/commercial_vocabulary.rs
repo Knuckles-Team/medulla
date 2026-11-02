@@ -3,9 +3,10 @@
 
 use std::sync::Arc;
 
-use medulla_core::graph::{
-    current_core_set_digest, GraphSchemaSource, GraphSchemaSources, SchemaSourceOrigin,
-};
+use medulla_graph_core::graph::current_core_set_digest;
+use medulla_graph_core::graph::GraphSchemaSource;
+use medulla_graph_core::graph::GraphSchemaSources;
+use medulla_graph_core::graph::SchemaSourceOrigin;
 use medulla_rdf::mapping::parse_turtle;
 use medulla_rdf::oxrdf::NamedNode;
 

@@ -1,0 +1,23 @@
+[package]
+name = "medulla-finance"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: Finance kernels, backtests, risk, attribution, banking and execution signals"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_finance"
+path = "src/lib.rs"
+
+[dependencies]
+medulla-types = { path = "../medulla-types", features = ["finance"] }
+serde = { version = "1.0", features = ["derive", "rc"] }
+medulla-result-types = { path = "../medulla-result-types", features = ["finance"] }
+medulla-numeric = { path = "../medulla-numeric" }
+ndarray = "0.17"
+serde_json = "1.0"
+
+[dev-dependencies]
+medulla-types = { path = "../medulla-types", features = ["test-support"] }

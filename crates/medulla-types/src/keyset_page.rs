@@ -34,6 +34,7 @@ pub trait KeysetListing {
 
 /// All native listing requests bind their cursor to a `tenant: String` and
 /// bound the page with `limit: u32`; keep that projection in one place.
+#[macro_export]
 macro_rules! keyset_tenant_limit_methods {
     ($this:tt) => {
         fn tenant(&$this) -> &str {
@@ -45,8 +46,6 @@ macro_rules! keyset_tenant_limit_methods {
         }
     };
 }
-
-pub(crate) use keyset_tenant_limit_methods;
 
 /// One page: at most `limit` items and the cursor that resumes the scan.
 #[derive(Debug, Clone, PartialEq)]

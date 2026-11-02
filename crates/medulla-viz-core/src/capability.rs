@@ -154,7 +154,7 @@ impl CapabilityMatrix {
         let mut entries = Vec::new();
 
         // Static export (V3a, `medulla-viz-export`) and server-side engine
-        // integration (V4, `server::viz_engine` — the persistent ColumnStore +
+        // integration (V4, `medulla_server::viz_engine` — the persistent ColumnStore +
         // content-addressed render cache + durable provenance, mark-agnostic)
         // are both shipped for every non-graph mark.
         for mark in [Line, Scatter, Bar, Area, Heatmap] {
@@ -162,7 +162,7 @@ impl CapabilityMatrix {
             push_shipped(&mut entries, mark, ServerSide, SupportLevel::Full, None);
         }
 
-        // Interactive (V3b, `server::viz_interactive`) ships for the
+        // Interactive (V3b, `medulla_server::viz_interactive`) ships for the
         // point-pair marks the binary tile protocol's `medulla_viz_kernels::lttb_reduce`
         // path actually serves (Line/Scatter/Area). Bar (a discrete-category
         // rect mark) and Heatmap (a z-matrix mark) have no representation on

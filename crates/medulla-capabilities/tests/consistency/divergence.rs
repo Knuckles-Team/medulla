@@ -161,14 +161,14 @@ pub(crate) const ACCESS_RS_COVERAGE_GAP: &[(&str, &str, &str)] = &[
     ("CatalogRemove", "UNASSIGNED", "mutates per policy/semantics, but absent from access.rs::requires_write entirely"),
     ("CepSubscribe", "UNASSIGNED", "mutates per policy/semantics, but absent from access.rs::requires_write entirely"),
     // RMDD-27/-28: the whole DevelopmentLane family (Reserve/Renew/Observe/Finish/
-    // Cleanup/UpdateQuota) route through `handlers::development_lane::try_handle`
+    // Cleanup/UpdateQuota) route through `medulla_h_jobs::development_lane::try_handle`
     // straight to PersistenceBackend's native
     // development_lane_* redb tables, gated by the current raft placement leader --
     // like DevelopmentLaneStatus/QueryDevelopmentLane (see access.rs's own
     // REASON_NATIVE_DEVELOPMENT_LANE_READ comment), it bypasses
     // requires_write and the generic mutation gateway through its explicit
     // domain handler, so the missing requires_write entry is not an oversight.
-    ("CleanupDevelopmentLane", "UNASSIGNED", "routes via handlers::development_lane::try_handle to the native development_lane_* redb tables under the raft placement-leader gate"),
+    ("CleanupDevelopmentLane", "UNASSIGNED", "routes via medulla_h_jobs::development_lane::try_handle to the native development_lane_* redb tables under the raft placement-leader gate"),
     ("CepUnsubscribe", "UNASSIGNED", "mutates per policy/semantics, but absent from access.rs::requires_write entirely"),
     ("CloseChannel", "UNASSIGNED", "mutates per policy/semantics, but absent from access.rs::requires_write entirely"),
     ("Commit", "UNASSIGNED", "mutates per policy/semantics, but absent from access.rs::requires_write entirely"),
@@ -177,11 +177,11 @@ pub(crate) const ACCESS_RS_COVERAGE_GAP: &[(&str, &str, &str)] = &[
     ("CreateMatView", "UNASSIGNED", "mutates per policy/semantics, but absent from access.rs::requires_write entirely"),
     ("DropContinuousQuery", "UNASSIGNED", "mutates per policy/semantics, but absent from access.rs::requires_write entirely"),
     ("DropTrigger", "UNASSIGNED", "mutates per policy/semantics, but absent from access.rs::requires_write entirely"),
-    ("FinishDevelopmentLane", "UNASSIGNED", "routes via handlers::development_lane::try_handle to the native development_lane_* redb tables under the raft placement-leader gate"),
+    ("FinishDevelopmentLane", "UNASSIGNED", "routes via medulla_h_jobs::development_lane::try_handle to the native development_lane_* redb tables under the raft placement-leader gate"),
     ("JoinChannel", "UNASSIGNED", "mutates per policy/semantics, but absent from access.rs::requires_write entirely"),
     ("LeaveChannel", "UNASSIGNED", "mutates per policy/semantics, but absent from access.rs::requires_write entirely"),
     ("MultiGraphBatchUpdate", "UNASSIGNED", "mutates per policy/semantics, but absent from access.rs::requires_write entirely"),
-    ("ObserveDevelopmentLane", "UNASSIGNED", "routes via handlers::development_lane::try_handle to the native development_lane_* redb tables under the raft placement-leader gate"),
+    ("ObserveDevelopmentLane", "UNASSIGNED", "routes via medulla_h_jobs::development_lane::try_handle to the native development_lane_* redb tables under the raft placement-leader gate"),
     ("PlanMatViewDefine", "UNASSIGNED", "mutates per policy/semantics, but absent from access.rs::requires_write entirely"),
     ("PlanMatViewDrop", "UNASSIGNED", "mutates per policy/semantics, but absent from access.rs::requires_write entirely"),
     ("PlanMatViewRefresh", "UNASSIGNED", "mutates per policy/semantics, but absent from access.rs::requires_write entirely"),
@@ -189,8 +189,8 @@ pub(crate) const ACCESS_RS_COVERAGE_GAP: &[(&str, &str, &str)] = &[
     ("PublishConfirmed", "UNASSIGNED", "mutates per policy/semantics, but absent from access.rs::requires_write entirely"),
     ("PublishIdempotent", "UNASSIGNED", "mutates per policy/semantics, but absent from access.rs::requires_write entirely"),
     ("RaftAddLearner", "UNASSIGNED", "mutates per policy/semantics, but absent from access.rs::requires_write entirely (self-routes in dispatch.rs before dispatch_graph_op, like Reshard/CatalogAssign)"),
-    ("RenewDevelopmentLane", "UNASSIGNED", "routes via handlers::development_lane::try_handle to the native development_lane_* redb tables under the raft placement-leader gate"),
-    ("ReserveDevelopmentLane", "UNASSIGNED", "routes via handlers::development_lane::try_handle to the native development_lane_* redb tables under the raft placement-leader gate"),
+    ("RenewDevelopmentLane", "UNASSIGNED", "routes via medulla_h_jobs::development_lane::try_handle to the native development_lane_* redb tables under the raft placement-leader gate"),
+    ("ReserveDevelopmentLane", "UNASSIGNED", "routes via medulla_h_jobs::development_lane::try_handle to the native development_lane_* redb tables under the raft placement-leader gate"),
     ("RaftChangeMembership", "UNASSIGNED", "mutates per policy/semantics, but absent from access.rs::requires_write entirely (self-routes in dispatch.rs before dispatch_graph_op, like Reshard/CatalogAssign)"),
     ("RbacAdmin", "UNASSIGNED", "mutates per policy/semantics, but absent from access.rs::requires_write entirely"),
     ("RbacElevation", "UNASSIGNED", "EH-404: an RBAC policy write in rbac.redb, not a graph write; like RbacAdmin it is absent from access.rs::requires_write, and its request/approve/revoke authority is the op's own action plus the ledger's two-person rule"),
@@ -234,7 +234,7 @@ pub(crate) const ACCESS_RS_COVERAGE_GAP: &[(&str, &str, &str)] = &[
     ("TxnPlanWriteback", "UNASSIGNED", "mutates per policy/semantics, but absent from access.rs::requires_write entirely"),
     ("TxnRemoveEdge", "UNASSIGNED", "mutates per policy/semantics, but absent from access.rs::requires_write entirely"),
     ("TxnRemoveNode", "UNASSIGNED", "mutates per policy/semantics, but absent from access.rs::requires_write entirely"),
-    ("UpdateDevelopmentLaneQuota", "UNASSIGNED", "routes via handlers::development_lane::try_handle to the native development_lane_* redb tables under the raft placement-leader gate"),
+    ("UpdateDevelopmentLaneQuota", "UNASSIGNED", "routes via medulla_h_jobs::development_lane::try_handle to the native development_lane_* redb tables under the raft placement-leader gate"),
 ];
 
 pub(crate) fn all_known_divergence_names() -> std::collections::HashSet<&'static str> {

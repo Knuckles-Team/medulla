@@ -43,7 +43,7 @@ def _agent_utilities_root(repository_root: Path) -> Path:
     ]
     # A repo checkout -- canonical or a linked worktree -- sits some number of
     # directory levels below the workspace root that also holds agent-utilities
-    # as a sibling (one level for a top-level repo like agent-webui, two for an
+    # as a sibling (one level for a top-level repo like overstory, two for an
     # agents/<name> package). Walk upward from each known worktree instead of
     # assuming a fixed depth, so one script works at every nesting level.
     for worktree in worktrees:

@@ -28,8 +28,8 @@ mod test_support;
 
 use serde_json::json;
 
-use medulla::protocol::{GraphType, Method, Response, ResultPayload};
-use medulla::server::dispatch;
+use medulla_protocol_types::protocol::{GraphType, Method, Response, ResultPayload};
+use medulla_server_router::dispatch::request_boundary::dispatch;
 
 const SECRET: &str = "multi-graph-batch-write-secret";
 

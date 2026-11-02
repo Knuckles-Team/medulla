@@ -9,11 +9,13 @@ use crate::admitted::AdmittedMutation;
 use crate::outbox::ensure_not_graft_fenced;
 use crate::outbox::rows::{validate_consumer, validate_topic, OutboxPosition};
 use crate::tables::{OUTBOX, OUTBOX_CONSUMERS};
+use medulla_mutation_types::{
+    mutation_scope::MutationOutboxRecord, mutation_scope::MutationScopeIdentity,
+};
 use medulla_storage::{
     decode_outbox_record, ledger_scope_key, MutationOwnerAuthority, OwnedStoreHandle, OwnerDomain,
     ScopedRead,
 };
-use medulla_types::{MutationOutboxRecord, MutationScopeIdentity};
 
 /// Durably subscribe one consumer of this scope to one topic.
 ///

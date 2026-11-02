@@ -6,7 +6,7 @@
 use std::sync::Mutex;
 use std::time::Duration;
 
-use medulla_core::graph::GraphView;
+use medulla_graph_core::graph::GraphView;
 use spargebra::algebra::{Expression, GraphPattern};
 use spargebra::Query;
 

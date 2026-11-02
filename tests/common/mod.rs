@@ -2,11 +2,12 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::OnceLock;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use medulla::acl::{AgentIdentity, AgentRole, RequestContextClaims};
-use medulla::isolation::IsolationLayer;
-use medulla::protocol::{build_context_operation_signature_bytes, Method, Request};
-use medulla::server::{compute_verified_envelope_token, VerifiedEnvelopeParams};
 use hmac::{Hmac, Mac};
+use medulla_types::acl::{AgentIdentity, AgentRole, RequestContextClaims};
+use medulla_isolation::isolation::IsolationLayer;
+use medulla_protocol_types::protocol::{build_context_operation_signature_bytes, Method, Request};
+use medulla_server_auth::auth::compute_verified_envelope_token;
+use medulla_server_auth::auth::VerifiedEnvelopeParams;
 use sha2::{Digest, Sha256};
 
 pub const TEST_AGENT: &str = "integration-test-agent";
@@ -94,7 +95,7 @@ fn configure_authority_once() {
     // identity for a third party), and having `root` self-register as `System`
     // cannot work either: `RegisterIdentity`'s own `authz_action` ("security:admin")
     // requires the ACTOR to already hold admin capability
-    // (`server::access::require_admin_capability`), which a freshly
+    // (`medulla_server::access::require_admin_capability`), which a freshly
     // self-registering identity never has -- the empty-RBAC-store bootstrap
     // exemption does not apply here because `TEST_AGENT` is already registered.
     //
@@ -263,22 +264,20 @@ pub struct SignedRegisterIdentity<'a> {
 #[allow(dead_code)]
 pub fn tempdir_persistence() -> (
     Option<String>,
-    Option<std::sync::Arc<dyn medulla::server::persistence::PersistenceBackend>>,
+    Option<std::sync::Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
 ) {
     use std::sync::atomic::{AtomicU64, Ordering};
     static SEQ: AtomicU64 = AtomicU64::new(0);
     let seq = SEQ.fetch_add(1, Ordering::Relaxed);
-    let dir = std::env::temp_dir().join(format!("medulla-test-persist-{}-{seq}", std::process::id()));
+    let dir =
+        std::env::temp_dir().join(format!("medulla-test-persist-{}-{seq}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).expect("create test persist dir");
     let dir_s = dir.to_string_lossy().into_owned();
-    let backend: std::sync::Arc<dyn medulla::server::persistence::PersistenceBackend> =
+    let backend: std::sync::Arc<dyn medulla_server_api::api::persistence::PersistenceBackend> =
         std::sync::Arc::new(
-            medulla::server::persistence::redb_backend::RedbBackend::open(
-                dir_s.clone(),
-                4096,
-            )
-            .expect("open tempdir redb backend"),
+            medulla_persistence::redb_backend::RedbBackend::open(dir_s.clone(), 4096)
+                .expect("open tempdir redb backend"),
         );
     (Some(dir_s), Some(backend))
 }
@@ -290,7 +289,7 @@ pub fn tempdir_persistence() -> (
 #[allow(dead_code)]
 pub fn tempdir_persistence() -> (
     Option<String>,
-    Option<std::sync::Arc<dyn medulla::server::persistence::PersistenceBackend>>,
+    Option<std::sync::Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
 ) {
     (None, None)
 }

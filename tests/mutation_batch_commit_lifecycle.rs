@@ -27,7 +27,7 @@ mod common;
 #[path = "common/test_support.rs"]
 mod test_support;
 
-use medulla::protocol::{GraphType, Method, Response};
+use medulla_protocol_types::protocol::{GraphType, Method, Response};
 
 const SECRET: &str = "cx-medulla-05-mutation-batch-secret";
 
@@ -35,13 +35,13 @@ fn state() -> test_support::SharedState {
     test_support::durable_state(SECRET, common::current_isolation())
 }
 
-fn req(id: u64, graph: &str, method: Method) -> medulla::protocol::Request {
+fn req(id: u64, graph: &str, method: Method) -> medulla_protocol_types::protocol::Request {
     test_support::request(SECRET, id, graph, method)
 }
 
 async fn dispatch(
     state: &test_support::SharedState,
-    request: medulla::protocol::Request,
+    request: medulla_protocol_types::protocol::Request,
 ) -> Response {
     test_support::dispatch(state, request).await
 }

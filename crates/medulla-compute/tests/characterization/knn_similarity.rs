@@ -8,7 +8,10 @@
 //! when a node has more than `top_k` candidates scoring above cutoff, and
 //! the final descending-score / ascending-id sort order.
 
-use medulla_compute::graph_algos::{knn_similarity, AdjacencyGraph, Direction, Metric};
+use medulla_graph_algos::{
+    graph_algos::knn_similarity, graph_algos::AdjacencyGraph, graph_algos::Direction,
+    graph_algos::Metric,
+};
 
 #[test]
 fn cosine_metric_ranks_by_cosine_score_not_jaccard() {

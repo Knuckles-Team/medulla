@@ -4,12 +4,15 @@
 //! record whose facts differ from the published revision, a component from
 //! another tenant) need the store and live with `DecisionCommit`'s tests.
 
-use medulla_types::agent_component::{AgentComponentKind, ComponentDependency};
-use medulla_types::agent_library::AgentLibraryLifecycle;
-use medulla_types::decision::derivation::verify_record;
-use medulla_types::decision::{
-    AbstainReason, CostBudget, DecisionErrorCode, DecisionOutcome, EvidenceClass, PremiseClass,
-    SolverBudget, Violation,
+use medulla_agent_types::agent_library::AgentLibraryLifecycle;
+use medulla_agent_types::{
+    agent_component::AgentComponentKind, agent_component::ComponentDependency,
+};
+use medulla_decision_outcome_types::decision::derivation::verify_record;
+use medulla_decision_types::{
+    decision::AbstainReason, decision::CostBudget, decision::DecisionErrorCode,
+    decision::DecisionOutcome, decision::EvidenceClass, decision::PremiseClass,
+    decision::SolverBudget, decision::Violation,
 };
 
 use super::super::model::{build, Building};
@@ -18,8 +21,8 @@ use super::super::{assemble, replay_check, Assembly};
 use super::fixture::*;
 
 fn decide(
-    request: medulla_types::decision::AssemblyRequest,
-    library: Vec<medulla_types::decision::CandidateFacts>,
+    request: medulla_decision_types::decision::AssemblyRequest,
+    library: Vec<medulla_decision_types::decision::CandidateFacts>,
 ) -> Assembly {
     assemble(inputs(request, library), identity()).expect("the inputs are consistent")
 }
@@ -209,7 +212,8 @@ fn an_option_outside_the_candidate_universe_or_a_tampered_certificate_cannot_com
     );
     // And the independent verifier refuses it on its own, without replay.
     let model =
-        crate::solve::Model::try_from(assembly.model.clone().expect("model")).expect("valid");
+        medulla_decision_policy::solve::Model::try_from(assembly.model.clone().expect("model"))
+            .expect("valid");
     let DecisionOutcome::Solved { certificate, .. } = &tampered.outcome else {
         unreachable!()
     };
@@ -217,7 +221,7 @@ fn an_option_outside_the_candidate_universe_or_a_tampered_certificate_cannot_com
     if let Some(incumbent) = lying.incumbent.as_mut() {
         incumbent.selected.iter_mut().for_each(|on| *on = !*on);
     }
-    assert!(crate::solve::verify(&model, &lying).is_err());
+    assert!(medulla_decision_policy::solve::verify(&model, &lying).is_err());
 }
 
 #[test]
@@ -230,10 +234,10 @@ fn a_result_the_deterministic_search_would_not_reach_is_not_committable() {
     aborted.outcome = DecisionOutcome::Abstained {
         reasons: bounded(vec![AbstainReason::BudgetExhausted {
             incumbent: None,
-            lower_bound: medulla_types::solve::Scalar::new(0),
+            lower_bound: medulla_types::solve_scalar::Scalar::new(0),
         }]),
     };
-    aborted.resolution_kind = medulla_types::decision::ResolutionKind::Abstention;
+    aborted.resolution_kind = medulla_decision_types::decision::ResolutionKind::Abstention;
     aborted.why_not = Default::default();
     assert!(replay_check(&aborted).is_err());
 }
@@ -265,7 +269,7 @@ fn the_nogood_loop_terminates_after_its_bounded_rounds() {
         panic!("the research library is buildable")
     };
     let context = SolveContext::new(&inputs, built, None).expect("context");
-    let refuse_all = |_: &[(usize, &medulla_types::decision::CandidateFacts)]| {
+    let refuse_all = |_: &[(usize, &medulla_decision_types::decision::CandidateFacts)]| {
         Err("TEMPLATE_REFUSED: every answer".to_string())
     };
     let Err(reasons) = search(&context, &refuse_all).expect("decides") else {
@@ -285,9 +289,9 @@ fn the_nogood_loop_terminates_after_its_bounded_rounds() {
 }
 
 fn required(
-    inputs: &medulla_types::decision::DecisionInputs,
-) -> Vec<medulla_types::decision::derivation::RequiredCapability> {
-    medulla_types::decision::derivation::required_capabilities(
+    inputs: &medulla_decision_types::decision::DecisionInputs,
+) -> Vec<medulla_decision_outcome_types::decision::derivation::RequiredCapability> {
+    medulla_decision_outcome_types::decision::derivation::required_capabilities(
         &inputs.request.requirements,
         &inputs.ontology_digest,
     )
@@ -301,9 +305,11 @@ fn required(
 // spec: MEDULLA-DECISION-ENGINE-R065
 #[test]
 fn candidate_scope_at_the_boundary_builds_one_more_is_refused() {
-    use medulla_types::decision::{DecisionErrorCode, DecisionPolicy, MAX_ASSEMBLY_CANDIDATES};
+    use medulla_decision_types::{
+        decision::DecisionErrorCode, decision::DecisionPolicy, decision::MAX_ASSEMBLY_CANDIDATES,
+    };
 
-    let sorted_tools = |n: usize| -> Vec<medulla_types::decision::CandidateFacts> {
+    let sorted_tools = |n: usize| -> Vec<medulla_decision_types::decision::CandidateFacts> {
         (0..n)
             .map(|i| {
                 tool(

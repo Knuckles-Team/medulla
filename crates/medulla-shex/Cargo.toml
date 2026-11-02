@@ -46,4 +46,4 @@ default = []
 # the `modality_conformance_tests!` battery. OFF by default, deliberately NOT folded
 # into any tier aggregate (pi/node/full) — it is a capability-discovery/testing seam,
 # not a serving feature. `cargo test -p medulla-shex --features contract` runs the suite.
-contract = ["dep:medulla-modality"]
+contract = ["dep:medulla-modality", "medulla-rdf/contract"]

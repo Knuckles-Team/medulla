@@ -24,8 +24,8 @@ R002.2 producer evidence: `scheduler_config::tests` uses real serde to prove def
 
 ### MEDULLA-PLACEMENT-R004 tests
 
-- `MEDULLA-PLACEMENT-R004.1`: `crates/medulla-types/src/decision/statistical/placement.rs::tests::capability_types_round_trip`.
-- `MEDULLA-PLACEMENT-R004.2`: `crates/medulla-types/src/decision/statistical/placement.rs::tests::route_orders_by_headroom`.
+- `MEDULLA-PLACEMENT-R004.1`: `crates/medulla-decision-types/src/decision/statistical/placement.rs::tests::capability_types_round_trip`.
+- `MEDULLA-PLACEMENT-R004.2`: `crates/medulla-decision-types/src/decision/statistical/placement.rs::tests::route_orders_by_headroom`.
 - `MEDULLA-PLACEMENT-R004.3`: `tests/jobs/test_capability_claim_served.py::test_claim_uses_declared_capability`.
 - `MEDULLA-PLACEMENT-R004.4`: `crates/medulla-jobs/src/store.rs::tests::no_capable_host_refuses`.
 - `MEDULLA-PLACEMENT-R004.5`: `crates/medulla-jobs/src/store.rs::tests::routing_premises_name_generation`.

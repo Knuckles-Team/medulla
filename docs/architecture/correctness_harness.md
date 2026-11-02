@@ -25,7 +25,7 @@ src/raft/harness/
 ├── checker.rs        # the invariant model over history + final state
 └── gauntlet_test.rs  # `cargo test --features harness raft::harness` — the gauntlet
 src/bin/nemesis.rs    # `cargo run --features harness --bin nemesis` — the soak runner
-src/raft/network.rs   # partition::{partition,isolate,heal,reachable} gate (cfg-gated)
+crates/medulla-raft/src/raft/network.rs   # partition::{partition,isolate,heal,reachable} gate (cfg-gated)
 ```
 
 ## The nemesis (4 fault primitives)

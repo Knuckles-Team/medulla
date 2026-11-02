@@ -58,7 +58,7 @@ Kafka compatibility, the analytics worker, the job bodies' parsing and LLM logic
 
 ## MEDULLA-INGEST-WORKER-R002 ontology induction with admission tests
 
-Data flow: served ingest queue claim → runner → `ingest_document` body → induction → `score_proposal` (creates the call site in `src/server/handlers/source_ingestion.rs`) → `Admitted` or `Draft` → instance population.
+Data flow: served ingest queue claim → runner → `ingest_document` body → induction → `score_proposal` (creates the call site in `crates/medulla-h-ingest/src/source_ingestion.rs`) → `Admitted` or `Draft` → instance population.
 Types: `OntologyProposal` in `crates/medulla-types/src/ontology_proposal.rs`.
 Attach point: the job body after induction. The production caller is the runner of R001.14.
 Failure: a failing score keeps the draft and populates nothing.
@@ -69,7 +69,7 @@ That Graft SDK row remains `SPECIFIED`; it does not establish a live worker runt
 
 ## MEDULLA-INGEST-WORKER-R003 knowledge atoms
 
-Data flow: claim → `ingest_document` body (`src/server/handlers/source_ingestion.rs`, created by R002.3) → `decompose` → atom store; query → `select_atoms` → context.
+Data flow: claim → `ingest_document` body (`crates/medulla-h-ingest/src/source_ingestion.rs`, created by R002.3) → `decompose` → atom store; query → `select_atoms` → context.
 Types: `KnowledgeAtom{atom_id, kind, text, provenance_key, tenant}` in `crates/medulla-types/src/knowledge_atom.rs`.
 Attach point: the document job body and the context query path. Production caller: the runner of R001.14. No production caller exists today.
 Failure: an atom without provenance is refused and not stored.
@@ -83,15 +83,15 @@ That Graft SDK row remains `SPECIFIED`; it does not establish a live worker runt
 
 Planned data flow: Graft SDK worker -> served `SourceIngest` -> authorize -> resolve trusted mappings -> validate -> reconcile/admit/map -> one envelope.
 The authorized committed-replay shortcut precedes mapping resolution and preserves its recorded outcome.
-The production route calls `prepare` at `src/server/dispatch/graph_pipeline/native_routes.rs:408`.
-It commits the envelope at `src/server/dispatch/graph_pipeline/native_routes.rs:428`, then calls `finish` at line 429.
+The production route calls `prepare` at `crates/medulla-server-graph/src/dispatch/graph_pipeline/native_routes.rs:408`.
+It commits the envelope at `crates/medulla-server-graph/src/dispatch/graph_pipeline/native_routes.rs:428`, then calls `finish` at line 429.
 
-Existing code: `SourceIngestionRequest` at `crates/medulla-types/src/source_ingestion.rs:265` validates the batch envelope.
-`prepare` at `src/server/handlers/source_ingestion.rs:155` authorizes requests and prepares the existing atomic projection.
-`resolve_mappings` at `src/server/handlers/source_ingestion.rs:385` resolves trusted mappings, rather than accepting caller-defined ontology authority.
+Existing code: `SourceIngestionRequest` at `crates/medulla-source-types/src/source_ingestion.rs:265` validates the batch envelope.
+`prepare` at `crates/medulla-h-ingest/src/source_ingestion.rs:155` authorizes requests and prepares the existing atomic projection.
+`resolve_mappings` at `crates/medulla-h-ingest/src/source_ingestion.rs:385` resolves trusted mappings, rather than accepting caller-defined ontology authority.
 `DocumentData` at `crates/medulla-document/src/document.rs:225` already holds content addresses, layout and chunk lineage.
 `NativeDocumentRuntime::decode_text` at `crates/medulla-document/src/runtime.rs:79` decodes native text.
-Its existing production caller is `DecodedIngest::into_document` at `src/server/handlers/modality/ingest.rs:151`.
+Its existing production caller is `DecodedIngest::into_document` at `crates/medulla-h-ingest/src/modality/ingest.rs:151`.
 The source pipeline must reuse document validation without invoking a second modality commit.
 Reachable today: yes for generic source ingestion and native document decoding; no for the new normalization and transcript validators.
 
@@ -103,17 +103,17 @@ The graph must remain authoritative for accepted records, provenance, mapping re
 `prepare` must return a prepared accepted or quarantine outcome for the existing one-envelope commit route.
 Normalization failure must not return the ordinary error path, which skips commit.
 A quarantine envelope must store only restricted evidence; it must not change the source marker, checkpoint or accepted projections.
-`finish` at `src/server/handlers/source_ingestion.rs:1683` must return quarantine only after its envelope commits.
+`finish` at `crates/medulla-h-ingest/src/source_ingestion.rs:1683` must return quarantine only after its envelope commits.
 The accepted variant must retain `SourceIngestionReceipt`; the quarantine variant must carry an optional prior accepted checkpoint.
 First-batch quarantine must preserve `None`; it must not fabricate acceptance of the submitted checkpoint.
-`prepared_replay` at `src/server/handlers/source_ingestion.rs:1791` must restore the stored outcome after verifying authority.
+`prepared_replay` at `crates/medulla-h-ingest/src/source_ingestion.rs:1791` must restore the stored outcome after verifying authority.
 Quarantine replay must preserve its original receipt without resetting a checkpoint advanced by later accepted ingestion.
 A failed quarantine commit must return refusal, never a durable quarantine claim.
 Raw content must retain its existing content-addressed admission boundary.
 The format registry must come from the single resolved connector mapping revision.
 The engine must bind tenant and policy identities from verified server authority, never from source payloads.
 Transcript thread identity must include tenant, connector, stream and session ID; message identity must add message ID.
-The source-scoped convention at `src/server/handlers/source_ingestion.rs:2187` must encode those record keys without ambiguity.
+The source-scoped convention at `crates/medulla-h-ingest/src/source_ingestion.rs:2187` must encode those record keys without ambiguity.
 Read authorization must deny same-tenant unauthorized access to transcript text, provenance, quarantine receipts and raw-content references.
 Raw-content retrieval must enforce the stored policy; knowledge of a reference must grant no access.
 Transcript mappings must reuse existing message and concept vocabulary where applicable; they must not redefine media transcript segments.
@@ -155,7 +155,7 @@ Three more batch kinds keep the held copy true to the source:
 | `enumeration` | R903 | Lists every source identifier. Missing records delete after a grace window. |
 | `containers` | R904 | Upserts the container tree. Scope filters name subtrees. |
 
-All four enter through `admit_records` in `src/server/handlers/source_ingestion.rs`. The Graft SDK
+All four enter through `admit_records` in `crates/medulla-h-ingest/src/source_ingestion.rs`. The Graft SDK
 connector contract `SCION-SOURCE-INGEST-R805` produces them. A restricted record whose access
 snapshot is older than its bound fails closed at retrieval.
 
@@ -163,4 +163,4 @@ snapshot is older than its bound fails closed at retrieval.
 
 A connector sync sends one source stream as one or more batches. Today the content version object id is the batch id. The second batch then names a prior digest that its own object never held. The engine refuses it with `STALE_CONTENT_VERSION`, and the ingest runner of ARBORA-OPS-R020.6.6 stops.
 
-The fix keys the content version on the stream. `admit_records` in `src/server/handlers/source_ingestion.rs` stamps the stream object id. The content guard in `src/redb_store/store_state.rs` reads the stream head. Equal content counts as unchanged. A true head mismatch still refuses. The mutation scope version of MEDULLA-DURABLE-KERNEL-R031 is a separate guard.
+The fix keys the content version on the stream. `admit_records` in `crates/medulla-h-ingest/src/source_ingestion.rs` stamps the stream object id. The content guard in `crates/medulla-store-apply/src/redb_store/store_state.rs` reads the stream head. Equal content counts as unchanged. A true head mismatch still refuses. The mutation scope version of MEDULLA-DURABLE-KERNEL-R031 is a separate guard.

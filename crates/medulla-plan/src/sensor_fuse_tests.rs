@@ -7,14 +7,15 @@
 //! as fused rows (id = aligned ts, score = present-channel count). A generous tolerance
 //! keeps every channel; a tight tolerance turns stale channels into gaps.
 
-use medulla_core::compute::semantic::SemanticStore;
-use medulla_core::graph::{GraphCore, GraphView};
+use medulla_graph_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphView;
+use medulla_semantic_index::semantic::SemanticStore;
 use medulla_types::wire::{FuseClock, FuseInterp, FuseStream};
 use serde_json::json;
 
-use crate::algebra::{Op, Plan};
-use crate::exec::PlanCtx;
-use crate::PlanExt;
+use medulla_exec::algebra::{Op, Plan};
+use medulla_exec::exec::PlanCtx;
+use medulla_exec::exec::PlanExt;
 
 const NS: i64 = 1_000_000_000; // 1 second in ns
 

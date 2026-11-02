@@ -1,0 +1,710 @@
+//! PA6 served acceptance tests for `Method::ConnectorPack` (pack design §10).
+//!
+//! Every request goes through the real signed dispatch: envelope verification,
+//! per-op policy, the RBAC admin gate, the handler, the Blob CAS and the Agent
+//! Library. The harness owns one temporary persist directory per test, so no
+//! test can observe another's committed state.
+
+use medulla_server_blob::blob::BlobStateExt;
+#[cfg(feature = "redb")]
+use medulla_agent_types::agent_library::AgentLibraryLifecycle;
+use medulla_persistence_records::agent_library::AgentLibraryStateExt;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
+
+use serde::de::DeserializeOwned;
+use sha2::{Digest, Sha256};
+use tokio::sync::RwLock;
+
+use medulla_catalog_types::{
+    connector_pack::ConnectorPackIndex, connector_pack::ConnectorPackOp,
+    connector_pack::McpCatalogSnapshotBinding, connector_pack::PackAnnotations,
+    connector_pack::PackArchiveRef, connector_pack::PackEntry, connector_pack::PackEntryKind,
+    connector_pack::PackProducer, connector_pack::PackRef, connector_pack::PackSection,
+    connector_pack::CONNECTOR_PACK_SCHEMA_VERSION,
+};
+use medulla_types::contract::{BoundedVec, Digest256, ResourceId};
+
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::Response;
+use medulla_protocol_types::protocol::ResultPayload;
+use medulla_server_auth::auth::dispatch_test_on_heap;
+use medulla_server_api::state::ServerState;
+
+mod admin;
+mod content_model;
+mod model_input_capabilities;
+#[cfg(all(feature = "owl", feature = "shacl"))]
+mod ontology;
+#[cfg(feature = "shacl")]
+mod outbox;
+mod scale;
+mod self_served_catalog;
+#[cfg(all(feature = "owl", feature = "shacl"))]
+mod source_approval;
+mod storage_acceptance;
+mod withdrawal;
+
+const SECRET: &str = "connector-pack-served-fixture-secret"; // sanitizer:ignore
+/// The fixed tenant `auth::request_context_policy` expects under `cfg(test)`.
+pub(super) const TENANT: &str = "tenant-shared";
+/// The System-role agent the harness isolation registers.
+pub(super) const ADMIN: &str = "pack-served-admin";
+
+/// One served engine over a private persist directory.
+pub(super) struct Served {
+    dir: tempfile::TempDir,
+    pub(super) state: Arc<RwLock<ServerState>>,
+}
+
+/// Request ids and envelope nonces, unique across the whole test process: the
+/// transport replay ledger that guards non-mutating reads is process-wide, so
+/// two engines counting from one would collide on `nonce already used`.
+fn next_id() -> u64 {
+    static NEXT: AtomicU64 = AtomicU64::new(1);
+    NEXT.fetch_add(1, Ordering::Relaxed)
+}
+
+impl Served {
+    pub(super) fn new() -> Self {
+        let dir = tempfile::tempdir().unwrap();
+        let mut state = medulla_server::seams_install::new_state_for_test(SECRET, ServerState::test_isolation(ADMIN));
+        state.persist_dir = Some(dir.path().to_string_lossy().into_owned());
+        let blob_dir = dir.path().join("blob");
+        std::fs::create_dir_all(&blob_dir).unwrap();
+        state.set_blob_cursors(Some(medulla_server_ops::api::ingest::cursors_for_test(
+            blob_dir.to_str().unwrap(),
+        )));
+        Self {
+            dir,
+            state: Arc::new(RwLock::new(state)),
+        }
+    }
+
+    /// Give the engine a durable graph backend, as production has: a pack
+    /// with schema projects into a `pack__` graph, and graph creation
+    /// requires durable persistence. The returned guard holds the ambient
+    /// encryption environment still while the backend is open.
+    pub(super) async fn with_graph_persistence(&self) -> medulla_kernel::crypto::TestEnvReadGuard {
+        let guard = medulla_kernel::crypto::acquire_test_env_read_lock().await;
+        let root = self.dir.path().join("graphs");
+        std::fs::create_dir_all(&root).unwrap();
+        let backend = medulla_persistence::redb_backend::RedbBackend::open(
+            root.to_string_lossy().into_owned(),
+            64,
+        )
+        .expect("open the served graph backend");
+        self.state.write().await.persistence = Some(Arc::new(backend));
+        guard
+    }
+
+    /// Send `method` signed as `principal` with `scopes`, under `key`.
+    pub(super) async fn call_as(
+        &self,
+        principal: &str,
+        scopes: &[&str],
+        key: &str,
+        method: Method,
+    ) -> Response {
+        self.call_as_on("__commons__", principal, scopes, key, method)
+            .await
+    }
+
+    /// [`Self::call_as`] against the named request `graph`.
+    async fn call_as_on(
+        &self,
+        graph: &str,
+        principal: &str,
+        scopes: &[&str],
+        key: &str,
+        method: Method,
+    ) -> Response {
+        let id = next_id();
+        let request = medulla_server_auth::auth::scoped_test_request_on(
+            SECRET,
+            id,
+            graph,
+            method,
+            medulla_server_auth::auth::ScopedTestCaller {
+                principal,
+                tenant: TENANT,
+                scopes,
+                nonce: &format!("pack-served-nonce-{id}"),
+                idempotency_key: key,
+            },
+        );
+        dispatch_test_on_heap(&self.state, request).await
+    }
+
+    /// Send `method` as the admin against the named request `graph`.
+    pub(super) async fn call_on(&self, graph: &str, key: &str, method: Method) -> Response {
+        self.call_as_on(graph, ADMIN, &["*"], key, method).await
+    }
+
+    /// Send `method` as the System-role admin with every scope.
+    pub(super) async fn call(&self, key: &str, method: Method) -> Response {
+        self.call_as(ADMIN, &["*"], key, method).await
+    }
+
+    pub(super) async fn pack(&self, key: &str, op: ConnectorPackOp) -> Response {
+        self.call(key, Method::ConnectorPack { op: Box::new(op) })
+            .await
+    }
+
+    /// Upload `archive` through the Blob CAS and return its blob digest.
+    pub(super) async fn upload(&self, archive: &[u8]) -> String {
+        // One identity per upload: re-uploading the same bytes is a new cursor.
+        let tag = format!("{}:{}", hex::encode(Sha256::digest(archive)), next_id());
+        let cursor: u64 = ok(
+            "BlobBegin",
+            self.call(
+                &format!("upload:{tag}:begin"),
+                Method::BlobBegin {
+                    chunk_size: 1 << 20,
+                },
+            )
+            .await,
+        );
+        let chunk: serde_json::Value = ok(
+            "BlobChunkPut",
+            self.call(
+                &format!("upload:{tag}:chunk"),
+                Method::BlobChunkPut {
+                    cursor,
+                    data: archive.to_vec(),
+                },
+            )
+            .await,
+        );
+        drop(chunk);
+        ok(
+            "BlobCommit",
+            self.call(
+                &format!("upload:{tag}:commit"),
+                Method::BlobCommit { cursor },
+            )
+            .await,
+        )
+    }
+}
+
+/// The principal persistence id a verified `principal` is compared under.
+pub(super) fn persistence_id(principal: &str) -> String {
+    format!(
+        "principal:sha256:{}",
+        hex::encode(Sha256::digest(principal.as_bytes()))
+    )
+}
+
+/// Decode a successful typed result.
+pub(super) fn ok<T: DeserializeOwned>(label: &str, response: Response) -> T {
+    assert!(
+        response.error.is_none(),
+        "{label} was refused: {response:?}"
+    );
+    let value = match response.result {
+        Some(ResultPayload::Raw(bytes)) => {
+            return rmp_serde::from_slice(&bytes)
+                .unwrap_or_else(|error| panic!("{label} result does not decode: {error}"));
+        }
+        Some(ResultPayload::Count(count)) => serde_json::json!(count),
+        Some(ResultPayload::String(text)) => serde_json::json!(text),
+        Some(ResultPayload::Bool(flag)) => serde_json::json!(flag),
+        Some(ResultPayload::Json(value)) => value,
+        other => panic!("{label} answered an unexpected payload shape: {other:?}"),
+    };
+    serde_json::from_value(value)
+        .unwrap_or_else(|error| panic!("{label} result does not decode: {error}"))
+}
+
+/// The refusal a request must produce.
+pub(super) fn refused(label: &str, response: Response) -> String {
+    response
+        .error
+        .unwrap_or_else(|| panic!("{label} was accepted but must be refused"))
+}
+
+/// A request-body context shell; the engine re-binds every field of it.
+pub(super) fn context(
+    key: &str,
+) -> medulla_agent_types::agent_library::AgentLibraryMutationContext {
+    medulla_agent_types::agent_library::AgentLibraryMutationContext {
+        request_id: 1,
+        principal: "bound-by-engine".to_string(),
+        caller_principal: "bound-by-engine".to_string(),
+        attempt_nonce: medulla_types::contract::Nonce::from_bytes([0; 32]),
+        tenant_id: TENANT.to_string(),
+        actor_scope: "bound-by-engine".to_string(),
+        purpose_id: "bound-by-engine".to_string(),
+        policy_revision: "bound-by-engine".to_string(),
+        policy_digest: format!("sha256:{}", "0".repeat(64)),
+        policy_decision_id: "bound-by-engine".to_string(),
+        idempotency_key: key.to_string(),
+        expected_revision: None,
+        trace_id: None,
+        created_at_ms: 1,
+    }
+}
+
+/// One entry's content, before archive layout.
+#[derive(Clone)]
+pub(super) struct Content {
+    pub(super) kind: PackEntryKind,
+    pub(super) uri: String,
+    pub(super) name: String,
+    pub(super) media_type: &'static str,
+    pub(super) body: Vec<u8>,
+    pub(super) input_schema: Option<Vec<u8>>,
+    pub(super) annotations: PackAnnotations,
+    pub(super) references: Vec<PackRef>,
+}
+
+/// A well-formed tool whose descriptor says `description`.
+pub(super) fn tool(connector: &str, name: &str, description: &str) -> Content {
+    Content {
+        kind: PackEntryKind::Tool,
+        uri: format!("tool://{connector}/{name}"),
+        name: name.to_string(),
+        media_type: "application/json",
+        body: format!(r#"{{"description":"{description}","name":"{name}"}}"#).into_bytes(),
+        input_schema: Some(br#"{"properties":{"q":{"type":"string"}},"type":"object"}"#.to_vec()),
+        annotations: PackAnnotations {
+            read_only_hint: Some(true),
+            ..PackAnnotations::default()
+        },
+        references: Vec::new(),
+    }
+}
+
+/// A well-formed skill using `tools`.
+pub(super) fn skill(connector: &str, name: &str, tools: &[&Content]) -> Content {
+    let _ = connector;
+    Content {
+        kind: PackEntryKind::Skill,
+        uri: format!("skill://{name}/SKILL.md"),
+        name: name.to_string(),
+        media_type: "text/markdown",
+        body: format!("---\nname: {name}\ndescription: A test skill.\n---\n# {name}\n")
+            .into_bytes(),
+        input_schema: None,
+        annotations: PackAnnotations::default(),
+        references: tools
+            .iter()
+            .map(|tool| PackRef {
+                uri: tool.uri.clone(),
+                kind: PackEntryKind::Tool,
+            })
+            .collect(),
+    }
+}
+
+pub(super) fn server(connector: &str) -> Content {
+    Content {
+        kind: PackEntryKind::McpServer,
+        uri: format!("mcp-server://{connector}"),
+        name: connector.to_string(),
+        media_type: "application/json",
+        body: format!(r#"{{"contract_version":"1","instructions":"Test.","name":"{connector}"}}"#)
+            .into_bytes(),
+        input_schema: None,
+        annotations: PackAnnotations::default(),
+        references: Vec::new(),
+    }
+}
+
+fn section(archive: &mut Vec<u8>, bytes: &[u8]) -> PackSection {
+    let section = PackSection {
+        offset: archive.len() as u64,
+        length: bytes.len() as u64,
+        sha256: Digest256::from_bytes(Sha256::digest(bytes).into()),
+    };
+    archive.extend_from_slice(bytes);
+    section
+}
+
+fn lay_out(archive: &mut Vec<u8>, content: &Content) -> PackEntry {
+    let body = section(archive, &content.body);
+    let input_schema = content
+        .input_schema
+        .as_ref()
+        .map(|schema| section(archive, schema));
+    PackEntry {
+        kind: content.kind,
+        uri: content.uri.clone(),
+        name: content.name.clone(),
+        media_type: content.media_type.to_string(),
+        body,
+        input_schema,
+        // A resource entry pins its content schema (the declaration is a JSON object).
+        output_schema: (content.kind == PackEntryKind::Resource)
+            .then(|| section(archive, br#"{"type":"object"}"#)),
+        annotations: content.annotations.clone(),
+        references: BoundedVec::new(content.references.clone()).unwrap(),
+    }
+}
+
+/// A complete, digest-honest pack: its index (archive blob digest still to be
+/// filled by the upload) and its archive bytes.
+pub(super) fn build_pack(connector: &str, entries: &[Content]) -> (ConnectorPackIndex, Vec<u8>) {
+    build_pack_with_server(connector, &server(connector), entries)
+}
+
+/// Use the same archive and digest layout for a changed server contract.
+pub(super) fn build_pack_with_server(
+    connector: &str,
+    server_content: &Content,
+    entries: &[Content],
+) -> (ConnectorPackIndex, Vec<u8>) {
+    let mut ordered = entries.to_vec();
+    ordered.sort_by(|left, right| left.uri.cmp(&right.uri));
+    let mut archive = Vec::new();
+    let server = lay_out(&mut archive, server_content);
+    let entries: Vec<PackEntry> = ordered
+        .iter()
+        .map(|content| lay_out(&mut archive, content))
+        .collect();
+    let mut index = ConnectorPackIndex {
+        schema_version: CONNECTOR_PACK_SCHEMA_VERSION,
+        connector: ResourceId::new(connector).unwrap(),
+        server,
+        server_package_version: "1.0.0".to_string(),
+        archive: PackArchiveRef {
+            blob_digest: String::new(),
+            length: archive.len() as u64,
+            sha256: Digest256::from_bytes(Sha256::digest(&archive).into()),
+        },
+        entries: BoundedVec::new(entries).unwrap(),
+        producer: PackProducer {
+            name: "pack-served-tests".to_string(),
+            version: "1".to_string(),
+        },
+        catalog: McpCatalogSnapshotBinding {
+            configuration_revision: 1,
+            catalog_generation: 1,
+            snapshot_digest: Digest256::from_bytes([1; 32]),
+            child_connection_generation: 1,
+            authorization_scope_digest: Digest256::from_bytes([2; 32]),
+        },
+        pack_digest: Digest256::from_bytes([0; 32]),
+    };
+    index.pack_digest = medulla_catalog_types::connector_pack::digest::pack_digest(&index).unwrap();
+    (index, archive)
+}
+
+/// Bind `connector` to `principal`'s persistence id.
+pub(super) async fn bind(served: &Served, connector: &str, principal: &str) {
+    let key = format!("bind:{connector}:{principal}");
+    let _: serde_json::Value = ok(
+        "Bind",
+        served
+            .pack(
+                &key,
+                ConnectorPackOp::Bind {
+                    request: medulla_catalog_types::connector_pack::ConnectorPackBindRequest {
+                        context: context(&key),
+                        connector: ResourceId::new(connector).unwrap(),
+                        importer: persistence_id(principal),
+                    },
+                },
+            )
+            .await,
+    );
+}
+
+/// Upload and import one pack as the admin, over `expected_head`.
+pub(super) async fn import(
+    served: &Served,
+    pack: &(ConnectorPackIndex, Vec<u8>),
+    expected_head: Option<medulla_catalog_types::connector_pack::PackHeadRef>,
+) -> Response {
+    let (mut index, archive) = pack.clone();
+    index.archive.blob_digest = served.upload(&archive).await;
+    import_uploaded(served, index, expected_head).await
+}
+
+/// Approve one held source declaration through the served ConnectorPack op.
+#[cfg(all(feature = "owl", feature = "shacl"))]
+pub(super) async fn approve_source(
+    served: &Served,
+    connector: &str,
+    contract_iri: &str,
+    resource_uri: &str,
+    expected_head: medulla_catalog_types::connector_pack::PackHeadRef,
+    contract_digest: Digest256,
+) -> Response {
+    let key = format!(
+        "connector-pack:{connector}:approve-source:{}:{}:{}",
+        expected_head.binding_revision, contract_iri, resource_uri
+    );
+    served
+        .pack(
+            &key,
+            ConnectorPackOp::ApproveSource {
+                request:
+                    medulla_catalog_types::connector_pack::ConnectorPackSourceApprovalRequest {
+                        context: context(&key),
+                        connector: ResourceId::new(connector).unwrap(),
+                        contract_iri: contract_iri.to_string(),
+                        resource_uri: resource_uri.to_string(),
+                        expected_head,
+                        contract_digest,
+                    },
+            },
+        )
+        .await
+}
+
+/// Import an already uploaded pack as the admin, over `expected_head`.
+pub(super) async fn import_uploaded(
+    served: &Served,
+    index: ConnectorPackIndex,
+    expected_head: Option<medulla_catalog_types::connector_pack::PackHeadRef>,
+) -> Response {
+    import_uploaded_with(served, index, expected_head, false).await
+}
+
+/// Import an already uploaded pack as the admin, with the mass-withdrawal
+/// approval set as given.
+pub(super) async fn import_uploaded_with(
+    served: &Served,
+    index: ConnectorPackIndex,
+    expected_head: Option<medulla_catalog_types::connector_pack::PackHeadRef>,
+    allow_mass_withdrawal: bool,
+) -> Response {
+    let key = format!(
+        "connector-pack:{}:import:{}:{}",
+        index.connector.as_str(),
+        index.pack_digest,
+        expected_head
+            .as_ref()
+            .map_or(0, |head| head.binding_revision)
+    );
+    served
+        .pack(
+            &key,
+            ConnectorPackOp::Import {
+                request: Box::new(
+                    medulla_catalog_types::connector_pack::ConnectorPackImportRequest {
+                        context: context(&key),
+                        index,
+                        expected_head,
+                        allow_mass_withdrawal,
+                    },
+                ),
+            },
+        )
+        .await
+}
+
+/// Import and require a landed receipt.
+pub(super) async fn imported(
+    served: &Served,
+    pack: &(ConnectorPackIndex, Vec<u8>),
+    expected_head: Option<medulla_catalog_types::connector_pack::PackHeadRef>,
+) -> medulla_catalog_types::connector_pack::PackImportReceipt {
+    match ok("Import", import(served, pack, expected_head).await) {
+        medulla_catalog_types::connector_pack::PackImportResult::Imported { receipt } => *receipt,
+        other => panic!("import did not land: {other:?}"),
+    }
+}
+
+/// The head a receipt names, for the next compare-and-set import.
+pub(super) fn head_of(
+    receipt: &medulla_catalog_types::connector_pack::PackImportReceipt,
+) -> medulla_catalog_types::connector_pack::PackHeadRef {
+    medulla_catalog_types::connector_pack::PackHeadRef {
+        binding_revision: receipt.binding_revision,
+        pack_digest: receipt.pack_digest,
+    }
+}
+
+/// EH-536: a request queued on a busy tenant pack lock gives up when its
+/// request is cancelled instead of waiting out the holder.
+#[tokio::test]
+async fn a_cancelled_waiter_leaves_the_pack_lock_queue() {
+    use medulla_server_api::request_scope::scope;
+    use medulla_server_api::request_scope::RequestCancel;
+    use medulla_server_api::request_scope::CANCELLED;
+
+    let held = super::tenant_pack_lock("eh536-busy-tenant")
+        .await
+        .expect("an uncancelled caller takes the free lock");
+    let cancel = RequestCancel::new();
+    cancel.cancel();
+    let waited = tokio::time::timeout(
+        std::time::Duration::from_secs(5),
+        scope(cancel, super::tenant_pack_lock("eh536-busy-tenant")),
+    )
+    .await
+    .expect("a cancelled waiter must not wait for the holder");
+    assert_eq!(waited.err().as_deref(), Some(CANCELLED));
+    drop(held);
+}
+
+/// Reproduce the old planner's server-only commit, leaving published dependent
+/// rows and their pins untouched. A fresh served import supplies the canonical
+/// server draft; the existing owner commit writes its revision, body holder,
+/// membership and receipt atomically. No raw tables or hash stand-ins are used.
+pub(super) async fn seed_server_only_import(
+    served: &Served,
+    pack: &(ConnectorPackIndex, Vec<u8>),
+    previous: &medulla_catalog_types::connector_pack::PackImportReceipt,
+) -> medulla_catalog_types::connector_pack::PackImportReceipt {
+    use medulla_agent_types::agent_component::{
+        AgentComponentEntry, AgentComponentMutationKind, ComponentDependency,
+    };
+    use medulla_catalog_types::{
+        connector_pack::PackArchiveFacts, connector_pack::PackDisposition,
+        connector_pack::PackEntryRecord, connector_pack::PackImportRecord,
+        connector_pack::PackImportResult, connector_pack::PackProjectionState,
+        connector_pack::PackServerRecord, connector_pack::PACK_IMPORT_RECORD_SCHEMA_VERSION,
+    };
+    use medulla_persistence_records::connector_pack::commit::ConnectorPackCommitPlan;
+    use medulla_persistence_records::connector_pack::commit::ConnectorPackComponentCommit;
+    use medulla_persistence_records::connector_pack::commit::ConnectorPackHolderCommit;
+    use medulla_persistence_records::connector_pack::ConnectorPackBodyHolderRow;
+
+    let index = &pack.0;
+    let donor = Served::new();
+    bind(&donor, index.connector.as_str(), ADMIN).await;
+    imported(&donor, pack, None).await;
+    let id = medulla_catalog_types::connector_pack::pack_component_id(
+        index.connector.as_str(),
+        PackEntryKind::McpServer,
+        &index.server.name,
+    );
+    let donor_store = donor.state.write().await.ensure_agent_library().unwrap();
+    let canonical = donor_store.current_component(TENANT, &id).unwrap().unwrap();
+    let store = served.state.write().await.ensure_agent_library().unwrap();
+    let old = store.current_component(TENANT, &id).unwrap().unwrap();
+    let mut context = medulla_persistence_records::agent_fixtures::mutation_context(
+        &store,
+        TENANT,
+        "seed-legacy-server-only",
+        200,
+        0,
+        "connector-pack:import",
+    );
+    context.created_at_ms = old.updated_at_ms + 1;
+    let server = AgentComponentEntry::create(
+        canonical.as_draft(),
+        old.entry_revision + 1,
+        AgentLibraryLifecycle::Published,
+        old.created_at_ms,
+        context.created_at_ms,
+    )
+    .unwrap();
+    let section = &index.server.body;
+    let body = medulla_server_blob::blob::engine_bodies::EngineBody {
+        sha256: section.sha256,
+        body: pack.1[section.offset as usize..(section.offset + section.length) as usize].to_vec(),
+    };
+    let stored = served
+        .state
+        .read()
+        .await
+        .blob_cursors()
+        .unwrap()
+        .store
+        .put_engine_bodies(TENANT, &[body], context.created_at_ms)
+        .unwrap()
+        .remove(0);
+    let holder = ConnectorPackBodyHolderRow {
+        engine_manifest_digest: stored.manifest_digest.clone(),
+        length: stored.length,
+    };
+    let record_id = "seed-legacy-server-only-record".to_string();
+    let mut members = store
+        .connector_pack_members(TENANT, &index.connector)
+        .unwrap();
+    for member in &mut members {
+        member.last_record_id = record_id.clone();
+        if member.uri == index.server.uri {
+            member.entry_digest =
+                medulla_catalog_types::connector_pack::digest::entry_digest(&index.server).unwrap();
+            member.entry_revision = server.entry_revision;
+            member.definition_digest = server.definition_digest.clone();
+            member.body_sha256 = stored.sha256;
+            member.engine_manifest_digest = stored.manifest_digest.clone();
+            member.body_length = stored.length;
+        } else {
+            let entry = index
+                .entries
+                .iter()
+                .find(|entry| entry.uri == member.uri)
+                .unwrap();
+            assert_eq!(
+                medulla_catalog_types::connector_pack::digest::entry_digest(entry).unwrap(),
+                member.entry_digest,
+                "the legacy fixture changes only server content"
+            );
+        }
+    }
+    let entries = members
+        .iter()
+        .map(|member| PackEntryRecord {
+            uri: member.uri.clone(),
+            kind: member.kind,
+            entry_digest: member.entry_digest,
+            disposition: if member.uri == index.server.uri {
+                PackDisposition::Revised
+            } else {
+                PackDisposition::Unchanged
+            },
+            component_id: member.component_id.clone(),
+            entry_revision: member.entry_revision,
+            definition_digest: member.definition_digest.clone(),
+        })
+        .collect();
+    let record = PackImportRecord {
+        schema_version: PACK_IMPORT_RECORD_SCHEMA_VERSION,
+        tenant_id: TENANT.to_string(),
+        connector: index.connector.clone(),
+        binding_revision: previous.binding_revision + 1,
+        record_id,
+        pack_digest: index.pack_digest,
+        catalog: index.catalog.clone(),
+        previous_pack_digest: Some(previous.pack_digest),
+        server: PackServerRecord {
+            name: index.server.name.clone(),
+            contract_version: index.server.annotations.contract_version.clone(),
+            package_version: index.server_package_version.clone(),
+            component: ComponentDependency {
+                component_id: id.clone(),
+                kind: server.kind,
+                definition_digest: server.definition_digest.clone(),
+            },
+        },
+        producer: index.producer.clone(),
+        archive: PackArchiveFacts {
+            length: index.archive.length,
+            sha256: index.archive.sha256,
+        },
+        importer: context.caller_principal.clone(),
+        committed_at_ms: context.created_at_ms,
+        entries: BoundedVec::new(entries).unwrap(),
+        warnings: BoundedVec::new(Vec::new()).unwrap(),
+        projection: PackProjectionState::None,
+    };
+    let plan = ConnectorPackCommitPlan {
+        context,
+        expected_head: Some(head_of(previous)),
+        record,
+        members,
+        holders: vec![ConnectorPackHolderCommit {
+            body_sha256: stored.sha256,
+            component_id: id,
+            entry_revision: server.entry_revision,
+            row: holder,
+        }],
+        components: vec![ConnectorPackComponentCommit {
+            expected_revision: old.entry_revision,
+            kind: AgentComponentMutationKind::Publish,
+            entry: server,
+        }],
+    };
+    match store.commit_connector_pack(plan).unwrap() {
+        PackImportResult::Imported { receipt } => *receipt,
+        other => panic!("legacy fixture import did not land: {other:?}"),
+    }
+}

@@ -4,7 +4,7 @@ use std::collections::{BTreeSet, HashMap, HashSet};
 
 use super::{allocation_bytes, timed, Observation, ProbeError};
 use medulla_ann::{FlatIndex, HnswIndex, IvfPq, IvfPqParams, Metric, SearchParams};
-use medulla_plan::leanrag::{AnnIndex, GraphTopology, HierarchicalRetriever, RetrievalParams, Scored};
+use medulla_retrieval::{leanrag::AnnIndex, leanrag::GraphTopology, leanrag::HierarchicalRetriever, leanrag::RetrievalParams, leanrag::Scored};
 use medulla_tsdb::point::Point;
 use medulla_tsdb::promql::{query_instant, MemSeriesSource, Value as PromValue};
 use medulla_tsdb::query::{sensor_fuse, time_bucket, Agg, Cell, Sample, SeriesRef};

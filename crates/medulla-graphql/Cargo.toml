@@ -40,7 +40,7 @@ name = "medulla_graphql"
 # excludes `graphql` entirely, so `sha2` never enters the Pi tree). `hardening` pulls
 # `sha2` for the APQ sha256 digest. Build a hardening-free surface with `--no-default-features`.
 default = ["federation", "hardening", "crossmodal"]
-federation = []
+federation = ["medulla-exec/federation", "medulla-plan?/federation", "medulla-types/federation", "medulla-uql?/federation"]
 hardening = ["dep:sha2"]
 # MEDULLA-379/380/381 — the GraphQL CROSS-MODAL transaction seam. Default-ON so it rides into
 # the facade's `graphql`/`node`/`full` tiers via the facade's default-features pull
@@ -51,14 +51,15 @@ hardening = ["dep:sha2"]
 # Build a cross-modal-free surface with `--no-default-features`. The facade enables
 # `crossmodal-tsdb` from its tsdb-bearing GraphQL tier and owns the sole authoritative
 # `commitTransaction` path (see crossmodal.rs module docs).
-crossmodal = ["dep:medulla-plan", "medulla-plan/query", "dep:medulla-rdf", "medulla-rdf/sparql"]
+crossmodal = ["dep:medulla-uql", "medulla-uql/query", "dep:medulla-plan", "medulla-plan/query", "medulla-exec/query", "dep:medulla-rdf", "medulla-rdf/sparql"]
 # MEDULLA-381 — the tsdb leg of the cross-modal seam: `addMeasurement` staging + the in-txn
 # `medulla_plan::StagedSeries` read-your-own-writes overlay (CONCEPT:MEDULLA-374 parity). Pulls
 # `medulla-plan/timeseries` (→ medulla-tsdb). Default-OFF (parity with the facade's `tsdb`-gated
 # measurement staging); enabled by the facade's tsdb tier.
-crossmodal-tsdb = ["crossmodal", "medulla-plan/timeseries"]
+crossmodal-tsdb = ["crossmodal", "medulla-plan/timeseries", "medulla-exec/timeseries"]
 
 [dependencies]
+medulla-uql = { path = "../medulla-uql", optional = true }
 medulla-types = { path = "../medulla-types" }
 medulla-core = { path = "../medulla-core" }
 # MEDULLA-379: the unified-query plan front-end + executor (uql parse, `Plan`/`Op`, `execute`,
@@ -81,8 +82,13 @@ petgraph = { version = "0.8.3", features = ["serde-1"] }
 # already a workspace dep elsewhere; optional + gated by `hardening`, so it links only
 # into the GraphQL-bearing tiers (never Pi, which excludes `graphql`).
 sha2 = { version = "0.10", optional = true }
+medulla-semantic-index = { path = "../medulla-semantic-index" }
+medulla-graph-core = { path = "../medulla-graph-core" }
+medulla-cypher = { path = "../medulla-cypher", features = ["cypher"] }
+medulla-exec = { path = "../medulla-exec" }
 
 [dev-dependencies]
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-exec = { path = "../medulla-exec", features = ["test-support"] }
 # The equivalence test runs the SAME query through the engine's real Cypher executor
 # (medulla-query/cypher — dep-free, no DataFusion) and asserts GraphQL == Cypher.
-medulla-query = { path = "../medulla-query", features = ["cypher"] }

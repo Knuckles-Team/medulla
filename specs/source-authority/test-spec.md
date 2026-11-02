@@ -18,18 +18,18 @@ Negative cases that must exist: an origin-approved rank-1 declaration with a con
 
 ### MEDULLA-SRC-AUTH-R010 tests
 
-- `MEDULLA-SRC-AUTH-R010.1`: `crates/medulla-rdf/src/source_selection.rs::tests::source_role_round_trips`.
-- `MEDULLA-SRC-AUTH-R010.2`: `crates/medulla-rdf/src/source_selection.rs::tests::live_truth_beats_historical_on_conflict`.
-- `MEDULLA-SRC-AUTH-R010.3`: `crates/medulla-plan/src/federation.rs::tests::plan_applies_source_role`.
-- `MEDULLA-SRC-AUTH-R010.4`: `crates/medulla-rdf/src/source_selection.rs::tests::inspiration_only_abstains_role_insufficient`.
-- `MEDULLA-SRC-AUTH-R010.5`: `crates/medulla-rdf/src/source_selection.rs::tests::role_premise_names_both_sources`.
+- `MEDULLA-SRC-AUTH-R010.1`: `crates/medulla-virtual-graph/src/source_selection.rs::tests::source_role_round_trips`.
+- `MEDULLA-SRC-AUTH-R010.2`: `crates/medulla-virtual-graph/src/source_selection.rs::tests::live_truth_beats_historical_on_conflict`.
+- `MEDULLA-SRC-AUTH-R010.3`: `crates/medulla-federation/src/federation.rs::tests::plan_applies_source_role`.
+- `MEDULLA-SRC-AUTH-R010.4`: `crates/medulla-virtual-graph/src/source_selection.rs::tests::inspiration_only_abstains_role_insufficient`.
+- `MEDULLA-SRC-AUTH-R010.5`: `crates/medulla-virtual-graph/src/source_selection.rs::tests::role_premise_names_both_sources`.
 - `MEDULLA-SRC-AUTH-R010.6`: `tests/federated/test_source_role_served.py::test_live_truth_wins_conflict`.
 
 ### MEDULLA-SRC-AUTH-R011 tests
 
-- `MEDULLA-SRC-AUTH-R011.1`: `crates/medulla-rdf/src/source_selection.rs::tests::trust_mark_round_trips`.
-- `MEDULLA-SRC-AUTH-R011.2`: `crates/medulla-rdf/src/source_selection.rs::tests::derived_content_inherits_untrusted`.
-- `MEDULLA-SRC-AUTH-R011.3`: `src/server/handlers/graph_ops/gateway_graph.rs::tests::add_node_stamps_trust_mark`.
-- `MEDULLA-SRC-AUTH-R011.4`: `crates/medulla-rdf/src/source_selection.rs::tests::downgrade_without_approval_refused`.
-- `MEDULLA-SRC-AUTH-R011.5`: `crates/medulla-rdf/src/source_selection.rs::tests::mark_carries_rule_and_generation`.
+- `MEDULLA-SRC-AUTH-R011.1`: `crates/medulla-virtual-graph/src/source_selection.rs::tests::trust_mark_round_trips`.
+- `MEDULLA-SRC-AUTH-R011.2`: `crates/medulla-virtual-graph/src/source_selection.rs::tests::derived_content_inherits_untrusted`.
+- `MEDULLA-SRC-AUTH-R011.3`: `crates/medulla-h-graph/src/graph_ops/gateway_graph.rs::tests::add_node_stamps_trust_mark`.
+- `MEDULLA-SRC-AUTH-R011.4`: `crates/medulla-virtual-graph/src/source_selection.rs::tests::downgrade_without_approval_refused`.
+- `MEDULLA-SRC-AUTH-R011.5`: `crates/medulla-virtual-graph/src/source_selection.rs::tests::mark_carries_rule_and_generation`.
 - `MEDULLA-SRC-AUTH-R011.6`: `tests/federated/test_trust_mark_served.py::test_tool_result_is_untrusted_and_sticky`.

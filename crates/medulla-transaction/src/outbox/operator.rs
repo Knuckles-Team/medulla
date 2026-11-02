@@ -15,8 +15,8 @@ use crate::outbox::{
     OutboxDeadLetterPage, OutboxPosition, OutboxRejectReason, OutboxRewindOutcome,
     OutboxRewindTarget,
 };
+use medulla_mutation_types::mutation_scope::MutationOutboxLease;
 use medulla_storage::{OwnedStoreHandle, OwnerDomain, ScopedRead};
-use medulla_types::MutationOutboxLease;
 
 impl MutationKernel {
     /// Resolve one held lease as a consumer-declared terminal failure, fenced

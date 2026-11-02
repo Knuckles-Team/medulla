@@ -16,8 +16,10 @@
 
 use std::cmp::Ordering;
 
-use medulla_types::decision::{AbstainReason, DecisionOutcome, Violation, WhyNot};
-use medulla_types::solve::{LevelValue, ObjectiveValue};
+use medulla_decision_types::{
+    decision::AbstainReason, decision::DecisionOutcome, decision::Violation, decision::WhyNot,
+};
+use medulla_decision_types::{solve::LevelValue, solve::ObjectiveValue};
 
 use super::conclude::{decide_one, Decided, Ladder};
 use super::AssembleError;

@@ -11,11 +11,11 @@
 //! children (R024.1 / R024.7); this rollup test covers exactly what can be
 //! exercised without a live backend, offline.
 
-use medulla_plan::federation::ForeignSourceRegistry;
-use medulla_plan::federation_brain_guarded::register_brain_guarded;
-use medulla_plan::federation_cypher_unbound::{register_falkordb, register_neo4j};
-use medulla_plan::federation_spark::register_spark;
-use medulla_plan::mirror_target::{target_for, MirrorTargetRegistry};
+use medulla_federation::federation::ForeignSourceRegistry;
+use medulla_federation::federation_brain_guarded::register_brain_guarded;
+use medulla_federation::{federation_cypher_unbound::register_falkordb, federation_cypher_unbound::register_neo4j};
+use medulla_federation::federation_spark::register_spark;
+use medulla_federation::{mirror_target::target_for, mirror_target::MirrorTargetRegistry};
 use medulla_types::wire::{ForeignCypherBackend, ForeignSourceSpec, MirrorTargetSpec};
 
 fn rollup_cypher_spec(backend: ForeignCypherBackend) -> ForeignSourceSpec {
@@ -145,7 +145,7 @@ fn rollup_age_spec() -> ForeignSourceSpec {
 #[test]
 fn age_binding_with_a_mismatched_dsn_is_refused_offline() {
     let mut registry = ForeignSourceRegistry::new();
-    let err = medulla_plan::federation_age::register_age(
+    let err = medulla_federation::federation_age::register_age(
         &mut registry,
         "rollup-age",
         &rollup_age_spec(),

@@ -1,5 +1,5 @@
 //! MEDULLA-SDLC lifecycle pass: derived lifecycle edges, defect intake, requirement
-//! state and the lifecycle trace. Records live in `medulla_types::lifecycle`.
+//! state and the lifecycle trace. Records live in `medulla_source_types::lifecycle`.
 
 pub mod defect;
 pub mod derive;

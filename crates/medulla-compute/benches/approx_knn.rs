@@ -13,9 +13,10 @@
 //!   cargo bench -p medulla-compute --bench approx_knn
 //!   cargo bench -p medulla-compute --bench approx_knn -- 20000 12 10 0.5
 
-use medulla_compute::graph_algos::{
-    knn_similarity, knn_similarity_approx, AdjacencyGraph, Direction, KnnSimilarityApproxConfig,
-    Metric, SimilarityPair,
+use medulla_graph_algos::{
+    graph_algos::knn_similarity, graph_algos::knn_similarity_approx, graph_algos::AdjacencyGraph,
+    graph_algos::Direction, graph_algos::KnnSimilarityApproxConfig, graph_algos::Metric,
+    graph_algos::SimilarityPair,
 };
 use std::collections::HashSet;
 use std::time::Instant;

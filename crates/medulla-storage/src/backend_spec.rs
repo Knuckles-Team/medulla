@@ -28,10 +28,11 @@ pub enum DurabilityClass {
 pub struct SecretRef(pub String);
 
 /// The declared durable-store backend for a graph.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "variant", rename_all = "snake_case", deny_unknown_fields)]
 pub enum StorageBackendSpec {
     /// redb on local disk: the default.
+    #[default]
     Local,
     /// S3-compatible object storage.
     ObjectStore {
@@ -44,11 +45,6 @@ pub enum StorageBackendSpec {
     },
 }
 
-impl Default for StorageBackendSpec {
-    fn default() -> Self {
-        Self::Local
-    }
-}
 
 /// Typed, atomic refusal; none of these leaves any state changed.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

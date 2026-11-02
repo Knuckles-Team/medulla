@@ -1,0 +1,14 @@
+[package]
+name = "medulla-decision-plan"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: Ladder stages 6-7 and task planning: AgentAssemble, bounded task graphs, delegation, harness and skill selection"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_decision_plan"
+path = "src/lib.rs"
+
+[dependencies]

@@ -8,7 +8,7 @@
 //! re-exported from `resolver.rs` so `crate::resolver::{resolve_root,
 //! ordered_matches}` keeps working for `federation.rs`/`mutation.rs`.
 
-use medulla_core::graph::GraphView;
+use medulla_graph_core::graph::GraphView;
 use serde_json::{Map, Value};
 
 use crate::parser::{gql_to_json, Field, GqlValue};

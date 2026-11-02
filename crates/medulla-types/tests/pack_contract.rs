@@ -1,7 +1,10 @@
 //! Pack contract versions and standalone grants (MEDULLA-TYPED-PACKS-R107.1).
 
-use medulla_types::connector_pack::contract_version::{
-    ContractBreakKind, PackContractVersion, StandaloneGrant, GRANT_INCOMPLETE,
+use medulla_catalog_types::{
+    connector_pack::contract_version::ContractBreakKind,
+    connector_pack::contract_version::PackContractVersion,
+    connector_pack::contract_version::StandaloneGrant,
+    connector_pack::contract_version::GRANT_INCOMPLETE,
 };
 
 fn digest(byte: &str) -> String {

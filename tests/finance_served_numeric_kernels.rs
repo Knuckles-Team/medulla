@@ -7,7 +7,7 @@ mod common;
 #[path = "common/test_support.rs"]
 mod test_support;
 
-use medulla::protocol::{GraphType, Method, Response, ResultPayload};
+use medulla_protocol_types::protocol::{GraphType, Method, Response, ResultPayload};
 use serde_json::Value;
 
 const SECRET: &str = "medulla-fin-served-numeric-kernels-secret";

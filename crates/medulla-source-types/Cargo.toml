@@ -1,0 +1,31 @@
+[package]
+name = "medulla-source-types"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: Source ingestion, source documents and transcripts, ingest jobs and development-lifecycle record types (changeset review, pre-merge tests, standards drift, live artifacts, supply-chain reports)"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_source_types"
+path = "src/lib.rs"
+
+[dependencies]
+medulla-catalog-types = { path = "../medulla-catalog-types" }
+medulla-types = { path = "../medulla-types" }
+serde = { version = "1.0", features = ["derive", "rc"] }
+serde_json = "1.0"
+thiserror = "2.0"
+rmp-serde = "1.3"
+sha2 = "0.10"
+hex = "0.4"
+schemars = { version = "1.2.3", optional = true }
+
+[features]
+contract-schema = ["dep:schemars", "medulla-types/contract-schema", "medulla-catalog-types/contract-schema"]
+test-support = ["medulla-types/test-support", "medulla-catalog-types/test-support"]
+
+[dev-dependencies]
+medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
+medulla-types = { path = "../medulla-types", features = ["test-support"] }

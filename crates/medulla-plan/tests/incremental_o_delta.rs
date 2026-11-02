@@ -13,7 +13,7 @@
 
 #![cfg(feature = "query")]
 
-use medulla_plan::{Circuit, Delta, Op, Plan, Pred, ZRow};
+use medulla_exec::{incremental::Circuit, incremental::Delta, algebra::Op, algebra::Plan, algebra::Pred, incremental::ZRow};
 use serde_json::{json, Map, Value};
 
 fn doc_props(year: i64) -> Map<String, Value> {

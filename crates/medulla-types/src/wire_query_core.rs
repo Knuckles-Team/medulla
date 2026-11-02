@@ -34,7 +34,7 @@ pub enum Pred {
     /// `prop <op> value` over a TYPED scalar (UQL predicate algebra, UQL-01). The three
     /// legacy forms above stay the canonical spelling of what they express —
     /// `Cmp{Eq,Str}` ≡ `Eq`, `Cmp{Gt,Num}` ≡ `GtNum`, `Cmp{Lt,Num}` ≡ `LtNum` (the UQL
-    /// parser never emits those three `Cmp` shapes; `medulla_plan::uql::canonicalize` rewrites
+    /// parser never emits those three `Cmp` shapes; `medulla_uql::canonicalize` rewrites
     /// them) — so the wire keeps ONE encoding per meaning. A `Num` compares numerically
     /// and a `Bool` as a boolean, never as their JSON text.
     Cmp {
@@ -69,7 +69,7 @@ pub enum Pred {
     /// `$.a[*]`, wildcard) evaluated against the row's decoded JSON; `op` is the
     /// existence / equality / `@>`-containment test. This is the lowered form of the
     /// Postgres JSON operators (`->`, `->>`, `@>`, `jsonb_path_query`) and a Mongo-style
-    /// `$match` — see `medulla_query::sql::classify`. Like the spatial preds it is NOT lowered
+    /// `$match` — see `medulla_sql::sql::classify`. Like the spatial preds it is NOT lowered
     /// to SQL (DataFusion has no JSONPath): `medulla-plan`'s FILTER leg splits it out and
     /// applies it per-row against the stored JSON, and the planner can consult medulla-core's
     /// inverted path-index for candidate selectivity. PURE serde here (a string, a small
@@ -328,7 +328,7 @@ pub enum UqlParam {
 /// DOCUMENT/JSON — the test applied by [`Pred::JsonPath`] against the value(s) a
 /// JSONPath resolves to (CONCEPT:MEDULLA-KG.query.json-wire-roundtrip). PURE serde (a small tag + an optional
 /// `serde_json::Value` literal); the actual walk/containment lives in
-/// `medulla_core::jsonpath` behind medulla-plan's FILTER leg — this is the wire variant.
+/// `medulla_graph_core::jsonpath` behind medulla-plan's FILTER leg — this is the wire variant.
 #[cfg(feature = "query")]
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
@@ -946,7 +946,7 @@ pub enum UqlProofStep {
     #[cfg(feature = "owl")]
     Reason {
         stage: String,
-        proof: crate::protocol::ProofNodeWire,
+        proof: crate::rdf_report::ProofNodeWire,
     },
     /// A stage that admitted or produced rows without carrying a proof.
     Unproved { stage: String },
