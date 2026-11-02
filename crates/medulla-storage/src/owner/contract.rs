@@ -66,12 +66,12 @@ pub(crate) fn table_contract(name: &str, owner: Option<OwnerLayout>) -> TableCon
     let value_type_id = value_type_id(name);
     TableContract {
         table_id: name.to_string(),
-        schema_id: format!("medulla.redb.{name}.v1"),
+        schema_id: format!("eg.redb.{name}.v1"),
         key_type_id: key_type_id.to_string(),
         value_type_id: value_type_id.to_string(),
         key_codec: "redb-native-key-v1".to_string(),
         value_codec: "redb-native-value-v1".to_string(),
-        logical_schema_id: format!("medulla.logical.{name}.v1"),
+        logical_schema_id: format!("eg.logical.{name}.v1"),
         logical_codec_id: logical_codec_id(name).to_string(),
         ownership,
         domain: owner.map(|layout| OWNER_LAYOUT_DOMAINS[layout as usize]),

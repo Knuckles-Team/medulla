@@ -158,7 +158,9 @@ fn agent_draft(
         .ok_or_else(|| "ONE_AGENT_SLOT: the model profile carries no model facts".to_string())?;
     Ok(AgentLibraryEntryDraft {
         agent_id,
-        package_id: "medulla-decide".to_string(),
+        // A stored identity: it is hashed into the entry digest the graph pins,
+        // so it keeps the name committed decision records were built with.
+        package_id: "eg-decide".to_string(),
         version: "1".to_string(),
         role: "assembled".to_string(),
         role_digest: inputs_digest.to_string(),
