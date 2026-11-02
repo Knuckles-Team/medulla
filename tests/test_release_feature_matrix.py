@@ -186,6 +186,23 @@ def test_crates_gate_cannot_disappear(release_matrix, mutation):
 CLIPPY_JOBS = ("quality-advisory", "clippy-release-profiles")
 
 
+CLIPPY_COMMAND = """\
+set -euo pipefail
+if [[ "${{ matrix.profile.flags }}" == --workspace* ]]; then
+  cargo clippy --locked --keep-going ${{ matrix.profile.flags }} --exclude medulla-numeric --all-targets -- -D warnings
+  env -u CLIPPY_CONF_DIR cargo clippy --locked --keep-going -p medulla-numeric --all-features --all-targets -- -D warnings
+else
+  cargo clippy --locked --keep-going ${{ matrix.profile.flags }} --all-targets -- -D warnings
+fi
+"""  # noqa: E501
+
+
+def _is_clippy_step(step):
+    return step.get("name", "").startswith("Clippy (") and "cargo clippy " in step.get(
+        "run", ""
+    )
+
+
 def _clippy_profiles(workflow):
     return [
         profile
@@ -208,17 +225,12 @@ def _assert_required_clippy_declarations(workflow):
         matches = [profile for profile in profiles if profile["name"] == name]
         assert len(matches) == 1, f"required Clippy profile must occur once: {name}"
         assert shlex.split(matches[0]["flags"]) == shlex.split(flags)
-    commands = [
-        step for step in job["steps"] if step.get("run", "").startswith("cargo clippy ")
-    ]
+    commands = [step for step in job["steps"] if _is_clippy_step(step)]
     assert len(commands) == 1, "expected one executable Clippy command"
     command = commands[0]
     assert "if" not in command and not command.get("continue-on-error", False)
     assert not job.get("continue-on-error", False)
-    assert command["run"] == (
-        "cargo clippy --locked --keep-going ${{ matrix.profile.flags }} "
-        "--all-targets -- -D warnings"
-    )
+    assert command["run"] == CLIPPY_COMMAND
     headers = [
         step
         for step in job["steps"]
@@ -252,9 +264,7 @@ def _break_profile_flags(job):
 
 
 def _comment_out_clippy_command(job):
-    command = next(
-        s for s in job["steps"] if s.get("run", "").startswith("cargo clippy ")
-    )
+    command = next(s for s in job["steps"] if _is_clippy_step(s))
     command["run"] = "# " + command["run"]
 
 
@@ -371,15 +381,14 @@ def test_slim_server_clippy_profile_lints_with_warnings_denied(release_matrix):
     assert shlex.split(matches[0]["flags"]) == shlex.split(
         "--no-default-features --features server"
     )
-    commands = [
-        step for step in job["steps"] if step.get("run", "").startswith("cargo clippy ")
-    ]
+    commands = [step for step in job["steps"] if _is_clippy_step(step)]
     assert len(commands) == 1, "expected one executable Clippy command"
     command = commands[0]
     # Every matrix profile's flags (the slim server's included) reach the
-    # single lint command, where warnings are denied.
+    # single lint command, where warnings are denied; a non-workspace profile
+    # takes the plain branch that lints exactly its own flags.
     assert "${{ matrix.profile.flags }}" in command["run"]
-    assert command["run"].endswith("--all-targets -- -D warnings")
+    assert command["run"] == CLIPPY_COMMAND
     assert "if" not in command and not command.get("continue-on-error", False)
     assert not job.get("continue-on-error", False)
 

@@ -201,8 +201,10 @@ def test_the_reference_report_records_configuration_hardware_revision_and_result
     assert report["helix"]["server_sha256"]
     # Measured results: both engines, a correctness-gate record for every
     # pinned workload, footprint and warm point-get timings.
+    # The archived report is immutable (its SHA-256 is published), so the engine
+    # keeps the label it was measured under: the engine's name before the rename.
     assert [engine["engine"] for engine in report["engines"]] == [
-        "medulla",
+        "epistemic-graph",
         "helixdb",
     ]
     for engine in report["engines"]:

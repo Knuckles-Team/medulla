@@ -13,7 +13,7 @@ offline smoke, and full recovery execution are separate validation steps.
 
 1. Review the reusable workflow commit and record its full immutable SHA as `P`.
 2. Through the separately approved organization settings change, restrict runner
-   group `medulla-release-recovery` to this repository and this selected workflow:
+   group `eg-release-recovery` to this repository and this selected workflow:
    `Knuckles-Team/medulla/.github/workflows/medulla-release-recovery.yml@P`.
    Substitute the actual 40-character SHA; do not use a branch or tag.
 3. After that review, render the inactive caller template with

@@ -54,7 +54,7 @@ def test_route_ownership_drift_fails_closed() -> None:
 def test_route_call_removal_fails_closed() -> None:
     module = _gate_module()
     parts = module.sources()
-    target = "src/server/dispatch/router.rs"
+    target = "crates/medulla-server-router/src/dispatch/router.rs"
     parts[target] = parts[target].replace(
         "dispatch_service_control_methods(ctx, method).await?",
         "removed_dispatch_service_control_methods(ctx, method).await?",
@@ -69,7 +69,7 @@ def test_route_call_removal_fails_closed() -> None:
 def test_graph_router_call_removal_fails_closed() -> None:
     module = _gate_module()
     parts = module.sources()
-    target = "src/server/dispatch/graph_pipeline/graph_dispatch.rs"
+    target = "crates/medulla-server-graph/src/dispatch/graph_pipeline/graph_dispatch.rs"
     parts[target] = parts[target].replace(
         "route_graph_op_method(routing, method).await",
         "removed_route_graph_op_method(routing, method).await",
@@ -82,12 +82,12 @@ def test_graph_router_call_removal_fails_closed() -> None:
 def test_legacy_coalescer_subset_proof_fails_closed() -> None:
     module = _gate_module()
     parts = copy.deepcopy(module.sources())
-    gateway_path = module.ROOT / "src/server/handlers/graph_ops/gateway_graph.rs"
+    gateway_path = module.ROOT / "crates/medulla-h-graph/src/graph_ops/gateway_graph.rs"
     original_root = module.ROOT
     try:
         # Supply the gateway source through the same dictionary seam used by the
         # checker so this mutation never touches the checkout.
-        parts["src/server/handlers/graph_ops/gateway_graph.rs"] = (
+        parts["crates/medulla-h-graph/src/graph_ops/gateway_graph.rs"] = (
             gateway_path.read_text().replace(
                 "Method::AddNode", "Method::RemovedAddNode"
             )
@@ -101,7 +101,7 @@ def test_legacy_coalescer_subset_proof_fails_closed() -> None:
 def test_route_order_ignores_comments_and_detects_reversed_calls() -> None:
     module = _gate_module()
     parts = copy.deepcopy(module.sources())
-    target = "src/server/dispatch/graph_pipeline/pipeline.rs"
+    target = "crates/medulla-server-graph/src/dispatch/graph_pipeline/pipeline.rs"
     compute = "route_pipeline_compute(&ctx, method)"
     surfaces = "route_pipeline_surfaces(&ctx, method)"
     source = parts[target]
@@ -121,7 +121,7 @@ def test_route_order_ignores_comments_and_detects_reversed_calls() -> None:
 def test_post_lock_router_order_swap_fails_closed() -> None:
     module = _gate_module()
     parts = copy.deepcopy(module.sources())
-    target = "src/server/dispatch/graph_pipeline/native_routes.rs"
+    target = "crates/medulla-server-graph/src/dispatch/graph_pipeline/native_routes.rs"
     change = "route_change_envelope_ops(ctx, method).await"
     store = "route_native_store_ops(ctx, method).await"
     source = parts[target]
@@ -135,7 +135,7 @@ def test_post_lock_router_order_swap_fails_closed() -> None:
 def test_consensus_fail_open_catch_all_fails_closed() -> None:
     module = _gate_module()
     parts = module.sources()
-    target = "src/server/dispatch/consensus/routing.rs"
+    target = "crates/medulla-server-consensus/src/dispatch/consensus/routing.rs"
     parts[target] = parts[target].replace(
         'Some(other) => unreachable!("unclassified native consensus domain: {other}")',
         "Some(other) => request_graph.to_string()",
@@ -149,15 +149,16 @@ def test_undeclared_dispatch_module_is_an_orphan(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     module = _gate_module()
+    dispatch_root = module.DISPATCH_ROOTS[0]
     family = module.read_compiler_family(
-        module.ROOT / f"{module.DISPATCH_ROOT}.rs", module.ROOT
+        module.ROOT / f"{dispatch_root}.rs", module.ROOT
     )
     root = tmp_path
     for path in family.all_paths:
         target = root / path.relative_to(module.ROOT)
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(path.read_text(encoding="utf-8"), encoding="utf-8")
-    (root / module.DISPATCH_ROOT / "forgotten.rs").write_text("fn dead() {}\n")
+    (root / dispatch_root / "forgotten.rs").write_text("fn dead() {}\n")
     monkeypatch.setattr(module, "ROOT", root)
 
     with pytest.raises(SystemExit, match="orphan Rust module files"):

@@ -616,7 +616,7 @@ def test_frozen_commit_stage_entry_uses_complete_range(local_gate_repo, monkeypa
 
 
 # spec: MEDULLA-CONTRACT-R035
-def test_generated_contract_pytest_uses_test_interpreter_and_lock() -> None:
+def test_locked_pytest_uses_test_interpreter_and_lock() -> None:
     jobs = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text())["jobs"]
     steps = jobs["gates"]["steps"]
     install = next(
@@ -637,23 +637,24 @@ def test_generated_contract_pytest_uses_test_interpreter_and_lock() -> None:
         for name in ("pytest", "iniconfig", "packaging", "pluggy", "pygments")
     }
     assert set(command.split('" ', 1)[1].split()) == expected
-    consumer = next(
-        step for step in steps if step.get("name") == "Generated Python client contract"
-    )
-    assert consumer["run"] == "python3 tests/test_generated_client_contract.py"
-    assert steps.index(install) < steps.index(consumer)
+    # The generated Python client contract check was retired together with the
+    # committed contract, so the install step's only in-job consumers are the
+    # later steps that run under the locked interpreter; its pins stay verified.
 
 
+# The digests were re-blessed once, for the rename cutover (3b67ca6c4): the only
+# differences in these step mappings since the previous digests are the
+# epistemic-graph -> medulla renames of crate paths, env names and step names.
 @pytest.mark.parametrize(
     ("job_name", "steps_digest"),
     [
         (
             "gates-wheel",
-            "6813e079e24f89bca2422161a8b09f8f1e681bfd7d337229bab34bfb46b6b0a8",
+            "9227ffb01a93a6cd06424e12c8b118b6322b5835a5176691be1db9d81c7d5704",
         ),
         (
             "gates-whisper",
-            "6a4943c685f7d0a3b4e27fd57ab2f3e3b7c0616cf2c156e294461a7786dce2cb",
+            "55ad0ac5f2dd898e892023c888984e4349b5c3aef6053c26e43ed2680d2ea8ab",
         ),
     ],
 )

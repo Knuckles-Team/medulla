@@ -32,7 +32,7 @@ def test_exact_fault_checker_reads_decomposed_contracts() -> None:
 
 def test_fault_checker_rejects_comment_or_string_marker_spoof(monkeypatch) -> None:
     module = _checker_module()
-    relative = "crates/medulla-types/src/mutation_batch.rs"
+    relative = "crates/medulla-protocol-types/src/mutation_batch.rs"
     source = module._read_rust_module(relative)
     marker = "pub enum MutationCommitPhase"
     source = source.replace(marker, "pub enum RenamedCommitPhase", 1)
@@ -48,7 +48,7 @@ def test_fault_checker_rejects_retired_request_binding_even_with_decoys(
     monkeypatch,
 ) -> None:
     module = _checker_module()
-    relative = "crates/medulla-types/src/mutation_batch.rs"
+    relative = "crates/medulla-protocol-types/src/mutation_batch.rs"
     source = module._read_rust_module(relative)
     source = source.replace(
         "batch_matches_request(batch, spec.request_id)",
@@ -107,8 +107,8 @@ def test_store_checker_rejects_an_omitted_graph_store_child(monkeypatch) -> None
     """The graph-store phase inventory must include every declared child."""
 
     module = _checker_module()
-    facade = "src/redb_store.rs"
-    omitted = "src/redb_store/store_batch.rs"
+    facade = "crates/medulla-store-apply/src/redb_store.rs"
+    omitted = "crates/medulla-store-apply/src/redb_store/store_batch.rs"
     original_reader = module._read_rust_module
     assembled = original_reader(facade)
     child = module._read(omitted)

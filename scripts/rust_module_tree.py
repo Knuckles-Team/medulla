@@ -13,6 +13,7 @@ from collections import namedtuple
 from pathlib import Path
 
 from rust_lexer import (
+    NON_PRODUCTION_CFG_ATOMS,
     _balanced_span_from,
     _delimiter_depths,
     _evaluate_cfg,
@@ -246,7 +247,7 @@ def _predicates_possible_without_test(trees: tuple[tuple, ...]) -> bool:
 
     def collect(tree: tuple) -> None:
         if tree[0] == "atom":
-            if tree[1] != "test":
+            if tree[1] not in NON_PRODUCTION_CFG_ATOMS:
                 atoms.add(tree[1])
             return
         for child in tree[1]:

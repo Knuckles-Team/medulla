@@ -130,7 +130,7 @@ class NormalReleaseTrust(unittest.TestCase):
         self.assertEqual(self.workflow["permissions"], {"contents": "read"})
         job = self.workflow["jobs"]["wheel"]
         self.assertEqual(job["needs"], "authorize")
-        self.assertEqual(job["runs-on"]["group"], "medulla-release-recovery")
+        self.assertEqual(job["runs-on"]["group"], "eg-release-recovery")
         for expected in (
             "needs.authorize.outputs.source == github.sha",
             "github.actor_id == '8661571'",

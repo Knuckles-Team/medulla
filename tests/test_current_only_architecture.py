@@ -39,22 +39,19 @@ def test_current_only_architecture_gate(gate) -> None:
     ("relative", "old", "new"),
     [
         (
-            "exec/dispatch.rs",
-            "Op::Foreign { name } => "
-            "crate::federation_opt::foreign_named(op, name, ctx),",
-            "Op::Foreign { name } => match ctx.foreign {\n"
-            "    Some(_) => crate::federation_opt::foreign_named(op, name, ctx),\n"
-            "    None => Ok(input),\n"
-            "},",
+            "crates/medulla-exec/src/exec/dispatch.rs",
+            'None => Err("FOREIGN requires a bound foreign-source registry"'
+            ".to_string()),",
+            "None => Ok(input),",
         ),
         (
-            "federation_opt/run.rs",
+            "crates/medulla-federation/src/federation_opt/run.rs",
             "return Ok(fuse_foreign(\n"
             "            input,\n"
-            "            super::foreign_source_rows(source, ctx.foreign)?,\n"
+            "            super::foreign_source_rows(source, registry)?,\n"
             "            join,\n"
             "        ));",
-            "return match ctx.foreign {\n"
+            "return match registry {\n"
             "    Some(registry) => Ok(fuse_foreign(\n"
             "        input,\n"
             "        super::foreign_source_rows(source, Some(registry))?, join,\n"
@@ -70,18 +67,20 @@ def test_live_foreign_pass_through_is_rejected(
     tmp_path: Path, monkeypatch, relative: str, old: str, new: str
 ) -> None:
     module = _gate_module()
-    plan = Path("crates/medulla-plan/src")
-    shutil.copytree(ROOT / plan, tmp_path / plan)
+    families = (Path("crates/medulla-exec/src"), Path("crates/medulla-federation/src"))
+    for family in families:
+        shutil.copytree(ROOT / family, tmp_path / family)
     read_tree = module.read_module_tree
 
     def isolated_tree(path, *, root_dir):
-        # Keep main()'s real entry points and compiler traversal. Only the plan
-        # family reads private copies; no tracked Rust source is ever mutated.
-        root = tmp_path if Path(path).is_relative_to(plan) else root_dir
-        return read_tree(path, root_dir=root)
+        # Keep main()'s real entry points and compiler traversal. Only the exec and
+        # federation families read private copies; no tracked Rust source is ever
+        # mutated.
+        private = any(Path(path).is_relative_to(family) for family in families)
+        return read_tree(path, root_dir=tmp_path if private else root_dir)
 
     monkeypatch.setattr(module, "read_module_tree", isolated_tree)
-    child = tmp_path / plan / relative
+    child = tmp_path / relative
     original = child.read_text(encoding="utf-8")
     assert original.count(old) == 1, "live FOREIGN mutation anchor drifted"
     module.main()
@@ -94,7 +93,7 @@ def test_live_foreign_pass_through_is_rejected(
     child.write_text(original, encoding="utf-8")
     module.tree.cache_clear()
     module.main()
-    assert (ROOT / plan / relative).read_text(encoding="utf-8") == original
+    assert (ROOT / relative).read_text(encoding="utf-8") == original
 
 
 _PROTOCOL = """\
@@ -231,8 +230,8 @@ def test_raft_snapshot_rejects_a_retired_plaintext_field(gate) -> None:
 
 
 def test_served_index_rejects_the_version_only_coverage_check(gate) -> None:
-    pregel = gate.read("src/raft/pregel.rs")
-    served = gate.tree("src/server/secondary_indexes.rs")
+    pregel = gate.read("crates/medulla-raft-xshard/src/pregel.rs")
+    served = gate.tree("crates/medulla-h-retrieve/src/secondary_indexes.rs")
     gate.check_read_authority(pregel, served)
     broken = served.replace("covers_source(", "covers_version(", 1)
     with pytest.raises(SystemExit, match="covers_version"):
@@ -258,7 +257,7 @@ def test_rdf_update_check_follows_compiler_declared_children(
 
 def test_raft_store_family_rejects_orphan_children(tmp_path: Path, monkeypatch) -> None:
     module = _gate_module()
-    store_dir = tmp_path / "src" / "raft"
+    store_dir = tmp_path / "crates/medulla-raft/src/raft"
     child_dir = store_dir / "store"
     child_dir.mkdir(parents=True)
     (store_dir / "store.rs").write_text(

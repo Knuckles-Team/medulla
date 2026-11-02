@@ -44,7 +44,9 @@ def test_module_inventory_matches_workspace_manifests() -> None:
         line for line in section.splitlines() if line.startswith("| ") and "`" in line
     ]
     listed = {
-        name for row in table_rows for name in re.findall(r"`(eg-[a-z0-9-]+)`", row)
+        name
+        for row in table_rows
+        for name in re.findall(r"`(medulla-[a-z0-9-]+)`", row)
     }
     packages = _workspace_packages()
     assert packages, "workspace members resolve to packages"
@@ -63,7 +65,9 @@ def test_module_inventory_matches_workspace_manifests() -> None:
             (ROOT / "crates" / crate / "Cargo.toml").read_text(encoding="utf-8")
         )
         return {
-            name for name in manifest.get("dependencies", {}) if name.startswith("eg-")
+            name
+            for name in manifest.get("dependencies", {})
+            if name.startswith("medulla-")
         }
 
     assert deps("medulla-types") == set()
@@ -113,7 +117,8 @@ def test_build_package_and_runtime_boundaries_match_source() -> None:
 
 
 ANCHOR = re.compile(
-    r"`(src/[\w/]+\.rs):(\d+)`, `(\w+)`|`(src/[\w/]+\.rs):(\d+)` exports `(\w+)`"
+    r"`((?:src|crates)/[\w/.-]+\.rs):(\d+)`, `(\w+)`"
+    r"|`((?:src|crates)/[\w/.-]+\.rs):(\d+)` exports `(\w+)`"
 )
 
 

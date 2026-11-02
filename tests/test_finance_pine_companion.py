@@ -23,7 +23,7 @@ pytestmark = pytest.mark.no_engine
 FIXTURES = (
     Path(__file__).resolve().parents[1]
     / "crates"
-    / "medulla-compute"
+    / "medulla-finance-market"
     / "tests"
     / "fixtures"
     / "finance_market"

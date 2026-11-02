@@ -144,28 +144,36 @@ def require(condition: bool, message: str) -> None:
         raise SystemExit(f"dispatch decomposition gate failed: {message}")
 
 
-DISPATCH_ROOT = "src/server/dispatch"
+DISPATCH_ROOTS = (
+    "crates/medulla-server-router/src/dispatch",
+    "crates/medulla-server-graph/src/dispatch",
+    "crates/medulla-server-consensus/src/dispatch",
+)
 
 
 def sources() -> dict[str, str]:
-    """The compiler-declared dispatch family; nothing is pinned.
+    """The compiler-declared dispatch families; nothing is pinned.
 
     `read_compiler_family` already refuses orphan `.rs` files the compiler never
-    reaches, so the only rule left is that every declared module stays under
-    `src/server/dispatch` (a `#[path]` escape would split the cut).
+    reaches, so the only rule left is that every declared module stays under its
+    crate's `src/dispatch` (a `#[path]` escape would split the cut). The cut now
+    spans the router, graph and consensus crates.
     """
 
-    family = read_compiler_family(ROOT / f"{DISPATCH_ROOT}.rs", ROOT)
-    paths = {
-        str(path.relative_to(ROOT)): path.read_text(encoding="utf-8")
-        for path in family.all_paths
-    }
-    escaped = sorted(
-        path
-        for path in paths
-        if path != f"{DISPATCH_ROOT}.rs" and not path.startswith(f"{DISPATCH_ROOT}/")
-    )
-    require(not escaped, f"dispatch module declared outside {DISPATCH_ROOT}: {escaped}")
+    paths: dict[str, str] = {}
+    for root in DISPATCH_ROOTS:
+        family = read_compiler_family(ROOT / f"{root}.rs", ROOT)
+        family_paths = {
+            str(path.relative_to(ROOT)): path.read_text(encoding="utf-8")
+            for path in family.all_paths
+        }
+        escaped = sorted(
+            path
+            for path in family_paths
+            if path != f"{root}.rs" and not path.startswith(f"{root}/")
+        )
+        require(not escaped, f"dispatch module declared outside {root}: {escaped}")
+        paths.update(family_paths)
     return paths
 
 
@@ -237,20 +245,20 @@ def check_route_order(graph: str) -> None:
     # b2ac7b93 -- the gate was crashing with `ValueError: substring not found`
     # rather than checking an order. The gateway stage now ends at `finance`.
     gateway_order = (
-        "handlers::graph_ops::try_handle_gateway(",
-        "handlers::finance::try_handle(",
+        "medulla_h_graph::graph_ops::try_handle_gateway(",
+        "medulla_h_compute::finance::try_handle(",
     )
     graph_order = (
-        "handlers::datascience::try_handle(",
-        "handlers::mining::try_handle(",
-        "handlers::graphlearn::try_handle(",
-        "handlers::pipeline::try_handle(",
+        "medulla_h_compute::datascience::try_handle(",
+        "medulla_h_mining::mining::try_handle(",
+        "medulla_server_api::handlers::graphlearn::try_handle(",
+        "medulla_h_graph::pipeline::try_handle(",
     )
     query_order = ("route_query_gateway(", "route_rdf_gateway(")
     global_order = (
-        "handlers::wasm_udf::try_handle(",
-        "handlers::federation::try_handle(",
-        "handlers::dist_compute::try_handle(",
+        "medulla_h_compute::wasm_udf::try_handle(",
+        "medulla_h_sparql::foreign_source_handlers::try_handle(",
+        "medulla_h_txn::dist_compute::try_handle(",
     )
     for markers in (gateway_order, graph_order, query_order, global_order):
         offsets = [graph.rindex(marker) for marker in markers]
@@ -260,7 +268,7 @@ def check_route_order(graph: str) -> None:
     pipeline_order = (
         "route_pipeline_compute(&ctx, method)",
         "route_pipeline_surfaces(&ctx, method)",
-        "handlers::graph_ops::try_handle(",
+        "medulla_h_graph::graph_ops::try_handle(",
     )
     offsets = [graph.rindex(marker) for marker in pipeline_order]
     require(offsets == sorted(offsets), "graph gateway/terminal route order changed")
