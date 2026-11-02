@@ -2,6 +2,7 @@
 //! level 6 in `scripts/crate_split/manifest.toml`.
 
 #![allow(dead_code)] // moved helper code, as the facade crate did
+#![allow(unused_imports)] // glob imports carried over from the facade; the visibility pass prunes them
 #![recursion_limit = "256"]
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]

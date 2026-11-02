@@ -4,5 +4,6 @@
 //! `tests/`, this library is intentionally empty.
 
 #![allow(dead_code)] // moved helper code, as the facade crate did
+#![allow(unused_imports)] // glob imports carried over from the facade; the visibility pass prunes them
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]

@@ -58,6 +58,7 @@
 //! this crate is a documented SKIP.
 
 #![allow(dead_code)] // moved helper code, as the facade crate did
+#![allow(unused_imports)] // glob imports carried over from the facade; the visibility pass prunes them
 #![cfg(feature = "wasm-udf")]
 
 use std::sync::Arc;
