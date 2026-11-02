@@ -1,6 +1,8 @@
 # Seam contract: spec artifact graph
 
 Governing spec: [spec.md](../spec.md).
+Provider: medulla MEDULLA-SDLC-R014.6
+Consumer: arbora ARBORA-OPS-R896.1
 
 ## Provider
 
