@@ -273,7 +273,7 @@ pub(super) fn native_envelope_shape_is_valid(
 fn native_method_key(server_secret: &str) -> [u8; 32] {
     use sha2::{Digest, Sha256};
     let mut digest = Sha256::new();
-    digest.update(b"medulla-native-raft-v1\0");
+    digest.update(b"epistemic-graph-native-raft-v1\0");
     digest.update(server_secret.as_bytes());
     digest.finalize().into()
 }

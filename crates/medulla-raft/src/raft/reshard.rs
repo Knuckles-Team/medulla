@@ -357,7 +357,7 @@ impl TenantManager {
     ) -> tokio::sync::OwnedMutexGuard<()> {
         use sha2::{Digest, Sha256};
         let mut digest = Sha256::new();
-        digest.update(b"medulla/partition-move-lock/v1\0");
+        digest.update(b"epistemic-graph/partition-move-lock/v1\0");
         digest.update(tenant.as_bytes());
         digest.update(range.0.to_be_bytes());
         digest.update(range.1.to_be_bytes());

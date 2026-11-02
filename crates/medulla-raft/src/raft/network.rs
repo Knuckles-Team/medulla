@@ -280,7 +280,7 @@ impl RaftTransportAuth {
     ) -> io::Result<[u8; 32]> {
         let mut mac = <HmacSha256 as Mac>::new_from_slice(&self.key)
             .map_err(|_| invalid_data("invalid raft transport key"))?;
-        mac.update(b"medulla-engine/raft-session/v1\0");
+        mac.update(b"epistemic-graph/raft-session/v1\0");
         mac.update(&client.to_be_bytes());
         mac.update(&server.to_be_bytes());
         mac.update(client_nonce);
@@ -504,7 +504,7 @@ fn read_u64(bytes: &[u8]) -> io::Result<u64> {
 fn nonce_prefix(key: &[u8; 32], direction: &[u8]) -> io::Result<[u8; 16]> {
     let mut mac = <HmacSha256 as Mac>::new_from_slice(key)
         .map_err(|_| invalid_data("invalid raft session key"))?;
-    mac.update(b"medulla-engine/raft-nonce/v1\0");
+    mac.update(b"epistemic-graph/raft-nonce/v1\0");
     mac.update(direction);
     let mut digest = mac.finalize().into_bytes();
     let mut out = [0u8; 16];

@@ -274,7 +274,7 @@ def test_anonymous_refuses_invalid_mode_marker(tmp_path, kind):
     marker = store / "anonymous-store-v1"
     if kind == "symlink":
         target = tmp_path / "marker-target"
-        target.write_text("medulla anonymous local store v1\n")
+        target.write_text("epistemic-graph anonymous local store v1\n")
         marker.symlink_to(target)
     elif kind == "directory":
         marker.mkdir()

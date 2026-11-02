@@ -1745,7 +1745,7 @@ fn register_identity_digest(
         roles: roles.to_vec(),
     };
     digest_operation(
-        "medulla-register-identity-v2",
+        "eg-register-identity-v2",
         context,
         graph,
         &method.canonical_body_bytes(),
@@ -1766,7 +1766,7 @@ fn multisig_mutation_digest(
         query: query.to_string(),
     };
     digest_operation(
-        "medulla-multisig-mutation-v2",
+        "eg-multisig-mutation-v2",
         context,
         graph,
         &method.canonical_body_bytes(),

@@ -160,7 +160,7 @@ impl ProgramCandidateRecord {
 
     fn recompute_candidate_digest(&self) -> String {
         let mut digest = Sha256::new();
-        digest.update(b"medulla-program.candidate.v3\0");
+        digest.update(b"eg-program.candidate.v3\0");
         digest.update(self.program_ref.as_str().as_bytes());
         digest.update(self.base_revision.to_le_bytes());
         digest.update(self.signature_ref.as_str().as_bytes());
@@ -184,7 +184,7 @@ impl ProgramCandidateRecord {
     /// by that compiler digest.
     fn recompute_content_digest(&self) -> String {
         let mut digest = Sha256::new();
-        digest.update(b"medulla-program.candidate-authority.v1\0");
+        digest.update(b"eg-program.candidate-authority.v1\0");
         frame_digest(&mut digest, self.result_ref.as_str());
         frame_digest(&mut digest, self.result_input_dataset_ref.as_str());
         frame_digest(&mut digest, self.result_input_content_digest.as_str());
@@ -424,7 +424,7 @@ impl ProgramRevisionIdentity {
     /// Stable row id for the one mutable pointer associated with a program.
     pub fn active_pointer_ref_for(program_ref: &OpaqueRef) -> OpaqueRef {
         let mut digest = Sha256::new();
-        digest.update(b"medulla-program.active-pointer.v1\0");
+        digest.update(b"eg-program.active-pointer.v1\0");
         frame_digest(&mut digest, program_ref.as_str());
         OpaqueRef::scoped("program_active", &hex::encode(digest.finalize()))
             .expect("program active pointer digest is a valid opaque reference")
@@ -451,7 +451,7 @@ fn revision_token(
     let (candidate_ref, content_digest) = candidate;
     let (tool_policy_ref, model_profile_ref) = bindings;
     let mut digest = Sha256::new();
-    digest.update(b"medulla-program.revision.v3\0");
+    digest.update(b"eg-program.revision.v3\0");
     frame_digest(&mut digest, program_ref);
     frame_digest(&mut digest, base_revision.to_be_bytes());
     digest.update([u8::from(parent_ref.is_some())]);

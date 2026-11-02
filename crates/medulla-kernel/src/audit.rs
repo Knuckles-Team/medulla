@@ -230,7 +230,7 @@ const NODE_TAG: u8 = 0x01;
 /// anchor-time leaf hash (a real one is content-addressed on that node's actual
 /// bytes), so an inclusion proof for a since-removed node fails closed exactly
 /// like tampering would, rather than panicking or fabricating a pass.
-pub const MISSING_NODE_SENTINEL: &[u8] = b"MEDULLA-PROVENANCE-ANCHOR-MISSING-NODE";
+pub const MISSING_NODE_SENTINEL: &[u8] = b"EG-PROVENANCE-ANCHOR-MISSING-NODE";
 
 /// Which side of its parent a Merkle audit-path sibling hash sits on — the
 /// verifier needs this to fold `(running_hash, sibling)` in the right order.

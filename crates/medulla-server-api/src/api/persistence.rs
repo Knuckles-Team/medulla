@@ -1071,7 +1071,7 @@ impl RaftMutationContext {
     pub fn internal_principal_fingerprint() -> String {
         crate::batch_compile::opaque_coordinator_key(
             "principal:sha256",
-            "medulla-raft-control-plane",
+            "epistemic-graph-raft-control-plane",
             "authority",
         )
     }

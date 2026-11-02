@@ -1075,7 +1075,7 @@ impl TableSchema {
         let encoded = rmp_serde::to_vec_named(&(&self.name, &self.columns, &self.constraints))
             .map_err(|error| format!("could not encode schema for digest: {error}"))?;
         let mut hasher = Sha256::new();
-        hasher.update(b"medulla/table-schema-digest\0");
+        hasher.update(b"epistemic-graph/table-schema-digest\0");
         hasher.update(&encoded);
         Ok(hex::encode(hasher.finalize()))
     }

@@ -294,7 +294,7 @@ impl ColumnStore {
         columns.sort_by(|a, b| a.name.cmp(&b.name));
 
         let mut hasher = Sha256::new();
-        hasher.update(b"medulla-viz-columnstore.content_fingerprint.v1\0");
+        hasher.update(b"eg-viz-columnstore.content_fingerprint.v1\0");
         for column in columns {
             hasher.update(column.name.as_bytes());
             hasher.update([0u8]);

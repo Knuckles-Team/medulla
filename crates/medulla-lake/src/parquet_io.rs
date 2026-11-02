@@ -22,7 +22,7 @@ use polars_parquet::write::{schema_to_metadata_key, KeyValue};
 use crate::schema::{CellValue, LakeBatch, LakeField, LakeSchema, LakeType};
 use crate::snapshot::ColumnStat;
 
-const LAKE_SCHEMA_METADATA_KEY: &str = "medulla.lake_schema.v1";
+const LAKE_SCHEMA_METADATA_KEY: &str = "epistemic_graph.lake_schema.v1";
 
 /// The Polars [`DataType`] a [`LakeType`] maps to. A UTC-zoned micro-timestamp
 /// is what Delta/Iceberg's `timestamptz` expects.

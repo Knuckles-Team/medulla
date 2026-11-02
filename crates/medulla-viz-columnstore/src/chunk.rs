@@ -50,7 +50,7 @@ pub struct Chunk {
 /// hashing discipline.
 pub fn content_id(encoded: &[u8]) -> String {
     let mut hasher = Sha256::new();
-    hasher.update(b"medulla-viz-columnstore.chunk.v1\0");
+    hasher.update(b"eg-viz-columnstore.chunk.v1\0");
     hasher.update(encoded);
     hex::encode(&hasher.finalize()[..16])
 }
