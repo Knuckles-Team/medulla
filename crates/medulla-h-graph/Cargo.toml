@@ -89,5 +89,6 @@ medulla-work-types = { path = "../medulla-work-types", features = ["test-support
 medulla-persistence-records = { path = "../medulla-persistence-records", features = ["test-support"] }
 medulla-server-ops = { path = "../medulla-server-ops", features = ["test-support"] }
 medulla-server-mutation = { path = "../medulla-server-mutation", features = ["test-support"] }
-medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support", "test-ambient-auth", "security"] }
+medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support", "security"] }
+medulla-test-ambient-auth = { path = "../medulla-test-ambient-auth" }
 medulla-server-api = { path = "../medulla-server-api", features = ["test-support", "request-policy-fixture"] }

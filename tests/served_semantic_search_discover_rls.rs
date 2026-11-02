@@ -298,6 +298,7 @@ fn discover_ids(r: &Response) -> Vec<String> {
 /// return another agent's private node -- even when that node's embedding is the exact
 /// query vector and the result budget is small enough that an unfiltered ranking would
 /// necessarily spend it there.
+// spec: MEDULLA-CONTRACT-R056.18
 #[tokio::test]
 async fn served_semantic_search_never_returns_another_agents_private_node() {
     let state = state().await;

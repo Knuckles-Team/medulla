@@ -76,4 +76,5 @@ medulla-exec = { path = "../medulla-exec", features = ["test-support"] }
 medulla-federation = { path = "../medulla-federation", features = ["test-support"] }
 medulla-server = { path = "../medulla-server", features = ["federation", "federation-search", "federation-sql", "full", "nl-query", "obda", "owl", "owl-plan", "query", "rdf", "redb", "result-cache", "security", "shacl", "shex", "sparql", "sparql-fuseki", "test-support"] }
 medulla-server-blob = { path = "../medulla-server-blob", features = ["test-support"] }
-medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support", "test-ambient-auth"] }
+medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }
+medulla-test-ambient-auth = { path = "../medulla-test-ambient-auth" }

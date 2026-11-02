@@ -214,8 +214,8 @@ fn now_secs() -> u64 {
 /// client ever bothers to mint one, always matches with zero operator
 /// configuration (ADR-3: "claim optional forever... zero friction for the
 /// published wheel's default profile").
-#[cfg(not(any(test, feature = "test-ambient-auth")))]
-fn node_identity() -> &'static str {
+#[cfg(not(test))]
+fn node_identity_production() -> &'static str {
     static IDENTITY: OnceLock<String> = OnceLock::new();
     IDENTITY
         .get_or_init(|| {
@@ -243,8 +243,53 @@ fn node_identity() -> &'static str {
 /// vary the CLAIM's node value between a match (`"node-a"`) and a mismatch
 /// (any other string).
 #[cfg(any(test, feature = "test-ambient-auth"))]
-fn node_identity() -> &'static str {
+fn node_identity_ambient() -> &'static str {
     "node-a"
+}
+
+fn node_identity() -> &'static str {
+    #[cfg(any(test, feature = "test-ambient-auth"))]
+    if ambient_test_posture() {
+        return node_identity_ambient();
+    }
+    #[cfg(not(test))]
+    return node_identity_production();
+    #[cfg(test)]
+    unreachable!("the ambient posture is always on in unit tests");
+}
+
+/// Whether this process runs under the ambient test posture (OIDC off, fixed
+/// node identity, fixture signer registry).
+///
+/// Inside this crate's own unit tests it is always on. Anywhere else it is on
+/// only after the test harness has called [`install_ambient_test_posture`].
+/// Compiling the `test-ambient-auth` feature in (which Cargo's feature
+/// unification can do to a binary that never asked for it) changes nothing by
+/// itself: the posture stays the production one until that call is made.
+#[cfg(any(test, feature = "test-ambient-auth"))]
+fn ambient_test_posture() -> bool {
+    #[cfg(test)]
+    {
+        true
+    }
+    #[cfg(not(test))]
+    {
+        AMBIENT_TEST_POSTURE.load(std::sync::atomic::Ordering::Acquire)
+    }
+}
+
+#[cfg(all(feature = "test-ambient-auth", not(test)))]
+static AMBIENT_TEST_POSTURE: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
+
+/// Switch the whole process to the ambient test posture. Called once by the
+/// test harness (`medulla-test-ambient-auth`, a dev-dependency only) before any
+/// test runs; idempotent. Other crates' test builds opt in by depending on
+/// that harness crate, never by a feature flag.
+#[cfg(feature = "test-ambient-auth")]
+pub fn install_ambient_test_posture() {
+    #[cfg(not(test))]
+    AMBIENT_TEST_POSTURE.store(true, std::sync::atomic::Ordering::Release);
 }
 
 /// Rollout posture for the node-binding claim
@@ -273,8 +318,8 @@ enum NodeBindingMode {
 /// insensitive, trimmed). Unset or unrecognized ⇒ `Warn` -- permissive
 /// enough that an un-migrated client keeps working, but visible enough that
 /// an operator preparing for the W5.2 cluster cutover can see it coming.
-#[cfg(not(any(test, feature = "test-ambient-auth")))]
-fn require_node_binding_mode() -> NodeBindingMode {
+#[cfg(not(test))]
+fn require_node_binding_mode_production() -> NodeBindingMode {
     static MODE: OnceLock<NodeBindingMode> = OnceLock::new();
     *MODE.get_or_init(|| {
         std::env::var("MEDULLA_REQUIRE_NODE_BINDING")
@@ -301,8 +346,19 @@ thread_local! {
 }
 
 #[cfg(any(test, feature = "test-ambient-auth"))]
-fn require_node_binding_mode() -> NodeBindingMode {
+fn require_node_binding_mode_ambient() -> NodeBindingMode {
     TEST_NODE_BINDING_MODE.with(std::cell::Cell::get)
+}
+
+fn require_node_binding_mode() -> NodeBindingMode {
+    #[cfg(any(test, feature = "test-ambient-auth"))]
+    if ambient_test_posture() {
+        return require_node_binding_mode_ambient();
+    }
+    #[cfg(not(test))]
+    return require_node_binding_mode_production();
+    #[cfg(test)]
+    unreachable!("the ambient posture is always on in unit tests");
 }
 
 /// Bounded best-effort de-duplication so `warn` mode logs an absent
@@ -782,8 +838,8 @@ fn primary_oidc_validator() -> Result<Option<&'static medulla_server_api::oidc::
 /// HMAC-only-permitted posture. An unrecognized value does NOT opt out (see
 /// [`env_flag_explicit`]) — only a clean, deliberate spelling downgrades
 /// security.
-#[cfg(not(any(test, feature = "test-ambient-auth")))]
-fn require_oidc() -> bool {
+#[cfg(not(test))]
+fn require_oidc_production() -> bool {
     env_flag_explicit("MEDULLA_REQUIRE_OIDC").unwrap_or(true)
 }
 
@@ -816,8 +872,19 @@ thread_local! {
 }
 
 #[cfg(any(test, feature = "test-ambient-auth"))]
-fn require_oidc() -> bool {
+fn require_oidc_ambient() -> bool {
     TEST_REQUIRE_OIDC.with(std::cell::Cell::get)
+}
+
+fn require_oidc() -> bool {
+    #[cfg(any(test, feature = "test-ambient-auth"))]
+    if ambient_test_posture() {
+        return require_oidc_ambient();
+    }
+    #[cfg(not(test))]
+    return require_oidc_production();
+    #[cfg(test)]
+    unreachable!("the ambient posture is always on in unit tests");
 }
 
 /// Bind the envelope's self-asserted `principal`/`tenant`/`roles`/`scopes` to
@@ -1549,7 +1616,7 @@ impl SignerRegistryStore {
     }
 }
 
-#[cfg(not(any(test, feature = "test-ambient-auth")))]
+#[cfg(not(test))]
 fn global_signer_registry_store() -> Result<&'static SignerRegistryStore, String> {
     static STORE: OnceLock<Result<SignerRegistryStore, String>> = OnceLock::new();
     match STORE.get_or_init(|| {
@@ -1565,8 +1632,8 @@ fn global_signer_registry_store() -> Result<&'static SignerRegistryStore, String
     }
 }
 
-#[cfg(not(any(test, feature = "test-ambient-auth")))]
-fn signer_registry() -> Result<std::sync::Arc<SignerKeyRegistry>, String> {
+#[cfg(not(test))]
+fn signer_registry_production() -> Result<std::sync::Arc<SignerKeyRegistry>, String> {
     Ok(global_signer_registry_store()?.current())
 }
 
@@ -1576,7 +1643,7 @@ fn signer_registry() -> Result<std::sync::Arc<SignerKeyRegistry>, String> {
 /// rotation event (an admin RPC, a SIGHUP handler, a secret-file watch) is
 /// deployment/dispatch wiring outside this module -- this is the mechanism
 /// that trigger would call, not the trigger itself.
-#[cfg(not(any(test, feature = "test-ambient-auth")))]
+#[cfg(not(test))]
 #[allow(dead_code)] // unwired pending a dispatch-side rotation trigger (see doc comment)
 pub(crate) fn reload_signer_registry_from_json(raw: &str) -> Result<(), String> {
     global_signer_registry_store()?.reload_from_json(raw)
@@ -1585,7 +1652,7 @@ pub(crate) fn reload_signer_registry_from_json(raw: &str) -> Result<(), String> 
 /// Convenience wrapper: reload from the CURRENT value of
 /// `MEDULLA_SIGNER_KEYS_JSON` (an operator updates the env/secret
 /// source the deployment mounts it from, then triggers this).
-#[cfg(not(any(test, feature = "test-ambient-auth")))]
+#[cfg(not(test))]
 #[allow(dead_code)] // unwired pending a dispatch-side rotation trigger (see doc comment)
 pub(crate) fn reload_signer_registry_from_env() -> Result<(), String> {
     let raw = std::env::var("MEDULLA_SIGNER_KEYS_JSON")
@@ -1596,7 +1663,7 @@ pub(crate) fn reload_signer_registry_from_env() -> Result<(), String> {
 /// NE-066 rotation primitive: revoke one signer immediately. See
 /// `SignerRegistryStore::revoke`. Unwired for the same reason as
 /// `reload_signer_registry_from_json` above.
-#[cfg(not(any(test, feature = "test-ambient-auth")))]
+#[cfg(not(test))]
 #[allow(dead_code)] // unwired pending a dispatch-side rotation trigger (see doc comment)
 pub(crate) fn revoke_signer(signer_id: &str) -> Result<(), String> {
     global_signer_registry_store()?.revoke(signer_id);
@@ -1614,7 +1681,7 @@ pub(crate) fn revoke_signer(signer_id: &str) -> Result<(), String> {
 /// register identities through it keep their exact prior behavior rather
 /// than failing on an allowance none of them were ever written to satisfy.
 #[cfg(any(test, feature = "test-ambient-auth"))]
-fn signer_registry() -> Result<std::sync::Arc<SignerKeyRegistry>, String> {
+fn signer_registry_ambient() -> Result<std::sync::Arc<SignerKeyRegistry>, String> {
     static REGISTRY: OnceLock<std::sync::Arc<SignerKeyRegistry>> = OnceLock::new();
     Ok(std::sync::Arc::clone(REGISTRY.get_or_init(|| {
         std::sync::Arc::new(SignerKeyRegistry {
@@ -1633,6 +1700,17 @@ fn signer_registry() -> Result<std::sync::Arc<SignerKeyRegistry>, String> {
                 .collect(),
         })
     })))
+}
+
+fn signer_registry() -> Result<std::sync::Arc<SignerKeyRegistry>, String> {
+    #[cfg(any(test, feature = "test-ambient-auth"))]
+    if ambient_test_posture() {
+        return signer_registry_ambient();
+    }
+    #[cfg(not(test))]
+    return signer_registry_production();
+    #[cfg(test)]
+    unreachable!("the ambient posture is always on in unit tests");
 }
 
 fn digest_operation(

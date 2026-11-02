@@ -171,6 +171,7 @@ include = [
     { path = "crates/medulla-store/**/*", format = "sdist" },
     { path = "crates/medulla-store-apply/**/*", format = "sdist" },
     { path = "crates/medulla-store-apply-tests/**/*", format = "sdist" },
+    { path = "crates/medulla-test-ambient-auth/**/*", format = "sdist" },
     { path = "crates/medulla-stream/**/*", format = "sdist" },
     { path = "crates/medulla-table-store/**/*", format = "sdist" },
     { path = "crates/medulla-tables/**/*", format = "sdist" },

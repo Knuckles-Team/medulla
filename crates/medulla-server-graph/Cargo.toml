@@ -137,5 +137,6 @@ medulla-server-ops = { path = "../medulla-server-ops", features = ["test-support
 medulla-server-blob = { path = "../medulla-server-blob", features = ["test-support"] }
 medulla-server-mutation = { path = "../medulla-server-mutation", features = ["test-support"] }
 medulla-server = { path = "../medulla-server", features = ["ann", "ann-redb", "ast", "blob", "compute-dist", "cypher", "datascience", "decide", "epistemic", "federation", "finance", "full", "graphlearn", "graphql", "jobs", "knowledge-batch", "matview", "metrics", "mining", "ml-pipeline", "modality-serving", "oidc", "query", "raft", "rdf", "redb", "security", "server", "shacl", "sparql", "sparql-http", "streaming", "test-support", "tsdb", "wasm-udf"] }
-medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support", "test-ambient-auth"] }
+medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }
+medulla-test-ambient-auth = { path = "../medulla-test-ambient-auth" }
 tempfile = "3"

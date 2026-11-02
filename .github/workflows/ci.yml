@@ -684,7 +684,7 @@ jobs:
   # test targets (all of medulla-query, medulla-rdf, medulla-shacl, medulla-storage, medulla-transaction,
   # medulla-plan's oracles, the quantum crates, ...) were run by no release step.
   # Excluded here only where another step runs
-  # the same package with the same features: the facade, medulla-types/medulla-core/
+  # the same package with the same features: medulla-types/medulla-core/
   # medulla-compute (gates), medulla-tts-piper (needs onnxruntime, its own job). The two
   # pyo3 crates get every feature except `python` (pyo3 extension-module cannot
   # link a test binary).
@@ -736,7 +736,7 @@ jobs:
       - name: Test (every other workspace crate, all features; push to main / release tag)
         env: *medulla-validation-compiler-cache-env
         if: github.job == 'gates-crates' && github.event_name != 'pull_request'
-        run: python3 scripts/cargo_test_rescue.py cargo test --locked --workspace --exclude medulla-engine --exclude medulla-types --exclude medulla-core --exclude medulla-compute --exclude medulla-storage --exclude medulla-tts-piper --exclude medulla-numeric --exclude medulla-pyengine --all-features --no-fail-fast
+        run: python3 scripts/cargo_test_rescue.py cargo test --locked --workspace --exclude medulla-types --exclude medulla-core --exclude medulla-compute --exclude medulla-storage --exclude medulla-tts-piper --exclude medulla-numeric --exclude medulla-pyengine --all-features --no-fail-fast
       - name: Test (pyo3 crates, every feature except python)
         if: github.job == 'gates-pyo3'
         env: *medulla-validation-compiler-cache-env
