@@ -3,6 +3,3 @@
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod development_lane;
 
-use medulla_store::redb_store::store_prelude::*;
-use medulla_store::redb_store::*;
-use development_lane::*;
