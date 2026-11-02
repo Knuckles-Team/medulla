@@ -3,12 +3,9 @@ use super::{
     AssociationRequest, CommunityRequest, EntityResolutionRequest, ForecastRequest,
     RiskPropagationRequest, RootCauseRequest, TextRequest, WritebackOptions,
 };
-use std::sync::Arc;
 
 use medulla_graph_core::graph::GraphCore;
-use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
-use medulla_server_api::carrier::GraphReadAuthority;
-use medulla_server_mutation::{mutation, mutation::MutationCtx, mutation::MutationPlan};
+use medulla_protocol_types::protocol::{Method, ResultPayload};
 
 /// Generate the uniform method-destructure → mining-handler → response-result
 /// adapter used by the mining methods without duplicating that gateway glue.

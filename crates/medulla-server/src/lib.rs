@@ -30,9 +30,6 @@ mod query_seam;
 
 
 // ---- merged from the moved module root (src/server/mod.rs) ----
-#[cfg(feature = "federation")]
-use medulla_server_ops::api::query_txn::ForeignStateExt;
-use medulla_server_cdc::cdc::CdcStateExt;
 #[cfg(feature = "ann-redb")]
 use medulla_h_retrieve::semantic_index_runtime::PendingRf019Activation;
 // CONCEPT:MEDULLA-KG.query.tokio-service-server — Tokio Service Server
@@ -245,7 +242,7 @@ pub mod replica;
 // calls this on startup to repopulate the in-RAM matview index from redb.
 // Post-bind maintenance hook (MEDULLA-DURABLE-KERNEL-R006.4): the binary calls this
 // from `serve_transports` right after the listeners bind.
-use medulla_server_api::state::{txn_limits_from_env, ServerState};
+use medulla_server_api::state::ServerState;
 
 /// Build the canonical feature-complete state used by dispatch and wire tests.
 /// Keeping the constructor and every feature-gated service attachment here

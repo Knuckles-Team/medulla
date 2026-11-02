@@ -1,12 +1,5 @@
 //! Authenticated Agent Library operation handlers.
 
-#[cfg(feature = "redb")]
-use medulla_agent_types::agent_library::AgentLibraryEntryDraft;
-use medulla_agent_types::agent_library::AgentLibraryMutationContext;
-use medulla_agent_types::agent_library::AgentLibraryOp;
-use medulla_agent_types::agent_library::AgentLibraryPublishRequest;
-use medulla_agent_types::agent_library::AgentLibraryRetireRequest;
-use medulla_agent_types::agent_library::AgentLibraryStatusRequest;
 use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 use std::sync::Arc;
 

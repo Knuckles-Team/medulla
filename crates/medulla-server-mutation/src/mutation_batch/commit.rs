@@ -45,10 +45,8 @@ pub use program::{
 
 #[cfg(test)]
 use medulla_server_api::batch_compile::compile::compile_methods;
-use medulla_server_api::batch_compile::compile::CompileBatch;
 #[cfg(test)]
 use medulla_graph_core::graph::GraphCore;
-use medulla_mutation_types::mutation_scope::MutationSurface;
 #[cfg(test)]
 use medulla_protocol_types::mutation_batch::MutationStateDescriptor;
 #[cfg(test)]

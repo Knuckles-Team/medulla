@@ -32,8 +32,6 @@
 //! evict/hibernate ops — no DataFusion / openraft / object_store. Pi-safe.
 
 use std::cmp::Ordering as CmpOrdering;
-#[cfg(test)]
-use std::collections::BinaryHeap;
 use std::sync::Arc;
 
 use parking_lot::Mutex;

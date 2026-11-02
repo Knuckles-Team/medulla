@@ -564,7 +564,7 @@ async fn txn_handle(
         let guard = state.read().await;
         medulla_server::seams_install::install_seams(&guard);
     }
-    let txn = medulla_server_ops::api::query_txn::txn_seam(&state).await;
+    let txn = medulla_server_ops::api::query_txn::txn_seam(state).await;
     let Some(txn) = txn else {
         return Ok(Response::err(
             req_id,

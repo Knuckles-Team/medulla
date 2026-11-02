@@ -124,6 +124,12 @@ pub struct ReplayCache {
 }
 
 #[cfg(any(test, feature = "test-support"))]
+impl Default for ReplayCache {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ReplayCache {
     pub fn new() -> Self {
         ReplayCache {

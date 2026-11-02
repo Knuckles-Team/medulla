@@ -1,4 +1,3 @@
-use medulla_server_blob::blob::BlobStateExt;
 #[cfg(test)]
 use super::change_envelope::decode_multi_graph_batches;
 use super::change_envelope::route_change_envelope_ops;

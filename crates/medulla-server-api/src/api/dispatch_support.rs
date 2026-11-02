@@ -140,6 +140,9 @@ pub fn outbound_http_config() -> ureq::config::ConfigBuilder<ureq::typestate::Ag
         .timeout_connect(Some(std::time::Duration::from_secs(30)))
 }
 
+/// Current typed event carried by the signed `ApplyMutation` protocol method.
+pub const SPARQL_HTTP_UPDATE_EVENT: &str = "sparql_http_update_v1";
+
 #[cfg(test)]
 mod tests {
     use super::{pseudonymous_broker_actor, validate_direct_wire_security};
@@ -177,6 +180,3 @@ mod tests {
         assert!(pseudonymous_broker_actor("", "principal").is_err());
     }
 }
-
-/// Current typed event carried by the signed `ApplyMutation` protocol method.
-pub const SPARQL_HTTP_UPDATE_EVENT: &str = "sparql_http_update_v1";

@@ -380,7 +380,7 @@ fn move_one_graph(
 ) -> Result<(), String> {
     let mut transfer = GraphShardPayloadTransfer::for_migration(report);
     let grafted = crate::online_reshard::graft_graph_from_with_payload(
-        &dest,
+        dest,
         source,
         graph,
         Some(&mut transfer),

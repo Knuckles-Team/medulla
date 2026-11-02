@@ -576,6 +576,16 @@ impl medulla_kernel::kernel::persistence::ResidentProjectionHost for ServerState
     }
 }
 
+/// Acquire the process-wide `ServerState` write lock, recording the wait (D-EIMG-2).
+pub async fn timed_write(
+    state: &std::sync::Arc<tokio::sync::RwLock<ServerState>>,
+) -> tokio::sync::RwLockWriteGuard<'_, ServerState> {
+    let started = std::time::Instant::now();
+    let guard = state.write().await;
+    medulla_kernel::metrics::observe_dispatch_lock_wait("write", started.elapsed().as_secs_f64());
+    guard
+}
+
 #[cfg(test)]
 mod construction_tests {
     use super::{IsolationLayer, ServerState};
@@ -602,14 +612,4 @@ mod construction_tests {
         #[cfg(feature = "blob")]
         assert_eq!(state.blob_cursor_ttl_secs, 300);
     }
-}
-
-/// Acquire the process-wide `ServerState` write lock, recording the wait (D-EIMG-2).
-pub async fn timed_write(
-    state: &std::sync::Arc<tokio::sync::RwLock<ServerState>>,
-) -> tokio::sync::RwLockWriteGuard<'_, ServerState> {
-    let started = std::time::Instant::now();
-    let guard = state.write().await;
-    medulla_kernel::metrics::observe_dispatch_lock_wait("write", started.elapsed().as_secs_f64());
-    guard
 }

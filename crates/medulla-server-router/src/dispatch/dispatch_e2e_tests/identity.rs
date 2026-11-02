@@ -2,11 +2,9 @@
 //! verified context, exact identity scopes are required, every secret is
 //! hashed and cleared before apply, and the floors refuse weak secrets.
 
-use crate::dispatch::*;
 use medulla_server_identity::dispatch::identity_store::*;
 use std::sync::Arc;
 use medulla_identity_types::{identity::IdentityOp, identity::IdentityStamp};
-use medulla_protocol_types::result_contract::security::Identity as IdentityResult;
 use tokio::sync::RwLock;
 use medulla_server_identity::dispatch::elevation::ElevationStampAuthority;
 use medulla_server_api::state::ServerState;

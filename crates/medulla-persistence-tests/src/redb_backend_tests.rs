@@ -70,7 +70,6 @@ pub fn seed_raw_row<'k, 'v, K, V>(
     wtx.commit().expect("commit raw seed row");
 }
 
-use medulla_persistence::AsRedb;
 // A raw `redb::Database` survives HERE and nowhere else: these fixtures plant
 // rows the production paths deliberately refuse to write, so they must reach
 // the file underneath the kernel's admission. Each opens the file only after

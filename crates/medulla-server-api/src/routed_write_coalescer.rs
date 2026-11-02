@@ -344,6 +344,40 @@ impl Default for RoutedWriteCoalescerRegistry {
     }
 }
 
+/// One deterministic async serialization lane for each logical graph. Transaction
+/// Commit and the ordinary mutation gateway both acquire it, so OCC validation
+/// cannot race a gateway write while its durable-before-RAM batch is in flight. A
+/// fixed number of deterministic stripes bounds memory across create/delete churn; a hash
+/// collision only serializes two unrelated graphs and cannot weaken correctness.
+pub async fn lock_graph(graph: &str) -> OwnedMutexGuard<()> {
+    static LOCKS: OnceLock<Vec<Arc<Mutex<()>>>> = OnceLock::new();
+    striped_lock(&LOCKS, graph).await
+}
+
+pub const LOCK_STRIPES: usize = 1024;
+
+/// The deterministic stripe a lane key maps to (FNV-1a).
+pub fn lock_stripe(key: &str) -> usize {
+    let mut hash = 0xcbf2_9ce4_8422_2325u64;
+    for byte in key.as_bytes() {
+        hash ^= u64::from(*byte);
+        hash = hash.wrapping_mul(0x0000_0100_0000_01b3);
+    }
+    (hash as usize) % LOCK_STRIPES
+}
+
+pub async fn striped_lock(
+    table: &'static OnceLock<Vec<Arc<Mutex<()>>>>,
+    key: &str,
+) -> OwnedMutexGuard<()> {
+    let locks = table.get_or_init(|| {
+        (0..LOCK_STRIPES)
+            .map(|_| Arc::new(Mutex::new(())))
+            .collect()
+    });
+    Arc::clone(&locks[lock_stripe(key)]).lock_owned().await
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -543,38 +577,4 @@ mod tests {
             "a reopened worker must continue from the durable commit stream"
         );
     }
-}
-
-/// One deterministic async serialization lane for each logical graph. Transaction
-/// Commit and the ordinary mutation gateway both acquire it, so OCC validation
-/// cannot race a gateway write while its durable-before-RAM batch is in flight. A
-/// fixed number of deterministic stripes bounds memory across create/delete churn; a hash
-/// collision only serializes two unrelated graphs and cannot weaken correctness.
-pub async fn lock_graph(graph: &str) -> OwnedMutexGuard<()> {
-    static LOCKS: OnceLock<Vec<Arc<Mutex<()>>>> = OnceLock::new();
-    striped_lock(&LOCKS, graph).await
-}
-
-pub const LOCK_STRIPES: usize = 1024;
-
-/// The deterministic stripe a lane key maps to (FNV-1a).
-pub fn lock_stripe(key: &str) -> usize {
-    let mut hash = 0xcbf2_9ce4_8422_2325u64;
-    for byte in key.as_bytes() {
-        hash ^= u64::from(*byte);
-        hash = hash.wrapping_mul(0x0000_0100_0000_01b3);
-    }
-    (hash as usize) % LOCK_STRIPES
-}
-
-pub async fn striped_lock(
-    table: &'static OnceLock<Vec<Arc<Mutex<()>>>>,
-    key: &str,
-) -> OwnedMutexGuard<()> {
-    let locks = table.get_or_init(|| {
-        (0..LOCK_STRIPES)
-            .map(|_| Arc::new(Mutex::new(())))
-            .collect()
-    });
-    Arc::clone(&locks[lock_stripe(key)]).lock_owned().await
 }

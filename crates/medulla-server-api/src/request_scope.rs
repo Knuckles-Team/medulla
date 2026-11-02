@@ -24,6 +24,12 @@ pub const CANCELLED: &str =
 #[derive(Clone)]
 pub struct RequestCancel(Arc<tokio::sync::watch::Sender<bool>>);
 
+impl Default for RequestCancel {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl RequestCancel {
     pub fn new() -> Self {
         Self(Arc::new(tokio::sync::watch::channel(false).0))
