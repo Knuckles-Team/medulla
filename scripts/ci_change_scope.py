@@ -99,7 +99,7 @@ PATH_GATES: dict[str, tuple[str, ...]] = {
     "ontology": (
         "crates/medulla-core/ontology/",
         "src/server/graph_schema/",
-        "src/server/graph_schema.rs",
+        "crates/medulla-h-admin/src/graph_schema.rs",
         *_TOOLCHAIN_PATHS,
     ),
     "tts": (

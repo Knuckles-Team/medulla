@@ -1,7 +1,7 @@
 //! Literal server refusal tokens observed at the wire boundary. New typed
 //! handler errors should replace these literals while retaining their wire codes.
 
-use super::closed_error_codes;
+use crate::closed_error_codes;
 
 closed_error_codes! {
     /// Existing server refusal vocabulary pending typed handler migration.

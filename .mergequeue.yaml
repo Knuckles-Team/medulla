@@ -407,7 +407,7 @@ gates:
     # `.config/pre-commit.yaml`'s D-WUI-7-equivalent already had to fix
     # elsewhere in this program (pnpm install's own non-reproducible progress
     # lines) -- the stable, itemized identifier is the summary line, same
-    # discipline as agent-webui's vitest gate (`keep_lines: ["^FAIL "]`).
+    # discipline as overstory's vitest gate (`keep_lines: ["^FAIL "]`).
     keep_lines:
       - '^test .* \.\.\. FAILED'
       - '^error\['

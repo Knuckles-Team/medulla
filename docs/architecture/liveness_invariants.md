@@ -50,7 +50,7 @@ A `recv_timeout` inside `while let Ok(..)` will make the worker exit the first
 time its owner paused, losing the state it owns.
 
 **Sites.**
-- `crates/medulla-query/src/sql/spill.rs`: the spill worker's command loop (the
+- `crates/medulla-sql/src/sql/spill.rs`: the spill worker's command loop (the
   worker owns the spill file writer).
 
 ## enclosing-deadline
@@ -60,7 +60,7 @@ that turns a missed party into a test failure. A second deadline inside the
 wait can fire only after the outer one had already failed the test.
 
 **Sites.**
-- `src/server/persistence/redb_backend.rs`: the concurrent shard fan-out
+- `crates/medulla-persistence/src/redb_backend.rs`: the concurrent shard fan-out
   barrier test, driven under `tokio::time::timeout(10s)`.
 
 ## panic-fixture-join
@@ -86,9 +86,9 @@ turns recovery into a decision.
   (three allows).
 - `crates/medulla-wasm/src/lib.rs`: the UDF-registry mutex. The registry can be
   rebuilt, and the report goes to stderr.
-- `crates/medulla-plan/src/exec.rs`: the derived-tensor CAS mutex. The CAS is
+- `crates/medulla-exec/src/exec.rs`: the derived-tensor CAS mutex. The CAS is
   content-addressed and re-derivable.
-- `crates/medulla-plan/src/learned_cost.rs`: `recover_corrections`, the learned
+- `crates/medulla-exec/src/learned_cost.rs`: `recover_corrections`, the learned
   cost-correction curves. They are advisory and can be re-learned, since an
   untrained curve is the identity.
 

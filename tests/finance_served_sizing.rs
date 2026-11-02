@@ -1,5 +1,5 @@
 //! MEDULLA-FINANCE-PRIMITIVES-R900.3: the served `FinancePositionSize` and
-//! `FinanceDistributionShift` routes run the shared `medulla_numeric::sizing` kernels
+//! `FinanceDistributionShift` routes run the shared `medulla_finance_quant::sizing` kernels
 //! through the real signed `dispatch` surface.
 #![cfg(all(feature = "server", feature = "security", feature = "finance"))]
 
@@ -7,7 +7,7 @@ mod common;
 #[path = "common/test_support.rs"]
 mod test_support;
 
-use medulla::protocol::{GraphType, Method, Response, ResultPayload};
+use medulla_protocol_types::protocol::{GraphType, Method, Response, ResultPayload};
 
 const SECRET: &str = "medulla-fin-r900-3-served-sizing-secret";
 

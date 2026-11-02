@@ -127,7 +127,7 @@ The finance compute path is deterministic and side-effect free except explicitly
 Introduce v2 asset-class values with explicit aliases from existing values, then dual-read old records during a bounded migration. Version SHACL, contract and persisted payload together; do not reinterpret prior digests. Backfill account activities from trusted imports only after dedupe, reconcile derived balances against independent statements, and publish the new head only when a tenant's migration validates. Retain prior activity revisions for as-of replay. Existing `FinanceMarket` bars, flip IDs and analysis snapshot versions must keep decoding throughout migration.
 ## MEDULLA-FINANCE-PRIMITIVES-R002 and MEDULLA-FINANCE-PRIMITIVES-R003 kernel reuse
 
-`crates/medulla-numeric/src/evaluation/` is the shared numerical authority; `crates/medulla-compute/src/finance/quant/validation.rs` and finance wire methods are callers. The UQL/series layer uses the same kernels through `medulla-plan` and `medulla-tsdb` without finance-specific copies. `crates/medulla-compute/src/finance/market/backtest_run.rs` seals and verifies the finance record from its draft split matrix, while `medulla-types` owns the versioned public record fields. If the generic `EvaluationRun` record is extended, share seal/no-look-ahead code with the decision replay path rather than diverging finance and decision validations. Generated clients derive from Rust descriptors; changing a method requires regenerated count, schema and binding checks.
+`crates/medulla-numeric/src/evaluation/` is the shared numerical authority; `crates/medulla-finance-market/src/market/validation.rs` and finance wire methods are callers. The UQL/series layer uses the same kernels through `medulla-plan` and `medulla-tsdb` without finance-specific copies. `crates/medulla-finance-market/src/market/backtest_run.rs` seals and verifies the finance record from its draft split matrix, while `medulla-types` owns the versioned public record fields. If the generic `EvaluationRun` record is extended, share seal/no-look-ahead code with the decision replay path rather than diverging finance and decision validations. Generated clients derive from Rust descriptors; changing a method requires regenerated count, schema and binding checks.
 
 ## Amendments
 
@@ -152,7 +152,7 @@ This correction changes acceptance prose; it neither changes test bindings nor a
 
 Inspection base: `7df2685439e98ebc8eaf036279f7f25d8fb9fe33`.
 `crates/medulla-types/src/wire_finance.rs` defines the version gate. The inspected source contains no served caller.
-`crates/medulla-compute/src/finance/lot_accounting.rs` supports FIFO, LIFO and specific-lot elections.
+`crates/medulla-finance/src/lot_accounting.rs` supports FIFO, LIFO and specific-lot elections.
 Its activity representation has buy/sell quantities, without transfer or split operations.
 `crates/medulla-types/src/finance_event_envelope.rs` explicitly defers transactional append and topic wiring.
 The existing mutation compiler and transaction outbox provide the intended integration authority.
@@ -199,8 +199,8 @@ children pass native execution. Do not treat a sample as complete acceptance.
 
 ## MEDULLA-FINANCE-PRIMITIVES-R018 factor research
 
-Data flow: served finance wire method → route (`src/server/handlers/finance/route_families.rs:211`) → `rank_factors` → `information_coefficient` (`crates/medulla-numeric/src/evaluation/skill.rs:16`) → `FactorRecord` node with provenance edges.
-Types: `FactorRecord` in `crates/medulla-compute/src/finance/factor.rs`.
+Data flow: served finance wire method → route (`crates/medulla-h-compute/src/finance/route_families.rs:211`) → `rank_factors` → `information_coefficient` (`crates/medulla-numeric/src/evaluation/skill.rs:16`) → `FactorRecord` node with provenance edges.
+Types: `FactorRecord` in `crates/medulla-finance-quant/src/factor.rs`.
 Attach point: the finance route. Production caller is the served finance method dispatch.
 Failure: thin input yields `FACTOR_INSUFFICIENT_DATA` and no node.
 Reuses the shared evaluation kernels per R002. New: ranking and the node record.
@@ -241,19 +241,19 @@ Inspection base: `a98f2037d36d0ab6f79a10ba91b9816f61658377`.
 | Existing source | Observed behavior and required extension |
 |---|---|
 | `crates/medulla-numeric/src/series/kalman.rs:52` | `Kalman::observe` provides scalar predict/update. It lacks versioned adaptation and robust matrix profiles. |
-| `crates/medulla-compute/src/finance/statespace.rs:56` | Level and beta wrappers call the shared scalar kernel. Volatility keeps a separate recurrence. |
-| `crates/medulla-compute/src/finance/statespace.rs:94` | Unspecified volatility initialization uses the first 60 available observations. Streaming initialization must use an explicit prior or completed warmup. |
-| `crates/medulla-compute/src/finance/statespace.rs:167` and `crates/medulla-compute/src/finance/regime.rs` | ADF, OU and regime calculations still require the original ownership migration. |
-| `src/server/handlers/finance/route_families.rs:576` | Finance filter requests enter existing compute wrappers. Preserve compatibility while migrating generic callers. |
-| `src/server/handlers/timeseries.rs:367` | `handle_append` commits source points, then calls `derived::maintain_after_append`. |
-| `src/server/handlers/timeseries/derived.rs:222` | `maintain_one` advances or replays `DerivedState`, then commits derived points and checkpoint state. |
+| `crates/medulla-finance-quant/src/statespace.rs:56` | Level and beta wrappers call the shared scalar kernel. Volatility keeps a separate recurrence. |
+| `crates/medulla-finance-quant/src/statespace.rs:94` | Unspecified volatility initialization uses the first 60 available observations. Streaming initialization must use an explicit prior or completed warmup. |
+| `crates/medulla-finance-quant/src/statespace.rs:167` and `crates/medulla-finance-quant/src/regime.rs` | ADF, OU and regime calculations still require the original ownership migration. |
+| `crates/medulla-h-compute/src/finance/route_families.rs:576` | Finance filter requests enter existing compute wrappers. Preserve compatibility while migrating generic callers. |
+| `crates/medulla-h-txn/src/timeseries.rs:367` | `handle_append` commits source points, then calls `derived::maintain_after_append`. |
+| `crates/medulla-h-txn/src/timeseries/derived.rs:222` | `maintain_one` advances or replays `DerivedState`, then commits derived points and checkpoint state. |
 | `crates/medulla-tsdb/src/derive/mod.rs:1` | `Program` compiles series expressions to shared numerical kernels. The current kernel revision is `eg-series-kernels/2`. |
-| `src/server/handlers/query/sql_read.rs:305` | `handle_unified_query` handles structured plans. The planner's `Op::Derive` dispatch uses the same series evaluator. |
+| `crates/medulla-h-query/src/query/sql_read.rs:305` | `handle_unified_query` handles structured plans. The planner's `Op::Derive` dispatch uses the same series evaluator. |
 
 The structured path is `handle_unified_query` -> `run_unified_off_lock` -> `run_unified_off_lock_with`.
 The runner binds the served plan context before calling `execute_rows`.
-`apply_timeseries` dispatches `Op::Derive` at `crates/medulla-plan/src/exec/dispatch.rs:461`.
-`derive_op` at `crates/medulla-plan/src/exec/derive.rs:21` compiles `Program`, then `derive_row` calls `Program::step`.
+`apply_timeseries` dispatches `Op::Derive` at `crates/medulla-exec/src/exec/dispatch.rs:461`.
+`derive_op` at `crates/medulla-exec/src/exec/derive.rs:21` compiles `Program`, then `derive_row` calls `Program::step`.
 Extend these existing boundaries to carry the typed profiles and diagnostics.
 The current append path commits source data before derived maintenance.
 Maintenance failure can leave the derived series behind its source.

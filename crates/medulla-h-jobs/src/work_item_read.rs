@@ -1,0 +1,224 @@
+//! EH-219 typed WorkItem reads (`GetWorkItem`, `ListWorkItems`), the
+//! graph-os MEDULLA-2 control-lease read (`GetControlLease`) and the EH-348 Gap
+//! reads (`GapGet`, `GapList`).
+//!
+//! Dispatch has already resolved the graph, its ACL and placement, and (under
+//! raft) made the read linearizable on the placement leader. What this module
+//! adds is the tenant rule and the native store call:
+//!
+//! * the request's `tenant` must equal the VERIFIED carrier tenant. A mismatch
+//!   is `ACCESS_DENIED`, never a cross-tenant read -- and unlike the resource
+//!   and capacity reads there is no aggregate-reader or `kg:admin` exception:
+//!   a WorkItem's caller view belongs to its tenant alone.
+//! * rows are read off the redb authority's MVCC snapshot; any other backend
+//!   fails closed, because only the redb authority holds native WorkItem rows.
+//!   (A build without `redb` does not compile this module at all: the methods
+//!   then fall to the "not available in this server build" arm, and `Health`
+//!   never advertises them.)
+
+#[cfg(feature = "redb")]
+use medulla_persistence::AsRedb;
+use std::sync::Arc;
+
+use medulla_work_types::work_item_read::WorkItemListRequest;
+
+use medulla_protocol_types::protocol::Response;
+use medulla_protocol_types::protocol::ResultPayload;
+use medulla_server_api::api::persistence::PersistenceBackend;
+
+/// One decoded WorkItem read.
+pub enum WorkItemRead {
+    SessionUsage {
+        tenant: String,
+        context_id: String,
+        actor: String,
+    },
+    Checkpoint {
+        request: medulla_work_types::run_checkpoint::GetRunCheckpointRequest,
+        actor: String,
+    },
+    RunAdmission {
+        tenant: String,
+        run_id: String,
+        actor: String,
+    },
+    CurrentPlan {
+        tenant: String,
+        run_id: String,
+        actor: String,
+    },
+    Get {
+        tenant: String,
+        work_item_id: String,
+    },
+    List(WorkItemListRequest),
+    /// graph-os MEDULLA-3: a terminal WorkItem and its committed provenance.
+    Outcome {
+        tenant: String,
+        work_item_id: String,
+    },
+    /// graph-os MEDULLA-5: one page of control leases.
+    ControlLeases(medulla_work_types::control_lease::ListControlLeasesRequest),
+    /// graph-os MEDULLA-2: one native control lease.
+    ControlLease {
+        tenant: String,
+        lease_id: String,
+    },
+    /// EH-348: one canonical Gap.
+    Gap {
+        tenant: String,
+        gap_id: String,
+    },
+    /// EH-348: one page of Gaps.
+    Gaps(medulla_work_types::work_market::GapListRequest),
+}
+
+impl WorkItemRead {
+    fn tenant(&self) -> &str {
+        match self {
+            Self::Checkpoint {
+                request: medulla_work_types::run_checkpoint::GetRunCheckpointRequest { tenant, .. },
+                ..
+            }
+            | Self::Get { tenant, .. }
+            | Self::Outcome { tenant, .. } => tenant,
+            Self::CurrentPlan { tenant, .. }
+            | Self::RunAdmission { tenant, .. }
+            | Self::SessionUsage { tenant, .. } => tenant,
+            Self::List(request) => &request.tenant,
+            Self::ControlLeases(request) => &request.tenant,
+            Self::ControlLease { tenant, .. } | Self::Gap { tenant, .. } => tenant,
+            Self::Gaps(request) => &request.tenant,
+        }
+    }
+}
+
+/// Answer one WorkItem read for the verified carrier tenant.
+pub async fn answer(
+    req_id: u64,
+    graph_name: &str,
+    verified_tenant: &str,
+    persistence: &Option<Arc<dyn PersistenceBackend>>,
+    read: WorkItemRead,
+) -> Response {
+    if let Err(denied) =
+        super::native_write_authority::require_carrier_tenant(read.tenant(), verified_tenant)
+    {
+        medulla_kernel::metrics::access_denied();
+        return Response::err(req_id, denied);
+    }
+    let graph = medulla_kernel::persist::sanitize(graph_name);
+    let checkpoint = matches!(&read, WorkItemRead::Checkpoint { .. });
+    match serve_native(&graph, persistence, read).await {
+        Ok(payload) => Response::ok(req_id, payload),
+        Err(error) if preserves_native_refusal(&error, checkpoint) => Response::err(req_id, error),
+        Err(error) => Response::err(req_id, format!("WorkItem read failed: {error}")),
+    }
+}
+
+/// Keep checkpoint claim conflicts typed without widening other read contracts.
+fn preserves_native_refusal(error: &str, checkpoint: bool) -> bool {
+    error.split_once(": ").is_some_and(|(code, _)| {
+        code == medulla_types::contract::ServerErrorCode::RunAdmissionUnavailable.as_str()
+            || (checkpoint && code == medulla_types::contract::EngineErrorCode::Conflict.as_str())
+    })
+}
+
+async fn serve_native(
+    graph: &str,
+    persistence: &Option<Arc<dyn PersistenceBackend>>,
+    read: WorkItemRead,
+) -> Result<ResultPayload, String> {
+    use medulla_protocol_types::{
+        result_contract::coordination::GapGet, result_contract::coordination::GapList,
+        result_contract::coordination::GetControlLease, result_contract::coordination::GetWorkItem,
+        result_contract::coordination::GetWorkItemOutcome,
+        result_contract::coordination::ListControlLeases,
+        result_contract::coordination::ListWorkItems,
+    };
+    let backend = persistence
+        .as_ref()
+        .and_then(|backend| backend.as_redb())
+        .ok_or_else(|| NATIVE_UNAVAILABLE.to_string())?;
+    match read {
+        WorkItemRead::RunAdmission {
+            tenant,
+            run_id,
+            actor,
+        } => {
+            let actor = medulla_server_api::batch_compile::principal_fingerprint(&actor)?;
+            ResultPayload::of::<medulla_protocol_types::result_contract::coordination::GetRunWorkItem>(
+                backend
+                    .read_run_work_item(graph, &tenant, &run_id, &actor)
+                    .await?,
+            )
+        }
+        WorkItemRead::SessionUsage {
+            tenant,
+            context_id,
+            actor,
+        } => {
+            let actor = medulla_server_api::batch_compile::principal_fingerprint(&actor)?;
+            ResultPayload::of::<
+                medulla_protocol_types::result_contract::coordination::GetSessionUsage,
+            >(
+                backend
+                    .read_session_usage(graph, &tenant, &context_id, &actor)
+                    .await?,
+            )
+        }
+        WorkItemRead::Checkpoint { request, actor } => {
+            let actor = medulla_server_api::batch_compile::principal_fingerprint(&actor)?;
+            ResultPayload::of::<
+                medulla_protocol_types::result_contract::coordination::GetRunCheckpoint,
+            >(backend.read_run_checkpoint(graph, request, &actor).await?)
+        }
+        WorkItemRead::CurrentPlan {
+            tenant,
+            run_id,
+            actor,
+        } => {
+            let actor = medulla_server_api::batch_compile::principal_fingerprint(&actor)?;
+            ResultPayload::of::<medulla_protocol_types::result_contract::coordination::GetCurrentPlan>(
+                backend
+                    .read_current_plan(graph, &tenant, &run_id, &actor)
+                    .await?,
+            )
+        }
+        WorkItemRead::Get {
+            tenant,
+            work_item_id,
+        } => ResultPayload::of::<GetWorkItem>(
+            backend
+                .read_work_item(graph, &tenant, &work_item_id)
+                .await?,
+        ),
+        WorkItemRead::List(request) => {
+            ResultPayload::of::<ListWorkItems>(backend.list_work_items(graph, request).await?)
+        }
+        WorkItemRead::Outcome {
+            tenant,
+            work_item_id,
+        } => ResultPayload::of::<GetWorkItemOutcome>(
+            backend
+                .read_work_item_outcome(graph, &tenant, &work_item_id)
+                .await?,
+        ),
+        WorkItemRead::ControlLeases(request) => ResultPayload::of::<ListControlLeases>(
+            backend.list_control_leases(graph, request).await?,
+        ),
+        WorkItemRead::ControlLease { tenant, lease_id } => ResultPayload::of::<GetControlLease>(
+            backend
+                .read_control_lease(graph, &tenant, &lease_id)
+                .await?,
+        ),
+        WorkItemRead::Gap { tenant, gap_id } => {
+            ResultPayload::of::<GapGet>(backend.read_gap(graph, &tenant, &gap_id).await?)
+        }
+        WorkItemRead::Gaps(request) => {
+            ResultPayload::of::<GapList>(backend.list_gaps(graph, request).await?)
+        }
+    }
+}
+
+const NATIVE_UNAVAILABLE: &str = "native WorkItem reads require the redb persistence backend";

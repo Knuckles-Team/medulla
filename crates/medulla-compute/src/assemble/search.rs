@@ -7,22 +7,31 @@
 //! decision abstains, naming each refusal. The final model, cuts included, is
 //! the one the record's certificate covers, so replay reproduces it exactly.
 
-use medulla_types::agent_component::AgentComponentKind;
-use medulla_types::agent_graph::AgentGraphDraft;
-use medulla_types::agent_library::AgentLibraryEntryDraft;
+use medulla_agent_types::agent_component::AgentComponentKind;
+use medulla_agent_types::agent_graph::AgentGraphDraft;
+use medulla_agent_types::agent_library::AgentLibraryEntryDraft;
+use medulla_decision_types::decision::request::effective_solver_budget;
+use medulla_decision_types::solve::Certificate;
+use medulla_decision_types::solve::ConstraintBody;
+use medulla_decision_types::solve::ConstraintSpec;
+use medulla_decision_types::solve::ModelSpec;
+use medulla_decision_types::solve::Relation;
+use medulla_decision_types::solve::SolveStatus;
+use medulla_decision_types::solve::SolverConfig;
+use medulla_decision_types::solve::SolverConfigSpec;
+use medulla_decision_types::solve::Term;
+use medulla_decision_types::solve::VarId;
+use medulla_decision_types::solve::DEFAULT_CERTIFICATE_LEAVES;
+use medulla_decision_types::{
+    decision::digest, decision::AbstainReason, decision::CandidateFacts,
+    decision::DecisionErrorCode, decision::DecisionInputs, decision::TemplateFacts,
+};
 use medulla_types::contract::BoundedVec;
-use medulla_types::decision::request::effective_solver_budget;
-use medulla_types::decision::{
-    digest, AbstainReason, CandidateFacts, DecisionErrorCode, DecisionInputs, TemplateFacts,
-};
-use medulla_types::solve::{
-    Certificate, ConstraintBody, ConstraintSpec, ModelSpec, Relation, Scalar, SolveStatus,
-    SolverConfig, SolverConfigSpec, Term, VarId, DEFAULT_CERTIFICATE_LEAVES,
-};
+use medulla_types::solve_scalar::Scalar;
 
 use super::model::Built;
 use super::AssembleError;
-use crate::solve::{solve, Model};
+use medulla_decision_policy::{solve::solve, solve::Model};
 
 /// Every agent an answer assembles, and the graph that runs them.
 pub(super) type Drafts = (Vec<AgentLibraryEntryDraft>, AgentGraphDraft);
@@ -100,7 +109,7 @@ pub(super) struct Answer {
     pub drafts: Drafts,
 }
 
-pub(super) fn model_invalid(error: crate::solve::ModelError) -> AssembleError {
+pub(super) fn model_invalid(error: medulla_decision_policy::solve::ModelError) -> AssembleError {
     AssembleError::new(DecisionErrorCode::AssemblyModelInvalid, error.to_string())
 }
 
@@ -211,7 +220,7 @@ fn budget_exhausted(context: &SolveContext<'_>, certificate: &Certificate) -> Ab
             .iter()
             .map(|(_, candidate)| candidate.component_id.as_str())
             .collect();
-        digest::digest_text("eg/decision-incumbent/v1", &ids)
+        medulla_types::solve_scalar::digest_text("eg/decision-incumbent/v1", &ids)
     });
     AbstainReason::BudgetExhausted {
         incumbent,

@@ -150,7 +150,7 @@ impl<'a> Iterator for TranscriptLineReader<'a> {
 
 /// Result of comparing the current line digests with the prior accepted prefix.
 /// The `last_ordinal` and `file_digest` fields are the bounded values an adapter
-/// writes into the existing `medulla_types::source_ingestion::SourceCheckpoint`
+/// writes into the existing `medulla_source_types::source_ingestion::SourceCheckpoint`
 /// position/content-hash fields; this scan result is not a second durable
 /// checkpoint contract.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -168,7 +168,7 @@ pub struct TranscriptPrefixDelta {
 //
 // spec: MEDULLA-REPO-INGEST-R800.2
 pub fn transcript_file_matches_checkpoint(
-    checkpoint: &medulla_types::source_ingestion::SourceCheckpoint,
+    checkpoint: &medulla_source_types::source_ingestion::SourceCheckpoint,
     bytes: &[u8],
 ) -> bool {
     checkpoint.content_hash == Some(Digest256::sha256(bytes))

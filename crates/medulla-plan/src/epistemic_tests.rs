@@ -6,14 +6,15 @@
 //! executor, mirroring `probabilistic_tests.rs`'s shape (a hand-built `GraphView` +
 //! `PlanCtx`, `plan.execute(&ctx)`, assert on the resulting `RowSet` ids/order).
 
-use medulla_core::compute::semantic::SemanticStore;
-use medulla_core::graph::{GraphCore, GraphView};
+use medulla_graph_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphView;
+use medulla_semantic_index::semantic::SemanticStore;
 use medulla_types::wire::TimeAxis;
 use serde_json::json;
 
-use crate::algebra::{Op, Plan};
-use crate::exec::PlanCtx;
-use crate::PlanExt;
+use medulla_exec::algebra::{Op, Plan};
+use medulla_exec::exec::PlanCtx;
+use medulla_exec::exec::PlanExt;
 
 fn blob(v: serde_json::Value) -> Vec<u8> {
     rmp_serde::to_vec_named(&v).unwrap()

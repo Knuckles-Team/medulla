@@ -168,7 +168,7 @@ receive **pushed** matches fed by the CDC bus (MEDULLA-KG.query.protocol-types).
 W4.10 wires that surface's matches onto the broker too (`MEDULLA_CEP_BROKER_EXCHANGE`, opt-in,
 feature `broker`) — a second, genuinely-pushed delivery path over the AMQP/MQTT/STOMP wire adapters
 alongside `CepPoll`'s long-poll, reachable with zero added write-path cost when unconfigured (see
-`src/server/cep.rs`).
+`crates/medulla-server-cdc/src/cep.rs`).
 
 ---
 

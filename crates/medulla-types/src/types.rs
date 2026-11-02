@@ -215,7 +215,7 @@ pub struct SceneQuat {
 }
 
 /// A scene object's composed world transform (`Method::WorldTransform`) -- the wire
-/// projection of `medulla_core::scene::Pose`, the same `{translation, rotation, scale}` object a
+/// projection of `medulla_graph_core::scene::Pose`, the same `{translation, rotation, scale}` object a
 /// scene node stores under its `pose` property.
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]

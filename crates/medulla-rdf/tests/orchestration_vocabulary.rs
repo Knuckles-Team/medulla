@@ -2,7 +2,7 @@
 #![cfg(feature = "owl")]
 
 use medulla_rdf::mapping::parse_turtle;
-use medulla_rdf::owl::Reasoner;
+use medulla_reasoner::owl::Reasoner;
 use medulla_rdf::oxrdf::{NamedNode, Triple};
 
 const KG: &str = "http://knuckles.team/kg#";
@@ -109,7 +109,8 @@ fn contradictory_parent_mutations_are_detected() {
 #[cfg(feature = "sparql")]
 mod run_trace {
     use super::*;
-    use medulla_core::graph::{GraphCore, GraphSchemaSources};
+    use medulla_graph_core::graph::GraphCore;
+    use medulla_graph_core::graph::GraphSchemaSources;
     use medulla_rdf::mapping::{load_triples, IriStore};
     use medulla_rdf::sparql::{execute, Dataset, Projection, QueryOutcome};
 
@@ -162,7 +163,9 @@ mod run_trace {
 
     fn conforms(properties: &str) -> bool {
         let data = format!("@prefix : <{KG}> . :trace a :RunTrace {properties} .");
-        medulla_shacl::validate_turtle(SHAPES, &data).unwrap().conforms
+        medulla_shacl::validate_turtle(SHAPES, &data)
+            .unwrap()
+            .conforms
     }
 
     // spec: MEDULLA-ORCH-VOCAB-R008.1
@@ -260,21 +263,25 @@ mod run_trace {
 #[cfg(feature = "sparql")]
 mod vocabulary {
     use super::*;
-    use medulla_core::graph::{GraphCore, GraphView};
+    use medulla_agent_types::agent_guardrail::entailed_guardrails;
+    use medulla_agent_types::agent_guardrail::GuardrailRule;
+    use medulla_graph_core::graph::GraphCore;
+    use medulla_graph_core::graph::GraphView;
     use medulla_rdf::mapping::{load_triples, IriStore};
-    use medulla_rdf::owl::saturate_object_properties;
+    use medulla_reasoner::owl::saturate_object_properties;
     use medulla_rdf::sparql::{execute, Dataset, Projection, QueryOutcome};
     use medulla_shacl::validate_turtle;
-    use medulla_types::decision::guardrail::{entailed_guardrails, GuardrailRule};
 
     const A2A: &str = include_str!("../../medulla-core/ontology/a2a-v1.ttl");
     const SDD: &str = include_str!("../../medulla-core/ontology/sdd-v1.ttl");
     const SWARM: &str = include_str!("../../medulla-core/ontology/swarm_topology-v1.ttl");
-    const SWARM_SHAPES: &str = include_str!("../../medulla-core/ontology/swarm_topology-v1.shapes.ttl");
+    const SWARM_SHAPES: &str =
+        include_str!("../../medulla-core/ontology/swarm_topology-v1.shapes.ttl");
     const ORCHESTRATION: &str = include_str!("../../medulla-core/ontology/orchestration-v1.ttl");
     const SHAPES: &str = include_str!("../../medulla-core/ontology/orchestration-v1.shapes.ttl");
-    const FIXTURE: &str =
-        include_str!("../../medulla-core/tests/fixtures/orchestration_vocabulary/deploy_container.ttl");
+    const FIXTURE: &str = include_str!(
+        "../../medulla-core/tests/fixtures/orchestration_vocabulary/deploy_container.ttl"
+    );
     const SWARM_NS: &str = "http://knuckles.team/kg/swarm#";
     const PREFIXES: &str = "PREFIX : <http://knuckles.team/kg#> \
         PREFIX swarm: <http://knuckles.team/kg/swarm#> \
@@ -397,7 +404,7 @@ mod vocabulary {
         shape_results(shapes, shape, shapes == SHAPES, data)
     }
 
-    fn consistent_with(extra: &str) -> medulla_rdf::owl::Classification {
+    fn consistent_with(extra: &str) -> medulla_reasoner::owl::Classification {
         let mut triples = schema();
         triples.extend(parse_turtle(&format!("{TURTLE_PREFIXES}{extra}")).unwrap());
         let classification = Reasoner::from_triples(&triples).classify();
@@ -516,7 +523,7 @@ mod vocabulary {
         assert!(swarm.contains(&"<http://knuckles.team/kg/orchestration>".to_string()));
         // The import closure has no cycle: orchestration imports nothing back.
         assert!(imports(ORCHESTRATION).is_empty());
-        medulla_core::graph::GraphSchemaSources::default()
+        medulla_graph_core::graph::GraphSchemaSources::default()
             .validate()
             .unwrap();
         consistent_with(FIXTURE);

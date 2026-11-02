@@ -1,0 +1,51 @@
+[package]
+name = "medulla-h-mining"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: Mining handlers"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_h_mining"
+path = "src/lib.rs"
+
+[dependencies]
+medulla-h-query = { path = "../medulla-h-query" }
+hex = "0.4"
+medulla-epistemic = { path = "../medulla-epistemic", optional = true }
+medulla-protocol-types = { path = "../medulla-protocol-types" }
+medulla-result-types = { path = "../medulla-result-types" }
+medulla-server-api = { path = "../medulla-server-api" }
+medulla-tsdb = { path = "../medulla-tsdb", optional = true }
+medulla-types = { path = "../medulla-types" }
+rmp-serde = "1.3"
+serde = { version = "1.0", features = ["derive", "rc"] }
+serde_json = "1.0"
+sha2 = "0.10"
+medulla-graph-core = { path = "../medulla-graph-core" }
+medulla-graph-algos = { path = "../medulla-graph-algos" }
+medulla-mining = { path = "../medulla-mining" }
+medulla-server-ops = { path = "../medulla-server-ops" }
+medulla-server-mutation = { path = "../medulla-server-mutation" }
+medulla-exec = { path = "../medulla-exec" }
+
+medulla-modality = { path = "../medulla-modality", optional = true }
+medulla-plan = { path = "../medulla-plan", optional = true }
+
+[features]
+epistemic = ["query", "dep:medulla-plan", "dep:medulla-modality", "dep:medulla-epistemic", "medulla-h-query/epistemic", "medulla-exec/epistemic", "medulla-plan?/epistemic", "medulla-protocol-types/epistemic", "medulla-server-api/epistemic", "medulla-server-mutation/epistemic", "medulla-server-ops/epistemic", "medulla-types/epistemic"]
+federation = ["query", "dep:medulla-plan", "medulla-h-query/federation", "medulla-exec/federation", "medulla-plan?/federation", "medulla-protocol-types/federation", "medulla-server-api/federation", "medulla-server-ops/federation", "medulla-types/federation"]
+mining = ["query", "tsdb", "medulla-h-query/mining", "medulla-mining/mining", "medulla-protocol-types/mining", "medulla-result-types/mining", "medulla-server-api/mining", "medulla-server-mutation/mining", "medulla-server-ops/mining", "medulla-types/mining"]
+query = ["dep:medulla-tsdb", "dep:medulla-plan", "medulla-h-query/query", "medulla-exec/query", "medulla-plan?/query", "medulla-protocol-types/query", "medulla-result-types/query", "medulla-server-api/query", "medulla-server-mutation/query", "medulla-server-ops/query", "medulla-types/query"]
+tsdb = ["dep:medulla-tsdb", "dep:medulla-plan", "medulla-h-query/tsdb", "medulla-server-api/tsdb", "medulla-server-ops/tsdb"]
+
+[dev-dependencies]
+medulla-h-query = { path = "../medulla-h-query", features = ["test-support"] }
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
+medulla-server-api = { path = "../medulla-server-api", features = ["test-support"] }
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-server-ops = { path = "../medulla-server-ops", features = ["test-support"] }
+medulla-server-mutation = { path = "../medulla-server-mutation", features = ["test-support"] }
+medulla-exec = { path = "../medulla-exec", features = ["test-support"] }

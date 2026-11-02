@@ -79,14 +79,14 @@ Every row's regression test must pass against an exact merged head, as PACK-06/0
 
 | Requirement | Native regression | Result |
 | --- | --- | --- |
-| MEDULLA-TYPED-PACKS-R042.1 | `src/server/handlers/admin/connector_pack/import/capability_tests.rs::both_capability_fields_refuse_relative_and_invalid_scheme_claims` and `foreign_terms_warn_and_stay_only_in_the_declared_partition`: both typed fields accept native terms and retain exact foreign claims with warnings. Native typos, roots, wrong kinds, invalid schemes, and malformed typed lists refuse. | Eight production-module tests passed on 2026-10-11 with Rust 1.96.0 and cached `medulla_types` and `serde_json` dependencies. Restoring the old scheme check makes the invalid-scheme test fail at `provides: 1vendor:search`. |
-| MEDULLA-TYPED-PACKS-R042.2 | `src/server/handlers/admin/connector_pack/tests/admin.rs::a_rejected_import_mutates_nothing_in_the_catalog`. `src/server/handlers/admin/connector_pack/tests/content_model.rs::capability_annotations_remain_declared_after_import`. | Both signed, served native regressions pass. Exact source, commands and results are in `../decision-engine/evidence/gr1080-native-20261011/final-native-results.json`. This focused slice does not verify the parent. |
+| MEDULLA-TYPED-PACKS-R042.1 | `crates/medulla-h-admin/src/admin/connector_pack/import/capability_tests.rs::both_capability_fields_refuse_relative_and_invalid_scheme_claims` and `foreign_terms_warn_and_stay_only_in_the_declared_partition`: both typed fields accept native terms and retain exact foreign claims with warnings. Native typos, roots, wrong kinds, invalid schemes, and malformed typed lists refuse. | Eight production-module tests passed on 2026-10-11 with Rust 1.96.0 and cached `medulla_types` and `serde_json` dependencies. Restoring the old scheme check makes the invalid-scheme test fail at `provides: 1vendor:search`. |
+| MEDULLA-TYPED-PACKS-R042.2 | `crates/medulla-h-admin/src/admin/connector_pack/tests/admin.rs::a_rejected_import_mutates_nothing_in_the_catalog`. `crates/medulla-h-admin/src/admin/connector_pack/tests/content_model.rs::capability_annotations_remain_declared_after_import`. | Both signed, served native regressions pass. Exact source, commands and results are in `../decision-engine/evidence/gr1080-native-20261011/final-native-results.json`. This focused slice does not verify the parent. |
 
 The native harness loads the unchanged production module path with `#[path]`; it uses no behavior substitutes. To repeat from the repository root with compatible cached Rust dependencies:
 
 ```sh
 work=$(mktemp -d)
-printf '#[path = "%s/src/server/handlers/admin/connector_pack/import/annotations.rs"]\nmod annotations;\n' "$PWD" > "$work/native.rs"
+printf '#[path = "%s/crates/medulla-h-admin/src/admin/connector_pack/import/annotations.rs"]\nmod annotations;\n' "$PWD" > "$work/native.rs"
 rustc --test --edition=2021 "$work/native.rs" \
   -L "dependency=$CACHED_RUST_DEPS" \
   --extern "medulla_types=$(find "$CACHED_RUST_DEPS" -name 'libeg_types-*.rlib' -print -quit)" \
@@ -115,10 +115,10 @@ The following tests cover existing native validation and digest behavior. They d
 
 | Source and proving test | Required observation |
 |---|---|
-| `src/server/handlers/admin/connector_pack/import/modality_tests.rs::modalities_accept_native_terms_for_tools_prompts_and_skills` | Both fields accept native terms for all three entry kinds and round-trip without loss. |
-| `src/server/handlers/admin/connector_pack/import/modality_tests.rs::modalities_refuse_foreign_roots_typos_and_wrong_kinds` | Both fields refuse foreign, root, typo, wrong-kind, relative, and empty IRIs with the typed code. |
-| `src/server/handlers/admin/connector_pack/import/modality_tests.rs::modality_lists_enforce_wire_types_and_both_size_edges` | Zero and 64 elements pass; 65 elements, null, scalars, and non-string elements refuse. |
-| `src/server/handlers/admin/connector_pack/import/modality_tests.rs::modality_digest_replay_is_canonical_and_direction_sensitive` | Rust replays committed full/empty vectors. Reordering and duplication preserve identity; content and direction changes do not. |
+| `crates/medulla-h-admin/src/admin/connector_pack/import/modality_tests.rs::modalities_accept_native_terms_for_tools_prompts_and_skills` | Both fields accept native terms for all three entry kinds and round-trip without loss. |
+| `crates/medulla-h-admin/src/admin/connector_pack/import/modality_tests.rs::modalities_refuse_foreign_roots_typos_and_wrong_kinds` | Both fields refuse foreign, root, typo, wrong-kind, relative, and empty IRIs with the typed code. |
+| `crates/medulla-h-admin/src/admin/connector_pack/import/modality_tests.rs::modality_lists_enforce_wire_types_and_both_size_edges` | Zero and 64 elements pass; 65 elements, null, scalars, and non-string elements refuse. |
+| `crates/medulla-h-admin/src/admin/connector_pack/import/modality_tests.rs::modality_digest_replay_is_canonical_and_direction_sensitive` | Rust replays committed full/empty vectors. Reordering and duplication preserve identity; content and direction changes do not. |
 | `tests/test_connector_pack_client.py::test_modality_annotations_replay_golden_vector_and_affect_identity` | Python replays the full vector. Both fields change tool, prompt, and skill pack identity. |
 
 TP-10, TP-11, and applicable quality gates remain required on the merged exact head.
@@ -126,21 +126,21 @@ These partial regressions intentionally carry no acceptance binding that would m
 
 ## Harness configuration evidence
 
-- `MEDULLA-TYPED-PACKS-R048.1`: `crates/medulla-types/src/agent_component/facts.rs::tests::context_window_zero_is_refused`.
-- `MEDULLA-TYPED-PACKS-R048.2`: `crates/medulla-types/src/agent_component/facts.rs::tests::measured_fact_requires_run_ref`.
-- `MEDULLA-TYPED-PACKS-R048.3`: `crates/medulla-types/src/agent_component.rs::tests::absent_shell_proficiency_keeps_digest`.
-- `MEDULLA-TYPED-PACKS-R048.4`: `crates/medulla-types/src/agent_component.rs::tests::measured_model_facts_change_digest`.
+- `MEDULLA-TYPED-PACKS-R048.1`: `crates/medulla-agent-types/src/agent_component/facts.rs::tests::context_window_zero_is_refused`.
+- `MEDULLA-TYPED-PACKS-R048.2`: `crates/medulla-agent-types/src/agent_component/facts.rs::tests::measured_fact_requires_run_ref`.
+- `MEDULLA-TYPED-PACKS-R048.3`: `crates/medulla-agent-types/src/agent_component.rs::tests::absent_shell_proficiency_keeps_digest`.
+- `MEDULLA-TYPED-PACKS-R048.4`: `crates/medulla-agent-types/src/agent_component.rs::tests::measured_model_facts_change_digest`.
 - `MEDULLA-TYPED-PACKS-R048.5`: `tests/typed_packs/test_model_harness_facts.py::test_model_profile_round_trip`.
 - `MEDULLA-TYPED-PACKS-R066.1`: `crates/medulla-core/tests/harness_shapes.rs::model_fact_shapes_reject_missing_run`.
 - `MEDULLA-TYPED-PACKS-R066.2`: `crates/medulla-shacl/tests/swarm_topology_shapes.rs::shell_centric_must_be_boolean`.
 - `MEDULLA-TYPED-PACKS-R066.3`: `crates/medulla-core/tests/swarm_topology_shapes.rs::shell_centric_inherits_or_is_absent`.
-- `MEDULLA-TYPED-PACKS-R045.1`: `crates/medulla-types/src/connector_pack/annotations.rs::tests::new_fields_roundtrip`.
-- `MEDULLA-TYPED-PACKS-R045.2`: `crates/medulla-types/src/connector_pack/annotations.rs::tests::absent_facts_take_safe_defaults`.
-- `MEDULLA-TYPED-PACKS-R045.3`: `crates/medulla-types/src/connector_pack/digest.rs::tests::absent_new_fields_keep_golden_vectors`.
-- `MEDULLA-TYPED-PACKS-R045.4`: `src/server/handlers/admin/connector_pack/import/annotations.rs::tests::unknown_side_effect_is_refused`.
-- `MEDULLA-TYPED-PACKS-R045.5`: `src/server/handlers/admin/connector_pack/import/facts.rs::tests::mcp_hint_read_only_is_unproven`.
-- `MEDULLA-TYPED-PACKS-R045.6`: `src/server/handlers/decide/stat_tests/tool_subset_tests.rs::missing_schema_tokens_abstains`.
-- `MEDULLA-TYPED-PACKS-R045.7`: `src/server/handlers/decide/stat_tests/harness_config_tests.rs::mcp_hint_read_only_premise_is_unproven`.
+- `MEDULLA-TYPED-PACKS-R045.1`: `crates/medulla-catalog-types/src/connector_pack/annotations.rs::tests::new_fields_roundtrip`.
+- `MEDULLA-TYPED-PACKS-R045.2`: `crates/medulla-catalog-types/src/connector_pack/annotations.rs::tests::absent_facts_take_safe_defaults`.
+- `MEDULLA-TYPED-PACKS-R045.3`: `crates/medulla-catalog-types/src/connector_pack/digest.rs::tests::absent_new_fields_keep_golden_vectors`.
+- `MEDULLA-TYPED-PACKS-R045.4`: `crates/medulla-h-admin/src/admin/connector_pack/import/annotations.rs::tests::unknown_side_effect_is_refused`.
+- `MEDULLA-TYPED-PACKS-R045.5`: `crates/medulla-h-admin/src/admin/connector_pack/import/facts.rs::tests::mcp_hint_read_only_is_unproven`.
+- `MEDULLA-TYPED-PACKS-R045.6`: `crates/medulla-h-decide/src/decide/stat_tests/tool_subset_tests.rs::missing_schema_tokens_abstains`.
+- `MEDULLA-TYPED-PACKS-R045.7`: `crates/medulla-server-served-tests/src/split_tests/medulla_h_decide_harness_config_tests.rs::mcp_hint_read_only_premise_is_unproven`.
 - `MEDULLA-TYPED-PACKS-R045.8`: `crates/medulla-capabilities/src/contract/python/surfaces/tests.rs::pack_annotations_expose_harness_tool_facts`.
 - `MEDULLA-TYPED-PACKS-R045.9`: `tests/harness_config_tool_facts_served.rs::two_tool_pack_subset_respects_budget`.
 
@@ -220,8 +220,8 @@ Retain all original PACK and TP acceptance above, including every original R001/
 | MEDULLA-TYPED-PACKS-R001.3 | Preserve ConnectorPackOp and AgentComponent.Content operation and result shapes. | Missing operations and incompatible result shapes fail qualification. | `tests/test_connector_pack_contract.py::test_pack_content_operation_contract` |
 | MEDULLA-TYPED-PACKS-R001.4 | Every published connector_pack_digest_vectors.json sample matches byte-for-byte. | Changing a framed input or expected digest fails. | `tests/test_connector_pack_contract.py::test_original_framed_digest_vectors` |
 | MEDULLA-TYPED-PACKS-R001.5 | The complete generated-client inventory shares the original wire shapes and golden bytes. | A stale client, omitted client or changed field fails. | `tests/test_connector_pack_contract.py::test_all_clients_share_pack_contract` |
-| MEDULLA-TYPED-PACKS-R001.6 | A typed object round-trips all identity and revision fields. | Changing a schema or body pin cannot preserve the old definition identity. | `crates/medulla-types/src/agent_component.rs::tests::prompt_blueprint_identity` |
-| MEDULLA-TYPED-PACKS-R001.7 | Nested valid objects retain every admitted field and extension value. | Missing task, wrong field types, nonfinite numbers and oversized objects refuse. | `crates/medulla-types/src/agent_component/facts.rs::tests::prompt_blueprint_schema_refusals` |
+| MEDULLA-TYPED-PACKS-R001.6 | A typed object round-trips all identity and revision fields. | Changing a schema or body pin cannot preserve the old definition identity. | `crates/medulla-agent-types/src/agent_component.rs::tests::prompt_blueprint_identity` |
+| MEDULLA-TYPED-PACKS-R001.7 | Nested valid objects retain every admitted field and extension value. | Missing task, wrong field types, nonfinite numbers and oversized objects refuse. | `crates/medulla-agent-types/src/agent_component/facts.rs::tests::prompt_blueprint_schema_refusals` |
 | MEDULLA-TYPED-PACKS-R001.8 | Repeated identical inputs produce the same bytes and render digest. | A changed variable changes the result; invalid input produces no render result. | `crates/medulla-compute/src/assemble/prompt.rs::tests::prompt_render_vectors` |
 | MEDULLA-TYPED-PACKS-R001.9 | Generated clients encode and decode every declared request, result and typed refusal. | Missing render provenance or an untyped fallback fails. | `tests/test_prompt_blueprint_contract.py::test_generated_prompt_contract` |
 | MEDULLA-TYPED-PACKS-R002.1 | Staged bytes use their verified SHA-256 address. | A digest mismatch refuses; staging alone exposes no component. | `tests/test_connector_pack_storage.py::test_body_staging` |
@@ -349,8 +349,8 @@ No test named here has run; names describe acceptance obligations, not evidence.
 - `MEDULLA-TYPED-PACKS-R101.7`: Retired; see R101.10 and R101.11.
 - `MEDULLA-TYPED-PACKS-R101.8`: Retired; see R101.10 and R101.11.
 - `MEDULLA-TYPED-PACKS-R101.9`: a served test imports a pack through `ConnectorPack.Import` and submits one mapped record through `SourceIngest`; the engine accepts it.
-- `MEDULLA-TYPED-PACKS-R101.10`: `src/server/handlers/admin/connector_pack/tests/scale.rs::the_selector_resolves_to_the_declared_class_and_field_map`; `src/server/handlers/admin/connector_pack/tests/scale.rs::relations_resolve_from_the_pack_ontology`.
-- `MEDULLA-TYPED-PACKS-R101.11`: `src/server/handlers/admin/connector_pack/tests/scale.rs::an_undeclared_type_is_refused_with_a_typed_error`.
+- `MEDULLA-TYPED-PACKS-R101.10`: `crates/medulla-h-admin/src/admin/connector_pack/tests/scale.rs::the_selector_resolves_to_the_declared_class_and_field_map`; `crates/medulla-h-admin/src/admin/connector_pack/tests/scale.rs::relations_resolve_from_the_pack_ontology`.
+- `MEDULLA-TYPED-PACKS-R101.11`: `crates/medulla-h-admin/src/admin/connector_pack/tests/scale.rs::an_undeclared_type_is_refused_with_a_typed_error`.
 - `MEDULLA-TYPED-PACKS-R102`: Rollup closes when every child `.1` to `.7` passes its proving test.
 - `MEDULLA-TYPED-PACKS-R102.1`: `crates/medulla-shacl/tests/connector_pack_shapes.rs::surface_shapes_accept_valid_and_refuse_invalid`.
 - `MEDULLA-TYPED-PACKS-R102.2`: `src/server/connector_pack_projection/surface_tests.rs::surface_nodes_follow_pack_head`.
@@ -360,7 +360,7 @@ No test named here has run; names describe acceptance obligations, not evidence.
 - `MEDULLA-TYPED-PACKS-R102.6`: `src/server/connector_pack_projection/surface_tests.rs::surface_nodes_carry_pack_digest`.
 - `MEDULLA-TYPED-PACKS-R102.7`: `tests/typed_packs/test_connector_surface_rdf_served.py::test_surface_query_follows_pack_head`.
 - `MEDULLA-TYPED-PACKS-R103`: Rollup closes when every child `.1` to `.6` passes its proving test.
-- `MEDULLA-TYPED-PACKS-R103.1`: `crates/medulla-types/src/graph_schema.rs::tests::ontology_import_ops_round_trip`.
+- `MEDULLA-TYPED-PACKS-R103.1`: `crates/medulla-catalog-types/src/graph_schema.rs::tests::ontology_import_ops_round_trip`.
 - `MEDULLA-TYPED-PACKS-R103.2`: `src/server/graph_schema/ontology_import_tests.rs::import_is_idempotent_by_digest_and_revises`.
 - `MEDULLA-TYPED-PACKS-R103.3`: `src/server/graph_schema/ontology_import_tests.rs::gateway_routes_ontology_import`.
 - `MEDULLA-TYPED-PACKS-R103.4`: `src/server/graph_schema/ontology_import_tests.rs::ontology_import_refusals_leave_schema_unchanged`.
@@ -372,15 +372,15 @@ No test named here has run; names describe acceptance obligations, not evidence.
 | Case | Row | Proving test and observation |
 |---|---|---|
 
-| Model | `MEDULLA-TYPED-PACKS-R104.1` | `crates/medulla-types/src/connector_pack/seed_graph.rs::tests::seed_import_round_trips`: A serde round trip keeps every field and rejects an unknown part key. |
+| Model | `MEDULLA-TYPED-PACKS-R104.1` | `crates/medulla-catalog-types/src/connector_pack/seed_graph.rs::tests::seed_import_round_trips`: A serde round trip keeps every field and rejects an unknown part key. |
 
-| Behavior | `MEDULLA-TYPED-PACKS-R104.2` | `src/server/handlers/admin/connector_pack/seed_tests.rs::changed_part_reimports_alone`: A second import with one changed part replaces that part and leaves the other two byte-identical. |
+| Behavior | `MEDULLA-TYPED-PACKS-R104.2` | `crates/medulla-h-admin/src/admin/connector_pack/seed_tests.rs::changed_part_reimports_alone`: A second import with one changed part replaces that part and leaves the other two byte-identical. |
 
-| Wiring | `MEDULLA-TYPED-PACKS-R104.3` | `src/server/handlers/admin/connector_pack/seed_tests.rs::served_import_projects_seed`: A served import with a seed body reaches `project_head` and writes the seed triples. |
+| Wiring | `MEDULLA-TYPED-PACKS-R104.3` | `crates/medulla-h-admin/src/admin/connector_pack/seed_tests.rs::served_import_projects_seed`: A served import with a seed body reaches `project_head` and writes the seed triples. |
 
-| Refusal | `MEDULLA-TYPED-PACKS-R104.4` | `src/server/handlers/admin/connector_pack/seed_tests.rs::seed_refusals_write_nothing`: Each case returns its code and the graph revision stays unchanged. |
+| Refusal | `MEDULLA-TYPED-PACKS-R104.4` | `crates/medulla-h-admin/src/admin/connector_pack/seed_tests.rs::seed_refusals_write_nothing`: Each case returns its code and the graph revision stays unchanged. |
 
-| Evidence | `MEDULLA-TYPED-PACKS-R104.5` | `src/server/handlers/admin/connector_pack/seed_tests.rs::receipt_names_part_outcomes`: A served SPARQL read finds the receipt and the `seed:fromSeed` link of one catalog object. |
+| Evidence | `MEDULLA-TYPED-PACKS-R104.5` | `crates/medulla-h-admin/src/admin/connector_pack/seed_tests.rs::receipt_names_part_outcomes`: A served SPARQL read finds the receipt and the `seed:fromSeed` link of one catalog object. |
 
 | Hot-path proof | `MEDULLA-TYPED-PACKS-R104.6` | `tests/connector_pack/test_seed_graph_served.py::test_seed_idempotent_and_partial_reimport`: The repeat returns `unchanged`, the change replaces only `catalog`, and the query sees the new objects. |
 

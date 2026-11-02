@@ -4,15 +4,15 @@
 
 use std::sync::Arc;
 
-use medulla::isolation::IsolationLayer;
-use medulla::protocol::{Method, Request, Response, ResultPayload};
-use medulla::registry::GraphRegistry;
-use medulla::server::persistence::PersistenceBackend;
-use medulla::server::ServerState;
+use medulla_isolation::isolation::IsolationLayer;
+use medulla_protocol_types::protocol::{Method, Request, Response, ResultPayload};
+use medulla_core::registry::GraphRegistry;
+use medulla_server_api::api::persistence::PersistenceBackend;
+use medulla_server_api::state::ServerState;
 use tokio::sync::RwLock;
 
 #[cfg(feature = "redb")]
-use medulla::server::persistence::redb_backend::RedbBackend;
+use medulla_persistence::redb_backend::RedbBackend;
 
 pub type SharedPersistence = Arc<dyn PersistenceBackend>;
 pub type SharedState = Arc<RwLock<ServerState>>;
@@ -155,12 +155,12 @@ pub async fn wait_for_listener_ready(addr: &str) {
 #[cfg(feature = "pgwire")]
 pub async fn spawn_pgwire_listener(
     state: SharedState,
-    mode: medulla::server::pgwire::PgWireAuthMode,
+    mode: medulla_wire::pgwire::PgWireAuthMode,
 ) -> String {
     let addr_s = ephemeral_listener_addr().await;
     let serve_addr = addr_s.clone();
     tokio::spawn(async move {
-        let _ = medulla::server::pgwire::serve_with_auth(&serve_addr, state, mode).await;
+        let _ = medulla_wire::pgwire::serve_with_auth(&serve_addr, state, mode).await;
     });
     wait_for_listener_ready(&addr_s).await;
     addr_s
@@ -173,7 +173,7 @@ pub async fn connect_pgwire(
     user: &str,
     dbname: &str,
 ) -> Result<tokio_postgres::Client, tokio_postgres::Error> {
-    let password = medulla::server::pgwire::derive_pg_password(secret, user);
+    let password = medulla_wire::pgwire::derive_pg_password(secret, user);
     connect_pgwire_with_password(addr, &password, user, dbname).await
 }
 
@@ -225,7 +225,7 @@ fn make_state(
     persistence: Option<SharedPersistence>,
 ) -> ServerState {
     provision_request_context_policy();
-    let mut state = ServerState::new_for_test(auth_secret.to_owned(), isolation);
+    let mut state = medulla_server::seams_install::new_state_for_test(auth_secret.to_owned(), isolation);
     state.persist_dir = persist_dir;
     state.persistence = persistence;
     state
@@ -239,7 +239,7 @@ pub fn state_with_registry(
     persistence: Option<SharedPersistence>,
 ) -> SharedState {
     provision_request_context_policy();
-    let mut state = ServerState::new_for_test(auth_secret.to_owned(), isolation);
+    let mut state = medulla_server::seams_install::new_state_for_test(auth_secret.to_owned(), isolation);
     state.registry = registry;
     state.persist_dir = persist_dir;
     state.persistence = persistence;
@@ -309,9 +309,9 @@ pub fn temporary_series(label: &str) -> Arc<medulla_tsdb::store::SeriesStore> {
     Arc::new(
         medulla_tsdb::store::SeriesStore::open(
             &path,
-            medulla::store_authority::process_verifier(),
-            medulla::store_authority::process_authority().principal(),
-            &medulla::store_authority::process_authority().proof(),
+            medulla_kernel::store_authority::process_verifier(),
+            medulla_kernel::store_authority::process_authority().principal(),
+            &medulla_kernel::store_authority::process_authority().proof(),
         )
         .expect("open temporary series store"),
     )
@@ -355,8 +355,8 @@ pub fn sql_test_persist_dir(label: &str) -> String {
 
 #[cfg(feature = "security")]
 pub fn wire_isolation(users: &[&str]) -> IsolationLayer {
-    use medulla::acl::{Grant, GrantEffect, RbacAction, ResourceSelector, Role};
-    use medulla::isolation::{AgentIdentity, AgentRole};
+    use medulla_types::acl::{Grant, GrantEffect, RbacAction, ResourceSelector, Role};
+    use medulla_types::acl::{AgentIdentity, AgentRole};
 
     let mut isolation = IsolationLayer::new();
     isolation.add_role(Role::new("commons-user"));
@@ -420,11 +420,8 @@ pub fn seed_wire_nodes(registry: &GraphRegistry, user: &str) {
     }
 }
 
-pub async fn dispatch(
-    state: &SharedState,
-    request: Request,
-) -> medulla::protocol::Response {
-    Box::pin(medulla::server::dispatch(state, request)).await
+pub async fn dispatch(state: &SharedState, request: Request) -> medulla_protocol_types::protocol::Response {
+    Box::pin(medulla_server_router::dispatch::request_boundary::dispatch(state, request)).await
 }
 
 pub async fn begin_txn(
@@ -461,13 +458,13 @@ pub async fn assert_ok(state: &SharedState, auth_secret: &str, id: u64, method: 
 }
 
 pub fn unified_ids(response: &Response) -> Vec<String> {
-    medulla::server::decode_unified_ids(response)
+    medulla_server::decode_unified_ids(response)
 }
 
 /// The row ids of a `Method::Uql` response (EH-434).
 #[cfg(feature = "query")]
 pub fn uql_ids(response: &Response) -> Vec<String> {
-    medulla::server::decode_uql_ids(response)
+    medulla_server::decode_uql_ids(response)
 }
 
 /// A parameterless UQL statement.
@@ -485,14 +482,14 @@ pub async fn unified_query(
     state: &SharedState,
     auth_secret: &str,
     id: u64,
-    plan: medulla_plan::Plan,
-) -> medulla::protocol::Response {
+    plan: medulla_exec::algebra::Plan,
+) -> medulla_protocol_types::protocol::Response {
     dispatch(
         state,
         commons_request(
             auth_secret,
             id,
-            medulla::protocol::Method::UnifiedQuery {
+            medulla_protocol_types::protocol::Method::UnifiedQuery {
                 plan,
                 foreign_execution: None,
 
@@ -558,14 +555,14 @@ pub fn json_bytes(value: serde_json::Value) -> Vec<u8> {
     rmp_serde::to_vec_named(&value).expect("encode JSON test value")
 }
 
-pub fn raw_rows(response: &medulla::protocol::Response) -> Vec<(String, Option<f32>)> {
+pub fn raw_rows(response: &medulla_protocol_types::protocol::Response) -> Vec<(String, Option<f32>)> {
     assert!(
         response.error.is_none(),
         "dispatch error: {:?}",
         response.error
     );
     match &response.result {
-        Some(medulla::protocol::ResultPayload::Raw(bytes)) => {
+        Some(medulla_protocol_types::protocol::ResultPayload::Raw(bytes)) => {
             rmp_serde::from_slice(bytes).expect("row decode")
         }
         other => panic!("expected Raw result, got {other:?}"),
@@ -580,17 +577,17 @@ pub fn edge_properties(tag: &str) -> Vec<u8> {
 /// at `ENGINE_WORKER_STACK_BYTES`), exactly as production serves a request,
 /// and propagate its failure.
 pub fn on_engine<F: std::future::Future<Output = ()> + 'static>(test: fn() -> F) {
-    let driver = medulla::server::spawn_engine_driver(move || {
+    let driver = medulla_server::spawn_engine_driver(move || {
         tokio::runtime::Builder::new_multi_thread()
             .worker_threads(2)
-            .thread_stack_size(medulla::server::ENGINE_WORKER_STACK_BYTES)
+            .thread_stack_size(medulla_server::ENGINE_WORKER_STACK_BYTES)
             .enable_all()
             .build()
             .expect("build engine runtime")
             .block_on(test());
     })
     .expect("spawn engine driver");
-    medulla::server::join_engine_driver(driver).expect("engine test body failed");
+    medulla_server::join_engine_driver(driver).expect("engine test body failed");
 }
 
 /// Dispatch `method` against `graph` and require that it succeeds.
@@ -630,7 +627,7 @@ pub async fn durable_graph_state(
         graph,
         Method::CreateGraph {
             graph_name: graph.to_string(),
-            graph_type: medulla::protocol::GraphType::Global,
+            graph_type: medulla_protocol_types::protocol::GraphType::Global,
         },
     )
     .await;

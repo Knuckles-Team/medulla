@@ -42,8 +42,8 @@ reports the same functions as trivial:
 
 | function | cyclomatic | cognitive |
 |---|---|---|
-| `src/server/wire/mod.rs::dispatch_kind` | 32 | **1** |
-| `src/server/persistence/redb_backend.rs::handle_cmd` | 54 | **8** |
+| `crates/medulla-wire-core/src/wire/mod.rs::dispatch_kind` | 32 | **1** |
+| `crates/medulla-persistence/src/redb_backend.rs::handle_cmd` | 54 | **8** |
 
 Decomposing a genuinely exhaustive match is not a neutral refactor: it trades
 away rustc's exhaustiveness guarantee. While the match names every variant,

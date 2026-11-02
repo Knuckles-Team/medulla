@@ -1,0 +1,14 @@
+[package]
+name = "medulla-vocab"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: Ontology modules and shapes for the data-platform, media, supply-chain and orchestration vocabularies"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_vocab"
+path = "src/lib.rs"
+
+[dependencies]

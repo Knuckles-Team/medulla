@@ -20,14 +20,14 @@ use std::time::Instant;
 
 use medulla_types::wire::{op_kind, Op, Plan, UqlResult, UqlRow, UqlStageReport};
 
-use super::{Body, Mode, Statement};
+use medulla_uql::{Body, Mode, Statement};
 
 mod annotate;
 mod dag;
 mod proof;
-use crate::cost::{Cardinality, ModalityCardinality, PlanStats};
-use crate::exec::{apply, apply_with_channels, plan_optimize, PlanCtx, StageChannels};
-use crate::rowset::RowSet;
+use medulla_exec::cost::{Cardinality, ModalityCardinality, PlanStats};
+use medulla_exec::exec::{apply, apply_with_channels, plan_optimize, PlanCtx, StageChannels};
+use medulla_exec::rowset::RowSet;
 
 // UQL-12, read-only by construction: the op dispatch every stage runs through takes the
 // snapshot context by SHARED reference and returns a new RowSet — it has no path to a
@@ -72,10 +72,13 @@ pub fn run_statement(stmt: &Statement, ctx: &PlanCtx) -> Result<UqlResult, Strin
 #[cfg(feature = "federation")]
 fn apply_federation_budget(stmt: &Statement, ctx: &PlanCtx) -> Result<(), String> {
     if let Some(budget) = stmt.federation_budget {
-        let session = ctx.federation.ok_or(
-            "FEDERATION_BUDGET_HINT_REQUIRES_SESSION: bind a per-query federation session",
-        )?;
-        session.narrow_budget(budget);
+        let bound = ctx.federation.is_some_and(|foreign| foreign.narrow_budget(budget));
+        if !bound {
+            return Err(
+                "FEDERATION_BUDGET_HINT_REQUIRES_SESSION: bind a per-query federation session"
+                    .to_string(),
+            );
+        }
     }
     Ok(())
 }
@@ -84,7 +87,7 @@ fn apply_federation_budget(stmt: &Statement, ctx: &PlanCtx) -> Result<(), String
 /// EXPLAIN is plan-only; PROFILE adds actual fragments from the same request session.
 #[cfg(feature = "federation")]
 pub(crate) fn attach_federation_report(result: &mut UqlResult, stmt: &Statement, ctx: &PlanCtx) {
-    use crate::federation_opt::{explain_source, EstimateProvenance, FragmentTrace};
+    use medulla_federation::federation_opt::explain_source;
 
     fn remote_ops(ops: &[Op], reports: &mut Vec<UqlStageReport>) {
         for op in ops {
@@ -103,32 +106,6 @@ pub(crate) fn attach_federation_report(result: &mut UqlResult, stmt: &Statement,
                 }
             }
         }
-    }
-
-    fn actual(trace: &[FragmentTrace]) -> Vec<UqlStageReport> {
-        trace.iter().map(|fragment| {
-            let source = crate::federation_opt::redacted_label(&fragment.source);
-            let estimate = match fragment.estimate {
-                EstimateProvenance::NotNeeded => "not-needed".to_string(),
-                EstimateProvenance::Default => "default".to_string(),
-                EstimateProvenance::Learned { samples, rows } => {
-                    format!("learned(samples={samples}, rows={rows:.2})")
-                }
-            };
-            UqlStageReport {
-                stage: format!(
-                    "REMOTE {source} strategy={:?} keys={} limit={:?} requests={} fetched={} kept={} estimate={estimate}",
-                    fragment.strategy, fragment.keys_pushed, fragment.limit_pushed,
-                    fragment.requests, fragment.rows_fetched, fragment.rows_kept,
-                ),
-                estimated_rows: match fragment.estimate {
-                    EstimateProvenance::Learned { rows, .. } => rows,
-                    _ => 0.0,
-                },
-                rows: Some(fragment.rows_kept as u64),
-                micros: Some(fragment.elapsed_ms.saturating_mul(1000)),
-            }
-        }).collect()
     }
 
     let ops = binding_plan(stmt).ops;
@@ -154,8 +131,15 @@ pub(crate) fn attach_federation_report(result: &mut UqlResult, stmt: &Statement,
                 rows: None,
                 micros: None,
             });
-            if let Some(session) = ctx.federation {
-                stages.extend(actual(&session.trace()));
+            if let Some(foreign) = ctx.federation {
+                stages.extend(foreign.fragment_reports().into_iter().map(|fragment| {
+                    UqlStageReport {
+                        stage: fragment.stage,
+                        estimated_rows: fragment.estimated_rows,
+                        rows: Some(fragment.rows),
+                        micros: Some(fragment.micros),
+                    }
+                }));
             }
         }
         UqlResult::Rows { .. } => {}
@@ -206,7 +190,7 @@ fn row_channels(id: &str, columns: &[String], table: &ChannelTable) -> Vec<Optio
 fn run(plan: &Plan, ctx: &PlanCtx, warnings: Vec<String>) -> Result<UqlResult, String> {
     let columns = returned_channels(&plan.ops);
     if columns.is_empty() {
-        let rows = crate::exec::execute(plan, ctx)?;
+        let rows = medulla_exec::exec::execute(plan, ctx)?;
         return Ok(UqlResult::Rows {
             rows: rows_of(&rows, &columns, &ChannelTable::new()),
             columns,
@@ -307,7 +291,7 @@ fn explain(plan: &Plan, ctx: &PlanCtx, warnings: Vec<String>) -> Result<UqlResul
             micros: None,
         })
         .collect();
-    let (incremental, incremental_note) = match crate::incremental::Circuit::compile(plan) {
+    let (incremental, incremental_note) = match medulla_exec::incremental::Circuit::compile(plan) {
         Ok(_) => (true, String::new()),
         Err(why) => (false, why.to_string()),
     };

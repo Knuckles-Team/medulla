@@ -55,6 +55,11 @@
 //! construction with a real encoder once Q2 lands, without touching any of this
 //! crate's trait-boundary/quota/credential machinery.
 
+#![allow(clippy::too_many_arguments, clippy::items_after_test_module, clippy::new_without_default)] // signatures and fixtures carried over from the facade
+#![allow(private_interfaces, private_bounds)] // visibility is narrowed by the unreachable_pub pass
+#![allow(dead_code)] // moved helper code, as the facade crate did
+#![allow(unused_imports)] // glob imports carried over from the facade; the visibility pass prunes them
+
 // CRATE-BOUNDARY NOTE (established by walking every module's real consumers,
 // `git -C crates/medulla-quantum-hardware grep -n '\b<module>::'` for each of
 // credentials/error/quota/transport/registry): this whole crate exists only to

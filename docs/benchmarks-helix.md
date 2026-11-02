@@ -143,7 +143,7 @@ if either digest drifts.
    transport floor is `Ping`: about 5.4 ms and 9.6 ms of server CPU, with
    throughput flat near 200 ops/s at concurrency 1 and 8. The server commits
    each request's replay nonce durably, through the same transaction kernel as a
-   write, before dispatch (`src/server/request_replay.rs`). That one serialized
+   write, before dispatch (`crates/medulla-server-api/src/request_replay.rs`). That one serialized
    commit per request sets the floor for every read row above. HelixDB's
    floor is 0.14 ms of CPU.
 2. **Filtered text and vector ranking in Medulla cost 350–450 ms and

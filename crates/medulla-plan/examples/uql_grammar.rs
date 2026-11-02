@@ -1,6 +1,6 @@
 //! Print or install the generated UQL artifacts (UQL-10) — the reference EBNF blocks that
 //! `docs/uql.md` embeds (UQL's and DecideText's, EH-452), or the NL planner's system
-//! prompt — straight from `medulla_plan::uql::grammar` / `medulla_plan::decide_text::grammar`.
+//! prompt — straight from `medulla_uql::grammar` / `medulla_plan::decide_text::grammar`.
 //!
 //! ```text
 //! cargo run -q -p medulla-plan --example uql_grammar -- write-docs  # rewrite both docs/uql.md blocks
@@ -12,8 +12,8 @@
 /// `(marker name, generated text)` for every generated block of `docs/uql.md`.
 fn blocks() -> [(&'static str, String); 2] {
     [
-        ("uql-grammar", medulla_plan::uql::grammar::ebnf()),
-        ("decide-text-grammar", medulla_plan::decide_text::grammar::ebnf()),
+        ("uql-grammar", medulla_uql::grammar::ebnf()),
+        ("decide-text-grammar", medulla_nlq::decide_text::grammar::ebnf()),
     ]
 }
 
@@ -42,14 +42,14 @@ fn write_docs() -> Result<(), String> {
 
 fn main() {
     match std::env::args().nth(1).as_deref() {
-        Some("prompt") => println!("{}", medulla_plan::uql::grammar::nl_system_prompt()),
-        Some("decide-text") => print!("{}", medulla_plan::decide_text::grammar::ebnf()),
+        Some("prompt") => println!("{}", medulla_uql::grammar::nl_system_prompt()),
+        Some("decide-text") => print!("{}", medulla_nlq::decide_text::grammar::ebnf()),
         Some("write-docs") => {
             if let Err(e) = write_docs() {
                 eprintln!("uql_grammar: {e}");
                 std::process::exit(1);
             }
         }
-        _ => print!("{}", medulla_plan::uql::grammar::ebnf()),
+        _ => print!("{}", medulla_uql::grammar::ebnf()),
     }
 }

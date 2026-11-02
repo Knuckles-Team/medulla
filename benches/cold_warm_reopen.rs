@@ -21,9 +21,9 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use criterion::{criterion_group, criterion_main, Criterion};
-use medulla::protocol::Method;
-use medulla::server::persistence::redb_backend::RedbBackend;
-use medulla::server::persistence::PersistenceBackend;
+use medulla_protocol_types::protocol::Method;
+use medulla_server_api::api::persistence::PersistenceBackend;
+use medulla_persistence::redb_backend::RedbBackend;
 use std::hint::black_box;
 use tokio::runtime::Builder;
 

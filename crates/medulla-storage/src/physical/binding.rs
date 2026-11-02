@@ -7,7 +7,7 @@ use crate::physical::root::{
     reject_prototype_names, validate_handle_write, PhysicalStore, StoreHandle, ValidatedWrite,
 };
 use crate::tables::{SCOPE_BINDINGS, STORE_ROOT, VERSIONS};
-use medulla_types::MutationScopeIdentity;
+use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
 use redb::{ReadTransaction, ReadableTable, TableHandle, WriteTransaction};
 use serde::{Deserialize, Serialize};
 

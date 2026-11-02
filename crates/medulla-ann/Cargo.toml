@@ -56,7 +56,7 @@ drift = ["dep:medulla-numeric", "dep:ndarray"]
 # deliberately NOT folded into any tier aggregate (pi/node/full) — it is a
 # capability-discovery/testing seam, not a serving feature. `cargo test -p medulla-ann
 # --features contract` runs the suite.
-contract = ["dep:medulla-modality"]
+contract = ["dep:medulla-modality", "medulla-numeric?/contract"]
 # GPU distance DISPATCH SEAM (CONCEPT:MEDULLA-326): compiles the `DistanceBackend` trait +
 # backend selection. The pure-Rust CPU backend is ALWAYS the compiled-in fallback; this
 # marker just opts a build into the seam (and is implied by `gpu-cuda`). No accelerator

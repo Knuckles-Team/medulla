@@ -16,26 +16,32 @@ mod write_authority;
 use crate::read::{read_ledger, read_outbox, read_private_payload, version};
 use crate::tables::{FENCES, OUTBOX, PRIVATE_PAYLOADS};
 use crate::{Begin, MutationKernel};
+use medulla_identity_types::{
+    authority::AuthorityContext, authority::AuthorityScope, authority::NonceReplayKey,
+    authority::OperationReplayIdentity, authority::AUTHORITY_CONTEXT_SCHEMA_V1,
+    authority::AUTHORITY_PROTOCOL_V1,
+};
+use medulla_mutation_types::mutation_scope::DurabilityDomain;
+use medulla_mutation_types::mutation_scope::IncarnationId;
+use medulla_mutation_types::mutation_scope::LogicalName;
+use medulla_mutation_types::mutation_scope::MutationSurface;
+use medulla_mutation_types::mutation_scope::ScopeTenantId;
+use medulla_mutation_types::{mutation::MutationReceipt, mutation::MutationResult};
+use medulla_mutation_types::{
+    mutation_scope::MutationScopeIdentity, mutation_scope::MUTATION_BATCH_VERSION,
+};
+use medulla_protocol_types::mutation_batch::VersionExpectation;
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::{mutation_batch::MutationBatch, mutation_batch::MutationOperation};
 use medulla_storage::{
     strict_recovery_evidence, BlobOwner, LedgerOnlyOwner, OwnedStoreHandle, OwnerDomain,
     OwnerLayout, PhysicalStoreIdentity, PrivatePayloadIntegrity, ScopeGrantVerifier, StorageKernel,
-};
-use medulla_types::authority::{
-    AuthorityContext, AuthorityScope, NonceReplayKey, OperationReplayIdentity,
-    AUTHORITY_CONTEXT_SCHEMA_V1, AUTHORITY_PROTOCOL_V1,
 };
 use medulla_types::contract::{
     ActorId, AudienceId, BoundedVec, Digest256, IdempotencyKey, IngressSurface, MethodId,
     MutationDisposition, Nonce, OpaqueId, Operation, PolicyRevision, ProtocolId, PurposeKind,
     ResourceId, SchemaId, ScopeKind, TenantId, UtcUnixNanos,
 };
-use medulla_types::mutation::{MutationReceipt, MutationResult};
-use medulla_types::mutation_batch::{
-    DurabilityDomain, IncarnationId, LogicalName, MutationSurface, ScopeTenantId,
-    VersionExpectation,
-};
-use medulla_types::protocol::Method;
-use medulla_types::{MutationBatch, MutationOperation, MutationScopeIdentity, MUTATION_BATCH_VERSION};
 use redb::{TableDefinition, TableHandle};
 use std::collections::BTreeSet;
 use std::path::Path;
@@ -125,12 +131,13 @@ fn native_identity(tenant: &str, incarnation: &str) -> MutationScopeIdentity {
 fn operation_envelope(
     identity: &MutationScopeIdentity,
     batch_id: &str,
-) -> medulla_types::mutation_batch::MutationEnvelope {
-    let method =
-        medulla_types::contract::MethodId::new(medulla_types::mutation_batch::BATCH_COMPILED_METHODS)
-            .unwrap();
-    medulla_types::mutation_batch::MutationEnvelope::for_scope(
-        medulla_types::mutation_batch::CompiledScope {
+) -> medulla_protocol_types::mutation_batch::MutationEnvelope {
+    let method = medulla_types::contract::MethodId::new(
+        medulla_protocol_types::mutation_batch::BATCH_COMPILED_METHODS,
+    )
+    .unwrap();
+    medulla_protocol_types::mutation_batch::MutationEnvelope::for_scope(
+        medulla_protocol_types::mutation_batch::CompiledScope {
             identity,
             actor: PRINCIPAL,
             serving_principal: PRINCIPAL,
@@ -139,8 +146,9 @@ fn operation_envelope(
             nonce: medulla_types::contract::Nonce::minted(),
             now_ms: 1,
         },
-        medulla_types::mutation_batch::CompiledOperation {
-            method_schema_id: medulla_types::mutation_batch::method_schema_id(&method).unwrap(),
+        medulla_protocol_types::mutation_batch::CompiledOperation {
+            method_schema_id: medulla_protocol_types::mutation_batch::method_schema_id(&method)
+                .unwrap(),
             method,
             method_schema_digest: medulla_types::contract::Digest256::from_bytes([1_u8; 32]),
             canonical_payload_digest: medulla_types::contract::Digest256::from_bytes([2_u8; 32]),
@@ -173,7 +181,7 @@ fn retry_of(batch: &MutationBatch) -> MutationBatch {
 /// what makes the class structural rather than an admission argument.
 fn maintenance_batch(identity: MutationScopeIdentity, batch_id: &str) -> MutationBatch {
     let mut batch = batch(identity, batch_id);
-    batch.envelope = medulla_types::mutation_batch::MutationEnvelope::maintenance(
+    batch.envelope = medulla_protocol_types::mutation_batch::MutationEnvelope::maintenance(
         PRINCIPAL,
         "fixture_maintenance",
         batch_id,

@@ -9,11 +9,11 @@ Spec-folder mapping: a fixture folder through `IndexRepository` yields one node 
 
 ### MEDULLA-ORCH-VOCAB-R013 tests
 
-- `MEDULLA-ORCH-VOCAB-R013.1`: `crates/medulla-types/src/outcome_bundle.rs::tests::step_record_round_trips`.
-- `MEDULLA-ORCH-VOCAB-R013.2`: `crates/medulla-types/src/outcome_bundle.rs::tests::step_digest_is_canonical`.
-- `MEDULLA-ORCH-VOCAB-R013.3`: `src/server/handlers/graph_ops/gateway_graph.rs::tests::add_run_trace_checks_step_digests`.
-- `MEDULLA-ORCH-VOCAB-R013.4`: `crates/medulla-types/src/outcome_bundle.rs::tests::bad_digest_and_gap_refused`.
-- `MEDULLA-ORCH-VOCAB-R013.5`: `crates/medulla-types/src/outcome_bundle.rs::tests::stored_steps_read_in_order`.
+- `MEDULLA-ORCH-VOCAB-R013.1`: `crates/medulla-result-types/src/outcome_bundle.rs::tests::step_record_round_trips`.
+- `MEDULLA-ORCH-VOCAB-R013.2`: `crates/medulla-result-types/src/outcome_bundle.rs::tests::step_digest_is_canonical`.
+- `MEDULLA-ORCH-VOCAB-R013.3`: `crates/medulla-h-graph/src/graph_ops/gateway_graph.rs::tests::add_run_trace_checks_step_digests`.
+- `MEDULLA-ORCH-VOCAB-R013.4`: `crates/medulla-result-types/src/outcome_bundle.rs::tests::bad_digest_and_gap_refused`.
+- `MEDULLA-ORCH-VOCAB-R013.5`: `crates/medulla-result-types/src/outcome_bundle.rs::tests::stored_steps_read_in_order`.
 - `MEDULLA-ORCH-VOCAB-R013.6`: `tests/orchestration/test_run_trace_steps_served.py::test_first_divergence_is_step_two`.
 
 <!-- spec-definition-patch:owner-batch-20261012-orchestration-vocabulary -->
@@ -67,7 +67,7 @@ Test equal admitted endpoints in exact and descendant modes. Test distinct candi
 
 - `MEDULLA-ORCH-VOCAB-R801.1`: `crates/medulla-types/tests/harness_components.rs::component_version_round_trips`.
 - `MEDULLA-ORCH-VOCAB-R801.2`: `crates/medulla-types/tests/harness_components.rs::newer_version_supersedes_and_old_stays_readable`.
-- `MEDULLA-ORCH-VOCAB-R801.3`: `src/server/handlers/graph_ops/gateway_graph.rs::tests::harness_component_write_stamps_and_links`.
+- `MEDULLA-ORCH-VOCAB-R801.3`: `crates/medulla-h-graph/src/graph_ops/gateway_graph.rs::tests::harness_component_write_stamps_and_links`.
 - `MEDULLA-ORCH-VOCAB-R801.4`: `crates/medulla-types/tests/harness_components.rs::evidence_kind_confidence_and_immutability_refusals`.
 - `MEDULLA-ORCH-VOCAB-R801.5`: `crates/medulla-types/tests/harness_components.rs::version_history_cites_evidence_and_digests`.
 - `MEDULLA-ORCH-VOCAB-R801.6`: `tests/orchestration/test_harness_components_served.py::test_two_versions_and_bitemporal_read`.

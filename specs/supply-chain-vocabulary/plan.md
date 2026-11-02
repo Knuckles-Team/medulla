@@ -224,7 +224,7 @@ Live competency tests must abstain when required source fields or approved mappi
 
 ## Ecosystem package risk propagation (R009)
 
-Data flow: served impact operation → `handle_impact` (`src/server/handlers/mining/impact.rs:264`) → `propagate_package_risk` (new, `crates/medulla-core/src/ecosystem.rs`) → `PackageImpact` list with paths.
+Data flow: served impact operation → `handle_impact` (`crates/medulla-h-mining/src/mining/impact.rs:264`) → `propagate_package_risk` (new, `crates/medulla-core/src/ecosystem.rs`) → `PackageImpact` list with paths.
 
 Types: `:EcosystemPackage`, `:affectsPackage`, `PackageImpact { dependent, path, severity }` and `PackageRefusal::UnknownPackage`.
 

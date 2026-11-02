@@ -5,11 +5,12 @@
 //! is the only thing any later step reads -- which is what makes the ladder
 //! monotone: nothing after this can reinstate an option removed here.
 
-use medulla_types::agent_component::AgentComponentKind;
-use medulla_types::agent_library::AgentLibraryLifecycle;
-use medulla_types::agent_ontology::satisfies;
-use medulla_types::decision::{
-    AssemblyConstraints, CandidateFacts, DecisionInputs, Elimination, ObjectiveLevelKind, Violation,
+use medulla_agent_types::agent_component::AgentComponentKind;
+use medulla_agent_types::agent_library::AgentLibraryLifecycle;
+use medulla_agent_types::agent_ontology::satisfies;
+use medulla_decision_types::{
+    decision::AssemblyConstraints, decision::CandidateFacts, decision::DecisionInputs,
+    decision::Elimination, decision::ObjectiveLevelKind, decision::Violation,
 };
 
 use super::facts::{self, Declared};

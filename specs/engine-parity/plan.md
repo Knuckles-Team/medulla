@@ -1,7 +1,7 @@
 # MEDULLA-ENGINE-PARITY plan
 
 Governing spec: [spec.md](spec.md).
-Code: ../../src/server/pgwire/mod.rs ../../src/server/pgwire/auth.rs ../../src/server/sql_wire_auth.rs
+Code: ../../crates/medulla-wire/src/pgwire/mod.rs ../../crates/medulla-wire/src/pgwire/auth.rs ../../crates/medulla-wire-core/src/sql_wire_auth.rs
 
 ## The trade-off
 

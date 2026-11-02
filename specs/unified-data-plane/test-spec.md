@@ -100,13 +100,13 @@ These bullets define future acceptance targets. They are not test evidence or re
 
 | Model | `MEDULLA-UNIFIED-DATA-PLANE-R038.3.1` | `crates/medulla-types/src/metadata_acceleration.rs::tests::snapshot_semantics_round_trip`: A serde round trip keeps every field and rejects an unknown category or isolation. |
 
-| Behavior | `MEDULLA-UNIFIED-DATA-PLANE-R038.3.2` | `crates/medulla-plan/src/federation_opt/tests.rs::fragments_share_snapshot`: Two fragments of one query read one snapshot while a concurrent writer commits. |
+| Behavior | `MEDULLA-UNIFIED-DATA-PLANE-R038.3.2` | `crates/medulla-federation/src/federation_opt/tests.rs::fragments_share_snapshot`: Two fragments of one query read one snapshot while a concurrent writer commits. |
 
-| Wiring | `MEDULLA-UNIFIED-DATA-PLANE-R038.3.3` | `crates/medulla-plan/src/federation_opt/tests.rs::foreign_scan_opens_snapshot`: A served query over a transactional source reaches the snapshot path. |
+| Wiring | `MEDULLA-UNIFIED-DATA-PLANE-R038.3.3` | `crates/medulla-federation/src/federation_opt/tests.rs::foreign_scan_opens_snapshot`: A served query over a transactional source reaches the snapshot path. |
 
-| Refusal | `MEDULLA-UNIFIED-DATA-PLANE-R038.3.4` | `crates/medulla-plan/src/federation_opt/tests.rs::snapshot_refusals`: Each case returns its code and runs no source statement. |
+| Refusal | `MEDULLA-UNIFIED-DATA-PLANE-R038.3.4` | `crates/medulla-federation/src/federation_opt/tests.rs::snapshot_refusals`: Each case returns its code and runs no source statement. |
 
-| Evidence | `MEDULLA-UNIFIED-DATA-PLANE-R038.3.5` | `crates/medulla-plan/src/federation_opt/tests.rs::provenance_names_snapshot`: The answer provenance names one snapshot token per source. |
+| Evidence | `MEDULLA-UNIFIED-DATA-PLANE-R038.3.5` | `crates/medulla-federation/src/federation_opt/tests.rs::provenance_names_snapshot`: The answer provenance names one snapshot token per source. |
 
 | Hot-path proof | `MEDULLA-UNIFIED-DATA-PLANE-R038.3.6` | `tests/federation/test_oltp_snapshot_served.py::test_fragments_share_one_snapshot`: The answer matches the snapshot oracle and the engine row count for that source stays unchanged. |
 
@@ -138,15 +138,15 @@ Hot-path proof for `MEDULLA-UNIFIED-DATA-PLANE-R038.4`: `tests/federation/test_m
 | Case | Row | Proving test and observation |
 |---|---|---|
 
-| Model | `MEDULLA-UNIFIED-DATA-PLANE-R038.5.1` | `crates/medulla-plan/src/federation_opt/tests.rs::search_capability_round_trips`: A serde round trip keeps every field and rejects an unknown score kind. |
+| Model | `MEDULLA-UNIFIED-DATA-PLANE-R038.5.1` | `crates/medulla-federation/src/federation_opt/tests.rs::search_capability_round_trips`: A serde round trip keeps every field and rejects an unknown score kind. |
 
-| Behavior | `MEDULLA-UNIFIED-DATA-PLANE-R038.5.2` | `crates/medulla-plan/src/federation_opt/tests.rs::relevance_pushdown_replenishes`: A pushed query returns k results with remote scores in their channel. |
+| Behavior | `MEDULLA-UNIFIED-DATA-PLANE-R038.5.2` | `crates/medulla-federation/src/federation_opt/tests.rs::relevance_pushdown_replenishes`: A pushed query returns k results with remote scores in their channel. |
 
-| Wiring | `MEDULLA-UNIFIED-DATA-PLANE-R038.5.3` | `crates/medulla-plan/src/federation_opt/tests.rs::served_search_reaches_fusion`: A served query reaches the remote index and the shared fusion. |
+| Wiring | `MEDULLA-UNIFIED-DATA-PLANE-R038.5.3` | `crates/medulla-federation/src/federation_opt/tests.rs::served_search_reaches_fusion`: A served query reaches the remote index and the shared fusion. |
 
-| Refusal | `MEDULLA-UNIFIED-DATA-PLANE-R038.5.4` | `crates/medulla-plan/src/federation_opt/tests.rs::search_refusals`: Each case returns its code or pages, and no result carries an invented score. |
+| Refusal | `MEDULLA-UNIFIED-DATA-PLANE-R038.5.4` | `crates/medulla-federation/src/federation_opt/tests.rs::search_refusals`: Each case returns its code or pages, and no result carries an invented score. |
 
-| Evidence | `MEDULLA-UNIFIED-DATA-PLANE-R038.5.5` | `crates/medulla-plan/src/federation_opt/tests.rs::search_receipt`: The receipt matches the remote request. |
+| Evidence | `MEDULLA-UNIFIED-DATA-PLANE-R038.5.5` | `crates/medulla-federation/src/federation_opt/tests.rs::search_receipt`: The receipt matches the remote request. |
 
 | Hot-path proof | `MEDULLA-UNIFIED-DATA-PLANE-R038.5.6` | `tests/federation/test_search_index_pushdown_served.py::test_relevance_pushed_and_k_replenished`: The answer holds k results, and the engine stores no index documents. |
 
@@ -184,15 +184,15 @@ Hot-path proof for `MEDULLA-UNIFIED-DATA-PLANE-R038.6`: `tests/federation/test_g
 | Case | Row | Proving test and observation |
 |---|---|---|
 
-| Model | `MEDULLA-UNIFIED-DATA-PLANE-R038.7.1` | `crates/medulla-plan/src/federation_opt/tests.rs::web_result_round_trips`: A serde round trip keeps every field and rejects a result without a URL. |
+| Model | `MEDULLA-UNIFIED-DATA-PLANE-R038.7.1` | `crates/medulla-federation/src/federation_opt/tests.rs::web_result_round_trips`: A serde round trip keeps every field and rejects a result without a URL. |
 
-| Behavior | `MEDULLA-UNIFIED-DATA-PLANE-R038.7.2` | `crates/medulla-plan/src/federation_opt/tests.rs::web_search_pushdown_and_ttl`: A repeated pattern within the time-to-live sends one connector query. |
+| Behavior | `MEDULLA-UNIFIED-DATA-PLANE-R038.7.2` | `crates/medulla-federation/src/federation_opt/tests.rs::web_search_pushdown_and_ttl`: A repeated pattern within the time-to-live sends one connector query. |
 
-| Wiring | `MEDULLA-UNIFIED-DATA-PLANE-R038.7.3` | `crates/medulla-plan/src/federation_opt/tests.rs::served_web_search_reaches_cache`: A served pattern over web results reaches the connector operation and the shared cache. |
+| Wiring | `MEDULLA-UNIFIED-DATA-PLANE-R038.7.3` | `crates/medulla-federation/src/federation_opt/tests.rs::served_web_search_reaches_cache`: A served pattern over web results reaches the connector operation and the shared cache. |
 
-| Refusal | `MEDULLA-UNIFIED-DATA-PLANE-R038.7.4` | `crates/medulla-plan/src/federation_opt/tests.rs::web_search_refusals`: Each case returns its code, and no expired row serves a read. |
+| Refusal | `MEDULLA-UNIFIED-DATA-PLANE-R038.7.4` | `crates/medulla-federation/src/federation_opt/tests.rs::web_search_refusals`: Each case returns its code, and no expired row serves a read. |
 
-| Evidence | `MEDULLA-UNIFIED-DATA-PLANE-R038.7.5` | `crates/medulla-plan/src/federation_opt/tests.rs::web_result_provenance`: Each row names its engine, rank and retrieval time, and a cached row says so. |
+| Evidence | `MEDULLA-UNIFIED-DATA-PLANE-R038.7.5` | `crates/medulla-federation/src/federation_opt/tests.rs::web_result_provenance`: Each row names its engine, rank and retrieval time, and a cached row says so. |
 
 | Hot-path proof | `MEDULLA-UNIFIED-DATA-PLANE-R038.7.6` | `tests/federation/test_web_metasearch_served.py::test_pattern_pushes_to_connector_with_ttl_cache`: The connector receives two queries, the rows are typed, and the graph store holds no result rows. |
 
@@ -204,9 +204,9 @@ Hot-path proof for `MEDULLA-UNIFIED-DATA-PLANE-R038.7`: `tests/federation/test_w
 | Case | Row | Proving test and observation |
 |---|---|---|
 | Matrix | `MEDULLA-UNIFIED-DATA-PLANE-R022.4.1` | `crates/medulla-types/src/dialect_conformance.rs::tests::matrix_states_residency`: The test fails when a category row has no residency value. |
-| Candidates | `MEDULLA-UNIFIED-DATA-PLANE-R038.7.7` | `crates/medulla-plan/src/federation_opt/tests.rs::web_candidates_carry_query_provenance`: Candidates carry query provenance, and the store holds no result rows. |
+| Candidates | `MEDULLA-UNIFIED-DATA-PLANE-R038.7.7` | `crates/medulla-federation/src/federation_opt/tests.rs::web_candidates_carry_query_provenance`: Candidates carry query provenance, and the store holds no result rows. |
 | Model | `MEDULLA-UNIFIED-DATA-PLANE-R651.7.1` | `web_document.rs::tests::web_provenance_round_trips`: A serde round trip keeps every field and rejects a missing Document ID or an unknown backend. |
-| Behavior | `MEDULLA-UNIFIED-DATA-PLANE-R651.7.2` | `src/server/handlers/web_ingest_tests.rs::links_chunks_vectors_and_facts`: One Document links its chunks and vectors; an equal digest is a no-op, and a new digest supersedes. |
+| Behavior | `MEDULLA-UNIFIED-DATA-PLANE-R651.7.2` | `crates/medulla-server-served-tests/src/split_tests/medulla_h_ingest_web_ingest_tests.rs::links_chunks_vectors_and_facts`: One Document links its chunks and vectors; an equal digest is a no-op, and a new digest supersedes. |
 | Wiring | `MEDULLA-UNIFIED-DATA-PLANE-R651.7.3` | `tests/web_document_enrich_served.rs::test_web_page_enriches_once_for_both_backends`: The served call commits chunks, edges and vectors, and `SemanticSearch` returns a chunk. |
 | Refusal | `MEDULLA-UNIFIED-DATA-PLANE-R651.7.4` | `tests/web_document_enrich_served.rs::test_web_document_refusals`: Each case returns its code and writes nothing. |
 | Evidence | `MEDULLA-UNIFIED-DATA-PLANE-R651.7.5` | `tests/web_document_enrich_served.rs::test_web_page_enriches_once_for_both_backends`: The receipt counts match a separate read of the chunks. |

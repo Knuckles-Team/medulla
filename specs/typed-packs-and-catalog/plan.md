@@ -52,7 +52,7 @@ For each PACK requirement, attach a PR/merged commit link and contract receipt d
 
 ### Existing path to extend
 
-`crates/medulla-types/src/connector_pack/{index,digest,annotations,ops,result,record}.rs` defines the wire values and bounds. `crates/medulla-capabilities/src/domains/` owns method descriptors; `gen_contract` emits the public contract, receipt and clients. `src/server/handlers/admin/connector_pack/import/` validates and plans; `src/server/persistence/connector_pack/` owns the head, membership, receipt, bindings, visibility and outbox; `src/server/blob/engine_bodies.rs` owns bodies; `src/server/connector_pack_projection.rs` and `src/server/graph_schema/attach_pack.rs` provide projection and schema attachment. `src/server/handlers/admin/component_content.rs` serves bodies. New code must enter through these paths, not create a second registry or a detached adapter.
+`crates/medulla-types/src/connector_pack/{index,digest,annotations,ops,result,record}.rs` defines the wire values and bounds. `crates/medulla-capabilities/src/domains/` owns method descriptors; `gen_contract` emits the public contract, receipt and clients. `src/server/handlers/admin/connector_pack/import/` validates and plans; `src/server/persistence/connector_pack/` owns the head, membership, receipt, bindings, visibility and outbox; `crates/medulla-server-blob/src/blob/engine_bodies.rs` owns bodies; `crates/medulla-h-admin/src/connector_pack_projection.rs` and `crates/medulla-h-admin/src/graph_schema/attach_pack.rs` provide projection and schema attachment. `crates/medulla-h-admin/src/admin/component_content.rs` serves bodies. New code must enter through these paths, not create a second registry or a detached adapter.
 
 ### Data flow and durable boundaries
 
@@ -165,7 +165,7 @@ R043 remains open until TP-10, TP-11, and applicable quality gates pass on the m
 Base: `ce34e41b7845fa220ec405508d392bc88a23b3f6`. No production behavior changed. R043 remains unverified.
 
 - Rust 1.96 compiled current `crates/medulla-types/src/lib.rs` with `feature="test-support"` against cached real dependencies.
-- A native harness included current `src/server/handlers/admin/connector_pack/import/annotations.rs` by path. All 12 tests passed, exit 0.
+- A native harness included current `crates/medulla-h-admin/src/admin/connector_pack/import/annotations.rs` by path. All 12 tests passed, exit 0.
 - Both independent modality-direction guard deletions made `modalities_refuse_foreign_roots_typos_and_wrong_kinds` fail, exit 101. Original source was restored.
 - `python -m pytest -q tests/test_connector_pack_client.py`: 9 passed, exit 0.
 - `python -m ruff check tests/test_connector_pack_client.py`: passed. Rustfmt 1.96 formatted the new native tests.
@@ -190,7 +190,7 @@ the test specification links the native acceptance evidence.
 
 ## Measured model and task facts for harness configuration (R048, R066)
 
-Data flow: evaluation run (Meristem) → pack import of a `model_profile` entry → `AgentComponentFacts::ModelProfile` (`crates/medulla-types/src/agent_component/facts.rs:169`) → `AgentLibraryStore` → `Decide(harness_config)` handler (MEDULLA-DECISION-ENGINE-R128.8) → premises.
+Data flow: evaluation run (Meristem) → pack import of a `model_profile` entry → `AgentComponentFacts::ModelProfile` (`crates/medulla-agent-types/src/agent_component/facts.rs:169`) → `AgentLibraryStore` → `Decide(harness_config)` handler (MEDULLA-DECISION-ENGINE-R128.8) → premises.
 
 Types and fields:
 
@@ -215,7 +215,7 @@ Cross-repository rows: the `MERISTEM-HARNESS` row for the matched ablation runne
 
 ## Tool-contract facts on pack annotations (R045)
 
-Data flow: connector Graft SDK pack (`SCION-CONNECTOR-CONTROL-R045.1` to `.11`) → `PackAnnotations` (`crates/medulla-types/src/connector_pack/annotations.rs:46`) → `check_annotations` (`src/server/handlers/admin/connector_pack/import/annotations.rs:34`) → `tool_facts` (`src/server/handlers/admin/connector_pack/import/facts.rs:21`) → `AgentComponentFacts::Tool` (`crates/medulla-types/src/agent_component/facts.rs:198`) → `request_body` (`src/server/handlers/decide/stat_tool_subset.rs:99`) → `smallest_covering_subset` (`crates/medulla-types/src/decision/statistical/tool_subset.rs:58`) → `HarnessConfig` action space (`MEDULLA-DECISION-ENGINE-R128.9`).
+Data flow: connector Graft SDK pack (`SCION-CONNECTOR-CONTROL-R045.1` to `.11`) → `PackAnnotations` (`crates/medulla-catalog-types/src/connector_pack/annotations.rs:46`) → `check_annotations` (`crates/medulla-h-admin/src/admin/connector_pack/import/annotations.rs:34`) → `tool_facts` (`crates/medulla-h-admin/src/admin/connector_pack/import/facts.rs:21`) → `AgentComponentFacts::Tool` (`crates/medulla-agent-types/src/agent_component/facts.rs:198`) → `request_body` (`crates/medulla-h-decide/src/decide/stat_tool_subset.rs:99`) → `smallest_covering_subset` (`crates/medulla-decision-types/src/decision/statistical/tool_subset.rs:58`) → `HarnessConfig` action space (`MEDULLA-DECISION-ENGINE-R128.9`).
 
 Types and fields: `side_effects` (`none`, `workspace_write`, `external_write`, `network`), `declared_by` (`connector`, `mcp_hint`, `certified`) and `schema_tokens` (positive integer) are new optional fields beside `read_only_hint` (`annotations.rs:58`). Safe defaults when absent: `read_only` false, `side_effects` external_write, `declared_by` connector, `schema_tokens` absent.
 
@@ -268,9 +268,9 @@ and check them. Producer tests do not substitute for that check.
 
 ## Skill packages rendered on demand (R100)
 
-Data flow: fleet catalog list wire method → `skill_row` (`src/server/dispatch/consensus/fleet_catalog/project.rs:271`) → `render_skill_package` (new) → `FleetCatalogRow::Skill` with a `RenderedSkillPackage` → listing.
+Data flow: fleet catalog list wire method → `skill_row` (`crates/medulla-server-consensus/src/dispatch/consensus/fleet_catalog/project.rs:271`) → `render_skill_package` (new) → `FleetCatalogRow::Skill` with a `RenderedSkillPackage` → listing.
 
-Types: `RenderedSkillPackage { uri, digest, ontology_refs, graph_revision }` and `RenderRefusal::DanglingOntologyRef`. The row type `FleetSkillRow` (`crates/medulla-types/src/fleet_catalog/row.rs:103`) gains an optional rendered package.
+Types: `RenderedSkillPackage { uri, digest, ontology_refs, graph_revision }` and `RenderRefusal::DanglingOntologyRef`. The row type `FleetSkillRow` (`crates/medulla-catalog-types/src/fleet_catalog/row.rs:103`) gains an optional rendered package.
 
 Attach point: `skill_row`, called by the catalog projection for each skill. Today the row carries only classification fields.
 
@@ -309,13 +309,13 @@ Test bindings alone do not establish served acceptance.
 
 Candidates EG:34 and EG:58 extend the existing core ontology and domain-pack owners. Schema.org and SKOS provide interoperability terms. They do not become ontology authorities. Medulla retains RDF/OWL semantics, upper-ontology disjointness, schema validation and activation decisions.
 
-Existing code: `VocabularyModule::to_turtle` in `crates/medulla-core/src/ontology_codegen.rs:45` emits deterministic Turtle from typed declarations. Its current vocabulary model has no versioned crosswalk records. `crates/medulla-types/src/domain_pack.rs` defines HR, legal, medical and government kinds with local consistency validation. Its own module documentation leaves import wiring to later requirements. Neither mechanism proves the new crosswalk contract.
+Existing code: `VocabularyModule::to_turtle` in `crates/medulla-core/src/ontology_codegen.rs:45` emits deterministic Turtle from typed declarations. Its current vocabulary model has no versioned crosswalk records. `crates/medulla-catalog-types/src/domain_pack.rs` defines HR, legal, medical and government kinds with local consistency validation. Its own module documentation leaves import wiring to later requirements. Neither mechanism proves the new crosswalk contract.
 
 Reuse `core-foundation-v1.ttl` person, event and document terms without changing their IRIs. Reuse `medical-v1.ttl`, `software-v1.ttl` and `hr-v1.ttl` as current domain vocabulary inputs. Extend the typed authority and generator under R090; never hand-edit generated artifacts as the authority. Existing `rdfs:seeAlso` statements provide candidate alignments, not automatic exact matches. Add the missing Technology domain kind. Labor coverage belongs to Hr.
 
 Data flow: typed crosswalk declarations -> generated RDF artifacts -> signed pack import -> schema attachment -> committed schema. Read flow: authenticated OntologyInspect -> revision-bound mappings and coverage. GraphSchemaClasses provides independent class and digest readback.
 
-The production pack route is `handle_connector_pack` -> `serve_import` -> `import::validate_and_commit`. Add validation before any new pack head becomes visible. `src/server/graph_schema.rs::apply_pack_source` checks composition before schema activation. `src/server/handlers/rdf/dispatch.rs` routes OntologyInspect to its current inspection handler. Extend that handler and its generated DTO contract. The new domain crosswalk path has no production caller today; these requirements create the missing calls.
+The production pack route is `handle_connector_pack` -> `serve_import` -> `import::validate_and_commit`. Add validation before any new pack head becomes visible. `crates/medulla-h-admin/src/graph_schema.rs::apply_pack_source` checks composition before schema activation. `crates/medulla-h-sparql/src/rdf/dispatch.rs` routes OntologyInspect to its current inspection handler. Extend that handler and its generated DTO contract. The new domain crosswalk path has no production caller today; these requirements create the missing calls.
 
 Use bounded pinned target declarations, not runtime vocabulary downloads. Preserve explicit relation direction and vocabulary revisions. For broadMatch the target is broader; for narrowMatch the target is narrower. The test specification fixes exact tuples, including conservative SeeAlso references for all three core metadata classes. Document includes physical documents, so its DigitalDocument reference cannot justify an exact match. These fixtures preserve existing core OWL axioms; they do not derive new axioms from crosswalks. Crosswalk relations do not generate identity or class-equivalence entailments. Reject conflicting or category-incompatible declarations before activation. Apply the existing bounded EL+/RL and tableau consistency checks to the resulting schema.
 
@@ -373,13 +373,13 @@ Inspection base: `38cae80eb37eba97a273e2a6259e2eb0dfe46b02`.
 
 | Source | Observed role and required extension |
 |---|---|
-| `crates/medulla-types/src/agent_component.rs:130` | Existing SystemPrompt/McpPrompt kinds, component identity, revisions and dependency pins. Reuse these types. |
-| `crates/medulla-types/src/agent_component/facts.rs:395` | Existing static/dynamic variable validation. This does not establish full blueprint validation or rendering. |
-| `src/server/handlers/admin/agent.rs:142` | Authenticated component dispatch. Publish binds verified scope before the owner write at line 184. |
-| `src/server/persistence/agent_component/write.rs:39` | Existing component publication authority. Extend it for validated native prompt bodies and replay. |
-| `src/server/handlers/admin/component_content.rs:55` | Tenant-scoped content lookup uses connector_pack_content_pointer and verifies engine-owned body bytes. |
-| `src/server/blob/engine_bodies.rs:202` | Existing verified engine-body reader. Reuse its digest and holder authority. |
-| `src/server/connector_pack_projection.rs` | Existing pack projection machinery. Native prompt projection requires an explicit admitted extension. |
+| `crates/medulla-agent-types/src/agent_component.rs:130` | Existing SystemPrompt/McpPrompt kinds, component identity, revisions and dependency pins. Reuse these types. |
+| `crates/medulla-agent-types/src/agent_component/facts.rs:395` | Existing static/dynamic variable validation. This does not establish full blueprint validation or rendering. |
+| `crates/medulla-h-admin/src/admin/agent.rs:142` | Authenticated component dispatch. Publish binds verified scope before the owner write at line 184. |
+| `crates/medulla-persistence-records/src/agent_component/write.rs:39` | Existing component publication authority. Extend it for validated native prompt bodies and replay. |
+| `crates/medulla-h-admin/src/admin/component_content.rs:55` | Tenant-scoped content lookup uses connector_pack_content_pointer and verifies engine-owned body bytes. |
+| `crates/medulla-server-blob/src/blob/engine_bodies.rs:202` | Existing verified engine-body reader. Reuse its digest and holder authority. |
+| `crates/medulla-h-admin/src/connector_pack_projection.rs` | Existing pack projection machinery. Native prompt projection requires an explicit admitted extension. |
 
 The inspected dispatch has Publish, Retire, Current, History, Status, Search and Content branches.
 It does not establish a prompt render or blueprint import/export method.
@@ -591,21 +591,21 @@ Every connector ships one OWL/RDF ontology pack. The pack holds the connector's 
 
 ### Current state
 
-Ontology and shapes entries are native RDF. They become one graph schema source through `projection_documents_from_store` (`src/server/handlers/admin/connector_pack/reproject.rs:227`).
+Ontology and shapes entries are native RDF. They become one graph schema source through `projection_documents_from_store` (`crates/medulla-h-admin/src/admin/connector_pack/reproject.rs:227`).
 
-A connector serves its data sources and mappings as JSON at `connector://resources`. The pack holds that body as a `resource` entry. Import decodes its `schema_mappings` with a closed JSON decoder (`src/server/persistence/connector_pack/declaration.rs`). Import reads relations from the ontology entries' object properties. Both projections commit beside the declaration member.
+A connector serves its data sources and mappings as JSON at `connector://resources`. The pack holds that body as a `resource` entry. Import decodes its `schema_mappings` with a closed JSON decoder (`crates/medulla-persistence-records/src/connector_pack/declaration.rs`). Import reads relations from the ontology entries' object properties. Both projections commit beside the declaration member.
 
-`SourceIngest` resolves `connector:<connector>#mappings/<type>` and `connector:<connector>#relations/<resource>/<relation>`. The resolvers are `resolve_connector_schema_mapping` and `resolve_connector_relationship_mapping` (`src/server/persistence/connector_pack.rs`). The engine holds no manifest entry kind and no YAML parser.
+`SourceIngest` resolves `connector:<connector>#mappings/<type>` and `connector:<connector>#relations/<resource>/<relation>`. The resolvers are `resolve_connector_schema_mapping` and `resolve_connector_relationship_mapping` (`crates/medulla-persistence-records/src/connector_pack.rs`). The engine holds no manifest entry kind and no YAML parser.
 
 ### Design
 
 The `connector_pack-v1.ttl` vocabulary of R101.1 and R101.2 and the surface triples of R102 remain the planned direction for graph-resident contracts. Until they land, the declaration and the pack ontology are the only mapping authority.
 
-The outbox consumer runs `project` (`src/server/connector_pack_projection.rs:220`) and `project_head` (`reproject.rs:72`). Projection commit upserts the capability index (`MEDULLA-DECISION-ENGINE-R172.12.3`). `Decide` answers `CapabilityDesignation` questions at `src/server/handlers/decide/stat_decide.rs:137`. Reads use the SPARQL handler (`src/server/handlers/rdf/sparql.rs:30`) and `OntologyInspect` (R098).
+The outbox consumer runs `project` (`crates/medulla-h-admin/src/connector_pack_projection.rs:220`) and `project_head` (`reproject.rs:72`). Projection commit upserts the capability index (`MEDULLA-DECISION-ENGINE-R172.12.3`). `Decide` answers `CapabilityDesignation` questions at `crates/medulla-h-decide/src/decide/stat_decide.rs:137`. Reads use the SPARQL handler (`crates/medulla-h-sparql/src/rdf/sparql.rs:30`) and `OntologyInspect` (R098).
 
 ### Runtime ontology import (R103)
 
-A connector imports or revises its domain ontology at runtime without a full pack import. The served `GraphSchema` method reaches the gateway route at `src/server/handlers/graph_ops/gateway_graph_routes.rs:656`. `handle_gateway` (`src/server/graph_schema.rs:191`) matches `ImportOntology`. The engine parses and validates the body. It commits one tenant-scoped schema source revision under `ontology:<connector>/<ontology IRI>`. The content digest makes a repeated import a no-op.
+A connector imports or revises its domain ontology at runtime without a full pack import. The served `GraphSchema` method reaches the gateway route at `crates/medulla-h-graph/src/graph_ops/gateway_graph_routes.rs:656`. `handle_gateway` (`crates/medulla-h-admin/src/graph_schema.rs:191`) matches `ImportOntology`. The engine parses and validates the body. It commits one tenant-scoped schema source revision under `ontology:<connector>/<ontology IRI>`. The content digest makes a repeated import a no-op.
 
 ## MEDULLA-TYPED-PACKS-R104 — connect-time seed graph import
 
@@ -764,7 +764,7 @@ These files are stale for the identity union, not a qualified combined contract.
 Fresh hosted native generation and final-source parity must replace this draft baseline before merge.
 The earlier identity exports remain preserved with their original source receipts.
 ## Schema drift wiring (R710, R712)
-`MEDULLA-TYPED-PACKS-R710` stays VERIFIED by the unit tests in `crates/medulla-types/src/graph_schema/drift.rs`. Its acceptance is unit tests of the typed model and the bound.
+`MEDULLA-TYPED-PACKS-R710` stays VERIFIED by the unit tests in `crates/medulla-catalog-types/src/graph_schema/drift.rs`. Its acceptance is unit tests of the typed model and the bound.
 `MEDULLA-TYPED-PACKS-R712` stays VERIFIED by the benchmark `benches/schema_drift_classify.rs` and the approval-lease served test.
 Superseded evidence: `tests/packs/test_schema_drift_served.py` drives attach, validate and approval-lease operations only. It never classifies drift.
 No engine code outside `benches/` calls the classifier today.

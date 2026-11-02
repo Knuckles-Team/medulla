@@ -75,16 +75,14 @@ pub struct AcceptanceQuestion<'a> {
 /// - with all sources connected, no question abstains and each question
 ///   answers (non-empty, provenance-carrying) through its own test;
 /// - with any one required source unconnected, the question returns the typed
-///   abstention (`medulla_rdf::source_selection::question_abstention`) naming
+///   abstention (`medulla_virtual_graph::source_selection::question_abstention`) naming
 ///   exactly that source with the closed reason `Unconnected`, and uses no
 ///   source — never an empty success.
 #[cfg(feature = "sparql")]
 pub fn assert_acceptance(questions: &[AcceptanceQuestion<'_>]) {
     use std::collections::BTreeMap;
 
-    use medulla_rdf::source_selection::{
-        connected_sources_from_turtle, question_abstention, NotUsedReason,
-    };
+    use medulla_virtual_graph::{source_selection::connected_sources_from_turtle, source_selection::question_abstention, source_selection::NotUsedReason};
 
     let mut mapped: BTreeMap<&str, Vec<String>> = BTreeMap::new();
     for (source, concept) in questions.iter().flat_map(|q| q.required) {

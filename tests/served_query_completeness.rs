@@ -22,10 +22,11 @@ use std::sync::Arc;
 use serde_json::json;
 use tokio::sync::RwLock;
 
-use medulla_plan::{Op, Plan};
+use medulla_exec::{algebra::Op, algebra::Plan};
 use medulla_types::wire::UqlResult;
-use medulla::protocol::{Method, Response, ResultPayload};
-use medulla::server::{dispatch, ServerState};
+use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
+use medulla_server_router::dispatch::request_boundary::dispatch;
+use medulla_server_api::state::ServerState;
 
 const SECRET: &str = "served-query-completeness-secret";
 
@@ -176,7 +177,7 @@ async fn served_fuserrf_text_branch_contributes_lexical_hits() {
 ///
 /// Proven DIFFERENTIALLY rather than by inspection: the persistent index derives a node's
 /// indexable body from a FIXED canonical key list (`GraphTextIndex`'s `TEXT_KEYS` —
-/// text/content/body/description/summary/title/name, see `server::secondary_indexes`),
+/// text/content/body/description/summary/title/name, see `medulla_server::secondary_indexes`),
 /// while the snapshot-derived fallback (`build_text_index_from_view`) concatenates EVERY
 /// string leaf in a node's property blob regardless of key. So a node whose only textual
 /// field lives under a NON-canonical key matches the snapshot fallback but is INVISIBLE to
@@ -191,7 +192,7 @@ async fn served_ranktext_pushes_down_into_persistent_index_not_snapshot_fallback
     // in-memory persistent `GraphTextIndex` per graph, maintained incrementally by the write
     // coalescer (CONCEPT:MEDULLA-KG.storage.incremental-text) — no on-disk dir needed for this test.
     state.write().await.registry.set_secondary_index_factory(
-        medulla::server::secondary_indexes::ServerIndexFactory::new()
+        medulla_h_retrieve::secondary_indexes::ServerIndexFactory::new()
             .with_text_dir(None)
             .into_arc(),
     );
@@ -311,7 +312,7 @@ fn uql_body(response: &Response) -> UqlResult {
 async fn served_filtered_ranktext_returns_every_matching_candidate() {
     let state = state();
     state.write().await.registry.set_secondary_index_factory(
-        medulla::server::secondary_indexes::ServerIndexFactory::new()
+        medulla_h_retrieve::secondary_indexes::ServerIndexFactory::new()
             .with_text_dir(None)
             .into_arc(),
     );
@@ -348,7 +349,7 @@ async fn served_filtered_ranktext_returns_every_matching_candidate() {
             label: "Doc".into(),
         },
         Op::Filter {
-            preds: vec![medulla_plan::Pred::Eq {
+            preds: vec![medulla_exec::algebra::Pred::Eq {
                 prop: "category".into(),
                 value: "pick".into(),
             }],

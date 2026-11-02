@@ -1,0 +1,430 @@
+use super::*;
+
+/// Most operations one mutation batch may carry (its collection budget).
+pub const MAX_MUTATION_OPERATIONS: usize = 100_000;
+const MAX_MUTATION_OUTBOX_INTENTS: usize = 100_000;
+
+impl MutationBatch {
+    /// Validate invariants required by every persistence implementation.
+    pub fn validate(&self) -> Result<(), String> {
+        validate_record_schema(self.schema_version, "batch")?;
+        self.validate_identity()?;
+        self.envelope.validate()?;
+        validate_envelope_covers_this_batch(self)?;
+        super::model::validate_serving_principal(self.serving_principal())?;
+        validate_required(&self.batch_id, "mutation batch_id")?;
+        validate_required(self.idempotency_key(), "mutation idempotency_key")?;
+        validate_operations(self)?;
+        validate_version_expectation(self)?;
+        validate_authoritative_state(self)?;
+        validate_outbox(&self.outbox)?;
+        validate_placement(self)
+    }
+
+    /// Bound write-side collections and directly owned bytes before any
+    /// MessagePack serializer is invoked.
+    pub fn validate_write_budget(&self) -> Result<(), String> {
+        self.validate()?;
+        if self.operations.len() > MAX_MUTATION_OPERATIONS
+            || self.outbox.len() > MAX_MUTATION_OUTBOX_INTENTS
+        {
+            return Err("mutation write exceeds its collection budget".to_string());
+        }
+        let mut bytes = 0usize;
+        let mut headers = 0usize;
+        for value in [
+            self.batch_id.as_str(),
+            self.idempotency_key(),
+            self.serving_principal(),
+        ] {
+            account_write_bytes(&mut bytes, value.len())?;
+        }
+        // The envelope's remaining bytes are bounded by their own contract types
+        // (`ActorId`, `TenantId`, `ResourceId`, `IdempotencyKey` all carry a
+        // maximum), so accounting them again here would double-count a value
+        // whose ceiling is already fixed. Only the two unbounded `String`s above
+        // -- the batch id and the serving principal -- need a budget.
+        if let Some(operation) = self.envelope.operation() {
+            account_write_bytes(&mut bytes, operation.authority.actor.as_str().len())?;
+        }
+        if let Some(state) = &self.authoritative_state {
+            account_write_bytes(&mut bytes, state.algorithm.len())?;
+            account_write_bytes(&mut bytes, state.digest.len())?;
+        }
+        for intent in &self.outbox {
+            account_write_bytes(&mut bytes, intent.topic.len())?;
+            account_write_bytes(&mut bytes, intent.key.len())?;
+            account_write_bytes(&mut bytes, intent.payload.len())?;
+            headers = headers
+                .checked_add(intent.headers.len())
+                .filter(|count| *count <= MAX_MUTATION_OUTBOX_HEADERS)
+                .ok_or_else(|| "mutation write exceeds its header budget".to_string())?;
+            for (key, value) in &intent.headers {
+                account_write_bytes(&mut bytes, key.len())?;
+                account_write_bytes(&mut bytes, value.len())?;
+            }
+        }
+        Ok(())
+    }
+}
+
+/// The envelope's canonical payload digest must be the digest OF THIS BATCH.
+///
+/// The envelope is minted from a batch's content, so a producer that then edits
+/// the content -- appends an outbox intent, rewrites an operation -- leaves an
+/// envelope that under-covers or mis-covers its own body. That is the same
+/// defect class as a mismatched identity: a replay resolved on such a digest
+/// could return a recorded result whose outbox or operations differ from what
+/// this attempt proposed. Checking it here makes the edit-after-mint refused at
+/// admission rather than committed, because `validate_write_budget` (and
+/// therefore `commit::begin`) runs this on every batch.
+///
+/// A maintenance envelope covers nothing and is exempt by construction: it has
+/// no operation identity, so there is no digest to disagree with.
+fn validate_envelope_covers_this_batch(batch: &MutationBatch) -> Result<(), String> {
+    let Some(operation) = batch.envelope.operation() else {
+        return Ok(());
+    };
+    let content = canonical_payload_digest(
+        &batch.identity,
+        &batch.operations,
+        &batch.outbox,
+        batch.authoritative_state.as_ref(),
+    )?;
+    if operation.canonical_payload_digest == content {
+        return Ok(());
+    }
+    Err(
+        "mutation batch content does not match its envelope's canonical payload digest -- \
+         the envelope must be minted from the batch's FINAL operations and outbox"
+            .to_string(),
+    )
+}
+
+fn validate_operations(batch: &MutationBatch) -> Result<(), String> {
+    if batch.operations.is_empty() {
+        if batch.is_repository_enrichment_top_up() {
+            return Ok(());
+        }
+        return Err("mutation batch must contain at least one operation".to_string());
+    }
+    for (expected, operation) in batch.operations.iter().enumerate() {
+        if operation.ordinal as usize != expected {
+            return Err(format!(
+                "mutation operation ordinal {} is not contiguous at index {}",
+                operation.ordinal, expected
+            ));
+        }
+        match batch.identity.scope() {
+            // A graph scope carries every domain whose authoritative state is the
+            // graph itself -- row writes, snapshots, RDF, and the lifecycle /
+            // control-plane / cross-modal / multi-graph families that are versioned
+            // by the same `MUTATION_GRAPH_VERSION` counter. Only a
+            // store-authoritative domain (one with its own counter) is rejected
+            // here; see `DurabilityDomain::requires_native_scope`.
+            MutationScope::Graph { .. } if operation.domain.forbidden_in_graph_scope() => {
+                return Err(
+                    "graph mutation scope contains a store-authoritative operation".to_string(),
+                );
+            }
+            MutationScope::Native { domain, .. } if operation.domain != *domain => {
+                return Err("native mutation scope domain does not match its operation".to_string());
+            }
+            _ => {}
+        }
+    }
+    Ok(())
+}
+
+fn validate_version_expectation(batch: &MutationBatch) -> Result<(), String> {
+    match (batch.identity.scope(), batch.version_expectation) {
+        (MutationScope::Graph { .. }, VersionExpectation::Graph(_)) => Ok(()),
+        (MutationScope::Native { .. }, VersionExpectation::Native(_)) => Ok(()),
+        (MutationScope::Native { domain, .. }, VersionExpectation::Unversioned) => {
+            let authorized_domain = matches!(
+                domain,
+                DurabilityDomain::ControlPlane | DurabilityDomain::Lifecycle
+            );
+            let authorized_capability = batch.verified_capabilities().is_some_and(|capabilities| {
+                capabilities.contains(&MutationCapability::UnversionedSystemMutation)
+            });
+            if batch.identity.tenant().is_system() && authorized_domain && authorized_capability {
+                Ok(())
+            } else {
+                Err(
+                    "unversioned mutation requires reserved-system tenant, control-plane/lifecycle scope, and verified capability"
+                        .to_string(),
+                )
+            }
+        }
+        _ => Err("mutation version expectation does not match its typed scope".to_string()),
+    }
+}
+
+fn validate_placement(batch: &MutationBatch) -> Result<(), String> {
+    if batch.placement_epoch > 0 && batch.fencing_token.is_none() {
+        return Err("placed mutation requires a fencing token".to_string());
+    }
+    Ok(())
+}
+
+fn validate_authoritative_state(batch: &MutationBatch) -> Result<(), String> {
+    let Some(state) = &batch.authoritative_state else {
+        return Ok(());
+    };
+    let supported_algorithm = matches!(
+        state.algorithm.as_str(),
+        "sha256" | "sha256-row-delta-v2" | "sha256-row-delta-schema-sources"
+    );
+    let valid_digest = state.digest.len() == 64
+        && state
+            .digest
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte));
+    if !supported_algorithm || !valid_digest {
+        return Err(
+            "authoritative state requires a supported lowercase sha256 descriptor".to_string(),
+        );
+    }
+    let expected_target = state
+        .source_graph_version
+        .checked_add(1)
+        .ok_or_else(|| "authoritative state source version overflow".to_string())?;
+    if state.target_graph_version != expected_target {
+        return Err(
+            "authoritative state target version must be exactly source version plus one"
+                .to_string(),
+        );
+    }
+    if !matches!(
+        batch.version_expectation,
+        VersionExpectation::Graph(version) if version == state.source_graph_version
+    ) {
+        return Err(
+            "authoritative graph state source version must equal graph version expectation"
+                .to_string(),
+        );
+    }
+    Ok(())
+}
+
+fn validate_outbox(outbox: &[MutationOutboxIntent]) -> Result<(), String> {
+    for intent in outbox {
+        validate_required(&intent.topic, "mutation outbox topic")?;
+        validate_required(&intent.key, "mutation outbox key")?;
+    }
+    Ok(())
+}
+
+impl MutationBatchRecord {
+    pub fn validate(&self) -> Result<(), String> {
+        self.batch.validate()?;
+        self.validate_identity()?;
+        match self.status {
+            MutationBatchStatus::Prepared | MutationBatchStatus::Aborted
+                if self.committed_version == CommittedVersion::None =>
+            {
+                Ok(())
+            }
+            MutationBatchStatus::Committed => validate_committed_expectation(
+                self.batch.version_expectation,
+                self.committed_version,
+            ),
+            _ => Err("mutation receipt status has invalid committed version semantics".to_string()),
+        }
+    }
+
+    pub fn validate_write_budget(&self) -> Result<(), String> {
+        self.validate()?;
+        self.batch.validate_write_budget()?;
+        if let Some(result) = &self.result_msgpack {
+            let mut bytes = 0usize;
+            account_write_bytes(&mut bytes, result.len())?;
+        }
+        Ok(())
+    }
+}
+
+impl MutationBatchCommit {
+    pub fn validate(&self) -> Result<(), String> {
+        self.record.validate()?;
+        self.validate_identity()?;
+        if self.record.status != MutationBatchStatus::Committed {
+            return Err("mutation commit envelope must contain a committed receipt".to_string());
+        }
+        Ok(())
+    }
+}
+
+fn validate_committed_expectation(
+    expectation: VersionExpectation,
+    committed: CommittedVersion,
+) -> Result<(), String> {
+    match (expectation, committed) {
+        (VersionExpectation::Graph(expected), CommittedVersion::Graph { source, target })
+            if source == expected && expected.checked_add(1) == Some(target) =>
+        {
+            Ok(())
+        }
+        (VersionExpectation::Native(expected), CommittedVersion::Native { source, target })
+            if source == expected && expected.checked_add(1) == Some(target) =>
+        {
+            Ok(())
+        }
+        (VersionExpectation::Unversioned, CommittedVersion::None) => Ok(()),
+        _ => Err("committed mutation version does not match its expectation".to_string()),
+    }
+}
+
+#[cfg(test)]
+mod commit_tests {
+
+    use crate::protocol::Method;
+
+    use super::*;
+
+    fn graph_batch(identity: MutationScopeIdentity) -> MutationBatch {
+        let mut batch = MutationBatch {
+            schema_version: MUTATION_BATCH_VERSION,
+            batch_id: "commit-validation".to_string(),
+            envelope: crate::mutation_batch::tests::test_envelope(
+                &identity,
+                7,
+                "commit-validation-key",
+            ),
+            identity,
+            placement_epoch: 0,
+            version_expectation: VersionExpectation::Graph(4),
+            fencing_token: None,
+            authoritative_state: None,
+            operations: vec![MutationOperation {
+                ordinal: 0,
+                surface: MutationSurface::Graph,
+                domain: DurabilityDomain::GraphRows,
+                method: Method::RemoveNode {
+                    node_id: "node-a".to_string(),
+                },
+            }],
+            outbox: Vec::new(),
+            created_at_ms: 10,
+        };
+        batch
+            .reseal_envelope(medulla_types::contract::Digest256::from_bytes([1_u8; 32]))
+            .expect("a fixture batch reseals its envelope over its final body");
+        batch
+    }
+
+    fn graph_commit(status: MutationBatchStatus) -> MutationBatchCommit {
+        let identity = MutationScopeIdentity::graph(
+            ScopeTenantId::new("tenant-a").unwrap(),
+            LogicalName::new("graph-a").unwrap(),
+            IncarnationId::new("incarnation:commit-validation").unwrap(),
+        );
+        MutationBatchCommit {
+            record: MutationBatchRecord {
+                batch: graph_batch(identity.clone()),
+                identity: identity.clone(),
+                status,
+                committed_version: if status == MutationBatchStatus::Committed {
+                    CommittedVersion::Graph {
+                        source: 4,
+                        target: 5,
+                    }
+                } else {
+                    CommittedVersion::None
+                },
+                result_msgpack: None,
+                committed_at_ms: 11,
+            },
+            identity,
+            replayed: false,
+        }
+    }
+
+    #[test]
+    fn commit_envelope_requires_a_complete_committed_record() {
+        graph_commit(MutationBatchStatus::Committed)
+            .validate()
+            .unwrap();
+
+        for status in [MutationBatchStatus::Prepared, MutationBatchStatus::Aborted] {
+            let error = graph_commit(status).validate().unwrap_err();
+            assert!(error.contains("must contain a committed receipt"));
+        }
+
+        let mut wrong_version = graph_commit(MutationBatchStatus::Committed);
+        wrong_version.record.committed_version = CommittedVersion::Native {
+            source: 4,
+            target: 5,
+        };
+        assert!(wrong_version.validate().is_err());
+
+        let mut wrong_identity = graph_commit(MutationBatchStatus::Committed);
+        wrong_identity.identity = MutationScopeIdentity::graph(
+            ScopeTenantId::new("tenant-b").unwrap(),
+            LogicalName::new("graph-a").unwrap(),
+            IncarnationId::new("incarnation:commit-validation").unwrap(),
+        );
+        assert!(wrong_identity.validate().is_err());
+    }
+
+    #[test]
+    fn repository_top_up_has_one_reserved_outbox_parent_without_graph_operations() {
+        let parent = graph_commit(MutationBatchStatus::Committed);
+        let old = MutationOutboxRecord {
+            schema_version: MUTATION_BATCH_VERSION,
+            batch_id: parent.record.batch.batch_id.clone(),
+            ordinal: 0,
+            identity: parent.identity.clone(),
+            committed_version: parent.record.committed_version,
+            commit_sequence: Some(5),
+            intent: MutationOutboxIntent {
+                topic: REPOSITORY_ENRICHMENT_PENDING_TOPIC.into(),
+                key: "old-source".into(),
+                payload: vec![1, 2, 3],
+                headers: Default::default(),
+            },
+            created_at_ms: 10,
+        };
+        let replacement = MutationOutboxIntent {
+            topic: REPOSITORY_ENRICHMENT_PENDING_TOPIC.into(),
+            key: "new-source".into(),
+            payload: vec![4, 5, 6],
+            headers: Default::default(),
+        };
+        let input = RepositoryEnrichmentTopUp {
+            old_delivery: &old,
+            policy_sequence: 3,
+            revision_idempotency_key: "top-up-revision-3",
+            replacement_intent: replacement,
+            replacement_batch_id: "new-source",
+            serving_principal: parent.record.batch.serving_principal(),
+            graph_version: 5,
+            placement_epoch: 3,
+            fencing_token: 4,
+            created_at_ms: 11,
+        };
+        let batch = MutationBatch::repository_enrichment_top_up(input).unwrap();
+        assert!(batch.operations.is_empty());
+        assert!(batch.is_repository_enrichment_top_up());
+        batch.validate_write_budget().unwrap();
+
+        let mut forged = batch.clone();
+        forged.outbox[0]
+            .headers
+            .insert("actor".into(), "forged".into());
+        assert!(forged.validate().is_err());
+        let mut forged = batch.clone();
+        forged.outbox[0].topic = "another.topic".into();
+        assert!(forged.validate().is_err());
+        let mut forged = batch.clone();
+        forged.envelope = parent.record.batch.envelope;
+        assert!(forged.validate().is_err());
+        let mut forged = batch.clone();
+        forged.outbox.clear();
+        assert!(forged.validate().is_err());
+        let mut forged = batch;
+        forged.placement_epoch = 0;
+        assert!(forged.validate().is_err());
+    }
+}

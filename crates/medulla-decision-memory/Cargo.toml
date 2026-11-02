@@ -1,0 +1,14 @@
+[package]
+name = "medulla-decision-memory"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: Decision context and memory: session memory, retrieval for decisions, temporal and indexless recall"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_decision_memory"
+path = "src/lib.rs"
+
+[dependencies]

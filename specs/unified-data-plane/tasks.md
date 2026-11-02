@@ -6,8 +6,8 @@
 
 - [x] **MEDULLA-UNIFIED-DATA-PLANE-R001:** Decide attached-source default, consistency, native admission and pgrx boundary by ADR. Recorded in [docs/architecture/unified_data_plane_adr.md](../../docs/architecture/unified_data_plane_adr.md) (five decisions, each quoting the merged spec.md/plan.md text it formalizes); the separate pgrx go/no-go spike decision remains MEDULLA-UNIFIED-DATA-PLANE-R025.
 - [x] **MEDULLA-UNIFIED-DATA-PLANE-R002 (rollup):** Merge source registration, owner scope, secret references, verified outbound checks and five-part adapter contract; depends on MEDULLA-FEDERATED-QUERY-R013. Split by code root per SPEC-SIZING-AND-DEPENDENCIES.md (score > 6, 3 code roots): LANDED only when R002.1, R002.2 and R002.3 are all LANDED.
-  - [x] **MEDULLA-UNIFIED-DATA-PLANE-R002.1:** Verify the outbound destination before persisting a `ForeignSourceSpec::Sql` registration (producer path, `src/server/foreign_catalog.rs` + `crates/medulla-plan/src/federation_ssrf.rs`). No dependency.
-  - [x] **MEDULLA-UNIFIED-DATA-PLANE-R002.2:** Verify the outbound destination before persisting an OBDA `external_sources` registration (consumer path, `src/server/handlers/rdf/obda.rs`); depends on MEDULLA-UNIFIED-DATA-PLANE-R002.1.
+  - [x] **MEDULLA-UNIFIED-DATA-PLANE-R002.1:** Verify the outbound destination before persisting a `ForeignSourceSpec::Sql` registration (producer path, `crates/medulla-server-ops/src/api/query_txn/foreign_catalog.rs` + `crates/medulla-federation/src/federation_ssrf.rs`). No dependency.
+  - [x] **MEDULLA-UNIFIED-DATA-PLANE-R002.2:** Verify the outbound destination before persisting an OBDA `external_sources` registration (consumer path, `crates/medulla-h-sparql/src/rdf/obda.rs`); depends on MEDULLA-UNIFIED-DATA-PLANE-R002.1.
   - [x] **MEDULLA-UNIFIED-DATA-PLANE-R002.3:** Verify the outbound destination before persisting a kernel mirror-target registration (sink path). Depends on MEDULLA-UNIFIED-DATA-PLANE-R002.1 and the same-repo MEDULLA-DURABLE-KERNEL-R024 (BUILDING; no mirror-target registration code root exists yet).
 - [x] **MEDULLA-UNIFIED-DATA-PLANE-R003:** Build versioned typed catalog extraction with OBDA and `schema_context` consumers; depends on MEDULLA-UNIFIED-DATA-PLANE-R002.
 - [x] **MEDULLA-UNIFIED-DATA-PLANE-R003.1:** Typed, hashed `AttachedCatalogGraph` model with reorder-stable hashing and duplicate-table refusal; part of MEDULLA-UNIFIED-DATA-PLANE-R003 (parent rollup).
@@ -58,17 +58,17 @@
   - [x] **MEDULLA-UNIFIED-DATA-PLANE-R014.2.1:** Adapter skeleton — `MysqlMariadbConnectionConfig`/`MysqlMariadbDriverConfig` typed mapping plus the no-live-database refusal path (`crates/medulla-types/src/mysql_mariadb_connection.rs`), behind the existing `federation-sql` sqlx-mysql feature structure. Test: `crates/medulla-types/src/mysql_mariadb_connection.rs::tests`.
   - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R014.2.2:** Live row-based binlog/GTID capture, information_schema catalog read, and per-engine (MySQL, MariaDB) conformance entries.
 - [x] **MEDULLA-UNIFIED-DATA-PLANE-R015 (rollup):** SQLite lock-safe file attach, WITHOUT ROWID and safe WAL/watermark capture; depends on MEDULLA-UNIFIED-DATA-PLANE-R002.
-  - [x] **MEDULLA-UNIFIED-DATA-PLANE-R015.1:** `SqliteSourceCatalog` typed model plus WITHOUT-ROWID capture-safety refusal (`crates/medulla-types/src/sqlite_attached_catalog.rs`).
+  - [x] **MEDULLA-UNIFIED-DATA-PLANE-R015.1:** `SqliteSourceCatalog` typed model plus WITHOUT-ROWID capture-safety refusal (`crates/medulla-catalog-types/src/sqlite_attached_catalog.rs`).
   - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R015.2 (rollup):** Lock-safe live read-only attach and real WAL-frame tailing/watermark polling. LANDED only once every child is.
-    - [x] **MEDULLA-UNIFIED-DATA-PLANE-R015.2.1:** Adapter skeleton — `SqliteAttachConfig`/`SqliteDriverOpenConfig` typed mapping plus the no-live-file refusal path (`crates/medulla-types/src/sqlite_live_attach.rs`). Test: `crates/medulla-types/src/sqlite_live_attach.rs::tests`.
+    - [x] **MEDULLA-UNIFIED-DATA-PLANE-R015.2.1:** Adapter skeleton — `SqliteAttachConfig`/`SqliteDriverOpenConfig` typed mapping plus the no-live-file refusal path (`crates/medulla-catalog-types/src/sqlite_live_attach.rs`). Test: `crates/medulla-catalog-types/src/sqlite_live_attach.rs::tests`.
     - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R015.2.2:** Real lock-safe open, WAL-frame tailing, and watermark polling against a live, concurrently-written file.
 - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R016 (rollup):** MSSQL catalog/T-SQL/CDC adapter; depends on MEDULLA-UNIFIED-DATA-PLANE-R002.
-  - [x] **MEDULLA-UNIFIED-DATA-PLANE-R016.1:** `MssqlSourceCatalog` typed model plus bracket-quoting identifier refusal (`crates/medulla-types/src/mssql_attached_catalog.rs`).
+  - [x] **MEDULLA-UNIFIED-DATA-PLANE-R016.1:** `MssqlSourceCatalog` typed model plus bracket-quoting identifier refusal (`crates/medulla-catalog-types/src/mssql_attached_catalog.rs`).
   - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R016.2 (rollup):** tiberius driver connection, T-SQL TOP/OFFSET-FETCH rendering, and LSN-polled CDC/Change Tracking capture. LANDED only once every child is.
-    - [x] **MEDULLA-UNIFIED-DATA-PLANE-R016.2.1:** Adapter skeleton — `MssqlConnectionConfig`/`MssqlDriverConfig` typed mapping plus the no-live-server refusal path (`crates/medulla-types/src/mssql_driver_connection.rs`). Test: `crates/medulla-types/src/mssql_driver_connection.rs::tests`.
+    - [x] **MEDULLA-UNIFIED-DATA-PLANE-R016.2.1:** Adapter skeleton — `MssqlConnectionConfig`/`MssqlDriverConfig` typed mapping plus the no-live-server refusal path (`crates/medulla-catalog-types/src/mssql_driver_connection.rs`). Test: `crates/medulla-catalog-types/src/mssql_driver_connection.rs::tests`.
     - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R016.2.2:** Real tiberius connection, T-SQL TOP/OFFSET-FETCH rendering, and LSN-polled CDC/Change Tracking capture loop.
 - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R017 (rollup):** ClickHouse federation/acceleration adapter with explicit no-CDC capability; depends on MEDULLA-UNIFIED-DATA-PLANE-R002.
-  - [x] **MEDULLA-UNIFIED-DATA-PLANE-R017.1:** `ClickHouseSourceCatalog` typed model with always-explicit capture capability (`crates/medulla-types/src/clickhouse_attached_catalog.rs`).
+  - [x] **MEDULLA-UNIFIED-DATA-PLANE-R017.1:** `ClickHouseSourceCatalog` typed model with always-explicit capture capability (`crates/medulla-catalog-types/src/clickhouse_attached_catalog.rs`).
   - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R017.2 (rollup):** HTTP/native client connection and federated query pushdown.
     - [x] **MEDULLA-UNIFIED-DATA-PLANE-R017.2.1:** `ClickHouseDriverConfig` typed driver config plus connect/refusal path (`crates/medulla-plan/src/clickhouse_connection.rs`).
     - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R017.2.2:** Live HTTP/native client federated query pushdown.
@@ -77,12 +77,12 @@
 - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R016:** MSSQL catalog/T-SQL/CDC adapter; depends on MEDULLA-UNIFIED-DATA-PLANE-R002.
 - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R017:** ClickHouse federation/acceleration adapter with explicit no-CDC capability; depends on MEDULLA-UNIFIED-DATA-PLANE-R002.
 - [x] **MEDULLA-UNIFIED-DATA-PLANE-R018 (rollup):** Oracle and Db2 catalog/query through driver/ODBC and Debezium capture; depends on MEDULLA-UNIFIED-DATA-PLANE-R021.
-  - [x] **MEDULLA-UNIFIED-DATA-PLANE-R018.1:** `RelationalSourceCatalog` typed model plus identifier and Debezium-capture refusals (`crates/medulla-types/src/relational_attached_catalog.rs`).
+  - [x] **MEDULLA-UNIFIED-DATA-PLANE-R018.1:** `RelationalSourceCatalog` typed model plus identifier and Debezium-capture refusals (`crates/medulla-catalog-types/src/relational_attached_catalog.rs`).
   - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R018.2 (rollup):** Driver/ODBC connection, catalog read, and Debezium bridge wiring.
     - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R018.2.1:** `RelationalDriverConfig` typed driver config plus connect/refusal path (`crates/medulla-plan/src/relational_connection.rs`).
     - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R018.2.2:** Live driver/ODBC catalog read and Debezium bridge wiring.
 - [x] **MEDULLA-UNIFIED-DATA-PLANE-R019:** MongoDB/DocumentDB document catalog and change streams; depends on MEDULLA-UNIFIED-DATA-PLANE-R002.
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R019.1:** `DocumentSourceCatalog` typed inferred-shape model plus field-path refusal (`crates/medulla-types/src/document_source_catalog.rs`).
+- [x] **MEDULLA-UNIFIED-DATA-PLANE-R019.1:** `DocumentSourceCatalog` typed inferred-shape model plus field-path refusal (`crates/medulla-catalog-types/src/document_source_catalog.rs`).
 - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R019.2 (rollup):** Native MongoDB/DocumentDB driver connection and change-stream capture into `ChangeEnvelope`.
   - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R019.2.1:** `DocumentDriverConfig` typed driver config plus connect/refusal path (`crates/medulla-plan/src/document_connection.rs`).
   - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R019.2.2:** Live native driver connection and change-stream capture into `ChangeEnvelope`.
@@ -100,8 +100,8 @@
   - [x] **MEDULLA-UNIFIED-DATA-PLANE-R020.3.1:** `build_warehouse_conformance_entry` typed per-kind conformance-entry constructor (`crates/medulla-types/src/warehouse_conformance.rs`).
   - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R020.3.2:** Live comparison against each native warehouse/lake engine.
 - [x] **MEDULLA-UNIFIED-DATA-PLANE-R021:** Debezium Kafka-to-`ChangeEnvelope` bridge; depends on MEDULLA-UNIFIED-DATA-PLANE-R008.
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R021.1:** `DebeziumChangeEvent` typed envelope shape plus op-code and before/after refusal (`crates/medulla-types/src/debezium_bridge.rs`).
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R021.2:** Kafka consumer plus real conversion into `ChangeEnvelope` records. (pure-function conversion slice: `DebeziumChangeEvent::to_draft` in `crates/medulla-types/src/debezium_bridge.rs`; the live Kafka consumer wiring remains open.)
+- [x] **MEDULLA-UNIFIED-DATA-PLANE-R021.1:** `DebeziumChangeEvent` typed envelope shape plus op-code and before/after refusal (`crates/medulla-protocol-types/src/debezium_bridge.rs`).
+- [x] **MEDULLA-UNIFIED-DATA-PLANE-R021.2:** Kafka consumer plus real conversion into `ChangeEnvelope` records. (pure-function conversion slice: `DebeziumChangeEvent::to_draft` in `crates/medulla-protocol-types/src/debezium_bridge.rs`; the live Kafka consumer wiring remains open.)
 - [x] **MEDULLA-UNIFIED-DATA-PLANE-R021.3:** Replay test feeding a captured Debezium event stream through the bridge. (`replay_of_captured_fixture_stream_matches_source_changes` over `crates/medulla-types/fixtures/debezium_replay_stream.json`.)
 
 ## Platform and app admission
@@ -115,11 +115,11 @@
   - [x] **MEDULLA-UNIFIED-DATA-PLANE-R023.3.1:** `RestoreDrillResult` typed drill-result contract plus digest-agreement refusal (`crates/medulla-types/src/restore_drill.rs`).
   - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R023.3.2:** Live restore-drill automation and digest capture.
 - [x] **MEDULLA-UNIFIED-DATA-PLANE-R024:** Admit three apps including MariaDB with rollback and retire each ingest connector only after parity; depends on MEDULLA-UNIFIED-DATA-PLANE-R023.
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R024.1:** `ApplicationAdmission` typed stage machine plus early-retirement refusal (`crates/medulla-types/src/platform_admission.rs`).
+- [x] **MEDULLA-UNIFIED-DATA-PLANE-R024.1:** `ApplicationAdmission` typed stage machine plus early-retirement refusal (`crates/medulla-identity-types/src/platform_admission.rs`).
 - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R024.2:** Admission runner and tested rollback path per candidate application.
-  - [x] **MEDULLA-UNIFIED-DATA-PLANE-R024.2.1:** `AdmissionRunner`/`PriorIngestConnector` runner plus tested rollback path, against a fake connector (`crates/medulla-types/src/platform_admission.rs`); no live candidate application needed.
+  - [x] **MEDULLA-UNIFIED-DATA-PLANE-R024.2.1:** `AdmissionRunner`/`PriorIngestConnector` runner plus tested rollback path, against a fake connector (`crates/medulla-identity-types/src/platform_admission.rs`); no live candidate application needed.
 - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R024.3:** Per-application admission test confirming rollback and that the retired connector no longer writes.
-  - [x] **MEDULLA-UNIFIED-DATA-PLANE-R024.3.1:** Fake-connector admission test run for each candidate application (gramps, immich, firefly) (`crates/medulla-types/src/platform_admission.rs`); no live candidate application needed.
+  - [x] **MEDULLA-UNIFIED-DATA-PLANE-R024.3.1:** Fake-connector admission test run for each candidate application (gramps, immich, firefly) (`crates/medulla-identity-types/src/platform_admission.rs`); no live candidate application needed.
 - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R032 (rollup) / Immich I0–I6:** Generated API client, MCP tools, registration, incremental per-user ingest, naming, approved links and operations. Implement I0–I6 as defined in [spec.md](spec.md).
   - [x] **MEDULLA-UNIFIED-DATA-PLANE-R032.1:** `ImmichPilotProgress` typed phase-gate model (I0-I6) plus exit-artifact and skip-ahead refusals (`crates/medulla-types/src/immich_pilot_phase.rs`).
   - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R032.2:** Run phase I0 (version-pinned OpenAPI client generation and digest).
@@ -145,11 +145,11 @@ Native storage and wire work (MEDULLA-DURABLE-KERNEL-R032/MEDULLA-DURABLE-KERNEL
   - [x] **MEDULLA-UNIFIED-DATA-PLANE-R026.3.1:** P3 adapter skeleton — `GrampsProvenGapFix` typed mapping to the P3 phase exit plus the empty-field/same-test/unreviewed refusal path (`crates/medulla-types/src/gramps_gap_fix.rs`). Test: `crates/medulla-types/src/gramps_gap_fix.rs::tests`.
   - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R026.3.2:** Real restore verification (P4) and schema-understanding demonstration (P5) against the live pilot.
 - [x] **MEDULLA-UNIFIED-DATA-PLANE-R027:** Fix Postgres features only when captured app traffic proves need; include B-tree indexes, collation, regex, bytea, sequences, savepoints, locks, notify, triggers/functions, JSONB, isolation, startup, SQLSTATE, schemas, constraints, types, materialized views, large objects and timezone; depends on MEDULLA-UNIFIED-DATA-PLANE-R026.
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R027.1:** `FeatureFixRecord`/`PgCompatFeature` typed inventory plus incomplete-proof refusal (`crates/medulla-types/src/pg_compat_feature.rs`).
+- [x] **MEDULLA-UNIFIED-DATA-PLANE-R027.1:** `FeatureFixRecord`/`PgCompatFeature` typed inventory plus incomplete-proof refusal (`crates/medulla-catalog-types/src/pg_compat_feature.rs`).
 - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R027.2:** Capture application traffic per feature and record the proof reference.
-  - [x] **MEDULLA-UNIFIED-DATA-PLANE-R027.2.1:** `capture_feature_fix`/`TrafficCaptureSource` runner plus unproven/incomplete-capture refusal (`crates/medulla-types/src/pg_compat_feature.rs`); no live candidate application needed.
+  - [x] **MEDULLA-UNIFIED-DATA-PLANE-R027.2.1:** `capture_feature_fix`/`TrafficCaptureSource` runner plus unproven/incomplete-capture refusal (`crates/medulla-catalog-types/src/pg_compat_feature.rs`); no live candidate application needed.
 - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R027.3:** Implement each proven feature with its failing-then-passing test.
-  - [x] **MEDULLA-UNIFIED-DATA-PLANE-R027.3.1:** `apply_proven_fix` runner applying a feature's fix only once proven, against a fake fix closure (`crates/medulla-types/src/pg_compat_feature.rs`); no live Postgres-compatible target needed.
+  - [x] **MEDULLA-UNIFIED-DATA-PLANE-R027.3.1:** `apply_proven_fix` runner applying a feature's fix only once proven, against a fake fix closure (`crates/medulla-catalog-types/src/pg_compat_feature.rs`); no live Postgres-compatible target needed.
 - [x] **MEDULLA-UNIFIED-DATA-PLANE-R028:** Differential Postgres regression, generated and captured-traffic corpora with reviewed deviations and no ratchet; depends on MEDULLA-UNIFIED-DATA-PLANE-R022.
 - [x] **MEDULLA-UNIFIED-DATA-PLANE-R028.1:** `DeviationBaseline`/`PostgresDeviation` typed model plus no-silent-drop refusal (`crates/medulla-types/src/pg_diff_baseline.rs`).
 - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R028.2:** Run the Postgres regression suite and generated metamorphic query corpora against Medulla.
@@ -178,7 +178,7 @@ For each row, add a subentry containing its merged commit, exact-head test run, 
 - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R040:** Per-modality retrieval gate blocks promotion of a shared embedding space.
 - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R040.1:** Model. Add `ModalityCheck{modality, probe_set_digest, metric, floor, baseline}` and `PromotionVerdict` in new `crates/medulla-types/src/embedding_promotion.rs`. Closed `modality` values are `text`, `image` and `audio`. `EmbeddingVersion` at `crates/medulla-ann/src/version.rs:32` names a model and version but holds no check result.
 - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R040.2:** Behavior. Add `evaluate_promotion(candidate, checks)` in `embedding_promotion.rs`. It computes recall at k per modality with `recall_at_k` at `crates/medulla-ann/src/recall.rs:28` on that modality probe set. A drop beyond the tolerance blocks promotion. The default tolerance is 0.02 absolute and is a named replaceable default. A modality with no probe set blocks promotion.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R040.3:** Wiring. The gate attaches before `EmbeddingVersionStore::tag_batch` at `crates/medulla-ann/src/version.rs:129` in the re-embed path. No production caller of `tag_batch` or `tag` exists today. This row creates the call site in the re-embed worker queued by `MEDULLA-FEDERATED-QUERY-R077.3`, and it reads the binding at `crates/medulla-query/src/tables/embedding_binding.rs:526`.
+- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R040.3:** Wiring. The gate attaches before `EmbeddingVersionStore::tag_batch` at `crates/medulla-ann/src/version.rs:129` in the re-embed path. No production caller of `tag_batch` or `tag` exists today. This row creates the call site in the re-embed worker queued by `MEDULLA-FEDERATED-QUERY-R077.3`, and it reads the binding at `crates/medulla-table-store/src/tables/embedding_binding.rs:526`.
 - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R040.4:** Refusal. A blocked promotion must leave the prior version active. The engine must return `PromotionBlocked` naming each regressed modality, its baseline and its measured value. The engine must not tag any vector with the candidate version.
 - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R040.5:** Evidence. The engine must store each `PromotionVerdict` as a node linked to the candidate model and version. It carries the per-modality metric, floor and probe set digest. The node is readable through a graph query.
 - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R040.6:** Hot-path proof. The entry point is a served row write on a bound text column. The test replaces the embedding model with a candidate that regresses the image check. The write passes through the re-embed worker and the wired gate. The test observes the blocked promotion and the prior version still active.

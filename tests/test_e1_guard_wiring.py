@@ -44,7 +44,9 @@ def test_universal_read_protocol_child_variant_is_composed_and_required() -> Non
 
 def test_p2_dispatch_ordering_follows_graph_pipeline_children() -> None:
     module = _load_gate("check_p2_modality_architecture.py", "e1_p2_dispatch_family")
-    dispatch = module.read_module_tree("src/server/dispatch.rs", root_dir=ROOT)
+    dispatch = module.read_module_tree(
+        "crates/medulla-server-graph/src/dispatch.rs", root_dir=ROOT
+    )
     module.require_graph_dispatch_ordering(dispatch)
 
     broken = dispatch.replace(
@@ -56,7 +58,9 @@ def test_p2_dispatch_ordering_follows_graph_pipeline_children() -> None:
 
 def test_p2_dispatch_ordering_rejects_knowledge_stream_before_the_router() -> None:
     module = _load_gate("check_p2_modality_architecture.py", "e1_p2_dispatch_early")
-    dispatch = module.read_module_tree("src/server/dispatch.rs", root_dir=ROOT)
+    dispatch = module.read_module_tree(
+        "crates/medulla-server-graph/src/dispatch.rs", root_dir=ROOT
+    )
     broken = _replace_once(
         dispatch,
         "    stamp_resource_and_capacity_timestamps(&mut method);\n",
@@ -68,10 +72,10 @@ def test_p2_dispatch_ordering_rejects_knowledge_stream_before_the_router() -> No
 
 
 def test_modality_retry_binds_caller_tenant_and_physical_graph_key() -> None:
-    source = (ROOT / "src/server/dispatch/graph_pipeline/modality.rs").read_text(
-        encoding="utf-8"
-    )
-    binding_start = source.index("pub(super) fn modality_receipt_binding_matches(")
+    source = (
+        ROOT / "crates/medulla-server-graph/src/dispatch/graph_pipeline/modality.rs"
+    ).read_text(encoding="utf-8")
+    binding_start = source.index("pub fn modality_receipt_binding_matches(")
     binding_end = source.index("\n}\n", binding_start)
     binding = source[binding_start:binding_end]
 
@@ -98,7 +102,7 @@ def test_modality_retry_binds_caller_tenant_and_physical_graph_key() -> None:
 def _write_raft_modality_fixture(
     root: Path, child: str, *, declare: bool = True
 ) -> None:
-    raft = root / "src" / "raft"
+    raft = root / "crates" / "medulla-raft" / "src" / "raft"
     raft.mkdir(parents=True)
     (raft / "mod.rs").write_text(
         ("mod modality;\n" if declare else "") + "pub struct RaftRequest;\n",
@@ -128,7 +132,7 @@ def test_p2_raft_replication_reads_declared_child_and_rejects_orphans(
 
     module.require_modality_raft_replication()
 
-    (tmp_path / "src" / "raft" / "mod.rs").write_text(
+    (tmp_path / "crates" / "medulla-raft" / "src" / "raft" / "mod.rs").write_text(
         "pub struct RaftRequest;\n", encoding="utf-8"
     )
     with pytest.raises(SystemExit, match="orphan Rust module files"):
@@ -140,7 +144,7 @@ def test_p2_raft_replication_rejects_missing_declared_child(
 ) -> None:
     module = _load_gate("check_p2_modality_architecture.py", "e1_p2_raft_missing_child")
     _write_raft_modality_fixture(tmp_path, _VALID_RAFT_MODALITY_CHILD)
-    (tmp_path / "src" / "raft" / "modality.rs").unlink()
+    (tmp_path / "crates" / "medulla-raft" / "src" / "raft" / "modality.rs").unlink()
     monkeypatch.setattr(module, "ROOT", tmp_path)
 
     with pytest.raises(SystemExit, match="resolve to exactly one file"):
@@ -187,9 +191,11 @@ def test_p2_raft_replication_passes_on_the_current_tree() -> None:
 
 def test_universal_read_cache_key_follows_query_children() -> None:
     module = _load_gate("check_universal_read_rls.py", "e1_universal_query_family")
-    query = module.read_module_tree("src/server/handlers/query.rs", root_dir=ROOT)
+    query = module.read_module_tree(
+        "crates/medulla-h-query/src/query.rs", root_dir=ROOT
+    )
     rdf = module.rdf_handler_source()
-    dispatch = module.read_module_tree("src/server/dispatch.rs", root_dir=ROOT)
+    dispatch = module.served_dispatch_source()
     module.require_query_result_cache_rls(query, rdf, dispatch)
 
     broken = query.replace('format!("rls:{caller}:{kind}")', 'format!("{kind}")', 1)
@@ -247,7 +253,9 @@ def test_knowledge_stream_wire_rejects_the_retired_projection() -> None:
 
 def test_modality_receipt_rejects_a_source_body_digest() -> None:
     module = _load_gate("check_p2_modality_architecture.py", "e1_p2_receipt")
-    mutation = module.read_module_tree("src/server/mutation.rs", root_dir=ROOT)
+    mutation = module.read_module_tree(
+        "crates/medulla-server-mutation/src/mutation.rs", root_dir=ROOT
+    )
     module.require_source_free_receipt(mutation)
     broken = mutation + (
         "\nfn durable_receipt_method(method: &Method) -> Method {\n"
@@ -330,7 +338,7 @@ def test_mint_guard_rejects_a_call_site_without_verified_mac_binding(tmp_path) -
 
 def test_universal_read_guard_rejects_an_unprojected_sql_snapshot() -> None:
     module = _load_gate("check_universal_read_rls.py", "e1_universal_rls_guard")
-    wire = module.read("src/server/wire/mod.rs")
+    wire = module.read("crates/medulla-wire-core/src/wire/mod.rs")
     module._check_sql_wire_read_contract(wire)
 
     broken = wire.replace(

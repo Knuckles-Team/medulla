@@ -7,7 +7,8 @@
 //! shapes companion registered as `finance-shapes` rejects an algorithm record
 //! missing either applicability axis.
 
-use medulla_core::graph::{GraphSchemaSources, SchemaSourceOrigin};
+use medulla_graph_core::graph::GraphSchemaSources;
+use medulla_graph_core::graph::SchemaSourceOrigin;
 use medulla_rdf::mapping::parse_turtle;
 use medulla_rdf::oxrdf::{NamedNode, Triple};
 
@@ -138,7 +139,8 @@ fn finance_method_terms_and_shape() {
 
     let missing_instrument = "@prefix : <http://knuckles.team/kg#> .
         :method a :FinanceAlgorithm ; :appliesToAnalysis :riskAnalysis .";
-    let report = medulla_shacl::validate_turtle(shapes, missing_instrument).expect("validation runs");
+    let report =
+        medulla_shacl::validate_turtle(shapes, missing_instrument).expect("validation runs");
     assert!(
         !report.conforms,
         "an algorithm naming no instrument or position class violates the shape: {report:?}"

@@ -8,7 +8,7 @@
 //! self-contained shape this crate actually needs; `src/server/cdc_sink/**`
 //! (the sole caller, in the root `medulla` crate, which already
 //! depends on `medulla-types`) translates the real `CdcEvent` into a `SinkEvent`
-//! and adapts [`KafkaCdcSink`] onto `crate::server::cdc::ExternalCdcSink`
+//! and adapts [`KafkaCdcSink`] onto `medulla_server::cdc::ExternalCdcSink`
 //! before installing it on the live `CdcHub`.
 //!
 //! ## CA-15 reuse (`RawKafkaProducer`)

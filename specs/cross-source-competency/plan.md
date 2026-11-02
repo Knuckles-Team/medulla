@@ -36,7 +36,7 @@ These are seed rows, not engine behavior; an operator changes them as ontology d
 
 ## Interfaces and data model
 
-New vocabulary in `virtual_graph-v1.ttl` (authority), new `supply_chain-v1.ttl` and shapes (supply chain, `R002` to `R004`), additions to `infrastructure-v1.ttl` (host limits), a commercial file for contracts, and `crates/medulla-types/src/supply_chain_report.rs`. Fresh-data decision: no migration; new terms only. Versioning follows the existing `-v1` ontology files.
+New vocabulary in `virtual_graph-v1.ttl` (authority), new `supply_chain-v1.ttl` and shapes (supply chain, `R002` to `R004`), additions to `infrastructure-v1.ttl` (host limits), a commercial file for contracts, and `crates/medulla-source-types/src/supply_chain_report.rs`. Fresh-data decision: no migration; new terms only. Versioning follows the existing `-v1` ontology files.
 
 Linking: `:suppliesItem` (supplier to procurement item), `:usesComponent` (service to component version), `:publishedBy`, and `:suppliesService` as the chain supplier to service. Entity resolution reuses `MEDULLA-UNIFIED-DATA-PLANE-R030`: proposals are inactive until approved, and a join never crosses an unapproved link.
 

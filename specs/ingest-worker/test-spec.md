@@ -34,13 +34,13 @@ Run cargo test for the touched crates in CI, the Graft SDK unit tests, and the s
 
 The following tests define required acceptance; they do not record passing results.
 
-- `MEDULLA-INGEST-WORKER-R003.7`: `crates/medulla-types/src/source_document.rs::tests::document_receipt_round_trips`.
-- `MEDULLA-INGEST-WORKER-R003.8`: `src/server/handlers/source_ingestion.rs::tests::complete_document_is_idempotent`.
-- `MEDULLA-INGEST-WORKER-R003.9`: `src/server/handlers/source_ingestion.rs::tests::prepare_validates_document_after_resolution`.
-- `MEDULLA-INGEST-WORKER-R003.10`: `src/server/handlers/source_ingestion.rs::tests::invalid_document_quarantines_without_partial_graph`.
-- `MEDULLA-INGEST-WORKER-R003.11`: `src/server/handlers/source_ingestion.rs::tests::quarantine_finish_and_replay_preserve_outcome`.
+- `MEDULLA-INGEST-WORKER-R003.7`: `crates/medulla-source-types/src/source_document.rs::tests::document_receipt_round_trips`.
+- `MEDULLA-INGEST-WORKER-R003.8`: `crates/medulla-h-ingest/src/source_ingestion.rs::tests::complete_document_is_idempotent`.
+- `MEDULLA-INGEST-WORKER-R003.9`: `crates/medulla-h-ingest/src/source_ingestion.rs::tests::prepare_validates_document_after_resolution`.
+- `MEDULLA-INGEST-WORKER-R003.10`: `crates/medulla-h-ingest/src/source_ingestion.rs::tests::invalid_document_quarantines_without_partial_graph`.
+- `MEDULLA-INGEST-WORKER-R003.11`: `crates/medulla-h-ingest/src/source_ingestion.rs::tests::quarantine_finish_and_replay_preserve_outcome`.
 - `MEDULLA-INGEST-WORKER-R003.12`: `tests/ingest/test_document_normalization_served.py::test_document_batch_is_atomic`.
-- `MEDULLA-INGEST-WORKER-R003.13`: `crates/medulla-types/src/source_transcript.rs::tests::transcript_round_trips`.
+- `MEDULLA-INGEST-WORKER-R003.13`: `crates/medulla-source-types/src/source_transcript.rs::tests::transcript_round_trips`.
 - `MEDULLA-INGEST-WORKER-R003.14`: `src/server/handlers/source_ingestion/transcript.rs::tests::source_sequence_and_identity_are_preserved`.
 - `MEDULLA-INGEST-WORKER-R003.15`: `src/server/handlers/source_ingestion/transcript.rs::tests::prepare_routes_declared_transcript_format`.
 - `MEDULLA-INGEST-WORKER-R003.16`: `src/server/handlers/source_ingestion/transcript.rs::tests::unknown_format_and_foreign_concept_are_refused`.

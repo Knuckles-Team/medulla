@@ -40,7 +40,7 @@ Names with spaces, punctuation, non-ASCII letters or keyword spellings are back-
 
 ## Grammar (EBNF)
 
-Generated from the grammar table (`crates/medulla-plan/src/uql/grammar.rs`) — the one source of
+Generated from the grammar table (`crates/medulla-uql/src/grammar.rs`) — the one source of
 truth the parser's dispatch table, the parse-error "expected" lists and the NL planner's
 system prompt are all generated from or checked against. A test fails when this block drifts;
 regenerate it in place with `cargo run -q -p medulla-plan --example uql_grammar -- write-docs`.
@@ -516,7 +516,7 @@ typed decide or assembly request, never to a plan `Op`, and UQL refuses its clau
 parameters (`@name` is refused with the fix), a `{ … }` candidate query that is ordinary UQL
 (braces inside its strings do not close it; its own diagnostic points into the DecideText
 source), the same structured errors, and a grammar table
-(`crates/medulla-plan/src/decide_text/grammar.rs`) this block is generated from:
+(`crates/medulla-nlq/src/decide_text/grammar.rs`) this block is generated from:
 
 <!-- BEGIN GENERATED: decide-text-grammar -->
 ```text
@@ -543,5 +543,5 @@ param           = "$" name ;
 
 - [Engine architecture](architecture/engine.md) — the plan executor, bi-temporal model, tiers.
 - [Concepts](concepts.md) — `AU-KG.compute.vector` (fused executor), `AU-KG.query.top-nodes-by-degree` (UQL).
-- The grammar lives in `crates/medulla-plan/src/uql/grammar.rs`; the printer in
+- The grammar lives in `crates/medulla-uql/src/grammar.rs`; the printer in
   `crates/medulla-types/src/wire_query_uql.rs`; the op algebra in `crates/medulla-types/src/wire_query_core.rs`.

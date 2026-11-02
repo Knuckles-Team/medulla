@@ -59,8 +59,8 @@ Evidence must be a test file and test name. A document, diagram, feature declara
 
 | Entry point | Source anchor | Owner evidence |
 |---|---|---|
-| Served mutation | `src/server/mutation/commit_entry.rs::commit_mutation` | missing: no served test asserts a committed result through this entry point; owner MEDULLA-DURABLE-KERNEL |
-| Planned query | `src/server/handlers/query/planning.rs::run_unified_with` | `src/server/handlers/query/planning/federation_served_tests.rs::a_served_named_join_keeps_the_exact_intersection` |
+| Served mutation | `crates/medulla-server-mutation/src/mutation/commit_entry.rs::commit_mutation` | missing: no served test asserts a committed result through this entry point; owner MEDULLA-DURABLE-KERNEL |
+| Planned query | `crates/medulla-h-query/src/query/planning.rs::run_unified_with` | `crates/medulla-h-query/src/query/planning/federation_served_tests.rs::a_served_named_join_keeps_the_exact_intersection` |
 
 Runtime proof must enter the actual served or embedded boundary named by the owning requirement.
 Query proof must observe authorized results and the specified planner behavior where applicable.

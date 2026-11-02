@@ -254,8 +254,8 @@ flowchart TD
 ```
 
 **SQL operators** (registered on the graph-exec AND obs-tables `SessionContext`, gated
-`#[cfg(feature = "numeric")]` in `crates/medulla-query/src/sql/exec.rs::register_numeric`,
-implemented in `crates/medulla-query/src/sql/numeric.rs`):
+`#[cfg(feature = "numeric")]` in `crates/medulla-sql/src/sql/exec.rs::register_numeric`,
+implemented in `crates/medulla-sql-udfs/src/numeric.rs`):
 
 | Operator | Kind | Kernel | Semantics |
 |----------|------|--------|-----------|
@@ -287,7 +287,7 @@ SELECT pca(emb, 3) AS top3_components FROM nodes;     -- top-3 principal-compone
 SELECT kmeans(emb, 4) AS cluster_labels FROM nodes;  -- 4-way clustering, one label per row
 ```
 
-**Batch Method** — `Method::BatchL2Normalize { vectors }` (`src/server/handlers/graph_ops.rs`,
+**Batch Method** — `Method::BatchL2Normalize { vectors }` (`crates/medulla-h-graph/src/graph_ops.rs`,
 handler `#[cfg(feature = "numeric")]`) L2-normalizes a batch in-engine via
 `medulla_numeric::linalg::batch_l2_normalize` through the sole current client method,
 `client.batch_l2_normalize()`.
@@ -328,7 +328,7 @@ flowchart LR
     AN --> R["result (in-engine)<br/>clusters · components · cross-modal cov"]
 ```
 
-**One query, three modalities** (from `crates/medulla-query/tests/cross_modal_analytics.rs`, the
+**One query, three modalities** (from `crates/medulla-sql-tests/tests/cross_modal_analytics.rs`, the
 proof test — synthetic data with hand-computed answers):
 
 ```sql

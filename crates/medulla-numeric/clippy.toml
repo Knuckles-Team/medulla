@@ -1,8 +1,8 @@
 # Clippy policy for the medulla-numeric crate.
 #
-# Clippy reads the NEAREST `clippy.toml` (the crate directory first, then its
-# parents) and does not merge files, so this file REPLACES the workspace
-# `clippy.toml` for this crate. It therefore repeats every workspace entry
+# Clippy reads the `clippy.toml` of the package directory and does not merge files, so
+# this file REPLACES the workspace `clippy.toml` for this crate (CI lints this crate without
+# CLIPPY_CONF_DIR for that reason; every other crate gets the root file through it). It therefore repeats every workspace entry
 # verbatim, and `tests/stat_kernels/clippy_policy.rs` fails if any key or
 # disallowed path from the workspace file is missing here.
 #

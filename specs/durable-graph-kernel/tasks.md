@@ -195,7 +195,7 @@ This batch defines the slices; it runs none of their runtime tests.
 
 - [ ] **MEDULLA-DURABLE-KERNEL-R084.8:** Define tenant-scoped ordering and backend atomicity semantics. Extend conflict resolution paths and add integration tests covering two tenants, multiple backends, concurrent writes and failure/replay.
 - [ ] **MEDULLA-DURABLE-KERNEL-R057.1:** Model order-snapshot lifecycle with immutable-history and derivation-link binding. Integrate with sealed-record guard. Test snapshot creation, atomic promotion, history preservation and veto refusal.
-- [ ] **MEDULLA-DURABLE-KERNEL-R087.1:** Define typed changeset-review schema with five flaw classes, impact policy and finding-to-code evidence in `crates/medulla-types/src/changeset_review.rs`.
+- [ ] **MEDULLA-DURABLE-KERNEL-R087.1:** Define typed changeset-review schema with five flaw classes, impact policy and finding-to-code evidence in `crates/medulla-source-types/src/changeset_review.rs`.
 - [ ] **MEDULLA-DURABLE-KERNEL-R087.2:** Serve `ChangesetReview` RPC endpoint. Integrate with Arbora producer and Meristem consumer. Regenerate contracts.
 - [ ] **MEDULLA-DURABLE-KERNEL-R088.1:** Model rule correction with lineage, versioned approval and replacement/revocation. Enforce two-principal requirement at type level.
 - [ ] **MEDULLA-DURABLE-KERNEL-R088.2:** Serve correction submission, approval and application through existing rule authority. Test two-principal validation, replacement flow and revocation refusal.

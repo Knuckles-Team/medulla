@@ -21,15 +21,15 @@ name = "medulla_rdf"
 [features]
 default = []
 # W1 — RDF term model + Turtle/N-Triples parse+serialize (oxrdf + oxttl). Pure Rust.
-rdf = ["dep:oxrdf", "dep:oxttl"]
+rdf = ["dep:oxrdf", "dep:oxttl", "medulla-types/rdf"]
 # W2 — SPARQL 1.1 algebra (spargebra). Parser + algebra ONLY; we provide the
 # evaluator (compile, not embed). Pure Rust (peg is a build-time PEG generator).
-sparql = ["rdf", "dep:spargebra", "dep:regex"]
+sparql = ["rdf", "dep:spargebra", "dep:regex", "medulla-types/sparql"]
 # W3 — native OWL 2 (EL⁺ completion + RL property rules) reasoner (CONCEPT:KG-2.219).
 # Parses OWL axioms from the SAME oxttl-parsed RDF as `rdf`, so it adds NO dep beyond
 # the RDF stack: implies `rdf`, links ZERO native/C crate (pure Rust — no horned-owl,
 # no whelk-rs). Safe to fold into pi/node/full alongside rdf/sparql.
-owl = ["rdf", "medulla-types/owl"]
+owl = ["rdf", "medulla-types/owl", "sparql"]
 # W5 — OWL-DL tableau reasoner (CONCEPT:MEDULLA-059): a description-logic tableau
 # (ALCQO + role hierarchy) that DECIDES the constructs the EL⁺/RL `owl` path cannot —
 # full cardinality (≥n/≤n, qualified), complementOf/negation (NNF), oneOf/hasValue
@@ -37,7 +37,7 @@ owl = ["rdf", "medulla-types/owl"]
 # owl.rs's triple index + node-id convention). Pure Rust — adds NO dep beyond the RDF
 # stack. Pi contract: deliberately OUT of `pi` (a Pi node runs the tractable EL⁺/RL
 # fast path only); folded into node/full via the facade.
-owl-dl = ["owl"]
+owl-dl = ["owl", "sparql"]
 # W6c — SPARQL 1.1 hash builtins (CONCEPT:MEDULLA-127): MD5/SHA1/SHA256/SHA384/SHA512 via
 # pure-Rust RustCrypto (`md-5`/`sha1`/`sha2`). Implies `sparql`. Pi contract: OUT of
 # `pi` — a minimal Pi node ships the dep-free builtins (constructors/date-time/numeric/
@@ -81,8 +81,7 @@ geosparql = ["sparql", "dep:medulla-geo"]
 # retrofit) `tests/icv_enforce_eg300.rs` is an unconditional integration test that
 # needs `sparql`'s `update`/`sparql` modules to build at all, so `cargo test -p
 # medulla-rdf --features contract` needs it too to build the crate's full test set.
-contract = ["dep:medulla-modality", "owl", "sparql"]
-
+contract = ["dep:medulla-modality", "owl", "sparql", "medulla-core/contract", "medulla-geo?/contract", "medulla-graph-core/contract"]
 [dependencies]
 medulla-core = { path = "../medulla-core" }
 # GeoSPARQL geometry kernel (feature `geosparql`, CONCEPT:MEDULLA-261). The pure-Rust medulla-geo
@@ -118,11 +117,24 @@ oxjsonld = { version = "0.2", optional = true }
 # OFF) — a default/node/full build links none of it and `owl::ProofNode` carries no
 # new required trait. See `src/contract.rs`.
 medulla-modality = { path = "../medulla-modality", optional = true }
+medulla-catalog-types = { path = "../medulla-catalog-types" }
+medulla-agent-types = { path = "../medulla-agent-types" }
+medulla-identity-types = { path = "../medulla-identity-types" }
+medulla-semantic-index = { path = "../medulla-semantic-index" }
+medulla-graph-core = { path = "../medulla-graph-core" }
+medulla-source-types = { path = "../medulla-source-types" }
 
 [dev-dependencies]
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
+medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
+medulla-identity-types = { path = "../medulla-identity-types", features = ["test-support"] }
+medulla-source-types = { path = "../medulla-source-types", features = ["test-support"] }
 # ICV integration test (CONCEPT:MEDULLA-146). medulla-shacl sits ABOVE medulla-rdf in the DAG (it
 # depends on medulla-rdf `rdf`); using it as a DEV-dependency here is a dev-dep cycle, which
 # Cargo permits — it affects ONLY the medulla-rdf test build, never `cargo check`/`pi`/`full`
 # (dev-deps are not compiled for a check/lib build). This lets the ICV closed-world
 # behaviour be exercised from `cargo test -p medulla-rdf --features sparql`.
 medulla-shacl = { path = "../medulla-shacl" }
+medulla-reasoner = { path = "../medulla-reasoner", features = ["owl", "sparql-star"] }
+medulla-virtual-graph = { path = "../medulla-virtual-graph", features = ["rdf"] }

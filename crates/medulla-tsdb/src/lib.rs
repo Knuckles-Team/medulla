@@ -21,6 +21,11 @@
 //! The ONE decay curve both the series `decay_weighted_mean` and the engine's
 //! semantic-memory confidence decay use lives in `medulla_core::decay` (CONCEPT:MEDULLA-KG.compute.handled-outside-single-anchor).
 
+#![allow(clippy::too_many_arguments, clippy::items_after_test_module, clippy::new_without_default)] // signatures and fixtures carried over from the facade
+#![allow(private_interfaces, private_bounds)] // visibility is narrowed by the unreachable_pub pass
+#![allow(dead_code)] // moved helper code, as the facade crate did
+#![allow(unused_imports)] // glob imports carried over from the facade; the visibility pass prunes them
+
 // CONCEPT:MEDULLA-KG.temporal.native-columnar-store — the native columnar (struct-of-arrays) segment for analytical
 // scans. Pure-Rust + serde only (no Arrow/DataFusion/redb), so it compiles in the
 // lean / Pi build exactly like `point`/`query` — always on, no feature gate.

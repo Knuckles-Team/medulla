@@ -1,8 +1,8 @@
 //! Private wheel binding: medulla-types remains the sole SQL source codec authority.
 
+use medulla_protocol_types::storage_wire::source_batch::MAX_SQL_SOURCE_BATCH_BYTES;
+use medulla_protocol_types::{storage_wire::SqlSourceBatchRequest, storage_wire::SqlSourceJson};
 use medulla_types::msgpack::{self, MsgpackLimits};
-use medulla_types::storage_wire::source_batch::MAX_SQL_SOURCE_BATCH_BYTES;
-use medulla_types::storage_wire::{SqlSourceBatchRequest, SqlSourceJson};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::PyBytes;
@@ -30,7 +30,8 @@ fn prepare(input: &[u8]) -> Result<(Vec<u8>, String, String, String, Vec<u8>), S
     .map_err(|_| "SQL source MessagePack input is invalid")?;
     let bytes = request.canonical_bytes()?;
     let digests = request.canonical_digests()?;
-    let body = medulla_types::protocol::Method::SqlSourceBatch { batch: request }.canonical_body_bytes();
+    let body = medulla_protocol_types::protocol::Method::SqlSourceBatch { batch: request }
+        .canonical_body_bytes();
     if body.is_empty() {
         return Err("SQL source method serialization failed".into());
     }
@@ -76,7 +77,9 @@ fn _canonical_sql_source_json(
     let bytes = py
         .detach(|| {
             let json = if raw_json {
-                SqlSourceJson::from_bytes(medulla_types::contract::RecordBytes::new(input.to_vec())?)?
+                SqlSourceJson::from_bytes(medulla_types::contract::RecordBytes::new(
+                    input.to_vec(),
+                )?)?
             } else {
                 SqlSourceJson::new(
                     msgpack::decode_property_value(input)

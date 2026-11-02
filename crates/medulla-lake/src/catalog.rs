@@ -20,7 +20,7 @@
 
 use std::collections::BTreeMap;
 
-use medulla_types::lake_catalog::ProjectionAccess;
+use medulla_catalog_types::lake_catalog::ProjectionAccess;
 use serde_json::{json, Value};
 
 /// The refusal code for a write that arrives through a projection

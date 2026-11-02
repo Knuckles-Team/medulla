@@ -7,10 +7,10 @@ one is **feature-gated into the opt-in `full-extras` layer** — the heavy deps 
 
 | Feature | Concept | Module | Feature flag |
 |---------|---------|--------|--------------|
-| Cross-region async read-replica tier | `CONCEPT:MEDULLA-KG.sharding.follower-pull-loop` | `src/server/replica.rs` | `federation-search` |
-| Capacity guardrails (breaker/quota/backpressure) | `CONCEPT:MEDULLA-KG.coordination.circuit-breaker` | `src/server/replica.rs` | `federation-search` |
+| Cross-region async read-replica tier | `CONCEPT:MEDULLA-KG.sharding.follower-pull-loop` | `crates/medulla-server/src/replica.rs` | `federation-search` |
+| Capacity guardrails (breaker/quota/backpressure) | `CONCEPT:MEDULLA-KG.coordination.circuit-breaker` | `crates/medulla-server/src/replica.rs` | `federation-search` |
 | Full Calvin deterministic-ordering commit | `CONCEPT:MEDULLA-KG.txn.calvin-deterministic-ordering` | `src/raft/cross_shard_txn/` | `calvin` (⇒ `nonblocking`) |
-| ROS2 bridge over rosbridge-WebSocket | `CONCEPT:MEDULLA-KG.domains.robotics-gpu-distribution` | `src/server/ros2_bridge.rs` | `ros2-bridge` |
+| ROS2 bridge over rosbridge-WebSocket | `CONCEPT:MEDULLA-KG.domains.robotics-gpu-distribution` | `crates/medulla-wire-msg/src/ros2_bridge.rs` | `ros2-bridge` |
 | GPU distance/tensor dispatch seam | `CONCEPT:MEDULLA-KG.compute.gpu-distance-seam` | `crates/medulla-ann/src/distance.rs`, `crates/medulla-tensor/src/gpu.rs` | `gpu` |
 | Real CUDA distance/tensor backend | `CONCEPT:MEDULLA-KG.backend.real-cuda-tensor-backend` | same | `gpu-cuda` |
 
@@ -128,7 +128,7 @@ The protocol framing (`RosbridgeOp`) + the CDC↔ROS2 mapping are pure and unit-
 WebSocket driver (`run_ros2_bridge`) wires them onto a live connection. Enabled by
 `MEDULLA_ROSBRIDGE_URL=ws://host:9090`.
 
-Two further legs sit behind the SAME `DdsTransport` trait (`src/server/dds.rs`), both
+Two further legs sit behind the SAME `DdsTransport` trait (`crates/medulla-wire-msg/src/dds.rs`), both
 `full-extras`-only (never in `default`/`full`):
 
 * **`ros2-dds`** — a native DDS/RTPS wire over the PURE-RUST `rustdds` crate
@@ -143,7 +143,7 @@ Two further legs sit behind the SAME `DdsTransport` trait (`src/server/dds.rs`),
   live-`ros2` interop — a real `ros2` node discovers/pubs/subs with no bridge.
 
 Both legs apply the rmw name/type mangling convention (`mangle_topic_name`/
-`mangle_type_name` in `src/server/dds.rs`, CONCEPT:MEDULLA-KG.ingest.rmw-topic-prefix) so a
+`mangle_type_name` in `crates/medulla-wire-msg/src/dds.rs`, CONCEPT:MEDULLA-KG.ingest.rmw-topic-prefix) so a
 topic published either way is discoverable by a live `ros2` daemon with zero config: the
 `rt/` topic prefix + the `<pkg>::<ns>::dds_::<Msg>_` type descriptor. Neither leg is
 folded into the workspace `--all-features` build (toolchain-gated, `full-extras` opt-in

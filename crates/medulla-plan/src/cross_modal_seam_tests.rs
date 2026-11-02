@@ -13,22 +13,24 @@
 //! / `tensor`), so the module compiles under any feature subset of `query`.
 
 #[cfg(any(feature = "owl", feature = "timeseries", feature = "tensor"))]
-use medulla_core::compute::semantic::SemanticStore;
+use medulla_graph_core::graph::GraphCore;
 #[cfg(any(feature = "owl", feature = "timeseries", feature = "tensor"))]
-use medulla_core::graph::{GraphCore, GraphView};
+use medulla_graph_core::graph::GraphView;
+#[cfg(any(feature = "owl", feature = "timeseries", feature = "tensor"))]
+use medulla_semantic_index::semantic::SemanticStore;
 #[cfg(any(feature = "owl", feature = "timeseries", feature = "tensor"))]
 use serde_json::json;
 
 #[cfg(feature = "owl")]
-use crate::algebra::Pred;
+use medulla_exec::algebra::Pred;
 #[cfg(any(feature = "owl", feature = "timeseries", feature = "tensor"))]
-use crate::algebra::{Op, Plan};
+use medulla_exec::algebra::{Op, Plan};
 #[cfg(feature = "owl")]
-use crate::exec::execute;
+use medulla_exec::exec::execute;
 #[cfg(any(feature = "owl", feature = "timeseries", feature = "tensor"))]
-use crate::exec::PlanCtx;
+use medulla_exec::exec::PlanCtx;
 #[cfg(any(feature = "timeseries", feature = "tensor"))]
-use crate::exec::PlanExt;
+use medulla_exec::exec::PlanExt;
 
 #[cfg(any(feature = "owl", feature = "timeseries", feature = "tensor"))]
 fn blob(v: serde_json::Value) -> Vec<u8> {
@@ -145,12 +147,13 @@ fn reason_then_traverse_then_rank_equals_separate() {
     let fused_ids: Vec<String> = execute(&plan, &ctx).unwrap().ids();
 
     // ── Separate oracle: reasoner ∘ BFS ∘ kNN, wired by hand. ──
-    let triples = medulla_rdf::owl::tbox_triples_from_view(&view);
-    let mut reasoner = medulla_rdf::owl::Reasoner::from_triples(&triples);
+    let triples = medulla_reasoner::owl::tbox_triples_from_view(&view);
+    let mut reasoner = medulla_reasoner::owl::Reasoner::from_triples(&triples);
     let cls = reasoner.classify();
-    let asserted = medulla_rdf::owl::asserted_types_from_view(&view, "http://example.org/").unwrap();
-    let members: Vec<String> = medulla_rdf::owl::instances_of(&cls, &asserted, target);
-    let reached = crate::exec::bfs_reached(&view, &members, "CITES", 1, 1);
+    let asserted =
+        medulla_reasoner::owl::asserted_types_from_view(&view, "http://example.org/").unwrap();
+    let members: Vec<String> = medulla_reasoner::owl::instances_of(&cls, &asserted, target);
+    let reached = medulla_exec::exec::bfs_reached(&view, &members, "CITES", 1, 1);
     let reached_set: HashSet<&str> = reached.iter().map(String::as_str).collect();
     let ranked = semantic.semantic_search(&q, 64);
     let separate: Vec<String> = ranked
@@ -184,7 +187,7 @@ fn reason_then_traverse_then_rank_equals_separate() {
 #[cfg(feature = "owl")]
 #[test]
 fn reason_seeded_reorder_picks_winner() {
-    use crate::cost::{CostModel, Order, Stats};
+    use medulla_exec::cost::{CostModel, Order, Stats};
 
     let reason = Op::Reason {
         target_class: "<http://example.org/ScholarlyWork>".into(),

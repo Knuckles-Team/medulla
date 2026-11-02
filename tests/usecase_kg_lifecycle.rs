@@ -33,13 +33,13 @@ mod test_support;
 
 use serde_json::json;
 
-use medulla::protocol::{Method, Response, ResultPayload};
+use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
 
 const SECRET: &str = "usecase-lifecycle-secret";
 
 /// A fully-featured state with a real redb persistence backend. The multi-op
 /// `BeginTxn`..`Commit` path in this test seals its transaction recovery plan
-/// (`server::handlers::txn::seal_txn_recovery_plan`), which fail-closed REQUIRES
+/// (`medulla_h_txn::txn::seal_txn_recovery_plan`), which fail-closed REQUIRES
 /// `MEDULLA_ENCRYPTION_KEY` at the backend's `open()` call -- the same
 /// requirement `redb_backend::tests::cm_dir` / `advanced_crossmodal_roundtrip.rs::state`
 /// provision. Encryption is symmetric and transparent to this test's assertions;
@@ -354,11 +354,11 @@ async fn validate_commit_infer_reindex_under_concurrency_eg438() {
 
     // ── 3. INFERENCE CLOSURE: the committed axiom makes s1 an inferred Device ──
     // REASON with an EMPTY ontology reads the axiom from the committed TBox.
-    let reason = medulla_plan::Plan::new(vec![
-        medulla_plan::Op::Scan {
+    let reason = medulla_exec::algebra::Plan::new(vec![
+        medulla_exec::algebra::Op::Scan {
             label: "Sensor".into(),
         },
-        medulla_plan::Op::Reason {
+        medulla_exec::algebra::Op::Reason {
             target_class: "<http://ex/Device>".into(),
             ontology: String::new(),
         },

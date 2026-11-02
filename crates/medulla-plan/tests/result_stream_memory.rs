@@ -7,8 +7,8 @@ use std::rc::Rc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use medulla_modality::OpaqueRef;
-use medulla_plan::knowledge_batch::KnowledgeBatchRow;
-use medulla_plan::result_stream::{graph_result_stream, KnowledgeStreamContext};
+use medulla_retrieval::knowledge_batch::KnowledgeBatchRow;
+use medulla_retrieval::{result_stream::graph_result_stream, result_stream::KnowledgeStreamContext};
 
 static LIVE_BYTES: AtomicUsize = AtomicUsize::new(0);
 static PEAK_BYTES: AtomicUsize = AtomicUsize::new(0);

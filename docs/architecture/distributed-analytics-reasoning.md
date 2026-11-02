@@ -248,13 +248,13 @@ work around the block by inventing a parallel shape:**
 
 - **GOC-03 tie-in.** `AnalyticsJob`/`TypedJobResult` register no
   `CommitDescriptor` participant under `CommitParticipantDomain::AnalyticsOutcome`
-  (`crates/medulla-types/src/commit_descriptor.rs`, branch `goc/goc-03-commit-currency`,
+  (`crates/medulla-mutation-types/src/commit_descriptor.rs`, branch `goc/goc-03-commit-currency`,
   not on `main`, unverified to compile). Wiring this needs GOC-03's descriptor type
   merged first; `AnalyticsJob` has no `commit_seq`/`fencing_token`/
   `participant_digests` fields today.
 - **GOC-10 tie-in.** `InputSnapshotHandle` (`model.rs`) pins a single
   `(graph, version)` plus an opaque `dataset_ref`/`content_digest` — it has no
-  shape for pinning a GOC-10 `LakeSnapshot` (`crates/medulla-types/src/lake_catalog.rs`,
+  shape for pinning a GOC-10 `LakeSnapshot` (`crates/medulla-catalog-types/src/lake_catalog.rs`,
   branch `goc/goc-10-lake-authority`, not on `main`) or multiple simultaneous
   cross-domain snapshots (lake/table, trace/series, vector-index namespace) for a
   job that reads across domains. Blocked the same way.

@@ -11,8 +11,11 @@ use crate::owner::registry::{owner_layouts, owner_table_names};
 use crate::owner::table_api::{owner_table_access, OwnerTableAccess};
 use crate::physical::manifest::{OwnerManifest, TableScope};
 use crate::scoped::ScopeRow;
-use medulla_types::mutation_batch::{DurabilityDomain, IncarnationId, LogicalName, ScopeTenantId};
-use medulla_types::MutationScopeIdentity;
+use medulla_mutation_types::mutation_scope::DurabilityDomain;
+use medulla_mutation_types::mutation_scope::IncarnationId;
+use medulla_mutation_types::mutation_scope::LogicalName;
+use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
+use medulla_mutation_types::mutation_scope::ScopeTenantId;
 
 /// The shard census is exact, and the eight private-ledger tables are absent.
 ///

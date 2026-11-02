@@ -26,7 +26,7 @@
 use crate::owner::contract::expected_owner_table_contract;
 use crate::owner::layout::OwnerLayout;
 use crate::physical::manifest::TableScope;
-use medulla_types::MutationScopeIdentity;
+use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
 
 /// The reserved logical name of a graph shard's own file-wide scope.
 ///

@@ -11,11 +11,11 @@
 //! (Placed in medulla-plan, NOT medulla-query as the audit's file plan sketched: medulla-query links no
 //! reasoner — the reason∩vector fusion only exists here, over `Op::Reason`+`Op::Rank`.)
 
-use medulla_core::compute::semantic::SemanticStore;
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
+use medulla_semantic_index::semantic::SemanticStore;
 use serde_json::json;
 
-use crate::exec::{PlanCtx, PlanExt};
+use medulla_exec::exec::{PlanCtx, PlanExt};
 use medulla_types::wire::{Op, Plan};
 
 fn blob(v: serde_json::Value) -> Vec<u8> {

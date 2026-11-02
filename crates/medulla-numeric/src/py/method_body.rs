@@ -5,7 +5,7 @@
 //! the signed body identical by construction for every method -- field order,
 //! defaults, sorted maps and float/byte widths are never restated in Python.
 
-use medulla_types::protocol::Method;
+use medulla_protocol_types::protocol::Method;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::PyBytes;

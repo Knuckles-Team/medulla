@@ -1,0 +1,49 @@
+[package]
+name = "medulla-nlq"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: Natural-language questions to UQL, with regressions"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_nlq"
+path = "src/lib.rs"
+
+[dependencies]
+medulla-agent-types = { path = "../medulla-agent-types" }
+medulla-core = { path = "../medulla-core" }
+medulla-decision-types = { path = "../medulla-decision-types" }
+medulla-exec = { path = "../medulla-exec" }
+medulla-federation = { path = "../medulla-federation" }
+medulla-types = { path = "../medulla-types" }
+medulla-uql = { path = "../medulla-uql" }
+rmp-serde = "1.3"
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12", "logging"], optional = true }
+serde = { version = "1.0", features = ["derive", "rc"] }
+serde_json = "1.0"
+ureq = { version = "3.4.2", optional = true }
+webpki-root-certs = { version = "1.0.10", optional = true }
+base64 = { version = "0.23", optional = true }
+medulla-graph-core = { path = "../medulla-graph-core" }
+medulla-semantic-index = { path = "../medulla-semantic-index" }
+
+[features]
+nl-query = ["medulla-exec/query", "dep:ureq", "dep:rustls", "dep:webpki-root-certs", "dep:base64"]
+epistemic = ["medulla-exec/epistemic", "medulla-uql/epistemic", "medulla-types/epistemic"]
+federation = ["medulla-exec/federation", "medulla-uql/federation", "medulla-federation/federation", "medulla-types/federation"]
+geo = ["medulla-exec/geo", "medulla-uql/geo", "medulla-types/geo"]
+numeric = ["medulla-exec/numeric", "medulla-uql/numeric"]
+owl = ["medulla-exec/owl", "medulla-uql/owl", "medulla-types/owl"]
+stream = ["medulla-exec/stream", "medulla-uql/stream", "medulla-types/stream"]
+tensor = ["medulla-exec/tensor", "medulla-uql/tensor", "medulla-types/tensor"]
+text = ["medulla-exec/text", "medulla-uql/text", "medulla-federation/text", "medulla-types/text"]
+timeseries = ["medulla-exec/timeseries", "medulla-uql/timeseries", "medulla-types/timeseries"]
+wasm-udf = ["medulla-exec/wasm-udf", "medulla-uql/wasm-udf", "medulla-types/wasm-udf"]
+[dev-dependencies]
+medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
+medulla-decision-types = { path = "../medulla-decision-types", features = ["test-support"] }
+medulla-federation = { path = "../medulla-federation", features = ["test-support"] }
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-exec = { path = "../medulla-exec", features = ["test-support"] }

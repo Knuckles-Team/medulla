@@ -1,7 +1,6 @@
 //! Model-level proof for the rendered skill package contract.
 
-
-use medulla_types::fleet_catalog::RenderedSkillPackage;
+use medulla_catalog_types::fleet_catalog::RenderedSkillPackage;
 
 #[test]
 fn rendered_package_round_trip() {

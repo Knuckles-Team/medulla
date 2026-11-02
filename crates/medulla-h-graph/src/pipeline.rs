@@ -1,0 +1,1543 @@
+//! ML pipeline handler (CONCEPT:MEDULLA-KG.mining.ml-pipeline): a graph-scoped
+//! train→evaluate→serve→predict lifecycle over versioned `:Model` artifacts.
+//! It composes medulla-compute's classify, estimator, graphlearn, embedding, and
+//! metrics primitives; ordered feature steps rebuild the same recipe for eval
+//! and predict. Train/serve/predict writes use the gateway; evaluate/compare
+//! reads use this handler's RLS-projected core.
+
+// The Result router moves the large `Method` enum by value on the fall-through path;
+// boxing the Err would allocate per non-pipeline request (see mining.rs / graphlearn.rs).
+#![allow(clippy::result_large_err)]
+
+mod features;
+mod pipeline_model;
+use std::sync::Arc;
+use std::time::{SystemTime, UNIX_EPOCH};
+
+use medulla_compute::datascience::estimators;
+use medulla_graph_algos::graphlearn::edge_fn::Basis;
+use medulla_graph_algos::graphlearn::link_predict::{self, FeatureCtx, KanLinkConfig, KanLinkModel};
+use medulla_mining::mining::classify;
+use medulla_graph_core::graph::GraphCore;
+use medulla_protocol_types::protocol::GraphSource;
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::Response;
+use medulla_protocol_types::protocol::ResultPayload;
+use medulla_protocol_types::{
+    result_contract::compute as results, result_contract::compute::MiningPipelinePredict,
+};
+use medulla_result_types::compute_result::graphlearn::PredictedLink;
+use medulla_result_types::{
+    compute_result::pipeline::ClassifyPrediction, compute_result::pipeline::EstimatorPrediction,
+    compute_result::pipeline::GraphlearnPrediction,
+    compute_result::pipeline::PipelineClassifiedRow, compute_result::pipeline::PipelineComparison,
+    compute_result::pipeline::PipelineEvaluation, compute_result::pipeline::PipelinePrediction,
+    compute_result::pipeline::PipelineServeResult, compute_result::pipeline::PipelineTrainResult,
+    compute_result::pipeline::PipelineValueRow,
+};
+use medulla_types::wire::{FeatureStep, ModelSpec, PipelineSpec};
+use serde_json::{json, Value};
+
+use self::features::{build_features, compute_embedding_rows, first_embedding};
+
+/// Handles read-only Evaluate/Compare and returns other methods to dispatch.
+/// BUG-034: both read paths scan graph labels or model nodes, so the caller's
+/// RLS-projected core must be used before any feature or metric computation.
+pub fn try_handle(
+    req_id: u64,
+    core: Arc<GraphCore>,
+    read_authority: Option<&medulla_server_api::carrier::GraphReadAuthority>,
+    method: Method,
+) -> Result<Response, Method> {
+    match method {
+        Method::MiningPipelineEvaluate {
+            name,
+            version,
+            source,
+            x,
+            y,
+        } => {
+            let authority = read_authority
+                .expect("MiningPipelineEvaluate must carry the universal served-read authority");
+            let core = authority.project_core(&core);
+            Ok(handle_evaluate(req_id, &core, name, version, source, x, y))
+        }
+        Method::MiningPipelineCompare {
+            name,
+            version_a,
+            version_b,
+        } => {
+            let authority = read_authority
+                .expect("MiningPipelineCompare must carry the universal served-read authority");
+            let core = authority.project_core(&core);
+            Ok(handle_compare(req_id, &core, name, version_a, version_b))
+        }
+        Method::MiningPipelineTrain { .. } => unreachable!(
+            "MiningPipelineTrain is GATEWAY_ROUTED; dispatch_graph_op routes it through \
+             try_handle_gateway before this fallback"
+        ),
+        Method::MiningPipelineServe { .. } => unreachable!(
+            "MiningPipelineServe is GATEWAY_ROUTED; dispatch_graph_op routes it through \
+             try_handle_gateway before this fallback"
+        ),
+        Method::MiningPipelinePredict { .. } => unreachable!(
+            "MiningPipelinePredict is GATEWAY_ROUTED; dispatch_graph_op routes it through \
+             try_handle_gateway before this fallback"
+        ),
+        other => Err(other),
+    }
+}
+
+// ─────────────────────────── Train ───────────────────────────
+
+/// Fit the pipeline's model over composed features, evaluate on a held-out split,
+/// and (when `writeback`) persist a versioned `:Model` artifact. `pub(crate)` so the
+/// graph-ops gateway drives it under `commit_conditional_mutation` (mirrors
+/// `graphlearn::handle_fit`).
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn handle_train(
+    req_id: u64,
+    core: &GraphCore,
+    name: String,
+    source: Option<GraphSource>,
+    x: Vec<Vec<f64>>,
+    y: Vec<i64>,
+    spec: PipelineSpec,
+    writeback: bool,
+) -> Response {
+    let family = normalize_family(&spec.model.family);
+    match family.as_str() {
+        "graphlearn" => handle_train_graphlearn(req_id, core, &name, source, &spec, writeback),
+        "classify" | "estimator" => handle_train_tabular(
+            req_id,
+            core,
+            &name,
+            TabularTrainingInput { source, x, y },
+            &spec,
+            &family,
+            writeback,
+        ),
+        other => Response::err(
+            req_id,
+            format!("pipeline: unknown model family {other:?} (classify | estimator | graphlearn)"),
+        ),
+    }
+}
+
+struct TabularTrainingInput {
+    source: Option<GraphSource>,
+    x: Vec<Vec<f64>>,
+    y: Vec<i64>,
+}
+
+fn handle_train_tabular(
+    req_id: u64,
+    core: &GraphCore,
+    name: &str,
+    input: TabularTrainingInput,
+    spec: &PipelineSpec,
+    family: &str,
+    writeback: bool,
+) -> Response {
+    let TabularTrainingInput { source, x, y } = input;
+    let (ids, rows) = match build_features(core, &source, &x, &spec.features) {
+        Ok(data) => data,
+        Err(e) => return Response::err(req_id, e),
+    };
+    if rows.is_empty() {
+        return Response::err(req_id, "pipeline: no feature rows produced".to_string());
+    }
+    let labels = match resolve_labels_f64(core, &ids, &y, &spec.label_property) {
+        Ok(labels) => labels,
+        Err(e) => return Response::err(req_id, e),
+    };
+    if labels.len() != rows.len() {
+        return Response::err(
+            req_id,
+            format!(
+                "pipeline: {} feature rows but {} labels",
+                rows.len(),
+                labels.len()
+            ),
+        );
+    }
+    let artifact =
+        match pipeline_model::fit_tabular(&rows, &labels, &spec.split, &spec.model, family) {
+            Ok(fitted) => fitted,
+            Err(e) => return Response::err(req_id, e),
+        };
+    finish_train(
+        req_id,
+        core,
+        TrainedModelIdentity {
+            name,
+            family,
+            algorithm: spec.model.algorithm.as_str(),
+        },
+        spec,
+        artifact,
+        writeback,
+    )
+}
+
+fn handle_train_graphlearn(
+    req_id: u64,
+    core: &GraphCore,
+    name: &str,
+    source: Option<GraphSource>,
+    spec: &PipelineSpec,
+    writeback: bool,
+) -> Response {
+    let Some(source) = source else {
+        return Response::err(
+            req_id,
+            "pipeline: graphlearn family requires a `source` (the learning subgraph)".to_string(),
+        );
+    };
+    // Reuse graphlearn's own subgraph builder (label vertices + observed intra-label
+    // edges as positives) — one builder, no drift.
+    let (graph, edge_set) =
+        medulla_server_api::handlers::graphlearn::build_graph_with_set(core, &source);
+    if graph.node_count() < 2 {
+        return Response::err(
+            req_id,
+            "pipeline: graphlearn subgraph has < 2 nodes".to_string(),
+        );
+    }
+    let positives: Vec<(usize, usize)> = edge_set.into_iter().collect();
+    if positives.is_empty() {
+        return Response::err(
+            req_id,
+            "pipeline: graphlearn subgraph has no observed edges (no positives)".to_string(),
+        );
+    }
+    let config = kan_config_from_spec(&spec.model);
+    // A structural-embedding feature step feeds the KAN's embedding channel; otherwise
+    // the 7 pure-structural features.
+    let ctx = match first_embedding(&spec.features) {
+        Some(step) => {
+            let rows = compute_embedding_rows(&graph, step);
+            FeatureCtx::build_with_embeddings(&graph, config.alpha, rows)
+        }
+        None => FeatureCtx::build(&graph, config.alpha),
+    };
+    let model = link_predict::fit_link_predictor(&ctx, &positives, &config);
+    let artifact = pipeline_model::TrainArtifact {
+        blob: serde_json::to_value(&model).unwrap_or(Value::Null),
+        classes: Value::Null,
+        metrics: json!({ "train": { "auc": model.train_auc } }),
+        counts: (model.feature_names.len(), positives.len(), 0),
+    };
+    finish_train(
+        req_id,
+        core,
+        TrainedModelIdentity {
+            name,
+            family: "graphlearn",
+            algorithm: spec.model.algorithm.as_str(),
+        },
+        spec,
+        artifact,
+        writeback,
+    )
+}
+
+/// How a fitted model is named on the graph.  `name` is the series a `:Model`
+/// node is versioned under, and `family` + `algorithm` are what a later
+/// `predict`/`evaluate` resolves and dispatches on.  All three are written into
+/// the `:Model` node AND echoed in the response, always as a set: a version
+/// whose recorded family or algorithm disagreed with its name could not be
+/// served back, so they are decided at the one place the fit happens and
+/// travel from there as one identity.
+struct TrainedModelIdentity<'a> {
+    name: &'a str,
+    family: &'a str,
+    algorithm: &'a str,
+}
+
+/// Version + (optionally) persist the fitted model as a `:Model` node, then respond.
+fn finish_train(
+    req_id: u64,
+    core: &GraphCore,
+    model: TrainedModelIdentity<'_>,
+    spec: &PipelineSpec,
+    artifact: pipeline_model::TrainArtifact,
+    writeback: bool,
+) -> Response {
+    let TrainedModelIdentity {
+        name,
+        family,
+        algorithm,
+    } = model;
+    let version = if writeback {
+        next_version(core, name)
+    } else {
+        0
+    };
+    let model_id = model_node_id(name, version);
+    let feature_spec = serde_json::to_value(&spec.features).unwrap_or(Value::Null);
+    if writeback {
+        let props = json!({
+            "type": "Model",
+            "name": name,
+            "version": version,
+            "family": family,
+            "algorithm": algorithm,
+            "metrics": artifact.metrics,
+            "classes": artifact.classes,
+            "n_features": artifact.counts.0,
+            "n_train": artifact.counts.1,
+            "n_test": artifact.counts.2,
+            "feature_spec": feature_spec,
+            "label_property": spec.label_property,
+            "blob": artifact.blob,
+            "created_ts": now_secs(),
+        });
+        match rmp_serde::to_vec_named(&props) {
+            Ok(b) => {
+                core.add_node(model_id.clone(), b);
+                core.mark_dirty();
+            }
+            Err(e) => return Response::err(req_id, format!("pipeline: serialize model node: {e}")),
+        }
+    }
+    Response::ok(
+        req_id,
+        ResultPayload::of::<results::MiningPipelineTrain>(PipelineTrainResult {
+            name: name.to_string(),
+            version,
+            model_id,
+            family: family.to_string(),
+            algorithm: algorithm.to_string(),
+            metrics: artifact.metrics,
+            n_features: artifact.counts.0,
+            n_train: artifact.counts.1,
+            n_test: artifact.counts.2,
+            classes: artifact.classes,
+            written_back: writeback,
+        }),
+    )
+}
+
+// ─────────────────────────── Serve ───────────────────────────
+
+/// Deploy a versioned `:Model` as the served version for `name`: writes a
+/// `:ServedModel` pointer so `predict`/`evaluate` with `version=0` resolve to it.
+pub(crate) fn handle_serve(req_id: u64, core: &GraphCore, name: String, version: u64) -> Response {
+    let model_id = model_node_id(&name, version);
+    if core.get_node_properties(&model_id).is_none() {
+        return Response::err(
+            req_id,
+            format!("pipeline: model {model_id:?} not found (train version {version} first)"),
+        );
+    }
+    let props = json!({
+        "type": "ServedModel",
+        "name": name,
+        "version": version,
+        "model_id": model_id,
+        "served_ts": now_secs(),
+    });
+    match rmp_serde::to_vec_named(&props) {
+        Ok(b) => {
+            core.add_node(served_node_id(&name), b);
+            core.mark_dirty();
+        }
+        Err(e) => return Response::err(req_id, format!("pipeline: serialize served pointer: {e}")),
+    }
+    Response::ok(
+        req_id,
+        ResultPayload::of::<results::MiningPipelineServe>(PipelineServeResult {
+            name,
+            version,
+            model_id,
+            served: true,
+        }),
+    )
+}
+
+// ─────────────────────────── Predict ───────────────────────────
+
+pub(crate) fn handle_predict(
+    req_id: u64,
+    core: &GraphCore,
+    name: String,
+    version: u64,
+    source: Option<GraphSource>,
+    x: Vec<Vec<f64>>,
+    writeback: bool,
+) -> Response {
+    let version = match resolve_version(core, &name, version) {
+        Ok(v) => v,
+        Err(e) => return Response::err(req_id, e),
+    };
+    let model = match load_model(core, &name, version) {
+        Ok(m) => m,
+        Err(e) => return Response::err(req_id, e),
+    };
+    match model.family.as_str() {
+        "graphlearn" => predict_graphlearn(req_id, core, &model, source, writeback),
+        "classify" => predict_classify(req_id, core, &model, source, x, writeback),
+        "estimator" => predict_estimator(req_id, core, &model, source, x, writeback),
+        other => Response::err(req_id, format!("pipeline: unknown stored family {other:?}")),
+    }
+}
+
+fn predict_classify(
+    req_id: u64,
+    core: &GraphCore,
+    model: &LoadedModel,
+    source: Option<GraphSource>,
+    x: Vec<Vec<f64>>,
+    writeback: bool,
+) -> Response {
+    let (ids, rows) = match build_features(core, &source, &x, &model.feature_spec) {
+        Ok(v) => v,
+        Err(e) => return Response::err(req_id, e),
+    };
+    if rows.is_empty() {
+        return Response::err(req_id, "pipeline: no feature rows to predict".to_string());
+    }
+    let clf = match pipeline_model::decode_blob(&model.blob, Some("classify")) {
+        Ok(m) => m,
+        Err(e) => return Response::err(req_id, e),
+    };
+    let out = classify::predict(&clf, &rows);
+    let written = if writeback {
+        materialize_predictions_classify(core, &model.model_id, &ids, &out)
+    } else {
+        0
+    };
+    let classified: Vec<PipelineClassifiedRow> = (0..rows.len())
+        .map(|i| PipelineClassifiedRow {
+            id: ids.get(i).cloned().unwrap_or_else(|| i.to_string()),
+            label: out.labels[i],
+            proba: out.proba[i].clone(),
+        })
+        .collect();
+    let body = PipelinePrediction::Classify(ClassifyPrediction {
+        model_id: model.model_id.clone(),
+        rows: classified,
+        classes: out.classes,
+        n_rows: rows.len(),
+        written_back: written,
+    });
+    Response::ok(req_id, ResultPayload::of::<MiningPipelinePredict>(body))
+}
+
+fn predict_estimator(
+    req_id: u64,
+    core: &GraphCore,
+    model: &LoadedModel,
+    source: Option<GraphSource>,
+    x: Vec<Vec<f64>>,
+    writeback: bool,
+) -> Response {
+    let (ids, rows) = match build_features(core, &source, &x, &model.feature_spec) {
+        Ok(v) => v,
+        Err(e) => return Response::err(req_id, e),
+    };
+    if rows.is_empty() {
+        return Response::err(req_id, "pipeline: no feature rows to predict".to_string());
+    }
+    let fm = match pipeline_model::decode_blob(&model.blob, Some("estimator")) {
+        Ok(m) => m,
+        Err(e) => return Response::err(req_id, e),
+    };
+    let yhat = estimators::predict(&fm, &rows);
+    let written = if writeback {
+        materialize_predictions_reg(core, &model.model_id, &ids, &yhat)
+    } else {
+        0
+    };
+    let regressed: Vec<PipelineValueRow> = (0..rows.len())
+        .map(|i| PipelineValueRow {
+            id: ids.get(i).cloned().unwrap_or_else(|| i.to_string()),
+            value: yhat.get(i).copied().unwrap_or(0.0),
+        })
+        .collect();
+    let body = PipelinePrediction::Estimator(EstimatorPrediction {
+        model_id: model.model_id.clone(),
+        rows: regressed,
+        n_rows: rows.len(),
+        written_back: written,
+    });
+    Response::ok(req_id, ResultPayload::of::<MiningPipelinePredict>(body))
+}
+
+fn predict_graphlearn(
+    req_id: u64,
+    core: &GraphCore,
+    model: &LoadedModel,
+    source: Option<GraphSource>,
+    _writeback: bool,
+) -> Response {
+    let Some(source) = source else {
+        return Response::err(
+            req_id,
+            "pipeline: graphlearn predict requires a `source` subgraph".to_string(),
+        );
+    };
+    let kan: KanLinkModel = match pipeline_model::decode_blob(&model.blob, Some("graphlearn")) {
+        Ok(m) => m,
+        Err(e) => return Response::err(req_id, e),
+    };
+    let (graph, existing) =
+        medulla_server_api::handlers::graphlearn::build_graph_with_set(core, &source);
+    if graph.node_count() < 2 {
+        return Response::err(
+            req_id,
+            "pipeline: graphlearn subgraph < 2 nodes".to_string(),
+        );
+    }
+    let ctx = match first_embedding(&model.feature_spec) {
+        Some(step) => {
+            let rows = compute_embedding_rows(&graph, step);
+            FeatureCtx::build_with_embeddings(&graph, kan.alpha, rows)
+        }
+        None => FeatureCtx::build(&graph, kan.alpha),
+    };
+    // Top-k highest-probability missing links (a sensible default surface; the fuller
+    // candidate-pairs API stays on `graph_learn predict`).
+    let scored = link_predict::predict_missing_links(&kan, &ctx, &existing, 50);
+    let predicted: Vec<PredictedLink> = scored
+        .iter()
+        .map(|&(a, b, score)| PredictedLink {
+            src: graph.node_at(a).clone(),
+            dst: graph.node_at(b).clone(),
+            score,
+        })
+        .collect();
+    let body = PipelinePrediction::Graphlearn(GraphlearnPrediction {
+        model_id: model.model_id.clone(),
+        predicted,
+        n_predicted: scored.len(),
+    });
+    Response::ok(req_id, ResultPayload::of::<MiningPipelinePredict>(body))
+}
+
+// ─────────────────────────── Evaluate ───────────────────────────
+
+fn handle_evaluate(
+    req_id: u64,
+    core: &GraphCore,
+    name: String,
+    version: u64,
+    source: Option<GraphSource>,
+    x: Vec<Vec<f64>>,
+    y: Vec<i64>,
+) -> Response {
+    let version = match resolve_version(core, &name, version) {
+        Ok(v) => v,
+        Err(e) => return Response::err(req_id, e),
+    };
+    let model = match load_model(core, &name, version) {
+        Ok(m) => m,
+        Err(e) => return Response::err(req_id, e),
+    };
+    if model.family == "graphlearn" {
+        return Response::err(
+            req_id,
+            "pipeline: evaluate is for classify/estimator families; the graphlearn \
+             family's held-out AUC is recorded at train time (see compare)"
+                .to_string(),
+        );
+    }
+    let (rows, labels) = match prepare_evaluation(
+        core,
+        &source,
+        &x,
+        &y,
+        &model.feature_spec,
+        &model.label_property,
+    ) {
+        Ok(data) => data,
+        Err(e) => return Response::err(req_id, e),
+    };
+    let metrics_obj =
+        match pipeline_model::evaluate_tabular(&model.blob, &model.family, &rows, &labels) {
+            Ok(metrics) => metrics,
+            Err(e) => return Response::err(req_id, e),
+        };
+    Response::ok(
+        req_id,
+        ResultPayload::of::<results::MiningPipelineEvaluate>(PipelineEvaluation {
+            name,
+            version,
+            family: model.family,
+            metrics: metrics_obj,
+            n: rows.len(),
+        }),
+    )
+}
+
+fn prepare_evaluation(
+    core: &GraphCore,
+    source: &Option<GraphSource>,
+    x: &[Vec<f64>],
+    y: &[i64],
+    feature_spec: &[FeatureStep],
+    label_property: &str,
+) -> Result<(Vec<Vec<f64>>, Vec<f64>), String> {
+    let (ids, rows) = build_features(core, source, x, feature_spec)?;
+    if rows.is_empty() {
+        return Err("pipeline: no feature rows to evaluate".to_string());
+    }
+    let labels = resolve_labels_f64(core, &ids, y, label_property)?;
+    if labels.len() != rows.len() {
+        return Err(format!(
+            "pipeline: {} rows but {} labels",
+            rows.len(),
+            labels.len()
+        ));
+    }
+    Ok((rows, labels))
+}
+
+// ─────────────────────────── Compare ───────────────────────────
+
+fn handle_compare(
+    req_id: u64,
+    core: &GraphCore,
+    name: String,
+    version_a: u64,
+    version_b: u64,
+) -> Response {
+    let a = match load_model(core, &name, version_a) {
+        Ok(m) => m,
+        Err(e) => return Response::err(req_id, e),
+    };
+    let b = match load_model(core, &name, version_b) {
+        Ok(m) => m,
+        Err(e) => return Response::err(req_id, e),
+    };
+    let ma = primary_metrics(&a.metrics);
+    let mb = primary_metrics(&b.metrics);
+    let diff = diff_metrics(ma, mb);
+    Response::ok(
+        req_id,
+        ResultPayload::of::<results::MiningPipelineCompare>(PipelineComparison {
+            name,
+            version_a,
+            version_b,
+            algorithm_a: a.algorithm,
+            algorithm_b: b.algorithm,
+            metrics_a: a.metrics,
+            metrics_b: b.metrics,
+            diff,
+        }),
+    )
+}
+
+/// The primary held-out metric object: `test` when present (tabular), else `train`
+/// (the graphlearn family records only train-time AUC).
+fn primary_metrics(m: &Value) -> &Value {
+    m.get("test")
+        .filter(|v| v.is_object())
+        .or_else(|| m.get("train"))
+        .unwrap_or(m)
+}
+
+/// Per-metric `b − a` for every numeric key present in both objects.
+fn diff_metrics(a: &Value, b: &Value) -> Value {
+    let (Some(ao), Some(bo)) = (a.as_object(), b.as_object()) else {
+        return Value::Null;
+    };
+    let mut out = serde_json::Map::new();
+    for (k, av) in ao {
+        if let (Some(af), Some(bf)) = (av.as_f64(), bo.get(k).and_then(|v| v.as_f64())) {
+            out.insert(k.clone(), json!(bf - af));
+        }
+    }
+    Value::Object(out)
+}
+
+// ─────────────────────────── Labels ───────────────────────────
+
+/// Resolve labels as `f64` (the internal split currency): explicit `y` (cast) wins;
+/// otherwise read each node's `label_property`. Classification rounds to `i64` at fit.
+fn resolve_labels_f64(
+    core: &GraphCore,
+    ids: &[String],
+    explicit_y: &[i64],
+    label_property: &str,
+) -> Result<Vec<f64>, String> {
+    if !explicit_y.is_empty() {
+        return Ok(explicit_y.iter().map(|&l| l as f64).collect());
+    }
+    if label_property.is_empty() {
+        return Err(
+            "pipeline: no labels — pass explicit `y` or set the spec's `label_property`"
+                .to_string(),
+        );
+    }
+    let mut labels = Vec::with_capacity(ids.len());
+    for id in ids {
+        let blob = core
+            .get_node_properties(id)
+            .ok_or_else(|| format!("pipeline: node {id:?} not found for label read"))?;
+        let val = medulla_types::msgpack::decode_property_value(&blob)
+            .map_err(|e| format!("pipeline: decode {id:?}: {e:?}"))?;
+        let label = val
+            .get(label_property)
+            .and_then(|v| v.as_f64())
+            .ok_or_else(|| {
+                format!("pipeline: node {id:?} missing numeric label property {label_property:?}")
+            })?;
+        labels.push(label);
+    }
+    Ok(labels)
+}
+
+// ─────────────────────────── Model artifact (versioned :Model node) ──────────
+
+/// A loaded `:Model` artifact (the fitted blob + the recipe needed to rebuild features).
+struct LoadedModel {
+    family: String,
+    algorithm: String,
+    blob: Value,
+    feature_spec: Vec<FeatureStep>,
+    label_property: String,
+    metrics: Value,
+    model_id: String,
+}
+
+fn model_node_id(name: &str, version: u64) -> String {
+    format!("model:{name}:v{version}")
+}
+
+fn served_node_id(name: &str) -> String {
+    format!("servedmodel:{name}")
+}
+
+/// Next version for `name` = 1 + the max existing `:Model` version carrying that name.
+fn next_version(core: &GraphCore, name: &str) -> u64 {
+    let mut max = 0u64;
+    for (_, blob) in core.get_nodes_by_label("Model", 0) {
+        if let Ok(v) = medulla_types::msgpack::decode_property_value(&blob) {
+            if v.get("name").and_then(|x| x.as_str()) == Some(name) {
+                if let Some(ver) = v.get("version").and_then(|x| x.as_u64()) {
+                    max = max.max(ver);
+                }
+            }
+        }
+    }
+    max + 1
+}
+
+/// Resolve `version` (0 ⇒ the served pointer's version).
+fn resolve_version(core: &GraphCore, name: &str, version: u64) -> Result<u64, String> {
+    if version > 0 {
+        return Ok(version);
+    }
+    let blob = core
+        .get_node_properties(&served_node_id(name))
+        .ok_or_else(|| {
+            format!(
+                "pipeline: no served version for {name:?} — call serve or pass an explicit version"
+            )
+        })?;
+    let v = medulla_types::msgpack::decode_property_value(&blob)
+        .map_err(|e| format!("pipeline: decode served pointer: {e:?}"))?;
+    v.get("version")
+        .and_then(|x| x.as_u64())
+        .ok_or_else(|| "pipeline: served pointer missing version".to_string())
+}
+
+fn load_model(core: &GraphCore, name: &str, version: u64) -> Result<LoadedModel, String> {
+    let model_id = model_node_id(name, version);
+    let blob = core
+        .get_node_properties(&model_id)
+        .ok_or_else(|| format!("pipeline: model {model_id:?} not found"))?;
+    let v = medulla_types::msgpack::decode_property_value(&blob)
+        .map_err(|e| format!("pipeline: decode model {model_id:?}: {e:?}"))?;
+    let feature_spec: Vec<FeatureStep> = v
+        .get("feature_spec")
+        .cloned()
+        .and_then(|fv| serde_json::from_value(fv).ok())
+        .unwrap_or_default();
+    Ok(LoadedModel {
+        family: v
+            .get("family")
+            .and_then(|x| x.as_str())
+            .unwrap_or("classify")
+            .to_string(),
+        algorithm: v
+            .get("algorithm")
+            .and_then(|x| x.as_str())
+            .unwrap_or_default()
+            .to_string(),
+        blob: v.get("blob").cloned().unwrap_or(Value::Null),
+        feature_spec,
+        label_property: v
+            .get("label_property")
+            .and_then(|x| x.as_str())
+            .unwrap_or_default()
+            .to_string(),
+        metrics: v.get("metrics").cloned().unwrap_or(Value::Null),
+        model_id,
+    })
+}
+
+// ─────────────────────────── Prediction write-back ───────────────────────────
+
+fn prediction_node_id(model_id: &str, src: &str) -> String {
+    use sha2::{Digest, Sha256};
+    let mut hasher = Sha256::new();
+    hasher.update(model_id.as_bytes());
+    hasher.update([0u8]);
+    hasher.update(src.as_bytes());
+    format!("prediction:{}", hex::encode(&hasher.finalize()[..12]))
+}
+
+fn materialize_predictions_classify(
+    core: &GraphCore,
+    model_id: &str,
+    ids: &[String],
+    out: &classify::Classification,
+) -> usize {
+    let mut written = 0usize;
+    for i in 0..out.labels.len() {
+        let src = ids.get(i).cloned().unwrap_or_else(|| i.to_string());
+        written += write_prediction(
+            core,
+            model_id,
+            &src,
+            json!({
+                "type": "Prediction",
+                "source": src,
+                "label": out.labels[i],
+                "proba": out.proba.get(i),
+                "model": model_id,
+            }),
+        );
+    }
+    written
+}
+
+fn materialize_predictions_reg(
+    core: &GraphCore,
+    model_id: &str,
+    ids: &[String],
+    yhat: &[f64],
+) -> usize {
+    let mut written = 0usize;
+    for (i, &value) in yhat.iter().enumerate() {
+        let src = ids.get(i).cloned().unwrap_or_else(|| i.to_string());
+        written += write_prediction(
+            core,
+            model_id,
+            &src,
+            json!({
+                "type": "Prediction",
+                "source": src,
+                "value": value,
+                "model": model_id,
+            }),
+        );
+    }
+    written
+}
+
+fn write_prediction(core: &GraphCore, model_id: &str, src: &str, props: Value) -> usize {
+    let node_id = prediction_node_id(model_id, src);
+    let Ok(blob) = rmp_serde::to_vec_named(&props) else {
+        return 0;
+    };
+    core.add_node(node_id.clone(), blob);
+    if core.has_node(src) {
+        if let Ok(eb) = rmp_serde::to_vec_named(&json!({ "relationship": "PREDICTED_FOR" })) {
+            let _ = core.add_edge(node_id, src.to_string(), eb);
+        }
+    }
+    1
+}
+
+// ─────────────────────────── Spec parsing ───────────────────────────
+
+fn normalize_family(family: &str) -> String {
+    match family.to_ascii_lowercase().as_str() {
+        "regress" | "regression" | "estimator" => "estimator".to_string(),
+        "kan" | "graphlearn" | "link_prediction" | "linkpredict" => "graphlearn".to_string(),
+        "" | "classify" | "classification" => "classify".to_string(),
+        other => other.to_string(),
+    }
+}
+
+fn kan_config_from_spec(m: &ModelSpec) -> KanLinkConfig {
+    let p = &m.params;
+    let f = |k: &str, d: f64| p.get(k).and_then(|v| v.as_f64()).unwrap_or(d);
+    let u = |k: &str, d: usize| {
+        p.get(k)
+            .and_then(|v| v.as_u64())
+            .map(|x| x as usize)
+            .unwrap_or(d)
+    };
+    let basis = match p
+        .get("basis")
+        .and_then(|v| v.as_str())
+        .unwrap_or("chebyshev")
+        .to_ascii_lowercase()
+        .as_str()
+    {
+        "jacobi" => Basis::Jacobi,
+        _ => Basis::Chebyshev,
+    };
+    let lr = f("lr", 0.05);
+    let neg_ratio = f("neg_ratio", 1.0);
+    KanLinkConfig {
+        basis,
+        degree: u("degree", 4).max(1),
+        hidden: u("hidden", 0),
+        epochs: u("epochs", 200).max(1),
+        lr: if lr > 0.0 { lr } else { 0.05 },
+        neg_ratio: if neg_ratio > 0.0 { neg_ratio } else { 1.0 },
+        seed: p.get("seed").and_then(|v| v.as_u64()).unwrap_or(42),
+        alpha: f("alpha", 0.5).clamp(0.0, 1.0),
+    }
+}
+
+// ─────────────────────────── Small helpers ───────────────────────────
+
+fn now_secs() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use medulla_isolation::isolation::IsolationLayer;
+    use medulla_protocol_types::protocol::GraphSource;
+    use medulla_server_api::carrier::GraphReadAuthority;
+    use medulla_server_api::authority_context::VerifiedRequestContext;
+    use medulla_types::wire::{FeatureStep, ModelSpec, SplitSpec};
+
+    fn node(props: Value) -> Vec<u8> {
+        rmp_serde::to_vec_named(&props).unwrap()
+    }
+
+    /// A [`GraphReadAuthority`] for `agent_id` over a fresh, empty (default-deny)
+    /// RLS policy — the same construction `access.rs`'s own RLS proof tests use.
+    fn authority_for(agent_id: &str) -> GraphReadAuthority {
+        let isolation = IsolationLayer::new();
+        let ctx = VerifiedRequestContext::verified_for_test(agent_id);
+        GraphReadAuthority::from_verified(&ctx, &isolation).unwrap()
+    }
+
+    /// Two dense communities of `Person` nodes (a planted partition), each node tagged
+    /// with its community as the integer `label` property — the node-classification
+    /// fixture. Community 0 = c0_*, community 1 = c1_*; dense intra, one weak cross edge.
+    fn seed_two_community_graph(core: &GraphCore) {
+        let c0 = ["c0a", "c0b", "c0c", "c0d", "c0e", "c0f"];
+        let c1 = ["c1a", "c1b", "c1c", "c1d", "c1e", "c1f"];
+        for id in c0 {
+            core.add_node(id.into(), node(json!({ "type": "Person", "label": 0 })));
+        }
+        for id in c1 {
+            core.add_node(id.into(), node(json!({ "type": "Person", "label": 1 })));
+        }
+        // Dense within each community (near-clique), plus a single cross link.
+        for group in [&c0, &c1] {
+            for i in 0..group.len() {
+                for j in (i + 1)..group.len() {
+                    let _ = core.add_edge(
+                        group[i].into(),
+                        group[j].into(),
+                        node(json!({ "relationship": "KNOWS" })),
+                    );
+                }
+            }
+        }
+        let _ = core.add_edge(
+            "c0a".into(),
+            "c1a".into(),
+            node(json!({ "relationship": "KNOWS" })),
+        );
+        core.mark_dirty();
+    }
+
+    fn person_source() -> GraphSource {
+        GraphSource {
+            node_label: "Person".into(),
+            direction: "any".into(),
+            relation: None,
+            limit: 0,
+        }
+    }
+
+    fn classify_spec(algorithm: &str) -> PipelineSpec {
+        PipelineSpec {
+            features: vec![FeatureStep::Embedding {
+                method: "fastrp".into(),
+                dim: 32,
+                iterations: 4,
+                walk_length: 40,
+                walks_per_node: 10,
+                window: 5,
+                epochs: 5,
+                seed: 7,
+            }],
+            split: SplitSpec {
+                test_ratio: 0.34,
+                shuffle: true,
+                seed: 13,
+            },
+            label_property: "label".into(),
+            model: ModelSpec {
+                family: "classify".into(),
+                algorithm: algorithm.into(),
+                params: json!({ "epochs": 400, "lr": 0.2 }),
+            },
+        }
+    }
+
+    fn json_of(resp: Response) -> Value {
+        match resp.result {
+            Some(ResultPayload::Json(v)) => v,
+            _ => panic!("expected json result, got error: {:?}", resp.error),
+        }
+    }
+
+    #[test]
+    fn explicit_features_skip_producers_and_apply_normalization() {
+        let core = GraphCore::new();
+        let steps = vec![
+            FeatureStep::Embedding {
+                method: "fastrp".into(),
+                dim: 8,
+                iterations: 2,
+                walk_length: 4,
+                walks_per_node: 2,
+                window: 2,
+                epochs: 2,
+                seed: 3,
+            },
+            FeatureStep::Normalize {},
+        ];
+        let (ids, rows) =
+            build_features(&core, &None, &[vec![3.0, 4.0], vec![0.0, 2.0]], &steps).unwrap();
+        assert_eq!(ids, vec!["0".to_string(), "1".to_string()]);
+        assert_eq!(rows[0], vec![0.6, 0.8]);
+        assert_eq!(rows[1], vec![0.0, 1.0]);
+    }
+
+    #[test]
+    fn prediction_decode_error_is_opaque() {
+        let core = Arc::new(GraphCore::new());
+        core.add_node(
+            "model:broken:v1".into(),
+            node(json!({
+                "type": "Model",
+                "name": "broken",
+                "version": 1,
+                "family": "classify",
+                "algorithm": "logistic",
+                "feature_spec": [],
+                "label_property": "",
+                "metrics": {},
+                "blob": Value::Null,
+            })),
+        );
+        let response = handle_predict(1, &core, "broken".into(), 1, None, vec![vec![1.0]], false);
+        assert_eq!(response.error.as_deref(), Some("INTERNAL"));
+        assert_eq!(
+            response.error_detail.as_deref(),
+            Some("unclassified engine refusal")
+        );
+        let response =
+            handle_evaluate(2, &core, "broken".into(), 1, None, vec![vec![1.0]], vec![0]);
+        assert_eq!(response.error.as_deref(), Some("INTERNAL"));
+        assert_eq!(
+            response.error_detail.as_deref(),
+            Some("unclassified engine refusal")
+        );
+    }
+
+    /// E2E acceptance: train + eval + serve + predict a node-classification pipeline
+    /// end-to-end over a fixture graph; then a SECOND version + a metrics-diff compare.
+    #[test]
+    fn node_classification_pipeline_end_to_end() {
+        let core = Arc::new(GraphCore::new());
+        seed_two_community_graph(&core);
+
+        // ── train v1 (logistic) ──
+        let v1 = json_of(handle_train(
+            1,
+            &core,
+            "community".into(),
+            Some(person_source()),
+            vec![],
+            vec![],
+            classify_spec("logistic"),
+            true,
+        ));
+        assert_eq!(v1["version"], 1);
+        assert_eq!(v1["family"], "classify");
+        assert_eq!(v1["written_back"], true);
+        assert_eq!(v1["model_id"], "model:community:v1");
+        let test_acc = v1["metrics"]["test"]["accuracy"].as_f64().unwrap();
+        assert!(
+            test_acc >= 0.7,
+            "held-out accuracy should recover the planted communities: {test_acc}"
+        );
+        // The versioned :Model artifact is a queryable KG node.
+        let models = core.get_nodes_by_label("Model", 0);
+        assert_eq!(models.len(), 1);
+
+        // ── eval v1 on the same labeled nodes (a distinct lifecycle verb) ──
+        let ev = json_of(handle_evaluate(
+            2,
+            &core,
+            "community".into(),
+            1,
+            Some(person_source()),
+            vec![],
+            vec![],
+        ));
+        assert!(ev["metrics"]["accuracy"].as_f64().unwrap() >= 0.7);
+        assert_eq!(ev["n"], 12);
+
+        // ── serve v1 ──
+        let sv = json_of(handle_serve(3, &core, "community".into(), 1));
+        assert_eq!(sv["served"], true);
+        assert_eq!(sv["version"], 1);
+
+        // ── predict via the served version (version=0 resolves the pointer) ──
+        let pr = json_of(handle_predict(
+            4,
+            &core,
+            "community".into(),
+            0,
+            Some(person_source()),
+            vec![],
+            true,
+        ));
+        assert_eq!(pr["n_rows"], 12);
+        assert_eq!(pr["written_back"], 12);
+        // Every predicted label is one of the trained classes.
+        for row in pr["rows"].as_array().unwrap() {
+            let lbl = row["label"].as_i64().unwrap();
+            assert!(lbl == 0 || lbl == 1, "label {lbl}");
+        }
+        // :Prediction nodes were materialized.
+        core.mark_dirty();
+        assert_eq!(core.get_nodes_by_label("Prediction", 0).len(), 12);
+
+        // ── train v2 (knn) → a comparable second version ──
+        let v2 = json_of(handle_train(
+            5,
+            &core,
+            "community".into(),
+            Some(person_source()),
+            vec![],
+            vec![],
+            classify_spec("knn"),
+            true,
+        ));
+        assert_eq!(v2["version"], 2);
+        assert_eq!(core.get_nodes_by_label("Model", 0).len(), 2);
+
+        // ── compare v1 vs v2 (metrics diff) ──
+        let cmp = json_of(handle_compare(6, &core, "community".into(), 1, 2));
+        assert_eq!(cmp["version_a"], 1);
+        assert_eq!(cmp["version_b"], 2);
+        assert!(cmp["metrics_a"]["test"]["accuracy"].is_number());
+        assert!(cmp["metrics_b"]["test"]["accuracy"].is_number());
+        // The diff carries the per-metric delta between the two versions.
+        assert!(cmp["diff"]["accuracy"].is_number());
+        let a = cmp["metrics_a"]["test"]["accuracy"].as_f64().unwrap();
+        let b = cmp["metrics_b"]["test"]["accuracy"].as_f64().unwrap();
+        let d = cmp["diff"]["accuracy"].as_f64().unwrap();
+        assert!((d - (b - a)).abs() < 1e-9, "diff must be b - a");
+    }
+
+    // ── BUG-034: `MiningPipelineEvaluate`/`Compare` must not leak existence via
+    // the label-index read their feature source (`Evaluate`) or loaded `:Model`
+    // (`Compare`) touches ──────────────────────────────────────────────────
+
+    /// Community 0 ("pub*") is explicitly public; community 1 ("priv*") is owned
+    /// by `bob` and marked private. Same dense-intra/one-cross-edge topology as
+    /// [`seed_two_community_graph`], just RLS-tagged so a non-grantee's
+    /// `project_core` hides exactly community 1.
+    ///
+    /// BUG-193: "pub*" carries `_owner_id`, not a bare ownerless
+    /// `_visibility: "public"` — that exact shape is the 21,064-row BUG-064
+    /// incident population and is denied by `row_visibility`'s BUG-192
+    /// middle branch. This models what a real gateway write now produces;
+    /// with no `_visibility`/`_shared_scope` set, the row keeps the
+    /// pre-existing bare-absent-default (visible beyond its owner).
+    fn seed_two_community_graph_rls(core: &GraphCore) {
+        let pub_ids = ["pub_a", "pub_b", "pub_c", "pub_d", "pub_e", "pub_f"];
+        let priv_ids = ["priv_a", "priv_b", "priv_c", "priv_d", "priv_e", "priv_f"];
+        for id in pub_ids {
+            core.add_node(
+                id.into(),
+                node(json!({ "type": "Person", "label": 0, "_owner_id": "system-writer" })),
+            );
+        }
+        for id in priv_ids {
+            core.add_node(
+                id.into(),
+                node(json!({
+                    "type": "Person",
+                    "label": 1,
+                    "_owner": "bob",
+                    "_visibility": "private",
+                })),
+            );
+        }
+        for group in [&pub_ids, &priv_ids] {
+            for i in 0..group.len() {
+                for j in (i + 1)..group.len() {
+                    let _ = core.add_edge(
+                        group[i].into(),
+                        group[j].into(),
+                        node(json!({ "relationship": "KNOWS" })),
+                    );
+                }
+            }
+        }
+        let _ = core.add_edge(
+            "pub_a".into(),
+            "priv_a".into(),
+            node(json!({ "relationship": "KNOWS" })),
+        );
+        core.mark_dirty();
+    }
+
+    /// Explicitly RLS-tag an already-trained `:Model` node (CONCEPT:MEDULLA-KG.sharding.row-level-security).
+    /// A freshly-trained model carries NO `_owner`/`_visibility`/`_grants` fields —
+    /// `RowVisibility::tagged` is therefore `false`, and an untagged row is
+    /// default-DENIED to every non-System caller (there is no implicit-public
+    /// fallback for an untagged row, only for an explicit `_visibility` other than
+    /// `"private"` — see `row_visibility`'s doc). Tests that read a model through a
+    /// non-System `GraphReadAuthority` must tag it explicitly, same as any other
+    /// row whose visibility they care about.
+    ///
+    /// BUG-193: an ownerless `visibility: "public"` tag is stamped as
+    /// `_owner_id` (the BUG-052/GOC-61 canonical convention a real gateway
+    /// write now stamps from the caller when absent), NOT a bare
+    /// `_visibility: "public"` with no owner — that exact shape is the
+    /// 21,064-row BUG-064 incident population and is denied by
+    /// `row_visibility`'s BUG-192 middle branch. With no `_visibility`/
+    /// `_shared_scope` key set, the row keeps the pre-existing
+    /// bare-absent-default (visible beyond its owner), so it stays readable
+    /// by a non-owning caller exactly as the ownerless-public callers below
+    /// require. An explicit `owner` still uses the native `_owner` +
+    /// `_visibility` pair unchanged (that shape is unaffected by BUG-192 —
+    /// `_visibility: "private"` is always honored outright).
+    fn tag_model_visibility(
+        core: &GraphCore,
+        model_id: &str,
+        visibility: &str,
+        owner: Option<&str>,
+    ) {
+        let mut props = medulla_types::msgpack::decode_property_value(
+            &core.get_node_properties(model_id).unwrap(),
+        )
+        .unwrap();
+        match owner {
+            Some(owner) => {
+                props["_owner"] = json!(owner);
+                props["_visibility"] = json!(visibility);
+            }
+            None if visibility == "public" => {
+                props["_owner_id"] = json!("system-writer");
+            }
+            None => {
+                props["_visibility"] = json!(visibility);
+            }
+        }
+        core.add_node(
+            model_id.to_string(),
+            rmp_serde::to_vec_named(&props).unwrap(),
+        );
+        core.mark_dirty();
+    }
+
+    /// RED before the BUG-034 fix: `try_handle`'s `Evaluate`/`Compare` arms called
+    /// `handle_evaluate`/`handle_compare` against the raw, unfiltered core, so a
+    /// non-grantee's `n` (a label-index-derived row count — the exact `count(n)`-
+    /// shaped side channel BUG-034 names) and model visibility included bob's
+    /// private community. GREEN after: `try_handle` now projects `core` through
+    /// `GraphReadAuthority::project_core` before either read, exactly like
+    /// `mining::try_handle`'s `MineClassifyFit` already does.
+    #[test]
+    fn mining_pipeline_evaluate_hides_invisible_rows_from_non_grantee() {
+        let core = Arc::new(GraphCore::new());
+        seed_two_community_graph_rls(&core);
+
+        // Train once, in full, over the WHOLE graph (both communities) — training
+        // is not the surface under test here; only the later read (`Evaluate`) is.
+        let train = json_of(handle_train(
+            1,
+            &core,
+            "community".into(),
+            Some(person_source()),
+            vec![],
+            vec![],
+            classify_spec("logistic"),
+            true,
+        ));
+        assert_eq!(train["version"], 1);
+        // A freshly-trained `:Model` node carries NO RLS tags of its own — under
+        // the mandatory default-deny RLS posture (CONCEPT:MEDULLA-KG.sharding.row-level-security,
+        // `RowVisibility::tagged`), an UNTAGGED row is invisible to every non-System
+        // caller, not implicitly public. This test is about the row-visibility of
+        // the PERSON data Evaluate reads, not the model's own visibility, so tag the
+        // model explicitly public — exactly the fixture pattern
+        // `mining_pipeline_compare_respects_model_visibility` uses for its own
+        // (explicitly private) v1 tag, just with the opposite value.
+        tag_model_visibility(&core, "model:community:v1", "public", None);
+
+        // alice is neither bob nor bob's manager: `priv_*` must stay invisible.
+        let alice = authority_for("alice");
+        let resp = handlers_try_handle_evaluate(&core, &alice, "community", 1);
+        let ev = json_of(resp);
+        assert_eq!(
+            ev["n"], 6,
+            "a non-grantee's Evaluate must see only the 6 public rows, not all 12 \
+             (existence/count leak of bob's private community)"
+        );
+
+        // bob (the owner) gets the correct, COMPLETE count — the fix must not
+        // turn this into an unconditional deny.
+        let bob = authority_for("bob");
+        let resp = handlers_try_handle_evaluate(&core, &bob, "community", 1);
+        let ev = json_of(resp);
+        assert_eq!(
+            ev["n"], 12,
+            "the owner's own Evaluate must still see the complete, correct count"
+        );
+    }
+
+    /// Same existence-leak shape as above, but for `Compare`'s loaded `:Model`
+    /// nodes: a `:Model` trained/serving inside a graph a non-owner otherwise has
+    /// Read access to is itself just another RLS-tagged node. Confirms `Compare`
+    /// goes through the SAME `project_core` gate — a model visible to its trainer
+    /// must not silently resolve for anyone else once tagged private.
+    #[test]
+    fn mining_pipeline_compare_respects_model_visibility() {
+        let core = Arc::new(GraphCore::new());
+        seed_two_community_graph_rls(&core);
+        let train = json_of(handle_train(
+            1,
+            &core,
+            "community".into(),
+            Some(person_source()),
+            vec![],
+            vec![],
+            classify_spec("logistic"),
+            true,
+        ));
+        assert_eq!(train["version"], 1);
+        // Tag the trained `:Model` node itself private to bob — a real deployment
+        // shape (a model trained over a private cohort, e.g. `:Model` inheriting
+        // its source's ownership).
+        tag_model_visibility(&core, "model:community:v1", "private", Some("bob"));
+
+        let train2 = json_of(handle_train(
+            2,
+            &core,
+            "community".into(),
+            Some(person_source()),
+            vec![],
+            vec![],
+            classify_spec("knn"),
+            true,
+        ));
+        assert_eq!(train2["version"], 2);
+        // v2 carries no RLS tags of its own (untagged ⇒ default-deny under the
+        // mandatory RLS posture, same as the evaluate test's model tag) — this
+        // test is about v1's PRIVATE visibility specifically, so v2 must be
+        // explicitly public or its own invisibility would mask the assertion
+        // this test exists to prove (bob CAN resolve it once v1's block clears).
+        tag_model_visibility(&core, "model:community:v2", "public", None);
+
+        let alice = authority_for("alice");
+        let resp = pipeline_try_handle(
+            &core,
+            &alice,
+            Method::MiningPipelineCompare {
+                name: "community".into(),
+                version_a: 1,
+                version_b: 2,
+            },
+        );
+        match resp.result {
+            Some(_) => panic!("alice must not resolve bob's private v1 model"),
+            None => {
+                assert_eq!(resp.error.as_deref(), Some("INTERNAL"));
+                assert_eq!(
+                    resp.error_detail.as_deref(),
+                    Some("unclassified engine refusal")
+                );
+            }
+        }
+
+        let bob = authority_for("bob");
+        let resp = pipeline_try_handle(
+            &core,
+            &bob,
+            Method::MiningPipelineCompare {
+                name: "community".into(),
+                version_a: 1,
+                version_b: 2,
+            },
+        );
+        let cmp = json_of(resp);
+        assert_eq!(cmp["version_a"], 1);
+        assert_eq!(cmp["version_b"], 2);
+    }
+
+    /// Drive the real `try_handle` entry point (not the bare `handle_evaluate`
+    /// helper) so the proof exercises the actual dispatch-reachable code path,
+    /// including the `project_core` gate this fix adds.
+    fn handlers_try_handle_evaluate(
+        core: &Arc<GraphCore>,
+        authority: &GraphReadAuthority,
+        name: &str,
+        version: u64,
+    ) -> Response {
+        pipeline_try_handle(
+            core,
+            authority,
+            Method::MiningPipelineEvaluate {
+                name: name.to_string(),
+                version,
+                source: Some(person_source()),
+                x: vec![],
+                y: vec![],
+            },
+        )
+    }
+
+    fn pipeline_try_handle(
+        core: &Arc<GraphCore>,
+        authority: &GraphReadAuthority,
+        method: Method,
+    ) -> Response {
+        super::try_handle(1, Arc::clone(core), Some(authority), method)
+            .unwrap_or_else(|m| panic!("method should be handled by pipeline::try_handle: {m:?}"))
+    }
+
+    /// The estimator (regression) family shares the same feature→split→version→predict
+    /// skeleton over an explicit matrix — proves the pipeline is not classify-only.
+    #[test]
+    fn estimator_family_trains_versions_and_predicts() {
+        let core = Arc::new(GraphCore::new());
+        // y ≈ 2·x0 + 1 — a trivially learnable line.
+        let x = vec![
+            vec![0.0],
+            vec![1.0],
+            vec![2.0],
+            vec![3.0],
+            vec![4.0],
+            vec![5.0],
+            vec![6.0],
+            vec![7.0],
+        ];
+        let y = vec![1, 3, 5, 7, 9, 11, 13, 15];
+        let spec = PipelineSpec {
+            features: vec![],
+            split: SplitSpec {
+                test_ratio: 0.25,
+                shuffle: true,
+                seed: 5,
+            },
+            label_property: String::new(),
+            model: ModelSpec {
+                family: "estimator".into(),
+                algorithm: "ridge".into(),
+                params: json!({ "alpha": 0.01 }),
+            },
+        };
+        let tr = json_of(handle_train(
+            1,
+            &core,
+            "line".into(),
+            None,
+            x.clone(),
+            y,
+            spec,
+            true,
+        ));
+        assert_eq!(tr["family"], "estimator");
+        assert_eq!(tr["version"], 1);
+        assert!(
+            tr["metrics"]["test"]["r2"].as_f64().unwrap() > 0.9,
+            "ridge should fit the line: {}",
+            tr["metrics"]["test"]["r2"]
+        );
+        // Predict with explicit x through the stored model.
+        let pr = json_of(handle_predict(
+            2,
+            &core,
+            "line".into(),
+            1,
+            None,
+            vec![vec![10.0]],
+            false,
+        ));
+        let yhat = pr["rows"][0]["value"].as_f64().unwrap();
+        assert!(
+            (yhat - 21.0).abs() < 2.0,
+            "expected ≈21 for x=10, got {yhat}"
+        );
+    }
+
+    /// The graphlearn (KAN) family is now one pipeline family: trainable as a versioned
+    /// :Model artifact and predict-able — the literal generalization of the one-off.
+    #[test]
+    fn graphlearn_family_versioned_artifact() {
+        let core = Arc::new(GraphCore::new());
+        seed_two_community_graph(&core);
+        let spec = PipelineSpec {
+            features: vec![],
+            split: SplitSpec::default(),
+            label_property: String::new(),
+            model: ModelSpec {
+                family: "graphlearn".into(),
+                algorithm: String::new(),
+                params: json!({ "epochs": 120, "degree": 3 }),
+            },
+        };
+        let tr = json_of(handle_train(
+            1,
+            &core,
+            "links".into(),
+            Some(person_source()),
+            vec![],
+            vec![],
+            spec,
+            true,
+        ));
+        assert_eq!(tr["family"], "graphlearn");
+        assert_eq!(tr["version"], 1);
+        assert!(tr["metrics"]["train"]["auc"].as_f64().unwrap() > 0.5);
+        // Predict top-k missing links through the stored KAN model.
+        let pr = json_of(handle_predict(
+            2,
+            &core,
+            "links".into(),
+            1,
+            Some(person_source()),
+            vec![],
+            false,
+        ));
+        assert_eq!(pr["family"], "graphlearn");
+        assert!(pr["n_predicted"].as_u64().unwrap() >= 1);
+    }
+
+    #[test]
+    fn non_pipeline_method_falls_through() {
+        let core = Arc::new(GraphCore::new());
+        assert!(matches!(
+            try_handle(1, core, None, Method::NodeCount),
+            Err(Method::NodeCount)
+        ));
+    }
+}

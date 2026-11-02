@@ -392,8 +392,8 @@ repos:
     pass_filenames: false
     always_run: true
   # GRAPH-POLICY-LEASE-CONTRACT.md §3 hardening (`MintAuthorization`,
-  # crates/medulla-core/src/isolation.rs): keeps `mint_policy_decision_lease` to its one
-  # traced production call site (src/server/dispatch.rs) so a second caller can
+  # crates/medulla-isolation/src/isolation.rs): keeps `mint_policy_decision_lease` to its one
+  # traced production call site (crates/medulla-server-router/src/dispatch.rs) so a second caller can
   # never silently appear without an audit. Pure stdlib text scan, no cargo/build,
   # safe for the commit stage; catch/no-false-positive proof against a planted
   # second call site is in the W6-MINT lane report.
@@ -575,7 +575,7 @@ repos:
   # a product defect: reproduced 0/5 in true single-test isolation on an idle
   # host) and was fixed structurally (a listener-wide publish-notify wakeup
   # replacing the blind 200ms poll as the primary delivery path — see
-  # src/server/mqtt_wire/mod.rs `accept_loop`/`handle_connection`) rather than
+  # crates/medulla-wire-msg/src/mqtt_wire/mod.rs `accept_loop`/`handle_connection`) rather than
   # re-baselined.
   # With the baseline now empty, the ratchet has nothing left to ratchet over,
   # so this hook runs the SAME command as release.yml's "Test (facade full)"

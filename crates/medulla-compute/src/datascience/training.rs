@@ -34,7 +34,7 @@ pub fn log_softmax(logits: &[f64]) -> Vec<f64> {
     logits.iter().map(|&x| (x - max) - log_sum).collect()
 }
 
-pub use medulla_types::compute_result::datascience::CrossEntropyResult;
+pub use medulla_result_types::compute_result::datascience::CrossEntropyResult;
 
 /// Mean categorical cross-entropy over a batch of rows with integer labels,
 /// returning the loss and the analytic gradient w.r.t. the logits.
@@ -67,7 +67,7 @@ pub fn cross_entropy(logits: &[Vec<f64>], labels: &[usize]) -> CrossEntropyResul
     }
 }
 
-pub use medulla_types::compute_result::datascience::DpoResult;
+pub use medulla_result_types::compute_result::datascience::DpoResult;
 
 fn sigmoid(x: f64) -> f64 {
     1.0 / (1.0 + (-x).exp())
@@ -110,7 +110,7 @@ pub fn dpo_loss(
     }
 }
 
-pub use medulla_types::compute_result::datascience::GrpoResult;
+pub use medulla_result_types::compute_result::datascience::GrpoResult;
 
 /// PPO/GRPO clipped surrogate (loss to minimise = negated objective), mean over
 /// elements, with the analytic gradient w.r.t. `logprob`. In the clipped (saturated)
@@ -162,7 +162,7 @@ pub fn kl_divergence(logprob: &[f64], ref_logprob: &[f64]) -> f64 {
     acc / n as f64
 }
 
-pub use medulla_types::compute_result::datascience::AdamResult;
+pub use medulla_result_types::compute_result::datascience::AdamResult;
 
 /// Adam hyperparameters shared by one optimizer step.
 #[derive(Debug, Clone, Copy)]

@@ -9,15 +9,16 @@
 //!    (prior, evidence) is not a supported conjugate pair are dropped.
 //!  * `Sample { seed }` — deterministic seeded draw (same seed ⇒ same score).
 
-use medulla_core::compute::semantic::SemanticStore;
-use medulla_core::graph::{GraphCore, GraphView};
+use medulla_catalog_types::distribution::Distribution;
+use medulla_graph_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphView;
+use medulla_semantic_index::semantic::SemanticStore;
 use medulla_types::wire::{ProbEvidenceSpec, ProbQuery};
-use medulla_types::Distribution;
 use serde_json::json;
 
-use crate::algebra::{Op, Plan};
-use crate::exec::PlanCtx;
-use crate::PlanExt;
+use medulla_exec::algebra::{Op, Plan};
+use medulla_exec::exec::PlanCtx;
+use medulla_exec::exec::PlanExt;
 
 fn blob(v: serde_json::Value) -> Vec<u8> {
     rmp_serde::to_vec_named(&v).unwrap()

@@ -16,7 +16,7 @@
 mod common;
 
 use common::*;
-use medulla_plan::{execute, Op, Plan, PlanCtx, Pred};
+use medulla_exec::{exec::execute, algebra::Op, algebra::Plan, exec::PlanCtx, algebra::Pred};
 use proptest::prelude::*;
 
 // ── a constrained generator of VALID UQL pipeline text ───────────────────────
@@ -76,7 +76,7 @@ proptest! {
     #[test]
     fn valid_uql_parses_executes_and_is_wellformed(q in pipeline_strategy()) {
         let (view, semantic) = build_docs();
-        let plan = medulla_plan::uql::parse(&q).expect("generated UQL must be valid");
+        let plan = medulla_uql::parse(&q).expect("generated UQL must be valid");
         let ctx = PlanCtx::new(&view, &semantic);
         let rs = execute(&plan, &ctx).expect("a valid plan must execute without error");
         let ids = rs.ids();
@@ -90,7 +90,7 @@ proptest! {
     #[test]
     fn execution_is_deterministic(q in pipeline_strategy()) {
         let (view, semantic) = build_docs();
-        let plan = medulla_plan::uql::parse(&q).expect("valid UQL");
+        let plan = medulla_uql::parse(&q).expect("valid UQL");
         let ctx = PlanCtx::new(&view, &semantic);
         let a = execute(&plan, &ctx).unwrap();
         let b = execute(&plan, &ctx).unwrap();
@@ -238,10 +238,10 @@ proptest! {
 
     #[test]
     fn serial_and_parallel_drivers_agree(q in pipeline_strategy()) {
-        use medulla_plan::{Driver, ParallelDriver, RuntimeConfig, SerialDriver};
+        use medulla_exec::{exec::Driver, runtime::ParallelDriver, runtime::RuntimeConfig, exec::SerialDriver};
 
         let (view, semantic) = build_docs();
-        let plan = medulla_plan::uql::parse(&q).expect("valid UQL");
+        let plan = medulla_uql::parse(&q).expect("valid UQL");
         let ctx = PlanCtx::new(&view, &semantic);
 
         // `plan_optimize` is identity in this tier, so routing the raw ops through each

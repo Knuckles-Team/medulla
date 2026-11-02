@@ -160,7 +160,7 @@ emulated CPU that will have masked the gap.
 
 - Facade feature `asr-whisper` (off by default, not part of `full`) links the
   `medulla-asr-whisper` crate and enables `Method::Asr`.
-- `src/server/handlers/asr.rs` self-routes ahead of the per-graph dispatch
+- `crates/medulla-h-ingest/src/asr.rs` self-routes ahead of the per-graph dispatch
   chain (like `Method::Quantum`/`Method::Viz`) — a transcription reads no
   persisted graph state and commits no durable record here.
 - `medulla.client.AsrClient` (`client.asr.transcribe_file(...)`) is

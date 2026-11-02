@@ -6,7 +6,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use medulla_rdf::mapping::parse_turtle;
-use medulla_rdf::owl::Reasoner;
+use medulla_reasoner::owl::Reasoner;
 use medulla_rdf::oxrdf::{NamedNode, NamedOrBlankNode, Term, Triple};
 
 const KG: &str = "http://knuckles.team/kg#";

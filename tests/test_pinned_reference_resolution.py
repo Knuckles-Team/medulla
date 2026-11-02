@@ -48,7 +48,7 @@ def real(gate) -> dict:
     one parse and plants into a copy of the bodies.
     """
 
-    tree = gate.read_module_tree(gate.SERVER_ROOT, root_dir=gate.ROOT)
+    tree = gate.server_source()
     layers = gate.durable_layers()
     return {
         "bodies": gate._functions(tree),

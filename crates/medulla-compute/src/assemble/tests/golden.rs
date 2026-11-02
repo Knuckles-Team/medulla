@@ -6,8 +6,8 @@
 
 use std::path::PathBuf;
 
-use medulla_types::decision::{CostBudget, DecisionRecord};
-use medulla_types::solve::ModelSpec;
+use medulla_decision_types::solve::ModelSpec;
+use medulla_decision_types::{decision::CostBudget, decision::DecisionRecord};
 
 use super::super::{assemble, replay_check};
 use super::fixture::*;

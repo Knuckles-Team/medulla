@@ -1,7 +1,7 @@
 //! `LET … FROM/JOIN` programs under every mode (EH-449): rows with `RETURN` channels,
 //! `EXPLAIN` and `PROFILE`, node by node.
 //!
-//! A program runs through [`crate::dag_exec::execute_dag`] exactly as written — there is
+//! A program runs through [`medulla_exec::dag_exec::execute_dag`] exactly as written — there is
 //! no DAG cost reordering — so `EXPLAIN` reports the program itself as both the canonical
 //! and the optimized plan, with one stage per node (`#id <- #parents clause`). A node's
 //! estimate is the cost model's output for its op given its input estimate: nothing for a
@@ -16,10 +16,10 @@ use std::time::Instant;
 use medulla_types::wire::{Op, UqlResult, UqlStageReport};
 
 use super::{micros_since, record_channel, returned_channels, rows_of, stage_text, ChannelTable};
-use crate::cost::{Cardinality, ModalityCardinality, PlanStats};
-use crate::exec::{apply_with_channels, PlanCtx};
-use crate::rowset::RowSet;
-use crate::uql::DagNode;
+use medulla_exec::cost::{Cardinality, ModalityCardinality, PlanStats};
+use medulla_exec::exec::{apply_with_channels, PlanCtx};
+use medulla_exec::rowset::RowSet;
+use medulla_uql::DagNode;
 
 /// Why a program's `EXPLAIN` reports `incremental: false`.
 const DAG_NOTE: &str = "a LET … FROM/JOIN program runs node by node as written (no cost \
@@ -34,7 +34,7 @@ pub(super) fn run(
 ) -> Result<UqlResult, String> {
     let columns = returned_channels(&node_ops(nodes));
     let (rows, table) = if columns.is_empty() {
-        let rows = crate::dag_exec::execute_dag(&crate::uql::to_plan_dag(nodes), ctx)?;
+        let rows = medulla_exec::dag_exec::execute_dag(&medulla_uql::to_plan_dag(nodes), ctx)?;
         ctx.budget.check_result(rows.len())?;
         (rows, ChannelTable::new())
     } else {
@@ -54,7 +54,7 @@ pub(super) fn explain(
     ctx: &PlanCtx,
     warnings: Vec<String>,
 ) -> Result<UqlResult, String> {
-    let program = crate::uql::print::dag_to_uql(nodes).map_err(|e| e.to_string())?;
+    let program = medulla_uql::print::dag_to_uql(nodes).map_err(|e| e.to_string())?;
     let stages = reports(nodes, ctx, None);
     Ok(UqlResult::Explain {
         plan_digest: None,
@@ -141,10 +141,10 @@ struct Trace {
 }
 
 fn traced(nodes: &[DagNode], ctx: &PlanCtx) -> Result<Trace, String> {
-    let dag = crate::uql::to_plan_dag(nodes);
+    let dag = medulla_uql::to_plan_dag(nodes);
     let mut table = ChannelTable::new();
     let mut stages = vec![(0, 0); nodes.len()];
-    let rows = crate::dag_exec::execute_dag_with(&dag, ctx, |id, node, input| {
+    let rows = medulla_exec::dag_exec::execute_dag_with(&dag, ctx, |id, node, input| {
         let started = Instant::now();
         let (out, extra) = apply_with_channels(&node.op, input.clone(), ctx)?;
         if let Some(slot) = stages.get_mut(id) {

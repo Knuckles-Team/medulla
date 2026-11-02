@@ -180,7 +180,7 @@ def test_deny_unknown_fields_is_read_from_the_whole_attribute_block(
 
     The previous check required `#[serde(deny_unknown_fields)]` to sit
     immediately above `pub struct X {`, so appending the schemars `cfg_attr`
-    reported every wire DTO in `crates/medulla-types/src/epistemic_operations.rs` as
+    reported every wire DTO in the result-types `epistemic_operations` module as
     open to unknown fields when nothing about its serde behaviour had changed.
     """
 
@@ -210,7 +210,7 @@ def test_epistemic_operations_gate_rejects_an_omitted_child(
     """Every compiler-declared DTO child must remain in the reviewed inventory."""
 
     gate = _script("check_epistemic_operations_protocol")
-    omitted = "crates/medulla-types/src/epistemic_operations/resource_status.rs"
+    omitted = "crates/medulla-result-types/src/epistemic_operations/resource_status.rs"
     monkeypatch.setattr(
         gate,
         "EXPECTED_RUST_SOURCES",

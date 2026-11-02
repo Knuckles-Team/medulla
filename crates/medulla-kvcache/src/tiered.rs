@@ -950,7 +950,7 @@ mod tests {
 
     /// CONCEPT:MEDULLA-KG.memory.graph-guided-paging — `apply_importance_scores` bulk-loads a
     /// PageRank/centrality-shaped `Vec<(K, f64)>` in one call (the shape
-    /// `medulla_compute::algorithms::pagerank` / the `graph_importance` adapter returns).
+    /// `medulla_graph_algos::algorithms::pagerank` / the `graph_importance` adapter returns).
     #[test]
     fn graph_guided_paging_bulk_apply_importance_scores() {
         let mut c: TieredCache<u64, Block> = TieredCache::new(1_000, 1_000, 1_000);

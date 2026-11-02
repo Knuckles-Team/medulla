@@ -19,20 +19,12 @@ use to accept either transport -- not made here, by design.
 
 ## Persist-dir contract (plan §1.9, §9.2 Gate A -- data-loss-critical)
 
-``medulla`` MUST NOT import ``agent_utilities`` (that would invert the
-repo dependency direction), so this module cannot call
-``agent_utilities.knowledge_graph.core.graph_compute``'s config helper directly.
-Instead it reads the SAME environment variable that function reads today --
-confirmed this session by reading
-``agent_utilities/knowledge_graph/core/graph_compute.py:1900-1922``:
+``medulla`` MUST NOT import ``meristem`` or any component that depends on it
+(that would invert the repo dependency direction), so this module reads the
+persist directory from the environment variable the platform sets, instead of
+calling a platform configuration helper:
 
-    persist_dir = setting("GRAPH_SERVICE_PERSIST_DIR")
-    if persist_dir is None:
-        try:
-            from agent_utilities.core.paths import data_dir
-            persist_dir = str(data_dir() / "graph_snapshots")
-        except Exception:
-            persist_dir = None
+    GRAPH_SERVICE_PERSIST_DIR
 
 ``setting("GRAPH_SERVICE_PERSIST_DIR")`` resolves that name as a plain
 environment variable (confirmed: every other ``GRAPH_SERVICE_*``-prefixed

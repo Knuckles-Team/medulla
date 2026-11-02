@@ -13,7 +13,7 @@
 mod common;
 
 use common::*;
-use medulla_plan::{Op, Plan, PlanCtx, PlanDag, PlanNode, Pred, RowSet};
+use medulla_exec::{algebra::Op, algebra::Plan, exec::PlanCtx, dag::PlanDag, dag::PlanNode, algebra::Pred, rowset::RowSet};
 use proptest::prelude::*;
 
 /// Arbitrary ordered/deduplicated branch materializations, including ranked and unranked
@@ -51,7 +51,7 @@ proptest! {
             PlanNode::new(Op::Limit { k: usize::MAX }, vec![]),
             PlanNode::new(Op::Limit { k: join_k }, vec![0, 1]),
         ]);
-        let via_dag = medulla_plan::execute_dag_with(&dag, &ctx, |id, _node, _input| {
+        let via_dag = medulla_exec::dag_exec::execute_dag_with(&dag, &ctx, |id, _node, _input| {
             Ok(match id {
                 0 => Some(branch_a.clone()),
                 1 => Some(branch_b.clone()),
@@ -83,7 +83,7 @@ fn single_branch_preserves_structural_order() {
         Op::Rank { query: query_vec() },
     ]));
 
-    let result = medulla_plan::execute_dag(&branch, &ctx).expect("raw branch must execute");
+    let result = medulla_exec::dag_exec::execute_dag(&branch, &ctx).expect("raw branch must execute");
     assert!(
         result.is_empty(),
         "structural Scan → Filter → Rank must drop the unembedded Tool, got {:?}",

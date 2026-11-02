@@ -17,7 +17,7 @@
 use std::collections::HashSet;
 
 use medulla_rdf::guard::{GuardRejection, WriteGuard};
-use medulla_rdf::owl::{asserted_types_from_view, instances_of, tbox_triples_from_view, Reasoner};
+use medulla_reasoner::{owl::asserted_types_from_view, owl::instances_of, owl::tbox_triples_from_view, owl::Reasoner};
 use medulla_rdf::oxrdf::{Graph, Triple};
 use medulla_rdf::sparql::Projection;
 use medulla_rdf::update::{execute_str, MapStore};

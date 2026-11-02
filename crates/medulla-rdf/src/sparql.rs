@@ -29,7 +29,7 @@
 
 use std::collections::HashMap;
 
-use medulla_core::graph::GraphView;
+use medulla_graph_core::graph::GraphView;
 use spargebra::algebra::{
     AggregateExpression, AggregateFunction, Expression, Function, GraphPattern, OrderExpression,
     PropertyPathExpression,

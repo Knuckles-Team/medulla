@@ -7,7 +7,7 @@ mod common;
 
 use common::parse_all;
 use medulla_rdf::mapping::parse_turtle;
-use medulla_rdf::owl::{saturate_object_properties, Reasoner};
+use medulla_reasoner::{owl::saturate_object_properties, owl::Reasoner};
 use medulla_rdf::oxrdf::Triple;
 
 const KG: &str = "http://knuckles.team/kg#";

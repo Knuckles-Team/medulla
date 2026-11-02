@@ -117,7 +117,7 @@ the virtual graph rewrites to an `Op::ForeignScan` against the backing source â€
 
 ## How it's reached
 
-SPARQL is served two ways: the W3C **`/sparql` HTTP endpoint** (`src/server/sparql_http.rs`, feature
+SPARQL is served two ways: the W3C **`/sparql` HTTP endpoint** (`crates/medulla-server-blob/src/sparql_http.rs`, feature
 `sparql-http` â€” GET `?query=`, POST `application/sparql-query`/`application/sparql-update`, content-negotiated
 output), and the binary RPC method (`Method::Sparql`) with result-cache + RLS row-filtering. Companion RDF
 methods: `AddTriples` (durable, replicated), `GetRdf` (serialization-matrix export), and the validation

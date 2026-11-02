@@ -176,7 +176,7 @@ fn cancel_reservation<D: OwnerDomain>(
 pub(super) fn require_reservation_baseline<D: OwnerDomain>(
     write: &AdmittedMutation<'_, D>,
     identity: &MutationScopeIdentity,
-    reservation: &medulla_types::MutationBatchRecord,
+    reservation: &medulla_protocol_types::mutation_batch::MutationBatchRecord,
 ) -> Result<(), String> {
     let scope = ledger_scope_key(identity);
     let reservation_id = reservation.batch.batch_id.as_str();
@@ -386,7 +386,7 @@ pub(super) fn reservation_in<D: OwnerDomain>(
     identity: &MutationScopeIdentity,
     source_digest: &str,
     destination_digest: &str,
-) -> Result<Option<medulla_types::MutationBatchRecord>, String> {
+) -> Result<Option<medulla_protocol_types::mutation_batch::MutationBatchRecord>, String> {
     let batch_id = reservation_batch_id(source_digest, destination_digest);
     let scope = ledger_scope_key(identity);
     let table = write.scoped_table(BATCHES)?;
@@ -440,7 +440,7 @@ fn validate_reservation_record(
     identity: &MutationScopeIdentity,
     source_digest: &str,
     destination_digest: &str,
-    record: &medulla_types::MutationBatchRecord,
+    record: &medulla_protocol_types::mutation_batch::MutationBatchRecord,
 ) -> Result<(), String> {
     let batch_id = reservation_batch_id(source_digest, destination_digest);
     let expected_envelope = MutationEnvelope::maintenance_for_scope(
@@ -478,7 +478,7 @@ fn validate_reservation_record(
 /// shape halves purely to keep each check under the complexity cap.
 fn reservation_receipt_matches(
     identity: &MutationScopeIdentity,
-    record: &medulla_types::MutationBatchRecord,
+    record: &medulla_protocol_types::mutation_batch::MutationBatchRecord,
     batch_id: &str,
     expected_envelope: &MutationEnvelope,
 ) -> bool {
@@ -490,7 +490,7 @@ fn reservation_receipt_matches(
 /// with the exact envelope a fresh kernel reservation would carry.
 fn reservation_receipt_identity_matches(
     identity: &MutationScopeIdentity,
-    record: &medulla_types::MutationBatchRecord,
+    record: &medulla_protocol_types::mutation_batch::MutationBatchRecord,
     batch_id: &str,
     expected_envelope: &MutationEnvelope,
 ) -> bool {
@@ -507,7 +507,7 @@ fn reservation_receipt_identity_matches(
 /// shape a fresh kernel reservation would carry.
 fn reservation_receipt_shape_matches(
     identity: &MutationScopeIdentity,
-    record: &medulla_types::MutationBatchRecord,
+    record: &medulla_protocol_types::mutation_batch::MutationBatchRecord,
 ) -> bool {
     record.committed_version.target() == Some(1)
         && record.batch.placement_epoch == GRAFT_FENCE
@@ -538,7 +538,7 @@ fn reservation_operation_matches(
 pub(super) fn validate_reservation_state<D: OwnerDomain>(
     write: &AdmittedMutation<'_, D>,
     identity: &MutationScopeIdentity,
-    record: &medulla_types::MutationBatchRecord,
+    record: &medulla_protocol_types::mutation_batch::MutationBatchRecord,
 ) -> Result<(), String> {
     if crate::ledger::bound_scope_version(write, identity)? != 1
         || current_fence(write, identity)? != (GRAFT_FENCE, GRAFT_FENCE)

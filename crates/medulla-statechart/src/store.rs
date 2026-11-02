@@ -60,17 +60,22 @@ use std::path::Path;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use medulla_mutation_types::mutation_scope::DurabilityDomain;
+use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
+use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
+use medulla_mutation_types::mutation_scope::MutationSurface;
+use medulla_mutation_types::mutation_scope::MUTATION_BATCH_VERSION;
+use medulla_protocol_types::mutation_batch::MutationBatch;
+use medulla_protocol_types::mutation_batch::MutationBatchRecord;
+use medulla_protocol_types::mutation_batch::MutationEnvelope;
+use medulla_protocol_types::mutation_batch::MutationOperation;
+use medulla_protocol_types::mutation_batch::VersionExpectation;
+use medulla_protocol_types::protocol::Method;
 use medulla_storage::{
     OwnedStoreHandle, PhysicalStoreIdentity, ScopeGrantVerifier, ScopedRead, StatechartOwner,
     StorageKernel,
 };
 use medulla_transaction::{Begin, MutationKernel};
-use medulla_types::mutation_batch::{
-    DurabilityDomain, MutationBatch, MutationBatchRecord, MutationEnvelope, MutationOperation,
-    MutationOutboxIntent, MutationScopeIdentity, MutationSurface, VersionExpectation,
-    MUTATION_BATCH_VERSION,
-};
-use medulla_types::protocol::Method;
 use redb::{ReadableTable, TableDefinition};
 use serde::{de::DeserializeOwned, Serialize};
 
@@ -1116,7 +1121,10 @@ mod tests {
         let record = medulla_transaction::read_ledger(&read, &batch.batch_id)
             .unwrap()
             .expect("a firing transition must leave a committed batch record");
-        assert_eq!(record.status, medulla_types::MutationBatchStatus::Committed);
+        assert_eq!(
+            record.status,
+            medulla_protocol_types::mutation_batch::MutationBatchStatus::Committed
+        );
         let committed_image: MachineInstance =
             decode_stored(record.result_msgpack.as_ref().unwrap()).unwrap();
         assert_eq!(committed_image, out.instance);

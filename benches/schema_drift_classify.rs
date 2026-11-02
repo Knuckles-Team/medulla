@@ -18,11 +18,16 @@
 use std::collections::BTreeMap;
 use std::time::Instant;
 
-use medulla_types::graph_schema::approval::approved_candidate_digest;
-use medulla_types::graph_schema::drift::{
-    classify, DriftClass, EvolutionPolicy, InferredField, InferredRecordShape,
+use medulla_catalog_types::graph_schema::approval::approved_candidate_digest;
+use medulla_catalog_types::{
+    graph_schema::drift::classify, graph_schema::drift::DriftClass,
+    graph_schema::drift::EvolutionPolicy, graph_schema::drift::InferredField,
+    graph_schema::drift::InferredRecordShape,
 };
-use medulla_types::graph_schema::repair::{FieldContract, JsonType, RecordContract};
+use medulla_catalog_types::{
+    graph_schema::repair::FieldContract, graph_schema::repair::JsonType,
+    graph_schema::repair::RecordContract,
+};
 
 const SOURCE_ID: &str = "approved:drift-bench";
 const FIELDS: usize = 1_000;

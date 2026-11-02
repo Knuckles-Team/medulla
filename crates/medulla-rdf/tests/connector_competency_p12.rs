@@ -21,7 +21,8 @@
 mod common;
 
 use common::parse_all;
-use medulla_core::graph::{GraphCore, GraphView};
+use medulla_graph_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphView;
 use medulla_rdf::mapping::{load_triples, parse_turtle, IriStore};
 use medulla_rdf::sparql::{execute, Dataset, Projection, QueryOutcome};
 

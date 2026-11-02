@@ -5,17 +5,17 @@
 #[cfg(feature = "numeric")]
 mod served {
     use super::super::blob;
-    use medulla_core::compute::semantic::SemanticStore;
-    use medulla_core::graph::GraphCore;
+    use medulla_graph_core::graph::GraphCore;
+    use medulla_semantic_index::semantic::SemanticStore;
     use medulla_types::wire::{UqlResult, UqlRow};
     use serde_json::json;
 
-    use crate::exec::PlanCtx;
+    use medulla_exec::exec::PlanCtx;
     use crate::uql::serve::run_statement;
-    use crate::uql::{parse_statement, Params};
+    use medulla_uql::{parse_statement, Params};
 
     /// Five services on two pods, each with a p95 latency; `s5` has no latency.
-    fn fixture() -> (medulla_core::graph::GraphView, SemanticStore) {
+    fn fixture() -> (medulla_graph_core::graph::GraphView, SemanticStore) {
         let core = GraphCore::new();
         let services = [
             ("s1", 120.0, "pod-a"),
@@ -114,7 +114,7 @@ mod served {
 #[cfg(not(feature = "numeric"))]
 #[test]
 fn a_build_without_numeric_refuses_the_stage_by_feature() {
-    use crate::uql::{parse_statement, Params, UqlCode};
+    use medulla_uql::{parse_statement, Params, UqlCode};
     let error = parse_statement(
         "MATCH (:Service) |> ATTRIBUTE SUM OF latency_ms LINEAR",
         &Params::new(),

@@ -1,6 +1,6 @@
 [package]
 name = "medulla-pyengine"
-version = "2.27.10"
+version = "3.0.0"
 edition = "2021"
 authors = ["Repository Maintainers <maintainers@example.invalid>"]
 description = "In-process PyO3 binding for the medulla-engine engine core (unified-binary program, workstream W-A). Embeds medulla-core's GraphCore/GraphRegistry directly in the Python process as the pyo3 extension module `medulla.engine`, so a self-contained deployment skips the socket entirely. Opt-in only: OFF by default, never linked by the out-of-process scale-out build (scripts/check_no_pyo3.sh)."
@@ -34,8 +34,7 @@ python = ["dep:pyo3"]
 # "security"))]` behavior). Independent of `python` -- a pure-Rust `cargo test
 # --features security` exercises authority.rs's own RLS unit tests with no pyo3 at
 # all. NOT folded into `pyo3-engine` below yet; see that root feature's own comment.
-security = ["medulla-core/security"]
-
+security = ["medulla-core/security", "medulla-isolation/security", "medulla-graph-core/security", "medulla-protocol-types/security", "medulla-types/security"]
 # ---------------------------------------------------------------------------
 # Wave-1 domain features (MEDULLA-PYENGINE-PLAN.md §4.5), pre-added here in ONE Wave-0
 # commit so no later lane ever edits this file again -- it only appends its OWN
@@ -63,23 +62,23 @@ security = ["medulla-core/security"]
 # being needed for it. `blob`'s Wave-1 lane has no medulla-core-level durable store to
 # call at all yet -- flagged here explicitly, per the plan's own instruction, for
 # that lane to review rather than silently discover.
-finance = ["dep:medulla-compute", "medulla-compute/finance"]
-datascience = ["dep:medulla-compute", "medulla-compute/datascience"]
-mining = ["dep:medulla-compute", "medulla-compute/mining"]
-graphlearn = ["datascience", "dep:medulla-compute", "medulla-compute/graphlearn"]
-ml-pipeline = ["mining", "datascience", "graphlearn"]
+finance = ["dep:medulla-compute", "medulla-compute/finance", "medulla-protocol-types/finance", "medulla-types/finance"]
+datascience = ["dep:medulla-compute", "medulla-compute/datascience", "medulla-protocol-types/datascience", "medulla-types/datascience"]
+mining = ["dep:medulla-compute", "medulla-compute/mining", "medulla-protocol-types/mining", "medulla-types/mining"]
+graphlearn = ["datascience", "dep:medulla-compute", "medulla-compute/graphlearn", "medulla-protocol-types/graphlearn", "medulla-types/graphlearn"]
+ml-pipeline = ["mining", "datascience", "graphlearn", "medulla-protocol-types/ml-pipeline", "medulla-types/ml-pipeline"]
 reasoning = ["dep:medulla-compute", "medulla-compute/reasoning"]
 # `query.rs` (the facade handler this mirrors) calls BOTH medulla_query (classify/exec_sql/
 # exec_cypher) and medulla_plan (Op/Plan/uql::parse, the unified-query-text surface) --
 # confirmed by grep, `src/server/handlers/query.rs`. `cypher` is medulla-query alone (no
 # medulla-plan), matching root Cargo.toml:432's own narrower composition.
-query = ["dep:medulla-query", "medulla-query/sql", "dep:medulla-plan", "medulla-plan/query"]
-cypher = ["dep:medulla-query", "medulla-query/cypher"]
+query = ["dep:medulla-plan", "medulla-plan/query", "medulla-protocol-types/query", "medulla-types/query"]
+cypher = []
 tsdb = ["dep:medulla-tsdb", "medulla-tsdb/redb-store"]
-streaming = []
-wasm-udf = ["dep:medulla-wasm", "medulla-wasm/wasm-udf"]
-rdf = ["dep:medulla-rdf", "medulla-rdf/rdf"]
-blob = []
+streaming = ["medulla-protocol-types/streaming", "medulla-types/streaming"]
+wasm-udf = ["dep:medulla-wasm", "medulla-wasm/wasm-udf", "medulla-plan?/wasm-udf", "medulla-protocol-types/wasm-udf", "medulla-types/wasm-udf"]
+rdf = ["dep:medulla-rdf", "medulla-rdf/rdf", "medulla-protocol-types/rdf", "medulla-types/rdf"]
+blob = ["medulla-protocol-types/blob", "medulla-types/blob"]
 # `jobs.rs` also calls `medulla_compute::mining` (association-rule mining as a job kind)
 # -- confirmed by grep -- so `jobs` pulls `mining` here too, matching root
 # Cargo.toml:212's own `jobs = ["server", "mining", "epistemic", ...]` composition
@@ -87,9 +86,8 @@ blob = []
 # of the 25 domain stubs calls yet -- not added on spec, per the crates.io-only /
 # "no dependency you cannot prove is needed" edict; the `jobs` Wave-1 lane appends
 # it as its own single feature line if its real implementation needs it).
-jobs = ["mining", "dep:medulla-jobs"]
-statechart = ["dep:medulla-statechart"]
-
+jobs = ["mining", "dep:medulla-jobs", "medulla-protocol-types/jobs", "medulla-types/jobs", "query"]
+statechart = ["dep:medulla-statechart", "medulla-protocol-types/statechart", "medulla-types/statechart"]
 [dependencies]
 # The engine core this binding embeds directly -- the SAME `GraphCore`/
 # `GraphRegistry` the out-of-process Tokio server dispatches against
@@ -115,15 +113,21 @@ pyo3 = { version = "0.29", features = ["extension-module", "abi3-py39"], optiona
 # `--features python` alone) links NONE of them.
 # ---------------------------------------------------------------------------
 medulla-compute = { path = "../medulla-compute", optional = true }
-medulla-query = { path = "../medulla-query", optional = true }
 medulla-plan = { path = "../medulla-plan", optional = true }
 medulla-tsdb = { path = "../medulla-tsdb", optional = true }
 medulla-rdf = { path = "../medulla-rdf", optional = true }
 medulla-jobs = { path = "../medulla-jobs", optional = true }
 medulla-statechart = { path = "../medulla-statechart", optional = true }
 medulla-wasm = { path = "../medulla-wasm", optional = true }
+medulla-protocol-types = { path = "../medulla-protocol-types" }
+medulla-types = { path = "../medulla-types" }
+medulla-graph-core = { path = "../medulla-graph-core" }
+medulla-isolation = { path = "../medulla-isolation" }
 
 [dev-dependencies]
+medulla-compute = { path = "../medulla-compute", features = ["test-support"] }
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
 # Test-only: `authority.rs`'s `per_call_override_lets_two_principals_share_one_authority`
 # test builds a real msgpack RLS-tagged property blob (`_owner`/`_visibility`) to
 # exercise `IsolationLayer::can_see_row` end to end, mirroring the exact encoding

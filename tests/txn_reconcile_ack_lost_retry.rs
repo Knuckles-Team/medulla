@@ -1,5 +1,5 @@
 //! Ack-lost `Commit` retry reconciliation (CONCEPT:MEDULLA-KG.txn.multi-op-occ-acid),
-//! covering the W1d hot-path fix in `handlers::txn::reconcile_committed_txn`.
+//! covering the W1d hot-path fix in `medulla_h_txn::txn::reconcile_committed_txn`.
 //!
 //! When a client's `Commit` response is lost after the transaction already
 //! committed durably, the retried `Commit { txn_id }` finds nothing in
@@ -30,10 +30,14 @@ mod common;
 #[path = "common/test_support.rs"]
 mod test_support;
 
-use medulla::acl::RequestContextClaims;
-use medulla::mutation_batch::MutationBatchStatus;
-use medulla::protocol::{GraphType, Method, Request, Response, ResultPayload};
-use medulla::server::{compute_verified_envelope_token, dispatch, VerifiedEnvelopeParams};
+use medulla_types::acl::RequestContextClaims;
+use medulla_protocol_types::mutation_batch::MutationBatchStatus;
+use medulla_protocol_types::protocol::{GraphType, Method, Request, Response, ResultPayload};
+#[cfg(feature = "redb")]
+use medulla_persistence::AsRedb;
+use medulla_server_router::dispatch::request_boundary::dispatch;
+use medulla_server_auth::auth::compute_verified_envelope_token;
+use medulla_server_auth::auth::VerifiedEnvelopeParams;
 use std::process::Command;
 
 const SECRET: &str = "txn-reconcile-ack-lost-secret";
@@ -71,7 +75,7 @@ fn pack(value: serde_json::Value) -> Vec<u8> {
 /// verified request produces.
 const TEST_TENANT_CLAIM: &str = "integration-test-tenant";
 
-/// Reproduce `server::mutation_batch::opaque_coordinator_key` (crate-private) so
+/// Reproduce `medulla_server::mutation_batch::opaque_coordinator_key` (crate-private) so
 /// this integration test can predict the exact `CarrierAuthority::tenant_scope()`
 /// a signed request resolves to: `opaque_coordinator_key("carrier-tenant",
 /// "verified", <tenant claim>)`. The single-graph OCC commit path stamps a
@@ -94,7 +98,7 @@ fn carrier_tenant_scope(raw_tenant: &str) -> String {
     opaque_coordinator_key("carrier-tenant", "verified", raw_tenant)
 }
 
-/// Reproduce `handlers::txn::receipts::commit_receipt_id` (crate-private) for
+/// Reproduce `medulla_h_txn::txn::receipts::commit_receipt_id` (crate-private) for
 /// the keyed signed Commit: the durable parent receipt id is the tenant-scoped
 /// operation id `transaction-receipt:<digest>` prefixed by its verifiable tenant
 /// binding, `<transaction-receipt-scope:digest>:<operation id>`. The cross-modal

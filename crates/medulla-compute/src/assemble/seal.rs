@@ -7,12 +7,13 @@
 //! the record abstains with `RecordTooLarge { bytes }` -- a committed record is
 //! never silently cut.
 
-use medulla_types::contract::BoundedVec;
-use medulla_types::decision::{
-    digest, AbstainReason, CandidateSourceRecord, DecisionErrorCode, DecisionInputs,
-    DecisionOutcome, DecisionQuestion, DecisionRecord, DerivationClass, TraceFidelity,
-    MAX_DECISION_RECORD_BYTES,
+use medulla_decision_types::{
+    decision::digest, decision::AbstainReason, decision::CandidateSourceRecord,
+    decision::DecisionErrorCode, decision::DecisionInputs, decision::DecisionOutcome,
+    decision::DecisionQuestion, decision::DecisionRecord, decision::DerivationClass,
+    decision::TraceFidelity, decision::MAX_DECISION_RECORD_BYTES,
 };
+use medulla_types::contract::BoundedVec;
 
 use super::conclude::Decided;
 use super::{AssembleError, Assembly};
@@ -75,7 +76,7 @@ pub(super) fn seal(
                 "reasons",
             )?,
         };
-        record.resolution_kind = medulla_types::decision::ResolutionKind::Abstention;
+        record.resolution_kind = medulla_decision_types::decision::ResolutionKind::Abstention;
         record.trace_fidelity = truncated(&["why_not", "outcome"])?;
         assembly_parts = (None, Vec::new(), None);
     }
@@ -109,7 +110,9 @@ fn unsealed(
         classification_under: inputs.request.candidates.classification_under.clone(),
     };
     Ok(DecisionRecord {
-        schema_version: medulla_types::decision::record::schema_version_for(&inputs.request),
+        schema_version: medulla_decision_types::decision::record::schema_version_for(
+            &inputs.request,
+        ),
         record_id: String::new(),
         tenant_id: identity.tenant_id,
         caller_principal: identity.caller_principal,

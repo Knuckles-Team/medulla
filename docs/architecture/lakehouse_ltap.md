@@ -104,7 +104,7 @@ or the catalog address is also configured.
   EVERY `serve_with_security`-wired auxiliary surface unconditionally (`obs`/`s3-api`/
   `sparql-http`/`federation-search`/`kvcache-server`/`lake-rest` — never something specific to
   lake) is gone. `unauthenticated_carrier_denied` now really checks for a checked
-  `CarrierAuthority` (`src/server/access.rs`). The Iceberg-REST catalog surface mints one from a
+  `CarrierAuthority` (`crates/medulla-server-auth/src/access.rs`). The Iceberg-REST catalog surface mints one from a
   checked OAuth2 bearer (`server::auth::mint_iceberg_carrier`, `src/server/lake/rest.rs`) the
   SAME way `s3-api` (SigV4), `kvcache-server` (bearer/JWT) and the `sparql-http`
   SELECT/Build/ASK leg (bearer/JWT, `server::auth::mint_fixed_service_carrier`) do — one

@@ -35,10 +35,10 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use medulla_protocol_types::protocol::Method;
+use medulla_server_api::api::persistence::PersistenceBackend;
+use medulla_persistence::redb_backend::RedbBackend;
 use medulla_kernel::audit;
-use medulla::protocol::Method;
-use medulla::server::persistence::redb_backend::RedbBackend;
-use medulla::server::persistence::PersistenceBackend;
 use redb_fan_in::{fan_in, GRAPH};
 use tokio::runtime::Builder;
 
@@ -72,7 +72,7 @@ async fn seed_anchor_window(backend: &Arc<RedbBackend>) -> Vec<String> {
 /// The aggressive anchor loop: every `interval`, mutate one anchored node (so
 /// the window's root always changes -- a REAL commit every tick, never the
 /// free unchanged-root skip path), hash the window off-thread, then commit the
-/// anchor. Mirrors `server::persistence::provenance_anchor::sweep`'s two-step
+/// anchor. Mirrors `medulla_server::persistence::provenance_anchor::sweep`'s two-step
 /// shape (off-writer-thread hash, then a small writer-thread commit) but
 /// against a fixed synthetic window instead of a live `GraphCore` label index,
 /// so this bench needs no `ServerState`/registry.

@@ -1,6 +1,6 @@
 //! Stable UQL parser diagnostics shared by the planner and served error catalog.
 
-use super::closed_error_codes;
+use crate::closed_error_codes;
 
 closed_error_codes! {
     /// UQL parser and binding refusals exposed on the wire.

@@ -3,15 +3,19 @@
 //! candidate, which is the structural reason prompt-injection text in a
 //! component's description cannot reach the decision.
 
-use medulla_types::agent_component::{
-    AgentComponentFacts, AgentComponentKind, CostFacts, DeclaredCost, DeclaredLatency, FactQuality,
-    ModalityFacts, PriceSource, PromptMode, ToolEffect,
+use medulla_agent_types::{
+    agent_component::AgentComponentFacts, agent_component::AgentComponentKind,
+    agent_component::CostFacts, agent_component::DeclaredCost, agent_component::DeclaredLatency,
+    agent_component::FactQuality, agent_component::ModalityFacts, agent_component::PriceSource,
+    agent_component::PromptMode, agent_component::ToolEffect,
+};
+use medulla_decision_types::{
+    decision::AssemblyRequest, decision::AssemblyRequirements, decision::CandidateFacts,
+    decision::DecisionInputs, decision::DecisionPolicy, decision::DecisionPolicyRef,
+    decision::LibraryCandidateScope, decision::PremiseClass, decision::PremiseProvenance,
+    decision::PremiseRef,
 };
 use medulla_types::contract::BoundedVec;
-use medulla_types::decision::{
-    digest, AssemblyRequest, AssemblyRequirements, CandidateFacts, DecisionInputs, DecisionPolicy,
-    DecisionPolicyRef, LibraryCandidateScope, PremiseClass, PremiseProvenance, PremiseRef,
-};
 
 use super::super::RecordIdentity;
 
@@ -23,7 +27,7 @@ pub fn bounded<T, const N: usize>(values: Vec<T>) -> BoundedVec<T, N> {
 
 /// A distinct, well-formed digest for `seed`.
 pub fn digest_of(seed: &str) -> String {
-    digest::digest_text("eg/test-fixture/v1", &seed)
+    medulla_types::solve_scalar::digest_text("eg/test-fixture/v1", &seed)
 }
 
 fn claim(component_id: &str) -> PremiseRef {
@@ -45,7 +49,7 @@ pub fn candidate(
 ) -> CandidateFacts {
     CandidateFacts {
         fact_premises: bounded(vec![claim(component_id)]),
-        ..medulla_types::test_support::decision::published_candidate(
+        ..medulla_decision_types::decision_fixtures::decision::published_candidate(
             component_id,
             kind,
             &digest_of(component_id),

@@ -7,7 +7,7 @@
 //! HTTP/native-client request. It requires NO live ClickHouse server. Issuing a real
 //! request and pushing federated query fragments down to ClickHouse is the live slice
 //! `MEDULLA-UNIFIED-DATA-PLANE-R017.2.2`, mirroring the loopback-only refusal gate already
-//! used by `connect_remote_engine` in `crate::federation`.
+//! used by `connect_remote_engine` in `medulla_federation::federation`.
 
 use std::net::ToSocketAddrs;
 
@@ -87,7 +87,7 @@ impl ClickHouseDriverConfig {
 
 /// Resolve the configured destination and refuse (never dial) anything that is not a
 /// local verified endpoint. Mirrors `connect_remote_engine`'s loopback-only gate in
-/// `crate::federation`; actually opening the HTTP/native-client session is the live
+/// `medulla_federation::federation`; actually opening the HTTP/native-client session is the live
 /// slice `MEDULLA-UNIFIED-DATA-PLANE-R017.2.2`.
 pub fn connect(
     config: &ClickHouseDriverConfig,

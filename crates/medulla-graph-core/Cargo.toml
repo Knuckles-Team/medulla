@@ -1,0 +1,49 @@
+[package]
+name = "medulla-graph-core"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: In-memory property graph, its indexes, paths, projections and JSONPath"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_graph_core"
+path = "src/lib.rs"
+
+[dependencies]
+medulla-types = { path = "../medulla-types" }
+serde = { version = "1.0", features = ["derive", "rc"] }
+serde_json = "1.0"
+rmp-serde = "1.3"
+petgraph = { version = "0.8.3", features = ["serde-1"] }
+parking_lot = "0.12"
+dashmap = "6.2"
+hex = "0.4"
+aho-corasick = "1.1"
+tracing = { version = "0.1" }
+redb = { workspace = true, optional = true }
+medulla-storage = { path = "../medulla-storage", optional = true }
+medulla-transaction = { path = "../medulla-transaction", optional = true }
+medulla-protocol-types = { path = "../medulla-protocol-types" }
+medulla-catalog-types = { path = "../medulla-catalog-types" }
+medulla-result-types = { path = "../medulla-result-types" }
+medulla-index-types = { path = "../medulla-index-types" }
+medulla-mutation-types = { path = "../medulla-mutation-types" }
+medulla-semantic-index = { path = "../medulla-semantic-index" }
+medulla-query-cache = { path = "../medulla-query-cache" }
+medulla-modality = { path = "../medulla-modality", optional = true }
+
+[features]
+ann = ["medulla-semantic-index/ann"]
+broker = ["medulla-protocol-types/broker", "medulla-types/broker"]
+cold-tier = []
+contract = ["dep:medulla-modality"]
+path-persist = ["dep:redb", "dep:medulla-storage", "dep:medulla-transaction"]
+result-cache = ["medulla-query-cache/result-cache"]
+security = ["dep:redb", "dep:medulla-storage", "dep:medulla-transaction", "medulla-protocol-types/security", "medulla-types/security"]
+
+[dev-dependencies]
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
+medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }

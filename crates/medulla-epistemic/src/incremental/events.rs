@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_types::protocol::Method;
+use medulla_protocol_types::protocol::Method;
 use serde::{Deserialize, Serialize};
 
 use super::{decode, opaque_identity};

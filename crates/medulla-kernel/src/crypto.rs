@@ -55,7 +55,7 @@ const MAX_KEY_VERSION_BYTES: usize = 64;
 /// Env var holding the raw key material for the transaction-recovery-plan channel
 /// ONLY (D-ORC-50 encryption-bootstrap decoupling). This key seals the private
 /// admin-saga/recovery-plan bytes a multi-op OCC `Commit` (and the cross-shard/
-/// coordinator recovery plans in `server::dispatch`) durably logs so a crash mid-commit
+/// coordinator recovery plans in `medulla_server::dispatch`) durably logs so a crash mid-commit
 /// can resume — it is INDEPENDENT of [`ENCRYPTION_KEY_ENV`], which controls at-rest
 /// encryption of ordinary node/edge/property value blobs.
 ///
@@ -79,7 +79,7 @@ pub const TXN_RECOVERY_KEY_ENV: &str = "MEDULLA_TXN_RECOVERY_KEY";
 
 /// Env var controlling whether the redb backend REFUSES to open without at-rest
 /// encryption configured (GOC-16). Tri-state rollout posture, the same shape as
-/// `MEDULLA_REQUIRE_NODE_BINDING` in `server::auth`: `off` keeps today's
+/// `MEDULLA_REQUIRE_NODE_BINDING` in `medulla_server::auth`: `off` keeps today's
 /// fully-silent opt-in behavior; `warn` (the shipped default) logs once that
 /// at-rest encryption is OFF, without refusing to start, so an operator sees it
 /// before a genuine production deployment goes live unencrypted; `on` fails
@@ -156,7 +156,7 @@ impl EncryptionKeyConfig {
 /// Rollout posture for [`ENCRYPTION_REQUIRED_ENV`]. A PRESENT
 /// `MEDULLA_ENCRYPTION_KEY` always installs a cipher in every mode — only
 /// an ABSENT key's handling varies by mode (mirrors
-/// `server::auth::NodeBindingMode`'s own doc comment on this exact point).
+/// `medulla_server::auth::NodeBindingMode`'s own doc comment on this exact point).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EncryptionRequiredMode {
     /// Missing key accepted silently — today's shipped behavior, byte-for-byte
@@ -177,13 +177,13 @@ pub enum EncryptionRequiredMode {
 /// Parse [`ENCRYPTION_REQUIRED_ENV`] (`off`/`warn`/`on`, case-insensitive,
 /// trimmed). Unset or unrecognized ⇒ [`EncryptionRequiredMode::Warn`] — the same
 /// "visible but non-breaking" default shape
-/// `server::auth::require_node_binding_mode` ships, chosen for the identical
+/// `medulla_server::auth::require_node_binding_mode` ships, chosen for the identical
 /// reason: an existing unencrypted deployment keeps working on upgrade, but the
 /// gap stops being silent (`redb_backend.rs`'s `Shard::open` previously logged
 /// NOTHING at all when the cipher resolved to `None`).
 ///
 /// Deliberately reads the env fresh on every call (no `OnceLock` cache, unlike
-/// `server::auth`'s production path) — checked once per `Shard::open`, never a
+/// `medulla_server::auth`'s production path) — checked once per `Shard::open`, never a
 /// hot path, and this keeps it testable exactly like this module's own
 /// `resolve_key`/`resolve_txn_recovery_key` without a `#[cfg(test)]` split.
 pub fn encryption_required_mode() -> EncryptionRequiredMode {
@@ -636,10 +636,10 @@ pub fn acquire_test_env_read_lock_blocking() -> TestEnvReadGuard {
 /// CONFIGURED (rather than a specific key) provisions.
 ///
 /// Before this existed, SEVEN modules each provisioned their own distinct key value
-/// through their own `std::sync::Once` -- `server::mod::ensure_txn_recovery_key`,
+/// through their own `std::sync::Once` -- `medulla_server::mod::ensure_txn_recovery_key`,
 /// `redb_backend::tests::cm_dir`, `redb_backend::tests::txn_commit_persists_to_redb`,
 /// `handlers::query`'s RYOW fixture, `raft::xshard_harness`, and BOTH of
-/// `server::wire`'s `ensure_env`s. Each `Once` fires at most once, but seven of them
+/// `medulla_server::wire`'s `ensure_env`s. Each `Once` fires at most once, but seven of them
 /// fire in some scheduling-dependent order, so the ambient key CHANGED up to seven
 /// times over the life of one test binary. A store opened under one of those values
 /// and read back after the next transition fails with "decryption failed (wrong key
@@ -903,7 +903,7 @@ mod tests {
     }
 
     /// GOC-16: unset ⇒ `Warn`, the shipped default — matches
-    /// `server::auth::require_node_binding_mode`'s own documented default shape.
+    /// `medulla_server::auth::require_node_binding_mode`'s own documented default shape.
     #[test]
     fn encryption_required_mode_defaults_to_warn_when_unset() {
         let _guard = EnvGuard::acquire();

@@ -19,14 +19,14 @@ use std::time::Duration;
 
 use arrow::ipc::reader::StreamReader;
 
-use medulla_types::jobs::{JobKind, JobOp, SubmitJobSpec};
-use medulla::knowledge_stream::{
+use medulla_types::knowledge_stream::{
     KnowledgeResultFamily, KnowledgeStreamBatch, KnowledgeStreamProjection, KnowledgeStreamQuery,
     KnowledgeStreamRequest, KNOWLEDGE_STREAM_SCHEMA_VERSION,
 };
-use medulla::protocol::{Method, Request, Response, ResultPayload};
-use medulla::server::persistence::redb_backend::RedbBackend;
-use medulla::server::persistence::PersistenceBackend;
+use medulla_protocol_types::protocol::{Method, Request, Response, ResultPayload};
+use medulla_server_api::api::persistence::PersistenceBackend;
+use medulla_persistence::redb_backend::RedbBackend;
+use medulla_work_types::{jobs::JobKind, jobs::JobOp, jobs::SubmitJobSpec};
 
 const SECRET: &str = "external-compute-contract-secret";
 const GRAPH: &str = "__commons__";
@@ -43,7 +43,7 @@ fn state(persist_dir: String) -> test_support::SharedState {
     )
 }
 
-fn request(id: u64, method: Method) -> medulla::protocol::Request {
+fn request(id: u64, method: Method) -> medulla_protocol_types::protocol::Request {
     test_support::request(SECRET, id, GRAPH, method)
 }
 
@@ -98,10 +98,10 @@ fn stream(query: KnowledgeStreamQuery) -> Method {
 
 #[test]
 fn signed_knowledge_stream_and_native_analytics_publication_round_trip() {
-    let driver = medulla::server::spawn_engine_driver(|| {
+    let driver = medulla_server::spawn_engine_driver(|| {
         let runtime = tokio::runtime::Builder::new_multi_thread()
             .worker_threads(2)
-            .thread_stack_size(medulla::server::ENGINE_WORKER_STACK_BYTES)
+            .thread_stack_size(medulla_server::ENGINE_WORKER_STACK_BYTES)
             .enable_all()
             .build()
             .expect("build engine-contract runtime");
@@ -252,5 +252,5 @@ fn signed_knowledge_stream_and_native_analytics_publication_round_trip() {
         });
     })
     .expect("start engine-contract driver");
-    medulla::server::join_engine_driver(driver).expect("engine-contract driver failed");
+    medulla_server::join_engine_driver(driver).expect("engine-contract driver failed");
 }

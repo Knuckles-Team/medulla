@@ -1,0 +1,615 @@
+use medulla_mutation_types::mutation_scope::CommittedVersion;
+use std::path::Path;
+use std::sync::Arc;
+
+use medulla_protocol_types::protocol::{GraphType, Method, ResultPayload};
+use medulla_persistence::redb_backend::RedbBackend;
+use medulla_server_api::api::persistence::PersistenceBackend;
+use medulla_types::contract::Nonce;
+
+use medulla_server_mutation::mutation_batch::commit_lifecycle;
+use medulla_server_api::batch_compile::lifecycle_batch_id;
+use medulla_server_mutation::mutation_batch::lifecycle_identity_matches;
+use medulla_server_mutation::mutation_batch::lifecycle_was_committed;
+use medulla_server_mutation::mutation_batch::LifecycleCommitRequest;
+
+/// The verified tenant scope every single-tenant lifecycle test commits under.
+const TENANT: &str = "carrier-tenant:lifecycle-test";
+
+fn open_backend(dir: &Path) -> Arc<dyn PersistenceBackend> {
+    Arc::new(
+        RedbBackend::open_with_shards(dir.to_string_lossy().into_owned(), 64, 1)
+            .expect("open lifecycle test backend"),
+    )
+}
+
+async fn assert_stable_lifecycle_replay(
+    dir: &Path,
+    action: &str,
+    graph: &str,
+    idempotency_key: &str,
+    method: Method,
+    changed_method: Method,
+    result: ResultPayload,
+) {
+    let principal = Some("principal:lifecycle-test");
+    let graph_fname = medulla_kernel::persist::sanitize(graph);
+    let first = {
+        let persistence = open_backend(dir);
+        let committed = commit_lifecycle(
+            LifecycleCommitRequest::new(
+                &persistence,
+                action,
+                medulla_server_mutation::mutation_batch::CommitOrigin {
+                    request_id: 101,
+                    principal,
+                },
+                idempotency_key,
+                graph,
+                method.clone(),
+                &result,
+            )
+            .with_attempt_nonce(Some(Nonce::from_bytes([1; 32])))
+            .with_tenant_scope(TENANT),
+        )
+        .await
+        .expect("first lifecycle commit");
+        assert!(!committed.replayed);
+        assert_eq!(
+            committed.record.batch.batch_id,
+            lifecycle_batch_id(action, TENANT, graph, principal, idempotency_key)
+        );
+        let stored = persistence
+            .read_mutation_batch(&graph_fname, &committed.record.batch.batch_id)
+            .await
+            .expect("read first lifecycle receipt")
+            .expect("first lifecycle receipt exists");
+        assert_eq!(stored.committed_version, committed.record.committed_version);
+        persistence.shutdown();
+        drop(persistence);
+        committed
+    };
+
+    // A restart and a fresh transport attempt with the same caller key must
+    // replay the one durable receipt rather than append a second effect.
+    let persistence = open_backend(dir);
+    let replayed = commit_lifecycle(
+        LifecycleCommitRequest::new(
+            &persistence,
+            action,
+            medulla_server_mutation::mutation_batch::CommitOrigin {
+                request_id: 202,
+                principal,
+            },
+            idempotency_key,
+            graph,
+            method.clone(),
+            &result,
+        )
+        .with_attempt_nonce(Some(Nonce::from_bytes([2; 32])))
+        .with_tenant_scope(TENANT),
+    )
+    .await
+    .expect("stable lifecycle retry");
+    assert!(replayed.replayed);
+    assert_eq!(replayed.record.batch.batch_id, first.record.batch.batch_id);
+    assert_eq!(
+        replayed.record.committed_version,
+        first.record.committed_version
+    );
+    assert_eq!(replayed.record.result_msgpack, first.record.result_msgpack);
+
+    // Reusing the original consumed attempt nonce is a replay error even
+    // though the caller-stable operation key is otherwise valid.
+    let consumed = commit_lifecycle(
+        LifecycleCommitRequest::new(
+            &persistence,
+            action,
+            medulla_server_mutation::mutation_batch::CommitOrigin {
+                request_id: 303,
+                principal,
+            },
+            idempotency_key,
+            graph,
+            method,
+            &result,
+        )
+        .with_attempt_nonce(Some(Nonce::from_bytes([1; 32])))
+        .with_tenant_scope(TENANT),
+    )
+    .await
+    .expect_err("the original attempt nonce must be consumed");
+    assert!(consumed.contains("REPLAY_NONCE_CONSUMED"), "{consumed}");
+
+    // A changed method under the same stable key cannot masquerade as a retry.
+    let conflict = commit_lifecycle(
+        LifecycleCommitRequest::new(
+            &persistence,
+            action,
+            medulla_server_mutation::mutation_batch::CommitOrigin {
+                request_id: 304,
+                principal,
+            },
+            idempotency_key,
+            graph,
+            changed_method,
+            &result,
+        )
+        .with_attempt_nonce(Some(Nonce::from_bytes([3; 32])))
+        .with_tenant_scope(TENANT),
+    )
+    .await
+    .expect_err("changed lifecycle payload must conflict");
+    assert!(conflict.contains("IDEMPOTENCY_CONFLICT"), "{conflict}");
+
+    let final_record = persistence
+        .read_mutation_batch(&graph_fname, &first.record.batch.batch_id)
+        .await
+        .expect("read final lifecycle receipt")
+        .expect("lifecycle receipt remains singular");
+    assert_eq!(final_record.batch.batch_id, first.record.batch.batch_id);
+    assert_eq!(
+        final_record.committed_version,
+        first.record.committed_version
+    );
+    persistence.shutdown();
+    drop(persistence);
+}
+
+#[cfg(feature = "redb")]
+#[tokio::test(flavor = "multi_thread")]
+async fn create_lifecycle_replay_keeps_one_stable_receipt() {
+    // Reads the ambient encryption env at its durable open, so the env must hold
+    // still for this whole body. READ guard: it excludes only a key MUTATOR, never
+    // another opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
+    let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
+    let dir = medulla_kernel::kernel::persistence::temp_dir("medulla-lifecycle-replay", "create");
+    assert_stable_lifecycle_replay(
+        &dir,
+        "create",
+        "lifecycle-create",
+        "caller-create-key",
+        Method::CreateGraph {
+            graph_name: "lifecycle-create".to_string(),
+            graph_type: GraphType::Global,
+        },
+        Method::CreateGraph {
+            graph_name: "lifecycle-create".to_string(),
+            graph_type: GraphType::Agent,
+        },
+        ResultPayload::Json(serde_json::json!({"created": "lifecycle-create"})),
+    )
+    .await;
+    let _ = std::fs::remove_dir_all(dir);
+}
+
+#[cfg(feature = "redb")]
+#[tokio::test(flavor = "multi_thread")]
+async fn delete_lifecycle_replay_keeps_one_stable_receipt() {
+    // Reads the ambient encryption env at its durable open, so the env must hold
+    // still for this whole body. READ guard: it excludes only a key MUTATOR, never
+    // another opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
+    let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
+    let dir = medulla_kernel::kernel::persistence::temp_dir("medulla-lifecycle-replay", "delete");
+    let graph = "lifecycle-delete";
+    {
+        let persistence = open_backend(&dir);
+        let result = ResultPayload::Json(serde_json::json!({"created": graph}));
+        commit_lifecycle(
+            LifecycleCommitRequest::new(
+                &persistence,
+                "create",
+                medulla_server_mutation::mutation_batch::CommitOrigin {
+                    request_id: 1,
+                    principal: Some("principal:lifecycle-test"),
+                },
+                "setup-create",
+                graph,
+                Method::CreateGraph {
+                    graph_name: graph.to_string(),
+                    graph_type: GraphType::Global,
+                },
+                &result,
+            )
+            .with_attempt_nonce(Some(Nonce::from_bytes([9; 32])))
+            .with_tenant_scope(TENANT),
+        )
+        .await
+        .expect("create delete-test graph");
+        persistence.shutdown();
+        drop(persistence);
+    }
+
+    assert_stable_lifecycle_replay(
+        &dir,
+        "delete",
+        graph,
+        "caller-delete-key",
+        Method::DeleteGraph {
+            graph_name: graph.to_string(),
+        },
+        Method::DeleteGraph {
+            graph_name: "different-delete-target".to_string(),
+        },
+        ResultPayload::Json(serde_json::json!({"deleted": graph})),
+    )
+    .await;
+    let _ = std::fs::remove_dir_all(dir);
+}
+
+/// Deleting a graph purges the receipts of its prior incarnation, so recreating
+/// a graph under the same name with the SAME CreateGraph idempotency key (and
+/// so the same deterministic batch id) as the now-deleted incarnation commits
+/// fresh rather than replaying the purged, stale outcome.
+// spec: MEDULLA-DURABLE-KERNEL-R049
+#[cfg(feature = "redb")]
+#[tokio::test(flavor = "multi_thread")]
+async fn delete_purges_receipts_of_a_prior_incarnation() {
+    let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
+    let dir = medulla_kernel::kernel::persistence::temp_dir(
+        "medulla-lifecycle-replay",
+        "purge-incarnation",
+    );
+    let graph = "lifecycle-reincarnated";
+    let principal = Some("principal:lifecycle-test");
+    let create_method = || Method::CreateGraph {
+        graph_name: graph.to_string(),
+        graph_type: GraphType::Global,
+    };
+    let create_result = ResultPayload::Json(serde_json::json!({"created": graph}));
+
+    let persistence = open_backend(&dir);
+    let first_create = commit_lifecycle(
+        LifecycleCommitRequest::new(
+            &persistence,
+            "create",
+            medulla_server_mutation::mutation_batch::CommitOrigin {
+                request_id: 1,
+                principal,
+            },
+            "reused-create-key",
+            graph,
+            create_method(),
+            &create_result,
+        )
+        .with_attempt_nonce(Some(Nonce::from_bytes([11; 32])))
+        .with_tenant_scope(TENANT),
+    )
+    .await
+    .expect("first incarnation creates");
+    assert!(!first_create.replayed);
+
+    let delete_result = ResultPayload::Json(serde_json::json!({"deleted": graph}));
+    commit_lifecycle(
+        LifecycleCommitRequest::new(
+            &persistence,
+            "delete",
+            medulla_server_mutation::mutation_batch::CommitOrigin {
+                request_id: 2,
+                principal,
+            },
+            "delete-key",
+            graph,
+            Method::DeleteGraph {
+                graph_name: graph.to_string(),
+            },
+            &delete_result,
+        )
+        .with_attempt_nonce(Some(Nonce::from_bytes([12; 32])))
+        .with_tenant_scope(TENANT),
+    )
+    .await
+    .expect("delete retires the first incarnation");
+
+    assert!(
+        persistence
+            .read_mutation_batch(
+                &medulla_kernel::persist::sanitize(graph),
+                &first_create.record.batch.batch_id
+            )
+            .await
+            .unwrap()
+            .is_none(),
+        "DeleteGraph purges the prior graph receipt"
+    );
+    persistence.shutdown();
+    drop(persistence);
+    let persistence = open_backend(&dir);
+
+    // The SAME idempotency key, action, graph and principal that named the
+    // first incarnation's CreateGraph must NOT replay its now-purged receipt:
+    // the second incarnation commits as a fresh batch with its own outcome.
+    let second_create = commit_lifecycle(
+        LifecycleCommitRequest::new(
+            &persistence,
+            "create",
+            medulla_server_mutation::mutation_batch::CommitOrigin {
+                request_id: 3,
+                principal,
+            },
+            "reused-create-key",
+            graph,
+            create_method(),
+            &create_result,
+        )
+        .with_attempt_nonce(Some(Nonce::from_bytes([13; 32])))
+        .with_tenant_scope(TENANT),
+    )
+    .await
+    .expect("second incarnation creates fresh, not a stale replay");
+    assert!(
+        !second_create.replayed,
+        "the purged prior incarnation's receipt must not be replayed into the new incarnation"
+    );
+    assert_eq!(
+        second_create.record.batch.batch_id, first_create.record.batch.batch_id,
+        "the batch id is deterministic from action/tenant/graph/principal/key, reused across incarnations"
+    );
+
+    let (
+        CommittedVersion::Graph {
+            target: first_target,
+            ..
+        },
+        CommittedVersion::Graph {
+            source: second_source,
+            target: second_target,
+        },
+    ) = (
+        first_create.record.committed_version,
+        second_create.record.committed_version,
+    )
+    else {
+        panic!("lifecycle commits must carry graph versions");
+    };
+    assert!(
+        second_source > first_target,
+        "DeleteGraph advances the prior graph version"
+    );
+    assert_eq!(
+        second_target,
+        second_source + 1,
+        "recreation advances the graph version once"
+    );
+    persistence.shutdown();
+    drop(persistence);
+    let persistence = open_backend(&dir);
+    let replay = commit_lifecycle(
+        LifecycleCommitRequest::new(
+            &persistence,
+            "create",
+            medulla_server_mutation::mutation_batch::CommitOrigin {
+                request_id: 4,
+                principal,
+            },
+            "reused-create-key",
+            graph,
+            create_method(),
+            &create_result,
+        )
+        .with_attempt_nonce(Some(Nonce::from_bytes([14; 32])))
+        .with_tenant_scope(TENANT),
+    )
+    .await
+    .expect("the new incarnation still replays after restart");
+    assert!(replay.replayed);
+    assert_eq!(
+        replay.record.committed_version,
+        second_create.record.committed_version
+    );
+    assert_eq!(
+        replay.record.result_msgpack,
+        second_create.record.result_msgpack
+    );
+
+    persistence.shutdown();
+    drop(persistence);
+    let _ = std::fs::remove_dir_all(dir);
+}
+
+/// EH-375: graph names are global and a verified agent id is not tenant-qualified, so
+/// the lifecycle batch id must include the verified tenant. Same agent id, same
+/// idempotency key, same graph name, different tenants: tenant B's retry probe must
+/// NOT find (and so must not replay) tenant A's committed CreateGraph.
+#[cfg(feature = "redb")]
+// spec: MEDULLA-DURABLE-KERNEL-R019
+#[tokio::test(flavor = "multi_thread")]
+async fn lifecycle_receipt_is_not_replayed_across_tenants() {
+    let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
+    let dir =
+        medulla_kernel::kernel::persistence::temp_dir("medulla-lifecycle-replay", "cross-tenant");
+    let persistence = open_backend(&dir);
+    let graph = "lifecycle-shared-name";
+    let method = || Method::CreateGraph {
+        graph_name: graph.to_string(),
+        graph_type: GraphType::Global,
+    };
+    let result = ResultPayload::Json(serde_json::json!({"created": graph}));
+    let principal = Some("principal:same-agent");
+    let committed = commit_lifecycle(
+        LifecycleCommitRequest::new(
+            &persistence,
+            "create",
+            medulla_server_mutation::mutation_batch::CommitOrigin {
+                request_id: 1,
+                principal,
+            },
+            "same-key",
+            graph,
+            method(),
+            &result,
+        )
+        .with_attempt_nonce(Some(Nonce::from_bytes([4; 32])))
+        .with_tenant_scope("carrier-tenant:a"),
+    )
+    .await
+    .expect("tenant A creates");
+    assert!(!committed.replayed);
+    assert_ne!(
+        lifecycle_batch_id("create", "carrier-tenant:a", graph, principal, "same-key"),
+        lifecycle_batch_id("create", "carrier-tenant:b", graph, principal, "same-key"),
+    );
+    let probe = |tenant_scope: &'static str, _attempt: u8| {
+        lifecycle_was_committed(
+            &persistence,
+            medulla_server_mutation::mutation::LifecycleAttempt {
+                action: "create",
+                tenant_scope,
+                graph,
+                request_id: 2,
+                attempt_nonce: None,
+                principal,
+                idempotency_key: "same-key",
+            },
+            method(),
+        )
+    };
+    assert!(
+        !probe("carrier-tenant:b", 5).await.expect("tenant B probe"),
+        "tenant B must not replay tenant A's CreateGraph receipt"
+    );
+    assert!(
+        probe("carrier-tenant:a", 6).await.expect("tenant A probe"),
+        "tenant A's own retry still replays its receipt"
+    );
+    persistence.shutdown();
+    drop(persistence);
+    let _ = std::fs::remove_dir_all(dir);
+}
+
+/// #709: a retry after an upgrade reads a receipt an earlier release wrote. Its
+/// build-dependent bytes (catalog digest, stored result, timestamps) differ from
+/// what this build would compile, yet the retained CreateGraph identity is the
+/// same, so it is committed. A receipt for another graph type is a conflict.
+#[cfg(feature = "redb")]
+// spec: MEDULLA-DURABLE-KERNEL-R861.1
+#[tokio::test(flavor = "multi_thread")]
+async fn lifecycle_replay_compares_identity_not_recompiled_bytes() {
+    let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
+    let dir = medulla_kernel::kernel::persistence::temp_dir("medulla-lifecycle-replay", "identity");
+    let persistence = open_backend(&dir);
+    let graph = "lifecycle-identity-graph";
+    let principal = Some("principal:identity-agent");
+    let create = |graph_type| Method::CreateGraph {
+        graph_name: graph.to_string(),
+        graph_type,
+    };
+    let result = ResultPayload::Json(serde_json::json!({"created": graph}));
+    commit_lifecycle(
+        LifecycleCommitRequest::new(
+            &persistence,
+            "create",
+            medulla_server_mutation::mutation_batch::CommitOrigin {
+                request_id: 1,
+                principal,
+            },
+            "identity-key",
+            graph,
+            create(GraphType::Global),
+            &result,
+        )
+        .with_attempt_nonce(Some(Nonce::from_bytes([7; 32])))
+        .with_tenant_scope(TENANT),
+    )
+    .await
+    .expect("first create commits");
+    let batch_id = lifecycle_batch_id("create", TENANT, graph, principal, "identity-key");
+    let mut stored = persistence
+        .read_mutation_batch(&medulla_kernel::persist::sanitize(graph), &batch_id)
+        .await
+        .expect("read receipt")
+        .expect("receipt stored");
+
+    // Same identity, different bytes: an older build's catalog digest, result
+    // encoding and timestamps.
+    if let medulla_protocol_types::mutation_batch::MutationEnvelope::Operation(operation) =
+        &mut stored.batch.envelope
+    {
+        operation.authority.catalog_digest =
+            medulla_types::contract::Digest256::from_bytes([9; 32]);
+    }
+    stored.result_msgpack = Some(vec![0xc0]);
+    stored.batch.created_at_ms += 1;
+    stored.committed_at_ms += 1;
+    lifecycle_identity_matches(
+        &stored,
+        &batch_id,
+        principal,
+        "identity-key",
+        &create(GraphType::Global),
+    )
+    .expect("same identity with different bytes is committed");
+
+    // Different identity: another graph type, principal or key is a conflict.
+    let conflict = lifecycle_identity_matches(
+        &stored,
+        &batch_id,
+        principal,
+        "identity-key",
+        &create(GraphType::Team),
+    )
+    .expect_err("a different graph type is a conflict");
+    assert!(conflict.contains("conflicting identity"), "{conflict}");
+    lifecycle_identity_matches(
+        &stored,
+        &batch_id,
+        Some("principal:someone-else"),
+        "identity-key",
+        &create(GraphType::Global),
+    )
+    .expect_err("a different principal is a conflict");
+    lifecycle_identity_matches(
+        &stored,
+        &batch_id,
+        principal,
+        "other-key",
+        &create(GraphType::Global),
+    )
+    .expect_err("a different idempotency key is a conflict");
+
+    // End to end through the probe: this build's retry replays; a retry naming
+    // another graph type under the same key is refused, not replayed.
+    let probe = |graph_type| {
+        lifecycle_was_committed(
+            &persistence,
+            medulla_server_mutation::mutation::LifecycleAttempt {
+                action: "create",
+                tenant_scope: TENANT,
+                graph,
+                request_id: 2,
+                attempt_nonce: None,
+                principal,
+                idempotency_key: "identity-key",
+            },
+            create(graph_type),
+        )
+    };
+    assert!(probe(GraphType::Global).await.expect("retry probe"));
+    assert!(probe(GraphType::Team).await.is_err());
+
+    // A reused attempt nonce is refused before the identity replay: only a fresh
+    // attempt under the same key replays the stored outcome.
+    let nonce_probe = |nonce: u8| {
+        lifecycle_was_committed(
+            &persistence,
+            medulla_server_mutation::mutation::LifecycleAttempt {
+                action: "create",
+                tenant_scope: TENANT,
+                graph,
+                request_id: 3,
+                attempt_nonce: Some(Nonce::from_bytes([nonce; 32])),
+                principal,
+                idempotency_key: "identity-key",
+            },
+            create(GraphType::Global),
+        )
+    };
+    let reused = nonce_probe(7)
+        .await
+        .expect_err("the consumed nonce is refused");
+    assert!(reused.starts_with("REPLAY_NONCE_CONSUMED:"), "{reused}");
+    assert!(nonce_probe(8).await.expect("a fresh nonce replays"));
+    persistence.shutdown();
+    drop(persistence);
+    let _ = std::fs::remove_dir_all(dir);
+}

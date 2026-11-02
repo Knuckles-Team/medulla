@@ -710,7 +710,7 @@ When no verifier is available, bind an ordered candidate set and candidate diges
 
 ### `MEDULLA-DECISION-ENGINE-R140.104` — TaskPlan production wiring
 
-The wiring row pins the production entry at src/server/dispatch/router/decision_plane.rs:107. And TaskPlan handler at src/server/handlers/decide/stat_decide.rs:48. Bind the R140.100-.103 decision and evidence digests into the returned plan; Medulla does not execute candidate generation. Meristem's decision-consumption and matching execution receipts remain explicit prerequisites.
+The wiring row pins the production entry at crates/medulla-server-router/src/dispatch/router/decision_plane.rs:107. And TaskPlan handler at crates/medulla-h-decide/src/decide/stat_decide.rs:48. Bind the R140.100-.103 decision and evidence digests into the returned plan; Medulla does not execute candidate generation. Meristem's decision-consumption and matching execution receipts remain explicit prerequisites.
 
 ### `MEDULLA-DECISION-ENGINE-R140.105` — Trajectory-refinement hot-path proof
 
@@ -739,7 +739,7 @@ Before any memory mutation is enable, bind the baseline. And candidate memory sn
 
 ### `MEDULLA-DECISION-ENGINE-R141.102` — DecisionEval production wiring
 
-The Medulla producer entry is DecisionEval at src/server/dispatch/router/decision_plane.rs:119. And src/server/handlers/decide/jobs.rs:30. It must bind R141.100/.101 candidate and evaluation evidence before any active-memory mutation. The authoritative memory store, mutation call sites and atomic receipt/CAS gate remain unidentified, so no universal write gate is claimed.
+The Medulla producer entry is DecisionEval at crates/medulla-server-router/src/dispatch/router/decision_plane.rs:119. And crates/medulla-h-decide/src/decide/jobs.rs:30. It must bind R141.100/.101 candidate and evaluation evidence before any active-memory mutation. The authoritative memory store, mutation call sites and atomic receipt/CAS gate remain unidentified, so no universal write gate is claimed.
 
 ### `MEDULLA-DECISION-ENGINE-R141.103` — Memory-change hot-path proof
 
@@ -756,7 +756,7 @@ For each skill revision, bind an atomic/workflow classification, local model id/
 
 ### `MEDULLA-DECISION-ENGINE-R142.101` — DecisionEval attestation wiring
 
-The Medulla producer attaches at src/server/dispatch/router/decision_plane.rs:119 and src/server/handlers/decide/jobs.rs:30. It binds Meristem's evaluation receipt and exact skill/model/dataset/criteria revisions into an immutable attestation. Meristem's receipt schema and Arbora R034.7-.12 consumption remain explicit owner dependencies.
+The Medulla producer attaches at crates/medulla-server-router/src/dispatch/router/decision_plane.rs:119 and crates/medulla-h-decide/src/decide/jobs.rs:30. It binds Meristem's evaluation receipt and exact skill/model/dataset/criteria revisions into an immutable attestation. Meristem's receipt schema and Arbora R034.7-.12 consumption remain explicit owner dependencies.
 
 ### `MEDULLA-DECISION-ENGINE-R142.102` — Certification hot-path proof
 
