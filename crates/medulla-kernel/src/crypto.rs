@@ -667,6 +667,31 @@ pub fn provision_test_at_rest_key_under_write_guard() {
         .call_once(|| std::env::set_var(ENCRYPTION_KEY_ENV, TEST_AT_REST_KEY));
 }
 
+/// Provision [`TEST_AT_REST_KEY`] for a test state builder that holds no environment guard.
+///
+/// A test binary of the crates that moved out of the facade is small, so no unrelated test has
+/// provisioned the ambient key first (the facade's one big binary leaned on exactly that
+/// ordering). The write guard is taken without ever blocking on a reader: a caller that is itself
+/// inside a read-guarded body must not deadlock, so after a bounded wait the key is left alone
+/// and that caller provisions it the way it always did.
+#[cfg(any(test, feature = "test-support"))]
+pub fn provision_test_at_rest_key_when_unlocked() {
+    if TEST_AT_REST_KEY_PROVISIONED.is_completed() {
+        return;
+    }
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+    loop {
+        if let Ok(_env_lock) = TEST_ENV_LOCK.try_write() {
+            provision_test_at_rest_key_under_write_guard();
+            return;
+        }
+        if std::time::Instant::now() >= deadline {
+            return;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(5));
+    }
+}
+
 /// Provision [`TEST_AT_REST_KEY`] if it is not provisioned yet -- under the WRITE
 /// guard, because that is a process-global mutation -- and then hold the ambient
 /// encryption environment still for the caller's ENTIRE body under the READ guard.

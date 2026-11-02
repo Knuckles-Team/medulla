@@ -531,6 +531,8 @@ impl ServerState {
     /// test-only constructor.
     #[doc(hidden)]
     pub fn new_for_test(auth_secret: impl Into<String>, isolation: IsolationLayer) -> Self {
+        #[cfg(all(feature = "security", feature = "test-support"))]
+        medulla_kernel::crypto::provision_test_at_rest_key_when_unlocked();
         let state = Self::new(auth_secret, isolation);
         #[cfg(feature = "raft")]
         let state = {
