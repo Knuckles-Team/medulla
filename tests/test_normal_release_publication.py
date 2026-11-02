@@ -52,7 +52,7 @@ class ReleasePublication(unittest.TestCase):
         )
         self.assertEqual(
             jobs["build-x86"]["uses"],
-            "Knuckles-Team/medulla/.github/workflows/medulla-release-x86.yml@219c853efa7aacb8cf7032abf67fc7f70aefb1ce",
+            "Knuckles-Team/medulla/.github/workflows/medulla-release-x86.yml@3b67ca6c44d7efbed4c834f0dafbac023883da87",
         )
         self.assertNotIn("docker-image", jobs)
         self.assertNotIn("publish-image", jobs)
