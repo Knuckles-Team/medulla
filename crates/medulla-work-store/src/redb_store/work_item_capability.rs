@@ -981,7 +981,7 @@ fn request_digest(
     live: &LiveLease,
 ) -> String {
     let mut digest = Sha256::new();
-    digest.update(b"medulla.work-item-claim-capability.v1\0");
+    digest.update(b"epistemic-graph.work-item-claim-capability.v1\0");
     for value in [
         graph.as_bytes(),
         authority.tenant.as_bytes(),

@@ -221,7 +221,7 @@ func (c *Client) seal(id int64, graph, method string, body []byte, idempotencyKe
 	timestamp, nonce := seal.Timestamp, seal.Nonce
 
 	canonical := make([]byte, 0, 512)
-	canonical = appendText(canonical, "medulla-envelope-v2")
+	canonical = appendText(canonical, "eg-envelope-v2")
 	var requestID [8]byte
 	binary.BigEndian.PutUint64(requestID[:], uint64(id))
 	canonical = append(canonical, requestID[:]...)
@@ -473,7 +473,7 @@ func (c *Client) RegisterIdentity(agentID string, role any, teams, roles []strin
 		AgentID: agentID, Role: role, Teams: teams, Signature: "", Roles: roles,
 	}
 	signature, err := c.signContextOperation(
-		"medulla-register-identity-v2", "RegisterIdentity", params, "__commons__",
+		"eg-register-identity-v2", "RegisterIdentity", params, "__commons__",
 		idempotencyKey, signerID, signerKey, true,
 	)
 	if err != nil {
@@ -523,7 +523,7 @@ func (c *Client) ApplyMultisigMutation(signerKeys map[string]string, threshold u
 		unsigned := params
 		unsigned.Signatures = []string{}
 		signature, signErr := c.signContextOperation(
-			"medulla-multisig-mutation-v2", "ApplyMultisigMutation", unsigned, "__commons__",
+			"eg-multisig-mutation-v2", "ApplyMultisigMutation", unsigned, "__commons__",
 			idempotencyKey, signerID, signerKeys[signerID], false,
 		)
 		if signErr != nil {

@@ -69,7 +69,7 @@ impl std::error::Error for SpecDigestError {}
 pub fn spec_digest(spec: &ViewSpec) -> Result<String, SpecDigestError> {
     let json = serde_json::to_string(spec).map_err(|e| SpecDigestError(e.to_string()))?;
     let mut hasher = Sha256::new();
-    hasher.update(b"medulla-viz-core.spec_digest.v1\0");
+    hasher.update(b"eg-viz-core.spec_digest.v1\0");
     hasher.update(json.as_bytes());
     Ok(hex::encode(&hasher.finalize()[..16]))
 }
@@ -87,7 +87,7 @@ pub fn query_hash(
 ) -> Result<String, SpecDigestError> {
     let spec_digest = spec_digest(spec)?;
     let mut hasher = Sha256::new();
-    hasher.update(b"medulla-viz-core.query_hash.v1\0");
+    hasher.update(b"eg-viz-core.query_hash.v1\0");
     hasher.update(spec_digest.as_bytes());
     hasher.update([0u8]);
     hasher.update(dataset_ref.as_bytes());

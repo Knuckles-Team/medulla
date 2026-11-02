@@ -127,7 +127,7 @@ pub fn render_cache_key(
     budget: FrameBudget,
 ) -> String {
     let mut hasher = Sha256::new();
-    hasher.update(b"medulla.viz_render_cache_key.v1\0");
+    hasher.update(b"epistemic-graph.viz_render_cache_key.v1\0");
     hasher.update(query_hash.as_bytes());
     hasher.update([0u8]);
     hasher.update(width_px.to_le_bytes());

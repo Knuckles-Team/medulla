@@ -52,7 +52,7 @@ use super::agent_revision::{
 /// Media type a committed record's body is served under.
 pub const DECISION_RECORD_MEDIA_TYPE: &str = "application/vnd.medulla.decision-record+json";
 /// Prefix of a decision record's engine-owned body reference.
-pub const DECISION_BODY_REF_PREFIX: &str = "medulla-decision:";
+pub const DECISION_BODY_REF_PREFIX: &str = "eg-decision:";
 /// Head rows one candidate read may examine. A tenant larger than this is
 /// refused by name rather than decided over a silently partial catalog.
 const MAX_CANDIDATE_SCAN: usize = 4_096;

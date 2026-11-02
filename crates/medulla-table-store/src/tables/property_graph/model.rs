@@ -278,7 +278,7 @@ impl PropertyGraphDefinition {
         let payload = serde_json::to_vec(&self.payload())
             .map_err(|error| format!("encode property graph digest payload: {error}"))?;
         let mut hasher = Sha256::new();
-        hasher.update(b"medulla/sql-pgq/property-graph/v1\0");
+        hasher.update(b"epistemic-graph/sql-pgq/property-graph/v1\0");
         hasher.update(payload);
         Ok(hex::encode(hasher.finalize()))
     }

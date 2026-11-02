@@ -173,7 +173,7 @@ impl CommitIntent {
     /// the same MutationBatch identity).
     pub fn compensation_operation_id(&self) -> uuid::Uuid {
         let mut hasher = Sha256::new();
-        hasher.update(b"medulla/txn-intent-compensation\0");
+        hasher.update(b"epistemic-graph/txn-intent-compensation\0");
         hasher.update(self.operation_id.as_bytes());
         let digest = hasher.finalize();
         let mut bytes = [0u8; 16];
@@ -184,7 +184,7 @@ impl CommitIntent {
 
 fn owner_dir(authority: &CarrierAuthority, persist_dir: &Path) -> PathBuf {
     let mut digest = Sha256::new();
-    digest.update(b"medulla/txn-intent-owner\0");
+    digest.update(b"epistemic-graph/txn-intent-owner\0");
     digest.update(authority.tenant_scope().as_bytes());
     digest.update([0]);
     digest.update(authority.agent_id().as_bytes());
@@ -198,7 +198,7 @@ fn intent_path(dir: &Path, operation_id: uuid::Uuid) -> PathBuf {
     // every filename in this durable log the SAME shape as `sql_tables.rs`'s
     // owner files — a bare digest, never a raw identifier.
     let mut digest = Sha256::new();
-    digest.update(b"medulla/txn-intent-file\0");
+    digest.update(b"epistemic-graph/txn-intent-file\0");
     digest.update(operation_id.as_bytes());
     dir.join(format!("{}.intent", hex::encode(digest.finalize())))
 }

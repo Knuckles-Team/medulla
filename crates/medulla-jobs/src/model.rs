@@ -283,7 +283,7 @@ impl AnalyticsJob {
 /// "has this exact computation already been committed?" without running it again.
 pub fn compute_result_ref(snapshot: &InputSnapshotHandle, algo: &AlgoVersion) -> String {
     let mut hasher = Sha256::new();
-    hasher.update(b"medulla-jobs.result_ref.v2\0");
+    hasher.update(b"eg-jobs.result_ref.v2\0");
     hasher.update(snapshot.graph.as_bytes());
     hasher.update([0u8]);
     hasher.update(snapshot.version.to_le_bytes());
@@ -310,7 +310,7 @@ pub fn compute_result_ref(snapshot: &InputSnapshotHandle, algo: &AlgoVersion) ->
 /// parameter set without this crate needing to know that shape.
 pub fn digest_params(params: &serde_json::Value) -> String {
     let mut hasher = Sha256::new();
-    hasher.update(b"medulla-jobs.params_digest.v1\0");
+    hasher.update(b"eg-jobs.params_digest.v1\0");
     // `serde_json::Value`'s `Display`/`to_string` serializes maps with a
     // deterministic (insertion- or BTree-ordered, depending on the `preserve_order`
     // feature) key order; either way the SAME `Value` always serializes identically

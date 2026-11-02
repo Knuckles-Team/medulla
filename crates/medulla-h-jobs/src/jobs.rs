@@ -69,7 +69,7 @@ use medulla_server_api::state::ServerState;
 /// of the `medulla` facade crate itself.
 const CODE_VERSION: &str = env!("CARGO_PKG_VERSION");
 /// Stable runtime/feature contract recorded in result reproducibility lineage.
-const ENV_VERSION: &str = "medulla-jobs-v1";
+const ENV_VERSION: &str = "eg-jobs-v1";
 const MAX_JOB_INPUT_BYTES: usize = 16 * 1024 * 1024;
 const MAX_JOB_INPUT_ITEMS: usize = 1_000_000;
 #[cfg(feature = "raft")]

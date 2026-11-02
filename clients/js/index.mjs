@@ -335,7 +335,7 @@ export class MedullaThinClient {
         .update(`${id}\0${graph}\0${method}\0${bodyHash}`)
         .digest("hex")}`;
     const parts = [];
-    appendText(parts, "medulla-envelope-v2");
+    appendText(parts, "eg-envelope-v2");
     const requestId = Buffer.allocUnsafe(8);
     requestId.writeBigUInt64BE(BigInt(id));
     parts.push(requestId);
@@ -459,7 +459,7 @@ export class MedullaThinClient {
       roles: validateExplicitStringList("roles", roles),
     };
     params.signature = this._signContextOperation({
-      domain: "medulla-register-identity-v2",
+      domain: "eg-register-identity-v2",
       method: "RegisterIdentity",
       params: { ...params, signature: "" },
       graph: "__commons__",
@@ -524,7 +524,7 @@ export class MedullaThinClient {
       .sort()
       .map((signerId) =>
         this._signContextOperation({
-          domain: "medulla-multisig-mutation-v2",
+          domain: "eg-multisig-mutation-v2",
           method: "ApplyMultisigMutation",
           params: unsigned,
           graph: "__commons__",

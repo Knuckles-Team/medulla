@@ -479,7 +479,7 @@ fn compute_epoch(
     markings: &BTreeMap<String, MarkingPolicyEntry>,
 ) -> String {
     let mut hasher = Sha256::new();
-    hasher.update(b"medulla-policy-bundle-epoch-v1\0");
+    hasher.update(b"eg-policy-bundle-epoch-v1\0");
     hasher.update(tenant.as_bytes());
     hasher.update(b"\0");
     let mut sorted_graphs: Vec<&str> = graphs.iter().map(String::as_str).collect();

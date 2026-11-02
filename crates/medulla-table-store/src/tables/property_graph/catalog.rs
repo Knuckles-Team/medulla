@@ -308,7 +308,7 @@ impl PropertyGraphCatalogRecord {
             )
             .collect();
         let dependency_digest = digest_value(
-            b"medulla/sql-pgq/dependencies/v1\0",
+            b"epistemic-graph/sql-pgq/dependencies/v1\0",
             &dependencies,
             "property graph dependencies",
         )?;
@@ -420,7 +420,7 @@ impl PropertyGraphCatalogRecord {
             "property graph dependency belongs to another tenant scope",
         )?;
         let dependency_digest = digest_value(
-            b"medulla/sql-pgq/dependencies/v1\0",
+            b"epistemic-graph/sql-pgq/dependencies/v1\0",
             &self.dependencies,
             "property graph dependencies",
         )?;
@@ -465,7 +465,7 @@ impl PropertyGraphCatalogRecord {
 
     fn compute_record_digest(&self) -> Result<String, String> {
         digest_value(
-            b"medulla/sql-pgq/catalog-record/v2\0",
+            b"epistemic-graph/sql-pgq/catalog-record/v2\0",
             &(
                 self.schema_version,
                 &self.object_id,
