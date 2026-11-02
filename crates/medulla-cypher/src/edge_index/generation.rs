@@ -52,7 +52,7 @@ pub(super) struct TextPostings {
     pub(super) corpus: medulla_text::Corpus,
 }
 
-pub(super) struct EdgeGeneration {
+pub struct EdgeGeneration {
     pub(super) generation: u64,
     /// The graph version of the snapshot the generation was built from.
     pub(super) built_version: u64,

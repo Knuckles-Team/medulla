@@ -8,6 +8,7 @@ pub use medulla_result_types::compute_result::finance::RiskMetrics;
 /// Compute parametric VaR assuming normal distribution.
 ///
 /// VaR(α) = μ - z_α * σ
+#[allow(dead_code)] // primitive built ahead of its wire exposure
 fn parametric_var(mean: f64, std: f64, confidence: f64) -> f64 {
     // Approximate inverse normal CDF (Beasley-Springer-Moro algorithm)
     let z = inv_norm(confidence);
@@ -15,6 +16,7 @@ fn parametric_var(mean: f64, std: f64, confidence: f64) -> f64 {
 }
 
 /// Approximate inverse normal CDF using rational approximation.
+#[allow(dead_code)] // primitive built ahead of its wire exposure
 fn inv_norm(p: f64) -> f64 {
     // Abramowitz & Stegun approximation 26.2.23
     let p = if p > 0.5 { 1.0 - p } else { p };
