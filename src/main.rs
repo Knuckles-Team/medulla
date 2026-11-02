@@ -11,17 +11,16 @@ use medulla_server_blob::blob::BlobStateExt;
 #[cfg(any(all(feature = "mining", feature = "query", feature = "streaming"), all(feature = "owl", feature = "streaming")))]
 use medulla_server_cdc::cdc::CdcStateExt;
 use clap::Parser;
+#[cfg(feature = "security")]
 use std::net::SocketAddr;
+#[cfg(feature = "security")]
 use std::sync::Arc;
 #[cfg(feature = "security")]
 use tokio::sync::RwLock;
-// NOT cfg-gated: `info!` is used 110 times in this file, the great majority in code
-// paths that carry no cfg of their own. Gating the import on `security` broke
-// `--no-default-features --features server` with 13 `cannot find macro `info`` errors
-// (BUG-CX-104, same shape as the dispatch.rs/graph_ops.rs fixes: an import gated more
-// narrowly than its uses).
+#[cfg(feature = "security")]
 use tracing::info;
 
+#[cfg(feature = "security")]
 use medulla_server_api::state::ServerState;
 mod offline_tools;
 
@@ -29,7 +28,9 @@ mod offline_tools;
 mod operator_command;
 #[cfg(feature = "full")]
 mod performance_probe;
-use medulla_server::server_startup::{self, run_fuseki_startup_health_check};
+use medulla_server::server_startup;
+#[cfg(feature = "security")]
+use medulla_server::server_startup::run_fuseki_startup_health_check;
 
 #[derive(Parser, Debug)]
 #[command(name = "medulla-server")]
@@ -98,7 +99,7 @@ fn run_exact_performance_probe(root: Option<&std::path::Path>) -> Result<(), Box
     }
 }
 
-#[cfg(feature = "security")]
+#[cfg(any(feature = "security", test))]
 fn resolve_socket_path(explicit: Option<String>) -> (String, Option<std::path::PathBuf>) {
     if let Some(p) = explicit {
         return (p, None);
@@ -189,7 +190,7 @@ async fn prepare_socket_directory(parent: Option<std::path::PathBuf>) -> std::io
 ///
 /// The address an auxiliary-listener flag names (an enable token binds
 /// `default_addr`, a bare port binds loopback), before any bind policy.
-#[cfg(feature = "security")]
+#[cfg(any(feature = "security", test))]
 fn parse_listener_addr(value: Option<&str>, default_addr: &str) -> Option<String> {
     let v = value.map(str::trim).filter(|s| !s.is_empty())?;
     match v.to_ascii_lowercase().as_str() {
@@ -212,7 +213,7 @@ fn resolve_obs_listener_addr(value: Option<&str>) -> Option<String> {
     resolve_listener_addr(value, "127.0.0.1:5080")
 }
 
-#[cfg(feature = "security")]
+#[cfg(any(feature = "security", test))]
 fn resolve_listener_addr(value: Option<&str>, default_addr: &str) -> Option<String> {
     let addr = parse_listener_addr(value, default_addr)?;
     let is_loopback = addr
@@ -1168,6 +1169,7 @@ where
     }
     Ok(())
 }
+#[cfg(feature = "security")]
 macro_rules! define_authenticated_wire_listener {
     (
         $function:ident,
