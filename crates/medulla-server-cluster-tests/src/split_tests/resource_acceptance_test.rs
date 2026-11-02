@@ -1128,6 +1128,10 @@ async fn attach_multi_raft(cluster: &Cluster) {
         .collect();
     for (state, multi) in nodes {
         let mut guard = state.write().await;
+        // Every member re-enters through the dispatch seam when it applies a committed
+        // native command, so install it before any entry replicates: a follower that
+        // gets it only when the test first reads its backend refuses every apply.
+        medulla_server::seams_install::install_seams(&guard);
         let raft = guard.raft_handle().cloned();
         guard.install_multi_raft_placement_authority(raft, multi);
     }
