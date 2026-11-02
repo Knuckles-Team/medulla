@@ -83,6 +83,7 @@ fn refusal(response: &Response) -> &str {
 
 #[tokio::test]
 async fn served_batch_commits_once_and_replays_its_durable_result() {
+    let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
     let served = Served::new();
     let batch = served.fixture.request(WRITER);
     let attempt = |id, nonce| Attempt {
@@ -118,6 +119,7 @@ async fn served_batch_commits_once_and_replays_its_durable_result() {
 
 #[tokio::test]
 async fn served_batch_is_refused_without_write_authority() {
+    let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
     let served = Served::new();
     let batch = served.fixture.request(WRITER);
     let read_only = Attempt {
@@ -142,6 +144,7 @@ async fn served_batch_is_refused_without_write_authority() {
 
 #[tokio::test]
 async fn served_batch_requires_the_existing_insert_grant() {
+    let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
     let served = Served::new();
     let foreign = change(&served.fixture.request(WRITER), |batch| {
         batch.table = id("not_granted");

@@ -388,32 +388,12 @@ pub fn durable_replay_ledger(
 }
 
 /// Test builds of the crates that moved out of this one (`request-policy-fixture`) use the
-/// in-memory window unless a state directory is configured.
+/// in-memory window, exactly as the in-crate `cfg(test)` build does: the durable ledger is one
+/// process-wide handle on its first caller's directory, which a parallel test process cannot share.
 #[cfg(all(not(test), feature = "request-policy-fixture"))]
 pub fn durable_replay_ledger(
-    state_dir: Option<&str>,
+    _state_dir: Option<&str>,
 ) -> Result<&'static dyn ReplayLedger, String> {
-    #[cfg(feature = "security")]
-    if std::env::var("MEDULLA_SECURITY_STATE_DIR")
-        .ok()
-        .is_some_and(|v| !v.trim().is_empty())
-        || state_dir.is_some()
-    {
-        return match LEDGER.get_or_init(|| {
-            let dir = std::env::var("MEDULLA_SECURITY_STATE_DIR")
-                .ok()
-                .map(|v| v.trim().to_string())
-                .filter(|v| !v.is_empty())
-                .or_else(|| state_dir.map(str::to_string))
-                .ok_or_else(|| "secure request context requires a state directory".to_string())?;
-            RedbReplayLedger::open(std::path::Path::new(&dir))
-        }) {
-            Ok(ledger) => Ok(ledger as &dyn ReplayLedger),
-            Err(message) => Err(message.clone()),
-        };
-    }
-    #[cfg(not(feature = "security"))]
-    let _ = state_dir;
     static MEMORY: std::sync::OnceLock<ReplayCache> = std::sync::OnceLock::new();
     Ok(MEMORY.get_or_init(ReplayCache::new))
 }

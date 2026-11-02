@@ -10,6 +10,7 @@ use support::*;
 
 #[test]
 fn write_scope_and_existing_insert_grant_are_both_required() {
+    let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock_blocking();
     let fixture = Fixture::new();
     fixture.grant_insert("bob");
     let request = fixture.request("bob");
@@ -29,6 +30,7 @@ fn write_scope_and_existing_insert_grant_are_both_required() {
 
 #[test]
 fn typed_rls_requires_explicit_matching_stamp_and_never_rewrites_cells() {
+    let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock_blocking();
     let fixture = Fixture::new();
     fixture.grant_insert("bob");
     fixture.enable_rls();
@@ -83,6 +85,7 @@ fn typed_rls_requires_explicit_matching_stamp_and_never_rewrites_cells() {
 
 #[test]
 fn tenant_and_grant_isolation_ignore_descriptor_claims() {
+    let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock_blocking();
     let fixture = Fixture::new();
     fixture.grant_insert("bob");
     let request = fixture.request("bob");
@@ -107,6 +110,7 @@ fn tenant_and_grant_isolation_ignore_descriptor_claims() {
 
 #[test]
 fn fresh_nonce_replay_returns_original_typed_result_without_duplicate_publication() {
+    let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock_blocking();
     let fixture = Fixture::new();
     fixture.grant_insert("bob");
     let carrier = authority("bob", "tenant-a", "replay", true);
@@ -128,6 +132,7 @@ fn fresh_nonce_replay_returns_original_typed_result_without_duplicate_publicatio
 
 #[test]
 fn append_preserves_sql_null_and_json_null_in_one_batch() {
+    let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock_blocking();
     let fixture = Fixture::new();
     fixture.grant_insert("bob");
     let carrier = authority("bob", "tenant-a", "nulls", true);
@@ -151,6 +156,7 @@ fn append_preserves_sql_null_and_json_null_in_one_batch() {
 
 #[tokio::test]
 async fn terminal_response_uses_raw_typed_result_and_verified_nonce() {
+    let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
     let fixture = Fixture::new();
     fixture.grant_insert("bob");
     let template = verified("bob", "tenant-a", "terminal", true);
@@ -237,6 +243,7 @@ fn active_raft_refuses_local_sql_source_authority_before_publication() {
 
 #[test]
 fn audit_line_carries_only_the_canonical_batch_digest() {
+    let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock_blocking();
     let fixture = Fixture::new();
     let request = fixture.request("bob");
     let expected = request.canonical_digests().unwrap().batch_digest.to_hex();
