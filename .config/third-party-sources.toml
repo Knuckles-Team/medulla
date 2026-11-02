@@ -1753,7 +1753,7 @@ reason = "Licensed upstream source snapshot; preserve exact upstream bytes and a
 
 [[source]]
 path = "vendor/zstd-parent-patches/parquet-58.4.0/Cargo.toml"
-sha256 = "39d21637d2413c7133562ed7c1bf08d0f2150b3300777471bea20bae22ef3288"
+sha256 = "02433406ec0cd3f90acbcff942cff30f4070cd7a3085af4065463e9f93ac1848"
 package = "parquet"
 reason = "Licensed upstream source snapshot; preserve exact upstream bytes and attribution while the security patch raises the vulnerable dependency floor."
 
@@ -5730,7 +5730,7 @@ path = "vendor/zstd-parent-patches/parquet-58.4.0/Cargo.toml"
 line = 17
 kind = "upstream_privacy_example"
 reason = "Upstream documented metadata/example; preserve licensed attribution and source bytes."
-sha256 = "39d21637d2413c7133562ed7c1bf08d0f2150b3300777471bea20bae22ef3288"
+sha256 = "02433406ec0cd3f90acbcff942cff30f4070cd7a3085af4065463e9f93ac1848"
 content_sha256 = "03927db5225b36159750a2699f9f11ba90d22e6b0c3716615ac9afe02c8fd390"
 
 [[finding]]
