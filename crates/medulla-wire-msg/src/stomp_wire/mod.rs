@@ -993,6 +993,7 @@ mod tests {
         broker_wire::spawn_broker_test_listener(
             "medulla-stomp-wire-test",
             |listener, state| async move {
+                medulla_server::seams_install::install_seams_on(&state).await;
                 accept_loop(
                     listener,
                     state,

@@ -2137,7 +2137,7 @@ mod tls_policy_tests {
             .expect("next startup function");
         let listener_source = &main_source[listener_start..listener_end];
         let preparation = listener_source
-            .find("let prepared_pgwire = medulla_server::pgwire::prepare_startup_policy(")
+            .find("let prepared_pgwire =")
             .expect("production TLS preparation");
         let awaited = listener_source[preparation..]
             .find(".await?;")
