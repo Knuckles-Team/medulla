@@ -42,6 +42,6 @@ pub mod lake;
 // RLS marking-predicate export (CA-16, feature `policy_export`, off by default).
 // Reserved and EMPTY until CA-16 implements it; landed by CA-17's single feature-stub
 // commit so CA-16 never edits this shared module list.
-#[cfg(feature = "policy_export")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+#[cfg(feature = "policy_export")]
 pub mod policy_export;

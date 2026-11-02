@@ -417,8 +417,8 @@ mod ca17_feature_stub_contract {
                 "pub mod obda;",
             ),
             (
-                "src/server/mod.rs",
-                include_str!("lib.rs"),
+                "crates/medulla-server-lake/src/lib.rs",
+                include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../medulla-server-lake/src/lib.rs")),
                 "policy_export",
                 "pub mod policy_export;",
             ),

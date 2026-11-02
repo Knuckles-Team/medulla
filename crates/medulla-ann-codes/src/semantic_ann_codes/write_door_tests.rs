@@ -476,9 +476,7 @@ fn is_vocabulary_use(masked: &[u8], at: usize, word: &str) -> bool {
 
 /// Every non-test source file of this module, as `(file name, source)`.
 fn module_files() -> Vec<(String, String)> {
-    let compute = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("src")
-        .join("compute");
+    let compute = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
     let mut paths = vec![compute.join("semantic_ann_codes.rs")];
     rust_files(&compute.join("semantic_ann_codes"), &mut paths);
     paths.retain(|path| path.is_file() && !path.to_string_lossy().ends_with("tests.rs"));
