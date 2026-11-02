@@ -13,7 +13,6 @@ use std::sync::Arc;
 use medulla_table_store::tables::TableStore;
 use tokio::sync::RwLock;
 
-use medulla_protocol_types::protocol::Method;
 use super::medulla_wire_wire_tests::wired_catalog_tests::authority;
 use super::medulla_wire_wire_tests::wired_catalog_tests::create_test_graph;
 use super::medulla_wire_wire_tests::wired_catalog_tests::read_rows;
@@ -22,9 +21,10 @@ use super::medulla_wire_wire_tests::wired_catalog_tests::session_for;
 use super::medulla_wire_wire_tests::wired_catalog_tests::test_persist_dir_of;
 use super::medulla_wire_wire_tests::wired_catalog_tests::test_state;
 use super::medulla_wire_wire_tests::wired_catalog_tests::CREATOR;
+use medulla_protocol_types::protocol::Method;
+use medulla_server_api::state::ServerState;
 use medulla_wire_core::wire::WireProtocol as _;
 use medulla_wire_core::wire::WireSession;
-use medulla_server_api::state::ServerState;
 
 const TENANT: &str = "tenant-shared";
 

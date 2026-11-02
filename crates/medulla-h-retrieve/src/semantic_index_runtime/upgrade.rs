@@ -9,14 +9,15 @@ use super::{
     legacy_semantic_owner_dir, sanitize_owner_segment, tenant_semantic_migration_fence_file,
     tenant_semantic_owner_file,
 };
-use medulla_storage::{
-    layout_digest_hex, open_read_only, prove_semantic_owner_partition_read_only,
-    prove_semantic_owner_union_read_only, strict_recovery_evidence_read_only, OwnerLayout, PhysicalStoreIdentity, StrictRecoveryEvidence,
-};
 #[cfg(test)]
 use medulla_storage::{
     adopt_recovery, merge_semantic_owner_files, open_recovery,
     prove_scope_bindings_reanchored_read_only, strict_recovery_evidence,
+};
+use medulla_storage::{
+    layout_digest_hex, open_read_only, prove_semantic_owner_partition_read_only,
+    prove_semantic_owner_union_read_only, strict_recovery_evidence_read_only, OwnerLayout,
+    PhysicalStoreIdentity, StrictRecoveryEvidence,
 };
 use sha2::{Digest, Sha256};
 use std::collections::BTreeSet;

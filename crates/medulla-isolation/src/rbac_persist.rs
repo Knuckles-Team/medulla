@@ -31,8 +31,8 @@ use medulla_transaction::MutationKernel;
 use redb::TableDefinition;
 use sha2::{Digest, Sha256};
 
-use medulla_types::acl::AgentIdentity;
 use crate::rbac::RbacPolicy;
+use medulla_types::acl::AgentIdentity;
 
 /// `key → serde_json bytes`. One table, three well-known keys (`policy`,
 /// `identities`, `bootstrap`) written in a single durable transaction
@@ -669,11 +669,11 @@ mod tests {
     use super::{
         IdentityBootstrapState, MemoryRbacStore, RbacPersistError, RbacPolicyStore, IDENTITIES_KEY,
     };
+    use crate::rbac::RbacPolicy;
     use medulla_types::acl::{
         AgentIdentity, AgentRole, Grant, GrantEffect, RbacAction, ResourceContext,
         ResourceSelector, Role,
     };
-    use crate::rbac::RbacPolicy;
 
     /// A unique temp dir per test invocation (no external dev-dep needed).
     fn tmp_dir(tag: &str) -> std::path::PathBuf {

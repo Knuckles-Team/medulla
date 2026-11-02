@@ -1,15 +1,15 @@
 //! Native rollback, provider CAS, replay and exact source-cell fidelity.
 
 use super::*;
-use medulla_tables::schema::Cell;
-use medulla_tables::schema::Column;
-use medulla_tables::schema::ColumnType;
-use medulla_tables::schema::TableSchema;
 use medulla_protocol_types::change_envelope::CursorPosition;
 use medulla_protocol_types::{
     storage_wire::SqlSourceCell, storage_wire::SqlSourceFloat, storage_wire::SqlSourceJson,
     storage_wire::SqlSourceText, storage_wire::SqlSourceVector,
 };
+use medulla_tables::schema::Cell;
+use medulla_tables::schema::Column;
+use medulla_tables::schema::ColumnType;
+use medulla_tables::schema::TableSchema;
 use medulla_types::contract::{BoundedVec, Digest256, RecordBytes};
 use serde_json::json;
 

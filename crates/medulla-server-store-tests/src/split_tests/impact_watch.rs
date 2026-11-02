@@ -11,8 +11,8 @@ use serde_json::json;
 use tokio::sync::RwLock;
 
 use medulla_protocol_types::protocol::{GraphType, Method};
-use medulla_server_cdc::impact_watch::*;
 use medulla_server_api::state::ServerState;
+use medulla_server_cdc::impact_watch::*;
 
 fn blob(v: serde_json::Value) -> Vec<u8> {
     rmp_serde::to_vec_named(&v).unwrap()
@@ -182,7 +182,10 @@ fn persisted_state() -> Arc<RwLock<ServerState>> {
         .into_owned();
     std::fs::create_dir_all(&dir).expect("create test persist dir");
     let backend = RedbBackend::open(dir.clone(), 4096).expect("open test redb backend");
-    let mut state = medulla_server::seams_install::new_state_for_test(SECRET, ServerState::test_isolation("system"));
+    let mut state = medulla_server::seams_install::new_state_for_test(
+        SECRET,
+        ServerState::test_isolation("system"),
+    );
     state.persist_dir = Some(dir);
     state.persistence = Some(Arc::new(backend));
     Arc::new(RwLock::new(state))

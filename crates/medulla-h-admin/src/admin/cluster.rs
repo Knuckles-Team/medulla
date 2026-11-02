@@ -1,21 +1,21 @@
 //! M3 cluster-admin routing and catalog/rebalance operations.
 
-use medulla_server_blob::kv::KvStateExt;
 #[cfg(feature = "redb")]
 use medulla_mutation_types::mutation_scope::DurabilityDomain;
-use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 #[cfg(feature = "redb")]
 use medulla_persistence::AsRedb;
+use medulla_persistence_records::agent_library::AgentLibraryStateExt;
+use medulla_server_blob::kv::KvStateExt;
 use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use medulla_protocol_types::protocol::Method;
-use medulla_protocol_types::protocol::Response;
-use medulla_protocol_types::protocol::ResultPayload;
 use medulla_persistence::rebalance::plan_rebalance;
 use medulla_persistence::rebalance::shard_loads_from_catalog;
 use medulla_persistence::rebalance::shard_loads_from_graph_loads;
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::Response;
+use medulla_protocol_types::protocol::ResultPayload;
 use medulla_server_api::state::ServerState;
 use medulla_types::contract::Nonce;
 

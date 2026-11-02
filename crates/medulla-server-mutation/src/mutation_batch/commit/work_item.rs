@@ -2,15 +2,18 @@ use std::sync::Arc;
 
 use sha2::{Digest, Sha256};
 
-use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_graph_core::graph::GraphCore;
 use medulla_mutation_types::mutation_scope::MutationSurface;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::ResultPayload;
+use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_types::contract::Nonce;
 
-use medulla_server_api::{batch_compile::compile::authoritative_graph_version, batch_compile::compile::compile_methods, batch_compile::compile::CompileBatch};
 use medulla_server_api::routed_write_coalescer::lock_graph;
+use medulla_server_api::{
+    batch_compile::compile::authoritative_graph_version, batch_compile::compile::compile_methods,
+    batch_compile::compile::CompileBatch,
+};
 
 fn derive_work_item_identity(
     graph: &str,
@@ -18,7 +21,13 @@ fn derive_work_item_identity(
     request_id: u64,
     stable_idempotency_key: Option<&str>,
     method: &Method,
-) -> Result<(medulla_server_api::batch_compile::digest::WorkItemBatchIdentity, String), String> {
+) -> Result<
+    (
+        medulla_server_api::batch_compile::digest::WorkItemBatchIdentity,
+        String,
+    ),
+    String,
+> {
     // Claim, renew, and metadata-CAS methods have no method-body idempotency key;
     // their old identity therefore depended on the transport request number.
     // Once authenticated, the envelope key is the retry identity and the
@@ -46,8 +55,12 @@ fn derive_work_item_identity(
     } else {
         request_id
     };
-    let identity =
-        medulla_server_api::batch_compile::digest::work_item_batch_identity(graph, tenant, identity_request_id, method)?;
+    let identity = medulla_server_api::batch_compile::digest::work_item_batch_identity(
+        graph,
+        tenant,
+        identity_request_id,
+        method,
+    )?;
     // The batch id and the idempotency key must be functions of the SAME inputs,
     // or a legitimate retry is refused as a conflict. Terminal WorkItem methods
     // derive both values from their body key; row-CAS methods keep the authenticated

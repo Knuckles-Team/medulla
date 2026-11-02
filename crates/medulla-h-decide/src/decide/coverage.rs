@@ -8,12 +8,12 @@
 //! ranking, no commit.
 
 use super::SharedState;
-use medulla_protocol_types::protocol::Response;
-use medulla_server_api::authority_context::VerifiedRequestContext;
+use medulla_decision_outcome_types::decision::coverage::CapabilityCoverageRequest;
 #[cfg(feature = "redb")]
 #[cfg(feature = "decide")]
 use medulla_persistence_records::agent_library::AgentLibraryStateExt;
-use medulla_decision_outcome_types::decision::coverage::CapabilityCoverageRequest;
+use medulla_protocol_types::protocol::Response;
+use medulla_server_api::authority_context::VerifiedRequestContext;
 
 /// Resolve the tenant's visible candidates and A2A cards and answer their
 /// per-capability coverage of the request's closure.
@@ -43,8 +43,12 @@ async fn coverage_for(
 ) -> Result<medulla_decision_outcome_types::decision::coverage::CapabilityCoverageResult, String> {
     use medulla_agent_types::agent_component::AgentComponentKind;
     use medulla_decision_outcome_types::decision::derivation::capability_coverage_query;
+    use medulla_decision_outcome_types::{
+        decision::coverage::CapabilityCoverageOutcome,
+        decision::coverage::CapabilityCoverageResult,
+        decision::coverage::CAPABILITY_COVERAGE_RESULT_SCHEMA_VERSION,
+    };
     use medulla_decision_types::decision::LibraryCandidateScope;
-    use medulla_decision_outcome_types::{decision::coverage::CapabilityCoverageOutcome, decision::coverage::CapabilityCoverageResult, decision::coverage::CAPABILITY_COVERAGE_RESULT_SCHEMA_VERSION};
 
     if request.tenant_id != verified.tenant() {
         return Err("ACCESS_DENIED: coverage tenant must match the verified request tenant".into());

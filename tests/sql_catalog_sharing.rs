@@ -437,7 +437,10 @@ fn check_graph_access_precedes_query_and_rdf_try_handle_in_dispatch() {
          dispatch_graph_op_inner — this ordering is the gate every table access \
          (SQL included, via NE-003's sql_catalog_acl) must pass through"
     );
-    for callee in ["medulla_h_query::query::try_handle(", "medulla_h_sparql::rdf::try_handle("] {
+    for callee in [
+        "medulla_h_query::query::try_handle(",
+        "medulla_h_sparql::rdf::try_handle(",
+    ] {
         assert!(
             !entry.contains(callee),
             "dispatch_graph_op_inner must not call {callee} directly — it is \

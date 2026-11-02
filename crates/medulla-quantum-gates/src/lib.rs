@@ -7,7 +7,6 @@
 // crate executes: matrices are expressed over `medulla_numeric::complex::Complex64`, not
 // QuantRS2's `scirs2_core::Complex64` -- no SciRS2 dependency exists in this crate.
 
-
 //! `medulla-quantum-gates` -- dense unitary matrices for `medulla_quantum_core::ir::GateKind`
 //! (register D-QN-1, lane Q1 vendoring).
 //!

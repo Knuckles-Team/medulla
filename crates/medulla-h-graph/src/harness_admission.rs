@@ -39,9 +39,10 @@
 
 use std::collections::BTreeMap;
 
+use medulla_graph_core::graph::GraphCore;
+use medulla_protocol_types::change_envelope::ChangeEnvelope;
+use medulla_protocol_types::protocol::Method;
 use medulla_work_types::orchestration::decode_component_write;
-use medulla_work_types::orchestration::is_harness_component_write;
-use medulla_work_types::orchestration::HarnessComponentRefusal;
 use medulla_work_types::orchestration::improvement::decode_adopted_harness_write;
 use medulla_work_types::orchestration::improvement::decode_harness_contrast_write;
 use medulla_work_types::orchestration::improvement::decode_harness_probe_run_write;
@@ -51,9 +52,8 @@ use medulla_work_types::orchestration::improvement::is_harness_contrast_write;
 use medulla_work_types::orchestration::improvement::is_harness_lesson_write;
 use medulla_work_types::orchestration::improvement::is_harness_probe_run_write;
 use medulla_work_types::orchestration::improvement::ImprovementLibraryRefusal;
-use medulla_graph_core::graph::GraphCore;
-use medulla_protocol_types::change_envelope::ChangeEnvelope;
-use medulla_protocol_types::protocol::Method;
+use medulla_work_types::orchestration::is_harness_component_write;
+use medulla_work_types::orchestration::HarnessComponentRefusal;
 
 type Props = serde_json::Map<String, serde_json::Value>;
 

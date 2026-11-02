@@ -43,7 +43,6 @@
 //! async job without this crate inventing a competing queue/poll/cancel surface of
 //! its own.
 
-
 pub mod circuit;
 pub mod demo;
 pub mod propose;

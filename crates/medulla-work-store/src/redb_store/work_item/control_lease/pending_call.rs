@@ -1,7 +1,7 @@
 //! Paired pending-envelope storage. No approval or execution authority.
 use super::*;
-use medulla_work_types::{control_lease::PendingCallFence, control_lease::PENDING_CALL_KIND};
 use medulla_result_types::epistemic_operations_ext::CasWorkItemMetadataLeaseFence;
+use medulla_work_types::{control_lease::PendingCallFence, control_lease::PENDING_CALL_KIND};
 
 const PENDING_REF: &str = "pending_call_lease_ref";
 const REGISTERED_WORK: &str = "pending_call_work_item";
@@ -68,11 +68,7 @@ pub fn work_item(
     Ok(row)
 }
 
-pub fn live_worker(
-    row: &NodeRow,
-    fence: &CasWorkItemMetadataLeaseFence,
-    now_ms: u64,
-) -> bool {
+pub fn live_worker(row: &NodeRow, fence: &CasWorkItemMetadataLeaseFence, now_ms: u64) -> bool {
     let expiry = property_f64(row, "lease_expires_at");
     let fenced = property_u64(row, "attempt") != 0
         && fence.lease_epoch != 0

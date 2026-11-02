@@ -15,10 +15,6 @@ pub use statechart::*;
 pub use work_items::*;
 
 use medulla_agent_types::delegation::KgDelegateResult;
-use medulla_work_types::{control_lease::ControlLeaseIssued, control_lease::ControlLeasePage, control_lease::ControlLeaseTransition, control_lease::ControlLeaseView};
-use medulla_work_types::{native_control::CapacityAcquireResult, native_control::CapacityCellUpdateResult, native_control::CapacityMutationResult, native_control::CapacityReclaimResult, native_control::CapacityStatusResult, native_control::SubmitWorkItemResult, native_control::SubmitWorkItemsResult};
-use medulla_work_types::{work_item_read::WorkItemOutcomeView, work_item_read::WorkItemPage, work_item_read::WorkItemView};
-use medulla_work_types::{work_market::GapPage, work_market::GapSettled, work_market::GapTransitioned, work_market::GapUpserted, work_market::GapView, work_market::WorkOfferRecorded};
 use medulla_decision_types::decision::statistical::retrieval::LearningRecorded;
 use medulla_decision_types::decision::DecisionJobRecord;
 use medulla_decision_types::{
@@ -45,6 +41,23 @@ use medulla_result_types::{
 use medulla_result_types::{
     epistemic_operations_ext::CasWorkItemMetadataResult,
     epistemic_operations_ext::WorkItemClaimCapabilityResult,
+};
+use medulla_work_types::{
+    control_lease::ControlLeaseIssued, control_lease::ControlLeasePage,
+    control_lease::ControlLeaseTransition, control_lease::ControlLeaseView,
+};
+use medulla_work_types::{
+    native_control::CapacityAcquireResult, native_control::CapacityCellUpdateResult,
+    native_control::CapacityMutationResult, native_control::CapacityReclaimResult,
+    native_control::CapacityStatusResult, native_control::SubmitWorkItemResult,
+    native_control::SubmitWorkItemsResult,
+};
+use medulla_work_types::{
+    work_item_read::WorkItemOutcomeView, work_item_read::WorkItemPage, work_item_read::WorkItemView,
+};
+use medulla_work_types::{
+    work_market::GapPage, work_market::GapSettled, work_market::GapTransitioned,
+    work_market::GapUpserted, work_market::GapView, work_market::WorkOfferRecorded,
 };
 
 method_results! {

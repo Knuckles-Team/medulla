@@ -62,9 +62,9 @@ use std::sync::Arc;
 
 use parking_lot::{Mutex, RwLock};
 
+use medulla_core::registry::GraphRegistry;
 use medulla_graph_core::graph::{GraphCore, GraphView};
 use medulla_protocol_types::protocol::{GraphType, Method};
-use medulla_core::registry::GraphRegistry;
 
 #[cfg(feature = "redb")]
 mod replay;
@@ -370,9 +370,8 @@ impl EmbeddedEngine {
         if let Method::AddEmbedding { embedding, .. } = &method {
             let validation = match self.core(graph, false) {
                 Ok(core) => core.semantic_store.read().validate_embedding(embedding),
-                Err(_) => {
-                    medulla_semantic_index::semantic::SemanticStore::new().validate_embedding(embedding)
-                }
+                Err(_) => medulla_semantic_index::semantic::SemanticStore::new()
+                    .validate_embedding(embedding),
             };
             validation.map_err(|error| error.to_string())?;
         }
@@ -561,7 +560,11 @@ impl EmbeddedEngine {
     /// DataFusion path the server's `Sql` handler uses (`medulla_sql::sql::exec_sql` over an
     /// off-lock `analysis_snapshot`). Available with the `query` feature.
     #[cfg(feature = "query")]
-    pub fn sql(&self, graph: &str, sql: &str) -> Result<medulla_protocol_types::protocol::QueryResult, String> {
+    pub fn sql(
+        &self,
+        graph: &str,
+        sql: &str,
+    ) -> Result<medulla_protocol_types::protocol::QueryResult, String> {
         let snap = self.core(graph, false)?.analysis_snapshot();
         medulla_sql::sql::exec_sql(&snap, sql, &medulla_sql::sql::CancellationToken::new())
     }
@@ -584,7 +587,9 @@ impl EmbeddedEngine {
     /// bulk writes; until a generation is live, a nearest-neighbour read takes the
     /// bounded exact path (and says so in the index status).
     #[cfg(feature = "query")]
-    pub fn refresh_ann_indexes(&self) -> Result<Vec<medulla_table_store::tables::AnnRefreshOutcome>, String> {
+    pub fn refresh_ann_indexes(
+        &self,
+    ) -> Result<Vec<medulla_table_store::tables::AnnRefreshOutcome>, String> {
         self.inner
             .tables
             .refresh_ann_generations(medulla_table_store::tables::AnnRefreshPolicy::Immediate)

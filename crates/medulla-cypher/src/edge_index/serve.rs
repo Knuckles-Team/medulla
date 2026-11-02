@@ -347,7 +347,8 @@ impl<'p> Probe<'p> {
                 EdgeQuery::Vector(query),
                 EdgeIndexKind::Vector { metric },
             ) => (vector.len() == query.len()).then(|| {
-                let distance = medulla_table_store::tables::ann_plan::metric_to_ann(metric).distance(query, vector);
+                let distance = medulla_table_store::tables::ann_plan::metric_to_ann(metric)
+                    .distance(query, vector);
                 Scored {
                     rank: distance,
                     score: distance,

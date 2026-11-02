@@ -416,7 +416,9 @@ pub(super) fn durable_read_lease(graph: &str, agent: &str) -> DurableReadLease {
     )
     .expect("reopen isolation layer over durable store");
     let verified_context =
-        medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test_in_tenant(agent, "tenant");
+        medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test_in_tenant(
+            agent, "tenant",
+        );
     let claims = verified_context.claims().clone();
     let carrier = CarrierAuthority::from_verified(&verified_context)
         .expect("derive carrier from verified context");
@@ -424,12 +426,18 @@ pub(super) fn durable_read_lease(graph: &str, agent: &str) -> DurableReadLease {
     // `MintAuthorization`, obtained only by presenting the server secret plus
     // an HMAC over the exact claims (same secret `from_verified_with_lease`
     // below is bound with).
-    let mint_mac = medulla_isolation::isolation::MintAuthorization::compute_mac("server-secret", &claims)
-        .expect("compute mint authorization mac");
-    let mint_auth = medulla_isolation::isolation::MintAuthorization::new("server-secret", &claims, &mint_mac)
-        .expect("construct mint authorization");
+    let mint_mac =
+        medulla_isolation::isolation::MintAuthorization::compute_mac("server-secret", &claims)
+            .expect("compute mint authorization mac");
+    let mint_auth =
+        medulla_isolation::isolation::MintAuthorization::new("server-secret", &claims, &mint_mac)
+            .expect("construct mint authorization");
     let lease = isolation
-        .mint_policy_decision_lease(&mint_auth, graph, medulla_isolation::isolation::AccessLevel::Read)
+        .mint_policy_decision_lease(
+            &mint_auth,
+            graph,
+            medulla_isolation::isolation::AccessLevel::Read,
+        )
         .expect("mint policy decision lease");
     let lease = Arc::new(lease);
     let policy_store = isolation
@@ -461,13 +469,13 @@ pub(super) fn durable_read_lease(graph: &str, agent: &str) -> DurableReadLease {
 ))]
 #[tokio::test]
 async fn knowledge_stream_sql_lists_the_request_graph_edge_indexes() {
+    use crate::query::try_handle_with_policy;
+    use crate::query::PolicyAwareQuery;
+    use medulla_server_api::api::reentry::TryHandleContext;
     use medulla_server_ops::api::query_txn::edge_test_support::edge_status_row;
     use medulla_server_ops::api::query_txn::edge_test_support::register_detached_edge_index;
     use medulla_server_ops::api::query_txn::edge_test_support::sql_rows;
     use medulla_server_ops::api::query_txn::edge_test_support::EDGE_STATUS_SQL;
-    use medulla_server_api::api::reentry::TryHandleContext;
-    use crate::query::try_handle_with_policy;
-    use crate::query::PolicyAwareQuery;
 
     let _env_read_lock = medulla_kernel::crypto::provisioned_test_env_read_lock().await;
     let fixture = durable_read_lease("tenant-graph", "alice");
@@ -563,7 +571,9 @@ fn durable_lease_revocation_rejects_resume_before_any_cursor_metadata() {
     )
     .expect("bind exact durable lease");
     let foreign_carrier = CarrierAuthority::from_verified(
-        &medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test_in_tenant("bob", "tenant"),
+        &medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test_in_tenant(
+            "bob", "tenant",
+        ),
     )
     .expect("derive mismatched carrier");
     assert!(authority
@@ -645,7 +655,8 @@ fn query_state_with_services(
     isolation: medulla_isolation::isolation::IsolationLayer,
     persistence_label: &str,
 ) -> std::sync::Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>> {
-    let mut state = medulla_server::seams_install::new_state_for_test(auth_secret.to_owned(), isolation);
+    let mut state =
+        medulla_server::seams_install::new_state_for_test(auth_secret.to_owned(), isolation);
     state.persist_dir = Some(
         medulla_server_auth::sql_tables::test_persist_dir()
             .to_string_lossy()

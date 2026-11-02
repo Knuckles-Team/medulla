@@ -10,12 +10,12 @@
 
 use std::collections::BTreeSet;
 
-use medulla_uql::grammar::{self, Feature, PRODUCTIONS};
-use medulla_uql::parser::Parser;
-use medulla_uql::{canonicalize, parse, parse_statement, Params, UqlCode, UqlError};
 use medulla_types::wire::{
     uql_sample_op, uql_sample_pred, Op, OpKind, Plan, PredKind, UQL_RESERVED_WORDS,
 };
+use medulla_uql::grammar::{self, Feature, PRODUCTIONS};
+use medulla_uql::parser::Parser;
+use medulla_uql::{canonicalize, parse, parse_statement, Params, UqlCode, UqlError};
 
 /// Variants with NO text spelling, each with the diagnostic a caller gets. EMPTY: every
 /// wire variant is expressible in UQL. (Credential-bearing `ForeignScan` SPECS are refused

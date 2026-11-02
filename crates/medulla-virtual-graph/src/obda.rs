@@ -65,7 +65,10 @@ use std::sync::Arc;
 
 use oxrdf::{Literal, NamedNode, NamedOrBlankNode, Term, Triple};
 
-use medulla_rdf::{sparql::Binding, sparql::Projection, sparql::QueryOutcome, sparql::Solution, sparql::SparqlResult};
+use medulla_rdf::{
+    sparql::Binding, sparql::Projection, sparql::QueryOutcome, sparql::Solution,
+    sparql::SparqlResult,
+};
 
 // EH-563 FO-04 — pattern-aware scan groups, key lookups and semi-join reduction.
 mod direct;

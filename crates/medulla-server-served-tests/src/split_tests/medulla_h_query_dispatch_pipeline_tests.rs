@@ -21,14 +21,6 @@ use tokio::sync::RwLock;
 use super::medulla_h_query_sql_source_read_tests::{
     binding_draft, commit_sql_change, dispatch_table_fixture, selector,
 };
-use medulla_types::acl::RequestContextClaims;
-use medulla_protocol_types::protocol::Request;
-use medulla_protocol_types::protocol::{Method, Response};
-use medulla_server_api::carrier::CarrierAuthority;
-use medulla_server_auth::auth::compute_verified_envelope_token;
-use medulla_server_auth::auth::VerifiedEnvelopeParams;
-use medulla_server_api::authority_context::VerifiedRequestContext;
-use medulla_server_api::test_support::decode_raw_response as ok;
 use medulla_index_types::semantic_index::{
     SemanticBinding, SemanticBindingState, SemanticIndexCommand, SemanticIndexFilter,
     SemanticIndexOp, SemanticIndexOutcome, SemanticIndexRequest, SemanticIndexResponse,
@@ -36,6 +28,14 @@ use medulla_index_types::semantic_index::{
     SemanticStageIntentDraft, SemanticStageLeasePage, SemanticStageOutcome,
     SemanticStagePredecessor, SemanticStageReceipt, SemanticStageScope, SemanticStageTransition,
 };
+use medulla_protocol_types::protocol::Request;
+use medulla_protocol_types::protocol::{Method, Response};
+use medulla_server_api::authority_context::VerifiedRequestContext;
+use medulla_server_api::carrier::CarrierAuthority;
+use medulla_server_api::test_support::decode_raw_response as ok;
+use medulla_server_auth::auth::compute_verified_envelope_token;
+use medulla_server_auth::auth::VerifiedEnvelopeParams;
+use medulla_types::acl::RequestContextClaims;
 
 /// Synthetic HMAC fixture for `ServerState::new_for_test`: it authenticates
 /// nothing outside this process and is never a live credential.
@@ -48,7 +48,9 @@ const SECRET: &str = "semantic-index-dispatch-fixture-secret"; // sanitizer:igno
 const TENANT: &str = "tenant-shared";
 const WORKER: &str = "semantic-dispatch-worker";
 
-fn dispatch_state(persist_dir: &std::path::Path) -> Arc<RwLock<medulla_server_api::state::ServerState>> {
+fn dispatch_state(
+    persist_dir: &std::path::Path,
+) -> Arc<RwLock<medulla_server_api::state::ServerState>> {
     let mut state = medulla_server::seams_install::new_state_for_test(
         SECRET,
         medulla_isolation::isolation::IsolationLayer::new(),
@@ -764,10 +766,9 @@ async fn dispatch_attributes_every_queue_class_to_the_one_verified_principal() {
         "completing S1 publishes its S2 successor onto the Medium queue"
     );
     let medium_entry = medium.entries.into_iter().next().unwrap();
-    let medium_parts = medulla_ann_codes::semantic_ann_codes::stage_consumer_parts(
-        &medium_entry.lease.consumer,
-    )
-    .expect("a leased row's consumer is `<worker>#<class>`");
+    let medium_parts =
+        medulla_ann_codes::semantic_ann_codes::stage_consumer_parts(&medium_entry.lease.consumer)
+            .expect("a leased row's consumer is `<worker>#<class>`");
     assert_eq!(
         medium_parts.0, WORKER,
         "the Medium lease is attributed to the verified envelope principal, \

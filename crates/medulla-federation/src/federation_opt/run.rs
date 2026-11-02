@@ -17,8 +17,8 @@ use super::session::FederationSession;
 use super::strategy::{choose_join, BatchSizer, JoinInputs, JoinStrategy};
 use super::trace::{FetchStrategy, FragmentTrace};
 use super::{fuse_foreign, stats};
-use medulla_exec::algebra::Op;
 use crate::federation::ForeignSourceRegistry;
+use medulla_exec::algebra::Op;
 use medulla_exec::rowset::RowSet;
 
 /// `Op::ForeignScan { source, join }`: a source read (`join == false`, or an empty input) or
@@ -60,8 +60,8 @@ pub(crate) fn foreign_named(
     registry: Option<&ForeignSourceRegistry>,
     session: Option<&FederationSession>,
 ) -> Result<RowSet, String> {
-    let registry = registry
-        .ok_or_else(|| "FOREIGN requires a bound foreign-source registry".to_string())?;
+    let registry =
+        registry.ok_or_else(|| "FOREIGN requires a bound foreign-source registry".to_string())?;
     let remote = super::enabled()
         .then(|| super::remote::resolve_named(name, registry))
         .flatten();

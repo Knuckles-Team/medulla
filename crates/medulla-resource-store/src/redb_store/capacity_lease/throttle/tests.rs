@@ -2,16 +2,20 @@
 //! ceiling, leaves the operator's declared capacity alone, and counts each
 //! window once.
 
-use medulla_work_types::{native_control::CapacityCellUpdateRequest, native_control::CapacityStatusRequest, native_control::CapacityThrottleRequest, native_control::CapacityThrottleResult, native_control::NativeControlSchemaVersion};
 use medulla_mutation_types::{capacity_lease::CapacityCell, capacity_lease::CapacityResourceClass};
 use medulla_mutation_types::{
     capacity_throttle::CapacityThrottle, capacity_throttle::CapacityThrottlePolicy,
     capacity_throttle::ErrorBudgetSample, capacity_throttle::ThrottleAction,
 };
+use medulla_work_types::{
+    native_control::CapacityCellUpdateRequest, native_control::CapacityStatusRequest,
+    native_control::CapacityThrottleRequest, native_control::CapacityThrottleResult,
+    native_control::NativeControlSchemaVersion,
+};
 
+use medulla_protocol_types::protocol::Method;
 use medulla_store::redb_store::shard::Shard;
 use medulla_store::{redb_store::decode_durable, redb_store::DurableCrypto};
-use medulla_protocol_types::protocol::Method;
 
 pub const GRAPH: &str = "graph-throttle";
 

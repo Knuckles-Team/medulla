@@ -4,19 +4,6 @@
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[cfg(feature = "cost")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
@@ -29,7 +16,6 @@ pub mod cost;
 // trait keeps mutation, recovery, read-through, backup, and Raft consumers on one
 // contract without exposing storage internals. Every public mutation is committed
 // before acknowledgement; bounded queues apply backpressure and never drop work.
-
 
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod read_through;
@@ -44,7 +30,6 @@ pub mod writer_reply;
 #[cfg(feature = "redb")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod durable_stores;
-
 
 #[cfg(feature = "redb")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
@@ -76,12 +61,9 @@ impl<'a> AsRedb for dyn medulla_server_api::api::persistence::PersistenceBackend
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod shard_migrate;
 
-
 #[cfg(feature = "redb")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod tenant_catalog;
-
-
 
 // M3 keystone (CONCEPT:MEDULLA-KG.backend.catalog-shard-resolve / MEDULLA-034). Both redb-only:
 //   * `online_reshard` — move ONE graph between shards while the engine RUNS (verbatim
@@ -112,7 +94,6 @@ pub mod provenance_anchor;
 #[cfg(feature = "redb")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod rebalance;
-
 
 // MEDULLA-090 — online consistent backup/restore + PITR foundation. Redb-only:
 //   * `backup` — per-shard `begin_read()` MVCC snapshot (MEDULLA-027) streamed verbatim

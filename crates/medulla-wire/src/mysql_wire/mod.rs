@@ -41,11 +41,11 @@ use tokio::sync::RwLock;
 
 use medulla_sql_lang::sql::typed_result::PgColType;
 
+use medulla_server_api::state::ServerState;
 use medulla_wire_core::wire::WireError;
 use medulla_wire_core::wire::WireOutcome;
 use medulla_wire_core::wire::WireProtocol;
 use medulla_wire_core::wire::WireSession;
-use medulla_server_api::state::ServerState;
 
 mod auth;
 mod packets;
@@ -480,9 +480,9 @@ mod tests {
     //! end-to-end through the shared `WireSession` execution core (CONCEPT:MEDULLA-KG.query.kg-2).
     use super::*;
     use medulla_isolation::isolation::IsolationLayer;
+    use medulla_server_api::state::ServerState;
     use medulla_server_api::test_support::grant_commons_user;
     use medulla_server_api::test_support::register_commons_agent;
-    use medulla_server_api::state::ServerState;
     use medulla_sql_lang::{sql::typed_result::TypedColumn, sql::typed_result::TypedQueryResult};
     use tokio::net::TcpStream;
 

@@ -5,10 +5,10 @@
 //! Library. The harness owns one temporary persist directory per test, so no
 //! test can observe another's committed state.
 
-use medulla_server_blob::blob::BlobStateExt;
 #[cfg(feature = "redb")]
 use medulla_agent_types::agent_library::AgentLibraryLifecycle;
 use medulla_persistence_records::agent_library::AgentLibraryStateExt;
+use medulla_server_blob::blob::BlobStateExt;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
@@ -28,8 +28,8 @@ use medulla_types::contract::{BoundedVec, Digest256, ResourceId};
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
-use medulla_server_auth::auth::dispatch_test_on_heap;
 use medulla_server_api::state::ServerState;
+use medulla_server_auth::auth::dispatch_test_on_heap;
 
 mod admin;
 mod content_model;
@@ -68,7 +68,10 @@ fn next_id() -> u64 {
 impl Served {
     pub(super) fn new() -> Self {
         let dir = tempfile::tempdir().unwrap();
-        let mut state = medulla_server::seams_install::new_state_for_test(SECRET, ServerState::test_isolation(ADMIN));
+        let mut state = medulla_server::seams_install::new_state_for_test(
+            SECRET,
+            ServerState::test_isolation(ADMIN),
+        );
         state.persist_dir = Some(dir.path().to_string_lossy().into_owned());
         let blob_dir = dir.path().join("blob");
         std::fs::create_dir_all(&blob_dir).unwrap();

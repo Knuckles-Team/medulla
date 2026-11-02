@@ -100,8 +100,9 @@ impl RedbBackend {
                 .shard
                 .upgrade()
                 .ok_or_else(|| "redb writer thread is gone".to_string())?;
-            upgrade_tasks
-                .push(move || medulla_store_apply::redb_store::dump::upgrade_legacy_graph_meta(&shard));
+            upgrade_tasks.push(move || {
+                medulla_store_apply::redb_store::dump::upgrade_legacy_graph_meta(&shard)
+            });
         }
         let upgraded: usize = join_blocking_in_order(upgrade_tasks)
             .await?

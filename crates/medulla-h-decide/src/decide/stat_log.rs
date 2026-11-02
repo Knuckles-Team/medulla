@@ -13,6 +13,12 @@ use std::time::Instant;
 use tracing::Instrument;
 
 use medulla_agent_types::agent_component::AgentComponentKind;
+use medulla_decision_stats::decision::candidate::CandidateView;
+use medulla_decision_stats::decision::features::outcome_rate_key;
+use medulla_decision_stats::{
+    decision::aggregate::aggregate, decision::aggregate::AggregateRules,
+    decision::aggregate::JoinedRecord,
+};
 use medulla_decision_types::{
     decision::statistical::dataset::ItemLabel, decision::statistical::dataset::LabelledDataset,
     decision::statistical::dataset::LabelledItem, decision::statistical::dataset::LoggedOutcome,
@@ -40,9 +46,6 @@ use medulla_decision_types::{
 use medulla_decision_types::{
     decision::CandidateSourceRecord, decision::QuantScaleTag, decision::RecordWindow,
 };
-use medulla_decision_stats::{decision::aggregate::aggregate, decision::aggregate::AggregateRules, decision::aggregate::JoinedRecord};
-use medulla_decision_stats::decision::candidate::CandidateView;
-use medulla_decision_stats::decision::features::outcome_rate_key;
 use medulla_types::contract::BoundedVec;
 
 use super::stat_executor::ExecutionContext;
@@ -53,14 +56,14 @@ use super::stat_slate::{evaluated_slates, slate_of, SLATE_QUESTION};
 use super::stat_support::{default_statistical_policy, pinned_entry, refusal};
 use super::telemetry;
 use super::SharedState;
-use medulla_protocol_types::protocol::Response;
-use medulla_protocol_types::protocol::ResultPayload;
-use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_persistence_records::agent_library::AgentLibraryStore;
 use medulla_persistence_records::decision_jobs::decode_artifact;
 use medulla_persistence_records::decision_jobs::encode_artifact;
 use medulla_persistence_records::decision_jobs::evaluation_key;
 use medulla_persistence_records::decision_jobs::record_key;
+use medulla_protocol_types::protocol::Response;
+use medulla_protocol_types::protocol::ResultPayload;
+use medulla_server_api::authority_context::VerifiedRequestContext;
 
 /// Most log rows one read walks before refusing as unbounded.
 pub(super) const MAX_LOG_ROWS: usize = 100_000;

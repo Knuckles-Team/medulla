@@ -22,7 +22,8 @@ impl medulla_server_ops::api::query_txn::TxnApi for TxnSeam {
         placement_epoch: u64,
         fencing_token: Option<u64>,
         method: medulla_protocol_types::protocol::Method,
-    ) -> Result<medulla_protocol_types::protocol::Response, medulla_protocol_types::protocol::Method> {
+    ) -> Result<medulla_protocol_types::protocol::Response, medulla_protocol_types::protocol::Method>
+    {
         crate::timeseries::try_handle(
             state,
             req_id,
@@ -42,7 +43,8 @@ impl medulla_server_ops::api::query_txn::TxnApi for TxnSeam {
         caller: &str,
         verified_context: &medulla_server_api::authority_context::VerifiedRequestContext,
         method: medulla_protocol_types::protocol::Method,
-    ) -> Result<medulla_protocol_types::protocol::Response, medulla_protocol_types::protocol::Method> {
+    ) -> Result<medulla_protocol_types::protocol::Response, medulla_protocol_types::protocol::Method>
+    {
         super::dispatch::try_handle(state, req_id, caller, verified_context, method).await
     }
 
@@ -82,7 +84,8 @@ impl medulla_server_ops::api::query_txn::TxnApi for TxnSeam {
         caller: &str,
         authority: &medulla_server_api::carrier::CarrierAuthority,
         method: &medulla_protocol_types::protocol::Method,
-    ) -> Result<medulla_server_ops::api::query_txn::txn_support::GraphQlLifecycleAdmission, String> {
+    ) -> Result<medulla_server_ops::api::query_txn::txn_support::GraphQlLifecycleAdmission, String>
+    {
         use medulla_server_ops::api::query_txn::txn_support as api;
         let admission =
             super::receipts::begin_graphql_lifecycle(state, req_id, caller, authority, method)

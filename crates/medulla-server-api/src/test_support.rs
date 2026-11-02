@@ -99,7 +99,10 @@ impl Drop for FederationAllowGuard {
 
 /// Common terminal fixture used by durable and transport retry identity tests.
 #[cfg(any(feature = "server", feature = "redb"))]
-pub fn terminal_method(lease_epoch: u64, fencing_token: u64) -> medulla_protocol_types::protocol::Method {
+pub fn terminal_method(
+    lease_epoch: u64,
+    fencing_token: u64,
+) -> medulla_protocol_types::protocol::Method {
     medulla_protocol_types::protocol::Method::CommitWorkItemResult {
         tenant: "tenant-a".into(),
         work_item_id: "work-1".into(),
@@ -147,7 +150,10 @@ pub fn grant_commons_user(isolation: &mut medulla_isolation::isolation::Isolatio
 /// Both query and protocol round-trip tests use this helper; the caller
 /// remains responsible for choosing the principal's identity and any
 /// additional roles required by its scenario.
-pub fn register_commons_agent(isolation: &mut medulla_isolation::isolation::IsolationLayer, agent_id: &str) {
+pub fn register_commons_agent(
+    isolation: &mut medulla_isolation::isolation::IsolationLayer,
+    agent_id: &str,
+) {
     isolation.register_agent(medulla_types::acl::AgentIdentity {
         agent_id: agent_id.to_string(),
         role: medulla_types::acl::AgentRole::Agent,

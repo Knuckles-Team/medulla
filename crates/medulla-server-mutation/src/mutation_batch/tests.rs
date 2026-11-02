@@ -1,20 +1,18 @@
 use std::sync::Arc;
 
-use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_graph_core::graph::GraphCore;
 use medulla_mutation_types::mutation_scope::MutationSurface;
 use medulla_protocol_types::mutation_batch::MutationBatch;
 use medulla_protocol_types::mutation_batch::VersionExpectation;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::ResultPayload;
+use medulla_server_api::api::persistence::PersistenceBackend;
 
 use super::commit::changed_work_item_ids;
+use super::{commit_work_item, publish_change_envelope_projection, WorkItemCommitRequest};
 use medulla_server_api::batch_compile::digest::work_item_batch_identity;
-use medulla_server_api::{batch_compile::compile_methods, batch_compile::CompileBatch};
 use medulla_server_api::routed_write_coalescer::lock_graph;
-use super::{
-    commit_work_item, publish_change_envelope_projection, WorkItemCommitRequest,
-};
+use medulla_server_api::{batch_compile::compile_methods, batch_compile::CompileBatch};
 
 struct LockProbePersistence {
     entered_commit: tokio::sync::Notify,
@@ -646,8 +644,8 @@ fn durability_domain_classification_matches_the_golden() {
 
 #[test]
 fn classifier_source_map_agrees_with_domain_for() {
-    use medulla_server_api::batch_compile::domain_for;
     use medulla_mutation_types::mutation_scope::DurabilityDomain;
+    use medulla_server_api::batch_compile::domain_for;
 
     let map = classification_map_from_source();
     let lookup = |name: &str| {
@@ -721,8 +719,8 @@ fn classifier_source_map_agrees_with_domain_for() {
 /// this match).
 #[test]
 fn owner_domain_classifies_wire_unconditional_methods_regardless_of_this_crates_own_feature() {
-    use medulla_server_api::batch_compile::domain_for;
     use medulla_mutation_types::mutation_scope::DurabilityDomain;
+    use medulla_server_api::batch_compile::domain_for;
 
     assert_eq!(
         domain_for(
@@ -1417,9 +1415,10 @@ async fn the_authoritative_version_accounts_a_durable_write_the_projection_misse
         core.mark_dirty();
     }
     let ahead: Arc<dyn PersistenceBackend> = Arc::new(DurableVersion(7));
-    let version = medulla_server_api::batch_compile::authoritative_graph_version(&ahead, "g", &core)
-        .await
-        .expect("a durable version ahead of the projection is accounted");
+    let version =
+        medulla_server_api::batch_compile::authoritative_graph_version(&ahead, "g", &core)
+            .await
+            .expect("a durable version ahead of the projection is accounted");
     assert_eq!(version, 7);
     assert_eq!(
         core.version(),

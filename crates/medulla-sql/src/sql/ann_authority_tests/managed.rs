@@ -7,8 +7,10 @@ use medulla_graph_core::index::ManagedIndexTarget;
 
 use super::*;
 use medulla_graph_core::index::ManagedIndexState;
-use medulla_table_store::{tables::ann_authority::durable::encode, tables::ann_authority::durable::Encoding};
 use medulla_table_store::tables::store::GenerationWrite;
+use medulla_table_store::{
+    tables::ann_authority::durable::encode, tables::ann_authority::durable::Encoding,
+};
 
 fn status_relation(store: &TableStore) -> Vec<Vec<Value>> {
     crate::sql::exec_sql_typed_with_tables(
@@ -183,7 +185,8 @@ fn drop_index_is_a_typed_sql_statement_over_the_same_fenced_drop() {
     let index = hnsw_l2();
     store.create_ann_index(&index).unwrap();
     refresh(&store);
-    let classified = medulla_sql_lang::sql::classify::classify("DROP INDEX IF EXISTS docs_emb;").unwrap();
+    let classified =
+        medulla_sql_lang::sql::classify::classify("DROP INDEX IF EXISTS docs_emb;").unwrap();
     assert!(matches!(
         classified,
         medulla_sql_lang::sql::classify::StatementKind::DropAnnIndex { ref name, if_exists: true } if name == "docs_emb"

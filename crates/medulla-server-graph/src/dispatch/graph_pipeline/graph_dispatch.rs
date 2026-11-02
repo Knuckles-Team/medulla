@@ -1,9 +1,9 @@
-use crate::dispatch::shared::timed_read;
-#[cfg(feature = "streaming")]
-use medulla_server_cdc::cdc::CdcStateExt;
 use super::*;
+use crate::dispatch::shared::timed_read;
 #[cfg(feature = "redb")]
 use medulla_persistence::cold_offload::ColdTrackerStateExt;
+#[cfg(feature = "streaming")]
+use medulla_server_cdc::cdc::CdcStateExt;
 struct GraphDispatchCapture<'a> {
     state: &'a Arc<RwLock<ServerState>>,
     graph_name: &'a str,
@@ -258,8 +258,7 @@ pub struct GraphOpRouting<'a> {
     pub core: &'a Arc<medulla_graph_core::graph::GraphCore>,
     pub materialization_manifest:
         &'a Option<Arc<std::sync::RwLock<medulla_core::registry::MaterializationManifest>>>,
-    pub persistence:
-        &'a Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
+    pub persistence: &'a Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
     #[cfg(feature = "streaming")]
     pub cdc: &'a Option<Arc<medulla_server_cdc::cdc::CdcHub>>,
     #[cfg(feature = "security")]

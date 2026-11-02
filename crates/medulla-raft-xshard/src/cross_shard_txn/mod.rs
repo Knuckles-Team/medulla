@@ -201,14 +201,14 @@ mod commit;
 mod prepare_record;
 use prepare_record::{decode_prepared_slices, encode_prepared_slices};
 
+use medulla_persistence::redb_backend::RedbBackend;
+use medulla_protocol_types::protocol::GraphType;
+use medulla_protocol_types::protocol::Method;
 use medulla_raft::raft::multi::MultiRaft;
 #[cfg(any(feature = "calvin", test, feature = "harness"))]
 use medulla_raft::raft::NodeId;
 use medulla_raft::raft::{GroupId, RaftRequest};
-use medulla_protocol_types::protocol::GraphType;
-use medulla_protocol_types::protocol::Method;
 use medulla_server_api::api::persistence::PersistenceBackend;
-use medulla_persistence::redb_backend::RedbBackend;
 
 const MAX_PREPARED_TXN_BYTES: usize = 256 * 1024 * 1024;
 const MAX_PREPARED_TXN_ITEMS: usize = 4_000_000;
@@ -324,7 +324,10 @@ impl GraphSlice {
                         0,
                         0,
                     ),
-                    command: medulla_raft::raft::ReplicatedMutation::graph(m.clone(), server_secret)?,
+                    command: medulla_raft::raft::ReplicatedMutation::graph(
+                        m.clone(),
+                        server_secret,
+                    )?,
                 })
             })
             .collect()
@@ -759,7 +762,8 @@ impl CrossShardCoordinator {
             let parent =
                 medulla_transaction::read_ledger(&redb.admin_mutations_read()?, &parent_id)?;
             if let Some(record) = parent.as_ref().filter(|record| {
-                record.status == medulla_protocol_types::mutation_batch::MutationBatchStatus::Committed
+                record.status
+                    == medulla_protocol_types::mutation_batch::MutationBatchStatus::Committed
             }) {
                 let bytes = record.result_msgpack.as_deref().ok_or_else(|| {
                     "committed transaction parent has no terminal result".to_string()
@@ -770,7 +774,8 @@ impl CrossShardCoordinator {
                         medulla_types::msgpack::MsgpackLimits::new(64 * 1024 * 1024, 1_000_000, 64),
                     )
                     .map_err(|_| "transaction parent has an invalid result".to_string())?;
-                let medulla_protocol_types::protocol::ResultPayload::Bool(parent_outcome) = result else {
+                let medulla_protocol_types::protocol::ResultPayload::Bool(parent_outcome) = result
+                else {
                     return Err("transaction parent has the wrong result type".to_string());
                 };
                 if outcome != Some(parent_outcome) {

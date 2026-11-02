@@ -21,7 +21,6 @@
 //! The ONE decay curve both the series `decay_weighted_mean` and the engine's
 //! semantic-memory confidence decay use lives in `medulla_core::decay` (CONCEPT:MEDULLA-KG.compute.handled-outside-single-anchor).
 
-
 // CONCEPT:MEDULLA-KG.temporal.native-columnar-store — the native columnar (struct-of-arrays) segment for analytical
 // scans. Pure-Rust + serde only (no Arrow/DataFusion/redb), so it compiles in the
 // lean / Pi build exactly like `point`/`query` — always on, no feature gate.

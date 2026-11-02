@@ -16,11 +16,13 @@ use medulla_protocol_types::{
 use medulla_types::acl::RequestContextClaims;
 use medulla_types::wire::{ForeignSourceSpec, UqlResult};
 
-use medulla_exec::budget::FederationBudget;
-use medulla_federation::federation_opt::{FederationSession, FetchStrategy, FragmentTrace, BUDGET_EXCEEDED};
 use medulla_exec::algebra::Op;
-use medulla_exec::exec::{execute, PlanCtx};
 use medulla_exec::algebra::Plan;
+use medulla_exec::budget::FederationBudget;
+use medulla_exec::exec::{execute, PlanCtx};
+use medulla_federation::federation_opt::{
+    FederationSession, FetchStrategy, FragmentTrace, BUDGET_EXCEEDED,
+};
 
 /// The registered statement: `d1`, `d2`, `d4` and `d5` of the fixture.
 const BASE: &str = "MATCH (:Doc) |> WHERE year > 2023";
@@ -447,12 +449,12 @@ mod engine_remote_tests {
     use medulla_types::acl::RequestContextClaims;
     use medulla_types::wire::ForeignSourceSpec;
 
+    use super::verified_claims;
+    use medulla_exec::exec::{execute, PlanCtx};
     use medulla_federation::federation_opt::capability::RemoteRequest;
     use medulla_federation::federation_opt::engine::EngineRemote;
-    use medulla_federation::federation_opt::remote::RemoteFetch;
-    use medulla_exec::exec::{execute, PlanCtx};
-    use super::verified_claims;
     use medulla_federation::federation_opt::remote::Identity;
+    use medulla_federation::federation_opt::remote::RemoteFetch;
 
     fn remote(query: &str) -> ForeignSourceSpec {
         ForeignSourceSpec::RemoteEngine {

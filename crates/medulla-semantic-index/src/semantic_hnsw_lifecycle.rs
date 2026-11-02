@@ -18,10 +18,7 @@ impl SemanticStore {
         }
     }
 
-    pub(in crate::semantic) fn mismatched_row_dim(
-        &self,
-        requested: usize,
-    ) -> Option<usize> {
+    pub(in crate::semantic) fn mismatched_row_dim(&self, requested: usize) -> Option<usize> {
         self.embeddings
             .values()
             .map(Vec::len)

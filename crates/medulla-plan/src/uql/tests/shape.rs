@@ -9,8 +9,8 @@ use medulla_rdf::mapping::{load_triples, parse_turtle, IriStore};
 use medulla_semantic_index::semantic::SemanticStore;
 use medulla_types::wire::UqlResult;
 
-use medulla_exec::exec::PlanCtx;
 use crate::uql::serve::run_statement;
+use medulla_exec::exec::PlanCtx;
 use medulla_uql::{parse_statement, Params};
 
 const SHAPES: &str = r#"

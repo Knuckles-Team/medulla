@@ -1,19 +1,19 @@
 //! Agent Library admin tests that drive the full method router.
 
-use medulla_types::acl::RequestContextClaims;
-use medulla_protocol_types::protocol::Method;
-use medulla_protocol_types::protocol::Request;
-use medulla_server_api::api::persistence::BundledStoreSource;
-use medulla_server_api::authority_context::VerifiedRequestContext;
-use medulla_h_admin::admin::backup_bundle_name;
-use medulla_h_admin::admin::bind_agent_library_draft;
-use medulla_persistence_records::agent_library::context::bind_agent_library_context;
-use medulla_persistence_records::agent_library::AgentLibraryStateExt;
-use medulla_types::contract::Nonce;
 use medulla_agent_types::agent_library::{
     AgentLibraryEntryDraft, AgentLibraryMutationContext, AgentLibraryMutationKind, AgentLibraryOp,
     AgentLibraryPublishRequest, AgentLibraryRetireRequest, AgentLibraryStatusRequest,
 };
+use medulla_h_admin::admin::backup_bundle_name;
+use medulla_h_admin::admin::bind_agent_library_draft;
+use medulla_persistence_records::agent_library::context::bind_agent_library_context;
+use medulla_persistence_records::agent_library::AgentLibraryStateExt;
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::Request;
+use medulla_server_api::api::persistence::BundledStoreSource;
+use medulla_server_api::authority_context::VerifiedRequestContext;
+use medulla_types::acl::RequestContextClaims;
+use medulla_types::contract::Nonce;
 use redb::{ReadableDatabase, ReadableTableMetadata, TableDefinition};
 use sha2::{Digest, Sha256};
 use std::sync::Arc;
@@ -399,8 +399,9 @@ async fn signed_public_dispatch_persists_publish_retire_action_and_receipts() {
         publish_key.to_string(),
     )
     .principal_persistence_id();
-    let published =
-        response_write_result(medulla_server_router::dispatch::request_boundary::dispatch(&state, publish_request).await);
+    let published = response_write_result(
+        medulla_server_router::dispatch::request_boundary::dispatch(&state, publish_request).await,
+    );
     assert!(!published.replayed);
     assert_eq!(published.entry.entry_revision, 1);
     assert_eq!(
@@ -430,8 +431,9 @@ async fn signed_public_dispatch_persists_publish_retire_action_and_receipts() {
     guard.set_agent_library(None);
     *guard.agent_library_open.lock() = None;
     drop(guard);
-    let replayed =
-        response_write_result(medulla_server_router::dispatch::request_boundary::dispatch(&state, replay_request).await);
+    let replayed = response_write_result(
+        medulla_server_router::dispatch::request_boundary::dispatch(&state, replay_request).await,
+    );
     assert!(replayed.replayed);
     assert_eq!(replayed.entry, published.entry);
     let store = {
@@ -515,8 +517,9 @@ async fn signed_public_dispatch_persists_publish_retire_action_and_receipts() {
     let expected_retire_actor =
         VerifiedRequestContext::from_verified_claims(retire_claims.clone(), retire_key.to_string())
             .principal_persistence_id();
-    let retired =
-        response_write_result(medulla_server_router::dispatch::request_boundary::dispatch(&state, retire_request).await);
+    let retired = response_write_result(
+        medulla_server_router::dispatch::request_boundary::dispatch(&state, retire_request).await,
+    );
     assert!(!retired.replayed);
     assert!(retired.entry.is_retired());
     assert_eq!(
@@ -718,7 +721,8 @@ async fn signed_public_dispatch_persists_publish_retire_action_and_receipts() {
         "wrong-tenant-nonce",
         "wrong-tenant-key",
     );
-    let wrong_tenant_response = medulla_server_router::dispatch::request_boundary::dispatch(&state, wrong_tenant).await;
+    let wrong_tenant_response =
+        medulla_server_router::dispatch::request_boundary::dispatch(&state, wrong_tenant).await;
     assert!(
         wrong_tenant_response
             .error
@@ -747,7 +751,8 @@ async fn signed_public_dispatch_persists_publish_retire_action_and_receipts() {
         "missing-write-nonce",
         "missing-write-key",
     );
-    let missing_write_response = medulla_server_router::dispatch::request_boundary::dispatch(&state, missing_write).await;
+    let missing_write_response =
+        medulla_server_router::dispatch::request_boundary::dispatch(&state, missing_write).await;
     assert!(
         missing_write_response
             .error
@@ -777,7 +782,8 @@ async fn signed_public_dispatch_persists_publish_retire_action_and_receipts() {
         "missing-read-nonce",
         "missing-read-key",
     );
-    let missing_read_response = medulla_server_router::dispatch::request_boundary::dispatch(&state, missing_read).await;
+    let missing_read_response =
+        medulla_server_router::dispatch::request_boundary::dispatch(&state, missing_read).await;
     assert!(
         missing_read_response
             .error

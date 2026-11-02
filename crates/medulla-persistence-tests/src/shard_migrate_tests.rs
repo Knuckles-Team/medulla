@@ -1,10 +1,23 @@
 //! Shared real-owner fixtures for migration layout, recovery and payload proofs.
 
+use medulla_persistence::redb_backend::RedbBackend;
 #[allow(unused_imports)]
 use medulla_persistence::redb_backend::{shard_index, RAFT_META};
 #[cfg(feature = "security")]
 #[allow(unused_imports)]
 use medulla_persistence::redb_backend::{ENCRYPTION_CANARY, ENCRYPTION_KEY_BINDING_KEY};
+#[allow(unused_imports)]
+use medulla_persistence::shard_migrate::inplace::migrate_in_place;
+#[allow(unused_imports)]
+use medulla_persistence::shard_migrate::payload::GraphShardPayloadTransfer;
+#[allow(unused_imports)]
+use medulla_persistence::shard_migrate::*;
+use medulla_protocol_types::protocol::GraphType;
+use medulla_protocol_types::protocol::Method;
+use medulla_server_api::api::persistence::PersistenceBackend;
+#[allow(unused_imports)]
+use medulla_storage::{GraphShardOwner, ScopedRead};
+use medulla_storage::{OwnerRowScope, OwnerRowScopeStart};
 #[allow(unused_imports)]
 use medulla_store::redb_layout::discover_indexed_shards;
 #[allow(unused_imports)]
@@ -17,24 +30,25 @@ use medulla_store::redb_layout::validate_shard_count;
 use medulla_store::redb_store::shard::Shard;
 #[allow(unused_imports)]
 use medulla_store::redb_store::shard::ShardWrite;
+use medulla_store::redb_store::CHANGE_CURSORS;
+use medulla_store::redb_store::CHANGE_ENVELOPES;
+use medulla_store::redb_store::CONTENT_VERSIONS;
+#[allow(unused_imports)]
+use medulla_store::redb_store::GRAPH_META;
 #[cfg(feature = "compute-dist")]
 #[allow(unused_imports)]
 use medulla_store::redb_store::MATVIEWS;
-#[allow(unused_imports)]
-use medulla_store::redb_store::GRAPH_META;
-#[allow(unused_imports)]
-use medulla_store::redb_store::RAFT_LOG;
-#[allow(unused_imports)]
-use medulla_store::redb_store::XSHARD_DECISION;
-#[allow(unused_imports)]
-use medulla_store::redb_store::XSHARD_PREPARE;
 #[cfg(feature = "matview")]
 #[allow(unused_imports)]
 use medulla_store::redb_store::MATVIEW_OPERATOR_STATE;
 #[allow(unused_imports)]
 use medulla_store::redb_store::PLAN_MATVIEWS;
 #[allow(unused_imports)]
-use medulla_storage::{GraphShardOwner, ScopedRead};
+use medulla_store::redb_store::RAFT_LOG;
+#[allow(unused_imports)]
+use medulla_store::redb_store::XSHARD_DECISION;
+#[allow(unused_imports)]
+use medulla_store::redb_store::XSHARD_PREPARE;
 #[allow(unused_imports)]
 use medulla_transaction::OwnerPayloadWrite;
 #[allow(unused_imports)]
@@ -43,20 +57,6 @@ use redb::{ReadableTable, TableDefinition};
 use std::collections::HashSet;
 #[allow(unused_imports)]
 use std::path::{Path, PathBuf};
-#[allow(unused_imports)]
-use medulla_persistence::shard_migrate::inplace::migrate_in_place;
-#[allow(unused_imports)]
-use medulla_persistence::shard_migrate::payload::GraphShardPayloadTransfer;
-#[allow(unused_imports)]
-use medulla_persistence::shard_migrate::*;
-use medulla_protocol_types::protocol::GraphType;
-use medulla_protocol_types::protocol::Method;
-use medulla_store::redb_store::CHANGE_CURSORS;
-use medulla_store::redb_store::CHANGE_ENVELOPES;
-use medulla_store::redb_store::CONTENT_VERSIONS;
-use medulla_server_api::api::persistence::PersistenceBackend;
-use medulla_persistence::redb_backend::RedbBackend;
-use medulla_storage::{OwnerRowScope, OwnerRowScopeStart};
 
 pub(crate) fn props(v: serde_json::Value) -> Vec<u8> {
     rmp_serde::to_vec_named(&v).unwrap()
@@ -87,7 +87,10 @@ fn fresh_in_place_dir(tag: &str) -> (std::path::PathBuf, String) {
 
 /// The node `a` every seeded graph carries is tagged with its own graph name,
 /// which proves a read-back graph was not mixed with another.
-pub(crate) fn assert_node_a_carries_graph_tag(dump: &medulla_store_apply::redb_store::store_control::GraphDump, graph: &str) {
+pub(crate) fn assert_node_a_carries_graph_tag(
+    dump: &medulla_store_apply::redb_store::store_control::GraphDump,
+    graph: &str,
+) {
     let a = dump
         .nodes
         .iter()

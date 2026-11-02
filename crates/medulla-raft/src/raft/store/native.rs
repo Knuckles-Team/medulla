@@ -292,6 +292,7 @@ impl MedullaStore {
     /// Same shape as [`native_bool_outcome_to_response`], for the one
     /// `NativeMutationCommand` arm (`JobPublicationFinalize`) whose outcome is
     /// already a typed `ResultPayload` rather than a bare `bool`.
+    #[cfg(feature = "jobs")]
     pub(super) fn native_result_outcome_to_response(
         outcome: Result<medulla_protocol_types::protocol::ResultPayload, String>,
     ) -> RaftResponse {

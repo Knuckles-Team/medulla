@@ -1,6 +1,15 @@
 //! Shared setup for in-process Raft harnesses.
 
-#[cfg(all(any(test, feature = "harness", feature = "compute-dist", feature = "test-support"), feature = "raft", feature = "streaming"))]
+#[cfg(all(
+    any(
+        test,
+        feature = "harness",
+        feature = "compute-dist",
+        feature = "test-support"
+    ),
+    feature = "raft",
+    feature = "streaming"
+))]
 use medulla_server_cdc::cdc::CdcStateExt;
 use std::collections::BTreeMap;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -10,15 +19,15 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use openraft::BasicNode;
 use tokio::sync::RwLock;
 
-use medulla_raft::raft::multi::MultiRaft;
-use medulla_raft::raft::{AppCtx, GroupId, NodeId};
 use medulla_isolation::isolation::IsolationLayer;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Request;
+use medulla_raft::raft::multi::MultiRaft;
+use medulla_raft::raft::{AppCtx, GroupId, NodeId};
 use medulla_server_api::api::persistence::PersistenceBackend;
+use medulla_server_api::state::ServerState;
 use medulla_server_auth::auth::compute_verified_envelope_token;
 use medulla_server_auth::auth::VerifiedEnvelopeParams;
-use medulla_server_api::state::ServerState;
 use medulla_types::acl::AgentIdentity;
 use medulla_types::acl::AgentRole;
 use medulla_types::acl::RequestContextClaims;
@@ -61,7 +70,10 @@ pub async fn make_state_with_cdc(
     let state = make_state(dir, backend, isolation, auth_secret).await;
     #[cfg(feature = "streaming")]
     {
-        state.write().await.set_cdc_hub(Some(Arc::new(medulla_server_cdc::cdc::CdcHub::new())));
+        state
+            .write()
+            .await
+            .set_cdc_hub(Some(Arc::new(medulla_server_cdc::cdc::CdcHub::new())));
     }
     state
 }

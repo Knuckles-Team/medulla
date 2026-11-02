@@ -26,8 +26,8 @@ use medulla_semantic_index::semantic::SemanticStore;
 use serde_json::json;
 
 use super::*;
-use medulla_exec::exec::{execute, PlanCtx};
 use crate::nl::{NlPlanner, NlQueryBudget, NlQueryError};
+use medulla_exec::exec::{execute, PlanCtx};
 
 /// Answers each call with the next scripted text (the last one repeats) and
 /// records the schema hint it was given.
@@ -563,7 +563,8 @@ fn foreign_row_properties_are_checked_against_the_local_snapshot() {
     // Nor can it exempt a local predicate before the source changes.
     assert!(matches!(
         context.ground(
-            &medulla_uql::parse("MATCH (:Incident) WHERE invented = 1 |> FOREIGN 'remote'").unwrap()
+            &medulla_uql::parse("MATCH (:Incident) WHERE invented = 1 |> FOREIGN 'remote'")
+                .unwrap()
         ),
         Err(SchemaViolation::UnknownProperty { .. })
     ));

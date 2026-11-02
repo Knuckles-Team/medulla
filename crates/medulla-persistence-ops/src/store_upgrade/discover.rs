@@ -69,10 +69,12 @@ fn is_regular_file(path: &Path) -> bool {
 }
 
 fn shard_files(data_dir: &Path) -> Result<Vec<StoreFile>, String> {
-    Ok(medulla_store::redb_layout::discover_indexed_shards(data_dir)?
-        .into_iter()
-        .map(|path| StoreFile::new(data_dir, path, Some(OwnerLayout::GraphShard)))
-        .collect())
+    Ok(
+        medulla_store::redb_layout::discover_indexed_shards(data_dir)?
+            .into_iter()
+            .map(|path| StoreFile::new(data_dir, path, Some(OwnerLayout::GraphShard)))
+            .collect(),
+    )
 }
 
 fn named_files(data_dir: &Path) -> Vec<StoreFile> {

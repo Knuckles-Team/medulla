@@ -6,8 +6,8 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use medulla_rdf::mapping::parse_turtle;
-use medulla_reasoner::owl::Reasoner;
 use medulla_rdf::oxrdf::{NamedNode, NamedOrBlankNode, Term, Triple};
+use medulla_reasoner::owl::Reasoner;
 
 const KG: &str = "http://knuckles.team/kg#";
 const BFO: &str = "http://purl.obolibrary.org/obo/BFO_";
@@ -37,7 +37,10 @@ const MODULES: [(&str, &str); 4] = [
         "dataplatform",
         include_str!("../../medulla-core/ontology/dataplatform-v1.ttl"),
     ),
-    ("media", include_str!("../../medulla-core/ontology/media-v1.ttl")),
+    (
+        "media",
+        include_str!("../../medulla-core/ontology/media-v1.ttl"),
+    ),
     (
         "retrieval",
         include_str!("../../medulla-core/ontology/retrieval-v1.ttl"),

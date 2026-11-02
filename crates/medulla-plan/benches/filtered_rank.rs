@@ -9,9 +9,9 @@
 //! Run: `cargo bench -p medulla-plan --features "query text" --bench filtered_rank`
 
 use criterion::{criterion_group, criterion_main, Criterion};
+use medulla_exec::{algebra::Op, algebra::Plan, algebra::Pred, exec::execute, exec::PlanCtx};
 use medulla_graph_core::graph::GraphCore;
 use medulla_graph_core::graph::GraphView;
-use medulla_exec::{exec::execute, algebra::Op, algebra::Plan, exec::PlanCtx, algebra::Pred};
 use medulla_semantic_index::semantic::SemanticStore;
 use medulla_text::TextIndex;
 use serde_json::json;

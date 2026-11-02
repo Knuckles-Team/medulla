@@ -24,9 +24,11 @@ use crate::decision::statistical::{
     FeatureMatrixRef, QuestionKind, StatisticalDecisionRecord, StatisticalOutcome,
 };
 use crate::decision::QuantScaleTag;
-use medulla_work_types::{orchestration::improvement::AdoptedHarness, orchestration::improvement::HarnessContrast};
 use medulla_types::closed_error_codes;
 use medulla_types::contract::BoundedVec;
+use medulla_work_types::{
+    orchestration::improvement::AdoptedHarness, orchestration::improvement::HarnessContrast,
+};
 
 /// The fewest candidate component versions one contrast decides over.
 pub const MIN_CONTRAST_CANDIDATES: usize = 2;
@@ -478,9 +480,9 @@ mod tests {
         DecisionPolicyRef, EvidenceClass, PremiseRef, ResolutionKind, StatisticalOutcome,
         TraceFidelity, UnitRationalWire, STATISTICAL_DECISION_RECORD_SCHEMA_VERSION,
     };
-    use medulla_work_types::orchestration::improvement::HarnessProbeRun;
     use medulla_types::contract::BoundedVec;
     use medulla_types::solve_scalar::digest_text;
+    use medulla_work_types::orchestration::improvement::HarnessProbeRun;
 
     /// The input-digest domain the server's `seal` uses for statistical
     /// records.

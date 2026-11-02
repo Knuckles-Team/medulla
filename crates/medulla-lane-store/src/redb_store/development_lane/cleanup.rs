@@ -1,5 +1,3 @@
-use medulla_resource_store::redb_store::resource::resource_encode;
-use medulla_store::redb_store::DurableCrypto;
 use super::finish::{
     remove_branch_index_checked, remove_index, remove_lane_index, remove_work_item_index,
 };
@@ -17,6 +15,7 @@ use super::validation::decision_name;
 use super::work_item::load_work_item;
 use super::{DurableLaneHold, DurableLanePolicy, GLOBAL_POLICY_KEY};
 use medulla_protocol_types::protocol::DevelopmentLaneWorkItemKind;
+use medulla_resource_store::redb_store::resource::resource_encode;
 use medulla_result_types::epistemic_operations::DevelopmentLaneCleanupCompleteRequest;
 use medulla_result_types::epistemic_operations::DevelopmentLaneHold;
 use medulla_result_types::epistemic_operations::DevelopmentLaneHoldHostTargetKind;
@@ -24,6 +23,7 @@ use medulla_result_types::epistemic_operations::DevelopmentLaneHoldState;
 use medulla_result_types::epistemic_operations::DevelopmentLaneQuotaCharge;
 use medulla_result_types::epistemic_operations::DevelopmentLaneQuotaUpdateRequest;
 use medulla_storage::ScopedOwnerTableMut;
+use medulla_store::redb_store::DurableCrypto;
 
 /// Load the bounded tenant/global policy snapshot.  The sorted pressure index
 /// supplies exact maxima for the non-tenant scope families; policy CAS never

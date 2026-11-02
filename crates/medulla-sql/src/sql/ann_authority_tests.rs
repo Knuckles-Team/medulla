@@ -14,20 +14,23 @@ use medulla_graph_core::graph::GraphView;
 use medulla_result_types::{row_predicate::CmpOp, row_predicate::RowPredicate};
 use serde_json::{json, Value};
 
+use medulla_graph_core::index::ManagedIndexState;
 use medulla_table_store::tables::ann_authority::generation::AnnGeneration;
 use medulla_table_store::tables::ann_authority::*;
-use medulla_graph_core::index::ManagedIndexState;
 use medulla_table_store::tables::ann_plan::metric_to_ann;
 use medulla_table_store::tables::ann_plan::AnnIndexPlan;
 use medulla_table_store::tables::ann_plan::AnnMethod;
 use medulla_table_store::tables::ann_plan::VectorMetric;
-use medulla_tables::schema::Cell;
-use medulla_table_store::{tables::store::dev_scope_grant::dev_verifier, tables::store::dev_scope_grant::DEV_PRINCIPAL, tables::store::dev_scope_grant::DEV_PROOF};
 use medulla_table_store::tables::store::AnnSourceRows;
+use medulla_table_store::tables::TableStore;
+use medulla_table_store::{
+    tables::store::dev_scope_grant::dev_verifier, tables::store::dev_scope_grant::DEV_PRINCIPAL,
+    tables::store::dev_scope_grant::DEV_PROOF,
+};
+use medulla_tables::schema::Cell;
 use medulla_tables::schema::Column;
 use medulla_tables::schema::ColumnType;
 use medulla_tables::schema::TableSchema;
-use medulla_table_store::tables::TableStore;
 
 const DIM: usize = 8;
 

@@ -140,9 +140,9 @@ pub fn replay_check(record: &DecisionRecord) -> Result<Assembly, AssembleError> 
         .clone()
         .checked()
         .map_err(|code| AssembleError::new(code, "the record's version is not served"))?;
-    medulla_decision_outcome_types::decision::derivation::verify_record(&record).map_err(|defect| {
-        AssembleError::new(DecisionErrorCode::DerivationRejected, defect.to_string())
-    })?;
+    medulla_decision_outcome_types::decision::derivation::verify_record(&record).map_err(
+        |defect| AssembleError::new(DecisionErrorCode::DerivationRejected, defect.to_string()),
+    )?;
     let again = assemble(record.inputs.clone(), RecordIdentity::of(&record))?;
     if again.record != record {
         return Err(AssembleError::new(

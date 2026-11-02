@@ -2,12 +2,12 @@ use std::sync::Arc;
 
 use medulla_capabilities::DurabilityDomain;
 
-use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_graph_core::graph::GraphCore;
 use medulla_isolation::isolation::IsolationLayer;
 use medulla_protocol_types::protocol::GraphType;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
+use medulla_server_api::api::persistence::PersistenceBackend;
 
 use super::MutationPlan;
 
@@ -141,7 +141,6 @@ impl IdempotencyStore {
             self.seen.insert(key, response);
         }
     }
-
 }
 
 impl Default for IdempotencyStore {

@@ -41,7 +41,6 @@
 //! of those features is enabled. The `medulla-jobs` interop proof in [`job`] lives
 //! behind `dev-dependencies` for exactly this reason (see `Cargo.toml`).
 
-
 pub mod capability;
 pub mod job;
 pub mod result;

@@ -14,23 +14,20 @@
 //! source returns are not RLS-filtered. A lightweight, non-blocking insert — no
 //! off-reactor work needed.
 
-use medulla_server_ops::api::query_txn::ForeignStateExt;
-use medulla_protocol_types::protocol::Method;
-use medulla_protocol_types::protocol::Response;
-use medulla_protocol_types::protocol::ResultPayload;
-use medulla_server_auth::access::OwnerScopedCall;
-#[cfg(feature = "redb")]
-use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 use medulla_catalog_types::foreign_read::{
     ForeignReadAbortRequest, ForeignReadChunkRequest, ForeignReadCompleteRequest,
     ForeignReadOpenRequest, FOREIGN_READ_SCHEMA_VERSION,
 };
+#[cfg(feature = "redb")]
+use medulla_persistence_records::agent_library::AgentLibraryStateExt;
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::Response;
+use medulla_protocol_types::protocol::ResultPayload;
+use medulla_server_auth::access::OwnerScopedCall;
+use medulla_server_ops::api::query_txn::ForeignStateExt;
 
 /// Try to handle a federation method. `Ok(resp)` = handled; `Err(method)` = not mine.
-pub async fn try_handle(
-    call: OwnerScopedCall<'_>,
-    method: Method,
-) -> Result<Response, Method> {
+pub async fn try_handle(call: OwnerScopedCall<'_>, method: Method) -> Result<Response, Method> {
     let req_id = call.req_id;
     match method {
         Method::RegisterForeignSource { name, source } => {
@@ -44,11 +41,13 @@ pub async fn try_handle(
             // EH-378: provision the source's share role (assigned to nobody) under the
             // same write lock as the registration, so a registered source always has one.
             let mut s = call.state.write().await;
-            if let Err(error) = medulla_server_ops::api::query_txn::foreign_share::provision_share_role(
-                &mut s.isolation,
-                owner.agent_id(),
-                &name,
-            ) {
+            if let Err(error) =
+                medulla_server_ops::api::query_txn::foreign_share::provision_share_role(
+                    &mut s.isolation,
+                    owner.agent_id(),
+                    &name,
+                )
+            {
                 return Ok(Response::err(req_id, error));
             }
             if let Err(error) = s.foreign_sources().register(&owner, name.clone(), source) {
@@ -305,10 +304,15 @@ async fn query_columns(
     }
     let registry = {
         let state = call.state.read().await;
-        state.foreign_sources().registry_for(&owner, &state.isolation)
+        state
+            .foreign_sources()
+            .registry_for(&owner, &state.isolation)
     };
     let result = tokio::task::spawn_blocking(move || {
-        use medulla_federation::{federation_opt::ColumnPredicate, federation_opt::Comparison, federation_opt::FederationSession};
+        use medulla_federation::{
+            federation_opt::ColumnPredicate, federation_opt::Comparison,
+            federation_opt::FederationSession,
+        };
         use medulla_types::wire::ForeignColumnComparison as WireComparison;
 
         let predicates = predicates

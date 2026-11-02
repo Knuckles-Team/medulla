@@ -14,9 +14,9 @@ use std::collections::HashSet;
 
 use medulla_types::wire::ForeignSourceSpec;
 
+use crate::federation_opt::fuse_foreign;
 use medulla_exec::algebra::Op;
 use medulla_exec::exec::{apply, PlanCtx};
-use crate::federation_opt::fuse_foreign;
 use medulla_exec::rowset::RowSet;
 
 /// The rows a `MockSql` would return — the SAME `(id, score?)` currency the real

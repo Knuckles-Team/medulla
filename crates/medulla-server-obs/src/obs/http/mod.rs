@@ -389,9 +389,7 @@ async fn try_traces_route(
         || path == "/api/dependencies"
         || path == "/api/services/dependencies"
     {
-        return Some(
-            crate::traces::handle(state, method, (path, query), body, tenant).await,
-        );
+        return Some(crate::traces::handle(state, method, (path, query), body, tenant).await);
     }
     None
 }

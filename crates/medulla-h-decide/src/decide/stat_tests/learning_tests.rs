@@ -84,7 +84,11 @@ async fn graph_with(
     let mut guard = h.state.write().await;
     guard
         .registry
-        .create_graph(name, medulla_protocol_types::protocol::GraphType::Team, None)
+        .create_graph(
+            name,
+            medulla_protocol_types::protocol::GraphType::Team,
+            None,
+        )
         .unwrap();
     let core = guard.registry.get(name).unwrap().core.clone();
     let space = medulla_index_types::embedding::EmbeddingSpaceRef::pinned(
@@ -270,7 +274,10 @@ fn a_plan_rewrite_re_aims_every_vector_rank_only() {
         panic!("fuse")
     };
     assert_eq!(branches[0][0], expected);
-    assert!(matches!(rewritten.ops[0], medulla_exec::algebra::Op::Scan { .. }));
+    assert!(matches!(
+        rewritten.ops[0],
+        medulla_exec::algebra::Op::Scan { .. }
+    ));
 }
 
 fn axis(dims: usize, index: usize, scale: f32) -> Vec<f32> {

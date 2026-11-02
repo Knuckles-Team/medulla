@@ -19,7 +19,6 @@
 //! single scheduler lane; they are still bounded by the quota's floor rather than
 //! rounded up to a second lane.
 
-
 pub mod admission;
 mod cgroup;
 use cgroup::{

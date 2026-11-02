@@ -18,21 +18,21 @@
 //! `MultiRaft`/`TenantManager` API the harness tests exercise directly, so no new
 //! placement logic is introduced here — only its external RPC surface.
 
-#[cfg(feature = "raft")]
-use medulla_raft::raft::RaftStateExt;
 #[cfg(feature = "redb")]
 #[cfg(feature = "raft")]
 use medulla_persistence::AsRedb;
+#[cfg(feature = "raft")]
+use medulla_raft::raft::RaftStateExt;
 use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use medulla_result_types::epistemic_operations::PlacementRouteSchemaVersion;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
-use medulla_server_api::state::ServerState;
 use medulla_protocol_types::result_contract::cluster::PlacementRouteWire;
+use medulla_result_types::epistemic_operations::PlacementRouteSchemaVersion;
+use medulla_server_api::state::ServerState;
 
 // GOC-15/BUG-030: `PlacementRoute`'s `authz_action` was narrowed from
 // `admin:cluster-read` to `cluster:placement-read` (`medulla_capabilities::policy`)

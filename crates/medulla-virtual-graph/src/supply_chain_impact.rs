@@ -9,7 +9,11 @@
 //! cross-repo (owner: Arbora) and is not claimed here; this slice fixes the
 //! method body and proves its output matches the typed model.
 
-use medulla_source_types::{supply_chain_report::assemble_supply_chain_report, supply_chain_report::ImpactRow, supply_chain_report::ReportAbstention, supply_chain_report::ReportError, supply_chain_report::SourcePremise, supply_chain_report::SupplyChainImpactReport};
+use medulla_source_types::{
+    supply_chain_report::assemble_supply_chain_report, supply_chain_report::ImpactRow,
+    supply_chain_report::ReportAbstention, supply_chain_report::ReportError,
+    supply_chain_report::SourcePremise, supply_chain_report::SupplyChainImpactReport,
+};
 
 use crate::source_selection::{
     select_sources, AbstainReason, CoverageFixture, CoverageResult, Premise,

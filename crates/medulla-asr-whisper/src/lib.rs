@@ -196,7 +196,6 @@
 //! policy-authorized `asr.result.v1` commit is future worker/AU-orchestration
 //! work (W03/W06 in the lane doc), explicitly out of scope here.
 
-
 mod abort_bridge;
 mod cpu_budget;
 mod model;

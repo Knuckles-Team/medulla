@@ -97,21 +97,23 @@ fn authoritative_snapshot_and_row_delta_paths_refuse_orphaning_lane_work_item() 
     );
     #[cfg(feature = "security")]
     let mut orphaned_audit = medulla_store::redb_store::audit::AuditTailCache::new();
-    assert!(medulla_store_apply::redb_store::store_mutation::commit_mutation_batch_state(
-        &fixture.shard,
-        medulla_store_apply::redb_store::store_mutation::StateCommitInput {
-            graph_fname: TEST_GRAPH,
-            batch: &orphaned_batch,
-            authoritative_state_msgpack: &orphaned_state,
-            result_msgpack: None,
-            committed_at_ms: TEST_NOW,
-            audited: true,
-        },
-        DurableCrypto::none(),
-        #[cfg(feature = "security")]
-        &mut orphaned_audit,
-    )
-    .is_err());
+    assert!(
+        medulla_store_apply::redb_store::store_mutation::commit_mutation_batch_state(
+            &fixture.shard,
+            medulla_store_apply::redb_store::store_mutation::StateCommitInput {
+                graph_fname: TEST_GRAPH,
+                batch: &orphaned_batch,
+                authoritative_state_msgpack: &orphaned_state,
+                result_msgpack: None,
+                committed_at_ms: TEST_NOW,
+                audited: true,
+            },
+            DurableCrypto::none(),
+            #[cfg(feature = "security")]
+            &mut orphaned_audit,
+        )
+        .is_err()
+    );
 
     // RMDD-29's native WorkItem-authority migration
     // (`work_item_capability::validate_snapshot_nodes`, invoked from
@@ -136,21 +138,23 @@ fn authoritative_snapshot_and_row_delta_paths_refuse_orphaning_lane_work_item() 
     );
     #[cfg(feature = "security")]
     let mut linked_audit = medulla_store::redb_store::audit::AuditTailCache::new();
-    assert!(medulla_store_apply::redb_store::store_mutation::commit_mutation_batch_state(
-        &fixture.shard,
-        medulla_store_apply::redb_store::store_mutation::StateCommitInput {
-            graph_fname: TEST_GRAPH,
-            batch: &linked_batch,
-            authoritative_state_msgpack: &linked_state,
-            result_msgpack: None,
-            committed_at_ms: TEST_NOW,
-            audited: true,
-        },
-        DurableCrypto::none(),
-        #[cfg(feature = "security")]
-        &mut linked_audit,
-    )
-    .is_err());
+    assert!(
+        medulla_store_apply::redb_store::store_mutation::commit_mutation_batch_state(
+            &fixture.shard,
+            medulla_store_apply::redb_store::store_mutation::StateCommitInput {
+                graph_fname: TEST_GRAPH,
+                batch: &linked_batch,
+                authoritative_state_msgpack: &linked_state,
+                result_msgpack: None,
+                committed_at_ms: TEST_NOW,
+                audited: true,
+            },
+            DurableCrypto::none(),
+            #[cfg(feature = "security")]
+            &mut linked_audit,
+        )
+        .is_err()
+    );
 
     // Neither `orphaned` nor `linked` above ever committed, so the durable graph version
     // is still 0 (unchanged from `commit_ops` never being called on this fixture's graph).
@@ -167,21 +171,23 @@ fn authoritative_snapshot_and_row_delta_paths_refuse_orphaning_lane_work_item() 
     );
     #[cfg(feature = "security")]
     let mut delta_audit = medulla_store::redb_store::audit::AuditTailCache::new();
-    assert!(medulla_store_apply::redb_store::store_mutation::commit_mutation_batch_state(
-        &fixture.shard,
-        medulla_store_apply::redb_store::store_mutation::StateCommitInput {
-            graph_fname: TEST_GRAPH,
-            batch: &delta_batch,
-            authoritative_state_msgpack: &delta_state,
-            result_msgpack: None,
-            committed_at_ms: TEST_NOW,
-            audited: true,
-        },
-        DurableCrypto::none(),
-        #[cfg(feature = "security")]
-        &mut delta_audit,
-    )
-    .is_err());
+    assert!(
+        medulla_store_apply::redb_store::store_mutation::commit_mutation_batch_state(
+            &fixture.shard,
+            medulla_store_apply::redb_store::store_mutation::StateCommitInput {
+                graph_fname: TEST_GRAPH,
+                batch: &delta_batch,
+                authoritative_state_msgpack: &delta_state,
+                result_msgpack: None,
+                committed_at_ms: TEST_NOW,
+                audited: true,
+            },
+            DurableCrypto::none(),
+            #[cfg(feature = "security")]
+            &mut delta_audit,
+        )
+        .is_err()
+    );
 
     let query = read_development_lane(
         &fixture.shard,
@@ -228,20 +234,22 @@ fn every_low_level_graph_row_path_refuses_orphaning_a_lane_work_item() {
 
     #[cfg(feature = "security")]
     let mut crossmodal_audit = medulla_store::redb_store::audit::AuditTailCache::new();
-    assert!(medulla_store_apply::redb_store::crossmodal::commit_crossmodal(
-        &fixture.shard,
-        TEST_GRAPH,
-        medulla_store_apply::redb_store::crossmodal::CrossModalStaged {
-            methods: std::slice::from_ref(&remove),
-            ..Default::default()
-        },
-        "lane-row-path-crossmodal",
-        TEST_NOW,
-        DurableCrypto::none(),
-        #[cfg(feature = "security")]
-        &mut crossmodal_audit,
-    )
-    .is_err());
+    assert!(
+        medulla_store_apply::redb_store::crossmodal::commit_crossmodal(
+            &fixture.shard,
+            TEST_GRAPH,
+            medulla_store_apply::redb_store::crossmodal::CrossModalStaged {
+                methods: std::slice::from_ref(&remove),
+                ..Default::default()
+            },
+            "lane-row-path-crossmodal",
+            TEST_NOW,
+            DurableCrypto::none(),
+            #[cfg(feature = "security")]
+            &mut crossmodal_audit,
+        )
+        .is_err()
+    );
 
     let query = read_development_lane(
         &fixture.shard,

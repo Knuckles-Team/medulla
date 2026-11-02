@@ -8,12 +8,12 @@
 //! through `DecisionCommit`.
 
 use super::SharedState;
-use medulla_protocol_types::protocol::Response;
-use medulla_server_api::authority_context::VerifiedRequestContext;
+use medulla_decision_types::decision::AssemblyRequest;
 #[cfg(feature = "redb")]
 #[cfg(feature = "decide")]
 use medulla_persistence_records::agent_library::AgentLibraryStateExt;
-use medulla_decision_types::decision::AssemblyRequest;
+use medulla_protocol_types::protocol::Response;
+use medulla_server_api::authority_context::VerifiedRequestContext;
 
 /// The audit target every Decide-layer decision line is written under.
 #[cfg(feature = "decide")]

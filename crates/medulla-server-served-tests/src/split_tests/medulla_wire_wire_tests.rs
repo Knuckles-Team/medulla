@@ -6,15 +6,15 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use medulla_protocol_types::protocol::Request;
-use medulla_tables::schema::Column;
-use medulla_tables::schema::ColumnType;
-use medulla_tables::schema::TableSchema;
+use medulla_server_api::carrier::CarrierAuthority;
+use medulla_server_api::state::ServerState;
+use medulla_sql_lang::sql::typed_result::TypedQueryResult;
 use medulla_table_store::tables::TableStore;
 use medulla_table_store::tables::TableTxn;
 use medulla_table_store::tables::TxnOp;
-use medulla_sql_lang::sql::typed_result::TypedQueryResult;
-use medulla_server_api::carrier::CarrierAuthority;
-use medulla_server_api::state::ServerState;
+use medulla_tables::schema::Column;
+use medulla_tables::schema::ColumnType;
+use medulla_tables::schema::TableSchema;
 use medulla_wire_core::wire::*;
 
 #[cfg(test)]
@@ -167,10 +167,9 @@ mod ne_004_ne_005_tests {
     /// no actor or transaction, snapshot isolation, and every flag/buffer cleared.
     #[test]
     fn new_session_starts_unbound_on_its_default_graph() {
-        let state = Arc::new(RwLock::new(medulla_server::seams_install::new_state_for_test(
-            SECRET,
-            test_isolation(&[AGENT]),
-        )));
+        let state = Arc::new(RwLock::new(
+            medulla_server::seams_install::new_state_for_test(SECRET, test_isolation(&[AGENT])),
+        ));
         let session = WireSession::new(state, "g-default".to_string());
         assert_eq!(session.current_graph(), "g-default");
         assert!(!session.in_txn() && session.actor().is_none());
@@ -338,8 +337,12 @@ mod ne_004_ne_005_tests {
             .clone()
             .expect("persist dir configured");
         let persist_dir = std::path::Path::new(&persist_dir_buf);
-        medulla_server_ops::api::query_txn::txn_intent::write_intent(&authority, persist_dir, &intent)
-            .expect("write durable intent");
+        medulla_server_ops::api::query_txn::txn_intent::write_intent(
+            &authority,
+            persist_dir,
+            &intent,
+        )
+        .expect("write durable intent");
         let begin_version = session
             .require_txn_begin_version()
             .expect("BEGIN captured a real begin-time version");
@@ -362,7 +365,8 @@ mod ne_004_ne_005_tests {
         // The torn state is real: the graph write is durable, the table
         // write is not, and the intent survives on disk.
         assert_eq!(
-            medulla_server_ops::api::query_txn::txn_intent::list_intents(&authority, persist_dir).len(),
+            medulla_server_ops::api::query_txn::txn_intent::list_intents(&authority, persist_dir)
+                .len(),
             1,
             "the crashed intent must still be on disk"
         );
@@ -436,13 +440,19 @@ mod ne_004_ne_005_tests {
             vec![Method::RemoveNode {
                 node_id: "recovery-after-graph-fault".to_string(),
             }],
-            vec![medulla_server_ops::api::query_txn::txn_intent::ReplayStep::Sql(
-                format!("CREATE TABLE {table} (id INT)"),
-            )],
+            vec![
+                medulla_server_ops::api::query_txn::txn_intent::ReplayStep::Sql(format!(
+                    "CREATE TABLE {table} (id INT)"
+                )),
+            ],
             medulla_server_api::txn::now_ms(),
         );
-        medulla_server_ops::api::query_txn::txn_intent::write_intent(&authority, persist_dir, &intent)
-            .expect("persist phase-1 recovery intent");
+        medulla_server_ops::api::query_txn::txn_intent::write_intent(
+            &authority,
+            persist_dir,
+            &intent,
+        )
+        .expect("persist phase-1 recovery intent");
 
         // The first recovery attempt fails at graph lookup because the graph
         // is temporarily absent. The durable intent must survive this
@@ -453,7 +463,8 @@ mod ne_004_ne_005_tests {
             .expect_err("missing graph must fail the first recovery attempt");
         assert!(first.message.contains("graph"), "{first}");
         assert_eq!(
-            medulla_server_ops::api::query_txn::txn_intent::list_intents(&authority, persist_dir).len(),
+            medulla_server_ops::api::query_txn::txn_intent::list_intents(&authority, persist_dir)
+                .len(),
             1,
             "an uncertain recovery graph error must retain its intent"
         );
@@ -781,7 +792,6 @@ mod ne_004_ne_005_tests {
     }
 }
 
-
 #[cfg(all(any(test, feature = "test-support"), feature = "query"))]
 pub mod wired_catalog_tests {
     //! NE-046 (MEDULLA-WIRE-CATALOG) wiring tests. `sql_catalog_acl.rs`'s own 13
@@ -1085,9 +1095,11 @@ pub mod wired_catalog_tests {
         // A malformed owner table lets the physical CREATE commit but makes
         // owner registration fail. This is a deterministic storage fault at
         // the exact cross-redb boundary ordinary autocommit must recover.
-        let acl =
-            medulla_server_auth::sql_tables::tenant_acl_table_store(owner.tenant_scope(), &persist_dir)
-                .expect("open tenant ACL store");
+        let acl = medulla_server_auth::sql_tables::tenant_acl_table_store(
+            owner.tenant_scope(),
+            &persist_dir,
+        )
+        .expect("open tenant ACL store");
         acl.create_table(
             &TableSchema::new(
                 "__eg_sql_owners__",
@@ -1111,7 +1123,8 @@ pub mod wired_catalog_tests {
             .expect("read physical create")
             .is_some());
         assert_eq!(
-            medulla_server_ops::api::query_txn::txn_intent::list_intents(&owner, &persist_dir).len(),
+            medulla_server_ops::api::query_txn::txn_intent::list_intents(&owner, &persist_dir)
+                .len(),
             1,
             "ordinary CREATE keeps its durable recipe while owner repair is pending"
         );
@@ -1139,7 +1152,10 @@ pub mod wired_catalog_tests {
 
     #[test]
     fn local_source_authority_is_checked_before_any_intent_state_effect() {
-        let source = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../medulla-wire-core/src/wire/mod.rs"));
+        let source = include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../medulla-wire-core/src/wire/mod.rs"
+        ));
         for (function, effect) in [
             ("async fn commit_mixed_txn", "write_intent"),
             ("async fn commit_table_txn_dispatch", "write_intent"),
@@ -1160,7 +1176,10 @@ pub mod wired_catalog_tests {
 
     #[test]
     fn durable_table_replay_cannot_enter_dispatch_or_create_an_intent() {
-        let source = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../medulla-wire-core/src/wire/mod.rs"));
+        let source = include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../medulla-wire-core/src/wire/mod.rs"
+        ));
         let replay_start = source
             .find("async fn replay_table_steps(")
             .expect("replay function must exist");
@@ -1330,9 +1349,11 @@ pub mod wired_catalog_tests {
             operation_id,
             Vec::new(),
             Vec::new(),
-            vec![medulla_server_ops::api::query_txn::txn_intent::ReplayStep::Sql(
-                "CREATE TABLE altered_replay_target (id TEXT PRIMARY KEY)".to_string(),
-            )],
+            vec![
+                medulla_server_ops::api::query_txn::txn_intent::ReplayStep::Sql(
+                    "CREATE TABLE altered_replay_target (id TEXT PRIMARY KEY)".to_string(),
+                ),
+            ],
             medulla_server_api::txn::now_ms(),
         );
         let altered_error = session
@@ -1392,8 +1413,9 @@ pub mod wired_catalog_tests {
         // The receipt is looked up under the same one, so the fixture has to
         // use it too or it commits into a scope nothing reads.
         let tenant_scope = owner.tenant_scope().to_string();
-        let store = medulla_server_auth::sql_tables::tenant_table_store(&tenant_scope, &persist_dir)
-            .expect("open tenant table store");
+        let store =
+            medulla_server_auth::sql_tables::tenant_table_store(&tenant_scope, &persist_dir)
+                .expect("open tenant table store");
 
         let operation = medulla_protocol_types::protocol::Method::Sql {
             query: "CREATE TABLE actor_header_target (id TEXT PRIMARY KEY)".to_string(),
@@ -1943,7 +1965,8 @@ pub mod wired_catalog_tests {
             .tenant_scope()
             .to_string();
         let store =
-            medulla_server_auth::sql_tables::tenant_table_store(&canonical_tenant, &persist_dir).unwrap();
+            medulla_server_auth::sql_tables::tenant_table_store(&canonical_tenant, &persist_dir)
+                .unwrap();
         assert!(store.get_schema("people").unwrap().is_some());
         assert!(store
             .property_graph(

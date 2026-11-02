@@ -19,7 +19,6 @@
 //! Pi contract: every dep is feature-gated OFF by default, so a `default`/`pi`
 //! build links none of oxrdf/oxttl/spargebra (all pure-Rust regardless).
 
-
 /// Re-export the oxrdf term model so callers (the engine handler) can name `Triple`
 /// etc. without taking their own oxrdf dependency.
 #[cfg(feature = "rdf")]
@@ -27,8 +26,6 @@ pub use oxrdf;
 
 #[cfg(feature = "rdf")]
 pub mod mapping;
-
-
 
 /// Pure connector-pack RDF preprocessing shared with admission.
 #[cfg(feature = "rdf")]
@@ -59,7 +56,6 @@ pub use spargebra;
 
 #[cfg(feature = "sparql")]
 pub mod sparql;
-
 
 /// SPARQL 1.1 UPDATE executed over the native property-graph write ops (CONCEPT:MEDULLA-KG.query.named-graph-support):
 /// INSERT/DELETE DATA, DELETE/INSERT … WHERE, CLEAR/CREATE/DROP GRAPH, with named-graph

@@ -11,23 +11,30 @@ use std::sync::Arc;
 
 use hmac::{Hmac, Mac};
 use medulla_modality::{OpaqueRef, ProtocolError};
-use medulla_retrieval::{result_stream::cross_modal_result_stream, result_stream::graph_result_stream, result_stream::job_result_stream, result_stream::rdf_result_stream, result_stream::sql_result_stream, result_stream::time_series_result_stream, result_stream::vector_result_stream, knowledge_batch::KnowledgeBatch, knowledge_batch::KnowledgeBatchRow, result_stream::KnowledgeStreamContext, result_stream::ResultStreamCursor, result_stream::ServedResultFamily};
+use medulla_retrieval::{
+    knowledge_batch::KnowledgeBatch, knowledge_batch::KnowledgeBatchRow,
+    result_stream::cross_modal_result_stream, result_stream::graph_result_stream,
+    result_stream::job_result_stream, result_stream::rdf_result_stream,
+    result_stream::sql_result_stream, result_stream::time_series_result_stream,
+    result_stream::vector_result_stream, result_stream::KnowledgeStreamContext,
+    result_stream::ResultStreamCursor, result_stream::ServedResultFamily,
+};
 use sha2::Sha256;
 use tokio::sync::RwLock;
 
 use medulla_graph_core::graph::GraphCore;
-#[cfg(any(test, feature = "test-support"))]
-pub use medulla_types::knowledge_stream::KnowledgeStreamProjection;
-use medulla_types::knowledge_stream::KnowledgeResultFamily;
-use medulla_types::knowledge_stream::KnowledgeStreamBatch;
-use medulla_types::knowledge_stream::KnowledgeStreamCursor;
-use medulla_types::knowledge_stream::KnowledgeStreamQuery;
-use medulla_types::knowledge_stream::KnowledgeStreamRequest;
-use medulla_types::knowledge_stream::KNOWLEDGE_STREAM_SCHEMA_VERSION;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
 use medulla_types::acl::RequestContextClaims;
+use medulla_types::knowledge_stream::KnowledgeResultFamily;
+use medulla_types::knowledge_stream::KnowledgeStreamBatch;
+use medulla_types::knowledge_stream::KnowledgeStreamCursor;
+#[cfg(any(test, feature = "test-support"))]
+pub use medulla_types::knowledge_stream::KnowledgeStreamProjection;
+use medulla_types::knowledge_stream::KnowledgeStreamQuery;
+use medulla_types::knowledge_stream::KnowledgeStreamRequest;
+use medulla_types::knowledge_stream::KNOWLEDGE_STREAM_SCHEMA_VERSION;
 
 #[cfg(feature = "security")]
 use medulla_isolation::rbac_persist::RbacPolicyStore;
@@ -185,14 +192,19 @@ impl KnowledgeStreamAuthority {
     /// this handle to policy-aware delegated readers; they must not mint,
     /// clone, or reconstruct a second graph capability.
     #[cfg(feature = "security")]
-    pub(super) fn policy_lease(&self) -> Option<&Arc<medulla_isolation::isolation::PolicyDecisionLease>> {
+    pub(super) fn policy_lease(
+        &self,
+    ) -> Option<&Arc<medulla_isolation::isolation::PolicyDecisionLease>> {
         self.policy_lease.as_ref()
     }
 
     /// Filter an owned graph snapshot with the same durable lease that binds
     /// this stream.  Graph/vector readers must not substitute a cloned
     /// `IsolationLayer` or a separately captured row-policy image.
-    pub(super) fn filter_view(&self, view: &mut medulla_graph_core::graph::GraphView) -> Result<(), String> {
+    pub(super) fn filter_view(
+        &self,
+        view: &mut medulla_graph_core::graph::GraphView,
+    ) -> Result<(), String> {
         #[cfg(feature = "security")]
         {
             let lease = self.policy_lease.as_ref().ok_or_else(|| {

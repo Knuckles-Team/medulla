@@ -15,7 +15,11 @@
 use medulla_storage::{GraphShardOwner, PhysicalWriteCapability, ScopedOwnerTableMut};
 use redb::TableDefinition;
 
-use medulla_work_types::{native_control::EnrichmentBudgetCheckpoint as BudgetCheckpoint, native_control::EnrichmentBudgetPark, native_control::EnrichmentBudgetReservation, native_control::NativeControlSchemaVersion, native_control::SubmitWorkItemsRequest};
+use medulla_work_types::{
+    native_control::EnrichmentBudgetCheckpoint as BudgetCheckpoint,
+    native_control::EnrichmentBudgetPark, native_control::EnrichmentBudgetReservation,
+    native_control::NativeControlSchemaVersion, native_control::SubmitWorkItemsRequest,
+};
 
 use super::shard::{Shard, ShardWrite};
 use super::{decode_durable, DurableCrypto};
@@ -29,8 +33,7 @@ pub const SUPERSESSIONS: TableDefinition<(&str, &str), &[u8]> =
 /// One graph-wide pause per enrichment consumer. The conservative pause keeps
 /// all of this graph's enrichment source events unclaimed until an authenticated
 /// budget-policy revision explicitly reactivates it.
-pub const PARKS: TableDefinition<&str, &[u8]> =
-    TableDefinition::new("repository_enrichment_parks");
+pub const PARKS: TableDefinition<&str, &[u8]> = TableDefinition::new("repository_enrichment_parks");
 const MAX_ENVELOPE_BYTES: usize = 512;
 const MAX_ELIGIBLE_UNITS: u32 = 4096;
 

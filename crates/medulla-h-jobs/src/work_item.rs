@@ -191,9 +191,8 @@ fn publication_authority<'a>(
         .as_ref()
         .and_then(|backend| backend.as_redb())
         .ok_or_else(|| format!("{kind} publication requires native persistence"))?;
-    let actor = medulla_server_api::batch_compile::principal_fingerprint(
-        ctx.verified_context.principal(),
-    )?;
+    let actor =
+        medulla_server_api::batch_compile::principal_fingerprint(ctx.verified_context.principal())?;
     Ok((
         backend,
         medulla_kernel::persist::sanitize(ctx.graph_name),

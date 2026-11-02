@@ -20,7 +20,6 @@
 //! temporal postings, and exact frame-window predicates. Governed persistence is
 //! exposed through [`VideoServingRuntime`].
 
-
 mod header;
 mod video;
 

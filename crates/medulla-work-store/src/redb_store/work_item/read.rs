@@ -5,8 +5,12 @@
 //! The projection, the tenant filter and the three-bound page rule live in
 //! [`medulla_work_types::work_item_read`]; this module only walks the stored rows.
 
-use medulla_work_types::{work_item_read::validate_work_item_get, work_item_read::CommittedOutcomeRefs, work_item_read::WorkItemListRequest, work_item_read::WorkItemOutcomeView, work_item_read::WorkItemPage, work_item_read::WorkItemView};
 use medulla_types::keyset_page::{KeysetListing, KeysetPage, KeysetScan};
+use medulla_work_types::{
+    work_item_read::validate_work_item_get, work_item_read::CommittedOutcomeRefs,
+    work_item_read::WorkItemListRequest, work_item_read::WorkItemOutcomeView,
+    work_item_read::WorkItemPage, work_item_read::WorkItemView,
+};
 
 use super::*;
 

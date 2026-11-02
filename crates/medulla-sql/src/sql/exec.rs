@@ -25,16 +25,30 @@ use super::ann_pushdown::{
     ann_pushdown_decision, ann_pushdown_may_apply, maintained_top_k, AnnPushdown,
 };
 use super::catalog::register_system_catalogs;
-use medulla_table_store::tables::ann_plan::AnnIndexPlan;
 use super::providers::{infer_nodes, EdgesTableProvider, NodesTableProvider, SqlCache};
 use super::spill::CancellationToken;
-use medulla_sql_lang::{sql::typed_result::PgColType, sql::typed_result::TypedColumn, sql::typed_result::TypedQueryResult};
 use super::store_catalog::{reads_index_status, StoreCatalog};
-use medulla_sql_udfs::{tablefuncs::BetweennessFunc, tablefuncs::GenerateSeriesFunc, tablefuncs::PagerankFunc};
-use medulla_sql_udfs::{udfs::base64_decode_udf, udfs::base64_encode_udf, udfs::bm25_match_udf, udfs::bm25_score_udf, udfs::bm25_snippet_udf, udfs::epistemic_decay_udf, udfs::greatest_udf, udfs::int4range_udf, udfs::ipcontains_udf, udfs::ipfamily_udf, udfs::iphost_udf, udfs::ipmasklen_udf, udfs::json_get_f64_udf, udfs::json_get_i64_udf, udfs::json_get_udf, udfs::least_udf, udfs::md5_udf, udfs::range_contained_by_udf, udfs::range_contains_range_udf, udfs::range_contains_udf, udfs::range_overlaps_udf, udfs::sha1_udf, udfs::sha256_udf, udfs::time_bucket_udf, udfs::tsrange_udf, udfs::vector_cosine_udf, udfs::vector_ip_udf, udfs::vector_l2_udf};
+use medulla_sql_lang::{
+    sql::typed_result::PgColType, sql::typed_result::TypedColumn,
+    sql::typed_result::TypedQueryResult,
+};
+use medulla_sql_udfs::{
+    tablefuncs::BetweennessFunc, tablefuncs::GenerateSeriesFunc, tablefuncs::PagerankFunc,
+};
+use medulla_sql_udfs::{
+    udfs::base64_decode_udf, udfs::base64_encode_udf, udfs::bm25_match_udf, udfs::bm25_score_udf,
+    udfs::bm25_snippet_udf, udfs::epistemic_decay_udf, udfs::greatest_udf, udfs::int4range_udf,
+    udfs::ipcontains_udf, udfs::ipfamily_udf, udfs::iphost_udf, udfs::ipmasklen_udf,
+    udfs::json_get_f64_udf, udfs::json_get_i64_udf, udfs::json_get_udf, udfs::least_udf,
+    udfs::md5_udf, udfs::range_contained_by_udf, udfs::range_contains_range_udf,
+    udfs::range_contains_udf, udfs::range_overlaps_udf, udfs::sha1_udf, udfs::sha256_udf,
+    udfs::time_bucket_udf, udfs::tsrange_udf, udfs::vector_cosine_udf, udfs::vector_ip_udf,
+    udfs::vector_l2_udf,
+};
+use medulla_table_store::tables::ann_plan::AnnIndexPlan;
+use medulla_table_store::tables::TableStore;
 use medulla_tables::schema::StoredFunction;
 use medulla_tables::schema::TableSchema;
-use medulla_table_store::tables::TableStore;
 
 /// One user table's registration plan for `build_ctx` (CONCEPT:MEDULLA-KG.query.register-user-tables-alongside):
 /// [`materialize_user_tables`] chooses PER TABLE between the two variants below.
@@ -94,7 +108,10 @@ fn register_pg_common(ctx: &SessionContext) {
 /// tables-only obs path so both expose the identical operator set.
 #[cfg(feature = "numeric")]
 fn register_numeric(ctx: &SessionContext) {
-    use medulla_sql_udfs::{numeric::cosine_sim_udf, numeric::covariance_udaf, numeric::kmeans_udaf, numeric::l2_normalize_udf, numeric::pca_udaf, numeric::svd_udaf, numeric::zscore_udf};
+    use medulla_sql_udfs::{
+        numeric::cosine_sim_udf, numeric::covariance_udaf, numeric::kmeans_udaf,
+        numeric::l2_normalize_udf, numeric::pca_udaf, numeric::svd_udaf, numeric::zscore_udf,
+    };
     ctx.register_udf(cosine_sim_udf());
     ctx.register_udf(l2_normalize_udf());
     ctx.register_udf(zscore_udf());
@@ -301,7 +318,9 @@ pub fn exec_graph_table_typed_with_tables_cancellable(
     verified_tenant_scope: &str,
     cancel: &CancellationToken,
 ) -> Result<TypedQueryResult, String> {
-    let lowered = medulla_sql_lang::sql::pgq::lower_graph_table(query, definition, verified_tenant_scope)?.to_sql();
+    let lowered =
+        medulla_sql_lang::sql::pgq::lower_graph_table(query, definition, verified_tenant_scope)?
+            .to_sql();
     exec_sql_typed_with_tables_cancellable(view, store, &lowered, cancel)
 }
 
@@ -330,7 +349,9 @@ pub fn exec_sql_typed_with_tables_cancellable(
     // stops an in-flight plpgsql-embedded SELECT.
     if catalog.functions.iter().any(|f| f.is_plpgsql()) {
         let run_sql = |q: &str| exec_sql_typed_with_tables_cancellable(view, store, q, cancel);
-        if let Some(res) = medulla_sql_lang::sql::plpgsql::try_exec_call(sql, &catalog.functions, &run_sql)? {
+        if let Some(res) =
+            medulla_sql_lang::sql::plpgsql::try_exec_call(sql, &catalog.functions, &run_sql)?
+        {
             return Ok(res);
         }
     }
@@ -1550,10 +1571,10 @@ mod medulla_embed_ann_pushdown_tests {
         ann_probe_sql_with, ann_pushdown_decision_with, ann_pushdown_may_apply_with,
     };
     use crate::sql::embed_udf::{medulla_embed_udf_with, EmbedFn};
-    use medulla_table_store::tables::ann_plan::AnnMethod;
-    use medulla_table_store::tables::ann_plan::VectorMetric;
     use arrow::array::{Float32Builder, Int64Array, ListBuilder, RecordBatch, StringArray};
     use arrow::datatypes::{DataType, Field, Schema};
+    use medulla_table_store::tables::ann_plan::AnnMethod;
+    use medulla_table_store::tables::ann_plan::VectorMetric;
 
     /// A deterministic, dependency-free stand-in for a real model, mirroring the one in
     /// `embed_udf`'s tests (and `medulla_plan::HashEmbedder`, which this crate cannot name —

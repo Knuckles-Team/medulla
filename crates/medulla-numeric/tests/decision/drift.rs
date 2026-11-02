@@ -3,6 +3,8 @@
 //! candidate and feature (the served ladder then abstains with
 //! `insufficient_confidence`); inside them the head reads normally.
 
+use medulla_decision_stats::decision::features::FeatureMatrix;
+use medulla_decision_stats::{decision::head_eval::read_head, decision::head_eval::HeadReading};
 use medulla_decision_types::{
     decision::statistical::head::DecisionHeadBody,
     decision::statistical::head::FeatureStandardisation, decision::statistical::head::FittedRegime,
@@ -10,8 +12,6 @@ use medulla_decision_types::{
     decision::statistical::head::DECISION_HEAD_SCHEMA_VERSION,
 };
 use medulla_decision_types::{decision::QuantScaleTag, decision::QuantisedValue};
-use medulla_decision_stats::decision::features::FeatureMatrix;
-use medulla_decision_stats::{decision::head_eval::read_head, decision::head_eval::HeadReading};
 
 use super::common::bounded;
 

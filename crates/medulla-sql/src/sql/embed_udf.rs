@@ -228,10 +228,9 @@ fn embed_text_array(embed: &EmbedFn, array: &dyn Array) -> DfResult<ListArray> {
             array.data_type()
         ))
     })?;
-    let texts = utf8
-        .as_any()
-        .downcast_ref::<StringArray>()
-        .ok_or_else(|| DataFusionError::Execution(format!("{MEDULLA_EMBED_FN}: text decode failed")))?;
+    let texts = utf8.as_any().downcast_ref::<StringArray>().ok_or_else(|| {
+        DataFusionError::Execution(format!("{MEDULLA_EMBED_FN}: text decode failed"))
+    })?;
     let mut out = ListBuilder::new(Float32Builder::new()).with_field(vector_element_field());
     for i in 0..texts.len() {
         if texts.is_null(i) {

@@ -1,6 +1,17 @@
 //! EH-293 / EH-295 / EH-302: fitting the resident scorer, its conformal
 //! calibration, the act rule's coverage guard, and the promotion protocol.
 
+use medulla_decision_stats::decision::exploration::ExplorationPermit;
+use medulla_decision_stats::decision::features::FeatureMatrix;
+use medulla_decision_stats::decision::scorer::forward::served_probabilities;
+use medulla_decision_stats::{decision::admission::admit, decision::admission::Regime};
+use medulla_decision_stats::{decision::evaluate::evaluate, decision::evaluate::EvalSpec};
+use medulla_decision_stats::{
+    decision::head_eval::calibration_statement, decision::head_eval::read_head,
+    decision::head_eval::Evaluated, decision::head_eval::HeadReading,
+};
+use medulla_decision_stats::{decision::ladder::decide, decision::ladder::LadderInputs};
+use medulla_decision_stats::{decision::scorer::fixed::to_f64, decision::scorer::fixed::ONE};
 use medulla_decision_types::decision::jobs::DecisionEvalReceipt;
 use medulla_decision_types::{
     decision::statistical::dataset::ItemLabel, decision::statistical::dataset::LabelSource,
@@ -15,14 +26,6 @@ use medulla_decision_types::{
 use medulla_decision_types::{
     decision::ColdStart, decision::QuantScaleTag, decision::QuantisedValue,
 };
-use medulla_decision_stats::{decision::admission::admit, decision::admission::Regime};
-use medulla_decision_stats::{decision::evaluate::evaluate, decision::evaluate::EvalSpec};
-use medulla_decision_stats::decision::exploration::ExplorationPermit;
-use medulla_decision_stats::decision::features::FeatureMatrix;
-use medulla_decision_stats::{decision::head_eval::calibration_statement, decision::head_eval::read_head, decision::head_eval::Evaluated, decision::head_eval::HeadReading};
-use medulla_decision_stats::{decision::ladder::decide, decision::ladder::LadderInputs};
-use medulla_decision_stats::{decision::scorer::fixed::to_f64, decision::scorer::fixed::ONE};
-use medulla_decision_stats::decision::scorer::forward::served_probabilities;
 use medulla_types::contract::BoundedVec;
 
 use super::common::{

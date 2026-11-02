@@ -76,7 +76,10 @@ pub fn read_admission(
     crypto: DurableCrypto<'_>,
 ) -> Result<Option<medulla_work_types::work_item_read::RunWorkItemView>, String> {
     use medulla_work_types::native_control::SubmitWorkItemRequest;
-    use medulla_work_types::{work_item_read::validate_work_item_get, work_item_read::RunWorkItemView, work_item_read::WorkItemView};
+    use medulla_work_types::{
+        work_item_read::validate_work_item_get, work_item_read::RunWorkItemView,
+        work_item_read::WorkItemView,
+    };
     validate_work_item_get(tenant, run_id)?;
     let id = work_item_id(graph, tenant, run_id)?;
     let handle = shard.graph(graph)?;

@@ -7,7 +7,6 @@
 //! injected [`ModelTransport`] contract; durable promotion must use the engine's
 //! existing [`medulla_types::ChangeEnvelope`] / `MutationBatch` authority.
 
-
 mod commit;
 mod contracts;
 pub mod optimize;

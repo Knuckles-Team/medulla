@@ -1,10 +1,10 @@
 //! Graph lifecycle and identity helpers for router dispatch.
 
-use medulla_server_graph::dispatch::shared::validate_get_identity_graph;
-use medulla_server_graph::dispatch::shared::timed_read;
 use super::*;
 #[cfg(feature = "redb")]
 use medulla_persistence::cold_offload::ColdTrackerStateExt;
+use medulla_server_graph::dispatch::shared::timed_read;
+use medulla_server_graph::dispatch::shared::validate_get_identity_graph;
 
 /// A `CreateGraph` that finds the graph already resident is either a retry of a
 /// durably-committed create (idempotent success) or a genuine collision.
@@ -620,8 +620,8 @@ fn rbac_admin_response(
     op: medulla_types::acl::RbacAdminOp,
     audit: medulla_isolation::isolation::AuditActor<'_>,
 ) -> Response {
-    use medulla_types::acl::RbacAdminOp;
     use medulla_protocol_types::result_contract::security as results;
+    use medulla_types::acl::RbacAdminOp;
     match op {
         RbacAdminOp::List => {
             let policy = s.isolation.rbac();

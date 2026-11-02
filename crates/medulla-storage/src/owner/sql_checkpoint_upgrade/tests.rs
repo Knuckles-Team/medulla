@@ -2,9 +2,9 @@
 //! the Train 4 owner lineage.
 
 use super::*;
-use medulla_direct_state::direct_state::private_local_tempdir;
 use crate::owner::persisted_layout::create_predecessor_owner_file;
 use crate::recovery::evidence::strict_recovery_evidence;
+use medulla_direct_state::direct_state::private_local_tempdir;
 use redb::{ReadableDatabase, TableDefinition};
 use sha2::{Digest, Sha256};
 
@@ -88,7 +88,11 @@ fn row(path: &Path) -> Vec<u8> {
 /// Only a subprocess receives the crash stage. Exiting without unwinding
 /// exercises redb's committed versus uncommitted upgrade boundary.
 pub(super) fn crash_at(stage: &str) {
-    if std::env::var("MEDULLA_SQL_LAYOUT_UPGRADE_CRASH").ok().as_deref() == Some(stage) {
+    if std::env::var("MEDULLA_SQL_LAYOUT_UPGRADE_CRASH")
+        .ok()
+        .as_deref()
+        == Some(stage)
+    {
         std::process::exit(73);
     }
 }

@@ -4,8 +4,8 @@ use medulla_mutation_types::{
     sealed_record::RetireSealedRecordRequest, sealed_record::SealedRecordRetirement,
 };
 
-use crate::redb_store::work_item::test_shard::{open, with_nodes, GRAPH};
 use super::*;
+use crate::redb_store::work_item::test_shard::{open, with_nodes, GRAPH};
 
 type NodeRow = serde_json::Map<String, serde_json::Value>;
 

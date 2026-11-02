@@ -400,11 +400,13 @@ fn hashed_tenant_namespace_cannot_alias_a_preserved_tenant_role() {
 fn assert_exact_saved_tenant_grants(store: &IdentityStore, slug: &str, role_id: &str) {
     let saved_projection = store.rbac_projection();
     for action in [RbacAction::Read, RbacAction::Write] {
-        assert!(saved_projection.grants.contains(&medulla_types::acl::Grant {
-            role: format!("idm:{role_id}"),
-            resource: ResourceSelector::Pattern(format!("tenant__{slug}__*")),
-            action,
-            effect: GrantEffect::Allow,
-        }));
+        assert!(saved_projection
+            .grants
+            .contains(&medulla_types::acl::Grant {
+                role: format!("idm:{role_id}"),
+                resource: ResourceSelector::Pattern(format!("tenant__{slug}__*")),
+                action,
+                effect: GrantEffect::Allow,
+            }));
     }
 }

@@ -35,7 +35,6 @@
 //! Pi contract: pure Rust, no C/native dep (`regex` for pattern facets rides medulla-rdf's
 //! sparql stack; `serde_json` for ShExJ is already resolved workspace-wide).
 
-
 mod compact;
 pub mod report;
 pub mod schema;

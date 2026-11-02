@@ -4,9 +4,9 @@ use std::sync::Arc;
 use std::time::Instant as DispatchLockInstant;
 use tokio::sync::RwLock;
 
-use medulla_server_auth::access::check_graph_access;
-use medulla_server_api::carrier::GraphReadAuthority;
 use medulla_server_api::authority_context::VerifiedRequestContext;
+use medulla_server_api::carrier::GraphReadAuthority;
+use medulla_server_auth::access::check_graph_access;
 // NOT `#[cfg(feature = "redb")]`: `server::persistence` is an unconditional module
 // (server/mod.rs) and three ungated signatures below -- `reconcile_existing_graph_create`,
 // `read_committed_graph_version`, `reconcile_missing_graph_delete` -- name this trait
@@ -58,7 +58,13 @@ pub fn authorized_graph_read(
     graph: &str,
     verified: &VerifiedRequestContext,
     missing_error: &str,
-) -> Result<(Arc<medulla_graph_core::graph::GraphCore>, GraphReadAuthority), String> {
+) -> Result<
+    (
+        Arc<medulla_graph_core::graph::GraphCore>,
+        GraphReadAuthority,
+    ),
+    String,
+> {
     let entry = state.registry.get(graph).ok_or(missing_error)?;
     check_graph_access(
         &state.isolation,
@@ -118,7 +124,9 @@ mod identity_graph_scope_tests {
 /// today, but the explicit allowlist means a future enum variant cannot be
 /// accepted by this boundary accidentally until its lifecycle contract is
 /// deliberately reviewed.
-pub fn validate_graph_create_type(graph_type: medulla_protocol_types::protocol::GraphType) -> Result<(), &'static str> {
+pub fn validate_graph_create_type(
+    graph_type: medulla_protocol_types::protocol::GraphType,
+) -> Result<(), &'static str> {
     if matches!(
         graph_type,
         medulla_protocol_types::protocol::GraphType::Agent

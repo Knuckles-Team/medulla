@@ -2,8 +2,8 @@
 
 use std::io::Read;
 
-use medulla_modality::{GovernedModality, NativePredicate, NativeProductionProbe};
 use flate2::read::ZlibDecoder;
+use medulla_modality::{GovernedModality, NativePredicate, NativeProductionProbe};
 
 use crate::{content_hash, ImageColorSpace, ImageData, ImageFormat};
 

@@ -67,9 +67,9 @@ use medulla_types::contract::Digest256;
 use medulla_types::wire::ForeignSourceSpec;
 
 use super::foreign_share::{may_use_shared, share_resource, shared_name};
-use medulla_server_api::carrier::CarrierAuthority;
-use medulla_server_api::api::persistence::SourceApprovalStore;
 use medulla_isolation::isolation::IsolationLayer;
+use medulla_server_api::api::persistence::SourceApprovalStore;
+use medulla_server_api::carrier::CarrierAuthority;
 
 /// `(verified owner scope, source name)` — the catalog key.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -120,10 +120,16 @@ impl OwnedForeignRegistry {
     #[cfg(feature = "result-cache")]
     pub fn install_fragment_cache(
         &mut self,
-        sources: std::collections::HashMap<String, medulla_federation::federation_opt::SourceWatermark>,
+        sources: std::collections::HashMap<
+            String,
+            medulla_federation::federation_opt::SourceWatermark,
+        >,
     ) {
         self.registry.set_cache_scope(std::sync::Arc::new(
-            medulla_federation::federation_opt::FragmentCacheScope::new(self.cache_salt.clone(), sources),
+            medulla_federation::federation_opt::FragmentCacheScope::new(
+                self.cache_salt.clone(),
+                sources,
+            ),
         ));
     }
     /// The verified owner (tenant+principal) scope this registry was built for.
@@ -718,7 +724,8 @@ mod tests {
         // spec: MEDULLA-UNIFIED-DATA-PLANE-R002.1
         #[test]
         fn an_allowed_sql_destination_still_registers() {
-            let _allow = medulla_server_api::test_support::FederationAllowGuard::blocking("127.0.0.1:5432");
+            let _allow =
+                medulla_server_api::test_support::FederationAllowGuard::blocking("127.0.0.1:5432");
             let a = carrier("agent-a");
             let catalog = ForeignSourceCatalog::default();
             // Same fixture `crates/medulla-plan/src/federation_ssrf.rs` already proves is

@@ -26,9 +26,9 @@
 
 use medulla_kernel::test_rendezvous;
 
+use medulla_persistence::redb_backend::RedbBackend;
 use medulla_protocol_types::protocol::Method;
 use medulla_server_api::api::persistence::PersistenceBackend;
-use medulla_persistence::redb_backend::RedbBackend;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::time::Duration;
@@ -201,12 +201,7 @@ fn best(attempts: &[Attempt]) -> (Duration, String) {
     let all = attempts
         .iter()
         .enumerate()
-        .map(|(i, attempt)| {
-            format!(
-                "attempt {i}: {:?}\n{}",
-                attempt.took, attempt.phases
-            )
-        })
+        .map(|(i, attempt)| format!("attempt {i}: {:?}\n{}", attempt.took, attempt.phases))
         .collect::<Vec<_>>()
         .join("\n");
     (fastest.took, all)
@@ -392,8 +387,7 @@ fn populated_scenario(limits: &Limits) -> Vec<String> {
     for _ in 0..ATTEMPTS {
         phase_log.take();
         let started = std::time::Instant::now();
-        let backend =
-            RedbBackend::open_with_shards(dir_str.clone(), 8192, SHARDS).expect("reopen");
+        let backend = RedbBackend::open_with_shards(dir_str.clone(), 8192, SHARDS).expect("reopen");
         let took = started.elapsed();
         fast_attempts.push(Attempt {
             took,

@@ -7,9 +7,9 @@ use medulla_semantic_index::semantic::SemanticStore;
 use medulla_types::wire::{UqlParam, UqlResult};
 use serde_json::json;
 
+use crate::uql::serve::run_statement;
 use medulla_exec::budget::Budget;
 use medulla_exec::exec::PlanCtx;
-use crate::uql::serve::run_statement;
 use medulla_uql::{parse_statement, Params};
 
 /// d1 → d2 → d3 (CITES), d4 isolated; d2 and d3 are cited once each.
@@ -178,10 +178,10 @@ fn budget_hint_requires_bound_session_and_never_bypasses_server_cap() {
 #[cfg(feature = "federation")]
 #[test]
 fn profile_remote_fragment_has_redacted_golden_output_and_provenance() {
+    use medulla_exec::budget::FederationBudget;
     use medulla_federation::federation_opt::{
         EstimateProvenance, FederationSession, FetchStrategy, FragmentTrace,
     };
-    use medulla_exec::budget::FederationBudget;
     let (view, semantic) = fixture();
     let session = FederationSession::new(FederationBudget::default());
     session.record(FragmentTrace {
@@ -253,7 +253,10 @@ fn budgets_refuse_with_a_typed_error() {
         max_series_work: Budget::DEFAULT_MAX_SERIES_WORK,
     });
     let err = run("MATCH (:Doc)", &Params::new(), &ctx).unwrap_err();
-    assert!(err.starts_with(medulla_exec::budget::BUDGET_EXCEEDED), "{err}");
+    assert!(
+        err.starts_with(medulla_exec::budget::BUDGET_EXCEEDED),
+        "{err}"
+    );
 }
 
 // Regression coverage for MEDULLA-FEDERATED-QUERY-R070; native acceptance remains pending.
@@ -266,7 +269,10 @@ fn profile_refuses_when_final_rows_exceed_budget() {
         max_series_work: Budget::DEFAULT_MAX_SERIES_WORK,
     });
     let err = run("PROFILE MATCH (:Doc)", &Params::new(), &ctx).unwrap_err();
-    assert!(err.starts_with(medulla_exec::budget::BUDGET_EXCEEDED), "{err}");
+    assert!(
+        err.starts_with(medulla_exec::budget::BUDGET_EXCEEDED),
+        "{err}"
+    );
     assert!(err.contains("max_result_rows = 1"), "{err}");
 }
 

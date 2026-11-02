@@ -25,7 +25,6 @@
 //! check, so the SAME binary runs correctly (scalar fallback) on a CPU without
 //! AVX2 (e.g. this fleet's interactive dev host, which lacks `x86-64-v3`) as on one with it.
 
-
 pub mod lttb;
 pub mod m4;
 pub mod simd;

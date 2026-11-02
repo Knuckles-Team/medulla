@@ -19,9 +19,9 @@ use super::generation::AnnGeneration;
 use super::{AnnFallbackReason, AnnLimits, AnnServeReceipt, AnnServingPath};
 use crate::tables::ann_plan::metric_to_ann;
 use crate::tables::ann_plan::AnnIndexPlan;
-use medulla_tables::schema::Cell;
 use crate::tables::store::{AnnRowReader, ScanExtent};
 use crate::tables::TableStore;
+use medulla_tables::schema::Cell;
 
 /// A probe asks the graph for `k × OVERFETCH` candidates before exact ranking.
 const OVERFETCH: usize = 8;

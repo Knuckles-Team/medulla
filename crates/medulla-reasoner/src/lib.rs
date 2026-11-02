@@ -6,6 +6,14 @@
 #![deny(unsafe_code)]
 #![deny(missing_docs)]
 
+/// ModalityContract retrofit (CONCEPT:E4): `impl ModalityContract for
+/// owl::ProofNode` — the reference non-trivial `provenance()`, mapping
+/// `owl::Justification` (reconstructed as a `ProofNode`) losslessly. Behind the
+/// crate's own opt-in `contract` feature (default OFF, implying `owl` since
+/// `ProofNode` lives there). See `src/contract.rs` module docs.
+#[cfg(feature = "contract")]
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+mod contract;
 /// W3 — the native OWL 2 (EL⁺ + RL) reasoner (CONCEPT:MEDULLA-KG.ontology.incremental-materialization). Classification,
 /// consistency checking, incremental materialization + justifications over the
 /// oxttl-parsed ontology. Pure Rust; behind `owl` (implies `rdf`).
@@ -17,14 +25,12 @@ pub mod owl;
 #[cfg(feature = "owl")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod owl_wire;
-/// ModalityContract retrofit (CONCEPT:E4): `impl ModalityContract for
-/// owl::ProofNode` — the reference non-trivial `provenance()`, mapping
-/// `owl::Justification` (reconstructed as a `ProofNode`) losslessly. Behind the
-/// crate's own opt-in `contract` feature (default OFF, implying `owl` since
-/// `ProofNode` lives there). See `src/contract.rs` module docs.
-#[cfg(feature = "contract")]
+#[cfg(feature = "reasoning")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-mod contract;
+pub mod reasoning;
+#[cfg(feature = "reasoning")]
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod reasoning_closure;
 /// MEDULLA-021 — user-defined custom rules + instance-level (ABox) OWL 2 RL / Datalog
 /// reasoning with `owl:sameAs` equality, run in one confidence-propagating
 /// forward-chaining fixpoint. The second Stardog-parity gap (custom rules) plus the
@@ -46,9 +52,3 @@ pub mod rules;
 #[cfg(feature = "owl-dl")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod tableau;
-#[cfg(feature = "reasoning")]
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod reasoning;
-#[cfg(feature = "reasoning")]
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod reasoning_closure;

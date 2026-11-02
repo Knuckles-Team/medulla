@@ -2,12 +2,12 @@
 
 use std::collections::BTreeMap;
 
-use medulla_source_types::{lifecycle::LifecycleEdgeKind as E, lifecycle::LifecycleKind as K};
 use medulla_core::lifecycle::derive::{
     derive_lifecycle_edges, CodeGraphView, Culprit, ReleaseHead, Span, SymbolFact, TestBinding,
     TestCall, RULE_VERSION,
 };
 use medulla_core::lifecycle::store::LifecycleStore;
+use medulla_source_types::{lifecycle::LifecycleEdgeKind as E, lifecycle::LifecycleKind as K};
 use medulla_types::source_changeset::{ChangedPath, Changeset, PathOp, Trailers};
 
 fn changeset(id: &str, paths: &[&str], trailers: Trailers) -> Changeset {

@@ -1,4 +1,3 @@
-use medulla_store::{redb_store::decode_durable, redb_store::DurableCrypto};
 use super::links::{lane_cleanup_value, lane_intent_value};
 use super::reserve_support::work_item_kind_name;
 use super::types::{LaneDecision, LaneWorkItem};
@@ -6,6 +5,7 @@ use medulla_protocol_types::protocol::DevelopmentLaneWorkItemKind;
 use medulla_result_types::epistemic_operations::DevelopmentLaneCleanupIntent;
 use medulla_result_types::epistemic_operations::DevelopmentLaneIntent;
 use medulla_storage::ScopedOwnerTableMut;
+use medulla_store::{redb_store::decode_durable, redb_store::DurableCrypto};
 
 // Private redb-transaction-scoped helper: every parameter is a distinct
 // required assertion against the borrowed row (table handle, identity,
@@ -57,7 +57,9 @@ pub fn work_item_identity_decision(
     if medulla_store::redb_store::property_string(props, "tenant") != tenant {
         return Err(LaneDecision::WrongTenant);
     }
-    if medulla_store::redb_store::property_string(props, "kind") != work_item_kind_name(expected_kind) {
+    if medulla_store::redb_store::property_string(props, "kind")
+        != work_item_kind_name(expected_kind)
+    {
         return Err(LaneDecision::WrongKind);
     }
     Ok(())
@@ -119,7 +121,8 @@ pub fn work_item_lease_decision(
         // current live claim, not merely to an echoed fence tuple.
         return Err(LaneDecision::WrongOwner);
     }
-    let lease_expires_at_ms = (medulla_store::redb_store::property_f64(props, "lease_expires_at") * 1_000.0)
+    let lease_expires_at_ms = (medulla_store::redb_store::property_f64(props, "lease_expires_at")
+        * 1_000.0)
         .max(0.0)
         .min(u64::MAX as f64) as u64;
     if !terminal && lease_expires_at_ms <= now_ms {

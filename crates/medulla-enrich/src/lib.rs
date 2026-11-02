@@ -16,7 +16,6 @@
 //! Every identifier is validated at construction, and every refusal carries a
 //! stable code.
 
-
 use serde::{Deserialize, Serialize};
 
 pub mod code;

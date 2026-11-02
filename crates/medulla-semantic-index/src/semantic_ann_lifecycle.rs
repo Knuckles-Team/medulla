@@ -34,10 +34,7 @@ impl SemanticStore {
         }
     }
 
-    pub(in crate::semantic) fn mismatched_row_dim(
-        &self,
-        requested: usize,
-    ) -> Option<usize> {
+    pub(in crate::semantic) fn mismatched_row_dim(&self, requested: usize) -> Option<usize> {
         (self.arena.dim != 0 && self.arena.dim != requested).then_some(self.arena.dim)
     }
 

@@ -1,10 +1,6 @@
 // Test partitions are modules so KISS measures each bounded unit rather
 // than an include-expanded aggregate. Shared fixture helpers are re-exported
 // below without changing the production module API.
-use medulla_store::{redb_store::decode_durable, redb_store::DurableCrypto, redb_store::NODES};
-use medulla_resource_store::{redb_store::resource::resource_decode, redb_store::resource::resource_encode};
-use medulla_store::redb_store::property_string;
-use medulla_store::redb_store::store_read::read_one_node;
 use medulla_lane_store::redb_store::development_lane::finish::ACTIVE_HOLD_REQUIRES_TERMINAL_WORK_ITEM;
 use medulla_lane_store::redb_store::development_lane::identity::{hold_load, method_name};
 use medulla_lane_store::redb_store::development_lane::lifecycle_shared::observation_fresh;
@@ -13,8 +9,12 @@ use medulla_lane_store::redb_store::development_lane::quota::{
     adjust, empty_charge, global_policy_equal, hold_id, load_counter, load_policy, scope_key,
     worktree_key, Metric,
 };
-use medulla_lane_store::redb_store::development_lane::reserve_support::{policy_pressure, pressure_max, reserve_counter_check};
-use medulla_lane_store::redb_store::development_lane::results::{load_invocation, store_invocation, REDACTED_PRIVATE_ID};
+use medulla_lane_store::redb_store::development_lane::reserve_support::{
+    policy_pressure, pressure_max, reserve_counter_check,
+};
+use medulla_lane_store::redb_store::development_lane::results::{
+    load_invocation, store_invocation, REDACTED_PRIVATE_ID,
+};
 use medulla_lane_store::redb_store::development_lane::rows::{clear_native_graph_rows, lane_op_id};
 use medulla_lane_store::redb_store::development_lane::types::{LaneDecision, Scope, ScopeCounter};
 use medulla_lane_store::redb_store::development_lane::validation::request_digest;
@@ -25,8 +25,6 @@ use medulla_lane_store::redb_store::development_lane::{
     MAX_INVOCATIONS_PER_TENANT, POLICIES, PRESSURE_INDEX, REPOSITORY_BRANCH_INDEX, WORKTREE_INDEX,
     WORK_ITEM_INDEX,
 };
-use medulla_store::redb_store::shard::Shard;
-use medulla_store::redb_store::shard::ShardWrite;
 use medulla_mutation_types::mutation_scope::DurabilityDomain;
 use medulla_mutation_types::mutation_scope::IncarnationId;
 use medulla_mutation_types::mutation_scope::LogicalName;
@@ -40,6 +38,9 @@ use medulla_protocol_types::mutation_batch::MutationBatchCommit;
 use medulla_protocol_types::mutation_batch::MutationOperation;
 use medulla_protocol_types::mutation_batch::VersionExpectation;
 use medulla_protocol_types::protocol::Method;
+use medulla_resource_store::{
+    redb_store::resource::resource_decode, redb_store::resource::resource_encode,
+};
 use medulla_result_types::epistemic_operations::DevelopmentLaneCleanupCompleteRequest;
 use medulla_result_types::epistemic_operations::DevelopmentLaneCleanupCompleteRequestSchemaVersion;
 use medulla_result_types::epistemic_operations::DevelopmentLaneCleanupCompleteResult;
@@ -81,6 +82,11 @@ use medulla_result_types::epistemic_operations::ResourceReservationRecordTargetK
 use medulla_result_types::epistemic_operations::ResourceTargetSnapshot;
 use medulla_result_types::epistemic_operations::ResourceTargetSnapshotKind;
 use medulla_storage::{GraphShardOwner, ScopedRead};
+use medulla_store::redb_store::property_string;
+use medulla_store::redb_store::shard::Shard;
+use medulla_store::redb_store::shard::ShardWrite;
+use medulla_store::redb_store::store_read::read_one_node;
+use medulla_store::{redb_store::decode_durable, redb_store::DurableCrypto, redb_store::NODES};
 use std::path::PathBuf;
 use std::sync::{Arc, Barrier};
 

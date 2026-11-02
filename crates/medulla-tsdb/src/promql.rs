@@ -1368,7 +1368,9 @@ impl<'a> Evaluator<'a> {
             // CONCEPT:MEDULLA-KG.query.bottomk-selection — label functions.
             "label_replace" => self.eval_label_replace_call(args, t),
             "label_join" => self.eval_label_join_call(args, t),
-            other => err(format!("unsupported function '{other}' (MEDULLA-172 follow-up)")),
+            other => err(format!(
+                "unsupported function '{other}' (MEDULLA-172 follow-up)"
+            )),
         }
     }
 

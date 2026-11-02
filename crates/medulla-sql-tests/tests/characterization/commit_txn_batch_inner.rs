@@ -35,8 +35,8 @@ use medulla_protocol_types::mutation_batch::MutationBatch;
 use medulla_protocol_types::mutation_batch::MutationEnvelope;
 use medulla_protocol_types::mutation_batch::MutationOperation;
 use medulla_protocol_types::mutation_batch::VersionExpectation;
-use medulla_tables::{schema::Column, schema::ColumnType, schema::TableSchema};
 use medulla_table_store::{tables::TableStore, tables::TableTxn, tables::TxnOp};
+use medulla_tables::{schema::Column, schema::ColumnType, schema::TableSchema};
 
 const TENANT: &str = "tenant-commit-txn-batch";
 const GRAPH: &str = "graph-commit-txn-batch";

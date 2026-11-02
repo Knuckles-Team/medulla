@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
-use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
+use medulla_server_api::api::persistence::PersistenceBackend;
 
 use super::{
     commit_finalize, commit_mutation_body_commit_staged, commit_mutation_body_replay_response,
@@ -104,15 +104,18 @@ async fn commit_prepublish_durable_batch(
     created_at_ms: u64,
     predicted: &ResultPayload,
 ) -> Result<medulla_protocol_types::mutation_batch::MutationBatchCommit, Response> {
-    let source_version =
-        medulla_server_api::batch_compile::authoritative_graph_version(persistence, fname, ctx.core)
-            .await
-            .map_err(|error| {
-                Response::err(
-                    ctx.req_id,
-                    format!("authoritative version read failed: {error}"),
-                )
-            })?;
+    let source_version = medulla_server_api::batch_compile::authoritative_graph_version(
+        persistence,
+        fname,
+        ctx.core,
+    )
+    .await
+    .map_err(|error| {
+        Response::err(
+            ctx.req_id,
+            format!("authoritative version read failed: {error}"),
+        )
+    })?;
     let (batch, result) = compile_batch_and_encode_result(
         ctx,
         compile_batch_context(
@@ -241,7 +244,8 @@ where
     // path). A rejection here discards the staged image before it is ever
     // diffed, snapshotted, or durably committed.
     #[cfg(feature = "shacl")]
-    if let Err(rejection) = medulla_server_api::icv_guard::check_native_write(ctx.graph_name, ctx.core, &staged)
+    if let Err(rejection) =
+        medulla_server_api::icv_guard::check_native_write(ctx.graph_name, ctx.core, &staged)
     {
         return Err(Response::err(
             ctx.req_id,
@@ -272,8 +276,12 @@ pub(super) async fn resolve_authoritative_base_snapshot(
     match persistence.read_authoritative_graph_snapshot(fname).await {
         Ok(Some(snapshot)) => Ok(snapshot),
         Ok(None) => {
-            match medulla_server_api::batch_compile::authoritative_graph_version(persistence, fname, ctx.core)
-                .await
+            match medulla_server_api::batch_compile::authoritative_graph_version(
+                persistence,
+                fname,
+                ctx.core,
+            )
+            .await
             {
                 Ok(version) => Ok((ctx.core.snapshot(), version)),
                 Err(error) => Err(Response::err(

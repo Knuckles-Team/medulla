@@ -6,8 +6,7 @@ pub struct ResourceReservationStatusTables {
         medulla_storage::ScopedOwnerTable<(&'static str, &'static str), &'static [u8]>,
     pub tenant_index:
         medulla_storage::ScopedOwnerTable<(&'static str, &'static str, &'static str), &'static str>,
-    pub hosts:
-        medulla_storage::ScopedOwnerTable<(&'static str, &'static str), &'static [u8]>,
+    pub hosts: medulla_storage::ScopedOwnerTable<(&'static str, &'static str), &'static [u8]>,
     pub disk_policies:
         medulla_storage::ScopedOwnerTable<(&'static str, &'static str), &'static [u8]>,
 }

@@ -195,11 +195,8 @@ pub(super) fn gather_plan_rows(
     // truth), THEN require the live store to actually be bound before falling through to the
     // old silent-empty degrade. `None` (the plan has no `TsScan` leg) is unaffected.
     #[cfg(feature = "tsdb")]
-    let tsdb_scope = medulla_h_query::query::served_tsdb_scope(
-        plan,
-        tsdb.graph_name,
-        tsdb.read_authority,
-    )?;
+    let tsdb_scope =
+        medulla_h_query::query::served_tsdb_scope(plan, tsdb.graph_name, tsdb.read_authority)?;
     #[cfg(feature = "tsdb")]
     if tsdb_scope.is_some() && tsdb.tsdb_store.is_none() {
         return Err(

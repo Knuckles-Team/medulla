@@ -64,7 +64,9 @@ pub fn subject_ref(locus: &EvidenceLocus) -> &OpaqueRef {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_modality::{ArtifactId, DerivationId, EvidenceAddress, EvidenceLocusId, ResourceId};
+    use medulla_modality::{
+        ArtifactId, DerivationId, EvidenceAddress, EvidenceLocusId, ResourceId,
+    };
     use std::collections::HashMap;
 
     fn r(namespace: &str, suffix: u8) -> OpaqueRef {

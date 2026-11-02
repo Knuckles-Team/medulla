@@ -179,7 +179,9 @@ fn assert_tamper_rejected(tamper: fn(&mut SanitizedModalityRaftCommand)) {
 
 #[test]
 fn malformed_result_type_length_version_and_digest_fail_closed() {
-    let wrong_type = rmp_serde::to_vec_named(&medulla_protocol_types::protocol::ResultPayload::Bool(true)).unwrap();
+    let wrong_type =
+        rmp_serde::to_vec_named(&medulla_protocol_types::protocol::ResultPayload::Bool(true))
+            .unwrap();
     let oversized = vec![0u8; MAX_REPLICATED_MODALITY_RESULT_BYTES + 1];
     [wrong_type, oversized]
         .into_iter()
@@ -288,12 +290,14 @@ fn mutation_batch_audit_and_outbox_retain_only_the_safe_receipt() {
             fencing_token: Some(1),
             created_at_ms: 1,
             default_surface: medulla_mutation_types::mutation_scope::MutationSurface::Graph,
-            authoritative_state: Some(medulla_protocol_types::mutation_batch::MutationStateDescriptor {
-                algorithm: "sha256".to_string(),
-                digest: "c".repeat(64),
-                source_graph_version: 0,
-                target_graph_version: 1,
-            }),
+            authoritative_state: Some(
+                medulla_protocol_types::mutation_batch::MutationStateDescriptor {
+                    algorithm: "sha256".to_string(),
+                    digest: "c".repeat(64),
+                    source_graph_version: 0,
+                    target_graph_version: 1,
+                },
+            ),
         },
         vec![safe_receipt],
     )

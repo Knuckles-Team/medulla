@@ -72,10 +72,8 @@ impl AgentLibraryStore {
             .ok_or_else(|| {
                 "CORRUPT_CONNECTOR_PACK: head has no retained import record".to_string()
             })?;
-        let record: PackImportRecord = crate::agent_row::decode(
-            record.value(),
-            "connector pack import record",
-        )?;
+        let record: PackImportRecord =
+            crate::agent_row::decode(record.value(), "connector pack import record")?;
         validate_head_record(tenant_id, connector, &head, &record)?;
 
         let mut bodies = Vec::new();
@@ -89,10 +87,8 @@ impl AgentLibraryStore {
             if row_tenant != tenant_id || row_connector != connector.as_str() {
                 break;
             }
-            let member: ConnectorPackMemberRow = crate::agent_row::decode(
-                value.value(),
-                "connector pack member",
-            )?;
+            let member: ConnectorPackMemberRow =
+                crate::agent_row::decode(value.value(), "connector pack member")?;
             if !matches!(
                 member.kind,
                 medulla_catalog_types::connector_pack::PackEntryKind::Ontology
@@ -121,10 +117,8 @@ impl AgentLibraryStore {
                         member.uri
                     )
                 })?;
-            let holder: ConnectorPackBodyHolderRow = crate::agent_row::decode(
-                holder.value(),
-                "connector pack body holder",
-            )?;
+            let holder: ConnectorPackBodyHolderRow =
+                crate::agent_row::decode(holder.value(), "connector pack body holder")?;
             if holder.engine_manifest_digest != member.engine_manifest_digest
                 || holder.length != member.body_length
             {
@@ -343,10 +337,8 @@ fn apply_projection_rows(
         .get((tenant, connector, plan.head.binding_revision))
         .map_err(|error| error.to_string())?
         .ok_or_else(|| "PACK_PLAN_STALE: connector pack record disappeared".to_string())?;
-    let mut record: PackImportRecord = crate::agent_row::decode(
-        current.value(),
-        "connector pack import record",
-    )?;
+    let mut record: PackImportRecord =
+        crate::agent_row::decode(current.value(), "connector pack import record")?;
     drop(current);
     validate_head_record(tenant, &plan.connector, &head, &record)?;
     record.projection = projection.clone();

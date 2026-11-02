@@ -398,10 +398,7 @@ async fn route_source_ingestion_or_resources(
     let source_method = match method {
         Method::SourceIngest { request } => SourceIngestionRoute::Ingest(request),
         Method::SourceIngestStatus { connector, stream } => SourceIngestionRoute::Status(
-            medulla_source_types::source_ingestion::SourceIngestStatusRequest {
-                connector,
-                stream,
-            },
+            medulla_source_types::source_ingestion::SourceIngestStatusRequest { connector, stream },
         ),
         Method::IndexRepository {
             files_msgpack,
@@ -509,8 +506,7 @@ async fn route_source_ingestion_request(
         Err(error) => return Response::err(ctx.req_id, error),
     };
     let envelope = prepared.envelope.clone();
-    let response =
-        crate::dispatch::change_envelope::apply_one_change_envelope(ctx, envelope).await;
+    let response = crate::dispatch::change_envelope::apply_one_change_envelope(ctx, envelope).await;
     medulla_h_ingest::source_ingestion::finish(prepared, response)
 }
 

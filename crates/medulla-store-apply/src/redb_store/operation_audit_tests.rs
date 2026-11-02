@@ -2,15 +2,15 @@
 //! of a reservation whose outcome was interrupted, and what replicas hold.
 
 use super::*;
-use medulla_store::redb_store::operation_audit::*;
 #[cfg(test)]
 use crate::redb_store::store_control::commit_ops;
-#[cfg(test)]
-use medulla_store::redb_store::DurableCrypto;
 #[cfg(test)]
 use medulla_protocol_types::protocol::AuditAppendReceipt;
 #[cfg(test)]
 use medulla_protocol_types::protocol::Method;
+use medulla_store::redb_store::operation_audit::*;
+#[cfg(test)]
+use medulla_store::redb_store::DurableCrypto;
 
 pub const GRAPH: &str = "g";
 pub const TENANT: &str = "tenant-a";

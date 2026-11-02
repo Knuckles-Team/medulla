@@ -1,5 +1,3 @@
-use medulla_resource_store::{redb_store::resource::resource_decode, redb_store::resource::resource_encode};
-use medulla_store::redb_store::DurableCrypto;
 use super::identity::method_name;
 use super::invocation::prune_invocations;
 use super::links::fingerprint;
@@ -9,6 +7,9 @@ use super::types::LaneDecision;
 use super::validation::{bounded_texts, decision_name, request_digest};
 use super::{DurableLaneHold, DurableLaneInvocation};
 use medulla_protocol_types::protocol::Method;
+use medulla_resource_store::{
+    redb_store::resource::resource_decode, redb_store::resource::resource_encode,
+};
 use medulla_result_types::epistemic_operations::DevelopmentLaneCleanupCompleteResult;
 use medulla_result_types::epistemic_operations::DevelopmentLaneCleanupCompleteResultSchemaVersion;
 use medulla_result_types::epistemic_operations::DevelopmentLaneFinishResult;
@@ -26,6 +27,7 @@ use medulla_result_types::epistemic_operations::DevelopmentLaneRenewResult;
 use medulla_result_types::epistemic_operations::DevelopmentLaneResult;
 use medulla_result_types::epistemic_operations::DevelopmentLaneResultSchemaVersion;
 use medulla_storage::ScopedOwnerTableMut;
+use medulla_store::redb_store::DurableCrypto;
 
 pub const REDACTED_PRIVATE_ID: &str = "redacted";
 
@@ -43,9 +45,7 @@ pub fn public_hold(hold: &DevelopmentLaneHold) -> DevelopmentLaneHold {
     projected
 }
 
-pub fn typed_decision<T: serde::de::DeserializeOwned>(
-    decision: LaneDecision,
-) -> Result<T, String> {
+pub fn typed_decision<T: serde::de::DeserializeOwned>(decision: LaneDecision) -> Result<T, String> {
     serde_json::from_value(serde_json::Value::String(
         decision_name(decision).to_string(),
     ))

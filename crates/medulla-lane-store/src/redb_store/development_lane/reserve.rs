@@ -1,5 +1,3 @@
-use medulla_resource_store::redb_store::resource::resource_decode;
-use medulla_store::redb_store::DurableCrypto;
 use super::identity::{hold_encode, hold_immutable_equal, hold_load};
 use super::quota::{
     apply_counter_delta, empty_charge, global_policy_equal, hold_charge, hold_id,
@@ -17,6 +15,7 @@ use super::types::{LaneDecision, ScopeCounter};
 use super::work_item::load_work_item;
 use super::{DurableLaneHold, DurableLanePolicy};
 use medulla_protocol_types::protocol::DevelopmentLaneWorkItemKind;
+use medulla_resource_store::redb_store::resource::resource_decode;
 use medulla_result_types::epistemic_operations::DevelopmentLaneHold;
 use medulla_result_types::epistemic_operations::DevelopmentLaneHoldState;
 use medulla_result_types::epistemic_operations::DevelopmentLaneIntent;
@@ -25,6 +24,7 @@ use medulla_result_types::epistemic_operations::DevelopmentLaneQuotaPolicy;
 use medulla_result_types::epistemic_operations::DevelopmentLaneReserveRequest;
 use medulla_result_types::epistemic_operations::ResourceReservationRecordState;
 use medulla_storage::ScopedOwnerTableMut;
+use medulla_store::redb_store::DurableCrypto;
 
 fn reserve_policy_refusal(
     policy: &DurableLanePolicy,
@@ -299,7 +299,9 @@ pub fn apply_reserve(
     let resource_row = resource_reservations
         .get((graph, work_item.resource_reservation_id.as_str()))?
         .map(|value| {
-            resource_decode::<medulla_resource_store::redb_store::resource_rows::DurableResourceReservation>(value.value(), crypto)
+            resource_decode::<
+                medulla_resource_store::redb_store::resource_rows::DurableResourceReservation,
+            >(value.value(), crypto)
         })
         .transpose()?;
     let Some(resource_row) = resource_row else {

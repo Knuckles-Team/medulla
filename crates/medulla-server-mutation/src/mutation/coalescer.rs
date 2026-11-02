@@ -483,8 +483,8 @@ where
 
     let (reply, reply_rx) = tokio::sync::oneshot::channel();
     let writer = coalescer.writer_for(ctx.graph_name);
-    let job =
-        medulla_server_api::routed_write_coalescer::RoutedCommitJob::new(run, reply).with_request_id(req_id);
+    let job = medulla_server_api::routed_write_coalescer::RoutedCommitJob::new(run, reply)
+        .with_request_id(req_id);
     match writer.try_enqueue(job) {
         Ok(()) => reply_rx.await.unwrap_or_else(|_| {
             Response::err(

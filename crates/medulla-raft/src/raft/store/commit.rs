@@ -1,6 +1,6 @@
+use super::*;
 #[cfg(all(feature = "modality-serving", feature = "raft", feature = "streaming"))]
 use medulla_server_cdc::cdc::CdcStateExt;
-use super::*;
 
 pub(super) struct MutationBatchCommitArgs<'a> {
     pub(super) req: &'a RaftRequest,

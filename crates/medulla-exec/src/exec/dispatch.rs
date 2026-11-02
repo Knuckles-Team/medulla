@@ -360,12 +360,10 @@ pub(super) fn apply_single_feature_ops(
         #[cfg(feature = "wasm-udf")]
         Op::Udf { id } => udf_transform(ctx, &input, id),
         #[cfg(feature = "federation")]
-        Op::ForeignScan { source, join } => {
-            match ctx.federation {
-                Some(foreign) => foreign.foreign_scan(op, input, source, *join, ctx),
-                None => Err(unbound_foreign_scan(source)),
-            }
-        }
+        Op::ForeignScan { source, join } => match ctx.federation {
+            Some(foreign) => foreign.foreign_scan(op, input, source, *join, ctx),
+            None => Err(unbound_foreign_scan(source)),
+        },
         #[cfg(feature = "probabilistic")]
         Op::Probabilistic { query } => Ok(probabilistic_op(ctx.view, input, query)),
         #[cfg(feature = "stream")]
@@ -507,6 +505,8 @@ fn unbound_foreign_scan(source: &medulla_types::wire::ForeignSourceSpec) -> Stri
              ForeignSourceRegistry is attached to the PlanCtx \
              (CONCEPT:MEDULLA-KG.query.symmetric-foreign-scan)"
         ),
-        _ => "federation: Op::ForeignScan needs a foreign executor bound to the PlanCtx".to_string(),
+        _ => {
+            "federation: Op::ForeignScan needs a foreign executor bound to the PlanCtx".to_string()
+        }
     }
 }

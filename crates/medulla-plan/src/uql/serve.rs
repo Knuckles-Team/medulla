@@ -72,7 +72,9 @@ pub fn run_statement(stmt: &Statement, ctx: &PlanCtx) -> Result<UqlResult, Strin
 #[cfg(feature = "federation")]
 fn apply_federation_budget(stmt: &Statement, ctx: &PlanCtx) -> Result<(), String> {
     if let Some(budget) = stmt.federation_budget {
-        let bound = ctx.federation.is_some_and(|foreign| foreign.narrow_budget(budget));
+        let bound = ctx
+            .federation
+            .is_some_and(|foreign| foreign.narrow_budget(budget));
         if !bound {
             return Err(
                 "FEDERATION_BUDGET_HINT_REQUIRES_SESSION: bind a per-query federation session"

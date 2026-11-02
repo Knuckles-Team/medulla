@@ -1,22 +1,22 @@
 //! Source regressions only: these fixtures do not qualify a deployed broker,
 //! credential authority, generated client or mounted serving surface.
-use medulla_server_identity::dispatch::identity_store::resolution_context::*;
+use medulla_identity_types::{
+    identity::ApiKeyUse, identity::ObjectRef, identity::Secret, identity::SessionTouch,
+    identity::UserKind, identity::UserStatus, identity::IDENTITY_AUTHENTICATE_SCOPE,
+};
 use medulla_identity_types::{
     identity::IdentityOp, identity::IdentityRefusal, identity::IdentityReply,
     identity::IdentityStamp, identity::IdentityStore, identity::PrincipalResolution,
     identity::SessionOp, identity::TokenOp, identity::UserOp,
 };
-use medulla_types::acl::RequestContextClaims;
-use medulla_server_identity::dispatch::elevation::ElevationStampAuthority;
-use medulla_server_api::state::ServerState;
-use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::authority_context::request_context_policy;
 use medulla_server_api::authority_context::RequestContextPolicy;
+use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::identity_view::identity_actor;
-use medulla_identity_types::{
-    identity::ApiKeyUse, identity::ObjectRef, identity::Secret, identity::SessionTouch,
-    identity::UserKind, identity::UserStatus, identity::IDENTITY_AUTHENTICATE_SCOPE,
-};
+use medulla_server_api::state::ServerState;
+use medulla_server_identity::dispatch::elevation::ElevationStampAuthority;
+use medulla_server_identity::dispatch::identity_store::resolution_context::*;
+use medulla_types::acl::RequestContextClaims;
 use serde_json::json;
 
 fn policy() -> RequestContextPolicy {
@@ -348,9 +348,6 @@ async fn unauthorized_broker_cannot_use_subject_credential() {
     assert_eq!(state.isolation.rbac().identity_store(), &before);
 }
 
-use medulla_protocol_types::protocol::Method;
-use medulla_protocol_types::protocol::Response;
-use medulla_protocol_types::protocol::ResultPayload;
 use crate::dispatch::test_support::bootstrapped_state;
 use crate::dispatch::test_support::send;
 use crate::dispatch::test_support::verified;
@@ -359,6 +356,9 @@ use medulla_identity_types::{
     identity::CredentialOp, identity::InitializeRequest, identity::MfaOp,
     identity::BOOTSTRAP_PRINCIPAL, identity::IDENTITY_ADMIN_SCOPE,
 };
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::Response;
+use medulla_protocol_types::protocol::ResultPayload;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -528,7 +528,12 @@ fn all_producer_refusals_survive_final_response_classification() {
         ),
     ];
     for (error, expected) in cases {
-        let response = medulla_server_identity::dispatch::identity_store::respond(9, &session_op(), &stamp, Err(error));
+        let response = medulla_server_identity::dispatch::identity_store::respond(
+            9,
+            &session_op(),
+            &stamp,
+            Err(error),
+        );
         assert_refusal(&response, expected);
     }
 }
@@ -549,7 +554,8 @@ fn edit_fixture_identity(state: &mut ServerState, edit: impl FnOnce(&mut serde_j
             snapshot.bootstrap(),
         )
         .unwrap();
-    state.isolation = medulla_isolation::isolation::IsolationLayer::with_policy_store(adapter).unwrap();
+    state.isolation =
+        medulla_isolation::isolation::IsolationLayer::with_policy_store(adapter).unwrap();
 }
 
 #[tokio::test]
@@ -562,9 +568,14 @@ async fn credential_expiring_while_waiting_for_write_lock_refuses_without_touch(
         op: session_request(),
         stamp: None,
     };
-    medulla_server_identity::dispatch::identity_store::stamp_identity(&state, &mut method, &ctx, ElevationStampAuthority::External)
-        .await
-        .unwrap();
+    medulla_server_identity::dispatch::identity_store::stamp_identity(
+        &state,
+        &mut method,
+        &ctx,
+        ElevationStampAuthority::External,
+    )
+    .await
+    .unwrap();
     let Method::Identity { op, stamp } = method else {
         unreachable!()
     };
@@ -578,13 +589,15 @@ async fn credential_expiring_while_waiting_for_write_lock_refuses_without_touch(
         identity["sessions"][&hash]["last_seen_at_ms"] = json!(old_touch);
     });
     let before = guard.isolation.rbac().identity_store().clone();
-    let mut blocked = Box::pin(medulla_server_identity::dispatch::identity_store::dispatch_identity(
-        &state,
-        10,
-        &ctx,
-        ElevationStampAuthority::External,
-        (op, stamp),
-    ));
+    let mut blocked = Box::pin(
+        medulla_server_identity::dispatch::identity_store::dispatch_identity(
+            &state,
+            10,
+            &ctx,
+            ElevationStampAuthority::External,
+            (op, stamp),
+        ),
+    );
     // Poll once while holding the lock: the old implementation samples its
     // stale timestamp here; the fixed implementation must still await the lock.
     std::future::poll_fn(|cx| {

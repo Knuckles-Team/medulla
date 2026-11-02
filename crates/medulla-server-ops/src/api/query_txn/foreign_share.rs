@@ -123,10 +123,10 @@ mod tests {
     //! EH-378 grant / use / revoke at the catalog chokepoint. The served proof lives in
     //! `medulla_server::tests::foreign_tenancy::shared_source_needs_an_explicit_grant`.
     use super::*;
+    use crate::api::query_txn::foreign_catalog::ForeignSourceCatalog;
+    use medulla_server_api::carrier::CarrierAuthority;
     use medulla_types::acl::AgentIdentity;
     use medulla_types::acl::AgentRole;
-    use medulla_server_api::carrier::CarrierAuthority;
-    use crate::api::query_txn::foreign_catalog::ForeignSourceCatalog;
     use medulla_types::wire::ForeignSourceSpec;
 
     fn carrier(agent: &str) -> CarrierAuthority {

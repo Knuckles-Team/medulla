@@ -12,10 +12,7 @@ use super::repository_index::commit_context;
 use super::*;
 
 /// Route the two web-ingest methods; hand any other method back.
-pub async fn route_web_ingest(
-    ctx: GraphOpRouting<'_>,
-    method: Method,
-) -> Result<Response, Method> {
+pub async fn route_web_ingest(ctx: GraphOpRouting<'_>, method: Method) -> Result<Response, Method> {
     match method {
         Method::EnrichDocument { request } => Ok(enrich(ctx, *request).await),
         Method::SelectWebPages { request } => Ok(select(ctx, *request).await),

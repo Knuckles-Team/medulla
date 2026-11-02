@@ -32,16 +32,16 @@ use redb::{ReadableTable, ReadableTableMetadata, TableDefinition};
 use serde::{de::DeserializeOwned, Serialize};
 use tokio::sync::RwLock;
 
-use medulla_server_api::state::ServerState;
 use medulla_mutation_types::mutation_scope::DurabilityDomain;
-use medulla_protocol_types::mutation_batch::MutationBatch;
 use medulla_mutation_types::mutation_scope::MutationSurface;
+use medulla_protocol_types::mutation_batch::MutationBatch;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
-use medulla_server_api::carrier::CarrierAuthority;
-use medulla_server_api::batch_compile::COMPILED_BATCH_INCARNATION;
 use medulla_protocol_types::result_contract::storage as results;
+use medulla_server_api::batch_compile::COMPILED_BATCH_INCARNATION;
+use medulla_server_api::carrier::CarrierAuthority;
+use medulla_server_api::state::ServerState;
 
 /// The single KV table: `(namespace, key) -> value bytes`. Composite key so one file
 /// holds every namespace and a prefix scan of one is a contiguous range. `medulla-storage`
@@ -233,11 +233,12 @@ impl RedbBackend {
     /// an accidental adoption of (for example) an S3 index as the main KV
     /// store fail at the storage manifest boundary before any scope is bound.
     pub fn open_named(path: &Path, physical_name: &str) -> Result<Self, String> {
-        let (kernel, mutations, bootstrap) = medulla_store::redb_store::shard::open_kernel_owned_store::<
-            KvOwner,
-        >(
-            path, physical_name, &kv_bootstrap_identity()?
-        )?;
+        let (kernel, mutations, bootstrap) =
+            medulla_store::redb_store::shard::open_kernel_owned_store::<KvOwner>(
+                path,
+                physical_name,
+                &kv_bootstrap_identity()?,
+            )?;
         Ok(Self {
             kernel,
             mutations,
@@ -377,10 +378,7 @@ impl KvStore {
     /// Redis and S3 each select a distinct manifest identity for their own
     /// subordinate file.  `None` is still process-local memory and therefore
     /// has no physical identity to stamp.
-    pub fn open_named(
-        persist_dir: Option<&str>,
-        physical_name: &str,
-    ) -> Result<Self, String> {
+    pub fn open_named(persist_dir: Option<&str>, physical_name: &str) -> Result<Self, String> {
         let backend = match persist_dir {
             Some(dir) => {
                 std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
@@ -625,8 +623,11 @@ fn compile_kv_batch(
     // `scope_owner` is the verified owner scope for a private namespace and the
     // verified tenant scope for a shared one, so every writer of one namespace
     // advances ONE kernel version sequence.
-    let scope =
-        medulla_server_api::batch_compile::opaque_coordinator_key("kv-scope", scope_owner, namespace);
+    let scope = medulla_server_api::batch_compile::opaque_coordinator_key(
+        "kv-scope",
+        scope_owner,
+        namespace,
+    );
     // The batch id is part of the canonical outbox key.  It must identify the
     // verified operation across transport retries, while the request id and
     // nonce identify only this attempt.  Derive it from the same authenticated

@@ -11,9 +11,12 @@ use medulla_decision_types::decision::statistical::head::DecisionHeadBody;
 use super::features::FeatureMatrix;
 use super::head_eval::{read_head, HeadReading};
 use super::refusal::RefusalResult;
-use medulla_numeric::{calibration::binary_proper_scores, calibration::BinCount, calibration::ProbabilityFloor, calibration::ProperScores};
 use medulla_numeric::detkernel::StatResult;
 use medulla_numeric::risk::SampleGate;
+use medulla_numeric::{
+    calibration::binary_proper_scores, calibration::BinCount, calibration::ProbabilityFloor,
+    calibration::ProperScores,
+};
 
 /// The head's probability for `executed` over `matrix`, re-read from the record's own
 /// inputs; `None` when the head scores without probabilities (a weighted-features head),

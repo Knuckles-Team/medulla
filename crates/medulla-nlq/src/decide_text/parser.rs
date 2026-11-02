@@ -22,7 +22,10 @@ use super::{DecideTextError, DecideTextErrorKind, DecideTextRequest};
 
 enum Source {
     Library(LibraryCandidateScope),
-    Graph { graph: String, plan: medulla_exec::algebra::Plan },
+    Graph {
+        graph: String,
+        plan: medulla_exec::algebra::Plan,
+    },
 }
 
 struct Question {

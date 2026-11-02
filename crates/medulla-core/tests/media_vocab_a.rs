@@ -899,7 +899,9 @@ fn object_ref(term: &Term) -> Option<String> {
 fn subject_ref(node: &medulla_rdf::oxrdf::NamedOrBlankNode) -> Option<String> {
     match node {
         medulla_rdf::oxrdf::NamedOrBlankNode::NamedNode(iri) => Some(iri.as_str().to_string()),
-        medulla_rdf::oxrdf::NamedOrBlankNode::BlankNode(label) => Some(format!("_:{}", label.as_str())),
+        medulla_rdf::oxrdf::NamedOrBlankNode::BlankNode(label) => {
+            Some(format!("_:{}", label.as_str()))
+        }
     }
 }
 

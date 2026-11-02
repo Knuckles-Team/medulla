@@ -16,10 +16,12 @@
 #![cfg(feature = "lake")]
 
 use medulla_lake::{LakeField, LakeType};
+use medulla_server_blob::blob::store::RedbChunkStore;
+use medulla_server_lake::{
+    lake::LakeManager, lake::LakeVisibility, lake::LoadTableAsOfError, lake::DEFAULT_NAMESPACE,
+};
 use medulla_tsdb::point::Point;
 use medulla_tsdb::store::SeriesStore;
-use medulla_server_blob::blob::store::RedbChunkStore;
-use medulla_server_lake::{lake::LakeManager, lake::LakeVisibility, lake::LoadTableAsOfError, lake::DEFAULT_NAMESPACE};
 
 const TEST_BUCKET_NS: u64 = 3_600_000_000_000;
 
@@ -83,7 +85,8 @@ fn as_of_reads_current_historical_and_empty_history_but_denies_uncommitted_lsns(
     .expect("append first points");
 
     let mgr = LakeManager::new();
-    let unrelated_schema = medulla_lake::LakeSchema::new(vec![LakeField::new("v", LakeType::Double)]);
+    let unrelated_schema =
+        medulla_lake::LakeSchema::new(vec![LakeField::new("v", LakeType::Double)]);
     let before = mgr
         .create_table(
             &s,

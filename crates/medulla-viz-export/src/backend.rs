@@ -20,7 +20,9 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 
 use medulla_viz_columnstore::ColumnStore;
-use medulla_viz_core::{FrameBudget, StaticExportBackend, StaticExportFormat, ViewResult, ViewSpec};
+use medulla_viz_core::{
+    FrameBudget, StaticExportBackend, StaticExportFormat, ViewResult, ViewSpec,
+};
 
 use crate::error::ExportError;
 use crate::plan::RenderPlan;

@@ -59,7 +59,6 @@
 //! GraphQL cross-modal txn stages (graph/vector/tsdb) already carry the contract in
 //! THEIR crates (`medulla-core::NodeChange`, `medulla-tensor`, `medulla-tsdb::SeriesMeta`).
 
-
 /// CONCEPT:MEDULLA-KG.query.medulla-9/380/381 — the GraphQL CROSS-MODAL transaction seam: a multi-request
 /// `txnId` handle ([`crossmodal::CrossModalTxnRegistry`]) whose `beginTransaction` /
 /// `stageEmbedding` / `addMeasurement` / `sparqlUpdate` / `sparqlConstruct` /
@@ -267,7 +266,8 @@ mod tests {
             .collect();
         gql_names.sort();
 
-        let cy = medulla_cypher::cypher::exec_cypher(&view, "MATCH (p:Person) RETURN p.name").unwrap();
+        let cy =
+            medulla_cypher::cypher::exec_cypher(&view, "MATCH (p:Person) RETURN p.name").unwrap();
         let mut cy_names: Vec<String> = cy
             .rows
             .iter()

@@ -23,12 +23,12 @@ use tokio::sync::RwLock;
 
 use medulla_protocol_types::protocol::GraphType;
 use medulla_protocol_types::protocol::Method;
-use medulla_raft_xshard::harness::cluster::fixture;
 use medulla_raft::raft::multi::MultiRaft;
 use medulla_raft::raft::placement::split_tenant_key;
 use medulla_raft::raft::reshard::TenantManager;
 use medulla_raft::raft::GroupId;
 use medulla_raft::raft::RaftRequest;
+use medulla_raft_xshard::harness::cluster::fixture;
 
 const GROUP_A: GroupId = 300;
 const GROUP_B: GroupId = 400;
@@ -712,7 +712,6 @@ async fn wire_placement_route_resolves_through_dispatch() {
     // opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
     let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
     use medulla_protocol_types::protocol::ResultPayload;
-
 
     let dir = fixture::fresh_dir("medulla-placement", "wire-route");
     let backend = fixture::open_backend(&dir).expect("open redb");

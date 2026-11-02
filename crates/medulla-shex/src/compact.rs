@@ -416,12 +416,10 @@ impl<'a> Parser<'a> {
                         language,
                     });
                 }
-                Tok::Punct('~') => {
-                    return Err(
-                        "ShExC: value-set stem ranges (`~`) are not supported (MEDULLA-133 follow-up)"
-                            .to_string(),
-                    )
-                }
+                Tok::Punct('~') => return Err(
+                    "ShExC: value-set stem ranges (`~`) are not supported (MEDULLA-133 follow-up)"
+                        .to_string(),
+                ),
                 other => return Err(format!("ShExC: unexpected value-set member {other:?}")),
             }
         }

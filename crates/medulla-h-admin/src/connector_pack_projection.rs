@@ -41,7 +41,6 @@ pub fn spawn(state: Arc<RwLock<ServerState>>) {
 ))]
 mod grant;
 
-
 #[cfg(all(feature = "redb", feature = "blob", feature = "shacl"))]
 pub mod worker {
     use std::sync::atomic::{AtomicBool, Ordering};
@@ -56,10 +55,10 @@ pub mod worker {
     use medulla_mutation_types::mutation_scope::MutationOutboxLease;
     use medulla_transaction::{OutboxClaimBudget, OutboxClaimOutcome, OutboxRejectReason};
 
-    use medulla_server_api::authority_context::VerifiedRequestContext;
-    use medulla_server_api::outbox_operator::OutboxWrite;
     use medulla_persistence_records::agent_library::AgentLibraryStateExt;
     use medulla_persistence_records::agent_library::AgentLibraryStore;
+    use medulla_server_api::authority_context::VerifiedRequestContext;
+    use medulla_server_api::outbox_operator::OutboxWrite;
     use medulla_server_api::state::ServerState;
 
     /// The label a failed blocking store task names.
@@ -249,9 +248,10 @@ pub mod worker {
         let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
         let (store, tenant) = (Arc::clone(store), tenant.to_string());
         let Some(reason) = reason else {
-            return medulla_server_api::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
-                store.outbox_ack(&tenant, &lease, now_ms)
-            })
+            return medulla_server_api::api::dispatch_support::blocking_task(
+                BLOCKING_TASK,
+                move || store.outbox_ack(&tenant, &lease, now_ms),
+            )
             .await;
         };
         medulla_kernel::metrics::outbox_dead_lettered(
@@ -332,8 +332,7 @@ pub mod worker {
     ) -> Result<(), String> {
         #[cfg(feature = "security")]
         {
-            let graph =
-                crate::graph_schema::pack_projection_graph_name(tenant, &record.connector)?;
+            let graph = crate::graph_schema::pack_projection_graph_name(tenant, &record.connector)?;
             super::grant::ensure(&mut state.write().await.isolation, &graph)
         }
         #[cfg(not(feature = "security"))]

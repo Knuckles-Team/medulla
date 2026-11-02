@@ -18,9 +18,9 @@
 //! Module-gated on `query` + `owl-plan`; runs under `--features full`.
 #![cfg(all(feature = "query", feature = "owl-plan"))]
 
+use medulla_exec::{algebra::Op, algebra::Plan, exec::execute, exec::PlanCtx};
 use medulla_graph_core::graph::GraphCore;
 use medulla_graph_core::graph::GraphView;
-use medulla_exec::{exec::execute, algebra::Op, algebra::Plan, exec::PlanCtx};
 use medulla_semantic_index::semantic::SemanticStore;
 use medulla_types::wire::TimeAxis;
 use serde_json::json;

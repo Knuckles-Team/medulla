@@ -271,7 +271,10 @@ mod tests {
             MutationStoreSagaBackend::KIND,
             DurableBackendKind::MutationStoreSaga
         );
-        assert_eq!(MutationStoreSagaBackend::backend_id(), "medulla-mutation-store");
+        assert_eq!(
+            MutationStoreSagaBackend::backend_id(),
+            "medulla-mutation-store"
+        );
         assert_eq!(
             PythonDurableRunBackend::KIND,
             DurableBackendKind::PythonDurableRun

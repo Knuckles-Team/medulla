@@ -267,8 +267,8 @@ pub fn evolve(
                 // standard reset-via-measure-and-correct technique.
                 let outcome = measure_and_collapse(&mut state, n, *qubit, rng);
                 if outcome {
-                    let x =
-                        medulla_quantum_gates::matrix1(&GateKind::X, &[]).expect("X is always defined");
+                    let x = medulla_quantum_gates::matrix1(&GateKind::X, &[])
+                        .expect("X is always defined");
                     apply_block2(&mut state, *qubit, x, |_| true);
                 }
             }

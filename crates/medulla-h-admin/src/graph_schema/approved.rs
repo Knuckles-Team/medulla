@@ -144,7 +144,9 @@ fn approval_store_unavailable() -> String {
 /// The `Approved`-origin source a repair op installs (or, for
 /// `ValidateRepair`, would install): EG renders the SHACL from the typed
 /// contract (AUD-27).
-pub(super) fn source(op: &GraphSchemaOp) -> Result<medulla_graph_core::graph::GraphSchemaSource, String> {
+pub(super) fn source(
+    op: &GraphSchemaOp,
+) -> Result<medulla_graph_core::graph::GraphSchemaSource, String> {
     let (source_id, contract, approval) = match op {
         GraphSchemaOp::AttachApproved {
             source_id,

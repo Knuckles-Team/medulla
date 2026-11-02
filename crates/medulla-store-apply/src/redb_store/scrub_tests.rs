@@ -3,10 +3,10 @@
 
 use super::*;
 use crate::redb_store::store_control::commit_ops;
+use medulla_protocol_types::protocol::Method;
 use medulla_store::redb_store::store_read::read_one_node;
 use medulla_store::redb_store::temp_path;
 use medulla_store::redb_store::UnsealFailure;
-use medulla_protocol_types::protocol::Method;
 
 pub const GRAPH: &str = "scrub_graph";
 const NODE_IDS: [&str; 5] = ["n0", "n1", "n2", "n3", "n4"];

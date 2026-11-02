@@ -46,7 +46,6 @@
 //! vLLM/LMCache connector ships in the `medulla` Python client; and the graph-os
 //! HTTP endpoint exposes both — none of which this leaf crate depends on.
 
-
 pub mod cold;
 pub mod compress;
 pub mod hash;

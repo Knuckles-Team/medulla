@@ -13,8 +13,8 @@
 
 #![cfg(feature = "sql")]
 
-use medulla_tables::{schema::Cell, schema::Column, schema::ColumnType, schema::TableSchema};
 use medulla_table_store::{tables::ConflictAction, tables::TableStore};
+use medulla_tables::{schema::Cell, schema::Column, schema::ColumnType, schema::TableSchema};
 use serde_json::Map;
 
 fn schema() -> TableSchema {

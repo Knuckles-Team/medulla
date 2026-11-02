@@ -1,6 +1,17 @@
 //! Variable-option calibration acceptance; native execution is still pending.
 //! These synthetic fixtures exercise the real fitted resident scorer and evaluator.
 
+use medulla_decision_stats::decision::features::FeatureMatrix;
+use medulla_decision_stats::{decision::admission::admit, decision::admission::Regime};
+use medulla_decision_stats::{
+    decision::evaluate::evaluate, decision::evaluate::EvalSpec, decision::evaluate::ECE_BINS,
+};
+use medulla_decision_stats::{
+    decision::head_eval::act_rule, decision::head_eval::calibration_statement,
+    decision::head_eval::read_head, decision::head_eval::top_index,
+    decision::head_eval::HeadReading,
+};
+use medulla_decision_stats::{decision::scorer::fixed::to_f64, decision::scorer::fixed::ONE};
 use medulla_decision_types::decision::statistical::head::HeadKind;
 use medulla_decision_types::decision::statistical::CalibrationMethod;
 use medulla_decision_types::{
@@ -8,11 +19,6 @@ use medulla_decision_types::{
     decision::statistical::dataset::LabelledDataset,
 };
 use medulla_numeric::calibration::metrics::{reliability, BinCount};
-use medulla_decision_stats::{decision::admission::admit, decision::admission::Regime};
-use medulla_decision_stats::{decision::evaluate::evaluate, decision::evaluate::EvalSpec, decision::evaluate::ECE_BINS};
-use medulla_decision_stats::decision::features::FeatureMatrix;
-use medulla_decision_stats::{decision::head_eval::act_rule, decision::head_eval::calibration_statement, decision::head_eval::read_head, decision::head_eval::top_index, decision::head_eval::HeadReading};
-use medulla_decision_stats::{decision::scorer::fixed::to_f64, decision::scorer::fixed::ONE};
 
 use super::common::{dataset, gold_item_for, statistical, FEATURES};
 use super::fit_eval::{fitted, rules};

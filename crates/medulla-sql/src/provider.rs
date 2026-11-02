@@ -27,11 +27,13 @@ use datafusion::datasource::MemTable;
 use datafusion::error::Result as DfResult;
 use datafusion::logical_expr::{Expr, Operator, TableProviderFilterPushDown, TableType};
 
-use medulla_tables::index::SecondaryIndexLookup;
-use medulla_tables::{schema::ArrayElemType, schema::Cell, schema::ColumnType, schema::TableSchema};
-use medulla_table_store::tables::store::TableStore;
 use crate::sql::filter_shape::{classify_pushdown, column_eq_literal, ScanPlan};
 use crate::sql::providers::NodesTableProvider;
+use medulla_table_store::tables::store::TableStore;
+use medulla_tables::index::SecondaryIndexLookup;
+use medulla_tables::{
+    schema::ArrayElemType, schema::Cell, schema::ColumnType, schema::TableSchema,
+};
 
 /// The Arrow `DataType` a [`ColumnType`] materializes as. Scalar legacy types keep
 /// their existing shapes; NE-002 types retain native UUID/Decimal128/timestamp/List
@@ -764,9 +766,9 @@ impl TableProvider for UserTableProvider {
 #[cfg(test)]
 mod user_table_provider_tests {
     use super::*;
+    use medulla_graph_core::graph::GraphView;
     use medulla_tables::schema::ArrayElemType;
     use medulla_tables::schema::Column;
-    use medulla_graph_core::graph::GraphView;
     use serde_json::json;
 
     #[test]

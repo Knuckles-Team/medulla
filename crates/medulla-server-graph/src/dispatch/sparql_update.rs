@@ -448,7 +448,11 @@ async fn create_missing_sparql_graphs(
 #[cfg(all(feature = "sparql-http", feature = "redb", feature = "security"))]
 fn sparql_forward_methods(
     plan: &SparqlRecoveryPlan,
-) -> Vec<(String, medulla_protocol_types::protocol::GraphType, Vec<Method>)> {
+) -> Vec<(
+    String,
+    medulla_protocol_types::protocol::GraphType,
+    Vec<Method>,
+)> {
     plan.graphs
         .iter()
         .map(|update| {
@@ -466,7 +470,11 @@ fn sparql_forward_methods(
 #[cfg(all(feature = "sparql-http", feature = "redb", feature = "security"))]
 fn sparql_rollback_methods(
     plan: &SparqlRecoveryPlan,
-) -> Vec<(String, medulla_protocol_types::protocol::GraphType, Vec<Method>)> {
+) -> Vec<(
+    String,
+    medulla_protocol_types::protocol::GraphType,
+    Vec<Method>,
+)> {
     plan.graphs
         .iter()
         .filter(|update| update.existed_before)
@@ -812,9 +820,9 @@ pub async fn coordinated_sparql_http_update(
 #[cfg(all(test, feature = "redb", feature = "security", feature = "sparql-http"))]
 mod coordinator_restart_tests {
     use super::*;
-    use medulla_protocol_types::mutation_batch::MutationBatchStatus;
     use medulla_mutation_types::mutation_scope::DurabilityDomain;
     use medulla_mutation_types::mutation_scope::MutationSurface;
+    use medulla_protocol_types::mutation_batch::MutationBatchStatus;
     use medulla_transaction::{read_ledger, read_private_payload};
 
     /// The coordinator owner file is ledger-only: receipts and sealed payloads.

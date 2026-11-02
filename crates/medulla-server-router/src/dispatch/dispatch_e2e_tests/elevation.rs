@@ -3,25 +3,25 @@
 //! identity, a replayed approval is refused, and revocation closes the
 //! chokepoint at once.
 
-use medulla_server_identity::dispatch::elevation::*;
 #[cfg(feature = "security")]
 use medulla_identity_types::rbac_elevation::RbacElevationOp;
-use medulla_identity_types::{
-    rbac_elevation::ElevationActor, rbac_elevation::ElevationDelegation,
-    rbac_elevation::ElevationStanding, rbac_elevation::APPROVE_ELEVATION_SCOPE,
-};
-use medulla_server_api::authority_context::VerifiedRequestContext;
-use medulla_protocol_types::protocol::Method;
-#[cfg(feature = "security")]
-use medulla_protocol_types::protocol::Response;
-use medulla_isolation::isolation::AccessLevel;
-use medulla_protocol_types::protocol::GraphType;
-use medulla_protocol_types::protocol::Request;
 use medulla_identity_types::{
     rbac_elevation::ElevationAction, rbac_elevation::ElevationApproval,
     rbac_elevation::ElevationRequest, rbac_elevation::ElevationRevoke,
     rbac_elevation::ElevationScope,
 };
+use medulla_identity_types::{
+    rbac_elevation::ElevationActor, rbac_elevation::ElevationDelegation,
+    rbac_elevation::ElevationStanding, rbac_elevation::APPROVE_ELEVATION_SCOPE,
+};
+use medulla_isolation::isolation::AccessLevel;
+use medulla_protocol_types::protocol::GraphType;
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::Request;
+#[cfg(feature = "security")]
+use medulla_protocol_types::protocol::Response;
+use medulla_server_api::authority_context::VerifiedRequestContext;
+use medulla_server_identity::dispatch::elevation::*;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -30,10 +30,9 @@ const REQUEST_SCOPE: &str = "rbac:elevation";
 
 fn state() -> Arc<RwLock<medulla_server_api::state::ServerState>> {
     let isolation = medulla_server_auth::access::two_agent_isolation();
-    Arc::new(RwLock::new(crate::dispatch::test_support::new_state_for_test(
-        "elevation-test-secret",
-        isolation,
-    )))
+    Arc::new(RwLock::new(
+        crate::dispatch::test_support::new_state_for_test("elevation-test-secret", isolation),
+    ))
 }
 
 fn context(agent: &str, scopes: &[&str], delegation: &[&str]) -> VerifiedRequestContext {
@@ -77,7 +76,9 @@ fn request_op() -> RbacElevationOp {
     }
 }
 
-async fn approve_op(state: &Arc<RwLock<medulla_server_api::state::ServerState>>) -> RbacElevationOp {
+async fn approve_op(
+    state: &Arc<RwLock<medulla_server_api::state::ServerState>>,
+) -> RbacElevationOp {
     let digest = state
         .read()
         .await

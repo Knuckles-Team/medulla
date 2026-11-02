@@ -11,12 +11,12 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use medulla_protocol_types::protocol::Response;
-use medulla_server_api::authority_context::VerifiedRequestContext;
 #[cfg(feature = "redb")]
 use medulla_persistence_records::agent_library::AgentLibraryStore;
 #[cfg(feature = "redb")]
 use medulla_persistence_records::connector_pack::admin as binding;
+use medulla_protocol_types::protocol::Response;
+use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 
 /// One served admin entry point: the dispatch signature, the named refusal in
@@ -175,7 +175,10 @@ where
 {
     let req_id = request.req_id;
     match run_admin_write::<M, F>(request, write).await {
-        Ok(body) => Response::ok(req_id, medulla_protocol_types::protocol::ResultPayload::of_ref::<M>(&body)),
+        Ok(body) => Response::ok(
+            req_id,
+            medulla_protocol_types::protocol::ResultPayload::of_ref::<M>(&body),
+        ),
         Err(error) => Response::err(req_id, error),
     }
 }

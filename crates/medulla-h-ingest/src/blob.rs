@@ -17,15 +17,15 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use medulla_protocol_types::result_contract::storage as results;
 use medulla_protocol_types::mutation_batch::MutationBatch;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
+use medulla_protocol_types::result_contract::storage as results;
 use medulla_server_api::carrier::CarrierAuthority;
+use medulla_server_api::state::ServerState;
 use medulla_server_blob::blob::store;
 use medulla_server_blob::blob::BlobCursors;
-use medulla_server_api::state::ServerState;
 use medulla_types::contract::Nonce;
 
 /// Handle the blob methods. Returns `Err(method)` for any non-blob method so the

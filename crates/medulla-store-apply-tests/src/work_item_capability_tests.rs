@@ -1,19 +1,19 @@
-use medulla_store::{redb_store::decode_durable, redb_store::DurableCrypto};
-use medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityDecision;
-use medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityMintRequest;
-use medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityRequestSchemaVersion;
-use medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityResult;
-use medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityVerifyRequest;
-use redb::TableDefinition;
-use medulla_store::redb_store::shard::ShardWrite;
-use medulla_work_store::redb_store::work_item_capability::*;
-use medulla_store::redb_store::shard::Shard;
 use medulla_mutation_types::mutation_scope::IncarnationId;
 use medulla_mutation_types::mutation_scope::LogicalName;
 use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
 use medulla_mutation_types::mutation_scope::ScopeTenantId;
 use medulla_protocol_types::mutation_batch::MutationBatch;
 use medulla_protocol_types::protocol::Method;
+use medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityDecision;
+use medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityMintRequest;
+use medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityRequestSchemaVersion;
+use medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityResult;
+use medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityVerifyRequest;
+use medulla_store::redb_store::shard::Shard;
+use medulla_store::redb_store::shard::ShardWrite;
+use medulla_store::{redb_store::decode_durable, redb_store::DurableCrypto};
+use medulla_work_store::redb_store::work_item_capability::*;
+use redb::TableDefinition;
 use std::path::{Path, PathBuf};
 
 /// One process-unique admission id per ATTEMPT, exactly as the production
@@ -79,16 +79,18 @@ fn sealed_work_item_batch(
         LogicalName::new("graph-a").expect("valid graph name"),
         IncarnationId::new("incarnation:test:work-item-capability").expect("valid incarnation"),
     );
-    medulla_store::redb_store::control_fixture_batch(medulla_store::redb_store::ControlFixtureBatch {
-        identity,
-        batch_id: format!("{prefix}-{key}"),
-        actor: format!("principal:sha256:{}", "a".repeat(64)),
-        request_id: now_ms,
-        idempotency_key: format!("{prefix}-key-{key}"),
-        expected_version: expected_graph_version,
-        method,
-        created_at_ms: now_ms,
-    })
+    medulla_store::redb_store::control_fixture_batch(
+        medulla_store::redb_store::ControlFixtureBatch {
+            identity,
+            batch_id: format!("{prefix}-{key}"),
+            actor: format!("principal:sha256:{}", "a".repeat(64)),
+            request_id: now_ms,
+            idempotency_key: format!("{prefix}-key-{key}"),
+            expected_version: expected_graph_version,
+            method,
+            created_at_ms: now_ms,
+        },
+    )
 }
 
 fn commit_work_item_batch(shard: &Shard, batch: &MutationBatch, now_ms: u64) -> bool {
@@ -96,7 +98,9 @@ fn commit_work_item_batch(shard: &Shard, batch: &MutationBatch, now_ms: u64) -> 
     let mut audit_tail = medulla_store::redb_store::AuditTailCache::new();
     medulla_store_apply::redb_store::store_mutation::commit_mutation_batch_inner(
         shard,
-        medulla_store_apply::redb_store::store_mutation::BatchCommitInput::compact("graph-a", batch, None, now_ms),
+        medulla_store_apply::redb_store::store_mutation::BatchCommitInput::compact(
+            "graph-a", batch, None, now_ms,
+        ),
         DurableCrypto::none(),
         #[cfg(feature = "security")]
         &mut audit_tail,
@@ -106,8 +110,9 @@ fn commit_work_item_batch(shard: &Shard, batch: &MutationBatch, now_ms: u64) -> 
 }
 
 fn claim_native(shard: &Shard, id: &str, worker: &str, now_ms: u64, key: &str) {
-    let expected_graph_version = medulla_store::redb_store::store_read::read_mutation_graph_version(shard, "graph-a")
-        .expect("read mutation graph version");
+    let expected_graph_version =
+        medulla_store::redb_store::store_read::read_mutation_graph_version(shard, "graph-a")
+            .expect("read mutation graph version");
     let batch = sealed_work_item_batch(
         Method::ClaimWorkItem {
             request: medulla_result_types::epistemic_operations::ClaimWorkItemRequest {
@@ -175,8 +180,7 @@ fn mint(
     let (group, batches) = shard
         .admit_maintenance(&members, &op_id)
         .expect("admit capability mint");
-    let write =
-        ShardWrite::open(shard, &group, &members, &batches).expect("open capability mint");
+    let write = ShardWrite::open(shard, &group, &members, &batches).expect("open capability mint");
     let result = mint_claim_capability(
         &write,
         "graph-a",
@@ -240,8 +244,9 @@ fn commit_native_result(
     outcome: &str,
     retryable: bool,
 ) {
-    let expected_graph_version = medulla_store::redb_store::store_read::read_mutation_graph_version(shard, "graph-a")
-        .expect("read mutation graph version");
+    let expected_graph_version =
+        medulla_store::redb_store::store_read::read_mutation_graph_version(shard, "graph-a")
+            .expect("read mutation graph version");
     let batch = sealed_work_item_batch(
         Method::CommitWorkItemResult {
             tenant: "tenant-a".to_string(),
@@ -342,18 +347,25 @@ fn generic_work_item_authority_forgery_is_rejected_before_private_state() {
     )
     .expect("read forged batch row")
     .is_none());
-    assert!(
-        medulla_store::redb_store::store_read::read_one_node(&shard, "graph-a", "forged", DurableCrypto::none())
-            .expect("read forged row")
-            .is_none()
-    );
+    assert!(medulla_store::redb_store::store_read::read_one_node(
+        &shard,
+        "graph-a",
+        "forged",
+        DurableCrypto::none()
+    )
+    .expect("read forged row")
+    .is_none());
     assert_eq!(private_row_counts(&shard), (0, 0, 0));
 
     seed_work_item(&shard, "wi-guard");
-    let before =
-        medulla_store::redb_store::store_read::read_one_node(&shard, "graph-a", "wi-guard", DurableCrypto::none())
-            .expect("read native WorkItem")
-            .expect("native WorkItem exists");
+    let before = medulla_store::redb_store::store_read::read_one_node(
+        &shard,
+        "graph-a",
+        "wi-guard",
+        DurableCrypto::none(),
+    )
+    .expect("read native WorkItem")
+    .expect("native WorkItem exists");
     let error = try_commit_method(
         &shard,
         Method::CompareAndSetNodeFields {
@@ -367,10 +379,14 @@ fn generic_work_item_authority_forgery_is_rejected_before_private_state() {
     )
     .expect_err("generic authority CAS must refuse");
     assert!(error.contains("native WorkItem authority"));
-    let after =
-        medulla_store::redb_store::store_read::read_one_node(&shard, "graph-a", "wi-guard", DurableCrypto::none())
-            .expect("read native WorkItem after refusal")
-            .expect("native WorkItem remains");
+    let after = medulla_store::redb_store::store_read::read_one_node(
+        &shard,
+        "graph-a",
+        "wi-guard",
+        DurableCrypto::none(),
+    )
+    .expect("read native WorkItem after refusal")
+    .expect("native WorkItem remains");
     assert_eq!(
         before, after,
         "refused CAS must not partially mutate the row"
@@ -423,11 +439,14 @@ fn graph_clear_purges_capability_invocation_and_native_provenance_rows_atomicall
 
     commit_method(&shard, Method::ClearGraph);
     assert_eq!(private_row_counts(&shard), (0, 0, 0));
-    assert!(
-        medulla_store::redb_store::store_read::read_one_node(&shard, "graph-a", "wi-clear", DurableCrypto::none())
-            .expect("read cleared WorkItem")
-            .is_none()
-    );
+    assert!(medulla_store::redb_store::store_read::read_one_node(
+        &shard,
+        "graph-a",
+        "wi-clear",
+        DurableCrypto::none()
+    )
+    .expect("read cleared WorkItem")
+    .is_none());
 
     // Reusing the graph/item id after a clear requires a new native claim;
     // the old opaque bytes cannot be replayed against the replacement row.
@@ -466,23 +485,28 @@ fn checkpoint_replacement_purges_private_capability_state_and_requires_new_claim
     // A checkpoint is an untrusted public graph image.  Convert the
     // leased image to a fresh ready submission before restoring it; the
     // restore path must never preserve an old lease or its private rows.
-    let dump = medulla_store_apply::redb_store::dump::read_graph_dump(&shard, "graph-a", DurableCrypto::none())
-        .expect("read graph checkpoint")
-        .expect("graph checkpoint identity");
-    let invalid = medulla_store_apply::redb_store::store_control::GraphDump::in_place_core_checkpoint(
-        medulla_store_apply::redb_store::store_control::InPlaceCoreCheckpoint {
-            graph: dump.graph.clone(),
-            name: dump.name.clone(),
-            graph_type: dump.graph_type,
-            incarnation_id: "incarnation:checkpoint-invalid".to_string(),
-            source_snapshot_version: dump.source_snapshot_version.saturating_add(1),
-            schema_sources: std::sync::Arc::clone(&dump.schema_sources),
-            nodes: dump.nodes.clone(),
-            edges: dump.edges.clone(),
-            ledger: dump.ledger.clone(),
-            semantic: dump.semantic.clone(),
-        },
-    );
+    let dump = medulla_store_apply::redb_store::dump::read_graph_dump(
+        &shard,
+        "graph-a",
+        DurableCrypto::none(),
+    )
+    .expect("read graph checkpoint")
+    .expect("graph checkpoint identity");
+    let invalid =
+        medulla_store_apply::redb_store::store_control::GraphDump::in_place_core_checkpoint(
+            medulla_store_apply::redb_store::store_control::InPlaceCoreCheckpoint {
+                graph: dump.graph.clone(),
+                name: dump.name.clone(),
+                graph_type: dump.graph_type,
+                incarnation_id: "incarnation:checkpoint-invalid".to_string(),
+                source_snapshot_version: dump.source_snapshot_version.saturating_add(1),
+                schema_sources: std::sync::Arc::clone(&dump.schema_sources),
+                nodes: dump.nodes.clone(),
+                edges: dump.edges.clone(),
+                ledger: dump.ledger.clone(),
+                semantic: dump.semantic.clone(),
+            },
+        );
     let error = medulla_store_apply::redb_store::checkpoint::apply_checkpoint(
         &shard,
         &mut Vec::new(),
@@ -526,20 +550,21 @@ fn checkpoint_replacement_purges_private_capability_state_and_requires_new_claim
         })
         .collect();
     let restored_incarnation = "incarnation:checkpoint-replacement";
-    let restored = medulla_store_apply::redb_store::store_control::GraphDump::in_place_core_checkpoint(
-        medulla_store_apply::redb_store::store_control::InPlaceCoreCheckpoint {
-            graph: dump.graph,
-            name: dump.name,
-            graph_type: dump.graph_type,
-            incarnation_id: restored_incarnation.to_string(),
-            source_snapshot_version: dump.source_snapshot_version.saturating_add(1),
-            schema_sources: dump.schema_sources,
-            nodes,
-            edges: dump.edges,
-            ledger: dump.ledger,
-            semantic: dump.semantic,
-        },
-    );
+    let restored =
+        medulla_store_apply::redb_store::store_control::GraphDump::in_place_core_checkpoint(
+            medulla_store_apply::redb_store::store_control::InPlaceCoreCheckpoint {
+                graph: dump.graph,
+                name: dump.name,
+                graph_type: dump.graph_type,
+                incarnation_id: restored_incarnation.to_string(),
+                source_snapshot_version: dump.source_snapshot_version.saturating_add(1),
+                schema_sources: dump.schema_sources,
+                nodes,
+                edges: dump.edges,
+                ledger: dump.ledger,
+                semantic: dump.semantic,
+            },
+        );
     medulla_store_apply::redb_store::checkpoint::apply_checkpoint(
         &shard,
         &mut Vec::new(),
@@ -622,10 +647,14 @@ fn crossmodal_clear_and_delete_purge_private_capability_state_atomically() {
     .expect_err("generic crossmodal blob mutation cannot touch a WorkItem");
     assert!(error.contains("native WorkItem authority"));
     assert_eq!(private_row_counts(&shard), before_blob_ref);
-    let props =
-        medulla_store::redb_store::store_read::read_one_node(&shard, "graph-a", "wi-crossmodal", DurableCrypto::none())
-            .expect("read WorkItem after refused blob mutation")
-            .expect("WorkItem remains after refused blob mutation");
+    let props = medulla_store::redb_store::store_read::read_one_node(
+        &shard,
+        "graph-a",
+        "wi-crossmodal",
+        DurableCrypto::none(),
+    )
+    .expect("read WorkItem after refused blob mutation")
+    .expect("WorkItem remains after refused blob mutation");
     let props: serde_json::Map<String, serde_json::Value> =
         decode_durable(&props).expect("decode WorkItem after refused blob mutation");
     assert!(!props.contains_key("__blob__"));

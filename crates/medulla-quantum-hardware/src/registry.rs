@@ -645,8 +645,10 @@ macro_rules! impl_hardware_backend {
                 &self,
                 program: &medulla_quantum_core::ir::QuantumProgram,
                 opts: &medulla_quantum_core::backend::RunOptions,
-            ) -> Result<medulla_quantum_core::backend::JobHandle, medulla_quantum_core::backend::BackendError>
-            {
+            ) -> Result<
+                medulla_quantum_core::backend::JobHandle,
+                medulla_quantum_core::backend::BackendError,
+            > {
                 let record =
                     $crate::registry::ProviderSubmission::execute_submit(self, program, opts)
                         .map_err(|error| error.into_backend_error(&self.state.id))?;
@@ -656,8 +658,10 @@ macro_rules! impl_hardware_backend {
             fn poll(
                 &self,
                 job: medulla_quantum_core::backend::JobHandle,
-            ) -> Result<medulla_quantum_core::backend::JobStatus, medulla_quantum_core::backend::BackendError>
-            {
+            ) -> Result<
+                medulla_quantum_core::backend::JobStatus,
+                medulla_quantum_core::backend::BackendError,
+            > {
                 self.state.jobs.with_record(job, |record| {
                     $crate::registry::ProviderClient::refresh_status(
                         &self.client,

@@ -93,7 +93,8 @@ pub fn derive_pg_password(secret: &str, user: &str) -> String {
 /// A deterministic 16-byte SCRAM salt derived from the secret + user, so the same
 /// login re-validates without a stored salt table.
 fn derive_salt(secret: &str, user: &str) -> Vec<u8> {
-    medulla_wire_core::sql_wire_auth::derive_hmac_digest(secret, b"pgwire-salt:", user)[..16].to_vec()
+    medulla_wire_core::sql_wire_auth::derive_hmac_digest(secret, b"pgwire-salt:", user)[..16]
+        .to_vec()
 }
 
 /// `AuthSource` that yields the SCRAM-salted form of the derived per-user password

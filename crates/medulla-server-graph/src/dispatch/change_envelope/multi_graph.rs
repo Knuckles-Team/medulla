@@ -1,10 +1,10 @@
+use super::*;
 #[cfg(feature = "redb")]
 use crate::dispatch::shared::timed_read;
 #[cfg(any(feature = "redb", test))]
-use crate::dispatch::shared::MAX_NESTED_MSGPACK_ITEMS;
-#[cfg(any(feature = "redb", test))]
 use crate::dispatch::shared::MAX_NESTED_MSGPACK_BYTES;
-use super::*;
+#[cfg(any(feature = "redb", test))]
+use crate::dispatch::shared::MAX_NESTED_MSGPACK_ITEMS;
 #[cfg(feature = "redb")]
 use medulla_persistence::AsRedb;
 #[cfg(feature = "redb")]

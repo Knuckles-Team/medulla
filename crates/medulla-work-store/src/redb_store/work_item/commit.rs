@@ -183,13 +183,10 @@ pub struct CommitWorkItemResultInput<'args, 'table, 'crypto> {
     pub now_ms: u64,
     pub outcome_extension:
         Option<&'args medulla_result_types::outcome_bundle::TerminalOutcomeExtension>,
-    pub run_completion:
-        Option<&'args medulla_work_types::run_completion::RunCompletionInput>,
+    pub run_completion: Option<&'args medulla_work_types::run_completion::RunCompletionInput>,
     pub batch_id: &'args str,
-    pub nodes:
-        &'args mut ScopedOwnerTableMut<'table, (&'static str, &'static str), &'static [u8]>,
-    pub holds:
-        &'args mut ScopedOwnerTableMut<'table, (&'static str, &'static str), &'static [u8]>,
+    pub nodes: &'args mut ScopedOwnerTableMut<'table, (&'static str, &'static str), &'static [u8]>,
+    pub holds: &'args mut ScopedOwnerTableMut<'table, (&'static str, &'static str), &'static [u8]>,
     pub work_item_index:
         &'args ScopedOwnerTableMut<'table, (&'static str, &'static str, u64), &'static str>,
     pub counters:
@@ -206,8 +203,7 @@ pub struct CommitWorkItemResultInput<'args, 'table, 'crypto> {
         ),
         u8,
     >,
-    pub policies:
-        &'args ScopedOwnerTableMut<'table, (&'static str, &'static str), &'static [u8]>,
+    pub policies: &'args ScopedOwnerTableMut<'table, (&'static str, &'static str), &'static [u8]>,
     pub crypto: DurableCrypto<'crypto>,
 }
 
@@ -542,11 +538,16 @@ fn record_outcome_refs(
     committed_status: &str,
     extension: Option<&medulla_result_types::outcome_bundle::TerminalOutcomeExtension>,
 ) -> Result<(), String> {
-    use medulla_work_types::{work_item_read::WORK_ITEM_OUTCOME_DIGEST, work_item_read::WORK_ITEM_OUTCOME_REF, work_item_read::WORK_ITEM_TOOL_CALL_REFS, work_item_read::WORK_ITEM_TRACE_REF};
+    use medulla_work_types::{
+        work_item_read::WORK_ITEM_OUTCOME_DIGEST, work_item_read::WORK_ITEM_OUTCOME_REF,
+        work_item_read::WORK_ITEM_TOOL_CALL_REFS, work_item_read::WORK_ITEM_TRACE_REF,
+    };
     let Some(extension) = extension.filter(|_| committed_status != "retry_scheduled") else {
         return Ok(());
     };
-    use medulla_work_types::{work_item_read::WORK_ITEM_EVENT_BATCH, work_item_read::WORK_ITEM_EVENT_DIGEST};
+    use medulla_work_types::{
+        work_item_read::WORK_ITEM_EVENT_BATCH, work_item_read::WORK_ITEM_EVENT_DIGEST,
+    };
     use sha2::{Digest, Sha256};
     let bundle = &extension.outcome_bundle;
     let event_bytes = rmp_serde::to_vec_named(&extension.run_event)

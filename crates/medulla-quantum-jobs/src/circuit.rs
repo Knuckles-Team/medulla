@@ -333,7 +333,10 @@ mod tests {
             program.metadata.name.as_deref(),
             Some("eg-quantum-jobs.induced_subgraph_ghz")
         );
-        assert_eq!(program.metadata.source.as_deref(), Some("medulla-quantum-jobs"));
+        assert_eq!(
+            program.metadata.source.as_deref(),
+            Some("medulla-quantum-jobs")
+        );
         assert_eq!(program.ir_version, IR_VERSION);
         assert!(program.parameters.is_empty());
     }

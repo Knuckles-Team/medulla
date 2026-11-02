@@ -29,14 +29,14 @@ use openraft::BasicNode;
 use tokio::sync::RwLock;
 
 use medulla_persistence::redb_backend::RedbBackend;
+use medulla_protocol_types::protocol::{GraphType, Method};
 use medulla_raft::raft::config::RaftClusterConfig;
-use medulla_raft_xshard::harness::cluster::fixture;
 use medulla_raft::raft::multi::MultiRaft;
 use medulla_raft::raft::node::{self, StartedNode};
 use medulla_raft::raft::{NodeId, RaftRequest};
+use medulla_raft_xshard::harness::cluster::fixture;
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_server_api::state::ServerState;
-use medulla_protocol_types::protocol::{GraphType, Method};
 
 /// Build a ServerState with a redb-AUTHORITATIVE backend rooted at `dir`.
 async fn make_state(dir: &str) -> Arc<RwLock<ServerState>> {
@@ -213,7 +213,9 @@ async fn node_count(state: &Arc<RwLock<ServerState>>, graph: &str) -> usize {
 fn dispatch_on_heap<'a>(
     state: &'a Arc<RwLock<ServerState>>,
     request: medulla_protocol_types::protocol::Request,
-) -> std::pin::Pin<Box<dyn std::future::Future<Output = medulla_protocol_types::protocol::Response> + Send + 'a>> {
+) -> std::pin::Pin<
+    Box<dyn std::future::Future<Output = medulla_protocol_types::protocol::Response> + Send + 'a>,
+> {
     let dispatched = medulla_server_router::dispatch::request_boundary::dispatch(state, request);
     Box::pin(dispatched)
 }
@@ -389,10 +391,10 @@ async fn cluster_members_reports_topology_and_tracks_leader_failover() {
     use std::sync::atomic::{AtomicU64, Ordering};
     use std::time::{SystemTime, UNIX_EPOCH};
 
-    use medulla_types::acl::{AgentIdentity, AgentRole, RequestContextClaims};
     use medulla_protocol_types::protocol::{Request, ResultPayload};
     use medulla_server_auth::auth::compute_verified_envelope_token;
     use medulla_server_auth::auth::VerifiedEnvelopeParams;
+    use medulla_types::acl::{AgentIdentity, AgentRole, RequestContextClaims};
 
     const TEST_AGENT: &str = "cluster-members-wire-test-agent";
     const SECRET: &str = "raft-test"; // matches make_state's ServerState.auth_secret
@@ -882,8 +884,8 @@ async fn default_startup_stays_single_group_unchanged() {
 
 mod placement_admin_wire_rpc {
     use super::*;
-    use medulla_types::acl::{AgentIdentity, AgentRole, RequestContextClaims};
     use medulla_protocol_types::protocol::{Response, ResultPayload};
+    use medulla_types::acl::{AgentIdentity, AgentRole, RequestContextClaims};
 
     use medulla_server_auth::auth::compute_verified_envelope_token;
     use medulla_server_auth::auth::VerifiedEnvelopeParams;
@@ -913,7 +915,11 @@ mod placement_admin_wire_rpc {
     /// (including `graph`), so setting `req.graph` AFTER signing invalidates the
     /// signature ("Authentication failed") — this is the one constructor path
     /// for a non-`__commons__` request.
-    fn signed_request_for_graph(id: u64, graph: &str, method: Method) -> medulla_protocol_types::protocol::Request {
+    fn signed_request_for_graph(
+        id: u64,
+        graph: &str,
+        method: Method,
+    ) -> medulla_protocol_types::protocol::Request {
         let context = RequestContextClaims {
             principal: TEST_AGENT.to_string(),
             tenant: "tenant-shared".to_string(),
@@ -1224,13 +1230,15 @@ mod placement_admin_wire_rpc {
         let route_checker_id = (1..=3u64)
             .find(|&i| i != control_leader && i != reader_id)
             .unwrap();
-        let placement_route_request = |client_epoch: u64| Method::PlacementRoute {
+        let placement_route_request = |client_epoch: u64| {
+            Method::PlacementRoute {
             request: medulla_result_types::epistemic_operations::PlacementRouteRequest {
                 schema_version: medulla_result_types::epistemic_operations::PlacementRouteRequestSchemaVersion::V1,
                 tenant_ref: TENANT.to_string(),
                 partition_ref: "ws1".to_string(),
                 client_epoch,
             },
+        }
         };
         let non_leader_resp = medulla_server_router::dispatch::request_boundary::dispatch(
             &node_state(route_checker_id),
@@ -1242,10 +1250,11 @@ mod placement_admin_wire_rpc {
             Some("OPERATION_REDIRECTED"),
             "a non-leader node must redirect a PlacementRoute query, not answer it locally"
         );
-        let redirect: medulla_result_types::epistemic_operations::OperationResult = match non_leader_resp.result {
-            Some(ResultPayload::Raw(bytes)) => rmp_serde::from_slice(&bytes).unwrap(),
-            other => panic!("expected a structured redirect, got {other:?}"),
-        };
+        let redirect: medulla_result_types::epistemic_operations::OperationResult =
+            match non_leader_resp.result {
+                Some(ResultPayload::Raw(bytes)) => rmp_serde::from_slice(&bytes).unwrap(),
+                other => panic!("expected a structured redirect, got {other:?}"),
+            };
         assert!(
             redirect.redirect.is_some(),
             "the redirect must carry a target for the caller to retry against"
@@ -2658,8 +2667,8 @@ async fn wire_raft_add_learner_and_change_membership_resolve_through_dispatch() 
     // this whole body. READ guard: it excludes only a key MUTATOR, never another
     // opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
     let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-    use medulla_types::acl::{AgentIdentity, AgentRole};
     use medulla_protocol_types::protocol::ResultPayload;
+    use medulla_types::acl::{AgentIdentity, AgentRole};
 
     const TEST_AGENT: &str = "raft-admin-wire-test-agent";
     const SECRET: &str = "raft-test";
@@ -2957,11 +2966,11 @@ async fn member_add_follows_the_current_leader_after_a_leader_change() {
 #[cfg(feature = "compute-dist")]
 mod dist_compute {
     use super::*;
-    use medulla_types::acl::{AgentIdentity, AgentRole};
     use medulla_protocol_types::protocol::{DistAlgo, GraphType};
+    use medulla_protocol_types::result_contract::cluster::DistResult;
     use medulla_raft_xshard::pregel;
     use medulla_server_api::carrier::GraphReadAuthority;
-    use medulla_protocol_types::result_contract::cluster::DistResult;
+    use medulla_types::acl::{AgentIdentity, AgentRole};
 
     fn props(n: &str) -> Vec<u8> {
         rmp_serde::to_vec_named(&serde_json::json!({"type": "N", "id": n})).unwrap()
@@ -3046,9 +3055,10 @@ mod dist_compute {
     }
 
     async fn read_authority(state: &Arc<RwLock<ServerState>>) -> GraphReadAuthority {
-        let context = medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test(
-            "pregel-test-authority",
-        );
+        let context =
+            medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test(
+                "pregel-test-authority",
+            );
         let state = state.read().await;
         GraphReadAuthority::from_verified(&context, &state.isolation).unwrap()
     }
@@ -3112,7 +3122,8 @@ mod dist_compute {
             panic!("expected scores")
         };
 
-        let single = medulla_graph_algos::algorithms::pagerank(&union.topology_snapshot(), 0.85, 50);
+        let single =
+            medulla_graph_algos::algorithms::pagerank(&union.topology_snapshot(), 0.85, 50);
         assert_eq!(
             score_map(&dist_scores),
             score_map(&single),
@@ -3139,7 +3150,8 @@ mod dist_compute {
 
         // Reference: single-graph CC partition. Compare as "same-component" equivalence
         // (the label VALUE differs by indexing, so compare which nodes share a label).
-        let single = medulla_graph_algos::algorithms::connected_components(&union.topology_snapshot());
+        let single =
+            medulla_graph_algos::algorithms::connected_components(&union.topology_snapshot());
         let mut single_comp: std::collections::HashMap<String, usize> =
             std::collections::HashMap::new();
         for (ci, comp) in single.iter().enumerate() {
@@ -3238,8 +3250,8 @@ mod dist_compute {
 mod matview {
     use super::*;
     use medulla_protocol_types::protocol::DistAlgo;
-    use medulla_server_api::api::persistence::MatView;
     use medulla_protocol_types::result_contract::cluster::DistResult;
+    use medulla_server_api::api::persistence::MatView;
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn matview_persists_and_reloads_from_redb() {

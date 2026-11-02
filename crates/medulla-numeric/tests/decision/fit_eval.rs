@@ -1,6 +1,11 @@
 //! EH-027 / EH-062 / EH-005 / EH-006: a deterministic fit, its calibration,
 //! and the evaluation receipt that gates promotion.
 
+use medulla_decision_stats::{
+    decision::admission::admit, decision::admission::AdmissionRules, decision::admission::Regime,
+};
+use medulla_decision_stats::{decision::evaluate::evaluate, decision::evaluate::EvalSpec};
+use medulla_decision_stats::{decision::fit::fit, decision::fit::FitSpec};
 use medulla_decision_types::decision::statistical::CalibrationMethod;
 use medulla_decision_types::{decision::jobs::OpeEstimatorKind, decision::jobs::OptimiserSpec};
 use medulla_decision_types::{
@@ -13,9 +18,6 @@ use medulla_decision_types::{
 use medulla_decision_types::{
     decision::QuantScaleTag, decision::QuantisedValue, decision::TraceFidelityLevel,
 };
-use medulla_decision_stats::{decision::admission::admit, decision::admission::AdmissionRules, decision::admission::Regime};
-use medulla_decision_stats::{decision::evaluate::evaluate, decision::evaluate::EvalSpec};
-use medulla_decision_stats::{decision::fit::fit, decision::fit::FitSpec};
 
 use super::common::{
     approved, dataset, gold_dataset, gold_item, logged, logged_item, statistical, window,

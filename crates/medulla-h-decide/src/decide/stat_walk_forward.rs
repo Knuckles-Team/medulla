@@ -12,6 +12,16 @@
 //! policy-dependent environment, bandit labels, an understated trial count, a
 //! look-ahead.
 
+use medulla_decision_stats::decision::admission::Regime;
+use medulla_decision_stats::decision::fit::FitSpec;
+use medulla_decision_stats::decision::refusal::RefusalResult;
+use medulla_decision_stats::{decision::quant::q32, decision::quant::value_of};
+use medulla_decision_stats::{
+    decision::replay::gold_steps, decision::replay::head_digest, decision::replay::max_drawdown,
+    decision::replay::mean, decision::replay::replay, decision::replay::sharpe,
+    decision::replay::time_ordered, decision::replay::HeadReplay, decision::replay::ReplayOutcome,
+    decision::replay::ReplayPolicy, decision::replay::ReplayStep, decision::replay::Uniform,
+};
 use medulla_decision_types::decision::statistical::dataset::LabelledItem;
 use medulla_decision_types::decision::statistical::StatisticalErrorCode;
 use medulla_decision_types::{
@@ -26,11 +36,6 @@ use medulla_finance_market::{
     market::validation::deflated_sharpe_ratio, market::validation::diebold_mariano,
     market::validation::probability_of_backtest_overfit,
 };
-use medulla_decision_stats::decision::admission::Regime;
-use medulla_decision_stats::decision::fit::FitSpec;
-use medulla_decision_stats::{decision::quant::q32, decision::quant::value_of};
-use medulla_decision_stats::decision::refusal::RefusalResult;
-use medulla_decision_stats::{decision::replay::gold_steps, decision::replay::head_digest, decision::replay::max_drawdown, decision::replay::mean, decision::replay::replay, decision::replay::sharpe, decision::replay::time_ordered, decision::replay::HeadReplay, decision::replay::ReplayOutcome, decision::replay::ReplayPolicy, decision::replay::ReplayStep, decision::replay::Uniform};
 use medulla_types::contract::BoundedVec;
 use medulla_types::solve_scalar::digest_text;
 

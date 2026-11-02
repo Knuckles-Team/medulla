@@ -33,7 +33,6 @@
 //! there" and "what does it contain", never "how much should I draw". See
 //! `medulla-viz-export`'s backend, which is the thing that actually honors a tier.
 
-
 pub mod chunk;
 pub mod dictionary;
 pub mod error;

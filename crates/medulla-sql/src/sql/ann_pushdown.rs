@@ -26,10 +26,10 @@ use medulla_result_types::row_predicate::RowPredicate;
 
 use super::ann_filter::{admissible_prefilter, ann_query_shape, AnnDeclineReason, AnnQueryShape};
 use medulla_sql_lang::{sql::pgfamily::plan_ann_search, sql::pgfamily::AnnSearchPlan};
-use medulla_table_store::{tables::ann_plan::AnnIndexPlan, tables::ann_plan::AnnMethod};
 use medulla_table_store::tables::ann_authority::AnnTopKRequest;
-use medulla_tables::schema::TableSchema;
 use medulla_table_store::tables::TableStore;
+use medulla_table_store::{tables::ann_plan::AnnIndexPlan, tables::ann_plan::AnnMethod};
+use medulla_tables::schema::TableSchema;
 
 /// Conservative predicate: could `sql` trigger an ANN pushdown against
 /// `ann_indexes`? A pushdown narrows `nodes`/a user table to a slice specific to
@@ -82,7 +82,9 @@ pub(super) fn ann_probe_sql_with(sql: &str, udf: &ScalarUDF) -> Option<String> {
     if !contains_ignore_ascii_case(sql, medulla_sql_lang::sql::pgfamily::MEDULLA_EMBED_FN) {
         return None;
     }
-    medulla_sql_lang::sql::pgfamily::fold_const_embed_order_key(sql, &|text| embed_const_text(udf, text))
+    medulla_sql_lang::sql::pgfamily::fold_const_embed_order_key(sql, &|text| {
+        embed_const_text(udf, text)
+    })
 }
 
 /// Case-insensitive substring test, allocation-free — the cheap prefilter that keeps the

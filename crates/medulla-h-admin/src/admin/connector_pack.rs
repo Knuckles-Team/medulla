@@ -6,10 +6,10 @@
 //! inheriting one. Each arm's target is owned by a different package after S1,
 //! which is why they are separate functions rather than one body.
 
-#[cfg(all(feature = "blob", feature = "redb"))]
-use medulla_server_blob::blob::BlobStateExt;
 #[cfg(feature = "redb")]
 use medulla_persistence_records::agent_library::AgentLibraryStateExt;
+#[cfg(all(feature = "blob", feature = "redb"))]
+use medulla_server_blob::blob::BlobStateExt;
 use std::sync::Arc;
 #[cfg(feature = "redb")]
 use std::{hash::Hash, sync::OnceLock};
@@ -19,9 +19,9 @@ use tokio::sync::RwLock;
 use medulla_protocol_types::protocol::Response;
 #[cfg(feature = "redb")]
 use medulla_protocol_types::protocol::ResultPayload;
+use medulla_server_api::authority_context::VerifiedRequestContext;
 #[cfg(all(feature = "redb", feature = "blob"))]
 use medulla_server_api::carrier::CarrierAuthority;
-use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 
 pub(crate) mod admin;
@@ -111,7 +111,9 @@ async fn serve_status(
     }
     #[cfg(feature = "redb")]
     {
-        if request.tenant_id != medulla_persistence_records::connector_pack::pack_tenant_key(verified) {
+        if request.tenant_id
+            != medulla_persistence_records::connector_pack::pack_tenant_key(verified)
+        {
             return Response::err(
                 req_id,
                 "ACCESS_DENIED: connector pack tenant must match verified request tenant",
@@ -280,14 +282,15 @@ async fn bind_import_context(
     mut request: Box<medulla_catalog_types::connector_pack::ConnectorPackImportRequest>,
 ) -> Result<Box<medulla_catalog_types::connector_pack::ConnectorPackImportRequest>, String> {
     let store = agent_library_store(state).await?;
-    request.context = medulla_persistence_records::agent_library::context::bind_agent_library_context(
-        &store,
-        req_id,
-        verified,
-        request.context.clone(),
-        "connector-pack:import",
-        true,
-    )?;
+    request.context =
+        medulla_persistence_records::agent_library::context::bind_agent_library_context(
+            &store,
+            req_id,
+            verified,
+            request.context.clone(),
+            "connector-pack:import",
+            true,
+        )?;
     Ok(request)
 }
 

@@ -1,8 +1,8 @@
 //! Lexer (UQL-02): comments, numbers, unicode, quoted identifiers, JSONPath/params.
 
+use medulla_types::wire::{Op, Pred};
 use medulla_uql::lexer::{lex, Tok};
 use medulla_uql::parse;
-use medulla_types::wire::{Op, Pred};
 
 fn kinds(src: &str) -> Vec<Tok> {
     lex(src).unwrap().into_iter().map(|t| t.kind).collect()

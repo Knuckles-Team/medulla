@@ -251,7 +251,11 @@ impl ModalityContract for DocumentData {
         medulla_modality::policy_labels()
     }
 
-    medulla_modality::modality_contract_runtime_hooks!(DocumentData, element_count, has_secondary_index);
+    medulla_modality::modality_contract_runtime_hooks!(
+        DocumentData,
+        element_count,
+        has_secondary_index
+    );
 }
 
 impl GovernedModality for DocumentData {

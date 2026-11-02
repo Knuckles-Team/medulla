@@ -49,7 +49,10 @@ pub struct CarrierAuthority {
 impl CarrierAuthority {
     /// A verified carrier for `agent` in the deployment's one tenant (the owner-scoped
     /// catalog test fixtures).
-    #[cfg(all(any(test, feature = "test-support"), any(feature = "federation", feature = "wasm-udf")))]
+    #[cfg(all(
+        any(test, feature = "test-support"),
+        any(feature = "federation", feature = "wasm-udf")
+    ))]
     pub fn verified_for_test(agent: &str) -> Self {
         Self::from_verified(&VerifiedRequestContext::verified_for_test(agent))
             .expect("verified test carrier")

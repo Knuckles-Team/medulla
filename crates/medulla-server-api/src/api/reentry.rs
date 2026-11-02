@@ -266,7 +266,8 @@ pub trait DispatchApi: Send + Sync {
         applying_group: medulla_direct_state::direct_state::GroupId,
         coordinator_id: &'a str,
         plan: &'a [u8],
-    ) -> SeamFuture<'a, Result<medulla_protocol_types::mutation_batch::MutationBatchCommit, String>> {
+    ) -> SeamFuture<'a, Result<medulla_protocol_types::mutation_batch::MutationBatchCommit, String>>
+    {
         Box::pin(async { Err(RAFT_NOT_SERVED.to_string()) })
     }
 

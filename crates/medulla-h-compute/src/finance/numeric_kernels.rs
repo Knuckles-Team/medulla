@@ -10,8 +10,6 @@ use medulla_protocol_types::result_contract::compute as results;
 use medulla_result_types::compute_result::finance as wire;
 use serde::Serialize;
 
-use medulla_finance_quant::factor;
-use medulla_finance_quant::factor::FactorInput;
 use medulla_finance::banking;
 use medulla_finance::banking::AmlRule;
 use medulla_finance::banking::CapitalInputs;
@@ -19,6 +17,8 @@ use medulla_finance::banking::CreditExposure;
 use medulla_finance_quant::execution;
 use medulla_finance_quant::execution::AlmgrenChriss;
 use medulla_finance_quant::execution::Ident;
+use medulla_finance_quant::factor;
+use medulla_finance_quant::factor::FactorInput;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;

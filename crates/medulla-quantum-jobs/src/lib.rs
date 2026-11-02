@@ -53,7 +53,6 @@
 //! (`medulla-jobs`, `medulla-quantum-core`, `medulla-quantum-sim`, `medulla-numeric`, optionally
 //! `medulla-plan`) already vendored for the sibling lanes.
 
-
 pub mod circuit;
 pub mod job;
 pub mod numeric_bridge;

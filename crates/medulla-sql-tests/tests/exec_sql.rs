@@ -37,7 +37,12 @@ fn sample_view() -> GraphView {
 fn run(sql: &str) -> medulla_sql::sql::QueryResult {
     // Direct call (exec_sql owns its current-thread runtime) — the spike already
     // proved the spawn_blocking nesting.
-    exec_sql(&sample_view(), sql, &medulla_sql::sql::CancellationToken::new()).expect("sql executed")
+    exec_sql(
+        &sample_view(),
+        sql,
+        &medulla_sql::sql::CancellationToken::new(),
+    )
+    .expect("sql executed")
 }
 
 fn rows_as_values(r: &medulla_sql::sql::QueryResult) -> Vec<Vec<serde_json::Value>> {
@@ -196,8 +201,8 @@ fn exec_sql_pre_cancelled_token_returns_no_rows() {
     let sql = "SELECT value FROM generate_series(1, 1000) ORDER BY value";
 
     let fresh = medulla_sql::sql::CancellationToken::new();
-    let normal =
-        medulla_sql::sql::exec_sql(&view, sql, &fresh).expect("an uncancelled run must execute normally");
+    let normal = medulla_sql::sql::exec_sql(&view, sql, &fresh)
+        .expect("an uncancelled run must execute normally");
     assert_eq!(
         normal.rows.len(),
         1000,

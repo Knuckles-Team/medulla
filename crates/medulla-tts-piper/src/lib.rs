@@ -70,7 +70,6 @@
 //! GOC-36's manifest is the place that record is meant to live, per the lane contract's
 //! explicit call-out that "some [voices] carry restrictive terms."
 
-
 pub mod streaming;
 pub mod voice;
 

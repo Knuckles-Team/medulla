@@ -18,12 +18,12 @@ use medulla_protocol_types::result_contract::security::Identity as IdentityResul
 use tokio::sync::RwLock;
 
 use super::elevation::ElevationStampAuthority;
-use medulla_server_api::state::ServerState;
-use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
+use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::identity_view::identity_actor;
+use medulla_server_api::state::ServerState;
 
 pub mod exposure;
 #[cfg(any(test, feature = "test-support"))]
@@ -33,7 +33,8 @@ pub mod secrets;
 pub mod stamp;
 
 /// Refusal for an identity op that reached apply without its stamp.
-pub const UNSTAMPED: &str = "IDENTITY_UNSTAMPED: an identity op must carry its boundary-derived stamp";
+pub const UNSTAMPED: &str =
+    "IDENTITY_UNSTAMPED: an identity op must carry its boundary-derived stamp";
 /// Refusal for a stamp whose actor is not the verified caller's.
 pub const FORGED: &str = "IDENTITY_FORGED_STAMP: the stamp does not name the verified caller";
 

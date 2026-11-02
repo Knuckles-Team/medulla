@@ -67,9 +67,7 @@ pub(crate) fn committed_status<L: RevisionLayer>(
     Ok(Some(L::write_result(committed, true)))
 }
 
-pub(crate) fn decode_status_result<L: RevisionLayer>(
-    bytes: &[u8],
-) -> Result<L::Committed, String> {
+pub(crate) fn decode_status_result<L: RevisionLayer>(bytes: &[u8]) -> Result<L::Committed, String> {
     let mutation_result: MutationResult =
         agent_row::decode(bytes, &format!("{} status result", L::NOUN))?;
     mutation_result.validate()?;

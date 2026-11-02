@@ -24,7 +24,10 @@ pub(super) struct DerivedClasses {
 #[cfg(feature = "owl")]
 mod imp {
     use super::*;
-    use medulla_reasoner::{rules::capability::classify_components, rules::capability::ClassificationPolicy, rules::capability::ProfiledComponent, rules::capability::DERIVATION_RULES};
+    use medulla_reasoner::{
+        rules::capability::classify_components, rules::capability::ClassificationPolicy,
+        rules::capability::ProfiledComponent, rules::capability::DERIVATION_RULES,
+    };
 
     /// Domain of the classification rule-set identity.
     const RULES_DOMAIN: &str = "eg/decide-classification-rules/v1";

@@ -9,7 +9,9 @@ mod address;
 
 use std::collections::BTreeSet;
 
-use medulla_modality::{EvidenceAddress, EvidenceLocus, OpaqueRef, PolicyEnvelope, PrivacyAttestation};
+use medulla_modality::{
+    EvidenceAddress, EvidenceLocus, OpaqueRef, PolicyEnvelope, PrivacyAttestation,
+};
 use serde::{Deserialize, Serialize};
 
 pub const PROGRAM_SCHEMA_VERSION: u16 = 1;

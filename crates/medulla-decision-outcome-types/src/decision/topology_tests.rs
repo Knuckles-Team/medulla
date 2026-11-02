@@ -1,9 +1,9 @@
-use medulla_decision_types::decision::record::schema_version_for;
-use medulla_decision_types::decision_fixtures::contract_decision as wave;
 use medulla_agent_types::agent_fixtures::topology::facts;
 use medulla_agent_types::agent_fixtures::topology::requirements;
 use medulla_agent_types::agent_fixtures::topology::slot;
 use medulla_agent_types::agent_topology::*;
+use medulla_decision_types::decision::record::schema_version_for;
+use medulla_decision_types::decision_fixtures::contract_decision as wave;
 use medulla_types::contract::BoundedVec;
 
 #[test]
@@ -82,7 +82,8 @@ fn a_topology_request_is_sealed_as_the_topology_version() {
         Err(medulla_decision_types::decision::DecisionErrorCode::DecisionRecordVersionUnsupported),
         "a v1 header over a topology request is refused, typed"
     );
-    record.schema_version = medulla_decision_types::decision::TOPOLOGY_DECISION_RECORD_SCHEMA_VERSION;
+    record.schema_version =
+        medulla_decision_types::decision::TOPOLOGY_DECISION_RECORD_SCHEMA_VERSION;
     let round_tripped: medulla_decision_types::decision::DecisionRecord =
         serde_json::from_str(&serde_json::to_string(&record).unwrap()).unwrap();
     assert_eq!(round_tripped.checked().unwrap(), record);
@@ -118,7 +119,8 @@ fn every_supported_decision_record_version_decodes_and_an_unknown_version_is_ref
 
     let mut topology_record = wave::record(wave::every_decision_outcome().remove(0));
     topology_record.inputs.request.requirements.topology = Some(requirements(4));
-    topology_record.schema_version = medulla_decision_types::decision::TOPOLOGY_DECISION_RECORD_SCHEMA_VERSION;
+    topology_record.schema_version =
+        medulla_decision_types::decision::TOPOLOGY_DECISION_RECORD_SCHEMA_VERSION;
     let round_tripped: medulla_decision_types::decision::DecisionRecord =
         serde_json::from_str(&serde_json::to_string(&topology_record).unwrap()).unwrap();
     round_tripped

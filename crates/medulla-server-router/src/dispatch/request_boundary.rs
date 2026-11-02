@@ -1,15 +1,15 @@
-use medulla_server_graph::dispatch::request_boundary::preflight::preflight_request_msgpack;
-use medulla_server_graph::dispatch::shared::validate_graph_create_type;
-use medulla_server_graph::dispatch::shared::timed_read;
+use super::router::dispatch_request_method;
+use crate::dispatch::*;
 use medulla_server_auth::auth::RequestAuthorityExt;
 #[cfg(feature = "raft")]
-use medulla_server_graph::dispatch::change_envelope::multi_graph_batch_update;
-#[cfg(feature = "raft")]
 use medulla_server_consensus::dispatch::consensus::propose_native_mutation;
-use super::router::dispatch_request_method;
+#[cfg(feature = "raft")]
+use medulla_server_graph::dispatch::change_envelope::multi_graph_batch_update;
+use medulla_server_graph::dispatch::request_boundary::preflight::preflight_request_msgpack;
+use medulla_server_graph::dispatch::shared::timed_read;
+use medulla_server_graph::dispatch::shared::validate_graph_create_type;
 #[cfg(all(feature = "sparql-http", feature = "raft"))]
 use medulla_server_graph::dispatch::sparql_update::coordinated_sparql_http_update;
-use crate::dispatch::*;
 
 pub mod authorization;
 #[cfg(feature = "raft")]
@@ -288,13 +288,7 @@ async fn preflight_commit_owner(
     let Method::Commit { txn_id, .. } = &req.method else {
         return Ok(());
     };
-    medulla_h_txn::txn::preflight_open_txn_authority(
-        state,
-        req_id,
-        verified_context,
-        txn_id,
-    )
-    .await
+    medulla_h_txn::txn::preflight_open_txn_authority(state, req_id, verified_context, txn_id).await
 }
 
 /// Derive and clear identity secrets while preserving the request error id.
@@ -309,7 +303,9 @@ async fn stamp_identity_request(
         state,
         &mut req.method,
         verified_context,
-        medulla_server_identity::dispatch::elevation::ElevationStampAuthority::of(state_machine_authorized),
+        medulla_server_identity::dispatch::elevation::ElevationStampAuthority::of(
+            state_machine_authorized,
+        ),
     )
     .await
     .map_err(|error| Response::err(req.id, error))
@@ -327,13 +323,17 @@ async fn dispatch_preamble_checks(
     medulla_server_identity::dispatch::elevation::stamp_elevation_actor(
         &mut req.method,
         verified_context,
-        medulla_server_identity::dispatch::elevation::ElevationStampAuthority::of(state_machine_authorized),
+        medulla_server_identity::dispatch::elevation::ElevationStampAuthority::of(
+            state_machine_authorized,
+        ),
     );
     // EH-560: the governed-change actor, the same way.
     medulla_server_identity::dispatch::governed::stamp_governed_actor(
         &mut req.method,
         verified_context,
-        medulla_server_identity::dispatch::elevation::ElevationStampAuthority::of(state_machine_authorized),
+        medulla_server_identity::dispatch::elevation::ElevationStampAuthority::of(
+            state_machine_authorized,
+        ),
     );
     let method_policy = medulla_capabilities::policy(&req.method);
     let action = method_policy.authz_action;
@@ -380,8 +380,12 @@ async fn dispatch_preamble_checks(
     // A client change-envelope draft becomes its governed envelope here, after
     // authorization and before material preflight, consensus and dispatch.
     let req =
-        medulla_server_graph::dispatch::change_envelope_draft::compile_change_envelope_drafts(state, req, verified_context)
-            .await?;
+        medulla_server_graph::dispatch::change_envelope_draft::compile_change_envelope_drafts(
+            state,
+            req,
+            verified_context,
+        )
+        .await?;
 
     if let Err(error) = preflight_request_msgpack(&req.method) {
         return Err(Response::err(req.id, error));

@@ -195,8 +195,8 @@ impl ScalarKind {
 #[cfg(test)]
 mod prefilter_precision_tests {
     use super::*;
-    use medulla_tables::schema::Column;
     use medulla_result_types::row_predicate::CmpOp;
+    use medulla_tables::schema::Column;
     use serde_json::json;
 
     #[test]

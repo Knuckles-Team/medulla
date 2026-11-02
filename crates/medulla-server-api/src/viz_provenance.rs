@@ -101,7 +101,8 @@ fn validate_key(key: &str) -> Result<(), String> {
 pub struct VizProvenanceStore {
     entries: RwLock<HashMap<String, VizProvenanceRecord>>,
     #[cfg(feature = "redb")]
-    durable: Option<medulla_store::sidecar_store::SidecarStore<medulla_storage::VizProvenanceOwner>>,
+    durable:
+        Option<medulla_store::sidecar_store::SidecarStore<medulla_storage::VizProvenanceOwner>>,
 }
 
 impl VizProvenanceStore {

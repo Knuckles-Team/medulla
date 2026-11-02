@@ -57,7 +57,6 @@
 //! application coordinator or pod-number dependency: the current Raft leader orders
 //! transitions and any caught-up replica can take over after leader failure.
 
-
 pub mod claim;
 pub mod intent;
 pub mod model;

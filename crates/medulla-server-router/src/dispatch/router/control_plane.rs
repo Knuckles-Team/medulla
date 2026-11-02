@@ -337,7 +337,13 @@ pub async fn dispatch_agent_library_methods(
             #[cfg(feature = "redb")]
             {
                 dispatch_boxed(async {
-                    medulla_h_admin::admin::handle_agent_library(state, req.id, verified_context, op).await
+                    medulla_h_admin::admin::handle_agent_library(
+                        state,
+                        req.id,
+                        verified_context,
+                        op,
+                    )
+                    .await
                 })
                 .await
             }
@@ -354,7 +360,8 @@ pub async fn dispatch_agent_library_methods(
             #[cfg(feature = "redb")]
             {
                 dispatch_boxed(async {
-                    medulla_h_admin::admin::handle_agent_graph(state, req.id, verified_context, op).await
+                    medulla_h_admin::admin::handle_agent_graph(state, req.id, verified_context, op)
+                        .await
                 })
                 .await
             }
@@ -371,8 +378,13 @@ pub async fn dispatch_agent_library_methods(
             #[cfg(feature = "redb")]
             {
                 dispatch_boxed(async {
-                    medulla_h_admin::admin::handle_agent_component(state, req.id, verified_context, op)
-                        .await
+                    medulla_h_admin::admin::handle_agent_component(
+                        state,
+                        req.id,
+                        verified_context,
+                        op,
+                    )
+                    .await
                 })
                 .await
             }
@@ -412,8 +424,13 @@ pub async fn dispatch_agent_library_methods(
             #[cfg(feature = "redb")]
             {
                 dispatch_boxed(async {
-                    medulla_h_admin::admin::handle_agent_template(state, req.id, verified_context, op)
-                        .await
+                    medulla_h_admin::admin::handle_agent_template(
+                        state,
+                        req.id,
+                        verified_context,
+                        op,
+                    )
+                    .await
                 })
                 .await
             }

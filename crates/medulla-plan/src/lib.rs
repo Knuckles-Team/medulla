@@ -53,7 +53,6 @@
 //!  * **Cross-shard** — per-shard sub-plans + a coordinator merge + traversal
 //!    frontier forwarding (the multi-quarter piece).
 
-
 // MEDULLA-UNIFIED-DATA-PLANE-R020.2.1 — warehouse federation pushdown-transport
 // dispatch: Arrow Flight SQL vs. native per WarehouseSourceKind, with a
 // refusal for an invalid config or an unmet Flight SQL preference. Pure
@@ -72,13 +71,11 @@ pub mod freshness_router;
 #[cfg(feature = "query")]
 pub mod code_context;
 
-
 /// The UQL text front-end (CONCEPT:AU-KG.query.top-nodes-by-degree) — `uql::parse(text) -> wire::Plan`. It
 /// is a pure parser (lexer + recursive descent, NO DataFusion), so it ships in a
 /// default/Pi build alongside the algebra/cost/IR; only EXECUTION of the resulting
 /// Plan is `query`-gated.
 pub mod uql;
-
 
 // The natural-language → query planning seam (CONCEPT:MEDULLA-KG.query.core-query-input) + the concrete standalone
 // `UreqNlPlanner` (CONCEPT:MEDULLA-KG.query.fence-stripper). The `NlPlanner` trait + the `plan_and_execute*`
@@ -90,14 +87,13 @@ pub mod uql;
 /// (MEDULLA-UNIFIED-DATA-PLANE-R017.2.1). Pure `std`, always compiled: no heavy HTTP/native
 /// client dependency is needed until the live slice (`R017.2.2`) issues real requests.
 pub mod clickhouse_connection;
+/// Pushdown to a peer engine, end to end (they run `uql::serve::run_statement`, so they sit above federation).
+#[cfg(all(test, feature = "federation"))]
+mod engine_peer_tests;
 /// Oracle/Db2 attached-source driver config + connect/refusal path
 /// (MEDULLA-UNIFIED-DATA-PLANE-R018.2.1). Pure `std`, always compiled: no driver/ODBC
 /// client dependency is needed until the live slice (`R018.2.2`) issues real reads.
 pub mod relational_connection;
-/// Pushdown to a peer engine, end to end (they run `uql::serve::run_statement`, so they sit above federation).
-#[cfg(all(test, feature = "federation"))]
-mod engine_peer_tests;
-
 
 // The hierarchical-retrieval surface (CONCEPT:MEDULLA-KG.retrieval.bounded-drill): the retriever + its accessor
 // traits + the structured result + the flat-top-k baseline, so a caller names them
@@ -197,9 +193,6 @@ mod text_tests;
 // (CONCEPT:MEDULLA-KG.ontology.concept-12).
 #[cfg(all(test, feature = "owl"))]
 mod owl_tests;
-
-
-
 
 // The spatial `SpatialScan` + `Spatial{Within,DWithin}` executor proofs
 // (CONCEPT:MEDULLA-KG.ontology.singles-concept): a bbox R-tree scan + geometry filters compose with the graph/

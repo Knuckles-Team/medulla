@@ -25,7 +25,6 @@
 //! Pi/full tiers — serving is CPU integer-table lookups (ADC) and needs no
 //! accelerator. The default build links no GPU, no faiss, no native-ML deps.
 
-
 mod codec;
 pub mod distance;
 pub mod flat;

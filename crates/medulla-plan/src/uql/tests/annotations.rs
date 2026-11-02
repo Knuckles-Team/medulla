@@ -5,8 +5,8 @@ use medulla_semantic_index::semantic::SemanticStore;
 use medulla_types::wire::{UqlProofCoverage, UqlProofStep, UqlResult, UqlRow};
 use serde_json::json;
 
-use medulla_exec::exec::PlanCtx;
 use crate::uql::serve::run_statement;
+use medulla_exec::exec::PlanCtx;
 use medulla_uql::{parse_statement, Params};
 
 fn rows_of(src: &str, ctx: &PlanCtx) -> Vec<UqlRow> {

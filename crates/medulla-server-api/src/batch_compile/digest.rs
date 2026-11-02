@@ -382,7 +382,8 @@ mod current_plan_identity_tests {
             request: medulla_decision_outcome_types::current_plan::sample_publish_request(),
         };
         let attached = Method::PublishCurrentPlan {
-            request: medulla_decision_outcome_types::current_plan::sample_task_plan_publish_request(),
+            request: medulla_decision_outcome_types::current_plan::sample_task_plan_publish_request(
+            ),
         };
         let identity = work_item_batch_identity("graph", "tenant", 1, &plain).unwrap();
         assert_eq!(
@@ -392,7 +393,8 @@ mod current_plan_identity_tests {
         let digest = |method| identity_payload_digest(&identity, method);
         assert_eq!(digest(attached.clone()), digest(attached.clone()));
         assert_ne!(digest(plain), digest(attached.clone()));
-        let mut changed = medulla_decision_outcome_types::current_plan::sample_task_plan_publish_request();
+        let mut changed =
+            medulla_decision_outcome_types::current_plan::sample_task_plan_publish_request();
         changed.task_plan_proposal.as_mut().unwrap().max_concurrency = 1;
         changed.snapshot.task_plan = Some(
             medulla_decision_types::decision::task_plan::plan_explicit_tasks(
@@ -470,7 +472,9 @@ mod current_plan_identity_tests {
 #[cfg(test)]
 mod checkpoint_identity_tests {
     use super::*;
-    use medulla_work_types::{run_checkpoint::CheckpointContent, run_checkpoint::PublishRunCheckpointRequest};
+    use medulla_work_types::{
+        run_checkpoint::CheckpointContent, run_checkpoint::PublishRunCheckpointRequest,
+    };
 
     // spec: MEDULLA-DURABLE-KERNEL-R028.1.1
     #[test]

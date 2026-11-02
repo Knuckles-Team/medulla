@@ -1,6 +1,8 @@
 use super::*;
-use medulla_decision_types::{decision::request::ClaimProvenance, decision::request::ClaimedTaskMapping};
 use medulla_agent_types::agent_component::AgentComponentKind;
+use medulla_decision_types::{
+    decision::request::ClaimProvenance, decision::request::ClaimedTaskMapping,
+};
 
 const ONTOLOGY: &str = "sha256:0000000000000000000000000000000000000000000000000000000000000000";
 

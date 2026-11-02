@@ -10,8 +10,8 @@ use std::sync::Arc;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
-use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_protocol_types::result_contract::coordination;
+use medulla_server_api::api::persistence::PersistenceBackend;
 
 /// Already-authorized graph and placement context for one development-lane op.
 pub struct HandleContext<'a> {
@@ -75,7 +75,8 @@ async fn prepare(ctx: &HandleContext<'_>) -> Result<PreparedOperation, Response>
         backend,
         graph: medulla_kernel::persist::sanitize(ctx.graph_name),
         now_ms: medulla_kernel::kernel::dispatch_support::authoritative_now_ms(),
-        _mutation_guard: medulla_server_api::routed_write_coalescer::lock_graph(ctx.graph_name).await,
+        _mutation_guard: medulla_server_api::routed_write_coalescer::lock_graph(ctx.graph_name)
+            .await,
     })
 }
 

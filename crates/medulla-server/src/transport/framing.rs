@@ -1,8 +1,11 @@
 //! Framed ingress and the single response-writer loop for one native connection.
 
-use medulla_server_graph::{dispatch::request_boundary::preflight::HARD_MAX_MSGPACK_ITEMS, dispatch::request_boundary::preflight::MAX_MSGPACK_NESTING_DEPTH};
 use medulla_protocol_types::protocol::Request;
 use medulla_protocol_types::protocol::Response;
+use medulla_server_graph::{
+    dispatch::request_boundary::preflight::HARD_MAX_MSGPACK_ITEMS,
+    dispatch::request_boundary::preflight::MAX_MSGPACK_NESTING_DEPTH,
+};
 
 const DEFAULT_MAX_REQUEST_FRAME_BYTES: usize = 64 * 1024 * 1024;
 pub(super) const HARD_MAX_REQUEST_FRAME_BYTES: usize = 384 * 1024 * 1024;
@@ -255,10 +258,7 @@ where
 }
 
 /// Decode the bounded native request body, preserving typed refusal and correlation.
-pub fn decode_request_payload(
-    payload: &[u8],
-    max_items: usize,
-) -> Result<Request, Response> {
+pub fn decode_request_payload(payload: &[u8], max_items: usize) -> Result<Request, Response> {
     if validate_msgpack_frame(payload, max_items).is_err() {
         return Err(Response::err(
             recover_request_id(payload),

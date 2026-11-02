@@ -4,8 +4,8 @@
 mod common;
 
 use common::{has_iri, parse_all};
-use medulla_reasoner::owl::Reasoner;
 use medulla_rdf::oxrdf::Triple;
+use medulla_reasoner::owl::Reasoner;
 
 const SWARM: &str = "http://knuckles.team/kg/swarm#";
 const RDF_TYPE: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
@@ -13,7 +13,9 @@ const OWL_OBJECT_PROPERTY: &str = "http://www.w3.org/2002/07/owl#ObjectProperty"
 const RDFS: &str = "http://www.w3.org/2000/01/rdf-schema#";
 
 fn documents() -> Vec<Triple> {
-    parse_all(&[include_str!("../../medulla-core/ontology/swarm_topology-v1.ttl")])
+    parse_all(&[include_str!(
+        "../../medulla-core/ontology/swarm_topology-v1.ttl"
+    )])
 }
 
 // spec: MEDULLA-CQ-ORCH-R007.1

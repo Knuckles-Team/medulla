@@ -5,9 +5,9 @@
 use medulla_agent_types::agent_topology::CapacityHeadroom;
 use medulla_mutation_types::{capacity_lease::CapacityCell, capacity_lease::LeasePriority};
 
+use super::{validate_cell_bounds, DurableUsage, CELLS, USAGE};
 use medulla_store::redb_store::shard::Shard;
 use medulla_store::{redb_store::decode_durable, redb_store::DurableCrypto};
-use super::{validate_cell_bounds, DurableUsage, CELLS, USAGE};
 
 /// The headroom one cell offers `priority` with `leased` already out: the
 /// acquire path's own [`CapacityCell::available_for`], so a

@@ -20,6 +20,7 @@ use std::collections::BTreeMap;
 use medulla_agent_types::{
     agent_component::AgentComponentEntry, agent_component::AgentComponentSearchRequest,
 };
+use medulla_decision_stats::decision::candidate::CandidateView;
 use medulla_decision_types::decision::statistical::ingestion_lane::IngestionLaneRequest;
 use medulla_decision_types::decision::statistical::log::RecordVisibility;
 use medulla_decision_types::decision::statistical::retrieval_plan::RetrievalPlanKind;
@@ -41,7 +42,6 @@ use medulla_decision_types::{
     decision::CandidateSourceRecord, decision::LibraryCandidateScope,
     decision::MAX_ASSEMBLY_CANDIDATES,
 };
-use medulla_decision_stats::decision::candidate::CandidateView;
 
 use super::stat_classes::{current_rules, derive, DerivedClasses};
 use super::stat_support::refusal;
@@ -60,7 +60,8 @@ pub(super) struct ReadCandidates {
     /// The library entries behind `views`; empty for graph candidates.
     pub(super) entries: Vec<AgentComponentEntry>,
     pub(super) record: CandidateSourceRecord,
-    #[allow(dead_code)] // set at every candidate construction; the record's visibility is enforced upstream, kept for the candidate's provenance
+    #[allow(dead_code)]
+    // set at every candidate construction; the record's visibility is enforced upstream, kept for the candidate's provenance
     pub(super) visibility: RecordVisibility,
     /// Rule-derived classes of library candidates (EH-200); empty for graph rows.
     pub(super) derived: DerivedClasses,
@@ -247,8 +248,9 @@ pub(super) fn graph_candidates(
 ) -> Result<ReadCandidates, String> {
     check_selecting_plan(plan)?;
     let semantic = medulla_semantic_index::semantic::SemanticStore::new();
-    let rows = medulla_exec::exec::execute(plan, &medulla_exec::exec::PlanCtx::new(view, &semantic))
-        .map_err(|detail| refusal(StatisticalErrorCode::CandidatePlanRefused, detail))?;
+    let rows =
+        medulla_exec::exec::execute(plan, &medulla_exec::exec::PlanCtx::new(view, &semantic))
+            .map_err(|detail| refusal(StatisticalErrorCode::CandidatePlanRefused, detail))?;
     let mut ids = rows.ids();
     ids.sort_unstable();
     ids.dedup();

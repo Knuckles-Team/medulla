@@ -7,8 +7,8 @@ mod common;
 
 use common::parse_all;
 use medulla_rdf::mapping::parse_turtle;
-use medulla_reasoner::{owl::saturate_object_properties, owl::Reasoner};
 use medulla_rdf::oxrdf::Triple;
+use medulla_reasoner::{owl::saturate_object_properties, owl::Reasoner};
 
 const KG: &str = "http://knuckles.team/kg#";
 const EX: &str = "http://knuckles.team/test/supply-chain#";

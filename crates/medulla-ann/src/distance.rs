@@ -359,8 +359,9 @@ mod tests {
     #[cfg(all(feature = "gpu-cuda", medulla_gpu_device_tests))]
     #[test]
     fn eg351_cuda_batch_distance_matches_cpu_ground_truth() {
-        let gpu = cuda::backend()
-            .expect("--cfg medulla_gpu_device_tests is set but no CUDA device initialised on this host");
+        let gpu = cuda::backend().expect(
+            "--cfg medulla_gpu_device_tests is set but no CUDA device initialised on this host",
+        );
         assert_eq!(gpu.name(), "cuda", "backend() returned a non-CUDA backend");
 
         // A non-trivial batch: several dims, a zero-norm row (exercises the cosine

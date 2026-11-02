@@ -72,8 +72,6 @@ pub fn apply_add_edge_row(
     Ok(())
 }
 
-
-
 // ── O(1) edge-ordinal counter (CONCEPT:MEDULLA-KG.storage.redb-store #3) ────────────────────────────
 //
 // **Why this exists (profiling rationale).** Assigning an edge's ordinal used to

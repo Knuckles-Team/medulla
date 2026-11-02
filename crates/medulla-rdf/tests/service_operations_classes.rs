@@ -5,8 +5,8 @@
 mod common;
 
 use common::{has_iri, parse_all, BFO, KG, RDFS};
-use medulla_reasoner::owl::Reasoner;
 use medulla_rdf::oxrdf::{NamedNode, NamedOrBlankNode, Term, Triple};
+use medulla_reasoner::owl::Reasoner;
 
 const RDF: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
 const OWL: &str = "http://www.w3.org/2002/07/owl#";

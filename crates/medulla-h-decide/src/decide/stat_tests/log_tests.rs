@@ -1,8 +1,8 @@
 //! Served decision-log tests: commit, evaluate, aggregate, fitting from the
 //! log, and retention (EH-060, EH-061, EH-062).
 
-use medulla_server_blob::blob::BlobStateExt;
 use super::*;
+use medulla_server_blob::blob::BlobStateExt;
 
 /// Engine-log fitting: a bandit fit reads its labels from the decision log
 /// (committed record + independent evaluation), admitted only because the
@@ -60,7 +60,11 @@ pub(super) async fn fit_from_the_engine_log(
     assert_eq!(draft.synthetic, record.synthetic_evidence);
 }
 
-pub(super) async fn log_op(h: &Harness, who: &str, op: DecisionLogOp) -> medulla_protocol_types::protocol::Response {
+pub(super) async fn log_op(
+    h: &Harness,
+    who: &str,
+    op: DecisionLogOp,
+) -> medulla_protocol_types::protocol::Response {
     let verified = VerifiedRequestContext::verified_for_test_in_tenant(who, TENANT);
     super::super::log::handle_decision_log(&h.state, 9, &verified, op).await
 }
@@ -493,7 +497,8 @@ async fn assert_reputation_origin(
     });
     assert_eq!(counts, expected);
     let verified = verified();
-    let authority = medulla_server_api::carrier::CarrierAuthority::from_verified(&verified).unwrap();
+    let authority =
+        medulla_server_api::carrier::CarrierAuthority::from_verified(&verified).unwrap();
     let views = super::super::stat_view::DecisionViews::of(h.store.clone(), &authority);
     let record = real.unwrap_or(synthetic);
     let StatisticalOutcome::Explored { option_id, .. } = &record.outcome else {
@@ -540,9 +545,11 @@ fn assert_forecast_is_available(h: &Harness, record: &StatisticalDecisionRecord)
         panic!("executed exploration")
     };
     assert!(
-        medulla_decision_stats::decision::track_record::executed_forecast(&head, &matrix, option_id)
-            .unwrap()
-            .is_some(),
+        medulla_decision_stats::decision::track_record::executed_forecast(
+            &head, &matrix, option_id
+        )
+        .unwrap()
+        .is_some(),
         "fixture must supply a scoreable synthetic forecast"
     );
 }

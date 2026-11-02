@@ -69,9 +69,7 @@ use medulla_types::wire::ForeignSourceSpec;
 /// Is the federation optimizer active? True unless `MEDULLA_FEDERATION_OPT=0`.
 pub fn enabled() -> bool {
     !matches!(
-        std::env::var("MEDULLA_FEDERATION_OPT")
-            .ok()
-            .as_deref(),
+        std::env::var("MEDULLA_FEDERATION_OPT").ok().as_deref(),
         Some("0")
     )
 }
@@ -83,7 +81,9 @@ pub fn explain_source(op: &medulla_exec::algebra::Op) -> Option<String> {
         medulla_exec::algebra::Op::Foreign { name } => {
             remote::Identity::of_spec(&ForeignSourceSpec::Named { name: name.clone() }, None)
         }
-        medulla_exec::algebra::Op::ForeignScan { source, .. } => remote::Identity::of_spec(source, None),
+        medulla_exec::algebra::Op::ForeignScan { source, .. } => {
+            remote::Identity::of_spec(source, None)
+        }
         _ => return None,
     };
     Some(trace::redacted_label(&identity.label))

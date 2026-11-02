@@ -1,6 +1,6 @@
+use super::*;
 #[cfg(feature = "raft")]
 use crate::dispatch::shared::timed_read;
-use super::*;
 #[cfg(feature = "redb")]
 use medulla_persistence::AsRedb;
 /// The caller/isolation-scoping fields shared by every `dispatch_graph_op_inner`
@@ -72,10 +72,7 @@ pub struct KnowledgeStreamCtx<'a> {
 }
 
 #[cfg(feature = "knowledge-batch")]
-pub async fn dispatch_op_knowledge_stream(
-    ctx: KnowledgeStreamCtx<'_>,
-    method: Method,
-) -> Response {
+pub async fn dispatch_op_knowledge_stream(ctx: KnowledgeStreamCtx<'_>, method: Method) -> Response {
     let state = ctx.state;
     let req_id = ctx.req_id;
     let graph_name = ctx.graph_name;
@@ -227,7 +224,9 @@ pub async fn dispatch_op_audit_append(
         },
         None => Response::err(
             req_id,
-            medulla_store::redb_store::audit_writer_unavailable("this server has no durable audit store"),
+            medulla_store::redb_store::audit_writer_unavailable(
+                "this server has no durable audit store",
+            ),
         ),
     }
 }
@@ -513,22 +512,23 @@ pub async fn dispatch_op_raft_write_routing_barrier(
         &principal_fingerprint,
         verified_context.idempotency_key(),
     );
-    let mutation = match medulla_server_api::api::persistence::RaftMutationContext::from_verified_request(
-        batch_id,
-        req_id,
-        verified_context.attempt_nonce(),
-        tenant_scope,
-        principal_fingerprint,
-        false,
-        medulla_server_api::api::persistence::RaftMutationTiming {
-            placement_epoch: routed.epoch,
-            fencing_token: Some(routed.group_id),
-            created_at_ms,
-        },
-    ) {
-        Ok(context) => context,
-        Err(error) => return Response::err(req_id, error),
-    };
+    let mutation =
+        match medulla_server_api::api::persistence::RaftMutationContext::from_verified_request(
+            batch_id,
+            req_id,
+            verified_context.attempt_nonce(),
+            tenant_scope,
+            principal_fingerprint,
+            false,
+            medulla_server_api::api::persistence::RaftMutationTiming {
+                placement_epoch: routed.epoch,
+                fencing_token: Some(routed.group_id),
+                created_at_ms,
+            },
+        ) {
+            Ok(context) => context,
+            Err(error) => return Response::err(req_id, error),
+        };
     let server_secret = timed_read(state).await.auth_secret.clone();
     let req = match build_bound_graph_request(BoundGraphRequest {
         graph_name,
@@ -582,7 +582,8 @@ struct BoundGraphRequest<'a> {
 fn build_bound_graph_request(
     input: BoundGraphRequest<'_>,
 ) -> Result<medulla_raft::raft::RaftRequest, String> {
-    let command = medulla_raft::raft::ReplicatedMutation::caller_graph(input.method, input.server_secret)?;
+    let command =
+        medulla_raft::raft::ReplicatedMutation::caller_graph(input.method, input.server_secret)?;
     let mut request = medulla_raft::raft::RaftRequest {
         graph_fname: input.graph_fname,
         graph_name: input.graph_name.to_string(),
@@ -624,11 +625,11 @@ pub async fn resolve_routed_raft(
 mod tests {
     use super::*;
     use medulla_graph_core::graph::GraphCore;
+    use medulla_persistence::redb_backend::audit_append_tests::seeded;
     use medulla_protocol_types::protocol::Method;
+    use medulla_server_api::api::persistence::PersistenceBackend;
     use medulla_store_apply::redb_store::operation_audit_tests::event;
     use medulla_store_apply::redb_store::operation_audit_tests::TENANT;
-    use medulla_server_api::api::persistence::PersistenceBackend;
-    use medulla_persistence::redb_backend::audit_append_tests::seeded;
 
     const GRAPH: &str = "audit_skew_graph";
 

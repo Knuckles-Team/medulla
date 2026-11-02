@@ -1,5 +1,5 @@
-use medulla_server_blob::blob::BlobStateExt;
 use super::*;
+use medulla_server_blob::blob::BlobStateExt;
 
 // ── EXPLAIN surfaces (CONCEPT:MEDULLA-KG.query.plan-dag, E5 phase 4) ──────────────
 #[cfg(feature = "query")]

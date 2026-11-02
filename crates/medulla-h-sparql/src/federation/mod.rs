@@ -241,7 +241,9 @@ impl PeerAllowlist {
         &self,
         peer_url: &str,
     ) -> Result<medulla_federation::federation_ssrf::ValidatedHttpJsonTarget, String> {
-        use medulla_federation::{federation_ssrf::validate_outbound_http_target, federation_ssrf::OutboundAllowPolicy};
+        use medulla_federation::{
+            federation_ssrf::validate_outbound_http_target, federation_ssrf::OutboundAllowPolicy,
+        };
         validate_outbound_http_target(peer_url, &self.allow, OutboundAllowPolicy::PublicHttps)
     }
 }
@@ -369,7 +371,11 @@ async fn local_execute(
 /// Build the in-process read [`Method`] for a `lang` (CONCEPT:MEDULLA-KG.ontology.federation-client). SQL/SPARQL arms
 /// only compile when their feature is present; otherwise every lang uses the NL/search
 /// path so a slim build still federates over the search surface.
-fn build_local_method(query: &str, lang: &str, graph: &str) -> medulla_protocol_types::protocol::Method {
+fn build_local_method(
+    query: &str,
+    lang: &str,
+    graph: &str,
+) -> medulla_protocol_types::protocol::Method {
     match lang {
         #[cfg(feature = "sparql")]
         "sparql" => medulla_protocol_types::protocol::Method::Sparql {
@@ -396,7 +402,9 @@ fn build_local_method(query: &str, lang: &str, graph: &str) -> medulla_protocol_
 fn decode_local_rows(bytes: &[u8], lang: &str) -> Vec<FedRow> {
     #[cfg(feature = "sparql")]
     if lang == "sparql" {
-        if let Ok(res) = medulla_types::msgpack::decode_bounded::<medulla_protocol_types::protocol::SparqlResult>(
+        if let Ok(res) = medulla_types::msgpack::decode_bounded::<
+            medulla_protocol_types::protocol::SparqlResult,
+        >(
             bytes,
             medulla_types::msgpack::MsgpackLimits::new(MAX_RESPONSE_BYTES as usize, 1_000_000, 64),
         ) {
@@ -425,7 +433,9 @@ fn decode_local_rows(bytes: &[u8], lang: &str) -> Vec<FedRow> {
     }
     #[cfg(feature = "query")]
     if lang == "sql" {
-        if let Ok(res) = medulla_types::msgpack::decode_bounded::<medulla_protocol_types::protocol::QueryResult>(
+        if let Ok(res) = medulla_types::msgpack::decode_bounded::<
+            medulla_protocol_types::protocol::QueryResult,
+        >(
             bytes,
             medulla_types::msgpack::MsgpackLimits::new(MAX_RESPONSE_BYTES as usize, 1_000_000, 64),
         ) {

@@ -6,11 +6,19 @@
 // Parses CLI args, initializes the GraphRegistry, and starts
 // the UDS/TCP listener.
 
-#[cfg(any(feature = "lake", feature = "lake-rest", feature = "obs", feature = "s3-api"))]
-use medulla_server_blob::blob::BlobStateExt;
-#[cfg(any(all(feature = "mining", feature = "query", feature = "streaming"), all(feature = "owl", feature = "streaming")))]
-use medulla_server_cdc::cdc::CdcStateExt;
 use clap::Parser;
+#[cfg(any(
+    feature = "lake",
+    feature = "lake-rest",
+    feature = "obs",
+    feature = "s3-api"
+))]
+use medulla_server_blob::blob::BlobStateExt;
+#[cfg(any(
+    all(feature = "mining", feature = "query", feature = "streaming"),
+    all(feature = "owl", feature = "streaming")
+))]
+use medulla_server_cdc::cdc::CdcStateExt;
 #[cfg(any(feature = "security", test))]
 use std::net::SocketAddr;
 #[cfg(feature = "security")]
@@ -85,7 +93,9 @@ impl std::ops::DerefMut for Args {
 ///   section). Keeping the value defined preserves parity for config/logging.
 ///   Run one bounded, stdin-driven exact performance probe and return.
 #[cfg(feature = "security")]
-fn run_exact_performance_probe(root: Option<&std::path::Path>) -> Result<(), Box<dyn std::error::Error>> {
+fn run_exact_performance_probe(
+    root: Option<&std::path::Path>,
+) -> Result<(), Box<dyn std::error::Error>> {
     let root = root.ok_or("exact performance probe root is required")?;
     #[cfg(feature = "full")]
     {
@@ -175,7 +185,6 @@ async fn prepare_socket_directory(parent: Option<std::path::PathBuf>) -> std::io
             )
         })
 }
-
 
 /// Resolve an optional listener bind address from a deploy-supplied value
 /// (CONCEPT:MEDULLA-OS.config.configurable-listeners — deploy-configurable listeners). The auxiliary HTTP listeners
@@ -301,9 +310,7 @@ async fn run_inner() -> Result<(), Box<dyn std::error::Error>> {
     let mut args = Args::parse();
 
     if args.exact_performance_probe {
-        return run_exact_performance_probe(
-            args.exact_performance_probe_root.as_deref(),
-        );
+        return run_exact_performance_probe(args.exact_performance_probe_root.as_deref());
     }
 
     // CONCEPT:MEDULLA-OS.observability.tracing-subscriber-init — install the tracing subscriber. This is the fmt-only
@@ -701,7 +708,9 @@ async fn spawn_obs_listener(
     let obs_addr = resolve_listener_addr(obs_addr_arg, "127.0.0.1:5080");
     #[cfg(feature = "obs")]
     if let Some(ref obs_addr) = obs_addr {
-        use medulla_server_obs::{obs::ObsState, obs::DEFAULT_FLUSH_RECORDS, obs::OBS_FLUSH_RECORDS_ENV};
+        use medulla_server_obs::{
+            obs::ObsState, obs::DEFAULT_FLUSH_RECORDS, obs::OBS_FLUSH_RECORDS_ENV,
+        };
         let flush = std::env::var(OBS_FLUSH_RECORDS_ENV)
             .ok()
             .and_then(|v| v.parse().ok())
@@ -1057,8 +1066,7 @@ async fn spawn_pgwire_listener(
         let pg_state = state.clone();
         info!("pgwire: enabling the configured listener (TLS policy applies)");
         tokio::spawn(async move {
-            if let Err(e) = medulla_wire::pgwire::serve_prepared(pg_state, prepared_pgwire).await
-            {
+            if let Err(e) = medulla_wire::pgwire::serve_prepared(pg_state, prepared_pgwire).await {
                 tracing::error!("pgwire server error: {}", e);
             }
         });
@@ -1124,8 +1132,7 @@ async fn spawn_mysql_listener(
         "127.0.0.1:3306",
     ) {
         let mysql_auth_secret = state.read().await.auth_secret.clone();
-        let mysql_auth_mode =
-            medulla_wire::mysql_wire::MysqlAuthMode::resolve(&mysql_auth_secret)?;
+        let mysql_auth_mode = medulla_wire::mysql_wire::MysqlAuthMode::resolve(&mysql_auth_secret)?;
         medulla_wire::mysql_wire::validate_startup_policy(
             &addr,
             &mysql_auth_secret,
@@ -1187,21 +1194,17 @@ macro_rules! define_authenticated_wire_listener {
             #[cfg(feature = $feature)]
             {
                 spawn_authenticated_wire_listener(
-                            _state,
-                            resolve_listener_addr(
-                                std::env::var($krate::$module::$addr_env)
-                                    .ok()
-                                    .as_deref(),
-                                $default_addr,
-                            ),
-                            $service_name,
-                            $enable_message,
-                            $krate::$module::validate_startup_policy,
-                            |addr, state| async move {
-                                $krate::$module::serve(&addr, state).await
-                            },
-                        )
-                        .await?;
+                    _state,
+                    resolve_listener_addr(
+                        std::env::var($krate::$module::$addr_env).ok().as_deref(),
+                        $default_addr,
+                    ),
+                    $service_name,
+                    $enable_message,
+                    $krate::$module::validate_startup_policy,
+                    |addr, state| async move { $krate::$module::serve(&addr, state).await },
+                )
+                .await?;
             }
             Ok(())
         }
@@ -1485,8 +1488,9 @@ async fn spawn_reasoning_cascade_and_ann_sweep(
     // byte-for-byte what it was before this feature existed.
     #[cfg(all(feature = "owl", feature = "streaming"))]
     {
-        let cascade =
-            std::sync::Arc::new(medulla_server_cdc::reasoning_cascade::ReasoningCascade::from_env());
+        let cascade = std::sync::Arc::new(
+            medulla_server_cdc::reasoning_cascade::ReasoningCascade::from_env(),
+        );
         if cascade.is_active() {
             if let Some(hub) = state.read().await.cdc_hub() {
                 hub.install_reasoning_cascade(cascade.clone());
@@ -1620,7 +1624,8 @@ async fn spawn_reasoning_cascade_and_ann_sweep(
                 ticker.tick().await;
                 let __loop_tick_started = std::time::Instant::now();
                 let n =
-                    medulla_server_graph::semantic_activation::sweep_resident_graphs(&sweep_state).await;
+                    medulla_server_graph::semantic_activation::sweep_resident_graphs(&sweep_state)
+                        .await;
                 if n > 0 {
                     tracing::info!(
                         "Semantic ANN warm re-check: spawned {} warm(s) for resident graph(s)",
@@ -1662,7 +1667,8 @@ async fn spawn_reasoning_cascade_and_ann_sweep(
             loop {
                 ticker.tick().await;
                 let __loop_tick_started = std::time::Instant::now();
-                let stats = medulla_kernel::persist::decay_all(&dk_state, half_life, floor, prune).await;
+                let stats =
+                    medulla_kernel::persist::decay_all(&dk_state, half_life, floor, prune).await;
                 tracing::info!(
                     "Decay sweep: {} nodes / {} edges decayed, {} nodes / {} edges pruned",
                     stats.nodes_decayed,
@@ -1738,10 +1744,11 @@ async fn spawn_memory_sweeps(
     // byte dimension on top).
     #[cfg(feature = "cost")]
     {
-        let cost_config = medulla_persistence::cost::CostConfig::from_env().unwrap_or_else(|error| {
-            eprintln!("error: {error}");
-            std::process::exit(2);
-        });
+        let cost_config =
+            medulla_persistence::cost::CostConfig::from_env().unwrap_or_else(|error| {
+                eprintln!("error: {error}");
+                std::process::exit(2);
+            });
         info!(
             "Memory budget: global ceiling {} bytes, per-tenant {} bytes, swept every {}s \
                  (CONCEPT:MEDULLA-KG.compute.lane-v)",
@@ -1791,9 +1798,7 @@ async fn cold_offload_tick(
     tracker: std::sync::Arc<medulla_persistence::cold_offload::ColdTenantTracker>,
     window: std::time::Duration,
 ) {
-    let n =
-        medulla_persistence::cold_offload::offload_cold_tenants(&state, &tracker, window)
-            .await;
+    let n = medulla_persistence::cold_offload::offload_cold_tenants(&state, &tracker, window).await;
     if n > 0 {
         tracing::info!("Cold-tenant offload: hibernated {} idle graph(s)", n);
     }

@@ -7,7 +7,6 @@ use serde::de::DeserializeOwned;
 use serde_json::{json, Value};
 use tokio::sync::RwLock;
 
-use medulla_work_types::{control_lease::ControlLeaseTarget, control_lease::IssueControlLeaseRequest, control_lease::TransitionControlLeaseRequest};
 use medulla_catalog_types::{
     graph_schema::approval::approved_candidate_digest,
     graph_schema::approval::SCHEMA_APPROVAL_ACTION,
@@ -21,11 +20,15 @@ use medulla_catalog_types::{
     graph_schema::GraphSchemaCommitted, graph_schema::GraphSchemaSourcesView,
     graph_schema::SchemaSourceOriginView,
 };
+use medulla_work_types::{
+    control_lease::ControlLeaseTarget, control_lease::IssueControlLeaseRequest,
+    control_lease::TransitionControlLeaseRequest,
+};
 
 use super::*;
 use medulla_protocol_types::protocol::ResultPayload;
-use medulla_server_auth::auth::dispatch_test_on_heap;
 use medulla_server_api::state::ServerState;
+use medulla_server_auth::auth::dispatch_test_on_heap;
 
 const SECRET: &str = "schema-approval-served-secret"; // sanitizer:ignore
 const TENANT: &str = "tenant-shared";
@@ -65,7 +68,10 @@ impl Served {
     async fn new() -> Self {
         let env = medulla_kernel::crypto::acquire_test_env_read_lock().await;
         let dir = tempfile::tempdir().unwrap();
-        let mut state = medulla_server::seams_install::new_state_for_test(SECRET, ServerState::test_isolation(ADMIN));
+        let mut state = medulla_server::seams_install::new_state_for_test(
+            SECRET,
+            ServerState::test_isolation(ADMIN),
+        );
         state.persist_dir = Some(dir.path().to_string_lossy().into_owned());
         let backend = medulla_persistence::redb_backend::RedbBackend::open(
             dir.path().join("graphs").to_string_lossy().into_owned(),

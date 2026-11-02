@@ -1,13 +1,13 @@
 //! Transaction helpers moved below the handler crates so wire can reach them (MEDULLA-CONTRACT-R056.8).
 
-#[cfg(feature = "graphql")]
-use medulla_server_api::carrier::CarrierAuthority;
-#[cfg(feature = "graphql")]
-use medulla_server_api::state::ServerState;
 #[cfg(feature = "sparql")]
 use medulla_protocol_types::protocol::Method;
 #[cfg(feature = "graphql")]
 use medulla_protocol_types::protocol::ResultPayload;
+#[cfg(feature = "graphql")]
+use medulla_server_api::carrier::CarrierAuthority;
+#[cfg(feature = "graphql")]
+use medulla_server_api::state::ServerState;
 #[cfg(feature = "graphql")]
 use std::sync::Arc;
 #[cfg(feature = "graphql")]

@@ -137,9 +137,10 @@ impl AgentLibraryStore {
             if uri != receipt.registration.resource_uri {
                 continue;
             }
-            current_member = Some(crate::agent_row::decode::<
-                ConnectorPackMemberRow,
-            >(value.value(), "connector pack member")?);
+            current_member = Some(crate::agent_row::decode::<ConnectorPackMemberRow>(
+                value.value(),
+                "connector pack member",
+            )?);
             break;
         }
         let member = current_member.ok_or_else(|| {

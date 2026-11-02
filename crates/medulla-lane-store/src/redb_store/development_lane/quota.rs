@@ -1,5 +1,3 @@
-use medulla_resource_store::{redb_store::resource::resource_decode, redb_store::resource::resource_encode};
-use medulla_store::redb_store::DurableCrypto;
 use super::reserve_support::{hold_target_kind, policy_validate};
 use super::rows::LaneRows;
 use super::types::{Scope, ScopeCounter};
@@ -8,6 +6,9 @@ use super::{
     DurableLaneCounter, DurableLaneHold, DurableLanePolicy, GLOBAL_POLICY_KEY, MAX_COUNT,
     MAX_DISK_BYTES,
 };
+use medulla_resource_store::{
+    redb_store::resource::resource_decode, redb_store::resource::resource_encode,
+};
 use medulla_result_types::epistemic_operations::DevelopmentLaneHold;
 use medulla_result_types::epistemic_operations::DevelopmentLaneIntent;
 use medulla_result_types::epistemic_operations::DevelopmentLaneQuotaCharge;
@@ -15,6 +16,7 @@ use medulla_result_types::epistemic_operations::DevelopmentLaneQuotaChargeSchema
 use medulla_result_types::epistemic_operations::DevelopmentLaneQuotaPolicy;
 use medulla_result_types::epistemic_operations::DevelopmentLaneReserveRequest;
 use medulla_storage::ScopedOwnerTableMut;
+use medulla_store::redb_store::DurableCrypto;
 use sha2::{Digest, Sha256};
 
 pub fn scope_key(scope: Scope, hold: &DevelopmentLaneHold) -> String {
@@ -117,11 +119,7 @@ pub fn policy_retained_limits(policy: &DevelopmentLaneQuotaPolicy) -> [u64; 7] {
     ]
 }
 
-pub fn policy_limit(
-    policy: &DevelopmentLaneQuotaPolicy,
-    scope: Scope,
-    metric: Metric,
-) -> u64 {
+pub fn policy_limit(policy: &DevelopmentLaneQuotaPolicy, scope: Scope, metric: Metric) -> u64 {
     let index = scope_index(scope);
     match metric {
         Metric::Count => policy_count_limits(policy)[index],

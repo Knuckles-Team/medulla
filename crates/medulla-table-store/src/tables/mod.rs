@@ -32,11 +32,11 @@ pub mod embedding_binding;
 pub mod property_graph;
 pub mod store;
 
-pub use ann_plan::{AnnIndexPlan, AnnMethod, HypertablePlan, VectorMetric};
 pub use ann_authority::{
     AnnFallbackReason, AnnIndexStatus, AnnLimits, AnnRefreshOutcome, AnnRefreshPolicy,
     AnnServeReceipt, AnnServingPath, AnnTopK, AnnTopKRequest, UserAnnAuthority,
 };
+pub use ann_plan::{AnnIndexPlan, AnnMethod, HypertablePlan, VectorMetric};
 pub use embedding_binding::{
     catalog_key as embedding_binding_catalog_key, decode_binding, default_target_column,
     encode_binding, is_embeddable, model_digest, prepare_catalog_write, recommend_vectorization,

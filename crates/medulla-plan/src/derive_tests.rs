@@ -6,10 +6,10 @@ use medulla_semantic_index::semantic::SemanticStore;
 use medulla_tsdb::derive::kernels::{apply, Rolling, Shift, Smoothing, Spec, State};
 use medulla_types::wire::{UqlResult, UqlRow};
 
-use medulla_exec::exec::PlanCtx;
 use crate::uql::serve::run_statement;
-use medulla_uql::{parse_statement, Params, UqlCode};
+use medulla_exec::exec::PlanCtx;
 use medulla_exec::exec::StagedSeries;
+use medulla_uql::{parse_statement, Params, UqlCode};
 
 const ONE_S: i64 = 1_000_000_000;
 

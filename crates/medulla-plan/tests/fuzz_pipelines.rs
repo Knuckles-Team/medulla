@@ -29,10 +29,10 @@
 mod common;
 
 use common::*;
+use medulla_exec::{exec::execute, exec::PlanCtx};
+use medulla_federation::federation::ForeignSourceRegistry;
 use medulla_graph_core::graph::GraphCore;
 use medulla_graph_core::graph::GraphView;
-use medulla_federation::federation::ForeignSourceRegistry;
-use medulla_exec::{exec::execute, exec::PlanCtx};
 use medulla_semantic_index::semantic::SemanticStore;
 use proptest::prelude::*;
 use serde_json::json;

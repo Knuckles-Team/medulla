@@ -82,22 +82,15 @@ pub mod store;
 /// and never misrepresents them as a global snapshot.
 pub mod xread;
 
-
-
-
-
 // The cross-shard 2PC atomicity + recovery gauntlet (CONCEPT:MEDULLA-KG.storage.lane-n-increment) — the nemesis
 // harness proving NO PARTIAL COMMIT under participant-kill + partition. Gated behind
 // the `harness` feature so the default `raft` test set is unchanged; run it with
 // `cargo test --features "raft harness"`.
 
-
 // The placement-catalog gauntlet (CONCEPT:MEDULLA-KG.sharding.placement-catalog, DIST-P2-1) — proves
 // assign→route, a stale-epoch redirect, persistence-across-restart, an online move
 // (snapshot→catch-up→fenced cutover) preserving data, and a tenant split spanning two
 // groups. Gated behind `harness` so a normal `raft` build links nothing.
-
-
 
 /// Raft node id — a small integer assigned per cluster member.
 pub type NodeId = u64;
@@ -486,7 +479,8 @@ pub struct RaftResponse {
     pub applied: bool,
     /// Present only for an engine-native ChangeEnvelope entry.
     #[serde(deserialize_with = "deserialize_required_option")]
-    pub change_envelope_commit: Option<medulla_protocol_types::change_envelope::ChangeEnvelopeCommit>,
+    pub change_envelope_commit:
+        Option<medulla_protocol_types::change_envelope::ChangeEnvelopeCommit>,
     /// Exact result produced by a bounded engine-native state-machine command or
     /// an ordinary atomic graph method whose apply result is part of its
     /// consensus contract (for example, a CAS or create-if-absent).
@@ -609,11 +603,13 @@ mod raft_response_receipt_tests {
                 default_surface: medulla_mutation_types::mutation_scope::MutationSurface::Graph,
                 authoritative_state: None,
             },
-            vec![medulla_protocol_types::protocol::Method::CompareAndSetNodeFields {
-                node_id: "reservation".to_string(),
-                conditions_msgpack: conditions,
-                updates_msgpack: updates,
-            }],
+            vec![
+                medulla_protocol_types::protocol::Method::CompareAndSetNodeFields {
+                    node_id: "reservation".to_string(),
+                    conditions_msgpack: conditions,
+                    updates_msgpack: updates,
+                },
+            ],
         )
         .unwrap();
         let identity = batch.identity.clone();
@@ -626,7 +622,10 @@ mod raft_response_receipt_tests {
                 target: 1,
             },
             result_msgpack: Some(
-                rmp_serde::to_vec_named(&medulla_protocol_types::protocol::ResultPayload::Bool(false)).unwrap(),
+                rmp_serde::to_vec_named(&medulla_protocol_types::protocol::ResultPayload::Bool(
+                    false,
+                ))
+                .unwrap(),
             ),
             committed_at_ms: 11,
         };
@@ -684,20 +683,23 @@ mod raft_response_receipt_tests {
         assert!(error.contains("does not match"), "{error}");
 
         response.native_result = Some(medulla_protocol_types::protocol::ResultPayload::Bool(false));
-        response.change_envelope_commit = Some(medulla_protocol_types::change_envelope::ChangeEnvelopeCommit {
-            envelope_id: "envelope".to_string(),
-            batch_id: "batch".to_string(),
-            content_version: medulla_protocol_types::change_envelope::ContentVersion {
-                object_id: "object".to_string(),
-                digest_algorithm: "sha256".to_string(),
-                digest: "a".repeat(64),
-                previous_digest: None,
-                source_version: medulla_protocol_types::change_envelope::ContentVersionPosition::Sequence(1),
+        response.change_envelope_commit = Some(
+            medulla_protocol_types::change_envelope::ChangeEnvelopeCommit {
+                envelope_id: "envelope".to_string(),
+                batch_id: "batch".to_string(),
+                content_version: medulla_protocol_types::change_envelope::ContentVersion {
+                    object_id: "object".to_string(),
+                    digest_algorithm: "sha256".to_string(),
+                    digest: "a".repeat(64),
+                    previous_digest: None,
+                    source_version:
+                        medulla_protocol_types::change_envelope::ContentVersionPosition::Sequence(1),
+                },
+                cursor: None,
+                outbox_count: 0,
+                replayed: false,
             },
-            cursor: None,
-            outbox_count: 0,
-            replayed: false,
-        });
+        );
         let error = response
             .validate()
             .expect_err("native and change-envelope receipts are separate response families");
@@ -727,7 +729,8 @@ mod raft_response_receipt_tests {
         struct LegacyRaftResponse {
             schema_version: u16,
             applied: bool,
-            change_envelope_commit: Option<medulla_protocol_types::change_envelope::ChangeEnvelopeCommit>,
+            change_envelope_commit:
+                Option<medulla_protocol_types::change_envelope::ChangeEnvelopeCommit>,
             native_result: Option<medulla_protocol_types::protocol::ResultPayload>,
             native_error: Option<String>,
             projection_pending: bool,

@@ -4,9 +4,9 @@
 //! any request, which the naive full-fetch path could not produce.
 
 use super::{run_unified_with, ServedIndexes};
-use medulla_graph_core::graph::GraphCore;
-use medulla_federation::federation::ForeignSourceRegistry;
 use medulla_exec::algebra::Op;
+use medulla_federation::federation::ForeignSourceRegistry;
+use medulla_graph_core::graph::GraphCore;
 use medulla_semantic_index::semantic::SemanticStore;
 use medulla_server_ops::api::query_txn::query_support::execute_rows;
 #[cfg(feature = "tsdb")]

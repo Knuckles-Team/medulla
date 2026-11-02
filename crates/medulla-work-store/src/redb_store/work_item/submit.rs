@@ -6,7 +6,9 @@ pub fn validate_submit_work_item_identity(
     graph: &str,
     request: &medulla_work_types::native_control::SubmitWorkItemRequest,
 ) -> Result<(), String> {
-    use medulla_work_types::{native_control::NativeControlSchemaVersion, native_control::MAX_SUBMIT_REF_BYTES};
+    use medulla_work_types::{
+        native_control::NativeControlSchemaVersion, native_control::MAX_SUBMIT_REF_BYTES,
+    };
     if request.schema_version != NativeControlSchemaVersion::V1 {
         return Err("SubmitWorkItem schema_version must be 1".to_string());
     }
@@ -33,7 +35,9 @@ pub fn validate_submit_work_item_identity(
 pub fn validate_submit_work_item_refs(
     request: &medulla_work_types::native_control::SubmitWorkItemRequest,
 ) -> Result<(), String> {
-    use medulla_work_types::{native_control::MAX_SUBMIT_DEPENDENCIES, native_control::MAX_SUBMIT_REF_BYTES};
+    use medulla_work_types::{
+        native_control::MAX_SUBMIT_DEPENDENCIES, native_control::MAX_SUBMIT_REF_BYTES,
+    };
     if request.command_digest.len() != 64
         || !request
             .command_digest
@@ -89,7 +93,10 @@ pub fn resolve_submit_work_item_max_inflight(
 pub fn validate_submit_work_item_provenance_and_metadata(
     request: &medulla_work_types::native_control::SubmitWorkItemRequest,
 ) -> Result<(), String> {
-    use medulla_work_types::{native_control::MAX_SUBMIT_METADATA_BYTES, native_control::MAX_SUBMIT_PROVENANCE_REFS, native_control::MAX_SUBMIT_REF_BYTES};
+    use medulla_work_types::{
+        native_control::MAX_SUBMIT_METADATA_BYTES, native_control::MAX_SUBMIT_PROVENANCE_REFS,
+        native_control::MAX_SUBMIT_REF_BYTES,
+    };
     if request.provenance_refs.len() > MAX_SUBMIT_PROVENANCE_REFS
         || request
             .provenance_refs
@@ -810,7 +817,10 @@ pub fn apply_submit_work_items_rows<'txn, 'crypto>(
         outbox_id,
         admitted_actor,
     } = scope;
-    use medulla_work_types::{native_control::NativeControlSchemaVersion, native_control::MAX_SUBMIT_BATCH, native_control::MAX_SUBMIT_BATCH_CHANGED_IDS};
+    use medulla_work_types::{
+        native_control::NativeControlSchemaVersion, native_control::MAX_SUBMIT_BATCH,
+        native_control::MAX_SUBMIT_BATCH_CHANGED_IDS,
+    };
     if request.schema_version != NativeControlSchemaVersion::V1
         || request.requests.is_empty()
         || request.requests.len() > MAX_SUBMIT_BATCH

@@ -1,8 +1,8 @@
 //! `WireApi` implementation: SQL wire behaviour that crates below the wire crate reach
 //! through the seam registry (MEDULLA-CONTRACT-R056.8).
 
-use medulla_tables::schema::TableSchema;
 use medulla_table_store::{tables::TableStore, tables::TableTxn};
+use medulla_tables::schema::TableSchema;
 
 /// Wire behaviour installed on the seam registry's `wire` slot.
 pub struct WireSeam;

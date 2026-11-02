@@ -45,7 +45,6 @@ pub enum StorageBackendSpec {
     },
 }
 
-
 /// Typed, atomic refusal; none of these leaves any state changed.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "code", rename_all = "snake_case")]
@@ -149,7 +148,10 @@ mod tests {
     #[test]
     fn both_variants_round_trip_over_the_wire() {
         for spec in [StorageBackendSpec::Local, good()] {
-            assert_eq!(StorageBackendSpec::from_wire(&spec.to_wire()).unwrap(), spec);
+            assert_eq!(
+                StorageBackendSpec::from_wire(&spec.to_wire()).unwrap(),
+                spec
+            );
         }
     }
 
@@ -172,7 +174,10 @@ mod tests {
         if let StorageBackendSpec::ObjectStore { durability, .. } = &mut spec {
             *durability = None;
         }
-        assert_eq!(spec.validate(), Err(BackendSpecRefusal::MissingDurabilityClass));
+        assert_eq!(
+            spec.validate(),
+            Err(BackendSpecRefusal::MissingDurabilityClass)
+        );
         let mut spec = good();
         if let StorageBackendSpec::ObjectStore { layout_digest, .. } = &mut spec {
             *layout_digest = Some("00".into());
