@@ -24,6 +24,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - `sql_catalog_acl` is `pub` in `medulla-server-auth` (query-gated; the facade does not re-export it).
 - `medulla-reasoner` and `medulla-wire-msg` use `deny(unsafe_code)` with their existing scoped allows.
 
+### 3.0.0 upgrade notes
+- **Drain the outbox before upgrading.** The rename cutover renamed the outbox topics, and rows
+  stored under the old names are not read after the upgrade. Old to new:
+  `eg.agent-graph.revision.v1` to `medulla.agent-graph.revision.v1`,
+  `eg.agent-component.revision.v1` to `medulla.agent-component.revision.v1`,
+  `eg.agent-template.revision.v1` to `medulla.agent-template.revision.v1`,
+  `eg.agent-library.entry.v1` to `medulla.agent-library.entry.v1`,
+  `eg.connector-pack.import.v1` to `medulla.connector-pack.import.v1`. CDC topics move from the
+  `eg.cdc.<graph>` prefix to `medulla.cdc.<graph>`.
+- **OpenLineage namespaces changed** from `epistemic-graph.lake` and `epistemic-graph.tsdb` to
+  `medulla.lake` and `medulla.tsdb`. Lineage consumers must update their namespace filters.
+- Hashed, signed and at-rest identities (digest domains, signature domains, markers, the raft
+  principal fingerprint, the lineage `code_version`/`env_version` values) keep their original
+  bytes; stored data, signatures and digests from 2.x stay valid. They are pinned by
+  `tests/test_identity_tags_pinned.py`.
+
 ### Fixed
 - The shard default of 1 under test builds also applies to the moved persistence tests.
 
