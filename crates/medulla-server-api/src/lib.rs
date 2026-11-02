@@ -22,8 +22,6 @@ pub mod authority_context;
 pub mod batch_compile;
 
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
-
-
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod carrier;
 

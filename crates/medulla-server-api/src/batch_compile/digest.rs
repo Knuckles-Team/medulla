@@ -10,7 +10,6 @@ use medulla_protocol_types::protocol::Method;
 /// (`medulla-types`'s `validate_principal` accepts only the opaque-digest form).
 /// The server-side compiler re-exports the server-independent definition so
 /// every batch context uses the same identity in every feature shape.
-
 /// The verified caller recorded on a compiled batch.
 ///
 /// Under RF-RULING-004's application note `context.principal` is the committing

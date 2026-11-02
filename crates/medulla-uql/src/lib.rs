@@ -56,7 +56,6 @@ pub mod parser;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod print;
 /// Running a parsed statement: rows with score channels, EXPLAIN, PROFILE (UQL-07/08/09).
-
 pub use diag::render_caret;
 pub use diag::{UqlCode, UqlError, UqlWarnCode, UqlWarning, ALL_CODES};
 #[cfg(feature = "query")]
