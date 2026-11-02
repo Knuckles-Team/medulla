@@ -28,3 +28,7 @@ pub mod storage_scrub;
 
 #[cfg(all(test, feature = "redb"))]
 mod online_reshard_graft_tests;
+
+// The ambient auth posture these tests run under (MEDULLA-CONTRACT-R056.18).
+#[cfg(test)]
+use medulla_test_ambient_auth as _;

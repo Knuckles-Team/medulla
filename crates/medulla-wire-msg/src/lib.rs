@@ -43,3 +43,7 @@ pub mod s3;
 #[cfg(feature = "stomp-wire")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod stomp_wire;
+
+// The ambient auth posture these tests run under (MEDULLA-CONTRACT-R056.18).
+#[cfg(test)]
+use medulla_test_ambient_auth as _;

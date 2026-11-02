@@ -115,7 +115,8 @@ medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types", f
 medulla-persistence-records = { path = "../medulla-persistence-records", features = ["test-support"] }
 medulla-server-ops = { path = "../medulla-server-ops", features = ["test-support"] }
 medulla-server-blob = { path = "../medulla-server-blob", features = ["test-support"] }
-medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support", "test-ambient-auth"] }
+medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }
+medulla-test-ambient-auth = { path = "../medulla-test-ambient-auth" }
 medulla-exec = { path = "../medulla-exec", features = ["test-support"] }
 medulla-uql = { path = "../medulla-uql", features = ["query"] }
 tempfile = "3"

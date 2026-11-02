@@ -14,3 +14,7 @@
 
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod split_tests;
+
+// The ambient auth posture these tests run under (MEDULLA-CONTRACT-R056.18).
+#[cfg(test)]
+use medulla_test_ambient_auth as _;

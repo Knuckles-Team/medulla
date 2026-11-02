@@ -27,3 +27,7 @@ pub mod semantic_index;
 #[cfg(feature = "ann-redb")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod semantic_index_runtime;
+
+// The ambient auth posture these tests run under (MEDULLA-CONTRACT-R056.18).
+#[cfg(test)]
+use medulla_test_ambient_auth as _;

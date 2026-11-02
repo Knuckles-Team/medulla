@@ -5,6 +5,7 @@
 #![cfg(feature = "kv")]
 
 use medulla_server_blob::kv::KvStateExt;
+use medulla_test_ambient_auth as _;
 use medulla_server_auth::auth::build_shared_test_request;
 use medulla_server_auth::auth::compute_verified_envelope_token;
 use medulla_server_auth::auth::dispatch_test_on_heap as dispatch_on_heap;

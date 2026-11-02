@@ -44,3 +44,7 @@ pub mod source_ingestion;
 #[cfg(all(feature = "query", feature = "modality-serving"))]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod web_ingest;
+
+// The ambient auth posture these tests run under (MEDULLA-CONTRACT-R056.18).
+#[cfg(test)]
+use medulla_test_ambient_auth as _;

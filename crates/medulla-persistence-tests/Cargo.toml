@@ -117,5 +117,6 @@ medulla-work-store = { path = "../medulla-work-store", features = ["test-support
 medulla-server = { path = "../medulla-server", features = ["test-support"] }
 medulla-server-ops = { path = "../medulla-server-ops", features = ["test-support"] }
 medulla-server-blob = { path = "../medulla-server-blob", features = ["test-support"] }
-medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support", "test-ambient-auth"] }
+medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }
+medulla-test-ambient-auth = { path = "../medulla-test-ambient-auth" }
 tempfile = "3"

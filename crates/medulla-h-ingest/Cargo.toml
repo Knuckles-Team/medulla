@@ -96,5 +96,6 @@ medulla-server-ops = { path = "../medulla-server-ops", features = ["test-support
 medulla-server-blob = { path = "../medulla-server-blob", features = ["test-support"] }
 medulla-server-mutation = { path = "../medulla-server-mutation", features = ["test-support"] }
 medulla-server = { path = "../medulla-server", features = ["alignment", "asr-whisper", "ast", "blob", "cypher", "cypher-plan", "decide", "epistemic", "full", "knowledge-batch", "modality-serving", "numeric", "query", "raft", "redb", "result-cache", "security", "server", "test-support"] }
-medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support", "test-ambient-auth"] }
+medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }
+medulla-test-ambient-auth = { path = "../medulla-test-ambient-auth" }
 tempfile = "3"

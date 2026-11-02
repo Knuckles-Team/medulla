@@ -43,6 +43,7 @@ async fn ready_state() -> test_support::SharedState {
 /// An old client that predates node binding never sends the `node` claim at
 /// all. Under the shipped default posture (`MEDULLA_REQUIRE_NODE_BINDING`
 /// unset ⇒ `warn`), the request must still succeed end-to-end.
+// spec: MEDULLA-CONTRACT-R056.18
 #[tokio::test]
 async fn old_client_without_node_claim_still_dispatches_under_default_warn_posture() {
     let state = ready_state().await;
