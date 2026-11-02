@@ -5,7 +5,6 @@ use medulla_graph_core::graph::GraphCore;
 use medulla_graph_core::graph::GraphView;
 #[cfg(feature = "security")]
 use medulla_graph_core::rls::row_visibility;
-use medulla_isolation::isolation::AccessLevel;
 use medulla_isolation::isolation::IsolationLayer;
 use medulla_types::contract::{Digest256, Nonce};
 use std::sync::Arc;
@@ -577,6 +576,7 @@ impl GraphReadAuthority {
     /// hex-encode + ledger-mutex-push entirely; there is no longer a ledger to
     /// clear, and the resulting `GraphCore` is byte-for-byte identical in every
     /// OTHER respect (node_map/graph/node_properties/edge_properties/bloom).
+    #[cfg(feature = "security")]
     fn build_projection(&self, core: &Arc<GraphCore>) -> Arc<GraphCore> {
         let mut view = core.analysis_snapshot();
         self.filter_view(&mut view);

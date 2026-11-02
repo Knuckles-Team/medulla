@@ -164,6 +164,7 @@ fn redact(message: &str) -> String {
 }
 
 /// Read an OpenAI-shaped `{"data": [{"index", "embedding"}]}` body, in input order.
+#[cfg(any(test, feature = "federation-search"))]
 pub(crate) fn parse_response(
     body: &serde_json::Value,
     expected: usize,

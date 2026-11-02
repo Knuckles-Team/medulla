@@ -26,7 +26,7 @@ fn connector_event_request(schema: &ComponentDependency) -> DecideRequest {
 #[tokio::test]
 async fn connector_event_triage_is_evaluate_only_and_logs_a_sampled_fraction() {
     let h = Harness::new().await;
-    h.publish(
+    h.publish_test_component(
         "tool-connector-event",
         AgentComponentKind::Tool,
         "a synthetic inbound connector event, classified before any action",
@@ -35,7 +35,7 @@ async fn connector_event_triage_is_evaluate_only_and_logs_a_sampled_fraction() {
     )
     .unwrap();
     let schema_pin = h
-        .publish(
+        .publish_test_component(
             "schema-connector-triage",
             AgentComponentKind::FeatureSchema,
             "connector event triage features",

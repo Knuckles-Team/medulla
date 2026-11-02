@@ -3,16 +3,20 @@
 pub use super::super::agent_fixtures::{
     ledger_record, mutation_context as context, open_agent_store as open_store,
 };
+#[cfg(test)]
 use super::super::agent_revision::{decode_status_result, validate_status_record};
 use super::*;
 use medulla_agent_types::agent_component::ComponentDependency;
+#[cfg(test)]
 use medulla_agent_types::agent_library::AgentLibraryLifecycle;
 use medulla_agent_types::{
     agent_graph::AgentGraphDraft, agent_graph::AgentGraphEdge, agent_graph::AgentGraphNode,
     agent_graph::AgentGraphNodeKind, agent_graph::AgentGraphShape,
 };
+#[cfg(test)]
 use medulla_protocol_types::mutation_batch::MutationBatchStatus;
 
+#[cfg(test)]
 pub(super) fn digest(byte: char) -> String {
     format!("sha256:{}", byte.to_string().repeat(64))
 }

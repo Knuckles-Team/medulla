@@ -24,6 +24,7 @@ const TOOLS: &[&str] = &[
     "lake-fixture-export",
 ];
 
+#[cfg(not(all(feature = "redb", feature = "ann-redb", feature = "lake")))]
 fn missing_feature(tool: &str, feature: &str) -> ! {
     eprintln!("medulla-server {tool}: this build lacks the `{feature}` feature");
     std::process::exit(2);

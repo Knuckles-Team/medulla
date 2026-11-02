@@ -2,7 +2,6 @@
 //! persistence-level reshard entry points (`graft_graph_from`,
 //! `reserve_graft_destination`, `export_graph_raw`, `import_graph_raw`).
 
-use medulla_persistence::online_reshard::*;
 use medulla_store::redb_store::shard::{
     graph_scope_identity, Shard, ShardWrite, GRAFT_BEFORE_PROTOCOL_LOCK,
 };

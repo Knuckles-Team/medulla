@@ -554,6 +554,7 @@ pub mod tests {
         JwtValidator::from_parts(issuer, audience, keys)
     }
 
+    #[cfg(test)]
     fn base_claims() -> serde_json::Value {
         serde_json::json!({
             "sub": "agent:planner",

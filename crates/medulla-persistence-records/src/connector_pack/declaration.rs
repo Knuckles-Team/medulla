@@ -6,7 +6,9 @@
 //! projection ingestion consumes. Relations come from the pack ontology's
 //! object properties (domain and range), never from the declaration.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
+#[cfg(feature = "rdf")]
+use std::collections::BTreeSet;
 
 use medulla_catalog_types::{
     connector_pack::ConnectorRelationshipMapping, connector_pack::ConnectorSchemaMapping,

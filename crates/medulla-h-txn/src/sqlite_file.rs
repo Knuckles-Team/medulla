@@ -321,6 +321,7 @@ fn decode_committed_import_report(
     Ok(report)
 }
 
+#[cfg(test)]
 fn compile_import_batch(
     store: &TableStore,
     req_id: u64,

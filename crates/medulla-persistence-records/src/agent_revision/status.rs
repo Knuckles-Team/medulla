@@ -34,7 +34,7 @@ pub fn ledger_status_record(
 }
 
 /// The typed result bytes a committed status record must carry.
-pub fn status_result_bytes<L: RevisionLayer>(
+pub(crate) fn status_result_bytes<L: RevisionLayer>(
     record: &medulla_protocol_types::mutation_batch::MutationBatchRecord,
 ) -> Result<&[u8], String> {
     record.result_msgpack.as_deref().ok_or_else(|| {
@@ -47,7 +47,7 @@ pub fn status_result_bytes<L: RevisionLayer>(
 
 /// A graph or template status: the committed result, bound to the operation
 /// the caller names.
-pub fn committed_status<L: RevisionLayer>(
+pub(crate) fn committed_status<L: RevisionLayer>(
     store: &AgentLibraryStore,
     context: &AgentLibraryMutationContext,
     record_id: &str,
@@ -67,7 +67,7 @@ pub fn committed_status<L: RevisionLayer>(
     Ok(Some(L::write_result(committed, true)))
 }
 
-pub fn decode_status_result<L: RevisionLayer>(
+pub(crate) fn decode_status_result<L: RevisionLayer>(
     bytes: &[u8],
 ) -> Result<L::Committed, String> {
     let mutation_result: MutationResult =
@@ -94,7 +94,7 @@ pub fn decode_status_result<L: RevisionLayer>(
 /// Bind a decoded status result to its durable record and the caller's
 /// operation. `operation` is the record id and mutation kind the caller asked
 /// about.
-pub fn validate_status_record<L: RevisionLayer>(
+pub(crate) fn validate_status_record<L: RevisionLayer>(
     record: &medulla_protocol_types::mutation_batch::MutationBatchRecord,
     owner_identity: &medulla_mutation_types::mutation_scope::MutationScopeIdentity,
     context: &AgentLibraryMutationContext,

@@ -1,7 +1,6 @@
 //! Private transaction receipts implementation.
 
 use super::*;
-use medulla_mutation_types::mutation_scope::DurabilityDomain;
 #[cfg(feature = "redb")]
 use medulla_persistence::AsRedb;
 
@@ -104,6 +103,7 @@ fn tenant_bound_receipt_id(tenant_scope: &str, operation_id: &str) -> String {
 /// Validate the id read from the authenticated durable parent, never an
 /// unverified routing hint. Reconstructing the whole id binds both the tenant
 /// and operation; merely checking a caller-provided tenant prefix would not.
+#[cfg(feature = "raft")]
 pub(super) fn validate_transaction_receipt_tenant(
     durable_receipt_id: &str,
     tenant_scope: &str,
@@ -122,6 +122,7 @@ pub(super) fn validate_transaction_receipt_tenant(
     Ok(())
 }
 
+#[cfg(feature = "raft")]
 fn valid_receipt_operation_id(operation_id: &str) -> bool {
     let Some((namespace, digest)) = operation_id.split_once(':') else {
         return false;

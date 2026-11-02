@@ -76,6 +76,7 @@ fn verified_owner_principal(
 
 /// Both catalog-authority writes need the dedicated attester scope AND the
 /// connector-pack administrative action, in the verified tenant.
+#[cfg(any(any(feature = "redb", test), feature = "redb", test))]
 pub(super) fn require_catalog_attester(
     verified: &VerifiedRequestContext,
     tenant_id: &str,
@@ -90,6 +91,7 @@ pub(super) fn require_catalog_attester(
     Ok(())
 }
 
+#[cfg(any(feature = "redb", test))]
 fn require_catalog_owner_read(
     verified: &VerifiedRequestContext,
     tenant_id: &str,
@@ -101,6 +103,7 @@ fn require_catalog_owner_read(
     Ok(())
 }
 
+#[cfg(any(feature = "redb", test))]
 fn require_catalog_request_read(
     verified: &VerifiedRequestContext,
     tenant_id: &str,

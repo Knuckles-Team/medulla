@@ -22,6 +22,7 @@ use medulla_server_api::state::ServerState;
 // module but touches NONE of it.
 #[cfg(feature = "compute-dist")]
 use medulla_raft_xshard::pregel;
+#[cfg(all(any(feature = "compute-dist", feature = "matview"), feature = "compute-dist"))]
 use medulla_server_api::api::persistence::MatView;
 #[cfg(feature = "matview")]
 use medulla_server_cdc::matview;

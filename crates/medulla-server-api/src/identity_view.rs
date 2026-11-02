@@ -14,7 +14,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, OnceLock, RwLock};
 
 use medulla_identity_types::{
-    identity::IdentityActor, identity::IdentityStore, identity::UserKind,
+    identity::IdentityActor, identity::IdentityStore,
 };
 
 use super::authority_context::VerifiedRequestContext;
@@ -57,14 +57,4 @@ pub fn publish(persist_dir: Option<&str>, store: &IdentityStore) {
 /// The last published store of the engine at `persist_dir`.
 pub fn published(persist_dir: &Path) -> Option<Arc<IdentityStore>> {
     views().read().ok()?.get(persist_dir).cloned()
-}
-
-/// The kind of an ACTIVE principal of the engine at `persist_dir`.
-pub(crate) fn active_principal_kind(
-    persist_dir: Option<&str>,
-    principal: &str,
-) -> Option<UserKind> {
-    let store = published(Path::new(persist_dir?))?;
-    let user = store.user(principal)?;
-    user.status.is_active().then_some(user.kind)
 }

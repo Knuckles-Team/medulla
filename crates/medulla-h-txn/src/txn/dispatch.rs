@@ -163,6 +163,8 @@ struct TxnDispatchArgs<'a> {
     txn_owner: &'a str,
     carrier_authority: &'a CarrierAuthority,
     attempt_nonce: Option<Nonce>,
+    // read only by the derived-read stages (sparql, query, epistemic)
+    #[cfg_attr(not(any(feature = "sparql", feature = "query", feature = "epistemic")), allow(dead_code))]
     derived_read_authority: Option<&'a GraphReadAuthority>,
     #[cfg(feature = "tsdb")]
     measurement_authority: Option<&'a CarrierAuthority>,

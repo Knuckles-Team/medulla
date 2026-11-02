@@ -65,6 +65,7 @@ pub fn ledger_record(
 
 /// Which of the four layers hold a record under `record_id` in `tenant_id`:
 /// component, library entry, graph, template.
+#[cfg(test)]
 pub(crate) fn layers_holding(
     store: &AgentLibraryStore,
     tenant_id: &str,

@@ -1,11 +1,6 @@
 //! medulla-server-api: server state, auth, access, mutation batch API and the crate-split seam traits. Split out of the `medulla-engine` facade (MEDULLA-CONTRACT-R056.11);
-//! level 2 in `scripts/crate_split/manifest.toml`.
+//! layer 2 of the crate layering (MEDULLA-CONTRACT-R056).
 
-#![allow(clippy::too_many_arguments)] // seam signatures mirror the moved facade functions
-#![allow(clippy::items_after_test_module, clippy::new_without_default)] // test-support fixtures share modules with production code
-#![allow(private_interfaces, private_bounds)] // visibility is narrowed by the unreachable_pub pass
-#![allow(dead_code)] // moved helper code, as the facade crate did
-#![allow(unused_imports)] // glob imports carried over from the facade; the visibility pass prunes them
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
 

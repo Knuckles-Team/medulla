@@ -25,7 +25,7 @@ fn connector_tool_choice_request(schema: &ComponentDependency) -> DecideRequest 
 #[tokio::test]
 async fn connector_tool_choice_is_a_proposal_that_cannot_itself_trigger_a_write_back() {
     let h = Harness::new().await;
-    h.publish(
+    h.publish_test_component(
         "tool-connector-candidate",
         AgentComponentKind::Tool,
         "an internal tool a connector might use for its task",
@@ -34,7 +34,7 @@ async fn connector_tool_choice_is_a_proposal_that_cannot_itself_trigger_a_write_
     )
     .unwrap();
     let schema_pin = h
-        .publish(
+        .publish_test_component(
             "schema-connector-toolchoice",
             AgentComponentKind::FeatureSchema,
             "connector tool-choice features",

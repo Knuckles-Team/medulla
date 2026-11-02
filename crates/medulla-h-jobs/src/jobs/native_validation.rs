@@ -1,5 +1,6 @@
 //! Private implementation module for the analytics job handler.
 
+#[cfg(all(feature = "jobs", feature = "knowledge-batch"))]
 use super::prelude_jobs::*;
 use super::*;
 

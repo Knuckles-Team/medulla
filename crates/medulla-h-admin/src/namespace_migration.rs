@@ -27,6 +27,7 @@ pub const RETIRED_OWL_NAMESPACE: &str = "http://epistemic-graph/owl#";
 /// The engine's OWL namespace.
 pub const OWL_NAMESPACE: &str = "http://medulla/owl#";
 /// The fixed service principal the migration writes as.
+#[cfg(feature = "security")]
 pub(crate) const MIGRATION_ACTOR: &str = "service:namespace-migration";
 const MIGRATION_SERVICE: &str = "namespace-migration";
 

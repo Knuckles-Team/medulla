@@ -28,8 +28,10 @@ pub(super) struct ConsensusPreparedTransaction {
 /// One engine-placed participant command built from a prepared transaction.
 #[cfg(feature = "raft")]
 pub struct ConsensusTransactionParticipant {
+    #[allow(dead_code)] // carried on the participant command for the raft apply path
     pub(crate) coordinator_id: String,
     pub participant_id: u64,
+    #[allow(dead_code)] // carried on the participant command for the raft apply path
     pub(crate) graph_name: String,
     pub graph_type: medulla_protocol_types::protocol::GraphType,
     pub group_id: medulla_raft::raft::GroupId,

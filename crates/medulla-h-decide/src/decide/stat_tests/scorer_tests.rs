@@ -112,7 +112,7 @@ async fn a_scorer_head_is_promoted_only_through_the_protocol_and_then_acts() {
         "a mislabelled frozen set fails the protocol"
     );
     assert!(failed.promotion.is_some());
-    let refused = h.publish(
+    let refused = h.publish_test_component(
         "head-scorer",
         AgentComponentKind::DecisionHead,
         "resident scorer",
@@ -126,7 +126,7 @@ async fn a_scorer_head_is_promoted_only_through_the_protocol_and_then_acts() {
     let passed = evaluated(&h, 4, pin, data).await;
     assert!(passed.passed, "gates: {:?}", passed.failed_gates.as_slice());
     let head_pin = h
-        .publish(
+        .publish_test_component(
             "head-scorer",
             AgentComponentKind::DecisionHead,
             "resident scorer",
@@ -215,7 +215,7 @@ async fn select_only_and_structured_encoding_hold_across_distinct_question_kinds
     let passed = evaluated(&h, 202, (draft_sha256, draft_length), data).await;
     assert!(passed.passed, "gates: {:?}", passed.failed_gates.as_slice());
     let head_pin = h
-        .publish(
+        .publish_test_component(
             "head-scorer-cross-question",
             AgentComponentKind::DecisionHead,
             "resident scorer, cross-question proof",
@@ -300,7 +300,7 @@ async fn a_resident_scorer_decision_is_served_with_no_gpu_or_model_server_presen
     let passed = evaluated(&h, 302, (draft_sha256, draft_length), data).await;
     assert!(passed.passed, "gates: {:?}", passed.failed_gates.as_slice());
     let head_pin = h
-        .publish(
+        .publish_test_component(
             "head-scorer-no-gpu",
             AgentComponentKind::DecisionHead,
             "resident scorer, no-GPU proof",

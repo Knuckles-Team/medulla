@@ -110,6 +110,7 @@ impl<'de> serde::de::Visitor<'de> for JsonVisitor {
     }
 }
 
+#[cfg(test)]
 pub(super) fn json_size(value: &serde_json::Value, depth: usize) -> Result<usize, ()> {
     if depth > MAX_JSON_DEPTH {
         return Err(());

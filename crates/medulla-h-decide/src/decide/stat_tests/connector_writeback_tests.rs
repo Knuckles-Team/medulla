@@ -26,7 +26,7 @@ fn connector_write_back_request(schema: &ComponentDependency) -> DecideRequest {
 #[tokio::test]
 async fn a_write_back_proposal_has_no_external_effect_until_separately_authorized() {
     let h = Harness::new().await;
-    h.publish(
+    h.publish_test_component(
         "tool-connector-write-target",
         AgentComponentKind::Tool,
         "the connector action a write-back proposal would name",
@@ -35,7 +35,7 @@ async fn a_write_back_proposal_has_no_external_effect_until_separately_authorize
     )
     .unwrap();
     let schema_pin = h
-        .publish(
+        .publish_test_component(
             "schema-connector-writeback",
             AgentComponentKind::FeatureSchema,
             "connector write-back features",

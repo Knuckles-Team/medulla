@@ -92,6 +92,7 @@ fn registry() -> &'static Mutex<HashMap<String, TableStore>> {
     STORES.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
+#[cfg(test)]
 fn owner_filename(authority: &CarrierAuthority) -> String {
     let mut digest = Sha256::new();
     digest.update(b"epistemic-graph/sql-catalog-owner\0");
@@ -116,6 +117,7 @@ fn tenant_filename(tenant_scope: &str, suffix: &str) -> String {
     format!("{}.{suffix}.redb", hex::encode(digest.finalize()))
 }
 
+#[cfg(test)]
 fn store_path(authority: &CarrierAuthority, persist_dir: &Path) -> PathBuf {
     persist_dir
         .join(SQL_CATALOG_DIR)
@@ -223,6 +225,7 @@ fn open_or_get(path: &Path, tenant_scope: &str) -> Result<TableStore, String> {
 ///
 /// Callers choose this principal-isolated store explicitly. Tenant-shared access
 /// must instead use [`tenant_table_store`] behind SQL source authorization.
+#[cfg(test)]
 pub(crate) fn user_table_store(
     authority: &CarrierAuthority,
     persist_dir: Option<&Path>,
@@ -291,38 +294,7 @@ pub fn tenant_acl_path_for_test(tenant_scope: &str, persist_dir: &Path) -> PathB
     tenant_acl_path(tenant_scope, persist_dir)
 }
 
-fn context_cache_registry(
-) -> &'static Mutex<HashMap<String, std::sync::Arc<medulla_sql::sql::SqlContextCache>>> {
-    static CACHES: OnceLock<
-        Mutex<HashMap<String, std::sync::Arc<medulla_sql::sql::SqlContextCache>>>,
-    > = OnceLock::new();
-    CACHES.get_or_init(|| Mutex::new(HashMap::new()))
-}
 
-/// Resolve the ONE served-path whole-`SessionContext` cache (CONCEPT:MEDULLA-KG.query.served-context-cache) for
-/// `authority`'s tenant-scoped SQL catalog — keyed by the SAME tenant-hash registry
-/// key [`tenant_table_store`] uses, so repeated served SQL reads from the SAME
-/// tenant reuse the SAME `SqlContextCache` instance (the entire point:
-/// amortizing the `SessionContext` build ACROSS requests, not just within one). A
-/// fresh, empty cache the first time this owner ever runs a served SQL read.
-pub(crate) fn sql_context_cache(
-    authority: &CarrierAuthority,
-    persist_dir: Option<&Path>,
-) -> Result<std::sync::Arc<medulla_sql::sql::SqlContextCache>, String> {
-    let persist_dir = persist_dir.ok_or_else(|| {
-        "owner-scoped SQL catalog requires the configured persistence directory".to_string()
-    })?;
-    let key = registry_key(&tenant_table_path(authority.tenant_scope(), persist_dir));
-    let mut caches = context_cache_registry()
-        .lock()
-        .map_err(|_| "owner-scoped SQL context cache registry is unavailable".to_string())?;
-    if let Some(cache) = caches.get(&key) {
-        return Ok(cache.clone());
-    }
-    let cache = std::sync::Arc::new(medulla_sql::sql::SqlContextCache::new());
-    caches.insert(key, cache.clone());
-    Ok(cache)
-}
 
 #[cfg(any(test, feature = "test-support"))]
 pub fn test_persist_dir() -> PathBuf {

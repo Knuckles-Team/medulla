@@ -121,6 +121,8 @@ pub fn terminal_method(lease_epoch: u64, fencing_token: u64) -> medulla_protocol
 /// Keeping this beside the other shared fixtures lets query and wire tests reuse the
 /// exact policy shape without copying an agent-registration block.
 pub fn grant_commons_user(isolation: &mut medulla_isolation::isolation::IsolationLayer) {
+    #[cfg(not(feature = "security"))]
+    let _ = &isolation;
     #[cfg(feature = "security")]
     {
         use medulla_types::acl::Grant;

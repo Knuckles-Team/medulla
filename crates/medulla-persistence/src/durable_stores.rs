@@ -30,8 +30,10 @@
 //! workspace it is opened — cannot be silently forgotten by a future change.
 
 use std::collections::BTreeMap;
+#[cfg(any(feature = "security", test))]
 use std::path::Path;
 
+#[cfg(feature = "security")]
 use medulla_server_api::api::persistence::BundledStoreSource;
 
 /// Whether a durable store is captured by the online backup bundle.

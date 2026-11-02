@@ -62,6 +62,7 @@ pub(super) struct SweepPlan {
 }
 
 impl SweepPlan {
+    #[cfg(feature = "blob-s3")]
     pub(super) fn into_chunks(self) -> BTreeSet<String> {
         self.chunks
     }

@@ -1,12 +1,13 @@
 //! Private implementation module for the analytics job handler.
 
+#[cfg(all(feature = "jobs", feature = "raft"))]
 use super::core::job_result_payload;
 use super::prelude_jobs::*;
 use super::prelude_server::*;
 use super::prelude_std::*;
 use super::*;
 #[cfg(feature = "raft")]
-use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
+#[cfg(test)]
 use medulla_mutation_types::mutation_scope::MutationSurface;
 #[cfg(feature = "raft")]
 use medulla_raft::raft::RaftStateExt;
