@@ -8,10 +8,8 @@ pub struct CancelWorkItemInput<'args, 'table, 'crypto> {
     pub work_item_id: &'args str,
     pub reason_ref: &'args Option<String>,
     pub now_ms: u64,
-    pub nodes:
-        &'args mut ScopedOwnerTableMut<'table, (&'static str, &'static str), &'static [u8]>,
-    pub holds:
-        &'args mut ScopedOwnerTableMut<'table, (&'static str, &'static str), &'static [u8]>,
+    pub nodes: &'args mut ScopedOwnerTableMut<'table, (&'static str, &'static str), &'static [u8]>,
+    pub holds: &'args mut ScopedOwnerTableMut<'table, (&'static str, &'static str), &'static [u8]>,
     pub work_item_index:
         &'args ScopedOwnerTableMut<'table, (&'static str, &'static str, u64), &'static str>,
     pub counters:
@@ -28,8 +26,7 @@ pub struct CancelWorkItemInput<'args, 'table, 'crypto> {
         ),
         u8,
     >,
-    pub policies:
-        &'args ScopedOwnerTableMut<'table, (&'static str, &'static str), &'static [u8]>,
+    pub policies: &'args ScopedOwnerTableMut<'table, (&'static str, &'static str), &'static [u8]>,
     pub crypto: DurableCrypto<'crypto>,
 }
 
@@ -204,8 +201,7 @@ pub struct DeferWorkItemInput<'args, 'table, 'crypto> {
     pub next_retry_at_ms: u64,
     pub reason_ref: &'args Option<String>,
     pub now_ms: u64,
-    pub nodes:
-        &'args mut ScopedOwnerTableMut<'table, (&'static str, &'static str), &'static [u8]>,
+    pub nodes: &'args mut ScopedOwnerTableMut<'table, (&'static str, &'static str), &'static [u8]>,
     pub crypto: DurableCrypto<'crypto>,
 }
 

@@ -4,18 +4,18 @@
 //! ever written.
 
 use super::*;
-use medulla_store::redb_layout::shard_filename;
-use medulla_store::redb_store::shard::SHARD_PHYSICAL_STORE;
-use medulla_store::redb_store::NODES;
+use medulla_persistence::durable_stores::AGENT_LIBRARY_PHYSICAL_STORE;
 use medulla_persistence_records::agent_library::AgentLibraryStore;
 use medulla_persistence_records::agent_library::AGENT_LIBRARY_FILE;
-use medulla_persistence::durable_stores::AGENT_LIBRARY_PHYSICAL_STORE;
 use medulla_storage::{
     create_predecessor_owner_file, AgentLibraryOwner, GraphShardOwner, LayoutPredecessor,
     OwnerLayout, StorageKernel, AGENT_LIBRARY_BEFORE_MCP_CATALOG, AGENT_LIBRARY_REVISIONS,
     BLOB_BEFORE_HOLDERS, GRAPH_SHARD_BEFORE_AUDIT_REQUESTS, GRAPH_SHARD_BEFORE_ENRICHMENT,
     OFFLINE_STORE_UPGRADES,
 };
+use medulla_store::redb_layout::shard_filename;
+use medulla_store::redb_store::shard::SHARD_PHYSICAL_STORE;
+use medulla_store::redb_store::NODES;
 use redb::ReadableDatabase;
 use sha2::{Digest, Sha256};
 
@@ -302,7 +302,9 @@ fn apply_upgrades_a_sql_catalog_and_keeps_its_rows() {
     const SQL_ROWS: redb::TableDefinition<(&str, u64), &[u8]> =
         redb::TableDefinition::new("__sql_rows__");
     let dir = data_dir();
-    let catalogs = dir.path().join(medulla_server_auth::sql_tables::SQL_CATALOG_DIR);
+    let catalogs = dir
+        .path()
+        .join(medulla_server_auth::sql_tables::SQL_CATALOG_DIR);
     std::fs::create_dir(&catalogs).unwrap();
     let catalog = catalogs.join("tenant-catalog").with_extension("redb");
     create_predecessor_owner_file(

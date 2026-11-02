@@ -5,10 +5,10 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use medulla_protocol_types::protocol::Response;
-use medulla_protocol_types::protocol::ResultPayload;
 #[cfg(feature = "redb")]
 use medulla_persistence_records::agent_library::context::bind_agent_library_context;
+use medulla_protocol_types::protocol::Response;
+use medulla_protocol_types::protocol::ResultPayload;
 use medulla_server_api::state::ServerState;
 
 /// Bind the context of a read-only Agent Library status query. Status never

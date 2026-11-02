@@ -4,11 +4,11 @@
 //! goes through the full signed dispatch.
 
 use super::*;
-use medulla_types::acl::AgentIdentity;
-use medulla_types::acl::AgentRole;
 use medulla_isolation::isolation::IsolationLayer;
 use medulla_protocol_types::protocol::Request;
 use medulla_server_auth::auth::sign_current_test_request;
+use medulla_types::acl::AgentIdentity;
+use medulla_types::acl::AgentRole;
 
 const SECRET: &str = "refusal-contract-test-secret";
 
@@ -38,7 +38,9 @@ fn engine() -> Arc<RwLock<ServerState>> {
             &medulla_capabilities::scopes::ScopeRegistry,
         )
         .expect("the store initializes");
-    Arc::new(RwLock::new(crate::dispatch::test_support::new_state_for_test(SECRET, isolation)))
+    Arc::new(RwLock::new(
+        crate::dispatch::test_support::new_state_for_test(SECRET, isolation),
+    ))
 }
 
 /// `root` registers `agent_id` with `roles` through the signed dispatch.

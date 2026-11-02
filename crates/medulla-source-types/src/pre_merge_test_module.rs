@@ -309,7 +309,10 @@ mod tests {
         // success are deliberately left to the R011.3 gate.
         let anchors = [
             (
-                include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../medulla-server-cluster-tests/src/split_tests/raft_cluster.rs")),
+                include_str!(concat!(
+                    env!("CARGO_MANIFEST_DIR"),
+                    "/../medulla-server-cluster-tests/src/split_tests/raft_cluster.rs"
+                )),
                 "fn durable_log_replays_from_redb_after_restart(",
             ),
             (
@@ -317,7 +320,10 @@ mod tests {
                 "fn a_coordinator_backup_preserves_every_consumed_nonce_and_receipt(",
             ),
             (
-                include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../medulla-persistence-tests/src/backup_tests.rs")),
+                include_str!(concat!(
+                    env!("CARGO_MANIFEST_DIR"),
+                    "/../medulla-persistence-tests/src/backup_tests.rs"
+                )),
                 "fn backup_restore_roundtrip_preserves_everything(",
             ),
         ];

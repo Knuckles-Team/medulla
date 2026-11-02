@@ -205,7 +205,10 @@ async fn handle_cypher_read(ctx: &QueryHandlerCtx<'_>, query: String) -> Respons
     #[cfg(not(feature = "result-cache"))]
     let resp = cypher_query_response(
         req_id,
-        compute_off_lock(req_id, move || medulla_cypher::cypher::exec_cypher(&snap, &query)).await,
+        compute_off_lock(req_id, move || {
+            medulla_cypher::cypher::exec_cypher(&snap, &query)
+        })
+        .await,
     );
     resp
 }

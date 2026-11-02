@@ -272,7 +272,8 @@ fn obda_dialect(dsn: &str) -> Result<ObdaSqlDialect, String> {
 /// while a real `federation-sql` executor connects to the fleet's Postgres/MySQL.
 #[cfg(feature = "obda")]
 pub(super) trait ObdaSqlExecutor: Send + Sync {
-    fn run_select(&self, sql: &str) -> Result<Vec<medulla_virtual_graph::obda::ForeignRow>, String>;
+    fn run_select(&self, sql: &str)
+        -> Result<Vec<medulla_virtual_graph::obda::ForeignRow>, String>;
 }
 
 /// An [`medulla_virtual_graph::obda::ObdaSource`] backed by a table in an EXTERNAL relational database
@@ -656,7 +657,10 @@ struct FederationSqlExecutor {
 
 #[cfg(all(feature = "obda", feature = "federation-sql"))]
 impl ObdaSqlExecutor for FederationSqlExecutor {
-    fn run_select(&self, sql: &str) -> Result<Vec<medulla_virtual_graph::obda::ForeignRow>, String> {
+    fn run_select(
+        &self,
+        sql: &str,
+    ) -> Result<Vec<medulla_virtual_graph::obda::ForeignRow>, String> {
         medulla_federation::federation::fetch_sql_columns(&self.dsn, sql)
     }
 }
@@ -769,7 +773,10 @@ mod ordered_distinct_tests {
     }
 
     impl ObdaSqlExecutor for RecordingExecutor {
-        fn run_select(&self, sql: &str) -> Result<Vec<medulla_virtual_graph::obda::ForeignRow>, String> {
+        fn run_select(
+            &self,
+            sql: &str,
+        ) -> Result<Vec<medulla_virtual_graph::obda::ForeignRow>, String> {
             self.queries.lock().unwrap().push(sql.to_string());
             Ok(self.response_rows(sql))
         }

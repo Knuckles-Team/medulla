@@ -199,8 +199,10 @@ mod tests {
             }
             let detail = validate_deployment_binding(&candidate, &policy())
                 .expect_err("mismatched deployment binding must refuse");
-            let response =
-                medulla_protocol_types::protocol::Response::err(1, super::super::authentication_refusal(&detail));
+            let response = medulla_protocol_types::protocol::Response::err(
+                1,
+                super::super::authentication_refusal(&detail),
+            );
             assert_eq!(response.error.as_deref(), Some(expected_code), "{field}");
             assert!(
                 response

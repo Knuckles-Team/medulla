@@ -13,8 +13,10 @@
 
 use medulla_federation::federation::ForeignSourceRegistry;
 use medulla_federation::federation_brain_guarded::register_brain_guarded;
-use medulla_federation::{federation_cypher_unbound::register_falkordb, federation_cypher_unbound::register_neo4j};
 use medulla_federation::federation_spark::register_spark;
+use medulla_federation::{
+    federation_cypher_unbound::register_falkordb, federation_cypher_unbound::register_neo4j,
+};
 use medulla_federation::{mirror_target::target_for, mirror_target::MirrorTargetRegistry};
 use medulla_types::wire::{ForeignCypherBackend, ForeignSourceSpec, MirrorTargetSpec};
 

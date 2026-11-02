@@ -208,7 +208,6 @@ fn policy(object_id: &str, tenant: &str, labels: &EnvelopeLabels) -> Result<Poli
     })
 }
 
-
 /// Compile repository rows and its bounded enrichment intent as one commit.
 /// The compiler includes the outbox bytes in the canonical payload digest.
 pub fn build_envelope_with_outbox(

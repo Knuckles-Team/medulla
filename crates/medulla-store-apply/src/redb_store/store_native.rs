@@ -1,6 +1,6 @@
+use super::*;
 use crate::redb_store::store_cleanup::clear_graph_rows;
 use medulla_store::redb_store::store_prelude::*;
-use super::*;
 
 /// GOC-19/GOC-20 (BUG-015 "B9"): a `CommitWorkItemResult` batch may
 /// additionally carry co-committed `AddNode` provenance operations
@@ -478,22 +478,24 @@ pub(crate) fn apply_native_work_item_family_operation(
     )? {
         return Ok(());
     }
-    let result = apply_work_item_rows(medulla_work_store::redb_store::work_item::WorkItemApplyRequest {
-        graph: graph_fname,
-        batch_id: batch.batch_id.as_str(),
-        method,
-        nodes: &mut tables.graph.nodes,
-        holds: &mut tables.lane_holds,
-        work_item_index: &tables.lane_work_item_index,
-        counters: &mut tables.lane_counters,
-        pressure_index: &mut tables.lane_pressure_index,
-        policies: &tables.lane_policies,
-        native_work_items: &mut tables.graph.native_work_items,
-        edges: &mut tables.graph.edges,
-        command_sequences: &mut tables.graph.command_sequences,
-        committed_at_ms,
-        crypto,
-    })?
+    let result = apply_work_item_rows(
+        medulla_work_store::redb_store::work_item::WorkItemApplyRequest {
+            graph: graph_fname,
+            batch_id: batch.batch_id.as_str(),
+            method,
+            nodes: &mut tables.graph.nodes,
+            holds: &mut tables.lane_holds,
+            work_item_index: &tables.lane_work_item_index,
+            counters: &mut tables.lane_counters,
+            pressure_index: &mut tables.lane_pressure_index,
+            policies: &tables.lane_policies,
+            native_work_items: &mut tables.graph.native_work_items,
+            edges: &mut tables.graph.edges,
+            command_sequences: &mut tables.graph.command_sequences,
+            committed_at_ms,
+            crypto,
+        },
+    )?
     .ok_or_else(|| "WorkItem mutation produced no durable result".to_string())?;
     // CommitWorkItemResult may co-commit provenance AddNode rows. Its shape is
     // checked before the operation loop; every other WorkItem write is singular.
@@ -633,15 +635,17 @@ fn apply_one_native_operation_row(
                 Ok(result)
             },
         ),
-        method @ medulla_store::work_item_kernel_writes!() => apply_native_work_item_family_operation(
-            graph_fname,
-            method,
-            tables,
-            batch,
-            generated_result,
-            crypto,
-            committed_at_ms,
-        ),
+        method @ medulla_store::work_item_kernel_writes!() => {
+            apply_native_work_item_family_operation(
+                graph_fname,
+                method,
+                tables,
+                batch,
+                generated_result,
+                crypto,
+                committed_at_ms,
+            )
+        }
         method @ Method::CommitWorkItemResult { .. } => apply_native_work_item_family_operation(
             graph_fname,
             method,

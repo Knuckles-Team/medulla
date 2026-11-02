@@ -14,10 +14,7 @@ use medulla_protocol_types::protocol::ResultPayload;
 use medulla_server_auth::access::OwnerScopedCall;
 
 /// Try to handle a WASM-UDF method. `Ok(resp)` = handled; `Err(method)` = not mine.
-pub async fn try_handle(
-    call: OwnerScopedCall<'_>,
-    method: Method,
-) -> Result<Response, Method> {
+pub async fn try_handle(call: OwnerScopedCall<'_>, method: Method) -> Result<Response, Method> {
     match method {
         Method::RegisterUdf { id, wasm } => Ok(register_udf(call, id, wasm).await),
         Method::RunUdf { id, input } => Ok(run_udf(call, id, input).await),

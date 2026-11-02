@@ -2,12 +2,12 @@ use super::*;
 use medulla_protocol_types::protocol_fixtures::sql_source::SqlSourceTarget;
 use medulla_protocol_types::storage_wire::SqlSourceJson;
 use medulla_protocol_types::storage_wire::SqlSourceText;
-use medulla_tables::schema::Column;
-use medulla_tables::schema::ColumnType;
-use medulla_tables::schema::TableSchema;
 use medulla_server_auth::sql_catalog_acl::create_owned_table;
 use medulla_server_auth::sql_catalog_acl::grant;
 use medulla_server_auth::sql_catalog_acl::SqlPrivilege;
+use medulla_tables::schema::Column;
+use medulla_tables::schema::ColumnType;
+use medulla_tables::schema::TableSchema;
 use medulla_types::acl::RequestContextClaims;
 
 pub(super) struct Fixture {

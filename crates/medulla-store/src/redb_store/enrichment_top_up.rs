@@ -3,8 +3,6 @@
 //! entering the graph-shard transaction.
 
 use crate::redb_store::enrichment_budget::RepositoryEnrichmentPolicyRevision;
-use medulla_work_types::native_control::EnrichmentBudgetCheckpoint;
-use medulla_work_types::native_control::EnrichmentBudgetPark;
 use medulla_compute::parser::enrichment_snapshot::EligibleSnapshot;
 use medulla_mutation_types::mutation_scope::MutationOutboxRecord;
 use medulla_protocol_types::{
@@ -14,6 +12,8 @@ use medulla_protocol_types::{
 use medulla_protocol_types::{
     mutation_batch::RepositoryEnrichmentTopUp, mutation_batch::VersionExpectation,
 };
+use medulla_work_types::native_control::EnrichmentBudgetCheckpoint;
+use medulla_work_types::native_control::EnrichmentBudgetPark;
 use serde::{Deserialize, Serialize};
 
 pub const TOPIC: &str = "repository.enrichment.pending";

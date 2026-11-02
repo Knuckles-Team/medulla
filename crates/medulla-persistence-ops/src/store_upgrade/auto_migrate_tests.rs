@@ -12,13 +12,13 @@ use super::tests::{
     old_graph_shard, statuses,
 };
 use super::*;
-use medulla_store::redb_store::shard::SHARD_PHYSICAL_STORE;
-use medulla_store::redb_store::NODES;
 use medulla_persistence_records::agent_library::AGENT_LIBRARY_FILE;
 use medulla_storage::{
     create_predecessor_owner_file, LayoutPredecessor, OwnerLayout, AGENT_LIBRARY_REVISIONS,
     BLOB_BEFORE_HOLDERS,
 };
+use medulla_store::redb_store::shard::SHARD_PHYSICAL_STORE;
+use medulla_store::redb_store::NODES;
 
 /// A graph shard whose table set no build ever wrote: its layout digest is
 /// outside this build's lineage, as a newer build's shard is.

@@ -179,11 +179,7 @@ pub(crate) struct ForecastRequest {
     pub(crate) writeback: WritebackOptions,
 }
 
-pub(crate) fn handle_forecast(
-    req_id: u64,
-    core: &GraphCore,
-    request: ForecastRequest,
-) -> Response {
+pub(crate) fn handle_forecast(req_id: u64, core: &GraphCore, request: ForecastRequest) -> Response {
     let ForecastRequest {
         values,
         algorithm,
@@ -347,11 +343,7 @@ pub(crate) struct TextRequest {
     pub(crate) writeback: WritebackOptions,
 }
 
-pub(crate) fn handle_text(
-    req_id: u64,
-    core: &GraphCore,
-    request: TextRequest,
-) -> Response {
+pub(crate) fn handle_text(req_id: u64, core: &GraphCore, request: TextRequest) -> Response {
     let TextRequest {
         docs,
         source,

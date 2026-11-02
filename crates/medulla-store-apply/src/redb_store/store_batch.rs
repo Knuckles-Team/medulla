@@ -1,5 +1,5 @@
-use medulla_store::redb_store::store_prelude::*;
 use super::*;
+use medulla_store::redb_store::store_prelude::*;
 
 /// The compact graph/control path can replace or remove a linked WorkItem
 /// just as a snapshot/row-delta can (`clears_semantic`); a lifecycle DeleteGraph

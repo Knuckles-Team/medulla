@@ -161,9 +161,7 @@ pub fn resource_validate_request_window(
 
 /// The four phases run in the original statement order, so a doubly-invalid
 /// request still reports the first field that was wrong before the split.
-pub fn resource_validate_request(
-    request: &ResourceReservationRequest,
-) -> Result<(), String> {
+pub fn resource_validate_request(request: &ResourceReservationRequest) -> Result<(), String> {
     resource_validate_request_identity(request)?;
     resource_validate_request_selectors(request)?;
     resource_validate_request_requirement(request)?;
@@ -528,18 +526,14 @@ pub fn resource_expected_fence(fencing_token: u64) -> String {
     fencing_token.to_string()
 }
 
-pub fn resource_request_target_kind(
-    kind: ResourceReservationRequestTargetKind,
-) -> &'static str {
+pub fn resource_request_target_kind(kind: ResourceReservationRequestTargetKind) -> &'static str {
     match kind {
         ResourceReservationRequestTargetKind::Local => "local",
         ResourceReservationRequestTargetKind::InventoryAlias => "inventory_alias",
     }
 }
 
-pub fn resource_record_target_kind(
-    kind: ResourceReservationRecordTargetKind,
-) -> &'static str {
+pub fn resource_record_target_kind(kind: ResourceReservationRecordTargetKind) -> &'static str {
     match kind {
         ResourceReservationRecordTargetKind::Local => "local",
         ResourceReservationRecordTargetKind::InventoryAlias => "inventory_alias",

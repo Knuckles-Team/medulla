@@ -8,7 +8,6 @@
 //! metadata is never consulted for a caller that does not currently own a
 //! live lease.
 
-use medulla_store::{redb_store::decode_durable, redb_store::property_string, redb_store::DurableCrypto, redb_store::NODES};
 use medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityDecision;
 use medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityMintRequest;
 use medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityRequestSchemaVersion;
@@ -16,6 +15,10 @@ use medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityResul
 use medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityResultSchemaVersion;
 use medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityVerifyRequest;
 use medulla_storage::{GraphShardOwner, PhysicalWriteCapability, ScopedOwnerTableMut};
+use medulla_store::{
+    redb_store::decode_durable, redb_store::property_string, redb_store::DurableCrypto,
+    redb_store::NODES,
+};
 use medulla_transaction::{AdmittedOwnerWrite, OwnerPayloadWrite};
 use rand::RngCore;
 use redb::TableDefinition;

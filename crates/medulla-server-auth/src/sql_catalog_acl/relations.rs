@@ -9,8 +9,8 @@
 
 use std::sync::Arc;
 
-use medulla_tables::schema::TableSchema;
 use medulla_table_store::tables::TableStore;
+use medulla_tables::schema::TableSchema;
 use serde_json::Value;
 
 /// One read-only relation: its schema and rows (cells in schema column order).

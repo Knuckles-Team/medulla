@@ -250,7 +250,6 @@ fn reap_expired<V>(
     expired.len()
 }
 
-
 /// Typed access to the blob cursor handle `ServerState` holds type-erased
 /// (MEDULLA-CONTRACT-R056.8).
 pub trait BlobStateExt {

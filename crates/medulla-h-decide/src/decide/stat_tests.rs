@@ -8,7 +8,6 @@
 
 use std::sync::Arc;
 
-
 use medulla_agent_types::{
     agent_component::AgentComponentKind, agent_component::AgentComponentPublishRequest,
     agent_component::ComponentDependency,
@@ -58,11 +57,11 @@ use medulla_decision_types::{
 };
 use medulla_types::contract::BoundedVec;
 
-use medulla_server_api::authority_context::VerifiedRequestContext;
+use super::stat_test_support::*;
 use medulla_persistence_records::agent_component::test_component_draft;
 use medulla_persistence_records::agent_fixtures::mutation_context;
+use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
-use super::stat_test_support::*;
 
 fn verified() -> VerifiedRequestContext {
     VerifiedRequestContext::verified_for_test_in_tenant("decider", TENANT)
@@ -847,7 +846,11 @@ async fn graph_candidates_are_read_through_acl_rls_and_a_select_only_plan() {
         let mut guard = h.state.write().await;
         guard
             .registry
-            .create_graph("kg-decide", medulla_protocol_types::protocol::GraphType::Team, None)
+            .create_graph(
+                "kg-decide",
+                medulla_protocol_types::protocol::GraphType::Team,
+                None,
+            )
             .unwrap();
         let core = guard.registry.get("kg-decide").unwrap().core.clone();
         for (id, score, summary) in [
@@ -982,7 +985,11 @@ async fn graph_log_record(h: &Harness) -> StatisticalDecisionRecord {
         let mut guard = h.state.write().await;
         guard
             .registry
-            .create_graph("kg-decide-log", medulla_protocol_types::protocol::GraphType::Team, None)
+            .create_graph(
+                "kg-decide-log",
+                medulla_protocol_types::protocol::GraphType::Team,
+                None,
+            )
             .unwrap();
         let core = guard.registry.get("kg-decide-log").unwrap().core.clone();
         let props = serde_json::json!({"type": "Tool", "score": 0.9, "summary": "web search"});
@@ -1033,7 +1040,6 @@ use log_tests::{retention_compacts_and_verifies, retention_retires};
 mod classes_tests;
 
 mod tool_subset_tests;
-
 
 mod consumer_tests;
 

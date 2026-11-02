@@ -6,9 +6,9 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use medulla_exec::algebra::Op;
 
 use super::budget::BudgetMeter;
-use medulla_exec::budget::FederationBudget;
 use super::cache::FragmentCacheScope;
 use super::trace::FragmentTrace;
+use medulla_exec::budget::FederationBudget;
 
 /// One foreign source op of the plan and the limit that immediately follows EVERY
 /// occurrence of it (`None` when an occurrence has no `Limit` or the limits disagree —

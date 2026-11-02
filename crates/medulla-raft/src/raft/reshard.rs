@@ -53,8 +53,8 @@ use super::placement::{
     MoveStage, PartitionMoveJournal, PartitionState, PlacementEntry, PlacementFence,
 };
 use super::GroupId;
-use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_persistence::redb_backend::rehydrate_core_from_dump;
+use medulla_server_api::api::persistence::PersistenceBackend;
 
 /// The outcome of a reshard, for observability + the proof.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -473,12 +473,11 @@ impl TenantManager {
             s.registry.get(graph_name).map(|e| e.core.clone())
         };
         let core = core.ok_or_else(|| format!("graph '{graph_name}' not found"))?;
-        let freed = medulla_persistence::cold_offload::offload_graph_core(
-            &core,
-            &self.backend,
-            graph_name,
-        )
-        .ok_or_else(|| format!("graph '{graph_name}' is not fully present in durable authority"))?;
+        let freed =
+            medulla_persistence::cold_offload::offload_graph_core(&core, &self.backend, graph_name)
+                .ok_or_else(|| {
+                    format!("graph '{graph_name}' is not fully present in durable authority")
+                })?;
         tracing::info!(freed, "graph hibernated after durable-presence gate");
         Ok(freed)
     }
@@ -516,7 +515,10 @@ impl TenantManager {
 
     /// Read ONE graph's durable dump via the redb backend (CONCEPT:MEDULLA-KG.storage.100m-tenant). Errors if
     /// the backend is not the redb tier (resharding/hibernation require it).
-    fn read_dump(&self, graph_fname: &str) -> Result<Option<medulla_store_apply::redb_store::store_control::GraphDump>, String> {
+    fn read_dump(
+        &self,
+        graph_fname: &str,
+    ) -> Result<Option<medulla_store_apply::redb_store::store_control::GraphDump>, String> {
         let redb = self.backend.as_redb().ok_or_else(|| {
             "resharding/hibernation require the redb persistence backend".to_string()
         })?;

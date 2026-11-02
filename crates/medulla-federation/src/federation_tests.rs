@@ -13,13 +13,13 @@ use std::collections::HashSet;
 use std::io::{Read, Write};
 use std::net::TcpListener;
 
-use medulla_types::wire::{ForeignSourceSpec, HttpFieldMap};
 use crate::test_guard::MockHttpAllowGuard;
+use medulla_types::wire::{ForeignSourceSpec, HttpFieldMap};
 
 use medulla_exec::algebra::Op;
+use medulla_exec::algebra::Plan;
 use medulla_exec::exec::{execute, PlanCtx};
 use medulla_exec::rowset::RowSet;
-use medulla_exec::algebra::Plan;
 
 /// Spawn a one-shot HTTP server on an ephemeral port that returns `body` (a JSON
 /// string) to the first GET, then exits. Returns its `http://host:port/` URL.

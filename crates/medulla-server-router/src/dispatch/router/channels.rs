@@ -1,5 +1,5 @@
-use medulla_server_graph::dispatch::shared::timed_read;
 use super::*;
+use medulla_server_graph::dispatch::shared::timed_read;
 
 use medulla_protocol_types::result_contract::messaging as results;
 use medulla_protocol_types::{

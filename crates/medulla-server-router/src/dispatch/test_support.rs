@@ -6,20 +6,16 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use medulla_server_api::authority_context::VerifiedRequestContext;
-use medulla_server_api::state::ServerState;
-use medulla_types::acl::RequestContextClaims;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Request;
 use medulla_protocol_types::protocol::Response;
+use medulla_server_api::authority_context::VerifiedRequestContext;
+use medulla_server_api::state::ServerState;
+use medulla_types::acl::RequestContextClaims;
 
 /// A verified context for `principal` (also the effective agent unless a
 /// delegation chain is given).
-pub fn verified(
-    principal: &str,
-    scopes: &[&str],
-    delegation: &[&str],
-) -> VerifiedRequestContext {
+pub fn verified(principal: &str, scopes: &[&str], delegation: &[&str]) -> VerifiedRequestContext {
     let agent = delegation.last().copied().unwrap_or(principal);
     verified_as(principal, agent, scopes, delegation)
 }

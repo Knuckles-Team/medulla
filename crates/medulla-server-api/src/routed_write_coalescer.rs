@@ -61,15 +61,15 @@
 use std::future::Future;
 use std::sync::Arc;
 
-use tokio::sync::{mpsc, oneshot, Mutex, OwnedMutexGuard};
 use std::sync::OnceLock;
+use tokio::sync::{mpsc, oneshot, Mutex, OwnedMutexGuard};
 use tracing::Instrument;
 
-use medulla_protocol_types::protocol::Response;
 use medulla_kernel::write_coalescer::{
     receive_batch, record_flush, BatchStats, CoalescerConfig, CoalescerRegistryState,
     CoalescerState,
 };
+use medulla_protocol_types::protocol::Response;
 
 /// Keep a panic-isolating child future from outliving the graph worker if the
 /// worker is canceled (for example during shutdown). Dropping a bare Tokio
@@ -343,7 +343,6 @@ impl Default for RoutedWriteCoalescerRegistry {
         Self::new()
     }
 }
-
 
 /// One deterministic async serialization lane for each logical graph. Transaction
 /// Commit and the ordinary mutation gateway both acquire it, so OCC validation

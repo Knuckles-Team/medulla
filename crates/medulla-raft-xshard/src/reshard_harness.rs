@@ -15,11 +15,11 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use crate::harness::cluster::fixture;
+use medulla_protocol_types::protocol::GraphType;
+use medulla_protocol_types::protocol::Method;
 use medulla_raft::raft::multi::MultiRaft;
 use medulla_raft::raft::reshard::TenantManager;
 use medulla_raft::raft::{GroupId, RaftRequest};
-use medulla_protocol_types::protocol::GraphType;
-use medulla_protocol_types::protocol::Method;
 
 const GROUP_A: GroupId = 100;
 const GROUP_B: GroupId = 200;

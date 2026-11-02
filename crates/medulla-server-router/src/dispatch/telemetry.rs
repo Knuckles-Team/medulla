@@ -39,13 +39,13 @@ use medulla_stream::telemetry::{derive_facts, fact_graph, TelemetryFacts, Teleme
 use medulla_types::telemetry_derive::TelemetryDeriveReceipt;
 use tokio::sync::RwLock;
 
-use medulla_server_graph::dispatch::graph_pipeline::dispatch_graph_op;
-use medulla_server_graph::dispatch::shared::timed_read;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_server_api::authority_context::VerifiedRequestContext;
-use medulla_server_obs::obs::ObsState;
 use medulla_server_api::state::ServerState;
+use medulla_server_graph::dispatch::graph_pipeline::dispatch_graph_op;
+use medulla_server_graph::dispatch::shared::timed_read;
+use medulla_server_obs::obs::ObsState;
 
 use collect::Window;
 use materialize::{FactBatch, FactOwner};

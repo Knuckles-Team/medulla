@@ -2,8 +2,8 @@
 #![cfg(feature = "owl")]
 
 use medulla_rdf::mapping::parse_turtle;
-use medulla_reasoner::owl::Reasoner;
 use medulla_rdf::oxrdf::{NamedNode, Triple};
+use medulla_reasoner::owl::Reasoner;
 
 const KG: &str = "http://knuckles.team/kg#";
 const ENTITY: &str = "http://purl.obolibrary.org/obo/BFO_0000001";
@@ -268,8 +268,8 @@ mod vocabulary {
     use medulla_graph_core::graph::GraphCore;
     use medulla_graph_core::graph::GraphView;
     use medulla_rdf::mapping::{load_triples, IriStore};
-    use medulla_reasoner::owl::saturate_object_properties;
     use medulla_rdf::sparql::{execute, Dataset, Projection, QueryOutcome};
+    use medulla_reasoner::owl::saturate_object_properties;
     use medulla_shacl::validate_turtle;
 
     const A2A: &str = include_str!("../../medulla-core/ontology/a2a-v1.ttl");

@@ -12,11 +12,11 @@ use std::sync::Arc;
 
 use medulla_types::wire::{ForeignSourceSpec, Pred};
 
-use medulla_exec::algebra::Op;
-use medulla_exec::exec::{execute, PlanCtx};
 use crate::federation::ForeignSourceRegistry;
-use medulla_exec::rowset::RowSet;
+use medulla_exec::algebra::Op;
 use medulla_exec::algebra::Plan;
+use medulla_exec::exec::{execute, PlanCtx};
+use medulla_exec::rowset::RowSet;
 
 /// Build a `(String, Option<f32>)` row list from `(&str, Option<f32>)` pairs.
 fn rows(pairs: &[(&str, Option<f32>)]) -> Vec<(String, Option<f32>)> {

@@ -35,10 +35,10 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use medulla_kernel::audit;
+use medulla_persistence::redb_backend::RedbBackend;
 use medulla_protocol_types::protocol::Method;
 use medulla_server_api::api::persistence::PersistenceBackend;
-use medulla_persistence::redb_backend::RedbBackend;
-use medulla_kernel::audit;
 use redb_fan_in::{fan_in, GRAPH};
 use tokio::runtime::Builder;
 

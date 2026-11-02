@@ -545,7 +545,8 @@ async fn page_in_remaining(
     page_size: usize,
 ) {
     loop {
-        let _lifecycle_guard = medulla_server_api::routed_write_coalescer::lock_graph(ticket.name()).await;
+        let _lifecycle_guard =
+            medulla_server_api::routed_write_coalescer::lock_graph(ticket.name()).await;
         if ticket.is_cancelled() {
             return;
         }

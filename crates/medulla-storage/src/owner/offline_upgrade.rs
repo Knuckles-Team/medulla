@@ -38,8 +38,7 @@ pub const OFFLINE_UPGRADE_APPLY_COMMAND: &str =
     "medulla-server store-upgrade apply <data-dir> --confirm";
 
 /// The read-only companion of [`OFFLINE_UPGRADE_APPLY_COMMAND`].
-pub const OFFLINE_UPGRADE_INSPECT_COMMAND: &str =
-    "medulla-server store-upgrade inspect <data-dir>";
+pub const OFFLINE_UPGRADE_INSPECT_COMMAND: &str = "medulla-server store-upgrade inspect <data-dir>";
 
 /// Private local staging root and disk budget of one offline inspection.
 pub type OfflineUpgradeInspectionOptions = SqlSourceCheckpointInspectionOptions;

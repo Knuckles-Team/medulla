@@ -15,10 +15,10 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-#[cfg(feature = "raft")]
-use medulla_protocol_types::protocol::ResultPayload;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
+#[cfg(feature = "raft")]
+use medulla_protocol_types::protocol::ResultPayload;
 use medulla_server_api::state::ServerState;
 
 #[cfg(feature = "raft")]

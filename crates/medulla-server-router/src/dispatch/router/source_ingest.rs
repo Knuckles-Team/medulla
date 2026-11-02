@@ -45,7 +45,8 @@ async fn parse_file(ctx: DispatchCtx<'_>, file_path: String, source: Vec<u8>) ->
                 Ok(())
             }
         });
-        match input_check.and_then(|()| medulla_compute::parser::tree_sitter::parse_file(&file_path, &source))
+        match input_check
+            .and_then(|()| medulla_compute::parser::tree_sitter::parse_file(&file_path, &source))
         {
             Ok(result) => Response::ok(
                 req_id,

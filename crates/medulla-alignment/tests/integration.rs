@@ -108,8 +108,9 @@ fn image_artifact_via_the_modality_contract_trait() {
 
 #[test]
 fn audio_artifact_via_the_modality_contract_trait() {
-    let audio = AudioData::new(16_000, 3000, "audio-blob-1")
-        .with_segments(vec![medulla_audio::AudioSegment::labeled("speech", 0, 1500)]);
+    let audio = AudioData::new(16_000, 3000, "audio-blob-1").with_segments(vec![
+        medulla_audio::AudioSegment::labeled("speech", 0, 1500),
+    ]);
     let address = ModalityContract::evidence_address(&audio).expect("audio has a segment");
     assert!(matches!(address, EvidenceAddress::AudioRange { .. }));
 }

@@ -10,7 +10,9 @@
 //! What each write DOES to a Gap is decided by [`medulla_work_types::work_market`]; this
 //! module only reads and writes rows.
 
-use medulla_work_types::{work_market::gap_row_key, work_market::is_tenant_gap, work_market::GapView};
+use medulla_work_types::{
+    work_market::gap_row_key, work_market::is_tenant_gap, work_market::GapView,
+};
 
 use super::*;
 

@@ -69,15 +69,19 @@ use pgwire::error::{ErrorInfo, PgWireError, PgWireResult};
 use pgwire::messages::data::DataRow;
 use pgwire::tokio::process_socket;
 
+use medulla_sql_lang::{
+    sql::classify::CopyFormat, sql::classify::DeleteNodes, sql::classify::InsertNodes,
+    sql::classify::StatementKind, sql::classify::UpdateNodes, sql::typed_result::PgColType,
+    sql::typed_result::TypedQueryResult,
+};
 use medulla_tables::{schema::ColumnType, schema::TableSchema};
-use medulla_sql_lang::{sql::classify::CopyFormat, sql::classify::DeleteNodes, sql::classify::InsertNodes, sql::typed_result::PgColType, sql::classify::StatementKind, sql::typed_result::TypedQueryResult, sql::classify::UpdateNodes};
 
+use medulla_server_api::state::ServerState;
 use medulla_wire_core::wire::CopyState;
 use medulla_wire_core::wire::WireError;
 use medulla_wire_core::wire::WireOutcome;
 use medulla_wire_core::wire::WireProtocol;
 use medulla_wire_core::wire::WireSession;
-use medulla_server_api::state::ServerState;
 
 mod auth;
 
@@ -868,7 +872,8 @@ impl EngineBackend {
                 // make the described `RowDescription` disagree with the executed
                 // DataRows. The probe keeps the projection/FROM/GROUP BY, so the
                 // columns are identical to the real query.
-                let probe = medulla_sql_lang::sql::classify::schema_probe_sql(sql).unwrap_or_else(|| sql.to_string());
+                let probe = medulla_sql_lang::sql::classify::schema_probe_sql(sql)
+                    .unwrap_or_else(|| sql.to_string());
                 let result = self
                     .session
                     .run_read(graph, probe)

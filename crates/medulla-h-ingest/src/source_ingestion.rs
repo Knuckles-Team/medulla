@@ -4,17 +4,26 @@
 //! existing ChangeEnvelope commit authority owns the final IngestBatch step, so
 //! there is one graph mutation path and one cursor compare-and-swap authority.
 
-#[cfg(all(feature = "blob", feature = "redb"))]
-use medulla_server_blob::blob::BlobStateExt;
 #[cfg(feature = "redb")]
 use medulla_persistence_records::agent_library::AgentLibraryStateExt;
+#[cfg(all(feature = "blob", feature = "redb"))]
+use medulla_server_blob::blob::BlobStateExt;
 #[cfg(all(feature = "redb", feature = "blob"))]
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
-use medulla_source_types::{source_ingestion::RawAdmissionReceipt, source_ingestion::RawRelationshipAdmissionReceipt, source_ingestion::SourceIngestionMode, source_ingestion::SourceIngestionRequest, source_ingestion::SourceMappingReceipt, source_ingestion::SourceRelationshipTombstoneReceipt, source_ingestion::SourceTombstoneReceipt};
+use medulla_source_types::{
+    source_ingestion::RawAdmissionReceipt, source_ingestion::RawRelationshipAdmissionReceipt,
+    source_ingestion::SourceIngestionMode, source_ingestion::SourceIngestionRequest,
+    source_ingestion::SourceMappingReceipt, source_ingestion::SourceRelationshipTombstoneReceipt,
+    source_ingestion::SourceTombstoneReceipt,
+};
 #[cfg(all(feature = "redb", feature = "blob"))]
-use medulla_source_types::{source_ingestion::SourceEntityRef, source_ingestion::SourceIngestionDisposition, source_ingestion::SourceIngestionReceipt, source_ingestion::SourceMappingKind, source_ingestion::SourceWithdrawal};
+use medulla_source_types::{
+    source_ingestion::SourceEntityRef, source_ingestion::SourceIngestionDisposition,
+    source_ingestion::SourceIngestionReceipt, source_ingestion::SourceMappingKind,
+    source_ingestion::SourceWithdrawal,
+};
 use medulla_types::contract::Digest256;
 use tokio::sync::RwLock;
 
@@ -23,9 +32,9 @@ use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 #[cfg(all(feature = "blob", feature = "redb"))]
 use medulla_protocol_types::protocol::ResultPayload;
+use medulla_server_api::authority_context::VerifiedRequestContext;
 #[cfg(all(feature = "redb", feature = "blob"))]
 use medulla_server_api::carrier::CarrierAuthority;
-use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 
 pub struct PrepareContext<'a> {
@@ -344,9 +353,14 @@ struct AdmittedRecords {
 
 #[cfg(all(feature = "redb", feature = "blob"))]
 struct ResolvedIngestionMappings {
-    entities: BTreeMap<String, medulla_persistence_records::connector_pack::ResolvedConnectorSchemaMapping>,
-    relationships:
-        BTreeMap<String, medulla_persistence_records::connector_pack::ResolvedConnectorRelationshipMapping>,
+    entities: BTreeMap<
+        String,
+        medulla_persistence_records::connector_pack::ResolvedConnectorSchemaMapping,
+    >,
+    relationships: BTreeMap<
+        String,
+        medulla_persistence_records::connector_pack::ResolvedConnectorRelationshipMapping,
+    >,
     receipts: Vec<SourceMappingReceipt>,
     entry_revision: Option<u64>,
 }
@@ -2403,7 +2417,10 @@ fn policy_with_operation(
 mod tests {
     use super::*;
     use medulla_catalog_types::connector_pack::McpCatalogSnapshotBinding;
-    use medulla_source_types::{source_ingestion::SourceJson, source_ingestion::SourceRecord, source_ingestion::SourceRecordProvenance};
+    use medulla_source_types::{
+        source_ingestion::SourceJson, source_ingestion::SourceRecord,
+        source_ingestion::SourceRecordProvenance,
+    };
     use medulla_types::contract::ResourceId;
 
     fn record() -> SourceRecord {
@@ -2586,7 +2603,10 @@ mod tests {
         use medulla_catalog_types::{
             connector_pack::ConnectorRelationshipMapping, connector_pack::ConnectorSchemaMapping,
         };
-        use medulla_source_types::{source_ingestion::SourceEntityRef, source_ingestion::SourceIngestionRequest, source_ingestion::SourceRelationship};
+        use medulla_source_types::{
+            source_ingestion::SourceEntityRef, source_ingestion::SourceIngestionRequest,
+            source_ingestion::SourceRelationship,
+        };
 
         struct NoReadPersistence;
         impl medulla_server_api::api::persistence::PersistenceBackend for NoReadPersistence {

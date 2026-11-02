@@ -50,12 +50,7 @@ impl PinnedPrivateDirectory {
         Ok(name)
     }
 
-    pub fn validate_file(
-        &self,
-        path: &Path,
-        expected: &File,
-        label: &str,
-    ) -> Result<(), String> {
+    pub fn validate_file(&self, path: &Path, expected: &File, label: &str) -> Result<(), String> {
         let name = self.validate_path(path, label)?;
         let actual = self.reader().open_regular(name, &format!("open {label}"))?;
         validate_same_file_identity(expected, &actual, label)

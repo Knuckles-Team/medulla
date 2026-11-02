@@ -83,7 +83,9 @@ fn wire_event(record: medulla_query_cache::dep_scope::InvalidationRecord) -> Inv
     InvalidationEvent {
         version: record.version,
         scope: match record.scope {
-            medulla_query_cache::dep_scope::InvalidationScope::Classes => InvalidationScope::Classes,
+            medulla_query_cache::dep_scope::InvalidationScope::Classes => {
+                InvalidationScope::Classes
+            }
             medulla_query_cache::dep_scope::InvalidationScope::All => InvalidationScope::All,
         },
         classes: record.classes,

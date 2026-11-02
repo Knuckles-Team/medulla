@@ -7,11 +7,11 @@ use super::super::test_support::{refused_with, send, state, verified};
 use medulla_mutation_types::governed_change::GovernedActor;
 #[cfg(feature = "security")]
 use medulla_mutation_types::governed_change::GovernedChangeOp;
-use medulla_protocol_types::protocol::Method;
 use medulla_mutation_types::{
     governed_change::GovernedApproval, governed_change::GovernedProposal,
     governed_change::GovernedStatus, governed_change::SCHEMA_REPAIR_KIND,
 };
+use medulla_protocol_types::protocol::Method;
 
 const PROPOSE: &str = "governance:propose";
 const APPROVE: &str = "governance:approve-schema-repair";

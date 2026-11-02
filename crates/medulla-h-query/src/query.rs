@@ -28,15 +28,17 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use medulla_graph_core::graph::GraphCore;
+#[cfg(feature = "graphql")]
+use medulla_graphql::parser::{Field, GqlValue};
 use medulla_protocol_types::protocol::Method;
 #[cfg(any(feature = "query", feature = "cypher", feature = "graphql"))]
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
 #[cfg(feature = "result-cache")]
 use medulla_query_cache::result_cache::ResultCache;
-#[cfg(feature = "graphql")]
-use medulla_graphql::parser::{Field, GqlValue};
 use medulla_server_api::carrier::GraphReadAuthority;
+use medulla_server_api::compute::compute_off_lock;
+use medulla_server_api::state::ServerState;
 #[cfg(feature = "federation")]
 use medulla_server_ops::api::query_txn::foreign_catalog::bound_registry;
 #[cfg(feature = "query")]
@@ -48,8 +50,6 @@ use medulla_server_ops::api::query_txn::query_support::plan_needs_tsdb;
 use medulla_server_ops::api::query_txn::query_support::uql_text_embedder;
 #[cfg(feature = "tsdb")]
 use medulla_server_ops::api::query_txn::query_support::TsdbLegBind;
-use medulla_server_api::compute::compute_off_lock;
-use medulla_server_api::state::ServerState;
 
 #[cfg(feature = "query")]
 use medulla_protocol_types::result_contract::EncodeRef;
@@ -104,7 +104,10 @@ where
 /// typed rows — one owner so a change to how a cell fails to encode can't
 /// land on one path and not the others.
 #[cfg(feature = "query")]
-fn typed_sql_response(req_id: u64, typed: medulla_sql_lang::sql::typed_result::TypedQueryResult) -> Response {
+fn typed_sql_response(
+    req_id: u64,
+    typed: medulla_sql_lang::sql::typed_result::TypedQueryResult,
+) -> Response {
     match typed.rows.iter().map(msgpack_bytes).collect() {
         Ok(rows) => dynamic_response::<query_results::Sql, _>(
             req_id,
@@ -202,8 +205,8 @@ pub mod current_auth_test_support {
     use medulla_protocol_types::protocol::Method;
     use medulla_protocol_types::protocol::Request;
     use medulla_server_api::api::persistence::PersistenceBackend;
-    use medulla_server_auth::auth::build_shared_test_request;
     use medulla_server_api::state::ServerState;
+    use medulla_server_auth::auth::build_shared_test_request;
     use std::sync::Arc;
     use tokio::sync::RwLock;
 
@@ -285,14 +288,14 @@ pub mod current_auth_test_support {
         pub(in super::super) use super::{
             current_isolation, current_isolation_with_agents, current_request, current_request_as,
         };
-        pub(in super::super) use medulla_types::acl::AgentIdentity;
-        pub(in super::super) use medulla_types::acl::AgentRole;
         pub(in super::super) use medulla_protocol_types::protocol::Method;
         pub(in super::super) use medulla_protocol_types::protocol::Request;
         pub(in super::super) use medulla_protocol_types::protocol::Response;
         pub(in super::super) use medulla_protocol_types::protocol::ResultPayload;
-        pub(in super::super) use medulla_server_auth::auth::dispatch_test_on_heap as dispatch_on_heap;
         pub(in super::super) use medulla_server_api::state::ServerState;
+        pub(in super::super) use medulla_server_auth::auth::dispatch_test_on_heap as dispatch_on_heap;
+        pub(in super::super) use medulla_types::acl::AgentIdentity;
+        pub(in super::super) use medulla_types::acl::AgentRole;
         pub(in super::super) use std::sync::Arc;
         pub(in super::super) use tokio::sync::RwLock;
     }
@@ -304,9 +307,9 @@ mod rls_no_exfiltrate_tests {
     //! SQL nor Cypher can exfiltrate a forbidden row. Agent A's query MUST exclude
     //! agent B's private node; a public node is visible to both.
     use medulla_graph_core::graph::GraphView;
+    use medulla_isolation::isolation::IsolationLayer;
     use medulla_types::acl::AgentIdentity;
     use medulla_types::acl::AgentRole;
-    use medulla_isolation::isolation::IsolationLayer;
     use std::sync::Arc;
 
     fn node_blob(pairs: &[(&str, &str)]) -> Arc<Vec<u8>> {
@@ -442,8 +445,8 @@ mod rls_no_exfiltrate_tests {
     feature = "redb"
 ))]
 mod result_cache_dispatch_tests {
-    use medulla_server_cdc::cdc::CdcStateExt;
     use super::current_auth_test_support::prelude::*;
+    use medulla_server_cdc::cdc::CdcStateExt;
 
     const SECRET: &str = "result-cache-test-secret";
 
@@ -490,7 +493,9 @@ mod result_cache_dispatch_tests {
         core.result_cache().stats()
     }
 
-    async fn core_of(state: &Arc<RwLock<ServerState>>) -> Arc<medulla_graph_core::graph::GraphCore> {
+    async fn core_of(
+        state: &Arc<RwLock<ServerState>>,
+    ) -> Arc<medulla_graph_core::graph::GraphCore> {
         state
             .read()
             .await
@@ -653,10 +658,15 @@ mod result_cache_dispatch_tests {
         // COHERENCE: drain A's feed into B → B invalidates its local cache for the
         // graph (bumps B's version). This is the cross-replica invalidation signal.
         let v_b_before = core_b.version();
-        let next =
-            medulla_server_cdc::cache_coherence::drain_and_invalidate(&b, &hub_a, "__commons__", 0, 0)
-                .await
-                .unwrap();
+        let next = medulla_server_cdc::cache_coherence::drain_and_invalidate(
+            &b,
+            &hub_a,
+            "__commons__",
+            0,
+            0,
+        )
+        .await
+        .unwrap();
         assert!(next > 0, "drained at least one event");
         assert_ne!(
             core_b.version(),
@@ -802,7 +812,9 @@ mod rls_aware_cache_no_cross_agent_leak {
         assert!(r.error.is_none(), "AddNode failed: {:?}", r.error);
     }
 
-    async fn core_of(state: &Arc<RwLock<ServerState>>) -> Arc<medulla_graph_core::graph::GraphCore> {
+    async fn core_of(
+        state: &Arc<RwLock<ServerState>>,
+    ) -> Arc<medulla_graph_core::graph::GraphCore> {
         state
             .read()
             .await
@@ -1733,7 +1745,11 @@ mod txn_ryow_dispatch_tests {
     /// Row ids of a successful `Method::Uql` response (`Rows` or `Profile`).
     fn decode_uql_ids(response: &Response) -> Vec<String> {
         use medulla_types::wire::UqlResult;
-        assert!(response.error.is_none(), "query error: {:?}", response.error);
+        assert!(
+            response.error.is_none(),
+            "query error: {:?}",
+            response.error
+        );
         let Some(ResultPayload::Raw(bytes)) = response.result.as_ref() else {
             panic!("expected Raw result, got {:?}", response.result);
         };

@@ -1,7 +1,7 @@
 //! Typed parameters (UQL-07): values are bound, never spliced.
 
-use medulla_uql::{parse_with, Params, UqlCode};
 use medulla_types::wire::{CmpOp, Op, Pred, PredLiteral, UqlParam};
+use medulla_uql::{parse_with, Params, UqlCode};
 
 fn params(items: &[(&str, UqlParam)]) -> Params {
     items

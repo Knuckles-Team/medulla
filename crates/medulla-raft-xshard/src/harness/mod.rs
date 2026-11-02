@@ -79,10 +79,7 @@ pub mod test_env {
         }
     }
 
-    pub fn configure_auth_test_environment(
-        tenant: &str,
-        state_dir_tag: &str,
-    ) -> AuthEnvGuard {
+    pub fn configure_auth_test_environment(tenant: &str, state_dir_tag: &str) -> AuthEnvGuard {
         let lock = AUTH_ENV_LOCK.lock_recovering("raft harness auth env guard");
         let names = [
             "MEDULLA_AUDIENCE",

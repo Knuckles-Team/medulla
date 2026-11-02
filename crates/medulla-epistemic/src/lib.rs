@@ -23,7 +23,6 @@
 //! runs an explicit, logged "materialize belief" op — so the stored-vs-derived signals
 //! never double-count.
 
-
 mod adapter;
 #[cfg(feature = "epistemic-tms")]
 mod incremental;

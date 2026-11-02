@@ -9,7 +9,9 @@
 //! A record is content-addressed and immutable, so a store is create-only: a
 //! row already holding the id is left untouched and answers `created: false`.
 
-use medulla_decision_outcome_types::{policy_evolution::PolicyRecordStored, policy_evolution::StoredPolicyRecord};
+use medulla_decision_outcome_types::{
+    policy_evolution::PolicyRecordStored, policy_evolution::StoredPolicyRecord,
+};
 use medulla_protocol_types::result_contract::graph::PolicyEvolutionStore;
 
 use super::*;

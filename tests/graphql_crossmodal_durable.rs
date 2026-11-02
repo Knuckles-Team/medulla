@@ -23,10 +23,10 @@ mod common;
 #[path = "common/test_support.rs"]
 mod test_support;
 
-use medulla_types::acl::RequestContextClaims;
 use medulla_protocol_types::protocol::{GraphType, Method, Request, Response, ResultPayload};
 use medulla_server_auth::auth::compute_verified_envelope_token;
 use medulla_server_auth::auth::VerifiedEnvelopeParams;
+use medulla_types::acl::RequestContextClaims;
 
 const SECRET: &str = "gql-crossmodal-durable-secret";
 const GRAPH: &str = "gqlxmdurable"; // lowercase-alnum ⇒ sanitize() is identity ⇒ fname == GRAPH

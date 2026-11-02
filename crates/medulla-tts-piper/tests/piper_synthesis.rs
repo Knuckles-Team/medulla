@@ -219,7 +219,10 @@ const MANY_SMALL_CHUNKS: u32 = 250;
 /// A stream of [`MANY_SMALL_CHUNKS`] real chunks from ONE phrase: far more than the
 /// stream's channel capacity of 4, so a consumer that stops reading leaves the
 /// producer blocked on a full channel.
-fn many_small_chunks_stream(tag: &str, cancel: CancellationToken) -> medulla_tts_piper::ChunkStream {
+fn many_small_chunks_stream(
+    tag: &str,
+    cancel: CancellationToken,
+) -> medulla_tts_piper::ChunkStream {
     many_small_chunks_stream_capped(tag, cancel, limits().max_chunks)
 }
 
@@ -459,7 +462,8 @@ fn malformed_config_json_fails_closed() {
 #[test]
 fn malformed_onnx_fails_closed() {
     require_onnx!();
-    let dir = std::env::temp_dir().join(format!("medulla-tts-piper-badonnx-{}", std::process::id()));
+    let dir =
+        std::env::temp_dir().join(format!("medulla-tts-piper-badonnx-{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
     let config = FixtureConfig::single_speaker(&['a']);
     std::fs::write(dir.join("model-badonnx.onnx"), b"not an onnx file at all").unwrap();

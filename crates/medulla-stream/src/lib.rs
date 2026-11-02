@@ -44,7 +44,6 @@
 //! The batch core is dependency-light (serde + serde_json); the `stream` feature adds
 //! `tokio`. The crate is folded into the `node`/`full` serving tiers, kept OUT of `pi`.
 
-
 mod cep;
 mod event;
 #[cfg(feature = "stream")]

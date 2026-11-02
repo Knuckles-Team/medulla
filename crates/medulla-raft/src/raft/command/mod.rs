@@ -12,7 +12,6 @@ mod native;
 
 pub use native::{NativeMutationCommand, SealedNativeMethod, NATIVE_CONSENSUS_METHODS};
 
-
 /// Build the same pending-source outbox record for Raft command tests in both
 /// this module and its top-up child. The production decoder still validates it.
 #[cfg(any(test, feature = "test-support"))]
@@ -121,7 +120,10 @@ impl ReplicatedMutation {
         source_budget: Option<&medulla_store::redb_store::enrichment_budget::SourceBudgetAuthority>,
         server_secret: &str,
     ) -> Result<Self, String> {
-        medulla_store::redb_store::enrichment_budget::validate_source_envelope(envelope, source_budget)?;
+        medulla_store::redb_store::enrichment_budget::validate_source_envelope(
+            envelope,
+            source_budget,
+        )?;
         Ok(Self::Native {
             command: NativeMutationCommand::ChangeEnvelope {
                 sealed_envelope: SealedNativeMethod::seal_value(server_secret, envelope)?,

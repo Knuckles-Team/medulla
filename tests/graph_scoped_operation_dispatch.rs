@@ -85,15 +85,9 @@ async fn parallel_state_construction_provisions_signer_policy_before_requests() 
         states.push(worker.await.expect("state constructor panicked"));
     }
     for (name, expected) in [
-        (
-            "MEDULLA_AUDIENCE",
-            "medulla-integration-tests",
-        ),
+        ("MEDULLA_AUDIENCE", "medulla-integration-tests"),
         ("MEDULLA_TENANT", "integration-test-tenant"),
-        (
-            "MEDULLA_POLICY_VERSION",
-            "integration-test-policy-v1",
-        ),
+        ("MEDULLA_POLICY_VERSION", "integration-test-policy-v1"),
     ] {
         assert_eq!(std::env::var(name).as_deref(), Ok(expected), "{name}");
     }

@@ -30,9 +30,9 @@ use super::classes::{bindable_types, BindableTypes};
 use serde_json::Value;
 use tokio::sync::RwLock;
 
-use medulla_server_graph::dispatch::shared::timed_read;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
+use medulla_server_graph::dispatch::shared::timed_read;
 
 pub const RESOLUTION_KEYS_PROPERTY: &str = "resolution_keys";
 pub const DECLARED_HEALTH_PROPERTY: &str = "declared_health";

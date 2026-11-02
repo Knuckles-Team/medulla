@@ -28,7 +28,6 @@ pub fn two_agent_isolation() -> IsolationLayer {
     isolation
 }
 
-
 /// One owner-scoped process-global call (EH-373/EH-374): the server state, the request
 /// id, and the verified carrier whose owner (tenant+principal) keys a registration
 /// catalog. The carrier is derived from the verified envelope only, never a request
@@ -57,7 +56,6 @@ impl OwnerScopedCall<'_> {
         })
     }
 }
-
 
 mod write_classification;
 pub use write_classification::requires_write;
@@ -589,8 +587,8 @@ mod secure_empty_policy_tests {
 #[cfg(test)]
 mod durability_closure_tests {
     use super::*;
-    use medulla_server_api::mutation_apply::is_durable_mutation;
     use medulla_protocol_types::protocol::Method;
+    use medulla_server_api::mutation_apply::is_durable_mutation;
 
     /// The one assertion every case below exercises: whenever `requires_write`
     /// says a method mutates (and therefore requires Write ACL + a write lock),
@@ -838,7 +836,10 @@ mod universal_row_read_tests {
     fn has_node_fast_path_answers_exactly_as_the_projection_it_skips() {
         let (core, isolation) = shared_graph();
         for agent_id in ["alice", "bob"] {
-            let context = medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test(agent_id);
+            let context =
+                medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test(
+                    agent_id,
+                );
             let authority = GraphReadAuthority::from_verified(&context, &isolation).unwrap();
             let projected = authority.project_core(&core);
             for node_id in [
@@ -864,8 +865,12 @@ mod universal_row_read_tests {
     #[test]
     fn alice_and_bob_same_tenant_shared_graph_cannot_observe_each_others_rows() {
         let (core, isolation) = shared_graph();
-        let alice_context = medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test("alice");
-        let bob_context = medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test("bob");
+        let alice_context =
+            medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test(
+                "alice",
+            );
+        let bob_context =
+            medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test("bob");
         let alice = GraphReadAuthority::from_verified(&alice_context, &isolation).unwrap();
         let bob = GraphReadAuthority::from_verified(&bob_context, &isolation).unwrap();
         assert_eq!(alice.verified_actor().unwrap(), "alice");
@@ -947,7 +952,10 @@ mod universal_row_read_tests {
     #[test]
     fn project_core_reflects_a_mutation_after_the_previous_projection_was_cached() {
         let (core, isolation) = shared_graph();
-        let alice_context = medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test("alice");
+        let alice_context =
+            medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test(
+                "alice",
+            );
         let alice = GraphReadAuthority::from_verified(&alice_context, &isolation).unwrap();
 
         // First call: populates the cache at the graph's current version. Alice's
@@ -1024,7 +1032,9 @@ mod universal_row_read_tests {
             roles: Vec::new(),
         });
         let context =
-            medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test("grounding-service");
+            medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test(
+                "grounding-service",
+            );
         let authority = GraphReadAuthority::from_verified(&context, &isolation).unwrap();
 
         // Warm-up call: excludes one-time allocator/page-fault effects, matching a
@@ -1234,7 +1244,9 @@ mod universal_row_read_tests {
     #[test]
     fn a18_carrier_authority_present_allows_absent_denies() {
         let carrier = CarrierAuthority::from_verified(
-            &medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test("alice"),
+            &medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test(
+                "alice",
+            ),
         )
         .unwrap();
         assert!(
@@ -1309,7 +1321,10 @@ mod universal_row_read_tests {
             teams: Vec::new(),
             roles: Vec::new(),
         });
-        let alice_context = medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test("alice");
+        let alice_context =
+            medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test(
+                "alice",
+            );
         let alice = GraphReadAuthority::from_verified(&alice_context, &isolation).unwrap();
 
         // Warm-up call: excludes one-time allocator/page-fault effects so the
@@ -1380,7 +1395,10 @@ mod universal_row_read_tests {
             teams: Vec::new(),
             roles: Vec::new(),
         });
-        let alice_context = medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test("alice");
+        let alice_context =
+            medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test(
+                "alice",
+            );
         let alice = GraphReadAuthority::from_verified(&alice_context, &isolation).unwrap();
 
         // Warm the cache for `alice` at the CURRENT version (a genuine hit baseline).

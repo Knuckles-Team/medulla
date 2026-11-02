@@ -510,19 +510,22 @@ pub(super) fn handle_sizing(req_id: u64, method: Method) -> Result<Response, Met
             reference,
             current,
             threshold,
-        } => match medulla_finance_quant::sizing::distribution_shift(&reference, &current, threshold) {
-            Ok(shift) => Response::ok(
-                req_id,
-                ResultPayload::of::<results::FinanceDistributionShift>(
-                    medulla_result_types::compute_result::finance::DistributionShift {
-                        statistic: shift.statistic,
-                        p_value: shift.p_value,
-                        shifted: shift.shifted,
-                    },
+        } => {
+            match medulla_finance_quant::sizing::distribution_shift(&reference, &current, threshold)
+            {
+                Ok(shift) => Response::ok(
+                    req_id,
+                    ResultPayload::of::<results::FinanceDistributionShift>(
+                        medulla_result_types::compute_result::finance::DistributionShift {
+                            statistic: shift.statistic,
+                            p_value: shift.p_value,
+                            shifted: shift.shifted,
+                        },
+                    ),
                 ),
-            ),
-            Err(error) => Response::err(req_id, format!("INVALID_ARGUMENT: {error}")),
-        },
+                Err(error) => Response::err(req_id, format!("INVALID_ARGUMENT: {error}")),
+            }
+        }
         Method::FinanceBayesianKelly {
             alpha,
             beta,

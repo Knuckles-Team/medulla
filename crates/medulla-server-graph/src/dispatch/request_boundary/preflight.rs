@@ -1,6 +1,6 @@
-use crate::dispatch::shared::MAX_NESTED_MSGPACK_ITEMS;
-use crate::dispatch::shared::MAX_NESTED_MSGPACK_BYTES;
 use crate::dispatch::request_boundary::*;
+use crate::dispatch::shared::MAX_NESTED_MSGPACK_BYTES;
+use crate::dispatch::shared::MAX_NESTED_MSGPACK_ITEMS;
 
 /// Item ceiling no request limit may exceed.
 pub const HARD_MAX_MSGPACK_ITEMS: usize = 4_000_000;
@@ -26,13 +26,8 @@ pub fn validate_nested_msgpack(
     .map_err(|_| "invalid or over-complex nested MessagePack payload")
 }
 
-
 fn preflight_nested_msgpack(bytes: &[u8]) -> Result<(), &'static str> {
-    validate_nested_msgpack(
-        bytes,
-        MAX_NESTED_MSGPACK_BYTES,
-        MAX_NESTED_MSGPACK_ITEMS,
-    )
+    validate_nested_msgpack(bytes, MAX_NESTED_MSGPACK_BYTES, MAX_NESTED_MSGPACK_ITEMS)
 }
 
 fn preflight_optional_nested_msgpack(bytes: &[u8]) -> Result<(), &'static str> {
@@ -192,9 +187,9 @@ fn preflight_feature_surface_msgpack(method: &Method) -> Option<Result<(), &'sta
         } => Some(preflight_nested_msgpack(pattern_msgpack)),
         #[cfg(feature = "knowledge-batch")]
         Method::KnowledgeStream { request } => Some(match &request.query {
-            medulla_types::knowledge_stream::KnowledgeStreamQuery::Sql { params_msgpack, .. } => {
-                preflight_optional_nested_msgpack(params_msgpack)
-            }
+            medulla_types::knowledge_stream::KnowledgeStreamQuery::Sql {
+                params_msgpack, ..
+            } => preflight_optional_nested_msgpack(params_msgpack),
             _ => Ok(()),
         }),
         #[cfg(feature = "modality-serving")]

@@ -2,6 +2,11 @@
 
 use std::collections::BTreeMap;
 
+use medulla_decision_stats::decision::candidate::CandidateView;
+use medulla_decision_stats::{
+    decision::features::feature_matrix, decision::features::FeatureInputs,
+    decision::features::MatrixOutcome,
+};
 use medulla_decision_types::{
     decision::statistical::features::FeatureKind,
     decision::statistical::features::FeatureSchemaBody,
@@ -11,8 +16,6 @@ use medulla_decision_types::{
 use medulla_decision_types::{
     decision::statistical::TypedParam, decision::statistical::TypedValue,
 };
-use medulla_decision_stats::decision::candidate::CandidateView;
-use medulla_decision_stats::{decision::features::feature_matrix, decision::features::FeatureInputs, decision::features::MatrixOutcome};
 
 use super::common::bounded;
 

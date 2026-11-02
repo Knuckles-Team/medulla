@@ -34,19 +34,22 @@
 //! which restores the pre-2026-07-22 HMAC-only-permitted posture. Nothing
 //! defaults into that downgrade; an operator must type it.
 
-use medulla_server_api::{authority_context::request_context_policy, authority_context::RequestContextPolicy, authority_context::VerifiedRequestContext};
-use medulla_server_api::request_replay::durable_replay_ledger;
-use medulla_server_api::request_replay::PresentedNonce;
-use medulla_server_api::request_replay::ReplayLedger;
 use hmac::{Hmac, Mac};
 use medulla_kernel::lock_recovery::{LockRecovery, WriteRecovery};
-use medulla_types::acl::AgentRole;
-use medulla_types::acl::RequestContextClaims;
-use medulla_types::contract::Nonce;
 use medulla_protocol_types::protocol::build_context_operation_signature_bytes;
 use medulla_protocol_types::protocol::build_envelope_v2_bytes;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Request;
+use medulla_server_api::request_replay::durable_replay_ledger;
+use medulla_server_api::request_replay::PresentedNonce;
+use medulla_server_api::request_replay::ReplayLedger;
+use medulla_server_api::{
+    authority_context::request_context_policy, authority_context::RequestContextPolicy,
+    authority_context::VerifiedRequestContext,
+};
+use medulla_types::acl::AgentRole;
+use medulla_types::acl::RequestContextClaims;
+use medulla_types::contract::Nonce;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, HashSet};
@@ -84,7 +87,9 @@ pub fn mint_fixed_service_carrier(
     }
     VerifiedRequestContext::authenticated_fixed_service_actor(service, scopes)
         .ok()
-        .and_then(|context| medulla_server_api::carrier::CarrierAuthority::from_verified(&context).ok())
+        .and_then(|context| {
+            medulla_server_api::carrier::CarrierAuthority::from_verified(&context).ok()
+        })
 }
 
 /// Mint a `CarrierAuthority` for the Iceberg-REST catalog surface (BUG-222,
@@ -103,7 +108,9 @@ pub fn mint_iceberg_carrier(
     let verified = verified?;
     VerifiedRequestContext::authenticated_iceberg_bearer(verified)
         .ok()
-        .and_then(|context| medulla_server_api::carrier::CarrierAuthority::from_verified(&context).ok())
+        .and_then(|context| {
+            medulla_server_api::carrier::CarrierAuthority::from_verified(&context).ok()
+        })
 }
 
 /// A configured bearer credential for an auxiliary HTTP surface that
@@ -750,7 +757,6 @@ fn decode_envelope(req: &Request) -> Result<Envelope, String> {
     serde_json::from_slice(&json).map_err(|_| "Authentication failed".to_string())
 }
 
-
 /// Parse an EXPLICIT env override for a boolean-ish deployment flag:
 /// `Some(true)`/`Some(false)` for a recognized value, `None` if the variable
 /// is unset, empty, OR carries an unrecognized value. Unlike
@@ -793,13 +799,16 @@ thread_local! {
 /// `Err` ⇒ an issuer is set but audience/JWKS URL are missing (fails closed,
 /// also surfaced eagerly by `validate_verified_context_startup`).
 #[cfg(all(feature = "oidc", test))]
-fn primary_oidc_validator() -> Result<Option<&'static medulla_server_api::oidc::JwtValidator>, String> {
+fn primary_oidc_validator(
+) -> Result<Option<&'static medulla_server_api::oidc::JwtValidator>, String> {
     Ok(TEST_OIDC_VALIDATOR.with(|cell| cell.get()))
 }
 
 #[cfg(all(feature = "oidc", not(test)))]
-fn primary_oidc_validator() -> Result<Option<&'static medulla_server_api::oidc::JwtValidator>, String> {
-    static VALIDATOR: OnceLock<Result<Option<medulla_server_api::oidc::JwtValidator>, String>> = OnceLock::new();
+fn primary_oidc_validator(
+) -> Result<Option<&'static medulla_server_api::oidc::JwtValidator>, String> {
+    static VALIDATOR: OnceLock<Result<Option<medulla_server_api::oidc::JwtValidator>, String>> =
+        OnceLock::new();
     match VALIDATOR.get_or_init(medulla_server_api::oidc::JwtValidator::from_env_primary) {
         Ok(Some(v)) => Ok(Some(v)),
         Ok(None) => Ok(None),
@@ -2190,7 +2199,8 @@ mod tests {
                 "AUTH_AUDIENCE_MISMATCH",
             ),
         ] {
-            let response = medulla_protocol_types::protocol::Response::err(1, authentication_refusal(error));
+            let response =
+                medulla_protocol_types::protocol::Response::err(1, authentication_refusal(error));
             assert_eq!(response.error.as_deref(), Some(code), "{error}");
         }
         // Redacted classes never echo request values back.
@@ -3060,7 +3070,11 @@ mod tests {
                 jsonwebtoken::DecodingKey::from_rsa_raw_components(&n, &e),
             );
             let validator: &'static medulla_server_api::oidc::JwtValidator = Box::leak(Box::new(
-                medulla_server_api::oidc::JwtValidator::from_parts(OIDC_ISSUER, OIDC_AUDIENCE, keys),
+                medulla_server_api::oidc::JwtValidator::from_parts(
+                    OIDC_ISSUER,
+                    OIDC_AUDIENCE,
+                    keys,
+                ),
             ));
             TEST_OIDC_VALIDATOR.with(|cell| cell.set(Some(validator)));
             OidcTestGuard
@@ -3505,9 +3519,7 @@ mod tests {
                 carrier.is_some(),
                 "a bearer whose verified tenant matches this deployment must mint a carrier"
             );
-            assert!(!medulla_server_api::carrier::unauthenticated_carrier_denied(
-                carrier.as_ref()
-            ));
+            assert!(!medulla_server_api::carrier::unauthenticated_carrier_denied(carrier.as_ref()));
         }
 
         #[test]

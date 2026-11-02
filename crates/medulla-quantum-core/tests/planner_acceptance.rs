@@ -27,8 +27,9 @@ fn clifford_circuit_prefers_stabilizer_over_statevector() {
         common::sv_cpu_descriptor("sv-cpu"),
         common::stabilizer_descriptor("stabilizer"),
     ];
-    let decision = medulla_quantum_core::select_backend(&est, &available, &PlannerOptions::default())
-        .expect("must select");
+    let decision =
+        medulla_quantum_core::select_backend(&est, &available, &PlannerOptions::default())
+            .expect("must select");
     assert_eq!(decision.family, BackendFamily::Stabilizer);
     assert_eq!(decision.chosen, BackendId("stabilizer".to_string()));
     assert_eq!(decision.rule, PlannerRule::R1CliffordStabilizer);
@@ -46,8 +47,9 @@ fn clifford_circuit_across_many_registered_statevector_backends_still_never_pick
         common::stabilizer_descriptor("stabilizer"),
         common::quest_ffi_descriptor("quest-ffi"),
     ];
-    let decision = medulla_quantum_core::select_backend(&est, &available, &PlannerOptions::default())
-        .expect("must select");
+    let decision =
+        medulla_quantum_core::select_backend(&est, &available, &PlannerOptions::default())
+            .expect("must select");
     assert_eq!(decision.family, BackendFamily::Stabilizer);
 }
 
@@ -71,8 +73,9 @@ fn over_memory_bound_never_selects_statevector_falls_back_to_distributed() {
         common::sv_gpu_descriptor("sv-gpu"),
         common::quest_ffi_descriptor("quest-ffi"), // no fixed byte ceiling: distributed
     ];
-    let decision = medulla_quantum_core::select_backend(&est, &available, &PlannerOptions::default())
-        .expect("must select");
+    let decision =
+        medulla_quantum_core::select_backend(&est, &available, &PlannerOptions::default())
+            .expect("must select");
     assert_ne!(decision.family, BackendFamily::StatevectorCpu);
     assert_ne!(decision.family, BackendFamily::StatevectorGpu);
     assert_eq!(decision.family, BackendFamily::QuestFfi);
@@ -136,8 +139,9 @@ fn noise_request_routes_to_a_non_exact_capable_family() {
         common::sv_cpu_descriptor("sv-cpu"),
         common::trajectory_descriptor("trajectory"),
     ];
-    let decision = medulla_quantum_core::select_backend(&est, &available, &PlannerOptions::default())
-        .expect("must select");
+    let decision =
+        medulla_quantum_core::select_backend(&est, &available, &PlannerOptions::default())
+            .expect("must select");
     assert_eq!(decision.family, BackendFamily::Trajectory);
 
     let chosen_descriptor = available.iter().find(|d| d.id == decision.chosen).unwrap();
@@ -307,8 +311,9 @@ fn low_entanglement_chain_circuit_prefers_mps_over_statevector() {
         common::sv_cpu_descriptor("sv-cpu"),
         common::mps_descriptor("mps"),
     ];
-    let decision = medulla_quantum_core::select_backend(&est, &available, &PlannerOptions::default())
-        .expect("must select");
+    let decision =
+        medulla_quantum_core::select_backend(&est, &available, &PlannerOptions::default())
+            .expect("must select");
     assert_eq!(decision.family, BackendFamily::MatrixProductState);
     assert_eq!(decision.chosen, BackendId("mps".to_string()));
     assert_eq!(decision.rule, PlannerRule::R3Structure);
@@ -330,8 +335,9 @@ fn dense_entanglement_circuit_never_selects_mps_falls_back_to_statevector() {
         common::mps_descriptor("mps"),
         common::sv_cpu_descriptor("sv-cpu"),
     ];
-    let decision = medulla_quantum_core::select_backend(&est, &available, &PlannerOptions::default())
-        .expect("must select");
+    let decision =
+        medulla_quantum_core::select_backend(&est, &available, &PlannerOptions::default())
+            .expect("must select");
     assert_ne!(decision.family, BackendFamily::MatrixProductState);
     assert_eq!(decision.family, BackendFamily::StatevectorCpu);
     assert_eq!(decision.rule, PlannerRule::R4Placement);
@@ -351,8 +357,9 @@ fn low_entanglement_circuit_selects_mps_when_it_is_the_only_registered_family() 
     );
 
     let available = vec![common::mps_descriptor("mps")];
-    let decision = medulla_quantum_core::select_backend(&est, &available, &PlannerOptions::default())
-        .expect("must select");
+    let decision =
+        medulla_quantum_core::select_backend(&est, &available, &PlannerOptions::default())
+            .expect("must select");
     assert_eq!(decision.family, BackendFamily::MatrixProductState);
     assert_eq!(decision.rule, PlannerRule::R3Structure);
 }

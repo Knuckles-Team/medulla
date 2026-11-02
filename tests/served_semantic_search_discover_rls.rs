@@ -55,9 +55,9 @@ mod test_support;
 
 use serde_json::json;
 
-use medulla_types::acl::AgentRole;
 use medulla_protocol_types::protocol::{Method, Request, Response, ResultPayload};
 use medulla_server_router::dispatch::request_boundary::dispatch;
+use medulla_types::acl::AgentRole;
 
 const SECRET: &str = "served-semantic-search-discover-rls-secret";
 

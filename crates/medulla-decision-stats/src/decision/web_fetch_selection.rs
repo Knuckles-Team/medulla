@@ -13,7 +13,13 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_decision_outcome_types::{decision::web_fetch_selection::SelectWebPagesAnswer, decision::web_fetch_selection::SelectWebPagesRequest, decision::web_fetch_selection::SelectedPage, decision::web_fetch_selection::SkipReason, decision::web_fetch_selection::SkippedPage, decision::web_fetch_selection::DEFAULT_FRESHNESS_WINDOW_S};
+use medulla_decision_outcome_types::{
+    decision::web_fetch_selection::SelectWebPagesAnswer,
+    decision::web_fetch_selection::SelectWebPagesRequest,
+    decision::web_fetch_selection::SelectedPage, decision::web_fetch_selection::SkipReason,
+    decision::web_fetch_selection::SkippedPage,
+    decision::web_fetch_selection::DEFAULT_FRESHNESS_WINDOW_S,
+};
 
 const RRF_K: f64 = 60.0;
 const MICROS: f64 = 1_000_000.0;

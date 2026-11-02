@@ -977,8 +977,8 @@ async fn sparql_post(addr: &str, query: &str) -> String {
 #[cfg(all(feature = "pgwire", feature = "sparql-http"))]
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn pgwire_sparql_native_consistent_snapshot_eg393() {
-    use medulla_wire::pgwire;
     use medulla_server_blob::sparql_http;
+    use medulla_wire::pgwire;
 
     let state = state().await;
 
@@ -1261,9 +1261,9 @@ static ENC_ENV_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 #[cfg(all(feature = "security", feature = "redb"))]
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn encryption_at_rest_wrong_key_fails_eg394() {
-    use medulla_server_api::api::persistence::PersistenceBackend;
-    use medulla_persistence::redb_backend::RedbBackend;
     use medulla_kernel::crypto::ENCRYPTION_KEY_ENV;
+    use medulla_persistence::redb_backend::RedbBackend;
+    use medulla_server_api::api::persistence::PersistenceBackend;
 
     let _guard = ENC_ENV_LOCK.lock().await;
     let prev = std::env::var(ENCRYPTION_KEY_ENV).ok();
@@ -1938,8 +1938,8 @@ async fn explain_belief_returns_full_justification_tree() {
 #[cfg(feature = "epistemic-redaction")]
 #[tokio::test]
 async fn explain_belief_disclosure_level_returns_redacted_skeleton_over_rpc() {
-    use medulla_types::acl::AgentRole;
     use medulla_protocol_types::protocol::{DisclosureLevelWire, ExplainBeliefRedactedResult};
+    use medulla_types::acl::AgentRole;
 
     let state = state().await;
 
@@ -2305,8 +2305,8 @@ async fn explain_evidence_resolves_a_located_citation_over_rpc() {
 #[cfg(all(feature = "evidence-graph", feature = "security"))]
 #[tokio::test]
 async fn explain_evidence_hides_other_agents_private_evidence_over_rpc() {
-    use medulla_types::acl::AgentRole;
     use medulla_protocol_types::protocol::ExplainEvidenceResult;
+    use medulla_types::acl::AgentRole;
 
     let state = state().await;
     let locus = json!({
@@ -2481,7 +2481,9 @@ async fn explain_evidence_hides_other_agents_private_evidence_over_rpc() {
 #[cfg(feature = "epistemic-causal")]
 #[tokio::test]
 async fn causal_estimate_do_calculus_matches_hand_derivation_over_rpc() {
-    use medulla_protocol_types::protocol::{CausalEstimateResult, CausalQueryModeWire, StructuralEquationWire};
+    use medulla_protocol_types::protocol::{
+        CausalEstimateResult, CausalQueryModeWire, StructuralEquationWire,
+    };
     use std::collections::BTreeMap;
 
     let state = state().await;
@@ -2566,7 +2568,9 @@ async fn causal_estimate_do_calculus_matches_hand_derivation_over_rpc() {
 #[cfg(feature = "epistemic-causal")]
 #[tokio::test]
 async fn rank_by_provenance_favors_corroborated_evidence_over_raw_similarity_over_rpc() {
-    use medulla_protocol_types::protocol::{CalibrationWire, RankByProvenanceResult, RetrievalCandidateWire};
+    use medulla_protocol_types::protocol::{
+        CalibrationWire, RankByProvenanceResult, RetrievalCandidateWire,
+    };
 
     let state = state().await;
 
@@ -2781,8 +2785,8 @@ async fn resolve_conflict_matches_tms_crate_semantics_over_rpc() {
 #[cfg(all(feature = "epistemic-tms", feature = "security"))]
 #[tokio::test]
 async fn resolve_conflict_hides_other_agents_private_argument_over_rpc() {
-    use medulla_types::acl::AgentRole;
     use medulla_protocol_types::protocol::ResolveConflictResult;
+    use medulla_types::acl::AgentRole;
 
     let state = state().await;
     // `a`/`c` are meant PUBLIC (this test's own doc comment: the SAME textbook AF

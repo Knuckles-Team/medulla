@@ -22,7 +22,6 @@
 //! [`CODEC`] names the body format; `medulla_codec_ptr`/`medulla_codec_len` expose it so
 //! a host can refuse a module that speaks a different one.
 
-
 use std::cell::RefCell;
 
 use medulla_protocol_types::protocol::Method;

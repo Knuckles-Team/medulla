@@ -16,7 +16,7 @@
 mod common;
 
 use common::*;
-use medulla_exec::{exec::execute, algebra::Op, algebra::Plan, exec::PlanCtx, algebra::Pred};
+use medulla_exec::{algebra::Op, algebra::Plan, algebra::Pred, exec::execute, exec::PlanCtx};
 use proptest::prelude::*;
 
 // ── a constrained generator of VALID UQL pipeline text ───────────────────────

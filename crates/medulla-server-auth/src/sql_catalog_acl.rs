@@ -50,14 +50,14 @@ use std::collections::BTreeSet;
 use std::path::Path;
 
 use hmac::{Hmac, Mac};
-use medulla_tables::{schema::Cell, schema::Column, schema::ColumnType, schema::TableSchema};
-use medulla_table_store::{tables::TableStore, tables::TableTxn, tables::TxnOp};
 use medulla_result_types::{row_predicate::CmpOp, row_predicate::RowPredicate};
+use medulla_table_store::{tables::TableStore, tables::TableTxn, tables::TxnOp};
+use medulla_tables::{schema::Cell, schema::Column, schema::ColumnType, schema::TableSchema};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 
-use medulla_server_api::carrier::CarrierAuthority;
 use crate::sql_tables;
+use medulla_server_api::carrier::CarrierAuthority;
 
 // RF-019: the served projection's maintained-ANN narrowing, with this caller's
 // row-level security applied inside the probe.
@@ -541,14 +541,17 @@ fn commit_source_acl_mutation(
         "sql_source_acl_operation",
     )?;
     let committed = acl.commit_txn_batch(txn, &batch, created_at_ms)?;
-    let expected_actor = medulla_server_api::batch_compile::principal_fingerprint(authority.actor_scope())?;
+    let expected_actor =
+        medulla_server_api::batch_compile::principal_fingerprint(authority.actor_scope())?;
     if committed.record.committing_actor()? != expected_actor {
         return Err(
             "IDEMPOTENCY_CONFLICT: SQL source ACL receipt is owned by another actor".to_string(),
         );
     }
     match committed.record.committed_version {
-        medulla_mutation_types::mutation_scope::CommittedVersion::Native { target, .. } => Ok(target),
+        medulla_mutation_types::mutation_scope::CommittedVersion::Native { target, .. } => {
+            Ok(target)
+        }
         _ => Err("SQL source ACL committed without a native revision".to_string()),
     }
 }
@@ -1269,9 +1272,7 @@ fn primary_key_indexes(schema: &TableSchema) -> Result<Vec<usize>, String> {
         .filter_map(|(index, column)| column.primary_key.then_some(index))
         .collect();
     let table_primary_key = schema.constraints().iter().find_map(|constraint| {
-        if let medulla_tables::schema::TableConstraint::PrimaryKey { columns, .. } =
-            constraint
-        {
+        if let medulla_tables::schema::TableConstraint::PrimaryKey { columns, .. } = constraint {
             Some(columns)
         } else {
             None
@@ -1300,7 +1301,10 @@ fn semantic_record_identity_digest(
     primary_key_indexes: &[usize],
 ) -> Result<[u8; 32], String> {
     let mut digest = Sha256::new();
-    update_len_prefixed(&mut digest, b"epistemic-graph/sql-semantic-record-identity-v1");
+    update_len_prefixed(
+        &mut digest,
+        b"epistemic-graph/sql-semantic-record-identity-v1",
+    );
     for field in [
         tenant_scope,
         selector.catalog_id.as_str(),
@@ -1846,7 +1850,6 @@ impl AuthorizedTable {
             self.store.delete_where(&self.table, &where_predicate)
         })
     }
-
 }
 
 // ── wire-layer entry points (CONCEPT:NE-046 — MEDULLA-WIRE-CATALOG) ─────────────
@@ -2174,9 +2177,9 @@ pub(crate) fn selectable_tables(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_server_api::authority_context::VerifiedRequestContext;
     use crate::sql_tables::test_persist_dir;
     use medulla_kernel::test_rendezvous::{join_bounded, recv_within};
+    use medulla_server_api::authority_context::VerifiedRequestContext;
 
     const SEMANTIC_CURSOR_SECRET: &[u8; 32] = b"semantic-cursor-test-secret-0001";
     const OTHER_SEMANTIC_CURSOR_SECRET: &[u8; 32] = &[7; 32];
@@ -4137,7 +4140,8 @@ mod tests {
                    customers KEY (customer_id) LABEL customer PROPERTIES (name), \
                    orders KEY (order_id) LABEL \"order\" PROPERTIES (ordered_when))";
         let medulla_table_store::tables::PropertyGraphStatement::Create(definition) =
-            medulla_sql_lang::sql::pgq::parse_property_graph_ddl(ddl, owner.tenant_scope()).unwrap()
+            medulla_sql_lang::sql::pgq::parse_property_graph_ddl(ddl, owner.tenant_scope())
+                .unwrap()
         else {
             panic!("expected CREATE PROPERTY GRAPH");
         };

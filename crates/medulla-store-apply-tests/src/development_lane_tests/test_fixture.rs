@@ -180,7 +180,9 @@ impl NativeLaneFixture {
         &self,
         batch: &MutationBatch,
         committed_at_ms: u64,
-        crashpoint: Option<medulla_store_apply::redb_store::store_mutation::MutationBatchCrashpoint>,
+        crashpoint: Option<
+            medulla_store_apply::redb_store::store_mutation::MutationBatchCrashpoint,
+        >,
     ) -> Result<MutationBatchCommit, String> {
         #[cfg(feature = "security")]
         let mut audit = medulla_store::redb_store::audit::AuditTailCache::new();
@@ -213,7 +215,9 @@ impl NativeLaneFixture {
         method: Method,
         batch_suffix: &str,
         committed_at_ms: u64,
-        crashpoint: Option<medulla_store_apply::redb_store::store_mutation::MutationBatchCrashpoint>,
+        crashpoint: Option<
+            medulla_store_apply::redb_store::store_mutation::MutationBatchCrashpoint,
+        >,
     ) -> Result<MutationBatchCommit, String> {
         // Graph-scoped: this batch is committed via `commit_mutation_batch_inner`
         // below, which every path in this module routes by `graph_fname` and
@@ -239,21 +243,25 @@ impl NativeLaneFixture {
         // This mirrors the production fix in `handlers/admin.rs`. That the
         // same correction is needed independently here is the evidence that
         // the underlying validator is comparing more than identity.
-        let expected_graph_version = match medulla_store::redb_store::store_read::read_mutation_batch_for_graph(
-            &self.shard,
-            TEST_GRAPH,
-            &batch_id,
-        )? {
-            Some(stored) => match stored.batch.version_expectation {
-                VersionExpectation::Graph(version) => version,
-                other => {
-                    return Err(format!(
-                        "stored development-lane batch has a non-graph expectation: {other:?}"
-                    ))
-                }
-            },
-            None => medulla_store::redb_store::store_read::read_mutation_graph_version(&self.shard, TEST_GRAPH)?,
-        };
+        let expected_graph_version =
+            match medulla_store::redb_store::store_read::read_mutation_batch_for_graph(
+                &self.shard,
+                TEST_GRAPH,
+                &batch_id,
+            )? {
+                Some(stored) => match stored.batch.version_expectation {
+                    VersionExpectation::Graph(version) => version,
+                    other => {
+                        return Err(format!(
+                            "stored development-lane batch has a non-graph expectation: {other:?}"
+                        ))
+                    }
+                },
+                None => medulla_store::redb_store::store_read::read_mutation_graph_version(
+                    &self.shard,
+                    TEST_GRAPH,
+                )?,
+            };
         let batch = self.sealed_fixture_batch(
             method,
             batch_suffix,
@@ -272,7 +280,10 @@ impl NativeLaneFixture {
         committed_at_ms: u64,
     ) -> Result<MutationBatchCommit, String> {
         let expected_graph_version =
-            medulla_store::redb_store::store_read::read_mutation_graph_version(&self.shard, TEST_GRAPH)?;
+            medulla_store::redb_store::store_read::read_mutation_graph_version(
+                &self.shard,
+                TEST_GRAPH,
+            )?;
         let conditions_msgpack =
             rmp_serde::to_vec_named(&serde_json::json!({"lease_owner": expected_owner}))
                 .map_err(|error| error.to_string())?;
@@ -352,7 +363,9 @@ impl NativeLaneFixture {
         &self,
         batch_suffix: &str,
         committed_at_ms: u64,
-        crashpoint: Option<medulla_store_apply::redb_store::store_mutation::MutationBatchCrashpoint>,
+        crashpoint: Option<
+            medulla_store_apply::redb_store::store_mutation::MutationBatchCrashpoint,
+        >,
     ) -> Result<MutationBatchCommit, String> {
         self.commit_work_item_with_crash(
             Method::CancelWorkItem {

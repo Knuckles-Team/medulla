@@ -10,13 +10,18 @@
 //! may not see is absent from that view, and the edge's own visibility metadata
 //! is checked inside the walk with the same rule the graph applies.
 
+use medulla_cypher::{
+    edge_index::create_durable_edge_index, edge_index::drop_durable_edge_index,
+    edge_index::edge_index, edge_index::install_edge_indexes,
+    edge_index::refresh_durable_edge_index, edge_index::EdgeIndexKind, edge_index::EdgeIndexSpec,
+    edge_index::EdgeQuery, edge_index::EdgeScope, edge_index::EdgeSearchRequest,
+};
 use medulla_index_types::{
     managed_index as wire, managed_index::EdgeIndexOp, managed_index::EdgeIndexStatusView,
     managed_index::EdgeSearchHit, managed_index::EdgeSearchView,
 };
-use medulla_cypher::{edge_index::create_durable_edge_index, edge_index::drop_durable_edge_index, edge_index::edge_index, edge_index::install_edge_indexes, edge_index::refresh_durable_edge_index, edge_index::EdgeIndexKind, edge_index::EdgeIndexSpec, edge_index::EdgeQuery, edge_index::EdgeScope, edge_index::EdgeSearchRequest};
-use medulla_table_store::tables::VectorMetric;
 use medulla_result_types::{row_predicate::CmpOp, row_predicate::RowPredicate};
+use medulla_table_store::tables::VectorMetric;
 
 use super::*;
 

@@ -13,9 +13,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, OnceLock, RwLock};
 
-use medulla_identity_types::{
-    identity::IdentityActor, identity::IdentityStore,
-};
+use medulla_identity_types::{identity::IdentityActor, identity::IdentityStore};
 
 use super::authority_context::VerifiedRequestContext;
 

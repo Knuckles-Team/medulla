@@ -5,8 +5,8 @@
 //! plus negative fixtures for the two shapes the grammar must reject with a typed parse
 //! error rather than silently misinterpret: Cypher-shaped text, and an ISO-8601 timestamp.
 
-use medulla_uql::parse;
 use medulla_types::wire::{Op, TimeAxis};
+use medulla_uql::parse;
 
 /// The exact text a temporal-scrubber control's query template emits when the user drags
 /// the handle to a given instant: a `MATCH` source stage-chained to `VALID AS OF` with a
@@ -54,9 +54,10 @@ fn the_scrubber_transaction_axis_variant_parses() {
 #[test]
 fn cypher_shaped_text_is_rejected_with_a_typed_parse_error() {
     // A typed `UqlError` (stable code + span), not a panic or a silently-accepted plan.
-    let _: medulla_types::contract::UqlCode = parse("MATCH (e:Event) WHERE e.ts = 1700000000 RETURN e")
-        .expect_err("Cypher-shaped text must not parse as UQL")
-        .code;
+    let _: medulla_types::contract::UqlCode =
+        parse("MATCH (e:Event) WHERE e.ts = 1700000000 RETURN e")
+            .expect_err("Cypher-shaped text must not parse as UQL")
+            .code;
 }
 
 /// An ISO-8601 timestamp in place of the required Unix-second `@<seconds>` literal is

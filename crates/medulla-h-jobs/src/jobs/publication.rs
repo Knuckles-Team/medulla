@@ -317,9 +317,7 @@ pub(super) async fn prepare_consensus_job_publication(
 }
 
 #[cfg(feature = "raft")]
-pub fn decode_prepared_job_publication(
-    bytes: &[u8],
-) -> Result<PreparedJobPublication, String> {
+pub fn decode_prepared_job_publication(bytes: &[u8]) -> Result<PreparedJobPublication, String> {
     if bytes.is_empty() || bytes.len() > MAX_JOB_PUBLICATION_PLAN_BYTES {
         return Err("job publication prepare result exceeds resource limits".to_string());
     }

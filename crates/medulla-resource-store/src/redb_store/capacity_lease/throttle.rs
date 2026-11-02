@@ -7,13 +7,16 @@
 //! the operator's (`UpdateCapacityCell`) and are written back unchanged, and a
 //! narrowed ceiling never touches a lease already held.
 
-use medulla_work_types::{native_control::CapacityThrottleRequest, native_control::CapacityThrottleResult, native_control::NativeControlSchemaVersion};
 use medulla_mutation_types::capacity_lease::CapacityCell;
 use medulla_mutation_types::capacity_throttle::apply_error_budget;
+use medulla_work_types::{
+    native_control::CapacityThrottleRequest, native_control::CapacityThrottleResult,
+    native_control::NativeControlSchemaVersion,
+};
 
+use super::{validate_cell_bounds, CELLS};
 use medulla_store::redb_store::shard::ShardWrite;
 use medulla_store::{redb_store::decode_durable, redb_store::DurableCrypto};
-use super::{validate_cell_bounds, CELLS};
 
 pub fn throttle_cell(
     write: &ShardWrite<'_>,

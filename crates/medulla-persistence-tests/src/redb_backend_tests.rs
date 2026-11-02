@@ -1,36 +1,7 @@
 //! Moved from the in-crate test tree of medulla-persistence (MEDULLA-CONTRACT-R056.11).
 
-#[cfg(feature = "redb")]
-#[allow(unused_imports)]
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-#[allow(unused_imports)]
-use std::sync::Arc;
-#[allow(unused_imports)]
-use std::time::Duration;
-#[allow(unused_imports)]
-use redb::{ReadableTable, TableDefinition};
-#[allow(unused_imports)]
-use tokio::sync::RwLock;
 #[allow(unused_imports)]
 use medulla_graph_core::graph::GraphCore;
-#[allow(unused_imports)]
-use medulla_store_apply::redb_store::store_control::GraphDump;
-#[allow(unused_imports)]
-use medulla_protocol_types::mutation_batch::*;
-#[allow(unused_imports)]
-use medulla_protocol_types::protocol::*;
-#[allow(unused_imports)]
-use medulla_server_api::state::ServerState;
-#[allow(unused_imports)]
-use medulla_store::redb_layout::shard_filename;
-#[allow(unused_imports)]
-use tokio::sync::oneshot;
-#[allow(unused_imports)]
-use medulla_server_api::api::persistence::PersistenceBackend;
-#[allow(unused_imports)]
-use medulla_store::redb_store::shard::Shard;
-#[allow(unused_imports)]
-use medulla_transaction::OutboxClaimBudget;
 #[allow(unused_imports)]
 use medulla_persistence::redb_backend::commands::{
     ChangeEnvelopePayload, ChangeEnvelopesPayload, Cmd, CrossModalBatchPayload, CrossModalPayload,
@@ -39,7 +10,9 @@ use medulla_persistence::redb_backend::commands::{
 #[allow(unused_imports)]
 use medulla_persistence::redb_backend::shard_writer::shard_index;
 #[allow(unused_imports)]
-use medulla_persistence::redb_backend::shard_writer::{join_blocking_in_order, resolve_flush_threshold, resolve_shard_count};
+use medulla_persistence::redb_backend::shard_writer::{
+    join_blocking_in_order, resolve_flush_threshold, resolve_shard_count,
+};
 #[allow(unused_imports)]
 use medulla_persistence::redb_backend::shard_writer::{PreparedShard, ShardWriter};
 #[cfg(feature = "tsdb")]
@@ -52,6 +25,35 @@ use medulla_persistence::redb_backend::writer_thread::in_control_write;
 use medulla_persistence::redb_backend::writer_thread::run;
 #[allow(unused_imports)]
 use medulla_persistence::redb_backend::*;
+#[allow(unused_imports)]
+use medulla_protocol_types::mutation_batch::*;
+#[allow(unused_imports)]
+use medulla_protocol_types::protocol::*;
+#[allow(unused_imports)]
+use medulla_server_api::api::persistence::PersistenceBackend;
+#[allow(unused_imports)]
+use medulla_server_api::state::ServerState;
+#[allow(unused_imports)]
+use medulla_store::redb_layout::shard_filename;
+#[allow(unused_imports)]
+use medulla_store::redb_store::shard::Shard;
+#[allow(unused_imports)]
+use medulla_store_apply::redb_store::store_control::GraphDump;
+#[allow(unused_imports)]
+use medulla_transaction::OutboxClaimBudget;
+#[allow(unused_imports)]
+use redb::{ReadableTable, TableDefinition};
+#[cfg(feature = "redb")]
+#[allow(unused_imports)]
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+#[allow(unused_imports)]
+use std::sync::Arc;
+#[allow(unused_imports)]
+use std::time::Duration;
+#[allow(unused_imports)]
+use tokio::sync::oneshot;
+#[allow(unused_imports)]
+use tokio::sync::RwLock;
 pub fn seed_raw_row<'k, 'v, K, V>(
     shard_path: &std::path::Path,
     table: TableDefinition<K, V>,
@@ -97,9 +99,6 @@ fn current_request(secret: &str, id: u64, graph: &str, method: Method) -> Reques
     build_shared_test_request(secret, id, graph, TEST_AGENT, method)
 }
 
-
-
-
 fn props(v: serde_json::Value) -> Vec<u8> {
     rmp_serde::to_vec_named(&v).unwrap()
 }
@@ -135,10 +134,7 @@ fn caller_outbox_batch(graph: &str, batch_id: &str) -> MutationBatch {
             topic: "projection.backend".to_string(),
             key: batch_id.to_string(),
             payload: rmp_serde::to_vec_named(&serde_json::json!({"event": "backend"})).unwrap(),
-            headers: std::collections::BTreeMap::from([(
-                MUTATION_ACTOR_HEADER.to_string(),
-                actor,
-            )]),
+            headers: std::collections::BTreeMap::from([(MUTATION_ACTOR_HEADER.to_string(), actor)]),
         }],
         created_at_ms: 10,
     };
@@ -198,10 +194,9 @@ async fn redb_backend_outbox_subscription_is_durable_and_topic_bound() {
         .await
         .expect("subscription survives restart");
     let mut budget = OutboxClaimBudget::new(8, 100, 100).unwrap();
-    let outcome =
-        PersistenceBackend::claim_mutation_outbox(&backend, graph, consumer, &mut budget)
-            .await
-            .expect("subscribed backend claim succeeds");
+    let outcome = PersistenceBackend::claim_mutation_outbox(&backend, graph, consumer, &mut budget)
+        .await
+        .expect("subscribed backend claim succeeds");
     assert!(!outcome.claims.is_empty());
     backend.shutdown();
     let _ = std::fs::remove_dir_all(dir);
@@ -767,8 +762,7 @@ async fn encryption_required_on_refuses_to_open_without_a_key() {
 #[tokio::test(flavor = "multi_thread")]
 async fn encryption_required_on_succeeds_when_a_key_is_set() {
     let _env_lock = medulla_kernel::crypto::acquire_test_env_lock().await;
-    let _guard =
-        EncryptionRequiredEnvGuard::set(Some("redb-encryption-required-test-key"), "on");
+    let _guard = EncryptionRequiredEnvGuard::set(Some("redb-encryption-required-test-key"), "on");
 
     let dir = std::env::temp_dir().join(format!(
         "medulla-redb-enc-required-ok-{}",
@@ -806,8 +800,7 @@ async fn encryption_key_mismatch_refuses_to_reopen() {
     }
 
     let result = {
-        let _guard =
-            EncryptionRequiredEnvGuard::set(Some("a-completely-different-key"), "warn");
+        let _guard = EncryptionRequiredEnvGuard::set(Some("a-completely-different-key"), "warn");
         RedbBackend::open(dir_s.clone(), 64)
     };
     let message = match result {
@@ -867,8 +860,7 @@ async fn encryption_key_same_key_reopens_cleanly_across_multiple_opens() {
     let _env_lock = medulla_kernel::crypto::acquire_test_env_lock().await;
     let _guard = EncryptionRequiredEnvGuard::set(Some("stable-key-material"), "warn");
 
-    let dir =
-        std::env::temp_dir().join(format!("medulla-redb-enc-stable-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("medulla-redb-enc-stable-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     let dir_s = dir.to_string_lossy().to_string();
 
@@ -889,8 +881,7 @@ async fn encryption_never_configured_skips_the_canary_check_entirely() {
     let _env_lock = medulla_kernel::crypto::acquire_test_env_lock().await;
     let _guard = EncryptionRequiredEnvGuard::set(None, "off");
 
-    let dir =
-        std::env::temp_dir().join(format!("medulla-redb-enc-none-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("medulla-redb-enc-none-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     let dir_s = dir.to_string_lossy().to_string();
 
@@ -984,8 +975,7 @@ async fn populated_plaintext_store_refuses_a_brand_new_key() {
 #[tokio::test(flavor = "multi_thread")]
 async fn encrypted_store_refuses_to_open_without_a_key() {
     let _env_lock = medulla_kernel::crypto::acquire_test_env_lock().await;
-    let dir =
-        std::env::temp_dir().join(format!("medulla-redb-enc-nokey-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("medulla-redb-enc-nokey-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     let dir_s = dir.to_string_lossy().to_string();
 
@@ -1217,8 +1207,7 @@ async fn delete_then_recreate_same_name_keeps_new_writes() {
     use medulla_protocol_types::protocol::ResultPayload;
 
     const SECRET: &str = "redb-recreate";
-    let dir =
-        std::env::temp_dir().join(format!("medulla-redb-recreate-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("medulla-redb-recreate-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     let dir_s = dir.to_string_lossy().to_string();
 
@@ -1597,9 +1586,7 @@ async fn dispatch_authoritative_durable_without_checkpoint() {
         )
         .await;
         assert!(r.error.is_none(), "addnode {nid}: {:?}", r.error);
-        assert!(
-            matches!(r.result, Some(ResultPayload::Bool(true)) | None) || r.error.is_none()
-        );
+        assert!(matches!(r.result, Some(ResultPayload::Bool(true)) | None) || r.error.is_none());
     }
 
     // NO checkpoint. Drop the backend (flushes shutdown) and reload redb-only.
@@ -1684,8 +1671,7 @@ async fn record_durable_coalesces_many_writers() {
     // check. A READ guard, so these tests still run concurrently with each
     // other -- only a key MUTATOR is excluded.
     let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-    let dir =
-        std::env::temp_dir().join(format!("medulla-redb-coalesce-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("medulla-redb-coalesce-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     let dir_s = dir.to_string_lossy().to_string();
     let backend = Arc::new(RedbBackend::open(dir_s.clone(), 256).expect("open"));
@@ -1742,8 +1728,7 @@ async fn read_through_snapshot_triggers_no_writer_commit() {
     // check. A READ guard, so these tests still run concurrently with each
     // other -- only a key MUTATOR is excluded.
     let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-    let dir =
-        std::env::temp_dir().join(format!("medulla-redb-snapread-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("medulla-redb-snapread-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     let dir_s = dir.to_string_lossy().to_string();
     // K=3 explicit (cfg(test) defaults to 1; open_with_shards honors the request on
@@ -1810,8 +1795,7 @@ async fn reads_run_concurrently_with_inflight_writes() {
     // check. A READ guard, so these tests still run concurrently with each
     // other -- only a key MUTATOR is excluded.
     let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-    let dir =
-        std::env::temp_dir().join(format!("medulla-redb-snapconc-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("medulla-redb-snapconc-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     let dir_s = dir.to_string_lossy().to_string();
     let backend = Arc::new(RedbBackend::open(dir_s.clone(), 256).expect("open"));
@@ -2093,8 +2077,7 @@ async fn micro_linger_disabled_preserves_durability() {
     // check. A READ guard, so these tests still run concurrently with each
     // other -- only a key MUTATOR is excluded.
     let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-    let dir =
-        std::env::temp_dir().join(format!("medulla-redb-nolinger-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("medulla-redb-nolinger-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     let dir_s = dir.to_string_lossy().to_string();
     let backend = {
@@ -2160,9 +2143,9 @@ async fn seed_authoritative(
         s.persistence = Some(backend.clone());
         let _ = s.registry.create_graph("g1", GraphType::Global, None);
         // Wire read-through exactly like startup (attaches to g1 + __commons__).
-        let factory = Arc::new(medulla_persistence::read_through::BackendReadThroughFactory::new(
-            backend.clone(),
-        ));
+        let factory = Arc::new(
+            medulla_persistence::read_through::BackendReadThroughFactory::new(backend.clone()),
+        );
         s.registry.set_read_through_factory(factory);
     }
     let core = {
@@ -2199,8 +2182,7 @@ async fn authoritative_eviction_bounds_memory_and_reads_through() {
     // check. A READ guard, so these tests still run concurrently with each
     // other -- only a key MUTATOR is excluded.
     let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-    let dir =
-        std::env::temp_dir().join(format!("medulla-redb-evict-rt-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("medulla-redb-evict-rt-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     let dir_s = dir.to_string_lossy().to_string();
     let backend: Arc<dyn PersistenceBackend> =
@@ -2264,8 +2246,7 @@ async fn authoritative_eviction_never_drops_undurable_node() {
     // check. A READ guard, so these tests still run concurrently with each
     // other -- only a key MUTATOR is excluded.
     let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-    let dir =
-        std::env::temp_dir().join(format!("medulla-redb-evict-safe-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("medulla-redb-evict-safe-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     let dir_s = dir.to_string_lossy().to_string();
     let backend: Arc<dyn PersistenceBackend> =
@@ -2278,9 +2259,9 @@ async fn authoritative_eviction_never_drops_undurable_node() {
         let mut s = state.write().await;
         s.persistence = Some(backend.clone());
         let _ = s.registry.create_graph("g1", GraphType::Global, None);
-        let factory = Arc::new(medulla_persistence::read_through::BackendReadThroughFactory::new(
-            backend.clone(),
-        ));
+        let factory = Arc::new(
+            medulla_persistence::read_through::BackendReadThroughFactory::new(backend.clone()),
+        );
         s.registry.set_read_through_factory(factory);
         s.registry.get("g1").map(|e| e.core.clone()).unwrap()
     };
@@ -2633,9 +2614,7 @@ async fn provenance_anchor_inclusion_proof_detects_tamper() {
                 rid,
                 Method::AddNode {
                     node_id: nid.into(),
-                    properties_msgpack: props(
-                        serde_json::json!({"node_type": node_type, "v": 1}),
-                    ),
+                    properties_msgpack: props(serde_json::json!({"node_type": node_type, "v": 1})),
                 },
             ),
         )
@@ -2691,13 +2670,12 @@ async fn provenance_anchor_inclusion_proof_detects_tamper() {
         "idle sweep must not bump authority"
     );
 
-    let decode_report =
-        |r: medulla_protocol_types::protocol::Response| -> MerkleInclusionReport {
-            match r.result {
-                Some(ResultPayload::Raw(bytes)) => rmp_serde::from_slice(&bytes).unwrap(),
-                other => panic!("expected raw MerkleInclusionReport, got {other:?}"),
-            }
-        };
+    let decode_report = |r: medulla_protocol_types::protocol::Response| -> MerkleInclusionReport {
+        match r.result {
+            Some(ResultPayload::Raw(bytes)) => rmp_serde::from_slice(&bytes).unwrap(),
+            other => panic!("expected raw MerkleInclusionReport, got {other:?}"),
+        }
+    };
 
     // A clean, freshly-anchored ToolCall node verifies.
     let clean = decode_report(
@@ -3687,16 +3665,15 @@ async fn online_reshard_preserves_resource_lane_capacity_and_provenance_tables()
     let _env_lock = medulla_kernel::crypto::acquire_test_env_lock().await;
     #[cfg(feature = "security")]
     let _enc_guard = EncryptionRequiredEnvGuard::set(None, "off");
+    use medulla_lane_store::redb_store::development_lane;
     use medulla_persistence::tenant_catalog::TenantCatalog;
     use medulla_resource_store::redb_store::capacity_lease;
-    use medulla_lane_store::redb_store::development_lane;
     #[cfg(feature = "security")]
     use medulla_store::redb_store::PROVENANCE_ANCHOR_MEMBERS;
     use medulla_store::redb_store::RESOURCE_RESERVATIONS;
     use medulla_store::redb_store::WORK_ITEM_COMMAND_SEQUENCE;
     const K: usize = 4;
-    let dir =
-        std::env::temp_dir().join(format!("medulla-reshard-cx054-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("medulla-reshard-cx054-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     let dir_s = dir.to_string_lossy().to_string();
     let catalog = Arc::new(TenantCatalog::open(&dir_s).expect("catalog"));

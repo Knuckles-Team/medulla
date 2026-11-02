@@ -16,7 +16,11 @@ const XSD: &str = "http://www.w3.org/2001/XMLSchema#";
 
 /// The named classes a `subject predicate` value stands for: the named objects
 /// themselves, plus every member of an `owl:unionOf` list.
-fn union_members(triples: &[medulla_rdf::oxrdf::Triple], subject: &str, predicate: &str) -> Vec<String> {
+fn union_members(
+    triples: &[medulla_rdf::oxrdf::Triple],
+    subject: &str,
+    predicate: &str,
+) -> Vec<String> {
     let mut found = Vec::new();
     for triple in triples.iter().filter(|t| {
         t.subject == NamedNode::new(subject).unwrap().into() && t.predicate.as_str() == predicate
@@ -578,8 +582,10 @@ fn supplies_service_has_the_only_domain_and_range_and_no_chain_recurses() {
 // spec: MEDULLA-SUPPLY-VOCAB-R001.3
 #[test]
 fn service_runs_on_is_a_service_scoped_runs_on() {
-    let triples =
-        parse_turtle(include_str!("../../medulla-core/ontology/infrastructure-v1.ttl")).unwrap();
+    let triples = parse_turtle(include_str!(
+        "../../medulla-core/ontology/infrastructure-v1.ttl"
+    ))
+    .unwrap();
     let subject = format!("{INFRA}serviceRunsOn");
     assert!(has_iri(
         &triples,

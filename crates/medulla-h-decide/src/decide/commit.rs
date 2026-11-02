@@ -10,12 +10,12 @@
 //! same record is an idempotent replay.
 
 use super::SharedState;
-use medulla_protocol_types::protocol::Response;
-use medulla_server_api::authority_context::VerifiedRequestContext;
+use medulla_decision_types::decision::DecisionCommitRequest;
 #[cfg(feature = "redb")]
 #[cfg(feature = "decide")]
 use medulla_persistence_records::agent_library::AgentLibraryStateExt;
-use medulla_decision_types::decision::DecisionCommitRequest;
+use medulla_protocol_types::protocol::Response;
+use medulla_server_api::authority_context::VerifiedRequestContext;
 
 /// Commit one `DecisionRecord` as a component revision, idempotently.
 #[cfg(feature = "decide")]

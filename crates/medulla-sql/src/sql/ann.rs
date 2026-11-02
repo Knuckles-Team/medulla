@@ -27,12 +27,15 @@ use arrow::array::{Array, ArrayRef, FixedSizeListArray, Float32Array, ListArray,
 use arrow::datatypes::{DataType, SchemaRef};
 use arrow::record_batch::RecordBatch;
 
-use medulla_ann::{FlatIndex, HnswIndex, IvfPq, IvfPqParams, SearchParams};
 #[cfg(test)]
 use medulla_ann::Metric;
+use medulla_ann::{FlatIndex, HnswIndex, IvfPq, IvfPqParams, SearchParams};
 use serde::{Deserialize, Serialize};
 
-use medulla_table_store::{tables::ann_plan::isqrt, tables::ann_plan::metric_to_ann, tables::ann_plan::AnnMethod, tables::ann_plan::VectorMetric};
+use medulla_table_store::{
+    tables::ann_plan::isqrt, tables::ann_plan::metric_to_ann, tables::ann_plan::AnnMethod,
+    tables::ann_plan::VectorMetric,
+};
 
 /// Deterministic seed for every medulla-ann index built for a pushdown (CONCEPT:MEDULLA-KG.query.real-pgvector-ann-top) —
 /// fixed so repeated runs of the same query are bit-identical.

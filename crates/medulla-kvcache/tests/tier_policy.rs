@@ -1,4 +1,6 @@
-use medulla_kvcache::{AdmissionRefusal, CacheEntryMeta, GenerationRef, PolicyTier, Tier, TierPolicy};
+use medulla_kvcache::{
+    AdmissionRefusal, CacheEntryMeta, GenerationRef, PolicyTier, Tier, TierPolicy,
+};
 
 const FOREVER: u64 = u64::MAX;
 

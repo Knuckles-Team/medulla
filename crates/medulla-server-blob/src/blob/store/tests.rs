@@ -54,17 +54,15 @@ fn repository_source_batch_is_one_owner_commit_and_tenant_bound() {
         bytes.len() as u64,
     )
     .is_err());
-    assert!(
-        crate::blob::engine_bodies::read_repository_content_ref(
-            &store,
-            "tenant-a",
-            "repo-one",
-            "file:///untrusted",
-            &format!("sha256:{}", sha256.to_hex()),
-            bytes.len() as u64,
-        )
-        .is_err()
-    );
+    assert!(crate::blob::engine_bodies::read_repository_content_ref(
+        &store,
+        "tenant-a",
+        "repo-one",
+        "file:///untrusted",
+        &format!("sha256:{}", sha256.to_hex()),
+        bytes.len() as u64,
+    )
+    .is_err());
 }
 
 /// A pass far past every grace period and upload TTL: what the defaults would
@@ -790,7 +788,9 @@ fn owner_acquire_and_release_are_the_named_holder_path() {
 // rather than re-apply it, and the data survives a full close/reopen of the
 // store.
 
-fn assert_holder_write_is_all_or_nothing_at(phase: medulla_protocol_types::mutation_batch::MutationCommitPhase) {
+fn assert_holder_write_is_all_or_nothing_at(
+    phase: medulla_protocol_types::mutation_batch::MutationCommitPhase,
+) {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().to_string_lossy().to_string();
     let digest;
@@ -811,7 +811,9 @@ fn assert_holder_write_is_all_or_nothing_at(phase: medulla_protocol_types::mutat
             "the injected failure at {phase:?} must surface"
         );
 
-        if phase == medulla_protocol_types::mutation_batch::MutationCommitPhase::AfterCommitBeforeAck {
+        if phase
+            == medulla_protocol_types::mutation_batch::MutationCommitPhase::AfterCommitBeforeAck
+        {
             // The write landed; only the ack was lost. A fresh-nonce retry of
             // the SAME idempotency key must replay the committed outcome, not
             // double-acquire.

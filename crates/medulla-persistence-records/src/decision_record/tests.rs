@@ -2,24 +2,23 @@
 //! DECIDE-LAYER-DESIGN §11.1 and the outcome link of §4.6 (EH-070).
 
 #[cfg(test)]
+use medulla_agent_types::agent_component::ComponentDependency;
+#[cfg(test)]
 use medulla_agent_types::agent_graph::AgentGraphPublishRequest;
 #[cfg(test)]
 use medulla_agent_types::agent_library::AgentLibraryPublishRequest;
 use medulla_agent_types::{
     agent_component::AgentComponentDraft, agent_component::AgentComponentFacts,
     agent_component::AgentComponentKind, agent_component::AgentComponentPublishRequest,
-    agent_component::ModalityFacts,
-    agent_component::PromptMode, agent_component::ToolEffect,
+    agent_component::ModalityFacts, agent_component::PromptMode, agent_component::ToolEffect,
 };
 use medulla_compute::assemble::{assemble, inputs, replay_check, Assembly, RecordIdentity};
-use medulla_decision_types::{
-    decision::AssemblyRequest, decision::AssemblyRequirements,
-    decision::DecisionPolicy, decision::DecisionPolicyRef, decision::LibraryCandidateScope,
-};
-#[cfg(test)]
-use medulla_agent_types::agent_component::ComponentDependency;
 #[cfg(test)]
 use medulla_decision_types::decision::DecisionOutcome;
+use medulla_decision_types::{
+    decision::AssemblyRequest, decision::AssemblyRequirements, decision::DecisionPolicy,
+    decision::DecisionPolicyRef, decision::LibraryCandidateScope,
+};
 use medulla_types::contract::BoundedVec;
 
 use super::super::agent_component::{test_component_draft, test_tool_facts};

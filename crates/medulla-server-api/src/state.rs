@@ -6,8 +6,8 @@ use tokio::sync::Semaphore;
 
 use crate::txn::GraphTxnState;
 use crate::txn::TxnIdGen;
-use medulla_isolation::isolation::IsolationLayer;
 use medulla_core::registry::GraphRegistry;
+use medulla_isolation::isolation::IsolationLayer;
 use medulla_kernel::channels::ChannelManager;
 use parking_lot::Mutex;
 
@@ -575,7 +575,6 @@ impl medulla_kernel::kernel::persistence::ResidentProjectionHost for ServerState
         })
     }
 }
-
 
 /// Acquire the process-wide `ServerState` write lock, recording the wait (D-EIMG-2).
 pub async fn timed_write(

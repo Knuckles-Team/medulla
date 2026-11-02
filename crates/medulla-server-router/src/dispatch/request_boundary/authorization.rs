@@ -1,5 +1,5 @@
-use medulla_server_graph::dispatch::shared::timed_read;
 use super::*;
+use medulla_server_graph::dispatch::shared::timed_read;
 
 #[derive(Clone, Copy)]
 pub struct DispatchAuthority {
@@ -17,7 +17,9 @@ fn validate_submit_context(
     context: &medulla_result_types::epistemic_operations::RequestContext,
     verified_context: &VerifiedRequestContext,
 ) -> Result<(), String> {
-    if context.schema_version != medulla_result_types::epistemic_operations::RequestContextSchemaVersion::V2 {
+    if context.schema_version
+        != medulla_result_types::epistemic_operations::RequestContextSchemaVersion::V2
+    {
         return Err("SubmitWorkItem context schema_version is unsupported".to_string());
     }
     if context.graph != graph {
@@ -304,7 +306,9 @@ pub async fn check_scope_and_admin_authority(
 /// checks validated them: the envelope's own context first, then each child's.
 /// That order is load-bearing — a batch invalid at both levels must keep
 /// reporting the envelope's failure.
-fn submit_work_item_contexts(method: &Method) -> Vec<&medulla_result_types::epistemic_operations::RequestContext> {
+fn submit_work_item_contexts(
+    method: &Method,
+) -> Vec<&medulla_result_types::epistemic_operations::RequestContext> {
     match method {
         Method::SubmitWorkItem { request } => vec![&request.context],
         Method::KgDelegate { request } => vec![&request.context],

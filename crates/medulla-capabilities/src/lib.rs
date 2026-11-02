@@ -33,7 +33,6 @@
 //! turned on -- see `Cargo.toml` for why). It is not a dependency of the main
 //! `medulla` package's default build; see the root `Cargo.toml`'s `members` comment.
 
-
 pub mod catalog;
 mod descriptor;
 mod domains;

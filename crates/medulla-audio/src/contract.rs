@@ -77,7 +77,11 @@ impl ModalityContract for AudioData {
         medulla_modality::policy_labels()
     }
 
-    medulla_modality::modality_contract_runtime_hooks!(AudioData, element_count, has_secondary_index);
+    medulla_modality::modality_contract_runtime_hooks!(
+        AudioData,
+        element_count,
+        has_secondary_index
+    );
 }
 
 /// Sample format, duration, and content address of a governed recording.

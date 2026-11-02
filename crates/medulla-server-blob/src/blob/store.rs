@@ -40,10 +40,10 @@
 use medulla_mutation_types::mutation_scope::DurabilityDomain;
 use medulla_mutation_types::mutation_scope::IncarnationId;
 use medulla_mutation_types::mutation_scope::LogicalName;
-use medulla_protocol_types::mutation_batch::MutationBatch;
-use medulla_protocol_types::mutation_batch::MutationCommitPhase;
 use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
 use medulla_mutation_types::mutation_scope::ScopeTenantId;
+use medulla_protocol_types::mutation_batch::MutationBatch;
+use medulla_protocol_types::mutation_batch::MutationCommitPhase;
 use medulla_storage::{
     BlobOwner, BlobSharedRead, BlobSharedServiceHandle, BlobSharedWrite, CasChunkRows,
     OwnedStoreHandle, PhysicalStoreIdentity, ScopedRead, StorageKernel, StoreOpenOptions,

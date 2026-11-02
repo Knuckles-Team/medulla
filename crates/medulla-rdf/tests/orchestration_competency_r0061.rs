@@ -2,8 +2,8 @@
 #![cfg(feature = "owl")]
 
 use medulla_rdf::mapping::parse_turtle;
-use medulla_reasoner::owl::Reasoner;
 use medulla_rdf::oxrdf::{NamedNode, Triple};
+use medulla_reasoner::owl::Reasoner;
 
 const KG: &str = "http://knuckles.team/kg#";
 const RDFS: &str = "http://www.w3.org/2000/01/rdf-schema#";

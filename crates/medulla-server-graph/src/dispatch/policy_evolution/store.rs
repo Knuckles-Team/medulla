@@ -6,7 +6,11 @@
 //! defence in depth: a row whose body no longer hashes to its id is refused as
 //! tampered.
 
-use medulla_decision_outcome_types::{policy_evolution::is_policy_evolution_row, policy_evolution::PolicyEvolutionRecord, policy_evolution::PolicyRecordView, policy_evolution::PolicyRefusal, policy_evolution::StoredPolicyRecord};
+use medulla_decision_outcome_types::{
+    policy_evolution::is_policy_evolution_row, policy_evolution::PolicyEvolutionRecord,
+    policy_evolution::PolicyRecordView, policy_evolution::PolicyRefusal,
+    policy_evolution::StoredPolicyRecord,
+};
 
 use super::gate::RecordLookup;
 use medulla_graph_core::graph::GraphCore;

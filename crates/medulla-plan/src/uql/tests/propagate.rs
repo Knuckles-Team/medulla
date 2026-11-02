@@ -8,8 +8,8 @@ use medulla_semantic_index::semantic::SemanticStore;
 use medulla_types::wire::UqlResult;
 use serde_json::json;
 
-use medulla_exec::exec::PlanCtx;
 use crate::uql::serve::run_statement;
+use medulla_exec::exec::PlanCtx;
 use medulla_uql::{parse_statement, Params};
 
 /// api, cache and web depend (transitively) on db; web's edge carries no transmission.

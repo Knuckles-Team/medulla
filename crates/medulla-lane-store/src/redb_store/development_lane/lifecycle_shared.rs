@@ -1,4 +1,3 @@
-use medulla_store::redb_store::DurableCrypto;
 use super::quota::{apply_counter_delta, hold_charge, load_policy, load_scope_counters};
 use super::types::LaneDecision;
 use super::{DurableLaneHold, DurableLanePolicy};
@@ -9,6 +8,7 @@ use medulla_result_types::epistemic_operations::DevelopmentLaneObserveRequest;
 use medulla_result_types::epistemic_operations::DevelopmentLaneQuotaPolicy;
 use medulla_result_types::epistemic_operations::DevelopmentLaneRenewRequest;
 use medulla_storage::ScopedOwnerTableMut;
+use medulla_store::redb_store::DurableCrypto;
 
 // Private redb-transaction-scoped helper; see `load_work_item`'s justification
 // above -- each identity/fencing field must be checked against `hold`
@@ -118,10 +118,7 @@ pub fn expire_active_hold(
     Ok(())
 }
 
-pub fn hold_policy_revision(
-    row: &DurableLaneHold,
-    policy: Option<&DurableLanePolicy>,
-) -> u64 {
+pub fn hold_policy_revision(row: &DurableLaneHold, policy: Option<&DurableLanePolicy>) -> u64 {
     policy.map_or(row.hold.quota_charge.policy_revision, |value| {
         value.policy_revision
     })

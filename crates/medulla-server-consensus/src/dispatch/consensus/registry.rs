@@ -1,9 +1,9 @@
-use medulla_server_graph::dispatch::shared::MAX_REGISTER_SERVER_TTL_SECS;
-use medulla_server_graph::dispatch::shared::MIN_REGISTER_SERVER_TTL_SECS;
-use medulla_server_graph::dispatch::shared::MAX_REGISTER_SERVER_RESOURCES_BYTES;
-use medulla_server_graph::dispatch::shared::MAX_REGISTER_SERVER_URL_BYTES;
-use medulla_server_graph::dispatch::shared::timed_read;
 use super::*;
+use medulla_server_graph::dispatch::shared::timed_read;
+use medulla_server_graph::dispatch::shared::MAX_REGISTER_SERVER_RESOURCES_BYTES;
+use medulla_server_graph::dispatch::shared::MAX_REGISTER_SERVER_TTL_SECS;
+use medulla_server_graph::dispatch::shared::MAX_REGISTER_SERVER_URL_BYTES;
+use medulla_server_graph::dispatch::shared::MIN_REGISTER_SERVER_TTL_SECS;
 
 use medulla_catalog_types::fleet_catalog::is_valid_server_name;
 use medulla_protocol_types::result_contract::cluster::RegisteredServerCursor;
@@ -255,7 +255,8 @@ pub async fn handle_list_registered_servers(
     request: RegisteredServerListRequest,
 ) -> Response {
     medulla_server_graph::dispatch::shared::ensure_graph_resident(state, REGISTRY_GRAPH).await;
-    let _registry_guard = medulla_server_api::routed_write_coalescer::lock_graph(REGISTRY_GRAPH).await;
+    let _registry_guard =
+        medulla_server_api::routed_write_coalescer::lock_graph(REGISTRY_GRAPH).await;
     let (raw_core, read_authority) = {
         let current = timed_read(state).await;
         let Some(entry) = current.registry.get(REGISTRY_GRAPH) else {

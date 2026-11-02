@@ -170,7 +170,6 @@ pub(super) fn mirror_blob_refs_into_ram(
     }
 }
 
-
 async fn resolve_cross_modal_target(
     state: &Arc<RwLock<ServerState>>,
     caller: Option<&str>,
@@ -292,7 +291,13 @@ struct CrossModalDurableArgs<'a> {
 
 async fn compile_cross_modal_batch(
     args: &CrossModalDurableArgs<'_>,
-) -> Result<(medulla_protocol_types::mutation_batch::MutationBatch, Vec<u8>), String> {
+) -> Result<
+    (
+        medulla_protocol_types::mutation_batch::MutationBatch,
+        Vec<u8>,
+    ),
+    String,
+> {
     let batch_id = medulla_server_api::batch_compile::opaque_coordinator_key(
         "crossmodal",
         &args.txn.graph,

@@ -8,10 +8,10 @@ use std::sync::Arc;
 
 use parking_lot::RwLock;
 
-use medulla_semantic_index::semantic::SemanticStore;
-use medulla_graph_core::graph::{GraphSnapshot, GRAPH_SNAPSHOT_SCHEMA_VERSION};
-use medulla_store_apply::redb_store::store_control::GraphDump;
 use medulla_core::registry::GraphRegistry;
+use medulla_graph_core::graph::{GraphSnapshot, GRAPH_SNAPSHOT_SCHEMA_VERSION};
+use medulla_semantic_index::semantic::SemanticStore;
+use medulla_store_apply::redb_store::store_control::GraphDump;
 
 const COMMONS: &str = "__commons__";
 

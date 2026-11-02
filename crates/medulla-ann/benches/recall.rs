@@ -82,7 +82,9 @@ fn main() {
     let nprobe: usize = a.get(5).and_then(|s| s.parse().ok()).unwrap_or(32);
     let nq: usize = a.get(6).and_then(|s| s.parse().ok()).unwrap_or(200);
 
-    println!("medulla-ann recall bench: N={n} dim={dim} nlist={nlist} m={m} nprobe={nprobe} q={nq}");
+    println!(
+        "medulla-ann recall bench: N={n} dim={dim} nlist={nlist} m={m} nprobe={nprobe} q={nq}"
+    );
     let data = clustered_vecs(n, dim, (n / 250).max(64), 11);
 
     let params = IvfPqParams {

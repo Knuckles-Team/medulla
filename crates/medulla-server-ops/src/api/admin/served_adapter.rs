@@ -8,8 +8,8 @@
 
 use std::sync::Arc;
 
-use medulla_graph_core::graph::GraphCore;
 use medulla_decision_stats::decision::adapter::AdapterKernel;
+use medulla_graph_core::graph::GraphCore;
 
 use medulla_server_api::state::ServerState;
 
@@ -82,7 +82,9 @@ pub fn salt(adapter: Option<&ServedAdapter>, payload: &mut Vec<u8>) {
 
 /// The verified carrier tenant of a read, the partition adapter state is
 /// served from (the same scope `DecisionLog.retrieval` activates under).
-pub fn carrier_tenant(authority: Option<&medulla_server_api::carrier::GraphReadAuthority>) -> Option<&str> {
+pub fn carrier_tenant(
+    authority: Option<&medulla_server_api::carrier::GraphReadAuthority>,
+) -> Option<&str> {
     authority
         .and_then(medulla_server_api::carrier::GraphReadAuthority::carrier)
         .map(medulla_server_api::carrier::CarrierAuthority::tenant_scope)
@@ -112,7 +114,9 @@ pub fn adapt_plan(
     embedder: Option<&dyn medulla_exec::exec::TextEmbedder>,
 ) -> medulla_exec::algebra::Plan {
     match adapter {
-        Some(adapter) => medulla_exec::algebra::Plan::new(rewrite_ops(plan.ops, &adapter, embedder)),
+        Some(adapter) => {
+            medulla_exec::algebra::Plan::new(rewrite_ops(plan.ops, &adapter, embedder))
+        }
         None => plan,
     }
 }

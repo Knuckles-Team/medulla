@@ -20,13 +20,17 @@ use medulla_mutation_types::{
 use medulla_types::contract::ResourceId;
 
 use super::{bind, build_pack, imported, ok, tool, Content, Served, ADMIN, TENANT};
-use medulla_protocol_types::protocol::Method;
 use crate::connector_pack_projection::worker::sweep;
 use crate::connector_pack_projection::worker::CONSUMER;
+use medulla_protocol_types::protocol::Method;
 
 const CONNECTOR: &str = "pack-outbox";
 
-async fn outbox(served: &Served, key: &str, op: MutationOutboxOp) -> medulla_protocol_types::protocol::Response {
+async fn outbox(
+    served: &Served,
+    key: &str,
+    op: MutationOutboxOp,
+) -> medulla_protocol_types::protocol::Response {
     served
         .call(key, Method::MutationOutbox { op: Box::new(op) })
         .await

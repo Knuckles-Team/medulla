@@ -2,10 +2,7 @@
 
 use super::*;
 
-pub async fn dispatch_transaction_methods_arm_0(
-    ctx: DispatchCtx<'_>,
-    method: Method,
-) -> Response {
+pub async fn dispatch_transaction_methods_arm_0(ctx: DispatchCtx<'_>, method: Method) -> Response {
     #[allow(unused_variables)]
     let DispatchCtx {
         state,
@@ -62,10 +59,7 @@ pub async fn dispatch_transaction_methods_arm_0(
 }
 
 #[cfg(feature = "tsdb")]
-pub async fn dispatch_transaction_methods_arm_1(
-    ctx: DispatchCtx<'_>,
-    method: Method,
-) -> Response {
+pub async fn dispatch_transaction_methods_arm_1(ctx: DispatchCtx<'_>, method: Method) -> Response {
     #[allow(unused_variables)]
     let DispatchCtx {
         state,
@@ -100,10 +94,7 @@ pub async fn dispatch_transaction_methods_arm_1(
 }
 
 #[cfg(feature = "owl")]
-pub async fn dispatch_transaction_methods_arm_2(
-    ctx: DispatchCtx<'_>,
-    method: Method,
-) -> Response {
+pub async fn dispatch_transaction_methods_arm_2(ctx: DispatchCtx<'_>, method: Method) -> Response {
     #[allow(unused_variables)]
     let DispatchCtx {
         state,
@@ -138,10 +129,7 @@ pub async fn dispatch_transaction_methods_arm_2(
 }
 
 #[cfg(feature = "sparql")]
-pub async fn dispatch_transaction_methods_arm_3(
-    ctx: DispatchCtx<'_>,
-    method: Method,
-) -> Response {
+pub async fn dispatch_transaction_methods_arm_3(ctx: DispatchCtx<'_>, method: Method) -> Response {
     #[allow(unused_variables)]
     let DispatchCtx {
         state,
@@ -176,10 +164,7 @@ pub async fn dispatch_transaction_methods_arm_3(
 }
 
 #[cfg(feature = "query")]
-pub async fn dispatch_transaction_methods_arm_4(
-    ctx: DispatchCtx<'_>,
-    method: Method,
-) -> Response {
+pub async fn dispatch_transaction_methods_arm_4(ctx: DispatchCtx<'_>, method: Method) -> Response {
     #[allow(unused_variables)]
     let DispatchCtx {
         state,
@@ -214,10 +199,7 @@ pub async fn dispatch_transaction_methods_arm_4(
 }
 
 #[cfg(feature = "epistemic")]
-pub async fn dispatch_transaction_methods_arm_5(
-    ctx: DispatchCtx<'_>,
-    method: Method,
-) -> Response {
+pub async fn dispatch_transaction_methods_arm_5(ctx: DispatchCtx<'_>, method: Method) -> Response {
     #[allow(unused_variables)]
     let DispatchCtx {
         state,

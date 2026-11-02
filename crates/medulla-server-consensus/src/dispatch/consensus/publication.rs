@@ -121,9 +121,7 @@ fn interpret_job_publication_commit(
 }
 
 #[cfg(all(feature = "raft", feature = "jobs"))]
-pub async fn execute_consensus_job_publication(
-    execution: JobPublicationExecution<'_>,
-) -> Response {
+pub async fn execute_consensus_job_publication(execution: JobPublicationExecution<'_>) -> Response {
     let prepared = match decode_job_publication(execution.request_id, execution.prepared_bytes) {
         Ok(prepared) => prepared,
         Err(response) => return response,

@@ -4,9 +4,9 @@
 
 use std::sync::Arc;
 
+use medulla_core::registry::GraphRegistry;
 use medulla_isolation::isolation::IsolationLayer;
 use medulla_protocol_types::protocol::{Method, Request, Response, ResultPayload};
-use medulla_core::registry::GraphRegistry;
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_server_api::state::ServerState;
 use tokio::sync::RwLock;
@@ -225,7 +225,8 @@ fn make_state(
     persistence: Option<SharedPersistence>,
 ) -> ServerState {
     provision_request_context_policy();
-    let mut state = medulla_server::seams_install::new_state_for_test(auth_secret.to_owned(), isolation);
+    let mut state =
+        medulla_server::seams_install::new_state_for_test(auth_secret.to_owned(), isolation);
     state.persist_dir = persist_dir;
     state.persistence = persistence;
     state
@@ -239,7 +240,8 @@ pub fn state_with_registry(
     persistence: Option<SharedPersistence>,
 ) -> SharedState {
     provision_request_context_policy();
-    let mut state = medulla_server::seams_install::new_state_for_test(auth_secret.to_owned(), isolation);
+    let mut state =
+        medulla_server::seams_install::new_state_for_test(auth_secret.to_owned(), isolation);
     state.registry = registry;
     state.persist_dir = persist_dir;
     state.persistence = persistence;
@@ -355,8 +357,8 @@ pub fn sql_test_persist_dir(label: &str) -> String {
 
 #[cfg(feature = "security")]
 pub fn wire_isolation(users: &[&str]) -> IsolationLayer {
-    use medulla_types::acl::{Grant, GrantEffect, RbacAction, ResourceSelector, Role};
     use medulla_types::acl::{AgentIdentity, AgentRole};
+    use medulla_types::acl::{Grant, GrantEffect, RbacAction, ResourceSelector, Role};
 
     let mut isolation = IsolationLayer::new();
     isolation.add_role(Role::new("commons-user"));
@@ -420,8 +422,14 @@ pub fn seed_wire_nodes(registry: &GraphRegistry, user: &str) {
     }
 }
 
-pub async fn dispatch(state: &SharedState, request: Request) -> medulla_protocol_types::protocol::Response {
-    Box::pin(medulla_server_router::dispatch::request_boundary::dispatch(state, request)).await
+pub async fn dispatch(
+    state: &SharedState,
+    request: Request,
+) -> medulla_protocol_types::protocol::Response {
+    Box::pin(medulla_server_router::dispatch::request_boundary::dispatch(
+        state, request,
+    ))
+    .await
 }
 
 pub async fn begin_txn(
@@ -555,7 +563,9 @@ pub fn json_bytes(value: serde_json::Value) -> Vec<u8> {
     rmp_serde::to_vec_named(&value).expect("encode JSON test value")
 }
 
-pub fn raw_rows(response: &medulla_protocol_types::protocol::Response) -> Vec<(String, Option<f32>)> {
+pub fn raw_rows(
+    response: &medulla_protocol_types::protocol::Response,
+) -> Vec<(String, Option<f32>)> {
     assert!(
         response.error.is_none(),
         "dispatch error: {:?}",

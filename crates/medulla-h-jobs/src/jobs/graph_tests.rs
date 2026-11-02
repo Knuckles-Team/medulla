@@ -1,13 +1,13 @@
 //! Private graph-ref cache tests for the analytics job handler.
 
-use medulla_kernel::lock_recovery::WriteRecovery;
 use super::*;
+use medulla_kernel::lock_recovery::WriteRecovery;
 
 #[cfg(test)]
 mod resolve_core_ref_tests {
     use super::*;
-    use medulla_protocol_types::protocol::GraphType;
     use medulla_core::registry::GraphRegistry;
+    use medulla_protocol_types::protocol::GraphType;
 
     /// A unique-enough name per call so parallel `cargo test` threads sharing
     /// the ONE process-wide `opaque_graph_ref_index()` singleton never collide
@@ -168,7 +168,6 @@ mod mine_associate_submission_tests {
         }
     }
 
-
     // spec: MEDULLA-PLACEMENT-R003.3
     #[test]
     fn mine_associate_accepts_thirty_one_distinct_items_and_refuses_thirty_two() {
@@ -234,5 +233,4 @@ mod mine_associate_submission_tests {
             JobKind::ProgramOptimize { .. } => panic!("expected association job"),
         }
     }
-
 }

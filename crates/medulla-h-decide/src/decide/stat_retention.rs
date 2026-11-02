@@ -10,7 +10,6 @@
 //! is still the attested one, but nothing can be re-derived. Summaries (the
 //! record minus its matrix) are kept for ever.
 
-use medulla_server_blob::blob::BlobStateExt;
 use medulla_decision_types::{
     decision::statistical::body::canonical_body_bytes,
     decision::statistical::body::content_digest_of,
@@ -25,6 +24,7 @@ use medulla_decision_types::{
     decision::statistical::StatisticalErrorCode,
 };
 use medulla_decision_types::{decision::DecisionPolicyRef, decision::StatisticalPolicy};
+use medulla_server_blob::blob::BlobStateExt;
 
 use super::stat_executor::ExecutionContext;
 use super::stat_log::{visible_entry, LogReader, MAX_LOG_ROWS};

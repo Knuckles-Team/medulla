@@ -15,21 +15,23 @@ use medulla_server_api::state::ServerState;
 
 async fn dispatch(h: &Harness, method: Method) -> Response {
     let method = rmp_serde::from_slice(&rmp_serde::to_vec_named(&method).unwrap()).unwrap();
-    Box::pin(medulla_server_router::dispatch::request_boundary::dispatch_verified_request(
-        &h.state,
-        Request {
-            id: 128,
-            graph: "__commons__".into(),
-            auth_token: String::new(),
-            agent_id: Some("decider".into()),
-            method,
-        },
-        VerifiedRequestContext::verified_for_test_with_scopes(
-            "decider",
-            TENANT,
-            &["kg:read", "agent:decision-write"],
+    Box::pin(
+        medulla_server_router::dispatch::request_boundary::dispatch_verified_request(
+            &h.state,
+            Request {
+                id: 128,
+                graph: "__commons__".into(),
+                auth_token: String::new(),
+                agent_id: Some("decider".into()),
+                method,
+            },
+            VerifiedRequestContext::verified_for_test_with_scopes(
+                "decider",
+                TENANT,
+                &["kg:read", "agent:decision-write"],
+            ),
         ),
-    ))
+    )
     .await
 }
 

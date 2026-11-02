@@ -17,9 +17,9 @@
 
 use std::sync::Arc;
 
-use medulla_jobs::JobStore;
-use medulla_federation::federation::ForeignSourceRegistry;
 use medulla_exec::rowset::RowSet;
+use medulla_federation::federation::ForeignSourceRegistry;
+use medulla_jobs::JobStore;
 
 use crate::job::join_quantum_result_rows;
 

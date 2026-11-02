@@ -43,10 +43,7 @@ pub(super) fn expected_target_name(index: usize) -> String {
     shard_filename(index)
 }
 
-pub fn parse_ready_marker(
-    path: &Path,
-    requested_k: usize,
-) -> Result<ReadyMigration, String> {
+pub fn parse_ready_marker(path: &Path, requested_k: usize) -> Result<ReadyMigration, String> {
     let text = std::fs::read_to_string(path).map_err(|error| {
         format!(
             "read shard migration readiness marker {} failed: {error}",

@@ -1,5 +1,5 @@
-use medulla_server_graph::dispatch::shared::timed_read;
 use super::*;
+use medulla_server_graph::dispatch::shared::timed_read;
 
 #[cfg(feature = "raft")]
 pub async fn check_cluster_placement_before_consensus(
@@ -114,7 +114,8 @@ pub async fn route_consensus_before_gateway(
             }
             #[cfg(feature = "sparql-http")]
             Method::ApplyMutation { event_type, query }
-                if event_type == medulla_server_api::api::dispatch_support::SPARQL_HTTP_UPDATE_EVENT =>
+                if event_type
+                    == medulla_server_api::api::dispatch_support::SPARQL_HTTP_UPDATE_EVENT =>
             {
                 coordinated_sparql_http_update(
                     state,

@@ -6,7 +6,9 @@ use medulla_quantum_core::backend::{BackendDescriptor, QuantumBackend, RunOption
 use medulla_quantum_core::estimate::{estimate, EstimateOptions};
 use medulla_quantum_core::planner::{select_backend, PlannerOptions};
 use medulla_quantum_jobs::circuit::induced_subgraph_ghz_program;
-use medulla_quantum_jobs::numeric_bridge::{bitstring_distribution, marginal_probabilities, run_batch};
+use medulla_quantum_jobs::numeric_bridge::{
+    bitstring_distribution, marginal_probabilities, run_batch,
+};
 use medulla_quantum_sim::stabilizer::StabilizerSimulator;
 
 fn descriptor(backend: &dyn QuantumBackend) -> BackendDescriptor {

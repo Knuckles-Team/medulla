@@ -101,9 +101,9 @@ pub mod commit_timing;
 pub mod store_graph_names;
 pub mod store_read;
 pub mod store_rows;
+pub use store_graph_names::*;
 pub use store_read::*;
 pub use store_rows::*;
-pub use store_graph_names::*;
 #[cfg(any(test, feature = "test-support"))]
 pub use store_types::{decode_durable, DurableCrypto};
 pub mod sealed_rows;
@@ -116,7 +116,6 @@ pub use commit_timing::CommitPhaseTimer;
 // private or crate-private.
 pub use store_types::*;
 pub use unreadable::{NodeUnreadable, UnsealFailure};
-
 
 pub mod enrichment_budget;
 /// The graph shard as a kernel-owned store (RF-RULING-004 step 8).
@@ -144,7 +143,6 @@ pub use shard::{Shard, ShardWrite};
 // ── Cross-shard 2PC durable rows (CONCEPT:MEDULLA-KG.storage.lane-n-increment) — pure, server-INDEPENDENT ──
 // Shared store helpers (mirroring NODES/EDGES/purge_graph_rows): the `Cmd` arms in
 // `redb_backend`'s off-reactor writer thread call straight into these.
-
 
 /// Build a unique process-local `.redb` fixture path for a kernel-owned-store
 /// test: `<prefix>-<tag>-<pid>-<nanos>.redb` under the OS temp directory.

@@ -134,11 +134,7 @@ fn check_candidate(env: &StampEnv<'_>, principal: Option<&str>, candidate: &str)
 }
 
 /// Derive `stamp` for `op`, clearing every secret in `op`.
-pub fn derive(
-    op: &mut IdentityOp,
-    stamp: &mut IdentityStamp,
-    env: &StampEnv<'_>,
-) -> Derived {
+pub fn derive(op: &mut IdentityOp, stamp: &mut IdentityStamp, env: &StampEnv<'_>) -> Derived {
     match op {
         IdentityOp::Config(op) => derive_config(op, stamp, env),
         IdentityOp::User(op) => derive_user(op, stamp, env),

@@ -473,7 +473,9 @@ struct BoundRows;
 
 impl medulla_federation::federation::ForeignSource for BoundRows {
     fn fetch(&self) -> Result<medulla_exec::rowset::RowSet, String> {
-        Ok(medulla_exec::rowset::RowSet::from_ids(["bound-row".to_string()]))
+        Ok(medulla_exec::rowset::RowSet::from_ids([
+            "bound-row".to_string()
+        ]))
     }
 }
 
@@ -692,7 +694,9 @@ async fn bind_for_requires_owner_catalog_and_rechecks_approval() {
     );
 
     let other = medulla_server_api::carrier::CarrierAuthority::from_verified(
-        &medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test("other-agent"),
+        &medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test(
+            "other-agent",
+        ),
     )
     .unwrap();
     let refused = match catalog.bind_for(

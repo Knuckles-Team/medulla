@@ -4,18 +4,18 @@
 //! (which depends on this crate) downcasts to; a unit test would link a second copy of the crate.
 #![cfg(feature = "kv")]
 
-use medulla_server_blob::kv::KvStateExt;
-use medulla_test_ambient_auth as _;
-use medulla_server_auth::auth::build_shared_test_request;
-use medulla_server_auth::auth::compute_verified_envelope_token;
-use medulla_server_auth::auth::dispatch_test_on_heap as dispatch_on_heap;
-use medulla_server_auth::auth::VerifiedEnvelopeParams;
-use medulla_server_api::state::ServerState;
-use medulla_types::acl::RequestContextClaims;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Request;
 use medulla_protocol_types::protocol::ResultPayload;
 use medulla_protocol_types::storage_wire::{KvCasOutcome, KvEntry, KvScanPage, KvWriteReceipt};
+use medulla_server_api::state::ServerState;
+use medulla_server_auth::auth::build_shared_test_request;
+use medulla_server_auth::auth::compute_verified_envelope_token;
+use medulla_server_auth::auth::dispatch_test_on_heap as dispatch_on_heap;
+use medulla_server_auth::auth::VerifiedEnvelopeParams;
+use medulla_server_blob::kv::KvStateExt;
+use medulla_test_ambient_auth as _;
+use medulla_types::acl::RequestContextClaims;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -24,7 +24,10 @@ const TEST_AGENT: &str = "unit-test-agent";
 
 fn state_with_kv(dir: &str) -> Arc<RwLock<ServerState>> {
     let kv = Arc::new(medulla_server_blob::kv::KvStore::open(Some(dir)).unwrap());
-    let mut state = medulla_server::seams_install::new_state_for_test(SECRET, ServerState::test_isolation(TEST_AGENT));
+    let mut state = medulla_server::seams_install::new_state_for_test(
+        SECRET,
+        ServerState::test_isolation(TEST_AGENT),
+    );
     state.persist_dir = Some(dir.to_string());
     #[cfg(feature = "kv")]
     {
@@ -450,8 +453,12 @@ fn shared_get(key: &str, shared: bool) -> Method {
 async fn kv_shared_namespace_spans_principals_and_needs_kv_shared_write() {
     let dir = std::env::temp_dir().join(format!("medulla-kv-shared-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
-    let kv = Arc::new(medulla_server_blob::kv::KvStore::open(Some(&dir.to_string_lossy())).unwrap());
-    let mut state = medulla_server::seams_install::new_state_for_test(SECRET, medulla_server_auth::access::two_agent_isolation());
+    let kv =
+        Arc::new(medulla_server_blob::kv::KvStore::open(Some(&dir.to_string_lossy())).unwrap());
+    let mut state = medulla_server::seams_install::new_state_for_test(
+        SECRET,
+        medulla_server_auth::access::two_agent_isolation(),
+    );
     state.persist_dir = Some(dir.to_string_lossy().to_string());
     state.set_kv_store(Some(kv));
     let state = Arc::new(RwLock::new(state));

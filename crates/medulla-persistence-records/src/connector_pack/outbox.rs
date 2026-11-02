@@ -11,13 +11,13 @@
 use medulla_mutation_types::mutation_scope::MutationOutboxLease;
 use medulla_transaction::{OutboxClaimBudget, OutboxClaimOutcome};
 
+use crate::agent_library::AgentLibraryStore;
 use medulla_server_api::outbox_operator::operate;
 use medulla_server_api::outbox_operator::read_view;
 use medulla_server_api::outbox_operator::OutboxView;
 use medulla_server_api::outbox_operator::OutboxViewAnswer;
 use medulla_server_api::outbox_operator::OutboxWrite;
 use medulla_server_api::outbox_operator::OutboxWriteReply;
-use crate::agent_library::AgentLibraryStore;
 
 impl AgentLibraryStore {
     /// Answer one operator view of a consumer's stream in `tenant_id`'s scope.

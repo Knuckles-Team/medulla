@@ -58,7 +58,9 @@ use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 
 use medulla_exec::dag::NodeId as DagNodeId;
-use medulla_exec::{dag_exec::execute_dag, dag_exec::execute_dag_with, exec::PlanCtx, dag::PlanDag, rowset::RowSet};
+use medulla_exec::{
+    dag::PlanDag, dag_exec::execute_dag, dag_exec::execute_dag_with, exec::PlanCtx, rowset::RowSet,
+};
 
 use medulla_raft::raft::multi::GroupRouter;
 use medulla_raft::raft::GroupId;
@@ -398,8 +400,8 @@ mod tests {
     //! separate physical node per CONCEPT:MEDULLA-KG.txn.harness-crash's documented
     //! cross-NODE-participant remainder).
     use super::*;
-    use medulla_graph_core::graph::GraphCore;
     use medulla_exec::{algebra::Op, dag::PlanNode};
+    use medulla_graph_core::graph::GraphCore;
     use medulla_semantic_index::semantic::SemanticStore;
     use serde_json::json;
 

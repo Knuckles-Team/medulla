@@ -11,7 +11,6 @@
 //! general mutable SQLite database. Format primitives reimplement the public SQLite file
 //! format (the technique used by `open-source-libraries/turso/core/storage`).
 
-
 mod error;
 mod freelist;
 mod header;

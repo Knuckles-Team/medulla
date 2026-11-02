@@ -72,7 +72,6 @@ impl SemanticIndexServerAdapter {
         Ok(())
     }
 
-
     /// Subscribe one authenticated semantic worker to this tenant's durable
     /// stage stream. A worker may differ from the actor whose source ACL
     /// decision is embedded in the binding; its verified agent id is always
@@ -86,10 +85,7 @@ impl SemanticIndexServerAdapter {
         self.authorize_binding_worker(binding, authority)?;
         self.service
             .subscribe_stage_consumer(authority.agent_id())
-            .map_err(|error| {
-                crate::semantic_index::semantic_failure_message(&error)
-                    .to_string()
-            })
+            .map_err(|error| crate::semantic_index::semantic_failure_message(&error).to_string())
     }
 
     /// Claim a bounded page from the existing durable semantic outbox. The
@@ -104,9 +100,6 @@ impl SemanticIndexServerAdapter {
         self.authorize_binding_worker(binding, authority)?;
         self.service
             .claim_stage_leases(authority.agent_id(), budget)
-            .map_err(|error| {
-                crate::semantic_index::semantic_failure_message(&error)
-                    .to_string()
-            })
+            .map_err(|error| crate::semantic_index::semantic_failure_message(&error).to_string())
     }
 }

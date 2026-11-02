@@ -6,9 +6,7 @@ use std::collections::HashMap;
 use medulla_protocol_types::change_envelope::MaterialClass;
 use medulla_types::ingestion_wire::{ExtractedEdge, ExtractedNode, IndexResult};
 
-use medulla_h_ingest::repository_index::{
-    lower, BATCH_TOO_LARGE, REDACTED_HOST_IDENTITY,
-};
+use medulla_h_ingest::repository_index::{lower, BATCH_TOO_LARGE, REDACTED_HOST_IDENTITY};
 use medulla_protocol_types::protocol::Method;
 
 fn node(id: &str, kind: &str, properties: &[(&str, &str)]) -> ExtractedNode {
@@ -131,7 +129,6 @@ fn code_result(extra: &[(&str, &str)]) -> IndexResult {
         ..Default::default()
     }
 }
-
 
 #[test]
 fn repository_code_passes_the_repository_content_rule() {

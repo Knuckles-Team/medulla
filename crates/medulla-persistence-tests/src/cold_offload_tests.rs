@@ -1,6 +1,18 @@
 //! Moved from the in-crate test tree of medulla-persistence (MEDULLA-CONTRACT-R056.11).
 
 #[allow(unused_imports)]
+use medulla_core::registry::GraphHandle;
+#[allow(unused_imports)]
+use medulla_graph_core::graph::GraphCore;
+#[allow(unused_imports)]
+use medulla_persistence::cold_offload::*;
+#[allow(unused_imports)]
+use medulla_server_api::api::persistence::PersistenceBackend;
+#[allow(unused_imports)]
+use medulla_server_api::state::ServerState;
+#[allow(unused_imports)]
+use parking_lot::Mutex;
+#[allow(unused_imports)]
 use std::collections::{HashMap, HashSet};
 #[allow(unused_imports)]
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -9,19 +21,7 @@ use std::sync::Arc;
 #[allow(unused_imports)]
 use std::time::{Duration, Instant};
 #[allow(unused_imports)]
-use parking_lot::Mutex;
-#[allow(unused_imports)]
 use tokio::sync::RwLock;
-#[allow(unused_imports)]
-use medulla_core::registry::GraphHandle;
-#[allow(unused_imports)]
-use medulla_graph_core::graph::GraphCore;
-#[allow(unused_imports)]
-use medulla_server_api::api::persistence::PersistenceBackend;
-#[allow(unused_imports)]
-use medulla_server_api::state::ServerState;
-#[allow(unused_imports)]
-use medulla_persistence::cold_offload::*;
 
 mod tracker_tests {
     use super::ColdTenantTracker;
@@ -137,17 +137,17 @@ mod admission_tests {
     //! backend (CONCEPT:MEDULLA-KG.sharding.lazy-graph-catalog, DIST-P2-3) — the durable tier a lazily-opened
     //! graph rehydrates from, and the tier that makes eviction loss-free.
     use super::*;
+    use medulla_isolation::isolation::IsolationLayer;
     use medulla_persistence::read_through::BackendGraphMaterializer;
     use medulla_persistence::read_through::BackendReadThroughFactory;
     use medulla_persistence::redb_backend::RedbBackend;
-    use medulla_isolation::isolation::IsolationLayer;
     use medulla_protocol_types::protocol::GraphType;
     use medulla_protocol_types::protocol::Method;
     use medulla_protocol_types::protocol::Request;
     use medulla_server_api::api::persistence::PersistenceBackend;
+    use medulla_server_api::state::ServerState;
     use medulla_server_auth::auth::build_current_test_request;
     use medulla_server_auth::auth::dispatch_test_on_heap as dispatch_on_heap;
-    use medulla_server_api::state::ServerState;
     #[cfg(feature = "security")]
     use medulla_types::acl::AgentIdentity;
     use medulla_types::acl::AgentRole;
@@ -208,7 +208,8 @@ mod admission_tests {
 
     async fn redb_state(dir_s: &str) -> Arc<RwLock<ServerState>> {
         let state =
-            super::test_redb_state(SECRET, dir_s, ServerState::test_isolation(TEST_AGENT), 64).await;
+            super::test_redb_state(SECRET, dir_s, ServerState::test_isolation(TEST_AGENT), 64)
+                .await;
         medulla_server::seams_install::install_seams_on(&state).await;
         state
     }

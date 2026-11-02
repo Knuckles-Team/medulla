@@ -21,16 +21,16 @@ use medulla_isolation::isolation::AccessLevel;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
-use medulla_server_auth::access::check_graph_access;
+use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::carrier::CarrierAuthority;
 use medulla_server_api::carrier::GraphReadAuthority;
-use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 #[cfg(feature = "graphql")]
 use medulla_server_api::txn::IsolationLevel;
 #[cfg(feature = "tsdb")]
 use medulla_server_api::txn::StagedMeasurement;
 use medulla_server_api::txn::{now_ms, parse_isolation, GraphTxnState, NewTxnArgs};
+use medulla_server_auth::access::check_graph_access;
 use medulla_types::contract::Nonce;
 
 const MAX_TXN_RESULT_BYTES: usize = 1024 * 1024;
@@ -264,9 +264,9 @@ mod materialize_belief_tests {
 #[cfg(all(test, feature = "redb", feature = "security"))]
 mod keyed_recovery_window_tests {
     use super::*;
-    use medulla_protocol_types::protocol::GraphType;
     use medulla_persistence::backup::EnvVarGuard;
     use medulla_persistence::redb_backend::RedbBackend;
+    use medulla_protocol_types::protocol::GraphType;
     use medulla_server_api::api::persistence::PersistenceBackend;
     use medulla_server_api::state::ServerState;
     use std::path::{Path, PathBuf};
@@ -316,7 +316,10 @@ mod keyed_recovery_window_tests {
         (Arc::new(RwLock::new(server)), backend, core)
     }
 
-    fn staged_cross_modal_txn(core: &medulla_graph_core::graph::GraphCore, graph: &str) -> GraphTxnState {
+    fn staged_cross_modal_txn(
+        core: &medulla_graph_core::graph::GraphCore,
+        graph: &str,
+    ) -> GraphTxnState {
         let mut txn = GraphTxnState::new(
             core,
             NewTxnArgs {
@@ -499,10 +502,12 @@ mod keyed_recovery_window_tests {
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn terminal_lifecycle_replay_refuses_missing_volatile_handle() {
-        let state = Arc::new(RwLock::new(medulla_server::seams_install::new_state_for_test(
-            "txn-lifecycle-replay-test-secret",
-            ServerState::test_isolation(CALLER),
-        )));
+        let state = Arc::new(RwLock::new(
+            medulla_server::seams_install::new_state_for_test(
+                "txn-lifecycle-replay-test-secret",
+                ServerState::test_isolation(CALLER),
+            ),
+        ));
         let authority = lifecycle_authority("terminal-lifecycle-key", [31; 32]);
         let method = Method::BeginTxn {
             graph: Some("lost-after-restart".to_string()),

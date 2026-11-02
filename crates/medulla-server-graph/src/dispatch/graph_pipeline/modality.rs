@@ -1,5 +1,5 @@
-use crate::dispatch::shared::timed_read;
 use super::*;
+use crate::dispatch::shared::timed_read;
 /// The route, graph and verified identity a replicated modality mutation is
 /// bound to. Bundled so each phase helper below stays inside the parameter cap.
 #[cfg(all(feature = "raft", feature = "modality-serving"))]
@@ -478,7 +478,8 @@ pub async fn replicate_served_modality(request: ModalityReplicationRequest<'_>) 
         return stale;
     }
 
-    let _mutation_guard = medulla_server_api::routed_write_coalescer::lock_graph(request.graph_name).await;
+    let _mutation_guard =
+        medulla_server_api::routed_write_coalescer::lock_graph(request.graph_name).await;
     let (op, inputs) = match decode_modality_replication_inputs(request.req_id, method) {
         Ok(decoded) => decoded,
         Err(response) => return response,

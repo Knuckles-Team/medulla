@@ -41,14 +41,14 @@ use medulla_isolation::isolation::IsolationLayer;
 use medulla_protocol_types::protocol::GraphType;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Request;
-use medulla_server_auth::access::check_graph_access;
-use medulla_server_api::carrier::GraphReadAuthority;
-use medulla_server_auth::auth::verify_request_with_security_dir;
 use medulla_server_api::authority_context::VerifiedRequestContext;
+use medulla_server_api::carrier::GraphReadAuthority;
 use medulla_server_api::http1;
 use medulla_server_api::http1::HttpMessage;
 use medulla_server_api::http1::RequestLimits;
 use medulla_server_api::state::ServerState;
+use medulla_server_auth::access::check_graph_access;
+use medulla_server_auth::auth::verify_request_with_security_dir;
 
 /// Environment/CLI address used by `main.rs` to opt into this listener.
 pub const GRAPHQL_ADDR_ENV: &str = "MEDULLA_GRAPHQL_ADDR";
@@ -744,11 +744,11 @@ referrer-policy: no-referrer\r\n\
 #[cfg(test)]
 mod tests {
     use super::*;
+    use medulla_server_auth::auth::compute_verified_envelope_token;
+    use medulla_server_auth::auth::VerifiedEnvelopeParams;
     use medulla_types::acl::AgentIdentity;
     use medulla_types::acl::AgentRole;
     use medulla_types::acl::RequestContextClaims;
-    use medulla_server_auth::auth::compute_verified_envelope_token;
-    use medulla_server_auth::auth::VerifiedEnvelopeParams;
     use serde_json::json;
     use std::time::{SystemTime, UNIX_EPOCH};
 

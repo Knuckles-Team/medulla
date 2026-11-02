@@ -18,15 +18,15 @@ mod common;
 #[path = "common/test_support.rs"]
 mod test_support;
 
-use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
-use medulla_source_types::source_ingestion::web_document::EnrichDocumentReceipt;
-use medulla_source_types::source_ingestion::web_document::EnrichDocumentRequest;
-use medulla_source_types::source_ingestion::web_document::FetchBackend;
 use medulla_decision_outcome_types::decision::web_fetch_selection::SelectWebPagesAnswer;
 use medulla_decision_outcome_types::decision::web_fetch_selection::SelectWebPagesRequest;
 use medulla_decision_outcome_types::decision::web_fetch_selection::SkipReason;
 use medulla_decision_outcome_types::decision::web_fetch_selection::WebCandidate;
 use medulla_exec::exec::TextEmbedder;
+use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
+use medulla_source_types::source_ingestion::web_document::EnrichDocumentReceipt;
+use medulla_source_types::source_ingestion::web_document::EnrichDocumentRequest;
+use medulla_source_types::source_ingestion::web_document::FetchBackend;
 
 const SECRET: &str = "web-document-enrich-secret";
 const GRAPH: &str = "webenrich";

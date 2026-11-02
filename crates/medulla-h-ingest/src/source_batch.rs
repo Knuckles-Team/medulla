@@ -21,8 +21,8 @@ use tokio::sync::RwLock;
 use medulla_protocol_types::mutation_batch::MutationBatch;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
-use medulla_server_api::carrier::CarrierAuthority;
 use medulla_server_api::authority_context::VerifiedRequestContext;
+use medulla_server_api::carrier::CarrierAuthority;
 use medulla_server_api::state::ServerState;
 
 mod authorization;
@@ -110,19 +110,25 @@ fn publish(
         return Err("ACCESS_DENIED: SQL source publication requires kg:write".into());
     }
     // LocalOnly is refused before opening or mutating a SQL owner in active Raft.
-    medulla_server_auth::sql_catalog_acl::with_source_authority_write(persist_dir, authority, |source| {
-        authorization::authorize_source_insert(source, authority, &request)?;
-        let store =
-            medulla_server_auth::sql_tables::tenant_table_store(authority.tenant_scope(), persist_dir)?;
-        let batch = compile_batch(&store, req_id, authority, attempt_nonce, request, now_ms)?;
-        let committed = store.commit_source_batch(&batch, now_ms)?;
-        let bytes = committed
-            .record
-            .result_msgpack
-            .as_deref()
-            .ok_or_else(|| "committed SQL source publication has no result".to_string())?;
-        medulla_storage::decode_ledger_record(bytes)
-    })
+    medulla_server_auth::sql_catalog_acl::with_source_authority_write(
+        persist_dir,
+        authority,
+        |source| {
+            authorization::authorize_source_insert(source, authority, &request)?;
+            let store = medulla_server_auth::sql_tables::tenant_table_store(
+                authority.tenant_scope(),
+                persist_dir,
+            )?;
+            let batch = compile_batch(&store, req_id, authority, attempt_nonce, request, now_ms)?;
+            let committed = store.commit_source_batch(&batch, now_ms)?;
+            let bytes = committed
+                .record
+                .result_msgpack
+                .as_deref()
+                .ok_or_else(|| "committed SQL source publication has no result".to_string())?;
+            medulla_storage::decode_ledger_record(bytes)
+        },
+    )
 }
 
 fn compile_batch(

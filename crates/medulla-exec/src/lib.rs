@@ -12,8 +12,9 @@ pub mod algebra;
 pub mod cost;
 // MEDULLA-UNIFIED-DATA-PLANE-R006 — typed pushdown decision/fallback-reason,
 // refusing a self-contradictory pushed-down-with-fallback state.
+/// Read-time access checks for `checked_at_read` sources (MEDULLA-FEDERATED-QUERY-R703).
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod pushdown_plan;
+pub mod access_check;
 /// Execution budgets (UQL-09): typed resource bounds on result size and traversal fan-out.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod budget;
@@ -36,6 +37,9 @@ pub mod dag_exec;
 #[cfg(feature = "query")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod exec;
+#[cfg(all(feature = "query", any(test, feature = "test-support")))]
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod fixture;
 /// DBSP-style INCREMENTAL materialized-view maintenance (CONCEPT:MEDULLA-KG.storage.incremental-matview):
 /// a dep-free Z-set delta model + a circuit compiler for the LINEAR operator subset
 /// (`Scan`/`Filter`/`AsOf`/`WindowAgg`(linear)/`Limit`), generalizing `src/server/cdc.rs`'s
@@ -45,31 +49,6 @@ pub mod exec;
 #[cfg(feature = "query")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod incremental;
-/// Per-row, SQL-three-valued evaluation of the relational predicate algebra (UQL-01) —
-/// the Rust twin of the FILTER leg's SQL for incremental maintenance and edge predicates.
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod pred_eval;
-/// The physical EXECUTION runtime (CONCEPT:MEDULLA-KG.query.parallel-runtime) — Lane B. The
-/// `execute_ops` driver-dispatch `execute` routes through + the rayon-morsel, memory-accounted,
-/// spilling `ParallelDriver` (feature `par-runtime`). Gated on `query` (it schedules the
-/// `query`-tier physical fns); a default/Pi build dispatches to the Lane-0 `SerialDriver`.
-#[cfg(feature = "query")]
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod runtime;
-/// The cross-modal cost-based optimizer (CONCEPT:MEDULLA-KG.query.xmodal-cost-optimizer) — Lane A's
-/// rule engine over the logical `Vec<Op>` that [`exec::plan_optimize`] calls to reorder
-/// operators across modalities into a cheaper-but-equivalent plan. Compiled under `query`;
-/// runtime kill-switch `MEDULLA_COST_OPT=0` → identity passthrough.
-#[cfg(feature = "query")]
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod optimizer;
-#[cfg(feature = "query")]
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod oracle;
-/// SQL text crossing a federation boundary: dialects, identifiers, literals (one owner).
-#[cfg(feature = "query")]
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod sql_text;
 /// KAN-learned cardinality-estimate correction (CONCEPT:MEDULLA-KG.query.adaptive-reoptimization,
 /// W4.12 phase 2): an online, per-op-kind correction trained continuously from the
 /// SAME `(estimated, actual)` pairs [`exec::run_with_adaptive_reopt`] already observes,
@@ -81,17 +60,38 @@ pub mod sql_text;
 #[cfg(feature = "learned-cost")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod learned_cost;
-/// Read-time access checks for `checked_at_read` sources (MEDULLA-FEDERATED-QUERY-R703).
+/// The cross-modal cost-based optimizer (CONCEPT:MEDULLA-KG.query.xmodal-cost-optimizer) — Lane A's
+/// rule engine over the logical `Vec<Op>` that [`exec::plan_optimize`] calls to reorder
+/// operators across modalities into a cheaper-but-equivalent plan. Compiled under `query`;
+/// runtime kill-switch `MEDULLA_COST_OPT=0` → identity passthrough.
+#[cfg(feature = "query")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod access_check;
+pub mod optimizer;
+#[cfg(feature = "query")]
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod oracle;
 /// Column mask and row-filter policies (MEDULLA-FEDERATED-QUERY-R706).
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod policy_mask;
+/// Per-row, SQL-three-valued evaluation of the relational predicate algebra (UQL-01) —
+/// the Rust twin of the FILTER leg's SQL for incremental maintenance and edge predicates.
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod pred_eval;
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod pushdown_plan;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod rowset;
+/// The physical EXECUTION runtime (CONCEPT:MEDULLA-KG.query.parallel-runtime) — Lane B. The
+/// `execute_ops` driver-dispatch `execute` routes through + the rayon-morsel, memory-accounted,
+/// spilling `ParallelDriver` (feature `par-runtime`). Gated on `query` (it schedules the
+/// `query`-tier physical fns); a default/Pi build dispatches to the Lane-0 `SerialDriver`.
+#[cfg(feature = "query")]
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod runtime;
+/// SQL text crossing a federation boundary: dialects, identifiers, literals (one owner).
+#[cfg(feature = "query")]
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod sql_text;
 /// Stored, versioned queries (MEDULLA-FEDERATED-QUERY-R708).
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod stored_query;
-#[cfg(all(feature = "query", any(test, feature = "test-support")))]
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod fixture;

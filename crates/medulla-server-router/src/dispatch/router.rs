@@ -1,20 +1,38 @@
-use medulla_server_graph::{dispatch::change_envelope::dispatch_change_envelopes, dispatch::change_envelope::multi_graph_batch_update};
-use medulla_server_consensus::{dispatch::consensus::handle_fleet_catalog, dispatch::consensus::handle_list_registered_servers, dispatch::consensus::handle_register_server, dispatch::consensus::replicated_identity_bootstrap_authorized, dispatch::consensus::ServerRegistration};
+#[cfg(feature = "cost")]
+use super::request_boundary::dispatch_resource_stats;
+use super::request_boundary::{
+    append_native_capacity_ops, append_native_resource_ops, append_native_work_item_ops,
+    dispatch_boxed, dispatch_boxed_typed, DispatchAuthority,
+};
+use crate::dispatch::*;
+use medulla_server_consensus::{
+    dispatch::consensus::handle_fleet_catalog, dispatch::consensus::handle_list_registered_servers,
+    dispatch::consensus::handle_register_server,
+    dispatch::consensus::replicated_identity_bootstrap_authorized,
+    dispatch::consensus::ServerRegistration,
+};
 use medulla_server_graph::dispatch::graph_pipeline::dispatch_graph_op;
 #[cfg(feature = "knowledge-batch")]
 use medulla_server_graph::dispatch::graph_pipeline::dispatch_knowledge_stream;
 #[cfg(feature = "modality-serving")]
 use medulla_server_graph::dispatch::graph_pipeline::dispatch_served_modality;
-use medulla_server_graph::{dispatch::policy_evolution::handle_policy_evolution, dispatch::policy_evolution::PolicyEvolutionTarget};
-#[cfg(feature = "cost")]
-use super::request_boundary::dispatch_resource_stats;
-use super::request_boundary::{append_native_capacity_ops, append_native_resource_ops, append_native_work_item_ops, dispatch_boxed, dispatch_boxed_typed, DispatchAuthority};
 use medulla_server_graph::dispatch::request_boundary::screen::decode_screen_observation;
-#[cfg(feature = "ast")]
-use medulla_server_graph::{dispatch::request_boundary::preflight::ast_input_limits, dispatch::request_boundary::preflight::decode_ast_files, dispatch::request_boundary::preflight::validate_ast_logical_path};
 #[cfg(feature = "sparql-http")]
 use medulla_server_graph::dispatch::sparql_update::coordinated_sparql_http_update;
-use crate::dispatch::*;
+use medulla_server_graph::{
+    dispatch::change_envelope::dispatch_change_envelopes,
+    dispatch::change_envelope::multi_graph_batch_update,
+};
+use medulla_server_graph::{
+    dispatch::policy_evolution::handle_policy_evolution,
+    dispatch::policy_evolution::PolicyEvolutionTarget,
+};
+#[cfg(feature = "ast")]
+use medulla_server_graph::{
+    dispatch::request_boundary::preflight::ast_input_limits,
+    dispatch::request_boundary::preflight::decode_ast_files,
+    dispatch::request_boundary::preflight::validate_ast_logical_path,
+};
 
 mod channels;
 mod control_plane;
@@ -93,7 +111,8 @@ async fn dispatch_sparql_http_update(
     } = ctx;
     ControlFlow::Break(match method {
         Method::ApplyMutation { event_type, query }
-            if event_type == medulla_server_api::api::dispatch_support::SPARQL_HTTP_UPDATE_EVENT =>
+            if event_type
+                == medulla_server_api::api::dispatch_support::SPARQL_HTTP_UPDATE_EVENT =>
         {
             coordinated_sparql_http_update(
                 state,

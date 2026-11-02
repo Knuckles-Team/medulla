@@ -558,7 +558,6 @@ pub fn decode_meta_record(graph: &str, blob: &[u8]) -> Result<GraphMetaRecord, S
     Ok(record)
 }
 
-
 /// The durable identity row of one graph, as the catalog stores it.
 ///
 /// The fields are `pub(crate)` because the reader of a decoded record is not

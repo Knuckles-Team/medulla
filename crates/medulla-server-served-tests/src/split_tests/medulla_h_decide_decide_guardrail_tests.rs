@@ -7,24 +7,26 @@ use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-use medulla_protocol_types::protocol::{Method, Request, Response, ResultPayload};
-use medulla_server_api::authority_context::VerifiedRequestContext;
-use medulla_persistence_records::agent_component::test_component_draft;
-use medulla_persistence_records::agent_fixtures::mutation_context;
-use medulla_persistence_records::agent_library::AgentLibraryStore;
-use medulla_server_api::state::ServerState;
 use medulla_agent_types::agent_component::{
     AgentComponentKind, AgentComponentPublishRequest, AgentComponentRetireRequest,
 };
 use medulla_agent_types::agent_guardrail::{
     EntailmentStep, GuardrailEntailmentRequest, GuardrailEntailmentResult, GuardrailRule,
 };
+use medulla_persistence_records::agent_component::test_component_draft;
+use medulla_persistence_records::agent_fixtures::mutation_context;
+use medulla_persistence_records::agent_library::AgentLibraryStore;
+use medulla_protocol_types::protocol::{Method, Request, Response, ResultPayload};
+use medulla_server_api::authority_context::VerifiedRequestContext;
+use medulla_server_api::state::ServerState;
 
 const TENANT: &str = "tenant-guardrail";
 
 fn state(path: &std::path::Path) -> Arc<RwLock<ServerState>> {
-    let mut server =
-        medulla_server::seams_install::new_state_for_test("guardrail-secret", ServerState::test_isolation("asker"));
+    let mut server = medulla_server::seams_install::new_state_for_test(
+        "guardrail-secret",
+        ServerState::test_isolation("asker"),
+    );
     server.persist_dir = Some(path.to_string_lossy().into_owned());
     Arc::new(RwLock::new(server))
 }
@@ -64,9 +66,11 @@ async fn ask(state: &medulla_h_decide::decide::SharedState, tenant: &str, task: 
         method,
     };
     let verified = VerifiedRequestContext::verified_for_test_in_tenant("asker", TENANT);
-    Box::pin(medulla_server_router::dispatch::request_boundary::dispatch_verified_request(
-        state, request, verified,
-    ))
+    Box::pin(
+        medulla_server_router::dispatch::request_boundary::dispatch_verified_request(
+            state, request, verified,
+        ),
+    )
     .await
 }
 

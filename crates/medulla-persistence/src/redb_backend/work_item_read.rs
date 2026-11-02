@@ -5,8 +5,14 @@
 //! the redb authority holds native WorkItem rows, and the handler reaches it
 //! through `PersistenceBackend::as_redb`, failing closed on any other backend.
 
-use medulla_work_types::{control_lease::ControlLeasePage, control_lease::ControlLeaseView, control_lease::ListControlLeasesRequest};
-use medulla_work_types::{work_item_read::WorkItemListRequest, work_item_read::WorkItemOutcomeView, work_item_read::WorkItemPage, work_item_read::WorkItemView};
+use medulla_work_types::{
+    control_lease::ControlLeasePage, control_lease::ControlLeaseView,
+    control_lease::ListControlLeasesRequest,
+};
+use medulla_work_types::{
+    work_item_read::WorkItemListRequest, work_item_read::WorkItemOutcomeView,
+    work_item_read::WorkItemPage, work_item_read::WorkItemView,
+};
 use medulla_work_types::{work_market::GapListRequest, work_market::GapPage, work_market::GapView};
 
 use super::RedbBackend;
@@ -66,7 +72,8 @@ impl RedbBackend {
         tenant: &str,
         work_item_id: &str,
     ) -> Result<Option<WorkItemOutcomeView>, String> {
-        let read: TenantPointRead<_> = medulla_work_store::redb_store::work_item::read_work_item_outcome;
+        let read: TenantPointRead<_> =
+            medulla_work_store::redb_store::work_item::read_work_item_outcome;
         self.tenant_point_read(graph_fname, tenant, work_item_id, read)
             .await
     }
@@ -78,7 +85,8 @@ impl RedbBackend {
         tenant: &str,
         lease_id: &str,
     ) -> Result<Option<ControlLeaseView>, String> {
-        let read: TenantPointRead<_> = medulla_work_store::redb_store::work_item::read_control_lease;
+        let read: TenantPointRead<_> =
+            medulla_work_store::redb_store::work_item::read_control_lease;
         self.tenant_point_read(graph_fname, tenant, lease_id, read)
             .await
     }
@@ -89,7 +97,8 @@ impl RedbBackend {
         graph_fname: &str,
         request: ListControlLeasesRequest,
     ) -> Result<ControlLeasePage, String> {
-        let read: TenantListRead<_, _> = medulla_work_store::redb_store::work_item::list_control_leases;
+        let read: TenantListRead<_, _> =
+            medulla_work_store::redb_store::work_item::list_control_leases;
         self.tenant_list_read(graph_fname, request, read).await
     }
 
@@ -227,7 +236,8 @@ impl RedbBackend {
         tenant: &str,
         run_id: &str,
         actor: &str,
-    ) -> Result<Option<medulla_decision_outcome_types::current_plan::CurrentPlanSnapshot>, String> {
+    ) -> Result<Option<medulla_decision_outcome_types::current_plan::CurrentPlanSnapshot>, String>
+    {
         self.owner_point_read(
             graph_fname,
             tenant,

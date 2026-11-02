@@ -29,7 +29,6 @@
 //! [`DocumentServingRuntime`]. Commits use the universal governed artifact protocol,
 //! maintain the lexical posting index atomically, and never retain source text.
 
-
 mod decoder;
 mod document;
 mod header;

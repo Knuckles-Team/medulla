@@ -714,44 +714,58 @@ fn core_specs() -> &'static [CoreSpec] {
             module: "catalog",
             version: 1,
             shapes: None,
-            ontology: Some(include_str!("../../../medulla-core/ontology/catalog-v1.ttl")),
+            ontology: Some(include_str!(
+                "../../../medulla-core/ontology/catalog-v1.ttl"
+            )),
         },
         CoreSpec {
             module: "foundation",
             version: 1,
             shapes: None,
-            ontology: Some(include_str!("../../../medulla-core/ontology/core-foundation-v1.ttl")),
+            ontology: Some(include_str!(
+                "../../../medulla-core/ontology/core-foundation-v1.ttl"
+            )),
         },
         // The core-foundation SHACL shapes are their own core source, the
         // same pattern as orchestration-shapes and finance-shapes.
         CoreSpec {
             module: "foundation-shapes",
             version: 1,
-            shapes: Some(include_str!("../../../medulla-core/ontology/core-foundation-v1.shapes.ttl")),
+            shapes: Some(include_str!(
+                "../../../medulla-core/ontology/core-foundation-v1.shapes.ttl"
+            )),
             ontology: None,
         },
         CoreSpec {
             module: "capability",
             version: 1,
             shapes: None,
-            ontology: Some(include_str!("../../../medulla-core/ontology/capability-v1.ttl")),
+            ontology: Some(include_str!(
+                "../../../medulla-core/ontology/capability-v1.ttl"
+            )),
         },
         CoreSpec {
             module: "archimate",
             version: 1,
             shapes: None,
-            ontology: Some(include_str!("../../../medulla-core/ontology/archimate-v1.ttl")),
+            ontology: Some(include_str!(
+                "../../../medulla-core/ontology/archimate-v1.ttl"
+            )),
         },
         CoreSpec {
             module: "enterprise",
             version: 1,
             shapes: None,
-            ontology: Some(include_str!("../../../medulla-core/ontology/enterprise-v1.ttl")),
+            ontology: Some(include_str!(
+                "../../../medulla-core/ontology/enterprise-v1.ttl"
+            )),
         },
         CoreSpec {
             module: "governance-shapes",
             version: 1,
-            shapes: Some(include_str!("../../../medulla-core/ontology/governance-core-v1.shapes.ttl")),
+            shapes: Some(include_str!(
+                "../../../medulla-core/ontology/governance-core-v1.shapes.ttl"
+            )),
             ontology: None,
         },
         CoreSpec {
@@ -770,69 +784,93 @@ fn core_specs() -> &'static [CoreSpec] {
             module: "argumentation",
             version: 1,
             shapes: None,
-            ontology: Some(include_str!("../../../medulla-core/ontology/argumentation-v1.ttl")),
+            ontology: Some(include_str!(
+                "../../../medulla-core/ontology/argumentation-v1.ttl"
+            )),
         },
         CoreSpec {
             module: "calendar",
             version: 1,
             shapes: None,
-            ontology: Some(include_str!("../../../medulla-core/ontology/calendar-v1.ttl")),
+            ontology: Some(include_str!(
+                "../../../medulla-core/ontology/calendar-v1.ttl"
+            )),
         },
         CoreSpec {
             module: "company",
             version: 1,
             shapes: None,
-            ontology: Some(include_str!("../../../medulla-core/ontology/company-v1.ttl")),
+            ontology: Some(include_str!(
+                "../../../medulla-core/ontology/company-v1.ttl"
+            )),
         },
         CoreSpec {
             module: "company_infra",
             version: 1,
             shapes: None,
-            ontology: Some(include_str!("../../../medulla-core/ontology/company_infra-v1.ttl")),
+            ontology: Some(include_str!(
+                "../../../medulla-core/ontology/company_infra-v1.ttl"
+            )),
         },
         CoreSpec {
             module: "concepts",
             version: 1,
             shapes: None,
-            ontology: Some(include_str!("../../../medulla-core/ontology/concepts-v1.ttl")),
+            ontology: Some(include_str!(
+                "../../../medulla-core/ontology/concepts-v1.ttl"
+            )),
         },
         CoreSpec {
             module: "dataplatform",
             version: 1,
             shapes: None,
-            ontology: Some(include_str!("../../../medulla-core/ontology/dataplatform-v1.ttl")),
+            ontology: Some(include_str!(
+                "../../../medulla-core/ontology/dataplatform-v1.ttl"
+            )),
         },
         CoreSpec {
             module: "documentation",
             version: 1,
             shapes: None,
-            ontology: Some(include_str!("../../../medulla-core/ontology/documentation-v1.ttl")),
+            ontology: Some(include_str!(
+                "../../../medulla-core/ontology/documentation-v1.ttl"
+            )),
         },
         CoreSpec {
             module: "energy_geopolitics",
             version: 1,
             shapes: None,
-            ontology: Some(include_str!("../../../medulla-core/ontology/energy_geopolitics-v1.ttl")),
+            ontology: Some(include_str!(
+                "../../../medulla-core/ontology/energy_geopolitics-v1.ttl"
+            )),
         },
         CoreSpec {
             module: "government",
             version: 1,
             shapes: None,
-            ontology: Some(include_str!("../../../medulla-core/ontology/government-v1.ttl")),
+            ontology: Some(include_str!(
+                "../../../medulla-core/ontology/government-v1.ttl"
+            )),
         },
         // The government SHACL shapes are their own core source, the same
         // pattern as orchestration-shapes and finance-shapes.
         CoreSpec {
             module: "government-shapes",
             version: 1,
-            shapes: Some(include_str!("../../../medulla-core/ontology/government-v1.shapes.ttl")),
+            shapes: Some(include_str!(
+                "../../../medulla-core/ontology/government-v1.shapes.ttl"
+            )),
             ontology: None,
         },
         CoreSpec {
             module: "harness",
             version: 1,
-            shapes: Some(include_str!("../../../medulla-core/ontology/harness-v1.shapes.ttl")),
-            ontology: Some(include_str!("../../../medulla-core/ontology/harness-v1.ttl")),
+            shapes: Some(include_str!(
+                "../../../medulla-core/ontology/harness-v1.shapes.ttl"
+            )),
+            ontology: Some(include_str!(
+                "../../../medulla-core/ontology/harness-v1.ttl"
+            )),
         },
         CoreSpec {
             module: "hr",
@@ -844,25 +882,35 @@ fn core_specs() -> &'static [CoreSpec] {
             module: "identity",
             version: 1,
             shapes: None,
-            ontology: Some(include_str!("../../../medulla-core/ontology/identity-v1.ttl")),
+            ontology: Some(include_str!(
+                "../../../medulla-core/ontology/identity-v1.ttl"
+            )),
         },
         CoreSpec {
             module: "infrastructure",
             version: 1,
-            shapes: Some(include_str!("../../../medulla-core/ontology/infrastructure-v1.shapes.ttl")),
-            ontology: Some(include_str!("../../../medulla-core/ontology/infrastructure-v1.ttl")),
+            shapes: Some(include_str!(
+                "../../../medulla-core/ontology/infrastructure-v1.shapes.ttl"
+            )),
+            ontology: Some(include_str!(
+                "../../../medulla-core/ontology/infrastructure-v1.ttl"
+            )),
         },
         CoreSpec {
             module: "it4it_delivery",
             version: 1,
             shapes: None,
-            ontology: Some(include_str!("../../../medulla-core/ontology/it4it_delivery-v1.ttl")),
+            ontology: Some(include_str!(
+                "../../../medulla-core/ontology/it4it_delivery-v1.ttl"
+            )),
         },
         CoreSpec {
             module: "medical",
             version: 1,
             shapes: None,
-            ontology: Some(include_str!("../../../medulla-core/ontology/medical-v1.ttl")),
+            ontology: Some(include_str!(
+                "../../../medulla-core/ontology/medical-v1.ttl"
+            )),
         },
         CoreSpec {
             module: "media",
@@ -882,33 +930,43 @@ fn core_specs() -> &'static [CoreSpec] {
             module: "orchestration",
             version: 1,
             shapes: None,
-            ontology: Some(include_str!("../../../medulla-core/ontology/orchestration-v1.ttl")),
+            ontology: Some(include_str!(
+                "../../../medulla-core/ontology/orchestration-v1.ttl"
+            )),
         },
         // The orchestration SHACL shapes are their own core source, the same
         // pattern as swarm-topology-shapes and finance-shapes.
         CoreSpec {
             module: "orchestration-shapes",
             version: 1,
-            shapes: Some(include_str!("../../../medulla-core/ontology/orchestration-v1.shapes.ttl")),
+            shapes: Some(include_str!(
+                "../../../medulla-core/ontology/orchestration-v1.shapes.ttl"
+            )),
             ontology: None,
         },
         CoreSpec {
             module: "personal",
             version: 1,
             shapes: None,
-            ontology: Some(include_str!("../../../medulla-core/ontology/personal-v1.ttl")),
+            ontology: Some(include_str!(
+                "../../../medulla-core/ontology/personal-v1.ttl"
+            )),
         },
         CoreSpec {
             module: "process_intelligence",
             version: 1,
             shapes: None,
-            ontology: Some(include_str!("../../../medulla-core/ontology/process_intelligence-v1.ttl")),
+            ontology: Some(include_str!(
+                "../../../medulla-core/ontology/process_intelligence-v1.ttl"
+            )),
         },
         CoreSpec {
             module: "retrieval",
             version: 1,
             shapes: None,
-            ontology: Some(include_str!("../../../medulla-core/ontology/retrieval-v1.ttl")),
+            ontology: Some(include_str!(
+                "../../../medulla-core/ontology/retrieval-v1.ttl"
+            )),
         },
         CoreSpec {
             module: "sdd",
@@ -920,19 +978,25 @@ fn core_specs() -> &'static [CoreSpec] {
             module: "sdlc_lifecycle",
             version: 1,
             shapes: None,
-            ontology: Some(include_str!("../../../medulla-core/ontology/sdlc_lifecycle-v1.ttl")),
+            ontology: Some(include_str!(
+                "../../../medulla-core/ontology/sdlc_lifecycle-v1.ttl"
+            )),
         },
         CoreSpec {
             module: "service_operations",
             version: 1,
             shapes: None,
-            ontology: Some(include_str!("../../../medulla-core/ontology/service_operations-v1.ttl")),
+            ontology: Some(include_str!(
+                "../../../medulla-core/ontology/service_operations-v1.ttl"
+            )),
         },
         CoreSpec {
             module: "software",
             version: 1,
             shapes: None,
-            ontology: Some(include_str!("../../../medulla-core/ontology/software-v1.ttl")),
+            ontology: Some(include_str!(
+                "../../../medulla-core/ontology/software-v1.ttl"
+            )),
         },
         CoreSpec {
             module: "system",
@@ -956,18 +1020,24 @@ fn core_specs() -> &'static [CoreSpec] {
             module: "environment",
             version: 1,
             shapes: None,
-            ontology: Some(include_str!("../../../medulla-core/ontology/environment-v1.ttl")),
+            ontology: Some(include_str!(
+                "../../../medulla-core/ontology/environment-v1.ttl"
+            )),
         },
         CoreSpec {
             module: "nutrition",
             version: 1,
             shapes: None,
-            ontology: Some(include_str!("../../../medulla-core/ontology/nutrition-v1.ttl")),
+            ontology: Some(include_str!(
+                "../../../medulla-core/ontology/nutrition-v1.ttl"
+            )),
         },
         CoreSpec {
             module: "world-model-shapes",
             version: 1,
-            shapes: Some(include_str!("../../../medulla-core/ontology/world_model-v1.shapes.ttl")),
+            shapes: Some(include_str!(
+                "../../../medulla-core/ontology/world_model-v1.shapes.ttl"
+            )),
             ontology: None,
         },
         // SWARM-TOPOLOGY-DECIDE-DESIGN §4 (ST-1): topology classes, slot roles, stop
@@ -977,31 +1047,41 @@ fn core_specs() -> &'static [CoreSpec] {
             module: "swarm-topology",
             version: 1,
             shapes: None,
-            ontology: Some(include_str!("../../../medulla-core/ontology/swarm_topology-v1.ttl")),
+            ontology: Some(include_str!(
+                "../../../medulla-core/ontology/swarm_topology-v1.ttl"
+            )),
         },
         CoreSpec {
             module: "swarm-topology-shapes",
             version: 1,
-            shapes: Some(include_str!("../../../medulla-core/ontology/swarm_topology-v1.shapes.ttl")),
+            shapes: Some(include_str!(
+                "../../../medulla-core/ontology/swarm_topology-v1.shapes.ttl"
+            )),
             ontology: None,
         },
         CoreSpec {
             module: "finance",
             version: 1,
             shapes: None,
-            ontology: Some(include_str!("../../../medulla-core/ontology/finance-v1.ttl")),
+            ontology: Some(include_str!(
+                "../../../medulla-core/ontology/finance-v1.ttl"
+            )),
         },
         CoreSpec {
             module: "finance-shapes",
             version: 1,
-            shapes: Some(include_str!("../../../medulla-core/ontology/finance-v1.shapes.ttl")),
+            shapes: Some(include_str!(
+                "../../../medulla-core/ontology/finance-v1.shapes.ttl"
+            )),
             ontology: None,
         },
         CoreSpec {
             module: "worldview",
             version: 1,
             shapes: None,
-            ontology: Some(include_str!("../../../medulla-core/ontology/worldview-v1.ttl")),
+            ontology: Some(include_str!(
+                "../../../medulla-core/ontology/worldview-v1.ttl"
+            )),
         },
         // MERISTEM-SEMANTIC-R004: bi-temporal fact invariants (validity window,
         // contradiction/superseded-closure) over the engine's own
@@ -1010,7 +1090,9 @@ fn core_specs() -> &'static [CoreSpec] {
         CoreSpec {
             module: "temporal-shapes",
             version: 1,
-            shapes: Some(include_str!("../../../medulla-core/ontology/temporal-v1.shapes.ttl")),
+            shapes: Some(include_str!(
+                "../../../medulla-core/ontology/temporal-v1.shapes.ttl"
+            )),
             ontology: None,
         },
         // The metadata catalog: assets, owners and stewards, lineage, glossary and
@@ -1019,7 +1101,9 @@ fn core_specs() -> &'static [CoreSpec] {
             module: "metadata_catalog",
             version: 1,
             shapes: None,
-            ontology: Some(include_str!("../../../medulla-core/ontology/metadata_catalog-v1.ttl")),
+            ontology: Some(include_str!(
+                "../../../medulla-core/ontology/metadata_catalog-v1.ttl"
+            )),
         },
         CoreSpec {
             module: "metadata_catalog-shapes",
@@ -1033,7 +1117,9 @@ fn core_specs() -> &'static [CoreSpec] {
             module: "virtual-graph",
             version: 1,
             shapes: None,
-            ontology: Some(include_str!("../../../medulla-core/ontology/virtual_graph-v1.ttl")),
+            ontology: Some(include_str!(
+                "../../../medulla-core/ontology/virtual_graph-v1.ttl"
+            )),
         },
         // MEDULLA-DATAPLAT-VOCAB-R001.4: shared data-platform terms are one immutable
         // core source and import the virtual-graph attachment vocabulary.
@@ -1044,13 +1130,19 @@ fn core_specs() -> &'static [CoreSpec] {
         CoreSpec {
             module: "data-platform",
             version: 1,
-            shapes: Some(include_str!("../../../medulla-core/ontology/data_platform-v1.shapes.ttl")),
-            ontology: Some(include_str!("../../../medulla-core/ontology/data_platform-v1.ttl")),
+            shapes: Some(include_str!(
+                "../../../medulla-core/ontology/data_platform-v1.shapes.ttl"
+            )),
+            ontology: Some(include_str!(
+                "../../../medulla-core/ontology/data_platform-v1.ttl"
+            )),
         },
         CoreSpec {
             module: "virtual-graph-shapes",
             version: 1,
-            shapes: Some(include_str!("../../../medulla-core/ontology/virtual_graph-v1.shapes.ttl")),
+            shapes: Some(include_str!(
+                "../../../medulla-core/ontology/virtual_graph-v1.shapes.ttl"
+            )),
             ontology: None,
         },
         // MEDULLA-SUPPLY-VOCAB-R003.13: the commercial module, registered once, with
@@ -1059,14 +1151,20 @@ fn core_specs() -> &'static [CoreSpec] {
         CoreSpec {
             module: "commercial",
             version: 1,
-            shapes: Some(include_str!("../../../medulla-core/ontology/commercial-v1.shapes.ttl")),
-            ontology: Some(include_str!("../../../medulla-core/ontology/commercial-v1.ttl")),
+            shapes: Some(include_str!(
+                "../../../medulla-core/ontology/commercial-v1.shapes.ttl"
+            )),
+            ontology: Some(include_str!(
+                "../../../medulla-core/ontology/commercial-v1.ttl"
+            )),
         },
         CoreSpec {
             module: "supply_chain",
             version: 1,
             shapes: None,
-            ontology: Some(include_str!("../../../medulla-core/ontology/supply_chain-v1.ttl")),
+            ontology: Some(include_str!(
+                "../../../medulla-core/ontology/supply_chain-v1.ttl"
+            )),
         },
         // MEDULLA-TYPED-PACKS-R101.1/R102.1: the connector-pack ingest-contract and
         // surface vocabulary, registered once, with its shapes companion wired
@@ -1075,8 +1173,12 @@ fn core_specs() -> &'static [CoreSpec] {
         CoreSpec {
             module: "connector-pack",
             version: 1,
-            shapes: Some(include_str!("../../../medulla-core/ontology/connector_pack-v1.shapes.ttl")),
-            ontology: Some(include_str!("../../../medulla-core/ontology/connector_pack-v1.ttl")),
+            shapes: Some(include_str!(
+                "../../../medulla-core/ontology/connector_pack-v1.shapes.ttl"
+            )),
+            ontology: Some(include_str!(
+                "../../../medulla-core/ontology/connector_pack-v1.ttl"
+            )),
         },
     ];
     SPECS

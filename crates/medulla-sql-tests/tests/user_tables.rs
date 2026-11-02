@@ -10,19 +10,22 @@
 #![cfg(feature = "sql")]
 
 use medulla_graph_core::graph::{GraphCore, GraphView};
-use medulla_sql_lang::{sql::classify::classify, sql::classify::AlterTableAction, sql::typed_result::PgColType, sql::classify::StatementKind, sql::typed_result::TypedQueryResult};
 use medulla_sql::sql::exec_sql_typed_with_tables;
-use medulla_tables::{schema::Cell, schema::Column, schema::ColumnType, schema::TableSchema};
+use medulla_sql_lang::{
+    sql::classify::classify, sql::classify::AlterTableAction, sql::classify::StatementKind,
+    sql::typed_result::PgColType, sql::typed_result::TypedQueryResult,
+};
 use medulla_table_store::tables::TableStore;
+use medulla_tables::{schema::Cell, schema::Column, schema::ColumnType, schema::TableSchema};
 // CONCEPT:MEDULLA-KG.query.table-schema-constraints/NE-001/NE-002 — table-level constraints + the new scalar types are
 // reachable via the fully-qualified `tables::schema` path (not yet added to the
 // crate's top-level re-export list in `tables/mod.rs`, a file this track does not
 // own — see the final report's "files touched outside the owned list" note).
 use medulla_sql_lang::sql::pgq::parse_property_graph_ddl;
+use medulla_table_store::tables::PropertyGraphStatement;
 use medulla_tables::schema::ArrayElemType;
 use medulla_tables::schema::RefAction;
 use medulla_tables::schema::TableConstraint;
-use medulla_table_store::tables::PropertyGraphStatement;
 use serde_json::{json, Value};
 
 /// Resolve a `classify::ColumnDef` (raw type spelling) into a store `Column`.
@@ -676,7 +679,10 @@ fn eg313_no_matching_index_falls_back_to_brute_force() {
     .unwrap();
     let want = brute_nearest_ids(q, 3, n, "<->");
     let got: Vec<Value> = no_index.rows.into_iter().map(|r| r[0].clone()).collect();
-    assert_eq!(got, want, "MEDULLA-313 no-index must fall back to brute force");
+    assert_eq!(
+        got, want,
+        "MEDULLA-313 no-index must fall back to brute force"
+    );
 
     // Register an L2-only index, then issue a COSINE query — metric not covered ⇒
     // fallback, still correct against the cosine brute-force reference.

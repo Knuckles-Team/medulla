@@ -256,7 +256,8 @@ async fn submit(
         agent_id: Some(context.agent_id().to_string()),
         method,
     };
-    let response = medulla_server_api::api::reentry::dispatch_verified_request(state, request, context).await;
+    let response =
+        medulla_server_api::api::reentry::dispatch_verified_request(state, request, context).await;
     match response.refusal_text() {
         None => Ok(()),
         Some(refusal) => Err(format!("writeback refused: {refusal}")),

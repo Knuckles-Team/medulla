@@ -30,12 +30,12 @@ use tokio::io::AsyncWriteExt;
 use tokio::net::TcpListener;
 use tokio::sync::RwLock;
 
+use medulla_graph_core::graph::GraphCore;
+use medulla_rdf::sparql::{Binding, Dataset, Projection, QueryOutcome, SparqlResult};
 use medulla_server_api::http1;
 use medulla_server_api::http1::HttpMessage;
 use medulla_server_api::http1::RequestLimits;
 use medulla_server_api::state::ServerState;
-use medulla_graph_core::graph::GraphCore;
-use medulla_rdf::sparql::{Binding, Dataset, Projection, QueryOutcome, SparqlResult};
 
 mod graph_store;
 mod negotiation;
@@ -87,7 +87,8 @@ const HTTP_READ_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(15
 /// configuration (an issuer selected without its mandatory audience/JWKS
 /// URL) — logged, then also treated as unconfigured so a startup typo cannot
 /// crash the listener that also serves SPARQL UPDATE / Graph Store traffic.
-fn resolve_bearer_credential() -> Result<Option<medulla_server_auth::auth::BearerCredential>, String> {
+fn resolve_bearer_credential() -> Result<Option<medulla_server_auth::auth::BearerCredential>, String>
+{
     match medulla_server_api::oidc::JwtValidator::from_env_sparql() {
         Ok(Some(validator)) => {
             return Ok(Some(medulla_server_auth::auth::BearerCredential::Jwt(
@@ -105,7 +106,9 @@ fn resolve_bearer_credential() -> Result<Option<medulla_server_auth::auth::Beare
 
 /// Serve the SPARQL 1.1 HTTP protocol on `listener`, backed by the engine `state`.
 pub async fn serve(listener: TcpListener, state: Arc<RwLock<ServerState>>) {
-    if let Err(error) = medulla_server_api::api::dispatch_support::require_loopback_listener(&listener) {
+    if let Err(error) =
+        medulla_server_api::api::dispatch_support::require_loopback_listener(&listener)
+    {
         tracing::error!("SPARQL listener refused: {error}");
         return;
     }
@@ -297,7 +300,8 @@ async fn handle_nl(
         agent_id: Some("service:local-query".to_string()),
         method: medulla_protocol_types::protocol::Method::NlQuery { text, graph },
     };
-    let resp = medulla_server_api::api::reentry::dispatch_authenticated_local_query(state, request).await;
+    let resp =
+        medulla_server_api::api::reentry::dispatch_authenticated_local_query(state, request).await;
     if let Some(err) = resp.error {
         return (
             "400 Bad Request",
@@ -490,7 +494,10 @@ impl ServiceClient {
 #[cfg(feature = "sparql-service")]
 impl medulla_rdf::sparql::RemoteSparql for ServiceClient {
     fn select(&self, endpoint: &str, query: &str) -> Result<SparqlResult, String> {
-        use medulla_federation::{federation_ssrf::pinned_agent, federation_ssrf::validate_outbound_http_target, federation_ssrf::OutboundAllowPolicy};
+        use medulla_federation::{
+            federation_ssrf::pinned_agent, federation_ssrf::validate_outbound_http_target,
+            federation_ssrf::OutboundAllowPolicy,
+        };
         use std::io::Read;
         let target = validate_outbound_http_target(
             endpoint,
@@ -1239,7 +1246,9 @@ mod tests {
     #[cfg(feature = "sparql-service")]
     #[test]
     fn service_destination_uses_single_federation_gate() {
-        use medulla_federation::{federation_ssrf::validate_outbound_http_target, federation_ssrf::OutboundAllowPolicy};
+        use medulla_federation::{
+            federation_ssrf::validate_outbound_http_target, federation_ssrf::OutboundAllowPolicy,
+        };
         let allow = vec!["127.0.0.1".to_string()];
         let accepted = validate_outbound_http_target(
             "http://127.0.0.1:8080/sparql",

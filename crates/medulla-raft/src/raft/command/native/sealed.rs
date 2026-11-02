@@ -74,10 +74,7 @@ impl SealedNativeMethod {
         .map_err(|_| "native Raft command payload is invalid".to_string())
     }
 
-    pub fn new(
-        server_secret: &str,
-        method: &Method,
-    ) -> Result<Self, String> {
+    pub fn new(server_secret: &str, method: &Method) -> Result<Self, String> {
         Self::seal_value(
             server_secret,
             &InternalGraphCommand {

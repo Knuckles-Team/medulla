@@ -19,13 +19,13 @@ use super::capability::{
 use super::remote::{Identity, RemoteFetch};
 use super::run::Fragment;
 use super::stats::fingerprint;
-use medulla_exec::budget::FederationBudget;
 use super::{FederationSession, FetchStrategy, BUDGET_EXCEEDED, REQUIRES_KEYS};
-use medulla_exec::algebra::Op;
-use medulla_exec::exec::{execute, PlanCtx};
 use crate::test_guard::MockHttpAllowGuard;
-use medulla_exec::rowset::RowSet;
+use medulla_exec::algebra::Op;
 use medulla_exec::algebra::Plan;
+use medulla_exec::budget::FederationBudget;
+use medulla_exec::exec::{execute, PlanCtx};
+use medulla_exec::rowset::RowSet;
 
 // ── a recording JSON API ─────────────────────────────────────────────────────────
 

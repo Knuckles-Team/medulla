@@ -17,10 +17,12 @@
 use std::collections::HashSet;
 
 use medulla_rdf::guard::{GuardRejection, WriteGuard};
-use medulla_reasoner::{owl::asserted_types_from_view, owl::instances_of, owl::tbox_triples_from_view, owl::Reasoner};
 use medulla_rdf::oxrdf::{Graph, Triple};
 use medulla_rdf::sparql::Projection;
 use medulla_rdf::update::{execute_str, MapStore};
+use medulla_reasoner::{
+    owl::asserted_types_from_view, owl::instances_of, owl::tbox_triples_from_view, owl::Reasoner,
+};
 
 struct SeamWriteGuard;
 

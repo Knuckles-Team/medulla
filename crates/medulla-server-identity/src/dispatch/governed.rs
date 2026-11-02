@@ -16,12 +16,12 @@ use medulla_protocol_types::{
 };
 
 use super::elevation::ElevationStampAuthority;
-use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_protocol_types::protocol::Method;
 #[cfg(feature = "security")]
 use medulla_protocol_types::protocol::Response;
 #[cfg(feature = "security")]
 use medulla_protocol_types::protocol::ResultPayload;
+use medulla_server_api::authority_context::VerifiedRequestContext;
 
 /// The actor of a verified request: its identities (hashed), whether it is
 /// delegated, and its EXACT `governance:*` scopes.

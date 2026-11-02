@@ -14,10 +14,13 @@ use common::parse_all;
 use medulla_graph_core::graph::GraphCore;
 use medulla_graph_core::graph::GraphView;
 use medulla_rdf::mapping::{load_triples, parse_turtle, IriStore};
-use medulla_reasoner::owl::Reasoner;
-use medulla_virtual_graph::{source_selection::select_sources, source_selection::CoverageFixture, source_selection::CoverageResult, source_selection::Premise};
 use medulla_rdf::sparql::{execute, Dataset, Projection, QueryOutcome};
+use medulla_reasoner::owl::Reasoner;
 use medulla_shacl::validate_turtle;
+use medulla_virtual_graph::{
+    source_selection::select_sources, source_selection::CoverageFixture,
+    source_selection::CoverageResult, source_selection::Premise,
+};
 
 const SCHEMA: &[&str] = &[
     include_str!("../../medulla-core/ontology/core-foundation-v1.ttl"),

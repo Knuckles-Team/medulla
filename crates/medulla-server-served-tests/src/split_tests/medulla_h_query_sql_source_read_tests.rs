@@ -1,8 +1,8 @@
-use medulla_mutation_types::mutation_scope::MutationOutboxRecord;
 use medulla_index_types::semantic_index::SemanticBinding;
 use medulla_index_types::semantic_index::SemanticDigest;
 use medulla_index_types::semantic_index::SemanticSourceDirtyIntent;
 use medulla_index_types::semantic_index::SemanticStageTransition;
+use medulla_mutation_types::mutation_scope::MutationOutboxRecord;
 use std::path::Path;
 
 use medulla_h_retrieve::semantic_index_runtime::*;
@@ -11,12 +11,15 @@ use std::sync::Arc;
 use medulla_ann_codes::semantic_index_service::SemanticIndexService;
 #[cfg(feature = "query")]
 use medulla_ann_codes::semantic_index_service::{
-    sql_source_revision_for_epoch, SemanticSqlSourceReadPage,
-    SemanticSqlSourceReadPort, SemanticSqlSourceValue,
+    sql_source_revision_for_epoch, SemanticSqlSourceReadPage, SemanticSqlSourceReadPort,
+    SemanticSqlSourceValue,
 };
 use medulla_server_api::carrier::CarrierAuthority;
 #[cfg(feature = "query")]
-use medulla_server_auth::{sql_catalog_acl::open_authorized_table, sql_catalog_acl::SemanticTextSnapshot, sql_catalog_acl::SqlPrivilege};
+use medulla_server_auth::{
+    sql_catalog_acl::open_authorized_table, sql_catalog_acl::SemanticTextSnapshot,
+    sql_catalog_acl::SqlPrivilege,
+};
 use medulla_transaction::OutboxClaimBudget;
 
 use medulla_protocol_types::protocol::Method;
@@ -29,8 +32,8 @@ use medulla_server_auth::sql_catalog_acl::revoke;
 use medulla_server_auth::sql_catalog_acl::with_source_authority_write;
 use medulla_server_auth::sql_tables::tenant_table_store;
 use medulla_server_auth::sql_tables::test_persist_dir;
-use medulla_tables::{schema::Column, schema::ColumnType, schema::TableSchema};
 use medulla_table_store::{tables::TableStore, tables::TableTxn, tables::TxnOp};
+use medulla_tables::{schema::Column, schema::ColumnType, schema::TableSchema};
 // `CmpOp` exists in BOTH medulla_query and medulla_types and they are distinct types.
 // `TxnOp::Update`'s selector is an `medulla_types::RowPredicate`, so this is the
 // one that belongs here; importing medulla_query's next to it is the mistake that

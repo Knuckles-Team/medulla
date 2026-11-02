@@ -709,6 +709,3 @@ export class MedullaThinClient {
 }
 
 export default MedullaThinClient;
-
-/** @deprecated The client is `MedullaThinClient`; this alias goes away in the next minor. */
-export { MedullaThinClient as MedullaThinClient };

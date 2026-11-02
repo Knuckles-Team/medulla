@@ -83,9 +83,9 @@ mod store_catalog;
 // `information_schema.medulla_index_status` (EH-352), synthesized like the other catalogs.
 mod index_status;
 // EH-387: the read-only gate of the graph-free SQL path.
-mod read_only;
 #[cfg(test)]
 mod pgfamily_tests;
+mod read_only;
 pub use read_only::require_single_read;
 
 pub use ann::ColumnVectorBinding;

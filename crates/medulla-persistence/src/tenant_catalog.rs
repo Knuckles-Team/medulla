@@ -104,7 +104,8 @@ pub struct TenantCatalog {
     /// Optional durable backing (`catalog.redb`), served through the composition-root
     /// kernels (`SidecarStore`) rather than a directly-opened `redb::Database`. `None`
     /// ⇒ in-memory only.
-    durable: Option<medulla_store::sidecar_store::SidecarStore<medulla_storage::TenantCatalogOwner>>,
+    durable:
+        Option<medulla_store::sidecar_store::SidecarStore<medulla_storage::TenantCatalogOwner>>,
 }
 
 impl TenantCatalog {

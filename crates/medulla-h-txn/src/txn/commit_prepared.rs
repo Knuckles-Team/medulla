@@ -256,7 +256,13 @@ pub(super) struct CompilePreparedBatchArgs<'a> {
 /// durable commit call.
 pub(super) async fn compile_prepared_batch(
     args: CompilePreparedBatchArgs<'_>,
-) -> Result<(medulla_protocol_types::mutation_batch::MutationBatch, Vec<u8>), Response> {
+) -> Result<
+    (
+        medulla_protocol_types::mutation_batch::MutationBatch,
+        Vec<u8>,
+    ),
+    Response,
+> {
     let CompilePreparedBatchArgs {
         req_id,
         caller,

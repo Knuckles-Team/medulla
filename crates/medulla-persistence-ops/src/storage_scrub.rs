@@ -12,10 +12,10 @@
 //! * `MEDULLA_STORAGE_SCRUB_ROWS`: node payloads one pass may open per
 //!   shard. Zero, absent or unparsable values mean [`DEFAULT_ROWS_PER_PASS`].
 
-use medulla_store_apply::redb_store::scrub::ScrubBudget;
-use medulla_server_api::api::persistence::PersistenceBackend;
 #[cfg(feature = "redb")]
 use medulla_persistence::AsRedb;
+use medulla_server_api::api::persistence::PersistenceBackend;
+use medulla_store_apply::redb_store::scrub::ScrubBudget;
 
 /// Default seconds between scrub steps.
 pub const DEFAULT_INTERVAL_SECS: u64 = 300;

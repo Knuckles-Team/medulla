@@ -1,7 +1,7 @@
-use medulla_server_graph::dispatch::shared::timed_read;
 use super::*;
 #[cfg(feature = "raft")]
 use medulla_raft::raft::RaftStateExt;
+use medulla_server_graph::dispatch::shared::timed_read;
 
 /// Per-tenant opaque coordinator key for a command that owns its OWN store
 /// (keyed by blob/kv/series/job/statechart/catalog id) and is therefore not

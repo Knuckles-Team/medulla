@@ -7,7 +7,9 @@ use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 use std::time::Instant;
 
 use medulla_catalog_types::{connector_pack::PackAnnotations, connector_pack::PackEntryKind};
-use medulla_source_types::{source_ingestion::SourceIngestionRequest, source_ingestion::SourceJson};
+use medulla_source_types::{
+    source_ingestion::SourceIngestionRequest, source_ingestion::SourceJson,
+};
 use medulla_types::contract::{BoundedVec, ResourceId};
 
 use super::{bind, build_pack, imported, tool, Content, Served, ADMIN, TENANT};

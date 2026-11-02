@@ -44,13 +44,13 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use medulla_protocol_types::protocol::Method;
+use medulla_server_api::state::ServerState;
 use medulla_wire_core::broker_wire;
+use medulla_wire_core::broker_wire::derive_password as derive_mqtt_password_impl;
 use medulla_wire_core::broker_wire::invalid_data;
 use medulla_wire_core::broker_wire::prelude::*;
-use medulla_wire_core::broker_wire::BrokerProtocol;
-use medulla_wire_core::broker_wire::derive_password as derive_mqtt_password_impl;
 use medulla_wire_core::broker_wire::verify_password as verify_mqtt_password_impl;
-use medulla_server_api::state::ServerState;
+use medulla_wire_core::broker_wire::BrokerProtocol;
 
 /// Env var: when set (and the binary is built `--features mqtt-wire`), the MQTT wire
 /// listener binds this address (documented loopback default `127.0.0.1:1883`). Unset ⇒

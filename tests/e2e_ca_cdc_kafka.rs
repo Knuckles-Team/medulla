@@ -24,8 +24,8 @@
 
 use std::sync::Arc;
 
-use medulla_server_cdc::cdc::CdcHub;
 use medulla_server::cdc_sink;
+use medulla_server_cdc::cdc::CdcHub;
 use medulla_types::wire::CdcKind;
 
 #[test]

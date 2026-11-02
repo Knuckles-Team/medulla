@@ -87,8 +87,13 @@ pub async fn decide_seam(state: &Arc<RwLock<ServerState>>) -> Option<Arc<dyn Dec
 }
 
 /// Install the decide seam; `false` when it was already installed.
-pub fn install_decide_seam(reg: &medulla_server_api::api::registry::SeamRegistry, api: Arc<dyn DecideApi>) -> bool {
-    reg.decide.set(Arc::new(api) as medulla_server_api::state::ErasedHandle).is_ok()
+pub fn install_decide_seam(
+    reg: &medulla_server_api::api::registry::SeamRegistry,
+    api: Arc<dyn DecideApi>,
+) -> bool {
+    reg.decide
+        .set(Arc::new(api) as medulla_server_api::state::ErasedHandle)
+        .is_ok()
 }
 
 /// The installed admin seam of `state`, or `None` before installation.
@@ -104,6 +109,11 @@ pub async fn admin_seam(state: &Arc<RwLock<ServerState>>) -> Option<Arc<dyn Admi
 }
 
 /// Install the admin seam; `false` when it was already installed.
-pub fn install_admin_seam(reg: &medulla_server_api::api::registry::SeamRegistry, api: Arc<dyn AdminApi>) -> bool {
-    reg.admin.set(Arc::new(api) as medulla_server_api::state::ErasedHandle).is_ok()
+pub fn install_admin_seam(
+    reg: &medulla_server_api::api::registry::SeamRegistry,
+    api: Arc<dyn AdminApi>,
+) -> bool {
+    reg.admin
+        .set(Arc::new(api) as medulla_server_api::state::ErasedHandle)
+        .is_ok()
 }

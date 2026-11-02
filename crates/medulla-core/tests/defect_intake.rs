@@ -1,9 +1,9 @@
 //! Defect intake (MEDULLA-SDLC-R003.2).
 
-use medulla_source_types::{lifecycle::DefectIntake, lifecycle::DefectStatus, lifecycle::Symptom};
 use medulla_core::lifecycle::defect::{
     normalize_symptom, signature_digest, DefectBook, FileOutcome,
 };
+use medulla_source_types::{lifecycle::DefectIntake, lifecycle::DefectStatus, lifecycle::Symptom};
 
 fn symptom(text: &str, at: u64) -> Symptom {
     Symptom {

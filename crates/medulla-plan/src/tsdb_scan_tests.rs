@@ -316,8 +316,8 @@ fn tsdb_in_plan_fusion() {
 #[cfg(feature = "timeseries")]
 #[test]
 fn tsdb_in_txn_ryow_staged_overlay() {
-    use medulla_exec::exec::{execute, PlanCtx};
     use medulla_exec::exec::StagedSeries;
+    use medulla_exec::exec::{execute, PlanCtx};
     use medulla_graph_core::graph::GraphCore;
     use medulla_semantic_index::semantic::SemanticStore;
     use medulla_types::wire::Plan;
@@ -341,9 +341,10 @@ fn tsdb_in_txn_ryow_staged_overlay() {
     let view = core.analysis_snapshot();
 
     let scan_plan = |series: &str| Plan::new(vec![scan(&[series], 10.0)]);
-    let by_id = |rs: medulla_exec::rowset::RowSet| -> std::collections::HashMap<String, Option<f32>> {
-        rs.rows().iter().map(|r| (r.id.clone(), r.score)).collect()
-    };
+    let by_id =
+        |rs: medulla_exec::rowset::RowSet| -> std::collections::HashMap<String, Option<f32>> {
+            rs.rows().iter().map(|r| (r.id.clone(), r.score)).collect()
+        };
 
     // OFF-TXN (committed only): 3 rows, committed values, no staged point/series.
     let off = {
@@ -717,8 +718,8 @@ fn tsscan_keeps_both_series_at_a_shared_timestamp() {
 #[test]
 fn tsscan_value_channels_are_exact_f64_through_uql_return() {
     use crate::uql::serve::run_statement;
-    use medulla_uql::{parse_statement, Params};
     use medulla_types::wire::UqlResult;
+    use medulla_uql::{parse_statement, Params};
 
     let (path, store, core, semantic) = series_fixture("f64_channel", build_two_series);
     let view = core.analysis_snapshot();

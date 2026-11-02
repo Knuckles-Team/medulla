@@ -351,8 +351,9 @@ pub(crate) fn explain_evidence_wire(
     )
     .entered();
 
-    let resolver = blob_store
-        .map(|store| medulla_server_blob::blob::cas_resolver::CasEvidenceResolver::new(view, store));
+    let resolver = blob_store.map(|store| {
+        medulla_server_blob::blob::cas_resolver::CasEvidenceResolver::new(view, store)
+    });
 
     medulla_protocol_types::protocol::ExplainEvidenceResult {
         citations: citations

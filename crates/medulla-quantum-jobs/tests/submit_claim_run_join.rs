@@ -14,7 +14,8 @@ use medulla_quantum_sim::statevector::StateVectorSimulator;
 
 fn open_store() -> (JobStore, tempfile::TempDir) {
     let dir = tempfile::tempdir().unwrap();
-    let store = medulla_jobs::dev_scope_grant::open_dev_store(&dir.path().join("jobs.redb")).unwrap();
+    let store =
+        medulla_jobs::dev_scope_grant::open_dev_store(&dir.path().join("jobs.redb")).unwrap();
     (store, dir)
 }
 
@@ -57,7 +58,10 @@ fn ghz_component_is_perfectly_correlated_and_routes_to_stabilizer() {
     )
     .expect("submit succeeds");
     assert_eq!(job.algo.family, medulla_quantum_jobs::QUANTUM_ALGO_FAMILY);
-    assert_eq!(job.algo.algorithm, medulla_quantum_jobs::GHZ_RANKING_ALGORITHM);
+    assert_eq!(
+        job.algo.algorithm,
+        medulla_quantum_jobs::GHZ_RANKING_ALGORITHM
+    );
 
     // Register BOTH backends -- proves planner rule R1 (Clifford -> stabilizer,
     // NEVER statevector) actually fires against a real registered pair, not a stub.
@@ -139,7 +143,8 @@ fn same_seed_reproduces_bit_exact_scores() {
         )
         .unwrap()
         .unwrap();
-        let mut rows = medulla_quantum_jobs::join_quantum_result_rows(&store, &finished.job_id).unwrap();
+        let mut rows =
+            medulla_quantum_jobs::join_quantum_result_rows(&store, &finished.job_id).unwrap();
         rows.sort_by(|a, b| a.0.cmp(&b.0));
         rows
     };

@@ -69,9 +69,9 @@ use std::time::Duration;
 use tokio::sync::RwLock;
 
 use crate::cross_shard_txn::{CrossShardCoordinator, CrossShardTxn, GraphSlice, TxnOutcome};
-use medulla_raft::raft::multi::MultiRaft;
 use medulla_protocol_types::protocol::GraphType;
 use medulla_protocol_types::protocol::Method;
+use medulla_raft::raft::multi::MultiRaft;
 
 use crate::fixture;
 
@@ -496,7 +496,9 @@ async fn scenario_stale_fenced_participant_rejected() -> Result<bool, String> {
 /// find a leader. Wait for it explicitly, the same way `bring_up` does for A/B.
 #[cfg(test)]
 async fn await_default_placement_leader(multi: &MultiRaft) -> Result<(), String> {
-    multi.ensure_group(medulla_raft::raft::DEFAULT_GROUP).await?;
+    multi
+        .ensure_group(medulla_raft::raft::DEFAULT_GROUP)
+        .await?;
     let default_group = multi
         .group(medulla_raft::raft::DEFAULT_GROUP)
         .await

@@ -574,9 +574,8 @@ pub async fn apply_consensus_participant_commit(
         participant_id,
         plan_bytes,
     } = participant;
-    let principal = medulla_server_api::batch_compile::principal_fingerprint(
-        &authority.principal_fingerprint,
-    )?;
+    let principal =
+        medulla_server_api::batch_compile::principal_fingerprint(&authority.principal_fingerprint)?;
     let (plan, txn) = decode_consensus_participant(plan_bytes, coordinator_id, participant_id)?;
     let backend = state
         .read()

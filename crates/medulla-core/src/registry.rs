@@ -38,9 +38,9 @@ use std::sync::{Arc, RwLock};
 
 use dashmap::DashMap;
 
-use medulla_protocol_types::protocol::GraphType;
 use medulla_graph_core::graph::GraphCore;
 use medulla_graph_core::graph::GraphSnapshot;
+use medulla_protocol_types::protocol::GraphType;
 
 /// Metadata for a registered graph.
 ///

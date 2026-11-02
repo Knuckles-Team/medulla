@@ -7,9 +7,9 @@
 
 use std::sync::Arc;
 
+use medulla_persistence::redb_backend::RedbBackend;
 use medulla_protocol_types::protocol::Method;
 use medulla_server_api::api::persistence::PersistenceBackend;
-use medulla_persistence::redb_backend::RedbBackend;
 
 pub const GRAPH: &str = "__commons__";
 

@@ -11,7 +11,6 @@
 //! once per kernel. No code outside this crate can name one otherwise, so no
 //! domain crate can obtain a write capability.
 
-
 mod backend_spec;
 mod capability;
 mod codec;

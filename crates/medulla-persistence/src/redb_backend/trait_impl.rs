@@ -24,6 +24,8 @@ use medulla_protocol_types::mutation_batch::MutationBatchCommit;
 use medulla_protocol_types::mutation_batch::MutationBatchRecord;
 use medulla_protocol_types::protocol::GraphType;
 use medulla_protocol_types::protocol::Method;
+use medulla_resource_store::redb_store::resource::read_resource_reservation as read_resource_reservation_record;
+use medulla_resource_store::redb_store::resource::read_resource_reservation_status as read_resource_reservation_status_record;
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_server_api::state::ServerState;
 use medulla_store::redb_store::durable_node_presence as read_durable_node_presence;
@@ -31,11 +33,9 @@ use medulla_store::redb_store::read_change_cursor as read_change_cursor_record;
 use medulla_store::redb_store::read_change_envelope as read_change_envelope_record;
 use medulla_store::redb_store::read_content_version as read_content_version_record;
 use medulla_store::redb_store::read_mutation_batch_for_graph as read_mutation_batch_record;
-use medulla_store::redb_store::store_read::read_mutation_graph_version as read_mutation_graph_version_record;
 use medulla_store::redb_store::read_mutation_outbox as read_mutation_outbox_records;
+use medulla_store::redb_store::store_read::read_mutation_graph_version as read_mutation_graph_version_record;
 use medulla_store::redb_store::store_read::read_one_node;
-use medulla_resource_store::redb_store::resource::read_resource_reservation as read_resource_reservation_record;
-use medulla_resource_store::redb_store::resource::read_resource_reservation_status as read_resource_reservation_status_record;
 use medulla_transaction::{OutboxClaimBudget, OutboxClaimOutcome};
 
 // `async_trait` must see the concrete methods when it expands. Invoking method

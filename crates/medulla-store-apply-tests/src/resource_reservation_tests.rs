@@ -1,19 +1,18 @@
-
 //! Adversarial unit coverage for the native resource authority helpers.
 //!
 //! These tests intentionally stay below the full server/Raft harness: they exercise
 //! the exact predicates used by the one redb transaction, so the race and restart
 //! integration suites can layer on top without duplicating policy logic.
 
-use medulla_store_apply::redb_store::store_cleanup::clear_graph_rows;
 use super::*;
-use medulla_store::redb_store::shard::Shard;
-use medulla_store::redb_store::shard::ShardWrite;
 use medulla_kernel::test_rendezvous::{join_bounded, meet};
 use medulla_mutation_types::mutation_scope::IncarnationId;
 use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
 use medulla_mutation_types::mutation_scope::ScopeTenantId;
 use medulla_storage::{GraphShardOwner, ScopedRead};
+use medulla_store::redb_store::shard::Shard;
+use medulla_store::redb_store::shard::ShardWrite;
+use medulla_store_apply::redb_store::store_cleanup::clear_graph_rows;
 
 fn host() -> DurableResourceHost {
     DurableResourceHost {
@@ -2800,9 +2799,11 @@ fn native_retry_rebuilds_projection_outbox_after_authoritative_time_changes() {
     let proposed_operations = vec![operation(proposed_method)];
     assert!(mutation_operations_retry_match(&stored_operations, &proposed_operations).unwrap());
     let stored_payload =
-        medulla_kernel::projection_wakeup::projection_payload_for_operations(&stored_operations).unwrap();
+        medulla_kernel::projection_wakeup::projection_payload_for_operations(&stored_operations)
+            .unwrap();
     let proposed_payload =
-        medulla_kernel::projection_wakeup::projection_payload_for_operations(&proposed_operations).unwrap();
+        medulla_kernel::projection_wakeup::projection_payload_for_operations(&proposed_operations)
+            .unwrap();
     assert_ne!(
         stored_payload, proposed_payload,
         "the producer binds each outbox to its historical authority timestamp"

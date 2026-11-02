@@ -79,23 +79,23 @@
 use super::redb_backend::{shard_index, RAFT_META};
 #[cfg(feature = "security")]
 use super::redb_backend::{ENCRYPTION_CANARY, ENCRYPTION_KEY_BINDING_KEY};
+use medulla_storage::{GraphShardOwner, ScopedRead};
 use medulla_store::redb_layout::discover_indexed_shards;
 use medulla_store::redb_layout::retired_single_shard;
 use medulla_store::redb_layout::shard_filename;
 use medulla_store::redb_layout::validate_shard_count;
 use medulla_store::redb_store::shard::Shard;
 use medulla_store::redb_store::shard::ShardWrite;
+use medulla_store::redb_store::GRAPH_META;
 #[cfg(feature = "compute-dist")]
 use medulla_store::redb_store::MATVIEWS;
-use medulla_store::redb_store::GRAPH_META;
-use medulla_store::redb_store::RAFT_LOG;
-use medulla_store::redb_store::XSHARD_DECISION;
-use medulla_store::redb_store::XSHARD_PREPARE;
 #[cfg(feature = "matview")]
 use medulla_store::redb_store::MATVIEW_OPERATOR_STATE;
 #[cfg(feature = "matview")]
 use medulla_store::redb_store::PLAN_MATVIEWS;
-use medulla_storage::{GraphShardOwner, ScopedRead};
+use medulla_store::redb_store::RAFT_LOG;
+use medulla_store::redb_store::XSHARD_DECISION;
+use medulla_store::redb_store::XSHARD_PREPARE;
 use medulla_transaction::OwnerPayloadWrite;
 use redb::{ReadableTable, TableDefinition};
 use std::collections::HashSet;

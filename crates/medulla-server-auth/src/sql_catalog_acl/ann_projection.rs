@@ -38,8 +38,8 @@ pub struct RequestGraph {
     pub name: String,
     pub core: Arc<GraphCore>,
 }
-use medulla_server_api::carrier::CarrierAuthority;
 use crate::sql_tables;
+use medulla_server_api::carrier::CarrierAuthority;
 
 /// The authorized read projection for `query`. When `query` is a maintained-ANN
 /// read of a user table, that table holds only its nearest visible rows; every
@@ -171,16 +171,16 @@ mod tests {
         create_owned_table, grant, open_authorized_table, set_row_level_column, SqlPrivilege,
     };
     use super::*;
-    use medulla_server_api::authority_context::VerifiedRequestContext;
     use crate::sql_tables::test_persist_dir;
+    use medulla_server_api::authority_context::VerifiedRequestContext;
     use medulla_table_store::tables::ann_plan::AnnIndexPlan;
     use medulla_table_store::tables::ann_plan::AnnMethod;
+    use medulla_table_store::tables::ann_plan::VectorMetric;
     use medulla_table_store::tables::AnnRefreshPolicy;
     use medulla_table_store::tables::AnnServingPath;
     use medulla_tables::schema::Column;
     use medulla_tables::schema::ColumnType;
     use medulla_tables::schema::TableSchema;
-    use medulla_table_store::tables::ann_plan::VectorMetric;
     use serde_json::{json, Value};
 
     const TENANT: &str = "tenant-ann-projection";

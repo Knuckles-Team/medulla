@@ -2,13 +2,13 @@ use medulla_mutation_types::mutation_scope::CommittedVersion;
 use std::path::Path;
 use std::sync::Arc;
 
-use medulla_protocol_types::protocol::{GraphType, Method, ResultPayload};
 use medulla_persistence::redb_backend::RedbBackend;
+use medulla_protocol_types::protocol::{GraphType, Method, ResultPayload};
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_types::contract::Nonce;
 
-use medulla_server_mutation::mutation_batch::commit_lifecycle;
 use medulla_server_api::batch_compile::lifecycle_batch_id;
+use medulla_server_mutation::mutation_batch::commit_lifecycle;
 use medulla_server_mutation::mutation_batch::lifecycle_identity_matches;
 use medulla_server_mutation::mutation_batch::lifecycle_was_committed;
 use medulla_server_mutation::mutation_batch::LifecycleCommitRequest;

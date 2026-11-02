@@ -6,9 +6,9 @@
 //! `RefreshMatView` manage named, durable, incrementally-maintained materialized
 //! views of those results. The heavy superstep loop runs off the reactor.
 
-use medulla_server_cdc::cdc::CdcStateExt;
 #[cfg(feature = "redb")]
 use medulla_persistence::AsRedb;
+use medulla_server_cdc::cdc::CdcStateExt;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -22,7 +22,10 @@ use medulla_server_api::state::ServerState;
 // module but touches NONE of it.
 #[cfg(feature = "compute-dist")]
 use medulla_raft_xshard::pregel;
-#[cfg(all(any(feature = "compute-dist", feature = "matview"), feature = "compute-dist"))]
+#[cfg(all(
+    any(feature = "compute-dist", feature = "matview"),
+    feature = "compute-dist"
+))]
 use medulla_server_api::api::persistence::MatView;
 #[cfg(feature = "matview")]
 use medulla_server_cdc::matview;
@@ -476,9 +479,7 @@ async fn index_matview(state: &Arc<RwLock<ServerState>>, def: PlanMatView) {
     // Watermark AFTER seeding (mirrors `cdc::register_query`): later deltas fold from here.
     let through_seq = {
         let s = state.read().await;
-        s.cdc_hub()
-            .map(|hub| hub.head_seq(&def.graph))
-            .unwrap_or(0)
+        s.cdc_hub().map(|hub| hub.head_seq(&def.graph)).unwrap_or(0)
     };
     // Best-effort durable operator-state snapshot (observability + a future resume seam;
     // reload today conservatively re-materializes in Recompute mode, per the CDC-ring

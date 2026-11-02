@@ -17,11 +17,7 @@ pub struct AssociationRequest {
     pub writeback: WritebackOptions,
 }
 
-pub fn handle_associate(
-    req_id: u64,
-    core: &GraphCore,
-    request: AssociationRequest,
-) -> Response {
+pub fn handle_associate(req_id: u64, core: &GraphCore, request: AssociationRequest) -> Response {
     let AssociationRequest {
         transactions,
         source,

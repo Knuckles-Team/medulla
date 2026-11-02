@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
-use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
+use medulla_server_api::api::persistence::PersistenceBackend;
 
 use super::{idempotency_store, CommitPrep, MutationCtx, MutationPlan};
 

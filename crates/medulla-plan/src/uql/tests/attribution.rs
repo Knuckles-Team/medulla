@@ -10,8 +10,8 @@ mod served {
     use medulla_types::wire::{UqlResult, UqlRow};
     use serde_json::json;
 
-    use medulla_exec::exec::PlanCtx;
     use crate::uql::serve::run_statement;
+    use medulla_exec::exec::PlanCtx;
     use medulla_uql::{parse_statement, Params};
 
     /// Five services on two pods, each with a p95 latency; `s5` has no latency.

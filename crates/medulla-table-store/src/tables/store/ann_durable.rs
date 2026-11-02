@@ -446,10 +446,7 @@ impl TableStore {
     }
 
     /// The live persisted generation of `index`, when one was activated.
-    pub fn live_ann_generation(
-        &self,
-        index: &str,
-    ) -> Result<Option<StoredGeneration>, String> {
+    pub fn live_ann_generation(&self, index: &str) -> Result<Option<StoredGeneration>, String> {
         read_generation_in(&self.authority.read()?, index)
     }
 

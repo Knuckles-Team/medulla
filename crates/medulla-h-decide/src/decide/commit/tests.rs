@@ -13,7 +13,6 @@ use medulla_agent_types::agent_topology::SchemaAuthority;
 use medulla_agent_types::agent_topology::TopologyAdmission;
 use medulla_agent_types::agent_topology::TopologyInputs;
 use medulla_agent_types::delegation::AgentGraphEntryRef;
-use medulla_work_types::{native_control::CapacityCellUpdateRequest, native_control::CapacityStatusRequest, native_control::NativeControlSchemaVersion};
 use medulla_compute::assemble::{assemble, inputs, replay_check, RecordIdentity};
 use medulla_decision_types::decision::DecisionCommitRequest;
 use medulla_decision_types::decision::DecisionCommitResult;
@@ -21,18 +20,22 @@ use medulla_decision_types::decision::DecisionRecord;
 use medulla_decision_types::decision::TemplateFacts;
 use medulla_mutation_types::{capacity_lease::CapacityCell, capacity_lease::CapacityResourceClass};
 use medulla_types::contract::BoundedVec;
+use medulla_work_types::{
+    native_control::CapacityCellUpdateRequest, native_control::CapacityStatusRequest,
+    native_control::NativeControlSchemaVersion,
+};
 use tokio::sync::RwLock;
 
-use medulla_protocol_types::protocol::Method;
-use medulla_protocol_types::protocol::ResultPayload;
-use medulla_server_api::api::persistence::PersistenceBackend;
-use medulla_server_api::authority_context::VerifiedRequestContext;
+use medulla_persistence::redb_backend::RedbBackend;
 use medulla_persistence_records::agent_library::AgentLibraryStore;
 use medulla_persistence_records::decision_record::tests::commit_context;
 use medulla_persistence_records::decision_record::tests::decided;
 use medulla_persistence_records::decision_record::tests::seed_library;
 use medulla_persistence_records::decision_record::tests::TENANT;
-use medulla_persistence::redb_backend::RedbBackend;
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::ResultPayload;
+use medulla_server_api::api::persistence::PersistenceBackend;
+use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 
 fn topology_record(store: &AgentLibraryStore) -> DecisionRecord {
@@ -159,8 +162,10 @@ async fn topology_commit_refuses_uncoordinated_owners() {
         )
         .await
         .unwrap();
-    let mut server =
-        ServerState::new_for_test("commit-guard", medulla_isolation::isolation::IsolationLayer::new());
+    let mut server = ServerState::new_for_test(
+        "commit-guard",
+        medulla_isolation::isolation::IsolationLayer::new(),
+    );
     server.persist_dir = Some(path);
     server.persistence = Some(backend.clone());
     let state = Arc::new(RwLock::new(server));

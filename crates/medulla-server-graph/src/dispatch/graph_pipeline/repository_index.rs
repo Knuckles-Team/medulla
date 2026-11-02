@@ -6,9 +6,9 @@
 //! parses each unique blob once, lowers the projection, and delegates the one
 //! durable commit to the existing ChangeEnvelope authority.
 
+use super::*;
 #[cfg(all(feature = "ast", feature = "blob"))]
 use medulla_server_blob::blob::BlobStateExt;
-use super::*;
 
 #[cfg(all(feature = "ast", feature = "redb"))]
 mod consumer;
@@ -70,7 +70,8 @@ async fn index_scoped(
     // malformed membership must never pin unreferenced source bytes forever.
     let (mut result, files, repository_id) =
         medulla_server_api::compute::compute_off_lock(req_id, move || {
-            let result = medulla_compute::parser::branch_index::index_branches(files.clone(), &scope)?;
+            let result =
+                medulla_compute::parser::branch_index::index_branches(files.clone(), &scope)?;
             Ok::<_, String>((result, files, scope.repository_id.clone()))
         })
         .await?
@@ -257,8 +258,7 @@ pub async fn route_repository_index(
     )
     .await;
     #[cfg(not(all(feature = "ast", feature = "redb")))]
-    let commit =
-        crate::dispatch::change_envelope::apply_one_change_envelope(ctx, envelope).await;
+    let commit = crate::dispatch::change_envelope::apply_one_change_envelope(ctx, envelope).await;
     medulla_h_ingest::repository_index::finish(result, commit)
 }
 

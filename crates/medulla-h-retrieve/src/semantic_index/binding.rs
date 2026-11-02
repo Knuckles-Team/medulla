@@ -9,8 +9,8 @@ use medulla_index_types::{
 use medulla_protocol_types::result_contract::ingestion as ingestion_results;
 use medulla_types::contract::Nonce;
 
-use medulla_protocol_types::protocol::Response;
 use crate::semantic_index_runtime::SemanticIndexServerAdapter;
+use medulla_protocol_types::protocol::Response;
 
 use super::{blocking, contracts, reply, stamp_draft_identity, SemanticIndexContext};
 

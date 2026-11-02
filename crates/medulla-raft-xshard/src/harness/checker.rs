@@ -21,9 +21,9 @@
 
 use std::collections::HashSet;
 
-use medulla_raft::raft::NodeId;
 use super::cluster::Cluster;
 use super::history::{History, Outcome};
+use medulla_raft::raft::NodeId;
 
 /// A leadership sample `(node_id, term, is_leader)` taken during the run.
 pub type LeadershipSample = (NodeId, u64, bool);

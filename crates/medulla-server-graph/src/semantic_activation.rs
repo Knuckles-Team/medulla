@@ -37,14 +37,14 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use medulla_semantic_index::semantic_ann::ANN_BUILD_THRESHOLD;
 use medulla_graph_core::graph::GraphCore;
+use medulla_semantic_index::semantic_ann::ANN_BUILD_THRESHOLD;
 use medulla_server_api::state::ServerState;
 
 #[cfg(feature = "ann-redb")]
-use medulla_semantic_index::semantic::SemanticStore;
-#[cfg(feature = "ann-redb")]
 use medulla_ann_codes::semantic_ann_codes::SemanticCodeStore;
+#[cfg(feature = "ann-redb")]
+use medulla_semantic_index::semantic::SemanticStore;
 
 /// The one directory under the persist dir that holds every binding's
 /// semantic-index owner file. `SemanticCodeStore::open` derives the file name

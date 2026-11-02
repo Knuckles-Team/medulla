@@ -523,9 +523,9 @@ mod tests {
     #[cfg(feature = "server")]
     #[test]
     fn ros2_cdc_fails_closed_only_once_row_ownership_is_active() {
+        use medulla_isolation::isolation::IsolationLayer;
         use medulla_types::acl::AgentIdentity;
         use medulla_types::acl::AgentRole;
-        use medulla_isolation::isolation::IsolationLayer;
 
         // No identities registered yet: nothing to protect, so the unauthenticated
         // outbound leg is allowed to publish, same as before this fix.

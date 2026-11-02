@@ -8,10 +8,10 @@
 
 #[cfg(feature = "sql")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod sql;
+pub mod provider;
 #[cfg(feature = "sql")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod provider;
+pub mod sql;
 
 #[cfg(feature = "sql")]
 use medulla_sql_lang::sql::classify::ColumnDef;

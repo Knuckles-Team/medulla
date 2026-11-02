@@ -53,8 +53,8 @@ use std::path::{Path, PathBuf};
 
 use sha2::{Digest, Sha256};
 
-use medulla_server_api::carrier::CarrierAuthority;
 use medulla_protocol_types::protocol::Method;
+use medulla_server_api::carrier::CarrierAuthority;
 
 const TXN_INTENT_DIR: &str = "txn-intent";
 const INTENT_SCHEMA_VERSION: u16 = 1;

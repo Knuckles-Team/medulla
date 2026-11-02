@@ -137,7 +137,8 @@ fn full_corpus_stays_within_the_recorded_reasoning_budgets() {
 #[test]
 fn world_model_classes_sit_under_the_bfo_categories() {
     let composed = validate_and_compose(&GraphSchemaSources::default()).unwrap();
-    let classification = medulla_reasoner::owl::Reasoner::from_triples(&composed.ontology).classify();
+    let classification =
+        medulla_reasoner::owl::Reasoner::from_triples(&composed.ontology).classify();
     let bfo = |id: &str| format!("<http://purl.obolibrary.org/obo/BFO_{id}>");
     let placed = [
         ("Organism", "0000030"),
@@ -212,7 +213,11 @@ fn a_weather_event_occurs_in_a_weather_system_and_its_region() {
         STORM,
         IN_WEATHER_SYSTEM
     ));
-    assert!(medulla_reasoner::tableau::is_instance(&dl, STORM, BFO_PROCESS));
+    assert!(medulla_reasoner::tableau::is_instance(
+        &dl,
+        STORM,
+        BFO_PROCESS
+    ));
     assert!(materialized().holds(&kg("occursIn"), &[STORM, BAVARIA]));
 }
 

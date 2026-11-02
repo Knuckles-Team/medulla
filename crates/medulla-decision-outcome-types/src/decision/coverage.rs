@@ -8,7 +8,9 @@ use serde::{Deserialize, Serialize};
 
 use super::derivation::CapabilityCoverage;
 use medulla_decision_types::decision::record::AbstainReason;
-use medulla_decision_types::{decision::request::AssemblyRequirements, decision::request::LibraryCandidateScope};
+use medulla_decision_types::{
+    decision::request::AssemblyRequirements, decision::request::LibraryCandidateScope,
+};
 
 /// The schema version of [`CapabilityCoverageResult`].
 pub const CAPABILITY_COVERAGE_RESULT_SCHEMA_VERSION: u16 = 1;

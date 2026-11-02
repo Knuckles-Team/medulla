@@ -234,7 +234,9 @@ pub(crate) fn render_sql_columns(
         .iter()
         .map(|field| {
             let quoted = quote_identifier(field, dialect)?;
-            Ok(format!("CAST(medulla_fed.{quoted} AS {cast_type}) AS {quoted}"))
+            Ok(format!(
+                "CAST(medulla_fed.{quoted} AS {cast_type}) AS {quoted}"
+            ))
         })
         .collect::<Result<Vec<_>, String>>()?
         .join(", ");
@@ -245,7 +247,9 @@ pub(crate) fn render_sql_columns(
         .map(|pred| {
             let quoted = quote_identifier(&pred.column, dialect)?;
             let value = render_literal(pred.value.as_str().unwrap_or_default(), false, dialect)?;
-            Ok(format!("CAST(medulla_fed.{quoted} AS {cast_type}) = {value}"))
+            Ok(format!(
+                "CAST(medulla_fed.{quoted} AS {cast_type}) = {value}"
+            ))
         })
         .collect::<Result<Vec<_>, String>>()?;
     let body = base.trim_end().trim_end_matches(';').trim_end();

@@ -8,7 +8,9 @@
 //! A restart empties every authority; the first pass after a catalog is reopened
 //! rebuilds its generations from the durable rows.
 
-use medulla_table_store::{tables::AnnRefreshOutcome, tables::AnnRefreshPolicy, tables::TableStore};
+use medulla_table_store::{
+    tables::AnnRefreshOutcome, tables::AnnRefreshPolicy, tables::TableStore,
+};
 
 /// One periodic pass: refresh every open catalog's ANN generations on the
 /// blocking pool. Logs counts only — index names are tenant data.

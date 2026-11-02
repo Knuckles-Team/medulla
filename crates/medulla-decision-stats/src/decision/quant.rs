@@ -13,7 +13,9 @@ use medulla_decision_types::{
 };
 
 use super::refusal::{Refusal, RefusalResult};
-use medulla_numeric::{detkernel::quantise::dequantise, detkernel::quantise::quantise, detkernel::quantise::QuantScale};
+use medulla_numeric::{
+    detkernel::quantise::dequantise, detkernel::quantise::quantise, detkernel::quantise::QuantScale,
+};
 use medulla_numeric::{detkernel::Level, detkernel::StatError, detkernel::UnitRational};
 
 /// The denominator probabilities are rounded onto when recorded.

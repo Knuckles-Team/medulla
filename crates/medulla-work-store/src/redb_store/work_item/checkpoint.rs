@@ -1,7 +1,15 @@
 //! Private immutable checkpoints and the WorkItem head share one native transaction.
 use super::*;
-use medulla_work_types::{run_checkpoint::CheckpointClaim, run_checkpoint::CheckpointContent, run_checkpoint::GetRunCheckpointRequest, run_checkpoint::PublishRunCheckpointRequest, run_checkpoint::RunCheckpointPublished, run_checkpoint::RunCheckpointRead, run_checkpoint::RunCheckpointSnapshot};
-use medulla_work_types::{work_item_read::WORK_ITEM_CHECKPOINT_DIGEST, work_item_read::WORK_ITEM_CHECKPOINT_REF, work_item_read::WORK_ITEM_CHECKPOINT_REVISION};
+use medulla_work_types::{
+    run_checkpoint::CheckpointClaim, run_checkpoint::CheckpointContent,
+    run_checkpoint::GetRunCheckpointRequest, run_checkpoint::PublishRunCheckpointRequest,
+    run_checkpoint::RunCheckpointPublished, run_checkpoint::RunCheckpointRead,
+    run_checkpoint::RunCheckpointSnapshot,
+};
+use medulla_work_types::{
+    work_item_read::WORK_ITEM_CHECKPOINT_DIGEST, work_item_read::WORK_ITEM_CHECKPOINT_REF,
+    work_item_read::WORK_ITEM_CHECKPOINT_REVISION,
+};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 

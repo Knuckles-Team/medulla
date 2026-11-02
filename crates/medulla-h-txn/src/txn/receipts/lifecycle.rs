@@ -119,10 +119,7 @@ pub(crate) async fn validate_txn_lifecycle_replay(
 }
 
 #[cfg(feature = "redb")]
-pub(crate) fn txn_lifecycle_batch_id(
-    authority: &CarrierAuthority,
-    method: &Method,
-) -> String {
+pub(crate) fn txn_lifecycle_batch_id(authority: &CarrierAuthority, method: &Method) -> String {
     // Keep one envelope idempotency key reusable across different transaction
     // operations by including the operation family in the opaque coordinator
     // input.  The full method body remains in the kernel operation digest, so a
@@ -137,8 +134,7 @@ pub(crate) fn txn_lifecycle_batch_id(
 
 #[cfg(feature = "redb")]
 pub(crate) struct TxnLifecycleReceipt {
-    pub(crate) backend:
-        Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>,
+    pub(crate) backend: Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>,
     pub(crate) saga: medulla_server_ops::api::admin::saga::AdminSaga,
 }
 

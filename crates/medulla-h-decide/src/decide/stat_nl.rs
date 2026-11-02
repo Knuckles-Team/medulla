@@ -7,6 +7,7 @@
 use medulla_agent_types::{
     agent_component::AgentComponentEntry, agent_component::ComponentDependency,
 };
+use medulla_decision_stats::decision::nl::fill_slots;
 use medulla_decision_types::decision::statistical::body::decode_body;
 use medulla_decision_types::{
     decision::statistical::nl::NlBinding, decision::statistical::nl::NlChoiceSource,
@@ -17,7 +18,6 @@ use medulla_decision_types::{
     decision::statistical::StatisticalErrorCode, decision::statistical::StatisticalOutcome,
     decision::statistical::TypedValue,
 };
-use medulla_decision_stats::decision::nl::fill_slots;
 use medulla_types::contract::BoundedVec;
 
 use super::stat_support::refusal;

@@ -46,8 +46,8 @@ use super::store::MedullaStore;
 use super::{
     AppCtx, GroupId, MedullaRaft, NodeId, RaftHandle, RaftRequest, RaftResponse, DEFAULT_GROUP,
 };
-use medulla_protocol_types::protocol::Method;
 use medulla_kernel::lock_recovery::LockRecovery;
+use medulla_protocol_types::protocol::Method;
 
 mod leader_balance;
 mod membership_follow;

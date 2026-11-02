@@ -1,9 +1,9 @@
 //! Fleet catalog reads: one consistent view of the `__commons__` records, then
 //! the connector-pack components those records make visible.
 
-use medulla_server_graph::dispatch::shared::timed_read;
 #[cfg(feature = "redb")]
 use medulla_persistence_records::agent_library::AgentLibraryStateExt;
+use medulla_server_graph::dispatch::shared::timed_read;
 use std::collections::BTreeMap;
 
 use medulla_agent_types::agent_component::AgentComponentEntry;
@@ -90,7 +90,8 @@ async fn load_commons(
     grants: &[Digest256],
 ) -> Result<CommonsView, String> {
     medulla_server_graph::dispatch::shared::ensure_graph_resident(state, REGISTRY_GRAPH).await;
-    let _registry_guard = medulla_server_api::routed_write_coalescer::lock_graph(REGISTRY_GRAPH).await;
+    let _registry_guard =
+        medulla_server_api::routed_write_coalescer::lock_graph(REGISTRY_GRAPH).await;
     let (core, authority) = {
         let current = timed_read(state).await;
         medulla_server_graph::dispatch::shared::authorized_graph_read(

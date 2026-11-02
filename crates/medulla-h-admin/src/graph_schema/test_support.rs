@@ -67,7 +67,8 @@ pub(super) fn assert_core_catalog(modules: &[&str]) -> medulla_reasoner::owl::Cl
     }
     assert!(sources.core.len() <= medulla_graph_core::graph::MAX_CORE_SCHEMA_SOURCES);
     let composed = validate_and_compose(&sources).unwrap();
-    let classification = medulla_reasoner::owl::Reasoner::from_triples(&composed.ontology).classify();
+    let classification =
+        medulla_reasoner::owl::Reasoner::from_triples(&composed.ontology).classify();
     assert!(classification.consistent);
     assert!(
         classification.unsatisfiable.is_empty(),

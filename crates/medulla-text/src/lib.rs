@@ -40,7 +40,6 @@
 //! a default build even though the *index* needs `tantivy`). [`TextIndex`] is the
 //! Tantivy-backed index, behind `#[cfg(feature = "tantivy")]`.
 
-
 use serde::{Deserialize, Serialize};
 
 /// One BM25 hit: a node id and its BM25 relevance score (higher = more relevant).

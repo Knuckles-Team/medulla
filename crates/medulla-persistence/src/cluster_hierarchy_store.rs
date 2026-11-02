@@ -61,7 +61,8 @@ const MAX_BLOB_BYTES: usize = 512 * 1024 * 1024;
 /// (`RedbBackend`'s impl) are this store's only callers.
 pub struct ClusterHierarchyStore {
     entries: RwLock<HashMap<String, Vec<u8>>>,
-    durable: Option<medulla_store::sidecar_store::SidecarStore<medulla_storage::ClusterHierarchyOwner>>,
+    durable:
+        Option<medulla_store::sidecar_store::SidecarStore<medulla_storage::ClusterHierarchyOwner>>,
 }
 
 impl ClusterHierarchyStore {

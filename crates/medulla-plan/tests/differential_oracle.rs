@@ -28,8 +28,10 @@
 mod common;
 
 use common::*;
+use medulla_exec::{
+    algebra::Op, algebra::Plan, algebra::Pred, exec::execute, exec::PlanCtx, rowset::RowSet,
+};
 use medulla_graph_core::graph::GraphView;
-use medulla_exec::{exec::execute, algebra::Op, algebra::Plan, exec::PlanCtx, algebra::Pred, rowset::RowSet};
 use medulla_semantic_index::semantic::SemanticStore;
 use medulla_types::wire::TimeAxis;
 
@@ -37,8 +39,7 @@ use medulla_types::wire::TimeAxis;
 /// to the IDENTICAL plan AST, and that they EXECUTE to the identical `RowSet` (ids +
 /// vector scores, in order). Returns the shared `RowSet` for further assertions.
 fn agree(uql: &str, builder: &Plan, view: &GraphView, semantic: &SemanticStore) -> RowSet {
-    let parsed =
-        medulla_uql::parse(uql).unwrap_or_else(|e| panic!("UQL parse `{uql}`: {}", e.msg));
+    let parsed = medulla_uql::parse(uql).unwrap_or_else(|e| panic!("UQL parse `{uql}`: {}", e.msg));
     assert_eq!(
         &parsed, builder,
         "UQL and the Rust builder must lower to the IDENTICAL plan AST\n  UQL: {uql}"

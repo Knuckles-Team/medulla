@@ -1,5 +1,5 @@
-use medulla_lane_store::redb_store::development_lane::links::validate_current_lane_links_in_wtx;
 use super::*;
+use medulla_lane_store::redb_store::development_lane::links::validate_current_lane_links_in_wtx;
 
 /// EH-290: the per-commit lane-link check reads only the WorkItems that
 /// linked holds name, by point lookup, and still refuses an orphaning write.

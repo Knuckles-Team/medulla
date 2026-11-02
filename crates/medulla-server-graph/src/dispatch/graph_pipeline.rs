@@ -3,12 +3,12 @@ use super::change_envelope::decode_multi_graph_batches;
 use super::change_envelope::route_change_envelope_ops;
 #[cfg(feature = "redb")]
 use super::change_envelope::work_item_capability_authority_epoch;
+#[cfg(test)]
+use super::request_boundary::preflight::preflight_request_msgpack;
 #[cfg(all(test, feature = "ast"))]
 use super::request_boundary::preflight::{decode_ast_files, decode_ast_sources, AstInputLimits};
 #[cfg(test)]
 use super::request_boundary::screen::decode_screen_observation;
-#[cfg(test)]
-use super::request_boundary::preflight::preflight_request_msgpack;
 use crate::dispatch::*;
 mod dispatch_helpers;
 #[cfg(any(
@@ -38,9 +38,7 @@ pub use repository_index::plan_held_underfunded_park;
     feature = "raft",
     feature = "security"
 ))]
-pub use repository_index::{
-    decode_pending_enrichment_intent, enrichment_intent_for_snapshot,
-};
+pub use repository_index::{decode_pending_enrichment_intent, enrichment_intent_for_snapshot};
 mod work_governance;
 use dispatch_helpers::*;
 #[cfg(any(
@@ -444,17 +442,17 @@ mod nested_payload_security_tests {
 #[cfg(all(test, feature = "redb"))]
 mod eg318_dispatch_tests {
     use super::*;
-    #[cfg(feature = "tsdb")]
-    use medulla_types::acl::AgentIdentity;
-    use medulla_types::acl::AgentRole;
+    use medulla_persistence::redb_backend::RedbBackend;
     use medulla_protocol_types::protocol::Method;
     use medulla_protocol_types::protocol::Request;
     use medulla_server_api::api::persistence::PersistenceBackend;
-    #[cfg(feature = "tsdb")]
-    use medulla_server_auth::auth::sign_current_test_request;
     use medulla_server_auth::auth::build_shared_test_request;
     use medulla_server_auth::auth::dispatch_test_on_heap as dispatch_on_heap;
-    use medulla_persistence::redb_backend::RedbBackend;
+    #[cfg(feature = "tsdb")]
+    use medulla_server_auth::auth::sign_current_test_request;
+    #[cfg(feature = "tsdb")]
+    use medulla_types::acl::AgentIdentity;
+    use medulla_types::acl::AgentRole;
     use std::ops::Deref;
     use std::path::PathBuf;
     use std::sync::Arc;
@@ -488,7 +486,10 @@ mod eg318_dispatch_tests {
         let persistence: Arc<dyn PersistenceBackend> = Arc::new(
             RedbBackend::open(dir_string.clone(), 64).expect("open authoritative test backend"),
         );
-        let mut state = medulla_server::seams_install::new_state_for_test(SECRET, ServerState::test_isolation("system"));
+        let mut state = medulla_server::seams_install::new_state_for_test(
+            SECRET,
+            ServerState::test_isolation("system"),
+        );
         state.persist_dir = Some(dir_string);
         state.persistence = Some(persistence);
         let state = Arc::new(RwLock::new(state));
@@ -509,9 +510,8 @@ mod eg318_dispatch_tests {
                 .unwrap()
                 .as_nanos()
         ));
-        state.write().await.tsdb_store = Some(
-            medulla_h_txn::timeseries::open_test_series_store(&path),
-        );
+        state.write().await.tsdb_store =
+            Some(medulla_h_txn::timeseries::open_test_series_store(&path));
         (state, path)
     }
 

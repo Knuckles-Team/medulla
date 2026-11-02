@@ -67,11 +67,11 @@ use serde::Deserialize;
 
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Request;
+use medulla_server_api::state::ServerState;
 use medulla_wire_core::wire::WireError;
 use medulla_wire_core::wire::WireOutcome;
 use medulla_wire_core::wire::WireProtocol;
 use medulla_wire_core::wire::WireSession;
-use medulla_server_api::state::ServerState;
 
 pub mod dialect;
 
@@ -258,12 +258,12 @@ fn sqlite_type_name(t: PgColType) -> &'static str {
 mod tests {
     use super::*;
 
-    use medulla_types::acl::AgentIdentity;
-    use medulla_types::acl::AgentRole;
     use medulla_isolation::isolation::IsolationLayer;
-    use medulla_server_api::api::persistence::PersistenceBackend;
     #[cfg(feature = "redb")]
     use medulla_persistence::redb_backend::RedbBackend;
+    use medulla_server_api::api::persistence::PersistenceBackend;
+    use medulla_types::acl::AgentIdentity;
+    use medulla_types::acl::AgentRole;
 
     /// A minimal `ServerState` with a pre-created `__commons__` graph (the registry
     /// creates it), mirroring `tests/pgwire_roundtrip.rs::state_with`. Feature-gated
@@ -282,7 +282,8 @@ mod tests {
             teams: Vec::new(),
             roles: Vec::new(),
         });
-        let mut state = medulla_server::seams_install::new_state_for_test("test-sqlite-wire-secret", isolation);
+        let mut state =
+            medulla_server::seams_install::new_state_for_test("test-sqlite-wire-secret", isolation);
         state.persist_dir = Some(
             medulla_server_auth::sql_tables::test_persist_dir()
                 .to_string_lossy()

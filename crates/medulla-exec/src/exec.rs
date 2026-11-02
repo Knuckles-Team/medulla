@@ -38,9 +38,9 @@ mod reliability;
 pub mod reason;
 pub use decisions::{DecisionSource, LearnedReliability};
 pub(crate) mod dispatch;
+mod expand;
 #[cfg(feature = "federation")]
 pub mod foreign;
-mod expand;
 mod pred_sql;
 pub mod propagate;
 mod string_eq;
@@ -2533,7 +2533,8 @@ fn sql_filter_ids(
 
     // `exec_sql` builds its own current-thread runtime to drive DataFusion's async
     // collect (safe to call inside spawn_blocking, exactly as the Sql handler does).
-    let result = medulla_sql::sql::exec_sql(view, &sql, &medulla_sql::sql::CancellationToken::new())?;
+    let result =
+        medulla_sql::sql::exec_sql(view, &sql, &medulla_sql::sql::CancellationToken::new())?;
     // `result.rows[i]` is a MessagePack-encoded `Vec<serde_json::Value>` aligned to
     // `result.columns` (here a single `id` column). Decode the id cell of each row.
     let mut out = Vec::with_capacity(result.rows.len());

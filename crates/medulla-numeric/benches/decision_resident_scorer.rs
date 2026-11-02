@@ -8,6 +8,9 @@ mod common;
 mod fit_eval;
 
 use common::{bounded, SCHEMA_DIGEST};
+use medulla_decision_stats::decision::scorer::fixed::ONE;
+use medulla_decision_stats::decision::scorer::forward::read;
+use medulla_decision_stats::decision::scorer::legal::LegalSet;
 use medulla_decision_types::{
     decision::statistical::head::DecisionHeadBody,
     decision::statistical::head::FeatureStandardisation, decision::statistical::head::FittedRegime,
@@ -23,9 +26,6 @@ use medulla_decision_types::{
     decision::statistical::scorer::RESIDENT_SCORER_CEILING,
 };
 use medulla_decision_types::{decision::QuantScaleTag, decision::QuantisedValue};
-use medulla_decision_stats::decision::scorer::fixed::ONE;
-use medulla_decision_stats::decision::scorer::forward::read;
-use medulla_decision_stats::decision::scorer::legal::LegalSet;
 use serde_json::{json, Value};
 use std::hint::black_box;
 

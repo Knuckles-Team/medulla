@@ -21,14 +21,17 @@ use medulla_agent_types::{
     delegation::KgDelegateDecision, delegation::KgDelegateRequest, delegation::KgDelegateResult,
 };
 #[cfg(feature = "redb")]
-use medulla_work_types::{native_control::NativeControlSchemaVersion, native_control::SubmitWorkItemRequest, native_control::SubmitWorkItemResult};
-#[cfg(feature = "redb")]
 use medulla_protocol_types::mutation_batch::MutationBatchStatus;
 #[cfg(feature = "redb")]
 use medulla_protocol_types::protocol::Method;
 #[cfg(feature = "redb")]
 use medulla_protocol_types::{protocol::Response, protocol::ResultPayload};
 use medulla_result_types::epistemic_operations::RequestContext;
+#[cfg(feature = "redb")]
+use medulla_work_types::{
+    native_control::NativeControlSchemaVersion, native_control::SubmitWorkItemRequest,
+    native_control::SubmitWorkItemResult,
+};
 #[cfg(feature = "redb")]
 use serde_json::json;
 
