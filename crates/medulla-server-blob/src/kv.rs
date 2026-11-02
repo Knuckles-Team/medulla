@@ -729,8 +729,6 @@ impl medulla_server_api::api::persistence::BundledStoreSource for KvStore {
 
 mod dispatch_handlers;
 #[cfg(test)]
-mod dispatch_tests;
-#[cfg(test)]
 mod tests;
 mod wire;
 

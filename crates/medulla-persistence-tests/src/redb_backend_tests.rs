@@ -579,6 +579,7 @@ fn seed_valid_development_lane_hold(
 fn new_state(persist_dir: Option<String>) -> Arc<RwLock<ServerState>> {
     let mut state = ServerState::new_for_test("test", ServerState::test_isolation(TEST_AGENT));
     state.persist_dir = persist_dir;
+    medulla_server::seams_install::install_seams(&state);
     Arc::new(RwLock::new(state))
 }
 

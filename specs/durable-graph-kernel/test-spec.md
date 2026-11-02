@@ -347,12 +347,12 @@ Hot-path proof for `MEDULLA-DURABLE-KERNEL-R101`: `tests/scheduler/test_downtime
 
 | Case | Row | Proving test and observation |
 |---|---|---|
-| Served contract | `MEDULLA-DURABLE-KERNEL-R102.1` | `crates/medulla-server-blob/src/kv/dispatch_tests.rs::kv_dispatch_put_get_scan_delete_cas`: every KV method answers its typed result through the real dispatch. |
-| Scope and authorization | `MEDULLA-DURABLE-KERNEL-R102.2` | `crates/medulla-server-blob/src/kv/dispatch_tests.rs::kv_keys_are_scoped_by_graph_and_writes_need_kv_write`: another graph sees nothing; a `kv:read` caller is refused a write. |
-| CAS and scan | `MEDULLA-DURABLE-KERNEL-R102.3` | `crates/medulla-server-blob/src/kv/dispatch_tests.rs::kv_scan_pages_are_bounded_and_resume_from_the_cursor`: 25 keys arrive in bounded pages in order; a foreign cursor refuses. |
-| Durable mutations | `MEDULLA-DURABLE-KERNEL-R102.4` | `crates/medulla-server-blob/src/kv/dispatch_tests.rs::kv_fresh_nonce_replays_stable_operation_without_duplicate_write`: the retried CAS returns the stored verdict and writes once. |
-| Hot-path proof | `MEDULLA-DURABLE-KERNEL-R102.5` | `crates/medulla-server-blob/src/kv/dispatch_tests.rs::kv_served_hot_path_meets_latency_budgets`: measured p50/p99 within the budgets. |
-| Shared namespace | `MEDULLA-DURABLE-KERNEL-R102.6` | `crates/medulla-server-blob/src/kv/dispatch_tests.rs::kv_shared_namespace_spans_principals_and_needs_kv_shared_write`: private keys never cross principals; a shared key does, and a coarse-write principal is refused. |
+| Served contract | `MEDULLA-DURABLE-KERNEL-R102.1` | `crates/medulla-server-blob/tests/kv_dispatch.rs::kv_dispatch_put_get_scan_delete_cas`: every KV method answers its typed result through the real dispatch. |
+| Scope and authorization | `MEDULLA-DURABLE-KERNEL-R102.2` | `crates/medulla-server-blob/tests/kv_dispatch.rs::kv_keys_are_scoped_by_graph_and_writes_need_kv_write`: another graph sees nothing; a `kv:read` caller is refused a write. |
+| CAS and scan | `MEDULLA-DURABLE-KERNEL-R102.3` | `crates/medulla-server-blob/tests/kv_dispatch.rs::kv_scan_pages_are_bounded_and_resume_from_the_cursor`: 25 keys arrive in bounded pages in order; a foreign cursor refuses. |
+| Durable mutations | `MEDULLA-DURABLE-KERNEL-R102.4` | `crates/medulla-server-blob/tests/kv_dispatch.rs::kv_fresh_nonce_replays_stable_operation_without_duplicate_write`: the retried CAS returns the stored verdict and writes once. |
+| Hot-path proof | `MEDULLA-DURABLE-KERNEL-R102.5` | `crates/medulla-server-blob/tests/kv_dispatch.rs::kv_served_hot_path_meets_latency_budgets`: measured p50/p99 within the budgets. |
+| Shared namespace | `MEDULLA-DURABLE-KERNEL-R102.6` | `crates/medulla-server-blob/tests/kv_dispatch.rs::kv_shared_namespace_spans_principals_and_needs_kv_shared_write`: private keys never cross principals; a shared key does, and a coarse-write principal is refused. |
 - **MEDULLA-DURABLE-KERNEL-R028.3:** `crates/medulla-work-store/src/redb_store/work_item/lease/tests.rs` tests live, expired and missing worker lease expiry against engine time, unchanged refused rows and unfenced compatibility. Runtime execution pending hosted CI.
 
 ## Pending envelope storage

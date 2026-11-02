@@ -201,11 +201,16 @@ mod admission_tests {
         backend: Arc<dyn PersistenceBackend>,
         isolation: IsolationLayer,
     ) -> Arc<RwLock<ServerState>> {
-        super::test_state_with_backend(SECRET, dir_s, backend, isolation).await
+        let state = super::test_state_with_backend(SECRET, dir_s, backend, isolation).await;
+        medulla_server::seams_install::install_seams_on(&state).await;
+        state
     }
 
     async fn redb_state(dir_s: &str) -> Arc<RwLock<ServerState>> {
-        super::test_redb_state(SECRET, dir_s, ServerState::test_isolation(TEST_AGENT), 64).await
+        let state =
+            super::test_redb_state(SECRET, dir_s, ServerState::test_isolation(TEST_AGENT), 64).await;
+        medulla_server::seams_install::install_seams_on(&state).await;
+        state
     }
 
     fn req(id: u64, graph: &str, method: Method) -> Request {
@@ -629,6 +634,7 @@ mod admission_tests {
         state2.max_in_flight = Arc::new(Semaphore::new(64));
         state2.read_admission = Arc::new(Semaphore::new(64));
         state2.per_graph_inflight_limit = 32;
+        medulla_server::seams_install::install_seams(&state2);
         let state2 = Arc::new(RwLock::new(state2));
         {
             let mut s = state2.write().await;

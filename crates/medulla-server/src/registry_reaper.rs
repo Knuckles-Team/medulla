@@ -175,13 +175,15 @@ mod tests {
     const TEST_AGENT: &str = "unit-test-agent";
 
     async fn redb_state(dir_s: &str) -> Arc<RwLock<ServerState>> {
-        medulla_persistence::cold_offload::test_redb_state(
+        let state = medulla_persistence::cold_offload::test_redb_state(
             SECRET,
             dir_s,
             ServerState::test_isolation(TEST_AGENT),
             64,
         )
-        .await
+        .await;
+        crate::seams_install::install_seams_on(&state).await;
+        state
     }
 
     fn req(id: u64, graph: &str, method: Method) -> Request {

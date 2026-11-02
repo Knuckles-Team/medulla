@@ -114,6 +114,7 @@ medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types", f
 medulla-store-apply = { path = "../medulla-store-apply", features = ["test-support"] }
 medulla-resource-store = { path = "../medulla-resource-store", features = ["test-support"] }
 medulla-work-store = { path = "../medulla-work-store", features = ["test-support"] }
+medulla-server = { path = "../medulla-server", features = ["test-support"] }
 medulla-server-ops = { path = "../medulla-server-ops", features = ["test-support"] }
 medulla-server-blob = { path = "../medulla-server-blob", features = ["test-support"] }
 medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support", "test-ambient-auth"] }
