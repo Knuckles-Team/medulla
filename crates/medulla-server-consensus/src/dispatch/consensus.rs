@@ -16,7 +16,6 @@ mod transaction;
 pub use fleet_catalog::handle_fleet_catalog;
 #[cfg(all(feature = "raft", feature = "jobs"))]
 use publication::{execute_consensus_job_publication, JobPublicationExecution};
-#[cfg(feature = "redb")]
 pub use registry::verified_served_registration;
 pub use registry::{
     handle_list_registered_servers, handle_register_server, ServerRegistration,

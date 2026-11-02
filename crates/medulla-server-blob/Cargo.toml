@@ -51,7 +51,7 @@ object_store = { version = "0.14.2", optional = true, features = ["aws"] }
 alignment = ["blob", "dep:medulla-modality", "dep:medulla-alignment", "medulla-server-api/alignment"]
 blob = ["redb", "medulla-server-api/blob", "medulla-protocol-types/blob", "medulla-types/blob"]
 blob-s3 = ["blob", "medulla-server-api/blob-s3", "dep:object_store"]
-kv = ["redb", "medulla-server-api/kv", "medulla-kernel/kv", "medulla-protocol-types/kv", "medulla-types/kv"]
+kv = ["redb", "medulla-server-api/kv", "medulla-kernel/kv", "medulla-kernel/security", "medulla-protocol-types/kv", "medulla-types/kv"]
 nl-query = ["dep:medulla-plan", "medulla-server-api/nl-query", "medulla-plan?/nl-query", "redb"]
 rdf-xml = ["dep:medulla-rdf", "medulla-server-api/rdf-xml", "medulla-rdf?/rdf-xml"]
 redb = ["dep:redb", "dep:medulla-transaction", "dep:medulla-storage", "medulla-server-api/redb", "medulla-kernel/redb", "medulla-store/redb"]
