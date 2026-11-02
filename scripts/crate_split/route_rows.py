@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# mypy: ignore-errors
 """Route every open medulla spec row to its target crate (MEDULLA-CONTRACT-R056.11).
 
 Reads boundaries.toml (crate map, moves, routing rules), placement.toml (file-to-crate

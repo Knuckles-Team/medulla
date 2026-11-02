@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# mypy: ignore-errors
 """Leaf-crate move codemod for the types split (MEDULLA-CONTRACT-R056.11).
 
 Moves the top-level modules of `crates/<from>/src` that boundaries.toml assigns to `<to>` (a

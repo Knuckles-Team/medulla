@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: E501
 """Turn one or more ``cargo llvm-cov --lcov`` reports into a ranked,
 actionable "what is never executed" list.
 

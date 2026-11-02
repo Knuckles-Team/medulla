@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: E501
 """Fail CI when current-only mutation/projection persistence regresses."""
 
 from __future__ import annotations

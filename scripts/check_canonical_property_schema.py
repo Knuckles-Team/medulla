@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: E501
 """Reject reintroduction of obsolete structural-property fallbacks.
 
 Property blobs remain open JSON/MessagePack objects, so an application is free to

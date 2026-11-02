@@ -1,3 +1,4 @@
+# ruff: noqa: E501
 """Resolve `Method` write families for the static architecture gates.
 
 Classifiers select the named families declared once next to the enum

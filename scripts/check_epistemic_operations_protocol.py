@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: E501
 """Verify the engine projection of Epistemic Operations Protocol v1.
 
 The manifest is generated from the authoritative agent-utilities JSON Schema

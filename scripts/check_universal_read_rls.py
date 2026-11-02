@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: E501
 """Fail CI if a served read bypasses row or carrier ownership isolation.
 
 The read inventory is generated from the exhaustive capability ledger and

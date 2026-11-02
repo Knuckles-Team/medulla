@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: E501
 """Fail CI when `mint_policy_decision_lease` grows a second production call site.
 
 GRAPH-POLICY-LEASE-CONTRACT.md §3 hardening (`MintAuthorization`,

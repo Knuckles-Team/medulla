@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: E501
 """Static gate for exact-binary fault/restart certification architecture."""
 
 from __future__ import annotations

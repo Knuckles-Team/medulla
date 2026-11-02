@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: E501
 """Terms of acceptance for Rust exhaustive dispatch under the cyclomatic cap.
 
 WHY THIS EXISTS

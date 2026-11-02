@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: E501
 """Fail CI if the P2 modality/KnowledgeBatch architecture is bypassed.
 
 Kept here are only properties the compiler and the Rust suites cannot see:

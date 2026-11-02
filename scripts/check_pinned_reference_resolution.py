@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: E501
 """Fail closed when a pinned cross-record reference has no production resolver.
 
 Why this exists

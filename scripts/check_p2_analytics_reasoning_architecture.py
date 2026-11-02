@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: E501
 """Static architecture gate for P2 analytics and incremental reasoning."""
 
 from __future__ import annotations

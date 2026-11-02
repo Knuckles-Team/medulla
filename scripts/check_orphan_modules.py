@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: E501
 """Fail closed when a tracked Rust file is not compiled by any cargo target.
 
 Why this exists

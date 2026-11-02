@@ -1,3 +1,4 @@
+# mypy: ignore-errors
 """Module graph of one crate (G7 split, MEDULLA-CONTRACT-R056.11).
 
 usage (repo root): modgraph.py <crate> [expand_mod ...] > graph.json

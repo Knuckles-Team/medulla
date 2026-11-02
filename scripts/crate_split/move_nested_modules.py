@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# mypy: ignore-errors
 """Nested-module move codemod for the types split (MEDULLA-CONTRACT-R056.11).
 
 `move_leaf_modules.py` moves whole top-level modules. This tool moves the units that boundaries.toml

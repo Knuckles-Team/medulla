@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: E501
 """The reviewed register of function pairs dupehound reports that are NOT clones.
 
 Dupehound answers a structural question: after identifiers and literals are

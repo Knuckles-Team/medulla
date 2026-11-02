@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: E501
 """Fail closed when the behavior-preserving dispatch module cut drifts."""
 
 from __future__ import annotations

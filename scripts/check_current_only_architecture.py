@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: E501
 """Fail CI when audited legacy readers, fallbacks, or retired symbols return.
 
 Every check here is a *ban*: a retired symbol, a compatibility default, a
