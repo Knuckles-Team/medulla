@@ -63,6 +63,7 @@ medulla-isolation = { path = "../medulla-isolation" }
 tracing = "0.1"
 
 [features]
+ast = []
 epistemic = ["medulla-server-graph/epistemic", "dep:medulla-plan", "medulla-plan/epistemic", "dep:medulla-modality", "query", "medulla-h-jobs/epistemic", "medulla-h-txn/epistemic", "medulla-kernel/epistemic", "medulla-protocol-types/epistemic", "medulla-raft/epistemic", "medulla-server-api/epistemic", "medulla-server-auth/epistemic", "medulla-types/epistemic"]
 jobs = ["medulla-server-graph/jobs", "medulla-capabilities/jobs", "server", "mining", "epistemic", "medulla-agent-types/jobs", "medulla-h-jobs/jobs", "medulla-protocol-types/jobs", "medulla-raft/jobs", "medulla-server-api/jobs", "medulla-types/jobs", "medulla-work-types/jobs"]
 mining = ["medulla-server-graph/mining", "medulla-kernel/mining", "medulla-protocol-types/mining", "medulla-result-types/mining", "medulla-server-api/mining", "medulla-server-auth/mining", "medulla-types/mining"]

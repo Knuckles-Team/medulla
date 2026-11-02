@@ -43,6 +43,7 @@ async-trait = { version = "0.1" }
 medulla-server-auth = { path = "../medulla-server-auth" }
 
 [features]
+ast = []
 test-support = ["medulla-server-graph/test-support", "medulla-identity-types/test-support", "medulla-kernel/test-support", "medulla-protocol-types/test-support", "medulla-server-api/test-support", "medulla-types/test-support", "medulla-server-auth/test-support"]
 oidc = ["medulla-server-graph/oidc", "dep:jsonwebtoken", "medulla-server-api/oidc", "medulla-server-auth/oidc"]
 redb = ["medulla-server-graph/redb", "dep:redb", "dep:medulla-transaction", "dep:medulla-storage", "medulla-kernel/redb", "medulla-server-api/redb"]
