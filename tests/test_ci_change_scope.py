@@ -260,8 +260,10 @@ def test_workspace_gates_use_hosted_runner_with_required_headers(job_name: str) 
     assert job["needs"] == "changes"
     assert job["if"] == "needs.changes.outputs.code == 'true'"
     pr_budget = 15 if job_name == "gates-crates" else 30
+    push_budget = 240 if job_name == "gates-crates" else 60
     assert job["timeout-minutes"] == (
-        f"${{{{ github.event_name == 'pull_request' && {pr_budget} || 60 }}}}"
+        "${{ github.event_name == 'pull_request' && "
+        f"{pr_budget} || {push_budget} }}}}"
     )
     installs = [
         step

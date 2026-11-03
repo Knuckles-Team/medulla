@@ -299,9 +299,16 @@ def _assert_cache_job_settings(job_name: str, job: dict) -> None:
         }
         else {"gates-crates": 30}.get(job_name, 10)
     )
+    # The full workspace sweep (~150 crates, all features, cold hosted runner)
+    # has its own push budget; every other job keeps the short one.
+    push_budget = 240 if job_name == "gates-crates" else 60
     expected = {"gates-facade": 60}.get(
         job_name,
-        "${{ github.event_name == 'pull_request' && " + str(budget) + " || 60 }}",
+        "${{ github.event_name == 'pull_request' && "
+        + str(budget)
+        + " || "
+        + str(push_budget)
+        + " }}",
     )
     assert job["timeout-minutes"] == expected
 

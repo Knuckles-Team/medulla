@@ -694,8 +694,9 @@ jobs:
     # member-version-only changes to no crate
     # (PIPE-RELEASE-R007.7), so it no longer forces the full workspace sweep.
     # A registry-dependency lock change prints FULL; main CI then owns the full
-    # sweep under the 60-minute push budget, as for every other FULL scope.
-    timeout-minutes: ${{ github.event_name == 'pull_request' && 15 || 60 }}
+    # sweep under its 240-minute push budget (about 150 crates built with all
+    # features on a cold hosted runner).
+    timeout-minutes: ${{ github.event_name == 'pull_request' && 15 || 240 }}
     name: gates (workspace crates)
     needs: changes
     if: &medulla-code-change needs.changes.outputs.code == 'true'
