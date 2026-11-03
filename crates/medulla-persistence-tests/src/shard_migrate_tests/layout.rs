@@ -61,6 +61,7 @@ fn retired_k1_layout_migrates_to_canonical_k1() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
+// spec: MEDULLA-TYPED-PACKS-R056
 #[test]
 fn migration_discovery_rejects_mixed_and_sparse_layouts() {
     // Every store this test builds or reopens resolves the value cipher from
