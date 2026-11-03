@@ -408,10 +408,13 @@ def _assert_runner_budget(workflow: Path, name: str, job: dict) -> None:
 
 def _assert_short_runner_budget(workflow: Path, name: str, job: dict) -> None:
     thirty_min = "${{ github.event_name == 'pull_request' && 30 || 60 }}"
-    fifteen_min = "${{ github.event_name == 'pull_request' && 15 || 60 }}"
+    # The full workspace sweep builds and runs every one of the ~150 crates'
+    # tests with all features on a cold hosted runner; it needs a push budget
+    # beyond the short one (pull requests keep the 15-minute affected subset).
+    workspace_sweep = "${{ github.event_name == 'pull_request' && 15 || 240 }}"
     pr_scoped = {
         ("ci.yml", "quality-advisory"): thirty_min,
-        ("ci.yml", "gates-crates"): fifteen_min,
+        ("ci.yml", "gates-crates"): workspace_sweep,
         ("ci.yml", "gates-storage"): thirty_min,
         ("ci.yml", "gates-ontology"): thirty_min,
     }.get(
