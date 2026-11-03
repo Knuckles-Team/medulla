@@ -709,6 +709,7 @@ def test_sdist_backend_imports_from_declared_isolated_source_tree(tmp_path):
     assert result.stdout.strip() == "medulla"
 
 
+@pytest.mark.spec("MEDULLA-CONTRACT-R053.9")
 def test_server_wheel_build_adds_swap_and_thin_links_aarch64():
     # Swap and the aarch64 link profile live in the shared action, so the release
     # leg and ci.yml's warm-cache build both get them (the cache job had no swap
@@ -720,7 +721,7 @@ def test_server_wheel_build_adds_swap_and_thin_links_aarch64():
         "Build the wheel in the manylinux_2_28 container"
     )
     build = steps[names.index("Build the wheel in the manylinux_2_28 container")]["run"]
-    assert 'image="$ARM_IMAGE"; jobs=1; lto=thin; cgu=16' in build
+    assert 'image="$ARM_IMAGE"; jobs=4; lto=thin; cgu=16' in build
     assert '"CARGO_PROFILE_RELEASE_SERVER_LTO=$lto"' in build
     release = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))["jobs"][
         "build-server"
@@ -852,3 +853,28 @@ def test_tag_pipeline_builds_checks_and_publishes_only() -> None:
         ci["jobs"]
     )
     assert not {"build", "build-x86", "build-sdist", "publish-pypi"} & set(ci["jobs"])
+
+
+@pytest.mark.spec("MEDULLA-CONTRACT-R053.9")
+def test_every_rust_cache_saves_the_configured_target_dir():
+    # `.cargo/config.toml` sends every build to its `target-dir` unless the file
+    # exports its own CARGO_TARGET_DIR; a rust-cache entry naming any other
+    # directory saves no compiled crates, and each run rebuilds the engine.
+    config = tomllib.loads((REPO / ".cargo/config.toml").read_text(encoding="utf-8"))
+    target_dir = config["build"]["target-dir"]
+    mappings = []
+    for path in sorted((REPO / ".github").rglob("*.yml")):
+        text = path.read_text(encoding="utf-8")
+        exported = [
+            line.split("CARGO_TARGET_DIR=", 1)[1]
+            for line in text.splitlines()
+            if "CARGO_TARGET_DIR=" in line
+        ]
+        for line in text.splitlines():
+            if "workspaces:" in line and "->" in line:
+                mapped = line.split("->", 1)[1].strip().strip("\"'")
+                own = any(mapped.rsplit("/", 1)[-1] in value for value in exported)
+                mappings.append((path.name, mapped, mapped == target_dir or own))
+    assert mappings
+    wrong = [(name, mapped) for name, mapped, ok in mappings if not ok]
+    assert not wrong, wrong
