@@ -207,7 +207,7 @@ jobs:
   gates:
     # Full engine compilation/test execution exceeds the short PR budget.
     # Run 38392685303 exhausted even 45m; retain this cap pending build profiling.
-    timeout-minutes: ${{ github.event_name == 'pull_request' && 45 || 60 }}
+    timeout-minutes: ${{ github.event_name == 'pull_request' && 90 || 90 }}
     name: gates
     needs: changes
     if: &medulla-main-only needs.changes.outputs.code == 'true' && github.event_name != 'pull_request'
@@ -314,7 +314,7 @@ jobs:
           sccache --show-stats
 
   gates-plan-fuzz:
-    timeout-minutes: ${{ github.event_name == 'pull_request' && 45 || 60 }}
+    timeout-minutes: ${{ github.event_name == 'pull_request' && 90 || 90 }}
     name: gates (plan fuzz and chaos)
     needs: changes
     if: *medulla-main-only
@@ -339,7 +339,7 @@ jobs:
   # Independent acceptance; retain the original native-job cap. On a pull
   # request it runs only when packaging or the pyo3 crates changed.
   gates-wheel:
-    timeout-minutes: ${{ github.event_name == 'pull_request' && 45 || 60 }}
+    timeout-minutes: ${{ github.event_name == 'pull_request' && 90 || 90 }}
     name: gates (installed wheel)
     needs: changes
     if: &medulla-packaging-change needs.changes.outputs.code == 'true' && (github.event_name != 'pull_request' || needs.changes.outputs.packaging == 'true')
@@ -592,7 +592,7 @@ jobs:
 
   # Independent acceptance; on a pull request only when its crates changed.
   gates-whisper:
-    timeout-minutes: ${{ github.event_name == 'pull_request' && 45 || 60 }}
+    timeout-minutes: ${{ github.event_name == 'pull_request' && 90 || 90 }}
     name: gates (Whisper real model)
     needs: changes
     if: needs.changes.outputs.code == 'true' && (github.event_name != 'pull_request' || needs.changes.outputs.whisper == 'true')
@@ -759,7 +759,7 @@ jobs:
   # Keep pyo3 validation independent of storage and the workspace sweep.
   # Main warms the same profile; pull requests retain read-only caches.
   gates-pyo3:
-    timeout-minutes: ${{ github.event_name == 'pull_request' && 45 || 60 }}
+    timeout-minutes: ${{ github.event_name == 'pull_request' && 90 || 90 }}
     name: gates (pyo3 crates)
     needs: changes
     if: *medulla-packaging-change
@@ -858,7 +858,7 @@ jobs:
     # The full-featured server build alone exceeds the short PR budget:
     # run 38519919307 compiled it in 9m34s, then the 10m cap killed the job
     # and cancelled the whole Python suite leg. Align with the full engine jobs.
-    timeout-minutes: ${{ github.event_name == 'pull_request' && 45 || 60 }}
+    timeout-minutes: ${{ github.event_name == 'pull_request' && 90 || 90 }}
     name: Python full server preparation
     needs: changes
     if: *medulla-code-change
@@ -893,7 +893,7 @@ jobs:
   python-suite:
     # The full root pytest suite leaves no headroom under the short PR budget
     # (9m29s suite leg on run 38500023697); align with the full engine jobs.
-    timeout-minutes: ${{ github.event_name == 'pull_request' && 45 || 60 }}
+    timeout-minutes: ${{ github.event_name == 'pull_request' && 90 || 90 }}
     name: Python suite (tests/)
     needs: [changes, python-kernels, python-server]
     if: always() && needs.changes.outputs.code == 'true'
@@ -1414,7 +1414,7 @@ jobs:
   # successful security job and central light-gate result.
   # ── The one pull-request gate (MEDULLA-CONTRACT-R053.7). ─────────────────────
   ci:
-    timeout-minutes: ${{ github.event_name == 'pull_request' && 45 || 60 }}
+    timeout-minutes: ${{ github.event_name == 'pull_request' && 90 || 90 }}
     name: CI
     if: github.event_name == 'pull_request'
     runs-on: *medulla-native-validation-runner

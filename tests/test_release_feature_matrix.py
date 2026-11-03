@@ -319,7 +319,7 @@ def test_pyo3_gate_is_independent_required_and_keeps_trusted_cache_policy(
     )
     assert (
         job["timeout-minutes"]
-        == "${{ github.event_name == 'pull_request' && 45 || 60 }}"
+        == "${{ github.event_name == 'pull_request' && 90 || 90 }}"
     )
     assert job["runs-on"] == "ubuntu-24.04"
     assert job["env"] == jobs["gates-crates"]["env"]

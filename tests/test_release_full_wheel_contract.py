@@ -353,6 +353,7 @@ def test_self_hosted_runners_are_unreachable_from_pull_requests() -> None:
             )
 
 
+@pytest.mark.spec("MEDULLA-CONTRACT-R056.12")
 def test_runner_jobs_keep_build_budget_and_bounded_authorization() -> None:
     for workflow in sorted((REPO / ".github" / "workflows").glob("*.yml")):
         doc = yaml.safe_load(workflow.read_text(encoding="utf-8"))
@@ -399,7 +400,7 @@ def _assert_runner_budget(workflow: Path, name: str, job: dict) -> None:
                 ("ci.yml", "clippy-release-profiles"): 60,
             }.get(
                 (workflow.name, name),
-                "${{ github.event_name == 'pull_request' && 45 || 60 }}",
+                "${{ github.event_name == 'pull_request' && 90 || 90 }}",
             )
             assert job.get("timeout-minutes") == expected
         else:
@@ -435,7 +436,7 @@ def _assert_short_runner_budget(workflow: Path, name: str, job: dict) -> None:
 
 @pytest.mark.parametrize(
     "timeout",
-    [10, 15, 45, 60, 360, "${{ github.event_name == 'pull_request' && 45 || 60 }}"],
+    [10, 15, 45, 60, 90, 360, "${{ github.event_name == 'pull_request' && 90 || 90 }}"],
 )
 def test_workspace_clippy_budget_rejects_unscoped_limits(timeout: int | str) -> None:
     """MEDULLA-CONTRACT-R031: only the workspace matrix leg receives extra time."""
