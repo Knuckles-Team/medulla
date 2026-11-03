@@ -589,3 +589,12 @@ mark the cross-owner rows above complete. They do not replace the served
 
 No row in this leaf promotes R722.3--R722.6. Record positive tests and refusal
 cases against the same frozen source archive before composing this evidence.
+
+## MEDULLA-FEDERATED-QUERY-R058.6 to R058.9 acceptance
+
+| Case | Row | Proving test and observation |
+|---|---|---|
+| Behavior | `MEDULLA-FEDERATED-QUERY-R058.6` | `tests/nl_query_certified_definitions.rs::mismatch_is_corrected_then_disclosed`: one feedback step, the certified terms in the result, and `NL_DEFINITION_CONFLICT` when the loop ends. |
+| Behavior | `MEDULLA-FEDERATED-QUERY-R058.7` | `tests/nl_query_certified_definitions.rs::recorded_correction_grounds_the_next_plan`: the approved pair is in the next planning context; no scope returns `NL_CORRECTION_UNAUTHORIZED`. |
+| Behavior | `MEDULLA-FEDERATED-QUERY-R058.8` | `tests/nl_query_bounded_steps.rs::follow_up_is_rewritten_and_disclosed`: the rewritten question is disclosed; without history the question is unchanged. |
+| Behavior | `MEDULLA-FEDERATED-QUERY-R058.9` | `tests/nl_query_certified_definitions.rs::conflicting_sources_record_one_conflict`: one conflict fact; planning does not treat the term as certified. |
