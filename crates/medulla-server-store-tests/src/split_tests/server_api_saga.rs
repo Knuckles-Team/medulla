@@ -99,6 +99,7 @@ fn channel_departure_receipt_keeps_json_string_variant() {
         .unwrap();
 }
 
+// spec: MEDULLA-DURABLE-KERNEL-R068
 #[test]
 fn channel_group_join_leave_rejoin_replays_each_tagged_result() {
     let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock_blocking();
