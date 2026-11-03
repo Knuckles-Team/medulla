@@ -1285,6 +1285,7 @@ mod tests {
         assert!(source.validate().unwrap_err().contains("digest mismatch"));
     }
 
+    // spec: MEDULLA-TYPED-PACKS-R061
     #[test]
     fn low_level_source_seam_enforces_the_document_bound() {
         let oversized =
@@ -1306,6 +1307,7 @@ mod tests {
         assert!(sources.dynamic.is_empty());
     }
 
+    // spec: MEDULLA-TYPED-PACKS-R061
     #[test]
     fn dynamic_quota_excludes_the_immutable_core_catalog() {
         let mut sources = GraphSchemaSources::default();
@@ -1328,6 +1330,7 @@ mod tests {
         assert!(!sources.dynamic.contains_key("admin:overflow"));
     }
 
+    // spec: MEDULLA-TYPED-PACKS-R051
     #[test]
     fn composed_digest_is_ordered_and_excludes_provenance_time() {
         let mut left = GraphSchemaSources::default();

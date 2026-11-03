@@ -208,6 +208,7 @@ def _case_id(mutation: object) -> str:
     return f"{case.rule}_{case.variant}"
 
 
+# spec: MEDULLA-TYPED-PACKS-R086
 @pytest.mark.parametrize(
     "index",
     range(len(MUTATIONS)),

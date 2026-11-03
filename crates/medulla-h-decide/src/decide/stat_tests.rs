@@ -1047,6 +1047,9 @@ mod consumer_tests;
 mod retrieval_tests;
 
 #[cfg(feature = "query")]
+mod retrieval_plan_tests;
+
+#[cfg(feature = "query")]
 mod learning_tests;
 
 #[cfg(feature = "query")]

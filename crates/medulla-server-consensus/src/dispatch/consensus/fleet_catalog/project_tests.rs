@@ -170,6 +170,7 @@ fn names_come_from_provenance_or_the_unescaped_id() {
     assert_eq!(component_name(&named), "search_issues");
 }
 
+// spec: MEDULLA-TYPED-PACKS-R072
 #[test]
 fn every_content_kind_projects_its_typed_facts() {
     let Some(FleetCatalogRow::Tool { row: tool_row }) =

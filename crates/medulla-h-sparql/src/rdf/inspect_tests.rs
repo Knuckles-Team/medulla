@@ -127,6 +127,7 @@ fn the_composed_schema_reads_the_live_core_catalog() {
     assert!(catalog.triple_count <= all.triple_count);
 }
 
+// spec: MEDULLA-TYPED-PACKS-R098
 #[test]
 fn ambiguous_unknown_and_malformed_requests_are_refused() {
     let core = GraphCore::new();

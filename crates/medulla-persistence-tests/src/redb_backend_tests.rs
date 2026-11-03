@@ -2869,6 +2869,7 @@ async fn k1_uses_canonical_indexed_layout() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
+// spec: MEDULLA-TYPED-PACKS-R056
 #[test]
 fn normal_startup_rejects_retired_single_file_layout() {
     // Sync `#[test]`, so the blocking counterpart. It opens a durable store

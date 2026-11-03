@@ -166,6 +166,7 @@ def only_source(listed: GraphSchemaSourcesView, expected_lease_id: str) -> bool:
     )
 
 
+# spec: MEDULLA-TYPED-PACKS-R083
 @pytest.mark.spec("MEDULLA-TYPED-PACKS-R712")
 @pytest.mark.asyncio
 async def test_breaking_drift_quarantines_and_activation_needs_approval() -> None:

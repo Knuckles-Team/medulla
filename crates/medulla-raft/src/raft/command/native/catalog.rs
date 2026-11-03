@@ -276,3 +276,33 @@ macro_rules! declare_native_domain_classifier {
 }
 
 native_method_catalog!(declare_native_domain_classifier);
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // spec: MEDULLA-TYPED-PACKS-R062
+    /// Graph schema attach replicates through the existing `GraphState` native
+    /// route: the catalog records `GraphSchema` under `GraphState`, the sealed
+    /// command reports that domain, and it round-trips byte-for-byte with the
+    /// public method -- no new sealed payload variant is added.
+    #[test]
+    fn graph_schema_records_replicate_as_graph_state() {
+        let op = medulla_catalog_types::graph_schema::GraphSchemaOp::Attach {
+            source_id: "admin:r062".to_string(),
+            shapes_ttl: None,
+            ontology_ttl: Some("@prefix owl: <http://www.w3.org/2002/07/owl#> .".to_string()),
+            if_composed_digest: None,
+        };
+        let method = Method::GraphSchema { op: Box::new(op) };
+        let expected = rmp_serde::to_vec_named(&method).unwrap();
+        let command = NativeMutationCommand::from_public_method(method, "r062-key")
+            .expect("GraphSchema has a native command");
+        assert_eq!(command.domain(), Some(NativeMutationDomain::GraphState));
+        let opened = command
+            .open_public_method("r062-key")
+            .unwrap()
+            .expect("public native method opens");
+        assert_eq!(rmp_serde::to_vec_named(&opened).unwrap(), expected);
+    }
+}

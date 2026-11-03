@@ -142,7 +142,7 @@ fn descriptor_ids() -> Vec<String> {
 /// feature, so the two sides can agree. A variant added behind a NEW feature that
 /// `canonical-ledger` does not select fails this test loudly, which is the correct
 /// outcome -- the canonical ledger would no longer be the complete inventory.
-// spec: MEDULLA-CONTRACT-R044
+// spec: MEDULLA-CONTRACT-R044, MEDULLA-TYPED-PACKS-R067
 #[cfg(feature = "canonical-ledger")]
 #[test]
 fn every_wire_variant_has_exactly_one_descriptor_and_vice_versa() {
@@ -290,4 +290,255 @@ fn session_usage_requires_the_shared_usage_read_scope() {
         .find(|descriptor| descriptor.id.as_str() == "GetSessionUsage")
         .unwrap();
     assert_eq!(descriptor.policy.authz_action, "usage:read");
+}
+
+// spec: MEDULLA-TYPED-PACKS-R063
+/// The agent-layer shared schema version constants, each with its pinned value
+/// and every record type that embeds it.
+///
+/// R063's rule: a change to a shared schema version names the agent-layer
+/// record types it changes, in the change's `Spec` trailer. This table IS that
+/// enumeration, and the test below fails in every drift direction:
+///   * a new `pub const *_SCHEMA_VERSION: u16` in `medulla-agent-types` that is
+///     not listed here (a new shared version nobody named);
+///   * a record type with a `pub schema_version: u16` field that is not named
+///     under its constant (a missing name in the enumeration);
+///   * a constant renamed, or a pinned value that no longer matches the live
+///     constant (a bump that skipped re-enumerating the table).
+const AGENT_LAYER_SCHEMA_BUMPS: &[(&str, u16, &[&str])] = &[
+    (
+        "AGENT_LIBRARY_ENTRY_SCHEMA_VERSION",
+        5,
+        &["AgentLibraryEntry"],
+    ),
+    (
+        "AGENT_LIBRARY_OUTBOX_SCHEMA_VERSION",
+        1,
+        &["AgentLibraryOutboxEvent"],
+    ),
+    (
+        "AGENT_LIBRARY_RESULT_SCHEMA_VERSION",
+        1,
+        &["AgentLibraryCommittedResult"],
+    ),
+    (
+        "AGENT_GRAPH_ENTRY_SCHEMA_VERSION",
+        2,
+        &[
+            "AgentGraphEntry",
+            "AgentGraphCommittedResult",
+            "AgentGraphOutboxEvent",
+        ],
+    ),
+    (
+        "AGENT_COMPONENT_SCHEMA_VERSION",
+        3,
+        &[
+            "AgentComponentEntry",
+            "AgentComponentCommittedResult",
+            "AgentComponentOutboxEvent",
+        ],
+    ),
+    (
+        "AGENT_TEMPLATE_SCHEMA_VERSION",
+        2,
+        &[
+            "AgentTemplateEntry",
+            "AgentTemplateCommittedResult",
+            "AgentTemplateOutboxEvent",
+        ],
+    ),
+    (
+        "GUARDRAIL_ENTAILMENT_RESULT_SCHEMA_VERSION",
+        1,
+        &["GuardrailEntailmentResult"],
+    ),
+    (
+        "COMPONENT_CONTENT_SCHEMA_VERSION",
+        1,
+        &["AgentComponentContentResult"],
+    ),
+];
+
+fn agent_layer_rust_files() -> Vec<PathBuf> {
+    let mut out = Vec::new();
+    let mut stack = vec![repo_root().join("crates/medulla-agent-types/src")];
+    while let Some(dir) = stack.pop() {
+        for entry in std::fs::read_dir(&dir)
+            .unwrap_or_else(|e| panic!("failed to read {}: {e}", dir.display()))
+        {
+            let path = entry.unwrap().path();
+            if path.is_dir() {
+                stack.push(path);
+            } else if path.extension().is_some_and(|ext| ext == "rs") {
+                out.push(path);
+            }
+        }
+    }
+    out
+}
+
+/// Every `pub const <NAME>_SCHEMA_VERSION: u16 = <n>;` in the agent-layer crate,
+/// with its value, read as text the same way the Method enum is read above --
+/// no baseline file, so a new shared version constant cannot appear silently.
+fn agent_layer_schema_constants() -> BTreeSet<(String, u16)> {
+    let mut found = BTreeSet::new();
+    for path in agent_layer_rust_files() {
+        let text = std::fs::read_to_string(&path)
+            .unwrap_or_else(|e| panic!("failed to read {}: {e}", path.display()));
+        for line in text.lines() {
+            let rest = match line.trim().strip_prefix("pub const ") {
+                Some(rest) => rest,
+                None => continue,
+            };
+            let (name, rest) = match rest.split_once(':') {
+                Some((name, rest)) => (name, rest),
+                None => continue,
+            };
+            if !name.ends_with("_SCHEMA_VERSION") || !rest.trim().starts_with("u16 = ") {
+                continue;
+            }
+            let value = rest
+                .trim()
+                .strip_prefix("u16 = ")
+                .and_then(|v| v.strip_suffix(';'))
+                .and_then(|v| v.parse::<u16>().ok())
+                .unwrap_or_else(|| {
+                    panic!(
+                        "{}: unparseable shared schema version value: {rest:?}",
+                        path.display()
+                    )
+                });
+            found.insert((name.to_string(), value));
+        }
+    }
+    found
+}
+
+/// Every agent-layer record type that embeds a `pub schema_version: u16` field:
+/// a `pub struct` name that owns such a field before its closing brace at
+/// column 0. A struct with no version field contributes nothing.
+fn agent_layer_versioned_record_types() -> BTreeSet<String> {
+    let mut found = BTreeSet::new();
+    for path in agent_layer_rust_files() {
+        let text = std::fs::read_to_string(&path)
+            .unwrap_or_else(|e| panic!("failed to read {}: {e}", path.display()));
+        let mut current: Option<String> = None;
+        for line in text.lines() {
+            if let Some(name) = line.trim().strip_prefix("pub struct ").map(|rest| {
+                rest.chars()
+                    .take_while(|c| c.is_ascii_alphanumeric())
+                    .collect::<String>()
+            }) {
+                if name.chars().next().is_some_and(|c| c.is_ascii_uppercase()) {
+                    current = Some(name);
+                    continue;
+                }
+            }
+            if line.starts_with('}') {
+                current = None;
+                continue;
+            }
+            if current.is_some() && line.trim() == "pub schema_version: u16," {
+                if let Some(name) = current.take() {
+                    found.insert(name);
+                }
+            }
+        }
+    }
+    found
+}
+
+fn agent_layer_schema_constant_value(name: &str) -> u16 {
+    match name {
+        "AGENT_LIBRARY_ENTRY_SCHEMA_VERSION" => {
+            medulla_agent_types::agent_library::AGENT_LIBRARY_ENTRY_SCHEMA_VERSION
+        }
+        "AGENT_LIBRARY_OUTBOX_SCHEMA_VERSION" => {
+            medulla_agent_types::agent_library::AGENT_LIBRARY_OUTBOX_SCHEMA_VERSION
+        }
+        "AGENT_LIBRARY_RESULT_SCHEMA_VERSION" => {
+            medulla_agent_types::agent_library::AGENT_LIBRARY_RESULT_SCHEMA_VERSION
+        }
+        "AGENT_GRAPH_ENTRY_SCHEMA_VERSION" => {
+            medulla_agent_types::agent_graph::AGENT_GRAPH_ENTRY_SCHEMA_VERSION
+        }
+        "AGENT_COMPONENT_SCHEMA_VERSION" => {
+            medulla_agent_types::agent_component::AGENT_COMPONENT_SCHEMA_VERSION
+        }
+        "AGENT_TEMPLATE_SCHEMA_VERSION" => {
+            medulla_agent_types::agent_template::AGENT_TEMPLATE_SCHEMA_VERSION
+        }
+        "GUARDRAIL_ENTAILMENT_RESULT_SCHEMA_VERSION" => {
+            medulla_agent_types::agent_guardrail::GUARDRAIL_ENTAILMENT_RESULT_SCHEMA_VERSION
+        }
+        "COMPONENT_CONTENT_SCHEMA_VERSION" => {
+            medulla_agent_types::agent_component::content::COMPONENT_CONTENT_SCHEMA_VERSION
+        }
+        other => panic!("enumeration names unknown constant {other}"),
+    }
+}
+
+#[test]
+fn schema_bump_enumerates_agent_layer_types() {
+    let constants = agent_layer_schema_constants();
+    let records = agent_layer_versioned_record_types();
+
+    let enumerated_constants: BTreeSet<String> = AGENT_LAYER_SCHEMA_BUMPS
+        .iter()
+        .map(|(name, _, _)| name.to_string())
+        .collect();
+    let unenumerated: Vec<&String> = constants
+        .iter()
+        .map(|(name, _)| name)
+        .filter(|name| !enumerated_constants.contains(*name))
+        .collect();
+    assert!(
+        unenumerated.is_empty(),
+        "unenumerated shared schema version constant(s) {unenumerated:?}: add each to \
+         AGENT_LAYER_SCHEMA_BUMPS with the record types it changes, named in the \
+         change's `Spec` trailer"
+    );
+    let stale_constants: Vec<&String> = enumerated_constants
+        .iter()
+        .filter(|name| !constants.iter().any(|(n, _)| n == *name))
+        .collect();
+    assert!(
+        stale_constants.is_empty(),
+        "enumerated constant(s) {stale_constants:?} no longer exist in medulla-agent-types"
+    );
+
+    // A bump changes a pinned value: it fails here until the table is
+    // re-enumerated for the new value.
+    for (name, pinned, _) in AGENT_LAYER_SCHEMA_BUMPS {
+        let actual = agent_layer_schema_constant_value(name);
+        assert_eq!(
+            actual, *pinned,
+            "{name} moved {pinned} -> {actual}: the bump must name the record types it \
+             changes in its `Spec` trailer and update this table"
+        );
+    }
+
+    let enumerated_records: BTreeSet<String> = AGENT_LAYER_SCHEMA_BUMPS
+        .iter()
+        .flat_map(|(_, _, records)| records.iter().map(|name| name.to_string()))
+        .collect();
+    let unenumerated_records: Vec<&String> = records
+        .iter()
+        .filter(|record| !enumerated_records.contains(*record))
+        .collect();
+    assert!(
+        unenumerated_records.is_empty(),
+        "record type(s) {unenumerated_records:?} embed a `schema_version: u16` field but \
+         are not named in AGENT_LAYER_SCHEMA_BUMPS -- a missing name fails"
+    );
+    let stale_records: Vec<&String> = enumerated_records
+        .iter()
+        .filter(|record| !records.contains(*record))
+        .collect();
+    assert!(
+        stale_records.is_empty(),
+        "enumerated record type(s) {stale_records:?} no longer embed a \
+         `schema_version: u16` field"
+    );
 }
