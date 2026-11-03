@@ -1644,6 +1644,7 @@ mod tests {
         }
     }
 
+    // spec: MEDULLA-FEDERATED-QUERY-R046
     #[test]
     fn eh573_direct_ordered_slice_matches_materialized_results_and_ships_less() {
         let table = TableSource::from_records(
@@ -1729,6 +1730,7 @@ mod tests {
         assert!(source.shipped.lock().unwrap().is_empty());
     }
 
+    // spec: MEDULLA-FEDERATED-QUERY-R046
     #[test]
     fn eh573_direct_count_matches_materialized_distinct_triples() {
         let table = TableSource::from_records(
