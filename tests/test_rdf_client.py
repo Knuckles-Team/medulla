@@ -39,6 +39,7 @@ class _FakeClient(MedullaClient):
         return self.result
 
 
+# spec: MEDULLA-TYPED-PACKS-R082, MEDULLA-TYPED-PACKS-R098
 @pytest.mark.asyncio
 async def test_validate_shacl_sends_both_inline_graphs() -> None:
     report = {"conforms": True, "results": [], "schema_digests": []}
