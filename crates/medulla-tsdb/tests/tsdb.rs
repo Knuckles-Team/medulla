@@ -268,6 +268,87 @@ fn downsample_roundtrips_to_points() {
     assert!((ds[1].values[0] - 14.5).abs() < 1e-9);
 }
 
+// The kernel keeps one portable path (the fleet has no AVX2 host): every
+// aggregate must equal a scalar reference computed by direct loop, within
+// 1e-12, on 10,000 seeded points.
+
+fn splitmix64(state: &mut u64) -> u64 {
+    *state = state.wrapping_add(0x9E37_79B9_7F4A_7C15);
+    let mut z = *state;
+    z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+    z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+    z ^ (z >> 31)
+}
+
+/// 10,000 seeded points: strictly ts-sorted, one per 20 minutes plus a seeded
+/// intra-step jitter (so buckets are non-empty and variable in width), field 0
+/// a seeded value in `[-100, 100)`.
+fn seeded_points(count: usize, step: i64) -> Vec<Point> {
+    let mut state = 0x5EED_u64;
+    (0..count)
+        .map(|i| {
+            let jitter = (splitmix64(&mut state) % (step as u64)) as i64;
+            let value = (splitmix64(&mut state) % 200_000_000) as f64 / 1_000_000.0 - 100.0;
+            Point::single(i as i64 * step + jitter, value)
+        })
+        .collect()
+}
+
+/// Scalar reference for [`downsample`]: each aggregate computed by direct loop
+/// over its bucket's samples (no fused or intrinsics path).
+fn downsample_scalar_reference(points: &[Point], width: i64, agg: Agg) -> Vec<Point> {
+    let mut buckets: Vec<(i64, Vec<f64>)> = Vec::new();
+    for p in points {
+        let start = (p.ts / width) * width;
+        match buckets.last_mut() {
+            Some((current, samples)) if *current == start => samples.push(p.values[0]),
+            _ => buckets.push((start, vec![p.values[0]])),
+        }
+    }
+    buckets
+        .into_iter()
+        .map(|(start, samples)| {
+            let value = match agg {
+                Agg::Min => samples.iter().copied().fold(f64::INFINITY, f64::min),
+                Agg::Max => samples.iter().copied().fold(f64::NEG_INFINITY, f64::max),
+                Agg::Mean => samples.iter().sum::<f64>() / samples.len() as f64,
+                Agg::Sum => samples.iter().sum::<f64>(),
+                Agg::Count => samples.len() as f64,
+                Agg::First => samples[0],
+                Agg::Last => *samples.last().expect("a bucket holds at least one sample"),
+            };
+            Point::single(start, value)
+        })
+        .collect()
+}
+
+// spec: MEDULLA-DURABLE-KERNEL-R053
+#[test]
+fn downsample_matches_scalar_reference_for_every_aggregate() {
+    let width = 6 * 3600 * NS; // 6-hour buckets over a 20-minute cadence
+    let points = seeded_points(10_000, 20 * 60 * NS);
+    for agg in [
+        Agg::Min,
+        Agg::Max,
+        Agg::Mean,
+        Agg::Sum,
+        Agg::Count,
+        Agg::First,
+        Agg::Last,
+    ] {
+        let got = downsample(&points, width, agg);
+        let want = downsample_scalar_reference(&points, width, agg);
+        assert_eq!(got.len(), want.len(), "{agg:?}: bucket count");
+        for (g, w) in got.iter().zip(want.iter()) {
+            assert_eq!(g.ts, w.ts, "{agg:?}: bucket start");
+            assert!(
+                (g.values[0] - w.values[0]).abs() <= 1e-12,
+                "{agg:?}: kernel {g:?} vs reference {w:?}",
+            );
+        }
+    }
+}
+
 #[test]
 fn ohlc_bars_basic() {
     let pts = vec![
