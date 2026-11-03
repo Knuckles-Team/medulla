@@ -54,7 +54,12 @@ FORBIDDEN = (
         re.IGNORECASE,
     ),
     re.compile(r"\bhomelab\b", re.IGNORECASE),
-    re.compile(r"(?:file://|/(?:home|Users|tmp|workspace)/)", re.IGNORECASE),
+    re.compile(
+        # `file://` only as a stand-alone URI scheme: a scheme-name character
+        # before it means a different scheme (e.g. `skill-file://`).
+        r"(?<![A-Za-z0-9+.\-])file://|/(?:home|Users|tmp|workspace)/",
+        re.IGNORECASE,
+    ),
 )
 LINK = re.compile(r"(?<!!)\[[^\]]+\]\(([^)]+)\)")
 LOCAL_HOST = re.compile(
