@@ -2195,3 +2195,4 @@ polars-parquet = { path = "vendor/zstd-parent-patches/polars-parquet-0.54.4" }
 tantivy-sstable = { path = "vendor/zstd-parent-patches/tantivy-sstable-0.7.0" }
 opendal-core = { path = "vendor/security-patches/opendal-core-0.57.0" }
 opendal-service-s3 = { path = "vendor/security-patches/opendal-service-s3-0.57.0" }
+iceberg-storage-opendal = { path = "vendor/security-patches/iceberg-storage-opendal-0.10.1" }
