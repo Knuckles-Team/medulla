@@ -291,9 +291,7 @@ mod tests {
         let op = medulla_catalog_types::graph_schema::GraphSchemaOp::Attach {
             source_id: "admin:r062".to_string(),
             shapes_ttl: None,
-            ontology_ttl: Some(
-                "@prefix owl: <http://www.w3.org/2002/07/owl#> .".to_string(),
-            ),
+            ontology_ttl: Some("@prefix owl: <http://www.w3.org/2002/07/owl#> .".to_string()),
             if_composed_digest: None,
         };
         let method = Method::GraphSchema { op: Box::new(op) };

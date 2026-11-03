@@ -549,10 +549,12 @@ mod tests {
         assert!(!samples.is_empty(), "the vector file lost every sample");
         for sample in samples {
             let name = &sample["name"];
-            let index: ConnectorPackIndex =
-                serde_json::from_value(sample["index"].clone()).unwrap_or_else(|e| {
-                    panic!("sample {name}: the committed wire fixture no longer \
-                     deserializes through the current Rust type: {e}")
+            let index: ConnectorPackIndex = serde_json::from_value(sample["index"].clone())
+                .unwrap_or_else(|e| {
+                    panic!(
+                        "sample {name}: the committed wire fixture no longer \
+                     deserializes through the current Rust type: {e}"
+                    )
                 });
             assert_eq!(
                 pack_digest(&index).unwrap().to_hex(),

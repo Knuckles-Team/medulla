@@ -468,10 +468,9 @@ async fn withdraw_engine_body(served: &Served, manifest_digest: &str, body_sha25
     .unwrap();
     let change = medulla_server_blob::blob::store::HolderChange::release(
         manifest_digest,
-        medulla_server_blob::blob::store::HolderId::new(&medulla_server_blob::blob::engine_bodies::engine_body_holder(
-            TENANT,
-            body_sha256,
-        ))
+        medulla_server_blob::blob::store::HolderId::new(
+            &medulla_server_blob::blob::engine_bodies::engine_body_holder(TENANT, body_sha256),
+        )
         .unwrap(),
     )
     .unwrap();
@@ -518,7 +517,10 @@ async fn pack_import_refusals_leave_state_unchanged() {
         &served,
         &build_pack(
             connector,
-            &[tool(connector, "a", "Tool a."), tool(connector, "b", "Tool b.")],
+            &[
+                tool(connector, "a", "Tool a."),
+                tool(connector, "b", "Tool b."),
+            ],
         ),
         None,
     )
@@ -568,9 +570,7 @@ async fn pack_import_refusals_leave_state_unchanged() {
         drop(store);
         let before = refusal_snapshot(&served, connector).await;
         let base =
-            medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test(
-                ADMIN,
-            );
+            medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test(ADMIN);
         let verified =
             medulla_server_api::authority_context::VerifiedRequestContext::from_verified_claims_with_nonce(
                 base.claims().clone(),
@@ -618,7 +618,10 @@ async fn pack_import_refusals_leave_state_unchanged() {
                 .into_iter()
                 .find(|member| member.component_id.ends_with("/a"))
                 .unwrap();
-            let entry = store.current_component(TENANT, &member.component_id).unwrap().unwrap();
+            let entry = store
+                .current_component(TENANT, &member.component_id)
+                .unwrap()
+                .unwrap();
             store
                 .connector_pack_content_pointer(
                     TENANT,
@@ -627,7 +630,12 @@ async fn pack_import_refusals_leave_state_unchanged() {
                 )
                 .unwrap()
         };
-        withdraw_engine_body(&served, &pointer.engine_manifest_digest, &pointer.body_sha256).await;
+        withdraw_engine_body(
+            &served,
+            &pointer.engine_manifest_digest,
+            &pointer.body_sha256,
+        )
+        .await;
         let before = served
             .state
             .write()
@@ -661,7 +669,6 @@ async fn pack_import_refusals_leave_state_unchanged() {
             "a missing-body refusal must not mutate head, members, holders or outbox"
         );
     }
-
 }
 
 // spec: MEDULLA-TYPED-PACKS-R003, MEDULLA-TYPED-PACKS-R042.2

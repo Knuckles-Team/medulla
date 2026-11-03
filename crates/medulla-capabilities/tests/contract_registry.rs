@@ -306,26 +306,58 @@ fn session_usage_requires_the_shared_usage_read_scope() {
 ///   * a constant renamed, or a pinned value that no longer matches the live
 ///     constant (a bump that skipped re-enumerating the table).
 const AGENT_LAYER_SCHEMA_BUMPS: &[(&str, u16, &[&str])] = &[
-    ("AGENT_LIBRARY_ENTRY_SCHEMA_VERSION", 5, &["AgentLibraryEntry"]),
-    ("AGENT_LIBRARY_OUTBOX_SCHEMA_VERSION", 1, &["AgentLibraryOutboxEvent"]),
-    ("AGENT_LIBRARY_RESULT_SCHEMA_VERSION", 1, &["AgentLibraryCommittedResult"]),
-    ("AGENT_GRAPH_ENTRY_SCHEMA_VERSION", 2, &[
-        "AgentGraphEntry",
-        "AgentGraphCommittedResult",
-        "AgentGraphOutboxEvent",
-    ]),
-    ("AGENT_COMPONENT_SCHEMA_VERSION", 3, &[
-        "AgentComponentEntry",
-        "AgentComponentCommittedResult",
-        "AgentComponentOutboxEvent",
-    ]),
-    ("AGENT_TEMPLATE_SCHEMA_VERSION", 2, &[
-        "AgentTemplateEntry",
-        "AgentTemplateCommittedResult",
-        "AgentTemplateOutboxEvent",
-    ]),
-    ("GUARDRAIL_ENTAILMENT_RESULT_SCHEMA_VERSION", 1, &["GuardrailEntailmentResult"]),
-    ("COMPONENT_CONTENT_SCHEMA_VERSION", 1, &["AgentComponentContentResult"]),
+    (
+        "AGENT_LIBRARY_ENTRY_SCHEMA_VERSION",
+        5,
+        &["AgentLibraryEntry"],
+    ),
+    (
+        "AGENT_LIBRARY_OUTBOX_SCHEMA_VERSION",
+        1,
+        &["AgentLibraryOutboxEvent"],
+    ),
+    (
+        "AGENT_LIBRARY_RESULT_SCHEMA_VERSION",
+        1,
+        &["AgentLibraryCommittedResult"],
+    ),
+    (
+        "AGENT_GRAPH_ENTRY_SCHEMA_VERSION",
+        2,
+        &[
+            "AgentGraphEntry",
+            "AgentGraphCommittedResult",
+            "AgentGraphOutboxEvent",
+        ],
+    ),
+    (
+        "AGENT_COMPONENT_SCHEMA_VERSION",
+        3,
+        &[
+            "AgentComponentEntry",
+            "AgentComponentCommittedResult",
+            "AgentComponentOutboxEvent",
+        ],
+    ),
+    (
+        "AGENT_TEMPLATE_SCHEMA_VERSION",
+        2,
+        &[
+            "AgentTemplateEntry",
+            "AgentTemplateCommittedResult",
+            "AgentTemplateOutboxEvent",
+        ],
+    ),
+    (
+        "GUARDRAIL_ENTAILMENT_RESULT_SCHEMA_VERSION",
+        1,
+        &["GuardrailEntailmentResult"],
+    ),
+    (
+        "COMPONENT_CONTENT_SCHEMA_VERSION",
+        1,
+        &["AgentComponentContentResult"],
+    ),
 ];
 
 fn agent_layer_rust_files() -> Vec<PathBuf> {
@@ -372,7 +404,10 @@ fn agent_layer_schema_constants() -> BTreeSet<(String, u16)> {
                 .and_then(|v| v.strip_suffix(';'))
                 .and_then(|v| v.parse::<u16>().ok())
                 .unwrap_or_else(|| {
-                    panic!("{}: unparseable shared schema version value: {rest:?}", path.display())
+                    panic!(
+                        "{}: unparseable shared schema version value: {rest:?}",
+                        path.display()
+                    )
                 });
             found.insert((name.to_string(), value));
         }
@@ -390,11 +425,11 @@ fn agent_layer_versioned_record_types() -> BTreeSet<String> {
             .unwrap_or_else(|e| panic!("failed to read {}: {e}", path.display()));
         let mut current: Option<String> = None;
         for line in text.lines() {
-            if let Some(name) = line
-                .trim()
-                .strip_prefix("pub struct ")
-                .map(|rest| rest.chars().take_while(|c| c.is_ascii_alphanumeric()).collect::<String>())
-            {
+            if let Some(name) = line.trim().strip_prefix("pub struct ").map(|rest| {
+                rest.chars()
+                    .take_while(|c| c.is_ascii_alphanumeric())
+                    .collect::<String>()
+            }) {
                 if name.chars().next().is_some_and(|c| c.is_ascii_uppercase()) {
                     current = Some(name);
                     continue;

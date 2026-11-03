@@ -577,10 +577,7 @@ fn attach_validates_its_own_writes_and_never_scans_existing_data() {
         if_composed_digest: None,
     };
     apply(&core, "g", &attach_strict).unwrap();
-    assert!(core
-        .schema_sources()
-        .dynamic
-        .contains_key("admin:strict"));
+    assert!(core.schema_sources().dynamic.contains_key("admin:strict"));
 
     // Writes the attach introduces are still validated: a self-contradicting
     // document is refused with the source set unchanged.

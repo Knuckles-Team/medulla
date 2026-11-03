@@ -52,9 +52,13 @@ async fn templates_are_keyed_by_task_class_and_schema_digest() {
         "SELECT template_json FROM decision_proven_paths WHERE composed_digest = 'sha256:schema-a'",
     )
     .await;
-    let stored: RetrievalPathTemplate = serde_json::from_str(edges[0][0].as_str().unwrap()).unwrap();
+    let stored: RetrievalPathTemplate =
+        serde_json::from_str(edges[0][0].as_str().unwrap()).unwrap();
     assert_eq!(stored.skill_ref, Some("skill.incident-triage".to_string()));
-    assert_eq!(stored.edges.as_slice().first().unwrap().relationship, "AFFECTS");
+    assert_eq!(
+        stored.edges.as_slice().first().unwrap().relationship,
+        "AFFECTS"
+    );
 
     // Prove a second template under the newer schema digest B.
     clone_executed(&h, &template_entry, "rec-b");
@@ -92,9 +96,10 @@ async fn templates_are_keyed_by_task_class_and_schema_digest() {
     // this tenant's candidate source.
     let foreign_learn = medulla_decision_types::decision::statistical::log::DecisionLogOp::Learn {
         tenant_id: "tenant-foreign".to_string(),
-        write: medulla_decision_types::decision::statistical::retrieval::LearningWrite::RecordOutcome {
-            outcome: Box::new(outcome("rec-foreign", &["z"], &["z"])),
-        },
+        write:
+            medulla_decision_types::decision::statistical::retrieval::LearningWrite::RecordOutcome {
+                outcome: Box::new(outcome("rec-foreign", &["z"], &["z"])),
+            },
     };
     let refused = decode::<String>(log_op(&h, "decider", foreign_learn).await);
     assert!(
@@ -132,7 +137,10 @@ async fn templates_are_keyed_by_task_class_and_schema_digest() {
     .await;
     assert_eq!(
         all,
-        vec![vec![json!("sha256:schema-a")], vec![json!("sha256:schema-b")]],
+        vec![
+            vec![json!("sha256:schema-a")],
+            vec![json!("sha256:schema-b")]
+        ],
         "another tenant's proven templates never enter this tenant's candidates"
     );
 }

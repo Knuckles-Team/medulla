@@ -434,7 +434,9 @@ async fn failed_projection_records_durable_failed_status() {
     )
     .await;
     assert!(
-        !searchable_ids(&served).await.contains(&"mcp:schema-pack-failed/tool/b".to_string()),
+        !searchable_ids(&served)
+            .await
+            .contains(&"mcp:schema-pack-failed/tool/b".to_string()),
         "the schema pack is dark until its projection applies"
     );
     // Withdraw the schema body after the import committed: release its engine
@@ -472,10 +474,12 @@ async fn failed_projection_records_durable_failed_status() {
         .unwrap();
         let change = medulla_server_blob::blob::store::HolderChange::release(
             &body.engine_manifest_digest,
-            medulla_server_blob::blob::store::HolderId::new(&medulla_server_blob::blob::engine_bodies::engine_body_holder(
-                TENANT,
-                &body.body_sha256,
-            ))
+            medulla_server_blob::blob::store::HolderId::new(
+                &medulla_server_blob::blob::engine_bodies::engine_body_holder(
+                    TENANT,
+                    &body.body_sha256,
+                ),
+            )
             .unwrap(),
         )
         .unwrap();
