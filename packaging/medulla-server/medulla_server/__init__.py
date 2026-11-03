@@ -9,7 +9,7 @@ from pathlib import Path
 
 __all__ = ["BinaryNotFoundError", "__version__", "binary_path"]
 
-__version__ = "3.0.0"
+__version__ = "3.0.1"
 
 _NAME = "medulla-server"
 
