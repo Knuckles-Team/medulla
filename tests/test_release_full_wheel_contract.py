@@ -913,3 +913,27 @@ def test_server_links_no_opendal_startup_constructor():
     assert manifest["patch"]["crates-io"]["iceberg-storage-opendal"]["path"].startswith(
         "vendor/security-patches/"
     )
+
+
+@pytest.mark.spec("MEDULLA-CONTRACT-R053.9")
+def test_platform_only_code_declares_its_platform_crates():
+    # `#[cfg(windows)]` code compiles only on the Windows wheel leg, so a crate that
+    # uses a platform crate without declaring it builds everywhere else and fails
+    # there (medulla-wire's pgwire TLS open after the crate split).
+    missing = []
+    for crate in sorted((REPO / "crates").iterdir()):
+        manifest = crate / "Cargo.toml"
+        if not manifest.exists():
+            continue
+        declared = manifest.read_text(encoding="utf-8")
+        used = "".join(
+            path.read_text(encoding="utf-8")
+            for path in sorted((crate / "src").rglob("*.rs"))
+        )
+        for module, package in (
+            ("windows_sys::", "windows-sys"),
+            ("rustix::", "rustix"),
+        ):
+            if module in used and f"{package} =" not in declared:
+                missing.append((crate.name, package))
+    assert not missing, missing
