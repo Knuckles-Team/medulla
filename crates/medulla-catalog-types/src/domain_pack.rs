@@ -338,6 +338,7 @@ mod tests {
     }
 
     /// MEDULLA-TYPED-PACKS-R097.1: a valid HR domain pack passes validation.
+    // spec: MEDULLA-TYPED-PACKS-R097.1
     #[test]
     fn hr_fixture_validates() {
         hr_fixture().validate().expect("fixture must be valid");
