@@ -878,3 +878,23 @@ def test_every_rust_cache_saves_the_configured_target_dir():
     assert mappings
     wrong = [(name, mapped) for name, mapped, ok in mappings if not ok]
     assert not wrong, wrong
+
+
+@pytest.mark.spec("MEDULLA-CONTRACT-R053.9")
+def test_no_crate_forbids_the_unsafe_code_it_allows():
+    # `forbid` cannot be overridden, so a scoped `#[allow(unsafe_code)]` in a crate
+    # with `#![forbid(unsafe_code)]` fails to compile, but only on the platform whose
+    # `cfg` enables it (the Windows server wheel of 3.0.0 failed this way).
+    conflicts = []
+    for crate in sorted((REPO / "crates").iterdir()):
+        roots = [crate / "src" / "lib.rs", crate / "src" / "main.rs"]
+        root_text = "".join(r.read_text(encoding="utf-8") for r in roots if r.exists())
+        if "#![forbid(unsafe_code)]" not in root_text:
+            continue
+        allows = [
+            str(path.relative_to(REPO))
+            for path in sorted((crate / "src").rglob("*.rs"))
+            if "#[allow(unsafe_code)]" in path.read_text(encoding="utf-8")
+        ]
+        conflicts.extend(allows)
+    assert not conflicts, conflicts

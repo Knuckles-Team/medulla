@@ -3,7 +3,9 @@
 //! Layer F9 (MEDULLA-CONTRACT-R056.11); it may depend only
 //! on crates of a lower level. Budget: 25,000 lines of Rust. Specs that land here: none yet.
 
-#![forbid(unsafe_code)]
+// `deny`, not `forbid`: the Windows snapshot swap in `reasoning_projection` is a
+// scoped, documented `#[allow(unsafe_code)]` FFI call, which `forbid` cannot admit.
+#![deny(unsafe_code)]
 #![deny(missing_docs)]
 
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
