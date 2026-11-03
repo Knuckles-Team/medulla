@@ -401,7 +401,7 @@ def _assert_runner_budget(workflow: Path, name: str, job: dict) -> None:
                 (
                     "ci.yml",
                     "ci",
-                ): "${{ github.event_name == 'pull_request' && 120 || 120 }}",
+                ): "${{ github.event_name == 'pull_request' && 180 || 180 }}",
             }.get(
                 (workflow.name, name),
                 "${{ github.event_name == 'pull_request' && 90 || 90 }}",
