@@ -86,7 +86,8 @@ def test_runs_keep_main_feature_profiles() -> None:
     assert runs == [
         "{tool} -p medulla-types --all-features",
         "{tool} -p medulla-storage --all-features {serial}",
-        f"{{tool}} -p medulla-numeric --features {mod.pyo3_features(['medulla-numeric'])}",
+        "{tool} -p medulla-numeric --features "
+        + mod.pyo3_features(["medulla-numeric"]),
         "{tool} -p facade --features full",
     ]
     assert mod.commands(_meta(), []) == []
