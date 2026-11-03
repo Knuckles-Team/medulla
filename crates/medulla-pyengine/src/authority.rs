@@ -51,8 +51,12 @@
 
 use std::sync::Arc;
 
-use medulla_isolation::isolation::{AccessLevel, IsolationLayer};
+use medulla_isolation::isolation::IsolationLayer;
+#[cfg(any(feature = "python", all(test, feature = "security")))]
+use medulla_isolation::isolation::AccessLevel;
+#[cfg(any(feature = "python", all(test, feature = "security")))]
 use medulla_protocol_types::protocol::GraphType;
+#[cfg(any(feature = "python", all(test, feature = "security")))]
 use medulla_types::acl::{AgentIdentity, AgentRole};
 
 /// The one RLS contract every domain module threads through: an asserted
@@ -82,6 +86,7 @@ impl EmbeddedAuthority {
     /// Explicit first-run provisioning for an in-process System caller. The
     /// caller controls this engine instance; an asserted identity alone must
     /// never acquire System privileges implicitly.
+    #[cfg(any(feature = "python", all(test, feature = "security")))]
     pub(crate) fn bootstrap_system_identity(&mut self, agent_id: String) -> Result<(), String> {
         let isolation = Arc::get_mut(&mut self.isolation).ok_or_else(|| {
             "ACCESS_DENIED: identity bootstrap requires an idle engine".to_string()
@@ -97,6 +102,7 @@ impl EmbeddedAuthority {
     /// Apply the same medulla-core graph ACL decision as the socket read path
     /// before a point lookup. An unset identity is the documented trusted
     /// in-process caller; every asserted identity must be provisioned.
+    #[cfg(any(feature = "python", all(test, feature = "security")))]
     pub(crate) fn require_graph_read(
         &self,
         agent_id_override: Option<&str>,

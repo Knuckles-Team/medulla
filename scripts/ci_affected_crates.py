@@ -50,6 +50,9 @@ PYO3_FEATURES = (
 )
 PYO3_PACKAGES = ("medulla-numeric", "medulla-pyengine")
 SERIAL_PACKAGES = ("medulla-storage",)
+# Tested only by their own job, as in the main workspace sweep: medulla-tts-piper
+# needs a real onnxruntime under --all-features (job ``tts-piper-inference``).
+OWN_JOB_PACKAGES = ("medulla-tts-piper",)
 
 
 def _packages(metadata: dict) -> dict[str, pathlib.PurePosixPath]:
@@ -128,6 +131,7 @@ def _is_root_package_source(path: str) -> bool:
 
 def commands(metadata: dict, selected: list[str]) -> list[str]:
     packages = _packages(metadata)
+    selected = [n for n in selected if n not in OWN_JOB_PACKAGES]
     root_pkg = owner("Cargo.toml", packages)
     default = [
         n

@@ -106,3 +106,10 @@ def test_pull_request_runs_one_gate() -> None:
     assert "ci_affected_crates.py" in script
     assert "--from-ref" in script and "spec-trailers" in script
     assert "cargo nextest run" in script and "cargo clippy" in script
+
+
+@pytest.mark.spec("MEDULLA-CONTRACT-R053.7")
+def test_own_job_packages_are_left_to_their_own_job() -> None:
+    runs = mod.commands(_meta(), ["medulla-types", "medulla-tts-piper"])
+    assert runs == ["{tool} -p medulla-types --all-features"]
+    assert mod.commands(_meta(), ["medulla-tts-piper"]) == []
