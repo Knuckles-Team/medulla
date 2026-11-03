@@ -443,6 +443,227 @@ async fn refusal_snapshot(served: &Served, connector: &str) -> serde_json::Value
     serde_json::json!({"owner": store.connector_pack_refusal_snapshot(TENANT), "bodies": bodies})
 }
 
+/// Release one engine body's pack holder and sweep it out of the CAS.
+async fn withdraw_engine_body(served: &Served, manifest_digest: &str, body_sha256: &Digest256) {
+    let (blob, _store) = {
+        let state = served.state.read().await;
+        (
+            state.blob_cursors().cloned().unwrap(),
+            state.agent_library().clone().unwrap(),
+        )
+    };
+    let caller = medulla_server_api::carrier::CarrierAuthority::from_verified(
+        &medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test(ADMIN),
+    )
+    .unwrap();
+    let method = medulla_protocol_types::protocol::Method::BlobUnref {
+        digest: manifest_digest.to_string(),
+    };
+    let (batch, now) = medulla_server_ops::api::ingest::compile_blob_batch(
+        blob.store.as_ref(),
+        9,
+        &caller,
+        &method,
+    )
+    .unwrap();
+    let change = medulla_server_blob::blob::store::HolderChange::release(
+        manifest_digest,
+        medulla_server_blob::blob::store::HolderId::new(&medulla_server_blob::blob::engine_bodies::engine_body_holder(
+            TENANT,
+            body_sha256,
+        ))
+        .unwrap(),
+    )
+    .unwrap();
+    blob.store.holder_batch(&change, &batch, now).unwrap();
+    // The default sweep keeps unheld blobs for a day of grace; this
+    // reclamation pass is immediate, so the body read fails right away.
+    let gc_method = medulla_protocol_types::protocol::Method::BlobGc;
+    let (gc_batch, gc_now) = medulla_server_ops::api::ingest::compile_blob_batch(
+        blob.store.as_ref(),
+        10,
+        &caller,
+        &gc_method,
+    )
+    .unwrap();
+    let request = medulla_server_blob::blob::store::SweepRequest::new(
+        medulla_server_blob::blob::store::GcOwnerScope::AllOwners,
+        medulla_server_blob::blob::store::BlobRetentionPolicy::new(
+            0,
+            medulla_server_blob::blob::store::DEFAULT_UPLOAD_TTL_MS,
+        )
+        .unwrap(),
+    );
+    let reclaimed = blob.store.sweep_batch(&request, &gc_batch, gc_now).unwrap();
+    assert!(
+        blob.store.get_manifest(manifest_digest).unwrap().is_none(),
+        "the withdrawn body must be gone: {reclaimed:?}"
+    );
+}
+
+/// Write-time refusal codes leave the catalog untouched: a moved head, a
+/// stale projection plan and a withdrawn body each refuse with its stable
+/// code, and the head, members, body holders and outbox are exactly as they
+/// were before the attempt. The row's fourth code is not asserted here:
+/// `AgentComponent` validation refuses a caller-minted reserved component id
+/// with `RESERVED_COMPONENT_ID`, but the served method contract does not
+/// declare that code for this method, so the served boundary reports the
+/// refusal as `INTERNAL` (MEDULLA-TYPED-PACKS-R041, reserved-id arm).
+#[tokio::test]
+async fn pack_import_refusals_leave_state_unchanged() {
+    let served = Served::new();
+    let connector = "pack-r041-refusals";
+    bind(&served, connector, ADMIN).await;
+    let first = imported(
+        &served,
+        &build_pack(
+            connector,
+            &[tool(connector, "a", "Tool a."), tool(connector, "b", "Tool b.")],
+        ),
+        None,
+    )
+    .await;
+
+    // PACK_HEAD_CONFLICT: the expected head no longer matches the committed one.
+    {
+        let before = refusal_snapshot(&served, connector).await;
+        let stale_head = medulla_catalog_types::connector_pack::PackHeadRef {
+            binding_revision: first.binding_revision + 1,
+            pack_digest: first.pack_digest,
+        };
+        let response = import(
+            &served,
+            &build_pack(connector, &[tool(connector, "c", "Tool c.")]),
+            Some(stale_head),
+        )
+        .await;
+        assert_eq!(refused("the moved head", response), "PACK_HEAD_CONFLICT");
+        assert_eq!(
+            refusal_snapshot(&served, connector).await,
+            before,
+            "a head-conflict refusal must not mutate head, members, holders or outbox"
+        );
+    }
+
+    // PACK_PLAN_STALE: a projection plan built against the old head cannot
+    // commit once a newer import has moved the head past it.
+    let second = {
+        let store = served.state.write().await.ensure_agent_library().unwrap();
+        let stale = store
+            .prepare_connector_pack_projection(TENANT, &ResourceId::new(connector).unwrap())
+            .unwrap();
+        let second = imported(
+            &served,
+            &build_pack(
+                connector,
+                &[
+                    tool(connector, "a", "Tool a."),
+                    tool(connector, "b", "Tool b."),
+                    tool(connector, "c", "Tool c."),
+                ],
+            ),
+            Some(head_of(&first)),
+        )
+        .await;
+        drop(store);
+        let before = refusal_snapshot(&served, connector).await;
+        let base =
+            medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test(
+                ADMIN,
+            );
+        let verified =
+            medulla_server_api::authority_context::VerifiedRequestContext::from_verified_claims_with_nonce(
+                base.claims().clone(),
+                "r041-stale-projection".to_string(),
+                Some(medulla_types::contract::Nonce::minted()),
+            );
+        let context =
+            medulla_persistence_records::agent_library::context::bind_agent_library_context(
+                served.state.write().await.agent_library().unwrap().as_ref(),
+                0,
+                &verified,
+                context("r041-stale-projection"),
+                "connector-pack:reproject",
+                true,
+            )
+            .unwrap();
+        let store = served.state.write().await.ensure_agent_library().unwrap();
+        let error = store
+            .commit_connector_pack_projection(
+                context,
+                &stale,
+                medulla_catalog_types::connector_pack::PackProjectionState::Applied {
+                    graph: format!("pack__{}", "a".repeat(64)),
+                    graph_version: 1,
+                },
+            )
+            .unwrap_err();
+        assert!(error.starts_with("PACK_PLAN_STALE:"), "{error}");
+        assert_eq!(
+            refusal_snapshot(&served, connector).await,
+            before,
+            "a stale-plan refusal must not mutate head, members, holders or outbox"
+        );
+        second
+    };
+
+    // BODY_MISSING: the body a to-be-withdrawn revision points at was
+    // reclaimed, so the import cannot copy it.
+    {
+        let pointer = {
+            let store = served.state.write().await.ensure_agent_library().unwrap();
+            let member = store
+                .connector_pack_members(TENANT, &ResourceId::new(connector).unwrap())
+                .unwrap()
+                .into_iter()
+                .find(|member| member.component_id.ends_with("/a"))
+                .unwrap();
+            let entry = store.current_component(TENANT, &member.component_id).unwrap().unwrap();
+            store
+                .connector_pack_content_pointer(
+                    TENANT,
+                    &member.component_id,
+                    Some(entry.entry_revision),
+                )
+                .unwrap()
+        };
+        withdraw_engine_body(&served, &pointer.engine_manifest_digest, &pointer.body_sha256).await;
+        let before = served
+            .state
+            .write()
+            .await
+            .ensure_agent_library()
+            .unwrap()
+            .connector_pack_refusal_snapshot(TENANT);
+        let response = import(
+            &served,
+            &build_pack(
+                connector,
+                &[
+                    tool(connector, "b", "Tool b."),
+                    tool(connector, "c", "Tool c."),
+                    tool(connector, "d", "Tool d."),
+                ],
+            ),
+            Some(head_of(&second)),
+        )
+        .await;
+        assert_eq!(refused("the withdrawn body", response), "BODY_MISSING");
+        assert_eq!(
+            served
+                .state
+                .write()
+                .await
+                .ensure_agent_library()
+                .unwrap()
+                .connector_pack_refusal_snapshot(TENANT),
+            before,
+            "a missing-body refusal must not mutate head, members, holders or outbox"
+        );
+    }
+
+}
+
 // spec: MEDULLA-TYPED-PACKS-R003, MEDULLA-TYPED-PACKS-R042.2
 #[tokio::test]
 async fn a_rejected_import_mutates_nothing_in_the_catalog() {

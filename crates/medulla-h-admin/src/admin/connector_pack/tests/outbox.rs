@@ -6,16 +6,22 @@
 use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 use std::sync::atomic::AtomicBool;
 
+#[cfg(feature = "redb")]
+use medulla_server_blob::blob::BlobStateExt;
+
 use medulla_agent_types::{
     agent_component::AgentComponentKind, agent_component::AgentComponentOp,
     agent_component::AgentComponentSearchPage, agent_component::AgentComponentSearchRequest,
 };
-use medulla_catalog_types::{connector_pack::PackAnnotations, connector_pack::PackEntryKind};
+use medulla_catalog_types::{
+    connector_pack::PackAnnotations, connector_pack::PackEntryKind,
+    connector_pack::CONNECTOR_PACK_IMPORT_TOPIC,
+};
 use medulla_mutation_types::{
     mutation_outbox::MutationOutboxOp, mutation_outbox::MutationOutboxStatusView,
     mutation_outbox::NativeOutboxScope, mutation_outbox::NativeOutboxStore,
-    mutation_outbox::OutboxRewindReceipt, mutation_outbox::OutboxTarget,
-    mutation_outbox::RewindTarget,
+    mutation_outbox::OutboxDeadLetterPage, mutation_outbox::OutboxRewindReceipt,
+    mutation_outbox::OutboxTarget, mutation_outbox::RewindTarget,
 };
 use medulla_types::contract::ResourceId;
 
@@ -397,4 +403,182 @@ async fn projected_schema(
         .unwrap()
         .0
         .schema_sources
+}
+
+// spec: MEDULLA-TYPED-PACKS-R074
+/// A projection failure sets a durable failed status on the outbox row and
+/// keeps the row visible for dead-letter inspection and retry: the worker
+/// rejects the row with its stable failure code, the operator's status and
+/// dead-letter view show it, and a rewind re-delivers it so the worker can
+/// retry.
+#[tokio::test]
+async fn failed_projection_records_durable_failed_status() {
+    let served = Served::new();
+    let _env = served.with_graph_persistence().await;
+    let schema = "schema-pack-failed";
+    bind(&served, schema, ADMIN).await;
+    let ontology = Content {
+        kind: PackEntryKind::Ontology,
+        uri: format!("ontology://{schema}/core.ttl"),
+        name: "core.ttl".to_string(),
+        media_type: "text/turtle",
+        body: b"<https://example.org/Thing> a <http://www.w3.org/2002/07/owl#Class>.\n".to_vec(),
+        input_schema: None,
+        annotations: PackAnnotations::default(),
+        references: Vec::new(),
+    };
+    imported(
+        &served,
+        &build_pack(schema, &[tool(schema, "b", "Tool b."), ontology]),
+        None,
+    )
+    .await;
+    assert!(
+        !searchable_ids(&served).await.contains(&"mcp:schema-pack-failed/tool/b".to_string()),
+        "the schema pack is dark until its projection applies"
+    );
+    // Withdraw the schema body after the import committed: release its engine
+    // holder and sweep the CAS, so the projection's body read fails.
+    {
+        let (blob, store) = {
+            let state = served.state.read().await;
+            let blob = state.blob_cursors().cloned().unwrap();
+            let store = state.agent_library().clone().unwrap();
+            (blob, store)
+        };
+        let plan = store
+            .prepare_connector_pack_projection(TENANT, &ResourceId::new(schema).unwrap())
+            .unwrap();
+        let body = plan
+            .bodies
+            .iter()
+            .find(|body| body.kind == PackEntryKind::Ontology)
+            .unwrap();
+        let caller = medulla_server_api::carrier::CarrierAuthority::from_verified(
+            &medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test(
+                ADMIN,
+            ),
+        )
+        .unwrap();
+        let method = medulla_protocol_types::protocol::Method::BlobUnref {
+            digest: body.engine_manifest_digest.clone(),
+        };
+        let (batch, now) = medulla_server_ops::api::ingest::compile_blob_batch(
+            blob.store.as_ref(),
+            7,
+            &caller,
+            &method,
+        )
+        .unwrap();
+        let change = medulla_server_blob::blob::store::HolderChange::release(
+            &body.engine_manifest_digest,
+            medulla_server_blob::blob::store::HolderId::new(&medulla_server_blob::blob::engine_bodies::engine_body_holder(
+                TENANT,
+                &body.body_sha256,
+            ))
+            .unwrap(),
+        )
+        .unwrap();
+        blob.store.holder_batch(&change, &batch, now).unwrap();
+        // The default sweep keeps unheld blobs for a day of grace; this
+        // reclamation pass is immediate, so the body read fails right away.
+        let gc_method = medulla_protocol_types::protocol::Method::BlobGc;
+        let (gc_batch, gc_now) = medulla_server_ops::api::ingest::compile_blob_batch(
+            blob.store.as_ref(),
+            8,
+            &caller,
+            &gc_method,
+        )
+        .unwrap();
+        let request = medulla_server_blob::blob::store::SweepRequest::new(
+            medulla_server_blob::blob::store::GcOwnerScope::AllOwners,
+            medulla_server_blob::blob::store::BlobRetentionPolicy::new(
+                0,
+                medulla_server_blob::blob::store::DEFAULT_UPLOAD_TTL_MS,
+            )
+            .unwrap(),
+        );
+        let reclaimed = blob.store.sweep_batch(&request, &gc_batch, gc_now).unwrap();
+        assert!(
+            blob.store
+                .get_manifest(&body.engine_manifest_digest)
+                .unwrap()
+                .is_none(),
+            "the withdrawn body must be gone: {reclaimed:?}"
+        );
+    }
+    // The worker's sweep claims the row; the projection's body read fails; the
+    // worker rejects the row instead of advancing.
+    let subscribed = AtomicBool::new(false);
+    assert!(
+        sweep(&served.state, &subscribed).await.unwrap(),
+        "the failed projection is still work for the sweep"
+    );
+    let status: MutationOutboxStatusView = ok(
+        "Status",
+        outbox(
+            &served,
+            "outbox:status",
+            MutationOutboxOp::Status {
+                target: target(),
+                consumer: CONSUMER.to_string(),
+            },
+        )
+        .await,
+    );
+    assert_eq!(status.status.dead_lettered, 1, "{status:?}");
+    assert_eq!(status.status.pending, 0, "{status:?}");
+    // The head records the failure's stable code and cause, not a bare error.
+    let store = served.state.write().await.ensure_agent_library().unwrap();
+    let failed = store
+        .connector_pack_status(TENANT, &ResourceId::new(schema).unwrap())
+        .unwrap()
+        .projection;
+    match &failed {
+        medulla_catalog_types::connector_pack::PackProjectionState::Failed { code, detail } => {
+            assert_eq!(code, "BODY_MISSING", "{failed:?}");
+            assert!(detail.as_deref().unwrap().contains("BODY_MISSING"));
+        }
+        other => panic!("the head must record the failed projection: {other:?}"),
+    }
+    // The failed row stays visible for dead-letter inspection...
+    let letters: OutboxDeadLetterPage = ok(
+        "DeadLetters",
+        outbox(
+            &served,
+            "outbox:letters",
+            MutationOutboxOp::DeadLetters {
+                target: target(),
+                consumer: CONSUMER.to_string(),
+                after: None,
+                limit: 4,
+            },
+        )
+        .await,
+    );
+    assert_eq!(letters.items.len(), 1, "{letters:?}");
+    assert_eq!(
+        letters.items.as_slice()[0].topic,
+        CONNECTOR_PACK_IMPORT_TOPIC
+    );
+    // ...and a rewind re-delivers it, so the worker can retry.
+    let rewound: OutboxRewindReceipt = ok(
+        "Rewind",
+        outbox(
+            &served,
+            "outbox:rewind",
+            MutationOutboxOp::Rewind {
+                target: target(),
+                consumer: CONSUMER.to_string(),
+                to: RewindTarget::Start,
+            },
+        )
+        .await,
+    );
+    assert!(rewound.completed);
+    assert_eq!(rewound.deleted_deliveries, 1);
+    assert!(
+        sweep(&served.state, &subscribed).await.unwrap(),
+        "the rewound row is claimed again for retry"
+    );
 }

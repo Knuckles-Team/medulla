@@ -55,6 +55,7 @@ mod tests {
         )
     }
 
+    // spec: MEDULLA-TYPED-PACKS-R074
     #[test]
     fn the_projection_actor_writes_only_the_pack_graph_it_was_granted() {
         let mut isolation = policy();
