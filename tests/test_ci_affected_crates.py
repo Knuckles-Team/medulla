@@ -86,7 +86,7 @@ def test_runs_keep_main_feature_profiles() -> None:
     assert runs == [
         "{tool} -p medulla-types --all-features",
         "{tool} -p medulla-storage --all-features {serial}",
-        f"{{tool}} -p medulla-numeric --features {mod.PYO3_FEATURES}",
+        f"{{tool}} -p medulla-numeric --features {mod.pyo3_features(['medulla-numeric'])}",
         "{tool} -p facade --features full",
     ]
     assert mod.commands(_meta(), []) == []
@@ -113,3 +113,11 @@ def test_own_job_packages_are_left_to_their_own_job() -> None:
     runs = mod.commands(_meta(), ["medulla-types", "medulla-tts-piper"])
     assert runs == ["{tool} -p medulla-types --all-features"]
     assert mod.commands(_meta(), ["medulla-tts-piper"]) == []
+
+
+@pytest.mark.spec("MEDULLA-CONTRACT-R053.7")
+def test_pyo3_features_name_only_selected_packages() -> None:
+    features = mod.pyo3_features(["medulla-pyengine"]).split(",")
+    assert features and all(f.startswith("medulla-pyengine/") for f in features)
+    both = mod.pyo3_features(["medulla-numeric", "medulla-pyengine"])
+    assert both == mod.PYO3_FEATURES

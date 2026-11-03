@@ -129,6 +129,13 @@ def _is_root_package_source(path: str) -> bool:
     return path.startswith(("tests/", "benches/", "examples/")) and path.endswith(".rs")
 
 
+def pyo3_features(packages: list[str]) -> str:
+    """The pyo3 feature profile, limited to the selected packages' features."""
+    return ",".join(
+        f for f in PYO3_FEATURES.split(",") if f.split("/", 1)[0] in packages
+    )
+
+
 def commands(metadata: dict, selected: list[str]) -> list[str]:
     packages = _packages(metadata)
     selected = [n for n in selected if n not in OWN_JOB_PACKAGES]
@@ -150,7 +157,7 @@ def commands(metadata: dict, selected: list[str]) -> list[str]:
     for name in serial:
         runs.append(f"{{tool}} -p {name} --all-features {{serial}}")
     if pyo3:
-        runs.append(f"{{tool}} {flags(pyo3)} --features {PYO3_FEATURES}")
+        runs.append(f"{{tool}} {flags(pyo3)} --features {pyo3_features(pyo3)}")
     if root_pkg in selected:
         runs.append(f"{{tool}} -p {root_pkg} --features full")
     return runs
