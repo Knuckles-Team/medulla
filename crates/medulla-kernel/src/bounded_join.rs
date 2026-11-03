@@ -198,4 +198,27 @@ mod tests {
             Err("helper-panic worker: the joining helper thread panicked".to_string())
         );
     }
+
+    // spec: MEDULLA-DURABLE-KERNEL-R061
+    #[test]
+    fn join_times_out_with_deadline() {
+        // The worker holds a rendezvous slot until the test releases it, so the
+        // 50ms deadline expires deterministically: the bounded join reports the
+        // overrun by name instead of hanging the joiner for the worker's life.
+        let (release, released) = sync_channel::<()>(1);
+        let worker = std::thread::spawn(move || released.recv_timeout(GENEROUS).is_ok());
+
+        let outcome = join_within(worker, "deadline worker", Duration::from_millis(50));
+
+        assert!(
+            outcome
+                .as_ref()
+                .is_err_and(|reason| reason.contains("deadline worker")
+                    && reason.contains("did not finish within 50ms")),
+            "the bounded join must time out with the deadline, got: {outcome:?}"
+        );
+        release
+            .send(())
+            .expect("the overrunning worker is still waiting");
+    }
 }
