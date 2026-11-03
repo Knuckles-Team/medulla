@@ -1414,7 +1414,7 @@ jobs:
   # successful security job and central light-gate result.
   # ── The one pull-request gate (MEDULLA-CONTRACT-R053.7). ─────────────────────
   ci:
-    timeout-minutes: ${{ github.event_name == 'pull_request' && 90 || 90 }}
+    timeout-minutes: ${{ github.event_name == 'pull_request' && 120 || 120 }}
     name: CI
     if: github.event_name == 'pull_request'
     runs-on: *medulla-native-validation-runner

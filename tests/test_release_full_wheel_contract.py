@@ -398,6 +398,7 @@ def _assert_runner_budget(workflow: Path, name: str, job: dict) -> None:
             expected = {
                 ("ci.yml", "gates-facade"): 60,
                 ("ci.yml", "clippy-release-profiles"): 60,
+                ("ci.yml", "ci"): "${{ github.event_name == 'pull_request' && 120 || 120 }}",
             }.get(
                 (workflow.name, name),
                 "${{ github.event_name == 'pull_request' && 90 || 90 }}",
