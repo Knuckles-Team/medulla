@@ -188,6 +188,7 @@ async fn terminal_response_uses_raw_typed_result_and_verified_nonce() {
 // spec: MEDULLA-DURABLE-KERNEL-R058
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn cancelling_publication_waiter_does_not_cancel_owned_commit() {
+    let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
     let fixture = Fixture::new();
     fixture.grant_insert("bob");
     let carrier = authority("bob", "tenant-a", "cancel", true);
