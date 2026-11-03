@@ -51,9 +51,9 @@
 
 use std::sync::Arc;
 
-use medulla_isolation::isolation::IsolationLayer;
 #[cfg(any(feature = "python", all(test, feature = "security")))]
 use medulla_isolation::isolation::AccessLevel;
+use medulla_isolation::isolation::IsolationLayer;
 #[cfg(any(feature = "python", all(test, feature = "security")))]
 use medulla_protocol_types::protocol::GraphType;
 #[cfg(any(feature = "python", all(test, feature = "security")))]

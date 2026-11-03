@@ -288,7 +288,7 @@ def _assert_cache_job_settings(job_name: str, job: dict) -> None:
         if job_name == "gates-crates"
         else 30
         if job_name in {"gates-storage", "gates-ontology"}
-        else 45
+        else 90
         if job_name
         in {
             "gates",
@@ -301,7 +301,7 @@ def _assert_cache_job_settings(job_name: str, job: dict) -> None:
     )
     # The full workspace sweep (~150 crates, all features, cold hosted runner)
     # has its own push budget; every other job keeps the short one.
-    push_budget = 240 if job_name == "gates-crates" else 60
+    push_budget = 240 if job_name == "gates-crates" else 90 if budget == 90 else 60
     expected = {"gates-facade": 60}.get(
         job_name,
         "${{ github.event_name == 'pull_request' && "
