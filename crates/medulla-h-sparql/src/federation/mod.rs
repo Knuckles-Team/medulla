@@ -713,6 +713,29 @@ mod tests {
         assert!(allow.check("http://localhost:7900/federated").is_ok());
     }
 
+    // spec: MEDULLA-FEDERATED-QUERY-R054
+    //
+    // One disallowed target through each path's guard as deployed: the served
+    // SPARQL `SERVICE` fetch (ExplicitOnly) and the peer fan-out (PublicHttps)
+    // both call the SAME `validate_outbound_http_target` from
+    // `medulla_federation::federation_ssrf` — no second validator in either
+    // path — and both refuse it fail-closed.
+    #[test]
+    fn service_and_peer_fanout_refuse_one_disallowed_target_through_the_one_guard() {
+        use medulla_federation::federation_ssrf::{
+            validate_outbound_http_target, OutboundAllowPolicy,
+        };
+        let target = "http://100.64.0.1:7900/sparql";
+        let service = validate_outbound_http_target(
+            target,
+            &["127.0.0.1".to_string()],
+            OutboundAllowPolicy::ExplicitOnly,
+        );
+        let peer = PeerAllowlist::default().check(target);
+        assert!(service.is_err(), "SERVICE path must refuse {target}");
+        assert!(peer.is_err(), "peer fan-out must refuse {target}");
+    }
+
     #[test]
     fn fo16_peer_gate_rejects_transition_ranges_and_ambiguous_authorities() {
         let allow = PeerAllowlist::default();
