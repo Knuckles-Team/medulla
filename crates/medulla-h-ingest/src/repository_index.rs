@@ -486,7 +486,9 @@ mod tests {
         for method in &edges {
             match method {
                 Method::AddEdge {
-                    source_id, target_id, ..
+                    source_id,
+                    target_id,
+                    ..
                 } => {
                     assert_eq!(source_id, "code::A");
                     assert_eq!(target_id, "spec::B");
