@@ -432,6 +432,11 @@ mod tests {
         assert_eq!(write_set.methods().len(), 8);
     }
 
+    // spec: MEDULLA-REPO-INGEST-R009
+    // Rollup: hydration links indexed entities into the specification bridge
+    // as typed edges committed in one envelope — proven by the child test
+    // below (R009.2), the only test on main that exercises this path.
+    //
     // spec: MEDULLA-REPO-INGEST-R009.2
     //
     // Two relations between the same endpoints stay two distinct edges: each
