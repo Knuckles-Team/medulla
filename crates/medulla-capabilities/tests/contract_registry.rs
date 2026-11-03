@@ -142,6 +142,7 @@ fn descriptor_ids() -> Vec<String> {
 /// feature, so the two sides can agree. A variant added behind a NEW feature that
 /// `canonical-ledger` does not select fails this test loudly, which is the correct
 /// outcome -- the canonical ledger would no longer be the complete inventory.
+// spec: MEDULLA-CONTRACT-R044
 #[cfg(feature = "canonical-ledger")]
 #[test]
 fn every_wire_variant_has_exactly_one_descriptor_and_vice_versa() {
