@@ -898,3 +898,18 @@ def test_no_crate_forbids_the_unsafe_code_it_allows():
         ]
         conflicts.extend(allows)
     assert not conflicts, conflicts
+
+
+@pytest.mark.spec("MEDULLA-CONTRACT-R053.9")
+def test_server_links_no_opendal_startup_constructor():
+    # opendal's `auto-register-services` adds a `ctor` constructor whose branch into
+    # the ~280 MB server binary is out of arm64 range, so the macOS server link
+    # failed in 3.0.0. The vendored iceberg-storage-opendal drops that feature.
+    lock = tomllib.loads((REPO / "Cargo.lock").read_text(encoding="utf-8"))
+    opendal = [p for p in lock["package"] if p["name"] == "opendal"]
+    assert opendal
+    assert all("ctor" not in p.get("dependencies", []) for p in opendal)
+    manifest = tomllib.loads((REPO / "Cargo.toml").read_text(encoding="utf-8"))
+    assert manifest["patch"]["crates-io"]["iceberg-storage-opendal"]["path"].startswith(
+        "vendor/security-patches/"
+    )
