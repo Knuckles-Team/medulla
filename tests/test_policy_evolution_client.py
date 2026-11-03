@@ -134,3 +134,62 @@ def test_get_answers_none_for_an_absent_record() -> None:
 def test_the_client_is_exported_and_mounted() -> None:
     assert medulla.PolicyEvolutionClient is PolicyEvolutionClient
     assert medulla.PolicyEvolutionRefused is PolicyEvolutionRefused
+
+
+# spec: MEDULLA-CONTRACT-R016
+#
+# The static consumer-profile audit covers every PolicyEvolution typed sender
+# the client publishes: each one rides the single audited PolicyEvolution
+# method row, so a published sender is never flagged as unaudited, and the
+# engine-internal twin publishes no sender at all.
+def test_policy_evolution_senders_are_all_audited() -> None:
+    import inspect
+    from pathlib import Path
+
+    from scripts.method_policy_inventory import (
+        load_capability_sources,
+        parse_method_policy_table,
+    )
+
+    root = Path(__file__).resolve().parents[1]
+
+    # Every typed sender the client publishes, by its public async surface.
+    senders = {
+        name
+        for name in dir(PolicyEvolutionClient)
+        if not name.startswith("_")
+        and inspect.iscoroutinefunction(getattr(PolicyEvolutionClient, name))
+    }
+    assert senders == {
+        "put_capability",
+        "commit_capture",
+        "register_model_policy_version",
+        "commit_training_run",
+        "commit_policy_evaluation",
+        "get",
+    }, f"the published sender set moved: {sorted(senders)}"
+
+    # The consumer-profile audit row for every one of them is audited.
+    rows = parse_method_policy_table(load_capability_sources(root))
+    policy_rows = [row for row in rows if row.name == "PolicyEvolution"]
+    assert len(policy_rows) == 1, "exactly one PolicyEvolution audit row"
+    assert policy_rows[0].audited is True, (
+        "a published PolicyEvolution sender is never flagged as unaudited"
+    )
+
+    # ...and it is a PUBLISHED surface: the row carries the Python consumer,
+    # while the engine-internal twin stays a NO_CONSUMER row (its senders are
+    # refused from the wire, so none is published).
+    source = load_capability_sources(root)
+
+    def _row(name: str) -> str:
+        return next(
+            line
+            for line in source.splitlines()
+            if line.strip().startswith(f'("{name}",')
+        )
+
+    assert "PYTHON" in _row("PolicyEvolution") and "NO_CONSUMER" not in _row(
+        "PolicyEvolution"
+    ), _row("PolicyEvolution")
+    assert "NO_CONSUMER" in _row("PolicyEvolutionStore"), _row("PolicyEvolutionStore")
