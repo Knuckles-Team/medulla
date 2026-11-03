@@ -348,3 +348,152 @@ pub fn repository_envelope(result: &IndexResult) -> Result<ChangeEnvelope, Strin
         &REPOSITORY_LABELS,
     )
 }
+
+#[cfg(test)]
+mod tests {
+    use medulla_protocol_types::mutation_batch::MAX_MUTATION_OPERATIONS;
+    use medulla_protocol_types::protocol::Method;
+    use medulla_types::ingestion_wire::{ExtractedEdge, ExtractedNode, IndexResult};
+
+    use super::*;
+
+    fn edge(source: &str, target: &str, relation: &str) -> ExtractedEdge {
+        ExtractedEdge {
+            source: source.into(),
+            target: target.into(),
+            edge_type: relation.into(),
+            properties: std::collections::HashMap::new(),
+        }
+    }
+
+    fn relation_of(method: &Method) -> Option<String> {
+        match method {
+            Method::AddEdge {
+                properties_msgpack, ..
+            } => rmp_serde::from_slice::<std::collections::BTreeMap<String, String>>(
+                properties_msgpack,
+            )
+            .ok()
+            .and_then(|properties| properties.get("relationship").cloned()),
+            _ => None,
+        }
+    }
+
+    // spec: MEDULLA-REPO-INGEST-R008
+    //
+    // Past one atomic commit's budget the batch is refused whole with the
+    // stable retry code before anything commits: the sender halves and
+    // re-sends, and no write-set, envelope or graph operation exists after
+    // the refusal.
+    #[test]
+    fn oversized_batch_is_refused_with_the_stable_retry_code_and_commits_nothing() {
+        let oversized = IndexResult {
+            nodes: Vec::new(),
+            edges: (0..=MAX_MUTATION_OPERATIONS)
+                .map(|i| edge(&format!("n{i:06}"), "t", "calls"))
+                .collect(),
+            ..Default::default()
+        };
+        let refusal = match lower(&oversized) {
+            Err(refusal) => refusal,
+            Ok(_) => panic!("past the budget the batch must refuse"),
+        };
+        assert!(
+            refusal.starts_with(BATCH_TOO_LARGE),
+            "the stable retry code leads the refusal, got: {refusal}"
+        );
+        // The commit path refuses the same way: no envelope is built.
+        match repository_envelope(&oversized) {
+            Err(refusal) => assert!(
+                refusal.starts_with(BATCH_TOO_LARGE),
+                "the commit path must refuse the same batch, got: {refusal}"
+            ),
+            Ok(_) => panic!("the commit path must refuse the same batch"),
+        }
+
+        // At the budget the batch still commits: the ceiling is enforced, not a
+        // blanket refusal.
+        let within_budget = IndexResult {
+            nodes: Vec::new(),
+            edges: (0..8)
+                .map(|i| edge(&format!("n{i}"), "t", "calls"))
+                .collect(),
+            ..Default::default()
+        };
+        let write_set = lower(&within_budget).expect("within budget the batch lowers");
+        assert_eq!(write_set.methods().len(), 8);
+    }
+
+    // spec: MEDULLA-REPO-INGEST-R009
+    // Rollup: hydration links indexed entities into the specification bridge
+    // as typed edges committed in one envelope — proven by the child test
+    // below (R009.2), the only test on main that exercises this path.
+    //
+    // spec: MEDULLA-REPO-INGEST-R009.2
+    //
+    // Two relations between the same endpoints stay two distinct edges: each
+    // bridge relation stores as its own `(source, target, relation_type)`
+    // edge in ONE envelope, the edge identity carries the relation type, and
+    // only a duplicate triple collapses.
+    #[test]
+    fn two_relations_between_the_same_endpoints_stay_distinct_edges() {
+        let bridge = IndexResult {
+            nodes: vec![
+                ExtractedNode {
+                    node_id: "code::A".into(),
+                    node_type: "symbol".into(),
+                    properties: std::collections::HashMap::new(),
+                },
+                ExtractedNode {
+                    node_id: "spec::B".into(),
+                    node_type: "specification".into(),
+                    properties: std::collections::HashMap::new(),
+                },
+            ],
+            edges: vec![
+                edge("code::A", "spec::B", "governsSpecification"),
+                edge("code::A", "spec::B", "testedBy"),
+                // A duplicate resolver output for the same triple collapses.
+                edge("code::A", "spec::B", "governsSpecification"),
+            ],
+            ..Default::default()
+        };
+        let write_set = lower(&bridge).expect("the batch lowers");
+        let methods = write_set.methods();
+        // Two nodes and exactly two edges — one per distinct relation type.
+        assert_eq!(methods.len(), 4, "{methods:?}");
+        let edges: Vec<_> = methods
+            .iter()
+            .filter(|m| matches!(m, Method::AddEdge { .. }))
+            .collect();
+        assert_eq!(edges.len(), 2);
+        let relations: Vec<_> = edges
+            .iter()
+            .map(|m| relation_of(m).expect("the edge identity carries its relation"))
+            .collect();
+        assert_eq!(
+            relations,
+            vec!["governsSpecification".to_string(), "testedBy".to_string()]
+        );
+        for method in &edges {
+            match method {
+                Method::AddEdge {
+                    source_id,
+                    target_id,
+                    ..
+                } => {
+                    assert_eq!(source_id, "code::A");
+                    assert_eq!(target_id, "spec::B");
+                }
+                _ => unreachable!("collected only AddEdge methods"),
+            }
+        }
+        // One envelope commits the entity nodes and the bridge edges together:
+        // no second graph writer.
+        let nodes: Vec<_> = methods
+            .iter()
+            .filter(|m| matches!(m, Method::AddNode { .. }))
+            .collect();
+        assert_eq!(nodes.len(), 2);
+    }
+}
