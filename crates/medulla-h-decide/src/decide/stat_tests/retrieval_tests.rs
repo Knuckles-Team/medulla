@@ -181,7 +181,7 @@ pub(super) async fn evaluate_by(h: &Harness, who: &str, record_id: &str, success
     let _: StoredEvaluation = decode(log_op(h, who, evaluation).await).unwrap();
 }
 
-fn template(composed_digest: &str) -> RetrievalPathTemplate {
+pub(super) fn template(composed_digest: &str) -> RetrievalPathTemplate {
     RetrievalPathTemplate {
         task_class: "urn:task:incident-triage".to_string(),
         composed_digest: composed_digest.to_string(),
