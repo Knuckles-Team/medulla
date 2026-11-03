@@ -434,12 +434,18 @@ _HOST_IDENTITY_RE = re.compile(r"(?i)\bssh://(?!\$\{)[^\s/@]+@")
 # genuine requirement-ID citations), not a leak. Every verified host-alias
 # occurrence in this repo (scripts/medulla_coverage_report.sh,
 # tests/test_bounded_test_runner_contract.py, ...) is preceded by
-# whitespace, an arrow or a backtick, never a hyphen, so excluding a
-# hyphen-preceded match keeps every real host alias caught while letting the
-# requirement-ID convention alone. See
+# whitespace, an arrow or a backtick, never a hyphen or an opening
+# paren. Requirement-ID citations are frequently parenthesized (the
+# ``description = "... (R805) ..."`` field of
+# crates/medulla-decision-records/Cargo.toml parsed as host alias
+# ``r805``), so the lookbehind excludes ``-`` AND ``(``: every real
+# host alias stays caught, and the requirement-ID convention passes in
+# every shape it occurs in. See
 # tests/test_documentation_privacy.py::
 # test_public_surface_allows_requirement_id_citations for the regression.
-_MACHINE_HOST_ID_RE = re.compile(r"(?i)(?<![a-z0-9-])(?:rw?|host)[0-9]{3,}(?![a-z0-9])")
+_MACHINE_HOST_ID_RE = re.compile(
+    r"(?i)(?<![a-z0-9-(])(?:rw?|host)[0-9]{3,}(?![a-z0-9])"
+)
 
 # EH-312 (2026-09-19): this workspace's own standing convention (CLAUDE.md /
 # medulla-publish-lane-rules.md) bans a small set of literal scratch/build-host
