@@ -130,7 +130,11 @@ mod tests {
         assert!(!scopes.is_empty());
         for method in methods {
             let action = method["policy"]["authz_action"].as_str().expect("action");
-            assert!(scopes.contains(action), "{} names unregistered scope {action}", method["id"]);
+            assert!(
+                scopes.contains(action),
+                "{} names unregistered scope {action}",
+                method["id"]
+            );
         }
         assert!(methods.iter().any(|m| m["is_wire_callable"] == true));
     }
