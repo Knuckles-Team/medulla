@@ -139,6 +139,7 @@ mod tests {
         assert_eq!(request.as_declared_options().len(), 2);
     }
 
+    // spec: MEDULLA-DECISION-ENGINE-R031
     #[test]
     fn a_negative_cost_is_refused() {
         let request = EnrichmentScheduleRequest {
