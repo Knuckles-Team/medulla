@@ -140,3 +140,9 @@ Planned proofs for the rows rewritten by the round-2 hygiene wave. No test named
 - `MEDULLA-ORCH-VOCAB-R012.7.1`: `crates/medulla-core/src/spec_folder/policy.rs::tests::both_formats_parse_to_one_type`.
 - `MEDULLA-ORCH-VOCAB-R012.7.2`: `tests/orchestration/test_policy_activation_served.py::test_index_yields_inactive_candidates_with_spans`.
 - `MEDULLA-ORCH-VOCAB-R012.8`: `tests/orchestration/test_policy_activation_served.py::test_graph_mutation_leaves_source_bytes_unchanged`.
+- `MEDULLA-ORCH-VOCAB-R750.750`: `crates/medulla-types/src/orchestration/org.rs::tests::records_round_trip_and_twin_needs_a_pin`.
+- `MEDULLA-ORCH-VOCAB-R750.751`: `src/server/handlers/decide/stat_tests/org_runtime_tests.rs::recruit_allocate_and_twin_replay`.
+- `MEDULLA-ORCH-VOCAB-R750.752`: `tests/orchestration/test_org_runtime_served.py::test_four_faults_refuse_with_codes`.
+- `MEDULLA-ORCH-VOCAB-R751.750`: `crates/medulla-types/src/orchestration/teams.rs::tests::records_round_trip_and_digest_is_order_free`.
+- `MEDULLA-ORCH-VOCAB-R751.751`: `src/server/handlers/decide/stat_tests/team_tests.rs::specialist_promotes_only_through_the_gate`.
+- `MEDULLA-ORCH-VOCAB-R751.752`: `tests/orchestration/test_team_evolution_served.py::test_team_and_social_faults_refuse_with_codes`.
