@@ -6151,6 +6151,7 @@ dependencies = [
 name = "medulla-pyengine"
 version = "3.0.1"
 dependencies = [
+ "medulla-capabilities",
  "medulla-compute",
  "medulla-core",
  "medulla-graph-core",

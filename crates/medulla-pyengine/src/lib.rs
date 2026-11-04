@@ -776,8 +776,17 @@ mod py {
         }
     }
 
+    /// The engine's method catalog as JSON (MEDULLA-CONTRACT-R057): every method row,
+    /// every registered scope and the catalog digest, computed from the descriptor
+    /// rows. Consumers bind their served operations to this instead of wheel files.
+    #[pyfunction]
+    fn method_catalog() -> String {
+        medulla_capabilities::catalog::catalog_json()
+    }
+
     #[pymodule]
     fn engine(m: &Bound<'_, PyModule>) -> PyResult<()> {
+        m.add_function(wrap_pyfunction!(method_catalog, m)?)?;
         m.add_class::<PyEngine>()?;
         m.add_class::<crate::graph_ops::PyGraphOpsOps>()?;
         m.add_class::<crate::query::PyQueryOps>()?;

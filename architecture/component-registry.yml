@@ -4036,6 +4036,7 @@ components:
       - "tests/test_recovery_workflow_contract.py"
       - "tests/test_release_feature_matrix.py"
       - "tests/test_release_full_wheel_contract.py"
+      - "tests/test_method_catalog.py"
       - "tests/test_wheel_extensions_only.py"
       - "tests/test_server_split.py"
       - "tests/test_server_split_rollup.py"
