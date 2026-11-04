@@ -4,7 +4,7 @@ Positive: each term resolves and the reasoner stays consistent. Each Q1-Q7 query
 
 Assembly-kind acceptance: a verifier-constrained slot excludes an executor-only candidate, accepts a visible verifier, and yields typed abstention without one.
 
-Harness run-trace acceptance: a valid trace per termination reason round-trips through the client and `AddNode`. The engine refuses a negative counter, an unknown reason, and a peak above budget without `context_overflow`. The engine refuses a measured fact without evaluation-run evidence. A newer measurement supersedes an older one, and the older one stays readable. Competency question: for model M on task class C, `harness_best_config` returns the configuration with the lowest cost per solved task. It returns its trace ids and abstains below the sample floor.
+Harness run-trace acceptance: a valid trace per termination reason round-trips through the client and `AddNode`. The engine refuses a negative counter, an unknown reason, and a peak above budget without `context_overflow`. The engine refuses a measured fact without evaluation-run evidence. A newer measurement supersedes an older one, and the older one stays readable. The `harness_config_evidence` statement returns the cost-per-solved-task rows with their trace ids and marks configurations below the `harness.min_traces_per_config` knob as insufficient; the selection of the cheapest configuration is MEDULLA-DECISION-ENGINE-R128.
 Spec-folder mapping: a fixture folder through `IndexRepository` yields one node of each kind. An unknown file is refused and stored as a plain document. Every node names its deciding rule.
 
 ### MEDULLA-ORCH-VOCAB-R013 tests
@@ -125,3 +125,11 @@ No test execution, generated contract or native receipt is claimed here.
 
 Arbora REST/MCP acceptance remains a separate consumer proof under ARBORA-OPS-R021.4.5 and .4.6.
 R009 remains open until actual producer and native readback evidence exists.
+
+## Round-2 cross-spec review rewrites — 2026-10-30
+
+Planned proofs for the rows rewritten by the round-2 hygiene wave. No test named here has run.
+
+- `MEDULLA-ORCH-VOCAB-R010.6`: `tests/orchestration/test_harness_metrics_served.py::test_config_evidence_marks_insufficient_trace_counts`.
+- `MEDULLA-ORCH-VOCAB-R616.2`: `src/server/handlers/decide/stat_tests/assemble_vocabulary_tests.rs::synthesis_drafts_a_team_and_leaves_champion_unchanged`.
+- `MEDULLA-ORCH-VOCAB-R800.1`: `crates/medulla-types/src/orchestration/definitions.rs::tests::template_and_pattern_round_trip`.
