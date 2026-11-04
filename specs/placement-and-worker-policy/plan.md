@@ -1,33 +1,72 @@
-# MEDULLA-PLACEMENT - Design and implementation plan
+# MEDULLA-PLACEMENT — Implementation plan
 
 Governing spec: [spec.md](spec.md). Rows: [requirements.md](requirements.md).
 
 All three gaps keep ONE decision authority: the engine decides, callers (Arbora, the ingest worker, the submit path) ask and obey. Nothing here adds a planner outside `specs/decision-engine`.
 
-## Problem and evidence
+## Summary
+
+This spec closes three engine-side design gaps so each keeps one decision authority: the placement question (MEDULLA-PLACEMENT-R001), the ingest-worker policy (MEDULLA-PLACEMENT-R002) and the association payload bound (MEDULLA-PLACEMENT-R003). The engine decides; Arbora, the ingest worker and the submit path ask and obey. Nothing here adds a planner outside specs/decision-engine. The owner-batch rollups MEDULLA-PLACEMENT-R611, MEDULLA-PLACEMENT-R750, MEDULLA-PLACEMENT-R751 and MEDULLA-PLACEMENT-R700 keep only their engine-side slices, citing their cross-repo owners.
+
+## Technical Context
+
+| Field | Value |
+|---|---|
+| Language/Version | Rust workspace (medulla 3.x) plus the Python client; served methods over the wire protocol. |
+| Primary Dependencies | medulla-decision-types, medulla-h-decide, medulla-jobs, medulla-resource, medulla-types, medulla-work-types, medulla-mining. No new external dependencies. |
+| Storage | Tenant graph (placement vocabulary and host capabilities), job store and job event log, capacity ledger read as premises only. |
+| Testing | Levels L1 to L6; crate unit tests, served journey tests under tests/, nightly bench groups that never gate a PR. |
+| Target Platform | The native engine (Linux); the Python client for the SDK runner. |
+| Project Type | Engine feature: pure functions plus served methods. No new service. |
+| Performance Goals | Claim pacer p50 under 2 microseconds and p99 under 10 microseconds; schedule tick p50 under 3 ms and p99 under 9 ms; placement plan p50 under 12 ms and p99 under 80 ms. All nightly, never PR-gating. |
+| Constraints | Decide is evaluate-only and takes no lease; the worker holds no policy; one decision authority per concept. |
+| Scale/Scope | At most 512 hosts and 4,096 services per placement plan; at most 31 distinct association items; at most 64 routing candidates per decision. |
+
+## Constitution Check
+
+Single decision authority per concept: placement, worker policy and the analytics bound each keep exactly one owner (this spec or the named cross-repo spec). No stubs: `AgentAssemble` is confirmed not a refusal stub (decision D1). Every row carries its budget and names its proof. No served operation is added outside the documented method family; `Decide` and `AgentAssemble` are evaluate-only and write nothing.
+
+## Project Structure
+
+- Pure decision types and the `place` / `route_heavy_job` functions: `crates/medulla-decision-types/src/decision/statistical/placement.rs`.
+- Served Decide wiring: `crates/medulla-h-decide/src/decide/stat_decide.rs` to `src/server/handlers/decide/stat_placement.rs`; the capacity premise in `crates/medulla-h-decide/src/decide/capacity_premise.rs`.
+- Worker admission: `crates/medulla-work-types/src/worker_registry/grants.rs` (`granted_slots`) behind served `AdmitWorkerTask` owned by MEDULLA-DURABLE-KERNEL-R075.
+- Served settings: `crates/medulla-types/src/scheduler_config.rs` (owner MEDULLA-DURABLE-KERNEL-R076).
+- Association bound: `crates/medulla-h-jobs/src/jobs/submit.rs` (`MAX_ASSOCIATION_DISTINCT_ITEMS`) and the kernel guard in `crates/medulla-mining/src/mining/association.rs`.
+- Tenant client pool and breaker: `medulla/placement.py`, proven by `tests/test_placement_r611.py`.
+
+## Phase 0: Research
+
+Unknown (see research.md): the production deployment template and fleet-tool components do not exist in any Agent Library yet (Arbora, typed packs). Until they land, the assembled step-graph proof runs over a fixture template.
+
+### Problem and evidence
 
 - A. Arbora `ARBORA-DEPLOY-R017` (branch `land/train-1010h`, `specs/portable-deployment/requirements.md:27`) requires "a deployment-placement question kind under `MEDULLA-DECISION-ENGINE-R046`/`R111`" and says assemble is "a refusal stub". In code: `QuestionKind` (`crates/medulla-decision-types/src/decision/statistical.rs:56-95`) has no placement or topology kind. `R111.1` (`specs/decision-engine/requirements.md:163`) says the standalone topology question is not built and its proving test name `a_standalone_topology_decide_question_returns_a_typed_decision_record` appears nowhere in `src`. Topology is reachable only through `AgentAssemble` (`crates/medulla-h-decide/src/decide/assemble.rs:57`, `topology_read.rs:44`).
 - B. `specs/ingest-worker` (R001.2, .3, .10, .11, .15) asks the worker/Graft SDK to autosize (0.36 of cores, 3 GiB), hold a hydration floor and route partitions. `MEDULLA-DURABLE-KERNEL-R074`-`R077` (`specs/durable-graph-kernel/requirements.md:109-112`) give the engine the registry, admission, floors and shard-writer width. No code for either exists yet (`git grep AdmitWorkerTask|SchedulerConfig|WorkerRecord` finds nothing in `src`/`crates`). The overlap is still only in specs and is cheap to remove now. The only live autosize knob is `MEDULLA_ANALYTICS_WORKERS` (`crates/medulla-h-jobs/src/jobs/executor_loop.rs:22-25`, default 1, cap 32).
 - C. `MEDULLA-DURABLE-KERNEL-R082.3` says the cap's existence "was not determinable". It is: `crates/medulla-h-jobs/src/jobs/submit.rs:289` refuses `distinct_items > 31` (inside the same merged check as the threshold tests, one message at `:293`).
 
-## Architecture
+## Phase 1: Design
+
+The placement question family (MEDULLA-PLACEMENT-R001): the `Placement` question kind, the target registry, the typed request body with refusals, the pure feasibility function, the headroom premise, the why-not evidence, the typed abstention and the served contract proof.
+
+### Architecture
 
 ```
 caller (Arbora / worker / submit)        engine (single authority)
  question + typed body ------Decide-----> QuestionKind::Placement (stat_placement.rs)
-                                           |- candidates: PlacementTarget (declared options)
-                                           |- hard constraints -> eliminated + why-not
-                                           |- capacity headroom premise (capacity_premise.rs, no lease)
-                                           |- DecisionPolicy caps (request may only tighten)
-                                           '- cheapest feasible -> Advisory; none -> Abstained
+                                            |- candidates: PlacementTarget (declared options)
+                                            |- hard constraints -> eliminated + why-not
+                                            |- capacity headroom premise (capacity_premise.rs, no lease)
+                                            |- DecisionPolicy caps (request may only tighten)
+                                            '- cheapest feasible -> Advisory; none -> Abstained
  task + capabilities -------AgentAssemble-> graph.assemble() over published deployment template
-                                           -> Solved graph (ordered fleet-tool steps) | Abstained
+                                            -> Solved graph (ordered fleet-tool steps) | Abstained
  worker Register{cores,mem} -> WorkerRecord (R074) -> AdmitWorkerTask (R075) -> WorkerGrant{slots,lane}
-                                           SchedulerConfig (R076) + shard width (R077) decide everything
+                                            SchedulerConfig (R076) + shard width (R077) decide everything
  submit MineAssociate -> submit.rs MAX_ASSOCIATION_DISTINCT_ITEMS=31 (u32 mask width of rule enumeration)
 ```
 
-### A. Placement question
+#### A. Placement question
 
 - **Question**: `QuestionKind::Placement`, candidates `CandidateSource::Declared` with option ids `placement:in_process|compose|helm|swarm` (same shape as `IngestionLane`, `statistical/ingestion_lane.rs:24-47`, and `ToolSubset`, `stat_tool_subset.rs`). It is a flat choice among deployment targets, not a template/slot assembly, so it does not go through `TopologyRequirements` (`decision/topology.rs:110`), which sizes widths of a swarm template. It reuses the topology path's pieces: the capacity headroom premise (`capacity_premise.rs:headroom`, R112), the policy-tightening rule (`TopologyCaps::loosened_field`, `topology.rs:~60`), and the standalone-typed-question dispatch R111.1 builds first.
 - **What is placed**: `PlacementSubject{workload_iri, cpu_millis, memory_bytes, replicas, needs_persistent_volume}`.
@@ -36,15 +75,15 @@ caller (Arbora / worker / submit)        engine (single authority)
 - **Answer**: chosen target (`Advisory` top score, `resolution_kind` Constraint when one candidate survives, Optimization when cost chooses), evidence class from premises (capacity headroom = Observation, target facts = their schema authority), why-not for each other target via `DecisionRecord.why_not`/`eliminated` (`record.rs:267-270`), and typed abstention via `StatisticalOutcome::Abstained{reasons: AbstainReason}` (`outcome.rs:107`) when no target is feasible or capacity facts are unavailable (`CAPACITY_UNAVAILABLE`, `topology_read`/`capacity_premise.rs:30`). No lease is taken (R046); acquisition stays `AcquireCapacity`.
 - **Step graph**: separate call, `AgentAssemble` over a published deployment graph template whose slots are fleet-tool components (render-artifact, apply, verify). Chosen target selects the template by IRI (`AssemblyRequest.templates`).
 
-### B. Single arrangement
+#### B. Single arrangement
 
 The worker holds NO policy. Sequence: `register(cores, mem_bytes, lanes_supported)` -> engine returns `WorkerRecord` and the engine-computed `WorkerGrant{slots, reserved_lane}`; each claim goes through `AdmitWorkerTask`; claim order and lane are derived by the engine from `lane_for(kind)` and `partition_key(envelope)` (engine-side pure functions, ingest-worker R001.2/.3, now explicitly engine-called). Autosize constants (360 per-mille of cores, 3 GiB per worker), lane floors and the queue-depth limit become fields of `SchedulerConfig` (R076) with those defaults. The worker's `--workers` becomes a request ceiling the engine may lower, never raise. A one-worker minimum never overrides a zero request ceiling, insufficient available memory or zero writer width; those cases return a typed capacity refusal and no allocation. Admission is a deterministic served constraint (R075), not a `Decide` question: `QuestionKind::IngestionLane` (fast/medium/slow) is a different concept (derivation cost lanes) and must not be conflated with worker lanes general/hydration.
 
-### C. Association bound
+#### C. Association bound
 
 `rules_for_itemset` enumerates antecedent masks `for mask in 1u32..((1u32 << k) - 1)` (`crates/medulla-mining/src/mining/association.rs:402`), and `rule_parts`/`rule_for_mask` take `mask: u32` (`:349`, `:364`). `k` is an itemset length, which cannot exceed the number of distinct items, so 31 distinct items guarantees `1u32 << k` cannot overflow (`1u32 << 32` overflows). The Apriori/Eclat/FP-Growth itemset engines themselves have no bound (`association.rs:124`, `:265`); `generate_rules` is `pub`, so a direct caller with k >= 32 is unprotected.
 
-## Decisions
+### Decisions
 
 | # | Item | Outcome | Evidence and reasoning |
 |---|---|---|---|
@@ -57,7 +96,7 @@ The worker holds NO policy. Sequence: `register(cores, mem_bytes, lanes_supporte
 | D7 | The bound | DECIDED | Keep 31 as named `MAX_ASSOCIATION_DISTINCT_ITEMS = u32::BITS - 1` in `submit.rs` (byte-identical parity with the old worker, R082.4, and rule enumeration cost is already 2^k, so a wider mask gains nothing: 2^63 is infeasible). Alternative (u64 masks, cap 63) rejected. Add a defence-in-depth guard so `generate_rules` cannot overflow for k >= 32. |
 | D8 | Opaque-reference rule of R082.3 | DECIDED | Not a refusal: the engine itself maps every label to an opaque ref (`submit.rs:266-278`, `native_opaque_ref`) before counting, so an `eg:` prefix check on input would reject valid labels for no gain. The cap is measured after hashing. Tests cover deterministic references and distinct outputs for bounded fixtures; they do not prove that hashing is injective. R082.3's non-opaque-item test is replaced by a test that a plain label is accepted and stored only as an opaque ref. |
 
-## Worked example
+### Worked example
 
 Question: "Where should the `graphos-core` workload (2000 mCPU, 4 GiB, 2 replicas, needs HA, no volume) run, among in_process, compose, helm, swarm?"
 
@@ -75,17 +114,17 @@ Then AgentAssemble{task: deploy-Arbora-core, templates:[deploy-swarm-template]}
 ```
 If cell-a headroom is below demand for every feasible target: `Abstained[CAPACITY_INFEASIBLE lease:cell-a:cpu]` and no lease taken.
 
-## Out of scope
+### Out of scope
 
 Rendering or applying manifests (Arbora `deploy/`), acquiring capacity, systemd, runtime auto-migration between targets, and the worker runner itself (Graft SDK).
 
-### B producer implementation boundary
+#### B producer implementation boundary
 
 R002.2 is implemented by the pure `medulla_types::scheduler_config` contract (R076.1). R076.2 owns its later served integration. Neither the autosize grant function nor the existing analytics pool has been switched by this producer slice.
 
 R002.3 now provides pure `worker_registry::granted_slots` with `WorkerSizingInput` for the optional request ceiling, current available memory and engine-selected write classification. It consumes the real `WorkerRecord` and `SchedulerConfig`; the typed `WorkerSlotGrant` reports zero on refusal. CPU sizing alone may round up to one; memory, request ceiling, pool, disabled resources and writer width remain hard bounds. No reservations, served registration or R075 admission are claimed.
 
-## Capability-declared heavy compute routing (R004)
+### Capability-declared heavy compute routing (R004)
 
 Data flow: job submit wire method -> ready queue -> `claim_next` (`crates/medulla-jobs/src/store.rs:736`) -> capability anchor filter (`store.rs:773`) -> claim on the capable host.
 
@@ -97,21 +136,35 @@ Decision: hosts declare capabilities and the graph stores them. Rejected alterna
 
 Cross-repository: `ARBORA-` rows that submit jobs only pass the job class.
 
-<!-- spec-definition-patch:owner-batch-20261012-placement-and-worker-policy -->
-## Owner implementation plan — 2026-10-12
+## Phase 2: Task approach
 
-### `MEDULLA-PLACEMENT-R001.15` — EG:9
+The ingest-worker policy (MEDULLA-PLACEMENT-R002) and the association bound (MEDULLA-PLACEMENT-R003) land with their durable-kernel owner rows. The owner-batch rollups (MEDULLA-PLACEMENT-R611, MEDULLA-PLACEMENT-R750, MEDULLA-PLACEMENT-R751, MEDULLA-PLACEMENT-R700) follow their cross-repo owners and keep only their engine-side slices.
 
-- Define pure `evaluate_capacity_adjustment(proposal, capacity_premise) -> CapacityAdjustmentVerdictV1`.
-- Return a verdict for a typed capacity proposal. Bind it to tenant, resource class, and unit.
-- Use unsigned integers for current/proposed capacity and minimum/maximum bounds. Include measured load and available headroom.
-- Record the UTC millisecond window, premise revision, policy revision, and canonical proposal digest.
-- Medulla validates against fresh R112 capacity premises and R001.6 placement feasibility.
-- Refuse stale, cross-tenant, or malformed proposals. Refuse inconsistent units, invalid windows, and out-of-bound targets.
-- Refuse increases above observed headroom. Return the applicable `CapacityRefusalCode` without host or graph mutation.
-- Arbora owns mode, AIMD proposal generation, limits, and actuation.
-- Arbora exposes an applied receipt for independent readback. The receipt binds proposal digest, requested/applied amount, resource/host, policy revision, and resulting state revision.
-- Preserve `ARBORA-CAPACITY-R001.1`, `MEDULLA-DECISION-ENGINE-R112`, `ARBORA-CAPACITY-R001/R002`, and `MEDULLA-PLACEMENT-R001.6`. Source hash: `cb17ea03a7344584fed7a9f22a78c1e97c58919616433e7026481606fd0bdccb`.
-- **Hold:** Reviewed evidence names no Medulla decision method or QuestionKind for this proposal. It names no Arbora apply/readback operation or receipt schema.
-- Resolve those exact owner API and receipt bindings before this candidate represents a wired closed loop.
-<!-- /spec-definition-patch -->
+## Complexity Tracking
+
+- Decision D3: the target is modelled as a declared option, not a swarm template, so the topology model stays intact.
+- Decision D7: the 31-item bound is the `u32` mask width; rule enumeration is already 2^k, so a wider mask gains nothing; the u64 alternative is rejected.
+- W0X 2026-10-31: the capacity adjustment question and verdict move to MEDULLA-DECISION-ENGINE-R824 and the model capacity question to MEDULLA-DECISION-ENGINE-R825 under MEDULLA-DECISION-ENGINE-R112; Arbora actuates; this spec keeps claim pacing, priority classes and the headroom premise.
+- The seven ingest-worker rewording rows retire to MEDULLA-INGEST-WORKER-R001 (MEDULLA-PLACEMENT-R002.6 to MEDULLA-PLACEMENT-R002.12 and MEDULLA-PLACEMENT-R002.15 are retired rows).
+
+## Build contract
+
+Focused `cargo test` on the named files per row; `spec-status` and `spec-decomposition` gates compute the state. Cargo is run by the implementing lane, not by this design. The nightly bench groups (claim pacing, schedule tick, placement plan, tenant pool) carry the budgets and never gate a PR.
+
+## Production caller chain
+
+- Arbora `plan.deploy` (ARBORA-DEPLOY-R017) asks served `Decide` with `placement`, then `AgentAssemble` with the chosen template key.
+- The worker runner (SCION-SOURCE-INGEST-R011.1) registers through served `RegisterWorker` (MEDULLA-DURABLE-KERNEL-R074), admits through `AdmitWorkerTask` (MEDULLA-DURABLE-KERNEL-R075) and claims through the engine claim path.
+- A caller submits `MineAssociate` through served `SubmitJob`, handled in `crates/medulla-h-jobs/src/jobs/submit.rs`.
+- The tenant client (`medulla/placement.py`) asks the engine for the route (`PlacementRouteRequest`) and the object store open check consumes it (MEDULLA-OBJECT-STORAGE-BACKEND-R004).
+
+## Cross-repo seams
+
+| Seam | Provider | Consumer |
+|---|---|---|
+| arbora-deployment | medulla MEDULLA-PLACEMENT-R001 | arbora ARBORA-DEPLOY-R017 |
+| worker-registry | medulla MEDULLA-DURABLE-KERNEL-R075 | medulla MEDULLA-PLACEMENT-R002 |
+| capacity-decisions | medulla MEDULLA-DECISION-ENGINE-R112 | medulla MEDULLA-PLACEMENT-R001 |
+| ingest-worker-wording | medulla MEDULLA-INGEST-WORKER-R001 | medulla MEDULLA-PLACEMENT-R002 |
+| worker-runner | medulla MEDULLA-PLACEMENT-R002 | scion-sdk SCION-SOURCE-INGEST-R011.1 |
+| object-storage-route | medulla MEDULLA-PLACEMENT-R611 | medulla MEDULLA-OBJECT-STORAGE-BACKEND-R004 |
