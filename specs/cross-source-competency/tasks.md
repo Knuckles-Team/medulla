@@ -28,11 +28,11 @@ Governing spec: [spec.md](spec.md). Design: [plan.md](plan.md). Producers first;
 - [ ] T024 MEDULLA-CQ-XSRC-R004.4 Resolve a service in uptime, container-manager and the CMDB to one `:Service`.
 - [ ] T025 MEDULLA-CQ-XSRC-R004.5 Query-time link: a join may only cross an approved `owl:sameAs`.
 - [ ] T026 MEDULLA-CQ-XSRC-R005 The federated query is planned from the ontology's source declarations (rollup).
-- [ ] T027 MEDULLA-CQ-XSRC-R005.1 `select_sources` orders candidate mappings by `vg:authorityRank`.
+- [ ] T027 MEDULLA-CQ-XSRC-R005.1 Source selection orders candidate mappings by the declared authority rank.
 - [ ] T028 MEDULLA-CQ-XSRC-R005.2 Query fixture: the supply-chain impact query over classes only.
 - [ ] T029 MEDULLA-CQ-XSRC-R005.3 The plan is derived, not authored: planned sources equal the declared authorities.
 - [ ] T030 MEDULLA-CQ-XSRC-R005.4 An unconnected authoritative source yields a typed abstention, not a silent fallback.
-- [ ] T031 MEDULLA-CQ-XSRC-R005.5 `EXPLAIN` shows the authority premise for each planned source.
+- [ ] T031 MEDULLA-CQ-XSRC-R005.5 Explain output shows the authority premise for each planned source.
 - [ ] T032 MEDULLA-CQ-XSRC-R006 The unified report shape (rollup).
 - [ ] T033 MEDULLA-CQ-XSRC-R006.1 Add the typed `SupplyChainImpactReport` model.
 - [ ] T034 MEDULLA-CQ-XSRC-R006.2 Report carries freshness per source.
@@ -67,3 +67,11 @@ Governing spec: [spec.md](spec.md). Design: [plan.md](plan.md). Producers first;
 - [ ] T060 MEDULLA-CQ-XSRC-R009.3 Contradiction decay analysis.
 - [ ] T061 MEDULLA-CQ-XSRC-R009.4 Served acceptance through arbora.
 - [ ] T062 MEDULLA-CQ-XSRC-R009.5 Refusal.
+
+## Served method and final-phase scenario (2026-11-04)
+
+- [ ] T063 MEDULLA-CQ-XSRC-R008.4 Serve the three generalization questions as one engine method.
+- [ ] T064 MEDULLA-CQ-XSRC-R011 Serve the supply-chain impact report as a Medulla method.
+- [ ] T065 MEDULLA-CQ-XSRC-R012 Served proof of cross-connector answers for the final phase scenario (rollup).
+- [ ] T066 MEDULLA-CQ-XSRC-R012.1 Cross-connector join with a provenance record per fact.
+- [ ] T067 MEDULLA-CQ-XSRC-R012.2 An unreadable source is excluded and named in coverage.
