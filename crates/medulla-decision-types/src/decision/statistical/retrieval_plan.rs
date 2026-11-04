@@ -141,6 +141,7 @@ mod tests {
         assert!(request.check().is_ok());
     }
 
+    // spec: MEDULLA-DECISION-ENGINE-R029
     #[test]
     fn a_request_naming_an_unregistered_plan_is_refused() {
         let request = RetrievalPlanRequest {
