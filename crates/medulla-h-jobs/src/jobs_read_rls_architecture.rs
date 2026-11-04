@@ -61,7 +61,6 @@ const NON_ROW_SCOPED_JOB_KINDS: &[(&str, &str)] = &[
          it ever reaches durable jobs.redb storage -- no node/edge property \
          is read from `core`",
     ),
-    #[cfg(feature = "program-optimization")]
     (
         "ProgramOptimize",
         "submits an opaque OptimizationRequest; the actual optimization work \
@@ -85,11 +84,7 @@ fn every_job_kind_is_classified_and_matches_the_live_guard() {
     // Every kind this build actually ships must be classified -- an
     // undocumented variant is the hard failure, mirroring
     // `medulla_server::access::read_rls_coverage_tests`'s UNDOCUMENTED gate.
-    let shipped: &[&str] = &[
-        "MineAssociate",
-        #[cfg(feature = "program-optimization")]
-        "ProgramOptimize",
-    ];
+    let shipped: &[&str] = &["MineAssociate", "ProgramOptimize"];
     let undocumented: Vec<&str> = shipped
         .iter()
         .copied()
@@ -119,7 +114,6 @@ fn every_job_kind_is_classified_and_matches_the_live_guard() {
          verify handle_submit actually projects the row through \
          GraphReadAuthority before this assertion changes"
     );
-    #[cfg(feature = "program-optimization")]
     assert!(
         !reads_graph_rows_server_side(&JobKind::ProgramOptimize {
             request_msgpack: Vec::new(),

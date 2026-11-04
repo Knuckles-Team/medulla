@@ -437,3 +437,28 @@ def test_only_workspace_clippy_runs_on_pull_requests(release_matrix):
         "slim-server",
     }
     _assert_required_clippy_declarations(workflow)
+
+
+# Declaration coverage only: the jobs-only build of the jobs handler crate is
+# compiled by the feature-matrix leg, not by this test. Its `jobs` feature
+# compiles `JobKind::ProgramOptimize` in, so every `JobKind` match names the
+# variant (refusing it fail-closed without `program-optimization`) under any
+# feature unification.
+@pytest.mark.spec("MEDULLA-CONTRACT-R033")
+def test_feature_matrix_builds_the_jobs_only_handler_crate(release_matrix):
+    workflow, _ = release_matrix
+    job = workflow["jobs"]["feature-matrix"]
+    targets = job["strategy"]["matrix"]["target"]
+    matches = [t for t in targets if t["name"] == "crate-medulla-h-jobs-jobs"]
+    assert len(matches) == 1, "the jobs-only medulla-h-jobs leg must occur once"
+    assert shlex.split(matches[0]["flags"]) == shlex.split(
+        "-p medulla-h-jobs --no-default-features --features jobs"
+    )
+    assert any(
+        "cargo build ${{ matrix.target.flags }}" in str(step.get("run", ""))
+        for step in job["steps"]
+    )
+    jobs_crate = tomllib.loads((ROOT / "crates/medulla-h-jobs/Cargo.toml").read_text())
+    assert (
+        "medulla-work-types/program-optimization" in jobs_crate["features"]["jobs"]
+    ), "the jobs feature must compile JobKind::ProgramOptimize in"

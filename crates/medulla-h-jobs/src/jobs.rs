@@ -82,6 +82,7 @@ mod association_hash_tests;
 mod core;
 mod executor_claim;
 mod executor_loop;
+#[cfg(feature = "program-optimization")]
 mod executor_program;
 #[cfg(test)]
 mod graph_tests;
@@ -91,9 +92,13 @@ mod native_validation;
 mod prelude_jobs;
 mod prelude_server;
 mod prelude_std;
+// The program-optimization handler, its result governance and its typed
+// results are built only behind program optimization.
+#[cfg(feature = "program-optimization")]
 mod program_validation;
 mod publication;
 mod results_association;
+#[cfg(feature = "program-optimization")]
 mod results_program;
 mod submit;
 mod worker_publish;
@@ -121,10 +126,12 @@ use core::{
 #[cfg(feature = "jobs")]
 use executor_claim::*;
 use executor_loop::*;
+#[cfg(feature = "program-optimization")]
 use executor_program::*;
 use helpers::*;
 #[cfg(feature = "knowledge-batch")]
 use native_validation::*;
+#[cfg(feature = "program-optimization")]
 use program_validation::*;
 #[cfg(feature = "raft")]
 use publication::prepare_consensus_job_publication;
@@ -136,6 +143,7 @@ pub use publication::{
     validate_job_publication_commit, PreparedJobPublication,
 };
 use results_association::*;
+#[cfg(feature = "program-optimization")]
 use results_program::*;
 use submit::*;
 use worker_publish::*;
@@ -448,7 +456,8 @@ mod jobs_read_rls_architecture;
 fn reads_graph_rows_server_side(kind: &JobKind) -> bool {
     match kind {
         JobKind::MineAssociate { .. } => false,
-        #[cfg(feature = "program-optimization")]
+        // `jobs` always compiles the variant in; built or refused, it reads
+        // no rows.
         JobKind::ProgramOptimize { .. } => false,
     }
 }
@@ -620,6 +629,13 @@ pub fn govern_job_kind(
             request_msgpack,
             required_capabilities,
         ),
+        // `jobs` always compiles the variant in; without this crate's
+        // handler it is refused instead of submitted.
+        #[cfg(not(feature = "program-optimization"))]
+        JobKind::ProgramOptimize { .. } => Err(Response::err(
+            req_id,
+            "INVALID_ARGUMENT: program optimization jobs are not built into this server",
+        )),
     }
 }
 
@@ -739,7 +755,6 @@ mod read_rls_tests {
             min_confidence: 0.5,
             algorithm: "fpgrowth".to_string(),
         }));
-        #[cfg(feature = "program-optimization")]
         assert!(!reads_graph_rows_server_side(&JobKind::ProgramOptimize {
             request_msgpack: Vec::new(),
         }));

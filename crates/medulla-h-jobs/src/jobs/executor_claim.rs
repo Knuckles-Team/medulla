@@ -49,6 +49,12 @@ pub(super) async fn execute_claim(
                 )
                 .await;
             }
+            // `jobs` always compiles the variant in; without this crate's
+            // executor the claim fails closed.
+            #[cfg(not(feature = "program-optimization"))]
+            JobKind::ProgramOptimize { .. } => {
+                return Err("program optimization jobs are not built into this worker".to_string());
+            }
         };
         let algorithm = parse_algorithm(&algorithm)?;
         store
