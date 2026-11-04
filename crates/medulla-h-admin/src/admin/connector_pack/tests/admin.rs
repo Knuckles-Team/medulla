@@ -503,11 +503,10 @@ async fn withdraw_engine_body(served: &Served, manifest_digest: &str, body_sha25
 /// Write-time refusal codes leave the catalog untouched: a moved head, a
 /// stale projection plan and a withdrawn body each refuse with its stable
 /// code, and the head, members, body holders and outbox are exactly as they
-/// were before the attempt. The row's fourth code is not asserted here:
-/// `AgentComponent` validation refuses a caller-minted reserved component id
-/// with `RESERVED_COMPONENT_ID`, but the served method contract does not
-/// declare that code for this method, so the served boundary reports the
-/// refusal as `INTERNAL` (MEDULLA-TYPED-PACKS-R041, reserved-id arm).
+/// were before the attempt. A direct `AgentComponent` write of a
+/// pack-reserved component id refuses with `RESERVED_COMPONENT_ID` and
+/// leaves the same state untouched.
+// spec: MEDULLA-TYPED-PACKS-R041
 #[tokio::test]
 async fn pack_import_refusals_leave_state_unchanged() {
     let served = Served::new();
@@ -667,6 +666,56 @@ async fn pack_import_refusals_leave_state_unchanged() {
                 .connector_pack_refusal_snapshot(TENANT),
             before,
             "a missing-body refusal must not mutate head, members, holders or outbox"
+        );
+    }
+
+    // RESERVED_COMPONENT_ID: a caller writes a pack member's reserved id
+    // directly instead of importing it through the pack.
+    {
+        let before = served
+            .state
+            .write()
+            .await
+            .ensure_agent_library()
+            .unwrap()
+            .connector_pack_refusal_snapshot(TENANT);
+        let mut publish_context = context("r041-reserved-id");
+        publish_context.principal = persistence_id(ADMIN);
+        publish_context.caller_principal = persistence_id(ADMIN);
+        let response = served
+            .call(
+                "r041-reserved-id",
+                medulla_protocol_types::protocol::Method::AgentComponent {
+                    op: medulla_agent_types::agent_component::AgentComponentOp::Publish {
+                        request: Box::new(
+                            medulla_agent_types::agent_component::AgentComponentPublishRequest {
+                                context: publish_context,
+                                component:
+                                    medulla_persistence_records::agent_component::test_component_draft(
+                                        TENANT,
+                                        &format!("mcp:{connector}/tool/b"),
+                                    ),
+                                evaluation_receipt_digest: None,
+                            },
+                        ),
+                    },
+                },
+            )
+            .await;
+        assert_eq!(
+            refused("the reserved component id", response),
+            "RESERVED_COMPONENT_ID"
+        );
+        assert_eq!(
+            served
+                .state
+                .write()
+                .await
+                .ensure_agent_library()
+                .unwrap()
+                .connector_pack_refusal_snapshot(TENANT),
+            before,
+            "a reserved-id refusal must not mutate head, members, holders or outbox"
         );
     }
 }
