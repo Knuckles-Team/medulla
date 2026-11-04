@@ -121,7 +121,7 @@ async fn health_response(state: &Arc<RwLock<ServerState>>, req_id: u64) -> Respo
                 status: "ok".to_string(),
                 uptime_s,
                 mem_bytes,
-                version: env!("CARGO_PKG_VERSION").to_string(),
+                version: medulla_version::VERSION.to_string(),
                 graph_lifecycle: lifecycle,
                 ops: served_ops.into_iter().map(str::to_string).collect(),
             },

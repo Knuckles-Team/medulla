@@ -342,7 +342,7 @@ impl Journal {
     fn planned(stores: &[&StoreFile]) -> Self {
         Self {
             version: JOURNAL_VERSION,
-            engine_version: env!("CARGO_PKG_VERSION").to_string(),
+            engine_version: medulla_version::VERSION.to_string(),
             stores: stores
                 .iter()
                 .map(|store| JournalEntry {

@@ -12,6 +12,7 @@ name = "medulla_h_admin"
 path = "src/lib.rs"
 
 [dependencies]
+medulla-version = { path = "../medulla-version" }
 async-trait = { version = "0.1" }
 dashmap = "6.2"
 hex = "0.4"

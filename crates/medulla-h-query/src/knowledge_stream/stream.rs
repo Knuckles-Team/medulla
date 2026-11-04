@@ -125,7 +125,7 @@ pub(super) fn stream_context(
         derivation_ref: keyed_opaque(
             authority,
             "derivation",
-            &[family_name.as_bytes(), env!("CARGO_PKG_VERSION").as_bytes()].concat(),
+            &[family_name.as_bytes(), medulla_version::VERSION.as_bytes()].concat(),
         )?,
         evidence_set_ref: keyed_opaque(
             authority,

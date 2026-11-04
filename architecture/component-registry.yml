@@ -4042,6 +4042,7 @@ components:
       - "tests/test_server_split.py"
       - "tests/test_server_split_rollup.py"
       - "tests/test_server_package.py"
+      - "tests/test_engine_release_version.py"
       - "tests/test_release_image_contract.py"
       - "tests/test_release_gates_test_target_coverage.py"
       - "tests/test_repository_fuzz.py"
