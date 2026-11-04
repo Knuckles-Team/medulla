@@ -5114,6 +5114,7 @@ dependencies = [
  "medulla-transaction",
  "medulla-tsdb",
  "medulla-types",
+ "medulla-version",
  "medulla-work-types",
  "rmp-serde",
  "rustls",
@@ -5344,6 +5345,7 @@ dependencies = [
  "medulla-table-store",
  "medulla-test-ambient-auth",
  "medulla-types",
+ "medulla-version",
  "medulla-work-types",
  "rmp-serde",
  "serde",
@@ -5373,6 +5375,7 @@ dependencies = [
  "medulla-server-ops",
  "medulla-tsdb",
  "medulla-types",
+ "medulla-version",
  "rmp-serde",
  "serde",
  "serde_json",
@@ -5446,6 +5449,7 @@ dependencies = [
  "medulla-tsdb",
  "medulla-types",
  "medulla-uql",
+ "medulla-version",
  "medulla-virtual-graph",
  "rmp-serde",
  "serde",
@@ -5958,6 +5962,7 @@ dependencies = [
  "medulla-test-ambient-auth",
  "medulla-transaction",
  "medulla-types",
+ "medulla-version",
  "object_store 0.14.2",
  "redb",
  "rmp-serde",
@@ -6215,6 +6220,7 @@ dependencies = [
  "medulla-quantum-core",
  "medulla-quantum-sim",
  "medulla-types",
+ "medulla-version",
  "ndarray 0.17.2",
  "serde",
  "serde_json",
@@ -7231,6 +7237,7 @@ dependencies = [
  "medulla-transaction",
  "medulla-tsdb",
  "medulla-types",
+ "medulla-version",
  "medulla-work-types",
  "openraft",
  "parking_lot",
@@ -7882,6 +7889,10 @@ dependencies = [
  "medulla-types",
  "serde_json",
 ]
+
+[[package]]
+name = "medulla-version"
+version = "3.1.0"
 
 [[package]]
 name = "medulla-video"

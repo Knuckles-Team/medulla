@@ -182,6 +182,7 @@ include = [
     { path = "crates/medulla-tts-piper/**/*", format = "sdist" },
     { path = "crates/medulla-types/**/*", format = "sdist" },
     { path = "crates/medulla-uql/**/*", format = "sdist" },
+    { path = "crates/medulla-version/**/*", format = "sdist" },
     { path = "crates/medulla-video/**/*", format = "sdist" },
     { path = "crates/medulla-virtual-graph/**/*", format = "sdist" },
     { path = "crates/medulla-viz-columnstore/**/*", format = "sdist" },

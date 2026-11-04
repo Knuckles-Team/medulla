@@ -12,6 +12,7 @@ name = "medulla_h_query"
 path = "src/lib.rs"
 
 [dependencies]
+medulla-version = { path = "../medulla-version" }
 medulla-cypher = { path = "../medulla-cypher" }
 medulla-sql = { path = "../medulla-sql" }
 medulla-sql-udfs = { path = "../medulla-sql-udfs" }

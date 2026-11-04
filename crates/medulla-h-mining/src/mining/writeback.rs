@@ -69,11 +69,11 @@ impl WritebackNodeId {
 #[cfg(feature = "epistemic")]
 pub(super) const CLAIM_VALIDATION_STATE: &str = "unvalidated";
 
-/// This crate's own build version — the `algo_code_version` leg of the universal
-/// writeback-lineage tuple (CONCEPT:MEDULLA-P3-1), mirroring `medulla_jobs::AlgoVersion::code_version`'s
-/// own doc ("the engine build that ran it, e.g. `CARGO_PKG_VERSION`").
+/// The engine release version (from `medulla-version`): the `algo_code_version` leg of
+/// the universal writeback-lineage tuple (CONCEPT:MEDULLA-P3-1), mirroring
+/// `medulla_jobs::AlgoVersion::code_version`'s own doc ("the engine build that ran it").
 #[cfg(feature = "epistemic")]
-pub(super) const ALGO_CODE_VERSION: &str = env!("CARGO_PKG_VERSION");
+pub(super) const ALGO_CODE_VERSION: &str = medulla_version::VERSION;
 
 /// The runtime/feature-set fingerprint the algorithm ran under (CONCEPT:MEDULLA-P3-1) — the
 /// `algo_env_version` leg, mirroring `medulla_jobs::AlgoVersion::env_version`'s own doc. Kept

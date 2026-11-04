@@ -65,9 +65,9 @@ use medulla_protocol_types::protocol::Response;
 use medulla_server_api::carrier::CarrierAuthority;
 use medulla_server_api::state::ServerState;
 
-/// The engine build that ran a job (CONCEPT:INT-P2-1 lineage) — `CARGO_PKG_VERSION`
-/// of the `medulla` facade crate itself.
-const CODE_VERSION: &str = env!("CARGO_PKG_VERSION");
+/// The engine build that ran a job (CONCEPT:INT-P2-1 lineage): the engine release
+/// version from `medulla-version`.
+const CODE_VERSION: &str = medulla_version::VERSION;
 /// Stable runtime/feature contract recorded in result reproducibility lineage.
 const ENV_VERSION: &str = "eg-jobs-v1";
 const MAX_JOB_INPUT_BYTES: usize = 16 * 1024 * 1024;

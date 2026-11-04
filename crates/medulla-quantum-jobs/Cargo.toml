@@ -28,6 +28,7 @@ name = "medulla_quantum_jobs"
 # federation posture, unrelated to this crate) -- step 1 (the plain submit/run/join
 # functions below) needs none of that.
 [dependencies]
+medulla-version = { path = "../medulla-version" }
 medulla-types = { path = "../medulla-types" }
 medulla-jobs = { path = "../medulla-jobs" }
 medulla-quantum-core = { path = "../medulla-quantum-core" }

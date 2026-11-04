@@ -334,7 +334,7 @@ async fn handle_backup(
     }
     match backend.backup(
         &stage,
-        env!("CARGO_PKG_VERSION"),
+        medulla_version::VERSION,
         ts,
         label.as_deref().unwrap_or(""),
         &extra_stores,

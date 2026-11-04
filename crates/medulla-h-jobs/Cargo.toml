@@ -12,6 +12,7 @@ name = "medulla_h_jobs"
 path = "src/lib.rs"
 
 [dependencies]
+medulla-version = { path = "../medulla-version" }
 hex = "0.4"
 medulla-agent-types = { path = "../medulla-agent-types" }
 medulla-capabilities = { path = "../medulla-capabilities" }

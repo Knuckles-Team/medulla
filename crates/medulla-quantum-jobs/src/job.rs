@@ -56,10 +56,10 @@ use crate::circuit;
 pub const QUANTUM_ALGO_FAMILY: &str = "quantum.circuit";
 /// The one workload this crate ships (see `circuit.rs`'s module doc for why).
 pub const GHZ_RANKING_ALGORITHM: &str = "induced_subgraph_ghz";
-/// `medulla-jobs`' own build-lineage placeholder — mirrors the pattern other in-tree job
-/// producers use (a real deployment stamps this from `CARGO_PKG_VERSION`/a git sha at
-/// build time; this crate is a library, not a binary, so it names itself instead).
-const CODE_VERSION: &str = concat!("eg-quantum-jobs/", env!("CARGO_PKG_VERSION"));
+/// The build lineage recorded on a quantum job: this crate's name plus the engine
+/// release version from `medulla-version`.
+static CODE_VERSION: std::sync::LazyLock<String> =
+    std::sync::LazyLock::new(|| format!("eg-quantum-jobs/{}", medulla_version::VERSION));
 const ENV_VERSION: &str = "eg-quantum-sim";
 
 #[derive(Debug, thiserror::Error)]

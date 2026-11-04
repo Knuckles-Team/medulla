@@ -1,0 +1,12 @@
+[package]
+name = "medulla-version"
+version = "3.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "The single engine release version every crate reports (Health, store migration journal, job lineage, backup manifests)."
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_version"
+path = "src/lib.rs"

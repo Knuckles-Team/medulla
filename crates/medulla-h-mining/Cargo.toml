@@ -12,6 +12,7 @@ name = "medulla_h_mining"
 path = "src/lib.rs"
 
 [dependencies]
+medulla-version = { path = "../medulla-version" }
 medulla-h-query = { path = "../medulla-h-query" }
 hex = "0.4"
 medulla-epistemic = { path = "../medulla-epistemic", optional = true }
