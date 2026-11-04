@@ -80,7 +80,7 @@ The engine binary never links a Python extension. The release action folds the
 compiled numeric and engine extensions into the same wheel while preserving the
 server binary's no-PyO3 boundary. The source-build backend also builds and folds
 both extensions through its shared PEP 517/660 composition path; see
-[the source-build amendment](../../specs/public-engine-contract-and-release/plan.md#2026-10-12-source-build-composition-after-engine-parity).
+[the build and package boundaries](../../specs/public-engine-contract-and-release/plan.md#behavior-builds-packages-and-deployments).
 
 ## Cargo `full` and Python `[full]`
 
