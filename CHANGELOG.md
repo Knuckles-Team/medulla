@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [3.1.1] - 2026-11-04 — The engine reports its release version
+
+### Fixed
+- **`Health` reports the release version.** After the crate split every crate carried the
+  placeholder version 0.1.0, so `Health.version`, the store migration journal's
+  `engine_version`, job, mining and quantum-job lineage and backup manifests all said 0.1.0.
+  They now read `medulla_version::VERSION` from the new `medulla-version` crate, whose version
+  the release bump moves with the engine.
+
 ## [3.0.0] - 2026-11-01 — The engine is split into small crates
 
 ### Changed
