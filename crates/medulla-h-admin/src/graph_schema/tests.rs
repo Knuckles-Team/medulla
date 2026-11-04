@@ -466,3 +466,133 @@ fn pack_member_failures_name_the_exact_uri_and_enforce_each_bound() {
     assert!(error.contains("shapes://test/oversized.ttl"));
     assert!(error.contains("TOO_LARGE"));
 }
+
+// spec: MEDULLA-TYPED-PACKS-R053
+/// A pack schema attached to a graph that is not its reserved projection graph
+/// copies a static snapshot: the installed bytes are fixed at attach time, and
+/// later pack head updates -- which only the reserved projection graph follows
+/// -- never enter the snapshot graph.
+#[test]
+fn attach_pack_into_a_spare_graph_copies_a_static_snapshot() {
+    let connector = medulla_types::contract::ResourceId::new("graph-os").unwrap();
+    let v1 = Arc::<str>::from(
+        "@prefix owl: <http://www.w3.org/2002/07/owl#> . @prefix ex: <http://example/> . ex:A a owl:Class .",
+    );
+    let v2 = Arc::<str>::from(
+        "@prefix owl: <http://www.w3.org/2002/07/owl#> . @prefix ex: <http://example/> . ex:A a owl:Class . ex:B a owl:Class .",
+    );
+
+    // The snapshot taken from pack head v1 is installed into a graph other
+    // than the connector's reserved projection graph.
+    let spare = GraphCore::new();
+    apply_pack_source(
+        &spare,
+        "tenant-a-spare",
+        &connector,
+        "pack:graph-os:1:aaaa",
+        Vec::new(),
+        vec![pack_document("ontology://graph-os/a.ttl", Arc::clone(&v1))],
+        None,
+    )
+    .unwrap();
+    let snapshot = spare
+        .schema_sources()
+        .dynamic
+        .get("pack:graph-os")
+        .cloned()
+        .unwrap();
+    let snapshot_digest = spare.schema_sources().composed_digest().to_hex();
+
+    // The pack head moves to v2; the reserved projection graph follows it.
+    let reserved = GraphCore::new();
+    let reserved_name = pack_projection_graph_name("tenant-a", &connector).unwrap();
+    apply_pack_source(
+        &reserved,
+        &reserved_name,
+        &connector,
+        "pack:graph-os:2:bbbb",
+        Vec::new(),
+        vec![pack_document("ontology://graph-os/a.ttl", Arc::clone(&v2))],
+        None,
+    )
+    .unwrap();
+
+    // The snapshot graph still serves the v1 bytes under the v1 record...
+    assert_eq!(
+        spare.schema_sources().composed_digest().to_hex(),
+        snapshot_digest
+    );
+    let still = spare
+        .schema_sources()
+        .dynamic
+        .get("pack:graph-os")
+        .cloned()
+        .unwrap();
+    assert_eq!(still.ontology_ttl, snapshot.ontology_ttl);
+    assert_eq!(
+        still.origin,
+        medulla_graph_core::graph::SchemaSourceOrigin::Pack {
+            connector: "graph-os".to_string(),
+            record_id: "pack:graph-os:1:aaaa".to_string(),
+        }
+    );
+    // ...while the reserved projection graph serves the newer head.
+    let followed = reserved
+        .schema_sources()
+        .dynamic
+        .get("pack:graph-os")
+        .cloned()
+        .unwrap();
+    assert_ne!(followed.ontology_ttl, snapshot.ontology_ttl);
+    // The composed projection is an N-Triples union, so the v2 addition shows
+    // up under its expanded IRI, not the author's `ex:` prefix.
+    assert!(followed.ontology_ttl.unwrap().contains("http://example/B"));
+}
+
+// spec: MEDULLA-TYPED-PACKS-R059
+/// Schema attach validates the staged document and the writes it introduces,
+/// but never scans or revalidates the graph's existing data: a node that
+/// already violates the stricter shape being attached does not block the
+/// attach, while a self-contradicting attached document is refused.
+#[test]
+fn attach_validates_its_own_writes_and_never_scans_existing_data() {
+    let core = GraphCore::new();
+    // An existing graph node that violates the shape being attached: a
+    // `Person` without the `name` the shape requires.
+    core.add_node(
+        "http://example/ada".to_string(),
+        rmp_serde::to_vec_named(&serde_json::json!({
+            "type": "http://example/Person"
+        }))
+        .unwrap(),
+    );
+    let shape = "@prefix sh: <http://www.w3.org/ns/shacl#> . \
+                 @prefix ex: <http://example/> . \
+                 ex:PersonShape a sh:NodeShape ; sh:targetClass ex:Person ; \
+                 sh:property [ sh:path ex:name ; sh:minCount 1 ] .";
+    let attach_strict = GraphSchemaOp::Attach {
+        source_id: "admin:strict".to_string(),
+        shapes_ttl: Some(shape.to_string()),
+        ontology_ttl: None,
+        if_composed_digest: None,
+    };
+    apply(&core, "g", &attach_strict).unwrap();
+    assert!(core.schema_sources().dynamic.contains_key("admin:strict"));
+
+    // Writes the attach introduces are still validated: a self-contradicting
+    // document is refused with the source set unchanged.
+    let before = core.schema_sources();
+    let error = apply(
+        &core,
+        "g",
+        &attach(
+            "admin:bad",
+            "@prefix owl: <http://www.w3.org/2002/07/owl#> . \
+             @prefix ex: <http://example/> . \
+             ex:A a owl:Class ; owl:disjointWith ex:B . ex:B a owl:Class . ex:x a ex:A, ex:B .",
+        ),
+    )
+    .unwrap_err();
+    assert!(error.starts_with("ONTOLOGY_INCONSISTENT"), "{error}");
+    assert_eq!(core.schema_sources(), before);
+}

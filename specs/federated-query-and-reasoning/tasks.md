@@ -458,3 +458,10 @@ Run `cargo run -q --locked -p medulla-capabilities --features contract --bin
 gen_contract` through the governed native lane after source changes. Do not
 hand-edit generated contract artifacts. Keep all R722.3--R722.6 checkboxes
 unchecked until the served SDK/Arbora path and live provenance evidence pass.
+
+## MEDULLA-FEDERATED-QUERY-R058.6 certified answers delivery tasks
+
+- [ ] Add `check_certified_definitions` in `crates/medulla-nlq/src/nl/certified.rs` and call it from the `handle_nl_query_plan` step loop, so an answer that uses a certified `:GlossaryTerm` follows its certified definition and a conflicting answer is refused. **MEDULLA-FEDERATED-QUERY-R058.6**
+- [ ] Add the served `NlQueryCorrect` method and `record_nl_correction`, which records a certified correction as a fact for callers with the `query:nl:certify` scope and grounds later planning. **MEDULLA-FEDERATED-QUERY-R058.7**
+- [ ] Add `rewrite_follow_up` in `crates/medulla-nlq/src/nl/context.rs`, which rewrites a follow-up question with up to `max_history_turns` earlier turns into a standalone question before planning. **MEDULLA-FEDERATED-QUERY-R058.8**
+- [ ] Add `reconcile_term_definitions` and the `TermConflict` fact, which records one conflict per pair of sources that define a term differently and keeps the term uncertified until a certifier resolves it. **MEDULLA-FEDERATED-QUERY-R058.9**

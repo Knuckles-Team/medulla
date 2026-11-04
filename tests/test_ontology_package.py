@@ -24,6 +24,7 @@ def _bare_wheel(path: Path) -> Path:
     return path
 
 
+# spec: MEDULLA-TYPED-PACKS-R081
 def test_api_returns_every_source_file() -> None:
     expected = {p.name: p.read_bytes() for p in SOURCE.glob("*.ttl")}
     assert dict(ontology.files()) == expected

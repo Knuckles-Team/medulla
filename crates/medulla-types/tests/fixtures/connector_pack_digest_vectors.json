@@ -1,0 +1,848 @@
+{
+  "samples": [
+    {
+      "entries": {
+        "mcp://connector-a/entry-0": {
+          "annotations_digest": "2184e78879af1f369b47adac45d9b847eb9c0f9f3f1f87fe53df73140eb0fe82",
+          "entry_digest": "b4cc2669351c89bdbafd632fc5e63efcad92190644b3035c1a291381bb8beed1"
+        },
+        "mcp://connector-a/entry-1": {
+          "annotations_digest": "2184e78879af1f369b47adac45d9b847eb9c0f9f3f1f87fe53df73140eb0fe82",
+          "entry_digest": "81d596ca13681a5b024a676ac83db7bf020783cb943af415a0fbf8964555694d"
+        },
+        "mcp://connector-a/entry-2": {
+          "annotations_digest": "2184e78879af1f369b47adac45d9b847eb9c0f9f3f1f87fe53df73140eb0fe82",
+          "entry_digest": "faf6481e5dd602e714de2f0c83fe2dd49ac0eec0af88e98180da33d51ca81ccf"
+        },
+        "mcp://connector-a/entry-3": {
+          "annotations_digest": "2184e78879af1f369b47adac45d9b847eb9c0f9f3f1f87fe53df73140eb0fe82",
+          "entry_digest": "28d7ec8c88427c03d0175ef60a226290f6e101d90ac1ca31b33f73eadfe7841a"
+        },
+        "mcp://connector-a/entry-4": {
+          "annotations_digest": "2184e78879af1f369b47adac45d9b847eb9c0f9f3f1f87fe53df73140eb0fe82",
+          "entry_digest": "d687b1947e2799b7f58fff575649431c6606b36cb713ec97eaa2122858fb51d7"
+        },
+        "mcp://connector-a/entry-5": {
+          "annotations_digest": "2184e78879af1f369b47adac45d9b847eb9c0f9f3f1f87fe53df73140eb0fe82",
+          "entry_digest": "2ca854e860704491e1a2b3ff41bdd748d3a2facb3cb83fea84e91cf42cca8120"
+        },
+        "mcp://connector-a/entry-6": {
+          "annotations_digest": "2184e78879af1f369b47adac45d9b847eb9c0f9f3f1f87fe53df73140eb0fe82",
+          "entry_digest": "f87643d53f24ece80e3d89de5a0516fb0f8c2cd78dd7445a8f1ff39b4e8c9577"
+        },
+        "mcp://connector-a/entry-7": {
+          "annotations_digest": "2184e78879af1f369b47adac45d9b847eb9c0f9f3f1f87fe53df73140eb0fe82",
+          "entry_digest": "32d6f9c6fbe384545aa5e9bb9bbc00d9868a1f5ee47f62f4eb84e6734bb60641"
+        },
+        "mcp://connector-a/entry-8": {
+          "annotations_digest": "2184e78879af1f369b47adac45d9b847eb9c0f9f3f1f87fe53df73140eb0fe82",
+          "entry_digest": "687be332320a9405ea1bd64a0f9312aef8ef36506c462d3e8d00fd7dad8fd01b"
+        },
+        "mcp://connector-a/entry-9": {
+          "annotations_digest": "2184e78879af1f369b47adac45d9b847eb9c0f9f3f1f87fe53df73140eb0fe82",
+          "entry_digest": "7a07fb4a65845cb31b9b510e8b311c6dbf31a34f4c4d0374f250ac57b95e282e"
+        },
+        "mcp://connector-a/server": {
+          "annotations_digest": "2184e78879af1f369b47adac45d9b847eb9c0f9f3f1f87fe53df73140eb0fe82",
+          "entry_digest": "be337c60eeea7477fe2970931c3de4ada4d30a301aa10bb6aa8d2b49827f4e6d"
+        }
+      },
+      "index": {
+        "archive": {
+          "blob_digest": "sha256:c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4",
+          "length": 4096,
+          "sha256": "c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5"
+        },
+        "catalog": {
+          "authorization_scope_digest": "c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9",
+          "catalog_generation": 11,
+          "child_connection_generation": 3,
+          "configuration_revision": 7,
+          "snapshot_digest": "c8c8c8c8c8c8c8c8c8c8c8c8c8c8c8c8c8c8c8c8c8c8c8c8c8c8c8c8c8c8c8c8"
+        },
+        "connector": "connector-a",
+        "entries": [
+          {
+            "annotations": {
+              "contract_version": "1.4.0",
+              "cost": {
+                "currency": "USD",
+                "input_per_mtok_micros": 300000,
+                "output_per_mtok_micros": null,
+                "per_call_micros": 2500
+              },
+              "destructive_hint": false,
+              "idempotent_hint": null,
+              "latency_declared": {
+                "p50_ms": 120,
+                "p95_ms": 900
+              },
+              "modalities_in": [
+                "eg:modality/text"
+              ],
+              "modalities_out": [
+                "eg:modality/text"
+              ],
+              "model": {
+                "context_window_tokens": 128000,
+                "max_output_tokens": 8192,
+                "model_identity": "vendor/model-1",
+                "provider": "vendor",
+                "supports_structured_output": true,
+                "supports_tools": true,
+                "supports_vision": false
+              },
+              "open_world_hint": true,
+              "provides": [
+                "eg:capability/retrieval"
+              ],
+              "read_only_hint": true,
+              "required_scopes": [
+                "kg:read"
+              ],
+              "requires_capabilities": [
+                "eg:capability/action"
+              ],
+              "sdk_contract_pin": "sdk-d18-1",
+              "tool_mode": "condensed"
+            },
+            "body": {
+              "length": 128,
+              "offset": 0,
+              "sha256": "c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1"
+            },
+            "input_schema": {
+              "length": 128,
+              "offset": 128,
+              "sha256": "c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2"
+            },
+            "kind": "tool",
+            "media_type": "application/json",
+            "name": "entry-0",
+            "output_schema": {
+              "length": 128,
+              "offset": 256,
+              "sha256": "c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3"
+            },
+            "references": [
+              {
+                "kind": "mcp_server",
+                "uri": "mcp://connector-a/server"
+              }
+            ],
+            "uri": "mcp://connector-a/entry-0"
+          },
+          {
+            "annotations": {
+              "contract_version": "1.4.0",
+              "cost": {
+                "currency": "USD",
+                "input_per_mtok_micros": 300000,
+                "output_per_mtok_micros": null,
+                "per_call_micros": 2500
+              },
+              "destructive_hint": false,
+              "idempotent_hint": null,
+              "latency_declared": {
+                "p50_ms": 120,
+                "p95_ms": 900
+              },
+              "modalities_in": [
+                "eg:modality/text"
+              ],
+              "modalities_out": [
+                "eg:modality/text"
+              ],
+              "model": {
+                "context_window_tokens": 128000,
+                "max_output_tokens": 8192,
+                "model_identity": "vendor/model-1",
+                "provider": "vendor",
+                "supports_structured_output": true,
+                "supports_tools": true,
+                "supports_vision": false
+              },
+              "open_world_hint": true,
+              "provides": [
+                "eg:capability/retrieval"
+              ],
+              "read_only_hint": true,
+              "required_scopes": [
+                "kg:read"
+              ],
+              "requires_capabilities": [
+                "eg:capability/action"
+              ],
+              "sdk_contract_pin": "sdk-d18-1",
+              "tool_mode": "condensed"
+            },
+            "body": {
+              "length": 128,
+              "offset": 0,
+              "sha256": "c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1"
+            },
+            "input_schema": {
+              "length": 128,
+              "offset": 128,
+              "sha256": "c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2"
+            },
+            "kind": "skill",
+            "media_type": "application/json",
+            "name": "entry-1",
+            "output_schema": {
+              "length": 128,
+              "offset": 256,
+              "sha256": "c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3"
+            },
+            "references": [
+              {
+                "kind": "mcp_server",
+                "uri": "mcp://connector-a/server"
+              }
+            ],
+            "uri": "mcp://connector-a/entry-1"
+          },
+          {
+            "annotations": {
+              "contract_version": "1.4.0",
+              "cost": {
+                "currency": "USD",
+                "input_per_mtok_micros": 300000,
+                "output_per_mtok_micros": null,
+                "per_call_micros": 2500
+              },
+              "destructive_hint": false,
+              "idempotent_hint": null,
+              "latency_declared": {
+                "p50_ms": 120,
+                "p95_ms": 900
+              },
+              "modalities_in": [
+                "eg:modality/text"
+              ],
+              "modalities_out": [
+                "eg:modality/text"
+              ],
+              "model": {
+                "context_window_tokens": 128000,
+                "max_output_tokens": 8192,
+                "model_identity": "vendor/model-1",
+                "provider": "vendor",
+                "supports_structured_output": true,
+                "supports_tools": true,
+                "supports_vision": false
+              },
+              "open_world_hint": true,
+              "provides": [
+                "eg:capability/retrieval"
+              ],
+              "read_only_hint": true,
+              "required_scopes": [
+                "kg:read"
+              ],
+              "requires_capabilities": [
+                "eg:capability/action"
+              ],
+              "sdk_contract_pin": "sdk-d18-1",
+              "tool_mode": "condensed"
+            },
+            "body": {
+              "length": 128,
+              "offset": 0,
+              "sha256": "c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1"
+            },
+            "input_schema": {
+              "length": 128,
+              "offset": 128,
+              "sha256": "c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2"
+            },
+            "kind": "prompt",
+            "media_type": "application/json",
+            "name": "entry-2",
+            "output_schema": {
+              "length": 128,
+              "offset": 256,
+              "sha256": "c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3"
+            },
+            "references": [
+              {
+                "kind": "mcp_server",
+                "uri": "mcp://connector-a/server"
+              }
+            ],
+            "uri": "mcp://connector-a/entry-2"
+          },
+          {
+            "annotations": {
+              "contract_version": "1.4.0",
+              "cost": {
+                "currency": "USD",
+                "input_per_mtok_micros": 300000,
+                "output_per_mtok_micros": null,
+                "per_call_micros": 2500
+              },
+              "destructive_hint": false,
+              "idempotent_hint": null,
+              "latency_declared": {
+                "p50_ms": 120,
+                "p95_ms": 900
+              },
+              "modalities_in": [
+                "eg:modality/text"
+              ],
+              "modalities_out": [
+                "eg:modality/text"
+              ],
+              "model": {
+                "context_window_tokens": 128000,
+                "max_output_tokens": 8192,
+                "model_identity": "vendor/model-1",
+                "provider": "vendor",
+                "supports_structured_output": true,
+                "supports_tools": true,
+                "supports_vision": false
+              },
+              "open_world_hint": true,
+              "provides": [
+                "eg:capability/retrieval"
+              ],
+              "read_only_hint": true,
+              "required_scopes": [
+                "kg:read"
+              ],
+              "requires_capabilities": [
+                "eg:capability/action"
+              ],
+              "sdk_contract_pin": "sdk-d18-1",
+              "tool_mode": "condensed"
+            },
+            "body": {
+              "length": 128,
+              "offset": 0,
+              "sha256": "c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1"
+            },
+            "input_schema": {
+              "length": 128,
+              "offset": 128,
+              "sha256": "c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2"
+            },
+            "kind": "resource",
+            "media_type": "application/json",
+            "name": "entry-3",
+            "output_schema": {
+              "length": 128,
+              "offset": 256,
+              "sha256": "c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3"
+            },
+            "references": [
+              {
+                "kind": "mcp_server",
+                "uri": "mcp://connector-a/server"
+              }
+            ],
+            "uri": "mcp://connector-a/entry-3"
+          },
+          {
+            "annotations": {
+              "contract_version": "1.4.0",
+              "cost": {
+                "currency": "USD",
+                "input_per_mtok_micros": 300000,
+                "output_per_mtok_micros": null,
+                "per_call_micros": 2500
+              },
+              "destructive_hint": false,
+              "idempotent_hint": null,
+              "latency_declared": {
+                "p50_ms": 120,
+                "p95_ms": 900
+              },
+              "modalities_in": [
+                "eg:modality/text"
+              ],
+              "modalities_out": [
+                "eg:modality/text"
+              ],
+              "model": {
+                "context_window_tokens": 128000,
+                "max_output_tokens": 8192,
+                "model_identity": "vendor/model-1",
+                "provider": "vendor",
+                "supports_structured_output": true,
+                "supports_tools": true,
+                "supports_vision": false
+              },
+              "open_world_hint": true,
+              "provides": [
+                "eg:capability/retrieval"
+              ],
+              "read_only_hint": true,
+              "required_scopes": [
+                "kg:read"
+              ],
+              "requires_capabilities": [
+                "eg:capability/action"
+              ],
+              "sdk_contract_pin": "sdk-d18-1",
+              "tool_mode": "condensed"
+            },
+            "body": {
+              "length": 128,
+              "offset": 0,
+              "sha256": "c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1"
+            },
+            "input_schema": {
+              "length": 128,
+              "offset": 128,
+              "sha256": "c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2"
+            },
+            "kind": "resource_template",
+            "media_type": "application/json",
+            "name": "entry-4",
+            "output_schema": {
+              "length": 128,
+              "offset": 256,
+              "sha256": "c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3"
+            },
+            "references": [
+              {
+                "kind": "mcp_server",
+                "uri": "mcp://connector-a/server"
+              }
+            ],
+            "uri": "mcp://connector-a/entry-4"
+          },
+          {
+            "annotations": {
+              "contract_version": "1.4.0",
+              "cost": {
+                "currency": "USD",
+                "input_per_mtok_micros": 300000,
+                "output_per_mtok_micros": null,
+                "per_call_micros": 2500
+              },
+              "destructive_hint": false,
+              "idempotent_hint": null,
+              "latency_declared": {
+                "p50_ms": 120,
+                "p95_ms": 900
+              },
+              "modalities_in": [
+                "eg:modality/text"
+              ],
+              "modalities_out": [
+                "eg:modality/text"
+              ],
+              "model": {
+                "context_window_tokens": 128000,
+                "max_output_tokens": 8192,
+                "model_identity": "vendor/model-1",
+                "provider": "vendor",
+                "supports_structured_output": true,
+                "supports_tools": true,
+                "supports_vision": false
+              },
+              "open_world_hint": true,
+              "provides": [
+                "eg:capability/retrieval"
+              ],
+              "read_only_hint": true,
+              "required_scopes": [
+                "kg:read"
+              ],
+              "requires_capabilities": [
+                "eg:capability/action"
+              ],
+              "sdk_contract_pin": "sdk-d18-1",
+              "tool_mode": "condensed"
+            },
+            "body": {
+              "length": 128,
+              "offset": 0,
+              "sha256": "c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1"
+            },
+            "input_schema": {
+              "length": 128,
+              "offset": 128,
+              "sha256": "c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2"
+            },
+            "kind": "ontology",
+            "media_type": "application/json",
+            "name": "entry-5",
+            "output_schema": {
+              "length": 128,
+              "offset": 256,
+              "sha256": "c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3"
+            },
+            "references": [
+              {
+                "kind": "mcp_server",
+                "uri": "mcp://connector-a/server"
+              }
+            ],
+            "uri": "mcp://connector-a/entry-5"
+          },
+          {
+            "annotations": {
+              "contract_version": "1.4.0",
+              "cost": {
+                "currency": "USD",
+                "input_per_mtok_micros": 300000,
+                "output_per_mtok_micros": null,
+                "per_call_micros": 2500
+              },
+              "destructive_hint": false,
+              "idempotent_hint": null,
+              "latency_declared": {
+                "p50_ms": 120,
+                "p95_ms": 900
+              },
+              "modalities_in": [
+                "eg:modality/text"
+              ],
+              "modalities_out": [
+                "eg:modality/text"
+              ],
+              "model": {
+                "context_window_tokens": 128000,
+                "max_output_tokens": 8192,
+                "model_identity": "vendor/model-1",
+                "provider": "vendor",
+                "supports_structured_output": true,
+                "supports_tools": true,
+                "supports_vision": false
+              },
+              "open_world_hint": true,
+              "provides": [
+                "eg:capability/retrieval"
+              ],
+              "read_only_hint": true,
+              "required_scopes": [
+                "kg:read"
+              ],
+              "requires_capabilities": [
+                "eg:capability/action"
+              ],
+              "sdk_contract_pin": "sdk-d18-1",
+              "tool_mode": "condensed"
+            },
+            "body": {
+              "length": 128,
+              "offset": 0,
+              "sha256": "c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1"
+            },
+            "input_schema": {
+              "length": 128,
+              "offset": 128,
+              "sha256": "c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2"
+            },
+            "kind": "shapes",
+            "media_type": "application/json",
+            "name": "entry-6",
+            "output_schema": {
+              "length": 128,
+              "offset": 256,
+              "sha256": "c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3"
+            },
+            "references": [
+              {
+                "kind": "mcp_server",
+                "uri": "mcp://connector-a/server"
+              }
+            ],
+            "uri": "mcp://connector-a/entry-6"
+          },
+          {
+            "annotations": {
+              "contract_version": "1.4.0",
+              "cost": {
+                "currency": "USD",
+                "input_per_mtok_micros": 300000,
+                "output_per_mtok_micros": null,
+                "per_call_micros": 2500
+              },
+              "destructive_hint": false,
+              "idempotent_hint": null,
+              "latency_declared": {
+                "p50_ms": 120,
+                "p95_ms": 900
+              },
+              "modalities_in": [
+                "eg:modality/text"
+              ],
+              "modalities_out": [
+                "eg:modality/text"
+              ],
+              "model": {
+                "context_window_tokens": 128000,
+                "max_output_tokens": 8192,
+                "model_identity": "vendor/model-1",
+                "provider": "vendor",
+                "supports_structured_output": true,
+                "supports_tools": true,
+                "supports_vision": false
+              },
+              "open_world_hint": true,
+              "provides": [
+                "eg:capability/retrieval"
+              ],
+              "read_only_hint": true,
+              "required_scopes": [
+                "kg:read"
+              ],
+              "requires_capabilities": [
+                "eg:capability/action"
+              ],
+              "sdk_contract_pin": "sdk-d18-1",
+              "tool_mode": "condensed"
+            },
+            "body": {
+              "length": 128,
+              "offset": 0,
+              "sha256": "c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1"
+            },
+            "input_schema": {
+              "length": 128,
+              "offset": 128,
+              "sha256": "c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2"
+            },
+            "kind": "model_profile",
+            "media_type": "application/json",
+            "name": "entry-7",
+            "output_schema": {
+              "length": 128,
+              "offset": 256,
+              "sha256": "c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3"
+            },
+            "references": [
+              {
+                "kind": "mcp_server",
+                "uri": "mcp://connector-a/server"
+              }
+            ],
+            "uri": "mcp://connector-a/entry-7"
+          },
+          {
+            "annotations": {
+              "contract_version": "1.4.0",
+              "cost": {
+                "currency": "USD",
+                "input_per_mtok_micros": 300000,
+                "output_per_mtok_micros": null,
+                "per_call_micros": 2500
+              },
+              "destructive_hint": false,
+              "idempotent_hint": null,
+              "latency_declared": {
+                "p50_ms": 120,
+                "p95_ms": 900
+              },
+              "modalities_in": [
+                "eg:modality/text"
+              ],
+              "modalities_out": [
+                "eg:modality/text"
+              ],
+              "model": {
+                "context_window_tokens": 128000,
+                "max_output_tokens": 8192,
+                "model_identity": "vendor/model-1",
+                "provider": "vendor",
+                "supports_structured_output": true,
+                "supports_tools": true,
+                "supports_vision": false
+              },
+              "open_world_hint": true,
+              "provides": [
+                "eg:capability/retrieval"
+              ],
+              "read_only_hint": true,
+              "required_scopes": [
+                "kg:read"
+              ],
+              "requires_capabilities": [
+                "eg:capability/action"
+              ],
+              "sdk_contract_pin": "sdk-d18-1",
+              "tool_mode": "condensed"
+            },
+            "body": {
+              "length": 128,
+              "offset": 0,
+              "sha256": "c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1"
+            },
+            "input_schema": {
+              "length": 128,
+              "offset": 128,
+              "sha256": "c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2"
+            },
+            "kind": "a2a_card",
+            "media_type": "application/json",
+            "name": "entry-8",
+            "output_schema": {
+              "length": 128,
+              "offset": 256,
+              "sha256": "c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3"
+            },
+            "references": [
+              {
+                "kind": "mcp_server",
+                "uri": "mcp://connector-a/server"
+              }
+            ],
+            "uri": "mcp://connector-a/entry-8"
+          },
+          {
+            "annotations": {
+              "contract_version": "1.4.0",
+              "cost": {
+                "currency": "USD",
+                "input_per_mtok_micros": 300000,
+                "output_per_mtok_micros": null,
+                "per_call_micros": 2500
+              },
+              "destructive_hint": false,
+              "idempotent_hint": null,
+              "latency_declared": {
+                "p50_ms": 120,
+                "p95_ms": 900
+              },
+              "modalities_in": [
+                "eg:modality/text"
+              ],
+              "modalities_out": [
+                "eg:modality/text"
+              ],
+              "model": {
+                "context_window_tokens": 128000,
+                "max_output_tokens": 8192,
+                "model_identity": "vendor/model-1",
+                "provider": "vendor",
+                "supports_structured_output": true,
+                "supports_tools": true,
+                "supports_vision": false
+              },
+              "open_world_hint": true,
+              "provides": [
+                "eg:capability/retrieval"
+              ],
+              "read_only_hint": true,
+              "required_scopes": [
+                "kg:read"
+              ],
+              "requires_capabilities": [
+                "eg:capability/action"
+              ],
+              "sdk_contract_pin": "sdk-d18-1",
+              "tool_mode": "condensed"
+            },
+            "body": {
+              "length": 128,
+              "offset": 0,
+              "sha256": "c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1"
+            },
+            "input_schema": {
+              "length": 128,
+              "offset": 128,
+              "sha256": "c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2"
+            },
+            "kind": "skill_file",
+            "media_type": "application/json",
+            "name": "entry-9",
+            "output_schema": {
+              "length": 128,
+              "offset": 256,
+              "sha256": "c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3"
+            },
+            "references": [
+              {
+                "kind": "mcp_server",
+                "uri": "mcp://connector-a/server"
+              }
+            ],
+            "uri": "mcp://connector-a/entry-9"
+          }
+        ],
+        "pack_digest": "c6c6c6c6c6c6c6c6c6c6c6c6c6c6c6c6c6c6c6c6c6c6c6c6c6c6c6c6c6c6c6c6",
+        "producer": {
+          "name": "agent-packages",
+          "version": "0.9.0"
+        },
+        "schema_version": 2,
+        "server": {
+          "annotations": {
+            "contract_version": "1.4.0",
+            "cost": {
+              "currency": "USD",
+              "input_per_mtok_micros": 300000,
+              "output_per_mtok_micros": null,
+              "per_call_micros": 2500
+            },
+            "destructive_hint": false,
+            "idempotent_hint": null,
+            "latency_declared": {
+              "p50_ms": 120,
+              "p95_ms": 900
+            },
+            "modalities_in": [
+              "eg:modality/text"
+            ],
+            "modalities_out": [
+              "eg:modality/text"
+            ],
+            "model": {
+              "context_window_tokens": 128000,
+              "max_output_tokens": 8192,
+              "model_identity": "vendor/model-1",
+              "provider": "vendor",
+              "supports_structured_output": true,
+              "supports_tools": true,
+              "supports_vision": false
+            },
+            "open_world_hint": true,
+            "provides": [
+              "eg:capability/retrieval"
+            ],
+            "read_only_hint": true,
+            "required_scopes": [
+              "kg:read"
+            ],
+            "requires_capabilities": [
+              "eg:capability/action"
+            ],
+            "sdk_contract_pin": "sdk-d18-1",
+            "tool_mode": "condensed"
+          },
+          "body": {
+            "length": 128,
+            "offset": 0,
+            "sha256": "c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1"
+          },
+          "input_schema": {
+            "length": 128,
+            "offset": 128,
+            "sha256": "c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2"
+          },
+          "kind": "mcp_server",
+          "media_type": "application/json",
+          "name": "server",
+          "output_schema": {
+            "length": 128,
+            "offset": 256,
+            "sha256": "c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3"
+          },
+          "references": [
+            {
+              "kind": "mcp_server",
+              "uri": "mcp://connector-a/server"
+            }
+          ],
+          "uri": "mcp://connector-a/server"
+        },
+        "server_package_version": "2.3.1"
+      },
+      "name": "contract_pack_index",
+      "pack_digest": "bf379d4af75cc24a6b8c1edb46abc5747390d9e5758ea3ea98e79ad5ed46a286"
+    }
+  ]
+}
