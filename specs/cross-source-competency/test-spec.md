@@ -30,3 +30,10 @@ Focused `cargo test` for `medulla-rdf`, `medulla-types` and `medulla-core` ontol
 | Contradiction decay analysis | `MEDULLA-CQ-XSRC-R009.3` | `tests/test_cq_xsrc_r009.py::test_agent_claims_against_report_one_plan` |
 | Served acceptance through arbora | `MEDULLA-CQ-XSRC-R009.4` | `tests/test_cq_xsrc_r009.py::test_agent_claims_against_report_one_plan` |
 | Refusal | `MEDULLA-CQ-XSRC-R009.5` | `tests/test_cq_xsrc_r009.py::test_unknown_report_refuses` |
+
+## Virtual mapping fixtures (2026-11-03)
+
+| Case | Requirement | Proving test |
+|---|---|---|
+| Virtual mapping fixture: erpnext supplier table to `:Supplier` | `MEDULLA-CQ-XSRC-R002.7` | `crates/medulla-core/tests/xsrc_mappings.rs::erpnext_mapping_passes_r037_shapes` |
+| Virtual mapping fixture: container-manager workload to `:Service` and `:ContainerImage` | `MEDULLA-CQ-XSRC-R003.5` | `crates/medulla-core/tests/xsrc_mappings.rs::container_manager_mapping_passes_r037_shapes` |
