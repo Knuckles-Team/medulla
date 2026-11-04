@@ -63,7 +63,6 @@ medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-s
 medulla-decision-types = { path = "../medulla-decision-types", features = ["test-support"] }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
 tempfile = "3"
-serde_json = "1.0.154"
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
 
 [features]
@@ -160,6 +159,8 @@ asr-native = ["medulla-types/asr-native", "medulla-protocol-types/asr-native"]
 viz = ["medulla-types/viz", "medulla-protocol-types/viz"]
 
 [dependencies]
+# The served method catalog (MEDULLA-CONTRACT-R057) renders as JSON.
+serde_json = "1.0.154"
 medulla-decision-types = { path = "../medulla-decision-types", features = ["wire-contract"] }
 medulla-catalog-types = { path = "../medulla-catalog-types", features = ["wire-contract"] }
 medulla-agent-types = { path = "../medulla-agent-types", features = ["wire-contract"] }

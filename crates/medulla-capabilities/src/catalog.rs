@@ -54,9 +54,86 @@ pub fn method_schema(method_id: &str) -> Option<(&'static str, [u8; 32])> {
     catalog().rows.get(method_id).copied()
 }
 
+/// The served method catalog as JSON (MEDULLA-CONTRACT-R057): every descriptor row and
+/// every registered scope, computed from [`crate::method_descriptors`] and the scope
+/// registry each call. Nothing is generated or written; consumers bind to this.
+pub fn catalog_json() -> String {
+    let methods: Vec<serde_json::Value> = crate::method_descriptors()
+        .map(|d| {
+            serde_json::json!({
+                "id": d.id.as_str(),
+                "domain": d.domain,
+                "is_wire_callable": d.stability != crate::Stability::Internal
+                    && !d.consumer_profiles.is_empty(),
+                "error_set": d.error_set,
+                "policy": {
+                    "mutates": d.policy.mutates,
+                    "durability_domain": format!("{:?}", d.policy.durability_domain),
+                    "authz_action": d.policy.authz_action,
+                    "idempotent": d.policy.idempotent,
+                    "audited": d.policy.audited,
+                    "emits_cdc": d.policy.emits_cdc,
+                    "txn_participation": format!("{:?}", d.policy.txn_participation),
+                },
+                "replay_class": format!("{:?}", d.replay_class),
+                "consumer_profiles": d
+                    .consumer_profiles
+                    .iter()
+                    .map(|p| p.as_str())
+                    .collect::<Vec<_>>(),
+                "stability": d.stability.as_str(),
+                "note": d.note,
+            })
+        })
+        .collect();
+    let scopes: Vec<serde_json::Value> = crate::scopes::SCOPES
+        .iter()
+        .map(|entry| {
+            let group = crate::scopes::APPROVER_GROUPS
+                .iter()
+                .find(|(scope, _)| *scope == entry.scope)
+                .map(|(_, group)| *group);
+            serde_json::json!({
+                "scope": entry.scope,
+                "class": crate::scopes::class_name(entry.class),
+                "owner": entry.owner,
+                "approver_group": group,
+            })
+        })
+        .collect();
+    serde_json::json!({
+        "catalog_digest": contract_catalog_digest(),
+        "methods": methods,
+        "scopes": scopes,
+    })
+    .to_string()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // spec: MEDULLA-CONTRACT-R057
+    #[test]
+    fn the_served_catalog_lists_every_method_under_a_registered_scope() {
+        let catalog: serde_json::Value =
+            serde_json::from_str(&catalog_json()).expect("catalog is JSON");
+        let methods = catalog["methods"].as_array().expect("methods");
+        assert_eq!(methods.len(), crate::method_descriptors().count());
+        assert_eq!(catalog["catalog_digest"], contract_catalog_digest());
+        let scopes: std::collections::BTreeSet<&str> = catalog["scopes"]
+            .as_array()
+            .expect("scopes")
+            .iter()
+            .map(|s| s["scope"].as_str().expect("scope name"))
+            .collect();
+        assert!(!scopes.is_empty());
+        for method in methods {
+            let action = method["policy"]["authz_action"].as_str().expect("action");
+            assert!(scopes.contains(action), "{} names unregistered scope {action}", method["id"]);
+        }
+        assert!(methods.iter().any(|m| m["is_wire_callable"] == true));
+    }
 
     #[test]
     fn every_descriptor_has_a_catalog_row() {
