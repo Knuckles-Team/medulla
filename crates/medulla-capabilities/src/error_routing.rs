@@ -126,9 +126,14 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     // Local-only authority: a clustered server refuses it with the typed
     // `LOCAL_ONLY_CLUSTER_REFUSAL` (server-mutation) instead of proposing it.
     ("SqlSourceBatch", &["CLUSTER_MUTATION_UNAVAILABLE"]),
+    // MEDULLA-TYPED-PACKS-R041: a caller-minted pack-reserved component id.
     (
         "AgentComponent",
-        &["COMPONENT_WITHDRAWN", "MALFORMED_GUARDRAIL_RULE"],
+        &[
+            "COMPONENT_WITHDRAWN",
+            "MALFORMED_GUARDRAIL_RULE",
+            "RESERVED_COMPONENT_ID",
+        ],
     ),
     (
         "GuardrailEntailment",
@@ -445,6 +450,18 @@ mod tests {
         assert!(method_allows_error("AgentComponent", "COMPONENT_WITHDRAWN"));
         for other in ["CreateGraph", "GetNodes", "GuardrailEntailment"] {
             assert!(!method_allows_error(other, "COMPONENT_WITHDRAWN"));
+        }
+    }
+
+    // spec: MEDULLA-TYPED-PACKS-R041
+    #[test]
+    fn reserved_component_id_refusal_is_declared_for_component_writes() {
+        assert!(method_allows_error(
+            "AgentComponent",
+            "RESERVED_COMPONENT_ID"
+        ));
+        for other in ["CreateGraph", "GetNodes", "GuardrailEntailment"] {
+            assert!(!method_allows_error(other, "RESERVED_COMPONENT_ID"));
         }
     }
 
