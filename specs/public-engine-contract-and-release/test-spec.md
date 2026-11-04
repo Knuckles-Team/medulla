@@ -34,11 +34,11 @@ The `engine-main-wheel` job runs `scripts/release_wheel_smoke.sh` on the built w
 - The test refuses a string `resolved`, duplicate exclusions and a blank bundle id.
 - `gen_contract --check` regenerates the Python models byte for byte.
 
-## MEDULLA-CONTRACT-R031 quality-gate evidence boundaries
+## Quality-gate evidence boundaries
 
 R031.1 uses tests/test_ci_change_scope.py::test_lint_installs_manifest_rustfmt_before_all_formatting_steps to assert unconditional manifest-resolved provisioning before both formatting paths. Run it alongside tests/test_rustfmt_scope.py. It is setup coverage only.
 
-R031.2 remains unbound until maintainers publish the full same-tree complexity, duplication, dependency, architecture and documentation censuses. They must also publish independent clippy and formatting evidence. A static workflow assertion cannot qualify those runtime checks.
+The same-tree complexity, duplication, dependency, architecture and documentation censuses, and the independent clippy and formatting evidence, now belong to MEDULLA-SDLC (MEDULLA-SDLC-R008); they are no longer tracked in this spec.
 
 ## Current architecture documentation checks
 
