@@ -1221,6 +1221,10 @@ jobs:
           # `not(feature = "blob")` twin; build the server without the blob store so
           # that twin cannot rot unnoticed.
           - { name: 'server-redb-no-blob', flags: '--no-default-features --features "graph,algorithms,metrics,server,redb"' }
+          # MEDULLA-CONTRACT-R033: the jobs handler crate's program-result
+          # governance module is gated behind `program-optimization`; build the
+          # crate with `jobs` alone so an ungated import cannot rot unnoticed.
+          - { name: 'crate-medulla-h-jobs-jobs', flags: '-p medulla-h-jobs --no-default-features --features jobs' }
     steps:
       - *medulla-gates-checkout
       - *medulla-gates-toolchain

@@ -196,7 +196,6 @@ mod mine_associate_submission_tests {
                             31
                         );
                     }
-                    #[cfg(feature = "program-optimization")]
                     JobKind::ProgramOptimize { .. } => panic!("expected association job"),
                 }
             } else {
@@ -229,7 +228,6 @@ mod mine_associate_submission_tests {
                 assert!(transactions[0][0].starts_with("eg:analytics_item:"));
                 assert_ne!(transactions[0][0], "raw-label");
             }
-            #[cfg(feature = "program-optimization")]
             JobKind::ProgramOptimize { .. } => panic!("expected association job"),
         }
     }
