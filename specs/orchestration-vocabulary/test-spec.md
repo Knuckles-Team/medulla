@@ -4,7 +4,7 @@ Positive: each term resolves and the reasoner stays consistent. Each Q1-Q7 query
 
 Assembly-kind acceptance: a verifier-constrained slot excludes an executor-only candidate, accepts a visible verifier, and yields typed abstention without one.
 
-Harness run-trace acceptance: a valid trace per termination reason round-trips through the client and `AddNode`. The engine refuses a negative counter, an unknown reason, and a peak above budget without `context_overflow`. The engine refuses a measured fact without evaluation-run evidence. A newer measurement supersedes an older one, and the older one stays readable. Competency question: for model M on task class C, `harness_best_config` returns the configuration with the lowest cost per solved task. It returns its trace ids and abstains below the sample floor.
+Harness run-trace acceptance: a valid trace per termination reason round-trips through the client and `AddNode`. The engine refuses a negative counter, an unknown reason, and a peak above budget without `context_overflow`. The engine refuses a measured fact without evaluation-run evidence. A newer measurement supersedes an older one, and the older one stays readable. The `harness_config_evidence` statement returns the cost-per-solved-task rows with their trace ids and marks configurations below the `harness.min_traces_per_config` knob as insufficient; the selection of the cheapest configuration is MEDULLA-DECISION-ENGINE-R128.
 Spec-folder mapping: a fixture folder through `IndexRepository` yields one node of each kind. An unknown file is refused and stored as a plain document. Every node names its deciding rule.
 
 ### MEDULLA-ORCH-VOCAB-R013 tests
@@ -21,11 +21,9 @@ Spec-folder mapping: a fixture folder through `IndexRepository` yields one node 
 
 All targets below are planned acceptance, no test or receipt has run. Use the real producer/consumer boundary named for each row and retain existing covered behavior.
 
-- **`MEDULLA-ORCH-VOCAB-R009.18` / AU:26; source `8d2f83f788c5fdd36c4dc47f85c9f7673393b6b9075dc46a5ac1c32afd2386e2`:** Planned served acceptance `run_observations_change_model_and_width_with_trace`. Exercise run_observations_change_model_and_width_with_trace through real Meristem routing/continuation and served Medulla Decide. Use identical budgets and controlled latency/cost/error windows. Demonstrate policy-directed model/width changes and budget-forced refusal/stop. Read back exact before/after trace facts. Reject stale windows and invalid rates/denominators. Keep unknown values unknown. Show width narrowing releases capacity. Reject mid-run widening. Host-only AIMD or model-only allocator tests do not pass. Owner wiring and holds are defined in `requirements.md`. No test, served readback, receipt, implementation, or closure is claimed.
+- **`MEDULLA-ORCH-VOCAB-R009.18` / AU:26; source `8d2f83f788c5fdd36c4dc47f85c9f7673393b6b9075dc46a5ac1c32afd2386e2`:** Planned served acceptance for the observation window store: ingest a revisioned window, read back the before/after trace facts with unknowns preserved, and refuse stale or conflicting windows. The joint model/width decision acceptance (`run_observations_change_model_and_width_with_trace`) belongs to MEDULLA-DECISION-ENGINE-R158; host-only AIMD or model-only allocator tests do not pass it. Owner wiring and holds are defined in `requirements.md`. No test, served readback, receipt, implementation, or closure is claimed.
 
 - **`MEDULLA-ORCH-VOCAB-R013.7` / AU:115:** Source-pinned `CodeWalkthroughV1` manifest and exact AddNode/UQL/artifact readback/refusal cases as named in requirements.md. Meristem producer schema/receipt and Overstory artifact-consumer owner IDs remain pending; no producer test is credited.
-
-- **`MEDULLA-ORCH-VOCAB-R003.8` / EG:12:** Require successful-run promotion. Test pinned similarity policy and exact signature/schema/topology eligibility. Test Jaccard score and stable tie break. Refuse stale or malformed handler metadata. Test served `graph.assemble` reuse with R036 certificate. Exact future test names and paths are in `requirements.md`; no implementation evidence is claimed.
 
 - **`MEDULLA-ORCH-VOCAB-R012.7` / EG:46; source `9de4d3274232cb97a9a85ad17ea20b368fff1bd729bdb4e7b2799991da106c58`:** Planned served acceptance `repository_policy_is_synthesized_guarded_and_used`. Exercise repository_policy_is_synthesized_guarded_and_used with real IndexRepository input. Inspect typed candidates/spans. Review the exact digest. Activate through owner path. The served decision SHALL prove active-rule use. A conflicting rule names the invariant and preserves prior active revision. Test unparsed prose, missing review, changed source digest, and invariant-generation race. Classification and direct helper-only tests do not pass. Owner wiring and holds are defined in `requirements.md`. No test, served readback, receipt, implementation, or closure is claimed.
 
@@ -39,7 +37,7 @@ All targets below are planned acceptance, no test or receipt has run. Use the re
 
 No test named here has run; names describe acceptance obligations, not evidence.
 
-- **`MEDULLA-ORCH-VOCAB-R005.100` (AU:33; source `1a32741b0a97f0c31cd1a3df4ea31d6eee0069c62c3487c0d8057b1ced4b6cf4`):** Served case: a secret undeclared nested field and declared sibling enter the workflow. Worker receives only declared projection. Coordinator can still synthesize typed outputs. Unknown paths, stale schema, and unauthorized fields refuse before dispatch. Preserve R020 result and schema refusal. Medulla declares projection/shield policy. Meristem `_dispatch_parallel_batch`/processor applies projection before tools. DTO extra-field rejection is not projection. Require exact revision, IO digests, caller, and independent readback as specified. Planned only.
+- **`MEDULLA-ORCH-VOCAB-R005.100` (AU:33; source `1a32741b0a97f0c31cd1a3df4ea31d6eee0069c62c3487c0d8057b1ced4b6cf4`):** Served case: Medulla declares the nested-input schema (`SourceSlotMap` per declared field) and binds the `projected_digest`; Meristem applies the projection before dispatch (MERISTEM-HARNESS-CYCLE-R069). Worker receives only the declared projection. A secret undeclared nested field never reaches the worker, and a stale schema refuses with `SHIELD_SCHEMA_STALE` before dispatch. DTO extra-field rejection is not projection. Require exact revision, IO digests, caller, and independent readback as specified. Planned only.
 
 - **`MEDULLA-ORCH-VOCAB-R009.100` (AU:60; source `5d53cbdda932456b27c6649360c3051d4ab09f2db42018550b4ee81c785748b4`):** Served read test exports a parent with multiple agents and tool calls. Retrieve all correlated records across pages. Verify stable digest, redaction, and completeness. Detect missing child, duplicate span, unauthorized read, and truncated pagination. Medulla read tests do not assert MCP transport delivery. Meristem `default_runtime_capabilities/run_agent` exports. Arbora transports MCP. Medulla returns correlated readback. Preserve R008/R024 trace ownership. Require exact revision, IO digests, caller, and independent readback as specified. Planned only.
 <!-- /spec-definition-patch -->
@@ -51,7 +49,7 @@ No test named here has run; names describe acceptance obligations, not evidence.
 No test in this section has run; these are future acceptance requirements.
 
 - `MEDULLA-ORCH-VOCAB-R009.101`: Serve index/search across every adapter in the pinned manifest. Read traces against receipts. Test restart/replay idempotency, source coverage, and cursor paging. Cost summaries use R010.101 units/profile and preserve unknown state. Refuse conflicting identities, stale cursors, and cross-tenant requests.
-- `MEDULLA-ORCH-VOCAB-R010.100`: Serve `EvolutionTraceMetricsV1` joining two revisioned traces and outcome metrics to proposal/prompt/progress revision. Independently read metric/progress digests and window. Missing traces are partial/unknown. Refuse stale, mismatched, and cross-tenant refs. Meristem producer and Arbora adapter evidence are separate.
+- `MEDULLA-ORCH-VOCAB-R010.100`: Serve the `evolution_trace_metrics` UQL view joining revisioned traces and outcome metrics to proposal/prompt/progress revision. Independently read metric/progress digests and window. Missing traces are partial/unknown. Refuse stale, mismatched, and cross-tenant refs. Meristem producer and Arbora adapter evidence are separate.
 - `MEDULLA-ORCH-VOCAB-R010.101`: Reconcile four token categories and grouped costs against an independent ledger. Test split-trace invariance, half-even boundaries, unknown prices, mixed currencies, and final FX rounding. Measure p95 ≤500 ms on 1,000,000 indexed traces and 32 readers through Arbora `handle_runs_metrics`.
 <!-- /spec-definition-patch -->
 
@@ -125,3 +123,24 @@ No test execution, generated contract or native receipt is claimed here.
 
 Arbora REST/MCP acceptance remains a separate consumer proof under ARBORA-OPS-R021.4.5 and .4.6.
 R009 remains open until actual producer and native readback evidence exists.
+
+## Round-2 cross-spec review rewrites — 2026-10-30
+
+Planned proofs for the rows rewritten by the round-2 hygiene wave. No test named here has run.
+
+- `MEDULLA-ORCH-VOCAB-R010.6`: `tests/orchestration/test_harness_metrics_served.py::test_config_evidence_marks_insufficient_trace_counts`.
+- `MEDULLA-ORCH-VOCAB-R616.2`: `src/server/handlers/decide/stat_tests/assemble_vocabulary_tests.rs::synthesis_drafts_a_team_and_leaves_champion_unchanged`.
+- `MEDULLA-ORCH-VOCAB-R800.1`: `crates/medulla-types/src/orchestration/definitions.rs::tests::template_and_pattern_round_trip`.
+- `MEDULLA-ORCH-VOCAB-R005.100`: `src/server/handlers/decide/stat_tests/assemble_vocabulary_tests.rs::shield_declares_schema_and_digest_only`.
+- `MEDULLA-ORCH-VOCAB-R009.100`: `tests/orchestration/test_trace_export_served.py::test_parent_with_children_exports_complete_stable_digest`.
+- `MEDULLA-ORCH-VOCAB-R009.101.2`: `tests/orchestration/test_harness_session_index_served.py::test_search_covers_manifest_with_unavailable_third_source`.
+- `MEDULLA-ORCH-VOCAB-R010.100`: `tests/orchestration/test_evolution_metrics_served.py::test_missing_trace_is_partial_not_zero`.
+- `MEDULLA-ORCH-VOCAB-R012.7.1`: `crates/medulla-core/src/spec_folder/policy.rs::tests::both_formats_parse_to_one_type`.
+- `MEDULLA-ORCH-VOCAB-R012.7.2`: `tests/orchestration/test_policy_activation_served.py::test_index_yields_inactive_candidates_with_spans`.
+- `MEDULLA-ORCH-VOCAB-R012.8`: `tests/orchestration/test_policy_activation_served.py::test_graph_mutation_leaves_source_bytes_unchanged`.
+- `MEDULLA-ORCH-VOCAB-R750.750`: `crates/medulla-types/src/orchestration/org.rs::tests::records_round_trip_and_twin_needs_a_pin`.
+- `MEDULLA-ORCH-VOCAB-R750.751`: `src/server/handlers/decide/stat_tests/org_runtime_tests.rs::recruit_allocate_and_twin_replay`.
+- `MEDULLA-ORCH-VOCAB-R750.752`: `tests/orchestration/test_org_runtime_served.py::test_four_faults_refuse_with_codes`.
+- `MEDULLA-ORCH-VOCAB-R751.750`: `crates/medulla-types/src/orchestration/teams.rs::tests::records_round_trip_and_digest_is_order_free`.
+- `MEDULLA-ORCH-VOCAB-R751.751`: `src/server/handlers/decide/stat_tests/team_tests.rs::specialist_promotes_only_through_the_gate`.
+- `MEDULLA-ORCH-VOCAB-R751.752`: `tests/orchestration/test_team_evolution_served.py::test_team_and_social_faults_refuse_with_codes`.
