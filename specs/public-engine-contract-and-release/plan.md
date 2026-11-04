@@ -1,8 +1,26 @@
-# MEDULLA-CONTRACT — Architecture and implementation plan
+# MEDULLA-CONTRACT — Implementation plan
+
+Governing spec: [spec.md](spec.md). Rows: [requirements.md](requirements.md).
+
+## Summary
+
+The public engine contract is generated from the Rust method and error declarations, because server dispatch and stable errors are Medulla's authority. Every language projection (Python models, the Go and JavaScript clients, the method codec) binds to one source revision, and the engine serves its method catalog at run time. The live caller is any client of a served method; the owners and reuse candidates are listed under Technical Context.
 
 **State:** PROPOSED. This plan is executable from a fresh public checkout.
 
-## Existing implementation to reuse
+## Technical Context
+
+- **Language/Version**: Rust (toolchain pinned by `rust-toolchain.toml`); Python 3.14 with a 3.12 floor for the wheels and tests; Go and JavaScript clients.
+- **Primary Dependencies**: maturin and pyo3 for the wheels; the method codec built to WebAssembly for the Go and JavaScript clients.
+- **Storage**: N/A (the contract is generated at build time and served at run time).
+- **Testing**: `cargo test`, `pytest`, `go test`, `npm test`; proof levels as each row names.
+- **Target Platform**: Linux, macOS and Windows on x86_64 and arm64.
+- **Project Type**: library and server.
+- **Performance Goals**: N/A.
+- **Constraints**: the Build contract below.
+- **Scale/Scope**: the workspace's crates and every served method in the catalog.
+
+### Existing implementation to reuse
 
 | Authority | Existing component | Rule for changes |
 |---|---|---|
@@ -13,22 +31,21 @@
 | Go/JS consumers | `clients/go/`, `clients/js/` | Run vector and error tests against embedded WASM and an installed/served engine. |
 | Release checks | `scripts/generated_artifacts.py`, `scripts/check_wheel_completeness.py`, `scripts/check_wheel_privacy.py`, `scripts/ci_parity.sh`, `.github/workflows/release.yml` | Make hosted checks hermetic and source-revision-bound; keep live deployment proof a separate gate. |
 
-## Contract data model
+### Contract data model
 
 Each method record has a stable `id`, `domain`, `request_schema`, `result_schema`, `policy`, `replay_class`, `stability`, `consumer_profiles`, `is_wire_callable` and `error_set`. Each error record has `code`, `class`, `retryable`, `http_status_hint`. The generator fails if a referenced schema or error is absent, a method ID is duplicated, an allowed wire method has no dispatcher, or a stable code changes meaning without a deliberate compatibility change. The receipt hashes every generated file and identifies the source revision.
 
 The request envelope and signed body are distinct. The codec canonicalizes only the specified body fields. The client attaches identity and transport metadata after encoding. Signatures cover the bytes actually sent. A decoder checks schema before use and maps each error code to its generated typed class. An unknown-code variant supports newer server errors. Unknown fields in strict request/result models still fail closed.
 
-## Work sequence
+## Constitution Check
 
-1. **Catalog audit:** enumerate every Rust-dispatched method and error. Compare generated descriptors to reachable server paths. Correct missing transaction conflict error mapping.
-2. **One Python shape:** replace duplicate hand-written DTO definitions with generated re-exports; preserve import compatibility through aliases only where named and tested.
-3. **Codec parity:** build Rust WASM from pinned tool versions. Compare both embedded copies. Run Go/JS/Python/Rust vectors and record source and artifact hashes. Reduce size by removing unused decode paths before changing optimization flags.
-4. **Package:** include catalogs, schemas and receipt in wheel data. Clean-install into a new virtual environment and verify loader digests and typed operations. Avoid source-tree fallbacks.
-5. **CI:** run full root Python tests with the kernel/engine build in hosted CI, static contract reachability, Go/JS tests, all release feature profiles, and differential quality scanners. Tests needing a service start one from checked-in fixtures; deployment/soak has its own documented workflow.
-6. **Release:** build the wheel twice in clean environments and compare normalized artifacts. Install the built wheel, run consumer parity and mark a precise commit/tag. Record evidence per requirement.
+Checked against `.specify/memory/constitution.md`: this plan waives no principle. A change that would is recorded under Complexity Tracking before it lands.
 
-## Fresh checkout developer path
+## Project Structure
+
+Existing paths only: `crates/` (one crate per subsystem; owners in the architecture map under Phase 1), the root package `src/`, the Python package `medulla/`, `packaging/medulla-server/`, `clients/go/`, `clients/js/`, `scripts/` and `.github/workflows/`.
+
+### Fresh checkout developer path
 
 Clone the public repository; install the versions declared by `rust-toolchain.toml`, `Cargo.lock`, `pyproject.toml`, `clients/go/go.mod` and `clients/js/package-lock.json`. Run the repository's normal generators, followed by:
 
@@ -42,86 +59,18 @@ python3 -m pytest -q tests/test_generated_client_contract.py tests/test_contract
 
 Run Go commands from `clients/go` and npm commands from `clients/js`. If a named Python test is moved, update this plan with its replacement before removing the gate. The complete merge gate is `bash scripts/ci_parity.sh` plus the hosted release workflow. CI must start each integration service from a checked-in container/fixture recipe. The job must tear down each service.
 
-## Design decisions
+## Phase 0: Research
+
+No unknowns.
+
+## Phase 1: Design
+
+### Design decisions
 
 - Catalog metadata is generated from Rust code because server dispatch and stable errors are Medulla authority.
 - The contract receipt binds all language projections to one revision; a package containing current JSON but stale WASM is invalid.
 - Hosted CI may split bounded fast checks from long soak. A missing external environment cannot convert a required public gate into a permanent skip.
 - Quality scans are differential over changed production code with explicit tracked configuration, and manual scanners remain observable release evidence.
-
-## Amendments
-
-### 2026-10-28: slim pull-request CI
-
-MEDULLA-CONTRACT-R053.7 keeps the tag guard on a passing main run. The
-pull-request set now targets twenty minutes of wall time and one runner-hour.
-A pull request runs lint, spec status, security and workspace Clippy. It also
-runs the affected-crate tests, the Python suite and contract parity. The
-affected-crate tests now include the lower crates.
-`scripts/ci_change_scope.py --path-gates` selects the narrow jobs. Language
-clients, Whisper, Piper, pyo3 and the installed wheel run only when their
-paths change. Main pushes, a nightly schedule and dispatch run the remaining
-jobs. Those jobs are the lower-crate gate, the facade suite, plan fuzz, the
-release Clippy profiles and the build variants. Native jobs read scope from a
-local job and skip the wait for the central pre-commit leg. This change
-removes the advisory hosted scanner job. Its scanners stay in the manual
-pre-commit stage that `scripts/ci_parity.sh` runs. `CI required` needs only
-the jobs that a pull request runs.
-
-### 2026-10-11: reconcile the native suite contract census
-
-MEDULLA-CONTRACT-R009 and MEDULLA-CONTRACT-R015 retain one current method authority. The
-domain registry, generated method catalog, capability ledger and both packaged
-receipts must agree, including CapabilityCoverage. Receipt regression checks
-derive their census from the declared catalog instead of pinning historical
-totals. The scanner wiring regression recognizes the blocking conditional
-pre-commit step for PR-diff and full-publication checks. It preserves the
-intentional pipelines@main workflow policy and pinned scanner binaries.
-
-### 2026-10-11: cache server compilation without bypassing source builds
-
-MEDULLA-CONTRACT-R009 retains the unconditional locked, full-featured server build
-and same-run revision/digest-verified artifact handoff. The server preparation
-job installs a pinned sccache before enabling its compiler wrapper only for
-that build step. This addresses the prior missing-wrapper CI incident without
-changing local Cargo configuration, wheel builds, or the other validation jobs.
-GitHub's built-in cache backend needs no repository secret; only main writes,
-and other refs read. Cargo still checks the current source and sccache keys
-cacheable compiler outputs by compiler inputs; final binary linking still runs.
-Cache statistics make warm reuse observable. The ten-minute target remains
-unproven until a main cache seed and a subsequent hosted run are measured.
-
-### 2026-10-11: register the bounded cluster harness tests
-
-MEDULLA-CONTRACT-R023.1 owns the completeness regression from MEDULLA-DURABLE-KERNEL-R014.2.
-Add the exact cluster-harness test path to the existing binary-composition component.
-Keep all existing ownership boundaries unchanged. Run the real completeness checker
-and pin that exact component assignment in its existing regression module.
-
-### 2026-10-11: retain completed facade compiler outputs across interrupted gates
-
-MEDULLA-CONTRACT-R009 extends the same pinned compiler-cache setup to the full-facade
-Cargo test step. The server and facade share YAML anchors for installation and
-step-local cache settings. Both still run their original Cargo commands;
-the later Whisper and bounded-memory tests keep their existing configuration.
-Only main writes to the GitHub cache. Each successful cacheable compilation can
-write its output before the overall job ends, so an interrupted cold gate does
-not discard every completed compilation. This does not cache final test-binary
-linking. Hosted cold and warm runs must establish whether the gate meets the
-ten-minute target. Test scope, failure propagation, and existing timeouts stay intact.
-
-### 2026-10-11: run workspace gates on the supported hosted runner
-
-MEDULLA-CONTRACT-R035 keeps the workspace-crates gate on `ubuntu-latest` for every
-release workflow event. The gate requires the declared Cyrus-SASL and curl
-build headers, installed by its existing Ubuntu provisioning step. Selecting
-the already-supported hosted runner makes that prerequisite reproducible
-without changing any self-hosted security policy. Preserve the exact package
-installation, test commands, dependency graph, event scope and timeout.
-The workflow regression pins hosted placement and unconditional provisioning;
-native end-to-end acceptance still requires the hosted job to finish.
-
-The `medulla-tts-piper real-inference tests` job runs apt only when `dpkg -s` reports a missing package. A slow apt mirror then cannot use the ten-minute PR budget before any test runs. The timeout stays as it was. The workflow regression pins the guard ahead of `apt-get update`.
 
 ### Capability refusal and decoding contracts
 
@@ -144,81 +93,6 @@ structurally. Regressions retain production before and after test modules,
 feature-gated production, called helpers and formatted refusal strings, while
 excluding an uncalled helper and typed diagnostic text.
 
-### 2026-10-11: keep cache reports on the build backend after daemon loss
-
-MEDULLA-CONTRACT-R009 scopes the shared GitHub cache backend settings to the server
-and full-facade jobs. The build, explicit statistics, and action cleanup therefore
-receive the same backend and main-only write policy. The compiler wrapper stays
-on the same two build/test steps. Statistics describe only the current daemon.
-A restart resets its counters. This does not prove the earlier daemon wrote nothing. This fixes the reporting configuration mismatch without explaining why
-the facade daemon stopped or claiming a runtime improvement.
-
-### 2026-10-11: keep the cache idle window above the bounded validation job
-
-MEDULLA-CONTRACT-R009 sets `SCCACHE_IDLE_TIMEOUT=7200` in the existing shared server
-and facade backend settings. In pinned sccache 0.16.0, incoming requests reset
-the idle timer; an active compilation does not inhibit it. A finite two-hour
-window exceeds both jobs' existing maximum of 60 minutes and retains eventual
-idle shutdown on persistent runners. The job deadlines, test scope, wrapper
-scope, and main-only cache writes remain unchanged. This prevents the documented
-idle-shutdown hazard within a fresh job daemon's lifetime. It does not prove the
-historical EOF cause or establish a facade speedup. Statistics synthesize zero
-counters from caller configuration when no daemon is reachable; they do not
-start a replacement daemon.
-
-### 2026-10-11: provision the manifest toolchain before lint formatting
-
-The lint job must install the manifest-selected toolchain and rustfmt before either formatting step, per MEDULLA-CONTRACT-R031. Reuse the workflow's manifest-resolved rustup installation
-pattern rather than duplicating its channel pin or relying on the hosted image.
-The workflow regression checks unconditional provisioning and step ordering for
-both PR-scoped and full-publication formatting. This repairs runner setup only;
-full hosted quality-gate and runtime acceptance remain independently required.
-
-R031.1 owns only the runner setup regression. R031.2 preserves the outstanding complete same-tree census and independent clippy/formatting evidence.
-A setup-only test cannot qualify the broad parent requirement.
-
-### Facade build timing and empty helper harnesses
-
-MEDULLA-CONTRACT-R009 disables the default unit-test harness only for four single-file
-helper binaries with no tests. These helpers observe RF-019, migrate shards,
-restore backups, and export lake fixtures. Their ordinary binaries still build
-for integration coverage. The server harness, library tests, and every
-integration target remain enabled. A source guard requires revisiting the
-exemption if a helper gains tests or a source module.
-
-The mandatory full-facade command adds stable Cargo `--timings`. Clear only
-previous timing reports after cache restore. Upload the current report on
-`always()` with the existing pinned artifact action and a source/run/attempt
-name. A canceled build may produce no report. Report its absence without
-claiming a successful test run. This adds evidence for the next natural build.
-Profiles, timeouts, cache permissions, and test failure propagation stay intact.
-Saved build time and the sub-ten-minute goal remain unmeasured.
-
-### 2026-10-11: conservative local source-gate scope
-
-The contract-method reachability and durable-table registration scanners retain
-their full algorithms. Automatic commit/push wrappers may omit a scan only when
-complete raw Git changes and supplied filenames independently prove ordinary
-documentation-only files, with verified index/worktree or clean push state.
-The existing CI documentation predicate is reused without broadening its default;
-only the local wrapper also recognizes the exact development skill document.
-CI, direct manual hooks, all-files, deletions and uncertain state run full scans.
-This is hook plumbing under R024, not completion of the full R023 gate suite.
-
-Frozen commit-stage `--from-ref`/`--to-ref` checks use the same immutable-ref,
-clean tracked worktree and exact checked-out-tip validation as push. Either range variable requires a valid complete pair.
-Partial or invalid ranges never fall back to the staged-document optimization. Ordinary commits without
-range variables retain index/worktree agreement checks.
-
-### 2026-10-12: preserve governed-change refusal codes
-
-MEDULLA-CONTRACT-R014 declares every existing GovernedRefusal through ServerErrorCode.
-The producer uses those typed declarations, and the generator publishes their
-GovernedChange method routes. Unknown codes still become INTERNAL without raw
-diagnostic text. MEDULLA-DURABLE-KERNEL-R027.2 retains two-person approval, direct
-identity and exact-scope checks. The forged-actor regression requires the exact
-authorization refusal instead of accepting any governed prefix.
-
 ### 2026-10-12: current architecture boundaries
 
 MEDULLA-CONTRACT-R052 documents the current source composition. It proposes no component split, feature change, or release change.
@@ -236,7 +110,7 @@ Each group below describes responsibility; it does not declare a new deployable 
 |---|---|
 | Composition, listeners, policy, persistence adapters | Root `src/` and its `Medulla` library and executable targets |
 | Engine kernel: metrics, tracing export, encryption at rest, audit chain, write coalescer, sealed-row rules, row deltas, lock recovery, host autosizing | `medulla-kernel` (depends only on leaf crates, so these edits do not recompile the server) |
-| Wire and domain record types, codecs, resources | `medulla-types`, `medulla-protocol-types`, `medulla-identity-types`, `medulla-agent-types`, `medulla-mutation-types`, `medulla-index-types`, `medulla-result-types`, `medulla-catalog-types`, `medulla-source-types`, `medulla-work-types`, `medulla-decision-types`, `medulla-decision-outcome-types`, `medulla-capabilities`, `medulla-method-codec`, `medulla-resource` |
+| Wire and domain record types, codecs, resources | `medulla-types`, `medulla-protocol-types`, `medulla-identity-types`, `medulla-agent-types`, `medulla-mutation-types`, `medulla-index-types`, `medulla-result-types`, `medulla-catalog-types`, `medulla-source-types`, `medulla-work-types`, `medulla-decision-types`, `medulla-decision-outcome-types`, `medulla-capabilities`, `medulla-method-codec`, `medulla-resource`, `medulla-version` (the single engine release version) |
 | Physical storage, mutation authority, graph state | `medulla-storage`, `medulla-storage-owner`, `medulla-transaction`, `medulla-core`, `medulla-graph-core`, `medulla-isolation`, `medulla-durable`, `medulla-direct-state`, `medulla-sqlite-format`, `medulla-store`, `medulla-store-apply`, `medulla-work-store`, `medulla-resource-store`, `medulla-lane-store` |
 | Persistence services and records | `medulla-persistence`, `medulla-persistence-ops`, `medulla-persistence-records`, `medulla-placement`, `medulla-raft`, `medulla-raft-xshard` |
 | Query and semantic processing | `medulla-plan`, `medulla-exec`, `medulla-uql`, `medulla-nlq`, `medulla-sql`, `medulla-sql-lang`, `medulla-sql-udfs`, `medulla-cypher`, `medulla-tables`, `medulla-table-store`, `medulla-query-cache`, `medulla-federation`, `medulla-virtual-graph`, `medulla-rdf`, `medulla-shacl`, `medulla-shex`, `medulla-graphql`, `medulla-epistemic`, `medulla-reasoner`, `medulla-enrich`, `medulla-semantic-index`, `medulla-retrieval`, `medulla-vocab`, `medulla-catalog`, `medulla-packs` |
@@ -274,20 +148,18 @@ The converged-engine design remains owned by [MEDULLA-UNIFIED-DATA-PLANE-R001](.
 | Python extras | [pyproject.toml](../../pyproject.toml) defines `full = []` and `numeric = []`. | These aliases neither change the compiled engine nor select a deployment shape. |
 | Runtime shape | A served engine and the embedded binding expose distinct process boundaries. | Configuration, identity, persistence, and runtime checks determine usable capabilities. |
 
-MEDULLA-C-07/08, MEDULLA-T-10, MEDULLA-CONTRACT-R033, and MEDULLA-CONTRACT-R037 retain artifact and feature-profile acceptance.
 MEDULLA-CONTRACT-R047 already owns rolling-wheel distribution. Package size does not imply a new architectural boundary.
-The source-backend composition difference belongs to that existing packaging acceptance; this document does not repair or qualify it.
 
 #### Wiring: shared contracts and call sites
 
 | Contract | Existing authority and source route | Owning requirements |
 |---|---|---|
-| Request identity and policy | `medulla-types` identity records feed server access checks; `medulla-capabilities::policy` declares method policy. Generated clients project the contract. | [MEDULLA-IDENTITY](../engine-identity-and-scope/requirements.md); MEDULLA-C-01/02 |
+| Request identity and policy | `medulla-types` identity records feed server access checks; `medulla-capabilities::policy` declares method policy. Generated clients project the contract. | [MEDULLA-IDENTITY](../engine-identity-and-scope/requirements.md) |
 | Artifact identity and provenance | `medulla-modality` exports `OpaqueRef`, `ArtifactBundle`, `EvidenceLocus`, and `Provenance`. `medulla-alignment` relates evidence locations. | [MEDULLA-FEDERATED-QUERY](../federated-query-and-reasoning/requirements.md), especially R039.1; native media coverage remains separate. |
 | Epistemic provenance | `medulla-epistemic` operates on graph claims and provenance; `medulla-plan` exposes `KnowledgeSet` and knowledge batches. | [MEDULLA-FEDERATED-QUERY](../federated-query-and-reasoning/spec.md) reasoning and retrieval requirements |
 | Physical ownership and mutation | `medulla-storage` owns physical access; `medulla-transaction::MutationKernel` owns admission, ordering, replay, and commit capabilities. | [MEDULLA-DURABLE-KERNEL](../durable-graph-kernel/requirements.md), including R019, R021, and R034 |
-| Served mutation | `crates/medulla-server-mutation/src/mutation/commit_entry.rs:264` exports `commit_mutation`; conditional and coalesced routes retain their own entry paths. | [MEDULLA-DURABLE-KERNEL](../durable-graph-kernel/spec.md); MEDULLA-C-02 error projection |
-| Planned query | `crates/medulla-h-query/src/query/planning.rs:325`, `run_unified_with`, binds execution through the existing planner. | [FQR-03/04/06](../federated-query-and-reasoning/spec.md), R038–R055 |
+| Served mutation | `crates/medulla-server-mutation/src/mutation/commit_entry.rs:264` exports `commit_mutation`; conditional and coalesced routes retain their own entry paths. | [MEDULLA-DURABLE-KERNEL](../durable-graph-kernel/spec.md) |
+| Planned query | `crates/medulla-h-query/src/query/planning.rs:325`, `run_unified_with`, binds execution through the existing planner. | [MEDULLA-FEDERATED-QUERY](../federated-query-and-reasoning/spec.md), R038–R055 |
 | Direct native access | [engine.md](../../docs/architecture/engine.md) shows dispatch reaching graph state both directly and through planning. | [MEDULLA-DURABLE-KERNEL-R032/R037](../durable-graph-kernel/requirements.md) |
 
 Repository scope is not RBAC scope: `engine-identity-and-scope` owns authorization identity.
@@ -302,7 +174,7 @@ This map adds no planner, identity registry, provenance store, or transaction au
 Reject architecture claims that have only a module name, feature flag, diagram arrow, or generated status as support.
 Use `status.json` for generator-owned delivery state. Preserve requirement acceptance and public receipts independently.
 `VERIFIED` identifies a landed row with a bound test; it does not establish a successful current deployment.
-MEDULLA-T-12 defines documentation checks. Existing owner tests retain all required served, negative, recovery, and release observations.
+Existing owner tests retain all required served, negative, recovery, and release observations.
 
 #### Diagram coverage and owner follow-ons
 
@@ -318,11 +190,11 @@ Consult each owner's generated `status.json` for current delivery state and its 
 | Analytics: SQL, graph, vector, numeric, programs | [MEDULLA-FINANCE-PRIMITIVES](../finance-primitives/requirements.md), [MEDULLA-DECISION-ENGINE](../decision-engine/requirements.md), and [MEDULLA-FEDERATED-QUERY](../federated-query-and-reasoning/requirements.md) | Separate numeric kernels, UQL programs R027/R065, native `ProgramOptimize`, and MEDULLA-DECISION-ENGINE-R135 compiled-run replay. |
 | Signals and time: events, streams, metrics, bitemporal state, CDC | [MEDULLA-FEDERATED-QUERY](../federated-query-and-reasoning/requirements.md), R023; [MEDULLA-DURABLE-KERNEL](../durable-graph-kernel/requirements.md), R078–R081 | Stream grammar does not define event-time, window, or watermark lifecycle. Bitemporal served requirements still need their specified evidence. |
 | Multimodal: document, image, audio, video, blobs, evidence | [MEDULLA-FEDERATED-QUERY](../federated-query-and-reasoning/requirements.md), R039.1; [MEDULLA-UNIFIED-DATA-PLANE](../unified-data-plane/requirements.md), R040 | Four-modality retrieval differs from native lifecycle. R040 names text/image/audio; video promotion needs an explicit reconciliation. |
-| Authenticated Python interface | MEDULLA-C-01–MEDULLA-C-05 and MEDULLA-C-10; [MEDULLA-IDENTITY](../engine-identity-and-scope/requirements.md) | Preserve installed-client, signed-body, strict-decoding, and served authorization evidence. |
+| Authenticated Python interface | [MEDULLA-IDENTITY](../engine-identity-and-scope/requirements.md) | Preserve installed-client, signed-body, strict-decoding, and served authorization evidence. |
 | UQL, SQL, SPARQL interfaces | [MEDULLA-FEDERATED-QUERY](../federated-query-and-reasoning/spec.md); [MEDULLA-UNIFIED-DATA-PLANE](../unified-data-plane/requirements.md) | Coverage of a dialect or foreign adapter does not qualify every native interface operation. |
-| Cypher, GraphQL, Bolt interfaces | MEDULLA-C-01/02 and MEDULLA-CONTRACT-R033 for projection; [MEDULLA-FEDERATED-QUERY](../federated-query-and-reasoning/requirements.md) for semantics | R053 and kernel R024.3 cover foreign Cypher. R073 and decision R064 cover other GraphQL uses. Bolt lacks an explicit requirement. |
+| Cypher, GraphQL, Bolt interfaces | [MEDULLA-FEDERATED-QUERY](../federated-query-and-reasoning/requirements.md) for semantics | R053 and kernel R024.3 cover foreign Cypher. R073 and decision R064 cover other GraphQL uses. Bolt lacks an explicit requirement. |
 | Streams interface | [MEDULLA-FEDERATED-QUERY-R023](../federated-query-and-reasoning/requirements.md) and [MEDULLA-DURABLE-KERNEL](../durable-graph-kernel/requirements.md) | Existing owners must define stream lifecycle acceptance. Parser coverage does not prove runtime behavior. |
-| Unified planner and governed mutations | [FQR-03/04/06](../federated-query-and-reasoning/spec.md); [MEDULLA-DURABLE-KERNEL-R034/R043](../durable-graph-kernel/requirements.md) | Prove common policy, authority, and state across interfaces. Preserve direct native paths and cross-modal atomicity acceptance. |
+| Unified planner and governed mutations | [MEDULLA-FEDERATED-QUERY](../federated-query-and-reasoning/spec.md); [MEDULLA-DURABLE-KERNEL-R034/R043](../durable-graph-kernel/requirements.md) | Prove common policy, authority, and state across interfaces. Preserve direct native paths and cross-modal atomicity acceptance. |
 | Authoritative durable store | [MEDULLA-DURABLE-KERNEL](../durable-graph-kernel/spec.md); [MEDULLA-IDENTITY](../engine-identity-and-scope/spec.md) | Commit-before-ack, audit, isolation, and optional replication retain their existing owner acceptance. |
 | Read-through recovery | [MEDULLA-DURABLE-KERNEL](../durable-graph-kernel/requirements.md) | R039 rebuild and federation R036 index reopening do not explicitly prove safe eviction followed by a durable read. |
 
@@ -341,289 +213,20 @@ For runtime rows, name the actual production call site and its served integratio
 
 No follow-on above asserts a passed test or changes a subsystem's acceptance in this batch.
 
-### 2026-10-12: source-build composition after engine parity
+## Phase 2: Task approach
 
-MEDULLA-CONTRACT-R052.2 records this source update at
-`3756ef27dd49e18aa54b962c7a1c743504b34dd6`.
-The architecture review above remains pinned to
-`54aab65786bf72fac94f565796eb21f5d1ec72c4`; its numeric-only backend
-observation describes that earlier revision.
+### Work sequence
 
-[build_backend.py](../../build_backend.py), `_compose`, now builds and folds
-`medulla-numeric/python` and `medulla-pyengine/python,security` with the existing
-`inject_numeric_kernel.py` and `inject_pyengine.py` helpers.
-Both `build_wheel` and `build_editable` use this composition path.
-The staging lock covers the server build, both component builds, and both folds.
-The server binary retains its separate no-PyO3 boundary.
+1. **Catalog audit:** enumerate every Rust-dispatched method and error. Compare generated descriptors to reachable server paths. Correct missing transaction conflict error mapping.
+2. **One Python shape:** replace duplicate hand-written DTO definitions with generated re-exports; preserve import compatibility through aliases only where named and tested.
+3. **Codec parity:** build Rust WASM from pinned tool versions. Compare both embedded copies. Run Go/JS/Python/Rust vectors and record source and artifact hashes. Reduce size by removing unused decode paths before changing optimization flags.
+4. **Package:** include catalogs, schemas and receipt in wheel data. Clean-install into a new virtual environment and verify loader digests and typed operations. Avoid source-tree fallbacks.
+5. **CI:** run full root Python tests with the kernel/engine build in hosted CI, static contract reachability, Go/JS tests, all release feature profiles, and differential quality scanners. Tests needing a service start one from checked-in fixtures; deployment/soak has its own documented workflow.
+6. **Release:** build the wheel twice in clean environments and compare normalized artifacts. Install the built wheel, run consumer parity and mark a precise commit/tag. Record evidence per requirement.
 
-This closes the source-composition difference recorded above.
-MEDULLA-C-07/08, MEDULLA-T-10, MEDULLA-CONTRACT-R033, and MEDULLA-CONTRACT-R037 retain their
-exact-artifact and feature-profile acceptance.
-Source wiring alone does not qualify native release artifacts or promote
-the architecture requirement's generated status.
+## Complexity Tracking
 
-<!-- spec-definition-patch:owner-batch-20261012-public-engine-contract-and-release -->
-## Reviewed implementation plan — 2026-10-12
-
-Normative contracts, source hashes, owner references, open dependencies, and acceptance remain in `requirements.md`.
-Each task preserves its existing parent and owner boundary.
-
-| Requirement | Implementation work | Open dependency | Source SHA-256 |
-|---|---|---|---|
-| `MEDULLA-CONTRACT-R001.1` | Extend the Medulla generated-model manifest. Connect its exports to Meristem `HarnessRequest` and `run_agent`. | MERISTEM-HARNESS-R007.40 remains unmerged. Meristem owns lifecycle transitions, persistence, and consumer integration. | `c0d92285a141dcaac6817bcac25ffa438517afeba50be716211751f3a37a31c2` |
-| `MEDULLA-CONTRACT-R001.2` | Use R094 export/import with governed Graft SDK and Arbora disk effects. Pin the number encoder. | MERISTEM-CONTROL-R025.40 remains unmerged. Medulla SHALL NOT add a filesystem writer. | `98b7ad1186ec2a385b334ffa0ad1b28888157ed6b51c6ed4172eeb7b7ef6768e` |
-
-Both requirements remain SPECIFIED until separately reviewed implementation and served evidence exist.
-
-
-### 2026-10-13: isolate pyo3 validation from the workspace queue
-
-Extend R018 and R035 by moving the existing pyo3 test command unchanged into `gates-pyo3`.
-The job depends only on change classification, not storage or the workspace sweep.
-Preserve its feature set, prerequisites, compiler wrapper and ten-minute PR ceiling.
-All release build consumers must require it. Main runs the same profile and may write caches; PR caches remain read-only.
-This removes preceding work from the pyo3 job budget. It does not claim a measured runtime improvement yet.
-Hosted exact-head timings must establish completion before larger lower/facade sharding or artifact-reuse changes.
-No server artifact identity or validation is relaxed by this split.
-
-
-### 2026-10-13: bind R035 pytest provisioning to the test interpreter
-
-The gates job must install pytest into the Python interpreter that runs generated-client contract checks.
-Use the existing uv-managed environment and pin its Linux/Python 3.12 pytest dependencies to uv.lock.
-Keep the ten-minute PR timeout policy. Do not install the project or build native code for this provisioning step.
-
-
-### 2026-10-13: limit PR543 acceptance evidence to what its tests prove
-
-R027 was amended on 2026-10-30: exhaustive dispatchers are accepted by rule. Its acceptance is `tests/test_check_complexity_staged.py::test_real_exhaustive_dispatcher_is_accepted_and_catch_all_fails`, which measures a real over-cap dispatcher and a catch-all fixture.
-R038 remains without acceptance evidence. Receipt counts and format identities do not prove regeneration or refusal of a changed digest.
-R039 remains without acceptance evidence. A declared base-ref flag does not prove scanning the complete combined tree against origin/main.
-Keep those tests under their original bindings only. Do not add R038 or R039 markers to them.
-Future R038 acceptance must run the blocking generator check and reject a changed receipt digest.
-Future R039 acceptance must run the actual duplication gate against origin/main across the combined changes.
-No runtime, scanner result or new acceptance receipt is claimed for these three rows.
-
-
-### 2026-10-13: withdraw incomplete R006, R030 and R047 verification bindings
-
-Keep their supplementary regression tests, but remove the full-row spec markers.
-R006 needs two independent source builds and measured size-budget evidence; synthetic bytes prove only the comparison helper.
-R030 needs observed CPU-affinity and timed execution logs; shell-text assertions cannot supply them.
-R047 needs successful wheel publication and download evidence; workflow declarations cannot supply them.
-Leave their acceptance open until that evidence exists. Retain the independently reviewed bindings for the other rows.
-
-
-### 2026-10-13: retain server workspace outputs and budget cache misses
-
-MEDULLA-CONTRACT-R009 keeps the unconditional locked build with full features.
-The required Python suite receives artifacts with verified revisions and digests.
-PR555 run 38452892633 attempt 2 restored dependencies.
-It recorded 22 compiler-cache hits, 16 misses and zero read errors.
-Workspace compilation then exceeded the ten-minute job limit.
-Main had already seeded its cache.
-Another unchanged retry cannot reliably fix this failure.
-
-The server Cargo cache now retains workspace crates under a dedicated key.
-Only main writes this cache.
-Cargo checks restored inputs before packaging.
-Cache presence never skips the build.
-
-Server preparation now has a 45-minute cold-build safety budget, matching the existing full-engine gates.
-This does not establish the sub-ten-minute goal.
-Main's warm server build took 6m37s, or 7m09s including setup.
-It recorded 38 hits and one miss.
-The PR555 retry compiled for 9m33s before cancellation.
-A completed cold-build measurement is unavailable.
-Other split jobs retain ten minutes.
-Features, profiles, native assertions, Python tests and artifact identity checks remain unchanged.
-Hosted completion and cache timing remain required evidence.
-Scoped workflow tests cannot establish native acceptance.
-
-### 2026-10-14: initialize visualization authority before server creation
-
-The visualization fixture mixed default policy initialization with the shared request authority.
-The defaults use tenant-test, while signed requests carry integration-test-tenant.
-Concurrent fixture initialization can interleave these environment writes.
-The authentication policy caches its values on first use.
-Nine dispatch tests failed with AUTH_TENANT_MISMATCH in run 38486393509.
-The fixture now calls the existing authority initializer before creating state.
-Production tenant checks remain unchanged.
-
-Facade compilation took 41m13s without a restored Cargo target cache.
-The facade cache now retains trusted-main workspace outputs under a dedicated key.
-Cargo still validates current inputs before running the full tests and isolated RSS checks.
-The 45-minute budget remains unchanged.
-A new main cache seed and subsequent warm run must measure the benefit.
-This cache change alone does not prove that cold compilation meets the budget.
-
-### 2026-10-14: separate required plan-fuzz compilation
-
-Run 38492560051 passed the full facade, isolated RSS checks and all ten visualization dispatch tests.
-The Python suite passed 3836 tests and skipped 47.
-The server build took 16m14s; facade compilation took 39m36s.
-These measurements do not establish a warm-cache improvement.
-
-Lower-crate compilation consumed 20m16s, capability compilation 8m32s and replay compilation 5m36s.
-The final plan-fuzz target was still compiling when the 45-minute job expired.
-Move its unchanged command into independent required acceptance with the same 45-minute cap.
-Preserve its features, assertions, compiler-cache trust and setup prerequisites.
-All three release consumers require the new job.
-Other job budgets remain unchanged.
-Scoped workflow tests establish routing; hosted execution must establish native acceptance.
-
-### 2026-10-14: keep ordinary native acceptance on hosted runners
-
-Main pushes previously routed five native acceptance jobs to self-hosted runners.
-Pull-request evidence used GitHub-hosted runners.
-Keep both events on ubuntu-latest to avoid additional native work on constrained user hosts.
-This covers lower crates, plan fuzz, installed wheels, facade and Whisper.
-Preserve every command, feature, assertion, artifact identity check and job budget.
-Main-only cache writes remain unchanged.
-
-### 2026-10-18: isolate storage acceptance from the workspace compile budget
-
-Run 39148513985 passed all 123 storage tests before its workspace job timed out.
-The selected capability crate needed a separate dependency feature compilation.
-Give the unchanged serial storage suite its own required hosted job.
-Keep both jobs' ten-minute PR and sixty-minute main budgets.
-Preserve commands, features, fixtures and main-only compiler-cache writes.
-The rolling release consumer must require both jobs.
-The storage, workspace and existing PyO3 jobs reuse one step sequence.
-Explicit job and event conditions preserve their separate test commands.
-The PyO3 budget remains unchanged.
-Storage never evaluates workspace scope output.
-Workflow tests establish routing; exact-head hosted tests establish acceptance.
-
-### Wasmtime patch update — 2026-10-20
-
-The Rust advisory gate must reject RUSTSEC-2026-0378 and RUSTSEC-2026-0379 without policy exceptions. Move the existing Wasmtime 49.0.3 dependency family to the compatible 49.0.4 patch and retain the same enabled features. Validate the unchanged advisory gate and lockfile; full native compilation remains hosted CI work when the local compiler slot is limited to leaf contract crates.
-
-### Certificate dependency repair — 2026-10-21
-
-Remove the vulnerable certificate dependencies reported by RUSTSEC-2026-0381, RUSTSEC-2026-0382 and RUSTSEC-2026-0383.
-Use the patched certificate verifier and root bundles without advisory exceptions.
-The legacy HTTP client requires an unpatched root bundle, so migrate its existing calls to ureq 3.
-Preserve DNS pinning, proxy and redirect restrictions, TLS verification, custom CA augmentation, timeouts and response limits.
-Validate the unchanged advisory gate, locked compilation and focused transport regressions before review.
-No endpoint settings, credentials or deployed services change.
-
-### 2026-10-22: reject distrusted TLS intermediates
-
-MEDULLA-CONTRACT-R031 retains the existing Rust advisory policy without new exceptions.
-Update rustls-webpki from 0.103.15 to 0.103.16.
-Update webpki-roots and webpki-root-certs from 1.0.9 to 1.0.10.
-These patches address RUSTSEC-2026-0381, RUSTSEC-2026-0382 and RUSTSEC-2026-0383.
-They reject the distrusted emSign certificate paths; default TLS behavior otherwise stays unchanged.
-Canonical Cargo resolution also rebinds eight Windows-only dependency edges to compatible versions already in the lock.
-No other package version changes, and no package is added or removed outside those three replacements.
-Validate the locked graph, the unchanged advisory gate and the affected client and server paths.
-Raw cargo-audit findings covered by existing, dated policy exceptions remain separate from these fixes.
-
-### 2026-10-22: recover canonical codec bytes from hosted CI
-
-MEDULLA-CONTRACT-R006.1 / MEDULLA-C-06 permits an artifact export from the canonical builder.
-Export follows a successful, import-verified build and precedes freshness comparison. Export the WASM with SHA-256, checked-out source revision/tree, dirty
-state, pinned toolchain and build-recipe provenance. A failed build must never
-export cached bytes. The language-clients job may upload a completed fresh export
-even when committed copies are stale; the freshness check must still fail.
-Existing codec-builder Python tests cover success, failed builds and provenance.
-
-This export-only child does not complete MEDULLA-CONTRACT-R006 or MEDULLA-T-05/MEDULLA-T-06.
-Two-build reproducibility, size-budget acceptance and Go/JS vector replay remain
-separate qualification obligations; baseline committed WASM bytes and pins stay unchanged.
-
-## Hosted canonical contract repair
-
-MEDULLA-CONTRACT-R006.3 uses the authoritative generator after a hosted parity failure. It exports only receipt-listed generated contracts plus the two receipts and catalog digest. The archive includes the clean source commit/tree, toolchain, command, recipe hashes and file hashes. An independent required job avoids waiting for unrelated lower-crate tests. Generation failure exports nothing. The initial parity failure stays blocking until verified generated files are committed and fresh CI passes.
-
-MEDULLA-CONTRACT-R053.13 retains the existing gates-wheel product after all installed-wheel checks. It adds no alternate build or release path. Capture the wheel digest before installation and require unchanged bytes before export. The archive carries one wheel, source commit/tree and hashed build recipes. Consumers verify these records before installing into an isolated environment; full-stack acceptance remains separate. Pin native validation producers and consumers to Ubuntu 24.04. Version both target and compiler cache namespaces so a newer libc image cannot supply incompatible cached outputs.
-
-### 2026-10-23: preserve the measured workspace Clippy budget boundary
-
-MEDULLA-CONTRACT-R031 keeps all three Clippy profiles blocking. The measured cold
-workspace build needs fifteen minutes for a pull request, rather than ten.
-Only workspace-all-features receives this budget. Other pull-request profiles
-keep ten minutes, and non-pull-request jobs keep sixty minutes. The earlier
-forty-five-minute draft is not the selected budget.
-
-Regression tests reject unscoped limits and reuse by release, security or lint
-jobs. Existing checks preserve the profile matrix, warnings-as-errors and locked
-commands. These static checks do not establish native lint acceptance or complete
-MEDULLA-CONTRACT-R031.2. Exact-head hosted qualification remains required.
-
-
-### 2026-10-23: patch constant-time utility dependency
-
-MEDULLA-CONTRACT-R031 retains the blocking Rust dependency advisory gate.
-Cargo resolves only ctutils from 0.4.3 to 0.4.4 for RUSTSEC-2026-0385.
-The patch repairs mask generation and unsigned 128-bit comparison timing.
-No advisory exception, runtime policy, credential, or network setting changes.
-Verify the locked graph and unchanged advisory gate before publication.
-The changed lockfile requires fresh hosted artifact recipe qualification.
-Complete same-tree quality acceptance under R031.2 remains open.
-
-Reuse the R006.1 and R006.3 fresh-export path for host-start source qualification. Preserve parity failures and exact source/build provenance. Keep R006.2 native, measured-size and cross-language acceptance open.
-
-
-### 2026-10-23: compose identity contracts with recovery main
-
-Retain the identity approval and Human-session renewal source and tests.
-The recovery operations and patched ctutils dependency come from main.
-Main keeps the same canonical exporters and their blocking parity checks.
-Previously generated identity contracts and codec bytes remain unchanged placeholders.
-They do not qualify the composed source or new lockfile recipe.
-Fresh hosted union exports must replace them before final qualification.
-R006.2 and the complete durable and served identity residuals remain open.
-
-### 2026-10-23: generated identity and recovery union
-
-Run 39936755442 exported canonical artifact 12494537180 and codec artifact 12495141918.
-Both identify source 38d1d67798236c00f3aaceec966763bfad8931e2 and the exact published cde04231 tree.
-Archive, recipe and output hashes were verified before importing generated files.
-All 73 canonical outputs match their receipt, including both security schemas.
-The catalog adds GetRunWorkItem without removing identity methods or changing existing descriptors.
-The import-free codec matches both client copies and the canonical ledger.
-Its recipe includes the patched ctutils lockfile.
-These exports replace the earlier placeholders; final-head parity and native qualification remain required.
-R006.2 and the complete durable and served identity residuals remain open.
-
-### 2026-10-23: compose qualified conversation admission
-
-Main dc434020e adds the qualified conversation-turn admission source and tests.
-The identity union retains those changes without production-source conflicts.
-Exact prior-union generated contracts and codec bytes remain temporary placeholders.
-No generated schema, receipt or binary was merged by hand.
-Fresh composed-source exports and parity must qualify the additional admission schema.
-The prior-union facade passed; its remaining generated failures are not final-union acceptance.
-
-### 2026-10-23: generated admission and identity union
-
-Run 39942779457 exported canonical artifact 12497600166 and codec artifact 12496593695.
-Both identify source 8e8a1e8f9deace15e7e8b7b659bc7f85d398d2c0 and the exact published fb37a103 tree.
-Archive, recipe and output hashes were verified before importing generated files.
-All 73 canonical outputs match their receipt; both client codecs match the import-free native export.
-The generated schema includes conversation admission alongside identity and recovery operations.
-These outputs replace prior-union placeholders without changing production source or test assertions.
-Final-head native and generated parity remain required; complete served identity acceptance stays open.
-
-## Coordinated pending-source integration for 2.27.6
-
-This integration preserves the published media, session-usage, host-start and checkpoint source histories. It composes their existing methods without widening authority or adding parallel effect owners. The shared dispatch inventories retain all four new method variants. The exact expected method count is 475: main had 471, usage adds one, host-start adds one and checkpoints add two.
-
-The native publication dispatcher retains the host-start shape check before its row call. Checkpoint publication retains its existing transaction and refusal behavior. The shared read handler keeps separate session-usage and checkpoint payloads, tenant checks and actor bindings. Only checkpoint reads preserve the classified CONFLICT refusal.
-
-All 73 canonical outputs, both codec copies and the ledger retain exact PR688 bytes as known placeholders. They do not describe this combined source. Prior native and artifact receipts apply only to their recorded source trees. Fresh combined-source canonical and codec generation, native tests and final parity are required before merge.
-
-The reviewed checkpoint fixture correction compares the row projection rather than the returned table-and-row tuple. Its no-mutation and snapshot-count assertions remain intact. New combined native execution must qualify this correction.
-
-Resource benchmarks, complete served image admission, installed session usage and live host activation remain open under their owning residuals. Checkpoint restore and full served continuation also remain open. This integration creates no release, deployment, credentials or policy grants.
-
-## Current-main reconciliation after initial union qualification
-
-Main `28ceffdbcff7042f266aa7b8be999d89635a4e7d` adds `NlQueryExplain`, the canonical task-plan feature-schema export and connector ontology parents. This necessary union retains those sources and the four existing feature slices. Its exact method inventory is 476, not the historical 475 above.
-
-The initial union's 2,405 passing native tests and reviewed generated artifacts remain evidence for their recorded source only. All 74 canonical outputs, both codec copies and the artifact ledger now retain exact current-main bytes as explicitly stale placeholders. No receipt or codec hash is combined by hand. Fresh current-union generation and native, client and parity gates must qualify this composition. The installed, served and resource residuals above remain open.
+None.
 
 ## Build contract
 
@@ -644,12 +247,22 @@ Shapes for every move lane:
 - A lane touches the files of its crate and the callers it rewrites.
 - The workspace builds with no dependency cycle before the train is enqueued.
 
-## North star
+## Production caller chain
+
+A client calls a served method through `medulla.MedullaClient` (Python) or the Go and JavaScript clients, which encode the body with the shared method codec. `crates/medulla-server-router/src/dispatch/router/` dispatches it to the owning handler crate (`medulla-h-*`), which reaches state through `medulla-persistence`; refusal codes are routed by `crates/medulla-capabilities/src/error_routing.rs`. The engine's release version comes from `medulla-version`.
+
+### North star
 
 Deployment comes only from published package releases. Releases ship delivered cross-repository spec bundles. Development is graph-native. The whole ecosystem is ingested into the engine. Developers work through arbora. The repository connector reads code from the graph.
 
-## Delivery phase
+### Delivery phase
 
 Rows `MEDULLA-CONTRACT-R056.14` to `.16` serve P5, scale and breadth. They lower build cost for every later delivery lane.
 
 Crate split: the generated-contract machinery goes first. Then each subsystem moves behind the handler registry (`MEDULLA-CONTRACT-R056.1` to `.10`). Build profiles, test layout and feature layout are part of the split, not follow-ups. A timings report before and after proves the gain.
+
+## Cross-repo seams
+
+- scion-sdk's engine client adapter imports the published `medulla` package's client and request and result models (`SCION-CENTRALIZED-CAPABILITIES-R018`): [contracts/scion-sdk-engine-client.md](contracts/scion-sdk-engine-client.md).
+
+arbora also reads the run-time method catalog, `medulla.engine.method_catalog()`, for its served operations and scope registry (`ARBORA-OPS-R006`, `ARBORA-IDENTITY-R002.1`). This seam has no contract document yet: the catalog row does not yet carry the caller chain and shape that document cites.
