@@ -42,10 +42,6 @@ pub enum RegistrationPolicy {
     Disabled,
 }
 
-/// The exact acknowledgement a transition into `none` must carry (§2.4). A
-/// typo keeps the refusal.
-pub const NONE_MODE_ACK: &str = "I-UNDERSTAND-ANYONE-WHO-CAN-REACH-THIS-PORT-IS-ADMIN";
-
 /// Default session bounds (§3.3), in milliseconds.
 pub const DEFAULT_IDLE_MS: u64 = 8 * 60 * 60 * 1000;
 pub const DEFAULT_ABSOLUTE_MS: u64 = 7 * 24 * 60 * 60 * 1000;
@@ -101,15 +97,13 @@ impl IdentityConfig {
     }
 }
 
-/// Every legal edge of the mode state machine (§2.3). `X → X` is not an edge:
-/// changing only the fallback or a policy is `update_policy`.
-const LEGAL_EDGES: [(AuthMode, AuthMode); 6] = [
-    (AuthMode::None, AuthMode::Local),
-    (AuthMode::None, AuthMode::External),
+/// Every legal served edge of the mode state machine. `X → X` is not an edge:
+/// changing only the fallback or a policy is `update_policy`. `none` is
+/// never a source or target of a served transition: only the offline
+/// operator conversion leaves it (MEDULLA-IDENTITY-R003.4).
+const LEGAL_EDGES: [(AuthMode, AuthMode); 2] = [
     (AuthMode::Local, AuthMode::External),
     (AuthMode::External, AuthMode::Local),
-    (AuthMode::Local, AuthMode::None),
-    (AuthMode::External, AuthMode::None),
 ];
 
 impl AuthMode {
@@ -140,9 +134,6 @@ pub struct ModeTransition {
     pub to: AuthMode,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub local_fallback: Option<LocalFallback>,
-    /// Required, exactly [`NONE_MODE_ACK`], when `to` is `none`.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub ack: Option<String>,
     /// The local issuer's new signing key id (rotation on every transition).
     pub issuer_kid: String,
 }

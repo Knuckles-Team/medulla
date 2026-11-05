@@ -1030,6 +1030,7 @@ mod graph_meta_migration_tests {
         assert_eq!(record.incarnation_id, "inc-1");
     }
 
+    // spec: MEDULLA-DURABLE-KERNEL-R063.2
     #[test]
     fn a_v2_row_lifts_its_integrity_policy_into_the_operator_source() {
         const V2_META_GOLDEN: &str = "85ae736368656d615f76657273696f6e02a46e616d65a167aa67726170685f74797065a6476c6f62616cae696e6361726e6174696f6e5f6964a6696e632d7632b0696e746567726974795f706f6c69637981aa7368617065735f74746cd92b407072656669782073683a203c687474703a2f2f7777772e77332e6f72672f6e732f736861636c233e202e";
@@ -1051,6 +1052,25 @@ mod graph_meta_migration_tests {
             .dynamic
             .contains_key(medulla_graph_core::graph::OPERATOR_SOURCE_ID));
         assert_eq!(record.incarnation_id, "inc-v2");
+    }
+
+    // spec: MEDULLA-DURABLE-KERNEL-R063.2
+    #[test]
+    fn an_unknown_graph_meta_version_refuses_with_the_registered_code() {
+        let unknown = LegacyGraphMetaRecordWithPolicy {
+            schema_version: 9,
+            name: "g".to_string(),
+            graph_type: GraphType::Global,
+            incarnation_id: "inc-v9".to_string(),
+            integrity_policy: None,
+        };
+        let bytes = rmp_serde::to_vec_named(&unknown).unwrap();
+        let error = match decode_meta_record("g", &bytes) {
+            Ok(_) => panic!("an unknown graph metadata version must not decode"),
+            Err(error) => error,
+        };
+        assert!(error.contains("GRAPH_META_VERSION_UNSUPPORTED"), "{error}");
+        assert!(error.contains("unsupported"), "{error}");
     }
 
     #[test]
