@@ -175,6 +175,9 @@ mod tests {
             handle_lineage_ingest(vec![event("c", "bad name", "y")], &|_, _| false).unwrap();
         assert_eq!(receipt.quarantined, 1);
         let blank = handle_lineage_ingest(vec![event(" ", "x", "y")], &|_, _| false);
-        assert!(blank.unwrap_err().starts_with(LINEAGE_EVENT_MALFORMED));
+        assert!(blank
+            .err()
+            .expect("a blank method name is refused")
+            .starts_with(LINEAGE_EVENT_MALFORMED));
     }
 }
