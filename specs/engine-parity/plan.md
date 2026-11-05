@@ -16,6 +16,19 @@ outside SQL tool
   -> CdcHub / archive            crates/medulla-server-cdc, crates/medulla-storage
 ```
 
+The named consumer of each rollup (the demand gate below; `crates/medulla-types/tests/engine_capabilities.rs` reads these rows):
+
+```text
+| Rollups | Named consumer |
+| R001 to R005 | Concurrent agent writes through arbora; MEDULLA-SCM changeset acceptance |
+| R006 to R009 | Outside BI and SQL tools for the catalog and governance rows; the native-hosting pilot of MEDULLA-UNIFIED-DATA-PLANE-R026 |
+| R010 to R014 | Native-hosted application tables of MEDULLA-UNIFIED-DATA-PLANE-R024 |
+| R015 to R017 | Change subscribers of MEDULLA-UNIFIED-DATA-PLANE-R009; operator recovery; read scale |
+| R018 | Catalog profiling and quality jobs of MEDULLA-UNIFIED-DATA-PLANE-R761 and R762 |
+| R019 | Every attached-source adapter |
+| R020 | The benchmark gate of MEDULLA-DURABLE-KERNEL-R042 |
+```
+
 Every arrow stays inside the library except the wire listener, the archive target and the attached sources. No arrow writes engine data to an outside database.
 
 ## Technical Context
@@ -97,15 +110,3 @@ none
 
 - Wire login grant and revoke: `MEDULLA-ENGINE-PARITY-R007.4` provides, `ARBORA-OPS-R858.1` consumes. Contract: [arbora-wire-logins.md](contracts/arbora-wire-logins.md).
 - Engine capability report: `MEDULLA-ENGINE-PARITY-R020.2` provides, `ARBORA-OPS-R006` consumes. Contract: [arbora-engine-capabilities.md](contracts/arbora-engine-capabilities.md).
-
-### Consumers
-
-| Rollups | Named consumer |
-|---|---|
-| R001 to R005 | Concurrent agent writes through arbora; MEDULLA-SCM changeset acceptance |
-| R006 to R009 | Outside BI and SQL tools for the catalog and governance rows; the native-hosting pilot of MEDULLA-UNIFIED-DATA-PLANE-R026 |
-| R010 to R014 | Native-hosted application tables of MEDULLA-UNIFIED-DATA-PLANE-R024 |
-| R015 to R017 | Change subscribers of MEDULLA-UNIFIED-DATA-PLANE-R009; operator recovery; read scale |
-| R018 | Catalog profiling and quality jobs of MEDULLA-UNIFIED-DATA-PLANE-R761 and R762 |
-| R019 | Every attached-source adapter |
-| R020 | The benchmark gate of MEDULLA-DURABLE-KERNEL-R042 |
