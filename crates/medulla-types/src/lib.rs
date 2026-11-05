@@ -31,6 +31,8 @@ pub mod mysql_mariadb_connection;
 pub mod asr_wire;
 // MEDULLA-DURABLE-KERNEL-R076.1 — authoritative scheduler policy data and validation.
 pub mod scheduler_config;
+// MEDULLA-DECISION-ENGINE-R653.1 — improvement-loop records and the `Loops` op body.
+pub mod loops;
 // MEDULLA-INGEST-WORKER-R002.1/.2 — induced ontology proposals and admission scores.
 pub mod ontology_proposal;
 // MEDULLA-INGEST-WORKER-R003.1 — typed knowledge atoms with mandatory provenance.
