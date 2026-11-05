@@ -4,9 +4,7 @@ Governing spec: [spec.md](spec.md). Rows: [requirements.md](requirements.md).
 
 ## Summary
 
-The public engine contract is generated from the Rust method and error declarations, because server dispatch and stable errors are Medulla's authority. Every language projection (Python models, the Go and JavaScript clients, the method codec) binds to one source revision, and the engine serves its method catalog at run time. The live caller is any client of a served method; the owners and reuse candidates are listed under Technical Context.
-
-**State:** PROPOSED. This plan is executable from a fresh public checkout.
+The public engine contract is the Rust method and error declarations, because server dispatch and stable errors are Medulla's authority. The engine serves its method catalog at run time (`medulla.engine.method_catalog()`), so no contract file is generated, committed or packaged. Every language projection binds to the Rust serde types: the hand-written Python models are pinned by round-trip vectors, and the Go and JavaScript clients sign through the shared method codec. The live caller is any client of a served method. The owners and reuse candidates are listed under Technical Context.
 
 ## Technical Context
 
@@ -24,18 +22,19 @@ The public engine contract is generated from the Rust method and error declarati
 
 | Authority | Existing component | Rule for changes |
 |---|---|---|
-| Method and errors | `crates/medulla-capabilities/src/bin/gen_contract.rs`, Rust `ErrorCode` declarations | Extend declarations and generator; never edit generated JSON as the source. |
-| Generated catalogs | `contract/methods.json`, `contract/errors.json`, `contract/schemas/`, `contract/fixtures/` | Check digest and fixture parity after regeneration. |
-| Python models and package | `medulla/generated/models.py`, `medulla/contract/` | Re-export generated wire classes and verify installed wheel contents. |
-| Canonical signing | Rust method codec and `scripts/build_method_codec_wasm.py` | Use its body bytes in Go and JS; do not port canonicalization by hand. |
-| Go/JS consumers | `clients/go/`, `clients/js/` | Run vector and error tests against embedded WASM and an installed/served engine. |
-| Release checks | `scripts/generated_artifacts.py`, `scripts/check_wheel_completeness.py`, `scripts/check_wheel_privacy.py`, `scripts/ci_parity.sh`, `.github/workflows/release.yml` | Make hosted checks hermetic and source-revision-bound; keep live deployment proof a separate gate. |
+| Method descriptors and scopes | `crates/medulla-capabilities/src/lib.rs::method_descriptors`, `crates/medulla-capabilities/src/scopes.rs::SCOPES` | Extend the descriptor rows; never copy them into a file. |
+| Served catalog | `crates/medulla-capabilities/src/catalog.rs::catalog_json`, `crates/medulla-pyengine/src/lib.rs` (`method_catalog`) | Compute at run time; the digest is `contract_catalog_digest`. |
+| Error codes | `crates/medulla-types/src/contract/engine_error_code.rs`, `crates/medulla-capabilities/src/error_routing.rs` | Declare a code once; the method `error_set` derives from it. |
+| Python models | `medulla/generated/models.py` and the typed senders in `medulla/generated/*.py` | Re-export wire classes; one class per wire shape. |
+| Canonical signing | `crates/medulla-method-codec` and `scripts/build_method_codec_wasm.py` | Use its body bytes in Go and JS; do not port canonicalization by hand. |
+| Go and JS consumers | `clients/go/`, `clients/js/` | Run vector tests against the embedded WASM. |
+| Release checks | `scripts/check_wheel_completeness.py`, `scripts/check_wheel_privacy.py`, `scripts/ci_parity.sh`, `.github/workflows/release.yml` | Keep hosted checks hermetic and bound to one source revision. |
 
 ### Contract data model
 
-Each method record has a stable `id`, `domain`, `request_schema`, `result_schema`, `policy`, `replay_class`, `stability`, `consumer_profiles`, `is_wire_callable` and `error_set`. Each error record has `code`, `class`, `retryable`, `http_status_hint`. The generator fails if a referenced schema or error is absent, a method ID is duplicated, an allowed wire method has no dispatcher, or a stable code changes meaning without a deliberate compatibility change. The receipt hashes every generated file and identifies the source revision.
+Each method record has a stable `id`, `domain`, `policy`, `replay_class`, `stability`, `consumer_profiles`, `is_wire_callable` and `error_set`. Each scope record has `scope`, `class` and `owner`. The catalog digest covers every method row in method-id order. A decoder checks the model before use and maps each error code to its typed class. A code newer than the installed package maps to an unknown-code variant.
 
-The request envelope and signed body are distinct. The codec canonicalizes only the specified body fields. The client attaches identity and transport metadata after encoding. Signatures cover the bytes actually sent. A decoder checks schema before use and maps each error code to its generated typed class. An unknown-code variant supports newer server errors. Unknown fields in strict request/result models still fail closed.
+The request envelope and signed body are distinct. The codec canonicalizes only the specified body fields. The client attaches identity and transport metadata after encoding. Signatures cover the bytes sent. Unknown fields in strict request and result models fail closed.
 
 ## Constitution Check
 
@@ -47,17 +46,17 @@ Existing paths only: `crates/` (one crate per subsystem; owners in the architect
 
 ### Fresh checkout developer path
 
-Clone the public repository; install the versions declared by `rust-toolchain.toml`, `Cargo.lock`, `pyproject.toml`, `clients/go/go.mod` and `clients/js/package-lock.json`. Run the repository's normal generators, followed by:
+Clone the public repository. Install the versions declared by `rust-toolchain.toml`, `Cargo.lock`, `pyproject.toml`, `clients/go/go.mod` and `clients/js/package-lock.json`. Then run:
 
 ```bash
-cargo run -q --locked -p medulla-capabilities --features contract --bin gen_contract -- --check
+cargo test -p medulla-capabilities --test contract_registry
 python3 scripts/build_method_codec_wasm.py --check
 go test ./...
 npm test
-python3 -m pytest -q tests/test_generated_client_contract.py tests/test_contract_method_reachability.py
+python3 -m pytest -q tests/test_decide_auth_boundary.py tests/test_method_catalog.py
 ```
 
-Run Go commands from `clients/go` and npm commands from `clients/js`. If a named Python test is moved, update this plan with its replacement before removing the gate. The complete merge gate is `bash scripts/ci_parity.sh` plus the hosted release workflow. CI must start each integration service from a checked-in container/fixture recipe. The job must tear down each service.
+Run Go commands from `clients/go` and npm commands from `clients/js`. The complete merge gate is `bash scripts/ci_parity.sh` plus the hosted release workflow. CI starts each integration service from a checked-in fixture recipe and tears it down.
 
 ## Phase 0: Research
 
@@ -67,36 +66,18 @@ No unknowns.
 
 ### Design decisions
 
-- Catalog metadata is generated from Rust code because server dispatch and stable errors are Medulla authority.
-- The contract receipt binds all language projections to one revision; a package containing current JSON but stale WASM is invalid.
-- Hosted CI may split bounded fast checks from long soak. A missing external environment cannot convert a required public gate into a permanent skip.
-- Quality scans are differential over changed production code with explicit tracked configuration, and manual scanners remain observable release evidence.
+- Catalog metadata derives from Rust code, because server dispatch and stable errors are Medulla authority.
+- The served catalog digest binds replay identities and consumer catalogs to one revision.
+- Hosted CI splits bounded fast checks from long soak. A missing external environment never turns a required public gate into a permanent skip.
+- Quality scans are differential over changed production code with explicit tracked configuration. Manual scanners stay observable release evidence.
 
 ### Capability refusal and decoding contracts
 
-MEDULLA-CONTRACT-R014 publishes the existing governed-actor refusal and routes it only
-to GovernedChange, preserving the fail-closed replicated actor boundary.
-MEDULLA-IDENTITY-R004 classifies federation:read as an engine user scope. Registry
-membership grants no scopes and preserves owner checks and the handler's kg:read
-requirement. MEDULLA-DECISION-ENGINE-R063 defines operation-selected typed decision-fit
-and decision-eval decoding, including nullable status/receipt results and strict
-rejection of wrong operation shapes. The native generator owns all contract
-artifacts. Refusal, scope-census, wrapper and byte-for-byte freshness guards
-validate their consistency.
+`MEDULLA-CONTRACT-R014` and `MEDULLA-CONTRACT-R014.1` publish the refusal codes. The governed-actor refusal routes only to governed changes, which keeps the replicated actor boundary fail-closed. `MEDULLA-IDENTITY-R004` classifies `federation:read` as an engine user scope. Registry membership grants no scopes and keeps the owner checks. `MEDULLA-DECISION-ENGINE-R063` defines the typed decoding of decision-fit and decision-eval results. Diagnostic and unserved-helper prefixes are not wire codes.
 
-Diagnostic and unserved-helper prefixes are not additional wire codes.
-The census follows a conservative function/method-reference graph from
-Response-returning functions
-and Response::err boundaries, includes macro literals, and excludes typed
-StatisticalErrorCode diagnostic arguments. Inline cfg(test) modules are excluded
-structurally. Regressions retain production before and after test modules,
-feature-gated production, called helpers and formatted refusal strings, while
-excluding an uncalled helper and typed diagnostic text.
-
-### 2026-10-12: current architecture boundaries
+### Current architecture boundaries
 
 MEDULLA-CONTRACT-R052 documents the current source composition. It proposes no component split, feature change, or release change.
-The reviewed source revision is `54aab65786bf72fac94f565796eb21f5d1ec72c4`; all paths below refer to that revision unless updated with new evidence.
 
 #### Model: module owners and dependencies
 
@@ -217,12 +198,12 @@ No follow-on above asserts a passed test or changes a subsystem's acceptance in 
 
 ### Work sequence
 
-1. **Catalog audit:** enumerate every Rust-dispatched method and error. Compare generated descriptors to reachable server paths. Correct missing transaction conflict error mapping.
-2. **One Python shape:** replace duplicate hand-written DTO definitions with generated re-exports; preserve import compatibility through aliases only where named and tested.
-3. **Codec parity:** build Rust WASM from pinned tool versions. Compare both embedded copies. Run Go/JS/Python/Rust vectors and record source and artifact hashes. Reduce size by removing unused decode paths before changing optimization flags.
-4. **Package:** include catalogs, schemas and receipt in wheel data. Clean-install into a new virtual environment and verify loader digests and typed operations. Avoid source-tree fallbacks.
-5. **CI:** run full root Python tests with the kernel/engine build in hosted CI, static contract reachability, Go/JS tests, all release feature profiles, and differential quality scanners. Tests needing a service start one from checked-in fixtures; deployment/soak has its own documented workflow.
-6. **Release:** build the wheel twice in clean environments and compare normalized artifacts. Install the built wheel, run consumer parity and mark a precise commit/tag. Record evidence per requirement.
+1. **Catalog:** the descriptor rows and error sets back the served catalog (R044, R054, R057).
+2. **One Python shape:** one generated class per wire shape; strict models pinned by vectors (R001.3 to R001.5, R005, R048).
+3. **Codec parity:** build the WASM from the pinned toolchain; compare both client copies; replay vectors in Rust, Python, Go and JS (R004, R006.x).
+4. **Package:** one `medulla` distribution per platform, with the server folded in (R053.x).
+5. **CI:** the full root Python suite, static gates and the feature matrix run in hosted CI (R009, R018, R037).
+6. **Split gates:** crate graph, build profiles and spec path checks (R056.x).
 
 ## Complexity Tracking
 
@@ -264,5 +245,4 @@ Crate split: the generated-contract machinery goes first. Then each subsystem mo
 ## Cross-repo seams
 
 - scion-sdk's engine client adapter imports the published `medulla` package's client and request and result models (`SCION-CENTRALIZED-CAPABILITIES-R018`): [contracts/scion-sdk-engine-client.md](contracts/scion-sdk-engine-client.md).
-
-arbora also reads the run-time method catalog, `medulla.engine.method_catalog()`, for its served operations and scope registry (`ARBORA-OPS-R006`, `ARBORA-IDENTITY-R002.1`). This seam has no contract document yet: the catalog row does not yet carry the caller chain and shape that document cites.
+- arbora reads the run-time method catalog `medulla.engine.method_catalog()` for its served operations and scope registry (`ARBORA-OPS-R006`, `ARBORA-IDENTITY-R002.1`): [contracts/arbora-method-catalog.md](contracts/arbora-method-catalog.md).
