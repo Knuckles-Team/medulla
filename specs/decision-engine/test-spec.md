@@ -1076,3 +1076,6 @@ Entries for rows whose named test is not yet in the tree.
 - `MEDULLA-DECISION-ENGINE-R121.2`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/classes_tests.rs::graph_claim_and_evidence_control_answer_class`.
 - `MEDULLA-DECISION-ENGINE-R122`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/learning_tests.rs::synthetic_origin_records_are_excluded_from_real_calibration`.
 - `MEDULLA-DECISION-ENGINE-R124`: planned L1 `crates/medulla-numeric/tests/stat_kernels/clippy_policy.rs::the_declared_self_check_file_exists`.
+- `MEDULLA-DECISION-ENGINE-R128.14`: planned L1 `tests/test_generated_models.py::test_harness_config_kind_is_a_contract_question_kind` asserts the `QuestionKind` literal includes `harness_config`.
+- `MEDULLA-DECISION-ENGINE-R129.1`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/rule_promotion_tests.rs::attach_point_reads_published_invariants`.
+- `MEDULLA-DECISION-ENGINE-R129.5`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/rule_promotion_tests.rs::contradicting_rule_is_rejected_and_compatible_rule_promotes`.
