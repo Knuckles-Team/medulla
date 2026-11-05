@@ -174,7 +174,7 @@ otel = ["medulla-kernel/otel",
     "dep:opentelemetry-otlp",
     "dep:tracing-opentelemetry",
     "server"]
-finance = ["medulla-server/finance", "medulla-h-decide/finance", "medulla-h-compute/finance", "medulla-compute/finance", "medulla-types/finance", "medulla-result-types/finance", "medulla-protocol-types/finance", "medulla-finance-quant/analytics", "medulla-sql-udfs/finance", "medulla-sql/finance", "medulla-sql-tests/finance", "medulla-server-graph/finance"]
+finance = ["medulla-server/finance", "medulla-h-decide/finance", "medulla-h-compute/finance", "medulla-compute/finance", "medulla-types/finance", "medulla-result-types/finance", "medulla-protocol-types/finance", "medulla-finance-quant/analytics", "medulla-sql-udfs/finance", "medulla-sql/finance", "medulla-sql-tests/finance", "medulla-server-graph/finance", "medulla-h-graph/finance"]
 ast = ["medulla-server/ast", "medulla-h-ingest/ast", "medulla-server-api/ast", "medulla-store/ast", "medulla-compute/ast", "medulla-server-cluster-tests/ast", "medulla-server-router/ast", "medulla-server-graph/ast"]
 # Extended-language grammar tier (CONCEPT:KG-2.106), folded into `full`.
 ast-extended = ["medulla-compute/ast-extended"]

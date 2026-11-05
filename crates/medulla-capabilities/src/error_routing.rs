@@ -182,6 +182,16 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     ("FinanceFactorRank", &["FACTOR_RECORD_INVALID"]),
     // MEDULLA-FINANCE-PRIMITIVES-R904: no current record for the binding in the caller's tenant.
     ("WalletKeyTrustGet", &["WALLET_KEY_TRUST_NOT_FOUND"]),
+    // MEDULLA-FINANCE-PRIMITIVES-R004.3.2: the record put's closed refusals.
+    (
+        "FinanceRecordPut",
+        &[
+            "FINANCE_RECORD_VERSION_UNKNOWN",
+            "RECORD_DERIVED_READONLY",
+            "RECORD_HEAD_CONFLICT",
+            "RECORD_SHAPE_INVALID",
+        ],
+    ),
     ("GetNodes", &["RESULT_TOO_LARGE"]),
     ("GetEdges", &["RESULT_TOO_LARGE"]),
     (
