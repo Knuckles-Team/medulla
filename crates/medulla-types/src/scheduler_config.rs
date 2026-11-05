@@ -12,6 +12,27 @@ pub const DEFAULT_CORES_PER_MILLE: u16 = 360;
 /// Default memory budget per worker: exactly three binary gibibytes.
 pub const DEFAULT_MEMORY_PER_WORKER_BYTES: u64 = 3 * 1024 * 1024 * 1024;
 
+/// Default hydration scope cap in work items (MEDULLA-REPO-INGEST-R650.2).
+pub const DEFAULT_HYDRATION_SCOPE_CAP: u32 = 10_000;
+/// Inclusive bounds of `hydration_scope_cap`.
+pub const HYDRATION_SCOPE_CAP_BOUNDS: (u32, u32) = (100, 1_000_000);
+/// Default target file count of one repository split part (MEDULLA-REPO-INGEST-R650.2).
+pub const DEFAULT_HYDRATION_SPLIT_TARGET_FILES: u32 = 2_000;
+/// Inclusive bounds of `hydration_split_target_files`.
+pub const HYDRATION_SPLIT_TARGET_FILES_BOUNDS: (u32, u32) = (100, 100_000);
+/// Environment key overriding `hydration_scope_cap` at startup.
+pub const ENV_HYDRATION_SCOPE_CAP: &str = "MEDULLA_HYDRATION_SCOPE_CAP";
+/// Environment key overriding `hydration_split_target_files` at startup.
+pub const ENV_HYDRATION_SPLIT_TARGET_FILES: &str = "MEDULLA_HYDRATION_SPLIT_TARGET_FILES";
+
+fn default_hydration_scope_cap() -> u32 {
+    DEFAULT_HYDRATION_SCOPE_CAP
+}
+
+fn default_hydration_split_target_files() -> u32 {
+    DEFAULT_HYDRATION_SPLIT_TARGET_FILES
+}
+
 fn default_cores_per_mille() -> u16 {
     DEFAULT_CORES_PER_MILLE
 }
@@ -45,6 +66,12 @@ pub struct SchedulerConfig {
     #[serde(default = "default_memory_per_worker_bytes")]
     pub memory_per_worker_bytes: u64,
     pub max_queue_depth: u64,
+    /// Largest baseline-hydration scope admitted, in work items.
+    #[serde(default = "default_hydration_scope_cap")]
+    pub hydration_scope_cap: u32,
+    /// Target file count of one repository split part.
+    #[serde(default = "default_hydration_split_target_files")]
+    pub hydration_split_target_files: u32,
     /// Above this many containers an architecture view is refused as too large.
     #[serde(default = "default_architecture_view_max_containers")]
     pub architecture_view_max_containers: u32,
@@ -58,6 +85,9 @@ pub enum InvalidSchedulerConfig {
     ZeroMemoryPerWorker,
     ArchitectureViewMaxContainersOutOfRange,
     OversubscribedFloors { total_workers: u32 },
+    HydrationScopeCapOutOfRange,
+    HydrationSplitTargetOutOfRange,
+    InvalidEnvValue(&'static str),
 }
 
 impl std::fmt::Display for InvalidSchedulerConfig {
@@ -80,6 +110,17 @@ impl std::fmt::Display for InvalidSchedulerConfig {
                     "scheduler lane floors exceed total workers {total_workers}"
                 )
             }
+            Self::HydrationScopeCapOutOfRange => write!(
+                f,
+                "scheduler hydration_scope_cap must be within [{}, {}]",
+                HYDRATION_SCOPE_CAP_BOUNDS.0, HYDRATION_SCOPE_CAP_BOUNDS.1
+            ),
+            Self::HydrationSplitTargetOutOfRange => write!(
+                f,
+                "scheduler hydration_split_target_files must be within [{}, {}]",
+                HYDRATION_SPLIT_TARGET_FILES_BOUNDS.0, HYDRATION_SPLIT_TARGET_FILES_BOUNDS.1
+            ),
+            Self::InvalidEnvValue(key) => write!(f, "{key} must be an unsigned integer"),
         }
     }
 }
@@ -94,6 +135,16 @@ impl SchedulerConfig {
         }
         if self.memory_per_worker_bytes == 0 {
             return Err(InvalidSchedulerConfig::ZeroMemoryPerWorker);
+        }
+        if !(HYDRATION_SCOPE_CAP_BOUNDS.0..=HYDRATION_SCOPE_CAP_BOUNDS.1)
+            .contains(&self.hydration_scope_cap)
+        {
+            return Err(InvalidSchedulerConfig::HydrationScopeCapOutOfRange);
+        }
+        if !(HYDRATION_SPLIT_TARGET_FILES_BOUNDS.0..=HYDRATION_SPLIT_TARGET_FILES_BOUNDS.1)
+            .contains(&self.hydration_split_target_files)
+        {
+            return Err(InvalidSchedulerConfig::HydrationSplitTargetOutOfRange);
         }
         if !ARCHITECTURE_VIEW_MAX_CONTAINERS_RANGE.contains(&self.architecture_view_max_containers)
         {
@@ -112,6 +163,29 @@ impl SchedulerConfig {
             )?;
         }
         Ok(())
+    }
+
+    /// Apply the `MEDULLA_<NAME>` startup overrides of the hydration keys and
+    /// re-validate, so an out-of-range value refuses startup.
+    pub fn apply_env_overrides(
+        &mut self,
+        lookup: impl Fn(&str) -> Option<String>,
+    ) -> Result<(), InvalidSchedulerConfig> {
+        for (key, slot) in [
+            (ENV_HYDRATION_SCOPE_CAP, &mut self.hydration_scope_cap),
+            (
+                ENV_HYDRATION_SPLIT_TARGET_FILES,
+                &mut self.hydration_split_target_files,
+            ),
+        ] {
+            if let Some(raw) = lookup(key) {
+                *slot = raw
+                    .trim()
+                    .parse()
+                    .map_err(|_| InvalidSchedulerConfig::InvalidEnvValue(key))?;
+            }
+        }
+        self.validate()
     }
 }
 
@@ -336,6 +410,31 @@ mod tests {
         ] {
             assert!(serde_json::from_value::<SchedulerConfig>(value).is_err());
         }
+    }
+
+    // spec: MEDULLA-REPO-INGEST-R650.2
+    #[test]
+    fn hydration_knobs_default_override_and_refuse_out_of_range() {
+        let mut config = config();
+        assert_eq!(config.hydration_scope_cap, 10_000);
+        assert_eq!(config.hydration_split_target_files, 2_000);
+        config
+            .apply_env_overrides(|key| (key == ENV_HYDRATION_SCOPE_CAP).then(|| "500".into()))
+            .unwrap();
+        assert_eq!(config.hydration_scope_cap, 500);
+        assert_eq!(
+            config.apply_env_overrides(|key| {
+                (key == ENV_HYDRATION_SPLIT_TARGET_FILES).then(|| "99".into())
+            }),
+            Err(InvalidSchedulerConfig::HydrationSplitTargetOutOfRange)
+        );
+        let mut config = self::config();
+        assert_eq!(
+            config.apply_env_overrides(|key| (key == ENV_HYDRATION_SCOPE_CAP).then(|| "x".into())),
+            Err(InvalidSchedulerConfig::InvalidEnvValue(
+                ENV_HYDRATION_SCOPE_CAP
+            ))
+        );
     }
 
     // spec: MEDULLA-FEDERATED-QUERY-R608.2

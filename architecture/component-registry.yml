@@ -1052,6 +1052,7 @@ components:
       - "crates/medulla-resource/src/lib.rs"
     test_roots:
       - "crates/medulla-capabilities/tests"
+      - "crates/medulla-durable/benches"
     generated_roots: []
     shared_roots: []
     shared_files: []
@@ -3890,6 +3891,9 @@ components:
       - "tests/test_cep_standing_queries.py"
       - "tests/test_certify_exact_multimodal_assert_page.py"
       - "tests/test_check_complexity_staged.py"
+      - "tests/test_check_decide_budgets.py"
+      - "tests/jobs/__init__.py"
+      - "tests/shex_served.rs"
       - "tests/test_quality_gate_script.py"
       - "tests/test_contract_architecture_evidence.py"
       - "tests/test_check_dupehound_main.py"
