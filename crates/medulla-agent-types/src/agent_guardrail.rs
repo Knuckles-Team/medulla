@@ -191,6 +191,58 @@ impl GuardrailRule {
     }
 }
 
+/// Attribute a `RuleInvariant` component carries its forbidden rule id in
+/// (MEDULLA-DECISION-ENGINE-R129.1).
+pub const INVARIANT_FORBIDDEN_RULE_ID_ATTRIBUTE: &str = "forbidden_rule_id";
+/// Attribute a `RuleInvariant` component carries its task class in.
+pub const INVARIANT_ON_CLASS_ATTRIBUTE: &str = "on_class";
+
+impl RuleInvariant {
+    /// The attributes a `RuleInvariant` component is published with; the
+    /// component id is `invariant_iri`.
+    pub fn to_attributes(&self) -> BTreeMap<String, String> {
+        BTreeMap::from([
+            (
+                INVARIANT_FORBIDDEN_RULE_ID_ATTRIBUTE.to_string(),
+                self.forbidden_rule_id.clone(),
+            ),
+            (
+                INVARIANT_ON_CLASS_ATTRIBUTE.to_string(),
+                self.on_class.clone(),
+            ),
+        ])
+    }
+
+    /// Decode a stored `RuleInvariant` component, refusing a malformed one by
+    /// name: a missing or blank attribute, or an `on_class` that is not an IRI.
+    pub fn from_attributes(
+        invariant_iri: &str,
+        attributes: &BTreeMap<String, String>,
+    ) -> Result<Self, String> {
+        let field = |name: &str| -> Result<String, String> {
+            match attributes.get(name).map(|value| value.trim()) {
+                Some(value) if !value.is_empty() => Ok(value.to_string()),
+                _ => Err(format!(
+                    "MALFORMED_GUARDRAIL_RULE: rule invariant '{invariant_iri}' needs a \
+                     non-empty '{name}' attribute"
+                )),
+            }
+        };
+        let on_class = field(INVARIANT_ON_CLASS_ATTRIBUTE)?;
+        if !is_iri(&on_class) {
+            return Err(format!(
+                "MALFORMED_GUARDRAIL_RULE: rule invariant '{invariant_iri}' on_class \
+                 '{on_class}' is not an IRI"
+            ));
+        }
+        Ok(Self {
+            invariant_iri: invariant_iri.to_string(),
+            forbidden_rule_id: field(INVARIANT_FORBIDDEN_RULE_ID_ATTRIBUTE)?,
+            on_class,
+        })
+    }
+}
+
 /// An IRI here is a scheme- or prefix-qualified name with no whitespace
 /// (`https://...`, `urn:...`, `eg:TaskClass`).
 fn is_iri(value: &str) -> bool {

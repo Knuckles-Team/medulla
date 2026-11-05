@@ -175,4 +175,5 @@ method_results! {
     DecisionLogVerify(DecisionLog / "verify") => Raw<DecisionLogVerification>;
     DecisionLogResolve(DecisionLog / "resolve") => Raw<StoredResolution>;
     DecisionLogLearn(DecisionLog / "learn") => Raw<LearningRecorded>;
+    DecisionLogPromoteRule(DecisionLog / "promote_rule") => Raw<medulla_agent_types::agent_guardrail::RulePromotionVerdict>;
 }

@@ -58,6 +58,8 @@ mod stat_resolve;
 #[cfg(feature = "decide")]
 mod stat_retention;
 #[cfg(feature = "decide")]
+mod stat_rule_promotion;
+#[cfg(feature = "decide")]
 mod stat_slate;
 // EH-523: the per-component split of a slate's outcome on the outcome aggregate.
 #[cfg(feature = "decide")]

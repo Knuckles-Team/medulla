@@ -495,6 +495,17 @@ fn dispatch(
                 medulla_protocol_types::result_contract::coordination::DecisionLogLearn,
             >(super::stat_learning::dispatch(ctx, reader, write, inputs)?)
         }
+        DecisionLogOp::PromoteRule {
+            rule,
+            resolution_ids,
+            ..
+        } => ResultPayload::of::<
+            medulla_protocol_types::result_contract::coordination::DecisionLogPromoteRule,
+        >(super::stat_rule_promotion::promote(
+            ctx,
+            &rule,
+            &resolution_ids,
+        )?),
         DecisionLogOp::Verify { record_id, .. } => ResultPayload::of::<DecisionLogVerify>(verify(
             ctx,
             reader,

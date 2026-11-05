@@ -119,7 +119,7 @@ const DIGEST_PREFIX: &str = "sha256:";
 /// `McpServer`, `McpPrompt`, `McpResource`, `Skill`, `Ontology`, `Schema`,
 /// `OutputValidator`, `Predicate`, `Shapes`, `A2aAgentCard`, `DecisionRecord`,
 /// `DecisionPolicy`, `DecisionHead`, `FeatureSchema`, `Rubric`, `NlTemplate`,
-/// and `GuardrailRule`.
+/// `GuardrailRule` and `RuleInvariant`.
 ///
 /// Closed on purpose. Every kind is either referenced from an agent slot —
 /// [`crate::agent_library::AgentLibraryEntry`],
@@ -186,6 +186,12 @@ pub enum AgentComponentKind {
     /// and are refused at publish when missing or malformed, so every stored
     /// rule decodes into a [`crate::decision::guardrail::GuardrailRule`].
     GuardrailRule,
+    /// A stored invariant a promoted guardrail rule may not contradict
+    /// (MEDULLA-DECISION-ENGINE-R129.1). The component id is the invariant
+    /// IRI; `forbidden_rule_id` and `on_class` travel as attributes and are
+    /// refused at publish when missing or malformed, so every stored
+    /// invariant decodes into a [`crate::agent_guardrail::RuleInvariant`].
+    RuleInvariant,
 }
 
 impl AgentComponentKind {
@@ -212,6 +218,7 @@ impl AgentComponentKind {
             Self::Rubric => "rubric",
             Self::NlTemplate => "nl_template",
             Self::GuardrailRule => "guardrail_rule",
+            Self::RuleInvariant => "rule_invariant",
         }
     }
 
@@ -242,7 +249,8 @@ impl AgentComponentKind {
             | Self::Shapes
             | Self::A2aAgentCard
             | Self::DecisionRecord
-            | Self::GuardrailRule => "agent:component-write",
+            | Self::GuardrailRule
+            | Self::RuleInvariant => "agent:component-write",
         }
     }
 }

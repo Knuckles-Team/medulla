@@ -1032,6 +1032,9 @@ async fn graph_log_record(h: &Harness) -> StatisticalDecisionRecord {
 
 mod retention_tests;
 
+// MEDULLA-DECISION-ENGINE-R129.1: the rule-promotion attach point.
+mod rule_promotion_tests;
+
 mod log_tests;
 use log_tests::{decision_log_round_trip, fit_from_the_engine_log, log_op};
 #[cfg(all(feature = "blob", feature = "query"))]

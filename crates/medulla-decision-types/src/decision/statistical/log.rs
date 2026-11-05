@@ -399,6 +399,14 @@ pub enum DecisionLogOp {
         tenant_id: String,
         write: super::retrieval::LearningWrite,
     },
+    /// Offer one guardrail rule for promotion, backed by stored abstention
+    /// resolutions; it reaches the invariant gate over the tenant's
+    /// published `RuleInvariant`s (MEDULLA-DECISION-ENGINE-R129.1).
+    PromoteRule {
+        tenant_id: String,
+        rule: medulla_agent_types::agent_guardrail::GuardrailRule,
+        resolution_ids: BoundedVec<String, 64>,
+    },
 }
 
 /// The authorization class of a decision-log operation: which action it
@@ -436,6 +444,7 @@ impl DecisionLogOp {
             Self::Commit { .. } => LogOpClass::Write,
             Self::Evaluate { .. } | Self::Resolve { .. } => LogOpClass::Evaluate,
             Self::Compact { .. } => LogOpClass::Admin,
+            Self::PromoteRule { .. } => LogOpClass::Govern,
             Self::Get { .. } | Self::Aggregate { .. } | Self::Verify { .. } => LogOpClass::Read,
             Self::Learn { write, .. } => write.class(),
         }
@@ -460,7 +469,8 @@ impl DecisionLogOp {
             | Self::Compact { tenant_id, .. }
             | Self::Verify { tenant_id, .. }
             | Self::Resolve { tenant_id, .. }
-            | Self::Learn { tenant_id, .. } => tenant_id,
+            | Self::Learn { tenant_id, .. }
+            | Self::PromoteRule { tenant_id, .. } => tenant_id,
             Self::Aggregate { request } => &request.tenant_id,
         }
     }
