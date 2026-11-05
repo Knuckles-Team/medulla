@@ -146,6 +146,7 @@ fn harness_component_write_stamps_and_links() {
     assert_eq!(properties_msgpack, plain_blob);
 }
 
+// spec: MEDULLA-ORCH-VOCAB-R009.15
 #[test]
 fn invalid_trace_is_refused_and_not_stored() {
     let core = GraphCore::new();

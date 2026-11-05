@@ -18,6 +18,7 @@ def _unit(unit_id: str, status: str, artifacts: list[str]) -> dict:
     }
 
 
+@pytest.mark.spec("MEDULLA-ORCH-VOCAB-R009.701")
 def test_resume_finds_produced_artifacts(clean_graph):
     clean_graph.nodes.add("trace-d", {"node_type": "RunTrace"})
     clean_graph.nodes.add("unit-1", _unit("unit-1", "completed", ["cas:a"]))
@@ -38,6 +39,7 @@ def test_resume_finds_produced_artifacts(clean_graph):
         )
 
 
+@pytest.mark.spec("MEDULLA-ORCH-VOCAB-R009.701")
 def test_unit_without_run_id_is_refused(clean_graph):
     unit = _unit("unit-x", "in_flight", [])
     del unit["run_id"]

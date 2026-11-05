@@ -48,6 +48,9 @@ pub mod icv_guard;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod identity_view;
 
+/// Typed server-config knob loader (MEDULLA-CONTRACT-R058).
+pub mod knob_config;
+
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[cfg(any(feature = "server", feature = "redb"))]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)

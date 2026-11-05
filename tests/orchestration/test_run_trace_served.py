@@ -25,6 +25,7 @@ def _traces() -> list[dict]:
     return json.loads(FIXTURES.read_text())["traces"]
 
 
+@pytest.mark.spec("MEDULLA-ORCH-VOCAB-R009.15")
 def test_invalid_trace_refused_and_not_stored(clean_graph):
     props = {
         "node_type": "RunTrace",

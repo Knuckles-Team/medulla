@@ -381,6 +381,14 @@ pub async fn dispatch_op_workitem_claim_capability(
                 .verify_work_item_claim_capability(&fname, request, authority)
                 .await
                 .map(|result| {
+                    // spec: MEDULLA-DURABLE-KERNEL-R750.752 -- every verify failure is served
+                    // as ACCESS_DENIED; the privacy-safe decision stays in the audit record.
+                    if !result.valid {
+                        return Response::err(
+                            req_id,
+                            "ACCESS_DENIED: WorkItem claim capability not verified".to_string(),
+                        );
+                    }
                     Response::ok(
                         req_id,
                         ResultPayload::of::<

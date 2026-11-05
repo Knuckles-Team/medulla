@@ -115,6 +115,7 @@ Governing spec: [spec.md](spec.md).
 | `MEDULLA-SDLC-R019.13` | Restart recovery never repeats an outside effect blindly | `crates/medulla-sdlc/tests/delivery_recovery.rs::expired_assignment_restarts_with_note_and_unread_inputs_once` (planned) |
 | `MEDULLA-SDLC-R019.14` | Wiring: served delivery methods | `tests/sdlc/test_delivery_served.py::test_every_delivery_method_is_served_and_scoped` (planned) |
 | `MEDULLA-SDLC-R019.15` | Hot-path proof: served delivery journey | `tests/sdlc/test_delivery_served.py::test_slice_to_merged_proposal_through_feedback` (planned) |
+| `MEDULLA-SDLC-R020` | Concurrent changes merge without registry conflicts | `tests/test_merge_safe_registries.py::test_append_only_registries_merge_as_union_and_no_exact_method_count` |
 
 ## Negative and boundary cases
 
@@ -259,3 +260,4 @@ Each entry below is planned. The test file or function does not exist in the tre
 - `MEDULLA-SDLC-R019.13`: `crates/medulla-sdlc/tests/delivery_recovery.rs::expired_assignment_restarts_with_note_and_unread_inputs_once` (planned, L2): proves: rule: a running assignment whose lane lease expired ends with reason `host_restarted`. The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-SDLC-R019.14`: `tests/sdlc/test_delivery_served.py::test_every_delivery_method_is_served_and_scoped` (planned, L3): proves: add the methods `DeliveryOpen`, `DeliveryFeedback`, `DeliveryReport`, `DeliveryStatus`, `DeliveryList`, `DeliveryStop` and `DeliveryRetry` to `crates/medulla-protocol-typ. The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-SDLC-R019.15`: `tests/sdlc/test_delivery_served.py::test_slice_to_merged_proposal_through_feedback` (planned, L4): proves: the journey opens a delivery for one slice. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-SDLC-R020`: `tests/test_merge_safe_registries.py::test_append_only_registries_merge_as_union_and_no_exact_method_count` (L2): proves: two changes that each add a distinct entry to an append-only registry merge with no conflict, and no exact method count is pinned.

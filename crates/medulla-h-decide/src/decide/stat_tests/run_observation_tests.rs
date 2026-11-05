@@ -59,6 +59,7 @@ fn commit(core: &GraphCore, method: &Method) {
     core.add_node(node_id.clone(), properties_msgpack.clone());
 }
 
+// spec: MEDULLA-ORCH-VOCAB-R009.18.2
 #[test]
 fn window_ingest_and_refusals() {
     let core = GraphCore::new();

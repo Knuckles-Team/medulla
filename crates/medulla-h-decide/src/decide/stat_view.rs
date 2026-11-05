@@ -263,7 +263,7 @@ impl medulla_exec::exec::DecisionSource for DecisionViews {
         subject: &str,
         prior_mean: f64,
         prior_strength: f64,
-    ) -> Result<Option<medulla_exec::exec::LearnedReliability>, String> {
+    ) -> Result<medulla_decision_types::decision::reputation::SourceReliability, String> {
         super::stat_reputation::learned_reliability(
             &self.store,
             &self.reader,

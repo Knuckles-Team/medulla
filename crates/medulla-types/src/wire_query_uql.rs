@@ -424,6 +424,10 @@ pub fn uql_op(op: &Op) -> Printed {
             value,
             method,
         } => super::wire_query_attribution::attribute(input, *value, method),
+        Op::Decay { half_life_secs } => {
+            Ok(format!("DECAY HALF_LIFE {}", uql_num(*half_life_secs)?))
+        }
+        Op::ClusterByEmbedding { k } => Ok(format!("CLUSTER BY EMBEDDING K {k}")),
         Op::DecisionScan { preds } => decision_scan(preds),
         Op::Limit { k } => Ok(format!("LIMIT {k}")),
         Op::Project { channels } => project(channels),

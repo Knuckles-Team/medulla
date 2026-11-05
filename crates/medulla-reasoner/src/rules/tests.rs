@@ -300,6 +300,7 @@ ex:bob   ex:parent ex:carol .
         min_confidence: 0.0,
         derived_only: true,
         explain: false,
+        max_steps: None,
     };
     let resp = run_rule_reasoning(&req).unwrap();
     assert_eq!(resp.registered_rules.len(), 1);
@@ -333,6 +334,7 @@ ex:carol ex:parent ex:dave .
         min_confidence: 0.0,
         derived_only: true,
         explain,
+        max_steps: None,
     }
 }
 
@@ -407,4 +409,53 @@ ex:alice ex:worksWith ex:bob .
         .derivations
         .proof("trusts", &[c("bob"), c("alice")])
         .is_none());
+}
+
+/// The fixpoint stops after `max_steps` rule evaluations and returns the facts
+/// derived so far, flagged incomplete with the bound code.
+// spec: MEDULLA-FEDERATED-QUERY-R608.2
+#[test]
+fn fixpoint_stops_at_bound_with_partial_facts() {
+    let mut ttl = String::from("@prefix ex: <http://ex/> .\n");
+    for i in 0..40 {
+        ttl.push_str(&format!("ex:n{i} ex:parent ex:n{} .\n", i + 1));
+    }
+    let triples = parse_turtle(&ttl).unwrap();
+    let ont = crate::owl::parse_ontology(&triples);
+    let mut rs = RuleSet::new();
+    rs.add_str("base: parent(?x,?y) -> ancestor(?x,?y)")
+        .unwrap();
+    rs.add_str("step: ancestor(?x,?y) ^ parent(?y,?z) -> ancestor(?x,?z)")
+        .unwrap();
+
+    let full = reason_triples(&triples, &ont, &rs);
+    assert!(full.complete);
+    assert!(full.rules_fired > 0 && full.steps >= full.rules_fired);
+
+    let bound = full.steps / 2;
+    let partial = reason_triples_bounded(&triples, &ont, &rs, bound);
+    assert!(!partial.complete);
+    assert_eq!(partial.steps, bound);
+    assert!(partial.derived.len() < full.derived.len());
+    assert!(partial.derived.iter().all(|f| full.derived.contains(f)));
+
+    let req = RuleReasonRequest {
+        ontology_ttl: ttl,
+        rules: vec![
+            "base: parent(?x,?y) -> ancestor(?x,?y)".into(),
+            "step: ancestor(?x,?y) ^ parent(?y,?z) -> ancestor(?x,?z)".into(),
+        ],
+        query_predicate: None,
+        min_confidence: 0.0,
+        derived_only: true,
+        explain: false,
+        max_steps: Some(1),
+    };
+    let resp = run_rule_reasoning(&req).unwrap();
+    assert!(!resp.complete);
+    assert_eq!(resp.steps, 1);
+    assert_eq!(
+        resp.bound_code.as_deref(),
+        Some(medulla_types::rdf_report::RULE_FIXPOINT_BOUND)
+    );
 }

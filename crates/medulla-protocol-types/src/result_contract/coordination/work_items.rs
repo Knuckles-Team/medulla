@@ -30,6 +30,10 @@ pub struct WorkItemLeaseRenewal {
     pub fencing_token: Option<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lease_expires_at_ms: Option<u64>,
+    /// A cancel reached this in-flight item: stop at the next step boundary
+    /// and commit `cancelled`.
+    #[serde(default)]
+    pub cancel_requested: bool,
     pub changed_work_item_ids: Vec<String>,
 }
 

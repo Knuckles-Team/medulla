@@ -4,6 +4,8 @@ attempt was eligible."""
 
 from __future__ import annotations
 
+import pytest
+
 UNKNOWN = {"state": "unknown", "value": "not reported"}
 
 
@@ -11,6 +13,7 @@ def _measured(value):
     return {"state": "measured", "value": value}
 
 
+@pytest.mark.spec("MEDULLA-ORCH-VOCAB-R009.18.2")
 def test_window_round_trips_with_unknowns(clean_graph):
     clean_graph.nodes.add("trace-w", {"node_type": "RunTrace", "run_revision": 1})
     window = {
