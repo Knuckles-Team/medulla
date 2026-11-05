@@ -13,6 +13,7 @@
 
 use std::sync::Arc;
 
+use medulla_graph_core::read_through::NodeReadOutcome;
 use medulla_graph_core::read_through::ReadThrough;
 use medulla_graph_core::read_through::ReadThroughFactory;
 
@@ -115,21 +116,13 @@ impl std::fmt::Debug for BackendReadThrough {
 }
 
 impl ReadThrough for BackendReadThrough {
-    fn read_node_blob(&self, node_id: &str) -> Option<Vec<u8>> {
-        // A durable read error (writer gone, etc.) is treated as "not found": the
-        // read path returns None rather than surfacing an I/O error type into
-        // medulla-core. The miss is logged so a real durability fault is observable.
+    fn read_node_blob(&self, node_id: &str) -> NodeReadOutcome {
+        // A durable read error (writer gone, etc.) is `Unavailable`, never
+        // "not found" (MEDULLA-DURABLE-KERNEL-R086.1).
         match self.backend.read_node_blocking(&self.graph_fname, node_id) {
-            Ok(blob) => blob,
-            Err(e) => {
-                tracing::warn!(
-                    "read-through miss for node '{}' in graph '{}': {}",
-                    node_id,
-                    self.graph_fname,
-                    e
-                );
-                None
-            }
+            Ok(Some(blob)) => NodeReadOutcome::Present(blob),
+            Ok(None) => NodeReadOutcome::Absent,
+            Err(e) => NodeReadOutcome::Unavailable(format!("graph '{}': {}", self.graph_fname, e)),
         }
     }
 }
@@ -264,13 +257,20 @@ pub mod tests {
     #[test]
     fn backend_failure_is_not_absence_evidence() {
         let committed_bytes = vec![0, 255, 7, 0];
-        for (reply, expected, warning) in [
-            (Err("durable read unavailable".to_owned()), None, true),
-            (Ok(None), None, false),
+        // MEDULLA-DURABLE-KERNEL-R086.1 replaced the warn-and-`None` branch:
+        // a backend error is the typed `Unavailable` arm, never `Absent`.
+        for (reply, expected) in [
+            (
+                Err("durable read unavailable".to_owned()),
+                NodeReadOutcome::Unavailable(format!(
+                    "graph '{}': durable read unavailable",
+                    sanitize("scope/alpha")
+                )),
+            ),
+            (Ok(None), NodeReadOutcome::Absent),
             (
                 Ok(Some(committed_bytes.clone())),
-                Some(committed_bytes.clone()),
-                false,
+                NodeReadOutcome::Present(committed_bytes.clone()),
             ),
         ] {
             let backend = Arc::new(ProbeBackend {
@@ -298,15 +298,10 @@ pub mod tests {
                 vec![(sanitize(logical_graph), node_id.to_owned())]
             );
             let log = String::from_utf8(captured.0.lock().unwrap().clone()).unwrap();
-            if warning {
-                assert!(log.contains("WARN"), "{log}");
-                assert!(log.contains("read-through miss"), "{log}");
-                assert!(log.contains("durable read unavailable"), "{log}");
-                assert!(log.contains(&sanitize(logical_graph)), "{log}");
-                assert!(log.contains(node_id), "{log}");
-            } else {
-                assert!(log.is_empty(), "unexpected warning: {log}");
-            }
+            assert!(
+                log.is_empty(),
+                "the typed outcome replaces the warning: {log}"
+            );
         }
     }
 }

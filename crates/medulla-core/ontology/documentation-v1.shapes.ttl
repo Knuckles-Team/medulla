@@ -1,0 +1,25 @@
+@prefix kg: <http://knuckles.team/kg#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+
+# Documentation ABox shapes: the records the archivebox connector writes under
+# the documentation module.
+
+kg:WebSnapshotShape a sh:NodeShape ;
+    sh:description "A web snapshot names the URL it captured." ;
+    sh:name "Web Snapshot Shape" ;
+    sh:property [ sh:minCount 1 ;
+            sh:message "A web snapshot has a sourceRef (the captured URL)." ;
+            sh:path kg:sourceRef ] ;
+    sh:targetClass kg:WebSnapshot .
+
+kg:ArchiveResultShape a sh:NodeShape ;
+    sh:description "An archive result names its extractor and a status from the closed succeeded/failed/skipped vocabulary." ;
+    sh:name "Archive Result Shape" ;
+    sh:property [ sh:minCount 1 ;
+            sh:message "An archive result has an extractorName." ;
+            sh:path kg:extractorName ],
+        [ sh:in ( "succeeded" "failed" "skipped" ) ;
+            sh:minCount 1 ;
+            sh:message "resultStatus is succeeded, failed or skipped." ;
+            sh:path kg:resultStatus ] ;
+    sh:targetClass kg:ArchiveResult .

@@ -25,6 +25,8 @@ Graft SDK / arbora --> ConnectorPack.Import / AgentComponent / GraphSchema / cat
 - **Constraints**: A rejected import changes no durable state. Every refusal has one stable code. No dynamic result envelope, no second contract generator, no shadow catalog. No version suffix in a name.
 - **Scale/Scope**: The leaf rows of `requirements.md` and 7 user stories; the `FR-` and `SC-` labels of `spec.md` map rows to stories.
 
+**Knob convention.** An engine knob named `knob x.y` in this spec's rows is a typed field of the server configuration, read from the command line or from the environment variable `MEDULLA_<NAME>` (the dotted name upper-cased, dots as underscores) and bounds-checked at startup: a value outside the stated range refuses startup with the knob name. Decision knobs are the exception and live only in the `MEDULLA-DECISION-ENGINE-R179` registry. Rows do not restate this.
+
 ## Constitution Check
 
 - **R-I. The engine is native Rust and the only fact store**: pass. Every row lands in a Rust crate or the shipped ontology corpus of the engine.

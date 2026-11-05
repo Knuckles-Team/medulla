@@ -11,8 +11,8 @@ This spec adds identity, scope and metadata types to the engine. Types marked ne
 
 ### Identity mode record
 
-- Fields: `IdentityModeRecord { schema_version, mode, epoch, changed_ms, changed_by }`, `IdentityMode { None, Local, External }`, `ModeOp::Transition { expected_epoch, to }` (`MEDULLA-IDENTITY-R003.4`, `crates/medulla-identity-types/src/identity/mode.rs`, new).
-- Rule: the singleton key is `identity_mode`; a transition commits by compare-and-set on the epoch; every session and envelope carries `mode_epoch`.
+- Fields: the existing `AuthMode { None, Local, External }`, `IdentityConfig { mode, epoch, issuer_kid_current, local_fallback }` and `ConfigOp::Transition { request: ModeTransition { expected_epoch, to, issuer_kid, local_fallback } }` (`MEDULLA-IDENTITY-R003.4`, `crates/medulla-identity-types/src/identity/store/modes.rs`).
+- Rule: a transition commits by compare-and-set on the epoch (`EpochConflict` on a mismatch); a transition to or from `None` refuses `MODE_TRANSITION_FORBIDDEN`; every session and envelope carries `mode_epoch`.
 
 ### Scope bound and run-scope policy node
 

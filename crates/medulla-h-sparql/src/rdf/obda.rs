@@ -213,6 +213,7 @@ fn sparql_virtual(
         vars,
         rows,
         proofs: Vec::new(),
+        spatial: Vec::new(),
     })
 }
 

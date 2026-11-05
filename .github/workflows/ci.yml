@@ -281,6 +281,9 @@ jobs:
         env: &medulla-validation-compiler-cache-env
           RUSTC_WRAPPER: sccache
         run: python3 scripts/cargo_test_rescue.py cargo test -p medulla-types -p medulla-core -p medulla-compute --all-features --no-fail-fast
+      - name: Lint (generated Cypher property keys are quoted)
+        env: *medulla-validation-compiler-cache-env
+        run: bash scripts/check_cypher_render.sh
       # The checked ledger is the canonical all-Method projection. The ordinary
       # feature-selected registry is intentionally smaller, so this named profile
       # is the only meaningful exact generated-artifact comparison. This step is
@@ -1617,6 +1620,19 @@ jobs:
           BASE: ${{ github.event.pull_request.base.sha }}
           HEAD: ${{ github.event.pull_request.head.sha }}
         run: SKIP="lane-guard,cargo-deny-advisories${SCOPE_SKIP:+,$SCOPE_SKIP}" pre-commit run --config .config/pre-commit.yaml --from-ref "$BASE" --to-ref "$HEAD" --show-diff-on-failure
+      # Whole-repo scans run at pre-push locally, never at commit; PR CI runs
+      # them here so every one still gates the merge (MEDULLA-CONTRACT-R053.7.1).
+      - name: Whole-repo gates (pre-push stage)
+        env:
+          SCOPE_SKIP: ${{ steps.gates-scope.outputs.skip-hooks }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+          WHOLE_REPO_HOOKS: vulture check-bumpversion canonical-property-schema epistemic-operations-protocol no-version-suffixes p2-modality-architecture p2-analytics-reasoning-architecture universal-read-rls-architecture exact-release-campaigns-architecture persisted-mutation-contract current-only-architecture exact-fault-restart-harness-architecture mint-lease-call-sites orphan-modules durable-table-registration-push security-sanitizer guardrail-tracked-privacy check-root-hygiene check-gitignore-convergence
+        run: |
+          set -euo pipefail
+          for hook in $WHOLE_REPO_HOOKS; do
+            SKIP="${SCOPE_SKIP}" pre-commit run "$hook" --config .config/pre-commit.yaml --hook-stage pre-push --from-ref "$BASE" --to-ref "$HEAD" --show-diff-on-failure
+          done
       - name: Spec trailers
         if: ${{ !cancelled() }}
         run: uvx --from 'git+https://github.com/Knuckles-Team/pipelines@main' pipelines-hook spec-trailers --base-ref "origin/${{ github.base_ref }}"

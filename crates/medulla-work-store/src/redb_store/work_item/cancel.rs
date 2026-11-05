@@ -60,6 +60,46 @@ fn cancel_status_refusal(
     None
 }
 
+/// The row property an in-flight cancel stamps (MEDULLA-DURABLE-KERNEL-R750.751).
+pub const CANCEL_REQUESTED_AT_MS: &str = "cancel_requested_at_ms";
+
+/// Whether a cancel reached this item while its lease was live.
+pub fn cancel_requested(props: &serde_json::Map<String, serde_json::Value>) -> bool {
+    props
+        .get(CANCEL_REQUESTED_AT_MS)
+        .is_some_and(|value| !value.is_null())
+}
+
+/// Stamp the cancel request on a live-leased item; the first stamp wins.
+/// Returns whether the row changed.
+fn stamp_cancel_request(
+    props: &mut serde_json::Map<String, serde_json::Value>,
+    now_ms: u64,
+) -> bool {
+    if cancel_requested(props) {
+        return false;
+    }
+    props.insert(
+        CANCEL_REQUESTED_AT_MS.into(),
+        serde_json::Value::from(now_ms),
+    );
+    props.insert(
+        "updated_at".into(),
+        serde_json::Value::from(now_ms as f64 / 1000.0),
+    );
+    true
+}
+
+/// Retire an expired lease whose cancel was requested: `cancelled`, never
+/// back to `ready`. The cancel grace was the remaining lease time.
+pub fn retire_cancel_requested_lease(
+    props: &mut serde_json::Map<String, serde_json::Value>,
+    reason_ref: &Option<String>,
+    now_s: f64,
+) -> Result<(), String> {
+    apply_cancelled_work_item_props(props, reason_ref, now_s).map(|_| ())
+}
+
 fn release_work_item_lease(
     props: &mut serde_json::Map<String, serde_json::Value>,
     next_epoch: u64,
@@ -148,6 +188,22 @@ pub fn apply_cancel_work_item_row(
     }
     let now_s = now_ms as f64 / 1000.0;
     if let Some(status) = cancel_status_refusal(&props, now_s) {
+        if status
+            == medulla_protocol_types::result_contract::coordination::WorkItemCancelStatus::InFlight
+            && stamp_cancel_request(&mut props, now_ms)
+        {
+            write_work_item_props(nodes, graph, work_item_id, &mut props, crypto)?;
+            return cancel_transition_result(
+                medulla_protocol_types::result_contract::coordination::WorkItemTransition {
+                    status,
+                    work_item_id: Some(work_item_id.to_string()),
+                    lease_epoch: None,
+                    fencing_token: None,
+                    changed_work_item_ids: vec![work_item_id.to_string()],
+                },
+            )
+            .map(Some);
+        }
         return cancel_transition_result(unchanged_transition(status, Some(work_item_id)))
             .map(Some);
     }
@@ -408,5 +464,31 @@ mod tests {
         assert_eq!(props["status"], "cancelled");
         assert!(props["lease_owner"].is_null());
         assert!(props["lease_expires_at"].is_null());
+    }
+
+    #[test]
+    fn in_flight_cancel_stamps_request_and_renew_reports_it() {
+        let mut props = leased_props(2, 2);
+        props.insert("status".into(), "running".into());
+        props.insert("lease_expires_at".into(), 100.0.into());
+        assert_eq!(
+            cancel_status_refusal(&props, 50.0),
+            Some(medulla_protocol_types::result_contract::coordination::WorkItemCancelStatus::InFlight)
+        );
+        assert!(!cancel_requested(&props));
+        assert!(stamp_cancel_request(&mut props, 50_000));
+        assert!(cancel_requested(&props));
+        assert_eq!(property_u64(&props, CANCEL_REQUESTED_AT_MS), 50_000);
+        assert!(
+            !stamp_cancel_request(&mut props, 60_000),
+            "first stamp wins"
+        );
+        assert_eq!(property_u64(&props, CANCEL_REQUESTED_AT_MS), 50_000);
+
+        // Lease expires before the worker commits: retired cancelled, never ready.
+        let retired =
+            claim_reclaim_expired_lease(&mut props, "wi", "running", 200.0).expect("retires");
+        assert!(retired);
+        assert_eq!(property_string(&props, "status"), "cancelled");
     }
 }
