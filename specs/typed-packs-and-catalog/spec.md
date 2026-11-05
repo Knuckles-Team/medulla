@@ -12,12 +12,126 @@ The generator owns delivery state in `status.json`.
 Record exact source, commands, test results and served evidence for each obligation.
 Existing records do not establish execution of newly defined scenarios.
 
-## Outcome and user stories
+## User Scenarios & Testing
 
-1. A connector author can publish one deterministic snapshot of tools, skills, prompts, ontology, shapes, model profiles, A2A cards, and its `connector://resources` declaration. Reimporting identical content is a no-op; a changed or withdrawn entry has a predictable lifecycle.
-2. A tenant administrator can bind the one allowed importer, inspect the head and projection status, retire entries, attach a visible pack schema to a graph, and safely re-drive a failed projection.
-3. A consumer can read a typed component and its engine-owned body. The consumer can trust the generated method/result contract and receipt. It sees only a projection that passed its readiness gate.
-4. A contributor can add a pack kind or catalog method by extending the existing type/registry/handler path. The contributor proves wire, storage, authorization, replay, client, and release parity.
+### User Story 1 - A connector author publishes one deterministic pack (Priority: P1)
+
+The user is a connector author. The outcome is one deterministic snapshot of tools, skills, prompts, ontology, shapes, model profiles, A2A cards and the `connector://resources` declaration, with a predictable lifecycle.
+
+**Acceptance scenarios**
+
+1. **Given** a valid pack, **When** the author imports it twice, including after a package-only version bump, **Then** the second call returns `Unchanged` and writes nothing.
+2. **Given** an imported pack, **When** a tool is removed and later restored with the same body, **Then** it becomes `Withdrawn`, leaves new selection, stays readable for historical pins and re-publishes under the same ID.
+3. **Given** a forged or oversized index, an unsafe ontology import or an unbound importer, **When** it is submitted, **Then** the import returns a stable refusal with at most 256 violations and no durable change.
+
+Independent test: the bound tests of `MEDULLA-TYPED-PACKS-R001` run this story through a production entry point.
+
+### User Story 2 - A tenant administrator operates packs and projections (Priority: P1)
+
+The user is a tenant administrator. The outcome is control of the importer binding, the head, retirement and projection status.
+
+**Acceptance scenarios**
+
+1. **Given** a pack head, **When** the administrator binds the importer, retires an entry or reprojects, **Then** only an admin with the matching tenant succeeds and the head reflects the change.
+2. **Given** a worker crash after schema attach and before acknowledgement, **When** the projection retries, **Then** the same record attaches as a no-op and visibility advances once.
+
+Independent test: the bound tests of `MEDULLA-TYPED-PACKS-R007` run this story through a production entry point.
+
+### User Story 3 - A consumer reads typed components and verified bodies (Priority: P1)
+
+The user is a consumer of the catalog. The outcome is typed reads that pass the readiness gate and exact verified bytes.
+
+**Acceptance scenarios**
+
+1. **Given** an authorized reader, **When** it reads a component, **Then** it receives exact verified bytes and a receipt that matches the contract vectors.
+2. **Given** an unauthorized reader, **When** it reads the same component, **Then** it receives a stable denial and no importer identity, body bytes or cross-tenant metadata.
+
+Independent test: the bound tests of `MEDULLA-TYPED-PACKS-R042` run this story through a production entry point.
+
+### User Story 4 - An ontology owner keeps packs and vocabulary joined to the core (Priority: P2)
+
+The user is an ontology owner. The outcome is a governed core and packs that extend it through subclass edges.
+
+**Acceptance scenarios**
+
+1. **Given** a pack ontology with a class that has no subclass path to a core class, **When** it is imported, **Then** the import is refused with `ONTOLOGY_ORPHAN` naming the class.
+2. **Given** a pack that declares an import of the core ontology, **When** it is imported, **Then** the import is refused with `ONTOLOGY_PACK_IMPORTS_CORE`.
+
+Independent test: the bound tests of `MEDULLA-TYPED-PACKS-R071` run this story through a production entry point.
+
+### User Story 5 - A catalog steward governs glossary, dashboards and classification (Priority: P2)
+
+The user is a data steward. The outcome is a glossary, dashboards, classification claims and an edit history that are first-class catalog assets.
+
+**Acceptance scenarios**
+
+1. **Given** a glossary scheme, **When** a term is proposed, reviewed and transitioned, **Then** each step is a recorded revision readable by UQL.
+2. **Given** a promoted marking, **When** it propagates along lineage edges, **Then** downstream assets carry proposed claims with provenance `propagated`.
+
+Independent test: the bound tests of `MEDULLA-TYPED-PACKS-R801` run this story through a production entry point.
+
+### User Story 6 - A skill author ships a skill graph as a pack (Priority: P3)
+
+The user is a skill author. The outcome is a skill graph that validates against an open knowledge-bundle format and layers its ontology on the core.
+
+**Acceptance scenarios**
+
+1. **Given** a graph bundle with a wrong hash, **When** it is imported, **Then** the import is refused with `SKILL_GRAPH_HASH_MISMATCH` naming the path and no state changes.
+2. **Given** a conformant bundle with an ontology layer, **When** it is imported, **Then** its classes read through a core class.
+
+Independent test: the bound tests of `MEDULLA-TYPED-PACKS-R700` run this story through a production entry point.
+
+### User Story 7 - A contributor extends the catalog without drift (Priority: P3)
+
+The user is a contributor. The outcome is a pack kind or catalog method added through the existing type, registry and handler path with proven parity.
+
+**Acceptance scenarios**
+
+1. **Given** a new method, **When** the contributor adds it, **Then** contract generation in check mode matches across every output directory and every client uses the generated result type.
+
+Independent test: the bound tests of `MEDULLA-TYPED-PACKS-R067` run this story through a production entry point.
+
+### Edge Cases
+
+- A pack whose digest differs only by archive layout or package version keeps the same semantic digest.
+- A crash before commit leaves only reclaimable orphan bodies; a crash during commit exposes no partial head.
+- A lost reply replays by operation identity; changed bytes under the same idempotency key are refused.
+- Validation that reaches 256 violations or its step budget stops and reports truncation.
+- A denied read never reveals importer identity, body bytes or cross-tenant metadata.
+- A projection that fails stays visible and retryable without losing later work.
+- A retired row leaves no shim; its behaviour is removed in the same change.
+
+## Requirements
+
+- **FR-001**: Pack index, entry, annotation and digest contract. Rows: `MEDULLA-TYPED-PACKS-R001`, `MEDULLA-TYPED-PACKS-R022`, `MEDULLA-TYPED-PACKS-R023`.
+- **FR-002**: Typed pack and component operations with declared results. Rows: `MEDULLA-TYPED-PACKS-R007`, `MEDULLA-TYPED-PACKS-R018`, `MEDULLA-TYPED-PACKS-R067`.
+- **FR-003**: Atomic import, replay and lifecycle. Rows: `MEDULLA-TYPED-PACKS-R008`, `MEDULLA-TYPED-PACKS-R014`, `MEDULLA-TYPED-PACKS-R015`.
+- **FR-004**: Bounded validation with stable refusal codes. Rows: `MEDULLA-TYPED-PACKS-R003`, `MEDULLA-TYPED-PACKS-R031`, `MEDULLA-TYPED-PACKS-R032`.
+- **FR-005**: Projection through an outbox with a visibility gate. Rows: `MEDULLA-TYPED-PACKS-R006`, `MEDULLA-TYPED-PACKS-R009`, `MEDULLA-TYPED-PACKS-R012`.
+- **FR-006**: Composed graph schema sources and ontology import. Rows: `MEDULLA-TYPED-PACKS-R035`, `MEDULLA-TYPED-PACKS-R103`, `MEDULLA-TYPED-PACKS-R104`.
+- **FR-007**: Prompt identity, rendering and blueprint round trips. Rows: `MEDULLA-TYPED-PACKS-R001.6`, `MEDULLA-TYPED-PACKS-R001.8`, `MEDULLA-TYPED-PACKS-R094`.
+- **FR-008**: Core ontology corpus, packs extend the core. Rows: `MEDULLA-TYPED-PACKS-R071`, `MEDULLA-TYPED-PACKS-R090`, `MEDULLA-TYPED-PACKS-R105`.
+- **FR-009**: Metadata-catalog vocabulary, glossary and dashboards. Rows: `MEDULLA-TYPED-PACKS-R108`, `MEDULLA-TYPED-PACKS-R801`, `MEDULLA-TYPED-PACKS-R109`.
+- **FR-010**: Object model, edit chain and classification claims. Rows: `MEDULLA-TYPED-PACKS-R650`, `MEDULLA-TYPED-PACKS-R651`, `MEDULLA-TYPED-PACKS-R652`.
+- **FR-011**: Skill-graph packs and skill packages. Rows: `MEDULLA-TYPED-PACKS-R100`, `MEDULLA-TYPED-PACKS-R700`, `MEDULLA-TYPED-PACKS-R701`.
+
+## Success Criteria
+
+- **SC-001**: An identical pack imported twice leaves head, revisions, receipts and outbox unchanged. Rows: `MEDULLA-TYPED-PACKS-R004`, `MEDULLA-TYPED-PACKS-R014`.
+- **SC-002**: No rejected import changes the head, members, holders, body liveness, record, receipt or outbox. Rows: `MEDULLA-TYPED-PACKS-R003`, `MEDULLA-TYPED-PACKS-R031`.
+- **SC-003**: Every digest of a pack is recomputed and matches the golden vectors on every client. Rows: `MEDULLA-TYPED-PACKS-R001`, `MEDULLA-TYPED-PACKS-R067`.
+- **SC-004**: A denied read returns a stable code and no bytes. Rows: `MEDULLA-TYPED-PACKS-R012`, `MEDULLA-TYPED-PACKS-R038`.
+- **SC-005**: A pack class without a subclass path to a core class is always refused. Rows: `MEDULLA-TYPED-PACKS-R105`, `MEDULLA-TYPED-PACKS-R102.3`.
+- **SC-006**: The projection visibility gate survives a crash and a retry. Rows: `MEDULLA-TYPED-PACKS-R006`, `MEDULLA-TYPED-PACKS-R009`.
+- **SC-007**: Contract generation in check mode matches across every output directory. Rows: `MEDULLA-TYPED-PACKS-R067`, `MEDULLA-TYPED-PACKS-R068`.
+- **SC-008**: Each refusal code is unique and registered once. Rows: `MEDULLA-TYPED-PACKS-R003`, `MEDULLA-TYPED-PACKS-R105`.
+
+## Assumptions
+
+- Arbora supplies a verified principal and tenant on every served request.
+- The Graft SDK builds the canonical pack and its digest vectors; Medulla recomputes and never trusts them.
+- Foreign capability claims in a pack enter as claims until an independent evaluation raises them.
+- Rows that wait on an owner decision or an unbuilt module stay SPECIFIED as written until the owner answers.
 
 ## Normative requirements
 
@@ -54,7 +168,7 @@ The current wire schema constant is `CONNECTOR_PACK_SCHEMA_VERSION = 2`; a versi
 
 The IDs in the requirement table are stable work identifiers. The full behavior is defined here and in this directory. Graft SDK package construction and connector certification belong in the Graft SDK's own public specs. Arbora serving and the browser belong in their own repositories. This spec defines the Medulla boundary those clients must call. Unit and contract proof do not require private documentation, a particular operator deployment, or a live external service. Specific deferred adjacent work is listed in [tasks.md](tasks.md). This prevents a broad deferred-work entry from being mistaken for completed pack behavior.
 
-## Success criteria
+## Delivery criteria
 
 Every PACK requirement has an exact merged commit, passing mapped tests, matching generated contract artifacts, and zero new unjustified duplication/complexity. A served-path result covers Import, Status, Content and projection. The visibility gate survives crash and retry. Unauthorized and malformed input never changes durable state. No public client must infer a wire result. Record source revision, command, test count, environment and scenario results in this spec bundle.
 These records must establish every required served and durable outcome.
@@ -75,7 +189,7 @@ R002.10 retains its missing Meristem model-dispatch consumer requirement and cal
 Original pack types, digest vectors, clients, body holders, grace reconciliation and Stable content serving remain mandatory.
 
 <!-- spec-definition-patch:owner-batch-20261012-typed-packs-and-catalog -->
-## Owner definitions — 2026-10-12
+## Owner definitions
 
 ### `MEDULLA-TYPED-PACKS-R100.7` — AU:31
 
@@ -97,7 +211,7 @@ Add `ExportWorkflowRdfV1(workflow_iri, requested_workflow_version, stored_versio
 <!-- /spec-definition-patch -->
 
 <!-- spec-definition-patch:reviewed-mapped-subsets-20261012 -->
-## Reviewed mapped children — 2026-10-12
+## Reviewed mapped children
 
 The children below extend existing rollups. Existing parent requirements, children, policy authority and refusal behavior remain in force. These are SPECIFIED definitions only; no code, producer receipt, consumer receipt or served result is claimed.
 
