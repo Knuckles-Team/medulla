@@ -5232,6 +5232,7 @@ dependencies = [
  "medulla-agent-types",
  "medulla-compute",
  "medulla-core",
+ "medulla-finance",
  "medulla-graph-algos",
  "medulla-graph-core",
  "medulla-isolation",

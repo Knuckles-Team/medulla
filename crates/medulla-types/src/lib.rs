@@ -210,8 +210,8 @@ pub mod rule_correction;
 pub mod health_incident;
 // MEDULLA-DURABLE-KERNEL-R700.1 — the retention-cleanup policy shape.
 pub mod retention_cleanup;
-pub mod retention_policy;
 pub mod retention_cleanup;
+pub mod retention_policy;
 // MEDULLA-DURABLE-KERNEL-R094.1 — hierarchical concept-ID grammar and path claims.
 pub mod concept_id;
 
@@ -242,6 +242,9 @@ pub mod lease_vocab;
 // refusal tests only, no outbox-append wiring yet).
 #[cfg(feature = "finance")]
 pub mod finance_event_envelope;
+// MEDULLA-FINANCE-PRIMITIVES-R751.750 — the strategy research record types.
+#[cfg(feature = "finance")]
+pub mod finance_research;
 // MEDULLA-FINANCE-PRIMITIVES-R904 — the wallet key trust record read by
 // `Method::WalletKeyTrustGet`.
 pub mod finance_wallet_trust;
