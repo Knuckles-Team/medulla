@@ -174,3 +174,9 @@ ArchiMate: Strategy → CourseOfAction.""" ;
     rdfs:subPropertyOf :supersedes ;
     rdfs:domain :ArchitectureDecisionRecord ;
     rdfs:range :ArchitectureDecisionRecord .
+
+:lifecyclePhase a owl:DatatypeProperty ;
+    rdfs:label "lifecycle phase" ;
+    rdfs:comment "Lifecycle phase of an enterprise-architecture fact sheet: plan, active, phaseOut or endOfLife." ;
+    rdfs:domain :EAFactSheet ;
+    rdfs:range xsd:string .

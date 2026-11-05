@@ -8,6 +8,7 @@
 @prefix : <http://knuckles.team/kg#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
 :assignedApp a owl:ObjectProperty ;
     rdfs:label "assigned app" ;
@@ -65,3 +66,9 @@
     rdfs:label "Intrusion Decision" ;
     rdfs:comment "An edge-security remediation decision (CrowdSec ban/captcha) against a scope value; the ban target is kept whole because the decision is about exactly that address (producer: caddy-mcp)." ;
     rdfs:subClassOf :SecurityAuditEvent .
+
+:accountStatus a owl:DatatypeProperty ;
+    rdfs:label "account status" ;
+    rdfs:comment "Lifecycle state of an identity user account: ACTIVE, SUSPENDED or DEACTIVATED." ;
+    rdfs:domain :IdentityUser ;
+    rdfs:range xsd:string .

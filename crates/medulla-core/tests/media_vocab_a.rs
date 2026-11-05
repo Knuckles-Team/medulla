@@ -4299,3 +4299,76 @@ fn media_vocab_mattermost_single() {
 fn media_vocab_mattermost_vocabulary_docs_truth() {
     vocab_cell_is("R036", "media-v1 / content-v1");
 }
+
+// spec: MEDULLA-MEDIA-VOCAB-R001.100.1
+#[test]
+fn media_tag_terms_and_shape() {
+    let triples = load(MEDIA);
+    assert_class(&triples, "MediaTag");
+    assert!(subclass_path(
+        &triples,
+        &format!("{KG}MediaTag"),
+        &format!("{KG}Observation")
+    ));
+    assert_domain_range(&triples, "taggedMedia", "MediaTag", "MediaItem");
+    assert_typed(&triples, "taggedMedia", "ObjectProperty");
+    for (name, range) in [
+        ("taxonomyId", "xsd:string"),
+        ("taxonomyVersion", "xsd:string"),
+        ("tagKind", "xsd:string"),
+        ("tagConfidence", "xsd:decimal"),
+        ("evidenceRef", "xsd:string"),
+        ("producerId", "xsd:string"),
+        ("producerRevision", "xsd:string"),
+        ("mediaRevision", "xsd:integer"),
+        ("provenanceDigest", "xsd:string"),
+    ] {
+        assert_typed(&triples, name, "DatatypeProperty");
+        assert_domain_range(&triples, name, "MediaTag", range);
+    }
+
+    let data = |body: &str| {
+        format!(
+            "@prefix : <http://knuckles.team/kg#> .\n@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n<urn:tag:1> a :MediaTag ; {body} ."
+        )
+    };
+    let complete = "
+        :taggedMedia <urn:media:1> ; :mediaRevision 3 ; :producerId \"p1\" ;
+        :evidenceRef \"ev:1\" ; :provenanceDigest \"d1\" ;
+        :tagKind \"object\" ; :tagConfidence \"0.5\"^^xsd:decimal";
+    let conforms = |doc: &str| {
+        medulla_shacl::validate_turtle(MEDIA_SHAPES, doc)
+            .expect("validation runs")
+            .conforms
+    };
+    assert!(conforms(&data(complete)));
+    // A tag without provenance is rejected.
+    let no_provenance = complete.replace(":provenanceDigest \"d1\" ;", "");
+    assert!(!conforms(&data(&no_provenance)));
+    let no_producer = complete.replace(":producerId \"p1\" ;", "");
+    assert!(!conforms(&data(&no_producer)));
+    let bad_kind = complete.replace("\"object\"", "\"scene\"");
+    assert!(!conforms(&data(&bad_kind)));
+    let bad_confidence = complete.replace("\"0.5\"", "\"1.5\"");
+    assert!(!conforms(&data(&bad_confidence)));
+}
+
+// spec: MEDULLA-MEDIA-VOCAB-R002.5.4
+#[test]
+fn paper_classes_and_cites_reconciled() {
+    let triples = load(&format!("{RETRIEVAL}\n{CONTENT}"));
+    assert_class(&triples, "ResearchPaper");
+    assert!(has_iri(
+        &triples,
+        &format!("{KG}ScholarlyPaper"),
+        &format!("{RDFS}subClassOf"),
+        &format!("{KG}ResearchPaper")
+    ));
+    assert_domain_range(&triples, "cites", "ResearchPaper", "ResearchPaper");
+    assert!(!has_iri(
+        &triples,
+        &format!("{KG}cites"),
+        &format!("{RDFS}domain"),
+        &format!("{KG}ScholarlyPaper")
+    ));
+}

@@ -1127,3 +1127,72 @@
     rdfs:comment "Memory usage in percent at the hardware sample." ;
     rdfs:domain :HardwareSample ;
     rdfs:range xsd:decimal .
+
+# --- provenanced media tags (MEDULLA-MEDIA-VOCAB-R001.100.1) ---
+# A tag is a source-backed assertion on a media item from any producer,
+# identified by an opaque producer id. No producer type is named here.
+
+:MediaTag a owl:Class ;
+    rdfs:label "Media Tag" ;
+    rdfs:comment "A source-backed tag assertion on a media item from one producer, with its evidence and provenance digest." ;
+    rdfs:subClassOf :Observation .
+
+:taggedMedia a owl:ObjectProperty ;
+    rdfs:label "tagged media" ;
+    rdfs:comment "The media item a tag asserts something about." ;
+    rdfs:domain :MediaTag ;
+    rdfs:range :MediaItem .
+
+:taxonomyId a owl:DatatypeProperty ;
+    rdfs:label "taxonomy id" ;
+    rdfs:comment "Identifier of the tag taxonomy a tag label belongs to." ;
+    rdfs:domain :MediaTag ;
+    rdfs:range xsd:string .
+
+:taxonomyVersion a owl:DatatypeProperty ;
+    rdfs:label "taxonomy version" ;
+    rdfs:comment "Version of the tag taxonomy." ;
+    rdfs:domain :MediaTag ;
+    rdfs:range xsd:string .
+
+:tagKind a owl:DatatypeProperty ;
+    rdfs:label "tag kind" ;
+    rdfs:comment "Whether a tag names an object or a context: object or context." ;
+    rdfs:domain :MediaTag ;
+    rdfs:range xsd:string .
+
+:tagConfidence a owl:DatatypeProperty ;
+    rdfs:label "tag confidence" ;
+    rdfs:comment "Producer confidence in a tag, a decimal in the closed range 0 to 1." ;
+    rdfs:domain :MediaTag ;
+    rdfs:range xsd:decimal .
+
+:evidenceRef a owl:DatatypeProperty ;
+    rdfs:label "evidence reference" ;
+    rdfs:comment "Reference to the evidence a tag was derived from." ;
+    rdfs:domain :MediaTag ;
+    rdfs:range xsd:string .
+
+:producerId a owl:DatatypeProperty ;
+    rdfs:label "producer id" ;
+    rdfs:comment "Opaque identifier of the producer that asserted a tag." ;
+    rdfs:domain :MediaTag ;
+    rdfs:range xsd:string .
+
+:producerRevision a owl:DatatypeProperty ;
+    rdfs:label "producer revision" ;
+    rdfs:comment "Revision of the producer that asserted a tag." ;
+    rdfs:domain :MediaTag ;
+    rdfs:range xsd:string .
+
+:mediaRevision a owl:DatatypeProperty ;
+    rdfs:label "media revision" ;
+    rdfs:comment "Revision of the media item a tag was asserted against." ;
+    rdfs:domain :MediaTag ;
+    rdfs:range xsd:integer .
+
+:provenanceDigest a owl:DatatypeProperty ;
+    rdfs:label "provenance digest" ;
+    rdfs:comment "Digest binding a tag to its producer, evidence and media revision." ;
+    rdfs:domain :MediaTag ;
+    rdfs:range xsd:string .

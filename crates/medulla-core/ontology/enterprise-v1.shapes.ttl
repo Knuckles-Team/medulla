@@ -1,0 +1,13 @@
+@prefix : <http://knuckles.team/kg#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# Enterprise ABox shapes (MEDULLA-CQ-CONN-R080.x): each term row adds its NodeShape here.
+
+:EAFactSheetLifecyclePhaseShape a sh:NodeShape ;
+    sh:description "A fact sheet lifecycle phase is one of the four lifecycle phases." ;
+    sh:name "EA Fact Sheet Lifecycle Phase Shape" ;
+    sh:property [ sh:in ( "plan" "active" "phaseOut" "endOfLife" ) ;
+            sh:message "A fact sheet lifecyclePhase must be plan, active, phaseOut or endOfLife." ;
+            sh:path :lifecyclePhase ] ;
+    sh:targetClass :EAFactSheet .

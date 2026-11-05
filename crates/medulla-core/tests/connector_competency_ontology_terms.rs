@@ -178,6 +178,23 @@ mod ontology_audit_orchestration_v1 {
             .conforms
     }
 
+    // spec: MEDULLA-CQ-CONN-R079.1
+    #[test]
+    fn shapes_module_loads() {
+        let (_ontology, shapes) = documents();
+        assert!(shapes.iter().any(|t| t.predicate.as_str() == RDF_TYPE
+            && t.object == Term::NamedNode(NamedNode::new(SHACL_NODE_SHAPE).unwrap())));
+        let sources = GraphSchemaSources::default();
+        sources
+            .validate()
+            .expect("the default core catalog validates");
+        assert_core_source(
+            &sources,
+            "core:orchestration-shapes@1",
+            "orchestration-shapes",
+        );
+    }
+
     // spec: MEDULLA-CQ-CONN-R079.2
     #[test]
     fn promptVersion_declared() {
@@ -968,5 +985,133 @@ mod ontology_audit_core_foundation_v1 {
             RDFS_RANGE,
             &format!("{KG}Action")
         ));
+    }
+}
+
+#[allow(non_snake_case)]
+mod ontology_audit_identity_v1 {
+    use super::*;
+
+    fn triples() -> Vec<Triple> {
+        let ontology = registered_ontology("core:identity@1", "identity");
+        parse_turtle(&ontology).expect("the registered identity ontology parses")
+    }
+
+    fn conforms(data: &str) -> bool {
+        let shapes = registered_shapes("core:identity-shapes@1", "identity-shapes");
+        medulla_shacl::validate_turtle(&shapes, data)
+            .expect("validation runs")
+            .conforms
+    }
+
+    // spec: MEDULLA-CQ-CONN-R078.1
+    #[test]
+    fn shapes_module_loads() {
+        let shapes = registered_shapes("core:identity-shapes@1", "identity-shapes");
+        let triples = parse_turtle(&shapes).expect("the registered identity shapes parse");
+        let shape = format!("{KG}IdentityUserAccountStatusShape");
+        assert!(has_iri(&triples, &shape, RDF_TYPE, SHACL_NODE_SHAPE));
+        assert!(has_iri(
+            &triples,
+            &shape,
+            SHACL_TARGET_CLASS,
+            &format!("{KG}IdentityUser")
+        ));
+    }
+
+    // spec: MEDULLA-CQ-CONN-R078.5
+    #[test]
+    fn accountStatus_declared() {
+        let triples = triples();
+        let property = format!("{KG}accountStatus");
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDF_TYPE,
+            OWL_DATATYPE_PROPERTY
+        ));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_DOMAIN,
+            &format!("{KG}IdentityUser")
+        ));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_RANGE,
+            &format!("{XSD}string")
+        ));
+        let data = |value: &str| {
+            format!(
+                "@prefix : <http://knuckles.team/kg#> .\n<urn:x:1> a :IdentityUser ; :accountStatus \"{value}\" ."
+            )
+        };
+        assert!(conforms(&data("SUSPENDED")));
+        assert!(!conforms(&data("BANNED")));
+    }
+}
+
+#[allow(non_snake_case)]
+mod ontology_audit_enterprise_v1 {
+    use super::*;
+
+    fn triples() -> Vec<Triple> {
+        let ontology = registered_ontology("core:enterprise@1", "enterprise");
+        parse_turtle(&ontology).expect("the registered enterprise ontology parses")
+    }
+
+    fn conforms(data: &str) -> bool {
+        let shapes = registered_shapes("core:enterprise-shapes@1", "enterprise-shapes");
+        medulla_shacl::validate_turtle(&shapes, data)
+            .expect("validation runs")
+            .conforms
+    }
+
+    // spec: MEDULLA-CQ-CONN-R080.1
+    #[test]
+    fn shapes_module_loads() {
+        let shapes = registered_shapes("core:enterprise-shapes@1", "enterprise-shapes");
+        let triples = parse_turtle(&shapes).expect("the registered enterprise shapes parse");
+        let shape = format!("{KG}EAFactSheetLifecyclePhaseShape");
+        assert!(has_iri(&triples, &shape, RDF_TYPE, SHACL_NODE_SHAPE));
+        assert!(has_iri(
+            &triples,
+            &shape,
+            SHACL_TARGET_CLASS,
+            &format!("{KG}EAFactSheet")
+        ));
+    }
+
+    // spec: MEDULLA-CQ-CONN-R080.3
+    #[test]
+    fn lifecyclePhase_declared() {
+        let triples = triples();
+        let property = format!("{KG}lifecyclePhase");
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDF_TYPE,
+            OWL_DATATYPE_PROPERTY
+        ));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_DOMAIN,
+            &format!("{KG}EAFactSheet")
+        ));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_RANGE,
+            &format!("{XSD}string")
+        ));
+        let data = |value: &str| {
+            format!(
+                "@prefix : <http://knuckles.team/kg#> .\n<urn:x:1> a :EAFactSheet ; :lifecyclePhase \"{value}\" ."
+            )
+        };
+        assert!(conforms(&data("phaseOut")));
+        assert!(!conforms(&data("retired")));
     }
 }
