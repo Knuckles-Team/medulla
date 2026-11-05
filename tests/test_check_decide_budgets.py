@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 from _script_loader import load_script
@@ -50,3 +51,43 @@ def test_planted_regression_fails(tmp_path: Path) -> None:
     assert (
         check_decide_budgets.main([str(report), "--baseline", str(baseline_path)]) == 0
     )
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def _question_kinds() -> set[str]:
+    source = (
+        ROOT / "crates/medulla-decision-types/src/decision/statistical.rs"
+    ).read_text(encoding="utf-8")
+    body = source.split("pub enum QuestionKind {", 1)[1].split("\n}", 1)[0]
+    variants = re.findall(r"^\s+([A-Z]\w*),\s*$", body, flags=re.MULTILINE)
+    return {re.sub(r"(?<!^)([A-Z])", r"_\1", v).lower() for v in variants}
+
+
+def test_bench_groups_cover_every_family() -> None:
+    # spec: MEDULLA-DECISION-ENGINE-R178.1
+    bench = (ROOT / "benches/decide_budgets.rs").read_text(encoding="utf-8")
+    arms = dict(re.findall(r'QuestionKind::(\w+) => "(\w+)",', bench))
+    listed = set(re.findall(r"^\s+QuestionKind::(\w+),\s*$", bench, flags=re.MULTILINE))
+    kinds = _question_kinds()
+    assert kinds, "no QuestionKind variants parsed"
+    assert set(arms.values()) == kinds
+    assert listed == set(arms), "FAMILIES must list every named family"
+    assert 'format!("decide/{}", family_name(*kind))' in bench
+    cargo = (ROOT / "Cargo.toml").read_text(encoding="utf-8")
+    assert 'name = "decide_budgets"' in cargo
+
+
+def test_workflow_invokes_the_check() -> None:
+    # spec: MEDULLA-DECISION-ENGINE-R178.3
+    workflow = (ROOT / ".github/workflows/nightly-decide-budgets.yml").read_text(
+        encoding="utf-8"
+    )
+    assert 'cron: "0 3 * * *"' in workflow
+    assert "refs/heads/main" in workflow
+    assert "--bench decide_budgets" in workflow
+    assert (
+        "python scripts/check_decide_budgets.py target/decide-budgets.json" in workflow
+    )
+    assert "upload-artifact" in workflow

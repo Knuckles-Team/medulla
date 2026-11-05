@@ -5186,6 +5186,7 @@ dependencies = [
  "medulla-finance",
  "medulla-finance-market",
  "medulla-graph-core",
+ "medulla-h-graph",
  "medulla-index-types",
  "medulla-isolation",
  "medulla-kernel",
