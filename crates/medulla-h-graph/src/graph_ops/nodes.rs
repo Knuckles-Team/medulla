@@ -105,16 +105,45 @@ fn handle_get_node_properties(
     // (see `can_see_node`'s doc) — `node_id` is exactly the
     // one row this fallback is checking, so the live lookup
     // is as cheap as reading a single DashMap entry.
-    let props = g.get_node_properties(node_id).or_else(|| {
-        raw_core
-            .get_node_properties(node_id)
-            .filter(|props| read_authority.can_see_node(props, raw_core.is_schema_node(node_id)))
-    });
+    //
+    // MEDULLA-DURABLE-KERNEL-R086.3: a durable-tier fault on the miss path
+    // answers `DURABLE_READ_UNAVAILABLE`, never an empty result. The fallback
+    // reads only this graph's raw core (graph-scoped `NODES`), and a hidden row
+    // answers exactly like an absent one (MEDULLA-DURABLE-KERNEL-R086.5).
+    let resident = match g.get_node_properties_checked(node_id) {
+        Ok(props) => props,
+        Err(error) => return durable_read_unavailable(req_id, &error),
+    };
+    let props = match resident {
+        Some(props) => Some(props),
+        None => match raw_core.get_node_properties_checked(node_id) {
+            Ok(props) => props.filter(|props| {
+                read_authority.can_see_node(props, raw_core.is_schema_node(node_id))
+            }),
+            Err(error) => return durable_read_unavailable(req_id, &error),
+        },
+    };
     Response::ok(
         req_id,
         ResultPayload::of_encoded_or_null::<
             medulla_protocol_types::result_contract::graph::GetNodeProperties,
         >(props),
+    )
+}
+
+/// Typed refusal for a durable read-through fault (MEDULLA-DURABLE-KERNEL-R086.3).
+fn durable_read_unavailable(
+    req_id: u64,
+    error: &medulla_graph_core::read_through::ReadThroughError,
+) -> Response {
+    tracing::warn!(
+        node_id = %error.node_id,
+        reason = %error.reason,
+        "durable read-through unavailable"
+    );
+    Response::err(
+        req_id,
+        medulla_types::contract::ServerErrorCode::DurableReadUnavailable.as_str(),
     )
 }
 
