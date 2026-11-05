@@ -190,6 +190,15 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     ("AnalyticsJob", &["INVALID_CONFIGURATION"]),
     // MEDULLA-FINANCE-PRIMITIVES-R018.3: mismatched factor record lengths.
     ("FinanceFactorRank", &["FACTOR_RECORD_INVALID"]),
+    // MEDULLA-FINANCE-PRIMITIVES-R750.752: stable codes of the research kernels.
+    (
+        "FinancePatternClassify",
+        &["PATTERN_WINDOW_SHORT", "PATTERN_INPUT_INVALID"],
+    ),
+    (
+        "FinanceProfitAttribution",
+        &["ATTRIBUTION_WEIGHTS_INVALID", "ATTRIBUTION_INPUT_INVALID"],
+    ),
     // MEDULLA-FINANCE-PRIMITIVES-R904: no current record for the binding in the caller's tenant.
     ("WalletKeyTrustGet", &["WALLET_KEY_TRUST_NOT_FOUND"]),
     ("GetNodes", &["RESULT_TOO_LARGE"]),

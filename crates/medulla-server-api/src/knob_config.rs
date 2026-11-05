@@ -233,6 +233,12 @@ knobs! {
     sdlc_delivery_max_automated_review_rounds: u64 = "sdlc.delivery.max_automated_review_rounds", U64(3), [1, 20], "rounds", Tunable;
     /// Owner approval is required for delivery.
     sdlc_delivery_owner_approval_required: bool = "sdlc.delivery.owner_approval_required", Bool(true), [true, true], "flag", Fixed;
+    /// Doji body-to-range ceiling (MEDULLA-FINANCE-PRIMITIVES-R750.751).
+    pattern_doji_body_max: f64 = "pattern.doji_body_max", F64(0.1), [0.01, 0.3], "ratio", Tunable;
+    /// Hammer and shooting-star shadow-to-body floor.
+    pattern_shadow_ratio_min: f64 = "pattern.shadow_ratio_min", F64(2.0), [1.5, 4.0], "ratio", Tunable;
+    /// Opposite-shadow ceiling as a fraction of the range.
+    pattern_wick_max: f64 = "pattern.wick_max", F64(0.1), [0.0, 0.3], "ratio", Tunable;
 }
 
 fn refusal(code: ServerErrorCode, knob: &str, detail: String) -> KnobRefusal {

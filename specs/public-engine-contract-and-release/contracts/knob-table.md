@@ -39,6 +39,9 @@ The initial `KNOB_TABLE` of `crates/medulla-server-api/src/knob_config.rs`: one 
 | `sdlc.delivery.shadow_unprompted_in_development` | bool | true | [true, true] | flag | Fixed | `MEDULLA_SDLC_DELIVERY_SHADOW_UNPROMPTED_IN_DEVELOPMENT` |
 | `sdlc.delivery.max_automated_review_rounds` | u64 | 3 | [1, 20] | rounds | Tunable | `MEDULLA_SDLC_DELIVERY_MAX_AUTOMATED_REVIEW_ROUNDS` |
 | `sdlc.delivery.owner_approval_required` | bool | true | [true, true] | flag | Fixed | `MEDULLA_SDLC_DELIVERY_OWNER_APPROVAL_REQUIRED` |
+| `pattern.doji_body_max` | f64 | 0.1 | [0.01, 0.3] | ratio | Tunable | `MEDULLA_PATTERN_DOJI_BODY_MAX` |
+| `pattern.shadow_ratio_min` | f64 | 2.0 | [1.5, 4.0] | ratio | Tunable | `MEDULLA_PATTERN_SHADOW_RATIO_MIN` |
+| `pattern.wick_max` | f64 | 0.1 | [0.0, 0.3] | ratio | Tunable | `MEDULLA_PATTERN_WICK_MAX` |
 | `toc.max_span_lines` | u64 | 2000 | [10, 20000] | lines | Tunable | `MEDULLA_TOC_MAX_SPAN_LINES` |
 
 ## Wire shape
