@@ -417,6 +417,7 @@ pub fn requires_write(method: &Method) -> bool {
                 | Method::SourceIngest { .. }
                 | Method::EnrichDocument { .. }
                 | Method::DocumentDelete { .. }
+                | Method::LineageIngest { .. }
                 | Method::TelemetryDerive { .. }
                 | Method::Reconcile { .. }
                 | Method::ApplyMutation { .. }

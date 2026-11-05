@@ -57,6 +57,7 @@ async fn assemble_for(
     let store = state.write().await.ensure_agent_library()?;
     let policy = resolve_policy(&store, &request)?;
     let entries = store.assembly_candidates(&request.tenant_id, &request.candidates)?;
+    admit_tool_set(state, graph, verified, &entries).await?;
     let candidates = medulla_persistence_records::decision_record::candidate_facts(&entries)?;
     let templates = request
         .templates
@@ -148,6 +149,84 @@ pub(crate) fn selected_model(
         ));
     }
     Ok((Some(revision), declared))
+}
+
+/// The plan's tool set: the component identifier of every candidate entry.
+#[cfg(feature = "decide")]
+pub(crate) fn plan_tool_iris(
+    entries: &[medulla_agent_types::agent_component::AgentComponentEntry],
+) -> Vec<String> {
+    entries
+        .iter()
+        .map(|entry| entry.component_id.clone())
+        .collect()
+}
+
+/// Tool-set admission (MEDULLA-IDENTITY-R008.1): the candidate scope must lie
+/// inside the principal's STORED `:RunScopePolicy` bound in the verified
+/// tenant's graph. A refusal is audited before it returns (R008.5).
+#[cfg(feature = "decide")]
+pub(crate) async fn admit_tool_set(
+    state: &SharedState,
+    graph: &str,
+    verified: &VerifiedRequestContext,
+    entries: &[medulla_agent_types::agent_component::AgentComponentEntry],
+) -> Result<(), String> {
+    let core = super::topology_read::graph_core(state, graph, verified).await?;
+    let principal = verified.principal_persistence_id();
+    match medulla_isolation::isolation::enforce_scope(&core, &principal, &plan_tool_iris(entries)) {
+        Ok(_) => Ok(()),
+        Err(refusal) => {
+            audit_scope_refusal(state, graph, verified, &refusal).await?;
+            Err(refusal.to_string())
+        }
+    }
+}
+
+/// Write the `scope_exceeds_policy` audit-chain entry of a refusal: actor,
+/// tenant, and (digested in the canonical line) the tool and policy IRIs.
+#[cfg(feature = "decide")]
+async fn audit_scope_refusal(
+    state: &SharedState,
+    graph: &str,
+    verified: &VerifiedRequestContext,
+    refusal: &medulla_isolation::isolation::ScopeRefusal,
+) -> Result<(), String> {
+    let line = medulla_isolation::isolation::scope_refusal_audit_line(refusal, verified.tenant());
+    tracing::warn!(
+        target: DECIDE_AUDIT_TARGET,
+        action = "agent-assemble",
+        principal = %verified.principal_persistence_id(),
+        tenant = %verified.tenant(),
+        refusal = %line,
+        "scope exceeds policy"
+    );
+    #[cfg(feature = "security")]
+    {
+        use medulla_persistence::AsRedb;
+        use sha2::Digest;
+        let persistence = state.read().await.persistence.clone();
+        if let Some(redb) = persistence.as_ref().and_then(|p| p.as_redb()) {
+            let event = medulla_store::redb_store::OperationAuditEvent {
+                tenant: verified.tenant().to_string(),
+                principal: verified.principal_persistence_id(),
+                op: "AgentAssemble".to_string(),
+                surface: "engine".to_string(),
+                params_sha256: hex::encode(sha2::Sha256::digest(line.as_bytes())),
+                status: "denied".to_string(),
+                request_id: hex::encode(sha2::Sha256::digest(
+                    verified.idempotency_key().as_bytes(),
+                )),
+                audit_class: medulla_isolation::isolation::SCOPE_EXCEEDS_POLICY_AUDIT_CLASS
+                    .to_string(),
+            };
+            redb.audit_append(&medulla_kernel::persist::sanitize(graph), event)
+                .await?;
+        }
+    }
+    #[cfg(not(feature = "security"))]
+    let _ = (state, graph);
+    Ok(())
 }
 
 /// The policy a request decides under: the engine default, or the verified

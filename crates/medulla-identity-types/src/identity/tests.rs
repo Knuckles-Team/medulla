@@ -14,6 +14,7 @@ mod provision;
 mod recovery;
 mod revocation;
 mod session_evidence;
+mod sql_dump;
 mod tokens;
 mod verdicts;
 

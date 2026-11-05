@@ -58,6 +58,10 @@ pub struct IngestJobEnvelope {
     pub kind: IngestJobKind,
     pub target: String,
     pub attempt: u32,
+    /// The drain page this job fetches, when it is one page of a source drain
+    /// (MEDULLA-INGEST-WORKER-R605.1).
+    #[serde(default)]
+    pub page: Option<medulla_types::ingest_drain::PageCheckpoint>,
 }
 
 /// Why an ingest job envelope or retry policy is refused.
@@ -214,6 +218,7 @@ mod tests {
             kind: IngestJobKind::Document,
             target: "docs/readme.md".into(),
             attempt: 1,
+            page: None,
         }
     }
 

@@ -1045,7 +1045,11 @@ mod classes_tests;
 
 mod tool_subset_tests;
 
+mod scope_bound_tests;
+
 mod consumer_tests;
+
+mod knob_tests;
 
 #[cfg(feature = "query")]
 mod retrieval_tests;
@@ -1080,3 +1084,5 @@ mod scorer_tests;
 mod replay_tests;
 
 mod task_plan_tests;
+
+mod run_observation_tests;

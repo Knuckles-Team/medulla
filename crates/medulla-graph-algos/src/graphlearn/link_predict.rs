@@ -325,6 +325,37 @@ impl FeatureCtx {
         feats
     }
 
+    /// Replace the embedding row of each `unseen` node (unseen at fit) with the mean
+    /// of its current neighbours' embedding rows; a node with no neighbours keeps a
+    /// zero row. No-op without an embedding channel. MEDULLA-FEDERATED-QUERY-R086.100.2
+    pub fn impute_unseen_embeddings(&mut self, unseen: &HashSet<usize>) {
+        let Some(emb) = self.embeddings.as_mut() else {
+            return;
+        };
+        let dim = emb.first().map(Vec::len).unwrap_or(0);
+        let mut order: Vec<usize> = unseen.iter().copied().filter(|&i| i < self.n).collect();
+        order.sort_unstable();
+        let imputed: Vec<(usize, Vec<f64>)> = order
+            .into_iter()
+            .map(|i| {
+                let nbrs = &self.neighbors[i];
+                let mut row = vec![0.0; dim];
+                for &w in nbrs {
+                    for (r, x) in row.iter_mut().zip(emb[w].iter()) {
+                        *r += x;
+                    }
+                }
+                if !nbrs.is_empty() {
+                    row.iter_mut().for_each(|r| *r /= nbrs.len() as f64);
+                }
+                (i, row)
+            })
+            .collect();
+        for (i, row) in imputed {
+            emb[i] = row;
+        }
+    }
+
     /// Node count of the underlying graph.
     pub fn node_count(&self) -> usize {
         self.n

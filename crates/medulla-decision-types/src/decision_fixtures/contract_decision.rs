@@ -59,6 +59,7 @@ pub fn policy() -> DecisionPolicy {
         cold_start: ColdStart::DeterministicOnly,
         statistical: None,
         topology: None,
+        knobs: Default::default(),
     }
 }
 
