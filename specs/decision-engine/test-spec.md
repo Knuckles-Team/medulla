@@ -456,8 +456,8 @@ No unrelated rebuild was substituted for the exact measured-source receipts.
 
 - `MEDULLA-DECISION-ENGINE-R133.1`: `crates/medulla-types/src/decision/run_governance.rs::tests::quota_round_trips`.
 - `MEDULLA-DECISION-ENGINE-R133.2`: `crates/medulla-types/src/decision/run_governance.rs::tests::request_only_tightens_quota`: omission uses D; tightening uses R; D < R <= C uses D; R > C refuses before clamping.
-- `MEDULLA-DECISION-ENGINE-R133.3`: `src/server/handlers/decide/stat_tests/runtime_quota_tests.rs::decide_routes_runtime_quota`.
-- `MEDULLA-DECISION-ENGINE-R133.4`: `src/server/handlers/decide/stat_tests/runtime_quota_tests.rs::missing_task_class_abstains_to_default`.
+- `MEDULLA-DECISION-ENGINE-R133.3`: `crates/medulla-h-decide/src/decide/stat_tests/runtime_quota_tests.rs::decide_routes_runtime_quota`.
+- `MEDULLA-DECISION-ENGINE-R133.4`: `crates/medulla-h-decide/src/decide/stat_tests/runtime_quota_tests.rs::missing_task_class_abstains_to_default`.
 - `MEDULLA-DECISION-ENGINE-R133.5`: `crates/medulla-work-store/src/redb_store/work_item/commit.rs::tests::run_trace_is_linked_to_unit`.
 - `MEDULLA-DECISION-ENGINE-R133.6`: `tests/decide/test_runtime_quota_served.py::test_quota_and_trace_end_to_end`: query quotas through read-only Decide, commit the trace through CommitWorkItemResult, then query the produced link; an invalid fence creates neither trace nor link.
 
@@ -476,9 +476,9 @@ No unrelated rebuild was substituted for the exact measured-source receipts.
 
 - `MEDULLA-DECISION-ENGINE-R135.1`: `crates/medulla-types/src/decision/program_store.rs::tests::program_round_trips`.
 - `MEDULLA-DECISION-ENGINE-R135.2`: `crates/medulla-types/src/decision/program_store.rs::tests::literals_become_parameters`.
-- `MEDULLA-DECISION-ENGINE-R135.3`: `src/server/handlers/decide/stat_tests/program_store_tests.rs::decide_routes_program_lookup`.
-- `MEDULLA-DECISION-ENGINE-R135.4`: `src/server/handlers/decide/stat_tests/program_store_tests.rs::overlong_trace_is_refused`.
-- `MEDULLA-DECISION-ENGINE-R135.5`: `src/server/handlers/decide/stat_tests/program_store_tests.rs::program_links_source_trace`.
+- `MEDULLA-DECISION-ENGINE-R135.3`: `crates/medulla-h-decide/src/decide/stat_tests/program_store_tests.rs::decide_routes_program_lookup`.
+- `MEDULLA-DECISION-ENGINE-R135.4`: `crates/medulla-h-decide/src/decide/stat_tests/program_store_tests.rs::overlong_trace_is_refused`.
+- `MEDULLA-DECISION-ENGINE-R135.5`: `crates/medulla-h-decide/src/decide/stat_tests/program_store_tests.rs::program_links_source_trace`.
 - `MEDULLA-DECISION-ENGINE-R135.6`: `tests/decide/test_program_store_served.py::test_compile_then_lookup`.
 
 ### MEDULLA-DECISION-ENGINE-R136 tests
@@ -486,27 +486,27 @@ No unrelated rebuild was substituted for the exact measured-source receipts.
 - `MEDULLA-DECISION-ENGINE-R136.1`: `crates/medulla-decision-outcome-types/src/decision/evolution_round.rs::tests::round_types_round_trip`.
 - `MEDULLA-DECISION-ENGINE-R136.2`: `crates/medulla-decision-outcome-types/src/decision/evolution_round.rs::tests::verdict_follows_flip_fraction`, including five declared-direction and five opposite flips at 0.5 yielding `unverified`; add `crates/medulla-decision-outcome-types/src/decision/evolution_round.rs::tests::simultaneous_thresholds_are_unverified`.
 - `MEDULLA-DECISION-ENGINE-R136.3`: `crates/medulla-decision-outcome-types/src/decision/evolution_round.rs::tests::stronger_models_go_to_high_impact_stages`.
-- `MEDULLA-DECISION-ENGINE-R136.4`: `src/server/handlers/decide/stat_tests/evolution_round_tests.rs::decide_routes_round_kinds`.
-- `MEDULLA-DECISION-ENGINE-R136.5`: `src/server/handlers/decide/stat_tests/evolution_round_tests.rs::empty_prediction_abstains`.
-- `MEDULLA-DECISION-ENGINE-R136.6`: `src/server/handlers/decide/stat_tests/evolution_round_tests.rs::premises_name_counts_and_budget`.
+- `MEDULLA-DECISION-ENGINE-R136.4`: `crates/medulla-h-decide/src/decide/stat_tests/evolution_round_tests.rs::decide_routes_round_kinds`.
+- `MEDULLA-DECISION-ENGINE-R136.5`: `crates/medulla-h-decide/src/decide/stat_tests/evolution_round_tests.rs::empty_prediction_abstains`.
+- `MEDULLA-DECISION-ENGINE-R136.6`: `crates/medulla-h-decide/src/decide/stat_tests/evolution_round_tests.rs::premises_name_counts_and_budget`.
 - `MEDULLA-DECISION-ENGINE-R136.7`: `tests/decide/test_evolution_round_served.py::test_verdict_and_allocation`.
 
 ### MEDULLA-DECISION-ENGINE-R137 tests
 
 - `MEDULLA-DECISION-ENGINE-R137.1`: `crates/medulla-decision-outcome-types/src/decision/context_budget.rs::tests::context_budget_round_trips`.
 - `MEDULLA-DECISION-ENGINE-R137.2`: `crates/medulla-decision-outcome-types/src/decision/context_budget.rs::tests::over_window_prompt_is_split_within_limits`.
-- `MEDULLA-DECISION-ENGINE-R137.3`: `src/server/handlers/decide/stat_tests/context_budget_tests.rs::decide_routes_context_budget`.
-- `MEDULLA-DECISION-ENGINE-R137.4`: `src/server/handlers/decide/stat_tests/context_budget_tests.rs::too_many_items_is_refused`.
-- `MEDULLA-DECISION-ENGINE-R137.5`: `src/server/handlers/decide/stat_tests/context_budget_tests.rs::premises_name_window_and_limits`.
+- `MEDULLA-DECISION-ENGINE-R137.3`: `crates/medulla-h-decide/src/decide/stat_tests/context_budget_tests.rs::decide_routes_context_budget`.
+- `MEDULLA-DECISION-ENGINE-R137.4`: `crates/medulla-h-decide/src/decide/stat_tests/context_budget_tests.rs::too_many_items_is_refused`.
+- `MEDULLA-DECISION-ENGINE-R137.5`: `crates/medulla-h-decide/src/decide/stat_tests/context_budget_tests.rs::premises_name_window_and_limits`.
 - `MEDULLA-DECISION-ENGINE-R137.6`: `tests/decide/test_context_budget_served.py::test_over_window_plan_end_to_end`.
 
 ### MEDULLA-DECISION-ENGINE-R138 tests
 
 - `MEDULLA-DECISION-ENGINE-R138.1`: `crates/medulla-decision-outcome-types/src/decision/red_team.rs::tests::red_team_records_round_trip`.
 - `MEDULLA-DECISION-ENGINE-R138.2`: `crates/medulla-decision-outcome-types/src/decision/red_team.rs::tests::one_passing_scorer_compromises`.
-- `MEDULLA-DECISION-ENGINE-R138.3`: `src/server/handlers/decide/stat_tests/red_team_tests.rs::decide_routes_probe_verdict`.
-- `MEDULLA-DECISION-ENGINE-R138.4`: `src/server/handlers/decide/stat_tests/red_team_tests.rs::missing_scorer_abstains`.
-- `MEDULLA-DECISION-ENGINE-R138.5`: `src/server/handlers/decide/stat_tests/red_team_tests.rs::premises_name_scorers_and_scores`.
+- `MEDULLA-DECISION-ENGINE-R138.3`: `crates/medulla-h-decide/src/decide/stat_tests/red_team_tests.rs::decide_routes_probe_verdict`.
+- `MEDULLA-DECISION-ENGINE-R138.4`: `crates/medulla-h-decide/src/decide/stat_tests/red_team_tests.rs::missing_scorer_abstains`.
+- `MEDULLA-DECISION-ENGINE-R138.5`: `crates/medulla-h-decide/src/decide/stat_tests/red_team_tests.rs::premises_name_scorers_and_scores`.
 - `MEDULLA-DECISION-ENGINE-R138.6`: `tests/decide/test_red_team_served.py::test_probe_verdict_end_to_end`.
 
 ### MEDULLA-DECISION-ENGINE-R137 package tests (planned)
@@ -514,10 +514,10 @@ No unrelated rebuild was substituted for the exact measured-source receipts.
 These are acceptance targets, not execution evidence. Retain every existing R137.1–.6 test.
 
 - `MEDULLA-DECISION-ENGINE-R137.7`: `crates/medulla-decision-outcome-types/src/decision/context_budget.rs::tests::package_records_round_trip`. Round trips preserve every constraint, source/range/revision and measurement identity. Validation rejects duplicate candidate ids, inconsistent resolution groups and malformed ranges. Negative/nonfinite measurements and arithmetic overflow refuse before solving.
-- `MEDULLA-DECISION-ENGINE-R137.8`: `crates/medulla-compute/src/solve/tests/context_package.rs::matches_tiny_multiresolution_oracle` (planned). Exhaustive tiny models match the optimum and fewer-token tie-break. Independent window, output reservation, caller, money and latency cases each become the tightest bound; fractional and zero-capacity boundaries never overrun. Changing candidate order must not change objective or totals; remaining ties use the recorded stable order.
-- `MEDULLA-DECISION-ENGINE-R137.9`: `src/server/handlers/decide/stat_tests/context_budget_tests.rs::decide_routes_package_selection` (planned). An authenticated served `Decide` request reaches package lowering, solver, independent verifier and sealed typed answer. The test rejects an unwired helper or local selection that replaces any step. Package selection, whole-prompt fit and R137.1–.6 recursive decomposition remain distinct operations.
-- `MEDULLA-DECISION-ENGINE-R137.10`: `src/server/handlers/decide/stat_tests/context_budget_tests.rs::package_refusals_are_typed` (planned). Negative cases cover invalid/missing measurements, no fitting nonempty package, empty/zero-capacity results and stale revisions. Work exhaustion tests cover no incumbent and unacceptable gaps. Certificate tests corrupt the proof, digests and selection bindings. No refusal silently relaxes a ceiling or returns a certified selection.
-- `MEDULLA-DECISION-ENGINE-R137.11`: `src/server/handlers/decide/stat_tests/context_budget_tests.rs::package_evidence_binds_inputs` (planned). Changes to unchosen candidates, token weights, tokenizer, cited ranges or revisions invalidate reuse. So do changes to active rates, output reservation, ceilings or objective. Independent recomputation checks selection, totals and certificate against the bound model. The record states the weakest evidence class and all defaults used.
+- `MEDULLA-DECISION-ENGINE-R137.8`: `crates/medulla-decision-policy/src/solve/tests/context_package.rs::matches_tiny_multiresolution_oracle` (planned). Exhaustive tiny models match the optimum and fewer-token tie-break. Independent window, output reservation, caller, money and latency cases each become the tightest bound; fractional and zero-capacity boundaries never overrun. Changing candidate order must not change objective or totals; remaining ties use the recorded stable order.
+- `MEDULLA-DECISION-ENGINE-R137.9`: `crates/medulla-h-decide/src/decide/stat_tests/context_budget_tests.rs::decide_routes_package_selection` (planned). An authenticated served `Decide` request reaches package lowering, solver, independent verifier and sealed typed answer. The test rejects an unwired helper or local selection that replaces any step. Package selection, whole-prompt fit and R137.1–.6 recursive decomposition remain distinct operations.
+- `MEDULLA-DECISION-ENGINE-R137.10`: `crates/medulla-h-decide/src/decide/stat_tests/context_budget_tests.rs::package_refusals_are_typed` (planned). Negative cases cover invalid/missing measurements, no fitting nonempty package, empty/zero-capacity results and stale revisions. Work exhaustion tests cover no incumbent and unacceptable gaps. Certificate tests corrupt the proof, digests and selection bindings. No refusal silently relaxes a ceiling or returns a certified selection.
+- `MEDULLA-DECISION-ENGINE-R137.11`: `crates/medulla-h-decide/src/decide/stat_tests/context_budget_tests.rs::package_evidence_binds_inputs` (planned). Changes to unchosen candidates, token weights, tokenizer, cited ranges or revisions invalidate reuse. So do changes to active rates, output reservation, ceilings or objective. Independent recomputation checks selection, totals and certificate against the bound model. The record states the weakest evidence class and all defaults used.
 - `MEDULLA-DECISION-ENGINE-R137.12`: `tests/decide/test_context_package_served.py::test_certified_package_end_to_end` (planned). The Medulla served receipt records source SHA, features/configuration, exact command, input/model/certificate digests and results. The linked Meristem receipt records its SHA, served caller and applied package/citations. Cover reserved output, monetary/latency ceilings, caller/window limits, fractional rounding, zero capacity, unknown rates, stale sources and rejected certificates. Unit-only solves, mock transports, greedy fits, planned test names and documentation commits do not establish this proof.
 
 <!-- spec-definition-patch:comparative-analysis-r139 -->
@@ -527,8 +527,8 @@ These are acceptance targets only, not implementation or execution evidence. Ret
 
 - `MEDULLA-DECISION-ENGINE-R139.1`: `crates/medulla-types/src/decision/comparative_analysis.rs::tests::plan_round_trips_and_binds_all_stages`; preserve every revision, digest, candidate/order, threshold, budget, refusal and question kind; reject duplicate/over-limit candidates.
 - `MEDULLA-DECISION-ENGINE-R139.2`: `crates/medulla-types/src/decision/comparative_analysis.rs::tests::thresholds_and_budgets_select_only_admissible_stages`; cover inclusive 0.50/0.80, one/two synthesis calls, stable ties, zero discovery calls, extraction exclusion and total equality/overflow.
-- `MEDULLA-DECISION-ENGINE-R139.3`: `src/server/handlers/decide/stat_tests/comparative_analysis_tests.rs::decide_returns_plan_without_model_execution`; run actual Decide dispatch and assert pinned inputs and zero discovery calls.
-- `MEDULLA-DECISION-ENGINE-R139.4`: `src/server/handlers/decide/stat_tests/comparative_analysis_tests.rs::stale_inputs_and_stage_budgets_refuse_before_calls`; cover stale query/vector/universe, invalid weights/thresholds, stage and total exhaustion with typed refusals and no model call.
+- `MEDULLA-DECISION-ENGINE-R139.3`: `crates/medulla-h-decide/src/decide/stat_tests/comparative_analysis_tests.rs::decide_returns_plan_without_model_execution`; run actual Decide dispatch and assert pinned inputs and zero discovery calls.
+- `MEDULLA-DECISION-ENGINE-R139.4`: `crates/medulla-h-decide/src/decide/stat_tests/comparative_analysis_tests.rs::stale_inputs_and_stage_budgets_refuse_before_calls`; cover stale query/vector/universe, invalid weights/thresholds, stage and total exhaustion with typed refusals and no model call.
 - `MEDULLA-DECISION-ENGINE-R139.5`: `crates/medulla-types/src/decision/comparative_analysis.rs::tests::plan_digest_binds_inputs_and_budgets`; every bound mutation changes digest and Meristem receipt validation rejects a different plan or over-budget calls.
 - `MEDULLA-DECISION-ENGINE-R139.6`: Medulla served target `tests/decide/test_comparative_analysis_served.py::test_plan_and_refusal_through_served_decide`; Meristem consumer target `tests/decide/test_comparative_analysis_consumer.py::test_served_consumer_obeys_plan_and_binds_invocation_receipt`. Require exact source SHAs and separate receipts; a Medulla-only test cannot establish Meristem invocation.
 <!-- /spec-definition-patch -->
