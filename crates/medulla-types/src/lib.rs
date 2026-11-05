@@ -299,3 +299,7 @@ pub use modality::{
 // representable. `MutationVersionScope` and `NON_GRAPH_SOURCE_VERSION` are therefore
 // not re-exported: they have no v1 meaning, and keeping an alias would be exactly the
 // compatibility seam RF-ADR-001 forbids.
+// MEDULLA-INGEST-WORKER-R001.1006: data-prep declaration model.
+pub mod data_prep_declaration;
+// MEDULLA-INGEST-WORKER-R605.1: drains, page checkpoints, graph routes, stage profiles.
+pub mod ingest_drain;
