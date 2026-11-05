@@ -400,7 +400,7 @@ Gates for any change under these rows: `cargo test -p medulla-core --test media_
 - Ingest surfaces: `Method::SourceIngest` → `crates/medulla-server-graph/src/dispatch/graph_pipeline/native_routes.rs::route_source_ingestion_or_resources` (:399) → `crates/medulla-h-ingest/src/source_ingestion.rs::prepare` (:167) → `admit_records` (:978) → `build_envelope` (:1658). Media tags, paper facts and meeting transcripts add steps here.
 - Reads: `Method::SemanticSearch` → `crates/medulla-h-graph/src/graph_ops/semantic.rs::try_handle_semantic_compute` (:281); bookmark search through `crates/medulla-server-router/src/dispatch/router/control_plane.rs` (:400) → `crates/medulla-h-retrieve/src/semantic_index.rs` (:59); relations through `crates/medulla-h-query/src/query/dispatch.rs` (:138).
 - Memory: `crates/medulla-h-graph/src/graph_ops/terminal.rs::try_handle_graph_domains` (:14) → the new `memory_surface` handler.
-- Obsolete paths to delete: none;
+- Obsolete paths to delete: none.
 
 ## Cross-repo seams
 
