@@ -1,166 +1,116 @@
-# MEDULLA-INGEST-WORKER - Design and implementation plan
+# MEDULLA-INGEST-WORKER — Implementation plan
 
-Governing spec: [spec.md](spec.md).
+Governing spec: [spec.md](spec.md). Rows: [requirements.md](requirements.md).
 
-## Functional description (what the deleted worker did)
+## Summary
 
-The Meristem `kg-ingest-worker` was a standalone process joining the Kafka consumer group `kg-ingest` on topic `kg_tasks`. The host engine used the same pool in Kafka mode.
-- Queue: keyed messages on `kg_tasks`; hydration task types (skill_workflows, capability_hydration) went to a separate `kg_tasks_hydration` topic and consumer group `kg-ingest-hydration`.
-- Job kinds: task type read from the WorkItem metadata (document or codebase, plus the two hydration types). Target path resolved from metadata.
-- Routing: partition key tenant, then repo or corpus, then task type, giving per-key ordering without global serialization.
-- Claiming: Kafka was notification only. Each consumer atomically claimed the deterministic WorkItem (`ClaimWorkItem`, lease 60 s). A negative claim skipped the duplicate. Missing target marked the task failed.
-- Batching and sizing: each thread owned one consumer. Threads autosized from CPU (0.36 of cores) and memory (3 GiB per worker). One poll per message, no message batching.
-- Checkpointing: offsets committed synchronously only after processing or durable failed marking (at-least-once); max poll interval 1 h to avoid mid-task rebalance.
-- Backpressure: Kafka consumer lag, plus jittered admission-denied re-offer delay.
-- Failure: any exception marked the task failed and the loop continued. Retry, backoff and dead letter lived in the engine's task code (`_fail_or_retry_task`).
-- Reserved lane: at least one and at most count-1 workers polled the hydration topic first (50 ms peek), then the general topic.
-- Startup: forced client role, minted an identity session from the process token, verified the engine exposed native ClaimWorkItem before joining, exited 2 otherwise; SIGINT and SIGTERM drained.
-- Metrics: logs only; lag came from Kafka.
+The engine owns the ingest queue, its policy and every admission rule. The runner process belongs to the connector SDK, and arbora hosts it. Two served paths carry the work. The queue path (`IngestEnqueue`, `IngestQueueDepth`, `TaskQueueClaim`, `TaskQueueAck`) enters at `crates/medulla-server-router` and runs in `crates/medulla-h-ingest/src/ingest_queue.rs`. The batch path (`SourceIngest`) enters at `crates/medulla-server-graph` and runs in `crates/medulla-h-ingest/src/source_ingestion.rs`. Each batch kind has one admission function in `crates/medulla-h-ingest/src/source_ingestion/`.
 
-## Existing system and reuse
+```text
+runner (SDK) --> register_worker > admit_worker_task > TaskQueueClaim > TaskQueueRenew > TaskQueueAck
+producer     --> IngestEnqueue > validate > lane + partition > TaskQueueEnqueue
+connector    --> SourceIngest > prepare > resolve_mappings > match batch.kind > one envelope > finish
+```
 
-Found in this repository: work-item methods (ClaimWorkItem, SubmitWorkItem, RenewWorkItemLease, CommitWorkItemResult, DeferWorkItem, CancelWorkItem) in the coordination domain. SourceIngest dead_letter and enrichment admission (MEDULLA-REPO-INGEST-R002, R006) are also present, along with the broker's consumer QoS acks. Not found: a served task queue (landing via MEDULLA-DURABLE-KERNEL-R071 to R073) or a worker registry (R074). No ingest-specific lane, depth read or metrics exists. No Kafka path is wanted.
-
-## Architecture and ownership decision
-
-The engine owns state and policy: queue, leases, retry, dead letter, depth, metrics. The running process is owned by the connector Graft SDK runner, with Arbora as host only.
-- Not the engine: job bodies parse files, call LLMs and touch source systems and credentials. The engine is a store and must not run source effects or hold their secrets.
-- Not Arbora: it is the door and supervisor. Embedding job logic there recreates the monolith and ties worker scale to the front door.
-- The Graft SDK already owns source effects and the halve-and-resend retry against Medulla batch refusals (MEDULLA-REPO-INGEST-R008), so the worker is a client of the engine in the same shape.
-- Native fast stages (parse, symbols, stats) stay in-engine per MEDULLA-REPO-INGEST-R006; this worker drains only the deferred, source-effect and enrichment jobs.
-
-## Wiring
-
-enqueue_ingest_job is called by SourceIngest when it defers enrichment and by Graft SDK producers. Run_ingest_worker claims through the generated client methods (MEDULLA-DURABLE-KERNEL-R073). The identity scopes already in the engine contract apply, and any new scope is a named dependency row. Config keys: queue depth limit, retry policy, lease seconds, worker count, engine endpoint.
-
-## Failure and Backpressure
-
-Failed outcome: redeliver with jittered delay until the ceiling, then one dead-letter record. Depth above limit: producers get INGEST_QUEUE_FULL; workers are unaffected.
-
-## Parity table
-
-| Old entry point | New entry point | Status |
+| Concern | Owning code | Rows |
 |---|---|---|
-| kg-ingest-worker console script | ingest-worker command (R001.15) | to build |
-| claim_task_envelope | TaskQueueClaim plus ClaimWorkItem (R001.5, R001.12) | exists once R071 to R073 land |
-| run_ingest_consumer_loop | run_ingest_worker (R001.14) | to build |
-| start_ingest_consumer_pool (autosize) | autosize in R001.15 | to build |
-| hydration topic and reserved floor | R001.10 with R074 to R076 | to build |
-| partition_key_for | partition_key (R001.3) | to build |
-| Kafka offset commit | TaskQueueAck (R001.14) | to build |
-| Kafka lag | IngestQueueDepth and metrics (R001.11, R001.13) | to build |
-| Kafka transport and consumer groups | none | intentionally dropped: engine queue replaces it |
-| in-process host pool | none | intentionally dropped: workers are always clients |
+| Job types, lanes, retry | `crates/medulla-source-types/src/ingest_job.rs` | `MEDULLA-INGEST-WORKER-R001.1` to `MEDULLA-INGEST-WORKER-R001.8` |
+| Queue handler | `crates/medulla-h-ingest/src/ingest_queue.rs` | `MEDULLA-INGEST-WORKER-R001.4`, `MEDULLA-INGEST-WORKER-R001.9` to `MEDULLA-INGEST-WORKER-R001.12` |
+| Metrics | `crates/medulla-kernel/src/metrics/ingest.rs` | `MEDULLA-INGEST-WORKER-R001.13`, `MEDULLA-INGEST-WORKER-R604.5` |
+| Drains | `crates/medulla-h-ingest/src/ingest_drain.rs` | `MEDULLA-INGEST-WORKER-R605.2` |
+| Documents and transcripts | `crates/medulla-h-ingest/src/source_ingestion/documents.rs`, `transcript.rs` | `MEDULLA-INGEST-WORKER-R003.8`, `MEDULLA-INGEST-WORKER-R003.14` |
+| Readers and dedup | `crates/medulla-document/src/fragment.rs`, `crates/medulla-compute/src/sketch.rs` | `MEDULLA-INGEST-WORKER-R700.1`, `MEDULLA-INGEST-WORKER-R702.1` |
+| Governance, permissions, sweep, containers | `crates/medulla-h-ingest/src/source_ingestion/` | `MEDULLA-INGEST-WORKER-R900.2`, `MEDULLA-INGEST-WORKER-R902.2`, `MEDULLA-INGEST-WORKER-R903.2`, `MEDULLA-INGEST-WORKER-R904.3` |
 
-## Out of scope
+## Technical Context
 
-Kafka compatibility, the analytics worker, the job bodies' parsing and LLM logic (Graft SDK existing runners).
+- **Language/Version**: Rust 2021 edition on the pinned toolchain of `rust-toolchain.toml`; Python 3.14 (floor 3.12) for served tests.
+- **Primary Dependencies**: The workspace crates named in Project Structure. Reader crates (`lopdf`, `zip`, `quick-xml`, `calamine`, `mail-parser`, `csv`) enter only after `tests/test_third_party_source_policy.py` passes, each behind a feature `reader-<format>`.
+- **Storage**: The durable job store behind `MEDULLA-DURABLE-KERNEL-R072` holds tasks. Graph nodes and edges hold atoms, proposals, containers and evidence. No second store exists.
+- **Testing**: Rust unit and handler tests per crate, served Python tests under `tests/ingest/`, nightly benches.
+- **Target Platform**: Linux x86_64 and aarch64 hosts without AVX2 assumptions.
+- **Project Type**: Library crates and one handler crate.
+- **Performance Goals**: Claim with admission p99 under 1 ms at 64 workers. Materialization p99 under 300 ms per 1,024-record batch. Each row states its own budget.
+- **Constraints**: Handler crates never call a sibling handler; a call across handlers goes through a seam in `crates/medulla-server-ops/src/api/ingest.rs`. Every refusal has one stable code and changes no state.
+- **Scale/Scope**: 116 leaf rows in five user stories and 13 `FR-` labels.
 
-## MEDULLA-INGEST-WORKER-R002 ontology induction with admission tests
+## Constitution Check
 
-Data flow: served ingest queue claim → runner → `ingest_document` body → induction → `score_proposal` (creates the call site in `crates/medulla-h-ingest/src/source_ingestion.rs`) → `Admitted` or `Draft` → instance population.
-Types: `OntologyProposal` in `crates/medulla-types/src/ontology_proposal.rs`.
-Attach point: the job body after induction. The production caller is the runner of R001.14.
-Failure: a failing score keeps the draft and populates nothing.
-Reuses the queue and ack path of R001.4. New: the proposal and its scores.
-Decision: admit only after scoring. Rejected: admitting at once and repairing later, which pollutes instances.
-Cross-repository dependency: `SCION-SOURCE-INGEST-R010` specifies the planned `run_ingest_worker` producer.
-That Graft SDK row remains `SPECIFIED`; it does not establish a live worker runtime.
+- **R-I. The engine is native Rust and the only fact store**: pass. Every row lands in a Rust crate and the engine store.
+- **R-II. Every wait has a deadline**: pass. Leases, grace windows and sweep intervals are named values.
+- **R-III. Every row sets budgets and names a benchmark**: pass. Hot-path rows name a nightly bench group of `MEDULLA-DECISION-ENGINE-R178.1`.
+- **R-IV. Crates are small, layered and cut over hard**: pass. Rows name post-split crates, and no handler calls a sibling handler.
+- **Organization standards**: pass. Rows follow the spec standard and the ecosystem boundaries.
 
-## MEDULLA-INGEST-WORKER-R003 knowledge atoms
+## Project Structure
 
-Data flow: claim → `ingest_document` body (`crates/medulla-h-ingest/src/source_ingestion.rs`, created by R002.3) → `decompose` → atom store; query → `select_atoms` → context.
-Types: `KnowledgeAtom{atom_id, kind, text, provenance_key, tenant}` in `crates/medulla-types/src/knowledge_atom.rs`.
-Attach point: the document job body and the context query path. Production caller: the runner of R001.14. No production caller exists today.
-Failure: an atom without provenance is refused and not stored.
-Existing code: `crates/medulla-document/src/contract.rs:141` (chunk validation). Reachable today: no. Search terms with no hit: knowledge atom, memory atom, provenance_key, assemble_context, ContextPack.
-Reuses document chunks. New: the atom type, decomposition and selection.
-Decision: select atoms per query. Rejected: sending whole documents as context, which spends budget on irrelevant text.
-Cross-repository dependency: `SCION-SOURCE-INGEST-R010` specifies the planned `run_ingest_worker` producer.
-That Graft SDK row remains `SPECIFIED`; it does not establish a live worker runtime.
+```text
+crates/medulla-source-types/src/ingest_job.rs        existing: envelope, lanes, partition key, retry
+crates/medulla-source-types/src/source_ingestion.rs  existing: batch, receipt, batch kind (extended)
+crates/medulla-source-types/src/source_document.rs   existing: normalized document, quarantine
+crates/medulla-source-types/src/source_transcript.rs existing: transcript thread and message
+crates/medulla-types/src/                            existing: knowledge_atom, ontology_proposal, extracted_fact, ingest_rules, source_governance; new: ingest_lanes, ingest_drain, ingest_materialize, data_prep_declaration
+crates/medulla-h-ingest/src/                         existing: source_ingestion.rs; new: ingest_queue, ingest_drain, atom_context, data_prep_declaration, source_ingestion/*
+crates/medulla-document/src/                         existing: processing, transcript, html; new: atoms, fragment, readers
+crates/medulla-compute/src/sketch.rs                 existing: MinHashSketch (LshIndex added)
+crates/medulla-core/src/                             new: source_hierarchy
+crates/medulla-kernel/src/metrics/                   existing: outbox; new: ingest
+crates/medulla-server-router/src/dispatch/router/source_ingest.rs  existing: dispatch arms
+crates/medulla-server-graph/src/dispatch/graph_pipeline/native_routes.rs  existing: SourceIngest route
+crates/medulla-server-ops/src/api/ingest.rs          existing: IngestApi and JobsApi seams
+tests/ingest/                                        new: served Python tests
+benches/                                             new: root benches named by the rows
+```
 
-## Document and transcript producers within R003
+New files that rows add are marked `new` in their own `Shape:` sentence.
 
-Planned data flow: Graft SDK worker -> served `SourceIngest` -> authorize -> resolve trusted mappings -> validate -> reconcile/admit/map -> one envelope.
-The authorized committed-replay shortcut precedes mapping resolution and preserves its recorded outcome.
-The production route calls `prepare` at `crates/medulla-server-graph/src/dispatch/graph_pipeline/native_routes.rs:408`.
-It commits the envelope at `crates/medulla-server-graph/src/dispatch/graph_pipeline/native_routes.rs:428`, then calls `finish` at line 429.
+## Phase 0: Research
 
-Existing code: `SourceIngestionRequest` at `crates/medulla-source-types/src/source_ingestion.rs:265` validates the batch envelope.
-`prepare` at `crates/medulla-h-ingest/src/source_ingestion.rs:155` authorizes requests and prepares the existing atomic projection.
-`resolve_mappings` at `crates/medulla-h-ingest/src/source_ingestion.rs:385` resolves trusted mappings, rather than accepting caller-defined ontology authority.
-`DocumentData` at `crates/medulla-document/src/document.rs:225` already holds content addresses, layout and chunk lineage.
-`NativeDocumentRuntime::decode_text` at `crates/medulla-document/src/runtime.rs:79` decodes native text.
-Its existing production caller is `DecodedIngest::into_document` at `crates/medulla-h-ingest/src/modality/ingest.rs:151`.
-The source pipeline must reuse document validation without invoking a second modality commit.
-Reachable today: yes for generic source ingestion and native document decoding; no for the new normalization and transcript validators.
+No unknowns; no research.md.
 
-New code must add typed terminal outcomes, transcript records and two validators after trusted mapping resolution.
-Both validators must consume the same resolved mapping snapshot before reconciliation and source admission.
-Validators must not resolve mappings independently.
-Searches for `TranscriptThread`, `TranscriptMessage`, `validate_transcript` and normalization quarantine found no equivalent source-ingestion validator.
-The graph must remain authoritative for accepted records, provenance, mapping revisions and source checkpoints.
-`prepare` must return a prepared accepted or quarantine outcome for the existing one-envelope commit route.
-Normalization failure must not return the ordinary error path, which skips commit.
-A quarantine envelope must store only restricted evidence; it must not change the source marker, checkpoint or accepted projections.
-`finish` at `crates/medulla-h-ingest/src/source_ingestion.rs:1683` must return quarantine only after its envelope commits.
-The accepted variant must retain `SourceIngestionReceipt`; the quarantine variant must carry an optional prior accepted checkpoint.
-First-batch quarantine must preserve `None`; it must not fabricate acceptance of the submitted checkpoint.
-`prepared_replay` at `crates/medulla-h-ingest/src/source_ingestion.rs:1791` must restore the stored outcome after verifying authority.
-Quarantine replay must preserve its original receipt without resetting a checkpoint advanced by later accepted ingestion.
-A failed quarantine commit must return refusal, never a durable quarantine claim.
-Raw content must retain its existing content-addressed admission boundary.
-The format registry must come from the single resolved connector mapping revision.
-The engine must bind tenant and policy identities from verified server authority, never from source payloads.
-Transcript thread identity must include tenant, connector, stream and session ID; message identity must add message ID.
-The source-scoped convention at `crates/medulla-h-ingest/src/source_ingestion.rs:2187` must encode those record keys without ambiguity.
-Read authorization must deny same-tenant unauthorized access to transcript text, provenance, quarantine receipts and raw-content references.
-Raw-content retrieval must enforce the stored policy; knowledge of a reference must grant no access.
-Transcript mappings must reuse existing message and concept vocabulary where applicable; they must not redefine media transcript segments.
+## Phase 1: Design
 
-Decision: validate the complete source batch before committing its graph projection.
-Rejected alternative: commit individual messages or atoms during normalization, which exposes partial knowledge after failure.
-The named defaults `complete_document`, `content_identity`, `source_sequence` and `source_identity` must be replaceable through versioned policy.
+The rules below bind every row.
 
-Cross-repository dependency: `SCION-SOURCE-INGEST-R010` specifies `run_ingest_worker`; its delivery state remains `SPECIFIED`.
-This planned worker must capture sources, perform source effects, parse external formats and submit normalized records.
-`ARBORA-` owns the hosted entry and worker supervision; `AU-` emits harness events only in this ingestion boundary.
-Medulla must validate, store and select knowledge; no connector credential or source-effect loop moves into Medulla.
-R001 already owns queues and retries; R003.1 through R003.6 already own atom decomposition and selection.
-Decision rows R133 through R138 own run traces, plans and budgets; they do not own source transcript ingestion.
+1. **The engine owns state and policy.** Queue, leases, retry, dead letter, depth and metrics are engine behaviour. Job bodies parse files, call models and touch sources with SDK credentials, so the engine never runs a source effect or holds a source secret.
+2. **One admission path.** Every connector batch converges on `prepare` and `admit_records`. The batch kind selects the admission function. Authorization and the committed-replay shortcut come first; mappings resolve once; validators share that snapshot.
+3. **One envelope per batch.** A batch commits one accepted or quarantine envelope. A normalization failure returns a prepared quarantine outcome and never bypasses the commit. A quarantine stores restricted evidence only and never advances a checkpoint.
+4. **No second policy writer.** The ack handler is the only dead-letter writer. The claim handler evaluates admission itself. One routing function and one gauge set exist.
+5. **Cross-handler calls use seams.** The queue handler reaches the task queue through `jobs_seam`, and the task-queue handler reaches `on_ingest_ack` and `on_ingest_claim` through `ingest_seam`. The implementations are installed in `crates/medulla-server/src/seams_install.rs`.
+6. **Wire changes carry no shim.** A changed Rust wire type updates the generated Python models in `medulla/generated/` and gets a Rust round-trip vector in the same change.
+7. **Names and ids.** Ids are SHA-256 framed with `Digest256::framed` under a domain tag per kind. No component name carries a version suffix.
+8. **Knobs.** Each tunable value is a named knob with a default, bounds and a unit; security-relevant values are `Fixed`.
 
-### Source evidence mapping
+Data entities are in [data-model.md](data-model.md). The shortest served proof is in [quickstart.md](quickstart.md). Each seam to another repository has a document in `contracts/`.
 
-Audit candidates 47 and 48 define the document and transcript requirements below.
-The audit tracker retains their complete source locations and provenance.
-Code and deduplication base: Medulla commit `2e44b8af87ec9681ab0f45d13b37fab38d45c7c2`.
+## Phase 2: Task approach
 
-| Candidate ID | Source descriptions | Citation | Requirement mapping |
-|---|---|---|---|
-| 47 | Paper ingestion requirements; document-to-graph ingestion design | None supplied | Extend R003 with R003.7 through R003.12: normalized documents, atomic publication and quarantine. |
-| 48 | Observational memory design; temporal update design | None supplied | Extend R003 with R003.13 through R003.18: timestamped threads, messages, concept links and format refusal. |
+`tasks.md` holds one task per leaf row in table order, producer first. A model row precedes the rows that wire it. A row lands in one slice with its caller, so no type lands without a production caller. Rows that edit `source_ingestion.rs` (`prepare`, `admit_record`) run in series; rows in separate new files run in parallel.
 
-These inputs add no paper citation. Existing R003 research references inspire atom design only; they do not prove served acceptance.
+## Complexity Tracking
 
+none
 
-## Source permission sync, deletion reconciliation and hierarchy (R902 to R904)
+## Build contract
 
-These rows complete the connector-sourced knowledge path. R900 writes the ACL at first ingest.
-Three more batch kinds keep the held copy true to the source:
+- `cargo clippy --workspace --all-targets -- -D warnings` and `cargo fmt --check` pass for every touched crate.
+- The architecture, complexity and duplication gates of `.config/pre-commit.yaml` pass with no baseline entry and no suppression.
+- Every hot-path row names a nightly bench group and its budget, per article R-III; a bench is a service level and never gates a pull request.
+- A public item in an ingest crate has a non-test caller under a handler or server crate. `MEDULLA-CONTRACT-R055` gates this.
+- Spec rows pass `spec-standard`, `plan-conformance` and `spec-decomposition` with zero findings.
+- A handler crate never calls a sibling handler crate; a call across handlers uses a seam.
 
-| Batch kind | Row | Effect |
-|---|---|---|
-| `access` | R902 | Replaces the ACL of named records. Content, vectors and edges stay unchanged. |
-| `groups` | R902 | Replaces group member sets. The read-RLS gate expands groups at query time. |
-| `enumeration` | R903 | Lists every source identifier. Missing records delete after a grace window. |
-| `containers` | R904 | Upserts the container tree. Scope filters name subtrees. |
+## Production caller chain
 
-All four enter through `admit_records` in `crates/medulla-h-ingest/src/source_ingestion.rs`. The Graft SDK
-connector contract `SCION-SOURCE-INGEST-R805` produces them. A restricted record whose access
-snapshot is older than its bound fails closed at retrieval.
+- `Method::IngestEnqueue` arm (`crates/medulla-server-router/src/dispatch/router/source_ingest.rs::dispatch_source_ingest_methods`, new) to `enqueue_ingest_job` (`crates/medulla-h-ingest/src/ingest_queue.rs`, new) to `jobs_seam` (`crates/medulla-server-ops/src/api/ingest.rs`) to the task-queue handler of `MEDULLA-DURABLE-KERNEL-R072`.
+- `Method::TaskQueueAck` and `TaskQueueClaim` arms of `MEDULLA-DURABLE-KERNEL-R072` to `ingest_seam` to `on_ingest_ack` and `on_ingest_claim` in `ingest_queue.rs` (new).
+- `Method::SourceIngest` (`crates/medulla-protocol-types/src/protocol/method/method_10.rs`) to `route_source_ingestion_or_resources` (`crates/medulla-server-graph/src/dispatch/graph_pipeline/native_routes.rs`) to `route_source_ingestion_dispatch` to `route_source_ingestion_request` to `prepare` (`crates/medulla-h-ingest/src/source_ingestion.rs`) to the admission function for the batch kind, then `apply_one_change_envelope` (`crates/medulla-server-graph/src/dispatch/change_envelope.rs`) and `finish`.
+- `Method::AtomContext`, `Method::SourceDrainStatus`, `Method::DataPrepDeclare` and `Method::IngestQueueDepth` arms of `source_ingest.rs` (new) to `atom_context`, `drain_status`, `declare_data_prep` and `queue_depth` in `crates/medulla-h-ingest/src/`.
+- Background: `src/main.rs` starts `spawn_reconcile_sweep` (`crates/medulla-h-ingest/src/source_ingestion/sweep.rs`, new) and registers the metrics collector.
 
-## Stream content versions (R910)
+## Cross-repo seams
 
-A connector sync sends one source stream as one or more batches. Today the content version object id is the batch id. The second batch then names a prior digest that its own object never held. The engine refuses it with `STALE_CONTENT_VERSION`, and the ingest runner of ARBORA-OPS-R020.6.6 stops.
-
-The fix keys the content version on the stream. `admit_records` in `crates/medulla-h-ingest/src/source_ingestion.rs` stamps the stream object id. The content guard in `crates/medulla-store-apply/src/redb_store/store_state.rs` reads the stream head. Equal content counts as unchanged. A true head mismatch still refuses. The mutation scope version of MEDULLA-DURABLE-KERNEL-R031 is a separate guard.
+- Ingest worker runner: `MEDULLA-INGEST-WORKER-R001.14` provides, `SCION-SOURCE-INGEST-R010` consumes. Contract: [scion-ingest-runner.md](contracts/scion-ingest-runner.md).
+- Source batch kinds from connectors: `MEDULLA-INGEST-WORKER-R902.3.1` provides, `SCION-SOURCE-INGEST-R805.1` consumes. Contract: [scion-source-batch-kinds.md](contracts/scion-source-batch-kinds.md).
+- Data-prep declaration: `MEDULLA-INGEST-WORKER-R001.1008` provides, `ARBORA-FLEET-R058` consumes. Contract: [arbora-data-prep-declaration.md](contracts/arbora-data-prep-declaration.md).
+- Document and transcript batches: `MEDULLA-INGEST-WORKER-R003.8` provides, `SCION-SOURCE-INGEST-R010` consumes. Contract: [scion-document-transcript-ingest.md](contracts/scion-document-transcript-ingest.md).
