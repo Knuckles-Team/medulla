@@ -677,3 +677,66 @@ mod graph_schema_reasoning_tests {
             .any(|(child, parent)| child == "PART_OF" && parent == "DEPENDS_ON"));
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use medulla_graph_core::graph::GraphCore;
+    use medulla_protocol_types::protocol::Method;
+
+    fn hex(byte: char) -> String {
+        std::iter::repeat_n(byte, 64).collect()
+    }
+
+    fn step(index: u64, digest: &str) -> serde_json::Value {
+        serde_json::json!({
+            "step_index": index,
+            "kind": "tool_call",
+            "model_request_digest": hex('a'),
+            "tool_args_digest": digest,
+            "result_digest": hex('c'),
+        })
+    }
+
+    fn trace_write(steps: Vec<serde_json::Value>) -> Method {
+        let props = serde_json::json!({
+            "node_type": "RunTrace",
+            "terminationReason": "final_answer",
+            "steps": steps,
+        });
+        Method::AddNode {
+            node_id: "trace-steps".into(),
+            properties_msgpack: rmp_serde::to_vec_named(&props).unwrap(),
+        }
+    }
+
+    // spec: MEDULLA-ORCH-VOCAB-R013.3
+    #[test]
+    fn add_run_trace_checks_step_digests() {
+        let core = GraphCore::new();
+        let valid = trace_write(vec![step(0, &hex('b')), step(1, &hex('d'))]);
+        let admitted = crate::harness_admission::direct_add_node(&valid, &core, 7).unwrap();
+        let (
+            Method::AddNode {
+                properties_msgpack: admitted,
+                ..
+            },
+            Method::AddNode {
+                properties_msgpack: sent,
+                ..
+            },
+        ) = (admitted, valid)
+        else {
+            panic!("AddNode came back");
+        };
+        assert_eq!(admitted, sent, "a valid trace passes through in order");
+
+        let bad_digest = trace_write(vec![step(0, "not-a-digest")]);
+        let refusal = crate::harness_admission::direct_add_node(&bad_digest, &core, 7).unwrap_err();
+        assert!(refusal.starts_with("STEP_DIGEST_INVALID"), "{refusal}");
+
+        let gap = trace_write(vec![step(0, &hex('b')), step(2, &hex('b'))]);
+        let refusal = crate::harness_admission::direct_add_node(&gap, &core, 7).unwrap_err();
+        assert!(refusal.starts_with("STEP_ORDER_INVALID"), "{refusal}");
+        assert!(!core.has_node("trace-steps"));
+    }
+}

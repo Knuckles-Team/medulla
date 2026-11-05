@@ -315,3 +315,7 @@ pub use modality::{
 pub mod data_prep_declaration;
 // MEDULLA-INGEST-WORKER-R605.1: drains, page checkpoints, graph routes, stage profiles.
 pub mod ingest_drain;
+// MEDULLA-ORCH-VOCAB-R009.700 — a durable run unit mirrored as a run-trace node.
+pub mod durable_unit;
+// MEDULLA-ORCH-VOCAB-R009.18.1 — the measured-or-unknown run observation window.
+pub mod run_observation;
