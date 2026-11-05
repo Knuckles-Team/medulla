@@ -145,3 +145,42 @@ fn harness_component_write_stamps_and_links() {
     assert_eq!(node_id, "some:other:node");
     assert_eq!(properties_msgpack, plain_blob);
 }
+
+#[test]
+fn invalid_trace_is_refused_and_not_stored() {
+    let core = GraphCore::new();
+    let mut valid = serde_json::Map::new();
+    valid.insert("node_type".into(), serde_json::json!("RunTrace"));
+    valid.insert(
+        "terminationReason".into(),
+        serde_json::json!("final_answer"),
+    );
+    valid.insert("peakContextTokens".into(), serde_json::json!(10));
+    valid.insert("contextBudgetTokens".into(), serde_json::json!(20));
+    valid.insert("costUsd".into(), serde_json::json!("0.042"));
+    let passed = direct_add_node(&add_node("trace-ok".into(), &valid), &core, 7).unwrap();
+    assert!(matches!(passed, Method::AddNode { .. }));
+
+    let cases = [
+        (
+            "terminationReason",
+            serde_json::json!("gave_up"),
+            "RunTraceTerminationShape",
+        ),
+        ("turnCount", serde_json::json!(-1), "RunTraceCounterShape"),
+        (
+            "peakContextTokens",
+            serde_json::json!(30),
+            "RunTraceBudgetShape",
+        ),
+    ];
+    for (key, value, shape) in cases {
+        let mut props = valid.clone();
+        props.insert(key.into(), value);
+        let err = direct_add_node(&add_node("trace-bad".into(), &props), &core, 7).unwrap_err();
+        assert!(err.starts_with("RUN_TRACE_SHAPE_INVALID"), "{err}");
+        assert!(err.contains(shape), "{err} names {shape}");
+        assert!(!core.has_node("trace-bad"));
+    }
+    let _ = decode_props;
+}

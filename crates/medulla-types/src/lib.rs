@@ -299,3 +299,7 @@ pub use modality::{
 // representable. `MutationVersionScope` and `NON_GRAPH_SOURCE_VERSION` are therefore
 // not re-exported: they have no v1 meaning, and keeping an alias would be exactly the
 // compatibility seam RF-ADR-001 forbids.
+// MEDULLA-ORCH-VOCAB-R009.700 — a durable run unit mirrored as a run-trace node.
+pub mod durable_unit;
+// MEDULLA-ORCH-VOCAB-R009.18.1 — the measured-or-unknown run observation window.
+pub mod run_observation;
