@@ -274,5 +274,9 @@ closed_error_codes! {
         StateDimensionMismatch => "STATE_DIMENSION_MISMATCH",
         StateRetryConflict => "STATE_RETRY_CONFLICT",
         StateRevisionUnsupported => "STATE_REVISION_UNSUPPORTED",
+        CarrierSignatureInvalid => "CARRIER_SIGNATURE_INVALID",
+        ChildTargetTerminal => "CHILD_TARGET_TERMINAL",
+        EnvelopeFieldMissing => "ENVELOPE_FIELD_MISSING",
+        RevisionConflict => "REVISION_CONFLICT",
     }
 }

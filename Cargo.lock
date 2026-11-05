@@ -6734,6 +6734,7 @@ dependencies = [
  "medulla-tsdb",
  "medulla-types",
  "medulla-wasm",
+ "medulla-work-types",
  "rmp-serde",
  "serde",
  "serde_json",
