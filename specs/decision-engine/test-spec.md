@@ -273,7 +273,7 @@ Each entry below is planned. The test file or function does not exist in the tre
 - `MEDULLA-DECISION-ENGINE-R137.3`: `crates/medulla-h-decide/src/decide/stat_tests/context_budget_tests.rs::window_source_order` (planned, L3): proves over-window plan family wiring. The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R137.3`: `crates/medulla-h-decide/src/decide/stat_tests/context_budget_tests.rs::cross_tenant_profile_is_not_read` (planned, L3): proves over-window plan family wiring. The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R137.4`: `crates/medulla-h-decide/src/decide/stat_tests/context_budget_tests.rs::budget_exhausted_names_the_limit` (planned, L3): proves over-window refusals. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R137.7`: `crates/medulla-types/src/decision/context_package.rs::tests::package_records_round_trip` (planned, L1): proves context package records. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R137.7`: `crates/medulla-decision-types/src/decision/context_package.rs::tests::package_records_round_trip` (planned, L1): proves context package records. The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R137.7`: `crates/medulla-h-decide/src/decide/stat_tests/context_package_tests.rs::package_journey` (planned, L3): proves context package records. The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R137.8`: `crates/medulla-decision-policy/src/solve/context_package/tests.rs::matches_tiny_multiresolution_oracle` (planned, L3): proves package lowering and exact selection kernel. The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R137.8`: `crates/medulla-decision-policy/src/solve/context_package/tests.rs::each_ceiling_can_be_the_tightest` (planned, L3): proves package lowering and exact selection kernel. The test does not exist yet; the owning change adds it at this exact path.
@@ -295,7 +295,7 @@ Each entry below is planned. The test file or function does not exist in the tre
 - `MEDULLA-DECISION-ENGINE-R138.7`: `crates/medulla-agent-types/src/agent_component/validation.rs::tests::red_team_bodies_validate_and_refuse_unknown_fields` (planned, L1): proves store red-team records as library components. The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R138.7`: `crates/medulla-h-decide/src/decide/stat_tests/probe_verdict_tests.rs::probe_verdict_journey` (planned, L3): proves store red-team records as library components. The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R139`: `crates/medulla-h-decide/src/decide/stat_tests/comparative_analysis_tests.rs::served_decide_returns_budgeted_plan` (planned, L3): proves comparative-analysis plan producer (rollup). The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R139.1`: `crates/medulla-types/src/decision/comparative_analysis.rs::tests::comparative_types_round_trip` (planned, L1): proves model. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R139.1`: `crates/medulla-decision-types/src/decision/comparative_analysis.rs::tests::comparative_types_round_trip` (planned, L1): proves model. The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R139.1`: `crates/medulla-h-decide/src/decide/stat_tests/comparative_analysis_tests.rs::served_decide_returns_budgeted_plan` (planned, L3): proves model. The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R139.2`: `crates/medulla-decision-stats/src/decision/comparative_analysis.rs::tests::thresholds_inclusive_and_budgets` (planned, L1): proves behaviour. The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R139.2`: `crates/medulla-h-decide/src/decide/stat_tests/comparative_analysis_tests.rs::served_decide_returns_budgeted_plan` (planned, L3): proves behaviour. The test does not exist yet; the owning change adds it at this exact path.
@@ -320,7 +320,7 @@ Each entry below is planned. The test file or function does not exist in the tre
 - `MEDULLA-DECISION-ENGINE-R001.101.5`: `crates/medulla-h-decide/src/decide/stat_tests/registry_tests.rs::decide_dispatches_every_kind_through_its_family` (planned, L3): proves typed family body and answer carriers. The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R135.7`: `crates/medulla-h-decide/src/decide/stat_tests/program_store_tests.rs::reusable_pattern_requires_a_verified_preplan_receipt` (planned, L3): proves pre-plan test receipt gates pattern promotion. The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R106.1`: `crates/medulla-h-decide/src/decide/stat_tests/council_tests.rs::council_quorum_conflict_and_refusals` (planned, L3): proves council positions coordinate into one evidence-bound decision. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R106.1`: `crates/medulla-types/src/decision/council.rs::tests` (planned, L3): proves council positions coordinate into one evidence-bound decision. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R106.1`: `crates/medulla-decision-types/src/decision/council.rs::tests` (planned, L3): proves council positions coordinate into one evidence-bound decision. The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R137.13`: `crates/medulla-h-decide/src/decide/stat_tests/recursion_mode_tests.rs::thresholds_select_mode` (planned, L3): proves measured signals select direct or recursive mode. The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R137.13`: `crates/medulla-h-decide/src/decide/stat_tests/recursion_mode_tests.rs::bad_signals_refuse` (planned, L3): proves measured signals select direct or recursive mode. The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R134.9`: `crates/medulla-h-decide/src/decide/stat_tests/task_plan_tests.rs::served_decide_returns_ranked_skill_tree` (planned, L3): proves behavior: ranked skill tree per task. The test does not exist yet; the owning change adds it at this exact path.
@@ -331,7 +331,7 @@ Each entry below is planned. The test file or function does not exist in the tre
 - `MEDULLA-DECISION-ENGINE-R137.15`: `crates/medulla-h-decide/src/decide/stat_tests/sub_call_admission_tests.rs::each_mismatch_refuses_with_expected_and_actual` (planned, L3): proves sub-call signatures are checked before dispatch. The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R134.11`: `crates/medulla-h-decide/src/decide/stat_tests/task_plan_tests.rs::long_plan_splits_and_checkpoints_reconcile` (planned, L3): proves horizon partition and credit checkpoints. The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R059.1`: `crates/medulla-h-decide/src/decide/stat_tests/transfer_tests.rs::aggregate_reports_robust_transfer_across_backbones` (planned, L3): proves robust transfer estimate across model backbones (rollup). The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R059.1.1`: `crates/medulla-types/src/decision/transfer.rs::tests::binding_and_estimate_round_trip` (planned, L1): proves model: backbone binding and transfer estimate. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R059.1.1`: `crates/medulla-decision-types/src/decision/transfer.rs::tests::binding_and_estimate_round_trip` (planned, L1): proves model: backbone binding and transfer estimate. The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R059.1.1`: `crates/medulla-h-decide/src/decide/stat_tests/transfer_tests.rs::aggregate_reports_robust_transfer_across_backbones` (planned, L3): proves model: backbone binding and transfer estimate. The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R059.1.2`: `crates/medulla-decision-stats/src/decision/transfer.rs::tests::robust_rate_is_the_backbone_minimum_and_missing_backbones_refuse` (planned, L1): proves behaviour: minimum over backbones with complete independent rows. The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R059.1.2`: `crates/medulla-h-decide/src/decide/stat_tests/transfer_tests.rs::aggregate_reports_robust_transfer_across_backbones` (planned, L3): proves behaviour: minimum over backbones with complete independent rows. The test does not exist yet; the owning change adds it at this exact path.
@@ -346,7 +346,7 @@ Each entry below is planned. The test file or function does not exist in the tre
 - `MEDULLA-DECISION-ENGINE-R020.1.1`: `crates/medulla-h-decide/src/decide/stat_tests/exploration_pool_tests.rs::only_same_principal_history_matches` (planned, L3): proves context digest sealed and matched against prior records. The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R020.1.2`: `crates/medulla-h-decide/src/decide/stat_tests/exploration_pool_tests.rs::matched_context_exploits_and_unmatched_context_may_explore` (planned, L3): proves exploitation pool gates exploration. The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R133.7`: `crates/medulla-h-jobs/src/work_item_tests.rs::nested_trace_ingests_and_reads_back` (planned, L3): proves recursive trace hierarchy and critique read (rollup). The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R133.7.1`: `crates/medulla-types/src/decision/recursive_trace.rs::tests::snapshot_checks` (planned, L1): proves recursive trace node and snapshot checks. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R133.7.1`: `crates/medulla-decision-types/src/decision/recursive_trace.rs::tests::snapshot_checks` (planned, L1): proves recursive trace node and snapshot checks. The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R133.7.1`: `crates/medulla-h-jobs/src/work_item_tests.rs::nested_trace_ingests_and_reads_back` (planned, L3): proves recursive trace node and snapshot checks. The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R133.7.2`: `crates/medulla-work-store/src/redb_store/work_item/commit.rs::tests::recursive_trace_nodes_link_to_parents` (planned, L1): proves terminal commit stores recursive trace nodes. The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R133.7.2`: `crates/medulla-h-jobs/src/work_item_tests.rs::cyclic_trace_refuses_without_state_change` (planned, L3): proves terminal commit stores recursive trace nodes. The test does not exist yet; the owning change adds it at this exact path.
@@ -373,7 +373,7 @@ Each entry below is planned. The test file or function does not exist in the tre
 - `MEDULLA-DECISION-ENGINE-R134.15`: `crates/medulla-h-decide/src/decide/stat_tests/task_plan_tests.rs::critical_chain_picks_longest_weighted_path` (planned, L3): proves weighted critical chain over a task plan. The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R135.8`: `crates/medulla-h-decide/src/decide/stat_tests/program_store_tests.rs::equal_keys_reuse_one_program_and_missing_step_refuses` (planned, L3): proves compile typed graph workflows into programs. The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R135.8.1`: `crates/medulla-h-decide/src/decide/stat_tests/program_store_tests.rs::new_source_revision_reuses_program_with_new_receipt` (planned, L3): proves compile receipts keep source provenance. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R135.10`: `crates/medulla-types/src/decision/program_store/insight.rs::tests::insight_without_source_rejected` (planned, L1): proves insight model. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R135.10`: `crates/medulla-decision-types/src/decision/program_store/insight.rs::tests::insight_without_source_rejected` (planned, L1): proves insight model. The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R135.10`: `crates/medulla-h-decide/src/decide/stat_tests/insight_tests.rs::served_selection_returns_insights_with_source_runs` (planned, L3): proves insight model. The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R135.11`: `crates/medulla-decision-stats/src/decision/insight.rs::tests::consolidation_and_selection_order` (planned, L1): proves behavior: consolidate and select insights. The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R135.11`: `crates/medulla-h-decide/src/decide/stat_tests/insight_tests.rs::served_selection_returns_insights_with_source_runs` (planned, L3): proves behavior: consolidate and select insights. The test does not exist yet; the owning change adds it at this exact path.
@@ -613,8 +613,8 @@ No unrelated rebuild was substituted for the exact measured-source receipts.
 
 ### MEDULLA-DECISION-ENGINE-R133 tests
 
-- `MEDULLA-DECISION-ENGINE-R133.1`: `crates/medulla-types/src/decision/run_governance.rs::tests::quota_round_trips`.
-- `MEDULLA-DECISION-ENGINE-R133.2`: `crates/medulla-types/src/decision/run_governance.rs::tests::request_only_tightens_quota`: omission uses D; tightening uses R; D < R <= C uses D; R > C refuses before clamping.
+- `MEDULLA-DECISION-ENGINE-R133.1`: `crates/medulla-decision-types/src/decision/run_governance.rs::tests::quota_round_trips`.
+- `MEDULLA-DECISION-ENGINE-R133.2`: `crates/medulla-decision-types/src/decision/run_governance.rs::tests::request_only_tightens_quota`: omission uses D; tightening uses R; D < R <= C uses D; R > C refuses before clamping.
 - `MEDULLA-DECISION-ENGINE-R133.3`: `crates/medulla-h-decide/src/decide/stat_tests/runtime_quota_tests.rs::decide_routes_runtime_quota`.
 - `MEDULLA-DECISION-ENGINE-R133.4`: `crates/medulla-h-decide/src/decide/stat_tests/runtime_quota_tests.rs::missing_task_class_abstains_to_default`.
 - `MEDULLA-DECISION-ENGINE-R133.5`: `crates/medulla-work-store/src/redb_store/work_item/commit.rs::tests::run_trace_is_linked_to_unit`.
@@ -633,8 +633,8 @@ No unrelated rebuild was substituted for the exact measured-source receipts.
 
 ### MEDULLA-DECISION-ENGINE-R135 tests
 
-- `MEDULLA-DECISION-ENGINE-R135.1`: `crates/medulla-types/src/decision/program_store.rs::tests::program_round_trips`.
-- `MEDULLA-DECISION-ENGINE-R135.2`: `crates/medulla-types/src/decision/program_store.rs::tests::literals_become_parameters`.
+- `MEDULLA-DECISION-ENGINE-R135.1`: `crates/medulla-decision-types/src/decision/program_store.rs::tests::program_round_trips`.
+- `MEDULLA-DECISION-ENGINE-R135.2`: `crates/medulla-decision-types/src/decision/program_store.rs::tests::literals_become_parameters`.
 - `MEDULLA-DECISION-ENGINE-R135.3`: `crates/medulla-h-decide/src/decide/stat_tests/program_store_tests.rs::decide_routes_program_lookup`.
 - `MEDULLA-DECISION-ENGINE-R135.4`: `crates/medulla-h-decide/src/decide/stat_tests/program_store_tests.rs::overlong_trace_is_refused`.
 - `MEDULLA-DECISION-ENGINE-R135.5`: `crates/medulla-h-decide/src/decide/stat_tests/program_store_tests.rs::program_links_source_trace`.
@@ -684,11 +684,11 @@ These are acceptance targets, not execution evidence. Retain every existing R137
 
 These are acceptance targets only, not implementation or execution evidence. Retain R137/R138 tests unchanged.
 
-- `MEDULLA-DECISION-ENGINE-R139.1`: `crates/medulla-types/src/decision/comparative_analysis.rs::tests::plan_round_trips_and_binds_all_stages`; preserve every revision, digest, candidate/order, threshold, budget, refusal and question kind; reject duplicate/over-limit candidates.
-- `MEDULLA-DECISION-ENGINE-R139.2`: `crates/medulla-types/src/decision/comparative_analysis.rs::tests::thresholds_and_budgets_select_only_admissible_stages`; cover inclusive 0.50/0.80, one/two synthesis calls, stable ties, zero discovery calls, extraction exclusion and total equality/overflow.
+- `MEDULLA-DECISION-ENGINE-R139.1`: `crates/medulla-decision-types/src/decision/comparative_analysis.rs::tests::plan_round_trips_and_binds_all_stages`; preserve every revision, digest, candidate/order, threshold, budget, refusal and question kind; reject duplicate/over-limit candidates.
+- `MEDULLA-DECISION-ENGINE-R139.2`: `crates/medulla-decision-types/src/decision/comparative_analysis.rs::tests::thresholds_and_budgets_select_only_admissible_stages`; cover inclusive 0.50/0.80, one/two synthesis calls, stable ties, zero discovery calls, extraction exclusion and total equality/overflow.
 - `MEDULLA-DECISION-ENGINE-R139.3`: `crates/medulla-h-decide/src/decide/stat_tests/comparative_analysis_tests.rs::decide_returns_plan_without_model_execution`; run actual Decide dispatch and assert pinned inputs and zero discovery calls.
 - `MEDULLA-DECISION-ENGINE-R139.4`: `crates/medulla-h-decide/src/decide/stat_tests/comparative_analysis_tests.rs::stale_inputs_and_stage_budgets_refuse_before_calls`; cover stale query/vector/universe, invalid weights/thresholds, stage and total exhaustion with typed refusals and no model call.
-- `MEDULLA-DECISION-ENGINE-R139.5`: `crates/medulla-types/src/decision/comparative_analysis.rs::tests::plan_digest_binds_inputs_and_budgets`; every bound mutation changes digest and Meristem receipt validation rejects a different plan or over-budget calls.
+- `MEDULLA-DECISION-ENGINE-R139.5`: `crates/medulla-decision-types/src/decision/comparative_analysis.rs::tests::plan_digest_binds_inputs_and_budgets`; every bound mutation changes digest and Meristem receipt validation rejects a different plan or over-budget calls.
 - `MEDULLA-DECISION-ENGINE-R139.6`: Medulla served target `tests/decide/test_comparative_analysis_served.py::test_plan_and_refusal_through_served_decide`; Meristem consumer target `tests/decide/test_comparative_analysis_consumer.py::test_served_consumer_obeys_plan_and_binds_invocation_receipt`. Require exact source SHAs and separate receipts; a Medulla-only test cannot establish Meristem invocation.
 <!-- /spec-definition-patch -->
 
@@ -841,8 +841,8 @@ No test in this section has run.
 - `MEDULLA-DECISION-ENGINE-R172.10`: `benches/decide_budgets.rs::capability_designation` (bench group `decide/capability_designation`).
 - `MEDULLA-DECISION-ENGINE-R172.11`: `tests/decide/test_capability_designation_served.py::test_designation_end_to_end`.
 - `MEDULLA-DECISION-ENGINE-R172.12`: Rollup closes when every child `.12.1` to `.12.6` passes its proving test, and `tests/decide/test_capability_designation_pack_served.py::test_designation_reads_imported_pack` passes.
-- `MEDULLA-DECISION-ENGINE-R172.12.1`: `crates/medulla-types/src/decision/capability_designation.rs::tests::pack_surface_fields_round_trip`.
-- `MEDULLA-DECISION-ENGINE-R172.12.2`: `crates/medulla-types/src/decision/capability_designation.rs::tests::target_class_subsumption_selects_tools`.
+- `MEDULLA-DECISION-ENGINE-R172.12.1`: `crates/medulla-decision-types/src/decision/capability_designation.rs::tests::pack_surface_fields_round_trip`.
+- `MEDULLA-DECISION-ENGINE-R172.12.2`: `crates/medulla-decision-types/src/decision/capability_designation.rs::tests::target_class_subsumption_selects_tools`.
 - `MEDULLA-DECISION-ENGINE-R172.12.3`: `src/server/handlers/decide/stat_tests/capability_designation_tests.rs::projection_commit_upserts_pack_records`.
 - `MEDULLA-DECISION-ENGINE-R172.12.4`: `src/server/handlers/decide/stat_tests/capability_designation_tests.rs::pack_target_refusals`.
 - `MEDULLA-DECISION-ENGINE-R172.12.5`: `src/server/handlers/decide/stat_tests/capability_designation_tests.rs::premises_name_subclass_path_and_pack`.
@@ -1167,8 +1167,8 @@ R050.2 runs `tests/test_generated_model_input_capabilities.py` with no engine.
 Both strict generated model classes must accept and preserve all four media values.
 They distinguish unknown from unrestricted input. After a successful positive
 control, they reject unknown MIME or extra capability fields. Do not skip or
-xfail missing generated fields. Run `gen_contract --check` after canonical
-regeneration; the generated fixture alone is not full contract freshness.
+xfail missing generated fields. Check the client fixture in the same change; the
+fixture alone is not full contract freshness.
 
 R050.3 requires command/result/commit receipts for all native fixtures above;
 formatting and source inspection are not compilation or execution. The planned
@@ -1225,7 +1225,6 @@ Do not infer it from these fixtures or generated status.
 | Participant memory knobs | `MEDULLA-DECISION-ENGINE-R179.8` | `crates/medulla-types/src/memory_scope.rs::tests::knob_defaults_are_inside_bounds`; `crates/medulla-h-decide/src/decide/stat_tests/knob_tests.rs::participant_knobs_are_registered_and_tunable` |
 | Participant memory refusal codes | `MEDULLA-DECISION-ENGINE-R010.100.4` | `crates/medulla-decision-types/src/decision/record/outcome.rs::tests::codes_are_unique_and_stable` |
 
-## Planned bindings: rows R001 through R079.2
 ## Planned bindings, range 7
 
 Each test below is planned: its path is the post-split location and its name is exact. A row binds it with a `// spec:` comment when it lands.
