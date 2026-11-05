@@ -59,6 +59,13 @@ PROFILE = "method-codec"
 MODULE = "medulla_method_codec.wasm"
 CLIENT_DIRS = ("clients/go", "clients/js")
 PROVENANCE = "medulla_method_codec.provenance.json"
+# The committed canonical-qualification evidence (MEDULLA-CONTRACT-R006.2): the
+# digests of two independent canonical builds and the measured size.
+COMMITTED_PROVENANCE = Path("clients") / PROVENANCE
+# Fixed release gate (MEDULLA-CONTRACT-R006): lowered, never raised.
+MAX_BYTES = 10_946_464
+CANONICAL_BUILDS = 2
+_DIGEST = re.compile(r"[0-9a-f]{64}")
 BUILD_COMMAND = (
     "cargo",
     "build",
@@ -164,10 +171,66 @@ def _check_client_copies(root: Path, module: bytes) -> bool:
     return not stale
 
 
-def check(root: Path, module: bytes) -> int:
-    """Require fresh bytes and matching reviewed SHA-256 pins for both copies."""
+def qualification(builds: Sequence[bytes]) -> dict[str, object]:
+    """The canonical-qualification record of independent builds of one module."""
 
+    return {
+        "canonical_build_sha256": [_sha256(module) for module in builds],
+        "size_bytes": len(builds[0]),
+        "max_bytes": MAX_BYTES,
+    }
+
+
+def _check_qualification(root: Path, module: bytes) -> bool:
+    """Require two equal canonical-build digests of the fresh module within budget."""
+
+    problems = []
+    if len(module) > MAX_BYTES:
+        problems.append(f"{MODULE} is {len(module)} bytes, over MAX_BYTES={MAX_BYTES}")
+    path = root / COMMITTED_PROVENANCE
+    try:
+        record = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        problems.append(f"unreadable {COMMITTED_PROVENANCE}: {exc}")
+        record = {}
+    digests = record.get("canonical_build_sha256") if isinstance(record, dict) else None
+    if not (
+        isinstance(digests, list)
+        and len(digests) == CANONICAL_BUILDS
+        and all(isinstance(d, str) and _DIGEST.fullmatch(d) for d in digests)
+    ):
+        problems.append(
+            f"{COMMITTED_PROVENANCE} must hold {CANONICAL_BUILDS} canonical-build "
+            "SHA-256 digests in 64 lowercase hex characters"
+        )
+    elif set(digests) != {_sha256(module)}:
+        problems.append(
+            f"{COMMITTED_PROVENANCE} canonical builds {digests} differ from the "
+            f"fresh sha256={_sha256(module)}"
+        )
+    if isinstance(record, dict) and record.get("size_bytes") != len(module):
+        problems.append(
+            f"{COMMITTED_PROVENANCE} size_bytes={record.get('size_bytes')} is not "
+            f"the measured {len(module)}"
+        )
+    for problem in problems:
+        print(f"REFUSED: {problem}", file=sys.stderr)
+    return not problems
+
+
+def check(root: Path, module: bytes, rebuild: bytes | None = None) -> int:
+    """Require fresh bytes, reviewed pins and the two-build qualification record."""
+
+    if rebuild is not None and rebuild != module:
+        print(
+            f"REFUSED: two canonical builds differ: sha256={_sha256(module)} "
+            f"vs sha256={_sha256(rebuild)}",
+            file=sys.stderr,
+        )
+        return 1
     if not _check_client_copies(root, module) or not _check_artifact_pins(root):
+        return 1
+    if not _check_qualification(root, module):
         return 1
     print(
         f"OK: {MODULE} sha256={_sha256(module)} ({len(module)} bytes) in every client"
@@ -221,10 +284,14 @@ def _updated_artifact_pins(root: Path, module: bytes) -> str:
     return updated
 
 
-def write(root: Path, module: bytes) -> int:
-    """Place the fresh module and matching existing pins in the repository."""
+def write(root: Path, module: bytes, rebuild: bytes | None = None) -> int:
+    """Place the fresh module, its existing pins and its qualification record."""
 
     verify_no_imports(module)
+    builds = [module, module if rebuild is None else rebuild]
+    if builds[1] != module:
+        print("REFUSED: two canonical builds differ", file=sys.stderr)
+        return 1
     try:
         ledger = _updated_artifact_pins(root, module)
         for client in CLIENT_DIRS:
@@ -236,6 +303,10 @@ def write(root: Path, module: bytes) -> int:
     for client in CLIENT_DIRS:
         (root / client / MODULE).write_bytes(module)
     (root / generated_artifacts.LEDGER).write_text(ledger, encoding="utf-8")
+    (root / COMMITTED_PROVENANCE).write_text(
+        json.dumps(qualification(builds), indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
     clients = ", ".join(CLIENT_DIRS)
     print(f"wrote {MODULE} sha256={_sha256(module)} ({len(module)} bytes) to {clients}")
     return 0
@@ -308,9 +379,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         os.environ.get("CARGO_TARGET_DIR", ROOT / "target")
     )
     module = build(ROOT, target_dir.resolve())
+    # The second canonical build is independent: its own fresh target directory.
+    rebuild = build(ROOT, (target_dir / "method-codec-requalify").resolve())
     if args.export_dir:
         export(ROOT, args.export_dir, module)
-    return check(ROOT, module) if args.check else write(ROOT, module)
+    if args.check:
+        return check(ROOT, module, rebuild)
+    return write(ROOT, module, rebuild)
 
 
 if __name__ == "__main__":

@@ -643,6 +643,7 @@ mod tests {
         assert!(broader_chain("acme:x", CAPABILITY_ROOT).is_none());
     }
 
+    // spec: MEDULLA-TYPED-PACKS-R066.3
     #[test]
     fn shell_centric_prefers_own_fact_then_inherits_from_task_ancestor() {
         let mut facts = std::collections::BTreeMap::from([(TASK_ROOT.to_string(), false)]);

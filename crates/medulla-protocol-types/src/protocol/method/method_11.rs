@@ -11,6 +11,9 @@ $($variants)*
     GetCurrentPlan { tenant: String, run_id: String },
     /// Caller-owned committed measurements from one bounded snapshot.
     GetSessionUsage { tenant: String, context_id: String },
+    /// The configured shard-writer count `k` for the verified tenant's graphs
+    /// (MEDULLA-DURABLE-KERNEL-R077); write-lane slot grants are capped at it.
+    GetShardWriterWidth { tenant: String },
     /// Historical native run admission, visible only to its verified immutable
     /// owner. Missing and foreign rows return null; missing original admission
     /// evidence refuses explicitly. Independent of current lease or terminal state.
@@ -173,6 +176,16 @@ $($variants)*
         #[cfg_attr(feature = "contract-schema", schemars(with = "Vec<u8>"))]
         #[serde(with = "serde_bytes")]
         policy_msgpack: Vec<u8>,
+    },
+
+    // ── Dataset lineage (MEDULLA-UNIFIED-DATA-PLANE-R702.3) ─────────────────
+    /// Drain lineage run events into the request graph: each event maps to
+    /// content-addressed `Dataset` nodes and `derivesInto` edges; an event that
+    /// cannot map is kept as one `QuarantinedLineageEvent` node with its payload
+    /// digest. The batch commits as one governed ChangeEnvelope keyed by its
+    /// write-set digest, so a replayed event adds no edge.
+    LineageIngest {
+        events: Vec<medulla_catalog_types::lineage::LineageEvent>,
     },
 
     // ── Market bars and trend signals (EH-413..EH-418) ─────────────────────

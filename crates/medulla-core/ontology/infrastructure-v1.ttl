@@ -790,3 +790,98 @@ BFO:GenericallyDependentContinuant — an information entity.""" ;
     rdfs:comment "When an :AutomationJob run started (its launch timestamp, used to order a template's runs)." ;
     rdfs:domain :AutomationJob ;
     rdfs:range xsd:dateTime .
+
+:routeHostname a owl:DatatypeProperty ;
+    rdfs:label "route hostname" ;
+    rdfs:comment "The hostname a reverse-proxy :ProxyRoute matches." ;
+    rdfs:domain :ProxyRoute ;
+    rdfs:range xsd:string .
+
+:upstreamAddress a owl:DatatypeProperty ;
+    rdfs:label "upstream address" ;
+    rdfs:comment "The upstream address a reverse-proxy :ProxyRoute forwards to." ;
+    rdfs:domain :ProxyRoute ;
+    rdfs:range xsd:string .
+
+:alertSeverity a owl:DatatypeProperty ;
+    rdfs:label "alert severity" ;
+    rdfs:comment "The severity label of a monitoring alert." ;
+    rdfs:domain kg:Alert ;
+    rdfs:range xsd:string .
+
+:alertState a owl:DatatypeProperty ;
+    rdfs:label "alert state" ;
+    rdfs:comment "The state of a monitoring alert: firing, resolved or pending." ;
+    rdfs:domain kg:Alert ;
+    rdfs:range xsd:string .
+
+:firingSince a owl:DatatypeProperty ;
+    rdfs:label "firing since" ;
+    rdfs:comment "When a monitoring alert started firing." ;
+    rdfs:domain kg:Alert ;
+    rdfs:range xsd:dateTime .
+
+:desiredReplicas a owl:DatatypeProperty ;
+    rdfs:label "desired replicas" ;
+    rdfs:comment "The replica count a :ContainerStack declares." ;
+    rdfs:domain :ContainerStack ;
+    rdfs:range xsd:integer .
+
+:runningReplicas a owl:DatatypeProperty ;
+    rdfs:label "running replicas" ;
+    rdfs:comment "The replica count of a :ContainerStack currently running." ;
+    rdfs:domain :ContainerStack ;
+    rdfs:range xsd:integer .
+
+:stackSourceRepository a owl:ObjectProperty ;
+    rdfs:label "stack source repository" ;
+    rdfs:comment "Links a :ContainerStack to the source repository it deploys from." ;
+    rdfs:domain :ContainerStack ;
+    rdfs:range kg:Repository .
+
+:ManagementEnvironment a owl:Class ;
+    rdfs:label "Management Environment" ;
+    rdfs:comment "A container-management environment that hosts stacks; named so it does not collide with the probed :Endpoint." ;
+    rdfs:subClassOf bfo:0000040 .
+
+:pendingUpdateCount a owl:DatatypeProperty ;
+    rdfs:label "pending update count" ;
+    rdfs:comment "The number of package updates pending on an :OperatingSystem." ;
+    rdfs:domain :OperatingSystem ;
+    rdfs:range xsd:integer .
+
+:uptimeSeconds a owl:DatatypeProperty ;
+    rdfs:label "uptime seconds" ;
+    rdfs:comment "Seconds since an :OperatingSystem last booted." ;
+    rdfs:domain :OperatingSystem ;
+    rdfs:range xsd:integer .
+
+:recordType a owl:DatatypeProperty ;
+    rdfs:label "record type" ;
+    rdfs:comment "The record type (A, CNAME, TXT, ...) of a :DnsRecord; the existing :dnsType is typed on :DNSService." ;
+    rdfs:domain :DnsRecord ;
+    rdfs:range xsd:string .
+
+:recordValue a owl:DatatypeProperty ;
+    rdfs:label "record value" ;
+    rdfs:comment "The value of a :DnsRecord." ;
+    rdfs:domain :DnsRecord ;
+    rdfs:range xsd:string .
+
+:lastConnectionStatus a owl:DatatypeProperty ;
+    rdfs:label "last connection status" ;
+    rdfs:comment "The outcome of the last remote connection to a :Host: ok or failed." ;
+    rdfs:domain :Host ;
+    rdfs:range xsd:string .
+
+:lastConnectionError a owl:DatatypeProperty ;
+    rdfs:label "last connection error" ;
+    rdfs:comment "The error text of the last failed remote connection to a :Host." ;
+    rdfs:domain :Host ;
+    rdfs:range xsd:string .
+
+:stackInEnvironment a owl:ObjectProperty ;
+    rdfs:label "stack in environment" ;
+    rdfs:comment "Links a :ContainerStack to the :ManagementEnvironment that hosts it." ;
+    rdfs:domain :ContainerStack ;
+    rdfs:range :ManagementEnvironment .

@@ -574,6 +574,7 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::FinanceMarketMakingQuote { .. }
         | Method::FinancePairsSignal { .. }
         | Method::FinanceFactorRank { .. }
+        | Method::WalletKeyTrustGet { .. }
         | Method::FinanceDistributionShift { .. }
         | Method::FinanceDownsideDeviation { .. }
         | Method::FinanceKalmanVolatility { .. }
@@ -651,6 +652,8 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::MeetingSummaryCommit { .. }
         | Method::MeetingSummaryContext { .. }
         | Method::MeetingTranscriptRevision { .. }
+        // MEDULLA-UNIFIED-DATA-PLANE-R702.3: lowers to one ChangeEnvelope.
+        | Method::LineageIngest { .. }
         | Method::SelectWebPages { .. }
         // EH-408/EH-409: self-translates into a request-graph `BatchUpdate`,
         // which carries its own domain.
@@ -668,6 +671,7 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::GetRunCheckpoint { .. }
         | Method::GetRunWorkItem { .. }
         | Method::GetSessionUsage { .. }
+        | Method::GetShardWriterWidth { .. }
         | Method::GetWorkItem { .. }
         | Method::ListWorkItems { .. }
         | Method::GetWorkItemOutcome { .. }

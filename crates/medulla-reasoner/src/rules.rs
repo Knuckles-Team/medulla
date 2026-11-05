@@ -111,6 +111,12 @@ pub struct RuleReasonResult {
     /// Final confidences + the derivation behind each derived one (EH-197): the source
     /// of [`RuleDerivations::proof`].
     pub derivations: RuleDerivations,
+    /// Rule evaluations the fixpoint ran (MEDULLA-FEDERATED-QUERY-R608.2).
+    pub steps: u64,
+    /// Rule evaluations that changed the fact base.
+    pub rules_fired: u64,
+    /// `false` when the step bound stopped the fixpoint before it converged.
+    pub complete: bool,
 }
 
 impl RuleReasonResult {
@@ -137,14 +143,30 @@ pub fn reason_facts(
     facts: &[(String, Vec<String>, f64)],
     custom: &RuleSet,
 ) -> RuleReasonResult {
-    engine::reason_facts(ont, facts, custom)
+    engine::reason_facts(ont, facts, custom, DEFAULT_RULE_MAX_STEPS)
 }
 
 #[cfg(feature = "rdf")]
 pub fn reason_triples(triples: &[Triple], ont: &Ontology, custom: &RuleSet) -> RuleReasonResult {
-    let facts = facts_from_triples(triples);
-    reason_facts(ont, &facts, custom)
+    reason_triples_bounded(triples, ont, custom, DEFAULT_RULE_MAX_STEPS)
 }
+
+/// [`reason_triples`] with an explicit fixpoint bound of `max_steps` rule
+/// evaluations (MEDULLA-FEDERATED-QUERY-R608.2). On the bound the result holds the
+/// facts derived so far with `complete = false`; it writes nothing.
+#[cfg(feature = "rdf")]
+pub fn reason_triples_bounded(
+    triples: &[Triple],
+    ont: &Ontology,
+    custom: &RuleSet,
+    max_steps: u64,
+) -> RuleReasonResult {
+    let facts = facts_from_triples(triples);
+    engine::reason_facts(ont, &facts, custom, max_steps)
+}
+
+/// The default fixpoint bound: `knob reasoning.rule_max_steps`.
+pub use medulla_types::scheduler_config::DEFAULT_RULE_MAX_STEPS;
 
 /// Extract ABox ground facts from a triple stream: a `rdf:type` triple with a non-meta
 /// object becomes a unary class-membership fact `C(s)`; any other non-schema triple
@@ -202,6 +224,18 @@ pub struct RuleReasonRequest {
     /// When true, every returned fact carries its proof tree (EH-197).
     #[serde(default)]
     pub explain: bool,
+    /// Fixpoint bound in rule evaluations; `None` uses `knob reasoning.rule_max_steps`
+    /// (MEDULLA-FEDERATED-QUERY-R608.2).
+    #[serde(default)]
+    pub max_steps: Option<u64>,
+}
+
+impl RuleReasonRequest {
+    /// The effective fixpoint bound of this request.
+    pub fn effective_max_steps(&self) -> u64 {
+        self.max_steps
+            .unwrap_or_else(|| medulla_types::scheduler_config::reasoning_knobs().rule_max_steps)
+    }
 }
 
 /// The rule-reasoning response and its facts -- the `RunRules` wire body, owned by medulla-types.
@@ -224,7 +258,7 @@ pub fn run_rule_reasoning(req: &RuleReasonRequest) -> Result<RuleReasonResponse,
         ruleset.add_str(r)?;
     }
     let registered = ruleset.names();
-    let result = reason_triples(&triples, &ont, &ruleset);
+    let result = reason_triples_bounded(&triples, &ont, &ruleset, req.effective_max_steps());
     Ok(project_response(result, req, registered))
 }
 
@@ -249,7 +283,7 @@ pub fn run_rule_reasoning_on_view(
         ruleset.add_str(r)?;
     }
     let registered = ruleset.names();
-    let result = reason_triples(&triples, &ont, &ruleset);
+    let result = reason_triples_bounded(&triples, &ont, &ruleset, req.effective_max_steps());
     Ok(project_response(result, req, registered))
 }
 
@@ -297,6 +331,11 @@ fn project_response(
         consistent: result.consistent,
         conflicts: result.conflicts,
         registered_rules: registered,
+        complete: result.complete,
+        steps: result.steps,
+        rules_fired: result.rules_fired,
+        bound_code: (!result.complete)
+            .then(|| medulla_types::rdf_report::RULE_FIXPOINT_BOUND.to_string()),
     }
 }
 

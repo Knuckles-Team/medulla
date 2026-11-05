@@ -506,12 +506,23 @@ async fn assert_reputation_origin(
     };
     let learned = views.learned_reliability(option_id, 0.5, 2.0).unwrap();
     if real.is_some() {
-        let learned = learned.expect("real outcomes teach reliability");
-        assert_eq!(learned.trials, support);
-        assert!(learned.lower < learned.mean && learned.mean < learned.upper);
+        let medulla_decision_types::decision::reputation::SourceReliability::Estimated {
+            mean,
+            lower,
+            upper,
+            trials,
+        } = learned
+        else {
+            panic!("real outcomes teach reliability: {learned:?}")
+        };
+        assert_eq!(trials, support);
+        assert!(lower < mean && mean < upper);
     } else {
         assert!(
-            learned.is_none(),
+            !matches!(
+                learned,
+                medulla_decision_types::decision::reputation::SourceReliability::Estimated { .. }
+            ),
             "synthetic outcomes cannot teach reliability"
         );
     }

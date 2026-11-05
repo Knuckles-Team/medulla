@@ -178,6 +178,7 @@ pub(super) const RLS_ROUTED: &[&str] = &[
     "UnionGetNodesByLabel",
     "Uql",
     "Vf2SubgraphMatch",
+    "WalletKeyTrustGet",
     "Watch",
     "WhatChanged",
     "WorldTransform",
@@ -336,6 +337,10 @@ pub(super) const REASON_DECIDE_LIBRARY_SNAPSHOT: &str =
 // `GraphView`/`core.analysis_snapshot()`. A WorkItem row is control-plane state whose scope is
 // its `tenant` field, not per-node `_owner`/`_visibility`/`_grants`; the projection returns only
 // the caller view (no lease owner/epoch/fencing token).
+// MEDULLA-DURABLE-KERNEL-R077: the shard-writer width is a process configuration
+// count (the durable backend's shard count), never a graph row.
+pub(super) const REASON_SHARD_WRITER_WIDTH_CONFIG: &str =
+    "native_routes::route_work_item_reads routes GetShardWriterWidth to handlers::worker_admission, which refuses any request tenant other than the verified carrier tenant and returns only the redb backend's configured shard count -- process configuration, never a GraphView/core.analysis_snapshot() row read; gated by scheduler:read in allows_method";
 pub(super) const REASON_NATIVE_WORK_ITEM_TENANT_READ: &str =
     "native_routes::route_work_item_reads routes GetWorkItem/ListWorkItems/GetWorkItemOutcome/GetControlLease/ListControlLeases/GapGet/GapList (placement leader + read barrier under raft) to handlers::work_item_read, which refuses any request tenant other than the verified carrier tenant, then reads redb node rows via redb_store::work_item::{read_work_item, list_work_items, read_work_item_outcome, read_control_lease, list_control_leases, read_gap, list_gaps} and projects only rows whose `tenant` equals it -- never a GraphView/core.analysis_snapshot() row read; lease owner/epoch/fencing token are never projected";
 
@@ -574,6 +579,8 @@ pub(super) const NON_ROW_SCOPED: &[(&str, &str)] = &[
     ("ListControlLeases", REASON_NATIVE_WORK_ITEM_TENANT_READ),
     ("GapGet", REASON_NATIVE_WORK_ITEM_TENANT_READ),
     ("GapList", REASON_NATIVE_WORK_ITEM_TENANT_READ),
+    // REASON_SHARD_WRITER_WIDTH_CONFIG
+    ("GetShardWriterWidth", REASON_SHARD_WRITER_WIDTH_CONFIG),
 ];
 
 // L-RLS-1 burn-down (CONCEPT:EPI-P3-3/P3-6): the 5 methods this pass covered (see the

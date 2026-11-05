@@ -126,6 +126,8 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T120 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.4.7.1 Snapshot graph and authorized foreign-source grounding
 - [ ] T121 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.4.8 The hint offers mapped connector properties under their ontology names
 - [ ] T122 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.4.9 Inline foreign adapter grounding
+- [ ] T420 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.4.10 Natural-language to SQL planner
+- [ ] T421 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.4.11 Natural-language to SPARQL planner
 - [ ] T123 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.5 Configurable NL planner request
 - [ ] T124 [US1] MEDULLA-FEDERATED-QUERY-R058.6 NL answers are checked against certified definitions
 - [ ] T125 [US1] MEDULLA-FEDERATED-QUERY-R058.7 A certified correction is recorded as a fact and grounds later planning
@@ -431,6 +433,7 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T413 [US5] MEDULLA-FEDERATED-QUERY-R709.4 Refusal of GeoSPARQL query functions
 - [ ] T414 [US5] MEDULLA-FEDERATED-QUERY-R709.5 Evidence of GeoSPARQL query functions
 - [ ] T415 [US5] MEDULLA-FEDERATED-QUERY-R709.6 Hot-path proof of GeoSPARQL query functions
+- [ ] T419 [US5] MEDULLA-FEDERATED-QUERY-R709.7 Per-graph spatial index over geo literals
 - [ ] T416 [US5] MEDULLA-FEDERATED-QUERY-R708.8 Share scope of Named stored queries and materialized results
 - [ ] T417 [US5] MEDULLA-FEDERATED-QUERY-R708.9 Lint against trust flags
 - [ ] T418 [P] [US4] MEDULLA-FEDERATED-QUERY-R703.100 The bench gate checks p99 ceilings

@@ -95,7 +95,7 @@ pub async fn route_gateway_and_stateless_domains(
     // Feature-gated: in a slim build the line is absent and the method flows
     // straight through to graph_ops (whose catch-all reports "not available").
     #[cfg(feature = "finance")]
-    let method = match medulla_h_compute::finance::try_handle(req_id, method) {
+    let method = match medulla_h_compute::finance::try_handle(req_id, tenant_id, method) {
         Ok(r) => return Ok(r),
         Err(m) => m,
     };
