@@ -2014,6 +2014,14 @@ name = "schema_drift_classify"
 path = "benches/schema_drift_classify.rs"
 harness = false
 
+# Anonymous admission budget (MEDULLA-IDENTITY-R003.2): the bounded `anon1.`
+# decoder at the 2 KiB / 256-byte bound, p99 <= 100 µs and <= 8 KiB allocated per
+# decode (counting allocator local to the bench). Default features; nightly suite.
+[[bench]]
+name = "anonymous_authority"
+path = "benches/anonymous_authority.rs"
+harness = false
+
 # Massive-scale core micro-benchmark harness (CONCEPT:MEDULLA-096): in-process node/edge
 # write throughput, in-process query latency (single-hop + label lookup), and IVF-PQ
 # kNN search latency. Feature-LIGHT — builds under DEFAULT features (no server/redb),
