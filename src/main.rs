@@ -916,36 +916,24 @@ async fn spawn_iceberg_listener(
     let iceberg_addr = resolve_listener_addr(iceberg_addr_arg, "127.0.0.1:8181");
     #[cfg(feature = "lake-rest")]
     if let Some(ref iceberg_addr) = iceberg_addr {
-        // `lake-rest` implies `lake` implies `blob`, so the CAS is always configured
-        // (`Some`) in any build reaching this arm — `blob` is never independently off.
-        let (lake_handle, blob_store) = {
+        let lake_handle = {
             use medulla_server_lake::lake::LakeStateExt;
-            let s = state.read().await;
-            (s.lake(), s.blob_cursors().map(|b| b.store.clone()))
+            state.read().await.lake()
         };
-        match blob_store {
-            Some(store) => {
-                let listener = tokio::net::TcpListener::bind(iceberg_addr).await?;
-                info!(
-                    "Iceberg-REST: serving the standards catalog surface on http://{}/v1/config",
-                    iceberg_addr
-                );
-                let lake_security_state = state.clone();
-                tokio::spawn(async move {
-                    medulla_server_lake::lake::rest::serve_with_security(
-                        listener,
-                        lake_handle,
-                        store,
-                        lake_security_state,
-                    )
-                    .await;
-                });
-            }
-            None => tracing::error!(
-                "--iceberg-addr {}: no blob CAS available (the `lake`/`blob` features need a persist dir)",
-                iceberg_addr
-            ),
-        }
+        let listener = tokio::net::TcpListener::bind(iceberg_addr).await?;
+        info!(
+            "Iceberg-REST: serving the standards catalog surface on http://{}/v1/config",
+            iceberg_addr
+        );
+        let lake_security_state = state.clone();
+        tokio::spawn(async move {
+            medulla_server_lake::lake::rest::serve_with_security(
+                listener,
+                lake_handle,
+                lake_security_state,
+            )
+            .await;
+        });
     }
     #[cfg(not(feature = "lake-rest"))]
     if iceberg_addr.is_some() {
