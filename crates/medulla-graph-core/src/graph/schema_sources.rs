@@ -27,8 +27,9 @@ use super::LegacyIntegrityPolicy;
 /// MEDULLA-TYPED-PACKS-R105.6 to R105.9), the commercial module with its shapes
 /// companion (52, MEDULLA-SUPPLY-VOCAB-R003.13), the supply-chain vocabulary
 /// (53, MEDULLA-SUPPLY-VOCAB-R001.1.2), and the connector-pack vocabulary with its
-/// shapes companion (54, MEDULLA-TYPED-PACKS-R101.1 to R102.1), and the government
-/// and foundation shapes companions (55, 56, MEDULLA-CQ-CONN-R073.1, R074.1).
+/// shapes companion (54, MEDULLA-TYPED-PACKS-R101.1 to R102.1), the government
+/// and foundation shapes companions (55, 56, MEDULLA-CQ-CONN-R073.1, R074.1), and
+/// the generated decision-contract ontology and shapes (57, MEDULLA-DECISION-ENGINE-R054.1).
 /// It is deliberately independent of the dynamic
 /// 32-source tenant quota, and equal to the wire bound
 /// `medulla_catalog_types::graph_schema::MAX_CORE_GRAPH_SCHEMA_SOURCES`.
@@ -747,7 +748,9 @@ fn core_specs() -> &'static [CoreSpec] {
         CoreSpec {
             module: "archimate",
             version: 1,
-            shapes: None,
+            shapes: Some(include_str!(
+                "../../../medulla-core/ontology/archimate-v1.shapes.ttl"
+            )),
             ontology: Some(include_str!(
                 "../../../medulla-core/ontology/archimate-v1.ttl"
             )),
@@ -835,6 +838,16 @@ fn core_specs() -> &'static [CoreSpec] {
             ontology: Some(include_str!(
                 "../../../medulla-core/ontology/documentation-v1.ttl"
             )),
+        },
+        // MEDULLA-CQ-CONN-R071.1: the documentation shapes companion, the same
+        // pattern as orchestration-shapes and finance-shapes.
+        CoreSpec {
+            module: "documentation-shapes",
+            version: 1,
+            shapes: Some(include_str!(
+                "../../../medulla-core/ontology/documentation-v1.shapes.ttl"
+            )),
+            ontology: None,
         },
         CoreSpec {
             module: "energy_geopolitics",
@@ -977,7 +990,9 @@ fn core_specs() -> &'static [CoreSpec] {
         CoreSpec {
             module: "sdlc_lifecycle",
             version: 1,
-            shapes: None,
+            shapes: Some(include_str!(
+                "../../../medulla-core/ontology/sdlc_lifecycle-v1.shapes.ttl"
+            )),
             ontology: Some(include_str!(
                 "../../../medulla-core/ontology/sdlc_lifecycle-v1.ttl"
             )),
@@ -1180,6 +1195,17 @@ fn core_specs() -> &'static [CoreSpec] {
                 "../../../medulla-core/ontology/connector_pack-v1.ttl"
             )),
         },
+        // MEDULLA-DECISION-ENGINE-R054.1: the decision contract's ontology and
+        // shapes, generated from its JSON schemas by
+        // `medulla_capabilities::decision_ontology` and committed.
+        CoreSpec {
+            module: "decision",
+            version: 1,
+            shapes: Some(include_str!(
+                "../../../medulla-core/ontology/decision.shapes.ttl"
+            )),
+            ontology: Some(include_str!("../../../medulla-core/ontology/decision.ttl")),
+        },
     ];
     SPECS
 }
@@ -1254,7 +1280,7 @@ mod tests {
     fn core_catalog_has_one_version_per_module_and_is_outside_dynamic_quota() {
         let sources = GraphSchemaSources::default();
         sources.validate().unwrap();
-        assert_eq!(sources.core.len(), 56);
+        assert_eq!(sources.core.len(), 57);
         assert!(sources.dynamic.is_empty());
         assert!(sources.core.keys().all(|id| id.starts_with("core:")));
     }
@@ -1643,7 +1669,7 @@ mod tests {
             ),
             (
                 "infrastructure",
-                "b9a9741a05482e67d6eab6c61e298c8dc55031f5ad1fb82f82f2a937e2e56db7",
+                "67efacdeba4847c91a0ddf9b4918e5063aa624750345e1029ecc24b71022db46",
             ),
             (
                 "medical",
@@ -1699,7 +1725,7 @@ mod tests {
             ),
             (
                 "sdlc_lifecycle",
-                "4ab13d77447cd3d0daae61cdbfd884a0d3ec67ea7d165b8c689f79b7eda4de98",
+                "17ee3ad6857ae44628eb8699c0ea93c7195d40e1b48351ee60d0d340d969644f",
             ),
             (
                 "software",
@@ -1744,6 +1770,11 @@ mod tests {
             (
                 "finance",
                 "57e4049671f6950d37ed62eac3dfbe8d0130a92ef53f0ed95d347738b3e8b49f",
+            ),
+            // MEDULLA-CQ-CONN-R071.1: the documentation shapes companion.
+            (
+                "documentation-shapes",
+                "ff2a265a10d6331770bcf2155a5f8e3c74e15522de4bf570e867ee95b6310cb2",
             ),
             (
                 "finance-shapes",

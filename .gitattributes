@@ -195,3 +195,9 @@ Procfile          text
 
 # Ignore files (like .npmignore or .gitignore)
 *.*ignore         text
+
+# Append-only registries: one entry per line, so concurrent additions merge as a union
+# (MEDULLA-SDLC-R020). The compile check and the registry tests catch a bad union.
+crates/medulla-types/src/contract/server_error_code.rs merge=union
+crates/medulla-types/src/lib.rs merge=union
+architecture/component-registry.yml merge=union

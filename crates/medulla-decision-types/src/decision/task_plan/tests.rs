@@ -6,6 +6,8 @@ fn task(id: &str, deps: &[&str]) -> TaskPlanTask {
         prompt: format!("Analyze {id} with cited evidence"),
         depends_on: BoundedVec::new(deps.iter().map(|s| s.to_string()).collect()).unwrap(),
         call: None,
+        aggregation: None,
+        assignee: None,
     }
 }
 
@@ -182,6 +184,8 @@ fn maximum_bounded_chain_is_valid() {
             })
             .unwrap(),
             call: None,
+            aggregation: None,
+            assignee: None,
         })
         .collect();
     let input = TaskPlanProposal {
@@ -562,4 +566,82 @@ fn digest_covers_calls_and_bindings() {
     let prompt_only = plan_explicit_tasks(&proposal()).unwrap();
     assert_ne!(prompt_only.policy_digest, "");
     assert_eq!(base.policy_digest, task_plan_policy_digest());
+}
+
+fn aggregated(op: AggregationOp, reducer_id: Option<&str>) -> TaskPlanProposal {
+    let mut input = proposal();
+    let mut tasks = input.tasks.as_slice().to_vec();
+    tasks[0].aggregation = Some(TaskPlanAggregation {
+        op,
+        reducer_id: reducer_id.map(str::to_string),
+    });
+    tasks[1].assignee = Some("skill:summarize".into());
+    input.tasks = BoundedVec::new(tasks).unwrap();
+    input
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R134.1
+#[test]
+fn aggregation_round_trips() {
+    let plan = plan_explicit_tasks(&aggregated(AggregationOp::MajorityVote, None)).unwrap();
+    let value = serde_json::to_value(&plan).unwrap();
+    let back = serde_json::from_value::<TaskPlan>(value.clone()).unwrap();
+    assert_eq!(back, plan);
+    let join = back.tasks.iter().find(|t| t.task_id == "join").unwrap();
+    assert_eq!(
+        join.aggregation,
+        Some(TaskPlanAggregation {
+            op: AggregationOp::MajorityVote,
+            reducer_id: None
+        })
+    );
+    let c = back.tasks.iter().find(|t| t.task_id == "c").unwrap();
+    assert_eq!(c.assignee.as_deref(), Some("skill:summarize"));
+    for (op, wire) in [
+        (AggregationOp::Concat, "concat"),
+        (AggregationOp::MajorityVote, "majority_vote"),
+        (AggregationOp::Reduce, "reduce"),
+        (AggregationOp::FirstValid, "first_valid"),
+    ] {
+        assert_eq!(serde_json::to_value(op).unwrap(), serde_json::json!(wire));
+    }
+    assert!(
+        serde_json::from_value::<TaskPlanAggregation>(serde_json::json!({"op": "average"}))
+            .is_err()
+    );
+    // Plans without the fields keep their serialized form.
+    let plain = serde_json::to_value(plan_explicit_tasks(&proposal()).unwrap()).unwrap();
+    assert!(plain["tasks"][0].get("aggregation").is_none());
+    assert!(plain["tasks"][0].get("assignee").is_none());
+    assert_eq!(plan.policy_revision, "bounded-explicit-dag-v2");
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R134.1
+#[test]
+fn aggregation_off_the_output_task_refuses() {
+    let mut off = proposal();
+    let mut tasks = off.tasks.as_slice().to_vec();
+    tasks[1].aggregation = Some(TaskPlanAggregation {
+        op: AggregationOp::Concat,
+        reducer_id: None,
+    });
+    off.tasks = BoundedVec::new(tasks).unwrap();
+    assert!(plan_explicit_tasks(&off)
+        .unwrap_err()
+        .starts_with(PLAN_AGGREGATION_NOT_OUTPUT));
+    for (op, reducer) in [
+        (AggregationOp::Reduce, None),
+        (AggregationOp::Concat, Some("reducer:sum")),
+        (AggregationOp::Reduce, Some("bad id")),
+    ] {
+        assert!(plan_explicit_tasks(&aggregated(op, reducer))
+            .unwrap_err()
+            .starts_with(PLAN_AGGREGATION_INVALID));
+    }
+    let base = plan_explicit_tasks(&proposal()).unwrap();
+    let reduce =
+        plan_explicit_tasks(&aggregated(AggregationOp::Reduce, Some("reducer:sum"))).unwrap();
+    let concat = plan_explicit_tasks(&aggregated(AggregationOp::Concat, None)).unwrap();
+    assert_ne!(base.plan_digest, reduce.plan_digest);
+    assert_ne!(reduce.plan_digest, concat.plan_digest);
 }
