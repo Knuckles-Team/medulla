@@ -29,7 +29,7 @@ Single decision authority per concept: placement, worker policy and the analytic
 ## Project Structure
 
 - Pure decision types and the `place` / `route_heavy_job` functions: `crates/medulla-decision-types/src/decision/statistical/placement.rs`.
-- Served Decide wiring: `crates/medulla-h-decide/src/decide/stat_decide.rs` to `src/server/handlers/decide/stat_placement.rs`; the capacity premise in `crates/medulla-h-decide/src/decide/capacity_premise.rs`.
+- Served Decide wiring: `crates/medulla-h-decide/src/decide/stat_decide.rs` to `crates/medulla-h-decide/src/decide/stat_placement.rs`; the capacity premise in `crates/medulla-h-decide/src/decide/capacity_premise.rs`.
 - Worker admission: `crates/medulla-work-types/src/worker_registry/grants.rs` (`granted_slots`) behind served `AdmitWorkerTask` owned by MEDULLA-DURABLE-KERNEL-R075.
 - Served settings: `crates/medulla-types/src/scheduler_config.rs` (owner MEDULLA-DURABLE-KERNEL-R076).
 - Association bound: `crates/medulla-h-jobs/src/jobs/submit.rs` (`MAX_ASSOCIATION_DISTINCT_ITEMS`) and the kernel guard in `crates/medulla-mining/src/mining/association.rs`.
