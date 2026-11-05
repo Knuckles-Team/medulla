@@ -132,4 +132,4 @@ Independent test: the bound tests of `MEDULLA-ORCH-VOCAB-R801.7`, `MEDULLA-ORCH-
 - Arbora supplies a verified principal and tenant on every served request.
 - The reference host runs the nightly benchmark suite that measures each budget.
 - Harness producers compute step digests with the one published recipe of `MEDULLA-ORCH-VOCAB-R013.2`.
-- The owner decision open on `MEDULLA-ORCH-VOCAB-R008.2` (ledger scope) stays as written until the owner answers.
+- The generated-artifact ledger covers every generated artifact, each with its regeneration command and digest (`MEDULLA-ORCH-VOCAB-R008.2`).
