@@ -335,11 +335,11 @@ These entries name tests that do not exist yet. Each is the exact post-split pat
 - **MEDULLA-UNIFIED-DATA-PLANE-R700.3:** `tests/data_plane/test_actions_served.py::test_register_submit_and_outbox_event` (planned). Proves the row: Wiring: `ActionRegister` and `ActionSubmit` reach the apply path and the outbox.
 - **MEDULLA-UNIFIED-DATA-PLANE-R700.6:** `tests/data_plane/test_actions_served.py::test_failed_criterion_applies_no_effect` (planned). Proves the row: Hot-path proof: a failed criterion applies no effect.
 - **MEDULLA-UNIFIED-DATA-PLANE-R701:** `tests/data_plane/test_standards_drift_served.py::test_missing_standard_is_not_zero` (planned). Proves the row: Standards conformance: cohorts, drift scores and consolidation recommendations (rollup).
-- **MEDULLA-UNIFIED-DATA-PLANE-R701.1:** `crates/medulla-catalog-types/src/standards.rs::tests::standards_types_round_trip` (planned). Proves the row: Model.
-- **MEDULLA-UNIFIED-DATA-PLANE-R701.2:** `crates/medulla-core/src/standards.rs::tests::drift_and_cohorts_are_single_pass` (planned). Proves the row: Behavior.
+- **MEDULLA-UNIFIED-DATA-PLANE-R701.1:** `crates/medulla-source-types/src/standards_drift.rs::tests::standards_model_round_trips`. Proves the row: Model.
+- **MEDULLA-UNIFIED-DATA-PLANE-R701.2:** `crates/medulla-source-types/src/standards_drift.rs::tests::cohorts_drift_and_recommendation_scale`. Proves the row: Behavior.
 - **MEDULLA-UNIFIED-DATA-PLANE-R701.3:** `tests/data_plane/test_standards_drift_served.py::test_cross_application_recommendation_is_a_proposal` (planned). Proves the row: Wiring: `StandardsDrift` reads the graph and stays a proposal across attached applications.
-- **MEDULLA-UNIFIED-DATA-PLANE-R701.4:** `crates/medulla-core/src/standards.rs::tests::cross_tenant_refused_and_unscored_is_not_applicable` (planned). Proves the row: Refusal.
-- **MEDULLA-UNIFIED-DATA-PLANE-R701.5:** `crates/medulla-core/src/standards.rs::tests::score_lists_satisfied_and_failed_rules` (planned). Proves the row: Evidence.
+- **MEDULLA-UNIFIED-DATA-PLANE-R701.4:** `crates/medulla-source-types/src/standards_drift.rs::tests::cross_tenant_refused_and_missing_standard_is_not_zero`. Proves the row: Refusal.
+- **MEDULLA-UNIFIED-DATA-PLANE-R701.5:** `crates/medulla-source-types/src/standards_drift.rs::tests::score_lists_satisfied_and_failed_rules`. Proves the row: Evidence.
 - **MEDULLA-UNIFIED-DATA-PLANE-R701.6:** `tests/data_plane/test_standards_drift_served.py::test_missing_standard_is_not_zero` (planned). Proves the row: Hot-path proof: a missing standard scores unscored, never zero.
 - **MEDULLA-UNIFIED-DATA-PLANE-R702:** `tests/data_plane/test_lineage_drain_served.py::test_replay_adds_no_edges_and_bad_events_quarantine` (planned). Proves the row: ETL runs record lineage and consume external lineage run events (rollup).
 - **MEDULLA-UNIFIED-DATA-PLANE-R702.3:** `tests/data_plane/test_lineage_drain_served.py::test_lake_sweep_run_event_reaches_lineage_graph` (planned). Proves the row: Wiring: `LineageIngest` is called by the lake sweep and the arbora route; lineage reads are plain graph queries.
