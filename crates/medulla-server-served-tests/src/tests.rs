@@ -5967,6 +5967,7 @@ async fn test_cdc_ordered_read_from_cursor() {
 /// A continuous query maintained incrementally off the CDC feed equals a full
 /// re-run over the final graph state (CONCEPT:MEDULLA-KG.query.streaming-cdc-subscriptions).
 #[cfg(feature = "streaming")]
+// spec: MEDULLA-INCREMENTAL-VIEWS-R001.9
 #[tokio::test]
 async fn test_continuous_query_incremental_equals_full_rerun() {
     // Reads the ambient encryption env at its durable open, so the env must hold

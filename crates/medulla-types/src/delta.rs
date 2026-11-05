@@ -163,6 +163,7 @@ mod tests {
     }
 
     /// MEDULLA-INCREMENTAL-VIEWS-R002.1: insert and retract carry unit `i64` weights.
+    // spec: MEDULLA-INCREMENTAL-VIEWS-R002.1
     #[test]
     fn insert_and_retract_carry_unit_weights() {
         let ins = ZRow::insert("a", props(json!({"year": 2001})));
@@ -175,6 +176,7 @@ mod tests {
 
     /// MEDULLA-INCREMENTAL-VIEWS-R002.2: equal rows sum, zero-weight rows drop, order is
     /// first-seen.
+    // spec: MEDULLA-INCREMENTAL-VIEWS-R002.2
     #[test]
     fn consolidation_sums_weights_and_drops_zero() {
         let p1 = props(json!({"v": 1}));
@@ -194,6 +196,7 @@ mod tests {
 
     /// MEDULLA-INCREMENTAL-VIEWS-R002.2: an overflowing sum is refused with
     /// `DELTA_WEIGHT_OVERFLOW` and the delta is left unchanged.
+    // spec: MEDULLA-INCREMENTAL-VIEWS-R002.2
     #[test]
     fn weight_overflow_is_refused() {
         let mut big = ZRow::insert("a", Map::new());
