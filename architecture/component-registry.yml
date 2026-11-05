@@ -3857,6 +3857,7 @@ components:
       - "tests/served_query_completeness.rs"
       - "tests/uql_dag_served.rs"
       - "tests/uql_governed_summary.rs"
+      - "tests/uql_single_plan_all_modalities.rs"
       - "tests/served_semantic_search_discover_rls.rs"
       - "tests/served_spatial_completeness.rs"
       - "tests/served_telemetry_facts.rs"

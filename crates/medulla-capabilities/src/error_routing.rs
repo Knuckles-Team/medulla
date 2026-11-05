@@ -259,6 +259,8 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         &["IDENTITY_STORE_MANAGED", "IDENTITY_STORE_NAMESPACE"],
     ),
     ("RbacAdmin", &["IDENTITY_STORE_NAMESPACE"]),
+    // MEDULLA-FEDERATED-QUERY-R720.5: the DECAY and CLUSTER BY EMBEDDING stage refusals.
+    ("Uql", &["UQL_E_CLUSTER_NO_VECTOR", "UQL_E_DECAY_NO_TIME"]),
     (
         "AuditAppend",
         &[

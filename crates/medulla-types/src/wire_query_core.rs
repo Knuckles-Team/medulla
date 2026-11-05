@@ -821,6 +821,17 @@ pub enum Op {
     /// built here (E2 scope is the wire+UQL plan surface). Gated by `epistemic`.
     #[cfg(feature = "epistemic")]
     ExplainBelief { node_id: String },
+    /// TRANSFORM (MEDULLA-FEDERATED-QUERY-R720.2, UQL `DECAY HALF_LIFE <seconds>`) — multiply
+    /// each row's score by `0.5^(age / half_life_secs)`, where age is now minus the row's
+    /// valid time in seconds. An unscored row takes score `1.0` before the decay. A row
+    /// with no valid time refuses the whole program with `UQL_E_DECAY_NO_TIME`.
+    Decay { half_life_secs: f64 },
+    /// TRANSFORM (MEDULLA-FEDERATED-QUERY-R720.3, UQL `CLUSTER BY EMBEDDING K <n>`) — partition
+    /// the rows into `k` clusters by cosine distance over their stored embeddings, seed 0,
+    /// so results repeat. Each row gains the `cluster_id` and `centroid_distance` value
+    /// channels. A row with no vector refuses the whole program with
+    /// `UQL_E_CLUSTER_NO_VECTOR`.
+    ClusterByEmbedding { k: usize },
     /// TRANSFORM (EH-523, UQL `ATTRIBUTE <agg> OF <input> <method>`) — contribution
     /// attribution over the incoming rows as players: each row's value is `input`, a
     /// coalition's value is the `value` aggregate of its members (`v(∅) = 0`), and every
