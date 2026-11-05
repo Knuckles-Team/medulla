@@ -15,9 +15,9 @@ use std::time::Instant;
 
 use medulla_types::wire::{Op, UqlResult, UqlStageReport};
 
-use super::{micros_since, record_channel, returned_channels, rows_of, stage_text, ChannelTable};
+use super::{ChannelTable, micros_since, record_channel, returned_channels, rows_of, stage_text};
 use medulla_exec::cost::{Cardinality, ModalityCardinality, PlanStats};
-use medulla_exec::exec::{apply_with_channels, PlanCtx};
+use medulla_exec::exec::{PlanCtx, apply_with_channels};
 use medulla_exec::rowset::RowSet;
 use medulla_uql::DagNode;
 
@@ -45,6 +45,8 @@ pub(super) fn run(
         rows: rows_of(&rows, &columns, &table),
         columns,
         warnings,
+        snapshot_revision: 0,
+        knowledge_revision: 0,
     })
 }
 
@@ -81,6 +83,8 @@ pub(super) fn profile(
         columns,
         stages: reports(nodes, ctx, Some(&trace.stages)),
         warnings,
+        snapshot_revision: 0,
+        knowledge_revision: 0,
     })
 }
 

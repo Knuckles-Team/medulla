@@ -987,6 +987,15 @@ pub enum UqlResult {
         columns: Vec<String>,
         rows: Vec<UqlRow>,
         warnings: Vec<String>,
+        /// MEDULLA-FEDERATED-QUERY-R088.1: the graph snapshot revision the rows were
+        /// read from. No hidden-row count is carried: it would leak row existence
+        /// across visibility.
+        #[serde(default)]
+        snapshot_revision: u64,
+        /// MEDULLA-FEDERATED-QUERY-R088.1: the epistemic layer revision of the same
+        /// snapshot; 0 when the build has no epistemic layer.
+        #[serde(default)]
+        knowledge_revision: u64,
     },
     /// `EXPLAIN`: the canonical and the optimized plan, per-stage estimates, and
     /// whether the plan is incrementally maintainable (with the reason when not).
@@ -1015,7 +1024,63 @@ pub enum UqlResult {
         rows: Vec<UqlRow>,
         stages: Vec<UqlStageReport>,
         warnings: Vec<String>,
+        /// MEDULLA-FEDERATED-QUERY-R088.1: the graph snapshot revision the rows were
+        /// read from. No hidden-row count is carried: it would leak row existence
+        /// across visibility.
+        #[serde(default)]
+        snapshot_revision: u64,
+        /// MEDULLA-FEDERATED-QUERY-R088.1: the epistemic layer revision of the same
+        /// snapshot; 0 when the build has no epistemic layer.
+        #[serde(default)]
+        knowledge_revision: u64,
     },
+}
+
+#[cfg(all(test, feature = "query"))]
+mod tests {
+    use super::*;
+
+    // spec: MEDULLA-FEDERATED-QUERY-R088.1
+    #[test]
+    fn uql_header_round_trips_with_defaults() {
+        for result in [
+            UqlResult::Rows {
+                columns: vec!["score".into()],
+                rows: vec![],
+                warnings: vec![],
+                snapshot_revision: 7,
+                knowledge_revision: 3,
+            },
+            UqlResult::Profile {
+                columns: vec![],
+                rows: vec![],
+                stages: vec![],
+                warnings: vec!["w".into()],
+                snapshot_revision: 9,
+                knowledge_revision: 0,
+            },
+        ] {
+            let bytes = rmp_serde::to_vec_named(&result).unwrap();
+            let back: UqlResult = rmp_serde::from_slice(&bytes).unwrap();
+            assert_eq!(back, result);
+        }
+        // A header-less payload (the pre-header row shape) decodes with both
+        // revisions defaulted to 0.
+        let legacy = serde_json::json!({
+            "Rows": {"columns": [], "rows": [], "warnings": []}
+        });
+        let back: UqlResult = serde_json::from_value(legacy).unwrap();
+        assert_eq!(
+            back,
+            UqlResult::Rows {
+                columns: vec![],
+                rows: vec![],
+                warnings: vec![],
+                snapshot_revision: 0,
+                knowledge_revision: 0,
+            }
+        );
+    }
 }
 
 #[cfg(all(test, feature = "query"))]

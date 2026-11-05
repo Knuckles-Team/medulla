@@ -10,7 +10,7 @@ use serde_json::json;
 use crate::uql::serve::run_statement;
 use medulla_exec::budget::Budget;
 use medulla_exec::exec::PlanCtx;
-use medulla_uql::{parse_statement, Params};
+use medulla_uql::{Params, parse_statement};
 
 /// d1 → d2 → d3 (CITES), d4 isolated; d2 and d3 are cited once each.
 fn fixture() -> (medulla_graph_core::graph::GraphView, SemanticStore) {
@@ -151,9 +151,11 @@ fn budget_hint_requires_bound_session_and_never_bypasses_server_cap() {
     let (view, semantic) = fixture();
     let unbound = PlanCtx::new(&view, &semantic);
     let hint = "PROFILE FEDERATION BUDGET (REQUESTS=5) MATCH (:Doc)";
-    assert!(run(hint, &Params::new(), &unbound)
-        .unwrap_err()
-        .starts_with("FEDERATION_BUDGET_HINT_REQUIRES_SESSION"));
+    assert!(
+        run(hint, &Params::new(), &unbound)
+            .unwrap_err()
+            .starts_with("FEDERATION_BUDGET_HINT_REQUIRES_SESSION")
+    );
 
     let session = FederationSession::new(FederationBudget {
         max_requests: 2,
@@ -207,6 +209,8 @@ fn profile_remote_fragment_has_redacted_golden_output_and_provenance() {
         rows: vec![],
         stages: vec![],
         warnings: vec![],
+        snapshot_revision: 0,
+        knowledge_revision: 0,
     };
     crate::uql::serve::attach_federation_report(&mut result, &stmt, &ctx);
     let UqlResult::Profile { stages, .. } = result else {
@@ -217,8 +221,10 @@ fn profile_remote_fragment_has_redacted_golden_output_and_provenance() {
         stages[0].stage,
         "LOCAL evaluation (per-stage reports above)"
     );
-    assert_eq!(stages[1].stage,
-        "REMOTE sql#deadbeef strategy=BindJoin keys=3 limit=Some(7) requests=2 fetched=5 kept=4 estimate=learned(samples=8, rows=12.50)");
+    assert_eq!(
+        stages[1].stage,
+        "REMOTE sql#deadbeef strategy=BindJoin keys=3 limit=Some(7) requests=2 fetched=5 kept=4 estimate=learned(samples=8, rows=12.50)"
+    );
     assert_eq!(
         (stages[1].estimated_rows, stages[1].rows, stages[1].micros),
         (12.5, Some(4), Some(6000))
@@ -309,9 +315,11 @@ fn a_program_explains_node_by_node() {
         names[2].starts_with("#2 <- #0,#1 RERANK MENTIONS"),
         "{names:?}"
     );
-    assert!(stages
-        .iter()
-        .all(|s| s.rows.is_none() && s.micros.is_none()));
+    assert!(
+        stages
+            .iter()
+            .all(|s| s.rows.is_none() && s.micros.is_none())
+    );
     assert!(!incremental && incremental_note.contains("LET"));
 }
 
