@@ -113,6 +113,7 @@ One row per leaf requirement. A planned test names the exact path that the row a
 | `MEDULLA-CONTRACT-R056.17` | `.github/workflows/ci.yml::quality` | L2 | (`Clippy workspace-all-features`) and `.github/workflows/ci.yml::clippy-release-profiles` (`Clippy published-full`, `Clippy slim-server`) pass with `-D warnings`, with no crate-level allow in any `lib.rs`. |
 | `MEDULLA-CONTRACT-R056.18` | `tests/advanced_crossmodal_roundtrip.rs::five_modality_in_txn_ryow_then_commit_eg390` | L3 | Test: the three facade integration tests pass in `cargo test --workspace --all-features` and in `cargo test -p medulla-engine` alike. |
 | `MEDULLA-CONTRACT-R057` | `tests/test_method_catalog.py::test_installed_engine_serves_the_method_catalog` | L2 | Rust test over the rendered catalog (row count equals the descriptors, scopes resolve, digest matches `contract_catalog_digest()`); installed-package Python test that `medulla.engine.method_catalog()` parses and matches the same shape. |
+| `MEDULLA-CONTRACT-R058` | `crates/medulla-server-api/tests/knob_config.rs::loader_reads_cli_then_env_then_default_and_refuses_bad_values` (planned) | L1 | precedence, `KNOB_INVALID`, `KNOB_OUT_OF_RANGE`, `KNOB_UNKNOWN` and a startup exit before bind; `tests/test_knob_startup_refusal.py::test_out_of_range_knob_refuses_startup` (planned) (L4) |
 
 ## Current architecture documentation checks
 
