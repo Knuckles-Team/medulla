@@ -217,6 +217,7 @@ closed_error_codes! {
         UnknownPackEntry => "UNKNOWN_PACK_ENTRY",
         UnknownRelationshipReference => "UNKNOWN_RELATIONSHIP_REFERENCE",
         UnsupportedCoalition => "UNSUPPORTED_COALITION",
+        WalletKeyTrustNotFound => "WALLET_KEY_TRUST_NOT_FOUND",
         WebBackendInvalid => "WEB_BACKEND_INVALID",
         WebSelectionBudgetInvalid => "WEB_SELECTION_BUDGET_INVALID",
         WebSelectionNoCandidates => "WEB_SELECTION_NO_CANDIDATES",

@@ -229,6 +229,9 @@ pub mod lease_vocab;
 // refusal tests only, no outbox-append wiring yet).
 #[cfg(feature = "finance")]
 pub mod finance_event_envelope;
+// MEDULLA-FINANCE-PRIMITIVES-R904 — the wallet key trust record read by
+// `Method::WalletKeyTrustGet`.
+pub mod finance_wallet_trust;
 pub mod solve_scalar;
 // CONCEPT:MEDULLA-KG.compute.quantum-agent-api — the agent-facing quantum control-plane
 // wire op (`QuantumOp`), gated `quantum`. Lives here (not in `medulla-quantum-core`,

@@ -43,6 +43,7 @@ mod semantic;
 mod subgraph;
 mod terminal;
 mod union;
+mod wallet_trust;
 
 #[cfg(any(
     feature = "query",

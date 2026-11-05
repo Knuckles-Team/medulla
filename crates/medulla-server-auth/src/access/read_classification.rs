@@ -178,6 +178,7 @@ pub(super) const RLS_ROUTED: &[&str] = &[
     "UnionGetNodesByLabel",
     "Uql",
     "Vf2SubgraphMatch",
+    "WalletKeyTrustGet",
     "Watch",
     "WhatChanged",
     "WorldTransform",
