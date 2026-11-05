@@ -186,7 +186,9 @@ pub mod durability_class;
 // set of scope-level merge strategies. Resolution and served wiring live above
 // this pure-data crate.
 pub mod write_conflict;
-pub use write_conflict::{MergeStrategy, WriteConflict};
+pub use write_conflict::{
+    resolve_write_conflict, ConflictWinner, MergeStrategy, WriteConflict, WriteConflictEvidence,
+};
 // MEDULLA-DURABLE-KERNEL-R037 — the workload classification (point/structure/sql)
 // every wire listener routes an operation by. Pure, no dep.
 pub mod workload_class;

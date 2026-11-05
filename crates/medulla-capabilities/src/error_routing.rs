@@ -117,7 +117,7 @@ const DOMAIN_PREFIXES: &[(&str, &[&str])] = &[
     ),
     (
         "transactions",
-        &["CHANGE_BATCH_", "REPLAY_NONCE_", "STALE_GRAPH_"],
+        &["CHANGE_BATCH_", "REPLAY_NONCE_", "WRITE_CONFLICT"],
     ),
 ];
 const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[

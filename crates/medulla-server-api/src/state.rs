@@ -265,6 +265,9 @@ pub struct ServerState {
     /// Idle TTL (seconds) after which an open txn is auto-rolled-back by the sweep
     /// (`MEDULLA_TXN_TTL_SECS`, default 300).
     pub txn_ttl_secs: u64,
+    /// Engine-wide policy for a stale `ApplyChangeEnvelope` version claim
+    /// (MEDULLA-DURABLE-KERNEL-R084.3). Defaults to `Refuse`.
+    pub write_conflict_strategy: medulla_types::MergeStrategy,
     /// Cap on concurrently-open txns per graph (`MEDULLA_TXN_MAX_PER_GRAPH`,
     /// default 256). `BeginTxn` over the cap is rejected — bounds memory the same
     /// way `per_graph_inflight` bounds request concurrency.
@@ -488,6 +491,7 @@ impl ServerState {
             open_txns: Arc::default(),
             txn_id_gen: Arc::new(TxnIdGen),
             txn_ttl_secs: 300,
+            write_conflict_strategy: medulla_types::MergeStrategy::Refuse,
             txn_max_per_graph: 256,
             txn_max_per_agent: 256,
             #[cfg(feature = "blob")]

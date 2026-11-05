@@ -88,6 +88,10 @@ pub struct ChangeEnvelopeApplied {
     pub commit: ChangeEnvelopeCommit,
     /// The commit is durable but its in-memory projection has not been published.
     pub projection_pending: bool,
+    /// Present only when a stale version claim was resolved by a merge strategy
+    /// (MEDULLA-DURABLE-KERNEL-R084.5).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub write_conflict: Option<medulla_types::WriteConflictEvidence>,
     /// Present only when the envelope was committed through a Raft placement group.
     #[serde(flatten)]
     pub replication: Option<ChangeEnvelopeReplication>,
