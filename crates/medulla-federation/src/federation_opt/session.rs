@@ -1,14 +1,18 @@
 //! The per-query federation state: budget meter, fragment trace, and the LIMIT hints the
 //! lookahead pass derived from the plan about to run.
 
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use medulla_exec::algebra::Op;
 
 use super::budget::BudgetMeter;
 use super::cache::FragmentCacheScope;
+use super::snapshot::{Consistency, SnapshotBound, SnapshotHandle};
+use super::stats::Fingerprint;
 use super::trace::FragmentTrace;
 use medulla_exec::budget::FederationBudget;
+use medulla_types::wire::ForeignSourceSpec;
 
 /// One foreign source op of the plan and the limit that immediately follows EVERY
 /// occurrence of it (`None` when an occurrence has no `Limit` or the limits disagree —
@@ -25,6 +29,12 @@ struct SessionState {
     trace: Vec<FragmentTrace>,
     hints: Vec<Hint>,
     cache_scope: Option<Arc<FragmentCacheScope>>,
+    /// How many foreign fragments of each source spec the prepared plan holds.
+    source_counts: Vec<(ForeignSourceSpec, usize)>,
+    /// One snapshot per source, opened by the first fragment and dropped with the session.
+    snapshots: HashMap<Fingerprint, SnapshotHandle>,
+    bound: SnapshotBound,
+    consistency: Consistency,
 }
 
 /// One federated query's optimizer state, bound on the `PlanCtx` with
@@ -44,6 +54,10 @@ impl FederationSession {
                 trace: Vec::new(),
                 hints: Vec::new(),
                 cache_scope: None,
+                source_counts: Vec::new(),
+                snapshots: HashMap::new(),
+                bound: SnapshotBound::default(),
+                consistency: Consistency::default(),
             }),
         }
     }
@@ -82,6 +96,43 @@ impl FederationSession {
         self.lock().meter.narrow(requested);
     }
 
+    /// The bounds snapshots of this query open under (the server knobs).
+    pub fn set_snapshot_bound(&self, bound: SnapshotBound) {
+        self.lock().bound = bound;
+    }
+
+    pub(super) fn snapshot_bound(&self) -> SnapshotBound {
+        self.lock().bound
+    }
+
+    /// Accept per-fragment reads for this query (the request field `consistency`).
+    pub fn set_consistency(&self, consistency: Consistency) {
+        self.lock().consistency = consistency;
+    }
+
+    /// How this query's fragments of one source relate in time.
+    pub fn consistency(&self) -> Consistency {
+        self.lock().consistency
+    }
+
+    /// How many foreign fragments of `source` the prepared plan holds.
+    pub(super) fn fragments_of(&self, source: &ForeignSourceSpec) -> usize {
+        self.lock()
+            .source_counts
+            .iter()
+            .find(|(spec, _)| spec == source)
+            .map_or(0, |(_, n)| *n)
+    }
+
+    /// The snapshot already open for a source, if an earlier fragment opened it.
+    pub(super) fn snapshot_of(&self, fingerprint: &Fingerprint) -> Option<SnapshotHandle> {
+        self.lock().snapshots.get(fingerprint).cloned()
+    }
+
+    pub(super) fn hold_snapshot(&self, fingerprint: Fingerprint, handle: SnapshotHandle) {
+        self.lock().snapshots.insert(fingerprint, handle);
+    }
+
     /// Every fragment executed so far, in execution order.
     pub fn trace(&self) -> Vec<FragmentTrace> {
         self.lock().trace.clone()
@@ -92,7 +143,11 @@ impl FederationSession {
     pub fn prepare(&self, ops: &[Op]) {
         let mut hints = Vec::new();
         collect_hints(ops, &mut hints);
-        self.lock().hints = hints;
+        let mut counts = Vec::new();
+        count_sources(ops, &mut counts);
+        let mut state = self.lock();
+        state.hints = hints;
+        state.source_counts = counts;
     }
 
     /// The limit that may be pushed into `op`'s source.
@@ -129,6 +184,24 @@ fn nested_branches(op: &Op) -> &[Vec<Op>] {
     }
     let _ = op;
     &[]
+}
+
+/// Count every foreign fragment of `ops` (and of every nested branch) by source spec.
+fn count_sources(ops: &[Op], counts: &mut Vec<(ForeignSourceSpec, usize)>) {
+    for op in ops {
+        for branch in nested_branches(op) {
+            count_sources(branch, counts);
+        }
+        let spec = match op {
+            Op::ForeignScan { source, .. } => (**source).clone(),
+            Op::Foreign { name } => ForeignSourceSpec::Named { name: name.clone() },
+            _ => continue,
+        };
+        match counts.iter_mut().find(|(known, _)| *known == spec) {
+            Some((_, n)) => *n += 1,
+            None => counts.push((spec, 1)),
+        }
+    }
 }
 
 fn collect_hints(ops: &[Op], hints: &mut Vec<Hint>) {

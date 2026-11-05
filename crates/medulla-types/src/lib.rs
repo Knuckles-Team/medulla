@@ -262,10 +262,14 @@ pub mod runtime_limit;
 pub mod series_expr;
 // MEDULLA-SCM-R002 — the source changeset record and its structured trailers.
 pub mod source_changeset;
+// MEDULLA-UNIFIED-DATA-PLANE-R038.5.1 — the search-index capability of an operation-bound source.
+pub mod search_source;
+// MEDULLA-UNIFIED-DATA-PLANE-R038.7.1 — the web metasearch capability and its result record.
 pub mod source_symbol_edit;
 #[cfg(feature = "statechart")]
 pub mod statechart;
 pub mod telemetry_derive;
+pub mod web_source;
 // MEDULLA-FEDERATED-QUERY-R607.1 — topology analytics result model.
 #[cfg(any(test, feature = "test-support"))]
 pub mod test_support;

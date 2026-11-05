@@ -355,8 +355,15 @@ pub fn run_unified_with<T>(
     // EH-563 — one federation-optimizer session per served query that touches a foreign
     // source: the server budget, the plan's LIMIT hints and the per-fragment trace.
     #[cfg(feature = "federation")]
-    let federation = plan_touches_foreign(&ops)
-        .then(medulla_federation::federation_opt::FederationSession::from_env);
+    let federation = plan_touches_foreign(&ops).then(|| {
+        let session = medulla_federation::federation_opt::FederationSession::from_env();
+        let knobs = medulla_server_api::knob_config::knobs();
+        session.set_snapshot_bound(medulla_federation::federation_opt::SnapshotBound {
+            replica_lag_bound_ms: knobs.federation_replica_lag_bound_ms,
+            statement_timeout_ms: knobs.federation_statement_timeout_ms,
+        });
+        session
+    });
 
     // CONCEPT:MEDULLA-KG.query.served-text-index-binding — bind a live BM25 lexical search surface into the
     // served `PlanCtx` so a served `UnifiedQuery`/`Uql` whose plan carries
