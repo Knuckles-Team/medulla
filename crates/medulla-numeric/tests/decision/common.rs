@@ -68,6 +68,7 @@ pub fn policy(cold_start: ColdStart) -> DecisionPolicy {
         cold_start,
         statistical: Some(statistical()),
         topology: None,
+        reasoning: std::collections::BTreeMap::new(),
     }
 }
 

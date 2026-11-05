@@ -165,6 +165,11 @@ pub struct DecisionPolicy {
     /// and keeps an existing policy's digest.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub topology: Option<medulla_agent_types::agent_topology::TopologyPolicy>,
+    /// The reasoning strategy per task class for thought search
+    /// (MEDULLA-DECISION-ENGINE-R750.750). Empty is omitted from the wire and
+    /// keeps an existing policy's digest.
+    #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
+    pub reasoning: std::collections::BTreeMap<String, super::thought_search::ReasoningStrategy>,
 }
 
 /// The component attribute a published `DecisionPolicy` carries its body in:
@@ -220,6 +225,7 @@ impl DecisionPolicy {
             cold_start: ColdStart::DeterministicOnly,
             statistical: None,
             topology: None,
+            reasoning: std::collections::BTreeMap::new(),
         }
     }
 
