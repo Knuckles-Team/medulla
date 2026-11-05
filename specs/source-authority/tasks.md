@@ -1,70 +1,61 @@
-# Implementable tasks
+# MEDULLA-SRC-AUTH — Tasks
 
-Tasks mirror requirements.md rows; check a task only when its evidence is linked.
+One task per leaf row of `requirements.md`, producer first. Each task names its row; the row holds the files, the caller chain and the proof.
 
-- [ ] Authority vocabulary (rollup). **MEDULLA-SRC-AUTH-R001**
-  - [ ] Add class `vg:SourceAuthority` with `vg:authoritativeSource`, `vg:authorityFor`, `vg:authorityRank`. **MEDULLA-SRC-AUTH-R001.1**
-  - [ ] Add `vg:authorityFacet` and `vg:authorityMapping`. **MEDULLA-SRC-AUTH-R001.2**
-  - [ ] Add `vg:scopeTenant`, `vg:scopePartition`, `vg:freshnessMaxAgeSeconds`. **MEDULLA-SRC-AUTH-R001.3**
-  - [ ] Add `vg:authorityContract` and `vg:allowFallback`. **MEDULLA-SRC-AUTH-R001.4**
-  - [ ] Add `vg:materialisation` and `vg:materialisationReason`. **MEDULLA-SRC-AUTH-R001.5**
-  - [ ] Add `vg:foreignSourceName` on `vg:SourceConnection`; widen the domain of `vg:approved` to `vg:SourceAuthority`. **MEDULLA-SRC-AUTH-R001.6**
-- [ ] Authority shapes (rollup). **MEDULLA-SRC-AUTH-R002**
-  - [ ] Shape: required cardinalities and node kinds **MEDULLA-SRC-AUTH-R002.1**
-  - [ ] Shape: mapping belongs to the named source and maps the named class. **MEDULLA-SRC-AUTH-R002.2**
-  - [ ] Shape: a facet must be projected by the mapping. **MEDULLA-SRC-AUTH-R002.3**
-  - [ ] Shape: contract kind agrees with the connection's source kind. **MEDULLA-SRC-AUTH-R002.4**
-  - [ ] Shape: accelerated materialisation needs reason, freshness bound and connection capability `copy`. **MEDULLA-SRC-AUTH-R002.5**
-  - [ ] Shape: equal-rank claims by different sources on one (class, facet, scope) are refused inside one graph. **MEDULLA-SRC-AUTH-R002.6**
-- [ ] Who may assert authority (rollup). **MEDULLA-SRC-AUTH-R003**
-  - [ ] Declare kind `governed.source-authority` with approver scope `governance:approve-source-authority` in `GOVERNED_KINDS`. **MEDULLA-SRC-AUTH-R003.1**
-  - [ ] Attach refuses `vg:approved true` inside a `Pack` or `Ingestion` origin schema source. **MEDULLA-SRC-AUTH-R003.2**
-  - [ ] `AttachApproved` accepts an authority candidate; the approval lease binds its digest. **MEDULLA-SRC-AUTH-R003.3**
-  - [ ] Planner derives effectiveness from origin, not from the flag. **MEDULLA-SRC-AUTH-R003.4**
-  - [ ] Proposed rows are listed, never selected. **MEDULLA-SRC-AUTH-R003.5**
-- [ ] Selection reads authority (rollup). **MEDULLA-SRC-AUTH-R004**
-  - [ ] Add `AuthorityRow` and `with_authority` to `CoverageFixture`; replace the silent `insert` overwrite by a list per class. **MEDULLA-SRC-AUTH-R004.1**
-  - [ ] `Premise::Authority` with row, source, class, facet, rank, scope, origin, generation. **MEDULLA-SRC-AUTH-R004.2**
-  - [ ] `Covered` gains `alternates`; order candidates by rank. **MEDULLA-SRC-AUTH-R004.3**
-  - [ ] Superclass authority is inherited; a subclass row overrides it. **MEDULLA-SRC-AUTH-R004.4**
-  - [ ] Live read: parse authority rows from the composed graph schema sources. **MEDULLA-SRC-AUTH-R004.5**
-  - [ ] Build the `ConnectedSources` view from the owner-scoped foreign catalog. **MEDULLA-SRC-AUTH-R004.6**
-  - [ ] Facet-aware selection: a question reading property `p` uses the facet row for `p` before the class row. **MEDULLA-SRC-AUTH-R004.7**
-- [ ] Tie-breaking (rollup). **MEDULLA-SRC-AUTH-R005**
-  - [ ] Order: facet over class over nearest superclass. **MEDULLA-SRC-AUTH-R005.1**
-  - [ ] Scope specificity: matching tenant and partition beat unscoped. **MEDULLA-SRC-AUTH-R005.2**
-  - [ ] Equal everything, different sources: `Abstained::Ambiguous` listing both rows; never choose by name. **MEDULLA-SRC-AUTH-R005.3**
-  - [ ] `Premise::Tiebreak { winner, loser, rule }` records the deciding step. **MEDULLA-SRC-AUTH-R005.4**
-- [ ] Typed abstention (rollup). **MEDULLA-SRC-AUTH-R006**
-  - [ ] Add `CoverageResult::Abstained { class, facet, reason, source, premises }` and the reason enum `Unconnected | UnapprovedMapping | Stale | ContractMismatch | Ambiguous`. **MEDULLA-SRC-AUTH-R006.1**
-  - [ ] Unconnected rank-1 authority abstains naming source and concept. **MEDULLA-SRC-AUTH-R006.2**
-  - [ ] `allowFallback` tries the next ordered alternate and records `FallbackFrom`. **MEDULLA-SRC-AUTH-R006.3**
-  - [ ] Freshness: a stale copy falls back to live; stale and no live route abstains `Stale`. **MEDULLA-SRC-AUTH-R006.4**
-  - [ ] No authority row: one approved mapping serves with `Premise::Implicit`; several abstain `Ambiguous`. **MEDULLA-SRC-AUTH-R006.5**
-- [ ] Audit trail (rollup). **MEDULLA-SRC-AUTH-R007**
-  - [ ] Add `AuthorityAudit` and `AuditEntry` types. **MEDULLA-SRC-AUTH-R007.1**
-  - [ ] Build the audit from verdicts and premises only. **MEDULLA-SRC-AUTH-R007.2**
-  - [ ] Audit lists `not_used` rows with reason (including `Proposed`). **MEDULLA-SRC-AUTH-R007.3**
-  - [ ] Wire the audit into the cross-source report's `sources_used`. **MEDULLA-SRC-AUTH-R007.4**
-  - [ ] Print the block in the served intent tool. **MEDULLA-SRC-AUTH-R007.5**
-- [ ] Materialisation policy (rollup). **MEDULLA-SRC-AUTH-R008**
-  - [ ] Selection reports `mode: live` for a `virtual` row and refuses a copy route for it. **MEDULLA-SRC-AUTH-R008.1**
-  - [ ] An `accelerated` row resolves through `AccelerationPolicy` and carries its reason into the audit. **MEDULLA-SRC-AUTH-R008.2**
-- [ ] Consumers and acceptance (rollup). **MEDULLA-SRC-AUTH-R009**
-  - [ ] Fixture: ServiceNow rank 1 and PagerDuty rank 2 for `:Incident`. **MEDULLA-SRC-AUTH-R009.1**
-  - [ ] Decisive test: swapping two ranks changes `sources_used` with equal query text. **MEDULLA-SRC-AUTH-R009.2**
-  - [ ] Re-point `MEDULLA-CQ-XSRC-R001.1` and `R001.2` to this spec and mark them delivered by `R001.*` and `R002.*`. **MEDULLA-SRC-AUTH-R009.3**
-- [ ] **MEDULLA-SRC-AUTH-R010:** Source trust role and live-truth preference.
-- [ ] **MEDULLA-SRC-AUTH-R010.1:** Model. Add `vg:sourceRole` on `vg:SourceConnection` in `crates/medulla-core/ontology/virtual_graph-v1.ttl`, with closed values `live_truth`, `historical_context` and `inspiration`. Add `SourceRole` in `crates/medulla-virtual-graph/src/source_selection.rs`. The authority rank at `source_selection.rs:172` (`select_sources`) orders sources but does not grade their trust.
-- [ ] **MEDULLA-SRC-AUTH-R010.2:** Behavior. Add `role_order` in `source_selection.rs`. The default order is `live_truth`, then `historical_context`, then `inspiration`. It is a named replaceable default. On a conflict for one class, facet and scope, the higher role wins before rank applies. `MEDULLA-SRC-AUTH-R005.1` documents the later tie-break steps.
-- [ ] **MEDULLA-SRC-AUTH-R010.3:** Wiring. `role_order` attaches in `select_sources` at `crates/medulla-virtual-graph/src/source_selection.rs:172`. No production caller of `select_sources` exists today; every call is in its own tests. This row creates the call site in `crates/medulla-federation/src/federation.rs`, where `MEDULLA-SRC-AUTH-R004.6` builds the `ConnectedSources` view for the served federated query.
-- [ ] **MEDULLA-SRC-AUTH-R010.4:** Refusal. A question that needs current state must not be answered from an `inspiration` source. Selection must return `Abstained` with reason `RoleInsufficient` naming the class and the source. This extends the reason enum of `MEDULLA-SRC-AUTH-R006.1`.
-- [ ] **MEDULLA-SRC-AUTH-R010.5:** Evidence. Add `Premise::Role{source, role, preferred_over}` beside `Premise` at `crates/medulla-virtual-graph/src/source_selection.rs:26`. The audit of `MEDULLA-SRC-AUTH-R007` must list the preferred and the displaced source with their roles.
-- [ ] **MEDULLA-SRC-AUTH-R010.6:** Hot-path proof. The entry point is the served cross-source report operation. The test attaches two sources that conflict on one concept: one `live_truth`, one `historical_context`. The test passes through the wired call site in `federation.rs`. It observes that `sources_used` names the live source and lists the other as displaced.
-- [ ] **MEDULLA-SRC-AUTH-R011:** Untrusted taint mark on content that enters a run.
-- [ ] **MEDULLA-SRC-AUTH-R011.1:** Model. Add `vg:trustMark` on content nodes in `crates/medulla-core/ontology/virtual_graph-v1.ttl`, with closed values `trusted` and `untrusted`. Add `TrustMark` in `crates/medulla-virtual-graph/src/source_selection.rs` beside `SourceRole` of `MEDULLA-SRC-AUTH-R010.1`. Proving test: `crates/medulla-virtual-graph/src/source_selection.rs::tests::trust_mark_round_trips`.
-- [ ] **MEDULLA-SRC-AUTH-R011.2:** Behavior. Add `mark_for_origin(origin, role) -> TrustMark`. The default marks content from a tool result, a retrieved document or an upload as `untrusted`. Content from a `live_truth` source with an approved mapping is `trusted`. Derived content is `untrusted` when any input is `untrusted`. Each rule is a named replaceable default. Proving test: `crates/medulla-virtual-graph/src/source_selection.rs::tests::derived_content_inherits_untrusted`.
-- [ ] **MEDULLA-SRC-AUTH-R011.3:** Wiring. `mark_for_origin` attaches in `select_sources` at `crates/medulla-virtual-graph/src/source_selection.rs:172` for source content, and in the `AddNode` arm at `crates/medulla-h-graph/src/graph_ops/gateway_graph.rs:62` for content written by a run. No production caller of `select_sources` exists today, and `MEDULLA-SRC-AUTH-R010.3` creates that call site. This row adds the `AddNode` call. Proving test: `crates/medulla-h-graph/src/graph_ops/gateway_graph.rs::tests::add_node_stamps_trust_mark`.
-- [ ] **MEDULLA-SRC-AUTH-R011.4:** Refusal. A write that lowers a mark from `untrusted` to `trusted` must be refused with `TRUST_MARK_DOWNGRADE_REFUSED` unless it carries an operator approval identifier. The refusal names the node and the missing approval. Proving test: `crates/medulla-virtual-graph/src/source_selection.rs::tests::downgrade_without_approval_refused`.
-- [ ] **MEDULLA-SRC-AUTH-R011.5:** Evidence. Each stored mark must carry `:markedBy` (the rule name) and `:markedAtGeneration`. A read of the content must return the mark with it. Proving test: `crates/medulla-virtual-graph/src/source_selection.rs::tests::mark_carries_rule_and_generation`.
-- [ ] **MEDULLA-SRC-AUTH-R011.6:** Hot-path proof. The entry point is the served graph write operation, the `AddNode` wire method. The test writes a node from a tool result, reads it back, then tries a downgrade. The call passes through `crates/medulla-h-graph/src/graph_ops/gateway_graph.rs:62`. It observes `untrusted` on the read and the typed refusal. Proving test: `tests/federated/test_trust_mark_served.py::test_tool_result_is_untrusted_and_sticky`.
+## Tasks
+
+- [ ] T001 [US1] MEDULLA-SRC-AUTH-R001.1 Add class `vg:SourceAuthority` with `vg:authoritativeSource`, `vg:authorityFor`, `vg:authorityRank`
+- [ ] T002 [US1] MEDULLA-SRC-AUTH-R001.2 Add `vg:authorityFacet` and `vg:authorityMapping`
+- [ ] T003 [US1] MEDULLA-SRC-AUTH-R001.3 Add `vg:scopeTenant`, `vg:scopePartition`, `vg:freshnessMaxAgeSeconds`
+- [ ] T004 [US1] MEDULLA-SRC-AUTH-R001.4 Add `vg:authorityContract` and `vg:allowFallback`
+- [ ] T005 [US1] MEDULLA-SRC-AUTH-R001.5 Add `vg:materialisation` and `vg:materialisationReason`
+- [ ] T006 [US1] MEDULLA-SRC-AUTH-R001.6 Add `vg:foreignSourceName` on `vg:SourceConnection`; widen the domain of `vg:approved` to `vg:SourceAuthority`
+- [ ] T007 [US1] MEDULLA-SRC-AUTH-R002.1 Shape: required cardinalities and node kinds
+- [ ] T008 [US1] MEDULLA-SRC-AUTH-R002.2 Shape: mapping belongs to the named source and maps the named class
+- [ ] T009 [US1] MEDULLA-SRC-AUTH-R002.3 Shape: a facet must be projected by the mapping
+- [ ] T010 [US1] MEDULLA-SRC-AUTH-R002.4 Shape: contract kind agrees with the connection's source kind
+- [ ] T011 [US1] MEDULLA-SRC-AUTH-R002.5 Shape: accelerated materialisation needs reason, freshness bound and connection capability `copy`
+- [ ] T012 [US1] MEDULLA-SRC-AUTH-R002.6 Shape: equal-rank claims by different sources on one (class, facet, scope) are refused inside one graph
+- [ ] T013 [US2] MEDULLA-SRC-AUTH-R003.1 Declare kind `governed.source-authority` with approver scope `governance:approve-source-authority` in `GOVE...
+- [ ] T014 [US2] MEDULLA-SRC-AUTH-R003.2 Attach refuses `vg:approved true` inside a `Pack` or `Ingestion` origin schema source
+- [ ] T015 [US2] MEDULLA-SRC-AUTH-R003.3 AttachApproved accepts an authority candidate bound to its digest
+- [ ] T016 [US2] MEDULLA-SRC-AUTH-R003.4 Planner derives effectiveness from origin, not from the flag
+- [ ] T017 [US2] MEDULLA-SRC-AUTH-R003.5 Proposed rows are listed, never selected
+- [ ] T018 [US3] MEDULLA-SRC-AUTH-R004.1 Add `AuthorityRow` and `with_authority` to `CoverageFixture`; replace the silent `insert` overwrite by a li...
+- [ ] T019 [US3] MEDULLA-SRC-AUTH-R004.2 Implement `Premise::Authority` with row, source, class, facet, rank, scope, origin, generation
+- [ ] T020 [US3] MEDULLA-SRC-AUTH-R004.3 Implement `Covered` gains `alternates`; order candidates by rank
+- [ ] T021 [US3] MEDULLA-SRC-AUTH-R004.4 Superclass authority is inherited; a subclass row overrides it
+- [ ] T022 [US3] MEDULLA-SRC-AUTH-R004.5 Live read: parse authority rows from the composed graph schema sources
+- [ ] T023 [US3] MEDULLA-SRC-AUTH-R004.6.1 Serve SourceCoverage and create the first production caller of select_sources
+- [ ] T024 [US3] MEDULLA-SRC-AUTH-R004.7 Facet-aware selection: a question reading property `p` uses the facet row for `p` before the class row
+- [ ] T025 [US3] MEDULLA-SRC-AUTH-R005.1 Order: facet over class over nearest superclass
+- [ ] T026 [US3] MEDULLA-SRC-AUTH-R005.2 Scope specificity: matching tenant and partition beat unscoped
+- [ ] T027 [US3] MEDULLA-SRC-AUTH-R005.3 Equal everything, different sources: `Abstained::Ambiguous` listing both rows; never choose by name
+- [ ] T028 [US3] MEDULLA-SRC-AUTH-R005.4 Implement `Premise::Tiebreak { winner, loser, rule }` records the deciding step
+- [ ] T029 [US3] MEDULLA-SRC-AUTH-R006.1 **Add `CoverageResult::Abstained { class, facet, reason, source, premises }` and the reason enum `Un
+- [ ] T030 [US3] MEDULLA-SRC-AUTH-R006.2 Unconnected rank-1 authority abstains naming source and concept
+- [ ] T031 [US3] MEDULLA-SRC-AUTH-R006.3 Implement `allowFallback` tries the next ordered alternate and records `FallbackFrom`
+- [ ] T032 [US3] MEDULLA-SRC-AUTH-R006.4 Freshness: a stale copy falls back to live; stale and no live route abstains `Stale`
+- [ ] T033 [US3] MEDULLA-SRC-AUTH-R006.5 No authority row: one approved mapping serves with `Premise::Implicit`; several abstain `Ambiguous`
+- [ ] T034 [US4] MEDULLA-SRC-AUTH-R007.1 Add `AuthorityAudit` and `AuditEntry` types
+- [ ] T035 [US4] MEDULLA-SRC-AUTH-R007.2 Build the audit from verdicts and premises only
+- [ ] T036 [US4] MEDULLA-SRC-AUTH-R007.3 Audit lists `not_used` rows with reason (including `Proposed`)
+- [ ] T037 [US4] MEDULLA-SRC-AUTH-R007.4 Wire the audit into the report's sources_used
+- [ ] T038 [US3] MEDULLA-SRC-AUTH-R008.1 Selection reports `mode: live` for a `virtual` row and refuses a copy route for it
+- [ ] T039 [US3] MEDULLA-SRC-AUTH-R008.2 An `accelerated` row resolves through `AccelerationPolicy` and carries its reason into the audit
+- [ ] T040 [US3] MEDULLA-SRC-AUTH-R009.1 Fixture: ServiceNow rank 1 and PagerDuty rank 2 for `:Incident`
+- [ ] T041 [US3] MEDULLA-SRC-AUTH-R009.2 Decisive test: swapping two ranks changes `sources_used` with equal query text
+- [ ] T042 [US3] MEDULLA-SRC-AUTH-R009.4 Served decisive test: swapping two ranks changes sources_used
+- [ ] T043 [US5] MEDULLA-SRC-AUTH-R010.1 Model
+- [ ] T044 [US5] MEDULLA-SRC-AUTH-R010.2 Behavior
+- [ ] T045 [US5] MEDULLA-SRC-AUTH-R010.3 Wire source roles into the served selection call
+- [ ] T046 [US5] MEDULLA-SRC-AUTH-R010.4 Refusal
+- [ ] T047 [US5] MEDULLA-SRC-AUTH-R010.5 Evidence
+- [ ] T048 [US5] MEDULLA-SRC-AUTH-R010.6 Hot-path proof for source roles
+- [ ] T049 [US5] MEDULLA-SRC-AUTH-R011.1 Model
+- [ ] T050 [US5] MEDULLA-SRC-AUTH-R011.2 Behavior
+- [ ] T051 [US5] MEDULLA-SRC-AUTH-R011.3 Stamp the trust mark in the mutation gateway
+- [ ] T052 [US5] MEDULLA-SRC-AUTH-R011.4 Refusal
+- [ ] T053 [US5] MEDULLA-SRC-AUTH-R011.5 Evidence
+- [ ] T054 [US5] MEDULLA-SRC-AUTH-R011.6 Hot-path proof for the trust mark
+- [ ] T055 [US2] MEDULLA-SRC-AUTH-R801 Reviewed policy source bound to the active policy
