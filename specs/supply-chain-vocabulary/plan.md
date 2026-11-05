@@ -1,18 +1,55 @@
-# MEDULLA-SUPPLY-VOCAB — Design and implementation plan
+# MEDULLA-SUPPLY-VOCAB — Implementation plan
 
-Governing spec: [spec.md](spec.md).
+Governing spec: [spec.md](spec.md). Rows: [requirements.md](requirements.md).
 
-## Problem and evidence
+## Summary
 
-`specs/cross-source-competency/plan.md` lists as MISSING: `:Supplier`, `:SupplyChainItem`, `:SoftwareComponent`, `:ComponentVersion`, `:Vulnerability`, `:usesComponent`, `:suppliesService`, `:CustomerContract`, `:ChangeRequest`, `:coversService`, host temperature and capacity-limit terms, and a `:Customer` class. The design-baseline audit of `crates/medulla-core/ontology/` sharpened this:
+The cross-source question "how does the supply chain affect our services?" needs a shared vocabulary that no single connector owns. This plan holds that vocabulary: the physical and software supply-chain terms in `supply_chain-v1.ttl`, the commercial terms in `commercial-v1.ttl`, host limits in `infrastructure-v1.ttl`, their SHACL shapes, the `vg:VirtualMapping` fixtures per source concept, the blocking keys for entity resolution, the class-only impact query and the ecosystem package risk function. It reuses the existing `kg:` and `infra:` classes, the `CoreSpec` registry of `GraphSchemaSources` and the impact handler; it adds no store and copies no source data.
 
-- `Supplier`, `SupplyChain`, `Vulnerability`, `SoftwareComponent` and `ComponentVersion` have no class declaration in any medulla-core `.ttl`. `Customer` appears only in a comment (`archimate-v1.ttl:15`, "an ERPNext :Employee or :Customer").
-- The connectors already declare several of these **in the same `kg#` namespace** (`http://knuckles.team/kg#`): `erpnext.ttl` declares `:Supplier`, `:Item`, `:PurchaseOrder`, `:Customer`, `:suppliedBy` (domain `:PurchaseOrder`, range `:Supplier`); `dockerhub_api` ontology declares `:Vulnerability` and `:hasVulnerability` (`ContainerImage` to `Vulnerability`, `dockerhub_api/ontology/*.ttl:40,76`); `container-manager-mcp` `container.ttl:83` declares `:usesImage`. medulla-core must declare the same IRIs so the connector ontologies merge instead of forking.
-- `:Change` already exists (`archimate-v1.ttl:33`, a ServiceNow change request, subclass of `:BusinessProcess`), and `:Incident` exists twice: `kg#Incident` (`archimate-v1.ttl:40`, ServiceNow, subclass of `:ApplicationEvent`) and `infra:Incident` (`infrastructure-v1.ttl:98`, a correlated health event). A new `:ChangeRequest` duplicates `:Change`.
-- Namespace split: `infrastructure-v1.ttl` uses `@prefix : <http://knuckles.team/kg/infrastructure#>` (`:Service` line 614, `:Host` 520, `:Rack` 619, `:ContainerImage` 34, `:runsOn` 411, `:dependsOn` 204, `:buildsImageFor` 169, `:affectsEntity` 139), while `archimate-v1.ttl`, `trm-v1.ttl` (`:Vendor` 298, `:TechnologyProduct` 336, `:AssetInstance`) and `core-foundation-v1.ttl` (`:Organization` 660, `:supports` 575) use `kg#`. Terms below are written with `kg:` and `infra:` prefixes to avoid the ambiguity the cross-source plan has.
-- Host limits: `infrastructure-v1.ttl` has `:capacityTb` (storage arrays only) and no temperature or limit terms; fan-manager's thermal data is only referenced in comments.
+## Technical Context
 
-## Architecture
+- **Language/Version**: Turtle ontology and shapes files; Rust 2021 edition on the pinned toolchain for the tests and the propagation function.
+- **Primary Dependencies**: `medulla-core`, `medulla-graph-core`, `medulla-rdf`, `medulla-shacl`, `medulla-h-mining`, `medulla-result-types`.
+- **Storage**: Core schema sources compiled into the binary; no store.
+- **Testing**: Parser, reasoner and shape tests in `crates/medulla-core/tests/` and `crates/medulla-rdf/tests/`; a served test in `crates/medulla-h-mining`.
+- **Target Platform**: Linux x86_64 and aarch64 hosts.
+- **Project Type**: Ontology files plus library crates.
+- **Performance Goals**: `propagate_package_risk` finishes a 10000-package chain at p99 50 ms (`MEDULLA-SUPPLY-VOCAB-R009.6`).
+- **Constraints**: One core module constrains each property; shared property domains never narrow; no connector name in a class.
+- **Scale/Scope**: 54 leaf rows over 6 user stories.
+
+## Constitution Check
+
+- **R-I. The engine is native Rust and the only fact store**: pass. Terms live in core sources; mappings stay virtual.
+- **R-II. Every wait has a deadline**: pass. Traversal is depth-bounded.
+- **R-III. Every row sets budgets and names a benchmark**: pass. `MEDULLA-SUPPLY-VOCAB-R009.6` holds the budget and the nightly group.
+- **R-IV. Crates are small, layered and cut over hard**: pass. Rows name post-split crates; `medulla-h-mining` adds one `medulla-core` dependency.
+- **Organization standards**: pass. Rows follow the spec standard and the wording standard.
+
+## Project Structure
+
+```text
+crates/medulla-core/ontology/supply_chain-v1.ttl           existing: supply-chain terms
+crates/medulla-core/ontology/supply_chain-v1.shapes.ttl    existing: shapes, wired by R001.4
+crates/medulla-core/ontology/commercial-v1.ttl             existing: commercial terms
+crates/medulla-core/ontology/commercial-v1.shapes.ttl      existing: commercial shapes
+crates/medulla-core/ontology/infrastructure-v1.ttl         existing: host limit terms
+crates/medulla-core/ontology/infrastructure-v1.shapes.ttl  existing: HostLimitShape
+crates/medulla-graph-core/src/graph/schema_sources.rs      existing: CoreSpec entries
+crates/medulla-core/src/ecosystem.rs                       existing: propagate_package_risk
+crates/medulla-core/tests/                                 existing: vocabulary, fixtures, blocking keys
+crates/medulla-rdf/tests/                                  existing: declaration and reasoner tests
+crates/medulla-h-mining/src/mining/impact.rs               existing: ecosystem branch added
+crates/medulla-result-types/src/compute_result/mining/impact.rs  existing: EcosystemQuery added
+```
+
+## Phase 0: Research
+
+none
+
+## Phase 1: Design
+
+### Architecture
 
 Owner of every term: `Medulla`, `crates/medulla-core/ontology/`. Sources keep their data. Each source's ontology and access contract are attached and a `vg:VirtualMapping` (`virtual_graph-v1.ttl:107`, `vg:mapsOntologyClass` line 72, `vg:approved` line 94) maps its native entity to these classes. Source choice comes from `vg:SourceAuthority` rows (`MEDULLA-CQ-XSRC-R001`), planning from `MEDULLA-FEDERATED-QUERY-R072/R073`.
 
@@ -25,20 +62,11 @@ question "how does the supply chain affect our services?"
   -> rows + freshness + abstentions -> SupplyChainImpactReport (MEDULLA-CQ-XSRC-R006)
 ```
 
-## Shared-term delivery stages
-
-`MEDULLA-SUPPLY-VOCAB-R001.1` preserves two separate acceptance stages:
-
-1. `MEDULLA-SUPPLY-VOCAB-R001.1.1` adds the shared ontology file and native production-parser tests for class declarations, superclass triples, labels, property domain/range and absence of a `suppliedBy` redeclaration. This producer stage does not install the file in the engine catalog.
-2. `MEDULLA-SUPPLY-VOCAB-R001.1.2` remains open until the default `GraphSchemaSources` catalog loads and validates that file and the native reasoner proves Supplier-to-Vendor and domain/range entailment, including the negative Vendor-to-Supplier case.
-
-The parent remains incomplete until both stages pass. A parsed declaration is not evidence of live catalog installation or reasoner execution.
-
-## Vocabulary
+### Vocabulary
 
 Prefixes: `kg:` = `http://knuckles.team/kg#`; `infra:` = `http://knuckles.team/kg/infrastructure#`. All new classes are `owl:Class` with `rdfs:label` and a BFO parent consistent with neighbours.
 
-### Physical and commercial supply chain — new file `supply_chain-v1.ttl` (prefix `:` = `kg:`)
+#### Physical and commercial supply chain — new file `supply_chain-v1.ttl` (prefix `:` = `kg:`)
 
 | Term | Kind | Domain to range / parent | Note |
 |---|---|---|---|
@@ -54,7 +82,7 @@ Prefixes: `kg:` = `http://knuckles.team/kg#`; `infra:` = `http://knuckles.team/k
 
 Reuse, not redefinition: `kg:suppliedBy` is **not** redeclared in this work; trm-v1.ttl already declares it for TechnologyProduct to Vendor. `erpnext.ttl` fixes its domain to `:PurchaseOrder`; a shared property must not be constrained by one module (the `trm-v1.ttl` `trmCurrentValue` precedent). The cross-source spec's "`:suppliedBy` item to supplier" is replaced by `kg:suppliesItem` (Decision D5).
 
-### Software supply chain — same file
+#### Software supply chain — same file
 
 | Term | Kind | Domain to range / parent | Note |
 |---|---|---|---|
@@ -75,7 +103,7 @@ Reuse, not redefinition: `kg:suppliedBy` is **not** redeclared in this work; trm
 
 `kg:vulnerabilityCount` in `trm-v1.ttl` is left unchanged.
 
-### Commercial — new file `commercial-v1.ttl`
+#### Commercial — new file `commercial-v1.ttl`
 
 | Term | Kind | Domain to range / parent | Note |
 |---|---|---|---|
@@ -88,11 +116,11 @@ Reuse, not redefinition: `kg:suppliedBy` is **not** redeclared in this work; trm
 
 No `:ChangeRequest` class is added (Decision D3).
 
-### Capability link — in `commercial-v1.ttl`
+#### Capability link — in `commercial-v1.ttl`
 
 `kg:supportsCapability`: `infra:Service` to `kg:BusinessCapability` (`archimate-v1.ttl:19`). See Decision D1.
 
-### Host limits — additions to `infrastructure-v1.ttl`
+#### Host limits — additions to `infrastructure-v1.ttl`
 
 | Term | Kind | Domain to range | Note |
 |---|---|---|---|
@@ -104,7 +132,7 @@ No `:ChangeRequest` class is added (Decision D3).
 
 "Over limit" is the query condition `?r > ?l`; no `OverLimit` class is stored (a stored breach would go stale between fetches).
 
-### SHACL (files `supply_chain-v1.shapes.ttl`, `commercial-v1.shapes.ttl`, host shape in `infrastructure-v1.shapes.ttl` created if absent)
+#### SHACL (files `supply_chain-v1.shapes.ttl`, `commercial-v1.shapes.ttl`, host shape in `infrastructure-v1.shapes.ttl` created if absent)
 
 - `SupplierShape`: `rdfs:label` min 1. `SupplyChainItemShape`: label min 1, at most one `suppliesItem` inverse not required.
 - `ComponentVersionShape`: exactly one `versionOf` (class `SoftwareComponent`), exactly one `versionString`.
@@ -114,7 +142,7 @@ No `:ChangeRequest` class is added (Decision D3).
 - `SupportsCapabilityShape`: subject `infra:Service`, object `BusinessCapability`.
 - `HostLimitShape`: exactly one `limitOf`, one `limitKind` (`sh:in`), one `readingValue`, one `limitValue`.
 
-## Entity resolution across sources
+### Entity resolution across sources
 
 Mechanism: `MEDULLA-UNIFIED-DATA-PLANE-R030` (blocking, field similarity, Fellegi-Sunter, proposals inactive until approved; `crates/medulla-types/src/entity_link_proposal.rs`, `assert_same_as`). Its `AttachedApplication` enum covers Gramps, Immich, Twenty and Firefly only; the consumers `MEDULLA-CQ-XSRC-R004.3/.4` extend it. This spec adds only the **blocking keys per concept** as a data fixture (`crates/medulla-core/tests/fixtures/supply_chain_blocking_keys.ttl`):
 
@@ -128,15 +156,15 @@ Mechanism: `MEDULLA-UNIFIED-DATA-PLANE-R030` (blocking, field similarity, Felleg
 
 A digest match is an exact key; a name-only match is always a proposal, never auto-approved.
 
-## Wiring
+### Wiring
 
-- Ontology load: medulla-core loads every `crates/medulla-core/ontology/*-v1.ttl`. New files follow the `-v1` naming and are registered wherever the existing files are enumerated (find the list with `rg -n "company_infra-v1" crates/`).
+- Ontology load: Each `crates/medulla-core/ontology/*-v1.ttl` file is a `CoreSpec` entry in `crates/medulla-graph-core/src/graph/schema_sources.rs`; the `supply_chain`, `commercial` and `infrastructure` entries compose into every graph.
 - Mappings: `vg:VirtualMapping` fixtures under `crates/medulla-core/tests/fixtures/` loaded by the same harness as `MEDULLA-CQ-XSRC-R002.7`.
 - Authority rows (which source wins per class): `MEDULLA-CQ-XSRC-R002.5/.6`, `R003.1-.3`; this spec supplies the per-concept source table below, they declare the rows.
-- Scopes: no new scope; reads use the existing federated-query read scope in `MEDULLA-IDENTITY-001`.
+- Scopes: no new scope; reads use the existing federated-query read scope in the identity registry (`MEDULLA-IDENTITY-R004`).
 - Connector side (cross-repo, agent-packages): resolve `schema_mappings.<X>.ontology_class` in each `connector_manifest.yml` to the medulla-core classes; the erpnext manifest currently lists `Supplier`, `Item`, `PurchaseOrder`, `Customer` as `ontology_class = None [UNRESOLVED]` (`erpnext-agent/connector_manifest.yml` review_todos).
 
-## Decisions
+### Decisions
 
 **D1. Service to business capability: DECIDED `kg:supportsCapability` (new), not `:supports`, not a bare ArchiMate relationship.**
 Evidence: `:supports` (`core-foundation-v1.ttl:575`) is defined as Evidence to claim ("SUPPORTS edge convention"); reusing it for service to capability mixes two meanings. `archimate-v1.ttl` declares only element anchors (`:BusinessCapability` line 19, `:Change` 33) and **no relationship properties**; the relationships live in the archimate-mcp ontology as reified `:ArchimateRelationship` plus direct `:relRealization`/`:relServing` (`archimate-mcp/.../ontology/archimate.ttl:106,397,402`), needing two hops and a model to be loaded. LeanIX uses a connector-side `supports` (Application to BusinessCapability, `leanix-agent/connector_manifest.yml:13`). Decision: one direct property, filled by three mappings (LeanIX `supports`; ArchiMate Realization or Serving from an application element to a capability; a CMDB business-service relation). Alternative: the ArchiMate relationship as the only form, rejected because it makes the report depend on an authored model. Revisit if archimate becomes the authority; then declare `kg:supportsCapability rdfs:subPropertyOf` nothing and keep the mapping.
@@ -150,7 +178,7 @@ Tool `erpnext_agent_resource` (`erpnext_agent/mcp/mcp_resource.py:16`), actions 
 **D2c. container-manager deployed workloads: CONFIRMED operation, no access contract.**
 `cm_k8s_workloads` actions `list_pods`, `list_statefulsets` (`mcp/mcp_k8s_workloads.py:372`), container tool action `list_containers` (`mcp_server.py:426`), `cm_image_operations` action `list_images` (`mcp_server.py:301`); `container.ttl:83` has `usesImage`; manifest resources `Pod`, `Deployment`, `K8sService`, `SwarmService`. No `ac:operation` access contract under `container_manager_mcp/ontology/` (row R006.1, agent-packages). A `list_deployments` action was not found in the workloads tool; Deployment-level data is reached through `list_pods` plus `managedByDeployment`. portainer-agent (`Service`, `Image`, `Container`) is the rank-2 source.
 
-**D3. `:ChangeRequest`: DECIDED not added commercially.** `kg:Change` (`archimate-v1.ttl:33`) is the ServiceNow change request and is a `:BusinessProcess`. The cross-source requirement `MEDULLA-CQ-XSRC-R008.3.1` reads `:CustomerContract` and `:coversService` only; `service_operations-v1.ttl` retains its distinct `:ChangeRequest` class for IT4IT `:touches` semantics. This amendment is recorded by `MEDULLA-SUPPLY-VOCAB-R003.6`. Alternative: `owl:equivalentClass`, rejected as a parallel name.
+**D3. `:ChangeRequest`: DECIDED not added commercially.** `kg:Change` (`archimate-v1.ttl:33`) is the ServiceNow change request and is a `:BusinessProcess`. The cross-source requirement `MEDULLA-CQ-XSRC-R008.3.1` reads `:CustomerContract` and `:coversService` only; `service_operations-v1.ttl` retains its distinct `:ChangeRequest` class for IT4IT `:touches` semantics. This amendment is recorded here. Alternative: `owl:equivalentClass`, rejected as a parallel name.
 
 **D4. Which sources can supply each concept (CONFIRMED from tool lists):**
 
@@ -180,7 +208,7 @@ Tool `erpnext_agent_resource` (`erpnext_agent/mcp/mcp_resource.py:16`), actions 
 
 **D6. Limits are declared, readings are fetched.** A temperature limit comes from the fan-manager policy field; capacity limits (for example 85 percent of `capacityBytes`) are `infra:HostLimit` rows declared in a small ontology-side threshold table (`infra:limitValue` on a declared `HostLimit`), because no connected source provides one. Alternative (use IPMI sensor critical thresholds) rejected: not exposed by any connector read here.
 
-## Worked example
+### Worked example
 
 Question: "Which services are exposed by a vulnerable component supplied by a vendor we also buy hardware from?"
 
@@ -198,15 +226,11 @@ SELECT ?service ?supplier ?comp ?ver ?cve ?sev WHERE {
 
 Trace: `kg:Vulnerability` and `kg:ComponentVersion` select dockerhub (`hub_scout cves`, `sbom`); `infra:Service` selects container-manager plus uptime; `kg:Supplier` selects erpnext. A docker namespace "acme" and an ERPNext supplier "Acme Corp" are joined only if `MEDULLA-UNIFIED-DATA-PLANE-R030` produced an approved `owl:sameAs`; otherwise the row is returned with `abstention: UnapprovedLink`. Answer rows: `{service: "git", supplier: "Acme Corp", comp: "openssl", ver: "3.0.1", cve: "CVE-...", sev: "high", sources: [dockerhub, container-manager, erpnext]}`.
 
-## Quality and release gates
-
-Ontology parse test and shape tests in `crates/medulla-core/tests/`; `cargo test -p medulla-core` is not run by this spec lane (spec-only); implementers run it per child. Gates: repo CCCC, jscpd, dupehound, KISS. No new Rust module is needed; fixtures are `.ttl`.
-
-## Out of scope
+### Out of scope
 
 Copying source data. The authority vocabulary (`MEDULLA-CQ-XSRC-R001`). The federated planner. Entity-resolution scoring. The report type. Building new connector tools (only mapping and access-contract rows in agent-packages).
 
-## Commercial acceptance
+### Commercial acceptance
 
 Rows `MEDULLA-SUPPLY-VOCAB-R003.7` through `R003.17` own commercial declarations and acceptance.
 Erpnext, Salesforce, and Twenty use `commercial-v1.ttl`; `MEDULLA-CQ-CONN-R083` owns their mapping acceptance.
@@ -222,9 +246,9 @@ Contact joins use approved opaque identity links, never raw email matching.
 Connector payload availability remains unverified and cannot be inferred from ontology declarations.
 Live competency tests must abstain when required source fields or approved mappings are absent.
 
-## Ecosystem package risk propagation (R009)
+### Ecosystem package risk propagation (R009)
 
-Data flow: served impact operation → `handle_impact` (`crates/medulla-h-mining/src/mining/impact.rs:264`) → `propagate_package_risk` (new, `crates/medulla-core/src/ecosystem.rs`) → `PackageImpact` list with paths.
+Data flow: served impact operation → `handle_impact` (`crates/medulla-h-mining/src/mining/impact.rs:268`) → `propagate_package_risk` (`crates/medulla-core/src/ecosystem.rs:69`) → `PackageImpact` list with paths.
 
 Types: `:EcosystemPackage`, `:affectsPackage`, `PackageImpact { dependent, path, severity }` and `PackageRefusal::UnknownPackage`.
 
@@ -236,4 +260,32 @@ Reused: `:dependsOn`, the impact handler and the supply-chain ontology. New: one
 
 Decision: reverse traversal at query time. Rejected: materialize every transitive edge, because each change rewrites every materialized edge.
 
-Cross-repository rows: the `AU-ECOSYSTEM` rows that ingest package manifests depend on the class name `:EcosystemPackage`.
+Cross-repository: the harness rows that ingest package manifests depend on the class name `:EcosystemPackage`.
+
+## Phase 2: Task approach
+
+`tasks.md` has one task per leaf row. Order: registration and declarations (R001, R002, R003), shapes, host limits (R004), mapping fixtures (R005, R006), blocking keys (R007), the impact query and recorded responses (R008), then ecosystem risk (R009). Rows on different files run in parallel.
+
+## Complexity Tracking
+
+none
+
+## Build contract
+
+- `cargo clippy --workspace --all-targets -- -D warnings` and `cargo fmt --check` pass for every touched crate.
+- The architecture, complexity and duplication gates of `.config/pre-commit.yaml` pass with no baseline entry and no suppression.
+- Every new `.ttl` parses with the native parser; every shape accepts a valid fixture and refuses each fault.
+- A public item in `medulla-core` has a non-test caller under a handler or server crate; `handle_impact` calls `propagate_package_risk`.
+- Spec rows pass `spec-standard`, `plan-conformance` and `spec-decomposition` with zero findings.
+
+## Production caller chain
+
+- Ontology terms: `crates/medulla-graph-core/src/graph/schema_sources.rs` (`CoreSpec` `supply_chain` at line 1162, `commercial` at line 1155, `infrastructure` at line 893) → `GraphSchemaSources::default()` → the composed schema of every graph → `validate_entering_schema` (`crates/medulla-server-api/src/schema_compose.rs:84`).
+- Mapping fixtures: attached as operator schema sources → `fixture_from_schema_sources` (`crates/medulla-virtual-graph/src/source_selection/live.rs:198`) → `select_sources_with` for `Method::SourceCoverage` (`MEDULLA-SRC-AUTH-R004.6.1`).
+- Ecosystem risk: `Method::MineRiskPropagation` → `crates/medulla-h-mining/src/mining/gateway_derived.rs:281` → `insight.rs::handle_risk_propagation` (line 205) → `impact.rs::handle_impact` (line 268) → `medulla_core::ecosystem::propagate_package_risk_with`.
+- Obsolete path to delete: none.
+
+## Cross-repo seams
+
+- Connector class resolution and access contracts: `MEDULLA-SUPPLY-VOCAB-R005` and `MEDULLA-SUPPLY-VOCAB-R006` provide the classes, `CONN-ERPNEXT-AGENT-CONNECTOR-CONTENT-R002` and `CONN-SALESFORCE-AGENT-CONNECTOR-CONTENT-R002` consume them. Contract: [connector-class-resolution.md](contracts/connector-class-resolution.md).
+- Mapping acceptance: `MEDULLA-SUPPLY-VOCAB-R003.13` provides the registered commercial module, `MEDULLA-CQ-CONN-R083` consumes it. Contract: [commercial-mapping-acceptance.md](contracts/commercial-mapping-acceptance.md).
