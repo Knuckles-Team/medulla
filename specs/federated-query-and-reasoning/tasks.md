@@ -1,467 +1,435 @@
 # Delivery tasks
 
-Check boxes describe work remaining for this combined contract. They do not certify acceptance. Assign one or more stable IDs to each PR. Record implementation details and acceptance evidence before closing each task.
+Check boxes describe work remaining. They do not certify acceptance. Each line names one leaf row of [requirements.md](requirements.md). The first slice is the unblocked frontier: rows with no `Depends on` row. Model and wiring rows come before the rows that read their output.
 
-## UQL and served query
+## User Story 1: Federated query, UQL surface and pushdown
 
-- [x] Audit the public head for the single read-only UQL method, typed parameters and generated Python sender. Remove any remaining duplicate query-text route. **MEDULLA-FEDERATED-QUERY-R020, MEDULLA-FEDERATED-QUERY-R025, MEDULLA-DURABLE-KERNEL-R023**
-- [x] Close predicate/lexer/source/modality/traversal parity and canonical round-trip exhaustiveness, including generated grammar and feature-gated refusal. **MEDULLA-FEDERATED-QUERY-R021 and related rows (see requirements.md), MEDULLA-TYPED-PACKS-R080, MEDULLA-FEDERATED-QUERY-R061**
-- [x] Complete named subplans, score channels, budgets, proof, explain/profile, KnowledgeSet and shared DecideText lexing; prove served wire parity. **MEDULLA-FEDERATED-QUERY-R006, MEDULLA-FEDERATED-QUERY-R028, MEDULLA-FEDERATED-QUERY-R065, MEDULLA-FEDERATED-QUERY-R067, MEDULLA-FEDERATED-QUERY-R068, MEDULLA-FEDERATED-QUERY-R070, MEDULLA-DECISION-ENGINE-R104**
-- [x] Verify all executable UQL examples and stable error diagnostics against the current grammar. **MEDULLA-FEDERATED-QUERY-R064, MEDULLA-FEDERATED-QUERY-R026**
-- [x] Verify `VALIDATE SHAPE` and graph-free SQL read-only guards with positive and mutation-negative fixtures. **MEDULLA-FEDERATED-QUERY-R005, MEDULLA-FEDERATED-QUERY-R015**
+- [ ] T001 [P] [US1] MEDULLA-FEDERATED-QUERY-R001 Bounded derivation steps in EL+/RL and tableau reasoning
+- [ ] T002 [P] [US1] MEDULLA-FEDERATED-QUERY-R002 Rejection reasons stay out of the core kernel row schema
+- [ ] T003 [P] [US1] MEDULLA-FEDERATED-QUERY-R003 Derivation-step budget is enforced once, not duplicated per path
+- [ ] T004 [P] [US1] MEDULLA-FEDERATED-QUERY-R004 Reasoning projection rebuilds after any skipped event
+- [ ] T005 [P] [US1] MEDULLA-FEDERATED-QUERY-R007 Semantic-index reconciliation tombstones only on a complete proof
+- [ ] T006 [P] [US1] MEDULLA-FEDERATED-QUERY-R009 Durable user-managed graph-index lifecycle
+- [ ] T007 [P] [US1] MEDULLA-FEDERATED-QUERY-R010 Tableau reasoning stays bounded on the shipped core schema
+- [ ] T008 [P] [US1] MEDULLA-FEDERATED-QUERY-R011 EL+/RL reasoning is sound against the shipped ontology corpus
+- [ ] T009 [P] [US1] MEDULLA-FEDERATED-QUERY-R012 Tableau honors AllDisjointClasses and core disjointness facts
+- [ ] T010 [P] [US1] MEDULLA-FEDERATED-QUERY-R013 Foreign-source resolution is scoped to the owning principal
+- [ ] T011 [P] [US1] MEDULLA-FEDERATED-QUERY-R014 Explicit grant-based sharing of a registered foreign source
+- [ ] T012 [P] [US1] MEDULLA-FEDERATED-QUERY-R015 Read-only enforcement at the shared SQL execution path
+- [ ] T013 [P] [US1] MEDULLA-FEDERATED-QUERY-R016 UQL AS OF uses Unix-second timestamps, not ISO dates
+- [ ] T014 [P] [US1] MEDULLA-FEDERATED-QUERY-R017 Dependency tracking covers edge-type and embedding generations
+- [ ] T015 [P] [US1] MEDULLA-FEDERATED-QUERY-R018 Class-level volatility drives invalidation and cache freshness
+- [ ] T016 [P] [US1] MEDULLA-FEDERATED-QUERY-R019 Per-bar signal-state advancement with revisable trend records
+- [ ] T017 [P] [US1] MEDULLA-FEDERATED-QUERY-R020 One query-text method surface, with the legacy method retired
+- [ ] T018 [P] [US1] MEDULLA-FEDERATED-QUERY-R021 Full UQL predicate algebra with SQL-consistent evaluation
+- [ ] T019 [P] [US1] MEDULLA-FEDERATED-QUERY-R022.1 A label Scan matches the engine's label set
+- [ ] T020 [P] [US1] MEDULLA-FEDERATED-QUERY-R023 Every query modality has a published UQL spelling
+- [ ] T021 [P] [US1] MEDULLA-FEDERATED-QUERY-R024 Traversal syntax compiles to one canonical Expand encoding
+- [ ] T022 [P] [US1] MEDULLA-FEDERATED-QUERY-R025 Typed parameter binding end-to-end through the Python client
+- [ ] T023 [P] [US1] MEDULLA-FEDERATED-QUERY-R026 UQL documentation is test-verified with an embedded grammar
+- [ ] T024 [P] [US1] MEDULLA-FEDERATED-QUERY-R027 EXPLAIN, PROFILE and RETURN support multi-stage UQL programs
+- [ ] T025 [P] [US1] MEDULLA-FEDERATED-QUERY-R029 UQL text from graph-exploration clients matches the grammar
+- [ ] T026 [P] [US1] MEDULLA-FEDERATED-QUERY-R030 TSSCAN preserves per-series row identity and full precision
+- [ ] T027 [P] [US1] MEDULLA-FEDERATED-QUERY-R031 Contribution attribution kernels exposed through UQL ATTRIBUTE
+- [ ] T028 [P] [US1] MEDULLA-FEDERATED-QUERY-R033 Barrier-hit and time-to-exhaustion derivations, one shared CDF
+- [ ] T029 [P] [US1] MEDULLA-FEDERATED-QUERY-R034 Motif and discord search over time series, batch and streaming
+- [ ] T030 [P] [US1] MEDULLA-FEDERATED-QUERY-R035 Filtered text search evaluates within the filtered candidate set
+- [ ] T031 [P] [US1] MEDULLA-FEDERATED-QUERY-R036 Bounded, observable graph reopen after a restart
+- [ ] T032 [P] [US1] MEDULLA-FEDERATED-QUERY-R037 Rolling window statistics are both O(1) and numerically exact
+- [ ] T033 [P] [US1] MEDULLA-FEDERATED-QUERY-R038.1 Typed foreign-source capability + cost model proves which pushdown kinds are sound
+- [ ] T034 [P] [US1] MEDULLA-FEDERATED-QUERY-R041 Federation optimizer core drives pushdown decisions for every query
+- [ ] T035 [P] [US1] MEDULLA-FEDERATED-QUERY-R042 OBDA pushes per-predicate scans and semi-join reduction to SQL sources
+- [ ] T036 [P] [US1] MEDULLA-FEDERATED-QUERY-R043 SQL foreign-source connections share the one outbound SSRF guard
+- [ ] T037 [P] [US1] MEDULLA-FEDERATED-QUERY-R044 UQL EXPLAIN and PROFILE surface federation trace and budget hints
+- [ ] T038 [P] [US1] MEDULLA-FEDERATED-QUERY-R045 Foreign rows carry typed columns for filter and projection pushdown
+- [ ] T039 [P] [US1] MEDULLA-FEDERATED-QUERY-R046 `OBDA` pushes `SPARQL` `LIMIT`, `ORDER BY`, aggregates and same-source joins
+- [ ] T040 [P] [US1] MEDULLA-FEDERATED-QUERY-R047 Federation enforces per-source parallelism caps and rate limits
+- [ ] T041 [P] [US1] MEDULLA-FEDERATED-QUERY-R048.1 Typed join-cardinality-statistic model with provenance
+- [ ] T042 [P] [US1] MEDULLA-FEDERATED-QUERY-R049 Foreign query fragment cache is freshness-aware and owner-salted
+- [ ] T043 [P] [US1] MEDULLA-FEDERATED-QUERY-R050 SPARQL SERVICE uses bind joins and pushes FILTER/LIMIT
+- [ ] T044 [P] [US1] MEDULLA-FEDERATED-QUERY-R051 Iceberg scans prune manifests using the final pushed predicates
+- [ ] T045 [P] [US1] MEDULLA-FEDERATED-QUERY-R052 RemoteEngine sources receive pushed key filters and bounded LIMIT
+- [ ] T046 [P] [US1] MEDULLA-FEDERATED-QUERY-R054 `SPARQL` `SERVICE` and peer federation share the one outbound `SSRF` guard
+- [ ] T047 [P] [US1] MEDULLA-FEDERATED-QUERY-R055 SPARQL evaluation binds every value of a multi-valued property
+- [ ] T048 [P] [US1] MEDULLA-FEDERATED-QUERY-R056 Causal-impact p-values reuse the shared numeric tail functions
+- [ ] T049 [P] [US1] MEDULLA-FEDERATED-QUERY-R057 SQL provider module stays within the repository's file-size limit
+- [ ] T050 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.1 Typed NL→UQL disclosure model
+- [ ] T051 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.2.1 Dispatch handler enforces the typed NL budget before parsing
+- [ ] T052 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.2.2.1 Served `NlQueryExplain` returns the executed UQL with the rows
+- [ ] T053 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.2.2.2 Plan-only NL entry point
+- [ ] T054 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.3.1 NL results are never cached on the NL text
+- [ ] T055 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.3.2 No mutating operation is reachable from the NL surface
+- [ ] T056 [P] [US1] MEDULLA-FEDERATED-QUERY-R059 Semantic index lifecycle is fenced, durable and restart-safe
+- [ ] T057 [P] [US1] MEDULLA-FEDERATED-QUERY-R060 Leiden community detection supports a Constant Potts Model quality function
+- [ ] T058 [P] [US1] MEDULLA-FEDERATED-QUERY-R061 One grammar table drives UQL docs, prompts and error messages
+- [ ] T059 [P] [US1] MEDULLA-FEDERATED-QUERY-R062 Streaming memory test measures only its own allocations
+- [ ] T060 [P] [US1] MEDULLA-FEDERATED-QUERY-R063 Leiden provides stable community naming and a connectivity check
+- [ ] T061 [P] [US1] MEDULLA-FEDERATED-QUERY-R064 UQL lexer supports its full token set and structured diagnostics
+- [ ] T062 [P] [US1] MEDULLA-FEDERATED-QUERY-R065 Named UQL sub-plans compile to an ordered plan DAG
+- [ ] T063 [P] [US1] MEDULLA-FEDERATED-QUERY-R066 SPARQL evaluator is split into modules within the file-size limit
+- [ ] T064 [P] [US1] MEDULLA-FEDERATED-QUERY-R067 UQL RETURN exposes multiple named score channels per row
+- [ ] T065 [P] [US1] MEDULLA-FEDERATED-QUERY-R068 UQL supports WITH PROOF for proof-carrying results
+- [ ] T066 [P] [US1] MEDULLA-FEDERATED-QUERY-R069 SQL pushdown batches key lookups and shares rendering with OBDA
+- [ ] T067 [P] [US1] MEDULLA-FEDERATED-QUERY-R070 UQL execution budgets are enforced and reported in EXPLAIN/PROFILE
+- [ ] T068 [P] [US1] MEDULLA-FEDERATED-QUERY-R071 HTTP foreign sources support templated pagination and key placeholders
+- [ ] T069 [P] [US1] MEDULLA-FEDERATED-QUERY-R072.1 Typed model for cross-source coverage, proved against a fixture
+- [ ] T070 [P] [US1] MEDULLA-FEDERATED-QUERY-R073.1 Typed model for operation-bound foreign sources, with refusal tests
+- [ ] T071 [US1] MEDULLA-FEDERATED-QUERY-R073.2 Connection-protocol pushdown matrix
+- [ ] T072 [P] [US1] MEDULLA-FEDERATED-QUERY-R077.1 `ColumnVectorBinding` typed model
+- [ ] T073 [US1] MEDULLA-FEDERATED-QUERY-R077.2 Column vectorization: bind and unbind surface
+- [ ] T074 [US1] MEDULLA-FEDERATED-QUERY-R077.3 Column vectorization: row-write re-embedding hook
+- [ ] T075 [P] [US1] MEDULLA-FEDERATED-QUERY-R077.5 Column vectorization: end-to-end column vector search
+- [ ] T076 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.1.1 Multimodal space: model
+- [ ] T077 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.1.2 Multimodal space: behavior
+- [ ] T078 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.1.3 Multimodal space: wiring
+- [ ] T079 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.1.4 Multimodal space: refusal
+- [ ] T080 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.1.5 Multimodal space: evidence
+- [ ] T081 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.1.6 Multimodal space: hot-path proof
+- [ ] T082 [P] [US1] MEDULLA-FEDERATED-QUERY-R040.1.1 Model of Hard entity and relationship constraints
+- [ ] T083 [P] [US1] MEDULLA-FEDERATED-QUERY-R040.1.2 Constraints: behavior
+- [ ] T084 [P] [US1] MEDULLA-FEDERATED-QUERY-R040.1.3 Constraints: wiring
+- [ ] T085 [P] [US1] MEDULLA-FEDERATED-QUERY-R040.1.4 Constraints: refusal
+- [ ] T086 [P] [US1] MEDULLA-FEDERATED-QUERY-R040.1.5 Constraints: evidence
+- [ ] T087 [P] [US1] MEDULLA-FEDERATED-QUERY-R040.1.6 Constraints: hot-path proof
+- [ ] T088 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.2.1 Model of Independent document-chunk encoding and aggregation
+- [ ] T089 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.2.2 Chunk encoding: window behavior
+- [ ] T090 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.2.3 Chunk encoding: independent per-chunk model calls
+- [ ] T091 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.2.4 Chunk encoding: `mean_chunks` aggregation
+- [ ] T092 [US1] MEDULLA-FEDERATED-QUERY-R039.2.5 Chunk encoding: wiring through the single recipe executor
+- [ ] T093 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.2.6 Chunk encoding: refusal
+- [ ] T094 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.2.7 Chunk encoding: evidence
+- [ ] T095 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.2.8 Chunk encoding: hot-path proof
+- [ ] T096 [P] [US1] MEDULLA-FEDERATED-QUERY-R077.6.1 Column advice: model
+- [ ] T097 [P] [US1] MEDULLA-FEDERATED-QUERY-R077.6.2 Column advice: workload-first behavior
+- [ ] T098 [P] [US1] MEDULLA-FEDERATED-QUERY-R077.6.3 Column advice: wiring
+- [ ] T099 [P] [US1] MEDULLA-FEDERATED-QUERY-R077.6.4 Column advice: refusal
+- [ ] T100 [P] [US1] MEDULLA-FEDERATED-QUERY-R077.6.5 Column advice: evidence
+- [ ] T101 [P] [US1] MEDULLA-FEDERATED-QUERY-R077.6.6 Column advice: hot-path proof
+- [ ] T102 [P] [US1] MEDULLA-FEDERATED-QUERY-R040.2.1 Topic fusion: model
+- [ ] T103 [US1] MEDULLA-FEDERATED-QUERY-R040.2.2 Topic fusion: behavior
+- [ ] T104 [P] [US1] MEDULLA-FEDERATED-QUERY-R040.2.3 Topic fusion: wiring
+- [ ] T105 [P] [US1] MEDULLA-FEDERATED-QUERY-R040.2.4 Topic fusion: refusal
+- [ ] T106 [P] [US1] MEDULLA-FEDERATED-QUERY-R040.2.5 Topic fusion: evidence
+- [ ] T107 [P] [US1] MEDULLA-FEDERATED-QUERY-R040.2.6 Topic fusion: hot-path proof
+- [ ] T108 [US1] MEDULLA-FEDERATED-QUERY-R006.1 Temporal rule-derived facts with persisted origin chain
+- [ ] T109 [P] [US1] MEDULLA-FEDERATED-QUERY-R028.1 Typed `KnowledgeSet` row contract
+- [ ] T110 [US1] MEDULLA-FEDERATED-QUERY-R005.1 Typed consistency-violation matrix on the validation result
+- [ ] T111 [P] [US1] MEDULLA-FEDERATED-QUERY-R040.2.7 Topic fusion: per-document topic responsibilities
+- [ ] T112 [US1] MEDULLA-FEDERATED-QUERY-R053.100 Generated `Cypher` property keys use backtick quoting with a build gate
+- [ ] T113 [US1] MEDULLA-FEDERATED-QUERY-R032.100 Layer- and history-weighted impact in both dependency directions
+- [ ] T114 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.4.1 NL planning context: model
+- [ ] T115 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.4.2 NL planning context: behavior
+- [ ] T116 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.4.3 NL planning context: wiring
+- [ ] T117 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.4.4 NL planning context: refusal
+- [ ] T118 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.4.5 NL planning context: evidence
+- [ ] T119 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.4.6 NL planning context: hot-path proof
+- [ ] T120 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.4.7.1 Snapshot graph and authorized foreign-source grounding
+- [ ] T121 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.4.8 The hint offers mapped connector properties under their ontology names
+- [ ] T122 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.4.9 Inline foreign adapter grounding
+- [ ] T123 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.5 Configurable NL planner request
+- [ ] T124 [US1] MEDULLA-FEDERATED-QUERY-R058.6 NL answers are checked against certified definitions
+- [ ] T125 [US1] MEDULLA-FEDERATED-QUERY-R058.7 A certified correction is recorded as a fact and grounds later planning
+- [ ] T126 [US1] MEDULLA-FEDERATED-QUERY-R058.8 A follow-up question is rewritten to a standalone question before planning
+- [ ] T127 [US1] MEDULLA-FEDERATED-QUERY-R058.9 Conflicting definitions across sources are reported, not merged
+- [ ] T128 [P] [US1] MEDULLA-FEDERATED-QUERY-R053.700 `Trino` and `Spark` sources with idempotent submission: model and behavior
+- [ ] T129 [P] [US1] MEDULLA-FEDERATED-QUERY-R053.701 `Trino` and `Spark` sources: refusal, evidence and hot-path proof
+- [ ] T130 [P] [US1] MEDULLA-FEDERATED-QUERY-R005.700 Graph integrity validation as named shapes: model and behavior
+- [ ] T131 [P] [US1] MEDULLA-FEDERATED-QUERY-R005.701 Graph integrity validation: refusal, evidence and hot-path proof
+- [ ] T132 [US1] MEDULLA-FEDERATED-QUERY-R008.1 NL planner routes catalog questions to CatalogSearch
+- [ ] T133 [P] [US1] MEDULLA-FEDERATED-QUERY-R720.1 Epistemic row fields
+- [ ] T134 [US1] MEDULLA-FEDERATED-QUERY-R720.2 Confidence, belief and decay stages
+- [ ] T135 [US1] MEDULLA-FEDERATED-QUERY-R720.3 Embedding-similarity clustering stage
+- [ ] T136 [US1] MEDULLA-FEDERATED-QUERY-R720.4 Wiring of One UQL plan across graph, vector, SQL, SPARQL and epistemic stages
+- [ ] T137 [US1] MEDULLA-FEDERATED-QUERY-R720.5 Refusal of One UQL plan across graph, vector, SQL, SPARQL and epistemic stages
+- [ ] T138 [US1] MEDULLA-FEDERATED-QUERY-R720.6 Hot-path proof of One UQL plan across graph, vector, SQL, SPARQL and epistemic stages
+- [ ] T139 [P] [US1] MEDULLA-FEDERATED-QUERY-R721.1 Each modality implements the modality contract
+- [ ] T140 [US1] MEDULLA-FEDERATED-QUERY-R721.2 Wiring and store authority
+- [ ] T141 [US1] MEDULLA-FEDERATED-QUERY-R721.3 Refusal of Modalities are views over one RowSet algebra in one store
+- [ ] T142 [US1] MEDULLA-FEDERATED-QUERY-R721.4 Hot-path proof: cross-modal queries with default configuration of Modalities are views over one RowSet algebra in one store
+- [ ] T143 [P] [US1] MEDULLA-FEDERATED-QUERY-R040.5.1 Low-storage ANN: manifest and byte accounting
+- [ ] T144 [P] [US1] MEDULLA-FEDERATED-QUERY-R040.5.2 Low-storage ANN: compact graph artifact
+- [ ] T145 [US1] MEDULLA-FEDERATED-QUERY-R040.5.3 Low-storage ANN: revision-bound regeneration and rescore
+- [ ] T146 [P] [US1] MEDULLA-FEDERATED-QUERY-R040.5.4 Low-storage ANN: bounded embedding provider and cache
+- [ ] T147 [P] [US1] MEDULLA-FEDERATED-QUERY-R040.5.5 Low-storage ANN: optional hub-preserving pruning
+- [ ] T148 [P] [US1] MEDULLA-FEDERATED-QUERY-R040.5.6 Low-storage ANN: authenticated integrated path and measured proof
+- [ ] T149 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.4.7.2.1 Grounding of decision-record identifiers
+- [ ] T150 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.4.7.2.2 Grounding of time-series identifiers
+- [ ] T151 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.4.7.2.3 Grounding of CEP attribute identifiers
+- [ ] T152 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.4.7.2.4 Grounding of UDF identifiers
+- [ ] T153 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.4.7.2.5 Grounding of embedded RDF and SPARQL identifiers
+- [ ] T154 [US1] MEDULLA-FEDERATED-QUERY-R072.2 UnifiedQuery plans sources through the shared source-coverage resolver
+- [ ] T155 [US1] MEDULLA-FEDERATED-QUERY-R073.3 Bind operation-bound `Mcp` sources to a connector call through the outbound guard
+- [ ] T156 [US1] MEDULLA-FEDERATED-QUERY-R720.7 UQL stage REQUIRE NONEMPTY with a caller-named refusal code
+- [ ] T157 [P] [US1] MEDULLA-FEDERATED-QUERY-R723 Serve embedding admission and re-embedding as methods
+- [ ] T158 [US1] MEDULLA-FEDERATED-QUERY-R724 Authorization-segmented schema projections method
+- [ ] T159 [P] [US1] MEDULLA-FEDERATED-QUERY-R725 Viewport bins and selection resolve methods
+- [ ] T160 [US1] MEDULLA-FEDERATED-QUERY-R726 UQL EVALUATE grammar
+- [ ] T161 [US1] MEDULLA-FEDERATED-QUERY-R727 Natural-language answers take context from AtomContext
+- [ ] T162 [US1] MEDULLA-FEDERATED-QUERY-R728 Exhaustive OpKind and PredKind printer and parser round trip
+- [ ] T163 [US1] MEDULLA-FEDERATED-QUERY-R729 Federated pushdown to connector raw-source tools
+- [ ] T164 [P] [US1] MEDULLA-FEDERATED-QUERY-R730 The unified planner earns its scope through a falsification gate
+- [ ] T165 [P] [US1] MEDULLA-FEDERATED-QUERY-R731 Queries declare a latency class
+- [ ] T166 [P] [US1] MEDULLA-FEDERATED-QUERY-R732 The unified planner improves through the evolution loop
 
-## Federation and virtual graphs
+## User Story 2: Bounded retrieval rounds and context
 
-- [x] Qualify capability model, shared renderer, typed budgets and optimized/full-fetch oracle on the exact public head. **MEDULLA-FEDERATED-QUERY-R038, MEDULLA-FEDERATED-QUERY-R041–MEDULLA-FEDERATED-QUERY-R043**
-- [x] Add a typed `ForeignSourceCapability`/cost-model struct (cardinality estimate, network-budget cost, which of projection/filter/limit-order/aggregate/same-source-join/batched-lookup pushdown kinds the source's declared capability proves sound) plus construction and refusal tests. **MEDULLA-FEDERATED-QUERY-R038.1**
-- [x] Expose redacted trace and caller-lowered budget in served UQL `EXPLAIN`/`PROFILE`; verify no URL/DSN leakage. **MEDULLA-FEDERATED-QUERY-R044**
-- [x] Qualify capability model, shared renderer, typed budgets and optimized/full-fetch oracle on the exact public head. **MEDULLA-FEDERATED-QUERY-R038, MEDULLA-FEDERATED-QUERY-R041–MEDULLA-FEDERATED-QUERY-R043**
-- [x] Expose redacted trace and caller-lowered budget in served UQL `EXPLAIN`/`PROFILE`; verify no URL/DSN leakage. **MEDULLA-FEDERATED-QUERY-R044**
-- [x] Add typed column-carrying foreign rows and exact/inexact/unsupported residual handling. Validate foreign-only predicates, projection dependencies and schema drift against a full-fetch oracle. **MEDULLA-FEDERATED-QUERY-R045**
-- [x] Execute approved OBDA virtual-graph solutions with typed ORDER/LIMIT/aggregate/join pushdown and sound fallback. **MEDULLA-FEDERATED-QUERY-R046, MEDULLA-FEDERATED-QUERY-R055**
-- [x] Bound source concurrency, learn/persist provenance-tagged stats, and cache only with fresh owner-bound watermarks. **MEDULLA-FEDERATED-QUERY-R018, MEDULLA-FEDERATED-QUERY-R047–MEDULLA-FEDERATED-QUERY-R049**
-- [x] Define `JoinCardinalityStatistic`/`StatisticsProvenance` in `crates/medulla-federation/src/federation_stats.rs`, refusing a statistic built with no provenance. **MEDULLA-FEDERATED-QUERY-R048.1**
-- [x] Qualify SPARQL SERVICE bind join, Iceberg pruning, RemoteEngine pushdown and the SSRF guard under the one outbound gate. **MEDULLA-FEDERATED-QUERY-R050, MEDULLA-FEDERATED-QUERY-R051, MEDULLA-FEDERATED-QUERY-R052, MEDULLA-FEDERATED-QUERY-R054**
-- [x] Register Trino, Cypher and Spark as typed `ForeignSourceSpec` kinds with per-kind capability sets; Spark is batch-only. **MEDULLA-FEDERATED-QUERY-R053**
-- [x] Prove RemoteEngine key/LIMIT UQL pushdown against a recording second engine, including signed owner context, exact residual, pagination and bounded fallback. **MEDULLA-FEDERATED-QUERY-R052**
-- [ ] Integrate the local [unified-data-plane](../unified-data-plane/spec.md) source identity and approved mapping contract without duplicating its registry or dialect work. **MEDULLA-UNIFIED-DATA-PLANE-R002, MEDULLA-UNIFIED-DATA-PLANE-R005–MEDULLA-UNIFIED-DATA-PLANE-R007 interface only**
+- [ ] T167 [P] [US2] MEDULLA-FEDERATED-QUERY-R078.1 Model of Tenant and clearance predicates are part of the query plan
+- [ ] T168 [P] [US2] MEDULLA-FEDERATED-QUERY-R078.2 Plan scope: behavior
+- [ ] T169 [P] [US2] MEDULLA-FEDERATED-QUERY-R078.3 Plan scope: wiring
+- [ ] T170 [P] [US2] MEDULLA-FEDERATED-QUERY-R078.4 Plan scope: refusal
+- [ ] T171 [P] [US2] MEDULLA-FEDERATED-QUERY-R078.5 Plan scope: evidence
+- [ ] T172 [P] [US2] MEDULLA-FEDERATED-QUERY-R078.6 Plan scope: hot-path proof
+- [ ] T173 [P] [US2] MEDULLA-FEDERATED-QUERY-R079.1 Model of `Iceberg` v2 catalog interoperability
+- [ ] T174 [P] [US2] MEDULLA-FEDERATED-QUERY-R079.3 `Iceberg` publication: graph-version wiring and catalog read
+- [ ] T175 [P] [US2] MEDULLA-FEDERATED-QUERY-R079.4 `Iceberg` publication: refusal
+- [ ] T176 [P] [US2] MEDULLA-FEDERATED-QUERY-R079.5 `Iceberg` publication: evidence
+- [ ] T177 [P] [US2] MEDULLA-FEDERATED-QUERY-R079.6 `Iceberg` publication: hot-path proof
+- [ ] T178 [P] [US2] MEDULLA-FEDERATED-QUERY-R080.1 Model of The graph is the only write boundary; table outputs are read-only projections
+- [ ] T179 [P] [US2] MEDULLA-FEDERATED-QUERY-R080.2 Behavior of The graph is the only write boundary; table outputs are read-only projections
+- [ ] T180 [P] [US2] MEDULLA-FEDERATED-QUERY-R080.3 Wiring of The graph is the only write boundary; table outputs are read-only projections
+- [ ] T181 [P] [US2] MEDULLA-FEDERATED-QUERY-R080.4 Refusal of The graph is the only write boundary; table outputs are read-only projections
+- [ ] T182 [P] [US2] MEDULLA-FEDERATED-QUERY-R080.5 Evidence of The graph is the only write boundary; table outputs are read-only projections
+- [ ] T183 [P] [US2] MEDULLA-FEDERATED-QUERY-R080.6 Hot-path proof of The graph is the only write boundary; table outputs are read-only projections
+- [ ] T184 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.1 Model of Retrieval sufficiency verdict with repair step, fallback policy and round limit
+- [ ] T185 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.2 Behavior of Retrieval sufficiency verdict with repair step, fallback policy and round limit
+- [ ] T186 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.3 Wiring of Retrieval sufficiency verdict with repair step, fallback policy and round limit
+- [ ] T187 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.4 Refusal of Retrieval sufficiency verdict with repair step, fallback policy and round limit
+- [ ] T188 [US2] MEDULLA-FEDERATED-QUERY-R081.5 Evidence of Retrieval sufficiency verdict with repair step, fallback policy and round limit
+- [ ] T189 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.6 Hot-path proof of Retrieval sufficiency verdict with repair step, fallback policy and round limit
+- [ ] T190 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.7.1 Model of Adaptive dual-score chunk selection
+- [ ] T191 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.7.2 Behavior of Adaptive dual-score chunk selection
+- [ ] T192 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.7.3 Wiring of Adaptive dual-score chunk selection
+- [ ] T193 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.7.4 Refusal of Adaptive dual-score chunk selection
+- [ ] T194 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.7.5 Evidence of Adaptive dual-score chunk selection
+- [ ] T195 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.7.6 Hot-path proof of Adaptive dual-score chunk selection
+- [ ] T196 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.8.1 Model of Bounded retrieval feedback and critique
+- [ ] T197 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.8.2 Behavior of Bounded retrieval feedback and critique
+- [ ] T198 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.8.3 Wiring of Bounded retrieval feedback and critique
+- [ ] T199 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.8.4 Refusal of Bounded retrieval feedback and critique
+- [ ] T200 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.8.5 Evidence of Bounded retrieval feedback and critique
+- [ ] T201 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.8.6 Hot-path proof of Bounded retrieval feedback and critique
+- [ ] T202 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.9.1 Model of Bounded typed hierarchy retrieval
+- [ ] T203 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.9.2 Behavior of Bounded typed hierarchy retrieval
+- [ ] T204 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.9.3 Wiring of Bounded typed hierarchy retrieval
+- [ ] T205 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.9.4 Refusal of Bounded typed hierarchy retrieval
+- [ ] T206 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.9.5 Evidence of Bounded typed hierarchy retrieval
+- [ ] T207 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.9.6 Hot-path proof of Bounded typed hierarchy retrieval
+- [ ] T208 [P] [US2] MEDULLA-FEDERATED-QUERY-R082.1 Model of Iterative retrieval stop rule with calibrated confidence and bounded termination
+- [ ] T209 [P] [US2] MEDULLA-FEDERATED-QUERY-R082.2 Behavior of Iterative retrieval stop rule with calibrated confidence and bounded termination
+- [ ] T210 [P] [US2] MEDULLA-FEDERATED-QUERY-R082.3 Wiring of Iterative retrieval stop rule with calibrated confidence and bounded termination
+- [ ] T211 [P] [US2] MEDULLA-FEDERATED-QUERY-R082.4 Refusal of Iterative retrieval stop rule with calibrated confidence and bounded termination
+- [ ] T212 [P] [US2] MEDULLA-FEDERATED-QUERY-R082.5 Evidence of Iterative retrieval stop rule with calibrated confidence and bounded termination
+- [ ] T213 [P] [US2] MEDULLA-FEDERATED-QUERY-R082.6 Hot-path proof of Iterative retrieval stop rule with calibrated confidence and bounded termination
+- [ ] T214 [P] [US2] MEDULLA-FEDERATED-QUERY-R083.1 Model of Arbitration between model prior and evidence
+- [ ] T215 [US2] MEDULLA-FEDERATED-QUERY-R083.2 Behavior of Arbitration between model prior and evidence
+- [ ] T216 [P] [US2] MEDULLA-FEDERATED-QUERY-R083.3 Wiring of Arbitration between model prior and evidence
+- [ ] T217 [P] [US2] MEDULLA-FEDERATED-QUERY-R083.4 Refusal of Arbitration between model prior and evidence
+- [ ] T218 [P] [US2] MEDULLA-FEDERATED-QUERY-R083.5 Evidence of Arbitration between model prior and evidence
+- [ ] T219 [P] [US2] MEDULLA-FEDERATED-QUERY-R083.6 Hot-path proof of Arbitration between model prior and evidence
+- [ ] T220 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.9.7.1 Model of Vector-free document-section traversal
+- [ ] T221 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.9.7.2 Behavior of Vector-free document-section traversal
+- [ ] T222 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.9.7.3 Wiring of Vector-free document-section traversal
+- [ ] T223 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.9.7.4 Refusal of Vector-free document-section traversal
+- [ ] T224 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.9.7.5 Evidence of Vector-free document-section traversal
+- [ ] T225 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.9.7.6 Hot-path proof of Vector-free document-section traversal
+- [ ] T226 [P] [US2] MEDULLA-FEDERATED-QUERY-R084.1 Model of Served ShEx validation
+- [ ] T227 [P] [US2] MEDULLA-FEDERATED-QUERY-R084.2 Behavior: data selection of Served ShEx validation
+- [ ] T228 [P] [US2] MEDULLA-FEDERATED-QUERY-R084.3 Behavior: supported constraints of Served ShEx validation
+- [ ] T229 [P] [US2] MEDULLA-FEDERATED-QUERY-R084.5 Wiring of Served ShEx validation
+- [ ] T230 [P] [US2] MEDULLA-FEDERATED-QUERY-R084.6 Refusal of Served ShEx validation
+- [ ] T231 [P] [US2] MEDULLA-FEDERATED-QUERY-R084.7 Scoped reads of Served ShEx validation
+- [ ] T232 [P] [US2] MEDULLA-FEDERATED-QUERY-R084.8 Evidence and hot-path proof
+- [ ] T233 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.10 Clock basis and bounded second pass
+- [ ] T234 [US2] MEDULLA-FEDERATED-QUERY-R078.7 Governed company-context logical view
+- [ ] T235 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.8.100 Retriever-bound query strategy and transfer revalidation
+- [ ] T236 [US2] MEDULLA-FEDERATED-QUERY-R081.102 Index-time distilled scorer with measured quality and zero query model calls
+- [ ] T237 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.100 Joint sparse nonnegative reconstruction selects a diverse document set
+- [ ] T238 [P] [US2] MEDULLA-FEDERATED-QUERY-R087.1 Model of Native visualization static export
+- [ ] T239 [P] [US2] MEDULLA-FEDERATED-QUERY-R087.2 Behavior of Native visualization static export
+- [ ] T240 [P] [US2] MEDULLA-FEDERATED-QUERY-R087.3 Wiring of Native visualization static export
+- [ ] T241 [P] [US2] MEDULLA-FEDERATED-QUERY-R087.4 Refusal of Native visualization static export
+- [ ] T242 [P] [US2] MEDULLA-FEDERATED-QUERY-R087.6 Hot-path proof of Native visualization static export
+- [ ] T243 [P] [US2] MEDULLA-FEDERATED-QUERY-R088.1 Model of UQL rows apply visibility before limits and carry a snapshot header
+- [ ] T244 [P] [US2] MEDULLA-FEDERATED-QUERY-R088.2 Behavior of UQL rows apply visibility before limits and carry a snapshot header
+- [ ] T245 [P] [US2] MEDULLA-FEDERATED-QUERY-R088.3 Wiring of UQL rows apply visibility before limits and carry a snapshot header
+- [ ] T246 [P] [US2] MEDULLA-FEDERATED-QUERY-R088.6 Hot-path proof of UQL rows apply visibility before limits and carry a snapshot header
+- [ ] T247 [P] [US2] MEDULLA-FEDERATED-QUERY-R089.1 Model of Discover returns a retrieval-quality verdict
+- [ ] T248 [US2] MEDULLA-FEDERATED-QUERY-R089.2 Behavior: failure modes of Discover returns a retrieval-quality verdict
+- [ ] T249 [P] [US2] MEDULLA-FEDERATED-QUERY-R089.3 Wiring and policy node
+- [ ] T250 [P] [US2] MEDULLA-FEDERATED-QUERY-R089.4 Refusal of Discover returns a retrieval-quality verdict
+- [ ] T251 [P] [US2] MEDULLA-FEDERATED-QUERY-R089.5 Evidence of Discover returns a retrieval-quality verdict
+- [ ] T252 [P] [US2] MEDULLA-FEDERATED-QUERY-R089.6 Hot-path proof of Discover returns a retrieval-quality verdict
+- [ ] T253 [US2] MEDULLA-FEDERATED-QUERY-R089.7 Behavior: drift mode of Discover returns a retrieval-quality verdict
+- [ ] T254 [P] [US2] MEDULLA-FEDERATED-QUERY-R090.1 Model of Discover plans expansions, recency and multi-hop context
+- [ ] T255 [US2] MEDULLA-FEDERATED-QUERY-R090.2 Behavior: arm fusion and recency of Discover plans expansions, recency and multi-hop context
+- [ ] T256 [US2] MEDULLA-FEDERATED-QUERY-R090.3 Wiring: planner entry of Discover plans expansions, recency and multi-hop context
+- [ ] T257 [P] [US2] MEDULLA-FEDERATED-QUERY-R090.4 Refusal of Discover plans expansions, recency and multi-hop context
+- [ ] T258 [US2] MEDULLA-FEDERATED-QUERY-R090.5 Evidence of Discover plans expansions, recency and multi-hop context
+- [ ] T259 [P] [US2] MEDULLA-FEDERATED-QUERY-R090.6 Hot-path proof of Discover plans expansions, recency and multi-hop context
+- [ ] T260 [P] [US2] MEDULLA-FEDERATED-QUERY-R091.1 Model of Virtual-query plans evolve by measured improvement
+- [ ] T261 [P] [US2] MEDULLA-FEDERATED-QUERY-R091.2 Behavior: keep or revert of Virtual-query plans evolve by measured improvement
+- [ ] T262 [US2] MEDULLA-FEDERATED-QUERY-R091.3 Wiring of Virtual-query plans evolve by measured improvement
+- [ ] T263 [P] [US2] MEDULLA-FEDERATED-QUERY-R091.4 Refusal of Virtual-query plans evolve by measured improvement
+- [ ] T264 [P] [US2] MEDULLA-FEDERATED-QUERY-R091.5 Evidence of Virtual-query plans evolve by measured improvement
+- [ ] T265 [P] [US2] MEDULLA-FEDERATED-QUERY-R091.6 Hot-path proof of Virtual-query plans evolve by measured improvement
+- [ ] T266 [US2] MEDULLA-FEDERATED-QUERY-R090.7 Wiring: scoped adapter and freshness provenance of Discover plans expansions, recency and multi-hop context
+- [ ] T267 [US2] MEDULLA-FEDERATED-QUERY-R650.1 Model of Context bundle compilation under a certified token budget
+- [ ] T268 [US2] MEDULLA-FEDERATED-QUERY-R650.2 Behavior: fuse, cut and select of Context bundle compilation under a certified token budget
+- [ ] T269 [US2] MEDULLA-FEDERATED-QUERY-R650.3 Wiring and the new-method recipe
+- [ ] T270 [P] [US2] MEDULLA-FEDERATED-QUERY-R650.4 Refusal of Context bundle compilation under a certified token budget
+- [ ] T271 [P] [US2] MEDULLA-FEDERATED-QUERY-R650.5 Evidence of Context bundle compilation under a certified token budget
+- [ ] T272 [P] [US2] MEDULLA-FEDERATED-QUERY-R650.6 Hot-path proof of Context bundle compilation under a certified token budget
+- [ ] T273 [P] [US2] MEDULLA-FEDERATED-QUERY-R651.1 Model of Query understanding and the one expansion port
+- [ ] T274 [P] [US2] MEDULLA-FEDERATED-QUERY-R651.2 Behavior: model-free analysis of Query understanding and the one expansion port
+- [ ] T275 [US2] MEDULLA-FEDERATED-QUERY-R651.3 Wiring: the expansion port of Query understanding and the one expansion port
+- [ ] T276 [P] [US2] MEDULLA-FEDERATED-QUERY-R651.4 Refusal of Query understanding and the one expansion port
+- [ ] T277 [P] [US2] MEDULLA-FEDERATED-QUERY-R651.5 Evidence of Query understanding and the one expansion port
+- [ ] T278 [P] [US2] MEDULLA-FEDERATED-QUERY-R651.6 Hot-path proof of Query understanding and the one expansion port
+- [ ] T279 [P] [US2] MEDULLA-FEDERATED-QUERY-R652.1 Model of Reranking and calibrated scores
+- [ ] T280 [US2] MEDULLA-FEDERATED-QUERY-R652.2 Behavior: lexical scoring and calibration of Reranking and calibrated scores
+- [ ] T281 [US2] MEDULLA-FEDERATED-QUERY-R652.3 Wiring of Reranking and calibrated scores
+- [ ] T282 [P] [US2] MEDULLA-FEDERATED-QUERY-R652.4 Refusal of Reranking and calibrated scores
+- [ ] T283 [P] [US2] MEDULLA-FEDERATED-QUERY-R652.5 Evidence of Reranking and calibrated scores
+- [ ] T284 [P] [US2] MEDULLA-FEDERATED-QUERY-R652.6 Hot-path proof of Reranking and calibrated scores
+- [ ] T285 [P] [US2] MEDULLA-FEDERATED-QUERY-R653.1 Model of Corpus grep, entity neighbourhood, session history and answer lineage
+- [ ] T286 [P] [US2] MEDULLA-FEDERATED-QUERY-R653.2 Behavior: grep of Corpus grep, entity neighbourhood, session history and answer lineage
+- [ ] T287 [US2] MEDULLA-FEDERATED-QUERY-R653.3 Wiring of Corpus grep, entity neighbourhood, session history and answer lineage
+- [ ] T288 [P] [US2] MEDULLA-FEDERATED-QUERY-R653.4 Refusal of Corpus grep, entity neighbourhood, session history and answer lineage
+- [ ] T289 [P] [US2] MEDULLA-FEDERATED-QUERY-R653.5 Evidence of Corpus grep, entity neighbourhood, session history and answer lineage
+- [ ] T290 [P] [US2] MEDULLA-FEDERATED-QUERY-R653.6 Hot-path proof of Corpus grep, entity neighbourhood, session history and answer lineage
+- [ ] T291 [US2] MEDULLA-FEDERATED-QUERY-R653.7 Web Document citations
+- [ ] T292 [P] [US2] MEDULLA-FEDERATED-QUERY-R654.1 Model of Code, operations and deployment context
+- [ ] T293 [US2] MEDULLA-FEDERATED-QUERY-R654.2 Behavior: code context of Code, operations and deployment context
+- [ ] T294 [US2] MEDULLA-FEDERATED-QUERY-R654.3 Wiring of Code, operations and deployment context
+- [ ] T295 [P] [US2] MEDULLA-FEDERATED-QUERY-R654.4 Refusal and degraded answers
+- [ ] T296 [P] [US2] MEDULLA-FEDERATED-QUERY-R654.5 Evidence of Code, operations and deployment context
+- [ ] T297 [P] [US2] MEDULLA-FEDERATED-QUERY-R654.6 Hot-path proof of Code, operations and deployment context
+- [ ] T298 [P] [US2] MEDULLA-FEDERATED-QUERY-R704.1 Model of Agent knowledge scope
+- [ ] T299 [P] [US2] MEDULLA-FEDERATED-QUERY-R704.2 Behavior of Agent knowledge scope
+- [ ] T300 [US2] MEDULLA-FEDERATED-QUERY-R704.3 Wiring of Agent knowledge scope
+- [ ] T301 [P] [US2] MEDULLA-FEDERATED-QUERY-R704.4 Refusal of Agent knowledge scope
+- [ ] T302 [P] [US2] MEDULLA-FEDERATED-QUERY-R704.5 Evidence of Agent knowledge scope
+- [ ] T303 [P] [US2] MEDULLA-FEDERATED-QUERY-R704.6 Hot-path proof of Agent knowledge scope
+- [ ] T304 [P] [US2] MEDULLA-FEDERATED-QUERY-R705.1 Model of Feedback-adjusted document rank
+- [ ] T305 [P] [US2] MEDULLA-FEDERATED-QUERY-R705.2 Behavior of Feedback-adjusted document rank
+- [ ] T306 [US2] MEDULLA-FEDERATED-QUERY-R705.3 Wiring of Feedback-adjusted document rank
+- [ ] T307 [P] [US2] MEDULLA-FEDERATED-QUERY-R705.4 Refusal of Feedback-adjusted document rank
+- [ ] T308 [P] [US2] MEDULLA-FEDERATED-QUERY-R705.5 Evidence of Feedback-adjusted document rank
+- [ ] T309 [P] [US2] MEDULLA-FEDERATED-QUERY-R705.6 Hot-path proof of Feedback-adjusted document rank
+- [ ] T310 [P] [US2] MEDULLA-FEDERATED-QUERY-R079.2.1 `Iceberg` publication: append, compaction and copy-on-write deletion
+- [ ] T311 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.11 Served retrieval round method
+- [ ] T312 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.101.1 Model and store
+- [ ] T313 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.101.2 Build job of Reusable compressed document state with decoding-free reranking
+- [ ] T314 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.101.3 Scoring and wiring
+- [ ] T315 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.103.1 Model of Viewport-bounded scatter and line queries over indexed sources
+- [ ] T316 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.103.2 Binning kernel and caps
+- [ ] T317 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.103.3 Wiring of Viewport-bounded scatter and line queries over indexed sources
+- [ ] T318 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.103.4 Hot-path proof of Viewport-bounded scatter and line queries over indexed sources
+- [ ] T319 [P] [US2] MEDULLA-FEDERATED-QUERY-R086.100.1 Model of Ordered n-ary inductive link prediction emits hypotheses only
+- [ ] T320 [P] [US2] MEDULLA-FEDERATED-QUERY-R086.100.2 Behavior of Ordered n-ary inductive link prediction emits hypotheses only
+- [ ] T321 [P] [US2] MEDULLA-FEDERATED-QUERY-R086.100.3 Wiring and refusal
+- [ ] T322 [P] [US2] MEDULLA-FEDERATED-QUERY-R086.100.4 Evidence and hot-path proof
+- [ ] T323 [P] [US2] MEDULLA-FEDERATED-QUERY-R090.8 Behavior: neighbour expansion of Discover plans expansions, recency and multi-hop context
+- [ ] T324 [US2] MEDULLA-FEDERATED-QUERY-R091.7 Behavior: cache and materialize candidates of Virtual-query plans evolve by measured improvement
+- [ ] T325 [P] [US2] MEDULLA-FEDERATED-QUERY-R091.8 Behavior: index suggestion of Virtual-query plans evolve by measured improvement
+- [ ] T326 [P] [US2] MEDULLA-FEDERATED-QUERY-R651.7 Behavior: expansion generation of Query understanding and the one expansion port
+- [ ] T327 [US2] MEDULLA-FEDERATED-QUERY-R652.7 Behavior: model scorer of Reranking and calibrated scores
+- [ ] T328 [P] [US2] MEDULLA-FEDERATED-QUERY-R653.8 Behavior: entity neighbourhood of Corpus grep, entity neighbourhood, session history and answer lineage
+- [ ] T329 [P] [US2] MEDULLA-FEDERATED-QUERY-R653.9 Behavior: session history of Corpus grep, entity neighbourhood, session history and answer lineage
+- [ ] T330 [P] [US2] MEDULLA-FEDERATED-QUERY-R653.10 Behavior: answer lineage of Corpus grep, entity neighbourhood, session history and answer lineage
+- [ ] T331 [P] [US2] MEDULLA-FEDERATED-QUERY-R654.7 Behavior: symptom diagnosis of Code, operations and deployment context
 
-## Search, reasoning and numerics
+## User Story 3: Reasoning, topology and argument analysis
 
-- [x] Validate semantic and edge index lifecycle, filtered BM25/ANN correctness, mixed traversal top-k/shortfall, generation replay and RLS. **MEDULLA-FEDERATED-QUERY-R059, MEDULLA-FEDERATED-QUERY-R008, MEDULLA-FEDERATED-QUERY-R009, MEDULLA-FEDERATED-QUERY-R035, MEDULLA-FEDERATED-QUERY-R039, MEDULLA-FEDERATED-QUERY-R040**
-- [x] Restore index state on graph reopen within the bounded performance profile, and refuse reads while materialization is incomplete. **MEDULLA-FEDERATED-QUERY-R036**
-- [x] Validate current corpus compose, EL/RL/tableau consistency, disjointness, bounded derivation, proof and skipped-event rebuild. **MEDULLA-FEDERATED-QUERY-R001, MEDULLA-DURABLE-KERNEL-R002, MEDULLA-FEDERATED-QUERY-R004, MEDULLA-FEDERATED-QUERY-R006, MEDULLA-TYPED-PACKS-R071, MEDULLA-FEDERATED-QUERY-R010, MEDULLA-FEDERATED-QUERY-R011, MEDULLA-FEDERATED-QUERY-R012**
-- [x] Implement and validate shared series/attribution/impact/barrier/motif kernels with exact or seeded oracles and typed budgets. Remove duplicate probability math. **MEDULLA-FEDERATED-QUERY-R030–MEDULLA-FEDERATED-QUERY-R031, MEDULLA-FEDERATED-QUERY-R032, MEDULLA-FEDERATED-QUERY-R033, MEDULLA-FEDERATED-QUERY-R034, MEDULLA-FEDERATED-QUERY-R037, MEDULLA-FEDERATED-QUERY-R056**
+- [ ] T332 [P] [US3] MEDULLA-FEDERATED-QUERY-R607.1 Model of Topology analytics find partitions, analogies, synergy and hyperedge scores
+- [ ] T333 [P] [US3] MEDULLA-FEDERATED-QUERY-R607.2 Behavior: partitions of Topology analytics find partitions, analogies, synergy and hyperedge scores
+- [ ] T334 [US3] MEDULLA-FEDERATED-QUERY-R607.3 Wiring of Topology analytics find partitions, analogies, synergy and hyperedge scores
+- [ ] T335 [P] [US3] MEDULLA-FEDERATED-QUERY-R607.4 Refusal of Topology analytics find partitions, analogies, synergy and hyperedge scores
+- [ ] T336 [P] [US3] MEDULLA-FEDERATED-QUERY-R607.5 Evidence of Topology analytics find partitions, analogies, synergy and hyperedge scores
+- [ ] T337 [P] [US3] MEDULLA-FEDERATED-QUERY-R607.6 Hot-path proof of Topology analytics find partitions, analogies, synergy and hyperedge scores
+- [ ] T338 [P] [US3] MEDULLA-FEDERATED-QUERY-R608.1 Model of Rule fixpoint bound and causal verification on the served reasoning methods
+- [ ] T339 [US3] MEDULLA-FEDERATED-QUERY-R608.2 Behavior: fixpoint bound and causal fit of Rule fixpoint bound and causal verification on the served reasoning methods
+- [ ] T340 [US3] MEDULLA-FEDERATED-QUERY-R608.3 Wiring of Rule fixpoint bound and causal verification on the served reasoning methods
+- [ ] T341 [P] [US3] MEDULLA-FEDERATED-QUERY-R608.4 Refusal of Rule fixpoint bound and causal verification on the served reasoning methods
+- [ ] T342 [P] [US3] MEDULLA-FEDERATED-QUERY-R608.5 Evidence of Rule fixpoint bound and causal verification on the served reasoning methods
+- [ ] T343 [P] [US3] MEDULLA-FEDERATED-QUERY-R608.6 Hot-path proof of Rule fixpoint bound and causal verification on the served reasoning methods
+- [ ] T344 [P] [US3] MEDULLA-FEDERATED-QUERY-R700.1 Model of Argument maps with a Dung projection
+- [ ] T345 [P] [US3] MEDULLA-FEDERATED-QUERY-R700.2 Behavior of Argument maps with a Dung projection
+- [ ] T346 [P] [US3] MEDULLA-FEDERATED-QUERY-R700.3 Wiring of Argument maps with a Dung projection
+- [ ] T347 [P] [US3] MEDULLA-FEDERATED-QUERY-R700.4 Refusal of Argument maps with a Dung projection
+- [ ] T348 [P] [US3] MEDULLA-FEDERATED-QUERY-R700.5 Evidence of Argument maps with a Dung projection
+- [ ] T349 [P] [US3] MEDULLA-FEDERATED-QUERY-R700.6 Hot-path proof of Argument maps with a Dung projection
+- [ ] T350 [P] [US3] MEDULLA-FEDERATED-QUERY-R702.1 Model of Search-task synthesis with shortcut-risk diagnostics
+- [ ] T351 [P] [US3] MEDULLA-FEDERATED-QUERY-R702.2 Behavior: detectors and refinement of Search-task synthesis with shortcut-risk diagnostics
+- [ ] T352 [US3] MEDULLA-FEDERATED-QUERY-R702.3 Wiring of Search-task synthesis with shortcut-risk diagnostics
+- [ ] T353 [P] [US3] MEDULLA-FEDERATED-QUERY-R702.4 Refusal of Search-task synthesis with shortcut-risk diagnostics
+- [ ] T354 [P] [US3] MEDULLA-FEDERATED-QUERY-R702.5 Evidence of Search-task synthesis with shortcut-risk diagnostics
+- [ ] T355 [P] [US3] MEDULLA-FEDERATED-QUERY-R702.6 Hot-path proof of Search-task synthesis with shortcut-risk diagnostics
+- [ ] T356 [P] [US3] MEDULLA-FEDERATED-QUERY-R607.7 Behavior: analogy of Topology analytics find partitions, analogies, synergy and hyperedge scores
+- [ ] T357 [US3] MEDULLA-FEDERATED-QUERY-R607.8 Behavior: synergy of Topology analytics find partitions, analogies, synergy and hyperedge scores
+- [ ] T358 [P] [US3] MEDULLA-FEDERATED-QUERY-R607.9 Behavior: hyperedge scoring of Topology analytics find partitions, analogies, synergy and hyperedge scores
 
-## Additional coverage
+## User Story 4: Governed sources, masks and approvals
 
-- [x] Close the remaining requirements no task above names: community-detection quality function and naming/connectivity (**MEDULLA-FEDERATED-QUERY-R060, MEDULLA-FEDERATED-QUERY-R063**), streaming memory test isolation (**MEDULLA-FEDERATED-QUERY-R062**), SPARQL evaluator file-size split (**MEDULLA-FEDERATED-QUERY-R066**), and SQL/HTTP pushdown batching and pagination (**MEDULLA-FEDERATED-QUERY-R069, MEDULLA-FEDERATED-QUERY-R071**); see `requirements.md` for each ID's definition.
+- [ ] T359 [P] [US4] MEDULLA-FEDERATED-QUERY-R085.1 Model of Medulla approves immutable source queries for bounded connector execution
+- [ ] T360 [US4] MEDULLA-FEDERATED-QUERY-R085.2 Behavior: issue approval of Medulla approves immutable source queries for bounded connector execution
+- [ ] T361 [P] [US4] MEDULLA-FEDERATED-QUERY-R085.3 Behavior: verify approval of Medulla approves immutable source queries for bounded connector execution
+- [ ] T362 [P] [US4] MEDULLA-FEDERATED-QUERY-R085.4 Behavior: read-only SQL of Medulla approves immutable source queries for bounded connector execution
+- [ ] T363 [P] [US4] MEDULLA-FEDERATED-QUERY-R085.5 Wiring of Medulla approves immutable source queries for bounded connector execution
+- [ ] T364 [P] [US4] MEDULLA-FEDERATED-QUERY-R085.6 Behavior: bounded execution contract of Medulla approves immutable source queries for bounded connector execution
+- [ ] T365 [P] [US4] MEDULLA-FEDERATED-QUERY-R085.7 Refusal of Medulla approves immutable source queries for bounded connector execution
+- [ ] T366 [P] [US4] MEDULLA-FEDERATED-QUERY-R085.8 Evidence and hot-path proof
+- [ ] T367 [P] [US4] MEDULLA-FEDERATED-QUERY-R703.1 Model of Query-time access check for dynamic-access sources
+- [ ] T368 [P] [US4] MEDULLA-FEDERATED-QUERY-R703.2 Behavior of Query-time access check for dynamic-access sources
+- [ ] T369 [US4] MEDULLA-FEDERATED-QUERY-R703.3 Wiring of Query-time access check for dynamic-access sources
+- [ ] T370 [P] [US4] MEDULLA-FEDERATED-QUERY-R703.4 Refusal of Query-time access check for dynamic-access sources
+- [ ] T371 [P] [US4] MEDULLA-FEDERATED-QUERY-R703.5 Evidence of Query-time access check for dynamic-access sources
+- [ ] T372 [P] [US4] MEDULLA-FEDERATED-QUERY-R703.6 Hot-path proof of Query-time access check for dynamic-access sources
+- [ ] T373 [P] [US4] MEDULLA-FEDERATED-QUERY-R706.1 Model of Tag-based column masking and row filters
+- [ ] T374 [US4] MEDULLA-FEDERATED-QUERY-R706.2 Behavior of Tag-based column masking and row filters
+- [ ] T375 [US4] MEDULLA-FEDERATED-QUERY-R706.3 Wiring of Tag-based column masking and row filters
+- [ ] T376 [US4] MEDULLA-FEDERATED-QUERY-R706.4 Refusal of Tag-based column masking and row filters
+- [ ] T377 [US4] MEDULLA-FEDERATED-QUERY-R706.5 Evidence of Tag-based column masking and row filters
+- [ ] T378 [US4] MEDULLA-FEDERATED-QUERY-R706.6 Hot-path proof of Tag-based column masking and row filters
+- [ ] T379 [P] [US4] MEDULLA-FEDERATED-QUERY-R722.1 Model of Connector data resources register as virtual-graph sources at pack import
+- [ ] T380 [US4] MEDULLA-FEDERATED-QUERY-R722.2 Registration and digest behavior
+- [ ] T381 [US4] MEDULLA-FEDERATED-QUERY-R722.3 Registration handoff and read path
+- [ ] T382 [US4] MEDULLA-FEDERATED-QUERY-R722.4 Refusal of Connector data resources register as virtual-graph sources at pack import
+- [ ] T383 [US4] MEDULLA-FEDERATED-QUERY-R722.5 Evidence of Connector data resources register as virtual-graph sources at pack import
+- [ ] T384 [US4] MEDULLA-FEDERATED-QUERY-R722.6 Hot-path proof of Connector data resources register as virtual-graph sources at pack import
+- [ ] T385 [P] [US4] MEDULLA-FEDERATED-QUERY-R703.7 Discover excludes unchecked records
+- [ ] T386 [US4] MEDULLA-FEDERATED-QUERY-R706.7 Policy load of Tag-based column masking and row filters
+- [ ] T387 [US4] MEDULLA-FEDERATED-QUERY-R722.7 Source approval compare-and-set
+- [ ] T388 [US4] MEDULLA-FEDERATED-QUERY-R722.8 Pushdown and residual filter
+- [ ] T389 [US4] MEDULLA-FEDERATED-QUERY-R722.9 Request-scoped driver binding
+- [ ] T390 [US4] MEDULLA-FEDERATED-QUERY-R722.10 Foreign read lifecycle
 
-- [x] Serve ontology source selection with premises and add operation-bound API, MCP, A2A and GraphQL source kinds; run F-07 and F-08. **MEDULLA-FEDERATED-QUERY-R072, MEDULLA-FEDERATED-QUERY-R073**
-  - [x] Typed `CoverageResult`/`SourceSelectionHop`/`Premise` model in `medulla-rdf::source_selection`, proved against a fixture (direct mapping, subclass-serves-superclass, uncovered, disconnected). **MEDULLA-FEDERATED-QUERY-R072.1**
-  - [x] Typed `ForeignSourceSpec` variants (`Api`/`Mcp`/`A2a`/`GraphQl`) with declared `ForeignOperationCapabilities`, plus unbound/ungranted and budget-exceeded refusal tests. **MEDULLA-FEDERATED-QUERY-R073.1**
+## User Story 5: SPARQL update, stored queries and live artifacts
 
-## Acceptance
-
-- [ ] Run all applicable [test cases](test-spec.md) and quality gates on the final public head; record one evidence line per accepted ID.
-- [ ] Verify generated delivery records against public merged commits and hosted CI. Require the stated proof for every acceptance claim.
-- [x] Keep the SQL provider module within the configured KISS file cap with behavior-preserving extraction. **MEDULLA-FEDERATED-QUERY-R057**
-- [x] Add the typed `NlQueryResult`/`NlQueryError`/`NlQueryBudget` disclosure model (`plan_only`, `plan_and_execute_typed`) to `medulla-plan`, with refusal and plan-only tests. **MEDULLA-FEDERATED-QUERY-R058.1**
-- [ ] Wire `Method::NlQuery`'s dispatch handler and result contract to the typed disclosure model so the served result carries the executed UQL, and expose a plan-only entry point to callers. **MEDULLA-FEDERATED-QUERY-R058.2**
-  - [x] Enforce the typed NL budget at the dispatch handler before parsing. **MEDULLA-FEDERATED-QUERY-R058.2.1**
-  - [ ] Wire the result contract to carry the executed UQL and expose a plan-only entry point. **MEDULLA-FEDERATED-QUERY-R058.2.2**
-    - [x] Serve `NlQueryExplain`: the executed UQL with the same rows as `NlQuery`. **MEDULLA-FEDERATED-QUERY-R058.2.2.1**
-    - [ ] Expose the plan-only entry point. **MEDULLA-FEDERATED-QUERY-R058.2.2.2**
-- [ ] Confirm natural-language results are never cached on the NL text and that no mutating/side-effecting operation is reachable from the NL surface. **MEDULLA-FEDERATED-QUERY-R058.3**
-  - [x] Guard that NL results are never cached on the NL text. **MEDULLA-FEDERATED-QUERY-R058.3.1**
-  - [ ] Confirm no mutating operation is reachable from the NL surface. **MEDULLA-FEDERATED-QUERY-R058.3.2**
-- [x] Configure the NL planner read timeout and extra request body. Disable thinking by default and refuse invalid values. **MEDULLA-FEDERATED-QUERY-R058.5**
-
-## Decomposition children (tracked)
-
-- [x] **MEDULLA-FEDERATED-QUERY-R048:** Join ordering across foreign sources uses learned, provenanced statistics
-- [x] **MEDULLA-FEDERATED-QUERY-R058:** Natural language runs only as disclosed, read-only typed UQL
-- [ ] **MEDULLA-FEDERATED-QUERY-R074:** Served `select_topology` reasoning-policy op
-- [ ] **MEDULLA-FEDERATED-QUERY-R075:** Generated client method for `select_topology`
-- [ ] **MEDULLA-FEDERATED-QUERY-R076:** Canonical ontology hash for a Turtle payload
-
-- [x] MEDULLA-FEDERATED-QUERY-R056: execute the exact causal-impact and shared numeric
-  source modules, confirm all five tests pass, and bind the independent literal
-  far-tail regression to the existing requirement. Full-crate and hosted gates
-  remain separate from this pure-module proof.
-- [ ] **MEDULLA-FEDERATED-QUERY-R077 (rollup):** Vectorized SQL text columns (rollup).
-  - [ ] **MEDULLA-FEDERATED-QUERY-R077.1:** `ColumnVectorBinding` typed model.
-  - [ ] **MEDULLA-FEDERATED-QUERY-R077.2:** Bind and unbind surface.
-  - [ ] **MEDULLA-FEDERATED-QUERY-R077.3:** Row-write re-embedding hook.
-  - [ ] **MEDULLA-FEDERATED-QUERY-R077.4:** Vectorization recommendation.
-  - [ ] **MEDULLA-FEDERATED-QUERY-R077.5:** End-to-end column vector search.
-  - [ ] **MEDULLA-FEDERATED-QUERY-R078:** Tenant and clearance predicates are part of the query plan (rollup).
-  - [ ] **MEDULLA-FEDERATED-QUERY-R078.1:** `PlanScope` typed model
-  - [ ] **MEDULLA-FEDERATED-QUERY-R078.2:** Predicate injection as a replaceable default
-  - [ ] **MEDULLA-FEDERATED-QUERY-R078.3:** Attach at the UQL statement handler
-  - [ ] **MEDULLA-FEDERATED-QUERY-R078.4:** Unverified caller refusal
-  - [ ] **MEDULLA-FEDERATED-QUERY-R078.5:** Scope premise in the trace
-  - [ ] **MEDULLA-FEDERATED-QUERY-R078.6:** Out-of-tenant read proof
-  - [ ] **MEDULLA-FEDERATED-QUERY-R079:** Iceberg v2 catalog and manifest interoperability (rollup).
-  - [ ] **MEDULLA-FEDERATED-QUERY-R079.1:** Model. Add version-bound `ManifestPublication` and complete schema-change kinds.
-  - [ ] **MEDULLA-FEDERATED-QUERY-R079.2:** Behavior. Publish durable v2 manifests and preserve retained snapshot/schema compatibility.
-  - [ ] **MEDULLA-FEDERATED-QUERY-R079.3:** Wiring. Bind the production graph-to-lake publisher and serve committed catalog metadata.
-  - [ ] **MEDULLA-FEDERATED-QUERY-R079.4:** Refusal. Reject invalid publication, unapproved destructive evolution and projected mutation.
-  - [ ] **MEDULLA-FEDERATED-QUERY-R079.5:** Evidence. Correlate graph version, schema, snapshot and artifact digests with reader acceptance.
-  - [ ] **MEDULLA-FEDERATED-QUERY-R079.6:** Hot-path proof. Exercise served mutations and REST reads with an independent Iceberg reader.
-  - [ ] **MEDULLA-FEDERATED-QUERY-R080:** Graph is the sole write boundary; projections are read-only (rollup).
-  - [ ] **MEDULLA-FEDERATED-QUERY-R080.1:** `ProjectionAccess` typed model
-  - [ ] **MEDULLA-FEDERATED-QUERY-R080.2:** `refuse_projection_write` classification
-  - [ ] **MEDULLA-FEDERATED-QUERY-R080.3:** Attach at the listener dispatch
-  - [ ] **MEDULLA-FEDERATED-QUERY-R080.4:** `PROJECTION_READ_ONLY` refusal
-  - [ ] **MEDULLA-FEDERATED-QUERY-R080.5:** Refusal and read-version evidence
-  - [ ] **MEDULLA-FEDERATED-QUERY-R080.6:** Write-then-read projection proof
-- [ ] **MEDULLA-FEDERATED-QUERY-R081:** Retrieval sufficiency verdict with repair step, fallback policy and round limit.
-- [ ] **MEDULLA-FEDERATED-QUERY-R081.1:** Model. Add `SufficiencyVerdict{verdict, evidence_count, reason, repair, fallback, round, round_limit}` in `crates/medulla-result-types/src/retrieval_verdict.rs`. The `verdict` set is closed: `sufficient`, `insufficient`. `repair` is `BoostK{k}`, `SwitchMode{mode}` or `Stop`. `fallback` is `Lenient` or `Strict`. No type of this shape exists today. Proving test: `crates/medulla-result-types/src/retrieval_verdict.rs::tests::verdict_round_trips_and_rejects_unknown`.
-- [ ] **MEDULLA-FEDERATED-QUERY-R081.2:** Behavior. Add `judge_sufficiency(rows, rule, call) -> SufficiencyVerdict`. The default `rule` is `min_evidence_count`, a named replaceable value with default 3. The default repair order is `BoostK` (k doubles, capped at 64), then `SwitchMode`, then `Stop`. The call carries `round` and `round_limit`. At `round_limit` the repair must be `Stop`. Proving test: `crates/medulla-retrieval/src/retrieval_verdict.rs::tests::repair_order_ends_at_round_limit`.
-- [ ] **MEDULLA-FEDERATED-QUERY-R081.3:** Wiring. `judge_sufficiency` attaches at the end of `execute` in `crates/medulla-exec/src/exec.rs:536`, after `fuse_rrf` at `crates/medulla-exec/src/exec.rs:848` returns its `RowSet`. A plan that carries a `SufficiencyRule` gets the verdict beside its rows. The production caller is the served query path: `medulla_plan::execute` is called from `crates/medulla-graphql/src/crossmodal.rs:429`. This row creates the call site in `execute`. No production caller of a sufficiency check exists today. Proving test: `crates/medulla-exec/src/exec.rs::tests::execute_returns_verdict_for_rule_plan`.
-- [ ] **MEDULLA-FEDERATED-QUERY-R081.4:** Refusal. A verdict call without `round_limit` must refuse with `RETRIEVAL_ROUND_LIMIT_REQUIRED`. A `Strict` fallback with an `insufficient` verdict must return `abstain` and no extractive answer. The refusal names the missing field or the fallback. Proving test: `crates/medulla-retrieval/src/retrieval_verdict.rs::tests::strict_insufficient_abstains`.
-- [ ] **MEDULLA-FEDERATED-QUERY-R081.5:** Evidence. Each verdict must be recorded as a premise on the retrieval `DecisionRecord` of `MEDULLA-DECISION-ENGINE-R100`. The premise lists `verdict`, `evidence_count`, `reason`, `repair`, `fallback` and `round`. Proving test: `crates/medulla-retrieval/src/retrieval_verdict.rs::tests::verdict_premise_lists_all_fields`.
-- [ ] **MEDULLA-FEDERATED-QUERY-R081.6:** Hot-path proof. The entry point is the served cross-modal query operation. The test sends a query that returns two rows against a rule of three. The call passes through `execute` at `crates/medulla-exec/src/exec.rs:536`. It observes an `insufficient` verdict, repair `BoostK`, and the premise on the decision record. Proving test: `tests/retrieval/test_sufficiency_served.py::test_insufficient_returns_boost_k`.
-- [ ] **MEDULLA-FEDERATED-QUERY-R082:** **Iterative retrieval stop rule with calibrated confidence and bounded termination (rollup).** Medulla applies one precedence rule for invalid feedback, exhausted limits, measured retrieval progress and calibrated confidence. Only the confidence branch can claim `answer_repeated_margin_met`. No component is learned. Children `.1` to `.6` deliver it.
-- [ ] **MEDULLA-FEDERATED-QUERY-R082.1:** **Model.** Add `CalibrationTable`, `RoundCalibration`, `StopContext` and `StopVerdict` in `crates/medulla-result-types/src/retrieval_stop.rs`. Calibration rows hold round, baseline confidence and margin threshold. Context carries validated limits, completed-round progress and policy revision. Verdict carries stop, reason, round, optional margin/threshold, optional calibration refusal and exhausted dimension. Closed reasons: `round_limit`, `budget_exhausted`, `no_new_evidence`, `quality_saturated`, `answer_repeated_margin_met`, `continue_uncalibrated`, `continue_answer_changed`, `continue_margin_low`. Missing calibration retains `ROUND_NOT_CALIBRATED` and absent margin/threshold.
-- [ ] **MEDULLA-FEDERATED-QUERY-R082.2:** **Behavior.** Add `decide_stop(table, history, context) -> StopVerdict`. After feedback validation, precedence is round limit, other exhausted budget, no new evidence, declared quality saturation, then calibrated confidence. A confidence stop requires repeated answers and `confidence - baseline_confidence > margin_threshold`. Missing calibration selects `continue_uncalibrated` only if no earlier terminal condition applies. Other continuations use answer-changed or low-margin reasons. Stop alone does not assert R081 sufficiency.
-- [ ] **MEDULLA-FEDERATED-QUERY-R082.3:** **Wiring.** `decide_stop` attaches beside `judge_sufficiency` at `crates/medulla-exec/src/exec.rs:536`, reached through `crates/medulla-graphql/src/crossmodal.rs:429`. Apply continuation validation and limit checks before dispatch; evaluate completed-round progress before issuing another continuation. Medulla derives context from validated evidence and counters. This row creates the call site. The harness cannot bypass a terminal verdict.
-- [ ] **MEDULLA-FEDERATED-QUERY-R082.4:** **Refusal.** A missing calibration row prohibits a confidence-based early stop and records `ROUND_NOT_CALIBRATED` with the round. It never overrides an exhausted limit, no new evidence or declared saturation. Such terminal outcomes retain the calibration refusal; only a valid progressing round with remaining budgets may continue. Exhausted limits return `RETRIEVAL_BUDGET_EXCEEDED` with the terminal verdict. Invalid feedback refuses before continuation.
-- [ ] **MEDULLA-FEDERATED-QUERY-R082.5:** **Evidence.** Record each `StopVerdict` as a retrieval `DecisionRecord` premise. Include round, reason, optional margin/threshold, calibration refusal, policy revision, completed-round progress and exhausted dimension. Return the same typed outcome to the caller. Retain R081 insufficiency where present.
-- [ ] **MEDULLA-FEDERATED-QUERY-R082.6:** **Hot-path proof.** Entry point: the served cross-modal query through `execute` at `crates/medulla-exec/src/exec.rs:536`. `tests/retrieval/test_stop_rule_served.py::test_repeat_with_margin_stops` proves the calibrated branch. `tests/retrieval/test_feedback_served.py::test_uncalibrated_continuation_precedence` sends real successive continuations through production retrieval and inference operators with pinned artifacts.
-- [ ] **MEDULLA-FEDERATED-QUERY-R083:** Arbitration between model prior and evidence.
-- [ ] **MEDULLA-FEDERATED-QUERY-R083.1:** Model. Add `Candidate{answer, confidence, evidence_class}` and `ArbitrationVerdict{choice, margin, prior, retrieved}` in `crates/medulla-result-types/src/retrieval_arbitration.rs`. `evidence_class` is closed: `parametric`, `retrieved`. `choice` is `Prior`, `Retrieved` or `Abstain`. Both candidates ride on every verdict. Search found no such type. Proving test: `crates/medulla-result-types/src/retrieval_arbitration.rs::tests::verdict_carries_both_candidates`.
-- [ ] **MEDULLA-FEDERATED-QUERY-R083.2:** Behavior. Add `arbitrate(prior, retrieved, margin) -> ArbitrationVerdict`. The default `margin` is a named replaceable value of 0.10. A candidate wins when its confidence exceeds the other by more than `margin`. Otherwise the choice is `Abstain`. The rule has no learned part. Proving test: `crates/medulla-plan/src/retrieval_arbitration.rs::tests::margin_picks_or_abstains`.
-- [ ] **MEDULLA-FEDERATED-QUERY-R083.3:** Wiring. `arbitrate` attaches at the end of `execute` in `crates/medulla-exec/src/exec.rs:536`. The harness runs the prior probe, the answer without retrieval, and sends it as a `Candidate` in the query call. Medulla scores the evidence side from the same call. The production caller of `execute` is `crates/medulla-graphql/src/crossmodal.rs:429`. This row creates the call site. No production caller of an arbitration exists today. Proving test: `crates/medulla-exec/src/exec.rs::tests::execute_returns_arbitration_for_prior_candidate`.
-- [ ] **MEDULLA-FEDERATED-QUERY-R083.4:** Refusal. A verdict that abstains must return the typed code `ARBITRATION_ABSTAIN` with both candidates and no chosen answer. A call whose prior candidate lacks `evidence_class` must refuse with `CANDIDATE_CLASS_REQUIRED`. The typed abstention follows the pattern at `crates/medulla-compute/src/assemble/conclude.rs:69`. Proving test: `crates/medulla-plan/src/retrieval_arbitration.rs::tests::abstain_returns_both_candidates`.
-- [ ] **MEDULLA-FEDERATED-QUERY-R083.5:** Evidence. Each verdict must be recorded as a premise on the retrieval `DecisionRecord`. The premise lists both candidates, their `evidence_class`, the margin and the choice. Proving test: `crates/medulla-plan/src/retrieval_arbitration.rs::tests::arbitration_premise_lists_both_classes`.
-- [ ] **MEDULLA-FEDERATED-QUERY-R083.6:** Hot-path proof. The entry point is the served cross-modal query operation. The test sends a prior candidate and an evidence set whose confidence gap is below the margin. The call passes through `execute` at `crates/medulla-exec/src/exec.rs:536`. It observes `ARBITRATION_ABSTAIN` with both candidates. Proving test: `tests/retrieval/test_arbitration_served.py::test_small_gap_abstains_with_both`.
-
-## R081 retrieval synthesis extensions
-
-- [ ] **MEDULLA-FEDERATED-QUERY-R081.7:** **Adaptive dual-score chunk selection (rollup).** Extend R081 with children `.1` through `.6`. Medulla owns retrieval decisions and evidence; applications consume or execute its bounded decisions.
-- [ ] **MEDULLA-FEDERATED-QUERY-R081.7.1:** **Model.** Define `ChunkScorePair`, `SelectionPolicy` and `SelectionReceipt` in `crates/medulla-result-types/src/retrieval_verdict.rs`. Bind chunk IDs, corpus revision, embedding and cross-encoder scores, model revisions, normalization, thresholds, fusion weights and maximum count. Carry an activation benchmark digest.
-- [ ] **MEDULLA-FEDERATED-QUERY-R081.7.2:** **Behavior.** Use already computed embedding and cross-encoder scores to classify four score regions. Retain dual-high candidates; reject dual-low candidates. Rescue low-embedding/high-relevance candidates, including vocabulary-mismatch results. Apply the declared fusion threshold to the remaining region. Compute query-dependent count, capped by `max_chunks`, with stable ID tie-breaking. Selection itself performs no model inference.
-- [ ] **MEDULLA-FEDERATED-QUERY-R081.7.3:** **Wiring.** Add the selection operator to `crates/medulla-exec/src/exec.rs:536` after candidate cross-encoder scoring and before final truncation. Retain per-chunk score pairs through `fuse_rrf` at line 848; rank-fusion output alone is insufficient. Its production caller is `crates/medulla-graphql/src/crossmodal.rs:429`. Cross-encoder binding and this selector remain missing production work.
-- [ ] **MEDULLA-FEDERATED-QUERY-R081.7.4:** **Refusal.** Return `RETRIEVAL_SCORE_PAIR_REQUIRED` for missing or stale scores and `RETRIEVAL_NORMALIZATION_INVALID` for undefined normalization. Explicitly define empty and constant-score normalization in the policy. Return `RETRIEVAL_POLICY_UNVERIFIED` when activation lacks the matching benchmark receipt. Reject dual-low chunks even when fewer than the requested count remain.
-- [ ] **MEDULLA-FEDERATED-QUERY-R081.7.5:** **Evidence.** Record input scores, normalization, region, fused score, selected IDs, exclusions, count and policy digest. Count embedding, reranker and selection inference calls separately. Benchmark against a declared fixed-count baseline using identical candidates, models, corpus and tenant predicates. Activation requires zero extra selection inference and declared quality/cost acceptance.
-- [ ] **MEDULLA-FEDERATED-QUERY-R081.7.6:** **Hot-path proof.** Entry point: the authenticated served cross-modal query. `tests/retrieval/test_adaptive_selection_served.py` uses a deterministic corpus and pinned production embedding/reranker artifacts. Compare adaptive and fixed-count results through the actual execution path.
-- [ ] **MEDULLA-FEDERATED-QUERY-R081.8:** **Bounded retrieval feedback and critique (rollup).** Extend R081 with children `.1` through `.6`. Medulla owns retrieval decisions and evidence; applications consume or execute its bounded decisions.
-- [ ] **MEDULLA-FEDERATED-QUERY-R081.8.1:** **Model.** Extend `crates/medulla-result-types/src/retrieval_verdict.rs` with `RetrievalFeedback`, `PerspectiveQuery`, `TermFeedback` and `RetrievalCritique`. Bind original query, round, corpus/model revisions, document IDs, measured relevance, term weights and critique provenance. Feedback tiers are `Reinforce`, `Missing`, `Suppress`. Carry round, query, term, token and inference budgets. Use R082 `StopContext` and `StopVerdict` for termination; do not add a second stop authority.
-- [ ] **MEDULLA-FEDERATED-QUERY-R081.8.2:** **Behavior.** Generate bounded diverse semantic-perspective expansions from the original query. Assess returned documents against that original query, then reinforce useful terms, record missing aspects and suppress misleading terms. Use the latest accepted expansion and revision-bound feedback for the next round. Critique may propose a reformulation but never replace measured relevance.
-- [ ] **MEDULLA-FEDERATED-QUERY-R081.8.3:** **Wiring.** Add the feedback operator beside R081 sufficiency evaluation in `crates/medulla-exec/src/exec.rs:536`. The caller remains `crates/medulla-graphql/src/crossmodal.rs:429`. Medulla validates continuation evidence and budgets, then applies R082 precedence before dispatching any next query. The harness only executes an authorized bounded continuation. This row creates the missing feedback call site.
-- [ ] **MEDULLA-FEDERATED-QUERY-R081.8.4:** **Refusal.** Return `RETRIEVAL_FEEDBACK_INVALID` for forged documents, incompatible revisions or evidence outside tenant scope. R082 checks round and other budget limits before progress or confidence stops. Exhaustion returns `RETRIEVAL_BUDGET_EXCEEDED` with its terminal verdict and dimension. Valid completed-round evidence can stop with `no_new_evidence` or `quality_saturated` even without calibration. Preserve `ROUND_NOT_CALIBRATED` and never promote such termination to calibrated sufficiency. Reject critiques that alter scope, scores, limits or activation policy.
-- [ ] **MEDULLA-FEDERATED-QUERY-R081.8.5:** **Evidence.** Record expansion text, semantic perspective, term reinforcement/suppression, document tiers, critique text and applied or rejected proposal. Bind each item to measured relevance, original query, round, policy and corpus revision. Record R082 reason, calibration refusal, exhausted dimension, progress evidence and inference/token costs. Treat critique text as untrusted data.
-- [ ] **MEDULLA-FEDERATED-QUERY-R081.8.6:** **Hot-path proof.** Entry point: the authenticated served cross-modal query with successive Medulla continuations. `tests/retrieval/test_feedback_served.py` reads a deterministic corpus through production operators and pinned inference artifacts. Its uncalibrated continuation matrix exercises R082 precedence and observes production dispatch counters.
-- [ ] **MEDULLA-FEDERATED-QUERY-R081.9:** **Bounded typed hierarchy retrieval (rollup).** Children `.1` through `.6` retain community-to-entity retrieval. Child `.7` adds distinct document-section retrieval. Medulla owns retrieval decisions and evidence; applications consume or execute its bounded decisions.
-- [ ] **MEDULLA-FEDERATED-QUERY-R081.9.1:** **Model.** Add `HierarchyRetrievalPolicy` and `HierarchyStageReceipt` to `crates/medulla-result-types/src/retrieval_verdict.rs`. Carry hierarchy revision, community/summary/entity IDs, parent links, stage, score provenance, beam width and depth. Bound visited communities, entity candidates, reranker calls, tokens and total cost.
-- [ ] **MEDULLA-FEDERATED-QUERY-R081.9.2:** **Behavior.** Read community summaries, refine selected communities, then descend to entity evidence. Rerank at each declared stage and prune with the declared beam and stable ID tie-breaks. Deduplicate entities and retain their community paths. Apply tenant predicates before every stage and candidate truncation.
-- [ ] **MEDULLA-FEDERATED-QUERY-R081.9.3:** **Wiring.** Attach the hierarchy operator before terminal fusion in `crates/medulla-exec/src/exec.rs:536`. Bind graph community summaries and entity reads through `PlanCtx`; the served caller is `crates/medulla-graphql/src/crossmodal.rs:429`. Reuse `fuse_rrf` only for its existing rank-combination role. Revision-aware descent and stage reranking remain missing production calls.
-- [ ] **MEDULLA-FEDERATED-QUERY-R081.9.4:** **Refusal.** Return `RETRIEVAL_HIERARCHY_INVALID` for cycles, stale summaries or dangling parents/entities. Exhausted breadth, depth, scoring or cost bounds return `RETRIEVAL_BUDGET_EXCEEDED` with completed-stage evidence. Never silently replace failed descent with unbounded global retrieval.
-- [ ] **MEDULLA-FEDERATED-QUERY-R081.9.5:** **Evidence.** Record each visited community, pruning decision, entity path, stage score, reranker invocation and cumulative cost. Bind summary generation and graph/corpus revisions to the receipt. Compare quality and measured work against a declared flat-retrieval baseline.
-- [ ] **MEDULLA-FEDERATED-QUERY-R081.9.6:** **Hot-path proof.** Entry point: the authenticated served cross-modal query. `tests/retrieval/test_hierarchy_served.py` loads two tenant hierarchies with deterministic summaries and entity evidence. It uses production graph reads and scoring.
-
-## Retrieval policy extensions
-
-- [ ] **MEDULLA-FEDERATED-QUERY-R039.1:** Shared multimodal space and missing-embedding shortfall (rollup).
-  - [ ] **MEDULLA-FEDERATED-QUERY-R039.1.1:** **Model.** The engine must extend EmbeddingSpaceRef in `crates/medulla-index-types/src/embedding.rs:47` with a modality contract. It must declare text, image, audio and video bindings within one pinned coordinate space.
-  - [ ] **MEDULLA-FEDERATED-QUERY-R039.1.2:** **Behavior.** The planner must rank each query modality against every target modality using the same compatible space. The named compatible_space_only policy must preserve R039 candidate replenishment and R040 exclusions.
-  - [ ] **MEDULLA-FEDERATED-QUERY-R039.1.3:** **Wiring.** The server must extend run_unified_bind_embedder at `crates/medulla-h-query/src/query/planning.rs:611`, called by run_unified_with at `crates/medulla-h-query/src/query/planning.rs:424`. It must bind approved multimodal encoders before rank_top at `crates/medulla-exec/src/exec/vector_rank.rs:65`. No production caller today supplies this complete multimodal contract.
-  - [ ] **MEDULLA-FEDERATED-QUERY-R039.1.4:** **Refusal.** The planner must return missing_embedding shortfall when eligible target items lack embeddings. It must report requested, returned and authorized missing counts without padding. Incompatible spaces and unavailable query encoders must refuse before ranking.
-  - [ ] **MEDULLA-FEDERATED-QUERY-R039.1.5:** **Evidence.** The retrieval receipt must record modality direction, space identity, model revisions, index generation and authorized shortfall counts. It must identify every actual encoding call.
-  - [ ] **MEDULLA-FEDERATED-QUERY-R039.1.6:** **Hot-path proof.** Entry point: authenticated UnifiedQuery. `tests/retrieval/test_multimodal_served.py` must use production encoders and persistent indexes for all sixteen pairs.
-- [ ] **MEDULLA-FEDERATED-QUERY-R040.1:** Hard entity and relationship constraints (rollup).
-  - [ ] **MEDULLA-FEDERATED-QUERY-R040.1.1:** **Model.** The engine must add RetrievalConstraints beside Pred at `crates/medulla-types/src/wire_query_core.rs:27`. It must bind typed entity predicates, directed relationship predicates, quantifiers and graph revision.
-  - [ ] **MEDULLA-FEDERATED-QUERY-R040.1.2:** **Behavior.** The constraint compiler must apply every declared constraint before ranking or truncation. The named require_all policy must intersect authorized entity and relationship matches. Contradictory constraints must yield an empty eligible set.
-  - [ ] **MEDULLA-FEDERATED-QUERY-R040.1.3:** **Wiring.** The planner must attach constraint compilation at `crates/medulla-exec/src/exec.rs:536` before rank_limit at `crates/medulla-exec/src/exec/vector_rank.rs:56`. Its caller is execute_rows at `crates/medulla-h-query/src/query/planning.rs:411`. Generic filters exist; no production caller today compiles this declared constraint contract.
-  - [ ] **MEDULLA-FEDERATED-QUERY-R040.1.4:** **Refusal.** The planner must refuse invalid predicates, stale graph revisions and unevaluable required constraints. It must never replace hard exclusion with a score penalty. An unsatisfiable valid conjunction must return R039 typed shortfall.
-  - [ ] **MEDULLA-FEDERATED-QUERY-R040.1.5:** **Evidence.** The trace must record constraint digest, graph revision, authorized exclusion counts and per-predicate outcomes. It must retain the same constraint binding across replenishment and fusion.
-  - [ ] **MEDULLA-FEDERATED-QUERY-R040.1.6:** **Hot-path proof.** Entry point: authenticated UnifiedQuery. `tests/retrieval/test_constraints_served.py` must traverse real entity relationships before production vector and text ranking.
-- [ ] **MEDULLA-FEDERATED-QUERY-R081.9.7:** Vector-free document-section traversal (rollup).
-  - [ ] **MEDULLA-FEDERATED-QUERY-R081.9.7.1:** **Model.** The engine must extend HierarchyRetrievalPolicy in `crates/medulla-result-types/src/retrieval_verdict.rs` with distinct community and document_section kinds. Section nodes must carry document revision, parent, ordered children, granularity, summary and source span.
-  - [ ] **MEDULLA-FEDERATED-QUERY-R081.9.7.2:** **Behavior.** The planner must traverse document sections through bounded reasoning over authorized summaries and section contents. The named section_beam policy must declare breadth, depth, visits, tokens, inference calls and cost limits. It must require no vector storage.
-  - [ ] **MEDULLA-FEDERATED-QUERY-R081.9.7.3:** **Wiring.** The planner must add section traversal before fusion at `crates/medulla-exec/src/exec.rs:536` through PlanCtx. run_unified_with at `crates/medulla-h-query/src/query/planning.rs:424` must bind section reads and approved reasoning. No production caller today supplies this vector-free path.
-  - [ ] **MEDULLA-FEDERATED-QUERY-R081.9.7.4:** **Refusal.** The planner must reject cycles, dangling parents, stale summaries, invalid spans and unavailable reasoning. It must stop before exceeding any traversal limit. Partial paths must carry incomplete evidence.
-  - [ ] **MEDULLA-FEDERATED-QUERY-R081.9.7.5:** **Evidence.** HierarchyStageReceipt must retain ordered visits, full root-to-section paths, selected spans, pruned branches and bounded decision premises. It must bind document, summary, model and policy revisions with measured work.
-  - [ ] **MEDULLA-FEDERATED-QUERY-R081.9.7.6:** **Hot-path proof.** Entry point: authenticated UnifiedQuery. `tests/retrieval/test_section_tree_served.py` must read real section records and invoke production reasoning without vector storage.
-- [ ] **MEDULLA-FEDERATED-QUERY-R039.2:** Independent document-chunk encoding and aggregation (rollup).
-  - [ ] **MEDULLA-FEDERATED-QUERY-R039.2.1:** **Model.** The engine must define DocumentEncodingPolicy in `crates/medulla-index-types/src/embedding.rs` beside EmbeddingSpaceRef. It must pin tokenizer, chunk size, overlap, position mode, aggregation and model revision.
-  - [ ] **MEDULLA-FEDERATED-QUERY-R039.2.2:** **Behavior.** The encoder must split token IDs into ordered windows without losing token identities. Each window must reset positions locally or preserve absolute document offsets according to policy.
-  - [ ] **MEDULLA-FEDERATED-QUERY-R039.2.3:** **Behavior.** The encoder must process every chunk independently with the pinned model and no state from another chunk. It must leave query encoding unchanged.
-  - [ ] **MEDULLA-FEDERATED-QUERY-R039.2.4:** **Behavior.** The named mean_chunks policy must average chunk vectors in ordinal order before one final declared normalization. Aggregation must be query-independent and produce exactly one document vector.
-  - [ ] **MEDULLA-FEDERATED-QUERY-R039.2.5:** **Wiring.** The engine must validate chunk receipts at `crates/medulla-h-retrieve/src/semantic_index/worker.rs:175`, called by `crates/medulla-h-retrieve/src/semantic_index/dispatch.rs:14`. The governed ingestion worker must execute the approved encoding recipe before completing that generation. No production caller today validates this complete composition contract.
-  - [ ] **MEDULLA-FEDERATED-QUERY-R039.2.6:** **Refusal.** The encoder must refuse unsupported position modes, incompatible vector dimensions, non-finite outputs and exhausted encoding budgets. Failed chunks must prevent aggregate publication. Empty input and zero-norm aggregates must return typed no_embedding outcomes.
-  - [ ] **MEDULLA-FEDERATED-QUERY-R039.2.7:** **Evidence.** The encoding receipt must retain document digest, token ranges, position mode, per-chunk model revision and aggregate digest. It must bind policy, index generation and measured encoding cost.
-  - [ ] **MEDULLA-FEDERATED-QUERY-R039.2.8:** **Hot-path proof.** Entry point: authenticated UnifiedQuery after governed ingestion. `tests/retrieval/test_chunk_encoding_served.py` must use actual model bindings and maintained indexes.
-- [ ] **MEDULLA-FEDERATED-QUERY-R077.6:** Workload-aware column vectorization advice (rollup).
-  - [ ] **MEDULLA-FEDERATED-QUERY-R077.6.1:** **Model.** The engine must add ColumnVectorAdvice beside EmbeddingBinding at `crates/medulla-table-store/src/tables/embedding_binding.rs:398`. It must include table, column, schema revision, observed workload window, sample count, embedding eligibility and reason.
-  - [ ] **MEDULLA-FEDERATED-QUERY-R077.6.2:** **Behavior.** The named workload_first policy must rank eligible text columns using observed text-search demand, average length and distinct ratio. It must use type admission before scoring and stable column identifiers for ties. Missing workload must produce insufficient_observations.
-  - [ ] **MEDULLA-FEDERATED-QUERY-R077.6.3:** **Wiring.** The SQL handler must record resolved column usage at `crates/medulla-h-query/src/query/sql_read.rs:379`, called by handle_sql_read at `crates/medulla-h-query/src/query/sql_read.rs:100`. It must expose a bounded read-only advice relation through the existing authorized catalog. No production caller today supplies this advice contract.
-  - [ ] **MEDULLA-FEDERATED-QUERY-R077.6.4:** **Refusal.** The advisor must refuse recommending any unembeddable type before scoring. It must reject stale schemas and unavailable model capability. Advice must never create a binding or queue embeddings.
-  - [ ] **MEDULLA-FEDERATED-QUERY-R077.6.5:** **Evidence.** The advice receipt must record per-column workload counts, observation window, schema revision, policy revision and ranking contributions. It must omit raw query text and hidden columns.
-  - [ ] **MEDULLA-FEDERATED-QUERY-R077.6.6:** **Hot-path proof.** Entry point: authenticated Sql. `tests/retrieval/test_column_advice_served.py` must issue real table queries followed by the planned advice relation.
-- [ ] **MEDULLA-FEDERATED-QUERY-R040.2:** Topic and dense ranking fusion (rollup).
-  - [ ] **MEDULLA-FEDERATED-QUERY-R040.2.1:** **Model.** The engine must add TopicBackend and TopicRankingPolicy beside PlanCtx in `crates/medulla-exec/src/exec.rs:84`. Backend results must carry topic weights, centroid vectors, corpus revision and the retriever EmbeddingSpaceRef.
-  - [ ] **MEDULLA-FEDERATED-QUERY-R040.2.2:** **Behavior.** The named weighted_topic_dense policy must combine normalized dense similarity and responsibility-weighted centroid similarity. It must use a bounded explicit weight and stable candidate identifiers for ties. Hard constraints must precede topic scoring.
-  - [ ] **MEDULLA-FEDERATED-QUERY-R040.2.3:** **Wiring.** The planner must attach topic scoring before final truncation at `crates/medulla-exec/src/exec.rs:536`. run_unified_with at `crates/medulla-h-query/src/query/planning.rs:424` must bind the selected backend. Existing fuse_rrf at `crates/medulla-exec/src/exec.rs:848` combines ranks; no production caller today supplies topic fusion.
-  - [ ] **MEDULLA-FEDERATED-QUERY-R040.2.4:** **Refusal.** The planner must reject centroid dimensions, model revisions or coordinate spaces differing from the retriever. It must refuse non-finite weights, stale corpus revisions and unavailable backends. Equal dimensions alone must never establish compatibility.
-  - [ ] **MEDULLA-FEDERATED-QUERY-R040.2.5:** **Evidence.** The receipt must record backend identity, centroid generation, space tuple, topic responsibilities, component scores and fusion policy. Empirical centroids must record their authorized source-vector generation.
-  - [ ] **MEDULLA-FEDERATED-QUERY-R040.2.6:** **Hot-path proof.** Entry point: authenticated UnifiedQuery. `tests/retrieval/test_topic_fusion_served.py` must swap two actual topic backends over the same authorized corpus.
-- [ ] **MEDULLA-FEDERATED-QUERY-R039.3:** **Behavior.** The planner must replenish only candidates satisfying R040.1 constraints. Constraint exhaustion must produce typed shortfall without relaxing any entity or relationship predicate.
-- [ ] **MEDULLA-FEDERATED-QUERY-R040.3:** **Wiring.** The filtered index must consume only complete R039.2 aggregates through rank_top at `crates/medulla-exec/src/exec/vector_rank.rs:65`. Its caller is execute at `crates/medulla-exec/src/exec.rs:536`. It must reject stale encoding-policy generations before ranking.
-- [ ] **MEDULLA-FEDERATED-QUERY-R039.4:** **Residual behavior: mixed multi-hop traversal and vector top-k.** A query must combine multi-hop graph traversal and vector similarity. It must replenish candidates until k results survive the traversal filter. Otherwise, it must return a typed shortfall naming the number of permitted matches. It must never return a silent undercount. Run the reference-corpus correctness oracle for exactly k permitted results or typed shortfall. Retain the S-01 two-hop/parallel-edge fixture and stable edge identity.
-- [ ] **MEDULLA-FEDERATED-QUERY-R040.4:** **Residual behavior: filter-aware ANN and BM25 scans.** Filtered approximate-nearest-neighbor and BM25 text search must plan filter-aware index scans. These scans must consume pre-filtered candidate sets or bitmap filters. They must not scan the full unfiltered index and discard non-matching rows afterward. They must preserve the filtered-search correctness guarantee. Compare filtered ANN and BM25 latency before and after the scan change. Use a fixed corpus and run the correctness oracle.
-
-## R084 bounded ShEx slices
-
-Each child is one focused five-minute definition or proof slice. Split larger implementation work before delivery.
-
-- [ ] **MEDULLA-FEDERATED-QUERY-R084:** Served ShEx validation (rollup). Use the matching planned acceptance in test-spec.md.
-- [ ] **MEDULLA-FEDERATED-QUERY-R084.1:** Model. Use the matching planned acceptance in test-spec.md.
-- [ ] **MEDULLA-FEDERATED-QUERY-R084.2:** Behavior: data selection. Use the matching planned acceptance in test-spec.md.
-- [ ] **MEDULLA-FEDERATED-QUERY-R084.3:** Behavior: supported constraints. Use the matching planned acceptance in test-spec.md.
-- [ ] **MEDULLA-FEDERATED-QUERY-R084.4:** Behavior: semantic limits. Use the matching planned acceptance in test-spec.md.
-- [ ] **MEDULLA-FEDERATED-QUERY-R084.5:** Wiring. Use the matching planned acceptance in test-spec.md.
-- [ ] **MEDULLA-FEDERATED-QUERY-R084.6:** Refusal. Use the matching planned acceptance in test-spec.md.
-- [ ] **MEDULLA-FEDERATED-QUERY-R084.7:** Scoped reads. Use the matching planned acceptance in test-spec.md.
-- [ ] **MEDULLA-FEDERATED-QUERY-R084.8:** Evidence and hot-path proof. Use the matching planned acceptance in test-spec.md.
-
-## R085 producer delivery
-
-Preserve all previous acceptance and receipts. Deliver producer leaves before the Graft SDK consumer. Split concrete implementation work further if a leaf exceeds five minutes.
-
-- [ ] **MEDULLA-FEDERATED-QUERY-R085:** Medulla approves immutable source queries for bounded connector execution (rollup).. Fulfil the complete requirement and its named proving test.
-- [ ] **MEDULLA-FEDERATED-QUERY-R085.1:** Model.. Fulfil the complete requirement and its named proving test.
-- [ ] **MEDULLA-FEDERATED-QUERY-R085.2:** Behavior: issue approval.. Fulfil the complete requirement and its named proving test.
-- [ ] **MEDULLA-FEDERATED-QUERY-R085.3:** Behavior: verify approval.. Fulfil the complete requirement and its named proving test.
-- [ ] **MEDULLA-FEDERATED-QUERY-R085.4:** Behavior: read-only SQL.. Fulfil the complete requirement and its named proving test.
-- [ ] **MEDULLA-FEDERATED-QUERY-R085.5:** Wiring.. Fulfil the complete requirement and its named proving test.
-- [ ] **MEDULLA-FEDERATED-QUERY-R085.6:** Behavior: bounded execution contract.. Fulfil the complete requirement and its named proving test.
-- [ ] **MEDULLA-FEDERATED-QUERY-R085.7:** Refusal.. Fulfil the complete requirement and its named proving test.
-- [ ] **MEDULLA-FEDERATED-QUERY-R085.8:** Evidence and hot-path proof.. Fulfil the complete requirement and its named proving test.
-
-<!-- spec-definition-patch:owner-batch-20261012-federated-query-and-reasoning -->
-## Definition tasks and explicit owner dependencies — owner batch 2026-10-12
-
-
-- [ ] **MEDULLA-FEDERATED-QUERY-R006.1:** **Open definition — temporal derivation producer and semantics are absent.** R006 continues to require proof-carrying results for rule-derived queries. The source asks for temporal forward chaining from extracted facts. It requires provenance from every derived fact to its originating sentence or axiom. But the owner review found only answer-level proofs and no persistent fact-production API/origin chain. Before specifying a producer, the owner must decide rule language/version, temporal interval vocabulary, join/overlap semantics and conflict handling. The owner must also define derived-fact identity/update/retraction behavior and the persistent origin-record schema. The owner must also name the authoritative admission/readback operation. Do not treat query proof premises as a durable fact producer. No derivation or write is authorized by this row. Preserve `MEDULLA-FEDERATED-QUERY-R001, MEDULLA-FEDERATED-QUERY-R011, MEDULLA-DECISION-ENGINE-R003, MEDULLA-FEDERATED-QUERY-R006` and source record `2c2ffcf18d947730bc60a935fed942e1f82e9e8547f4509fe2941a34672fb8f3`. Status remains SPECIFIED. This task is not implementation evidence.
-- [ ] **MEDULLA-FEDERATED-QUERY-R006.1 acceptance:** After owner decisions are recorded, acceptance uses two source facts with sentence and axiom origins. It exercises matching and nonmatching temporal intervals. Read back the derived fact with rule digest, graph generation and complete origin refs. Missing/stale origins, unsupported rule versions, conflicting validity windows and unauthorized writes must refuse without changing graph revision. Until then no producer test is specified as executable.
-
-- [ ] **MEDULLA-FEDERATED-QUERY-R040.5:** The low-storage ANN definition below replaces the earlier generic hold. It keeps the source record and the existing obligations. The rollup has six unfinished child tasks. This task is not implementation evidence.
-- [ ] **MEDULLA-FEDERATED-QUERY-R040.5 acceptance:** Follow the six-child acceptance matrix in the `low-storage-ann-tasks-20261026` patch below. Native, authenticated integration, and independent evidence stay required. The definition alone proves no storage saving and no recall.
-
-
-- [ ] **MEDULLA-FEDERATED-QUERY-R083.7 (EG:22):** Define and wire the Medulla-owned residual for `MEDULLA-FEDERATED-QUERY-R083.1` using the reviewed producer/consumer route. Preserve covered clauses `MEDULLA-FEDERATED-QUERY-R083.1`, `MEDULLA-FEDERATED-QUERY-R083.2`, `MEDULLA-FEDERATED-QUERY-R083.3`, `MEDULLA-FEDERATED-QUERY-R083.4`, `MEDULLA-FEDERATED-QUERY-R083.6`.
-- [ ] **MEDULLA-FEDERATED-QUERY-R083.7 acceptance:** Extend existing R083 behavior/model/refusal acceptance with support-margin inputs. Add a served counterexample where a higher-confidence unsupported candidate loses to an evidence-supported candidate. Retain two-candidate, class, abstention and evidence obligations.
-- [ ] **MEDULLA-FEDERATED-QUERY-R083.7 status:** Keep SPECIFIED until separately reviewed implementation and served evidence are available.
-
-- [ ] **MEDULLA-FEDERATED-QUERY-R081.10:** **Open definition — clock precedence and fallback trigger are unspecified.** R081.8.1-.6 already own follow-up query expansion and remain credited. This child covers confusion among storage time, event time and narrative time. It also covers a bounded second pass when first-pass context is insufficient. Existing transcript ingestion supplies event/storage fields but no narrative-time interpretation. The owner must define three typed clock fields and their source/provenance. The owner must set precedence when values disagree. Define the sufficiency threshold that triggers fallback. Specify fallback query construction and maximum fanout. Report the selected clock basis. Until policy values are approved, do not choose narrative, event or storage time by heuristic. Do not duplicate R081.8 follow-up behavior. Preserve `MEDULLA-FEDERATED-QUERY-R081.1-.4, R081.8.1-.6` and source record `fb8d54d8554b8158da64f7c9e8bf02ea846e5b411768a0381c2682b2e6302dac`. Status remains SPECIFIED. This task is not implementation evidence.
-- [ ] **MEDULLA-FEDERATED-QUERY-R081.10 acceptance:** Once defined, serve a fixture where all three clocks disagree and another where one clock is absent. Assert the selected basis and its provenance, and trigger exactly the configured bounded fallback only below the declared sufficiency threshold. enough first-pass context must issue no second pass. Stale or conflicting clock provenance and exhausted query budget must return a typed partial/refusal with no unbounded retry. No executable acceptance is currently authorized.
-
-- [ ] **MEDULLA-FEDERATED-QUERY-R028.1:** **Typed KnowledgeSet row contract.** Reuse the existing `KnowledgeSet`/`KnowledgeRow` producer in `crates/medulla-retrieval/src/knowledge.rs`, the `UqlKnowledge` wire carrier in `crates/medulla-types/src/wire_query_core.rs`. And the existing `WITH KNOWLEDGE` attachment in `crates/medulla-plan/src/uql/serve/annotate.rs`. Do not substitute `ForeignRows`. Each row carries its own provenance-frame state and policy-frame state alongside the existing row id, `source_refs`, `evidence_refs` and `policy_labels`. `Resolved` means row provenance and policy were resolved from one pinned graph snapshot. Missing or unresolved frames do not count as empty success. The KnowledgeSet remains a superset of a plain row set: id/score and requested projection preserve existing values. Structured and UQL surfaces must serialize the same carrier. If either per-row frame is absent, malformed, or from a different snapshot, return typed `KNOWLEDGE_FRAME_MISSING`/`KNOWLEDGE_FRAME_STALE` and no partially annotated result. This is a contract clarification only. The source explicitly withholds UQL implementation authorization. Preserve `MEDULLA-FEDERATED-QUERY-R028, MEDULLA-FEDERATED-QUERY-R045` and source record `2eb8aadb1b6ccc2d5de77a4d1964fc04a4e944bccf9bcc1793e262f146af7583`. Status remains SPECIFIED. This task is not implementation evidence.
-- [ ] **MEDULLA-FEDERATED-QUERY-R028.1 acceptance:** Create one plain row and one row with resolved evidence/policy frames. Compare both with the same structured KnowledgeSet producer. Verify row id/score/projection are unchanged and both frame states are row-local. Independently omit provenance, policy and snapshot binding. Each case must return the typed refusal without a partial row. Keep R045 foreign-row pushdown behavior unchanged. Tests are acceptance targets only. No UQL implementation or served receipt is claimed.
-
-- [ ] **MEDULLA-FEDERATED-QUERY-R005.1:** **Typed consistency-violation matrix on the existing validation result.** Extend the existing R005 VALIDATE SHAPE / reasoning-validation result with a closed `ViolationKindV1`: `temporal_conflict`, `cardinality`, `self_loop`, `asymmetry`, `ontology_defect`. Each `ViolationV1` binds `kind`, focus entity, relation/property ids, graph/ontology revisions, expected/observed values and source axiom/evidence refs. Kind-specific fields are required: conflicting validity intervals for temporal conflict. Declared min/max and observed count for cardinality. One entity and its forbidden self-edge for self-loop. For asymmetry, use a declared asymmetric relation with an observed reverse pair. Include property/axiom id, subject/object, both edge ids/evidence refs and pinned graph/ontology revisions. Violated axiom id and affected terms for ontology defect. A missing reverse edge is not a violation. The validator is read-only: it reports each independent violation and never chooses a winner or retracts facts. Any later retraction requires a distinct explicit authorized mutation. Do not add a UQL implementation under this row. Preserve `MEDULLA-DECISION-ENGINE-R034, MEDULLA-FEDERATED-QUERY-R001, MEDULLA-FEDERATED-QUERY-R005, MEDULLA-FEDERATED-QUERY-R011, MEDULLA-FEDERATED-QUERY-R012` and source record `973de1c3b38646a438d057299d8070070f0ef7a2056bb30acff6d1a3814df513`. Status remains SPECIFIED. This task is not implementation evidence.
-- [ ] **MEDULLA-FEDERATED-QUERY-R005.1 acceptance:** Serve a violating fixture and repaired control for each of the five kinds. Assert exactly the typed diagnostic with pinned graph/ontology revision and evidence refs. For asymmetry, `(a,p,b)` alone is a clean control. Adding `(b,p,a)` as the sole change produces a violation citing both edge ids and the declared asymmetric axiom. Missing reverse edge is not a violation. Combine two independent defects and require both diagnostics. Missing kind-specific fields, unknown kinds and stale ontology revision refuse validation. Querying graph state afterward proves no mutation. Retraction remains denied absent explicit authorization.
-
-- [ ] **MEDULLA-FEDERATED-QUERY-R078.7:** **Governed company-context logical view.** The authenticated query uses the existing `PlanScope` and `inject_scope` path (R078.1-.6) over one pinned graph snapshot. It composes stored organization/role vocabulary (`crates/medulla-core/ontology/core-foundation-v1.ttl` and `company-v1.ttl`), registered data-source mappings and native time-series facts. It returns references/projections from those sources as one logical view. It does not copy or merge source records. Every result is scoped by verified tenant and clearance before retrieval, and every source row retains its source identity/revision. **Definition hold:** Owner review found no exact canonical ontology/mapping ids for organizations, roles, data assets, permissions or time-series facts. The time-series source/revision join key is also unknown. Before complete acceptance, map each category to its existing class/property or registered mapping. Name the time-series key. Do not invent or duplicate terms. Preserve `MEDULLA-DURABLE-KERNEL-R043, MEDULLA-FEDERATED-QUERY-R078, MEDULLA-UNIFIED-DATA-PLANE-R001/R003, MEDULLA-FEDERATED-QUERY-R078.1-.6` and source record `fd5990a7c9f30e1e1aa0eed9aa08efef4e2ebc8f5f34387598f1c9e577c458dc`. Status remains SPECIFIED. This task is not implementation evidence.
-- [ ] **MEDULLA-FEDERATED-QUERY-R078.7 acceptance:** With category mappings supplied, serve identical company-context queries as two tenants with differing clearances. Verify the authorized tenant receives each mapped category as source-bound references. Exclude denied rows before any source read and copy no source record. Join native time-series values only by the declared series/time key and snapshot. Missing/ambiguous mapping, unverified tenant, stale source revision or cross-tenant join refuses. Current scope-planning acceptance remains covered by R078.1-.6. This new composed view stays held until mappings are exact.
-
-- [ ] **MEDULLA-FEDERATED-QUERY-R081.9.7.7:** **Vector-free hierarchy mode with zero external model calls.** Add a read-only mode to the existing `HierarchyRetrievalPolicy`/authenticated `UnifiedQuery` section traversal. It accepts requested granularity (`document`, `section`, or `source_span`) and uses only the stored authorized section summaries and source spans already bound by R081.9.7.1-.6. It returns the selected stored summary or exact source span plus the ordered root-to-leaf path. It does not generate or rewrite summaries. In this mode external inference-call budget is exactly zero, vector index and embedding calls are forbidden. And the traversal limits from the existing section-beam policy remain enforced. Wire only at the existing `PlanCtx` section traversal before fusion in `crates/medulla-exec/src/exec.rs`, reached through `run_unified_with`. Do not create a second retriever. Refuse requests for generated answer text, missing/stale summaries or spans, invalid trees, or external inference dispatch. Preserve `MEDULLA-FEDERATED-QUERY-R081.9.7.1-.6` and source record `b2e5de8386b3ca72b59a81ca5fa3193eaf7736af86aca472a720b9e4511961c0`. Status remains SPECIFIED. This task is not implementation evidence.
-- [ ] **MEDULLA-FEDERATED-QUERY-R081.9.7.7 acceptance:** Serve all three granularities over a nested authorized section tree. Compare selected path/span ids with an independent tree oracle. Instrument external model, embedding and vector calls and require zero calls on every positive query. Malformed or stale section records and exhausted depth/visit/token limits refuse before extra dispatch. Tenant isolation and existing community traversal outputs remain unchanged. No runtime proof is claimed.
-
-- [ ] **MEDULLA-FEDERATED-QUERY-R081.9.7.8:** **Open definition — offline TOC producer and finite span-read policy are unbound.** Preserve existing space/section mappings. Do not recreate interaction spaces. The requested producer builds an offline line-numbered TOC from an immutable document revision. Each entry binds section id, title/path, inclusive start/end lines and source digest. Medulla needs a bounded line-span read from the pinned document. It returns exact lines, source digest and line range; it never returns the whole document. The current Graft SDK source-ingest -> Medulla document/section -> Arbora retrieval.space -> Meristem path leaves the TOC producer unresolved. It does not define who builds or refreshes the TOC. Source byte/line encoding and finite line-span/response-byte limits are also undefined. Those owner decisions and their producer/consumer schema are required before this can be executable. Existing directory mappings do not fill the gap. Preserve `ARBORA-OPS-R053.1-.3, R053.6; MEDULLA-FEDERATED-QUERY-R081.9.7.1, R081.9.7.5` and source record `6797cff839c16c3b9c3877d6bbf48bf8953eae8696087abc99f2b57147daed93`. Status remains SPECIFIED. This task is not implementation evidence.
-- [ ] **MEDULLA-FEDERATED-QUERY-R081.9.7.8 acceptance:** Once the owner supplies TOC generation and versioned positive finite `max_lines` and `max_bytes`, index a multisection fixture offline. Read a bounded middle span and verify exact line numbers and source digest. Refuse stale document/TOC revision, invalid or too-wide range, a response above the bound, and whole-file requests. Verify current Arbora space/section links still resolve. Until producer and caps are named, no served acceptance is claimed.
-
-- [ ] **MEDULLA-FEDERATED-QUERY-R040.2.7:** **Revision-bound per-document topic responsibilities.** Extend the existing `TopicBackend` result and `weighted_topic_dense` score in `run_unified_with` before final truncation. For each eligible candidate, the backend supplies a `DocumentTopicAssignment`. It binds document id/content revision, corpus generation, backend identity/revision and the retriever's `EmbeddingSpaceRef`. Each assignment identifies topic id and that document’s responsibility. Compute each candidate's topic component from its revision-matched responsibilities and the existing centroid similarity formula. Feed it into existing weighted dense/topic fusion. Preserve hard constraints, fusion weight, deterministic ties, tenant scope and all R040.2 refusals. Missing, duplicate, stale or cross-space assignments refuse the requested topic contribution. The planner must not silently fall back to dense-only ranking. Arbora projects reads and does not rank; ARBORA-FLEET-R014 is unrelated. Preserve `MEDULLA-FEDERATED-QUERY-R040.2.1-.3, R040.2.6` and source record `f7654cd07d4d95f32f09fec742c4172b35c689749b3228aef9424830b1f7cc1b`. Status remains SPECIFIED. This task is not implementation evidence.
-- [ ] **MEDULLA-FEDERATED-QUERY-R040.2.7 acceptance:** Serve the same corpus/backend with two candidates whose assignments differ. Independently recompute both topic components and final scores. Change only one candidate’s responsibility vector and prove only the expected candidate contribution/order changes. Refuse missing/duplicate document assignment, stale document or corpus revision, backend mismatch and embedding-space mismatch before truncation. Verify hard exclusions still hold and `run_unified_with` records the assignment/backend revision in the existing topic receipt. No implementation or served receipt is claimed.
-
-<!-- spec-definition-patch:reviewed-mapped-subsets-20261012 -->
-## Mapped definition tasks — 2026-10-12
-
-- [ ] `MEDULLA-FEDERATED-QUERY-R081.8.100`: Add the typed request/result, policy/revision binding and producer/consumer wiring described in requirements. Include refusal cases and receipt/readback fields. Preserve `R081.8` and its prior children.
-- [ ] `MEDULLA-FEDERATED-QUERY-R081.8.100`: Add served acceptance: same-retriever reuse succeeds; retriever-version changes require validation; failed, stale or missing transfer receipts refuse retrieval. Verify the receipt binds the strategy digest and target retriever. Keep feedback budgets unchanged. Rejected critiques must not change the active strategy.
-- [ ] `MEDULLA-FEDERATED-QUERY-R053.100`: bind the property-key escaping rule to the actual Cypher query-construction path and add a focused build/CI regression test there. Keep ForeignSourceSpec registration and Spark batch-only capability unchanged.
-- [ ] `MEDULLA-FEDERATED-QUERY-R053.100` build gate: exercise generated Cypher for plain, reserved, spaced, Unicode and embedded-backtick property keys. Parse safe outputs with the Cypher grammar and fail the build for an unquoted or malformed generated key. Do not add a served request, runtime receipt, or second renderer.
-- [ ] `MEDULLA-FEDERATED-QUERY-R032.100`: Add the typed request/result, policy/revision binding and producer/consumer wiring described in requirements. Include refusal cases and receipt/readback fields. Preserve `R032` and its prior children.
-- [ ] `MEDULLA-FEDERATED-QUERY-R032.100`: Add served acceptance for graph fixtures with ancestors and descendants across three layers. Include differing historical failure counts, a cycle boundary and missing-history data. Verify both directions and deterministic layer/history contribution. Refuse stale or malformed history, and compare existing R032 propagation outputs unchanged.
-<!-- /spec-definition-patch -->
-
-<!-- spec-definition-patch:final-mappings-20261012 -->
-## Final mapped definition tasks — 2026-10-12
-
-- [x] `MEDULLA-FEDERATED-QUERY-R086` links sole required child `MEDULLA-FEDERATED-QUERY-R086.100`. Generated status remains SPECIFIED until evidence closes.
-- [ ] `MEDULLA-FEDERATED-QUERY-R086.100`: resolve the model/training artifact, unseen-entity semantics, evidence-class vocabulary, read-only authorization action and Meristem receipt named in requirements. Preserve binary `GraphLearnPredict` and its write authority.
-- [ ] `MEDULLA-FEDERATED-QUERY-R086.100` acceptance: Acceptance is blocked until model, evidence-class, authorization and Meristem receipt decisions are published. A served ordered three-source fixture includes an unseen-at-fit entity. Return candidates with tuple order, graph/model/policy revisions and evidence class. Leave graph revision unchanged. Changing source order must change request digest. Refuse unary tuples, unresolved/unauthorized sources, stale revisions and malformed relation constraints. Confirm `GraphLearnPredict` binary results and write authority are unchanged. No producer test is currently defined as runnable.
-- [ ] `MEDULLA-FEDERATED-QUERY-R081.101`: implement the typed fields, decision/refusal behavior and owner boundary stated in requirements. Preserve `MEDULLA-FEDERATED-QUERY-R081`.
-- [ ] `MEDULLA-FEDERATED-QUERY-R081.101` acceptance: Build state once, then rerank under two query contexts and reversed candidate order. Assert the state digest stays identical and per-document scores remain aligned. Assert no decoder/model-generation call. Compare measured interaction cost with the same full-token baseline. Refuse stale document/encoder revisions, malformed segment coverage or any query-time state rewrite.
-- [ ] `MEDULLA-FEDERATED-QUERY-R081.102`: implement the typed fields, decision/refusal behavior and owner boundary stated in requirements. Preserve `MEDULLA-FEDERATED-QUERY-R081`.
-- [ ] `MEDULLA-FEDERATED-QUERY-R081.102` acceptance: Distill and read back an artifact meeting held-out quality threshold. Serve queries and assert zero model-service calls plus scorer-digest binding. Below-threshold, missing held-out evidence, stale corpus/index or teacher revision all refuse activation. Verify the prior scorer remains active.
-<!-- /spec-definition-patch -->
-
-<!-- spec-definition-patch:final-mapping-eg41-20261012 -->
-## Mapped retrieval-selection task — 2026-10-12
-
-- [ ] `MEDULLA-FEDERATED-QUERY-R081.100`: implement the joint objective, typed result fields, existing-bound enforcement and refusals specified in requirements.
-- [ ] Acceptance: Compare served retrieval on a tiny fixture with an independent exhaustive nonnegative-sparse oracle. Include two highly correlated documents and an alternative diverse pair. Assert exact selection, coefficients, residual and deterministic order. Refuse embedding-space mismatch, invalid policy and non-convergence. Verify existing tenant and result-count filters still apply.
-<!-- /spec-definition-patch -->
-
-
-<!-- spec-definition-patch:owner-dispatch-20261012-tasks -->
-## Cross-owner viewport query tasks — 2026-10-12
-
-- [ ] `MEDULLA-FEDERATED-QUERY-R081.103`: define and wire the closed `ViewportQueryV1` and `ResolveViewportSelectionV1` union through existing UnifiedQuery/run_unified_with. Serve billion-point scatter/line, pan/zoom, exact/bin selection and stale/denied/cap refusal cases. Verify effective encoded ceiling is the minimum of the caller request and formula cap. Refuse missing, invalid and envelope-too-small requests before scanning.
-- [ ] Implement separate scatter/line aggregation rules, continuity gaps, exact/aggregate selection and fixed viewport/variant bin plus serialized-byte formula.
-- [ ] Serve pan/zoom/selection at billion-point cardinality. Verify no full-source transfer and typed stale-index, authorization and cap refusals.
-- [ ] `MEDULLA-FEDERATED-QUERY-R087`: add served-path tests for SVG and PDF export through `Method::Viz`. Verify content type, non-empty body and unknown-dataset refusal for each format. Confirm which production caller reaches the method.
-<!-- /spec-definition-patch -->
-- [ ] **MEDULLA-FEDERATED-QUERY-R058.4 (rollup):** Natural-language planning context, dialect choice and bounded steps.
-- [ ] **MEDULLA-FEDERATED-QUERY-R058.4.1 (Model):** Add the context, step and request fields.
-- [ ] **MEDULLA-FEDERATED-QUERY-R058.4.2 (Behavior):** Implement linking, dialect choice and the bounded loop.
-- [ ] **MEDULLA-FEDERATED-QUERY-R058.4.3 (Wiring):** Attach the bounded steps to the served handler.
-- [ ] **MEDULLA-FEDERATED-QUERY-R058.4.4 (Refusal):** Declare and return the two refusals.
-- [ ] **MEDULLA-FEDERATED-QUERY-R058.4.5 (Evidence):** Emit the step trace in the result.
-- [ ] **MEDULLA-FEDERATED-QUERY-R058.4.6 (Hot-path proof):** Add the served correction test and the overhead measurement.
-- [ ] **MEDULLA-FEDERATED-QUERY-R058.4.7 (Grounding rollup):** Complete snapshot and source-native identifier grounding.
-- [x] **MEDULLA-FEDERATED-QUERY-R058.4.7.1 (Snapshot grounding):** Ground graph labels, stored fields, relationships and owner-authorized foreign source names.
-- [ ] **MEDULLA-FEDERATED-QUERY-R058.4.7.2 (Source-native grounding):** Reuse source schemas for decision records, series/channels, CEP attributes, UDF names and embedded RDF/SPARQL identifiers.
-- [x] **MEDULLA-FEDERATED-QUERY-R058.4.8 (Ontology names):** Link the composed GraphSchema ontology properties onto stored keys and offer them in the hint.
-- [ ] **MEDULLA-FEDERATED-QUERY-R058.4.9 (Inline adapters):** Bind inline foreign adapters to owner authority and a declared source schema before NL grounding accepts them.
-- [ ] **MEDULLA-FEDERATED-QUERY-R088 (rollup):** UQL text rows carry governance and an epistemic summary.
-- [ ] **MEDULLA-FEDERATED-QUERY-R088.1 (Model):** Add the flag and the row summary.
-- [ ] **MEDULLA-FEDERATED-QUERY-R088.2 (Behavior):** Apply visibility and resolve summaries in batch.
-- [ ] **MEDULLA-FEDERATED-QUERY-R088.3 (Wiring):** Attach visibility and summaries in `handle_uql`.
-- [ ] **MEDULLA-FEDERATED-QUERY-R088.4 (Refusal):** Add the build refusal.
-- [ ] **MEDULLA-FEDERATED-QUERY-R088.5 (Evidence):** Emit the result header fields.
-- [ ] **MEDULLA-FEDERATED-QUERY-R088.6 (Hot-path proof):** Add the served governance test and the cost measurement.
-- [ ] **MEDULLA-FEDERATED-QUERY-R089 (rollup):** Discover returns a retrieval-quality verdict.
-- [ ] **MEDULLA-FEDERATED-QUERY-R089.1 (Model):** Add the policy reference and the verdict.
-- [ ] **MEDULLA-FEDERATED-QUERY-R089.2 (Behavior):** Compute the verdict from existing scores and counters.
-- [ ] **MEDULLA-FEDERATED-QUERY-R089.3 (Wiring):** Attach the verdict in `discover`.
-- [ ] **MEDULLA-FEDERATED-QUERY-R089.4 (Refusal):** Add the policy refusal.
-- [ ] **MEDULLA-FEDERATED-QUERY-R089.5 (Evidence):** Emit the verdict evidence.
-- [ ] **MEDULLA-FEDERATED-QUERY-R089.6 (Hot-path proof):** Add the served verdict test and the cost measurement.
-- [ ] **MEDULLA-FEDERATED-QUERY-R089.7 (Behavior):** Read the drift monitor and name the adapter in the verdict.
-- [ ] **MEDULLA-FEDERATED-QUERY-R090 (rollup):** Discover plans expansions, recency and multi-hop context.
-- [ ] **MEDULLA-FEDERATED-QUERY-R090.1 (Model):** Add the planning fields.
-- [ ] **MEDULLA-FEDERATED-QUERY-R090.2 (Behavior):** Implement expansion, decay and capped hops.
-- [ ] **MEDULLA-FEDERATED-QUERY-R090.3 (Wiring):** Attach planning in `discover`.
-- [ ] **MEDULLA-FEDERATED-QUERY-R090.4 (Refusal):** Declare and return the refusals.
-- [ ] **MEDULLA-FEDERATED-QUERY-R090.5 (Evidence):** Emit the planning evidence.
-- [ ] **MEDULLA-FEDERATED-QUERY-R090.6 (Hot-path proof):** Add the served planning test and the benchmark.
-
-- [ ] **MEDULLA-FEDERATED-QUERY-R073.2:** Connection-protocol pushdown matrix.
-- [ ] **MEDULLA-FEDERATED-QUERY-R091 (rollup):** Virtual-query plans evolve by measured improvement (rollup).
-- [ ] **MEDULLA-FEDERATED-QUERY-R091.1 (Model):** Add the typed model.
-- [ ] **MEDULLA-FEDERATED-QUERY-R091.2 (Behavior):** Implement the behavior.
-- [ ] **MEDULLA-FEDERATED-QUERY-R091.3 (Wiring):** Wire the production call site.
-- [ ] **MEDULLA-FEDERATED-QUERY-R091.4 (Refusal):** Add the typed refusals.
-- [ ] **MEDULLA-FEDERATED-QUERY-R091.5 (Evidence):** Emit the evidence.
-- [ ] **MEDULLA-FEDERATED-QUERY-R091.6 (Hot-path proof):** Add the served hot-path test.
-- [ ] **MEDULLA-FEDERATED-QUERY-R090.7 (Wiring):** Apply the scoped adapter to expansion arms and list refresh provenance.
-
-- [ ] **MEDULLA-FEDERATED-QUERY-R653.7:** Cite the source URL, retrieval time, digest, backend and query on a web Document hit.
-
-- [ ] **MEDULLA-FEDERATED-QUERY-R703:** Query-time access check for dynamic-access sources (rollup).
-- [ ] **MEDULLA-FEDERATED-QUERY-R703.1:** Model.
-- [ ] **MEDULLA-FEDERATED-QUERY-R703.2:** Behavior.
-- [ ] **MEDULLA-FEDERATED-QUERY-R703.3:** Wiring.
-- [ ] **MEDULLA-FEDERATED-QUERY-R703.4:** Refusal.
-- [ ] **MEDULLA-FEDERATED-QUERY-R703.5:** Evidence.
-- [ ] **MEDULLA-FEDERATED-QUERY-R703.6:** Hot-path proof.
-- [ ] **MEDULLA-FEDERATED-QUERY-R704:** Agent knowledge scope (rollup).
-- [ ] **MEDULLA-FEDERATED-QUERY-R704.1:** Model.
-- [ ] **MEDULLA-FEDERATED-QUERY-R704.2:** Behavior.
-- [ ] **MEDULLA-FEDERATED-QUERY-R704.3:** Wiring.
-- [ ] **MEDULLA-FEDERATED-QUERY-R704.4:** Refusal.
-- [ ] **MEDULLA-FEDERATED-QUERY-R704.5:** Evidence.
-- [ ] **MEDULLA-FEDERATED-QUERY-R704.6:** Hot-path proof.
-- [ ] **MEDULLA-FEDERATED-QUERY-R705:** Feedback-adjusted document rank (rollup).
-- [ ] **MEDULLA-FEDERATED-QUERY-R705.1:** Model.
-- [ ] **MEDULLA-FEDERATED-QUERY-R705.2:** Behavior.
-- [ ] **MEDULLA-FEDERATED-QUERY-R705.3:** Wiring.
-- [ ] **MEDULLA-FEDERATED-QUERY-R705.4:** Refusal.
-- [ ] **MEDULLA-FEDERATED-QUERY-R705.5:** Evidence.
-- [ ] **MEDULLA-FEDERATED-QUERY-R705.6:** Hot-path proof.
-- [ ] **MEDULLA-FEDERATED-QUERY-R706:** Tag-based column masking and row filters (rollup).
-- [ ] **MEDULLA-FEDERATED-QUERY-R706.1:** Model.
-- [ ] **MEDULLA-FEDERATED-QUERY-R706.2:** Behavior.
-- [ ] **MEDULLA-FEDERATED-QUERY-R706.3:** Wiring.
-- [ ] **MEDULLA-FEDERATED-QUERY-R706.4:** Refusal.
-- [ ] **MEDULLA-FEDERATED-QUERY-R706.5:** Evidence.
-- [ ] **MEDULLA-FEDERATED-QUERY-R706.6:** Hot-path proof.
-- [ ] **MEDULLA-FEDERATED-QUERY-R707:** SPARQL 1.1 Update and Graph Store semantics (rollup).
-- [ ] **MEDULLA-FEDERATED-QUERY-R707.1:** Model.
-- [ ] **MEDULLA-FEDERATED-QUERY-R707.2:** Behavior.
-- [ ] **MEDULLA-FEDERATED-QUERY-R707.3:** Wiring.
-- [ ] **MEDULLA-FEDERATED-QUERY-R707.4:** Refusal.
-- [ ] **MEDULLA-FEDERATED-QUERY-R707.5:** Evidence.
-- [ ] **MEDULLA-FEDERATED-QUERY-R707.6:** Hot-path proof.
-- [ ] **MEDULLA-FEDERATED-QUERY-R708:** Named stored queries and materialized results (rollup).
-- [ ] **MEDULLA-FEDERATED-QUERY-R708.1:** Model.
-- [ ] **MEDULLA-FEDERATED-QUERY-R708.2:** Behavior.
-- [ ] **MEDULLA-FEDERATED-QUERY-R708.3:** Wiring.
-- [ ] **MEDULLA-FEDERATED-QUERY-R708.4:** Refusal.
-- [ ] **MEDULLA-FEDERATED-QUERY-R708.5:** Evidence.
-- [ ] **MEDULLA-FEDERATED-QUERY-R708.6:** Hot-path proof.
-- [ ] **MEDULLA-FEDERATED-QUERY-R709:** GeoSPARQL query functions (rollup).
-- [ ] **MEDULLA-FEDERATED-QUERY-R709.1:** Model.
-- [ ] **MEDULLA-FEDERATED-QUERY-R709.2:** Behavior.
-- [ ] **MEDULLA-FEDERATED-QUERY-R709.3:** Wiring.
-- [ ] **MEDULLA-FEDERATED-QUERY-R709.4:** Refusal.
-- [ ] **MEDULLA-FEDERATED-QUERY-R709.5:** Evidence.
-- [ ] **MEDULLA-FEDERATED-QUERY-R709.6:** Hot-path proof.
-
-- [ ] **MEDULLA-FEDERATED-QUERY-R708.7:** Shared query workspace.
-
-## Agent-memory substrate claims (2026-10-22)
-
-- [ ] **MEDULLA-FEDERATED-QUERY-R720:** One UQL plan across graph, vector, SQL, SPARQL and epistemic stages (rollup).
-  - [ ] **MEDULLA-FEDERATED-QUERY-R720.1:** Epistemic row fields.
-  - [ ] **MEDULLA-FEDERATED-QUERY-R720.2:** Confidence, bitemporal and time-decay stages.
-  - [ ] **MEDULLA-FEDERATED-QUERY-R720.3:** Embedding-similarity clustering stage.
-  - [ ] **MEDULLA-FEDERATED-QUERY-R720.4:** Wiring.
-  - [ ] **MEDULLA-FEDERATED-QUERY-R720.5:** Refusal.
-  - [ ] **MEDULLA-FEDERATED-QUERY-R720.6:** Hot-path proof.
-- [ ] **MEDULLA-FEDERATED-QUERY-R721:** Modalities are views over one RowSet algebra in one store (rollup).
-  - [ ] **MEDULLA-FEDERATED-QUERY-R721.1:** Each modality implements the modality contract.
-  - [ ] **MEDULLA-FEDERATED-QUERY-R721.2:** Wiring and store authority.
-  - [ ] **MEDULLA-FEDERATED-QUERY-R721.3:** Refusal.
-  - [ ] **MEDULLA-FEDERATED-QUERY-R721.4:** Hot-path proof: cross-modal queries with default configuration.
-
-- [ ] **MEDULLA-FEDERATED-QUERY-R722:** Connector data resources register as virtual-graph sources at pack import (rollup).
-- [ ] **MEDULLA-FEDERATED-QUERY-R722.1:** Model.
-- [ ] **MEDULLA-FEDERATED-QUERY-R722.2:** Behavior.
-- [ ] **MEDULLA-FEDERATED-QUERY-R722.3:** Wiring.
-- [ ] **MEDULLA-FEDERATED-QUERY-R722.4:** Refusal.
-- [ ] **MEDULLA-FEDERATED-QUERY-R722.5:** Evidence.
-- [ ] **MEDULLA-FEDERATED-QUERY-R722.6:** Hot-path proof.
-
-<!-- spec-definition-patch:low-storage-ann-tasks-20261026 -->
-## MEDULLA-FEDERATED-QUERY-R040.5 delivery tasks — definition first
-
-No task below is complete from this definition patch. Each row stays open until the native and authenticated evidence named in `test-spec.md` exists.
-
-- [ ] **MEDULLA-FEDERATED-QUERY-R040.5.1:** Add the bounded `LowStorageAnnManifest` and `StorageAccounting` model in the existing `medulla-ann` owner. Bind source id, revision, text digest, `EmbeddingSpaceRef`, `DocumentEncodingPolicy`, build policy, build workspace, and checked byte ceilings. Add refusal tests for absent identity, overflow, and over-budget persisted or peak bytes.
-- [ ] **MEDULLA-FEDERATED-QUERY-R040.5.2:** Extend the existing HNSW and IVF-PQ artifact path with compact topology, codes, and tombstones. Keep compatibility artifacts and stable IDs. Add tests for malformed artifacts, degree and code shapes, duplicate and dangling edges, and the exact oracle. Add no second index authority and no second store.
-- [ ] **MEDULLA-FEDERATED-QUERY-R040.5.3:** Add the core-owned `EmbeddingProvider::regenerate_eligible` write foundation with generation and fence promotion. Then add a separate embeddingless compact search and exact-rescore path. Enforce source-fetch, byte, rescore, and elapsed-work budgets. Add stale-identity and failed-replacement tests.
-- [ ] **MEDULLA-FEDERATED-QUERY-R040.5.4:** Add bounded multi-source batching around the core `EmbeddingProvider`, plus an exact-key in-process cache. Keep `medulla_plan::TextEmbedder` unchanged. Keep `medulla-core` independent of `medulla-plan`. Enforce batch, call, byte, entry, and cache ceilings. Add cache-isolation tests and refusal tests for wrong-space, wrong-width, and non-finite vectors. Do not reuse `medulla-kvcache` and add no durable embedding store.
-- [ ] **MEDULLA-FEDERATED-QUERY-R040.5.5:** Add the disabled-by-default hub-preserving pruning policy in the existing compact graph owner. Add deterministic topology and connectivity validation. Prove disabled identity, repeatable output, retained hubs, and typed refusal on invalid or disconnected output.
-- [ ] **MEDULLA-FEDERATED-QUERY-R040.5.6:** Wire manifest, generation, batch, cache, and receipt fields through the existing `UnifiedQuery`, `run_unified_with`, and `PlanCtx` paths. Add a temporary durable-engine test for build, update, restart, query, and readback. Compare with an exact full-scan oracle and a bounded measurement matrix. Record source, embedding space, workspace, bytes, rows, visits, latencies, recalls, and refusals.
-- [ ] **R040.5 release gate:** Run the affected native and served checks in the assigned environment. Then run the standard spec, contract, and quality gates. Keep reference measurements apart from Medulla acceptance. Claim no storage-savings figure and no universal recall.
-
-<!-- /spec-definition-patch -->
-
-R722.1 qualification in progress: run the typed-model, RDF parser and served
-import-held persistence tests before claiming delivery. Keep R722.2 through
-R722.6 open until approval and the real governed source execution path work.
-
-Tracked R722.3 amendment (2026-10-26): the next EG leaf is the owner-scoped,
-request-scoped bound-driver seam on the existing `ForeignSourceRegistry`.
-It uses the new typed `ForeignReadOpen`/`ForeignReadChunk`/
-`ForeignReadComplete`/`ForeignReadAbort` operations over the existing
-authenticated transport. Reuse
-R085 verification, R722.2 registration CAS, Arbora R042/R043.7
-admission/executor and SDK-SOURCE-INGEST-R004.7-.12;
-do not add a second authority or direct connector transport. The exact native,
-refusal and served matrix is in `test-spec.md`. Leave R722.3 through R722.6
-unchecked until the bound-driver and served `fleet.call` evidence exists.
-
-The same pending leaf now includes the typed `ForeignReadOpen`/
-`ForeignReadChunk`/`ForeignReadComplete`/`ForeignReadAbort` DTOs, the optional
-`UnifiedQuery`/`Uql` execution correlation, and the additive
-`ExplainPlanResult.plan_digest` pin. The `test-spec.md` section lists the
-native evidence bindings and their boundaries under “R722.3 EG native leaf
-evidence”.
-Run `cargo run -q --locked -p medulla-capabilities --features contract --bin
-gen_contract` through the governed native lane after source changes. Do not
-hand-edit generated contract artifacts. Keep all R722.3--R722.6 checkboxes
-unchecked until the served SDK/Arbora path and live provenance evidence pass.
-
-## MEDULLA-FEDERATED-QUERY-R058.6 certified answers delivery tasks
-
-- [ ] Add `check_certified_definitions` in `crates/medulla-nlq/src/nl/certified.rs` and call it from the `handle_nl_query_plan` step loop, so an answer that uses a certified `:GlossaryTerm` follows its certified definition and a conflicting answer is refused. **MEDULLA-FEDERATED-QUERY-R058.6**
-- [ ] Add the served `NlQueryCorrect` method and `record_nl_correction`, which records a certified correction as a fact for callers with the `query:nl:certify` scope and grounds later planning. **MEDULLA-FEDERATED-QUERY-R058.7**
-- [ ] Add `rewrite_follow_up` in `crates/medulla-nlq/src/nl/context.rs`, which rewrites a follow-up question with up to `max_history_turns` earlier turns into a standalone question before planning. **MEDULLA-FEDERATED-QUERY-R058.8**
-- [ ] Add `reconcile_term_definitions` and the `TermConflict` fact, which records one conflict per pair of sources that define a term differently and keeps the term uncertified until a certifier resolves it. **MEDULLA-FEDERATED-QUERY-R058.9**
+- [ ] T391 [P] [US5] MEDULLA-FEDERATED-QUERY-R701.1 Model of Live artifacts re-derive from a query and keep the prior value on failure
+- [ ] T392 [P] [US5] MEDULLA-FEDERATED-QUERY-R701.2 Behavior of Live artifacts re-derive from a query and keep the prior value on failure
+- [ ] T393 [P] [US5] MEDULLA-FEDERATED-QUERY-R701.3 Wiring of Live artifacts re-derive from a query and keep the prior value on failure
+- [ ] T394 [P] [US5] MEDULLA-FEDERATED-QUERY-R701.4 Refusal of Live artifacts re-derive from a query and keep the prior value on failure
+- [ ] T395 [P] [US5] MEDULLA-FEDERATED-QUERY-R701.5 Evidence of Live artifacts re-derive from a query and keep the prior value on failure
+- [ ] T396 [P] [US5] MEDULLA-FEDERATED-QUERY-R701.6 Hot-path proof of Live artifacts re-derive from a query and keep the prior value on failure
+- [ ] T397 [P] [US5] MEDULLA-FEDERATED-QUERY-R707.1 Model of SPARQL 1.1 Update and Graph Store semantics
+- [ ] T398 [US5] MEDULLA-FEDERATED-QUERY-R707.2 Behavior of SPARQL 1.1 Update and Graph Store semantics
+- [ ] T399 [US5] MEDULLA-FEDERATED-QUERY-R707.3 Wiring of SPARQL 1.1 Update and Graph Store semantics
+- [ ] T400 [US5] MEDULLA-FEDERATED-QUERY-R707.4 Refusal of SPARQL 1.1 Update and Graph Store semantics
+- [ ] T401 [US5] MEDULLA-FEDERATED-QUERY-R707.5 Evidence of SPARQL 1.1 Update and Graph Store semantics
+- [ ] T402 [US5] MEDULLA-FEDERATED-QUERY-R707.6 Hot-path proof of SPARQL 1.1 Update and Graph Store semantics
+- [ ] T403 [P] [US5] MEDULLA-FEDERATED-QUERY-R708.1 Model of Named stored queries and materialized results
+- [ ] T404 [US5] MEDULLA-FEDERATED-QUERY-R708.2 Behavior of Named stored queries and materialized results
+- [ ] T405 [US5] MEDULLA-FEDERATED-QUERY-R708.3 Wiring of Named stored queries and materialized results
+- [ ] T406 [US5] MEDULLA-FEDERATED-QUERY-R708.4 Refusal of Named stored queries and materialized results
+- [ ] T407 [US5] MEDULLA-FEDERATED-QUERY-R708.5 Evidence of Named stored queries and materialized results
+- [ ] T408 [US5] MEDULLA-FEDERATED-QUERY-R708.6 Hot-path proof of Named stored queries and materialized results
+- [ ] T409 [US5] MEDULLA-FEDERATED-QUERY-R708.7 Shared query workspace (rollup)
+- [ ] T410 [P] [US5] MEDULLA-FEDERATED-QUERY-R709.1 Model of GeoSPARQL query functions
+- [ ] T411 [US5] MEDULLA-FEDERATED-QUERY-R709.2 Behavior of GeoSPARQL query functions
+- [ ] T412 [US5] MEDULLA-FEDERATED-QUERY-R709.3 Wiring of GeoSPARQL query functions
+- [ ] T413 [US5] MEDULLA-FEDERATED-QUERY-R709.4 Refusal of GeoSPARQL query functions
+- [ ] T414 [US5] MEDULLA-FEDERATED-QUERY-R709.5 Evidence of GeoSPARQL query functions
+- [ ] T415 [US5] MEDULLA-FEDERATED-QUERY-R709.6 Hot-path proof of GeoSPARQL query functions
+- [ ] T416 [US5] MEDULLA-FEDERATED-QUERY-R708.8 Share scope of Named stored queries and materialized results
+- [ ] T417 [US5] MEDULLA-FEDERATED-QUERY-R708.9 Lint against trust flags

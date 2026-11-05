@@ -48,12 +48,12 @@ For each accepted stable ID: `ID | public merged SHA | test command/profile | ex
 | MEDULLA-FEDERATED-QUERY-R056 | `crates/medulla-mining/src/mining/causal_impact.rs::tests::two_sided_p_keeps_relative_accuracy_in_the_far_tail` | Passed against exact production modules and real libm: independent literal probabilities for z = ±3, ±6, ±8, ±10, ±20 at relative error < 1e-12. Z = 0 and +infinity boundaries. All five causal-impact tests passed. |
 
 Canonical crate command: `cargo test -p medulla-compute --lib mining::causal_impact::tests`.
-The 2026-10-11 bounded local run compiled the exact module with `rustc
+The bounded local run compiled the exact module with `rustc
 --test --edition=2021`. It imported production numeric modules by path and linked
 the cached real libm. This is pure-module acceptance, not a full-crate or hosted
 release result. See the owning plan's audit record for revision and limits.
 
-### 2026-10-11 — NL cache source guard (MEDULLA-FEDERATED-QUERY-R058.3.1)
+### NL cache source guard (MEDULLA-FEDERATED-QUERY-R058.3.1)
 
 Base: `f154c5b4a115713ab8ff3e1d9643e2295c4ebe43`. Extract the exact `nl.rs`
 test module into a standalone Rust test crate. Keep the original `nl.rs`
@@ -257,17 +257,15 @@ The following are proving targets, not execution receipts. Runtime delivery requ
 
 - **MEDULLA-FEDERATED-QUERY-R085:** All child tests and linked consumer evidence. Each child must pass; these definitions do not establish runtime delivery.
 - **MEDULLA-FEDERATED-QUERY-R085.1:** `crates/medulla-result-types/src/source_query.rs::tests::approval_records_round_trip` (planned). Round trips preserve every binding. Invalid references, parameter types, nonfinite values, absent snapshot identity and zero/unbounded limits refuse.
-- **MEDULLA-FEDERATED-QUERY-R085.2:** `src/server/handlers/federation/source_query_tests.rs::approval_requires_authority_and_native_commit` (planned). A successful response follows durable issuance. Generic lease writes cannot forge approval. Issuance uses existing storage and credentials; no external SQL executes during approval.
-- **MEDULLA-FEDERATED-QUERY-R085.3:** `src/server/handlers/federation/source_query_tests.rs::changed_or_revoked_approval_refuses` (planned). Changing any binding, authority, source or revision refuses. Revoked, expired, consumed, unavailable or missing leases refuse. Verification grants no SQL effect and creates no bearer credential.
+- **MEDULLA-FEDERATED-QUERY-R085.2:** `crates/medulla-h-sparql/src/federation/source_query_tests.rs::approval_requires_authority_and_native_commit` (planned). A successful response follows durable issuance. Generic lease writes cannot forge approval. Issuance uses existing storage and credentials; no external SQL executes during approval.
+- **MEDULLA-FEDERATED-QUERY-R085.3:** `crates/medulla-h-sparql/src/federation/source_query_tests.rs::changed_or_revoked_approval_refuses` (planned). Changing any binding, authority, source or revision refuses. Revoked, expired, consumed, unavailable or missing leases refuse. Verification grants no SQL effect and creates no bearer credential.
 - **MEDULLA-FEDERATED-QUERY-R085.4:** `crates/medulla-federation/src/federation_tests.rs::approved_source_query_has_no_write_effects` (planned). Native parameter binding preserves values and query meaning. Supported projections, predicates, ordering and limits match the query oracle. Unknown dialects, functions or effects refuse without issuing approval.
 - **MEDULLA-FEDERATED-QUERY-R085.5:** `tests/source_query_approval_served.rs::real_dispatch_issues_and_verifies_approval` (planned). Real authenticated dispatch reaches source validation, native issuance and fresh verification. No parallel planner, store or client-side approval authority appears. Current source has neither method.
 - **MEDULLA-FEDERATED-QUERY-R085.6:** `tests/source_query_approval_served.rs::bounded_stream_preserves_approval` (planned). Oversized rows, exceeded budgets or failed revalidation stop execution and close the driver. Exactly one explicit completion or typed failure stops an execution. Missing terminal completion never means success.
 - **MEDULLA-FEDERATED-QUERY-R085.7:** `tests/source_query_approval_served.rs::failure_after_three_chunks_is_terminal` (planned). Failure after three chunks stays failure with an incomplete execution identity. No successful terminal event or failed-chunk checkpoint follows. Earlier accepted pages retain their actual durable receipts.
 - **MEDULLA-FEDERATED-QUERY-R085.8:** `tests/source_query_approval_served.rs::approval_to_connector_query_journey` (planned). Keep row widths, driver settings and all limits fixed while increasing cardinality by two orders of magnitude. Declare the baseline, memory envelope and tolerance before runs. Every peak must fit that fixed envelope; whole-result buffering fails. Record exact revisions, features, commands, rows/bytes, queue high-water marks, terminal outcomes and checkpoint agreement.
 
-<!-- spec-definition-patch:owner-batch-20261012-federated-query-and-reasoning -->
-## Source-backed acceptance targets and explicit holds — owner batch 2026-10-12
-
+## Source-backed acceptance targets and explicit holds
 All targets below are planned acceptance, not executed tests or receipts. Use the real producer/consumer boundary named for each row and retain existing covered behavior.
 
 - **`MEDULLA-FEDERATED-QUERY-R006.1` / EG:11. Source `2c2ffcf18d947730bc60a935fed942e1f82e9e8547f4509fe2941a34672fb8f3`:** After owner decisions are recorded, acceptance uses two source facts with sentence and axiom origins. It exercises matching and nonmatching temporal intervals. Read back the derived fact with rule digest, graph generation and complete origin refs. Missing/stale origins, unsupported rule versions, conflicting validity windows and unauthorized writes must refuse without changing graph revision. Until then no producer test is specified as executable.
@@ -289,11 +287,8 @@ All targets below are planned acceptance, not executed tests or receipts. Use th
 - **`MEDULLA-FEDERATED-QUERY-R081.9.7.8` / GRAPHOS:25. Source `6797cff839c16c3b9c3877d6bbf48bf8953eae8696087abc99f2b57147daed93`:** Once the owner supplies TOC generation and versioned positive finite `max_lines` and `max_bytes`, index a multisection fixture offline. Read a bounded middle span and verify exact line numbers and source digest. Refuse stale document/TOC revision, invalid or too-wide range, a response above the bound, and whole-file requests. Verify current Arbora space/section links still resolve. Until producer and caps are named, no served acceptance is claimed.
 
 - **`MEDULLA-FEDERATED-QUERY-R040.2.7` / GRAPHOS:28. Source `f7654cd07d4d95f32f09fec742c4172b35c689749b3228aef9424830b1f7cc1b`:** Serve the same corpus/backend with two candidates whose assignments differ. Independently recompute both topic components and final scores. Change only one candidate’s responsibility vector and prove only the expected candidate contribution/order changes. Refuse missing/duplicate document assignment, stale document or corpus revision, backend mismatch and embedding-space mismatch before truncation. Verify hard exclusions still hold and `run_unified_with` records the assignment/backend revision in the existing topic receipt. No implementation or served receipt is claimed.
-<!-- /spec-definition-patch -->
 
-<!-- spec-definition-patch:reviewed-mapped-subsets-20261012 -->
-## Planned mapped acceptance — 2026-10-12
-
+## Planned mapped acceptance
 No test named here has run. Names describe acceptance obligations, not evidence.
 
 - **`MEDULLA-FEDERATED-QUERY-R081.8.100` (AU:77. Source `213700ec5b9e8648657ec47d0c587483a978db10f4661475b467be451d3bb2e1`):** Same-retriever feedback reuse succeeds. Retriever-version changes require validation. Failed, stale or missing transfer receipts refuse retrieval. Verify the receipt binds the strategy digest and target retriever. Keep feedback budgets unchanged. Rejected critiques must not change the active strategy. Producer/consumer boundary: Authenticated crossmodal -> `medulla-plan::exec` R081.8 feedback -> selected retriever. Preserve existing R081.8.1-.6 tiering, feedback and refusal behavior. Require exact source revision, input/output digests, caller and independent readback where specified. These cases are planned only. No implementation or receipt is asserted.
@@ -301,11 +296,8 @@ No test named here has run. Names describe acceptance obligations, not evidence.
 - **`MEDULLA-FEDERATED-QUERY-R053.100` (EG:37. Source `803f4e4ffbcd939af750e23451469835555beaa37e14ce555ffd0a59c0a3ac48`):** Build-time test enters the Cypher query-construction path. Check generated property keys for plain, reserved, spaced, Unicode and embedded-backtick names. Parse safe output against the Cypher grammar. An unquoted or malformed generated key fails the build. Keep values parameterized, preserve ForeignSourceSpec registration and Spark batch-only capability, and add no served API or runtime receipt. Gate evidence binds renderer source revision, fixture digest and test result.
 
 - **`MEDULLA-FEDERATED-QUERY-R032.100` (AU:43. Source `327ced0e0605f34366c662017d82ac892a481c5ca5f40bba2f3693ba6a5f7649`):** Graph fixtures cover ancestors and descendants across three layers. Include differing historical failure counts, a cycle boundary and missing-history data. Verify both directions and deterministic layer/history contribution. Refuse stale or malformed history, and compare existing R032 propagation outputs unchanged. Producer/consumer boundary: Medulla owns graph impact query/risk decision; Meristem requests and consumes the result. Existing numeric risk helpers are not this two-direction historical impact contract. Require exact source revision, input/output digests, caller and independent readback where specified. These cases are planned only. No implementation or receipt is asserted.
-<!-- /spec-definition-patch -->
 
-<!-- spec-definition-patch:final-mappings-20261012 -->
-## Final mapped planned acceptance — 2026-10-12
-
+## Final mapped planned acceptance
 No cases listed here have run. They describe required future acceptance, not evidence.
 
 - **`MEDULLA-FEDERATED-QUERY-R086.100` / EG:14. Source `7223250e7f899a187aad0b152e597c6174b772c49779ca2bdd12d3ba68f4f5ef`:** Acceptance is blocked until model, evidence-class, authorization and Meristem receipt decisions are published. A served ordered three-source fixture includes an unseen-at-fit entity. Return candidates with tuple order, graph/model/policy revisions and evidence class. Leave graph revision unchanged. Changing source order must change request digest. Refuse unary tuples, unresolved/unauthorized sources, stale revisions and malformed relation constraints. Confirm `GraphLearnPredict` binary results and write authority are unchanged. No producer test is currently defined as runnable. Parent `MEDULLA-FEDERATED-QUERY-R086` is linked to this sole required child. Both remain SPECIFIED.
@@ -313,24 +305,18 @@ No cases listed here have run. They describe required future acceptance, not evi
 - **`MEDULLA-FEDERATED-QUERY-R081.101` / AU:126. Source `deca151180a749cb3784d9946da0de17205eca89c92e5eb4f275859e1d4be165`:** Build state once, then rerank under two query contexts and reversed candidate order. Assert the state digest stays identical and per-document scores remain aligned. Assert no decoder/model-generation call. Compare measured interaction cost with the same full-token baseline. Refuse stale document/encoder revisions, malformed segment coverage or any query-time state rewrite. Producer/consumer: Medulla retrieval owns document-state construction and PlanCtx reranking. Query embeddings/context remain query inputs and do not alter the reusable state. Preserve existing FQR R081 tiering and selection bounds. Parent `MEDULLA-FEDERATED-QUERY-R081` remains intact.
 
 - **`MEDULLA-FEDERATED-QUERY-R081.102` / GRAPHOS:27. Source `baac22c9fb42470957b5b91499c6e42e1bb2410d24446d15f6f364638c88138e`:** Distill and read back an artifact meeting held-out quality threshold. Serve queries and assert zero model-service calls plus scorer-digest binding. Below-threshold, missing held-out evidence, stale corpus/index or teacher revision all refuse activation. Verify the prior scorer remains active. Producer/consumer: Medulla owns retrieval learning/ranking and the stored scorer. Meristem may execute evaluation. Arbora catalog ranking is separate. Use the existing authenticated UnifiedQuery -> run_unified_with planning route. Do not invent a public operation name. Parent `MEDULLA-FEDERATED-QUERY-R081` remains intact.
-<!-- /spec-definition-patch -->
 
-<!-- spec-definition-patch:final-mapping-eg41-20261012 -->
-## Mapped retrieval-selection acceptance — 2026-10-12
-
+## Mapped retrieval-selection acceptance
 No case listed here has run.
 
 - **`MEDULLA-FEDERATED-QUERY-R081.100` / EG:41. Source `bceeed106b5db2933cf5161d58b4203fc7afe9d714503a31d68323992906c23b`:** Compare served retrieval on a tiny fixture with an independent exhaustive nonnegative-sparse oracle. Include two highly correlated documents and an alternative diverse pair. Assert exact selection, coefficients, residual and deterministic order. Refuse embedding-space mismatch, invalid policy and non-convergence. Verify existing tenant and result-count filters still apply. Producer/consumer: Medulla retrieval selection owns the joint objective and set result. The existing served UnifiedQuery/retrieval path consumes it. Preserve R081.1-.9 selection and tenant bounds. No new caller-controlled score authority. Parent `R081` remains intact.
-<!-- /spec-definition-patch -->
 
-<!-- spec-definition-patch:owner-dispatch-20261012-tests -->
 ## Planned served acceptance — viewport query
 
 No test in this section has run.
 
 - `MEDULLA-FEDERATED-QUERY-R081.103`: serve scatter and line variants over a real indexed source of at least 1,000,000,000 points. Verify viewport-derived bin caps and `min(requested_byte_ceiling, formula_cap)` encoded-byte behavior at minimum/maximum sizes, source/cardinality/index revision and line gaps. Missing, invalid and too-small requested ceilings refuse before scanning. Pan/zoom changes query digest. Exact-point and aggregate-bin selections remain revision-bound. Stale index/source, denied selection, invalid/exceeded cap and any full-source transfer fail acceptance.
 - Pan/zoom and exact/aggregate selection prove viewport-bound tokens. Missing index, stale revision, denied point/bin and invalid/exceeded caps refuse. Verify no full-source payload or silently dropped bins.
-<!-- /spec-definition-patch -->
 
 ## MEDULLA-FEDERATED-QUERY-R058.4 acceptance
 
@@ -485,8 +471,7 @@ Hot-path proof for `MEDULLA-FEDERATED-QUERY-R091`: `tests/federation/test_plan_e
 |---|---|
 | `MEDULLA-FEDERATED-QUERY-R708.7` | `tests/test_stored_query_served.py::test_workspace_share_schedule_and_lint` |
 
-## Agent-memory substrate claims (2026-10-22)
-
+## Agent-memory substrate claims
 | Case | Requirement | Proving test |
 |---|---|---|
 | One UQL plan across graph, vector, SQL, SPARQL and epistemic stages (rollup) | `MEDULLA-FEDERATED-QUERY-R720` | Rollup: satisfied when the test of every child passes. |
@@ -519,7 +504,6 @@ Hot-path proof for `MEDULLA-FEDERATED-QUERY-R091`: `tests/federation/test_plan_e
 | Served refusal | `MEDULLA-FEDERATED-QUERY-R058.5` | `nl_config_refusal_tests::invalid_planner_config_is_refused_with_code_and_key` sees `ENGINE_UNAVAILABLE` and the bad key in the detail. |
 | Raw value | `MEDULLA-FEDERATED-QUERY-R058.5` | `nl::tests::unparseable_env_values_are_refused_with_source_and_raw_value` sees the env name or config key and the raw text in the detail. |
 
-<!-- spec-definition-patch:low-storage-ann-tests-20261026 -->
 ## MEDULLA-FEDERATED-QUERY-R040.5 planned acceptance — low-storage ANN
 
 These are planned acceptance cases. They have not run. They establish no native, served, deployed, or benchmark evidence. Each case uses a fresh temporary durable engine and two authorized tenants. It uses the real source and index lifecycle and a separate evidence reader. Each case pins the source-text snapshot and digest. It pins the `EmbeddingSpaceRef` model, revision, tokenizer, and preprocessing identity. It also pins the `DocumentEncodingPolicy`, the compact graph policy, the lane-private build workspace, and every finite budget. Each case enters through the existing `UnifiedQuery`, `run_unified_with`, and `PlanCtx` path. No case injects a finished ranking or receipt.
@@ -933,21 +917,21 @@ Proving targets for rows `MEDULLA-FEDERATED-QUERY-R058.4.2` to `MEDULLA-FEDERATE
 - **MEDULLA-FEDERATED-QUERY-R654.5:** `tests/retrieval/test_code_context_served.py::test_evidence_fields` (planned). Evidence. The fixture and expected result are stated in the row's Test cell.
 - **MEDULLA-FEDERATED-QUERY-R654.6:** `tests/retrieval/test_code_context_served.py::test_code_context_and_diagnose` (planned). Hot-path proof. Served test passes. cargo bench -p medulla-plan --bench code_context meets the key.
 - **MEDULLA-FEDERATED-QUERY-R700:** `tests/reasoning/test_aif_dung_served.py::test_grounded_extension_matches_fixture` (planned). Argument maps with a Dung projection (rollup). The fixture and expected result are stated in the row's Test cell.
-- **MEDULLA-FEDERATED-QUERY-R700.1:** `crates/medulla-types/src/argument_map.rs::tests::golden_vector_round_trips_and_rejects_invalid_shapes` (planned). Model. Compile-time test: the types reject the invalid shapes named in .4; golden serialization vector round-trips.
-- **MEDULLA-FEDERATED-QUERY-R700.2:** `crates/medulla-types/src/argument_map.rs::tests::grounded_is_linear_and_preferred_respects_budget` (planned). Behavior. Unit tests cover the stated complexity bound on fixtures of 10, 1,000 and 100,000 items.
+- **MEDULLA-FEDERATED-QUERY-R700.1:** `crates/medulla-result-types/src/argument_map.rs::tests::interchange_golden_vector_round_trips_and_projects`. Model. Compile-time test: the types reject the invalid shapes named in .4; golden serialization vector round-trips.
+- **MEDULLA-FEDERATED-QUERY-R700.2:** `crates/medulla-result-types/src/argument_map.rs::tests::grounded_and_preferred_extensions`, `crates/medulla-result-types/src/argument_map.rs::tests::grounded_is_linear_on_10_1000_100000_items` (planned). Behavior. Unit tests cover the stated complexity bound on fixtures of 10, 1,000 and 100,000 items.
 - **MEDULLA-FEDERATED-QUERY-R700.3:** `tests/reasoning/test_aif_dung_served.py::test_put_get_round_trip_and_evaluate` (planned). Wiring. Stores the golden vector, exports it byte-equal and evaluates it.
 - **MEDULLA-FEDERATED-QUERY-R700.4:** `tests/reasoning/test_aif_dung_served.py::test_dangling_edge_refused_and_budget_returns_gap` (planned). Refusal. Negative tests assert each refusal code and that durable state is unchanged.
 - **MEDULLA-FEDERATED-QUERY-R700.5:** `tests/reasoning/test_aif_dung_served.py::test_digest_binds_map` (planned). Evidence. Recomputes the digest from ArgumentMapGet and re-derives the extension.
-- **MEDULLA-FEDERATED-QUERY-R700.6:** `tests/reasoning/test_aif_dung_served.py::test_grounded_extension_matches_fixture` (planned). Hot-path proof. Served test passes. cargo bench -p medulla-types --bench dung_grounded meets the key.
+- **MEDULLA-FEDERATED-QUERY-R700.6:** `tests/reasoning/test_aif_dung_served.py::test_grounded_extension_matches_fixture` (planned). Hot-path proof. Served test passes. cargo bench -p medulla-result-types --bench dung_grounded meets the key.
 - **MEDULLA-FEDERATED-QUERY-R701:** `tests/query/test_live_artifact_served.py::test_failed_refresh_preserves_prior_data` (planned). Live artifacts re-derive from a query and keep the prior value on failure (rollup). The fixture and expected result are stated in the row's Test cell.
-- **MEDULLA-FEDERATED-QUERY-R701.1:** `crates/medulla-types/src/live_artifact.rs::tests::golden_vector_round_trips_and_rejects_oversize` (planned). Model. Compile-time test: the types reject the invalid shapes named in .4; golden serialization vector round-trips.
-- **MEDULLA-FEDERATED-QUERY-R701.2:** `crates/medulla-types/src/live_artifact.rs::tests::refresh_is_compare_and_set_and_interpolation_is_single_pass` (planned). Behavior. Unit tests cover the stated complexity bound on fixtures of 10, 1,000 and 100,000 items.
+- **MEDULLA-FEDERATED-QUERY-R701.1:** `crates/medulla-source-types/src/live_artifact.rs::tests::live_artifact_golden_vector_round_trips_and_bounds_hold`. Model. Compile-time test: the types reject the invalid shapes named in .4; golden serialization vector round-trips.
+- **MEDULLA-FEDERATED-QUERY-R701.2:** `crates/medulla-source-types/src/live_artifact.rs::tests::refresh_is_compare_and_set_and_interpolation_is_one_pass`. Behavior. Unit tests cover the stated complexity bound on fixtures of 10, 1,000 and 100,000 items.
 - **MEDULLA-FEDERATED-QUERY-R701.3:** `tests/query/test_live_artifact_served.py::test_put_refresh_get_and_scheduled_refresh` (planned). Wiring. Drives all three methods and one scheduler tick.
 - **MEDULLA-FEDERATED-QUERY-R701.4:** `tests/query/test_live_artifact_served.py::test_executable_template_refused_and_failed_refresh_keeps_data` (planned). Refusal. Negative tests assert each refusal code and that durable state is unchanged.
 - **MEDULLA-FEDERATED-QUERY-R701.5:** `tests/query/test_live_artifact_served.py::test_refresh_records_success_and_failure` (planned). Evidence. The fixture and expected result are stated in the row's Test cell.
 - **MEDULLA-FEDERATED-QUERY-R701.6:** `tests/query/test_live_artifact_served.py::test_failed_refresh_preserves_prior_data` (planned). Hot-path proof. Served test passes. cargo bench -p medulla-plan --bench live_artifact_refresh meets the key.
 - **MEDULLA-FEDERATED-QUERY-R702:** `tests/query/test_search_task_synthesis_served.py::test_single_clue_task_is_rejected` (planned). Search-task synthesis with shortcut-risk diagnostics (rollup). The fixture and expected result are stated in the row's Test cell.
-- **MEDULLA-FEDERATED-QUERY-R702.1:** `crates/medulla-types/src/search_task.rs::tests::golden_vector_round_trips_and_rejects_invalid_shapes` (planned). Model. Compile-time test: the types reject the invalid shapes named in .4; golden serialization vector round-trips.
+- **MEDULLA-FEDERATED-QUERY-R702.1:** `crates/medulla-work-types/src/search_task.rs::tests::records_round_trip_and_reject_invalid_shapes`. Model. Compile-time test: the types reject the invalid shapes named in .4; golden serialization vector round-trips.
 - **MEDULLA-FEDERATED-QUERY-R702.2:** `crates/medulla-plan/src/search_task.rs::tests::detector_complexity_on_10_1000_100000_items` (planned). Behavior: detectors and refinement. Tests::each_detector_threshold_boundary.
 - **MEDULLA-FEDERATED-QUERY-R702.3:** `tests/query/test_search_task_synthesis_served.py::test_task_feeds_ranking_evaluation` (planned). Wiring. Synthesizes a task and submits it to DecisionEval.
 - **MEDULLA-FEDERATED-QUERY-R702.4:** `tests/query/test_search_task_synthesis_served.py::test_risky_task_refused_with_detector_name` (planned). Refusal. Negative tests assert each refusal code and that durable state is unchanged.
