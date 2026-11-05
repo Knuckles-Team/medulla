@@ -73,6 +73,83 @@ pub fn geom_from_lexical(lexical: &str) -> Option<Geometry> {
     medulla_geo::parse_wkt(wkt).ok()
 }
 
+/// The one coordinate reference a `geo:wktLiteral` may name: `EPSG:4326`.
+pub const EPSG_4326: &str = "http://www.opengis.net/def/crs/EPSG/0/4326";
+
+/// A coded refusal of a spatial relation's operand (MEDULLA-FEDERATED-QUERY-R709.4).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum GeoRefusal {
+    /// The operand is not a parseable WKT geometry.
+    LiteralInvalid,
+    /// The operand names a coordinate reference other than `EPSG:4326`.
+    CrsUnsupported(String),
+}
+
+impl GeoRefusal {
+    /// The registered wire code of this refusal.
+    pub fn code(&self) -> medulla_types::contract::ServerErrorCode {
+        use medulla_types::contract::ServerErrorCode;
+        match self {
+            GeoRefusal::LiteralInvalid => ServerErrorCode::GeoLiteralInvalid,
+            GeoRefusal::CrsUnsupported(_) => ServerErrorCode::GeoCrsUnsupported,
+        }
+    }
+
+    /// The `CODE: detail` text the wire response splits into code and detail.
+    pub fn to_coded(&self) -> String {
+        let detail = match self {
+            GeoRefusal::LiteralInvalid => "operand is not a WKT geometry".to_string(),
+            GeoRefusal::CrsUnsupported(crs) => {
+                format!("coordinate reference {crs} is not {EPSG_4326}")
+            }
+        };
+        format!("{}: {detail}", self.code().as_str())
+    }
+}
+
+/// Parse a `geo:wktLiteral` operand of a spatial relation, refusing a coordinate
+/// reference other than `EPSG:4326` (absent means the default) and malformed WKT.
+/// An EWKT `SRID=<n>;` prefix is a coordinate reference too.
+pub fn geom_from_checked(lexical: &str) -> Result<Geometry, GeoRefusal> {
+    let trimmed = lexical.trim();
+    let wkt = match trimmed.strip_prefix('<') {
+        Some(rest) => {
+            let (crs, tail) = rest.split_once('>').ok_or(GeoRefusal::LiteralInvalid)?;
+            if crs.trim() != EPSG_4326 {
+                return Err(GeoRefusal::CrsUnsupported(crs.trim().to_string()));
+            }
+            tail.trim_start()
+        }
+        None => trimmed,
+    };
+    if wkt
+        .get(..5)
+        .is_some_and(|p| p.eq_ignore_ascii_case("SRID="))
+    {
+        let (srid, _) = wkt[5..].split_once(';').ok_or(GeoRefusal::LiteralInvalid)?;
+        if srid.trim() != "4326" {
+            return Err(GeoRefusal::CrsUnsupported(format!("SRID={}", srid.trim())));
+        }
+    }
+    medulla_geo::parse_wkt(wkt).map_err(|_| GeoRefusal::LiteralInvalid)
+}
+
+/// [`eval_relation`] with coded operand refusals: `Ok(None)` is an unknown function,
+/// `Err` a malformed literal or an unsupported coordinate reference
+/// (MEDULLA-FEDERATED-QUERY-R709.4).
+pub fn eval_relation_checked(
+    local: &str,
+    a_wkt: &str,
+    b_wkt: &str,
+) -> Result<Option<bool>, GeoRefusal> {
+    let Some((_, relation)) = SPATIAL_RELATIONS.iter().find(|(name, _)| *name == local) else {
+        return Ok(None);
+    };
+    let a = geom_from_checked(a_wkt)?;
+    let b = geom_from_checked(b_wkt)?;
+    Ok(Some(relation(&a, &b)))
+}
+
 /// Dispatch a boolean `geof:` spatial relation given its LOCAL name (the part after
 /// [`GEOF_NS`]) and the two operands' already-evaluated WKT lexical forms
 /// (CONCEPT:MEDULLA-KG.ontology.concept-10). Returns `None` for an unknown function or unparseable geometry —
