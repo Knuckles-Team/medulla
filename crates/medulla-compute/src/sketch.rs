@@ -387,6 +387,18 @@ mod tests {
 
     // ── HyperLogLog ──────────────────────────────────────────────────────────────
 
+    // spec: MEDULLA-UNIFIED-DATA-PLANE-R761.2
+    #[test]
+    fn hll_precision_14_within_error_bound() {
+        let mut h = HyperLogLog::new(14);
+        let n = 1_000_000u64;
+        for i in 0..n {
+            h.insert(&i);
+        }
+        let relative = (h.estimate() - n as f64).abs() / n as f64;
+        assert!(relative <= 0.025, "relative error {relative} exceeds 2.5%");
+    }
+
     #[test]
     fn hll_empty_estimates_zero() {
         let h = HyperLogLog::new(HLL_DEFAULT_PRECISION);

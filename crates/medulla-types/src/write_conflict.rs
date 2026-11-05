@@ -1,10 +1,13 @@
 //! Typed optimistic-write conflict data.
 //!
-//! This module contains only the wire model. Conflict resolution and the
-//! served mutation path live in the crates above `medulla-types` in the workspace
-//! DAG.
+//! This module holds the wire model and the pure per-node resolver
+//! (`resolve_write_conflict`). The served mutation path lives in the crates
+//! above `medulla-types` in the workspace DAG.
+
+use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 /// The policy applied when a writer's expected version is stale.
 ///
@@ -34,9 +37,85 @@ pub struct WriteConflict {
     pub scope: String,
 }
 
+/// Resolve one node's stale write under `strategy` (MEDULLA-DURABLE-KERNEL-R084.2).
+///
+/// `Refuse` returns the conflict. `PreferNewer` returns `incoming`.
+/// `FieldUnion` keeps every key only one side holds and every key both sides
+/// hold with equal values; a key with different values returns the conflict.
+/// Pure and deterministic.
+pub fn resolve_write_conflict(
+    conflict: &WriteConflict,
+    strategy: MergeStrategy,
+    current: &BTreeMap<String, Value>,
+    incoming: &BTreeMap<String, Value>,
+) -> Result<BTreeMap<String, Value>, WriteConflict> {
+    match strategy {
+        MergeStrategy::Refuse => Err(conflict.clone()),
+        MergeStrategy::PreferNewer => Ok(incoming.clone()),
+        MergeStrategy::FieldUnion => {
+            let mut merged = current.clone();
+            for (key, value) in incoming {
+                match current.get(key) {
+                    Some(existing) if existing != value => return Err(conflict.clone()),
+                    _ => {
+                        merged.insert(key.clone(), value.clone());
+                    }
+                }
+            }
+            Ok(merged)
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn props(pairs: &[(&str, Value)]) -> BTreeMap<String, Value> {
+        pairs
+            .iter()
+            .map(|(key, value)| ((*key).to_owned(), value.clone()))
+            .collect()
+    }
+
+    // spec: MEDULLA-DURABLE-KERNEL-R084.2
+    #[test]
+    fn resolve_under_each_strategy() {
+        let conflict = WriteConflict {
+            expected: 3,
+            actual: 4,
+            scope: "graph-main".to_owned(),
+        };
+        let current = props(&[("a", Value::from(1)), ("shared", Value::from("x"))]);
+        let disjoint = props(&[("b", Value::from(2)), ("shared", Value::from("x"))]);
+        let colliding = props(&[("a", Value::from(9))]);
+
+        assert_eq!(
+            resolve_write_conflict(&conflict, MergeStrategy::Refuse, &current, &disjoint),
+            Err(conflict.clone())
+        );
+        assert_eq!(
+            resolve_write_conflict(&conflict, MergeStrategy::PreferNewer, &current, &colliding),
+            Ok(colliding.clone())
+        );
+        assert_eq!(
+            resolve_write_conflict(&conflict, MergeStrategy::FieldUnion, &current, &disjoint),
+            Ok(props(&[
+                ("a", Value::from(1)),
+                ("b", Value::from(2)),
+                ("shared", Value::from("x")),
+            ]))
+        );
+        assert_eq!(
+            resolve_write_conflict(&conflict, MergeStrategy::FieldUnion, &current, &colliding),
+            Err(conflict.clone())
+        );
+        // Deterministic: the same inputs give the same output.
+        assert_eq!(
+            resolve_write_conflict(&conflict, MergeStrategy::FieldUnion, &current, &disjoint),
+            resolve_write_conflict(&conflict, MergeStrategy::FieldUnion, &current, &disjoint)
+        );
+    }
 
     // spec: MEDULLA-DURABLE-KERNEL-R084.1
     #[test]

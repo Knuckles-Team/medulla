@@ -224,7 +224,7 @@ async fn resolve_native(
     }
 }
 
-#[cfg(feature = "redb")]
+#[cfg(all(feature = "redb", any(feature = "ann-redb", feature = "query")))]
 async fn persist_dir(state: &Arc<RwLock<ServerState>>) -> Result<std::path::PathBuf, String> {
     state
         .read()

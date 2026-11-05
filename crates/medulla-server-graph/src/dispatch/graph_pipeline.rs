@@ -11,6 +11,7 @@ use super::request_boundary::preflight::{decode_ast_files, decode_ast_sources, A
 use super::request_boundary::screen::decode_screen_observation;
 use crate::dispatch::*;
 mod dispatch_helpers;
+mod document_ops;
 #[cfg(any(
     feature = "query",
     feature = "cypher",
@@ -20,6 +21,8 @@ mod dispatch_helpers;
 mod gateway;
 mod graph_access;
 mod graph_dispatch;
+// MEDULLA-UNIFIED-DATA-PLANE-R702.3 — the served lineage drain.
+mod lineage_ingest;
 #[cfg(all(feature = "raft", feature = "modality-serving"))]
 mod modality;
 mod native_routes;

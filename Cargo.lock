@@ -4512,6 +4512,7 @@ dependencies = [
  "medulla-protocol-types",
  "medulla-types",
  "medulla-work-types",
+ "schemars 1.2.3",
  "serde_json",
  "tempfile",
 ]
@@ -4808,6 +4809,8 @@ dependencies = [
 name = "medulla-durable"
 version = "0.1.0"
 dependencies = [
+ "criterion",
+ "medulla-types",
  "rmp-serde",
  "serde",
  "serde_json",
@@ -5043,11 +5046,13 @@ dependencies = [
  "medulla-catalog-types",
  "medulla-compute",
  "medulla-core",
+ "medulla-decision-types",
  "medulla-epistemic",
  "medulla-finance",
  "medulla-geo",
  "medulla-graph-algos",
  "medulla-graph-core",
+ "medulla-mining",
  "medulla-numeric",
  "medulla-rdf",
  "medulla-reasoner",
@@ -5266,6 +5271,8 @@ dependencies = [
 name = "medulla-h-compute"
 version = "0.1.0"
 dependencies = [
+ "criterion",
+ "hex",
  "medulla-compute",
  "medulla-core",
  "medulla-finance",
@@ -5292,7 +5299,9 @@ dependencies = [
  "rmp-serde",
  "serde",
  "serde_json",
+ "sha2 0.10.9",
  "tokio",
+ "tracing",
 ]
 
 [[package]]
@@ -5314,6 +5323,7 @@ dependencies = [
  "medulla-finance",
  "medulla-finance-market",
  "medulla-graph-core",
+ "medulla-h-graph",
  "medulla-index-types",
  "medulla-isolation",
  "medulla-kernel",
@@ -5333,6 +5343,7 @@ dependencies = [
  "medulla-shacl",
  "medulla-sql",
  "medulla-sql-lang",
+ "medulla-store",
  "medulla-table-store",
  "medulla-tables",
  "medulla-test-ambient-auth",
@@ -6859,6 +6870,7 @@ dependencies = [
  "medulla-tsdb",
  "medulla-types",
  "medulla-wasm",
+ "medulla-work-types",
  "rmp-serde",
  "serde",
  "serde_json",
@@ -7141,6 +7153,7 @@ dependencies = [
  "hex",
  "jsonwebtoken",
  "medulla-capabilities",
+ "medulla-catalog-types",
  "medulla-graph-core",
  "medulla-graphql",
  "medulla-isolation",
@@ -7835,6 +7848,7 @@ dependencies = [
  "rdkafka",
  "serde",
  "serde_json",
+ "sha2 0.10.9",
  "tokio",
 ]
 

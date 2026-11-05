@@ -1625,3 +1625,147 @@ async fn strict_run_admission_refusals_preserve_durable_evidence_after_restart()
     drop(reopened);
     let _ = std::fs::remove_dir_all(dir);
 }
+
+fn control_lease_issue(lease_id: &str, issued_at_ms: u64, expires_at_ms: u64) -> Method {
+    use medulla_work_types::control_lease::IssueControlLeaseRequest;
+    let mut grant = serde_json::Map::new();
+    grant.insert("tool_ids".into(), serde_json::json!(["click"]));
+    Method::IssueControlLease {
+        request: IssueControlLeaseRequest {
+            pending_call_registration: None,
+            tenant: TENANT.into(),
+            lease_id: lease_id.into(),
+            kind: "browser.control".into(),
+            grant,
+            issued_at_ms,
+            expires_at_ms,
+            hard_expires_at_ms: expires_at_ms,
+            idempotency_key: format!("issue:{lease_id}"),
+        },
+    }
+}
+
+fn control_lease_end(
+    lease_id: &str,
+    expected_revision: u64,
+    to: medulla_work_types::control_lease::ControlLeaseTarget,
+) -> Method {
+    use medulla_work_types::control_lease::TransitionControlLeaseRequest;
+    Method::TransitionControlLease {
+        request: TransitionControlLeaseRequest {
+            pending_call_consumption: None,
+            tenant: TENANT.into(),
+            lease_id: lease_id.into(),
+            expected_revision,
+            to,
+            idempotency_key: format!("end:{lease_id}:{expected_revision}:{to:?}"),
+        },
+    }
+}
+
+// spec: MEDULLA-DURABLE-KERNEL-R039.2
+#[tokio::test]
+async fn lease_consumption_expiry_through_signed_dispatch() {
+    use medulla_work_types::control_lease::{
+        ControlLeaseIssueOutcome, ControlLeaseIssued, ControlLeaseStatus, ControlLeaseTarget,
+        ControlLeaseTransition, ControlLeaseTransitionOutcome, ControlLeaseView,
+    };
+    let dir = temp_dir("medulla-lease-consumption-expiry");
+    let concrete = Arc::new(RedbBackend::open(dir.clone(), 8192).expect("open redb backend"));
+    let backend: Arc<dyn PersistenceBackend> = concrete.clone();
+    let state = state_with(backend, dir.clone());
+    let now_ms = now_secs() * 1000;
+    let cases = [
+        ("lease-live", now_ms - 1_000, now_ms + 600_000),
+        ("lease-lapsed", now_ms - 2_000, now_ms - 1_000),
+    ];
+    for (index, (lease_id, issued, expires)) in cases.into_iter().enumerate() {
+        let issued: ControlLeaseIssued = decode_raw(
+            &test_support::dispatch(
+                &state,
+                signed_request(
+                    7000 + index as u64,
+                    control_lease_issue(lease_id, issued, expires),
+                    &format!("lease-issue-{lease_id}"),
+                ),
+            )
+            .await,
+            "IssueControlLease",
+        );
+        assert_eq!(issued.outcome, ControlLeaseIssueOutcome::Issued);
+    }
+    let get = |id: u64, lease_id: &'static str| {
+        signed_request(
+            id,
+            Method::GetControlLease {
+                tenant: TENANT.into(),
+                lease_id: lease_id.into(),
+            },
+            &format!("lease-get-{id}"),
+        )
+    };
+
+    let live: ControlLeaseTransition = decode_raw(
+        &test_support::dispatch(
+            &state,
+            signed_request(
+                7100,
+                control_lease_end("lease-live", 1, ControlLeaseTarget::Consumed),
+                "lease-consume-live",
+            ),
+        )
+        .await,
+        "consume(live)",
+    );
+    assert_eq!(live.outcome, ControlLeaseTransitionOutcome::Applied);
+    assert_eq!(live.lease.unwrap().status, ControlLeaseStatus::Consumed);
+
+    let before: Option<ControlLeaseView> = decode_raw(
+        &test_support::dispatch(&state, get(7200, "lease-lapsed")).await,
+        "GetControlLease(before)",
+    );
+    let before = before.expect("lapsed lease is readable");
+    let lapsed: ControlLeaseTransition = decode_raw(
+        &test_support::dispatch(
+            &state,
+            signed_request(
+                7101,
+                control_lease_end("lease-lapsed", 1, ControlLeaseTarget::Consumed),
+                "lease-consume-lapsed",
+            ),
+        )
+        .await,
+        "consume(lapsed)",
+    );
+    assert_eq!(lapsed.outcome, ControlLeaseTransitionOutcome::Conflict);
+    assert!(lapsed.changed_work_item_ids.is_empty());
+    assert_eq!(lapsed.lease.as_ref(), Some(&before));
+    let after: Option<ControlLeaseView> = decode_raw(
+        &test_support::dispatch(&state, get(7201, "lease-lapsed")).await,
+        "GetControlLease(after)",
+    );
+    assert_eq!(after, Some(before.clone()));
+    assert_eq!(
+        (after.unwrap().status, before.revision),
+        (ControlLeaseStatus::Active, 1)
+    );
+
+    let revoked: ControlLeaseTransition = decode_raw(
+        &test_support::dispatch(
+            &state,
+            signed_request(
+                7102,
+                control_lease_end("lease-lapsed", 1, ControlLeaseTarget::Revoked),
+                "lease-revoke-lapsed",
+            ),
+        )
+        .await,
+        "revoke(lapsed)",
+    );
+    assert_eq!(revoked.outcome, ControlLeaseTransitionOutcome::Applied);
+
+    drop(state);
+    concrete.shutdown();
+    drop(concrete);
+    let _ = std::fs::remove_dir_all(dir);
+}
