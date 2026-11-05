@@ -59,7 +59,7 @@ Specs are already designed. The work is implementation, delivered in very small,
 - The rules are in `specs/README.md`. The `spec-standard` gate enforces the names, file set, title and index.
 
 **Time and size**
-- One agent delivers one PR in 5 minutes or less. No agent or sub-agent runs longer than 5 minutes; an orchestrator dispatches the next slice to a fresh agent.
+- A writer delivers one item (at most 8 rows of one served-method slice) and pushes it without building or testing; no writer runs longer than 5 minutes of active work, and the orchestrator dispatches the next item to a fresh writer. One PR covers one green item or one green train of 20 to 100 rows.
 - Self-timer (hard): run `date +%s > /tmp/agent-start-$$` as your FIRST command, and before every later step check elapsed with `echo $(( $(date +%s) - $(cat /tmp/agent-start-*) ))`. At 300 s, stop starting new work. At 480 s, commit what passes, push it, open the PR, report and STOP. Never exceed 600 s. Keep installed commit/push hooks enabled; use the immutable-range publication procedure below and report required gate time separately.
 - CI turns around in 5 minutes or less. PR CI runs the fast subset: lint, type check, the spec check, and only the tests and crates the diff touches. Pushes to main run the full suite.
 - CI timer (hard): every PR-path job carries `timeout-minutes: ${{ github.event_name == 'pull_request' && 10 || 60 }}`, so a PR gate is killed at 10 minutes and a slow gate shows up as a failure instead of a silent queue.
@@ -97,12 +97,22 @@ Specs are already designed. The work is implementation, delivered in very small,
 - Select targeted tests for local feedback, and honor broader checks required by the configured gates. Run the type checker on every changed file, and keep each function at cyclomatic complexity 10 or less.
 
 **Landing**
-- Every PR lands within minutes of going green; no PR sits idle. Mechanical conflicts (generated files, Markdown) are resolved automatically by the merge-train tool. Real conflicts are additive in most cases and are resolved, not deferred.
-- Many open PRs land together as a merge train: one integration branch and one CI run.
-- Full CI on main catches what the fast subset missed; regressions are fixed forward immediately.
-- Landing in this repo: delivery agents open the PR and do not run per-PR build-host builds or merge. The orchestrator lands EG in batches about every 20 minutes, validated by one warm integration build (`cargo check --workspace --all-features` plus contract regeneration) on the least-loaded build host.
+- Writers open no PR and run no build. Validation workers build pushed branches in batches (format check, the linter on the crate set PR CI selects, then the bound tests) and record a green result as a commit status on the exact head SHA.
+- A PR covers one green item or one green train. PR CI skips its own build and test for a SHA that already has the green status; forks and pushes to main run in full.
+- Merges happen automatically on green. Mechanical conflicts (generated files, Markdown) resolve automatically; real conflicts are additive in most cases and are resolved, not deferred.
+- Full CI on main catches what the batched build missed; regressions are fixed forward immediately.
 
 **Report**: at most 8 lines: PR URL, requirement IDs, test result, and any `ID:<main sha>` proof for rows already on main.
+
+## Bulk delivery
+
+High-rate delivery follows the [bulk delivery standard](https://github.com/Knuckles-Team/pipelines/blob/main/reference/bulk-delivery.md).
+
+- Four separate stages, run by different workers: writing, batched validation, fixing red results only, and automatic merge on green.
+- Writers implement one served-method slice of at most 8 rows, push the branch, and never build, test or wait on CI. They format only and run both hook stages.
+- Validation workers build branches in batches and record green as a commit status on the exact head SHA.
+- A writer never makes an open design choice. It records the question; the decision is written into the owning spec row first, then the row is implemented.
+- Only rows implemented completely, with their bound test, go in the `Spec:` trailer. Remainders are re-queued.
 
 ## Choose the owning implementation
 
