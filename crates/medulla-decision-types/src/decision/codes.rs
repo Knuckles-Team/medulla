@@ -26,6 +26,7 @@ pub fn resolve(code: &str) -> Option<RefusalCode> {
     SHARED
         .iter()
         .chain(FAMILY_TABLES.iter().flat_map(|(_, table)| table.iter()))
+        .chain(super::usage::REFUSALS.iter())
         .copied()
         .find(|registered| registered.as_str() == code)
 }

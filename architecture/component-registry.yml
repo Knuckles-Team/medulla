@@ -3828,6 +3828,7 @@ components:
       - "tests/finance_served_sizing.rs"
       - "tests/finance_wallet_trust_served.rs"
       - "tests/fixtures"
+      - "tests/golden/usage_cost_rollup.json"
       - "tests/graph_tile_stream.rs"
       - "tests/graphql_crossmodal_durable.rs"
       - "tests/incremental_server_indexes.rs"

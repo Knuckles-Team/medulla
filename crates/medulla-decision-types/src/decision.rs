@@ -21,9 +21,9 @@
 //! Every algorithm -- derivation, solving, verification, execution, fitting --
 //! lives above this module. These are data types and their bounds.
 
+pub mod codes;
 pub mod comparative_analysis;
 pub mod context_package;
-pub mod codes;
 pub mod digest;
 pub mod errors;
 pub mod harness_contrast;
@@ -39,6 +39,7 @@ pub mod reputation;
 pub mod request;
 pub mod statistical;
 pub mod task_plan;
+pub mod usage;
 
 /// Format identity (RF-ADR-006) of an assembly decision record.
 pub const DECISION_RECORD_SCHEMA_VERSION: u16 = 1;

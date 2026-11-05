@@ -231,6 +231,8 @@ knobs! {
     sdlc_delivery_max_automated_review_rounds: u64 = "sdlc.delivery.max_automated_review_rounds", U64(3), [1, 20], "rounds", Tunable;
     /// Owner approval is required for delivery.
     sdlc_delivery_owner_approval_required: bool = "sdlc.delivery.owner_approval_required", Bool(true), [true, true], "flag", Fixed;
+    /// Usage ledger batch size cap.
+    usage_max_batch: u64 = "usage.max_batch", U64(1_000), [1, 10_000], "records", Tunable;
 }
 
 fn refusal(code: ServerErrorCode, knob: &str, detail: String) -> KnobRefusal {
