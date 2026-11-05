@@ -27,8 +27,9 @@ use super::LegacyIntegrityPolicy;
 /// MEDULLA-TYPED-PACKS-R105.6 to R105.9), the commercial module with its shapes
 /// companion (52, MEDULLA-SUPPLY-VOCAB-R003.13), the supply-chain vocabulary
 /// (53, MEDULLA-SUPPLY-VOCAB-R001.1.2), and the connector-pack vocabulary with its
-/// shapes companion (54, MEDULLA-TYPED-PACKS-R101.1 to R102.1), and the government
-/// and foundation shapes companions (55, 56, MEDULLA-CQ-CONN-R073.1, R074.1).
+/// shapes companion (54, MEDULLA-TYPED-PACKS-R101.1 to R102.1), the government
+/// and foundation shapes companions (55, 56, MEDULLA-CQ-CONN-R073.1, R074.1), and
+/// the generated decision-contract ontology and shapes (57, MEDULLA-DECISION-ENGINE-R054.1).
 /// It is deliberately independent of the dynamic
 /// 32-source tenant quota, and equal to the wire bound
 /// `medulla_catalog_types::graph_schema::MAX_CORE_GRAPH_SCHEMA_SOURCES`.
@@ -1194,6 +1195,17 @@ fn core_specs() -> &'static [CoreSpec] {
                 "../../../medulla-core/ontology/connector_pack-v1.ttl"
             )),
         },
+        // MEDULLA-DECISION-ENGINE-R054.1: the decision contract's ontology and
+        // shapes, generated from its JSON schemas by
+        // `medulla_capabilities::decision_ontology` and committed.
+        CoreSpec {
+            module: "decision",
+            version: 1,
+            shapes: Some(include_str!(
+                "../../../medulla-core/ontology/decision.shapes.ttl"
+            )),
+            ontology: Some(include_str!("../../../medulla-core/ontology/decision.ttl")),
+        },
     ];
     SPECS
 }
@@ -1268,7 +1280,7 @@ mod tests {
     fn core_catalog_has_one_version_per_module_and_is_outside_dynamic_quota() {
         let sources = GraphSchemaSources::default();
         sources.validate().unwrap();
-        assert_eq!(sources.core.len(), 56);
+        assert_eq!(sources.core.len(), 57);
         assert!(sources.dynamic.is_empty());
         assert!(sources.core.keys().all(|id| id.starts_with("core:")));
     }
