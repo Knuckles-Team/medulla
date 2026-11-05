@@ -66,6 +66,7 @@ closed_error_codes! {
         CorruptWriteBack => "CORRUPT_WRITE_BACK",
         Decisions => "DECISIONS",
         DecisionLogTooLarge => "DECISION_LOG_TOO_LARGE",
+        DeltaWeightOverflow => "DELTA_WEIGHT_OVERFLOW",
         ElevationActorUnstamped => "ELEVATION_ACTOR_UNSTAMPED",
         ElevationCollision => "ELEVATION_COLLISION",
         ElevationConflict => "ELEVATION_CONFLICT",

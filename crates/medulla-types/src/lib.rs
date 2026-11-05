@@ -155,6 +155,8 @@ pub mod nl_query;
 pub mod entity_link_proposal;
 // RF-RULING-004 — bounded scalar/collection primitives shared by kernel DTOs.
 pub mod contract;
+// MEDULLA-INCREMENTAL-VIEWS-R002.1 — the signed-row Z-set delta of incremental views.
+pub mod delta;
 // MEDULLA-DURABLE-KERNEL-R032 — the native primary-key fast-path routing decision
 // (pgwire/MySQL/MSSQL point operations that bypass DataFusion planning).
 // Pure serde, no dep.

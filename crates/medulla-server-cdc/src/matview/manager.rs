@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use std::sync::OnceLock;
 
 use medulla_exec::incremental::Circuit;
+use medulla_types::delta::Delta;
 use parking_lot::Mutex;
 
 /// The durable DEFINITION of a plan-backed materialized view (CONCEPT:MEDULLA-KG.storage.plan-backed-matview):
@@ -170,37 +171,62 @@ impl PlanMatViewManager {
     /// output updates `current` and the watermark advances. Returns how many views it
     /// maintained. `Mode::Recompute` views are UNTOUCHED here (they ride `note_change`).
     pub fn apply_delta(&self, graph: &str, event: &medulla_types::wire::CdcEvent) -> usize {
-        let mut views = self.views.lock();
+        let delta = super::incremental::event_to_delta(event);
+        self.apply_signed(graph, event.seq, &delta)
+    }
+
+    /// Fold one signed `delta` at change `seq` into every `Mode::Incremental` view over
+    /// `graph` (the core of [`Self::apply_delta`]). A view whose circuit refuses the delta
+    /// (MEDULLA-INCREMENTAL-VIEWS-R002.3) is demoted to `Mode::Recompute` with the typed
+    /// reason code (`DELTA_WEIGHT_OVERFLOW`) and marked stale, so the next read
+    /// recomputes it.
+    fn apply_signed(&self, graph: &str, seq: u64, delta: &Delta) -> usize {
+        let mut demoted: Vec<(PlanMatView, String)> = Vec::new();
         let mut n = 0;
-        for t in views.values_mut() {
-            if t.mode != Mode::Incremental || t.def.graph != graph {
-                continue;
+        {
+            let mut views = self.views.lock();
+            for t in views.values_mut() {
+                if t.mode != Mode::Incremental || t.def.graph != graph {
+                    continue;
+                }
+                if seq < t.through_seq {
+                    continue;
+                }
+                if let Some(circuit) = t.circuit.as_mut() {
+                    // O(delta) maintenance: fold the signed delta into the circuit's state
+                    // ONLY (no O(view) result projection here — `Get` projects `current()`
+                    // lazily). `touched` is the rows-touched instrument (bounded by the
+                    // delta size, independent of view size — the O(delta) cost proof).
+                    let touched = if delta.is_empty() {
+                        0
+                    } else {
+                        match circuit.apply(delta) {
+                            Ok(touched) => touched,
+                            Err(err) => {
+                                demoted.push((t.def.clone(), err.code().as_str().to_string()));
+                                continue;
+                            }
+                        }
+                    };
+                    t.through_seq = seq + 1;
+                    n += 1;
+                    tracing::trace!(
+                        target: "medulla::matview",
+                        view = %t.def.name,
+                        graph = %graph,
+                        seq,
+                        delta = delta.len(),
+                        touched,
+                        "incremental matview maintained one CDC delta",
+                    );
+                }
             }
-            if event.seq < t.through_seq {
-                continue;
-            }
-            if let Some(circuit) = t.circuit.as_mut() {
-                let delta = super::incremental::event_to_delta(event);
-                // O(delta) maintenance: fold the signed delta into the circuit's state
-                // ONLY (no O(view) result projection here — `Get` projects `current()`
-                // lazily). `touched` is the rows-touched instrument (bounded by the delta
-                // size, independent of view size — the O(delta) cost proof).
-                let touched = if delta.is_empty() {
-                    0
-                } else {
-                    circuit.apply(&delta)
-                };
-                t.through_seq = event.seq + 1;
-                n += 1;
-                tracing::trace!(
-                    target: "medulla::matview",
-                    view = %t.def.name,
-                    graph = %graph,
-                    seq = event.seq,
-                    delta = delta.len(),
-                    touched,
-                    "incremental matview maintained one CDC delta",
-                );
+        }
+        for (def, reason) in demoted {
+            let name = def.name.clone();
+            self.insert_recompute(def, Some(reason));
+            if let Some(t) = self.views.lock().get_mut(&name) {
+                t.stale = true;
             }
         }
         n
@@ -317,6 +343,43 @@ mod tests {
             had_before: true,
             had_after: false,
         }
+    }
+
+    /// MEDULLA-INCREMENTAL-VIEWS-R002.3: a delta the circuit refuses demotes the view to
+    /// recompute mode with the typed reason code, and the view reads as stale.
+    #[test]
+    fn apply_failure_demotes_with_typed_reason() {
+        use medulla_types::delta::ZRow;
+        use medulla_types::wire::{Op, Plan};
+        let plan = Plan::new(vec![Op::Scan {
+            label: "Doc".into(),
+        }]);
+        let circuit = Circuit::compile(&plan).unwrap();
+        let m = PlanMatViewManager::default();
+        m.install_incremental(
+            PlanMatView {
+                name: "v".into(),
+                graph: "g".into(),
+                plan,
+            },
+            circuit,
+            0,
+        );
+        let props = serde_json::json!({"type": "Doc"})
+            .as_object()
+            .cloned()
+            .unwrap();
+        let mut big = ZRow::insert("a", props.clone());
+        big.weight = i64::MAX;
+        let delta = Delta::from(vec![big, ZRow::insert("a", props)]);
+        assert_eq!(m.apply_signed("g", 0, &delta), 0);
+        assert_eq!(m.mode("v"), Some(Mode::Recompute));
+        assert_eq!(
+            m.fallback_reason("v").as_deref(),
+            Some("DELTA_WEIGHT_OVERFLOW")
+        );
+        assert!(m.is_stale("v"));
+        assert!(m.incremental_rows("v").is_none());
     }
 
     // spec: MEDULLA-INCREMENTAL-VIEWS-R001.6
