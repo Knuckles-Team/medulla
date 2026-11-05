@@ -650,6 +650,10 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         // MEDULLA-UNIFIED-DATA-PLANE-R651.7: lowers to one ChangeEnvelope, which
         // carries its own domains; selection commits nothing.
         | Method::EnrichDocument { .. }
+        // MEDULLA-MEDIA-VOCAB-R001.101.3-.5: each lowers to one ChangeEnvelope.
+        | Method::MeetingSummaryCommit { .. }
+        | Method::MeetingSummaryContext { .. }
+        | Method::MeetingTranscriptRevision { .. }
         // MEDULLA-UNIFIED-DATA-PLANE-R651.3: lowers to one ChangeEnvelope.
         | Method::DocumentDelete { .. }
         // MEDULLA-UNIFIED-DATA-PLANE-R702.3: lowers to one ChangeEnvelope.

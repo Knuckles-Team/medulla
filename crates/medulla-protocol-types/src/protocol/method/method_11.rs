@@ -240,6 +240,25 @@ $($variants)*
         request: Box<medulla_decision_outcome_types::decision::web_fetch_selection::SelectWebPagesRequest>,
     },
 
+    // ── Meeting transcripts (MEDULLA-MEDIA-VOCAB-R001.101.3 / .4 / .5) ──────
+    /// Apply one transcript revision event (`append`, `correct`,
+    /// `delete_segment`, `finalize`) to the request graph's meeting transcript
+    /// and commit its `TranscriptSegment` nodes and revision node as one
+    /// ChangeEnvelope. An exact replay answers the stored revision.
+    MeetingTranscriptRevision {
+        request: Box<medulla_types::meeting_transcript::MeetingTranscriptRevision>,
+    },
+    /// Cut a bounded summary context from the current finalized transcript and
+    /// record one `SummaryContext` node keyed by its digest.
+    MeetingSummaryContext {
+        request: Box<medulla_types::meeting_transcript::MeetingSummaryContextRequest>,
+    },
+    /// Commit a produced summary: the receipt must match its stored context and
+    /// every citation must lie inside a context span.
+    MeetingSummaryCommit {
+        request: Box<medulla_types::meeting_transcript::MeetingSummaryCommitRequest>,
+    },
+
     // ── Document delete (MEDULLA-UNIFIED-DATA-PLANE-R651.3..R651.5) ─────────
     /// Delete one RLS-visible Document of the request graph and everything
     /// derived from it (chunks, extracted facts, enrichment records) as one

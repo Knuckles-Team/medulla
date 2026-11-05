@@ -16,6 +16,10 @@ pub mod blob;
 
 /// Dataset lineage ingest (MEDULLA-UNIFIED-DATA-PLANE-R702.3).
 pub mod lineage;
+/// Served meeting transcript revisions and summaries
+/// (MEDULLA-MEDIA-VOCAB-R001.101.3 / .4 / .5).
+#[allow(missing_docs)] // fields mirror the medulla-types wire contracts
+pub mod meeting_transcript;
 
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[cfg(feature = "modality-serving")]

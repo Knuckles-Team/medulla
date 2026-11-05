@@ -903,6 +903,9 @@ mod tests {
         ("IndexRepository", "EH-280 runtime-conditional: an unscoped batch is a stateless parse; a scoped batch lowers its :Blob/:FileVersion/:Branch projection and delegates its sole graph commit to ApplyChangeEnvelope, exactly like SourceIngest"),
         ("DocumentDelete", "MEDULLA-UNIFIED-DATA-PLANE-R651.3 lowers a planned Document cascade (RemoveEdge/RemoveNode) plus one content-free DocumentDeletion record and delegates its sole graph commit to ApplyChangeEnvelope, exactly like EnrichDocument"),
         ("EnrichDocument", "MEDULLA-UNIFIED-DATA-PLANE-R651.7 lowers chunk nodes, chunkOf edges, vectors and one enrichment record of a held Document and delegates its sole graph commit to ApplyChangeEnvelope, exactly like IndexRepository"),
+        ("MeetingSummaryCommit", "MEDULLA-MEDIA-VOCAB-R001.101.3-.5 lowers meeting transcript, summary-context or summary rows and delegates its sole graph commit to ApplyChangeEnvelope, exactly like EnrichDocument"),
+        ("MeetingSummaryContext", "MEDULLA-MEDIA-VOCAB-R001.101.3-.5 lowers meeting transcript, summary-context or summary rows and delegates its sole graph commit to ApplyChangeEnvelope, exactly like EnrichDocument"),
+        ("MeetingTranscriptRevision", "MEDULLA-MEDIA-VOCAB-R001.101.3-.5 lowers meeting transcript, summary-context or summary rows and delegates its sole graph commit to ApplyChangeEnvelope, exactly like EnrichDocument"),
         ("LineageIngest", "MEDULLA-UNIFIED-DATA-PLANE-R702.3 lowers Dataset nodes, derivesInto edges and QuarantinedLineageEvent nodes of one drained batch and delegates its sole graph commit to ApplyChangeEnvelope, exactly like EnrichDocument"),
         ("RecomputeMaterialization", "fenced reasoning-projection coordinator resolves authoritative graph provenance and fsyncs its projection watermark"),
         // ── Server lifecycle: TxnParticipation::None, not a graph mutation. ──
