@@ -32,6 +32,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 use medulla_mutation_types::commit_descriptor::CommitParticipantDomain;
+use medulla_types::contract::Digest256;
 
 mod engine_fields;
 mod validation;
@@ -133,6 +134,56 @@ pub enum ReceiptNodeKind {
     RunTrace,
     ToolCall,
     OutcomeEvaluation,
+    /// One model request step of a run (MEDULLA-ORCH-VOCAB-R013.1).
+    ModelRequest,
+}
+
+/// The closed kind of one [`StepRecord`] (MEDULLA-ORCH-VOCAB-R013.1).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum StepKind {
+    ModelRequest,
+    ToolCall,
+}
+
+impl StepKind {
+    fn as_str(self) -> &'static str {
+        match self {
+            StepKind::ModelRequest => "model_request",
+            StepKind::ToolCall => "tool_call",
+        }
+    }
+}
+
+/// One step of a `:RunTrace` (MEDULLA-ORCH-VOCAB-R013.1). Only digests ride
+/// here; raw prompt and argument bytes stay in a referenced artifact.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct StepRecord {
+    pub step_index: u32,
+    pub kind: StepKind,
+    pub model_request_digest: Digest256,
+    pub tool_args_digest: Digest256,
+    pub result_digest: Digest256,
+}
+
+/// The one canonical step digest recipe (MEDULLA-ORCH-VOCAB-R013.2):
+/// SHA-256 over the canonical JSON of the step body, framed by its kind.
+/// Key order and whitespace of `canonical_bytes` do not change the digest.
+pub fn step_digest(kind: StepKind, canonical_bytes: &[u8]) -> Result<Digest256, String> {
+    let value: serde_json::Value = serde_json::from_slice(canonical_bytes)
+        .map_err(|err| format!("step body is not JSON: {err}"))?;
+    // serde_json's default map is ordered, so re-encoding canonicalizes keys
+    // and drops insignificant whitespace.
+    let canonical =
+        serde_json::to_vec(&value).map_err(|err| format!("step body encode failed: {err}"))?;
+    let mut hasher = Sha256::new();
+    hasher.update(kind.as_str().as_bytes());
+    hasher.update([0u8]);
+    hasher.update(&canonical);
+    Ok(Digest256::from_bytes(hasher.finalize().into()))
 }
 
 /// One Langfuse observation identity.  EG records the opaque receipt and its
@@ -514,6 +565,7 @@ fn receipt_kind_name(kind: ReceiptNodeKind) -> &'static str {
         ReceiptNodeKind::RunTrace => "run_trace",
         ReceiptNodeKind::ToolCall => "tool_call",
         ReceiptNodeKind::OutcomeEvaluation => "outcome_evaluation",
+        ReceiptNodeKind::ModelRequest => "model_request",
     }
 }
 
@@ -531,6 +583,8 @@ fn receipt_node_kind_matches_bundle(bundle: &CommitOutcomeBundle, node: &Receipt
         ReceiptNodeKind::RunTrace => node.node_id == bundle.trace_ref,
         ReceiptNodeKind::ToolCall => bundle.tool_call_refs.contains(&node.node_id),
         ReceiptNodeKind::OutcomeEvaluation => node.node_id == bundle.outcome_ref,
+        // A terminal bundle binds no model-request receipt refs.
+        ReceiptNodeKind::ModelRequest => false,
     }
 }
 
@@ -1150,5 +1204,48 @@ mod tests {
         let mut event = valid_event();
         event.cursor_token = String::new();
         assert!(event.validate().unwrap_err().contains("cursor_token"));
+    }
+
+    // spec: MEDULLA-ORCH-VOCAB-R013.1
+    #[test]
+    fn step_record_round_trips() {
+        let record = StepRecord {
+            step_index: 3,
+            kind: StepKind::ToolCall,
+            model_request_digest: Digest256::sha256(b"request"),
+            tool_args_digest: Digest256::sha256(b"args"),
+            result_digest: Digest256::sha256(b"result"),
+        };
+        let encoded = serde_json::to_value(&record).expect("encode");
+        assert_eq!(encoded["kind"], "tool_call");
+        let decoded: StepRecord = serde_json::from_value(encoded.clone()).expect("decode");
+        assert_eq!(decoded, record);
+        let mut unknown = encoded;
+        unknown["kind"] = serde_json::json!("prompt_dump");
+        assert!(serde_json::from_value::<StepRecord>(unknown).is_err());
+        assert_eq!(
+            serde_json::to_value(ReceiptNodeKind::ModelRequest).expect("kind"),
+            "model_request"
+        );
+    }
+
+    // spec: MEDULLA-ORCH-VOCAB-R013.2
+    #[test]
+    fn step_digest_is_canonical() {
+        let compact =
+            step_digest(StepKind::ModelRequest, br#"{"a":1,"b":[true,null]}"#).expect("digest");
+        let reordered = step_digest(
+            StepKind::ModelRequest,
+            b"{ \"b\" : [ true , null ] ,\n \"a\" : 1 }",
+        )
+        .expect("digest");
+        assert_eq!(compact, reordered);
+        let mut framed = Vec::from(&b"model_request\0"[..]);
+        framed.extend_from_slice(br#"{"a":1,"b":[true,null]}"#);
+        assert_eq!(compact, Digest256::sha256(&framed));
+        let other_kind =
+            step_digest(StepKind::ToolCall, br#"{"a":1,"b":[true,null]}"#).expect("digest");
+        assert_ne!(compact, other_kind);
+        assert!(step_digest(StepKind::ToolCall, b"not json").is_err());
     }
 }

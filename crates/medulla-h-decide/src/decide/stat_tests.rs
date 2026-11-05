@@ -1076,3 +1076,5 @@ mod scorer_tests;
 mod replay_tests;
 
 mod task_plan_tests;
+
+mod run_observation_tests;
