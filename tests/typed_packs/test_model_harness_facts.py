@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import copy
 import os
+from pathlib import Path
 from typing import Any
 
 import msgpack
@@ -21,6 +22,7 @@ from medulla import (
 )
 from medulla.client import (
     MedullaClient,
+    RdfClient,
     _canonical_method_body,
     _decode_send_result,
 )
@@ -209,6 +211,65 @@ def test_model_profile_round_trip() -> None:
             )
             for field in ("shell_proficiency", "stopping_behaviour"):
                 assert stored["facts"][field] == model[field]
+        finally:
+            await client.close()
+
+    asyncio.run(exercise())
+
+
+_HARNESS_SHAPES = (
+    Path(__file__).resolve().parents[2]
+    / "crates"
+    / "medulla-core"
+    / "ontology"
+    / "harness-v1.shapes.ttl"
+).read_text(encoding="utf-8")
+
+_MODEL_PREFIXES = """@prefix eg: <http://knuckles.team/kg#> .
+@prefix ex: <http://example.org/model-harness/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+"""
+
+
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R066.1")
+def test_shapes_reject_missing_run() -> None:
+    measured = (
+        _MODEL_PREFIXES
+        + """ex:model a eg:ModelProfile ;
+    eg:contextWindowTokens "128000"^^xsd:integer ;
+    eg:shellProficiency [ eg:value "high" ; eg:evaluationRun ex:shell ] ;
+    eg:stoppingBehaviour [ eg:value "balanced" ; eg:evaluationRun ex:stop ] .
+"""
+    )
+    missing_run = (
+        _MODEL_PREFIXES
+        + """ex:model a eg:ModelProfile ;
+    eg:contextWindowTokens "128000"^^xsd:integer ;
+    eg:shellProficiency [ eg:value "high" ] ;
+    eg:stoppingBehaviour [ eg:value "balanced" ; eg:evaluationRun ex:stop ] .
+"""
+    )
+    zero_window = measured.replace('"128000"', '"0"')
+
+    async def exercise() -> None:
+        client = await MedullaClient.connect(
+            socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+            verified_context=request_context(),
+        )
+        try:
+            rdf = RdfClient(client)
+            accepted = await rdf.validate_shacl(_HARNESS_SHAPES, measured)
+            assert accepted["conforms"], accepted
+            refused = await rdf.validate_shacl(_HARNESS_SHAPES, missing_run)
+            assert not refused["conforms"], refused
+            assert any(
+                result.get("path") == "<http://knuckles.team/kg#evaluationRun>"
+                or "evaluationRun" in (result.get("message") or "")
+                for result in refused["results"]
+            ), refused
+            assert not (await rdf.validate_shacl(_HARNESS_SHAPES, zero_window))[
+                "conforms"
+            ]
         finally:
             await client.close()
 
