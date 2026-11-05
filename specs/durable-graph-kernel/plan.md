@@ -1,34 +1,102 @@
-# Implementation plan
+# MEDULLA-DURABLE-KERNEL — Implementation plan
 
-## Build sequence
+Governing spec: [spec.md](spec.md). Rows: [requirements.md](requirements.md).
+
+## Summary
+
+The durable graph kernel is the system of record for graph, table, KV, time-series, outbox, audit and transaction state. Every write enters as one authenticated MutationBatch. Admission in `crates/medulla-transaction` checks owner scope, policy, idempotency and storage lineage before any effect. The owner store in `crates/medulla-storage` and the redb stores of `crates/medulla-persistence` hold the data. `crates/medulla-raft` and `crates/medulla-raft-xshard` replicate it. Served handlers live in the handler crates `crates/medulla-h-graph`, `crates/medulla-h-jobs` and `crates/medulla-h-admin`, reached through the dispatch of `crates/medulla-server-router`.
+
+```text
+arbora / SDK client --> medulla dispatch (verified tenant + principal)
+  MutationBatch --> admission --> owner manifest check --> one group commit
+    --> outbox / CDC feed --> mirrors, consumers   (delivery state stays node-local)
+  reads --> scope (RLS, UQL, KV, TSDB, foreign sources) --> native route or plan cache
+```
+
+## Technical Context
+
+- **Language/Version**: Rust 2021 edition on the pinned toolchain of `rust-toolchain.toml`; Python 3.14 (floor 3.12) for served tests and the client.
+- **Primary Dependencies**: The workspace crates named in Project Structure, redb, the Raft crates and the standard library. No parallel log store and no external cache product.
+- **Storage**: The owner store of `crates/medulla-storage` with redb files per shard; the work store of `crates/medulla-work-store`; the memory and KV-cache tiers of `crates/medulla-kvcache`.
+- **Testing**: Rust unit tests per crate, the served Rust harnesses in `crates/medulla-server-served-tests` and `crates/medulla-server-cluster-tests`, and served Python tests under `tests/`.
+- **Target Platform**: Linux x86_64 and aarch64 hosts without AVX2 assumptions.
+- **Project Type**: Library crates plus a server binary.
+- **Performance Goals**: Startup open budgets of rows `MEDULLA-DURABLE-KERNEL-R006.2`; async loss window at most 100 ms (`MEDULLA-DURABLE-KERNEL-R038`); each speed claim names workload, class, hardware and measured p99 (`MEDULLA-DURABLE-KERNEL-R042`).
+- **Constraints**: One write authority; no unguarded fast path; a mirror or cache never becomes read authority; each refusal has a stable code; no version suffix in a name; hard cutover with no shim.
+- **Scale/Scope**: The active leaf rows of `requirements.md`, spread over 6 user stories, 15 `FR-` labels and 6 `SC-` criteria.
+
+## Constitution Check
+
+- **R-I. The engine is native Rust and the only fact store**: pass. Every row lands in a Rust crate over the engine store.
+- **R-II. Every wait has a deadline**: pass. Leases, cursors, opens and jobs carry explicit deadlines.
+- **R-III. Every row sets budgets and names a benchmark**: pass. Hot-path rows name a budget and a benchmark.
+- **R-IV. Crates are small, layered and cut over hard**: pass. Rows name post-split crates and no handler crate calls a sibling handler crate.
+- **Organization standards**: pass. Rows follow the spec standard, ecosystem boundaries and the wording standard.
+
+## Project Structure
+
+```text
+crates/medulla-types/                 existing: MutationBatch, scheduler config, task queue, scopes types
+crates/medulla-transaction/           existing: admission, outbox claim and cursor
+crates/medulla-storage/               existing: owner manifest, lineage registry, scrub
+crates/medulla-persistence/           existing: redb stores and recovery
+crates/medulla-persistence-ops/       existing: store upgrade and auto-migration
+crates/medulla-store-apply/           existing: batch apply to the stores
+crates/medulla-work-store/            existing: WorkItem, checkpoint, control lease rows
+crates/medulla-work-types/            existing: run checkpoint and worker registry types
+crates/medulla-h-graph/               existing: graph handlers, supersession, as-of reads
+crates/medulla-h-jobs/                existing: job plane, task queue, worker admission handlers
+crates/medulla-h-admin/               existing: admin sagas and agent library
+crates/medulla-server-graph/          existing: graph dispatch and change envelope
+crates/medulla-server-router/         existing: dispatch arms
+crates/medulla-server-api/            existing: ServerState
+crates/medulla-capabilities/          existing: method catalog and scopes
+crates/medulla-protocol-types/        existing: methods and wire types
+crates/medulla-raft/, crates/medulla-raft-xshard/   existing: replication and cross-shard harness
+crates/medulla-kvcache/               existing: tiered KV-cache and eviction
+crates/medulla-server-served-tests/, crates/medulla-server-cluster-tests/   existing: served harnesses
+tests/                                existing: served Python and Rust integration tests
+```
+
+New files that rows add are marked `new` in their own `Shape:` sentence.
+
+## Phase 0: Research
+
+No unknowns; no research.md.
+
+## Phase 1: Design
+
+The sections below bind the rows. Data entities are in [data-model.md](data-model.md). The shortest served proof is in [quickstart.md](quickstart.md). Each seam to another repository has a document in `contracts/`.
+
+### Build sequence
 
 1. **Baseline and proof harness.** Pin one main revision and inventory the listed entry points. Record existing focused and hosted gate results. Add reproducible fault/cluster fixtures. Mark each work ID as queued, built, landed, or accepted only from actual evidence.
-2. **Transaction and storage authority (KG-01–04).** Add the cross-store ADR and enforce pre-effect refusal or atomic commit. Keep owner binding at the existing manifest/write boundary. Add lineage fixtures and bounded scrub. Verify table-only traffic stays in its present atomic path.
-3. **Policy and audit (KG-07–09).** Thread the verified authority context through every native/read/wire path; cover foreign sources, UDFs, KV, TSDB and caches. Add reserved audit and lease kinds through the existing audit store and capability registry. Define generated client error codes before changing callers.
-4. **Outbox, replication and mirrors (KG-05–06, KG-10).** Repair head attempts and replay; add per-consumer cursor/reconcile using committed ChangeEnvelope events. Add failure trace capture and repeated multi-node tests. Expand mirror sinks to user tables only after source/target digest and schema semantics are specified.
-5. **Native performance (KG-11–15).** Make durability visible and measured, then add RAM working structures, batching and classification. Extend the existing dependency clock plan cache. Run store-engine ADR and benchmark matrix; publish precise per-workload results.
+2. **Transaction and storage authority.** Add the cross-store ADR and enforce pre-effect refusal or atomic commit. Keep owner binding at the existing manifest/write boundary. Add lineage fixtures and bounded scrub. Verify table-only traffic stays in its present atomic path.
+3. **Policy and audit.** Thread the verified authority context through every native/read/wire path; cover foreign sources, UDFs, KV, TSDB and caches. Add reserved audit and lease kinds through the existing audit store and capability registry. Define generated client error codes before changing callers.
+4. **Outbox, replication and mirrors.** Repair head attempts and replay; add per-consumer cursor/reconcile using committed ChangeEnvelope events. Add failure trace capture and repeated multi-node tests. Expand mirror sinks to user tables only after source/target digest and schema semantics are specified.
+5. **Native performance.** Make durability visible and measured, then add RAM working structures, batching and classification. Extend the existing dependency clock plan cache. Run store-engine ADR and benchmark matrix; publish precise per-workload results.
 
-## Integration and migration
+### Integration and migration
 
 Persisted formats change only behind lineage versions and migration/rollback fixtures. Existing sync namespaces retain sync semantics until explicitly reconfigured. Existing client/wire methods continue to use the canonical MutationBatch path. Generated clients are regenerated from the authoritative protocol contract rather than hand edited. A mirror or replica is introduced in shadow mode, reconciled against source digest, then promoted by explicit operation. Restart resumes its cursor. If a new path lacks authorization or audit parity, it is not wired into serving.
 
-## Definition of done
+### Definition of done
 
-Each task names a `KG-*` requirement, tests its normal and refusal cases, and records exact revision plus CI links. `pre-commit run --config .config/pre-commit.yaml --all-files` and `bash scripts/ci_parity.sh` are the repository's broad configured checks; focused cargo tests and cloud CI are required for affected packages. CCCC, Dupehound, jscpd differential, KISS, rust architecture lint and clippy must have evidence at the same head. A missing scanner is a setup failure, not a pass. Live cluster/system proofs may add confidence but cannot replace reproducible container or process fixtures available to outside contributors.
+Each task names a requirement row, tests its normal and refusal cases, and records exact revision plus CI links. `pre-commit run --config .config/pre-commit.yaml --all-files` and `bash scripts/ci_parity.sh` are the repository's broad configured checks; focused cargo tests and cloud CI are required for affected packages. CCCC, Dupehound, jscpd differential, KISS, rust architecture lint and clippy must have evidence at the same head. A missing scanner is a setup failure, not a pass. Live cluster/system proofs may add confidence but cannot replace reproducible container or process fixtures available to outside contributors.
 
 No acceptance status changes until a reviewer can trace requirement → code entry point → positive/negative test → exact merged revision. Document only changed public wire contracts and operational behavior needed by contributors; generated documentation has its own source-of-truth workflow.
 
-## Worker registry sequence
+### Worker registry sequence
 
 Implement R074.1 in medulla-types with explicit caller-supplied timestamps and checked TTL arithmetic. Preserve capacity facts through heartbeat and expire at now >= deadline. Then R074.2 consumes that module through authenticated tenant/principal-scoped dispatch and regenerates contracts; verify the served path before completing the parent.
 
-## Scheduler producer-first decomposition
+### Scheduler producer-first decomposition
 
 R076 spans pure data and the served setting/admission boundary, so the SPEC-SIZING producer-first split is R076.1 followed by R076.2. Deliver and test the native `medulla-types` contract first, then connect it to the engine with served tests. Keep the parent open until both children are met. No server or worker policy is changed by the first slice.
 
-## Architecture
+### Architecture
 
-### Existing path to extend
+#### Existing path to extend
 
 `crates/medulla-server-mutation/src/mutation_batch.rs` compiles and commits the request, `crates/medulla-types/src/mutation_batch/` defines its persisted envelope, `crates/medulla-transaction` admits it, `crates/medulla-storage/src/owner/` binds a store owner, and `src/redb_store/` applies it. `src/raft/store/` handles replicated log/state-machine commits. `src/server/{auth,authority_context,sql_catalog_acl,kv,cdc}.rs` and the wire directories feed that same kernel. `crates/medulla-tsdb/src/store.rs` and `crates/medulla-stream/` are existing series and stream owners. These are extension points, not proposals to replace them.
 
@@ -45,7 +113,7 @@ flowchart LR
 
 No arrow bypasses identity, owner binding, or transaction admission. A native fast path may skip the SQL planner only. Derived hot structures and Parquet copies can be rebuilt from committed authority; they cannot accept independent authoritative writes.
 
-### Stable interfaces
+#### Stable interfaces
 
 | Contract | Producer → consumer | Invariant |
 |---|---|---|
@@ -56,36 +124,36 @@ No arrow bypasses identity, owner binding, or transaction admission. A native fa
 | Mirror cursor | committed stream → target sink | per-target durable checkpoint advanced only after idempotent target apply |
 | Auth context | verified transport → all executors | tenant and principal survive every route; no caller-supplied scope substitution |
 
-### Commit and recovery
+#### Commit and recovery
 
 Admission checks identity, scope, capability, owner member set, lineage, size and idempotency before opening a write transaction. For a single redb shard, graph and table members should share one redb `WriteTransaction`. Otherwise, an ADR must choose a recoverable intent protocol or a clear pre-effect refusal. A multi-shard/replicated batch must identify the commitment and replay boundary and preserve deterministic ordering. It must return one terminal result after durable acknowledgement. Crash injection must cover before-admission, after-intent, after-member-write, before-seal, after-seal, before-reply and after-reply. Each case must yield only absent or fully committed state, with idempotent retry after lost acknowledgement.
 
 Owner binding is validated once per write transaction and cached only for that transaction. A manifest format bump retains a golden fixture for each supported predecessor and a named refusal for unsupported lineage. A background scrub uses bounded read transactions, a persisted/resumable key cursor and a rate cap. It never repairs data silently. Typed findings include member, key digest, error class and first/last observed time without leaking payloads.
 
-### Policy, audit and streaming
+#### Policy, audit and streaming
 
 The transport verifies claims; all read executors and the native fast path take an immutable scoped authority context. RLS predicates apply before returning or joining user data. Explicit grants are resolved at use time, so revoke takes effect on the next request. KV keys retain principal-bound HMAC partitioning in every durability class. Audit reservation must be durable before any governed effect; an interrupted worker leaves `PENDING` for reconciliation, not a fabricated success. The outbox increments attempts for the head actually tried. Rejected reasoning projections require rebuild rather than skip-ack. CDC and mirror checkpoints move after target apply and can replay from the previous checkpoint safely. Delivery-side cursor rows stay local to their owner unless a versioned replicated contract proves otherwise.
 
 The deployment may offer `none`, `local`, or `external` authentication, but all modes produce the same internal principal/RBAC context before dispatch. `none` is an explicit single-principal development mode and must not mint an administrative identity from a client-supplied name. `local` owns password/session lifecycle in Medulla; `external` validates issuer, audience, tenant and policy-version binding before mapping claims. Switching modes must not reinterpret an old session as another principal. Every mode uses the same scope checks, request digest, audit class and access-denied errors. JIT elevation is a separate reserved `rbac.elevation` lease. The proposer and approver are distinct verified principals. The digest is exact, and expiry is checked on every use. Ordinary lease-write capability cannot issue it. Schema repair uses its own reserved kind with the same two-person invariant.
 
-### Native storage expansion
+#### Native storage expansion
 
 Classify requests before planner allocation. Only an exact supported point/structure form takes the native route; ambiguous SQL stays in the SQL planner. Prepared SQL cache keys include statement digest, dialect, schema version, authorization scope and relevant dependency-clock generation. Schema or policy changes invalidate before reuse. `sync` is default and cannot be silently changed. `async` acknowledges within its advertised maximum loss window and exports observed oldest-unflushed age. It blocks/degrades explicitly if it cannot honor ≤100 ms. `ephemeral` is advertised as non-recoverable. Hot structures are reconstructed deterministically from the durability log; compaction and hot/cold union preserve tombstone/version order. The store-engine comparison is an ADR based on reproducible captured workload fixtures, not a second authority design.
 
-### Cross-product boundaries
+#### Cross-product boundaries
 
 The [`unified-data-plane`](../unified-data-plane/spec.md) spec owns attached-source adapters, catalog mapping, upstream CDC capture, and federated query routing. It submits canonical envelopes and consumes Medulla positions. Serving products may call the audit API but cannot implement an independent audit log or skip reservation when unavailable. Finance can use TSDB and transactions, but this kernel contains no trading decision or order policy. These links are to local repository contracts; implementing this spec requires no private inventory.
 
-### Design decisions to record before implementation
+#### Design decisions to record before implementation
 
 1. Cross-store atomicity ADR: same redb transaction versus recoverable intent versus bounded refusal, with measured failure matrix.
 2. Native hot-store ADR: redb versus alternatives with persistence/latency/restore comparisons.
 3. Durability-class wire contract: how class, measured loss window and failure state are exposed for each protocol.
 4. Mirror/replication compatibility contract: schema evolution, ordering, cursor, restore and security behavior.
 
-### Analytics worker carry-over
+#### Analytics worker carry-over
 
-The Meristem analytics worker (removed in MERISTEM-SEMANTIC-R011.10) was a remote client of the engine's existing `medulla-jobs` plane, not a separate queue. It opened one engine connection per slot with a service identity holding scopes `kg:write` and `analytics:worker`. It claimed jobs with `worker_claim` and checkpointed at progress 0.1 and 0.9. It stage-published a typed result and called `worker_publish`. It had no schedule: it polled. Schedules for analytics belong to `JobIntent` in `crates/medulla-jobs`, which this spec does not change.
+The Meristem analytics worker (since removed from the harness) was a remote client of the engine's existing `medulla-jobs` plane, not a separate queue. It opened one engine connection per slot with a service identity holding scopes `kg:write` and `analytics:worker`. It claimed jobs with `worker_claim` and checkpointed at progress 0.1 and 0.9. It stage-published a typed result and called `worker_publish`. It had no schedule: it polled. Schedules for analytics belong to `JobIntent` in `crates/medulla-jobs`, which this spec does not change.
 
 The engine already runs the same loop in-process (`ensure_job_workers`), so the owning process for mining is the engine. A second process only adds a network hop and a second copy of the kernel. If a remote worker is ever needed, Arbora hosts it and uses the generated client. Arbora deploys engine-adjacent services. Meristem does not host this worker. The generic task queue in `MEDULLA-DURABLE-KERNEL-R071` to `R077` serves other work and is not used by this path.
 
@@ -104,13 +172,13 @@ The mining submission boundary returns `INVALID_ARGUMENT` for non-finite or out-
 
 Out of scope: new analytics families, a schedule for mining jobs, and any change to the task-queue rows. Not determinable from the deleted source: the engine kernel's own item cap (R082.3).
 
-### Scheduler policy contract (R076.1)
+#### Scheduler policy contract (R076.1)
 
 `medulla_types::scheduler_config::SchedulerConfig` is the sole producer of scheduler policy data. It includes explicit total workers and queue depth, a deterministic lane-floor map, and CPU per-mille default 360. The memory-per-worker default is 3,221,225,472 bytes. `validate()` rejects blank lane IDs, CPU fractions above 1000, zero memory divisors and floor sums exceeding the pool. Checked subtraction prevents floor-sum overflow. Zero pool, CPU fraction or queue depth is an explicit disabled resource. The later grant path must never override it with a floor of one. Serde rejects unknown fields and requires the two explicit limits. Deserialization alone is not policy admission: consumers must call validation before applying data.
 
 R076.2 remains responsible for scope, persistence, served reads/updates, lane membership and real admission/queue enforcement. Worker registration supplies capacity, not an alternative policy authority. R074 worker registration and these floor keys share canonical engine lane IDs; served integration must validate membership against the same registry.
 
-## Lifecycle control admission and fixture isolation
+### Lifecycle control admission and fixture isolation
 
 The control owner must bind each R049 maintenance claim to its in-transaction version.
 The graph owner must retain caller-key replay and nonce enforcement.
@@ -118,111 +186,21 @@ The graph owner must retain caller-key replay and nonce enforcement.
 The shared temporary-path helper must add a process-local sequence; concurrent path tests must prove uniqueness.
 Native facade acceptance remains pending.
 
-## Clippy profile declaration coverage
+### Clippy profile declaration coverage
 
 R011.5 checks both required Clippy profiles through the existing release feature-matrix suite.
 The R011 parent binding records partial declaration coverage only.
 R011.3 and R011.4 retain their runtime and exact-head receipt obligations.
 The generator must keep these three rows SPECIFIED until their own evidence exists.
 
-## Amendments
-
-### 2026-10-16: R024 acceptance evidence correction
-
-At PR #605 head `4f172cb5259fe471d32e74080a74c7581243d283`, refusal tests
-were bound as verification for MEDULLA-DURABLE-KERNEL-R024, MEDULLA-DURABLE-KERNEL-R024.3,
-and MEDULLA-DURABLE-KERNEL-R024.4. Retain these tests as partial safety coverage,
-but remove their acceptance bindings and reopen the three task checkboxes.
-The canonical status generator reports LANDED for existing implementation commits.
-These rows have no verification evidence. Their successful-operation acceptance remains incomplete.
-R024.3 still needs successful non-AGE Cypher registration and a representative
-query. R024.4 still needs mirror registration and a successful representative
-mirror operation. R024 still needs representative operations for every named
-backend, not merely refusal at the entry points. Requirements remain unchanged.
-R024.5, R024.6 and R024.8 explicitly accept refusal tests and retain their
-verification bindings. R017 and all other rows are unchanged.
-
-### 2026-10-11: R082.6 historical ordering
-
-MEDULLA-DURABLE-KERNEL-R082.6 previously left ascending tie keys ambiguous.
-The historical miner sorts first-seen integer IDs, not label strings.
-The engine must preserve this order.
-Meristem commit `134576bd0f5931a9b22ed3c3859a3f4350731ad6` provides the original implementation.
-Commit `92974bae8c3ed3a270f582300b7458d4f53571c4` deletes that implementation.
-The fixture records unchanged historical mining definitions, executed without unrelated transport imports.
-Six transactions use reverse-lexical labels and duplicate items.
-The existing association module owns execution; its child test module owns parity checks.
-No second production miner is introduced.
-
-### 2026-10-11: R011 and R014 runtime acceptance repair
-
-This amendment applies to MEDULLA-DURABLE-KERNEL-R011 and MEDULLA-DURABLE-KERNEL-R014.
-Previously, each generated parent inherited completion from its sole typed-model child.
-The parent text and source comments explicitly deferred runtime work.
-Now, R011.2 through R011.4 track the manifest, pre-merge execution, and exact-head CI receipts.
-R014.2 through R014.5 track load generation, repeated execution, and both cluster-test acceptance records.
-The existing children retain their evidence. The original runtime obligations remain mandatory.
-The repair extends existing parents because both parents already own these behaviors.
-Planned children record unverified acceptance; they do not imply that every implementation is absent.
-
-## Audit record
-
-2026-10-11: R082.6 compares all three engines against the historical Python output.
-The fixture records source identity and SHA-256.
-Boundary cases cover ceiling support, minimum count, confidence tolerance, and zero consequent support.
-
-### 2026-10-11: runtime source audit
-
-Audited revision: `2a2f9498863250c71827cf56ecbcb9307940cff0`.
-`crates/medulla-source-types/src/pre_merge_test_module.rs` explicitly defers the concrete manifest and pre-merge gate.
-`.github/workflows/ci.yml` excludes `gates-variants` from pull requests.
-The same workflow declares `published-full` and `workspace-all-features` clippy profiles with Kafka dependencies.
-Configuration presence does not supply passing exact-head CI receipts.
-`crates/medulla-raft-xshard/src/flake_budget.rs` explicitly defers the representative-load generator and repeated-run harness.
-`scripts/validate-raft-cluster.sh` selects leader rebalance but omits the named placement-admin test.
-That script records no representative-load generator or repeated-load evidence.
-`crates/medulla-server-cluster-tests/src/split_tests/raft_cluster.rs` contains both named cluster tests.
-`crates/medulla-raft-xshard/src/harness/trace_capture.rs` owns existing causal trace capture.
-No runtime suite ran during this spec-only repair.
-
-### 2026-10-11: concrete runtime manifest
-
-R011.2 extends `RequiredTestModule` with explicit features and Cargo arguments.
-The manifest selects real library-test modules in the engine and transaction crate.
-`validate_selection` refuses an empty or mismatched discovery inventory.
-Eight source-module tests passed with Rust 1.96.0, including source-anchor checks.
-This evidence completes the manifest child only. R011, R011.3, and R011.4 remain open.
-
-### 2026-10-11: bounded representative CPU load
-
-R014.2 extends the existing cluster validation script with explicit opt-in CPU load.
-`RAFT_LOAD_WORKERS` accepts 1 through 32; `RAFT_LOAD_SECONDS` accepts 1 through
-3600 seconds, default 300. Invalid settings refuse before compilation.
-Workers begin only after the build and remain active during the test command.
-The supervisor aborts on budget exhaustion or unexpected worker exit. It reaps
-workers and the command process group on success, failure, SIGINT, or SIGTERM.
-The supervisor logs worker count, process IDs, duration bound, and measured elapsed time.
-Unconfigured callers keep the existing unloaded command. R014.3 through R014.5
-remain open: process-fixture tests do not prove loaded Rust cluster acceptance.
-
-### 2026-10-11: make manifest reproduction portable
-
-R011.2 reproduction writes its disposable binary beneath the checkout's target directory.
-The public-spec gate and its regression test must reject machine-specific paths.
-This documentation repair adds no Rust execution evidence or runtime acceptance.
-
-### 2026-10-11: repeated loaded harness
-
-R014.3.1 adds bounded repetitions and per-invocation evidence to the existing CPU-load supervisor. R014.3.2 retains Rust FlakeBudget-driven diagnostic retries. R014.4 and R014.5 remain open until actual Rust cluster execution is recorded.
-
-## Recovered requirement: shared KV-cache tier
+### Recovered requirement: shared KV-cache tier
 
 Data flow: consumer put → `KvBlockKey` → tiered store → budgeted eviction → other consumer get.
 Attach point: `crates/medulla-kvcache/src/{version,shared,tiered}.rs`; the served operation is located by R083.4.
 Reuses the existing tiered, cold and graph-importance modules.
 Decision: key by model version plus prefix hash. Rejected: session-keyed blocks, which cannot be shared across parallel instances.
 
-## MEDULLA-DURABLE-KERNEL-R084 version-checked writes
+### MEDULLA-DURABLE-KERNEL-R084 version-checked writes
 
 Data flow: served `ApplyMutation` → mutation envelope with `VersionExpectation::Native` (`crates/medulla-jobs/src/store.rs:2537`) → `resolve_conflict` → commit or `WRITE_CONFLICT` → trace.
 Types: `WriteConflict` and `MergeStrategy` in `crates/medulla-types/src/write_conflict.rs`. The default strategy is `Refuse`.
@@ -236,7 +214,7 @@ References
 - No paper is cited.
 
 
-## R085: authoritative versioned memory synchronization
+### R085: authoritative versioned memory synchronization
 
 This is a proposed producer contract. No R085 runtime method exists yet.
 Every child remains SPECIFIED until its own acceptance evidence exists.
@@ -244,7 +222,7 @@ The owning scope is durable graph state, atomic mutation and conflict retention.
 R084.3, R084.4 and R084.6 supply concurrency prerequisites only.
 They do not define memory snapshots, file listings or synchronization.
 
-### Existing production boundaries
+#### Existing production boundaries
 
 The reviewed base is `3477a5da33d4593b0248558d0501c40685f6c9f7`.
 `crates/medulla-protocol-types/src/protocol.rs::Request` binds graph and verified request context.
@@ -264,7 +242,7 @@ Reuse named holders in `crates/medulla-server-blob/src/blob/store/holders.rs`.
 R050 and R051 retain their garbage-collection and holder guarantees.
 Do not add another persistent write envelope or an agent-owned memory store.
 
-### Proposed public contract
+#### Proposed public contract
 
 The proposed wire methods are `ReadMemorySnapshot`, `ListMemorySnapshots` and `SyncMemorySnapshot`.
 These names reserve design intent, not existing runtime availability.
@@ -330,7 +308,7 @@ Capacity or persistence failure returns a typed refusal without claiming retaine
 Resolution requires current write authority and an exact current-head comparison.
 Old conflict contents remain retained until the explicit retention policy permits release.
 
-### Sync state, provenance and retention
+#### Sync state, provenance and retention
 
 Sync states are in_sync, graph_ahead, file_ahead, conflict and unavailable.
 Medulla derives each state from accepted revisions and persisted, authorized host evidence.
@@ -365,7 +343,7 @@ Unresolved versions remain pinned. Exhausted capacity refuses new retention befo
 Resolved versions retain both contents until their declared deadline and authorized release.
 Graph deletion and recreation cannot rebind old holders to the new graph incarnation.
 
-### Producer sequence and non-ownership
+#### Producer sequence and non-ownership
 
 Arbora later extends ARBORA-OPS-R024.4 under R009 and R013.
 It must compose these generated Medulla contracts through a real engine-backed port.
@@ -375,7 +353,7 @@ Overstory then refines existing OVERSTORY-APPS-R031.2 through R031.4 and its R03
 Meristem is a Medulla-driven harness. Neither Meristem nor Overstory decides synchronization or conflict authority.
 No Arbora, Overstory, decision-engine or federated-query files change in this producer slice.
 
-## 2026-10-12: R086 safe eviction and durable read-through
+### R086 safe eviction and durable read-through
 
 This is an as-is contract inventory at source 65b7c75fdbfd673c19df4cd79ad83b8afdb93df5.
 Source inspection establishes the call sites below, not successful runtime execution.
@@ -385,7 +363,7 @@ Index reopening alone does not establish this node read-through contract.
 The existing [engine reference](../../docs/architecture/engine.md) describes safe eviction.
 R086 makes its proof obligations explicit without changing that document or the architecture.
 
-### Model and reuse
+#### Model and reuse
 
 The core owns [ReadThrough and ReadThroughFactory](../../crates/medulla-graph-core/src/read_through.rs).
 The facade implements them in [read_through.rs](../../crates/medulla-persistence/src/read_through.rs).
@@ -396,7 +374,7 @@ The backend returns a result containing bytes, absence or an error.
 The core adapter returns an option and currently collapses backend errors to a logged miss.
 Evidence must preserve that distinction without proposing a replacement public type.
 
-### Behavior and production wiring
+#### Behavior and production wiring
 
 | Boundary | Existing source | Required observation |
 |---|---|---|
@@ -416,7 +394,7 @@ Current candidate selection uses resident insertion indices; this definition add
 The served eviction gateway retains its existing admission and receipt effects.
 Memory-only removal means no logical node deletion, not that the entire served request writes nothing.
 
-### Refusal and evidence limits
+#### Refusal and evidence limits
 
 Missing persistence, failed presence or a malformed vector must not cause candidate removal.
 False presence entries retain their corresponding nodes.
@@ -428,7 +406,7 @@ Test equal node IDs with distinct properties in separate graphs and denied hidde
 Do not infer a cross-request snapshot, universal concurrency guarantee or new transaction boundary.
 Preserve a contradictory interleaving as a failure for a separate runtime change.
 
-### Existing evidence candidates, not execution receipts
+#### Existing evidence candidates, not execution receipts
 
 [redb_backend.rs](../../crates/medulla-persistence/src/redb_backend.rs) contains
 `authoritative_eviction_bounds_memory_and_reads_through`,
@@ -440,16 +418,16 @@ They cannot replace real durable, scoped, served or restart evidence.
 R086.9 requires the served entry points and the observations in test-spec.md.
 
 <!-- spec-definition-patch:owner-batch-20261012-durable-graph-kernel -->
-## Durable-kernel owner implementation plan — 2026-10-12
+### Durable-kernel owner implementation plan
 
-### `MEDULLA-DURABLE-KERNEL-R028.1` — AU:21
+#### `MEDULLA-DURABLE-KERNEL-R028.1`
 
 - **Medulla storage contract:** persist the run checkpoint as an R085 `active_context` snapshot. Bind `run_id`, `work_item_id`, lease epoch/fencing token, checkpoint revision and payload digest in canonical UTF-8 content. Bind separate short-/long-term memory references by document ID, revision and digest. Derive tenant and graph only from verified request context. Fence updates to the live WorkItem lease epoch/token. No current Medulla operation atomically joins the R085 snapshot and WorkItem checkpoint pointer; `CasWorkItemMetadata` is scheduling metadata only. Define transaction and crash-recovery semantics before claiming this binding.
 - **Attach point:** proposed R085 `SyncMemorySnapshot` / `ReadMemorySnapshot`. Writes pass through existing MutationBatch, expected-head CAS. R039 remains the sole redb authority. A stale fence/revision, authority mismatch, digest mismatch, changed-body replay, or unavailable store refuses without head advance.
 - **Required acceptance:** restart and read the same checkpoint and memory references. Negative cases cover wrong tenant/graph, stale revision/fence, digest mismatch, changed-body replay, and unavailable persistence.
 - **Explicit dependency hold:** retention bounds/release authority. Owners must define the atomic transaction or explicit recovery contract joining the snapshot and WorkItem checkpoint pointer/fence. Meristem must define the resume request/receipt binding to the checkpoint and current fence. Define host-issued stream ID/cursor authority and replay semantics. Preserve original R028 and identity obligations, along with ARBORA-A2A/OPS streaming requirements. Hash `d89bb9c69e2fdef6a5c3fd428ede3f91868539056c2b949700867d8d8087d1e7`.
 
-### `MEDULLA-DURABLE-KERNEL-R085.9` — AU:48
+#### `MEDULLA-DURABLE-KERNEL-R085.9`
 
 - Store an `active_context` memory snapshot with a stable search-run document ID. Require exact UTF-8 JSON fields: nonempty `search_run_id`, positive `state_revision` equal to the snapshot revision, and four array-valued state fields. Arrays may be empty. Medulla validates the envelope and hashes exact bytes; Meristem defines item schemas and source identities.
 - Reuse R085 digest, one-MiB bound, graph-incarnation binding, authorization-before-lookup, expected-head CAS, durable mutation gateway, conflict retention. R039 remains the authority. Meristem must save complete state before eviction and resume using the exact document ID/revision read back by `ReadMemorySnapshot`.
@@ -457,7 +435,7 @@ R086.9 requires the served entry points and the observations in test-spec.md.
 - Required tests: restart/context eviction then independent exact readback. Negatives for each refusal and a stale conflict with the accepted head unchanged. Preserve Meristem R013.13/R020.1 and Medulla R085.1/.4/.7. Hash `8c76fa1637e0cc2082a1cce16b9d637f12b310ae96d1fe9a50ec9c64f8e23944`.
 - **Meristem hold:** Meristem has not defined per-entry schemas/source identity for the four fields. Meristem also has not defined the continuation request/receipt binding to the exact stored revision. Do not claim consumer completion.
 
-### `MEDULLA-DURABLE-KERNEL-R085.10` — AU:49
+#### `MEDULLA-DURABLE-KERNEL-R085.10`
 
 - Persist each authorized session note through R085 with stable note ID and source run/task references. Bind source revision, canonical UTF-8 content/digest, provenance, graph incarnation and parent/current revision. Serve through existing R085 read/list and sync methods only.
 - Medulla returns authorized revision and sync/conflict state. Stale submissions are retained without replacing the head. Medulla does not perform automatic capture, prompt injection, relevance ranking, or conflict selection.
@@ -467,85 +445,85 @@ R086.9 requires the served entry points and the observations in test-spec.md.
 <!-- /spec-definition-patch -->
 
 <!-- spec-definition-patch:final-mappings-20261012 -->
-## Final mapping implementation plan — 2026-10-12
+### Final mapping implementation plan
 
-### `MEDULLA-DURABLE-KERNEL-R038.100` / EG:60
+#### `MEDULLA-DURABLE-KERNEL-R038.100`
 
 - Preserve parent `MEDULLA-DURABLE-KERNEL-R038` and its existing clauses.
 - Define: Define an explicit deployment profile with `embedded` (in-process operation requiring no external service) and `served` (configured service endpoint) modes. Profile selection controls transport/startup only. It does not silently change the existing persistent-namespace durability default or sync/redb acknowledgment authority. Ephemeral in-memory namespaces require an explicit `ephemeral` declaration and retain no durable log. Persistent namespaces retain their declared `sync` or `async` class. Do not adopt the source request’s universal in-memory default.
 - Producer/consumer: Medulla owns profile and storage selection. Transport mode is separate from namespace DurabilityClass. Preserve R038 durability classes, sync default, redb authority and authorization/HMAC isolation.
-- Source record SHA-256: `b36ed0f40742d2f455b4eae67f2fb64edfb7a6ea87b93cbb8ac0046970728458`.
+- Source record sha256: `b36ed0f40742d2f455b4eae67f2fb64edfb7a6ea87b93cbb8ac0046970728458`.
 - Keep status SPECIFIED until each named producer and consumer is separately implemented, served-tested and independently read back.
 <!-- /spec-definition-patch -->
 
 
 <!-- spec-definition-patch:owner-dispatch-20261012-plan -->
-## Cross-owner graph feed implementation plan — 2026-10-12
+### Cross-owner graph feed implementation plan
 
-- **`MEDULLA-DURABLE-KERNEL-R043.100` / WEBUI:5:** Add snapshot/high-water and cursor-read operations over the committed `ApplyChangeEnvelope` path. Include graph incarnation/revision, stable `(commit_id,event_ordinal)` identity, ordering and tombstones. Also include current authorization revision, 24-hour retention, a 256-event page limit and explicit expired-cursor/revocation outcomes. Emit versioned commit-to-visible latency fields and target p95 ≤1000 ms. Arbora and Overstory own the served adapter and readable concurrent layout. Consumer id is `OVERSTORY-APPS-R030.8`. Source SHA-256 `0b416b47d85530fb35cf44bf5dc79e04e1b9746481027d0b0687b66579dc9844`.
+- **`MEDULLA-DURABLE-KERNEL-R043.100` / WEBUI:5:** Add snapshot/high-water and cursor-read operations over the committed `ApplyChangeEnvelope` path. Include graph incarnation/revision, stable `(commit_id,event_ordinal)` identity, ordering and tombstones. Also include current authorization revision, 24-hour retention, a 256-event page limit and explicit expired-cursor/revocation outcomes. Emit versioned commit-to-visible latency fields and target p95 ≤1000 ms. Arbora and Overstory own the served adapter and readable concurrent layout. Consumer id is `OVERSTORY-APPS-R030.8`. Source sha256 `0b416b47d85530fb35cf44bf5dc79e04e1b9746481027d0b0687b66579dc9844`.
 - The read feed must reuse the existing durable mutation authority. Do not create an alternate write envelope or count reload/local optimistic state as feed evidence.
 - Keep SPECIFIED until two authenticated served clients demonstrate concurrent commits and cursor reconnect. Also verify tombstone authorization, no-refresh visibility, measured latency and independent graph readback.
 <!-- /spec-definition-patch -->
 
-## Benchmark measurement plan — 2026-10-12
+### Benchmark measurement plan
 
-- **`MEDULLA-DURABLE-KERNEL-R042.100` / EG:63:** Extend existing `BenchmarkClaim.measured_result` with `BenchmarkMeasurementV1`. Bind full tokenizer input-token count, release/model/profile/workload identities, post-ready inference elapsed time and pinned price table/currency. Exclude startup from throughput. Refuse missing measurements, invalid denominators and incomparable profiles. Source SHA-256 `78016644588199c94f30e549cda44e35667f0447e1ae15a2524a4710bdf92e00`.
+- **`MEDULLA-DURABLE-KERNEL-R042.100` / EG:63:** Extend existing `BenchmarkClaim.measured_result` with `BenchmarkMeasurementV1`. Bind full tokenizer input-token count, release/model/profile/workload identities, post-ready inference elapsed time and pinned price table/currency. Exclude startup from throughput. Refuse missing measurements, invalid denominators and incomparable profiles. Source sha256 `78016644588199c94f30e549cda44e35667f0447e1ae15a2524a4710bdf92e00`.
 
-## Spec-audit closure plan — 2026-10-15
+### Spec-audit closure plan
 
-### MEDULLA-DURABLE-KERNEL-R084.8 — EG:28
+#### MEDULLA-DURABLE-KERNEL-R084.8
 
 - Owners decide writable backend kinds and registry/coordinator ownership. Choose per-graph or tenant-scoped ordering. Define atomic-versus-eventual semantics. Specify partial failure, retry and receipt behavior.
 - Attach point: extend existing conflict-resolution paths in `crates/medulla-jobs/src/store.rs` and `src/server/mutation_batch/commit/`.
 - Tests: two tenants, two backends, concurrent writes with backend failure and replay verification.
 
-### MEDULLA-DURABLE-KERNEL-R057.1 — EG:43
+#### MEDULLA-DURABLE-KERNEL-R057.1
 
 - Define order-snapshot structure with immutable-history marker and derivation-link binding.
 - Reuse sealed-record guard and transactional authority from R057 for atomic promotion.
 - Route provider submission through Graft SDK governed writeback; host confirmation through Arbora.
 - Tests: snapshot creation, promotion with history immutability, derivation binding, veto on refusal.
 
-### MEDULLA-DURABLE-KERNEL-R087 — EG:46
+#### MEDULLA-DURABLE-KERNEL-R087
 
 - `.1`: Define five changeset-review flaw classes (injection, auth, exposure, crypto, logic) with impact policy and finding-to-code evidence in `crates/medulla-source-types/src/changeset_review.rs`.
 - `.2`: Serve `ChangesetReview` endpoint routed from Arbora producer through Medulla review logic. Regenerate public contracts.
 - Tests: all flaw classes, positive/negative acceptance, evidence-to-location tracing.
 
-### MEDULLA-DURABLE-KERNEL-R088 — AU:38
+#### MEDULLA-DURABLE-KERNEL-R088
 
 - `.1`: Model correction with original output, approved version and replacement/revocation binding. Require two distinct approval principals.
 - `.2`: Serve through existing rule authority. Check both principals before mutation. Keep invariant checking separate from approval.
 - Tests: two-principal requirement, replacement application, revocation refusal, audit trail.
 
-### MEDULLA-DURABLE-KERNEL-R089 — AU:54
+#### MEDULLA-DURABLE-KERNEL-R089
 
 - `.1`: Typed `VerificationVerdict` with success/failure, uncertainty bound and proof reference per step.
 - `.2`: Meristem consumer path refuses forward-chained conclusions from failed steps. Preserve existing AU-EG integration.
 - Tests: failed step, dependent refusal, proof binding round-trip.
 
-### MEDULLA-DURABLE-KERNEL-R090 — EG:57
+#### MEDULLA-DURABLE-KERNEL-R090
 
 - `.1`: Route Arbora deployment selection through Medulla schema admission with typed refusal for unknown candidates.
 - `.2`: Serve digest readback with mismatch detection and typed refusal for divergence.
 - `.3`: Enforce read-only on external projections; refuse mutations; trace lineage to Medulla revision.
 - Tests: import selection, digest verification and accuracy, read-only refusal, lineage preservation.
 
-### MEDULLA-DURABLE-KERNEL-R097 — EG:11
+#### MEDULLA-DURABLE-KERNEL-R097
 
 - R097.1, R097.2, R097.3, R097.4, R097.5, R097.6: Temporal extracted-fact forward chaining produces facts with origin-linked rule and axiom provenance. Fact production API returns origin chain per fact.
 
-### MEDULLA-DURABLE-KERNEL-R098 — EG:14
+#### MEDULLA-DURABLE-KERNEL-R098
 
 - R098.1, R098.2, R098.3, R098.4, R098.5, R098.6: Public hyperedge predictor accepts ordered arguments, routes unseen entities through hypothesis paths, admits hypothesis-only evidence classes to output.
 
-### 2026-10-16: explicit evidence withdrawal
+#### explicit evidence withdrawal
 
 MEDULLA-DURABLE-KERNEL-R024, MEDULLA-DURABLE-KERNEL-R024.3 and MEDULLA-DURABLE-KERNEL-R024.4 retain their original acceptance requirements.
 Withdrawal reason: Refusal-only tests do not establish successful backend queries or mirror operations.
 This declaration records the evidence correction without changing test behavior or rewriting earlier commits.
 
-## MEDULLA-DURABLE-KERNEL-R099 — cross-graph shard-writer fan-out
+### MEDULLA-DURABLE-KERNEL-R099 — cross-graph shard-writer fan-out
 
 Replaces: the harness-side proof of shard parallelism. The harness only submits one `MultiGraphBatchUpdate`.
 
@@ -568,7 +546,7 @@ Budget: wall time under 1.5 times the slowest single-graph commit for eight grap
 References
 - No paper is cited.
 
-## MEDULLA-DURABLE-KERNEL-R100 — native property-graph mirror sinks
+### MEDULLA-DURABLE-KERNEL-R100 — native property-graph mirror sinks
 
 Replaces: `agent_utilities/knowledge_graph/backends/contrib/` (three backend modules and their package marker).
 
@@ -593,20 +571,19 @@ Decision: the file sink writes Parquet tables and a load manifest. This keeps fo
 References
 - No paper is cited.
 
-## Amendments
 
-### 2026-10-17 — R028.2 terminal event readback
+#### R028.2 terminal event readback
 
 Extend `WorkItemOutcomeView`, the native terminal CAS and its existing snapshot
 reader. Reuse the primary mutation outbox and engine commit sequence; do not add
-a log, subscription, grant or polling cursor. Bind batch ID and SHA-256 of the
+a log, subscription, grant or polling cursor. Bind batch ID and sha256 of the
 encoded RunEvent on the native WorkItem row. Resolve both node and outbox from
 one scoped read. Compare scope, batch, work item and digest before projecting
 safe fields. Never expose fence tokens, executor lease identity, carrier digest
 or caller-filled event sequence/cursor. Missing legacy bindings remain explicit
-unavailability; invalid bindings fail closed. Arbora A2A-R010 remains open:
+unavailability; invalid bindings fail closed. The arbora A2A serving row remains open:
 status/step producers and full replay/gap policy are separate prerequisites.
-## MEDULLA-DURABLE-KERNEL-R101 — downtime work ontology and scheduler
+### MEDULLA-DURABLE-KERNEL-R101 — downtime work ontology and scheduler
 
 The scheduler owner is `SchedulerConfig` (`MEDULLA-DURABLE-KERNEL-R076`). The durable job plane is `medulla-jobs`. This row adds the ontology of downtime work and the selection rule. It adds no second scheduler.
 
@@ -622,7 +599,7 @@ Seed job types: `plan_evolution` (`MEDULLA-FEDERATED-QUERY-R091`), `index_build`
 
 Budget: a default window budget of 25% CPU and 2 GiB memory; preemption within 250 ms. These are starting defaults. A measurement on this platform replaces them.
 
-### 2026-10-18 — current-plan owner admission and replay contract
+#### current-plan owner admission and replay contract
 
 This owner-contract amendment extends the WorkItem/run boundary under
 `MEDULLA-DURABLE-KERNEL-R028`. It resolves the current-plan admission and retry design
@@ -631,7 +608,7 @@ a served operation, grant access, or change deployed authorization. It does not
 close the checkpoint/resume, retention or stream-cursor holds in R028.1. The
 separate decision-owner amendment is outside this change.
 
-#### Immutable ownership at new admission
+##### Immutable ownership at new admission
 
 Arbora owns authenticated run admission; Medulla owns enforcement and durable state.
 The existing verified request context supplies tenant, graph authority and the
@@ -651,7 +628,7 @@ writes must neither create nor overwrite the binding. A retry may return its
 original admission receipt through the existing native replay path. It cannot
 create another WorkItem or another owner binding.
 
-#### Native publication and read transaction
+##### Native publication and read transaction
 
 After native claim admission, publication checks run inside the existing durable
 mutation transaction. They compare the immutable binding and verified principal,
@@ -666,7 +643,7 @@ scaffold update. A first publication at a later revision is refused. Later
 new publications require a strictly greater Meristem scaffold revision; gaps are
 permitted. Every new accepted publication stores its binding, revision, canonical
 payload digest and existing durable commit receipt atomically. Refusal changes
-none of them. SCION-CONNECTOR-CONTROL-R070 supplies the DTO; MERISTEM-BOUNDARY-R043.5.1
+none of them. the connector control spec supplies the DTO; the harness boundary spec
 supplies the atomic revision/items pair. Arbora retains its read projection under
 ARBORA-OPS-R021.4.5.1. No model-history reconstruction is allowed.
 
@@ -680,7 +657,7 @@ snapshot expiry and lease expiry. Lease renewal and reads never extend a stored
 snapshot. An exact replay receipt is historical evidence, not current-plan
 availability or renewed lease authority.
 
-#### Reuse existing mutation identity and replay
+##### Reuse existing mutation identity and replay
 
 Use the existing authenticated stable idempotency key, native WorkItem
 `MutationBatch` identity derivation and durable receipt ledger. Extend that path
@@ -717,7 +694,7 @@ receipt. `crates/medulla-work-types/src/work_item_command_log.rs` documents same
 same-digest replay and changed-digest conflict, but its reference map is not
 itself durable evidence. Reuse the native writer, not that map as a new store.
 
-#### Planned acceptance and implementation boundary
+##### Planned acceptance and implementation boundary
 
 All following tests are required future acceptance; none is claimed run here.
 
@@ -753,7 +730,7 @@ native gates pass may Graft SDK/Meristem/Arbora composition and authenticated se
 establish runtime availability. No native build or generation is part of this
 spec-only amendment.
 
-### 2026-10-18 — private native current-plan implementation
+#### private native current-plan implementation
 
 R028.5 stores payloads in the graph owner's private `work_item_current_plans`
 table. It shares the existing MutationBatch transaction and read snapshot with run ownership and native WorkItem claims.
@@ -773,7 +750,7 @@ the previous build and native execution evidence remain pending.
 This engine prerequisite does not compose Arbora's reader or Meristem's run loop and
 does not establish successful end-to-end inspector publication.
 
-### 2026-10-22 — executable attachment on the existing current-plan owner
+#### executable attachment on the existing current-plan owner
 
 `MEDULLA-DURABLE-KERNEL-R028.5.1` through `.5.3` extend the existing private snapshot, not its authority model.
 `CurrentPlanSnapshot.task_plan` optionally holds the typed `MEDULLA-DECISION-ENGINE-R134.111` TaskPlan.
@@ -812,7 +789,7 @@ Those lifecycle surfaces remain separate requirements; this attachment does not 
 Retries must retain their original observation and expiry fields; changed timestamps conflict under the same scoped key.
 The parent point-read/publication budget and the TaskPlan producer bounds apply; benchmark measurements remain required.
 
-## Amendment 2026-10-18: R034 coordinator decision monotonicity
+### R034 coordinator decision monotonicity
 
 The existing cross-shard decision row must preserve its first terminal outcome.
 Compare and write under the same owner transaction. Permit absent-to-pending,
@@ -831,7 +808,7 @@ heterogeneous-owner reservations, revocation fencing, visibility or profile
 admission. R034 and MEDULLA-DECISION-ENGINE-R036 remain incomplete. Native test
 execution and storage-fixture qualification must be reported separately.
 
-## Agent-memory substrate: KV-cache tiers, benchmarks and wire listeners (R083.5–R083.8, R042.2–R042.6, R860)
+### Agent-memory substrate: KV-cache tiers, benchmarks and wire listeners (R083.5–R083.8, R042.2–R042.6, R860)
 
 The KV-cache tier ladder reuses `crates/medulla-kvcache`. `tiered.rs` holds the hot, warm and cold tiers. `cold.rs` holds the durable redb cold store. `graph_importance.rs` holds the centrality scores. The inference connector in `medulla/kvcache/connector.py` moves blocks between accelerator memory and the engine. R083.5 to R083.8 bind this code to tests; graph-neighbor prefetch is new code.
 
@@ -840,10 +817,10 @@ The benchmark rows R042.2 to R042.6 publish each result as the `BenchmarkClaim` 
 The four wire listeners already start in `src/main.rs`. R860 binds them to one admission path and to round-trip tests. R035 keeps the PostgreSQL operational parity work.
 
 
-## Immutable run submission recovery
+### Immutable run submission recovery
 
 MEDULLA-DURABLE-KERNEL-R028.4.1 stores the original submission beside the existing immutable owner binding in the native WorkItem transaction. A point read returns that record and the current caller-safe WorkItem from the same snapshot. Verified owner selection is mandatory even after the lease expires or execution ends. This is historical database evidence, not authentication, application admission or permission to execute. Arbora continues to own those application decisions. Legacy records without evidence refuse explicitly instead of reconstructing a request from mutable metadata. Generic mutations cannot forge or remove the private record. Retry identity and receipt semantics remain unchanged. MEDULLA-DURABLE-KERNEL-R028.4.2 retains independent performance acceptance.
-## Ordinary terminal completion (MEDULLA-DURABLE-KERNEL-R028.6)
+### Ordinary terminal completion (MEDULLA-DURABLE-KERNEL-R028.6)
 
 Extend `CommitWorkItemResult` with an optional `RunCompletionInput`. Existing
 callers retain their current behavior. Ordinary completion and delegated outcome
@@ -871,7 +848,7 @@ host and execution libraries consume this storage contract. Canonical generators
 own every derived schema and client artifact. Historical source-stack acceptance
 is background only; native and served receipts must identify the tested revision.
 
-## Checkpoint-only adaptation after run admission recovery
+### Checkpoint-only adaptation after run admission recovery
 
 R028.1 reuses the native owner-bound admission and immutable
 `run_admission_request`. A checkpoint request carries an exact context ID.
@@ -985,7 +962,7 @@ checkpoint nonce reuse and live-claim conflict refusals.
 Independent review confirms the artifact and source match.
 Final hosted parity and complete native gates remain open.
 
-## Amendment: ordered conversation admission, 2026-10-23
+### ordered conversation admission
 
 Extend R028.4 and retain the session/chat obligations in R751.750 and R751.751.
 Those rows name session and chat records but do not provide a chat-store type.
@@ -1018,7 +995,7 @@ Keep the optional admission boxed without changing its wire form or the existing
 Method-size regression bound. Regenerate native artifacts for the corrected
 source; earlier artifact receipts do not qualify the changed codec.
 
-### Conversation admission: final native evidence and base integration
+#### Conversation admission: final native evidence and base integration
 
 Head d408d51a passed the complete hosted workflow 39906163268.
 The facade library passed 2,379 tests with four ignored tests.
@@ -1029,7 +1006,7 @@ The conflicting receipt and catalog files retain exact parent versions pending f
 Those placeholders do not certify the combined child schema.
 Fresh native exports and final-head parity remain required before merge.
 
-## Store migration at open and copied-store restore (R070.1, R070.2, R862)
+### Store migration at open and copied-store restore (R070.1, R070.2, R862)
 
 **Migration at open.** The entry point is `main.rs`, which calls `server_startup::acquire_persist_lock`.
 That function takes the exclusive lock and then calls `migrate_stores_on_open` (`crates/medulla-server/src/server_startup.rs:155`).
@@ -1042,7 +1019,7 @@ A store left by an unclean shutdown is not inspected at open. Its ordinary open 
 That binding stops a copied file from replacing a live store unnoticed. R862 keeps it for the ordinary open.
 Only an explicit restore or `rebind` re-binds a store, and only after a content-digest check.
 
-### 2026-10-20 — R030.1 issuer-bound host-start records
+#### R030.1 issuer-bound host-start records
 
 Arbora decides startup policy and calls a dedicated native storage operation.
 EG records the issuer assertions in the existing ControlLease store.
@@ -1053,7 +1030,7 @@ Arbora owns session freshness and workspace admission.
 This slice does not qualify execution reservation or atomic cross-owner admission.
 
 Validation checkpoint: Python legacy/provenance and lease-client checks passed.
-Canonical generation and freshness checking passed for all 73 artifacts on 2026-10-20.
+Canonical generation and freshness checking passed for all 73 artifacts.
 The generation-only continuation took 776.2 seconds.
 Earlier attempts timed out during medulla-types compilation at 360 and 540 seconds.
 Rust typed, redb and signed-dispatch tests exist but remain unexecuted.
@@ -1063,7 +1040,7 @@ The signed-dispatch runtime test must qualify authenticated issuer attribution a
 
 The current-main reconciliation preserves current security and uses fresh hosted canonical generation for host-start DTO changes. R030.1.1 through R030.1.3 separate typed/client, native store and signed dispatch evidence. R030.1.4 keeps the complete producer qualification open. Arbora remains responsible for live session and construction-owner policy; these storage assertions cannot reserve an external effect atomically.
 
-### 2026-10-23: compose qualified identity main for host-start
+#### compose qualified identity main for host-start
 
 Retain the dedicated host-start issuer, signed refusal proofs and strict client provenance checks.
 Main fdb75651 contributes the qualified identity approval and Human-session renewal contracts.
@@ -1074,7 +1051,7 @@ Fresh composed-source exports and required native and Clippy checks must qualify
 R030.1.4 retains installed-consumer and latency acceptance; deployed issuer policy and actual startup remain separate.
 
 
-### Checkpoint and ordered-admission integration
+#### Checkpoint and ordered-admission integration
 
 The exact checkpoint head `48bbf6de` passed all 23 executed jobs in run
 39938181881. This includes native checkpoint replay, migration, full Python,
@@ -1099,12 +1076,47 @@ outputs as stale placeholders. Only genuine composed-source export may replace
 them. Full hosted qualification remains required before merge.
 This bridge does not implement public history paging or served model continuation.
 
-## North star
+### North star
 
 One engine, medulla, holds all facts. There is no second database and no sync. External stores are virtual-graph sources reached through connectors.
 
-## Delivery phase
+### Delivery phase
 
 Row `MEDULLA-DURABLE-KERNEL-R861.3` serves P1. A restart must not leave a graph that the catalog lists but the engine cannot read or write.
 
 Residency: after a restart only the commons graph is resident. Other graphs are catalog-only until a routed operation opens them. Internal lifecycle code paths must use the same lazy-open path. Validation showed the defect on pack projection and on the first tenant-graph read at boot.
+
+## Phase 2: Task approach
+
+`tasks.md` holds one task per active leaf row in table order, producer first. A typed model row precedes the rows that serve it. A row lands in one slice with its production caller, so no type lands without a caller. Rows that edit the shared dispatch file run in series; rows in different handler crates run in parallel.
+
+## Complexity Tracking
+
+none
+
+## Build contract
+
+- `cargo clippy --workspace --all-targets -- -D warnings` and `cargo fmt --check` pass for every touched crate.
+- The architecture, complexity, clone and duplication gates of `.config/pre-commit.yaml` pass with no baseline entry and no suppression: no new function over cyclomatic 10 or cognitive 15.
+- Every hot-path row names a budget and a benchmark per article R-III; the benchmark claims name workload, class, hardware and measured p99.
+- A public item in a kernel crate has a non-test caller under a handler or server crate (`MEDULLA-CONTRACT-R055`).
+- Hosted gates run on an ephemeral runner with declared fixture provisioning; live private services are optional deployment proof.
+- Spec rows pass `spec-standard`, `plan-conformance` and `spec-decomposition` with zero findings.
+
+## Production caller chain
+
+- Mutation outbox: the local owner writes delivery rows through `claim` (`crates/medulla-transaction/src/outbox/claim.rs:57`) and `ack` (`crates/medulla-transaction/src/outbox/cursor.rs:42`) on its own owner store handle; the replicated log never carries them (`MEDULLA-DURABLE-KERNEL-R005`).
+- Change envelope and feed: `ApplyChangeEnvelope` to `apply_one_change_envelope_inner` (`crates/medulla-server-graph/src/dispatch/change_envelope.rs:611`) next to `CdcHub::emit` (`crates/medulla-server-cdc/src/cdc.rs:269`); the feed reads are downstream (`MEDULLA-DURABLE-KERNEL-R043.100`).
+- Lazy agent library open: admin handlers (`crates/medulla-h-admin/src/admin/agent.rs:51`) to `ensure_agent_library` (`crates/medulla-persistence-records/src/agent_library.rs:709`); boot never calls it before the listeners bind (`MEDULLA-DURABLE-KERNEL-R006`).
+- Run checkpoint: `Method::PublishRunCheckpoint` to `try_handle` (`crates/medulla-h-jobs/src/work_item.rs:40`) to `commit_verified_work_item` (`work_item.rs:104`) to `crates/medulla-work-store/src/redb_store/work_item/checkpoint.rs::publish` (`MEDULLA-DURABLE-KERNEL-R028.1`).
+- Task queue: `Method::TaskQueueEnqueue`, `TaskQueueClaim` and `TaskQueueAck` to `crates/medulla-h-jobs/src/task_queue.rs` over `crates/medulla-jobs` (`MEDULLA-DURABLE-KERNEL-R072`).
+- Host-start grant: `Method::IssueHostStartGrant` to `crates/medulla-work-store/src/redb_store/work_item/control_lease/host_start.rs` (`MEDULLA-DURABLE-KERNEL-R030.1`).
+- Supersession: `Method::SupersedeEdge` to `crates/medulla-h-graph/src/graph_ops/gateway_graph.rs::apply_supersede_edge` (`MEDULLA-DURABLE-KERNEL-R080`).
+- Obsolete paths to delete: the dispatch queue duplicates named by `MEDULLA-DURABLE-KERNEL-R866` once the task queue facade lands.
+
+## Cross-repo seams
+
+- Task queue and worker registry: `MEDULLA-DURABLE-KERNEL-R072` provides, `SCION-SOURCE-INGEST-R011` consumes (the runner in `scion_sdk/runner/`). Contract: [task-queue-worker-client.md](contracts/task-queue-worker-client.md).
+- Committed graph change feed: `MEDULLA-DURABLE-KERNEL-R043.100` provides, `ARBORA-OPS-R062` consumes. Contract: [graph-change-feed.md](contracts/graph-change-feed.md).
+- Run checkpoint and memory references: `MEDULLA-DURABLE-KERNEL-R028.1` provides, `ARBORA-A2A-R001.2` consumes. Contract: [run-checkpoint.md](contracts/run-checkpoint.md).
+- Host-start grant: `MEDULLA-DURABLE-KERNEL-R030.1` provides, `ARBORA-HOST-R010.7.1` consumes. Contract: [host-start-grant.md](contracts/host-start-grant.md).

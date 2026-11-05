@@ -4,21 +4,21 @@ All fixtures run against a disposable local data directory and generated credent
 
 | Scenario | Requirements | Positive fixture and expected result | Negative/failure fixture and expected result |
 |---|---|---|---|
-| T-KG-01 batch terminality | KG-01, KG-02 | Graph+table+KV batch commits once. Readback and retry return same terminal result | Inject failure at every commit phase. Restart yields all-or-none. Lost-ack retry does not duplicate |
-| T-KG-02 table-only path | KG-02 | Concurrent table-only writes use the current atomic path and match the reference corpus. | Mixed unsupported member sets refuse before writes. |
-| T-KG-03 owner lineage | KG-03 | Load each supported golden manifest. One validation per transaction | Unknown predecessor or extra physical table returns typed upgrade/ownership error. Stale cached binding never crosses transactions |
-| T-KG-04 scrub | KG-04 | Corrupt one persisted node. The scrub reports a typed finding and resumes the cursor after restart | Rate cap prevents writer starvation. The scrub hides unreadable payloads and never silently repairs them |
-| T-KG-05 outbox | KG-05 | Healthy successors deliver after a failing head is rejected/rewound with ordered receipts | Retry one head 16 times. Successors keep their own zero-attempt count. Reasoning skip without rebuild is refused |
-| T-KG-06 CDC/mirror | KG-06 | Commit 100 ordered graph/table changes, disconnect target, reconnect, replay and match digest | Crash after target apply before cursor; replay is idempotent; empty default target guard and schema drift fail visibly |
-| T-KG-07 scope | KG-07 | Owner and explicitly granted principal can access allowed data | Cross-tenant/principal probes deny SQL, UQL, TSDB and KV access. UDF, foreign-source and cache probes also deny access. Revoked grants deny the next use |
-| T-KG-07a auth modes | KG-07, KG-09 | `none`, `local` and `external` each resolve to the same internal principal/RBAC evaluator | Spoofed name in `none`, stale local session after mode switch, wrong external issuer/audience/tenant/policy version and generic elevation lease all deny |
-| T-KG-08 audit | KG-08 | Reservation precedes the governed effect and links its truthful outcome. | An unavailable audit writer, missing class, wrong tenant or duplicate ID refuses. A crash after effect reconciles without false success. |
-| T-KG-09 approval | KG-09 | Two distinct principals approve exact digest before expiry. | Self-approval, generic lease, altered digest, expiry and replay all deny and audit refusal |
-| T-KG-10 Raft | KG-10 | Repeated 3-node multi-group writes/failover preserve independent progress and one committed result | Inject slow peer/leader loss. Unaffected groups progress. Failed assertion emits causal ring-buffer trace |
-| T-KG-11 durability | KG-11, KG-12 | Sync survives kill. Async oldest-unflushed age stays ≤100 ms. Hot structures rebuild from log | Ephemeral disappears on restart. Forced flush lag yields explicit degraded/refusal, never silent class change. Concurrent primitive history linearizes |
-| T-KG-11a control-lease expiry | MEDULLA-DURABLE-KERNEL-R039.2 | `native_record_consumption_checks_commit_time_and_preserves_expired_rows` enters native-record dispatch over a real shard and consumes strictly before expiry. Existing row-applier tests prove single use; the new regression also proves revocation after expiry. | At or after either deadline, consumption returns `Conflict`. It reports no changed IDs. The persisted lease and revision remain unchanged. Time is the engine-owned mutation timestamp, not caller input or physical commit wall-clock. Runtime execution is required; source presence alone is not acceptance. |
-| T-KG-12 wire batches | KG-13, KG-14 | RESP and pgwire batches return N ordered replies after one commit. Point route avoids DataFusion session | Middle operation fails. No earlier reply promises a commit. Schema/policy change invalidates cached SQL plan |
-| T-KG-13 parity and benchmark | KG-15 | Differential corpus, restore drill and benchmark report include exact config, hardware class, code revision and digest | Accepted deviation is named/reviewed; a regression fails instead of rewriting baseline; missing benchmark row blocks superiority claim |
+| T-FR-01 batch terminality | FR-01, FR-02 | Graph+table+KV batch commits once. Readback and retry return same terminal result | Inject failure at every commit phase. Restart yields all-or-none. Lost-ack retry does not duplicate |
+| T-FR-02 table-only path | FR-02 | Concurrent table-only writes use the current atomic path and match the reference corpus. | Mixed unsupported member sets refuse before writes. |
+| T-FR-03 owner lineage | FR-03 | Load each supported golden manifest. One validation per transaction | Unknown predecessor or extra physical table returns typed upgrade/ownership error. Stale cached binding never crosses transactions |
+| T-FR-04 scrub | FR-04 | Corrupt one persisted node. The scrub reports a typed finding and resumes the cursor after restart | Rate cap prevents writer starvation. The scrub hides unreadable payloads and never silently repairs them |
+| T-FR-05 outbox | FR-05 | Healthy successors deliver after a failing head is rejected/rewound with ordered receipts | Retry one head 16 times. Successors keep their own zero-attempt count. Reasoning skip without rebuild is refused |
+| T-FR-06 CDC/mirror | FR-06 | Commit 100 ordered graph/table changes, disconnect target, reconnect, replay and match digest | Crash after target apply before cursor; replay is idempotent; empty default target guard and schema drift fail visibly |
+| T-FR-07 scope | FR-07 | Owner and explicitly granted principal can access allowed data | Cross-tenant/principal probes deny SQL, UQL, TSDB and KV access. UDF, foreign-source and cache probes also deny access. Revoked grants deny the next use |
+| T-FR-07a auth modes | FR-07, FR-09 | `none`, `local` and `external` each resolve to the same internal principal/RBAC evaluator | Spoofed name in `none`, stale local session after mode switch, wrong external issuer/audience/tenant/policy version and generic elevation lease all deny |
+| T-FR-08 audit | FR-08 | Reservation precedes the governed effect and links its truthful outcome. | An unavailable audit writer, missing class, wrong tenant or duplicate ID refuses. A crash after effect reconciles without false success. |
+| T-FR-09 approval | FR-09 | Two distinct principals approve exact digest before expiry. | Self-approval, generic lease, altered digest, expiry and replay all deny and audit refusal |
+| T-FR-10 Raft | FR-10 | Repeated 3-node multi-group writes/failover preserve independent progress and one committed result | Inject slow peer/leader loss. Unaffected groups progress. Failed assertion emits causal ring-buffer trace |
+| T-FR-11 durability | FR-11, FR-12 | Sync survives kill. Async oldest-unflushed age stays ≤100 ms. Hot structures rebuild from log | Ephemeral disappears on restart. Forced flush lag yields explicit degraded/refusal, never silent class change. Concurrent primitive history linearizes |
+| T-FR-11a control-lease expiry | MEDULLA-DURABLE-KERNEL-R039.2 | `native_record_consumption_checks_commit_time_and_preserves_expired_rows` enters native-record dispatch over a real shard and consumes strictly before expiry. Existing row-applier tests prove single use; the new regression also proves revocation after expiry. | At or after either deadline, consumption returns `Conflict`. It reports no changed IDs. The persisted lease and revision remain unchanged. Time is the engine-owned mutation timestamp, not caller input or physical commit wall-clock. Runtime execution is required; source presence alone is not acceptance. |
+| T-FR-12 wire batches | FR-13, FR-14 | RESP and pgwire batches return N ordered replies after one commit. Point route avoids DataFusion session | Middle operation fails. No earlier reply promises a commit. Schema/policy change invalidates cached SQL plan |
+| T-FR-13 parity and benchmark | FR-15 | Differential corpus, restore drill and benchmark report include exact config, hardware class, code revision and digest | Accepted deviation is named/reviewed; a regression fails instead of rewriting baseline; missing benchmark row blocks superiority claim |
 
 ## Commands and quality evidence
 
@@ -34,11 +34,11 @@ R074.1: register a 16-core, 64-GiB worker supporting general/hydration, serde ro
 
 R074.2 remains pending: exercise these transitions through real authenticated dispatch and generated contracts, including cross-tenant and cross-principal refusals. Pure tests are not served acceptance.
 
-## T-KG-14 scheduler configuration producer
+## T-FR-14 scheduler configuration producer
 
 R076.1 and MEDULLA-PLACEMENT-R002.2 bind native tests in `crates/medulla-types/src/scheduler_config.rs`: real-serde default and override round trips. Exact floor sum. Over-subscription. U32::MAX floor overflow. Zero disabling bounds. CPU >1000, memory=0 and blank-lane refusals. Missing/unknown/negative/out-of-range wire fields. Run `cargo test -p medulla-types scheduler_config::tests` on a warm build, or compile that exact source with real serde/serde_json dependencies for isolated producer evidence. The latter is not full-crate or server validation. R076.2 still requires the served settings/admission scenario.
 
-## T-KG-15 association submission schema
+## T-FR-15 association submission schema
 
 R082.2 binds the table-driven tests in `crates/medulla-h-jobs/src/jobs/graph_tests.rs`.
 Fifteen malformed outer-list, transaction-list and item shapes go through the
@@ -49,7 +49,7 @@ outside [0, 1], unknown algorithms, all five accepted names/aliases and inclusiv
 0/1 boundaries. The production reader uses the same decoder; no second refusal
 implementation is introduced for tests.
 
-2026-10-11 focused evidence: the exact complete submission-test module plus the
+Focused evidence: the exact complete submission-test module plus the
 two existing hash tests passed (6 tests), compiled against real serde,
 rmp-serde, sha2 and the actual jobs-enabled medulla-types crate. The harness includes
 the exact production decoder, governor, submit validator and authority/hash
@@ -93,7 +93,7 @@ R014.4 and R014.5 depend on R014.2 and R014.3.
 The loaded evidence must record every attempt, including retries and failed first attempts.
 A successful retry does not satisfy the parent's requirement for no flaky failures.
 
-### R011.2 manifest evidence (2026-10-11)
+### R011.2 manifest evidence
 
 The existing typed declaration now records feature flags and builds Cargo arguments.
 Each command uses `test --locked --lib --no-default-features`.
@@ -113,7 +113,7 @@ No raft, backup, persistence, or clippy runtime gate ran for this slice.
 R011.3 must obtain test names from compiled library targets and run every selected test.
 R011.4 must record the exact-head runtime and clippy receipts.
 
-### R014.2 process evidence (2026-10-11)
+### R014.2 process evidence
 
 Run `python -m pytest -q tests/test_validate_raft_cluster.py`.
 Twenty-one tests exercise the real shell entry point and CPU worker processes.
@@ -124,7 +124,7 @@ The suite also covers timeout, unexpected worker exit, build failure, Cargo chil
 This is process-harness evidence, not a passing Rust cluster run.
 R014, R014.3, R014.4, and R014.5 remain open.
 
-### R014.3.1 process evidence (2026-10-11)
+### R014.3.1 process evidence
 
 Run `python -m pytest -q tests/test_validate_raft_cluster.py`. Controlled Cargo subprocesses check both exact test names over two loaded repetitions. They check separate traces and result records, invalid repeat refusal, empty-selection refusal, and failure retention despite later successes.
 
@@ -261,36 +261,30 @@ request correlation, commit acknowledgment, residency observations and terminal 
 Preserve all existing owner receipts. New results must identify the exact source exercised.
 This specification batch makes no runtime execution or implementation-complete claim.
 
-<!-- spec-definition-patch:owner-batch-20261012-durable-graph-kernel -->
-## Durable-kernel owner acceptance targets — 2026-10-12
+## Durable-kernel owner acceptance targets
 
 Planned cases only. None have run. Medulla producer acceptance stops at its authenticated durable memory contract. Cross-owner cases remain blocked where called out.
 
-- **`MEDULLA-DURABLE-KERNEL-R028.1` / AU:21:** Write a checkpoint and both referenced memory revisions through R085. Restart and read back the same revision and digests. Refuse wrong tenant/graph, stale head or stale WorkItem fence. Also refuse a crash/race between snapshot write and WorkItem pointer update. Refuse digest mismatch, changed-body replay identity or unavailable storage without advancing the head. Meristem must resume the same run and fence. Arbora must continue from the exact existing host-issued stream cursor without duplicate or skipped output. Those cases remain blocked on the atomic snapshot/pointer transaction or crash-recovery contract. Short-/long-term kind and retention decisions, Meristem resume-binding and host cursor/replay semantics also remain open. Preserve `MEDULLA-DURABLE-KERNEL-R028`, `MEDULLA-IDENTITY-R006`, `ARBORA-A2A-R001`, `ARBORA-A2A-R001.1`, `ARBORA-OPS-R001`. Source hash `d89bb9c69e2fdef6a5c3fd428ede3f91868539056c2b949700867d8d8087d1e7`.
-- **`MEDULLA-DURABLE-KERNEL-R085.9` / AU:48:** Store all required search-state fields and evict context. Restart or use an independent client. Read back byte-identical exact UTF-8 JSON content at its bound revision. Validate the envelope field types and the equality of state revision and snapshot revision. Refuse missing/malformed fields, oversize content, wrong authority, stale graph, digest mismatch, and unavailable storage without changing the head. Stale expected revision preserves the accepted head and retains the candidate conflict. Meristem continuation must restore all four fields using the exact returned document ID/revision before compacted context is used. That last case is blocked on Meristem’s per-entry schema/source identity and continuation receipt decision. Preserve Meristem R013.13/R020.1 and Medulla R085.1/.4/.7. Source hash `8c76fa1637e0cc2082a1cce16b9d637f12b310ae96d1fe9a50ec9c64f8e23944`.
-- **`MEDULLA-DURABLE-KERNEL-R085.10` / AU:49:** Write/read an authorized note across restart with source revision, digest, and provenance intact. Ensure cross-tenant/revoked reads are redacted. Stale writes must retain conflict without replacing the accepted head. Capacity exhaustion must refuse before effects. Meristem must separately test the decided capture trigger, relevance/staleness rule, and conflict presentation without using unresolved content. That acceptance is blocked on Meristem defining those semantics. Preserve Meristem R022.3 and Medulla R085.2/.5/.7. Source hash `2362fd76bf40223aeb813866392670b65eae13d02a725b1af9a2e6711542dd12`.
+- **`MEDULLA-DURABLE-KERNEL-R028.1`:** Write a checkpoint and both referenced memory revisions through R085. Restart and read back the same revision and digests. Refuse wrong tenant/graph, stale head or stale WorkItem fence. Also refuse a crash/race between snapshot write and WorkItem pointer update. Refuse digest mismatch, changed-body replay identity or unavailable storage without advancing the head. Meristem must resume the same run and fence. Arbora must continue from the exact existing host-issued stream cursor without duplicate or skipped output. Those cases remain blocked on the atomic snapshot/pointer transaction or crash-recovery contract. Short-/long-term kind and retention decisions, Meristem resume-binding and host cursor/replay semantics also remain open. Preserve `MEDULLA-DURABLE-KERNEL-R028`, `MEDULLA-IDENTITY-R006`, `ARBORA-A2A-R001`, `ARBORA-A2A-R001.1`, `ARBORA-OPS-R001`. Source hash `d89bb9c69e2fdef6a5c3fd428ede3f91868539056c2b949700867d8d8087d1e7`.
+- **`MEDULLA-DURABLE-KERNEL-R085.9`:** Store all required search-state fields and evict context. Restart or use an independent client. Read back byte-identical exact UTF-8 JSON content at its bound revision. Validate the envelope field types and the equality of state revision and snapshot revision. Refuse missing/malformed fields, oversize content, wrong authority, stale graph, digest mismatch, and unavailable storage without changing the head. Stale expected revision preserves the accepted head and retains the candidate conflict. Meristem continuation must restore all four fields using the exact returned document ID/revision before compacted context is used. That last case is blocked on Meristem’s per-entry schema/source identity and continuation receipt decision. Preserve Meristem R013.13/R020.1 and Medulla R085.1/.4/.7. Source hash `8c76fa1637e0cc2082a1cce16b9d637f12b310ae96d1fe9a50ec9c64f8e23944`.
+- **`MEDULLA-DURABLE-KERNEL-R085.10`:** Write/read an authorized note across restart with source revision, digest, and provenance intact. Ensure cross-tenant/revoked reads are redacted. Stale writes must retain conflict without replacing the accepted head. Capacity exhaustion must refuse before effects. Meristem must separately test the decided capture trigger, relevance/staleness rule, and conflict presentation without using unresolved content. That acceptance is blocked on Meristem defining those semantics. Preserve Meristem R022.3 and Medulla R085.2/.5/.7. Source hash `2362fd76bf40223aeb813866392670b65eae13d02a725b1af9a2e6711542dd12`.
 
 - **`MEDULLA-DURABLE-KERNEL-R028.1.1`:** Run `checkpoint_native_authenticated_cas_replay_and_owner_isolation` through authenticated dispatch and MutationBatch. Exact nonce reuse returns `REPLAY_NONCE_CONSUMED`. Live-claim and expected-head refusals return `CONFLICT`, not `INTERNAL`. Closed error-routing tests preserve only the declared method codes. A fresh nonce with identical canonical retry identity returns the original receipt, including after expiry/reopen, without another snapshot/version. Changed content/references/fence conflict; wrong owner/context/tenant/run refuse before ledger replay. Run `run_checkpoint` DTO tests, native `work_item/checkpoint/tests.rs` for immutable admitted-context authority despite metadata replacement, wrong graph/tenant/run and missing admission/node-type refusals, CAS/digest/fence and rollback tests. Run graph predecessor/offline upgrade/reopen tests and regenerate owner layout/public contracts from the exact candidate. Python `tests/test_run_checkpoint_client.py` requires those fresh generated methods. Hosted job 120276448287 passes the full authenticated checkpoint fixture after the refusal fixes. Replay, expiry, owner isolation, claim-bearing read refusal and reopen now have native evidence for head `c065ad9a`. The integrated final source still requires a fresh complete gate run. Hosted storage predecessor and migration-preservation tests pass, as recorded in the plan. Both Python facade tests pass with the hosted generated send methods. Final composed-head export, parity and complete gate qualification remain pending.
-- **`MEDULLA-DURABLE-KERNEL-R028.1.2` / AU:21:** Resolve and read back both referenced memory revisions after restart. AU must resume the same run and current fence, preferring its current-run checkpoint. Shared served paths must enforce durable context ordering and continue the exact host-issued cursor without duplicate or skipped output. Retention/release, memory existence and host replay authority remain open. Preserve `MEDULLA-DURABLE-KERNEL-R028`, `MEDULLA-IDENTITY-R006`, `ARBORA-A2A-R001`, `ARBORA-A2A-R001.1`, `ARBORA-OPS-R001`. Source hash `d89bb9c69e2fdef6a5c3fd428ede3f91868539056c2b949700867d8d8087d1e7`.
-<!-- /spec-definition-patch -->
+- **`MEDULLA-DURABLE-KERNEL-R028.1.2`:** Resolve and read back both referenced memory revisions after restart. AU must resume the same run and current fence, preferring its current-run checkpoint. Shared served paths must enforce durable context ordering and continue the exact host-issued cursor without duplicate or skipped output. Retention/release, memory existence and host replay authority remain open. Preserve `MEDULLA-DURABLE-KERNEL-R028`, `MEDULLA-IDENTITY-R006`, `ARBORA-A2A-R001`, `ARBORA-A2A-R001.1`, `ARBORA-OPS-R001`. Source hash `d89bb9c69e2fdef6a5c3fd428ede3f91868539056c2b949700867d8d8087d1e7`.
 
-<!-- spec-definition-patch:final-mappings-20261012 -->
-## Final mapped planned acceptance — 2026-10-12
+## Final mapped planned acceptance
 
 No cases listed here have run. They describe required future acceptance, not evidence.
 
-- **`MEDULLA-DURABLE-KERNEL-R038.100` / EG:60. Source `b36ed0f40742d2f455b4eae67f2fb64edfb7a6ea87b93cbb8ac0046970728458`:** Start a fresh embedded profile without an external service and read/write an explicitly ephemeral namespace. Confirm no persistent namespace is silently downgraded. Start served mode against its configured endpoint and confirm its declared sync/async class and acknowledgment boundary. Refuse an unknown profile and an ephemeral-to-durable class mismatch. Read back profile and namespace declarations. Producer/consumer: Medulla owns profile and storage selection. Transport mode is separate from namespace DurabilityClass. Preserve R038 durability classes, sync default, redb authority and authorization/HMAC isolation. Parent `MEDULLA-DURABLE-KERNEL-R038` remains intact.
-<!-- /spec-definition-patch -->
+- **`MEDULLA-DURABLE-KERNEL-R038.100`:** Start a fresh embedded profile without an external service and read/write an explicitly ephemeral namespace. Confirm no persistent namespace is silently downgraded. Start served mode against its configured endpoint and confirm its declared sync/async class and acknowledgment boundary. Refuse an unknown profile and an ephemeral-to-durable class mismatch. Read back profile and namespace declarations. Producer/consumer: Medulla owns profile and storage selection. Transport mode is separate from namespace DurabilityClass. Preserve R038 durability classes, sync default, redb authority and authorization/HMAC isolation. Parent `MEDULLA-DURABLE-KERNEL-R038` remains intact.
 
 
-<!-- spec-definition-patch:owner-dispatch-20261012-tests -->
 ## Planned served acceptance — graph change feed
 
 No test in this section has run. It is a future contract.
 
 - `MEDULLA-DURABLE-KERNEL-R043.100`: Use two authenticated served GraphView clients to take a consistent snapshot. Commit concurrent `ApplyChangeEnvelope` mutations and consume ordered events without refresh. Reconnect from the opaque cursor and independently read back committed state. Exercise stable dedup ids, tombstones, expired cursor recovery, stale graph incarnation and revoked permissions without denied counts/edges. Measure Medulla commit-to-visible p95 only through first authorized feed read. Arbora/Overstory acceptance must separately set and confirm a versioned browser commit-to-visible p95. It must also set explicit numeric readable-layout limits for visible node/edge budget, interaction and label bounds. Medulla feed latency is not end-to-end evidence.
 - Exercise tombstones, expired cursor recovery, graph-incarnation mismatch and authorization revocation. Denied edges/counts remain invisible. Measure p95 commit acknowledgement to first authorized read ≤1000 ms using the recorded latency-profile revision. Overstory R030.8 separately proves concurrent layout remains readable.
-<!-- /spec-definition-patch -->
 
 ## Planned served acceptance — benchmark measurement
 
@@ -322,7 +316,7 @@ Hot-path proof for `MEDULLA-DURABLE-KERNEL-R099`: `tests/shard_write_fanout.rs::
 
 Hot-path proof for `MEDULLA-DURABLE-KERNEL-R100`: `tests/mirror_graph_sinks_served.rs::each_sink_replays_after_outage`.
 
-- MEDULLA-DURABLE-KERNEL-R028.2: terminal event readback, restart identity, tenant isolation, missing/corrupt binding refusal and legacy unavailability. Receipt 2026-10-19 UTC on main `ed1f25ba023c29a8da6734819005c38bb34f18b9`: the five wired native tests from `2835f06de` (PR #622) ran and all passed (5 passed, 0 failed): `redb_store::mutation_batch_tests::terminal_extension_commits_rows_outbox_and_replays_after_reopen`, `redb_store::work_item::read::tests::an_outcome_read_returns_only_digest_verified_provenance_of_the_tenants_item`, `redb_store::work_item::read::tests::event_bindings_cannot_be_forged_and_missing_bound_event_is_not_legacy`, `redb_store::work_item::read::tests::a_bound_event_read_refuses_a_committed_batch_without_its_event`, `redb_store::work_item::read::tests::present_event_payload_corruption_is_refused`; `tests/test_work_item_read_client.py` passed 14/14, including `test_get_outcome_returns_the_verified_provenance_view`. Every acceptance bullet of the row is proven by these tests, so the pending condition is cleared.
+- MEDULLA-DURABLE-KERNEL-R028.2: terminal event readback, restart identity, tenant isolation, missing/corrupt binding refusal and legacy unavailability.
 ## MEDULLA-DURABLE-KERNEL-R101 acceptance
 
 | Case | Row | Proving test and observation |
@@ -368,7 +362,7 @@ Hot-path proof for `MEDULLA-DURABLE-KERNEL-R101`: `tests/scheduler/test_downtime
 
 - **MEDULLA-DURABLE-KERNEL-R028.5:** `current_plan_publication_readback`, `current_plan_refusals_preserve_row`, `renewal_does_not_extend_snapshot_and_generic_nodes_carry_no_plan` exercise private storage; `current_plan_native_publish_read_and_receipt_replay` exercises authenticated admission, native claim, ordered publication, foreign-owner refusal, replay and reopen. Native acceptance remains pending.
 
-## Agent-memory substrate claims (2026-10-22)
+## Agent-memory substrate claims
 
 | Case | Requirement | Proving test |
 |---|---|---|
@@ -734,3 +728,7 @@ Each entry names a test that does not exist yet. The path is the exact post-spli
 | `MEDULLA-DURABLE-KERNEL-R860.5` | `tests/wire_listeners_one_store.rs::unauthenticated_sessions_refuse` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R860`, `MEDULLA-DURABLE-KERNEL-R860.6` | `tests/wire_listeners_one_store.rs::write_each_protocol_read_native` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R028.2.1` | `tests/work_items/test_transition_history_served.py::test_history_matches_ledger_in_commit_order` (planned) |
+
+## Internal lifecycle residency
+
+- `MEDULLA-DURABLE-KERNEL-R861.3`: Planned: `crates/medulla-server-graph/src/dispatch/shared.rs::internal_global_graph_residency_tests::cold_catalog_graph_is_rematerialized_by_internal_lifecycle_ensure` (L3) creates, writes and evicts a graph, then ensures it through the internal lifecycle path and asserts residency and content. A graph that fails to open returns a typed refusal naming the graph and the cause.
