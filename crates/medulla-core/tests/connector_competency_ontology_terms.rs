@@ -396,17 +396,25 @@ mod ontology_audit_personal_v1 {
             RDF_TYPE,
             OWL_DATATYPE_PROPERTY
         ));
-        assert!(has_iri(
-            &triples,
-            &property,
-            RDFS_DOMAIN,
-            &format!("{KG}Document")
-        ));
+        assert!(domain_covers(&triples, &property, &format!("{KG}Document")));
         assert!(has_iri(
             &triples,
             &property,
             RDFS_RANGE,
             &format!("{XSD}decimal")
+        ));
+    }
+
+    // spec: MEDULLA-MEDIA-VOCAB-R653
+    #[test]
+    fn totalAmount_covers_purchase_invoice() {
+        let triples = triples();
+        let property = format!("{KG}totalAmount");
+        assert!(domain_covers(&triples, &property, &format!("{KG}Document")));
+        assert!(domain_covers(
+            &triples,
+            &property,
+            &format!("{KG}PurchaseInvoice")
         ));
     }
 

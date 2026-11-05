@@ -281,6 +281,9 @@ jobs:
         env: &medulla-validation-compiler-cache-env
           RUSTC_WRAPPER: sccache
         run: python3 scripts/cargo_test_rescue.py cargo test -p medulla-types -p medulla-core -p medulla-compute --all-features --no-fail-fast
+      - name: Lint (generated Cypher property keys are quoted)
+        env: *medulla-validation-compiler-cache-env
+        run: bash scripts/check_cypher_render.sh
       # The checked ledger is the canonical all-Method projection. The ordinary
       # feature-selected registry is intentionally smaller, so this named profile
       # is the only meaningful exact generated-artifact comparison. This step is
