@@ -91,15 +91,14 @@ def test_full_queue_stale_head_and_bad_capability_refuse(queue_client):
     assert _absent(client, "ctx-b-" + stem)
 
     # An unverifiable claim capability refuses as ACCESS_DENIED.
-    denied = client.work_items.verify_capability(
-        {
-            "schema_version": "1",
-            "work_item_id": first["work_item_id"],
-            "capability": b"forged",
-        }
-    )
-    assert denied["valid"] is False
-    assert denied["decision"] in {"unauthorized", "malformed"}
+    with pytest.raises(EngineResponseError, match="ACCESS_DENIED"):
+        client.work_items.verify_capability(
+            {
+                "schema_version": "1",
+                "work_item_id": first["work_item_id"],
+                "capability": b"forged",
+            }
+        )
 
     # Cancel of a terminal item is a Noop and changes nothing.
     terminal = client.work_items.get(
