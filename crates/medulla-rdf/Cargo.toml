@@ -127,6 +127,8 @@ medulla-source-types = { path = "../medulla-source-types" }
 [dev-dependencies]
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
 medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
+# GeoSPARQL kernel parity test (MEDULLA-FEDERATED-QUERY-R709.2).
+medulla-geo = { path = "../medulla-geo" }
 medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
 medulla-identity-types = { path = "../medulla-identity-types", features = ["test-support"] }
 medulla-source-types = { path = "../medulla-source-types", features = ["test-support"] }
