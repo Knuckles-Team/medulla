@@ -164,7 +164,7 @@ runs:
 
     - name: Fold the server executable into the medulla wheel
       shell: bash
-      run: python scripts/inject_server_binary.py "$(ls dist-${{ inputs.pass }}/medulla-*.whl)" "$(ls dist-server-bin/medulla-server dist-server-bin/medulla-server.exe 2>/dev/null)"
+      run: python scripts/inject_server_binary.py "$(ls dist-${{ inputs.pass }}/medulla-*.whl)" "dist-server-bin/$(ls dist-server-bin | grep -xE 'medulla-server(\.exe)?')"
 
     # Safety net: the server is package data, never a console script; drop any
     # `*.data/scripts/*` member a future build change might emit.
