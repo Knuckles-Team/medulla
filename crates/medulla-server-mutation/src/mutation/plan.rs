@@ -783,6 +783,7 @@ fn cluster_mutation_route_admin(method: &Method) -> Option<ClusterMutationRoute>
             | Method::SourceIngest { .. }
             | Method::IndexRepository { .. }
             | Method::EnrichDocument { .. }
+            | Method::DocumentDelete { .. }
     ) {
         return Some(ClusterMutationRoute::VolatileControl);
     }
