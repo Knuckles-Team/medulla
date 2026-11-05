@@ -50,7 +50,7 @@ The user is an ontology owner. The outcome is that every term a question reads i
 **Acceptance scenarios**
 
 1. **Given** a registered module, **When** the engine loads `GraphSchemaSources::default()`, **Then** each term of the rollups `MEDULLA-CQ-CONN-R068` to `MEDULLA-CQ-CONN-R082` resolves to its full IRI with its domain and range.
-2. **Given** a term that no module declares, **When** a question reads it, **Then** the row stays blocked and is listed for owner review.
+2. **Given** a term that no module declares, **When** a question reads it, **Then** the term is reused from an open vocabulary or minted in the owning core module, and the decision is listed in the data model.
 
 Independent test: `MEDULLA-CQ-CONN-R089` runs the served vocabulary coverage test.
 
@@ -71,7 +71,7 @@ Independent test: `MEDULLA-CQ-CONN-R085.6` and `MEDULLA-CQ-CONN-R090`.
 - A held mapping returns `SOURCE_HELD`; an unapproved `owl:sameAs` link adds no join.
 - A query with a write stage refuses before any source is called (`MEDULLA-CQ-CONN-R090`).
 - A caller without access to a source adds no rows from it and sees it in the coverage block (`MEDULLA-SRC-AUTH-R006.1`).
-- A term that is not yet declared is a proposed term for owner review; its row stays SPECIFIED and blocked until the owner approves the module and class.
+- A term that no module declares is reused from an open vocabulary when an equivalent exists, otherwise minted in the owning core module with a mapping to the open term and a core superclass (see [data-model.md](data-model.md)).
 
 ### Assumptions
 

@@ -55,7 +55,7 @@ New files that rows add are marked `new` in their own `Shape:` sentence.
 
 ## Phase 0: Research
 
-No unknowns that block planning; no research.md. The vocabulary terms that no module declares are listed as proposed terms for owner review in [data-model.md](data-model.md).
+No unknowns that block planning; no research.md. The vocabulary terms that no module declares are reused or minted as listed in [data-model.md](data-model.md).
 
 ## Phase 1: Design
 
@@ -66,7 +66,7 @@ The rules below bind every row.
 3. **One harness.** The table-driven served test of `MEDULLA-CQ-CONN-R067.9` replaces per-connector acceptance tests; the `.3` rows are retired.
 4. **Provenance on every row.** Source, record id and as-of time travel with each answer row; an unavailable source abstains by name.
 5. **Vocabulary first.** A question row depends on the producer row that declares its terms; filename-based vocabulary assignment is a proposal until checked against the registered modules.
-6. **New terms need the owner.** A term that no module declares is marked a proposed term (owner review) in its row and listed in [data-model.md](data-model.md); the row stays SPECIFIED.
+6. **Reuse before minting.** A term that no module declares is reused from an open vocabulary when an equivalent exists; otherwise it is minted in the owning core module with a `skos:exactMatch` or `skos:closeMatch` mapping and a core superclass. Each decision is listed in [data-model.md](data-model.md).
 7. **Planned means planned.** `Method::SourceCoverage` is planned under `MEDULLA-SRC-AUTH-R004.6.1`; rows cite it as planned until that row lands.
 
 The sections below hold the question inventory and the term assignment. Data entities are in [data-model.md](data-model.md); the shortest served proof is in [quickstart.md](quickstart.md); each seam has a document in `contracts/`.
