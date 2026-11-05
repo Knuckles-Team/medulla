@@ -283,6 +283,9 @@ pub(crate) const NATIVE_GRAPHREDB_DURABLE: &[&str] = &[
     "DecaySweep",
     "DeleteGraph",
     "EvictLRU",
+    // MEDULLA-FINANCE-PRIMITIVES-R004.3.2: an admitted record put self-translates
+    // into `Method::AddNode`, which carries the durable effect.
+    "FinanceRecordPut",
     "FromMsgpack",
     "GraphQl",
     "IcvConfigure",

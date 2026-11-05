@@ -201,6 +201,24 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     ),
     // MEDULLA-FINANCE-PRIMITIVES-R904: no current record for the binding in the caller's tenant.
     ("WalletKeyTrustGet", &["WALLET_KEY_TRUST_NOT_FOUND"]),
+    // MEDULLA-FINANCE-PRIMITIVES-R004.3.2: the record put's closed refusals.
+    (
+        "FinanceRecordPut",
+        &[
+            "FINANCE_RECORD_VERSION_UNKNOWN",
+            "RECORD_DERIVED_READONLY",
+            "RECORD_HEAD_CONFLICT",
+            "RECORD_SHAPE_INVALID",
+            // MEDULLA-FINANCE-PRIMITIVES-R751.752: the research records' refusals.
+            "DEBATE_ROUND_OUT_OF_ORDER",
+            "RECORD_IMMUTABLE",
+            "RECORD_TENANT_MISMATCH",
+            "SCORE_EVIDENCE_MISSING",
+            "SCORE_RANGE_INVALID",
+            "SCORE_WEIGHTS_INVALID",
+            "STRATEGY_CARD_LICENCE_MISSING",
+        ],
+    ),
     ("GetNodes", &["RESULT_TOO_LARGE"]),
     ("GetEdges", &["RESULT_TOO_LARGE"]),
     (
