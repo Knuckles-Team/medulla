@@ -10,7 +10,7 @@ name: CI
 # changed files, the spec-trailer check, and cargo clippy + nextest on the
 # affected crates only (scripts/ci_affected_crates.py: owning packages of the
 # changed files plus their reverse dependencies). A same-repository pull request
-# runs on the warm self-hosted runners (vars.MEDULLA_WARM_CI_RUNNER) with a
+# runs on the warm self-hosted runners (vars.MEDULLA_WARM_CI_RUNNER, group medulla-warm, never for dependabot) with a
 # persistent cargo target and a local-disk sccache outside the checkout; a fork
 # pull request stays on GitHub-hosted ubuntu-24.04 with the Actions caches. A documentation- or
 # specs-only diff runs no cargo and only the shared spec gate set. `CI required` (the branch-protection context)
@@ -1439,7 +1439,7 @@ jobs:
     if: github.event_name == 'pull_request'
     # Same-repository pull requests run on the warm self-hosted pool (persistent
     # cargo target + local sccache); fork pull requests stay on GitHub-hosted.
-    runs-on: ${{ (vars.MEDULLA_WARM_CI_RUNNER == 'true' && github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('{"group":"arbora-ci-trusted","labels":["self-hosted","rust-1.96"]}') || 'ubuntu-24.04' }}
+    runs-on: ${{ (vars.MEDULLA_WARM_CI_RUNNER == 'true' && github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]') && fromJSON('{"group":"medulla-warm","labels":["self-hosted","medulla-warm"]}') || 'ubuntu-24.04' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -1469,7 +1469,16 @@ jobs:
             echo "SCCACHE_GHA_ENABLED=false"
             echo "PRE_COMMIT_HOME=$root/pre-commit"
           } >> "$GITHUB_ENV"
-          if command -v sccache >/dev/null 2>&1; then echo "RUSTC_WRAPPER=sccache" >> "$GITHUB_ENV"; fi
+          # Pinned static sccache (v0.10.0, musl x86_64), kept in the persistent cache root.
+          sccache_bin="$root/bin/sccache"
+          if [ ! -x "$sccache_bin" ]; then
+            mkdir -p "$root/bin"
+            curl -fsSL -o "$RUNNER_TEMP/sccache.tgz" https://github.com/mozilla/sccache/releases/download/v0.10.0/sccache-v0.10.0-x86_64-unknown-linux-musl.tar.gz
+            echo "1fbb35e135660d04a2d5e42b59c7874d39b3deb17de56330b25b713ec59f849b  $RUNNER_TEMP/sccache.tgz" | sha256sum -c -
+            tar -xzf "$RUNNER_TEMP/sccache.tgz" -C "$root/bin" --strip-components=1 sccache-v0.10.0-x86_64-unknown-linux-musl/sccache
+          fi
+          echo "$root/bin" >> "$GITHUB_PATH"
+          echo "RUSTC_WRAPPER=$sccache_bin" >> "$GITHUB_ENV"
           df -h "$root" | tail -1
       - *medulla-gates-python
       - name: Scope the diff (changed files, docs-only, affected crates)
