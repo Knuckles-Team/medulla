@@ -29,6 +29,8 @@ pub mod mysql_mariadb_connection;
 // `medulla-asr-whisper`.
 #[cfg(feature = "asr-native")]
 pub mod asr_wire;
+// MEDULLA-FEDERATED-QUERY-R608.1 — causal model fit verdict (`CausalVerify`).
+pub mod causal_wire;
 // MEDULLA-DURABLE-KERNEL-R076.1 — authoritative scheduler policy data and validation.
 pub mod scheduler_config;
 // MEDULLA-INGEST-WORKER-R002.1/.2 — induced ontology proposals and admission scores.

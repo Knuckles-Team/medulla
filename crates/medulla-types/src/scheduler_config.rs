@@ -94,6 +94,111 @@ impl SchedulerConfig {
     }
 }
 
+/// Default of `knob reasoning.rule_max_steps` (MEDULLA-FEDERATED-QUERY-R608.2).
+pub const DEFAULT_RULE_MAX_STEPS: u64 = 100_000;
+/// Bounds of `knob reasoning.rule_max_steps`, in rule evaluations.
+pub const RULE_MAX_STEPS_RANGE: (u64, u64) = (1_000, 10_000_000);
+/// Default of `knob reasoning.causal_nrmse_max` (MEDULLA-FEDERATED-QUERY-R608.2).
+pub const DEFAULT_CAUSAL_NRMSE_MAX: f64 = 0.25;
+/// Bounds of `knob reasoning.causal_nrmse_max`, a ratio.
+pub const CAUSAL_NRMSE_MAX_RANGE: (f64, f64) = (0.01, 1.0);
+
+/// Reasoning knobs of the server configuration, read from
+/// `MEDULLA_REASONING_RULE_MAX_STEPS` and `MEDULLA_REASONING_CAUSAL_NRMSE_MAX`
+/// and bounds-checked at startup.
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ReasoningKnobs {
+    pub rule_max_steps: u64,
+    pub causal_nrmse_max: f64,
+}
+
+impl Default for ReasoningKnobs {
+    fn default() -> Self {
+        Self {
+            rule_max_steps: DEFAULT_RULE_MAX_STEPS,
+            causal_nrmse_max: DEFAULT_CAUSAL_NRMSE_MAX,
+        }
+    }
+}
+
+/// A reasoning knob outside its range or unparseable; refuses startup.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct InvalidKnob {
+    pub knob: &'static str,
+    pub value: String,
+}
+
+impl std::fmt::Display for InvalidKnob {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "knob {} has invalid value {:?}", self.knob, self.value)
+    }
+}
+
+impl std::error::Error for InvalidKnob {}
+
+const RULE_MAX_STEPS_KNOB: &str = "reasoning.rule_max_steps";
+const CAUSAL_NRMSE_MAX_KNOB: &str = "reasoning.causal_nrmse_max";
+
+impl ReasoningKnobs {
+    /// Read the knobs through `lookup` (the environment in production), apply
+    /// defaults for unset ones and check every bound.
+    pub fn from_lookup(lookup: impl Fn(&str) -> Option<String>) -> Result<Self, InvalidKnob> {
+        let mut knobs = Self::default();
+        if let Some(raw) = lookup("MEDULLA_REASONING_RULE_MAX_STEPS") {
+            knobs.rule_max_steps = raw.trim().parse().map_err(|_| InvalidKnob {
+                knob: RULE_MAX_STEPS_KNOB,
+                value: raw.clone(),
+            })?;
+        }
+        if let Some(raw) = lookup("MEDULLA_REASONING_CAUSAL_NRMSE_MAX") {
+            knobs.causal_nrmse_max = raw.trim().parse().map_err(|_| InvalidKnob {
+                knob: CAUSAL_NRMSE_MAX_KNOB,
+                value: raw.clone(),
+            })?;
+        }
+        knobs.validate()?;
+        Ok(knobs)
+    }
+
+    /// Read the knobs from the process environment.
+    pub fn from_env() -> Result<Self, InvalidKnob> {
+        Self::from_lookup(|key| std::env::var(key).ok())
+    }
+
+    /// Check every knob against its range.
+    pub fn validate(&self) -> Result<(), InvalidKnob> {
+        let (lo, hi) = RULE_MAX_STEPS_RANGE;
+        if !(lo..=hi).contains(&self.rule_max_steps) {
+            return Err(InvalidKnob {
+                knob: RULE_MAX_STEPS_KNOB,
+                value: self.rule_max_steps.to_string(),
+            });
+        }
+        let (lo, hi) = CAUSAL_NRMSE_MAX_RANGE;
+        if !(lo..=hi).contains(&self.causal_nrmse_max) {
+            return Err(InvalidKnob {
+                knob: CAUSAL_NRMSE_MAX_KNOB,
+                value: self.causal_nrmse_max.to_string(),
+            });
+        }
+        Ok(())
+    }
+}
+
+static REASONING_KNOBS: std::sync::OnceLock<ReasoningKnobs> = std::sync::OnceLock::new();
+
+/// Install the startup-validated reasoning knobs; the first install wins.
+pub fn install_reasoning_knobs(knobs: ReasoningKnobs) {
+    let _ = REASONING_KNOBS.set(knobs);
+}
+
+/// The installed reasoning knobs, or the defaults when startup installed none
+/// (embedded and test construction).
+pub fn reasoning_knobs() -> ReasoningKnobs {
+    REASONING_KNOBS.get().copied().unwrap_or_default()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -210,5 +315,27 @@ mod tests {
         ] {
             assert!(serde_json::from_value::<SchedulerConfig>(value).is_err());
         }
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R608.2
+    #[test]
+    fn reasoning_knobs_default_and_refuse_out_of_range() {
+        let none = ReasoningKnobs::from_lookup(|_| None).unwrap();
+        assert_eq!(none, ReasoningKnobs::default());
+        let set = ReasoningKnobs::from_lookup(|k| match k {
+            "MEDULLA_REASONING_RULE_MAX_STEPS" => Some("1000".into()),
+            "MEDULLA_REASONING_CAUSAL_NRMSE_MAX" => Some("1.0".into()),
+            _ => None,
+        })
+        .unwrap();
+        assert_eq!((set.rule_max_steps, set.causal_nrmse_max), (1_000, 1.0));
+        let low = ReasoningKnobs::from_lookup(|k| {
+            (k == "MEDULLA_REASONING_RULE_MAX_STEPS").then(|| "999".into())
+        });
+        assert_eq!(low.unwrap_err().knob, "reasoning.rule_max_steps");
+        let high = ReasoningKnobs::from_lookup(|k| {
+            (k == "MEDULLA_REASONING_CAUSAL_NRMSE_MAX").then(|| "1.5".into())
+        });
+        assert_eq!(high.unwrap_err().knob, "reasoning.causal_nrmse_max");
     }
 }
