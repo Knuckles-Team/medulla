@@ -1029,7 +1029,7 @@ Do not infer it from these fixtures or generated status.
 | Derive worker writes conclusions as claims | `MEDULLA-DECISION-ENGINE-R651.12` | `src/server/handlers/graph_ops/participant_memory_tests.rs::derive_job_writes_claims_with_turn_evidence`; `tests/memory/test_participant_memory_served.py::test_turns_become_perspective_claims` |
 | Claims carry subject and observer | `MEDULLA-DECISION-ENGINE-R652.9` | `crates/medulla-epistemic/src/claims.rs::tests::observer_sees_own_and_visible_system_claims_only`; `src/server/handlers/decide/stat_tests/claims_tests.rs::perspective_claims_hide_other_observers` |
 | Scope narrows cross-session episode recall | `MEDULLA-DECISION-ENGINE-R155.7` | `src/server/handlers/graph_ops/participant_memory_tests.rs::scoped_recall_returns_only_scope_episodes` |
-| Memory events enter the graph outbox | `MEDULLA-DECISION-ENGINE-R073.6` | `src/server/handlers/graph_ops/participant_memory_tests.rs::each_memory_change_emits_one_atomic_event` |
+| Memory events enter the graph outbox | `MEDULLA-DECISION-ENGINE-R073.6` | `crates/medulla-h-graph/src/graph_ops/participant_memory_tests.rs::each_memory_change_emits_one_atomic_event` |
 | Pull and acknowledge memory events over the served outbox method | `MEDULLA-DECISION-ENGINE-R073.7` | `crates/medulla-h-jobs/src/mutation_outbox.rs::tests::pull_leases_then_ack_advances_cursor`; `tests/memory/test_participant_memory_served.py::test_events_pull_and_ack` |
 | Participant questions, cards and derivation status (rollup) | `MEDULLA-DECISION-ENGINE-R655` | `tests/memory/test_participant_memory_served.py::test_ask_card_and_status_journey` |
 | Model | `MEDULLA-DECISION-ENGINE-R655.1` | `crates/medulla-types/src/participant_memory.rs::tests::types_round_trip_and_write_vectors` |
@@ -1049,3 +1049,50 @@ Do not infer it from these fixtures or generated status.
 | AgentAssemble respects the profile tool allowlist | `MEDULLA-DECISION-ENGINE-R036.107` | `src/server/handlers/decide/stat_tests/assemble_tests.rs::allowlist_removes_tools_and_admission_still_runs` |
 | Participant memory knobs | `MEDULLA-DECISION-ENGINE-R179.8` | `crates/medulla-types/src/memory_scope.rs::tests::knob_defaults_are_inside_bounds`; `src/server/handlers/decide/stat_tests/knob_tests.rs::participant_knobs_are_registered_and_tunable` |
 | Participant memory refusal codes | `MEDULLA-DECISION-ENGINE-R010.100.4` | `crates/medulla-decision-types/src/decision/record/outcome.rs::tests::codes_are_unique_and_stable` |
+
+## Planned bindings: rows R001 through R079.2
+
+Each test below is planned: its path is the post-split location and its name is exact. A row binds it with a `// spec:` comment when it lands.
+
+| Row | Planned test | Level |
+|---|---|---|
+| `MEDULLA-DECISION-ENGINE-R001` | `crates/medulla-h-decide/src/decide/stat_tests/resolution_tests.rs::every_resolution_kind_is_reachable_through_production_dispatch` | L3 |
+| `MEDULLA-DECISION-ENGINE-R001.2` | `crates/medulla-h-decide/src/decide/stat_tests/assemble_resolution_tests.rs::unique_selection_resolves_as_constraint_or_entailment` | L3 |
+| `MEDULLA-DECISION-ENGINE-R001.2.1` | `crates/medulla-compute/src/assemble/tests/uniqueness.rs::no_good_resolve_agrees_with_exhaustive_enumeration` | L1/L2 |
+| `MEDULLA-DECISION-ENGINE-R001.2.1` | `crates/medulla-h-decide/src/decide/stat_tests/assemble_resolution_tests.rs::unique_selection_resolves_as_constraint_or_entailment` | L3 |
+| `MEDULLA-DECISION-ENGINE-R001.2.2` | `crates/medulla-compute/src/assemble/tests/uniqueness.rs::coverage_alone_fixes_the_answer_as_entailment` | L1/L2 |
+| `MEDULLA-DECISION-ENGINE-R001.2.2` | `crates/medulla-h-decide/src/decide/stat_tests/assemble_resolution_tests.rs::unique_selection_resolves_as_constraint_or_entailment` | L3 |
+| `MEDULLA-DECISION-ENGINE-R010.100.1` | `crates/medulla-decision-types/src/decision/record/outcome.rs::codes_are_unique_and_stable` | L1/L2 |
+| `MEDULLA-DECISION-ENGINE-R010.100.2` | `crates/medulla-decision-types/src/decision/record/outcome.rs::every_decision_refusal_enum_maps_to_a_registered_code` | L1/L2 |
+| `MEDULLA-DECISION-ENGINE-R010.100.3` | `crates/medulla-result-types/src/retrieval_arbitration.rs::answer_grounding_round_trip` | L1/L2 |
+| `MEDULLA-DECISION-ENGINE-R010.100.4` | `crates/medulla-decision-types/src/decision/record/outcome.rs::codes_are_unique_and_stable` | L1/L2 |
+| `MEDULLA-DECISION-ENGINE-R014` | `crates/medulla-h-decide/src/decide/stat_tests/assemble_size_tests.rs::smallest_adequate_composition_is_served` | L3 |
+| `MEDULLA-DECISION-ENGINE-R029` | `crates/medulla-h-decide/src/decide/stat_tests/retrieval_tests.rs::retrieval_plan_is_selected_and_bound_through_decide` | L3 |
+| `MEDULLA-DECISION-ENGINE-R031` | `crates/medulla-h-decide/src/decide/stat_tests/consumer_tests.rs::enrichment_schedule_prefers_higher_net_value` | L3 |
+| `MEDULLA-DECISION-ENGINE-R032` | `crates/medulla-h-decide/src/decide/stat_tests/resolve_entity_tests.rs::gold_set_guarantee_holds_or_the_decision_abstains` | L3 |
+| `MEDULLA-DECISION-ENGINE-R032.2` | `crates/medulla-h-decide/src/decide/stat_tests/resolve_entity_tests.rs::gold_set_guarantee_holds_or_the_decision_abstains` | L3 |
+| `MEDULLA-DECISION-ENGINE-R032.2.1` | `crates/medulla-decision-stats/src/decision/fit_calibrate.rs::isotonic_calibration_is_monotone_and_reproducible` | L1/L2 |
+| `MEDULLA-DECISION-ENGINE-R032.2.1` | `crates/medulla-h-decide/src/decide/stat_tests/resolve_entity_tests.rs::gold_set_guarantee_holds_or_the_decision_abstains` | L3 |
+| `MEDULLA-DECISION-ENGINE-R032.2.2` | `crates/medulla-h-decide/src/decide/stat_tests/resolve_entity_tests.rs::pairs_act_only_inside_the_conformal_set` | L3 |
+| `MEDULLA-DECISION-ENGINE-R032.2.3` | `crates/medulla-h-decide/src/decide/stat_tests/resolve_entity_tests.rs::gold_set_guarantee_holds_or_the_decision_abstains` | L3 |
+| `MEDULLA-DECISION-ENGINE-R033` | `crates/medulla-h-decide/src/decide/stat_tests/schema_mapping_tests.rs::columns_map_to_expected_properties_with_evidence_class` | L3 |
+| `MEDULLA-DECISION-ENGINE-R033.2` | `crates/medulla-h-decide/src/decide/stat_tests/schema_mapping_tests.rs::columns_map_to_expected_properties_with_evidence_class` | L3 |
+| `MEDULLA-DECISION-ENGINE-R033.2.1` | `crates/medulla-decision-stats/src/decision/schema_mapping.rs::score_and_class_follow_the_rule` | L1/L2 |
+| `MEDULLA-DECISION-ENGINE-R033.2.1` | `crates/medulla-h-decide/src/decide/stat_tests/schema_mapping_tests.rs::columns_map_to_expected_properties_with_evidence_class` | L3 |
+| `MEDULLA-DECISION-ENGINE-R033.2.2` | `crates/medulla-h-decide/src/decide/stat_tests/schema_mapping_tests.rs::columns_map_to_expected_properties_with_evidence_class` | L3 |
+| `MEDULLA-DECISION-ENGINE-R039` | `crates/medulla-h-decide/src/decide/stat_tests/route_tests.rs::lower_cost_option_wins_within_the_tie_epsilon` | L3 |
+| `MEDULLA-DECISION-ENGINE-R039.2` | `crates/medulla-decision-stats/src/decision/ladder.rs::cost_breaks_ties_within_epsilon_only` | L1/L2 |
+| `MEDULLA-DECISION-ENGINE-R039.2` | `crates/medulla-h-decide/src/decide/stat_tests/route_tests.rs::lower_cost_option_wins_within_the_tie_epsilon` | L3 |
+| `MEDULLA-DECISION-ENGINE-R044` | `crates/medulla-h-decide/src/decide/stat_tests/a2a_route_tests.rs::inbound_task_routes_through_a_recorded_decision` | L3 |
+| `MEDULLA-DECISION-ENGINE-R044.2` | `crates/medulla-h-decide/src/decide/stat_tests/a2a_route_tests.rs::inbound_task_routes_through_a_recorded_decision` | L3 |
+| `MEDULLA-DECISION-ENGINE-R044.2.2` | `crates/medulla-h-decide/src/decide/stat_tests/a2a_route_tests.rs::inbound_task_routes_through_a_recorded_decision` | L3 |
+| `MEDULLA-DECISION-ENGINE-R050.2` | `tests/test_generated_models.py::test_model_input_capabilities_round_trip_and_refuse_unknown_mime` | L3 |
+| `MEDULLA-DECISION-ENGINE-R050.3` | `crates/medulla-h-admin/src/admin/connector_pack/tests/model_input_capabilities.rs::four_media_types_at_128_parts_import` | L1/L2 |
+| `MEDULLA-DECISION-ENGINE-R054.1` | `crates/medulla-capabilities/tests/decision_ontology.rs::generated_decision_ontology_matches_committed_files` | L1/L2 |
+| `MEDULLA-DECISION-ENGINE-R066.4` | `crates/medulla-h-decide/src/decide/stat_tests/retention_tests.rs::graph_summaries_expire_on_policy_window` | L3 |
+| `MEDULLA-DECISION-ENGINE-R072.100` | `crates/medulla-h-decide/src/decide/stat_tests/telemetry_tests.rs::served_decide_emits_one_span_per_stage` | L3 |
+| `MEDULLA-DECISION-ENGINE-R073.6` | `crates/medulla-h-graph/src/graph_ops/participant_memory_tests.rs::each_memory_change_emits_one_atomic_event` | L1/L2 |
+| `MEDULLA-DECISION-ENGINE-R073.7` | `crates/medulla-h-jobs/src/mutation_outbox.rs::pull_leases_then_ack_advances_cursor` | L1/L2 |
+| `MEDULLA-DECISION-ENGINE-R073.7` | `tests/memory/test_participant_memory_served.py::test_events_pull_and_ack` | L3 |
+| `MEDULLA-DECISION-ENGINE-R079` | `tests/web_document_enrich_served.rs::excluded_units_make_no_embedding_call` | L3 |
+| `MEDULLA-DECISION-ENGINE-R079.2` | `tests/web_document_enrich_served.rs::excluded_units_make_no_embedding_call` | L3 |
