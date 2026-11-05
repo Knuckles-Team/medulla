@@ -47,9 +47,10 @@ FORBIDDEN = (
     re.compile(
         # A connector's own file and directory names (``cases/gitlab.json``,
         # ``recordings/gitlab/``) are not hosts: a file extension or a parent
-        # path segment marks them as repository paths.
+        # path segment marks them as repository paths, and ``gitlab.q1`` is a
+        # competency question id (``<connector>.q<n>``), not a host.
         r"\bgitlab(?:[-.][a-z0-9-]+)*\."
-        r"(?!(?:json|jsonl|ya?ml|toml|md|ttl|py|rs|txt|csv)\b)[a-z0-9-]+\b"
+        r"(?!(?:json|jsonl|ya?ml|toml|md|ttl|py|rs|txt|csv|q\d+)\b)[a-z0-9-]+\b"
         r"|(?<![/\w])gitlab[/:\\]\S",
         re.IGNORECASE,
     ),
@@ -68,7 +69,7 @@ LOCAL_HOST = re.compile(
 )
 PLACEHOLDER = re.compile(
     r"\[(?:Describe|Exact|Record|ID|Feature name|repository name|"
-    r"Observable behavior|Measurable)",
+    r"Observable behavior|Measurable)\b",
     re.IGNORECASE,
 )
 CONTENT_MARKERS = {
