@@ -381,6 +381,7 @@ mod tests {
         }
     }
 
+    // spec: MEDULLA-DECISION-ENGINE-R130.1
     #[test]
     fn ranked_candidate_round_trips() {
         let c = cand("a", Some(0.7), "C1", 0.4);
