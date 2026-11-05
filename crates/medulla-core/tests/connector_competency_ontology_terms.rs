@@ -1306,7 +1306,6 @@ mod ontology_audit_virtual_graph_v1 {
     }
 }
 
-
 #[allow(non_snake_case)]
 mod ontology_audit_identity_v1 {
     use super::*;
