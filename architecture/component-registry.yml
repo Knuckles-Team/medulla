@@ -4098,6 +4098,7 @@ components:
       - "tests/usecase_observability_rca.rs"
       - "tests/viz_dispatch.rs"
       - "tests/web_document_enrich_served.rs"
+      - "tests/write_conflict_two_writers.rs"
       - "benches"
       - "examples"
     generated_roots: []

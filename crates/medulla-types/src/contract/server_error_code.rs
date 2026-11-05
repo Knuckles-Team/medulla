@@ -205,7 +205,6 @@ closed_error_codes! {
         SourceWithdrawalUnknown => "SOURCE_WITHDRAWAL_UNKNOWN",
         SqlOwnerRepairPending => "SQL_OWNER_REPAIR_PENDING",
         StaleAgentLibraryRevision => "STALE_AGENT_LIBRARY_REVISION",
-        StaleGraphVersion => "STALE_GRAPH_VERSION",
         StaleOutboxLease => "STALE_OUTBOX_LEASE",
         StaleMappingReference => "STALE_MAPPING_REFERENCE",
         StaleRecomputeFence => "STALE_RECOMPUTE_FENCE",
@@ -222,5 +221,7 @@ closed_error_codes! {
         WebSelectionNoCandidates => "WEB_SELECTION_NO_CANDIDATES",
         WebSelectionQueryMissing => "WEB_SELECTION_QUERY_MISSING",
         WebSelectionTooManyCandidates => "WEB_SELECTION_TOO_MANY_CANDIDATES",
+        WriteConflict => "WRITE_CONFLICT",
+        WriteConflictUnmergeable => "WRITE_CONFLICT_UNMERGEABLE",
     }
 }

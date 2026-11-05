@@ -19,6 +19,19 @@ use tracing::info;
 
 use medulla_server_api::state::ServerState;
 
+/// Parse the `--write-conflict-strategy` token into its closed enum.
+fn parse_write_conflict_strategy(value: &str) -> Result<medulla_types::MergeStrategy, String> {
+    use medulla_types::MergeStrategy;
+    [
+        MergeStrategy::Refuse,
+        MergeStrategy::PreferNewer,
+        MergeStrategy::FieldUnion,
+    ]
+    .into_iter()
+    .find(|strategy| strategy.label() == value)
+    .ok_or_else(|| format!("expected refuse, prefer_newer or field_union, got `{value}`"))
+}
+
 /// Service configuration read by the startup steps (the binary flattens this into its CLI).
 #[derive(clap::Args, Debug)]
 pub struct ServerArgs {
@@ -67,6 +80,16 @@ pub struct ServerArgs {
     /// HMAC-SHA256 shared secret for authentication.
     #[arg(long, env = "GRAPH_SERVICE_AUTH_SECRET", default_value = "")]
     pub auth_secret: String,
+
+    /// Engine-wide policy for a stale `ApplyChangeEnvelope` version claim:
+    /// `refuse` (default), `prefer_newer`, or `field_union`.
+    #[arg(
+        long,
+        default_value = "refuse",
+        env = "MEDULLA_WRITE_CONFLICT_STRATEGY",
+        value_parser = parse_write_conflict_strategy
+    )]
+    pub write_conflict_strategy: medulla_types::MergeStrategy,
 
     /// Directory for the authoritative durable store.
     #[arg(long, env = "GRAPH_SERVICE_PERSIST_DIR")]

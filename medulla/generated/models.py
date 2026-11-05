@@ -2409,6 +2409,7 @@ class ChangeEnvelopeApplied(BaseModel):
     projection_pending: bool
     replayed: bool
     replicated: bool | None = None
+    write_conflict: WriteConflictEvidence | None = None
 
 
 class ChangeEnvelopeBatch(BaseModel):
@@ -2982,6 +2983,12 @@ class ConfirmToken(BaseModel):
 
     confirmed: bool
     delivery_tag: int
+
+
+class ConflictWinner(str, Enum):
+    EXISTING = "existing"
+    INCOMING = "incoming"
+    MERGED = "merged"
 
 
 class ConnectorPackBindingResult(BaseModel):
@@ -9263,6 +9270,12 @@ class MaterializationStatusResult(BaseModel):
 
     source_graph_version: Annotated[int, Field(ge=0)]
     status: str | None = None
+
+
+class MergeStrategy(str, Enum):
+    REFUSE = "refuse"
+    PREFER_NEWER = "prefer_newer"
+    FIELD_UNION = "field_union"
 
 
 class MergeProposal(BaseModel):
@@ -24638,6 +24651,14 @@ class WhyNotWire(BaseModel):
     reason: str
 
 
+class WriteConflictEvidence(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    conflict_scope: str
+    strategy: MergeStrategy
+    winner: ConflictWinner
+
+
 class WorkItemCancelStatus(str, Enum):
     CANCELLED = "cancelled"
     MISSING = "missing"
@@ -27044,6 +27065,7 @@ __all__ = [
     "ComputeSimilarityEdgesResult",
     "ComputeSimilarityEdgesResultValueItem",
     "ConfirmToken",
+    "ConflictWinner",
     "ConnectedComponentsResult",
     "ConnectorPackBindRequest",
     "ConnectorPackBindingResult",
@@ -28048,6 +28070,7 @@ __all__ = [
     "MeasuredFact_ShellProficiency",
     "MeasuredFact_StoppingBehaviour",
     "MergeProposal",
+    "MergeStrategy",
     "MerkleInclusionReport",
     "MerkleProofStep",
     "MerkleSide",
@@ -30275,5 +30298,6 @@ __all__ = [
     "WriteBackReceiptRecord",
     "WriteBackReceiptRecordAttempt",
     "WriteBackReceiptRecordReconciliation",
+    "WriteConflictEvidence",
     "YearData",
 ]

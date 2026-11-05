@@ -879,6 +879,10 @@ pub use outbox::{outbox_dead_lettered, set_outbox_head};
 mod store_migration;
 pub use store_migration::store_migration_step;
 
+// Write-conflict outcomes (MEDULLA-DURABLE-KERNEL-R084.5).
+mod write_conflict;
+pub use write_conflict::{write_conflict, write_conflict_count};
+
 // ── No-op shims (feature `metrics` disabled) ─────────────────────────────
 #[cfg(not(feature = "metrics"))]
 mod noop;
