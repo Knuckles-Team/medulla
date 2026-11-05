@@ -12,6 +12,23 @@ pub const DEFAULT_CORES_PER_MILLE: u16 = 360;
 /// Default memory budget per worker: exactly three binary gibibytes.
 pub const DEFAULT_MEMORY_PER_WORKER_BYTES: u64 = 3 * 1024 * 1024 * 1024;
 
+/// Default cap on work items one baseline hydration scope may admit.
+pub const DEFAULT_HYDRATION_SCOPE_CAP: u32 = 10_000;
+/// Bounds of `hydration_scope_cap`, inclusive.
+pub const HYDRATION_SCOPE_CAP_BOUNDS: (u32, u32) = (100, 1_000_000);
+/// Default target file count of one repository split part.
+pub const DEFAULT_HYDRATION_SPLIT_TARGET_FILES: u32 = 2_000;
+/// Bounds of `hydration_split_target_files`, inclusive.
+pub const HYDRATION_SPLIT_TARGET_FILES_BOUNDS: (u32, u32) = (100, 100_000);
+
+fn default_hydration_scope_cap() -> u32 {
+    DEFAULT_HYDRATION_SCOPE_CAP
+}
+
+fn default_hydration_split_target_files() -> u32 {
+    DEFAULT_HYDRATION_SPLIT_TARGET_FILES
+}
+
 fn default_cores_per_mille() -> u16 {
     DEFAULT_CORES_PER_MILLE
 }
@@ -36,6 +53,14 @@ pub struct SchedulerConfig {
     #[serde(default = "default_memory_per_worker_bytes")]
     pub memory_per_worker_bytes: u64,
     pub max_queue_depth: u64,
+    /// Most work items one baseline hydration scope admits
+    /// (MEDULLA-REPO-INGEST-R650.2).
+    #[serde(default = "default_hydration_scope_cap")]
+    pub hydration_scope_cap: u32,
+    /// Files per part when a repository is split for hydration
+    /// (MEDULLA-REPO-INGEST-R650.2).
+    #[serde(default = "default_hydration_split_target_files")]
+    pub hydration_split_target_files: u32,
 }
 
 /// Invalid scheduler policy, refused before it can govern admission.
@@ -45,6 +70,8 @@ pub enum InvalidSchedulerConfig {
     CoresPerMilleOutOfRange,
     ZeroMemoryPerWorker,
     OversubscribedFloors { total_workers: u32 },
+    HydrationScopeCapOutOfRange,
+    HydrationSplitTargetOutOfRange,
 }
 
 impl std::fmt::Display for InvalidSchedulerConfig {
@@ -57,6 +84,16 @@ impl std::fmt::Display for InvalidSchedulerConfig {
             Self::ZeroMemoryPerWorker => {
                 write!(f, "scheduler memory_per_worker_bytes must be nonzero")
             }
+            Self::HydrationScopeCapOutOfRange => {
+                write!(
+                    f,
+                    "scheduler hydration_scope_cap must be within [100, 1000000]"
+                )
+            }
+            Self::HydrationSplitTargetOutOfRange => write!(
+                f,
+                "scheduler hydration_split_target_files must be within [100, 100000]"
+            ),
             Self::OversubscribedFloors { total_workers } => {
                 write!(
                     f,
@@ -77,6 +114,14 @@ impl SchedulerConfig {
         }
         if self.memory_per_worker_bytes == 0 {
             return Err(InvalidSchedulerConfig::ZeroMemoryPerWorker);
+        }
+        let (cap_lo, cap_hi) = HYDRATION_SCOPE_CAP_BOUNDS;
+        if !(cap_lo..=cap_hi).contains(&self.hydration_scope_cap) {
+            return Err(InvalidSchedulerConfig::HydrationScopeCapOutOfRange);
+        }
+        let (split_lo, split_hi) = HYDRATION_SPLIT_TARGET_FILES_BOUNDS;
+        if !(split_lo..=split_hi).contains(&self.hydration_split_target_files) {
+            return Err(InvalidSchedulerConfig::HydrationSplitTargetOutOfRange);
         }
         let mut available = self.total_workers;
         for (lane, floor) in &self.lane_floors {
@@ -120,6 +165,25 @@ mod tests {
         assert_eq!(
             serde_json::from_str::<SchedulerConfig>(&encoded).unwrap(),
             config
+        );
+    }
+
+    // spec: MEDULLA-REPO-INGEST-R650.2
+    #[test]
+    fn hydration_knobs_default_and_refuse_out_of_bounds() {
+        let mut config = config();
+        assert_eq!(config.hydration_scope_cap, 10_000);
+        assert_eq!(config.hydration_split_target_files, 2_000);
+        config.hydration_scope_cap = 99;
+        assert_eq!(
+            config.validate(),
+            Err(InvalidSchedulerConfig::HydrationScopeCapOutOfRange)
+        );
+        config.hydration_scope_cap = 1_000_000;
+        config.hydration_split_target_files = 100_001;
+        assert_eq!(
+            config.validate(),
+            Err(InvalidSchedulerConfig::HydrationSplitTargetOutOfRange)
         );
     }
 
