@@ -1,200 +1,131 @@
-# MEDULLA-CQ-ORCH — Plan
+# MEDULLA-CQ-ORCH — Implementation plan
 
-See [design.md](plan.md) for per-question blocks and the layer model. Reuse: `specs/decision-engine` (R036, R044, R046, R111, R126, R127), `specs/federated-query-and-reasoning`, `specs/unified-data-plane`, `specs/typed-packs-and-catalog`. Order: ontology gaps, shapes, authority mappings, fixtures, acceptance tests, composed envelope, then Arbora probes.
+Governing spec: [spec.md](spec.md). Rows: [requirements.md](requirements.md).
 
-## Design
+## Summary
+
+"How can I execute task XYZ?" is answered when it decomposes into seven separately answerable questions, each answered by one query over the ontology from connected data, and a composed answer carries all seven parts with provenance through the existing assembly handler. The live caller of the question vocabularies is `GraphSchemaSources::default()` in `crates/medulla-graph-core/src/graph/schema_sources.rs`; the composed answer enters at `dispatch_decision_methods` in `crates/medulla-server-router/src/dispatch/router/decision_plane.rs` beside `Method::AgentAssemble`. Reuse candidates found by searching the code first: `assemble_for`, `coverage_for` and `entailment_for` of `crates/medulla-h-decide`, the source-selection model of `crates/medulla-virtual-graph`, and the mining read path of `crates/medulla-h-mining`.
+
+## Technical Context
+
+- **Language/Version**: Rust 2021 edition on the pinned toolchain of `rust-toolchain.toml`; Turtle ontology and SHACL files; Python 3.14 (floor 3.12) for served tests.
+- **Primary Dependencies**: `medulla-rdf` (parser, SPARQL), `medulla-shacl`, `medulla-reasoner`, `medulla-virtual-graph`, `medulla-h-decide`, `medulla-h-mining`, `medulla-h-graph` and the standard library.
+- **Storage**: the engine graph store; workflows persist as versioned graph content through the mutation gateway. No second store.
+- **Testing**: `crates/medulla-rdf/tests/orchestration_competency.rs` for questions 1 to 7, the unit tests named by the rows, and served L3 and L4 tests under `tests/`.
+- **Target Platform**: Linux x86_64 and aarch64 hosts.
+- **Project Type**: Library crates, ontology files and server handler crates.
+- **Performance Goals**: the nightly groups `architecture_view`, `process_compile` and `process_import` of `MEDULLA-DECISION-ENGINE-R178.1` hold the budgets stated in rows R010.6, R700.6 and R701.6.
+- **Constraints**: no second planner; every refusal has a stable code; reads write nothing; no version suffix in a name.
+- **Scale/Scope**: the leaf rows of `requirements.md`, spread over 6 user stories and 6 `FR-` labels.
+
+## Constitution Check
+
+- **R-I. The engine is native Rust and the only fact store**: pass. Every row lands in a Rust crate, an ontology file or an engine test.
+- **R-II. Every wait has a deadline**: pass. No row adds a wait.
+- **R-III. Every row sets budgets and names a benchmark**: pass. Rows R010.6, R700.6 and R701.6 name the nightly groups.
+- **R-IV. Crates are small, layered and cut over hard**: pass. Rows name post-split crates; no handler crate calls a sibling handler crate.
+- **Organization standards**: pass. Rows follow the spec standard and the ecosystem boundaries.
+
+## Project Structure
+
+```text
+crates/medulla-core/ontology/orchestration-v1.ttl, capability-v1.ttl, swarm_topology-v1.ttl  existing
+crates/medulla-core/ontology/orchestration-v1.shapes.ttl, swarm_topology-v1.shapes.ttl      existing
+crates/medulla-core/tests/fixtures/orchestration_competency/q1..q7/                         existing
+crates/medulla-rdf/tests/orchestration_competency*.rs                                       existing
+crates/medulla-decision-outcome-types/src/decision/execution_answer.rs                      existing
+crates/medulla-types/src/architecture_view.rs                                               existing
+crates/medulla-h-decide/src/decide/execution_answer.rs                                      new
+crates/medulla-h-mining/src/mining/architecture.rs                                          new
+crates/medulla-h-graph/src/graph_ops/process_compile.rs                                     new
+crates/medulla-core/src/{architecture_view,process_compile,process_import}.rs               new
+crates/medulla-types/src/process_import.rs                                                  new
+tests/orchestration/, tests/competency/                                                     new served tests
+```
+
+## Phase 0: Research
+
+No unknowns. The two earlier open questions are resolved by the code: `AgentTemplate` is declared in `orchestration-v1.ttl`, and step order reuses the core `:precedes` property.
+
+## Phase 1: Design
 
 ### Layer model
 
 | Layer | Contents | Read by |
 |---|---|---|
-| L0 | Sources and ontologies | Q1, Q4, Q8 |
-| L1 | Components: tools, skills, prompts, model profiles | Q3, Q4, Q5, Q8 |
-| L2 | Agents and the Agent Library | Q2, Q3, Q5, Q8 |
-| L3 | Agent graphs | Q1, Q2, Q6, Q7, Q8 |
-| L4 | Harness port | Q6, Q8 |
-| L5 | Runs, outcomes and feedback | Q1, Q2, Q6, Q8 |
+| L0 | Sources and ontologies | Q1, Q4, composed answer |
+| L1 | Components: tools, skills, prompts, model profiles | Q3, Q4, Q5, composed answer |
+| L2 | Agents and the Agent Library | Q2, Q3, Q5, composed answer |
+| L3 | Agent graphs | Q1, Q2, Q6, Q7, composed answer |
+| L4 | Harness port | Q6, composed answer |
+| L5 | Runs, outcomes and feedback | Q1, Q2, Q6, composed answer |
 
-Composition is the engine's decision functionality: `graph.assemble()` (`MEDULLA-DECISION-ENGINE-R036`) lowers typed tasks and capabilities to a bounded 0-1 program (R014) and returns a certified assembly or a typed abstention. Q2, Q3, Q4, Q7 reuse its sibling queries (R046/R111 topology, R126 coverage, R127 guardrails). Cross-source answers use federated query and foreign sources; the Agent Library comes from typed packs.
+Composition is the engine's decision functionality: `graph.assemble()` (`MEDULLA-DECISION-ENGINE-R036`) lowers typed tasks and capabilities to a bounded 0-1 program and returns a certified assembly or a typed abstention. Cross-source answers use federated query and foreign sources. A question is answered when one query over the ontology returns a correct, provenance-carrying answer; otherwise the answer is a typed abstention.
 
-### Q1. What steps do I need to follow to complete task XYZ?
+### Questions 1 to 7
 
-- **Layers read:** L0 (task, process and standard ontologies), L3 (stored agent graphs and workflows), L5 (past runs and outcomes)
-- **Question:** "What steps do I need to follow to complete task XYZ?"
-- **Decomposition:**
-  - Which task class is XYZ (native task IRI, or typed abstention if unknown)?
-  - Which subtask decomposition does the class entail?
-  - In what partial order do the steps run?
-  - Which past runs of the same class succeeded (L5 evidence)?
-- **Ontology terms:** found: swarm:DecomposableTask, swarm:TaskShape (swarm_topology-v1.ttl); :Goal, :Workflow, :realizesProcess, :childWorkItemOf (orchestration-v1.ttl); :ImplementationPlan, :planForFeature (sdd-v1.ttl). MISSING: ordered-step class (TaskStep), :hasStep, :precedes (step order).
-- **Sources:** Process models (ARIS/ArchiMate/process-intelligence mirrors), SDD plans, and run history from L5. Each declared an authority for :realizesProcess / :ImplementationPlan through the source-authority mapping (MISSING statement, see child .3).
-- **Mechanism:** MEDULLA-DECISION-ENGINE-R036 (graph.assemble composes tasks), R003 (is_a derivation records), MEDULLA-FEDERATED-QUERY-R006 (proof-carrying results).
-- **Query sketch:** `SELECT ?step ?order ?src WHERE { ?task a swarm:DecomposableTask ; :childWorkItemOf* ?root . ?step :childWorkItemOf ?task . OPTIONAL { ?step eg:precedes ?next } # MISSING eg:precedes }`
-- **Answer shape:** StepsAnswer{task_iri, steps[{step_iri, label, precedes[], provenance{source, derivation_path, evidence_class}}], resolution_kind}; abstention AbstainReason::UnknownTaskClass.
+| Question | Terms (as built) | Shape | Fixture source | Rows |
+|---|---|---|---|---|
+| Q1 steps | `:TaskStep`, `:hasStep`, core `:precedes` | `TaskStepShape` | task-decomposition | R001 |
+| Q2 staffing | `:AgentKind`, `:hasAgentKind`, `swarm:requiresAgentKind` | swarm slot shapes | topology-templates | R002 |
+| Q3 template coverage | `:AgentTemplate`, `:AgentLibrary`, `:memberOfLibrary` | `LibraryMemberShape` | agent-library | R003 |
+| Q4 guardrails | `:BestPractice`, `:appliesToTaskClass` | `RuleScopeShape` | guardrail-rules | R004 |
+| Q5 bindings | `:ModelProfile`, `:needsSkill`, `:stepAssignedAgent` | `StepBindingShape` | assembly | R005 |
+| Q6 workflow | `:handsOffTo` | `HandOffShape` | workflow-store | R006 |
+| Q7 DAG | `swarm:feeds` | `FeedsAcyclicShape`, `FeedsSingleRootShape` | topology-templates | R007 |
 
-### Q2. How many agents and what type of agents are needed to complete the task?
+Each question has a fixture directory with `fixture.ttl`, `query.rq` and `expected.tsv`; the acceptance test asserts that every row carries its source and that an unconnected source yields the typed abstention.
 
-- **Layers read:** L3 (topology slots), L2 (agent kinds), L5 (observed width/outcomes)
-- **Question:** "How many agents and what type of agents are needed to complete the task?"
-- **Decomposition:**
-  - How many slots does the chosen topology template have (min/max width)?
-  - What role does each slot play (supervisor, worker, verifier, aggregator)?
-  - What agent kind fills each role?
-- **Ontology terms:** found: swarm:Topology, swarm:TopologyTemplate, swarm:Slot, swarm:SlotRole, swarm:hasSlot, swarm:role, swarm:minWidth, swarm:maxWidth, swarm:nodeKind, swarm:Aggregator, swarm:Verifier (swarm_topology-v1.ttl); :Agent, :Team, :memberOfTeam, :intelligenceLevel (orchestration-v1.ttl). MISSING: agent-kind taxonomy (AgentKind), slot-to-agent-kind link.
-- **Sources:** Agent Library catalog projection (L2) and swarm topology facts; no external source needed.
-- **Mechanism:** MEDULLA-DECISION-ENGINE-R046 and R111 (topology decision), R014 (composition as bounded 0-1 optimization), R036.
-- **Query sketch:** `SELECT ?slot ?role ?kind WHERE { ?t a swarm:TopologyTemplate ; swarm:hasSlot ?slot . ?slot swarm:role ?role . OPTIONAL { ?slot eg:fillsAgentKind ?kind } # MISSING eg:fillsAgentKind }`
-- **Answer shape:** StaffingAnswer{topology_iri, agent_count{min,max,chosen}, slots[{slot, role, agent_kind}], certificate_digest, provenance}; abstention AbstainReason::NoLegalTopology.
+### Composed answer
 
-### Q3. Can we use an agent template we already have, or an external A2A agent we have added to our Agent Library, based on their capabilities?
+`AgentExecutionAnswer` returns `ExecutionAnswer{task_iri, parts{steps, staffing, coverage, guardrails, bindings, workflow, dag}, assembled_by, certificate_digest}`. Each part is an answer or a typed abstention with provenance and an evidence class. The handler runs `assemble_for` once, reads coverage and guardrails through their existing functions and runs the fixture queries of Q1, Q6 and Q7. It adds no planner. Rows R008 and R012.
 
-- **Layers read:** L2 (agents, templates, A2A cards in the Agent Library), L1 (capabilities of components)
-- **Question:** "Can we use an agent template we already have, or an external A2A agent we have added to our Agent Library, based on their capabilities?"
-- **Decomposition:**
-  - Which capabilities does each subtask require?
-  - Which Agent Library templates provide them?
-  - Which registered A2A cards provide them?
-  - Which gaps remain uncovered?
-- **Ontology terms:** found: :Agent, :A2AAgentCard, :exposesSkill, :registeredIn, :ResourceRegistry, :a2aDelegatesTo (a2a-v1.ttl); :requiresCapability, :providesCapability, :canServe, :swappableWith (capability-v1.ttl). MISSING: AgentTemplate class, AgentLibrary class (catalog-v1.ttl declares no terms; library is storage per MEDULLA-TYPED-PACKS).
-- **Sources:** Agent Library catalog (MEDULLA-TYPED-PACKS) for templates. Registered A2A cards for external agents. Each is the authority for :providesCapability on its own components.
-- **Mechanism:** MEDULLA-DECISION-ENGINE-R126 and children (capability coverage over Agent Library candidates and A2A cards), R044 (A2A routing), MEDULLA-TYPED-PACKS-R013 (capability IRI validation), R006 (pack projection).
-- **Query sketch:** `SELECT ?cap ?cand ?kind WHERE { ?task :requiresCapability ?cap . ?cand :providesCapability ?cap . OPTIONAL { ?cand a eg:AgentTemplate } # MISSING OPTIONAL { ?cand a :A2AAgentCard } }`
-- **Answer shape:** CoverageAnswer{per_capability[{capability, candidates[{id, kind: template|a2a, evidence_class}]}], uncovered[], provenance}. Typed abstention names the missing capability (R010).
+### Probes
 
-### Q4. What standards, best practices, or guardrails should I follow?
+Six probe questions are answered by existing engine paths (`NlQuery`, `Decide`, `AgentLibrary`, `Discover`). Medulla owns the engine answer and its fixture; arbora owns intent resolution and proves the same answers through the intent tools. Row R009.
 
-- **Layers read:** L0 (standards, shapes, policies), L1 (component-level constraints)
-- **Question:** "What standards, best practices, or guardrails should I follow?"
-- **Decomposition:**
-  - Which task class governs?
-  - Which standards and rules are entailed for that class?
-  - Which SHACL shapes enforce them?
-- **Ontology terms:** found: :DevelopmentStandard, :mustFollow, :mustFollowChain, :SecureTask (capability-v1.ttl). :ComplianceConstraint, :constrainedBy, :DesignGuideline, :guidelineFor (sdd-v1.ttl). :PolicyShape, :CapabilityShape, :ToolShape (governance-core-v1.shapes.ttl). Swarm:StopRule. MISSING: BestPractice class, appliesToTaskClass on a rule.
-- **Sources:** Governance and standards sources (Egeria glossary/governance, CISO assistant compliance, repository standards); each is the authority for :DevelopmentStandard.
-- **Mechanism:** MEDULLA-DECISION-ENGINE-R127 and children (guardrail entailment with entailment path and source generation), MEDULLA-FEDERATED-QUERY-R005 (VALIDATE SHAPE), R006.
-- **Query sketch:** `SELECT ?rule ?path WHERE { ?task :mustFollow ?rule } # entailed via :mustFollowChain; eg:appliesToTaskClass MISSING`
-- **Answer shape:** GuardrailAnswer{task_iri, rules[{rule_id, kind: standard|best_practice|guardrail, entailment_path, source_generation, shape_iri}], provenance}. Empty rule set is a typed answer, not an error.
+### Architecture views
 
-### Q5. What skills, tools, prompts, and LLM models does each agent need to complete each subtask?
+Data flow: `Method::ArchitectureView` → `crates/medulla-h-mining/src/mining.rs::try_handle` → `handle_architecture_view` (new) → `derive_architecture_view` (new, `crates/medulla-core/src/architecture_view.rs`) → `ArchitectureView` with containers, edges and support paths. The view has its own read method; `handle_impact` serves risk propagation and is not the call site. Failure behaviour: a scope with no supporting source returns a typed refusal; a diagram element with no matching package stays a container with empty support. Decision: derive on read from the graph; a stored diagram per repository goes stale at the next ingest. Row R010.
 
-- **Layers read:** L1 (skills, tools, prompts, model profiles), L2 (which agent holds them)
-- **Question:** "What skills, tools, prompts, and LLM models does each agent need to complete each subtask?"
-- **Decomposition:**
-  - Which agent fills each subtask?
-  - Which skills and tools provide the subtask capability?
-  - Which prompt applies?
-  - Which model profile satisfies context and cost limits?
-- **Ontology terms:** found: :Skill, :Tool, :Prompt, :Model, :hasSkill, :hasPrompt, :usesTool, :usesModel, :orchestrationUsesTool, :contextWindow, :systemPrompt (orchestration-v1.ttl). :providesCapability (capability-v1.ttl). :assignedAgent (sdd-v1.ttl). MISSING: ModelProfile class, subtask-needs-skill property, per-subtask assignment node.
-- **Sources:** Component catalog (MEDULLA-TYPED-PACKS): skills, tools, prompts imported as packs; model profile facts from annotations (MEDULLA-TYPED-PACKS-R006 typed annotations).
-- **Mechanism:** MEDULLA-DECISION-ENGINE-R036 (assembly binds components), R126 (coverage), R014 (knapsack/cardinality constraints), R002 (evidence class).
-- **Query sketch:** `SELECT ?agent ?sub ?skill ?tool ?prompt ?model WHERE { ?agent :hasSkill ?skill ; :usesTool ?tool ; :hasPrompt ?prompt ; :usesModel ?model . ?sub :assignedAgent ?agent }`
-- **Answer shape:** BindingAnswer{rows[{subtask, agent, skills[], tools[], prompts[], model_profile, provenance}], gaps[]}; abstention names the unbound slot.
-
-### Q6. What workflow do the agents need to follow?
-
-- **Layers read:** L3 (workflows and agent graphs), L4 (harness hooks and extension points), L5 (past runs)
-- **Question:** "What workflow do the agents need to follow?"
-- **Decomposition:**
-  - Which workflow realizes the task class?
-  - What hand-offs and control-flow does it declare?
-  - Which harness hooks govern execution?
-- **Ontology terms:** found: :Workflow, :composes, :orchestrates, :delegatesTo, :SkillWorkflowProposal, :DurableRun, :SagaCoordination, :StatechartInstance (orchestration-v1.ttl); :Harness, :HarnessHook, :atHook, :hookOrder (harness-v1.ttl). MISSING: handoff condition property, workflow-step ordering (shared with Q1).
-- **Sources:** Stored workflows (L3) and harness definitions (L4); run history (L5) as supporting evidence.
-- **Mechanism:** MEDULLA-DECISION-ENGINE-R036 (assembled graph carries workflow), R044 (routing to an existing graph), plus the durable-run kernel already in orchestration-v1.
-- **Query sketch:** `SELECT ?wf ?member ?next WHERE { ?wf a :Workflow ; :composes ?member . OPTIONAL { ?member eg:hands_off_to ?next } # MISSING }`
-- **Answer shape:** WorkflowAnswer{workflow_iri, steps[], handoffs[], hooks[], provenance}; abstention AbstainReason::NoWorkflowForClass.
-
-### Q7. What does the agent graph shape (DAG) look like?
-
-- **Layers read:** L3 (agent graphs and topology templates)
-- **Question:** "What does the agent graph shape (DAG) look like?"
-- **Decomposition:**
-  - Which topology kind applies?
-  - Which nodes and slots exist?
-  - Which edges connect them?
-  - Is the graph acyclic?
-- **Ontology terms:** found: swarm:Topology and subclasses (Single, Pipeline, FanOutJoin, SupervisorWorkers, PeerTeam, Hierarchy), swarm:TopologyTemplate, swarm:Slot, swarm:hasSlot, swarm:nodeId, swarm:nodeKind (swarm_topology-v1.ttl); swarm_topology-v1.shapes.ttl TemplateTopologyShape. MISSING: slot-to-slot edge property, acyclicity SHACL shape.
-- **Sources:** Swarm topology facts and assembled graphs persisted in L3; no external source.
-- **Mechanism:** MEDULLA-DECISION-ENGINE-R046, R111 and R111.1 (topology as typed Decide question), R036.
-- **Query sketch:** `SELECT ?a ?b WHERE { ?t swarm:hasSlot ?a, ?b . ?a eg:feeds ?b } # eg:feeds MISSING`
-- **Answer shape:** DagAnswer{topology_kind, nodes[], edges[], acyclic: bool, serialization (adjacency list), provenance}.
-
-### Q8. How can I execute task XYZ? (composed answer)
-
-- **Layers read:** L0 through L5 (all layers, composed)
-- **Question:** "How can I execute task XYZ? (composed answer)"
-- **Decomposition:**
-  - Are all seven part-answers present?
-  - Is each part carrying its own provenance?
-  - Is a missing part a typed abstention instead of an omitted field?
-- **Ontology terms:** found: :derivedFrom (capability-v1.ttl, orchestration-v1.ttl), :RunTrace, :producedBy (orchestration-v1.ttl). MISSING: none new; the composed answer is a wire DTO, not an ontology class.
-- **Sources:** All sources feeding rollups 1-7.
-- **Mechanism:** MEDULLA-DECISION-ENGINE-R036 graph.assemble() / AgentAssemble is the sole composition path. This spec adds no planner; it adds an answer envelope over assemble() output and the coverage and guardrail queries (R126, R127).
-- **Query sketch:** `n/a: the envelope is built by the assemble handler from the seven part queries.`
-- **Answer shape:** ExecutionAnswer{task_iri, parts{steps, staffing, coverage, guardrails, bindings, workflow, dag}, each part{answer|abstain, provenance, evidence_class}, assembled_by: assemble, certificate_digest}.
-
-### Q9. Probe questions through the intent surface
-
-- **Layers read:** the Arbora intent tools front L0-L5. Each probe lands on the rollup above it (node counts: L0; Agent Library: L2; tool discovery: L1; delegate: L3-L5).
-- **Mechanism:** Arbora registry serves the intent tools; Medulla supplies the answer and provenance. Owner: Arbora (cross-repo).
-- **Answer shape:** non-empty answer, provenance field present, correct against a fixture; typed abstention only when the source is genuinely absent.
-- **Probes and previously observed results:**
-  - "How many nodes does the graph hold, by label?": previously correct SQL, empty answer.
-  - "How can I deploy a container with container-manager?": previously 1-step plan.
-  - "Which agents are in the Agent Library?": previously routed.
-  - "Why does Arbora use the intent surface?": previously pending.
-  - "Find a tool that lists Docker containers.": previously pending.
-  - "Delegate: list running containers.": previously pending.
-
-## Architecture views derived from the graph (R010)
-
-Data flow: served impact operation → `handle_impact` (`crates/medulla-h-mining/src/mining/impact.rs:264`) → `derive_architecture_view` (new, `crates/medulla-core/src/architecture_view.rs`) → `ArchitectureView` with containers, edges and support ids.
-
-Types: `ArchitectureView`, `ViewContainer { name, technology, support }`, `ViewEdge { from, to, kind, call_count }`, and `ViewAbstained::NoSupportingSource`.
-
-Attach point: the read handler `handle_impact`, which the server dispatches in production. The view branch is new. The derivation reads only nodes already in the graph and writes nothing.
-
-Failure behavior: a scope with no supporting source returns the typed abstention. A diagram element with no matching package stays a container flagged `diagram_only`.
-
-Reused: the call graph from `crates/medulla-compute/src/parser/resolve.rs:63` and the impact handler. New: three types and one derivation function.
-
-Decision: derive on read from the graph. Rejected: store a rendered diagram per repository, because it goes stale at the next ingest.
-
-Cross-repository rows: the `AU-WEBUI` row that draws the view depends on the contract name `ArchitectureView`.
-
-<!-- spec-definition-patch:owner-batch-20261012-orchestration-competency -->
-## Reviewed residual closure plan — owner batch 2026-10-12
-
-### `MEDULLA-CQ-ORCH-R010.7` — GRAPHOS:20
-
-- Existing Medulla rollup: `MEDULLA-CQ-ORCH-R010.1`; append-only residual ID: `MEDULLA-CQ-ORCH-R010.7`.
-- Original objective: Before planning, query graph architecture and wiring. Report design differences. Each feature names its hot-path attach point. Refuse plans with unwired features.
-- Specified Medulla obligation: `MEDULLA-CQ-ORCH-R010.7` defines `PlanAdmissionV1`. It checks each feature's attach point and wiring edge. It returns typed refusal before TaskPlan emission. AU-HARNESS-R019.5-.7 must return the same study-gap proposal id/revision and repository revision. Admission refuses if those fields are absent.
-- Producer/consumer route: The served impact architecture view, capability query, and Meristem study-gap receipt feed `PlanAdmissionV1`. Admission runs before the existing plan-producing Decide handler. Meristem identity/revision confirmation and served receipts remain pending. Do not re-derive architecture or claim Meristem producer closure.
-- Minimum closure action: Keep R010.7 as the Medulla definition. Resolve Meristem receipt field mapping. Record independent served producer/consumer results. No second Medulla admission contract is needed.
-- Preserve covered clauses: `MEDULLA-CQ-ORCH-R010.1`, `MEDULLA-CQ-ORCH-R010.2`, `MEDULLA-CQ-ORCH-R010.3`, `MEDULLA-CQ-ORCH-R010.4`, `MEDULLA-CQ-ORCH-R010.5`, `MEDULLA-CQ-ORCH-R010.6`, `MERISTEM-HARNESS-R019.5`, `MERISTEM-HARNESS-R019.6`, `MERISTEM-HARNESS-R019.7`.
-- Source review: `bbc3f62e74bc899e49191e1d9bf324afe5e6dc2553df9e8d8651aae1311a8418`; evidence: spec-audit/reconciliation/fresh-validation-20261012/semantic-reviews/incoming-24-owner-supplements.json.
-- Cross-owner behavior and receipts remain with the named owner; no runtime evidence is claimed.
-<!-- /spec-definition-patch -->
-
-## MEDULLA-CQ-ORCH-R011 — job, downtime and plan competency questions
-
-These questions are the acceptance set for the connect-time contract, the downtime scheduler, plan evolution and job-scoped loading. The capability-to-component questions of `MEDULLA-CQ-CONN-R084` stay separate. This rollup adds no question that row asks.
+### Job and plan questions
 
 | Question | Mechanism |
 |---|---|
-| Q1 load set for job J | `MEDULLA-DECISION-ENGINE-R176` |
-| Q2 next downtime jobs | `MEDULLA-DURABLE-KERNEL-R101` |
-| Q3 best virtual plan for Q across A and B | `MEDULLA-FEDERATED-QUERY-R091` |
-| Q4 how and when to use connector X | `MEDULLA-DECISION-ENGINE-R177` |
-| Q5 seed facts and changed parts of connector X | `MEDULLA-TYPED-PACKS-R104` |
+| load set for job J | `MEDULLA-DECISION-ENGINE-R176` |
+| next downtime jobs | `MEDULLA-DURABLE-KERNEL-R101` |
+| best virtual plan across two connectors | `MEDULLA-FEDERATED-QUERY-R091` |
+| how and when to use connector X | `MEDULLA-DECISION-ENGINE-R177` |
+| seed facts and changed parts of connector X | `MEDULLA-TYPED-PACKS-R104` |
 
-Call path: Arbora `find` -> served `Decide` or SPARQL -> the mechanism row -> answer with provenance.
+Call path: arbora `find` → served `Decide` or SPARQL → the mechanism row → answer with provenance. Row R011.
 
-## North star
+### Workflows
 
-The exit gate is competency questions. The ontology answers how to execute a task and produces cross-source reports from connector virtual graphs. Every connector that connects through arbora onboards itself. Its ontology extends the core ontology. Its prompts become system-prompt candidates. Its skills, tools and resources appear as virtual graph entries in the engine.
+A modeled process compiles deterministically into one `WorkflowPattern`, stored as versioned graph content that replays by recomputing its digest; a stored process model imports to and exports from the same workflow shape. The workflow type belongs to `MEDULLA-ORCH-VOCAB-R800.1`. Rows R700 and R701.
 
-## Delivery phase
+## Phase 2: Task approach
 
-Row `MEDULLA-CQ-ORCH-R012` serves P5. It is the engine side of the execution-plan answer in `ARBORA-ACCEPTANCE-R006.7`.
+`tasks.md` has one line per leaf row. Producer first: ontology terms, shapes and authority mappings (US1), then the composed envelope (US2), probes (US3), architecture view (US4), job questions (US5) and workflows (US6). The first three rows of each question are marked parallel because they touch disjoint files.
+
+## Complexity Tracking
+
+None.
+
+## Build contract
+
+Gates for any change under these rows: `cargo test -p medulla-rdf --test orchestration_competency`, `cargo test -p medulla-decision-outcome-types execution_answer`, `cargo clippy --workspace --all-targets -- -D warnings`, the repository complexity, duplication, dead-code and KISS gates with their committed thresholds, and the spec gate set (`pre-commit run --config .config/pre-commit.yaml --hook-stage pre-push`). No scanner gaming and no duplicate implementation: the composed answer reuses `assemble_for`, and the workflow compiler reuses the mutation gateway.
+
+## Production caller chain
+
+- Question vocabularies: `GraphSchemaSources::default()` (`crates/medulla-graph-core/src/graph/schema_sources.rs:207`) → `current_core_catalog` (:656) → `core_specs` modules `orchestration` (:930), `capability` (:740), `swarm-topology` (:1047) and the shape modules `orchestration-shapes` (:940) and `swarm-topology-shapes` (:1055).
+- Composed answer: `crates/medulla-server-router/src/dispatch/router/decision_plane.rs::dispatch_decision_methods` → `crates/medulla-h-decide/src/decide/execution_answer.rs::handle_execution_answer` (new) → `assemble_for` (`crates/medulla-h-decide/src/decide/assemble.rs:46`).
+- Architecture view: `crates/medulla-server-router/src/dispatch/router.rs::dispatch_request_method_inner` (:208) → `dispatch_graph_op` (`crates/medulla-server-graph/src/dispatch/graph_pipeline.rs:68`) → `crates/medulla-h-mining/src/mining.rs::try_handle` (:80).
+- Workflows: the same graph-op chain → `crates/medulla-h-graph/src/graph_ops/terminal.rs::try_handle_graph_domains` (:14) → the new `process_compile` handler.
+- Obsolete paths to delete: none.
+
+## Cross-repo seams
+
+- arbora intent-surface probes: `ARBORA-FLEET-R052.4` (consumer rows R009.1 to R009.6) and `ARBORA-FLEET-R056`; contract `contracts/arbora-intent-probes.md`.
+- arbora acceptance scenario for the execution plan: `ARBORA-ACCEPTANCE-R006.7` (consumer row R012); contract `contracts/arbora-execution-scenario.md`.
+- meristem consumer of the architecture view: `MERISTEM-HARNESS-CYCLE-R026.1` (provider row R010.3); contract `contracts/meristem-architecture-view.md`.
