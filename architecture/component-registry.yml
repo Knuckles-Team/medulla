@@ -3839,6 +3839,7 @@ components:
       - "tests/parity"
       - "tests/pgwire_roundtrip.rs"
       - "tests/protocol_method_routing.rs"
+      - "tests/shex_served.rs"
       - "tests/repository_index_durable.rs"
       - "tests/run_lake_parity.py"
       - "tests/sealed_record_guard.rs"
