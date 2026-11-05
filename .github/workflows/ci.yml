@@ -309,6 +309,8 @@ jobs:
         run: uv pip install --python "$(command -v python3)" pytest==9.1.1 iniconfig==2.3.1 packaging==26.3 pluggy==1.7.0 pygments==2.21.0
       - name: Epistemic Operations manifest ⇄ Rust DTO parity
         run: python3 scripts/check_epistemic_operations_protocol.py
+      - name: Decision reachability gate (MEDULLA-CONTRACT-R055)
+        run: python3 scripts/check_decision_reachability.py
 
       - name: Report lower-crate compiler cache reuse
         if: always()

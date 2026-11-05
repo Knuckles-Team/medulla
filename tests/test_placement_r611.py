@@ -15,6 +15,7 @@ from medulla.client import MedullaClient
 from medulla.placement import (
     PLACEMENT_STALE,
     Breaker,
+    PlacementConfig,
     PlacementDirectory,
     PlacementStaleError,
     TenantPool,
@@ -81,6 +82,61 @@ pytestmark = pytest.mark.no_engine
 
 
 # --- R611.1 / R611.2: model and behaviour -----------------------------------
+
+
+@pytest.mark.spec("MEDULLA-PLACEMENT-R611.1")
+@pytest.mark.asyncio
+async def test_pool_and_breaker_types_validate() -> None:
+    defaults = PlacementConfig()
+    assert (defaults.pool_size, defaults.breaker_failures) == (64, 5)
+    assert defaults.breaker_half_open_ms == 10_000
+    config = PlacementConfig.from_mapping(
+        {
+            "placement.pool_size": 1_024,
+            "placement.breaker_failures": 1,
+            "placement.breaker_half_open_ms": 100,
+            "other.key": "ignored",
+        }
+    )
+    assert config.pool_size == 1_024
+    for key, bad in (
+        ("placement.pool_size", 0),
+        ("placement.pool_size", 1_025),
+        ("placement.breaker_failures", 101),
+        ("placement.breaker_half_open_ms", 99),
+        ("placement.breaker_half_open_ms", 600_001),
+        ("placement.breaker_failures", True),
+        ("placement.unknown", 1),
+    ):
+        with pytest.raises(ValueError):
+            PlacementConfig.from_mapping({key: bad})
+
+    now = [0.0]
+    breaker = PlacementConfig(breaker_failures=1).breaker(clock=lambda: now[0])
+    assert breaker.state == "closed"
+    breaker.record_failure()
+    assert breaker.state == "open"
+    now[0] = 10.0
+    assert breaker.state == "half_open"
+    with pytest.raises(ValueError):
+        Breaker(failure_threshold=0)
+    with pytest.raises(ValueError):
+        Breaker(reset_after_s=0.0)
+
+    async def factory(tenant: str) -> str:
+        return tenant
+
+    pool: TenantPool[str] = TenantPool(factory, capacity=defaults.pool_size)
+    assert await pool.acquire("tenant-a:prod") == "tenant-a:prod"
+    for bad_tenant in ("", "tenant a", "tenant\n", "t" * 1_025, "tenänt", 7):
+        with pytest.raises(ValueError):
+            await pool.acquire(bad_tenant)  # type: ignore[arg-type]
+    with pytest.raises(ValueError):
+        TenantPool(factory, capacity=1_025)
+    directory = PlacementDirectory(_FakeEngine([]))  # type: ignore[arg-type]
+    with pytest.raises(ValueError):
+        await directory.route("bad tenant", "p")
+    assert directory.breaker("tcp://n1:9100").state == "closed"
 
 
 @pytest.mark.spec("MEDULLA-PLACEMENT-R611.2")
