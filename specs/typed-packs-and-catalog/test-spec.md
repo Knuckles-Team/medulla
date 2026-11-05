@@ -703,3 +703,4 @@ consumption acceptance remain open. No atomic approval consumption is added.
 - **MEDULLA-TYPED-PACKS-R652.5:** `tests/typed_packs/test_classification_served.py::test_marking_sets_and_promoter_read_back` (planned). Proves the row at its served entry point; no receipt is asserted.
 - **MEDULLA-TYPED-PACKS-R652.6:** `tests/typed_packs/test_classification_served.py::test_claim_propose_propagate_promote_and_redacted_read` (planned). Proves the row at its served entry point; no receipt is asserted.
 - **MEDULLA-TYPED-PACKS-R700:** `tests/packs/test_skill_graph_pack_served.py::test_bad_hash_refused_and_conformant_pack_imports` (planned). Proves the row at its served entry point; no receipt is asserted.
+- **MEDULLA-TYPED-PACKS-R100.1:** `crates/medulla-capabilities/tests/skill_package_regeneration.rs::rendered_package_round_trip` (existing test; add the `// spec: MEDULLA-TYPED-PACKS-R100.1` tag above it, and extend it to assert the new `schema_version` field is 1).
