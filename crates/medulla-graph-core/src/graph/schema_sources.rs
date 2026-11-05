@@ -1645,7 +1645,7 @@ mod tests {
             ),
             (
                 "identity",
-                "a3f8390ab124c56d1c68637614373b7865e1158fabab60da10a42c5c5009a140",
+                "c204b6a093f4e43c5072645016ff5744540335c63f8ec5f5e0a6e2c58c97f7a8",
             ),
             (
                 "infrastructure",

@@ -83,7 +83,7 @@ fn attach_list_and_detach_share_one_authoritative_source_set() {
             .iter()
             .filter(|source| source.shapes_sha256.is_some())
             .count(),
-        17
+        19
     );
     for source in &initial.core_sources {
         let expected = if matches!(
