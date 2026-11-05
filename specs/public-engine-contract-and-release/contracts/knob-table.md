@@ -39,3 +39,15 @@ The initial `KNOB_TABLE` of `crates/medulla-server-api/src/knob_config.rs`: one 
 | `sdlc.delivery.shadow_unprompted_in_development` | bool | true | [true, true] | flag | Fixed | `MEDULLA_SDLC_DELIVERY_SHADOW_UNPROMPTED_IN_DEVELOPMENT` |
 | `sdlc.delivery.max_automated_review_rounds` | u64 | 3 | [1, 20] | rounds | Tunable | `MEDULLA_SDLC_DELIVERY_MAX_AUTOMATED_REVIEW_ROUNDS` |
 | `sdlc.delivery.owner_approval_required` | bool | true | [true, true] | flag | Fixed | `MEDULLA_SDLC_DELIVERY_OWNER_APPROVAL_REQUIRED` |
+
+## Wire shape
+
+Input: repeatable `--knob <name>=<value>` command-line option and env `MEDULLA_<NAME>`; no wire message. Output: `KnobConfig`, one typed field per table row, handed to the listeners at startup.
+
+## Refusal codes
+
+`KNOB_INVALID` (value does not parse as the type), `KNOB_OUT_OF_RANGE` (outside the inclusive range), `KNOB_UNKNOWN` (a `--knob` name in no table). Each names the knob and the server exits non-zero before it binds.
+
+## Owner rows
+
+`MEDULLA-CONTRACT-R058` owns the loader and this table.
