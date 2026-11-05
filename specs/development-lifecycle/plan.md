@@ -10,7 +10,7 @@ The engine holds the whole software lifecycle as typed records. This plan extend
 ## Technical Context
 
 - **Language/Version**: Rust 2024 (engine), Python 3.14 (served tests)
-- **Primary Dependencies**: `medulla-core`, `medulla-types`, `medulla-compute` parser crate
+- **Primary Dependencies**: `medulla-core`, `medulla-source-types`, `medulla-h-ingest`, `medulla-h-decide`, `medulla-sdlc`, `medulla-compute` parser crate
 - **Storage**: the one engine graph; no second store
 - **Testing**: Rust crate tests and served Python tests at L3 and L4 through the wire
 - **Target Platform**: the engine server executable on Linux
@@ -28,18 +28,29 @@ The engine holds the whole software lifecycle as typed records. This plan extend
 ## Project Structure
 
 ```text
-crates/medulla-compute/src/parser/spec_artifacts.rs   new   deterministic parser (R014.1)
-crates/medulla-core/ontology/sdd-spec-v1.ttl          new   ontology pack (R014.5)
-crates/medulla-source-types/src/lifecycle.rs                 existing  Proposal, Goal, ProjectMode types
-crates/medulla-h-ingest/src/source_ingestion/spec_projection.rs   existing  incremental ingest and linking
-src/server/handlers/lifecycle.rs                      existing  mode, goal and proposal methods
-crates/medulla-h-decide/src/decide/family/task_context.rs     new   run-context assembly (R015.2)
-specs/development-lifecycle/contracts/                new   seam contracts
-crates/medulla-core/ontology/sdlc_lifecycle-v1.ttl    existing  delivery classes (R019.1)
-crates/medulla-source-types/src/delivery.rs           new   delivery records (R019.2)
-crates/medulla-sdlc/src/lifecycle/delivery/           new   open, feedback, mandate, stage, rounds, arming, ending, superseded, recovery (R019.3 to R019.13)
-crates/medulla-server-router/src/dispatch/router/lifecycle.rs  existing  delivery method arms (R019.14)
-crates/medulla-protocol-types/src/protocol/method/method_10.rs existing  delivery methods (R019.14)
+crates/medulla-compute/src/parser/spec_artifacts.rs                existing  deterministic parser (R014.1)
+crates/medulla-core/src/lifecycle/                                 existing  derive, store, defect, status, trace (R001, R003, R005, R006)
+crates/medulla-core/ontology/sdd-v1.ttl                            existing  lifecycle kinds and edges (R001.1)
+crates/medulla-core/ontology/sdd-v1.shapes.ttl                     new       lifecycle shapes (R001.1)
+crates/medulla-core/ontology/sdd-spec-v1.ttl                       new       spec artifact ontology pack (R014.5)
+crates/medulla-core/ontology/sdlc_lifecycle-v1.ttl                 existing  delivery classes (R019.1)
+crates/medulla-source-types/src/lifecycle.rs                       existing  records, Proposal and ScenarioRun types (R001 to R006, R013, R017.2)
+crates/medulla-source-types/src/delivery.rs                        new       delivery, goal and project mode records (R012.8, R017.1, R019.2)
+crates/medulla-h-ingest/src/lifecycle.rs                           new       served lifecycle, mode, goal, proposal and delivery handlers
+crates/medulla-h-ingest/src/lifecycle_tests.rs                     new       tenant-scope and refusal tests of those handlers
+crates/medulla-h-ingest/src/source_ingestion/spec_projection.rs    new       spec document and artifact projection, incremental ingest, linking (R009, R014)
+crates/medulla-h-decide/src/decide/triage.rs                       new       TriageDefect handler (R004.3)
+crates/medulla-h-decide/src/decide/family/defect_triage.rs         new       DefectTriage decide family (R004)
+crates/medulla-h-decide/src/decide/family/task_plan.rs             new       TaskPlan decide family (R015.1)
+crates/medulla-h-decide/src/decide/family/task_context.rs          new       run-context assembly (R015.2)
+crates/medulla-decision-outcome-types/src/decision/defect_triage.rs  existing  triage types, knobs and refusals (R004.1, R004.7)
+crates/medulla-decision-stats/src/decision/defect_triage.rs        new       triage kernel (R004.8)
+crates/medulla-competency/src/spec_artifact_questions.rs           new       spec artifact competency questions (R012.4, R014.6, R018.2)
+crates/medulla-sdlc/src/lifecycle/                                 new       scenario, proposals, research and delivery logic (R013, R017, R019)
+crates/medulla-server-router/src/dispatch/router/sdlc.rs           new       served lifecycle method arms (R002.3, R019.14)
+crates/medulla-protocol-types/src/protocol/method/method_10.rs     existing  new Method variants (R002.3, R019.14)
+scripts/ci_full_suite.py                                           new       complete-suite landing gate (R010, R011)
+specs/development-lifecycle/contracts/                             existing  seam contracts
 ```
 
 ## Phase 0: Research
@@ -233,7 +244,7 @@ Rows `R014` to `R018` serve P5. The next-task question of `R014.6` supports the 
 ## Phase 2: Task approach
 
 `tasks.md` holds one task line per row, producer first. Model rows come before behaviour, wiring and hot-path rows. Rows `R014.1`, `R014.5`, `R016.5` and `R017.2` carry `[P]` because they share no file with their siblings.
-Rows `R019.1`, `R019.2`, `R019.6`, `R019.9` and `R019.12` carry `[P]` for the same reason. The R019 rows land after the medulla 3.0.0 crate split, on the post-split paths.
+Rows `R019.1`, `R019.2`, `R019.6`, `R019.9` and `R019.12` carry `[P]` for the same reason.
 
 ## Complexity Tracking
 
@@ -253,10 +264,10 @@ The delivery budget gates are the bench groups `lifecycle/delivery`, `lifecycle/
 
 1. MEDULLA-SCM-R003 accepts a changeset. The accept path calls the re-index hook of MEDULLA-SCM-R006.
 2. The re-index hook calls `derive_lifecycle_edges` in `crates/medulla-core/src/lifecycle/derive.rs`.
-3. For an ingested git repository, `IndexRepository` at `crates/medulla-server-router/src/dispatch/router/source_ingest.rs:24` calls the same function.
+3. For an ingested git repository, the `Method::IndexRepository` arm (`crates/medulla-server-graph/src/dispatch/graph_pipeline/native_routes.rs:403`) calls `route_repository_index` (`crates/medulla-server-graph/src/dispatch/graph_pipeline/repository_index.rs:208`), which calls the same function.
 4. `RecordGateVerdict` of MEDULLA-SCM-R008 calls the defect intake on a failed verdict.
-5. arbora serves the methods above through `ARBORA-OPS-R853`.
-6. The repository-manager ingest job calls `SourceIngest`. `index_repository` in `crates/medulla-server-router/src/dispatch/router/source_ingest.rs` calls `reingest_changed_artifacts`, which parses and links the spec artifacts (R014.8).
+5. arbora serves the methods above through `ARBORA-OPS-R853`. Each served lifecycle method enters at `dispatch_sdlc_methods` (`crates/medulla-server-router/src/dispatch/router/sdlc.rs`, chained at `crates/medulla-server-router/src/dispatch/router.rs:142`) and runs in `crates/medulla-h-ingest/src/lifecycle.rs`. `TriageDefect` enters beside `Method::Decide` (`crates/medulla-server-router/src/dispatch/router/decision_plane.rs:112`) and runs in `crates/medulla-h-decide/src/decide/triage.rs`.
+6. The repository-manager ingest job calls `SourceIngest` (`native_routes.rs:399`). The scoped index commit in `crates/medulla-h-ingest/src/repository_index.rs` calls `reingest_changed_artifacts` in `crates/medulla-h-ingest/src/source_ingestion/spec_projection.rs`, which parses and links the spec artifacts (R014.8).
 7. arbora serves the artifact reads, the run dispatch, the mode and the proposal operations through `ARBORA-OPS-R896`.
 8. `run.dispatch` calls `Decide` with `TaskPlan`. The engine hands each task to a run through the MERISTEM-SCM task-run row. The result returns through `SubmitChangeset` and the gates.
 
