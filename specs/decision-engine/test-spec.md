@@ -2097,4 +2097,4 @@ Every row below has a planned test at its exact post-split path; the row text na
 | `MEDULLA-DECISION-ENGINE-R814.7` | `tests/decide/test_prompt_candidates_served.py::test_system_prompt_query_lists_candidates_for_a_task` |
 | `MEDULLA-DECISION-ENGINE-R814.8` | `tests/decide/test_prompt_candidates_served.py::test_non_canonical_prompt_is_refused_with_field_path` |
 | `MEDULLA-DECISION-ENGINE-R822` | `crates/medulla-h-decide/src/decide/stat_calibration.rs::fit_isotonic` |
-| `MEDULLA-DECISION-ENGINE-R828` | `crates/medulla-server-api/src/conflict_decider.rs::branch_merge_conflicts_route_through_the_conflict_decider_seam` |
+| `MEDULLA-DECISION-ENGINE-R828` | `crates/medulla-server-api/src/api/conflict_decider.rs::branch_merge_conflicts_route_through_the_conflict_decider_seam` |
