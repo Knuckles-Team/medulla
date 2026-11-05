@@ -223,6 +223,7 @@ async fn evicted_blob_reads_body() {
         "reads never repopulate RAM"
     );
 
+    #[derive(Debug)]
     struct Down;
     impl medulla_graph_core::read_through::ReadThrough for Down {
         fn read_node_blob(&self, _node_id: &str) -> NodeReadOutcome {
