@@ -1,58 +1,94 @@
-# MEDULLA-REPO-INGEST implementation tasks
+# MEDULLA-REPO-INGEST — Tasks
 
-Task completion requires code and test evidence at an exact commit. The presence of this document does not change feature delivery state. Each task cites the requirement IDs it closes, as defined in [requirements.md](requirements.md).
+One task per leaf row of `requirements.md`, producer first. Each task names its row. The row holds the files, the caller chain and the proof.
 
-- [ ] **T1 — MEDULLA-REPO-INGEST-R002, MEDULLA-REPO-INGEST-R003 (rollup):** Inventory the current `IndexRepository`, `SourceIngest`, parser, generated client, CAS, envelope and worker paths at the target revision. Confirm `SourceIngest` is the sole implementation of every listed migrated ingestion/derivation capability. MEDULLA-REPO-INGEST-R003 is split into `MEDULLA-REPO-INGEST-R003.1`–`MEDULLA-REPO-INGEST-R003.11`, one child per migrating legacy-module root (see requirements.md). Each child closes when its own consumer test confirms no duplicate writer remains for that root.
-- [ ] **T1a — MEDULLA-REPO-INGEST-R003.1:** Confirm the migrated standardization processing (excluding drift detection) capability is reachable only through its Medulla typed interface and add the consumer test proving the retiring source module no longer performs the same computation.
-- [ ] **T1b — MEDULLA-REPO-INGEST-R003.2:** Confirm the migrated infrastructure processing capability is reachable only through its Medulla typed interface and add the consumer test proving the retiring source module no longer performs the same computation.
-- [ ] **T1c — MEDULLA-REPO-INGEST-R003.3:** Confirm the migrated quantum processing capability is reachable only through its Medulla typed interface and add the consumer test proving the retiring source module no longer performs the same computation.
-- [ ] **T1d — MEDULLA-REPO-INGEST-R003.4:** Confirm the migrated security processing capability is reachable only through its Medulla typed interface and add the consumer test proving the retiring source module no longer performs the same computation.
-- [ ] **T1e — MEDULLA-REPO-INGEST-R003.5:** Confirm the migrated enterprise protocol handling capability is reachable only through its Medulla typed interface and add the consumer test proving the retiring source module no longer performs the same computation.
-- [ ] **T1f — MEDULLA-REPO-INGEST-R003.6:** Confirm the migrated ecosystem concept extraction capability is reachable only through its Medulla typed interface and add the consumer test proving the retiring source module no longer performs the same computation.
-- [ ] **T2 — MEDULLA-REPO-INGEST-R007, MEDULLA-REPO-INGEST-R008:** Freeze the typed public contract and error vocabulary for scope, parse outcomes, reparse and budget refusal; prove an over-limit batch and a batch past the 64 MiB write-byte ceiling both refuse atomically with the stable `REPOSITORY_BATCH_TOO_LARGE` code and enough bounded detail for a halve-and-resend retry, before any graph mutation.
-- [x] **T3 — MEDULLA-REPO-INGEST-R006:** Complete native ingestion so parsing, symbol resolution and statistical analysis commit as batched durable commits within seconds, while classical ML, embedding and LLM-based enrichment never block the commit and are instead enqueued as durable, budgeted, admitted work items drained by background workers, plus bounded on-demand enrichment when a query needs it.
-- [ ] **T4 — MEDULLA-REPO-INGEST-R009:** Complete repository hydration into the semantic bridge that links indexed repository entities to their source, test, specification and release relationships, so a query follows a hydrated code entity to its governing specification without a duplicate graph writer.
-- [ ] **T4a — MEDULLA-REPO-INGEST-R009.1:** Make medulla-core's edge identity the `(source_id, target_id, relation_type)` triple: migrate an untyped edge onto its blob's `type`/`label` field (falling back to `related_to`), resolve a migration collision deterministically with a collision receipt, and add the collision test plus a typed-edge add/retrieve/remove test.
-- [ ] **T4b — MEDULLA-REPO-INGEST-R009.2:** Project the semantic bridge's nine relations (`declares`, `calls`, `inherits`, `realizes`, `depends_on`, `definedBy`, `testedBy`, `specifiedBy`, `releasedIn`) onto typed `(source, target, relation_type)` triples from T4a, and confirm each relation between the same two endpoints is independently retrievable.
-- [x] **T5 — MEDULLA-REPO-INGEST-R010:** Expand tree-sitter grammar coverage to the 18 additional languages (Swift, Kotlin, Objective-C, Zig, Julia, Elixir, Groovy, PowerShell, Fortran, Pascal, Verilog, CUDA, HTML, CSS, JSON, Terraform/HCL, and a custom DreamMaker extractor) alongside the existing supported languages, with a grammar-expansion fixture per added language.
-- [x] **T6 — MEDULLA-REPO-INGEST-R011:** Route ingestion community detection through the shared pure-Leiden driver (`graph_algos/leiden.rs`, wired through `algorithms.rs` and `features.py`) rather than a Louvain/Leiden hybrid, and prove no committed community in a test graph is internally disconnected.
-- [x] **T7 — MEDULLA-REPO-INGEST-R001:** Implement `SourceIngest`'s reconcile mode (`admit_sql_source_dirty_reconcile`) to re-admit semantic intents that were stranded when their originating topic was retired, rather than leaving them permanently unprocessed.
-- [x] **T8 — MEDULLA-REPO-INGEST-R004:** Add the `SeriesDefine{name, expr, sources}` mutation for an incrementally maintained derived series with `DerivedSeries derivedFrom Series` lineage, append-only replay of new values, row-level security set to the most restrictive policy among its sources, cyclic-definition refusal and a bounded maintenance budget.
-- [x] **T9 — MEDULLA-REPO-INGEST-R005:** Commit replay-protection nonces in batched or group-commit fashion, or maintain a bounded in-memory window backed by a durable epoch, so per-request durable-commit overhead no longer dominates served request latency, without weakening replay protection.
-- [x] **T9a — MEDULLA-REPO-INGEST-R002.102:** Key the SourceIngest content version by the stream's live-set marker. A second batch to the same stream then chains from the stored version.
-- [ ] **T10 — all IDs:** Run the full test matrix in [test-spec.md](test-spec.md) (RI-T01–RI-T14) against a fresh store and a restarted store, plus the configured CCCC, KISS, Dupehound, jscpd, generated-client and hosted release gates from [plan.md](plan.md); publish exact commit, generated artifact digest, test command/result and benchmark evidence in `evidence.md` before changing any requirement's delivery or acceptance state.
+## Tasks
 
-- [ ] **T1g — MEDULLA-REPO-INGEST-R003.7:** Confirm the migrated trace-ontology observability capability is reachable only through its Medulla typed interface and add the consumer test proving the retiring source module no longer performs the same computation.
-- [ ] **T1h — MEDULLA-REPO-INGEST-R003.8:** Confirm the migrated self-ingestion observability capability is reachable only through its Medulla typed interface and add the consumer test proving the retiring source module no longer performs the same computation.
-- [ ] **T1i — MEDULLA-REPO-INGEST-R003.9:** Confirm the migrated audit-logging observability capability is reachable only through its Medulla typed interface and add the consumer test proving the retiring source module no longer performs the same computation.
-- [ ] **T1j — MEDULLA-REPO-INGEST-R003.10:** Confirm the migrated relational-authority governance capability is reachable only through its Medulla typed interface and add the consumer test proving the retiring source module no longer performs the same computation.
-- [ ] **T1k — MEDULLA-REPO-INGEST-R003.11:** Confirm the migrated placement-mining research capability is reachable only through its Medulla typed interface and add the consumer test proving the retiring source module no longer performs the same computation.
-
-Parallel implementation is allowed only where interfaces and file ownership are explicit. Merge the native engine contract before dependent Graft SDK or application consumers cut over. Retire obsolete graph writers after their callers are migrated and parity tests pass.
-
-<!-- spec-definition-patch:owner-batch-20261012-repository-index-and-ingestion -->
-## Reviewed residual definition tasks — owner batch 2026-10-12
-
-The linked requirement rows retain normative contracts, source hashes, refusal semantics, and acceptance.
-Every task extends its listed parent. Existing obligations remain active.
-
-| Requirement | Source SHA-256 | Task | Open dependency |
-|---|---|---|---|
-| `MEDULLA-REPO-INGEST-R002.1` | `3f7e133169a76ce2680ec667c28ea2c5543354ed8874d258c432e65346f2e529` | Compile pinned skill documents into typed plans through the existing SourceIngest and Meristem path. | Grammar, capability/type lookup, and MERISTEM-CONTROL-R037.30 remain prerequisites. |
-| `MEDULLA-REPO-INGEST-R006.1` | `902f964dd909186f3a31d1f8a84d146b715446e64dfeec62480c8151baa06996` | Measure complete papers over 24 hours and gate maintenance allocation. | Stage roster, freshness, allocation policy, and Arbora operation remain prerequisites. |
-| `MEDULLA-REPO-INGEST-R006.2` | `771acc731a6e25746641adf30cde9ec91f4eb56edd6597f2d308a42947a3abb3` | Queue importance-aware re-embedding outside routing and gate promotion. | Importance producer, compatible space policy, and R040.3 production caller remain prerequisites. |
-| `MEDULLA-REPO-INGEST-R006.3` | `e69e6fa3a5c26ae763809d600cb7d264d028b9ce0d80f8ca6141e1a40cf0638e` | Serve revision-bound code maps through UnifiedQuery; refuse stale queries for changed and unchanged symbols until full reindex. | Authoritative inventory producer and code-entity IDs remain prerequisites. |
-| `MEDULLA-REPO-INGEST-R006.4` | `340c1817f2a52dc6da4c9c13d93d215debbeb9fefd8b84b8d2400b86541d4d81` | Apply revision-scoped deltas under host-granted working-memory limits. | Semantic support matrix and host resource-grant binding remain prerequisites. |
-| `MEDULLA-REPO-INGEST-R002.100` | `e8ad0c2417b7fa6ce53c46899f1adf8e925977becd0bd1813db6b62d3786af11` | Require independent authorized readback before ingestion success. | Meristem success-transition consumer ID remains unassigned. |
-| `MEDULLA-REPO-INGEST-R002.101` | `e0c431512565acb1a8ae00e09b63ec6fb7c8f9e81ef9c786a0fd7b26b2239455` | Gate graph-loaded workflow completion on durable hydration readback. | Meristem execution-success consumer ID remains unassigned. Pipelines is not the runtime producer. |
-
-All seven definitions remain SPECIFIED. Tasks remain open pending owner review and served evidence.
-
-
-### Proposed producer work for MEDULLA-REPO-INGEST-R006.3
-
-- [ ] Implement the exact typed authority and producer contracts in plan.md.
-- [ ] Wire existing authorization, ChangeEnvelope admission and generated UnifiedQuery.
-- [ ] Run `test_inventory_advance_fences_map_and_rebinds_symbols` with restart and independent durable readback.
-
-Status remains SPECIFIED. `landed_in` and `verified_by` remain empty.
+- [ ] T001 [US3] MEDULLA-REPO-INGEST-R001 Reconcile mode re-admits stranded semantic intents
+- [ ] T002 [US3] MEDULLA-REPO-INGEST-R004 Derived series maintained incrementally with lineage
+- [ ] T003 [US3] MEDULLA-REPO-INGEST-R005 Replay-protection nonces commit in batches for throughput
+- [ ] T004 [US1] MEDULLA-REPO-INGEST-R007 Large ingestion batches refuse atomically with a stable code
+- [ ] T005 [US1] MEDULLA-REPO-INGEST-R008 Oversized batches return a stable retry code
+- [ ] T006 [US1] MEDULLA-REPO-INGEST-R009.1 Edge identity is the `(source, target, relation_type)` triple
+- [ ] T007 [US1] MEDULLA-REPO-INGEST-R009.2 Project the nine bridge relations onto typed triples
+- [ ] T008 [US1] MEDULLA-REPO-INGEST-R010 Tree-sitter grammar coverage expands to 18 more languages
+- [ ] T009 [US1] MEDULLA-REPO-INGEST-R011 Ingestion community detection uses pure Leiden
+- [ ] T010 [US3] MEDULLA-REPO-INGEST-R002.1.1 Model
+- [ ] T011 [US3] MEDULLA-REPO-INGEST-R002.1.2 Behavior
+- [ ] T012 [US3] MEDULLA-REPO-INGEST-R002.1.3 Wiring
+- [ ] T013 [US3] MEDULLA-REPO-INGEST-R002.1.4 Refusal
+- [ ] T014 [US3] MEDULLA-REPO-INGEST-R002.1.5 Evidence
+- [ ] T015 [US3] MEDULLA-REPO-INGEST-R006.1 Measure the daily paper target
+- [ ] T016 [US2] MEDULLA-REPO-INGEST-R006.2 Apply importance resistance in the deferred re-embed worker
+- [ ] T017 [US1] MEDULLA-REPO-INGEST-R006.3 Serve revision-bound structured code maps
+- [ ] T018 [US1] MEDULLA-REPO-INGEST-R006.4 Bound incremental indexing and declare semantic-type support
+- [ ] T019 [US3] MEDULLA-REPO-INGEST-R002.100 Require independent readback before ingestion success
+- [ ] T020 [US3] MEDULLA-REPO-INGEST-R002.101 Bind graph-loaded workflow execution to hydration readback
+- [ ] T021 [US3] MEDULLA-REPO-INGEST-R002.102 Successive batches to one stream chain one content version
+- [ ] T022 [US2] MEDULLA-REPO-INGEST-R600.1 Model
+- [ ] T023 [US2] MEDULLA-REPO-INGEST-R600.2 Behavior
+- [ ] T024 [US2] MEDULLA-REPO-INGEST-R600.3 Wiring
+- [ ] T025 [US2] MEDULLA-REPO-INGEST-R600.4 Refusal
+- [ ] T026 [US2] MEDULLA-REPO-INGEST-R600.5 Evidence
+- [ ] T027 [US2] MEDULLA-REPO-INGEST-R600.6 Hot-path proof
+- [ ] T028 [US2] MEDULLA-REPO-INGEST-R601.1 Model
+- [ ] T029 [US2] MEDULLA-REPO-INGEST-R601.2 Behavior
+- [ ] T030 [US2] MEDULLA-REPO-INGEST-R601.3 Wiring
+- [ ] T031 [US2] MEDULLA-REPO-INGEST-R601.4 Refusal
+- [ ] T032 [US2] MEDULLA-REPO-INGEST-R601.5 Evidence
+- [ ] T033 [US2] MEDULLA-REPO-INGEST-R601.6 Hot-path proof
+- [ ] T034 [US2] MEDULLA-REPO-INGEST-R602.1 Model
+- [ ] T035 [US2] MEDULLA-REPO-INGEST-R602.2 Behavior
+- [ ] T036 [US2] MEDULLA-REPO-INGEST-R602.3 Wiring
+- [ ] T037 [US2] MEDULLA-REPO-INGEST-R602.4 Refusal
+- [ ] T038 [US2] MEDULLA-REPO-INGEST-R602.5 Evidence
+- [ ] T039 [US2] MEDULLA-REPO-INGEST-R602.6 Hot-path proof
+- [ ] T040 [US2] MEDULLA-REPO-INGEST-R603.1 Model
+- [ ] T041 [US2] MEDULLA-REPO-INGEST-R603.2 Behavior
+- [ ] T042 [US2] MEDULLA-REPO-INGEST-R603.3 Wiring
+- [ ] T043 [US2] MEDULLA-REPO-INGEST-R603.4 Refusal
+- [ ] T044 [US2] MEDULLA-REPO-INGEST-R603.5 Evidence
+- [ ] T045 [US2] MEDULLA-REPO-INGEST-R603.6 Hot-path proof
+- [ ] T046 [US4] MEDULLA-REPO-INGEST-R800.1 Model
+- [ ] T047 [US4] MEDULLA-REPO-INGEST-R800.2 Behavior
+- [ ] T048 [US4] MEDULLA-REPO-INGEST-R800.3 Wiring
+- [ ] T049 [US4] MEDULLA-REPO-INGEST-R800.4 Refusal
+- [ ] T050 [US4] MEDULLA-REPO-INGEST-R800.5 Evidence
+- [ ] T051 [US4] MEDULLA-REPO-INGEST-R800.6 Hot-path proof
+- [ ] T052 [US4] MEDULLA-REPO-INGEST-R650.1 Model
+- [ ] T053 [US4] MEDULLA-REPO-INGEST-R650.2 Behavior
+- [ ] T054 [US4] MEDULLA-REPO-INGEST-R650.3 Wiring
+- [ ] T055 [US4] MEDULLA-REPO-INGEST-R650.4 Refusal
+- [ ] T056 [US4] MEDULLA-REPO-INGEST-R650.5 Evidence
+- [ ] T057 [US4] MEDULLA-REPO-INGEST-R650.6 Hot-path proof
+- [ ] T058 [US4] MEDULLA-REPO-INGEST-R651.1 Model
+- [ ] T059 [US4] MEDULLA-REPO-INGEST-R651.2 Behavior
+- [ ] T060 [US4] MEDULLA-REPO-INGEST-R651.3 Wiring
+- [ ] T061 [US4] MEDULLA-REPO-INGEST-R651.4 Refusal
+- [ ] T062 [US4] MEDULLA-REPO-INGEST-R651.5 Evidence
+- [ ] T063 [US4] MEDULLA-REPO-INGEST-R651.6 Hot-path proof
+- [ ] T064 [US4] MEDULLA-REPO-INGEST-R652.1 Model
+- [ ] T065 [US4] MEDULLA-REPO-INGEST-R652.2 Behavior
+- [ ] T066 [US4] MEDULLA-REPO-INGEST-R652.3 Wiring
+- [ ] T067 [US4] MEDULLA-REPO-INGEST-R652.4 Refusal
+- [ ] T068 [US4] MEDULLA-REPO-INGEST-R652.5 Evidence
+- [ ] T069 [US4] MEDULLA-REPO-INGEST-R652.6 Hot-path proof
+- [ ] T070 [US3] MEDULLA-REPO-INGEST-R002.650 Model: ingest capability types
+- [ ] T071 [US3] MEDULLA-REPO-INGEST-R002.651.1 Envelope commit and idempotent replay
+- [ ] T072 [US3] MEDULLA-REPO-INGEST-R002.651.2 Supersession edge
+- [ ] T073 [US3] MEDULLA-REPO-INGEST-R002.651.3 Dead-letter park and redrive
+- [ ] T074 [US3] MEDULLA-REPO-INGEST-R002.651.4 Process conformance
+- [ ] T075 [US3] MEDULLA-REPO-INGEST-R002.652 Wiring: ingest capabilities
+- [ ] T076 [US3] MEDULLA-REPO-INGEST-R002.653 Refusal: ingest capabilities
+- [ ] T077 [US3] MEDULLA-REPO-INGEST-R002.654 Evidence: ingest capabilities
+- [ ] T078 [US3] MEDULLA-REPO-INGEST-R002.655 Hot-path proof: ingest capabilities
+- [ ] T079 [US1] MEDULLA-REPO-INGEST-R006.5 Branch-aware, blob-deduplicated repository indexing
+- [ ] T080 [US3] MEDULLA-REPO-INGEST-R006.6 Schedule the paper intake job every six hours
+- [ ] T081 [US1] MEDULLA-REPO-INGEST-R603.7 Source-binding identity separates cosmetic from structural change
+- [ ] T082 [US2] MEDULLA-REPO-INGEST-R700.1 Model
+- [ ] T083 [US2] MEDULLA-REPO-INGEST-R700.2 Behavior
+- [ ] T084 [US2] MEDULLA-REPO-INGEST-R700.3 Wiring
+- [ ] T085 [US2] MEDULLA-REPO-INGEST-R700.4 Refusal
+- [ ] T086 [US2] MEDULLA-REPO-INGEST-R700.5 Evidence
+- [ ] T087 [US2] MEDULLA-REPO-INGEST-R700.6 Hot-path proof
+- [ ] T088 [US1] MEDULLA-REPO-INGEST-R801 Ecosystem packages and architecture layers become typed nodes
