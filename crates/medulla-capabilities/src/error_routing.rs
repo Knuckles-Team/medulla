@@ -188,7 +188,7 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         "CreateGraph",
         &["REPLAY_NONCE_CONSUMED", "RESERVED_GRAPH_NAME"],
     ),
-    ("AddNode", &["REPLAY_NONCE_CONSUMED"]),
+    ("AddNode", &["COMMIT_QUEUE_FULL", "REPLAY_NONCE_CONSUMED"]),
     ("CypherQuery", &["REPLAY_NONCE_CONSUMED"]),
     ("GraphQl", &["REPLAY_NONCE_CONSUMED"]),
     (

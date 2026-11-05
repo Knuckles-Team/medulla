@@ -33,6 +33,7 @@ closed_error_codes! {
         ChangeBatchTooLarge => "CHANGE_BATCH_TOO_LARGE",
         ChangeBatchUnavailableUnderPlacement => "CHANGE_BATCH_UNAVAILABLE_UNDER_PLACEMENT",
         ChunkConfigInvalid => "CHUNK_CONFIG_INVALID",
+        CommitQueueFull => "COMMIT_QUEUE_FULL",
         ClusterConfigurationInvalid => "CLUSTER_CONFIGURATION_INVALID",
         ClusterDiscoveryIncomplete => "CLUSTER_DISCOVERY_INCOMPLETE",
         ClusterDiscoveryInvalid => "CLUSTER_DISCOVERY_INVALID",
