@@ -69,48 +69,17 @@ The rules below bind every row.
 6. **New terms need the owner.** A term that no module declares is marked a proposed term (owner review) in its row and listed in [data-model.md](data-model.md); the row stays SPECIFIED.
 7. **Planned means planned.** `Method::SourceCoverage` is planned under `MEDULLA-SRC-AUTH-R004.6.1`; rows cite it as planned until that row lands.
 
-The Design, Vocabulary design and Vocabulary decisions sections below hold the question inventory and the term assignment. Data entities are in [data-model.md](data-model.md); the shortest served proof is in [quickstart.md](quickstart.md); each seam has a document in `contracts/`.
+The sections below hold the question inventory and the term assignment. Data entities are in [data-model.md](data-model.md); the shortest served proof is in [quickstart.md](quickstart.md); each seam has a document in `contracts/`.
 
-## Phase 2: Task approach
+### Design
 
-`tasks.md` holds one task per leaf row, producer first: the served harness and the vocabulary rows precede the question rows that read them. Question tasks of different connectors run in parallel because each owns its own case file and recording. Tasks that edit the same ontology module run in sequence.
-
-## Complexity Tracking
-
-none
-
-## Build contract
-
-- `cargo clippy --workspace --all-targets -- -D warnings` and `cargo fmt --check` pass for every touched crate.
-- The architecture, complexity and duplication gates of `.config/pre-commit.yaml` pass with no baseline entry and no suppression.
-- Every ontology module that a row changes still loads through `GraphSchemaSources::default()` and passes its shapes check.
-- A public item added by a row has a non-test caller under a handler or server crate (`MEDULLA-CONTRACT-R055`).
-- Served tests use recorded fixtures and need no live credential or network.
-- Spec rows pass `spec-standard`, `plan-conformance` and `spec-decomposition` with zero findings.
-
-## Production caller chain
-
-- `Method::Uql` (`crates/medulla-protocol-types/src/protocol/method/method_05.rs:119`) to `dispatch_sql_query` (`crates/medulla-h-query/src/query/dispatch.rs:127`) to `handle_uql` (`crates/medulla-h-query/src/query/uql_statement.rs:17`) to `foreign_scan` (`crates/medulla-federation/src/federation_opt/run.rs:26`) to the connector contract.
-- `Method::UnifiedQuery` (`method_05.rs:95`) to `dispatch_sql_query` to `run_unified_off_lock_with` (`crates/medulla-h-query/src/query/planning.rs:877`) to `Op::ForeignScan` (`crates/medulla-exec/src/exec/dispatch.rs:363`) to `FederatedExec::foreign_scan` (`crates/medulla-federation/src/federation_opt/federated.rs:51`).
-- `ConnectorPackOp::Import` (`crates/medulla-h-admin/src/admin/connector_pack.rs:53`) to `serve_import` (:146) to `project` (`crates/medulla-h-admin/src/connector_pack_projection.rs:286`), which writes the pack and catalog nodes.
-- Ontology terms: server bootstrap to `GraphSchemaSources::default()` (`crates/medulla-graph-core/src/graph/schema_sources.rs`) to the registered modules in `crates/medulla-core/ontology/`.
-- Obsolete paths to delete: none; every row adds to an existing path.
-
-## Cross-repo seams
-
-- Connector access contracts and mappings: the connector repositories provide through their `CONN-<REPO>-CONNECTOR-CONTENT-R002` rows, `MEDULLA-CQ-CONN-R067` consumes. Contract: [connector-access-contracts.md](contracts/connector-access-contracts.md).
-- Fleet onboarding handshake: `ARBORA-FLEET-R041.7` provides, `MEDULLA-CQ-CONN-R085` consumes. Contract: [arbora-fleet-onboarding.md](contracts/arbora-fleet-onboarding.md).
-- Federated read through the served door: `MEDULLA-CQ-CONN-R090` provides, `ARBORA-ACCEPTANCE-R006.7` consumes. Contract: [arbora-federated-read.md](contracts/arbora-federated-read.md).
-
-## Design
-
-### Method
+#### Method
 
 Each live connector gets one rollup with three children: a single-source competency question, a cross-source question that needs at least one other connector, and an acceptance test. Questions are specific to what the system holds. The vocabulary column was decided from the single listing of `crates/medulla-core/ontology/` by file name only (files were not opened); MISSING means no file obviously matches, so a vocabulary file must be added before the question can be answered.
 
 Mechanism is existing engine functionality, not new: cross-source answers use federated query and foreign sources (`specs/federated-query-and-reasoning`, `specs/unified-data-plane`); source authority and connector mapping use the native source connector vocabulary (`native_source_connector-v1.ttl`). Typed abstention names the unconnected source when a linked connector has no data. Rows here only add the question, the vocabulary assignment and the acceptance test.
 
-### Questions
+#### Questions
 
 | Row | Connector | Single-source question | Cross-source question (other connectors; link) | Vocabulary |
 |---|---|---|---|---|
@@ -181,7 +150,7 @@ Mechanism is existing engine functionality, not new: cross-source answers use fe
 | R065 | vector | Which collections have the most vectors and which have an embedding dimension that mismatches the model? | Which Paperless-ngx documents have no embedding stored in the vector database? (data-science, paperless-ngx; embedding / document) | MISSING |
 | R066 | wger | Which workout routines were not completed in the last two weeks and which exercises were skipped? | Which weeks of low workout completion coincide with a Mealie meal plan above the calorie target? (mealie, home-assistant; person / nutrition plan) | nutrition-v1 |
 
-### Coverage
+#### Coverage
 
 | Connector | Domain | Vocabulary |
 |---|---|---|
@@ -254,9 +223,9 @@ Mechanism is existing engine functionality, not new: cross-source answers use fe
 
 Connectors with no matching vocabulary: **23** of 66 (arr, audiobookshelf, audio-transcriber, clarity, data-science, documentdb, freshrss, jellyfin, kafka, listmonk, mattermost, media-downloader, objectstore, openbao, owncast, postiz, pulselink, qbittorrent, rom-manager, scholarx, searxng, sql, vector).
 
-## Vocabulary design
+### Vocabulary design
 
-#### Architecture
+##### Architecture
 
 This is a vocabulary correction. No new mechanism: answers still come from the engine's federated query over each connector's access contract (`specs/federated-query-and-reasoning`, `specs/unified-data-plane`), source authority from `native_source_connector-v1.ttl`, and virtual mappings from `virtual_graph-v1.ttl`. The requirements name the ontology terms that each competency question uses.
 
@@ -268,7 +237,7 @@ competency question -> vocabulary file (the coverage table) -> classes/propertie
 
 Owners: ontology files and `schema_sources.rs` registration are Medulla (`crates/medulla-core`); connector-side mappings stay with the connector package (cross-repo, not in this spec).
 
-#### Vocabulary
+##### Vocabulary
 
 Terms to add, by file. Each is one child row (a 5-minute unit: one class or property, plus its SHACL shape where the constraint is implied). Prefixed names use the file's default prefix `:`; domains, ranges and shapes are in the child rows of `requirements.md`.
 
@@ -296,7 +265,7 @@ Only `finance-v1` has a `.shapes.ttl` companion today. Other files register
 `shapes: None`. Each constrained file rollup has a first child. That child
 creates and registers its companion. Shape children therefore have a home.
 
-#### Wiring
+##### Wiring
 
 - Ontology files: `crates/medulla-core/ontology/<file>.ttl`; registration: `CoreSpec` entries in `crates/medulla-graph-core/src/graph/schema_sources.rs` (precedent `governance-shapes`, `personal`, `government`).
 - `catalog-v1.ttl` is generated; it is never hand-edited. The `commercial` module appears in it by regeneration.
@@ -304,7 +273,7 @@ creates and registers its companion. Shape children therefore have a home.
 - Reassignment rows change the Coverage table and `Vocabulary:` text in `specs/connector-competency` after their producer terms land. They carry exact row-level assertions in both documents.
 - Scopes: none added; reads use the scopes the engine contract already lists.
 
-#### Worked example
+##### Worked example
 
 Question (home-assistant, single-source): "Which sensors reported a value outside their normal range in the last 24 hours?"
 
@@ -324,11 +293,11 @@ The caller supplies the cutoff for a frozen as-of of 2026-01-03T00:00:00Z. Entit
 
 The query uses terms declared in `infrastructure-v1.ttl`. Answer shape: rows of entity, observed value, baseline p95, with provenance (source, record id, as-of) from the virtual mapping, or a typed abstention naming the unconnected Home Assistant source.
 
-#### Out of scope
+##### Out of scope
 
 The 23 MISSING connectors; connector-side mapping code; copying source data; the cross-source federation mechanism (existing specs).
 
-## Vocabulary decisions and acceptance
+### Vocabulary decisions and acceptance
 
 Home Assistant uses `infrastructure-v1.ttl`; the trace-store connector uses `orchestration-v1.ttl`.
 Ciso Assistant and OneTrust use `government-v1.ttl`.
@@ -350,14 +319,45 @@ Implementations must retain each producer's current representation, domain, rang
 Connector packages must verify source payload fields and mappings before live competency acceptance.
 Vocabulary declarations alone do not prove runtime competency.
 
-## Connector-pack competency questions (R084)
+### Connector-pack competency questions (R084)
 
 Every connector ships an OWL/RDF ontology pack with its domain ontology, ingest contract and surface. The engine imports it as native relationships (`MEDULLA-TYPED-PACKS-R101`, `MEDULLA-TYPED-PACKS-R102`). R084 states the acceptance questions for that design. The engine answers each by SPARQL over imported packs. The method-selection question also runs through `Decide` (`MEDULLA-DECISION-ENGINE-R172.12`). Call path: `ConnectorPack.Import` → pack graph → `SourceIngest` → served SPARQL handler (`crates/medulla-h-sparql/src/rdf/sparql.rs:30`) and `handle_decide` (`crates/medulla-h-decide/src/decide/stat_decide.rs:50`).
 
-## North star
+### North star
 
 One engine, medulla, holds all facts. There is no second database and no sync. External stores are virtual-graph sources reached through connectors. Every connector that connects through arbora onboards itself. Its ontology extends the core ontology. Its prompts become system-prompt candidates. Its skills, tools and resources appear as virtual graph entries in the engine. The exit gate is competency questions. The ontology answers how to execute a task and produces cross-source reports from connector virtual graphs.
 
-## Delivery phase
+### Delivery phase
 
 Row `MEDULLA-CQ-CONN-R090` serves P5. It is the engine side of the federated read in `ARBORA-ACCEPTANCE-R006.7`.
+
+## Phase 2: Task approach
+
+`tasks.md` holds one task per leaf row, producer first: the served harness and the vocabulary rows precede the question rows that read them. Question tasks of different connectors run in parallel because each owns its own case file and recording. Tasks that edit the same ontology module run in sequence.
+
+## Complexity Tracking
+
+none
+
+## Build contract
+
+- `cargo clippy --workspace --all-targets -- -D warnings` and `cargo fmt --check` pass for every touched crate.
+- The architecture, complexity and duplication gates of `.config/pre-commit.yaml` pass with no baseline entry and no suppression.
+- Every ontology module that a row changes still loads through `GraphSchemaSources::default()` and passes its shapes check.
+- A public item added by a row has a non-test caller under a handler or server crate (`MEDULLA-CONTRACT-R055`).
+- Served tests use recorded fixtures and need no live credential or network.
+- Spec rows pass `spec-standard`, `plan-conformance` and `spec-decomposition` with zero findings.
+
+## Production caller chain
+
+- `Method::Uql` (`crates/medulla-protocol-types/src/protocol/method/method_05.rs:119`) to `dispatch_sql_query` (`crates/medulla-h-query/src/query/dispatch.rs:127`) to `handle_uql` (`crates/medulla-h-query/src/query/uql_statement.rs:17`) to `foreign_scan` (`crates/medulla-federation/src/federation_opt/run.rs:26`) to the connector contract.
+- `Method::UnifiedQuery` (`method_05.rs:95`) to `dispatch_sql_query` to `run_unified_off_lock_with` (`crates/medulla-h-query/src/query/planning.rs:877`) to `Op::ForeignScan` (`crates/medulla-exec/src/exec/dispatch.rs:363`) to `FederatedExec::foreign_scan` (`crates/medulla-federation/src/federation_opt/federated.rs:51`).
+- `ConnectorPackOp::Import` (`crates/medulla-h-admin/src/admin/connector_pack.rs:53`) to `serve_import` (:146) to `project` (`crates/medulla-h-admin/src/connector_pack_projection.rs:286`), which writes the pack and catalog nodes.
+- Ontology terms: server bootstrap to `GraphSchemaSources::default()` (`crates/medulla-graph-core/src/graph/schema_sources.rs`) to the registered modules in `crates/medulla-core/ontology/`.
+- Obsolete paths to delete: none; every row adds to an existing path.
+
+## Cross-repo seams
+
+- Connector access contracts and mappings: the connector repositories provide through their `CONN-<REPO>-CONNECTOR-CONTENT-R002` rows, `MEDULLA-CQ-CONN-R067` consumes. Contract: [connector-access-contracts.md](contracts/connector-access-contracts.md).
+- Fleet onboarding handshake: `ARBORA-FLEET-R041.7` provides, `MEDULLA-CQ-CONN-R085` consumes. Contract: [arbora-fleet-onboarding.md](contracts/arbora-fleet-onboarding.md).
+- Federated read through the served door: `MEDULLA-CQ-CONN-R090` provides, `ARBORA-ACCEPTANCE-R006.7` consumes. Contract: [arbora-federated-read.md](contracts/arbora-federated-read.md).
