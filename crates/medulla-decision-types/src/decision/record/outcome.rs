@@ -189,6 +189,7 @@ mod tests {
     use crate::decision::codes;
     use crate::decision::errors::DecisionErrorCode;
 
+    // spec: MEDULLA-DECISION-ENGINE-R010.100.1
     #[test]
     fn codes_are_unique_and_stable() {
         let mut all: Vec<&str> = FIXED_CODES.iter().map(|code| code.as_str()).collect();

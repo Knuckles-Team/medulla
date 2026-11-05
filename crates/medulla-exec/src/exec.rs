@@ -36,7 +36,7 @@ mod reliability;
 // The OWL membership closure behind `REASON` (and its `WITH PROOF` explanation, EH-448).
 #[cfg(feature = "owl")]
 pub mod reason;
-pub use decisions::{DecisionSource, LearnedReliability};
+pub use decisions::DecisionSource;
 pub(crate) mod dispatch;
 // MEDULLA-FEDERATED-QUERY-R720.2/.3/.5 — the `DECAY` and `CLUSTER BY EMBEDDING` stages.
 mod decay_cluster;

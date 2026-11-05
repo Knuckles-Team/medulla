@@ -35,6 +35,7 @@ pub mod policy;
 pub mod rapid_r015;
 pub mod record;
 pub mod replay;
+pub mod reputation;
 pub mod request;
 pub mod statistical;
 pub mod task_plan;
