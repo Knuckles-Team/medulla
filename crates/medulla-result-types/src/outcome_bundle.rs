@@ -32,7 +32,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 use medulla_mutation_types::commit_descriptor::CommitParticipantDomain;
-use medulla_types::contract::Digest256;
+use medulla_types::contract::{Digest256, ServerErrorCode};
 
 mod engine_fields;
 mod validation;
@@ -184,6 +184,149 @@ pub fn step_digest(kind: StepKind, canonical_bytes: &[u8]) -> Result<Digest256, 
     hasher.update([0u8]);
     hasher.update(&canonical);
     Ok(Digest256::from_bytes(hasher.finalize().into()))
+}
+
+/// The step-record fields that carry a digest (MEDULLA-ORCH-VOCAB-R013.4).
+const STEP_DIGEST_FIELDS: [&str; 3] = ["model_request_digest", "tool_args_digest", "result_digest"];
+
+/// MEDULLA-ORCH-VOCAB-R013.3/R013.4 — validate the ordered step records of one
+/// `:RunTrace`. Every digest must be 64 hex characters (`STEP_DIGEST_INVALID`)
+/// and the step indices must run 0, 1, 2, … without a skip or a repeat
+/// (`STEP_ORDER_INVALID`). The raw step bodies stay in the referenced artifact
+/// (R013.1), so the digests are checked as the [`step_digest`] output shape.
+pub fn validate_step_records(
+    steps: &[serde_json::Value],
+) -> Result<Vec<StepRecord>, (ServerErrorCode, String)> {
+    let mut records = Vec::with_capacity(steps.len());
+    for (position, step) in steps.iter().enumerate() {
+        for field in STEP_DIGEST_FIELDS {
+            let valid = step
+                .get(field)
+                .and_then(|value| value.as_str())
+                .is_some_and(|text| text.len() == 64 && Digest256::parse(text).is_ok());
+            if !valid {
+                return Err((
+                    ServerErrorCode::StepDigestInvalid,
+                    format!("step {position} {field} is not 64 hex characters"),
+                ));
+            }
+        }
+        let index = step.get("step_index").and_then(|value| value.as_u64());
+        if index != Some(position as u64) {
+            return Err((
+                ServerErrorCode::StepOrderInvalid,
+                format!("step at position {position} carries index {index:?}"),
+            ));
+        }
+        let record: StepRecord = serde_json::from_value(step.clone()).map_err(|err| {
+            (
+                ServerErrorCode::RunTraceShapeInvalid,
+                format!("step {position}: {err}"),
+            )
+        })?;
+        records.push(record);
+    }
+    Ok(records)
+}
+
+/// One cited source span of a walkthrough (MEDULLA-ORCH-VOCAB-R013.7.1). The
+/// entity id and digest are those of the repository index.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct WalkthroughSourceRef {
+    pub entity_id: String,
+    pub source_revision: String,
+    pub source_digest: Digest256,
+    pub path: String,
+    pub start_line: u32,
+    pub end_line: u32,
+}
+
+/// Section content: embedded text with its digest, or a reference by
+/// immutable digest. A mutable URL has no spelling here.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "mode", rename_all = "snake_case", deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum WalkthroughContent {
+    Embedded { text: String, digest: Digest256 },
+    Referenced { digest: Digest256 },
+}
+
+/// One ordered walkthrough section (MEDULLA-ORCH-VOCAB-R013.7.1).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct WalkthroughSection {
+    pub ordinal: u32,
+    pub source_refs: Vec<WalkthroughSourceRef>,
+    pub content: WalkthroughContent,
+}
+
+/// An interaction edge between two section ordinals.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct WalkthroughEdge {
+    pub from_ordinal: u32,
+    pub to_ordinal: u32,
+    pub relation_iri: String,
+}
+
+/// One execution note, bound to a run step (MEDULLA-ORCH-VOCAB-R013.7.1).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct WalkthroughNote {
+    pub run_id: String,
+    pub step_index: u32,
+    pub span_id: String,
+    pub kind: StepKind,
+    pub result_digest: Digest256,
+    pub source_refs: Vec<WalkthroughSourceRef>,
+}
+
+/// The code walkthrough manifest a `:RunTrace` carries
+/// (MEDULLA-ORCH-VOCAB-R013.7.1).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct CodeWalkthrough {
+    pub run_id: String,
+    pub repository_id: String,
+    pub repository_revision: String,
+    pub graph_snapshot_revision: u64,
+    pub query_digest: Digest256,
+    pub ordered_sections: Vec<WalkthroughSection>,
+    pub interaction_edges: Vec<WalkthroughEdge>,
+    pub artifact_ref: String,
+    pub artifact_digest: Digest256,
+    pub execution_notes: Vec<WalkthroughNote>,
+}
+
+impl CodeWalkthrough {
+    /// Section ordinals are contiguous from zero and every edge binds two of them.
+    pub fn validate_shape(&self) -> Result<(), String> {
+        for (position, section) in self.ordered_sections.iter().enumerate() {
+            if section.ordinal as usize != position {
+                return Err(format!(
+                    "section at position {position} carries ordinal {}",
+                    section.ordinal
+                ));
+            }
+        }
+        let sections = self.ordered_sections.len();
+        for edge in &self.interaction_edges {
+            if edge.from_ordinal as usize >= sections || edge.to_ordinal as usize >= sections {
+                return Err(format!(
+                    "edge {} -> {} names a section the manifest does not hold",
+                    edge.from_ordinal, edge.to_ordinal
+                ));
+            }
+            require_text("relation_iri", &edge.relation_iri)?;
+        }
+        Ok(())
+    }
 }
 
 /// One Langfuse observation identity.  EG records the opaque receipt and its
@@ -1227,6 +1370,109 @@ mod tests {
             serde_json::to_value(ReceiptNodeKind::ModelRequest).expect("kind"),
             "model_request"
         );
+    }
+
+    fn step_value(index: u64, digest: &str) -> serde_json::Value {
+        serde_json::json!({
+            "step_index": index,
+            "kind": "model_request",
+            "model_request_digest": digest,
+            "tool_args_digest": "b".repeat(64),
+            "result_digest": "c".repeat(64),
+        })
+    }
+
+    // spec: MEDULLA-ORCH-VOCAB-R013.4
+    #[test]
+    fn bad_digest_and_gap_refused() {
+        let good = "a".repeat(64);
+        let records = validate_step_records(&[step_value(0, &good), step_value(1, &good)])
+            .expect("ordered steps");
+        assert_eq!(records.len(), 2);
+        assert_eq!(records[1].step_index, 1);
+
+        for bad in ["a".repeat(63), "g".repeat(64), String::new()] {
+            let (code, _) = validate_step_records(&[step_value(0, &bad)]).unwrap_err();
+            assert_eq!(code, ServerErrorCode::StepDigestInvalid, "{bad}");
+        }
+        let (code, _) =
+            validate_step_records(&[step_value(0, &good), step_value(2, &good)]).unwrap_err();
+        assert_eq!(code, ServerErrorCode::StepOrderInvalid);
+        let (code, _) =
+            validate_step_records(&[step_value(0, &good), step_value(0, &good)]).unwrap_err();
+        assert_eq!(code, ServerErrorCode::StepOrderInvalid);
+    }
+
+    fn source_ref(path: &str) -> WalkthroughSourceRef {
+        WalkthroughSourceRef {
+            entity_id: format!("entity:{path}"),
+            source_revision: "rev-1".into(),
+            source_digest: Digest256::sha256(path.as_bytes()),
+            path: path.into(),
+            start_line: 1,
+            end_line: 9,
+        }
+    }
+
+    // spec: MEDULLA-ORCH-VOCAB-R013.7.1
+    #[test]
+    fn code_walkthrough_manifest_round_trips() {
+        let manifest = CodeWalkthrough {
+            run_id: "run-1".into(),
+            repository_id: "repo-1".into(),
+            repository_revision: "rev-1".into(),
+            graph_snapshot_revision: 4,
+            query_digest: Digest256::sha256(b"query"),
+            ordered_sections: vec![
+                WalkthroughSection {
+                    ordinal: 0,
+                    source_refs: vec![source_ref("src/a.rs")],
+                    content: WalkthroughContent::Embedded {
+                        text: "entry".into(),
+                        digest: Digest256::sha256(b"entry"),
+                    },
+                },
+                WalkthroughSection {
+                    ordinal: 1,
+                    source_refs: vec![source_ref("src/b.rs")],
+                    content: WalkthroughContent::Referenced {
+                        digest: Digest256::sha256(b"body"),
+                    },
+                },
+            ],
+            interaction_edges: vec![WalkthroughEdge {
+                from_ordinal: 0,
+                to_ordinal: 1,
+                relation_iri: "urn:medulla:calls".into(),
+            }],
+            artifact_ref: "blob:artifact".into(),
+            artifact_digest: Digest256::sha256(b"artifact"),
+            execution_notes: vec![WalkthroughNote {
+                run_id: "run-1".into(),
+                step_index: 0,
+                span_id: "span-1".into(),
+                kind: StepKind::ToolCall,
+                result_digest: Digest256::sha256(b"result"),
+                source_refs: vec![source_ref("src/a.rs")],
+            }],
+        };
+        manifest.validate_shape().expect("well-formed manifest");
+        let wire = serde_json::to_value(&manifest).expect("encode");
+        assert_eq!(wire["ordered_sections"][1]["content"]["mode"], "referenced");
+        let back: CodeWalkthrough = serde_json::from_value(wire.clone()).expect("decode");
+        assert_eq!(back, manifest);
+
+        let mut url = wire.clone();
+        url["ordered_sections"][1]["content"] =
+            serde_json::json!({"mode": "url", "url": "https://example.invalid/x"});
+        assert!(serde_json::from_value::<CodeWalkthrough>(url).is_err());
+
+        let mut gapped = manifest.clone();
+        gapped.ordered_sections[1].ordinal = 2;
+        assert!(gapped.validate_shape().is_err());
+        let mut dangling = manifest;
+        dangling.interaction_edges[0].to_ordinal = 5;
+        assert!(dangling.validate_shape().is_err());
     }
 
     // spec: MEDULLA-ORCH-VOCAB-R013.2

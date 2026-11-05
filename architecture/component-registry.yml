@@ -3838,6 +3838,7 @@ components:
       - "tests/orchestration/test_harness_lessons_served.py"
       - "tests/orchestration/test_run_observation_served.py"
       - "tests/orchestration/test_run_trace_served.py"
+      - "tests/orchestration/test_run_trace_steps_served.py"
       - "tests/packs"
       - "tests/parity"
       - "tests/pgwire_roundtrip.rs"

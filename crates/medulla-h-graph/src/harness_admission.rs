@@ -754,13 +754,34 @@ fn validate_run_trace_node(props: &Props) -> Result<Option<Admission>, String> {
     if node_type(props) != Some("RunTrace") {
         return Ok(None);
     }
-    match run_trace_violation(props) {
-        Some((shape, detail)) => Err(refuse_code(
+    if let Some((shape, detail)) = run_trace_violation(props) {
+        return Err(refuse_code(
             medulla_types::contract::ServerErrorCode::RunTraceShapeInvalid,
             format!("{shape}: {detail}"),
-        )),
-        None => Ok(None),
+        ));
     }
+    validate_step_records(props)?;
+    Ok(None)
+}
+
+/// MEDULLA-ORCH-VOCAB-R013.3/R013.4 — the `steps` of a `RunTrace` are checked
+/// in order before the trace is admitted: a malformed digest refuses with
+/// `STEP_DIGEST_INVALID`, a skipped or repeated index with
+/// `STEP_ORDER_INVALID`, and a refusal writes nothing. A valid trace stores
+/// its steps in the order given.
+fn validate_step_records(props: &Props) -> Result<(), String> {
+    let Some(steps) = props.get("steps") else {
+        return Ok(());
+    };
+    let Some(steps) = steps.as_array() else {
+        return Err(refuse_code(
+            medulla_types::contract::ServerErrorCode::RunTraceShapeInvalid,
+            "steps must be an ordered list of step records".to_string(),
+        ));
+    };
+    medulla_result_types::outcome_bundle::validate_step_records(steps)
+        .map(|_| ())
+        .map_err(|(code, detail)| refuse_code(code, detail))
 }
 
 /// Engine-owned keys stripped before a run-trace vocabulary record decodes.

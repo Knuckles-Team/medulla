@@ -225,6 +225,8 @@ closed_error_codes! {
         DurableUnitRunConflict => "DURABLE_UNIT_RUN_CONFLICT",
         DurableUnitRunMissing => "DURABLE_UNIT_RUN_MISSING",
         RunTraceShapeInvalid => "RUN_TRACE_SHAPE_INVALID",
+        StepDigestInvalid => "STEP_DIGEST_INVALID",
+        StepOrderInvalid => "STEP_ORDER_INVALID",
         ValidityInverted => "VALIDITY_INVERTED",
         WindowContentConflict => "WINDOW_CONTENT_CONFLICT",
         WindowRunRevisionMismatch => "WINDOW_RUN_REVISION_MISMATCH",
