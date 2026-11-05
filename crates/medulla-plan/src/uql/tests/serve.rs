@@ -207,6 +207,8 @@ fn profile_remote_fragment_has_redacted_golden_output_and_provenance() {
         rows: vec![],
         stages: vec![],
         warnings: vec![],
+        snapshot_revision: 0,
+        knowledge_revision: 0,
     };
     crate::uql::serve::attach_federation_report(&mut result, &stmt, &ctx);
     let UqlResult::Profile { stages, .. } = result else {

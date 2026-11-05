@@ -24260,6 +24260,8 @@ class UqlResultProfileBody(BaseModel):
     rows: list[UqlRow]
     stages: list[UqlStageReport]
     warnings: list[str]
+    snapshot_revision: int = 0
+    knowledge_revision: int = 0
 
 
 class UqlResultRows(BaseModel):
@@ -24274,6 +24276,8 @@ class UqlResultRowsBody(BaseModel):
     columns: list[str]
     rows: list[UqlRow]
     warnings: list[str]
+    snapshot_revision: int = 0
+    knowledge_revision: int = 0
 
 
 class UqlRow(BaseModel):
