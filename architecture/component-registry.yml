@@ -2777,6 +2777,7 @@ components:
       - "crates/medulla-query/tests"
       - "crates/medulla-plan/tests"
       - "crates/medulla-plan/benches"
+      - "tests/nl_query_bounded_steps.rs"
     generated_roots: []
     shared_roots: []
     shared_files: []
