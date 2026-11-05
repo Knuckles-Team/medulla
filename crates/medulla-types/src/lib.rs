@@ -126,6 +126,8 @@ pub mod gramps_cutover_gate;
 pub mod metadata_acceleration;
 // MEDULLA-UNIFIED-DATA-PLANE-R040.1/.2 — per-modality embedding promotion gate.
 pub mod embedding_promotion;
+// MEDULLA-UNIFIED-DATA-PLANE-R038.5.1 — search-index capability of a foreign source.
+pub mod search_source;
 // MEDULLA-UNIFIED-DATA-PLANE-R038.6.1 — read-only property-graph view over mappings.
 pub mod virtual_graph_view;
 // MEDULLA-UNIFIED-DATA-PLANE-R761.1 — column profile record.

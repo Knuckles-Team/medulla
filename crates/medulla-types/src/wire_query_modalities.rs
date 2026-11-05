@@ -524,6 +524,10 @@ pub struct ForeignOperationCapabilities {
     /// The bound operation accepts a server-side key filter (e.g. `id IN (...)`).
     #[serde(default)]
     pub key_filter_pushdown: bool,
+    /// Declared search-index capability of the bound operation
+    /// (MEDULLA-UNIFIED-DATA-PLANE-R038.5.1); `None` for a non-search source.
+    #[serde(default)]
+    pub search: Option<crate::search_source::SearchIndexCapability>,
 }
 
 /// A WRITE-side mirror target (MEDULLA-DURABLE-KERNEL-R024's mirror-target half,

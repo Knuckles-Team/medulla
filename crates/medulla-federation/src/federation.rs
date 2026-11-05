@@ -190,6 +190,7 @@ mod operation_bound_source_kinds {
     fn specs_with_pushdown(key_filter_pushdown: bool) -> Vec<(ForeignSourceSpec, &'static str)> {
         let capabilities = ForeignOperationCapabilities {
             key_filter_pushdown,
+            ..ForeignOperationCapabilities::default()
         };
         vec![
             (

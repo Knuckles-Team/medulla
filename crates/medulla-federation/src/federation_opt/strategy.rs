@@ -144,6 +144,7 @@ mod tests {
             paging: Paging::Single,
             full_fetch,
             rate: SourceRate::new(4, 0),
+            search_push: false,
         }
     }
 

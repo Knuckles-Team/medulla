@@ -66,6 +66,8 @@ pub struct SourceCapabilities {
     pub paging: Paging,
     pub full_fetch: FullFetch,
     pub rate: SourceRate,
+    /// The source ranks a search request remotely (MEDULLA-UNIFIED-DATA-PLANE-R038.5.1).
+    pub search_push: bool,
 }
 
 impl SourceCapabilities {
@@ -77,6 +79,7 @@ impl SourceCapabilities {
             paging: Paging::Single,
             full_fetch: FullFetch::Allowed,
             rate: SourceRate::new(4, 0),
+            search_push: false,
         }
     }
 
