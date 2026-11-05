@@ -70,43 +70,6 @@ The design below binds every row; the detail sections follow under Design refere
 
 Data entities are in [data-model.md](data-model.md). The shortest served proof is in [quickstart.md](quickstart.md). Each seam to another repository has a document in `contracts/`.
 
-## Phase 2: Task approach
-
-`tasks.md` holds one task per leaf row, grouped by user story and ordered producer first: a model row precedes the rows that wire it. A row lands in one slice with its caller, so no type lands without a production caller. Tasks that edit the shared dispatch file or `metadata_catalog-v1.ttl` run in series; tasks in different crates run in parallel.
-
-## Complexity Tracking
-
-none
-
-## Build contract
-
-- `cargo clippy --workspace --all-targets -- -D warnings` and `cargo fmt --check` pass for every touched crate.
-- The architecture, complexity and duplication gates of `.config/pre-commit.yaml` pass with no baseline entry and no suppression.
-- Validation keeps its fixed limits: index 1 MiB, 1024 entries, 64 references per list, archive 16 MiB, body 2 MiB, schema 1 MiB, record 4 MiB, 256 violations.
-- Contract generation runs in check mode and the generated artifacts match across every output directory.
-- A public item in a pack or catalog crate has a non-test caller under a handler or server crate.
-- Spec rows pass `spec-standard`, `plan-conformance` and `spec-decomposition` with zero findings.
-- Dispatch stays in the router crate; a handler crate never calls a sibling handler crate.
-
-## Production caller chain
-
-- `Method::ConnectorPack` arm of `dispatch_catalog_admin_methods` (`crates/medulla-server-router/src/dispatch/router/decision_plane.rs:150`) to `handle_connector_pack` (`crates/medulla-h-admin/src/admin/connector_pack.rs:43`) to `serve_import` (`connector_pack.rs:146`) to `validate_and_commit` (`crates/medulla-h-admin/src/admin/connector_pack/import.rs:48`) to `run_import` (`import.rs:66`) to `prepare` (`crates/medulla-h-admin/src/admin/connector_pack/import/planning.rs:95`).
-- Commit to projection: the owner transaction leaves an outbox row; `project_head` (`crates/medulla-h-admin/src/admin/connector_pack/reproject.rs:74`) projects the head and `GraphSchema.AttachPack` attaches the pack schema.
-- `AgentComponent` ops to `handle_agent_component` (`crates/medulla-h-admin/src/admin/agent.rs:99`) for content, render and receipt verification.
-- `GraphSchema` ops (`ImportOntology`, `WithdrawOntology`, `AttachApproved`) to `handle_gateway` (`crates/medulla-h-admin/src/graph_schema.rs:195`).
-- Every graph write to `check_before_write` (`crates/medulla-server-api/src/icv_guard.rs:133`), which enforces the composed shapes.
-- Obsolete paths to delete: the `MEDULLA_ONTOLOGY_ORPHANS` switch and `OrphanPolicy::Warn` in `import/validation.rs`, and `PackWarningCode::OntologyOrphan` (`MEDULLA-TYPED-PACKS-R105.1`).
-
-## Cross-repo seams
-
-- Skill graph packs: `SCION-CONNECTOR-CONTROL-R071.1` provides, `MEDULLA-TYPED-PACKS-R700.8` consumes. Contract: [skill-graph-pack.md](contracts/skill-graph-pack.md).
-- Connector onboarding and seed graphs: `MEDULLA-TYPED-PACKS-R104.3` provides, `ARBORA-FLEET-R036.3` consumes. Contract: [arbora-connector-onboarding.md](contracts/arbora-connector-onboarding.md).
-- Glossary and dashboard operations: `MEDULLA-TYPED-PACKS-R801` provides, `ARBORA-OPS-R855` consumes. Contract: [arbora-catalog-operations.md](contracts/arbora-catalog-operations.md).
-- Connector conformance evidence: `MEDULLA-TYPED-PACKS-R807` provides, `ARBORA-OPS-R067.10` consumes. Contract: [arbora-conformance-evidence.md](contracts/arbora-conformance-evidence.md).
-- Skill upgrade admission: `MEDULLA-TYPED-PACKS-R100.101` provides, `ARBORA-FLEET-R034.9` consumes. Contract: [arbora-skill-admission.md](contracts/arbora-skill-admission.md).
-- Repository-source effects for prompt blueprints: `SCION-GOVERNED-WRITEBACK-R004.5` provides, `MEDULLA-TYPED-PACKS-R094.7` consumes. Contract: [governed-writeback-effects.md](contracts/governed-writeback-effects.md).
-- Generated ontology artifacts: `MEDULLA-TYPED-PACKS-R090` provides, `ARBORA-DEPLOY-R009.3` consumes. Contract: [arbora-ontology-artifacts.md](contracts/arbora-ontology-artifacts.md).
-
 ### Design reference
 
 #### Design decisions
@@ -602,3 +565,40 @@ No bulk data: the seed graph names objects and their references. Entity rows sta
 Masking enforcement lives in MEDULLA-FEDERATED-QUERY-R706. Quality scores live in
 MEDULLA-UNIFIED-DATA-PLANE-R762. Approval admission lives in arbora; the record and the reviewer
 choice stay here.
+
+## Phase 2: Task approach
+
+`tasks.md` holds one task per leaf row, grouped by user story and ordered producer first: a model row precedes the rows that wire it. A row lands in one slice with its caller, so no type lands without a production caller. Tasks that edit the shared dispatch file or `metadata_catalog-v1.ttl` run in series; tasks in different crates run in parallel.
+
+## Complexity Tracking
+
+none
+
+## Build contract
+
+- `cargo clippy --workspace --all-targets -- -D warnings` and `cargo fmt --check` pass for every touched crate.
+- The architecture, complexity and duplication gates of `.config/pre-commit.yaml` pass with no baseline entry and no suppression.
+- Validation keeps its fixed limits: index 1 MiB, 1024 entries, 64 references per list, archive 16 MiB, body 2 MiB, schema 1 MiB, record 4 MiB, 256 violations.
+- Contract generation runs in check mode and the generated artifacts match across every output directory.
+- A public item in a pack or catalog crate has a non-test caller under a handler or server crate.
+- Spec rows pass `spec-standard`, `plan-conformance` and `spec-decomposition` with zero findings.
+- Dispatch stays in the router crate; a handler crate never calls a sibling handler crate.
+
+## Production caller chain
+
+- `Method::ConnectorPack` arm of `dispatch_catalog_admin_methods` (`crates/medulla-server-router/src/dispatch/router/decision_plane.rs:150`) to `handle_connector_pack` (`crates/medulla-h-admin/src/admin/connector_pack.rs:43`) to `serve_import` (`connector_pack.rs:146`) to `validate_and_commit` (`crates/medulla-h-admin/src/admin/connector_pack/import.rs:48`) to `run_import` (`import.rs:66`) to `prepare` (`crates/medulla-h-admin/src/admin/connector_pack/import/planning.rs:95`).
+- Commit to projection: the owner transaction leaves an outbox row; `project_head` (`crates/medulla-h-admin/src/admin/connector_pack/reproject.rs:74`) projects the head and `GraphSchema.AttachPack` attaches the pack schema.
+- `AgentComponent` ops to `handle_agent_component` (`crates/medulla-h-admin/src/admin/agent.rs:99`) for content, render and receipt verification.
+- `GraphSchema` ops (`ImportOntology`, `WithdrawOntology`, `AttachApproved`) to `handle_gateway` (`crates/medulla-h-admin/src/graph_schema.rs:195`).
+- Every graph write to `check_before_write` (`crates/medulla-server-api/src/icv_guard.rs:133`), which enforces the composed shapes.
+- Obsolete paths to delete: the `MEDULLA_ONTOLOGY_ORPHANS` switch and `OrphanPolicy::Warn` in `import/validation.rs`, and `PackWarningCode::OntologyOrphan` (`MEDULLA-TYPED-PACKS-R105.1`).
+
+## Cross-repo seams
+
+- Skill graph packs: `SCION-CONNECTOR-CONTROL-R071.1` provides, `MEDULLA-TYPED-PACKS-R700.8` consumes. Contract: [skill-graph-pack.md](contracts/skill-graph-pack.md).
+- Connector onboarding and seed graphs: `MEDULLA-TYPED-PACKS-R104.3` provides, `ARBORA-FLEET-R036.3` consumes. Contract: [arbora-connector-onboarding.md](contracts/arbora-connector-onboarding.md).
+- Glossary and dashboard operations: `MEDULLA-TYPED-PACKS-R801` provides, `ARBORA-OPS-R855` consumes. Contract: [arbora-catalog-operations.md](contracts/arbora-catalog-operations.md).
+- Connector conformance evidence: `MEDULLA-TYPED-PACKS-R807` provides, `ARBORA-OPS-R067.10` consumes. Contract: [arbora-conformance-evidence.md](contracts/arbora-conformance-evidence.md).
+- Skill upgrade admission: `MEDULLA-TYPED-PACKS-R100.101` provides, `ARBORA-FLEET-R034.9` consumes. Contract: [arbora-skill-admission.md](contracts/arbora-skill-admission.md).
+- Repository-source effects for prompt blueprints: `SCION-GOVERNED-WRITEBACK-R004.5` provides, `MEDULLA-TYPED-PACKS-R094.7` consumes. Contract: [governed-writeback-effects.md](contracts/governed-writeback-effects.md).
+- Generated ontology artifacts: `MEDULLA-TYPED-PACKS-R090` provides, `ARBORA-DEPLOY-R009.3` consumes. Contract: [arbora-ontology-artifacts.md](contracts/arbora-ontology-artifacts.md).
