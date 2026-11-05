@@ -1,0 +1,88 @@
+name: Build the release server executable
+description: >-
+  Compile the release `medulla-server` executable (release-server profile,
+  features `full,ast-extended`) for MEDULLA_WHEEL_TARGET exactly once and leave
+  it, with its sha256, in dist-server-bin/. release.yml runs this in one job per
+  platform and uploads the result; both folded-wheel passes of that platform then
+  fold those exact bytes (scripts/fetch_server_binary.py). On Linux the server is
+  compiled inside the same manylinux container as the engine wheel, so it keeps
+  the pinned glibc baseline. Reads MEDULLA_WHEEL_TARGET, MEDULLA_WHEEL_MANYLINUX
+  and MEDULLA_WHEEL_JOBS_ARG from the calling job's environment.
+runs:
+  using: composite
+  steps:
+    - name: Select the release target directory
+      id: build-environment
+      shell: bash
+      run: |
+        mkdir -p "${RUNNER_TEMP:?}/medulla-release-target"
+        echo "CARGO_TARGET_DIR=$RUNNER_TEMP/medulla-release-target" >> "$GITHUB_ENV"
+        if [ "${MEDULLA_WHEEL_TARGET:-}" = aarch64-unknown-linux-gnu ]; then
+          echo "container=quay.io/pypa/manylinux_2_28_aarch64@sha256:acc4e63610fef1da3d687322793665205415c2b22c0d2e403f1a44eb834d63fc" >> "$GITHUB_OUTPUT"
+          echo "maturin-version=1.15.0" >> "$GITHUB_OUTPUT"
+        fi
+        case "${MEDULLA_WHEEL_TARGET:-}" in
+          *-apple-darwin)
+            echo "maturin-version=1.15.0" >> "$GITHUB_OUTPUT"
+            ;;
+        esac
+
+    # Same per-platform key as the wheel passes: main's warm build saves it, the
+    # server job only restores it.
+    - name: Restore the per-platform compile cache
+      uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      with:
+        shared-key: medulla-wheel-${{ env.MEDULLA_WHEEL_TARGET }}
+        workspaces: ". -> ${{ runner.temp }}/medulla-release-target"
+        save-if: 'false'
+
+    # The server link is the most memory-hungry step of the release: hosted
+    # Linux runners (16 GB) get swap first.
+    - name: Add swap for the server link
+      if: ${{ runner.os == 'Linux' && runner.environment == 'github-hosted' }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        if swapon --show | grep -q /swapfile-medulla; then exit 0; fi
+        avail_gb="$(df --output=avail -BG / | tail -1 | tr -dc '0-9')"
+        size_gb=24
+        if [ "$avail_gb" -lt $((size_gb + 15)) ]; then size_gb=$((avail_gb - 15)); fi
+        test "$size_gb" -ge 8 || { echo "not enough free disk for swap: ${avail_gb}G" >&2; exit 1; }
+        sudo fallocate -l "${size_gb}G" /swapfile-medulla
+        sudo chmod 600 /swapfile-medulla
+        sudo mkswap /swapfile-medulla
+        sudo swapon /swapfile-medulla
+        free -h
+
+    - name: Build the release server executable (native)
+      if: ${{ runner.os != 'Linux' }}
+      shell: bash
+      run: bash scripts/build_release_server.sh
+
+    # The container builds the server in prepare-script; the Maturin command
+    # itself only needs to be cheap (an sdist of the pure source tree).
+    - name: Build the release server executable (manylinux container)
+      if: ${{ runner.os == 'Linux' }}
+      uses: ./.github/actions/release-maturin
+      with:
+        command: sdist
+        args: --out server-sdist-scratch
+        container: ${{ steps.build-environment.outputs.container }}
+        maturin-version: ${{ steps.build-environment.outputs.maturin-version }}
+        prepare-script: scripts/build_release_server.sh
+
+    - name: Hand the container-built binary to the runner user
+      if: ${{ always() && runner.os == 'Linux' }}
+      shell: bash
+      run: |
+        for dir in dist-server-bin server-sdist-scratch; do
+          [ -d "$dir" ] || continue
+          sudo -n chown -R "$(id -u):$(id -g)" "$dir" 2>/dev/null \
+            || docker run --rm -v "$PWD:/w" "${{ steps.build-environment.outputs.container || 'quay.io/pypa/manylinux_2_28_x86_64' }}" chown -R "$(id -u):$(id -g)" "/w/$dir" \
+            || true
+        done
+        rm -rf server-sdist-scratch
+
+    - name: Record the server checksum
+      shell: bash
+      run: python scripts/fetch_server_binary.py record dist-server-bin

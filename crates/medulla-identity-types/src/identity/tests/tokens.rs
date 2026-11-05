@@ -304,7 +304,6 @@ fn leaving_external_puts_credentialless_humans_into_pending_reset() {
             expected_epoch: epoch,
             to: AuthMode::Local,
             local_fallback: None,
-            ack: None,
             issuer_kid: "kid-back".to_string(),
         },
     });

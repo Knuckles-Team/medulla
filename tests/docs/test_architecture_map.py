@@ -106,10 +106,11 @@ def test_build_package_and_runtime_boundaries_match_source() -> None:
     assert "crates/medulla-numeric/Cargo.toml" in action
     assert "--features python" in action
     assert "--require-engine-kernel" in action
-    assert "no server crate" in action
+    assert "server-artifact" in action
     assert "`medulla-pyengine/python,security`" in section
     assert "`medulla-numeric/python`" in section
     assert "compiles no server crate" in section
+    assert "`server-binary` job compiled once for that platform" in section
 
     backend = (ROOT / "build_backend.py").read_text(encoding="utf-8")
     assert "def _compose(" in backend

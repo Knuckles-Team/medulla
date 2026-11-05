@@ -30,6 +30,7 @@ use medulla_decision_stats::{
     decision::track_record::executed_forecast, decision::track_record::track_records,
     decision::track_record::ResolvedForecast, decision::track_record::TrackRecord,
 };
+use medulla_decision_types::decision::reputation::SourceReliability;
 use medulla_decision_types::decision::statistical::head::DecisionHeadBody;
 use medulla_decision_types::decision::QuantScaleTag;
 use medulla_decision_types::decision::TraceFidelityLevel;
@@ -39,7 +40,6 @@ use medulla_decision_types::{
 use medulla_decision_types::{
     decision::statistical::FeatureMatrixRef, decision::statistical::StatisticalErrorCode,
 };
-use medulla_exec::exec::LearnedReliability;
 use medulla_numeric::calibration::ProperScores;
 use medulla_numeric::detkernel::Level;
 use medulla_numeric::risk::{
@@ -290,13 +290,15 @@ fn gather_slates(
     Ok(())
 }
 
+/// The pooling rules; the sample gate is the `reputation.min_support` knob
+/// (MEDULLA-DECISION-ENGINE-R118.1.2.1).
 fn rules(now_ms: u64) -> Result<ReputationRules, String> {
-    let policy = default_statistical_policy();
+    let min_support = medulla_server_api::knob_config::knobs().reputation_min_support;
     let render = |e: medulla_numeric::detkernel::StatError| e.to_string();
     Ok(ReputationRules {
         half_life_ms: Some(HALF_LIFE_MS),
         now_ms,
-        gate: SampleGate::new(policy.min_support.max(1)).map_err(render)?,
+        gate: SampleGate::new(min_support.max(1)).map_err(render)?,
         delta: Level::new(1, 20).map_err(render)?,
         bounds: ConcentrationBounds::new(1.0, 1_000.0).map_err(render)?,
     })
@@ -384,29 +386,43 @@ pub(super) fn reputation_relation(
 }
 
 /// `subject`'s learned reliability (an option first, then an agent), anchored at the
-/// caller's prior; `None` when the visible log has no gated estimate of it.
+/// caller's prior (MEDULLA-DECISION-ENGINE-R118.1.2.1). A visible subject below the
+/// `reputation.min_support` knob is `InsufficientHistory`, never `Absent`; `Absent`
+/// means the visible log holds no outcome of it at all.
 pub(super) fn learned_reliability(
     store: &AgentLibraryStore,
     reader: &LogReader,
     subject: &str,
     prior: (f64, f64),
-) -> Result<Option<LearnedReliability>, String> {
+) -> Result<SourceReliability, String> {
     let evidence = gather(store, reader)?;
     let rules = rules(medulla_kernel::kernel::dispatch_support::authoritative_now_ms())?;
+    let mut sparse: Option<SourceReliability> = None;
     for outcomes in [&evidence.options, &evidence.agents] {
-        let found = learned(outcomes, &rules)?.into_iter().find(|row| {
-            row.subject == subject && matches!(row.reputation, Reputation::Estimated(_))
-        });
-        if let Some(row) = found {
-            let estimate = anchored_reliability(prior.0, prior.1, &row, rules.delta)
-                .map_err(|e| e.to_string())?;
-            return Ok(Some(LearnedReliability {
-                mean: estimate.mean,
-                lower: estimate.lower,
-                upper: estimate.upper,
-                trials: row.trials,
-            }));
+        let Some(row) = learned(outcomes, &rules)?
+            .into_iter()
+            .find(|row| row.subject == subject)
+        else {
+            continue;
+        };
+        match row.reputation {
+            Reputation::Estimated(_) => {
+                let estimate = anchored_reliability(prior.0, prior.1, &row, rules.delta)
+                    .map_err(|e| e.to_string())?;
+                return Ok(SourceReliability::Estimated {
+                    mean: estimate.mean,
+                    lower: estimate.lower,
+                    upper: estimate.upper,
+                    trials: row.trials,
+                });
+            }
+            Reputation::InsufficientHistory { n_min } => {
+                sparse.get_or_insert(SourceReliability::InsufficientHistory {
+                    trials: row.trials,
+                    min_support: n_min,
+                });
+            }
         }
     }
-    Ok(None)
+    Ok(sparse.unwrap_or(SourceReliability::Absent))
 }

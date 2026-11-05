@@ -89,8 +89,8 @@ pub use typed::{EpistemicNodeIndex, TypedEvidence};
 // selectable by `CausalModelKind`.
 #[cfg(feature = "epistemic-causal")]
 pub use causal::{
-    CategoricalEstimate, CausalEstimate, CausalGraph, CausalModelKind, DiscreteCausalGraph,
-    DiscreteStructuralEquation, StructuralEquation,
+    verify_fit, CategoricalEstimate, CausalEstimate, CausalFitError, CausalGraph, CausalModelKind,
+    DiscreteCausalGraph, DiscreteStructuralEquation, StructuralEquation, MIN_FIT_OBSERVATIONS,
 };
 // EPI-P3-3 — provenance-aware retrieval ranking, see `ranking` module docs.
 #[cfg(feature = "epistemic-causal")]

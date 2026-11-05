@@ -32,6 +32,7 @@ fn resolve(
 }
 
 // spec: MEDULLA-TYPED-PACKS-R085.1
+// spec: MEDULLA-IDENTITY-R708
 #[test]
 fn projection_survives_persistence_and_reports_post_touch_facts() {
     let mut store: IdentityStore =
@@ -64,6 +65,7 @@ fn projection_survives_persistence_and_reports_post_touch_facts() {
 }
 
 // spec: MEDULLA-TYPED-PACKS-R085.1
+// spec: MEDULLA-IDENTITY-R708
 #[test]
 fn legacy_unbound_and_non_session_resolutions_omit_projection() {
     let mut store = opened();

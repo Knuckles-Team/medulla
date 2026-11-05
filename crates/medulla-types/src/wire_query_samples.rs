@@ -247,6 +247,10 @@ pub fn uql_sample_op(kind: OpKind) -> Op {
                 seed: 7,
             },
         },
+        OpKind::Decay => Op::Decay {
+            half_life_secs: 3600.0,
+        },
+        OpKind::ClusterByEmbedding => Op::ClusterByEmbedding { k: 3 },
         OpKind::DecisionScan => Op::DecisionScan {
             preds: vec![uql_sample_pred(PredKind::In)],
         },

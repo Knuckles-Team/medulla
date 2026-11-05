@@ -38,6 +38,18 @@ pub fn register_trino(
     Ok(())
 }
 
+/// MEDULLA-FEDERATED-QUERY-R053.700: a Trino read names a snapshot the source
+/// registered; any other snapshot refuses with `SNAPSHOT_UNKNOWN`.
+pub fn check_snapshot(
+    known_snapshots: &[&str],
+    snapshot_id: &str,
+) -> Result<(), medulla_types::contract::ServerErrorCode> {
+    if snapshot_id.is_empty() || !known_snapshots.contains(&snapshot_id) {
+        return Err(medulla_types::contract::ServerErrorCode::SnapshotUnknown);
+    }
+    Ok(())
+}
+
 /// A verified in-process binding, with credentials intentionally absent from Debug.
 struct TrinoSource {
     origin: String,
