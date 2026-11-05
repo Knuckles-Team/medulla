@@ -28,6 +28,9 @@ fn clustered_mutation_inventory_is_complete() {
     covered.insert("SourceIngest");
     covered.insert("IndexRepository");
     covered.insert("EnrichDocument");
+    covered.insert("MeetingSummaryCommit");
+    covered.insert("MeetingSummaryContext");
+    covered.insert("MeetingTranscriptRevision");
     covered.insert("ServedModality");
     covered.insert("Shutdown");
     covered.insert("KgDelegate");

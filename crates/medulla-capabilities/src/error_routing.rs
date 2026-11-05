@@ -159,6 +159,31 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "WEB_BACKEND_INVALID",
         ],
     ),
+    // MEDULLA-MEDIA-VOCAB-R001.101.3-.5 (codes of R001.101.6).
+    (
+        "MeetingSummaryCommit",
+        &[
+            "CITATION_OUTSIDE_TEXT",
+            "RECEIPT_MISMATCH",
+            "RECEIPT_UNKNOWN",
+            "TRANSCRIPT_NOT_FINAL",
+            "TRANSCRIPT_STALE",
+        ],
+    ),
+    (
+        "MeetingSummaryContext",
+        &[
+            "SUMMARY_ADMISSION_MISSING",
+            "SUMMARY_LIMIT_EXCEEDED",
+            "SUMMARY_LIMIT_INVALID",
+            "TRANSCRIPT_NOT_FINAL",
+            "TRANSCRIPT_STALE",
+        ],
+    ),
+    (
+        "MeetingTranscriptRevision",
+        &["TRANSCRIPT_BASE_CONFLICT", "TRANSCRIPT_EVENT_CONFLICT"],
+    ),
     (
         "SelectWebPages",
         &[
