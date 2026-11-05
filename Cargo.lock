@@ -4381,6 +4381,7 @@ dependencies = [
  "medulla-protocol-types",
  "medulla-types",
  "medulla-work-types",
+ "regex",
  "schemars 1.2.3",
  "serde_json",
  "tempfile",
@@ -4678,6 +4679,8 @@ dependencies = [
 name = "medulla-durable"
 version = "0.1.0"
 dependencies = [
+ "criterion",
+ "medulla-types",
  "rmp-serde",
  "serde",
  "serde_json",
