@@ -271,3 +271,116 @@ fn native_metadata_cas_cannot_mutate_a_conversation_head() {
     .unwrap();
     assert_eq!(read_head(&temp.shard).revision, 1);
 }
+
+fn child_request(
+    run: &str,
+    key: &str,
+    digest: &str,
+    revision: u64,
+    state: ChildInputState,
+) -> SubmitWorkItemRequest {
+    let mut request = super::super::test_shard::run_request();
+    request.run_id = Some(run.into());
+    request.idempotency_key = run.into();
+    request.child_input = Some(Box::new(ChildInputAdmission {
+        child_run_id: "kid".into(),
+        expected_revision: revision,
+        content_digest: digest.into(),
+        idempotency_key: key.into(),
+        state,
+    }));
+    request
+}
+
+fn lifecycle(shard: &Shard, run: &str) -> u64 {
+    let handle = shard.graph(GRAPH).unwrap();
+    let snapshot = shard.read(&handle).unwrap();
+    let nodes = snapshot.scoped_owner_table(NODES).unwrap();
+    let id = super::super::run_owner::work_item_id(GRAPH, "tenant", run).unwrap();
+    let row: serde_json::Map<String, serde_json::Value> =
+        decode_durable(nodes.get((GRAPH, id.as_str())).unwrap().unwrap().value()).unwrap();
+    property_u64(&row, WORK_ITEM_LIFECYCLE_REVISION)
+}
+
+fn read_child_input(shard: &Shard, key: &str) -> ChildInputRecord {
+    let handle = shard.graph(GRAPH).unwrap();
+    let snapshot = shard.read(&handle).unwrap();
+    let nodes = snapshot.scoped_owner_table(NODES).unwrap();
+    let id = child_input_id("tenant", "kid", key);
+    decode_durable(nodes.get((GRAPH, id.as_str())).unwrap().unwrap().value()).unwrap()
+}
+
+// spec: MEDULLA-DURABLE-KERNEL-R865
+#[test]
+fn child_input_states_replay_and_refusals() {
+    let temp = open("child-input-admission");
+    let (a, b) = ("a".repeat(64), "b".repeat(64));
+    let mut kid = super::super::test_shard::run_request();
+    kid.run_id = Some("kid".into());
+    kid.idempotency_key = "kid".into();
+    admit(&temp.shard, &kid, "owner").unwrap();
+    assert_eq!(lifecycle(&temp.shard, "kid"), 0);
+
+    admit(
+        &temp.shard,
+        &child_request("m1", "k1", &a, 0, ChildInputState::Queued),
+        "owner",
+    )
+    .unwrap();
+    assert_eq!(
+        read_child_input(&temp.shard, "k1").state,
+        ChildInputState::Queued
+    );
+    // Same key and digest return the stored record; a different digest conflicts.
+    admit(
+        &temp.shard,
+        &child_request("m1b", "k1", &a, 0, ChildInputState::Queued),
+        "owner",
+    )
+    .unwrap();
+    assert!(admit(
+        &temp.shard,
+        &child_request("m1c", "k1", &b, 0, ChildInputState::Queued),
+        "owner"
+    )
+    .unwrap_err()
+    .contains("IDEMPOTENCY_CONFLICT"));
+
+    // Each state transition raises lifecycle_revision by exactly one.
+    state(&temp.shard, "kid", "running");
+    assert_eq!(lifecycle(&temp.shard, "kid"), 1);
+    assert!(admit(
+        &temp.shard,
+        &child_request("m2", "k2", &a, 0, ChildInputState::Queued),
+        "owner"
+    )
+    .unwrap_err()
+    .contains("REVISION_CONFLICT"));
+    admit(
+        &temp.shard,
+        &child_request("m3", "k2", &a, 1, ChildInputState::Applied),
+        "owner",
+    )
+    .unwrap();
+    assert_eq!(
+        read_child_input(&temp.shard, "k2").state,
+        ChildInputState::Applied
+    );
+    assert!(admit(
+        &temp.shard,
+        &child_request("m4", "k3", &a, 1, ChildInputState::Queued),
+        "foreign"
+    )
+    .unwrap_err()
+    .contains("ACCESS_DENIED"));
+
+    state(&temp.shard, "kid", "succeeded");
+    assert_eq!(lifecycle(&temp.shard, "kid"), 2);
+    assert!(admit(
+        &temp.shard,
+        &child_request("m5", "k4", &a, 2, ChildInputState::Queued),
+        "owner"
+    )
+    .unwrap_err()
+    .contains("CHILD_TARGET_TERMINAL"));
+}

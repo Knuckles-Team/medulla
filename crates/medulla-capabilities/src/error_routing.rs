@@ -191,9 +191,18 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     ("AddNode", &["REPLAY_NONCE_CONSUMED"]),
     ("CypherQuery", &["REPLAY_NONCE_CONSUMED"]),
     ("GraphQl", &["REPLAY_NONCE_CONSUMED"]),
+    // MEDULLA-DURABLE-KERNEL-R865 (child input) and R750.750.1 (signed agent-turn envelope).
     (
         "SubmitWorkItem",
-        &["REPLAY_NONCE_CONSUMED", "WORK_QUEUE_FULL"],
+        &[
+            "CARRIER_SIGNATURE_INVALID",
+            "CHILD_TARGET_TERMINAL",
+            "ENVELOPE_FIELD_MISSING",
+            "IDEMPOTENCY_CONFLICT",
+            "REPLAY_NONCE_CONSUMED",
+            "REVISION_CONFLICT",
+            "WORK_QUEUE_FULL",
+        ],
     ),
     ("ClaimWorkItem", &["REPLAY_NONCE_CONSUMED"]),
     ("PublishRunCheckpoint", &["REPLAY_NONCE_CONSUMED"]),

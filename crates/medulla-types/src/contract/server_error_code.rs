@@ -265,5 +265,9 @@ closed_error_codes! {
         WindowContentConflict => "WINDOW_CONTENT_CONFLICT",
         WindowRunRevisionMismatch => "WINDOW_RUN_REVISION_MISMATCH",
         WorkQueueFull => "WORK_QUEUE_FULL",
+        CarrierSignatureInvalid => "CARRIER_SIGNATURE_INVALID",
+        ChildTargetTerminal => "CHILD_TARGET_TERMINAL",
+        EnvelopeFieldMissing => "ENVELOPE_FIELD_MISSING",
+        RevisionConflict => "REVISION_CONFLICT",
     }
 }
