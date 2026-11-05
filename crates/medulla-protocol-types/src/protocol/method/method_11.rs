@@ -11,6 +11,9 @@ $($variants)*
     GetCurrentPlan { tenant: String, run_id: String },
     /// Caller-owned committed measurements from one bounded snapshot.
     GetSessionUsage { tenant: String, context_id: String },
+    /// The configured shard-writer count `k` for the verified tenant's graphs
+    /// (MEDULLA-DURABLE-KERNEL-R077); write-lane slot grants are capped at it.
+    GetShardWriterWidth { tenant: String },
     /// Historical native run admission, visible only to its verified immutable
     /// owner. Missing and foreign rows return null; missing original admission
     /// evidence refuses explicitly. Independent of current lease or terminal state.

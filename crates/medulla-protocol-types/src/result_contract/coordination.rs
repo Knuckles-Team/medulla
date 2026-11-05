@@ -90,6 +90,7 @@ method_results! {
     GetRunCheckpoint(GetRunCheckpoint) => Raw<Option<medulla_work_types::run_checkpoint::RunCheckpointRead>>;
     GetCurrentPlan(GetCurrentPlan) => Raw<Option<medulla_decision_outcome_types::current_plan::CurrentPlanSnapshot>>;
     GetSessionUsage(GetSessionUsage) => Raw<medulla_work_types::run_usage::SessionUsage>;
+    GetShardWriterWidth(GetShardWriterWidth) => Raw<medulla_work_types::worker_registry::ShardWriterWidth>;
     GetRunWorkItem(GetRunWorkItem) => Raw<Option<medulla_work_types::work_item_read::RunWorkItemView>>;
     GetWorkItem(GetWorkItem) => Raw<Option<WorkItemView>>;
     ListWorkItems(ListWorkItems) => Raw<WorkItemPage>;

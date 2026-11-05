@@ -3467,6 +3467,7 @@ components:
     public_contract_roots: []
     test_roots:
       - "tests/graph_scoped_operation_dispatch.rs"
+      - "tests/scheduler_config_served.rs"
     generated_roots: []
     shared_roots: []
     shared_files: []
