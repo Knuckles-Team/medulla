@@ -136,6 +136,9 @@ pub enum NlQueryError {
         /// The execution error.
         message: String,
     },
+    /// The follow-up rewrite produced no usable standalone question
+    /// (MEDULLA-FEDERATED-QUERY-R058.8): empty, or longer than 2000 characters.
+    RewriteFailed(String),
 }
 
 impl std::fmt::Display for NlQueryError {
@@ -156,6 +159,7 @@ impl std::fmt::Display for NlQueryError {
                 )
             }
             Self::Execution { message, .. } => write!(f, "nl-query: execution failed: {message}"),
+            Self::RewriteFailed(msg) => write!(f, "nl-query: follow-up rewrite failed: {msg}"),
         }
     }
 }
@@ -312,6 +316,22 @@ pub const NL_READ_TIMEOUT_MIN_SECS: u64 = 1;
 /// Largest accepted planner read timeout, seconds.
 #[cfg(feature = "nl-query")]
 pub const NL_READ_TIMEOUT_MAX_SECS: u64 = 600;
+/// Default number of earlier turns a request may carry (MEDULLA-FEDERATED-QUERY-R058.8).
+#[cfg(feature = "nl-query")]
+pub const NL_MAX_HISTORY_TURNS_DEFAULT: usize = 4;
+/// Largest accepted `max_history_turns` (MEDULLA-FEDERATED-QUERY-R058.8).
+#[cfg(feature = "nl-query")]
+pub const NL_MAX_HISTORY_TURNS_MAX: u64 = 16;
+
+/// Check a configured `max_history_turns` against `0..=16` (MEDULLA-FEDERATED-QUERY-R058.8).
+#[cfg(feature = "nl-query")]
+pub fn validate_max_history_turns(turns: u64) -> Result<usize, NlConfigError> {
+    if turns > NL_MAX_HISTORY_TURNS_MAX {
+        return Err(NlConfigError::MaxHistoryTurnsOutOfRange(turns));
+    }
+    Ok(turns as usize)
+}
+
 /// Request-body members the planner owns; the extra body may not set them.
 #[cfg(feature = "nl-query")]
 const NL_RESERVED_BODY_KEYS: &[&str] = &["model", "messages"];
@@ -322,6 +342,8 @@ const NL_RESERVED_BODY_KEYS: &[&str] = &["model", "messages"];
 pub enum NlConfigError {
     /// The read timeout is outside the accepted range.
     ReadTimeoutOutOfRange(u64),
+    /// `max_history_turns` is outside `0..=16` (MEDULLA-FEDERATED-QUERY-R058.8).
+    MaxHistoryTurnsOutOfRange(u64),
     /// The extra request body is not a JSON object.
     ExtraBodyNotObject,
     /// The extra request body sets a member the planner owns.
@@ -342,6 +364,10 @@ impl std::fmt::Display for NlConfigError {
             Self::ReadTimeoutOutOfRange(s) => write!(
                 f,
                 "nl-query: read_timeout_secs {s} outside {NL_READ_TIMEOUT_MIN_SECS}..={NL_READ_TIMEOUT_MAX_SECS} seconds"
+            ),
+            Self::MaxHistoryTurnsOutOfRange(n) => write!(
+                f,
+                "nl-query: max_history_turns {n} outside 0..={NL_MAX_HISTORY_TURNS_MAX}"
             ),
             Self::InvalidValue { source, raw, reason } => {
                 write!(f, "nl-query: {source}='{raw}' {reason}")

@@ -18,6 +18,8 @@ The orchestration vocabulary makes four questions one graph query each: which st
 - **Constraints**: Each refusal has one stable code. Unknown stays unknown and never becomes zero. A write never leaves a partial node. No version suffix in a name.
 - **Scale/Scope**: 148 leaf rows in 8 user stories and 8 functional requirements.
 
+**Knob convention.** An engine knob named `knob x.y` in this spec's rows is a typed field of the server configuration, read from the command line or from the environment variable `MEDULLA_<NAME>` (the dotted name upper-cased, dots as underscores) and bounds-checked at startup: a value outside the stated range refuses startup with the knob name. Decision knobs are the exception and live only in the `MEDULLA-DECISION-ENGINE-R179` registry. Rows do not restate this.
+
 ## Constitution Check
 
 - **R-I. The engine is native Rust and the only fact store**: pass. Every row lands in a Rust crate or an ontology file of the engine.

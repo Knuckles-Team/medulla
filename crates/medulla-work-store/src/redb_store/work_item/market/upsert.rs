@@ -137,6 +137,7 @@ fn gap_submission(
         ("gap_generation".to_string(), gap.generation.into()),
     ]);
     SubmitWorkItemRequest {
+        child_input: None,
         conversation: None,
         run_id: None,
         schema_version: NativeControlSchemaVersion::V1,

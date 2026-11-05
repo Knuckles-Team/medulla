@@ -19,6 +19,9 @@ pub mod lot_accounting;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod strategy;
 
+// Strategy research record kernels (MEDULLA-FINANCE-PRIMITIVES-R751.751).
+pub mod research;
+
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod attribution;
 // Banking risk calculations (MEDULLA-FINANCE-PRIMITIVES-R901) and position sizing and

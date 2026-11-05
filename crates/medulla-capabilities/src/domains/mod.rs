@@ -48,6 +48,7 @@ pub(crate) const fn make_policy(
 pub(crate) mod cluster;
 pub(crate) mod compute;
 pub(crate) mod coordination;
+pub(crate) mod finance;
 pub(crate) mod graph;
 pub(crate) mod ingestion;
 pub(crate) mod messaging;
@@ -66,6 +67,7 @@ const REGISTRY: &[(&str, &[PolicyRow])] = &[
     ("cluster", cluster::ROWS),
     ("compute", compute::ROWS),
     ("coordination", coordination::ROWS),
+    ("finance", finance::ROWS),
     ("graph", graph::ROWS),
     ("ingestion", ingestion::ROWS),
     ("messaging", messaging::ROWS),

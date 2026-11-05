@@ -31,8 +31,14 @@ pub mod mysql_mariadb_connection;
 // `medulla-asr-whisper`.
 #[cfg(feature = "asr-native")]
 pub mod asr_wire;
+// MEDULLA-FEDERATED-QUERY-R608.1 — causal model fit verdict (`CausalVerify`).
+pub mod causal_wire;
+// MEDULLA-FEDERATED-QUERY-R086.100.1 — ordered n-ary inductive link prediction model.
+pub mod graphlearn_nary;
 // MEDULLA-DURABLE-KERNEL-R076.1 — authoritative scheduler policy data and validation.
 pub mod scheduler_config;
+// MEDULLA-DURABLE-KERNEL-R071 — typed durable task-queue model with refusals.
+pub mod task_queue;
 // MEDULLA-INGEST-WORKER-R002.1/.2 — induced ontology proposals and admission scores.
 pub mod ontology_proposal;
 // MEDULLA-INGEST-WORKER-R003.1 — typed knowledge atoms with mandatory provenance.
@@ -150,6 +156,9 @@ pub mod pg_diff_baseline;
 pub mod schema_context;
 // MEDULLA-FEDERATED-QUERY-R058.2.2.1 — the disclosed NL query result (executed UQL + rows).
 pub mod nl_query;
+// MEDULLA-MEDIA-VOCAB-R001.101.1 — meeting transcript revisions and summary
+// contracts. Pure serde.
+pub mod meeting_transcript;
 // MEDULLA-UNIFIED-DATA-PLANE-R030.1 — typed cross-application entity-link
 // proposal, refusing an owl:sameAs assertion before approval or for a
 // non-Match classification. Pure data; blocking, field-similarity scoring
@@ -157,6 +166,8 @@ pub mod nl_query;
 pub mod entity_link_proposal;
 // RF-RULING-004 — bounded scalar/collection primitives shared by kernel DTOs.
 pub mod contract;
+// MEDULLA-INCREMENTAL-VIEWS-R002.1 — the signed-row Z-set delta of incremental views.
+pub mod delta;
 // MEDULLA-DURABLE-KERNEL-R032 — the native primary-key fast-path routing decision
 // (pgwire/MySQL/MSSQL point operations that bypass DataFusion planning).
 // Pure serde, no dep.
@@ -188,7 +199,7 @@ pub mod durability_class;
 // set of scope-level merge strategies. Resolution and served wiring live above
 // this pure-data crate.
 pub mod write_conflict;
-pub use write_conflict::{MergeStrategy, WriteConflict};
+pub use write_conflict::{ConflictWinner, MergeStrategy, WriteConflict, WriteConflictEvidence};
 // MEDULLA-DURABLE-KERNEL-R037 — the workload classification (point/structure/sql)
 // every wire listener routes an operation by. Pure, no dep.
 pub mod workload_class;
@@ -199,7 +210,10 @@ pub mod step_verdict;
 pub mod rule_correction;
 // MEDULLA-DURABLE-KERNEL-R852.1/.2/.4 — health anomalies and correlated incidents.
 pub mod health_incident;
+// MEDULLA-DECISION-ENGINE-R701.1 — failure records, patterns and gap topics.
+pub mod failure_patterns;
 // MEDULLA-DURABLE-KERNEL-R700.1 — the retention-cleanup policy shape.
+pub mod retention_cleanup;
 pub mod retention_policy;
 // MEDULLA-DURABLE-KERNEL-R094.1 — hierarchical concept-ID grammar and path claims.
 pub mod concept_id;
@@ -231,6 +245,12 @@ pub mod lease_vocab;
 // refusal tests only, no outbox-append wiring yet).
 #[cfg(feature = "finance")]
 pub mod finance_event_envelope;
+// MEDULLA-FINANCE-PRIMITIVES-R751.750 — the strategy research record types.
+#[cfg(feature = "finance")]
+pub mod finance_research;
+// MEDULLA-FINANCE-PRIMITIVES-R904 — the wallet key trust record read by
+// `Method::WalletKeyTrustGet`.
+pub mod finance_wallet_trust;
 pub mod solve_scalar;
 // CONCEPT:MEDULLA-KG.compute.quantum-agent-api — the agent-facing quantum control-plane
 // wire op (`QuantumOp`), gated `quantum`. Lives here (not in `medulla-quantum-core`,
@@ -250,20 +270,30 @@ pub mod series_expr;
 // MEDULLA-SCM-R002 — the source changeset record and its structured trailers.
 pub mod source_changeset;
 pub mod source_symbol_edit;
+// MEDULLA-DECISION-ENGINE-R153.1 — source table of contents and line index.
+pub mod source_toc;
 #[cfg(feature = "statechart")]
 pub mod statechart;
 pub mod telemetry_derive;
+// MEDULLA-FEDERATED-QUERY-R607.1 — topology analytics result model.
 #[cfg(any(test, feature = "test-support"))]
 pub mod test_support;
+pub mod topology;
 pub mod types;
 // The opaque tenant-bound keyset cursor shared by every paged read
 // (`AgentComponent.Search`, `ListWorkItems`).
 pub mod tenant_cursor;
 // The three-bound keyset page shared by the tenant-bound native listings.
 pub mod keyset_page;
+// MEDULLA-DURABLE-KERNEL-R043.100.1 — graph change-feed types and snapshot digest.
+pub mod graph_change_feed;
 // MEDULLA-TYPED-PACKS-R802.1/R805.1 — governance record models: stewardship and
 // data products. Pure data and field validation; served wiring lands in later children.
 pub mod data_product;
+// MEDULLA-UNIFIED-DATA-PLANE-R651.1 — document delete request and receipt.
+pub mod document_ops;
+// MEDULLA-TYPED-PACKS-R801.1 — business glossary term model (SKOS projection).
+pub mod glossary;
 pub mod stewardship;
 // MEDULLA-UNIFIED-DATA-PLANE-R004 — bounded, policy-gated column-sampling budget
 // for deterministic schema inference.
@@ -301,3 +331,11 @@ pub use modality::{
 // representable. `MutationVersionScope` and `NON_GRAPH_SOURCE_VERSION` are therefore
 // not re-exported: they have no v1 meaning, and keeping an alias would be exactly the
 // compatibility seam RF-ADR-001 forbids.
+// MEDULLA-INGEST-WORKER-R001.1006: data-prep declaration model.
+pub mod data_prep_declaration;
+// MEDULLA-INGEST-WORKER-R605.1: drains, page checkpoints, graph routes, stage profiles.
+pub mod ingest_drain;
+// MEDULLA-ORCH-VOCAB-R009.700 — a durable run unit mirrored as a run-trace node.
+pub mod durable_unit;
+// MEDULLA-ORCH-VOCAB-R009.18.1 — the measured-or-unknown run observation window.
+pub mod run_observation;

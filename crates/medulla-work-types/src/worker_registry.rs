@@ -7,6 +7,17 @@ pub use grants::{granted_slots, WorkerCapacityRefusal, WorkerSizingInput, Worker
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 
+/// The served shard-writer width (MEDULLA-DURABLE-KERNEL-R077): the number of
+/// configured durable shard writers `k` for the verified tenant's graphs.
+/// `granted_slots` caps write-lane workers at this value.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct ShardWriterWidth {
+    pub tenant: String,
+    pub shard_writers: u32,
+}
+
 /// Worker-supplied capability facts. These do not grant scheduler capacity.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]

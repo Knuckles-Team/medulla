@@ -283,7 +283,13 @@ pub(super) fn eval_bool_geof(
     let local = &iri[crate::geosparql::GEOF_NS.len()..];
     let a = expr_str(ctx, args.first()?, sol)?;
     let b = expr_str(ctx, args.get(1)?, sol)?;
-    crate::geosparql::eval_relation(local, &a, &b)
+    match crate::geosparql::eval_relation_checked(local, &a, &b) {
+        Ok(verdict) => verdict,
+        Err(refusal) => {
+            ctx.refuse(refusal.to_coded());
+            None
+        }
+    }
 }
 
 /// String/term-valued SPARQL built-ins (CONCEPT:MEDULLA-KG.ontology.rich-filter): `STR`/`IRI`/`LANG`/`DATATYPE`,
@@ -672,6 +678,9 @@ pub(super) fn eval_str_geof(
     match local {
         "distance" => eval_str_geof_distance(ctx, args, sol),
         "buffer" => eval_str_geof_buffer(ctx, args, sol),
+        "envelope" => Some(Binding::Literal(crate::geosparql::eval_envelope(
+            &expr_str(ctx, args.first()?, sol)?,
+        )?)),
         _ => Some(Binding::Literal(bool_str(eval_bool_function(
             ctx, f, args, sol,
         )?))),

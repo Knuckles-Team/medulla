@@ -392,6 +392,7 @@ async fn nl_query_foreign_leg_is_owner_scoped() {
     let nl = |text: &str| Method::NlQuery {
         text: text.into(),
         graph: "__commons__".into(),
+        history: Vec::new(),
     };
     let a = dispatch_as(
         &local,

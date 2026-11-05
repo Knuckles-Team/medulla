@@ -59,8 +59,16 @@ method_results! {
     SourceIngestStatus(SourceIngestStatus) => Raw<SourceIngestStatusBody>;
     // MEDULLA-UNIFIED-DATA-PLANE-R651.7: chunk, vector and provenance counts.
     EnrichDocument(EnrichDocument) => Raw<medulla_source_types::source_ingestion::web_document::EnrichDocumentReceipt>;
+    // MEDULLA-MEDIA-VOCAB-R001.101.3 / .4 / .5: meeting transcript surface.
+    MeetingTranscriptRevision(MeetingTranscriptRevision) => Raw<medulla_types::meeting_transcript::MeetingTranscriptRevisionReceipt>;
+    MeetingSummaryContext(MeetingSummaryContext) => Raw<medulla_types::meeting_transcript::MeetingSummaryContext>;
+    MeetingSummaryCommit(MeetingSummaryCommit) => Raw<medulla_types::meeting_transcript::MeetingSummaryCommitReceipt>;
+    // MEDULLA-UNIFIED-DATA-PLANE-R651.3/.5: what one committed cascade deleted.
+    DocumentDelete(DocumentDelete) => Raw<medulla_types::document_ops::DocumentDeleteReceipt>;
     // EH-408 / EH-409: counts plus the id of every fact node written.
     TelemetryDerive(TelemetryDerive) => Raw<TelemetryDeriveReceipt>;
+    // MEDULLA-UNIFIED-DATA-PLANE-R702.3: edge, quarantine and replay counts.
+    LineageIngest(LineageIngest) => Raw<medulla_catalog_types::lineage::LineageIngestReceipt>;
     // `(node_id, weighted_similarity)` pairs, best first.
     SemanticSearch(SemanticSearch) => Raw<Vec<(String, f32)>>;
     Discover(Discover) => Json<Vec<DiscoverHit>>;

@@ -45,11 +45,32 @@ pub fn write_work_item_props(
     props: &mut serde_json::Map<String, serde_json::Value>,
     crypto: DurableCrypto<'_>,
 ) -> Result<(), String> {
+    use medulla_work_types::native_control::WORK_ITEM_LIFECYCLE_REVISION;
     use medulla_work_types::work_item_read::WORK_ITEM_ROW_REVISION;
     let revision = property_u64(props, WORK_ITEM_ROW_REVISION).saturating_add(1);
     props.insert(
         WORK_ITEM_ROW_REVISION.into(),
         serde_json::Value::from(revision),
+    );
+    // MEDULLA-DURABLE-KERNEL-R865: `lifecycle_revision` starts at 0 and rises by
+    // one on every state transition, written in the transition's transaction.
+    let prior_status = nodes
+        .get((graph, node_id))
+        .map_err(|e| e.to_string())?
+        .map(|stored| {
+            let bytes = crypto.unseal(stored.value())?;
+            decode_durable::<serde_json::Map<String, serde_json::Value>>(&bytes)
+                .map(|row| property_string(&row, "status").to_owned())
+        })
+        .transpose()?;
+    let transitioned = prior_status
+        .as_deref()
+        .is_some_and(|prior| prior != property_string(props, "status"));
+    let lifecycle =
+        property_u64(props, WORK_ITEM_LIFECYCLE_REVISION).saturating_add(u64::from(transitioned));
+    props.insert(
+        WORK_ITEM_LIFECYCLE_REVISION.into(),
+        serde_json::Value::from(lifecycle),
     );
     let bytes = rmp_serde::to_vec_named(props).map_err(|e| e.to_string())?;
     let sealed = crypto.seal(&bytes);
@@ -546,7 +567,8 @@ pub fn decode_meta_record(graph: &str, blob: &[u8]) -> Result<GraphMetaRecord, S
     };
     if record.schema_version != GRAPH_META_SCHEMA_VERSION {
         return Err(format!(
-            "graph metadata for {graph} has unsupported schema version {}",
+            "{}: graph metadata for {graph} has unsupported schema version {}",
+            medulla_types::contract::ServerErrorCode::GraphMetaVersionUnsupported.as_str(),
             record.schema_version
         ));
     }
@@ -637,11 +659,13 @@ impl<'de> serde::Deserialize<'de> for GraphMetaRecord {
                 .map_err(D::Error::custom)?,
             }),
             GraphMetaRecordWire::Current(value) => Err(D::Error::custom(format!(
-                "unsupported graph metadata schema version {}",
+                "{}: unsupported graph metadata schema version {}",
+                medulla_types::contract::ServerErrorCode::GraphMetaVersionUnsupported.as_str(),
                 value.schema_version
             ))),
             GraphMetaRecordWire::V2(value) => Err(D::Error::custom(format!(
-                "unsupported legacy graph metadata schema version {}",
+                "{}: unsupported legacy graph metadata schema version {}",
+                medulla_types::contract::ServerErrorCode::GraphMetaVersionUnsupported.as_str(),
                 value.schema_version
             ))),
         }

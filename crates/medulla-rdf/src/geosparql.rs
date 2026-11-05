@@ -73,6 +73,83 @@ pub fn geom_from_lexical(lexical: &str) -> Option<Geometry> {
     medulla_geo::parse_wkt(wkt).ok()
 }
 
+/// The one coordinate reference a `geo:wktLiteral` may name: `EPSG:4326`.
+pub const EPSG_4326: &str = "http://www.opengis.net/def/crs/EPSG/0/4326";
+
+/// A coded refusal of a spatial relation's operand (MEDULLA-FEDERATED-QUERY-R709.4).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum GeoRefusal {
+    /// The operand is not a parseable WKT geometry.
+    LiteralInvalid,
+    /// The operand names a coordinate reference other than `EPSG:4326`.
+    CrsUnsupported(String),
+}
+
+impl GeoRefusal {
+    /// The registered wire code of this refusal.
+    pub fn code(&self) -> medulla_types::contract::ServerErrorCode {
+        use medulla_types::contract::ServerErrorCode;
+        match self {
+            GeoRefusal::LiteralInvalid => ServerErrorCode::GeoLiteralInvalid,
+            GeoRefusal::CrsUnsupported(_) => ServerErrorCode::GeoCrsUnsupported,
+        }
+    }
+
+    /// The `CODE: detail` text the wire response splits into code and detail.
+    pub fn to_coded(&self) -> String {
+        let detail = match self {
+            GeoRefusal::LiteralInvalid => "operand is not a WKT geometry".to_string(),
+            GeoRefusal::CrsUnsupported(crs) => {
+                format!("coordinate reference {crs} is not {EPSG_4326}")
+            }
+        };
+        format!("{}: {detail}", self.code().as_str())
+    }
+}
+
+/// Parse a `geo:wktLiteral` operand of a spatial relation, refusing a coordinate
+/// reference other than `EPSG:4326` (absent means the default) and malformed WKT.
+/// An EWKT `SRID=<n>;` prefix is a coordinate reference too.
+pub fn geom_from_checked(lexical: &str) -> Result<Geometry, GeoRefusal> {
+    let trimmed = lexical.trim();
+    let wkt = match trimmed.strip_prefix('<') {
+        Some(rest) => {
+            let (crs, tail) = rest.split_once('>').ok_or(GeoRefusal::LiteralInvalid)?;
+            if crs.trim() != EPSG_4326 {
+                return Err(GeoRefusal::CrsUnsupported(crs.trim().to_string()));
+            }
+            tail.trim_start()
+        }
+        None => trimmed,
+    };
+    if wkt
+        .get(..5)
+        .is_some_and(|p| p.eq_ignore_ascii_case("SRID="))
+    {
+        let (srid, _) = wkt[5..].split_once(';').ok_or(GeoRefusal::LiteralInvalid)?;
+        if srid.trim() != "4326" {
+            return Err(GeoRefusal::CrsUnsupported(format!("SRID={}", srid.trim())));
+        }
+    }
+    medulla_geo::parse_wkt(wkt).map_err(|_| GeoRefusal::LiteralInvalid)
+}
+
+/// [`eval_relation`] with coded operand refusals: `Ok(None)` is an unknown function,
+/// `Err` a malformed literal or an unsupported coordinate reference
+/// (MEDULLA-FEDERATED-QUERY-R709.4).
+pub fn eval_relation_checked(
+    local: &str,
+    a_wkt: &str,
+    b_wkt: &str,
+) -> Result<Option<bool>, GeoRefusal> {
+    let Some((_, relation)) = SPATIAL_RELATIONS.iter().find(|(name, _)| *name == local) else {
+        return Ok(None);
+    };
+    let a = geom_from_checked(a_wkt)?;
+    let b = geom_from_checked(b_wkt)?;
+    Ok(Some(relation(&a, &b)))
+}
+
 /// Dispatch a boolean `geof:` spatial relation given its LOCAL name (the part after
 /// [`GEOF_NS`]) and the two operands' already-evaluated WKT lexical forms
 /// (CONCEPT:MEDULLA-KG.ontology.concept-10). Returns `None` for an unknown function or unparseable geometry —
@@ -189,6 +266,44 @@ pub fn eval_distance(a_wkt: &str, b_wkt: &str, units: &str) -> Option<f64> {
 pub fn eval_buffer(geom_wkt: &str, radius: f64, _units: &str) -> Option<String> {
     let g = geom_from_lexical(geom_wkt)?;
     Some(medulla_geo::to_wkt(&algebra::buffer(&g, radius)))
+}
+
+/// `geof:envelope(geom)`: the axis-aligned bounding box of `geom` as a WKT `POLYGON`
+/// lexical. The box comes from `medulla-geo`'s `Geometry::bbox`; `None` for an unparseable
+/// or empty geometry, which fails the expression SAFE.
+pub fn eval_envelope(geom_wkt: &str) -> Option<String> {
+    let b = geom_from_lexical(geom_wkt)?.bbox()?;
+    Some(format!(
+        "POLYGON(({minx} {miny}, {maxx} {miny}, {maxx} {maxy}, {minx} {maxy}, {minx} {miny}))",
+        minx = b.minx,
+        miny = b.miny,
+        maxx = b.maxx,
+        maxy = b.maxy,
+    ))
+}
+
+/// The GeoSPARQL query functions this module serves under [`GEOF_NS`]: the eight
+/// Simple-Features relations (dispatched by [`eval_relation`]) and the three value
+/// functions `distance`, `buffer` and `envelope`. The `F::Custom` hook in
+/// `sparql/expression.rs` routes each `geof:<name>` call here.
+pub const GEOF_FUNCTIONS: [&str; 11] = [
+    "sfEquals",
+    "sfDisjoint",
+    "sfIntersects",
+    "sfTouches",
+    "sfWithin",
+    "sfContains",
+    "sfOverlaps",
+    "sfCrosses",
+    "distance",
+    "buffer",
+    "envelope",
+];
+
+/// Whether `local` (the part after [`GEOF_NS`]) names a registered GeoSPARQL function
+/// from [`GEOF_FUNCTIONS`].
+pub fn is_registered_function(local: &str) -> bool {
+    GEOF_FUNCTIONS.contains(&local)
 }
 
 /// Whether a `geof:distance`/`geof:buffer` UOM IRI denotes metres (great-circle) rather

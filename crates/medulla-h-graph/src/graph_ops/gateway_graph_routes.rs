@@ -17,6 +17,7 @@ enum Route {
     #[cfg(any(feature = "shacl", feature = "reasoning"))]
     Policy,
     Analytics,
+    FinanceRecords,
     Other,
 }
 
@@ -131,6 +132,10 @@ fn is_analytics(method: &Method) -> bool {
     )
 }
 
+fn is_finance_record(method: &Method) -> bool {
+    matches!(method, Method::FinanceRecordPut { .. })
+}
+
 /// A predicate selecting the methods one gateway route owns.
 type RouteMatcher = fn(&Method) -> bool;
 
@@ -150,6 +155,7 @@ const ROUTE_MATCHERS: &[(RouteMatcher, Route)] = &[
     #[cfg(any(feature = "shacl", feature = "reasoning"))]
     (is_policy, Route::Policy),
     (is_analytics, Route::Analytics),
+    (is_finance_record, Route::FinanceRecords),
 ];
 
 fn route_for(method: &Method) -> Route {
@@ -167,7 +173,11 @@ fn route_handler(route: Route) -> RouteHandler {
         | Route::Bus
         | Route::Scene
         | Route::Trajectory => RouteHandler::Core,
-        Route::Edges | Route::Lifecycle | Route::Import | Route::Analytics => RouteHandler::Admin,
+        Route::Edges
+        | Route::Lifecycle
+        | Route::Import
+        | Route::Analytics
+        | Route::FinanceRecords => RouteHandler::Admin,
         #[cfg(any(feature = "shacl", feature = "reasoning"))]
         Route::Policy => RouteHandler::Admin,
         Route::Other => RouteHandler::None,
@@ -214,9 +224,10 @@ async fn try_handle_admin(
     method: &Method,
     route: Route,
 ) -> Option<Response> {
-    // Only the policy route (shacl/reasoning builds) reads the state and tenant.
+    // Only the policy route (shacl/reasoning builds) reads the state; the
+    // finance record route reads the tenant.
     #[cfg(not(any(feature = "shacl", feature = "reasoning")))]
-    let _ = (state, tenant_id);
+    let _ = state;
     match route {
         Route::Edges => try_handle_edges(ctx, plan, method).await,
         Route::Lifecycle => try_handle_lifecycle(ctx, plan, method).await,
@@ -224,6 +235,9 @@ async fn try_handle_admin(
         #[cfg(any(feature = "shacl", feature = "reasoning"))]
         Route::Policy => try_handle_policy(state, tenant_id, ctx, plan, method).await,
         Route::Analytics => try_handle_analytics(ctx, plan, method).await,
+        Route::FinanceRecords => {
+            super::super::finance_records::handle_record(ctx, tenant_id, method).await
+        }
         _ => None,
     }
 }

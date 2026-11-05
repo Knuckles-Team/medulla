@@ -129,6 +129,87 @@ pub struct DistributionShift {
     pub shifted: bool,
 }
 
+/// A price-action candlestick pattern (MEDULLA-FINANCE-PRIMITIVES-R750.750).
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(rename_all = "snake_case")]
+pub enum PatternKind {
+    /// Small body with a long lower shadow.
+    Hammer,
+    /// Small body with a long upper shadow.
+    ShootingStar,
+    /// A bullish bar that engulfs the prior bearish bar.
+    BullishEngulfing,
+    /// A bearish bar that engulfs the prior bullish bar.
+    BearishEngulfing,
+    /// A bar whose body is a small fraction of its range.
+    Doji,
+    /// A bar whose range lies inside the prior bar's range.
+    InsideBar,
+}
+
+/// One pattern found at a bar index.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct PatternMatch {
+    /// Bar index the pattern ends at.
+    pub index: usize,
+    /// The pattern.
+    pub kind: PatternKind,
+    /// Strength in `[0, 1]`.
+    pub strength: f64,
+}
+
+/// One group's portfolio and benchmark weight and return.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct GroupInput {
+    /// Group name.
+    pub group: String,
+    /// Portfolio weight.
+    pub w_p: f64,
+    /// Benchmark weight.
+    pub w_b: f64,
+    /// Portfolio return.
+    pub r_p: f64,
+    /// Benchmark return.
+    pub r_b: f64,
+}
+
+/// The Brinson-Fachler effects of one group.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct GroupEffect {
+    /// Group name.
+    pub group: String,
+    /// Allocation effect.
+    pub allocation: f64,
+    /// Selection effect.
+    pub selection: f64,
+    /// Interaction effect.
+    pub interaction: f64,
+}
+
+/// Brinson-Fachler profit attribution (MEDULLA-FINANCE-PRIMITIVES-R750.750).
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct AttributionBreakdown {
+    /// Per-group effects in input order.
+    pub groups: Vec<GroupEffect>,
+    /// Total allocation effect.
+    pub allocation: f64,
+    /// Total selection effect.
+    pub selection: f64,
+    /// Total interaction effect.
+    pub interaction: f64,
+    /// Portfolio return minus benchmark return.
+    pub active_return: f64,
+}
+
 /// Forensic-accounting scores for one fiscal year against the prior one.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
@@ -340,4 +421,74 @@ pub struct FactorRecordResult {
     pub information_ratio: f64,
     pub rank: u32,
     pub input_provenance_keys: Vec<String>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // spec: MEDULLA-FINANCE-PRIMITIVES-R750.750
+    #[test]
+    fn research_types_round_trip_and_refuse_unknown_fields() {
+        let m = PatternMatch {
+            index: 3,
+            kind: PatternKind::BullishEngulfing,
+            strength: 0.5,
+        };
+        let json = serde_json::to_string(&m).unwrap();
+        assert!(json.contains("\"bullish_engulfing\""));
+        assert_eq!(serde_json::from_str::<PatternMatch>(&json).unwrap(), m);
+        for kind in [
+            "hammer",
+            "shooting_star",
+            "bullish_engulfing",
+            "bearish_engulfing",
+            "doji",
+            "inside_bar",
+        ] {
+            let k: PatternKind = serde_json::from_value(serde_json::json!(kind)).unwrap();
+            assert_eq!(serde_json::to_value(k).unwrap(), serde_json::json!(kind));
+        }
+        assert!(serde_json::from_value::<PatternKind>(serde_json::json!("marubozu")).is_err());
+        assert!(serde_json::from_str::<PatternMatch>(
+            r#"{"index":0,"kind":"doji","strength":1.0,"extra":1}"#
+        )
+        .is_err());
+
+        let g = GroupInput {
+            group: "tech".into(),
+            w_p: 0.6,
+            w_b: 0.5,
+            r_p: 0.02,
+            r_b: 0.01,
+        };
+        let json = serde_json::to_string(&g).unwrap();
+        assert_eq!(serde_json::from_str::<GroupInput>(&json).unwrap(), g);
+        assert!(serde_json::from_str::<GroupInput>(&json.replace('}', ",\"x\":1}")).is_err());
+
+        let b = AttributionBreakdown {
+            groups: vec![GroupEffect {
+                group: "tech".into(),
+                allocation: 0.1,
+                selection: 0.2,
+                interaction: 0.3,
+            }],
+            allocation: 0.1,
+            selection: 0.2,
+            interaction: 0.3,
+            active_return: 0.6,
+        };
+        let json = serde_json::to_string(&b).unwrap();
+        assert_eq!(
+            serde_json::from_str::<AttributionBreakdown>(&json).unwrap(),
+            b
+        );
+        assert!(
+            serde_json::from_str::<AttributionBreakdown>(&json.replace('}', ",\"x\":1}")).is_err()
+        );
+        assert!(serde_json::from_str::<GroupEffect>(
+            r#"{"group":"a","allocation":0,"selection":0,"interaction":0,"z":1}"#
+        )
+        .is_err());
+    }
 }
