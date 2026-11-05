@@ -195,6 +195,8 @@ pub mod workload_class;
 pub mod step_verdict;
 // MEDULLA-DURABLE-KERNEL-R088.1 — rule-output correction with two-principal approval.
 pub mod rule_correction;
+// MEDULLA-DECISION-ENGINE-R702.1 — Learn-stage correction records and effects.
+pub mod correction;
 // MEDULLA-DURABLE-KERNEL-R852.1/.2/.4 — health anomalies and correlated incidents.
 pub mod health_incident;
 // MEDULLA-DURABLE-KERNEL-R700.1 — the retention-cleanup policy shape.
