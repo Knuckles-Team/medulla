@@ -1342,3 +1342,8 @@ bfo:0000001 a owl:Class ;
     rdfs:comment "A named quantitative measure with a defined way of computing it, reported as values over time or over a run (an evaluation metric, a backtest metric, a service metric)." ;
     skos:altLabel "Evaluation Metric", "Backtest Metric", "Measure" ;
     rdfs:subClassOf bfo:0000031 .
+
+:ValueType a owl:Class ;
+    rdfs:label "Value Type" ;
+    rdfs:comment "A named constrained datatype (XSD base plus pattern, range, length and enumeration) that object-type properties use; compiled to SHACL property constraints. MEDULLA-TYPED-PACKS-R650.1." ;
+    rdfs:subClassOf bfo:0000031 .
