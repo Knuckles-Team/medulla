@@ -20,6 +20,15 @@ fn default_memory_per_worker_bytes() -> u64 {
     DEFAULT_MEMORY_PER_WORKER_BYTES
 }
 
+/// Default bound on the containers of one architecture view (MEDULLA-CQ-ORCH-R010.2).
+pub const DEFAULT_ARCHITECTURE_VIEW_MAX_CONTAINERS: u32 = 512;
+/// Accepted range of `architecture_view_max_containers`.
+pub const ARCHITECTURE_VIEW_MAX_CONTAINERS_RANGE: std::ops::RangeInclusive<u32> = 16..=4096;
+
+fn default_architecture_view_max_containers() -> u32 {
+    DEFAULT_ARCHITECTURE_VIEW_MAX_CONTAINERS
+}
+
 /// Engine-owned policy. Pool size and queue bound must be configured explicitly.
 /// Zero workers, zero CPU share, or zero queue depth can disable that resource;
 /// no implicit minimum may override those limits. Lane IDs are engine-defined
@@ -36,6 +45,9 @@ pub struct SchedulerConfig {
     #[serde(default = "default_memory_per_worker_bytes")]
     pub memory_per_worker_bytes: u64,
     pub max_queue_depth: u64,
+    /// Above this many containers an architecture view is refused as too large.
+    #[serde(default = "default_architecture_view_max_containers")]
+    pub architecture_view_max_containers: u32,
 }
 
 /// Invalid scheduler policy, refused before it can govern admission.
@@ -44,6 +56,7 @@ pub enum InvalidSchedulerConfig {
     BlankLane,
     CoresPerMilleOutOfRange,
     ZeroMemoryPerWorker,
+    ArchitectureViewMaxContainersOutOfRange,
     OversubscribedFloors { total_workers: u32 },
 }
 
@@ -57,6 +70,10 @@ impl std::fmt::Display for InvalidSchedulerConfig {
             Self::ZeroMemoryPerWorker => {
                 write!(f, "scheduler memory_per_worker_bytes must be nonzero")
             }
+            Self::ArchitectureViewMaxContainersOutOfRange => write!(
+                f,
+                "scheduler architecture_view_max_containers must be in [16, 4096]"
+            ),
             Self::OversubscribedFloors { total_workers } => {
                 write!(
                     f,
@@ -77,6 +94,10 @@ impl SchedulerConfig {
         }
         if self.memory_per_worker_bytes == 0 {
             return Err(InvalidSchedulerConfig::ZeroMemoryPerWorker);
+        }
+        if !ARCHITECTURE_VIEW_MAX_CONTAINERS_RANGE.contains(&self.architecture_view_max_containers)
+        {
+            return Err(InvalidSchedulerConfig::ArchitectureViewMaxContainersOutOfRange);
         }
         let mut available = self.total_workers;
         for (lane, floor) in &self.lane_floors {
