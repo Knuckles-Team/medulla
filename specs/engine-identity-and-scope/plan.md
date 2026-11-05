@@ -25,6 +25,8 @@ request -> admission (crates/medulla-server-api/src/oidc.rs, crates/medulla-serv
 - **Constraints**: A refusal changes no state. Every authority comes from the verified request context, never from a request field. No version suffix in a name.
 - **Scale/Scope**: 63 leaf rows over 7 user stories, 13 `FR-` labels and 5 `SC-` labels.
 
+**Knob convention.** An engine knob named `knob x.y` in this spec's rows is a typed field of the server configuration, read from the command line or from the environment variable `MEDULLA_<NAME>` (the dotted name upper-cased, dots as underscores) and bounds-checked at startup: a value outside the stated range refuses startup with the knob name. Decision knobs are the exception and live only in the `MEDULLA-DECISION-ENGINE-R179` registry. Rows do not restate this.
+
 ## Constitution Check
 
 - **R-I. The engine is native Rust and the only fact store**: pass. Identity, scope and metadata state live in the engine; Arbora composes the served operations.
