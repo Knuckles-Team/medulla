@@ -1402,6 +1402,7 @@ components:
       - "crates/medulla-document/src/header.rs"
       - "crates/medulla-document/src/html.rs"
       - "crates/medulla-document/src/runtime.rs"
+      - "crates/medulla-document/tests"
       - "crates/medulla-geo/src/algebra.rs"
       - "crates/medulla-geo/src/contract.rs"
       - "crates/medulla-geo/src/crs.rs"
