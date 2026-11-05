@@ -31,8 +31,23 @@ This file describes the ontology classes and the Rust types that the rows of thi
 ### MediaAttachment and MediaDerivation
 
 - `MediaAttachment{blob_digest, mime, byte_len, derivation_ids}` in `crates/medulla-work-types/src/memory.rs`, row `MEDULLA-MEDIA-VOCAB-R650.1`; the node class `:MediaDerivation` joins media-v1.ttl.
-- Relation: a `MemoryRecord` cites the blob through its attachments; derivations are separate nodes linked by `:derivedFrom`.
+- Relation: a `MemoryRecord` cites the blob through its attachments; derivations are separate nodes linked by `prov:wasDerivedFrom`.
 
 ### Refusal tables
 
 - Each new family declares a `REFUSALS` const (`meeting_transcript.rs`, `bookmark_query.rs`, `media_tag.rs`, `paper_ingest.rs` in `crates/medulla-types/src/`, and the `memory` family in `memory.rs`), collected by the uniqueness test of `MEDULLA-DECISION-ENGINE-R010.100.1`.
+
+### Term decisions
+
+A term is reused from an open vocabulary when an equivalent exists; otherwise it is minted in `media-v1.ttl` with a `skos:closeMatch` or `skos:exactMatch` mapping where one exists, and every new class extends a core class.
+
+| Term | Rows | Decision |
+|---|---|---|
+| `:MediaTag` | R001.100.1 | mint; `skos:closeMatch oa:Annotation` |
+| `:taggedMedia` | R001.100.1 | mint; `skos:closeMatch oa:hasTarget` |
+| other `:MediaTag` properties | R001.100.1 | mint; no equivalent |
+| `:MediaDerivation` | R650.1 | mint; `skos:closeMatch prov:Derivation` |
+| derivation lineage link | R650.1 | reuse `prov:wasDerivedFrom`; nothing minted |
+| `:engagementMetricName`, `:engagementMetricValue` | R651 | mint; no equivalent |
+| `:announcesStream` | R652 | mint; no equivalent |
+| `storage_time`, `event_time`, `narrative_time` | R654 | mint on `:TranscriptSegment`; no equivalent |

@@ -378,9 +378,9 @@ Vocabulary and shapes land with `cargo test -p medulla-core` ontology load and S
 
 Connector ontologies already exist and may drift from the core vocabulary: mitigated by the .1 mapping tests and the collision test. Several questions are BLOCKED on connector operations; Medulla ships abstentions first so the questions fail honestly.
 
-### Proposed terms awaiting owner review
+### Term decisions
 
-The rows reuse existing terms. These names appear in rows but are not yet in an ontology file, so each is a proposed term: `:MediaTag` and its ten properties (R001.100.1), `:MediaDerivation` and its three properties (R650.1), `:engagementMetricName` and `:engagementMetricValue` (R651), `:announcesStream` (R652), the three transcript clock properties (R654) and the audio-transcriber and searxng additions of rows R029 and R031.
+The rows reuse existing terms. Terms that no ontology file declares are decided as follows. `prov:wasDerivedFrom` is reused for the derivation lineage link. Everything else is minted in `media-v1.ttl`, every new class extending a core class: `:MediaTag` and its ten properties (R001.100.1; `skos:closeMatch oa:Annotation`, `:taggedMedia` `skos:closeMatch oa:hasTarget`), `:MediaDerivation` with `:derivationKind` and `:derivationText` (R650.1; `skos:closeMatch prov:Derivation`), `:engagementMetricName` and `:engagementMetricValue` (R651), `:announcesStream` (R652) and the three transcript clock properties (R654), none of which has an open-vocabulary equivalent. Rows R029 and R031 are cross-repo operations, not terms. The mapping table is in [data-model.md](data-model.md).
 
 ## Phase 2: Task approach
 
