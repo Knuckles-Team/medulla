@@ -33,7 +33,7 @@
 //! Deferred follow-ups: GML geometry literals (`geo:gmlLiteral`) — see the code note on
 //! [`geom_from_lexical`].
 
-use medulla_geo::{Geometry, algebra, centroid, geodesic, predicates};
+use medulla_geo::{algebra, centroid, geodesic, predicates, Geometry};
 
 /// The GeoSPARQL **ontology** namespace (classes/properties: `geo:hasGeometry`,
 /// `geo:asWKT`, `geo:wktLiteral`, …). (CONCEPT:MEDULLA-KG.ontology.concept-10)
