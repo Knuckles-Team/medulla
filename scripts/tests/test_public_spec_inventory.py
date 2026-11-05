@@ -63,7 +63,8 @@ def test_public_connector_names_are_not_private_references(tmp_path: Path) -> No
         "GitLab pipelines use the gitlab connector and gitlab-mcp access contract.\n"
         "The product is GitLab. GitLab: a public connector competency.\n"
         "Case file `tests/connector_competency/cases/gitlab.json` and recording\n"
-        "`tests/connector_competency/recordings/gitlab/single.json` are paths.\n",
+        "`tests/connector_competency/recordings/gitlab/single.json` are paths.\n"
+        "Question ids `test_case[gitlab.q1]` and gitlab.q2 are not hosts.\n",
         encoding="utf-8",
     )
     assert _reference_errors(tmp_path, path) == []
@@ -99,6 +100,16 @@ def test_private_reference_protection_is_preserved(
         "private or local reference" in issue
         for issue in _reference_errors(tmp_path, path)
     )
+
+
+def test_link_text_starting_with_id_is_not_a_placeholder(tmp_path: Path) -> None:
+    from scripts.check_public_specs import PLACEHOLDER
+
+    assert not PLACEHOLDER.search(
+        "Contract: [identity-mode-and-credentials.md](contracts/x.md)"
+    )
+    assert PLACEHOLDER.search("[ID] of the requirement")
+    assert PLACEHOLDER.search("[Describe the behavior]")
 
 
 @pytest.mark.spec("MEDULLA-DURABLE-KERNEL-R011.2")
