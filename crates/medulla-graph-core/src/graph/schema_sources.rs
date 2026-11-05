@@ -362,7 +362,7 @@ fn validate_core_source<'a>(
         _ => {
             return Err(format!(
                 "core schema source '{source_id}' origin is invalid"
-            ))
+            ));
         }
     }
     source.validate()?;
@@ -1300,10 +1300,12 @@ mod tests {
         )
         .unwrap();
         let mut sources = GraphSchemaSources::default();
-        assert!(sources
-            .attach_dynamic("admin:oversized".to_string(), source)
-            .unwrap_err()
-            .contains("exceeds"));
+        assert!(
+            sources
+                .attach_dynamic("admin:oversized".to_string(), source)
+                .unwrap_err()
+                .contains("exceeds")
+        );
         assert!(sources.dynamic.is_empty());
     }
 
@@ -1364,12 +1366,16 @@ mod tests {
             0,
         )
         .unwrap();
-        assert!(sources
-            .attach_dynamic("core:forged@1".to_string(), core)
-            .is_err());
-        assert!(sources
-            .attach_dynamic("pack:wrong".to_string(), admin_source("wrong", 0))
-            .is_err());
+        assert!(
+            sources
+                .attach_dynamic("core:forged@1".to_string(), core)
+                .is_err()
+        );
+        assert!(
+            sources
+                .attach_dynamic("pack:wrong".to_string(), admin_source("wrong", 0))
+                .is_err()
+        );
         let mismatched_pack = GraphSchemaSource::new(
             SchemaSourceOrigin::Pack {
                 connector: "actual".to_string(),
@@ -1380,12 +1386,16 @@ mod tests {
             0,
         )
         .unwrap();
-        assert!(sources
-            .attach_dynamic("pack:claimed".to_string(), mismatched_pack)
-            .is_err());
-        assert!(sources
-            .attach_dynamic("admin:claimed".to_string(), admin_source("actual", 0))
-            .is_err());
+        assert!(
+            sources
+                .attach_dynamic("pack:claimed".to_string(), mismatched_pack)
+                .is_err()
+        );
+        assert!(
+            sources
+                .attach_dynamic("admin:claimed".to_string(), admin_source("actual", 0))
+                .is_err()
+        );
         assert!(sources.dynamic.is_empty());
     }
 
@@ -1418,16 +1428,22 @@ mod tests {
         let mut sources = GraphSchemaSources::default();
         let ontology_a = "@prefix owl: <http://www.w3.org/2002/07/owl#> . # a";
         let ontology_b = "@prefix owl: <http://www.w3.org/2002/07/owl#> . # b";
-        assert!(sources
-            .attach_dynamic("pack:github".to_string(), pack("r2", ontology_a))
-            .unwrap());
-        assert!(!sources
-            .attach_dynamic("pack:github".to_string(), pack("r2", ontology_a))
-            .unwrap());
-        assert!(sources
-            .attach_dynamic("pack:github".to_string(), pack("r1", ontology_b))
-            .unwrap_err()
-            .contains("SCHEMA_SOURCE_REGRESSION"));
+        assert!(
+            sources
+                .attach_dynamic("pack:github".to_string(), pack("r2", ontology_a))
+                .unwrap()
+        );
+        assert!(
+            !sources
+                .attach_dynamic("pack:github".to_string(), pack("r2", ontology_a))
+                .unwrap()
+        );
+        assert!(
+            sources
+                .attach_dynamic("pack:github".to_string(), pack("r1", ontology_b))
+                .unwrap_err()
+                .contains("SCHEMA_SOURCE_REGRESSION")
+        );
         let numeric_pack = |record_id: &str, document: &'static str| {
             GraphSchemaSource::new(
                 SchemaSourceOrigin::Pack {
@@ -1440,28 +1456,38 @@ mod tests {
             )
             .unwrap()
         };
-        assert!(sources
-            .attach_dynamic(
-                "pack:numeric".to_string(),
-                numeric_pack("pack:numeric:2:aaaa", ontology_a),
-            )
-            .unwrap());
-        assert!(sources
-            .attach_dynamic(
-                "pack:numeric".to_string(),
-                numeric_pack("pack:numeric:10:bbbb", ontology_b),
-            )
-            .unwrap());
-        assert!(sources
-            .attach_dynamic("ingest:cmdb".to_string(), ingest(2, ontology_a))
-            .unwrap());
-        assert!(sources
-            .attach_dynamic("ingest:cmdb".to_string(), ingest(1, ontology_b))
-            .unwrap_err()
-            .contains("SCHEMA_SOURCE_REGRESSION"));
-        assert!(sources
-            .attach_dynamic("ingest:cmdb".to_string(), ingest(3, ontology_b))
-            .unwrap());
+        assert!(
+            sources
+                .attach_dynamic(
+                    "pack:numeric".to_string(),
+                    numeric_pack("pack:numeric:2:aaaa", ontology_a),
+                )
+                .unwrap()
+        );
+        assert!(
+            sources
+                .attach_dynamic(
+                    "pack:numeric".to_string(),
+                    numeric_pack("pack:numeric:10:bbbb", ontology_b),
+                )
+                .unwrap()
+        );
+        assert!(
+            sources
+                .attach_dynamic("ingest:cmdb".to_string(), ingest(2, ontology_a))
+                .unwrap()
+        );
+        assert!(
+            sources
+                .attach_dynamic("ingest:cmdb".to_string(), ingest(1, ontology_b))
+                .unwrap_err()
+                .contains("SCHEMA_SOURCE_REGRESSION")
+        );
+        assert!(
+            sources
+                .attach_dynamic("ingest:cmdb".to_string(), ingest(3, ontology_b))
+                .unwrap()
+        );
     }
 
     #[test]
@@ -1480,37 +1506,45 @@ mod tests {
         };
         let mut sources = GraphSchemaSources::default();
         let ontology = "@prefix owl: <http://www.w3.org/2002/07/owl#> .";
-        assert!(sources
-            .attach_dynamic(
-                "pack:graph-os".to_string(),
-                pack("pack:graph-os:1:aaaa", Some(ontology)),
-            )
-            .unwrap());
-        assert!(sources
-            .attach_dynamic(
-                "pack:graph-os".to_string(),
-                pack("pack:graph-os:2:bbbb", None),
-            )
-            .unwrap());
+        assert!(
+            sources
+                .attach_dynamic(
+                    "pack:graph-os".to_string(),
+                    pack("pack:graph-os:1:aaaa", Some(ontology)),
+                )
+                .unwrap()
+        );
+        assert!(
+            sources
+                .attach_dynamic(
+                    "pack:graph-os".to_string(),
+                    pack("pack:graph-os:2:bbbb", None),
+                )
+                .unwrap()
+        );
         let tombstone = sources.dynamic.get("pack:graph-os").unwrap();
         assert!(tombstone.shapes_ttl.is_none() && tombstone.ontology_ttl.is_none());
-        assert!(sources
-            .attach_dynamic(
-                "pack:graph-os".to_string(),
-                pack("pack:graph-os:1:cccc", Some(ontology)),
-            )
-            .unwrap_err()
-            .contains("SCHEMA_SOURCE_REGRESSION"));
+        assert!(
+            sources
+                .attach_dynamic(
+                    "pack:graph-os".to_string(),
+                    pack("pack:graph-os:1:cccc", Some(ontology)),
+                )
+                .unwrap_err()
+                .contains("SCHEMA_SOURCE_REGRESSION")
+        );
     }
 
     #[test]
     fn core_catalog_cannot_be_partially_installed() {
         let mut sources = GraphSchemaSources::default();
         sources.core.pop_first();
-        assert!(sources
-            .validate()
-            .unwrap_err()
-            .contains("immutable catalog"));
+        assert!(
+            sources
+                .validate()
+                .unwrap_err()
+                .contains("immutable catalog")
+        );
     }
 
     #[test]
