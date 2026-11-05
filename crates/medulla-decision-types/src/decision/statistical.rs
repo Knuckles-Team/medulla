@@ -14,6 +14,7 @@ pub mod enrichment_schedule;
 pub mod errors;
 pub mod execution_routing;
 pub mod features;
+pub mod grounded_eval;
 pub mod harness_config;
 pub mod head;
 pub mod ingestion_lane;
