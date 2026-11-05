@@ -261,8 +261,10 @@ pub mod source_symbol_edit;
 #[cfg(feature = "statechart")]
 pub mod statechart;
 pub mod telemetry_derive;
+// MEDULLA-FEDERATED-QUERY-R607.1 — topology analytics result model.
 #[cfg(any(test, feature = "test-support"))]
 pub mod test_support;
+pub mod topology;
 pub mod types;
 // The opaque tenant-bound keyset cursor shared by every paged read
 // (`AgentComponent.Search`, `ListWorkItems`).
