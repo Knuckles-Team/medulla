@@ -444,3 +444,15 @@ def test_anonymous_connector_sweep_projects_committed_pack(tmp_path):
 
     with server(tmp_path) as sock:
         asyncio.run(exercise(sock))
+
+
+@pytest.mark.spec("MEDULLA-IDENTITY-R003.2")
+def test_oversize_authority_metadata_refuses(tmp_path):
+    body = json.dumps({"idempotency_key": "bounded-key"}, separators=(",", ":"))
+    at_bound = body + " " * (2048 - len(body))
+    assert len(at_bound.encode()) == 2048
+    with server(tmp_path) as sock:
+        ok(rpc(sock, "Ping", token="anon1." + at_bound))
+        refused = rpc(sock, "Ping", token="anon1." + at_bound + " ")
+        assert refused.get("error"), refused
+        assert "ACCESS_DENIED" in str(refused.get("error")), refused

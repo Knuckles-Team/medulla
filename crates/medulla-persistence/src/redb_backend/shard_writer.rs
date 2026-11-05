@@ -153,6 +153,9 @@ pub struct ShardWriter {
     /// warm graph never re-binds.
     pub(super) shard: Weak<Shard>,
     pub tx: SyncSender<Cmd>,
+    /// Longest a durable write waits for room in `tx` before it is refused with
+    /// `COMMIT_QUEUE_FULL` (MEDULLA-ENGINE-PARITY-R001.1); resolved once at open.
+    pub(super) enqueue_timeout: Duration,
     /// Group-commit batch-size / linger counters (CONCEPT:MEDULLA-KG.backend.adaptive-linger-coalesce), per shard.
     pub stats: Arc<RedbCommitStats>,
     /// Value-blob cipher for snapshot reads off the writer (CONCEPT:MEDULLA-KG.storage.snapshot-read-off-writer). The same
@@ -353,6 +356,7 @@ impl ShardWriter {
             }
         }
         let (tx, rx) = sync_channel::<Cmd>(capacity.max(1));
+        let enqueue_timeout = group_commit.enqueue_timeout;
         // Adaptive group-commit micro-linger config + observability (CONCEPT:MEDULLA-KG.backend.adaptive-linger-coalesce).
         // Resolved once by the backend open path (Configuration discipline); the
         // writer thread owns the supplied config and a clone of the stats Arc so
@@ -386,6 +390,7 @@ impl ShardWriter {
             db_path,
             shard: shard_weak,
             tx,
+            enqueue_timeout,
             stats,
             #[cfg(feature = "security")]
             cipher: cipher_for_reads,
@@ -469,21 +474,95 @@ impl ShardWriter {
         .map_err(|error| format!("redb snapshot read join error: {error}"))?
     }
 
-    /// Enqueue one writer command with a blocking send on Tokio's blocking
-    /// pool: a saturated writer propagates backpressure and never drops it.
+    /// A clonable handle for a bounded blocking send into this shard's writer
+    /// channel (MEDULLA-ENGINE-PARITY-R001.2). It carries the shard's enqueue
+    /// timeout and its stats so a send that waits too long is counted and refused.
+    pub(super) fn deadline_sender(&self) -> DeadlineSender {
+        DeadlineSender {
+            tx: self.tx.clone(),
+            timeout: self.enqueue_timeout,
+            stats: self.stats.clone(),
+        }
+    }
+
+    /// Enqueue one writer command with a bounded blocking send on Tokio's
+    /// blocking pool: a saturated writer propagates backpressure for at most
+    /// `enqueue_timeout`, then refuses with `COMMIT_QUEUE_FULL` and enqueues
+    /// nothing. An enqueued command is never dropped.
     pub(super) async fn send_off_reactor(
         &self,
         hold: RoutingHold,
         cmd: Cmd,
         what: &str,
     ) -> Result<(), String> {
-        let tx = self.tx.clone();
+        let sender = self.deadline_sender();
         tokio::task::spawn_blocking(move || {
             let _hold = hold;
-            tx.send(cmd).map_err(|_| ())
+            sender.send(cmd)
         })
         .await
         .map_err(|error| format!("{what} join error: {error}"))?
-        .map_err(|_| "redb writer thread is gone".to_string())
+    }
+}
+
+/// Why [`send_with_deadline`] did not enqueue.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum DeadlineSendError {
+    /// The channel stayed full for the whole timeout.
+    Full,
+    /// The writer thread is gone.
+    Gone,
+}
+
+/// Enqueue `cmd` into the bounded writer channel, waiting at most `timeout` for
+/// room. On `Full` nothing was enqueued. Must run on the blocking pool.
+pub(super) fn send_with_deadline(
+    tx: &SyncSender<Cmd>,
+    cmd: Cmd,
+    timeout: Duration,
+) -> Result<(), DeadlineSendError> {
+    use std::sync::mpsc::TrySendError;
+    let deadline = std::time::Instant::now() + timeout;
+    let mut pending = cmd;
+    let mut backoff = Duration::from_micros(20);
+    loop {
+        match tx.try_send(pending) {
+            Ok(()) => return Ok(()),
+            Err(TrySendError::Disconnected(_)) => return Err(DeadlineSendError::Gone),
+            Err(TrySendError::Full(back)) => {
+                let now = std::time::Instant::now();
+                if now >= deadline {
+                    return Err(DeadlineSendError::Full);
+                }
+                pending = back;
+                std::thread::sleep(backoff.min(deadline - now));
+                backoff = (backoff * 2).min(Duration::from_millis(2));
+            }
+        }
+    }
+}
+
+/// A shard's writer channel plus its enqueue timeout and counters.
+pub(super) struct DeadlineSender {
+    tx: SyncSender<Cmd>,
+    timeout: Duration,
+    stats: Arc<RedbCommitStats>,
+}
+
+impl DeadlineSender {
+    /// Bounded blocking send; maps a full queue to `COMMIT_QUEUE_FULL` and counts
+    /// it in `refused_full`.
+    pub(super) fn send(&self, cmd: Cmd) -> Result<(), String> {
+        send_with_deadline(&self.tx, cmd, self.timeout).map_err(|error| match error {
+            DeadlineSendError::Full => {
+                self.stats.record_refused_full();
+                format!(
+                    "{}: redb commit queue stayed full for {} ms; nothing was enqueued, retry with backoff",
+                    medulla_types::contract::ServerErrorCode::CommitQueueFull.as_str(),
+                    self.timeout.as_millis()
+                )
+            }
+            DeadlineSendError::Gone => "redb writer thread is gone".to_string(),
+        })
     }
 }

@@ -10,11 +10,17 @@ impl RedbBackend {
     /// MEDULLA-026 `FNV-1a(graph_fname) % K`. `resolve_shard` folds both cases + clamps to
     /// the live shard count, so the override can never index out of range.
     pub fn shard_for(&self, graph_fname: &str) -> &ShardWriter {
-        let idx = match &self.catalog {
+        &self.shards[self.shard_of(graph_fname)]
+    }
+
+    /// The index of the shard writer that owns `graph_fname`
+    /// (MEDULLA-DURABLE-KERNEL-R099.2): the tenant catalog entry wins, else
+    /// `shard_index(graph_fname, k)`. Shares its resolution with [`Self::shard_for`].
+    pub fn shard_of(&self, graph_fname: &str) -> usize {
+        match &self.catalog {
             Some(cat) => cat.resolve_shard(graph_fname, self.shards.len()),
             None => shard_index(graph_fname, self.shards.len()),
-        };
-        &self.shards[idx]
+        }
     }
 
     /// Flush and export one graph's complete durable authority for a Raft

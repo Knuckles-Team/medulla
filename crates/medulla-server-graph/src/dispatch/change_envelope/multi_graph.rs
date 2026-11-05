@@ -57,7 +57,15 @@ pub async fn multi_graph_batch_update(
     let report = if batches.is_empty() {
         txn_results::MultiGraphBatchReport::default()
     } else {
-        run_multi_graph_batches(state, req_id, caller, verified_context, batches).await
+        run_multi_graph_batches(
+            state,
+            backend.as_ref(),
+            req_id,
+            caller,
+            verified_context,
+            batches,
+        )
+        .await
     };
     finish_multi_graph_report(redb, req_id, saga, report)
 }
@@ -200,13 +208,32 @@ fn record_multi_graph_result(
     }
 }
 
-/// Fan each sub-batch onto its own task so distinct graphs apply concurrently.
-/// The `Arc<RwLock<ServerState>>` is cheaply cloned; `dispatch_graph_op` takes
-/// the registry read-lock only briefly then releases it before the per-graph
-/// write lock, so the writes overlap across shard writers.
+/// Group sub-batches by the shard writer that owns their graph
+/// (MEDULLA-DURABLE-KERNEL-R099.2). Request order is kept inside each group;
+/// routing costs one `shard_of` call per sub-batch.
+#[cfg(any(feature = "redb", test))]
+fn group_by_shard<T>(
+    batches: Vec<(String, T)>,
+    shard_of: impl Fn(&str) -> usize,
+) -> std::collections::BTreeMap<usize, Vec<(String, T)>> {
+    let mut groups: std::collections::BTreeMap<usize, Vec<(String, T)>> =
+        std::collections::BTreeMap::new();
+    for (graph, ops) in batches {
+        let shard = shard_of(&medulla_kernel::persist::sanitize(&graph));
+        groups.entry(shard).or_default().push((graph, ops));
+    }
+    groups
+}
+
+/// Fan the sub-batches onto one task per shard writer so distinct shards commit
+/// concurrently (MEDULLA-DURABLE-KERNEL-R099.2). Inside a task the group's
+/// sub-batches run one after another in request order through
+/// `dispatch_graph_op`; sub-batches on one shard would serialize on its single
+/// writer anyway.
 #[cfg(feature = "redb")]
 async fn run_multi_graph_batches(
     state: &Arc<RwLock<ServerState>>,
+    backend: &dyn medulla_server_api::api::persistence::PersistenceBackend,
     req_id: u64,
     caller: Option<&str>,
     verified_context: &VerifiedRequestContext,
@@ -215,31 +242,39 @@ async fn run_multi_graph_batches(
     let mut report = txn_results::MultiGraphBatchReport::default();
     let caller_owned = caller.map(str::to_string);
     let mut set = tokio::task::JoinSet::new();
-    for (graph, ops) in batches {
+    for (_shard, group) in group_by_shard(batches, |fname| backend.shard_of(fname)) {
         let state = Arc::clone(state);
         let caller_owned = caller_owned.clone();
         let verified_context = VerifiedRequestContext::clone(verified_context);
         set.spawn(async move {
-            let resp = dispatch_graph_op(
-                &state,
-                &graph,
-                req_id,
-                caller_owned.as_deref(),
-                &verified_context,
-                Method::BatchUpdate {
-                    operations_msgpack: ops.into_vec(),
-                },
-            )
-            .await;
-            (graph, resp)
+            let mut out = Vec::with_capacity(group.len());
+            for (graph, ops) in group {
+                let resp = dispatch_graph_op(
+                    &state,
+                    &graph,
+                    req_id,
+                    caller_owned.as_deref(),
+                    &verified_context,
+                    Method::BatchUpdate {
+                        operations_msgpack: ops.into_vec(),
+                    },
+                )
+                .await;
+                out.push((graph, resp));
+            }
+            out
         });
     }
 
     while let Some(joined) = set.join_next().await {
         match joined {
-            Ok((graph, resp)) => record_multi_graph_result(&mut report, graph, resp),
+            Ok(results) => {
+                for (graph, resp) in results {
+                    record_multi_graph_result(&mut report, graph, resp);
+                }
+            }
             Err(join_err) => {
-                // A panicked/cancelled sub-batch task — surface it, don't abort.
+                // A panicked/cancelled shard task — surface it, don't abort.
                 let _ = join_err;
                 let key = format!("__join_error_{}", report.errors.len());
                 report
@@ -347,5 +382,34 @@ mod fanout_cap_tests {
                 .is_some_and(|e| e.contains("batch count exceeds")),
             "256 sub-batches must pass the count check"
         );
+    }
+
+    // spec: MEDULLA-DURABLE-KERNEL-R099.2
+    #[cfg(feature = "redb")]
+    #[test]
+    fn groups_keep_request_order_within_a_shard() {
+        let k = 4;
+        let names: Vec<String> = (0..8).map(|i| format!("graph-{i}")).collect();
+        let batches: Vec<(String, usize)> = names
+            .iter()
+            .cloned()
+            .enumerate()
+            .map(|(i, g)| (g, i))
+            .collect();
+        let shard = |fname: &str| medulla_persistence::redb_backend::shard_index(fname, k);
+        let groups = group_by_shard(batches, shard);
+        let mut seen = 0;
+        for (idx, group) in &groups {
+            assert!(*idx < k);
+            for (graph, _) in group {
+                assert_eq!(shard(&medulla_kernel::persist::sanitize(graph)), *idx);
+            }
+            let order: Vec<usize> = group.iter().map(|(_, i)| *i).collect();
+            let mut sorted = order.clone();
+            sorted.sort_unstable();
+            assert_eq!(order, sorted, "request order is kept within shard {idx}");
+            seen += group.len();
+        }
+        assert_eq!(seen, 8, "every sub-batch lands in exactly one group");
     }
 }

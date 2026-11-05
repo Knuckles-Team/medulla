@@ -12,18 +12,8 @@ use serde_json::{Map, Value};
 use super::PlanCtx;
 use crate::pred_eval;
 use crate::rowset::RowSet;
+use medulla_decision_types::decision::reputation::SourceReliability;
 use medulla_types::wire::Pred;
-
-/// A reliability learned from the caller's visible decision log (EH-525): the prior
-/// the caller supplied, updated with the subject's independently evaluated, discounted
-/// outcomes. `trials` counts those outcomes.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct LearnedReliability {
-    pub mean: f64,
-    pub lower: f64,
-    pub upper: f64,
-    pub trials: u64,
-}
 
 /// The caller's visible decision records, one JSON object per record carrying the
 /// `decisions` relation's columns (`record_id`, `question_id`, `outcome`, …).
@@ -32,17 +22,17 @@ pub trait DecisionSource: Send + Sync {
     fn decision_rows(&self) -> Result<Vec<Map<String, Value>>, String>;
 
     /// `subject`'s reliability learned from the visible log's `reputation` rows, anchored
-    /// at `prior_mean` held with `prior_strength` pseudo-counts; `None` when the log holds
-    /// no independent outcome of `subject` (the caller then keeps its prior). A source
-    /// with no reputation view answers `None`.
+    /// at `prior_mean` held with `prior_strength` pseudo-counts (MEDULLA-DECISION-ENGINE-R118.1.2.1):
+    /// `Absent` when the log holds no independent outcome of `subject`, `InsufficientHistory`
+    /// below `reputation.min_support`. A source with no reputation view answers `Absent`.
     fn learned_reliability(
         &self,
         subject: &str,
         prior_mean: f64,
         prior_strength: f64,
-    ) -> Result<Option<LearnedReliability>, String> {
+    ) -> Result<SourceReliability, String> {
         let _ = (subject, prior_mean, prior_strength);
-        Ok(None)
+        Ok(SourceReliability::Absent)
     }
 }
 

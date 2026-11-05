@@ -5,7 +5,7 @@ use petgraph::visit::EdgeRef;
 
 #[cfg(feature = "result-cache")]
 use super::view::ProjectionScope;
-use super::{lift_v2_integrity_policy, GraphCore, GraphSchemaSources, GraphView, Topology};
+use super::{GraphCore, GraphSchemaSources, GraphView, Topology, lift_v2_integrity_policy};
 
 /// Owned, serializable graph state used for isolated mutation staging and portable
 /// transfer (CONCEPT:MEDULLA-KG.storage.nonblocking-checkpoint). Two properties matter:
@@ -96,10 +96,12 @@ mod schema_migration_tests {
         assert_eq!(rmp_serde::to_vec_named(&legacy).unwrap(), bytes);
         let decoded: GraphSnapshot = rmp_serde::from_slice(&bytes).unwrap();
         assert_eq!(decoded.schema_version, GRAPH_SNAPSHOT_SCHEMA_VERSION);
-        assert!(decoded
-            .schema_sources
-            .dynamic
-            .contains_key(super::super::OPERATOR_SOURCE_ID));
+        assert!(
+            decoded
+                .schema_sources
+                .dynamic
+                .contains_key(super::super::OPERATOR_SOURCE_ID)
+        );
         assert!(!decoded.schema_sources.core.is_empty());
         assert_eq!(decoded.nodes[0].0, "n");
     }

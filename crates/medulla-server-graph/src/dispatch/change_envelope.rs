@@ -271,6 +271,7 @@ fn change_envelope_result(
         commit: committed.clone(),
         projection_pending,
         replication: None,
+        write_conflict: None,
     }
 }
 
@@ -626,6 +627,10 @@ async fn apply_one_change_envelope_inner(
     let graph_name = ctx.graph_name;
     let core = ctx.core;
     let persistence = ctx.persistence;
+    // MEDULLA-DURABLE-KERNEL-R084.3: the capture already released the state
+    // guard, so this short read cannot invert the lock order.
+    let write_conflict_strategy = ctx.state.read().await.write_conflict_strategy;
+    let mut envelope = envelope;
     #[cfg(feature = "raft")]
     let state = ctx.state;
     #[cfg(feature = "raft")]
@@ -657,11 +662,15 @@ async fn apply_one_change_envelope_inner(
         return Response::err(req_id, error);
     }
     let fname = medulla_kernel::persist::sanitize(graph_name);
-    let (backend, known_replay) = match prepare_change_envelope_commit(
+    let (backend, known_replay, write_conflict) = match prepare_change_envelope_commit(
         persistence.as_ref(),
         &fname,
-        &envelope,
-        core.version(),
+        &mut envelope,
+        EnvelopeVersionScope {
+            graph_name,
+            strategy: write_conflict_strategy,
+            core,
+        },
     )
     .await
     {
@@ -742,22 +751,32 @@ async fn apply_one_change_envelope_inner(
         medulla_server_mutation::mutation_batch::publish_change_envelope_projection(core, &envelope)
             .err()
     };
-    let result = change_envelope_result(&committed, projection_error.is_some());
+    let mut result = change_envelope_result(&committed, projection_error.is_some());
+    result.write_conflict = write_conflict;
     Response::ok(
         req_id,
         ResultPayload::of::<txn_results::ApplyChangeEnvelope>(result),
     )
 }
 
+/// What the served version check needs to resolve a stale expectation
+/// (MEDULLA-DURABLE-KERNEL-R084.3).
+struct EnvelopeVersionScope<'a> {
+    graph_name: &'a str,
+    strategy: medulla_types::write_conflict::MergeStrategy,
+    core: &'a Arc<medulla_graph_core::graph::GraphCore>,
+}
+
 async fn prepare_change_envelope_commit(
     backend: Option<&Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
     graph_fname: &str,
-    envelope: &medulla_protocol_types::change_envelope::ChangeEnvelope,
-    current_version: u64,
+    envelope: &mut medulla_protocol_types::change_envelope::ChangeEnvelope,
+    scope: EnvelopeVersionScope<'_>,
 ) -> Result<
     (
         Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>,
         bool,
+        Option<medulla_types::write_conflict::WriteConflictEvidence>,
     ),
     String,
 > {
@@ -765,8 +784,22 @@ async fn prepare_change_envelope_commit(
         "ApplyChangeEnvelope requires a configured persistence backend".to_string()
     })?;
     let known_replay = change_envelope_is_known_replay(&backend, graph_fname, envelope).await?;
-    validate_change_envelope_version(envelope, current_version, known_replay)?;
-    Ok((backend, known_replay))
+    let Err(conflict) = validate_change_envelope_version(
+        envelope,
+        scope.core.version(),
+        known_replay,
+        scope.graph_name,
+    )?
+    else {
+        return Ok((backend, known_replay, None));
+    };
+    match resolve_envelope_conflict(envelope, conflict, scope.strategy, scope.core) {
+        Ok((resolved, evidence)) => {
+            *envelope = resolved;
+            Ok((backend, known_replay, Some(evidence)))
+        }
+        Err(refusal) => Err(refusal.to_string()),
+    }
 }
 
 /// A retry may arrive after unrelated graph writes advanced the serving
@@ -790,22 +823,148 @@ async fn change_envelope_is_known_replay(
     Ok(stored.is_some() && stored == submitted)
 }
 
+/// The outer `Err` is a malformed envelope; the inner `Err` is a stale
+/// expectation, typed with the graph name as its scope
+/// (MEDULLA-DURABLE-KERNEL-R084.3). A known replay skips the check.
 fn validate_change_envelope_version(
     envelope: &medulla_protocol_types::change_envelope::ChangeEnvelope,
     current_version: u64,
     known_replay: bool,
-) -> Result<(), String> {
+    graph_name: &str,
+) -> Result<Result<(), medulla_types::write_conflict::WriteConflict>, String> {
     let medulla_protocol_types::mutation_batch::VersionExpectation::Graph(expected) =
         envelope.mutation.version_expectation
     else {
         return Err("ApplyChangeEnvelope requires a graph version expectation".to_string());
     };
     if expected != current_version && !known_replay {
-        return Err(format!(
-            "STALE_GRAPH_VERSION: expected {expected}, current {current_version}"
-        ));
+        return Ok(Err(medulla_types::write_conflict::WriteConflict {
+            expected,
+            actual: current_version,
+            scope: graph_name.to_owned(),
+        }));
     }
-    Ok(())
+    Ok(Ok(()))
+}
+
+/// A stale envelope the strategy did not resolve (MEDULLA-DURABLE-KERNEL-R084.4).
+/// `Display` is the served refusal: the declared code first, then the three
+/// values and the evidence (MEDULLA-DURABLE-KERNEL-R084.5).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct EnvelopeConflictRefusal {
+    pub conflict: medulla_types::write_conflict::WriteConflict,
+    pub evidence: medulla_types::write_conflict::WriteConflictEvidence,
+    /// `true` under a merge strategy (`WRITE_CONFLICT_UNMERGEABLE`).
+    pub unmergeable: bool,
+}
+
+impl std::fmt::Display for EnvelopeConflictRefusal {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let code = if self.unmergeable {
+            "WRITE_CONFLICT_UNMERGEABLE"
+        } else {
+            "WRITE_CONFLICT"
+        };
+        let evidence = serde_json::to_string(&self.evidence).unwrap_or_default();
+        write!(
+            f,
+            "{code}: expected {}, actual {}, scope {}; evidence {evidence}",
+            self.conflict.expected, self.conflict.actual, self.conflict.scope
+        )
+    }
+}
+
+/// Resolve a stale envelope under `strategy` (MEDULLA-DURABLE-KERNEL-R084.3).
+///
+/// `Refuse` returns the conflict at once. A merge strategy needs every
+/// operation to be `AddNode` on an existing node; each such operation's
+/// properties are resolved against the current node with
+/// `resolve_write_conflict`, the expectation is moved to the actual version
+/// and the envelope is resealed. Every outcome carries its evidence and moves
+/// `medulla_write_conflicts_total` (MEDULLA-DURABLE-KERNEL-R084.5). The kernel
+/// `STALE_VERSION` check in `admit_fresh` stays the last guard.
+pub fn resolve_envelope_conflict(
+    envelope: &medulla_protocol_types::change_envelope::ChangeEnvelope,
+    conflict: medulla_types::write_conflict::WriteConflict,
+    strategy: medulla_types::write_conflict::MergeStrategy,
+    core: &medulla_graph_core::graph::GraphCore,
+) -> Result<
+    (
+        medulla_protocol_types::change_envelope::ChangeEnvelope,
+        medulla_types::write_conflict::WriteConflictEvidence,
+    ),
+    EnvelopeConflictRefusal,
+> {
+    use medulla_types::write_conflict::{ConflictWinner, MergeStrategy, WriteConflictEvidence};
+    let refuse = |conflict: medulla_types::write_conflict::WriteConflict| {
+        let evidence = WriteConflictEvidence {
+            conflict_scope: conflict.scope.clone(),
+            strategy,
+            winner: ConflictWinner::Existing,
+        };
+        medulla_kernel::metrics::write_conflict(strategy.as_str(), evidence.winner.as_str());
+        EnvelopeConflictRefusal {
+            conflict,
+            evidence,
+            unmergeable: strategy != MergeStrategy::Refuse,
+        }
+    };
+    if strategy == MergeStrategy::Refuse {
+        return Err(refuse(conflict));
+    }
+    let mut resolved = envelope.clone();
+    for operation in &mut resolved.mutation.operations {
+        let Method::AddNode {
+            node_id,
+            properties_msgpack,
+        } = &mut operation.method
+        else {
+            return Err(refuse(conflict));
+        };
+        let Some(current_blob) = core.get_node_properties(node_id) else {
+            return Err(refuse(conflict));
+        };
+        let decode = |bytes: &[u8]| {
+            rmp_serde::from_slice::<std::collections::BTreeMap<String, serde_json::Value>>(bytes)
+        };
+        let (Ok(current), Ok(incoming)) = (decode(&current_blob), decode(properties_msgpack))
+        else {
+            return Err(refuse(conflict));
+        };
+        let merged = match medulla_types::write_conflict::resolve_write_conflict(
+            &conflict, strategy, &current, &incoming,
+        ) {
+            Ok(merged) => merged,
+            Err(conflict) => return Err(refuse(conflict)),
+        };
+        let Ok(encoded) = rmp_serde::to_vec_named(&merged) else {
+            return Err(refuse(conflict));
+        };
+        *properties_msgpack = encoded;
+    }
+    resolved.mutation.version_expectation =
+        medulla_protocol_types::mutation_batch::VersionExpectation::Graph(conflict.actual);
+    let digest = match &resolved.mutation.envelope {
+        medulla_protocol_types::mutation_batch::MutationEnvelope::Operation(operation) => {
+            operation.method_schema_digest
+        }
+        medulla_protocol_types::mutation_batch::MutationEnvelope::Maintenance(_) => {
+            return Err(refuse(conflict));
+        }
+    };
+    if resolved.mutation.reseal_envelope(digest).is_err() {
+        return Err(refuse(conflict));
+    }
+    let winner = ConflictWinner::for_strategy(strategy);
+    medulla_kernel::metrics::write_conflict(strategy.as_str(), winner.as_str());
+    Ok((
+        resolved,
+        WriteConflictEvidence {
+            conflict_scope: conflict.scope,
+            strategy,
+            winner,
+        },
+    ))
 }
 
 async fn apply_change_envelope_batch(

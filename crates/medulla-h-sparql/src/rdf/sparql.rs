@@ -202,8 +202,22 @@ async fn evaluate_sparql(
                 Err(error) => Response::err(req_id, error),
             }
         }
-        Ok(Err(msg)) => Response::err(req_id, format!("SPARQL error: {msg}")),
+        Ok(Err(msg)) => Response::err(req_id, sparql_refusal(msg)),
         Err(resp) => resp,
+    }
+}
+
+/// A coded refusal raised inside evaluation (`CODE: detail`, e.g. the GeoSPARQL
+/// `GEO_LITERAL_INVALID`) keeps its registered code on the wire; any other evaluation
+/// error is a SPARQL error (MEDULLA-FEDERATED-QUERY-R709.4).
+fn sparql_refusal(msg: String) -> String {
+    let coded = msg
+        .split_once(": ")
+        .is_some_and(|(code, _)| medulla_protocol_types::error_registry::declared_error_code(code));
+    if coded {
+        msg
+    } else {
+        format!("SPARQL error: {msg}")
     }
 }
 
@@ -223,5 +237,16 @@ fn run_sparql(
         SparqlProofMode::RowsWithProofs => medulla_rdf::sparql::execute_explained(ds, query, proj)?,
     };
     let (vars, rows) = table.to_rows();
-    Ok(medulla_protocol_types::protocol::SparqlResult { vars, rows, proofs })
+    // EXPLAIN names each spatial function the query calls and whether a spatial index
+    // served it (MEDULLA-FEDERATED-QUERY-R709.5).
+    let spatial = match mode {
+        SparqlProofMode::Rows => Vec::new(),
+        SparqlProofMode::RowsWithProofs => medulla_rdf::sparql::spatial_functions(query),
+    };
+    Ok(medulla_protocol_types::protocol::SparqlResult {
+        vars,
+        rows,
+        proofs,
+        spatial,
+    })
 }
