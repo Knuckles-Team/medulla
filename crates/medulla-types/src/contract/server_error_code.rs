@@ -207,6 +207,7 @@ closed_error_codes! {
         ScoreWeightsInvalid => "SCORE_WEIGHTS_INVALID",
         ScopeExceedsPolicy => "SCOPE_EXCEEDS_POLICY",
         ScopePolicyUnreadable => "SCOPE_POLICY_UNREADABLE",
+        SeedBulkData => "SEED_BULK_DATA",
         SeedDigestMismatch => "SEED_DIGEST_MISMATCH",
         SeedInvalid => "SEED_INVALID",
         SeedShaclViolation => "SEED_SHACL_VIOLATION",
