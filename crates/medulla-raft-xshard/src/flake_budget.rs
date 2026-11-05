@@ -45,7 +45,14 @@ pub enum DiagnosticRetryDecision {
     Retry { attempt: usize, backoff_ms: u64 },
     /// The recorded failure is terminal for this diagnostic run.
     Exhausted { attempt: usize },
+    /// A retry beyond `max_retries` was requested; nothing was recorded.
+    /// `code` is [`RAFT_RETRY_BUDGET_EXHAUSTED`].
+    Refused { attempt: usize, code: &'static str },
 }
+
+/// Refusal code for a retry requested past the declared budget
+/// (MEDULLA-DURABLE-KERNEL-R014.3.2).
+pub const RAFT_RETRY_BUDGET_EXHAUSTED: &str = "RAFT_RETRY_BUDGET_EXHAUSTED";
 
 /// Retains diagnostic failures across optional retries without allowing a retry
 /// past the declared [`FlakeBudget`].
@@ -78,9 +85,10 @@ impl DiagnosticRetryLog {
             .ok_or_else(|| "diagnostic retry attempt count overflowed".to_string())?;
         let max_attempts = (budget.max_retries as usize).saturating_add(1);
         if attempt > max_attempts {
-            return Err(format!(
-                "diagnostic retry budget exhausted after {max_attempts} attempts"
-            ));
+            return Ok(DiagnosticRetryDecision::Refused {
+                attempt,
+                code: RAFT_RETRY_BUDGET_EXHAUSTED,
+            });
         }
 
         self.failures.push(DiagnosticFailure {
@@ -266,10 +274,32 @@ mod tests {
             log.record_failure(&budget, "terminal trace"),
             Ok(DiagnosticRetryDecision::Exhausted { attempt: 2 })
         );
-        assert!(log
-            .record_failure(&budget, "out-of-budget trace")
-            .unwrap_err()
-            .contains("budget exhausted"));
+        assert_eq!(
+            log.record_failure(&budget, "out-of-budget trace"),
+            Ok(DiagnosticRetryDecision::Refused {
+                attempt: 3,
+                code: RAFT_RETRY_BUDGET_EXHAUSTED,
+            })
+        );
         assert_eq!(log.failures().len(), 2);
+    }
+
+    // spec: MEDULLA-DURABLE-KERNEL-R014.3.2
+    #[test]
+    fn retry_beyond_budget_returns_refused_with_code() {
+        let budget = FlakeBudget::new(2, 10, 100).unwrap();
+        let mut log = DiagnosticRetryLog::new();
+        for n in 1..=3 {
+            log.record_failure(&budget, format!("trace {n}")).unwrap();
+        }
+        let decision = log.record_failure(&budget, "beyond budget").unwrap();
+        assert_eq!(
+            decision,
+            DiagnosticRetryDecision::Refused {
+                attempt: 4,
+                code: "RAFT_RETRY_BUDGET_EXHAUSTED",
+            }
+        );
+        assert_eq!(log.failures().len(), 3, "a refusal records no attempt");
     }
 }

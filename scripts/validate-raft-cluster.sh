@@ -67,8 +67,23 @@ if [[ -v RAFT_LOAD_WORKERS ]]; then
   exec python3 scripts/raft_cpu_load.py -- cargo test --features "${FEATURES}" --lib raft -- --test-threads=1 --nocapture "${TESTS[@]}"
 fi
 set +e
-cargo test --features "${FEATURES}" --lib raft -- --test-threads=1 --nocapture "${TESTS[@]}"
-rc=$?
+# Optional bounded diagnostic retry (MEDULLA-DURABLE-KERNEL-R014.3.2): when
+# RAFT_RETRY_MAX is set, the decision to retry a failed run comes from the
+# `raft_flake_budget` bin, never from this script. Every failed attempt's log is kept.
+attempt=1
+while :; do
+  cargo test --features "${FEATURES}" --lib raft -- --test-threads=1 --nocapture "${TESTS[@]}" 2>&1 \
+    | tee "${RAFT_RETRY_LOG_DIR:-${TMPDIR:-/tmp}}/raft-cluster-attempt-${attempt}.log"
+  rc=${PIPESTATUS[0]}
+  [[ "${rc}" -eq 0 || ! -v RAFT_RETRY_MAX ]] && break
+  decision=$(cargo run -q --features "${FEATURES}" --bin raft_flake_budget -- \
+    "${RAFT_RETRY_MAX}" "${RAFT_RETRY_BACKOFF_MS:-1000}" "${RAFT_RETRY_MAX_BACKOFF_MS:-30000}" "${attempt}" "${rc}")
+  echo "retry decision after attempt ${attempt}: ${decision}"
+  case "${decision}" in
+    "retry "*) sleep "$(awk -v ms="${decision#retry }" 'BEGIN{print ms/1000}')"; attempt=$((attempt + 1)) ;;
+    *) break ;;
+  esac
+done
 set -e
 
 echo

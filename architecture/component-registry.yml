@@ -4022,6 +4022,7 @@ components:
       - "tests/test_jscpd_per_commit_gate.py"
       - "tests/test_raft_cluster_ci_gate.py"
       - "tests/test_validate_raft_cluster.py"
+      - "tests/test_unwired_records_removed.py"
       - "tests/test_release_python_suite_contract.py"
       - "tests/test_ci_change_scope.py"
       - "tests/test_no_crate_level_lint_allows.py"

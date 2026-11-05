@@ -327,3 +327,34 @@ def test_direct_repeat_requires_count(harness: tuple[dict[str, str], Path]) -> N
     assert result.returncode == 2
     assert "RAFT_LOAD_REPEATS must be an integer in 2..100" in result.stderr
     assert "Traceback" not in result.stderr
+
+
+def _flake_budget_cmd(args: list[str]) -> list[str]:
+    binary = os.environ.get("MEDULLA_RAFT_FLAKE_BUDGET_BIN")
+    if binary:
+        return [binary, *args]
+    return ["cargo", "run", "-q", "--bin", "raft_flake_budget", "--", *args]
+
+
+@pytest.mark.spec("MEDULLA-DURABLE-KERNEL-R014.3.2")
+def test_retry_budget_is_bounded() -> None:
+    def decide(attempt: int, code: int = 37) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            _flake_budget_cmd(["2", "10", "100", str(attempt), str(code)]),
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            timeout=900,
+        )
+
+    first = decide(1)
+    assert (first.returncode, first.stdout.strip()) == (0, "retry 10")
+    second = decide(2)
+    assert (second.returncode, second.stdout.strip()) == (0, "retry 20")
+    last = decide(3)
+    assert (last.returncode, last.stdout.strip()) == (1, "exhausted")
+    beyond = decide(4)
+    assert beyond.returncode == 3
+    assert beyond.stdout.strip() == "refused RAFT_RETRY_BUDGET_EXHAUSTED"
+    assert decide(1, 0).stdout.strip() == "pass"
+    assert decide(0).returncode == 2
