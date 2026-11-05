@@ -27,8 +27,10 @@ packages, so a pull request runs the same gate main runs, only narrower:
 from __future__ import annotations
 
 import argparse
+import functools
 import json
 import pathlib
+import re
 import sys
 
 WORKSPACE_WIDE = (
@@ -90,6 +92,40 @@ def owner(path: str, packages: dict[str, pathlib.PurePosixPath]) -> str | None:
     return best[1] if best else None
 
 
+@functools.cache
+def _sources(directory: str) -> str:
+    """The concatenated Rust sources under *directory* (repository-relative)."""
+    if directory == ".":
+        # The root package compiles only these; the member crates are scanned
+        # as their own packages.
+        roots = [pathlib.Path(d) for d in ("src", "tests", "benches", "examples")]
+    else:
+        roots = [pathlib.Path(directory)]
+    files = sorted(f for r in roots if r.is_dir() for f in r.rglob("*.rs"))
+    if directory == "." and pathlib.Path("build.rs").is_file():
+        files.append(pathlib.Path("build.rs"))
+    return "\n".join(f.read_text(encoding="utf-8", errors="replace") for f in files)
+
+
+def readers(path: str, packages: dict[str, pathlib.PurePosixPath]) -> set[str]:
+    """Packages whose Rust sources name *path* or a directory that holds it.
+
+    A test reads a non-crate file through ``include_str!``, ``read_to_string``
+    or a path join, so its source holds the literal ``specs/<dir>`` (or the
+    full path). Single-segment directories are too broad to be a literal.
+    """
+    parts = pathlib.PurePosixPath(path).parts
+    literals = {"/".join(parts[:n]) for n in range(2, len(parts) + 1)}
+    pattern = re.compile(
+        "(?:" + "|".join(re.escape(x) for x in sorted(literals)) + r")(?![\w.-])"
+    )
+    return {
+        name
+        for name, directory in packages.items()
+        if pattern.search(_sources(str(directory)))
+    }
+
+
 def affected(metadata: dict, changed: list[str]) -> list[str]:
     """Owning packages of the changed files plus their reverse dependencies."""
     packages = _packages(metadata)
@@ -107,9 +143,8 @@ def affected(metadata: dict, changed: list[str]) -> list[str]:
             # versions: every member reads it.
             return sorted(packages)
         name = owner(path, packages)
-        if name is None:
-            continue
-        if name == root_pkg and not _is_root_package_source(path):
+        if name is None or (name == root_pkg and not _is_root_package_source(path)):
+            seeds |= readers(path, packages)
             continue
         seeds.add(name)
     rdeps = _reverse_edges(metadata, set(packages))

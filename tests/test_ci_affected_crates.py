@@ -133,3 +133,35 @@ def test_pyo3_features_name_only_selected_packages() -> None:
     assert features and all(f.startswith("medulla-pyengine/") for f in features)
     both = mod.pyo3_features(["medulla-numeric", "medulla-pyengine"])
     assert both == mod.PYO3_FEATURES
+
+
+@pytest.mark.spec("MEDULLA-CONTRACT-R053.7.1")
+def test_spec_file_read_by_a_test_selects_its_package(tmp_path, monkeypatch) -> None:
+    """A changed ``specs/`` file selects every package whose sources read it."""
+    reader = tmp_path / "crates" / "medulla-types" / "tests"
+    reader.mkdir(parents=True)
+    (reader / "engine_capabilities.rs").write_text(
+        'let plan = include_str!("../../../specs/engine-parity/plan.md");\n',
+        encoding="utf-8",
+    )
+    other = tmp_path / "crates" / "medulla-viz" / "src"
+    other.mkdir(parents=True)
+    (other / "lib.rs").write_text("// specs/engine-parity-other\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    mod._sources.cache_clear()
+    got = mod.affected(_meta(), ["specs/engine-parity/plan.md"])
+    assert "medulla-types" in got
+    assert "medulla-viz" not in got
+    assert mod.affected(_meta(), ["specs/unread/plan.md"]) == []
+    mod._sources.cache_clear()
+
+
+@pytest.mark.spec("MEDULLA-CONTRACT-R053.7.1")
+def test_pr_spec_only_decision_uses_the_crate_selection() -> None:
+    ci = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8"))
+    for job in ("pr-scope", "ci"):
+        script = "\n".join(s.get("run", "") for s in ci["jobs"][job]["steps"])
+        assert "ci_affected_crates.py" in script
+    steps = {s.get("id"): s for s in ci["jobs"]["ci"]["steps"]}
+    assert "spec-scope" in steps
+    assert "steps.spec-scope.outputs.scope" in steps["crates"]["if"]
