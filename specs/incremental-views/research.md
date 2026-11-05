@@ -25,12 +25,12 @@ Each entry states a decision, its rationale and the alternatives considered. All
 ### D2. SQL row-change events are not implemented
 
 - Finding: no `InsertRow`, `UpdateRow`, `DeleteRow` or `emit_row_changes` exists. `CdcKind` has only node and edge variants (`crates/medulla-types/src/wire_streaming.rs:17`).
-- Finding: the cited paths of MEDULLA-ENGINE-PARITY-R015.1 and R015.2 moved. `commit_txn_batch_result` is in `crates/medulla-table-store/src/tables/store.rs:2019`. The SQL commit caller is `crates/medulla-h-query/src/query/sql_catalog.rs:267`. `CdcHub::emit` is in `crates/medulla-server-cdc/src/cdc.rs:269`.
+- Finding: the cited paths of MEDULLA-ENGINE-PARITY-R015.1 and R015.2 moved. `commit_txn_batch_result` is in `crates/medulla-table-store/src/tables/store.rs:2033`. The SQL commit caller is `crates/medulla-h-query/src/query/sql_catalog.rs:269`. `CdcHub::emit` is in `crates/medulla-server-cdc/src/cdc.rs:269`.
 - Decision: R009, R010.1 and R010.2 depend on R015.1 and R015.2. They are not in the first slice.
 
 ### D3. `CREATE MATERIALIZED VIEW` is not stored as a materialized view
 
-- Finding: `classify_create_view` refuses a plain `CREATE MATERIALIZED VIEW` (`crates/medulla-sql-lang/src/sql/classify.rs:2216`). Only the continuous-aggregate form is accepted. It stores a plain view through `TxnOp::CreateView` (`crates/medulla-h-query/src/query/sql_dispatch.rs:512`).
+- Finding: `classify_create_view` refuses a plain `CREATE MATERIALIZED VIEW` (`crates/medulla-sql-lang/src/sql/classify.rs:2219`). Only the continuous-aggregate form is accepted. It stores a plain view through `TxnOp::CreateView` (`crates/medulla-h-query/src/query/sql_dispatch.rs:512`).
 - Finding: `TableStore::create_matview` and the file `matview.rs` named by MEDULLA-ENGINE-PARITY-R014.1 do not exist. The table store now lives in `crates/medulla-table-store/src/tables/`.
 - Decision: R009 depends on MEDULLA-ENGINE-PARITY-R014.1 and R014.2 for the catalog, the result table and the refresh path.
 

@@ -154,17 +154,17 @@ Code shapes: new logic goes into the new files listed above. No function takes m
 
 ## Production caller chain
 
-- Define: `Method::PlanMatViewDefine` arm (`crates/medulla-h-txn/src/dist_compute.rs:243`) → `define_plan_matview` (`dist_compute.rs:409`) → `index_matview` (`dist_compute.rs:448`) → `Circuit::compile` (`crates/medulla-exec/src/incremental/circuit.rs:253`) → `install_incremental` (`crates/medulla-server-cdc/src/matview/manager.rs:111`).
+- Define: `Method::PlanMatViewDefine` arm (`crates/medulla-h-txn/src/dist_compute.rs:247`) → `define_plan_matview` (`dist_compute.rs:413`) → `index_matview` (`dist_compute.rs:452`) → `Circuit::compile` (`crates/medulla-exec/src/incremental/circuit.rs:253`) → `install_incremental` (`crates/medulla-server-cdc/src/matview/manager.rs:111`).
 - Change: committed write → `CdcHub::emit` (`crates/medulla-server-cdc/src/cdc.rs:269`) → `crate::matview::apply_delta` (`cdc.rs:357`) → `PlanMatViewManager::apply_delta` (`manager.rs:172`) → `Circuit::apply` (`circuit.rs:287`).
-- Read: `get_plan_matview` (`dist_compute.rs:499`) → `incremental_rows` (`manager.rs:144`).
-- Boot: `spawn_matview_reload` (`crates/medulla-h-admin/src/boot_maintenance.rs:50`) → `reload_matviews` (`dist_compute.rs:661`) → the call at `dist_compute.rs:698` that R006 replaces.
-- Explain: `Method::Uql` → `explain` (`crates/medulla-plan/src/uql/serve.rs:281`).
-- SQL commit: pgwire `COMMIT` → `crates/medulla-h-query/src/query/sql_catalog.rs:267` → `commit_txn_batch` (`crates/medulla-table-store/src/tables/store.rs:2008`) → `commit_txn_batch_inner` (`store.rs:2081`) → `apply_mutation_txn_ops_with_crashpoints` (`store.rs:2267`).
-- SQL create: `classify_create_view` (`crates/medulla-sql-lang/src/sql/classify.rs:2210`); today it refuses `CREATE MATERIALIZED VIEW` at `classify.rs:2216`.
+- Read: `get_plan_matview` (`dist_compute.rs:501`) → `incremental_rows` (`manager.rs:144`).
+- Boot: `spawn_matview_reload` (`crates/medulla-h-admin/src/boot_maintenance.rs:50`) → `reload_matviews` (`dist_compute.rs:663`) → the call at `dist_compute.rs:700` that R006 replaces.
+- Explain: `Method::Uql` → `explain` (`crates/medulla-plan/src/uql/serve.rs:283`).
+- SQL commit: pgwire `COMMIT` → `crates/medulla-h-query/src/query/sql_catalog.rs:269` → `commit_txn_batch` (`crates/medulla-table-store/src/tables/store.rs:2022`) → `commit_txn_batch_inner` (`store.rs:2095`) → `apply_mutation_txn_ops_with_crashpoints` (`store.rs:2281`).
+- SQL create: `classify_create_view` (`crates/medulla-sql-lang/src/sql/classify.rs:2213`); today it refuses `CREATE MATERIALIZED VIEW` at `classify.rs:2219`.
 - Feed read: `Method::CdcRead` arm (`crates/medulla-h-query/src/streaming.rs:429`).
-- Closure: `reasoning_cascade::spawn` (`crates/medulla-server-cdc/src/reasoning_cascade.rs:358`) → `refresh_one` (`reasoning_cascade.rs:246`).
+- Closure: `reasoning_cascade::spawn` (`crates/medulla-server-cdc/src/reasoning_cascade.rs:360`) → `refresh_one` (`reasoning_cascade.rs:248`).
 
-Obsolete paths to delete: `crates/medulla-exec/src/incremental/zset.rs` (R002.1) and the recompute-only reload at `dist_compute.rs:698` (R006).
+Obsolete paths to delete: `crates/medulla-exec/src/incremental/zset.rs` (R002.1) and the recompute-only reload at `dist_compute.rs:700` (R006).
 
 ## Cross-repo seams
 
