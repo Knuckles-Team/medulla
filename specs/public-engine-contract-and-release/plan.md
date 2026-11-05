@@ -43,7 +43,7 @@ Checked against `.specify/memory/constitution.md`: this plan waives no principle
 
 ## Project Structure
 
-Existing paths only: `crates/` (one crate per subsystem; owners in the architecture map under Phase 1), the root package `src/`, the Python package `medulla/`, `packaging/medulla-server/`, `clients/go/`, `clients/js/`, `scripts/` and `.github/workflows/`.
+Existing paths only: `crates/` (one crate per subsystem; owners in the architecture map under Phase 1), the root package `src/`, the Python package `medulla/`, `clients/go/`, `clients/js/`, `scripts/` and `.github/workflows/`.
 
 ### Fresh checkout developer path
 

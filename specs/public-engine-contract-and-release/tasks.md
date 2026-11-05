@@ -2,6 +2,24 @@
 
 **State:** PARTIAL source baseline; ACCEPTED evidence pending. A checked box means only its named task is proven. The evidence table below records its exact commit and test result.
 
+Each task line reads `- [ ] T001 [P] [US1] <ID>-R012.4 description`. `[P]` marks a task that may run in parallel.
+
+## One-distribution packaging
+
+- [ ] T001 [US1] MEDULLA-CONTRACT-R053.2 Strip console scripts in `build_backend.py` and the folded wheel; the gate refuses them.
+- [ ] T002 [US1] MEDULLA-CONTRACT-R053.3 Keep one distribution: no server extra, second package or retired name.
+- [ ] T003 [US1] MEDULLA-CONTRACT-R053.4 Resolve the packaged server binary only, through `medulla.server_binary`.
+- [ ] T004 [US1] MEDULLA-CONTRACT-R053.8 Build the wheel base from the extension crate and publish each platform as it finishes.
+- [ ] T005 [US1] MEDULLA-CONTRACT-R053.9 Build the server per platform in `folded-wheel` and fold it into the `medulla` wheel.
+- [ ] T006 [US1] MEDULLA-CONTRACT-R053.10 Report the release version from `medulla-server --version` and smoke-test it.
+- [ ] T007 [US1] MEDULLA-CONTRACT-R053.11 Build the server image from the `medulla` wheel and publish one multi-architecture tag.
+- [ ] T008 [US1] MEDULLA-CONTRACT-R053.12 Keep one version and a build-only release dispatch.
+
+## Legacy task ledger
+
+The block below is the pre-template task ledger, kept verbatim until each of its rows gains the `Caller chain:`, `Shape:` and `path::name` test the spec standard requires; a row moves out of it into a `T` line when it does. The `MEDULLA-CONTRACT-R053` lines in it are superseded by the section above.
+
+```text
 - [x] **C-01 — MEDULLA-CONTRACT-R001, MEDULLA-CONTRACT-R005:** Audit and converge all Python method DTOs on generated strict models; verify with MEDULLA-T-04.
 - [x] **C-02 — MEDULLA-CONTRACT-R014, MEDULLA-CONTRACT-R015:** Complete catalog error sets, conflict mapping, scope projection and wheel contents; verify with MEDULLA-T-01/MEDULLA-T-02/MEDULLA-T-03.
 - [x] **C-03 — MEDULLA-CONTRACT-R004, MEDULLA-CONTRACT-R006:** Rebuild and measure both WASM codec copies and replay cross-language vectors; verify with MEDULLA-T-05/MEDULLA-T-06.
@@ -73,17 +91,17 @@ The linked requirement rows retain the full contract, hashes, acceptance, and ow
 - [ ] Keep both definitions SPECIFIED until implementation and served evidence receive separate review.
 - [ ] **MEDULLA-CONTRACT-R053:** Complete the twelve children without replacing R015 or R047 acceptance.
 - [ ] **MEDULLA-CONTRACT-R053.1:** Fold the four offline tools into `medulla-server`.
-- [ ] **MEDULLA-CONTRACT-R053.2:** Strip executables in `build_backend.py` and gate the wheel.
-- [ ] **MEDULLA-CONTRACT-R053.3:** Add the `server` extra and its bump entry.
-- [ ] **MEDULLA-CONTRACT-R053.4:** Resolve the server binary through `medulla.server_binary`.
+- [ ] **MEDULLA-CONTRACT-R053.2:** Strip console scripts in `build_backend.py` and gate the wheel.
+- [ ] **MEDULLA-CONTRACT-R053.3:** Keep one distribution: no server extra, second package or retired name.
+- [ ] **MEDULLA-CONTRACT-R053.4:** Resolve the packaged server binary through `medulla.server_binary`.
 - [ ] **MEDULLA-CONTRACT-R053.5:** Add `[profile.release-server]` and record measured sizes.
 - [ ] **MEDULLA-CONTRACT-R053.6:** Update callers of the retired binary names.
 - [ ] **MEDULLA-CONTRACT-R053.7:** Split `ci.yml` (all gates) from `release.yml` (guard, build, check, publish) and guard tags on a passing main CI run.
 - [ ] **MEDULLA-CONTRACT-R053.8:** Build the public wheel from the extension crates only, publish each platform as it finishes, and warm the compile cache from main.
-- [ ] **MEDULLA-CONTRACT-R053.9:** Build and publish the server wheel per Linux architecture from `packaging/medulla-server`.
-- [ ] **MEDULLA-CONTRACT-R053.10:** Keep `binary_path()` and `BinaryNotFoundError` with their tests in the package.
-- [ ] **MEDULLA-CONTRACT-R053.11:** Build the server image from the server wheel and publish one multi-architecture tag.
-- [ ] **MEDULLA-CONTRACT-R053.12:** Bump the package with the engine and add the tagged-source dispatch.
+- [ ] **MEDULLA-CONTRACT-R053.9:** Build the server per platform in `folded-wheel` and fold it into the `medulla` wheel.
+- [ ] **MEDULLA-CONTRACT-R053.10:** Report the release version from `medulla-server --version` and smoke-test it.
+- [ ] **MEDULLA-CONTRACT-R053.11:** Build the server image from the `medulla` wheel and publish one multi-architecture tag.
+- [ ] **MEDULLA-CONTRACT-R053.12:** Keep one version and a build-only release dispatch.
 
 - [ ] **MEDULLA-CONTRACT-R006.3:** Deliver and qualify bounded hosted canonical contract export with source provenance.
 
@@ -94,3 +112,4 @@ The linked requirement rows retain the full contract, hashes, acceptance, and ow
 - [x] **MEDULLA-CONTRACT-R056.17:** Remove the crate-level lint allows the split added and clear the roughly 400 findings behind them.
 - [ ] **MEDULLA-CONTRACT-R056.18:** Move the ambient test auth posture behind a test-only dev-dependency path or a runtime test hook so workspace feature unification cannot change auth behaviour.
 - [ ] **MEDULLA-CONTRACT-R057:** Serve the method catalog (methods + scopes + digest) at run time from the descriptor rows, in Rust and as `medulla.engine.method_catalog()`.
+```

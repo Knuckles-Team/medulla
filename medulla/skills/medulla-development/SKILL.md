@@ -241,36 +241,34 @@ Leave other owners' changes, build slots, and publication decisions alone.
 ## Server package
 
 The server and its subcommands (`restore`, `migrate-shards`, `rf019-observe`,
-`lake-fixture-export`) are engine code in this repository, and so is its packaging. The
-public `medulla` wheel carries no executables; `pip install "medulla[server]"`
-installs the matching `medulla-server` package at the same version.
+`lake-fixture-export`) are engine code in this repository, and so is its packaging. There
+is one PyPI distribution, `medulla`: every platform wheel carries the server executable
+for its platform at `medulla/_bin/medulla-server` (`.exe` on Windows).
 
-- `packaging/medulla-server/` holds the package: a maturin `bindings = "bin"` build over
-  the root manifest's `medulla-server` binary, `medulla_server.binary_path()`
-  and `BinaryNotFoundError`, and its tests. `medulla/server_binary.py` resolves the
-  binary through that function. Build the wheel with
-  `maturin build --profile release-server` from that directory, on a build host, never on a
-  workstation. The `release-server` Cargo profile is size-optimised with `panic = "unwind"`.
-- `docker/Dockerfile` builds the server image from the server wheel staged in `docker/wheels`.
-- `.github/workflows/release.yml` job `build-server` builds one wheel per Linux architecture
-  natively and uploads each to PyPI right away; `server-image` pushes one image per
-  architecture by digest and `server-manifest` joins them into one tag. `ci.yml` job
-  `server-wheel-cache` warms the compile cache `egs-<arch>` on main pushes.
-- To publish the server package of an already tagged version, dispatch `release.yml` with
-  `packages=server` and `source_ref=v<version>`. The guard still requires a successful
-  `ci.yml` run on that tag's commit.
-- The version moves with the engine through `.config/bumpversion.cfg`, which covers the package
-  `pyproject.toml`, its `__version__`, the `server` extra and the Dockerfile.
+- `.github/actions/folded-wheel` builds it with `scripts/build_release_server.sh`
+  (`--profile release-server --features full,ast-extended`; inside the manylinux
+  container on Linux, natively on macOS and Windows) and folds it in with
+  `scripts/inject_server_binary.py`. `check_wheel_completeness.py --require-server-binary`
+  requires it. Build it on a build host, never on a workstation. The `release-server`
+  Cargo profile is size-optimised with `panic = "unwind"`.
+- `medulla/server_binary.py` `resolve_server_binary()` returns the packaged path only and
+  raises `ServerBinaryNotFoundError` when it is absent (an sdist or source install).
+  `medulla-server --version` prints the release version.
+- `docker/Dockerfile` builds the server image from the Linux `medulla` wheel staged in
+  `docker/wheels`; `release.yml` jobs `server-image` and `server-manifest` push one image
+  per architecture by digest and join them into one tag on `v*` tags.
+- The version moves with the engine through `.config/bumpversion.cfg`; the server has no
+  separate version.
 
 ## Release
 
 Summary in `AGENTS.md` "Release". Bump first, tag last. A tag on a commit with the previous version rebuilds the old version. PyPI then refuses it.
 
-1. Bump first: run `bump2version --config-file .config/bumpversion.cfg --no-tag patch` (or `minor`, `major`, or `--new-version X.Y.Z`). The wheel version is dynamic from `crates/medulla-pyengine/Cargo.toml` `[package].version`. The config also moves root `Cargo.toml`, `Cargo.lock`, `README.md`, `docker/Dockerfile`, `pyproject.toml` and the server package. Refresh the lock (`cargo update --workspace`) and any fixture that embeds the version. Then open the PR.
+1. Bump first: run `bump2version --config-file .config/bumpversion.cfg --no-tag patch` (or `minor`, `major`, or `--new-version X.Y.Z`). The wheel version is dynamic from `crates/medulla-pyengine/Cargo.toml` `[package].version`. The config also moves root `Cargo.toml`, `Cargo.lock`, `README.md` and `docker/Dockerfile`. Refresh the lock (`cargo update --workspace`) and any fixture that embeds the version. Then open the PR.
 2. Merge the bump PR to `main`.
 3. On the merged `main` commit, confirm `crates/medulla-pyengine/Cargo.toml` and `current_version` in `.config/bumpversion.cfg` equal the intended `X.Y.Z`. PyPI must not have that version: `curl -s -o /dev/null -w '%{http_code}' https://pypi.org/pypi/medulla/X.Y.Z/json` prints `404`. Alternatively run `python3 -I <pipelines>/.github/actions/verify-release-version/verify_release_version.py --root . --ref refs/tags/vX.Y.Z` once it is on pipelines `main`.
 4. Only then push the tag `vX.Y.Z` on that commit; `release.yml` triggers on `v*`.
-5. Confirm the `medulla` wheels and sdist and the `medulla-server` wheels are on PyPI at `X.Y.Z`.
+5. Confirm the `medulla` wheels and sdist are on PyPI at `X.Y.Z`.
 6. Tag on the wrong commit and nothing published: delete the tag and re-tag. Anything published: cut the next patch, because PyPI never accepts a file twice.
 
 ## Operations are separate

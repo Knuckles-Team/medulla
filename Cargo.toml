@@ -2128,9 +2128,9 @@ panic = "abort"
 # DATABASE — unwind keeps a panic recoverable at the dispatch boundary instead of
 # aborting the whole process and masking a recoverable error. Normal `release` builds
 # are unaffected (this is a separate named profile).
-# Size profile for the standalone `medulla-server` package (built natively on
-# x86_64 and aarch64 from packaging/medulla-server, so fat LTO has no cross-build
-# memory limit). panic = "unwind": the multi-tenant server must not abort every tenant on one panic.
+# Size profile for the `medulla-server` executable folded into every platform
+# wheel (built natively per target by scripts/build_release_server.sh; the
+# ARM64 Linux and macOS targets override LTO to thin). panic = "unwind": the multi-tenant server must not abort every tenant on one panic.
 [profile.release-server]
 inherits = "release"
 opt-level = "s"

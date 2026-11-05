@@ -1,8 +1,12 @@
-"""The server package builds and publishes here (MEDULLA-CONTRACT-R053.9-12)."""
+"""The server ships inside the medulla wheel (MEDULLA-CONTRACT-R053.3, .9-.12)."""
 
 from __future__ import annotations
 
-import re
+import os
+import stat
+import subprocess
+import sys
+import zipfile
 from pathlib import Path
 
 import pytest
@@ -12,11 +16,15 @@ import yaml
 pytestmark = pytest.mark.no_engine
 
 ROOT = Path(__file__).resolve().parents[1]
-PACKAGE = ROOT / "packaging/medulla-server"
 RELEASE = ROOT / ".github/workflows/release.yml"
 CI = ROOT / ".github/workflows/ci.yml"
-ACTION = ROOT / ".github/actions/build-server-wheel/action.yml"
+ACTION = ROOT / ".github/actions/folded-wheel/action.yml"
+BUILD_SCRIPT = ROOT / "scripts/build_release_server.sh"
+INJECT = ROOT / "scripts/inject_server_binary.py"
+SMOKE = ROOT / "scripts/release_wheel_smoke.sh"
 DOCKERFILE = ROOT / "docker/Dockerfile"
+# The retired second distribution (its project and wheel names) and its import.
+RETIRED = ("medulla" + "-stem", "medulla" + "_stem", "import " + "medulla_server")
 
 
 def _yaml(path: Path) -> dict:
@@ -31,239 +39,206 @@ def _version() -> str:
     return tomllib.loads((ROOT / "Cargo.toml").read_text())["package"]["version"]
 
 
-@pytest.mark.spec("MEDULLA-CONTRACT-R053.9")
-def test_package_wraps_the_root_server_bin_with_the_full_feature_set() -> None:
-    project = tomllib.loads((PACKAGE / "pyproject.toml").read_text())
-    maturin = project["tool"]["maturin"]
-    assert project["project"]["name"] == "medulla-stem"
-    assert maturin["bindings"] == "bin"
-    assert maturin["manifest-path"] == "../../Cargo.toml"
-    assert maturin["features"] == ["full", "ast-extended"]
-    root = tomllib.loads((ROOT / "Cargo.toml").read_text())
-    assert "medulla-server" in {b["name"] for b in root["bin"]}
-    assert "--profile release-server" in ACTION.read_text()
-
-
-@pytest.mark.spec("MEDULLA-CONTRACT-R053.9")
-def test_release_builds_every_platform_natively_and_uploads_each() -> None:
-    jobs = _yaml(RELEASE)["jobs"]
-    job = jobs["build-server"]
-    assert job["needs"] == "guard"
-    legs = {leg["arch"]: leg["runner"] for leg in job["strategy"]["matrix"]["include"]}
-    assert legs == {
-        "x86_64": "ubuntu-latest",
-        "aarch64": "ubuntu-24.04-arm",
-        "macos-arm64": "macos-14",
-        "windows-x64": "windows-latest",
-    }
-    assert job["name"] == "server wheel ${{ matrix.label }}"
-    assert job["defaults"]["run"]["shell"] == "bash"
-    # Swap lives in the shared build action, so the release leg and ci.yml's
-    # warm-cache build both get it (the cache build had none and was OOM-killed).
-    action = _yaml(ACTION)["runs"]["steps"]
-    swap = next(s for s in action if "swap" in s.get("name", ""))
-    assert swap["if"] == "runner.os == 'Linux'"
-    script = _script(job)
-    assert '"$smoke/$exe" --help' in script
-    assert "Scripts" in script and "medulla-server.exe" in script
-    assert "binary_path" in script
-    upload = next(s for s in job["steps"] if s.get("name", "").startswith("Publish"))
-    assert "twine upload --skip-existing" in upload["run"]
-    assert "PYPI_API_TOKEN" in str(upload["env"])
-    # Smoke steps run before the upload.
-    names = [s.get("name", "") for s in job["steps"]]
-    assert names.index("Smoke test the built wheel") < names.index(upload["name"])
-    verify = _script(jobs["verify-pypi"])
-    assert "--package medulla-stem" in verify
-    assert "build-server" in jobs["verify-pypi"]["needs"]
-    for tag in (
-        "manylinux_2_28_x86_64",
-        "manylinux_2_28_aarch64",
-        "macosx_11_0_arm64",
-        "win_amd64",
-    ):
-        assert tag in verify
-
-
-@pytest.mark.spec("MEDULLA-CONTRACT-R053.9")
-def test_compile_cache_is_saved_by_main_ci_and_only_restored_by_release() -> None:
-    action = ACTION.read_text()
-    assert "shared-key: egs-${{ steps.env.outputs.key }}" in action
-    assert "save-if: ${{ inputs.cache-save == 'true' }}" in action
-    cache_job = _yaml(CI)["jobs"]["server-wheel-cache"]
-    assert "github.ref == 'refs/heads/main'" in cache_job["if"]
-    assert cache_job["strategy"]["matrix"]["arch"] == ["x86_64", "aarch64"]
-    assert "ubuntu-24.04-arm" in cache_job["runs-on"]
-    assert "cache-save: 'true'" in yaml.safe_dump(cache_job)
-    release_uses = [
-        step
-        for step in _yaml(RELEASE)["jobs"]["build-server"]["steps"]
-        if "uses" in step
+@pytest.mark.spec("MEDULLA-CONTRACT-R053.3")
+def test_one_distribution_no_server_extra_and_no_retired_name() -> None:
+    pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text())
+    assert pyproject["project"]["name"] == "medulla"
+    assert "server" not in pyproject["project"]["optional-dependencies"]
+    assert "sources" not in pyproject.get("tool", {}).get("uv", {})
+    assert not (ROOT / "packaging").exists()
+    assert not (ROOT / ".github/actions/build-server-wheel").exists()
+    lock = (ROOT / "uv.lock").read_text()
+    assert 'source = { directory = "' not in lock
+    surfaces = [
+        ROOT / "pyproject.toml",
+        ROOT / "uv.lock",
+        ROOT / ".config/bumpversion.cfg",
+        DOCKERFILE,
+        ROOT / "README.md",
+        *sorted((ROOT / ".github").rglob("*.yml")),
+        *sorted((ROOT / "scripts").glob("*.py")),
+        *sorted((ROOT / "scripts").glob("*.sh")),
+        *sorted((ROOT / "medulla").rglob("*.py")),
     ]
-    build = next(s for s in release_uses if s["uses"].endswith("build-server-wheel"))
-    assert "cache-save" not in build.get("with", {})
+    for path in surfaces:
+        text = path.read_text(encoding="utf-8")
+        for name in (*RETIRED, "from " + "medulla_server"):
+            assert name not in text, f"{path.relative_to(ROOT)} names {name}"
+
+
+@pytest.mark.spec("MEDULLA-CONTRACT-R053.9")
+def test_folded_wheel_builds_the_server_per_target_and_folds_it_in() -> None:
+    steps = _yaml(ACTION)["runs"]["steps"]
+    names = [s.get("name", "") for s in steps]
+    engine = steps[names.index("Build engine extension wheel")]
+    assert engine["with"]["prepare-script"] == "scripts/build_release_server.sh"
+    native = steps[names.index("Build the release server executable (native)")]
+    assert native["if"] == "${{ runner.os != 'Linux' }}"
+    assert native["run"] == "bash scripts/build_release_server.sh"
+    swap = steps[names.index("Add swap for the server link")]
+    assert "runner.environment == 'github-hosted'" in swap["if"]
+    fold = steps[names.index("Fold the server executable into the medulla wheel")]
+    assert "scripts/inject_server_binary.py" in fold["run"]
+    assert "dist-server-bin/medulla-server" in fold["run"]
+    order = [
+        names.index(n)
+        for n in (
+            "Add swap for the server link",
+            "Build engine extension wheel",
+            "Fold numeric kernel into the medulla wheel",
+            "Fold the server executable into the medulla wheel",
+            "Strip console scripts",
+            "Normalize and audit wheel",
+        )
+    ]
+    assert order == sorted(order)
+    complete = next(
+        s["run"] for s in steps if "check_wheel_completeness" in s.get("run", "")
+    )
+    assert "--require-server-binary" in complete
+    script = BUILD_SCRIPT.read_text()
+    assert "--profile release-server --features full,ast-extended" in script
+    assert "--bin medulla-server" in script
+    assert "medulla-server.exe" in script
+    assert "aarch64-unknown-linux-gnu | *-apple-darwin)" in script
+    assert "CARGO_PROFILE_RELEASE_SERVER_LTO=thin" in script
+    assert os.access(BUILD_SCRIPT, os.X_OK)
+
+
+def _wheel(path: Path, members: dict[str, bytes]) -> Path:
+    with zipfile.ZipFile(path, "w") as archive:
+        for name, data in members.items():
+            archive.writestr(name, data)
+        archive.writestr("medulla-1.0.dist-info/RECORD", "")
+    return path
+
+
+@pytest.mark.spec("MEDULLA-CONTRACT-R053.9")
+@pytest.mark.parametrize("exe", ["medulla-server", "medulla-server.exe"])
+def test_inject_places_an_executable_server_member_and_rewrites_record(
+    tmp_path: Path, exe: str
+) -> None:
+    wheel = _wheel(
+        tmp_path / "medulla-1.0-cp39-abi3-linux_x86_64.whl",
+        {
+            "medulla/__init__.py": b"",
+            "medulla/_bin/medulla-server": b"stale",
+        },
+    )
+    binary = tmp_path / exe
+    binary.write_bytes(b"\x7fELF server")
+    for _ in range(2):  # idempotent: a second fold replaces the member
+        subprocess.run(
+            [sys.executable, str(INJECT), str(wheel), str(binary)], check=True
+        )
+    with zipfile.ZipFile(wheel) as archive:
+        members = [i for i in archive.infolist() if "/_bin/" in i.filename]
+        record = archive.read("medulla-1.0.dist-info/RECORD").decode()
+        assert [i.filename for i in members] == [f"medulla/_bin/{exe}"]
+        mode = members[0].external_attr >> 16
+        assert stat.S_ISREG(mode) and mode & 0o777 == 0o755
+        assert archive.read(f"medulla/_bin/{exe}") == b"\x7fELF server"
+        assert f"medulla/_bin/{exe},sha256=" in record
+        assert record.rstrip().endswith("medulla-1.0.dist-info/RECORD,,")
+
+
+@pytest.mark.spec("MEDULLA-CONTRACT-R053.9")
+def test_inject_refuses_anything_but_the_server_executable(tmp_path: Path) -> None:
+    wheel = _wheel(tmp_path / "medulla-1.0-py3-none-any.whl", {"medulla/x.py": b""})
+    other = tmp_path / "nemesis"
+    other.write_bytes(b"x")
+    done = subprocess.run(
+        [sys.executable, str(INJECT), str(wheel), str(other)],
+        capture_output=True,
+        text=True,
+    )
+    assert done.returncode != 0
+    assert "not a medulla-server executable" in done.stderr
+
+
+@pytest.mark.spec("MEDULLA-CONTRACT-R053.9")
+def test_release_builds_publish_and_verify_only_medulla() -> None:
+    jobs = _yaml(RELEASE)["jobs"]
+    assert "build-server" not in jobs
+    assert set(jobs["verify-pypi"]["needs"]) == {"build", "publish-x86", "build-sdist"}
+    verify = _script(jobs["verify-pypi"])
+    assert "--package medulla " in verify
+    for tag in ("manylinux_2_28_x86_64", "manylinux_2_28_aarch64", "win_amd64"):
+        assert tag in verify
+    assert "server-wheel-cache" not in _yaml(CI)["jobs"]
+    smoke = SMOKE.read_text()
+    assert "resolve_server_binary" in smoke
+    assert '[binary, "--version"]' in smoke
+    assert 'f"medulla-server {version}"' in smoke
 
 
 @pytest.mark.spec("MEDULLA-CONTRACT-R053.10")
-def test_package_ships_binary_path_and_its_tests() -> None:
-    init = (PACKAGE / "medulla_server/__init__.py").read_text()
-    assert "def binary_path()" in init
-    assert "class BinaryNotFoundError(FileNotFoundError)" in init
-    assert (PACKAGE / "tests/test_binary_path.py").is_file()
-    server_binary = (ROOT / "medulla/server_binary.py").read_text()
-    assert "from medulla_server import binary_path" in server_binary
+def test_server_reports_the_release_version() -> None:
+    main = (ROOT / "src/main.rs").read_text()
+    head = main[main.index("#[derive(Parser, Debug)]") : main.index("struct Args")]
+    assert "#[command(version)]" in head
+    assert '#[command(name = "medulla-server")]' in head
+    cfg = (ROOT / ".config/bumpversion.cfg").read_text()
+    assert "[bumpversion:file:Cargo.toml]" in cfg
 
 
 @pytest.mark.spec("MEDULLA-CONTRACT-R053.11")
-def test_image_is_built_from_the_wheel_and_published_as_one_manifest() -> None:
+def test_image_is_built_from_the_medulla_wheel_and_published_as_one_manifest() -> None:
     dockerfile = DOCKERFILE.read_text()
     assert "AS runtime" in dockerfile
-    assert "docker/wheels/" in dockerfile
+    assert "/wheels/medulla-*.whl" in dockerfile
+    assert '"medulla==${EGS_VERSION}"' in dockerfile
+    assert "*/site-packages/medulla/_bin/medulla-server" in dockerfile
+    assert '"${server}" --version' in dockerfile
     assert "EGS_VERSION must be numeric" in dockerfile
     assert 'ENTRYPOINT ["medulla-server"]' in dockerfile
     assert "EXPOSE 9100 9101" in dockerfile
     assert "USER 10001:10001" in dockerfile
     jobs = _yaml(RELEASE)["jobs"]
     image = jobs["server-image"]
-    assert image["needs"] == ["guard", "build-server"]
-    platforms = {leg["platform"] for leg in image["strategy"]["matrix"]["include"]}
-    assert platforms == {"linux/amd64", "linux/arm64"}
+    assert image["needs"] == ["guard", "build", "build-x86"]
+    assert "startsWith(github.ref, 'refs/tags/v')" in image["if"]
+    legs = {
+        leg["platform"]: leg["wheel"] for leg in image["strategy"]["matrix"]["include"]
+    }
+    assert legs == {
+        "linux/amd64": "wheel-linux-x86_64",
+        "linux/arm64": "wheel-linux-aarch64",
+    }
     assert "push-by-digest=true" in _script(image)
     manifest = jobs["server-manifest"]
     assert manifest["needs"] == "server-image"
-    script = _script(manifest)
-    assert "docker buildx imagetools create" in script
+    assert "docker buildx imagetools create" in _script(manifest)
     assert "medulla-server" in str(manifest["steps"])
 
 
 @pytest.mark.spec("MEDULLA-CONTRACT-R053.12")
-def test_package_version_is_bumped_with_the_engine() -> None:
+def test_one_version_and_a_build_only_dispatch() -> None:
     version = _version()
-    project = tomllib.loads((PACKAGE / "pyproject.toml").read_text())["project"]
-    assert project["version"] == version
-    init = (PACKAGE / "medulla_server/__init__.py").read_text()
-    assert f'__version__ = "{version}"' in init
     assert f"ARG EGS_VERSION={version}" in DOCKERFILE.read_text()
     cfg = (ROOT / ".config/bumpversion.cfg").read_text()
-    for target in (
-        "packaging/medulla-server/pyproject.toml",
-        "packaging/medulla-server/medulla_server/__init__.py",
-        "docker/Dockerfile",
-    ):
-        assert f"[bumpversion:file:{target}]" in cfg
+    assert "[bumpversion:file:docker/Dockerfile]" in cfg
     assert "ARG EGS_VERSION={current_version}" in cfg
-
-
-@pytest.mark.spec("MEDULLA-CONTRACT-R053.12")
-def test_dispatch_can_package_a_tagged_version_behind_the_guard() -> None:
     doc = _yaml(RELEASE)
     triggers = doc[True] if True in doc else doc["on"]
-    inputs = triggers["workflow_dispatch"]["inputs"]
-    assert inputs["source_ref"]["default"] == ""
-    assert inputs["packages"]["options"] == ["all", "server"]
-    guard = doc["jobs"]["guard"]
-    script = _script(guard)
-    assert "commits/refs/tags/${SOURCE_REF}" in script
-    assert "source_ref is only valid with packages=server" in script
-    assert guard["outputs"]["sha"] == "${{ steps.guard.outputs.sha }}"
-    assert "head_sha=${SHA}&status=success" in script
-    build = doc["jobs"]["build-server"]
-    checkout = [s for s in build["steps"] if s.get("with", {}).get("path") == "source"]
-    assert checkout[0]["with"]["ref"] == "${{ needs.guard.outputs.sha }}"
-    for name in ("build", "build-x86", "build-sdist"):
-        assert "inputs.packages != 'server'" in doc["jobs"][name]["if"]
-    assert re.search(r"source .* != Cargo.toml version", _script(build))
+    assert set(triggers["workflow_dispatch"]["inputs"]) == {"force_untested"}
+    guard = _script(doc["jobs"]["guard"])
+    assert "head_sha=${SHA}&status=success" in guard
+    tag_push = "github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')"
+    for job in doc["jobs"].values():
+        for step in job.get("steps", []):
+            body = str(step.get("run", "")) + str(step.get("uses", ""))
+            if "publish-distribution" in body or "twine upload" in body:
+                assert tag_push in str(step.get("if", "")) + str(job.get("if", ""))
+    assert tag_push in doc["jobs"]["server-image"]["if"]
 
 
 def test_tag_release_creates_the_github_release_after_pypi() -> None:
-    """The GitHub release follows the PyPI check and links both packages."""
+    """The GitHub release follows the PyPI check and links the one package."""
     job = _yaml(RELEASE)["jobs"]["github-release"]
     assert job["needs"] == ["verify-pypi"]
     assert job["permissions"] == {"contents": "write"}
     script = _script(job)
-    for package in ("medulla", "medulla-stem"):
-        assert package in script
-    assert "https://pypi.org/project/$package/$version/" in script
+    assert "https://pypi.org/project/medulla/$version/" in script
+    assert 'pip install \\"medulla==$version\\"' in script
     assert "--latest" in script
-
-
-@pytest.mark.spec("MEDULLA-CONTRACT-R053.9")
-def test_server_sdist_is_built_proven_published_and_verified() -> None:
-    jobs = _yaml(RELEASE)["jobs"]
-    steps = jobs["build-server"]["steps"]
-    names = [s.get("name", "") for s in steps]
-    build = steps[names.index("Build the server source distribution")]
-    proof = steps[
-        names.index("Prove the server source distribution by an isolated rebuild")
-    ]
-    publish = steps[names.index("Publish the server source distribution to PyPI")]
-    upload = next(
-        s for s in steps if (s.get("with") or {}).get("name") == "server-sdist"
-    )
-    for step in (build, proof, upload, publish):
-        assert "matrix.arch == 'x86_64'" in step["if"]
-    assert "maturin sdist" in build["run"]
-    assert "medulla_stem-${VERSION}.tar.gz" in build["run"]
-    assert "pip wheel --isolated --no-deps" in proof["run"]
-    assert '"$work/venv/bin/medulla-server" --help' in proof["run"]
-    assert (
-        "twine upload --skip-existing source/dist-server-sdist/*.tar.gz"
-        in publish["run"]
-    )
-    order = [
-        names.index(n)
-        for n in (
-            "Smoke test the built wheel",
-            "Build the server source distribution",
-            "Prove the server source distribution by an isolated rebuild",
-            "Publish the server source distribution to PyPI",
-        )
-    ]
-    assert order == sorted(order)
-    assert steps.index(upload) < names.index(
-        "Publish the server source distribution to PyPI"
-    )
-    verify = jobs["verify-pypi"]["steps"]
-    assert any((s.get("with") or {}).get("name") == "server-sdist" for s in verify)
-    assert 'medulla_stem-"${GITHUB_REF_NAME#v}".tar.gz' in _script(jobs["verify-pypi"])
-
-
-def _path_crates(manifest_dir: Path, seen: dict[Path, None]) -> None:
-    manifest = tomllib.loads((manifest_dir / "Cargo.toml").read_text())
-    tables = [manifest, *manifest.get("target", {}).values()]
-    for table in tables:
-        for kind in ("dependencies", "dev-dependencies", "build-dependencies"):
-            for spec in table.get(kind, {}).values():
-                if isinstance(spec, dict) and "path" in spec:
-                    crate = (manifest_dir / spec["path"]).resolve()
-                    if crate not in seen:
-                        seen[crate] = None
-                        _path_crates(crate, seen)
-
-
-@pytest.mark.spec("MEDULLA-CONTRACT-R053.9")
-def test_sdist_carries_every_path_crate_cargo_needs_to_load_the_manifest() -> None:
-    """maturin drops path crates reached only through unselected optional features,
-    but `cargo metadata` still loads their manifests, so the isolated rebuild fails
-    unless each crate tree is an explicit sdist include. maturin rejects `..` in
-    include patterns, so the package dir carries `crates` and `vendor` symlinks to
-    workspace trees and the patterns are relative to them."""
-    seen: dict[Path, None] = {}
-    _path_crates(ROOT, seen)
-    members = tomllib.loads((ROOT / "Cargo.toml").read_text())["workspace"]["members"]
-    expected = {str(c.relative_to(ROOT)) for c in seen} | set(members)
-    project = tomllib.loads((PACKAGE / "pyproject.toml").read_text())
-    includes = project["tool"]["maturin"]["include"]
-    assert all(i["format"] == "sdist" for i in includes)
-    included = {i["path"].removesuffix("/**/*") for i in includes}
-    link = PACKAGE / "crates"
-    assert link.is_symlink() and link.resolve() == ROOT / "crates"
-    vendor = PACKAGE / "vendor"
-    assert vendor.is_symlink() and vendor.resolve() == ROOT / "vendor"
-    assert expected - included == set(), "crates missing from the sdist include list"
-    assert "crates/medulla-asr-whisper" in included
-    assert "crates/medulla-tts-piper" in included
-    assert {
-        "vendor/zstd-parent-patches",
-        "vendor/security-patches",
-    } <= included

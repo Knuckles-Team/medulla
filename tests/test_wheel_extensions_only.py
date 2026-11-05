@@ -39,15 +39,15 @@ def test_wheel_base_is_the_extension_crate_not_the_server_bin() -> None:
 
 
 @pytest.mark.spec("MEDULLA-CONTRACT-R053.8")
-def test_no_wheel_path_compiles_a_server_target() -> None:
+def test_maturin_builds_extension_modules_and_the_server_is_a_separate_build() -> None:
     steps = _yaml(ACTION)["runs"]["steps"]
-    commands = "\n".join(
-        str(step.get("with", {}).get("args", "")) + step.get("run", "")
-        for step in steps
+    maturin_args = "\n".join(
+        str(step.get("with", {}).get("args", "")) for step in steps
     )
-    assert "--features" in commands  # the numeric component only
-    assert "full,ast-extended" not in commands
-    assert "--bins" not in commands
+    assert "--features python" in maturin_args  # the numeric component only
+    assert "full,ast-extended" not in maturin_args
+    assert "--bins" not in maturin_args
+    assert "bindings" not in maturin_args
     ci_gate = next(
         step
         for step in _yaml(CI)["jobs"]["gates-wheel"]["steps"]
@@ -78,7 +78,6 @@ def test_each_platform_publishes_on_its_own_behind_the_guard() -> None:
         "build",
         "publish-x86",
         "build-sdist",
-        "build-server",
     }
     assert "twine upload" not in "\n".join(
         s.get("run", "") for s in jobs["verify-pypi"]["steps"]

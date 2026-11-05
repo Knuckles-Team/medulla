@@ -4,9 +4,11 @@ Maturin builds the wheel from the ``medulla-pyengine`` PyO3 crate (the
 ``medulla.engine`` module plus the pure-Python package, selected by
 ``[tool.maturin] manifest-path``); the numeric PyO3 module is built from its own
 crate. Every PEP 517 and editable build folds the numeric module into that wheel
-using the same injector as the release pipeline. No server crate or bin target is
-compiled; the strip step is a safety net that removes any executable, because the
-server ships in the separate ``medulla-stem`` package (extra ``server``).
+using the same injector as the release pipeline. A source build compiles the
+extension modules only: the ``medulla-server`` executable ships in the platform
+wheels (``medulla/_bin/medulla-server``, folded in by the release workflow), not
+in builds from the sdist. The strip step is a safety net that removes any
+console script.
 """
 
 from __future__ import annotations

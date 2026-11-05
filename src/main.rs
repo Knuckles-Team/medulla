@@ -43,6 +43,8 @@ use medulla_server::server_startup::run_fuseki_startup_health_check;
 #[derive(Parser, Debug)]
 #[command(name = "medulla-server")]
 #[command(about = "Tokio-native epistemic graph service")]
+// `--version` prints the root package version, which is the release version.
+#[command(version)]
 struct Args {
     /// Offline operator command, run instead of the service.
     #[cfg(feature = "security")]

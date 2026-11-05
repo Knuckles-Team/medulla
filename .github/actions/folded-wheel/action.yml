@@ -1,8 +1,9 @@
 name: Build folded release wheel
 description: >-
   One complete release-wheel pass: build the medulla wheel from the
-  medulla-pyengine PyO3 crate plus the pure-Python package (no server crate or bin
-  target is compiled), build the medulla-numeric PyO3 module and fold it in,
+  medulla-pyengine PyO3 crate plus the pure-Python package, build the
+  medulla-numeric PyO3 module and the release-server `medulla-server` executable
+  for the same target and fold both in (the server as medulla/_bin/medulla-server),
   normalize and privacy-audit the wheel, and require the result to be complete.
   The primary and reproduction passes in release.yml both run this, so the two
   cannot drift apart. Reads MEDULLA_WHEEL_TARGET, MEDULLA_WHEEL_MANYLINUX,
@@ -58,9 +59,35 @@ runs:
         workspaces: ". -> ${{ runner.temp }}/medulla-release-target"
         save-if: ${{ inputs.cache-save == 'true' }}
 
+    # The server link is the most memory-hungry step of the leg: hosted Linux
+    # runners (16 GB) get swap first. Self-hosted runners are sized for it.
+    - name: Add swap for the server link
+      if: ${{ runner.os == 'Linux' && runner.environment == 'github-hosted' }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        if swapon --show | grep -q /swapfile-medulla; then exit 0; fi
+        avail_gb="$(df --output=avail -BG / | tail -1 | tr -dc '0-9')"
+        size_gb=24
+        if [ "$avail_gb" -lt $((size_gb + 15)) ]; then size_gb=$((avail_gb - 15)); fi
+        test "$size_gb" -ge 8 || { echo "not enough free disk for swap: ${avail_gb}G" >&2; exit 1; }
+        sudo fallocate -l "${size_gb}G" /swapfile-medulla
+        sudo chmod 600 /swapfile-medulla
+        sudo mkswap /swapfile-medulla
+        sudo swapon /swapfile-medulla
+        free -h
+
+    # The server executable for this target (release-server profile, features
+    # `full,ast-extended`). Linux builds it inside the engine build's manylinux
+    # container below (prepare-script); macOS and Windows build it natively here.
+    - name: Build the release server executable (native)
+      if: ${{ runner.os != 'Linux' }}
+      shell: bash
+      run: bash scripts/build_release_server.sh
+
     # The base wheel is the medulla-pyengine PyO3 crate (`medulla.engine`) plus
     # the pure-Python package, selected by `[tool.maturin] manifest-path` in
-    # pyproject.toml. Nothing that is not an extension module is compiled.
+    # pyproject.toml.
     - name: Build engine extension wheel
       uses: ./.github/actions/release-maturin
       with:
@@ -71,6 +98,7 @@ runs:
           ${{ env.MEDULLA_WHEEL_MATURIN_ARGS }}
         container: ${{ steps.build-environment.outputs.container }}
         maturin-version: ${{ steps.build-environment.outputs.maturin-version }}
+        prepare-script: scripts/build_release_server.sh
 
     # ── Fold the medulla-numeric Surface-A kernel INTO this same wheel (CONCEPT:MEDULLA-346).
     #    Build the pyo3 cdylib kernel (`crates/medulla-numeric --features python`) for the
@@ -98,7 +126,7 @@ runs:
       if: ${{ always() && runner.os == 'Linux' }}
       shell: bash
       run: |
-        for dir in "dist-${{ inputs.pass }}" "numdist-${{ inputs.pass }}"; do
+        for dir in "dist-${{ inputs.pass }}" "numdist-${{ inputs.pass }}" dist-server-bin; do
           [ -d "$dir" ] || continue
           sudo -n chown -R "$(id -u):$(id -g)" "$dir" 2>/dev/null \
             || docker run --rm -v "$PWD:/w" "${{ steps.build-environment.outputs.container || 'quay.io/pypa/manylinux_2_28_x86_64' }}" chown -R "$(id -u):$(id -g)" "/w/$dir" \
@@ -111,9 +139,13 @@ runs:
         python scripts/inject_numeric_kernel.py "$(ls dist-${{ inputs.pass }}/medulla-*.whl)" "$(ls numdist-${{ inputs.pass }}/*.whl)"
         python scripts/inject_ontology.py "$(ls dist-${{ inputs.pass }}/medulla-*.whl)"
 
-    # Safety net: this wheel path builds no executable, but the published wheel
-    # must stay executable-free whatever a future build change emits.
-    - name: Strip console executables (executable-free wheel)
+    - name: Fold the server executable into the medulla wheel
+      shell: bash
+      run: python scripts/inject_server_binary.py "$(ls dist-${{ inputs.pass }}/medulla-*.whl)" "$(ls dist-server-bin/medulla-server*)"
+
+    # Safety net: the server is package data, never a console script; drop any
+    # `*.data/scripts/*` member a future build change might emit.
+    - name: Strip console scripts
       shell: bash
       run: python scripts/strip_wheel_executables.py dist-${{ inputs.pass }}/*.whl
 
@@ -130,9 +162,9 @@ runs:
     # is silent when it fails. Running the gate on the build leg localizes such a
     # regression to the platform that produced it; `publish-pypi` re-runs it on the
     # downloaded artifacts as the actual publish boundary.
-    - name: Require a complete wheel (numeric + engine kernels + no executables + RECORD)
+    - name: Require a complete wheel (numeric + engine kernels + server + RECORD)
       shell: bash
-      run: python scripts/check_wheel_completeness.py --require-engine-kernel dist-${{ inputs.pass }}/*.whl
+      run: python scripts/check_wheel_completeness.py --require-engine-kernel --require-server-binary dist-${{ inputs.pass }}/*.whl
 
     # Container builds create root-owned target files; hand them back so the
     # cache save (a post step of the restore above) can read and prune them.

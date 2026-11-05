@@ -35,9 +35,9 @@ build with the `cluster` Cargo feature — see [deployment.md](deployment.md).)
 
 ### 1. Install
 
-The wheel ships the prebuilt `medulla-server` binary (maturin
-`bindings = "bin"`) — installing it just downloads and unpacks the per-platform
-binary; nothing compiles.
+Every platform wheel ships the prebuilt `medulla-server` binary at
+`medulla/_bin/medulla-server` — installing it just downloads and unpacks the
+per-platform binary; nothing compiles. The source distribution carries no server.
 
 ```bash
 # with pip
@@ -46,8 +46,9 @@ pip install medulla
 # …or with uv (the fleet-standard fast installer)
 uv pip install --prerelease=allow medulla
 
-# confirm the binary is on PATH
-medulla-server --help
+# locate the packaged binary and confirm its version
+SERVER="$(python -c 'from medulla.server_binary import resolve_server_binary; print(resolve_server_binary())')"
+"$SERVER" --version
 ```
 
 The wheel's Rust binary is already built with Cargo `full`, and the bare Python
