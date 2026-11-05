@@ -17,7 +17,9 @@ pub const MAX_SUMMARY_SEGMENT_BYTES: u32 = 16_384;
 pub const MAX_SUMMARY_TOKENS: u32 = 8_192;
 
 /// The refusal codes of the meeting transcript surface
-/// (MEDULLA-MEDIA-VOCAB-R001.101.6), `(code, meaning)`, sorted by code.
+/// (MEDULLA-MEDIA-VOCAB-R001.101.6), `(code, meaning)`, sorted by code. A
+/// cross-tenant request refuses with `ACCESS_DENIED` from the shared tenant
+/// check of the route, so no tenant code belongs to this table.
 pub const REFUSALS: &[(&str, &str)] = &[
     (
         "CITATION_OUTSIDE_TEXT",
@@ -40,7 +42,6 @@ pub const REFUSALS: &[(&str, &str)] = &[
         "a summary limit is above its fixed ceiling",
     ),
     ("SUMMARY_LIMIT_INVALID", "a summary limit is zero"),
-    ("TENANT_DENIED", "the request names another tenant"),
     (
         "TRANSCRIPT_BASE_CONFLICT",
         "the revision base does not match the current transcript revision",

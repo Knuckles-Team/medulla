@@ -25,6 +25,8 @@ use crate::repository_index::{stored_value, IndexWriteSet};
 pub const SUMMARY_TYPE: &str = "MeetingSummary";
 /// Node type of one summary claim.
 pub const CLAIM_TYPE: &str = "SummaryClaim";
+/// Evidence class of every committed summary (MEDULLA-MEDIA-VOCAB-R001.101.6).
+pub const SUMMARY_EVIDENCE_CLASS: &str = "Observation";
 
 fn refuse(code: &str, detail: impl std::fmt::Display) -> String {
     format!("{code}: {detail}")
@@ -113,7 +115,9 @@ pub fn commit_summary(
     properties.insert("type", SUMMARY_TYPE.to_string());
     properties.insert("meeting_id", request.meeting_id.clone());
     properties.insert("summary_id", stored_value(&request.summary_id).to_string());
+    properties.insert("evidence_class", SUMMARY_EVIDENCE_CLASS.to_string());
     properties.insert("transcript_digest", context.transcript_digest.to_hex());
+    properties.insert("context_digest", receipt.input_context_digest.to_hex());
     properties.insert("receipt_id", stored_value(&receipt.receipt_id).to_string());
     properties.insert("receipt_digest", receipt.receipt_digest.to_hex());
     properties.insert(

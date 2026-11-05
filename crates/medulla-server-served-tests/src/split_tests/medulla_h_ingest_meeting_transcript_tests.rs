@@ -1,4 +1,4 @@
-//! MEDULLA-MEDIA-VOCAB-R001.101.3 / .4 / .5 through the real request
+//! MEDULLA-MEDIA-VOCAB-R001.101.3 / .4 / .5 / .6 through the real request
 //! boundary: signed `MeetingTranscriptRevision`, `MeetingSummaryContext` and
 //! `MeetingSummaryCommit` requests under a tenant and principal context, each
 //! committed through the one ChangeEnvelope authority, and every refusal
@@ -465,4 +465,117 @@ async fn commit_validates_receipt_and_citations() {
     .await;
     assert!(refusal("stale", &stale).contains("TRANSCRIPT_STALE"));
     assert_eq!(snapshot(&state, 520).await, after);
+}
+
+async fn properties_of(
+    state: &Arc<RwLock<medulla_server_api::state::ServerState>>,
+    id: u64,
+    node_id: &str,
+) -> serde_json::Value {
+    let response = call(
+        state,
+        id,
+        Method::GetNodeProperties {
+            node_id: node_id.to_string(),
+        },
+    )
+    .await;
+    let Some(ResultPayload::Raw(bytes)) = response.result else {
+        panic!("{node_id} is stored");
+    };
+    medulla_types::msgpack::decode_property_value(&bytes).unwrap()
+}
+
+// spec: MEDULLA-MEDIA-VOCAB-R001.101.6
+#[tokio::test]
+async fn transcript_finalize_context_commit_round_trip() {
+    let codes: Vec<&str> = medulla_types::meeting_transcript::REFUSALS
+        .iter()
+        .map(|(code, _)| *code)
+        .collect();
+    assert!(
+        !codes.contains(&"TENANT_DENIED"),
+        "no tenant code in the table"
+    );
+
+    let dir = tempfile::tempdir().unwrap();
+    let state = state(dir.path());
+    let sealed = finalized_transcript(&state).await;
+    let context: MeetingSummaryContext = ok(
+        "context",
+        call(&state, 600, context_request(sealed, POLICY)).await,
+    );
+    let span = context.spans[0].span_id.clone();
+
+    // A cross-tenant request refuses with ACCESS_DENIED before any write.
+    let before = snapshot(&state, 610).await;
+    let mut foreign = signed(620, commit_request(receipt(&context, "local"), &span, 10));
+    foreign.graph = "tenant-other".to_string();
+    let denied = medulla_server_router::dispatch::request_boundary::dispatch(&state, foreign).await;
+    assert!(refusal("cross-tenant", &denied).contains("ACCESS_DENIED"));
+    assert!(!refusal("cross-tenant", &denied).contains("TENANT_DENIED"));
+    assert_eq!(snapshot(&state, 630).await, before, "cross-tenant wrote");
+
+    let committed: MeetingSummaryCommitReceipt = ok(
+        "commit",
+        call(
+            &state,
+            640,
+            commit_request(receipt(&context, "local"), &span, 10),
+        )
+        .await,
+    );
+    assert_eq!(committed.transcript_digest, sealed);
+
+    // The summary node carries its four evidence digests, class Observation.
+    let summary_node = format!("meeting-summary:{MEETING}:summary-1");
+    let summary = properties_of(&state, 650, &summary_node).await;
+    assert_eq!(summary["evidence_class"], serde_json::json!("Observation"));
+    assert_eq!(
+        summary["transcript_digest"],
+        serde_json::json!(sealed.to_hex())
+    );
+    assert_eq!(
+        summary["context_digest"],
+        serde_json::json!(context.context_digest.to_hex())
+    );
+    let sent = receipt(&context, "local");
+    assert_eq!(
+        summary["receipt_digest"],
+        serde_json::json!(sent.receipt_digest.to_hex())
+    );
+    assert_eq!(
+        summary["output_digest"],
+        serde_json::json!(sent.output_digest.to_hex())
+    );
+    let claim_node = format!("{summary_node}:claim:c1");
+    let claim = properties_of(&state, 660, &claim_node).await;
+
+    // Correcting the transcript marks the summary stale; its text is unchanged.
+    let _: MeetingTranscriptRevisionReceipt = ok(
+        "correct",
+        call(
+            &state,
+            670,
+            event(TranscriptRevisionOp::Correct, 4, 5, &["s2"], "corrected s2"),
+        )
+        .await,
+    );
+    let head = properties_of(&state, 680, &format!("meeting-transcript:{MEETING}")).await;
+    let head_state: serde_json::Value =
+        serde_json::from_str(head["state_json"].as_str().expect("state_json")).unwrap();
+    let marks = head_state["summaries"].as_array().expect("summary marks");
+    assert_eq!(marks.len(), 1);
+    assert_eq!(marks[0]["summary_id"], serde_json::json!("summary-1"));
+    assert_eq!(
+        marks[0]["stale"],
+        serde_json::json!(true),
+        "the summary reads stale"
+    );
+    assert_eq!(properties_of(&state, 690, &summary_node).await, summary);
+    assert_eq!(properties_of(&state, 700, &claim_node).await, claim);
+    assert_eq!(
+        claim["text"],
+        serde_json::json!("The plan ships on Friday.")
+    );
 }
