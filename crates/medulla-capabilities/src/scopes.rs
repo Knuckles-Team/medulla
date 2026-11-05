@@ -122,6 +122,7 @@ pub const SCOPES: &[ScopeEntry] = &[
     entry("finance:backfill", Domain, "finance"),
     entry("finance:propose-order", Domain, "finance"),
     entry("finance:read", Domain, "finance"),
+    entry("finance:records", Domain, "finance"),
     entry("finance:track", Domain, "finance"),
     entry("fleet:control", Admin, "graph-os"),
     entry("fleet:events", ServiceOnly, "graph-os"),

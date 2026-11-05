@@ -224,9 +224,10 @@ fn every_wire_variant_has_exactly_one_descriptor_and_vice_versa() {
     // and `GetRunCheckpoint`.
     // 481 -> 483: MEDULLA-FINANCE-PRIMITIVES-R900.3 `FinancePositionSize`, `FinanceDistributionShift`.
     // 483 -> 492: MEDULLA-FINANCE-PRIMITIVES-R901.3/R613.3/R018.3 banking, execution and factor-rank methods.
+    // 492 -> 494: MEDULLA-FINANCE-PRIMITIVES-R004.3.2 `FinanceRecordPut` and `FinanceRecordGet`.
     assert_eq!(
         variants.len(),
-        492,
+        494,
         "the wire method census changed; update this exact count deliberately"
     );
 }
