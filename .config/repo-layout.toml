@@ -38,7 +38,6 @@ architecture = "RF-ADR-005 owner manifest: component-registry.yml declares this 
 benches = "criterion benchmarks: cold/warm reopen, massive-scale, pyo3 in-process vs UDS transport, redb group-commit, provenance-anchor"
 clients = "hand-maintained out-of-tree client SDKs: clients/go (Go) and clients/js (JS/TS), each with its own README, tests, and lockfile"
 docker = "Dockerfile(s) + compose stacks for the standalone/test engine image, the BuildKit-scoped Dockerfile.dockerignore for the repository-root build context, plus the docker/wheels/ COPY target for the CI-built wheel"
-packaging = "the medulla-server PyPI package source: a maturin bin-bindings build over the root server binary, plus medulla_server.binary_path() and its tests"
 docs = "mkdocs documentation source: architecture, benchmarks, generated capability docs"
 examples = "runnable Rust examples (embedded usage, a neighbors-batch benchmark)"
 protocols = "versioned wire-protocol schemas (epistemic-operations, performance) consumed by client generators"

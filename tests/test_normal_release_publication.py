@@ -60,7 +60,7 @@ class ReleasePublication(unittest.TestCase):
         self.assertEqual(jobs["publish-x86"]["needs"], "build-x86")
         self.assertEqual(
             jobs["verify-pypi"]["needs"],
-            ["build", "publish-x86", "build-sdist", "build-server"],
+            ["build", "publish-x86", "build-sdist"],
         )
 
     def test_source_archive_is_validated_before_upload(self):
@@ -244,7 +244,8 @@ class ReleasePublication(unittest.TestCase):
         for proof in (
             "set -euo pipefail",
             "--force-reinstall",
-            "unexpected medulla-server executable",
+            "unexpected medulla-server console script",
+            "resolve_server_binary",
             "metadata.requires",
             "numpy",
             "n.sum(values)==10.0",

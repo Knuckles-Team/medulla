@@ -1269,7 +1269,7 @@ jobs:
 
   # ── Warm compile cache for tag releases (MEDULLA-CONTRACT-R053.8). Builds the EXACT
   # release wheel configuration (.github/actions/folded-wheel: the medulla-pyengine
-  # wheel plus the numeric module, extension modules only) for each published
+  # wheel, the numeric module and the release-server executable) for each published
   # platform on main pushes and SAVES the Swatinem/rust-cache entry under the
   # stable key `medulla-wheel-<target>`. Tag builds restore that default-branch cache
   # and never save; pull requests neither restore nor save it.
@@ -1328,32 +1328,6 @@ jobs:
           pass: primary
           cache-save: 'true'
 
-  # ── Warm compile cache for the medulla-server wheel (MEDULLA-CONTRACT-R053.9).
-  # Builds the exact release server wheel natively for each Linux architecture on
-  # main pushes and SAVES the Swatinem/rust-cache entry under `egs-<arch>`; release.yml
-  # restores it and never saves.
-  server-wheel-cache:
-    timeout-minutes: 360
-    name: server wheel cache linux-${{ matrix.arch }}
-    if: >-
-      github.repository == 'Knuckles-Team/medulla'
-      && github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ${{ matrix.arch == 'aarch64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
-    continue-on-error: true
-    strategy:
-      fail-fast: false
-      matrix:
-        arch: [x86_64, aarch64]
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ github.sha }}
-          persist-credentials: false
-      - name: Build the server wheel and save the compile cache
-        uses: ./.github/actions/build-server-wheel
-        with:
-          cache-save: 'true'
-
   # ── Rolling engine wheel for consumer CI (spec public-engine-contract-and-release). The wheel
   # exceeds the PyPI size limit, so each main push publishes its Linux x86
   # wheel to the `engine-main` GitHub prerelease. Consumers install it with
@@ -1407,7 +1381,7 @@ jobs:
           cp dist-primary/medulla-*.whl dist/
           (cd dist && sha256sum medulla-*.whl > SHA256SUMS)
 
-      - name: Smoke test (no executables + import medulla.{numeric,engine})
+      - name: Smoke test (packaged server --version + import medulla.{numeric,engine})
         shell: bash
         run: bash scripts/release_wheel_smoke.sh
 

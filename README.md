@@ -76,17 +76,15 @@ for the current behavior of each operation.
 
 ## Packages
 
-This repository publishes two PyPI packages and one container image, all at the same version.
-
-**Medulla Stem** is the native server, distributed as `medulla-stem`.
-The server executable, module and packaging-path identifiers remain unchanged.
+This repository publishes one PyPI package and one container image, at the same version.
 
 | Artifact | Contents | Install |
 |---|---|---|
-| `medulla` | The Python client, the in-process engine module and the numeric kernel. Carries no executable. | `pip install medulla` |
-| `medulla-stem` | The native `medulla-server` executable (Linux x86_64 and aarch64) and `medulla_server.binary_path()`. Source in [`packaging/medulla-server`](packaging/medulla-server). | `pip install medulla-stem` |
-| `medulla[server]` | The client plus the server package pinned to the same version. | `pip install "medulla[server]"` |
-| `medulla-stem` image | The server binary on a slim base, one tag for `linux/amd64` and `linux/arm64`, built from the server wheel. | `docker pull <registry-user>/medulla-stem:<version>` |
+| `medulla` | The Python client, the in-process engine module, the numeric kernel and the native `medulla-server` executable for the wheel's platform (Linux x86_64 and aarch64, macOS arm64, Windows x64) at `medulla/_bin/medulla-server`. `medulla.server_binary.resolve_server_binary()` returns its path. | `pip install medulla` |
+| `medulla-server` image | The server binary on a slim base, one tag for `linux/amd64` and `linux/arm64`, built from the Linux wheels. | `docker pull <registry-user>/medulla-server:<version>` |
+
+The server executable ships in the platform wheels only. An install from the
+source distribution builds the extension modules and carries no server.
 
 ## Documentation
 

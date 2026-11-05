@@ -62,7 +62,7 @@ def _find_server_binary() -> str | None:
             os.path.dirname(__file__), "..", "target", "debug", "medulla-server"
         ),
     ]
-    # The installed `medulla-server` package, else PATH.
+    # The server packaged in the installed medulla wheel.
     from medulla.server_binary import (
         ServerBinaryNotFoundError,
         resolve_server_binary,
@@ -85,7 +85,7 @@ def cmd_start(args: argparse.Namespace) -> None:
     if not binary:
         print("Error: medulla-server binary not found.", file=sys.stderr)
         print(
-            'Install it with: pip install "medulla[server]" (or cargo build --release)',
+            "Install a medulla wheel (it carries the server) or cargo build --release",
             file=sys.stderr,
         )
         sys.exit(1)

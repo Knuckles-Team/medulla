@@ -211,18 +211,57 @@ def test_a_windows_wheel_is_accepted(tmp_path: Path) -> None:
 
 
 @pytest.mark.spec("MEDULLA-CONTRACT-R053.2")
-def test_a_wheel_carrying_the_server_binary_is_rejected(tmp_path: Path) -> None:
-    """The server binary ships in medulla-server, not in this wheel."""
+def test_a_wheel_carrying_a_console_script_is_rejected(tmp_path: Path) -> None:
+    """The server is package data, never a `*.data/scripts/` console script."""
     members = _complete_members()
     members[f"{DATA_SCRIPTS}/medulla-server"] = b"\x7fELF-server"
     wheel = _build_wheel(
-        tmp_path / "with-server.whl",
+        tmp_path / "with-script.whl",
         members=members,
         executable={f"{DATA_SCRIPTS}/medulla-server"},
     )
     failures = check_wheel(wheel)
-    assert any("is an executable" in failure for failure in failures)
+    assert any("is a console script" in failure for failure in failures)
     assert main([str(wheel)]) == 1
+
+
+SERVER = "medulla/_bin/medulla-server"
+
+
+@pytest.mark.spec("MEDULLA-CONTRACT-R053.9")
+def test_the_packaged_server_is_required_only_when_asked(tmp_path: Path) -> None:
+    without = _build_wheel(tmp_path / "without.whl", members=_complete_members())
+    assert check_wheel(without) == []
+    failures = check_wheel(without, require_server_binary=True)
+    assert any("expected exactly one server executable" in f for f in failures)
+    assert main(["--require-server-binary", str(without)]) == 1
+
+    members = _complete_members()
+    members[SERVER] = b"\x7fELF-server"
+    packaged = _build_wheel(
+        tmp_path / "packaged.whl", members=members, executable={SERVER}
+    )
+    assert check_wheel(packaged, require_server_binary=True) == []
+    assert main(["--require-server-binary", str(packaged)]) == 0
+
+
+@pytest.mark.spec("MEDULLA-CONTRACT-R053.9")
+def test_a_non_executable_or_empty_packaged_server_is_rejected(
+    tmp_path: Path,
+) -> None:
+    members = _complete_members()
+    members[SERVER] = b"\x7fELF-server"
+    plain = _build_wheel(tmp_path / "plain.whl", members=members)
+    assert any(
+        "no executable bit" in f for f in check_wheel(plain, require_server_binary=True)
+    )
+    members[SERVER] = b""
+    empty = _build_wheel(tmp_path / "empty.whl", members=members, executable={SERVER})
+    assert any("is empty" in f for f in check_wheel(empty, require_server_binary=True))
+    windows = _complete_members()
+    windows[f"{SERVER}.exe"] = b"MZ-server"
+    exe = _build_wheel(tmp_path / "windows.whl", members=windows)
+    assert check_wheel(exe, require_server_binary=True) == []
 
 
 def test_numpy_base_dependency_is_rejected(tmp_path: Path) -> None:

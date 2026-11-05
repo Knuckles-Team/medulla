@@ -5,21 +5,19 @@ name the project no longer ships under. The tombstone declares the current name 
 only dependency, so installing the retired name installs the current one. `pip` then
 reports the switch instead of leaving the user on a frozen release.
 
-Two names are tombstoned:
+One name is tombstoned:
 
 | Retired name | Tombstone version | Depends on | Lives in |
 | --- | --- | --- | --- |
 | `medulla` | 2.28.0 | `medulla>=2.27.9` | [`packaging/tombstones/medulla`](../../packaging/tombstones/medulla) |
-| `medulla-server` | 2.28.0 | `medulla-stem>=2.27.9` | [`packaging/tombstones/medulla-server`](../../packaging/tombstones/medulla-server) |
 
 ```bash
 pip install medulla         # resolves to medulla
-pip install medulla-server  # resolves to medulla-stem
 ```
 
-The import names did not move. `import medulla` and
-`from medulla_server import binary_path` still work, because the tombstone
-installs the package that provides them. Only the distribution name changed.
+The separate server distributions are retired without a tombstone. Since 3.2.0
+every `medulla` platform wheel carries the `medulla-server` executable, and
+`medulla.server_binary.resolve_server_binary()` returns its path.
 
 ## When a tombstone is published
 

@@ -26,9 +26,8 @@ The invariants, each one a regression that actually shipped:
 
 1. **Numeric kernel present** — ``medulla/numeric*.{so,pyd}``. The
    2.14.0-2.23.0 regression.
-2. **No executables** — nothing under ``*.data/scripts/``. The native server
-   ships in the separate ``medulla-stem`` package (extra ``server``);
-   the public wheel stays under the PyPI per-file limit.
+2. **No console scripts** — nothing under ``*.data/scripts/``. The native
+   server is package data (invariant 7), never an installed console script.
 3. **Python surface complete** — the ``medulla`` package plus its
    ``kvcache`` and ``skills`` subpackages, so a wheel that silently loses package
    data fails here rather than at a consumer's import.
@@ -56,11 +55,18 @@ The invariants, each one a regression that actually shipped:
    ``.github/workflows/release.yml``) passes the flag at every call site; any
    other caller that omits it gets the pre-existing, lenient behavior
    unchanged.
+7. **Server executable present, but only when opted into** — exactly one
+   ``medulla/_bin/medulla-server`` (``.exe`` on Windows), with its executable
+   bits set on Unix. The release build folds it in
+   (:mod:`scripts.inject_server_binary`); ``--require-server-binary`` asserts
+   it. Development wheels built without the server do not pass the flag.
 
 Usage::
 
     python scripts/check_wheel_completeness.py dist/*.whl
     python scripts/check_wheel_completeness.py --require-engine-kernel dist/*.whl
+    python scripts/check_wheel_completeness.py --require-engine-kernel \
+        --require-server-binary dist/*.whl
 
 Exits non-zero, naming every failed invariant per wheel, if any wheel is
 incomplete. Prints only wheel-relative member names — never a build path.
@@ -88,6 +94,10 @@ REQUIRED_BASE_DEPENDENCIES = ("msgpack",)
 FORBIDDEN_DEPENDENCIES = ("numpy",)
 # ``<name>-<version>.data/scripts/<binary>`` — maturin's console-binary location.
 _SCRIPTS_RE = re.compile(r"^[^/]+\.data/scripts/(?P<name>[^/]+)$")
+SERVER_MEMBERS = (
+    f"{TARGET_PACKAGE}/_bin/medulla-server",
+    f"{TARGET_PACKAGE}/_bin/medulla-server.exe",
+)
 
 
 def _urlsafe_sha256(data: bytes) -> str:
@@ -212,14 +222,33 @@ def _check_engine_kernel(
     ]
 
 
-def _check_server_entries(archive: zipfile.ZipFile) -> list[str]:
-    """The public wheel ships no executables; the server is its own package."""
+def _check_console_scripts(archive: zipfile.ZipFile) -> list[str]:
+    """The wheel installs no console scripts; the server is package data."""
     return [
-        f"{info.filename} is an executable — the server binary ships in the "
-        "medulla-stem package (extra `server`), never in this wheel"
+        f"{info.filename} is a console script — the server ships as "
+        f"{SERVER_MEMBERS[0]}, never under *.data/scripts/"
         for info in archive.infolist()
         if _SCRIPTS_RE.match(info.filename)
     ]
+
+
+def _check_server_binary(
+    archive: zipfile.ZipFile, require_server_binary: bool
+) -> list[str]:
+    if not require_server_binary:
+        return []
+    members = [i for i in archive.infolist() if i.filename in SERVER_MEMBERS]
+    if len(members) != 1:
+        return [
+            f"expected exactly one server executable ({' or '.join(SERVER_MEMBERS)}),"
+            f" found {len(members)} — the server inject did not run or was undone"
+        ]
+    info = members[0]
+    if info.file_size == 0:
+        return [f"{info.filename} is empty"]
+    if not info.filename.endswith(".exe") and not (info.external_attr >> 16) & 0o111:
+        return [f"{info.filename} has no executable bit; pip would install it 0644"]
+    return []
 
 
 def _check_python_surface(names: Sequence[str]) -> list[str]:
@@ -257,7 +286,12 @@ def _check_forbidden_dependencies(archive: zipfile.ZipFile) -> list[str]:
     ]
 
 
-def check_wheel(path: Path, *, require_engine_kernel: bool = False) -> list[str]:
+def check_wheel(
+    path: Path,
+    *,
+    require_engine_kernel: bool = False,
+    require_server_binary: bool = False,
+) -> list[str]:
     """Return the list of failed invariants for one wheel (empty == complete).
 
     ``require_engine_kernel`` gates invariant 6 (the medulla-pyengine binding):
@@ -270,7 +304,8 @@ def check_wheel(path: Path, *, require_engine_kernel: bool = False) -> list[str]
         names = archive.namelist()
         failures.extend(_check_numeric_kernel(names))
         failures.extend(_check_engine_kernel(names, require_engine_kernel))
-        failures.extend(_check_server_entries(archive))
+        failures.extend(_check_console_scripts(archive))
+        failures.extend(_check_server_binary(archive, require_server_binary))
         failures.extend(_check_python_surface(names))
         failures.extend(_check_base_dependencies(archive))
         failures.extend(_check_forbidden_dependencies(archive))
@@ -291,13 +326,23 @@ def main(argv: Sequence[str] | None = None) -> int:
             "default because the extension is genuinely optional."
         ),
     )
+    parser.add_argument(
+        "--require-server-binary",
+        action="store_true",
+        help=(
+            "also require exactly one executable medulla/_bin/medulla-server "
+            "(.exe on Windows). Release builds pass it; they fold the server in."
+        ),
+    )
     args = parser.parse_args(argv)
 
     incomplete = 0
     for path in sorted(args.wheels, key=lambda item: item.name):
         try:
             failures = check_wheel(
-                path, require_engine_kernel=args.require_engine_kernel
+                path,
+                require_engine_kernel=args.require_engine_kernel,
+                require_server_binary=args.require_server_binary,
             )
         except (OSError, zipfile.BadZipFile, UnicodeDecodeError) as exc:
             print(
@@ -311,7 +356,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             for failure in failures:
                 print(f"  - {failure}")
         else:
-            print(f"OK: {path.name} is complete (kernels + no executables + RECORD).")
+            print(f"OK: {path.name} is complete.")
 
     if incomplete:
         print(

@@ -6,10 +6,10 @@ python -m pip install --upgrade pip
 # base and extra-gated NumPy metadata. Keep this smoke test independent from the
 # developer-only parity environment below.
 pip install --force-reinstall "$(ls dist/medulla-*.whl)"
-# (1) The public wheel carries NO executable; the server ships in the separate
-#     medulla-stem package (extra `server`).
+# (1) The wheel installs no console script: the server is package data at
+#     medulla/_bin/medulla-server, reached through medulla.server_binary.
 if command -v medulla-server >/dev/null 2>&1; then
-  echo "unexpected medulla-server executable from the bare wheel" >&2
+  echo "unexpected medulla-server console script from the wheel" >&2
   exit 1
 fi
 # (2) Import + compute the kernel FROM THE INSTALLED WHEEL. Run from a neutral
@@ -29,3 +29,18 @@ assert not any(
 PY
 python -c "import medulla.numeric as n; values=[1.,2.,3.,4.]; assert n.sum(values)==10.0 and n.mean(values)==2.5, (n.sum(values), n.mean(values)); print('numeric kernel OK:', n.__file__, '| sum=', n.sum(values), 'mean=', n.mean(values), 'std=', n.std(values))"
 python -c "import medulla.engine as e; print('engine kernel OK:', e.__file__, '| __engine__=', getattr(e, '__engine__', None))"
+# (3) The packaged server runs and reports the wheel's own version.
+python - <<'PY'
+import importlib.metadata as metadata
+import subprocess
+
+from medulla.server_binary import resolve_server_binary
+
+binary = resolve_server_binary()
+version = metadata.version("medulla")
+out = subprocess.run(
+    [binary, "--version"], capture_output=True, text=True, check=True
+).stdout.strip()
+assert out == f"medulla-server {version}", (out, version)
+print("packaged server OK:", binary, "|", out)
+PY

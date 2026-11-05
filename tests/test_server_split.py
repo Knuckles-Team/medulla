@@ -1,10 +1,9 @@
-"""Split distribution: one server, an executable-free wheel (MEDULLA-CONTRACT-R053)."""
+"""One server executable, packaged in the medulla wheel (MEDULLA-CONTRACT-R053)."""
 
 from __future__ import annotations
 
+import os
 import re
-import sys
-import types
 from pathlib import Path
 
 import pytest
@@ -35,32 +34,35 @@ def test_only_server_and_nemesis_binaries_remain_and_tools_are_dispatched() -> N
     assert main.index("offline_tools::run_if_requested()") < main.index("Args::parse()")
 
 
-@pytest.mark.spec("MEDULLA-CONTRACT-R053.3")
-def test_server_extra_pins_the_engine_version_and_is_bumped_with_it() -> None:
-    version = _cargo()["package"]["version"]
-    pyproject = tomllib.loads((REPO / "pyproject.toml").read_text())
-    extra = pyproject["project"]["optional-dependencies"]["server"]
-    assert extra == [f"medulla-stem=={version}"]
-    cfg = (REPO / ".config/bumpversion.cfg").read_text()
-    assert "[bumpversion:file:pyproject.toml]" in cfg
-    assert 'search = "medulla-stem=={current_version}"' in cfg
-
-
 @pytest.mark.spec("MEDULLA-CONTRACT-R053.4")
-def test_server_binary_resolution_order_and_typed_error(
-    monkeypatch: pytest.MonkeyPatch,
+def test_server_binary_resolves_the_packaged_executable_only(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    monkeypatch.setitem(sys.modules, "medulla_server", None)
-    monkeypatch.setattr(server_binary.shutil, "which", lambda _: None)
+    exe = "medulla-server.exe" if os.name == "nt" else "medulla-server"
+    packaged = tmp_path / "medulla" / "_bin" / exe
+    monkeypatch.setattr(server_binary, "__file__", str(tmp_path / "medulla" / "x.py"))
+    assert server_binary.packaged_server_binary() == packaged.resolve()
+    # PATH is never consulted, even when it holds a medulla-server.
+    on_path = tmp_path / "bin"
+    on_path.mkdir()
+    (on_path / exe).write_text("")
+    (on_path / exe).chmod(0o755)
+    monkeypatch.setenv("PATH", str(on_path))
     with pytest.raises(
-        server_binary.ServerBinaryNotFoundError, match=r"medulla\[server\]"
+        server_binary.ServerBinaryNotFoundError, match="platform wheels"
     ):
         server_binary.resolve_server_binary()
-    monkeypatch.setattr(server_binary.shutil, "which", lambda _: "/on/path")
-    assert server_binary.resolve_server_binary() == "/on/path"
-    package = types.SimpleNamespace(binary_path=lambda: "/from/package")
-    monkeypatch.setitem(sys.modules, "medulla_server", package)
-    assert server_binary.resolve_server_binary() == "/from/package"
+    packaged.parent.mkdir(parents=True)
+    packaged.write_bytes(b"server")
+    if os.name != "nt":
+        packaged.chmod(0o644)
+        with pytest.raises(
+            server_binary.ServerBinaryNotFoundError, match="not executable"
+        ):
+            server_binary.resolve_server_binary()
+        packaged.chmod(0o755)
+    assert server_binary.resolve_server_binary() == str(packaged.resolve())
+    assert "shutil" not in vars(server_binary)
 
 
 @pytest.mark.spec("MEDULLA-CONTRACT-R053.5")

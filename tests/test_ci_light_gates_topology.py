@@ -54,7 +54,6 @@ NON_BLOCKING_JOBS = {
     "feature-matrix",
     "benchmarks",
     "wheel-cache",
-    "server-wheel-cache",
     "engine-main-wheel",
 }
 

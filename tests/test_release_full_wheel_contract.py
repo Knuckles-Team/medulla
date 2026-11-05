@@ -227,14 +227,16 @@ def test_release_wheels_are_rebuilt_and_compared_reproducibly() -> None:
     assert 'CARGO_INCREMENTAL: "0"' in raw
     assert "max-parallel: 1" in raw
     assert "SOURCE_DATE_EPOCH=" in raw
-    # One pass (.github/actions/folded-wheel) builds the engine extension wheel
-    # and the numeric module into one shared target directory, folds the numeric
-    # module in, then normalizes, audits and checks the result. No server crate.
+    # One pass (.github/actions/folded-wheel) builds the engine extension wheel,
+    # the numeric module and the release server into one shared target directory,
+    # folds the numeric module and the server in, then normalizes, audits and
+    # checks the result. The server build lives in scripts/build_release_server.sh.
     wheel_pass = WHEEL_PASS_ACTION.read_text(encoding="utf-8")
     for output in ("dist", "numdist"):
         assert f"--out {output}-${{{{ inputs.pass }}}}" in wheel_pass
     assert "enginedist" not in wheel_pass
-    assert "full,ast-extended" not in wheel_pass
+    assert "--profile release-server" not in wheel_pass
+    assert wheel_pass.count("scripts/build_release_server.sh") == 2
     assert wheel_pass.count("uses: ./.github/actions/release-maturin") == 2
     shared = yaml.safe_load(
         (REPO / ".github/actions/release-maturin/action.yml").read_text()
@@ -250,6 +252,7 @@ def test_release_wheels_are_rebuilt_and_compared_reproducibly() -> None:
         "scripts/normalize_wheel_sbom.py",
         "scripts/normalize_wheel_build_paths.py",
         "scripts/check_wheel_privacy.py",
+        "scripts/inject_server_binary.py",
         "scripts/check_wheel_completeness.py --require-engine-kernel",
     ):
         assert wheel_pass.count(script) == 1, script
@@ -302,7 +305,6 @@ def test_incomplete_fallback_artifacts_cannot_be_published() -> None:
         "build",
         "publish-x86",
         "build-sdist",
-        "build-server",
     }
     source_steps = jobs["build-sdist"]["steps"]
     assert any(
@@ -710,24 +712,23 @@ def test_sdist_backend_imports_from_declared_isolated_source_tree(tmp_path):
 
 
 @pytest.mark.spec("MEDULLA-CONTRACT-R053.9")
-def test_server_wheel_build_adds_swap_and_thin_links_aarch64():
-    # Swap and the aarch64 link profile live in the shared action, so the release
-    # leg and ci.yml's warm-cache build both get them (the cache job had no swap
-    # and was OOM-killed on main).
-    action = REPO / ".github/actions/build-server-wheel/action.yml"
-    steps = yaml.safe_load(action.read_text(encoding="utf-8"))["runs"]["steps"]
+def test_server_build_adds_swap_and_thin_links_aarch64():
+    # Swap and the ARM64/macOS link profile live in the shared wheel pass and the
+    # server build script, so the release legs and ci.yml's warm-cache build both
+    # get them (a cache job without swap was OOM-killed on main).
+    steps = yaml.safe_load(WHEEL_PASS_ACTION.read_text(encoding="utf-8"))["runs"][
+        "steps"
+    ]
     names = [step.get("name", "") for step in steps]
     assert names.index("Add swap for the server link") < names.index(
-        "Build the wheel in the manylinux_2_28 container"
+        "Build engine extension wheel"
     )
-    build = steps[names.index("Build the wheel in the manylinux_2_28 container")]["run"]
-    assert 'image="$ARM_IMAGE"; jobs=4; lto=thin; cgu=16' in build
-    assert '"CARGO_PROFILE_RELEASE_SERVER_LTO=$lto"' in build
-    release = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))["jobs"][
-        "build-server"
-    ]
-    uses = [step.get("uses", "") for step in release["steps"]]
-    assert "./.github/actions/build-server-wheel" in uses
+    script = (REPO / "scripts/build_release_server.sh").read_text(encoding="utf-8")
+    assert "aarch64-unknown-linux-gnu | *-apple-darwin)" in script
+    assert "export CARGO_PROFILE_RELEASE_SERVER_LTO=thin" in script
+    assert "export CARGO_PROFILE_RELEASE_SERVER_CODEGEN_UNITS=16" in script
+    release = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))["jobs"]
+    assert "build-server" not in release
 
 
 def test_sdist_inventory_includes_explicit_manifest_inputs(tmp_path):
@@ -825,13 +826,12 @@ def test_tag_pipeline_builds_checks_and_publishes_only() -> None:
         "build-x86",
         "build-sdist",
         "publish-x86",
-        "build-server",
         "server-image",
         "server-manifest",
         "verify-pypi",
         "github-release",
     }
-    for name in ("build", "build-x86", "build-sdist", "build-server"):
+    for name in ("build", "build-x86", "build-sdist"):
         assert jobs[name]["needs"] == "guard"
     guard = jobs["guard"]
     assert guard["permissions"]["actions"] == "read"
