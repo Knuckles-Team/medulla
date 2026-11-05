@@ -132,6 +132,10 @@ async fn apply_evict_lru(
         return response;
     }
     let candidates = ctx.core.lru_eviction_candidates(max_nodes);
+    let candidate_count = candidates.len();
+    // MEDULLA-DURABLE-KERNEL-R086.6: a candidate stays resident when the
+    // backend is absent, presence errors, the presence length differs, or the
+    // entry is `false`. The count is the number actually evicted.
     let evicted = if candidates.is_empty() {
         0
     } else if let Some(backend) = ctx.persistence {
@@ -153,7 +157,17 @@ async fn apply_evict_lru(
         // No durable tier to fall back to, so eviction would lose the node.
         0
     };
-    Response::ok(ctx.req_id, ResultPayload::Json(serde_json::json!(evicted)))
+    let mut response = Response::ok(ctx.req_id, ResultPayload::Json(serde_json::json!(evicted)));
+    // Candidates remain resident, so the cap is not reported as reached:
+    // `EVICTION_UNCONFIRMED` is a response detail, never an error.
+    if evicted < candidate_count {
+        response.error_detail = Some(
+            medulla_types::contract::ServerErrorCode::EvictionUnconfirmed
+                .as_str()
+                .to_string(),
+        );
+    }
+    response
 }
 
 /// `ApplyMutation` (SPARQL UPDATE): pure extract-method from `try_handle_gateway`'s

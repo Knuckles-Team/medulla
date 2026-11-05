@@ -3841,6 +3841,7 @@ components:
       - "tests/protocol_method_routing.rs"
       - "tests/repository_index_durable.rs"
       - "tests/run_lake_parity.py"
+      - "tests/safe_eviction_read_through.rs"
       - "tests/sealed_record_guard.rs"
       - "tests/semantic_arch_gate_src.rs"
       - "tests/served_mining_tsdb_scan.rs"
