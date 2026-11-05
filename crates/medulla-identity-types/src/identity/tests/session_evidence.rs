@@ -382,7 +382,7 @@ fn renewal_clamps_idle_to_original_absolute_expiry_and_preserves_subject_mfa() {
     assert_eq!(store, renewed);
 }
 
-// spec: MEDULLA-TYPED-PACKS-R085.4.1
+// spec: MEDULLA-TYPED-PACKS-R085.4.1, MEDULLA-IDENTITY-R710
 #[test]
 fn renewal_refuses_invalid_authority_without_mutation() {
     for reason in [
