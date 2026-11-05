@@ -629,3 +629,108 @@ Planned test names do not claim passing results. Each path is the post-split loc
 - `MEDULLA-DURABLE-KERNEL-R086.9`: Planned: `tests/safe_eviction_read_through.rs::served_safe_eviction_read_through_journey` (L3).
 - `MEDULLA-DURABLE-KERNEL-R095.1004`: Planned: `tests/agent_bus_served.rs::roster_survives_restart` (L3).
 - `MEDULLA-DURABLE-KERNEL-R099.6`: Planned: `tests/shard_write_fanout.rs::cross_graph_writes_fan_across_shard_writers` (L3).
+
+## Planned bindings, range 3
+
+Each entry names a test that does not exist yet. The path is the exact post-split location. The test lands with the row that cites it and covers that row's positive and refusal cases.
+
+| Requirements | Planned test |
+|---|---|
+| `MEDULLA-DURABLE-KERNEL-R042.2`, `MEDULLA-DURABLE-KERNEL-R042.3`, `MEDULLA-DURABLE-KERNEL-R042.5` | `benches/common/claim.rs::write_receipt` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R028.4.2` | `benches/redb_write_latency_bench.rs::run_owner_recovery` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R094.7` | `crates/medulla-h-admin/src/admin/concept_lineage.rs::handle` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R043.100.2` | `crates/medulla-h-graph/src/graph_ops/graph_change_feed.rs::open_snapshot` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R043.100.3` | `crates/medulla-h-graph/src/graph_ops/graph_change_feed.rs::read_changes` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R700.2` | `crates/medulla-h-graph/src/graph_ops/retention_cleanup.rs::step_examines_batch_in_id_order` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R030.1` | `crates/medulla-h-jobs/src/work_item/host_start_tests.rs::lease_only_caller_is_refused_the_issue_scope` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R030.1.4` | `crates/medulla-h-jobs/src/work_item/host_start_tests.rs::signed_dispatch_issues_and_arbora_client_reads_the_grant` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R101.1` | `crates/medulla-jobs/src/downtime.rs::job_type_round_trips` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R101.2` | `crates/medulla-jobs/src/downtime.rs::priority_then_budget_fit` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R083.7` | `crates/medulla-kvcache/tests/long_context.rs::ten_million_token_context_pages_in_coherent` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R083.8` | `crates/medulla-kvcache/tests/tier_ladder.rs::cold_write_failure_and_digest_mismatch_refuse` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R083.5` | `crates/medulla-kvcache/tests/tier_ladder.rs::demote_then_promote_keeps_bytes` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R800.3` | `crates/medulla-kvcache/tests/tier_policy.rs::dependency_advance_invalidates_answer` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R800.5` | `crates/medulla-kvcache/tests/tier_policy.rs::foreign_tenant_key_misses` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R042.3` | `crates/medulla-kvcache/tests/tier_policy.rs::tiering_receipt_has_per_tier_hit_rate` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R862.1` | `crates/medulla-persistence-tests/src/shard_migrate_tests/recovery.rs::copied_bundle_restores_by_content` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R862.1` | `crates/medulla-persistence-tests/src/shard_migrate_tests/recovery.rs::one_changed_byte_refuses_and_leaves_destination_empty` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R870` | `crates/medulla-server-auth/src/access/path_grant.rs::check` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R039.5` | `crates/medulla-server-blob/src/kv/tests.rs::in_memory_tier_rebuilds_from_the_redb_log_after_restart` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R039.5` | `crates/medulla-server-blob/tests/kv_dispatch.rs::atomic_primitives_are_linearizable_under_16_threads` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R028.4` | `crates/medulla-server-store-tests/src/split_tests/store_run_owner.rs::admission_binds_owner_and_refuses_duplicate_forged_and_generic_writes` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R028.4.4` | `crates/medulla-server-store-tests/src/split_tests/store_run_owner.rs::replay_returns_original_receipt_and_refuses_changed_or_corrupt_evidence` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R101.4` | `crates/medulla-server/src/downtime.rs::downtime_refusals` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R101.3` | `crates/medulla-server/src/downtime.rs::run_tick` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R101.5` | `crates/medulla-server/src/downtime.rs::selection_recorded` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R101.3` | `crates/medulla-server/src/downtime.rs::tick_enqueues_leased_jobs` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R042.100.1` | `crates/medulla-types/src/benchmark_claim.rs::throughput_and_cost_match_hand_computed_values` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R043.100.1` | `crates/medulla-types/src/graph_change_feed.rs::types_round_trip_and_cursor_binds_scope` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R700.1` | `crates/medulla-types/src/retention_cleanup.rs::report_and_record_round_trip` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R035.7` | `crates/medulla-wire/src/pgwire/replication.rs::serve_walsender` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R750.751` | `crates/medulla-work-store/src/redb_store/work_item/cancel.rs::in_flight_cancel_stamps_request_and_renew_reports_it` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R030.1.2` | `crates/medulla-work-store/src/redb_store/work_item/control_lease/host_start/tests.rs::issuer_provenance_is_stamped_and_read_back_from_redb` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R865` | `crates/medulla-work-store/src/redb_store/work_item/conversation/tests.rs::child_input_states_replay_and_refusals` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R820.2` | `crates/medulla-work-store/src/redb_store/work_item/effect.rs::started_expiry_keeps_attempt_and_blocks_dead_letter` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R028.3` | `crates/medulla-work-store/src/redb_store/work_item/lease/tests.rs::fenced_cas_before_exact_and_after_expiry` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R030.1.1` | `crates/medulla-work-types/src/host_start/tests.rs::bounded_references_and_expiry_clamps_validate` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R750.750` | `crates/medulla-work-types/src/work_item_read/tests.rs::cancel_requested_round_trips` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R820.1` | `crates/medulla-work-types/src/work_item_read/tests.rs::effect_records_round_trip_with_golden_digest` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R028.5.4` | `current_plan.rs::publish` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R028.5.1` | `current_plan.rs::validate_publication` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R028.4.2`, `MEDULLA-DURABLE-KERNEL-R028.4.4` | `run_owner.rs::read_admission` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R700` | `src/server/retention_cleanup.rs::cleanup_graph` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R028.4.3` | `tests/adopt_workitem_authenticated_replay.rs::conversation_turn_admission_replays_and_conflicts` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R028.3` | `tests/adopt_workitem_authenticated_replay.rs::fenced_cas_ignores_caller_clock` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R028.4.4` | `tests/adopt_workitem_authenticated_replay.rs::run_admission_replay_after_restart_and_after_upgrade` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R028.4` | `tests/adopt_workitem_authenticated_replay.rs::run_admission_through_signed_dispatch` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R028.5.1` | `tests/adopt_workitem_authenticated_replay.rs::served_publish_with_attached_plan` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R042.100.2` | `tests/bench_claim_cli.rs::each_missing_or_invalid_field_is_refused_with_its_code` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R042.5` | `tests/bench_claim_cli.rs::one_receipt_per_protocol_with_session_count` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R042.2` | `tests/bench_claim_cli.rs::receipt_carries_configuration_corpus_digest_p50_p99` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R042.6` | `tests/bench_claim_cli.rs::regression_over_ten_percent_fails_and_missing_baseline_is_created` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R860.2` | `tests/bolt_roundtrip.rs::run_returns_records` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R750.750.1` | `tests/dispatch/test_agent_turn_envelope_served.py::test_signed_envelope_carries_subset_and_decision_ref` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R750`, `MEDULLA-DURABLE-KERNEL-R750.753` | `tests/durable/test_agent_turn_queue_served.py::test_cancel_reaches_leased_worker_on_renew` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R750.752` | `tests/durable/test_agent_turn_queue_served.py::test_full_queue_stale_head_and_bad_capability_refuse` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R867` | `tests/durable/test_capacity_lease_served.py::test_background_lease_cannot_spend_reserved_floor` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R094.7` | `tests/durable/test_concept_lineage_served.py::test_lineage_cycle_is_refused` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R700`, `MEDULLA-DURABLE-KERNEL-R700.6` | `tests/durable/test_retention_cleanup_served.py::test_held_and_referenced_nodes_survive` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R700.5` | `tests/durable/test_retention_cleanup_served.py::test_record_reproduces_report` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R700.4` | `tests/durable/test_retention_cleanup_served.py::test_refusals_leave_state_unchanged` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R700.3` | `tests/durable/test_retention_cleanup_served.py::test_run_method_matches_sweep` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R869` | `tests/durable/test_stream_log_served.py::test_order_cursor_and_restart` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R820.5` | `tests/durable/test_uncertain_effect_served.py::test_audit_and_metrics_after_uncertain_run` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R820.3` | `tests/durable/test_uncertain_effect_served.py::test_methods_reachable_through_wire_contract` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R820.4` | `tests/durable/test_uncertain_effect_served.py::test_refusals_leave_state_unchanged` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R820`, `MEDULLA-DURABLE-KERNEL-R820.6` | `tests/durable/test_uncertain_effect_served.py::test_started_item_never_dead_letters` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R043.100.3` | `tests/graph_change_feed_served.rs::expired_stale_and_revoked_cursors_return_typed_results_without_leaks` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R043.100.2` | `tests/graph_change_feed_served.rs::snapshot_cursor_leaves_no_gap_under_concurrent_commits` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R083.5` | `tests/kvcache_http_served.rs::over_budget_put_demotes_and_get_promotes` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R083.8` | `tests/kvcache_http_served.rs::refusal_codes_map_to_507_and_422` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R083.6` | `tests/kvcache_http_served.rs::version_bump_refreshes_importance_and_central_block_outlives_peripheral` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R863` | `tests/memory_sync_served.rs::sync_rewrite_requires_a_current_admit_receipt` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R043.101` | `tests/mutation_batch_sole_envelope.rs::every_store_member_commits_through_mutation_batch` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R862.2` | `tests/operator_command_store_upgrade_cli.rs::rebind_copied_store_then_open` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R862.2` | `tests/operator_command_store_upgrade_cli.rs::rebind_without_confirm_writes_nothing` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R035.7` | `tests/pgwire_roundtrip.rs::logical_slot_streams_commits_in_order_and_resumes` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R861.2` | `tests/protocol_method_routing.rs::list_graphs_after_restart_uses_catalog_record` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R860.3` | `tests/resp_roundtrip.rs::set_get_maps_to_kv_methods` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R860.4` | `tests/s3_roundtrip.rs::put_get_list_delete` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R101`, `MEDULLA-DURABLE-KERNEL-R101.6` | `tests/scheduler/test_downtime_scheduler_served.py::test_idle_window_runs_priority_jobs_and_preempts` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R864` | `tests/scheduler/test_loop_control_served.py::test_run_is_idempotent_and_pause_holds` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R866` | `tests/task_queue_served.rs::only_one_work_claim_table_exists` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R871` | `tests/test_agent_loop_batch_served.py::test_batch_commits_once_and_refuses_oversize` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R865` | `tests/test_child_input_served.py::test_child_input_record_reads_over_the_wire` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R042.7` | `tests/test_engine_bench_gate.py::test_gate_loads_records` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R043.100.4` | `tests/test_graph_change_feed_client.py::test_client_reads_feed_from_a_served_engine` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R800`, `MEDULLA-DURABLE-KERNEL-R800.3` | `tests/test_kvcache_policy_served.py::test_answer_entry_invalidated_when_dependency_advances` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R800.6` | `tests/test_kvcache_policy_served.py::test_policy_admits_hot_answer_and_refuses_cold_one` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R800.5` | `tests/test_kvcache_policy_served.py::test_stats_report_policy_counters_and_trace` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R868` | `tests/test_orphan_modules_gate.py::test_topic_log_and_agent_peer_are_gone` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R043.102` | `tests/test_sole_write_envelope.py::test_direct_write_is_reported_and_allowlist_needs_reason` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R862`, `MEDULLA-DURABLE-KERNEL-R862.1`, `MEDULLA-DURABLE-KERNEL-R862.3` | `tests/test_store_copy_restore.py::test_copied_bundle_restores_and_serves` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R862.3` | `tests/test_store_copy_restore.py::test_rebound_copy_serves` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R030.1.1`, `MEDULLA-DURABLE-KERNEL-R030.1.4` | `tests/test_work_item_capability_client.py::test_host_start_grant_round_trip` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R860.5` | `tests/wire_listeners_one_store.rs::unauthenticated_sessions_refuse` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R860`, `MEDULLA-DURABLE-KERNEL-R860.6` | `tests/wire_listeners_one_store.rs::write_each_protocol_read_native` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R028.2.1` | `tests/work_items/test_transition_history_served.py::test_history_matches_ledger_in_commit_order` (planned) |
