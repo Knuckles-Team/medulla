@@ -11,6 +11,13 @@ pub const REQUIRES_KEYS: &str = "FEDERATION_SOURCE_REQUIRES_KEYS";
 /// Error code of a source whose single request hit its own row cap, so completeness cannot
 /// be proven.
 pub const RESULT_INCOMPLETE: &str = "FEDERATION_RESULT_INCOMPLETE";
+/// Error code of a query with two or more fragments of a source that cannot give them one
+/// snapshot (MEDULLA-UNIFIED-DATA-PLANE-R038.3.4).
+pub const SNAPSHOT_UNAVAILABLE: &str = "SNAPSHOT_UNAVAILABLE";
+/// Error code of a declared replica whose replay lag is over `federation.replica_lag_bound_ms`.
+pub const REPLICA_LAG_EXCEEDED: &str = "REPLICA_LAG_EXCEEDED";
+/// Error code of a read plan that holds a statement other than a `SELECT`.
+pub const SOURCE_WRITE_FORBIDDEN: &str = "SOURCE_WRITE_FORBIDDEN";
 
 /// The typed refusal for one exhausted dimension.
 pub(crate) fn refusal(dimension: &str, limit: impl std::fmt::Display) -> String {
