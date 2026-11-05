@@ -59,11 +59,13 @@ pub fn execute_explained(
 ) -> Result<(SparqlResult, Vec<SparqlRowProof>), String> {
     let query = parse_query(query_str)?;
     let table = evaluate_query(ds, &query, proj, None)?.into_table();
+    let refusal = std::sync::OnceLock::new();
     let ctx = Ctx {
         ds,
         active: ds.default,
         proj,
         service: None,
+        refusal: &refusal,
     };
     let obligations = obligations(&query);
     let proofs = explain_rows(&ctx, &obligations, &table.solutions);

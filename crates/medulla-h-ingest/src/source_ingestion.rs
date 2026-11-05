@@ -2076,6 +2076,14 @@ fn mapped_properties(
     map_configured_fields(source, fields, &mut targets, &mut mapped)?;
     insert_datatypes(source, fields, datatypes, &mut mapped)?;
     map_external_tool_id(source, &mut mapped);
+    if ontology_class.trim_start_matches(':') == "TranscriptSegment" {
+        mapped.extend(
+            medulla_source_types::source_transcript::segment_clock_properties(
+                source,
+                &record.provenance,
+            ),
+        );
+    }
     insert_source_metadata(&mut mapped, record, mapping_reference, raw_digest)?;
     Ok(mapped)
 }

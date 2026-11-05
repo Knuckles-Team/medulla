@@ -77,6 +77,109 @@ fn identifier(value: &str, field: &str) -> Result<(), String> {
     Ok(())
 }
 
+/// MEDULLA-FEDERATED-QUERY-R053.700: the idempotent Spark submission id --
+/// the SHA-256 digest (64 lowercase hex characters) of the preset id, the input
+/// digests and the parameters. Identical inputs always derive the same id, so a
+/// resubmission names the run it already started. This is the only id function.
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct SubmissionId(String);
+
+impl SubmissionId {
+    /// Derive the id. Every part is length-prefixed so no two distinct inputs
+    /// share an encoding; parameters hash in key order.
+    pub fn derive(
+        preset_id: &str,
+        input_digests: &[&str],
+        parameters: &std::collections::BTreeMap<String, String>,
+    ) -> Self {
+        use sha2::{Digest, Sha256};
+        let mut hasher = Sha256::new();
+        let mut part = |bytes: &[u8]| {
+            hasher.update((bytes.len() as u64).to_be_bytes());
+            hasher.update(bytes);
+        };
+        part(b"medulla.spark.submission.v1");
+        part(preset_id.as_bytes());
+        part(&(input_digests.len() as u64).to_be_bytes());
+        for digest in input_digests {
+            part(digest.as_bytes());
+        }
+        part(&(parameters.len() as u64).to_be_bytes());
+        for (key, value) in parameters {
+            part(key.as_bytes());
+            part(value.as_bytes());
+        }
+        Self(hex::encode(hasher.finalize()))
+    }
+
+    /// The 64 lowercase hex characters.
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+/// The change-envelope fence fields a Spark or Trino result carries.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct SubmissionFence {
+    pub source_id: Option<String>,
+    pub snapshot_id: Option<String>,
+    pub submission_id: Option<String>,
+    pub generation: Option<u64>,
+    pub producer_revision: Option<String>,
+}
+
+/// A typed refusal of the Spark submission path.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum SubmissionRefusal {
+    /// A fence field is absent or empty; carries the field name.
+    FenceFieldMissing(&'static str),
+    /// The preset is not one the source offers.
+    PresetUnavailable,
+}
+
+impl SubmissionRefusal {
+    /// The registered `ServerErrorCode` wire token.
+    pub const fn code(&self) -> medulla_types::contract::ServerErrorCode {
+        use medulla_types::contract::ServerErrorCode;
+        match self {
+            Self::FenceFieldMissing(_) => ServerErrorCode::FenceFieldMissing,
+            Self::PresetUnavailable => ServerErrorCode::PresetUnavailable,
+        }
+    }
+}
+
+impl SubmissionFence {
+    /// Refuse the first absent or empty fence field, in envelope order.
+    pub fn check(&self) -> Result<(), SubmissionRefusal> {
+        let present = |value: &Option<String>| value.as_deref().is_some_and(|v| !v.is_empty());
+        for (name, ok) in [
+            ("source_id", present(&self.source_id)),
+            ("snapshot_id", present(&self.snapshot_id)),
+            ("submission_id", present(&self.submission_id)),
+            ("generation", self.generation.is_some()),
+            ("producer_revision", present(&self.producer_revision)),
+        ] {
+            if !ok {
+                return Err(SubmissionRefusal::FenceFieldMissing(name));
+            }
+        }
+        Ok(())
+    }
+}
+
+/// Resolve a preset among those the source offers, then derive its submission id.
+pub fn derive_submission(
+    available_presets: &[&str],
+    preset_id: &str,
+    input_digests: &[&str],
+    parameters: &std::collections::BTreeMap<String, String>,
+) -> Result<SubmissionId, SubmissionRefusal> {
+    if !available_presets.contains(&preset_id) {
+        return Err(SubmissionRefusal::PresetUnavailable);
+    }
+    Ok(SubmissionId::derive(preset_id, input_digests, parameters))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -147,5 +250,42 @@ mod tests {
         };
         let err = register_spark(&mut registry, "spark", &spec).unwrap_err();
         assert!(err.contains("expected a Spark batch source"), "{err}");
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R053.700
+    #[test]
+    fn submission_id_idempotent_and_fenced() {
+        let mut params = std::collections::BTreeMap::new();
+        params.insert("window".to_string(), "7d".to_string());
+        let first = derive_submission(&["daily"], "daily", &["sha256:aa"], &params).unwrap();
+        let again = derive_submission(&["daily"], "daily", &["sha256:aa"], &params).unwrap();
+        assert_eq!(first, again, "resubmission names the same run");
+        assert_eq!(first.as_str().len(), 64);
+        assert!(first
+            .as_str()
+            .bytes()
+            .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)));
+        let other = SubmissionId::derive("daily", &["sha256:ab"], &params);
+        assert_ne!(first, other);
+        assert_ne!(
+            SubmissionId::derive("ab", &["c"], &Default::default()),
+            SubmissionId::derive("a", &["bc"], &Default::default())
+        );
+
+        let refusal = derive_submission(&["daily"], "hourly", &[], &params).unwrap_err();
+        assert_eq!(refusal.code().as_str(), "PRESET_UNAVAILABLE");
+
+        let mut fence = SubmissionFence {
+            source_id: Some("spark".into()),
+            snapshot_id: Some("s1".into()),
+            submission_id: Some(first.as_str().to_string()),
+            generation: Some(1),
+            producer_revision: Some("r1".into()),
+        };
+        assert_eq!(fence.check(), Ok(()));
+        fence.snapshot_id = Some(String::new());
+        let refusal = fence.check().unwrap_err();
+        assert_eq!(refusal, SubmissionRefusal::FenceFieldMissing("snapshot_id"));
+        assert_eq!(refusal.code().as_str(), "FENCE_FIELD_MISSING");
     }
 }

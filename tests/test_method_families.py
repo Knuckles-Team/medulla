@@ -244,6 +244,7 @@ _UNCONDITIONAL_WRITES_AT_BASE = (
         "DecisionCommit",
         "EnrichDocument",
         "GraphSchema",
+        "LineageIngest",
         "SourceIngest",
         "TelemetryDerive",
     }

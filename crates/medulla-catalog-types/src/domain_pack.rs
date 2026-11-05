@@ -12,6 +12,13 @@
 
 use std::collections::BTreeSet;
 
+mod crosswalk;
+
+pub use crosswalk::{
+    validate_crosswalks, CrosswalkContext, PinnedHierarchy, MAX_CROSSWALK_IRI_BYTES,
+    MAX_CROSSWALK_MAPPINGS, MAX_CROSSWALK_SOURCE_CLASSES,
+};
+
 /// The four domains this requirement names. Closed: a fifth domain is a new
 /// variant and a new child requirement, not a free-form string.
 #[derive(
@@ -69,6 +76,7 @@ pub struct ApprovedTargetDeclaration {
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct VocabularyCrosswalk {
+    pub schema_version: u16,
     pub source_class_iri: String,
     pub target_class_iri: String,
     pub relation: VocabularyCrosswalkRelation,
@@ -82,6 +90,7 @@ pub struct VocabularyCrosswalk {
 #[derive(Debug, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 struct VocabularyCrosswalkWire {
+    schema_version: u16,
     source_class_iri: String,
     target_class_iri: String,
     relation: VocabularyCrosswalkRelation,
@@ -114,6 +123,52 @@ pub enum VocabularyCrosswalkError {
     EmptyApprovedTargetCategory,
     #[error("crosswalk declares duplicate approved target class_iri {0:?}")]
     DuplicateApprovedTargetClassIri(String),
+    #[error("crosswalk schema_version {0} is not supported (expected {VOCABULARY_CROSSWALK_SCHEMA_VERSION})")]
+    UnsupportedSchemaVersion(u16),
+    #[error(
+        "crosswalk content_digest {declared:?} does not match the computed digest {computed:?}"
+    )]
+    ContentDigestMismatch { declared: String, computed: String },
+    #[error("crosswalk source class {source_iri:?} does not resolve as a class in revision {revision:?} of scope {scope:?}")]
+    SourceUnknown {
+        source_iri: String,
+        revision: String,
+        scope: String,
+    },
+    #[error("crosswalk source class {source_iri:?} (revision {revision:?}) is outside the selected source scope {scope:?}")]
+    SourceOutOfScope {
+        source_iri: String,
+        revision: String,
+        scope: String,
+    },
+    #[error("crosswalk target class {0:?} is not an approved declaration of the target vocabulary revision")]
+    TargetUnknown(String),
+    #[error("crosswalk mapping {source_iri:?} -> {target_iri:?} conflicts with a declared mapping or the pinned hierarchy")]
+    Conflict {
+        source_iri: String,
+        target_iri: String,
+    },
+    #[error("crosswalk target {target_iri:?} category {target_category:?} differs from source category {source_category:?}")]
+    CategoryConflict {
+        target_iri: String,
+        source_category: String,
+        target_category: String,
+    },
+    #[error("crosswalk input exceeds the fixed bound {bound} at {iri:?}")]
+    LimitExceeded { bound: &'static str, iri: String },
+}
+
+/// The one record layout this build reads and writes (MEDULLA-TYPED-PACKS-R071.1.1).
+pub const VOCABULARY_CROSSWALK_SCHEMA_VERSION: u16 = 1;
+
+fn relation_tag(relation: VocabularyCrosswalkRelation) -> &'static str {
+    match relation {
+        VocabularyCrosswalkRelation::SeeAlso => "see_also",
+        VocabularyCrosswalkRelation::SkosExactMatch => "skos_exact_match",
+        VocabularyCrosswalkRelation::SkosCloseMatch => "skos_close_match",
+        VocabularyCrosswalkRelation::SkosBroadMatch => "skos_broad_match",
+        VocabularyCrosswalkRelation::SkosNarrowMatch => "skos_narrow_match",
+    }
 }
 
 impl VocabularyCrosswalk {
@@ -140,6 +195,11 @@ impl VocabularyCrosswalk {
         if self.origin.trim().is_empty() {
             return Err(VocabularyCrosswalkError::EmptyOrigin);
         }
+        if self.schema_version != VOCABULARY_CROSSWALK_SCHEMA_VERSION {
+            return Err(VocabularyCrosswalkError::UnsupportedSchemaVersion(
+                self.schema_version,
+            ));
+        }
         if self.content_digest.trim().is_empty() {
             return Err(VocabularyCrosswalkError::EmptyContentDigest);
         }
@@ -161,13 +221,48 @@ impl VocabularyCrosswalk {
             }
         }
 
+        let computed = self.compute_content_digest();
+        if self.content_digest != computed {
+            return Err(VocabularyCrosswalkError::ContentDigestMismatch {
+                declared: self.content_digest.clone(),
+                computed,
+            });
+        }
+
         Ok(())
+    }
+
+    /// SHA-256 (64 lowercase hex characters) over every field except the
+    /// digest itself, `schema_version` first. Each field is length-prefixed so
+    /// no two distinct records share an encoding.
+    pub fn compute_content_digest(&self) -> String {
+        use sha2::{Digest, Sha256};
+        fn field(hasher: &mut Sha256, bytes: &[u8]) {
+            hasher.update((bytes.len() as u64).to_be_bytes());
+            hasher.update(bytes);
+        }
+        let mut hasher = Sha256::new();
+        hasher.update(b"medulla.vocabulary_crosswalk");
+        hasher.update(self.schema_version.to_be_bytes());
+        field(&mut hasher, self.source_class_iri.as_bytes());
+        field(&mut hasher, self.target_class_iri.as_bytes());
+        field(&mut hasher, relation_tag(self.relation).as_bytes());
+        field(&mut hasher, self.source_revision.as_bytes());
+        field(&mut hasher, self.target_vocabulary_revision.as_bytes());
+        field(&mut hasher, self.origin.as_bytes());
+        hasher.update((self.approved_target_declarations.len() as u64).to_be_bytes());
+        for target in &self.approved_target_declarations {
+            field(&mut hasher, target.class_iri.as_bytes());
+            field(&mut hasher, target.category.as_bytes());
+        }
+        hex::encode(hasher.finalize())
     }
 }
 
 impl VocabularyCrosswalk {
     fn from_wire(wire: VocabularyCrosswalkWire) -> Result<Self, VocabularyCrosswalkError> {
         let crosswalk = Self {
+            schema_version: wire.schema_version,
             source_class_iri: wire.source_class_iri,
             target_class_iri: wire.target_class_iri,
             relation: wire.relation,
@@ -322,19 +417,25 @@ mod tests {
     }
 
     fn crosswalk_fixture() -> VocabularyCrosswalk {
-        VocabularyCrosswalk {
+        sealed(VocabularyCrosswalk {
+            schema_version: VOCABULARY_CROSSWALK_SCHEMA_VERSION,
             source_class_iri: "http://knuckles.team/kg#Person".to_string(),
             target_class_iri: "http://schema.org/Person".to_string(),
             relation: VocabularyCrosswalkRelation::SeeAlso,
             source_revision: "core-crosswalk-fixture-v1".to_string(),
             target_vocabulary_revision: "schemaorg-crosswalk-fixture-v1".to_string(),
             origin: "core-foundation-v1".to_string(),
-            content_digest: "sha256:crosswalk-person".to_string(),
+            content_digest: String::new(),
             approved_target_declarations: vec![ApprovedTargetDeclaration {
                 class_iri: "http://schema.org/Person".to_string(),
                 category: "continuant".to_string(),
             }],
-        }
+        })
+    }
+
+    fn sealed(mut crosswalk: VocabularyCrosswalk) -> VocabularyCrosswalk {
+        crosswalk.content_digest = crosswalk.compute_content_digest();
+        crosswalk
     }
 
     /// MEDULLA-TYPED-PACKS-R097.1: a valid HR domain pack passes validation.
@@ -394,15 +495,76 @@ mod tests {
         ));
     }
 
-    /// MEDULLA-TYPED-PACKS-R071.1.1: every crosswalk field, including the approved
-    /// target declaration and category, survives the wire round trip.
+    /// MEDULLA-TYPED-PACKS-R071.1.1: every crosswalk field, including
+    /// `schema_version`, the approved target declaration and category, survives
+    /// the wire round trip, and every field (schema version included) is folded
+    /// into the 64-hex SHA-256 content digest.
+    // spec: MEDULLA-TYPED-PACKS-R071.1.1
     #[test]
-    fn crosswalk_round_trip_preserves_all_fields() {
+    fn crosswalk_round_trips_every_field() {
         let original = crosswalk_fixture();
         original.validate().expect("fixture must validate");
+        assert_eq!(original.schema_version, 1);
+        assert_eq!(original.content_digest.len(), 64);
+        assert!(original
+            .content_digest
+            .bytes()
+            .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)));
         let encoded = serde_json::to_vec(&original).expect("serialize");
         let decoded: VocabularyCrosswalk = serde_json::from_slice(&encoded).expect("deserialize");
         assert_eq!(decoded, original);
+
+        // Each field changes the digest.
+        let base = original.compute_content_digest();
+        let mut mutations: Vec<VocabularyCrosswalk> = Vec::new();
+        let mut m = original.clone();
+        m.schema_version = 2;
+        mutations.push(m);
+        let mut m = original.clone();
+        m.source_class_iri.push('X');
+        mutations.push(m);
+        let mut m = original.clone();
+        m.target_class_iri.push('X');
+        mutations.push(m);
+        let mut m = original.clone();
+        m.relation = VocabularyCrosswalkRelation::SkosCloseMatch;
+        mutations.push(m);
+        let mut m = original.clone();
+        m.source_revision.push('X');
+        mutations.push(m);
+        let mut m = original.clone();
+        m.target_vocabulary_revision.push('X');
+        mutations.push(m);
+        let mut m = original.clone();
+        m.origin.push('X');
+        mutations.push(m);
+        let mut m = original.clone();
+        m.approved_target_declarations[0].category.push('X');
+        mutations.push(m);
+        for m in mutations {
+            assert_ne!(m.compute_content_digest(), base);
+        }
+
+        // An unsupported schema version and a stale digest refuse.
+        let mut wrong_version = original.clone();
+        wrong_version.schema_version = 2;
+        let wrong_version = sealed(wrong_version);
+        assert!(matches!(
+            wrong_version.validate(),
+            Err(VocabularyCrosswalkError::UnsupportedSchemaVersion(2))
+        ));
+        let mut stale = original.clone();
+        stale.origin = "other-origin".to_string();
+        assert!(matches!(
+            stale.validate(),
+            Err(VocabularyCrosswalkError::ContentDigestMismatch { .. })
+        ));
+        let mut value = serde_json::to_value(&original).expect("serialize");
+        value
+            .as_object_mut()
+            .expect("crosswalk object")
+            .remove("schema_version");
+        assert!(serde_json::from_value::<VocabularyCrosswalk>(value).is_err());
     }
 
     /// The relation is closed; a caller cannot smuggle in an unapproved
@@ -418,6 +580,7 @@ mod tests {
         ] {
             let mut fixture = crosswalk_fixture();
             fixture.relation = relation;
+            let fixture = sealed(fixture);
             let encoded = serde_json::to_vec(&fixture).expect("serialize");
             let decoded: VocabularyCrosswalk =
                 serde_json::from_slice(&encoded).expect("known relation must decode");

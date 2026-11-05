@@ -118,3 +118,26 @@ async fn distribution_shift_runs_the_ks_kernel_through_dispatch() {
         .as_deref()
         .is_some_and(|d| d.contains("SHIFT_SAMPLE_EMPTY")));
 }
+
+#[tokio::test(flavor = "multi_thread")]
+// spec: MEDULLA-FINANCE-PRIMITIVES-R900.6
+async fn distribution_shift_serves_100k_samples() {
+    // Two 100k-value uniform grids, the second moved by 0.1: the two-sample KS
+    // statistic is 0.1 up to the grid step (1e-5).
+    const N: usize = 100_000;
+    let reference: Vec<f64> = (0..N).map(|i| i as f64 / N as f64).collect();
+    let current: Vec<f64> = reference.iter().map(|v| v + 0.1).collect();
+    let response = call(Method::FinanceDistributionShift {
+        reference,
+        current,
+        threshold: 0.05,
+    })
+    .await;
+    let Some(ResultPayload::Raw(bytes)) = response.result.as_ref() else {
+        panic!("expected a raw result, got {:?}", response.error_detail);
+    };
+    let value: serde_json::Value = rmp_serde::from_slice(bytes).expect("msgpack result");
+    let statistic = value["statistic"].as_f64().expect("statistic");
+    assert!((statistic - 0.1).abs() <= 2e-5, "statistic {statistic}");
+    assert_eq!(value["shifted"], true);
+}

@@ -102,11 +102,11 @@ Tasks mirror the leaf rows of requirements.md, producer first: vocabulary, shape
 - [ ] T096 [P] [US4] MEDULLA-MEDIA-VOCAB-R020.1 Fixture and test: 'Which requested films are downloaded but not yet in the library?' across arr, qbittorrent, jellyfin
 - [ ] T097 [P] [US4] MEDULLA-MEDIA-VOCAB-R020.2 Fixture and test: 'Which feed articles are not archived and have no matching search result?' across freshrss, searxng, archivebox on
 - [ ] T098 [P] [US4] MEDULLA-MEDIA-VOCAB-R028 Transcript list/get operation belongs to audio-transcriber (pointer)
-- [ ] T099 [P] [US4] MEDULLA-MEDIA-VOCAB-R029 Cross-repo, owner audio-transcriber: expose avg_logprob (confidence) per segment
-- [ ] T100 [P] [US4] MEDULLA-MEDIA-VOCAB-R030 Cross-repo, owner scholarx: citing-papers operation: add sx_search action 'citations' returning papers that cite a given id
-- [ ] T101 [P] [US4] MEDULLA-MEDIA-VOCAB-R031 Cross-repo, owner searxng-mcp: pass through per-engine result counts and unresponsive_engines from the SearXNG response
-- [ ] T102 [P] [US4] MEDULLA-MEDIA-VOCAB-R032 Cross-repo, owner arr-mcp: rename connector :Episode to mv:TelevisionEpisode subclass (collision with core :Episode)
-- [ ] T103 [P] [US4] MEDULLA-MEDIA-VOCAB-R033 Cross-repo, owner jellyfin-mcp and audiobookshelf-mcp: stop declaring :Author in the shared namespace; use mv:contributor to :Person
+- [ ] T099 [P] [US4] MEDULLA-MEDIA-VOCAB-R029 Expose avg_logprob (confidence) per segment belongs to audio-transcriber (pointer)
+- [ ] T100 [P] [US4] MEDULLA-MEDIA-VOCAB-R030 Citing-papers operation belongs to scholarx (pointer)
+- [ ] T101 [P] [US4] MEDULLA-MEDIA-VOCAB-R031 Per-engine result counts and unresponsive engines belong to searxng-mcp (pointer)
+- [ ] T102 [P] [US4] MEDULLA-MEDIA-VOCAB-R032 The connector :Episode rename belongs to arr-mcp (pointer)
+- [ ] T103 [P] [US4] MEDULLA-MEDIA-VOCAB-R033 Retiring the connector :Author declarations belongs to jellyfin-mcp and audiobookshelf-mcp (pointer)
 - [ ] T104 [US7] MEDULLA-MEDIA-VOCAB-R650.1 Model
 - [ ] T105 [US7] MEDULLA-MEDIA-VOCAB-R650.2 Behavior
 - [ ] T106 [US7] MEDULLA-MEDIA-VOCAB-R650.3 Wiring

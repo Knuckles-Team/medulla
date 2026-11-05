@@ -384,6 +384,84 @@ fn scaffold_minimal_config() {
     }
 }
 
+/// Env override of `max_history_turns` (MEDULLA-FEDERATED-QUERY-R058.8).
+const MAX_HISTORY_TURNS_ENV: &str = "MEDULLA_NL_MAX_HISTORY_TURNS";
+/// The resolved `max_history_turns`, read once (env over the config section).
+static MAX_HISTORY_TURNS: OnceLock<Result<usize, NlConfigError>> = OnceLock::new();
+
+/// The most earlier turns one NL request may carry (MEDULLA-FEDERATED-QUERY-R058.8):
+/// `MEDULLA_NL_MAX_HISTORY_TURNS`, else `max_history_turns` of the `nl_query` / `llm`
+/// config section, else 4. A value outside `0..=16` is the typed
+/// [`NlConfigError::MaxHistoryTurnsOutOfRange`].
+pub fn resolve_max_history_turns() -> Result<usize, NlConfigError> {
+    MAX_HISTORY_TURNS
+        .get_or_init(|| {
+            let env = std::env::var(MAX_HISTORY_TURNS_ENV).ok();
+            let file = find_config_file()
+                .and_then(|p| std::fs::read_to_string(p).ok())
+                .and_then(|text| serde_json::from_str::<serde_json::Value>(&text).ok());
+            max_history_turns_from(env, file.as_ref())
+        })
+        .clone()
+}
+
+fn max_history_turns_from(
+    env: Option<String>,
+    config: Option<&serde_json::Value>,
+) -> Result<usize, NlConfigError> {
+    if let Some(raw) = env.filter(|v| !v.trim().is_empty()) {
+        let turns = raw
+            .trim()
+            .parse::<u64>()
+            .map_err(|_| NlConfigError::InvalidValue {
+                source: MAX_HISTORY_TURNS_ENV.into(),
+                raw: raw.clone(),
+                reason: "is not a non-negative integer".into(),
+            })?;
+        return medulla_nlq::nl::validate_max_history_turns(turns);
+    }
+    let value = config.and_then(|json| {
+        json.get("nl_query")
+            .or_else(|| json.get("llm"))
+            .unwrap_or(json)
+            .get("max_history_turns")
+    });
+    match value {
+        None => Ok(medulla_nlq::nl::NL_MAX_HISTORY_TURNS_DEFAULT),
+        Some(v) => {
+            let turns = v.as_u64().ok_or_else(|| NlConfigError::InvalidValue {
+                source: "max_history_turns".into(),
+                raw: v.to_string(),
+                reason: "is not a non-negative integer".into(),
+            })?;
+            medulla_nlq::nl::validate_max_history_turns(turns)
+        }
+    }
+}
+
+#[cfg(test)]
+mod max_history_turns_tests {
+    use super::*;
+
+    // spec: MEDULLA-FEDERATED-QUERY-R058.8
+    #[test]
+    fn max_history_turns_defaults_bounds_and_env_precedence() {
+        assert_eq!(max_history_turns_from(None, None), Ok(4));
+        let cfg = serde_json::json!({"nl_query": {"max_history_turns": 16}});
+        assert_eq!(max_history_turns_from(None, Some(&cfg)), Ok(16));
+        let cfg = serde_json::json!({"llm": {"max_history_turns": 17}});
+        assert_eq!(
+            max_history_turns_from(None, Some(&cfg)),
+            Err(NlConfigError::MaxHistoryTurnsOutOfRange(17))
+        );
+        assert_eq!(max_history_turns_from(Some("0".into()), Some(&cfg)), Ok(0));
+        assert!(matches!(
+            max_history_turns_from(Some("x".into()), None),
+            Err(NlConfigError::InvalidValue { .. })
+        ));
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

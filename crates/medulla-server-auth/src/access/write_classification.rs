@@ -416,6 +416,8 @@ pub fn requires_write(method: &Method) -> bool {
                 | Method::ApplyChangeEnvelopeDrafts { .. }
                 | Method::SourceIngest { .. }
                 | Method::EnrichDocument { .. }
+                | Method::DocumentDelete { .. }
+                | Method::LineageIngest { .. }
                 | Method::TelemetryDerive { .. }
                 | Method::Reconcile { .. }
                 | Method::ApplyMutation { .. }

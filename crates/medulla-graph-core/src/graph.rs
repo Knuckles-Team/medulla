@@ -1646,8 +1646,10 @@ mod tests {
             rows: Mutex<HashMap<String, Vec<u8>>>,
         }
         impl crate::read_through::ReadThrough for StubStore {
-            fn read_node_blob(&self, node_id: &str) -> Option<Vec<u8>> {
-                self.rows.lock().unwrap().get(node_id).cloned()
+            fn read_node_blob(&self, node_id: &str) -> crate::read_through::NodeReadOutcome {
+                crate::read_through::NodeReadOutcome::from_option(
+                    self.rows.lock().unwrap().get(node_id).cloned(),
+                )
             }
         }
 
@@ -1701,9 +1703,11 @@ mod tests {
             calls: AtomicUsize,
         }
         impl crate::read_through::ReadThrough for CountingStore {
-            fn read_node_blob(&self, node_id: &str) -> Option<Vec<u8>> {
+            fn read_node_blob(&self, node_id: &str) -> crate::read_through::NodeReadOutcome {
                 self.calls.fetch_add(1, Ordering::SeqCst);
-                self.rows.lock().unwrap().get(node_id).cloned()
+                crate::read_through::NodeReadOutcome::from_option(
+                    self.rows.lock().unwrap().get(node_id).cloned(),
+                )
             }
         }
 

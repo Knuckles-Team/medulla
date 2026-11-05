@@ -297,6 +297,11 @@ pub struct SparqlResult {
     /// One witness proof per row, in row order, when the request asked to `explain`
     /// (EH-197); empty otherwise.
     pub proofs: Vec<medulla_types::rdf_report::SparqlRowProof>,
+    /// Each GeoSPARQL function the query calls and whether a spatial index served it,
+    /// when the request asked to `explain` (MEDULLA-FEDERATED-QUERY-R709.5); empty
+    /// otherwise.
+    #[serde(default)]
+    pub spatial: Vec<medulla_types::rdf_report::SparqlSpatialUse>,
 }
 
 /// Materialized result of a `Method::OwlReason` run (CONCEPT:MEDULLA-KG.ontology.incremental-materialization). Returned via

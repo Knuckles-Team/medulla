@@ -167,6 +167,25 @@ pub struct ServerArgs {
     /// tiny daemon.
     #[arg(long, default_value = "0", env = "MEDULLA_IDLE_SHUTDOWN_SECS")]
     pub idle_shutdown_secs: u64,
+
+    /// Knob `identity.ownership_writer_share` (MEDULLA-IDENTITY-R700.2): the
+    /// fraction of a graph's writes that earns a non-owner writer the
+    /// `Writer` disposition. Range [0.01, 0.5]; out of range refuses startup.
+    #[arg(
+        long,
+        env = "MEDULLA_IDENTITY_OWNERSHIP_WRITER_SHARE",
+        default_value_t = medulla_isolation::isolation::ownership::DEFAULT_OWNERSHIP_WRITER_SHARE,
+        value_parser = parse_ownership_writer_share
+    )]
+    pub identity_ownership_writer_share: f64,
+}
+
+fn parse_ownership_writer_share(raw: &str) -> Result<f64, String> {
+    let value: f64 = raw
+        .parse()
+        .map_err(|error| format!("identity.ownership_writer_share: {error}"))?;
+    medulla_isolation::isolation::ownership::OwnershipWriterShare::new(value)
+        .map(|share| share.get())
 }
 
 pub fn native_tcp_addr_is_loopback(addr: &str) -> bool {
