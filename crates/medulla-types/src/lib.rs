@@ -197,6 +197,9 @@ pub mod durability_class;
 // set of scope-level merge strategies. Resolution and served wiring live above
 // this pure-data crate.
 pub mod write_conflict;
+// MEDULLA-DURABLE-KERNEL-R085.1 — memory snapshot head, sync request/outcome, cursor and
+// the pure compare-and-set core. Pure serde; served handlers live above this crate.
+pub mod memory_sync;
 pub use write_conflict::{MergeStrategy, WriteConflict};
 // MEDULLA-DURABLE-KERNEL-R037 — the workload classification (point/structure/sql)
 // every wire listener routes an operation by. Pure, no dep.
