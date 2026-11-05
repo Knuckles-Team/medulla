@@ -300,6 +300,7 @@ async fn capability_matrix_is_reachable_over_the_wire() {
     }
 }
 
+// spec: MEDULLA-FEDERATED-QUERY-R087.4
 #[tokio::test]
 async fn invalid_spec_json_is_a_typed_error_not_a_panic() {
     let state = state();
@@ -334,6 +335,7 @@ async fn invalid_spec_json_is_a_typed_error_not_a_panic() {
     );
 }
 
+// spec: MEDULLA-FEDERATED-QUERY-R087.4
 #[tokio::test]
 async fn empty_dataset_ref_is_access_denied() {
     let state = state();
@@ -372,6 +374,7 @@ async fn empty_dataset_ref_is_access_denied() {
 // ── Lane V4: persistent ColumnStore, content-addressed render cache,
 // durable provenance — end to end through the SAME served RPC surface. ──
 
+// spec: MEDULLA-FEDERATED-QUERY-R087.4
 #[tokio::test]
 async fn omitting_dataset_against_an_unknown_dataset_ref_is_an_explicit_unavailable_error() {
     let state = state();
