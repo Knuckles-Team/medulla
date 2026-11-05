@@ -11,6 +11,7 @@ use super::request_boundary::preflight::{decode_ast_files, decode_ast_sources, A
 use super::request_boundary::screen::decode_screen_observation;
 use crate::dispatch::*;
 mod dispatch_helpers;
+mod document_ops;
 #[cfg(any(
     feature = "query",
     feature = "cypher",

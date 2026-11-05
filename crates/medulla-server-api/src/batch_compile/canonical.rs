@@ -647,6 +647,8 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         // MEDULLA-UNIFIED-DATA-PLANE-R651.7: lowers to one ChangeEnvelope, which
         // carries its own domains; selection commits nothing.
         | Method::EnrichDocument { .. }
+        // MEDULLA-UNIFIED-DATA-PLANE-R651.3: lowers to one ChangeEnvelope.
+        | Method::DocumentDelete { .. }
         | Method::SelectWebPages { .. }
         // EH-408/EH-409: self-translates into a request-graph `BatchUpdate`,
         // which carries its own domain.
