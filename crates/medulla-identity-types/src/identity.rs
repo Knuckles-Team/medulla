@@ -59,7 +59,7 @@ pub use audit::{
 };
 pub use config::{
     AuthMode, IdentityConfig, LocalFallback, ModeTransition, RegistrationPolicy,
-    DEFAULT_PASSWORD_MIN_CHARS, MAX_PASSWORD_CHARS, NONE_MODE_ACK,
+    DEFAULT_PASSWORD_MIN_CHARS, MAX_PASSWORD_CHARS,
 };
 pub use denials::{DenialSample, DenialSampler, MAX_DENIAL_SAMPLES};
 pub use model::{
@@ -208,6 +208,9 @@ medulla_types::closed_error_codes! {
         PreconditionFailed => "IDENTITY_PRECONDITION_FAILED",
         /// The transition is not in the state machine.
         IllegalTransition => "IDENTITY_ILLEGAL_TRANSITION",
+        /// A served transition names `none` as its source or target; only
+        /// the offline operator conversion leaves `none`.
+        ModeTransitionForbidden => "MODE_TRANSITION_FORBIDDEN",
         /// A built-in object cannot be removed or renamed.
         BuiltIn => "IDENTITY_BUILT_IN",
         /// The boundary did not stamp what this op needs (defense in depth: a
