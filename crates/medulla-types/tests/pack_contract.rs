@@ -1,7 +1,7 @@
 //! Pack contract versions and standalone grants (MEDULLA-TYPED-PACKS-R107.1).
 
 use medulla_catalog_types::{
-    connector_pack::contract_version::ContractBreakKind,
+    connector_pack::contract_version::{is_breaking, ContractBreak, ContractBreakKind},
     connector_pack::contract_version::PackContractVersion,
     connector_pack::contract_version::StandaloneGrant,
     connector_pack::contract_version::GRANT_INCOMPLETE,
@@ -107,4 +107,43 @@ fn invalid_versions_and_incomplete_grants_are_refused() {
     };
     let error = no_expiry.validate().unwrap_err();
     assert_eq!((error.code, error.field), (GRANT_INCOMPLETE, "expires_at"));
+}
+
+// spec: MEDULLA-TYPED-PACKS-R107.1
+#[test]
+fn version_grant_and_break_round_trip() {
+    version_and_grant_round_trip();
+    for kind in [
+        ContractBreakKind::RemovedClass,
+        ContractBreakKind::RetypedClass,
+        ContractBreakKind::RemovedProperty,
+        ContractBreakKind::RetypedProperty,
+        ContractBreakKind::RemovedField,
+        ContractBreakKind::RetypedField,
+        ContractBreakKind::NarrowedShape,
+        ContractBreakKind::RemovedMapping,
+    ] {
+        let change = ContractBreak {
+            kind,
+            item: "Invoice.total".into(),
+        };
+        change.validate().unwrap();
+        let json: ContractBreak =
+            serde_json::from_value(serde_json::to_value(&change).unwrap()).unwrap();
+        assert_eq!(json, change);
+        let packed: ContractBreak =
+            rmp_serde::from_slice(&rmp_serde::to_vec_named(&change).unwrap()).unwrap();
+        assert_eq!(packed, change);
+        assert!(is_breaking(&[change]));
+    }
+    assert!(!is_breaking(&[]));
+    let blank = ContractBreak {
+        kind: ContractBreakKind::RemovedClass,
+        item: " ".into(),
+    };
+    assert_eq!(blank.validate().unwrap_err().field, "item");
+    assert!(serde_json::from_value::<ContractBreak>(
+        serde_json::json!({"kind": "removed_class", "item": "X", "extra": 1})
+    )
+    .is_err());
 }

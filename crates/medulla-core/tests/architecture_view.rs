@@ -1,7 +1,10 @@
 //! Round-trip coverage for the architecture-view wire model.
 
-use medulla_types::architecture_view::{ArchitectureView, ViewContainer, ViewEdge};
+use medulla_types::architecture_view::{
+    ArchitectureView, ViewAbstained, ViewContainer, ViewEdge, ViewScope,
+};
 
+// spec: MEDULLA-CQ-ORCH-R010.1
 #[test]
 fn view_types_round_trip() {
     let expected = ArchitectureView {
@@ -26,4 +29,36 @@ fn view_types_round_trip() {
         serde_json::from_slice(&encoded).expect("architecture view deserializes");
 
     assert_eq!(decoded, expected);
+
+    let scope = ViewScope {
+        repository_id: "repo-1".to_owned(),
+        revision: Some("ab".repeat(32)),
+    };
+    assert!(scope.revision_is_valid());
+    let scope_back: ViewScope =
+        serde_json::from_value(serde_json::to_value(&scope).unwrap()).unwrap();
+    assert_eq!(scope_back, scope);
+    let latest: ViewScope =
+        serde_json::from_value(serde_json::json!({"repository_id": "repo-1"})).unwrap();
+    assert_eq!(latest.revision, None);
+    assert!(latest.revision_is_valid());
+    for bad in ["short", &"AB".repeat(32)] {
+        let bad_scope = ViewScope { repository_id: "r".into(), revision: Some((*bad).into()) };
+        assert!(!bad_scope.revision_is_valid());
+    }
+    assert!(serde_json::from_value::<ViewScope>(
+        serde_json::json!({"repository_id": "r", "branch": "main"})
+    )
+    .is_err());
+    for refusal in [
+        ViewAbstained::NoSupportingSource,
+        ViewAbstained::UnknownRepository,
+        ViewAbstained::StaleRevision,
+        ViewAbstained::TooLarge,
+    ] {
+        let back: ViewAbstained =
+            serde_json::from_value(serde_json::to_value(refusal).unwrap()).unwrap();
+        assert_eq!(back, refusal);
+    }
+    assert_eq!(ViewAbstained::TooLarge.code(), "VIEW_TOO_LARGE");
 }

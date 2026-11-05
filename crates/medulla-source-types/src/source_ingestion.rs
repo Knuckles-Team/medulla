@@ -451,6 +451,12 @@ pub struct SourceIngestionReceipt {
     pub relationship_tombstoned_count: u64,
     pub committed_graph_version: u64,
     pub receipt_digest: Digest256,
+    /// Shared batch counters (MEDULLA-INGEST-WORKER-R606.1).
+    #[serde(default, skip_serializing_if = "medulla_types::ingest_materialize::IngestBatchReport::is_empty")]
+    pub report: medulla_types::ingest_materialize::IngestBatchReport,
+    /// Per-class counters, at most 1,024 entries.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub classes: Vec<medulla_types::ingest_materialize::ClassReport>,
 }
 
 /// Read-only restart/failover key. Tenant and graph remain verified server

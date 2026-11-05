@@ -25,6 +25,38 @@ pub enum SourceQueryError {
     InvalidQuery,
     #[error("limit_exceeded")]
     LimitExceeded,
+    #[error("unauthorized")]
+    Unauthorized,
+    #[error("approval_expired")]
+    ApprovalExpired,
+    #[error("approval_revoked")]
+    ApprovalRevoked,
+    #[error("stale_source")]
+    StaleSource,
+    #[error("query_failed")]
+    QueryFailed,
+    #[error("cancelled")]
+    Cancelled,
+    #[error("verification_unavailable")]
+    VerificationUnavailable,
+}
+
+/// A source-query refusal as it crosses the wire (MEDULLA-FEDERATED-QUERY-R085.7).
+///
+/// It names the query by id and digest, the stage the query reached and the last
+/// chunk completed before the refusal. It has no free-text field: SQL literals,
+/// parameter values and credentials cannot ride on it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct SourceQueryFailure {
+    pub error: SourceQueryError,
+    pub query_id: String,
+    pub query_digest: String,
+    pub stage: SourceQueryPhase,
+    /// Index of the last chunk fully delivered; absent when none completed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_completed_chunk: Option<u64>,
 }
 
 /// SQL dialects a source may declare. Closed.
@@ -295,6 +327,53 @@ pub struct SourceQueryApprovalValidity {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // spec: MEDULLA-FEDERATED-QUERY-R085.7
+    #[test]
+    fn errors_redact_literals_and_round_trip() {
+        let all = [
+            (SourceQueryError::UnsupportedDialect, "unsupported_dialect"),
+            (SourceQueryError::InvalidQuery, "invalid_query"),
+            (SourceQueryError::Unauthorized, "unauthorized"),
+            (SourceQueryError::ApprovalExpired, "approval_expired"),
+            (SourceQueryError::ApprovalRevoked, "approval_revoked"),
+            (SourceQueryError::StaleSource, "stale_source"),
+            (SourceQueryError::QueryFailed, "query_failed"),
+            (SourceQueryError::LimitExceeded, "limit_exceeded"),
+            (SourceQueryError::Cancelled, "cancelled"),
+            (SourceQueryError::VerificationUnavailable, "verification_unavailable"),
+        ];
+        for (error, code) in all {
+            assert_eq!(serde_json::to_value(error).unwrap(), code);
+            assert_eq!(error.to_string(), code);
+            let failure = SourceQueryFailure {
+                error,
+                query_id: "q-1".into(),
+                query_digest: "ab".repeat(32),
+                stage: SourceQueryPhase::Chunk,
+                last_completed_chunk: Some(4),
+            };
+            let json = serde_json::to_value(&failure).unwrap();
+            assert_eq!(serde_json::from_value::<SourceQueryFailure>(json).unwrap(), failure);
+            let wire = serde_json::to_string(&failure).unwrap();
+            assert!(!wire.contains("SELECT") && !wire.contains("hunter2"));
+        }
+        let none = SourceQueryFailure {
+            error: SourceQueryError::Cancelled,
+            query_id: "q".into(),
+            query_digest: "cd".repeat(32),
+            stage: SourceQueryPhase::Start,
+            last_completed_chunk: None,
+        };
+        assert!(serde_json::to_value(&none).unwrap().get("last_completed_chunk").is_none());
+        // No free-text field can carry a SQL literal or a parameter value.
+        assert!(serde_json::from_value::<SourceQueryFailure>(serde_json::json!({
+            "error": "query_failed", "query_id": "q", "query_digest": "ab",
+            "stage": "chunk", "sql": "SELECT 'hunter2'"
+        }))
+        .is_err());
+        assert!(serde_json::from_value::<SourceQueryError>(serde_json::json!("other")).is_err());
+    }
 
     fn limits() -> SourceQueryLimits {
         SourceQueryLimits {

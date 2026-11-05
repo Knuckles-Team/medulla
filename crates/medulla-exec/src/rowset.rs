@@ -68,6 +68,25 @@ pub fn parse_series_event_row_id(id: &str) -> Option<(&str, &str, i64)> {
 pub struct Row {
     pub id: String,
     pub score: Option<f32>,
+    /// Calibrated confidence of the row, when the producing stage knows it.
+    pub confidence: Option<f32>,
+    /// Valid-time of the fact behind the row, in milliseconds.
+    pub valid_time_ms: Option<i64>,
+    /// Transaction-time of the fact behind the row, in milliseconds.
+    pub tx_time_ms: Option<i64>,
+}
+
+impl Row {
+    /// A row with an id and score and no epistemic fields.
+    fn plain(id: String, score: Option<f32>) -> Self {
+        Self {
+            id,
+            score,
+            confidence: None,
+            valid_time_ms: None,
+            tx_time_ms: None,
+        }
+    }
 }
 
 /// An ordered set of rows. Deduplicated by id (a node appears at most once); the
@@ -92,7 +111,7 @@ impl RowSet {
         let rows = ids
             .into_iter()
             .filter(|id| seen.insert(id.clone()))
-            .map(|id| Row { id, score: None })
+            .map(|id| Row::plain(id, None))
             .collect();
         Self::of_rows(rows)
     }
@@ -135,7 +154,7 @@ impl RowSet {
         let rows = scored
             .into_iter()
             .filter(|(id, _)| seen.insert(id.clone()))
-            .map(|(id, s)| Row { id, score: Some(s) })
+            .map(|(id, s)| Row::plain(id, Some(s)))
             .collect();
         Self::of_rows(rows)
     }
@@ -148,7 +167,19 @@ impl RowSet {
         let rows = rows
             .into_iter()
             .filter(|(id, _)| seen.insert(id.clone()))
-            .map(|(id, score)| Row { id, score })
+            .map(|(id, score)| Row::plain(id, score))
+            .collect();
+        Self::of_rows(rows)
+    }
+
+    /// Build from full rows preserving order, deduping by id (first wins). Unlike
+    /// [`RowSet::from_rows`] this keeps the epistemic fields of each row
+    /// (MEDULLA-FEDERATED-QUERY-R720.1).
+    pub fn from_epistemic_rows<I: IntoIterator<Item = Row>>(rows: I) -> Self {
+        let mut seen = HashSet::new();
+        let rows = rows
+            .into_iter()
+            .filter(|row| seen.insert(row.id.clone()))
             .collect();
         Self::of_rows(rows)
     }
@@ -260,6 +291,39 @@ mod tests {
             None,
             "LIMIT drops the cut row's channels"
         );
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R720.1
+    #[test]
+    fn epistemic_fields_survive_traversal_and_vector() {
+        let row = |id: &str, score: Option<f32>, c: f32, v: i64, t: i64| Row {
+            id: id.into(),
+            score,
+            confidence: Some(c),
+            valid_time_ms: Some(v),
+            tx_time_ms: Some(t),
+        };
+        // The vector stage ranks (score), the traversal stage keeps a set (no score).
+        let ranked = RowSet::from_epistemic_rows([
+            row("b", Some(0.9), 0.8, 10, 20),
+            row("a", Some(0.5), 0.7, 11, 21),
+            row("b", Some(0.1), 0.1, 1, 1),
+            row("c", None, 0.6, 12, 22),
+        ]);
+        assert_eq!(ranked.ids(), vec!["b", "a", "c"], "first occurrence wins");
+        // Stages that read none of the fields pass them through unchanged.
+        let keep: HashSet<&str> = ["a", "b"].into_iter().collect();
+        let kept = ranked.intersect_keep_order(&keep);
+        assert_eq!(kept.rows()[0], row("b", Some(0.9), 0.8, 10, 20));
+        assert_eq!(kept.rows()[1], row("a", Some(0.5), 0.7, 11, 21));
+        let limited = kept.limit(1);
+        assert_eq!(limited.rows()[0].confidence, Some(0.8));
+        assert_eq!(limited.rows()[0].valid_time_ms, Some(10));
+        assert_eq!(limited.rows()[0].tx_time_ms, Some(20));
+        // The tuple constructor keeps its signature and sets the new fields to None.
+        let plain = RowSet::from_rows([("x".to_string(), Some(1.0))]);
+        let r = &plain.rows()[0];
+        assert_eq!((r.confidence, r.valid_time_ms, r.tx_time_ms), (None, None, None));
     }
 
     #[test]

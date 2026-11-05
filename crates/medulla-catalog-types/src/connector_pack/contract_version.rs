@@ -58,6 +58,28 @@ pub enum ContractBreakKind {
     RemovedMapping,
 }
 
+/// One breaking change between two releases of a pack contract. A breaking
+/// release is any release with at least one `ContractBreak`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ContractBreak {
+    pub kind: ContractBreakKind,
+    /// The class, property, field, shape or mapping the change names.
+    pub item: String,
+}
+
+impl ContractBreak {
+    pub fn validate(&self) -> Result<(), PackContractError> {
+        text("item", &self.item)
+    }
+}
+
+/// Whether a set of changes makes the release a breaking one.
+pub fn is_breaking(breaks: &[ContractBreak]) -> bool {
+    !breaks.is_empty()
+}
+
 /// A record that failed validation.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PackContractError {

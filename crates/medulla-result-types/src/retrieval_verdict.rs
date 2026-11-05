@@ -829,11 +829,14 @@ impl HierarchyRetrievalPolicy {
                 }
                 validate_links_against_ids(&self.parent_links, &self.community_ids)
             }
-            HierarchyRetrievalKind::DocumentSection => self.validate_section_tree(),
+            HierarchyRetrievalKind::DocumentSection => self.validate_sections(),
         }
     }
 
-    fn validate_section_tree(&self) -> Result<(), HierarchyValidationError> {
+    /// Check one root, acyclic single-parent links and nested source spans of
+    /// the document-section tree (MEDULLA-FEDERATED-QUERY-R081.9.7.1). Community
+    /// fields are untouched.
+    pub fn validate_sections(&self) -> Result<(), HierarchyValidationError> {
         if self.section_nodes.is_empty() {
             return Err(HierarchyValidationError::MissingSectionNodes);
         }
@@ -1145,6 +1148,97 @@ mod tests {
             embedding_model_revision: "emb@1".into(),
             cross_encoder_model_revision: "ce@1".into(),
         }
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R081.9.7.1
+    #[test]
+    fn section_tree_validation_rejects_cycles_and_bad_spans() {
+        fn node(
+            id: &str,
+            parent: Option<&str>,
+            children: &[&str],
+            granularity: SectionGranularity,
+            start: u64,
+            end: u64,
+        ) -> HierarchySectionNode {
+            HierarchySectionNode {
+                id: id.into(),
+                document_id: "d".into(),
+                document_revision: "r1".into(),
+                parent_id: parent.map(str::to_string),
+                ordered_children: children.iter().map(|c| c.to_string()).collect(),
+                granularity,
+                summary: format!("summary {id}"),
+                source_span: SectionSourceSpan { start, end },
+            }
+        }
+        fn policy(nodes: Vec<HierarchySectionNode>) -> HierarchyRetrievalPolicy {
+            HierarchyRetrievalPolicy {
+                kind: HierarchyRetrievalKind::DocumentSection,
+                hierarchy_revision: "h1".into(),
+                community_ids: vec![],
+                summary_ids: vec![],
+                entity_ids: vec![],
+                parent_links: vec![],
+                stage: HierarchyStage::DocumentSection,
+                score_provenance: vec![],
+                beam_width: 1,
+                max_depth: 4,
+                max_visited_communities: 1,
+                max_entity_candidates: 1,
+                max_reranker_calls: 1,
+                max_tokens: 1,
+                max_total_cost_micros: 1,
+                section_nodes: nodes,
+            }
+        }
+        let root = |children: &[&str]| node("doc", None, children, SectionGranularity::Document, 0, 100);
+        let good = policy(vec![
+            root(&["sec"]),
+            node("sec", Some("doc"), &[], SectionGranularity::Section, 10, 50),
+        ]);
+        good.validate_sections().unwrap();
+
+        // A span that leaves its parent.
+        let outside = policy(vec![
+            root(&["sec"]),
+            node("sec", Some("doc"), &[], SectionGranularity::Section, 10, 200),
+        ]);
+        assert!(matches!(
+            outside.validate_sections(),
+            Err(HierarchyValidationError::SpanNotNested { .. })
+        ));
+        // A span whose start is after its end.
+        let inverted = policy(vec![
+            root(&["sec"]),
+            node("sec", Some("doc"), &[], SectionGranularity::Section, 60, 50),
+        ]);
+        assert!(matches!(
+            inverted.validate_sections(),
+            Err(HierarchyValidationError::InvalidSpan(_))
+        ));
+        // A node that is its own parent.
+        let own = policy(vec![
+            root(&[]),
+            node("sec", Some("sec"), &[], SectionGranularity::Section, 10, 50),
+        ]);
+        assert!(own.validate_sections().is_err());
+        // A cycle with the root unreachable from it.
+        let cycle = policy(vec![
+            root(&[]),
+            node("a", Some("b"), &["b"], SectionGranularity::Section, 10, 50),
+            node("b", Some("a"), &["a"], SectionGranularity::Section, 10, 50),
+        ]);
+        assert!(cycle.validate_sections().is_err());
+        // Two roots.
+        let two_roots = policy(vec![
+            root(&[]),
+            node("doc2", None, &[], SectionGranularity::Document, 0, 10),
+        ]);
+        assert_eq!(
+            two_roots.validate_sections(),
+            Err(HierarchyValidationError::InvalidRootCount)
+        );
     }
 
     // spec: MEDULLA-FEDERATED-QUERY-R081.1

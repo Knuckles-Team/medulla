@@ -226,6 +226,8 @@ mod tests {
             relationship_tombstoned_count: 0,
             committed_graph_version: 9,
             receipt_digest: digest(5),
+            report: Default::default(),
+            classes: Vec::new(),
         }
     }
 

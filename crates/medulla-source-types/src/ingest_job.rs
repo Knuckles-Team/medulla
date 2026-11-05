@@ -30,6 +30,14 @@ pub enum IngestLane {
 }
 
 impl IngestLane {
+    /// The scheduler lane id this lane maps to (MEDULLA-INGEST-WORKER-R604.1).
+    pub fn lane_id(self) -> &'static str {
+        match self {
+            Self::General => "general",
+            Self::Hydration => "hydration",
+        }
+    }
+
     /// The served task-queue name for this lane.
     pub fn queue_name(self) -> &'static str {
         match self {
@@ -58,6 +66,9 @@ pub struct IngestJobEnvelope {
     pub kind: IngestJobKind,
     pub target: String,
     pub attempt: u32,
+    /// Resume point when the job drains one page of a source drain.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub page: Option<medulla_types::ingest_drain::PageCheckpoint>,
 }
 
 /// Why an ingest job envelope or retry policy is refused.
@@ -214,6 +225,7 @@ mod tests {
             kind: IngestJobKind::Document,
             target: "docs/readme.md".into(),
             attempt: 1,
+            page: None,
         }
     }
 

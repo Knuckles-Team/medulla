@@ -277,6 +277,16 @@ pub mod consolidation_isolation;
 // child.
 pub mod immich_pilot_phase;
 pub mod usage;
+// MEDULLA-DURABLE-KERNEL-R071 — typed durable task-queue records and refusals.
+pub mod task_queue;
+// MEDULLA-INGEST-WORKER-R604.1/R605.1/R606.1 — lanes, drains and the batch report.
+pub mod ingest_drain;
+pub mod ingest_lanes;
+pub mod ingest_materialize;
+// MEDULLA-INGEST-WORKER-R001.1006 — the data-prep declaration record.
+pub mod data_prep_declaration;
+// MEDULLA-CQ-ORCH-R701.1 — imported process model and gate classification.
+pub mod process_import;
 #[cfg(feature = "viz")]
 pub mod viz;
 pub mod wire;

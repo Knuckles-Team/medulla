@@ -1846,6 +1846,8 @@ fn build_terminal_receipt(
         relationship_tombstoned_count: prepared.relationship_tombstoned_count,
         committed_graph_version: prepared.committed_graph_version,
         receipt_digest,
+        report: Default::default(),
+        classes: Vec::new(),
     })
 }
 
