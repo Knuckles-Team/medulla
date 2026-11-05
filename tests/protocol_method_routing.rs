@@ -720,7 +720,7 @@ async fn t20_served_supersession_closes_prior_links_successor_and_refuses_replay
     assert!(
         second
             .refusal_text()
-            .is_some_and(|text| text.contains("prior edge is missing or already closed")),
+            .is_some_and(|text| text.starts_with("EDGE_ALREADY_CLOSED")),
         "unexpected refusal: {second:?}"
     );
     assert_eq!(

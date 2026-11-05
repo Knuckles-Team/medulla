@@ -1145,6 +1145,14 @@ pub async fn serve(addr: &str, state: Arc<RwLock<ServerState>>) -> std::io::Resu
     serve_with_blob_store(addr, state, selected_blob).await
 }
 
+/// Fail-closed startup policy for the S3 listener (MEDULLA-DURABLE-KERNEL-R860.5),
+/// checked before bind: the SigV4 access and secret credentials must be
+/// injected at runtime, whatever the address. The engine key is not the S3
+/// credential, so it is not consulted.
+pub fn validate_startup_policy(_addr: &str, _auth_secret: &str) -> std::io::Result<()> {
+    resolve_auth().map(|_| ())
+}
+
 /// Resolve mandatory SigV4 credentials from the environment.
 fn resolve_auth() -> std::io::Result<S3Auth> {
     let access = std::env::var(S3_ACCESS_KEY_ENV)

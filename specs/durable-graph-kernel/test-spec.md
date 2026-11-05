@@ -696,6 +696,7 @@ Each entry names a test that does not exist yet. The path is the exact post-spli
 | `MEDULLA-DURABLE-KERNEL-R820.5` | `tests/durable/test_uncertain_effect_served.py::test_audit_and_metrics_after_uncertain_run` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R820.3` | `tests/durable/test_uncertain_effect_served.py::test_methods_reachable_through_wire_contract` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R820.4` | `tests/durable/test_uncertain_effect_served.py::test_refusals_leave_state_unchanged` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R820.1` | `crates/medulla-persistence-ops/src/store_upgrade/tests.rs::pre_effect_receipts_shard_upgrades_offline_and_old_layout_refuses_open` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R820`, `MEDULLA-DURABLE-KERNEL-R820.6` | `tests/durable/test_uncertain_effect_served.py::test_started_item_never_dead_letters` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R043.100.3` | `tests/graph_change_feed_served.rs::expired_stale_and_revoked_cursors_return_typed_results_without_leaks` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R043.100.2` | `tests/graph_change_feed_served.rs::snapshot_cursor_leaves_no_gap_under_concurrent_commits` (planned) |

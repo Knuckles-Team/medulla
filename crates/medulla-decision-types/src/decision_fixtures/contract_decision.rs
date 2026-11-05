@@ -59,6 +59,7 @@ pub fn policy() -> DecisionPolicy {
         cold_start: ColdStart::DeterministicOnly,
         statistical: None,
         topology: None,
+        knobs: Default::default(),
     }
 }
 
@@ -75,6 +76,7 @@ pub fn assembly_request() -> AssemblyRequest {
             pins: bounded(Vec::new()),
             denies: bounded(vec!["component-denied".to_string()]),
             topology: None,
+            required_input_media: bounded(Vec::new()),
         },
         candidates: LibraryCandidateScope {
             kinds: bounded(vec![AgentComponentKind::Tool]),

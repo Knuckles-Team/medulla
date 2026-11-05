@@ -32,10 +32,12 @@ rmp-serde = "1.3"
 petgraph = { version = "0.8.3", features = ["serde-1"] }
 rayon = { version = "1.12", optional = true }
 medulla-catalog-types = { path = "../medulla-catalog-types" }
+medulla-decision-types = { path = "../medulla-decision-types" }
 medulla-result-types = { path = "../medulla-result-types", features = ["query"] }
 medulla-finance = { path = "../medulla-finance" }
 medulla-graph-algos = { path = "../medulla-graph-algos" }
 medulla-graph-core = { path = "../medulla-graph-core" }
+medulla-mining = { path = "../medulla-mining", features = ["mining"] }
 medulla-reasoner = { path = "../medulla-reasoner" }
 medulla-semantic-index = { path = "../medulla-semantic-index" }
 medulla-sql = { path = "../medulla-sql" }

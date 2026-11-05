@@ -244,6 +244,9 @@ async fn the_reconciler_releases_an_orphan_body_and_keeps_every_held_one() {
 
 // spec: MEDULLA-TYPED-PACKS-R018
 // spec: MEDULLA-TYPED-PACKS-R002
+// spec: MEDULLA-TYPED-PACKS-R002.2
+// spec: MEDULLA-TYPED-PACKS-R002.3
+// spec: MEDULLA-TYPED-PACKS-R002.4
 #[tokio::test]
 async fn holder_refcounts_transition_across_unchanged_revised_and_withdrawn_entries() {
     let served = Served::new();
@@ -322,6 +325,37 @@ async fn holder_refcounts_transition_across_unchanged_revised_and_withdrawn_entr
         );
         assert_eq!(&content.body, expected, "retained body {name}:{revision:?}");
     }
+    // A repeated identical import changes no holder and no refcount.
+    let repeated = import(
+        &served,
+        &build_pack(CONNECTOR, &[a.clone(), b_revised.clone()]),
+        Some(head_of(&second)),
+    )
+    .await;
+    assert!(
+        matches!(
+            ok::<PackImportResult>("repeated import", repeated),
+            PackImportResult::Unchanged { .. }
+        ),
+        "an identical re-import is unchanged"
+    );
+    let key = "reconcile:pack-admin-transitions-repeat";
+    let again: PackBodyReconcileReport = ok(
+        "ReconcileBodies",
+        served
+            .pack(
+                key,
+                ConnectorPackOp::ReconcileBodies {
+                    request: ConnectorPackReconcileRequest {
+                        context: context(key),
+                    },
+                },
+            )
+            .await,
+    );
+    assert_eq!(again.scanned, report.scanned, "holder set is unchanged");
+    assert_eq!(again.orphaned, 0);
+    assert_eq!(again.released, 0);
 }
 
 // spec: MEDULLA-TYPED-PACKS-R007

@@ -1,8 +1,9 @@
 //! Conversation order is reserved with native run admission, not a second store.
 use super::*;
 use medulla_work_types::{
+    native_control::ChildInputAdmission, native_control::ChildInputState,
     native_control::ConversationTurnAdmission, native_control::NativeControlSchemaVersion,
-    native_control::SubmitWorkItemRequest,
+    native_control::SubmitWorkItemRequest, native_control::WORK_ITEM_LIFECYCLE_REVISION,
 };
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -185,6 +186,122 @@ pub fn reserve(
         run_id: run.into(),
     };
     let encoded = rmp_serde::to_vec_named(&head).map_err(|e| e.to_string())?;
+    let sealed = crypto.seal(&encoded);
+    nodes.insert((graph, id.as_str()), sealed.as_ref())?;
+    Ok(Some(id))
+}
+
+/// Stored child-input record: the admission plus the scope that owns it.
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ChildInputRecord {
+    pub schema_version: NativeControlSchemaVersion,
+    pub node_type: String,
+    pub graph: String,
+    pub tenant: String,
+    pub owner: String,
+    pub child_run_id: String,
+    pub expected_revision: u64,
+    pub content_digest: String,
+    pub idempotency_key: String,
+    pub state: ChildInputState,
+}
+
+fn child_input_id(tenant: &str, child_run_id: &str, key: &str) -> String {
+    let mut digest = Sha256::new();
+    for field in ["child-input", tenant, child_run_id, key] {
+        digest.update((field.len() as u64).to_be_bytes());
+        digest.update(field.as_bytes());
+    }
+    format!("child-input:{}", hex::encode(digest.finalize()))
+}
+
+fn validate_child_input(input: &ChildInputAdmission) -> Result<(), String> {
+    let bounded = |value: &str| !value.trim().is_empty() && value.len() <= 512;
+    let digest = input.content_digest.len() == 64
+        && input
+            .content_digest
+            .bytes()
+            .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b));
+    if !bounded(&input.child_run_id) || !bounded(&input.idempotency_key) || !digest {
+        return Err("CHILD_INPUT_INVALID: child run, key or content digest is invalid".into());
+    }
+    Ok(())
+}
+
+/// Reserve one child message in `SubmitWorkItem`'s existing MutationBatch
+/// transaction (MEDULLA-DURABLE-KERNEL-R865). The expected revision and the
+/// key are checked in this one transaction; the record is the write path and
+/// Decide writes nothing. The same key and digest replay the stored record.
+pub fn reserve_child_input(
+    graph: &str,
+    request: &SubmitWorkItemRequest,
+    actor: Option<&str>,
+    nodes: &mut NativeNodeRows<'_>,
+    crypto: DurableCrypto<'_>,
+) -> Result<Option<String>, String> {
+    let Some(input) = &request.child_input else {
+        return Ok(None);
+    };
+    let owner = actor
+        .filter(|s| !s.is_empty())
+        .ok_or("ACCESS_DENIED: child input owner is unavailable")?;
+    validate_child_input(input)?;
+    let tenant = request.context.tenant_id.as_str();
+    let id = child_input_id(tenant, &input.child_run_id, &input.idempotency_key);
+    let stored = nodes
+        .get((graph, id.as_str()))?
+        .map(|value| decode_durable::<ChildInputRecord>(&crypto.unseal(value.value())?))
+        .transpose()?;
+    if let Some(record) = stored {
+        if record.graph != graph
+            || record.tenant != tenant
+            || record.owner != owner
+            || record.node_type != "ChildInputAdmission"
+        {
+            return Err("ACCESS_DENIED: child input owner is unavailable".into());
+        }
+        if record.content_digest != input.content_digest {
+            return Err("IDEMPOTENCY_CONFLICT: key was used with a different digest".into());
+        }
+        return Ok(Some(id));
+    }
+    let child_id = super::run_owner::work_item_id(graph, tenant, &input.child_run_id)?;
+    let bytes = nodes
+        .get((graph, child_id.as_str()))?
+        .map(|value| crypto.unseal(value.value()))
+        .transpose()?
+        .ok_or("ACCESS_DENIED: child run is unavailable")?;
+    let row: serde_json::Map<String, serde_json::Value> = decode_durable(&bytes)?;
+    if !super::run_owner::owned(&row, graph, tenant, &input.child_run_id, &child_id, owner) {
+        return Err("ACCESS_DENIED: child run is unavailable".into());
+    }
+    if matches!(
+        property_string(&row, "status"),
+        "succeeded" | "failed" | "cancelled" | "dead_letter"
+    ) {
+        return Err("CHILD_TARGET_TERMINAL: child run already finished".into());
+    }
+    let current = property_u64(&row, WORK_ITEM_LIFECYCLE_REVISION);
+    if current != input.expected_revision {
+        return Err(format!(
+            "REVISION_CONFLICT: expected lifecycle revision {} but current is {current}",
+            input.expected_revision
+        ));
+    }
+    let record = ChildInputRecord {
+        schema_version: NativeControlSchemaVersion::V1,
+        node_type: "ChildInputAdmission".into(),
+        graph: graph.into(),
+        tenant: tenant.into(),
+        owner: owner.into(),
+        child_run_id: input.child_run_id.clone(),
+        expected_revision: input.expected_revision,
+        content_digest: input.content_digest.clone(),
+        idempotency_key: input.idempotency_key.clone(),
+        state: input.state,
+    };
+    let encoded = rmp_serde::to_vec_named(&record).map_err(|e| e.to_string())?;
     let sealed = crypto.seal(&encoded);
     nodes.insert((graph, id.as_str()), sealed.as_ref())?;
     Ok(Some(id))
