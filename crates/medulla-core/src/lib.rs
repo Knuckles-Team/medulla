@@ -16,6 +16,8 @@
 // CONCEPT:MEDULLA-KG.compute.message-broker-exchanges — message-broker exchanges/routing on top of the KG-2.303 queue.
 #[cfg(feature = "broker")]
 pub mod broker;
+/// Data contract checks (MEDULLA-TYPED-PACKS-R805.2).
+pub mod data_product;
 pub mod decay;
 /// Canonical durable-mutation classification/application, hoisted down from the
 /// facade's `src/mutation_apply.rs` (`plans/pyengine/MEDULLA-PYENGINE-PLAN.md` §4.2) so a
