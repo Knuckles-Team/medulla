@@ -3,6 +3,8 @@
 
 use super::*;
 
+use super::auth::set_password_op;
+// spec: MEDULLA-IDENTITY-R707
 #[test]
 fn dump_round_trips_and_redacts_secrets() {
     let mut store = store_in(AuthMode::Local);
