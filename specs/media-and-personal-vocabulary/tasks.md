@@ -4,12 +4,12 @@ Governing spec: [spec.md](spec.md). Design: [plan.md](plan.md).
 
 Tasks mirror the leaf rows of requirements.md, producer first: vocabulary, shapes and identity keys, then the connector mappings, then the ingest and query surfaces.
 
-- [ ] T001 [US1] MEDULLA-MEDIA-VOCAB-R001.1 Add mv:MediaWork (⊑ :CreativeWork) with mv:Film, mv:TelevisionSeries, mv:TelevisionSeason, mv:TelevisionEpisode, mv:MusicAlbum, mv:MusicTrac
-- [ ] T002 [US1] MEDULLA-MEDIA-VOCAB-R001.2 Add mv:MediaLibrary, mv:LibraryItem (links a work to a library, mv:itemOf, mv:inLibrary), mv:MediaFile, mv:RomFile, mv:GamePlatform, mv:Musi
-- [ ] T003 [US1] MEDULLA-MEDIA-VOCAB-R001.3 Add mv:PlaybackSession (⊑ :Session) with mv:playedBy, mv:lastPlayedAt, mv:playCount, mv:playbackPositionSeconds, and mv:BroadcastStream (⊑ :
-- [ ] T004 [US1] MEDULLA-MEDIA-VOCAB-R001.4 Add mv:DownloadRequest (states requested, wanted, grabbed, importing, imported, failed), mv:DownloadTransfer, mv:GrabEvent, mv:MediaIndexer 
-- [ ] T005 [US1] MEDULLA-MEDIA-VOCAB-R001.5 Add mv:TranscriptSegment (part of the existing :Transcript in personal-v1.ttl: reuse, do not redefine) with mv:segmentStart, mv:segmentEnd, 
-- [ ] T006 [US1] MEDULLA-MEDIA-VOCAB-R001.6 Resolve the two name collisions: connector packages declare :Episode (TV) and :Author in the shared : namespace, while core-foundation-v1.tt
+- [ ] T001 [US1] MEDULLA-MEDIA-VOCAB-R001.1 Add mv:MediaWork (⊑ :CreativeWork) with mv:Film, mv:TelevisionSeries, mv:TelevisionSeason, mv:TelevisionEpisode, mv:MusicAlbum
+- [ ] T002 [US1] MEDULLA-MEDIA-VOCAB-R001.2 Add mv:MediaLibrary, mv:LibraryItem (links a work to a library, mv:itemOf, mv:inLibrary), mv:MediaFile, mv:RomFile, mv:GamePlatform
+- [ ] T003 [US1] MEDULLA-MEDIA-VOCAB-R001.3 Add mv:PlaybackSession (⊑ :Session) with mv:playedBy, mv:lastPlayedAt, mv:playCount, mv:playbackPositionSeconds, and mv:BroadcastStream (⊑
+- [ ] T004 [US1] MEDULLA-MEDIA-VOCAB-R001.4 Add mv:DownloadRequest (states requested, wanted, grabbed, importing, imported, failed), mv:DownloadTransfer, mv:GrabEvent, mv:MediaIndexer
+- [ ] T005 [US1] MEDULLA-MEDIA-VOCAB-R001.5 Add mv:TranscriptSegment (part of the existing :Transcript in personal-v1.ttl: reuse, do not redefine) with mv:segmentStart, mv:segmentEnd
+- [ ] T006 [US1] MEDULLA-MEDIA-VOCAB-R001.6 Resolve the two name collisions: connector packages declare :Episode (TV) and :Author in the shared : namespace, while
 - [ ] T007 [US6] MEDULLA-MEDIA-VOCAB-R001.100.1 Tag vocabulary
 - [ ] T008 [US6] MEDULLA-MEDIA-VOCAB-R001.100.2 Tag ingest mapping
 - [ ] T009 [US6] MEDULLA-MEDIA-VOCAB-R001.100.3 Authorized search and served proof
@@ -23,9 +23,9 @@ Tasks mirror the leaf rows of requirements.md, producer first: vocabulary, shape
 - [ ] T017 [US5] MEDULLA-MEDIA-VOCAB-R001.102.2 Search
 - [ ] T018 [US5] MEDULLA-MEDIA-VOCAB-R001.102.3 Relations
 - [ ] T019 [US5] MEDULLA-MEDIA-VOCAB-R001.102.4 Refusals, evidence and served proof
-- [ ] T020 [US2] MEDULLA-MEDIA-VOCAB-R002.1 Add cv:Feed, cv:FeedSubscription, cv:Article (⊑ :Document), cv:ResearchPaper (⊑ :Document, seeAlso bibo:AcademicArticle), cv:SearchQuery, cv
-- [ ] T021 [US2] MEDULLA-MEDIA-VOCAB-R002.2 Add cv:SocialPost, cv:PublishingChannel, cv:EngagementMetric, cv:EmailCampaign, cv:MailingList, cv:Subscriber (opaque identity), with cv:sen
-- [ ] T022 [US2] MEDULLA-MEDIA-VOCAB-R002.3 Add cv:MessageChannel and cv:ChatMessage; reuse existing kg:Team from core-foundation-v1.ttl without redeclaration, with cv:memberCount, cv:
+- [ ] T020 [US2] MEDULLA-MEDIA-VOCAB-R002.1 Add cv:Feed, cv:FeedSubscription, cv:Article (⊑ :Document), cv:ResearchPaper (⊑ :Document, seeAlso bibo:AcademicArticle), cv:SearchQuery
+- [ ] T021 [US2] MEDULLA-MEDIA-VOCAB-R002.2 Add cv:SocialPost, cv:PublishingChannel, cv:EngagementMetric, cv:EmailCampaign, cv:MailingList, cv:Subscriber (opaque identity), with
+- [ ] T022 [US2] MEDULLA-MEDIA-VOCAB-R002.3 Add cv:MessageChannel and cv:ChatMessage; reuse existing kg:Team from core-foundation-v1.ttl without redeclaration, with cv:memberCount
 - [ ] T023 [US2] MEDULLA-MEDIA-VOCAB-R002.4 Add content properties cv:publishedAt, cv:isRead, cv:feedUrl, cv:resultUrl, cv:rank, cv:servedByEngine, cv:doi, cv:arxivId, cv:citationCount
 - [ ] T024 [US6] MEDULLA-MEDIA-VOCAB-R002.5.1 Identity and receipt checks
 - [ ] T025 [US6] MEDULLA-MEDIA-VOCAB-R002.5.2 Mapping and provenance
@@ -33,74 +33,74 @@ Tasks mirror the leaf rows of requirements.md, producer first: vocabulary, shape
 - [ ] T027 [US6] MEDULLA-MEDIA-VOCAB-R002.5.4 Vocabulary reconciliation
 - [ ] T028 [US6] MEDULLA-MEDIA-VOCAB-R002.5.5 Refusals and served proof
 - [ ] T029 [US1] MEDULLA-MEDIA-VOCAB-R003.1 Declare the eight key properties as datatype correlation properties in media-v1.ttl and content-v1.ttl, without global inverse-functionality
-- [ ] T030 [US1] MEDULLA-MEDIA-VOCAB-R003.2 Specify normalisation (infoHash lower-case hex; canonicalUrl via scheme/host lower-case, tracking parameters and fragment stripped) as an rd
+- [ ] T030 [US1] MEDULLA-MEDIA-VOCAB-R003.2 Specify normalisation (infoHash lower-case hex; canonicalUrl via scheme/host lower-case, tracking parameters and fragment stripped) as an
 - [ ] T031 [US1] MEDULLA-MEDIA-VOCAB-R003.3 Add the keyed-hash identity rule for email-derived joins (cv:subscriberKey), never storing the raw address
 - [ ] T032 [US1] MEDULLA-MEDIA-VOCAB-R004.1 Shape: mv:Film/mv:TelevisionSeries carry at least one of mv:tmdbId, mv:tvdbId, mv:imdbId when sourced from a connector
 - [ ] T033 [US1] MEDULLA-MEDIA-VOCAB-R004.2 Shape: mv:DownloadTransfer has exactly one mv:infoHash matching ^[0-9a-f]{40}$ or ^[0-9a-f]{64}$
-- [ ] T034 [US1] MEDULLA-MEDIA-VOCAB-R004.3 Shape: mv:DownloadRequest mv:downloadRequestState in the closed set (requested, wanted, grabbed, importing, imported, failed). Caller chain:
-- [ ] T035 [US1] MEDULLA-MEDIA-VOCAB-R004.4 Shape: cv:Article, cv:SearchResult carry exactly one normalised cv:canonicalUrl; shapes are aggregate-free per the virtual-graph shapes conv
-- [ ] T036 [P] [US3] MEDULLA-MEDIA-VOCAB-R005.1 Add the arr vg:VirtualMapping source file (operation to class/property rows listed in plan.md section Connector mapping tables) as a mapping
+- [ ] T034 [US1] MEDULLA-MEDIA-VOCAB-R004.3 Shape: mv:DownloadRequest mv:downloadRequestState in the closed set (requested, wanted, grabbed, importing, imported, failed). Caller
+- [ ] T035 [US1] MEDULLA-MEDIA-VOCAB-R004.4 Shape: cv:Article, cv:SearchResult carry exactly one normalised cv:canonicalUrl; shapes are aggregate-free per the virtual-graph shapes
+- [ ] T036 [P] [US3] MEDULLA-MEDIA-VOCAB-R005.1 Add the arr vg:VirtualMapping source file (operation to class/property rows listed in plan.md section Connector mapping tables) as a
 - [ ] T037 [P] [US3] MEDULLA-MEDIA-VOCAB-R005.2 Add the arr fixture (recorded tool response) for its single-source question for MEDULLA-CQ-CONN-R005.1
-- [ ] T038 [P] [US3] MEDULLA-MEDIA-VOCAB-R005.3 Add the test that answers the arr single-source question from the fixture, or returns the typed abstention naming the missing operation for 
-- [ ] T039 [P] [US3] MEDULLA-MEDIA-VOCAB-R005.4 Update MEDULLA-CQ-CONN-R005 vocabulary column from MISSING to media-v1 / content-v1 once R005.1 is LANDED (wire one call site: specs/connect
-- [ ] T040 [P] [US3] MEDULLA-MEDIA-VOCAB-R006.1 Add the jellyfin vg:VirtualMapping source file (operation to class/property rows listed in plan.md section Connector mapping tables) as a ma
+- [ ] T038 [P] [US3] MEDULLA-MEDIA-VOCAB-R005.3 Add the test that answers the arr single-source question from the fixture, or returns the typed abstention naming the missing operation for
+- [ ] T039 [P] [US3] MEDULLA-MEDIA-VOCAB-R005.4 Update MEDULLA-CQ-CONN-R005 vocabulary column from MISSING to media-v1 / content-v1 once R005.1 is LANDED (wire one call site
+- [ ] T040 [P] [US3] MEDULLA-MEDIA-VOCAB-R006.1 Add the jellyfin vg:VirtualMapping source file (operation to class/property rows listed in plan.md section Connector mapping tables) as a
 - [ ] T041 [P] [US3] MEDULLA-MEDIA-VOCAB-R006.2 Add the jellyfin fixture (recorded tool response) for its single-source question for MEDULLA-CQ-CONN-R027.1
-- [ ] T042 [P] [US3] MEDULLA-MEDIA-VOCAB-R006.3 Add the test that answers the jellyfin single-source question from the fixture, or returns the typed abstention naming the missing operation
-- [ ] T043 [P] [US3] MEDULLA-MEDIA-VOCAB-R006.4 Update MEDULLA-CQ-CONN-R027 vocabulary column from MISSING to media-v1 / content-v1 once R006.1 is LANDED (wire one call site: specs/connect
-- [ ] T044 [P] [US3] MEDULLA-MEDIA-VOCAB-R007.1 Add the audiobookshelf vg:VirtualMapping source file (operation to class/property rows listed in plan.md section Connector mapping tables) a
+- [ ] T042 [P] [US3] MEDULLA-MEDIA-VOCAB-R006.3 Add the test that answers the jellyfin single-source question from the fixture, or returns the typed abstention naming the missing
+- [ ] T043 [P] [US3] MEDULLA-MEDIA-VOCAB-R006.4 Update MEDULLA-CQ-CONN-R027 vocabulary column from MISSING to media-v1 / content-v1 once R006.1 is LANDED (wire one call site
+- [ ] T044 [P] [US3] MEDULLA-MEDIA-VOCAB-R007.1 Add the audiobookshelf vg:VirtualMapping source file (operation to class/property rows listed in plan.md section Connector mapping tables)
 - [ ] T045 [P] [US3] MEDULLA-MEDIA-VOCAB-R007.2 Add the audiobookshelf fixture (recorded tool response) for its single-source question for MEDULLA-CQ-CONN-R007.1
-- [ ] T046 [P] [US3] MEDULLA-MEDIA-VOCAB-R007.3 Add the test that answers the audiobookshelf single-source question from the fixture, or returns the typed abstention naming the missing ope
-- [ ] T047 [P] [US3] MEDULLA-MEDIA-VOCAB-R007.4 Update MEDULLA-CQ-CONN-R007 vocabulary column from MISSING to media-v1 / content-v1 once R007.1 is LANDED (wire one call site: specs/connect
-- [ ] T048 [P] [US3] MEDULLA-MEDIA-VOCAB-R008.1 Add the qbittorrent vg:VirtualMapping source file (operation to class/property rows listed in plan.md section Connector mapping tables) as a
+- [ ] T046 [P] [US3] MEDULLA-MEDIA-VOCAB-R007.3 Add the test that answers the audiobookshelf single-source question from the fixture, or returns the typed abstention naming the missing
+- [ ] T047 [P] [US3] MEDULLA-MEDIA-VOCAB-R007.4 Update MEDULLA-CQ-CONN-R007 vocabulary column from MISSING to media-v1 / content-v1 once R007.1 is LANDED (wire one call site
+- [ ] T048 [P] [US3] MEDULLA-MEDIA-VOCAB-R008.1 Add the qbittorrent vg:VirtualMapping source file (operation to class/property rows listed in plan.md section Connector mapping tables) as
 - [ ] T049 [P] [US3] MEDULLA-MEDIA-VOCAB-R008.2 Add the qbittorrent fixture (recorded tool response) for its single-source question for MEDULLA-CQ-CONN-R051.1
-- [ ] T050 [P] [US3] MEDULLA-MEDIA-VOCAB-R008.3 Add the test that answers the qbittorrent single-source question from the fixture, or returns the typed abstention naming the missing operat
-- [ ] T051 [P] [US3] MEDULLA-MEDIA-VOCAB-R008.4 Update MEDULLA-CQ-CONN-R051 vocabulary column from MISSING to media-v1 / content-v1 once R008.1 is LANDED (wire one call site: specs/connect
-- [ ] T052 [P] [US3] MEDULLA-MEDIA-VOCAB-R009.1 Add the rom-manager vg:VirtualMapping source file (operation to class/property rows listed in plan.md section Connector mapping tables) as a
+- [ ] T050 [P] [US3] MEDULLA-MEDIA-VOCAB-R008.3 Add the test that answers the qbittorrent single-source question from the fixture, or returns the typed abstention naming the missing
+- [ ] T051 [P] [US3] MEDULLA-MEDIA-VOCAB-R008.4 Update MEDULLA-CQ-CONN-R051 vocabulary column from MISSING to media-v1 / content-v1 once R008.1 is LANDED (wire one call site
+- [ ] T052 [P] [US3] MEDULLA-MEDIA-VOCAB-R009.1 Add the rom-manager vg:VirtualMapping source file (operation to class/property rows listed in plan.md section Connector mapping tables) as
 - [ ] T053 [P] [US3] MEDULLA-MEDIA-VOCAB-R009.2 Add the rom-manager fixture (recorded tool response) for its single-source question for MEDULLA-CQ-CONN-R053.1
-- [ ] T054 [P] [US3] MEDULLA-MEDIA-VOCAB-R009.3 Add the test that answers the rom-manager single-source question from the fixture, or returns the typed abstention naming the missing operat
-- [ ] T055 [P] [US3] MEDULLA-MEDIA-VOCAB-R009.4 Update MEDULLA-CQ-CONN-R053 vocabulary column from MISSING to media-v1 / content-v1 once R009.1 is LANDED (wire one call site: specs/connect
-- [ ] T056 [P] [US3] MEDULLA-MEDIA-VOCAB-R010.1 Add the owncast vg:VirtualMapping source file (operation to class/property rows listed in plan.md section Connector mapping tables) as a map
+- [ ] T054 [P] [US3] MEDULLA-MEDIA-VOCAB-R009.3 Add the test that answers the rom-manager single-source question from the fixture, or returns the typed abstention naming the missing
+- [ ] T055 [P] [US3] MEDULLA-MEDIA-VOCAB-R009.4 Update MEDULLA-CQ-CONN-R053 vocabulary column from MISSING to media-v1 / content-v1 once R009.1 is LANDED (wire one call site
+- [ ] T056 [P] [US3] MEDULLA-MEDIA-VOCAB-R010.1 Add the owncast vg:VirtualMapping source file (operation to class/property rows listed in plan.md section Connector mapping tables) as a
 - [ ] T057 [P] [US3] MEDULLA-MEDIA-VOCAB-R010.2 Add the owncast fixture (recorded tool response) for its single-source question for MEDULLA-CQ-CONN-R045.1
-- [ ] T058 [P] [US3] MEDULLA-MEDIA-VOCAB-R010.3 Add the test that answers the owncast single-source question from the fixture, or returns the typed abstention naming the missing operation 
-- [ ] T059 [P] [US3] MEDULLA-MEDIA-VOCAB-R010.4 Update MEDULLA-CQ-CONN-R045 vocabulary column from MISSING to media-v1 / content-v1 once R010.1 is LANDED (wire one call site: specs/connect
-- [ ] T060 [P] [US3] MEDULLA-MEDIA-VOCAB-R011.1 Add the media-downloader vg:VirtualMapping source file (operation to class/property rows listed in plan.md section Connector mapping tables)
+- [ ] T058 [P] [US3] MEDULLA-MEDIA-VOCAB-R010.3 Add the test that answers the owncast single-source question from the fixture, or returns the typed abstention naming the missing operation
+- [ ] T059 [P] [US3] MEDULLA-MEDIA-VOCAB-R010.4 Update MEDULLA-CQ-CONN-R045 vocabulary column from MISSING to media-v1 / content-v1 once R010.1 is LANDED (wire one call site
+- [ ] T060 [P] [US3] MEDULLA-MEDIA-VOCAB-R011.1 Add the media-downloader vg:VirtualMapping source file (operation to class/property rows listed in plan.md section Connector mapping
 - [ ] T061 [P] [US3] MEDULLA-MEDIA-VOCAB-R011.2 Add the media-downloader fixture (recorded tool response) for its single-source question for MEDULLA-CQ-CONN-R038.1
-- [ ] T062 [P] [US3] MEDULLA-MEDIA-VOCAB-R011.3 Add the test that answers the media-downloader single-source question from the fixture, or returns the typed abstention naming the missing o
-- [ ] T063 [P] [US3] MEDULLA-MEDIA-VOCAB-R011.4 Update MEDULLA-CQ-CONN-R038 vocabulary column from MISSING to media-v1 / content-v1 once R011.1 is LANDED (wire one call site: specs/connect
-- [ ] T064 [P] [US3] MEDULLA-MEDIA-VOCAB-R012.1 Add the audio-transcriber vg:VirtualMapping source file (operation to class/property rows listed in plan.md section Connector mapping tables
+- [ ] T062 [P] [US3] MEDULLA-MEDIA-VOCAB-R011.3 Add the test that answers the media-downloader single-source question from the fixture, or returns the typed abstention naming the missing
+- [ ] T063 [P] [US3] MEDULLA-MEDIA-VOCAB-R011.4 Update MEDULLA-CQ-CONN-R038 vocabulary column from MISSING to media-v1 / content-v1 once R011.1 is LANDED (wire one call site
+- [ ] T064 [P] [US3] MEDULLA-MEDIA-VOCAB-R012.1 Add the audio-transcriber vg:VirtualMapping source file (operation to class/property rows listed in plan.md section Connector mapping
 - [ ] T065 [P] [US3] MEDULLA-MEDIA-VOCAB-R012.2 Add the audio-transcriber fixture (recorded tool response) for its single-source question for MEDULLA-CQ-CONN-R008.1
-- [ ] T066 [P] [US3] MEDULLA-MEDIA-VOCAB-R012.3 Add the test that answers the audio-transcriber single-source question from the fixture, or returns the typed abstention naming the missing 
-- [ ] T067 [P] [US3] MEDULLA-MEDIA-VOCAB-R012.4 Update MEDULLA-CQ-CONN-R008 vocabulary column from MISSING to media-v1 / content-v1 once R012.1 is LANDED (wire one call site: specs/connect
-- [ ] T068 [P] [US3] MEDULLA-MEDIA-VOCAB-R013.1 Add the freshrss vg:VirtualMapping source file (operation to class/property rows listed in plan.md section Connector mapping tables) as a ma
+- [ ] T066 [P] [US3] MEDULLA-MEDIA-VOCAB-R012.3 Add the test that answers the audio-transcriber single-source question from the fixture, or returns the typed abstention naming the missing
+- [ ] T067 [P] [US3] MEDULLA-MEDIA-VOCAB-R012.4 Update MEDULLA-CQ-CONN-R008 vocabulary column from MISSING to media-v1 / content-v1 once R012.1 is LANDED (wire one call site
+- [ ] T068 [P] [US3] MEDULLA-MEDIA-VOCAB-R013.1 Add the freshrss vg:VirtualMapping source file (operation to class/property rows listed in plan.md section Connector mapping tables) as a
 - [ ] T069 [P] [US3] MEDULLA-MEDIA-VOCAB-R013.2 Add the freshrss fixture (recorded tool response) for its single-source question for MEDULLA-CQ-CONN-R022.1
-- [ ] T070 [P] [US3] MEDULLA-MEDIA-VOCAB-R013.3 Add the test that answers the freshrss single-source question from the fixture, or returns the typed abstention naming the missing operation
-- [ ] T071 [P] [US3] MEDULLA-MEDIA-VOCAB-R013.4 Update MEDULLA-CQ-CONN-R022 vocabulary column from MISSING to media-v1 / content-v1 once R013.1 is LANDED (wire one call site: specs/connect
-- [ ] T072 [P] [US3] MEDULLA-MEDIA-VOCAB-R014.1 Add the scholarx vg:VirtualMapping source file (operation to class/property rows listed in plan.md section Connector mapping tables) as a ma
+- [ ] T070 [P] [US3] MEDULLA-MEDIA-VOCAB-R013.3 Add the test that answers the freshrss single-source question from the fixture, or returns the typed abstention naming the missing
+- [ ] T071 [P] [US3] MEDULLA-MEDIA-VOCAB-R013.4 Update MEDULLA-CQ-CONN-R022 vocabulary column from MISSING to media-v1 / content-v1 once R013.1 is LANDED (wire one call site
+- [ ] T072 [P] [US3] MEDULLA-MEDIA-VOCAB-R014.1 Add the scholarx vg:VirtualMapping source file (operation to class/property rows listed in plan.md section Connector mapping tables) as a
 - [ ] T073 [P] [US3] MEDULLA-MEDIA-VOCAB-R014.2 Add the scholarx fixture (recorded tool response) for its single-source question for MEDULLA-CQ-CONN-R055.1
-- [ ] T074 [P] [US3] MEDULLA-MEDIA-VOCAB-R014.3 Add the test that answers the scholarx single-source question from the fixture, or returns the typed abstention naming the missing operation
-- [ ] T075 [P] [US3] MEDULLA-MEDIA-VOCAB-R014.4 Update MEDULLA-CQ-CONN-R055 vocabulary column from MISSING to media-v1 / content-v1 once R014.1 is LANDED (wire one call site: specs/connect
-- [ ] T076 [P] [US3] MEDULLA-MEDIA-VOCAB-R015.1 Add the searxng vg:VirtualMapping source file (operation to class/property rows listed in plan.md section Connector mapping tables) as a map
+- [ ] T074 [P] [US3] MEDULLA-MEDIA-VOCAB-R014.3 Add the test that answers the scholarx single-source question from the fixture, or returns the typed abstention naming the missing
+- [ ] T075 [P] [US3] MEDULLA-MEDIA-VOCAB-R014.4 Update MEDULLA-CQ-CONN-R055 vocabulary column from MISSING to media-v1 / content-v1 once R014.1 is LANDED (wire one call site
+- [ ] T076 [P] [US3] MEDULLA-MEDIA-VOCAB-R015.1 Add the searxng vg:VirtualMapping source file (operation to class/property rows listed in plan.md section Connector mapping tables) as a
 - [ ] T077 [P] [US3] MEDULLA-MEDIA-VOCAB-R015.2 Add the searxng fixture (recorded tool response) for its single-source question for MEDULLA-CQ-CONN-R056.1
-- [ ] T078 [P] [US3] MEDULLA-MEDIA-VOCAB-R015.3 Add the test that answers the searxng single-source question from the fixture, or returns the typed abstention naming the missing operation 
-- [ ] T079 [P] [US3] MEDULLA-MEDIA-VOCAB-R015.4 Update MEDULLA-CQ-CONN-R056 vocabulary column from MISSING to media-v1 / content-v1 once R015.1 is LANDED (wire one call site: specs/connect
-- [ ] T080 [P] [US3] MEDULLA-MEDIA-VOCAB-R016.1 Add the pulselink vg:VirtualMapping source file (operation to class/property rows listed in plan.md section Connector mapping tables) as a m
+- [ ] T078 [P] [US3] MEDULLA-MEDIA-VOCAB-R015.3 Add the test that answers the searxng single-source question from the fixture, or returns the typed abstention naming the missing operation
+- [ ] T079 [P] [US3] MEDULLA-MEDIA-VOCAB-R015.4 Update MEDULLA-CQ-CONN-R056 vocabulary column from MISSING to media-v1 / content-v1 once R015.1 is LANDED (wire one call site
+- [ ] T080 [P] [US3] MEDULLA-MEDIA-VOCAB-R016.1 Add the pulselink vg:VirtualMapping source file (operation to class/property rows listed in plan.md section Connector mapping tables) as a
 - [ ] T081 [P] [US3] MEDULLA-MEDIA-VOCAB-R016.2 Add the pulselink fixture (recorded tool response) for its single-source question for MEDULLA-CQ-CONN-R050.1
-- [ ] T082 [P] [US3] MEDULLA-MEDIA-VOCAB-R016.3 Add the test that answers the pulselink single-source question from the fixture, or returns the typed abstention naming the missing operatio
-- [ ] T083 [P] [US3] MEDULLA-MEDIA-VOCAB-R016.4 Update MEDULLA-CQ-CONN-R050 vocabulary column from MISSING to media-v1 / content-v1 once R016.1 is LANDED (wire one call site: specs/connect
-- [ ] T084 [P] [US3] MEDULLA-MEDIA-VOCAB-R017.1 Add the postiz vg:VirtualMapping source file (operation to class/property rows listed in plan.md section Connector mapping tables) as a mapp
+- [ ] T082 [P] [US3] MEDULLA-MEDIA-VOCAB-R016.3 Add the test that answers the pulselink single-source question from the fixture, or returns the typed abstention naming the missing
+- [ ] T083 [P] [US3] MEDULLA-MEDIA-VOCAB-R016.4 Update MEDULLA-CQ-CONN-R050 vocabulary column from MISSING to media-v1 / content-v1 once R016.1 is LANDED (wire one call site
+- [ ] T084 [P] [US3] MEDULLA-MEDIA-VOCAB-R017.1 Add the postiz vg:VirtualMapping source file (operation to class/property rows listed in plan.md section Connector mapping tables) as a
 - [ ] T085 [P] [US3] MEDULLA-MEDIA-VOCAB-R017.2 Add the postiz fixture (recorded tool response) for its single-source question for MEDULLA-CQ-CONN-R049.1
-- [ ] T086 [P] [US3] MEDULLA-MEDIA-VOCAB-R017.3 Add the test that answers the postiz single-source question from the fixture, or returns the typed abstention naming the missing operation f
-- [ ] T087 [P] [US3] MEDULLA-MEDIA-VOCAB-R017.4 Update MEDULLA-CQ-CONN-R049 vocabulary column from MISSING to media-v1 / content-v1 once R017.1 is LANDED (wire one call site: specs/connect
-- [ ] T088 [P] [US3] MEDULLA-MEDIA-VOCAB-R018.1 Add the listmonk vg:VirtualMapping source file (operation to class/property rows listed in plan.md section Connector mapping tables) as a ma
+- [ ] T086 [P] [US3] MEDULLA-MEDIA-VOCAB-R017.3 Add the test that answers the postiz single-source question from the fixture, or returns the typed abstention naming the missing operation
+- [ ] T087 [P] [US3] MEDULLA-MEDIA-VOCAB-R017.4 Update MEDULLA-CQ-CONN-R049 vocabulary column from MISSING to media-v1 / content-v1 once R017.1 is LANDED (wire one call site
+- [ ] T088 [P] [US3] MEDULLA-MEDIA-VOCAB-R018.1 Add the listmonk vg:VirtualMapping source file (operation to class/property rows listed in plan.md section Connector mapping tables) as a
 - [ ] T089 [P] [US3] MEDULLA-MEDIA-VOCAB-R018.2 Add the listmonk fixture (recorded tool response) for its single-source question for MEDULLA-CQ-CONN-R035.1
-- [ ] T090 [P] [US3] MEDULLA-MEDIA-VOCAB-R018.3 Add the test that answers the listmonk single-source question from the fixture, or returns the typed abstention naming the missing operation
-- [ ] T091 [P] [US3] MEDULLA-MEDIA-VOCAB-R018.4 Update MEDULLA-CQ-CONN-R035 vocabulary column from MISSING to media-v1 / content-v1 once R018.1 is LANDED (wire one call site: specs/connect
-- [ ] T092 [P] [US3] MEDULLA-MEDIA-VOCAB-R019.1 Add the mattermost vg:VirtualMapping source file (operation to class/property rows listed in plan.md section Connector mapping tables) as a 
+- [ ] T090 [P] [US3] MEDULLA-MEDIA-VOCAB-R018.3 Add the test that answers the listmonk single-source question from the fixture, or returns the typed abstention naming the missing
+- [ ] T091 [P] [US3] MEDULLA-MEDIA-VOCAB-R018.4 Update MEDULLA-CQ-CONN-R035 vocabulary column from MISSING to media-v1 / content-v1 once R018.1 is LANDED (wire one call site
+- [ ] T092 [P] [US3] MEDULLA-MEDIA-VOCAB-R019.1 Add the mattermost vg:VirtualMapping source file (operation to class/property rows listed in plan.md section Connector mapping tables) as a
 - [ ] T093 [P] [US3] MEDULLA-MEDIA-VOCAB-R019.2 Add the mattermost fixture (recorded tool response) for its single-source question for MEDULLA-CQ-CONN-R036.1
-- [ ] T094 [P] [US3] MEDULLA-MEDIA-VOCAB-R019.3 Add the test that answers the mattermost single-source question from the fixture, or returns the typed abstention naming the missing operati
-- [ ] T095 [P] [US3] MEDULLA-MEDIA-VOCAB-R019.4 Update MEDULLA-CQ-CONN-R036 vocabulary column from MISSING to media-v1 / content-v1 once R019.1 is LANDED (wire one call site: specs/connect
+- [ ] T094 [P] [US3] MEDULLA-MEDIA-VOCAB-R019.3 Add the test that answers the mattermost single-source question from the fixture, or returns the typed abstention naming the missing
+- [ ] T095 [P] [US3] MEDULLA-MEDIA-VOCAB-R019.4 Update MEDULLA-CQ-CONN-R036 vocabulary column from MISSING to media-v1 / content-v1 once R019.1 is LANDED (wire one call site
 - [ ] T096 [P] [US4] MEDULLA-MEDIA-VOCAB-R020.1 Fixture and test: 'Which requested films are downloaded but not yet in the library?' across arr, qbittorrent, jellyfin
-- [ ] T097 [P] [US4] MEDULLA-MEDIA-VOCAB-R020.2 Fixture and test: 'Which feed articles are not archived and have no matching search result?' across freshrss, searxng, archivebox on cv:cano
+- [ ] T097 [P] [US4] MEDULLA-MEDIA-VOCAB-R020.2 Fixture and test: 'Which feed articles are not archived and have no matching search result?' across freshrss, searxng, archivebox on
 - [ ] T098 [P] [US4] MEDULLA-MEDIA-VOCAB-R028 Cross-repo, owner audio-transcriber: transcript list/get operation by recording id and date
 - [ ] T099 [P] [US4] MEDULLA-MEDIA-VOCAB-R029 Cross-repo, owner audio-transcriber: expose avg_logprob (confidence) per segment
 - [ ] T100 [P] [US4] MEDULLA-MEDIA-VOCAB-R030 Cross-repo, owner scholarx: citing-papers operation: add sx_search action 'citations' returning papers that cite a given id
