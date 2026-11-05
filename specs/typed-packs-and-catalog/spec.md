@@ -131,7 +131,7 @@ Independent test: the bound tests of `MEDULLA-TYPED-PACKS-R067` run this story t
 - Arbora supplies a verified principal and tenant on every served request.
 - The Graft SDK builds the canonical pack and its digest vectors; Medulla recomputes and never trusts them.
 - Foreign capability claims in a pack enter as claims until an independent evaluation raises them.
-- Rows that wait on an owner decision or an unbuilt module stay SPECIFIED as written until the owner answers.
+- The Rust engine owns the object model; `medulla/ontology` is a read-only Python API (`MEDULLA-TYPED-PACKS-R081`). The alignment axioms of `MEDULLA-TYPED-PACKS-R105.5` are planned work.
 
 ## Normative requirements
 
