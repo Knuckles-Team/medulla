@@ -1282,7 +1282,7 @@ mod tests {
     fn core_catalog_has_one_version_per_module_and_is_outside_dynamic_quota() {
         let sources = GraphSchemaSources::default();
         sources.validate().unwrap();
-        assert_eq!(sources.core.len(), 58);
+        assert_eq!(sources.core.len(), 59);
         assert!(sources.dynamic.is_empty());
         assert!(sources.core.keys().all(|id| id.starts_with("core:")));
     }
@@ -1621,7 +1621,7 @@ mod tests {
             ),
             (
                 "enterprise",
-                "26efde71d91f59dae4a2f7964a3b09f402d100ff6f275dd8cc6b86497a17e6f9",
+                "a15167354ea3794e7a2d2a3af8c96e89c29928888a1980865d41847a8413c4b7",
             ),
             (
                 "governance-shapes",
