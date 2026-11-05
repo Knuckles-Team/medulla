@@ -250,6 +250,7 @@ closed_error_codes! {
         UnsupportedCoalition => "UNSUPPORTED_COALITION",
         UqlEClusterNoVector => "UQL_E_CLUSTER_NO_VECTOR",
         UqlEDecayNoTime => "UQL_E_DECAY_NO_TIME",
+        WalletKeyTrustNotFound => "WALLET_KEY_TRUST_NOT_FOUND",
         WebBackendInvalid => "WEB_BACKEND_INVALID",
         WebSelectionBudgetInvalid => "WEB_SELECTION_BUDGET_INVALID",
         WebSelectionNoCandidates => "WEB_SELECTION_NO_CANDIDATES",
