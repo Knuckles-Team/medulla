@@ -14,13 +14,96 @@ This contract covers query language and planner semantics, federation optimizati
 
 Application prompts, agent orchestration, connector certification, UI presentation, and autonomous model training are outside this owner contract. Natural language may produce a *previewed* typed UQL candidate; no unreviewed natural-language text is executed as authority. A learned relevance score never grants access. Mutating foreign SQL through UQL or an implicit attached-source write path is forbidden.
 
-## User stories and acceptance
+## User Scenarios & Testing
 
-1. **P0 — correct read:** A contributor can run equivalent native and optimized UQL/SPARQL/OBDA queries against the same permitted fixture and receive the same ordered results where order is defined, including duplicate RDF values, nulls, timestamps and typed numerics.
-2. **P0 — safe foreign read:** A tenant can query only registered and granted sources. A malicious URL, DSN, redirect, private destination, credential-bearing inline spec or over-budget query fails with a stable typed refusal. No partial rows or secret-bearing trace are returned.
-3. **P1 — transparent plan:** `EXPLAIN` shows a canonical and optimized plan with remote fragments, residual operators, route/freshness and maintainability reason. `PROFILE` adds observed rows, time and budget usage, with safe source labels.
-4. **P1 — durable semantic read:** Search, ANN, proof, ontology and query caches serve only generations authorized for the caller and survive restart or fall back safely while a generation rebuilds.
-5. **P1 — measurable compute:** Time-series, attribution, impact and motif operators share deterministic kernels across UQL and other public surfaces. Correctness fixtures and performance evidence accompany each implementation.
+### User Story 1 - Correct and safe federated read (Priority: P1)
+
+A contributor runs one read-only query across local and foreign sources and gets the same rows whether work runs locally or at a permitted source. The reason is trust: an optimization must never change an answer or widen access.
+
+**Independent test**: run the optimized and full-fetch oracle on the same fixture (`MEDULLA-FEDERATED-QUERY-R020` to `MEDULLA-FEDERATED-QUERY-R054`).
+
+**Acceptance scenarios**:
+
+1. **Given** equal native and optimized UQL, SPARQL and OBDA queries on one permitted fixture, **When** both run, **Then** the ordered results match, including duplicate RDF values, nulls, timestamps and typed numerics.
+2. **Given** a malicious URL, DSN, redirect, private destination, credential-bearing inline spec or over-budget query, **When** a tenant submits it, **Then** a stable typed refusal returns with no partial rows and no secret in the trace.
+3. **Given** a permitted query, **When** the caller runs `EXPLAIN` and `PROFILE`, **Then** the canonical and optimized plans show remote fragments, residual operators, route and freshness, and observed rows, time and budget use.
+
+### User Story 2 - Bounded retrieval and context (Priority: P1)
+
+An agent harness asks for evidence in bounded rounds and receives a verdict it can apply. The reason is that the engine, not the harness, owns the stop rule and the evidence count.
+
+**Independent test**: send `Method::RetrievalRound` with each part (`MEDULLA-FEDERATED-QUERY-R081.11`).
+
+**Acceptance scenarios**:
+
+1. **Given** a plan that returns fewer rows than the rule needs, **When** the round runs with a round limit, **Then** the verdict is `insufficient` with the declared repair, and the last round returns `Stop`.
+2. **Given** a `Strict` fallback and an insufficient verdict, **When** the answer mode is chosen, **Then** the engine abstains and returns no extractive answer.
+3. **Given** a context request with a token budget, **When** a bundle compiles, **Then** the bundle fits the certified budget and lists its sources.
+
+### User Story 3 - Durable semantic read and sound reasoning (Priority: P2)
+
+An analyst reads search, ANN, proof and ontology results that only use generations the caller may see. The reason is correct answers after restart or while an index rebuilds.
+
+**Independent test**: restart a server mid-backfill and replay (`MEDULLA-FEDERATED-QUERY-R001` to `MEDULLA-FEDERATED-QUERY-R009`, `MEDULLA-FEDERATED-QUERY-R607` to `MEDULLA-FEDERATED-QUERY-R608`).
+
+**Acceptance scenarios**:
+
+1. **Given** a crash during an index backfill, **When** the server restarts, **Then** the previous valid generation serves or a correct fallback runs, never a stale row.
+2. **Given** a corpus with a disjointness violation, **When** the reasoner runs under its derivation budget, **Then** the result is a bounded consistency verdict with premises, with no stack overflow.
+3. **Given** an argument map, **When** a caller evaluates it, **Then** grounded and preferred extensions return, with a certified gap when the node budget runs out.
+
+### User Story 4 - Governed sources and masked reads (Priority: P2)
+
+A governance owner approves source queries, masks and access checks once. The reason is that every caller reads under the same rules.
+
+**Independent test**: run the served masking and approval journeys (`MEDULLA-FEDERATED-QUERY-R085`, `MEDULLA-FEDERATED-QUERY-R703`, `MEDULLA-FEDERATED-QUERY-R706`, `MEDULLA-FEDERATED-QUERY-R722`).
+
+**Acceptance scenarios**:
+
+1. **Given** a column with a mask tag, **When** two callers read it over SQL and UQL, **Then** the masked caller sees the masked value and the explain output lists the policy.
+2. **Given** an approved source query, **When** the binding, authority or revision changes, **Then** verification refuses.
+3. **Given** a connector data resource, **When** a pack imports, **Then** it registers as a virtual-graph source with an approval gate.
+
+### User Story 5 - SPARQL update, stored queries and live artifacts (Priority: P3)
+
+A caller updates named graphs, keeps stored results and refreshes live artifacts. The reason is that a failed refresh must never lose the prior value.
+
+**Independent test**: run the served update and refresh journeys (`MEDULLA-FEDERATED-QUERY-R701`, `MEDULLA-FEDERATED-QUERY-R707`, `MEDULLA-FEDERATED-QUERY-R708`).
+
+**Acceptance scenarios**:
+
+1. **Given** a SPARQL update sent as `Method::ApplyMutation` with event type `SPARQL_HTTP_UPDATE_EVENT`, **When** the third operation fails, **Then** the store is unchanged.
+2. **Given** a live artifact whose source is unreachable, **When** a refresh runs, **Then** the prior data and version stay and an error record is written.
+
+### Edge Cases
+
+- A source reports an `Inexact` filter, lacks top-N, or errors on a batch: an exact local residual runs and the fallback is bounded.
+- A watermark is missing or stale: the foreign cache is bypassed.
+- A selection has fewer chunks than requested: dual-low chunks are still rejected.
+- An update needs a `LOAD` from a private address: the shared outbound guard refuses and the store is unchanged.
+- A graph exceeds the validation node budget: the report states a gap, never a clean pass.
+
+### Assumptions
+
+- Foreign sources are read in place; the one engine store holds all facts.
+- The harness and the SDK own model calls and connector transports; this engine runs no model.
+- Arbora serves the methods of this spec as operations and adds no handler.
+- Integrity shapes of `VALIDATE SHAPE` extend the one SHACL `Op::ValidateShape` stage; the retrieval-quality verdict consumer is `MERISTEM-HARNESS-CYCLE-R079`.
+
+## Functional requirements and success criteria
+
+- FR-001 One read-only UQL method with typed parameters and an exhaustive round trip (`MEDULLA-FEDERATED-QUERY-R020`).
+- FR-002 Pushdown only when a source capability proves it sound, with an exact local residual (`MEDULLA-FEDERATED-QUERY-R045`).
+- FR-003 Outbound access bound to a grant and the shared outbound guard (`MEDULLA-FEDERATED-QUERY-R052`).
+- FR-004 Retrieval verdicts with a round limit, repair order and fallback policy (`MEDULLA-FEDERATED-QUERY-R081`).
+- FR-005 Search and index reads that filter tenant and clearance before truncation (`MEDULLA-FEDERATED-QUERY-R078`).
+- FR-006 Bounded, proof-carrying reasoning and argument analysis (`MEDULLA-FEDERATED-QUERY-R001`, `MEDULLA-FEDERATED-QUERY-R700`).
+- FR-007 Approved immutable source queries for bounded connector execution (`MEDULLA-FEDERATED-QUERY-R085`).
+- FR-008 SPARQL update through `Method::ApplyMutation` with one atomic batch (`MEDULLA-FEDERATED-QUERY-R707`).
+- SC-001 Optimized and full-fetch results are equal on every conformance fixture (`MEDULLA-FEDERATED-QUERY-R046`).
+- SC-002 Every refusal path returns a stable typed code with unchanged durable state (`MEDULLA-FEDERATED-QUERY-R054`).
+- SC-003 Every row meets the latency and memory budget named by its benchmark (`MEDULLA-FEDERATED-QUERY-R081.11`).
+- SC-004 A failed live-artifact refresh keeps the prior value in every served test (`MEDULLA-FEDERATED-QUERY-R701`).
 
 ## Normative requirements
 
@@ -99,9 +182,7 @@ The lifecycle generator owns status; this definition supplies no runtime receipt
 
 Medulla supplies immutable, read-only source-query approvals and verifies their authority throughout bounded connector execution. SCION-SOURCE-INGEST-R004 consumes that producer contract. Query semantics, authorization and provenance remain engine-owned; native driver execution remains Graft SDK-owned. Existing query, lease and checkpoint contracts remain intact. These definitions introduce no runtime delivery claim.
 
-<!-- spec-definition-patch:owner-batch-20261012-federated-query-and-reasoning -->
-## Reviewed owner residuals — 2026-10-12
-
+## Reviewed owner residuals
 ### `MEDULLA-FEDERATED-QUERY-R006.1` — EG:11
 
 Original objective: The engine derives facts from extracted facts using temporal forward chaining. Each derived fact links to its originating sentence or axiom.
@@ -225,11 +306,8 @@ Producer/consumer boundary: TopicBackend returns responsibilities, centroids, ba
 Preserve existing coverage: `MEDULLA-FEDERATED-QUERY-R040.2.1`, `MEDULLA-FEDERATED-QUERY-R040.2.2`, `MEDULLA-FEDERATED-QUERY-R040.2.3`, `MEDULLA-FEDERATED-QUERY-R040.2.6`.
 
 Owner source hash: `f7654cd07d4d95f32f09fec742c4172b35c689749b3228aef9424830b1f7cc1b`. This definition adds no Meristem/Arbora/Graft SDK implementation or acceptance claim.
-<!-- /spec-definition-patch -->
 
-<!-- spec-definition-patch:reviewed-mapped-subsets-20261012 -->
-## Reviewed mapped children — 2026-10-12
-
+## Reviewed mapped children
 The children below extend existing rollups. Existing parent requirements, children, policy authority and refusal behavior remain in force. These are SPECIFIED definitions only. No code, producer receipt, consumer receipt or served result is claimed.
 
 ### Extension of R081.8
@@ -267,11 +345,8 @@ Extend the existing authenticated R032 `PROPAGATE` result with a separate histor
 Producer/consumer: Medulla owns graph impact query/risk decision; Meristem requests and consumes the result. Existing numeric risk helpers are not this two-direction historical impact contract.
 
 Source record SHA-256: `327ced0e0605f34366c662017d82ac892a481c5ca5f40bba2f3693ba6a5f7649`. Verification remains planned until independently served by each named owner.
-<!-- /spec-definition-patch -->
 
-<!-- spec-definition-patch:final-mappings-20261012 -->
-## Final mapped contract extensions — 2026-10-12
-
+## Final mapped contract extensions
 These definitions are planned contracts. They do not claim implementation or served evidence.
 
 ### Rollup `MEDULLA-FEDERATED-QUERY-R086` — ordered n-ary hypothesis-only link prediction
@@ -299,11 +374,8 @@ Persist an index-time distilled scorer with corpus/index revision, teacher model
 **Source record SHA-256:** `baac22c9fb42470957b5b91499c6e42e1bb2410d24446d15f6f364638c88138e`.
 
 **Preserved parent:** `MEDULLA-FEDERATED-QUERY-R081` remains unchanged.
-<!-- /spec-definition-patch -->
 
-<!-- spec-definition-patch:final-mapping-eg41-20261012 -->
-## Mapped retrieval-selection extension — 2026-10-12
-
+## Mapped retrieval-selection extension
 ### `MEDULLA-FEDERATED-QUERY-R081.100` — EG:41
 
 Given query vector q and candidate matrix V, select a joint coefficient vector x by minimizing `||q - Vᵀx||₂² + λ||x||₁`. V rows are revision-pinned embeddings in the same declared embedding space. Require xᵢ >= 0 and existing result-count/tenant bounds. λ, solver version, convergence tolerance, embedding-space revision and input digest are bound to the request. Return selected document ids, nonnegative coefficients, reconstruction residual, solver status and policy revision in deterministic coefficient-descending then document-id order. Do not substitute independent dense/lexical dual-score ranking. Preserve the distinct R081.7 mechanism. Refuse mismatched embedding revisions, invalid λ, solver non-convergence or a result set that exceeds existing bounds.
@@ -313,19 +385,13 @@ Given query vector q and candidate matrix V, select a joint coefficient vector x
 **Source record SHA-256:** `bceeed106b5db2933cf5161d58b4203fc7afe9d714503a31d68323992906c23b`.
 
 **Preserved parent:** `R081` remains unchanged.
-<!-- /spec-definition-patch -->
 
-
-<!-- spec-definition-patch:owner-dispatch-20261012-spec -->
 ## Cross-owner viewport-bounded query
 
 `ViewportQueryV1` extends the authenticated `UnifiedQuery` path. `ResolveViewportSelectionV1` resolves only the exact point or aggregate bin named by its typed token. V1 uses `min(W×H, 262,144)` scatter bins, `min(4W, 65,536)` line bins and an encoded-byte ceiling of `min(16,777,216, 65,536 + 96×max_bin_count)`, where W/H are validated viewport pixels. Those caps depend on viewport and variant, never source cardinality. Line outputs preserve first/last/min/max/count and explicit gaps. Scatter returns count and axis extrema. Both bind source/index revision, viewport and policy digest and refuse stale/unauthorized/cap-exceeding requests.
 
 The served acceptance uses an indexed billion-point source and proves pan/zoom/selection without full-source transfer. Arbora owns its transport adapter and Overstory R001.2 owns rendered interaction. This specification does not claim runtime delivery.
-<!-- /spec-definition-patch -->
 
-<!-- fqr-source-backed-definition-dispositions-20261012 -->
 ## Definition boundaries and explicit holds
 
 The exact source-backed contracts and missing owner decisions for the 12 mapped rows are in the corresponding `requirements.md` rows and `plan.md` dispositions. Existing production attach points are named only where the repository has an owning operation. Unbound producers remain held. No implementation or served evidence is claimed.
-<!-- /fqr-source-backed-definition-dispositions-20261012 -->
