@@ -3817,6 +3817,7 @@ components:
       - "tests/e2e_ca_lineage_kafka.rs"
       - "tests/edge_pagination.rs"
       - "tests/external_compute_e2e.rs"
+      - "tests/finance_records_served.rs"
       - "tests/finance_served_numeric_kernels.rs"
       - "tests/finance_served_sizing.rs"
       - "tests/fixtures"

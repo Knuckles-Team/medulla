@@ -41,6 +41,7 @@ pub(super) async fn try_handle_graph_domains(
     method = super::memory::try_handle_lifecycle_context(ctx, method).await?;
     method = super::memory::try_handle_ledger(ctx, method).await?;
     method = super::subgraph::try_handle_subgraph_reads(ctx, method).await?;
+    method = super::finance_records::handle_record_get(ctx, method).await?;
     method = super::union::try_handle_cross_graph_union(ctx, method).await?;
     let _ = super::union::try_handle_subgraph_comparison(ctx, method).await?;
     ControlFlow::Break(Response::err(

@@ -98,6 +98,10 @@ pub const GATEWAY_ROUTED: &[&str] = &[
     // one gateway so it is ordered, audited and CDC-emitted with every other
     // write to that graph.
     "GraphSchema",
+    // MEDULLA-FINANCE-PRIMITIVES-R004.3.2: the served finance record put is
+    // admitted (version gate, kind policy, tenant, SHACL shape, head) and then
+    // commits as the one `AddNode` upsert through this gateway.
+    "FinanceRecordPut",
     "PruneByLifecycle",
     "BatchUpdate",
     "ClearLedger",
@@ -544,6 +548,7 @@ const METHOD_NAME_RESOLVERS: &[fn(&Method) -> Option<&'static str>] = &[
     native_local_only_method_name,
     native_local_only_decision_method_name,
     write_back_method_name,
+    finance_record_method_name,
 ];
 
 /// Extract a `Method` variant's name as a `&'static str`, covering exactly
@@ -650,6 +655,10 @@ pub const LOCAL_ONLY_METHODS: &[&str] = &[
     "MutationOutbox",
     "EdgeIndex",
     "SqlSourceBatch",
+    // The finance record head check reads the stored head and commits the
+    // admitted upsert through the process-local owner; no replicated command
+    // carries the admission yet (MEDULLA-FINANCE-PRIMITIVES-R004.3.2).
+    "FinanceRecordPut",
 ];
 
 /// The local-only names that are NOT gateway-routed.
@@ -688,6 +697,14 @@ fn native_local_only_decision_method_name(m: &Method) -> Option<&'static str> {
 fn write_back_method_name(m: &Method) -> Option<&'static str> {
     match m {
         Method::WriteBack { .. } => Some("WriteBack"),
+        _ => None,
+    }
+}
+
+/// Resolve the served finance record put (MEDULLA-FINANCE-PRIMITIVES-R004.3.2).
+fn finance_record_method_name(m: &Method) -> Option<&'static str> {
+    match m {
+        Method::FinanceRecordPut { .. } => Some("FinanceRecordPut"),
         _ => None,
     }
 }
