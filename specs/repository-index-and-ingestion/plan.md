@@ -1,36 +1,56 @@
-# MEDULLA-REPO-INGEST implementation plan
+# MEDULLA-REPO-INGEST — Implementation plan
 
-Governing outcome: [spec.md](spec.md). Normative data and failure contract: [architecture.md](plan.md).
+Governing spec: [spec.md](spec.md). Rows: [requirements.md](requirements.md).
 
-## Existing implementation to extend
+## Summary
 
-The generated/public shapes are `crates/medulla-types/src/ingestion_wire.rs` and `medulla/generated/index_repository.py`. The native parser and branch projection live in `crates/medulla-compute/src/parser/branch_index.rs`. `crates/medulla-server-graph/src/dispatch/graph_pipeline/repository_index.rs` applies graph scope and ACL, parses off the reactor, admits source bytes and calls `crates/medulla-h-ingest/src/repository_index.rs`. That handler lowers to a canonical write set and one `ChangeEnvelope`, with current `REPOSITORY_BATCH_TOO_LARGE` budgeting. `crates/medulla-h-ingest/src/repository_enrichment_worker.rs` and its dispatch consumer are the existing durable work path. `crates/medulla-h-ingest/src/source_ingestion.rs`, `crates/medulla-source-types/src/source_ingestion.rs` and `docs/architecture/source_ingestion.md` implement the general source contract. These are the owners to reuse, not templates for a second service.
+Medulla indexes a repository snapshot and ingests governed source observations through one writer. `Method::IndexRepository` and `Method::SourceIngest` enter at the dispatch boundary of `crates/medulla-server-router`, pass the graph ACL in `crates/medulla-server-graph`, and lower in `crates/medulla-h-ingest` to one `ChangeEnvelope` that commits in one durable transaction. Native parsing and resolution commit first. Heavy enrichment runs afterwards as durable, budgeted work through `crates/medulla-enrich`. The reuse candidates are the branch parser in `crates/medulla-compute/src/parser/`, the mutation outbox and the enrichment worker in `crates/medulla-h-ingest/src/repository_enrichment_worker.rs`.
 
-Current evidence includes branch-aware durable tests in `tests/repository_index_durable.rs`, parser tests in `crates/medulla-compute/src/parser/branch_index_tests.rs`, generated result contract tests, and source-ingest tests. They establish parts of RI-01–RI-06 and RI-11. They do not prove full semantic bridge coverage, all failure reparse behavior, production throughput, or an accepted release. The implementation must inspect the exact current revision before claiming a gap is still present.
+## Technical Context
 
-## Sequenced changes
+- **Language/Version**: Rust 2021 edition on the toolchain pinned by `rust-toolchain.toml`; Python 3.14 (floor 3.12) for served tests.
+- **Primary Dependencies**: the workspace crates `medulla-h-ingest`, `medulla-server-graph`, `medulla-compute`, `medulla-document`, `medulla-enrich`, `medulla-durable`, `medulla-jobs` and the standard library. No model service is required.
+- **Storage**: the durable graph store through the mutation gateway, the blob store for source bytes and the job store of `medulla-jobs`.
+- **Testing**: crate unit tests, served tests under `crates/medulla-server-served-tests/src/split_tests/`, served Python tests under `tests/` and nightly benches.
+- **Target Platform**: Linux x86_64 and aarch64 without AVX2 assumptions.
+- **Project Type**: library crates and server handler crates.
+- **Performance Goals**: native commit p99 at most 5 s on 5,000 files (`MEDULLA-REPO-INGEST-R006`); the nightly bench budgets of each hot-path row.
+- **Constraints**: one graph writer; a refusal commits nothing; no host identity in durable text; limits of 48 MiB and 900,000 items per write set.
+- **Scale/Scope**: the leaf rows of `requirements.md`, spread over 5 user stories.
 
-1. **Freeze the contract.** Confirm generated `IndexRepository` and `SourceIngest` schemas, stable parse-disposition and refusal codes, bounds and feature-gating. Add contract fixtures for each error and parser outcome. Regenerate clients from authoritative schema; never hand-edit generated bindings.
-2. **Complete identity and scope.** Canonicalize repository, revision, path, blob, file-version and per-occurrence symbol identities. Validate duplicate/conflicting membership and tombstones before CAS admission. Resolve the multiple-edge representation decision in [architecture.md](plan.md) with a regression.
-3. **Complete parser and resolver.** Make per-file outcomes exact and repeatable. Preserve failed/unsupported blobs for capability-version reparse. Resolve cross-file calls/imports by scope and stable order; annotate unresolved cases; commit only admitted endpoints. Implement deterministic, versioned model-free similarity.
-4. **Complete one-writer projection.** Extend `repository_index` lowering and `ChangeEnvelope` metadata with source/lineage and semantic-bridge relations. Keep CAS holder, graph projection, tombstone and outbox behavior atomic at the graph commit boundary. Retire any alternate graph mutation path after its callers use this path.
-5. **Complete bounded enrichment.** Use the existing mutation outbox and worker; add admission and budget receipts, fenced retry/park and a bounded on-demand path. Native indexing must return without waiting for model work.
-6. **Complete source-position consumers.** Extend approved `SourceIngest` mappings with idempotent graph/index/outbox projection and a Debezium-style envelope adapter. Preserve source position and explicit deletion. Implement bounded freshness wait and route evidence for accelerated reads.
-7. **Prove integration and release.** Run the [test matrix](test-spec.md) on public fixtures, a fresh store and a restarted store. Publish exact commit, generated artifact digest, test command/result and benchmark environment in a local `evidence.md` when complete. Update this spec's delivery and acceptance independently.
+## Constitution Check
 
-## Interfaces and compatibility
+- **R-I. The engine is native Rust and the only fact store**: pass. Every row lands in a Rust crate and the engine store.
+- **R-II. Every wait has a deadline**: pass. Enrichment, hydration and intake run as jobs with budgets and deadlines.
+- **R-III. Every row sets budgets and names a benchmark**: pass. Each hot-path row names a nightly bench with p50, p99 and memory.
+- **R-IV. Crates are small, layered and cut over hard**: pass. Rows name the post-split crates and no handler crate calls a sibling handler crate.
+- **Organization standards**: pass. Rows follow the spec standard and the wording standard.
 
-Keep the existing `Method::IndexRepository { files_msgpack, scope }` entrypoint and typed `IndexResult`; add fields with explicit schema evolution and generated-client round trips. A caller can submit smaller batches on `REPOSITORY_BATCH_TOO_LARGE` without changing identity or replay semantics. Existing graph data may need a versioned re-index if symbol or file-version IDs change; never reinterpret persisted old IDs silently. New metadata must be optional or migrated with a tested one-time upgrade. Source-ingest checkpoint CAS is not relaxed for connector retries.
+## Project Structure
 
-## Quality gates
+```text
+crates/medulla-h-ingest/src/repository_index.rs        existing: lowering, commit budget, envelope build
+crates/medulla-h-ingest/src/source_ingestion.rs        existing: SourceIngest prepare and finish
+crates/medulla-h-ingest/src/web_ingest.rs              existing: document chunks
+crates/medulla-h-ingest/src/repository_index/          new: enrich.rs (run_after_commit)
+crates/medulla-h-ingest/src/                           new: ingest_throughput.rs, ingest_readback.rs, dead_letter.rs, transcript_intake.rs, code_health.rs, source_binding.rs
+crates/medulla-server-graph/src/dispatch/              existing: change_envelope.rs, graph_pipeline/repository_index.rs
+crates/medulla-enrich/src/                             existing: code, history, links, fingerprint
+crates/medulla-document/src/                           existing: processing.rs, transcript.rs; new: skill_plan.rs, semantic_support.rs
+crates/medulla-durable/src/                            existing: hydration.rs; new: adapters.rs
+crates/medulla-h-mining/src/mining/                    existing: process.rs; new: ocel.rs
+crates/medulla-types/src/                              existing: code_health.rs; new: skill_plan.rs, ingest_throughput.rs, ingest_readback.rs, code_map.rs, ingest_capabilities.rs
+```
 
-Run focused parser, durable repository, source-ingest, generated-client and restart tests during development. Before landing code, use `pre-commit run --config .config/pre-commit.yaml --all-files` and `bash scripts/ci_parity.sh` where the environment supports the hosted matrix. Report any unrun service matrix separately. The repository's configured changed-code CCCC gate is `python3 scripts/check_complexity_staged.py` (no new cyclomatic over 10 or cognitive over 15). Dupehound is `python3 scripts/check_dupehound.py`. KISS is `bash scripts/check_kiss_staged.sh`. Jscpd differential is `python3 scripts/check_duplication.py enforce --base-ref <merge-base>` with the repository's scanner contract. The manual whole-tree CCCC census and jscpd census are defined in `.config/pre-commit.yaml`. Use those configured thresholds, not a fabricated score. Fix duplicate owner logic at the source. Do not suppress a legitimate finding or split a function solely to pacify a scanner.
+New files that rows add are marked `new` in their own `Shape:` sentence.
 
-The deterministic contract/unit tier must run from a clean checkout with local toolchain and temporary storage. Tests requiring a provider, model, cluster or credentials belong to an explicit opt-in served tier with a reproducible provision step. A missing live service cannot fail the offline contribution gate.
+## Phase 0: Research
 
-## Architecture
+No unknowns; no research.md.
 
-This document defines the engine-owned boundary and data model for [spec.md](spec.md).
+## Phase 1: Design
+
+Data entities are in [data-model.md](data-model.md). The shortest served proof is in [quickstart.md](quickstart.md). Each seam to another repository has a document in `contracts/`.
 
 ### Authority and flow
 
@@ -58,7 +78,7 @@ The adapter is transport only. Medulla verifies graph write access before invoki
 | Repository | verified tenant + canonical repository ID | source kind, schema version, access class |
 | Ref | repository + ref name | status and immutable current revision ID |
 | Revision | repository + canonical immutable commit ID | parent IDs if supplied, observed time, evidence digest |
-| Blob | content SHA-256 (stored under tenant/repository holder) | content reference, length, parser capability digest, parse disposition |
+| Blob | content digest (stored under tenant/repository holder) | content reference, length, parser capability digest, parse disposition |
 | FileVersion | repository + revision + normalized relative path + blob digest | path, blob link, validity and provenance |
 | SymbolOccurrence | FileVersion + byte start/end + symbol kind + disambiguator | declaration name, language, span, parse evidence |
 | Resolved edge | relation + source occurrence + target occurrence + algorithm/schema version | provenance, confidence when statistical |
@@ -98,71 +118,20 @@ Rejected alternatives:
 - **Set-of-types on one edge.** Keep one edge per endpoint pair and widen its `relation_type` field to a set. Rejected: it collapses distinct relations' independent properties, provenance and lifecycle (add/remove/invalidate timing) onto one shared record, and a removal of one type cannot be expressed without either deleting the whole edge or mutating the set in place with no edge-level audit trail.
 - **Reified relation nodes.** Model each relation as its own graph node with edges to its source and target. Rejected: it multiplies node count by the relation volume, forces every relation-aware query through an extra hop, and provides no benefit over a typed edge for a binary relation that carries no further relations of its own.
 
-## Amendments
+### Inventory authority and identity binding for the code map
 
-### 2026-10-11: correct acceptance-evidence scope
-
-Audit of revision `660ae016` found that the bindings for
-`MEDULLA-REPO-INGEST-R003.1`–`MEDULLA-REPO-INGEST-R003.11` identified typed enum
-serialization and local claim-list checks in
-`crates/medulla-source-types/src/source_ingestion/tests.rs`. These remain useful
-supplementary unit evidence, but do not execute the migrated capabilities or
-prove that their legacy modules no longer perform the same computation.
-The child acceptance and therefore the R003 rollup remain unverified by this
-evidence. Reopening T1 and T1a–T1k records that proof gap, not a conclusion that
-all implementation is absent.
-
-The R008-bound test in `crates/medulla-server-served-tests/src/split_tests/medulla_h_ingest_repository_index_tests.rs` constructs
-roughly 60 MB of payload, exceeds the 48 MiB write-set ceiling, and invokes
-`lower()` on the full and halved fixtures. It proves the stable refusal prefix
-and successful lowering of the smaller fixture. It does not exercise a batch
-above 64 MiB through a served request, graph commit, or Graft SDK halve-and-resend
-retry. T2 remains open for that integration proof; its already established
-contract and lowering checks remain supplementary evidence.
-
-Remove full-acceptance bindings from these unchanged test bodies and regenerate
-status with the official spec hooks. Preserve every normative requirement and
-all existing implementation. Historical landing trailers remain historical
-implementation evidence; a generated LANDED state without `verified_by` does
-not establish acceptance. Full acceptance still requires the consumer/retirement
-and served boundary evidence specified in requirements.md and test-spec.md.
-
-<!-- spec-definition-patch:owner-batch-20261012-repository-index-and-ingestion -->
-## Reviewed implementation plan — 2026-10-12
-
-Normative contracts, source hashes, owner references, open dependencies, and acceptance remain in `requirements.md`.
-Each work item below extends its named parent and preserves existing obligations.
-
-| Requirement | Plan | Open dependency |
-|---|---|---|
-| `MEDULLA-REPO-INGEST-R002.1` | Compile a pinned skill directory into a typed plan through SourceIngest and Meristem. Use the existing graph orchestration path. | Versioned grammar and capability/type lookup remain owner prerequisites. MERISTEM-CONTROL-R037.30 remains unmerged. |
-| `MEDULLA-REPO-INGEST-R006.1` | Measure distinct completed papers over 24 hours. Admit maintenance only with authorization and bounded goal allocation. | Stage roster, freshness policy, allocation policy, and Arbora operation remain owner prerequisites. |
-| `MEDULLA-REPO-INGEST-R006.2` | Queue re-embedding outside query routing. Gate promotion through unified data-plane R040.2/.3 before tag_batch. | Importance producer and compatible embedding-space policy remain owner prerequisites. |
-| `MEDULLA-REPO-INGEST-R006.3` | Serve typed code maps through current-revision UnifiedQuery. Refuse changed and unchanged-symbol queries against a stale generation. | Source-inventory producer and code-entity IDs remain owner prerequisites. |
-| `MEDULLA-REPO-INGEST-R006.4` | Apply revision-scoped deltas under host-granted working-memory limits. | Semantic support matrix and host resource-grant binding remain owner prerequisites. |
-| `MEDULLA-REPO-INGEST-R002.100` | Require independently authorized readback before ingestion success. | Meristem success-transition consumer ID remains unassigned. |
-| `MEDULLA-REPO-INGEST-R002.101` | Gate graph-loaded workflow completion on durable hydration readback. | Meristem execution-success consumer ID remains unassigned. |
-
-Acceptance cases and exact refusal conditions remain in the linked requirements rows.
-All seven definitions remain SPECIFIED with empty `landed_in` and `verified_by` fields.
-Implementation and served acceptance await separate owner review.
-
-
-### Proposed inventory authority and identity binding for R006.3
-
-These proposed Medulla contracts extend R006/R009 and the R017 query consumer.
-They are not existing API or implementation claims. All fields are required.
+These Medulla contracts extend `MEDULLA-REPO-INGEST-R006.3` and `MEDULLA-REPO-INGEST-R006.4`. All fields are required.
 Text IDs are nonempty UTF-8; counters are unsigned 64-bit integers; digests
 are lowercase `sha256:<64 hex>`. Unknown fields and missing bindings refuse.
 
-`RepositoryInventoryAuthorityV1` = `{tenant, repository_id, ref_name, binding_id, binding_revision, publisher_principal, source_binding_ref, source_binding_revision, source_binding_digest, provenance_ref, provenance_digest}`.
+`RepositoryInventoryAuthority` = `{tenant, repository_id, ref_name, binding_id, binding_revision, publisher_principal, source_binding_ref, source_binding_revision, source_binding_digest, provenance_ref, provenance_digest}`.
 Admit through existing governed ChangeEnvelope authorization and expected
 binding revision. Verified tenant and graph authority control admission;
 payload principal does not grant permission. The binding selects an explicit
-publisher/source without assigning either role to Graft SDK transport or Arbora/Meristem.
+publisher/source without assigning either role to connector SDK transport or Arbora/Meristem.
 The publisher must have current graph write authority at every submission.
 
-`AdvanceRepositoryInventoryV1` = `{binding_id, binding_revision, expected_inventory_revision, source_event_id, source_revision, inventory_digest, files}`. Each file is `{path, blob_digest, byte_length}`. Paths are unique,
+`AdvanceRepositoryInventory` = `{binding_id, binding_revision, expected_inventory_revision, source_event_id, source_revision, inventory_digest, files}`. Each file is `{path, blob_digest, byte_length}`. Paths are unique,
 normalized repository-relative paths. The list is the complete source snapshot,
 canonically sorted by UTF-8 path bytes. Inventory digest hashes canonical JSON
 of this list (RFC 8785). Source revision is an immutable provider revision,
@@ -176,7 +145,7 @@ and invalidates the prior current-map binding. No partial inventory is current.
 Identical source event/payload replays the receipt; conflicting replay, stale
 CAS, unknown binding, incomplete manifest or unauthorized publisher stores nothing.
 
-`PublishRepositoryMapV1` = `{binding_id, binding_revision, inventory_revision, inventory_digest, source_revision, expected_map_generation, map_digest, identity_scheme, parser_digest, complete}`. Output adds `{map_generation, graph_revision}` to these fields. `complete` must be true. Every admitted file must have an explicit parse outcome, including unsupported/error outcomes.
+`PublishRepositoryMap` = `{binding_id, binding_revision, inventory_revision, inventory_digest, source_revision, expected_map_generation, map_digest, identity_scheme, parser_digest, complete}`. Output adds `{map_generation, graph_revision}` to these fields. `complete` must be true. Every admitted file must have an explicit parse outcome, including unsupported/error outcomes.
 Unsupported relations remain incomplete. Medulla publishes only after comparing the
 current inventory and all native IndexRepository/SourceIngest results in one
 ChangeEnvelope. A failed/raced publish keeps the old map historical, never current.
@@ -193,17 +162,36 @@ Reuse `branch_index::ParseUnits::build` / `unit_name`,
 symbol type, qualified name and ordinal; branch parse-unit paths bind blob
 content and grammar suffix. FileVersion binds repository/path/blob; Branch
 binds repository/ref. Revision and current path/span are query bindings through
-`branch_projection::project_scope`, not a new symbol-ID hash. This binding uses
-current code, not the earlier plan table's revision-scoped FileVersion formula.
-Unchanged file content retains symbol IDs in a new repository revision. Changed
+`branch_projection::project_scope`, not a new symbol-ID hash. Unchanged file content retains symbol IDs in a new repository revision. Changed
 blobs may change IDs. Same-content renames retain symbol IDs only with unchanged grammar suffix and parser/identity scheme. File-version and membership still change. A changed grammar suffix or parser/identity scheme requires reparse and may change symbol IDs. Deleted membership is absent from the new map. No promise
 of stable IDs across edits to the same blob is introduced. Preserve typed edge
-identity under R009.1/R009.2 and R069 semantic projection ownership.
+identity under R009.1/R009.2 and `MEDULLA-TYPED-PACKS-R069` semantic projection ownership.
 
+## Phase 2: Task approach
 
-### 2026-10-13: correct R009.2 acceptance binding
+`tasks.md` holds one task per leaf row. Producer rows come first: the contract and identity rows (`R009.1`, `R009.2`, `R007`, `R008`), then the native commit rows, then the post-commit enrichment rows (`R600` to `R603`), then the intake, hydration and adapter rows (`R650` to `R652`, `R800`). Tasks of independent crates may run in parallel.
 
-The direct GraphCore typed-edge test proves R009.1 storage behavior only.
-It does not exercise hydration or the semantic bridge required by R009.2.
-Remove the R009.2 marker and leave its verification evidence empty until that integration test exists.
-Keep the R011 connectivity regression and its distinct acceptance binding.
+## Complexity Tracking
+
+None.
+
+## Build contract
+
+The numbers come from `.config/kiss.toml`, `.config/pre-commit.yaml` and `[tool.medulla.scanners]`.
+
+- **KISS:** at most 35 statements, 8 arguments, 20 local variables and 45 calls per function. At most 900 lines, 250 statements and 40 functions per file. Indentation depth 5. No cycles.
+- **cccc:** no new function over cyclomatic 10 or cognitive 15, and none may regress.
+- **dupehound:** similarity threshold 0.85 with at least 40 tokens.
+- **jscpd:** at least 50 tokens and 5 lines in mild mode. New clone pairs fail the gate.
+- **Commands:** `pre-commit run --config .config/pre-commit.yaml --all-files`, `bash scripts/ci_parity.sh` and `python3 scripts/check_complexity_staged.py`.
+
+Shapes: lowering stays in `repository_index.rs`; a new write path reuses `ChangeEnvelope`; no second graph writer; move helpers, do not copy them.
+
+## Production caller chain
+
+A caller sends `Method::IndexRepository` or `Method::SourceIngest`. `crates/medulla-server-router/src/dispatch/router/source_ingest.rs::dispatch_source_ingest_methods` hands scoped and durable work to `crates/medulla-server-graph/src/dispatch/graph_pipeline/native_routes.rs::route_source_ingestion_dispatch` (`:415`). That function routes to `repository_index.rs::route_repository_index` (`:208`) or `route_source_ingestion_request` (`:467`). The handlers in `crates/medulla-h-ingest/src/repository_index.rs` (`lower` `:115`, `finish` `:303`) and `source_ingestion.rs` (`prepare` `:167`, `finish` `:1743`) build the envelope and commit it through the mutation gateway. Post-commit enrichment attaches in `finish` through `run_after_commit`. Envelope applies enter through `crates/medulla-server-router/src/dispatch/router/data_plane.rs` (`:673`) and `crates/medulla-server-graph/src/dispatch/change_envelope.rs::apply_one_change_envelope` (`:588`). No alternate graph mutation path may stay once its callers use this path.
+
+## Cross-repo seams
+
+- The connector transport (`SCION-REPOSITORY-TRANSPORT-R004`, `SCION-SOURCE-INGEST-R004.13`) sends batches and halves them on `REPOSITORY_BATCH_TOO_LARGE`: [contracts/scion-repository-transport.md](contracts/scion-repository-transport.md).
+- The host admits and runs skill plans and grants working memory (`ARBORA-HOST-R001.2.1.2`, `ARBORA-CAPACITY-R753`): [contracts/arbora-host-skill-compile.md](contracts/arbora-host-skill-compile.md).
