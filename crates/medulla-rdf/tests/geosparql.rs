@@ -1,10 +1,10 @@
 //! GeoSPARQL query functions (MEDULLA-FEDERATED-QUERY-R709.1, R709.2).
 #![cfg(feature = "geosparql")]
 
-use medulla_geo::{Geometry, parse_wkt, predicates};
+use medulla_geo::{parse_wkt, predicates, Geometry};
 use medulla_rdf::geosparql::{
-    GEOF_FUNCTIONS, eval_buffer, eval_distance, eval_envelope, eval_relation,
-    is_registered_function,
+    eval_buffer, eval_distance, eval_envelope, eval_relation, is_registered_function,
+    GEOF_FUNCTIONS,
 };
 
 /// MEDULLA-FEDERATED-QUERY-R709.1: the registry lists exactly the 11 GeoSPARQL query
