@@ -380,11 +380,11 @@ Then run `cargo test --lib --features blob storage_acceptance` for the adjacent 
 The existing lineage tests retain their independent file-digest and manifest-order assertions.
 The existing admin holder test retains its historical Content assertions.
 - `MEDULLA-DECISION-ENGINE-R129`: `crates/medulla-agent-types/src/agent_guardrail.rs::tests::promotion_obeys_invariants`.
-- `MEDULLA-DECISION-ENGINE-R129.1`: `src/server/handlers/decide/stat_tests/rule_promotion_tests.rs::attach_point_is_reached`.
+- `MEDULLA-DECISION-ENGINE-R129.1`: `crates/medulla-h-decide/src/decide/stat_tests/rule_promotion_tests.rs::attach_point_is_reached`.
 - `MEDULLA-DECISION-ENGINE-R129.2`: `crates/medulla-agent-types/src/agent_guardrail.rs::tests::verdict_serialises_snake_case` roundtrips both exact snake_case wire variants and preserves the invariant IRI; `verdict_rejects_unknown_variants_and_malformed_payloads` refuses wrong-case/unknown variants, missing or non-string IRIs, and unknown payload fields. These type tests do not prove the invariant gate.
 - `MEDULLA-DECISION-ENGINE-R129.3`: `crates/medulla-agent-types/src/agent_guardrail.rs::tests::first_contradicted_invariant_is_named`.
 - `MEDULLA-DECISION-ENGINE-R129.4`: `crates/medulla-agent-types/src/agent_guardrail.rs::tests::full_consensus_does_not_override`.
-- `MEDULLA-DECISION-ENGINE-R129.5`: `src/server/handlers/decide/stat_tests/rule_promotion_tests.rs::rejected_rule_is_audited_not_active`.
+- `MEDULLA-DECISION-ENGINE-R129.5`: `crates/medulla-h-decide/src/decide/stat_tests/rule_promotion_tests.rs::rejected_rule_is_audited_not_active`.
 - `MEDULLA-DECISION-ENGINE-R129.6`: `tests/decide/test_rule_promotion_served.py::test_invariant_blocks_promotion`.
 
 ### MEDULLA-DECISION-ENGINE-R130 tests
@@ -1096,3 +1096,41 @@ Each test below is planned: its path is the post-split location and its name is 
 | `MEDULLA-DECISION-ENGINE-R073.7` | `tests/memory/test_participant_memory_served.py::test_events_pull_and_ack` | L3 |
 | `MEDULLA-DECISION-ENGINE-R079` | `tests/web_document_enrich_served.rs::excluded_units_make_no_embedding_call` | L3 |
 | `MEDULLA-DECISION-ENGINE-R079.2` | `tests/web_document_enrich_served.rs::excluded_units_make_no_embedding_call` | L3 |
+## Planned bindings, range 2
+
+Entries for rows whose named test is not yet in the tree.
+
+- `MEDULLA-DECISION-ENGINE-R079.4`: planned L3 `tests/source_ingest_sql_columns_served.rs::sql_column_kinds_and_cardinality_control_embedding` drives `SourceIngest` with one column per kind and asserts each exclusion reason and the 100-sample free-text floor.
+- `MEDULLA-DECISION-ENGINE-R081`: planned L1 `crates/medulla-graph-algos/src/algorithms/community.rs::tests::resolver_confidence_weights_bind_a_community` compares assignments across two confidence levels.
+- `MEDULLA-DECISION-ENGINE-R085.1`: planned L1 `crates/medulla-decision-stats/src/decision/legal_option_filter.rs::tests::an_option_failing_the_predicate_is_excluded` plus the admissible pass-through case.
+- `MEDULLA-DECISION-ENGINE-R085.2`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/consumer_tests.rs::a_caller_asserted_option_violating_a_shape_never_reaches_the_scorer`.
+- `MEDULLA-DECISION-ENGINE-R088.1`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/belief_tests.rs::graph_belief_slices_match_direct_belief_as_of_queries` compares each slice to a direct AS OF query.
+- `MEDULLA-DECISION-ENGINE-R090.1`: planned L1 `crates/medulla-decision-types/src/decision/statistical/scorer.rs::tests::a_budget_over_the_ceiling_is_refused` with the at-ceiling accept case.
+- `MEDULLA-DECISION-ENGINE-R095`: planned L2 `crates/medulla-decision-policy/tests/solve/determinism.rs::the_certificate_digest_matches_the_committed_golden_vector`; the repeated-solves byte-identical test sits beside it.
+- `MEDULLA-DECISION-ENGINE-R096`: planned L3 `crates/medulla-h-mining/src/mining/insight.rs::tests::a_weighted_request_with_a_non_default_quality_function_reaches_the_kernel`.
+- `MEDULLA-DECISION-ENGINE-R097`: planned L1 `crates/medulla-server-api/src/request_replay.rs::tests::a_reused_nonce_is_rejected` and the blob-GC grace-period test beside the collector.
+- `MEDULLA-DECISION-ENGINE-R099.1`: planned L3 `crates/medulla-h-admin/src/graph_schema/world_model_tests.rs::wikidata_schema_mappings_validate_against_world_model_shapes` validates the fixture and resolves each entity by key.
+- `MEDULLA-DECISION-ENGINE-R099.2`: planned L3 `crates/medulla-h-ingest/src/web_ingest/tests.rs::entity_document_lowers_to_alignment_claims`.
+- `MEDULLA-DECISION-ENGINE-R117.1.1`: planned L2 `crates/medulla-tsdb/tests/derive_golden.rs::uql_sql_promql_outputs_agree_on_golden_reference` asserts all fifteen functions agree within 1e-9 on the three surfaces.
+- `MEDULLA-DECISION-ENGINE-R117.1.2`: planned L1 `crates/medulla-numeric/src/evaluation/skill.rs::tests::bootstrap_interval_is_reproducible` and planned L3 `crates/medulla-h-decide/src/decide/stat_tests/evaluator_tests.rs::decision_eval_reports_feature_power`.
+- `MEDULLA-DECISION-ENGINE-R118.1.2.1`: planned L1 `crates/medulla-decision-types/src/decision/reputation.rs::tests::source_reliability_round_trips`.
+- `MEDULLA-DECISION-ENGINE-R118.1.2.2`: planned L1 `crates/medulla-exec/src/exec/reliability.rs::tests::insufficient_history_abstains_instead_of_using_the_prior`.
+- `MEDULLA-DECISION-ENGINE-R118.1.2.3`: planned L1 `crates/medulla-h-query/src/query/explain_wire_b.rs::tests::caller_reliability_cannot_replace_the_governed_estimate`.
+- `MEDULLA-DECISION-ENGINE-R118.1.2.4`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/reputation_tests.rs::three_readers_agree_on_sparse_abstention_and_dense_estimate`.
+- `MEDULLA-DECISION-ENGINE-R119`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/replay_tests.rs::walk_forward_seals_trial_count_pbo_and_dm_figures` compares the sealed trial count, PBO and Diebold-Mariano figures to independently recomputed values and asserts the policy-dependent refusal.
+- `MEDULLA-DECISION-ENGINE-R120`: planned L1 `tests/test_decision_static_contracts.py::test_only_persisted_writes_count_as_admission_anchors` runs a read helper, a replay helper and a persisted write path through the script.
+- `MEDULLA-DECISION-ENGINE-R121.2`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/classes_tests.rs::graph_claim_and_evidence_control_answer_class`.
+- `MEDULLA-DECISION-ENGINE-R122`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/learning_tests.rs::synthetic_origin_records_are_excluded_from_real_calibration`.
+- `MEDULLA-DECISION-ENGINE-R124`: planned L1 `crates/medulla-numeric/tests/stat_kernels/clippy_policy.rs::the_declared_self_check_file_exists`.
+- `MEDULLA-DECISION-ENGINE-R128.14`: planned L1 `tests/test_generated_models.py::test_harness_config_kind_is_a_contract_question_kind` asserts the `QuestionKind` literal includes `harness_config`.
+- `MEDULLA-DECISION-ENGINE-R129.1`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/rule_promotion_tests.rs::attach_point_reads_published_invariants`.
+- `MEDULLA-DECISION-ENGINE-R129.5`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/rule_promotion_tests.rs::contradicting_rule_is_rejected_and_compatible_rule_promotes`.
+- `MEDULLA-DECISION-ENGINE-R102.1`: planned L1 `crates/medulla-catalog-types/src/graph_schema/shadow_branch.rs::tests::activation_requires_every_step_in_order` with the omitted-shadow-ingest and reordered-approval refusals.
+- `MEDULLA-DECISION-ENGINE-R103`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/scorer_tests.rs::each_forecast_horizon_reports_calibrated_confidence_or_abstains`.
+- `MEDULLA-DECISION-ENGINE-R104`: planned L1 `crates/medulla-nlq/src/decide_text/tests.rs::decide_text_and_uql_share_structured_error_shape` runs the same table-driven fixtures against both parsers.
+- `MEDULLA-DECISION-ENGINE-R107`: planned L2 `crates/medulla-agent-types/src/agent_topology.rs::tests::topology_types_stay_within_twelve_and_goldens_match` and a Python round-trip in tests/test_generated_models.py.
+- `MEDULLA-DECISION-ENGINE-R108`: planned L1 `crates/medulla-server-ops/src/api/admin/topology_shape.rs::tests::an_invalid_topology_is_rejected_at_publish`.
+- `MEDULLA-DECISION-ENGINE-R111.1`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/consumer_tests.rs::a_standalone_topology_decide_question_returns_a_typed_decision_record`.
+- `MEDULLA-DECISION-ENGINE-R112`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/consumer_tests.rs::exhausted_capacity_at_a_priority_is_a_lease_named_infeasible_result`.
+- `MEDULLA-DECISION-ENGINE-R114`: planned L5 `crates/medulla-h-decide/src/decide/stat_tests/consumer_tests.rs::subagent_allowance_reads_the_topology_facts_of_a_committed_record`.
+- `MEDULLA-DECISION-ENGINE-R116.1`: planned L1 `tests/test_generated_contract_inventory.py::test_published_contract_path_is_admitted_and_a_bespoke_facade_refused` (row conflicts with R116.2; owner decision pending).
