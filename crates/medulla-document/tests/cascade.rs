@@ -1,8 +1,8 @@
 //! Document delete cascade (MEDULLA-UNIFIED-DATA-PLANE-R651.1/.2).
 
 use medulla_document::cascade::{
-    CASCADE_TOO_LARGE, CascadePlan, CascadeReader, CascadeRefusal, EdgeKey, NodeKey, OrphanReport,
-    plan_cascade,
+    plan_cascade, CascadePlan, CascadeReader, CascadeRefusal, EdgeKey, NodeKey, OrphanReport,
+    CASCADE_TOO_LARGE,
 };
 use medulla_types::document_ops::{DocumentDeleteReceipt, DocumentDeleteRequest};
 
@@ -68,11 +68,10 @@ fn document(chunks: usize) -> Graph {
 fn cascade_types_round_trip() {
     let plan = plan_cascade(&document(3), "t1", "doc-1", 100).unwrap();
     assert_eq!(plan.plan_digest.len(), 64);
-    assert!(
-        plan.plan_digest
-            .bytes()
-            .all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f'))
-    );
+    assert!(plan
+        .plan_digest
+        .bytes()
+        .all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f')));
     let json = serde_json::to_value(&plan).unwrap();
     assert_eq!(
         serde_json::from_value::<CascadePlan>(json.clone()).unwrap(),
