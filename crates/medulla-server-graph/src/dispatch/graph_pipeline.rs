@@ -20,6 +20,7 @@ mod dispatch_helpers;
 mod gateway;
 mod graph_access;
 mod graph_dispatch;
+mod meeting_transcript;
 #[cfg(all(feature = "raft", feature = "modality-serving"))]
 mod modality;
 mod native_routes;

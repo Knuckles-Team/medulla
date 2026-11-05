@@ -61,6 +61,7 @@ pub const REFUSALS: &[(&str, &str)] = &[
 
 /// The operation of one transcript revision event.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum TranscriptRevisionOp {
     Append,
@@ -71,6 +72,7 @@ pub enum TranscriptRevisionOp {
 
 /// One revision event of a meeting transcript.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct MeetingTranscriptRevision {
     pub meeting_id: String,
@@ -84,14 +86,17 @@ pub struct MeetingTranscriptRevision {
     pub end_ms: u64,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub speaker_ref: Option<String>,
+    #[cfg_attr(feature = "contract-schema", schemars(with = "String"))]
     pub text_digest: Digest256,
     pub provenance_ref: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "contract-schema", schemars(with = "Option<String>"))]
     pub finalization_digest: Option<Digest256>,
 }
 
 /// The bounds a summary context is built under.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct MeetingSummaryLimitPolicy {
     pub max_spans: u32,
@@ -120,11 +125,13 @@ impl MeetingSummaryLimitPolicy {
 /// The admission a summary context was granted: the provider, model and
 /// policy revision a later receipt must match.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct SummaryAdmissionRef {
     pub provider: String,
     pub model: String,
     pub policy_revision: String,
+    #[cfg_attr(feature = "contract-schema", schemars(with = "String"))]
     pub admission_digest: Digest256,
 }
 
@@ -145,15 +152,19 @@ impl SummaryAdmissionRef {
 
 /// The receipt a summary producer returns with its claims.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct SummaryReceipt {
     pub owner_requirement_id: String,
     pub receipt_id: String,
+    #[cfg_attr(feature = "contract-schema", schemars(with = "String"))]
     pub receipt_digest: Digest256,
     pub provider: String,
     pub model: String,
     pub policy_revision: String,
+    #[cfg_attr(feature = "contract-schema", schemars(with = "String"))]
     pub input_context_digest: Digest256,
+    #[cfg_attr(feature = "contract-schema", schemars(with = "String"))]
     pub output_digest: Digest256,
 }
 
@@ -176,4 +187,114 @@ impl SummaryReceipt {
         )
         .expect("seven bounded fields frame")
     }
+}
+
+/// The answer of one committed (or replayed) transcript revision event
+/// (MEDULLA-MEDIA-VOCAB-R001.101.3).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct MeetingTranscriptRevisionReceipt {
+    pub meeting_id: String,
+    pub revision: u64,
+    pub replayed: bool,
+    /// The sealed digest when the event was a `finalize`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "contract-schema", schemars(with = "Option<String>"))]
+    pub finalization_digest: Option<Digest256>,
+}
+
+/// One segment text offered for a summary context; its SHA-256 must equal the
+/// segment's stored `text_digest`.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct SummarySegmentText {
+    pub segment_id: String,
+    pub text: String,
+}
+
+/// `MeetingSummaryContext` request (MEDULLA-MEDIA-VOCAB-R001.101.4).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct MeetingSummaryContextRequest {
+    pub meeting_id: String,
+    /// The finalized transcript digest the context is built from.
+    #[cfg_attr(feature = "contract-schema", schemars(with = "String"))]
+    pub transcript_digest: Digest256,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub admission: Option<SummaryAdmissionRef>,
+    pub policy: MeetingSummaryLimitPolicy,
+    /// The texts of the finalized segments, in any order.
+    pub segments: Vec<SummarySegmentText>,
+}
+
+/// One bounded span of a summary context.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct SummarySpan {
+    pub span_id: String,
+    pub segment_id: String,
+    pub text: String,
+}
+
+/// The bounded context a summary is produced from.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct MeetingSummaryContext {
+    pub meeting_id: String,
+    #[cfg_attr(feature = "contract-schema", schemars(with = "String"))]
+    pub transcript_digest: Digest256,
+    pub spans: Vec<SummarySpan>,
+    /// The span ids a claim may cite, in span order.
+    pub citations: Vec<String>,
+    #[cfg_attr(feature = "contract-schema", schemars(with = "String"))]
+    pub context_digest: Digest256,
+    pub policy_revision: String,
+}
+
+/// A claim citation: a byte range `[start, end)` inside one context span.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct SummaryCitation {
+    pub span_id: String,
+    pub start: u32,
+    pub end: u32,
+}
+
+/// One summary claim with its citations.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct SummaryClaim {
+    pub claim_id: String,
+    pub text: String,
+    pub citations: Vec<SummaryCitation>,
+}
+
+/// `MeetingSummaryCommit` request (MEDULLA-MEDIA-VOCAB-R001.101.5).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct MeetingSummaryCommitRequest {
+    pub meeting_id: String,
+    pub summary_id: String,
+    pub claims: Vec<SummaryClaim>,
+    pub receipt: SummaryReceipt,
+}
+
+/// The answer of one committed summary.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct MeetingSummaryCommitReceipt {
+    pub summary_id: String,
+    pub claim_count: u32,
+    pub citation_count: u32,
+    #[cfg_attr(feature = "contract-schema", schemars(with = "String"))]
+    pub transcript_digest: Digest256,
 }
