@@ -1,81 +1,122 @@
-# MEDULLA-INGEST-WORKER implementation tasks
+# MEDULLA-INGEST-WORKER — Tasks
 
-Governing spec: [spec.md](spec.md). Design: [plan.md](plan.md).
+One task per leaf row of `requirements.md`, producer first. Each task names its row; the row holds the files, the caller chain and the proof.
 
-- [ ] **T1 - R001:** Ingest worker capability is served by the engine queue and run by the Graft SDK runner (rollup).
-- [ ] **T2 - R001.1:** Typed ingest job envelope with refusal tests.
-- [ ] **T3 - R001.2:** Typed job kinds and lane derivation.
-- [ ] **T4 - R001.3:** Partition key function.
-- [ ] **T5 - R001.4:** Enqueue maps onto the served task queue with deterministic ids.
-- [ ] **T6 - R001.5:** Prerequisite: durable task queue (this repository, MEDULLA-DURABLE-KERNEL-R071, R072, R073).
-- [ ] **T7 - R001.6:** Prerequisite: worker registry, reserved admission and scheduler floors (this repository, MEDULLA-DURABLE-KERNEL-R074, R075, R076).
-- [ ] **T8 - R001.7:** Typed retry policy with validation.
-- [ ] **T9 - R001.8:** Retry delay function with jitter.
-- [ ] **T10 - R001.9:** Failure routing: retry then dead letter.
-- [ ] **T11 - R001.10:** Hydration-reserved lane served as a distinct queue.
-- [ ] **T12 - R001.11:** Backpressure read and producer refusal.
-- [ ] **T13 - R001.12:** Lease renewal for long jobs.
-- [ ] **T14 - R001.13:** Ingest queue metrics.
-- [ ] **T15 - R001.14:** Cross-repo (connector Graft SDK repository): ingest worker runner.
-- [ ] **T16 - R001.15:** Cross-repo (connector Graft SDK repository): CLI entry point and autosize.
-- [ ] **T17 - R001.16:** Cross-repo (Arbora): host and supervise the worker.
-- [ ] **T18 - R001.17:** Parity test against the deleted module.
+## Tasks
 
-Order: R001.5 and R001.6 prerequisites, then R001.1-R001.3, R001.7-R001.8, R001.4, R001.9-R001.13, then Graft SDK and Arbora rows.
-- [ ] **T-R002 - MEDULLA-INGEST-WORKER-R002:** Ontology induction from text stays a draft until it passes checks (rollup).
-- [ ] **T-R002 - MEDULLA-INGEST-WORKER-R002.1:** `OntologyProposal` typed model
-- [ ] **T-R002 - MEDULLA-INGEST-WORKER-R002.2:** Coverage and redundancy checks as replaceable defaults
-- [ ] **T-R002 - MEDULLA-INGEST-WORKER-R002.3:** Attach at the ingest job body
-- [ ] **T-R002 - MEDULLA-INGEST-WORKER-R002.4:** Draft retention refusal
-- [ ] **T-R002 - MEDULLA-INGEST-WORKER-R002.5:** Check results in the job trace
-- [ ] **T-R002 - MEDULLA-INGEST-WORKER-R002.6:** Claim-to-admission proof
-- [ ] **T-R003 - MEDULLA-INGEST-WORKER-R003.1:** `KnowledgeAtom` typed model
-- [ ] **T-R003 - MEDULLA-INGEST-WORKER-R003.2:** Decompose and select as replaceable defaults
-- [ ] **T-R003 - MEDULLA-INGEST-WORKER-R003.3:** Attach at the ingest job body and context query
-- [ ] **T-R003 - MEDULLA-INGEST-WORKER-R003.4:** Missing provenance refusal
-- [ ] **T-R003 - MEDULLA-INGEST-WORKER-R003.5:** Atom counts in the trace
-- [ ] **T-R003 - MEDULLA-INGEST-WORKER-R003.6:** Ingest-to-context proof
-- [ ] MEDULLA-INGEST-WORKER-R003.7: Model for document normalization.
-- [ ] MEDULLA-INGEST-WORKER-R003.8: Behavior for document normalization.
-- [ ] MEDULLA-INGEST-WORKER-R003.9: Resolve mappings once before document validation; preserve authorized replay.
-- [ ] MEDULLA-INGEST-WORKER-R003.10: Refusal for document normalization.
-- [ ] MEDULLA-INGEST-WORKER-R003.11: Return typed accepted or quarantine outcomes from finish and replay.
-- [ ] MEDULLA-INGEST-WORKER-R003.12: Prove first-batch quarantine, replay, checkpoint preservation and read denial.
-- [ ] MEDULLA-INGEST-WORKER-R003.13: Model for transcript ingestion.
-- [ ] MEDULLA-INGEST-WORKER-R003.14: Scope transcript identity by tenant, connector, stream, session and message.
-- [ ] MEDULLA-INGEST-WORKER-R003.15: Wiring for transcript ingestion.
-- [ ] MEDULLA-INGEST-WORKER-R003.16: Refusal for transcript ingestion.
-- [ ] MEDULLA-INGEST-WORKER-R003.17: Evidence for transcript ingestion.
-- [ ] MEDULLA-INGEST-WORKER-R003.18: Prove source isolation, idempotence and same-tenant unauthorized read denial.
-
-- [ ] **MEDULLA-INGEST-WORKER-R902:** Source permission and group sync (rollup).
-- [ ] **MEDULLA-INGEST-WORKER-R902.1:** Model.
-- [ ] **MEDULLA-INGEST-WORKER-R902.2:** Behavior.
-- [ ] **MEDULLA-INGEST-WORKER-R902.3:** Wiring.
-- [ ] **MEDULLA-INGEST-WORKER-R902.4:** Refusal.
-- [ ] **MEDULLA-INGEST-WORKER-R902.5:** Evidence.
-- [ ] **MEDULLA-INGEST-WORKER-R902.6:** Hot-path proof.
-- [ ] **MEDULLA-INGEST-WORKER-R903:** Source deletion reconciliation (rollup).
-- [ ] **MEDULLA-INGEST-WORKER-R903.1:** Model.
-- [ ] **MEDULLA-INGEST-WORKER-R903.2:** Behavior.
-- [ ] **MEDULLA-INGEST-WORKER-R903.3:** Wiring.
-- [ ] **MEDULLA-INGEST-WORKER-R903.4:** Refusal.
-- [ ] **MEDULLA-INGEST-WORKER-R903.5:** Evidence.
-- [ ] **MEDULLA-INGEST-WORKER-R903.6:** Hot-path proof.
-- [ ] **MEDULLA-INGEST-WORKER-R904:** Source container hierarchy (rollup).
-- [ ] **MEDULLA-INGEST-WORKER-R904.1:** Model.
-- [ ] **MEDULLA-INGEST-WORKER-R904.2:** Behavior.
-- [ ] **MEDULLA-INGEST-WORKER-R904.3:** Wiring.
-- [ ] **MEDULLA-INGEST-WORKER-R904.4:** Refusal.
-- [ ] **MEDULLA-INGEST-WORKER-R904.5:** Evidence.
-- [ ] **MEDULLA-INGEST-WORKER-R904.6:** Hot-path proof.
-
-## Stream content versions (R910)
-
-- [ ] **MEDULLA-INGEST-WORKER-R910 (rollup):** Version source content per stream, not per batch.
-- [ ] **MEDULLA-INGEST-WORKER-R910.1 (Model):** Derive the content version object id from the stream.
-- [ ] **MEDULLA-INGEST-WORKER-R910.2 (Behavior):** Chain each batch to the prior stream digest; count equal content as unchanged.
-- [ ] **MEDULLA-INGEST-WORKER-R910.3 (Wiring):** Stamp the stream id in `admit_records` and read the chain in the content check.
-- [ ] **MEDULLA-INGEST-WORKER-R910.4 (Refusal):** Refuse a true stream-head mismatch with `STALE_CONTENT_VERSION`.
-- [ ] **MEDULLA-INGEST-WORKER-R910.5 (Evidence):** Record the digest chain in the receipt.
-- [ ] **MEDULLA-INGEST-WORKER-R910.6 (Hot-path proof):** Add the served two-batch test and the benchmark.
+- [ ] T001 [US1] MEDULLA-INGEST-WORKER-R001.1 Typed ingest job envelope with refusal tests
+- [ ] T002 [US1] MEDULLA-INGEST-WORKER-R001.2 Typed job kinds and lane derivation
+- [ ] T003 [US1] MEDULLA-INGEST-WORKER-R001.3 Partition key function
+- [ ] T004 [US1] MEDULLA-INGEST-WORKER-R001.4 Enqueue maps onto the served task queue with deterministic ids
+- [ ] T005 [US1] MEDULLA-INGEST-WORKER-R001.7 Typed retry policy with validation
+- [ ] T006 [US1] MEDULLA-INGEST-WORKER-R001.8 Retry delay function with jitter
+- [ ] T007 [US1] MEDULLA-INGEST-WORKER-R001.9 Failure routing: retry with backoff, then dead letter
+- [ ] T008 [US1] MEDULLA-INGEST-WORKER-R001.10 Hydration kinds run on the hydration queue
+- [ ] T009 [US1] MEDULLA-INGEST-WORKER-R001.11 Backpressure read and producer refusal
+- [ ] T010 [US1] MEDULLA-INGEST-WORKER-R001.12 A missed lease renewal redelivers the job and counts as an attempt
+- [ ] T011 [US1] MEDULLA-INGEST-WORKER-R001.13 Ingest job metrics are exported from one registry
+- [ ] T012 [US1] MEDULLA-INGEST-WORKER-R001.14 Runner contract: the engine methods the SDK runner relies on
+- [ ] T013 [US2] MEDULLA-INGEST-WORKER-R001.1006 Model: data-prep declaration
+- [ ] T014 [US2] MEDULLA-INGEST-WORKER-R001.1007 Behavior: data-prep declaration replace
+- [ ] T015 [US2] MEDULLA-INGEST-WORKER-R001.1008 Wiring: data-prep declaration methods
+- [ ] T016 [US2] MEDULLA-INGEST-WORKER-R001.1009 Refusal: data-prep declaration
+- [ ] T017 [US2] MEDULLA-INGEST-WORKER-R001.1010 Evidence: data-prep declaration report
+- [ ] T018 [US2] MEDULLA-INGEST-WORKER-R001.1011 Hot-path proof: data-prep declaration
+- [ ] T019 [US4] MEDULLA-INGEST-WORKER-R002.1 Model
+- [ ] T020 [US4] MEDULLA-INGEST-WORKER-R002.2 Behavior
+- [ ] T021 [US4] MEDULLA-INGEST-WORKER-R002.3 Wiring: proposals are judged inside SourceIngest admission
+- [ ] T022 [US4] MEDULLA-INGEST-WORKER-R002.4 Refusal
+- [ ] T023 [US4] MEDULLA-INGEST-WORKER-R002.5 Evidence: proposal receipt
+- [ ] T024 [US4] MEDULLA-INGEST-WORKER-R002.6 Hot-path proof: ontology induction through SourceIngest
+- [ ] T025 [US4] MEDULLA-INGEST-WORKER-R002.7 Behavior: instances populate only against admitted proposals
+- [ ] T026 [US3] MEDULLA-INGEST-WORKER-R003.1 Model
+- [ ] T027 [US3] MEDULLA-INGEST-WORKER-R003.2 Behavior: atom decomposition and context selection
+- [ ] T028 [US3] MEDULLA-INGEST-WORKER-R003.3 Wiring: decompose at ingest and select at query
+- [ ] T029 [US3] MEDULLA-INGEST-WORKER-R003.4 Refusal
+- [ ] T030 [US3] MEDULLA-INGEST-WORKER-R003.5 Evidence: atom counts
+- [ ] T031 [US3] MEDULLA-INGEST-WORKER-R003.6 Hot-path proof: ingest, then answer from atoms
+- [ ] T032 [US3] MEDULLA-INGEST-WORKER-R003.7 Model
+- [ ] T033 [US3] MEDULLA-INGEST-WORKER-R003.8 Behavior: document normalization and the complete_document check
+- [ ] T034 [US3] MEDULLA-INGEST-WORKER-R003.9 Wiring: the document validator runs inside prepare
+- [ ] T035 [US3] MEDULLA-INGEST-WORKER-R003.10.1 Behavior: the quarantine envelope commits without advancing state
+- [ ] T036 [US3] MEDULLA-INGEST-WORKER-R003.11 Evidence: quarantine receipt, finish and replay
+- [ ] T037 [US3] MEDULLA-INGEST-WORKER-R003.12 Hot-path proof: document normalization through the wire method
+- [ ] T038 [US3] MEDULLA-INGEST-WORKER-R003.13 Model
+- [ ] T039 [US3] MEDULLA-INGEST-WORKER-R003.14 Behavior: transcript validation
+- [ ] T040 [US3] MEDULLA-INGEST-WORKER-R003.15 Wiring: the transcript validator runs inside prepare
+- [ ] T041 [US3] MEDULLA-INGEST-WORKER-R003.16 Refusal: typed transcript errors
+- [ ] T042 [US3] MEDULLA-INGEST-WORKER-R003.17.1 Evidence: transcript and quarantine reads enforce stored policy
+- [ ] T043 [US3] MEDULLA-INGEST-WORKER-R003.18 Hot-path proof: transcripts through the wire method
+- [ ] T044 [US1] MEDULLA-INGEST-WORKER-R604.1 Model: lanes, queue classes and lane metrics
+- [ ] T045 [US1] MEDULLA-INGEST-WORKER-R604.2 Behavior: ingest stage to queue class table
+- [ ] T046 [US1] MEDULLA-INGEST-WORKER-R604.3 Wiring: admission is enforced inside the claim
+- [ ] T047 [US1] MEDULLA-INGEST-WORKER-R604.4 Refusal: a claim that starves the reserve
+- [ ] T048 [US1] MEDULLA-INGEST-WORKER-R604.5 Evidence: lane gauges and the admission counter
+- [ ] T049 [US1] MEDULLA-INGEST-WORKER-R604.6 Hot-path proof: claim with admission
+- [ ] T050 [US1] MEDULLA-INGEST-WORKER-R605.1 Model: drains, page checkpoints, graph routes and stage profiles
+- [ ] T051 [US1] MEDULLA-INGEST-WORKER-R605.2 Behavior: a drain is a chain of bounded page tasks
+- [ ] T052 [US1] MEDULLA-INGEST-WORKER-R605.3 Wiring: routing runs before graph resolution
+- [ ] T053 [US1] MEDULLA-INGEST-WORKER-R605.4 Refusal: a stale page cursor is dropped
+- [ ] T054 [US1] MEDULLA-INGEST-WORKER-R605.5 Evidence: drain status
+- [ ] T055 [US1] MEDULLA-INGEST-WORKER-R605.6 Hot-path proof: page task overhead
+- [ ] T056 [US5] MEDULLA-INGEST-WORKER-R606.1 Model: the shared batch report and the provenance stamp
+- [ ] T057 [US5] MEDULLA-INGEST-WORKER-R606.2 Behavior: stamping, label normalization and per-source routing
+- [ ] T058 [US5] MEDULLA-INGEST-WORKER-R606.3 Wiring: SourceIngest is the sole write path for connector batches
+- [ ] T059 [US5] MEDULLA-INGEST-WORKER-R606.4 Refusal: a batch without a source system
+- [ ] T060 [US5] MEDULLA-INGEST-WORKER-R606.5 Evidence: per-batch report
+- [ ] T061 [US5] MEDULLA-INGEST-WORKER-R606.6 Hot-path proof: materialization at batch size
+- [ ] T062 [US3] MEDULLA-INGEST-WORKER-R700.1 Model: fragments and the reader registry
+- [ ] T063 [US3] MEDULLA-INGEST-WORKER-R700.2 Behavior: bounded streaming readers
+- [ ] T064 [US3] MEDULLA-INGEST-WORKER-R700.3 Wiring: readers run inside document normalization
+- [ ] T065 [US3] MEDULLA-INGEST-WORKER-R700.4 Refusal: oversize, encrypted, unsupported or corrupt input
+- [ ] T066 [US3] MEDULLA-INGEST-WORKER-R700.5 Evidence: every fragment re-extracts from its span
+- [ ] T067 [US3] MEDULLA-INGEST-WORKER-R700.6 Hot-path proof: readers through the wire method
+- [ ] T068 [US4] MEDULLA-INGEST-WORKER-R701.1 Model
+- [ ] T069 [US4] MEDULLA-INGEST-WORKER-R701.2 Behavior
+- [ ] T070 [US4] MEDULLA-INGEST-WORKER-R701.3 Wiring: grounded claims commit as atoms
+- [ ] T071 [US4] MEDULLA-INGEST-WORKER-R701.4 Refusal
+- [ ] T072 [US4] MEDULLA-INGEST-WORKER-R701.5 Evidence: per-unit outcome with the content hash
+- [ ] T073 [US4] MEDULLA-INGEST-WORKER-R701.6 Hot-path proof: grounding through the wire method
+- [ ] T074 [US4] MEDULLA-INGEST-WORKER-R701.7 Behavior: link inference over shared mentions
+- [ ] T075 [US3] MEDULLA-INGEST-WORKER-R702.1 Model: the locality-sensitive index
+- [ ] T076 [US3] MEDULLA-INGEST-WORKER-R702.2 Behavior: insert, query and false-negative rate
+- [ ] T077 [US3] MEDULLA-INGEST-WORKER-R702.3 Wiring: dedup runs at admission before enrichment
+- [ ] T078 [US3] MEDULLA-INGEST-WORKER-R702.4 Refusal: a near duplicate is linked, not stored twice
+- [ ] T079 [US3] MEDULLA-INGEST-WORKER-R702.5 Evidence: link similarity
+- [ ] T080 [US3] MEDULLA-INGEST-WORKER-R702.6 Hot-path proof: dedup through the wire method
+- [ ] T081 [US5] MEDULLA-INGEST-WORKER-R900.1 Model
+- [ ] T082 [US5] MEDULLA-INGEST-WORKER-R900.2 Behavior: governance becomes policy and access properties
+- [ ] T083 [US5] MEDULLA-INGEST-WORKER-R900.3 Wiring: governance parses before projection
+- [ ] T084 [US5] MEDULLA-INGEST-WORKER-R900.4 Refusal
+- [ ] T085 [US5] MEDULLA-INGEST-WORKER-R900.5 Evidence: governance counts
+- [ ] T086 [US5] MEDULLA-INGEST-WORKER-R900.6 Hot-path proof: governance parsing at batch size
+- [ ] T087 [US5] MEDULLA-INGEST-WORKER-R901.1 Model
+- [ ] T088 [US5] MEDULLA-INGEST-WORKER-R901.2 Behavior: store and supersede row-version evidence
+- [ ] T089 [US5] MEDULLA-INGEST-WORKER-R901.3 Wiring: evidence is stored with the record commit
+- [ ] T090 [US5] MEDULLA-INGEST-WORKER-R901.4 Refusal
+- [ ] T091 [US5] MEDULLA-INGEST-WORKER-R901.5 Evidence: row-version counts
+- [ ] T092 [US5] MEDULLA-INGEST-WORKER-R901.6 Hot-path proof: locus storage at batch size
+- [ ] T093 [US5] MEDULLA-INGEST-WORKER-R902.1 Model
+- [ ] T094 [US5] MEDULLA-INGEST-WORKER-R902.2 Behavior: access batches and group batches
+- [ ] T095 [US5] MEDULLA-INGEST-WORKER-R902.3.1 Model: batch kind and typed batch extension
+- [ ] T096 [US5] MEDULLA-INGEST-WORKER-R902.4 Refusal
+- [ ] T097 [US5] MEDULLA-INGEST-WORKER-R902.5 Evidence: access counts and fail-closed stale reads
+- [ ] T098 [US5] MEDULLA-INGEST-WORKER-R902.6 Hot-path proof: permission sync at batch size
+- [ ] T099 [US5] MEDULLA-INGEST-WORKER-R903.1 Model
+- [ ] T100 [US5] MEDULLA-INGEST-WORKER-R903.2 Behavior: plan, grace window and sweep
+- [ ] T101 [US5] MEDULLA-INGEST-WORKER-R903.3 Wiring: enumeration pages and the sweep job
+- [ ] T102 [US5] MEDULLA-INGEST-WORKER-R903.4 Refusal
+- [ ] T103 [US5] MEDULLA-INGEST-WORKER-R903.5 Evidence: reconcile receipt
+- [ ] T104 [US5] MEDULLA-INGEST-WORKER-R903.6 Hot-path proof: reconcile at 1M identifiers
+- [ ] T105 [US5] MEDULLA-INGEST-WORKER-R904.1 Model
+- [ ] T106 [US5] MEDULLA-INGEST-WORKER-R904.2 Behavior
+- [ ] T107 [US5] MEDULLA-INGEST-WORKER-R904.3 Wiring
+- [ ] T108 [US5] MEDULLA-INGEST-WORKER-R904.4 Refusal
+- [ ] T109 [US5] MEDULLA-INGEST-WORKER-R904.5 Evidence
+- [ ] T110 [US5] MEDULLA-INGEST-WORKER-R904.6 Hot-path proof
+- [ ] T111 [US5] MEDULLA-INGEST-WORKER-R910.1 Model
+- [ ] T112 [US5] MEDULLA-INGEST-WORKER-R910.2 Behavior
+- [ ] T113 [US5] MEDULLA-INGEST-WORKER-R910.3 Wiring
+- [ ] T114 [US5] MEDULLA-INGEST-WORKER-R910.4 Refusal
+- [ ] T115 [US5] MEDULLA-INGEST-WORKER-R910.5 Evidence
+- [ ] T116 [US5] MEDULLA-INGEST-WORKER-R910.6 Hot-path proof
