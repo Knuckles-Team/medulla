@@ -1,56 +1,68 @@
 # MEDULLA-PLACEMENT implementation tasks
 
-Governing spec: [spec.md](spec.md). Design: [plan.md](plan.md).
+Governing spec: [spec.md](spec.md). Design: [plan.md](plan.md). Rows: [requirements.md](requirements.md).
 
-- [ ] **T1 - R001:** Deployment-placement question and assembled step graph go through the engine decision functionality (rollup).
-- [ ] **T2 - R001.1:** Prerequisite (decision-engine): standalone topology Decide question.
-- [ ] **T3 - R001.2:** Add the `Placement` question kind.
-- [ ] **T4 - R001.3:** Target registry.
-- [ ] **T5 - R001.4:** Typed request body with refusals.
-- [ ] **T6 - R001.5:** Add the placement vocabulary and shape.
-- [ ] **T7 - R001.6:** Pure feasibility function.
-- [ ] **T8 - R001.7:** Wire the kind into Decide.
-- [ ] **T9 - R001.8:** Capacity premise reuse, no lease.
-- [ ] **T10 - R001.9:** Why-not for every non-chosen target.
-- [ ] **T11 - R001.10:** Typed abstention.
-- [ ] **T12 - R001.11:** Served contract test through the real dispatch.
-- [ ] **T13 - R001.12:** Assembled step graph fixture.
-- [ ] **T14 - R001.13:** Assemble abstains rather than invents.
-- [ ] **T15 - R001.14:** Cross-repo (Arbora): correct R017 wording.
-- [ ] **T16 - R002:** Ingest-worker policy has one authority: the engine decides, the worker asks and obeys (rollup).
-- [ ] **T17 - R002.1:** Register carries capacity.
-- [x] **T18 - R002.2:** Autosize and depth limit live in the R076.1 `SchedulerConfig` producer; served integration remains R076.2.
-- [x] **T19 - R002.3:** Pure grant sizing and typed zero-capacity refusal; served admission remains R075.
-- [ ] **T20 - R002.4:** Admission returns a grant.
-- [ ] **T21 - R002.5:** Routing is engine-side.
-- [ ] **T22 - R002.6:** Reword `MEDULLA-INGEST-WORKER-R001.2`.
-- [ ] **T23 - R002.7:** Reword `MEDULLA-INGEST-WORKER-R001.3`.
-- [ ] **T24 - R002.8:** Reword `MEDULLA-INGEST-WORKER-R001.6`.
-- [ ] **T25 - R002.9:** Reword `MEDULLA-INGEST-WORKER-R001.10`.
-- [ ] **T26 - R002.10:** Reword `MEDULLA-INGEST-WORKER-R001.11`.
-- [ ] **T27 - R002.11:** Reword `MEDULLA-INGEST-WORKER-R001.14`.
-- [ ] **T28 - R002.12:** Reword `MEDULLA-INGEST-WORKER-R001.15`.
-- [ ] **T30 - R002.14:** Fold the analytics pool knob into the same config.
-- [ ] **T31 - R002.15:** Parity check that no duplicate policy remains.
-- [ ] **T32 - R003:** Analytics payload bound is decided and defended (rollup).
-- [ ] **T33 - R003.1:** Name the constant.
-- [ ] **T34 - R003.2:** Separate refusal for cardinality.
-- [ ] **T35 - R003.3:** Accept at the cap, refuse above.
-- [ ] **T36 - R003.4:** Defence in depth in the kernel.
-- [ ] **T37 - R003.5:** Plain labels are accepted and stored opaque.
-- [ ] **T38 - R003.6:** Cap is counted after hashing; verify deterministic behavior on bounded fixtures.
+Each task line reads `- [ ] T001 [P] [US1] <ID>-R012.4 description`. `[P]` marks a task that may run in parallel. A ticked box means the row's bound tests exist and pass on the default branch. Order is producer first: the decision-engine prerequisite, then types, behaviour and wiring, then the dependent rows.
 
-Order: R003 (independent, smallest), R002.1-R002.5 with the durable-kernel rows, then R002 rewordings; R001.1 (decision-engine R111.1) before R001.2-R001.11; R001.12-R001.14 last.
-- [ ] **MEDULLA-PLACEMENT-R004:** Heavy compute routes to the host that declares the capability.
-- [ ] **MEDULLA-PLACEMENT-R004.1:** Model. Add `HostCapability{host_iri, capability, headroom}` and `RoutingFact{job_class, required_capability}` in `crates/medulla-decision-types/src/decision/statistical/placement.rs`. The capability set is closed and declared by the host.
-- [ ] **MEDULLA-PLACEMENT-R004.2:** Behavior. Add `route_heavy_job(job_class, hosts)` returning hosts that declare the required capability, ordered by headroom. Ordering is a named replaceable default `most_headroom_first`.
-- [ ] **MEDULLA-PLACEMENT-R004.3:** Wiring. The behavior attaches at `crates/medulla-jobs/src/store.rs:773` inside `claim_next` (`store.rs:736`), where worker capabilities already filter the ready queue. The production caller `crates/medulla-quantum-jobs/src/job.rs:275` passes an empty capability list, so this row passes the declared capabilities from the topology facts.
-- [ ] **MEDULLA-PLACEMENT-R004.4:** Refusal. When no host declares the capability, the engine must refuse with `no_capable_host` naming the capability. It must not fall back to any host.
-- [ ] **MEDULLA-PLACEMENT-R004.5:** Evidence. Each routing decision must record `required_capability` and the candidate host list. It must also record the topology fact generation.
-- [ ] **MEDULLA-PLACEMENT-R004.6:** Hot-path proof. The entry point is the served job submit and worker claim wire methods. The test `tests/jobs/test_capability_claim_served.py::test_backtest_job_lands_on_declared_host` submits a heavy job. It passes through the wired `claim_next` and observes the claim on the host that declares the capability.
-
-<!-- spec-definition-patch:owner-batch-20261012-placement-and-worker-policy -->
-## Owner definition tasks — 2026-10-12
-
-- [ ] **`MEDULLA-PLACEMENT-R001.15`:** Define typed read-only capacity feasibility input/verdict and refusal rules using R112 premises and R001.6. Arbora must define proposal, actuation and independent applied-state readback receipt APIs before the row can claim a closed loop.
-<!-- /spec-definition-patch -->
+- [ ] T001 [US1] MEDULLA-PLACEMENT-R001 Deployment-placement question and assembled step graph (rollup).
+- [x] T002 [P] [US1] MEDULLA-PLACEMENT-R001.2 Add the `Placement` question kind.
+- [x] T003 [P] [US1] MEDULLA-PLACEMENT-R001.3 Target registry.
+- [x] T004 [P] [US1] MEDULLA-PLACEMENT-R001.4 Typed request body with refusals.
+- [ ] T005 [US1] MEDULLA-PLACEMENT-R001.5 Placement vocabulary, shape and reader.
+- [x] T006 [US1] MEDULLA-PLACEMENT-R001.6 Pure feasibility function.
+- [ ] T007 [US1] MEDULLA-PLACEMENT-R001.7 Wiring: Placement kind in Decide.
+- [ ] T008 [US1] MEDULLA-PLACEMENT-R001.8 Evidence: capacity headroom premises, no lease.
+- [ ] T009 [US1] MEDULLA-PLACEMENT-R001.9 Evidence: why-not for every non-chosen target.
+- [ ] T010 [US1] MEDULLA-PLACEMENT-R001.10 Refusal: typed abstention.
+- [ ] T011 [US1] MEDULLA-PLACEMENT-R001.11 Served contract proof through Decide.
+- [ ] T012 [US1] MEDULLA-PLACEMENT-R001.12 Assembled step graph from the chosen target.
+- [ ] T013 [US1] MEDULLA-PLACEMENT-R001.13 Assemble abstains rather than invents.
+- [ ] T014 [US1] MEDULLA-PLACEMENT-R001.15 Capacity adjustment is a decision-engine question (pointer).
+- [ ] T015 [US1] MEDULLA-PLACEMENT-R001.16 Wiring: arbora placement flow.
+- [ ] T016 [US2] MEDULLA-PLACEMENT-R002 Ingest-worker policy has one authority: the engine decides, the worker asks (rollup).
+- [ ] T017 [US2] MEDULLA-PLACEMENT-R002.1 Register carries capacity.
+- [x] T018 [US2] MEDULLA-PLACEMENT-R002.2 Autosize and depth limit live in `SchedulerConfig`.
+- [x] T019 [US2] MEDULLA-PLACEMENT-R002.3 Pure grant function.
+- [ ] T020 [US2] MEDULLA-PLACEMENT-R002.4 Consumer: admission returns a grant.
+- [ ] T021 [US2] MEDULLA-PLACEMENT-R002.5 Routing is engine-side only.
+- [ ] T022 [US2] MEDULLA-PLACEMENT-R002.14 Analytics pool size is a SchedulerConfig field.
+- [ ] T023 [US2] MEDULLA-PLACEMENT-R002.600 Integration proof: reserved-worker admission.
+- [ ] T024 [US3] MEDULLA-PLACEMENT-R003 Analytics payload bound is decided and defended (rollup).
+- [x] T025 [P] [US3] MEDULLA-PLACEMENT-R003.1 Name the constant.
+- [x] T026 [P] [US3] MEDULLA-PLACEMENT-R003.2 Separate refusal for cardinality.
+- [x] T027 [US3] MEDULLA-PLACEMENT-R003.3 Accept at the cap, refuse above.
+- [x] T028 [P] [US3] MEDULLA-PLACEMENT-R003.4 Defence in depth in the kernel.
+- [ ] T029 [US3] MEDULLA-PLACEMENT-R003.5 Plain labels are accepted and stored opaque.
+- [x] T030 [US3] MEDULLA-PLACEMENT-R003.6 Cap is counted after hashing; verify deterministic behavior on bounded fixtures.
+- [ ] T031 [US4] MEDULLA-PLACEMENT-R004 Heavy compute claims route to the host that declares the capability (rollup).
+- [x] T032 [US4] MEDULLA-PLACEMENT-R004.1 Model.
+- [x] T033 [US4] MEDULLA-PLACEMENT-R004.2 Behavior.
+- [ ] T034 [US4] MEDULLA-PLACEMENT-R004.3 Wiring: claim_next filters by declared host capability.
+- [ ] T035 [US4] MEDULLA-PLACEMENT-R004.4 Refusal: no capable host.
+- [ ] T036 [US4] MEDULLA-PLACEMENT-R004.5 Evidence: routing premises and fact generation.
+- [ ] T037 [US4] MEDULLA-PLACEMENT-R004.6 Hot-path journey: backtest job lands on the declared host.
+- [ ] T038 [US4] MEDULLA-PLACEMENT-R611 Tenant client pool and breaker follow the engine's placement authority (rollup).
+- [ ] T039 [P] [US4] MEDULLA-PLACEMENT-R611.1 Model: tenant pool and breaker.
+- [x] T040 [US4] MEDULLA-PLACEMENT-R611.2 Behavior.
+- [x] T041 [US4] MEDULLA-PLACEMENT-R611.3 Wiring.
+- [x] T042 [US4] MEDULLA-PLACEMENT-R611.4 Refusal.
+- [x] T043 [US4] MEDULLA-PLACEMENT-R611.5 Evidence.
+- [ ] T044 [US4] MEDULLA-PLACEMENT-R611.6 Hot-path proof: route lookup and pool acquire.
+- [ ] T045 [US4] MEDULLA-PLACEMENT-R611.7 A node opens a tenant graph from the shared root only with a placement route.
+- [ ] T046 [US1] MEDULLA-PLACEMENT-R700 Infrastructure inventory and capacity-bounded placement plans (rollup).
+- [ ] T047 [US1] MEDULLA-PLACEMENT-R700.1 Model: host capacity, service spec, placement plan.
+- [ ] T048 [US1] MEDULLA-PLACEMENT-R700.2 Behavior: bounded 0-1 program with a deterministic budget.
+- [ ] T049 [US1] MEDULLA-PLACEMENT-R700.3 Wiring: PlacementPlan question in Decide.
+- [ ] T050 [US1] MEDULLA-PLACEMENT-R700.4 Refusal: capability gap and capacity overrun.
+- [ ] T051 [US1] MEDULLA-PLACEMENT-R700.5 Evidence: solver certificate.
+- [ ] T052 [US1] MEDULLA-PLACEMENT-R700.6 Hot-path journey: capability gap abstains, feasible plan solves.
+- [ ] T053 [US4] MEDULLA-PLACEMENT-R750 Claim pacing and priority classes in the job claim path (rollup).
+- [x] T054 [P] [US4] MEDULLA-PLACEMENT-R750.750 Model: Admission pacing and priority classes.
+- [x] T055 [US4] MEDULLA-PLACEMENT-R750.751 Behavior: Admission pacing and priority classes.
+- [x] T056 [US4] MEDULLA-PLACEMENT-R750.752 Refusal: Admission pacing and priority classes.
+- [ ] T057 [US4] MEDULLA-PLACEMENT-R750.753 Wiring and hot-path proof: pacer in claim_next.
+- [ ] T058 [US4] MEDULLA-PLACEMENT-R751 Unified schedule ticks and daemon leadership (rollup).
+- [x] T059 [P] [US4] MEDULLA-PLACEMENT-R751.750 Model: Unified scheduling, leader election and cost-bounded resource allocation.
+- [x] T060 [US4] MEDULLA-PLACEMENT-R751.751 Behavior: Unified scheduling, leader election and cost-bounded resource allocation.
+- [x] T061 [US4] MEDULLA-PLACEMENT-R751.752 Refusal: Unified scheduling, leader election and cost-bounded resource allocation.
+- [ ] T062 [US4] MEDULLA-PLACEMENT-R751.753 Wiring and hot-path proof: tick loop of the executor.

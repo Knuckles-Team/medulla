@@ -28,12 +28,26 @@ Single decision authority per concept: placement, worker policy and the analytic
 
 ## Project Structure
 
-- Pure decision types and the `place` / `route_heavy_job` functions: `crates/medulla-decision-types/src/decision/statistical/placement.rs`.
-- Served Decide wiring: `crates/medulla-h-decide/src/decide/stat_decide.rs` to `src/server/handlers/decide/stat_placement.rs`; the capacity premise in `crates/medulla-h-decide/src/decide/capacity_premise.rs`.
-- Worker admission: `crates/medulla-work-types/src/worker_registry/grants.rs` (`granted_slots`) behind served `AdmitWorkerTask` owned by MEDULLA-DURABLE-KERNEL-R075.
-- Served settings: `crates/medulla-types/src/scheduler_config.rs` (owner MEDULLA-DURABLE-KERNEL-R076).
-- Association bound: `crates/medulla-h-jobs/src/jobs/submit.rs` (`MAX_ASSOCIATION_DISTINCT_ITEMS`) and the kernel guard in `crates/medulla-mining/src/mining/association.rs`.
-- Tenant client pool and breaker: `medulla/placement.py`, proven by `tests/test_placement_r611.py`.
+```text
+crates/medulla-decision-types/src/decision/statistical/placement.rs      existing  Placement types, place, route_heavy_job (R001.2 to R001.6, R004.1, R004.2)
+crates/medulla-decision-types/src/decision/statistical/placement_plan.rs new       plan types (R700.1)
+crates/medulla-decision-policy/src/solve/placement.rs                    new       plan_services (R700.2)
+crates/medulla-h-decide/src/decide/stat_placement.rs                     new       placement_outcome, load_target_facts (R001.5 to R001.10)
+crates/medulla-h-decide/src/decide/stat_placement_plan.rs                new       placement_plan_outcome (R700.3 to R700.5)
+crates/medulla-h-decide/src/decide/capacity_premise.rs                   existing  headroom premise (R001.8)
+crates/medulla-h-decide/src/decide/assemble.rs                           existing  AgentAssemble (R001.12, R001.13)
+crates/medulla-core/ontology/placement.ttl, placement.shapes.ttl         new       placement vocabulary and shapes (R001.5)
+crates/medulla-work-types/src/worker_registry/grants.rs                  existing  granted_slots; WorkerGrant added (R002.3, R002.4)
+crates/medulla-types/src/scheduler_config.rs                             existing  engine-owned settings (R002.2, R002.14, R751.753)
+crates/medulla-h-jobs/src/jobs/submit.rs                                 existing  association bound (R003.1 to R003.6)
+crates/medulla-mining/src/mining/association.rs                          existing  kernel guard (R003.4)
+crates/medulla-h-jobs/src/jobs/host_capabilities.rs                      new       declared_for (R004.3, R004.4)
+crates/medulla-jobs/src/store.rs                                         existing  claim_next routing and pacing (R004, R750.753)
+crates/medulla-resource/src/admission.rs                                 existing  PriorityClass, ClaimPacer (R750)
+crates/medulla-jobs/src/schedule.rs                                      existing  schedule, tick ledger, leadership (R751)
+crates/medulla-h-jobs/src/jobs/executor_loop.rs                          existing  worker pool and tick task (R002.14, R751.753)
+medulla/placement.py                                                     existing  tenant pool, breaker, route directory (R611)
+```
 
 ## Phase 0: Research
 
@@ -144,7 +158,7 @@ The ingest-worker policy (MEDULLA-PLACEMENT-R002) and the association bound (MED
 
 - Decision D3: the target is modelled as a declared option, not a swarm template, so the topology model stays intact.
 - Decision D7: the 31-item bound is the `u32` mask width; rule enumeration is already 2^k, so a wider mask gains nothing; the u64 alternative is rejected.
-- W0X 2026-10-31: the capacity adjustment question and verdict move to MEDULLA-DECISION-ENGINE-R824 and the model capacity question to MEDULLA-DECISION-ENGINE-R825 under MEDULLA-DECISION-ENGINE-R112; Arbora actuates; this spec keeps claim pacing, priority classes and the headroom premise.
+- The capacity adjustment question and verdict move to MEDULLA-DECISION-ENGINE-R824 and the model capacity question to MEDULLA-DECISION-ENGINE-R825 under MEDULLA-DECISION-ENGINE-R112; Arbora actuates; this spec keeps claim pacing, priority classes and the headroom premise.
 - The seven ingest-worker rewording rows retire to MEDULLA-INGEST-WORKER-R001 (MEDULLA-PLACEMENT-R002.6 to MEDULLA-PLACEMENT-R002.12 and MEDULLA-PLACEMENT-R002.15 are retired rows).
 
 ## Build contract
@@ -153,8 +167,8 @@ Focused `cargo test` on the named files per row; `spec-status` and `spec-decompo
 
 ## Production caller chain
 
-- Arbora `plan.deploy` (ARBORA-DEPLOY-R017) asks served `Decide` with `placement`, then `AgentAssemble` with the chosen template key.
-- The worker runner (SCION-SOURCE-INGEST-R011.1) registers through served `RegisterWorker` (MEDULLA-DURABLE-KERNEL-R074), admits through `AdmitWorkerTask` (MEDULLA-DURABLE-KERNEL-R075) and claims through the engine claim path.
+- Arbora `plan.deploy` (ARBORA-DEPLOY-R017) asks served `Decide` with `placement` (`Method::Decide` arm, `crates/medulla-server-router/src/dispatch/router/decision_plane.rs:112` → `stat_decide::handle_decide`, `crates/medulla-h-decide/src/decide/stat_decide.rs:60` → `placement_outcome`), then `AgentAssemble` with the chosen template key (`handle_agent_assemble`, `crates/medulla-h-decide/src/decide/assemble.rs:25`).
+- The worker runner (SCION-SOURCE-INGEST-R011.1) registers through served `RegisterWorker` (MEDULLA-DURABLE-KERNEL-R074), admits through `AdmitWorkerTask` (MEDULLA-DURABLE-KERNEL-R075) and claims through the engine claim path (`handle_worker_claim`, `crates/medulla-h-jobs/src/jobs/worker_requests.rs:92` → `JobStore::claim_next`, `crates/medulla-jobs/src/store.rs:742`).
 - A caller submits `MineAssociate` through served `SubmitJob`, handled in `crates/medulla-h-jobs/src/jobs/submit.rs`.
 - The tenant client (`medulla/placement.py`) asks the engine for the route (`PlacementRouteRequest`) and the object store open check consumes it (MEDULLA-OBJECT-STORAGE-BACKEND-R004).
 
