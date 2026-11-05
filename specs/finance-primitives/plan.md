@@ -26,6 +26,8 @@ arbora (admission, auth, principal) --> medulla dispatch
 - **Constraints**: Tenant visibility precedes every read or count. No binary float in a persisted monetary result. Each refusal has one stable code. No version suffix in a name. No second state store.
 - **Scale/Scope**: The 164 leaf rows of `requirements.md` over 6 user stories and 15 `FR-` labels.
 
+**Knob convention.** An engine knob named `knob x.y` in this spec's rows is a typed field of the server configuration, read from the command line or from the environment variable `MEDULLA_<NAME>` (the dotted name upper-cased, dots as underscores) and bounds-checked at startup: a value outside the stated range refuses startup with the knob name. Decision knobs are the exception and live only in the `MEDULLA-DECISION-ENGINE-R179` registry. Rows do not restate this.
+
 ## Constitution Check
 
 - **R-I. The engine is native Rust and the only fact store**: pass. Every row lands in a Rust crate and the engine store.
