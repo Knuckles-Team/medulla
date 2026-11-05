@@ -1022,9 +1022,22 @@ mod ontology_audit_process_intelligence_v1 {
         let triples = triples();
         let property = format!("{KG}flowsTo");
         assert!(has_iri(&triples, &property, RDF_TYPE, OWL_OBJECT_PROPERTY));
-        assert!(domain_covers(&triples, &property, &format!("{KG}EpcFunction")));
-        assert!(domain_covers(&triples, &property, &format!("{KG}EpcRuleOperator")));
-        assert!(has_iri(&triples, &property, RDFS_RANGE, &format!("{KG}ProcessEventType")));
+        assert!(domain_covers(
+            &triples,
+            &property,
+            &format!("{KG}EpcFunction")
+        ));
+        assert!(domain_covers(
+            &triples,
+            &property,
+            &format!("{KG}EpcRuleOperator")
+        ));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_RANGE,
+            &format!("{KG}ProcessEventType")
+        ));
     }
 
     // spec: MEDULLA-CQ-CONN-R072.4
@@ -1047,7 +1060,12 @@ mod ontology_audit_process_intelligence_v1 {
             RDFS_DOMAIN,
             &format!("{KG}ProcessInstance")
         ));
-        assert!(has_iri(&triples, &property, RDFS_RANGE, &format!("{KG}ProcessModelVersion")));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_RANGE,
+            &format!("{KG}ProcessModelVersion")
+        ));
     }
 
     // spec: MEDULLA-CQ-CONN-R072.6
@@ -1062,7 +1080,12 @@ mod ontology_audit_process_intelligence_v1 {
             RDFS_DOMAIN,
             &format!("{KG}ProcessInstance")
         ));
-        assert!(has_iri(&triples, &property, RDFS_RANGE, &format!("{KG}ProcessEventType")));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_RANGE,
+            &format!("{KG}ProcessEventType")
+        ));
     }
 
     // spec: MEDULLA-CQ-CONN-R072.7
@@ -1077,7 +1100,12 @@ mod ontology_audit_process_intelligence_v1 {
             RDFS_DOMAIN,
             &format!("{KG}ProcessInstance")
         ));
-        assert!(has_iri(&triples, &property, RDFS_RANGE, &format!("{KG}ApplicationEvent")));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_RANGE,
+            &format!("{KG}ApplicationEvent")
+        ));
     }
 }
 
@@ -1109,14 +1137,24 @@ mod ontology_audit_virtual_graph_v1 {
     fn tripleCount_declared() {
         let triples = triples();
         let property = format!("{KG}tripleCount");
-        assert!(has_iri(&triples, &property, RDF_TYPE, OWL_DATATYPE_PROPERTY));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDF_TYPE,
+            OWL_DATATYPE_PROPERTY
+        ));
         assert!(has_iri(
             &triples,
             &property,
             RDFS_DOMAIN,
             &format!("{KG}NamedGraph")
         ));
-        assert!(has_iri(&triples, &property, RDFS_RANGE, &format!("{XSD}integer")));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_RANGE,
+            &format!("{XSD}integer")
+        ));
     }
 
     // spec: MEDULLA-CQ-CONN-R077.3
@@ -1124,14 +1162,24 @@ mod ontology_audit_virtual_graph_v1 {
     fn lastModifiedAt_declared() {
         let triples = triples();
         let property = format!("{KG}lastModifiedAt");
-        assert!(has_iri(&triples, &property, RDF_TYPE, OWL_DATATYPE_PROPERTY));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDF_TYPE,
+            OWL_DATATYPE_PROPERTY
+        ));
         assert!(has_iri(
             &triples,
             &property,
             RDFS_DOMAIN,
             &format!("{KG}NamedGraph")
         ));
-        assert!(has_iri(&triples, &property, RDFS_RANGE, &format!("{XSD}dateTime")));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_RANGE,
+            &format!("{XSD}dateTime")
+        ));
     }
 }
 
@@ -1192,7 +1240,12 @@ mod ontology_audit_identity_v1 {
             RDFS_DOMAIN,
             &format!("{KG}IdentityRole")
         ));
-        assert!(has_iri(&triples, &property, RDFS_RANGE, &format!("{KG}Application")));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_RANGE,
+            &format!("{KG}Application")
+        ));
         // The range is the service-operations application class.
         let service_operations = parse_turtle(&registered_ontology(
             "core:service_operations@1",
@@ -1212,14 +1265,24 @@ mod ontology_audit_identity_v1 {
     fn accountStatus_declared() {
         let triples = triples();
         let property = format!("{KG}accountStatus");
-        assert!(has_iri(&triples, &property, RDF_TYPE, OWL_DATATYPE_PROPERTY));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDF_TYPE,
+            OWL_DATATYPE_PROPERTY
+        ));
         assert!(has_iri(
             &triples,
             &property,
             RDFS_DOMAIN,
             &format!("{KG}IdentityUser")
         ));
-        assert!(has_iri(&triples, &property, RDFS_RANGE, &format!("{XSD}string")));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_RANGE,
+            &format!("{XSD}string")
+        ));
         assert!(conforms(
             "@prefix : <http://knuckles.team/kg#> . :u a :IdentityUser ; :accountStatus \"ACTIVE\" ."
         ));
@@ -1265,14 +1328,24 @@ mod ontology_audit_enterprise_v1 {
     fn factSheetType_declared() {
         let triples = triples();
         let property = format!("{KG}factSheetType");
-        assert!(has_iri(&triples, &property, RDF_TYPE, OWL_DATATYPE_PROPERTY));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDF_TYPE,
+            OWL_DATATYPE_PROPERTY
+        ));
         assert!(has_iri(
             &triples,
             &property,
             RDFS_DOMAIN,
             &format!("{KG}EAFactSheet")
         ));
-        assert!(has_iri(&triples, &property, RDFS_RANGE, &format!("{XSD}string")));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_RANGE,
+            &format!("{XSD}string")
+        ));
     }
 
     // spec: MEDULLA-CQ-CONN-R080.3
@@ -1280,14 +1353,24 @@ mod ontology_audit_enterprise_v1 {
     fn lifecyclePhase_declared() {
         let triples = triples();
         let property = format!("{KG}lifecyclePhase");
-        assert!(has_iri(&triples, &property, RDF_TYPE, OWL_DATATYPE_PROPERTY));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDF_TYPE,
+            OWL_DATATYPE_PROPERTY
+        ));
         assert!(has_iri(
             &triples,
             &property,
             RDFS_DOMAIN,
             &format!("{KG}EAFactSheet")
         ));
-        assert!(has_iri(&triples, &property, RDFS_RANGE, &format!("{XSD}string")));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_RANGE,
+            &format!("{XSD}string")
+        ));
         assert!(conforms(
             "@prefix : <http://knuckles.team/kg#> . :f a :EAFactSheet ; :lifecyclePhase \"phaseOut\" ."
         ));
@@ -1301,13 +1384,23 @@ mod ontology_audit_enterprise_v1 {
     fn activeUserCount_declared() {
         let triples = triples();
         let property = format!("{KG}activeUserCount");
-        assert!(has_iri(&triples, &property, RDF_TYPE, OWL_DATATYPE_PROPERTY));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDF_TYPE,
+            OWL_DATATYPE_PROPERTY
+        ));
         assert!(has_iri(
             &triples,
             &property,
             RDFS_DOMAIN,
             &format!("{KG}EAFactSheet")
         ));
-        assert!(has_iri(&triples, &property, RDFS_RANGE, &format!("{XSD}integer")));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_RANGE,
+            &format!("{XSD}integer")
+        ));
     }
 }
