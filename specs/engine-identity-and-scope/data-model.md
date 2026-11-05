@@ -49,8 +49,10 @@ This spec adds identity, scope and metadata types to the engine. Types marked ne
 - Fields: `SessionRecordProjection`, `SessionOp::Liveness`, `InspectReference`, `RenewReference`, `RegisterApprovalKey` (`MEDULLA-IDENTITY-R708` to `MEDULLA-IDENTITY-R713`).
 - Rule: no operation takes, returns or logs a raw token; renewal requires the exact global revision.
 
-## Proposed terms (owner review)
+## Term decisions
 
-- Proposed term (owner review): ontology class `ClientSession` and its properties, declared by `MEDULLA-IDENTITY-R705` in the identity pack; no registered module declares it today.
-- Proposed term (owner review): ontology class `RunScopePolicy` with `allowed_tools` and `allowed_graphs`, declared by `MEDULLA-IDENTITY-R008.4` in `core-foundation-v1.ttl`.
-- Proposed term (owner review): the `identity_metadata` module with `Preference`, `ClientMetadata` and `InteractionNetwork`, declared by `MEDULLA-IDENTITY-R023.8`.
+A term is reused from an open vocabulary when an equivalent exists; otherwise it is minted in the owning core module with a `skos:exactMatch` or `skos:closeMatch` mapping, and every new class extends a core class.
+
+- `ClientSession` (`MEDULLA-IDENTITY-R705`): minted in the identity pack, extends the engine core session class, `skos:closeMatch prov:Activity`. Its properties map as `principal` to `prov:wasAssociatedWith` (`skos:closeMatch`), `started_at_ms` to `prov:startedAtTime` and `ended_at_ms` to `prov:endedAtTime` (`skos:closeMatch`; the values are epoch milliseconds, not `xsd:dateTime`).
+- `RunScopePolicy` (`MEDULLA-IDENTITY-R008.4`): minted in `core-foundation-v1.ttl`, extends the core policy class, `skos:closeMatch odrl:Policy`. `allowed_tools` and `allowed_graphs` have no open-vocabulary equivalent.
+- `identity_metadata` module (`MEDULLA-IDENTITY-R023.8`): minted with `Preference`, `ClientMetadata` and `InteractionNetwork`, each extending a core class; `InteractionNetwork` carries `skos:closeMatch foaf:knows` on its relation edge. `Preference` and `ClientMetadata` have no open-vocabulary equivalent.
