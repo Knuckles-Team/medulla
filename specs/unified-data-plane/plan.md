@@ -186,7 +186,7 @@ Cross-repository: none.
 - Submit an authorized graph mutation through `MutationBatch`. Confirm the projection read reflects its committed revision.
 - Also deny stale/unapproved mappings and unauthorized graph mutations.
 - Open dependency: the source names no target application, full relational schema, or captured statement corpus. The R026 pilot owner must supply and approve those artifacts before application compatibility is accepted.
-- Preserve MEDULLA-DURABLE-KERNEL-R035, MEDULLA-DURABLE-KERNEL-R043, MEDULLA-FEDERATED-QUERY-R080, MEDULLA-UNIFIED-DATA-PLANE-R026, MEDULLA-FEDERATED-QUERY-R080.1, MEDULLA-FEDERATED-QUERY-R080.2, MEDULLA-FEDERATED-QUERY-R080.3, MEDULLA-FEDERATED-QUERY-R080.4, MEDULLA-FEDERATED-QUERY-R080.5, MEDULLA-FEDERATED-QUERY-R080.6. Source SHA-256: `c55bc629b1bfefc9d0346b75b8bb95e5a231b891e7e34297df17b960d6c9773c`.
+- Preserve MEDULLA-DURABLE-KERNEL-R035, MEDULLA-DURABLE-KERNEL-R043, MEDULLA-FEDERATED-QUERY-R080, MEDULLA-UNIFIED-DATA-PLANE-R026, MEDULLA-FEDERATED-QUERY-R080.1, MEDULLA-FEDERATED-QUERY-R080.2, MEDULLA-FEDERATED-QUERY-R080.3, MEDULLA-FEDERATED-QUERY-R080.4, MEDULLA-FEDERATED-QUERY-R080.5, MEDULLA-FEDERATED-QUERY-R080.6.
 
 ### Source categories: OLTP, metastore, search index, graph languages and the coverage matrix (R038.3 to R038.6, R022.4)
 
