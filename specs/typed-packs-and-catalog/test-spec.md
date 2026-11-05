@@ -679,7 +679,7 @@ Each line binds one row to its proving test. A test marked planned does not exis
 - `MEDULLA-TYPED-PACKS-R074`: `crates/medulla-h-admin/src/connector_pack_projection/grant.rs::tests::the_projection_actor_writes_only_the_pack_graph_it_was_granted` (existing); `crates/medulla-h-admin/src/admin/connector_pack/tests/outbox.rs::failed_projection_records_durable_failed_status` (existing)
 - `MEDULLA-TYPED-PACKS-R077`: `crates/medulla-server-ops/src/api/admin/terms.rs::tests::a_paged_walk_returns_every_term_once_in_order_at_one_digest` (existing)
 - `MEDULLA-TYPED-PACKS-R078`: `crates/medulla-h-decide/src/decide/stat_tests/retrieval_plan_tests.rs::templates_are_keyed_by_task_class_and_schema_digest` (existing)
-- `MEDULLA-TYPED-PACKS-R081`: `tests/test_ontology_package.py::test_api_returns_every_source_file` (existing); `tests/test_ontology_object_model.py::test_migrated_modules_match_prior_behaviour` (planned)
+- `MEDULLA-TYPED-PACKS-R081`: `tests/test_ontology_package.py::test_api_returns_every_source_file` (existing)
 - `MEDULLA-TYPED-PACKS-R082`: `tests/test_rdf_client.py::test_validate_shacl_sends_both_inline_graphs` (existing); `tests/test_graph_schema_vectors.py::test_client_models_match_rust_vectors` (planned)
 - `MEDULLA-TYPED-PACKS-R083`: `tests/packs/test_schema_drift_served.py::test_breaking_drift_quarantines_and_activation_needs_approval` (existing)
 - `MEDULLA-TYPED-PACKS-R084`: `crates/medulla-h-admin/src/admin/connector_pack/tests/ontology.rs::a_cancelled_import_does_not_block_the_next_bind` (existing); `crates/medulla-h-admin/src/admin/connector_pack/tests.rs::a_cancelled_waiter_leaves_the_pack_lock_queue` (existing)

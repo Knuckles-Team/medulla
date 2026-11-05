@@ -120,7 +120,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T114 [US3] MEDULLA-TYPED-PACKS-R074 Least-privilege per-pack projection grant with recorded failure
 - [ ] T115 [US3] MEDULLA-TYPED-PACKS-R077 GraphSchemaClasses exposes canonical class and property names
 - [ ] T116 [US3] MEDULLA-TYPED-PACKS-R078 Proven retrieval-plan templates keyed by task class and schema digest
-- [ ] T117 [US3] MEDULLA-TYPED-PACKS-R081 Core ontology object model lives in Medulla
+- [ ] T117 [US3] MEDULLA-TYPED-PACKS-R081 The Rust engine owns the object model; medulla/ontology is a read-only Python API
 - [ ] T118 [US3] MEDULLA-TYPED-PACKS-R082 Rust serde types replace hand-written graph-schema DTOs
 - [ ] T119 [US3] MEDULLA-TYPED-PACKS-R083 Schema-drift SHACL rendering and contract store live in Medulla
 - [ ] T120 [US3] MEDULLA-TYPED-PACKS-R084 Request deadlines propagate into long-running pack operations
