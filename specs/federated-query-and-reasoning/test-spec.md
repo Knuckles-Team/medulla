@@ -465,6 +465,7 @@ Hot-path proof for `MEDULLA-FEDERATED-QUERY-R091`: `tests/federation/test_plan_e
 | `MEDULLA-FEDERATED-QUERY-R709.4` | `tests/test_geosparql_served.py::test_geo_refusals` |
 | `MEDULLA-FEDERATED-QUERY-R709.5` | `tests/test_geosparql_served.py::test_explain_names_spatial_index` |
 | `MEDULLA-FEDERATED-QUERY-R709.6` | `cargo bench -p medulla-rdf --bench geosparql` |
+| `MEDULLA-FEDERATED-QUERY-R709.7` | `crates/medulla-rdf/tests/geosparql.rs::indexed_and_scanned_results_are_equal` (planned) |
 
 ## Shared query workspace
 
@@ -994,6 +995,7 @@ Each entry names the test the row binds once its code lands; the path is the pos
 | Planned | `MEDULLA-FEDERATED-QUERY-R709.4` | `tests/federated/test_geosparql_served.py::test_geo_refusals` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R709.5` | `tests/federated/test_geosparql_served.py::test_explain_names_spatial_index` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R709.6` | `cargo bench -p medulla-rdf --bench geosparql` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R709.7` | `crates/medulla-rdf/tests/geosparql.rs::indexed_and_scanned_results_are_equal` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R720` | `tests/uql_single_plan_all_modalities.rs::five_stage_kinds_one_plan` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R720.1` | `crates/medulla-exec/src/rowset.rs::tests::epistemic_fields_survive_traversal_and_vector` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R720.2` | `crates/medulla-plan/tests/uql_epistemic_stages.rs::confidence_asof_decay` |
