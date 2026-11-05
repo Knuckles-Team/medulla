@@ -14,6 +14,7 @@ pub mod enrichment_schedule;
 pub mod errors;
 pub mod execution_routing;
 pub mod features;
+pub mod grounded_eval;
 pub mod harness_config;
 pub mod head;
 pub mod ingestion_lane;
@@ -136,6 +137,12 @@ pub enum QuestionKind {
     BranchOutcome,
     /// Edit concentration checks over a declared rolling round window (MEDULLA-DECISION-ENGINE-R173).
     EditConcentration,
+    /// A budgeted comparative-analysis plan (MEDULLA-DECISION-ENGINE-R139.1).
+    /// See `decision::comparative_analysis`.
+    ComparativeAnalysisPlan,
+    /// A context package under token, money and latency ceilings
+    /// (MEDULLA-DECISION-ENGINE-R137.7). See `decision::context_package`.
+    ContextPackage,
 }
 
 /// What is at stake. Exploration is permitted only for
@@ -202,6 +209,8 @@ pub enum TypedValue {
     Rational(UnitRationalWire),
     /// Explicit task claims, never policy or authorization.
     TaskPlan(Box<super::task_plan::TaskPlanProposal>),
+    /// A context-package request (MEDULLA-DECISION-ENGINE-R137.7).
+    ContextPackages(Box<super::context_package::ContextPackageRequest>),
 }
 
 /// One named parameter of a question.

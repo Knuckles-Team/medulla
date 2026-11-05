@@ -76,6 +76,7 @@ fn model_fact_shapes_reject_missing_required_facts() {
     }
 }
 
+// spec: MEDULLA-TYPED-PACKS-R066.1
 #[test]
 fn model_fact_shapes_reject_missing_run() {
     let result = report(

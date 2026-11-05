@@ -134,7 +134,7 @@ fn route_for_calibration(method: &Method) -> Option<FinanceRoute> {
     }
 }
 
-pub fn try_handle(req_id: u64, method: Method) -> Result<Response, Method> {
+pub fn try_handle(req_id: u64, tenant: &str, method: Method) -> Result<Response, Method> {
     match route_for(&method) {
         FinanceRoute::Portfolio => super::route_families::handle_portfolio(req_id, method),
         FinanceRoute::Risk => super::route_families::handle_risk(req_id, method),
@@ -145,9 +145,9 @@ pub fn try_handle(req_id: u64, method: Method) -> Result<Response, Method> {
         FinanceRoute::Microstructure => {
             super::route_families::handle_microstructure(req_id, method)
         }
-        FinanceRoute::Sizing => super::route_families::handle_sizing(req_id, method),
+        FinanceRoute::Sizing => super::route_families::handle_sizing(req_id, tenant, method),
         FinanceRoute::NumericKernels => {
-            super::numeric_kernels::handle_numeric_kernels(req_id, method)
+            super::numeric_kernels::handle_numeric_kernels(req_id, tenant, method)
         }
         FinanceRoute::Backtest => super::route_families::handle_backtest(req_id, method),
         FinanceRoute::Forensic => super::route_families::handle_forensic(req_id, method),

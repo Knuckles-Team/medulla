@@ -197,6 +197,8 @@ fn run(plan: &Plan, ctx: &PlanCtx, warnings: Vec<String>) -> Result<UqlResult, S
             rows: rows_of(&rows, &columns, &ChannelTable::new()),
             columns,
             warnings,
+            snapshot_revision: 0,
+            knowledge_revision: 0,
         });
     }
     let traced = traced(plan, ctx)?;
@@ -204,6 +206,8 @@ fn run(plan: &Plan, ctx: &PlanCtx, warnings: Vec<String>) -> Result<UqlResult, S
         rows: rows_of(&traced.rows, &columns, &traced.table),
         columns,
         warnings,
+        snapshot_revision: 0,
+        knowledge_revision: 0,
     })
 }
 
@@ -329,5 +333,7 @@ fn profile(plan: &Plan, ctx: &PlanCtx, warnings: Vec<String>) -> Result<UqlResul
         columns,
         stages,
         warnings,
+        snapshot_revision: 0,
+        knowledge_revision: 0,
     })
 }

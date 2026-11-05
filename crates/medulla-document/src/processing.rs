@@ -318,6 +318,230 @@ fn next_start(text: &str, from: usize, cut: usize, overlap: usize) -> usize {
     }
 }
 
+/// How a document marks its sections (MEDULLA-REPO-INGEST-R652.2).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SectionSource {
+    /// Markdown ATX headings, `#` to `######`.
+    Markdown,
+    /// Form-feed (`\x0c`) page breaks.
+    Paged,
+}
+
+/// One node of a document's section tree (MEDULLA-REPO-INGEST-R652.1).
+/// Spans are byte offsets into the source text, `span_start..span_end`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SectionNode {
+    pub section_id: u32,
+    pub parent_id: Option<u32>,
+    pub title: String,
+    pub span_start: usize,
+    pub span_end: usize,
+    pub depth: u32,
+}
+
+/// The outcome of [`verify_section_tree`] (MEDULLA-REPO-INGEST-R652.1).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SectionTreeCheck {
+    Valid,
+    Overlap,
+    Gap,
+    OutOfBounds,
+}
+
+/// The processing evidence recorded for one document (MEDULLA-REPO-INGEST-R652.1).
+/// `coverage_milli` is the share of the text covered by leaf sections, in
+/// thousandths.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ProcessedDocument {
+    pub document_id: String,
+    pub content_digest: String,
+    pub chunk_count: u32,
+    pub section_count: u32,
+    pub coverage_milli: u32,
+    pub tree_check: SectionTreeCheck,
+}
+
+struct OpenSection {
+    index: usize,
+    level: usize,
+    has_child: bool,
+}
+
+/// Close every open section deeper than or at `level`, ending them at `end`.
+fn close_sections(
+    nodes: &mut [SectionNode],
+    open: &mut Vec<OpenSection>,
+    level: usize,
+    end: usize,
+) {
+    while open.last().is_some_and(|o| o.level >= level) {
+        let closed = open.pop().expect("checked non-empty");
+        nodes[closed.index].span_end = end;
+    }
+}
+
+/// Push a node under the innermost open section. When that parent gets its
+/// first child after some text of its own, the text becomes an intro leaf, so
+/// the leaves always cover the whole parent span.
+fn open_section(
+    nodes: &mut Vec<SectionNode>,
+    open: &mut Vec<OpenSection>,
+    title: &str,
+    level: usize,
+    start: usize,
+) {
+    let parent = open.last_mut().map(|p| {
+        let first_child = !p.has_child;
+        p.has_child = true;
+        (p.index, first_child)
+    });
+    if let Some((parent_index, true)) = parent {
+        let parent_node = nodes[parent_index].clone();
+        if start > parent_node.span_start {
+            nodes.push(SectionNode {
+                section_id: nodes.len() as u32,
+                parent_id: Some(parent_node.section_id),
+                title: parent_node.title,
+                span_start: parent_node.span_start,
+                span_end: start,
+                depth: parent_node.depth + 1,
+            });
+        }
+    }
+    let (parent_id, depth) = match open.last() {
+        Some(p) => (Some(nodes[p.index].section_id), nodes[p.index].depth + 1),
+        None => (None, 1),
+    };
+    let index = nodes.len();
+    nodes.push(SectionNode {
+        section_id: index as u32,
+        parent_id,
+        title: title.to_string(),
+        span_start: start,
+        span_end: start,
+        depth,
+    });
+    open.push(OpenSection {
+        index,
+        level,
+        has_child: false,
+    });
+}
+
+/// Build the section tree of `text` in one pass (MEDULLA-REPO-INGEST-R652.2).
+/// Nodes come in pre-order with `section_id` equal to their index. Children
+/// nest inside their parent's span, siblings do not overlap and the leaves
+/// cover the text. Text before the first heading is a top-level untitled
+/// section. An empty text has no sections.
+pub fn build_section_tree(text: &str, kind: SectionSource) -> Vec<SectionNode> {
+    let mut nodes = Vec::new();
+    if text.is_empty() {
+        return nodes;
+    }
+    let mut open: Vec<OpenSection> = Vec::new();
+    match kind {
+        SectionSource::Markdown => {
+            let mut offset = 0;
+            for line in text.split_inclusive('\n') {
+                if let Some((level, title)) = heading(line.trim_end_matches(['\n', '\r'])) {
+                    close_sections(&mut nodes, &mut open, level, offset);
+                    open_section(&mut nodes, &mut open, title, level, offset);
+                } else if open.is_empty() {
+                    // Preamble before the first heading: deeper than any
+                    // heading level, so the first heading closes it rather
+                    // than nesting under it.
+                    open_section(&mut nodes, &mut open, "", 7, offset);
+                }
+                offset += line.len();
+            }
+        }
+        SectionSource::Paged => {
+            let mut offset = 0;
+            for (page, body) in text.split_inclusive('\x0c').enumerate() {
+                close_sections(&mut nodes, &mut open, 1, offset);
+                open_section(
+                    &mut nodes,
+                    &mut open,
+                    &format!("page {}", page + 1),
+                    1,
+                    offset,
+                );
+                offset += body.len();
+            }
+        }
+    }
+    close_sections(&mut nodes, &mut open, 0, text.len());
+    nodes
+}
+
+/// Verify the section-tree rule over `nodes` for a text of `text_len` bytes
+/// (MEDULLA-REPO-INGEST-R652.2): every span lies in the text, each child lies
+/// in its parent, siblings are ordered and disjoint, and the leaves, read in
+/// order, cover `0..text_len` with no gap and no overlap. O(n).
+pub fn verify_section_tree(nodes: &[SectionNode], text_len: usize) -> SectionTreeCheck {
+    let mut last_child_end: Vec<Option<usize>> = vec![None; nodes.len()];
+    let mut top_end: Option<usize> = None;
+    let mut has_child = vec![false; nodes.len()];
+    for (index, node) in nodes.iter().enumerate() {
+        if node.section_id as usize != index
+            || node.span_start > node.span_end
+            || node.span_end > text_len
+        {
+            return SectionTreeCheck::OutOfBounds;
+        }
+        let previous_end = match node.parent_id {
+            Some(parent) => {
+                let parent = parent as usize;
+                if parent >= index {
+                    return SectionTreeCheck::OutOfBounds;
+                }
+                let p = &nodes[parent];
+                if node.span_start < p.span_start || node.span_end > p.span_end {
+                    return SectionTreeCheck::Overlap;
+                }
+                has_child[parent] = true;
+                &mut last_child_end[parent]
+            }
+            None => &mut top_end,
+        };
+        if previous_end.is_some_and(|end| node.span_start < end) {
+            return SectionTreeCheck::Overlap;
+        }
+        *previous_end = Some(node.span_end);
+    }
+    let mut covered = 0;
+    for (index, node) in nodes.iter().enumerate() {
+        if has_child[index] {
+            continue;
+        }
+        if node.span_start > covered {
+            return SectionTreeCheck::Gap;
+        }
+        if node.span_start < covered {
+            return SectionTreeCheck::Overlap;
+        }
+        covered = node.span_end;
+    }
+    if covered != text_len {
+        return SectionTreeCheck::Gap;
+    }
+    SectionTreeCheck::Valid
+}
+
+/// The deepest section containing byte `offset`: the leaf a chunk starting
+/// there belongs to (MEDULLA-REPO-INGEST-R652.2).
+pub fn section_for(nodes: &[SectionNode], offset: usize) -> Option<u32> {
+    nodes
+        .iter()
+        .filter(|n| n.span_start <= offset && offset < n.span_end)
+        .max_by_key(|n| n.depth)
+        .map(|n| n.section_id)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

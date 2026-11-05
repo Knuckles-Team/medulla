@@ -292,6 +292,14 @@ $($variants)*
         forward_returns: Vec<f64>,
     },
 
+    /// MEDULLA-FINANCE-PRIMITIVES-R904: read the current wallet key trust record
+    /// of one `(account, wallet, network)` binding under the caller's tenant.
+    WalletKeyTrustGet {
+        account_id: String,
+        wallet_id: String,
+        network_id: String,
+    },
+
     FinanceBayesianKelly {
         alpha: f64,
         beta: f64,

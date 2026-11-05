@@ -650,6 +650,16 @@
     :recordMode is a declaration (intent) or a capture (observed outcome).""" ;
     rdfs:seeAlso prov:Entity .
 
+:RunObservationWindow a owl:Class ;
+    rdfs:label "RunObservationWindow" ;
+    rdfs:subClassOf bfo:0000001 ;
+    rdfs:comment "One measured-or-unknown observation window of a :RunTrace (MEDULLA-ORCH-VOCAB-R009.18.1)." .
+
+:DurableUnit a owl:Class ;
+    rdfs:label "DurableUnit" ;
+    rdfs:subClassOf :DurableExecutionUnit ;
+    rdfs:comment "One durable run unit mirrored as a node linked to its :RunTrace (MEDULLA-ORCH-VOCAB-R009.700)." .
+
 :RunTrace a owl:Class ;
     rdfs:label "RunTrace" ;
     rdfs:comment """CONCEPT:AU-ORCH.runvcs.event-kernel — one agent run, now the root of a
