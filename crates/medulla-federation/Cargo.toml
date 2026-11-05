@@ -52,3 +52,8 @@ text = ["medulla-exec/text", "medulla-types/text", "medulla-uql/text"]
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
 medulla-exec = { path = "../medulla-exec", features = ["test-support"] }
+
+[[bench]]
+name = "spark_submission_id"
+harness = false
+required-features = ["federation"]

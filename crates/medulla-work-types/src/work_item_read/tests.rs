@@ -214,3 +214,61 @@ fn a_metadata_match_selects_exact_top_level_pairs_and_is_bounded() {
     request.metadata_match = Some(too_many);
     assert!(request.validate().is_err());
 }
+
+#[test]
+fn effect_records_round_trip_with_golden_digest() {
+    let mut stored = row("tenant-a", "agent_turn", "running");
+    stored.insert("effect_phase".into(), json!("started"));
+    let view = WorkItemView::from_tenant_row("wi-1", &stored, "tenant-a")
+        .expect("projects")
+        .expect("visible");
+    assert_eq!(view.effect_phase, EffectPhase::Started);
+    let back: WorkItemView =
+        serde_json::from_value(serde_json::to_value(&view).expect("ser")).expect("de");
+    assert_eq!(back, view);
+    assert!(NATIVE_WORK_ITEM_ROW_KEYS.contains(&WORK_ITEM_EFFECT_PHASE));
+    for phase in [
+        EffectPhase::Unstarted,
+        EffectPhase::Started,
+        EffectPhase::Resolved,
+    ] {
+        let mut r = Map::new();
+        r.insert(WORK_ITEM_EFFECT_PHASE.into(), json!(phase.as_stored()));
+        assert_eq!(EffectPhase::from_row(&r), Ok(phase));
+    }
+    assert_eq!(
+        EffectPhase::from_row(&Map::new()),
+        Ok(EffectPhase::Unstarted)
+    );
+
+    let canonical = br#"{"op":"charge","amount":5}"#;
+    let request_ref = AdmittedRequest::request_ref_of(canonical);
+    assert_eq!(
+        request_ref,
+        "sha256:1b52805c1a1c1c410c4e7843cc048a189d1cc1aa34138f5bf95ebbcf0b704634"
+    );
+    let request = AdmittedRequest {
+        request_ref: request_ref.clone(),
+        tenant: "tenant-a".into(),
+        session_ref: "session-1".into(),
+        payload_digest: request_ref.clone(),
+        bytes: canonical.to_vec(),
+    };
+    let receipt = EffectReceipt {
+        job_id: "wi-1".into(),
+        request_ref,
+        principal_ref: "principal-a".into(),
+        outcome: EffectOutcome::NotApplied,
+        receipt_ref: "receipt-1".into(),
+        committed_at: 1_700_000_000_000,
+    };
+    let receipt_json = serde_json::to_value(&receipt).expect("ser");
+    assert_eq!(receipt_json["outcome"], json!("not_applied"));
+    assert_eq!(
+        serde_json::from_value::<EffectReceipt>(receipt_json).expect("de"),
+        receipt
+    );
+    let request_back: AdmittedRequest =
+        serde_json::from_value(serde_json::to_value(&request).expect("ser")).expect("de");
+    assert_eq!(request_back, request);
+}

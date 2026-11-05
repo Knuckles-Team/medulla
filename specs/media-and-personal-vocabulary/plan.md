@@ -18,6 +18,8 @@ Medulla owns one media vocabulary (`crates/medulla-core/ontology/media-v1.ttl`),
 - **Constraints**: no new wire method for tag search; denied rows never reach a count; every refusal has a stable code; no version suffix in a name.
 - **Scale/Scope**: the leaf rows of `requirements.md`, spread over 7 user stories and 8 `FR-` labels.
 
+**Knob convention.** An engine knob named `knob x.y` in this spec's rows is a typed field of the server configuration, read from the command line or from the environment variable `MEDULLA_<NAME>` (the dotted name upper-cased, dots as underscores) and bounds-checked at startup: a value outside the stated range refuses startup with the knob name. Decision knobs are the exception and live only in the `MEDULLA-DECISION-ENGINE-R179` registry. Rows do not restate this.
+
 ## Constitution Check
 
 - **R-I. The engine is native Rust and the only fact store**: pass. Every behaviour row lands in a Rust crate and the engine store.

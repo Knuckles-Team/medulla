@@ -1,8 +1,8 @@
 //! Data product, contract and access-request records (MEDULLA-TYPED-PACKS-R805.1).
 
 use medulla_types::data_product::{
-    parse_product_version, AccessRequest, AccessRequestState, DataContract, DataProduct,
-    ProductPort, ProductPortKind, ACCESS_PURPOSE_MISSING,
+    parse_product_version, AccessRequest, AccessRequestState, ContractPromise, ContractViolation,
+    DataContract, DataProduct, ProductPort, ProductPortKind, ACCESS_PURPOSE_MISSING,
 };
 
 fn round_trip<T>(value: &T) -> T
@@ -60,9 +60,25 @@ fn records_round_trip() {
             principal: "user:ada".into(),
             purpose: "quarterly revenue reporting".into(),
             state,
+            grant_ref: (state == AccessRequestState::Approved).then(|| "grant:1".into()),
         };
         request.validate().unwrap();
         assert_eq!(round_trip(&request), request);
+    }
+    for promise in [
+        ContractPromise::Schema,
+        ContractPromise::Quality {
+            rule: "rule:orders-not-null".into(),
+        },
+        ContractPromise::Freshness,
+    ] {
+        let violation = ContractViolation {
+            product: "product:orders".into(),
+            promise,
+            observed: "7200".into(),
+            at_ms: 1_700_000_000_000,
+        };
+        assert_eq!(round_trip(&violation), violation);
     }
     assert_eq!(parse_product_version("2.1.0"), Some((2, 1, 0)));
 }
@@ -99,6 +115,7 @@ fn invalid_records_are_refused() {
         principal: "user:ada".into(),
         purpose: "  ".into(),
         state: AccessRequestState::Pending,
+        grant_ref: None,
     };
     assert_eq!(request.validate().unwrap_err().code, ACCESS_PURPOSE_MISSING);
     assert!(serde_json::from_value::<AccessRequest>(serde_json::json!({

@@ -93,6 +93,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T087 [US1] MEDULLA-FINANCE-PRIMITIVES-R004.3.2.6 StrategySpec served entry point
 - [ ] T088 [US1] MEDULLA-FINANCE-PRIMITIVES-R004.3.2.7 StrategyRun served entry point
 - [ ] T089 [US1] MEDULLA-FINANCE-PRIMITIVES-R004.3.2.8 LeverageTerms served entry point
+- [ ] T165 [US1] MEDULLA-FINANCE-PRIMITIVES-R004.3.2.9 Replicated FinanceRecordPut command
 - [ ] T090 [US1] MEDULLA-FINANCE-PRIMITIVES-R004.3.3.2 Finance client round trips against Rust vectors
 - [ ] T091 [US2] MEDULLA-FINANCE-PRIMITIVES-R005.1.1 FIFO/LIFO lot-matching tests are confirmed to run and pass against mixed buy/sell activity
 - [ ] T092 [US2] MEDULLA-FINANCE-PRIMITIVES-R005.2.1 Specific-lot election

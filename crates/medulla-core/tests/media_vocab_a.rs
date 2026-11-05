@@ -3283,6 +3283,7 @@ fn media_vocab_audio_transcriber_response_round_trips_through_mapping() {
 }
 
 // spec: MEDULLA-MEDIA-VOCAB-R012.3
+// spec: MEDULLA-MEDIA-VOCAB-R028
 #[test]
 fn media_vocab_audio_transcriber_single() {
     // "Which recordings were transcribed with a low-confidence segment, and
@@ -3357,7 +3358,7 @@ fn media_vocab_audio_transcriber_single() {
     let abstention = TypedAbstention {
         connector: "audio-transcriber",
         missing_operation: "list/get transcript by recording id and date",
-        owner: "audio-transcriber",
+        owner: "CONN-AUDIO-TRANSCRIBER-R005",
     };
     assert_eq!(abstention.connector, "audio-transcriber");
     assert!(
@@ -3365,7 +3366,9 @@ fn media_vocab_audio_transcriber_single() {
         "the abstention names the missing list/get operation: {}",
         abstention.missing_operation
     );
-    assert_eq!(abstention.owner, "audio-transcriber");
+    // MEDULLA-MEDIA-VOCAB-R028: the abstention names the owning row in the
+    // audio-transcriber repository, which specifies the list/get operation.
+    assert_eq!(abstention.owner, "CONN-AUDIO-TRANSCRIBER-R005");
 }
 
 // spec: MEDULLA-MEDIA-VOCAB-R012.4
@@ -4298,4 +4301,62 @@ fn media_vocab_mattermost_single() {
 #[test]
 fn media_vocab_mattermost_vocabulary_docs_truth() {
     vocab_cell_is("R036", "media-v1 / content-v1");
+}
+
+// spec: MEDULLA-MEDIA-VOCAB-R001.100.1
+#[test]
+fn media_tag_terms_and_shape() {
+    let media = load(MEDIA);
+    assert_class(&media, "MediaTag");
+    assert!(has_iri(
+        &media,
+        &format!("{KG}MediaTag"),
+        &format!("{RDFS}subClassOf"),
+        &format!("{KG}Observation"),
+    ));
+    let close_match = "http://www.w3.org/2004/02/skos/core#closeMatch";
+    assert!(has_iri(
+        &media,
+        &format!("{KG}MediaTag"),
+        close_match,
+        "http://www.w3.org/ns/oa#Annotation",
+    ));
+    assert!(has_iri(
+        &media,
+        &format!("{KG}taggedMedia"),
+        close_match,
+        "http://www.w3.org/ns/oa#hasTarget",
+    ));
+    assert_typed(&media, "taggedMedia", "ObjectProperty");
+    for local in [
+        "taxonomyId",
+        "taxonomyVersion",
+        "tagKind",
+        "evidenceRef",
+        "producerId",
+        "producerRevision",
+        "mediaRevision",
+        "provenanceDigest",
+    ] {
+        assert_domain_range(&media, local, "MediaTag", "xsd:string");
+    }
+    assert_domain_range(&media, "tagConfidence", "MediaTag", "xsd:decimal");
+
+    let prefixes = "@prefix : <http://knuckles.team/kg#> . \
+                    @prefix xsd: <http://www.w3.org/2001/XMLSchema#> . ";
+    let digest = "a".repeat(64);
+    let full = format!(
+        "{prefixes}<urn:tag:1> a :MediaTag ; :taggedMedia <urn:film:1> ; \
+         :mediaRevision \"r1\" ; :producerId \"tagger\" ; :evidenceRef \"frame:12\" ; \
+         :provenanceDigest \"{digest}\" ; :tagKind \"object\" ; \
+         :tagConfidence \"0.9\"^^xsd:decimal ."
+    );
+    let report = medulla_shacl::validate_turtle(MEDIA_SHAPES, &full).expect("the fixture parses");
+    assert!(report.conforms, "a tag with provenance conforms");
+    let bare = format!(
+        "{prefixes}<urn:tag:2> a :MediaTag ; :taggedMedia <urn:film:1> ; \
+         :mediaRevision \"r1\" ; :tagKind \"object\" ."
+    );
+    let report = medulla_shacl::validate_turtle(MEDIA_SHAPES, &bare).expect("the fixture parses");
+    assert!(!report.conforms, "a tag without provenance is refused");
 }

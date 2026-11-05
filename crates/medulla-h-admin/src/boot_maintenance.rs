@@ -15,7 +15,7 @@
 //! start and completion (counts + elapsed) — a multi-minute pass must never
 //! again be invisible in the log.
 
-#[cfg(feature = "redb")]
+#[cfg(all(feature = "redb", feature = "tsdb"))]
 use medulla_persistence::AsRedb;
 use std::sync::Arc;
 #[cfg(any(
