@@ -1,145 +1,99 @@
-# MEDULLA-ENGINE-PARITY plan
+# MEDULLA-ENGINE-PARITY — Implementation plan
 
-Governing spec: [spec.md](spec.md).
-Code: ../../crates/medulla-wire/src/pgwire/mod.rs ../../crates/medulla-wire/src/pgwire/auth.rs ../../crates/medulla-wire-core/src/sql_wire_auth.rs
+Governing spec: [spec.md](spec.md). Rows: [requirements.md](requirements.md).
 
-## The trade-off
+## Summary
 
-The engine stays one library. That choice keeps five properties that a second engine breaks.
+The engine stays one library. That choice keeps five properties a second engine breaks: one process with one commit path and one backup, deterministic replay from the committed log, sealed create-only records, epistemic and ontology primitives in the same transaction as the data, and the same library on a small board and in the cluster. The cost is maturity work: planner tuning, index kinds, constraint semantics, tool compatibility and operations practice. This plan builds that parity piece by piece, only for named consumers, and states each gap in the compatibility matrix (R009) instead of hiding it.
 
-- **One library.** One process, one commit path, one backup. No network hop inside a commit.
-- **Deterministic replay.** Every state derives from the committed log. Decisions replay byte for byte.
-- **Sealed records.** Create-only classes (MEDULLA-DURABLE-KERNEL-R057) hold in one store with one guard.
-- **Epistemic and ontology primitives.** Trust, provenance, bitemporal reads and OWL reasoning sit in the same transaction as the data.
-- **Embedded targets.** The same library runs on a small board and in the cluster.
-
-The cost is maturity work. A mature relational database brings decades of planner tuning,
-index kinds, constraint semantics, tool compatibility and operations practice. This spec builds
-that parity piece by piece, only for named consumers. It states each gap in the compatibility
-matrix (R009) instead of hiding it.
-
-## Architecture
-
-```mermaid
-flowchart TB
-  subgraph Clients
-    N[Native and generated clients]
-    W[Outside SQL and BI tools]
-  end
-  W -- PostgreSQL wire protocol --> PW[Wire front end R006-R009]
-  N --> RB[Request boundary]
-  PW --> RB
-  RB --> AD[Admission, principal, row security]
-  AD --> PL[SQL / UQL planner over the columnar engine]
-  PL --> TX[Transaction: snapshot reads, read and write sets R002]
-  TX --> GC[Group committer per store file R001]
-  GC --> P1[(Store file: tenant A)]
-  GC --> P2[(Store file: tenant B)]
-  GC --> LOG[Committed log]
-  LOG --> CDC[Change stream R015]
-  LOG --> ARC[Log archive and snapshots R016]
-  LOG --> REP[Read replicas R017]
-  LOG --> COL[Columnar copies of hot classes R018]
-  PL --> COL
-  PL --> EXT[Attached outside databases, read and federate only R019]
+```text
+outside SQL tool
+  -> pgwire listener             crates/medulla-wire/src/pgwire/mod.rs
+  -> classify                    crates/medulla-sql-lang/src/sql/classify.rs
+  -> sql_catalog / exec_sql      crates/medulla-h-query, crates/medulla-sql
+  -> TableStore::commit_txn_batch  crates/medulla-table-store/src/tables/store.rs
+  -> RedbBackend writer thread   crates/medulla-persistence/src/redb_backend/
+  -> CdcHub / archive            crates/medulla-server-cdc, crates/medulla-storage
 ```
 
-Every arrow stays inside the library except the wire listener, the archive target and the
-attached sources. No arrow writes engine data to an outside database.
+Every arrow stays inside the library except the wire listener, the archive target and the attached sources. No arrow writes engine data to an outside database.
 
-## Write concurrency
+## Technical Context
 
-| Mechanism | Row | Effect |
-|---|---|---|
-| Group commit | R001 | One write transaction and one fsync per batch of up to `max_batch` requests |
-| Optimistic concurrency | R002 | Snapshot reads; read and write sets validated at commit; typed conflict |
-| Partitioned store files | R003 | One committer per tenant or declared partition; partitions commit in parallel |
-| Disjoint acceptance | R004 | Non-overlapping footprints never wait; shared with MEDULLA-SCM-R003 |
+- **Language/Version**: Rust 2021 edition on the pinned toolchain; Python 3.14 (floor 3.12) for served tests.
+- **Primary Dependencies**: `crates/medulla-persistence`, `crates/medulla-transaction`, `crates/medulla-table-store`, `crates/medulla-tables`, `crates/medulla-sql`, `crates/medulla-sql-lang`, `crates/medulla-wire`, `crates/medulla-wire-core`, `crates/medulla-server-cdc`, `crates/medulla-storage`, `crates/medulla-statechart`. No new third-party dependency.
+- **Storage**: redb store files with new catalog tables `sql_sequences` and `sql_matviews`; archive segments in the object root of `MEDULLA-OBJECT-STORAGE-BACKEND`.
+- **Testing**: Rust tests in `crates/medulla-sql-tests/tests/`, `crates/medulla-transaction/tests/` and root `tests/pgwire_roundtrip.rs` (L1 to L3); served Python tests under `tests/` (L4); nightly benchmark groups in `benches/engine_parity.rs` (L6).
+- **Target Platform**: Linux x86_64 and aarch64.
+- **Project Type**: Storage, query and wire additions to the existing engine crates.
+- **Performance Goals**: At least 20,000 commits per second for 64 writers; single-row commit p99 at most 5 ms; prepared point read p99 at most 1 ms; targets W1 to W5 of `MEDULLA-ENGINE-PARITY-R005.1`.
+- **Constraints**: One committer per store file. A refusal precedes any write. Conflicts are typed. No secret is stored. Benchmarks never gate a pull request.
+- **Scale/Scope**: 51 leaf rows over 5 user stories, 8 `FR-` labels and 6 `SC-` labels.
 
-A batch over two partitions uses the cross-store path of MEDULLA-DURABLE-KERNEL-R034 or refuses.
+## Constitution Check
 
-## PostgreSQL wire front end
+- **R-I. The engine is native Rust and the only fact store**: pass. Outside databases are attached sources only (R019).
+- **R-II. Every wait has a deadline**: pass. The enqueue wait is bounded by `MEDULLA_REDB_ENQUEUE_TIMEOUT_MS` (R001.1) and retries are bounded by `tables.occ_max_retries` (R004.2).
+- **R-III. Every row sets budgets and names a benchmark**: pass. Each hot-path row names a budget and a nightly bench group.
+- **R-IV. Crates are small, layered and cut over hard**: pass. Rows name post-split crates; new table features sit in `medulla-table-store`.
+- **Organization standards**: pass. Rows follow the spec standard and the ecosystem boundaries.
 
-The listener already exists in `src/server/pgwire`. It has TLS startup policy, `CopyState`
-and an extended-query path. This spec completes the message flows (R006). It maps logins to
-engine principals and row security (R007). It emulates the catalog views that tools read at
-connect (R008). It publishes the dialect matrix (R009). MEDULLA-DURABLE-KERNEL-R035 keeps the
-operational surfaces.
+## Project Structure
 
-## Relational features
+```text
+crates/medulla-persistence/src/redb_backend/   existing: group commit config, shard writer, send_with_deadline
+crates/medulla-transaction/src/occ.rs          existing: TxnFootprint, disjoint
+crates/medulla-table-store/src/tables/         existing store.rs; new trigger.rs, sequence.rs, matview.rs
+crates/medulla-tables/src/                     existing: schema.rs, index.rs extended
+crates/medulla-sql-lang/src/sql/classify.rs    existing: new statement kinds
+crates/medulla-sql/src/sql/catalog.rs          existing: new catalog providers
+crates/medulla-wire-core/src/wire/sqlstate.rs  new: closed SQLSTATE table
+crates/medulla-identity-types/src/identity/    existing ops.rs; new wire_login.rs
+crates/medulla-server-cdc/src/cdc.rs           existing: emit_row_changes
+crates/medulla-storage/src/recovery/archive.rs new: archive_scope, replay_to
+benches/engine_parity.rs                       new: W1 to W5 and the nightly groups
+```
 
-| Feature | Row | Engine form |
-|---|---|---|
-| Secondary, partial, expression indexes | R010 | redb index tables updated in the row transaction |
-| Unique, foreign key, check, not null | R011 | Commit-time checks; SHACL shapes for graph data |
-| Triggers | R012 | Reactive rules on the statechart engine, inside the transaction |
-| Sequences | R013 | Block-reserved counters that never repeat after a crash |
-| Views and materialized views | R014 | Stored plans; materialized views as derived series with lineage |
+## Phase 0: Research
 
-## Log-based services
+No unknowns that block planning; no research.md.
 
-The committed log is the one change stream. Change capture (R015), point-in-time recovery
-(R016) and read replicas (R017) all read it. Columnar copies (R018) rebuild from it.
+## Phase 1: Design
 
-## Native modality map
+1. **One library, one committer per store file.** Group commit folds queued commands into one write transaction and one fsync; this plan adds only a bounded enqueue wait.
+2. **Native writes keep their version check.** Graph mutations keep `MEDULLA-DURABLE-KERNEL-R084`; footprints (R002) cover user-table transactions only.
+3. **One compatibility matrix.** `PgCompatibilityMatrix` is the single matrix; the classifier consults it and a refused form answers `0A000`.
+4. **One SQLSTATE table.** Every wire refusal maps through `sqlstate_for`; an unknown code keeps `58000`.
+5. **No second change feed.** Row capture feeds the `ReadGraphChanges` feed of `MEDULLA-DURABLE-KERNEL-R043.100`; there is no new subscribe method.
+6. **Demand gate.** A rollup enters the work queue only with a named consumer; the consumers are `MEDULLA-SCM-R003` (R004), `ARBORA-OPS-R858` (R007) and `MEDULLA-DURABLE-KERNEL-R035` (R009, R015).
 
-Plan-level map only. The spec rows name capabilities, not extensions.
+Data entities are in [data-model.md](data-model.md); the shortest served proof is in [quickstart.md](quickstart.md); each seam has a document in `contracts/`.
 
-| Engine crate | Capability | Matching PostgreSQL extension class |
-|---|---|---|
-| `medulla-ann` | Vector similarity search | vector similarity extension |
-| `medulla-geo` | Geometry types and spatial predicates | geospatial extension |
-| graph kernels in `medulla-core`, `medulla-compute` | Property graph, traversal, openCypher-style queries | graph query extension |
-| `medulla-text` | Ranked full-text search | BM25 full-text extension |
-| `medulla-tsdb` | Time-series buckets and rollups | time-series extension |
-| `medulla-viz-columnstore`, Parquet through the columnar engine | Columnar storage and scans | columnar storage extension |
+## Phase 2: Task approach
 
-## Failure modes
+`tasks.md` holds one task per leaf row, producer first within each user story. Tasks that edit `crates/medulla-table-store/src/tables/store.rs` run in series; hot-path proofs run in parallel.
 
-| Failure | Detection | Behavior |
-|---|---|---|
-| Commit queue full | Bounded channel full | Refuse with `COMMIT_QUEUE_FULL`; the client retries |
-| Write conflict | Footprint validation | Refuse with `TXN_CONFLICT{keys}`; nothing written |
-| fsync failure | Store error on commit | Refuse the whole batch; the store re-opens read-only until an operator checks the disk |
-| Partition file corruption | Scrub of MEDULLA-DURABLE-KERNEL-R020 | Isolate the partition; restore it by R016; other partitions keep serving |
-| Change subscriber too slow | Cursor below the retained log | Refuse with `CHANGE_CURSOR_EXPIRED`; the subscriber re-snapshots |
-| Replica behind | `applied_seq` below the token | Wait up to 2,000 ms, then refuse with `REPLICA_BEHIND` |
-| Unsupported SQL form | Matrix lookup | Refuse with SQLSTATE `0A000` and the matrix entry |
-| Wire client without TLS on a public address | Startup policy | Refuse to start the listener |
+## Complexity Tracking
 
-## Benchmark budget
+none
 
-| Workload | Budget |
-|---|---|
-| Single-row commit | p99 under 2 ms |
-| 64 concurrent writers, one file | at least 20,000 commits per second; p99 under 5 ms |
-| 8 partitions, 8 writers each | at least 6 times one file |
-| Index probe on a non-key column, 10M rows | p99 under 2 ms |
-| Prepared point read over the wire | p99 under 1 ms on loopback |
-| 100M-row aggregate on a columnar copy | at least 5 times faster than the primary store |
-| Change decoding at 20,000 commits per second | lag p99 under 100 ms |
-| Replica lag under the 64-writer load | p99 under 200 ms |
-| Restore drill, 10 GiB | under 15 minutes, zero lost sequences |
+## Build contract
 
-These budgets are starting defaults. A measured run of R005 and R020 replaces each one.
+- `cargo clippy --workspace --all-targets -- -D warnings` and `cargo fmt --check` pass for every touched crate.
+- The architecture, complexity and duplication gates of `.config/pre-commit.yaml` pass with no baseline entry and no suppression.
+- The no-duplicate-authority check confirms one committer per store file and one change feed.
+- Each nightly benchmark gates a 10 percent regression against `benches/baselines/engine_parity.json`.
+- Spec rows pass `spec-standard`, `plan-conformance` and `spec-decomposition` with zero findings.
 
-## Consumers
+## Production caller chain
 
-| Rollups | Named consumer |
-|---|---|
-| R001 to R005 | Concurrent agent writes through arbora; MEDULLA-SCM changeset acceptance |
-| R006 to R009 | Outside BI and SQL tools for the catalog and governance rows; the native-hosting pilot of MEDULLA-UNIFIED-DATA-PLANE-R026 |
-| R010 to R014 | Native-hosted application tables of MEDULLA-UNIFIED-DATA-PLANE-R024 |
-| R015 to R017 | Change subscribers of MEDULLA-UNIFIED-DATA-PLANE-R009; operator recovery; read scale |
-| R018 | Catalog profiling and quality jobs of MEDULLA-UNIFIED-DATA-PLANE-R761 and R762 |
-| R019 | Every attached-source adapter |
-| R020 | The benchmark gate of MEDULLA-DURABLE-KERNEL-R042 |
+- Served `AddNode` to `commit_mutation_body` (`crates/medulla-server-mutation/src/mutation/commit_entry.rs:327`) to `record_durable` (`crates/medulla-persistence/src/redb_backend/trait_mutations.rs:5`) to the shard writer (`shard_writer.rs:474`).
+- `COMMIT` over the SQL wire to `sql_catalog.rs:269` to `commit_txn_batch` (`crates/medulla-table-store/src/tables/store.rs:2022`) to `commit_txn_batch_inner` (:2095) to `TxnFootprint::validate` (`crates/medulla-transaction/src/occ.rs:92`).
+- Pgwire startup to `on_startup` (`crates/medulla-wire/src/pgwire/auth.rs:176`) to `resolve_wire_login`; a statement to `do_query` (`crates/medulla-wire/src/pgwire/mod.rs:925`) to `classify` (`crates/medulla-sql-lang/src/sql/classify.rs:520`).
+- `medulla-server restore` to `src/offline_tools/restore.rs` to `restore_bundle` (`crates/medulla-persistence/src/backup.rs:801`) to `replay_to`.
+- Obsolete paths to delete: the per-column serial counter of `store.rs`, read once into the sequence `high_mark` and then removed (R013.2).
 
-## Build sequence
+## Cross-repo seams
 
-1. R001, R002, R004, R005: write path and its benchmark.
-2. R006 to R009: wire front end for the first outside tool.
-3. R010, R011, R013: indexes, constraints and sequences for the first native-hosted application.
-4. R015 to R017: log services.
-5. R003, R012, R014, R018: partitions, triggers, views and columnar copies, each on demand.
-6. R019 and R020 hold from the first step as boundary and report rows.
+- Wire login grant and revoke: `MEDULLA-ENGINE-PARITY-R007.4` provides, `ARBORA-OPS-R858.1` consumes. Contract: [arbora-wire-logins.md](contracts/arbora-wire-logins.md).
+- Engine capability report: `MEDULLA-ENGINE-PARITY-R020.2` provides, `ARBORA-OPS-R006` consumes. Contract: [arbora-engine-capabilities.md](contracts/arbora-engine-capabilities.md).
