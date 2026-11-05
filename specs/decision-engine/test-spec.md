@@ -156,7 +156,7 @@ The request fixture in `.3.3` depends on those operations.
 R113.2 requires all four transaction tests. R113.3 requires all three retry tests.
 Neither rollup is runtime acceptance evidence.
 
-### R090.1 native acceptance receipt (2026-10-11)
+### R090.1 native acceptance receipt
 
 `crates/medulla-decision-types/src/decision/statistical/scorer.rs::budget_tests` passed all six native tests with Rust 1.96.0.
 `a_budget_at_the_ceiling_is_declared` proves ceiling acceptance.
@@ -182,7 +182,7 @@ served decision paths passed. R090.3 has paired native measurements below:
 the Cargo launch is inconclusive; the standalone run meets the measured limits.
 Budget declarations alone do not establish either result.
 
-### R090.3 native release measurement (2026-10-11)
+### R090.3 native release measurement
 
 The [structured receipt](../../crates/medulla-numeric/benches/decision_resident_scorer.receipt.json)
 binds measured source `41cce5dd08d7f27aeacf23b6f01d177dfcbf7c59` to the executable
@@ -204,7 +204,7 @@ memory remains unknown. The native result is **inconclusive**, with exit code 2;
 Neither serialized model size nor runner file length resolves this above-ceiling
 RSS result. It remains preserved in the first receipt.
 
-### R090.3 standalone corroboration (2026-10-11)
+### R090.3 standalone corroboration
 
 The [standalone receipt](../../crates/medulla-numeric/benches/decision_resident_scorer.standalone.receipt.json)
 records the exact same executable, with no rebuild, fixture changes, reduced
@@ -693,7 +693,7 @@ These are acceptance targets only, not implementation or execution evidence. Ret
 <!-- /spec-definition-patch -->
 
 <!-- spec-definition-patch:owner-batch-20261012-decision-engine -->
-## Reviewed residual acceptance targets — owner batch 2026-10-12
+## Reviewed residual acceptance targets
 
 All targets below are planned acceptance, not executed tests or receipts. Use the real producer/consumer boundary named for each row and retain existing covered behavior.
 
@@ -741,7 +741,7 @@ All targets below are planned acceptance, not executed tests or receipts. Use th
 <!-- /spec-definition-patch -->
 
 <!-- spec-definition-patch:reviewed-mapped-subsets-20261012 -->
-## Planned mapped acceptance — 2026-10-12
+## Planned mapped acceptance
 
 No test named here has run. Names describe acceptance obligations, not evidence.
 
@@ -781,7 +781,7 @@ No test named here has run. Names describe acceptance obligations, not evidence.
 <!-- /spec-definition-patch -->
 
 <!-- spec-definition-patch:final-mappings-20261012 -->
-## Final mapped planned acceptance — 2026-10-12
+## Final mapped planned acceptance
 
 No cases listed here have run. They describe required future acceptance, not evidence.
 
@@ -1048,7 +1048,7 @@ Hot-path proof for `MEDULLA-DECISION-ENGINE-R803`: `tests/decide/test_harness_co
 | `MEDULLA-DECISION-ENGINE-R805.5` | `crates/medulla-h-decide/src/decide/stat_tests/promotion_tests.rs::pointer_history_replays` |
 | `MEDULLA-DECISION-ENGINE-R805.6` | `crates/medulla-h-decide/src/decide/stat_tests/promotion_tests.rs::served_promotion_journey` |
 
-## Agent-memory substrate claims (2026-10-22)
+## Agent-memory substrate claims
 
 | Case | Requirement | Proving test |
 |---|---|---|

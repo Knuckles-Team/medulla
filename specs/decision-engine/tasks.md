@@ -1,1123 +1,908 @@
-# Delivery tasks and evidence record
-
-## Delivery waves
-
-`plan.md` "Delivery architecture" defines the waves, the stages and the architecture decisions AD-1 to AD-12. Each task below names its exit proof. [`evidence/delivery-review-20261030/review.jsonl`](evidence/delivery-review-20261030/review.jsonl) holds the per-row gap, the proposed fix, the entry point, the proof kind and the model tier.
-
-### W0 Spec coherence
-
-W0 rewrote every open row to this standard. Each row must name its stage, its served operation and its files. It must also name its rule values, knobs (R179) and refusal codes (R010.100). It names its premises, write path and served proving test.
-
-- [x] W0.1 Apply the review fixes to THIN rows.
-- [x] W0.2 Record each DECISION answer in its row. `evidence/delivery-review-20261030/w0-decisions.json` lists every call.
-- [x] W0.3 Retire DUP rows into their surviving rows.
-- [x] W0.4 File other-owner parts in ARBORA-OPS, ARBORA-A2A, SCION-* and CONN-* rows (`w0-moves.json`).
-- [x] W0.5 Write the formerly blank rows.
-- [x] W0.6 Drop version suffixes from type names.
-- [x] W0.7 Correct stale paths and dispatch references.
-- [x] W0.8 Mark model rows as verified by their root's served slice.
-- [x] W0.9 Re-check every open row against the standard.
-
-#### Cross-cutting decisions
-
-| ID | Decision |
-|---|---|
-| D-1 | Lifecycle, package and workflow roots keep the record and the decision in medulla. Served parts go to ARBORA-OPS. The harness applies the received decision. |
-| D-2 | Agent memory stays in this spec as one `MemoryRecord` (R651.1) with one consolidation path over the served `Consolidate`, `Reinforce` and `DecayMemories` routes. R145 retired into R141.100. |
-| D-3 | Benchmark clauses run in the nightly suite (R178). A `.6` row keeps its served functional proof. |
-| D-4 | R178 budgets are service-level objectives, not knobs. W6 records measured values. |
-| D-5 | Tunable values are R179 knobs. Promotion-gate knobs are `Fixed`. |
-| D-6 | Harness obligations from the cut Meristem specs are consumer notes (`w0-consumer-notes.json`), not medulla clauses. |
-
-### W1 Architecture spine (serial PRs, Opus low effort)
-
-- [x] W1.1 Add the spine rows R001.101, R010.100, R072.100, R178, R179 and MEDULLA-CONTRACT-R055.
-- [ ] W1.2 Implement the `DecisionFamily` registry. Migrate all 27 existing `QuestionKind` values. Proof: the existing `stat_tests` suite passes unchanged through the registry.
-- [ ] W1.3 Implement the refusal taxonomy, the code-uniqueness test and the `AnswerGrounding` rename. Proof: existing refusal tests assert the same stable codes.
-- [ ] W1.4 Add the served-test kit to the Rust `Harness`. It provides per-family request builders, publish fixtures and record-premise assertions. Add one served Python smoke template under `tests/decide/`.
-- [ ] W1.5 Add the reachability script (AD-6) in report mode. Commit its first report as evidence.
-- [ ] W1.6 Emit the per-stage spans and metrics (AD-8). Proof: a served test reads the span names and attributes.
-
-### W2 Reachability remediation
-
-- [ ] W2.1 Wire each orphan module in `verified-isolation.json` through its open wiring rows, as one vertical slice per root.
-- [ ] W2.2 Add a served test for each unit-only kernel row in `verified-isolation.json`, and rebind the row to it.
-- [ ] W2.3 Bind the 18 EXISTS rows to served tests.
-- [ ] W2.4 Make the reachability gate a required check.
-
-### W3–W6
-
-- [ ] W3 Deliver subsystem S1 as vertical slices.
-- [ ] W4 Deliver subsystems S2–S6, S8 and S9 as vertical slices, one root per PR. Order: S2 (R036 first), S4, S5, S3, S6, S8, S9.
-- [ ] W5 Deliver subsystem S7 under AD-10.
-- [ ] W6 Add the nightly benchmark suite, the `DecideText` fuzz target and the cross-target replay qualification.
-
-### Per-root map
-
-Counts are open leaf rows per verdict at `origin/main` 9a6ab7d80.
-
-### S1 ladder core and contract — implementation wave W3
-
-| Root | Title | Open | Verified | READY | THIN | DECISION | OWNER | DUP | EXISTS | BLANK |
-|---|---|---|---|---|---|---|---|---|---|---|
-| `R001` | Typed decision ladder with explicit resolution kinds | 2 | 1 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
-| `R014` | Composition solved as bounded constraint optimization | 1 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
-| `R019` | Decision commit re-derives and verifies before writing | 1 | 0 | 0 | 0 | 0 | 1 | 0 | 0 | 0 |
-| `R020` | Bounded, keyed exploration excluded from sensitive questions | 1 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 |
-| `R050` | Typed optional model and tool facts | 1 | 2 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
-| `R054` | Statistical contract: Decide, DecisionFit, DecisionEval | 1 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
-| `R066` | Retention split between library and graph-sourced records | 1 | 3 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
-| `R088` | Belief-as-of-t exposed as a Decide primitive over prefixes | 2 | 0 | 0 | 2 | 0 | 0 | 0 | 0 | 0 |
-| `R116` | Consumers reach Medulla only through the versioned client contract | 1 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
-| `R117` | DERIVE series functions share one incremental kernel | 1 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
-| `R121` | Typed Claim and Evidence structures back evidence class | 2 | 1 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
-| `R129` | Promoted rules cannot contradict a stored invariant | 6 | 1 | 1 | 2 | 0 | 1 | 0 | 2 | 0 |
-| `R130` | Calibrated candidate ranking with item-level tie-break | 6 | 0 | 0 | 2 | 1 | 0 | 0 | 3 | 0 |
-| `R131` | Limit guard pipeline refuses an order with a typed reason | 4 | 2 | 0 | 3 | 1 | 0 | 0 | 0 | 0 |
-| `R132` | Retrieved entries carry a trust tier and a poisoned-entry check gates premises | 4 | 2 | 0 | 4 | 0 | 0 | 0 | 0 | 0 |
-
-### S2 assembly, topology and capability designation — implementation wave W4a
-
-| Root | Title | Open | Verified | READY | THIN | DECISION | OWNER | DUP | EXISTS | BLANK |
-|---|---|---|---|---|---|---|---|---|---|---|
-| `R036` | graph.assemble() as the authority for agent composition | 6 | 1 | 0 | 6 | 0 | 0 | 0 | 0 | 0 |
-| `R046` | Swarm topology decisions via the decision ladder | 2 | 0 | 0 | 2 | 0 | 0 | 0 | 0 | 0 |
-| `R106` | AgentGraph templates carry topology facts for standard shapes | 2 | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
-| `R111` | Decide exposes the topology decision as a single typed question | 1 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
-| `R113` | Medulla commits capacity acquisition atomically with synthesis evidence | 5 | 3 | 0 | 5 | 0 | 0 | 0 | 0 | 0 |
-| `R172` | Capability designation index moved from Meristem | 18 | 0 | 12 | 6 | 0 | 0 | 0 | 0 | 0 |
-| `R650` | Capability descriptors and request-scoped designation | 5 | 1 | 0 | 5 | 0 | 0 | 0 | 0 | 0 |
-| `R614` | Capability cards, distilled proposals, topic classes and relation projection are engine enrichment | 5 | 1 | 0 | 5 | 0 | 0 | 0 | 0 | 0 |
-| `R814` | Connector prompts are system-prompt candidates that agent assembly selects | 6 | 2 | 0 | 6 | 0 | 0 | 0 | 0 | 0 |
-
-### S3 routing question families — implementation wave W4b
-
-| Root | Title | Open | Verified | READY | THIN | DECISION | OWNER | DUP | EXISTS | BLANK |
-|---|---|---|---|---|---|---|---|---|---|---|
-| `R029` | Decision-based retrieval-plan selection | 3 | 0 | 0 | 1 | 0 | 2 | 0 | 0 | 0 |
-| `R031` | Expected-value scheduling for enrichment work | 1 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 |
-| `R032` | Entity-resolution candidates with conformal guarantees | 1 | 1 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
-| `R033` | Decision-based schema mapping for SQL sources | 1 | 1 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
-| `R035` | Decision-based routing for execution configuration | 2 | 0 | 0 | 2 | 0 | 0 | 0 | 0 | 0 |
-| `R039` | Cost-aware routing using accounting data | 1 | 1 | 0 | 0 | 1 | 0 | 0 | 0 | 0 |
-| `R042` | Connector tool-choice advisory via Decide | 2 | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
-| `R043` | Write-back proposals routed through Decide | 1 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 |
-| `R044` | A2A task routing through the decision ladder | 1 | 2 | 0 | 0 | 0 | 1 | 0 | 0 | 0 |
-| `R079` | Per-unit embedding admission classifier for ingestion | 4 | 1 | 0 | 4 | 0 | 0 | 0 | 0 | 0 |
-| `R080` | Ingestion cost ladder with provenance rungs | 1 | 1 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
-| `R099` | Wikidata alignment connector supplies entity-resolution keys | 1 | 0 | 0 | 0 | 0 | 1 | 0 | 0 | 0 |
-| `R102` | Schema repair proposals pass a decided mapping and shadow-branch check | 1 | 1 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
-| `R615` | Write-back proposals queue for approval, then reach vendors only through the governed contract | 5 | 1 | 0 | 4 | 0 | 1 | 0 | 0 | 0 |
-
-### S4 harness configuration and run facts — implementation wave W4a
-
-| Root | Title | Open | Verified | READY | THIN | DECISION | OWNER | DUP | EXISTS | BLANK |
-|---|---|---|---|---|---|---|---|---|---|---|
-| `R128` | HarnessConfig decision answers how to configure an agent run | 11 | 6 | 4 | 6 | 0 | 0 | 0 | 1 | 0 |
-| `R133` | The engine stores each agent run as a trace fact and decides its runtime quotas | 7 | 0 | 1 | 6 | 0 | 0 | 0 | 0 | 0 |
-| `R137` | The engine decides the context budget and the limits of recursive parallel work | 17 | 2 | 1 | 10 | 1 | 3 | 2 | 0 | 0 |
-| `R148` | Typed command-config/mode schema and loading/replay contract | 6 | 0 | 0 | 3 | 1 | 2 | 0 | 0 | 0 |
-| `R158` | Per-run error frequency and joint model-width adjustment | 6 | 0 | 0 | 3 | 1 | 2 | 0 | 0 | 0 |
-| `R165` | Per-model empirical tool necessity measurement and decision comparison tracing | 6 | 0 | 1 | 2 | 1 | 2 | 0 | 0 | 0 |
-| `R173` | Cross-round edit concentration cap | 3 | 3 | 1 | 2 | 0 | 0 | 0 | 0 | 0 |
-| `R801` | Usage ledger and versioned price catalog | 6 | 2 | 0 | 6 | 0 | 0 | 0 | 0 | 0 |
-
-### S5 planning, tools and compiled programs — implementation wave W4c
-
-| Root | Title | Open | Verified | READY | THIN | DECISION | OWNER | DUP | EXISTS | BLANK |
-|---|---|---|---|---|---|---|---|---|---|---|
-| `R134` | The engine selects tools, decomposes tasks and plans over the skill library | 37 | 9 | 0 | 23 | 2 | 3 | 3 | 6 | 0 |
-| `R135` | A successful run compiles into a stored program keyed by task signature | 15 | 0 | 0 | 10 | 1 | 3 | 1 | 0 | 0 |
-| `R139` | Comparative-analysis plan producer | 7 | 0 | 0 | 5 | 0 | 2 | 0 | 0 | 0 |
-| `R156` | Skill document procedural compilation without separate workflow files | 6 | 0 | 0 | 6 | 0 | 0 | 0 | 0 | 0 |
-| `R159` | Tool-routing path success history and preference | 6 | 0 | 0 | 5 | 0 | 1 | 0 | 0 | 0 |
-| `R171` | Planning admission requires an architecture and wiring gap comparison | 6 | 0 | 0 | 3 | 1 | 2 | 0 | 0 | 0 |
-| `R176` | Job-scoped load set from the overlay of all connector packs | 5 | 1 | 3 | 2 | 0 | 0 | 0 | 0 | 0 |
-| `R177` | Connector usage guidance is a graph query | 5 | 1 | 4 | 1 | 0 | 0 | 0 | 0 | 0 |
-| `R750` | Bounded multi-step reasoning search with explicit budgets | 4 | 0 | 0 | 4 | 0 | 0 | 0 | 0 | 0 |
-| `R751` | Horizon curriculum, step reward decomposition and hierarchical task decomposition | 4 | 0 | 0 | 4 | 0 | 0 | 0 | 0 | 0 |
-| `R752` | Population drift, diversity-aware fan-out width and safe-autonomy ramp | 4 | 0 | 0 | 4 | 0 | 0 | 0 | 0 | 0 |
-| `R753` | Verification, adversarial and synthesis steps over parallel trajectories | 4 | 0 | 0 | 4 | 0 | 0 | 0 | 0 | 0 |
-
-### S6 memory and retrieval context — implementation wave W4d
-
-| Root | Title | Open | Verified | READY | THIN | DECISION | OWNER | DUP | EXISTS | BLANK |
-|---|---|---|---|---|---|---|---|---|---|---|
-| `R100` | Retrieval decisions join cited evidence with independent outcomes | 9 | 0 | 2 | 6 | 1 | 0 | 0 | 0 | 0 |
-| `R141` | Memory-change evaluation and rewrite admission | 4 | 0 | 0 | 2 | 0 | 0 | 0 | 0 | 2 |
-| `R144` | Indexless retrieval operations and cost budgeting | 7 | 0 | 0 | 6 | 1 | 0 | 0 | 0 | 0 |
-| `R145` | Fidelity-gated memory rewrite decision | 6 | 0 | 0 | 0 | 0 | 0 | 6 | 0 | 0 |
-| `R146` | Temporal context queries and confusion detection | 6 | 0 | 0 | 6 | 0 | 0 | 0 | 0 | 0 |
-| `R147` | Index-time distillation of language-model relevance judgments | 6 | 0 | 0 | 4 | 0 | 2 | 0 | 0 | 0 |
-| `R149` | Search-state record combining transcript, evidence, constraints and claims | 6 | 0 | 0 | 5 | 0 | 1 | 0 | 0 | 0 |
-| `R150` | Session-note capture and reuse with stale/conflict behavior | 6 | 0 | 0 | 4 | 1 | 1 | 0 | 0 | 0 |
-| `R151` | Importance-weighted penalty resisting feature loss and post-sync consolidation | 6 | 0 | 2 | 3 | 1 | 0 | 0 | 0 | 0 |
-| `R152` | KG fact rendering into natural-language text | 6 | 0 | 0 | 6 | 0 | 0 | 0 | 0 | 0 |
-| `R153` | Offline line-numbered table of contents and span-read contracts | 6 | 0 | 0 | 4 | 0 | 2 | 0 | 0 | 0 |
-| `R154` | Parameter-free memory/retention scaling and corpus growth semantics | 6 | 0 | 0 | 2 | 4 | 0 | 0 | 0 | 0 |
-| `R155` | Memory layers, episode construction and cross-session retrieval | 6 | 0 | 0 | 5 | 0 | 1 | 0 | 0 | 0 |
-| `R164` | Long-horizon branches retrieve and apply prior outcome evidence for breadth adaptation | 6 | 0 | 0 | 5 | 0 | 0 | 0 | 1 | 0 |
-| `R174` | Engine-run embedding generation swap cycle | 25 | 0 | 1 | 24 | 0 | 0 | 0 | 0 | 0 |
-| `R175` | Implicit-reasoning recommendation over temporal semantic ids | 5 | 1 | 0 | 5 | 0 | 0 | 0 | 0 | 0 |
-| `R617` | Conversation logs, project rules and memory pruning are engine-held memory | 5 | 1 | 0 | 5 | 0 | 0 | 0 | 0 | 0 |
-| `R651` | Agent-native memory lifecycle and consolidation | 8 | 0 | 0 | 7 | 1 | 0 | 0 | 0 | 0 |
-
-### S7 learning and fitted-head governance — implementation wave W5
-
-| Root | Title | Open | Verified | READY | THIN | DECISION | OWNER | DUP | EXISTS | BLANK |
-|---|---|---|---|---|---|---|---|---|---|---|
-| `R059` | Outcome aggregate with independent-evaluation join | 1 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 |
-| `R093` | Resident scorer is trained from the served synthetic-episode generator | 3 | 1 | 0 | 3 | 0 | 0 | 0 | 0 | 0 |
-| `R118` | Reputation view backs source reliability across all readers | 1 | 1 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
-| `R136` | The engine gives the round verdict and allocates models per evolution stage | 8 | 2 | 0 | 5 | 0 | 3 | 0 | 0 | 0 |
-| `R654` | Skill evolution, promotion gate and spec proposals | 6 | 0 | 0 | 3 | 1 | 1 | 1 | 0 | 0 |
-| `R800` | Reflective optimization and benchmark scoring for recursive-run policies | 5 | 1 | 0 | 5 | 0 | 0 | 0 | 0 | 0 |
-| `R804` | Evaluation sets and the program optimizer loop | 6 | 0 | 0 | 1 | 1 | 0 | 4 | 0 | 0 |
-| `R805` | Harness promotion and rollback | 5 | 1 | 0 | 4 | 0 | 1 | 0 | 0 | 0 |
-| `R810` | Program and prompt optimization job | 6 | 0 | 0 | 4 | 0 | 0 | 0 | 2 | 0 |
-| `R811` | Policy evolution capture, training and held-out evaluation receipts | 6 | 0 | 0 | 4 | 0 | 0 | 0 | 2 | 0 |
-| `R812` | Champion and challenger promotion with rollback | 6 | 0 | 0 | 1 | 0 | 0 | 5 | 0 | 0 |
-| `R813` | Trace-store scores become evaluation examples | 6 | 0 | 0 | 4 | 1 | 1 | 0 | 0 | 0 |
-
-### S8 epistemic loop: beliefs, failures, corrections, gaps — implementation wave W4e
-
-| Root | Title | Open | Verified | READY | THIN | DECISION | OWNER | DUP | EXISTS | BLANK |
-|---|---|---|---|---|---|---|---|---|---|---|
-| `R138` | The engine holds red-team records and returns a verdict for each probe | 6 | 2 | 0 | 4 | 0 | 2 | 0 | 0 | 0 |
-| `R143` | Instruction-set disclosure policy and typed event | 6 | 0 | 0 | 4 | 1 | 1 | 0 | 0 | 0 |
-| `R652` | Claim lifecycle, evidence channels and perspective arbitration | 6 | 0 | 0 | 6 | 0 | 0 | 0 | 0 | 0 |
-| `R653` | Loop engine state, gap market and improvement ledger | 6 | 0 | 0 | 6 | 0 | 0 | 0 | 0 | 0 |
-| `R700` | Belief revision recomputes confidence and explains every change | 7 | 0 | 0 | 7 | 0 | 0 | 0 | 0 | 0 |
-| `R701` | Recurring failures cluster into patterns and file capability gaps | 6 | 0 | 0 | 6 | 0 | 0 | 0 | 0 | 0 |
-| `R702` | Human corrections become rules, outcomes and evaluation cases | 6 | 0 | 0 | 6 | 0 | 0 | 0 | 0 | 0 |
-| `R703` | Skill gaps, neologisms and merge candidates are detected as proposals | 6 | 0 | 0 | 6 | 0 | 0 | 0 | 0 | 0 |
-| `R704` | Fleet events and tickets route through remediation playbooks, evaluate-only | 6 | 0 | 0 | 6 | 0 | 0 | 0 | 0 | 0 |
-| `R705` | Research orchestration is budgeted by value of information | 6 | 0 | 0 | 6 | 0 | 0 | 0 | 0 | 0 |
-| `R706` | Entity-resolution proposals use tenant-scoped embeddings and drift-monitored acceptance | 6 | 0 | 0 | 6 | 0 | 0 | 0 | 0 | 0 |
-| `R707` | Comparative-analysis ingest, matching, gap ledger and plan synthesis | 6 | 0 | 0 | 6 | 0 | 0 | 0 | 0 | 0 |
-
-### S9 lifecycle, packages and workflows (ownership review) — implementation wave W4f
-
-| Root | Title | Open | Verified | READY | THIN | DECISION | OWNER | DUP | EXISTS | BLANK |
-|---|---|---|---|---|---|---|---|---|---|---|
-| `R140` | Trajectory refinement and ranking family | 6 | 0 | 1 | 3 | 0 | 0 | 0 | 0 | 2 |
-| `R142` | Atomic-before-workflow local-model certification | 3 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 2 |
-| `R157` | Delegation quality gate and observation window | 6 | 0 | 0 | 4 | 0 | 2 | 0 | 0 | 0 |
-| `R160` | Package identity validation and publication refusal | 6 | 0 | 0 | 4 | 0 | 2 | 0 | 0 | 0 |
-| `R161` | Failed-run trace to fix and test binding with revision receipts | 6 | 0 | 1 | 2 | 0 | 3 | 0 | 0 | 0 |
-| `R162` | Workspace field shielding and declared-input projection at step boundaries | 6 | 0 | 0 | 0 | 0 | 6 | 0 | 0 | 0 |
-| `R163` | Graph-ingested papers and codebases in study intake with revision provenance | 6 | 0 | 0 | 3 | 0 | 3 | 0 | 0 | 0 |
-| `R166` | Workflow registration and lazy engine initialization | 5 | 1 | 0 | 1 | 0 | 4 | 0 | 0 | 0 |
-| `R167` | Skill upgrade compatibility and declared migration | 6 | 0 | 0 | 2 | 1 | 2 | 0 | 1 | 0 |
-| `R168` | Typed agent lifecycle model across construction, transition, persistence and serialization | 6 | 0 | 0 | 3 | 1 | 2 | 0 | 0 | 0 |
-| `R169` | Every-output checker feedback loop with durable continuation and explicit stop | 6 | 0 | 0 | 3 | 0 | 3 | 0 | 0 | 0 |
-| `R170` | Team coordination fallback and graph-discoverable team records | 6 | 0 | 0 | 2 | 0 | 4 | 0 | 0 | 0 |
-
-## Task list
-
-- [ ] D01 Audit current decision and pack public DTOs, method descriptors, generated clients and versioned digests; record exact main commit and gaps. Test A1–A2.
-- [ ] D02 Finish deterministic solver/certificate verifier and explainable abstention; compare with exhaustive oracle. Test B.
-- [ ] D03 Enforce visibility-before-features and monotone policy order for every candidate source. Test C.
-- [ ] D04 Make `DecisionCommit` re-derive, verify and CAS the catalog in one transaction; preserve idempotent retry and synthesis evidence. Test A3–A5, D.
-- [ ] D05 Verify decision-facing pack claims, reserved kinds, withdrawal and projection readiness against published component revisions. Test E.
-- [ ] D06 Complete statistical feature schema, calibration, off-policy diagnostics, outcome admission and receipt-bound head promotion. Test C–D.
-- [ ] D07 Add typed question adapters and per-question negative side-effect tests. Test D.
-- [ ] D08 Run focused tests and quality gates on exact head, then hosted baseline CI with disposable fixtures. Test H.
-- [ ] D09 Record each covered ID's `SOURCE_LANDED` main commit and `ACCEPTED` evidence independently; leave unverified IDs open.
-- [x] D10 **MEDULLA-DECISION-ENGINE-R118:** Bind posterior/reliability kernels to one independently labeled, RLS-filtered materialization. Make policy, ranking and UQL read it, and prove sparse/self-label refusals.
-- [x] D11 **MEDULLA-DECISION-ENGINE-R119:** Finish shared sealed replay, fold checkpoints, bitemporal no-look-ahead, trial-count and incumbent statistics. Exercise typed text and served job routes.
-- [x] D12 Close the component-schema and ingestion-side requirements no task above names: **MEDULLA-DECISION-ENGINE-R077–MEDULLA-DECISION-ENGINE-R081** (shared component schema bump, contract freeze reissue, embedding admission classifier, ingestion cost ladder, confidence-weighted community detection); see `requirements.md` for each ID's definition.
-
-- [x] D13 **MEDULLA-DECISION-ENGINE-R126, MEDULLA-DECISION-ENGINE-R127:** Add the coverage and guardrail read queries beside `AgentAssemble`, generate their client methods, and run test D2. The Meristem planner (MERISTEM-CONTROL-R027) consumes them through its capability-search and guardrail ports. Split per the sizing rule: R126 into D13a/D13b below; R127 similarly when it is picked up.
-
-- [x] D13a **MEDULLA-DECISION-ENGINE-R126.1 (producer):** Add `derivation::capability_coverage` (`crates/medulla-decision-outcome-types/src/decision/derivation.rs`). It joins the `required_capabilities` closure with each library candidate’s `coverage_chain`. That chain carries the weakest-premise evidence class. The function also joins each A2A card’s self-declared capability list as an unconditional claim. No server surface. Test: `crates/medulla-decision-outcome-types/src/decision/derivation/tests.rs::capability_coverage_joins_derived_library_coverage_with_self_declared_a2a_coverage`.
-
-- [x] D13b **MEDULLA-DECISION-ENGINE-R126.2 (consumer):** Add the served read-only query beside `AgentAssemble` that resolves a tenant's visible library candidates and registered A2A cards and calls `MEDULLA-DECISION-ENGINE-R126.1`'s `capability_coverage`; generate its client method; run test D2 (visibility filtering, absence of invisible components).
-- [x] D13 **MEDULLA-DECISION-ENGINE-R126, MEDULLA-DECISION-ENGINE-R127:** Add the coverage and guardrail read queries beside `AgentAssemble`, generate their client methods, and run test D2. The Meristem planner (MERISTEM-CONTROL-R027) consumes them through its capability-search and guardrail ports. Split per the sizing rule: R126 into D13a/D13b, R127 into D13c/D13d, below.
-
-- [x] D13c **MEDULLA-DECISION-ENGINE-R127.1 (producer):** Add `decision::guardrail::entailed_guardrails` (`crates/medulla-agent-types/src/agent_guardrail.rs`). It decides which `GuardrailRule`s apply to a task IRI by task-class subsumption (reusing `agent_ontology::broader_chain`, the same primitive `coverage_chain` uses for capability coverage). No server surface. Test: `crates/medulla-agent-types/src/agent_guardrail.rs::tests`.
-
-- [x] D13d **MEDULLA-DECISION-ENGINE-R127.2 (consumer):** Design and add a `GuardrailRule` storage/publish path, then the served read-only query beside `AgentAssemble` that reads a tenant's published rules and calls `MEDULLA-DECISION-ENGINE-R127.1`'s `entailed_guardrails`; generate its client method; run the fixture (entailed rules for a subclassed task, no rule for an unrelated task, stable premises after restart).
-- [x] D15a **MEDULLA-DECISION-ENGINE-R045.1:** Add the typed tool-subset request body and the greedy covering-set selection (`crates/medulla-decision-types/src/decision/statistical/tool_subset.rs`), with unit tests proving minimality, coverage and the two refusal reasons. No server wiring yet.
-- [x] D15b **MEDULLA-DECISION-ENGINE-R045.2:** Wire the R045.1 selection into a dedicated `Decide` question kind reading tool candidates from the agent library, with a served test proving the returned subset is minimal, covers every required capability and stays within budget.
-
-- [x] D13 **MEDULLA-DECISION-ENGINE-R126, MEDULLA-DECISION-ENGINE-R127:** Add the coverage and guardrail read queries beside `AgentAssemble`, generate their client methods, and run test D2. The Meristem planner (MERISTEM-CONTROL-R027) consumes them through its capability-search and guardrail ports.
-
-- [x] D14 **MEDULLA-DECISION-ENGINE-R017:** Add a regression test for the existing `FORBIDDEN_COMPONENT_KIND` refusal (`validate_publish` in `crates/medulla-agent-types/src/agent_component.rs`), exercised through both the bare validator and the public `AgentComponentOp::Publish.validate()` surface, so the previously untested bypass path is covered. Test: `crates/medulla-agent-types/src/agent_component.rs::tests::a_decision_record_cannot_be_published_directly`.
-
-- [x] D15 **MEDULLA-DECISION-ENGINE-R030 (first slice):** Add the typed `IngestionLane` registry (fast/medium/slow) and `IngestionLaneRequest::check()` refusal for an unregistered lane id (`crates/medulla-decision-types/src/decision/statistical/ingestion_lane.rs`). `QuestionKind::IngestionLane` candidates still route through the ordinary generic `Decide`/declared-candidate executor (no kind-specific scoring path).
-
-- [x] D15b **MEDULLA-DECISION-ENGINE-R030 (wiring):** Wire the registry into the real `Decide` dispatch chokepoint: `candidates::declared_candidates` (the one function every `CandidateSource::Declared` request passes through, called from `candidates::read_candidates`, called from `stat_decide::decide_blocking`, which `handlers::decide::handle_decide` runs -- the handler `Method::Decide` dispatches to) now refuses an unregistered lane id before any feature schema is resolved, gated on `QuestionKind::IngestionLane`. Dispatch-level regression test through the served path: `crates/medulla-h-decide/src/decide/stat_tests/consumer_tests.rs::an_unregistered_ingestion_lane_is_refused_through_decide`. Remaining for this requirement: a real ingestion call site (e.g. `crates/medulla-server-router/src/dispatch/router/source_ingest.rs`) that builds registry options for a request and calls `Decide`, plus an integration test selecting the expected lane for a representative input under a published feature schema/head (the requirement's acceptance test; needs ranking, not just refusal).
-
-- [x] D16 **MEDULLA-DECISION-ENGINE-R031 (first slice):** Add typed `EnrichmentCandidate` and `EnrichmentScheduleRequest` (`crates/medulla-decision-types/src/decision/statistical/enrichment_schedule.rs`). The request uses Q32 expected-value and cost values. Its `check()` refuses a negative cost or duplicate work ID. `as_declared_options()` converts a checked request into `CandidateSource::Declared` options for `QuestionKind::EnrichmentSchedule`. No scheduling-specific comparison path exists. Remaining: add a real enrichment-scheduler call site that invokes `Decide` and prefers higher net value. Add an integration test that selects the higher-value candidate under representative cost scenarios, as required for acceptance.
-
-- [x] D16 **MEDULLA-DECISION-ENGINE-R029 (first slice):** Add the typed `RetrievalPlanKind` registry (leanrag/reciprocal-rank-fusion/direct-sparql) and `RetrievalPlanRequest::check()` refusal for an unregistered plan id (`crates/medulla-decision-types/src/decision/statistical/retrieval_plan.rs`). `QuestionKind::RetrievalPlan` candidates still route through the ordinary generic `Decide`/declared-candidate executor (no kind-specific comparison path).
-
-- [x] D16b **MEDULLA-DECISION-ENGINE-R029 (wiring):** Wire the registry into the real `Decide` dispatch chokepoint: `candidates::declared_candidates` now refuses an option id that claims the registry's reserved `retrieval-plan:` namespace (`RetrievalPlanKind::claims_registry_namespace`) but does not name a registered plan, gated on `QuestionKind::RetrievalPlan`, before any feature schema is resolved. The check is namespace-scoped rather than exhaustive like R030's: `QuestionKind::RetrievalPlan` is reused across the existing decide-consumer test suite (`declared_abstention`'s "plan-deep"/"plan-hyde" fixtures, reused by `reputation_tests.rs`/`retrieval_tests.rs`/`evaluator_tests.rs`) for ordinary declared-option mechanics unrelated to plan selection; gating on the whole option-id space would have refused all of them. Dispatch-level regression test: `crates/medulla-h-decide/src/decide/stat_tests/consumer_tests.rs::an_unregistered_retrieval_plan_is_refused_through_decide`. Remaining for this requirement: a real retrieval-dispatch call site (selecting among `RetrievalPathTemplate`s, `retrieval.rs`) that builds registry options for a request and calls `Decide`, plus an integration test selecting the expected plan for a representative request shape under a published feature schema/head (the requirement's acceptance test; needs ranking, not just refusal).
-
-- [x] D17 **MEDULLA-DECISION-ENGINE-R106:** Add `every_standard_shape_has_a_conforming_template` to `crates/medulla-h-admin/src/graph_schema/swarm_topology_tests.rs`, proving a minimal template for each of the six standard shapes (single-agent, pipeline, fan-out/join, supervisor-to-workers, critique-loop, council) validates against the `core:swarm-topology-shapes@1` SHACL shapes landed for MEDULLA-DECISION-ENGINE-R105. No new Rust topology-contract type was needed; the gap was test coverage of the existing vocabulary and shapes, not missing fact-carrying capacity.
-
-- [x] D18 **MEDULLA-DECISION-ENGINE-R075:** Add `two_entries_minting_the_same_component_id_are_rejected` (`crates/medulla-h-admin/src/admin/connector_pack/tests/content_model.rs`), proving the already-implemented `PackViolationCode::DuplicateComponentId` check (`validate_identity` in `import/validation.rs`) refuses two pack entries of the same kind and name but different URIs, before any state change. `PackEntryKind` structurally excludes `DecisionRecord`/`DecisionHead`/`DecisionPolicy` already, because no variant exists to import. No code change was needed for the reserved-kind half of this requirement, only the duplicate-id test.
-
-- [x] D19 **MEDULLA-DECISION-ENGINE-R059:** Add `only_independent_outcomes_join_and_a_pool_below_min_support_is_omitted` (`crates/medulla-decision-stats/src/decision/aggregate.rs::tests`), the first test of `aggregate()`/`aggregate_log()` itself. Proves a self-reported evaluation is refused rather than counted as a trial, an independent one is counted, and a pool below `min_support` is omitted entirely from the output rather than reported with low support. The independent-evaluation label rule (`label_use`) was already tested via its two consumers (`stat_reputation.rs`, `stat_slate_attribution.rs`); this closes the gap in the aggregate function itself.
-
-- [x] D16 **MEDULLA-DECISION-ENGINE-R061.1:** Add the shared `test-support` fixture `tool_entry_with_cost_latency` (`crates/medulla-decision-types/src/decision_fixtures/decision.rs`), with a unit test proving its declared cost/latency survive `CandidateFacts::from_entry`. **MEDULLA-DECISION-ENGINE-R061:** build on this fixture with a cross-path test asserting the exact-solver path and `CandidateView::from_component` read the same declared values from the same entry.
-
-- [x] D16 **MEDULLA-DECISION-ENGINE-R078 split (2026-10-09):** `feature_profile()` in `crates/medulla-capabilities/src/contract.rs` never named the `decide` feature, so a reissued contract freeze would silently omit it. `Package_surface_is_complete_identical_and_receipt_bound` would fail under `--all-features` against the committed artifacts, which an authorized generation ceremony must resolve. Split into **MEDULLA-DECISION-ENGINE-R078.1** (typed `MissingFrozenFeature`/`require_feature_frozen` refusal, plus the `decide` entry, producer) and **MEDULLA-DECISION-ENGINE-R078.2** (reissue `contract/FREEZE-RECEIPT.json` and `contract/receipt.json`, consumer, blocked on R078.1).
-
-- [x] D16 **MEDULLA-DECISION-ENGINE-R079.1 (producer slice of R079):** Add the typed `ContentClass` taxonomy (prose/document/comment eligible; generated/lockfile/vendored/minified excluded) and its pure `admits()` gate (`crates/medulla-decision-types/src/decision/ingestion_admission.rs`). No real ingestion call site, embedding client, cheaper-index skip, entropy/hash dedup, size bound, SQL-column cardinality rule, or retrieval-telemetry feedback is wired yet -- those remain open under `MEDULLA-DECISION-ENGINE-R079` as later `.2`/`.3`+ slices.
-
-- [x] D16 **MEDULLA-DECISION-ENGINE-R080.1 (first slice of R080):** Add the typed `ProvenanceRung` six-level enum and the pure `resolve_rung` overwrite-protection rule (`crates/medulla-decision-outcome-types/src/decision/ingestion_ladder.rs`). Remaining for `MEDULLA-DECISION-ENGINE-R080`: the real per-rung extractors (AST walking, symbol resolution, statistical/community derivation, classical ML/NER, embeddings, an LLM call) and an ingestion call site that tags each derived fact through `resolve_rung`.
-
-- [x] D16 **MEDULLA-DECISION-ENGINE-R085.1:** Add the typed `derive_legal_options` filter and `CandidateOption` (`crates/medulla-decision-stats/src/decision/legal_option_filter.rs`), proving the type-level contract that a caller-supplied candidate reaches the derived set only if an admissibility predicate accepts it. The predicate here is a fixture closure; the real SHACL-shape / SPARQL-shortlist-backed predicate is `MEDULLA-DECISION-ENGINE-R085.2` (not in scope for this slice). Test: `crates/medulla-decision-stats/src/decision/legal_option_filter.rs::tests::a_caller_supplied_option_that_fails_the_admissibility_predicate_is_excluded`.
-- [x] D16b **MEDULLA-DECISION-ENGINE-R031 (wiring):** Wire the shape into the real `Decide` dispatch chokepoint: `candidates::declared_candidates` now refuses a `QuestionKind::EnrichmentSchedule` candidate carrying a negative `enrichment.cost_q32` fact, before any feature schema is resolved. Dispatch-level regression test through the served path: `crates/medulla-h-decide/src/decide/stat_tests/consumer_tests.rs::a_negative_enrichment_cost_is_refused_through_decide`. Remaining for this requirement: a real enrichment-scheduler call site that calls `Decide` over these options and prefers higher net value, plus an integration test confirming the higher-value candidate wins under representative cost scenarios (ranking, not just refusal -- this requirement's acceptance test).
-
-- [x] D17 **MEDULLA-DECISION-ENGINE-R035 (first slice):** Add the typed `ExecutionRoutingCategory` enum naming all 7 routing categories the requirement enumerates (model/prompt/skill/tool/harness mode/account mode/sandbox configuration -- the last 3 had no type anywhere) and `ExecutionRoutingRequest::check()` refusal for an empty or duplicate candidate option id (`crates/medulla-decision-types/src/decision/statistical/execution_routing.rs`). Routing candidates still route through the ordinary generic `Decide`/declared-candidate executor. Remaining for this requirement: a contract test confirming `graph.decide()` returns a valid typed choice and evidence class for each of the 7 categories (the requirement's acceptance test).
-
-- [x] D17b **MEDULLA-DECISION-ENGINE-R035 (closed on the contract-test reading):** Checked `spec.md`/`plan.md`/`requirements.md`/`architecture.md` for a routing-category field on the `Route` question or request: none exists -- all 7 categories share one `QuestionKind::Route`, so there is nothing a chokepoint could gate on the way `IngestionLane`/`EnrichmentSchedule` can (adding such a field would be a wire-protocol change, not a wiring fix, so it is out of scope here). Per the acceptance criterion's own wording ("a contract test confirms graph.decide() returns a valid typed choice and evidence class for each supported routing category"), added that contract test: `crates/medulla-h-decide/src/decide/stat_tests/consumer_tests.rs::graph_decide_answers_every_execution_routing_category` calls the real `handle_decide` once per category with representative declared candidates and asserts a typed `Explored` outcome with `EvidenceClass::Claim`. `ExecutionRoutingCategory` (D17) is kept as the typed name for the 7 categories; no further requirement-specific product code is planned for R035.
-
-- [x] D18 **MEDULLA-DECISION-ENGINE-R015.1 (producer slice):** Add the typed, closed `StatisticalHeadKind::parse` (`crates/medulla-decision-types/src/decision/rapid_r015.rs`), refusing any head-kind name outside the two fitted heads the ladder actually uses -- in particular a generative-model label. Test: `crates/medulla-decision-types/src/decision/rapid_r015.rs::tests::refuses_a_generative_model_name`.
-
-- [ ] D18 **MEDULLA-DECISION-ENGINE-R015.2:** Remaining scope from the R015 split (2026-10-09): wiring the ladder's head registry to construct heads only through this parse.
-
-- [x] D18 **MEDULLA-DECISION-ENGINE-R044.1 (producer slice):** Add the typed `A2ARoutingResolution::new` refusal (`crates/medulla-decision-outcome-types/src/decision/rapid_r044.rs`) over the existing `ResolutionKind`/`EvidenceClass`, refusing an empty graph id and an abstention claiming proof-grade evidence. Remaining: the A2A task-submission entry point that constructs one of these per inbound task. Test: `crates/medulla-decision-outcome-types/src/decision/rapid_r044.rs::tests::refuses_an_abstention_claiming_proof_grade_evidence`.
-
-- [ ] D18 **MEDULLA-DECISION-ENGINE-R044.2:** Remaining scope from the R044 split (2026-10-09): the A2A task-submission entry point that constructs one of these per inbound task and an integration test over the served path.
-
-- [x] D18 **MEDULLA-DECISION-ENGINE-R056.1 (producer slice):** Add the typed `StatisticalSolverCertificate::verify` refusal on a stale model digest (`crates/medulla-decision-outcome-types/src/decision/rapid_r056.rs`), giving the statistical path the same certificate-verification shape as the core assembly solver. Remaining: routing an actual statistical-path solve through the exact 0-1 solver and this certificate. Test: `crates/medulla-decision-outcome-types/src/decision/rapid_r056.rs::tests::refuses_a_stale_model_digest`.
-
-- [ ] D18 **MEDULLA-DECISION-ENGINE-R056.2:** Remaining scope from the R056 split (2026-10-09): routing an actual statistical-path solve through the exact 0-1 solver and this certificate shape.
-
-- [x] D18 **MEDULLA-DECISION-ENGINE-R075.1 (producer slice):** Add `check_unique_component_ids` (`crates/medulla-catalog-types/src/connector_pack/rapid_r075.rs`), the duplicate-component-id rejection the existing `PackViolationCode::DuplicateComponentId` code names but no test previously exercised. `PackEntryKind` already structurally excludes decision-owned kinds (no `DecisionRecord`/`DecisionHead`/`DecisionPolicy` variant exists), so that half of the requirement needed no new code. Remaining: wire the check into the real pack-import entry point. Test: `crates/medulla-catalog-types/src/connector_pack/rapid_r075.rs::tests::refuses_a_duplicate_component_id`.
-
-- [x] D18 **MEDULLA-DECISION-ENGINE-R075.2:** Wire `medulla_types::connector_pack::rapid_r075::check_unique_component_ids` into the real pack-import entry point, `validate_index` (`crates/medulla-h-admin/src/admin/connector_pack/import/validation.rs`), via a new `check_duplicate_component_ids` call computing every entry's actual minted component id. Test: `crates/medulla-h-admin/src/admin/connector_pack/import/validation.rs::duplicate_component_id_wiring_tests::the_real_entry_point_calls_the_shared_duplicate_id_check`.
-
-- [x] D18 **MEDULLA-DECISION-ENGINE-R083.1 (producer slice):** Add the typed `OptionFacts::encode` (`crates/medulla-decision-stats/src/decision/rapid_r083.rs`), bounded by the declared `MAX_OPTION_CAPABILITIES` cardinality rather than by any text-token budget. Remaining: wire this encoding into the real `FeatureMatrix` computation in `decision::features`. Test: `crates/medulla-decision-stats/src/decision/rapid_r083.rs::tests::scores_an_option_whose_capability_text_would_exceed_a_token_budget`.
-
-- [ ] D18 **MEDULLA-DECISION-ENGINE-R083.2:** Remaining scope from the R083 split (2026-10-09): wiring this encoding into the real `FeatureMatrix` computation in `decision::features`.
-
-- [x] D18 **MEDULLA-DECISION-ENGINE-R078.2:** Skipped this lane (2026-10-09) -- it requires the authorized contract-generation ceremony to regenerate and commit `contract/FREEZE-RECEIPT.json`/`contract/receipt.json` under `--all-features`, which needs a cargo build this lane does not run. R078.1 (its blocker) is confirmed `LANDED` on `origin/main` (commit `1527a97f211825f02feaa1f9475c494a822918f5`), so R078.2 is now unblocked for whichever lane next runs that ceremony.
-
-- [ ] D20 **MEDULLA-DECISION-ENGINE-R001.1 (reopened 2026-10-09, audit gap):** Constraint and Entailment resolution kinds are actually constructed. `graph.assemble()` and `stat_decide()` must construct `ResolutionKind::Constraint` and `ResolutionKind::Entailment` for representative cases. Today assemble only emits Optimization/Abstention and stat_decide only Statistical/Abstention, so the two declared kinds are never produced. Test: `crates/medulla-types/src/decision/rapid_r001.rs::tests::assemble_and_stat_decide_each_construct_a_constraint_and_an_entailment_resolution`.
-- [ ] D21 **MEDULLA-DECISION-ENGINE-R012.1 (reopened 2026-10-09, audit gap):** Slot-level crediting across questions sharing an assembly template. Multiple questions can share an assembly template. Outcomes must receive slot-level credit across that template; today only whole- or sub-slate crediting exists. Test: `crates/medulla-types/src/decision/rapid_r012.rs::tests::credits_outcomes_at_the_slot_level_across_a_shared_assembly_template`.
-- [ ] D22 **MEDULLA-DECISION-ENGINE-R026.1 (reopened 2026-10-09, audit gap):** Calibration-weighting half of audit sampling is tested in-crate. The audit-flag sampling half of inverse-probability-weighted audit sampling has a bound test, but the calibration-weighting half (`pub(crate) audit_weight`/targets) has no in-crate `#[cfg(test)]` test confirming calibration correctly applies the inverse-probability weight. Test: `crates/medulla-numeric/src/decision/audit.rs::tests::calibration_applies_the_pub_crate_inverse_probability_audit_weight`.
-- [ ] D23 **MEDULLA-DECISION-ENGINE-R032.1 (reopened 2026-10-09, audit gap):** QuestionKind::ResolveEntity path with isotonic calibration and a conformal guarantee. No `QuestionKind::ResolveEntity` path exists. The path must wire the binary entity-matching head. It needs isotonic calibration and a conformal guarantee validated against a gold label set. Test: `crates/medulla-h-decide/src/decide/stat_tests/consumer_tests.rs::resolve_entity_question_applies_isotonic_calibration_and_reports_a_conformal_guarantee`.
-- [ ] D24 **MEDULLA-DECISION-ENGINE-R033.1 (reopened 2026-10-09, audit gap):** QuestionKind::SchemaMapping path from a SQL column to an ontology property. No `QuestionKind::SchemaMapping` path exists routing a SQL-column-to-ontology-property mapping decision through the typed decision mechanism; today such mappings are unverified direct assignments. Test: `crates/medulla-h-decide/src/decide/stat_tests/consumer_tests.rs::schema_mapping_question_maps_a_sql_column_to_the_expected_ontology_property_with_evidence_class`.
-- [ ] D25 **MEDULLA-DECISION-ENGINE-R038.1 (reopened 2026-10-09, audit gap):** Typed ToolInvocation / pre-tool risk concept exists. No risk/pretool/ToolInvocation concept exists in the engine. Add the typed representation a caller can score before dispatching a tool invocation, advisory only. Test: `crates/medulla-types/src/decision/rapid_r038.rs::tests::returns_an_advisory_risk_score_for_a_candidate_tool_invocation_without_gating_execution`.
-- [ ] D26 **MEDULLA-DECISION-ENGINE-R039.1 (reopened 2026-10-09, audit gap):** Routing prefers the lower-cost legal option when accounting data distinguishes candidates. Only abstain-on-missing-cost exists today. Routing has no preference for the lower-cost legal option when usage/cost accounting data is actually present and distinguishes candidates. Test: `crates/medulla-h-decide/src/decide/stat_tests/consumer_tests.rs::routing_prefers_the_lower_cost_legal_option_when_accounting_data_distinguishes_candidates`.
-- [ ] D27 **MEDULLA-DECISION-ENGINE-R041.1 (reopened 2026-10-09, audit gap):** Connector-event evaluate-only triage path with sampled audit logging. No connector-event evaluate-only triage path or sampled-audit mechanism exists. Inbound connector events must be classified via the decision ladder in evaluate-only mode with a sampled fraction logged for audit. Test: `crates/medulla-h-decide/src/decide/stat_tests/consumer_tests.rs::connector_event_triage_is_evaluate_only_and_logs_a_sampled_fraction_for_audit`.
-- [ ] D28 **MEDULLA-DECISION-ENGINE-R054.1 (reopened 2026-10-09, audit gap):** TTL/SHACL generation artifact for the Decide/DecisionFit/DecisionEval contract exists. No TTL/SHACL generation artifact exists for the Decide, DecisionFit, and DecisionEval contract and DecisionRecord v2 schema. Test: `contract/tests/decide_contract_generation.rs::ttl_and_shacl_artifacts_are_generated_and_match_the_decide_fit_eval_contract`.
-- D29 **MEDULLA-DECISION-ENGINE-R072.1:** Capture solver node count and optional checked optimality gap through `crates/medulla-decision-policy/tests/solve/instrumentation.rs::assemble_emits_solver_node_count_and_optimality_gap_metrics`. The exact production telemetry helper ran successfully (3 tests); the native solver-entry capture test has not been run.
-- [ ] D30 **MEDULLA-DECISION-ENGINE-R084.1 (reopened 2026-10-09, audit gap):** ECE/coverage measurement across option sets of varying size. No expected-calibration-error/coverage measurement exists across option sets of varying size. Fixtures are fixed at 3 options, so the declared coverage-holds-without-a-size-specific-parameter claim is untested. Test: `tests/decision/calibration_coverage.rs::measures_ece_and_empirical_coverage_across_option_sets_of_varying_size`.
-- [ ] D31 **MEDULLA-DECISION-ENGINE-R088.1 (reopened 2026-10-09, audit gap):** Belief-as-of-t uses the bitemporal AS OF mechanism, not a bespoke per-feature recompute. Belief-as-of-t is currently a bespoke per-feature recompute. It does not go through the required bitemporal AS OF query mechanism over temporal slices. Test: `crates/medulla-types/src/decision/rapid_r088.rs::tests::belief_as_of_successive_prefixes_matches_direct_bitemporal_as_of_queries`.
-- [ ] D32 **MEDULLA-DECISION-ENGINE-R099.1 (reopened 2026-10-09, audit gap):** Wikidata alignment connector and schema_mappings SHACL validation exist. No Wikidata connector, schema_mappings data, or SHACL test exists supplying the Region/Country/Taxon/Food/Nutrient entity-resolution keys MEDULLA-DECISION-ENGINE-R032 consumes. Test: `tests/connectors/wikidata_alignment.rs::schema_mappings_validate_against_world_model_shacl_shapes_and_resolve_expected_entities`.
-- [ ] D33 **MEDULLA-DECISION-ENGINE-R109.1 (reopened 2026-10-09, audit gap):** Topology admissibility entailment test varies the composed schema digest. Entailment lives in `topology_schema.rs::entail`, not the named `admissible.rs`, and no test varies the composed schema digest to show the derived TopologyAdmissible facts and eliminated options actually change. Test: `crates/medulla-compute/src/assemble/topology/admissible.rs::tests::varying_the_composed_schema_digest_changes_derived_topology_admissibility`.
-- [x] D34 **MEDULLA-DECISION-ENGINE-R110.1:** Add the independent bounded topology oracle in `crates/medulla-compute/src/assemble/tests/topology_oracle.rs`. The test covers 66 deterministic fixtures and counts twenty actual solver variables. Native execution remains pending.
-- [ ] D35 **MEDULLA-DECISION-ENGINE-R111.1 (reopened 2026-10-09, audit gap):** Topology selection is exposed as its own standalone typed Decide question. No dispatch-level standalone typed Topology Decide question exists; topology selection is still only reachable inside `graph.assemble()`. Test: `crates/medulla-h-decide/src/decide/stat_tests/consumer_tests.rs::a_standalone_topology_decide_question_returns_a_typed_decision_record`.
-- [ ] D36 **MEDULLA-DECISION-ENGINE-R117.1 (reopened 2026-10-09, audit gap):** UQL/SQL/PromQL golden-equivalence and 4-metric DecisionEval report test. No UQL/SQL/PromQL golden-equivalence test or 4-metric DecisionEval report test exists for the DERIVE series functions. Test: `crates/medulla-tsdb/tests/derive_golden.rs::uql_sql_promql_outputs_agree_on_golden_reference_and_decisioneval_reports_all_four_feature_power_metrics`.
-- [ ] D37 **MEDULLA-DECISION-ENGINE-R118.1 (reopened 2026-10-09, audit gap):** Reputation-view test exists outside the unrelated privacy regression fixture. No real test of the reputation materialization exists. Only incidental fixture text inside an unrelated privacy regression test currently touches this path. Test: `crates/medulla-numeric/src/decision/reputation.rs::tests::sparse_pool_abstains_and_authority_policy_retrieval_candidate_and_uql_source_reliability_agree`.
-- [ ] D38 **MEDULLA-DECISION-ENGINE-R126.2.1 (reopened 2026-10-09, audit gap):** [VISION-Q PRIORITY] Capability-coverage query is served as an RPC with a generated client. `capability_coverage_query` exists but there is no served RPC beside `AgentAssemble` and no generated client method, so no consumer can actually call it. Test: `tests/contract/capability_coverage_served.rs::capability_coverage_is_served_beside_agent_assemble_with_a_generated_client_method`.
-- [ ] D39 **MEDULLA-DECISION-ENGINE-R127.2.2:** Qualify the served `GuardrailEntailment` dispatcher against published rule heads, tenant boundaries, lifecycle filtering and restart-stable premises. The typed handler and dispatcher fixtures exist; native facade execution remains pending.
-
-## Evidence format
-
-For each stable ID, record: `ID | sequence | delivery | acceptance | main SHA | tests/workflow | reviewed date | notes`. Until a row has an exact commit and passing required tests, use `WAITING / NOT_RUN`, `IN_PROGRESS / PARTIAL`, or `SOURCE_LANDED / PARTIAL` as observed. Do not infer acceptance from a sequence label. `RETIRED` requires the superseding contract and removal test. Keep evidence records in this repository alongside the spec so external contributors can audit them.
-
-## Initial known evidence and unresolved qualification
-
-Existing source modules and tests provide foundations, but this spec does not assign new `ACCEPTED` states from historical branch notes. The first implementation task must inspect current published main and fill the evidence table. The decision ladder may already be source landed in part; served, hosted, replay and security proofs remain separate checks.
-
-## Decomposition children (tracked)
-
-- [x] **MEDULLA-DECISION-ENGINE-R015:** No generative model weights inside the decision engine (rollup)
-- [x] **MEDULLA-DECISION-ENGINE-R044:** A2A task routing through the decision ladder (rollup)
-- [x] **MEDULLA-DECISION-ENGINE-R045:** Smallest covering tool subset within a context budget
-- [x] **MEDULLA-DECISION-ENGINE-R056:** Statistical-path release of the exact solver (rollup)
-- [x] **MEDULLA-DECISION-ENGINE-R083:** Options encode structured facts, not option-label text (rollup)
-- [x] **MEDULLA-DECISION-ENGINE-R085:** Legal option sets are derived from the ontology, never received as-is
-- [ ] **MEDULLA-DECISION-ENGINE-R090:** Resident native decision-scorer head in medulla-numeric
-- [x] **MEDULLA-DECISION-ENGINE-R090.1:** Typed resident-scorer budget (producer-first split of R090)
-- [ ] **MEDULLA-DECISION-ENGINE-R093:** Resident scorer is trained from the served synthetic-episode generator
-- [x] **MEDULLA-DECISION-ENGINE-R093.1:** Typed served-path provenance and ground-truth verification
-- [ ] **MEDULLA-DECISION-ENGINE-R093.2:** Complete served corpus export and training acceptance.
-- [ ] **MEDULLA-DECISION-ENGINE-R093.2.1:** Collect seeded results through the existing served client.
-- [ ] **MEDULLA-DECISION-ENGINE-R093.2.2:** Bind served labels to collected results and refuse invalid provenance.
-- [ ] **MEDULLA-DECISION-ENGINE-R093.2.3:** Verify training consumes real served episodes.
-- [ ] **MEDULLA-DECISION-ENGINE-R102:** Schema repair proposals pass a decided mapping and shadow-branch check
-- [x] **MEDULLA-DECISION-ENGINE-R102.1:** Typed schema-repair activation gate (producer-first split of R102)
-- [ ] **MEDULLA-DECISION-ENGINE-R113:** Medulla commits capacity acquisition atomically with synthesis evidence
-- [x] **MEDULLA-DECISION-ENGINE-R113.1:** Typed atomic capacity/synthesis-evidence commit outcome (producer-first split of R113)
-- [ ] **MEDULLA-DECISION-ENGINE-R113.2:** Atomic commit transaction (planned; not run)
-- [ ] **MEDULLA-DECISION-ENGINE-R113.2.1:** Refuse an unsupported transaction boundary (handler fixture added; native execution pending)
-- [ ] **MEDULLA-DECISION-ENGINE-R113.2.2:** Accepted transaction fixture (planned; not run)
-- [ ] **MEDULLA-DECISION-ENGINE-R113.2.3:** Denied transaction fixture (planned; not run)
-- [ ] **MEDULLA-DECISION-ENGINE-R113.2.4:** Transaction recovery fixture (planned; not run)
-- [ ] **MEDULLA-DECISION-ENGINE-R113.3:** One retry after capacity denial (planned; not run)
-- [x] **MEDULLA-DECISION-ENGINE-R113.3.1:** Consume the typed allowance once; direct native module tests pass. Durable and handler enforcement remain open.
-- [ ] **MEDULLA-DECISION-ENGINE-R113.3.2:** Durable consumption fixture (planned; not run)
-- [ ] **MEDULLA-DECISION-ENGINE-R113.3.3:** Handler retry fixture (planned; not run)
-- [ ] **MEDULLA-DECISION-ENGINE-R116:** Consumers reach Medulla only through the versioned client contract
-- [x] **MEDULLA-DECISION-ENGINE-R116.1:** A typed gate admits only the published client-contract call path
-- [ ] **MEDULLA-DECISION-ENGINE-R116.2:** Every generated client method is wired through the contract-only gate
-
-- [x] MEDULLA-DECISION-ENGINE-R090.1: Run six native budget tests and bind exact boundary/refusal coverage.
-- [ ] MEDULLA-DECISION-ENGINE-R090: Retain the separate compiled-scorer benchmark obligation.
-
-- [ ] MEDULLA-DECISION-ENGINE-R090.2: Verify compiled in-process scoring without external runtimes.
-- [ ] MEDULLA-DECISION-ENGINE-R090.3: Measure parameter count, memory, binary footprint, and p99 CPU latency.
-
-- [x] MEDULLA-DECISION-ENGINE-R074: Check component-kind closure documentation with positive and adversarial source fixtures.
-- [x] MEDULLA-DECISION-ENGINE-R123: Scan canonical solve DTO declarations and reject planted duplicates.
-
-## Remaining integration acceptance
-
-- [ ] **MEDULLA-DECISION-ENGINE-R079.2:** Embedding admission at the ingestion boundary; producer tests do not close this integration requirement.
-- [ ] **MEDULLA-DECISION-ENGINE-R079.3:** Duplicate and size admission; producer tests do not close this integration requirement.
-- [ ] **MEDULLA-DECISION-ENGINE-R079.4:** SQL column admission; producer tests do not close this integration requirement.
-- [ ] **MEDULLA-DECISION-ENGINE-R079.5:** Retrieval feedback admission; producer tests do not close this integration requirement.
-- [ ] **MEDULLA-DECISION-ENGINE-R080.2:** Served enrichment ladder qualification; producer tests do not close this integration requirement.
-- [ ] **MEDULLA-DECISION-ENGINE-R102.2:** Served shadow repair qualification; producer tests do not close this integration requirement.
-
-- [x] **MEDULLA-DECISION-ENGINE-R121.1:** Add assembly and replay regression for typed premise classes and misleading labels.
-- [ ] **MEDULLA-DECISION-ENGINE-R121.2:** Carry graph provenance through statistical answers, immutable input identity, and replay.
-
-- [x] **MEDULLA-DECISION-ENGINE-R066.1:** Exclude library records from statistical retention; add the stored-byte acceptance fixture.
-- [x] **MEDULLA-DECISION-ENGINE-R066.2:** Add exact graph-input window acceptance through the real retention implementation.
-- [x] **MEDULLA-DECISION-ENGINE-R066.3:** Assert repeated evaluate-only calls leave both committed-record stores empty.
-- [ ] **MEDULLA-DECISION-ENGINE-R066.4:** Define and implement graph-summary expiry without breaking digest and replay contracts.
-
-- [x] **MEDULLA-DECISION-ENGINE-R122:** Exclude synthetic decisions from outcome aggregates and extend the served pipeline fixture. Native execution remains pending.
-
-- [ ] **MEDULLA-DECISION-ENGINE-R128:** HarnessConfig decision answers how to configure an agent run. One new `Decide` question kind, `harness_config`, returns the context policy, plan scaffold and action space for a model profile, a task class, a usable context budget and a request priority. It reuses the decision ladder and the `ToolSubset` selection. It is not a planner. Children `.1` through `.15` split it by producer, behaviour, wiring and proof. R128 is LANDED when all children are. Test: A served test submits one `harness_config` question and asserts the committed record names all three parts with premises.
-- [ ] **MEDULLA-DECISION-ENGINE-R128.1:** The question kind exists in the enum. `QuestionKind` at `crates/medulla-decision-types/src/decision/statistical.rs:57` must gain the variant `HarnessConfig`, serialised as `harness_config`, with a doc comment that cites R128 and states the question is evaluate-only. Test: `crates/medulla-decision-types/src/decision/statistical.rs::tests::harness_config_kind_serialises_snake_case`.
-- [ ] **MEDULLA-DECISION-ENGINE-R128.2:** The request carries typed params. A new module `crates/medulla-decision-types/src/decision/statistical/harness_config.rs` must define `HarnessConfigRequestBody` with `model_profile_ref` (iri), `task_class` (iri), `usable_context_budget_tokens` (int), `priority` and an optional `expected_trajectory_tokens` (int). Each param name must match a `DecideRequest.params` entry, as `tool_subset.rs:29` does. Test: `crates/medulla-decision-types/src/decision/statistical/harness_config.rs::tests::body_requires_every_input`.
-- [ ] **MEDULLA-DECISION-ENGINE-R128.3:** The answer type states each part and its abstention. `harness_config.rs` must define `HarnessConfigAnswer` with `context_policy` (`none`, `elide`, `elide_then_summarize`), `soft_threshold`, `hard_threshold` and `recent_window_fraction` (Q32 fractions), `plan_scaffold` (`on`, `off`), `action_space` (`tool_set`, `shell_only`) and `tool_subset`. Each part must be `Decided` or `Abstained { missing_fact, conservative_default }`. Test: `crates/medulla-decision-types/src/decision/statistical/harness_config.rs::tests::answer_round_trips_through_serde`.
-- [ ] **MEDULLA-DECISION-ENGINE-R128.4:** Named defaults hold the thresholds and are replaceable. `harness_config.rs` must define `HarnessDefaults` with `soft_threshold` 0.6, `hard_threshold` 0.85 and `recent_window_fraction` 0.3. The handler must read a tenant policy override through `resolve_policy` before it uses a default. Each value used must appear as a premise. Test: `crates/medulla-decision-types/src/decision/statistical/harness_config.rs::tests::policy_override_replaces_default`.
-- [x] **MEDULLA-DECISION-ENGINE-R128.5:** `decide_context_policy` computes unsigned Q32 pressure without clamping values above one. It selects `none` only when an explicit hard task bound fits the profile window. Estimates alone retain `elide_then_summarize`. Missing windows or estimates abstain with that conservative default. Zero windows, contradictory bounds and invalid thresholds refuse. The result preserves supplied `HarnessDefaults`; tenant-policy resolution and served premises remain open. Native acceptance: five new context-policy tests plus ten existing harness tests passed. Test: `crates/medulla-decision-types/src/decision/statistical/harness_config/context_policy/tests.rs::context_policy_none_only_when_overflow_impossible`.
-- [x] **MEDULLA-DECISION-ENGINE-R128.6:** `decide_plan_scaffold` selects `on` for measured early stopping (accuracy) and over-verification (cost). It selects `off` only for balanced stopping with a measured no-gain ablation. Missing required facts abstain with conservative `on`; malformed evaluation references are refused. The pure result preserves the reason and exact evaluation references. Bound native tests: `harness_config.rs::tests::plan_scaffold_rules`, `plan_scaffold_missing_evidence_abstains`, and `plan_scaffold_refuses_invalid_evaluation_references`. This delivers the pure rule only; served R128 profile lookup, dispatch, committed premises and generated-client acceptance remain open.
-- [ ] **MEDULLA-DECISION-ENGINE-R128.7:** Action space follows shell proficiency and task class. A pure function `decide_action_space` must return `shell_only` only when `shellProficiency` is `high` and the task class is `shellCentric`. Otherwise it must return `tool_set`. A missing `shellProficiency` or `shellCentric` must abstain with default `tool_set`. Test: `crates/medulla-decision-types/src/decision/statistical/harness_config.rs::tests::shell_only_needs_both_facts`.
-- [ ] **MEDULLA-DECISION-ENGINE-R128.8:** The handler reads model and task facts. A new handler `src/server/handlers/decide/stat_harness_config.rs` must read the model profile by `model_profile_ref` through `ctx.store` (`AgentLibraryStore`, the store `read_candidates` at `candidates.rs:415` uses). It must read `shellCentric` from the task class. An unknown profile reference must refuse with `StatisticalErrorCode::ParameterInvalid`. Test: `crates/medulla-server-served-tests/src/split_tests/medulla_h_decide_harness_config_tests.rs::unknown_profile_is_refused`.
-- [ ] **MEDULLA-DECISION-ENGINE-R128.9:** The action-space part reuses the tool-subset selection. `stat_harness_config.rs` must call `tool_subset::smallest_covering_subset` (`tool_subset.rs:59`) for a `tool_set` result. It must pass the declared candidates and `usable_context_budget_tokens` as the budget. A `ToolSubsetRefusal` must become an abstention on `tool_subset`. A `shell_only` result must carry an empty subset. Test: `crates/medulla-server-served-tests/src/split_tests/medulla_h_decide_harness_config_tests.rs::tool_set_reuses_covering_subset`.
-- [ ] **MEDULLA-DECISION-ENGINE-R128.10:** The dispatch hook routes the new kind. `stat_decide.rs:134` must match `harness_config_outcome(request)` beside `tool_subset_outcome(request)` and seal the result through `seal` (`stat_decide.rs:372`). `Method::Decide` at `crates/medulla-server-router/src/dispatch/router/decision_plane.rs:95` must need no new method variant. Test: `crates/medulla-server-served-tests/src/split_tests/medulla_h_decide_harness_config_tests.rs::decide_routes_harness_config`.
-- [ ] **MEDULLA-DECISION-ENGINE-R128.11:** Premises and why-not explain every part. The handler must emit one premise per rule input and per default used. It must emit one why-not entry for each rejected option of each part. A part answered by a conservative default must emit a `Claim`-class premise naming the missing fact. Test: `crates/medulla-server-served-tests/src/split_tests/medulla_h_decide_harness_config_tests.rs::premises_and_why_not_cover_each_part`.
-- [ ] **MEDULLA-DECISION-ENGINE-R128.12:** The outcome encodes decided and abstained parts. The handler must seal a `StatisticalOutcome::Advisory` (`outcome.rs:101`) with one `ScoredOption` per decided part, using the option id `<part>:<value>`. When every part abstains, it must seal `StatisticalOutcome::Abstained` (`outcome.rs:107`). The record must read `ResolutionKind::Statistical` or `Abstention` accordingly. Test: `crates/medulla-server-served-tests/src/split_tests/medulla_h_decide_harness_config_tests.rs::all_parts_abstained_seals_abstention`.
-- [ ] **MEDULLA-DECISION-ENGINE-R128.13:** The committed answer is accepted by the commit path. `handle_decision_commit` must accept and re-derive a sealed `harness_config` record without a kind-specific branch. A test must commit the record and read it back with identical premises. Test: `crates/medulla-server-served-tests/src/split_tests/medulla_h_decide_harness_config_tests.rs::harness_config_record_commits`.
-- [ ] **MEDULLA-DECISION-ENGINE-R128.13.1:** Run both typed digest/roundtrip tests and the native injected-evidence commit-refusal test on the exact source.
-- [ ] **MEDULLA-DECISION-ENGINE-R128.13.1.1:** Run both typed digest/roundtrip tests and the native injected-evidence commit-refusal test on the exact source. Native dispatch remains pending.
-- [ ] **MEDULLA-DECISION-ENGINE-R128.13.1.2:** Implement the planned evidence-codec and refusal benchmarks and retain measured receipts.
-- [ ] **MEDULLA-DECISION-ENGINE-R128.13.2:** Implement and run complete answer re-derivation, changed-premise and forged-answer refusals, and independent committed-record readback.
-- [ ] **MEDULLA-DECISION-ENGINE-R128.13.2.1:** Implement and run complete answer re-derivation, changed-premise and forged-answer refusals, and independent committed-record readback.
-- [ ] **MEDULLA-DECISION-ENGINE-R128.13.2.2:** Implement the planned replay/readback benchmark and retain exact-source measurements.
-- [ ] **MEDULLA-DECISION-ENGINE-R128.14:** The generated contract and clients carry the kind. `gen_contract` must be rerun so `contract/schemas/method.request.json` and the `result.*.json` schemas list `harness_config` beside `tool_subset`. The Python DTO in `crates/medulla-capabilities/src/contract/python/dto.rs` and the JS and Go codecs under `clients/` must regenerate. The `gen_contract --check` step at `.github/workflows/release.yml:210` must pass. Test: `crates/medulla-capabilities/tests/contract_generated.rs::question_kind_lists_harness_config`.
-- [ ] **MEDULLA-DECISION-ENGINE-R128.15:** End-to-end proof uses the served path. A served test must publish a model profile with measured facts, submit `Method::Decide` for `harness_config` over the wire, and assert the answer, premises and the unchanged tool-subset result. A second case must submit a profile without `shellProficiency` and assert the `tool_set` abstention. Test: `tests/decide/test_harness_config_served.py::test_harness_config_end_to_end`.
-
-- [x] **MEDULLA-DECISION-ENGINE-R127.2.3:** Qualify the generated guardrail client against a compiled server and a real published rule set. Native dispatcher acceptance and the hosted real-engine generated-client fixture pass. The fixture exercises the generated sender, typed decoder and request/response schemas against published rules. Cases include subclass/exact matching and foreign-tenant refusal. Exact source and run evidence: `evidence/gr1080-native-20261011/guardrail-results.json`.
-
-- [x] **MEDULLA-DECISION-ENGINE-R073.4:** Qualify committed receipt binding and typed owner replay with native execution.
-  The named receipt fixture and adjacent served storage fixtures pass; exact source and results are in `evidence/gr1080-native-20261011/final-native-results.json`.
-
-- [x] **MEDULLA-DECISION-ENGINE-R073.3:** Add production fresh-open, five-table empty-catalog, reopen, and genuine-predecessor no-write proofs in `agent_library/open_tests.rs`.
-- [x] **MEDULLA-DECISION-ENGINE-R073.5:** Bind existing transitive and diamond tests. Add signed withdrawal Search, historical Content, and new-pin refusal proof in `tests/withdrawal.rs`.
-- [x] Run native R073.3/R073.5 acceptance tests. Production-open, withdrawal, transitive/diamond and related pin cases pass; exact source and results are in `evidence/gr1080-native-20261011/final-native-results.json`.
-- [ ] **MEDULLA-DECISION-ENGINE-R129:** Promoted rules cannot contradict a stored invariant (rollup). The engine must check every rule promoted from repeated human overrides against stored invariants.
-- [ ] **MEDULLA-DECISION-ENGINE-R129.1:** Locate and wire the attach point. The implementer must find where a proposal from R034 becomes an active rule and record `file:line` in `plan.md`.
-- [x] **MEDULLA-DECISION-ENGINE-R129.2:** Typed `RulePromotionVerdict`. Add `RulePromotionVerdict { Promotable, RejectedInvariant { invariant_iri } }` to `crates/medulla-agent-types/src/agent_guardrail.rs`.
-- [ ] **MEDULLA-DECISION-ENGINE-R129.3:** Pure invariant check. Add `check_rule_against_invariants(rule, invariants)` to `guardrail.rs`.
-- [ ] **MEDULLA-DECISION-ENGINE-R129.4:** Consensus gives no override. The check must run before any confidence threshold.
-- [ ] **MEDULLA-DECISION-ENGINE-R129.5:** Wire the check into promotion. The promotion path must call `check_rule_against_invariants` and persist a `RejectedInvariant` record for audit.
-- [ ] **MEDULLA-DECISION-ENGINE-R129.6:** End-to-end proof over the wire. A served test must submit five overrides of a rule that violates a stored invariant and assert rejection.
-- [ ] **MEDULLA-DECISION-ENGINE-R130:** Calibrated candidate ranking with item-level tie-break.
-- [ ] **MEDULLA-DECISION-ENGINE-R130.1:** Model. Add `RankedCandidate{id, calibrated_score, code, tie_break_score, evidence_class}` and `TieBreakPolicy` in `crates/medulla-epistemic/src/ranking.rs`. Closed values of `TieBreakPolicy` are `ItemScore` and `StableId`.
-- [ ] **MEDULLA-DECISION-ENGINE-R130.2:** Behavior. Extend `rank` so the calibrated score orders candidates before sequence likelihood. Candidates with equal codes must be ordered by `tie_break_score`. Each rule is a named replaceable default: `calibrated_first` and `item_level_tie_break`.
-- [ ] **MEDULLA-DECISION-ENGINE-R130.3:** Wiring. The behavior attaches at `crates/medulla-epistemic/src/ranking.rs:116` (`rank`). Today only the re-export at `crates/medulla-epistemic/src/lib.rs:97` and unit tests reference it. This row creates the call site in the statistical `Decide` path (`crates/medulla-compute/src/assemble/conclude.rs`).
-- [ ] **MEDULLA-DECISION-ENGINE-R130.4:** Refusal. When a candidate lacks a calibrated score, the engine must abstain for that option with reason `uncalibrated_candidate`. It must not substitute a likelihood.
-- [ ] **MEDULLA-DECISION-ENGINE-R130.5:** Evidence. Each ranked option must carry `calibrated_score`, `tie_break_applied` and `tie_break_policy` as decision premises in the decision record. The record must state the weakest evidence class of the premises.
-- [ ] **MEDULLA-DECISION-ENGINE-R130.6:** Hot-path proof. The entry point is the served `Decide` wire method with a ranking question. The test `tests/decide/test_ranked_decide_served.py::test_tied_codes_resolve_by_item_score` submits tied candidates. It passes through the wired `rank` call and observes the item-score order and the premises in the returned record.
-- [ ] **MEDULLA-DECISION-ENGINE-R131:** Limit guard pipeline refuses an order with a typed reason.
-- [ ] **MEDULLA-DECISION-ENGINE-R131.1:** Model. Add `LimitRule{id, metric, bound, scope}` and `LimitBreach{rule_id, observed, bound, signal_iri}` in `crates/medulla-decision-outcome-types/src/decision/limit_guard.rs`. Closed `metric` values are `position_size`, `drawdown` and `sector_concentration`.
-- [ ] **MEDULLA-DECISION-ENGINE-R131.2:** Behavior. Add `check_limits(action, rules)` returning every breach in rule order. Each metric check is a named replaceable default, and a request may only tighten a bound.
-- [ ] **MEDULLA-DECISION-ENGINE-R131.3:** Wiring. The check attaches at `crates/medulla-agent-types/src/agent_guardrail.rs:201` (`guardrail_entailment_query`), which already reads the stored rule set. A second call site is created in the `Decide` chokepoint `crates/medulla-compute/src/assemble/conclude.rs`, before an option becomes `Advisory`.
-- [ ] **MEDULLA-DECISION-ENGINE-R131.4:** Refusal. A breach must return `ResolutionKind::Abstention` with reason `limit_breach` naming the rule id. The engine must not perform the action.
-- [ ] **MEDULLA-DECISION-ENGINE-R131.5:** Evidence. The engine must store each breach as an observation node. An edge links it to the affected signal. The observation carries `rule_id`, `observed` and `bound`.
-- [ ] **MEDULLA-DECISION-ENGINE-R131.6:** Hot-path proof. The entry point is the served `Decide` wire method. The test `tests/decide/test_limit_guard_served.py::test_oversize_order_refused_and_recorded` submits an oversize order. It passes through the wired check and observes the typed refusal and the stored observation node.
-- [ ] **MEDULLA-DECISION-ENGINE-R132:** Retrieved entries carry a trust tier and a poisoned-entry check gates premises.
-- [ ] **MEDULLA-DECISION-ENGINE-R132.1:** Model. Add `TrustTier` (closed values `verified`, `attested`, `unverified`) and `EntryTrust{tier, source_digest, observed_at}` in new `crates/medulla-decision-outcome-types/src/decision/entry_trust.rs`. `PremiseClass` at `crates/medulla-decision-types/src/decision/record/premise.rs:17` grades premise strength, not retrieved-entry origin. `Provenance` at `crates/medulla-modality/src/provenance.rs:22` holds a confidence only.
-- [ ] **MEDULLA-DECISION-ENGINE-R132.2:** Behavior. Add `admit_entries(entries, policy)` in `entry_trust.rs`. An entry of a lower tier must not replace a higher-tier entry on the same subject and fact key. Each rule is a named replaceable default: `tier_order` and `poison_check`. `poison_check` refuses an entry whose source digest is absent from the source record. It also refuses an unverified entry that contradicts a verified fact. The monotone rule at `crates/medulla-decision-outcome-types/src/decision/ingestion_ladder.rs:46` (`resolve_rung`) is the pattern to reuse.
-- [ ] **MEDULLA-DECISION-ENGINE-R132.3:** Wiring. `admit_entries` attaches in `crates/medulla-compute/src/assemble/conclude.rs:180`, where premises are built from the required capabilities, before any retrieved entry becomes a premise. The caller is `decide_one` at `conclude.rs:93`, reached from `conclude.rs:87` and `template.rs:74`, and served by `handle_decide` at `crates/medulla-h-decide/src/decide/stat_decide.rs:48`. No production caller of `resolve_rung` exists today. The trust check creates the call site at `conclude.rs:180`.
-- [ ] **MEDULLA-DECISION-ENGINE-R132.4:** Refusal. A refused entry must not become a premise. When a required premise has only refused entries, the engine must abstain. It must use `AbstainReason::PoisonedEntry` naming the entry id and the failed check. `AbstainReason` is exported from `crates/medulla-decision-types/src/decision/record/outcome.rs`.
-- [ ] **MEDULLA-DECISION-ENGINE-R132.5:** Evidence. `PremiseRef` at `crates/medulla-decision-types/src/decision/record/premise.rs:89` gains an optional `trust_tier`. The engine must record each refused or overridden entry in the decision record with its tier and check name. Replay must reproduce the same record.
-- [ ] **MEDULLA-DECISION-ENGINE-R132.6:** Hot-path proof. The entry point is the served `Decide` wire method. The test submits a decision whose candidate set holds a verified fact and an unverified contradicting entry. It passes through the wired check at `conclude.rs:180` and observes that the verified fact is the premise and the unverified entry is recorded as refused.
-- [ ] **MEDULLA-DECISION-ENGINE-R133:** The engine stores each agent run as a trace fact and decides its runtime quotas.
-- [ ] **MEDULLA-DECISION-ENGINE-R133.1:** Model. Add `RunTraceRecord{run_id, task_signature, steps, outcome, started_at}` and `RuntimeQuota{wall_time_ms, memory_bytes, process_count, grace_ms}` in new `crates/medulla-types/src/decision/run_governance.rs`. Add `QuestionKind::RuntimeQuota` at `crates/medulla-decision-types/src/decision/statistical.rs:58`.
-- [ ] **MEDULLA-DECISION-ENGINE-R133.2:** Behavior. Add the pure function `decide_runtime_quota(task_class, policy, request)` in `run_governance.rs`. For each field resolve an effective default D and hard tenant ceiling C with D <= C. Named replaceable `QuotaDefaults` are `wall_time_ms` 600000, `memory_bytes` 2147483648, `process_count` 32 and `grace_ms` 10000. First refuse any requested R > C; otherwise use min(D, R), or D when omitted. Increases above D through C are ignored and reductions below D tighten the quota.
-- [ ] **MEDULLA-DECISION-ENGINE-R133.3:** Wiring. The decision attaches in `handle_decide` at `crates/medulla-h-decide/src/decide/stat_decide.rs:134`, where `tool_subset_outcome` is matched; a new `runtime_quota_outcome` is matched beside it. The caller is `Method::Decide` through `handle_decide` at `stat_decide.rs:48`. `Decide` remains read-only. A separate served `CommitWorkItemResult` reuses `lower_terminal_outcome_extensions` in `crates/medulla-server-api/src/batch_compile/terminal_outcome.rs:22` and `apply_commit_work_item_result_row` in `crates/medulla-work-store/src/redb_store/work_item/commit.rs:211`; trace receipts and their produced link may materialize only after the successful fenced terminal CAS in the same transaction. `RunTraceRecord` adaptation and produced-link materialization are new work; `outcome_bundle.rs:56` is a participant-domain constant, not a write call.
-- [ ] **MEDULLA-DECISION-ENGINE-R133.4:** Refusal. A quota request above any hard tenant ceiling must refuse with `StatisticalErrorCode::ParameterInvalid` before clamping or missing-task fallback. A missing task class must abstain with the effective defaults D (resolved under C) and a `Claim`-class premise naming the missing fact.
-- [ ] **MEDULLA-DECISION-ENGINE-R133.5:** Evidence. The terminal commit must adapt `RunTraceRecord` into a `RunTrace` receipt and materialize its execution-unit `produced` link after the fenced terminal CAS in `crates/medulla-work-store/src/redb_store/work_item/commit.rs:343`. Reuse the pure node/edge descriptors from `project` at `crates/medulla-durable/src/project.rs:68`; adaptation and link materialization are new, and `project` performs no writes. Each decided quota value must appear as a premise, and each default used must be named.
-- [ ] **MEDULLA-DECISION-ENGINE-R133.6:** Hot-path proof. The test `tests/decide/test_runtime_quota_served.py::test_quota_and_trace_end_to_end` first queries quotas through served `Decide` with a `RuntimeQuota` question, then commits the run summary through served `CommitWorkItemResult` with the terminal outcome extension. It inspects quota premises and queries the persisted execution-unit-to-trace link after the fenced terminal commit.
-- [ ] **MEDULLA-DECISION-ENGINE-R134:** The engine selects tools, decomposes tasks and plans over the skill library.
-- [ ] **MEDULLA-DECISION-ENGINE-R134.1:** Model. Add `Subtask{id, text, independent, depends_on}`, `AggregationOp` (closed values `concat`, `majority_vote`, `reduce`, `first_valid`), `SkillStep{subtask_id, skill_id, depends_on}` and `TaskPlan` in new `crates/medulla-decision-types/src/decision/task_plan.rs`. Add `QuestionKind::ToolRelevance` and `QuestionKind::TaskPlan` at `crates/medulla-decision-types/src/decision/statistical.rs:58`.
-- [ ] **MEDULLA-DECISION-ENGINE-R134.2:** Behavior. Add `rank_tools_by_relevance(query, catalog, required_capabilities, context_budget_tokens, policy)` in `task_plan.rs`. First filter by `relevance_floor`, rank descending by relevance with tool-id ties, and retain `top_k` candidates. Then pass those candidates and the explicit required capabilities and token budget to the existing R045 `smallest_covering_subset` at `crates/medulla-decision-types/src/decision/statistical/tool_subset.rs:59`. Its selection remains greedy uncovered-capability gain per token, then lower token cost and tool id; relevance is a prefilter, not the subset objective. Preserve its coverage/budget refusals after filtering. The defaults are `top_k` 12 and `relevance_floor` 0.2. The existing code to move is `agent_utilities/capabilities/fleet_tool_search.py:54`.
-- [ ] **MEDULLA-DECISION-ENGINE-R134.3:** Behavior. Add `decompose_task(task, facts, policy)` in `task_plan.rs`. It returns subtasks, routes each to a specialist, sets `independent` per subtask and chooses an `AggregationOp`. `TopologyRequirements.subtasks` at `topology.rs:110` receives the independent count. Each rule is a named replaceable default: `independence_test` and `default_aggregation`. The existing code to move is `agent_utilities/graph/planning/__init__.py:165`.
-- [ ] **MEDULLA-DECISION-ENGINE-R134.4:** Behavior. Add `plan_over_skills(query, skill_index, policy)` in `task_plan.rs`. It decomposes the query into atomic subtasks. It retrieves one skill per subtask from skill metadata only. It merges or splits subtasks when the retrieved skills show a different granularity. It orders steps by `depends_on`. The existing code to move is `agent_utilities/decide/consumers/task_planner.py:211`.
-- [ ] **MEDULLA-DECISION-ENGINE-R134.5:** Wiring. The decisions attach in `handle_decide` at `crates/medulla-h-decide/src/decide/stat_decide.rs:134`, where `tool_subset_outcome` is matched; `tool_relevance_outcome` and `task_plan_outcome` are matched beside it. The topology question is already posed at `crates/medulla-compute/src/assemble/topology.rs:54` (`pose`), called from `conclude.rs:99`. The skill index is read through `AgentLibraryStore` at `crates/medulla-h-decide/src/decide/candidates.rs:415`. The match arms create the call site.
-- [ ] **MEDULLA-DECISION-ENGINE-R134.6:** Refusal. A subtask with no skill above `relevance_floor` must abstain with `no_skill_for_subtask` naming the subtask id. A dependency cycle must refuse with `plan_cycle`. An empty catalog must abstain with `empty_catalog`.
-- [ ] **MEDULLA-DECISION-ENGINE-R134.7:** Evidence. The engine must emit one premise per subtask holding the chosen skill, its relevance score and the independence flag. It must emit the aggregation operator and the default used as premises. The record must state the weakest evidence class.
-- [ ] **MEDULLA-DECISION-ENGINE-R134.8:** Hot-path proof. The entry point is the served `Decide` wire method with a `TaskPlan` question. The test `tests/decide/test_task_plan_served.py::test_plan_end_to_end` publishes a skill index and submits a query. It passes through the wired dispatch and observes the ordered steps, the flags and the aggregation operator.
-- [ ] **MEDULLA-DECISION-ENGINE-R135:** A successful run compiles into a stored program keyed by task signature.
-- [ ] **MEDULLA-DECISION-ENGINE-R135.1:** Model. Add `CompiledProgram{task_signature, steps, parameters, source_run_id}`, `ProgramStep{state, action, next}` and `MAX_PROGRAM_STEPS` (40) in new `crates/medulla-types/src/decision/program_store.rs`. Add `QuestionKind::ProgramLookup` at `crates/medulla-decision-types/src/decision/statistical.rs:58`.
-- [ ] **MEDULLA-DECISION-ENGINE-R135.2:** Behavior. Add `compile_program(trace, policy)` in `program_store.rs`. It replaces each literal in the trace with a named parameter and keeps the step order. The named replaceable defaults are `max_steps` 40 and `literal_to_parameter`. `lookup_program(store, task_signature)` returns the stored program or none. The existing code to move is `agent_utilities/observability/replay_engine.py:48`.
-- [ ] **MEDULLA-DECISION-ENGINE-R135.3:** Wiring. The lookup attaches in `handle_decide` at `crates/medulla-h-decide/src/decide/stat_decide.rs:134`, where `program_lookup_outcome` is matched beside `tool_subset_outcome`. Programs are stored through `AgentLibraryStore`, the store `read_candidates` uses at `crates/medulla-h-decide/src/decide/candidates.rs:415`. The commit path is `handle_decision_commit`. The match arm and the store write create the call site.
-- [ ] **MEDULLA-DECISION-ENGINE-R135.4:** Refusal. A run that did not succeed must refuse with `run_not_successful`. A trace that compiles to more than 40 steps must refuse with `program_too_long`. A lookup with no stored program must abstain with `no_program`.
-- [ ] **MEDULLA-DECISION-ENGINE-R135.5:** Evidence. The engine must emit premises for the task signature, the step count, the parameter count and the source run id. A stored program must link to its source `RunTrace` node from `MEDULLA-DECISION-ENGINE-R133`.
-- [ ] **MEDULLA-DECISION-ENGINE-R135.6:** Hot-path proof. The entry point is the served `Decide` wire method with a `ProgramLookup` question. The test `tests/decide/test_program_store_served.py::test_compile_then_lookup` commits a successful trace, then looks up its signature. It passes through the wired dispatch and observes the stored program with parameters.
-- [ ] **MEDULLA-DECISION-ENGINE-R136:** The engine gives the round verdict and allocates models per evolution stage.
-- [ ] **MEDULLA-DECISION-ENGINE-R136.1:** Model. Add `PredictionDeclaration{round, fixes, regressions}`, `RoundVerdict` (closed values `verified`, `falsified`, `unverified`) and `EvolutionDefaults{rounds, flip_fraction}` in new `crates/medulla-decision-outcome-types/src/decision/evolution_round.rs`. Add `StageAllocation{stage, model_ref, impact}` and `RunBudget{max_cost, max_stronger_stages}`. Add `QuestionKind::RoundVerdict` and `QuestionKind::StageAllocation` at `statistical.rs:58`.
-- [ ] **MEDULLA-DECISION-ENGINE-R136.2:** Behavior. Add `decide_round_verdict(prediction, outcomes, defaults)` in `evolution_round.rs`. Evaluate declared-direction and opposite-direction fractions separately against `flip_fraction`. Return `verified` only when the declared-direction threshold alone is met; return `falsified` only when the opposite-direction threshold alone is met. If both thresholds or neither threshold is met, return `unverified`. The defaults are `rounds` 1 and `flip_fraction` 0.5.
-- [ ] **MEDULLA-DECISION-ENGINE-R136.3:** Behavior. Add `allocate_stage_models(stages, models, budget)` in `evolution_round.rs`. It gives a stronger model only to the highest-impact stages while the cost stays within `max_cost`. Every other stage gets the cheapest adequate model. The named replaceable default is `impact_first`. The existing code to move is `agent_utilities/decide/consumers/routing.py:58`.
-- [ ] **MEDULLA-DECISION-ENGINE-R136.4:** Wiring. Both decisions attach in `handle_decide` at `crates/medulla-h-decide/src/decide/stat_decide.rs:134`, where `tool_subset_outcome` is matched; `round_verdict_outcome` and `stage_allocation_outcome` are matched beside it. The caller is `Method::Decide` through `handle_decide` at `stat_decide.rs:48`. Model facts come from the model profile read at `candidates.rs:415`. The match arms create the call site.
-- [ ] **MEDULLA-DECISION-ENGINE-R136.5:** Refusal. A prediction with no declared tasks must abstain with `no_prediction`. A budget below the cheapest allocation must refuse with `budget_below_minimum` naming the shortfall. A missing impact estimate must abstain to the cheapest adequate model.
-- [ ] **MEDULLA-DECISION-ENGINE-R136.6:** Evidence. The engine must emit premises for the flip fraction used. It must also emit the counts of tasks that flipped each way and the verdict. For an allocation it must emit the budget, the cost and each stage's impact. Defaults used must be named.
-- [ ] **MEDULLA-DECISION-ENGINE-R136.7:** Hot-path proof. The entry point is the served `Decide` wire method with a `RoundVerdict` question, then a `StageAllocation` question. The test `tests/decide/test_evolution_round_served.py::test_verdict_and_allocation` submits a prediction with outcomes and a stage list. It passes through the wired dispatch and observes the verdict and the allocation within the budget.
-- [ ] **MEDULLA-DECISION-ENGINE-R137:** The engine decides the context budget and the limits of recursive parallel work.
-- [ ] **MEDULLA-DECISION-ENGINE-R137.1:** Model. Add `ParallelMapLimits{max_depth, max_items, max_cost, max_model_calls}`, `WindowBudget{window_tokens, over_window_fraction}` and `OverWindowPlan{exceeds, chunks, depth}` in new `crates/medulla-decision-outcome-types/src/decision/context_budget.rs`. Add `QuestionKind::ContextBudget` at `statistical.rs:58`. `ContextPolicy` at `crates/medulla-decision-types/src/decision/statistical/harness_config.rs:81` is reused.
-- [ ] **MEDULLA-DECISION-ENGINE-R137.2:** Behavior. Add `decide_over_window(prompt_tokens, budget, limits)` in `context_budget.rs`. The prompt exceeds the window when `prompt_tokens` passes `over_window_fraction` of `window_tokens`. The plan then splits the prompt into chunks, depth by depth, until each chunk fits or `max_depth` or `max_cost` is reached. The named replaceable defaults are `over_window_fraction` 0.8, `max_items` 1000, `max_depth` 3 and `max_model_calls` 1000. The existing code to move is `agent_utilities/rlm/config.py:60` and `agent_utilities/knowledge_graph/retrieval/context_knapsack.py:422`.
-- [ ] **MEDULLA-DECISION-ENGINE-R137.3:** Wiring. The decision attaches in `handle_decide` at `crates/medulla-h-decide/src/decide/stat_decide.rs:134`, where `tool_subset_outcome` is matched; `context_budget_outcome` is matched beside it. The context policy comes from the `harness_config` decision of `MEDULLA-DECISION-ENGINE-R128.5`. The window comes from the model profile read at `candidates.rs:415`. The match arm creates the call site.
-- [ ] **MEDULLA-DECISION-ENGINE-R137.4:** Refusal. A prompt that cannot fit within `max_depth` and `max_cost` must refuse with `budget_exhausted` naming the limit reached. A work list above `max_items` must refuse with `too_many_items`. A missing window size must abstain with the policy default.
-- [ ] **MEDULLA-DECISION-ENGINE-R137.5:** Evidence. The engine must emit premises for the window, the prompt size, the fraction used and each limit applied. Each default used must be named. The record must state the weakest evidence class.
-- [ ] **MEDULLA-DECISION-ENGINE-R137.6:** Hot-path proof. The entry point is the served `Decide` wire method with a `ContextBudget` question. The test `tests/decide/test_context_budget_served.py::test_over_window_plan_end_to_end` publishes a model profile and submits an over-window prompt size. It passes through the wired dispatch and observes the plan and the limits handed to the harness.
-- [ ] **MEDULLA-DECISION-ENGINE-R138:** The engine holds red-team records and returns a verdict for each probe.
-- [ ] **MEDULLA-DECISION-ENGINE-R138.1:** Model. Add `RedTeamAttack{id, category, goal}`, `RedTeamTransform{id, kind}`, `RedTeamScorer{id, category, threshold}` and `ProbeVerdict` (closed values `resisted`, `compromised`, `inconclusive`) in new `crates/medulla-decision-outcome-types/src/decision/red_team.rs`. Add `QuestionKind::ProbeVerdict` at `statistical.rs:58`.
-- [ ] **MEDULLA-DECISION-ENGINE-R138.2:** Behavior. Add `select_scorers(attack, scorers, policy)` and `decide_probe_verdict(results, policy)` in `red_team.rs`. A scorer is selected when its category matches the attack category. The verdict is `compromised` when any selected scorer passes its threshold, `resisted` when all fail it, otherwise `inconclusive`. The named replaceable defaults are `category_match` and `any_scorer_compromises`. The existing code to move is `agent_utilities/harness/reliability_scorers.py:1`.
-- [ ] **MEDULLA-DECISION-ENGINE-R138.3:** Wiring. The decision attaches in `handle_decide` at `crates/medulla-h-decide/src/decide/stat_decide.rs:134`, where `tool_subset_outcome` is matched; `probe_verdict_outcome` is matched beside it. The records are stored and read through `AgentLibraryStore`, the store `read_candidates` uses at `crates/medulla-h-decide/src/decide/candidates.rs:415`. The match arm and the record store create the call site.
-- [ ] **MEDULLA-DECISION-ENGINE-R138.4:** Refusal. A probe whose attack category has no scorer must abstain with `no_scorer_for_category` naming the category. A scorer result with a missing score must count as `inconclusive`, not as `resisted`.
-- [ ] **MEDULLA-DECISION-ENGINE-R138.5:** Evidence. The engine must emit one premise per selected scorer holding its score and threshold. It must emit the attack and transform ids. The record must state the weakest evidence class.
-- [ ] **MEDULLA-DECISION-ENGINE-R138.6:** Hot-path proof. The entry point is the served `Decide` wire method with a `ProbeVerdict` question. The test `tests/decide/test_red_team_served.py::test_probe_verdict_end_to_end` publishes attack, transform and scorer records and submits probe results. It passes through the wired dispatch and observes the selected scorers and the verdict.
-
-## R137 certified package producer
-
-Deliver these additive leaves in order; preserve R137.1–.6 and R128 unchanged. Each leaf is one bounded implementation/verification slice. Split further before delivery if its concrete work cannot fit five minutes. Named tests remain planned until their owner supplies receipts.
-
-- [ ] **MEDULLA-DECISION-ENGINE-R137.7:** Define package records; validate and round-trip every field.
-- [ ] **MEDULLA-DECISION-ENGINE-R137.8:** Lower the capacities and net-value/token objective into the existing solver; prove tiny-oracle and boundary cases.
-- [ ] **MEDULLA-DECISION-ENGINE-R137.9:** Wire package selection through served Decide, the existing solver and independent verifier.
-- [ ] **MEDULLA-DECISION-ENGINE-R137.10:** Add typed package refusals and work-budget/certificate negative tests.
-- [ ] **MEDULLA-DECISION-ENGINE-R137.11:** Bind the universe, sources, measurements, full budget and verified certificate to the sealed result.
-- [ ] **MEDULLA-DECISION-ENGINE-R137.12:** Run the Medulla served proof and link MERISTEM-CONTEXT-R004 consumer receipts; preserve exact selection and citations.
-
-<!-- spec-definition-patch:comparative-analysis-r139 -->
-## Comparative analysis plan producer (MEDULLA-DECISION-ENGINE-R139)
-
-- [ ] **MEDULLA-DECISION-ENGINE-R139.1:** Define and round-trip typed request, candidate, stage, budget, plan, refusal, evidence and `QuestionKind::ComparativeAnalysisPlan`; preserve revision/digest bindings and the 64-candidate limit.
-- [ ] **MEDULLA-DECISION-ENGINE-R139.2:** Implement zero-model discovery, versioned 0.50/0.80 thresholds, stable ordering and per-stage/total budgets; prove one/two-call synthesis and high-weight-only extraction.
-- [ ] **MEDULLA-DECISION-ENGINE-R139.3:** Wire through public `Method::Decide` and return only plan/refusal; leave all model invocation at the post-plan Meristem `compiled_chat_completion` boundary.
-- [ ] **MEDULLA-DECISION-ENGINE-R139.4:** Add typed stale-input, invalid-candidate/policy and per-stage/total-budget refusals before any model call; never return a partial plan.
-- [ ] **MEDULLA-DECISION-ENGINE-R139.5:** Bind query, candidate, revision, policy, threshold and budget premises in the plan digest; specify the separate Meristem receipt for actual calls and request/result digests.
-- [ ] **MEDULLA-DECISION-ENGINE-R139.6:** Prove positive/negative Medulla served Decide paths and the separate served Meristem consumer/receipt path; preserve both exact SHAs and receipts. Meristem acceptance remains open until its owner publishes it.
-<!-- /spec-definition-patch -->
-
-<!-- spec-definition-patch:owner-batch-20261012-decision-engine -->
-## Reviewed residual definition tasks — owner batch 2026-10-12
-
-- [ ] **MEDULLA-DECISION-ENGINE-R135.7 (AU:18):** Define `PrePlanTestReceiptV1`, bind the same receipt to planning and verifier scores. And persist only a successful test/artifact-qualified pattern through the existing `CompiledProgram` / `AgentLibraryStore` / `ProgramLookup` path. Preserve `.2`, `.3`, `.5` and MERISTEM-HARNESS-R022.2 as adjacent coverage only.
-- [ ] **MEDULLA-DECISION-ENGINE-R135.7 acceptance:** Served positive receipt and independent pattern readback. Negative/missing, late, stale, command/revision mismatch, nonzero exit and missing/unreadable artifact-manifest cases block promotion. Keep SPECIFIED until Meristem producer/verifier contract and implementation receipts are independently reviewed.
-- [ ] **MEDULLA-DECISION-ENGINE-R135.7 status:** Keep SPECIFIED until separately reviewed implementation and served evidence are available.
-
-- [ ] **MEDULLA-DECISION-ENGINE-R106.1 (AU:19):** Define `CouncilPositionV1`, `CouncilPolicyV1` and `CouncilCoordinationV1` on the existing Decide path. Preserve all input positions, policy outcome and explicit abstention, with topology validated through the existing AgentGraph shape path. Preserve R106 and R006.3.
-- [ ] **MEDULLA-DECISION-ENGINE-R106.1 acceptance:** Served tests cover quorum, conflict, abstention, missing/duplicate/stale/unauthorized positions and topology mismatch. With independent decision/position readback. Meristem position producer remains pending. Keep SPECIFIED until its contract and receipts are reviewed.
-- [ ] **MEDULLA-DECISION-ENGINE-R106.1 status:** Keep SPECIFIED until separately reviewed implementation and served evidence are available.
-
-- [ ] **MEDULLA-DECISION-ENGINE-R137.13 (AU:25):** Define `ContextBudgetSignalsV1` and `ContextBudgetPolicyV1` on `Method::Decide`. Route tool-output bytes. And graph-node count through the existing decision ladder and bind both observations to the returned direct/recursive mode. Preserve `.1-.3` and keep package selection `.7-.12` separate.
-- [ ] **MEDULLA-DECISION-ENGINE-R137.13 acceptance:** Served tests vary each signal independently/jointly around thresholds and refuse missing, stale, invalid. Mismatched and cross-tenant observations before run. Meristem observation producer/consumer remains pending. Keep SPECIFIED until reviewed receipts exist.
-- [ ] **MEDULLA-DECISION-ENGINE-R137.13 status:** Keep SPECIFIED until separately reviewed implementation and served evidence are available.
-
-- [ ] **MEDULLA-DECISION-ENGINE-R134.9 definition:** Define TaskPlanSkillNodeV1 with task_plan_id/revision/digest, skill_id, nullable parent_skill_id. Context_match_policy_revision and evidence refs, prior_outcome_refs with source revisions/digests, score, rank, and ranking_policy_revision. Medulla emits multiple relevant skills in a deterministic tree under a versioned score/rank policy that binds the comparison operator. And tie rule. Missing or unpinned policy refuses. Outcome feedback changes later breadth only through R140.102 and its pinned policy/outcome set. This is a proposed Medulla contract. Named cross-owner producer/consumer holds remain open.
-- [ ] **MEDULLA-DECISION-ENGINE-R134.9 acceptance:** Case R134.9-ranked-plan. served Decide(TaskPlan) returns multiple skill nodes with stable parent links, cited context matches, pinned outcome refs. Score/rank and plan digest. Equal scores use the declared tie-break. Refuse missing/stale context or outcome evidence and malformed/cyclic parent links. Meristem application of this rank is not asserted. Attach the proposed result at plan_over_skills -> AgentLibraryStore -> served TaskPlan. MERISTEM-HARNESS-R022.3 local ranking and MERISTEM-CONTEXT-R001 feedback authority remain existing adjacent obligations. The Meristem consumer that applies Medulla rank and the feedback-to-R140.102 receipt contract are not yet specified. Keep SPECIFIED pending those owner definitions and served evidence. No implementation, served test, or receipt is claimed by this SPECIFIED definition.
-- [ ] **MEDULLA-DECISION-ENGINE-R134.9 status:** Keep SPECIFIED until separately reviewed implementation and served evidence are available.
-
-- [ ] **MEDULLA-DECISION-ENGINE-R137.14 definition:** Define PairedContextEvaluationV1. Bind the held-out query-set id, revision and digest. Record raw/candidate context revisions and digests, evaluator/model revision, and per-query answer digests. Name the quality metric, aggregation rule, tolerance and policy revision. Include one verdict per query. Replace raw context only when all queries are present and the aggregate meets the declared tolerance. On failure or incomplete evaluation, retain the raw revision. This is a proposed Medulla contract. Named cross-owner producer/consumer holds remain open.
-- [ ] **MEDULLA-DECISION-ENGINE-R137.14 acceptance:** Case R137.14-paired-context. a complete held-out set within the declared tolerance permits the replacement verdict. A beyond-tolerance result, missing query, stale context/evaluator digest, undefined metric/aggregation/tolerance. Or incomplete verdict set refuses and leaves the active raw-context revision unchanged. Meristem ContextManager.before_model_request -> run_agent is the existing replacement point. The Meristem held-out evaluator and receipt schema plus the consumer that atomically applies Medulla acceptance are absent. R013.5/.10/.12/.13 remain adjacent coverage, not evidence of this gate. No implementation, served test, or receipt is claimed by this SPECIFIED definition.
-- [ ] **MEDULLA-DECISION-ENGINE-R137.14 status:** Keep SPECIFIED until separately reviewed implementation and served evidence are available.
-
-- [ ] **MEDULLA-DECISION-ENGINE-R134.10 definition:** Define ChildSummaryV1 with plan/decision id and digest, parent run id, child run id, expected child id set. Summary artifact kind/schema/version/digest, exact tokenizer revision, summary token count, and source/result evidence refs. A parent budget record binds remaining context tokens at dispatch and the maximum aggregate child-summary tokens. Child output exposed to the parent contains only the declared summary artifact, never raw transcript. The accepted fan-out receipt accounts for every child as one summary or named failure gap. This is a proposed Medulla contract. Named cross-owner producer/consumer holds remain open.
-- [ ] **MEDULLA-DECISION-ENGINE-R134.10 acceptance:** Case R134.10-bounded-child-summary. valid summary-only children whose checked token total fits the parent remaining budget are linked to decision, child and summary digests. Refuse raw/oversized output, missing/duplicate/unknown children, tokenizer or budget revision mismatch. And any total above the bound before parent synthesis. Meristem _fork_fanout -> FanoutResult and parallel workspace synthesis are the observed attachment points; Medulla owns TaskPlan authority. Meristem summary producer, parent remaining-context budget field and consumer validation/readback receipt are missing. MERISTEM-CONTROL-R043.2/.5 and MERISTEM-HARNESS-R020.4 and MERISTEM-HARNESS-R024.1 remain adjacent. No implementation, served test, or receipt is claimed by this SPECIFIED definition.
-- [ ] **MEDULLA-DECISION-ENGINE-R134.10 status:** Keep SPECIFIED until separately reviewed implementation and served evidence are available.
-
-- [ ] **MEDULLA-DECISION-ENGINE-R137.15 definition:** Define RecursiveCallV1 request/result records with parent run/span, call id, signature id/revision/digest, typed input schema. And digest, admitted tool id/revision set, selected model id/revision, typed output schema and digest, and terminal status. Validate input and tool membership before dispatch and output against the same signature before recording success. Bind all revisions/digests in the recursive trace. This is a proposed Medulla contract. Named cross-owner producer/consumer holds remain open.
-- [ ] **MEDULLA-DECISION-ENGINE-R137.15 acceptance:** Case R137.15-signature-boundary. an admitted typed call records matching signature/model/tool/input/output digests. Refuse unknown or changed signatures, unadmitted tools, malformed input/output, missing parent span. Or revision mismatch before accepting the call result. Meristem run_full_rlm -> RLMEnvironment.run_parallel_sub_calls is the observed run point. Medulla resource limits and span instrumentation are adjacent only. No Meristem recursive signature producer/validator receipt or exact Medulla-to-AU call contract is named. No implementation, served test, or receipt is claimed by this SPECIFIED definition.
-- [ ] **MEDULLA-DECISION-ENGINE-R137.15 status:** Keep SPECIFIED until separately reviewed implementation and served evidence are available.
-
-- [ ] **MEDULLA-DECISION-ENGINE-R134.11 definition:** Define HorizonPartitionV1 over one committed TaskPlan revision with ordered step ids, dependency edges, positive max_steps_per_horizon. Per-step budget policy id/revision/unit and credit ceiling. Partition only at dependency-safe boundaries before start. Each completed horizon returns a durable credit checkpoint with plan/horizon ids, consumed/reserved/remaining amounts, budget revision and digest. Require a versioned accounting rule for debits. This is a proposed Medulla contract. Named cross-owner producer/consumer holds remain open.
-- [ ] **MEDULLA-DECISION-ENGINE-R134.11 acceptance:** Case R134.11-horizon-credit. a plan within the limit remains one horizon. A longer valid plan is split at dependency-safe boundaries and its checkpoint balances reconcile exactly. Refuse an unsplittable dependency component, absent/invalid budget rule, over-credit horizon, missing checkpoint. Or stale plan revision before the next start. Medulla decompose_task/TaskPlan feeds Meristem bounded map primitives, but no named partition/credit receipt interface exists. Meristem durable checkpoint/debit semantics and the consumer that blocks start on a missing receipt remain unspecified. Do not substitute Finance forecast horizons or solver budgets. No implementation, served test, or receipt is claimed by this SPECIFIED definition.
-- [ ] **MEDULLA-DECISION-ENGINE-R134.11 status:** Keep SPECIFIED until separately reviewed implementation and served evidence are available.
-
-- [ ] **MEDULLA-DECISION-ENGINE-R059.1 definition:** Define BackboneSkillEvaluationV1 rows keyed by candidate id, canonical skill identity, source model/backbone id/revision, task-distribution id/revision. Evaluation dataset id/revision/digest, metric id/revision, sample count and result digest. An aggregate may be emitted only with complete independent rows for every declared backbone and a versioned transferability policy. Publish the full per-backbone evidence with the aggregate, not a bare score. This is a proposed Medulla contract. Named cross-owner producer/consumer holds remain open.
-- [ ] **MEDULLA-DECISION-ENGINE-R059.1 acceptance:** Case R059.1-backbone-evidence. complete independent evaluations for the same canonical skill identity produce a result that lists every backbone and policy revision. Refuse missing/duplicate backbone rows, candidate identity mismatch, reused non-independent evidence, incomplete dataset coverage or absent metric/transferability aggregation policy. Meristem supplies experience/skill candidates; Medulla R059 is the existing independent-outcome admission path. No shared canonical skill merge key, robust aggregation/threshold decision, or Meristem multi-backbone evaluation producer is specified. These decisions are explicit holds. No implementation, served test, or receipt is claimed by this SPECIFIED definition.
-- [ ] **MEDULLA-DECISION-ENGINE-R059.1 status:** Keep SPECIFIED until separately reviewed implementation and served evidence are available.
-
-- [ ] **MEDULLA-DECISION-ENGINE-R134.12 definition:** Define TrajectoryDecisionV1 with one task/plan digest, policy revision, chosen width/depth, ordered trajectory ids. Identical input snapshot digest per arm, single-trajectory baseline id, per-arm outcome/evaluation refs, and paired comparison receipt. The decision names the selection and evaluation policies. It does not prescribe an unsupported scoring formula. A pass requires complete paired arms over the same task/input and an explicit R018 comparison verdict. This is a proposed Medulla contract. Named cross-owner producer/consumer holds remain open.
-- [ ] **MEDULLA-DECISION-ENGINE-R134.12 acceptance:** Case R134.12-paired-trajectories. selected width/depth and all trajectory/baseline ids bind to the same plan and input snapshot. Each arm has an outcome and the paired R018 verdict is readable. Refuse missing/mismatched arm, baseline, policy revision or result, and refuse any claim of improvement without the declared paired verdict. Existing points are Decide(TaskPlan), MERISTEM-CONTROL-R042/R043, MERISTEM-HARNESS-R020.4, and paired arms in MERISTEM-HARNESS-R018.1/.2/.5. Meristem trajectory generation, summary aggregation and Medulla selection-policy consumer receipt are absent. No implementation, served test, or receipt is claimed by this SPECIFIED definition.
-- [ ] **MEDULLA-DECISION-ENGINE-R134.12 status:** Keep SPECIFIED until separately reviewed implementation and served evidence are available.
-
-- [ ] **MEDULLA-DECISION-ENGINE-R134.13 definition:** Define AnalystFindingV1 with task/plan digest, expected analyst id and role, finding id, claim text/digest. Cited evidence ids/revisions/digests and source spans. Define SynthesisResultV1 with the complete expected analyst-id set, all finding ids. Outcome per analyst, cited evidence set, conflicts, final decision-role id and either a supported conclusion or a typed abstention reason. Never drop a failed or absent analyst from accounting. This is a proposed Medulla contract. Named cross-owner producer/consumer holds remain open.
-- [ ] **MEDULLA-DECISION-ENGINE-R134.13 acceptance:** Case R134.13-cited-synthesis. cited compatible findings produce a result that accounts for every expected analyst. Refuse missing/duplicate analyst, unsupported finding, unresolved conflict, invalid citation. Plan mismatch or absent decision role with explicit abstention and no recommendation. Medulla R134.5 served Decide(TaskPlan) is the planning point; Meristem R020.5 _dispatch_parallel_batch constructs worker slots. The exact Meristem finding producer/collector and aggregation consumer contract is missing. Existing fan-out clauses do not prove it. No implementation, served test, or receipt is claimed by this SPECIFIED definition.
-- [ ] **MEDULLA-DECISION-ENGINE-R134.13 status:** Keep SPECIFIED until separately reviewed implementation and served evidence are available.
-
-- [ ] **MEDULLA-DECISION-ENGINE-R029.1 definition:** Define RetrievalProviderBindingV1 in the committed retrieval plan with provider id/revision/config digest, query/request digest, tenant scope. And a separately identified reasoning model id/revision. The binding has an explicit no-substitution policy. run evidence records the exact provider, binding digest, request/result digests and provider revision. This is a proposed Medulla contract. Named cross-owner producer/consumer holds remain open.
-- [ ] **MEDULLA-DECISION-ENGINE-R029.1 acceptance:** Case R029.1-exact-provider. independently vary provider and reasoning-model ids while verifying the committed provider is run. If the bound provider is unavailable, stale, unauthorized or mismatched, refuse before retrieval and record zero calls to alternate providers. Preserve ARBORA-OPS-R021.2.1 retrieval.search and its tenant-scoped retriever. Medulla must commit the provider binding. The Graft SDK/Arbora consumer contract that run and receipts that exact binding is not defined. No implementation, served test, or receipt is claimed by this SPECIFIED definition.
-- [ ] **MEDULLA-DECISION-ENGINE-R029.1 status:** Keep SPECIFIED until separately reviewed implementation and served evidence are available.
-
-- [ ] **MEDULLA-DECISION-ENGINE-R134.14 definition:** Define BranchOutcomeV1 with branch id, parent task/plan digest, branch input digest, experience snapshot revision, ordered fusion position. Terminal outcome or named failure gap, and immutable result digest. The fusion receipt lists every planned branch in deterministic order. The versioned fusion-policy id/revision, all outcome refs and the fused result digest. A later branch retrieval records the exact outcome refs and revisions it consumed. This is a proposed Medulla contract. Named cross-owner producer/consumer holds remain open.
-- [ ] **MEDULLA-DECISION-ENGINE-R134.14 acceptance:** Case R134.14-branch-readback. a complete branch set produces an ordered fusion receipt and independent readback for every outcome. A later branch cites the exact pinned prior outcome. Refuse missing/duplicate branch, changed parent/input/snapshot, omitted failure gap, absent fusion policy, or stale readback. Existing points are Decide R134.5, Meristem R020.5 worker run and Meristem R022.4 outcome distillation. The Meristem branch-experience producer, committed-plan consumer and durable per-outcome receipt schema remain missing. Do not substitute R140.102 breadth adaptation. No implementation, served test, or receipt is claimed by this SPECIFIED definition.
-- [ ] **MEDULLA-DECISION-ENGINE-R134.14 status:** Keep SPECIFIED until separately reviewed implementation and served evidence are available.
-
-- [ ] **MEDULLA-DECISION-ENGINE-R020.1 definition:** Define CandidatePoolV1 with tenant/agent id, task/context feature digest, policy revision, candidate ids and per-candidate source revisions. The selection receipt partitions candidates into exploitation (matched prior trajectories) and exploration (eligible only when no match exists). Records the context-match policy revision and evidence refs, and includes a deterministic tie-break. Cross-agent history is never eligible. This is a proposed Medulla contract. Named cross-owner producer/consumer holds remain open.
-- [ ] **MEDULLA-DECISION-ENGINE-R020.1 acceptance:** Case R020.1-agent-isolated-pools. a same-agent matching trajectory selects from the exploitation pool and excludes exploration. A declared no-match case may select from exploration. Refuse missing match policy/evidence and cross-tenant or cross-agent history. Bind result to the candidate snapshot. Medulla owns candidate selection and MERISTEM-HARNESS-R022.1/.3 provide adjacent experience inputs. No Meristem per-agent pool producer or context-match evidence contract exists. Exact match dimensions/threshold must be supplied by that owner policy before implementation. No implementation, served test, or receipt is claimed by this SPECIFIED definition.
-- [ ] **MEDULLA-DECISION-ENGINE-R020.1 status:** Keep SPECIFIED until separately reviewed implementation and served evidence are available.
-
-- [ ] **MEDULLA-DECISION-ENGINE-R133.7 definition:** Define RecursiveTraceNodeV1 with run id/revision, step id/revision, parent node id, ordered child ids. Input/output/evidence refs and digests, source revision, and trace snapshot id. Define TraceCritiqueQueryV1 with root node, authorized projection, snapshot revision, filters and opaque cursor. The response includes the complete selected ancestry and source refs. Parent/child links must be complete and acyclic within the selected snapshot. This is a proposed Medulla contract. Named cross-owner producer/consumer holds remain open.
-- [ ] **MEDULLA-DECISION-ENGINE-R133.7 acceptance:** Case R133.7-trace-critique. ingest and independently read back a nested trace, then critique it at the same authorized snapshot with complete ancestry. Refuse incomplete ancestry, cycle, stale cursor/snapshot, missing digest or unauthorized projection without returning protected fields. Terminal CommitWorkItemResult adapts traces, AddNode validates records and graph queries read them. The recursive node producer and named authorized critique-query operation/consumer are absent. Existing fencing/projection rules remain binding. No implementation, served test, or receipt is claimed by this SPECIFIED definition.
-- [ ] **MEDULLA-DECISION-ENGINE-R133.7 status:** Keep SPECIFIED until separately reviewed implementation and served evidence are available.
-
-- [ ] **MEDULLA-DECISION-ENGINE-R100.1 definition:** Define FeedbackEventV1 with stable event id, decision id/revision/digest, option/action id, actor id. Outcome/evidence refs and digests, event time and source revision. A versioned mapping policy converts only a complete joined event into a fit example. Deduplication is by event id plus source revision. Bind example-set digest to R100 fitting, resulting adapter id/revision to R101, and publish admission to R040. This is a proposed Medulla contract. Named cross-owner producer/consumer holds remain open.
-- [ ] **MEDULLA-DECISION-ENGINE-R100.1 acceptance:** Case R100.1-feedback-join. an authorized complete event is read back as exactly one fit example bound to the expected R100 dataset digest. Replaying the same event is idempotent. Refuse duplicate identity with changed content, missing decision/option/outcome join, invalid mapping policy. Stale source revision or evidence mismatch before fitting. R100 persists examples, R101 applies a promoted adapter post-RLS/pre-ANN and R040 gates publish. The Meristem signal producer and outcome-to-label mapping policy are not specified. Do not treat an independent outcome record as the producer contract. No implementation, served test, or receipt is claimed by this SPECIFIED definition.
-- [ ] **MEDULLA-DECISION-ENGINE-R100.1 status:** Keep SPECIFIED until separately reviewed implementation and served evidence are available.
-
-- [ ] **MEDULLA-DECISION-ENGINE-R088.2 definition:** Define ReplayEventV1 with event id, strictly ordered sequence number, event time, state snapshot id/revision/digest. Observed action id, outcome/evidence refs and source revision. Replay uses an AS OF snapshot and opaque deterministic cursor. The sealed ReplayReceipt binds ordered event digests, cursor, policy id/revision and result digest. Identical duplicate delivery is idempotent. A conflicting duplicate or sequence gap refuses. When the environment is policy-dependent, route to R119 off-policy evaluation. This is a proposed Medulla contract. Named cross-owner producer/consumer holds remain open.
-- [ ] **MEDULLA-DECISION-ENGINE-R088.2 acceptance:** Case R088.2-ordered-replay. replay a fixed event sequence and resume from its receipt/cursor to the same event order and sealed digest. Refuse gaps, out-of-order events, conflicting duplicate ids, changed snapshots or policy-dependent on-policy claims without R119 routing. DecisionEval provides AS OF and fold replay. The real-world event simulator and Meristem adaptive-harness producer/consumer are undefined. This row specifies Medulla replay envelope and refusal only, not an external event source. No implementation, served test, or receipt is claimed by this SPECIFIED definition.
-- [ ] **MEDULLA-DECISION-ENGINE-R088.2 status:** Keep SPECIFIED until separately reviewed implementation and served evidence are available.
-
-- [ ] **MEDULLA-DECISION-ENGINE-R137.16 definition:** Extend ContextBudgetSignalsV1 with task-complexity feature set/digest and complexity-policy id/revision. Derive remaining tokens at a pinned snapshot as total token ceiling minus committed. And reserved token consumption in the same tokenizer revision. Return both operands and the checked result. Bind the complexity decision and remaining budget to the sealed ContextPackageSelection and its R137.7-.12 solver certificate. R128.5 task-class pressure remains a separate input. This is a proposed Medulla contract. Named cross-owner producer/consumer holds remain open.
-- [ ] **MEDULLA-DECISION-ENGINE-R137.16 acceptance:** Case R137.16-complexity-and-remaining-budget. vary complexity while holding model cost and remaining tokens fixed, then vary remaining tokens while holding complexity fixed. Verify the declared policy and certified package bind both decisions. Refuse missing/invalid policy, tokenizer or snapshot mismatch, negative/overflowing remainder, or package cost above remaining tokens. Planned Decide(ContextBudget) -> existing solver -> independent certificate verifier -> sealed ContextPackageSelection -> MERISTEM-CONTEXT-R004. R137.11/.12 name the consumer. The dispatch and receipt binding remain pending as recorded in R137.9. No implementation, served test, or receipt is claimed by this SPECIFIED definition.
-- [ ] **MEDULLA-DECISION-ENGINE-R137.16 status:** Keep SPECIFIED until separately reviewed implementation and served evidence are available.
-
-- [ ] **MEDULLA-DECISION-ENGINE-R029.2 definition:** Define AvailableContextSourceV1 with authorized source id/revision/digest, relevance evidence, authority class, token/cost estimate and enumeration snapshot. ContextSourceSelectionV1 returns complete selected and omitted partitions with reason enum IRRELEVANT, OVER_BUDGET, AUTHORITY_DISPLACED, or UNAUTHORIZED, plus deterministic policy revision and source snapshot digest. Every enumerated source appears exactly once. Protected source identifiers are omitted from unauthorized caller-visible details. This is a proposed Medulla contract. Named cross-owner producer/consumer holds remain open.
-- [ ] **MEDULLA-DECISION-ENGINE-R029.2 acceptance:** Case R029.2-complete-source-partition. the same served compile journey includes relevant selected sources and omitted examples for irrelevance, over-budget and authority displacement. Every authorized source is accounted for once. Refuse incomplete enumeration, duplicate source, unknown reason, stale budget/authority snapshot or unauthorized disclosure. Served Decide(ContextBudget) -> certified package -> MERISTEM-CONTEXT-R004 context compile; R072 ontology selection and MEDULLA-SRC-AUTH-R010.6 provide distinct source inputs. The Meristem consumer receipt for the exhaustive partition is not named. Preserve the parent retrieval/authorization obligations. No implementation, served test, or receipt is claimed by this SPECIFIED definition.
-- [ ] **MEDULLA-DECISION-ENGINE-R029.2 status:** Keep SPECIFIED until separately reviewed implementation and served evidence are available.
-
-- [ ] **MEDULLA-DECISION-ENGINE-R134.15 definition:** For each TaskPlan DAG step require positive duration_ms, nonnegative integer priority_weight and source evidence. All bound to a weight-policy id/revision and input digest. Compute checked integer path totals from duration_ms multiplied by priority_weight using the declared weight scale. Return ordered critical_chain_step_ids, total_weighted_duration_ms, policy revision, plan revision and input digest. Ties choose the lexicographically smallest step-id sequence. This is a proposed Medulla contract. Named cross-owner producer/consumer holds remain open.
-- [ ] **MEDULLA-DECISION-ENGINE-R134.15 acceptance:** Case R134.15-weighted-critical-chain. a branched DAG returns the independently calculated longest weighted path and total, source-duration/weight provenance, and deterministic tie result. Refuse a cycle, missing/invalid duration or weight, absent scale policy, stale source evidence. Or checked multiplication/sum overflow before emitting TaskPlan. Attach the proposed fields to served Decide(TaskPlan) -> plan_over_skills -> typed TaskPlan. The run consumer schema for critical-chain fields is not defined. The decision producer and consumer remain SPECIFIED pending that schema. No implementation, served test, or receipt is claimed by this SPECIFIED definition.
-- [ ] **MEDULLA-DECISION-ENGINE-R134.15 status:** Keep SPECIFIED until separately reviewed implementation and served evidence are available.
-
-- [ ] **MEDULLA-DECISION-ENGINE-R135.8 definition:** Define WorkflowCompileRequestV1 with source kind NL or graph, exact source revision/digest, workflow identifier. Compiler id/revision and referenced step/agent-config ids. CompiledWorkflowV1 binds the canonical typed step graph digest and every agent-config id/revision/digest. Its `semantic_reuse_key_v1` is the exact tuple `{canonical_typed_step_graph_digest, compiler_id, compiler_revision, sorted_agent_config_refs}`, with each config ref `{id, revision, digest}` sorted by config id. Source kind/revision/digest. And source-to-step mapping are excluded from the semantic key and retained in WorkflowCompileReceiptV1 bound to the key and program id. A missing step returns MISSING_WORKFLOW_STEP with exact source location and publishes no partial program. SourceIngest remains the ingestion authority. The compiler/storage contract is a named owner dependency.
-- [ ] **MEDULLA-DECISION-ENGINE-R135.8 acceptance:** NL and graph inputs with equal graph digest, compiler id/revision. And config refs reuse one complete program/key but produce separate receipts with each source's kind/revision/digest/mapping. A new source revision reuses the program and emits new provenance. Changing graph/compiler/config changes the key. Refuse missing steps with exact location, stale revisions, or partial publication. No implementation, served test, or receipt is claimed by this SPECIFIED definition.
-- [ ] **MEDULLA-DECISION-ENGINE-R135.8 status:** Keep SPECIFIED until separately reviewed implementation and served evidence are available.
-<!-- /spec-definition-patch -->
-
-<!-- spec-definition-patch:reviewed-mapped-subsets-20261012 -->
-## Mapped definition tasks — 2026-10-12
-
-- [ ] `MEDULLA-DECISION-ENGINE-R042.100`: add the typed request/result, policy/revision binding, producer/consumer wiring contract. Refusal cases and receipt/readback fields described in requirements. Preserve `R042` and its prior children.
-- [ ] `MEDULLA-DECISION-ENGINE-R042.100`: add served acceptance for: Prove with served Decide cases that a enough sampled higher-success path is preferred. Threshold-qualified repeated failure is skipped, and missing/stale/undersampled history preserves declared order. Verify the advisory cannot trigger write-back and every score recomputes from its bound counts.
-- [ ] `MEDULLA-DECISION-ENGINE-R042.101`: add the typed request/result, policy/revision binding, producer/consumer wiring contract. Refusal cases and receipt/readback fields described in requirements. Preserve `R042` and its prior children.
-- [ ] `MEDULLA-DECISION-ENGINE-R042.101`: add served acceptance for: For each paired fixture, show necessary/not-necessary/unknown results. At the Meristem call boundary prove every disagreement creates a linked trace event and matching decisions create none. Stale or insufficient evidence must not become a necessity verdict. Served Medulla and Meristem receipts remain separate and linked by decision/measurement ids.
-- [ ] `MEDULLA-DECISION-ENGINE-R129.100`: add the typed request/result, policy/revision binding, producer/consumer wiring contract. Refusal cases and receipt/readback fields described in requirements. Preserve `R129` and its prior children.
-- [ ] `MEDULLA-DECISION-ENGINE-R129.100`: add served acceptance for: Served tests cover correction/output mismatch refusal, proposal-only state, approval plus invariant pass, invariant rejection. Version replacement, revocation and a future invocation using the approved version only. Every state transition reads back with actor, version and source-output lineage. Existing R129 invariant behavior stays mandatory.
-- [ ] `MEDULLA-DECISION-ENGINE-R134.100`: add the typed request/result, policy/revision binding, producer/consumer wiring contract. Refusal cases and receipt/readback fields described in requirements. Preserve `R134` and its prior children.
-- [ ] `MEDULLA-DECISION-ENGINE-R134.100`: add served acceptance for: At the actual served `agents.run` -> Meristem `_fork_fanout` -> generated Medulla aggregation call, cover all-success results, named failed gaps. Missing/duplicate/stale receipts, refused concurrent-budget admission, and independent artifact readback. The output must bind the same selected operation/version and exact Meristem/Arbora receipt set. No extrapolated capacity claim is added.
-- [ ] `MEDULLA-DECISION-ENGINE-R134.101`: add the typed request/result, policy/revision binding, producer/consumer wiring contract. Refusal cases and receipt/readback fields described in requirements. Preserve `R134` and its prior children.
-- [ ] `MEDULLA-DECISION-ENGINE-R134.101`: add served acceptance for: Served fan-out test sends multiple outputs and a named failed gap through the designated coordinator. Then reads one structured artifact back. Refuse absent coordinator, missing/duplicate child accounting, schema-invalid artifact or mismatched digest. Verify a non-coordinator cannot finalize and every child is accounted for.
-- [ ] `MEDULLA-DECISION-ENGINE-R137.100`: add the typed request/result, policy/revision binding, producer/consumer wiring contract. Refusal cases and receipt/readback fields described in requirements. Preserve `R137` and its prior children.
-- [ ] `MEDULLA-DECISION-ENGINE-R137.100`: add served acceptance for: Through served Decide and Meristem run-loop consumer, prove initial instructions precede run. A runtime refinement is withheld before its trigger and disclosed at the trigger, and every disclosure is trace-linked. Stale or unauthorized instruction revisions refuse without application. Verify distinct initial/runtime tags and exact version readback.
-- [ ] `MEDULLA-DECISION-ENGINE-R134.102`: add the typed request/result, policy/revision binding, producer/consumer wiring contract. Refusal cases and receipt/readback fields described in requirements. Preserve `R134` and its prior children.
-- [ ] `MEDULLA-DECISION-ENGINE-R134.102`: add served acceptance for: Served Decide matrix proves below-threshold and unstable/incomplete windows refuse, while a complete above-threshold window admits. Mutate a sample, threshold, metric or policy revision and require a new verdict. Meristem consumer demonstrates no delegation effect on refusal.
-- [ ] `MEDULLA-DECISION-ENGINE-R136.100`: add the typed request/result, policy/revision binding, producer/consumer wiring contract. Refusal cases and receipt/readback fields described in requirements. Preserve `R136` and its prior children.
-- [ ] `MEDULLA-DECISION-ENGINE-R136.100`: add served acceptance for: Positive paired test uses identical test digest and environment across before/after revisions and proves fail. Then pass. Negative cases alter either revision/test digest, omit a receipt, pass before or fail after. Each refuses admission. Read back the admitted proposal with both receipt links.
-- [ ] `MEDULLA-DECISION-ENGINE-R031.100`: add the typed request/result, policy/revision binding, producer/consumer wiring contract. Refusal cases and receipt/readback fields described in requirements. Preserve `R031` and its prior children.
-- [ ] `MEDULLA-DECISION-ENGINE-R031.100`: add served acceptance for: For served Medulla admission, use a paper relevant to both goals and graph. One relevant to only one, below-threshold, and duplicate/stale snapshots. Only the both-relevant accepted record yields a selected-claim ingestion request. Read back the decision and source bindings. Do not claim six-hour schedule or provider retrieve is implemented.
-- [ ] `MEDULLA-DECISION-ENGINE-R036.100`: add the typed request/result, policy/revision binding, producer/consumer wiring contract. Refusal cases and receipt/readback fields described in requirements. Preserve `R036` and its prior children.
-- [ ] `MEDULLA-DECISION-ENGINE-R036.100`: add served acceptance for: Test substitution independently for all four primitive classes, compatible and incompatible schema/effect changes. And trace-derived proposal creation that remains inactive until normal admission. Served assembly receipt names each primitive/version and compatibility proof.
-- [ ] `MEDULLA-DECISION-ENGINE-R136.101`: add the typed request/result, policy/revision binding, producer/consumer wiring contract. Refusal cases and receipt/readback fields described in requirements. Preserve `R136` and its prior children.
-- [ ] `MEDULLA-DECISION-ENGINE-R136.101`: add served acceptance for: Served revision sequence starts with satisfied and unsatisfied criteria, applies process-level feedback. Then proves a nonregressing revision accepted and a single previously satisfied criterion regression refused. Mutating rubric or prior report digest invalidates the comparison.
-- [ ] `MEDULLA-DECISION-ENGINE-R121.100`: add the typed request/result, policy/revision binding, producer/consumer wiring contract. Refusal cases and receipt/readback fields described in requirements. Preserve `R121` and its prior children.
-- [ ] `MEDULLA-DECISION-ENGINE-R121.100`: add served acceptance for: Served Meristem/Medulla chain verifies a supported step. Rejects an under-evidenced step and proves downstream conclusions are absent on failed/uncertain dependencies. Alter proof digest, evidence revision or uncertainty bounds and require re-verification. Trace readback shows the entire dependency chain.
-- [ ] `MEDULLA-DECISION-ENGINE-R138.100`: add the typed request/result, policy/revision binding, producer/consumer wiring contract. Refusal cases and receipt/readback fields described in requirements. Preserve `R138` and its prior children.
-- [ ] `MEDULLA-DECISION-ENGINE-R138.100`: add served acceptance for: Served admission accepts only a complete receipt whose artifact digest matches the proposed code. And whose edge cases are all resolved and retested. Negative cases include skipped verifier, unresolved edge case, stale artifact, changed tests and failed recheck. None can activate/write code.
-- [ ] `MEDULLA-DECISION-ENGINE-R136.102`: add the typed request/result, policy/revision binding, producer/consumer wiring contract. Refusal cases and receipt/readback fields described in requirements. Preserve `R136` and its prior children.
-- [ ] `MEDULLA-DECISION-ENGINE-R136.102`: add served acceptance for: Serve one fully graded report admitted against a proposal. Then refuse missing outcome, missing rubric, ungraded criterion, wrong artifact digest, stale rubric and absent grade evidence. Read back the proposal and prove no admission side effect on refusal.
-- [ ] `MEDULLA-DECISION-ENGINE-R138.101`: add the typed request/result, policy/revision binding, producer/consumer wiring contract. Refusal cases and receipt/readback fields described in requirements. Preserve `R138` and its prior children.
-- [ ] `MEDULLA-DECISION-ENGINE-R138.101`: add served acceptance for: Served review fixtures include one finding from each class, one evidence-backed low-impact false positive. And an injected high-impact finding. Verify five-class coverage, changed-range binding, evidence retention and filtering disposition. Reject missing revision, unsupported class, absent proof or silently omitted high-impact findings.
-- [ ] `MEDULLA-DECISION-ENGINE-R036.101`: add the typed request/result, policy/revision binding, producer/consumer wiring contract. Refusal cases and receipt/readback fields described in requirements. Preserve `R036` and its prior children.
-- [ ] `MEDULLA-DECISION-ENGINE-R036.101`: add served acceptance for: Served Medulla assembly accepts verified agent/skill facts and returns a plan with exact revisions. And transformation order. Refuse absent/stale discovery receipts, incompatible transformation schemas or changed artifact digest. Separate Meristem discovery receipt and Overstory sandbox receipt must be linked for end-to-end closure. No runtime implementation is claimed.
-- [ ] `MEDULLA-DECISION-ENGINE-R014.100`: add the typed request/result, policy/revision binding, producer/consumer wiring contract. Refusal cases and receipt/readback fields described in requirements. Preserve `R014` and its prior children.
-- [ ] `MEDULLA-DECISION-ENGINE-R014.100`: add served acceptance for: Tiny exhaustive candidates prove the smallest cost-optimal eligible composition under the declared objective and constraints. Test equal-size/cost ties, unknown facts, an inadequate smaller candidate and illegal-candidate refusal. Preserve separate size and cost measurements. Do not impose or remove shortcut comments.
-<!-- /spec-definition-patch -->
-
-<!-- spec-definition-patch:final-mappings-20261012 -->
-## Final mapped definition tasks — 2026-10-12
-
-- [ ] Define rollup `MEDULLA-DECISION-ENGINE-R140` and generated child links. Keep it SPECIFIED until all required children are implemented and verified.
-- [ ] Define rollup `MEDULLA-DECISION-ENGINE-R141` and generated child links. Keep it SPECIFIED until all required children are implemented and verified.
-- [ ] Define rollup `MEDULLA-DECISION-ENGINE-R142` and generated child links. Keep it SPECIFIED until all required children are implemented and verified.
-- [ ] `MEDULLA-DECISION-ENGINE-R139.100`: implement the typed fields, decision/refusal behavior and owner boundary stated in requirements. Preserve `MEDULLA-DECISION-ENGINE-R139`.
-- [ ] `MEDULLA-DECISION-ENGINE-R139.100` acceptance: Serve one graph paper, one graph codebase and one filesystem source in the same comparison. Assert exact ordered references, revisions and digests in readback. Refuse stale, unauthorized and mismatched graph refs before comparison, while filesystem-only intake remains valid. Meristem consumer receipts remain a separate dependency.
-- [ ] `MEDULLA-DECISION-ENGINE-R019.100`: implement the typed fields, decision/refusal behavior and owner boundary stated in requirements. Preserve `MEDULLA-DECISION-ENGINE-R019`.
-- [ ] `MEDULLA-DECISION-ENGINE-R019.100` acceptance: Serve a decision with all three evidence streams and independently read back exact provenance. Refuse a recommendation commit with missing, stale, wrong-reviewer-scope or digest-mismatched approval and prove no decision revision/effect changed. Approve the exact revision, commit once, and verify reviewer provenance and idempotent retry under R019.
-- [ ] `MEDULLA-DECISION-ENGINE-R029.100`: implement the typed fields, decision/refusal behavior and owner boundary stated in requirements. Preserve `MEDULLA-DECISION-ENGINE-R029`.
-- [ ] `MEDULLA-DECISION-ENGINE-R029.100` acceptance: Through the real retrieval command. Load a valid file and assert its config/mode/plan digests are bound in the run record. Refuse missing file, invalid typed field, unknown mode and stale/mismatched mode digest before command effects. Repeat the same command/input and verify identical config, mode and decision bindings. Do not assert result determinism beyond declared source behavior.
-- [ ] `MEDULLA-DECISION-ENGINE-R140.100`: Define and wire the Medulla producer only at the existing handler named in requirements. Preserve the stated cross-owner dependency.
-- [ ] `MEDULLA-DECISION-ENGINE-R140.100` acceptance: Run `test_trajectory_refinement_served.py::test_complexity_selects_single_or_bounded_k` and `::test_complexity_policy_and_k_refusals`. Do not claim Meristem run. Attach point and owner dependency. The existing R134.5 Method::Decide TaskPlan path accepts task complexity evidence and returns a digest-bound K decision only. Meristem K run receipt is pending.
-- [ ] `MEDULLA-DECISION-ENGINE-R140.101`: Define and wire the Medulla producer only at the existing handler named in requirements. Preserve the stated cross-owner dependency.
-- [ ] `MEDULLA-DECISION-ENGINE-R140.101` acceptance: Run `test_trajectory_refinement_served.py::test_projection_preserves_sources_and_links_candidate` and `::test_projection_refuses_bad_ranges_or_missing_parent`. Do not claim Meristem projection served. Attach point and owner dependency. The R134.5 plan binds Meristem projection inputs and the exact result parent set; Meristem R022.4 projection/reinsertion receipt is pending.
-- [ ] `MEDULLA-DECISION-ENGINE-R140.102`: Define and wire the Medulla producer only at the existing handler named in requirements. Preserve the stated cross-owner dependency.
-- [ ] `MEDULLA-DECISION-ENGINE-R140.102` acceptance: Run `test_trajectory_refinement_served.py::test_later_branch_adapts_from_pinned_outcome`, `::test_branch_history_refuses_stale_or_cross_tenant`, and `::test_no_history_uses_declared_initial_breadth`; Meristem receipt tests remain pending. Attach point and owner dependency. The R134.5 TaskPlan route commits `BreadthDecisionV1`; Meristem R020.5/R022.4 must bind it to branch requests and outcomes, a pending consumer contract.
-- [ ] `MEDULLA-DECISION-ENGINE-R140.103`: Define and wire the Medulla producer only at the existing handler named in requirements. Preserve the stated cross-owner dependency.
-- [ ] `MEDULLA-DECISION-ENGINE-R140.103` acceptance
-- [ ] MEDULLA-DECISION-ENGINE-R140.104: Wire digest-bound R140.100-.103 plan decisions through `crates/medulla-server-router/src/dispatch/router/decision_plane.rs:107` and `crates/medulla-h-decide/src/decide/stat_decide.rs:48`. Preserve the Meristem receipt and ranking-policy dependencies.
-- [ ] MEDULLA-DECISION-ENGINE-R140.104 acceptance: Run tests/decide/test_trajectory_refinement_served.py::test_real_decide_route_emits_pinned_refinement_decisions through Method::Decide. And read back task, policy and source bindings. Planned only.
-- [ ] MEDULLA-DECISION-ENGINE-R140.105: Specify the full Medulla-to-AU hot-path proof without moving Meristem run into Medulla. Keep the four exact consumer/policy dependencies open.
-- [ ] MEDULLA-DECISION-ENGINE-R140.105 acceptance: Planned test: `tests/decide/test_trajectory_refinement_served.py::test_taskplan_decisions_reach_au_and_receipts_read_back`. Run only after Meristem receipt contracts and R140.103 policy are reviewed. Independently read each receipt. Also run `test_pairwise_ranking_served.py::test_refuses_unselected_aggregation_policy`. R134.5 TaskPlan/Decide is only the proposed boundary. Keep ranking/revision output blocked until the owner defines pairwise aggregation, cycle, incomplete-pair and tie policies. The owner must also define keep-count and revision bounds and the Meristem comparison receipt. No positive ranking case is specified.
-- [ ] `MEDULLA-DECISION-ENGINE-R141.100`: Bind fidelity metric identity and immutable specification digest in MemoryRewriteProposalV1. Keep Admit unavailable until the formula/normalization is reviewed. Preserve R141 and the explicit active-memory write-path hold.
-- [ ] `MEDULLA-DECISION-ENGINE-R141.100` acceptance: Named hold acceptance at Method::DecisionEval: test_refuses_unresolved_fidelity_metric refuses an absent/unreviewed fidelity formula or normalization. Test_discards_failed_or_stale_rewrite proves failed policy gates preserve the baseline. A positive Admit fixture is pending review of the fidelity metric semantics. Even after that review, activation/readback remains held until the authoritative memory mutation and atomic CAS path are identified. No active-memory change is claimed.
-- [ ] `MEDULLA-DECISION-ENGINE-R141.101`: Bind the baseline/candidate benchmark to an immutable recall@k and answer-accuracy metric specification. Refuse unresolved formulas and keep universal write admission held pending the mutation map/atomic gate.
-- [ ] `MEDULLA-DECISION-ENGINE-R141.101` acceptance
-- [ ] MEDULLA-DECISION-ENGINE-R141.102: Bind memory-evaluation inputs to the current DecisionEval route: `crates/medulla-server-router/src/dispatch/router/decision_plane.rs:119` -> `crates/medulla-h-decide/src/decide/jobs.rs:30`. Keep metric and memory-write/CAS owner dependencies explicit.
-- [ ] MEDULLA-DECISION-ENGINE-R141.102 acceptance: Planned test: `tests/decide/test_memory_change_admission_served.py::test_real_decision_eval_binds_memory_candidate_and_metrics`. Run through Method::DecisionEval. Refuse unresolved formulas. Do not infer an active-write gate.
-- [ ] MEDULLA-DECISION-ENGINE-R141.103: Define the end-to-end admission proof at the authoritative mutator once its owner and CAS path are named. Preserve baseline memory on every refusal.
-- [ ] MEDULLA-DECISION-ENGINE-R141.103 acceptance: Planned test: `tests/decide/test_memory_change_admission_served.py::test_memory_mutation_requires_current_decision_eval_receipt`. Independently read back the active revision after the exact receipt gate exists. At Method::DecisionEval, refuse unresolved recall@k and answer-accuracy formulas. The planned hold checks are `test_refuses_unresolved_metric_semantics`, `test_binds_metrics_to_same_snapshots` and `test_each_failed_metric_blocks_admission`. After formula review, bind both metrics to the same snapshots and test each failed metric independently. Verify exact numerators, positive denominators and threshold handling. These acceptance cases remain pending the formula decision. Keep end-to-end admission held until owners identify the authoritative mutation map and atomic gate.
-- [ ] `MEDULLA-DECISION-ENGINE-R142.100`: Define and wire the Medulla producer only at the existing handler named in requirements. Preserve the stated cross-owner dependency.
-- [ ] `MEDULLA-DECISION-ENGINE-R142.100` acceptance
-- [ ] MEDULLA-DECISION-ENGINE-R142.101: Bind the Meristem evaluation receipt to the Medulla DecisionEval attestation and name the Arbora R034.7-.12 consumer. Retain both missing owner contracts.
-- [ ] MEDULLA-DECISION-ENGINE-R142.101 acceptance: Planned test: `tests/decide/test_local_skill_certification_served.py::test_decision_eval_attestation_binds_au_receipt`. Serve through the real DecisionEval route. Independently read back the attestation.
-- [ ] MEDULLA-DECISION-ENGINE-R142.102: Specify the cross-owner hot-path check before normal workflow invocation. Keep Meristem receipt and Arbora gate evidence pending.
-- [ ] MEDULLA-DECISION-ENGINE-R142.102 acceptance: Planned test: `tests/decide/test_local_skill_certification_served.py::test_current_attestation_is_checked_before_graphos_workflow_run`. Run through the actual invocation path. Verify refusal before effects and admission only for the exact current attestation. Also run `test_local_skill_certification_served.py::test_attests_matching_atomic_evaluation`, `::test_workflow_requires_current_atomic_attestations` and `::test_stale_input_invalidates_attestation`. Meristem and Arbora served tests remain required. DecisionEval validates the Meristem receipt and emits a Medulla attestation. Normal Arbora invocation validates it through R034.7-.12. Meristem receipt schema and Arbora consumption remain pending owner contracts.
-<!-- /spec-definition-patch -->
-
-
-<!-- spec-definition-patch:owner-dispatch-20261012-tasks -->
-## Cross-owner retrieval evaluation tasks — 2026-10-12
-
-- [ ] `MEDULLA-DECISION-ENGINE-R100.100`: define `RetrievalRankingV1` and `RetrievalContextSearchV1` over existing DecisionEval, UnifiedQuery and authenticated read paths. Add served positive/negative evaluation, exact span, stale cursor and denied-context acceptance.
-- [ ] Bind two algorithm receipts to an identical pinned corpus/label/query/k input. Persist exact hits-at-k numerator/denominator and authorized n-gram offsets with bounded context.
-- [ ] Test missing labels, incompatible settings/revisions, incomplete algorithm output, denied context and stale cursor. Preserve R100's independent-outcome/hard-negative behavior.
-<!-- /spec-definition-patch -->
-
-## Grounded-answer and pre-surface safety tasks — 2026-10-12
-
-- [ ] `MEDULLA-DECISION-ENGINE-R100.101`: define complete expected/covered topic sets, per-claim label-blind probabilities with scorer provenance. Independent annotator labels, scored population, weighted Brier formula and positive denominator in `GroundedAnswerEvaluationV1`.
-- [ ] Verify topic coverage by exact topic-id sets and summed counts. Recompute the weighted Brier formula from distinct predictions and labels. Change predictions while holding labels fixed and prove only Brier changes. Refuse incomplete populations, missing provenance, duplicate annotators and zero denominators.
-- [ ] `MEDULLA-DECISION-ENGINE-R001.100`: define `RecommendationSafetyV1` on the existing Decide path with per-bound receipt and fail-closed typed verdict. Retain the separate Arbora pre-surface validation dependency.
-
-## KG fact rendering and natural-language text (R152)
-
-- [ ] **MEDULLA-DECISION-ENGINE-R152.1 (Model):** Define Meristem context compiler contract accepting retrieved KG facts and producing natural-language prose.
-- [ ] **MEDULLA-DECISION-ENGINE-R152.2 (Behavior):** Preserve semantic meaning, source authority and exact token count in rendered output.
-- [ ] **MEDULLA-DECISION-ENGINE-R152.3 (Wiring):** Map rendered text to source fact identities and citation metadata bidirectionally.
-- [ ] **MEDULLA-DECISION-ENGINE-R152.4 (Refusal):** Refuse unrenderable facts or missing provenance without fabricated substitutions.
-- [ ] **MEDULLA-DECISION-ENGINE-R152.5 (Evidence):** Test no triple leakage, correct placement outside demonstration regions, complete citations and budget compliance.
-- [ ] **MEDULLA-DECISION-ENGINE-R152.6 (Hot-path proof):** Serve `Method::CompileContext` through Meristem context_compiler_serving.py with integration test.
-
-## Offline line-numbered table of contents and span-read contracts (R153)
-
-- [ ] **MEDULLA-DECISION-ENGINE-R153.1 (Model):** Source ingestion produces offline line-numbered TOC keyed by document identity and revision.
-- [ ] **MEDULLA-DECISION-ENGINE-R153.2 (Behavior):** Span-read operations use precomputed line ranges without reading whole files.
-- [ ] **MEDULLA-DECISION-ENGINE-R153.3 (Wiring):** Medulla document/section records link Graft SDK source ingestion to Arbora retrieval to Meristem exploration.
-- [ ] **MEDULLA-DECISION-ENGINE-R153.4 (Refusal):** Refuse span reads when requested range exceeds offline TOC bounds.
-- [ ] **MEDULLA-DECISION-ENGINE-R153.5 (Evidence):** Validate TOC construction and line-range conformance against original files.
-- [ ] **MEDULLA-DECISION-ENGINE-R153.6 (Hot-path proof):** Serve `Method::RetrievalContextSearch` with offline TOC and bounded span reads.
-
-## Parameter-free memory/retention scaling and corpus growth semantics (R154)
-
-- [ ] **MEDULLA-DECISION-ENGINE-R154.1 (Model):** Memory layers accept and retain cross-document encoded facts without external configuration.
-- [ ] **MEDULLA-DECISION-ENGINE-R154.2 (Behavior):** Corpus growth is linear in document count without scaling parameter retuning.
-- [ ] **MEDULLA-DECISION-ENGINE-R154.3 (Wiring):** Filtered-scan and lifecycle operators feed memory layers and consume retention semantics.
-- [ ] **MEDULLA-DECISION-ENGINE-R154.4 (Refusal):** Refuse memory operations under OOM or when selectivity constraints cannot be met.
-- [ ] **MEDULLA-DECISION-ENGINE-R154.5 (Evidence):** Scaling benchmarks validate linear growth under doubling corpus size.
-- [ ] **MEDULLA-DECISION-ENGINE-R154.6 (Hot-path proof):** Serve `Method::UnifiedQuery` with growing corpus and parameter-free memory.
-
-## Memory layers, episode construction and cross-session retrieval (R155)
-
-- [ ] **MEDULLA-DECISION-ENGINE-R155.1 (Model):** Sessions produce episodes: ordered, immutable fact sequences with temporal anchors.
-- [ ] **MEDULLA-DECISION-ENGINE-R155.2 (Behavior):** Episodes support cross-session retrieval with temporal validation.
-- [ ] **MEDULLA-DECISION-ENGINE-R155.3 (Wiring):** SourceIngest, episode builder and UnifiedQuery form a producer-consumer chain.
-- [ ] **MEDULLA-DECISION-ENGINE-R155.4 (Refusal):** Refuse cross-session retrieval when temporal ordering cannot be established.
-- [ ] **MEDULLA-DECISION-ENGINE-R155.5 (Evidence):** Multi-session test data validates episode formation and temporal consistency.
-- [ ] **MEDULLA-DECISION-ENGINE-R155.6 (Hot-path proof):** Serve `Method::UnifiedQuery` with multi-session episodes.
-
-## Skill document procedural compilation without separate workflow files (R156)
-
-- [ ] **MEDULLA-DECISION-ENGINE-R156.1 (Model):** Skill documents define steps, branching and error handling in natural language.
-- [ ] **MEDULLA-DECISION-ENGINE-R156.2 (Behavior):** Steps compile to executable Meristem workflow steps without separate .yml files.
-- [ ] **MEDULLA-DECISION-ENGINE-R156.3 (Wiring):** Medulla SourceIngest documents and Meristem graph_orchestrate form a producer-consumer pair.
-- [ ] **MEDULLA-DECISION-ENGINE-R156.4 (Refusal):** Refuse compilation when steps are ambiguous or lack input/output types.
-- [ ] **MEDULLA-DECISION-ENGINE-R156.5 (Evidence):** Golden skill documents compile to deterministic Meristem plan representations.
-- [ ] **MEDULLA-DECISION-ENGINE-R156.6 (Hot-path proof):** Serve `Method::CompileSkillWorkflow` with Meristem graph_orchestrate consumer.
-
-## Delegation quality gate and observation window (R157)
-
-- [ ] **MEDULLA-DECISION-ENGINE-R157.1 (Model):** Define quality window, threshold and admission decision types.
-- [ ] **MEDULLA-DECISION-ENGINE-R157.2 (Behavior):** Measure quality over stable window and gate on threshold.
-- [ ] **MEDULLA-DECISION-ENGINE-R157.3 (Wiring):** Route quality measurement through decision authority.
-- [ ] **MEDULLA-DECISION-ENGINE-R157.4 (Refusal):** Stale window or undefined threshold refuse admission.
-- [ ] **MEDULLA-DECISION-ENGINE-R157.5 (Evidence):** Bind quality metrics, threshold and admission decision.
-- [ ] **MEDULLA-DECISION-ENGINE-R157.6 (Hot-path proof):** Serve quality gate with delegation admission and refusal paths.
-
-## Per-run error frequency and joint model-width adjustment (R158)
-
-- [ ] **MEDULLA-DECISION-ENGINE-R158.1 (Model):** Define per-run window, adjustment record and before/after values.
-- [ ] **MEDULLA-DECISION-ENGINE-R158.2 (Behavior):** Compute per-run error frequency and drive adjustment decision.
-- [ ] **MEDULLA-DECISION-ENGINE-R158.3 (Wiring):** Extend routing/continuation with adjustment observation window.
-- [ ] **MEDULLA-DECISION-ENGINE-R158.4 (Refusal):** Unpartitioned errors or violated ceiling refuse adjustment.
-- [ ] **MEDULLA-DECISION-ENGINE-R158.5 (Evidence):** Bind run, window, before/after model/width/budget and decision.
-- [ ] **MEDULLA-DECISION-ENGINE-R158.6 (Hot-path proof):** Serve per-run adjustment with Meristem consumption.
-
-## Tool-routing path success history and preference (R159)
-
-- [ ] **MEDULLA-DECISION-ENGINE-R159.1 (Model):** Define path identity, success rate and preference rule types.
-- [ ] **MEDULLA-DECISION-ENGINE-R159.2 (Behavior):** Measure success rates and prefer higher-rate paths.
-- [ ] **MEDULLA-DECISION-ENGINE-R159.3 (Wiring):** Bind connector/harness observations to path-success tracking.
-- [ ] **MEDULLA-DECISION-ENGINE-R159.4 (Refusal):** Unmeasured paths or stale data refuse routing decision.
-- [ ] **MEDULLA-DECISION-ENGINE-R159.5 (Evidence):** Bind path identity, success rate and preference applied.
-- [ ] **MEDULLA-DECISION-ENGINE-R159.6 (Hot-path proof):** Serve routing with path-success preference.
-
-## Package identity validation and publication refusal (R160)
-
-- [ ] **MEDULLA-DECISION-ENGINE-R160.1 (Model):** Define package identity, validation and publication receipt types.
-- [ ] **MEDULLA-DECISION-ENGINE-R160.2 (Behavior):** Validate rendered package against recorded runs before publication.
-- [ ] **MEDULLA-DECISION-ENGINE-R160.3 (Wiring):** Link identity contracts to validation and publication authority.
-- [ ] **MEDULLA-DECISION-ENGINE-R160.4 (Refusal):** Mismatched or failed validation refuses publication.
-- [ ] **MEDULLA-DECISION-ENGINE-R160.5 (Evidence):** Bind identity, validation result and publication receipt.
-- [ ] **MEDULLA-DECISION-ENGINE-R160.6 (Hot-path proof):** Serve skill package with validation and publication refusal.
-
-## Failed-run trace to fix and test binding with revision receipts (R161)
-
-- [ ] **MEDULLA-DECISION-ENGINE-R161.1 (Model):** Define trace, fix, test and revision receipt binding types.
-- [ ] **MEDULLA-DECISION-ENGINE-R161.2 (Behavior):** Extract fix from trace and bind test to before/after receipts.
-- [ ] **MEDULLA-DECISION-ENGINE-R161.3 (Wiring):** Extend correction/admission with trace and test contracts.
-- [ ] **MEDULLA-DECISION-ENGINE-R161.4 (Refusal):** Absent trace or mismatched receipt refuse admission.
-- [ ] **MEDULLA-DECISION-ENGINE-R161.5 (Evidence):** Bind trace, test, revision digests and outcome.
-- [ ] **MEDULLA-DECISION-ENGINE-R161.6 (Hot-path proof):** Serve correction proposal with trace-test binding.
-
-## Workspace field shielding and declared-input projection (R162)
-
-- [ ] **MEDULLA-DECISION-ENGINE-R162.1 (Model):** Define shielding, projection and nesting depth types.
-- [ ] **MEDULLA-DECISION-ENGINE-R162.2 (Behavior):** Remove shielded fields recursively; project declared inputs.
-- [ ] **MEDULLA-DECISION-ENGINE-R162.3 (Wiring):** Attach shielding before workspace construction at dispatch.
-- [ ] **MEDULLA-DECISION-ENGINE-R162.4 (Refusal):** Undeclared fields refuse projection; withheld at read.
-- [ ] **MEDULLA-DECISION-ENGINE-R162.5 (Evidence):** Record withheld fields, depth and shielding per step.
-- [ ] **MEDULLA-DECISION-ENGINE-R162.6 (Hot-path proof):** Serve decision with shielding and field rejection.
-
-## Graph-ingested papers and codebases in study intake (R163)
-
-- [ ] **MEDULLA-DECISION-ENGINE-R163.1 (Model):** Define graph sources, references and revision provenance.
-- [ ] **MEDULLA-DECISION-ENGINE-R163.2 (Behavior):** Resolve graph references and record source revision.
-- [ ] **MEDULLA-DECISION-ENGINE-R163.3 (Wiring):** Bind graph resolution to study comparison path.
-- [ ] **MEDULLA-DECISION-ENGINE-R163.4 (Refusal):** Missing authority or revision refuse intake.
-- [ ] **MEDULLA-DECISION-ENGINE-R163.5 (Evidence):** Record source type, authority, revision and digest.
-- [ ] **MEDULLA-DECISION-ENGINE-R163.6 (Hot-path proof):** Serve study comparison with mixed graph/filesystem sources.
-
-## Long-horizon branches retrieve prior outcomes for breadth adaptation (R164)
-
-- [ ] **MEDULLA-DECISION-ENGINE-R164.1 (Model):** Define branch outcomes, evidence and breadth adaptation.
-- [ ] **MEDULLA-DECISION-ENGINE-R164.2 (Behavior):** Retrieve prior outcomes and adapt breadth by success.
-- [ ] **MEDULLA-DECISION-ENGINE-R164.3 (Wiring):** Integrate outcome retrieval and breadth at branch start.
-- [ ] **MEDULLA-DECISION-ENGINE-R164.4 (Refusal):** Missing outcomes or stale evidence refuse planning.
-- [ ] **MEDULLA-DECISION-ENGINE-R164.5 (Evidence):** Record prior outcomes and breadth adaptation trigger.
-- [ ] **MEDULLA-DECISION-ENGINE-R164.6 (Hot-path proof):** Serve task plan with outcome-driven breadth.
-
-## Per-model tool necessity measurement and decision comparison (R165)
-
-- [ ] **MEDULLA-DECISION-ENGINE-R165.1 (Model):** Define tool necessity, comparison and trace mismatch.
-- [ ] **MEDULLA-DECISION-ENGINE-R165.2 (Behavior):** Measure necessity per model; compare with decision.
-- [ ] **MEDULLA-DECISION-ENGINE-R165.3 (Wiring):** Integrate measurement and comparison at tool span path.
-- [ ] **MEDULLA-DECISION-ENGINE-R165.4 (Refusal):** Unknown and stale measurements refuse tool decision.
-- [ ] **MEDULLA-DECISION-ENGINE-R165.5 (Evidence):** Record necessity score, comparison and mismatch trace.
-- [ ] **MEDULLA-DECISION-ENGINE-R165.6 (Hot-path proof):** Serve tool decision with necessity and comparison.
-<!-- /spec-definition-patch -->
-- [ ] **MEDULLA-DECISION-ENGINE-R134.104 (Model):** Define AnswerCandidateRankingV1 under the decide contract.
-- [ ] **MEDULLA-DECISION-ENGINE-R134.105 (Behavior):** The engine must compare answer candidates pairwise without a verifier.
-- [ ] **MEDULLA-DECISION-ENGINE-R134.106 (Wiring):** The ranking attaches in handle_decide beside the existing task-plan decisions.
-- [ ] **MEDULLA-DECISION-ENGINE-R134.107 (Refusal):** The engine must refuse a ranking request that names a verifier, has fewer than two candidates, or exceeds the revision bound.
-- [ ] **MEDULLA-DECISION-ENGINE-R134.108 (Evidence):** The engine must emit one premise per pairwise comparison and one for the global order.
-- [ ] **MEDULLA-DECISION-ENGINE-R134.109 (Hot-path proof):** The entry point is the served Decide wire method.
-- [ ] **MEDULLA-DECISION-ENGINE-R135.10 (Model):** Define InsightRecordV1 in the program store.
-- [ ] **MEDULLA-DECISION-ENGINE-R135.11 (Behavior):** The engine must consolidate submitted insights and rank them by context match and success.
-- [ ] **MEDULLA-DECISION-ENGINE-R135.12 (Wiring):** The Harness observes outcomes and submits them to the engine.
-- [ ] **MEDULLA-DECISION-ENGINE-R135.13 (Refusal):** The engine must refuse a submission that has no source run.
-- [ ] **MEDULLA-DECISION-ENGINE-R135.14 (Evidence):** The engine must emit premises for the selected insights, their source runs and the selection revision.
-- [ ] **MEDULLA-DECISION-ENGINE-R135.15 (Hot-path proof):** The entry point is the served Decide wire method.
-
-## Workflow registration and lazy engine initialization (R166)
-
-- [ ] **MEDULLA-DECISION-ENGINE-R166.1 (Model):** Define registration record and read identity.
-- [ ] **MEDULLA-DECISION-ENGINE-R166.2 (Behavior):** Start the engine lazily on first use.
-- [ ] **MEDULLA-DECISION-ENGINE-R166.3 (Wiring):** Resolve invocation through the registry.
-- [ ] **MEDULLA-DECISION-ENGINE-R166.4 (Refusal):** Refuse unknown workflow before any start.
-- [ ] **MEDULLA-DECISION-ENGINE-R166.5 (Evidence):** Record identity and start event on receipts.
-- [ ] **MEDULLA-DECISION-ENGINE-R166.6 (Hot-path proof):** Serve registered invocation with lazy start and refusal.
-
-## Skill upgrade compatibility and declared migration (R167)
-
-- [ ] **MEDULLA-DECISION-ENGINE-R167.1 (Model):** Define the upgrade receipt.
-- [ ] **MEDULLA-DECISION-ENGINE-R167.2 (Behavior):** Admit compatible and migrated upgrades.
-- [ ] **MEDULLA-DECISION-ENGINE-R167.3 (Wiring):** Run the check before invoke dispatch.
-- [ ] **MEDULLA-DECISION-ENGINE-R167.4 (Refusal):** Refuse breaking upgrade without migration.
-- [ ] **MEDULLA-DECISION-ENGINE-R167.5 (Evidence):** Emit comparison and migration premises.
-- [ ] **MEDULLA-DECISION-ENGINE-R167.6 (Hot-path proof):** Serve upgrade admission cases.
-- [ ] **MEDULLA-DECISION-ENGINE-R168.1 (Model):** Define the agent state type and its lifecycle states.
-- [ ] **MEDULLA-DECISION-ENGINE-R168.2 (Behavior):** The engine must validate state at construction and on every transition.
-- [ ] **MEDULLA-DECISION-ENGINE-R168.3 (Wiring):** The harness port and run contract must construct and advance the agent through this model.
-- [ ] **MEDULLA-DECISION-ENGINE-R168.4 (Refusal):** The engine must refuse malformed state at construction, on transition and on read from storage.
-- [ ] **MEDULLA-DECISION-ENGINE-R168.5 (Evidence):** The engine must emit one premise per transition naming the prior state, the next state and the state digest.
-- [ ] **MEDULLA-DECISION-ENGINE-R168.6 (Hot-path proof):** The entry point is the served agent run path.
-- [ ] **MEDULLA-DECISION-ENGINE-R169.1 (Model):** Define a feedback record with the output digest, the checker report digest, the findings and the next instruction.
-- [ ] **MEDULLA-DECISION-ENGINE-R169.2 (Behavior):** The harness must grade every output, not one output per evaluation round.
-- [ ] **MEDULLA-DECISION-ENGINE-R169.3 (Wiring):** The engine must hold the continuation in durable state.
-- [ ] **MEDULLA-DECISION-ENGINE-R169.4 (Refusal):** The loop must refuse a missing bound, an ungraded output and a replayed idempotency key.
-- [ ] **MEDULLA-DECISION-ENGINE-R169.5 (Evidence):** The engine must emit one premise per round with the findings digest and the instruction digest.
-- [ ] **MEDULLA-DECISION-ENGINE-R169.6 (Hot-path proof):** The entry point is the served loop run path.
-- [ ] **MEDULLA-DECISION-ENGINE-R170.1 (Model):** Define a team record with team id, members, and the persisted task status of each task.
-- [ ] **MEDULLA-DECISION-ENGINE-R170.2 (Behavior):** The coordinator must start team coordination when the primary channel is unavailable.
-- [ ] **MEDULLA-DECISION-ENGINE-R170.3 (Wiring):** The host agent-to-agent endpoint and task store must write the record.
-- [ ] **MEDULLA-DECISION-ENGINE-R170.4 (Refusal):** The coordinator must refuse to treat a library member as a team member without an explicit team binding.
-- [ ] **MEDULLA-DECISION-ENGINE-R170.5 (Evidence):** The engine must emit one premise for the channel signal and one for the team membership.
-- [ ] **MEDULLA-DECISION-ENGINE-R170.6 (Hot-path proof):** The entry point is the served team coordination path.
-- [ ] **MEDULLA-DECISION-ENGINE-R171.1 (Model):** Define a planning admission request with the architecture view digest, the gap proposal digests and the plan features.
-- [ ] **MEDULLA-DECISION-ENGINE-R171.2 (Behavior):** The engine must run the comparison before admission and not after.
-- [ ] **MEDULLA-DECISION-ENGINE-R171.3 (Wiring):** The study consumer must submit gap proposals to this admission.
-- [ ] **MEDULLA-DECISION-ENGINE-R171.4 (Refusal):** The engine must refuse a plan with no comparison, a stale view, or a feature without an attach point.
-- [ ] **MEDULLA-DECISION-ENGINE-R171.5 (Evidence):** The engine must emit one premise for the comparison and one per feature attach point.
-- [ ] **MEDULLA-DECISION-ENGINE-R171.6 (Hot-path proof):** The entry point is the served planning admission path.
-- [ ] **MEDULLA-DECISION-ENGINE-R172:** The engine owns capability designation, moved from Meristem.
-- [ ] **MEDULLA-DECISION-ENGINE-R172.1 (Model):** Implement in native Rust and pass the named proving test.
-- [ ] **MEDULLA-DECISION-ENGINE-R172.2 (Behavior):** Implement in native Rust and pass the named proving test.
-- [ ] **MEDULLA-DECISION-ENGINE-R172.3 (Behavior):** Implement in native Rust and pass the named proving test.
-- [ ] **MEDULLA-DECISION-ENGINE-R172.4 (Behavior):** Implement in native Rust and pass the named proving test.
-- [ ] **MEDULLA-DECISION-ENGINE-R172.5 (Behavior):** Implement in native Rust and pass the named proving test.
-- [ ] **MEDULLA-DECISION-ENGINE-R172.6 (Behavior):** Implement in native Rust and pass the named proving test.
-- [ ] **MEDULLA-DECISION-ENGINE-R172.7 (Wiring):** Implement in native Rust and pass the named proving test.
-- [ ] **MEDULLA-DECISION-ENGINE-R172.8 (Refusal):** Implement in native Rust and pass the named proving test.
-- [ ] **MEDULLA-DECISION-ENGINE-R172.9 (Evidence):** Implement in native Rust and pass the named proving test.
-- [ ] **MEDULLA-DECISION-ENGINE-R172.10 (Behavior):** Implement in native Rust and pass the named proving test.
-- [ ] **MEDULLA-DECISION-ENGINE-R172.11 (Hot-path proof):** Implement in native Rust and pass the named proving test.
-- [ ] **MEDULLA-DECISION-ENGINE-R172.12:** Designation and selection read imported connector-pack relationships. Pass the proving test in test-spec.md.
-- [ ] **MEDULLA-DECISION-ENGINE-R172.12.1:** Model. Pass the proving test in test-spec.md.
-- [ ] **MEDULLA-DECISION-ENGINE-R172.12.2:** Behavior. Pass the proving test in test-spec.md.
-- [ ] **MEDULLA-DECISION-ENGINE-R172.12.3:** Wiring. Pass the proving test in test-spec.md.
-- [ ] **MEDULLA-DECISION-ENGINE-R172.12.4:** Refusal. Pass the proving test in test-spec.md.
-- [ ] **MEDULLA-DECISION-ENGINE-R172.12.5:** Evidence. Pass the proving test in test-spec.md.
-- [ ] **MEDULLA-DECISION-ENGINE-R172.12.6:** Hot-path proof. Pass the proving test in test-spec.md.
-- [ ] **MEDULLA-DECISION-ENGINE-R172.13:** Behavior. Pass the proving test in test-spec.md.
-- [ ] **MEDULLA-DECISION-ENGINE-R175 (rollup):** Implicit-reasoning recommendation over temporal semantic ids.
-- [ ] **MEDULLA-DECISION-ENGINE-R175.1 (Model):** Add the recommendation types and question kind.
-- [ ] **MEDULLA-DECISION-ENGINE-R175.2 (Behavior):** Implement the encoder and the refinement ranker.
-- [ ] **MEDULLA-DECISION-ENGINE-R175.3 (Wiring):** Add the match arm and the encoder artifact.
-- [ ] **MEDULLA-DECISION-ENGINE-R175.4 (Refusal):** Add the typed refusals.
-- [ ] **MEDULLA-DECISION-ENGINE-R175.5 (Evidence):** Emit premises and the benchmark claim.
-- [ ] **MEDULLA-DECISION-ENGINE-R175.6 (Hot-path proof):** Add the served NDCG test and the benchmark.
-- [ ] **MEDULLA-DECISION-ENGINE-R173 (rollup):** Cross-round edit concentration cap.
-- [ ] **MEDULLA-DECISION-ENGINE-R173.1 (Model):** Add the concentration types and question kind.
-- [ ] **MEDULLA-DECISION-ENGINE-R173.2 (Behavior):** Implement the windowed verdict.
-- [ ] **MEDULLA-DECISION-ENGINE-R173.3 (Wiring):** Add the match arm and the shape.
-- [ ] **MEDULLA-DECISION-ENGINE-R173.4 (Refusal):** Add the typed abstentions.
-- [ ] **MEDULLA-DECISION-ENGINE-R173.5 (Evidence):** Emit the concentration premises.
-- [ ] **MEDULLA-DECISION-ENGINE-R173.6 (Hot-path proof):** Add the served concentration test and the benchmark.
-- [ ] **MEDULLA-DECISION-ENGINE-R134.110 (rollup):** Native tool relevance index and task-to-tool assignment.
-- [ ] **MEDULLA-DECISION-ENGINE-R134.110.1 (Model):** Add the tool entry and assignment types.
-- [ ] **MEDULLA-DECISION-ENGINE-R134.110.2 (Behavior):** Implement the index and the fused ranking.
-- [ ] **MEDULLA-DECISION-ENGINE-R134.110.3 (Wiring):** Wire the index into the decision arm and the catalog writes.
-- [ ] **MEDULLA-DECISION-ENGINE-R134.110.4 (Refusal):** Add the typed refusals.
-- [ ] **MEDULLA-DECISION-ENGINE-R134.110.5 (Evidence):** Emit per-tool premises.
-- [ ] **MEDULLA-DECISION-ENGINE-R134.110.6 (Hot-path proof):** Add the served assignment test and the benchmark.
-- [ ] **MEDULLA-DECISION-ENGINE-R100.102 (rollup):** Run retrieval outcomes and per-step credit.
-- [ ] **MEDULLA-DECISION-ENGINE-R100.102.1 (Model):** Add the run outcome write.
-- [ ] **MEDULLA-DECISION-ENGINE-R100.102.2 (Behavior):** Implement the join and the step credit.
-- [ ] **MEDULLA-DECISION-ENGINE-R100.102.3 (Wiring):** Wire the write into `DecisionLog.Learn`.
-- [ ] **MEDULLA-DECISION-ENGINE-R100.102.4 (Refusal):** Add the typed refusals.
-- [ ] **MEDULLA-DECISION-ENGINE-R100.102.5 (Evidence):** Emit the run credit receipt.
-- [ ] **MEDULLA-DECISION-ENGINE-R100.102.6 (Hot-path proof):** Add the served credit test and the benchmark.
-- [ ] **MEDULLA-DECISION-ENGINE-R174 (rollup):** Engine-run embedding generation swap cycle.
-- [ ] **MEDULLA-DECISION-ENGINE-R174.1 (Model):** Add the cycle record.
-- [ ] **MEDULLA-DECISION-ENGINE-R174.2 (Behavior):** Implement the cycle state machine.
-- [ ] **MEDULLA-DECISION-ENGINE-R174.3 (Wiring):** Wire the cycle into `DecisionLog.Learn` and `medulla-jobs`.
-- [ ] **MEDULLA-DECISION-ENGINE-R174.4 (Refusal):** Add the typed refusals.
-- [ ] **MEDULLA-DECISION-ENGINE-R174.5 (Evidence):** Emit the cycle receipt.
-- [ ] **MEDULLA-DECISION-ENGINE-R174.6 (Hot-path proof):** Add the served cycle test and the overhead measurement.
-
-- [ ] **MEDULLA-DECISION-ENGINE-R176 (rollup):** Job-scoped load set from the overlay of all connector packs (rollup).
-- [ ] **MEDULLA-DECISION-ENGINE-R176.1 (Model):** Add the typed model.
-- [ ] **MEDULLA-DECISION-ENGINE-R176.2 (Behavior):** Implement the behavior.
-- [ ] **MEDULLA-DECISION-ENGINE-R176.3 (Wiring):** Wire the production call site.
-- [ ] **MEDULLA-DECISION-ENGINE-R176.4 (Refusal):** Add the typed refusals.
-- [ ] **MEDULLA-DECISION-ENGINE-R176.5 (Evidence):** Emit the evidence.
-- [ ] **MEDULLA-DECISION-ENGINE-R176.6 (Hot-path proof):** Add the served hot-path test.
-- [ ] **MEDULLA-DECISION-ENGINE-R177 (rollup):** Connector usage guidance is a graph query (rollup).
-- [ ] **MEDULLA-DECISION-ENGINE-R177.1 (Model):** Add the typed model.
-- [ ] **MEDULLA-DECISION-ENGINE-R177.2 (Behavior):** Implement the behavior.
-- [ ] **MEDULLA-DECISION-ENGINE-R177.3 (Wiring):** Wire the production call site.
-- [ ] **MEDULLA-DECISION-ENGINE-R177.4 (Refusal):** Add the typed refusals.
-- [ ] **MEDULLA-DECISION-ENGINE-R177.5 (Evidence):** Emit the evidence.
-- [ ] **MEDULLA-DECISION-ENGINE-R177.6 (Hot-path proof):** Add the served hot-path test.
-- [ ] **MEDULLA-DECISION-ENGINE-R174.7 (rollup):** Scoped outcome-trained adapters on the frozen base embedding.
-- [ ] **MEDULLA-DECISION-ENGINE-R174.7.1 (Model):** Add the scope, side, source and pointer types.
-- [ ] **MEDULLA-DECISION-ENGINE-R174.7.2 (Behavior):** Extend the fit, the keep-or-revert rules and the monitor.
-- [ ] **MEDULLA-DECISION-ENGINE-R174.7.3 (Wiring):** Wire fit, activation and serving through the named call sites.
-- [ ] **MEDULLA-DECISION-ENGINE-R174.7.4 (Refusal):** Add the typed refusals.
-- [ ] **MEDULLA-DECISION-ENGINE-R174.7.5 (Evidence):** Emit the fit and rollback receipts.
-- [ ] **MEDULLA-DECISION-ENGINE-R174.7.6 (Hot-path proof):** Add the served adapter test and the benchmark.
-- [ ] **MEDULLA-DECISION-ENGINE-R174.8 (rollup):** Drift-driven embedding refresh with atomic per-shard versions.
-- [ ] **MEDULLA-DECISION-ENGINE-R174.8.1 (Model):** Add the drift signal and refresh plan types.
-- [ ] **MEDULLA-DECISION-ENGINE-R174.8.2 (Behavior):** Implement the per-shard monitor and region selection.
-- [ ] **MEDULLA-DECISION-ENGINE-R174.8.3 (Wiring):** Wire the monitor, the job and the per-shard swap.
-- [ ] **MEDULLA-DECISION-ENGINE-R174.8.4 (Refusal):** Add the typed refusals.
-- [ ] **MEDULLA-DECISION-ENGINE-R174.8.5 (Evidence):** Emit the signal premises and the refresh receipt.
-- [ ] **MEDULLA-DECISION-ENGINE-R174.8.6 (Hot-path proof):** Add the served drift test and the benchmark.
-- [ ] **MEDULLA-DECISION-ENGINE-R174.9 (rollup):** Fresh data through the search connector's virtual-graph source.
-- [ ] **MEDULLA-DECISION-ENGINE-R174.9.1 (Model):** Add the refresh request and result types.
-- [ ] **MEDULLA-DECISION-ENGINE-R174.9.2 (Behavior):** Implement deduplication, region marks and budgets.
-- [ ] **MEDULLA-DECISION-ENGINE-R174.9.3 (Wiring):** Wire the refresh through the virtual-graph source and the job.
-- [ ] **MEDULLA-DECISION-ENGINE-R174.9.4 (Refusal):** Add the typed refusals.
-- [ ] **MEDULLA-DECISION-ENGINE-R174.9.5 (Evidence):** Emit result provenance and the refresh receipt.
-- [ ] **MEDULLA-DECISION-ENGINE-R174.9.6 (Hot-path proof):** Add the served freshness test and the overhead measurement.
-
-## Web page selection (R802, R174.9.7)
-
-- [ ] **MEDULLA-DECISION-ENGINE-R174.9.7:** Turn stale web Documents into page candidates and supersede on a digest change.
-- [ ] **MEDULLA-DECISION-ENGINE-R802 (rollup):** Web page selection over search candidates.
-- [x] **MEDULLA-DECISION-ENGINE-R802.1 (Model):** Add the question, the answer and the skip reasons.
-- [x] **MEDULLA-DECISION-ENGINE-R802.2 (Behavior):** Implement ranking, deduplication, freshness skips and budgets.
-- [x] **MEDULLA-DECISION-ENGINE-R802.3 (Wiring):** Serve `SelectWebPages` over the held Documents.
-- [x] **MEDULLA-DECISION-ENGINE-R802.4 (Refusal):** Add the typed refusals.
-- [x] **MEDULLA-DECISION-ENGINE-R802.5 (Evidence):** Emit one premise per candidate.
-- [x] **MEDULLA-DECISION-ENGINE-R802.6 (Hot-path proof):** Add the served selection test and the benchmark.
-
-## Harness contrast composition (R803)
-
-- [ ] **MEDULLA-DECISION-ENGINE-R803 (rollup):** Compose the adopted harness from the probed candidates.
-- [ ] **MEDULLA-DECISION-ENGINE-R803.1 (Model):** Add the decision type and the closed abstain reasons.
-- [ ] **MEDULLA-DECISION-ENGINE-R803.2 (Behavior):** Implement adoption, tie-break and abstention.
-- [ ] **MEDULLA-DECISION-ENGINE-R803.3 (Wiring):** Serve the contrast question through `Decide` and `DecisionCommit`.
-- [ ] **MEDULLA-DECISION-ENGINE-R803.4 (Refusal):** Add the typed refusals.
-- [ ] **MEDULLA-DECISION-ENGINE-R803.5 (Evidence):** Pin the probe evidence in the decision record.
-- [ ] **MEDULLA-DECISION-ENGINE-R803.6 (Hot-path proof):** Add the served contrast test and the benchmark.
-
-- [ ] **MEDULLA-DECISION-ENGINE-R036.102:** Bind the existing graph prepare writer and recovery readers to versioned transaction/participant identity; qualify refusal and legacy recovery.
-
-- [ ] `MEDULLA-DECISION-ENGINE-R036.103` Implement durable RBAC prepare, writer interlock and coordinator resolution; qualify reopen, conflicting writes, replay and offline layout upgrade. No profile-admission completion claim.
-- [ ] **MEDULLA-DECISION-ENGINE-R036.105:** Qualify atomic certificate persistence, strict expiry, immutable recovery and exact cross-owner binding.
-- [ ] **MEDULLA-DECISION-ENGINE-R036.104:** Implement and qualify AgentLibraryOwner durable prepare, all-writer fencing and decision-record materialization/recovery against the native coordinator certificate.
-- [ ] **MEDULLA-DECISION-ENGINE-R801.8:** Co-commit caller-bound observed run usage and aggregate unique committed runs with explicit coverage.
-- [ ] **MEDULLA-DECISION-ENGINE-R804:** Evaluation sets and the program optimizer loop (rollup).
-- [ ] **MEDULLA-DECISION-ENGINE-R804.1:** Model.
-- [ ] **MEDULLA-DECISION-ENGINE-R804.2:** Behavior.
-- [ ] **MEDULLA-DECISION-ENGINE-R804.3:** Wiring.
-- [ ] **MEDULLA-DECISION-ENGINE-R804.4:** Refusal.
-- [ ] **MEDULLA-DECISION-ENGINE-R804.5:** Evidence.
-- [ ] **MEDULLA-DECISION-ENGINE-R804.6:** Hot-path proof.
-- [ ] **MEDULLA-DECISION-ENGINE-R805:** Harness promotion and rollback (rollup).
-- [ ] **MEDULLA-DECISION-ENGINE-R805.1:** Model.
-- [ ] **MEDULLA-DECISION-ENGINE-R805.2:** Behavior.
-- [ ] **MEDULLA-DECISION-ENGINE-R805.3:** Wiring.
-- [ ] **MEDULLA-DECISION-ENGINE-R805.4:** Refusal.
-- [ ] **MEDULLA-DECISION-ENGINE-R805.5:** Evidence.
-- [ ] **MEDULLA-DECISION-ENGINE-R805.6:** Hot-path proof.
-
-## Agent-memory substrate claims (2026-10-22)
-
-  - [ ] **MEDULLA-DECISION-ENGINE-R651.7:** Episodic-to-semantic promotion.
-  - [ ] **MEDULLA-DECISION-ENGINE-R651.8:** Reinforce and decay share one salience update.
-  - [ ] **MEDULLA-DECISION-ENGINE-R700.7:** Contradiction records are tracked.
-
-## Program optimization, policy evolution and champion promotion (R810 to R813)
-
-- [ ] **MEDULLA-DECISION-ENGINE-R810 (rollup):** Program and prompt optimization job (rollup)
-- [ ] **MEDULLA-DECISION-ENGINE-R810.1:** Model
-- [ ] **MEDULLA-DECISION-ENGINE-R810.2:** Behavior
-- [ ] **MEDULLA-DECISION-ENGINE-R810.3:** Wiring
-- [ ] **MEDULLA-DECISION-ENGINE-R810.4:** Refusal
-- [ ] **MEDULLA-DECISION-ENGINE-R810.5:** Evidence
-- [ ] **MEDULLA-DECISION-ENGINE-R810.6:** Hot-path proof
-- [ ] **MEDULLA-DECISION-ENGINE-R811 (rollup):** Policy evolution capture, training and held-out evaluation receipts (rollup)
-- [ ] **MEDULLA-DECISION-ENGINE-R811.1:** Model
-- [ ] **MEDULLA-DECISION-ENGINE-R811.2:** Behavior
-- [ ] **MEDULLA-DECISION-ENGINE-R811.3:** Wiring
-- [ ] **MEDULLA-DECISION-ENGINE-R811.4:** Refusal
-- [ ] **MEDULLA-DECISION-ENGINE-R811.5:** Evidence
-- [ ] **MEDULLA-DECISION-ENGINE-R811.6:** Hot-path proof
-- [ ] **MEDULLA-DECISION-ENGINE-R812 (rollup):** Champion and challenger promotion with rollback (rollup)
-- [ ] **MEDULLA-DECISION-ENGINE-R812.1:** Model
-- [ ] **MEDULLA-DECISION-ENGINE-R812.2:** Behavior
-- [ ] **MEDULLA-DECISION-ENGINE-R812.3:** Wiring
-- [ ] **MEDULLA-DECISION-ENGINE-R812.4:** Refusal
-- [ ] **MEDULLA-DECISION-ENGINE-R812.5:** Evidence
-- [ ] **MEDULLA-DECISION-ENGINE-R812.6:** Hot-path proof
-- [ ] **MEDULLA-DECISION-ENGINE-R813 (rollup):** Trace-store scores become evaluation examples (rollup)
-- [ ] **MEDULLA-DECISION-ENGINE-R813.1:** Model
-- [ ] **MEDULLA-DECISION-ENGINE-R813.2:** Behavior
-- [ ] **MEDULLA-DECISION-ENGINE-R813.3:** Wiring
-- [ ] **MEDULLA-DECISION-ENGINE-R813.4:** Refusal
-- [ ] **MEDULLA-DECISION-ENGINE-R813.5:** Evidence
-- [ ] **MEDULLA-DECISION-ENGINE-R813.6:** Hot-path proof
-- [ ] **MEDULLA-DECISION-ENGINE-R134.111.1-.5:** Add and verify the bounded explicit-task
-  Decide path. Keep semantic decomposition, skill search, durable graph publish,
-  and cross-owner admission/execution acceptance separate and open.
-
-- [ ] **MEDULLA-DECISION-ENGINE-R134.111.6:** Qualify the named maximum-input benchmark; record the profile, hardware and latency/memory results before claiming the performance budget.
-
-- [ ] **MEDULLA-DECISION-ENGINE-R134.111.8:** Model the typed tool step and its bindings.
-- [ ] **MEDULLA-DECISION-ENGINE-R134.111.9:** Canonicalize and statically check calls and bindings.
-- [ ] **MEDULLA-DECISION-ENGINE-R134.111.10:** Refuse bad references, binding cycles and call bounds with typed reasons.
-- [ ] **MEDULLA-DECISION-ENGINE-R134.111.11:** Bind calls and bindings into the plan digest and evidence.
-- [ ] **MEDULLA-DECISION-ENGINE-R134.111.12:** Wire calls through the served Decide path and the feature schema.
-- [ ] **MEDULLA-DECISION-ENGINE-R134.111.13:** Prove typed tool steps through the served Decide method.
-
-
-- [ ] **MEDULLA-DECISION-ENGINE-R814:** Connector prompts are system-prompt candidates that agent assembly selects (rollup).
-- [ ] **MEDULLA-DECISION-ENGINE-R814.1:** Model (rollup).
-- [x] **MEDULLA-DECISION-ENGINE-R814.1.1:** Vocabulary: metadata-catalog prompt-candidate class, relation and shapes.
-- [ ] **MEDULLA-DECISION-ENGINE-R814.1.2:** Typed `PromptCandidate` record and round-trip contract.
-- [ ] **MEDULLA-DECISION-ENGINE-R814.2:** Behavior.
-- [ ] **MEDULLA-DECISION-ENGINE-R814.3:** Wiring.
-- [ ] **MEDULLA-DECISION-ENGINE-R814.4:** Refusal.
-- [ ] **MEDULLA-DECISION-ENGINE-R814.5:** Evidence.
-- [ ] **MEDULLA-DECISION-ENGINE-R814.6:** Hot-path proof.
-- [ ] **MEDULLA-DECISION-ENGINE-R814.7:** Competency query.
-- [ ] **MEDULLA-DECISION-ENGINE-R814.8:** Packaged prompts validate against the canonical blueprint.
-## Usage ledger (R801)
-- [ ] **MEDULLA-DECISION-ENGINE-R801.7:** Serve `UsageRead` over the durable ledger; take the tenant from the verified context; add the served test.
-- [ ] **MEDULLA-DECISION-ENGINE-R036.106:** Wire profile-use grant records and the offline RBAC layout upgrade. Qualify grant issuance and composed model admission.
-
-## Model media producer qualification
-
-- [ ] **MEDULLA-DECISION-ENGINE-R050.1:** Land optional bounded media declarations,
-  digest compatibility, pack propagation and the eight producer fixtures.
-  Source exists; native execution is not inferred from test annotations.
-- [ ] **MEDULLA-DECISION-ENGINE-R050.2:** Regenerate canonical contracts and clients;
-  pass the strict generated-model fixture and freshness gate on the same head.
-- [ ] **MEDULLA-DECISION-ENGINE-R050.3:** Run native declaration, digest,
-  persistence and signed pack-import fixtures on that head; implement and
-  qualify the planned maximum-parts benchmark with a hardware/profile receipt.
-- [ ] Keep **MEDULLA-DECISION-ENGINE-R036** selected-profile authority and atomic
-  admission open. Record the missing media-run snapshot, downstream consumer
-  enforcement and served PNG evidence before changing the TUI104 refusal.
-
-## Participant memory, assistant profiles and memory events
-
-- [ ] **MEDULLA-DECISION-ENGINE-R617.7:** Participant class and record.
-- [ ] **MEDULLA-DECISION-ENGINE-R617.8:** Session membership and speaking participant.
-- [ ] **MEDULLA-DECISION-ENGINE-R617.9:** Served participant writes.
-- [ ] **MEDULLA-DECISION-ENGINE-R651.9:** Memory scope narrows and the ACL still applies.
-- [ ] **MEDULLA-DECISION-ENGINE-R651.10:** Observation configuration per participant per session.
-- [ ] **MEDULLA-DECISION-ENGINE-R651.11:** Appending a turn enqueues one derive job.
-- [ ] **MEDULLA-DECISION-ENGINE-R651.12:** Derive worker writes conclusions as claims.
-- [ ] **MEDULLA-DECISION-ENGINE-R652.9:** Claims carry subject and observer.
-- [ ] **MEDULLA-DECISION-ENGINE-R155.7:** Scope narrows cross-session episode recall.
-- [ ] **MEDULLA-DECISION-ENGINE-R073.6:** Memory events enter the graph outbox.
-- [ ] **MEDULLA-DECISION-ENGINE-R073.7:** Pull and acknowledge memory events over the served outbox method.
-- [ ] **MEDULLA-DECISION-ENGINE-R655:** Participant questions, cards and derivation status (rollup).
-- [ ] **MEDULLA-DECISION-ENGINE-R655.1:** Model.
-- [ ] **MEDULLA-DECISION-ENGINE-R655.2:** Behavior: ask about a participant.
-- [ ] **MEDULLA-DECISION-ENGINE-R655.3:** Behavior: participant card.
-- [ ] **MEDULLA-DECISION-ENGINE-R655.4:** Wiring: card read and derivation status.
-- [ ] **MEDULLA-DECISION-ENGINE-R655.5:** Refusal.
-- [ ] **MEDULLA-DECISION-ENGINE-R655.6:** Hot-path proof.
-- [ ] **MEDULLA-DECISION-ENGINE-R656:** Assistant profiles and document sets (rollup).
-- [ ] **MEDULLA-DECISION-ENGINE-R656.1:** Model.
-- [ ] **MEDULLA-DECISION-ENGINE-R656.2:** Behavior: profile and document-set store with sharing.
-- [ ] **MEDULLA-DECISION-ENGINE-R656.3:** Behavior: document set as a retrieval filter.
-- [ ] **MEDULLA-DECISION-ENGINE-R656.4:** Wiring: a named profile constrains the run.
-- [ ] **MEDULLA-DECISION-ENGINE-R656.5:** Refusal.
-- [ ] **MEDULLA-DECISION-ENGINE-R656.6:** Hot-path proof.
-- [ ] **MEDULLA-DECISION-ENGINE-R128.16:** Assistant profile constrains the HarnessConfig request.
-- [ ] **MEDULLA-DECISION-ENGINE-R036.107:** AgentAssemble respects the profile tool allowlist.
-- [ ] **MEDULLA-DECISION-ENGINE-R179.8:** Participant memory knobs.
-- [ ] **MEDULLA-DECISION-ENGINE-R010.100.4:** Participant memory refusal codes.
+# MEDULLA-DECISION-ENGINE — Tasks
+
+One task per leaf row of `requirements.md`, producer first. Each task names its row; the row holds the files, the caller chain and the proof.
+
+## Tasks
+
+- [ ] T001 [US1] MEDULLA-DECISION-ENGINE-R001.1 ResolutionKind is typed with all five variants; the production chokepoint emits Optimization, Statistical,...
+- [ ] T002 [US1] MEDULLA-DECISION-ENGINE-R001.2.1 Constraint kind from a no-good re-solve
+- [ ] T003 [US1] MEDULLA-DECISION-ENGINE-R001.2.2 Entailment kind from a re-solve over every candidate
+- [ ] T004 [US1] MEDULLA-DECISION-ENGINE-R002 Evidence class recorded on every decision record
+- [ ] T005 [US1] MEDULLA-DECISION-ENGINE-R003 Derivation records for entailed answers
+- [ ] T006 [US2] MEDULLA-DECISION-ENGINE-R004 Independently verifiable 0-1 integer solver certificate
+- [ ] T007 [US3] MEDULLA-DECISION-ENGINE-R005 Conformal and risk-controlled statistical guarantees
+- [ ] T008 [US3] MEDULLA-DECISION-ENGINE-R006 Off-policy evaluation gated on effective sample size
+- [ ] T009 [US5] MEDULLA-DECISION-ENGINE-R007 Deterministic cross-target replay of committed decision records
+- [ ] T010 [US2] MEDULLA-DECISION-ENGINE-R008 Why-chosen and why-not explanations for solved assemblies
+- [ ] T011 [US1] MEDULLA-DECISION-ENGINE-R009 Learned ranking stays monotone with respect to safety
+- [ ] T012 [US1] MEDULLA-DECISION-ENGINE-R010.100.1 Refusal code type and family tables
+- [ ] T013 [US1] MEDULLA-DECISION-ENGINE-R010.100.2 Fold existing per-feature refusal enums
+- [ ] T014 [US1] MEDULLA-DECISION-ENGINE-R010.100.3 Rename the retrieval evidence class
+- [ ] T015 [US1] MEDULLA-DECISION-ENGINE-R010.100.4 Participant memory refusal codes
+- [ ] T016 [US1] MEDULLA-DECISION-ENGINE-R011 Work-budgeted search without an arbitrary result cap
+- [ ] T017 [US1] MEDULLA-DECISION-ENGINE-R012.1 Slot-level crediting across questions sharing an assembly template
+- [ ] T018 [US1] MEDULLA-DECISION-ENGINE-R013 Tenant-visibility filtering before feature computation
+- [ ] T019 [US1] MEDULLA-DECISION-ENGINE-R015.1 Typed, closed StatisticalHeadKind refusing a non-fitted-head name
+- [ ] T020 [US1] MEDULLA-DECISION-ENGINE-R015.2.1 Total, reversible mapping between StatisticalHeadKind and the production HeadKind registry
+- [ ] T021 [US1] MEDULLA-DECISION-ENGINE-R015.2.2 Route DecisionFitRequest construction through the typed mapping
+- [ ] T022 [US1] MEDULLA-DECISION-ENGINE-R016 Training restricted to independently evaluated outcomes
+- [ ] T023 [US1] MEDULLA-DECISION-ENGINE-R017 Single write authority per durable decision state kind
+- [ ] T024 [US1] MEDULLA-DECISION-ENGINE-R018 Unknown facts never default to zero in the solver
+- [ ] T025 [US1] MEDULLA-DECISION-ENGINE-R021 Versioned feature schema for decision candidates
+- [ ] T026 [US1] MEDULLA-DECISION-ENGINE-R022 Separation of full-label and bandit-label training regimes
+- [ ] T027 [US3] MEDULLA-DECISION-ENGINE-R023 Hierarchical pooling of outcome statistics with a minimum-sample gate
+- [ ] T028 [US3] MEDULLA-DECISION-ENGINE-R024 Multi-class and binary calibration utilities
+- [ ] T029 [US3] MEDULLA-DECISION-ENGINE-R025 Drift detection via out-of-distribution checks and adaptive conformal bounds
+- [ ] T030 [US3] MEDULLA-DECISION-ENGINE-R026.1 Calibration-weighting half of audit sampling is tested in-crate
+- [ ] T031 [US3] MEDULLA-DECISION-ENGINE-R027 WeightedFeatures and ListwiseLogistic fitted decision heads
+- [ ] T032 [US3] MEDULLA-DECISION-ENGINE-R028 Natural-language template routing without a generative model
+- [ ] T033 [US6] MEDULLA-DECISION-ENGINE-R030 Decision-based ingestion path routing
+- [ ] T034 [US6] MEDULLA-DECISION-ENGINE-R032.1 QuestionKind::ResolveEntity is declared
+- [ ] T035 [US6] MEDULLA-DECISION-ENGINE-R032.2.1 Isotonic calibration method for binary heads
+- [ ] T036 [US6] MEDULLA-DECISION-ENGINE-R032.2.2 Served ResolveEntity family
+- [ ] T037 [US6] MEDULLA-DECISION-ENGINE-R032.2.3 Gold-set coverage gate on the evaluation receipt
+- [ ] T038 [US6] MEDULLA-DECISION-ENGINE-R033.1 QuestionKind::SchemaMapping is declared
+- [ ] T039 [US6] MEDULLA-DECISION-ENGINE-R033.2.1 Column-to-property score and evidence rule
+- [ ] T040 [US6] MEDULLA-DECISION-ENGINE-R033.2.2 Served SchemaMapping family
+- [ ] T041 [US6] MEDULLA-DECISION-ENGINE-R034 Proposal-only contradiction-handling suggestions
+- [ ] T042 [US2] MEDULLA-DECISION-ENGINE-R037 Escalated abstentions re-enter as claims
+- [ ] T043 [US6] MEDULLA-DECISION-ENGINE-R038.1 Typed pre-tool risk question exists
+- [ ] T044 [US6] MEDULLA-DECISION-ENGINE-R039.1 Routing abstains naming the fact when L5 accounting data is missing
+- [ ] T045 [US6] MEDULLA-DECISION-ENGINE-R039.2 Cost preference among near-tied legal options
+- [ ] T046 [US4] MEDULLA-DECISION-ENGINE-R040 Guarded promotion of fitted heads via publish receipt
+- [ ] T047 [US6] MEDULLA-DECISION-ENGINE-R041.1 Connector-event evaluate-only triage path with sampled audit logging
+- [ ] T048 [US6] MEDULLA-DECISION-ENGINE-R044.1 Typed A2ARoutingResolution refusal over ResolutionKind/EvidenceClass
+- [ ] T049 [US6] MEDULLA-DECISION-ENGINE-R044.2.1 Typed registry-lookup routing function over known graph ids
+- [ ] T050 [US6] MEDULLA-DECISION-ENGINE-R044.2.2 Served A2A routing family
+- [ ] T051 [US6] MEDULLA-DECISION-ENGINE-R045.1 Typed tool-subset request and greedy covering-set selection
+- [ ] T052 [US6] MEDULLA-DECISION-ENGINE-R045.2 Tool-subset selection wired into Decide
+- [ ] T053 [US1] MEDULLA-DECISION-ENGINE-R047 DecisionRecord v1 contract: types and methods
+- [ ] T054 [US1] MEDULLA-DECISION-ENGINE-R048 Entailment derivation with weakest-premise evidence class
+- [ ] T055 [US2] MEDULLA-DECISION-ENGINE-R049 Exact 0-1 solver with certificate and verifier
+- [ ] T056 [US6] MEDULLA-DECISION-ENGINE-R050.1 Digest-bound model input declaration source
+- [ ] T057 [US6] MEDULLA-DECISION-ENGINE-R050.2 Generated media-facts consumer contract
+- [ ] T058 [US6] MEDULLA-DECISION-ENGINE-R050.3 Nightly media-facts qualification
+- [ ] T059 [US2] MEDULLA-DECISION-ENGINE-R051 AgentAssemble and DecisionCommit handlers with audit lines
+- [ ] T060 [US2] MEDULLA-DECISION-ENGINE-R052 Routing acceptance fixture with golden vectors
+- [ ] T061 [US2] MEDULLA-DECISION-ENGINE-R053 Gold set of labelled requirement-to-assembly items
+- [ ] T062 [US3] MEDULLA-DECISION-ENGINE-R054.1 Generated ontology and shapes for the decision contract
+- [ ] T063 [US2] MEDULLA-DECISION-ENGINE-R055 Pinned deterministic numeric stack for calibration
+- [ ] T064 [US2] MEDULLA-DECISION-ENGINE-R056.1 Typed StatisticalSolverCertificate refusal on a stale model digest
+- [ ] T065 [US2] MEDULLA-DECISION-ENGINE-R056.2.1 Validating certificate constructor bound to the solver's node budget
+- [ ] T066 [US2] MEDULLA-DECISION-ENGINE-R056.2.2 Statistical-path call into the exact 0-1 solver
+- [ ] T067 [US3] MEDULLA-DECISION-ENGINE-R057 Decision executor with CandidateSource and DecideText
+- [ ] T068 [US3] MEDULLA-DECISION-ENGINE-R058 Graph-sourced decision records with RLS-routed reads
+- [ ] T069 [US4] MEDULLA-DECISION-ENGINE-R060 DecisionFit and DecisionEval jobs with gated promotion
+- [ ] T070 [US3] MEDULLA-DECISION-ENGINE-R061.1 Shared AgentComponentEntry cost/latency fixture
+- [ ] T071 [US3] MEDULLA-DECISION-ENGINE-R062 NlTemplate selection without a language model
+- [ ] T072 [US4] MEDULLA-DECISION-ENGINE-R063 Typed client wrappers and documentation for Decide
+- [ ] T073 [US5] MEDULLA-DECISION-ENGINE-R064 Optional read views of decision records
+- [ ] T074 [US5] MEDULLA-DECISION-ENGINE-R065 Decision record size and shape limits
+- [ ] T075 [US5] MEDULLA-DECISION-ENGINE-R066.1 Preserve library inputs
+- [ ] T076 [US5] MEDULLA-DECISION-ENGINE-R066.2 Expire graph inputs
+- [ ] T077 [US5] MEDULLA-DECISION-ENGINE-R066.3 Evaluate without persistence
+- [ ] T078 [US5] MEDULLA-DECISION-ENGINE-R066.4 Expire graph summaries on a policy window
+- [ ] T079 [US5] MEDULLA-DECISION-ENGINE-R067 Decision record versioning stays decodable
+- [ ] T080 [US5] MEDULLA-DECISION-ENGINE-R068 Outcome link via the existing synthesis-evidence pin
+- [ ] T081 [US2] MEDULLA-DECISION-ENGINE-R069 DecisionShape enforcement inside the commit handler
+- [ ] T082 [US2] MEDULLA-DECISION-ENGINE-R070 Bounded no-good-cut re-solve for post-solve validators
+- [ ] T083 [US5] MEDULLA-DECISION-ENGINE-R071 DecideText parser kept separate from the UQL core
+- [ ] T084 [US5] MEDULLA-DECISION-ENGINE-R072.1 Solver node count and optimality gap are emitted on the Assemble/solver path
+- [ ] T085 [US5] MEDULLA-DECISION-ENGINE-R072.100 Per-stage spans and metrics
+- [ ] T086 [US5] MEDULLA-DECISION-ENGINE-R073.1 One durable outbox event per imported component
+- [ ] T087 [US5] MEDULLA-DECISION-ENGINE-R073.2 Competing served imports share one head compare-and-set
+- [ ] T088 [US5] MEDULLA-DECISION-ENGINE-R073.3 Fresh owner open and outdated-format refusal
+- [ ] T089 [US5] MEDULLA-DECISION-ENGINE-R073.4 Receipt covers every batch intent
+- [ ] T090 [US5] MEDULLA-DECISION-ENGINE-R073.5 Batch pins and withdrawn-component reads
+- [ ] T091 [US5] MEDULLA-DECISION-ENGINE-R073.6 Memory events enter the graph outbox
+- [ ] T092 [US5] MEDULLA-DECISION-ENGINE-R073.7 Pull and acknowledge memory events over the served outbox method
+- [ ] T093 [US2] MEDULLA-DECISION-ENGINE-R074 Agent-slot component-kind closure rule kept current
+- [ ] T094 [US2] MEDULLA-DECISION-ENGINE-R075.1 check_unique_component_ids rejects a duplicate component id
+- [ ] T095 [US2] MEDULLA-DECISION-ENGINE-R075.2 The duplicate-id check runs in the real pack-import entry point
+- [ ] T096 [US5] MEDULLA-DECISION-ENGINE-R076 Opt-in nested models for decision result markers
+- [ ] T097 [US2] MEDULLA-DECISION-ENGINE-R077 Component schema version bump to add decision kinds
+- [ ] T098 [US5] MEDULLA-DECISION-ENGINE-R079.1 Typed content-class taxonomy and pure admission gate (producer slice of R079)
+- [ ] T099 [US5] MEDULLA-DECISION-ENGINE-R079.2 Content-class gate and exact-digest skip at enrichment
+- [ ] T100 [US5] MEDULLA-DECISION-ENGINE-R079.3 Duplicate, entropy and size admission at enrichment
+- [ ] T101 [US5] MEDULLA-DECISION-ENGINE-R079.4 SQL column admission rule
+- [ ] T102 [US5] MEDULLA-DECISION-ENGINE-R079.5 Retrieval feedback demotes never-retrieved content classes
+- [ ] T103 [US5] MEDULLA-DECISION-ENGINE-R080.1 Typed provenance-rung model and overwrite-protection rule
+- [ ] T104 [US5] MEDULLA-DECISION-ENGINE-R080.2 Served producers record their rung and resist overwrite
+- [ ] T105 [US5] MEDULLA-DECISION-ENGINE-R081 Confidence-weighted community detection excluding similarity edges
+- [ ] T106 [US3] MEDULLA-DECISION-ENGINE-R082 Single-pass option-marker scoring head for Decide
+- [ ] T107 [US5] MEDULLA-DECISION-ENGINE-R083.1 Typed OptionFacts encoding bounded by declared capability cardinality
+- [ ] T108 [US5] MEDULLA-DECISION-ENGINE-R083.2 Wire OptionFacts encoding into the real FeatureMatrix computation
+- [ ] T109 [US3] MEDULLA-DECISION-ENGINE-R084.1 ECE/coverage measurement across option sets of varying size
+- [ ] T110 [US1] MEDULLA-DECISION-ENGINE-R085.1 Typed legal-option-set filter (producer-first split of R085)
+- [ ] T111 [US1] MEDULLA-DECISION-ENGINE-R085.2 Shape- and shortlist-backed admissibility predicate
+- [ ] T112 [US3] MEDULLA-DECISION-ENGINE-R086 DecisionFit promotion protocol reports nine metrics
+- [ ] T113 [US1] MEDULLA-DECISION-ENGINE-R087 Scorer always receives a bounded shortlist, never a full catalog
+- [ ] T114 [US5] MEDULLA-DECISION-ENGINE-R088.1 Graph belief slices read through BELIEF AS OF
+- [ ] T115 [US1] MEDULLA-DECISION-ENGINE-R089 Learned ranking never replaces the constraint-first decision ladder
+- [ ] T116 [US3] MEDULLA-DECISION-ENGINE-R090.1 Typed resident-scorer budget (producer-first split of R090)
+- [ ] T117 [US3] MEDULLA-DECISION-ENGINE-R090.2 Compiled resident scorer execution
+- [ ] T118 [US3] MEDULLA-DECISION-ENGINE-R090.3 Measured resident scorer resource budget
+- [ ] T119 [US3] MEDULLA-DECISION-ENGINE-R091 Resident scorer is bit-reproducible via fixed-point arithmetic
+- [ ] T120 [US3] MEDULLA-DECISION-ENGINE-R092 Scorer selection and structured encoding apply ladder-wide
+- [ ] T121 [US3] MEDULLA-DECISION-ENGINE-R093.1 Typed served-path provenance and ground-truth verification
+- [ ] T122 [US3] MEDULLA-DECISION-ENGINE-R093.2.1 Collect served episode results
+- [ ] T123 [US3] MEDULLA-DECISION-ENGINE-R093.2.2 Bind served labels to collected results
+- [ ] T124 [US3] MEDULLA-DECISION-ENGINE-R093.2.3 Verify served corpus training
+- [ ] T125 [US3] MEDULLA-DECISION-ENGINE-R094 Decision scoring requires no GPU or model-server dependency
+- [ ] T126 [US2] MEDULLA-DECISION-ENGINE-R095 Solver certificate digest matches its committed golden vector
+- [ ] T127 [US5] MEDULLA-DECISION-ENGINE-R096 Community-detection wire contract carries edge weight and quality function
+- [ ] T128 [US5] MEDULLA-DECISION-ENGINE-R097 Replay-nonce rejection and blob GC grace period behave correctly
+- [ ] T129 [US1] MEDULLA-DECISION-ENGINE-R098 Decide ladder excludes generative free-text models by design
+- [ ] T130 [US6] MEDULLA-DECISION-ENGINE-R099.1 Alignment mapping data validated against world-model shapes
+- [ ] T131 [US6] MEDULLA-DECISION-ENGINE-R099.2 Entity documents become alignment claims
+- [ ] T132 [US3] MEDULLA-DECISION-ENGINE-R101 Query-side embedding adapter head promoted via DecisionEval
+- [ ] T133 [US4] MEDULLA-DECISION-ENGINE-R102.1 Typed schema-repair activation gate (producer-first split of R102)
+- [ ] T134 [US4] MEDULLA-DECISION-ENGINE-R102.2 Served shadow ingest before schema activation
+- [ ] T135 [US3] MEDULLA-DECISION-ENGINE-R103 Calibrated per-horizon flip confidence with conformal abstention
+- [ ] T136 [US3] MEDULLA-DECISION-ENGINE-R104 DecideText shares the UQL lexer and grammar family
+- [ ] T137 [US2] MEDULLA-DECISION-ENGINE-R105 GraphSchema.attach publishes the swarm-topology ontology
+- [ ] T138 [US2] MEDULLA-DECISION-ENGINE-R107 Typed topology contract in medulla-types with versioned goldens
+- [ ] T139 [US2] MEDULLA-DECISION-ENGINE-R108 Publish-time topology-shape validation fails closed
+- [ ] T140 [US2] MEDULLA-DECISION-ENGINE-R109.1 Topology admissibility entailment test varies the composed schema digest
+- [ ] T141 [US2] MEDULLA-DECISION-ENGINE-R110.1 Topology brute-force oracle property test covers n<=20 variables
+- [ ] T142 [US2] MEDULLA-DECISION-ENGINE-R111.1 Topology is a standalone Decide question
+- [ ] T143 [US2] MEDULLA-DECISION-ENGINE-R112 Capacity premise derives headroom observations by priority
+- [ ] T144 [US2] MEDULLA-DECISION-ENGINE-R113.1 Typed atomic capacity/synthesis-evidence commit outcome (producer-first split of R113)
+- [ ] T145 [US2] MEDULLA-DECISION-ENGINE-R113.2.1 Refuse an unsupported transaction boundary
+- [ ] T146 [US2] MEDULLA-DECISION-ENGINE-R113.2.2 Accepted transaction fixture
+- [ ] T147 [US2] MEDULLA-DECISION-ENGINE-R113.2.3 Denied transaction fixture
+- [ ] T148 [US2] MEDULLA-DECISION-ENGINE-R113.2.4 Transaction recovery fixture
+- [ ] T149 [US2] MEDULLA-DECISION-ENGINE-R113.3.1 Consume the typed allowance once
+- [ ] T150 [US2] MEDULLA-DECISION-ENGINE-R113.3.2 Durable denial allowance consumption
+- [ ] T151 [US2] MEDULLA-DECISION-ENGINE-R113.3.3 Handler retry fixture
+- [ ] T152 [US2] MEDULLA-DECISION-ENGINE-R114 Subagent allowance negotiation reads Medulla's topology facts
+- [ ] T153 [US5] MEDULLA-DECISION-ENGINE-R116.1 A typed gate admits only the published client-contract call path
+- [ ] T154 [US5] MEDULLA-DECISION-ENGINE-R116.2 Generated-client inventory covers every served method
+- [ ] T155 [US5] MEDULLA-DECISION-ENGINE-R117.1.1 Cross-surface golden equivalence
+- [ ] T156 [US5] MEDULLA-DECISION-ENGINE-R117.1.2 Feature-power metrics in DecisionEval
+- [ ] T157 [US5] MEDULLA-DECISION-ENGINE-R118.1.1 A sparse pool abstains in the reputation materialization
+- [ ] T158 [US5] MEDULLA-DECISION-ENGINE-R118.1.2.1 Typed source-reliability read contract
+- [ ] T159 [US5] MEDULLA-DECISION-ENGINE-R118.1.2.2 UQL SOURCE RELIABILITY propagates the typed result
+- [ ] T160 [US5] MEDULLA-DECISION-ENGINE-R118.1.2.3 Authority policy and retrieval ranking read the governed estimate
+- [ ] T161 [US5] MEDULLA-DECISION-ENGINE-R118.1.2.4 Served cross-surface agreement proof
+- [ ] T162 [US4] MEDULLA-DECISION-ENGINE-R119 Walk-forward replay seals deflated Sharpe and PBO evidence
+- [ ] T163 [US5] MEDULLA-DECISION-ENGINE-R120 Admission anchors are limited to persisted write paths
+- [ ] T164 [US5] MEDULLA-DECISION-ENGINE-R121.1 Assembly answers use typed premise classes
+- [ ] T165 [US5] MEDULLA-DECISION-ENGINE-R121.2 Graph candidate provenance reaches statistical answers
+- [ ] T166 [US3] MEDULLA-DECISION-ENGINE-R122 Synthetic decision data stays separate from calibration
+- [ ] T167 [US1] MEDULLA-DECISION-ENGINE-R123 Solve DTOs canonical in medulla-types, no duplicate copies
+- [ ] T168 [US3] MEDULLA-DECISION-ENGINE-R124 medulla-numeric statistical kernel tests compile and run
+- [ ] T169 [US5] MEDULLA-DECISION-ENGINE-R125 Telemetry binds to ontology entities as BehaviourObservation
+- [ ] T170 [US7] MEDULLA-DECISION-ENGINE-R126.1 Capability coverage is a pure function of required capabilities and candidate facts
+- [ ] T171 [US7] MEDULLA-DECISION-ENGINE-R126.2.1 The capability-coverage query answers over the wire
+- [ ] T172 [US7] MEDULLA-DECISION-ENGINE-R126.2.2 The capability-coverage query gets a generated client method
+- [ ] T173 [US7] MEDULLA-DECISION-ENGINE-R127.1 Guardrail entailment is a pure function of a task IRI and a rule set
+- [ ] T174 [US7] MEDULLA-DECISION-ENGINE-R127.2.1 A GuardrailRule can be published and read back per tenant
+- [ ] T175 [US7] MEDULLA-DECISION-ENGINE-R127.2.2 The guardrail-entailment query answers over the wire
+- [ ] T176 [US7] MEDULLA-DECISION-ENGINE-R127.2.3 The guardrail-entailment query gets a generated client method
+- [ ] T177 [US7] MEDULLA-DECISION-ENGINE-R128.1 The question kind exists in the enum
+- [ ] T178 [US7] MEDULLA-DECISION-ENGINE-R128.2 The request carries typed params
+- [ ] T179 [US7] MEDULLA-DECISION-ENGINE-R128.3 The answer type states each part and its abstention
+- [ ] T180 [US7] MEDULLA-DECISION-ENGINE-R128.4 Named thresholds are knobs with replaceable defaults
+- [ ] T181 [US7] MEDULLA-DECISION-ENGINE-R128.5 Context policy follows budget pressure
+- [ ] T182 [US7] MEDULLA-DECISION-ENGINE-R128.6 Plan scaffold follows stopping behaviour
+- [ ] T183 [US7] MEDULLA-DECISION-ENGINE-R128.7 Action space follows shell proficiency and task class
+- [ ] T184 [US7] MEDULLA-DECISION-ENGINE-R128.8 The family reads model-profile and task-class facts
+- [ ] T185 [US7] MEDULLA-DECISION-ENGINE-R128.9 The action-space part reuses the exact tool-subset solve
+- [ ] T186 [US7] MEDULLA-DECISION-ENGINE-R128.10 The dispatch registry routes the new kind
+- [ ] T187 [US7] MEDULLA-DECISION-ENGINE-R128.11 Premises and why-not entries explain every part
+- [ ] T188 [US7] MEDULLA-DECISION-ENGINE-R128.12 The outcome encodes decided and abstained parts
+- [ ] T189 [US7] MEDULLA-DECISION-ENGINE-R128.13.1.1 Evidence codec and relabelled-record refusal
+- [ ] T190 [US7] MEDULLA-DECISION-ENGINE-R128.13.1.2 Evidence codec limits and the nightly budget
+- [ ] T191 [US7] MEDULLA-DECISION-ENGINE-R128.13.2.1 Successful HarnessConfig replay and readback
+- [ ] T192 [US7] MEDULLA-DECISION-ENGINE-R128.13.2.2 Replay limits and the nightly budget
+- [ ] T193 [US7] MEDULLA-DECISION-ENGINE-R128.14 The generated contract and clients carry the kind
+- [ ] T194 [US7] MEDULLA-DECISION-ENGINE-R128.15 Served proof of the harness_config journey
+- [ ] T195 [US7] MEDULLA-DECISION-ENGINE-R128.16 Assistant profile constrains the HarnessConfig request
+- [ ] T196 [US4] MEDULLA-DECISION-ENGINE-R129.1 Promotion attach point and invariant store
+- [ ] T197 [US4] MEDULLA-DECISION-ENGINE-R129.2 Typed RulePromotionVerdict
+- [ ] T198 [US4] MEDULLA-DECISION-ENGINE-R129.3 Pure invariant check names the first contradicted invariant
+- [ ] T199 [US4] MEDULLA-DECISION-ENGINE-R129.4 Consensus gives no override
+- [ ] T200 [US4] MEDULLA-DECISION-ENGINE-R129.5 Served promotion with audited rejection
+- [ ] T201 [US4] MEDULLA-DECISION-ENGINE-R129.6 End-to-end promotion over the wire
+- [ ] T202 [US3] MEDULLA-DECISION-ENGINE-R130.1 Ranked candidate model
+- [ ] T203 [US3] MEDULLA-DECISION-ENGINE-R130.2 Calibrated-first ranking with item tie-break
+- [ ] T204 [US3] MEDULLA-DECISION-ENGINE-R130.3 Rank family calls rank_calibrated in Decide
+- [ ] T205 [US3] MEDULLA-DECISION-ENGINE-R130.4 Uncalibrated option abstains
+- [ ] T206 [US3] MEDULLA-DECISION-ENGINE-R130.5 Ranking premises in the sealed record
+- [ ] T207 [US3] MEDULLA-DECISION-ENGINE-R130.6 Hot-path proof for calibrated ranking
+- [ ] T208 [US3] MEDULLA-DECISION-ENGINE-R131.1 Model
+- [ ] T209 [US3] MEDULLA-DECISION-ENGINE-R131.2 Behavior
+- [ ] T210 [US3] MEDULLA-DECISION-ENGINE-R131.3 Limit stage wired into Decide
+- [ ] T211 [US3] MEDULLA-DECISION-ENGINE-R131.4 Limit breach abstention
+- [ ] T212 [US3] MEDULLA-DECISION-ENGINE-R131.5 Committed breach becomes an observation linked to the signal
+- [ ] T213 [US3] MEDULLA-DECISION-ENGINE-R131.6 Hot-path proof for the limit guard
+- [ ] T214 [US3] MEDULLA-DECISION-ENGINE-R132.1 Model
+- [ ] T215 [US3] MEDULLA-DECISION-ENGINE-R132.2 Behavior
+- [ ] T216 [US3] MEDULLA-DECISION-ENGINE-R132.3 Entry admission wired into Decide
+- [ ] T217 [US3] MEDULLA-DECISION-ENGINE-R132.4 Poisoned-entry abstention
+- [ ] T218 [US3] MEDULLA-DECISION-ENGINE-R132.5 Refused entries and tiers in the sealed record
+- [ ] T219 [US3] MEDULLA-DECISION-ENGINE-R132.6 Hot-path proof for entry trust
+- [ ] T220 [US9] MEDULLA-DECISION-ENGINE-R133.1 Quota and run-trace records
+- [ ] T221 [US9] MEDULLA-DECISION-ENGINE-R133.2 Quota resolution only tightens
+- [ ] T222 [US9] MEDULLA-DECISION-ENGINE-R133.3 Runtime quota family wiring
+- [ ] T223 [US9] MEDULLA-DECISION-ENGINE-R133.4 Quota refusals and the missing-task-class answer
+- [ ] T224 [US9] MEDULLA-DECISION-ENGINE-R133.5 Quota premises
+- [ ] T225 [US9] MEDULLA-DECISION-ENGINE-R133.6 Served proof of quota and trace
+- [ ] T226 [US7] MEDULLA-DECISION-ENGINE-R134.1 Model
+- [ ] T227 [US7] MEDULLA-DECISION-ENGINE-R134.2 Behavior: tool relevance ranking and covering subset
+- [ ] T228 [US7] MEDULLA-DECISION-ENGINE-R134.3 Behavior: task decomposition
+- [ ] T229 [US7] MEDULLA-DECISION-ENGINE-R134.4 Behavior: planning over the skill library
+- [ ] T230 [US7] MEDULLA-DECISION-ENGINE-R134.5 Wiring: automatic task plans through Decide
+- [ ] T231 [US7] MEDULLA-DECISION-ENGINE-R134.6 Refusal: task-plan refusals and codes
+- [ ] T232 [US7] MEDULLA-DECISION-ENGINE-R134.7 Evidence: planner premises
+- [ ] T233 [US7] MEDULLA-DECISION-ENGINE-R134.8 Hot-path proof: automatic plan served end to end
+- [ ] T234 [US7] MEDULLA-DECISION-ENGINE-R135.1 Model
+- [ ] T235 [US7] MEDULLA-DECISION-ENGINE-R135.2 Behavior: compile and look up
+- [ ] T236 [US7] MEDULLA-DECISION-ENGINE-R135.3 Wiring: commit path and lookup family
+- [ ] T237 [US7] MEDULLA-DECISION-ENGINE-R135.4 Refusal: programs
+- [ ] T238 [US7] MEDULLA-DECISION-ENGINE-R135.5 Evidence: program premises and source link
+- [ ] T239 [US7] MEDULLA-DECISION-ENGINE-R135.6 Hot-path proof: compile then look up
+- [ ] T240 [US4] MEDULLA-DECISION-ENGINE-R136.1 Model
+- [ ] T241 [US4] MEDULLA-DECISION-ENGINE-R136.2 Behavior
+- [ ] T242 [US4] MEDULLA-DECISION-ENGINE-R136.3 Behaviour: impact-first stage model allocation
+- [ ] T243 [US4] MEDULLA-DECISION-ENGINE-R136.4 Wiring: round verdict and stage allocation families
+- [ ] T244 [US4] MEDULLA-DECISION-ENGINE-R136.5 Refusal: round and allocation codes
+- [ ] T245 [US4] MEDULLA-DECISION-ENGINE-R136.6 Evidence: round and allocation premises
+- [ ] T246 [US4] MEDULLA-DECISION-ENGINE-R136.7 Hot-path proof: served round journey
+- [ ] T247 [US7] MEDULLA-DECISION-ENGINE-R137.1 Model
+- [ ] T248 [US7] MEDULLA-DECISION-ENGINE-R137.2 Behavior
+- [ ] T249 [US7] MEDULLA-DECISION-ENGINE-R137.3 Over-window plan family wiring
+- [ ] T250 [US7] MEDULLA-DECISION-ENGINE-R137.4 Over-window refusals
+- [ ] T251 [US7] MEDULLA-DECISION-ENGINE-R137.5 Over-window premises
+- [ ] T252 [US7] MEDULLA-DECISION-ENGINE-R137.6 Served proof of the over-window plan
+- [ ] T253 [US7] MEDULLA-DECISION-ENGINE-R137.7 Context package records
+- [ ] T254 [US7] MEDULLA-DECISION-ENGINE-R137.8 Package lowering and exact selection kernel
+- [ ] T255 [US7] MEDULLA-DECISION-ENGINE-R137.9 Package family wiring with independent certificate check
+- [ ] T256 [US7] MEDULLA-DECISION-ENGINE-R137.10 Package refusals and abstentions
+- [ ] T257 [US7] MEDULLA-DECISION-ENGINE-R137.11 Package evidence
+- [ ] T258 [US7] MEDULLA-DECISION-ENGINE-R137.12 Served proof of certified package selection
+- [ ] T259 [US7] MEDULLA-DECISION-ENGINE-R138.1 Model
+- [ ] T260 [US7] MEDULLA-DECISION-ENGINE-R138.2 Behavior
+- [ ] T261 [US7] MEDULLA-DECISION-ENGINE-R138.3 Wiring
+- [ ] T262 [US7] MEDULLA-DECISION-ENGINE-R138.4 Refusal
+- [ ] T263 [US7] MEDULLA-DECISION-ENGINE-R138.5 Evidence
+- [ ] T264 [US7] MEDULLA-DECISION-ENGINE-R138.6 Hot-path proof
+- [ ] T265 [US7] MEDULLA-DECISION-ENGINE-R138.7 Store red-team records as library components
+- [ ] T266 [US7] MEDULLA-DECISION-ENGINE-R139.1 Model
+- [ ] T267 [US7] MEDULLA-DECISION-ENGINE-R139.2 Behaviour
+- [ ] T268 [US7] MEDULLA-DECISION-ENGINE-R139.3 Wiring and authority
+- [ ] T269 [US7] MEDULLA-DECISION-ENGINE-R139.4 Typed refusal
+- [ ] T270 [US7] MEDULLA-DECISION-ENGINE-R139.5 Evidence
+- [ ] T271 [US7] MEDULLA-DECISION-ENGINE-R139.6 Served acceptance
+- [ ] T272 [US4] MEDULLA-DECISION-ENGINE-R100.101.1 Grounded topic coverage
+- [ ] T273 [US4] MEDULLA-DECISION-ENGINE-R100.101.2 Soft-label unsupported-claim Brier score
+- [ ] T274 [US4] MEDULLA-DECISION-ENGINE-R100.101.3 Grounded evaluation wiring, scorer isolation and evidence
+- [ ] T275 [US1] MEDULLA-DECISION-ENGINE-R001.100.1 Safety bound types and evaluator
+- [ ] T276 [US1] MEDULLA-DECISION-ENGINE-R001.100.2 Served safety bound check and refusals
+- [ ] T277 [US1] MEDULLA-DECISION-ENGINE-R001.101.1 DecisionFamily trait and registry
+- [ ] T278 [US1] MEDULLA-DECISION-ENGINE-R001.101.2 Route decide_blocking through the registry
+- [ ] T279 [US1] MEDULLA-DECISION-ENGINE-R001.101.3 Route AgentAssemble and DecideText through the registry
+- [ ] T280 [US1] MEDULLA-DECISION-ENGINE-R001.101.4 Family template for new roots
+- [ ] T281 [US1] MEDULLA-DECISION-ENGINE-R001.101.5 Typed family body and answer carriers
+- [ ] T282 [US7] MEDULLA-DECISION-ENGINE-R135.7 Pre-plan test receipt gates pattern promotion
+- [ ] T283 [US2] MEDULLA-DECISION-ENGINE-R106.1 Council positions coordinate into one evidence-bound decision
+- [ ] T284 [US7] MEDULLA-DECISION-ENGINE-R137.13 Measured signals select direct or recursive mode
+- [ ] T285 [US7] MEDULLA-DECISION-ENGINE-R134.9 Behavior: ranked skill tree per task
+- [ ] T286 [US7] MEDULLA-DECISION-ENGINE-R137.14 Held-out comparison gates context replacement
+- [ ] T287 [US7] MEDULLA-DECISION-ENGINE-R134.10 Summary-only child returns and parent budget
+- [ ] T288 [US7] MEDULLA-DECISION-ENGINE-R137.15 Sub-call signatures are checked before dispatch
+- [ ] T289 [US7] MEDULLA-DECISION-ENGINE-R134.11 Horizon partition and credit checkpoints
+- [ ] T290 [US3] MEDULLA-DECISION-ENGINE-R059.1.1 Model: backbone binding and transfer estimate
+- [ ] T291 [US3] MEDULLA-DECISION-ENGINE-R059.1.2 Behaviour: minimum over backbones with complete independent rows
+- [ ] T292 [US3] MEDULLA-DECISION-ENGINE-R059.1.3 Wiring, refusals and evidence of the served transfer read
+- [ ] T293 [US3] MEDULLA-DECISION-ENGINE-R059.2 Skill candidates from repeated independent successes
+- [ ] T294 [US7] MEDULLA-DECISION-ENGINE-R134.12.1 Paired-comparison verdict record
+- [ ] T295 [US7] MEDULLA-DECISION-ENGINE-R134.13 Cited analyst synthesis with required abstention
+- [ ] T296 [US6] MEDULLA-DECISION-ENGINE-R029.1 Committed retrieval provider binding with no substitution
+- [ ] T297 [US7] MEDULLA-DECISION-ENGINE-R134.14 Branch outcome records and fusion receipt
+- [ ] T298 [US1] MEDULLA-DECISION-ENGINE-R020.1.1 Context digest sealed and matched against prior records
+- [ ] T299 [US1] MEDULLA-DECISION-ENGINE-R020.1.2 Exploitation pool gates exploration
+- [ ] T300 [US9] MEDULLA-DECISION-ENGINE-R133.7.1 Recursive trace node and snapshot checks
+- [ ] T301 [US9] MEDULLA-DECISION-ENGINE-R133.7.2 Terminal commit stores recursive trace nodes
+- [ ] T302 [US9] MEDULLA-DECISION-ENGINE-R133.7.3 Authorized trace critique read
+- [ ] T303 [US9] MEDULLA-DECISION-ENGINE-R133.8 Terminal commit writes the run trace and its produced link
+- [ ] T304 [US4] MEDULLA-DECISION-ENGINE-R100.1.1 Feedback event write
+- [ ] T305 [US4] MEDULLA-DECISION-ENGINE-R100.1.2 Feedback labels reach the adapter fit
+- [ ] T306 [US5] MEDULLA-DECISION-ENGINE-R088.2.1 Replay event and receipt types
+- [ ] T307 [US5] MEDULLA-DECISION-ENGINE-R088.2.2 Served event replay
+- [ ] T308 [US7] MEDULLA-DECISION-ENGINE-R137.16 Task complexity and remaining tokens bound the package
+- [ ] T309 [US6] MEDULLA-DECISION-ENGINE-R029.2.1 Context-source partition types and rule
+- [ ] T310 [US6] MEDULLA-DECISION-ENGINE-R029.2.2 Served context-budget family and refusals
+- [ ] T311 [US7] MEDULLA-DECISION-ENGINE-R134.15 Weighted critical chain over a task plan
+- [ ] T312 [US7] MEDULLA-DECISION-ENGINE-R135.8.1 Compile receipts keep source provenance
+- [ ] T313 [US7] MEDULLA-DECISION-ENGINE-R135.10 Insight model
+- [ ] T314 [US7] MEDULLA-DECISION-ENGINE-R135.11 Behavior: consolidate and select insights
+- [ ] T315 [US7] MEDULLA-DECISION-ENGINE-R135.12 Wiring: insight submission and selection
+- [ ] T316 [US7] MEDULLA-DECISION-ENGINE-R135.13 Refusal: insights
+- [ ] T317 [US7] MEDULLA-DECISION-ENGINE-R135.14 Evidence: insight selection premises
+- [ ] T318 [US7] MEDULLA-DECISION-ENGINE-R135.15 Hot-path proof: insight write then selection served
+- [ ] T319 [US4] MEDULLA-DECISION-ENGINE-R129.100 Versioned rule lifecycle from correction to revocation
+- [ ] T320 [US7] MEDULLA-DECISION-ENGINE-R134.100 Fan-out aggregation decision
+- [ ] T321 [US7] MEDULLA-DECISION-ENGINE-R134.101 Designated coordinator and one final artifact
+- [ ] T322 [US7] MEDULLA-DECISION-ENGINE-R137.100 Relevance-triggered instruction disclosure
+- [ ] T323 [US7] MEDULLA-DECISION-ENGINE-R134.102 Delegation admission over a stable outcome window
+- [ ] T324 [US7] MEDULLA-DECISION-ENGINE-R134.104 Model
+- [ ] T325 [US7] MEDULLA-DECISION-ENGINE-R134.105 Behavior
+- [ ] T326 [US7] MEDULLA-DECISION-ENGINE-R134.106 Wiring: answer ranking through Decide
+- [ ] T327 [US7] MEDULLA-DECISION-ENGINE-R134.107 Refusal
+- [ ] T328 [US7] MEDULLA-DECISION-ENGINE-R134.108 Evidence: answer-ranking premises
+- [ ] T329 [US7] MEDULLA-DECISION-ENGINE-R134.109 Hot-path proof: answer ranking served
+- [ ] T330 [US6] MEDULLA-DECISION-ENGINE-R031.100 Paper relevance admission against platform goals and graph content
+- [ ] T331 [US2] MEDULLA-DECISION-ENGINE-R036.100.1 Primitive types
+- [ ] T332 [US2] MEDULLA-DECISION-ENGINE-R036.100.2 Edge type-check and substitution rule
+- [ ] T333 [US2] MEDULLA-DECISION-ENGINE-R036.100.3 Wire primitive checks into AgentAssemble
+- [ ] T334 [US2] MEDULLA-DECISION-ENGINE-R036.100.4 Primitive evidence and proposal path
+- [ ] T335 [US4] MEDULLA-DECISION-ENGINE-R136.101 Criterion review: per-criterion nonregression
+- [ ] T336 [US5] MEDULLA-DECISION-ENGINE-R121.100 Step verification verdicts with uncertainty and proof digest
+- [ ] T337 [US7] MEDULLA-DECISION-ENGINE-R138.100.1 Receipt model and check kernel
+- [ ] T338 [US7] MEDULLA-DECISION-ENGINE-R138.100.2 Family wiring, refusals and evidence
+- [ ] T339 [US4] MEDULLA-DECISION-ENGINE-R136.102 Criterion review: complete and artifact-bound grading
+- [ ] T340 [US4] MEDULLA-DECISION-ENGINE-R136.103 Criterion review: judge and outcome divergence
+- [ ] T341 [US7] MEDULLA-DECISION-ENGINE-R138.101.1 Finding model and impact filter kernel
+- [ ] T342 [US7] MEDULLA-DECISION-ENGINE-R138.101.2 Family wiring, refusals and evidence
+- [ ] T343 [US2] MEDULLA-DECISION-ENGINE-R036.101 Compose verified coding-agent facts with skill transformations
+- [ ] T344 [US2] MEDULLA-DECISION-ENGINE-R014.100.1 Size, cost and adequacy facts with eliminations
+- [ ] T345 [US2] MEDULLA-DECISION-ENGINE-R014.100.2 Size and cost objective levels
+- [ ] T346 [US4] MEDULLA-DECISION-ENGINE-R147.1 Distilled score model
+- [ ] T347 [US4] MEDULLA-DECISION-ENGINE-R147.2 Stored-score ranking kernel
+- [ ] T348 [US4] MEDULLA-DECISION-ENGINE-R147.3 Distilled score upload and Rank wiring
+- [ ] T349 [US4] MEDULLA-DECISION-ENGINE-R147.4 Distilled ranking refusals
+- [ ] T350 [US4] MEDULLA-DECISION-ENGINE-R147.5 Distilled ranking evidence
+- [ ] T351 [US4] MEDULLA-DECISION-ENGINE-R147.6 Distilled ranking served proof
+- [ ] T352 [US4] MEDULLA-DECISION-ENGINE-R148.1 Command config records
+- [ ] T353 [US4] MEDULLA-DECISION-ENGINE-R148.2 Mode selection and config build
+- [ ] T354 [US4] MEDULLA-DECISION-ENGINE-R148.3 Command config family wiring
+- [ ] T355 [US4] MEDULLA-DECISION-ENGINE-R148.4 Command config refusals
+- [ ] T356 [US4] MEDULLA-DECISION-ENGINE-R148.5 Command config premises
+- [ ] T357 [US4] MEDULLA-DECISION-ENGINE-R148.6 Served proof of mode decision and replay
+- [ ] T358 [US7] MEDULLA-DECISION-ENGINE-R149.1 Search-state model
+- [ ] T359 [US7] MEDULLA-DECISION-ENGINE-R149.2 Search-state validation
+- [ ] T360 [US7] MEDULLA-DECISION-ENGINE-R149.3 Search-state wiring
+- [ ] T361 [US7] MEDULLA-DECISION-ENGINE-R149.4 Search-state refusals
+- [ ] T362 [US7] MEDULLA-DECISION-ENGINE-R149.5 Search-state evidence
+- [ ] T363 [US7] MEDULLA-DECISION-ENGINE-R149.6 Search-state served proof
+- [ ] T364 [US7] MEDULLA-DECISION-ENGINE-R150.1 Session-note model
+- [ ] T365 [US7] MEDULLA-DECISION-ENGINE-R150.2 Session-note rules
+- [ ] T366 [US7] MEDULLA-DECISION-ENGINE-R150.3 Session-note capture and recall wiring
+- [ ] T367 [US7] MEDULLA-DECISION-ENGINE-R150.4 Session-note refusals
+- [ ] T368 [US7] MEDULLA-DECISION-ENGINE-R150.5 Session-note evidence
+- [ ] T369 [US7] MEDULLA-DECISION-ENGINE-R150.6 Session-note served proof
+- [ ] T370 [US4] MEDULLA-DECISION-ENGINE-R151.1 Model
+- [ ] T371 [US4] MEDULLA-DECISION-ENGINE-R151.2 Behavior
+- [ ] T372 [US4] MEDULLA-DECISION-ENGINE-R151.3 Wiring
+- [ ] T373 [US4] MEDULLA-DECISION-ENGINE-R151.4 Refusal
+- [ ] T374 [US4] MEDULLA-DECISION-ENGINE-R151.5 Evidence
+- [ ] T375 [US4] MEDULLA-DECISION-ENGINE-R151.6 Hot-path proof
+- [ ] T376 [US7] MEDULLA-DECISION-ENGINE-R139.100 Graph-backed comparative sources with exact revision provenance
+- [ ] T377 [US2] MEDULLA-DECISION-ENGINE-R019.100.1 Evidence-stream references sealed into records
+- [ ] T378 [US2] MEDULLA-DECISION-ENGINE-R019.100.2 Approval receipt checked before commit
+- [ ] T379 [US6] MEDULLA-DECISION-ENGINE-R029.100 Retrieval command config and inference-mode digest binding
+- [ ] T380 [US7] MEDULLA-DECISION-ENGINE-R140.100 Complexity-gated K-trajectory decision
+- [ ] T381 [US7] MEDULLA-DECISION-ENGINE-R140.101 Provenance-preserving trajectory projection and reinsertion
+- [ ] T382 [US7] MEDULLA-DECISION-ENGINE-R140.102 Branch-start experience retrieval and outcome-driven breadth
+- [ ] T383 [US7] MEDULLA-DECISION-ENGINE-R140.103 Verifier-free pairwise candidate ranking with bounded revision
+- [ ] T384 [US7] MEDULLA-DECISION-ENGINE-R140.104 Wire trajectory decisions into the TaskPlan result
+- [ ] T385 [US7] MEDULLA-DECISION-ENGINE-R140.105 Trajectory hot-path proof
+- [ ] T386 [US7] MEDULLA-DECISION-ENGINE-R141.100 Fidelity-gated memory rewrite evaluation
+- [ ] T387 [US7] MEDULLA-DECISION-ENGINE-R141.101 Memory-change benchmark receipt
+- [ ] T388 [US7] MEDULLA-DECISION-ENGINE-R141.102 Memory-change evaluation wiring
+- [ ] T389 [US7] MEDULLA-DECISION-ENGINE-R141.103 Memory-change served proof
+- [ ] T390 [US7] MEDULLA-DECISION-ENGINE-R141.104 Admission gate on memory mutations
+- [ ] T391 [US7] MEDULLA-DECISION-ENGINE-R142.100 Local-model certification attestation
+- [ ] T392 [US7] MEDULLA-DECISION-ENGINE-R142.101 Wire certification into DecisionEval with refusals and evidence
+- [ ] T393 [US7] MEDULLA-DECISION-ENGINE-R142.102 Certification hot-path proof
+- [ ] T394 [US7] MEDULLA-DECISION-ENGINE-R143.1 Model
+- [ ] T395 [US7] MEDULLA-DECISION-ENGINE-R143.2 Behavior
+- [ ] T396 [US7] MEDULLA-DECISION-ENGINE-R143.3 Wiring
+- [ ] T397 [US7] MEDULLA-DECISION-ENGINE-R143.4 Refusal
+- [ ] T398 [US7] MEDULLA-DECISION-ENGINE-R143.5 Evidence
+- [ ] T399 [US7] MEDULLA-DECISION-ENGINE-R143.6 Hot-path proof
+- [ ] T400 [US7] MEDULLA-DECISION-ENGINE-R144.1 Indexless retrieval model
+- [ ] T401 [US7] MEDULLA-DECISION-ENGINE-R144.2 Indexless budget meter
+- [ ] T402 [US7] MEDULLA-DECISION-ENGINE-R144.3 Indexless retrieval method wiring
+- [ ] T403 [US7] MEDULLA-DECISION-ENGINE-R144.4 Indexless retrieval refusals
+- [ ] T404 [US7] MEDULLA-DECISION-ENGINE-R144.5 Indexless cost evidence
+- [ ] T405 [US7] MEDULLA-DECISION-ENGINE-R144.6 Indexless retrieval served proof
+- [ ] T406 [US7] MEDULLA-DECISION-ENGINE-R144.7 Tenant budget ceiling
+- [ ] T407 [US7] MEDULLA-DECISION-ENGINE-R146.1 Temporal context model
+- [ ] T408 [US7] MEDULLA-DECISION-ENGINE-R146.2 Temporal basis rules
+- [ ] T409 [US7] MEDULLA-DECISION-ENGINE-R146.3 Temporal basis family wiring
+- [ ] T410 [US7] MEDULLA-DECISION-ENGINE-R146.4 Temporal basis refusals
+- [ ] T411 [US7] MEDULLA-DECISION-ENGINE-R146.5 Temporal basis evidence
+- [ ] T412 [US7] MEDULLA-DECISION-ENGINE-R146.6 Temporal basis served proof
+- [ ] T413 [US4] MEDULLA-DECISION-ENGINE-R100.100.1 Ranking evaluation request and hits-at-k kernel
+- [ ] T414 [US4] MEDULLA-DECISION-ENGINE-R100.100.2 Ranking evaluation wiring, receipt and evidence
+- [ ] T415 [US4] MEDULLA-DECISION-ENGINE-R100.100.3 Context search model and offset kernel
+- [ ] T416 [US4] MEDULLA-DECISION-ENGINE-R100.100.4 Context search method, authorization and served proof
+- [ ] T417 [US7] MEDULLA-DECISION-ENGINE-R152.1 Model
+- [ ] T418 [US7] MEDULLA-DECISION-ENGINE-R152.2 Behavior
+- [ ] T419 [US7] MEDULLA-DECISION-ENGINE-R152.3 Wiring
+- [ ] T420 [US7] MEDULLA-DECISION-ENGINE-R152.4 Refusal
+- [ ] T421 [US7] MEDULLA-DECISION-ENGINE-R152.5 Evidence
+- [ ] T422 [US7] MEDULLA-DECISION-ENGINE-R152.6 Hot-path proof
+- [ ] T423 [US5] MEDULLA-DECISION-ENGINE-R153.1 Model
+- [ ] T424 [US5] MEDULLA-DECISION-ENGINE-R153.2 Behavior
+- [ ] T425 [US5] MEDULLA-DECISION-ENGINE-R153.3 Wiring
+- [ ] T426 [US5] MEDULLA-DECISION-ENGINE-R153.4 Refusal
+- [ ] T427 [US5] MEDULLA-DECISION-ENGINE-R153.5 Evidence
+- [ ] T428 [US5] MEDULLA-DECISION-ENGINE-R153.6 Hot-path proof
+- [ ] T429 [US5] MEDULLA-DECISION-ENGINE-R154.1 Model
+- [ ] T430 [US5] MEDULLA-DECISION-ENGINE-R154.2 Behavior
+- [ ] T431 [US5] MEDULLA-DECISION-ENGINE-R154.4 Refusal
+- [ ] T432 [US5] MEDULLA-DECISION-ENGINE-R154.6 Hot-path proof
+- [ ] T433 [US7] MEDULLA-DECISION-ENGINE-R155.1 Model
+- [ ] T434 [US7] MEDULLA-DECISION-ENGINE-R155.2 Behavior
+- [ ] T435 [US7] MEDULLA-DECISION-ENGINE-R155.3 Wiring
+- [ ] T436 [US7] MEDULLA-DECISION-ENGINE-R155.4 Refusal
+- [ ] T437 [US7] MEDULLA-DECISION-ENGINE-R155.5 Evidence
+- [ ] T438 [US7] MEDULLA-DECISION-ENGINE-R155.6 Hot-path proof
+- [ ] T439 [US7] MEDULLA-DECISION-ENGINE-R155.7 Scope narrows cross-session episode recall
+- [ ] T440 [US7] MEDULLA-DECISION-ENGINE-R156.1 Model
+- [ ] T441 [US7] MEDULLA-DECISION-ENGINE-R156.2 Behaviour
+- [ ] T442 [US7] MEDULLA-DECISION-ENGINE-R156.3 Wiring
+- [ ] T443 [US7] MEDULLA-DECISION-ENGINE-R156.4 Refusal
+- [ ] T444 [US7] MEDULLA-DECISION-ENGINE-R156.5 Evidence
+- [ ] T445 [US7] MEDULLA-DECISION-ENGINE-R156.6 Hot-path proof
+- [ ] T446 [US7] MEDULLA-DECISION-ENGINE-R157.1 Delegation quality model
+- [ ] T447 [US7] MEDULLA-DECISION-ENGINE-R157.2 Delegation quality gate behaviour
+- [ ] T448 [US7] MEDULLA-DECISION-ENGINE-R157.3 Route the quality gate through DecisionEval
+- [ ] T449 [US7] MEDULLA-DECISION-ENGINE-R157.4 Delegation quality refusals
+- [ ] T450 [US7] MEDULLA-DECISION-ENGINE-R157.5 Delegation quality evidence
+- [ ] T451 [US7] MEDULLA-DECISION-ENGINE-R157.6 Delegation quality hot-path proof
+- [ ] T452 [US7] MEDULLA-DECISION-ENGINE-R158.1 Adjustment records
+- [ ] T453 [US7] MEDULLA-DECISION-ENGINE-R158.2 Error-rate rule for model and width
+- [ ] T454 [US7] MEDULLA-DECISION-ENGINE-R158.3 Run adjustment family wiring
+- [ ] T455 [US7] MEDULLA-DECISION-ENGINE-R158.4 Run adjustment refusals
+- [ ] T456 [US7] MEDULLA-DECISION-ENGINE-R158.5 Run adjustment premises
+- [ ] T457 [US7] MEDULLA-DECISION-ENGINE-R158.6 Served proof of run adjustment
+- [ ] T458 [US7] MEDULLA-DECISION-ENGINE-R159.1 Model
+- [ ] T459 [US7] MEDULLA-DECISION-ENGINE-R159.2 Behaviour
+- [ ] T460 [US7] MEDULLA-DECISION-ENGINE-R159.3 Wiring
+- [ ] T461 [US7] MEDULLA-DECISION-ENGINE-R159.4 Refusal
+- [ ] T462 [US7] MEDULLA-DECISION-ENGINE-R159.5 Evidence
+- [ ] T463 [US7] MEDULLA-DECISION-ENGINE-R159.6 Hot-path proof
+- [ ] T464 [US7] MEDULLA-DECISION-ENGINE-R160.1 Package validation model
+- [ ] T465 [US7] MEDULLA-DECISION-ENGINE-R160.2 Package validation behaviour
+- [ ] T466 [US7] MEDULLA-DECISION-ENGINE-R160.3 Serve PublishSkillPackage
+- [ ] T467 [US7] MEDULLA-DECISION-ENGINE-R160.4 Package publication refusals
+- [ ] T468 [US7] MEDULLA-DECISION-ENGINE-R160.5 Package validation evidence
+- [ ] T469 [US7] MEDULLA-DECISION-ENGINE-R160.6 Package publication hot-path proof
+- [ ] T470 [US7] MEDULLA-DECISION-ENGINE-R161.1 Correction binding model
+- [ ] T471 [US7] MEDULLA-DECISION-ENGINE-R161.2 Receipt pattern check
+- [ ] T472 [US7] MEDULLA-DECISION-ENGINE-R161.3 Wire correction admission into Decide
+- [ ] T473 [US7] MEDULLA-DECISION-ENGINE-R161.4 Correction binding refusals
+- [ ] T474 [US7] MEDULLA-DECISION-ENGINE-R161.5 Correction binding evidence
+- [ ] T475 [US7] MEDULLA-DECISION-ENGINE-R161.6 Correction binding hot-path proof
+- [ ] T476 [US7] MEDULLA-DECISION-ENGINE-R162.1 Field shielding model
+- [ ] T477 [US7] MEDULLA-DECISION-ENGINE-R162.2 Projection behaviour
+- [ ] T478 [US7] MEDULLA-DECISION-ENGINE-R162.3 Wire field shielding into Decide
+- [ ] T479 [US7] MEDULLA-DECISION-ENGINE-R162.4 Field shielding refusals
+- [ ] T480 [US7] MEDULLA-DECISION-ENGINE-R162.5 Field shielding evidence
+- [ ] T481 [US7] MEDULLA-DECISION-ENGINE-R162.6 Field shielding hot-path proof
+- [ ] T482 [US7] MEDULLA-DECISION-ENGINE-R163.1 Graph intake model
+- [ ] T483 [US7] MEDULLA-DECISION-ENGINE-R163.2 Graph reference resolution
+- [ ] T484 [US7] MEDULLA-DECISION-ENGINE-R163.3 Wire graph intake into Decide
+- [ ] T485 [US7] MEDULLA-DECISION-ENGINE-R163.4 Graph intake refusals
+- [ ] T486 [US7] MEDULLA-DECISION-ENGINE-R163.5 Graph intake evidence
+- [ ] T487 [US7] MEDULLA-DECISION-ENGINE-R163.6 Graph intake hot-path proof
+- [ ] T488 [US7] MEDULLA-DECISION-ENGINE-R164.1 Model
+- [ ] T489 [US7] MEDULLA-DECISION-ENGINE-R164.2 Behavior
+- [ ] T490 [US7] MEDULLA-DECISION-ENGINE-R164.3 Wiring
+- [ ] T491 [US7] MEDULLA-DECISION-ENGINE-R164.4 Refusal
+- [ ] T492 [US7] MEDULLA-DECISION-ENGINE-R164.5 Evidence
+- [ ] T493 [US7] MEDULLA-DECISION-ENGINE-R164.6 Hot-path proof
+- [ ] T494 [US7] MEDULLA-DECISION-ENGINE-R165.1 Tool necessity records
+- [ ] T495 [US7] MEDULLA-DECISION-ENGINE-R165.2 Necessity measure and comparison rule
+- [ ] T496 [US7] MEDULLA-DECISION-ENGINE-R165.3 Tool necessity family wiring
+- [ ] T497 [US7] MEDULLA-DECISION-ENGINE-R165.4 Tool necessity refusals and abstentions
+- [ ] T498 [US7] MEDULLA-DECISION-ENGINE-R165.5 Tool necessity premises
+- [ ] T499 [US7] MEDULLA-DECISION-ENGINE-R165.6 Served proof of necessity and mismatch
+- [ ] T500 [US7] MEDULLA-DECISION-ENGINE-R166.1 Model
+- [ ] T501 [US7] MEDULLA-DECISION-ENGINE-R166.3 Serve the workflow registry
+- [ ] T502 [US7] MEDULLA-DECISION-ENGINE-R166.4 Workflow registry refusals
+- [ ] T503 [US7] MEDULLA-DECISION-ENGINE-R166.6 Workflow registry hot-path proof
+- [ ] T504 [US7] MEDULLA-DECISION-ENGINE-R167.1 Skill upgrade receipt model
+- [ ] T505 [US7] MEDULLA-DECISION-ENGINE-R167.2 Additive-only compatibility rule
+- [ ] T506 [US7] MEDULLA-DECISION-ENGINE-R167.3 Wire upgrade admission into Decide
+- [ ] T507 [US7] MEDULLA-DECISION-ENGINE-R167.4 Skill upgrade refusals
+- [ ] T508 [US7] MEDULLA-DECISION-ENGINE-R167.5 Skill upgrade evidence
+- [ ] T509 [US7] MEDULLA-DECISION-ENGINE-R167.6 Skill upgrade hot-path proof
+- [ ] T510 [US7] MEDULLA-DECISION-ENGINE-R168.1 Agent lifecycle record and boundaries
+- [ ] T511 [US7] MEDULLA-DECISION-ENGINE-R168.2 Lifecycle validation behaviour
+- [ ] T512 [US7] MEDULLA-DECISION-ENGINE-R168.4 Lifecycle refusals
+- [ ] T513 [US7] MEDULLA-DECISION-ENGINE-R168.5 Lifecycle evidence
+- [ ] T514 [US7] MEDULLA-DECISION-ENGINE-R168.6 Lifecycle hot-path proof
+- [ ] T515 [US7] MEDULLA-DECISION-ENGINE-R169.1 Feedback record model
+- [ ] T516 [US7] MEDULLA-DECISION-ENGINE-R169.2 Continue or stop rule
+- [ ] T517 [US7] MEDULLA-DECISION-ENGINE-R169.3 Wire the feedback loop into Decide and the commit path
+- [ ] T518 [US7] MEDULLA-DECISION-ENGINE-R169.4 Feedback loop refusals
+- [ ] T519 [US7] MEDULLA-DECISION-ENGINE-R169.5 Feedback loop evidence
+- [ ] T520 [US7] MEDULLA-DECISION-ENGINE-R169.6 Feedback loop hot-path proof
+- [ ] T521 [US7] MEDULLA-DECISION-ENGINE-R170.1 Team vocabulary and channel signal
+- [ ] T522 [US7] MEDULLA-DECISION-ENGINE-R170.2 Fallback choice rule
+- [ ] T523 [US7] MEDULLA-DECISION-ENGINE-R170.3 Team records in the graph
+- [ ] T524 [US7] MEDULLA-DECISION-ENGINE-R170.4 Team coordination refusals
+- [ ] T525 [US7] MEDULLA-DECISION-ENGINE-R170.5 Team coordination evidence
+- [ ] T526 [US7] MEDULLA-DECISION-ENGINE-R170.6 Team coordination hot-path proof
+- [ ] T527 [US7] MEDULLA-DECISION-ENGINE-R171.1 Model
+- [ ] T528 [US7] MEDULLA-DECISION-ENGINE-R171.2 Behaviour
+- [ ] T529 [US7] MEDULLA-DECISION-ENGINE-R171.3 Wiring
+- [ ] T530 [US7] MEDULLA-DECISION-ENGINE-R171.4 Refusal
+- [ ] T531 [US7] MEDULLA-DECISION-ENGINE-R171.5 Evidence
+- [ ] T532 [US7] MEDULLA-DECISION-ENGINE-R171.6 Hot-path proof
+- [ ] T533 [US8] MEDULLA-DECISION-ENGINE-R172.1 Designation model types
+- [ ] T534 [US8] MEDULLA-DECISION-ENGINE-R172.2.1 Interned ids and capability postings
+- [ ] T535 [US8] MEDULLA-DECISION-ENGINE-R172.2.2 Vector arena and re-score tier
+- [ ] T536 [US8] MEDULLA-DECISION-ENGINE-R172.2.3 Incremental upsert, tombstone and compaction
+- [ ] T537 [US8] MEDULLA-DECISION-ENGINE-R172.3 Eligibility gates
+- [ ] T538 [US8] MEDULLA-DECISION-ENGINE-R172.4 Rank blend
+- [ ] T539 [US8] MEDULLA-DECISION-ENGINE-R172.5.1 Reward persistence
+- [ ] T540 [US8] MEDULLA-DECISION-ENGINE-R172.6 Embedding version pin and generation swap
+- [ ] T541 [US8] MEDULLA-DECISION-ENGINE-R172.7.1 capability_outcome decision-log op
+- [ ] T542 [US8] MEDULLA-DECISION-ENGINE-R172.7.2 Index follows committed changes
+- [ ] T543 [US8] MEDULLA-DECISION-ENGINE-R172.8 Designation refusals
+- [ ] T544 [US8] MEDULLA-DECISION-ENGINE-R172.9 Designation evidence
+- [ ] T545 [US8] MEDULLA-DECISION-ENGINE-R172.10 Designation latency and recall budgets
+- [ ] T546 [US8] MEDULLA-DECISION-ENGINE-R172.11 Designation served journey
+- [ ] T547 [US8] MEDULLA-DECISION-ENGINE-R172.12.1 Pack surface fields
+- [ ] T548 [US8] MEDULLA-DECISION-ENGINE-R172.12.2 Target-class subsumption
+- [ ] T549 [US8] MEDULLA-DECISION-ENGINE-R172.12.3 Pack projection upserts index records
+- [ ] T550 [US8] MEDULLA-DECISION-ENGINE-R172.12.4 Pack target refusals
+- [ ] T551 [US8] MEDULLA-DECISION-ENGINE-R172.12.5 Pack designation evidence
+- [ ] T552 [US8] MEDULLA-DECISION-ENGINE-R172.12.6 Pack designation served journey
+- [ ] T553 [US8] MEDULLA-DECISION-ENGINE-R172.13 Adapter applies before rank
+- [ ] T554 [US7] MEDULLA-DECISION-ENGINE-R175.1 Model
+- [ ] T555 [US7] MEDULLA-DECISION-ENGINE-R175.2 Behavior: residual quantization and refinement
+- [ ] T556 [US7] MEDULLA-DECISION-ENGINE-R175.3 Wiring
+- [ ] T557 [US7] MEDULLA-DECISION-ENGINE-R175.4 Refusal
+- [ ] T558 [US7] MEDULLA-DECISION-ENGINE-R175.5 Evidence
+- [ ] T559 [US7] MEDULLA-DECISION-ENGINE-R175.6 Hot-path proof
+- [ ] T560 [US7] MEDULLA-DECISION-ENGINE-R175.7 Drop the version suffix from recommend types
+- [ ] T561 [US7] MEDULLA-DECISION-ENGINE-R175.8 Fit the catalog encoder through Learn
+- [ ] T562 [US7] MEDULLA-DECISION-ENGINE-R173.1 Model
+- [ ] T563 [US7] MEDULLA-DECISION-ENGINE-R173.2 Behavior
+- [ ] T564 [US7] MEDULLA-DECISION-ENGINE-R173.3 Concentration family wiring and the matching shape
+- [ ] T565 [US7] MEDULLA-DECISION-ENGINE-R173.4 Refusal
+- [ ] T566 [US7] MEDULLA-DECISION-ENGINE-R173.5 Concentration premises
+- [ ] T567 [US7] MEDULLA-DECISION-ENGINE-R173.6 Served proof of the concentration cap
+- [ ] T568 [US7] MEDULLA-DECISION-ENGINE-R134.110.1 Model
+- [ ] T569 [US7] MEDULLA-DECISION-ENGINE-R134.110.2 Behavior: lexical and embedding fusion
+- [ ] T570 [US7] MEDULLA-DECISION-ENGINE-R134.110.3 Wiring: ToolRelevance family
+- [ ] T571 [US7] MEDULLA-DECISION-ENGINE-R134.110.4 Refusal: tool relevance
+- [ ] T572 [US7] MEDULLA-DECISION-ENGINE-R134.110.5 Evidence: tool relevance premises
+- [ ] T573 [US7] MEDULLA-DECISION-ENGINE-R134.110.6 Hot-path proof: one ranking for every search surface
+- [ ] T574 [US7] MEDULLA-DECISION-ENGINE-R134.110.7 Tool index cache with visibility and generation
+- [ ] T575 [US4] MEDULLA-DECISION-ENGINE-R100.102.1 Run outcome model
+- [ ] T576 [US4] MEDULLA-DECISION-ENGINE-R100.102.2 Run credit kernel
+- [ ] T577 [US4] MEDULLA-DECISION-ENGINE-R100.102.3 Run outcome wiring
+- [ ] T578 [US4] MEDULLA-DECISION-ENGINE-R100.102.4 Run outcome refusals
+- [ ] T579 [US4] MEDULLA-DECISION-ENGINE-R100.102.5 Run credit receipt
+- [ ] T580 [US4] MEDULLA-DECISION-ENGINE-R100.102.6 Run credit served proof
+- [ ] T581 [US8] MEDULLA-DECISION-ENGINE-R174.1 Model
+- [ ] T582 [US8] MEDULLA-DECISION-ENGINE-R174.2 Behavior
+- [ ] T583 [US8] MEDULLA-DECISION-ENGINE-R174.3 Wiring
+- [ ] T584 [US8] MEDULLA-DECISION-ENGINE-R174.4 Refusal
+- [ ] T585 [US8] MEDULLA-DECISION-ENGINE-R174.5 Evidence
+- [ ] T586 [US8] MEDULLA-DECISION-ENGINE-R174.6 Hot-path proof
+- [ ] T587 [US8] MEDULLA-DECISION-ENGINE-R176.1 Model
+- [ ] T588 [US8] MEDULLA-DECISION-ENGINE-R176.2 Behaviour
+- [ ] T589 [US8] MEDULLA-DECISION-ENGINE-R176.3 Wiring
+- [ ] T590 [US8] MEDULLA-DECISION-ENGINE-R176.4 Refusal
+- [ ] T591 [US8] MEDULLA-DECISION-ENGINE-R176.5 Evidence
+- [ ] T592 [US8] MEDULLA-DECISION-ENGINE-R176.6 Hot-path proof
+- [ ] T593 [US8] MEDULLA-DECISION-ENGINE-R177.1 Model
+- [ ] T594 [US8] MEDULLA-DECISION-ENGINE-R177.2 Behaviour
+- [ ] T595 [US8] MEDULLA-DECISION-ENGINE-R177.3 Wiring
+- [ ] T596 [US8] MEDULLA-DECISION-ENGINE-R177.4 Refusal
+- [ ] T597 [US8] MEDULLA-DECISION-ENGINE-R177.5 Evidence
+- [ ] T598 [US8] MEDULLA-DECISION-ENGINE-R177.6 Hot-path proof
+- [ ] T599 [US5] MEDULLA-DECISION-ENGINE-R178.1 Benchmark harness per family
+- [ ] T600 [US5] MEDULLA-DECISION-ENGINE-R178.2 Baseline file and regression check
+- [ ] T601 [US5] MEDULLA-DECISION-ENGINE-R178.3 Nightly workflow
+- [ ] T602 [US9] MEDULLA-DECISION-ENGINE-R179.1 Knob registry types
+- [ ] T603 [US9] MEDULLA-DECISION-ENGINE-R179.2 Policy carries knob values; families read them
+- [ ] T604 [US9] MEDULLA-DECISION-ENGINE-R179.3 Knob revisions are challenger candidates
+- [ ] T605 [US9] MEDULLA-DECISION-ENGINE-R179.4 Knob refusals
+- [ ] T606 [US9] MEDULLA-DECISION-ENGINE-R179.5 Knob premises
+- [ ] T607 [US9] MEDULLA-DECISION-ENGINE-R179.6 Served knob journey
+- [ ] T608 [US8] MEDULLA-DECISION-ENGINE-R174.7.1 Model
+- [ ] T609 [US8] MEDULLA-DECISION-ENGINE-R174.7.2.1 Behavior: monitor, rollback and scope resolution
+- [ ] T610 [US8] MEDULLA-DECISION-ENGINE-R174.7.3.1 Wiring: serve the scoped adapter
+- [ ] T611 [US8] MEDULLA-DECISION-ENGINE-R174.7.3.2 Wiring: capability index and index-side adapters
+- [ ] T612 [US8] MEDULLA-DECISION-ENGINE-R174.7.4 Refusal
+- [ ] T613 [US8] MEDULLA-DECISION-ENGINE-R174.7.5 Evidence
+- [ ] T614 [US8] MEDULLA-DECISION-ENGINE-R174.7.6 Hot-path proof
+- [ ] T615 [US8] MEDULLA-DECISION-ENGINE-R174.8.1 Model
+- [ ] T616 [US8] MEDULLA-DECISION-ENGINE-R174.8.2.1 Behavior: quality decay, staleness and region selection
+- [ ] T617 [US8] MEDULLA-DECISION-ENGINE-R174.8.3.1 Wiring: per-shard generation pin and swap
+- [ ] T618 [US8] MEDULLA-DECISION-ENGINE-R174.8.4 Refusal
+- [ ] T619 [US8] MEDULLA-DECISION-ENGINE-R174.8.5 Evidence
+- [ ] T620 [US8] MEDULLA-DECISION-ENGINE-R174.8.6 Hot-path proof
+- [ ] T621 [US8] MEDULLA-DECISION-ENGINE-R174.9.1 Model
+- [ ] T622 [US8] MEDULLA-DECISION-ENGINE-R174.9.2 Behavior
+- [ ] T623 [US8] MEDULLA-DECISION-ENGINE-R174.9.3 Wiring
+- [ ] T624 [US8] MEDULLA-DECISION-ENGINE-R174.9.4 Refusal
+- [ ] T625 [US8] MEDULLA-DECISION-ENGINE-R174.9.5 Evidence
+- [ ] T626 [US8] MEDULLA-DECISION-ENGINE-R174.9.6 Hot-path proof
+- [ ] T627 [US8] MEDULLA-DECISION-ENGINE-R174.9.7 Held web Documents refresh by drift
+- [ ] T628 [US6] MEDULLA-DECISION-ENGINE-R614.1 Model
+- [ ] T629 [US6] MEDULLA-DECISION-ENGINE-R614.2.1 Store a grounded capability card
+- [ ] T630 [US6] MEDULLA-DECISION-ENGINE-R614.2.2 Rank research concepts into proposals
+- [ ] T631 [US6] MEDULLA-DECISION-ENGINE-R614.2.3 Classify a document into a taxonomy
+- [ ] T632 [US6] MEDULLA-DECISION-ENGINE-R614.2.4 Project node properties into edges
+- [ ] T633 [US6] MEDULLA-DECISION-ENGINE-R614.3 SemanticEnrich method and schedule gate
+- [ ] T634 [US6] MEDULLA-DECISION-ENGINE-R614.4 Enrichment refusals
+- [ ] T635 [US6] MEDULLA-DECISION-ENGINE-R614.5 Enrichment evidence
+- [ ] T636 [US6] MEDULLA-DECISION-ENGINE-R614.6 Enrichment served hot path
+- [ ] T637 [US6] MEDULLA-DECISION-ENGINE-R615.1 Model
+- [ ] T638 [US6] MEDULLA-DECISION-ENGINE-R615.2.1 Preflight and queueing rule
+- [ ] T639 [US6] MEDULLA-DECISION-ENGINE-R615.2.2 Creation and ticket proposals
+- [ ] T640 [US6] MEDULLA-DECISION-ENGINE-R615.3 Served write-back queue
+- [ ] T641 [US6] MEDULLA-DECISION-ENGINE-R615.4 Unapproved release refuses
+- [ ] T642 [US6] MEDULLA-DECISION-ENGINE-R615.5 Write-back release evidence
+- [ ] T643 [US6] MEDULLA-DECISION-ENGINE-R615.6 Hot-path proof for the write-back queue
+- [ ] T644 [US8] MEDULLA-DECISION-ENGINE-R617.1 Model
+- [ ] T645 [US8] MEDULLA-DECISION-ENGINE-R617.2.1 Behavior: layered project rules
+- [ ] T646 [US8] MEDULLA-DECISION-ENGINE-R617.2.2 Behavior: retention prune plan
+- [ ] T647 [US8] MEDULLA-DECISION-ENGINE-R617.2.3 Behavior: create, read and expire through one surface
+- [ ] T648 [US8] MEDULLA-DECISION-ENGINE-R617.2.4 Behavior: smallest covering set under a context budget
+- [ ] T649 [US8] MEDULLA-DECISION-ENGINE-R617.3 Wiring
+- [ ] T650 [US8] MEDULLA-DECISION-ENGINE-R617.4 Refusal
+- [ ] T651 [US8] MEDULLA-DECISION-ENGINE-R617.5 Evidence
+- [ ] T652 [US8] MEDULLA-DECISION-ENGINE-R617.6 Hot-path proof
+- [ ] T653 [US8] MEDULLA-DECISION-ENGINE-R617.7 Participant class and record
+- [ ] T654 [US8] MEDULLA-DECISION-ENGINE-R617.8 Session membership and speaking participant
+- [ ] T655 [US8] MEDULLA-DECISION-ENGINE-R617.9 Served participant writes
+- [ ] T656 [US7] MEDULLA-DECISION-ENGINE-R750.750 Model
+- [ ] T657 [US7] MEDULLA-DECISION-ENGINE-R750.751 Behaviour
+- [ ] T658 [US7] MEDULLA-DECISION-ENGINE-R750.752 Refusal
+- [ ] T659 [US7] MEDULLA-DECISION-ENGINE-R750.753 Hot-path proof
+- [ ] T660 [US7] MEDULLA-DECISION-ENGINE-R750.754 Wiring and evidence
+- [ ] T661 [US7] MEDULLA-DECISION-ENGINE-R751.750 Model
+- [ ] T662 [US7] MEDULLA-DECISION-ENGINE-R751.751 Behaviour (reward kernels)
+- [ ] T663 [US7] MEDULLA-DECISION-ENGINE-R751.752 Refusal
+- [ ] T664 [US7] MEDULLA-DECISION-ENGINE-R751.753 Hot-path proof
+- [ ] T665 [US7] MEDULLA-DECISION-ENGINE-R751.754 Curriculum promotion
+- [ ] T666 [US7] MEDULLA-DECISION-ENGINE-R751.755 Decomposition wiring and evidence
+- [ ] T667 [US7] MEDULLA-DECISION-ENGINE-R752.750 Model
+- [ ] T668 [US7] MEDULLA-DECISION-ENGINE-R752.751 Behaviour (drift and width kernels)
+- [ ] T669 [US7] MEDULLA-DECISION-ENGINE-R752.752 Refusal
+- [ ] T670 [US7] MEDULLA-DECISION-ENGINE-R752.753 Hot-path proof
+- [ ] T671 [US7] MEDULLA-DECISION-ENGINE-R752.754 Drift and width wiring and evidence
+- [ ] T672 [US7] MEDULLA-DECISION-ENGINE-R752.755 Trust ledger and corrigibility verdict
+- [ ] T673 [US7] MEDULLA-DECISION-ENGINE-R753.750 Model
+- [ ] T674 [US7] MEDULLA-DECISION-ENGINE-R753.751 Behaviour (join, distill, verify kernels)
+- [ ] T675 [US7] MEDULLA-DECISION-ENGINE-R753.752 Refusal
+- [ ] T676 [US7] MEDULLA-DECISION-ENGINE-R753.753 Hot-path proof
+- [ ] T677 [US7] MEDULLA-DECISION-ENGINE-R753.754 Join and distill wiring and evidence
+- [ ] T678 [US7] MEDULLA-DECISION-ENGINE-R753.755 Step verification and adversarial admission wiring
+- [ ] T679 [US6] MEDULLA-DECISION-ENGINE-R035.750.1 Route pipeline and fast path
+- [ ] T680 [US6] MEDULLA-DECISION-ENGINE-R035.750.2 Team reuse route stage
+- [ ] T681 [US6] MEDULLA-DECISION-ENGINE-R035.751 Hot-path proof for the route pipeline
+- [ ] T682 [US6] MEDULLA-DECISION-ENGINE-R046.750 Elastic topology admission against sandbox caps
+- [ ] T683 [US6] MEDULLA-DECISION-ENGINE-R046.751 Topology admission hot path
+- [ ] T684 [US7] MEDULLA-DECISION-ENGINE-R134.751 Hot-path proof: tool relevance at the catalog cap
+- [ ] T685 [US8] MEDULLA-DECISION-ENGINE-R650.1 Model
+- [ ] T686 [US8] MEDULLA-DECISION-ENGINE-R650.2.1 Persist descriptors and derive reliability
+- [ ] T687 [US8] MEDULLA-DECISION-ENGINE-R650.2.2 Generate the power descriptor
+- [ ] T688 [US8] MEDULLA-DECISION-ENGINE-R650.2.3 Project the request-scoped closure
+- [ ] T689 [US8] MEDULLA-DECISION-ENGINE-R650.3 Descriptor wiring into designation and assembly
+- [ ] T690 [US8] MEDULLA-DECISION-ENGINE-R650.4 Descriptor refusals
+- [ ] T691 [US8] MEDULLA-DECISION-ENGINE-R650.5 Descriptor evidence
+- [ ] T692 [US8] MEDULLA-DECISION-ENGINE-R650.6 Descriptor designation hot path
+- [ ] T693 [US8] MEDULLA-DECISION-ENGINE-R651.1 Model
+- [ ] T694 [US8] MEDULLA-DECISION-ENGINE-R651.2.1 Behavior: mementos and session priming
+- [ ] T695 [US8] MEDULLA-DECISION-ENGINE-R651.2.2 Behavior: embedding drift report
+- [ ] T696 [US8] MEDULLA-DECISION-ENGINE-R651.2.3 Behavior: trajectory pruning
+- [ ] T697 [US8] MEDULLA-DECISION-ENGINE-R651.3 Wiring
+- [ ] T698 [US8] MEDULLA-DECISION-ENGINE-R651.4 Refusal
+- [ ] T699 [US8] MEDULLA-DECISION-ENGINE-R651.5 Evidence
+- [ ] T700 [US8] MEDULLA-DECISION-ENGINE-R651.6 Hot-path proof
+- [ ] T701 [US8] MEDULLA-DECISION-ENGINE-R652.1 Model
+- [ ] T702 [US8] MEDULLA-DECISION-ENGINE-R652.2 Behavior: lifecycle and evidence combination
+- [ ] T703 [US8] MEDULLA-DECISION-ENGINE-R652.3 Wiring
+- [ ] T704 [US8] MEDULLA-DECISION-ENGINE-R652.4 Refusal
+- [ ] T705 [US8] MEDULLA-DECISION-ENGINE-R652.5 Evidence
+- [ ] T706 [US8] MEDULLA-DECISION-ENGINE-R652.6 Hot-path proof
+- [ ] T707 [US8] MEDULLA-DECISION-ENGINE-R652.7 Perspective arbitration and feed grading
+- [ ] T708 [US8] MEDULLA-DECISION-ENGINE-R652.8 Artifact compile and seal
+- [ ] T709 [US8] MEDULLA-DECISION-ENGINE-R652.9 Claims carry subject and observer
+- [ ] T710 [US7] MEDULLA-DECISION-ENGINE-R653.1 Model
+- [ ] T711 [US7] MEDULLA-DECISION-ENGINE-R653.2 Behavior: fenced lease and priority order
+- [ ] T712 [US7] MEDULLA-DECISION-ENGINE-R653.3 Wiring
+- [ ] T713 [US7] MEDULLA-DECISION-ENGINE-R653.4 Refusal
+- [ ] T714 [US7] MEDULLA-DECISION-ENGINE-R653.5 Evidence
+- [ ] T715 [US7] MEDULLA-DECISION-ENGINE-R653.6 Hot-path proof
+- [ ] T716 [US7] MEDULLA-DECISION-ENGINE-R653.7 Behavior: gap settlement and offer rate
+- [ ] T717 [US7] MEDULLA-DECISION-ENGINE-R653.8 Behavior: failure-sequence miner and capability ratchet
+- [ ] T718 [US8] MEDULLA-DECISION-ENGINE-R654.1 Model: rollout set and spec-proposal chart
+- [ ] T719 [US8] MEDULLA-DECISION-ENGINE-R654.2 Behaviour: paired rollout evidence and legal spec transitions
+- [ ] T720 [US8] MEDULLA-DECISION-ENGINE-R654.3 Wiring: record rollouts and promote through the champion pointer
+- [ ] T721 [US8] MEDULLA-DECISION-ENGINE-R654.4 Refusal: rollout and spec-proposal codes
+- [ ] T722 [US8] MEDULLA-DECISION-ENGINE-R654.5 Evidence: rollout premises and read-back
+- [ ] T723 [US8] MEDULLA-DECISION-ENGINE-R654.6 Hot-path proof: served skill-evolution journey
+- [ ] T724 [US8] MEDULLA-DECISION-ENGINE-R655.6 Hot-path proof
+- [ ] T725 [US8] MEDULLA-DECISION-ENGINE-R656.6 Hot-path proof
+- [ ] T726 [US8] MEDULLA-DECISION-ENGINE-R656.5 Refusal
+- [ ] T727 [US8] MEDULLA-DECISION-ENGINE-R656.4 Wiring: a named profile constrains the run
+- [ ] T728 [US8] MEDULLA-DECISION-ENGINE-R656.3 Behavior: document set as a retrieval filter
+- [ ] T729 [US8] MEDULLA-DECISION-ENGINE-R656.2 Behavior: profile and document-set store with sharing
+- [ ] T730 [US8] MEDULLA-DECISION-ENGINE-R656.1 Model
+- [ ] T731 [US8] MEDULLA-DECISION-ENGINE-R655.5 Refusal
+- [ ] T732 [US8] MEDULLA-DECISION-ENGINE-R655.4 Wiring: card read and derivation status
+- [ ] T733 [US8] MEDULLA-DECISION-ENGINE-R655.3 Behavior: participant card
+- [ ] T734 [US8] MEDULLA-DECISION-ENGINE-R655.2 Behavior: ask about a participant
+- [ ] T735 [US8] MEDULLA-DECISION-ENGINE-R655.1 Model
+- [ ] T736 [US8] MEDULLA-DECISION-ENGINE-R700.1 Model
+- [ ] T737 [US8] MEDULLA-DECISION-ENGINE-R700.2 Behavior
+- [ ] T738 [US8] MEDULLA-DECISION-ENGINE-R700.3 Wiring
+- [ ] T739 [US8] MEDULLA-DECISION-ENGINE-R700.4 Refusal
+- [ ] T740 [US8] MEDULLA-DECISION-ENGINE-R700.5 Evidence
+- [ ] T741 [US8] MEDULLA-DECISION-ENGINE-R700.6 Hot-path proof
+- [ ] T742 [US8] MEDULLA-DECISION-ENGINE-R701.1 Model
+- [ ] T743 [US8] MEDULLA-DECISION-ENGINE-R701.2 Behavior
+- [ ] T744 [US8] MEDULLA-DECISION-ENGINE-R701.3 Wiring
+- [ ] T745 [US8] MEDULLA-DECISION-ENGINE-R701.4 Refusal
+- [ ] T746 [US8] MEDULLA-DECISION-ENGINE-R701.5 Evidence
+- [ ] T747 [US8] MEDULLA-DECISION-ENGINE-R701.6 Hot-path proof
+- [ ] T748 [US8] MEDULLA-DECISION-ENGINE-R702.1 Model
+- [ ] T749 [US8] MEDULLA-DECISION-ENGINE-R702.2 Behavior
+- [ ] T750 [US8] MEDULLA-DECISION-ENGINE-R702.3 Wiring
+- [ ] T751 [US8] MEDULLA-DECISION-ENGINE-R702.4 Refusal
+- [ ] T752 [US8] MEDULLA-DECISION-ENGINE-R702.5 Evidence
+- [ ] T753 [US8] MEDULLA-DECISION-ENGINE-R702.6 Hot-path proof
+- [ ] T754 [US8] MEDULLA-DECISION-ENGINE-R703.1 Model
+- [ ] T755 [US8] MEDULLA-DECISION-ENGINE-R703.2 Behavior
+- [ ] T756 [US8] MEDULLA-DECISION-ENGINE-R703.3 Wiring
+- [ ] T757 [US8] MEDULLA-DECISION-ENGINE-R703.4 Refusal
+- [ ] T758 [US8] MEDULLA-DECISION-ENGINE-R703.5 Evidence
+- [ ] T759 [US8] MEDULLA-DECISION-ENGINE-R703.6 Hot-path proof
+- [ ] T760 [US8] MEDULLA-DECISION-ENGINE-R704.1 Model
+- [ ] T761 [US8] MEDULLA-DECISION-ENGINE-R704.2 Behavior
+- [ ] T762 [US8] MEDULLA-DECISION-ENGINE-R704.3 Wiring
+- [ ] T763 [US8] MEDULLA-DECISION-ENGINE-R704.4 Refusal
+- [ ] T764 [US8] MEDULLA-DECISION-ENGINE-R704.5 Evidence
+- [ ] T765 [US8] MEDULLA-DECISION-ENGINE-R704.6 Hot-path proof
+- [ ] T766 [US8] MEDULLA-DECISION-ENGINE-R705.1 Model
+- [ ] T767 [US8] MEDULLA-DECISION-ENGINE-R705.2 Behavior
+- [ ] T768 [US8] MEDULLA-DECISION-ENGINE-R705.3 Wiring
+- [ ] T769 [US8] MEDULLA-DECISION-ENGINE-R705.4 Refusal
+- [ ] T770 [US8] MEDULLA-DECISION-ENGINE-R705.5 Evidence
+- [ ] T771 [US8] MEDULLA-DECISION-ENGINE-R705.6 Hot-path proof
+- [ ] T772 [US6] MEDULLA-DECISION-ENGINE-R706.1 Model
+- [ ] T773 [US6] MEDULLA-DECISION-ENGINE-R706.2 Behavior
+- [ ] T774 [US6] MEDULLA-DECISION-ENGINE-R706.3 Wiring
+- [ ] T775 [US6] MEDULLA-DECISION-ENGINE-R706.4 Refusal
+- [ ] T776 [US6] MEDULLA-DECISION-ENGINE-R706.5 Evidence
+- [ ] T777 [US6] MEDULLA-DECISION-ENGINE-R706.6 Hot-path proof
+- [ ] T778 [US8] MEDULLA-DECISION-ENGINE-R707.1 Model
+- [ ] T779 [US8] MEDULLA-DECISION-ENGINE-R707.2 Behavior
+- [ ] T780 [US8] MEDULLA-DECISION-ENGINE-R707.3 Wiring
+- [ ] T781 [US8] MEDULLA-DECISION-ENGINE-R707.4 Refusal
+- [ ] T782 [US8] MEDULLA-DECISION-ENGINE-R707.5 Evidence
+- [ ] T783 [US8] MEDULLA-DECISION-ENGINE-R707.6 Hot-path proof
+- [ ] T784 [US4] MEDULLA-DECISION-ENGINE-R800.1 Model
+- [ ] T785 [US4] MEDULLA-DECISION-ENGINE-R800.2 Behaviour: next parent, scoreboard and front digest
+- [ ] T786 [US4] MEDULLA-DECISION-ENGINE-R800.3 Wiring: the reflective optimizer uses the front
+- [ ] T787 [US4] MEDULLA-DECISION-ENGINE-R800.4 Refusal: front input codes
+- [ ] T788 [US4] MEDULLA-DECISION-ENGINE-R800.5 Evidence: front digest and scoreboard
+- [ ] T789 [US4] MEDULLA-DECISION-ENGINE-R800.6 Hot-path proof: served reflective job
+- [ ] T790 [US9] MEDULLA-DECISION-ENGINE-R801.1 Usage and price records
+- [ ] T791 [US9] MEDULLA-DECISION-ENGINE-R801.2 Append, derived cost, name normalization and day buckets
+- [ ] T792 [US9] MEDULLA-DECISION-ENGINE-R801.3 Wiring
+- [ ] T793 [US9] MEDULLA-DECISION-ENGINE-R801.4 Ledger refusals write nothing
+- [ ] T794 [US9] MEDULLA-DECISION-ENGINE-R801.5 Audit line and golden cost report
+- [ ] T795 [US9] MEDULLA-DECISION-ENGINE-R801.6 Ledger nightly budget
+- [ ] T796 [US9] MEDULLA-DECISION-ENGINE-R801.7 Served tenant-scoped usage read
+- [ ] T797 [US9] MEDULLA-DECISION-ENGINE-R801.8 Served usage append and price put
+- [ ] T798 [US6] MEDULLA-DECISION-ENGINE-R802.1 Model
+- [ ] T799 [US6] MEDULLA-DECISION-ENGINE-R802.2 Behavior
+- [ ] T800 [US6] MEDULLA-DECISION-ENGINE-R802.3 Wiring
+- [ ] T801 [US6] MEDULLA-DECISION-ENGINE-R802.4 Refusal
+- [ ] T802 [US6] MEDULLA-DECISION-ENGINE-R802.5 Evidence
+- [ ] T803 [US6] MEDULLA-DECISION-ENGINE-R802.6 Hot-path proof
+- [ ] T804 [US9] MEDULLA-DECISION-ENGINE-R803.1 Model
+- [ ] T805 [US9] MEDULLA-DECISION-ENGINE-R803.2 Behavior
+- [ ] T806 [US9] MEDULLA-DECISION-ENGINE-R803.3 Wiring
+- [ ] T807 [US9] MEDULLA-DECISION-ENGINE-R803.4 Refusal
+- [ ] T808 [US9] MEDULLA-DECISION-ENGINE-R803.5 Evidence
+- [ ] T809 [US9] MEDULLA-DECISION-ENGINE-R803.6 Hot-path proof
+- [ ] T810 [US4] MEDULLA-DECISION-ENGINE-R810.1 Model: program contracts and optimizer catalog
+- [ ] T811 [US4] MEDULLA-DECISION-ENGINE-R810.2 Behaviour: seeded compile over the train split
+- [ ] T812 [US4] MEDULLA-DECISION-ENGINE-R810.3 Wiring: served program job path
+- [ ] T813 [US4] MEDULLA-DECISION-ENGINE-R810.4 Refusal: program job codes
+- [ ] T814 [US4] MEDULLA-DECISION-ENGINE-R810.5 Evidence: revision record fields and seeded replay
+- [ ] T815 [US4] MEDULLA-DECISION-ENGINE-R810.6 Hot-path proof: served program job journey
+- [ ] T816 [US4] MEDULLA-DECISION-ENGINE-R810.7 Held-out evidence on the evaluated program revision
+- [ ] T817 [US4] MEDULLA-DECISION-ENGINE-R811.1 Model: policy evolution operations and receipts
+- [ ] T818 [US4] MEDULLA-DECISION-ENGINE-R811.2 Behaviour: capture gate and held-out split isolation
+- [ ] T819 [US4] MEDULLA-DECISION-ENGINE-R811.3 Wiring: served policy evolution path
+- [ ] T820 [US4] MEDULLA-DECISION-ENGINE-R811.4 Refusal: policy evolution codes
+- [ ] T821 [US4] MEDULLA-DECISION-ENGINE-R811.5 Evidence: receipt fields
+- [ ] T822 [US4] MEDULLA-DECISION-ENGINE-R811.6 Hot-path proof: served capture, training and evaluation
+- [ ] T823 [US4] MEDULLA-DECISION-ENGINE-R811.7 Evaluation receipts name a revision subject
+- [ ] T824 [US4] MEDULLA-DECISION-ENGINE-R811.8 Policy evaluation maps into held-out evidence
+- [ ] T825 [US4] MEDULLA-DECISION-ENGINE-R812.2 Behaviour: challenger beats champion by a margin
+- [ ] T826 [US4] MEDULLA-DECISION-ENGINE-R813.1 Model: one grader kind
+- [ ] T827 [US4] MEDULLA-DECISION-ENGINE-R813.2 Behaviour: corpus build from score rows
+- [ ] T828 [US4] MEDULLA-DECISION-ENGINE-R813.3 Wiring: submit-time corpus from ingested scores
+- [ ] T829 [US4] MEDULLA-DECISION-ENGINE-R813.4 Refusal: score row codes
+- [ ] T830 [US4] MEDULLA-DECISION-ENGINE-R813.5 Evidence: example provenance
+- [ ] T831 [US4] MEDULLA-DECISION-ENGINE-R813.6 Hot-path proof: scores to compiled program
+- [ ] T832 [US2] MEDULLA-DECISION-ENGINE-R036.102 Bind graph participant prepare records to their recovery identity
+- [ ] T833 [US2] MEDULLA-DECISION-ENGINE-R036.103 Durable RBAC read reservation
+- [ ] T834 [US2] MEDULLA-DECISION-ENGINE-R036.104 Agent Library durable admission participant
+- [ ] T835 [US2] MEDULLA-DECISION-ENGINE-R036.105 Request-bound coordinator decision certificate
+- [ ] T836 [US2] MEDULLA-DECISION-ENGINE-R036.106 Durable profile-use grant records
+- [ ] T837 [US2] MEDULLA-DECISION-ENGINE-R036.107 AgentAssemble respects the profile tool allowlist
+- [ ] T838 [US6] MEDULLA-DECISION-ENGINE-R038.2 Tool-action admission is a served Decide question
+- [ ] T839 [US6] MEDULLA-DECISION-ENGINE-R038.3 Held-item admission is a served Decide question
+- [ ] T840 [US6] MEDULLA-DECISION-ENGINE-R039.3 The Route question honours a caller-preferred option when it is legal
+- [ ] T841 [US4] MEDULLA-DECISION-ENGINE-R804.4 Refusal: independent held-out evidence
+- [ ] T842 [US4] MEDULLA-DECISION-ENGINE-R805.1 Model
+- [ ] T843 [US4] MEDULLA-DECISION-ENGINE-R805.2 Behaviour: post-promotion regression rollback
+- [ ] T844 [US4] MEDULLA-DECISION-ENGINE-R805.3 Wiring: promotion family and champion pointer moves
+- [ ] T845 [US4] MEDULLA-DECISION-ENGINE-R805.4 Refusal: one promotion code set
+- [ ] T846 [US4] MEDULLA-DECISION-ENGINE-R805.5 Evidence: promotion premises and pointer history replay
+- [ ] T847 [US4] MEDULLA-DECISION-ENGINE-R805.6 Hot-path proof: served promotion journey
+- [ ] T848 [US4] MEDULLA-DECISION-ENGINE-R805.7 Model: revision lifecycle types
+- [ ] T849 [US4] MEDULLA-DECISION-ENGINE-R805.8 Program champion moves to the governed pointer store
+- [ ] T850 [US4] MEDULLA-DECISION-ENGINE-R805.9 Receipt resolution into held-out evidence
+- [ ] T851 [US8] MEDULLA-DECISION-ENGINE-R651.7 Episodic-to-semantic promotion
+- [ ] T852 [US8] MEDULLA-DECISION-ENGINE-R651.8 Reinforce and decay share one importance update
+- [ ] T853 [US8] MEDULLA-DECISION-ENGINE-R651.9 Memory scope narrows and the ACL still applies
+- [ ] T854 [US8] MEDULLA-DECISION-ENGINE-R651.10 Observation configuration per participant per session
+- [ ] T855 [US8] MEDULLA-DECISION-ENGINE-R651.11 Appending a turn enqueues one derive job
+- [ ] T856 [US8] MEDULLA-DECISION-ENGINE-R651.12 Derive worker writes conclusions as claims
+- [ ] T857 [US8] MEDULLA-DECISION-ENGINE-R700.7 Contradiction records are tracked
+- [ ] T858 [US7] MEDULLA-DECISION-ENGINE-R134.111.1 Model
+- [ ] T859 [US7] MEDULLA-DECISION-ENGINE-R134.111.2 Behavior
+- [ ] T860 [US7] MEDULLA-DECISION-ENGINE-R134.111.3 Wiring
+- [ ] T861 [US7] MEDULLA-DECISION-ENGINE-R134.111.4 Refusal
+- [ ] T862 [US7] MEDULLA-DECISION-ENGINE-R134.111.5 Evidence
+- [ ] T863 [US7] MEDULLA-DECISION-ENGINE-R134.111.6 Performance qualification
+- [ ] T864 [US7] MEDULLA-DECISION-ENGINE-R134.111.7 Canonical task-plan feature schema
+- [ ] T865 [US7] MEDULLA-DECISION-ENGINE-R134.111.8 Tool step model
+- [ ] T866 [US7] MEDULLA-DECISION-ENGINE-R134.111.9 Canonical form and static checks
+- [ ] T867 [US7] MEDULLA-DECISION-ENGINE-R134.111.10 Refusal
+- [ ] T868 [US7] MEDULLA-DECISION-ENGINE-R134.111.11 Digest and evidence for tool steps
+- [ ] T869 [US7] MEDULLA-DECISION-ENGINE-R134.111.12 Wiring and schema
+- [ ] T870 [US7] MEDULLA-DECISION-ENGINE-R134.111.13 Hot-path proof: tool-step bindings served
+- [ ] T871 [US7] MEDULLA-DECISION-ENGINE-R158.7 Latency and cost inputs and knobs for run adjustment
+- [ ] T872 [US9] MEDULLA-DECISION-ENGINE-R179.7 Harness evolution knobs
+- [ ] T873 [US9] MEDULLA-DECISION-ENGINE-R179.8 Participant memory knobs
+- [ ] T874 [US9] MEDULLA-DECISION-ENGINE-R803.7 Contrast measured from stored traces, scores and the usage ledger
+- [ ] T875 [US9] MEDULLA-DECISION-ENGINE-R803.8 DecisionLog op HarnessAdoption stores the adoption, contrast and lesson
+- [ ] T876 [US4] MEDULLA-DECISION-ENGINE-R805.10 Model: three more revision subject kinds
+- [ ] T877 [US4] MEDULLA-DECISION-ENGINE-R805.11 Behaviour: gate rule per added subject kind
+- [ ] T878 [US4] MEDULLA-DECISION-ENGINE-R805.12 Harness component and harness adoption revision subjects
+- [ ] T879 [US4] MEDULLA-DECISION-ENGINE-R805.13 Serve the champion pointer read
+- [ ] T880 [US8] MEDULLA-DECISION-ENGINE-R814.1.1 Vocabulary
+- [ ] T881 [US8] MEDULLA-DECISION-ENGINE-R814.1.2 Typed record
+- [ ] T882 [US8] MEDULLA-DECISION-ENGINE-R814.2 System-prompt selection per slot
+- [ ] T883 [US8] MEDULLA-DECISION-ENGINE-R814.3 Read candidates through the Agent Library scope
+- [ ] T884 [US8] MEDULLA-DECISION-ENGINE-R814.4 Prompt candidate refusals
+- [ ] T885 [US8] MEDULLA-DECISION-ENGINE-R814.5 Prompt selection evidence
+- [ ] T886 [US8] MEDULLA-DECISION-ENGINE-R814.6 Prompt selection served journey
+- [ ] T887 [US8] MEDULLA-DECISION-ENGINE-R814.7 System-prompt competency query
+- [ ] T888 [US8] MEDULLA-DECISION-ENGINE-R814.8 Packaged prompts validate against the canonical blueprint
+- [ ] T889 [US6] MEDULLA-DECISION-ENGINE-R815 Model media capability on the model selection answer
+- [ ] T890 [US8] MEDULLA-DECISION-ENGINE-R816 Store run-bound observation state
+- [ ] T891 [US4] MEDULLA-DECISION-ENGINE-R817 Serve revision proposals as a tenant-scoped list
+- [ ] T892 [US6] MEDULLA-DECISION-ENGINE-R818 Probe selection from a goal
+- [ ] T893 [US6] MEDULLA-DECISION-ENGINE-R819 Serving technique activation verdict
+- [ ] T894 [US6] MEDULLA-DECISION-ENGINE-R820 Process remediation verdict
+- [ ] T895 [US6] MEDULLA-DECISION-ENGINE-R821 Retrieval strategy adoption and per-source trust posterior
+- [ ] T896 [US4] MEDULLA-DECISION-ENGINE-R822 Rerank calibration head fitted from outcomes
+- [ ] T897 [US6] MEDULLA-DECISION-ENGINE-R823 Reasoning-paradigm choice family
+- [ ] T898 [US6] MEDULLA-DECISION-ENGINE-R824 Capacity adjustment question and verdict
+- [ ] T899 [US6] MEDULLA-DECISION-ENGINE-R825 Model capacity question
+- [ ] T900 [US6] MEDULLA-DECISION-ENGINE-R826 Ingest shortfall allocation family
+- [ ] T901 [US6] MEDULLA-DECISION-ENGINE-R827 Revert or fix-forward family
+- [ ] T902 [US6] MEDULLA-DECISION-ENGINE-R828 Branch merge conflict winner family (ResolveConflict)
