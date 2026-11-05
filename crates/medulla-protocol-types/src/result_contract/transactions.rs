@@ -91,6 +91,10 @@ pub struct ChangeEnvelopeApplied {
     /// Present only when the envelope was committed through a Raft placement group.
     #[serde(flatten)]
     pub replication: Option<ChangeEnvelopeReplication>,
+    /// Present only when a stale version expectation was resolved by a merge
+    /// strategy (MEDULLA-DURABLE-KERNEL-R084.5).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub write_conflict: Option<medulla_types::write_conflict::WriteConflictEvidence>,
 }
 
 /// An envelope of an `ApplyChangeEnvelopes` batch that did not commit.
