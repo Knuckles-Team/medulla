@@ -678,7 +678,8 @@ mod tests {
                 let handles: Vec<_> = (0..threads)
                     .map(|t| {
                         let mut shuffled = entries.clone();
-                        shuffled.rotate_left((t * 37) % shuffled.len());
+                        let len = shuffled.len();
+                        shuffled.rotate_left((t * 37) % len);
                         if t % 2 == 1 {
                             shuffled.reverse();
                         }
