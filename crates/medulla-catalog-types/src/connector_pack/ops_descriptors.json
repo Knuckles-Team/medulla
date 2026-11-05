@@ -1,0 +1,103 @@
+{
+  "operations": {
+    "ConnectorPack.approve_source": [
+      "connector",
+      "context",
+      "contract_digest",
+      "contract_iri",
+      "expected_head",
+      "resource_uri"
+    ],
+    "ConnectorPack.attest_self_served_catalog": [
+      "connector",
+      "context",
+      "expected_catalog_generation",
+      "four_family_digest",
+      "registration_config_digest",
+      "registry_digest",
+      "registry_revision",
+      "server_entry_digest",
+      "server_name"
+    ],
+    "ConnectorPack.bind": [
+      "connector",
+      "context",
+      "importer"
+    ],
+    "ConnectorPack.catalog_authority_status": [
+      "server_name",
+      "tenant_id"
+    ],
+    "ConnectorPack.catalog_binding_status": [
+      "server_name",
+      "tenant_id"
+    ],
+    "ConnectorPack.catalog_owner_principal": [
+      "server_name",
+      "tenant_id"
+    ],
+    "ConnectorPack.catalog_request_owner_principal": [
+      "server_name",
+      "tenant_id"
+    ],
+    "ConnectorPack.import": [
+      "allow_mass_withdrawal",
+      "context",
+      "expected_head",
+      "index"
+    ],
+    "ConnectorPack.reconcile_bodies": [
+      "context"
+    ],
+    "ConnectorPack.reconcile_catalog": [
+      "child_connection_generation",
+      "child_id",
+      "component_digest",
+      "component_id",
+      "component_revision",
+      "context",
+      "discovery_tenant",
+      "expected_catalog_generation",
+      "four_family_digest",
+      "local_catalog_epoch",
+      "registration_config_digest",
+      "registry_digest",
+      "registry_revision",
+      "server_name"
+    ],
+    "ConnectorPack.reproject": [
+      "connector",
+      "context"
+    ],
+    "ConnectorPack.retire": [
+      "connector",
+      "context",
+      "uris"
+    ],
+    "ConnectorPack.status": [
+      "connector",
+      "tenant_id"
+    ],
+    "ConnectorPack.unbind": [
+      "connector",
+      "context"
+    ]
+  },
+  "results": {
+    "imported": [
+      "receipt",
+      "result"
+    ],
+    "rejected": [
+      "budget_exhausted",
+      "pack_digest",
+      "result",
+      "violations"
+    ],
+    "unchanged": [
+      "binding_revision",
+      "pack_digest",
+      "result"
+    ]
+  }
+}

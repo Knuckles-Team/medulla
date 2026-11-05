@@ -896,6 +896,9 @@ pub(super) fn section_bytes<'a>(
     archive: &'a [u8],
     section: &medulla_catalog_types::connector_pack::PackSection,
 ) -> Result<&'a [u8], String> {
+    if !section.fits_within(archive.len() as u64) {
+        return Err("section outside archive".to_string());
+    }
     let start =
         usize::try_from(section.offset).map_err(|_| "section offset overflow".to_string())?;
     let end = usize::try_from(

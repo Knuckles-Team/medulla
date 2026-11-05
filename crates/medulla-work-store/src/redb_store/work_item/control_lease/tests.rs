@@ -249,7 +249,7 @@ fn the_pending_approval_queue_lists_only_the_tenants_active_approvals() {
 
 // spec: MEDULLA-DURABLE-KERNEL-R039.2
 #[test]
-fn native_record_consumption_checks_commit_time_and_preserves_expired_rows() {
+fn consume_live_exact_and_elapsed_expiry() {
     use super::super::market::{apply_native_record_rows, NativeRecordRequest};
     use super::super::test_shard::with_write;
     use crate::redb_store::graph_row_tables::GraphRowTables;
@@ -328,6 +328,55 @@ fn native_record_consumption_checks_commit_time_and_preserves_expired_rows() {
     );
     assert_eq!(expired.outcome, ControlLeaseTransitionOutcome::Applied);
     assert_eq!(expired.lease.unwrap().status, ControlLeaseStatus::Expired);
+}
+
+// spec: MEDULLA-DURABLE-KERNEL-R039.2
+#[test]
+fn single_use_and_revoke_after_expiry() {
+    let temp = open("lease-single-use-expiry");
+    issued(&temp.shard, "issue-a", issue("single-1", "tenant-a"));
+    let live = native_call_at(
+        &temp.shard,
+        "consume-live",
+        &Method::TransitionControlLease {
+            request: end("single-1", 1, ControlLeaseTarget::Consumed),
+        },
+        300_999,
+    )
+    .unwrap();
+    let consumed: ControlLeaseTransition = decode(live);
+    assert_eq!(consumed.outcome, ControlLeaseTransitionOutcome::Applied);
+    let again: ControlLeaseTransition = decode(
+        native_call_at(
+            &temp.shard,
+            "consume-twice",
+            &Method::TransitionControlLease {
+                request: end("single-1", 2, ControlLeaseTarget::Consumed),
+            },
+            300_999,
+        )
+        .unwrap(),
+    );
+    assert_eq!(again.outcome, ControlLeaseTransitionOutcome::Conflict);
+
+    // Once the soft deadline has passed, revocation stays legal.
+    issued(&temp.shard, "issue-b", issue("single-2", "tenant-a"));
+    let revoked: ControlLeaseTransition = decode(
+        native_call_at(
+            &temp.shard,
+            "revoke-late",
+            &Method::TransitionControlLease {
+                request: end("single-2", 1, ControlLeaseTarget::Revoked),
+            },
+            901_000,
+        )
+        .unwrap(),
+    );
+    assert_eq!(revoked.outcome, ControlLeaseTransitionOutcome::Applied);
+    assert_eq!(
+        get(&temp.shard, "tenant-a", "single-2").unwrap().status,
+        ControlLeaseStatus::Revoked
+    );
 }
 
 fn pending_fixture(shard: &Shard) -> IssueControlLeaseRequest {
@@ -470,6 +519,67 @@ fn pending_registration_and_consumption_change_both_rows_once() {
         transitioned(&temp.shard, "replay", consume).outcome,
         ControlLeaseTransitionOutcome::Conflict
     );
+    assert_eq!(stored_work(&temp.shard), after);
+}
+
+// spec: MEDULLA-DURABLE-KERNEL-R039.3
+#[test]
+fn pending_call_register_consume_and_refusals() {
+    let (temp, request) = registered_pending_fixture("pending-composite");
+    let work = stored_work(&temp.shard);
+    let lease = get(&temp.shard, "tenant-a", "pending-a");
+    assert_eq!(work["pending_call_lease_ref"], "pending-a");
+    let valid = pending_consume(&request);
+
+    // A changed preimage, a wrong tenant, a stale fence and an elapsed lease
+    // each refuse and leave both rows byte-identical.
+    let mut changed_preimage = valid.clone();
+    changed_preimage
+        .pending_call_consumption
+        .as_mut()
+        .unwrap()
+        .expected_grant
+        .insert("params_digest".into(), "other-digest".into());
+    let mut wrong_tenant = valid.clone();
+    wrong_tenant.tenant = "tenant-b".into();
+    let mut stale_fence = valid.clone();
+    stale_fence
+        .pending_call_consumption
+        .as_mut()
+        .unwrap()
+        .work_item
+        .expected_revision = 1;
+    for (name, consume, now_ms) in [
+        ("preimage", changed_preimage, 1_500),
+        ("tenant", wrong_tenant, 1_500),
+        ("fence", stale_fence, 1_500),
+        ("expiry", valid.clone(), request.expires_at_ms),
+    ] {
+        let outcome = with_nodes(&temp.shard, &format!("refuse-{name}"), |nodes| {
+            Ok(apply_transition_control_lease_row(
+                GRAPH,
+                &consume,
+                nodes,
+                now_ms,
+                DurableCrypto::none(),
+            ))
+        });
+        if let Ok(payload) = outcome {
+            let result: ControlLeaseTransition = decode(Some(payload));
+            assert_ne!(result.outcome, ControlLeaseTransitionOutcome::Applied, "{name}");
+        }
+        assert_eq!(stored_work(&temp.shard), work, "{name}: no partial write");
+        assert_eq!(get(&temp.shard, "tenant-a", "pending-a"), lease, "{name}");
+    }
+
+    // The valid envelope consumes once, clears the reference, and a replay
+    // changes nothing.
+    let consumed = transitioned(&temp.shard, "consume", valid.clone());
+    assert_eq!(consumed.outcome, ControlLeaseTransitionOutcome::Applied);
+    let after = stored_work(&temp.shard);
+    assert!(!after.contains_key("pending_call_lease_ref"));
+    let replay = transitioned(&temp.shard, "replay", valid);
+    assert_eq!(replay.outcome, ControlLeaseTransitionOutcome::Conflict);
     assert_eq!(stored_work(&temp.shard), after);
 }
 

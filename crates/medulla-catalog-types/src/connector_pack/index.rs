@@ -64,6 +64,18 @@ pub struct PackSection {
     pub sha256: Digest256,
 }
 
+impl PackSection {
+    /// The exclusive end offset, or `None` when `offset + length` overflows.
+    pub fn end(&self) -> Option<u64> {
+        self.offset.checked_add(self.length)
+    }
+
+    /// Whether the section lies wholly inside an archive of `archive_len` bytes.
+    pub fn fits_within(&self, archive_len: u64) -> bool {
+        self.end().is_some_and(|end| end <= archive_len)
+    }
+}
+
 /// A reference from one entry to another, by URI and kind.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -145,5 +157,63 @@ mod kind_wire_tests {
             serde_json::from_str::<PackEntryKind>("\"resource\"").unwrap(),
             PackEntryKind::Resource
         );
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::catalog_fixtures::contract_pack;
+
+    // spec: MEDULLA-TYPED-PACKS-R001.1
+    #[test]
+    fn index_entry_round_trip_and_refusals() {
+        let index = contract_pack::index();
+        let bytes = rmp_serde::to_vec_named(&index).unwrap();
+        let back: ConnectorPackIndex = rmp_serde::from_slice(&bytes).unwrap();
+        assert_eq!(back, index);
+        let entry_bytes = rmp_serde::to_vec_named(&index.server).unwrap();
+        let entry: PackEntry = rmp_serde::from_slice(&entry_bytes).unwrap();
+        assert_eq!(entry, index.server);
+
+        let mut wire = serde_json::to_value(&index).unwrap();
+        wire["server"]["kind"] = serde_json::json!("not_a_kind");
+        assert!(serde_json::from_value::<ConnectorPackIndex>(wire).is_err());
+
+        let mut wire = serde_json::to_value(&index).unwrap();
+        wire["schema_version"] = serde_json::json!("one");
+        assert!(serde_json::from_value::<ConnectorPackIndex>(wire).is_err());
+
+        let mut wire = serde_json::to_value(&index).unwrap();
+        wire["unexpected_field"] = serde_json::json!(1);
+        assert!(serde_json::from_value::<ConnectorPackIndex>(wire).is_err());
+    }
+
+    // spec: MEDULLA-TYPED-PACKS-R001.2
+    #[test]
+    fn invalid_section_bounds_refuse() {
+        let section = contract_pack::index().server.body;
+        let bytes = rmp_serde::to_vec_named(&section).unwrap();
+        let back: PackSection = rmp_serde::from_slice(&bytes).unwrap();
+        assert_eq!(back, section);
+
+        let inside = PackSection {
+            offset: 10,
+            length: 6,
+            sha256: section.sha256,
+        };
+        assert!(inside.fits_within(16));
+        assert!(!inside.fits_within(15));
+        let overflow = PackSection {
+            offset: u64::MAX,
+            length: 1,
+            sha256: section.sha256,
+        };
+        assert_eq!(overflow.end(), None);
+        assert!(!overflow.fits_within(u64::MAX));
+
+        let mut wire = serde_json::to_value(&section).unwrap();
+        wire["length"] = serde_json::json!(-1);
+        assert!(serde_json::from_value::<PackSection>(wire).is_err());
     }
 }

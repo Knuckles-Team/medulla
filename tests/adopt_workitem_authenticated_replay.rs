@@ -1625,3 +1625,107 @@ async fn strict_run_admission_refusals_preserve_durable_evidence_after_restart()
     drop(reopened);
     let _ = std::fs::remove_dir_all(dir);
 }
+
+fn lease_issue_method(lease_id: &str, now_ms: u64, ttl_ms: u64) -> Method {
+    let mut grant = serde_json::Map::new();
+    grant.insert("tool_ids".into(), serde_json::json!(["click"]));
+    Method::IssueControlLease {
+        request: medulla_work_types::control_lease::IssueControlLeaseRequest {
+            pending_call_registration: None,
+            tenant: TENANT.to_string(),
+            lease_id: lease_id.to_string(),
+            kind: "browser.control".to_string(),
+            grant,
+            issued_at_ms: now_ms,
+            expires_at_ms: now_ms + ttl_ms,
+            hard_expires_at_ms: now_ms + ttl_ms * 3,
+            idempotency_key: format!("issue:{lease_id}"),
+        },
+    }
+}
+
+fn lease_end_method(
+    lease_id: &str,
+    revision: u64,
+    to: medulla_work_types::control_lease::ControlLeaseTarget,
+) -> Method {
+    Method::TransitionControlLease {
+        request: medulla_work_types::control_lease::TransitionControlLeaseRequest {
+            pending_call_consumption: None,
+            tenant: TENANT.to_string(),
+            lease_id: lease_id.to_string(),
+            expected_revision: revision,
+            to,
+            idempotency_key: format!("end:{lease_id}:{revision}:{to:?}"),
+        },
+    }
+}
+
+fn decode_lease<T: serde::de::DeserializeOwned>(response: &Response, label: &str) -> T {
+    assert_eq!(response.error, None, "{label} returned an error: {response:?}");
+    match response.result.as_ref() {
+        Some(ResultPayload::Json(value)) => serde_json::from_value(value.clone())
+            .unwrap_or_else(|error| panic!("decode {label}: {error}")),
+        other => panic!("{label} did not return a JSON result: {other:?}"),
+    }
+}
+
+// spec: MEDULLA-DURABLE-KERNEL-R039.2
+#[tokio::test]
+async fn lease_consumption_expiry_through_signed_dispatch() {
+    use medulla_work_types::control_lease::{
+        ControlLeaseIssued, ControlLeaseTarget, ControlLeaseTransition,
+        ControlLeaseTransitionOutcome,
+    };
+    let dir = temp_dir("medulla-lease-expiry-signed");
+    let concrete = Arc::new(RedbBackend::open(dir.clone(), 8192).expect("open redb backend"));
+    let backend: Arc<dyn PersistenceBackend> = concrete.clone();
+    let state = state_with(backend, dir.clone());
+    let now_ms = now_secs() * 1_000;
+
+    // A live lease consumes once.
+    let issued = test_support::dispatch(
+        &state,
+        signed_request(1, lease_issue_method("lease-live", now_ms, 600_000), "k-issue-live"),
+    )
+    .await;
+    let _: ControlLeaseIssued = decode_lease(&issued, "IssueControlLease(live)");
+    let consumed = test_support::dispatch(
+        &state,
+        signed_request(2, lease_end_method("lease-live", 1, ControlLeaseTarget::Consumed), "k-consume-live"),
+    )
+    .await;
+    let consumed: ControlLeaseTransition = decode_lease(&consumed, "consume(live)");
+    assert_eq!(consumed.outcome, ControlLeaseTransitionOutcome::Applied);
+
+    // A lease past its deadline refuses consumption on the engine clock and
+    // leaves the row unchanged; revocation stays legal afterwards.
+    let issued = test_support::dispatch(
+        &state,
+        signed_request(3, lease_issue_method("lease-short", now_ms, 1_500), "k-issue-short"),
+    )
+    .await;
+    let _: ControlLeaseIssued = decode_lease(&issued, "IssueControlLease(short)");
+    tokio::time::sleep(std::time::Duration::from_millis(2_500)).await;
+    let late = test_support::dispatch(
+        &state,
+        signed_request(4, lease_end_method("lease-short", 1, ControlLeaseTarget::Consumed), "k-consume-short"),
+    )
+    .await;
+    let late: ControlLeaseTransition = decode_lease(&late, "consume(elapsed)");
+    assert_eq!(late.outcome, ControlLeaseTransitionOutcome::Conflict);
+    assert!(late.changed_work_item_ids.is_empty());
+    assert_eq!(late.lease.as_ref().map(|lease| lease.revision), Some(1));
+    let revoked = test_support::dispatch(
+        &state,
+        signed_request(5, lease_end_method("lease-short", 1, ControlLeaseTarget::Revoked), "k-revoke-short"),
+    )
+    .await;
+    let revoked: ControlLeaseTransition = decode_lease(&revoked, "revoke(after expiry)");
+    assert_eq!(revoked.outcome, ControlLeaseTransitionOutcome::Applied);
+
+    drop(state);
+    concrete.shutdown();
+    drop(concrete);
+    let _ = std::fs::remove_dir_all(dir);
+}

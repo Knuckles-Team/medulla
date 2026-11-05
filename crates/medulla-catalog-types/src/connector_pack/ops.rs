@@ -323,4 +323,84 @@ mod tests {
             );
         }
     }
+
+    /// Descriptor of one wire shape: its top-level field names, sorted.
+    fn keys(value: &serde_json::Value) -> Vec<String> {
+        let mut keys: Vec<String> = value
+            .as_object()
+            .map(|object| object.keys().cloned().collect())
+            .unwrap_or_default();
+        keys.sort();
+        keys
+    }
+
+    fn current_descriptors() -> serde_json::Value {
+        use crate::connector_pack::{
+            McpCatalogSnapshotBinding, PackDispositionCounts, PackImportReceipt, PackImportResult,
+            PackProjectionState,
+        };
+        use medulla_types::test_support::wave::{bounded, raw_digest};
+        let mut operations = serde_json::Map::new();
+        for (label, op) in crate::catalog_fixtures::contract_pack::ops() {
+            let wire = serde_json::to_value(&op).unwrap();
+            let request = wire.get("request").cloned().unwrap_or_default();
+            operations.insert(label.to_string(), serde_json::json!(keys(&request)));
+        }
+        let receipt = PackImportReceipt {
+            schema_version: 1,
+            tenant_id: "tenant-a".to_string(),
+            connector: crate::catalog_fixtures::contract_pack::connector(),
+            binding_revision: 1,
+            pack_digest: raw_digest(1),
+            catalog: McpCatalogSnapshotBinding {
+                configuration_revision: 1,
+                catalog_generation: 1,
+                snapshot_digest: raw_digest(2),
+                child_connection_generation: 1,
+                authorization_scope_digest: raw_digest(3),
+            },
+            previous_pack_digest: None,
+            record_id: "record".to_string(),
+            batch_id: "batch".to_string(),
+            committed_version: 1,
+            counts: PackDispositionCounts::default(),
+            warnings: bounded(vec![]),
+            projection: PackProjectionState::None,
+        };
+        let results = [
+            PackImportResult::Imported {
+                receipt: Box::new(receipt),
+            },
+            PackImportResult::Unchanged {
+                pack_digest: raw_digest(1),
+                binding_revision: 1,
+            },
+            PackImportResult::Rejected {
+                pack_digest: None,
+                violations: bounded(vec![]),
+                budget_exhausted: false,
+            },
+        ];
+        let mut result_shapes = serde_json::Map::new();
+        for result in results {
+            let wire = serde_json::to_value(&result).unwrap();
+            let tag = wire["result"].as_str().unwrap().to_string();
+            result_shapes.insert(tag, serde_json::json!(keys(&wire)));
+        }
+        serde_json::json!({ "operations": operations, "results": result_shapes })
+    }
+
+    // spec: MEDULLA-TYPED-PACKS-R001.3
+    #[test]
+    fn operation_and_result_shapes_are_stable() {
+        let committed: serde_json::Value =
+            serde_json::from_str(include_str!("ops_descriptors.json")).unwrap();
+        let current = current_descriptors();
+        assert_eq!(
+            current,
+            committed,
+            "operation or result shape moved; current descriptors:\n{}",
+            serde_json::to_string_pretty(&current).unwrap()
+        );
+    }
 }
