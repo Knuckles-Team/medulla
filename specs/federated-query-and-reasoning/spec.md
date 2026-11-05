@@ -88,7 +88,7 @@ A caller updates named graphs, keeps stored results and refreshes live artifacts
 - Foreign sources are read in place; the one engine store holds all facts.
 - The harness and the SDK own model calls and connector transports; this engine runs no model.
 - Arbora serves the methods of this spec as operations and adds no handler.
-- The owner decisions listed in the pull request stay open until the owner answers them.
+- Integrity shapes of `VALIDATE SHAPE` extend the one SHACL `Op::ValidateShape` stage; the retrieval-quality verdict consumer is `MERISTEM-HARNESS-CYCLE-R079`.
 
 ## Functional requirements and success criteria
 
