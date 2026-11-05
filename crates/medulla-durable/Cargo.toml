@@ -37,6 +37,7 @@ name = "medulla_durable"
 # `serde_json` moved from [dev-dependencies] to [dependencies] at DE1: `project.rs`'s
 # `project()` (production code, not test-only) builds `serde_json::Value` properties.
 [dependencies]
+medulla-types = { path = "../medulla-types" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 
