@@ -157,7 +157,7 @@ Independent test: the bound tests of `MEDULLA-UNIFIED-DATA-PLANE-R651.6` and `ME
 - A deployment layer supplies the secret-reference resolver and the outbound network policy; Medulla resolves a reference at connection time and verifies the target address.
 - The reference host runs the benchmark and conformance suites that measure each budget; a default value in a row is a starting point that a measurement on that host replaces.
 - The source database stays the write authority for attached application data.
-- Owner decisions open on `MEDULLA-UNIFIED-DATA-PLANE-R038.3.6`, `MEDULLA-UNIFIED-DATA-PLANE-R039.1`, `MEDULLA-UNIFIED-DATA-PLANE-R039.2` and `MEDULLA-UNIFIED-DATA-PLANE-R766` stay as written until the owner answers.
+- `MEDULLA-UNIFIED-DATA-PLANE-R039.1` and `MEDULLA-UNIFIED-DATA-PLANE-R039.2` stay retired: they required types that `MEDULLA-UNIFIED-DATA-PLANE-R039.3` deletes.
 
 ## Behavior detail
 
