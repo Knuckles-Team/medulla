@@ -739,3 +739,4 @@ Each entry names the test the row binds once its code lands; the path is the pos
 | Planned | `MEDULLA-FEDERATED-QUERY-R730` | `tests/test_unified_planner_gate.py::test_failed_gate_records_the_freeze_decision` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R731` | `tests/query/test_latency_classes_served.py::test_interactive_budget_refuses_and_analytical_runs_as_job` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R732` | `tests/query/test_planner_evolution_served.py::test_recorded_plans_train_a_challenger_that_promotes_only_on_improvement` |
+| Behavior | `MEDULLA-FEDERATED-QUERY-R722.7` | `crates/medulla-h-admin/src/admin/connector_pack/tests/source_approval.rs::approve_source_requires_current_head_and_contract_digest` |
