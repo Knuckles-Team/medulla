@@ -521,6 +521,18 @@
     rdfs:comment "One engagement measurement of a published post, for example impressions or likes (Postiz analytics)." ;
     rdfs:subClassOf :Observation .
 
+:engagementMetricName a owl:DatatypeProperty ;
+    rdfs:label "engagement metric name" ;
+    rdfs:comment "The name of an engagement measurement, for example impressions or likes." ;
+    rdfs:domain :EngagementMetric ;
+    rdfs:range xsd:string .
+
+:engagementMetricValue a owl:DatatypeProperty ;
+    rdfs:label "engagement metric value" ;
+    rdfs:comment "The measured count of an engagement metric." ;
+    rdfs:domain :EngagementMetric ;
+    rdfs:range xsd:nonNegativeInteger .
+
 :postState a owl:DatatypeProperty ;
     rdfs:label "post state" ;
     rdfs:comment "The state of a social post: draft, scheduled, published or failed." ;
