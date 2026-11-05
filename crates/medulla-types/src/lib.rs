@@ -51,6 +51,10 @@ pub mod ingest_rules;
 pub mod sensitive_detect;
 // MEDULLA-TYPED-PACKS-R804.1 — ontology revision difference and impact records.
 pub mod code_health;
+// MEDULLA-DECISION-ENGINE-R152.1 — the `ContextFacts` wire types, shared with the protocol
+// crate (a wire type, not a decision type), and the evidence class they cite.
+pub mod context_facts;
+pub mod evidence_class;
 pub mod ontology_diff;
 // MEDULLA-UNIFIED-DATA-PLANE-R019.3.1 — typed conformance-entry constructor for the
 // MongoDB/DocumentDB adapter, over the generic R022.1 report entry. Pure
@@ -211,7 +215,6 @@ pub mod health_incident;
 // MEDULLA-DURABLE-KERNEL-R700.1 — the retention-cleanup policy shape.
 pub mod retention_cleanup;
 pub mod retention_policy;
-pub mod retention_cleanup;
 // MEDULLA-DURABLE-KERNEL-R094.1 — hierarchical concept-ID grammar and path claims.
 pub mod concept_id;
 

@@ -575,6 +575,7 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::FinancePairsSignal { .. }
         | Method::FinanceFactorRank { .. }
         | Method::WalletKeyTrustGet { .. }
+        | Method::ContextFacts { .. }
         | Method::FinanceDistributionShift { .. }
         | Method::FinanceDownsideDeviation { .. }
         | Method::FinanceKalmanVolatility { .. }

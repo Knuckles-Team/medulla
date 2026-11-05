@@ -6729,6 +6729,32 @@ class GraphOperationsClient:
             )
         ).payload
 
+    async def context_facts(
+        self,
+        node_ids: list[str],
+        token_budget: int,
+        max_facts_per_node: int | None = None,
+    ) -> dict[str, Any]:
+        """Cited facts of ranked nodes inside a token budget
+        (MEDULLA-DECISION-ENGINE-R152).
+
+        Pass the ids ``discover`` ranked. Returns ``{schema_version, facts,
+        omitted_count, token_estimate_total}``; each fact carries ``fact_id``,
+        ``subject``, ``predicate``, ``object``, ``source_key``, ``authority`` and
+        ``token_estimate``. Only nodes visible to the caller yield facts. A zero
+        budget, more than 512 ids or a fact with no source is refused.
+        """
+        request: dict[str, Any] = {
+            "schema_version": 1,
+            "node_ids": node_ids,
+            "token_budget": token_budget,
+        }
+        if max_facts_per_node is not None:
+            request["max_facts_per_node"] = max_facts_per_node
+        return (
+            await _gen.graph.send_context_facts(self._client, {"request": request})
+        ).payload
+
     async def match_ontology_terms(self, query: str) -> list[dict[str, Any]]:
         """CONCEPT:MEDULLA-ORCH.routing.lexical-capability-escalation — embedding-free
         lexical classification gate.

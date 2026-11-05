@@ -239,6 +239,16 @@ $($variants)*
     SelectWebPages {
         request: Box<medulla_decision_outcome_types::decision::web_fetch_selection::SelectWebPagesRequest>,
     },
+
+    // ── Context facts (MEDULLA-DECISION-ENGINE-R152) ──
+    /// Cited facts of ranked nodes inside a token budget: for each node id in
+    /// the caller's order, the visible literal properties and outgoing edges as
+    /// facts that name their source and evidence class. Reads only, through the
+    /// caller's graph view, so a hidden node yields no fact. See
+    /// [`medulla_types::context_facts`].
+    ContextFacts {
+        request: medulla_types::context_facts::ContextFactsRequest,
+    },
         ]);
     };
 }

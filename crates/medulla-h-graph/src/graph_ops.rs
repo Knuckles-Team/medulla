@@ -29,6 +29,9 @@ use medulla_server_mutation::{
 
 mod algorithms;
 mod broker;
+mod context_facts;
+#[cfg(test)]
+mod context_facts_tests;
 mod edges;
 mod gateway;
 #[cfg(feature = "broker")]

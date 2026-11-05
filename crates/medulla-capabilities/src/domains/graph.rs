@@ -71,4 +71,5 @@ pub(crate) const ROWS: &[PolicyRow] = &[
     ("AddTriples", spec(make_policy(true, DurabilityDomain::GraphRedb, "rdf:write", PolicyFlags { idempotent: false, audited: true, emits_cdc: false }, TxnParticipation::Atomic), PYTHON, Stability::Stable), ""),
     ("RemoveTriples", spec(make_policy(true, DurabilityDomain::GraphRedb, "rdf:write", PolicyFlags { idempotent: true, audited: true, emits_cdc: false }, TxnParticipation::Atomic), PYTHON, Stability::Stable), ""),
     ("DropNamedGraph", spec(make_policy(true, DurabilityDomain::GraphRedb, "rdf:write", PolicyFlags { idempotent: true, audited: true, emits_cdc: false }, TxnParticipation::Atomic), PYTHON, Stability::Stable), ""),
+    ("ContextFacts", spec(make_policy(false, DurabilityDomain::None, "graph:read", PolicyFlags { idempotent: true, audited: false, emits_cdc: false }, TxnParticipation::Snapshot), PYTHON, Stability::Stable), "MEDULLA-DECISION-ENGINE-R152: cited facts of ranked visible nodes inside a token budget; reads through the caller's graph view and writes nothing."),
 ];

@@ -217,6 +217,10 @@ knobs! {
     federated_raw_scan_cost_per_kib: f64 = "federated.raw_scan_cost_per_kib", F64(1.0), [1.0, 100.0], "cost units per KiB", Tunable;
     /// Interactive query node budget.
     query_interactive_node_budget: u64 = "query.interactive_node_budget", U64(100_000), [1_000, 10_000_000], "nodes", Tunable;
+    /// Context facts kept per node.
+    context_facts_max_facts_per_node: u64 = "context_facts.max_facts_per_node", U64(16), [1, 256], "facts", Tunable;
+    /// Bytes per token in the context facts estimate.
+    context_facts_bytes_per_token: u64 = "context_facts.bytes_per_token", U64(4), [2, 8], "bytes", Tunable;
     /// Ingest link minimum shared mentions.
     ingest_link_min_shared_mentions: u64 = "ingest.link_min_shared_mentions", U64(2), [1, 20], "count", Tunable;
     /// Media blob size cap.

@@ -76,6 +76,7 @@ pub(super) const RLS_ROUTED: &[&str] = &[
     "CommunityDetection",
     "ComputeSimilarityEdges",
     "ConnectedComponents",
+    "ContextFacts",
     "DegreeCentrality",
     "DegreeCentralityAll",
     "DiffAgainst",
