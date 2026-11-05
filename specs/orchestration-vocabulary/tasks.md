@@ -1,23 +1,154 @@
 # MEDULLA-ORCH-VOCAB — Implementation tasks
 
-Governing spec: [spec.md](spec.md). Design: [design.md](plan.md).
+Governing spec: [spec.md](spec.md). Plan: [plan.md](plan.md).
 
-Each task line reads `- [ ] T001 [P] [US1] <ID>-R012.4 description`. The round-2 hygiene of the 2026-10-30 cross-spec review replaced the legacy task list with one task line per row this wave rewrites; rows not rewritten by this wave keep their requirement text as the task source.
+Each task line reads `- [ ] T001 [P] [US1] <ID> description`. One task per leaf requirement row in table order; a parent row closes when its children close.
 
-- [ ] T001 MEDULLA-ORCH-VOCAB-R005.100 Declare the nested step-input shield schema.
-- [ ] T002 MEDULLA-ORCH-VOCAB-R009.100 Correlated trace export read.
-- [ ] T003 MEDULLA-ORCH-VOCAB-R009.101.2 Search harness sessions as a UQL view.
-- [ ] T004 MEDULLA-ORCH-VOCAB-R010.6 Evidence query for the best configuration per solved task.
-- [ ] T005 MEDULLA-ORCH-VOCAB-R010.100 Join evolution proposals to measured source traces as a read view.
-- [ ] T006 MEDULLA-ORCH-VOCAB-R012.7.1 Model: policy rule and candidate with source spans.
-- [ ] T007 MEDULLA-ORCH-VOCAB-R012.7.2 Wiring: synthesize on repository index.
-- [ ] T008 MEDULLA-ORCH-VOCAB-R012.8 Bind active policy to reviewed repository files.
-- [ ] T009 MEDULLA-ORCH-VOCAB-R012.9 Requirement rows become typed nodes.
-- [ ] T010 MEDULLA-ORCH-VOCAB-R616.2 Behaviour: draft a team or workflow from capability search.
-- [ ] T011 MEDULLA-ORCH-VOCAB-R750.750 Model: organization, market, twin and lifecycle records.
-- [ ] T012 MEDULLA-ORCH-VOCAB-R750.751 Behaviour: recruit, allocate, replay and move state.
-- [ ] T013 MEDULLA-ORCH-VOCAB-R750.752 Refusal: organization and market faults.
-- [ ] T014 MEDULLA-ORCH-VOCAB-R751.750 Model: team, specialist, population and social records.
-- [ ] T015 MEDULLA-ORCH-VOCAB-R751.751 Behaviour: score teams and promote specialists.
-- [ ] T016 MEDULLA-ORCH-VOCAB-R751.752 Refusal: team and social faults.
-- [ ] T017 MEDULLA-ORCH-VOCAB-R800.1 Model: prompt template and workflow pattern.
+- [ ] T001 [P] [US1] MEDULLA-ORCH-VOCAB-R001.1 Add class `:TaskStep`
+- [ ] T002 [P] [US1] MEDULLA-ORCH-VOCAB-R001.2 Add property `:hasStep`
+- [ ] T003 [P] [US1] MEDULLA-ORCH-VOCAB-R001.3 Add step-order acyclicity shape
+- [ ] T004 [P] [US1] MEDULLA-ORCH-VOCAB-R001.4 Add Q1 fixture and query test
+- [ ] T005 [P] [US2] MEDULLA-ORCH-VOCAB-R002.1 Add class `:AgentKind` and seed members
+- [ ] T006 [P] [US2] MEDULLA-ORCH-VOCAB-R002.2 Add property `:hasAgentKind`
+- [ ] T007 [P] [US2] MEDULLA-ORCH-VOCAB-R002.3 Add property `swarm:requiresAgentKind` and the import
+- [ ] T008 [P] [US2] MEDULLA-ORCH-VOCAB-R002.4 Add slot-kind shape
+- [ ] T009 [P] [US2] MEDULLA-ORCH-VOCAB-R002.5 Add Q2 query test
+- [ ] T010 [P] [US2] MEDULLA-ORCH-VOCAB-R003.1 Add class `:AgentTemplate`
+- [ ] T011 [P] [US2] MEDULLA-ORCH-VOCAB-R003.2 Add class `:AgentLibrary`
+- [ ] T012 [P] [US2] MEDULLA-ORCH-VOCAB-R003.3 Add property `:memberOfLibrary`
+- [ ] T013 [P] [US2] MEDULLA-ORCH-VOCAB-R003.4 Add property `:instanceOfTemplate`
+- [ ] T014 [P] [US2] MEDULLA-ORCH-VOCAB-R003.5 Add library-member shape
+- [ ] T015 [US2] MEDULLA-ORCH-VOCAB-R003.6.1 Run the Agent Library projection worker
+- [ ] T016 [P] [US2] MEDULLA-ORCH-VOCAB-R003.7 Add Q3 query test
+- [ ] T017 [P] [US2] MEDULLA-ORCH-VOCAB-R004.1 Add class `:BestPractice`
+- [ ] T018 [P] [US2] MEDULLA-ORCH-VOCAB-R004.2 Add property `:appliesToTaskClass`
+- [ ] T019 [P] [US2] MEDULLA-ORCH-VOCAB-R004.3 Add rule-scope shape
+- [ ] T020 [US2] MEDULLA-ORCH-VOCAB-R004.4 Project `GuardrailRule` components as best practices
+- [ ] T021 [P] [US2] MEDULLA-ORCH-VOCAB-R004.5 Add Q4 query test
+- [ ] T022 [P] [US2] MEDULLA-ORCH-VOCAB-R005.1 Add class `:ModelProfile`
+- [ ] T023 [P] [US2] MEDULLA-ORCH-VOCAB-R005.2 Add property `:needsSkill`
+- [ ] T024 [P] [US2] MEDULLA-ORCH-VOCAB-R005.3 Add property `:stepAssignedAgent`
+- [ ] T025 [P] [US2] MEDULLA-ORCH-VOCAB-R005.4 Add binding shape
+- [ ] T026 [US2] MEDULLA-ORCH-VOCAB-R005.5 Project `model_profile` components
+- [ ] T027 [P] [US2] MEDULLA-ORCH-VOCAB-R005.6 Add Q5 query test
+- [ ] T028 [P] [US1] MEDULLA-ORCH-VOCAB-R006.1 Add property `:handsOffTo`
+- [ ] T029 [P] [US1] MEDULLA-ORCH-VOCAB-R006.2 Add property `swarm:feeds`
+- [ ] T030 [P] [US1] MEDULLA-ORCH-VOCAB-R006.3 Add property `swarm:loopsBackTo`
+- [ ] T031 [P] [US1] MEDULLA-ORCH-VOCAB-R006.4 Add DAG acyclicity shape
+- [ ] T032 [US1] MEDULLA-ORCH-VOCAB-R006.5 Project template topology to `swarm:feeds`
+- [ ] T033 [P] [US1] MEDULLA-ORCH-VOCAB-R006.6 Add Q6 and Q7 query tests
+- [ ] T034 [US2] MEDULLA-ORCH-VOCAB-R007.1 Expand a task into assembly tasks by step
+- [ ] T035 [US2] MEDULLA-ORCH-VOCAB-R007.2 Project the committed assembly back into the graph
+- [ ] T036 [US2] MEDULLA-ORCH-VOCAB-R007.4 Enforce slot agent-kind constraints before selection
+- [ ] T037 [P] [US3] MEDULLA-ORCH-VOCAB-R008.1 Register `orchestration-v1.shapes.ttl` with the shape loader
+- [ ] T038 [US3] MEDULLA-ORCH-VOCAB-R008.2 Keep the generated-artifact ledger in step with the ontology files
+- [ ] T039 [P] [US4] MEDULLA-ORCH-VOCAB-R009.1 Add property `:terminationReason`
+- [ ] T040 [P] [US4] MEDULLA-ORCH-VOCAB-R009.2 Add property `:peakContextTokens`
+- [ ] T041 [P] [US4] MEDULLA-ORCH-VOCAB-R009.3 Add property `:contextBudgetTokens`
+- [ ] T042 [P] [US4] MEDULLA-ORCH-VOCAB-R009.4 Add property `:elisionCount`
+- [ ] T043 [P] [US4] MEDULLA-ORCH-VOCAB-R009.5 Add property `:summarizationCount`
+- [ ] T044 [P] [US4] MEDULLA-ORCH-VOCAB-R009.6 Add property `:turnCount`
+- [ ] T045 [P] [US4] MEDULLA-ORCH-VOCAB-R009.7 Add property `:toolCallCount`
+- [ ] T046 [P] [US4] MEDULLA-ORCH-VOCAB-R009.8 Add property `:costUsd`
+- [ ] T047 [P] [US4] MEDULLA-ORCH-VOCAB-R009.9 Add property `:appliedHarnessConfig`
+- [ ] T048 [P] [US4] MEDULLA-ORCH-VOCAB-R009.10 Add property `:runModel`
+- [ ] T049 [P] [US4] MEDULLA-ORCH-VOCAB-R009.11 Add property `:runTaskClass`
+- [ ] T050 [P] [US4] MEDULLA-ORCH-VOCAB-R009.12 Add counter shape
+- [ ] T051 [P] [US4] MEDULLA-ORCH-VOCAB-R009.13 Add context-budget shape
+- [ ] T052 [P] [US4] MEDULLA-ORCH-VOCAB-R009.14 Add completed-trace shape
+- [ ] T053 [US4] MEDULLA-ORCH-VOCAB-R009.15 Refuse a shape-invalid `RunTrace` write
+- [ ] T054 [P] [US4] MEDULLA-ORCH-VOCAB-R009.16 Fixture trace for each termination reason
+- [ ] T055 [US4] MEDULLA-ORCH-VOCAB-R009.17 Prove the ingestion hot path through the Python client
+- [ ] T056 [P] [US5] MEDULLA-ORCH-VOCAB-R010.1 Query harness_success_rate
+- [ ] T057 [P] [US5] MEDULLA-ORCH-VOCAB-R010.2 Query harness_cost_per_solved_task
+- [ ] T058 [P] [US5] MEDULLA-ORCH-VOCAB-R010.3 Query harness_overflow_rate
+- [ ] T059 [P] [US5] MEDULLA-ORCH-VOCAB-R010.4 Query harness_mean_peak_ratio
+- [ ] T060 [P] [US5] MEDULLA-ORCH-VOCAB-R010.5 Query harness_mechanism_counts
+- [ ] T061 [P] [US5] MEDULLA-ORCH-VOCAB-R010.6 Evidence query for the best configuration per solved task
+- [ ] T062 [P] [US5] MEDULLA-ORCH-VOCAB-R011.1 Add class `:EvaluationRun`
+- [ ] T063 [P] [US5] MEDULLA-ORCH-VOCAB-R011.2 Add class `:MeasuredModelFact`
+- [ ] T064 [P] [US5] MEDULLA-ORCH-VOCAB-R011.3 Add properties `:factOfModel` and `:measuredProperty`
+- [ ] T065 [P] [US5] MEDULLA-ORCH-VOCAB-R011.4 Add property `:evidencedByRun`
+- [ ] T066 [P] [US5] MEDULLA-ORCH-VOCAB-R011.5 Add property `:measuredSupersedes`
+- [ ] T067 [P] [US5] MEDULLA-ORCH-VOCAB-R011.6 Add measured-fact shape
+- [ ] T068 [P] [US5] MEDULLA-ORCH-VOCAB-R011.7 Build the measured-fact change envelope
+- [ ] T069 [US5] MEDULLA-ORCH-VOCAB-R011.8 Refuse a measured fact without run evidence
+- [ ] T070 [US5] MEDULLA-ORCH-VOCAB-R011.9 Replace a measured fact through the champion pointer
+- [ ] T071 [US5] MEDULLA-ORCH-VOCAB-R011.10 Apply the evaluation result once through the governed path
+- [ ] T072 [US5] MEDULLA-ORCH-VOCAB-R011.11 Prove the loop closes through `HarnessConfig`
+- [ ] T073 [P] [US6] MEDULLA-ORCH-VOCAB-R012.1 Model: spec node kinds
+- [ ] T074 [US6] MEDULLA-ORCH-VOCAB-R012.2 Behaviour: classify a spec file by named rule
+- [ ] T075 [US6] MEDULLA-ORCH-VOCAB-R012.3 Wiring: index spec folders on the durable repository route
+- [ ] T076 [US6] MEDULLA-ORCH-VOCAB-R012.4 Refusal: an unknown file is not guessed
+- [ ] T077 [US6] MEDULLA-ORCH-VOCAB-R012.5 Evidence: each node records its deciding rule
+- [ ] T078 [US6] MEDULLA-ORCH-VOCAB-R012.6 Hot-path proof: spec folder yields five kinds
+- [ ] T079 [P] [US4] MEDULLA-ORCH-VOCAB-R013.1 Model: step record
+- [ ] T080 [US4] MEDULLA-ORCH-VOCAB-R013.2 Behaviour: one canonical step digest recipe
+- [ ] T081 [US4] MEDULLA-ORCH-VOCAB-R013.3 Wiring: validate step records on the run-trace write
+- [ ] T082 [US4] MEDULLA-ORCH-VOCAB-R013.4 Refusal: bad digest and bad step order
+- [ ] T083 [US4] MEDULLA-ORCH-VOCAB-R013.5 Evidence: ordered steps with the writing actor
+- [ ] T084 [US4] MEDULLA-ORCH-VOCAB-R013.6 Hot-path proof: first divergence is step two
+- [ ] T085 [P] [US2] MEDULLA-ORCH-VOCAB-R004.6.1 Model: gap and enhancement nodes
+- [ ] T086 [US2] MEDULLA-ORCH-VOCAB-R004.6.2 Behaviour and wiring: governed write with deduplication
+- [ ] T087 [US2] MEDULLA-ORCH-VOCAB-R004.6.3 Query by task class with exact or descendant match
+- [ ] T088 [US6] MEDULLA-ORCH-VOCAB-R012.8 Bind active policy to reviewed repository files
+- [ ] T089 [US6] MEDULLA-ORCH-VOCAB-R012.9 Requirement rows become typed nodes
+- [ ] T090 [US2] MEDULLA-ORCH-VOCAB-R005.100 Declare the nested step-input shield schema
+- [ ] T091 [US4] MEDULLA-ORCH-VOCAB-R009.100 Correlated trace export read
+- [ ] T092 [US5] MEDULLA-ORCH-VOCAB-R010.100 Join evolution proposals to measured source traces as a read view
+- [ ] T093 [US5] MEDULLA-ORCH-VOCAB-R010.101 Index project and agent token and cost totals
+- [ ] T094 [US7] MEDULLA-ORCH-VOCAB-R616.3 Wiring: synthesis proposes and assemble decides
+- [ ] T095 [US7] MEDULLA-ORCH-VOCAB-R616.4 Refusal: a draft that fails its shape
+- [ ] T096 [US7] MEDULLA-ORCH-VOCAB-R616.5 Evidence: capabilities, budget and shape result
+- [ ] T097 [US7] MEDULLA-ORCH-VOCAB-R616.6 Hot-path proof: synthesis over a 10,000-skill catalog
+- [ ] T098 [P] [US7] MEDULLA-ORCH-VOCAB-R750.750 Model: organization, market, twin and lifecycle records
+- [ ] T099 [US7] MEDULLA-ORCH-VOCAB-R750.751 Behaviour: recruit, allocate, replay and move state
+- [ ] T100 [US7] MEDULLA-ORCH-VOCAB-R750.752 Refusal: organization and market faults
+- [ ] T101 [US7] MEDULLA-ORCH-VOCAB-R750.753 Hot-path proof: twin capture and served journey
+- [ ] T102 [P] [US7] MEDULLA-ORCH-VOCAB-R751.750 Model: team, specialist, population and social records
+- [ ] T103 [US7] MEDULLA-ORCH-VOCAB-R751.751 Behaviour: score teams and promote specialists
+- [ ] T104 [US7] MEDULLA-ORCH-VOCAB-R751.752 Refusal: team and social faults
+- [ ] T105 [US7] MEDULLA-ORCH-VOCAB-R751.753 Hot-path proof: team scoring
+- [ ] T106 [US7] MEDULLA-ORCH-VOCAB-R800.1 Model: prompt template and workflow pattern
+- [ ] T107 [US7] MEDULLA-ORCH-VOCAB-R800.2 Behaviour: typed rendering and pattern selection
+- [ ] T108 [US7] MEDULLA-ORCH-VOCAB-R800.3 Wiring: definitions are read by assembly and revised by version
+- [ ] T109 [US7] MEDULLA-ORCH-VOCAB-R800.4 Refusal: four definition faults
+- [ ] T110 [US7] MEDULLA-ORCH-VOCAB-R800.5 Evidence: revision history and render digest
+- [ ] T111 [US7] MEDULLA-ORCH-VOCAB-R800.6 Hot-path proof: render budget
+- [ ] T112 [P] [US4] MEDULLA-ORCH-VOCAB-R009.18.1 Model: observation window record
+- [ ] T113 [US4] MEDULLA-ORCH-VOCAB-R009.18.2 Behaviour and refusal: ingest a window
+- [ ] T114 [US4] MEDULLA-ORCH-VOCAB-R009.18.3 Wiring: producer and consumer of windows
+- [ ] T115 [US4] MEDULLA-ORCH-VOCAB-R009.18.4 Evidence: before and after trace facts
+- [ ] T116 [US4] MEDULLA-ORCH-VOCAB-R009.101.1 Index a batch of harness sessions
+- [ ] T117 [US4] MEDULLA-ORCH-VOCAB-R009.101.2 Search harness sessions as a UQL view over the full manifest
+- [ ] T118 [US4] MEDULLA-ORCH-VOCAB-R009.700 Mirror durable run units as run-trace nodes: model and behaviour
+- [ ] T119 [US4] MEDULLA-ORCH-VOCAB-R009.701 Mirror durable run units as run-trace nodes: refusal and proof
+- [ ] T120 [P] [US6] MEDULLA-ORCH-VOCAB-R012.7.1 Model: policy rule and candidate with source spans
+- [ ] T121 [US6] MEDULLA-ORCH-VOCAB-R012.7.2 Wiring: synthesize on repository index
+- [ ] T122 [US6] MEDULLA-ORCH-VOCAB-R012.7.3 Activation: invariant guard, review and atomic publish
+- [ ] T123 [US6] MEDULLA-ORCH-VOCAB-R012.7.4 Evidence: decisions record the active policy revision
+- [ ] T124 [US4] MEDULLA-ORCH-VOCAB-R013.7.1 Model: walkthrough manifest
+- [ ] T125 [US4] MEDULLA-ORCH-VOCAB-R013.7.2 Refusal: validate the manifest on write
+- [ ] T126 [US4] MEDULLA-ORCH-VOCAB-R013.7.3 Evidence: independent readback and artifact digest
+- [ ] T127 [US7] MEDULLA-ORCH-VOCAB-R616.2.1 Export and import a team as OWL
+- [ ] T128 [P] [US8] MEDULLA-ORCH-VOCAB-R801.1 Model
+- [ ] T129 [P] [US8] MEDULLA-ORCH-VOCAB-R801.2 Behavior
+- [ ] T130 [P] [US8] MEDULLA-ORCH-VOCAB-R801.3 Wiring
+- [ ] T131 [P] [US8] MEDULLA-ORCH-VOCAB-R801.4 Refusal
+- [ ] T132 [P] [US8] MEDULLA-ORCH-VOCAB-R801.5 Evidence
+- [ ] T133 [P] [US8] MEDULLA-ORCH-VOCAB-R801.6 Hot-path proof
+- [ ] T134 [US8] MEDULLA-ORCH-VOCAB-R801.7 Harness component and adoption chains become revision subjects
+- [ ] T135 [P] [US8] MEDULLA-ORCH-VOCAB-R802.1 Model
+- [ ] T136 [P] [US8] MEDULLA-ORCH-VOCAB-R802.2 Behavior
+- [ ] T137 [P] [US8] MEDULLA-ORCH-VOCAB-R802.3 Query
+- [ ] T138 [P] [US8] MEDULLA-ORCH-VOCAB-R802.4 Supersession
+- [ ] T139 [P] [US8] MEDULLA-ORCH-VOCAB-R802.5 Refusal
+- [ ] T140 [P] [US8] MEDULLA-ORCH-VOCAB-R802.6 Hot-path proof
+- [ ] T141 [US5] MEDULLA-ORCH-VOCAB-R803 Serve the five run trace queries as one method
+- [ ] T142 [P] [US5] MEDULLA-ORCH-VOCAB-R804 Tenant telemetry snapshot read method
+- [ ] T143 [P] [US5] MEDULLA-ORCH-VOCAB-R805 Per-turn timing observations in the session usage result
+- [ ] T144 [P] [US5] MEDULLA-ORCH-VOCAB-R806 Policy activation method with review receipt
+- [ ] T145 [P] [US5] MEDULLA-ORCH-VOCAB-R807 Indexed agent-session query method
+- [ ] T146 [P] [US7] MEDULLA-ORCH-VOCAB-R808 AgentDefinition carries a knowledge scope
+- [ ] T147 [US7] MEDULLA-ORCH-VOCAB-R809 Lossless versioned workflow RDF export and import
+- [ ] T148 [P] [US8] MEDULLA-ORCH-VOCAB-R810 Store run-bound visual observation records
