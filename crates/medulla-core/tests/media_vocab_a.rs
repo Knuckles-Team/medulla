@@ -444,6 +444,7 @@ fn transcript_segment_terms_reuse_personal_transcript() {
 }
 
 // spec: MEDULLA-MEDIA-VOCAB-R001.6
+// spec: MEDULLA-MEDIA-VOCAB-R033
 #[test]
 fn connector_alias_collisions_are_baseline_two_and_media_adds_none() {
     // List every class IRI declared in two or more ontology/*.ttl documents.
@@ -478,7 +479,10 @@ fn connector_alias_collisions_are_baseline_two_and_media_adds_none() {
         .filter(|(_, files)| files.len() >= 2)
         .map(|(iri, _)| iri)
         .collect();
-    // Baseline: exactly the two connector aliases the spec names.
+    // Baseline: exactly the two connector aliases the spec names. `Author` is
+    // declared by the jellyfin-mcp and audiobookshelf-mcp connectors until
+    // CONN-JELLYFIN-MCP-CONNECTOR-CONTENT-R002 and
+    // CONN-AUDIOBOOKSHELF-MCP-CONNECTOR-CONTENT-R002 retire it.
     let connector_aliases: BTreeSet<String> = ["Episode", "Author"]
         .into_iter()
         .map(|n| format!("{KG}{n}"))
