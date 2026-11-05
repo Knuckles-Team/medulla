@@ -1,6 +1,6 @@
 //! Contract check behavior (MEDULLA-TYPED-PACKS-R805.2).
 
-use medulla_core::data_product::{LiveContractState, check_contract};
+use medulla_core::data_product::{check_contract, LiveContractState};
 use medulla_types::data_product::{
     ContractPromise, DataContract, DataProduct, ProductPort, ProductPortKind,
 };
