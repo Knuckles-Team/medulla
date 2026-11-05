@@ -9,7 +9,10 @@ name: CI
 # Pull requests run ONE job, `CI` (spec MEDULLA-CONTRACT-R053.7): pre-commit on the
 # changed files, the spec-trailer check, and cargo clippy + nextest on the
 # affected crates only (scripts/ci_affected_crates.py: owning packages of the
-# changed files plus their reverse dependencies). A documentation- or
+# changed files plus their reverse dependencies). A same-repository pull request
+# runs on the warm self-hosted runners (vars.MEDULLA_WARM_CI_RUNNER) with a
+# persistent cargo target and a local-disk sccache outside the checkout; a fork
+# pull request stays on GitHub-hosted ubuntu-24.04 with the Actions caches. A documentation- or
 # specs-only diff runs no cargo and only the shared spec gate set. `CI required` (the branch-protection context)
 # needs only that job on a pull request. Every other gate runs on main pushes,
 # the nightly schedule and manual dispatch. Optional feature-combination
@@ -1434,12 +1437,40 @@ jobs:
     timeout-minutes: ${{ github.event_name == 'pull_request' && 180 || 180 }}
     name: CI
     if: github.event_name == 'pull_request'
-    runs-on: *medulla-native-validation-runner
+    # Same-repository pull requests run on the warm self-hosted pool (persistent
+    # cargo target + local sccache); fork pull requests stay on GitHub-hosted.
+    runs-on: ${{ (vars.MEDULLA_WARM_CI_RUNNER == 'true' && github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('{"group":"arbora-ci-trusted","labels":["self-hosted","rust-1.96"]}') || 'ubuntu-24.04' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
+      # checkout cleans ignored files, so the warm cargo target and the local
+      # sccache live outside the checkout, on the runner pod's persistent _work
+      # volume. One runner per pod runs one job at a time, so the dir is private.
+      - name: Warm cache root (self-hosted runners)
+        if: runner.environment == 'self-hosted'
+        run: |
+          set -euo pipefail
+          root="$(cd "$RUNNER_WORKSPACE/.." && pwd)/_medulla-cache"
+          mkdir -p "$root/target" "$root/sccache" "$root/pre-commit"
+          budget_kb=$((250 * 1024 * 1024))
+          used_kb="$(du -sk "$root" | cut -f1)"
+          echo "cache root $root: ${used_kb} KiB used (budget ${budget_kb} KiB)"
+          if [ "$used_kb" -gt "$budget_kb" ]; then
+            echo "cache root over budget: pruning the cargo target (sccache kept)"
+            rm -rf "$root/target"
+            mkdir -p "$root/target"
+          fi
+          {
+            echo "CARGO_TARGET_DIR=$root/target"
+            echo "SCCACHE_DIR=$root/sccache"
+            echo "SCCACHE_CACHE_SIZE=100G"
+            echo "SCCACHE_GHA_ENABLED=false"
+            echo "PRE_COMMIT_HOME=$root/pre-commit"
+          } >> "$GITHUB_ENV"
+          if command -v sccache >/dev/null 2>&1; then echo "RUSTC_WRAPPER=sccache" >> "$GITHUB_ENV"; fi
+          df -h "$root" | tail -1
       - *medulla-gates-python
       - name: Scope the diff (changed files, docs-only, affected crates)
         id: scope
@@ -1472,6 +1503,7 @@ jobs:
 
       - name: Restore pre-commit environments
         id: hook-cache
+        if: runner.environment != 'self-hosted'
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/pre-commit
@@ -1481,7 +1513,7 @@ jobs:
             pre-commit-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.config/pre-commit.yaml') }}-
 
       - name: Drop the stale shared-hook environment
-        if: steps.hook-cache.outputs.cache-matched-key != '' && !startsWith(steps.hook-cache.outputs.cache-matched-key, format('pre-commit-{0}-{1}-{2}-{3}', runner.os, runner.arch, hashFiles('.config/pre-commit.yaml'), steps.hook-rev.outputs.sha))
+        if: runner.environment != 'self-hosted' && steps.hook-cache.outputs.cache-matched-key != '' && !startsWith(steps.hook-cache.outputs.cache-matched-key, format('pre-commit-{0}-{1}-{2}-{3}', runner.os, runner.arch, hashFiles('.config/pre-commit.yaml'), steps.hook-rev.outputs.sha))
         run: |
           set -euo pipefail
           db="$HOME/.cache/pre-commit/db.db"
@@ -1497,7 +1529,7 @@ jobs:
           PY
 
       - name: Rust toolchain
-        if: steps.gates-scope.outputs.scope != 'spec'
+        if: runner.environment != 'self-hosted' && steps.gates-scope.outputs.scope != 'spec'
         uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
         with:
           toolchain: stable
@@ -1513,14 +1545,14 @@ jobs:
           pre-commit install-hooks --config .config/pre-commit.yaml
 
       - name: Save pre-commit environments
-        if: success() && steps.hook-cache.outputs.cache-hit != 'true'
+        if: runner.environment != 'self-hosted' && success() && steps.hook-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/pre-commit
           key: pre-commit-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.config/pre-commit.yaml') }}-${{ steps.hook-rev.outputs.sha }}
 
       - name: Save partly installed pre-commit environments
-        if: (failure() || cancelled()) && steps.hook-install.outcome != 'success' && steps.hook-install.outcome != 'skipped'
+        if: runner.environment != 'self-hosted' && (failure() || cancelled()) && steps.hook-install.outcome != 'success' && steps.hook-install.outcome != 'skipped'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/pre-commit
@@ -1551,7 +1583,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends libsasl2-dev libcurl4-openssl-dev
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
-        if: steps.crates.outputs.rust == 'true'
+        if: runner.environment != 'self-hosted' && steps.crates.outputs.rust == 'true'
         with:
           workspaces: ". -> target-isolated"
           shared-key: medulla-ci-gates-ubuntu-24.04-v1

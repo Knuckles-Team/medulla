@@ -107,6 +107,10 @@ def test_pull_request_runs_one_gate() -> None:
     assert "ci_affected_crates.py" in script
     assert "--from-ref" in script and "spec-trailers" in script
     assert "cargo nextest run" in script and "cargo clippy" in script
+    runs_on = jobs["ci"]["runs-on"]
+    assert "MEDULLA_WARM_CI_RUNNER" in runs_on and "head.repo.full_name" in runs_on
+    assert "arbora-ci-trusted" in runs_on and "'ubuntu-24.04'" in runs_on
+    assert "SCCACHE_GHA_ENABLED=false" in script and "CARGO_TARGET_DIR=" in script
 
 
 @pytest.mark.spec("MEDULLA-CONTRACT-R053.7")
