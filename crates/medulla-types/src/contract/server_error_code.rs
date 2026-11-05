@@ -217,6 +217,8 @@ closed_error_codes! {
         UnknownPackEntry => "UNKNOWN_PACK_ENTRY",
         UnknownRelationshipReference => "UNKNOWN_RELATIONSHIP_REFERENCE",
         UnsupportedCoalition => "UNSUPPORTED_COALITION",
+        UqlEClusterNoVector => "UQL_E_CLUSTER_NO_VECTOR",
+        UqlEDecayNoTime => "UQL_E_DECAY_NO_TIME",
         WebBackendInvalid => "WEB_BACKEND_INVALID",
         WebSelectionBudgetInvalid => "WEB_SELECTION_BUDGET_INVALID",
         WebSelectionNoCandidates => "WEB_SELECTION_NO_CANDIDATES",

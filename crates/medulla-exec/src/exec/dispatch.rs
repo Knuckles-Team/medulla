@@ -64,6 +64,8 @@ pub fn apply(op: &Op, input: RowSet, ctx: &PlanCtx) -> Result<RowSet, String> {
         | Op::Foreign { .. }
         | Op::DecisionScan { .. }
         | Op::Attribute { .. }
+        | Op::Decay { .. }
+        | Op::ClusterByEmbedding { .. }
         | Op::Limit { .. } => apply_core_ops(op, input, ctx),
 
         // Each gate names only the variants its own feature compiles: an `owl` build
@@ -282,6 +284,8 @@ pub(super) fn apply_core_ops(op: &Op, input: RowSet, ctx: &PlanCtx) -> Result<Ro
             method,
         } => super::attribution::attribute(ctx, input, attribute_spec(players, *value, method))
             .map(|attributed| attributed.rows),
+        Op::Decay { half_life_secs } => super::decay_cluster::decay(ctx, input, *half_life_secs),
+        Op::ClusterByEmbedding { k } => super::decay_cluster::cluster_by_embedding(ctx, input, *k),
         Op::Rank { .. }
         | Op::RankEmbed { .. }
         | Op::RankNodeDistance { .. }

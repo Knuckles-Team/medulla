@@ -36,6 +36,7 @@ medulla-result-types = { path = "../medulla-result-types", features = ["query"] 
 medulla-finance = { path = "../medulla-finance" }
 medulla-graph-algos = { path = "../medulla-graph-algos" }
 medulla-graph-core = { path = "../medulla-graph-core" }
+medulla-mining = { path = "../medulla-mining", features = ["mining"] }
 medulla-reasoner = { path = "../medulla-reasoner" }
 medulla-semantic-index = { path = "../medulla-semantic-index" }
 medulla-sql = { path = "../medulla-sql" }
