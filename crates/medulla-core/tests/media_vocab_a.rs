@@ -444,6 +444,7 @@ fn transcript_segment_terms_reuse_personal_transcript() {
 }
 
 // spec: MEDULLA-MEDIA-VOCAB-R001.6
+// spec: MEDULLA-MEDIA-VOCAB-R032
 #[test]
 fn connector_alias_collisions_are_baseline_two_and_media_adds_none() {
     // List every class IRI declared in two or more ontology/*.ttl documents.
@@ -478,7 +479,9 @@ fn connector_alias_collisions_are_baseline_two_and_media_adds_none() {
         .filter(|(_, files)| files.len() >= 2)
         .map(|(iri, _)| iri)
         .collect();
-    // Baseline: exactly the two connector aliases the spec names.
+    // Baseline: exactly the two connector aliases the spec names. The arr-mcp
+    // `Episode` alias stays counted until `CONN-ARR-MCP-CONNECTOR-CONTENT-R002`
+    // (the rename to a `mv:TelevisionEpisode` subclass) lands.
     let connector_aliases: BTreeSet<String> = ["Episode", "Author"]
         .into_iter()
         .map(|n| format!("{KG}{n}"))
@@ -3284,6 +3287,7 @@ fn media_vocab_audio_transcriber_response_round_trips_through_mapping() {
 
 // spec: MEDULLA-MEDIA-VOCAB-R012.3
 // spec: MEDULLA-MEDIA-VOCAB-R028
+// spec: MEDULLA-MEDIA-VOCAB-R029
 #[test]
 fn media_vocab_audio_transcriber_single() {
     // "Which recordings were transcribed with a low-confidence segment, and
@@ -3369,6 +3373,20 @@ fn media_vocab_audio_transcriber_single() {
     // MEDULLA-MEDIA-VOCAB-R028: the abstention names the owning row in the
     // audio-transcriber repository, which specifies the list/get operation.
     assert_eq!(abstention.owner, "CONN-AUDIO-TRANSCRIBER-R005");
+    // MEDULLA-MEDIA-VOCAB-R029: until the per-segment avg_logprob row lands in
+    // the audio-transcriber repository, the confidence question abstains and
+    // names that owner row.
+    let confidence = TypedAbstention {
+        connector: "audio-transcriber",
+        missing_operation: "per-segment avg_logprob (confidence)",
+        owner: "CONN-AUDIO-TRANSCRIBER-CONNECTOR-CONTENT-R003",
+    };
+    assert_eq!(confidence.connector, "audio-transcriber");
+    assert!(confidence.missing_operation.contains("avg_logprob"));
+    assert_eq!(
+        confidence.owner,
+        "CONN-AUDIO-TRANSCRIBER-CONNECTOR-CONTENT-R003"
+    );
 }
 
 // spec: MEDULLA-MEDIA-VOCAB-R012.4
@@ -3831,6 +3849,7 @@ fn media_vocab_scholarx_response_round_trips_through_mapping() {
 }
 
 // spec: MEDULLA-MEDIA-VOCAB-R014.3
+// spec: MEDULLA-MEDIA-VOCAB-R030
 #[test]
 fn media_vocab_scholarx_single() {
     // "Which papers cite a given paper and were published in the last two
@@ -3865,11 +3884,13 @@ fn media_vocab_scholarx_single() {
     let abstention = TypedAbstention {
         connector: "scholarx",
         missing_operation: "sx_search/citations (papers that cite a given id)",
-        owner: "scholarx",
+        owner: "CONN-SCHOLARX-CONNECTOR-CONTENT-R002",
     };
     assert_eq!(abstention.connector, "scholarx");
     assert!(abstention.missing_operation.contains("citations"));
-    assert_eq!(abstention.owner, "scholarx");
+    // MEDULLA-MEDIA-VOCAB-R030: the abstention names the owning row in the
+    // scholarx repository, which specifies the citations operation.
+    assert_eq!(abstention.owner, "CONN-SCHOLARX-CONNECTOR-CONTENT-R002");
 }
 
 // spec: MEDULLA-MEDIA-VOCAB-R014.4
@@ -3909,6 +3930,7 @@ fn media_vocab_searxng_response_round_trips_through_mapping() {
 }
 
 // spec: MEDULLA-MEDIA-VOCAB-R015.3
+// spec: MEDULLA-MEDIA-VOCAB-R031
 #[test]
 fn media_vocab_searxng_single() {
     // "Which engines returned no results, and which returned the most?" The
@@ -3951,13 +3973,15 @@ fn media_vocab_searxng_single() {
     let abstention = TypedAbstention {
         connector: "searxng",
         missing_operation: "web_search unresponsive_engines / per-engine result counts",
-        owner: "searxng-mcp",
+        owner: "CONN-SEARXNG-MCP-CONNECTOR-CONTENT-R002",
     };
     assert_eq!(abstention.connector, "searxng");
     assert!(abstention
         .missing_operation
         .contains("unresponsive_engines"));
-    assert_eq!(abstention.owner, "searxng-mcp");
+    // MEDULLA-MEDIA-VOCAB-R031: the abstention names the owning row in the
+    // searxng-mcp repository, which specifies the pass-through.
+    assert_eq!(abstention.owner, "CONN-SEARXNG-MCP-CONNECTOR-CONTENT-R002");
 }
 
 // spec: MEDULLA-MEDIA-VOCAB-R015.4
