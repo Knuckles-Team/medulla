@@ -208,6 +208,8 @@ pub mod step_verdict;
 pub mod rule_correction;
 // MEDULLA-DURABLE-KERNEL-R852.1/.2/.4 — health anomalies and correlated incidents.
 pub mod health_incident;
+// MEDULLA-DECISION-ENGINE-R701.1 — failure records, patterns and gap topics.
+pub mod failure_patterns;
 // MEDULLA-DURABLE-KERNEL-R700.1 — the retention-cleanup policy shape.
 pub mod retention_cleanup;
 pub mod retention_policy;

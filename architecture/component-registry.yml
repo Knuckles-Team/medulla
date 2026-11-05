@@ -3906,6 +3906,7 @@ components:
       - "tests/shex_served.rs"
       - "tests/test_quality_gate_script.py"
       - "tests/test_contract_architecture_evidence.py"
+      - "tests/test_check_decide_budgets.py"
       - "tests/test_check_dupehound_main.py"
       - "tests/test_check_cluster_extras_affected_lint.py"
       - "tests/test_check_duplication_identity.py"

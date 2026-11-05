@@ -21,9 +21,9 @@
 //! Every algorithm -- derivation, solving, verification, execution, fitting --
 //! lives above this module. These are data types and their bounds.
 
+pub mod codes;
 pub mod comparative_analysis;
 pub mod context_package;
-pub mod codes;
 pub mod digest;
 pub mod errors;
 pub mod harness_contrast;
