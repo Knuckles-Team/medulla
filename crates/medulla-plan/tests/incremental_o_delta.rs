@@ -15,7 +15,7 @@
 
 use medulla_exec::{algebra::Op, algebra::Plan, algebra::Pred, incremental::Circuit};
 use medulla_types::delta::{Delta, ZRow};
-use serde_json::{Map, Value, json};
+use serde_json::{json, Map, Value};
 
 fn doc_props(year: i64) -> Map<String, Value> {
     json!({ "type": "Doc", "year": year })

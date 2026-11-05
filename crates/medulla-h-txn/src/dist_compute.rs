@@ -632,9 +632,9 @@ async fn persist_and_index<M>(
 ) -> Response
 where
     M: medulla_protocol_types::result_contract::MethodResult<
-            Body = u64,
-            Encoding = medulla_protocol_types::result_contract::encoding::Count,
-        >,
+        Body = u64,
+        Encoding = medulla_protocol_types::result_contract::encoding::Count,
+    >,
 {
     let operation_state = Arc::clone(state);
     match run_control_saga(state, req_id, caller, method, move |control| async move {

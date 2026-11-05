@@ -25,7 +25,7 @@ use medulla_exec::incremental::Circuit;
 use medulla_types::delta::{Delta, ZRow};
 use medulla_types::wire::{Op, Plan, Pred, TimeAxis};
 use proptest::prelude::*;
-use serde_json::{Map, Value, json};
+use serde_json::{json, Map, Value};
 
 type Node = Map<String, Value>;
 type Model = BTreeMap<String, Node>;

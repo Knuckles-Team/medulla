@@ -25,7 +25,7 @@
 use std::collections::BTreeMap;
 
 use medulla_exec::{
-    algebra::Op, algebra::Plan, algebra::Pred, exec::PlanCtx, exec::execute, incremental::Circuit,
+    algebra::Op, algebra::Plan, algebra::Pred, exec::execute, exec::PlanCtx, incremental::Circuit,
     rowset::RowSet,
 };
 use medulla_graph_core::graph::GraphCore;
@@ -33,7 +33,7 @@ use medulla_semantic_index::semantic::SemanticStore;
 use medulla_types::delta::{Delta, ZRow};
 use medulla_types::wire::TimeAxis;
 use proptest::prelude::*;
-use serde_json::{Map, Value, json};
+use serde_json::{json, Map, Value};
 
 type Node = Map<String, Value>;
 
