@@ -39,6 +39,7 @@ mod gateway_mining_ml;
 mod hierarchy;
 mod memory;
 mod nodes;
+pub mod retention_cleanup;
 mod semantic;
 mod subgraph;
 mod terminal;
