@@ -172,7 +172,11 @@ pub use governed_admin::GovernedError;
 mod layer_store;
 mod policy_admin;
 mod scope_bound;
-pub use scope_bound::{scope_within_bound, ScopeBound, ScopeBoundError};
+pub use scope_bound::{
+    enforce_scope, load_scope_bound, run_scope_policy_iri, scope_refusal_audit_line,
+    scope_within_bound, ScopeBound, ScopeBoundError, ScopeRefusal, RUN_SCOPE_POLICY_CLASS,
+    SCOPE_EXCEEDS_POLICY, SCOPE_EXCEEDS_POLICY_AUDIT_CLASS, SCOPE_POLICY_UNREADABLE,
+};
 #[cfg(test)]
 mod tests {
     use super::*;

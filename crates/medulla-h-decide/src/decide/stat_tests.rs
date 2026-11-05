@@ -1041,6 +1041,8 @@ mod classes_tests;
 
 mod tool_subset_tests;
 
+mod scope_bound_tests;
+
 mod consumer_tests;
 
 mod knob_tests;

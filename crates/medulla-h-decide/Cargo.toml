@@ -58,6 +58,7 @@ medulla-server-blob = { path = "../medulla-server-blob" }
 medulla-server-auth = { path = "../medulla-server-auth" }
 medulla-exec = { path = "../medulla-exec" }
 medulla-sql-lang = { path = "../medulla-sql-lang" }
+medulla-store = { path = "../medulla-store", optional = true }
 
 [features]
 ann = ["dep:medulla-ann", "medulla-core/ann", "medulla-graph-core/ann", "medulla-semantic-index/ann"]
@@ -69,7 +70,7 @@ owl = ["dep:medulla-rdf", "medulla-rdf/owl", "medulla-reasoner/owl", "medulla-ex
 query = ["medulla-sql/sql", "medulla-tables/sql", "medulla-table-store/sql", "medulla-cypher/sql", "dep:medulla-plan", "medulla-plan/query", "redb", "medulla-exec/query", "medulla-decision-types/query", "medulla-kernel/query", "medulla-persistence/query", "medulla-protocol-types/query", "medulla-server-api/query", "medulla-server-auth/query", "medulla-server-ops/query", "medulla-types/query"]
 raft = ["redb", "medulla-exec/raft", "medulla-kernel/raft", "medulla-persistence/raft", "medulla-server-api/raft", "medulla-server-auth/raft", "server"]
 redb = ["medulla-kernel/redb", "medulla-persistence-records/redb", "medulla-persistence/redb", "medulla-server-api/redb", "medulla-server-blob/redb", "medulla-server-ops/redb"]
-security = ["redb", "medulla-core/security", "medulla-graph-core/security", "medulla-isolation/security", "medulla-kernel/security", "medulla-persistence/security", "medulla-protocol-types/security", "medulla-server-api/security", "medulla-server-auth/security", "medulla-server-blob/security", "medulla-server-ops/security", "medulla-types/security"]
+security = ["redb", "dep:medulla-store", "medulla-store/security", "medulla-core/security", "medulla-graph-core/security", "medulla-isolation/security", "medulla-kernel/security", "medulla-persistence/security", "medulla-protocol-types/security", "medulla-server-api/security", "medulla-server-auth/security", "medulla-server-blob/security", "medulla-server-ops/security", "medulla-types/security"]
 solve = ["medulla-compute/solve", "medulla-decision-policy/solve"]
 server = ["medulla-kernel/server", "medulla-persistence/server", "medulla-server-api/server"]
 numeric = ["medulla-sql/numeric", "dep:medulla-plan", "medulla-plan?/numeric", "dep:medulla-numeric", "medulla-exec/numeric", "medulla-kernel/numeric", "medulla-persistence/numeric", "medulla-server-api/numeric"]

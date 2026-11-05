@@ -1881,6 +1881,7 @@ components:
       - "crates/medulla-graph-core/src/index.rs"
       - "crates/medulla-core/src/isolation"
       - "crates/medulla-isolation/src/isolation.rs"
+      - "crates/medulla-isolation/tests/scope_bound.rs"
       - "crates/medulla-graph-core/src/jsonpath.rs"
       - "crates/medulla-graph-core/src/path_persist.rs"
       - "crates/medulla-graph-core/src/per_actor_cache.rs"

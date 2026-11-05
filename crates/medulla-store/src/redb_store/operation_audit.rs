@@ -47,7 +47,7 @@ pub fn audit_writer_unavailable(cause: impl std::fmt::Display) -> String {
 }
 
 /// The audit classes an operation may declare.
-const AUDIT_CLASSES: [&str; 2] = ["event", "identity_chain"];
+const AUDIT_CLASSES: [&str; 3] = ["event", "identity_chain", "scope_exceeds_policy"];
 /// How a caller spells "this operation declares no audit class".
 const NO_AUDIT_CLASS: &str = "none";
 
