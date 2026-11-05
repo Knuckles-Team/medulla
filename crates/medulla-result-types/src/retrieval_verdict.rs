@@ -829,11 +829,13 @@ impl HierarchyRetrievalPolicy {
                 }
                 validate_links_against_ids(&self.parent_links, &self.community_ids)
             }
-            HierarchyRetrievalKind::DocumentSection => self.validate_section_tree(),
+            HierarchyRetrievalKind::DocumentSection => self.validate_sections(),
         }
     }
 
-    fn validate_section_tree(&self) -> Result<(), HierarchyValidationError> {
+    /// Validate the document-section tree: exactly one root, acyclic
+    /// single-parent links and source spans nested inside their parent's span.
+    pub fn validate_sections(&self) -> Result<(), HierarchyValidationError> {
         if self.section_nodes.is_empty() {
             return Err(HierarchyValidationError::MissingSectionNodes);
         }
@@ -1400,6 +1402,89 @@ mod tests {
         assert_eq!(cycle.code, RETRIEVAL_HIERARCHY_INVALID);
         let stale = validate_hierarchy(&[community("a", None)], "h2").unwrap_err();
         assert_eq!(stale.code, RETRIEVAL_HIERARCHY_INVALID);
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R081.9.7.1
+    #[test]
+    fn section_tree_validation_rejects_cycles_and_bad_spans() {
+        fn section(
+            id: &str,
+            parent: Option<&str>,
+            children: &[&str],
+            start: u64,
+            end: u64,
+        ) -> HierarchySectionNode {
+            HierarchySectionNode {
+                id: id.to_string(),
+                document_id: "doc".to_string(),
+                document_revision: "doc-r1".to_string(),
+                parent_id: parent.map(str::to_string),
+                ordered_children: children.iter().map(|c| (*c).to_string()).collect(),
+                granularity: if parent.is_none() {
+                    SectionGranularity::Document
+                } else {
+                    SectionGranularity::Section
+                },
+                summary: format!("summary {id}"),
+                source_span: SectionSourceSpan { start, end },
+            }
+        }
+        fn link(parent: &str, child: &str) -> HierarchyParentLink {
+            HierarchyParentLink {
+                parent_id: parent.to_string(),
+                child_id: child.to_string(),
+            }
+        }
+        let base = HierarchyRetrievalPolicy {
+            kind: HierarchyRetrievalKind::DocumentSection,
+            hierarchy_revision: "h1".to_string(),
+            community_ids: Vec::new(),
+            summary_ids: Vec::new(),
+            entity_ids: Vec::new(),
+            parent_links: vec![link("root", "a")],
+            stage: HierarchyStage::DocumentSection,
+            score_provenance: Vec::new(),
+            beam_width: 2,
+            max_depth: 4,
+            max_visited_communities: 8,
+            max_entity_candidates: 8,
+            max_reranker_calls: 1,
+            max_tokens: 64,
+            max_total_cost_micros: 100,
+            section_nodes: vec![
+                section("root", None, &["a"], 0, 100),
+                section("a", Some("root"), &[], 10, 50),
+            ],
+        };
+        assert_eq!(base.validate_sections(), Ok(()));
+        assert_eq!(base.validate(), Ok(()));
+
+        let mut cycle = base.clone();
+        cycle.section_nodes = vec![
+            section("root", None, &[], 0, 100),
+            section("a", Some("b"), &["b"], 10, 50),
+            section("b", Some("a"), &["a"], 10, 50),
+        ];
+        cycle.parent_links = vec![link("b", "a"), link("a", "b")];
+        assert!(cycle.validate_sections().is_err());
+        assert!(cycle.validate().is_err());
+
+        let mut inverted = base.clone();
+        inverted.section_nodes[1].source_span = SectionSourceSpan { start: 60, end: 20 };
+        assert_eq!(
+            inverted.validate_sections(),
+            Err(HierarchyValidationError::InvalidSpan("a".to_string()))
+        );
+
+        let mut outside = base.clone();
+        outside.section_nodes[1].source_span = SectionSourceSpan {
+            start: 90,
+            end: 140,
+        };
+        assert!(matches!(
+            outside.validate_sections(),
+            Err(HierarchyValidationError::SpanNotNested { .. })
+        ));
     }
 }
 

@@ -341,3 +341,13 @@
     sh:property [ sh:path :tokenCost ;
         sh:datatype xsd:decimal ;
         sh:minInclusive 0 ] .
+
+# MEDULLA-ORCH-VOCAB-R009.18.1: an observation window names its run and an
+# ordered interval; measured fields are Measured(value) or Unknown(reason).
+:RunObservationWindowShape a sh:NodeShape ;
+    sh:targetClass :RunObservationWindow ;
+    sh:property [ sh:path :runId ; sh:datatype xsd:string ; sh:minCount 1 ; sh:maxCount 1 ],
+    [ sh:path :windowId ; sh:datatype xsd:string ; sh:minCount 1 ; sh:maxCount 1 ],
+    [ sh:path :runRevision ; sh:datatype xsd:integer ; sh:minInclusive 0 ],
+    [ sh:path :startMs ; sh:datatype xsd:integer ; sh:minInclusive 0 ],
+    [ sh:path :endMs ; sh:datatype xsd:integer ; sh:minInclusive 0 ] .

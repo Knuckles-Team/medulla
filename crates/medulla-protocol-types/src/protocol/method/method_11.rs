@@ -11,6 +11,9 @@ $($variants)*
     GetCurrentPlan { tenant: String, run_id: String },
     /// Caller-owned committed measurements from one bounded snapshot.
     GetSessionUsage { tenant: String, context_id: String },
+    /// The configured shard-writer count `k` for the verified tenant's graphs
+    /// (MEDULLA-DURABLE-KERNEL-R077); write-lane slot grants are capped at it.
+    GetShardWriterWidth { tenant: String },
     /// Historical native run admission, visible only to its verified immutable
     /// owner. Missing and foreign rows return null; missing original admission
     /// evidence refuses explicitly. Independent of current lease or terminal state.
@@ -175,6 +178,16 @@ $($variants)*
         policy_msgpack: Vec<u8>,
     },
 
+    // ── Dataset lineage (MEDULLA-UNIFIED-DATA-PLANE-R702.3) ─────────────────
+    /// Drain lineage run events into the request graph: each event maps to
+    /// content-addressed `Dataset` nodes and `derivesInto` edges; an event that
+    /// cannot map is kept as one `QuarantinedLineageEvent` node with its payload
+    /// digest. The batch commits as one governed ChangeEnvelope keyed by its
+    /// write-set digest, so a replayed event adds no edge.
+    LineageIngest {
+        events: Vec<medulla_catalog_types::lineage::LineageEvent>,
+    },
+
     // ── Market bars and trend signals (EH-413..EH-418) ─────────────────────
     /// Typed OHLCV bars over the time-series store, deterministic integer
     /// indicators, the per-series trend signal with its flip records, the
@@ -225,6 +238,17 @@ $($variants)*
     /// [`crate::decision::web_fetch_selection`].
     SelectWebPages {
         request: Box<medulla_decision_outcome_types::decision::web_fetch_selection::SelectWebPagesRequest>,
+    },
+
+    // ── Document delete (MEDULLA-UNIFIED-DATA-PLANE-R651.3..R651.5) ─────────
+    /// Delete one RLS-visible Document of the request graph and everything
+    /// derived from it (chunks, extracted facts, enrichment records) as one
+    /// atomic batch that also writes one content-free `DocumentDeletion`
+    /// record. Refuses with `DOCUMENT_NOT_FOUND`, `DOCUMENT_HAS_REFERENCES` or
+    /// `CASCADE_TOO_LARGE` and then changes nothing. See
+    /// [`medulla_types::document_ops`].
+    DocumentDelete {
+        request: Box<medulla_types::document_ops::DocumentDeleteRequest>,
     },
         ]);
     };

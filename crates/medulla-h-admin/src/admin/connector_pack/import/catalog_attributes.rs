@@ -5,7 +5,7 @@
 //! definition digest like every other pack attribute:
 //!
 //! * `mcp.media_type` on MCP resources, resource templates and skill files;
-//! * `skill.type` on skills, the `SKILL.md` front-matter `type` verbatim;
+//! * `skill.type` on skills, the `SKILL.md` front-matter `skill_type` verbatim;
 //! * `sdk.tool_mode` on tools, the pack builder's declaration (EG never
 //!   re-derives it from the schema).
 

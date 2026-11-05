@@ -2531,6 +2531,17 @@ where
     }
 }
 
+/// Fail-closed startup policy for the direct RESP listener
+/// (MEDULLA-DURABLE-KERNEL-R860.5): loopback only, and a non-empty engine key
+/// for the verified principal binding, checked before bind.
+pub fn validate_startup_policy(addr: &str, auth_secret: &str) -> std::io::Result<()> {
+    medulla_server_api::api::dispatch_support::validate_direct_wire_security(
+        addr,
+        "redis-wire",
+        !auth_secret.is_empty(),
+    )
+}
+
 /// Bind `addr` and serve Redis RESP connections until the process exits. Spawned by
 /// `main.rs` only when built `--features redis-wire` AND `MEDULLA_REDIS_ADDR`
 /// is set (CONCEPT:MEDULLA-KG.ontology.resp2-resp3-codec-round). The Redis keyspace is durable when a persist dir is
@@ -2541,11 +2552,7 @@ pub async fn serve(addr: &str, state: Arc<RwLock<ServerState>>) -> std::io::Resu
         let state = state.read().await;
         (state.persist_dir.clone(), state.auth_secret.clone())
     };
-    medulla_server_api::api::dispatch_support::validate_direct_wire_security(
-        addr,
-        "redis-wire",
-        !auth_secret.is_empty(),
-    )?;
+    validate_startup_policy(addr, &auth_secret)?;
     let store = Arc::new(RedisStore::open(persist_dir.as_deref()).map_err(std::io::Error::other)?);
     serve_listener(addr, store, auth_secret).await
 }

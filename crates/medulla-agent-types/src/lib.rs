@@ -25,9 +25,6 @@ pub mod agent_topology;
 // RF-020 — typed Agent Library delegation admission/result currency.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod delegation;
-// MEDULLA-DURABLE-KERNEL-R851.1 — the A2A peer record. Pure serde.
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod agent_peer;
 // EH-408 / EH-409 — the receipt of a served telemetry derivation.
 #[cfg(any(test, feature = "test-support"))]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
