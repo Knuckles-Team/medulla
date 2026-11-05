@@ -71,9 +71,11 @@ def test_folded_wheel_builds_the_server_per_target_and_folds_it_in() -> None:
     steps = _yaml(ACTION)["runs"]["steps"]
     names = [s.get("name", "") for s in steps]
     engine = steps[names.index("Build engine extension wheel")]
-    assert engine["with"]["prepare-script"] == "scripts/build_release_server.sh"
+    assert engine["with"]["prepare-script"] == (
+        "${{ inputs.server-artifact == '' && 'scripts/build_release_server.sh' || '' }}"
+    )
     native = steps[names.index("Build the release server executable (native)")]
-    assert native["if"] == "${{ runner.os != 'Linux' }}"
+    assert native["if"] == "${{ inputs.server-artifact == '' && runner.os != 'Linux' }}"
     assert native["run"] == "bash scripts/build_release_server.sh"
     swap = steps[names.index("Add swap for the server link")]
     assert "runner.environment == 'github-hosted'" in swap["if"]
@@ -242,3 +244,23 @@ def test_tag_release_creates_the_github_release_after_pypi() -> None:
     assert "https://pypi.org/project/medulla/$version/" in script
     assert 'pip install \\"medulla==$version\\"' in script
     assert "--latest" in script
+
+
+@pytest.mark.spec("MEDULLA-CONTRACT-R053.9")
+def test_release_compiles_the_server_once_per_platform_and_folds_those_bytes() -> None:
+    release = _yaml(ROOT / ".github/workflows/release.yml")["jobs"]
+    server, build = release["server-binary"], release["build"]
+    legs = lambda job: {m["name"]: m["target"] for m in job["strategy"]["matrix"]["include"]}  # noqa: E731
+    assert legs(server) == legs(build)
+    assert any(s.get("uses") == "./.github/actions/server-binary" for s in server["steps"])
+    upload = next(s for s in server["steps"] if "upload-artifact" in s.get("uses", ""))
+    assert upload["with"]["name"] == "server-${{ matrix.name }}"
+    folds = [s for s in build["steps"] if s.get("uses") == "./.github/actions/folded-wheel"]
+    assert [f["with"]["pass"] for f in folds] == ["primary", "reproduction"]
+    assert {f["with"]["server-artifact"] for f in folds} == {"server-${{ matrix.name }}"}
+    names = [s.get("name", "") for s in _yaml(ACTION)["runs"]["steps"]]
+    assert names.index("Download the prebuilt server executable") < names.index(
+        "Fold the server executable into the medulla wheel"
+    )
+    action = _yaml(ROOT / ".github/actions/server-binary/action.yml")["runs"]["steps"]
+    assert any(s.get("run", "") == "bash scripts/build_release_server.sh" for s in action)

@@ -7,7 +7,8 @@ name: Release
 # concluded `success` for this exact commit on main, so a tag publishes only
 # a commit main CI has passed.
 #
-#   guard -> build (matrix leg)  -> uploads its own wheel to PyPI
+#   guard -> server-binary (matrix leg, server compiled once per platform)
+#         -> build (matrix leg)  -> folds that server, uploads its own wheel to PyPI
 #         -> build-x86           -> publish-x86 uploads the Linux x86_64 wheel
 #         -> build-sdist         -> uploads the source distribution
 #   build + build-x86 -> server-image -> per-arch image from the Linux wheels, one multi-arch manifest
@@ -99,15 +100,103 @@ jobs:
           echo "::error::REFUSING to publish: ci.yml has no successful main run for ${SHA}. Wait for main CI, or dispatch with force_untested for an emergency."
           exit 1
 
+  # ── Release server executable: compiled ONCE per platform in its own job and
+  # handed to that platform's wheel job as an artifact with its sha256. Both
+  # folded-wheel passes (primary and reproduction) fold these exact bytes, so the
+  # expensive release-server link never runs twice and the wheel job only
+  # builds the extension modules. Linux compiles inside the wheel's manylinux
+  # container, keeping the pinned glibc baseline. The Linux x86_64 wheel is built
+  # by the reusable workflow below, which compiles its own server in-job.
+  server-binary:
+    timeout-minutes: 360
+    name: server-binary ${{ matrix.name }}
+    needs: guard
+    if: >-
+      github.repository == 'Knuckles-Team/medulla'
+      && (startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch')
+    runs-on: ${{ matrix.runner }}
+    continue-on-error: ${{ matrix.optional || false }}
+    env:
+      MEDULLA_WHEEL_TARGET: ${{ matrix.target }}
+      MEDULLA_WHEEL_JOBS_ARG: ${{ matrix.jobs && format('--jobs {0}', matrix.jobs) || '' }}
+      MEDULLA_WHEEL_MANYLINUX: ${{ startsWith(matrix.target, 'aarch64-unknown-linux') && '2_28' || 'auto' }}
+      CARGO_BUILD_JOBS: ${{ matrix.jobs }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-aarch64
+            runner: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+            jobs: 1
+          - name: windows-x86_64
+            runner: windows-latest
+            target: x86_64-pc-windows-msvc
+            jobs: 4
+          - name: macos-aarch64
+            runner: macos-14
+            target: aarch64-apple-darwin
+            jobs: 2
+            optional: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - id: rust-toolchain
+        uses: ./.github/actions/pinned-rust-toolchain
+
+      - name: Bind build time to the source revision
+        shell: bash
+        run: |
+          SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)"
+          case "$SOURCE_DATE_EPOCH" in
+            ''|*[!0-9]*) exit 1 ;;
+          esac
+          echo "SOURCE_DATE_EPOCH=$SOURCE_DATE_EPOCH" >> "$GITHUB_ENV"
+
+      - name: Configure identity-neutral Rust source paths
+        shell: bash
+        run: python scripts/configure_rust_path_remap.py --github-env "$GITHUB_ENV" --target "${{ matrix.target }}"
+
+      - name: Select the verified native Mach-O linker
+        if: ${{ endsWith(matrix.target, '-apple-darwin') }}
+        shell: bash
+        env:
+          RUSTUP_TOOLCHAIN: ${{ steps.rust-toolchain.outputs.channel }}
+        run: |
+          case "$MEDULLA_WHEEL_TARGET" in
+            aarch64-apple-darwin) export MACOSX_DEPLOYMENT_TARGET=11.0 ;;
+          esac
+          source scripts/configure_macos_linker.sh "$MEDULLA_WHEEL_TARGET"
+          python - <<'PYENV'
+          import os
+          with open(os.environ["GITHUB_ENV"], "a") as output:
+              for key in ("SDKROOT", "MACOSX_DEPLOYMENT_TARGET", "RUSTUP_TOOLCHAIN", "CARGO_ENCODED_RUSTFLAGS"):
+                  output.write(f"{key}={os.environ[key]}\n")
+          PYENV
+
+      - name: Build the release server executable (${{ matrix.name }})
+        uses: ./.github/actions/server-binary
+
+      - name: Upload the server executable and its sha256
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: server-${{ matrix.name }}
+          path: dist-server-bin/medulla-server*
+          if-no-files-found: error
+
   # ── Release wheel matrix: the expensive cross-platform reproducible build.
   # The product tests and installed-wheel smoke already ran in ci.yml.
   build:
     timeout-minutes: 360
     name: wheel ${{ matrix.name }}
-    needs: guard
+    needs: [guard, server-binary]
     # Hosted platform legs; x86 is isolated in the immutable reusable job below.
+    # A failed server leg fails only its own platform's download step.
     if: >-
-      github.repository == 'Knuckles-Team/medulla'
+      !cancelled() && needs.guard.result == 'success'
+      && github.repository == 'Knuckles-Team/medulla'
       && (startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch')
     runs-on: ${{ matrix.runner }}
     continue-on-error: ${{ matrix.optional || false }}
@@ -211,6 +300,7 @@ jobs:
         uses: ./.github/actions/folded-wheel
         with:
           pass: primary
+          server-artifact: server-${{ matrix.name }}
 
       - name: Remove primary native build state
         if: ${{ github.event_name == 'workflow_dispatch' }}
@@ -228,6 +318,7 @@ jobs:
         uses: ./.github/actions/folded-wheel
         with:
           pass: reproduction
+          server-artifact: server-${{ matrix.name }}
 
       # Diagnostic replacement for the former bare inline `python -c` (three
       # `assert`s, no output on failure -- exactly what made the
