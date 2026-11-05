@@ -10,6 +10,10 @@ inputs:
   maturin-version:
     description: Verified Maturin override; empty retains the existing selection.
     required: false
+  command:
+    description: Maturin command; `sdist` makes a container run only to compile the prepare-script output.
+    required: false
+    default: build
   prepare-script:
     description: Optional repository script sourced after mandatory linker setup.
     required: false
@@ -21,6 +25,7 @@ runs:
       env:
         CARGO_EG_PREPARE_SCRIPT: ${{ inputs.prepare-script }}
       with:
+        command: ${{ inputs.command }}
         target: ${{ env.MEDULLA_WHEEL_TARGET }}
         args: ${{ inputs.args }}
         manylinux: ${{ env.MEDULLA_WHEEL_MANYLINUX }}

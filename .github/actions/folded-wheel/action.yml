@@ -19,6 +19,15 @@ inputs:
       reproduction pass always starts from an empty target directory.
     required: false
     default: 'false'
+  server-artifact:
+    description: >-
+      Name of the run artifact holding the platform's prebuilt server executable
+      (built once by the release `server-binary` job). When set, both passes
+      download, checksum-verify and fold that exact binary and never compile the
+      server. Empty (single-job callers such as the main warm build) compiles it
+      once in this job.
+    required: false
+    default: ''
 runs:
   using: composite
   steps:
@@ -62,7 +71,7 @@ runs:
     # The server link is the most memory-hungry step of the leg: hosted Linux
     # runners (16 GB) get swap first. Self-hosted runners are sized for it.
     - name: Add swap for the server link
-      if: ${{ runner.os == 'Linux' && runner.environment == 'github-hosted' }}
+      if: ${{ inputs.server-artifact == '' && runner.os == 'Linux' && runner.environment == 'github-hosted' }}
       shell: bash
       run: |
         set -euo pipefail
@@ -80,8 +89,22 @@ runs:
     # The server executable for this target (release-server profile, features
     # `full,ast-extended`). Linux builds it inside the engine build's manylinux
     # container below (prepare-script); macOS and Windows build it natively here.
+    - name: Download the prebuilt server executable
+      if: ${{ inputs.server-artifact != '' }}
+      uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+      with:
+        name: ${{ inputs.server-artifact }}
+        path: dist-server-bin
+
+    - name: Verify the prebuilt server executable checksum
+      if: ${{ inputs.server-artifact != '' }}
+      shell: bash
+      run: |
+        python scripts/fetch_server_binary.py verify dist-server-bin
+        chmod 0755 dist-server-bin/medulla-server* || true
+
     - name: Build the release server executable (native)
-      if: ${{ runner.os != 'Linux' }}
+      if: ${{ inputs.server-artifact == '' && runner.os != 'Linux' }}
       shell: bash
       run: bash scripts/build_release_server.sh
 
@@ -98,7 +121,7 @@ runs:
           ${{ env.MEDULLA_WHEEL_MATURIN_ARGS }}
         container: ${{ steps.build-environment.outputs.container }}
         maturin-version: ${{ steps.build-environment.outputs.maturin-version }}
-        prepare-script: scripts/build_release_server.sh
+        prepare-script: ${{ inputs.server-artifact == '' && 'scripts/build_release_server.sh' || '' }}
 
     # ── Fold the medulla-numeric Surface-A kernel INTO this same wheel (CONCEPT:MEDULLA-346).
     #    Build the pyo3 cdylib kernel (`crates/medulla-numeric --features python`) for the
@@ -141,7 +164,7 @@ runs:
 
     - name: Fold the server executable into the medulla wheel
       shell: bash
-      run: python scripts/inject_server_binary.py "$(ls dist-${{ inputs.pass }}/medulla-*.whl)" "$(ls dist-server-bin/medulla-server*)"
+      run: python scripts/inject_server_binary.py "$(ls dist-${{ inputs.pass }}/medulla-*.whl)" "$(ls dist-server-bin/medulla-server dist-server-bin/medulla-server.exe 2>/dev/null)"
 
     # Safety net: the server is package data, never a console script; drop any
     # `*.data/scripts/*` member a future build change might emit.
