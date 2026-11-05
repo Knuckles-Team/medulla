@@ -2,6 +2,7 @@
 use super::*;
 
 // spec: MEDULLA-TYPED-PACKS-R085.5.3
+// spec: MEDULLA-IDENTITY-R711
 #[tokio::test]
 async fn approval_key_stamping_erases_session_secret_and_replaces_untrusted_evidence() {
     let state = state();
