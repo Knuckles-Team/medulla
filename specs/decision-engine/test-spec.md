@@ -1308,7 +1308,6 @@ Entries for rows whose named test is not yet in the tree.
 - `MEDULLA-DECISION-ENGINE-R111.1`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/consumer_tests.rs::a_standalone_topology_decide_question_returns_a_typed_decision_record`.
 - `MEDULLA-DECISION-ENGINE-R112`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/consumer_tests.rs::exhausted_capacity_at_a_priority_is_a_lease_named_infeasible_result`.
 - `MEDULLA-DECISION-ENGINE-R114`: planned L5 `crates/medulla-h-decide/src/decide/stat_tests/consumer_tests.rs::subagent_allowance_reads_the_topology_facts_of_a_committed_record`.
-- `MEDULLA-DECISION-ENGINE-R116.1`: planned L1 `tests/test_generated_contract_inventory.py::test_published_contract_path_is_admitted_and_a_bespoke_facade_refused` (row conflicts with R116.2; owner decision pending).
 ## Planned bindings, range 4
 
 Entries for rows whose named test is not yet in the tree.
@@ -2098,4 +2097,4 @@ Every row below has a planned test at its exact post-split path; the row text na
 | `MEDULLA-DECISION-ENGINE-R814.7` | `tests/decide/test_prompt_candidates_served.py::test_system_prompt_query_lists_candidates_for_a_task` |
 | `MEDULLA-DECISION-ENGINE-R814.8` | `tests/decide/test_prompt_candidates_served.py::test_non_canonical_prompt_is_refused_with_field_path` |
 | `MEDULLA-DECISION-ENGINE-R822` | `crates/medulla-h-decide/src/decide/stat_calibration.rs::fit_isotonic` |
-| `MEDULLA-DECISION-ENGINE-R828` | `src/server/handlers/branch.rs::merge_conflicts` |
+| `MEDULLA-DECISION-ENGINE-R828` | `crates/medulla-server-api/src/conflict_decider.rs::branch_merge_conflicts_route_through_the_conflict_decider_seam` |

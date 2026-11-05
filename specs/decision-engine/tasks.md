@@ -156,7 +156,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T150 [US2] MEDULLA-DECISION-ENGINE-R113.3.2 Durable denial allowance consumption
 - [ ] T151 [US2] MEDULLA-DECISION-ENGINE-R113.3.3 Handler retry fixture
 - [ ] T152 [US2] MEDULLA-DECISION-ENGINE-R114 Subagent allowance negotiation reads Medulla's topology facts
-- [ ] T153 [US5] MEDULLA-DECISION-ENGINE-R116.1 A typed gate admits only the published client-contract call path
+- [ ] T153 [US5] MEDULLA-DECISION-ENGINE-R116.1 RETIRED: enforcement is server-side only
 - [ ] T154 [US5] MEDULLA-DECISION-ENGINE-R116.2 Generated-client inventory covers every served method
 - [ ] T155 [US5] MEDULLA-DECISION-ENGINE-R117.1.1 Cross-surface golden equivalence
 - [ ] T156 [US5] MEDULLA-DECISION-ENGINE-R117.1.2 Feature-power metrics in DecisionEval

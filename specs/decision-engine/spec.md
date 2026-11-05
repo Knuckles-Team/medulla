@@ -153,7 +153,7 @@ Independent test: the bound tests of `MEDULLA-DECISION-ENGINE-R133.1` run this s
 - Arbora supplies a verified principal and tenant on every served request.
 - The reference host runs the benchmark suite that measures each service-level budget.
 - Pack-provided facts enter as claims until an independent evaluation raises them.
-- Owner decisions open on `MEDULLA-DECISION-ENGINE-R010.100.2` and `MEDULLA-DECISION-ENGINE-R116.1` stay as written until the owner answers.
+- Enforcement is server-side only: arbora admission and medulla policy. No client-side call-path gate exists (`MEDULLA-DECISION-ENGINE-R116.2`).
 
 ## Behavior detail
 
