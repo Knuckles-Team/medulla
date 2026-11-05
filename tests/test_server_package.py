@@ -81,7 +81,7 @@ def test_folded_wheel_builds_the_server_per_target_and_folds_it_in() -> None:
     assert "runner.environment == 'github-hosted'" in swap["if"]
     fold = steps[names.index("Fold the server executable into the medulla wheel")]
     assert "scripts/inject_server_binary.py" in fold["run"]
-    assert "dist-server-bin/medulla-server" in fold["run"]
+    assert "medulla-server(\\.exe)?" in fold["run"]
     order = [
         names.index(n)
         for n in (
