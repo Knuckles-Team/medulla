@@ -1027,7 +1027,7 @@ Each entry names the test the row binds once its code lands; the path is the pos
 | Planned | `MEDULLA-FEDERATED-QUERY-R058.4.7.2.4` | `tests/nl_query_grounding.rs::udf_identifiers` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R058.4.7.2.5` | `tests/nl_query_grounding.rs::rdf_identifiers` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R072.2` | `tests/federated/test_unified_query_source_plan_served.py::test_plan_sources_equal_authority_rows` |
-| Planned | `MEDULLA-FEDERATED-QUERY-R073.3` | `crates/medulla-federation/src/federation_opt/tests.rs::mcp_remote_calls_bound_tool` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R073.3` | `crates/medulla-federation/src/federation_opt/tests.rs::mcp_remote_delegates_to_connector_row_source` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R073.3` | `tests/federation/test_web_metasearch_served.py::test_mcp_source_resolves` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R079.2.1` | `tests/lake_manifest_interoperability.rs::append_compaction_cow_delete` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R081.11` | `tests/retrieval_round_served.rs::round_with_no_parts_returns_rows_only` |
