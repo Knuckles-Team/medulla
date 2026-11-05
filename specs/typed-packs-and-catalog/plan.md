@@ -107,9 +107,9 @@ none
 - Repository-source effects for prompt blueprints: `SCION-GOVERNED-WRITEBACK-R004.5` provides, `MEDULLA-TYPED-PACKS-R094.7` consumes. Contract: [governed-writeback-effects.md](contracts/governed-writeback-effects.md).
 - Generated ontology artifacts: `MEDULLA-TYPED-PACKS-R090` provides, `ARBORA-DEPLOY-R009.3` consumes. Contract: [arbora-ontology-artifacts.md](contracts/arbora-ontology-artifacts.md).
 
-## Design reference
+### Design reference
 
-### Design decisions
+#### Design decisions
 
 The implementation extends Medulla's current typed pack, component, schema, outbox and capability registry. It adds no separate pack database or dynamic response envelope. It adds no second contract generator or graph projection side channel. The public wire is generated from `medulla-capabilities`; canonical receipt content must be compared byte for byte. Changes to a shared wire shape land as one coordinated revision across Rust, generated Python/Go/JS and the Graft SDK TCK.
 
@@ -122,7 +122,7 @@ The order below minimizes incompatible intermediate states. A step may be a veri
 5. **Schema and projection proof.** Reuse one G13–G16/K1–K7 validator for operator, pack and ingestion sources. Attach current pack schema in one graph commit. Mark visibility only after attach; use durable failure/retry and least-privilege row-scoped graph grant. Verify static `AttachPack` staleness and `GraphSchemaClasses` output. Preserve exact `IcvConfigure` behavior.
 6. **Consumer and release proof.** Run an end-to-end connector fixture from Graft SDK package creation through Import, projection, Arbora typed read and an authorized body read. Run Go/JS/Python/Rust contract vectors and full integration suites on the exact commit. Include scanner and architecture gates, release workflow parity, and a crash/restart restore check. Record exact evidence for each required outcome.
 
-### Interfaces and ownership
+#### Interfaces and ownership
 
 | Interface | Medulla owner | Caller/consumer contract |
 |---|---|---|
@@ -133,7 +133,7 @@ The order below minimizes incompatible intermediate states. A step may be a veri
 | Fleet catalog | ServerRegistry liveness plus component content | Arbora joins typed reads and may cache by version, without becoming content authority. |
 | Contract receipt | `medulla-capabilities` registry and `gen_contract` | Python/Go/JS senders and Graft SDK verify method/result/signing vectors. |
 
-### R016 digest v4: package version is provenance only
+#### R016 digest v4: package version is provenance only
 
 MEDULLA-TYPED-PACKS-R016 requires equal server pins across package releases with equal content. The v3 definition digest mixes `SourcePackage.package_version` into every server component digest. Two independent stores that import the same content under different releases therefore mint different server pins.
 
@@ -144,22 +144,22 @@ MEDULLA-TYPED-PACKS-R016 requires equal server pins across package releases with
 - **One-time revision.** The first import after the upgrade recomputes the server pin under v4. A changed pin issues one ordinary revision for the server and its dependents. Later releases with equal content stay `Unchanged`.
 - **Proof.** A unit test proves v4 equality across package versions and v3 read compatibility. The connector-pack test `package_versions_produce_equal_pins_in_independent_stores` returns.
 
-### Migration and rollback
+#### Migration and rollback
 
 The current connector pack schema is version 2. Compatible additions keep existing method semantics and require regenerated artifacts. An incompatible version bump must refuse old payloads with a stable code and be coupled to client TCK changes. Agent Library layout changes use a registered layout lineage and named manifest refusal. No implicit destructive upgrade is allowed. Deployment rolls forward with dual-reader compatibility only if explicitly tested. Rollback to an older binary is rejected when its layout cannot read the new owner file. A projection failure leaves the committed pack invisible and re-drivable. ReconcileBodies reclaims only unheld bodies after the grace period. A static schema attachment on another graph remains at its recorded pack revision until an administrator reattaches it.
 
-#### Turtle parse identity repair
+##### Turtle parse identity repair
 
 - MEDULLA-TYPED-PACKS-R093.1: Scope the public bounded/unbounded Turtle readers per invocation. Keep the existing label-preserving reader for catalogue composition, whose callers already apply document namespaces.
 - MEDULLA-TYPED-PACKS-R093.2: Validate the served connector-pack reproject path with colliding member labels and repeatable composed digests. Complete this before claiming parent acceptance.
 
-### Architecture
+#### Architecture
 
-#### Existing path to extend
+##### Existing path to extend
 
 `crates/medulla-catalog-types/src/connector_pack/{index,digest,annotations,ops,result,record}.rs` defines the wire values and bounds. `crates/medulla-capabilities/src/domains/` owns method descriptors; `gen_contract` emits the public contract, receipt and clients. `crates/medulla-h-admin/src/admin/connector_pack/import/` validates and plans; `crates/medulla-persistence-records/src/connector_pack/` owns the head, membership, receipt, bindings, visibility and outbox; `crates/medulla-server-blob/src/blob/engine_bodies.rs` owns bodies; `crates/medulla-h-admin/src/connector_pack_projection.rs` and `crates/medulla-h-admin/src/graph_schema/attach_pack.rs` provide projection and schema attachment. `crates/medulla-h-admin/src/admin/component_content.rs` serves bodies. New code must enter through these paths, not create a second registry or a detached adapter.
 
-#### Data flow and durable boundaries
+##### Data flow and durable boundaries
 
 ```mermaid
 flowchart LR
@@ -179,19 +179,19 @@ flowchart LR
 
 The body store can commit before the Agent Library transaction. An orphan has no holder; reclamation follows the grace window. Agent Library rows and outbox intents commit together. Projection is intentionally asynchronous. `visible_record_id` is the read gate until the graph schema has committed. The projection worker reads the current head, not an obsolete event payload; its graph attach uses the pack record as a monotone source revision. The subsequent owner transaction marks visibility and acknowledges the event. If interrupted between commits, redelivery is idempotent.
 
-#### Pack encoding
+##### Pack encoding
 
-Entries are a closed kind set: `mcp_server`, `tool`, `skill`, `prompt`, `ontology`, `shapes`, `model_profile`, `a2a_card`. Each entry has a URI, name, media type, raw-body section, optional input/output schema sections, typed annotations and bounded sibling references. Every section carries offset, length and SHA-256. Section ranges use checked arithmetic, cover the uncompressed archive once, and never overlap. Text is UTF-8 without BOM; JSON has no duplicate keys, NaN or infinity and is depth/node bounded. `$ref` remains data rather than a network fetch.
+Entries are a closed kind set: `mcp_server`, `tool`, `skill`, `prompt`, `ontology`, `shapes`, `model_profile`, `a2a_card`. Each entry has a URI, name, media type, raw-body section, optional input/output schema sections, typed annotations and bounded sibling references. Every section carries offset, length and SHA256. Section ranges use checked arithmetic, cover the uncompressed archive once, and never overlap. Text is UTF-8 without BOM; JSON has no duplicate keys, NaN or infinity and is depth/node bounded. `$ref` remains data rather than a network fetch.
 
 `Digest256::framed` hashes length-framed fields in domain-separated order. Nested digest values are 32 raw bytes. String lists are UTF-8 byte sorted and deduplicated. Integers are big-endian u64. Absent optionals encode an empty field. Tri-state booleans use `00` absent, `01` false, `02` true. `entry_digest` frames kind, URI, name, media type, body/schema digests, annotations digest and reference digest under `eg/connector-pack-entry/v1`. `pack_digest` frames connector, server-entry digest, count and URI-sorted entry digests under `eg/connector-pack/v1`. Archive offsets and package version are excluded. Tool input/output schema digests are computed by Medulla over the exact received bytes. The Graft SDK must serialize MCP JSON objects deterministically before byte hashing and replay the shared vectors. The Graft SDK's normalized contract pin is a claim, not a Medulla-verified digest.
 
-#### Identity, lifecycle and reads
+##### Identity, lifecycle and reads
 
-The pack head uses `(tenant, connector)` as its key. It includes binding revision, content digest, server pin, package provenance, record ID and projection state. Membership is keyed by pack URI and has a component ID, revision, content digest and lifecycle. Bodies are keyed by SHA-256 with holder rows to protect live content. A same-digest import produces no write. A changed entry or pinned server revision creates a new component revision; a removed entry is `Withdrawn`. Historical pinned records may resolve withdrawn revisions; new publication, search, assembly and candidate selection cannot. `Retired` is explicit and permanent, and a later return is refused. Pack-generated `mcp:` IDs cannot be directly published by the generic component method.
+The pack head uses `(tenant, connector)` as its key. It includes binding revision, content digest, server pin, package provenance, record ID and projection state. Membership is keyed by pack URI and has a component ID, revision, content digest and lifecycle. Bodies are keyed by SHA256 with holder rows to protect live content. A same-digest import produces no write. A changed entry or pinned server revision creates a new component revision; a removed entry is `Withdrawn`. Historical pinned records may resolve withdrawn revisions; new publication, search, assembly and candidate selection cannot. `Retired` is explicit and permanent, and a later return is refused. Pack-generated `mcp:` IDs cannot be directly published by the generic component method.
 
 `Status` is a snapshot read and has no reap/write side effects. `Content` checks component-read authority and the exact revision and returns verified bytes. Bind/Unbind/Retire/Reproject and body reconciliation require admin rights. Import requires `agent:pack-control` and a matching verified principal and tenant. It also requires an expected head and deterministic operation identity. A mass withdrawal requires an explicit override and admin capability. This means an empty pack or over half of published members.
 
-#### Validation table
+##### Validation table
 
 | Rule | Required refusal or warning |
 |---|---|
@@ -207,7 +207,7 @@ The pack head uses `(tenant, connector)` as its key. It includes binding revisio
 | G19–G20 | Bound importer matches; mass withdrawal requires explicit admin override: `IMPORTER_MISMATCH`, `PACK_MASS_WITHDRAWAL`. |
 | G21 | Stop at 256 violations or exhausted step budget and indicate truncation: `VALIDATION_BUDGET_EXCEEDED`. |
 
-#### Schema source composition
+##### Schema source composition
 
 One graph owns a bounded ordered map of `GraphSchemaSource { source_id, origin, revision, shapes, ontology }`. The composed digest derives from all source content and revisions; compiled policy and TBox are caches, never authority. Shapes from separate sources retain separate blank-node scopes; their union is conjunctive. Ontology composition adds source triples to the view's TBox. The shared bounded validator serves `IcvConfigure`, `GraphSchema.Attach` and pack G13–G16.
 
@@ -222,11 +222,11 @@ One graph owns a bounded ordered map of `GraphSchemaSource { source_id, origin, 
 
 `GraphSchema.AttachPack` reads visible engine-owned pack schema, never caller-supplied substitute bytes. `pack__<connector>` is reserved and only the authorized worker writes it. Other graph attachments are static snapshots with a visible record ID; automatic following needs a separately specified durable target list. `IcvConfigure` maps to the operator source, preserving its wire contract. Attach validates the staged schema and later writes; it does not retroactively scan all existing data. The `GraphSchemaClasses` read supplies canonical classes/properties and composition digest for consumers.
 
-#### Failure, security and compatibility decisions
+##### Failure, security and compatibility decisions
 
 The per-tenant lock serializes pack mutations but does not replace in-write head compare-and-swap. Cancellation is checked before expensive reasoning and before atomic commit; a cancelled request must release the lock. Outbox failure is a durable failed state, not a swallowed log; retry is bounded and does not collateral-dead-letter unrelated events. Projection's graph write uses a grant scoped to that outbox row. Clustered writes for this family are `LocalOnly`. Incompatible owner layout fails by named refusal at the manifest read; an offline upgrade path is rejected. The first schema corpus remains generated from typed Rust authority and preserves its public IRI vocabulary. New source and row types require the same generated contract/receipt update and compatibility tests.
 
-### Measured model and task facts for harness configuration (R048, R066)
+#### Measured model and task facts for harness configuration (R048, R066)
 
 Data flow: evaluation run (Meristem) → pack import of a `model_profile` entry → `AgentComponentFacts::ModelProfile` (`crates/medulla-agent-types/src/agent_component/facts.rs:169`) → `AgentLibraryStore` → `Decide(harness_config)` handler (MEDULLA-DECISION-ENGINE-R128.8) → premises.
 
@@ -251,7 +251,7 @@ Decisions:
 
 Cross-repository rows: the `MERISTEM-HARNESS` row for the matched ablation runner writes `shellProficiency` and `stoppingBehaviour` with their run references. The `MEDULLA-DECISION-ENGINE` row R128 reads them.
 
-### Tool-contract facts on pack annotations (R045)
+#### Tool-contract facts on pack annotations (R045)
 
 Data flow: connector Graft SDK pack (`SCION-CONNECTOR-CONTROL-R045.1` to `.11`) → `PackAnnotations` (`crates/medulla-catalog-types/src/connector_pack/annotations.rs:46`) → `check_annotations` (`crates/medulla-h-admin/src/admin/connector_pack/import/annotations.rs:34`) → `tool_facts` (`crates/medulla-h-admin/src/admin/connector_pack/import/facts.rs:21`) → `AgentComponentFacts::Tool` (`crates/medulla-agent-types/src/agent_component/facts.rs:198`) → `request_body` (`crates/medulla-h-decide/src/decide/stat_tool_subset.rs:99`) → `smallest_covering_subset` (`crates/medulla-decision-types/src/decision/statistical/tool_subset.rs:58`) → `HarnessConfig` action space (`MEDULLA-DECISION-ENGINE-R128.9`).
 
@@ -271,7 +271,7 @@ Decisions:
 
 Cross-repository rows: the `SCION-CONNECTOR-CONTROL-R045` rows publish the facts. The `MERISTEM-HARNESS` row for parallel read-only execution consumes `read_only` and `declared_by`. The `MEDULLA-DECISION-ENGINE-R128` rows consume the size and read-only facts.
 
-#### Capability warning acceptance (R042.2)
+##### Capability warning acceptance (R042.2)
 
 The served fixture must select capability warnings by `UnresolvedCapabilityIri`
 and the candidate component URI. It must check both exact foreign claim details
@@ -279,7 +279,7 @@ and the persisted native/declared provides/requires partition. Unrelated server
 description warnings must not affect the capability-warning count. Assertion
 failures must retain the full warning list and served refusal details.
 
-#### Current producer boundary (R048.2)
+##### Current producer boundary (R048.2)
 
 `MeasuredFact<T>` and `ShellProficiency` live in the existing facts module.
 The required evaluation reference reuses measured-latency validation at decode
@@ -287,7 +287,7 @@ and through `validate`; digest text retains the existing opaque reference rules.
 Profile attachment and digest integration are implemented by R048.3 and R048.4.
 Signed pack import and readback remain the separate R048.5 leaf.
 
-#### Measured profile fields (R048.3, R048.4)
+##### Measured profile fields (R048.3, R048.4)
 
 `ModelProfile` carries optional measured shell proficiency and stopping behaviour.
 Both use the existing evaluation reference validator during decode and draft
@@ -304,7 +304,7 @@ R066.1 owns the separate SHACL shapes and evaluation links.
 Before integration, regenerate the contract surfaces from the Rust schema source
 and check them. Producer tests do not substitute for that check.
 
-### Skill packages rendered on demand (R100)
+#### Skill packages rendered on demand (R100)
 
 Data flow: fleet catalog list wire method → `skill_row` (`crates/medulla-server-consensus/src/dispatch/consensus/fleet_catalog/project.rs:271`) → `render_skill_package` (new) → `FleetCatalogRow::Skill` with a `RenderedSkillPackage` → listing.
 
@@ -320,7 +320,7 @@ Decision: render on read from the graph. Rejected: keep static package snapshots
 
 Cross-repository rows: the `AU-SKILLS` row that consumes the package depends on the contract name `RenderedSkillPackage`.
 
-#### Signed model facts source (R048.5)
+##### Signed model facts source (R048.5)
 
 The pack model DTO now carries both measured fields. Rust and Python pack digest
 writers append present values and evaluation references. Absent values retain
@@ -343,7 +343,7 @@ successful import and canonical readback. Alias decoding must preserve the signe
 canonical body. These aliases do not establish R048.1 ontology or Python naming.
 Test bindings alone do not establish served acceptance.
 
-### R071.1 and R097.2: governed vocabulary crosswalks
+#### R071.1 and R097.2: governed vocabulary crosswalks
 
 Candidates EG:34 and EG:58 extend the existing core ontology and domain-pack owners. Schema.org and SKOS provide interoperability terms. They do not become ontology authorities. Medulla retains RDF/OWL semantics, upper-ontology disjointness, schema validation and activation decisions.
 
@@ -365,7 +365,7 @@ Cross-repository boundary: connectors and applications supply candidates and con
 
 The direction contract follows the [SKOS mapping reference](https://www.w3.org/TR/skos-reference/#mapping). Its broadMatch relation points to the broader concept; narrowMatch is its inverse.
 
-#### R066.2 shell-centric task fact
+##### R066.2 shell-centric task fact
 
 The registered `core:swarm-topology@1` source now declares `swarm:shellCentric` as an optional boolean.
 Its shape permits at most one value. It checks both task instances and task-class declarations.
@@ -378,23 +378,23 @@ Native execution remains pending. Reference validation does not establish native
 Run `cargo test --locked -p medulla-shacl --test swarm_topology_shapes --offline` on an admitted build lane.
 
 
-### Native prompt identity, rendering and blueprint round trips
+#### Native prompt identity, rendering and blueprint round trips
 
 This definition extends R001, R002 and R094 without changing their original acceptance cells.
 Each child names one producer, transition or proving journey.
 No runtime scenario receipt accompanies these definitions.
 Existing source names establish reuse boundaries, not implementation of the new prompt operations.
 
-#### Original acceptance crosswalk
+##### Original acceptance crosswalk
 
 | Original obligation | Required residual children |
 |---|---|
 | ConnectorPackIndex and entry types | R001.1 |
 | Section and annotation types | R001.2 |
 | ConnectorPackOp and AgentComponent.Content shapes | R001.3 |
-| Published framed SHA-256 sample vectors, byte-for-byte | R001.4 |
+| Published framed SHA256 sample vectors, byte-for-byte | R001.4 |
 | All generated clients share one wire contract | R001.5 |
-| SHA-256 engine body staging | R002.1 |
+| SHA256 engine body staging | R002.1 |
 | Guarded holder/refcount updates for unchanged components | R002.2 |
 | Revised components and historical holders | R002.3 |
 | Withdrawn components and historical holders | R002.4 |
@@ -405,7 +405,7 @@ Existing source names establish reuse boundaries, not implementation of the new 
 Prompt-specific tests cannot substitute for these original obligations.
 Every prior landing receipt and test binding remains evidence at its original scope.
 
-#### Existing code and reachability
+##### Existing code and reachability
 
 Inspection base: `38cae80eb37eba97a273e2a6259e2eb0dfe46b02`.
 
@@ -427,7 +427,7 @@ The intended renderer path in R001.8 is a work target, not an existing implement
 Do not copy prompt content into component metadata or introduce a second registry.
 Graph nodes retain typed identity, revisions, schema and body dependencies; engine-owned bodies retain the complete payload.
 
-#### Typed payload and render policy
+##### Typed payload and render policy
 
 A blueprint envelope carries format revision, component identity, exact base revision, schema pin, payload and provenance.
 The server derives tenant, actor and permitted scope from verified context.
@@ -476,7 +476,7 @@ A modified import names that identity and expected base; an admitted change crea
 An unchanged import follows existing no-op semantics, and a lost-reply retry returns the same operation receipt.
 Reserved pack identities still use pack admission; native import cannot bypass importer binding or retirement rules.
 
-#### Producer dependencies and authority
+##### Producer dependencies and authority
 
 | Consumer obligation | Required producer or boundary | Evidence still required |
 |---|---|---|
@@ -518,7 +518,7 @@ Arbora RepositoryWriteBackPreview carries the actual Graft SDK DryRunObservation
 These are defined producer contracts; their names and merge commits do not prove runtime availability.
 Their published definitions identify missing exports, provider adapters, registry composition and qualified replay wiring as implementation prerequisites.
 
-Use the exact exported blueprint bytes as Graft SDK payload_base64, with matching SHA-256 and byte count.
+Use the exact exported blueprint bytes as Graft SDK payload_base64, with matching SHA256 and byte count.
 Bind the immutable repository base, relative path, mode, actor, scope, canonical change-set digest, approval and Graft SDK effect key.
 Require request.intent to equal durable.desired_patch["repository_effect"], preserving the Graft SDK's sole-field patch, scope and provenance constraints.
 Arbora binds the complete RepositoryWriteBackParams projection and trusted configuration digest to the COMMIT operation and existing confirmation.
@@ -533,7 +533,7 @@ R002.10 still lacks the exact Meristem owning requirement and production model-d
 Those must consume the render receipt before transport and prove one valid request versus zero invalid requests.
 The source-effect producers do not fill that boundary. No other prompt-evolution or Meristem audit input is absorbed by these references.
 
-#### Source provenance and limitations
+##### Source provenance and limitations
 
 The two original field-array hashes were checked against the coordinator recipe before writing.
 EG:15 hash: `e58f10a2b4e4daa2525f90a8ac283d43a43bb695c635305900acd420fac669ba`.
@@ -546,13 +546,13 @@ Its earlier direct-file-write proposal does not override the separate approved-e
 Neither accepted input supplies a research citation; no research result is claimed here.
 
 <!-- spec-definition-patch:owner-batch-20261012-typed-packs-and-catalog -->
-### Connector packs as native OWL/RDF (R101, R102)
+#### Connector packs as native OWL/RDF (R101, R102)
 
-#### Vision
+##### Vision
 
 Every connector ships one OWL/RDF ontology pack. The pack holds the connector's domain ontology and its ingest contract. It also holds the connector's features, tools, prompts and skills. The engine imports the pack and stores every element as native relationships in the pack graph. Selection is an engine decision. The engine answers which algorithm, tool or skill applies by SPARQL and `Decide` over that ontology. Connectors and agents ask; the engine decides and computes. The Graft SDK authors the pack from the connector's typed declarations (`SCION-CONNECTOR-CONTROL-R067`). The competency questions in `MEDULLA-CQ-CONN-R084` accept this design.
 
-#### Current state
+##### Current state
 
 Ontology and shapes entries are native RDF. They become one graph schema source through `projection_documents_from_store` (`crates/medulla-h-admin/src/admin/connector_pack/reproject.rs:227`).
 
@@ -560,17 +560,17 @@ A connector serves its data sources and mappings as JSON at `connector://resourc
 
 `SourceIngest` resolves `connector:<connector>#mappings/<type>` and `connector:<connector>#relations/<resource>/<relation>`. The resolvers are `resolve_connector_schema_mapping` and `resolve_connector_relationship_mapping` (`crates/medulla-persistence-records/src/connector_pack.rs`). The engine holds no manifest entry kind and no YAML parser.
 
-#### Design
+##### Design
 
 The `connector_pack-v1.ttl` vocabulary of R101.1 and R101.2 and the surface triples of R102 remain the planned direction for graph-resident contracts. Until they land, the declaration and the pack ontology are the only mapping authority.
 
 The outbox consumer runs `project` (`crates/medulla-h-admin/src/connector_pack_projection.rs:220`) and `project_head` (`reproject.rs:72`). Projection commit upserts the capability index (`MEDULLA-DECISION-ENGINE-R172.12.3`). `Decide` answers `CapabilityDesignation` questions at `crates/medulla-h-decide/src/decide/stat_decide.rs:137`. Reads use the SPARQL handler (`crates/medulla-h-sparql/src/rdf/sparql.rs:30`) and `OntologyInspect` (R098).
 
-#### Runtime ontology import (R103)
+##### Runtime ontology import (R103)
 
 A connector imports or revises its domain ontology at runtime without a full pack import. The served `GraphSchema` method reaches the gateway route at `crates/medulla-h-graph/src/graph_ops/gateway_graph_routes.rs:656`. `handle_gateway` (`crates/medulla-h-admin/src/graph_schema.rs:191`) matches `ImportOntology`. The engine parses and validates the body. It commits one tenant-scoped schema source revision under `ontology:<connector>/<ontology IRI>`. The content digest makes a repeated import a no-op.
 
-### MEDULLA-TYPED-PACKS-R104 — connect-time seed graph import
+#### MEDULLA-TYPED-PACKS-R104 — connect-time seed graph import
 
 Component: Connector packs
 References: MEDULLA-TYPED-PACKS-R101, MEDULLA-TYPED-PACKS-R103, [ARBORA-FLEET-R036](https://github.com/Knuckles-Team/graph-os/blob/main/specs/fleet-catalog-and-tools/spec.md), [SCION-CONNECTOR-CONTROL-R068](https://github.com/Knuckles-Team/agent-connector-sdk/blob/main/specs/SCION-CONNECTOR-CONTROL/spec.md)
@@ -589,7 +589,7 @@ Tenant isolation: the seed graph resolves inside the importing tenant.
 
 No bulk data: the seed graph names objects and their references. Entity rows stay at the source and answer through virtual mappings (`MEDULLA-UNIFIED-DATA-PLANE-R038`).
 
-### Catalog and governance records (R801 to R805)
+#### Catalog and governance records (R801 to R805)
 
 | Row | Record set | Producer | Served through |
 |---|---|---|---|

@@ -43,258 +43,271 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T037 [US1] MEDULLA-TYPED-PACKS-R016 Server pin follows declared contract, not package version
 - [ ] T038 [US1] MEDULLA-TYPED-PACKS-R017 Release scope excludes an offline Agent Library upgrade path
 - [ ] T039 [US1] MEDULLA-TYPED-PACKS-R018 Body reads use AgentComponent.Content, not a pack-specific method
-- [ ] T040 [US1] MEDULLA-TYPED-PACKS-R020 A tenant-profile administrative capability defect is out of Medulla scope
-- [ ] T041 [US2] MEDULLA-TYPED-PACKS-R021 Cross-cutting import-safety defects are release-gate obligations
-- [ ] T042 [US2] MEDULLA-TYPED-PACKS-R022 Pack index well-formedness validation
-- [ ] T043 [US2] MEDULLA-TYPED-PACKS-R023 Pack size bounds across index, entries, archive and body
-- [ ] T044 [US2] MEDULLA-TYPED-PACKS-R024 Archive presence, length and digest integrity
-- [ ] T045 [US2] MEDULLA-TYPED-PACKS-R025 Archive section layout and offset correctness
-- [ ] T046 [US2] MEDULLA-TYPED-PACKS-R026 Section, entry and pack digest recomputation
-- [ ] T047 [US2] MEDULLA-TYPED-PACKS-R027 Text body UTF-8 validity without a byte-order mark
-- [ ] T048 [US2] MEDULLA-TYPED-PACKS-R028 Bounded JSON body and schema validation
-- [ ] T049 [US2] MEDULLA-TYPED-PACKS-R029 SKILL.md front-matter validation
-- [ ] T050 [US2] MEDULLA-TYPED-PACKS-R030 Tool entries require an input schema
-- [ ] T051 [US2] MEDULLA-TYPED-PACKS-R031 Empty description falls back to the entry name
-- [ ] T052 [US2] MEDULLA-TYPED-PACKS-R032 Capability, cost, latency and model annotation validation
-- [ ] T053 [US2] MEDULLA-TYPED-PACKS-R033 Bounded Turtle parsing for ontology and shapes
-- [ ] T054 [US2] MEDULLA-TYPED-PACKS-R034 Shape blank-node scoping and SPARQL-backed constraint rejection
-- [ ] T055 [US2] MEDULLA-TYPED-PACKS-R035 Step-bounded SHACL cross-validation against the ontology
-- [ ] T056 [US2] MEDULLA-TYPED-PACKS-R036 Sibling reference resolution without cycles
-- [ ] T057 [US2] MEDULLA-TYPED-PACKS-R037 Server-stamped draft validation before commit
-- [ ] T058 [US2] MEDULLA-TYPED-PACKS-R038 Import requires a matching bound importer identity
-- [ ] T059 [US2] MEDULLA-TYPED-PACKS-R039 Mass-withdrawal guard requires an explicit admin override
-- [ ] T060 [US2] MEDULLA-TYPED-PACKS-R040 Validation stops at a bounded violation count
-- [ ] T061 [US2] MEDULLA-TYPED-PACKS-R041 Write-time refusal codes for pack import conflicts
-- [ ] T062 [US2] MEDULLA-TYPED-PACKS-R042.1 Native capability annotation admission
-- [ ] T063 [US2] MEDULLA-TYPED-PACKS-R042.2 Served capability claim and refusal proof
-- [ ] T064 [US2] MEDULLA-TYPED-PACKS-R043 Modality annotations on pack entries
-- [ ] T065 [US2] MEDULLA-TYPED-PACKS-R044 Medulla-computed tool schema digests
-- [ ] T066 [US2] MEDULLA-TYPED-PACKS-R045.1 Annotation type carries side effects, declarer and schema size
-- [ ] T067 [US2] MEDULLA-TYPED-PACKS-R045.2 Absent facts take safe defaults, never zero
-- [ ] T068 [US2] MEDULLA-TYPED-PACKS-R045.3 The annotation digest covers the new fields without moving old vectors
-- [ ] T069 [US2] MEDULLA-TYPED-PACKS-R045.4 Admission refuses an unknown side-effect or declarer value
-- [ ] T070 [US2] MEDULLA-TYPED-PACKS-R045.5 Admission records an unproven read-only claim
-- [ ] T071 [US2] MEDULLA-TYPED-PACKS-R045.6 The tool-subset path abstains for a tool with no size
-- [ ] T072 [US2] MEDULLA-TYPED-PACKS-R045.7 A read-only claim is certified only by a trusted declarer
-- [ ] T073 [US2] MEDULLA-TYPED-PACKS-R045.8 The Python client carries the new fields
-- [ ] T074 [US2] MEDULLA-TYPED-PACKS-R045.9 End-to-end proof: a two-tool pack yields a budget-respecting subset
-- [ ] T075 [US2] MEDULLA-TYPED-PACKS-R046 Cost annotation on pack entries
-- [ ] T076 [US2] MEDULLA-TYPED-PACKS-R047 Latency annotation on pack entries
-- [ ] T077 [US2] MEDULLA-TYPED-PACKS-R048.1 Context window is a named model fact
-- [ ] T078 [US2] MEDULLA-TYPED-PACKS-R048.2 A measured fact cites the evaluation run that produced it
-- [ ] T079 [US2] MEDULLA-TYPED-PACKS-R048.3 Shell proficiency is a measured model fact
-- [ ] T080 [US2] MEDULLA-TYPED-PACKS-R048.4 Stopping behaviour is a measured model fact
-- [ ] T081 [US2] MEDULLA-TYPED-PACKS-R048.5 Pack import round-trips the new model facts
-- [ ] T082 [US2] MEDULLA-TYPED-PACKS-R049 contract_pin is carried as an opaque Graft SDK claim
-- [ ] T083 [US2] MEDULLA-TYPED-PACKS-R050 Per-entry contract_version replaces package-version pinning
-- [ ] T084 [US2] MEDULLA-TYPED-PACKS-R051 Composable per-graph schema source sets
-- [ ] T085 [US2] MEDULLA-TYPED-PACKS-R052 No pack-specific stand-in for pending schema authority
-- [ ] T086 [US2] MEDULLA-TYPED-PACKS-R053 Visible-staleness snapshot for non-pack schema attach
-- [ ] T087 [US2] MEDULLA-TYPED-PACKS-R054 One topic per Agent Library outbox consumer
-- [ ] T088 [US2] MEDULLA-TYPED-PACKS-R055 Outbox retry never collateral dead-letters unrelated events
-- [ ] T089 [US2] MEDULLA-TYPED-PACKS-R056 Owner-layout refusal happens at the manifest read
-- [ ] T090 [US2] MEDULLA-TYPED-PACKS-R057 Ontology withdrawal removes a whole source, not per-triple
-- [ ] T091 [US2] MEDULLA-TYPED-PACKS-R058 One shared derivation-step budget bounds EL+/RL reasoning
-- [ ] T092 [US2] MEDULLA-TYPED-PACKS-R059 Schema attach validates only newly introduced data
-- [ ] T093 [US2] MEDULLA-TYPED-PACKS-R061 Bounded schema source catalog: 32 sources, 2 MiB per document
-- [ ] T094 [US2] MEDULLA-TYPED-PACKS-R062 GraphSchema replicates through the existing GraphState route
-- [ ] T095 [US2] MEDULLA-TYPED-PACKS-R063 Agent-layer row types affected by a schema bump are enumerated
-- [ ] T096 [US2] MEDULLA-TYPED-PACKS-R064 Output-schema digest recorded on tool pins
-- [ ] T097 [US2] MEDULLA-TYPED-PACKS-R065 Medulla does not recompute the connector SDK's contract-pin normalization
-- [ ] T098 [US2] MEDULLA-TYPED-PACKS-R066.1 SHACL shapes validate the measured model facts
-- [ ] T099 [US2] MEDULLA-TYPED-PACKS-R066.2 The task class carries a shell-centric fact
-- [ ] T100 [US2] MEDULLA-TYPED-PACKS-R066.3 The shell-centric fact is inherited by task subclasses
-- [ ] T101 [US2] MEDULLA-TYPED-PACKS-R067 A new library method lands with its descriptor and client model
-- [ ] T102 [US2] MEDULLA-TYPED-PACKS-R068 Contract regeneration packages the complete generated set
-- [ ] T103 [US2] MEDULLA-TYPED-PACKS-R070 A committed fixture matches the type that produces it
-- [ ] T104 [US3] MEDULLA-TYPED-PACKS-R071.1.1 Crosswalk model
-- [ ] T105 [US3] MEDULLA-TYPED-PACKS-R071.1.2 Crosswalk behaviour
-- [ ] T106 [US3] MEDULLA-TYPED-PACKS-R071.1.3 Crosswalk wiring
-- [ ] T107 [US3] MEDULLA-TYPED-PACKS-R071.1.4 Crosswalk refusals
-- [ ] T108 [US3] MEDULLA-TYPED-PACKS-R071.1.5 Crosswalk evidence
-- [ ] T109 [US3] MEDULLA-TYPED-PACKS-R071.1.6 Crosswalk hot-path proof
-- [ ] T110 [US3] MEDULLA-TYPED-PACKS-R071.2 Shipped modules extend core classes and never import core
-- [ ] T111 [US3] MEDULLA-TYPED-PACKS-R071.100 Canonical hierarchical concept paths
-- [ ] T112 [US3] MEDULLA-TYPED-PACKS-R073 Raise the core schema source bound to 64 and split world_model
-- [ ] T113 [US3] MEDULLA-TYPED-PACKS-R074 Least-privilege per-pack projection grant with recorded failure
-- [ ] T114 [US3] MEDULLA-TYPED-PACKS-R077 GraphSchemaClasses exposes canonical class and property names
-- [ ] T115 [US3] MEDULLA-TYPED-PACKS-R078 Proven retrieval-plan templates keyed by task class and schema digest
-- [ ] T116 [US3] MEDULLA-TYPED-PACKS-R081 Core ontology object model lives in Medulla
-- [ ] T117 [US3] MEDULLA-TYPED-PACKS-R082 Rust serde types replace hand-written graph-schema DTOs
-- [ ] T118 [US3] MEDULLA-TYPED-PACKS-R083 Schema-drift SHACL rendering and contract store live in Medulla
-- [ ] T119 [US3] MEDULLA-TYPED-PACKS-R084 Request deadlines propagate into long-running pack operations
-- [ ] T120 [US3] MEDULLA-TYPED-PACKS-R085.4.1 Pure renewal ceiling transitions
-- [ ] T121 [US3] MEDULLA-TYPED-PACKS-R085.4.3 Renewal contract and served qualification
-- [ ] T122 [US3] MEDULLA-TYPED-PACKS-R085.5.1 Pure registered approval-key transitions
-- [ ] T123 [US3] MEDULLA-TYPED-PACKS-R085.6.1 Pure credential observation
-- [ ] T124 [US3] MEDULLA-TYPED-PACKS-R085.7.1 Pure reference inspection
-- [ ] T125 [US3] MEDULLA-TYPED-PACKS-R086 Planted derivation-budget and malformed-path cases are refused
-- [ ] T126 [US3] MEDULLA-TYPED-PACKS-R087 Stable error codes for auth-boundary refusals
-- [ ] T127 [US3] MEDULLA-TYPED-PACKS-R088 Embedded engine enforces graph-level access control
-- [ ] T128 [US3] MEDULLA-TYPED-PACKS-R089 Blob-layout table for pack body holder rows
-- [ ] T129 [US3] MEDULLA-TYPED-PACKS-R090.1 A typed-vocabulary-to-Turtle generator reproduces checked-in output byte-for-byte
-- [ ] T130 [US3] MEDULLA-TYPED-PACKS-R092 Python client idempotency key excludes the request ID
-- [ ] T131 [US3] MEDULLA-TYPED-PACKS-R093.1 Public Turtle parse identity locality
-- [ ] T132 [US3] MEDULLA-TYPED-PACKS-R093.2 Reproject-path blank-node isolation
-- [ ] T133 [US3] MEDULLA-TYPED-PACKS-R094.1 Stable content route returns verified bytes
-- [ ] T134 [US3] MEDULLA-TYPED-PACKS-R094.2 Pinned native blueprint export
-- [ ] T135 [US3] MEDULLA-TYPED-PACKS-R094.3 Modified native blueprint import
-- [ ] T136 [US3] MEDULLA-TYPED-PACKS-R094.4 Blueprint retry identity
-- [ ] T137 [US3] MEDULLA-TYPED-PACKS-R094.5 Served lossless blueprint round trip
-- [ ] T138 [US3] MEDULLA-TYPED-PACKS-R094.6 Optimization proposals carry no authority
-- [ ] T139 [US3] MEDULLA-TYPED-PACKS-R094.7 Approved repository-source effect dependency
-- [ ] T140 [US3] MEDULLA-TYPED-PACKS-R094.8 Record the source-effect receipt on the component revision
-- [ ] T141 [US3] MEDULLA-TYPED-PACKS-R096.1 A rejected projection never leaves a head dark without a state
-- [ ] T142 [US3] MEDULLA-TYPED-PACKS-R097.1 HR domain vocabulary as a typed domain pack
-- [ ] T143 [US3] MEDULLA-TYPED-PACKS-R097.2.1 Crosswalk coverage model
-- [ ] T144 [US3] MEDULLA-TYPED-PACKS-R097.2.2 Crosswalk coverage behaviour
-- [ ] T145 [US3] MEDULLA-TYPED-PACKS-R097.2.3 Crosswalk coverage wiring
-- [ ] T146 [US3] MEDULLA-TYPED-PACKS-R097.2.4 Crosswalk coverage refusals
-- [ ] T147 [US3] MEDULLA-TYPED-PACKS-R097.2.5 Crosswalk coverage evidence
-- [ ] T148 [US3] MEDULLA-TYPED-PACKS-R097.2.6 Crosswalk coverage hot-path proof
-- [ ] T149 [US3] MEDULLA-TYPED-PACKS-R097.2.7.1 External term mapping and coverage model
-- [ ] T150 [US3] MEDULLA-TYPED-PACKS-R097.2.7.2 External term coverage behaviour
-- [ ] T151 [US3] MEDULLA-TYPED-PACKS-R097.2.7.3 External schema import wiring and refusals
-- [ ] T152 [US3] MEDULLA-TYPED-PACKS-R097.2.7.4 External schema import hot-path proof
-- [ ] T153 [US3] MEDULLA-TYPED-PACKS-R097.700 Domain pack manifest, mapping language, loader and promotion bridge
-- [ ] T154 [US3] MEDULLA-TYPED-PACKS-R097.701 Domain pack refusals, evidence and hot-path proof
-- [ ] T155 [US3] MEDULLA-TYPED-PACKS-R098 Ontology inspection and inline data triples for validation
-- [ ] T156 [US3] MEDULLA-TYPED-PACKS-R099 Best-matching prototype by cosine similarity in the numeric kernel
-- [ ] T157 [US4] MEDULLA-TYPED-PACKS-R100.1 Rendered skill package model
-- [ ] T158 [US4] MEDULLA-TYPED-PACKS-R100.2 Render a skill package from graph content
-- [ ] T159 [US4] MEDULLA-TYPED-PACKS-R100.3 Call rendering from the catalog listing
-- [ ] T160 [US4] MEDULLA-TYPED-PACKS-R100.4 Dangling ontology reference refusal
-- [ ] T161 [US4] MEDULLA-TYPED-PACKS-R100.5 Rendered package evidence
-- [ ] T162 [US4] MEDULLA-TYPED-PACKS-R100.6 Rendered package hot-path proof
-- [ ] T163 [US4] MEDULLA-TYPED-PACKS-R100.100 Lossless SKILL.md frontmatter and step editing
-- [ ] T164 [US4] MEDULLA-TYPED-PACKS-R100.101 Skill consumer compatibility and declared-migration admission
-- [ ] T165 [US4] MEDULLA-TYPED-PACKS-R101.1 Model
-- [ ] T166 [US4] MEDULLA-TYPED-PACKS-R101.2 Connector contract shapes
-- [ ] T167 [US4] MEDULLA-TYPED-PACKS-R101.9 One tenant key for pack heads
-- [ ] T168 [US4] MEDULLA-TYPED-PACKS-R101.10 Mappings come from the connector's declaration
-- [ ] T169 [US4] MEDULLA-TYPED-PACKS-R101.11 Undeclared mappings are refused by type
-- [ ] T170 [US4] MEDULLA-TYPED-PACKS-R102.1 Model
-- [ ] T171 [US4] MEDULLA-TYPED-PACKS-R102.2 Surface node projection
-- [ ] T172 [US4] MEDULLA-TYPED-PACKS-R102.3 Pack ontology extends core classes and never redeclares them
-- [ ] T173 [US4] MEDULLA-TYPED-PACKS-R102.4 Surface projection wiring and consumers
-- [ ] T174 [US4] MEDULLA-TYPED-PACKS-R102.5 Surface refusals
-- [ ] T175 [US4] MEDULLA-TYPED-PACKS-R102.6 Surface evidence
-- [ ] T176 [US4] MEDULLA-TYPED-PACKS-R102.7 Surface hot-path proof
-- [ ] T177 [US4] MEDULLA-TYPED-PACKS-R103.1 Model
-- [ ] T178 [US4] MEDULLA-TYPED-PACKS-R103.2 Runtime ontology import behaviour
-- [ ] T179 [US4] MEDULLA-TYPED-PACKS-R103.3 Runtime ontology import wiring
-- [ ] T180 [US4] MEDULLA-TYPED-PACKS-R103.4 Runtime ontology import refusals
-- [ ] T181 [US4] MEDULLA-TYPED-PACKS-R103.5 Runtime ontology revision evidence
-- [ ] T182 [US4] MEDULLA-TYPED-PACKS-R103.6 Runtime ontology hot-path proof
-- [ ] T183 [US4] MEDULLA-TYPED-PACKS-R104.1 Model
-- [ ] T184 [US4] MEDULLA-TYPED-PACKS-R104.2 Seed graph import behaviour
-- [ ] T185 [US4] MEDULLA-TYPED-PACKS-R104.3 Seed graph import wiring
-- [ ] T186 [US4] MEDULLA-TYPED-PACKS-R104.4 Seed graph refusals
-- [ ] T187 [US4] MEDULLA-TYPED-PACKS-R104.5 Seed graph receipt
-- [ ] T188 [US4] MEDULLA-TYPED-PACKS-R104.6 Seed graph hot-path proof
-- [ ] T189 [US4] MEDULLA-TYPED-PACKS-R105.1 Delete the orphan warn switch; the parent-link check refuses
-- [ ] T190 [US4] MEDULLA-TYPED-PACKS-R105.3.1 Central source-record bridge
-- [ ] T191 [US4] MEDULLA-TYPED-PACKS-R105.4 The parent catalog holds a service-operations core aligned to the Open Group IT4IT data objects
-- [ ] T192 [US4] MEDULLA-TYPED-PACKS-R105.5 The competency-question paths are complete on the engine side
-- [ ] T193 [US4] MEDULLA-TYPED-PACKS-R105.6 The parent catalog declares the IT4IT delivery data objects
-- [ ] T194 [US4] MEDULLA-TYPED-PACKS-R105.7 The parent catalog declares a data-platform and machine-learning module aligned to DCAT, PROV-O and ML-Schema
-- [ ] T195 [US4] MEDULLA-TYPED-PACKS-R105.8 The parent catalog declares a media and content module aligned to schema.org media types, EBUCore, IFLA LRM and ActivityStreams
-- [ ] T196 [US4] MEDULLA-TYPED-PACKS-R105.9 The parent catalog declares a search, retrieval and information-source module aligned to OpenSearch, DCMI Terms and PROV-O
-- [ ] T197 [US4] MEDULLA-TYPED-PACKS-R106.1 Model
-- [ ] T198 [US4] MEDULLA-TYPED-PACKS-R106.2 Behavior
-- [ ] T199 [US4] MEDULLA-TYPED-PACKS-R106.3 Wiring
-- [ ] T200 [US4] MEDULLA-TYPED-PACKS-R106.4 Refusal
-- [ ] T201 [US4] MEDULLA-TYPED-PACKS-R106.5 Evidence
-- [ ] T202 [US4] MEDULLA-TYPED-PACKS-R106.6 Hot-path proof
-- [ ] T203 [US4] MEDULLA-TYPED-PACKS-R106.7 Competency queries
-- [ ] T204 [US4] MEDULLA-TYPED-PACKS-R107.1 Model
-- [ ] T205 [US4] MEDULLA-TYPED-PACKS-R107.2 Behavior
-- [ ] T206 [US4] MEDULLA-TYPED-PACKS-R107.3 Wiring
-- [ ] T207 [US4] MEDULLA-TYPED-PACKS-R107.4 Refusal
-- [ ] T208 [US4] MEDULLA-TYPED-PACKS-R107.5 Evidence
-- [ ] T209 [US4] MEDULLA-TYPED-PACKS-R107.6 Hot-path proof
-- [ ] T210 [US4] MEDULLA-TYPED-PACKS-R108.1 Model
-- [ ] T211 [US4] MEDULLA-TYPED-PACKS-R108.2 Behavior
-- [ ] T212 [US4] MEDULLA-TYPED-PACKS-R108.3 Wiring
-- [ ] T213 [US4] MEDULLA-TYPED-PACKS-R108.4 Refusal
-- [ ] T214 [US4] MEDULLA-TYPED-PACKS-R108.5 Evidence
-- [ ] T215 [US4] MEDULLA-TYPED-PACKS-R108.6 Hot-path proof
-- [ ] T216 [US4] MEDULLA-TYPED-PACKS-R108.7 Technical metadata from contracts
-- [ ] T217 [US4] MEDULLA-TYPED-PACKS-R108.8 Operational metadata from provenance
-- [ ] T218 [US4] MEDULLA-TYPED-PACKS-R108.9 Sensitivity propagation and policy link
-- [ ] T219 [US4] MEDULLA-TYPED-PACKS-R108.10 End-to-end lineage across the platform
-- [ ] T220 [US4] MEDULLA-TYPED-PACKS-R108.11 Metric and KPI definitions
-- [ ] T221 [US4] MEDULLA-TYPED-PACKS-R108.12 Annotations: comments, tags, ratings and threads
-- [ ] T222 [US4] MEDULLA-TYPED-PACKS-R108.13 Curated articles and guides
-- [ ] T223 [US4] MEDULLA-TYPED-PACKS-R108.14 Dashboards, reports, saved queries and templates
-- [ ] T224 [US4] MEDULLA-TYPED-PACKS-R108.15 AI and ML model assets
-- [ ] T225 [US4] MEDULLA-TYPED-PACKS-R108.16 One ranked index across all asset families, callable from queries
-- [ ] T226 [US4] MEDULLA-TYPED-PACKS-R109.1 Model
-- [ ] T227 [US4] MEDULLA-TYPED-PACKS-R109.2 Behavior
-- [ ] T228 [US4] MEDULLA-TYPED-PACKS-R109.3 Wiring
-- [ ] T229 [US4] MEDULLA-TYPED-PACKS-R109.4 Refusal
-- [ ] T230 [US4] MEDULLA-TYPED-PACKS-R109.5 Evidence
-- [ ] T231 [US4] MEDULLA-TYPED-PACKS-R109.6 Hot-path proof
-- [ ] T232 [US5] MEDULLA-TYPED-PACKS-R650.1 Model
-- [ ] T233 [US5] MEDULLA-TYPED-PACKS-R650.2 Behavior
-- [ ] T234 [US5] MEDULLA-TYPED-PACKS-R650.3 Wiring
-- [ ] T235 [US5] MEDULLA-TYPED-PACKS-R650.4 Refusal
-- [ ] T236 [US5] MEDULLA-TYPED-PACKS-R650.5 Evidence
-- [ ] T237 [US5] MEDULLA-TYPED-PACKS-R650.6 Hot-path proof
-- [ ] T238 [US5] MEDULLA-TYPED-PACKS-R651.1 Model
-- [ ] T239 [US5] MEDULLA-TYPED-PACKS-R651.2 Behavior
-- [ ] T240 [US5] MEDULLA-TYPED-PACKS-R651.3 Wiring
-- [ ] T241 [US5] MEDULLA-TYPED-PACKS-R651.4 Refusal
-- [ ] T242 [US5] MEDULLA-TYPED-PACKS-R651.5 Evidence
-- [ ] T243 [US5] MEDULLA-TYPED-PACKS-R651.6 Hot-path proof
-- [ ] T244 [US5] MEDULLA-TYPED-PACKS-R652.1 Model
-- [ ] T245 [US5] MEDULLA-TYPED-PACKS-R652.2 Behavior
-- [ ] T246 [US5] MEDULLA-TYPED-PACKS-R652.3 Wiring
-- [ ] T247 [US5] MEDULLA-TYPED-PACKS-R652.4 Refusal
-- [ ] T248 [US5] MEDULLA-TYPED-PACKS-R652.5 Evidence
-- [ ] T249 [US5] MEDULLA-TYPED-PACKS-R652.6 Hot-path proof
-- [ ] T250 [US6] MEDULLA-TYPED-PACKS-R700.5 Evidence
-- [ ] T251 [US6] MEDULLA-TYPED-PACKS-R700.6 Hot-path proof
-- [ ] T252 [US6] MEDULLA-TYPED-PACKS-R710 Schema drift classification, containment, repair proposal and activation: model and behavior
-- [ ] T253 [US6] MEDULLA-TYPED-PACKS-R712 Schema drift classification, containment, repair proposal and activation: refusal, evidence and hot-path proof
-- [ ] T254 [US6] MEDULLA-TYPED-PACKS-R714 Delivery-path wiring of drift classification
-- [ ] T255 [US6] MEDULLA-TYPED-PACKS-R715 Served quarantine of a drifted delivery
-- [ ] T256 [US7] MEDULLA-TYPED-PACKS-R801.1 Model
-- [ ] T257 [US7] MEDULLA-TYPED-PACKS-R801.2 Behavior
-- [ ] T258 [US7] MEDULLA-TYPED-PACKS-R801.3 Wiring
-- [ ] T259 [US7] MEDULLA-TYPED-PACKS-R801.4 Refusal
-- [ ] T260 [US7] MEDULLA-TYPED-PACKS-R801.5 Evidence
-- [ ] T261 [US7] MEDULLA-TYPED-PACKS-R801.6 Hot-path proof
-- [ ] T262 [US7] MEDULLA-TYPED-PACKS-R801.7 Proposed descriptions for terms and assets
-- [ ] T263 [US7] MEDULLA-TYPED-PACKS-R802.1 Model
-- [ ] T264 [US7] MEDULLA-TYPED-PACKS-R802.2 Behavior
-- [ ] T265 [US7] MEDULLA-TYPED-PACKS-R802.3 Wiring
-- [ ] T266 [US7] MEDULLA-TYPED-PACKS-R802.4 Refusal
-- [ ] T267 [US7] MEDULLA-TYPED-PACKS-R802.5 Evidence
-- [ ] T268 [US7] MEDULLA-TYPED-PACKS-R802.6 Hot-path proof
-- [ ] T269 [US7] MEDULLA-TYPED-PACKS-R802.7 Trust flags on assets
-- [ ] T270 [US7] MEDULLA-TYPED-PACKS-R802.8 Critical data elements
-- [ ] T271 [US7] MEDULLA-TYPED-PACKS-R803.1 Model
-- [ ] T272 [US7] MEDULLA-TYPED-PACKS-R803.2 Column scan behavior
-- [ ] T273 [US7] MEDULLA-TYPED-PACKS-R803.3 Job wiring
-- [ ] T274 [US7] MEDULLA-TYPED-PACKS-R803.4 Refusals
-- [ ] T275 [US7] MEDULLA-TYPED-PACKS-R803.5 Evidence
-- [ ] T276 [US7] MEDULLA-TYPED-PACKS-R803.6 Hot-path proof
-- [ ] T277 [US7] MEDULLA-TYPED-PACKS-R803.7 Document chunk wiring
-- [ ] T278 [US7] MEDULLA-TYPED-PACKS-R804.1 Model
-- [ ] T279 [US7] MEDULLA-TYPED-PACKS-R804.2 Diff and impact behavior
-- [ ] T280 [US7] MEDULLA-TYPED-PACKS-R804.3 Wiring
-- [ ] T281 [US7] MEDULLA-TYPED-PACKS-R804.4 Refusals
-- [ ] T282 [US7] MEDULLA-TYPED-PACKS-R804.5 Evidence
-- [ ] T283 [US7] MEDULLA-TYPED-PACKS-R804.6 Hot-path proof
-- [ ] T284 [US7] MEDULLA-TYPED-PACKS-R805.1 Model
-- [ ] T285 [US7] MEDULLA-TYPED-PACKS-R805.2 Contract check behavior
-- [ ] T286 [US7] MEDULLA-TYPED-PACKS-R805.3 Wiring
-- [ ] T287 [US7] MEDULLA-TYPED-PACKS-R805.4 Refusals
-- [ ] T288 [US7] MEDULLA-TYPED-PACKS-R805.5 Evidence
-- [ ] T289 [US7] MEDULLA-TYPED-PACKS-R805.6 Hot-path proof
-- [ ] T290 [US7] MEDULLA-TYPED-PACKS-R805.7 Data product proposals
-- [ ] T291 [US7] MEDULLA-TYPED-PACKS-R806 Serve schema drift records and repair approval as methods
-- [ ] T292 [US7] MEDULLA-TYPED-PACKS-R807 Connector conformance evidence record and read method
-- [ ] T293 [US7] MEDULLA-TYPED-PACKS-R808 Operator-selected schema import with digest check and readback
-- [ ] T294 [US7] MEDULLA-TYPED-PACKS-R809 Served canonical hash of a Turtle payload
+- [ ] T040 [US1] MEDULLA-TYPED-PACKS-R019 Only SKILL.md is imported as skill content
+- [ ] T041 [US1] MEDULLA-TYPED-PACKS-R020 A tenant-profile administrative capability defect is out of Medulla scope
+- [ ] T042 [US2] MEDULLA-TYPED-PACKS-R021 Cross-cutting import-safety defects are release-gate obligations
+- [ ] T043 [US2] MEDULLA-TYPED-PACKS-R022 Pack index well-formedness validation
+- [ ] T044 [US2] MEDULLA-TYPED-PACKS-R023 Pack size bounds across index, entries, archive and body
+- [ ] T045 [US2] MEDULLA-TYPED-PACKS-R024 Archive presence, length and digest integrity
+- [ ] T046 [US2] MEDULLA-TYPED-PACKS-R025 Archive section layout and offset correctness
+- [ ] T047 [US2] MEDULLA-TYPED-PACKS-R026 Section, entry and pack digest recomputation
+- [ ] T048 [US2] MEDULLA-TYPED-PACKS-R027 Text body UTF-8 validity without a byte-order mark
+- [ ] T049 [US2] MEDULLA-TYPED-PACKS-R028 Bounded JSON body and schema validation
+- [ ] T050 [US2] MEDULLA-TYPED-PACKS-R029 SKILL.md front-matter validation
+- [ ] T051 [US2] MEDULLA-TYPED-PACKS-R030 Tool entries require an input schema
+- [ ] T052 [US2] MEDULLA-TYPED-PACKS-R031 Empty description falls back to the entry name
+- [ ] T053 [US2] MEDULLA-TYPED-PACKS-R032 Capability, cost, latency and model annotation validation
+- [ ] T054 [US2] MEDULLA-TYPED-PACKS-R033 Bounded Turtle parsing for ontology and shapes
+- [ ] T055 [US2] MEDULLA-TYPED-PACKS-R034 Shape blank-node scoping and SPARQL-backed constraint rejection
+- [ ] T056 [US2] MEDULLA-TYPED-PACKS-R035 Step-bounded SHACL cross-validation against the ontology
+- [ ] T057 [US2] MEDULLA-TYPED-PACKS-R036 Sibling reference resolution without cycles
+- [ ] T058 [US2] MEDULLA-TYPED-PACKS-R037 Server-stamped draft validation before commit
+- [ ] T059 [US2] MEDULLA-TYPED-PACKS-R038 Import requires a matching bound importer identity
+- [ ] T060 [US2] MEDULLA-TYPED-PACKS-R039 Mass-withdrawal guard requires an explicit admin override
+- [ ] T061 [US2] MEDULLA-TYPED-PACKS-R040 Validation stops at a bounded violation count
+- [ ] T062 [US2] MEDULLA-TYPED-PACKS-R041 Write-time refusal codes for pack import conflicts
+- [ ] T063 [US2] MEDULLA-TYPED-PACKS-R042.1 Native capability annotation admission
+- [ ] T064 [US2] MEDULLA-TYPED-PACKS-R042.2 Served capability claim and refusal proof
+- [ ] T065 [US2] MEDULLA-TYPED-PACKS-R043 Modality annotations on pack entries
+- [ ] T066 [US2] MEDULLA-TYPED-PACKS-R044 Medulla-computed tool schema digests
+- [ ] T067 [US2] MEDULLA-TYPED-PACKS-R045.1 Annotation type carries side effects, declarer and schema size
+- [ ] T068 [US2] MEDULLA-TYPED-PACKS-R045.2 Absent facts take safe defaults, never zero
+- [ ] T069 [US2] MEDULLA-TYPED-PACKS-R045.3 The annotation digest covers the new fields without moving old vectors
+- [ ] T070 [US2] MEDULLA-TYPED-PACKS-R045.4 Admission refuses an unknown side-effect or declarer value
+- [ ] T071 [US2] MEDULLA-TYPED-PACKS-R045.5 Admission records an unproven read-only claim
+- [ ] T072 [US2] MEDULLA-TYPED-PACKS-R045.6 The tool-subset path abstains for a tool with no size
+- [ ] T073 [US2] MEDULLA-TYPED-PACKS-R045.7 A read-only claim is certified only by a trusted declarer
+- [ ] T074 [US2] MEDULLA-TYPED-PACKS-R045.8 The Python client carries the new fields
+- [ ] T075 [US2] MEDULLA-TYPED-PACKS-R045.9 End-to-end proof: a two-tool pack yields a budget-respecting subset
+- [ ] T076 [US2] MEDULLA-TYPED-PACKS-R046 Cost annotation on pack entries
+- [ ] T077 [US2] MEDULLA-TYPED-PACKS-R047 Latency annotation on pack entries
+- [ ] T078 [US2] MEDULLA-TYPED-PACKS-R048.1 Context window is a named model fact
+- [ ] T079 [US2] MEDULLA-TYPED-PACKS-R048.2 A measured fact cites the evaluation run that produced it
+- [ ] T080 [US2] MEDULLA-TYPED-PACKS-R048.3 Shell proficiency is a measured model fact
+- [ ] T081 [US2] MEDULLA-TYPED-PACKS-R048.4 Stopping behaviour is a measured model fact
+- [ ] T082 [US2] MEDULLA-TYPED-PACKS-R048.5 Pack import round-trips the new model facts
+- [ ] T083 [US2] MEDULLA-TYPED-PACKS-R049 contract_pin is carried as an opaque Graft SDK claim
+- [ ] T084 [US2] MEDULLA-TYPED-PACKS-R050 Per-entry contract_version replaces package-version pinning
+- [ ] T085 [US2] MEDULLA-TYPED-PACKS-R051 Composable per-graph schema source sets
+- [ ] T086 [US2] MEDULLA-TYPED-PACKS-R052 No pack-specific stand-in for pending schema authority
+- [ ] T087 [US2] MEDULLA-TYPED-PACKS-R053 Visible-staleness snapshot for non-pack schema attach
+- [ ] T088 [US2] MEDULLA-TYPED-PACKS-R054 One topic per Agent Library outbox consumer
+- [ ] T089 [US2] MEDULLA-TYPED-PACKS-R055 Outbox retry never collateral dead-letters unrelated events
+- [ ] T090 [US2] MEDULLA-TYPED-PACKS-R056 Owner-layout refusal happens at the manifest read
+- [ ] T091 [US2] MEDULLA-TYPED-PACKS-R057 Ontology withdrawal removes a whole source, not per-triple
+- [ ] T092 [US2] MEDULLA-TYPED-PACKS-R058 One shared derivation-step budget bounds EL+/RL reasoning
+- [ ] T093 [US2] MEDULLA-TYPED-PACKS-R059 Schema attach validates only newly introduced data
+- [ ] T094 [US2] MEDULLA-TYPED-PACKS-R061 Bounded schema source catalog: 32 sources, 2 MiB per document
+- [ ] T095 [US2] MEDULLA-TYPED-PACKS-R062 GraphSchema replicates through the existing GraphState route
+- [ ] T096 [US2] MEDULLA-TYPED-PACKS-R063 Agent-layer row types affected by a schema bump are enumerated
+- [ ] T097 [US2] MEDULLA-TYPED-PACKS-R064 Output-schema digest recorded on tool pins
+- [ ] T098 [US2] MEDULLA-TYPED-PACKS-R065 Medulla does not recompute the connector SDK's contract-pin normalization
+- [ ] T099 [US2] MEDULLA-TYPED-PACKS-R066.1 SHACL shapes validate the measured model facts
+- [ ] T100 [US2] MEDULLA-TYPED-PACKS-R066.2 The task class carries a shell-centric fact
+- [ ] T101 [US2] MEDULLA-TYPED-PACKS-R066.3 The shell-centric fact is inherited by task subclasses
+- [ ] T102 [US2] MEDULLA-TYPED-PACKS-R067 A new library method lands with its descriptor and client model
+- [ ] T103 [US2] MEDULLA-TYPED-PACKS-R068 Contract regeneration packages the complete generated set
+- [ ] T104 [US2] MEDULLA-TYPED-PACKS-R070 A committed fixture matches the type that produces it
+- [ ] T105 [US3] MEDULLA-TYPED-PACKS-R071.1.1 Crosswalk model
+- [ ] T106 [US3] MEDULLA-TYPED-PACKS-R071.1.2 Crosswalk behaviour
+- [ ] T107 [US3] MEDULLA-TYPED-PACKS-R071.1.3 Crosswalk wiring
+- [ ] T108 [US3] MEDULLA-TYPED-PACKS-R071.1.4 Crosswalk refusals
+- [ ] T109 [US3] MEDULLA-TYPED-PACKS-R071.1.5 Crosswalk evidence
+- [ ] T110 [US3] MEDULLA-TYPED-PACKS-R071.1.6 Crosswalk hot-path proof
+- [ ] T111 [US3] MEDULLA-TYPED-PACKS-R071.2 Shipped modules extend core classes and never import core
+- [ ] T112 [US3] MEDULLA-TYPED-PACKS-R071.100 Canonical hierarchical concept paths
+- [ ] T113 [US3] MEDULLA-TYPED-PACKS-R073 Raise the core schema source bound to 64 and split world_model
+- [ ] T114 [US3] MEDULLA-TYPED-PACKS-R074 Least-privilege per-pack projection grant with recorded failure
+- [ ] T115 [US3] MEDULLA-TYPED-PACKS-R077 GraphSchemaClasses exposes canonical class and property names
+- [ ] T116 [US3] MEDULLA-TYPED-PACKS-R078 Proven retrieval-plan templates keyed by task class and schema digest
+- [ ] T117 [US3] MEDULLA-TYPED-PACKS-R081 Core ontology object model lives in Medulla
+- [ ] T118 [US3] MEDULLA-TYPED-PACKS-R082 Rust serde types replace hand-written graph-schema DTOs
+- [ ] T119 [US3] MEDULLA-TYPED-PACKS-R083 Schema-drift SHACL rendering and contract store live in Medulla
+- [ ] T120 [US3] MEDULLA-TYPED-PACKS-R084 Request deadlines propagate into long-running pack operations
+- [ ] T121 [US3] MEDULLA-TYPED-PACKS-R085.4.1 Pure renewal ceiling transitions
+- [ ] T122 [US3] MEDULLA-TYPED-PACKS-R085.4.3 Renewal contract and served qualification
+- [ ] T123 [US3] MEDULLA-TYPED-PACKS-R085.5.1 Pure registered approval-key transitions
+- [ ] T124 [US3] MEDULLA-TYPED-PACKS-R085.6.1 Pure credential observation
+- [ ] T125 [US3] MEDULLA-TYPED-PACKS-R085.7.1 Pure reference inspection
+- [ ] T126 [US3] MEDULLA-TYPED-PACKS-R086 Planted derivation-budget and malformed-path cases are refused
+- [ ] T127 [US3] MEDULLA-TYPED-PACKS-R087 Stable error codes for auth-boundary refusals
+- [ ] T128 [US3] MEDULLA-TYPED-PACKS-R088 Embedded engine enforces graph-level access control
+- [ ] T129 [US3] MEDULLA-TYPED-PACKS-R089 Blob-layout table for pack body holder rows
+- [ ] T130 [US3] MEDULLA-TYPED-PACKS-R090.1 A typed-vocabulary-to-Turtle generator reproduces checked-in output byte-for-byte
+- [ ] T131 [US3] MEDULLA-TYPED-PACKS-R092 Python client idempotency key excludes the request ID
+- [ ] T132 [US3] MEDULLA-TYPED-PACKS-R093.1 Public Turtle parse identity locality
+- [ ] T133 [US3] MEDULLA-TYPED-PACKS-R093.2 Reproject-path blank-node isolation
+- [ ] T134 [US3] MEDULLA-TYPED-PACKS-R094.1 Stable content route returns verified bytes
+- [ ] T135 [US3] MEDULLA-TYPED-PACKS-R094.2 Pinned native blueprint export
+- [ ] T136 [US3] MEDULLA-TYPED-PACKS-R094.3 Modified native blueprint import
+- [ ] T137 [US3] MEDULLA-TYPED-PACKS-R094.4 Blueprint retry identity
+- [ ] T138 [US3] MEDULLA-TYPED-PACKS-R094.5 Served lossless blueprint round trip
+- [ ] T139 [US3] MEDULLA-TYPED-PACKS-R094.6 Optimization proposals carry no authority
+- [ ] T140 [US3] MEDULLA-TYPED-PACKS-R094.7 Approved repository-source effect dependency
+- [ ] T141 [US3] MEDULLA-TYPED-PACKS-R094.8 Record the source-effect receipt on the component revision
+- [ ] T142 [US3] MEDULLA-TYPED-PACKS-R096.1 A rejected projection never leaves a head dark without a state
+- [ ] T143 [US3] MEDULLA-TYPED-PACKS-R097.1 HR domain vocabulary as a typed domain pack
+- [ ] T144 [US3] MEDULLA-TYPED-PACKS-R097.2.1 Crosswalk coverage model
+- [ ] T145 [US3] MEDULLA-TYPED-PACKS-R097.2.2 Crosswalk coverage behaviour
+- [ ] T146 [US3] MEDULLA-TYPED-PACKS-R097.2.3 Crosswalk coverage wiring
+- [ ] T147 [US3] MEDULLA-TYPED-PACKS-R097.2.4 Crosswalk coverage refusals
+- [ ] T148 [US3] MEDULLA-TYPED-PACKS-R097.2.5 Crosswalk coverage evidence
+- [ ] T149 [US3] MEDULLA-TYPED-PACKS-R097.2.6 Crosswalk coverage hot-path proof
+- [ ] T150 [US3] MEDULLA-TYPED-PACKS-R097.2.7.1 External term mapping and coverage model
+- [ ] T151 [US3] MEDULLA-TYPED-PACKS-R097.2.7.2 External term coverage behaviour
+- [ ] T152 [US3] MEDULLA-TYPED-PACKS-R097.2.7.3 External schema import wiring and refusals
+- [ ] T153 [US3] MEDULLA-TYPED-PACKS-R097.2.7.4 External schema import hot-path proof
+- [ ] T154 [US3] MEDULLA-TYPED-PACKS-R097.700 Domain pack manifest, mapping language, loader and promotion bridge
+- [ ] T155 [US3] MEDULLA-TYPED-PACKS-R097.701 Domain pack refusals, evidence and hot-path proof
+- [ ] T156 [US3] MEDULLA-TYPED-PACKS-R098 Ontology inspection and inline data triples for validation
+- [ ] T157 [US3] MEDULLA-TYPED-PACKS-R099 Best-matching prototype by cosine similarity in the numeric kernel
+- [ ] T158 [US4] MEDULLA-TYPED-PACKS-R100.1 Rendered skill package model
+- [ ] T159 [US4] MEDULLA-TYPED-PACKS-R100.2 Render a skill package from graph content
+- [ ] T160 [US4] MEDULLA-TYPED-PACKS-R100.3 Call rendering from the catalog listing
+- [ ] T161 [US4] MEDULLA-TYPED-PACKS-R100.4 Dangling ontology reference refusal
+- [ ] T162 [US4] MEDULLA-TYPED-PACKS-R100.5 Rendered package evidence
+- [ ] T163 [US4] MEDULLA-TYPED-PACKS-R100.6 Rendered package hot-path proof
+- [ ] T164 [US4] MEDULLA-TYPED-PACKS-R100.100 Lossless SKILL.md frontmatter and step editing
+- [ ] T165 [US4] MEDULLA-TYPED-PACKS-R100.101 Skill consumer compatibility and declared-migration admission
+- [ ] T166 [US4] MEDULLA-TYPED-PACKS-R101.1 Model
+- [ ] T167 [US4] MEDULLA-TYPED-PACKS-R101.2 Connector contract shapes
+- [ ] T168 [US4] MEDULLA-TYPED-PACKS-R101.9 One tenant key for pack heads
+- [ ] T169 [US4] MEDULLA-TYPED-PACKS-R101.10 Mappings come from the connector's declaration
+- [ ] T170 [US4] MEDULLA-TYPED-PACKS-R101.11 Undeclared mappings are refused by type
+- [ ] T171 [US4] MEDULLA-TYPED-PACKS-R102.1 Model
+- [ ] T172 [US4] MEDULLA-TYPED-PACKS-R102.2 Surface node projection
+- [ ] T173 [US4] MEDULLA-TYPED-PACKS-R102.3 Pack ontology extends core classes and never redeclares them
+- [ ] T174 [US4] MEDULLA-TYPED-PACKS-R102.4 Surface projection wiring and consumers
+- [ ] T175 [US4] MEDULLA-TYPED-PACKS-R102.5 Surface refusals
+- [ ] T176 [US4] MEDULLA-TYPED-PACKS-R102.6 Surface evidence
+- [ ] T177 [US4] MEDULLA-TYPED-PACKS-R102.7 Surface hot-path proof
+- [ ] T178 [US4] MEDULLA-TYPED-PACKS-R103.1 Model
+- [ ] T179 [US4] MEDULLA-TYPED-PACKS-R103.2 Runtime ontology import behaviour
+- [ ] T180 [US4] MEDULLA-TYPED-PACKS-R103.3 Runtime ontology import wiring
+- [ ] T181 [US4] MEDULLA-TYPED-PACKS-R103.4 Runtime ontology import refusals
+- [ ] T182 [US4] MEDULLA-TYPED-PACKS-R103.5 Runtime ontology revision evidence
+- [ ] T183 [US4] MEDULLA-TYPED-PACKS-R103.6 Runtime ontology hot-path proof
+- [ ] T184 [US4] MEDULLA-TYPED-PACKS-R104.1 Model
+- [ ] T185 [US4] MEDULLA-TYPED-PACKS-R104.2 Seed graph import behaviour
+- [ ] T186 [US4] MEDULLA-TYPED-PACKS-R104.3 Seed graph import wiring
+- [ ] T187 [US4] MEDULLA-TYPED-PACKS-R104.4 Seed graph refusals
+- [ ] T188 [US4] MEDULLA-TYPED-PACKS-R104.5 Seed graph receipt
+- [ ] T189 [US4] MEDULLA-TYPED-PACKS-R104.6 Seed graph hot-path proof
+- [ ] T190 [US4] MEDULLA-TYPED-PACKS-R105.1 Delete the orphan warn switch; the parent-link check refuses
+- [ ] T191 [US4] MEDULLA-TYPED-PACKS-R105.3.1 Central source-record bridge
+- [ ] T192 [US4] MEDULLA-TYPED-PACKS-R105.4 The parent catalog holds a service-operations core aligned to the Open Group IT4IT data objects
+- [ ] T193 [US4] MEDULLA-TYPED-PACKS-R105.5 The competency-question paths are complete on the engine side
+- [ ] T194 [US4] MEDULLA-TYPED-PACKS-R105.6 The parent catalog declares the IT4IT delivery data objects
+- [ ] T195 [US4] MEDULLA-TYPED-PACKS-R105.7 The parent catalog declares a data-platform and machine-learning module aligned to DCAT, PROV-O and ML-Schema
+- [ ] T196 [US4] MEDULLA-TYPED-PACKS-R105.8 The parent catalog declares a media and content module aligned to schema.org media types, EBUCore, IFLA LRM and ActivityStreams
+- [ ] T197 [US4] MEDULLA-TYPED-PACKS-R105.9 The parent catalog declares a search, retrieval and information-source module aligned to OpenSearch, DCMI Terms and PROV-O
+- [ ] T198 [US4] MEDULLA-TYPED-PACKS-R106.1 Model
+- [ ] T199 [US4] MEDULLA-TYPED-PACKS-R106.2 Behavior
+- [ ] T200 [US4] MEDULLA-TYPED-PACKS-R106.3 Wiring
+- [ ] T201 [US4] MEDULLA-TYPED-PACKS-R106.4 Refusal
+- [ ] T202 [US4] MEDULLA-TYPED-PACKS-R106.5 Evidence
+- [ ] T203 [US4] MEDULLA-TYPED-PACKS-R106.6 Hot-path proof
+- [ ] T204 [US4] MEDULLA-TYPED-PACKS-R106.7 Competency queries
+- [ ] T205 [US4] MEDULLA-TYPED-PACKS-R107.1 Model
+- [ ] T206 [US4] MEDULLA-TYPED-PACKS-R107.2 Behavior
+- [ ] T207 [US4] MEDULLA-TYPED-PACKS-R107.3 Wiring
+- [ ] T208 [US4] MEDULLA-TYPED-PACKS-R107.4 Refusal
+- [ ] T209 [US4] MEDULLA-TYPED-PACKS-R107.5 Evidence
+- [ ] T210 [US4] MEDULLA-TYPED-PACKS-R107.6 Hot-path proof
+- [ ] T211 [US4] MEDULLA-TYPED-PACKS-R108.1 Model
+- [ ] T212 [US4] MEDULLA-TYPED-PACKS-R108.2 Behavior
+- [ ] T213 [US4] MEDULLA-TYPED-PACKS-R108.3 Wiring
+- [ ] T214 [US4] MEDULLA-TYPED-PACKS-R108.4 Refusal
+- [ ] T215 [US4] MEDULLA-TYPED-PACKS-R108.5 Evidence
+- [ ] T216 [US4] MEDULLA-TYPED-PACKS-R108.6 Hot-path proof
+- [ ] T217 [US4] MEDULLA-TYPED-PACKS-R108.7 Technical metadata from contracts
+- [ ] T218 [US4] MEDULLA-TYPED-PACKS-R108.8 Operational metadata from provenance
+- [ ] T219 [US4] MEDULLA-TYPED-PACKS-R108.9 Sensitivity propagation and policy link
+- [ ] T220 [US4] MEDULLA-TYPED-PACKS-R108.10 End-to-end lineage across the platform
+- [ ] T221 [US4] MEDULLA-TYPED-PACKS-R108.11 Metric and KPI definitions
+- [ ] T222 [US4] MEDULLA-TYPED-PACKS-R108.12 Annotations: comments, tags, ratings and threads
+- [ ] T223 [US4] MEDULLA-TYPED-PACKS-R108.13 Curated articles and guides
+- [ ] T224 [US4] MEDULLA-TYPED-PACKS-R108.14 Dashboards, reports, saved queries and templates
+- [ ] T225 [US4] MEDULLA-TYPED-PACKS-R108.15 AI and ML model assets
+- [ ] T226 [US4] MEDULLA-TYPED-PACKS-R108.16 One ranked index across all asset families, callable from queries
+- [ ] T227 [US4] MEDULLA-TYPED-PACKS-R109.1 Model
+- [ ] T228 [US4] MEDULLA-TYPED-PACKS-R109.2 Behavior
+- [ ] T229 [US4] MEDULLA-TYPED-PACKS-R109.3 Wiring
+- [ ] T230 [US4] MEDULLA-TYPED-PACKS-R109.4 Refusal
+- [ ] T231 [US4] MEDULLA-TYPED-PACKS-R109.5 Evidence
+- [ ] T232 [US4] MEDULLA-TYPED-PACKS-R109.6 Hot-path proof
+- [ ] T233 [US5] MEDULLA-TYPED-PACKS-R650.1 Model
+- [ ] T234 [US5] MEDULLA-TYPED-PACKS-R650.2 Behavior
+- [ ] T235 [US5] MEDULLA-TYPED-PACKS-R650.3 Wiring
+- [ ] T236 [US5] MEDULLA-TYPED-PACKS-R650.4 Refusal
+- [ ] T237 [US5] MEDULLA-TYPED-PACKS-R650.5 Evidence
+- [ ] T238 [US5] MEDULLA-TYPED-PACKS-R650.6 Hot-path proof
+- [ ] T239 [US5] MEDULLA-TYPED-PACKS-R651.1 Model
+- [ ] T240 [US5] MEDULLA-TYPED-PACKS-R651.2 Behavior
+- [ ] T241 [US5] MEDULLA-TYPED-PACKS-R651.3 Wiring
+- [ ] T242 [US5] MEDULLA-TYPED-PACKS-R651.4 Refusal
+- [ ] T243 [US5] MEDULLA-TYPED-PACKS-R651.5 Evidence
+- [ ] T244 [US5] MEDULLA-TYPED-PACKS-R651.6 Hot-path proof
+- [ ] T245 [US5] MEDULLA-TYPED-PACKS-R652.1 Model
+- [ ] T246 [US5] MEDULLA-TYPED-PACKS-R652.2 Behavior
+- [ ] T247 [US5] MEDULLA-TYPED-PACKS-R652.3 Wiring
+- [ ] T248 [US5] MEDULLA-TYPED-PACKS-R652.4 Refusal
+- [ ] T249 [US5] MEDULLA-TYPED-PACKS-R652.5 Evidence
+- [ ] T250 [US5] MEDULLA-TYPED-PACKS-R652.6 Hot-path proof
+- [ ] T251 [US6] MEDULLA-TYPED-PACKS-R700.1 Model
+- [ ] T252 [US6] MEDULLA-TYPED-PACKS-R700.2 Behavior
+- [ ] T253 [US6] MEDULLA-TYPED-PACKS-R700.3 Wiring
+- [ ] T254 [US6] MEDULLA-TYPED-PACKS-R700.4 Refusal
+- [ ] T255 [US6] MEDULLA-TYPED-PACKS-R700.5 Evidence
+- [ ] T256 [US6] MEDULLA-TYPED-PACKS-R700.6 Hot-path proof
+- [ ] T257 [US6] MEDULLA-TYPED-PACKS-R700.7 Declared skill type key
+- [ ] T258 [US6] MEDULLA-TYPED-PACKS-R700.8 Graph reference files import as skill files
+- [ ] T259 [US6] MEDULLA-TYPED-PACKS-R700.9 Distill a source set into a skill-graph bundle
+- [ ] T260 [US6] MEDULLA-TYPED-PACKS-R701.1 Model
+- [ ] T261 [US6] MEDULLA-TYPED-PACKS-R701.2 Behavior
+- [ ] T262 [US6] MEDULLA-TYPED-PACKS-R701.3 Wiring
+- [ ] T263 [US6] MEDULLA-TYPED-PACKS-R701.4 Refusal
+- [ ] T264 [US6] MEDULLA-TYPED-PACKS-R701.5 Hot-path proof
+- [ ] T265 [US6] MEDULLA-TYPED-PACKS-R710 Schema drift classification, containment, repair proposal and activation: model and behavior
+- [ ] T266 [US6] MEDULLA-TYPED-PACKS-R712 Schema drift classification, containment, repair proposal and activation: refusal, evidence and hot-path proof
+- [ ] T267 [US6] MEDULLA-TYPED-PACKS-R714 Delivery-path wiring of drift classification
+- [ ] T268 [US6] MEDULLA-TYPED-PACKS-R715 Served quarantine of a drifted delivery
+- [ ] T269 [US7] MEDULLA-TYPED-PACKS-R801.1 Model
+- [ ] T270 [US7] MEDULLA-TYPED-PACKS-R801.2 Behavior
+- [ ] T271 [US7] MEDULLA-TYPED-PACKS-R801.3 Wiring
+- [ ] T272 [US7] MEDULLA-TYPED-PACKS-R801.4 Refusal
+- [ ] T273 [US7] MEDULLA-TYPED-PACKS-R801.5 Evidence
+- [ ] T274 [US7] MEDULLA-TYPED-PACKS-R801.6 Hot-path proof
+- [ ] T275 [US7] MEDULLA-TYPED-PACKS-R801.7 Proposed descriptions for terms and assets
+- [ ] T276 [US7] MEDULLA-TYPED-PACKS-R802.1 Model
+- [ ] T277 [US7] MEDULLA-TYPED-PACKS-R802.2 Behavior
+- [ ] T278 [US7] MEDULLA-TYPED-PACKS-R802.3 Wiring
+- [ ] T279 [US7] MEDULLA-TYPED-PACKS-R802.4 Refusal
+- [ ] T280 [US7] MEDULLA-TYPED-PACKS-R802.5 Evidence
+- [ ] T281 [US7] MEDULLA-TYPED-PACKS-R802.6 Hot-path proof
+- [ ] T282 [US7] MEDULLA-TYPED-PACKS-R802.7 Trust flags on assets
+- [ ] T283 [US7] MEDULLA-TYPED-PACKS-R802.8 Critical data elements
+- [ ] T284 [US7] MEDULLA-TYPED-PACKS-R803.1 Model
+- [ ] T285 [US7] MEDULLA-TYPED-PACKS-R803.2 Column scan behavior
+- [ ] T286 [US7] MEDULLA-TYPED-PACKS-R803.3 Job wiring
+- [ ] T287 [US7] MEDULLA-TYPED-PACKS-R803.4 Refusals
+- [ ] T288 [US7] MEDULLA-TYPED-PACKS-R803.5 Evidence
+- [ ] T289 [US7] MEDULLA-TYPED-PACKS-R803.6 Hot-path proof
+- [ ] T290 [US7] MEDULLA-TYPED-PACKS-R803.7 Document chunk wiring
+- [ ] T291 [US7] MEDULLA-TYPED-PACKS-R804.1 Model
+- [ ] T292 [US7] MEDULLA-TYPED-PACKS-R804.2 Diff and impact behavior
+- [ ] T293 [US7] MEDULLA-TYPED-PACKS-R804.3 Wiring
+- [ ] T294 [US7] MEDULLA-TYPED-PACKS-R804.4 Refusals
+- [ ] T295 [US7] MEDULLA-TYPED-PACKS-R804.5 Evidence
+- [ ] T296 [US7] MEDULLA-TYPED-PACKS-R804.6 Hot-path proof
+- [ ] T297 [US7] MEDULLA-TYPED-PACKS-R805.1 Model
+- [ ] T298 [US7] MEDULLA-TYPED-PACKS-R805.2 Contract check behavior
+- [ ] T299 [US7] MEDULLA-TYPED-PACKS-R805.3 Wiring
+- [ ] T300 [US7] MEDULLA-TYPED-PACKS-R805.4 Refusals
+- [ ] T301 [US7] MEDULLA-TYPED-PACKS-R805.5 Evidence
+- [ ] T302 [US7] MEDULLA-TYPED-PACKS-R805.6 Hot-path proof
+- [ ] T303 [US7] MEDULLA-TYPED-PACKS-R805.7 Data product proposals
+- [ ] T304 [US7] MEDULLA-TYPED-PACKS-R806 Serve schema drift records and repair approval as methods
+- [ ] T305 [US7] MEDULLA-TYPED-PACKS-R807 Connector conformance evidence record and read method
+- [ ] T306 [US7] MEDULLA-TYPED-PACKS-R808 Operator-selected schema import with digest check and readback
+- [ ] T307 [US7] MEDULLA-TYPED-PACKS-R809 Served canonical hash of a Turtle payload
