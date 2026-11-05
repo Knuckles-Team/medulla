@@ -176,7 +176,8 @@ pub struct FinanceRecord {
     pub fields: std::collections::BTreeMap<String, String>,
 }
 
-/// Refusal detail codes of the served finance record methods.
+/// The closed refusal codes of `FinanceRecordPut`; each is a registered
+/// `ServerErrorCode` (MEDULLA-FINANCE-PRIMITIVES-R004.3.2).
 #[cfg(feature = "finance")]
 pub mod finance_record_refusal {
     pub const VERSION_UNKNOWN: &str = "FINANCE_RECORD_VERSION_UNKNOWN";
@@ -188,6 +189,24 @@ pub mod finance_record_refusal {
 #[cfg(all(test, feature = "finance"))]
 mod finance_record_version_tests {
     use super::*;
+
+    #[test]
+    fn record_refusals_are_registered_server_error_codes() {
+        use crate::contract::ServerErrorCode;
+        for code in [
+            finance_record_refusal::VERSION_UNKNOWN,
+            finance_record_refusal::DERIVED_READONLY,
+            finance_record_refusal::HEAD_CONFLICT,
+            finance_record_refusal::SHAPE_INVALID,
+        ] {
+            assert!(
+                ServerErrorCode::ALL
+                    .iter()
+                    .any(|item| item.as_str() == code),
+                "{code} is not a ServerErrorCode"
+            );
+        }
+    }
 
     // spec: MEDULLA-FINANCE-PRIMITIVES-R004.3.1
     #[test]

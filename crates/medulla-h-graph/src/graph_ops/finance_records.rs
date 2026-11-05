@@ -29,11 +29,10 @@ const FINANCE_SHAPES: &str = include_str!("../../../medulla-core/ontology/financ
 const TURTLE_PREFIXES: &str = "@prefix : <http://knuckles.team/kg#> .\n\
      @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n";
 
-/// `INVALID_ARGUMENT`/`READ_ONLY`/`CONFLICT`/`ACCESS_DENIED` carry the declared
-/// class code; the finance refusal code leads the detail.
+/// A finance refusal is its closed `ServerErrorCode` wire code, then the detail.
 #[cfg(all(feature = "finance", feature = "shacl"))]
-fn refuse(class: &str, code: &str, detail: impl std::fmt::Display) -> String {
-    format!("{class}: {code}: {detail}")
+fn refuse(code: &str, detail: impl std::fmt::Display) -> String {
+    format!("{code}: {detail}")
 }
 
 #[cfg(all(feature = "finance", feature = "shacl"))]
@@ -58,7 +57,6 @@ pub(super) fn check_record_shape(
     use medulla_types::wire_finance::finance_record_refusal::SHAPE_INVALID;
     if !is_local_name(&record.record_id) {
         return Err(refuse(
-            "INVALID_ARGUMENT",
             SHAPE_INVALID,
             "record_id must be a non-empty [A-Za-z0-9_] name",
         ));
@@ -71,7 +69,6 @@ pub(super) fn check_record_shape(
     for (name, value) in &record.fields {
         if !is_local_name(name) || !single_object_term(value) {
             return Err(refuse(
-                "INVALID_ARGUMENT",
                 SHAPE_INVALID,
                 format!("field '{name}' is not one finance property term"),
             ));
@@ -80,12 +77,11 @@ pub(super) fn check_record_shape(
     }
     data.push_str(" .\n");
     let report = medulla_shacl::validate_turtle(FINANCE_SHAPES, &data)
-        .map_err(|error| refuse("INVALID_ARGUMENT", SHAPE_INVALID, error))?;
+        .map_err(|error| refuse(SHAPE_INVALID, error))?;
     if report.conforms {
         Ok(())
     } else {
         Err(refuse(
-            "INVALID_ARGUMENT",
             SHAPE_INVALID,
             format!(
                 "{} violates {}Shape ({} result(s))",
@@ -128,10 +124,9 @@ pub(super) fn admit_put(
         unreachable!("admit_put is only called for FinanceRecordPut");
     };
     admit_finance_record_version(schema_version)
-        .map_err(|refusal| refuse("INVALID_ARGUMENT", code::VERSION_UNKNOWN, refusal.reason))?;
+        .map_err(|refusal| refuse(code::VERSION_UNKNOWN, refusal.reason))?;
     if kind.policy() == FinanceRecordPolicy::Derived {
         return Err(refuse(
-            "READ_ONLY",
             code::DERIVED_READONLY,
             format!("{} records are derived by the engine", kind.class_name()),
         ));
@@ -158,7 +153,6 @@ pub(super) fn admit_put(
         .and_then(|v| v.as_u64());
     if current_head != *expected_head {
         return Err(refuse(
-            "CONFLICT",
             code::HEAD_CONFLICT,
             format!("{node_id} head is {current_head:?}, the writer expected {expected_head:?}"),
         ));

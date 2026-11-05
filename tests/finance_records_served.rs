@@ -187,7 +187,7 @@ async fn client_writable_round_trip(
             None,
         )
         .await;
-    refused_with(&stale, "CONFLICT", "RECORD_HEAD_CONFLICT");
+    refused_with(&stale, "RECORD_HEAD_CONFLICT", "");
     let next = served
         .put(
             kind,
@@ -204,11 +204,7 @@ async fn client_writable_round_trip(
     let unknown = served
         .put(kind, "finance-v0", record("rec_2", TENANT, fields), None)
         .await;
-    refused_with(
-        &unknown,
-        "INVALID_ARGUMENT",
-        "FINANCE_RECORD_VERSION_UNKNOWN",
-    );
+    refused_with(&unknown, "FINANCE_RECORD_VERSION_UNKNOWN", "");
 
     let foreign = served
         .put(
@@ -234,7 +230,7 @@ async fn client_writable_round_trip(
             None,
         )
         .await;
-    refused_with(&shape, "INVALID_ARGUMENT", "RECORD_SHAPE_INVALID");
+    refused_with(&shape, "RECORD_SHAPE_INVALID", "");
     assert_eq!(stored(&served.get(kind, "rec_4").await), None);
 
     served.seed_foreign(kind, "rec_5").await;
@@ -254,17 +250,13 @@ async fn derived_refusals(kind: FinanceRecordKind, fields: &[(&'static str, &'st
             None,
         )
         .await;
-    refused_with(&put, "READ_ONLY", "RECORD_DERIVED_READONLY");
+    refused_with(&put, "RECORD_DERIVED_READONLY", "");
     assert_eq!(stored(&served.get(kind, "rec_1").await), before);
 
     let unknown = served
         .put(kind, "finance-v0", record("rec_1", TENANT, fields), None)
         .await;
-    refused_with(
-        &unknown,
-        "INVALID_ARGUMENT",
-        "FINANCE_RECORD_VERSION_UNKNOWN",
-    );
+    refused_with(&unknown, "FINANCE_RECORD_VERSION_UNKNOWN", "");
 
     // An invalid record is still refused as derived: the policy refusal precedes
     // the shape check, so nothing about a derived kind is ever written.
@@ -276,7 +268,7 @@ async fn derived_refusals(kind: FinanceRecordKind, fields: &[(&'static str, &'st
             None,
         )
         .await;
-    refused_with(&invalid, "READ_ONLY", "RECORD_DERIVED_READONLY");
+    refused_with(&invalid, "RECORD_DERIVED_READONLY", "");
 
     served.seed_foreign(kind, "rec_2").await;
     refused_with(&served.get(kind, "rec_2").await, "ACCESS_DENIED", "");

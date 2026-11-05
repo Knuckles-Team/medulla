@@ -175,6 +175,16 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     ("AnalyticsJob", &["INVALID_CONFIGURATION"]),
     // MEDULLA-FINANCE-PRIMITIVES-R018.3: mismatched factor record lengths.
     ("FinanceFactorRank", &["FACTOR_RECORD_INVALID"]),
+    // MEDULLA-FINANCE-PRIMITIVES-R004.3.2: the record put's closed refusals.
+    (
+        "FinanceRecordPut",
+        &[
+            "FINANCE_RECORD_VERSION_UNKNOWN",
+            "RECORD_DERIVED_READONLY",
+            "RECORD_HEAD_CONFLICT",
+            "RECORD_SHAPE_INVALID",
+        ],
+    ),
     ("GetNodes", &["RESULT_TOO_LARGE"]),
     ("GetEdges", &["RESULT_TOO_LARGE"]),
     (
