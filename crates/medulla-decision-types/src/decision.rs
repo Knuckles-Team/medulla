@@ -23,6 +23,7 @@
 
 pub mod comparative_analysis;
 pub mod context_package;
+pub mod codes;
 pub mod digest;
 pub mod errors;
 pub mod harness_contrast;
