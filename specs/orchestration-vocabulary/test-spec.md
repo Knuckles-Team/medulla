@@ -1,146 +1,129 @@
 # MEDULLA-ORCH-VOCAB — Test spec
 
-Positive: each term resolves and the reasoner stays consistent. Each Q1-Q7 query returns fixture rows. Negative: plant one invalid fixture per shape. Cover `:precedes` cycle and `swarm:feeds` cycle. Cover slot with non-kind, member without capability, rule without class, and agent without model. Integration: committed assembly is queryable through Q5 and Q7. Tests live in `crates/medulla-core/tests/orchestration_vocabulary.rs`. Fixtures live in `crates/medulla-core/tests/fixtures/orchestration_vocabulary/`.
+Positive: each term resolves and the reasoner stays consistent. Each Q1-Q7 query returns fixture rows. Negative: plant one invalid fixture per shape. Cover `:precedes` cycle and `swarm:feeds` cycle. Cover slot with non-kind, member without capability, rule without class, and agent without model. Integration: committed assembly is queryable through Q5 and Q7. Vocabulary tests live in `crates/medulla-rdf/tests/orchestration_vocabulary.rs` (modules `run_trace` and `vocabulary`). Fixtures live in `crates/medulla-core/tests/fixtures/orchestration_vocabulary/`.
 
 Assembly-kind acceptance: a verifier-constrained slot excludes an executor-only candidate, accepts a visible verifier, and yields typed abstention without one.
 
 Harness run-trace acceptance: a valid trace per termination reason round-trips through the client and `AddNode`. The engine refuses a negative counter, an unknown reason, and a peak above budget without `context_overflow`. The engine refuses a measured fact without evaluation-run evidence. A newer measurement supersedes an older one, and the older one stays readable. The `harness_config_evidence` statement returns the cost-per-solved-task rows with their trace ids and marks configurations below the `harness.min_traces_per_config` knob as insufficient; the selection of the cheapest configuration is MEDULLA-DECISION-ENGINE-R128.
 Spec-folder mapping: a fixture folder through `IndexRepository` yields one node of each kind. An unknown file is refused and stored as a plain document. Every node names its deciding rule.
 
-### MEDULLA-ORCH-VOCAB-R013 tests
 
-- `MEDULLA-ORCH-VOCAB-R013.1`: `crates/medulla-result-types/src/outcome_bundle.rs::tests::step_record_round_trips`.
-- `MEDULLA-ORCH-VOCAB-R013.2`: `crates/medulla-result-types/src/outcome_bundle.rs::tests::step_digest_is_canonical`.
-- `MEDULLA-ORCH-VOCAB-R013.3`: `crates/medulla-h-graph/src/graph_ops/gateway_graph.rs::tests::add_run_trace_checks_step_digests`.
-- `MEDULLA-ORCH-VOCAB-R013.4`: `crates/medulla-result-types/src/outcome_bundle.rs::tests::bad_digest_and_gap_refused`.
-- `MEDULLA-ORCH-VOCAB-R013.5`: `crates/medulla-result-types/src/outcome_bundle.rs::tests::stored_steps_read_in_order`.
-- `MEDULLA-ORCH-VOCAB-R013.6`: `tests/orchestration/test_run_trace_steps_served.py::test_first_divergence_is_step_two`.
+## Planned tests
 
-<!-- spec-definition-patch:owner-batch-20261012-orchestration-vocabulary -->
-## Reviewed residual acceptance targets — owner batch 2026-10-12
+Each entry below is planned. The test file or function does not exist in the tree yet; the row that binds it adds it at the stated post-split path.
 
-All targets below are planned acceptance, no test or receipt has run. Use the real producer/consumer boundary named for each row and retain existing covered behavior.
-
-- **`MEDULLA-ORCH-VOCAB-R009.18` / AU:26; source `8d2f83f788c5fdd36c4dc47f85c9f7673393b6b9075dc46a5ac1c32afd2386e2`:** Planned served acceptance for the observation window store: ingest a revisioned window, read back the before/after trace facts with unknowns preserved, and refuse stale or conflicting windows. The joint model/width decision acceptance (`run_observations_change_model_and_width_with_trace`) belongs to MEDULLA-DECISION-ENGINE-R158; host-only AIMD or model-only allocator tests do not pass it. Owner wiring and holds are defined in `requirements.md`. No test, served readback, receipt, implementation, or closure is claimed.
-
-- **`MEDULLA-ORCH-VOCAB-R013.7` / AU:115:** Source-pinned `CodeWalkthroughV1` manifest and exact AddNode/UQL/artifact readback/refusal cases as named in requirements.md. Meristem producer schema/receipt and Overstory artifact-consumer owner IDs remain pending; no producer test is credited.
-
-- **`MEDULLA-ORCH-VOCAB-R012.7` / EG:46; source `9de4d3274232cb97a9a85ad17ea20b368fff1bd729bdb4e7b2799991da106c58`:** Planned served acceptance `repository_policy_is_synthesized_guarded_and_used`. Exercise repository_policy_is_synthesized_guarded_and_used with real IndexRepository input. Inspect typed candidates/spans. Review the exact digest. Activate through owner path. The served decision SHALL prove active-rule use. A conflicting rule names the invariant and preserves prior active revision. Test unparsed prose, missing review, changed source digest, and invariant-generation race. Classification and direct helper-only tests do not pass. Owner wiring and holds are defined in `requirements.md`. No test, served readback, receipt, implementation, or closure is claimed.
-
-- **`MEDULLA-ORCH-VOCAB-R004.6` / EG:51; source `ed01ad35731abc6a739b3e1a39ee198549103acf0d30ec51c77316ca7cf75c49`:** Planned served acceptance `capability_gap_and_enhancement_are_queryable`. Exercise capability_gap_and_enhancement_are_queryable through served mutation and generated UnifiedQuery. Cause a served unmet-capability abstention. Confirm it does not by itself create a durable registry gap. Admit a CapabilityGap that cites the abstention. Admit a distinct DesiredEnhancement from a reviewed request through the governed mutation path. Query two task classes and independently read typed fields, edges, and provenance before and after restart. Test event deduplication, revision conflict, invalid taxonomy, exact/descendant matching, and denied-tenant pagination. Confirm capability implementation state did not change. In-memory fixtures alone do not pass. Owner wiring and holds are defined in `requirements.md`. No test, served readback, receipt, implementation, or closure is claimed.
-
-- **`MEDULLA-ORCH-VOCAB-R012.8` / EG:61; source `c5f1dfe7867267169ebc8c75abba87a1d9ed47568a65cbfe1bf6d183b8026e59`:** Planned served acceptance `reviewed_normative_source_activates_without_graph_overwrite`. Exercise reviewed_normative_source_activates_without_graph_overwrite through served ingestion/review/activation. Dispatch a decision that records active policy revision. Compare source bytes/Git revision before and after graph mutation/reasoning. A graph-originated normative write has no source effect. Missing/rejected review, modified blob, changed rules, or raced revisions preserve prior policy. Permitted source changes require governed writeback, reread, renewed review, then activation. Direct fixture activation does not pass. Owner wiring and holds are defined in `requirements.md`. No test, served readback, receipt, implementation, or closure is claimed.
-<!-- /spec-definition-patch -->
-
-<!-- spec-definition-patch:reviewed-mapped-subsets-20261012 -->
-## Planned mapped acceptance — 2026-10-12
-
-No test named here has run; names describe acceptance obligations, not evidence.
-
-- **`MEDULLA-ORCH-VOCAB-R005.100` (AU:33; source `1a32741b0a97f0c31cd1a3df4ea31d6eee0069c62c3487c0d8057b1ced4b6cf4`):** Served case: Medulla declares the nested-input schema (`SourceSlotMap` per declared field) and binds the `projected_digest`; Meristem applies the projection before dispatch (MERISTEM-HARNESS-CYCLE-R069). Worker receives only the declared projection. A secret undeclared nested field never reaches the worker, and a stale schema refuses with `SHIELD_SCHEMA_STALE` before dispatch. DTO extra-field rejection is not projection. Require exact revision, IO digests, caller, and independent readback as specified. Planned only.
-
-- **`MEDULLA-ORCH-VOCAB-R009.100` (AU:60; source `5d53cbdda932456b27c6649360c3051d4ab09f2db42018550b4ee81c785748b4`):** Served read test exports a parent with multiple agents and tool calls. Retrieve all correlated records across pages. Verify stable digest, redaction, and completeness. Detect missing child, duplicate span, unauthorized read, and truncated pagination. Medulla read tests do not assert MCP transport delivery. Meristem `default_runtime_capabilities/run_agent` exports. Arbora transports MCP. Medulla returns correlated readback. Preserve R008/R024 trace ownership. Require exact revision, IO digests, caller, and independent readback as specified. Planned only.
-<!-- /spec-definition-patch -->
-
-
-<!-- spec-definition-patch:owner-dispatch-20261012-tests -->
-## Planned served acceptance — cross-owner harness analytics
-
-No test in this section has run; these are future acceptance requirements.
-
-- `MEDULLA-ORCH-VOCAB-R009.101`: Serve index/search across every adapter in the pinned manifest. Read traces against receipts. Test restart/replay idempotency, source coverage, and cursor paging. Cost summaries use R010.101 units/profile and preserve unknown state. Refuse conflicting identities, stale cursors, and cross-tenant requests.
-- `MEDULLA-ORCH-VOCAB-R010.100`: Serve the `evolution_trace_metrics` UQL view joining revisioned traces and outcome metrics to proposal/prompt/progress revision. Independently read metric/progress digests and window. Missing traces are partial/unknown. Refuse stale, mismatched, and cross-tenant refs. Meristem producer and Arbora adapter evidence are separate.
-- `MEDULLA-ORCH-VOCAB-R010.101`: Reconcile four token categories and grouped costs against an independent ledger. Test split-trace invariance, half-even boundaries, unknown prices, mixed currencies, and final FX rounding. Measure p95 ≤500 ms on 1,000,000 indexed traces and 32 readers through Arbora `handle_runs_metrics`.
-<!-- /spec-definition-patch -->
-
-
-### Additional future acceptance for MEDULLA-ORCH-VOCAB-R004.6
-
-`tests/orchestration-vocabulary/test_authority_binding_served.py::test_authority_bound_gap_admission_and_restart` is a planned test, not an existing receipt. Exercise every schema and refusal rule in plan.md through generated served clients. Independently read admitted authority, producer receipts, exact revisions and output after restart. Test identical replay and conflicting source events, stale expected revisions, missing/changed authority, denied tenant and unknown references. Verify refusal stores nothing. Preserve every existing acceptance clause above verbatim.
-Test unknown-equal IRIs, forbidden/unlisted extensions and descendant proof pinning. Request-local abstention must create no durable gap; separately admit and read the gap and reviewed enhancement.
-
-Test equal admitted endpoints in exact and descendant modes. Test distinct candidate-child/requested-ancestor endpoints only in descendant mode. Refuse reversed, disconnected, mismatched and unknown-equal endpoints. Independently read both endpoints and match mode from resolver output and durable admission receipt after restart.
-
-### MEDULLA-ORCH-VOCAB-R801 tests
-
-- `MEDULLA-ORCH-VOCAB-R801.1`: `crates/medulla-types/tests/harness_components.rs::component_version_round_trips`.
-- `MEDULLA-ORCH-VOCAB-R801.2`: `crates/medulla-types/tests/harness_components.rs::newer_version_supersedes_and_old_stays_readable`.
-- `MEDULLA-ORCH-VOCAB-R801.3`: `crates/medulla-h-graph/src/graph_ops/gateway_graph.rs::tests::harness_component_write_stamps_and_links`.
-- `MEDULLA-ORCH-VOCAB-R801.4`: `crates/medulla-types/tests/harness_components.rs::evidence_kind_confidence_and_immutability_refusals`.
-- `MEDULLA-ORCH-VOCAB-R801.5`: `crates/medulla-types/tests/harness_components.rs::version_history_cites_evidence_and_digests`.
-- `MEDULLA-ORCH-VOCAB-R801.6`: `tests/orchestration/test_harness_components_served.py::test_two_versions_and_bitemporal_read`.
-
-### MEDULLA-ORCH-VOCAB-R802 tests
-
-- `MEDULLA-ORCH-VOCAB-R802.1`: `crates/medulla-types/tests/harness_lessons.rs::improvement_records_round_trip`.
-- `MEDULLA-ORCH-VOCAB-R802.2`: `crates/medulla-types/tests/harness_lessons.rs::lesson_requires_measurable_improvement`.
-- `MEDULLA-ORCH-VOCAB-R802.3`: `crates/medulla-types/tests/harness_lessons.rs::retrieval_ranks_by_confidence_and_abstains`.
-- `MEDULLA-ORCH-VOCAB-R802.4`: `crates/medulla-types/tests/harness_lessons.rs::supersession_keeps_old_readable`.
-- `MEDULLA-ORCH-VOCAB-R802.5`: `crates/medulla-types/tests/harness_lessons.rs::evidence_and_condition_refusals`.
-- `MEDULLA-ORCH-VOCAB-R802.6`: `tests/orchestration/test_harness_lessons_served.py::test_contrast_lesson_and_retrieval_served`.
-
-Status remains SPECIFIED. `landed_in` and `verified_by` remain empty.
-
-## Requirement rows as typed nodes
-
-| Row | Proving test |
-|---|---|
-| `MEDULLA-ORCH-VOCAB-R012.9` | `crates/medulla-core/tests/spec_folder_mapping.rs::requirement_rows_become_nodes` |
-
-## Run measurement schema evidence (2026-10-24)
-
-The schema tests live in `crates/medulla-rdf/tests/orchestration_vocabulary.rs::run_trace`.
-This crate already owns the native parser, SPARQL evaluator and SHACL test dependency.
-The tests cover R008.1, R009.1 through R009.8, R009.12 and R009.13.
-They use ASK for declarations and native SHACL validation for constraints.
-They test all termination reasons, unknown reasons, missing measurements and measured zero.
-They also test negative, fractional and malformed typed counters, negative cost, and budget overshoot.
-Exact numeric regressions cover adjacent integers above 2^53 and a negative decimal below floating-point range.
-Shared decimal tests cover lexical validity, signs, scale and arbitrary-length values.
-
-Validation command: `cargo test --locked -p medulla-rdf --features owl,sparql --test orchestration_vocabulary`.
-Shared validator command: `cargo test --locked -p medulla-shacl`.
-Both commands passed on this source: eight orchestration tests and 55 shared SHACL tests.
-Independent source review approved the schema and exact numeric handling.
-These tests do not establish native producer, authority, restart or generated-client acceptance.
-R009.9 through R009.11 and R009.14 through R009.17 remain open.
-## R009 native producer acceptance proposal (2026-10-24)
-
-These are planned acceptance cases for existing R009.15 through R009.17.
-No test execution, generated contract or native receipt is claimed here.
-
-- Submit each existing termination fixture through generated public mutation methods.
-- Commit a terminal trace and its applied-decision edge atomically, then read both through the public query path.
-- Preserve exact original run ID, separate trace node ID, zero counters and zero cost.
-- Read the recorded decision answer; changing the current configuration must not alter the trace projection.
-- Refuse a negative or fractional counter, non-finite cost and forbidden budget overshoot before commit.
-- Refuse standalone terminal writes lacking the required edge, and invalid later field or edge mutations.
-- Refuse conflicting run-to-trace associations and prove no partial node, edge or receipt survives.
-- Prove original-owner access and foreign-owner absence within the same tenant, plus cross-tenant refusal.
-- Prove mutable work-item metadata cannot transfer trace ownership or change the recorded association.
-- Exercise authenticated and explicit local no-auth modes through their existing public request paths.
-- Keep legacy traces without native admission association unavailable; do not guess a task/hash alias.
-
-Arbora REST/MCP acceptance remains a separate consumer proof under ARBORA-OPS-R021.4.5 and .4.6.
-R009 remains open until actual producer and native readback evidence exists.
-
-## Round-2 cross-spec review rewrites — 2026-10-30
-
-Planned proofs for the rows rewritten by the round-2 hygiene wave. No test named here has run.
-
-- `MEDULLA-ORCH-VOCAB-R010.6`: `tests/orchestration/test_harness_metrics_served.py::test_config_evidence_marks_insufficient_trace_counts`.
-- `MEDULLA-ORCH-VOCAB-R616.2`: `src/server/handlers/decide/stat_tests/assemble_vocabulary_tests.rs::synthesis_drafts_a_team_and_leaves_champion_unchanged`.
-- `MEDULLA-ORCH-VOCAB-R800.1`: `crates/medulla-types/src/orchestration/definitions.rs::tests::template_and_pattern_round_trip`.
-- `MEDULLA-ORCH-VOCAB-R005.100`: `src/server/handlers/decide/stat_tests/assemble_vocabulary_tests.rs::shield_declares_schema_and_digest_only`.
-- `MEDULLA-ORCH-VOCAB-R009.100`: `tests/orchestration/test_trace_export_served.py::test_parent_with_children_exports_complete_stable_digest`.
-- `MEDULLA-ORCH-VOCAB-R009.101.2`: `tests/orchestration/test_harness_session_index_served.py::test_search_covers_manifest_with_unavailable_third_source`.
-- `MEDULLA-ORCH-VOCAB-R010.100`: `tests/orchestration/test_evolution_metrics_served.py::test_missing_trace_is_partial_not_zero`.
-- `MEDULLA-ORCH-VOCAB-R012.7.1`: `crates/medulla-core/src/spec_folder/policy.rs::tests::both_formats_parse_to_one_type`.
-- `MEDULLA-ORCH-VOCAB-R012.7.2`: `tests/orchestration/test_policy_activation_served.py::test_index_yields_inactive_candidates_with_spans`.
-- `MEDULLA-ORCH-VOCAB-R012.8`: `tests/orchestration/test_policy_activation_served.py::test_graph_mutation_leaves_source_bytes_unchanged`.
-- `MEDULLA-ORCH-VOCAB-R750.750`: `crates/medulla-types/src/orchestration/org.rs::tests::records_round_trip_and_twin_needs_a_pin`.
-- `MEDULLA-ORCH-VOCAB-R750.751`: `src/server/handlers/decide/stat_tests/org_runtime_tests.rs::recruit_allocate_and_twin_replay`.
-- `MEDULLA-ORCH-VOCAB-R750.752`: `tests/orchestration/test_org_runtime_served.py::test_four_faults_refuse_with_codes`.
-- `MEDULLA-ORCH-VOCAB-R751.750`: `crates/medulla-types/src/orchestration/teams.rs::tests::records_round_trip_and_digest_is_order_free`.
-- `MEDULLA-ORCH-VOCAB-R751.751`: `src/server/handlers/decide/stat_tests/team_tests.rs::specialist_promotes_only_through_the_gate`.
-- `MEDULLA-ORCH-VOCAB-R751.752`: `tests/orchestration/test_team_evolution_served.py::test_team_and_social_faults_refuse_with_codes`.
+- `MEDULLA-ORCH-VOCAB-R003.6`: `crates/medulla-h-admin/src/agent_library_projection/map.rs::tests::a2a_card_maps_to_member_with_claim_capabilities` (planned, L1): covers the row "Project Agent Library entries into membership facts". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R003.6`: `tests/orchestration/test_agent_library_projection_served.py::test_publish_projects_membership_and_a2a_capabilities` (planned, L4): covers the row "Project Agent Library entries into membership facts". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R003.6.1`: `tests/orchestration/test_agent_library_projection_served.py::test_projection_replays_and_survives_restart` (planned, L4): covers the row "Run the Agent Library projection worker". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R004.4`: `crates/medulla-h-admin/src/agent_library_projection/map.rs::tests::guardrail_rule_maps_to_best_practice_with_scope` (planned, L1): covers the row "Project `GuardrailRule` components as best practices". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R004.4`: `tests/orchestration/test_agent_library_projection_served.py::test_guardrail_rule_projects_applies_to_task_class` (planned, L4): covers the row "Project `GuardrailRule` components as best practices". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R005.5`: `crates/medulla-h-admin/src/agent_library_projection/map.rs::tests::model_profile_maps_with_context_window` (planned, L1): covers the row "Project `model_profile` components". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R005.5`: `tests/orchestration/test_agent_library_projection_served.py::test_model_profile_projects_with_context_window` (planned, L4): covers the row "Project `model_profile` components". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R006.5`: `crates/medulla-compute/src/assemble/topology_facts.rs::tests::feeds_and_loop_back_edges` (planned, L1): covers the row "Project template topology to `swarm:feeds`". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R006.5`: `crates/medulla-h-decide/src/decide/stat_tests/assemble_vocabulary_tests.rs::template_projection_emits_feeds_edges` (planned, L3): covers the row "Project template topology to `swarm:feeds`". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R007.1`: `crates/medulla-h-decide/src/decide/stat_tests/assemble_vocabulary_tests.rs::assemble_expands_has_step_into_tasks` (planned, L3): covers the row "Expand a task into assembly tasks by step". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R007.2`: `crates/medulla-h-decide/src/decide/stat_tests/assemble_vocabulary_tests.rs::committed_assembly_is_queryable_through_q5_and_q7` (planned, L3): covers the row "Project the committed assembly back into the graph". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R007.4`: `crates/medulla-h-decide/src/decide/stat_tests/assemble_vocabulary_tests.rs::assemble_enforces_slot_agent_kind` (planned, L3): covers the row "Enforce slot agent-kind constraints before selection". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R008.2`: `tests/test_generated_artifacts_ledger.py::test_ontology_entries_match_the_files` (planned, L1): covers the row "Keep the generated-artifact ledger in step with the ontology files". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R009.15`: `crates/medulla-h-graph/src/harness_admission/tests.rs::invalid_trace_is_refused_and_not_stored` (planned, L2): covers the row "Refuse a shape-invalid `RunTrace` write". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R009.15`: `tests/orchestration/test_run_trace_served.py::test_invalid_trace_refused_and_not_stored` (planned, L4): covers the row "Refuse a shape-invalid `RunTrace` write". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R009.17`: `tests/orchestration/test_run_trace_served.py::test_client_ingest_round_trips_harness_properties` (planned, L4): covers the row "Prove the ingestion hot path through the Python client". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R010.1`: `tests/orchestration/test_harness_metrics_served.py::test_success_rate_per_model_and_task_class` (planned, L4): covers the row "Query harness_success_rate". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R010.2`: `tests/orchestration/test_harness_metrics_served.py::test_cost_per_solved_task_abstains_without_solved_trace` (planned, L4): covers the row "Query harness_cost_per_solved_task". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R010.3`: `tests/orchestration/test_harness_metrics_served.py::test_overflow_rate_counts_only_context_overflow` (planned, L4): covers the row "Query harness_overflow_rate". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R010.4`: `tests/orchestration/test_harness_metrics_served.py::test_mean_peak_ratio_per_model_and_task_class` (planned, L4): covers the row "Query harness_mean_peak_ratio". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R010.5`: `tests/orchestration/test_harness_metrics_served.py::test_mechanism_counts_per_config` (planned, L4): covers the row "Query harness_mechanism_counts". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R010.6`: `tests/orchestration/test_harness_metrics_served.py::test_config_evidence_marks_insufficient_trace_counts` (planned, L4): covers the row "Evidence query for the best configuration per solved task". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R011.7`: `crates/medulla-protocol-types/src/change_envelope/measured_fact.rs::tests::envelope_carries_run_evidence` (planned, L1): covers the row "Build the measured-fact change envelope". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R011.7`: `tests/orchestration/test_measured_fact_served.py::test_envelope_applies_through_served_path` (planned, L4): covers the row "Build the measured-fact change envelope". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R011.8`: `crates/medulla-protocol-types/src/change_envelope/measured_fact.rs::tests::missing_evidence_is_refused` (planned, L1): covers the row "Refuse a measured fact without run evidence". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R011.8`: `tests/orchestration/test_measured_fact_served.py::test_apply_without_evidence_is_refused` (planned, L4): covers the row "Refuse a measured fact without run evidence". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R011.9`: `crates/medulla-h-decide/src/decide/stat_tests/promotion_tests.rs::measured_fact_replaces_older_and_rolls_back` (planned, L3): covers the row "Replace a measured fact through the champion pointer". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R011.9`: `tests/orchestration/test_measured_fact_served.py::test_newer_measurement_replaces_and_old_stays_readable` (planned, L4): covers the row "Replace a measured fact through the champion pointer". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R011.10`: `tests/orchestration/test_measured_fact_served.py::test_evaluation_result_writes_fact_then_promotes` (planned, L4): covers the row "Apply the evaluation result once through the governed path". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R011.11`: `crates/medulla-server-served-tests/src/split_tests/medulla_h_decide_harness_config_tests.rs::harness_config_reads_champion_fact_and_abstains_without` (planned, L3): covers the row "Prove the loop closes through `HarnessConfig`". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R011.11`: `tests/orchestration/test_measured_fact_served.py::test_harness_config_cites_fact_and_abstains_without` (planned, L4): covers the row "Prove the loop closes through `HarnessConfig`". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R012.1`: `crates/medulla-core/tests/spec_folder_mapping.rs::node_kinds_are_closed_and_declared` (planned, L1): covers the row "Model: spec node kinds". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R012.2`: `crates/medulla-core/tests/spec_folder_mapping.rs::default_rules_classify_each_file_kind` (planned, L1): covers the row "Behaviour: classify a spec file by named rule". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R012.3`: `tests/orchestration/test_spec_folder_served.py::test_index_repository_writes_typed_nodes` (planned, L4): covers the row "Wiring: index spec folders on the durable repository route". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R012.4`: `crates/medulla-core/tests/spec_folder_mapping.rs::unknown_file_is_refused_not_guessed` (planned, L1): covers the row "Refusal: an unknown file is not guessed". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R012.4`: `tests/orchestration/test_spec_folder_served.py::test_unknown_file_becomes_plain_document` (planned, L4): covers the row "Refusal: an unknown file is not guessed". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R012.5`: `tests/orchestration/test_spec_folder_served.py::test_node_records_deciding_rule` (planned, L4): covers the row "Evidence: each node records its deciding rule". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R012.6`: `tests/orchestration/test_spec_folder_served.py::test_index_repository_on_spec_folder_yields_five_kinds` (planned, L4): covers the row "Hot-path proof: spec folder yields five kinds". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R013.1`: `crates/medulla-result-types/src/outcome_bundle.rs::tests::step_record_round_trips` (planned, L1): covers the row "Model: step record". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R013.2`: `crates/medulla-result-types/src/outcome_bundle.rs::tests::step_digest_is_canonical` (planned, L2): covers the row "Behaviour: one canonical step digest recipe". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R013.3`: `crates/medulla-h-graph/src/graph_ops/gateway_graph.rs::tests::add_run_trace_checks_step_digests` (planned, L3): covers the row "Wiring: validate step records on the run-trace write". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R013.3`: `tests/orchestration/test_run_trace_steps_served.py::test_valid_trace_stores_steps_in_order` (planned, L4): covers the row "Wiring: validate step records on the run-trace write". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R013.4`: `crates/medulla-result-types/src/outcome_bundle.rs::tests::bad_digest_and_gap_refused` (planned, L1): covers the row "Refusal: bad digest and bad step order". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R013.4`: `tests/orchestration/test_run_trace_steps_served.py::test_each_fault_returns_its_code_and_stores_nothing` (planned, L4): covers the row "Refusal: bad digest and bad step order". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R013.5`: `tests/orchestration/test_run_trace_steps_served.py::test_stored_steps_read_in_order_with_actor` (planned, L4): covers the row "Evidence: ordered steps with the writing actor". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R013.6`: `tests/orchestration/test_run_trace_steps_served.py::test_first_divergence_is_step_two` (planned, L4): covers the row "Hot-path proof: first divergence is step two". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R004.6.1`: `crates/medulla-work-types/src/orchestration/capability_gap.rs::tests::nodes_round_trip_and_disposition_is_closed` (planned, L1): covers the row "Model: gap and enhancement nodes". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R004.6.2`: `tests/orchestration/test_capability_gap_served.py::test_dedup_conflict_and_invalid_taxonomy` (planned, L4): covers the row "Behaviour and wiring: governed write with deduplication". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R004.6.3`: `tests/orchestration/test_capability_gap_served.py::test_query_two_task_classes_across_restart_and_denied_tenant` (planned, L4): covers the row "Query by task class with exact or descendant match". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R012.8`: `tests/orchestration/test_policy_activation_served.py::test_graph_mutation_leaves_source_bytes_unchanged` (planned, L4): covers the row "Bind active policy to reviewed repository files". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R012.8`: `tests/orchestration/test_policy_activation_served.py::test_missing_or_modified_review_preserves_prior_policy` (planned, L4): covers the row "Bind active policy to reviewed repository files". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R012.9`: `crates/medulla-core/tests/spec_folder_mapping.rs::requirement_rows_become_nodes` (planned, L1): covers the row "Requirement rows become typed nodes". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R012.9`: `tests/orchestration/test_spec_folder_served.py::test_requirement_rows_index_with_duplicate_refused` (planned, L4): covers the row "Requirement rows become typed nodes". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R005.100`: `crates/medulla-h-decide/src/decide/stat_tests/assemble_vocabulary_tests.rs::shield_declares_schema_and_digest_only` (planned, L3): covers the row "Declare the nested step-input shield schema". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R009.100`: `crates/medulla-types/src/run_trace_export.rs::tests::page_round_trips_against_vectors` (planned, L2): covers the row "Correlated trace export read". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R009.100`: `tests/orchestration/test_trace_export_served.py::test_parent_with_children_exports_complete_stable_digest` (planned, L4): covers the row "Correlated trace export read". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R010.100`: `crates/medulla-types/src/evolution_metrics.rs::tests::answer_round_trips_against_vectors` (planned, L2): covers the row "Join evolution proposals to measured source traces as a read view". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R010.100`: `tests/orchestration/test_evolution_metrics_served.py::test_missing_trace_is_partial_not_zero` (planned, L4): covers the row "Join evolution proposals to measured source traces as a read view". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R010.101`: `tests/orchestration/test_usage_totals_served.py::test_grouped_totals_match_reference_ledger` (planned, L4): covers the row "Index project and agent token and cost totals". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R010.101`: `tests/orchestration/test_usage_totals_served.py::test_unknown_price_and_half_even_boundaries` (planned, L4): covers the row "Index project and agent token and cost totals". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R616.2`: `crates/medulla-compute/src/assemble/synthesis.rs::tests::budget_bounds_the_selection` (planned, L1): covers the row "Behaviour: draft a team or workflow from capability search". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R616.2`: `crates/medulla-h-decide/src/decide/stat_tests/assemble_vocabulary_tests.rs::synthesis_drafts_a_team_and_leaves_champion_unchanged` (planned, L3): covers the row "Behaviour: draft a team or workflow from capability search". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R616.3`: `crates/medulla-h-decide/src/decide/stat_tests/assemble_vocabulary_tests.rs::draft_is_proposed_and_solver_decides` (planned, L3): covers the row "Wiring: synthesis proposes and assemble decides". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R616.4`: `crates/medulla-h-decide/src/decide/stat_tests/assemble_vocabulary_tests.rs::invalid_draft_is_refused_with_no_partial_write` (planned, L3): covers the row "Refusal: a draft that fails its shape". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R616.5`: `crates/medulla-h-decide/src/decide/stat_tests/assemble_vocabulary_tests.rs::synthesis_premises_after_success_and_refusal` (planned, L3): covers the row "Evidence: capabilities, budget and shape result". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R616.6`: `crates/medulla-h-decide/src/decide/stat_tests/assemble_vocabulary_tests.rs::synthesis_served_over_a_thousand_skills` (planned, L3): covers the row "Hot-path proof: synthesis over a 10,000-skill catalog". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R750.750`: `crates/medulla-work-types/src/orchestration/org.rs::tests::records_round_trip_and_twin_needs_a_pin` (planned, L1): covers the row "Model: organization, market, twin and lifecycle records". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R750.751`: `crates/medulla-h-decide/src/decide/stat_tests/org_runtime_tests.rs::recruit_allocate_and_twin_replay` (planned, L3): covers the row "Behaviour: recruit, allocate, replay and move state". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R750.752`: `tests/orchestration/test_org_runtime_served.py::test_four_faults_refuse_with_codes` (planned, L4): covers the row "Refusal: organization and market faults". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R750.753`: `tests/orchestration/test_org_runtime_served.py::test_recruit_allocate_twin_and_drain_journey` (planned, L4): covers the row "Hot-path proof: twin capture and served journey". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R751.750`: `crates/medulla-work-types/src/orchestration/teams.rs::tests::records_round_trip_and_digest_is_order_free` (planned, L1): covers the row "Model: team, specialist, population and social records". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R751.751`: `crates/medulla-decision-stats/src/decision/team_score.rs::tests::fixed_point_converges_and_is_deterministic` (planned, L1): covers the row "Behaviour: score teams and promote specialists". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R751.751`: `crates/medulla-h-decide/src/decide/stat_tests/team_tests.rs::specialist_promotes_only_through_the_gate` (planned, L3): covers the row "Behaviour: score teams and promote specialists". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R751.752`: `tests/orchestration/test_team_evolution_served.py::test_team_and_social_faults_refuse_with_codes` (planned, L4): covers the row "Refusal: team and social faults". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R751.753`: `tests/orchestration/test_team_evolution_served.py::test_outcomes_rank_teams_and_specialist_promotes` (planned, L4): covers the row "Hot-path proof: team scoring". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R800.1`: `crates/medulla-work-types/src/orchestration/definitions.rs::tests::template_and_pattern_round_trip` (planned, L1): covers the row "Model: prompt template and workflow pattern". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R800.2`: `crates/medulla-work-types/src/orchestration/definitions.rs::tests::render_fills_typed_slots_only` (planned, L1): covers the row "Behaviour: typed rendering and pattern selection". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R800.2`: `crates/medulla-h-decide/src/decide/stat_tests/pattern_select_tests.rs::selection_follows_preconditions_and_outcomes` (planned, L3): covers the row "Behaviour: typed rendering and pattern selection". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R800.3`: `tests/orchestration/test_definitions_served.py::test_edit_creates_new_revision_and_champion_selects_current` (planned, L4): covers the row "Wiring: definitions are read by assembly and revised by version". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R800.4`: `tests/orchestration/test_definitions_served.py::test_four_faults_refuse_with_codes` (planned, L4): covers the row "Refusal: four definition faults". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R800.5`: `crates/medulla-work-types/src/orchestration/definitions.rs::tests::render_digest_golden` (planned, L2): covers the row "Evidence: revision history and render digest". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R800.6`: `tests/orchestration/test_definitions_served.py::test_assembly_renders_prompts_for_each_assigned_agent` (planned, L4): covers the row "Hot-path proof: render budget". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R009.18.1`: `crates/medulla-types/src/run_observation.rs::tests::unknown_stays_unknown_and_round_trips` (planned, L1): covers the row "Model: observation window record". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R009.18.2`: `crates/medulla-h-decide/src/decide/stat_tests/run_observation_tests.rs::window_ingest_and_refusals` (planned, L3): covers the row "Behaviour and refusal: ingest a window". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R009.18.2`: `tests/orchestration/test_run_observation_served.py::test_window_round_trips_with_unknowns` (planned, L4): covers the row "Behaviour and refusal: ingest a window". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R009.18.3`: `crates/medulla-h-decide/src/decide/stat_tests/run_adjustment_tests.rs::windows_drive_model_and_width_and_refuse_mid_run_widening` (planned, L3): covers the row "Wiring: producer and consumer of windows". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R009.18.3`: `tests/orchestration/test_run_observation_served.py::test_window_to_adjustment_through_meristem_fixture` (planned, L4): covers the row "Wiring: producer and consumer of windows". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R009.18.4`: `tests/orchestration/test_run_observation_served.py::test_adjustment_readback_names_before_after_and_reason` (planned, L4): covers the row "Evidence: before and after trace facts". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R009.101.1`: `crates/medulla-types/src/harness_session.rs::tests::batch_round_trips_against_vectors` (planned, L2): covers the row "Index a batch of harness sessions". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R009.101.1`: `tests/orchestration/test_harness_session_index_served.py::test_replay_is_idempotent_and_changed_content_refuses` (planned, L4): covers the row "Index a batch of harness sessions". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R009.101.2`: `tests/orchestration/test_harness_session_index_served.py::test_search_covers_manifest_with_unavailable_third_source` (planned, L4): covers the row "Search harness sessions as a UQL view over the full manifest". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R009.101.2`: `tests/orchestration/test_harness_session_index_served.py::test_cost_totals_report_unknown_not_zero` (planned, L4): covers the row "Search harness sessions as a UQL view over the full manifest". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R009.700`: `crates/medulla-types/src/durable_unit.rs::tests::status_is_closed_and_round_trips` (planned, L1): covers the row "Mirror durable run units as run-trace nodes: model and behaviour". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R009.701`: `tests/orchestration/test_durable_units_served.py::test_resume_finds_produced_artifacts` (planned, L4): covers the row "Mirror durable run units as run-trace nodes: refusal and proof". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R009.701`: `tests/orchestration/test_durable_units_served.py::test_unit_without_run_id_is_refused` (planned, L4): covers the row "Mirror durable run units as run-trace nodes: refusal and proof". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R012.7.1`: `crates/medulla-types/src/policy_document.rs::tests::candidate_round_trips_and_inactive_has_reason` (planned, L1): covers the row "Model: policy rule and candidate with source spans". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R012.7.1`: `crates/medulla-core/src/spec_folder/policy.rs::tests::both_formats_parse_to_one_type` (planned, L1): covers the row "Model: policy rule and candidate with source spans". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R012.7.2`: `tests/orchestration/test_policy_activation_served.py::test_index_yields_inactive_candidates_with_spans` (planned, L4): covers the row "Wiring: synthesize on repository index". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R012.7.3`: `crates/medulla-h-decide/src/decide/stat_tests/policy_activation_tests.rs::activation_refuses_contradiction_and_stale_review` (planned, L3): covers the row "Activation: invariant guard, review and atomic publish". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R012.7.3`: `tests/orchestration/test_policy_activation_served.py::test_review_activate_and_decide_uses_active_rule` (planned, L4): covers the row "Activation: invariant guard, review and atomic publish". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R012.7.4`: `tests/orchestration/test_policy_activation_served.py::test_decision_records_active_policy_revision` (planned, L4): covers the row "Evidence: decisions record the active policy revision". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R013.7.1`: `crates/medulla-result-types/src/outcome_bundle.rs::tests::code_walkthrough_manifest_round_trips` (planned, L1): covers the row "Model: walkthrough manifest". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R013.7.2`: `crates/medulla-h-graph/src/graph_ops/gateway_graph.rs::tests::add_run_trace_rejects_stale_walkthrough_source_or_artifact` (planned, L3): covers the row "Refusal: validate the manifest on write". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R013.7.3`: `tests/orchestration/test_code_walkthrough_served.py::test_walkthrough_trace_and_artifact_read_back` (planned, L4): covers the row "Evidence: independent readback and artifact digest". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R616.2.1`: `tests/orchestration/test_team_owl_served.py::test_export_then_import_reproduces_team_digest` (planned, L4): covers the row "Export and import a team as OWL". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R801.3`: `crates/medulla-h-graph/src/graph_ops/gateway_graph.rs::tests::harness_component_write_stamps_and_links` (planned, L1): covers the row "Wiring". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R801.7`: `crates/medulla-h-decide/src/decide/stat_tests/promotion_tests.rs::harness_component_current_is_the_champion` (planned, L3): covers the row "Harness component and adoption chains become revision subjects". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R803`: `tests/orchestration/test_run_metrics_served.py::test_five_queries_and_zero_solved_abstention` (planned, L4): covers the row "Serve the five run trace queries as one method". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R804`: `crates/medulla-server-served-tests/src/split_tests/medulla_server_obs_telemetry_snapshot_tests.rs::snapshot_is_tenant_scoped_and_read_only` (planned, L3): covers the row "Tenant telemetry snapshot read method". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R805`: `crates/medulla-server-served-tests/src/split_tests/medulla_h_jobs_session_usage_tests.rs::timing_binds_to_committed_turn_receipts` (planned, L3): covers the row "Per-turn timing observations in the session usage result". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R806`: `crates/medulla-server-served-tests/src/split_tests/medulla_h_decide_policy_activation_tests.rs::activation_requires_a_matching_receipt` (planned, L3): covers the row "Policy activation method with review receipt". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R807`: `crates/medulla-server-served-tests/src/split_tests/medulla_h_query_session_query_tests.rs::pages_cursors_and_partial_sources` (planned, L3): covers the row "Indexed agent-session query method". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R808`: `tests/orchestration/test_agent_scope_served.py::test_scope_stored_and_foreign_set_refused` (planned, L4): covers the row "AgentDefinition carries a knowledge scope". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R809`: `tests/orchestration/test_workflow_rdf_served.py::test_round_trip_keeps_graphs_literals_and_unknown_predicates` (planned, L4): covers the row "Lossless versioned workflow RDF export and import". The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-ORCH-VOCAB-R810`: `crates/medulla-server-served-tests/src/split_tests/medulla_h_graph_visual_observation_tests.rs::observation_round_trip_and_scope` (planned, L3): covers the row "Store run-bound visual observation records". The test does not exist yet; the owning change adds it at this exact path.
