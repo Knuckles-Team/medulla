@@ -170,6 +170,8 @@ mod governed_admin;
 #[cfg(feature = "security")]
 pub use governed_admin::GovernedError;
 mod layer_store;
+/// MEDULLA-IDENTITY-R700.2: graph ownership plan, apply and rollback.
+pub mod ownership;
 mod policy_admin;
 mod scope_bound;
 pub use scope_bound::{
