@@ -3,7 +3,7 @@
 Governing spec: [spec.md](../spec.md).
 
 Provider: medulla MEDULLA-FEDERATED-QUERY-R081
-Consumer: meristem MERISTEM-BOUNDARY-R034.1
+Consumer: meristem MERISTEM-HARNESS-CYCLE-R079
 
 ## Provider
 
@@ -11,7 +11,7 @@ Repository: medulla. Rows: `MEDULLA-FEDERATED-QUERY-R081`, `MEDULLA-FEDERATED-QU
 
 ## Consumer
 
-Repository: meristem. Row `MERISTEM-BOUNDARY-R034.1`. The harness applies the verdict and runs the next round. It cannot bypass a terminal verdict.
+Repository: meristem. Row `MERISTEM-HARNESS-CYCLE-R079`. The harness applies the verdict and runs the next round. It cannot bypass a terminal verdict.
 
 ## Wire shape
 

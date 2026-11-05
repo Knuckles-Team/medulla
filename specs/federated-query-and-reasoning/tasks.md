@@ -42,20 +42,20 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T036 [P] [US1] MEDULLA-FEDERATED-QUERY-R043 SQL foreign-source connections share the one outbound SSRF guard
 - [ ] T037 [P] [US1] MEDULLA-FEDERATED-QUERY-R044 UQL EXPLAIN and PROFILE surface federation trace and budget hints
 - [ ] T038 [P] [US1] MEDULLA-FEDERATED-QUERY-R045 Foreign rows carry typed columns for filter and projection pushdown
-- [ ] T039 [P] [US1] MEDULLA-FEDERATED-QUERY-R046 `OBDA` pushes `SPARQL` `LIMIT`, `ORDER BY`, aggregates and same-source joins
+- [ ] T039 [P] [US1] MEDULLA-FEDERATED-QUERY-R046 OBDA pushes SPARQL LIMIT, ORDER BY, aggregates and same-source joins
 - [ ] T040 [P] [US1] MEDULLA-FEDERATED-QUERY-R047 Federation enforces per-source parallelism caps and rate limits
 - [ ] T041 [P] [US1] MEDULLA-FEDERATED-QUERY-R048.1 Typed join-cardinality-statistic model with provenance
 - [ ] T042 [P] [US1] MEDULLA-FEDERATED-QUERY-R049 Foreign query fragment cache is freshness-aware and owner-salted
 - [ ] T043 [P] [US1] MEDULLA-FEDERATED-QUERY-R050 SPARQL SERVICE uses bind joins and pushes FILTER/LIMIT
 - [ ] T044 [P] [US1] MEDULLA-FEDERATED-QUERY-R051 Iceberg scans prune manifests using the final pushed predicates
 - [ ] T045 [P] [US1] MEDULLA-FEDERATED-QUERY-R052 RemoteEngine sources receive pushed key filters and bounded LIMIT
-- [ ] T046 [P] [US1] MEDULLA-FEDERATED-QUERY-R054 `SPARQL` `SERVICE` and peer federation share the one outbound `SSRF` guard
+- [ ] T046 [P] [US1] MEDULLA-FEDERATED-QUERY-R054 SPARQL SERVICE and peer federation share the one outbound SSRF guard
 - [ ] T047 [P] [US1] MEDULLA-FEDERATED-QUERY-R055 SPARQL evaluation binds every value of a multi-valued property
 - [ ] T048 [P] [US1] MEDULLA-FEDERATED-QUERY-R056 Causal-impact p-values reuse the shared numeric tail functions
 - [ ] T049 [P] [US1] MEDULLA-FEDERATED-QUERY-R057 SQL provider module stays within the repository's file-size limit
 - [ ] T050 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.1 Typed NL→UQL disclosure model
 - [ ] T051 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.2.1 Dispatch handler enforces the typed NL budget before parsing
-- [ ] T052 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.2.2.1 Served `NlQueryExplain` returns the executed UQL with the rows
+- [ ] T052 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.2.2.1 Served NlQueryExplain returns the executed UQL with the rows
 - [ ] T053 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.2.2.2 Plan-only NL entry point
 - [ ] T054 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.3.1 NL results are never cached on the NL text
 - [ ] T055 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.3.2 No mutating operation is reachable from the NL surface
@@ -75,7 +75,7 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T069 [P] [US1] MEDULLA-FEDERATED-QUERY-R072.1 Typed model for cross-source coverage, proved against a fixture
 - [ ] T070 [P] [US1] MEDULLA-FEDERATED-QUERY-R073.1 Typed model for operation-bound foreign sources, with refusal tests
 - [ ] T071 [US1] MEDULLA-FEDERATED-QUERY-R073.2 Connection-protocol pushdown matrix
-- [ ] T072 [P] [US1] MEDULLA-FEDERATED-QUERY-R077.1 `ColumnVectorBinding` typed model
+- [ ] T072 [P] [US1] MEDULLA-FEDERATED-QUERY-R077.1 ColumnVectorBinding typed model
 - [ ] T073 [US1] MEDULLA-FEDERATED-QUERY-R077.2 Column vectorization: bind and unbind surface
 - [ ] T074 [US1] MEDULLA-FEDERATED-QUERY-R077.3 Column vectorization: row-write re-embedding hook
 - [ ] T075 [P] [US1] MEDULLA-FEDERATED-QUERY-R077.5 Column vectorization: end-to-end column vector search
@@ -94,7 +94,7 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T088 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.2.1 Model of Independent document-chunk encoding and aggregation
 - [ ] T089 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.2.2 Chunk encoding: window behavior
 - [ ] T090 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.2.3 Chunk encoding: independent per-chunk model calls
-- [ ] T091 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.2.4 Chunk encoding: `mean_chunks` aggregation
+- [ ] T091 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.2.4 Chunk encoding: mean_chunks aggregation
 - [ ] T092 [US1] MEDULLA-FEDERATED-QUERY-R039.2.5 Chunk encoding: wiring through the single recipe executor
 - [ ] T093 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.2.6 Chunk encoding: refusal
 - [ ] T094 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.2.7 Chunk encoding: evidence
@@ -112,10 +112,10 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T106 [P] [US1] MEDULLA-FEDERATED-QUERY-R040.2.5 Topic fusion: evidence
 - [ ] T107 [P] [US1] MEDULLA-FEDERATED-QUERY-R040.2.6 Topic fusion: hot-path proof
 - [ ] T108 [US1] MEDULLA-FEDERATED-QUERY-R006.1 Temporal rule-derived facts with persisted origin chain
-- [ ] T109 [P] [US1] MEDULLA-FEDERATED-QUERY-R028.1 Typed `KnowledgeSet` row contract
+- [ ] T109 [P] [US1] MEDULLA-FEDERATED-QUERY-R028.1 Typed KnowledgeSet row contract
 - [ ] T110 [US1] MEDULLA-FEDERATED-QUERY-R005.1 Typed consistency-violation matrix on the validation result
 - [ ] T111 [P] [US1] MEDULLA-FEDERATED-QUERY-R040.2.7 Topic fusion: per-document topic responsibilities
-- [ ] T112 [US1] MEDULLA-FEDERATED-QUERY-R053.100 Generated `Cypher` property keys use backtick quoting with a build gate
+- [ ] T112 [US1] MEDULLA-FEDERATED-QUERY-R053.100 Generated Cypher property keys use backtick quoting with a build gate
 - [ ] T113 [US1] MEDULLA-FEDERATED-QUERY-R032.100 Layer- and history-weighted impact in both dependency directions
 - [ ] T114 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.4.1 NL planning context: model
 - [ ] T115 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.4.2 NL planning context: behavior
@@ -131,8 +131,8 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T125 [US1] MEDULLA-FEDERATED-QUERY-R058.7 A certified correction is recorded as a fact and grounds later planning
 - [ ] T126 [US1] MEDULLA-FEDERATED-QUERY-R058.8 A follow-up question is rewritten to a standalone question before planning
 - [ ] T127 [US1] MEDULLA-FEDERATED-QUERY-R058.9 Conflicting definitions across sources are reported, not merged
-- [ ] T128 [P] [US1] MEDULLA-FEDERATED-QUERY-R053.700 `Trino` and `Spark` sources with idempotent submission: model and behavior
-- [ ] T129 [P] [US1] MEDULLA-FEDERATED-QUERY-R053.701 `Trino` and `Spark` sources: refusal, evidence and hot-path proof
+- [ ] T128 [P] [US1] MEDULLA-FEDERATED-QUERY-R053.700 Trino and Spark sources with idempotent submission: model and behavior
+- [ ] T129 [P] [US1] MEDULLA-FEDERATED-QUERY-R053.701 Trino and Spark sources: refusal, evidence and hot-path proof
 - [ ] T130 [P] [US1] MEDULLA-FEDERATED-QUERY-R005.700 Graph integrity validation as named shapes: model and behavior
 - [ ] T131 [P] [US1] MEDULLA-FEDERATED-QUERY-R005.701 Graph integrity validation: refusal, evidence and hot-path proof
 - [ ] T132 [US1] MEDULLA-FEDERATED-QUERY-R008.1 NL planner routes catalog questions to CatalogSearch
@@ -158,7 +158,7 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T152 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.4.7.2.4 Grounding of UDF identifiers
 - [ ] T153 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.4.7.2.5 Grounding of embedded RDF and SPARQL identifiers
 - [ ] T154 [US1] MEDULLA-FEDERATED-QUERY-R072.2 UnifiedQuery plans sources through the shared source-coverage resolver
-- [ ] T155 [US1] MEDULLA-FEDERATED-QUERY-R073.3 Bind operation-bound `Mcp` sources to a connector call through the outbound guard
+- [ ] T155 [US1] MEDULLA-FEDERATED-QUERY-R073.3 Bind operation-bound Mcp sources to a connector call through the outbound guard
 - [ ] T156 [US1] MEDULLA-FEDERATED-QUERY-R720.7 UQL stage REQUIRE NONEMPTY with a caller-named refusal code
 - [ ] T157 [P] [US1] MEDULLA-FEDERATED-QUERY-R723 Serve embedding admission and re-embedding as methods
 - [ ] T158 [US1] MEDULLA-FEDERATED-QUERY-R724 Authorization-segmented schema projections method
@@ -179,11 +179,11 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T170 [P] [US2] MEDULLA-FEDERATED-QUERY-R078.4 Plan scope: refusal
 - [ ] T171 [P] [US2] MEDULLA-FEDERATED-QUERY-R078.5 Plan scope: evidence
 - [ ] T172 [P] [US2] MEDULLA-FEDERATED-QUERY-R078.6 Plan scope: hot-path proof
-- [ ] T173 [P] [US2] MEDULLA-FEDERATED-QUERY-R079.1 Model of `Iceberg` v2 catalog interoperability
-- [ ] T174 [P] [US2] MEDULLA-FEDERATED-QUERY-R079.3 `Iceberg` publication: graph-version wiring and catalog read
-- [ ] T175 [P] [US2] MEDULLA-FEDERATED-QUERY-R079.4 `Iceberg` publication: refusal
-- [ ] T176 [P] [US2] MEDULLA-FEDERATED-QUERY-R079.5 `Iceberg` publication: evidence
-- [ ] T177 [P] [US2] MEDULLA-FEDERATED-QUERY-R079.6 `Iceberg` publication: hot-path proof
+- [ ] T173 [P] [US2] MEDULLA-FEDERATED-QUERY-R079.1 Model of Iceberg v2 catalog interoperability
+- [ ] T174 [P] [US2] MEDULLA-FEDERATED-QUERY-R079.3 Iceberg publication: graph-version wiring and catalog read
+- [ ] T175 [P] [US2] MEDULLA-FEDERATED-QUERY-R079.4 Iceberg publication: refusal
+- [ ] T176 [P] [US2] MEDULLA-FEDERATED-QUERY-R079.5 Iceberg publication: evidence
+- [ ] T177 [P] [US2] MEDULLA-FEDERATED-QUERY-R079.6 Iceberg publication: hot-path proof
 - [ ] T178 [P] [US2] MEDULLA-FEDERATED-QUERY-R080.1 Model of The graph is the only write boundary; table outputs are read-only projections
 - [ ] T179 [P] [US2] MEDULLA-FEDERATED-QUERY-R080.2 Behavior of The graph is the only write boundary; table outputs are read-only projections
 - [ ] T180 [P] [US2] MEDULLA-FEDERATED-QUERY-R080.3 Wiring of The graph is the only write boundary; table outputs are read-only projections
@@ -316,7 +316,7 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T307 [P] [US2] MEDULLA-FEDERATED-QUERY-R705.4 Refusal of Feedback-adjusted document rank
 - [ ] T308 [P] [US2] MEDULLA-FEDERATED-QUERY-R705.5 Evidence of Feedback-adjusted document rank
 - [ ] T309 [P] [US2] MEDULLA-FEDERATED-QUERY-R705.6 Hot-path proof of Feedback-adjusted document rank
-- [ ] T310 [P] [US2] MEDULLA-FEDERATED-QUERY-R079.2.1 `Iceberg` publication: append, compaction and copy-on-write deletion
+- [ ] T310 [P] [US2] MEDULLA-FEDERATED-QUERY-R079.2.1 Iceberg publication: append, compaction and copy-on-write deletion
 - [ ] T311 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.11 Served retrieval round method
 - [ ] T312 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.101.1 Model and store
 - [ ] T313 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.101.2 Build job of Reusable compressed document state with decoding-free reranking
