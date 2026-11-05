@@ -1661,7 +1661,7 @@ mod tests {
             ),
             (
                 "retrieval",
-                "0ed0901d7f65bf09a8c00f3a168672f21d8e10db827b65a6d3be467c39f43d26",
+                "8619ae4a42a9545427ce72d1fe61744977d337037937ef62b96305c732aa6767",
             ),
             (
                 "sdlc_lifecycle",
@@ -1689,7 +1689,7 @@ mod tests {
             ),
             (
                 "nutrition",
-                "06772fb766c86eda3c3acf70dda010a948f6917c496415a0df1a64ae2dac27ad",
+                "d0874f95836d54e5d556d53edadae85aa3a892c2028b3236a28d6c06997c7d37",
             ),
             (
                 "world-model-shapes",
