@@ -67,9 +67,9 @@ pub enum GraphSchemaOp {
         #[serde(default)]
         if_composed_digest: Option<String>,
     },
-    /// Import or revise one connector-owned ontology source. The runtime
-    /// handler is introduced by R103.2; keeping the closed model here makes
-    /// the source identity and CAS fields explicit before that wiring lands.
+    /// Import or revise one connector-owned ontology source
+    /// (MEDULLA-TYPED-PACKS-R103.2). The importer is the authenticated request
+    /// principal, never a body field.
     ImportOntology {
         connector: ResourceId,
         ontology_iri: String,
@@ -82,7 +82,7 @@ pub enum GraphSchemaOp {
         expected_prior_revision: Option<u64>,
     },
     /// Withdraw the complete connector-owned ontology source at a known
-    /// revision. The runtime handler is introduced by R103.2.
+    /// revision (MEDULLA-TYPED-PACKS-R103.2); only the bound importer may.
     WithdrawOntology {
         connector: ResourceId,
         ontology_iri: String,
@@ -345,6 +345,34 @@ pub enum SchemaSourceOriginView {
         name: String,
         approval_lease_id: String,
     },
+    /// MEDULLA-TYPED-PACKS-R103.2: a connector-owned runtime ontology at its
+    /// active revision, with the metadata-only revision history.
+    Ontology {
+        connector: String,
+        ontology_iri: String,
+        revision: u64,
+        importer: String,
+        history: Vec<OntologyRevisionEntry>,
+    },
+}
+
+/// The newest runtime-ontology revisions kept as metadata on one source
+/// record (MEDULLA-TYPED-PACKS-R103.2). A fixed limit, not a knob.
+pub const MAX_ONTOLOGY_REVISION_HISTORY: usize = 256;
+
+/// One accepted runtime-ontology revision. Metadata only: earlier Turtle and
+/// shapes bodies are never kept, so the history is not a second store.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct OntologyRevisionEntry {
+    /// `Digest256::sha256` of the revision's ontology body.
+    pub digest: Digest256,
+    pub revision: u64,
+    /// The authenticated request principal that imported the revision.
+    pub importer: String,
+    /// Acceptance time, unix milliseconds.
+    pub at: u64,
 }
 
 /// One attached source, without its documents.
@@ -405,8 +433,6 @@ pub struct GraphSchemaSourcesView {
 closed_error_codes! {
     /// Every typed refusal the schema-source surface can answer with.
     pub enum GraphSchemaErrorCode {
-        /// Runtime ontology import is modeled but is wired by the next delivery stage.
-        OntologyImportNotWired => "ONTOLOGY_IMPORT_NOT_WIRED",
         /// The key is under a reserved importer prefix.
         SourceReserved => "SCHEMA_SOURCE_RESERVED",
         /// Two sources declare the same shape or term incompatibly.

@@ -66,7 +66,23 @@ pub enum SchemaSourceOrigin {
         name: String,
         approval_lease_id: String,
     },
+    /// MEDULLA-TYPED-PACKS-R103.2: a connector-owned runtime ontology under
+    /// `ontology:<connector>/<ontology_iri>`. `revision` is the active (and only
+    /// composed) revision; `importer` is the principal bound by the first
+    /// accepted revision; `history` is metadata only (no earlier bodies), the
+    /// newest [`MAX_ONTOLOGY_REVISION_HISTORY`] entries.
+    Ontology {
+        connector: String,
+        ontology_iri: String,
+        revision: u64,
+        importer: String,
+        history: Vec<OntologyRevisionEntry>,
+    },
 }
+
+pub use medulla_catalog_types::graph_schema::{
+    OntologyRevisionEntry, MAX_ONTOLOGY_REVISION_HISTORY,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -117,6 +133,7 @@ impl GraphSchemaSource {
     }
 
     pub fn validate(&self) -> Result<(), String> {
+        validate_ontology_origin(&self.origin)?;
         if self.shapes_ttl.is_none()
             && self.ontology_ttl.is_none()
             && !matches!(&self.origin, SchemaSourceOrigin::Pack { .. })
@@ -176,6 +193,36 @@ fn same_schema_document(
     right_digest: Option<Digest256>,
 ) -> bool {
     left_document == right_document && left_digest == right_digest
+}
+
+/// A runtime-ontology record names its active revision as the newest history
+/// entry, within the fixed history bound, with strictly increasing revisions.
+fn validate_ontology_origin(origin: &SchemaSourceOrigin) -> Result<(), String> {
+    let SchemaSourceOrigin::Ontology {
+        revision,
+        importer,
+        history,
+        ..
+    } = origin
+    else {
+        return Ok(());
+    };
+    if importer.is_empty() || *revision == 0 {
+        return Err("runtime ontology record needs an importer and a revision".to_string());
+    }
+    if history.is_empty() || history.len() > MAX_ONTOLOGY_REVISION_HISTORY {
+        return Err(format!(
+            "runtime ontology history must hold 1..={MAX_ONTOLOGY_REVISION_HISTORY} entries"
+        ));
+    }
+    if history
+        .windows(2)
+        .any(|pair| pair[1].revision <= pair[0].revision)
+        || history.last().map(|entry| entry.revision) != Some(*revision)
+    {
+        return Err("runtime ontology history does not end at the active revision".to_string());
+    }
+    Ok(())
 }
 
 fn validate_document_digest(
@@ -554,7 +601,8 @@ fn validate_dynamic_identity(source_id: &str, origin: &SchemaSourceOrigin) -> Re
 }
 
 /// Whether `origin` is the authority its key prefix asserts (`admin:<name>`,
-/// `pack:<connector>`, `ingest:<mapping>`, `approved:<name>`, `operator`).
+/// `pack:<connector>`, `ingest:<mapping>`, `approved:<name>`,
+/// `ontology:<connector>/<iri>`, `operator`).
 fn origin_owns_key(source_id: &str, origin: &SchemaSourceOrigin) -> bool {
     match origin {
         SchemaSourceOrigin::Core { .. } => false,
@@ -569,6 +617,17 @@ fn origin_owns_key(source_id: &str, origin: &SchemaSourceOrigin) -> bool {
             name,
             approval_lease_id,
         } => keyed(source_id, "approved:", name) && !approval_lease_id.is_empty(),
+        SchemaSourceOrigin::Ontology {
+            connector,
+            ontology_iri,
+            importer,
+            ..
+        } => {
+            !connector.is_empty()
+                && !ontology_iri.is_empty()
+                && !importer.is_empty()
+                && source_id == format!("ontology:{connector}/{ontology_iri}")
+        }
     }
 }
 
@@ -607,7 +666,21 @@ fn validate_replacement_progression(
                 revision: replacement_revision,
             },
         ) => current_mapping == replacement_mapping && replacement_revision > current_revision,
-        (SchemaSourceOrigin::Pack { .. }, _) | (SchemaSourceOrigin::Ingestion { .. }, _) => false,
+        (
+            SchemaSourceOrigin::Ontology {
+                revision: current_revision,
+                importer: current_importer,
+                ..
+            },
+            SchemaSourceOrigin::Ontology {
+                revision: replacement_revision,
+                importer: replacement_importer,
+                ..
+            },
+        ) => current_importer == replacement_importer && replacement_revision > current_revision,
+        (SchemaSourceOrigin::Pack { .. }, _)
+        | (SchemaSourceOrigin::Ingestion { .. }, _)
+        | (SchemaSourceOrigin::Ontology { .. }, _) => false,
         _ => true,
     };
     if advances {
@@ -1229,6 +1302,13 @@ fn origin_bytes(origin: &SchemaSourceOrigin) -> Vec<u8> {
             name,
             approval_lease_id,
         } => format!("approved\0{name}\0{approval_lease_id}").into_bytes(),
+        SchemaSourceOrigin::Ontology {
+            connector,
+            ontology_iri,
+            revision,
+            importer,
+            ..
+        } => format!("ontology\0{connector}\0{ontology_iri}\0{revision}\0{importer}").into_bytes(),
     }
 }
 

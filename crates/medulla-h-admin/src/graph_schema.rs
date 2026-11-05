@@ -16,6 +16,7 @@ mod approved;
 pub(crate) mod attach_pack;
 #[cfg(test)]
 mod finance_tests;
+mod ontology_import;
 #[cfg(all(test, feature = "shacl"))]
 mod swarm_topology_tests;
 #[cfg(test)]
@@ -230,16 +231,45 @@ pub(crate) async fn handle_gateway(
             approved::handle_validate(ctx, plan, method, op).await
         }
         GraphSchemaOp::ImportOntology { .. } | GraphSchemaOp::WithdrawOntology { .. } => {
-            Response::err(
-                ctx.req_id,
-                format!(
-                    "{}: runtime ontology import is delivered by R103.2",
-                    medulla_catalog_types::graph_schema::GraphSchemaErrorCode::OntologyImportNotWired
-                        .as_str()
-                ),
-            )
+            handle_ontology_gateway(tenant_id, ctx, plan, method, op).await
         }
     }
+}
+
+/// R103.3: route `ImportOntology` / `WithdrawOntology` through the gateway with
+/// the authenticated request principal as the importer.
+async fn handle_ontology_gateway(
+    tenant_id: &str,
+    ctx: &MutationCtx<'_>,
+    plan: &MutationPlan,
+    method: &Method,
+    op: &medulla_catalog_types::graph_schema::GraphSchemaOp,
+) -> Response {
+    use medulla_catalog_types::graph_schema::GraphSchemaOp;
+
+    let authority = ontology_import::OntologyAuthority {
+        importer: ctx.caller.unwrap_or_default().to_string(),
+        tenant: tenant_id.to_string(),
+        at_ms: std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |elapsed| {
+                u64::try_from(elapsed.as_millis()).unwrap_or(u64::MAX)
+            }),
+    };
+    let op = op.clone();
+    let graph_name = ctx.graph_name.to_string();
+    medulla_server_ops::api::ingest::graph::commit_gateway(ctx, plan, method, move |core| {
+        let committed = match &op {
+            GraphSchemaOp::WithdrawOntology { .. } => {
+                ontology_import::withdraw_ontology(core, &graph_name, &op, &authority)
+            }
+            _ => ontology_import::import_ontology(core, &graph_name, &op, &authority),
+        };
+        committed.and_then(
+            ResultPayload::of::<medulla_protocol_types::result_contract::reasoning::GraphSchema>,
+        )
+    })
+    .await
 }
 
 async fn handle_attach_pack_gateway(
@@ -428,15 +458,13 @@ fn apply(
             sources.attach_dynamic(source_id.clone(), approved::source(op)?)?
         }
         GraphSchemaOp::Detach { source_id, .. } => sources.detach_dynamic(source_id),
-        GraphSchemaOp::AttachPack { .. } | GraphSchemaOp::ValidateRepair { .. } => {
-            unreachable!("attach-pack and validate-repair have their own routes")
-        }
-        GraphSchemaOp::ImportOntology { .. } | GraphSchemaOp::WithdrawOntology { .. } => {
-            return Err(format!(
-                "{}: runtime ontology import is delivered by R103.2",
-                medulla_catalog_types::graph_schema::GraphSchemaErrorCode::OntologyImportNotWired
-                    .as_str()
-            ));
+        GraphSchemaOp::AttachPack { .. }
+        | GraphSchemaOp::ValidateRepair { .. }
+        | GraphSchemaOp::ImportOntology { .. }
+        | GraphSchemaOp::WithdrawOntology { .. } => {
+            unreachable!(
+                "attach-pack, validate-repair and runtime ontologies have their own routes"
+            )
         }
     };
     if matches!(op, GraphSchemaOp::Detach { .. }) {

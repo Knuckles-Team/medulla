@@ -12786,6 +12786,63 @@ class RdfClient:
             )
         ).model_dump(mode="json")
 
+    async def import_ontology(
+        self,
+        connector: str,
+        ontology_iri: str,
+        version: str,
+        ontology_ttl: str,
+        *,
+        shapes_ttl: str | None = None,
+        expected_prior_revision: int | None = None,
+        graph: str | None = None,
+        idempotency_key: str | None = None,
+    ) -> dict[str, Any]:
+        """Import or revise one connector-owned runtime ontology (GraphSchema).
+
+        The engine binds the authenticated principal as the importer; the
+        request carries no importer. The same body digest as the active revision
+        answers unchanged; a new digest commits the next revision. The digest is
+        the SHA-256 of ``ontology_ttl``.
+        """
+        op = {
+            "op": "import_ontology",
+            "connector": connector,
+            "ontology_iri": ontology_iri,
+            "version": version,
+            "ontology_ttl": ontology_ttl,
+            "shapes_ttl": shapes_ttl,
+            "content_digest": hashlib.sha256(ontology_ttl.encode("utf-8")).hexdigest(),
+            "expected_prior_revision": expected_prior_revision,
+        }
+        return (
+            await _gen.reasoning.send_graph_schema(
+                self._client, {"op": op}, graph, idempotency_key=idempotency_key
+            )
+        ).model_dump(mode="json")
+
+    async def withdraw_ontology(
+        self,
+        connector: str,
+        ontology_iri: str,
+        expected_revision: int,
+        *,
+        graph: str | None = None,
+        idempotency_key: str | None = None,
+    ) -> dict[str, Any]:
+        """Withdraw one runtime ontology as a whole; only its bound importer may."""
+        op = {
+            "op": "withdraw_ontology",
+            "connector": connector,
+            "ontology_iri": ontology_iri,
+            "expected_revision": expected_revision,
+        }
+        return (
+            await _gen.reasoning.send_graph_schema(
+                self._client, {"op": op}, graph, idempotency_key=idempotency_key
+            )
+        ).model_dump(mode="json")
+
     async def validate_committed(
         self, *, data_triples: list[dict[str, Any]]
     ) -> dict[str, Any]:
