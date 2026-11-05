@@ -78,7 +78,7 @@ The rules below bind every row.
 4. **No second policy writer.** The ack handler is the only dead-letter writer. The claim handler evaluates admission itself. One routing function and one gauge set exist.
 5. **Cross-handler calls use seams.** The queue handler reaches the task queue through `jobs_seam`, and the task-queue handler reaches `on_ingest_ack` and `on_ingest_claim` through `ingest_seam`. The implementations are installed in `crates/medulla-server/src/seams_install.rs`.
 6. **Wire changes carry no shim.** A changed Rust wire type updates the generated Python models in `medulla/generated/` and gets a Rust round-trip vector in the same change.
-7. **Names and ids.** Ids are SHA-256 framed with `Digest256::framed` under a domain tag per kind. No component name carries a version suffix.
+7. **Names and ids.** Ids are framed digests built with `Digest256::framed` under a domain tag per kind. No component name carries a version suffix.
 8. **Knobs.** Each tunable value is a named knob with a default, bounds and a unit; security-relevant values are `Fixed`.
 
 Data entities are in [data-model.md](data-model.md). The shortest served proof is in [quickstart.md](quickstart.md). Each seam to another repository has a document in `contracts/`.
