@@ -1,14 +1,57 @@
-# MEDULLA-MEDIA-VOCAB — Design and implementation plan
+# MEDULLA-MEDIA-VOCAB — Implementation plan
 
-## Dependencies and unresolved owner contracts
+Governing spec: [spec.md](spec.md). Rows: [requirements.md](requirements.md).
 
-- `SDK-SOURCE-INGEST-R005.7-.12` is the existing source-envelope prerequisite for bookmark ingestion under `MEDULLA-MEDIA-VOCAB-R001.102`; it does not create a second Medulla ingestion path. `OVERSTORY-APPS-R001.6` owns mindmap/export presentation. Arbora query/export adapter requirement ID remains unlinked and is a coordinator hold.
-- `OVERSTORY-APPS-R001.5` is the meeting summary UI consumer for `MEDULLA-MEDIA-VOCAB-R001.101`. Reviewed evidence lacks Meristem provider-admission and invocation-receipt producer IDs. Reserved `MERISTEM-SEMANTIC-R030` remains pending admission, retry-attempt accounting, and disabled-provider refusal. Producer contracts and served receipts remain required. Wrapper-default retries do not count as one invocation.
-- The vision extraction producer for `MEDULLA-MEDIA-VOCAB-R001.100` remains held. `MEDULLA-MEDIA-VOCAB-R002.5` defines Medulla receipt-bound paper facts; citation edges remain held pending the Graft SDK reference-ID schema, identity normalization and paper-serving registration.
+## Summary
 
-Governing spec: [spec.md](spec.md).
+Medulla owns one media vocabulary (`crates/medulla-core/ontology/media-v1.ttl`), one content-channel vocabulary (`content-v1.ttl`), their shapes, the fifteen connector mapping fixtures and the ingest and query surfaces for meeting transcripts, bookmarks, media tags, paper facts and media memory. The live caller of the registered vocabulary is `GraphSchemaSources::default()` in `crates/medulla-graph-core/src/graph/schema_sources.rs`; the ingest surfaces enter at `Method::SourceIngest` in `crates/medulla-h-ingest/src/source_ingestion.rs`. Reuse candidates found by searching the code first: the semantic index service of `crates/medulla-h-retrieve`, the relationship admission of `source_ingestion.rs`, the `Derivation` type of `crates/medulla-modality`, and the refusal-table pattern of `MEDULLA-DECISION-ENGINE-R010.100`.
 
-## Problem and evidence
+## Technical Context
+
+- **Language/Version**: Rust 2021 edition on the pinned toolchain of `rust-toolchain.toml`; Turtle ontology files; Python 3.14 (floor 3.12) for the one served Python test.
+- **Primary Dependencies**: `medulla-rdf` (parser and SPARQL), `medulla-shacl`, `medulla-graph-core`, the handler crates named in the rows, and the standard library.
+- **Storage**: the engine graph store through the one `SourceIngest` ChangeEnvelope commit; no second store.
+- **Testing**: ontology load tests in `crates/medulla-core/tests/media_vocab_a.rs` and `media_vocab_b.rs`, SHACL tests in `crates/medulla-rdf/tests/media_vocab_shapes.rs`, and the served tests of `crates/medulla-server-served-tests` (L3).
+- **Target Platform**: Linux x86_64 and aarch64 hosts.
+- **Project Type**: Library crates, ontology files and server handler crates.
+- **Performance Goals**: the media memory write meets the nightly budget of row R650.6; vocabulary loading adds no measurable start-up cost.
+- **Constraints**: no new wire method for tag search; denied rows never reach a count; every refusal has a stable code; no version suffix in a name.
+- **Scale/Scope**: the leaf rows of `requirements.md`, spread over 7 user stories and 8 `FR-` labels.
+
+## Constitution Check
+
+- **R-I. The engine is native Rust and the only fact store**: pass. Every behaviour row lands in a Rust crate and the engine store.
+- **R-II. Every wait has a deadline**: pass. No row adds a wait.
+- **R-III. Every row sets budgets and names a benchmark**: pass. R650.6 names the only hot path and its nightly budget.
+- **R-IV. Crates are small, layered and cut over hard**: pass. Rows name post-split crates; no handler crate calls a sibling handler crate.
+- **Organization standards**: pass. Rows follow the spec standard and the ecosystem boundaries.
+
+## Project Structure
+
+```text
+crates/medulla-core/ontology/media-v1.ttl, content-v1.ttl           existing
+crates/medulla-core/ontology/media-v1.shapes.ttl, content-v1.shapes.ttl  existing
+crates/medulla-core/tests/media_vocab_a.rs, media_vocab_b.rs         existing
+crates/medulla-core/tests/fixtures/media_vocab/                      existing: 15 mapping and response pairs
+crates/medulla-rdf/tests/media_vocab_shapes.rs, media_vocab_cross_source.rs  existing
+crates/medulla-h-ingest/src/source_ingestion/media_tag.rs            new
+crates/medulla-h-ingest/src/meeting_transcript/                      new
+crates/medulla-h-ingest/src/paper_ingest/                            new
+crates/medulla-h-retrieve/src/bookmark.rs                            new
+crates/medulla-h-query/src/bookmark_relations.rs                     new
+crates/medulla-h-graph/src/graph_ops/memory_surface.rs               new (owned by the decision-engine spec)
+crates/medulla-modality/src/media_memory.rs                          new
+crates/medulla-types/src/{meeting_transcript,bookmark_query,media_tag,paper_ingest}.rs  new
+crates/medulla-server-served-tests/src/split_tests/                  new served test files named by the rows
+```
+
+## Phase 0: Research
+
+No unknowns. Every caveat is CONFIRMED, DECIDED or BLOCKED in the Decisions section; blocked items have a cross-repo row.
+
+## Phase 1: Design
+
+### Problem and evidence
 
 `specs/connector-competency` marked the vocabulary for the whole media and personal-content domain MISSING because its method judged `crates/medulla-core/ontology/` by file name. This spec re-checked by opening the files.
 
@@ -16,7 +59,7 @@ Governing spec: [spec.md](spec.md).
 - Result: the gap is confirmed. Reusable terms include `:Team` as well as `:CreativeWork`, `:Document`, `:Transcript`, `:VoiceMessage`, `:Event`, `:Session`, `:Person`, `:Organization`, `:Tag` are reusable.
 - New evidence: every connector package already ships a packaged vocabulary (`<pkg>/ontology/*.ttl`: arr.ttl, media.ttl, audiobookshelf.ttl, qbittorrent.ttl, rom.ttl, owncast.ttl, audio.ttl, feed.ttl, scholarx.ttl, searxng.ttl, pulselink.ttl, social.ttl, listmonk.ttl, mattermost.ttl), a `mappings/source.yaml`, and `connectors/mcp_source_presets.json`. Those declare connector-local classes in the shared `:` namespace, two of which collide with core (`:Episode` in arr.ttl vs core-foundation `:Episode`; `:Author` in jellyfin/audiobookshelf media.ttl vs software-v1 `:Author`). What is missing in Medulla is the shared layer they all subclass, and the cross-source identity keys.
 
-## Architecture
+### Architecture
 
 Virtual-first: Medulla never copies a source. The core vocabulary is the join surface. Each connector's packaged ontology and mapping declare which tool fetches which class at query time.
 
@@ -31,11 +74,11 @@ question
 
 Owners: vocabulary files and shapes: Medulla (`crates/medulla-core/ontology/`). Mapping rows: Medulla (fixtures) consuming `vg:` terms already in `virtual_graph-v1.ttl`. Operations and connector ontologies: each connector package (agent-packages). Planning, routing, federation: existing specs, cited, not redefined. Packs/agent library: `specs/typed-packs-and-catalog`.
 
-## Vocabulary
+### Vocabulary
 
 Two new files, namespace `http://knuckles.team/kg#`, prefixes `mv:` (media) and `cv:` (content channels) denote the section of the shared namespace. All IRIs stay in `:` as the other ontology files do, so `mv:`/`cv:` below are documentation prefixes.
 
-### media-v1.ttl
+#### media-v1.ttl
 
 | Term | Kind | Domain / range / parent | Notes |
 |---|---|---|---|
@@ -59,7 +102,7 @@ Two new files, namespace `http://knuckles.team/kg#`, prefixes `mv:` (media) and 
 
 SHACL (media-v1.shapes.ttl, aggregate-free like virtual_graph-v1.shapes.ttl): connector-sourced Film/Series carry one of the three ids. `infoHash` is 40 or 64 lower-case hex; `downloadRequestState` in (requested, wanted, grabbed, importing, imported, failed); a LibraryItem has exactly one `itemOf` and one `inLibrary`.
 
-### content-v1.ttl
+#### content-v1.ttl
 
 | Term | Kind | Domain / range / parent | Notes |
 |---|---|---|---|
@@ -76,7 +119,7 @@ Shared-namespace collision decisions: reuse `kg:Team`. Use `kg:socialScheduledAt
 
 SHACL: Article/SearchResult carry exactly one normalised `canonicalUrl`; Subscriber has `subscriberKey` (keyed hash) and no raw-address property.
 
-## Wiring
+### Wiring
 
 - Ontology files are read from `crates/medulla-core/ontology/*.ttl` by the existing loader (same as `personal-v1.ttl`); shapes live beside them as `*.shapes.ttl`.
 - Mappings are `vg:VirtualMapping` rows (`vg:mapsOntologyClass`, `vg:mapsEntity`, `vg:keyField`, `vg:hasPredicateFieldPair`) validated by `virtual_graph-v1.shapes.ttl`; `vg:sourceKind` is `mcp` for all 15 connectors (the closed set is api, mcp, a2a, graphql, sql, iceberg, warehouse, sparql). `api` was the alternative; rejected because every connector already publishes tool schemas and fingerprints for MCP, and governance (default_acl quarantine, identity opaque-reference) is declared there.
@@ -84,9 +127,9 @@ SHACL: Article/SearchResult carry exactly one normalised `canonicalUrl`; Subscri
 - Connector truth: each `<pkg>/ontology/mappings/source.yaml` and `connectors/mcp_source_presets.json` is the connector-side declaration; Medulla mappings must agree with them (test R-row .1).
 - `specs/connector-competency` vocabulary column flips from MISSING after landing (row .4 of each connector rollup).
 
-## Connector mapping tables
+### Connector mapping tables
 
-### arr (arr-mcp; `MEDULLA-CQ-CONN-R005`)
+#### arr (arr-mcp; `MEDULLA-CQ-CONN-R005`)
 
 | Connector operation / tool | Class / property | Contract kind |
 |---|---|---|
@@ -102,7 +145,7 @@ SHACL: Article/SearchResult carry exactly one normalised `canonicalUrl`; Subscri
 - Cross-source question: CONFIRMED: queue exposes the download client id (get_queue) which is the torrent info-hash. Qbittorrent hash and jellyfin provider ids supply the other two legs. DECIDED: join key is mv:infoHash then mv:tmdbId.
 - Cross-repo row: arr-mcp (per-title 'last searched indexer' (Radarr/Sonarr keep no per-title search log; Prowlarr history is query-keyed, not title-keyed): add a prowlarr_action history-by-title projection)
 
-### jellyfin (jellyfin-mcp; `MEDULLA-CQ-CONN-R027`)
+#### jellyfin (jellyfin-mcp; `MEDULLA-CQ-CONN-R027`)
 
 | Connector operation / tool | Class / property | Contract kind |
 |---|---|---|
@@ -115,7 +158,7 @@ SHACL: Article/SearchResult carry exactly one normalised `canonicalUrl`; Subscri
 - Single-source question: CONFIRMED: get_items and get_item_user_data exist in the jellyfin api client (get_items, get_item_user_data, get_resume_items); never-played-and-older-than-one-year is a filter on lastPlayedAt unbound plus addedAt (DateCreated is the preset updated_field).
 - Cross-source question: DECIDED: the join to Radarr/Sonarr needs ProviderIds, which get_items returns only when asked via its Fields parameter. The mapping fixes Fields=ProviderIds. Alternative (title-and-year fuzzy join) rejected as unsound.
 
-### audiobookshelf (audiobookshelf-mcp; `MEDULLA-CQ-CONN-R007`)
+#### audiobookshelf (audiobookshelf-mcp; `MEDULLA-CQ-CONN-R007`)
 
 | Connector operation / tool | Class / property | Contract kind |
 |---|---|---|
@@ -130,7 +173,7 @@ SHACL: Article/SearchResult carry exactly one normalised `canonicalUrl`; Subscri
 - Cross-repo row: audiobookshelf-mcp (user listening progress: add a library_operations or users action for media progress per user and item)
 - Cross-repo row: media-downloader (see media-downloader B1)
 
-### qbittorrent (qbittorrent-agent; `MEDULLA-CQ-CONN-R051`)
+#### qbittorrent (qbittorrent-agent; `MEDULLA-CQ-CONN-R051`)
 
 | Connector operation / tool | Class / property | Contract kind |
 |---|---|---|
@@ -143,7 +186,7 @@ SHACL: Article/SearchResult carry exactly one normalised `canonicalUrl`; Subscri
 - Single-source question: CONFIRMED: state, ratio, added_on and last_activity are fields of the torrent list (qbittorrent_models.py, mcp_torrents.py); 'stalled' is state stalledDL or stalledUP.
 - Cross-source question: CONFIRMED with arr: the join is mv:infoHash against the Radarr/Sonarr queue entry's downloadId (case-folded). DECIDED: a stalled torrent with no arr queue entry is reported separately as unmanaged.
 
-### rom-manager (rom-manager; `MEDULLA-CQ-CONN-R053`)
+#### rom-manager (rom-manager; `MEDULLA-CQ-CONN-R053`)
 
 | Connector operation / tool | Class / property | Contract kind |
 |---|---|---|
@@ -157,7 +200,7 @@ SHACL: Article/SearchResult carry exactly one normalised `canonicalUrl`; Subscri
 - Cross-repo row: rom-manager (reference-set verification: add a romm_roms verify action returning per-ROM checksum verdict)
 - Cross-repo row: media-downloader (see media-downloader B1)
 
-### owncast (owncast-agent; `MEDULLA-CQ-CONN-R045`)
+#### owncast (owncast-agent; `MEDULLA-CQ-CONN-R045`)
 
 | Connector operation / tool | Class / property | Contract kind |
 |---|---|---|
@@ -171,7 +214,7 @@ SHACL: Article/SearchResult carry exactly one normalised `canonicalUrl`; Subscri
 - Cross-source question: BLOCKED: broadcast-to-post link is not an Owncast field. DECIDED: join via the stream URL appearing in the Postiz post content (mv:canonicalUrl). Audience from ViewerSample, reach from postiz_analytics. History limitation applies.
 - Cross-repo row: owncast-agent (past broadcast list with start/end and peak viewers: add an owncast_internal stream-history action or persist sessions)
 
-### media-downloader (media-downloader; `MEDULLA-CQ-CONN-R038`)
+#### media-downloader (media-downloader; `MEDULLA-CQ-CONN-R038`)
 
 | Connector operation / tool | Class / property | Contract kind |
 |---|---|---|
@@ -182,7 +225,7 @@ SHACL: Article/SearchResult carry exactly one normalised `canonicalUrl`; Subscri
 - Cross-source question: BLOCKED for the same reason: 'completed downloads never added to Jellyfin or Audiobookshelf' needs the completed-download list. Jellyfin and Audiobookshelf legs are CONFIRMED.
 - Cross-repo row: media-downloader (download history: add a list_downloads operation returning job id, source URL, status, error, completedAt, output path)
 
-### audio-transcriber (audio-transcriber; `MEDULLA-CQ-CONN-R008`)
+#### audio-transcriber (audio-transcriber; `MEDULLA-CQ-CONN-R008`)
 
 | Connector operation / tool | Class / property | Contract kind |
 |---|---|---|
@@ -194,7 +237,7 @@ SHACL: Article/SearchResult carry exactly one normalised `canonicalUrl`; Subscri
 - Cross-repo row: audio-transcriber (transcript list/get operation by recording id and date)
 - Cross-repo row: audio-transcriber (expose avg_logprob (confidence) per segment)
 
-### freshrss (freshrss-agent; `MEDULLA-CQ-CONN-R022`)
+#### freshrss (freshrss-agent; `MEDULLA-CQ-CONN-R022`)
 
 | Connector operation / tool | Class / property | Contract kind |
 |---|---|---|
@@ -206,7 +249,7 @@ SHACL: Article/SearchResult carry exactly one normalised `canonicalUrl`; Subscri
 - Single-source question: CONFIRMED: stream_contents with newer_than and unread filter, plus unread_count (freshrss_reader docstring, mcp_freshrss reader tool). Published is the preset updated_field.
 - Cross-source question: CONFIRMED: join on cv:canonicalUrl (normalised URL) with SearXNG result urls. 'new' means absent from the earlier fetch window, DECIDED as publishedAt within the question window.
 
-### scholarx (scholarx; `MEDULLA-CQ-CONN-R055`)
+#### scholarx (scholarx; `MEDULLA-CQ-CONN-R055`)
 
 | Connector operation / tool | Class / property | Contract kind |
 |---|---|---|
@@ -218,7 +261,7 @@ SHACL: Article/SearchResult carry exactly one normalised `canonicalUrl`; Subscri
 - Cross-source question: CONFIRMED: sx_search for the topic and searxng web_search for the same query. Join on cv:doi / cv:arxivId extracted from result URLs, else cv:canonicalUrl.
 - Cross-repo row: scholarx (citing-papers operation: add sx_search action 'citations' returning papers that cite a given id)
 
-### searxng (searxng-mcp; `MEDULLA-CQ-CONN-R056`)
+#### searxng (searxng-mcp; `MEDULLA-CQ-CONN-R056`)
 
 | Connector operation / tool | Class / property | Contract kind |
 |---|---|---|
@@ -229,7 +272,7 @@ SHACL: Article/SearchResult carry exactly one normalised `canonicalUrl`; Subscri
 - Cross-source question: CONFIRMED: SearXNG URLs against ArchiveBox snapshots by cv:canonicalUrl (archivebox is covered by documentation-v1).
 - Cross-repo row: searxng-mcp (pass through per-engine result counts and unresponsive_engines from the SearXNG response)
 
-### pulselink (pulselink-mcp; `MEDULLA-CQ-CONN-R050`)
+#### pulselink (pulselink-mcp; `MEDULLA-CQ-CONN-R050`)
 
 | Connector operation / tool | Class / property | Contract kind |
 |---|---|---|
@@ -241,7 +284,7 @@ SHACL: Article/SearchResult carry exactly one normalised `canonicalUrl`; Subscri
 - Single-source question: CONFIRMED: pulse_search finds videos by topic and pulse_transcribe returns the transcript on demand (pulselink_mcp mcp tools). DECIDED: term matching is applied to transcripts fetched for at most N search hits (bounded fan-out) because transcripts are produced per call, not stored.
 - Cross-source question: CONFIRMED legs: pulse_transcribe, searxng web_search, archivebox. DECIDED: topic is a :Concept/:Tag; archived-page absence is by cv:canonicalUrl.
 
-### postiz (postiz-agent; `MEDULLA-CQ-CONN-R049`)
+#### postiz (postiz-agent; `MEDULLA-CQ-CONN-R049`)
 
 | Connector operation / tool | Class / property | Contract kind |
 |---|---|---|
@@ -254,7 +297,7 @@ SHACL: Article/SearchResult carry exactly one normalised `canonicalUrl`; Subscri
 - Single-source question: CONFIRMED op: postiz_list_posts. DECIDED: failed state is read from the post's state field and verified by the fixture; no separate failures operation is needed.
 - Cross-source question: DECIDED: there is no campaign id shared by Postiz and Listmonk. The join is a shared cv:canonicalUrl (tracked link or landing URL) found in post content and campaign body. Alternative (explicit campaign tag) rejected: needs both connectors to agree on a field.
 
-### listmonk (listmonk-api; `MEDULLA-CQ-CONN-R035`)
+#### listmonk (listmonk-api; `MEDULLA-CQ-CONN-R035`)
 
 | Connector operation / tool | Class / property | Contract kind |
 |---|---|---|
@@ -266,7 +309,7 @@ SHACL: Article/SearchResult carry exactly one normalised `canonicalUrl`; Subscri
 - Single-source question: CONFIRMED: get_campaigns and get_campaign_stats exist (listmonk_api/api). Open rate := viewCount / sentCount, DECIDED as the definition. List average computed at query time.
 - Cross-source question: DECIDED: subscribers to Twenty contacts join on a keyed hash of the email address, never the raw address, because the connector's governance is identity: opaque-reference.
 
-### mattermost (mattermost-mcp; `MEDULLA-CQ-CONN-R036`)
+#### mattermost (mattermost-mcp; `MEDULLA-CQ-CONN-R036`)
 
 | Connector operation / tool | Class / property | Contract kind |
 |---|---|---|
@@ -278,7 +321,7 @@ SHACL: Article/SearchResult carry exactly one normalised `canonicalUrl`; Subscri
 - Single-source question: CONFIRMED: channels, channel stats and posts-for-channel are generated from the Mattermost API (mattermost_mcp/mcp/mcp_posts.py, mcp_channels). DECIDED: inactivity := lastPostAt older than 90 days, member count from channel stats.
 - Cross-source question: DECIDED: join to Keycloak and Okta on a keyed hash of the email / username identity. Absence of an IdP account is a typed absence, not an error.
 
-## Decisions
+### Decisions
 
 Every caveat is resolved as CONFIRMED, DECIDED or BLOCKED. The per-connector decisions are in the tables above; summary:
 
@@ -302,9 +345,9 @@ Every caveat is resolved as CONFIRMED, DECIDED or BLOCKED. The per-connector dec
 
 Other decisions: D1 reuse `:Transcript`, `:VoiceMessage`, `:CreativeWork`, `:Document`, `:Session`, `:Event`, `:Person`, `:Tag` from existing files; do not redefine. D2 `TelevisionEpisode` not `:Episode` (collision, alternative: rename core `:Episode`, rejected, it is used by the memory model). D3 two files, not one, because the domains share no classes and ship on different cadences. D4 materialisation is not the default; the accelerated copy remains the federated-query spec's option.
 
-## Worked examples
+### Worked examples
 
-### Example 1: Which requested films are downloaded but not yet in the library?
+#### Example 1: Which requested films are downloaded but not yet in the library?
 
 Legs: arr (Radarr `get_wanted_missing` plus Seerr `get_request` for requested; `get_queue` for in-flight), qbittorrent (`get_torrent_list`), jellyfin (`get_items` with ProviderIds).
 
@@ -319,52 +362,50 @@ SELECT ?film ?tmdb ?hash WHERE {
 
 Flow: arr rows give ?film/?tmdb and the queue downloadId (= ?hash). Qbittorrent rows are matched on ?hash and filtered to completed states. Jellyfin rows supply library membership by ?tmdb. The anti-join (OPTIONAL plus `!BOUND`, the aggregate-free form) leaves films downloaded but absent. Answer shape: rows of (film title, tmdbId, torrent hash, transferState, completedAt) each with provenance (source, record id, as-of) per leg. If Jellyfin is unconnected the answer is a typed abstention naming jellyfin. No row is guessed.
 
-### Example 2: Which feed articles are not archived and were not returned for a search?
+#### Example 2: Which feed articles are not archived and were not returned for a search?
 
 freshrss `stream_contents` (unread, window), searxng `web_search`, archivebox snapshots. Join on `cv:canonicalUrl`; answer is the articles with no matching result or snapshot. Same shape and abstention rule.
 
-## Out of scope
+### Out of scope
 
 Writing connector operations (owned by the connector packages, tracked as cross-repo rows). Bulk ingestion of media metadata (virtual-first). ArchiveBox, Paperless, Nextcloud, Gramps, Mealie vocabularies (documentation-v1, personal-v1, life-v1 or other specs). Plans, routing, topology (decision-engine).
 
-## Quality and release gates
+### Quality and release gates
 
 Vocabulary and shapes land with `cargo test -p medulla-core` ontology load and SHACL tests, the repo's CCCC, jscpd, dupehound and KISS gates. No duplicate class IRIs across `ontology/*.ttl` except the documented connector aliases. No scanner gaming.
 
-## Risks, alternatives, and decisions
+### Risks, alternatives, and decisions
 
 Connector ontologies already exist and may drift from the core vocabulary: mitigated by the .1 mapping tests and the collision test. Several questions are BLOCKED on connector operations; Medulla ships abstentions first so the questions fail honestly.
 
-<!-- spec-definition-patch:owner-batch-20261012-media-and-personal-vocabulary -->
-## Owner definition and dependency plan — 2026-10-12
+### Proposed terms awaiting owner review
 
-### `MEDULLA-MEDIA-VOCAB-R002.5` — EG:50
+The rows reuse existing terms. These names appear in rows but are not yet in an ontology file, so each is a proposed term: `:MediaTag` and its ten properties (R001.100.1), `:MediaDerivation` and its three properties (R650.1), `:engagementMetricName` and `:engagementMetricValue` (R651), `:announcesStream` (R652), the three transcript clock properties (R654) and the audio-transcriber and searxng additions of rows R029 and R031.
 
-- **Medulla contract:** Reuse Graft SDK `PaperSearchResult` → `PaperRecord`/`DocumentReceipt` → existing `SourceIngest`. Require Graft SDK `exact_identity`, matching paper/revision, a complete authorized artifact, and per-field provenance. The artifact binds URL, media type, byte count, SHA-256, and local artifact. Assert `cv:ResearchPaper` and available DOI, arXiv ID, publication date, and citation-count facts. Bind each fact to source provenance and the receipt/document digest. Exact replay is idempotent. Missing identity or mismatched receipt/revision/digest refuses the affected paper before graph mutation. Incomplete artifacts or provenance mismatches also refuse. Preserve healthy sibling results.
-- **Open dependency:** Current `PaperRecord`/`DocumentReceipt` lacks cited-paper IDs. The Graft SDK plan also leaves paper-serving registration open. Citation counts cannot create citation edges. The Graft SDK owner must define and serve reference IDs, target identity/normalization, and paper registration. Medulla must await those definitions before defining or claiming citation-edge construction. Do not infer providers or synthesize edges.
-- **Acceptance:** Test a matching record and independent `SourceIngest` readback for every asserted fact/provenance. Test byte-identical replay. Test mixed identified/unidentified batches; only the unidentified paper refuses. Test receipt, revision, artifact, and field-provenance mismatches before mutation. Confirm that a count-only paper emits no edge. Citation-edge acceptance remains held; it is not a passing test.
-- **Preserve:** `MEDULLA-MEDIA-VOCAB-R002.1`, `.4`, `SCION-SOURCE-INGEST-R005.1`, `.2`, `.4`, `MEDULLA-REPO-INGEST-R002`.
-- **Source record:** `b6d12a184f1c5812c8f4fd56a0a299e48381e85ad9b18af4eb0ed19faf3d7e0b`. No runtime receipt is claimed.
+## Phase 2: Task approach
 
-<!-- /spec-definition-patch -->
+`tasks.md` has one line per leaf row. Producer first: vocabulary, shapes and identity keys (US1, US2), then the connector mappings (US3, parallel), then the cross-source and cross-repo rows (US4), then the served surfaces (US5 to US7). Connector mapping rows and cross-repo rows are marked parallel because they touch disjoint files.
 
-<!-- spec-definition-patch:final-mappings-20261012 -->
-## Final mapping implementation plan — 2026-10-12
+## Complexity Tracking
 
-### `MEDULLA-MEDIA-VOCAB-R001.100` / EG:69
+None.
 
-- Preserve parent `MEDULLA-MEDIA-VOCAB-R001` and all existing clauses.
-- Define each tag assertion with `{media item/revision, taxonomy id/version, object-or-context value, confidence, evidence span/reference, opaque producer id/revision, provenance digest}`. Store each tag as a source-backed assertion attached to its media item. Do not store unqualified labels. Search returns only tags visible under caller media/item authorization. Bind matched tag IDs, media revisions, and authorization revision. Missing provenance or stale media revision refuses assertion. Unauthorized queries return no protected tag data.
-- Medulla owns tag storage, provenance, and authorized search. The vision extraction producer identity and contract remain held by its owner. No producer implementation or served result is claimed.
-- Source record SHA-256: `38f71f6a205cf8df27631a4aa86ec3312a91f7902dfd8bfe843db2a142d1d30f`.
-- Keep status SPECIFIED until each named producer and consumer is implemented, served-tested, and independently read back.
-<!-- /spec-definition-patch -->
+## Build contract
 
+Gates for any change under these rows: `cargo test -p medulla-core --test media_vocab_a --test media_vocab_b`, `cargo test -p medulla-rdf --test media_vocab_shapes --test media_vocab_cross_source`, `cargo clippy --workspace --all-targets -- -D warnings`, the repository complexity, duplication, dead-code and KISS gates with their committed thresholds, and the spec gate set (`pre-commit run --config .config/pre-commit.yaml --hook-stage pre-push`). No scanner gaming and no duplicate implementation: the bookmark search reuses the semantic service, and the media memory path reuses the one memory record of the decision-engine spec.
 
-<!-- spec-definition-patch:owner-dispatch-20261012-plan -->
-## Cross-owner transcript and bookmark plan — 2026-10-12
+## Production caller chain
 
-- **`MEDULLA-MEDIA-VOCAB-R001.101` / WEBUI:10:** Extend `TranscriptSegment` with immutable meeting revisions, strict sequence, correction, and finalization. Add `MeetingSummaryContextV1` and `CommitMeetingSummaryV1`. Bind both to current transcript digest, admitted provider/model/policy, and Meristem invocation receipt. Resolve citation IDs in the final revision. Medulla authorizes and serves context only. Meristem invokes models and mints receipts. Overstory R001.5 renders. Source SHA-256 `c82a815c87428a5baf4379ef7790bafb24a5d3367d16ebd85a6c39ff9b52521d`.
-- **`MEDULLA-MEDIA-VOCAB-R001.102` / WEBUI:11:** Reuse Graft SDK SourceIngest R005.7-.12 and the existing Medulla SourceIngest → ChangeEnvelope commit path. Define bounded semantic bookmark search and authorized relation reads. Bind ingestion receipt and source/index/snapshot/authorization revisions. Reuse `Method::SemanticSearch` and UQL; add no ingestion pipeline. Arbora/Overstory R001.6 owns the served adapter, mindmap, and export. Source SHA-256 `b1708c96d6b9cadcb1c9f35cc5cb7dde4e60ed2cb1250598e55b9ce4cc66907e`.
-- Keep both SPECIFIED until Medulla producer readback and the named Meristem/Arbora/Overstory served receipts pass. Do not claim transcript provider, live capture, or bookmark export from these definitions.
-<!-- /spec-definition-patch -->
+- Registered vocabulary: `GraphSchemaSources::default()` (`crates/medulla-graph-core/src/graph/schema_sources.rs:207`) → `current_core_catalog` (:656) → `core_specs` entries for `media`, `personal`, `retrieval` and `nutrition`. Not registered today: `content-v1.ttl` and the media and content shapes.
+- Ingest surfaces: `Method::SourceIngest` → `crates/medulla-server-graph/src/dispatch/graph_pipeline/native_routes.rs::route_source_ingestion_or_resources` (:399) → `crates/medulla-h-ingest/src/source_ingestion.rs::prepare` (:167) → `admit_records` (:978) → `build_envelope` (:1658). Media tags, paper facts and meeting transcripts add steps here.
+- Reads: `Method::SemanticSearch` → `crates/medulla-h-graph/src/graph_ops/semantic.rs::try_handle_semantic_compute` (:281); bookmark search through `crates/medulla-server-router/src/dispatch/router/control_plane.rs` (:400) → `crates/medulla-h-retrieve/src/semantic_index.rs` (:59); relations through `crates/medulla-h-query/src/query/dispatch.rs` (:138).
+- Memory: `crates/medulla-h-graph/src/graph_ops/terminal.rs::try_handle_graph_domains` (:14) → the new `memory_surface` handler.
+- Obsolete paths to delete: none.
+
+## Cross-repo seams
+
+- scion-sdk source envelopes for bookmarks and papers: `SCION-SOURCE-INGEST-R005.8` (consumer rows R001.102.1 and R002.5.1); contract `contracts/scion-sdk-source-ingest.md`.
+- arbora served adapters for meeting and bookmark operations: `ARBORA-OPS-R065.4` and `ARBORA-OPS-R066`; contract `contracts/arbora-served-operations.md`.
+- overstory renderers of summaries, mindmaps and exports: `OVERSTORY-APPS-R001.5` and `OVERSTORY-APPS-R001.6`; contract `contracts/overstory-presentation.md`.
+- meristem invocation receipts for summaries: `MERISTEM-HARNESS-CYCLE-R068`; contract `contracts/meristem-summary-receipt.md`.
+- connector operations and ontology cleanups owned by the connector repositories: `MEDULLA-CQ-CONN-R067.9` and rows R028 to R033; contract `contracts/connector-operations.md`.
