@@ -1,55 +1,69 @@
-# MEDULLA-IDENTITY — Work and evidence
+# MEDULLA-IDENTITY — Tasks
 
-| Task | IDs | Exit condition | Public evidence |
-|---|---|---|---|
-| `I-1` | MEDULLA-IDENTITY-R001 | Multi-issuer verifier and envelope binding pass `I-01`/`I-02`, including rotation and cross-tenant denials. | No public evidence recorded |
-| `I-2` | MEDULLA-IDENTITY-R002 | Full role replacement and identity audit share one durable transaction; `I-03`/`I-04` pass after restart. | No public evidence recorded |
-| `I-3` | MEDULLA-IDENTITY-R003 | Mode singleton, epoch CAS, attested preconditions and revocation recovery pass `I-05`/`I-06`. | No public evidence recorded |
-| `I-4` | MEDULLA-IDENTITY-R004 | Generated scope registry and installed-wheel consumer parity pass `I-07`/`I-08`. | No public evidence recorded |
-| `I-5` | MEDULLA-IDENTITY-R005 | A production semantic worker presents one verified identity across every queue class it processes. | No public evidence recorded |
-| `I-6` | all | Exact-head hosted, CCCC, KISS, jscpd, Dupehound, contract, consumer and release proof passes `I-09`. | No public evidence recorded |
+One task per leaf row of `requirements.md`, producers first: issuer trust and RBAC audit, the mode singleton, the scope registry and run-scope bound, knowledge segments and metadata, share and ownership operations, then session and approval-key operations. Each task names its row; the row holds the caller chain, the shape and the test.
 
-For each task record public PR URL, exact merged SHA, test command and hosted run, tool versions, pass/fail, package digest and remaining unrun proof. Delivery evidence requires a verified public main ancestor. Acceptance requires tests, consumer and release receipts on that same commit. A historical branch artifact is an input to review, not completion evidence.
+## Tasks
 
-## Task list
-
-- [x] **`I-1`:** Define versioned issuer entries. Validate duplicate issuers, invalid URLs, ambiguous keys and unsupported algorithms. Upgrade primary OIDC loading while preserving ancillary protocol validators. Add local signed-JWT fixtures for two issuers and key rotation. Closes `MEDULLA-IDENTITY-R001`. Tests `I-01`, `I-02`.
-- [x] **`I-2`:** Add typed full-replacement identity mutation in one durable `ControlRedb` write transaction. Couple the identity audit record and chain head to that transaction. Add `AuditVerify` and bounded denial storage. Route existing `RegisterIdentity` and `RbacAdmin` through the same mutation path. Closes `MEDULLA-IDENTITY-R002`. Tests `I-03`, `I-04`.
-- [x] **`I-3`:** Add the durable mode singleton and epoch CAS. Implement the precondition table, verified gateway attestation and nonce. Add session-epoch invalidation, revocation/rotation receipts and restart recovery. Keep account/link/grant/data records intact. Closes `MEDULLA-IDENTITY-R003`. Tests `I-05`, `I-06`.
-- [x] **`I-4`:** Classify scopes in capability declarations. Generate the registry and package digest. Update server grant evaluation to use that classification. Add consumer contract tests using only the public wheel catalog. Closes `MEDULLA-IDENTITY-R004`. Tests `I-07`, `I-08`.
-- [x] **`I-5`:** Verify a production semantic worker presents a single verified identity consistently across every queue class it processes, with an integration test asserting the same principal in its audit records for each class. Closes `MEDULLA-IDENTITY-R005`.
-- [x] **`I-6`:** Run the full checks in [test-spec.md](test-spec.md) — `cargo run -q --locked -p medulla-capabilities --features contract --bin gen_contract -- --check`, focused Rust tests for OIDC, isolation identity admin, RBAC persistence and audit, `pre-commit run --config .config/pre-commit.yaml --all-files` and `bash scripts/ci_parity.sh` — at the exact PR head; review generated-artifact diffs; record a merged-head SHA plus hosted results. Closes `MEDULLA-IDENTITY-R001`–`MEDULLA-IDENTITY-R005` (all). Test `I-09`.
-- [x] **`I-7`:** Add the commons Read grant to tenant role provisioning and add the isolation unit test `a_tenant_role_reads_but_never_writes_the_shared_commons`. Closes `MEDULLA-IDENTITY-R006`. Test `I-10`.
-- [x] **`I-8`:** Backfill the commons Read grant for tenant roles that exist before this change. Provisioning runs only on `CreateGraph`, so an existing deployment needs one `RbacAdmin` `AddGrant` per tenant role, or a startup reconcile. Closes the live rollout of `MEDULLA-IDENTITY-R006`.
-| `I-9` | MEDULLA-IDENTITY-R007 | Scopes `identity:admin`, `loops:read` and `loops:control` are registered in the engine contract. | No public evidence recorded |
-| `I-11` | MEDULLA-IDENTITY-R008 | Plan scope is bounded by a stored policy node; `I-11` passes including the refusal. | No public evidence recorded |
-- [ ] **MEDULLA-IDENTITY-R023:** Principal-scoped knowledge segments with explicit sharing.
-- [ ] **MEDULLA-IDENTITY-R023.1:** Model. Add `KnowledgeUnit{id, owner, version, supersedes, access_labels, share_scope}` in `crates/medulla-identity-types/src/identity/segment.rs`. Closed `share_scope` values are `private`, `placement` and `tenant`.
-- [ ] **MEDULLA-IDENTITY-R023.2:** Behavior. Add `visible_units(principal, units)` returning owned units and units a matching scope shares. It keeps only the highest version of each lineage. Each rule is a named replaceable default.
-- [ ] **MEDULLA-IDENTITY-R023.3:** Wiring. The behavior attaches in the served content-read handler, before the hits leave the retrieval function. It reuses the visibility pattern at `crates/medulla-identity-types/src/rbac_elevation/ledger.rs:268`. This row creates the call site in the served content-read handler that invokes retrieval.
-- [ ] **MEDULLA-IDENTITY-R023.4:** Refusal. A read naming a unit outside the principal's scope must return `OutOfScope` naming the unit id. It must not reveal the unit's content.
-- [ ] **MEDULLA-IDENTITY-R023.5:** Evidence. Each read must append an audit entry. The entry lists the principal and the returned unit ids. It also counts units hidden by scope or version.
-- [ ] **MEDULLA-IDENTITY-R023.6:** Hot-path proof. The entry point is the served content-read wire method. The test `tests/identity/test_segment_retrieval_served.py::test_shared_unit_visible_only_in_scope` writes a private and a shared unit. It passes through the wired retrieval call and observes that only the permitted current version returns.
-
-
-## Typed metadata producer tasks
-
-- [ ] **MEDULLA-IDENTITY-R023.7:** Model. Implement the typed metadata contract and its planned proving test.
-- [ ] **MEDULLA-IDENTITY-R023.8:** Behavior. Implement the typed metadata contract and its planned proving test.
-- [ ] **MEDULLA-IDENTITY-R023.9:** Wiring. Implement the typed metadata contract and its planned proving test.
-- [ ] **MEDULLA-IDENTITY-R023.10:** Refusal. Implement the typed metadata contract and its planned proving test.
-- [ ] **MEDULLA-IDENTITY-R023.11:** Evidence. Implement the typed metadata contract and its planned proving test.
-- [ ] **MEDULLA-IDENTITY-R023.12:** Hot-path proof. Implement the typed metadata contract and its planned proving test.
-- [ ] **MEDULLA-IDENTITY-R023.13 (rollup):** Served share grant and revoke persist across restart.
-- [ ] **MEDULLA-IDENTITY-R023.13.1 (Model):** Add the two share operations and their bounds.
-- [ ] **MEDULLA-IDENTITY-R023.13.2 (Behavior):** Implement `share_transition` as a pure function.
-- [ ] **MEDULLA-IDENTITY-R023.13.3 (Wiring):** Route the share operations through the `RbacAdmin` arm and the gateway.
-- [ ] **MEDULLA-IDENTITY-R023.13.4 (Refusal):** Add the typed refusals with an unchanged-state readback.
-- [ ] **MEDULLA-IDENTITY-R023.13.5 (Evidence):** Append the share audit event.
-- [ ] **MEDULLA-IDENTITY-R023.13.6 (Hot-path proof):** Add the served restart test and the benchmark.
-
-## Explicit isolated anonymous authority
-
-- [ ] **MEDULLA-IDENTITY-R003.1:** Implement explicit isolated anonymous origin and fresh-store boundary; bind `I-12`/`I-13` to the real served/Python tests. Finish the combined Arbora/Tuig runtime receipt and preserve explicit UDS, AST/full-feature, Rust-unit and authenticated-comparison validation gaps. No deployment migration and no claim that parent R003 is complete.
-- [ ] **MEDULLA-IDENTITY-R003.2:** Implement and run the independent admission latency/allocation benchmark. This performance residual is not verified by `I-12`/`I-13`.
-- [ ] **MEDULLA-IDENTITY-R003.3:** Run private-UDS and default-feature runtime qualification, including AST enrichment, on a suitable host. Do not infer these receipts from the scoped TCP binary.
+- [ ] T001 [US1] MEDULLA-IDENTITY-R001 Multi-issuer OIDC trust list with per-issuer kind limits
+- [ ] T002 [US1] MEDULLA-IDENTITY-R002 Identity and RBAC writes recompute roles and audit atomically
+- [ ] T003 [US3] MEDULLA-IDENTITY-R003.1 Explicit isolated anonymous store authority (native TCP qualification)
+- [ ] T004 [US3] MEDULLA-IDENTITY-R003.2 Measured anonymous admission budget
+- [ ] T005 [US3] MEDULLA-IDENTITY-R003.3 Isolated-mode runtime qualification over a private socket
+- [ ] T006 [US2] MEDULLA-IDENTITY-R003.4 Model: identity mode record and CAS operation
+- [ ] T007 [US2] MEDULLA-IDENTITY-R003.5 Behavior: transition preconditions
+- [ ] T008 [US2] MEDULLA-IDENTITY-R003.6 Wiring: session invalidation and issuer rotation after the commit
+- [ ] T009 [US2] MEDULLA-IDENTITY-R003.7 Wiring: served transition method and offline conversion
+- [ ] T010 [US2] MEDULLA-IDENTITY-R003.8 Hot-path proof: mode round trip over the wire
+- [ ] T011 [US4] MEDULLA-IDENTITY-R004 Generated scope registry classifies every capability scope
+- [ ] T012 [US4] MEDULLA-IDENTITY-R005 Semantic workers use one identity across queue classes
+- [ ] T013 [US4] MEDULLA-IDENTITY-R006 Tenant roles read the shared commons graph
+- [ ] T014 [US4] MEDULLA-IDENTITY-R007 Scopes `identity:admin`, `loops:read` and `loops:control` are registered in the engine contract
+- [ ] T015 [US4] MEDULLA-IDENTITY-R008.1 Attach point: tool-set admission in AgentAssemble
+- [ ] T016 [US4] MEDULLA-IDENTITY-R008.2 Typed `ScopeBound`
+- [ ] T017 [US4] MEDULLA-IDENTITY-R008.3 Pure subset check
+- [ ] T018 [US4] MEDULLA-IDENTITY-R008.4 Bound is read from the stored policy node
+- [ ] T019 [US4] MEDULLA-IDENTITY-R008.5 Typed refusal ScopeExceedsPolicy with an audit record
+- [ ] T020 [US4] MEDULLA-IDENTITY-R008.6 End-to-end proof over the wire
+- [ ] T021 [US5] MEDULLA-IDENTITY-R023.1 Model
+- [ ] T022 [US5] MEDULLA-IDENTITY-R023.2 Behavior
+- [ ] T023 [US5] MEDULLA-IDENTITY-R023.3 Wiring: visible-unit filter on the served read path
+- [ ] T024 [US5] MEDULLA-IDENTITY-R023.4 Refusal: point read outside scope
+- [ ] T025 [US5] MEDULLA-IDENTITY-R023.5 Evidence: read audit with hidden count
+- [ ] T026 [US5] MEDULLA-IDENTITY-R023.6 Hot-path journey: shared unit visible only in scope
+- [ ] T027 [US5] MEDULLA-IDENTITY-R023.7 Model: typed principal metadata
+- [ ] T028 [US5] MEDULLA-IDENTITY-R023.8 Behavior: persist metadata as versioned graph nodes
+- [ ] T029 [US5] MEDULLA-IDENTITY-R023.9 Wiring: metadata admission before mutation compilation
+- [ ] T030 [US5] MEDULLA-IDENTITY-R023.10 Refusal: invalid metadata writes
+- [ ] T031 [US5] MEDULLA-IDENTITY-R023.11 Evidence: metadata import provenance
+- [ ] T032 [US5] MEDULLA-IDENTITY-R023.12 Hot-path journey: typed metadata over the wire
+- [ ] T033 [US6] MEDULLA-IDENTITY-R023.13.1 Model: share operations
+- [ ] T034 [US6] MEDULLA-IDENTITY-R023.13.2 Behavior: share transition function
+- [ ] T035 [US6] MEDULLA-IDENTITY-R023.13.3 Wiring: RbacAdmin arm calls the transition
+- [ ] T036 [US6] MEDULLA-IDENTITY-R023.13.4 Refusal: share operations
+- [ ] T037 [US6] MEDULLA-IDENTITY-R023.13.5 Evidence: share audit event
+- [ ] T038 [US6] MEDULLA-IDENTITY-R023.13.6 Hot-path journey: org share revoke survives restart
+- [ ] T039 [US5] MEDULLA-IDENTITY-R610.1 Model
+- [ ] T040 [US5] MEDULLA-IDENTITY-R610.2 Behavior
+- [ ] T041 [US5] MEDULLA-IDENTITY-R610.3 Wiring: tenant predicate in the UQL executor
+- [ ] T042 [US5] MEDULLA-IDENTITY-R610.4 Refusal: unscopable read query
+- [ ] T043 [US5] MEDULLA-IDENTITY-R610.5 Evidence: read and claim audit sink
+- [ ] T044 [US5] MEDULLA-IDENTITY-R610.6 Hot-path journey: scope injection and marking filter
+- [ ] T045 [US6] MEDULLA-IDENTITY-R700.1 Model: ownership signals and grant plan
+- [ ] T046 [US6] MEDULLA-IDENTITY-R700.2 Behavior: deterministic plan, transactional apply, exact rollback
+- [ ] T047 [US6] MEDULLA-IDENTITY-R700.3 Wiring: plan method and RbacAdmin apply
+- [ ] T048 [US6] MEDULLA-IDENTITY-R700.4 Refusal: unsafe ownership plans
+- [ ] T049 [US6] MEDULLA-IDENTITY-R700.5 Evidence: stored plan and rollback record
+- [ ] T050 [US6] MEDULLA-IDENTITY-R700.6 Hot-path journey: apply then rollback
+- [ ] T051 [US6] MEDULLA-IDENTITY-R701 Delegation record read for background work
+- [ ] T052 [US6] MEDULLA-IDENTITY-R702 Policy rule bundle: compile, bind and enforce in the engine
+- [ ] T053 [US6] MEDULLA-IDENTITY-R703 Epistemic policy predicates
+- [ ] T054 [US6] MEDULLA-IDENTITY-R704 Resource-scoped access decision method
+- [ ] T055 [US6] MEDULLA-IDENTITY-R705 ClientSession record vocabulary
+- [ ] T056 [US5] MEDULLA-IDENTITY-R706 Read gate expands source groups and honors source access properties
+- [ ] T057 [US7] MEDULLA-IDENTITY-R707 Identity domain operations with Argon2id and redacted views
+- [ ] T058 [US7] MEDULLA-IDENTITY-R708 Durable session record projection on Resolve
+- [ ] T059 [US7] MEDULLA-IDENTITY-R709 Served session-liveness check by opaque session reference
+- [ ] T060 [US7] MEDULLA-IDENTITY-R710 Idle session renewal uses global authority compare-and-set
+- [ ] T061 [US7] MEDULLA-IDENTITY-R711 Registered human approval keys
+- [ ] T062 [US7] MEDULLA-IDENTITY-R712 Credential resolution observes without refreshing
+- [ ] T063 [US7] MEDULLA-IDENTITY-R713 Original session reference inspection

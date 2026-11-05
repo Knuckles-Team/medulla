@@ -1,18 +1,26 @@
 # MEDULLA-IDENTITY — Test specification
 
-| Test | Requirement | Setup | Pass and refusal observations |
-|---|---|---|---|
-| `I-01` | ID-01 | Network-free signed JWTs for issuers A/B, separate audiences and human/service kinds. | Both valid issuers bind exact principal and tenant; unknown issuer, bad signature/audience/expiry, subject/tenant mismatch and wrong kind are denied before method dispatch. |
-| `I-02` | ID-01 | Rotate key ID on issuer A while issuer B remains unchanged. | Declared overlap works only in window; removed/stale/ambiguous key fails after refresh; B is unaffected. |
-| `I-03` | ID-02 | Register and replace complete roles, then remove an admin role. | Effective grants reflect removal before success; a concurrent request cannot use removed role; state persists after restart. |
-| `I-04` | ID-02 | Force failure between proposed role write and audit append; tamper with one historical audit record. | One transaction rolls back both writes; audit verification detects deletion/reorder/alteration and reports bounded location without secrets. |
-| `I-05` | ID-03 | Exercise every allowed mode transition with two admins, local credentials, enabled IdP and a test-signed gateway attestation. | Mode/epoch advance once; accounts/grants persist; sessions on old epoch are denied; retry recovers revocation receipt after restart. |
-| `I-06` | ID-03 | Stale epoch, missing surviving admin, no fresh MFA, non-loopback attestations, forged/replayed nonce, wrong tenant/principal. | Typed denial/conflict, unchanged mode and epoch, no retained session accepted after a committed transition. |
-| `I-07` | ID-04 | Generate contract and install wheel in a clean environment. | Every declared scope has one class and digest; public catalog equals server registry and the consumer-derived allowlist. |
-| `I-08` | ID-04 | Try human grant of service-only scope, service account admin, wildcard approver, and an unknown name. | Generation or runtime refuses each; direct human approver membership works only for the designated group. |
-| `I-10` | ID-02 | Create a user whose explicit principal ID belongs to a `RegisterIdentity` principal or the System identity. | `IDENTITY_COLLISION`; the registered identity, its role set and its System role stay unchanged (`create_user_cannot_take_over_a_registered_principal`). |
-| `I-09` | all | Run complete PR/release quality checks at exact commit. | No new CCCC/KISS/jscpd/Dupehound violation; generated artifacts fresh; supported Rust/Python/consumer tests pass. |
-| `I-10` | ID-06 | Provision `tenant__alpha__default`, register a principal with role `tenant:alpha`, then check `__commons__` and `tenant__acme__default`. | Read on `__commons__` is allowed. Write on `__commons__` is denied. Read on the other tenant's graph is denied. Repeated provisioning keeps three grants. |
+Governing spec: [spec.md](spec.md).
+
+| Test ID | Requirement | Level | Setup and input | Expected observation | Evidence |
+|---|---|---|---|---|---|
+| T-001 | FR-001 | Integration | Network-free signed JWTs for issuers A and B with separate audiences and kinds; rotate the key of A | Both valid issuers bind exact principal and tenant; unknown, ambiguous or disallowed-kind issuers fail before dispatch; the overlap key works only in its window | PENDING |
+| T-002 | FR-002 | Integration | Register and replace complete roles, remove an admin role, force a failure between the role write and the audit append, tamper with one audit record | Grants reflect removal before success; one transaction rolls back both writes; verification detects the altered record; state persists after restart | PENDING |
+| T-003 | FR-003 | End to end | Every allowed mode transition with two admins, local credentials and an enabled provider; stale epoch; no surviving admin | Mode and epoch advance once; old sessions refuse; refusals leave mode and epoch unchanged | PENDING |
+| T-004 | FR-004 | End to end | Anonymous mode over loopback and a private socket; remote listener; store reuse; oversize metadata | Fixed anonymous authority; each refusal is `ACCESS_DENIED`; the decoder stays within its budget | PENDING |
+| T-005 | FR-005 | Contract | Generate the contract and install the wheel in a clean environment; a human grant of a service-only scope; an unknown name | Every scope has one class and the digest matches the server; generation or runtime refuses each fault | PENDING |
+| T-006 | FR-006 | Unit | One verified principal across every queue class; tenant role reads `__commons__` | One principal attributed throughout; read allowed, write refused, other tenants unreadable | PENDING |
+| T-007 | FR-007 | End to end | A stored policy node, a wider plan scope in the request, a candidate beyond the bound | The stored bound wins; `SCOPE_EXCEEDS_POLICY` with one audit entry; another tenant sees the empty bound | PENDING |
+| T-008 | FR-008 | End to end | Private and org-shared units as principals A, B and C | Only the org-shared current version reaches B; C sees neither; hidden and absent point reads return one code | PENDING |
+| T-009 | FR-009 | End to end | All three metadata variants through every write route, restart, owner and other principal reads | Admission runs on each route; refusals leave no durable effect; restart keeps the revision chain | PENDING |
+| T-010 | FR-010 | End to end | Share to `org`, revoke, SIGTERM and restart | A second principal does not see the node after restart; refusals change nothing; one audit event per change | PENDING |
+| T-011 | FR-011 | End to end | Three-level tenant chain, unscopable query, group-restricted record | Visibility order and marking filter hold; the unscopable query is refused; one audit line per read | PENDING |
+| T-012 | FR-012 | End to end | Plan and apply ownership then roll back; delegation record; policy bundle; resource access; client session | Roles restore exactly; refusals change nothing; each served method returns its typed result | PENDING |
+| T-013 | FR-013 | End to end | Resolve, liveness, renewal, approval-key lifecycle and credential observation | Replies match the closed sets; no raw token on the wire; stale revision refuses without mutation | PENDING |
+
+## Negative and boundary cases
+
+Unknown, ambiguous and disallowed-kind issuers. Stale epoch and no surviving admin. A mode transition into or out of `none`. A missing policy node. A hidden unit versus an absent unit. A full audit queue. A plan that removes the last admin. A reference outside the caller's deployment tenant. A delegated broker that tries to attest a key.
 
 ## Open acceptance gap: replicated tenant provisioning
 
@@ -24,12 +32,12 @@ verified identity into the request, and lifecycle provisioning looks it up as an
 identity ID. Local tenant provisioning tests do not establish correct clustered
 provisioning; this work does not claim that inherited mismatch is fixed.
 
-A narrow fail-closed guard now withholds managed auto-binding during replicated
+A narrow fail-closed guard withholds managed auto-binding during replicated
 creation when the fingerprint matches a managed ID. It skips the entire
 provisioning call, including the unmanaged fallback; graph creation still
 succeeds. Raw fingerprint-shaped self IDs are also withheld because the carrier
 cannot distinguish them from another caller's fingerprint. Separate authorized
-Identity grants are required. The new serialization/application regression source
+Identity grants are required. The serialization/application regression source
 covers caller `U` plus managed alias `H(U)`, raw self-ID `H`, local creation, and
 policy persistence/reprojection using temporary Redb. These regressions are
 unexecuted pending exact-source native qualification; they do not establish
@@ -49,95 +57,75 @@ exists; passing local mapping, persistence, or routing tests alone is insufficie
 This note does not authorize principal reverse lookup or a cross-group authority
 design change, and does not promote the related acceptance criteria to passed.
 
+
 ## Reproducible gates
 
-Use `cargo run -q --locked -p medulla-capabilities --features contract --bin gen_contract -- --check` and focused Rust tests for OIDC, isolation identity admin, RBAC persistence and audit. Run `pre-commit run --config .config/pre-commit.yaml --all-files` and `bash scripts/ci_parity.sh` on the exact PR head. Hosted CI must generate JWTs and attestations locally, use disposable redb files, and clean up all fixtures. If a named focused test moves, record the replacement before removing it from the gate. A live external IdP is an optional deployment qualification, not the baseline PR test substrate.
+Use `cargo run -q --locked -p medulla-capabilities --features contract --bin gen_contract -- --check` and focused Rust tests for OIDC, isolation identity admin, RBAC persistence and audit. Run `pre-commit run --config .config/pre-commit.yaml --all-files` on the exact PR head. Hosted CI generates JWTs and attestations locally, uses disposable redb files and needs no live identity provider or network.
 
-## Semantic owner registry validation
+## Bound tests
 
-Published source: [cf7010728682663f735516ee276f423476d3690b](https://github.com/Knuckles-Team/medulla/commit/cf7010728682663f735516ee276f423476d3690b).
-Review: [PR 445](https://github.com/Knuckles-Team/medulla/pull/445).
+Each leaf row binds the tests below. A test marked `(planned)` does not exist yet; the row names its exact path.
 
-`semantic_owner_registry_is_scoped_to_persistence_root` checks distinct-root isolation and canonical path-alias reuse.
-`dispatch_attributes_every_queue_class_to_the_one_verified_principal` retains its verified-principal and spoofed-consumer assertions.
-Native execution of both tests remains pending.
-Hosted facade execution must establish R005 acceptance; source inspection alone does not establish it.
-| `I-11` | R008 | A principal with a stored policy node allowing two tools; plans naming two tools and three tools. | The two-tool plan passes. The three-tool plan returns `ScopeExceedsPolicy` naming the third tool, and an audit record exists. |
-
-### MEDULLA-IDENTITY-R023 tests
-
-- `MEDULLA-IDENTITY-R023.1`: `crates/medulla-identity-types/src/identity/segment.rs::tests::unit_round_trips`.
-- `MEDULLA-IDENTITY-R023.2`: `crates/medulla-identity-types/src/identity/segment.rs::tests::superseded_and_foreign_units_hidden`.
-- `MEDULLA-IDENTITY-R023.3`: `tests/identity/test_segment_retrieval_served.py::test_retrieve_filters_by_principal`.
-- `MEDULLA-IDENTITY-R023.4`: `crates/medulla-identity-types/src/identity/segment.rs::tests::out_of_scope_names_id_only`.
-- `MEDULLA-IDENTITY-R023.5`: `crates/medulla-types/src/identity/tests/segment_audit.rs::read_audit_counts_hidden`.
-- `MEDULLA-IDENTITY-R023.6`: `tests/identity/test_segment_retrieval_served.py::test_shared_unit_visible_only_in_scope`.
-
-
-## R023 typed metadata acceptance
-
-All names below are planned tests; this definition batch does not run runtime acceptance.
-Use a real authenticated server, generated client and disposable durable storage.
-Do not mock transport, authorization, schema composition, mutation admission or persistence.
-
-- `MEDULLA-IDENTITY-R023.7`: Planned: tests/identity/test_typed_metadata_served.py::typed_metadata_variants_round_trip.
-
-- `MEDULLA-IDENTITY-R023.8`: Planned: tests/identity/test_typed_metadata_served.py::typed_metadata_persists_without_file_authority.
-
-- `MEDULLA-IDENTITY-R023.9`: Planned: tests/identity/test_typed_metadata_served.py::all_metadata_write_routes_reach_admission.
-
-- `MEDULLA-IDENTITY-R023.10`: Planned: tests/identity/test_typed_metadata_served.py::invalid_metadata_has_no_durable_effect.
-
-- `MEDULLA-IDENTITY-R023.11`: Planned: tests/identity/test_typed_metadata_served.py::metadata_import_provenance_survives_restart.
-
-- `MEDULLA-IDENTITY-R023.12`: Planned: tests/identity/test_typed_metadata_served.py::typed_metadata_served_journey.
-
-Create each variant through served AddNode and ApplyMutation, including typed interaction links through AddEdge.
-Read through GetNodeProperties and an independent authorized client; restart and repeat the reads.
-Check the exact payload, owner, scope, schema digest, revision and source provenance.
-Remove or change the import file and prove the committed graph remains authoritative.
-Replay the same import and prove one mutation and one receipt; altered replay must refuse.
-Exercise structural, batch, query and RDF writes into the managed metadata domain.
-Every route must reject missing types, removed labels, malformed fields, unknown variants and stale schema digests.
-Include dangling principals, client/principal kind confusion, disabled actors and foreign-tenant interaction endpoints.
-Test schema detachment, caller-forged ownership, stale revisions and authorization revocation between admission and commit.
-Compare denied existing and absent identities after removing request-local correlation IDs; neither response reveals stored metadata.
-Check unchanged graph nodes, edges, revisions, import receipts and mutation outbox through independent authorized readback.
-Security denial audit records may follow the existing policy; they must contain no metadata payload.
-Inject persistence failure and restart. A batch must expose every accepted record and receipt, or none.
-Confirm metadata cannot register an identity, grant a role, change a credential or widen sharing.
-Record the source SHA, generated contract digest, binary digest and authenticated receipts for eventual served proof.
-Run contract generation and the affected language, CCCC, KISS, jscpd and Dupehound checks when runtime code changes.
-
-### R004 Arbora curated scope regression
-
-`graph_os_curated_scopes_preserve_principal_and_key_boundaries` pins all six
-Arbora-owned scopes, service-only decision commits, user-class reads, API-key
-eligibility and wildcard refusal. `gen_contract --check` verifies regenerated
-server/package catalogs and receipt freshness. This slice does not claim an
-installed Arbora wheel or live authorization deployment.
-
-## MEDULLA-IDENTITY-R023.13 acceptance
-
-| Case | Row | Proving test and observation |
+| Case | Requirement | Proving test |
 |---|---|---|
-| Model | `MEDULLA-IDENTITY-R023.13.1` | A serde round trip keeps every field. It rejects an unknown scope and a 65-entry grantee list. |
-| Behavior | `MEDULLA-IDENTITY-R023.13.2` | Unit tests cover grant, revoke, commons promotion and a non-owner attempt. |
-| Wiring | `MEDULLA-IDENTITY-R023.13.3` | A dispatch test asserts the gateway commit and an unchanged read path. |
-| Refusal | `MEDULLA-IDENTITY-R023.13.4` | Each case returns its code. An independent readback shows unchanged properties. |
-| Evidence | `MEDULLA-IDENTITY-R023.13.5` | A test reads the audit event after one grant and one revoke. |
-| Hot-path proof | `MEDULLA-IDENTITY-R023.13.6` | The served test passes against a restarted engine, and the benchmark receipt meets the budget. |
-
-Hot-path proof for `MEDULLA-IDENTITY-R023.13`: `tests/identity/test_share_restart_served.py::test_org_share_revocation_persists_across_restart`.
-
-## Explicit isolated anonymous authority
-
-| Test | Requirement | Setup | Pass and refusal observations |
-|---|---|---|---|
-| `I-12` | MEDULLA-IDENTITY-R003.1 | `tests/test_native_no_auth_served.py` owns real loopback native processes and fresh anonymous stores. | Cover write/read/restart, durable replay/conflict, independent-client clears and real Blob CAS. Cover signed/mixed/forged metadata refusals, store separation and loopback-only startup. Connector-pack import becomes visible with a nonempty graph-schema source through the actual background sweep. |
-| `I-13` | MEDULLA-IDENTITY-R003.1 | `tests/test_client_no_auth.py` plus existing verified-context/client regressions. | Explicit anonymous mode never signs or manufactures verified claims. Strict unsigned retry metadata preserves caller keys and the required null agent field. Authenticated defaults and payloads remain unchanged. |
-| `I-14` | MEDULLA-IDENTITY-R003.2 | Pending dedicated admission benchmark implementation and allocation/latency receipt. | No measured performance claim from the opt0 scoped runtime build or functional tests. |
-
-Private UDS runtime proof on a suitable host remains pending. So do the full default feature matrix, including AST enrichment, and native Rust unit execution. Synthetic authenticated end-to-end comparison also remains pending. The parent durable mode-transition row R003 is not closed by this isolated-store child.
-
-`I-15` (MEDULLA-IDENTITY-R003.3) remains pending: real private-UDS operations and the full feature runtime matrix, including AST enrichment. This is separate from `I-12` native TCP qualification.
+| Multi-issuer OIDC trust list with per-issuer kind limits | `MEDULLA-IDENTITY-R001` | `crates/medulla-server-api/src/oidc.rs::tests::unknown_ambiguous_or_disallowed_kind_issuer_fails_before_dispatch` (planned); `crates/medulla-server-auth/src/auth.rs::tests::two_signers_valid_simultaneously_during_an_overlap_window_then_old_is_retired`; `crates/medulla-server-api/src/oidc.rs::tests::rotated_jwks_key_is_accepted_only_in_its_overlap_window` (planned) |
+| Identity and RBAC writes recompute roles and audit atomically | `MEDULLA-IDENTITY-R002` | `crates/medulla-isolation/src/isolation/identity_store_tests.rs::a_failed_write_rolls_back_the_store_and_the_projection_together`; `crates/medulla-isolation/src/isolation/identity_store_tests/tenant_and_audit.rs::failed_no_op_grant_audit_save_rolls_back_the_audit_entry`; `crates/medulla-kernel/src/audit.rs::tests::audit_path_detects_a_tampered_leaf` |
+| Explicit isolated anonymous store authority (native TCP qualification) | `MEDULLA-IDENTITY-R003.1` | `tests/test_native_no_auth_served.py::test_anonymous_mode_native_tcp_cases` (planned) |
+| Measured anonymous admission budget | `MEDULLA-IDENTITY-R003.2` | `tests/test_native_no_auth_served.py::test_oversize_authority_metadata_refuses` (planned) |
+| Isolated-mode runtime qualification over a private socket | `MEDULLA-IDENTITY-R003.3` | `tests/test_native_no_auth_uds_served.py::test_anonymous_mode_over_private_socket` (planned); `tests/test_native_no_auth_uds_served.py::test_anonymous_mode_with_ast_enrichment` (planned) |
+| Model: identity mode record and CAS operation | `MEDULLA-IDENTITY-R003.4` | `crates/medulla-isolation/src/isolation/identity_store_tests/mode.rs::stale_epoch_refuses_and_changes_nothing` (planned); `tests/identity/test_identity_mode_served.py::test_local_external_round_trip` (planned) |
+| Behavior: transition preconditions | `MEDULLA-IDENTITY-R003.5` | `crates/medulla-isolation/src/isolation/identity_store_tests/mode.rs::unmet_precondition_refuses_typed` (planned) |
+| Wiring: session invalidation and issuer rotation after the commit | `MEDULLA-IDENTITY-R003.6` | `crates/medulla-isolation/src/isolation/identity_store_tests/mode.rs::sessions_older_than_epoch_refuse_after_commit_only` (planned); `crates/medulla-server-auth/src/auth.rs::tests::crash_between_commit_and_rotation_is_finished_at_boot` (planned) |
+| Wiring: served transition method and offline conversion | `MEDULLA-IDENTITY-R003.7` | `tests/operator_command_identity_mode_cli.rs::none_store_converts_to_local_keeping_data` (planned); `tests/identity/test_identity_mode_served.py::test_non_admin_cannot_transition` (planned) |
+| Hot-path proof: mode round trip over the wire | `MEDULLA-IDENTITY-R003.8` | `tests/identity/test_identity_mode_served.py::test_local_external_round_trip` (planned) |
+| Generated scope registry classifies every capability scope | `MEDULLA-IDENTITY-R004` | `crates/medulla-capabilities/src/scopes.rs::tests::registry_digest_matches_every_declared_scope` (planned); `crates/medulla-capabilities/src/scopes.rs::tests::unclassified_or_wildcard_scope_fails_generation` (planned) |
+| Semantic workers use one identity across queue classes | `MEDULLA-IDENTITY-R005` | `crates/medulla-server-served-tests/src/split_tests/medulla_h_query_dispatch_pipeline_tests.rs::dispatch_attributes_every_queue_class_to_the_one_verified_principal`; `crates/medulla-h-retrieve/src/semantic_index_runtime.rs::semantic_owner_registry_is_scoped_to_persistence_root` |
+| Tenant roles read the shared commons graph | `MEDULLA-IDENTITY-R006` | `crates/medulla-isolation/src/isolation.rs::tests::a_tenant_role_reads_but_never_writes_the_shared_commons`; `crates/medulla-isolation/src/isolation/identity_store_tests/tenant_and_audit.rs::managed_tenant_binding_survives_projection_and_is_in_the_saved_store` |
+| Scopes `identity:admin`, `loops:read` and `loops:control` are registered in the engine contract | `MEDULLA-IDENTITY-R007` | `crates/medulla-capabilities/src/scopes.rs::tests::registry_digest_matches_every_declared_scope` (planned); `crates/medulla-capabilities/src/scopes.rs::tests::unclassified_or_wildcard_scope_fails_generation` (planned) |
+| Attach point: tool-set admission in AgentAssemble | `MEDULLA-IDENTITY-R008.1` | `crates/medulla-h-decide/src/decide/stat_tests/scope_bound_tests.rs::attach_point_is_reached` (planned); `tests/identity/test_scope_bound_served.py::test_plan_scope_is_bounded_by_policy` (planned) |
+| Typed `ScopeBound` | `MEDULLA-IDENTITY-R008.2` | `crates/medulla-isolation/src/isolation/scope_bound.rs::tests::empty_policy_iri_is_refused` |
+| Pure subset check | `MEDULLA-IDENTITY-R008.3` | `crates/medulla-isolation/src/isolation/scope_bound.rs::tests::first_excess_tool_is_named` |
+| Bound is read from the stored policy node | `MEDULLA-IDENTITY-R008.4` | `crates/medulla-isolation/tests/scope_bound.rs::plan_scope_field_is_ignored` (planned); `crates/medulla-isolation/tests/scope_bound.rs::missing_policy_node_is_empty_bound` (planned) |
+| Typed refusal ScopeExceedsPolicy with an audit record | `MEDULLA-IDENTITY-R008.5` | `crates/medulla-isolation/tests/scope_bound.rs::excess_plan_is_refused_and_audited` (planned) |
+| End-to-end proof over the wire | `MEDULLA-IDENTITY-R008.6` | `tests/identity/test_scope_bound_served.py::test_plan_scope_is_bounded_by_policy` (planned) |
+| Wiring: visible-unit filter on the served read path | `MEDULLA-IDENTITY-R023.3` | `tests/identity/test_segment_retrieval_served.py::test_retrieve_filters_by_principal` (planned) |
+| Refusal: point read outside scope | `MEDULLA-IDENTITY-R023.4` | `tests/identity/test_segment_retrieval_served.py::test_out_of_scope_read_names_id_only` (planned) |
+| Evidence: read audit with hidden count | `MEDULLA-IDENTITY-R023.5` | `tests/identity/test_segment_retrieval_served.py::test_read_audit_counts_hidden` (planned) |
+| Hot-path journey: shared unit visible only in scope | `MEDULLA-IDENTITY-R023.6` | `tests/identity/test_segment_retrieval_served.py::test_shared_unit_visible_only_in_scope` (planned) |
+| Model: typed principal metadata | `MEDULLA-IDENTITY-R023.7` | `crates/medulla-identity-types/src/identity/metadata.rs::tests::typed_metadata_variants_round_trip` (planned); `tests/identity/test_typed_metadata_served.py::test_typed_metadata_served_journey` (planned) |
+| Behavior: persist metadata as versioned graph nodes | `MEDULLA-IDENTITY-R023.8` | `tests/identity/test_typed_metadata_served.py::test_typed_metadata_persists_without_file_authority` (planned) |
+| Wiring: metadata admission before mutation compilation | `MEDULLA-IDENTITY-R023.9` | `tests/identity/test_typed_metadata_served.py::test_all_metadata_write_routes_reach_admission` (planned) |
+| Refusal: invalid metadata writes | `MEDULLA-IDENTITY-R023.10` | `tests/identity/test_typed_metadata_served.py::test_invalid_metadata_has_no_durable_effect` (planned) |
+| Evidence: metadata import provenance | `MEDULLA-IDENTITY-R023.11` | `tests/identity/test_typed_metadata_served.py::test_metadata_import_provenance_survives_restart` (planned) |
+| Hot-path journey: typed metadata over the wire | `MEDULLA-IDENTITY-R023.12` | `tests/identity/test_typed_metadata_served.py::test_typed_metadata_served_journey` (planned) |
+| Model: share operations | `MEDULLA-IDENTITY-R023.13.1` | `crates/medulla-types/src/acl.rs::tests::share_ops_round_trip` (planned); `tests/identity/test_share_restart_served.py::test_org_share_revocation_persists_across_restart` (planned) |
+| Behavior: share transition function | `MEDULLA-IDENTITY-R023.13.2` | `crates/medulla-isolation/src/isolation/share.rs::tests::revoke_clears_grants` (planned) |
+| Wiring: RbacAdmin arm calls the transition | `MEDULLA-IDENTITY-R023.13.3` | `crates/medulla-server-router/src/dispatch/dispatch_e2e_tests/identity/share_grant.rs::share_grant_commits_through_gateway` (planned) |
+| Refusal: share operations | `MEDULLA-IDENTITY-R023.13.4` | `tests/identity/test_share_restart_served.py::test_share_refusals_change_nothing` (planned) |
+| Evidence: share audit event | `MEDULLA-IDENTITY-R023.13.5` | `tests/identity/test_share_restart_served.py::test_share_audit_event_readable` (planned) |
+| Hot-path journey: org share revoke survives restart | `MEDULLA-IDENTITY-R023.13.6` | `tests/identity/test_share_restart_served.py::test_org_share_revocation_persists_across_restart` (planned) |
+| Model | `MEDULLA-IDENTITY-R610.1` | `crates/medulla-identity-types/src/tenancy.rs::tests::types_round_trip_and_reject_invalid_identifiers` |
+| Behavior | `MEDULLA-IDENTITY-R610.2` | `crates/medulla-identity-types/src/tenancy.rs::tests::graph_precedence_marking_filter_claims_and_scope` |
+| Wiring: tenant predicate in the UQL executor | `MEDULLA-IDENTITY-R610.3` | `tests/identity/test_tenant_scope_served.py::test_scope_predicate_injected_on_served_read` (planned) |
+| Refusal: unscopable read query | `MEDULLA-IDENTITY-R610.4` | `tests/identity/test_tenant_scope_served.py::test_unscopable_query_is_refused` (planned) |
+| Evidence: read and claim audit sink | `MEDULLA-IDENTITY-R610.5` | `tests/identity/test_tenant_scope_served.py::test_read_and_claim_are_audited` (planned) |
+| Hot-path journey: scope injection and marking filter | `MEDULLA-IDENTITY-R610.6` | `tests/identity/test_tenant_scope_served.py::test_chain_visibility_and_unscopable_refusal` (planned) |
+| Model: ownership signals and grant plan | `MEDULLA-IDENTITY-R700.1` | `crates/medulla-identity-types/src/identity/ownership.rs::tests::ownership_types_round_trip` (planned) |
+| Behavior: deterministic plan, transactional apply, exact rollback | `MEDULLA-IDENTITY-R700.2` | `crates/medulla-isolation/src/isolation/ownership.rs::tests::plan_is_deterministic_and_rollback_exact` (planned) |
+| Wiring: plan method and RbacAdmin apply | `MEDULLA-IDENTITY-R700.3` | `tests/identity/test_graph_ownership_served.py::test_plan_and_apply_reach_wire_methods` (planned) |
+| Refusal: unsafe ownership plans | `MEDULLA-IDENTITY-R700.4` | `tests/identity/test_graph_ownership_served.py::test_unsafe_plans_are_refused` (planned) |
+| Evidence: stored plan and rollback record | `MEDULLA-IDENTITY-R700.5` | `tests/identity/test_graph_ownership_served.py::test_stored_record_reproduces_plan` (planned) |
+| Hot-path journey: apply then rollback | `MEDULLA-IDENTITY-R700.6` | `tests/identity/test_graph_ownership_served.py::test_apply_then_rollback_restores_prior_roles` (planned) |
+| Delegation record read for background work | `MEDULLA-IDENTITY-R701` | `crates/medulla-server-router/src/dispatch/dispatch_e2e_tests/identity/delegation_record.rs::write_read_revoke_and_foreign_tenant_read` (planned) |
+| Policy rule bundle: compile, bind and enforce in the engine | `MEDULLA-IDENTITY-R702` | `crates/medulla-server-router/src/dispatch/dispatch_e2e_tests/identity/policy_bundle.rs::bundle_compiles_enforces_and_refuses_both_codes` (planned); `tests/identity/test_policy_bundle_served.py::test_bundle_binds_and_enforces` (planned) |
+| Epistemic policy predicates | `MEDULLA-IDENTITY-R703` | `crates/medulla-server-router/src/dispatch/dispatch_e2e_tests/identity/policy_bundle.rs::epistemic_condition_admits_expired_and_missing_refuse` (planned) |
+| Resource-scoped access decision method | `MEDULLA-IDENTITY-R704` | `crates/medulla-server-router/src/dispatch/dispatch_e2e_tests/identity/resource_access.rs::check_resource_access_default_denies` (planned) |
+| ClientSession record vocabulary | `MEDULLA-IDENTITY-R705` | `crates/medulla-server-router/src/dispatch/dispatch_e2e_tests/identity/client_session.rs::client_session_node_round_trip_and_principal_mismatch_refused` (planned) |
+| Read gate expands source groups and honors source access properties | `MEDULLA-IDENTITY-R706` | `tests/ingest/test_source_permission_sync_served.py::test_group_change_applies_without_rewrite` (planned) |
+| Identity domain operations with Argon2id and redacted views | `MEDULLA-IDENTITY-R707` | `crates/medulla-identity-types/src/identity/tests/auth.rs::a_matched_password_opens_a_session_and_a_wrong_one_does_not`; `crates/medulla-identity-types/src/identity/tests/sql_dump.rs::dump_round_trips_and_redacts_secrets` (planned) |
+| Durable session record projection on Resolve | `MEDULLA-IDENTITY-R708` | `crates/medulla-identity-types/src/identity/tests/session_evidence.rs::projection_survives_persistence_and_reports_post_touch_facts`; `tests/identity/test_session_record_served.py::test_resolve_returns_session_record` (planned) |
+| Served session-liveness check by opaque session reference | `MEDULLA-IDENTITY-R709` | `crates/medulla-identity-types/src/identity/tests/session_evidence.rs::liveness_reports_live_revoked_expired_and_not_session_bound` (planned); `tests/identity/test_session_liveness_served.py::test_liveness_unknown_and_cross_tenant_refuse` (planned) |
+| Idle session renewal uses global authority compare-and-set | `MEDULLA-IDENTITY-R710` | `crates/medulla-identity-types/src/identity/tests/session_evidence.rs::renewal_refuses_invalid_authority_without_mutation`; `crates/medulla-server-router/src/dispatch/dispatch_e2e_tests/identity/resolution_context.rs::reference_renewal_rechecks_boundary_and_global_revision` |
+| Registered human approval keys | `MEDULLA-IDENTITY-R711` | `crates/medulla-identity-types/src/identity/tests/approval_keys.rs::lifecycle_persists_public_facts_and_enforces_rotation_and_revocation_cas`; `tests/identity/test_approval_key_served.py::test_enrollment_requires_broker_proof` (planned) |
+| Credential resolution observes without refreshing | `MEDULLA-IDENTITY-R712` | `crates/medulla-identity-types/src/identity/tests/session_evidence.rs::credential_observation_preserves_state_and_existing_refusals`; `tests/identity/test_credential_observe_served.py::test_refresh_false_does_not_touch` (planned) |
+| Original session reference inspection | `MEDULLA-IDENTITY-R713` | `crates/medulla-identity-types/src/identity/tests/session_evidence.rs::original_reference_inspection_is_owner_bound_and_does_not_touch`; `tests/identity/test_session_reference_served.py::test_inspect_reference_owner_and_tenant` (planned) |

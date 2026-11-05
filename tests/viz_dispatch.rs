@@ -300,6 +300,7 @@ async fn capability_matrix_is_reachable_over_the_wire() {
     }
 }
 
+// spec: MEDULLA-FEDERATED-QUERY-R087.4
 #[tokio::test]
 async fn invalid_spec_json_is_a_typed_error_not_a_panic() {
     let state = state();
@@ -334,9 +335,46 @@ async fn invalid_spec_json_is_a_typed_error_not_a_panic() {
     );
 }
 
+// spec: MEDULLA-FEDERATED-QUERY-R087.4
+#[tokio::test]
+async fn empty_dataset_ref_is_access_denied() {
+    let state = state();
+    let render = VizRenderRequest {
+        spec_json: scatter_spec("ds:x"),
+        dataset: Some(VizDatasetSource::SyntheticScatterClusters {
+            row_count: 10,
+            clusters: 1,
+            seed: 0,
+        }),
+        width_px: 100,
+        height_px: 100,
+        format: VizFormat::Png,
+        max_primitives: 1_000,
+        max_bytes: 1_000_000,
+        dataset_ref: "  ".to_string(),
+    };
+    let resp = Box::pin(dispatch(
+        &state,
+        test_support::commons_request(
+            SECRET,
+            8,
+            Method::Viz {
+                op: VizOp::Render(render),
+            },
+        ),
+    ))
+    .await;
+    assert_eq!(resp.error.as_deref(), Some("ACCESS_DENIED"));
+    assert!(
+        resp.result.is_none(),
+        "a refusal must never return an image"
+    );
+}
+
 // ── Lane V4: persistent ColumnStore, content-addressed render cache,
 // durable provenance — end to end through the SAME served RPC surface. ──
 
+// spec: MEDULLA-FEDERATED-QUERY-R087.4
 #[tokio::test]
 async fn omitting_dataset_against_an_unknown_dataset_ref_is_an_explicit_unavailable_error() {
     let state = state();
