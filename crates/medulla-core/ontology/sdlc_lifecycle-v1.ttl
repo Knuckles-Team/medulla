@@ -295,3 +295,67 @@ BFO:Process — it unfolds through open→ack→resolved over time.""" ;
     rdfs:comment "The :Branch (canonical software) a :CodeChangeProposal's change lives on." ;
     rdfs:domain :CodeChangeProposal ;
     rdfs:range :Branch .
+
+:IterationCycle a owl:Class ;
+    rdfs:label "Iteration Cycle" ;
+    rdfs:comment "A time-boxed iteration of work (a Plane cycle or a sprint) that groups :Ticket records through :inCycle; its state is carried on :cycleState." ;
+    rdfs:subClassOf bfo:0000015 .
+
+:WorkModule a owl:Class ;
+    rdfs:label "Work Module" ;
+    rdfs:comment "A named grouping of :Ticket records inside a project (a Plane module), reached from a ticket through :inModule." ;
+    rdfs:subClassOf bfo:0000031 .
+
+:blockedBy a owl:ObjectProperty ;
+    rdfs:label "blocked by" ;
+    rdfs:comment "A :Ticket that must be resolved before this :Ticket can proceed (an issue blocking link)." ;
+    rdfs:domain :Ticket ;
+    rdfs:range :Ticket .
+
+:assignedTo a owl:ObjectProperty ;
+    rdfs:label "assigned to" ;
+    rdfs:comment "The :Person (canonical core-foundation) a :Ticket is assigned to." ;
+    rdfs:domain :Ticket ;
+    rdfs:range :Person .
+
+:ticketStatus a owl:DatatypeProperty ;
+    rdfs:label "ticket status" ;
+    rdfs:comment "The workflow status of a :Ticket as the system of record names it." ;
+    rdfs:domain :Ticket ;
+    rdfs:range xsd:string .
+
+:inCycle a owl:ObjectProperty ;
+    rdfs:label "in cycle" ;
+    rdfs:comment "The :IterationCycle a :Ticket is planned into." ;
+    rdfs:domain :Ticket ;
+    rdfs:range :IterationCycle .
+
+:inModule a owl:ObjectProperty ;
+    rdfs:label "in module" ;
+    rdfs:comment "The :WorkModule a :Ticket belongs to." ;
+    rdfs:domain :Ticket ;
+    rdfs:range :WorkModule .
+
+:ticketDueDate a owl:DatatypeProperty ;
+    rdfs:label "ticket due date" ;
+    rdfs:comment "The calendar date a :Ticket is due." ;
+    rdfs:domain :Ticket ;
+    rdfs:range xsd:date .
+
+:cycleState a owl:DatatypeProperty ;
+    rdfs:label "cycle state" ;
+    rdfs:comment "The state of an :IterationCycle: active, upcoming or completed (closed vocabulary — see sdlc_lifecycle-v1.shapes.ttl)." ;
+    rdfs:domain :IterationCycle ;
+    rdfs:range xsd:string .
+
+:pipelineStatus a owl:DatatypeProperty ;
+    rdfs:label "pipeline status" ;
+    rdfs:comment "The latest-state snapshot of a :PipelineRun: success, failed, running or cancelled (closed vocabulary — see sdlc_lifecycle-v1.shapes.ttl)." ;
+    rdfs:domain :PipelineRun ;
+    rdfs:range xsd:string .
+
+:pipelineRunOf a owl:ObjectProperty ;
+    rdfs:label "pipeline run of" ;
+    rdfs:comment "The :Repository (canonical software) a :PipelineRun ran for." ;
+    rdfs:domain :PipelineRun ;
+    rdfs:range :Repository .

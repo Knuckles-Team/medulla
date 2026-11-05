@@ -747,7 +747,9 @@ fn core_specs() -> &'static [CoreSpec] {
         CoreSpec {
             module: "archimate",
             version: 1,
-            shapes: None,
+            shapes: Some(include_str!(
+                "../../../medulla-core/ontology/archimate-v1.shapes.ttl"
+            )),
             ontology: Some(include_str!(
                 "../../../medulla-core/ontology/archimate-v1.ttl"
             )),
@@ -835,6 +837,16 @@ fn core_specs() -> &'static [CoreSpec] {
             ontology: Some(include_str!(
                 "../../../medulla-core/ontology/documentation-v1.ttl"
             )),
+        },
+        // MEDULLA-CQ-CONN-R071.1: the documentation shapes companion, the same
+        // pattern as orchestration-shapes and finance-shapes.
+        CoreSpec {
+            module: "documentation-shapes",
+            version: 1,
+            shapes: Some(include_str!(
+                "../../../medulla-core/ontology/documentation-v1.shapes.ttl"
+            )),
+            ontology: None,
         },
         CoreSpec {
             module: "energy_geopolitics",
@@ -977,7 +989,9 @@ fn core_specs() -> &'static [CoreSpec] {
         CoreSpec {
             module: "sdlc_lifecycle",
             version: 1,
-            shapes: None,
+            shapes: Some(include_str!(
+                "../../../medulla-core/ontology/sdlc_lifecycle-v1.shapes.ttl"
+            )),
             ontology: Some(include_str!(
                 "../../../medulla-core/ontology/sdlc_lifecycle-v1.ttl"
             )),
@@ -1665,7 +1679,7 @@ mod tests {
             ),
             (
                 "sdlc_lifecycle",
-                "4ab13d77447cd3d0daae61cdbfd884a0d3ec67ea7d165b8c689f79b7eda4de98",
+                "17ee3ad6857ae44628eb8699c0ea93c7195d40e1b48351ee60d0d340d969644f",
             ),
             (
                 "software",
@@ -1710,6 +1724,11 @@ mod tests {
             (
                 "finance",
                 "57e4049671f6950d37ed62eac3dfbe8d0130a92ef53f0ed95d347738b3e8b49f",
+            ),
+            // MEDULLA-CQ-CONN-R071.1: the documentation shapes companion.
+            (
+                "documentation-shapes",
+                "ff2a265a10d6331770bcf2155a5f8e3c74e15522de4bf570e867ee95b6310cb2",
             ),
             (
                 "finance-shapes",
