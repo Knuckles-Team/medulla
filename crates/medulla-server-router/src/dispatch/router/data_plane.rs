@@ -784,17 +784,56 @@ pub async fn dispatch_method_scoped_graph_methods(
         // UQL pipeline; a build without `nl-query` reaches the graph_ops
         // "not available" catch-all like any other feature-off method.
         // `NlQueryExplain` (MEDULLA-FEDERATED-QUERY-R058.2.2.1) routes exactly like `NlQuery`.
-        Method::NlQuery { text, graph } => {
+        Method::NlQuery {
+            text,
+            graph,
+            history,
+        } => {
             let target = nl_target_graph(&graph, &req.graph);
-            dispatch_nl_method(ctx, &target, Method::NlQuery { text, graph }).await
+            dispatch_nl_method(
+                ctx,
+                &target,
+                Method::NlQuery {
+                    text,
+                    graph,
+                    history,
+                },
+            )
+            .await
         }
-        Method::NlQueryExplain { text, graph } => {
+        Method::NlQueryExplain {
+            text,
+            graph,
+            history,
+        } => {
             let target = nl_target_graph(&graph, &req.graph);
-            dispatch_nl_method(ctx, &target, Method::NlQueryExplain { text, graph }).await
+            dispatch_nl_method(
+                ctx,
+                &target,
+                Method::NlQueryExplain {
+                    text,
+                    graph,
+                    history,
+                },
+            )
+            .await
         }
-        Method::NlQueryPlan { text, graph } => {
+        Method::NlQueryPlan {
+            text,
+            graph,
+            history,
+        } => {
             let target = nl_target_graph(&graph, &req.graph);
-            dispatch_nl_method(ctx, &target, Method::NlQueryPlan { text, graph }).await
+            dispatch_nl_method(
+                ctx,
+                &target,
+                Method::NlQueryPlan {
+                    text,
+                    graph,
+                    history,
+                },
+            )
+            .await
         }
         // Batched CROSS-GRAPH write (CONCEPT:MEDULLA-KG.storage.multi-graph-batch-write) — the
         // graphs ride the METHOD (one round-trip, many graphs), so like the txn/ts

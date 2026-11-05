@@ -26,8 +26,48 @@ use std::sync::Arc;
 /// absence, not an eviction). The call is allowed to BLOCK (it does a durable
 /// point-read); it is only ever invoked on a RAM MISS — never on the resident hot
 /// path — so the cost is paid only when a node was actually evicted.
+/// The outcome of one durable node point-read (MEDULLA-DURABLE-KERNEL-R086.1).
+///
+/// `Unavailable` is a durable-tier fault and is never `Absent`: a caller that
+/// claims durability surfaces it as an error instead of a missing node.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum NodeReadOutcome {
+    /// The durable tier holds the node's property blob.
+    Present(Vec<u8>),
+    /// The durable tier answered and the node does not exist.
+    Absent,
+    /// The durable tier could not answer; the string names the fault.
+    Unavailable(String),
+}
+
+impl NodeReadOutcome {
+    /// Map an `Option` answer from a store that cannot fail.
+    pub fn from_option(blob: Option<Vec<u8>>) -> Self {
+        blob.map_or(Self::Absent, Self::Present)
+    }
+}
+
+/// A durable read the tier could not answer (MEDULLA-DURABLE-KERNEL-R086.1).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ReadThroughError {
+    pub node_id: String,
+    pub reason: String,
+}
+
+impl std::fmt::Display for ReadThroughError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "durable read of node '{}' unavailable: {}",
+            self.node_id, self.reason
+        )
+    }
+}
+
+impl std::error::Error for ReadThroughError {}
+
 pub trait ReadThrough: std::fmt::Debug + Send + Sync {
-    fn read_node_blob(&self, node_id: &str) -> Option<Vec<u8>>;
+    fn read_node_blob(&self, node_id: &str) -> NodeReadOutcome;
 }
 
 /// Builds a per-graph [`ReadThrough`] for a logical graph name. One factory is set

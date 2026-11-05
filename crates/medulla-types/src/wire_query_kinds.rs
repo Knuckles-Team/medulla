@@ -68,7 +68,7 @@ kinds! {
     #[cfg(feature = "epistemic")] SourceReliability,
     #[cfg(feature = "epistemic")] ConfidenceOp,
     #[cfg(feature = "epistemic")] ExplainBelief,
-    Attribute, DecisionScan, Limit, Project,
+    Decay, ClusterByEmbedding, Attribute, DecisionScan, Limit, Project,
 }
 
 kinds! {
@@ -160,6 +160,8 @@ pub fn op_kind(op: &Op) -> OpKind {
         Op::ConfidenceOp {} => OpKind::ConfidenceOp,
         #[cfg(feature = "epistemic")]
         Op::ExplainBelief { .. } => OpKind::ExplainBelief,
+        Op::Decay { .. } => OpKind::Decay,
+        Op::ClusterByEmbedding { .. } => OpKind::ClusterByEmbedding,
         Op::Attribute { .. } => OpKind::Attribute,
         Op::DecisionScan { .. } => OpKind::DecisionScan,
         Op::Limit { .. } => OpKind::Limit,
@@ -238,6 +240,8 @@ impl OpKind {
             | OpKind::AsOf
             | OpKind::Foreign
             | OpKind::DecisionScan
+            | OpKind::Decay
+            | OpKind::ClusterByEmbedding
             | OpKind::Limit
             | OpKind::Project => None,
             #[cfg(feature = "owl-plan")]
@@ -271,6 +275,8 @@ impl OpKind {
             | OpKind::RankMentions
             | OpKind::RankMmr
             | OpKind::Attribute
+            | OpKind::Decay
+            | OpKind::ClusterByEmbedding
             | OpKind::Limit
             | OpKind::Project => ProofRole::Neutral,
             #[cfg(feature = "text")]

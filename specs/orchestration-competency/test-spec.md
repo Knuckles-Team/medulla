@@ -31,6 +31,7 @@ Every row below names a test that does not exist yet. The test file and function
 | T-018 | MEDULLA-CQ-ORCH-R010.1 | L1 | `crates/medulla-core/tests/architecture_view.rs::view_types_round_trip` | Architecture view model proves its row as stated in requirements.md |
 | T-019 | MEDULLA-CQ-ORCH-R010.2 | L1 | `crates/medulla-core/tests/architecture_view.rs::derivation_merges_code_and_diagram_elements` | Architecture view derivation proves its row as stated in requirements.md |
 | T-020 | MEDULLA-CQ-ORCH-R010.3 | L3 | `tests/architecture_view_served.rs::served_operation_returns_view` | Architecture view wiring proves its row as stated in requirements.md |
+| T-020a | MEDULLA-CQ-ORCH-R010.3 | L3 | `tests/architecture_view_served.rs::stale_revision_compares_latest_committed_snapshot` | the first digest is refused as stale and the digest of the latest committed snapshot returns the view |
 | T-021 | MEDULLA-CQ-ORCH-R010.4 | L1 | `crates/medulla-core/tests/architecture_view.rs::empty_scope_abstains` | Architecture view refusal proves its row as stated in requirements.md |
 | T-022 | MEDULLA-CQ-ORCH-R010.5 | L1 | `crates/medulla-core/tests/architecture_view.rs::every_container_cites_support` | Architecture view evidence proves its row as stated in requirements.md |
 | T-023 | MEDULLA-CQ-ORCH-R010.6 | L3 | `tests/architecture_view_served.rs::served_view_over_fixture_repository` | Architecture view hot-path proof proves its row as stated in requirements.md |

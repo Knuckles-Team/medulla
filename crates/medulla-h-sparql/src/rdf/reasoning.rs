@@ -33,6 +33,7 @@ pub(super) struct RunRulesRequest<'a> {
     pub(super) min_confidence: f64,
     pub(super) derived_only: bool,
     pub(super) explain: bool,
+    pub(super) max_steps: Option<u64>,
     #[cfg(feature = "security")]
     pub(super) caller: &'a str,
     #[cfg(feature = "security")]
@@ -50,6 +51,7 @@ pub(super) async fn handle_run_rules(request: RunRulesRequest<'_>) -> Response {
         min_confidence,
         derived_only,
         explain,
+        max_steps,
         #[cfg(feature = "security")]
         caller,
         #[cfg(feature = "security")]
@@ -90,6 +92,7 @@ pub(super) async fn handle_run_rules(request: RunRulesRequest<'_>) -> Response {
         min_confidence,
         derived_only,
         explain,
+        max_steps,
     };
     match compute_off_lock(req_id, move || {
         medulla_reasoner::rules::run_rule_reasoning_on_view(&snap, &req)

@@ -44,6 +44,10 @@ pub mod work_item;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod work_item_read;
 
+/// MEDULLA-DURABLE-KERNEL-R077: served scheduler worker-admission reads.
+#[cfg(feature = "redb")]
+pub mod worker_admission;
+
 // The ambient auth posture these tests run under (MEDULLA-CONTRACT-R056.18).
 #[cfg(test)]
 use medulla_test_ambient_auth as _;

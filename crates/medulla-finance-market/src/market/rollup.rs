@@ -100,6 +100,7 @@ mod tests {
         }
     }
 
+    // spec: MEDULLA-FINANCE-PRIMITIVES-R903
     #[test]
     fn hourly_bars_roll_up_into_four_hour_bars() {
         let day = days_from_civil(2026, 9, 24) * NS_PER_DAY;
@@ -128,6 +129,7 @@ mod tests {
         assert_eq!(rolled[1].volume, 20);
     }
 
+    // spec: MEDULLA-FINANCE-PRIMITIVES-R903
     #[test]
     fn an_open_period_or_a_provisional_part_leaves_the_rolled_bar_provisional() {
         let day = days_from_civil(2026, 9, 24) * NS_PER_DAY;
@@ -161,6 +163,7 @@ mod tests {
         assert_eq!(settled[0].known_at, day + NS_PER_DAY);
     }
 
+    // spec: MEDULLA-FINANCE-PRIMITIVES-R903
     #[test]
     fn a_bar_wider_than_the_target_is_refused() {
         let day = days_from_civil(2026, 9, 24) * NS_PER_DAY;
