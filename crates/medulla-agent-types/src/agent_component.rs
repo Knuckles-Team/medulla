@@ -63,7 +63,8 @@ pub use content::{
 pub use facts::{
     AgentComponentFacts, CostFacts, DeclaredCost, DeclaredLatency, FactQuality, MeasuredFact,
     ModalityFacts, ObservationRef, PriceSource, PromptMode, ShellProficiency, StoppingBehaviour,
-    ToolEffect, ToolFactDeclarer, ToolSideEffects, ToolsetTransport,
+    ToolEffect, ToolFactDeclarer, ToolSideEffects, ToolsetTransport, PROMPT_IDENTITY_INVALID,
+    PROMPT_SCHEMA_REVISION,
 };
 pub use input_capabilities::{ModelInputCapabilities, ModelInputMediaType};
 pub use search::{
@@ -831,6 +832,8 @@ fn put_facts(hasher: &mut Sha256, facts: &AgentComponentFacts) {
             prompt_mode,
             token_estimate,
             variables,
+            body_sha256,
+            schema_revision,
         } => {
             put_text(
                 hasher,
@@ -841,6 +844,12 @@ fn put_facts(hasher: &mut Sha256, facts: &AgentComponentFacts) {
             );
             hasher.update(token_estimate.to_be_bytes());
             put_names(hasher, variables);
+            // Pins hash only when set, so an unpinned prompt keeps its digest.
+            if let (Some(body), Some(revision)) = (body_sha256, schema_revision) {
+                put_text(hasher, "blueprint_pins");
+                put_text(hasher, body);
+                hasher.update(revision.to_be_bytes());
+            }
         }
         AgentComponentFacts::Tool {
             effect,
@@ -1295,6 +1304,86 @@ fn validate_receipt_digest(request: &AgentComponentPublishRequest) -> Result<(),
     }
 }
 
+/// The versioned graph identity of one blueprint prompt revision.
+///
+/// Derived, never stored: publish assigns `entry_revision`, then
+/// [`PromptBlueprintIdentity::derive`] reads the pins off the facts. Changing
+/// either pin changes the identity.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct PromptBlueprintIdentity {
+    pub tenant_id: String,
+    pub component_id: String,
+    pub entry_revision: u64,
+    pub schema_revision: u32,
+    /// 64 lowercase hex characters.
+    pub body_sha256: String,
+    pub provenance: ComponentProvenance,
+}
+
+impl PromptBlueprintIdentity {
+    /// Derive the identity of a blueprint prompt. Refuses with
+    /// `PROMPT_IDENTITY_INVALID` for non-prompt facts, missing or unpaired
+    /// pins, an unsupported schema revision or invalid ids.
+    pub fn derive(
+        tenant_id: &str,
+        component_id: &str,
+        entry_revision: u64,
+        facts: &AgentComponentFacts,
+        provenance: &ComponentProvenance,
+    ) -> Result<Self, String> {
+        let invalid = |why: &str| format!("{PROMPT_IDENTITY_INVALID}: {why}");
+        let AgentComponentFacts::SystemPrompt {
+            body_sha256,
+            schema_revision,
+            ..
+        } = facts
+        else {
+            return Err(invalid("only a system prompt has a blueprint identity"));
+        };
+        facts::validate_prompt_pins(body_sha256.as_deref(), *schema_revision)?;
+        let (Some(body_sha256), Some(schema_revision)) = (body_sha256, schema_revision) else {
+            return Err(invalid(
+                "a blueprint prompt carries body_sha256 and schema_revision",
+            ));
+        };
+        validate_text("tenant_id", tenant_id).map_err(|e| invalid(&e))?;
+        validate_text("component_id", component_id).map_err(|e| invalid(&e))?;
+        if entry_revision == 0 {
+            return Err(invalid("entry_revision must be assigned by publish"));
+        }
+        provenance.validate().map_err(|e| invalid(&e))?;
+        Ok(Self {
+            tenant_id: tenant_id.to_string(),
+            component_id: component_id.to_string(),
+            entry_revision,
+            schema_revision: *schema_revision,
+            body_sha256: body_sha256.clone(),
+            provenance: provenance.clone(),
+        })
+    }
+
+    /// The identity of a published entry, when it is a pinned blueprint prompt.
+    pub fn of_entry(entry: &AgentComponentEntry) -> Option<Self> {
+        match &entry.facts {
+            AgentComponentFacts::SystemPrompt {
+                body_sha256: Some(_),
+                schema_revision: Some(_),
+                ..
+            } => Self::derive(
+                &entry.tenant_id,
+                &entry.component_id,
+                entry.entry_revision,
+                &entry.facts,
+                &entry.provenance,
+            )
+            .ok(),
+            _ => None,
+        }
+    }
+}
+
 /// What a committed component mutation returns.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -1304,6 +1393,9 @@ pub struct AgentComponentCommittedResult {
     pub component: AgentComponentEntry,
     pub batch_id: String,
     pub committed_version: u64,
+    /// The derived blueprint identity when the component is a pinned prompt.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt_identity: Option<PromptBlueprintIdentity>,
 }
 
 /// The outbox event one committed component revision emits.
@@ -1350,6 +1442,99 @@ mod tests {
 
     /// One named edit to a definition, for the digest-binding table below.
     type NamedMutation<T> = (&'static str, fn(&mut T));
+
+    // spec: MEDULLA-TYPED-PACKS-R001.6
+    #[test]
+    fn prompt_blueprint_identity() {
+        let pinned = |body: char, revision: u32| AgentComponentFacts::SystemPrompt {
+            prompt_mode: PromptMode::Static,
+            token_estimate: 64,
+            variables: Vec::new(),
+            body_sha256: Some(body.to_string().repeat(64)),
+            schema_revision: Some(revision),
+        };
+        let provenance = ComponentProvenance::SourcePackage {
+            package_id: "pkg-a".into(),
+            package_version: "1.0.0".into(),
+        };
+        let identity = PromptBlueprintIdentity::derive(
+            "tenant-a",
+            "prompt:a",
+            3,
+            &pinned('a', 1),
+            &provenance,
+        )
+        .unwrap();
+        assert_eq!(identity.entry_revision, 3);
+        assert_eq!(identity.schema_revision, PROMPT_SCHEMA_REVISION);
+        assert_eq!(identity.body_sha256, "a".repeat(64));
+        let wire = serde_json::to_value(&identity).unwrap();
+        assert_eq!(
+            serde_json::from_value::<PromptBlueprintIdentity>(wire).unwrap(),
+            identity
+        );
+
+        // A pin change changes the identity and the definition digest.
+        let changed = PromptBlueprintIdentity::derive(
+            "tenant-a",
+            "prompt:a",
+            3,
+            &pinned('b', 1),
+            &provenance,
+        )
+        .unwrap();
+        assert_ne!(changed, identity);
+        let mut a = draft("prompt:a", AgentComponentKind::SystemPrompt);
+        a.facts = pinned('a', 1);
+        let mut b = a.clone();
+        b.facts = pinned('b', 1);
+        assert_ne!(
+            AgentComponentEntry::publish(a.clone(), 1, 1)
+                .unwrap()
+                .definition_digest,
+            AgentComponentEntry::publish(b, 1, 1)
+                .unwrap()
+                .definition_digest
+        );
+        let entry = AgentComponentEntry::publish(a, 2, 1).unwrap();
+        assert_eq!(
+            PromptBlueprintIdentity::of_entry(&entry).map(|i| i.entry_revision),
+            Some(2)
+        );
+
+        let refuse = |facts: AgentComponentFacts, id: &str| {
+            let error = PromptBlueprintIdentity::derive("tenant-a", id, 3, &facts, &provenance)
+                .expect_err("must refuse");
+            assert!(error.starts_with(PROMPT_IDENTITY_INVALID), "{error}");
+        };
+        refuse(pinned('a', 2), "prompt:a");
+        refuse(pinned('A', 1), "prompt:a");
+        refuse(pinned('a', 1), "");
+        let mut half = pinned('a', 1);
+        if let AgentComponentFacts::SystemPrompt {
+            schema_revision, ..
+        } = &mut half
+        {
+            *schema_revision = None;
+        }
+        refuse(half.clone(), "prompt:a");
+        let mut unpaired = draft("prompt:a", AgentComponentKind::SystemPrompt);
+        unpaired.facts = half;
+        assert!(unpaired
+            .validate()
+            .unwrap_err()
+            .contains(PROMPT_IDENTITY_INVALID));
+        refuse(
+            AgentComponentFacts::SystemPrompt {
+                prompt_mode: PromptMode::Static,
+                token_estimate: 64,
+                variables: Vec::new(),
+                body_sha256: None,
+                schema_revision: None,
+            },
+            "prompt:a",
+        );
+    }
 
     /// MEDULLA-TYPED-PACKS-R016: package version is provenance, not identity.
     /// New writes mint v4, which ignores it; a stored v3 row still validates.
@@ -1775,6 +1960,8 @@ mod tests {
             prompt_mode: PromptMode::Static,
             token_estimate: 500,
             variables: vec!["topic".into()],
+            body_sha256: None,
+            schema_revision: None,
         };
         let error = broken.validate().expect_err("must be refused");
         assert!(
