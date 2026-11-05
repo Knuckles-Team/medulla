@@ -168,6 +168,8 @@ closed_error_codes! {
         ReservedGraphName => "RESERVED_GRAPH_NAME",
         ResultTooLarge => "RESULT_TOO_LARGE",
         SchemaInconsistent => "SCHEMA_INCONSISTENT",
+        ScopeExceedsPolicy => "SCOPE_EXCEEDS_POLICY",
+        ScopePolicyUnreadable => "SCOPE_POLICY_UNREADABLE",
         SeedDigestMismatch => "SEED_DIGEST_MISMATCH",
         SeedInvalid => "SEED_INVALID",
         SeedShaclViolation => "SEED_SHACL_VIOLATION",

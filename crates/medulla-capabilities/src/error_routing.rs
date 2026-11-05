@@ -121,6 +121,11 @@ const DOMAIN_PREFIXES: &[(&str, &[&str])] = &[
     ),
 ];
 const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
+    // MEDULLA-IDENTITY-R008.4/R008.5: the stored run-scope bound.
+    (
+        "AgentAssemble",
+        &["SCOPE_EXCEEDS_POLICY", "SCOPE_POLICY_UNREADABLE"],
+    ),
     ("AnalyticsJob", &["INVALID_CONFIGURATION"]),
     ("GetRunWorkItem", &["RUN_ADMISSION_UNAVAILABLE"]),
     // Local-only authority: a clustered server refuses it with the typed
