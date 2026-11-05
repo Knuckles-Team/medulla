@@ -323,11 +323,23 @@ async fn dispatch_external_query_method(
 ) -> Result<Response, Method> {
     match method {
         #[cfg(feature = "nl-query")]
-        Method::NlQuery { text, graph } => handle_nl_query(ctx, text, graph).await,
+        Method::NlQuery {
+            text,
+            graph,
+            history,
+        } => handle_nl_query(ctx, text, graph, history).await,
         #[cfg(feature = "nl-query")]
-        Method::NlQueryExplain { text, graph } => handle_nl_query_explain(ctx, text, graph).await,
+        Method::NlQueryExplain {
+            text,
+            graph,
+            history,
+        } => handle_nl_query_explain(ctx, text, graph, history).await,
         #[cfg(feature = "nl-query")]
-        Method::NlQueryPlan { text, graph } => handle_nl_query_plan_only(ctx, text, graph).await,
+        Method::NlQueryPlan {
+            text,
+            graph,
+            history,
+        } => handle_nl_query_plan_only(ctx, text, graph, history).await,
         #[cfg(feature = "graphql")]
         Method::GraphQl { query, variables } => handle_graphql(ctx, query, variables).await,
         #[cfg(feature = "cypher")]

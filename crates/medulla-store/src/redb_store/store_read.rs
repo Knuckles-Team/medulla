@@ -546,7 +546,8 @@ pub fn decode_meta_record(graph: &str, blob: &[u8]) -> Result<GraphMetaRecord, S
     };
     if record.schema_version != GRAPH_META_SCHEMA_VERSION {
         return Err(format!(
-            "graph metadata for {graph} has unsupported schema version {}",
+            "{}: graph metadata for {graph} has unsupported schema version {}",
+            medulla_types::contract::ServerErrorCode::GraphMetaVersionUnsupported.as_str(),
             record.schema_version
         ));
     }
@@ -637,11 +638,13 @@ impl<'de> serde::Deserialize<'de> for GraphMetaRecord {
                 .map_err(D::Error::custom)?,
             }),
             GraphMetaRecordWire::Current(value) => Err(D::Error::custom(format!(
-                "unsupported graph metadata schema version {}",
+                "{}: unsupported graph metadata schema version {}",
+                medulla_types::contract::ServerErrorCode::GraphMetaVersionUnsupported.as_str(),
                 value.schema_version
             ))),
             GraphMetaRecordWire::V2(value) => Err(D::Error::custom(format!(
-                "unsupported legacy graph metadata schema version {}",
+                "{}: unsupported legacy graph metadata schema version {}",
+                medulla_types::contract::ServerErrorCode::GraphMetaVersionUnsupported.as_str(),
                 value.schema_version
             ))),
         }

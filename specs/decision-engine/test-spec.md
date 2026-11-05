@@ -1286,7 +1286,7 @@ Entries for rows whose named test is not yet in the tree.
 - `MEDULLA-DECISION-ENGINE-R097`: planned L1 `crates/medulla-server-api/src/request_replay.rs::tests::a_reused_nonce_is_rejected` and the blob-GC grace-period test beside the collector.
 - `MEDULLA-DECISION-ENGINE-R099.1`: planned L3 `crates/medulla-h-admin/src/graph_schema/world_model_tests.rs::wikidata_schema_mappings_validate_against_world_model_shapes` validates the fixture and resolves each entity by key.
 - `MEDULLA-DECISION-ENGINE-R099.2`: planned L3 `crates/medulla-h-ingest/src/web_ingest/tests.rs::entity_document_lowers_to_alignment_claims`.
-- `MEDULLA-DECISION-ENGINE-R117.1.1`: planned L2 `crates/medulla-tsdb/tests/derive_golden.rs::uql_sql_promql_outputs_agree_on_golden_reference` asserts all fifteen functions agree within 1e-9 on the three surfaces.
+- `MEDULLA-DECISION-ENGINE-R117.1.1`: planned L2 `tests/derive_golden.rs::uql_sql_promql_outputs_agree_on_golden_reference` asserts all fifteen functions agree within 1e-9 on the three surfaces.
 - `MEDULLA-DECISION-ENGINE-R117.1.2`: planned L1 `crates/medulla-numeric/src/evaluation/skill.rs::tests::bootstrap_interval_is_reproducible` and planned L3 `crates/medulla-h-decide/src/decide/stat_tests/evaluator_tests.rs::decision_eval_reports_feature_power`.
 - `MEDULLA-DECISION-ENGINE-R118.1.2.1`: planned L1 `crates/medulla-decision-types/src/decision/reputation.rs::tests::source_reliability_round_trips`.
 - `MEDULLA-DECISION-ENGINE-R118.1.2.2`: planned L1 `crates/medulla-exec/src/exec/reliability.rs::tests::insufficient_history_abstains_instead_of_using_the_prior`.
@@ -1544,8 +1544,8 @@ Rows `MEDULLA-DECISION-ENGINE-R154.5` to `MEDULLA-DECISION-ENGINE-R172.12`. Ever
 | `crates/medulla-h-decide/src/decide/stat_tests/tool_necessity_tests.rs::other_tenant_traces_are_not_read` | L3 | `MEDULLA-DECISION-ENGINE-R165.3` | Proves: Tool necessity family wiring |
 | `crates/medulla-h-decide/src/decide/stat_tests/tool_necessity_tests.rs::unknown_measurements_refuse` | L3 | `MEDULLA-DECISION-ENGINE-R165.4` | covers each code |
 | `crates/medulla-h-decide/src/decide/stat_tests/tool_necessity_tests.rs::mismatch_links_to_the_model_call` | L3 | `MEDULLA-DECISION-ENGINE-R165.5` | asserts the premises and the call id |
-| `crates/medulla-h-admin/src/admin/workflow_registry_tests.rs::register_read_and_refuse_unknown` | L3 | `MEDULLA-DECISION-ENGINE-R166`, `MEDULLA-DECISION-ENGINE-R166.3` | passes |
-| `crates/medulla-h-admin/src/admin/workflow_registry_tests.rs::unknown_identity_refuses_without_default` | L3 | `MEDULLA-DECISION-ENGINE-R166.4` | asserts each code and that a refused `Register` leaves the graph unchanged |
+| `crates/medulla-h-graph/src/graph_ops/workflow_registry_tests.rs::register_read_and_refuse_unknown` | L3 | `MEDULLA-DECISION-ENGINE-R166`, `MEDULLA-DECISION-ENGINE-R166.3` | passes |
+| `crates/medulla-h-graph/src/graph_ops/workflow_registry_tests.rs::unknown_identity_refuses_without_default` | L3 | `MEDULLA-DECISION-ENGINE-R166.4` | asserts each code and that a refused `Register` leaves the graph unchanged |
 | `tests/workflows/test_registry_served.py::test_register_read_and_unknown_refusal` | L4 | `MEDULLA-DECISION-ENGINE-R166.6` | asserts readback equality and the unknown-identity code |
 | `crates/medulla-h-decide/src/decide/stat_tests/skill_upgrade_tests.rs::upgrade_admission_journey` | L3 | `MEDULLA-DECISION-ENGINE-R167`, `MEDULLA-DECISION-ENGINE-R167.1`, `MEDULLA-DECISION-ENGINE-R167.2`, `MEDULLA-DECISION-ENGINE-R167.6` | passes |
 | `crates/medulla-decision-outcome-types/src/decision/skill_upgrade.rs::tests::additive_only_diff` | L1 | `MEDULLA-DECISION-ENGINE-R167.2` | covers addition, removal, type change and optional-to-required |
@@ -1996,10 +1996,10 @@ Every row below has a planned test at its exact post-split path; the row text na
 | `MEDULLA-DECISION-ENGINE-R800.5` | `crates/medulla-h-jobs/src/jobs/program_tests.rs::front_digest_replays_under_one_seed` |
 | `MEDULLA-DECISION-ENGINE-R800.6` | `crates/medulla-h-jobs/src/jobs/program_tests.rs::served_reflective_job_journey` |
 | `MEDULLA-DECISION-ENGINE-R801.1` | `crates/medulla-types/src/usage.rs::tests::record_round_trips_digest_only`; `tests/usage/test_usage_ledger_served.py::test_append_then_read_cost_end_to_end` |
-| `MEDULLA-DECISION-ENGINE-R801.2` | `crates/medulla-persistence/src/usage_ledger/tests.rs::cost_uses_price_valid_at_record_time`; `crates/medulla-persistence/src/usage_ledger/tests.rs::alias_table_normalizes_model_keys`; `crates/medulla-persistence/src/usage_ledger/tests.rs::day_rollup_reads_buckets_not_records`; `tests/usage/test_usage_ledger_served.py::test_append_then_read_cost_end_to_end` |
+| `MEDULLA-DECISION-ENGINE-R801.2` | `crates/medulla-persistence-records/src/usage_ledger/tests.rs::cost_uses_price_valid_at_record_time`; `crates/medulla-persistence-records/src/usage_ledger/tests.rs::alias_table_normalizes_model_keys`; `crates/medulla-persistence-records/src/usage_ledger/tests.rs::day_rollup_reads_buckets_not_records`; `tests/usage/test_usage_ledger_served.py::test_append_then_read_cost_end_to_end` |
 | `MEDULLA-DECISION-ENGINE-R801.3` | `crates/medulla-capabilities/src/scopes/tests.rs::usage_domain_registers_read_and_service_only_write_scopes` |
-| `MEDULLA-DECISION-ENGINE-R801.4` | `crates/medulla-persistence/src/usage_ledger/tests.rs::each_refusal_writes_nothing`; `crates/medulla-h-decide/src/usage/tests.rs::cross_tenant_read_is_empty` |
-| `MEDULLA-DECISION-ENGINE-R801.5` | `crates/medulla-persistence/src/usage_ledger/tests.rs::append_writes_one_audit_line`; `crates/medulla-persistence/src/usage_ledger/tests.rs::golden_cost_rollup_is_byte_identical` |
+| `MEDULLA-DECISION-ENGINE-R801.4` | `crates/medulla-persistence-records/src/usage_ledger/tests.rs::each_refusal_writes_nothing`; `crates/medulla-h-decide/src/usage/tests.rs::cross_tenant_read_is_empty` |
+| `MEDULLA-DECISION-ENGINE-R801.5` | `crates/medulla-persistence-records/src/usage_ledger/tests.rs::append_writes_one_audit_line`; `crates/medulla-persistence-records/src/usage_ledger/tests.rs::golden_cost_rollup_is_byte_identical` |
 | `MEDULLA-DECISION-ENGINE-R801.6` | `tests/usage/test_usage_ledger_served.py::test_append_then_read_cost_end_to_end` |
 | `MEDULLA-DECISION-ENGINE-R801.7` | `crates/medulla-h-decide/src/usage/tests.rs::read_is_tenant_scoped`; `tests/usage/test_usage_ledger_served.py::test_usage_read_is_tenant_scoped` |
 | `MEDULLA-DECISION-ENGINE-R801.8` | `crates/medulla-h-decide/src/usage/tests.rs::service_append_succeeds_and_human_is_refused`; `tests/usage/test_usage_ledger_served.py::test_service_append_and_price_put` |

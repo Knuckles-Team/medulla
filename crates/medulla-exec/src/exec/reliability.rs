@@ -13,6 +13,7 @@
 
 use super::{belief_policy, PlanCtx};
 use crate::rowset::RowSet;
+use medulla_decision_types::decision::reputation::SourceReliability;
 
 /// A source's reliability and, when it was learned, its credible interval.
 pub(super) struct Reliability {
@@ -27,14 +28,16 @@ pub(super) fn reliability_of(ctx: &PlanCtx, source_id: &str) -> Result<Reliabili
     let prior = medulla_epistemic::propagate_confidence(&graph, source_id, &policy).confidence;
     let learned = match ctx.decisions {
         Some(log) => log.learned_reliability(source_id, prior, policy.prior_strength)?,
-        None => None,
+        None => SourceReliability::Absent,
     };
     Ok(match learned {
-        Some(learned) => Reliability {
-            mean: learned.mean,
-            interval: Some((learned.lower, learned.upper)),
+        SourceReliability::Estimated {
+            mean, lower, upper, ..
+        } => Reliability {
+            mean,
+            interval: Some((lower, upper)),
         },
-        None => Reliability {
+        SourceReliability::Absent | SourceReliability::InsufficientHistory { .. } => Reliability {
             mean: prior,
             interval: None,
         },

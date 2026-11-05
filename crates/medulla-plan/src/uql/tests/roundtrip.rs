@@ -2,10 +2,59 @@
 //! accepts, `parse(print(p)) == canonicalize(p)`. Generated values deliberately include
 //! quotes, back-quotes, unicode, reserved words, negative zero and extreme magnitudes.
 
-use medulla_types::wire::{CmpOp, EdgeDir, JsonPathOp, Op, Plan, Pred, PredLiteral, TimeAxis};
+use medulla_types::wire::{
+    CmpOp, EdgeDir, JsonPathOp, Op, OpKind, Plan, Pred, PredKind, PredLiteral, TimeAxis,
+    uql_sample_op, uql_sample_pred,
+};
 use proptest::prelude::*;
 
 use medulla_uql::{canonicalize, parse};
+
+use super::contract::{BUILDER_ONLY, not_in_build};
+
+/// The refusal a variant without a faithful printer spelling fails the build test with
+/// (MEDULLA-FEDERATED-QUERY-R728).
+const UQL_VARIANT_UNPRINTABLE: &str = "UQL_VARIANT_UNPRINTABLE";
+
+/// Print one plan and re-parse it; `Ok(())` when it round-trips (or the build lacks
+/// the op's feature), the reason otherwise.
+fn round_trip(plan: &Plan) -> Result<(), String> {
+    let text = plan.to_uql().map_err(|e| e.to_string())?;
+    match parse(&text) {
+        Ok(back) if back == canonicalize(plan) => Ok(()),
+        Ok(back) => Err(format!("`{text}` re-parsed to {back:?}")),
+        Err(e) if not_in_build(&e) => Ok(()),
+        Err(e) => Err(e.render(&text)),
+    }
+}
+
+/// Every `OpKind` and `PredKind` variant the one `kinds!` macro generates prints,
+/// parses and canonicalizes, against the empty builder-only allowlist
+/// (MEDULLA-FEDERATED-QUERY-R728).
+#[test]
+fn every_op_and_pred_kind_round_trips() {
+    assert!(
+        BUILDER_ONLY.is_empty(),
+        "the builder-only allowlist must stay empty"
+    );
+    for kind in OpKind::all() {
+        let plan = Plan::new(vec![uql_sample_op(kind)]);
+        if let Err(why) = round_trip(&plan) {
+            panic!("{UQL_VARIANT_UNPRINTABLE}: Op::{}: {why}", kind.name());
+        }
+    }
+    for kind in PredKind::all() {
+        let plan = Plan::new(vec![
+            Op::ScanAll {},
+            Op::Filter {
+                preds: vec![uql_sample_pred(kind)],
+            },
+        ]);
+        if let Err(why) = round_trip(&plan) {
+            panic!("{UQL_VARIANT_UNPRINTABLE}: Pred::{}: {why}", kind.name());
+        }
+    }
+}
 
 fn text() -> impl Strategy<Value = String> {
     prop_oneof![
@@ -158,7 +207,7 @@ proptest! {
     #![proptest_config(ProptestConfig::with_cases(512))]
 
     #[test]
-    fn print_then_parse_is_canonical_identity(ops in prop::collection::vec(op(), 1..6)) {
+    fn roundtrip_property_512_cases(ops in prop::collection::vec(op(), 1..6)) {
         let plan = Plan::new(ops);
         let text = plan.to_uql().expect("generated plans are printable");
         let back = parse(&text).map_err(|e| e.render(&text));
