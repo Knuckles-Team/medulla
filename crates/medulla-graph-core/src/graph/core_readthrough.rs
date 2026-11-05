@@ -27,7 +27,41 @@ impl GraphCore {
     /// I/O. Serve-only — it does NOT repopulate RAM, so a full scan over evicted
     /// nodes cannot re-grow the resident set past the cap (memory stays bounded).
     pub(super) fn read_through_get(&self, node_id: &str) -> Option<Vec<u8>> {
-        let rt = self.read_through.read().clone()?;
+        match self.read_through_outcome(node_id) {
+            crate::read_through::NodeReadOutcome::Present(blob) => Some(blob),
+            crate::read_through::NodeReadOutcome::Absent => None,
+            crate::read_through::NodeReadOutcome::Unavailable(reason) => {
+                tracing::warn!("read-through unavailable for node '{node_id}': {reason}");
+                None
+            }
+        }
+    }
+
+    /// Like `get_node_properties`, but a durable-tier fault is an error, never
+    /// an absent node (MEDULLA-DURABLE-KERNEL-R086.1).
+    pub fn get_node_properties_checked(
+        &self,
+        node_id: &str,
+    ) -> Result<Option<Vec<u8>>, crate::read_through::ReadThroughError> {
+        if let Some(a) = self.node_properties.get(node_id) {
+            return Ok(Some((**a).clone()));
+        }
+        match self.read_through_outcome(node_id) {
+            crate::read_through::NodeReadOutcome::Present(blob) => Ok(Some(blob)),
+            crate::read_through::NodeReadOutcome::Absent => Ok(None),
+            crate::read_through::NodeReadOutcome::Unavailable(reason) => {
+                Err(crate::read_through::ReadThroughError {
+                    node_id: node_id.to_owned(),
+                    reason,
+                })
+            }
+        }
+    }
+
+    fn read_through_outcome(&self, node_id: &str) -> crate::read_through::NodeReadOutcome {
+        let Some(rt) = self.read_through.read().clone() else {
+            return crate::read_through::NodeReadOutcome::Absent;
+        };
         // CONCEPT:MEDULLA-KG.storage.bloom-negative-lookup-guard — only trust a bloom "no"
         // once `node_bloom` reflects the COMPLETE durable node-id set (never during
         // a paged-lazy-open still in progress: CONCEPT:MEDULLA-KG.sharding.paged-lazy-open); a not-yet-
@@ -39,7 +73,7 @@ impl GraphCore {
             .load(std::sync::atomic::Ordering::Acquire)
             && !self.node_bloom.read().might_contain(node_id)
         {
-            return None;
+            return crate::read_through::NodeReadOutcome::Absent;
         }
         rt.read_node_blob(node_id)
     }
@@ -79,19 +113,60 @@ mod tests {
     }
 
     impl crate::read_through::ReadThrough for LockCheckingStore {
-        fn read_node_blob(&self, node_id: &str) -> Option<Vec<u8>> {
+        fn read_node_blob(&self, node_id: &str) -> crate::read_through::NodeReadOutcome {
             let core = self.core.upgrade().expect("graph remains alive");
             assert!(
                 core.read_through.try_write().is_some(),
                 "the seam lock must be released before durable access"
             );
             self.calls.lock().unwrap().push(node_id.to_owned());
-            match node_id {
+            crate::read_through::NodeReadOutcome::from_option(match node_id {
                 "cold" => Some(vec![0, 255, 7]),
                 "not-yet-loaded" => Some(vec![9, 0, 128]),
                 _ => None,
+            })
+        }
+    }
+
+    #[derive(Debug)]
+    struct OutcomeStore;
+
+    impl crate::read_through::ReadThrough for OutcomeStore {
+        fn read_node_blob(&self, node_id: &str) -> crate::read_through::NodeReadOutcome {
+            use crate::read_through::NodeReadOutcome;
+            match node_id {
+                "present" => NodeReadOutcome::Present(vec![4, 2]),
+                "down" => NodeReadOutcome::Unavailable("writer gone".to_owned()),
+                _ => NodeReadOutcome::Absent,
             }
         }
+    }
+
+    // spec: MEDULLA-DURABLE-KERNEL-R086.1
+    #[test]
+    fn read_through_model_outcomes() {
+        use crate::read_through::{NodeReadOutcome, ReadThroughError};
+        let core = GraphCore::new();
+        core.set_read_through(Arc::new(OutcomeStore));
+        assert_eq!(
+            core.get_node_properties_checked("present"),
+            Ok(Some(vec![4, 2]))
+        );
+        assert_eq!(core.get_node_properties_checked("missing"), Ok(None));
+        assert_eq!(
+            core.get_node_properties_checked("down"),
+            Err(ReadThroughError {
+                node_id: "down".to_owned(),
+                reason: "writer gone".to_owned(),
+            })
+        );
+        assert_ne!(
+            NodeReadOutcome::Unavailable("writer gone".to_owned()),
+            NodeReadOutcome::Absent
+        );
+        // The in-process `Option` form keeps claiming no durability.
+        assert_eq!(core.get_node_properties("present"), Some(vec![4, 2]));
+        assert_eq!(core.get_node_properties("down"), None);
     }
 
     #[test]

@@ -18,6 +18,7 @@
 //! serial, and the sampled estimator draws its permutations from a seeded ChaCha20
 //! stream, so an attribution replays bit-identically from its inputs and seed.
 
+pub mod brinson;
 pub mod game;
 pub mod linear;
 pub mod owen;
@@ -27,6 +28,7 @@ pub mod shapley;
 #[cfg(test)]
 mod tests;
 
+pub use brinson::brinson_fachler;
 pub use game::{Aggregate, AggregateGame, Game, LoggedGame};
 pub use linear::{additive_fit, linear_split};
 pub use owen::owen_values;

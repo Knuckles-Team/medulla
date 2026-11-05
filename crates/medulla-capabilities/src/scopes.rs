@@ -218,6 +218,7 @@ pub const SCOPES: &[ScopeEntry] = &[
     entry("semantic:source-admit", ServiceOnly, "engine"),
     entry("semantic:stage-claim", ServiceOnly, "engine"),
     entry("semantic:stage-complete", ServiceOnly, "engine"),
+    entry("scheduler:read", User, "engine"),
     entry("semantic:stage-read", User, "engine"),
     entry("service:admin", Admin, "engine"),
     entry("service:control", User, "engine"),

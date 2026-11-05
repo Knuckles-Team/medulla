@@ -19,6 +19,7 @@ method_results! {
     HasNode(HasNode) => Bool<bool>;
     GetNodes(GetNodes) => NodeList<Vec<(String, serde_json::Value)>>;
     GetNodesByLabel(GetNodesByLabel) => NodeList<Vec<(String, serde_json::Value)>>;
+    WalletKeyTrustGet(WalletKeyTrustGet) => Json<medulla_types::finance_wallet_trust::WalletKeyTrust>;
     CompareAndSetNodeFields(CompareAndSetNodeFields) => Bool<bool>;
     CreateSummaryNode(CreateSummaryNode) => Text<String>;
     Consolidate(Consolidate) => Text<String>;

@@ -10,6 +10,8 @@ use medulla_protocol_types::result_contract::compute as results;
 use medulla_result_types::compute_result::finance as wire;
 use serde::Serialize;
 
+use super::telemetry;
+
 use medulla_finance::banking;
 use medulla_finance::banking::AmlRule;
 use medulla_finance::banking::CapitalInputs;
@@ -35,7 +37,23 @@ fn name<T: Serialize>(value: &T) -> String {
         .unwrap_or_default()
 }
 
-pub(super) fn handle_numeric_kernels(req_id: u64, method: Method) -> Result<Response, Method> {
+pub(super) fn handle_numeric_kernels(
+    req_id: u64,
+    tenant: &str,
+    method: Method,
+) -> Result<Response, Method> {
+    // MEDULLA-FINANCE-PRIMITIVES-R613.5: regime and execution calls carry an evidence
+    // span; a refusal emits the `EXEC_PARAM_INVALID` trace event with the field name.
+    let span = match &method {
+        Method::FinanceRegimeChain { .. } => {
+            telemetry::kernel_span(telemetry::Kernel::RegimeChain, tenant, &method)
+        }
+        Method::FinanceExecutionSchedule { .. } => {
+            telemetry::kernel_span(telemetry::Kernel::ExecutionSchedule, tenant, &method)
+        }
+        _ => tracing::Span::none(),
+    };
+    let _entered = span.enter();
     Ok(match method {
         Method::FinanceAmlScreen {
             rule_id,
@@ -129,26 +147,32 @@ pub(super) fn handle_numeric_kernels(req_id: u64, method: Method) -> Result<Resp
             threshold,
             horizon,
         } => match execution::fit_regime_chain(&returns, threshold, horizon) {
-            Ok(f) => Response::ok(
-                req_id,
-                ResultPayload::of::<results::FinanceRegimeChain>(wire::RegimeChainResult {
-                    states: f
-                        .matrix
-                        .states
-                        .iter()
-                        .map(|s| s.as_str().to_owned())
-                        .collect(),
-                    probabilities: f.matrix.probabilities,
-                    current_state: f.current_state,
-                    forecast: f.forecast,
-                    horizon: f.horizon,
-                    threshold: f.threshold,
-                    hit_rate: f.hit_rate,
-                    transitions: f.transitions,
-                    solver_status: name(&f.solver_status),
-                }),
-            ),
-            Err(error) => refuse(req_id, error),
+            Ok(f) => {
+                telemetry::record_outcome(&span, telemetry::OUTCOME_OK);
+                Response::ok(
+                    req_id,
+                    ResultPayload::of::<results::FinanceRegimeChain>(wire::RegimeChainResult {
+                        states: f
+                            .matrix
+                            .states
+                            .iter()
+                            .map(|s| s.as_str().to_owned())
+                            .collect(),
+                        probabilities: f.matrix.probabilities,
+                        current_state: f.current_state,
+                        forecast: f.forecast,
+                        horizon: f.horizon,
+                        threshold: f.threshold,
+                        hit_rate: f.hit_rate,
+                        transitions: f.transitions,
+                        solver_status: name(&f.solver_status),
+                    }),
+                )
+            }
+            Err(error) => {
+                telemetry::refusal_event(&span, error.code(), error.field);
+                refuse(req_id, error)
+            }
         },
         Method::FinanceExecutionSchedule {
             symbol,
@@ -172,27 +196,33 @@ pub(super) fn handle_numeric_kernels(req_id: u64, method: Method) -> Result<Resp
                 permanent_impact,
             });
             match params.and_then(|p| execution::almgren_chriss_schedule(&p, continuous)) {
-                Ok(plan) => Response::ok(
-                    req_id,
-                    ResultPayload::of::<results::FinanceExecutionSchedule>(
-                        wire::ExecutionScheduleResult {
-                            symbol: plan.params.symbol.as_str().to_owned(),
-                            continuous: plan.continuous,
-                            total_shares: plan.params.total_shares,
-                            horizon: plan.params.horizon,
-                            slices: plan.params.slices,
-                            volatility: plan.params.volatility,
-                            risk_aversion: plan.params.risk_aversion,
-                            temporary_impact: plan.params.temporary_impact,
-                            permanent_impact: plan.params.permanent_impact,
-                            holdings: plan.holdings,
-                            trades: plan.trades,
-                            objective: plan.objective,
-                            solver_status: name(&plan.solver_status),
-                        },
-                    ),
-                ),
-                Err(error) => refuse(req_id, error),
+                Ok(plan) => {
+                    telemetry::record_outcome(&span, telemetry::OUTCOME_OK);
+                    Response::ok(
+                        req_id,
+                        ResultPayload::of::<results::FinanceExecutionSchedule>(
+                            wire::ExecutionScheduleResult {
+                                symbol: plan.params.symbol.as_str().to_owned(),
+                                continuous: plan.continuous,
+                                total_shares: plan.params.total_shares,
+                                horizon: plan.params.horizon,
+                                slices: plan.params.slices,
+                                volatility: plan.params.volatility,
+                                risk_aversion: plan.params.risk_aversion,
+                                temporary_impact: plan.params.temporary_impact,
+                                permanent_impact: plan.params.permanent_impact,
+                                holdings: plan.holdings,
+                                trades: plan.trades,
+                                objective: plan.objective,
+                                solver_status: name(&plan.solver_status),
+                            },
+                        ),
+                    )
+                }
+                Err(error) => {
+                    telemetry::refusal_event(&span, error.code(), error.field);
+                    refuse(req_id, error)
+                }
             }
         }
         Method::FinanceMarketMakingQuote {

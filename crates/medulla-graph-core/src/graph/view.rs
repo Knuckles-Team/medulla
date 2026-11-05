@@ -5,8 +5,8 @@ use std::sync::{Arc, OnceLock};
 use petgraph::stable_graph::{NodeIndex, StableDiGraph};
 use petgraph::visit::EdgeRef;
 
-use super::decode_property_value;
 use super::GraphSchemaSources;
+use super::decode_property_value;
 
 /// An owned, consistent, UNLOCKED read view of a graph (topology + properties),
 /// produced by `GraphCore::*_snapshot`. The read-only graph algorithms operate on

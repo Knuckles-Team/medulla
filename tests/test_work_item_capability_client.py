@@ -117,3 +117,65 @@ async def test_capability_request_does_not_accept_public_authority_tuple() -> No
                 "lease_epoch": 1,
             }
         )
+
+
+# spec: MEDULLA-DURABLE-KERNEL-R030.1.1
+# spec: MEDULLA-DURABLE-KERNEL-R030.1.4
+@pytest.mark.asyncio
+async def test_host_start_grant_round_trip() -> None:
+    from medulla.client import ControlLeaseClient
+    from medulla.generated.models import (
+        ControlLeaseIssued,
+        HostStartBinding,
+        IssueHostStartGrantRequest,
+    )
+
+    binding = {
+        "principal_ref": "beneficiary",
+        "session_ref": "opaque-session",
+        "workspace_ref": "workspace",
+        "configuration_digest": "a" * 64,
+        "interfaces": "terminal",
+        "web_logs": False,
+        "policy_revision": "policy-1",
+        "session_expires_at_ms": 61_000,
+    }
+    lease = {
+        "lease_id": "host-grant",
+        "kind": "host.start",
+        "status": "active",
+        "grant": binding,
+        "issued_at_ms": 1_000,
+        "expires_at_ms": 61_000,
+        "hard_expires_at_ms": 61_000,
+        "revision": 1,
+        "host_start_provenance": {
+            "schema_version": 1,
+            "issuer_ref": "principal:sha256:" + "b" * 64,
+        },
+    }
+    wire: dict[str, object] = {
+        "outcome": "issued",
+        "lease": lease,
+        "changed_work_item_ids": [],
+    }
+    ControlLeaseIssued.model_validate(wire)
+    transport = _FakeGraphClient(wire)
+    answer = await ControlLeaseClient(transport).issue_host_start(
+        tenant="tenant-shared",
+        lease_id="host-grant",
+        binding=binding,
+        expires_at_ms=61_000,
+        idempotency_key="host-issue",
+    )
+    assert transport.calls[0][0] == "IssueHostStartGrant"
+    sent = transport.calls[0][1]["request"]
+    IssueHostStartGrantRequest.model_validate(sent)
+    assert answer["outcome"] == "issued"
+    assert answer["lease"] == lease
+    assert (
+        HostStartBinding.model_validate(answer["lease"]["grant"]).model_dump(
+            mode="json"
+        )
+        == binding
+    )

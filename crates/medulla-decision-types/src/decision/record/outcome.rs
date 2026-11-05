@@ -52,6 +52,95 @@ pub enum AbstainReason {
     /// Statistical: below the policy's support, coverage or risk floor. It
     /// names no invisible data, by construction.
     InsufficientConfidence,
+    /// A refusal from one family's registered table, or a shared request code.
+    Family {
+        family: crate::decision::statistical::QuestionKind,
+        code: RefusalCode,
+        detail: String,
+    },
+}
+
+/// A stable refusal code: one entry of a family `REFUSALS` table or of the
+/// shared request codes in `crate::decision::codes`. On the wire it is the code
+/// string; deserializing accepts only a registered code.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct RefusalCode(&'static str);
+
+impl RefusalCode {
+    /// Declare a code. Only tables and the fixed variants call this.
+    pub const fn new(code: &'static str) -> Self {
+        Self(code)
+    }
+
+    /// The stable wire string.
+    pub const fn as_str(self) -> &'static str {
+        self.0
+    }
+}
+
+impl Serialize for RefusalCode {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.0)
+    }
+}
+
+impl<'de> Deserialize<'de> for RefusalCode {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let text = String::deserialize(deserializer)?;
+        crate::decision::codes::resolve(&text)
+            .ok_or_else(|| serde::de::Error::custom(format!("unregistered refusal code `{text}`")))
+    }
+}
+
+/// Hand-written: the wire form is the code string, not the private field.
+#[cfg(feature = "contract-schema")]
+impl schemars::JsonSchema for RefusalCode {
+    fn schema_name() -> std::borrow::Cow<'static, str> {
+        std::borrow::Cow::Borrowed("RefusalCode")
+    }
+
+    fn json_schema(_generator: &mut schemars::SchemaGenerator) -> schemars::Schema {
+        schemars::Schema::try_from(serde_json::json!({
+            "type": "string",
+            "description": "A registered decision refusal code",
+            "pattern": "^[A-Z][A-Z0-9_]*$",
+        }))
+        .expect("a JSON object is a valid schema")
+    }
+}
+
+/// The code of every fixed `AbstainReason` variant, in declaration order.
+pub const FIXED_CODES: &[RefusalCode] = &[
+    RefusalCode::new("UNCOVERED_CAPABILITY"),
+    RefusalCode::new("UNRESOLVED_CAPABILITY_IRI"),
+    RefusalCode::new("UNMAPPED_TASK"),
+    RefusalCode::new("INFEASIBLE"),
+    RefusalCode::new("BUDGET_EXHAUSTED"),
+    RefusalCode::new("UNKNOWN_FACT"),
+    RefusalCode::new("INELIGIBLE_EXTERNAL_AGENT"),
+    RefusalCode::new("RECORD_TOO_LARGE"),
+    RefusalCode::new("POLICY_LOOSENING"),
+    RefusalCode::new("INSUFFICIENT_CONFIDENCE"),
+];
+
+impl AbstainReason {
+    /// The stable code of this reason, for every variant.
+    pub fn code(&self) -> RefusalCode {
+        let index = match self {
+            Self::UncoveredCapability { .. } => 0,
+            Self::UnresolvedCapabilityIri { .. } => 1,
+            Self::UnmappedTask { .. } => 2,
+            Self::Infeasible { .. } => 3,
+            Self::BudgetExhausted { .. } => 4,
+            Self::UnknownFact { .. } => 5,
+            Self::IneligibleExternalAgent { .. } => 6,
+            Self::RecordTooLarge { .. } => 7,
+            Self::PolicyLoosening { .. } => 8,
+            Self::InsufficientConfidence => 9,
+            Self::Family { code, .. } => return *code,
+        };
+        FIXED_CODES[index]
+    }
 }
 
 /// Why one candidate did not win its slot.
@@ -92,4 +181,64 @@ pub enum DecisionOutcome {
     Abstained {
         reasons: BoundedVec<AbstainReason, 64>,
     },
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::decision::codes;
+    use crate::decision::errors::DecisionErrorCode;
+
+    // spec: MEDULLA-DECISION-ENGINE-R010.100.1
+    #[test]
+    fn codes_are_unique_and_stable() {
+        let mut all: Vec<&str> = FIXED_CODES.iter().map(|code| code.as_str()).collect();
+        all.extend(codes::SHARED.iter().map(|code| code.as_str()));
+        for (_, table) in codes::FAMILY_TABLES {
+            all.extend(table.iter().map(|code| code.as_str()));
+        }
+        let mut sorted = all.clone();
+        sorted.sort_unstable();
+        sorted.dedup();
+        assert_eq!(sorted.len(), all.len(), "a refusal code is declared twice");
+        for code in &all {
+            assert!(
+                code.bytes()
+                    .all(|b| b.is_ascii_uppercase() || b.is_ascii_digit() || b == b'_'),
+                "{code} is not an upper-snake code"
+            );
+        }
+        // Stable: the codes shared with the request vocabulary keep its strings.
+        assert_eq!(
+            AbstainReason::RecordTooLarge { bytes: 1 }.code().as_str(),
+            DecisionErrorCode::RecordTooLarge.as_str()
+        );
+        assert_eq!(
+            AbstainReason::PolicyLoosening { field: "f".into() }
+                .code()
+                .as_str(),
+            DecisionErrorCode::PolicyLoosening.as_str()
+        );
+        assert_eq!(
+            AbstainReason::InsufficientConfidence.code().as_str(),
+            "INSUFFICIENT_CONFIDENCE"
+        );
+        let family = AbstainReason::Family {
+            family: crate::decision::statistical::QuestionKind::Route,
+            code: codes::PARAMETER_INVALID,
+            detail: "column.name".into(),
+        };
+        assert_eq!(family.code(), codes::PARAMETER_INVALID);
+        let wire = serde_json::to_string(&family).expect("encodes");
+        assert_eq!(
+            wire,
+            r#"{"reason":"family","family":"route","code":"PARAMETER_INVALID","detail":"column.name"}"#
+        );
+        assert_eq!(
+            serde_json::from_str::<AbstainReason>(&wire).expect("decodes"),
+            family
+        );
+        let unregistered = wire.replace("PARAMETER_INVALID", "NOT_A_CODE");
+        assert!(serde_json::from_str::<AbstainReason>(&unregistered).is_err());
+    }
 }

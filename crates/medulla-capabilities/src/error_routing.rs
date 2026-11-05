@@ -121,6 +121,11 @@ const DOMAIN_PREFIXES: &[(&str, &[&str])] = &[
     ),
 ];
 const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
+    // MEDULLA-IDENTITY-R008.4/R008.5: the stored run-scope bound.
+    (
+        "AgentAssemble",
+        &["SCOPE_EXCEEDS_POLICY", "SCOPE_POLICY_UNREADABLE"],
+    ),
     ("AnalyticsJob", &["INVALID_CONFIGURATION"]),
     ("GetRunWorkItem", &["RUN_ADMISSION_UNAVAILABLE"]),
     // Local-only authority: a clustered server refuses it with the typed
@@ -144,6 +149,16 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     (
         "ApplyChangeEnvelopeDraft",
         &["CARRIER_INNER_METHOD_REFUSED"],
+    ),
+    // MEDULLA-UNIFIED-DATA-PLANE-R651.4.
+    (
+        "DocumentDelete",
+        &[
+            "CASCADE_TOO_LARGE",
+            "DOCUMENT_DELETE_UNAVAILABLE",
+            "DOCUMENT_HAS_REFERENCES",
+            "DOCUMENT_NOT_FOUND",
+        ],
     ),
     // MEDULLA-UNIFIED-DATA-PLANE-R651.7.4 / MEDULLA-DECISION-ENGINE-R802.4.
     (
@@ -185,6 +200,17 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "RECORD_SHAPE_INVALID",
         ],
     ),
+    // MEDULLA-FINANCE-PRIMITIVES-R750.752: stable codes of the research kernels.
+    (
+        "FinancePatternClassify",
+        &["PATTERN_WINDOW_SHORT", "PATTERN_INPUT_INVALID"],
+    ),
+    (
+        "FinanceProfitAttribution",
+        &["ATTRIBUTION_WEIGHTS_INVALID", "ATTRIBUTION_INPUT_INVALID"],
+    ),
+    // MEDULLA-FINANCE-PRIMITIVES-R904: no current record for the binding in the caller's tenant.
+    ("WalletKeyTrustGet", &["WALLET_KEY_TRUST_NOT_FOUND"]),
     ("GetNodes", &["RESULT_TOO_LARGE"]),
     ("GetEdges", &["RESULT_TOO_LARGE"]),
     (
@@ -194,7 +220,19 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     ("AddNode", &["REPLAY_NONCE_CONSUMED"]),
     ("CypherQuery", &["REPLAY_NONCE_CONSUMED"]),
     ("GraphQl", &["REPLAY_NONCE_CONSUMED"]),
-    ("SubmitWorkItem", &["REPLAY_NONCE_CONSUMED"]),
+    // MEDULLA-DURABLE-KERNEL-R865 (child input) and R750.750.1 (signed agent-turn envelope).
+    (
+        "SubmitWorkItem",
+        &[
+            "CARRIER_SIGNATURE_INVALID",
+            "CHILD_TARGET_TERMINAL",
+            "ENVELOPE_FIELD_MISSING",
+            "IDEMPOTENCY_CONFLICT",
+            "REPLAY_NONCE_CONSUMED",
+            "REVISION_CONFLICT",
+            "WORK_QUEUE_FULL",
+        ],
+    ),
     ("ClaimWorkItem", &["REPLAY_NONCE_CONSUMED"]),
     ("PublishRunCheckpoint", &["REPLAY_NONCE_CONSUMED"]),
     ("GetRunCheckpoint", &["CONFLICT"]),
@@ -214,6 +252,17 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         "RegisterForeignSource",
         &["FOREIGN_SOURCE_POLICY_UNBOOTSTRAPPED"],
     ),
+    // MEDULLA-FEDERATED-QUERY-R053.100 / R053.700 / R053.701: foreign Cypher,
+    // Trino and Spark refusals on the served `Uql` FOREIGN path.
+    (
+        "Uql",
+        &[
+            "CYPHER_KEY_INVALID",
+            "FENCE_FIELD_MISSING",
+            "PRESET_UNAVAILABLE",
+            "SNAPSHOT_UNKNOWN",
+        ],
+    ),
     (
         "MutationOutbox",
         &[
@@ -225,6 +274,8 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         ],
     ),
     ("AgentLibrary", &["STALE_AGENT_LIBRARY_REVISION"]),
+    // MEDULLA-UNIFIED-DATA-PLANE-R702.6.
+    ("LineageIngest", &["LINEAGE_EVENT_MALFORMED"]),
     ("WriteBack", &["CORRUPT_WRITE_BACK"]),
     ("TxnPlanWriteback", &["CORRUPT_WRITE_BACK"]),
     (
@@ -250,6 +301,8 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         &["IDENTITY_STORE_MANAGED", "IDENTITY_STORE_NAMESPACE"],
     ),
     ("RbacAdmin", &["IDENTITY_STORE_NAMESPACE"]),
+    // MEDULLA-FEDERATED-QUERY-R720.5: the DECAY and CLUSTER BY EMBEDDING stage refusals.
+    ("Uql", &["UQL_E_CLUSTER_NO_VECTOR", "UQL_E_DECAY_NO_TIME"]),
     (
         "AuditAppend",
         &[
