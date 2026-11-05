@@ -13,4 +13,4 @@ The placement premise is `capacity_premise::headroom(state, graph, scope)`: read
 
 ## Authoritative types
 
-`CapacityAdjustmentProposal` and `CapacityAdjustmentVerdict` in `crates/medulla-decision-types/src/decision/statistical/capacity.rs`; `ModelCapacityController`, `CircuitBreaker`, `GpuGroupBudget` and `CognitiveScheduler` in `crates/medulla-resource/src/admission.rs`.
+`CapacityAdjustmentProposal` and `CapacityAdjustmentVerdict` in new `crates/medulla-decision-types/src/decision/statistical/capacity.rs` (owned by MEDULLA-DECISION-ENGINE-R824); `ModelCapacityController`, `CircuitBreaker`, `GpuGroupBudget` and `CognitiveScheduler` in `crates/medulla-resource/src/admission.rs`.
