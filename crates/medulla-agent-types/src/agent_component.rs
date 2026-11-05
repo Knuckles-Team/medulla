@@ -1384,6 +1384,31 @@ impl PromptBlueprintIdentity {
     }
 }
 
+/// Frame the pins of one prompt revision as unambiguous bytes.
+///
+/// Each field is a big-endian `u32` length then its bytes, in a fixed order:
+/// tenant, component, entry revision, schema revision, body hash. Rendering
+/// binds these bytes into its digest and receipt verification recomputes
+/// them, so both sides share this one function.
+pub fn frame_pins(identity: &PromptBlueprintIdentity) -> Vec<u8> {
+    let entry_revision = identity.entry_revision.to_be_bytes();
+    let schema_revision = identity.schema_revision.to_be_bytes();
+    let fields: [&[u8]; 5] = [
+        identity.tenant_id.as_bytes(),
+        identity.component_id.as_bytes(),
+        &entry_revision,
+        &schema_revision,
+        identity.body_sha256.as_bytes(),
+    ];
+    let mut framed = Vec::with_capacity(fields.iter().map(|f| f.len() + 4).sum());
+    for field in fields {
+        let len = u32::try_from(field.len()).unwrap_or(u32::MAX);
+        framed.extend_from_slice(&len.to_be_bytes());
+        framed.extend_from_slice(field);
+    }
+    framed
+}
+
 /// What a committed component mutation returns.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
