@@ -119,6 +119,12 @@ name = "nemesis"
 path = "src/bin/nemesis.rs"
 required-features = ["harness"]
 
+# Prints the diagnostic-retry decision for `scripts/validate-raft-cluster.sh`
+# (MEDULLA-DURABLE-KERNEL-R014.3.2).
+[[bin]]
+name = "raft_flake_budget"
+path = "src/bin/raft_flake_budget.rs"
+
 # The offline tools (`restore`, `migrate-shards`, `medulla-engine-rf019-observe`,
 # `lake-fixture-export`) are subcommands of `medulla-server`
 # (`src/offline_tools/`); they are not separate executables.
