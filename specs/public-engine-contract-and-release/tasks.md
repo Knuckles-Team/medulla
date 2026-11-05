@@ -1,115 +1,102 @@
-# MEDULLA-CONTRACT — Delivery tasks and evidence
+# MEDULLA-CONTRACT — Tasks
 
-**State:** PARTIAL source baseline; ACCEPTED evidence pending. A checked box means only its named task is proven. The evidence table below records its exact commit and test result.
+One task per leaf row of `requirements.md`, producer first. Each task names its row. The row holds the files, the caller chain and the proof.
 
-Each task line reads `- [ ] T001 [P] [US1] <ID>-R012.4 description`. `[P]` marks a task that may run in parallel.
+## Tasks
 
-## One-distribution packaging
-
-- [ ] T001 [US1] MEDULLA-CONTRACT-R053.2 Strip console scripts in `build_backend.py` and the folded wheel; the gate refuses them.
-- [ ] T002 [US1] MEDULLA-CONTRACT-R053.3 Keep one distribution: no server extra, second package or retired name.
-- [ ] T003 [US1] MEDULLA-CONTRACT-R053.4 Resolve the packaged server binary only, through `medulla.server_binary`.
-- [ ] T004 [US1] MEDULLA-CONTRACT-R053.8 Build the wheel base from the extension crate and publish each platform as it finishes.
-- [ ] T005 [US1] MEDULLA-CONTRACT-R053.9 Build the server per platform in `folded-wheel` and fold it into the `medulla` wheel.
-- [ ] T006 [US1] MEDULLA-CONTRACT-R053.10 Report the release version from `medulla-server --version` and smoke-test it.
-- [ ] T007 [US1] MEDULLA-CONTRACT-R053.11 Build the server image from the `medulla` wheel and publish one multi-architecture tag.
-- [ ] T008 [US1] MEDULLA-CONTRACT-R053.12 Keep one version and a build-only release dispatch.
-
-## Legacy task ledger
-
-The block below is the pre-template task ledger, kept verbatim until each of its rows gains the `Caller chain:`, `Shape:` and `path::name` test the spec standard requires; a row moves out of it into a `T` line when it does. The `MEDULLA-CONTRACT-R053` lines in it are superseded by the section above.
-
-```text
-- [x] **C-01 — MEDULLA-CONTRACT-R001, MEDULLA-CONTRACT-R005:** Audit and converge all Python method DTOs on generated strict models; verify with MEDULLA-T-04.
-- [x] **C-02 — MEDULLA-CONTRACT-R014, MEDULLA-CONTRACT-R015:** Complete catalog error sets, conflict mapping, scope projection and wheel contents; verify with MEDULLA-T-01/MEDULLA-T-02/MEDULLA-T-03.
-- [x] **C-03 — MEDULLA-CONTRACT-R004, MEDULLA-CONTRACT-R006:** Rebuild and measure both WASM codec copies and replay cross-language vectors; verify with MEDULLA-T-05/MEDULLA-T-06.
-- [x] **C-04 — MEDULLA-CONTRACT-R007, MEDULLA-CONTRACT-R008, MEDULLA-CONTRACT-R016, MEDULLA-CONTRACT-R017, MEDULLA-CONTRACT-R019, MEDULLA-CONTRACT-R020:** Make reachability and current-tree static gates follow real code paths. Verify with mutation fixtures MEDULLA-T-09.
-- [x] **C-05 — MEDULLA-CONTRACT-R009, MEDULLA-CONTRACT-R018, MEDULLA-CONTRACT-R021:** Run the root Python suite, lifecycle cases and supported feature matrix in hosted CI. Verify with MEDULLA-T-07/MEDULLA-T-10.
-- [x] **C-06 — MEDULLA-CONTRACT-R003, MEDULLA-CONTRACT-R010, MEDULLA-CONTRACT-R011, MEDULLA-CONTRACT-R012, MEDULLA-CONTRACT-R013, MEDULLA-CONTRACT-R022, MEDULLA-CONTRACT-R023:** Prove wheel/privacy and exact-tree quality gates without new clones or live-host dependencies; verify with MEDULLA-T-08.
-- [x] **C-07 — MEDULLA-CONTRACT-R024, MEDULLA-CONTRACT-R038, MEDULLA-CONTRACT-R039:** Lock the final pre-commit/codespell configuration, regenerate and check the contract receipt on every source change that affects it, and run the duplication gate against the full combined diff compared to `origin/main`.
-- [x] **C-08 — MEDULLA-CONTRACT-R002:** Add a served Python Agent Library and Decide journey in hosted CI using a disposable engine and the installed wheel; verify with MEDULLA-T-11.
-- [x] **C-09 — MEDULLA-CONTRACT-R025, MEDULLA-CONTRACT-R029, MEDULLA-CONTRACT-R030:** Fix environment-dependent build and test failures: give the UDS bind-error test and the build runner's `TMPDIR` short, fixed-length paths under the 108-byte `sun_path` limit, and give the gate's unconstrained build step full CPU availability instead of inheriting the constrained-run CPU-affinity restriction.
-- [x] **C-10 — MEDULLA-CONTRACT-R026, MEDULLA-CONTRACT-R031, MEDULLA-CONTRACT-R034:** Add the combined staged quality-gate script (CCCC, KISS, Dupehound, jscpd, privacy) and drive the complexity, duplication and architecture censuses to zero actionable backlog with clean clippy and formatting; make the dispatch-complexity test fixture derive its residual from the compiler-visible arm count.
-- [x] **C-11 — MEDULLA-CONTRACT-R027, MEDULLA-CONTRACT-R033, MEDULLA-CONTRACT-R036, MEDULLA-CONTRACT-R044, MEDULLA-CONTRACT-R045:** Pass the complexity gate for exhaustive dispatch matches via per-arm extraction, keep wire-method feature acceptance aligned with the compiled classifier/dispatch support for each feature profile, scope the pinned-reference gate to each layer's own admission step, and keep the contract gate's structural `Method`-variant discovery and pinned enum-size assertion correct as variants are added.
-- [x] **C-12 — MEDULLA-CONTRACT-R032, MEDULLA-CONTRACT-R042, MEDULLA-CONTRACT-R046:** Make the slim-server build, the no-quantum-hardware-feature build, and the broker-disabled slim-server build compile clean under `-D warnings` by fixing the underlying write-classifier return values and feature gates, not by suppressing the warning.
-- [x] **C-13 — MEDULLA-CONTRACT-R028, MEDULLA-CONTRACT-R035, MEDULLA-CONTRACT-R037:** Wire the SQLite-format and speech-recognition differential tests and the `medulla-compute` solve test into the release workflow's gates job, run clippy warning-free across every declared release feature profile, and audit declared-versus-executed test targets for the full gates job.
-- [x] **C-14 — MEDULLA-CONTRACT-R040, MEDULLA-CONTRACT-R041, MEDULLA-CONTRACT-R043:** Keep the privacy and secret-history scanners accurate: no false positive on their own documented example patterns, host-path detection across the full tracked tree including the files named in MEDULLA-CONTRACT-R041, and zero credential-shaped literals in test fixtures across the full commit range.
-- [x] **C-01 — MEDULLA-CONTRACT-R001, MEDULLA-CONTRACT-R005:** Audit and converge all Python method DTOs on generated strict models; verify with MEDULLA-T-04.
-- [x] **C-02 — MEDULLA-CONTRACT-R014, MEDULLA-CONTRACT-R015:** Complete catalog error sets, conflict mapping, scope projection and wheel contents; verify with MEDULLA-T-01/MEDULLA-T-02/MEDULLA-T-03.
-- [x] **C-03 — MEDULLA-CONTRACT-R004, MEDULLA-CONTRACT-R006:** Rebuild and measure both WASM codec copies and replay cross-language vectors; verify with MEDULLA-T-05/MEDULLA-T-06.
-- [x] **C-04 — MEDULLA-CONTRACT-R007, MEDULLA-CONTRACT-R008, MEDULLA-CONTRACT-R016, MEDULLA-CONTRACT-R017, MEDULLA-CONTRACT-R019, MEDULLA-CONTRACT-R020:** Make reachability and current-tree static gates follow real code paths. Verify with mutation fixtures MEDULLA-T-09.
-- [x] **C-05 — MEDULLA-CONTRACT-R009, MEDULLA-CONTRACT-R018, MEDULLA-CONTRACT-R021:** Run the root Python suite, lifecycle cases and supported feature matrix in hosted CI. Verify with MEDULLA-T-07/MEDULLA-T-10.
-- [x] **C-06 — MEDULLA-CONTRACT-R003, MEDULLA-CONTRACT-R010, MEDULLA-CONTRACT-R011, MEDULLA-CONTRACT-R012, MEDULLA-CONTRACT-R013, MEDULLA-CONTRACT-R022, MEDULLA-CONTRACT-R023:** Prove wheel/privacy and exact-tree quality gates without new clones or live-host dependencies; verify with MEDULLA-T-08.
-- [x] **C-07 — MEDULLA-CONTRACT-R024, MEDULLA-CONTRACT-R038, MEDULLA-CONTRACT-R039:** Lock the final pre-commit/codespell configuration, regenerate and check the contract receipt on every source change that affects it, and run the duplication gate against the full combined diff compared to `origin/main`.
-- [x] **C-08.1 — MEDULLA-CONTRACT-R002.1:** Add the served `Decide` tenant auth-boundary refusal test (`tests/test_decide_auth_boundary.py`) against the suite's disposable-engine session fixture.
-- [x] **C-08.2 — MEDULLA-CONTRACT-R002.2:** Add the served Decide authorized-tenant-path test and the served Agent Library pack-import journey (`tests/test_decide_auth_boundary.py`), reusing `tests/test_connector_pack_planted.py`'s served helpers.
-- [x] **C-08.3 — MEDULLA-CONTRACT-R002.3:** Add the installed-wheel/no-source-tree-import check (`tests/test_installed_wheel_decision_client_boundary.py`) as a release-workflow gates-job step against `.gates-wheel-venv`.
-- [x] **C-09 — MEDULLA-CONTRACT-R025, MEDULLA-CONTRACT-R029, MEDULLA-CONTRACT-R030:** Fix environment-dependent build and test failures: give the UDS bind-error test and the build runner's `TMPDIR` short, fixed-length paths under the 108-byte `sun_path` limit, and give the gate's unconstrained build step full CPU availability instead of inheriting the constrained-run CPU-affinity restriction.
-- [x] **C-10 — MEDULLA-CONTRACT-R026, MEDULLA-CONTRACT-R031, MEDULLA-CONTRACT-R034:** Add the combined staged quality-gate script (CCCC, KISS, Dupehound, jscpd, privacy) and drive the complexity, duplication and architecture censuses to zero actionable backlog with clean clippy and formatting; make the dispatch-complexity test fixture derive its residual from the compiler-visible arm count.
-- [x] **C-11 — MEDULLA-CONTRACT-R027, MEDULLA-CONTRACT-R033, MEDULLA-CONTRACT-R036, MEDULLA-CONTRACT-R044, MEDULLA-CONTRACT-R045:** Pass the complexity gate for exhaustive dispatch matches via per-arm extraction, keep wire-method feature acceptance aligned with the compiled classifier/dispatch support for each feature profile, scope the pinned-reference gate to each layer's own admission step, and keep the contract gate's structural `Method`-variant discovery and pinned enum-size assertion correct as variants are added.
-- [x] **C-12 — MEDULLA-CONTRACT-R032, MEDULLA-CONTRACT-R042, MEDULLA-CONTRACT-R046:** Make the slim-server build, the no-quantum-hardware-feature build, and the broker-disabled slim-server build compile clean under `-D warnings` by fixing the underlying write-classifier return values and feature gates, not by suppressing the warning.
-- [x] **C-13 — MEDULLA-CONTRACT-R028, MEDULLA-CONTRACT-R035, MEDULLA-CONTRACT-R037:** Wire the SQLite-format and speech-recognition differential tests and the `medulla-compute` solve test into the release workflow's gates job, run clippy warning-free across every declared release feature profile, and audit declared-versus-executed test targets for the full gates job.
-- [x] **C-14 — MEDULLA-CONTRACT-R040, MEDULLA-CONTRACT-R041, MEDULLA-CONTRACT-R043:** Keep the privacy and secret-history scanners accurate: no false positive on their own documented example patterns, host-path detection across the full tracked tree including the files named in MEDULLA-CONTRACT-R041, and zero credential-shaped literals in test fixtures across the full commit range.
-- [ ] **C-15 — All IDs:** Build the wheel twice in clean environments, install the published candidate outside the checkout, run every consumer check against one commit/digest, run the combined quality-gate script plus the full hosted release workflow (CCCC, KISS, Dupehound, jscpd, clippy, formatting, the complete Rust and Python test suites), and publish the evidence record below before setting any requirement to `ACCEPTED`.
-- [x] **C-16 — MEDULLA-CONTRACT-R015:** Ship the installed contract package. Project the canonical methods, errors, schemas and receipt into `medulla/contract/` with the generator only. Include that data in the `tool.maturin` wheel contents. Register one importable `contract_errors` module with shared typed exceptions. Authenticate the receipt aggregate against the caller's trusted pin before the loader reads any installed contract file. Reject a missing file, a digest mismatch, a duplicate key and a path escape with typed errors. Prove the loader outside the checkout with the built wheel (MEDULLA-T-03). Recovered from the never-started agent claim `codex-medulla-contract-r015-packaging-01a0fe5f`.
-- [x] **C-17 — MEDULLA-CONTRACT-R047:** Publish the main Linux x86_64 wheel to the rolling `engine-main` prerelease. Record the first main run and asset SHA-256. Consumer CI in Meristem, Arbora and Graft SDK installs from it.
-
-## Evidence record to fill for each task
-
-Record a public commit SHA and PR URL, commands and tool versions, pass/fail outputs or hosted run links, wheel/codec/catalog hashes, target platform, and remaining failed or skipped checks. A source commit can move a task to LANDED; it cannot close C-15. Avoid checking a task solely because a file or an earlier branch exists.
-
-## Reconciliation rule
-
-At every merge, compare the source SHA in this table to the public default branch. If an implementation is present and the focused test passes, label that requirement LANDED. If the installed artifact, consumers, hosted quality and release matrix pass on the same SHA, label it ACCEPTED. Otherwise leave the specific failed or unrun gate open.
-- [x] **C-18 — MEDULLA-CONTRACT-R048:** Declare the work-claim and evidence DTO bounds in the Rust schema source. Emit strict booleans and unique-item validators from the generator. Merge the PR and record the merged commit.
-- [ ] **C-19 — MEDULLA-CONTRACT-R050:** Generated client ingests OTLP logs
-- [ ] **C-20 — MEDULLA-CONTRACT-R051:** Generated client ingests RunTrace
-- [ ] **C-20.1 — MEDULLA-CONTRACT-R051.1:** Client ingest carries harness fields
-
-## 2026-10-11 lint formatter provisioning
-
-- [x] MEDULLA-CONTRACT-R031.1: Install manifest-selected Rust and rustfmt before lint formatting; 38 focused Python regressions pass. Existing-toolchain execution confirms manifest resolution, not a clean-host download.
-- [ ] MEDULLA-CONTRACT-R031.2: Publish complete same-tree zero-backlog census and independent clippy/formatting results. Earlier C-10 implementation checkmarks do not establish this complete acceptance.
-
-## Current architecture documentation units
-
-Each child is a separate documentation review unit of at most five minutes.
-
-- [ ] **MEDULLA-CONTRACT-R052:** Complete all four child checks without replacing existing acceptance or receipts.
-- [ ] **MEDULLA-CONTRACT-R052.1:** Compare the module inventory and dependency claims with source using MEDULLA-T-12.1.
-- [ ] **MEDULLA-CONTRACT-R052.2:** Compare build, package, and runtime boundaries using MEDULLA-T-12.2.
-- [ ] **MEDULLA-CONTRACT-R052.3:** Resolve shared-contract ownership and call sites using MEDULLA-T-12.3.
-- [ ] **MEDULLA-CONTRACT-R052.4:** Check evidence boundaries and the diagram coverage map using MEDULLA-T-12.4.
-
-<!-- spec-definition-patch:owner-batch-20261012-public-engine-contract-and-release -->
-## Reviewed residual definition tasks — 2026-10-12
-
-The linked requirement rows retain the full contract, hashes, acceptance, and owner dependencies.
-
-- [ ] `MEDULLA-CONTRACT-R001.1`: Extend the Medulla generator and manifest. Wire exports into Meristem `HarnessRequest` and `run_agent`. Keep Meristem lifecycle ownership.
-- [ ] `MEDULLA-CONTRACT-R001.2`: Use R094 export/import and governed filesystem effects. Pin the canonical number encoder. Do not add a Medulla filesystem writer.
-- [ ] Keep both definitions SPECIFIED until implementation and served evidence receive separate review.
-- [ ] **MEDULLA-CONTRACT-R053:** Complete the twelve children without replacing R015 or R047 acceptance.
-- [ ] **MEDULLA-CONTRACT-R053.1:** Fold the four offline tools into `medulla-server`.
-- [ ] **MEDULLA-CONTRACT-R053.2:** Strip console scripts in `build_backend.py` and gate the wheel.
-- [ ] **MEDULLA-CONTRACT-R053.3:** Keep one distribution: no server extra, second package or retired name.
-- [ ] **MEDULLA-CONTRACT-R053.4:** Resolve the packaged server binary through `medulla.server_binary`.
-- [ ] **MEDULLA-CONTRACT-R053.5:** Add `[profile.release-server]` and record measured sizes.
-- [ ] **MEDULLA-CONTRACT-R053.6:** Update callers of the retired binary names.
-- [ ] **MEDULLA-CONTRACT-R053.7:** Split `ci.yml` (all gates) from `release.yml` (guard, build, check, publish) and guard tags on a passing main CI run.
-- [ ] **MEDULLA-CONTRACT-R053.8:** Build the public wheel from the extension crates only, publish each platform as it finishes, and warm the compile cache from main.
-- [ ] **MEDULLA-CONTRACT-R053.9:** Build the server per platform in `folded-wheel` and fold it into the `medulla` wheel.
-- [ ] **MEDULLA-CONTRACT-R053.10:** Report the release version from `medulla-server --version` and smoke-test it.
-- [ ] **MEDULLA-CONTRACT-R053.11:** Build the server image from the `medulla` wheel and publish one multi-architecture tag.
-- [ ] **MEDULLA-CONTRACT-R053.12:** Keep one version and a build-only release dispatch.
-
-- [ ] **MEDULLA-CONTRACT-R006.3:** Deliver and qualify bounded hosted canonical contract export with source provenance.
-
-- [ ] **MEDULLA-CONTRACT-R053.13:** Retain and verify the qualified wheel for isolated installed-artifact acceptance.
-
-- [ ] **MEDULLA-CONTRACT-R006.1:** Qualify fresh WASM exports without inferring native reproducibility.
-- [ ] **MEDULLA-CONTRACT-R006.2:** Complete independent native builds, measured size and cross-language acceptance.
-- [x] **MEDULLA-CONTRACT-R056.17:** Remove the crate-level lint allows the split added and clear the roughly 400 findings behind them.
-- [ ] **MEDULLA-CONTRACT-R056.18:** Move the ambient test auth posture behind a test-only dev-dependency path or a runtime test hook so workspace feature unification cannot change auth behaviour.
-- [ ] **MEDULLA-CONTRACT-R057:** Serve the method catalog (methods + scopes + digest) at run time from the descriptor rows, in Rust and as `medulla.engine.method_catalog()`.
-```
+- [ ] T001 [US1] MEDULLA-CONTRACT-R001.3 Rust round-trip vectors for every wire method
+- [ ] T002 [US1] MEDULLA-CONTRACT-R001.1 Export the type manifest that the Meristem lifecycle consumes
+- [ ] T003 [US1] MEDULLA-CONTRACT-R001.2 Canonical blueprint bytes survive export, disk write and re-export
+- [ ] T004 [US1] MEDULLA-CONTRACT-R001.4 Gate: Python models accept and re-emit every Rust vector
+- [ ] T005 [US1] MEDULLA-CONTRACT-R001.5 Consumer proof: SDK adapter uses only the typed models
+- [ ] T006 [US1] MEDULLA-CONTRACT-R002.1 Served Decide tenant auth-boundary refusal
+- [ ] T007 [US1] MEDULLA-CONTRACT-R002.2 Served Decide authorized-tenant path and pack-import journey
+- [ ] T008 [US1] MEDULLA-CONTRACT-R002.3 Installed-wheel / no-source-tree-import check for the Decide and pack-import client surface
+- [ ] T009 [US4] MEDULLA-CONTRACT-R003 Privacy scan covers relocated graph-backends documentation
+- [ ] T010 [US2] MEDULLA-CONTRACT-R004 Go and JavaScript clients sign bodies through the shared codec
+- [ ] T011 [US1] MEDULLA-CONTRACT-R005 One generated model per wire shape, with typed SPARQL decode
+- [ ] T012 [US2] MEDULLA-CONTRACT-R006.1 Fresh canonical codec export with provenance
+- [ ] T013 [US2] MEDULLA-CONTRACT-R006.2 Complete canonical qualification of the codec artifact
+- [ ] T014 [US2] MEDULLA-CONTRACT-R006.3 Export fresh typed contracts for parity repair
+- [ ] T015 [US4] MEDULLA-CONTRACT-R007 Dispatch decomposition test is current and runs in CI
+- [ ] T016 [US4] MEDULLA-CONTRACT-R008.1 Typed resolved-checkout parity contract (producer-first split of R008)
+- [ ] T017 [US4] MEDULLA-CONTRACT-R008.2 check_five_repo_parity.py CLI wires in the typed parity contract
+- [ ] T018 [US4] MEDULLA-CONTRACT-R009 CI runs the full root Python test suite
+- [ ] T019 [US4] MEDULLA-CONTRACT-R010 Complexity gate scores exhaustive matches by arm body, not count
+- [ ] T020 [US4] MEDULLA-CONTRACT-R011.1 Fan-out host-group manifest is structurally valid before any gate work is dispatched
+- [ ] T021 [US4] MEDULLA-CONTRACT-R012 Complexity scanner resolves modules declared in inline mod blocks
+- [ ] T022 [US4] MEDULLA-CONTRACT-R013 KISS config keys avoid a silently dropped section
+- [ ] T023 [US1] MEDULLA-CONTRACT-R014.1 Authentication refusals name a safe cause class
+- [ ] T024 [US3] MEDULLA-CONTRACT-R015.1 Wheel ships the core ontology, shapes and catalog
+- [ ] T025 [US1] MEDULLA-CONTRACT-R016 Consumer-profile audit covers every typed PolicyEvolution sender
+- [ ] T026 [US4] MEDULLA-CONTRACT-R017 Dispatch census pins cover the current compiler-declared modules
+- [ ] T027 [US4] MEDULLA-CONTRACT-R018 Release feature matrix includes the motif Cargo feature
+- [ ] T028 [US4] MEDULLA-CONTRACT-R019 Dispatch reachability gate follows the current FOREIGN paths
+- [ ] T029 [US4] MEDULLA-CONTRACT-R020 Topology test names avoid version-number suffixes
+- [ ] T030 [US4] MEDULLA-CONTRACT-R021 Failed-connect test checks its own teardown, not process counts
+- [ ] T031 [US4] MEDULLA-CONTRACT-R022 Zero new duplicate-code pairs across the combined source tree
+- [ ] T032 [US4] MEDULLA-CONTRACT-R023.1 Every tracked test file has a recognized component-registry owner
+- [ ] T033 [US4] MEDULLA-CONTRACT-R024 Pre-commit and codespell configuration finalized and locked
+- [ ] T034 [US4] MEDULLA-CONTRACT-R025 UDS bind-error test uses a short, environment-independent path
+- [ ] T035 [US4] MEDULLA-CONTRACT-R027 Exhaustive dispatch matches are accepted by rule, not decomposed
+- [ ] T036 [US4] MEDULLA-CONTRACT-R028 SQLite-format and speech-recognition differential tests run in CI
+- [ ] T037 [US4] MEDULLA-CONTRACT-R029 Build runner keeps TMPDIR short enough for Unix socket paths
+- [ ] T038 [US4] MEDULLA-CONTRACT-R030 Unconstrained build step is not CPU-affinity restricted
+- [ ] T039 [US4] MEDULLA-CONTRACT-R031.1 Lint runner provisions the manifest-selected formatter
+- [ ] T040 [US4] MEDULLA-CONTRACT-R032 Write-classifier functions compile cleanly under the slim profile
+- [ ] T041 [US4] MEDULLA-CONTRACT-R033 Wire acceptance stays aligned with classifier and dispatch support
+- [ ] T042 [US4] MEDULLA-CONTRACT-R034 Complexity test derives its residual from the dispatch arm count
+- [ ] T043 [US4] MEDULLA-CONTRACT-R035 Release workflow executes end to end with all declared targets
+- [ ] T044 [US4] MEDULLA-CONTRACT-R036 Pinned-reference gate anchors each layer to its own admission step
+- [ ] T045 [US4] MEDULLA-CONTRACT-R037 Clippy is warning-free across every release profile
+- [ ] T046 [US4] MEDULLA-CONTRACT-R039 Duplication gate runs against the full combined diff, not per-change
+- [ ] T047 [US4] MEDULLA-CONTRACT-R040 Privacy scanner excludes its own documented example patterns
+- [ ] T048 [US4] MEDULLA-CONTRACT-R041 Privacy gate detects host paths across the tracked tree
+- [ ] T049 [US4] MEDULLA-CONTRACT-R042 Quantum hardware macro feature-gated to match its consumers
+- [ ] T050 [US4] MEDULLA-CONTRACT-R043 Test fixtures carry no credential-shaped literals
+- [ ] T051 [US1] MEDULLA-CONTRACT-R044 Contract gate discovers Method variants structurally
+- [ ] T052 [US1] MEDULLA-CONTRACT-R045 Method enum size pinned and proven stable
+- [ ] T053 [US4] MEDULLA-CONTRACT-R046 Slim-server build compiles with broker feature disabled
+- [ ] T054 [US3] MEDULLA-CONTRACT-R047 Main publishes a rolling engine wheel for consumer CI
+- [ ] T055 [US1] MEDULLA-CONTRACT-R048 Generated work-claim and evidence DTOs refuse coerced, empty and duplicate inputs
+- [ ] T056 [US1] MEDULLA-CONTRACT-R049 The Python client retries an idempotent read once on a dropped connection
+- [ ] T057 [US1] MEDULLA-CONTRACT-R050 Typed client ingests OTLP logs
+- [ ] T058 [US1] MEDULLA-CONTRACT-R051.1 RunTrace ingest carries harness fields
+- [ ] T059 [US5] MEDULLA-CONTRACT-R052.1 Module ownership model
+- [ ] T060 [US5] MEDULLA-CONTRACT-R052.2 Build, package, and deployment behavior
+- [ ] T061 [US5] MEDULLA-CONTRACT-R052.3 Shared-contract wiring
+- [ ] T062 [US5] MEDULLA-CONTRACT-R052.4 Runtime evidence and refusal
+- [ ] T063 [US3] MEDULLA-CONTRACT-R053.1 One executable with subcommands
+- [ ] T064 [US3] MEDULLA-CONTRACT-R053.2 The wheel installs no console scripts
+- [ ] T065 [US3] MEDULLA-CONTRACT-R053.3 No second distribution
+- [ ] T066 [US3] MEDULLA-CONTRACT-R053.4 Server lookup returns the packaged executable only
+- [ ] T067 [US3] MEDULLA-CONTRACT-R053.5 The `release-server` profile sizes the standalone server
+- [ ] T068 [US3] MEDULLA-CONTRACT-R053.6 Callers of the old binary names use the subcommands
+- [ ] T069 [US3] MEDULLA-CONTRACT-R053.7 A tag publishes only a commit main CI already passed
+- [ ] T070 [US3] MEDULLA-CONTRACT-R053.8 The wheel base is the extension crate; each platform publishes independently
+- [ ] T071 [US3] MEDULLA-CONTRACT-R053.9 Every release wheel folds in the server built for its own platform
+- [ ] T072 [US3] MEDULLA-CONTRACT-R053.10 The packaged server reports the release version
+- [ ] T073 [US3] MEDULLA-CONTRACT-R053.11 The server image is built from the `medulla` wheel
+- [ ] T074 [US3] MEDULLA-CONTRACT-R053.12 One version and a build-only dispatch
+- [ ] T075 [US3] MEDULLA-CONTRACT-R053.13 Retain the validated wheel for installed acceptance
+- [ ] T076 [US1] MEDULLA-CONTRACT-R054 The engine serves its method descriptors and scope registry
+- [ ] T077 [US4] MEDULLA-CONTRACT-R055 Decision reachability gate
+- [ ] T078 [US5] MEDULLA-CONTRACT-R056.1 Step 0: the server contract wave is removed before any move
+- [ ] T079 [US5] MEDULLA-CONTRACT-R056.2 Step 1: `medulla-store` holds the redb store, its layout and the sidecar store
+- [ ] T080 [US5] MEDULLA-CONTRACT-R056.3 Step 2: `medulla-kernel` holds the small shared modules
+- [ ] T081 [US5] MEDULLA-CONTRACT-R056.4 Step 3: `medulla-raft` holds replication above `server-api` and persistence
+- [ ] T082 [US5] MEDULLA-CONTRACT-R056.5 Step 4: `medulla-server-api` defines `MethodHandler` and `HandlerRegistry`
+- [ ] T083 [US5] MEDULLA-CONTRACT-R056.6 Step 5: `medulla-persistence` implements the persistence trait
+- [ ] T084 [US5] MEDULLA-CONTRACT-R056.7 Step 6: handler crates for domains without cycles
+- [ ] T085 [US5] MEDULLA-CONTRACT-R056.8 Step 7: the decide, query, admin and transaction cycle breaks through `server-api` traits
+- [ ] T086 [US5] MEDULLA-CONTRACT-R056.9 Step 8: `medulla-wire` holds the wire protocols behind one feature per protocol
+- [ ] T087 [US5] MEDULLA-CONTRACT-R056.10 Step 9: the facade is link-only, and pull-request CI builds the changed-crate closure
+- [ ] T088 [US5] MEDULLA-CONTRACT-R056.11 Scaffold: every empty crate exists before any parallel lane
+- [ ] T089 [US5] MEDULLA-CONTRACT-R056.12 Lane landing: a step lands on a passing build-train run of its changed crates
+- [ ] T090 [US5] MEDULLA-CONTRACT-R056.13 Lane order and parallel groups
+- [ ] T091 [US5] MEDULLA-CONTRACT-R056.14 Build profiles keep iteration fast
+- [ ] T092 [US5] MEDULLA-CONTRACT-R056.15 Served tests live with their handler crate
+- [ ] T093 [US5] MEDULLA-CONTRACT-R056.16 Cargo features map to crates one to one
+- [ ] T094 [US5] MEDULLA-CONTRACT-R056.17 The split leaves no crate-level lint allows
+- [ ] T095 [US5] MEDULLA-CONTRACT-R056.18 The ambient test auth posture does not change behaviour under workspace feature unification
+- [ ] T096 [US1] MEDULLA-CONTRACT-R057 The engine serves its method catalog at run time
