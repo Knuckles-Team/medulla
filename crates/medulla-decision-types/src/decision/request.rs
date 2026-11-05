@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use super::policy::DecisionPolicy;
 use super::record::DecisionRecord;
+use medulla_agent_types::agent_component::{ModelInputCapabilities, ModelInputMediaType};
 use medulla_agent_types::agent_graph::AgentGraphDraft;
 use medulla_agent_types::delegation::AgentGraphEntryRef;
 use medulla_agent_types::{
@@ -119,6 +120,10 @@ pub struct AssemblyRequirements {
     /// plain assembly, so a v1 request keeps its exact digest.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub topology: Option<medulla_agent_types::agent_topology::TopologyRequirements>,
+    /// Input media the selected model must declare (MEDULLA-DECISION-ENGINE-R815).
+    /// Omitted from the encoding, and so from the digest, when empty.
+    #[serde(default, skip_serializing_if = "BoundedVec::is_empty")]
+    pub required_input_media: BoundedVec<ModelInputMediaType, 4>,
 }
 
 /// Which slice of the agent library the candidates come from.
@@ -180,6 +185,14 @@ pub struct AssemblyResult {
     /// so a client can verify the certificate without trusting the engine.
     #[serde(default)]
     pub model: Option<crate::solve::ModelSpec>,
+    /// The selected model component's `definition_digest` (64 lowercase hex,
+    /// SHA-256); `Some` exactly when the outcome is `Solved`.
+    #[serde(default)]
+    pub model_revision: Option<String>,
+    /// The selected profile's declared input capabilities; `None` when the
+    /// outcome is not `Solved` or the profile declares nothing (unknown).
+    #[serde(default)]
+    pub model_input: Option<ModelInputCapabilities>,
 }
 
 /// Commit one assembly record as a durable `DecisionRecord` component.
