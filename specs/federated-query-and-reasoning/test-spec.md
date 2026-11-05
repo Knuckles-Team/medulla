@@ -422,6 +422,7 @@ Hot-path proof for `MEDULLA-FEDERATED-QUERY-R091`: `tests/federation/test_plan_e
 | `MEDULLA-FEDERATED-QUERY-R703.4` | `tests/retrieval/test_access_check_served.py::test_missing_port_fails_closed` |
 | `MEDULLA-FEDERATED-QUERY-R703.5` | `tests/retrieval/test_access_check_served.py::test_drop_reasons_read_back` |
 | `MEDULLA-FEDERATED-QUERY-R703.6` | `cargo bench -p medulla-plan --bench access_check` |
+| `MEDULLA-FEDERATED-QUERY-R703.100` | `scripts/tests/test_bench_gate_p99.py::test_p99_over_ceiling_fails_and_missing_sample_fails` |
 | `MEDULLA-FEDERATED-QUERY-R704` | See each child. |
 | `MEDULLA-FEDERATED-QUERY-R704.1` | `crates/medulla-plan/tests/knowledge_scope.rs::scope_round_trips` |
 | `MEDULLA-FEDERATED-QUERY-R704.2` | `crates/medulla-plan/tests/knowledge_scope.rs::scope_prefilters_before_truncation` |
@@ -911,7 +912,7 @@ Proving targets for rows `MEDULLA-FEDERATED-QUERY-R058.4.2` to `MEDULLA-FEDERATE
 - **MEDULLA-FEDERATED-QUERY-R653.6:** `tests/retrieval/test_corpus_retrieve_served.py::test_each_mode_is_served` (planned). Hot-path proof. Served test passes. cargo bench -p medulla-plan --bench corpus_retrieval meets the key.
 - **MEDULLA-FEDERATED-QUERY-R654:** `tests/retrieval/test_code_context_served.py::test_code_context_and_diagnose` (planned). Code, operations and deployment context (rollup). The fixture and expected result are stated in the row's Test cell.
 - **MEDULLA-FEDERATED-QUERY-R654.1:** `crates/medulla-plan/src/code_context.rs::tests::types_round_trip_and_reject_unknown_stage` (planned). Model. The fixture and expected result are stated in the row's Test cell.
-- **MEDULLA-FEDERATED-QUERY-R654.2:** `crates/medulla-plan/src/code_context.rs::tests::depth_cap_and_pagerank_order` (planned). Behavior: code context. The fixture and expected result are stated in the row's Test cell.
+- **MEDULLA-FEDERATED-QUERY-R654.2:** `crates/medulla-plan/src/code_context.rs::tests::depth_cap_and_hub_order` (planned). Behavior: code context. The fixture and expected result are stated in the row's Test cell.
 - **MEDULLA-FEDERATED-QUERY-R654.3:** `tests/retrieval/test_code_context_served.py::test_methods_reach_kernels` (planned). Wiring. Compares served output with the kernel.
 - **MEDULLA-FEDERATED-QUERY-R654.4:** `tests/retrieval/test_code_context_served.py::test_ambiguous_degraded_and_refusals` (planned). Refusal and degraded answers. Asserts the status values, both codes and zero writes.
 - **MEDULLA-FEDERATED-QUERY-R654.5:** `tests/retrieval/test_code_context_served.py::test_evidence_fields` (planned). Evidence. The fixture and expected result are stated in the row's Test cell.
@@ -954,6 +955,7 @@ Each entry names the test the row binds once its code lands; the path is the pos
 | Planned | `MEDULLA-FEDERATED-QUERY-R703.4` | `tests/retrieval/test_access_check_served.py::test_missing_port_fails_closed` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R703.5` | `tests/retrieval/test_access_check_served.py::test_drop_reasons_read_back` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R703.6` | `cargo bench -p medulla-plan --bench access_check` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R703.100` | `scripts/tests/test_bench_gate_p99.py::test_p99_over_ceiling_fails_and_missing_sample_fails` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R704` | `tests/retrieval/test_knowledge_scope_served.py::test_agent_sees_only_scoped_sources` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R704.3` | `tests/retrieval/test_knowledge_scope_served.py::test_agent_sees_only_scoped_sources` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R704.4` | `tests/retrieval/test_knowledge_scope_served.py::test_scope_refusals` |
