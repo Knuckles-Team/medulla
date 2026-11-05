@@ -191,6 +191,44 @@ pub fn eval_buffer(geom_wkt: &str, radius: f64, _units: &str) -> Option<String> 
     Some(medulla_geo::to_wkt(&algebra::buffer(&g, radius)))
 }
 
+/// `geof:envelope(geom)`: the axis-aligned bounding box of `geom` as a WKT `POLYGON`
+/// lexical. The box comes from `medulla-geo`'s `Geometry::bbox`; `None` for an unparseable
+/// or empty geometry, which fails the expression SAFE.
+pub fn eval_envelope(geom_wkt: &str) -> Option<String> {
+    let b = geom_from_lexical(geom_wkt)?.bbox()?;
+    Some(format!(
+        "POLYGON(({minx} {miny}, {maxx} {miny}, {maxx} {maxy}, {minx} {maxy}, {minx} {miny}))",
+        minx = b.minx,
+        miny = b.miny,
+        maxx = b.maxx,
+        maxy = b.maxy,
+    ))
+}
+
+/// The GeoSPARQL query functions this module serves under [`GEOF_NS`]: the eight
+/// Simple-Features relations (dispatched by [`eval_relation`]) and the three value
+/// functions `distance`, `buffer` and `envelope`. The `F::Custom` hook in
+/// `sparql/expression.rs` routes each `geof:<name>` call here.
+pub const GEOF_FUNCTIONS: [&str; 11] = [
+    "sfEquals",
+    "sfDisjoint",
+    "sfIntersects",
+    "sfTouches",
+    "sfWithin",
+    "sfContains",
+    "sfOverlaps",
+    "sfCrosses",
+    "distance",
+    "buffer",
+    "envelope",
+];
+
+/// Whether `local` (the part after [`GEOF_NS`]) names a registered GeoSPARQL function
+/// from [`GEOF_FUNCTIONS`].
+pub fn is_registered_function(local: &str) -> bool {
+    GEOF_FUNCTIONS.contains(&local)
+}
+
 /// Whether a `geof:distance`/`geof:buffer` UOM IRI denotes metres (great-circle) rather
 /// than the planar/degree default. Tolerant: matches the OGC `…/metre` IRI and any
 /// spelling mentioning "met" (metre/meter). (CONCEPT:MEDULLA-KG.ontology.concept-10)

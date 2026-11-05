@@ -672,6 +672,9 @@ pub(super) fn eval_str_geof(
     match local {
         "distance" => eval_str_geof_distance(ctx, args, sol),
         "buffer" => eval_str_geof_buffer(ctx, args, sol),
+        "envelope" => Some(Binding::Literal(crate::geosparql::eval_envelope(
+            &expr_str(ctx, args.first()?, sol)?,
+        )?)),
         _ => Some(Binding::Literal(bool_str(eval_bool_function(
             ctx, f, args, sol,
         )?))),
