@@ -475,7 +475,11 @@ async fn index_matview(state: &Arc<RwLock<ServerState>>, def: PlanMatView) {
         return;
     };
     let seed = matview::incremental::seed_delta_from_core(&core);
-    circuit.apply(&seed);
+    if let Err(err) = circuit.apply(&seed) {
+        // A refused seed (MEDULLA-INCREMENTAL-VIEWS-R002.3) keeps the typed reason code.
+        matview::manager().note_fallback(def, err.code().as_str().to_string());
+        return;
+    }
     // Watermark AFTER seeding (mirrors `cdc::register_query`): later deltas fold from here.
     let through_seq = {
         let s = state.read().await;

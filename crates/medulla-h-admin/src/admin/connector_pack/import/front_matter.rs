@@ -32,13 +32,13 @@ pub(super) fn front_matter_value(body: &[u8], key: &str) -> Option<String> {
     })
 }
 
-/// The skill types a `SKILL.md` may declare in its `type` key.
+/// The skill types a `SKILL.md` may declare in its `skill_type` key.
 pub(super) const SKILL_TYPES: [&str; 4] = ["skill", "workflow", "graph", "mcp_skill"];
 
 /// The declared skill type: `Ok(None)` when absent, `Err` when it names a
 /// type outside [`SKILL_TYPES`].
 pub(super) fn declared_skill_type(body: &[u8]) -> Result<Option<&'static str>, ()> {
-    match front_matter_value(body, "type") {
+    match front_matter_value(body, "skill_type") {
         None => Ok(None),
         Some(value) => SKILL_TYPES
             .iter()
@@ -54,7 +54,7 @@ mod tests {
     use super::*;
 
     const SKILL: &[u8] =
-        b"---\nname: demo\ndescription:  A   demo skill.\ntype: workflow\n---\n# Demo\n";
+        b"---\nname: demo\ndescription:  A   demo skill.\nskill_type: workflow\n---\n# Demo\n";
 
     #[test]
     fn values_are_read_from_the_front_matter_only() {
@@ -66,6 +66,7 @@ mod tests {
         assert_eq!(front_matter_value(b"# no front matter\n", "name"), None);
     }
 
+    // spec: MEDULLA-TYPED-PACKS-R700.7
     #[test]
     fn the_skill_type_is_closed() {
         assert_eq!(declared_skill_type(SKILL), Ok(Some("workflow")));
@@ -74,8 +75,13 @@ mod tests {
             Ok(None)
         );
         assert_eq!(
-            declared_skill_type(b"---\nname: demo\ndescription: d\ntype: macro\n---\n"),
+            declared_skill_type(b"---\nname: demo\ndescription: d\nskill_type: macro\n---\n"),
             Err(())
+        );
+        // The legacy `type` key is not read.
+        assert_eq!(
+            declared_skill_type(b"---\nname: demo\ndescription: d\ntype: workflow\n---\n"),
+            Ok(None)
         );
     }
 }

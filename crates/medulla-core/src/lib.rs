@@ -14,8 +14,12 @@
 // Bounded thread fan-out and start gates for this crate's concurrency tests.
 
 // CONCEPT:MEDULLA-KG.compute.message-broker-exchanges — message-broker exchanges/routing on top of the KG-2.303 queue.
+/// Graph-derived architecture view (MEDULLA-CQ-ORCH-R010.2).
+pub mod architecture_view;
 #[cfg(feature = "broker")]
 pub mod broker;
+/// Data contract checks (MEDULLA-TYPED-PACKS-R805.2).
+pub mod data_product;
 pub mod decay;
 /// Canonical durable-mutation classification/application, hoisted down from the
 /// facade's `src/mutation_apply.rs` (`plans/pyengine/MEDULLA-PYENGINE-PLAN.md` §4.2) so a
@@ -34,10 +38,13 @@ pub mod freshness;
 pub mod fs;
 // MEDULLA-SDLC — derived lifecycle edges, defect intake, requirement state and trace.
 pub mod lifecycle;
+/// MEDULLA-MEDIA-VOCAB-R001.101.2 — the pure meeting transcript revision function.
+pub mod meeting_transcript;
 /// CONCEPT:MEDULLA-KG.ontology.codegen-from-rust-vocabulary — deterministic ontology/SHACL-shape
 /// text generated from a typed Rust vocabulary, with a byte-equality regeneration test
 /// (MEDULLA-TYPED-PACKS-R090.1). The canonical ontology/shape corpus itself is owned by the
 /// typed vocabulary, not hand-edited Turtle.
+pub mod ontology;
 pub mod ontology_codegen;
 
 /// Single-writer-per-persist-dir guard, hoisted down from the facade's

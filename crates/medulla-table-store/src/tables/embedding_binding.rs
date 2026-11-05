@@ -388,6 +388,33 @@ impl BindingRequest {
     }
 }
 
+/// Whether a column is eligible for vector-index advice
+/// (MEDULLA-FEDERATED-QUERY-R077.6.1).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum AdviceEligibility {
+    Eligible,
+    UnsupportedType,
+    InsufficientObservations,
+}
+
+/// Read-only advice that a column would benefit from an embedding binding,
+/// computed from observed text-search usage over one window. Advice never
+/// creates a binding and holds no store handle.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ColumnVectorAdvice {
+    pub table: String,
+    pub column: String,
+    pub schema_revision: u64,
+    pub window_start: i64,
+    pub window_end: i64,
+    pub sample_count: u64,
+    pub eligibility: AdviceEligibility,
+    pub reason: String,
+    pub score: f64,
+}
+
 /// A durable declaration that a text-bearing source is semantically indexed.
 ///
 /// `tenant_scope` is not inferred from SQL text.  It is supplied by the
@@ -1140,5 +1167,45 @@ mod embedding_binding_tests {
             let bytes = encode_binding(&candidate, &schema).unwrap();
             assert_eq!(decode_binding(&bytes, &schema).unwrap().state, state);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // spec: MEDULLA-FEDERATED-QUERY-R077.6.1
+    #[test]
+    fn advice_round_trip() {
+        let ranked = vec![
+            ColumnVectorAdvice {
+                table: "items".to_string(),
+                column: "description".to_string(),
+                schema_revision: 3,
+                window_start: 1_000,
+                window_end: 87_400,
+                sample_count: 120,
+                eligibility: AdviceEligibility::Eligible,
+                reason: "frequent text-search predicate".to_string(),
+                score: 0.75,
+            },
+            ColumnVectorAdvice {
+                table: "items".to_string(),
+                column: "sku".to_string(),
+                schema_revision: 3,
+                window_start: 1_000,
+                window_end: 87_400,
+                sample_count: 40,
+                eligibility: AdviceEligibility::UnsupportedType,
+                reason: "column type uuid is not text-bearing".to_string(),
+                score: 0.0,
+            },
+        ];
+        let bytes = rmp_serde::to_vec_named(&ranked).expect("encode advice");
+        let decoded: Vec<ColumnVectorAdvice> =
+            rmp_serde::from_slice(&bytes).expect("decode advice");
+        assert_eq!(decoded, ranked);
+        assert!(decoded[0].score >= decoded[1].score);
+        assert_eq!(decoded[1].eligibility, AdviceEligibility::UnsupportedType);
     }
 }
