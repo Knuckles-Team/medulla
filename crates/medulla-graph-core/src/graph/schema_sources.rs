@@ -763,6 +763,14 @@ fn core_specs() -> &'static [CoreSpec] {
             )),
         },
         CoreSpec {
+            module: "enterprise-shapes",
+            version: 1,
+            shapes: Some(include_str!(
+                "../../../medulla-core/ontology/enterprise-v1.shapes.ttl"
+            )),
+            ontology: None,
+        },
+        CoreSpec {
             module: "governance-shapes",
             version: 1,
             shapes: Some(include_str!(
@@ -897,6 +905,14 @@ fn core_specs() -> &'static [CoreSpec] {
             ontology: Some(include_str!(
                 "../../../medulla-core/ontology/identity-v1.ttl"
             )),
+        },
+        CoreSpec {
+            module: "identity-shapes",
+            version: 1,
+            shapes: Some(include_str!(
+                "../../../medulla-core/ontology/identity-v1.shapes.ttl"
+            )),
+            ontology: None,
         },
         CoreSpec {
             module: "infrastructure",
@@ -1266,7 +1282,7 @@ mod tests {
     fn core_catalog_has_one_version_per_module_and_is_outside_dynamic_quota() {
         let sources = GraphSchemaSources::default();
         sources.validate().unwrap();
-        assert_eq!(sources.core.len(), 57);
+        assert_eq!(sources.core.len(), 58);
         assert!(sources.dynamic.is_empty());
         assert!(sources.core.keys().all(|id| id.starts_with("core:")));
     }
@@ -1584,6 +1600,14 @@ mod tests {
                 "405805a8b246426bffcaacc5e3caf1b54d6e1340a281379ca7a5678c87f69cfe",
             ),
             (
+                "enterprise-shapes",
+                "64e61b50e126df9b10e9281302c5199e41853f1c6d461dc58ec87903cd4e67e3",
+            ),
+            (
+                "identity-shapes",
+                "16957305748b53fdbbf593e3339cb03dd231af97631a14108fd6c88dd0a3b5c1",
+            ),
+            (
                 "documentation",
                 "d902c03b433aa907695f22b32515686b141f459b81b85cc3136ca95b858d5ca6",
             ),
@@ -1597,7 +1621,7 @@ mod tests {
             ),
             (
                 "enterprise",
-                "afc4f45cc9e83fe0b1cc1f1d7da677a81a23533d8c6d9f19c412c8c7b523b5a7",
+                "26efde71d91f59dae4a2f7964a3b09f402d100ff6f275dd8cc6b86497a17e6f9",
             ),
             (
                 "governance-shapes",
@@ -1621,7 +1645,7 @@ mod tests {
             ),
             (
                 "identity",
-                "1f90ee14a47c5ee12a472f1857afab21d0da22ef13c0f564827216a6823f56f1",
+                "a3f8390ab124c56d1c68637614373b7865e1158fabab60da10a42c5c5009a140",
             ),
             (
                 "infrastructure",
@@ -1673,11 +1697,11 @@ mod tests {
             ),
             (
                 "media",
-                "35e04e76c65e03f700bae25793022f0eefdf3d0f755ac40b65726665df5a78ac",
+                "cff31e387132aa859a0fe0bfb20b1dea967486eb76cf5560ca61610b9e9cd986",
             ),
             (
                 "retrieval",
-                "0ed0901d7f65bf09a8c00f3a168672f21d8e10db827b65a6d3be467c39f43d26",
+                "88453ae1dbf65049d1d49a8f838092b4019bd4427247b29b801c08cca3ed6584",
             ),
             (
                 "sdlc_lifecycle",

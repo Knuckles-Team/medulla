@@ -186,3 +186,9 @@ ArchiMate: Strategy → CourseOfAction.""" ;
     rdfs:comment "The number of active users an :EAFactSheet reports (producer: leanix)." ;
     rdfs:domain :EAFactSheet ;
     rdfs:range xsd:integer .
+
+:lifecyclePhase a owl:DatatypeProperty ;
+    rdfs:label "lifecycle phase" ;
+    rdfs:comment "Lifecycle phase of an enterprise-architecture fact sheet: plan, active, phaseOut or endOfLife." ;
+    rdfs:domain :EAFactSheet ;
+    rdfs:range xsd:string .
