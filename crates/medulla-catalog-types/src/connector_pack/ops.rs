@@ -335,6 +335,7 @@ mod tests {
         );
 
         use crate::connector_pack::{PackDisposition, PackViolationCode, PackWarningCode};
+        use crate::connector_pack::result::{PackDisposition, PackViolationCode, PackWarningCode};
         for code in crate::catalog_fixtures::contract_pack::every_violation_code() {
             let wire = serde_json::to_value(code).unwrap();
             assert_eq!(
