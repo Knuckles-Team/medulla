@@ -145,6 +145,8 @@ closed_error_codes! {
         MalformedBody => "MALFORMED_BODY",
         MalformedIndex => "MALFORMED_INDEX",
         MethodNotYetServed => "METHOD_NOT_YET_SERVED",
+        NaryArityInvalid => "NARY_ARITY_INVALID",
+        NaryConstraintInvalid => "NARY_CONSTRAINT_INVALID",
         OutboxOwnerUnavailable => "OUTBOX_OWNER_UNAVAILABLE",
         OutboxOwnerUnknown => "OUTBOX_OWNER_UNKNOWN",
         OutboxScopeMismatch => "OUTBOX_SCOPE_MISMATCH",

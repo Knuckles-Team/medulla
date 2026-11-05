@@ -9,9 +9,9 @@
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
-/// Refusal code for a tuple outside the arity bounds (unary, binary or above the max).
+/// Registered `ServerErrorCode` refusal for a tuple outside the arity bounds (unary, binary or above the max).
 pub const NARY_ARITY_INVALID: &str = "NARY_ARITY_INVALID";
-/// Refusal code for a candidate set above `graphlearn.nary_max_candidates`.
+/// Registered `ServerErrorCode` refusal for a candidate set above `graphlearn.nary_max_candidates`.
 pub const NARY_CONSTRAINT_INVALID: &str = "NARY_CONSTRAINT_INVALID";
 
 /// Smallest admitted tuple arity; unary and binary tuples refuse.
@@ -247,5 +247,18 @@ mod tests {
         // No writeback field is accepted on the wire.
         let raw = serde_json::json!({"model": {}, "candidates": [], "writeback": true});
         assert!(serde_json::from_value::<NaryRequest>(raw).is_err());
+    }
+
+    #[test]
+    fn nary_refusals_are_registered_server_error_codes() {
+        use crate::contract::ServerErrorCode;
+        for code in [NARY_ARITY_INVALID, NARY_CONSTRAINT_INVALID] {
+            assert!(
+                ServerErrorCode::ALL
+                    .iter()
+                    .any(|item| item.as_str() == code),
+                "{code} is not a ServerErrorCode"
+            );
+        }
     }
 }
