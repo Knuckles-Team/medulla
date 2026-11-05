@@ -109,6 +109,7 @@ closed_error_codes! {
         GovernedNotFound => "GOVERNED_NOT_FOUND",
         GovernedSelfApproval => "GOVERNED_SELF_APPROVAL",
         GovernedUnknownKind => "GOVERNED_UNKNOWN_KIND",
+        GraphMetaVersionUnsupported => "GRAPH_META_VERSION_UNSUPPORTED",
         GraphNotFound => "GRAPH_NOT_FOUND",
         IdentityAlreadyInitialized => "IDENTITY_ALREADY_INITIALIZED",
         IdentityBadCredential => "IDENTITY_BAD_CREDENTIAL",
