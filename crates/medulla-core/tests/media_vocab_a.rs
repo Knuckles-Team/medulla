@@ -4062,16 +4062,20 @@ fn media_vocab_postiz_response_round_trips_through_mapping() {
     let mapping = include_str!("fixtures/media_vocab/postiz_mapping.ttl");
     assert_mapping_rows_resolve(
         mapping,
-        2,
-        &[("Post", "SocialPost"), ("Channel", "PublishingChannel")],
+        3,
+        &[
+            ("Post", "SocialPost"),
+            ("Channel", "PublishingChannel"),
+            ("Metric", "EngagementMetric"),
+        ],
     );
     let mapped = mapped_connector(
         "postiz",
         mapping,
         include_str!("fixtures/media_vocab/postiz_response.json"),
     );
-    // Four posts, two minted channel references, two integrations.
-    assert_round_trip_nodes(&mapped, 8);
+    // Four posts, two minted channel references, two integrations, two metrics.
+    assert_round_trip_nodes(&mapped, 10);
     let post = media_node("postiz", "Post", "post-2");
     assert_eq!(
         values_of(&mapped, &post, format!("{KG}postState").as_str()),
