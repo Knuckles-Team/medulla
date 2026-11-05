@@ -2,6 +2,10 @@ macro_rules! persistence_capabilities {
     ($next:ident { $($methods:tt)* }) => {
     $next! {
     $($methods)*
+    fn shard_of(&self, graph_fname: &str) -> usize {
+        RedbBackend::shard_of(self, graph_fname)
+    }
+
     fn supports_native_resource_reservations(&self) -> bool {
         true
     }

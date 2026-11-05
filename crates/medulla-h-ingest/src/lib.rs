@@ -14,6 +14,9 @@ pub mod asr;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod blob;
 
+/// Dataset lineage ingest (MEDULLA-UNIFIED-DATA-PLANE-R702.3).
+pub mod lineage;
+
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[cfg(feature = "modality-serving")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)

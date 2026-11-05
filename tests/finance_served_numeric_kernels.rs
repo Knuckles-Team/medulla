@@ -4,6 +4,8 @@
 #![cfg(all(feature = "server", feature = "security", feature = "finance"))]
 
 mod common;
+#[path = "common/span_capture.rs"]
+mod span_capture;
 #[path = "common/test_support.rs"]
 mod test_support;
 
@@ -251,4 +253,80 @@ async fn factor_rank_abstains_on_thin_input() {
         &call(rank(vec![], vec![])).await,
         "FACTOR_INSUFFICIENT_DATA",
     );
+}
+
+fn schedule(slices: u32, risk_aversion: f64) -> Method {
+    Method::FinanceExecutionSchedule {
+        symbol: "AAPL".into(),
+        total_shares: 1_000.0,
+        horizon: 1.0,
+        slices,
+        volatility: 1.0,
+        risk_aversion,
+        temporary_impact: 1.0,
+        permanent_impact: 0.0,
+        continuous: false,
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+// spec: MEDULLA-FINANCE-PRIMITIVES-R613.5
+async fn execution_results_carry_evidence_and_refusal_trace() {
+    span_capture::install();
+    // Success: the result carries its parameters, objective and solver status.
+    let ok_method = schedule(4, 1.0);
+    let plan = body(&call(ok_method.clone()).await);
+    assert_eq!(plan["slices"], 4);
+    assert_eq!(plan["risk_aversion"], 1.0);
+    assert!(plan["objective"].as_f64().is_some_and(f64::is_finite));
+    assert_eq!(plan["solver_status"], "closed_form");
+    let ok_spans = span_capture::spans(
+        "medulla.finance.execution_schedule",
+        &span_capture::digest_of(&ok_method),
+    );
+    assert_eq!(ok_spans.len(), 1, "one evidence span: {ok_spans:?}");
+    assert_eq!(
+        ok_spans[0].fields.get("outcome").map(String::as_str),
+        Some("ok")
+    );
+
+    // Refusal: a trace event names the code and the refused field.
+    let bad_method = schedule(4, 0.0);
+    refusal_code_in_detail(&call(bad_method.clone()).await, "EXEC_PARAM_INVALID");
+    let bad_spans = span_capture::spans(
+        "medulla.finance.execution_schedule",
+        &span_capture::digest_of(&bad_method),
+    );
+    assert_eq!(bad_spans.len(), 1);
+    assert_eq!(
+        bad_spans[0].fields.get("outcome").map(String::as_str),
+        Some("EXEC_PARAM_INVALID")
+    );
+    let events = span_capture::events_in("medulla.finance.execution_schedule");
+    assert!(
+        events.iter().any(|e| {
+            e.fields.get("code").map(String::as_str) == Some("EXEC_PARAM_INVALID")
+                && e.fields.get("field").map(String::as_str) == Some("risk_aversion")
+        }),
+        "refusal trace event: {events:?}"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+// spec: MEDULLA-FINANCE-PRIMITIVES-R613.6
+async fn r613_budget_inputs_complete() {
+    // The bench inputs are accepted at full size: a 1000-slice schedule and a regime
+    // fit over 1_000_000 bars.
+    let plan = body(&call(schedule(1_000, 1.0)).await);
+    assert_eq!(plan["trades"].as_array().map(Vec::len), Some(1_000));
+    let returns: Vec<f64> = (0..1_000_000).map(|i| [0.02, -0.02, 0.0][i % 3]).collect();
+    let regime = body(
+        &call(Method::FinanceRegimeChain {
+            returns,
+            threshold: 0.01,
+            horizon: 1,
+        })
+        .await,
+    );
+    assert_eq!(regime["transitions"], 999_999);
 }

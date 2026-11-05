@@ -247,3 +247,121 @@ async fn hidden_rows_do_not_displace_visible_rows() {
         "WITH KNOWLEDGE keeps the visible row order"
     );
 }
+
+/// One served UQL answer: the row ids and the `(snapshot_revision,
+/// knowledge_revision)` header.
+async fn uql_header_as(
+    state: &test_support::SharedState,
+    request: Request,
+) -> (Vec<String>, u64, u64, Vec<bool>) {
+    use medulla_types::wire::UqlResult;
+    let response = Box::pin(dispatch_req(state, request)).await;
+    assert!(response.error.is_none(), "UQL failed: {:?}", response.error);
+    let Some(medulla_protocol_types::protocol::ResultPayload::Raw(bytes)) =
+        response.result.as_ref()
+    else {
+        panic!("expected Raw result, got {:?}", response.result);
+    };
+    match rmp_serde::from_slice(bytes).unwrap() {
+        UqlResult::Rows {
+            rows,
+            snapshot_revision,
+            knowledge_revision,
+            ..
+        }
+        | UqlResult::Profile {
+            rows,
+            snapshot_revision,
+            knowledge_revision,
+            ..
+        } => (
+            rows.iter().map(|row| row.id.clone()).collect(),
+            snapshot_revision,
+            knowledge_revision,
+            rows.iter().map(|row| row.knowledge.is_some()).collect(),
+        ),
+        UqlResult::Explain { .. } => panic!("an EXPLAIN result has no rows"),
+    }
+}
+
+/// The knowledge revision the header must carry for a snapshot revision.
+fn expected_knowledge_revision(snapshot_revision: u64) -> u64 {
+    if cfg!(feature = "epistemic") {
+        snapshot_revision
+    } else {
+        0
+    }
+}
+
+// spec: MEDULLA-FEDERATED-QUERY-R088.3
+#[tokio::test]
+async fn rows_and_header_share_one_snapshot() {
+    let state = state().await;
+    let add = |node: &str| Method::AddNode {
+        node_id: node.to_string(),
+        properties_msgpack: pack(json!({ "type": "Probe" })),
+    };
+    ok(&state, 1, add("probe-0")).await;
+    let text = "MATCH (:Probe) WITH KNOWLEDGE";
+
+    let (first_rows, first_rev, first_k, first_knowledge) =
+        uql_header_as(&state, req(10, test_support::uql(text))).await;
+    assert_eq!(first_rows, vec!["probe-0".to_string()]);
+    assert!(first_rev > 0, "the header names a real snapshot revision");
+    assert_eq!(first_k, expected_knowledge_revision(first_rev));
+    assert!(first_knowledge.iter().all(|k| *k), "{first_knowledge:?}");
+
+    // A repeat read with no write in between names the same snapshot.
+    let (again_rows, again_rev, _, _) =
+        uql_header_as(&state, req(11, test_support::uql(text))).await;
+    assert_eq!((again_rows, again_rev), (first_rows.clone(), first_rev));
+
+    // A write between two reads moves the header together with the rows.
+    ok(&state, 2, add("probe-1")).await;
+    let (second_rows, second_rev, second_k, second_knowledge) =
+        uql_header_as(&state, req(12, test_support::uql(text))).await;
+    let mut sorted = second_rows.clone();
+    sorted.sort();
+    assert_eq!(sorted, vec!["probe-0".to_string(), "probe-1".to_string()]);
+    assert!(
+        second_rev > first_rev,
+        "the header must name the newer snapshot the rows came from: {first_rev} -> {second_rev}"
+    );
+    assert_eq!(second_k, expected_knowledge_revision(second_rev));
+    assert_eq!(second_knowledge.len(), second_rows.len());
+    assert!(second_knowledge.iter().all(|k| *k));
+}
+
+// spec: MEDULLA-FEDERATED-QUERY-R088.6
+#[tokio::test]
+async fn governed_rows_carry_knowledge_and_header() {
+    let state = state().await;
+    seed(&state).await;
+
+    let plain = format!("MATCH (:Robot) |> RANK BY {PROBE} |> LIMIT 5");
+    let knowledge = format!("{plain} WITH KNOWLEDGE");
+
+    let (plain_rows, plain_rev, _, _) =
+        uql_header_as(&state, req_as(20, "alice", test_support::uql(&plain))).await;
+    let (rows, rev, k_rev, annotated) =
+        uql_header_as(&state, req_as(21, "alice", test_support::uql(&knowledge))).await;
+
+    assert_eq!(rows.len(), 5, "{rows:?}");
+    assert!(
+        rows.iter().all(|id| id.starts_with("alice-")),
+        "hidden rows must be absent: {rows:?}"
+    );
+    assert_eq!(rows, plain_rows, "WITH KNOWLEDGE keeps the row order");
+    assert!(annotated.iter().all(|k| *k), "every row carries knowledge");
+    assert_eq!(rev, plain_rev, "the header names the snapshot of the rows");
+    assert_eq!(k_rev, expected_knowledge_revision(rev));
+
+    // The second principal sees its own rows under the same snapshot header.
+    let (bob_rows, bob_rev, _, _) =
+        uql_header_as(&state, req_as(22, "bob", test_support::uql(&knowledge))).await;
+    assert!(
+        bob_rows.iter().all(|id| id.starts_with("bob-")),
+        "{bob_rows:?}"
+    );
+    assert_eq!(bob_rev, rev);
+}

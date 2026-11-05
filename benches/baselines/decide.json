@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "budgets": {
+    "p50_ms": 20.0,
+    "p99_ms": 150.0,
+    "peak_mib": 32.0
+  },
+  "regression_tolerance": 0.10,
+  "groups": {}
+}

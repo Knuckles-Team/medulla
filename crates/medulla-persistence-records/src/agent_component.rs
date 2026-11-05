@@ -400,11 +400,14 @@ impl RevisionLayer for ComponentLayer {
         batch_id: String,
         committed_version: u64,
     ) -> AgentComponentCommittedResult {
+        let prompt_identity =
+            medulla_agent_types::agent_component::PromptBlueprintIdentity::of_entry(&component);
         AgentComponentCommittedResult {
             schema_version: AGENT_COMPONENT_SCHEMA_VERSION,
             component,
             batch_id,
             committed_version,
+            prompt_identity,
         }
     }
 
@@ -527,6 +530,8 @@ pub(crate) fn seed_component_for_test(
                     prompt_mode: PromptMode::Static,
                     token_estimate: 128,
                     variables: Vec::new(),
+                    body_sha256: None,
+                    schema_revision: None,
                 },
                 AgentComponentKind::Tool => test_tool_facts(ToolEffect::Read),
                 AgentComponentKind::Toolset => AgentComponentFacts::Toolset {
