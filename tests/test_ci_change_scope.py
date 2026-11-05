@@ -1023,6 +1023,7 @@ CARGO_STEPS = (
 )
 
 
+@pytest.mark.spec("MEDULLA-CONTRACT-R053.7.1")
 def test_train_attestation_gates_the_cargo_steps() -> None:
     jobs = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text())["jobs"]
     steps = jobs["ci"]["steps"]
