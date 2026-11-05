@@ -341,3 +341,136 @@ pub struct FactorRecordResult {
     pub rank: u32,
     pub input_provenance_keys: Vec<String>,
 }
+
+/// Candlestick pattern kinds recognised by the pattern classifier (MEDULLA-FINANCE-PRIMITIVES-R750.750).
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(rename_all = "snake_case")]
+pub enum PatternKind {
+    Hammer,
+    ShootingStar,
+    BullishEngulfing,
+    BearishEngulfing,
+    Doji,
+    InsideBar,
+}
+
+/// One detected candlestick pattern at a bar index.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct PatternMatch {
+    pub index: usize,
+    pub kind: PatternKind,
+    pub strength: f64,
+}
+
+/// Portfolio and benchmark weights and returns for one attribution group.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct GroupInput {
+    pub group: String,
+    pub w_p: f64,
+    pub w_b: f64,
+    pub r_p: f64,
+    pub r_b: f64,
+}
+
+/// Brinson-Fachler effects of one group.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct GroupEffect {
+    pub group: String,
+    pub allocation: f64,
+    pub selection: f64,
+    pub interaction: f64,
+}
+
+/// Brinson-Fachler attribution totals with the per-group breakdown.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct AttributionBreakdown {
+    pub groups: Vec<GroupEffect>,
+    pub allocation: f64,
+    pub selection: f64,
+    pub interaction: f64,
+    pub active_return: f64,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn round_trip<T>(value: &T)
+    where
+        T: Serialize + serde::de::DeserializeOwned + PartialEq + std::fmt::Debug,
+    {
+        let text = serde_json::to_string(value).expect("serialize");
+        let back: T = serde_json::from_str(&text).expect("deserialize");
+        assert_eq!(&back, value);
+    }
+
+    #[test]
+    fn research_types_round_trip_and_refuse_unknown_fields() {
+        for kind in [
+            PatternKind::Hammer,
+            PatternKind::ShootingStar,
+            PatternKind::BullishEngulfing,
+            PatternKind::BearishEngulfing,
+            PatternKind::Doji,
+            PatternKind::InsideBar,
+        ] {
+            round_trip(&PatternMatch {
+                index: 3,
+                kind,
+                strength: 0.5,
+            });
+        }
+        assert_eq!(
+            serde_json::to_string(&PatternKind::BullishEngulfing).unwrap(),
+            "\"bullish_engulfing\""
+        );
+        round_trip(&GroupInput {
+            group: "tech".into(),
+            w_p: 0.4,
+            w_b: 0.3,
+            r_p: 0.05,
+            r_b: 0.04,
+        });
+        let effect = GroupEffect {
+            group: "tech".into(),
+            allocation: 0.1,
+            selection: 0.2,
+            interaction: 0.3,
+        };
+        round_trip(&effect);
+        round_trip(&AttributionBreakdown {
+            groups: vec![effect],
+            allocation: 0.1,
+            selection: 0.2,
+            interaction: 0.3,
+            active_return: 0.6,
+        });
+
+        assert!(serde_json::from_str::<PatternKind>("\"marubozu\"").is_err());
+        assert!(serde_json::from_str::<PatternMatch>(
+            r#"{"index":1,"kind":"doji","strength":1.0,"extra":1}"#
+        )
+        .is_err());
+        assert!(serde_json::from_str::<GroupInput>(
+            r#"{"group":"a","w_p":1,"w_b":1,"r_p":1,"r_b":1,"x":0}"#
+        )
+        .is_err());
+        assert!(serde_json::from_str::<GroupEffect>(
+            r#"{"group":"a","allocation":1,"selection":1,"interaction":1,"x":0}"#
+        )
+        .is_err());
+        assert!(serde_json::from_str::<AttributionBreakdown>(
+            r#"{"groups":[],"allocation":0,"selection":0,"interaction":0,"active_return":0,"x":0}"#
+        )
+        .is_err());
+    }
+}

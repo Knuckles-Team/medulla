@@ -699,6 +699,59 @@ async fn served_render_supports_png_svg_pdf_and_refuses_unknown_dataset() {
         }
     }
 
+    // Cross-owner negative: a second principal's result reference is refused.
+    let owned = VizRenderRequest {
+        spec_json: scatter_spec("ds:r0876-owner"),
+        dataset: Some(VizDatasetSource::InlineColumns {
+            columns: [
+                ("x".to_string(), VizColumnValues::F64(vec![0.0, 1.0])),
+                ("y".to_string(), VizColumnValues::F64(vec![1.0, 0.0])),
+            ]
+            .into_iter()
+            .collect(),
+        }),
+        width_px: 200,
+        height_px: 150,
+        format: VizFormat::Png,
+        max_primitives: 200_000,
+        max_bytes: 50_000_000,
+        dataset_ref: "ds:r0876-owner".to_string(),
+    };
+    let owned_resp = Box::pin(dispatch(
+        &state,
+        test_support::commons_request(
+            SECRET,
+            704,
+            Method::Viz {
+                op: VizOp::Render(owned),
+            },
+        ),
+    ))
+    .await;
+    let owned_ref = raw_result(&owned_resp).result_ref;
+    let foreign = Box::pin(dispatch(
+        &state,
+        test_support::request(
+            SECRET,
+            705,
+            "second-principal-graph",
+            Method::Viz {
+                op: VizOp::RenderProvenance {
+                    result_ref: owned_ref,
+                },
+            },
+        ),
+    ))
+    .await;
+    assert!(
+        foreign
+            .error
+            .as_deref()
+            .is_some_and(|e| e.contains("ACCESS_DENIED")),
+        "a second principal's result reference must return ACCESS_DENIED; got {:?}",
+        foreign.error
+    );
+
     let unknown = VizRenderRequest {
         spec_json: scatter_spec("ds:r0876-unknown"),
         dataset: None,
