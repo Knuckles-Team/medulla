@@ -14,6 +14,7 @@ pub mod factor;
 pub mod leverage;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod optimizer;
+pub mod pattern;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod quant;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)

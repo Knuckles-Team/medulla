@@ -83,8 +83,15 @@ pub(crate) async fn handle_uql(
         #[cfg(feature = "security")]
         ctx.rls,
     );
-    #[cfg(not(feature = "result-cache"))]
-    let _ = version;
+    // MEDULLA-FEDERATED-QUERY-R088.3: the header names the one snapshot the rows
+    // (and their `WITH KNOWLEDGE` summaries) were read from. The epistemic layer
+    // is resolved over that same snapshot, so its revision is the snapshot
+    // revision; 0 when the build has no epistemic layer.
+    let knowledge_revision = if cfg!(feature = "epistemic") {
+        version
+    } else {
+        0
+    };
     let result = run_unified_off_lock_with(
         ctx.state,
         req_id,
@@ -94,6 +101,20 @@ pub(crate) async fn handle_uql(
         legs,
         move |_plan, plan_ctx| {
             let mut result = medulla_plan::uql::serve::run_statement(&stmt_for_run, plan_ctx)?;
+            if let medulla_types::wire::UqlResult::Rows {
+                snapshot_revision,
+                knowledge_revision: reported_knowledge_revision,
+                ..
+            }
+            | medulla_types::wire::UqlResult::Profile {
+                snapshot_revision,
+                knowledge_revision: reported_knowledge_revision,
+                ..
+            } = &mut result
+            {
+                *snapshot_revision = version;
+                *reported_knowledge_revision = knowledge_revision;
+            }
             #[cfg(feature = "federation")]
             if let medulla_types::wire::UqlResult::Explain {
                 plan_digest: reported_plan_digest,

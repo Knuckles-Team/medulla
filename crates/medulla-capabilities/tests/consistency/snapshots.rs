@@ -104,6 +104,11 @@ pub(crate) const ACCESS_RS_MUTATES_UNCONDITIONAL: &[&str] = &[
     "SqlSourceBatch",
     "SourceIngest",
     "EnrichDocument",
+    "MeetingSummaryCommit",
+    "MeetingSummaryContext",
+    "MeetingTranscriptRevision",
+    "DocumentDelete",
+    "LineageIngest",
     "StartTrajectory",
     // EH-408/EH-409: always writes (one BatchUpdate of derived facts).
     "TelemetryDerive",
@@ -319,6 +324,11 @@ pub(crate) const NATIVE_GRAPHREDB_DURABLE: &[&str] = &[
     // applier or native command; this inventory records that adapter lowering.
     "SourceIngest",
     "EnrichDocument",
+    "MeetingSummaryCommit",
+    "MeetingSummaryContext",
+    "MeetingTranscriptRevision",
+    "DocumentDelete",
+    "LineageIngest",
     // EH-408/EH-409: derived facts self-translate into ONE `BatchUpdate`
     // against the request graph, the same lowering shape as `FleetCatalog`.
     "TelemetryDerive",
@@ -511,6 +521,11 @@ pub(crate) const AUDIT_RS_AUDITED: &[&str] = &[
     "RunDatalogReasoning",
     "SourceIngest",
     "EnrichDocument",
+    "MeetingSummaryCommit",
+    "MeetingSummaryContext",
+    "MeetingTranscriptRevision",
+    "DocumentDelete",
+    "LineageIngest",
     "SetPose",
     "Sql",
     "SqlSourceBatch",
@@ -577,6 +592,11 @@ pub(crate) const CDC_RS_EMITS_CDC: &[&str] = &[
     "RunDatalogReasoning",
     "SourceIngest",
     "EnrichDocument",
+    "MeetingSummaryCommit",
+    "MeetingSummaryContext",
+    "MeetingTranscriptRevision",
+    "DocumentDelete",
+    "LineageIngest",
     #[cfg(feature = "modality-serving")]
     "ServedModality",
 ];

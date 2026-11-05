@@ -4,9 +4,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use super::super::access::{GroupRecord, RoleRecord};
 use super::super::audit::IdentityEvent;
-use super::super::config::{
-    AuthMode, IdentityConfig, ModeTransition, HARD_PASSWORD_MIN_CHARS, NONE_MODE_ACK,
-};
+use super::super::config::{AuthMode, IdentityConfig, ModeTransition, HARD_PASSWORD_MIN_CHARS};
 use super::super::model::{UserKind, UserRecord, UserStatus};
 use super::super::ops::ConfigOp;
 use super::super::requests::InitializeRequest;
@@ -298,6 +296,8 @@ impl IdentityStore {
     /// Move the mode along one edge of the state machine. Every accepted
     /// transition bumps the epoch, records the new issuer key id and revokes
     /// every session; none deletes an account, credential, link or grant.
+    /// A transition to or from `none` is refused before any other check
+    /// (MEDULLA-IDENTITY-R003.4); a refusal changes nothing.
     fn transition(
         &mut self,
         request: &ModeTransition,
@@ -305,6 +305,9 @@ impl IdentityStore {
         now_ms: u64,
     ) -> Result<IdentityReply, IdentityRefusal> {
         let config = self.require_initialized()?.clone();
+        if config.mode == AuthMode::None || request.to == AuthMode::None {
+            return Err(IdentityRefusal::ModeTransitionForbidden);
+        }
         if request.expected_epoch != config.epoch {
             return Err(IdentityRefusal::EpochConflict);
         }
@@ -312,7 +315,7 @@ impl IdentityStore {
             return Err(IdentityRefusal::IllegalTransition);
         }
         super::super::text::identifier(&request.issuer_kid)?;
-        self.check_transition(config.mode, request, stamp)?;
+        self.check_transition(config.mode, request.to)?;
         if (config.mode, request.to) == (AuthMode::External, AuthMode::Local) {
             self.mark_credentialless_pending_reset();
         }
@@ -329,21 +332,20 @@ impl IdentityStore {
         Ok(IdentityReply::Config(next))
     }
 
-    /// The per-edge preconditions of §2.3.
-    fn check_transition(
-        &self,
-        from: AuthMode,
-        request: &ModeTransition,
-        stamp: &IdentityStamp,
-    ) -> Result<(), IdentityRefusal> {
-        let holds = match (from, request.to) {
-            (AuthMode::None, AuthMode::Local) => self.some_admin_has_password(),
-            (AuthMode::None | AuthMode::Local, AuthMode::External) => self.some_admin_is_linked(),
+    /// The per-edge preconditions of §2.3 (MEDULLA-IDENTITY-R003.5):
+    /// `local → external` needs a linked administrator, `external → local`
+    /// needs every administrator to hold a password. `transition` refuses
+    /// `none` and same-mode edges before this runs; they still refuse here.
+    fn check_transition(&self, from: AuthMode, to: AuthMode) -> Result<(), IdentityRefusal> {
+        let holds = match (from, to) {
+            (AuthMode::Local, AuthMode::External) => self.some_admin_is_linked(),
             (AuthMode::External, AuthMode::Local) => self.every_admin_has_password(),
-            (_, AuthMode::None) => {
-                stamp.engine_loopback && request.ack.as_deref() == Some(NONE_MODE_ACK)
+            (AuthMode::None, _) | (_, AuthMode::None) => {
+                return Err(IdentityRefusal::ModeTransitionForbidden)
             }
-            (AuthMode::Local, AuthMode::Local) | (AuthMode::External, AuthMode::External) => false,
+            (AuthMode::Local, AuthMode::Local) | (AuthMode::External, AuthMode::External) => {
+                return Err(IdentityRefusal::IllegalTransition)
+            }
         };
         if holds {
             Ok(())
@@ -360,11 +362,6 @@ impl IdentityStore {
             .flat_map(|group| group.members.keys())
             .filter_map(|principal| self.users.get(principal))
             .filter(|user| user.kind == UserKind::Human && user.status.is_active())
-    }
-
-    fn some_admin_has_password(&self) -> bool {
-        self.administrators()
-            .any(|user| self.passwords.contains_key(&user.principal_id))
     }
 
     fn every_admin_has_password(&self) -> bool {

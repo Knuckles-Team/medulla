@@ -255,6 +255,7 @@ async fn try_handle_rules(
         min_confidence,
         derived_only,
         explain,
+        max_steps,
     } = method
     else {
         return None;
@@ -269,6 +270,7 @@ async fn try_handle_rules(
             min_confidence: *min_confidence,
             derived_only: *derived_only,
             explain: *explain,
+            max_steps: *max_steps,
             #[cfg(feature = "security")]
             caller,
             #[cfg(feature = "security")]

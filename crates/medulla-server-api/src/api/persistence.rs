@@ -81,6 +81,12 @@ pub trait SourceApprovalStore {
 /// so process teardown can stop the backend after request admission has closed.
 #[async_trait::async_trait]
 pub trait PersistenceBackend: Send + Sync {
+    /// The durable shard writer index that owns `graph_fname`
+    /// (MEDULLA-DURABLE-KERNEL-R099.2). Single-writer backends answer shard 0.
+    fn shard_of(&self, _graph_fname: &str) -> usize {
+        0
+    }
+
     /// Whether this backend exposes the complete native resource-reservation
     /// authority (atomic MutationBatch rows plus the linearizable readers).
     ///

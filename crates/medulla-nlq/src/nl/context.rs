@@ -898,6 +898,54 @@ fn feedback_hint(hint: &str, steps: &[NlPlanStep]) -> String {
     out
 }
 
+/// Rewrite a follow-up `question` into one standalone question against the
+/// earlier turns (MEDULLA-FEDERATED-QUERY-R058.8). An empty `history` returns
+/// the question unchanged. Otherwise the configured planner request is reused
+/// with a rewrite instruction carrying the turns, oldest first; an empty answer
+/// or one longer than 2000 characters is [`NlQueryError::RewriteFailed`].
+pub fn rewrite_follow_up(
+    planner: &dyn NlPlanner,
+    question: &str,
+    history: &[medulla_types::nl_query::NlTurn],
+) -> Result<String, NlQueryError> {
+    if history.is_empty() {
+        return Ok(question.to_string());
+    }
+    let rewritten = planner
+        .plan(question, &rewrite_hint(history))
+        .map_err(NlQueryError::Planner)?;
+    let rewritten = rewritten.trim();
+    let chars = rewritten.chars().count();
+    if chars == 0 {
+        return Err(NlQueryError::RewriteFailed(
+            "the planner returned an empty question".into(),
+        ));
+    }
+    if chars > medulla_types::nl_query::NL_TURN_QUESTION_MAX_CHARS {
+        return Err(NlQueryError::RewriteFailed(format!(
+            "the rewritten question holds {chars} characters, more than {}",
+            medulla_types::nl_query::NL_TURN_QUESTION_MAX_CHARS
+        )));
+    }
+    Ok(rewritten.to_string())
+}
+
+/// The rewrite instruction: the earlier turns, then the reply contract.
+fn rewrite_hint(history: &[medulla_types::nl_query::NlTurn]) -> String {
+    let mut out = String::from(
+        "Rewrite the question as ONE standalone question. Resolve every pronoun and \
+         reference against the earlier turns below. Reply with the question only, not a \
+         query.\nEarlier turns, oldest first:\n",
+    );
+    for (i, turn) in history.iter().enumerate() {
+        out.push_str(&format!("{}. Question: {}\n", i + 1, turn.question));
+        if let Some(summary) = &turn.answer_summary {
+            out.push_str(&format!("   Answer: {summary}\n"));
+        }
+    }
+    out
+}
+
 #[cfg(test)]
 #[path = "context_tests.rs"]
 mod tests;

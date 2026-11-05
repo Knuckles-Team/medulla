@@ -17,7 +17,7 @@ mod test_support;
 use std::collections::BTreeMap;
 
 use medulla_protocol_types::protocol::{GraphType, Method, Response, ResultPayload};
-use medulla_types::wire_finance::{FinanceRecord, FinanceRecordKind, FINANCE_V1_SCHEMA_VERSION};
+use medulla_types::wire::{FinanceRecord, FinanceRecordKind, FINANCE_V1_SCHEMA_VERSION};
 
 const SECRET: &str = "medulla-fin-r004-3-2-served-records-secret";
 const GRAPH: &str = "fin-r004-3-2";
@@ -187,7 +187,7 @@ async fn client_writable_round_trip(
             None,
         )
         .await;
-    refused_with(&stale, "CONFLICT", "RECORD_HEAD_CONFLICT");
+    refused_with(&stale, "RECORD_HEAD_CONFLICT", "");
     let next = served
         .put(
             kind,
@@ -204,11 +204,7 @@ async fn client_writable_round_trip(
     let unknown = served
         .put(kind, "finance-v0", record("rec_2", TENANT, fields), None)
         .await;
-    refused_with(
-        &unknown,
-        "INVALID_ARGUMENT",
-        "FINANCE_RECORD_VERSION_UNKNOWN",
-    );
+    refused_with(&unknown, "FINANCE_RECORD_VERSION_UNKNOWN", "");
 
     let foreign = served
         .put(
@@ -234,7 +230,7 @@ async fn client_writable_round_trip(
             None,
         )
         .await;
-    refused_with(&shape, "INVALID_ARGUMENT", "RECORD_SHAPE_INVALID");
+    refused_with(&shape, "RECORD_SHAPE_INVALID", "");
     assert_eq!(stored(&served.get(kind, "rec_4").await), None);
 
     served.seed_foreign(kind, "rec_5").await;
@@ -254,17 +250,13 @@ async fn derived_refusals(kind: FinanceRecordKind, fields: &[(&'static str, &'st
             None,
         )
         .await;
-    refused_with(&put, "READ_ONLY", "RECORD_DERIVED_READONLY");
+    refused_with(&put, "RECORD_DERIVED_READONLY", "");
     assert_eq!(stored(&served.get(kind, "rec_1").await), before);
 
     let unknown = served
         .put(kind, "finance-v0", record("rec_1", TENANT, fields), None)
         .await;
-    refused_with(
-        &unknown,
-        "INVALID_ARGUMENT",
-        "FINANCE_RECORD_VERSION_UNKNOWN",
-    );
+    refused_with(&unknown, "FINANCE_RECORD_VERSION_UNKNOWN", "");
 
     // An invalid record is still refused as derived: the policy refusal precedes
     // the shape check, so nothing about a derived kind is ever written.
@@ -276,7 +268,7 @@ async fn derived_refusals(kind: FinanceRecordKind, fields: &[(&'static str, &'st
             None,
         )
         .await;
-    refused_with(&invalid, "READ_ONLY", "RECORD_DERIVED_READONLY");
+    refused_with(&invalid, "RECORD_DERIVED_READONLY", "");
 
     served.seed_foreign(kind, "rec_2").await;
     refused_with(&served.get(kind, "rec_2").await, "ACCESS_DENIED", "");
@@ -415,4 +407,110 @@ async fn leverage_terms_served_round_trip_and_refusals() {
         ("leverageMultiplier", "\"0\"^^xsd:decimal"),
     )
     .await;
+}
+
+/// MEDULLA-FINANCE-PRIMITIVES-R751.754: the five create-only research kinds. JSON
+/// text fields, a stored record with its kernel version, the version gate, the
+/// create-only policy and the tenant check.
+#[tokio::test(flavor = "multi_thread")]
+// spec: MEDULLA-FINANCE-PRIMITIVES-R751.754
+async fn research_entries_round_trip_and_refuse() {
+    let mut served = Served::new().await;
+    let evidence = served
+        .call(Method::AddNode {
+            node_id: "ev_1".to_string(),
+            properties_msgpack: rmp_serde::to_vec_named(&serde_json::json!({"type": "Evidence"}))
+                .unwrap(),
+        })
+        .await;
+    assert!(evidence.error.is_none(), "{evidence:?}");
+    let components = r#"[{"source":"news","score":0.5,"weight":2.0,"evidenceRef":"ev_1"}]"#;
+    let entries: [(FinanceRecordKind, &str, Vec<(&str, &str)>); 5] = [
+        (
+            FinanceRecordKind::DebateRound,
+            "d9_r1",
+            vec![
+                ("debateId", r#""d9""#),
+                ("roundIndex", "1"),
+                ("debateSide", r#""bull""#),
+                ("debateArgument", r#""rates fall""#),
+                ("evidenceRefs", r#"["ev_1"]"#),
+            ],
+        ),
+        (
+            FinanceRecordKind::TradeJournalEntry,
+            "j_1",
+            vec![
+                ("journalId", r#""j_1""#),
+                ("entryAt", r#""2026-10-01T00:00:00Z""#),
+                ("journalRationale", r#""trend""#),
+                (
+                    "biasAudits",
+                    r#"[{"biasKind":"recency","finding":"weighted last week","evidenceRefs":["ev_1"]}]"#,
+                ),
+            ],
+        ),
+        (
+            FinanceRecordKind::SentimentFusion,
+            "s_1",
+            vec![("subjectListing", r#""l-1""#), ("components", components)],
+        ),
+        (
+            FinanceRecordKind::GeopoliticalRisk,
+            "g_1",
+            vec![("geoRegion", r#""emea""#), ("components", components)],
+        ),
+        (
+            FinanceRecordKind::StrategyCard,
+            "c_1",
+            vec![
+                ("cardId", r#""c_1""#),
+                ("strategySpecRef", r#""spec-1""#),
+                ("licenceClass", r#""open""#),
+                ("cardSummary", r#""momentum""#),
+            ],
+        ),
+    ];
+    for (kind, id, fields) in entries {
+        let put = served
+            .put(
+                kind,
+                FINANCE_V1_SCHEMA_VERSION,
+                record(id, TENANT, &fields),
+                None,
+            )
+            .await;
+        assert!(put.error.is_none(), "{id}: {put:?}");
+        assert!(
+            matches!(put.result, Some(ResultPayload::Count(1))),
+            "{put:?}"
+        );
+        let got = stored(&served.get(kind, id).await).expect("stored research record");
+        assert_eq!(got["schema_version"], FINANCE_V1_SCHEMA_VERSION);
+        assert_eq!(got["tenant"], TENANT);
+        assert_eq!(got["research_kernel_version"], "research-1");
+
+        let unknown = served
+            .put(kind, "finance-v0", record("rec_x", TENANT, &fields), None)
+            .await;
+        refused_with(&unknown, "FINANCE_RECORD_VERSION_UNKNOWN", "");
+        let foreign = served
+            .put(
+                kind,
+                FINANCE_V1_SCHEMA_VERSION,
+                record("rec_y", "another-tenant", &fields),
+                None,
+            )
+            .await;
+        refused_with(&foreign, "ACCESS_DENIED", "");
+        let again = served
+            .put(
+                kind,
+                FINANCE_V1_SCHEMA_VERSION,
+                record(id, TENANT, &fields),
+                None,
+            )
+            .await;
+        refused_with(&again, "RECORD_IMMUTABLE", "");
+    }
 }

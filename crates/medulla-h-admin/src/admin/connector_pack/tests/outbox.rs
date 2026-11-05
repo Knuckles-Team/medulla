@@ -586,3 +586,96 @@ async fn failed_projection_records_durable_failed_status() {
         "the rewound row is claimed again for retry"
     );
 }
+
+// spec: MEDULLA-TYPED-PACKS-R096.1
+/// A retryable projection rejection never leaves the head dark without a
+/// state: the head reports `failed` with the stable code, the worker leaves
+/// the lease unresolved (no dead letter) so the kernel redelivers the row, and
+/// the failed state stays visible until a served reproject succeeds.
+#[tokio::test]
+async fn rejected_projection_is_visible_and_retried() {
+    use crate::admin::connector_pack::reproject::{
+        is_retryable_projection_error, INJECT_BLOB_UNAVAILABLE, RETRYABLE_PROJECTION_CODES,
+    };
+    for code in RETRYABLE_PROJECTION_CODES {
+        assert!(is_retryable_projection_error(&format!("{code}: cause")));
+    }
+    assert!(!is_retryable_projection_error("BODY_MISSING: gone"));
+    assert!(!is_retryable_projection_error("PACK_PROJECTION_FAILED"));
+
+    let served = Served::new();
+    let _env = served.with_graph_persistence().await;
+    let schema = "schema-pack-retryable";
+    bind(&served, schema, ADMIN).await;
+    let ontology = Content {
+        kind: PackEntryKind::Ontology,
+        uri: format!("ontology://{schema}/core.ttl"),
+        name: "core.ttl".to_string(),
+        media_type: "text/turtle",
+        body: b"<https://example.org/Thing> a <http://www.w3.org/2002/07/owl#Class>.\n".to_vec(),
+        input_schema: None,
+        annotations: PackAnnotations::default(),
+        references: Vec::new(),
+    };
+    imported(
+        &served,
+        &build_pack(schema, &[tool(schema, "b", "Tool b."), ontology]),
+        None,
+    )
+    .await;
+    *INJECT_BLOB_UNAVAILABLE
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner) = Some(schema.to_string());
+    let subscribed = AtomicBool::new(false);
+    sweep(&served.state, &subscribed).await.unwrap();
+    let status: MutationOutboxStatusView = ok(
+        "Status",
+        outbox(
+            &served,
+            "outbox:status:retryable",
+            MutationOutboxOp::Status {
+                target: target(),
+                consumer: CONSUMER.to_string(),
+            },
+        )
+        .await,
+    );
+    assert_eq!(
+        status.status.dead_lettered, 0,
+        "a retryable rejection is redelivered, not dead-lettered: {status:?}"
+    );
+    let tool_b = format!("mcp:{schema}/tool/b");
+    assert!(
+        !searchable_ids(&served).await.contains(&tool_b),
+        "a dark head never reads as applied"
+    );
+    let store = served.state.write().await.ensure_agent_library().unwrap();
+    let failed = store
+        .connector_pack_status(TENANT, &ResourceId::new(schema).unwrap())
+        .unwrap()
+        .projection;
+    match &failed {
+        medulla_catalog_types::connector_pack::PackProjectionState::Failed { code, detail } => {
+            assert_eq!(code, "PACK_PROJECTION_BLOB_UNAVAILABLE", "{failed:?}");
+            assert!(detail.is_some());
+        }
+        other => panic!("the head must record the failed projection: {other:?}"),
+    }
+    // The served reproject clears the failed state.
+    let key = "reproject:schema-pack-retryable";
+    let _: medulla_catalog_types::connector_pack::PackImportReceipt = ok(
+        "Reproject",
+        served
+            .pack(
+                key,
+                medulla_catalog_types::connector_pack::ConnectorPackOp::Reproject {
+                    request: medulla_catalog_types::connector_pack::ConnectorPackReprojectRequest {
+                        context: super::context(key),
+                        connector: ResourceId::new(schema).unwrap(),
+                    },
+                },
+            )
+            .await,
+    );
+    assert!(searchable_ids(&served).await.contains(&tool_b));
+}
