@@ -957,7 +957,18 @@ def test_native_artifacts_use_pinned_libc_and_fresh_cache_namespaces() -> None:
             if "Swatinem/rust-cache@" in step.get("uses", "")
         ]
         if any(key.startswith("medulla-ci-gates") for key in caches):
-            assert job["runs-on"] == "ubuntu-24.04", name
+            if name == "ci":
+                # Hosted for spec/docs-only PRs; warm pool only for code PRs.
+                runs_on = job["runs-on"]
+                assert runs_on.endswith("|| 'ubuntu-24.04' }}"), name
+                assert (
+                    "github.event.pull_request.head.repo.full_name == github.repository"
+                    in runs_on
+                )
+                assert "needs.pr-scope.outputs.code == 'true'" in runs_on
+                assert job["needs"] == "pr-scope"
+            else:
+                assert job["runs-on"] == "ubuntu-24.04", name
             assert caches == ["medulla-ci-gates-ubuntu-24.04-v1"], name
         if "SCCACHE_GHA_ENABLED" in job.get("env", {}):
             assert job["env"]["SCCACHE_GHA_VERSION"] == "medulla-ci-ubuntu-24.04-v1"
