@@ -1075,7 +1075,7 @@ Each entry names the test the row binds once its code lands; the path is the pos
 | Planned | `MEDULLA-FEDERATED-QUERY-R723` | `tests/semantic_index/test_reembed_methods_served.py::test_admit_then_reembed_one_job` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R724` | `tests/served_schema_projections.rs::projections_follow_caller_grants_and_hide_other_boundaries` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R725` | `tests/served_viewport_bins.rs::bins_match_independent_reference_and_obey_limits` |
-| Planned | `MEDULLA-FEDERATED-QUERY-R726` | `crates/medulla-sql-tests/tests/uql_evaluate_grammar.rs::parses_every_kernel_and_refuses_unknown` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R726` | `crates/medulla-uql/src/parser/evaluate.rs::tests::parses_every_kernel_and_refuses_unknown` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R727` | `tests/query/test_nl_answer_atoms_served.py::test_answer_cites_atom_provenance` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R728` | `crates/medulla-plan/src/uql/tests/roundtrip.rs::every_op_and_pred_kind_round_trips` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R729` | `tests/federated/test_raw_pushdown_served.py::test_raw_source_search_is_budgeted_and_refuses_over_ceiling` |
