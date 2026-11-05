@@ -433,3 +433,4 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T415 [US5] MEDULLA-FEDERATED-QUERY-R709.6 Hot-path proof of GeoSPARQL query functions
 - [ ] T416 [US5] MEDULLA-FEDERATED-QUERY-R708.8 Share scope of Named stored queries and materialized results
 - [ ] T417 [US5] MEDULLA-FEDERATED-QUERY-R708.9 Lint against trust flags
+- [ ] T418 [P] [US4] MEDULLA-FEDERATED-QUERY-R703.100 The bench gate checks p99 ceilings
