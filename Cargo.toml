@@ -2036,6 +2036,16 @@ path = "benches/cold_warm_reopen.rs"
 harness = false
 required-features = ["full"]
 
+# Decision budgets per question family (MEDULLA-DECISION-ENGINE-R178.1): one
+# Criterion group `decide/<family>` per `QuestionKind`, through the served
+# dispatch boundary; the nightly workflow checks its report against
+# `benches/baselines/decide.json` (R178.2, R178.3).
+[[bench]]
+name = "decide_budgets"
+path = "benches/decide_budgets.rs"
+harness = false
+required-features = ["full"]
+
 # Provenance-anchoring write-path overhead (provenance anchoring, CONCEPT:MEDULLA-KG.sharding.row-level-security):
 # N concurrent authoritative writers fanned into ONE redb backend, with vs.
 # without a concurrent (deliberately aggressive) anchor-sweep loop contending
