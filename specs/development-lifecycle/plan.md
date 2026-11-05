@@ -34,8 +34,8 @@ crates/medulla-core/ontology/sdd-v1.ttl                            existing  lif
 crates/medulla-core/ontology/sdd-v1.shapes.ttl                     new       lifecycle shapes (R001.1)
 crates/medulla-core/ontology/sdd-spec-v1.ttl                       new       spec artifact ontology pack (R014.5)
 crates/medulla-core/ontology/sdlc_lifecycle-v1.ttl                 existing  delivery classes (R019.1)
-crates/medulla-source-types/src/lifecycle.rs                       existing  records, Proposal and ScenarioRun types (R001 to R006, R013, R017.2)
-crates/medulla-source-types/src/delivery.rs                        new       delivery, goal and project mode records (R012.8, R017.1, R019.2)
+crates/medulla-source-types/src/lifecycle.rs                       existing  records, Goal, ProjectMode, Proposal and ScenarioRun types (R001 to R006, R012.8, R013, R017)
+crates/medulla-source-types/src/delivery.rs                        new       delivery records (R019.2)
 crates/medulla-h-ingest/src/lifecycle.rs                           new       served lifecycle, mode, goal, proposal and delivery handlers
 crates/medulla-h-ingest/src/lifecycle_tests.rs                     new       tenant-scope and refusal tests of those handlers
 crates/medulla-h-ingest/src/source_ingestion/spec_projection.rs    new       spec document and artifact projection, incremental ingest, linking (R009, R014)
