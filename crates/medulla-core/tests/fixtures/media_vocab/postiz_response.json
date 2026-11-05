@@ -40,5 +40,17 @@
    "platform": "linkedin",
    "name": "brand on linkedin"
   }
+ ],
+ "Metric": [
+  {
+   "id": "metric-1",
+   "name": "impressions",
+   "value": "120"
+  },
+  {
+   "id": "metric-2",
+   "name": "likes",
+   "value": "7"
+  }
  ]
 }

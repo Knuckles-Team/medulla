@@ -100,6 +100,30 @@ jobs:
           echo "::error::REFUSING to publish: ci.yml has no successful main run for ${SHA}. Wait for main CI, or dispatch with force_untested for an emergency."
           exit 1
 
+  # MEDULLA-CONTRACT-R006.2: every tag requalifies the embedded method codec --
+  # two independent canonical builds, both committed copies against their pins,
+  # the committed two-digest provenance and the MAX_BYTES budget.
+  method-codec:
+    timeout-minutes: 60
+    needs: guard
+    if: >-
+      github.repository == 'Knuckles-Team/medulla'
+      && (startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - id: rust-toolchain
+        uses: ./.github/actions/pinned-rust-toolchain
+
+      - name: Install the pinned toolchain's wasm32 target
+        run: rustup target add wasm32-unknown-unknown
+
+      - name: Requalify the embedded method-body codec
+        run: python3 scripts/build_method_codec_wasm.py --check
+
   # ── Release server executable: compiled ONCE per platform in its own job and
   # handed to that platform's wheel job as an artifact with its sha256. Both
   # folded-wheel passes (primary and reproduction) fold these exact bytes, so the
@@ -611,7 +635,7 @@ jobs:
   github-release:
     timeout-minutes: 5
     name: GitHub release with PyPI links
-    needs: [verify-pypi]
+    needs: [verify-pypi, method-codec]
     runs-on: ubuntu-latest
     if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
     permissions:

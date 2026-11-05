@@ -212,6 +212,18 @@ impl<'a> GraphTxn<'a> {
     /// closed at or before `invalid_at`. Returns how many
     /// edge blobs were updated. Deterministic in its args, so it replays identically
     /// from the WAL / on a Raft follower.
+    /// Whether any edge `source_id -> target_id` carries `relationship`, open or closed.
+    fn has_relationship(&self, source_id: &str, target_id: &str, relationship: &str) -> bool {
+        let key = (source_id.to_string(), target_id.to_string());
+        self.edge_properties.get(&key).is_some_and(|entry| {
+            entry.value().iter().any(|blob| {
+                decode_property_value(blob.as_slice()).is_ok_and(|val| {
+                    val.get("relationship").and_then(|v| v.as_str()) == Some(relationship)
+                })
+            })
+        })
+    }
+
     pub fn invalidate_edge(
         &mut self,
         source_id: &str,
@@ -305,7 +317,22 @@ impl<'a> GraphTxn<'a> {
             tx_now,
         ) == 0
         {
-            return Err("INVALID_ARGUMENT: prior edge is missing or already closed".into());
+            // MEDULLA-DURABLE-KERNEL-R080.2: name why history could not close.
+            let (code, state) =
+                if self.has_relationship(prior_source, prior_target, prior_relationship) {
+                    (
+                        medulla_types::contract::ServerErrorCode::EdgeAlreadyClosed,
+                        "is already closed",
+                    )
+                } else {
+                    (
+                        medulla_types::contract::ServerErrorCode::EdgeNotFound,
+                        "is missing",
+                    )
+                };
+            return Err(format!(
+                "{code}: prior edge {prior_source} -> {prior_target} ({prior_relationship}) {state}"
+            ));
         }
         self.add_edge(new_source, new_target, new_properties_msgpack)
     }

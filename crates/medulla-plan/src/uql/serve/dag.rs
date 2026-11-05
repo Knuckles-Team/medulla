@@ -45,6 +45,8 @@ pub(super) fn run(
         rows: rows_of(&rows, &columns, &table),
         columns,
         warnings,
+        snapshot_revision: 0,
+        knowledge_revision: 0,
     })
 }
 
@@ -81,6 +83,8 @@ pub(super) fn profile(
         columns,
         stages: reports(nodes, ctx, Some(&trace.stages)),
         warnings,
+        snapshot_revision: 0,
+        knowledge_revision: 0,
     })
 }
 

@@ -416,6 +416,11 @@ pub fn requires_write(method: &Method) -> bool {
                 | Method::ApplyChangeEnvelopeDrafts { .. }
                 | Method::SourceIngest { .. }
                 | Method::EnrichDocument { .. }
+                | Method::MeetingSummaryCommit { .. }
+                | Method::MeetingSummaryContext { .. }
+                | Method::MeetingTranscriptRevision { .. }
+                | Method::DocumentDelete { .. }
+                | Method::LineageIngest { .. }
                 | Method::TelemetryDerive { .. }
                 // MEDULLA-UNIFIED-DATA-PLANE-R760.3: incident writes.
                 | Method::IncidentRecordAnomaly { .. }

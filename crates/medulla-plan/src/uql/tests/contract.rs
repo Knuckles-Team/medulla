@@ -5,25 +5,22 @@
 //!  * `docs/uql.md` embeds the generated EBNF verbatim, and every ```uql block in the
 //!    UQL docs parses;
 //!  * the printer's reserved words cover every grammar keyword;
-//!  * EVERY `wire::Op` / `wire::Pred` variant compiled into this build prints and re-parses
-//!    to its canonical form, or sits on the (empty) builder-only allowlist.
+//!  * the (empty) builder-only allowlist the variant walk in `roundtrip` checks.
 
 use std::collections::BTreeSet;
 
-use medulla_types::wire::{
-    uql_sample_op, uql_sample_pred, Op, OpKind, Plan, PredKind, UQL_RESERVED_WORDS,
-};
+use medulla_types::wire::{OpKind, UQL_RESERVED_WORDS};
 use medulla_uql::grammar::{self, Feature, PRODUCTIONS};
 use medulla_uql::parser::Parser;
-use medulla_uql::{canonicalize, parse, parse_statement, Params, UqlCode, UqlError};
+use medulla_uql::{Params, UqlCode, UqlError, parse_statement};
 
 /// Variants with NO text spelling, each with the diagnostic a caller gets. EMPTY: every
 /// wire variant is expressible in UQL. (Credential-bearing `ForeignScan` SPECS are refused
 /// by value, not by variant — see `credential_bearing_foreign_specs_are_refused`.)
-const BUILDER_ONLY: &[(OpKind, &str)] = &[];
+pub(super) const BUILDER_ONLY: &[(OpKind, &str)] = &[];
 
 /// Is `e` the refusal of a clause whose feature this build lacks?
-fn not_in_build(e: &UqlError) -> bool {
+pub(super) fn not_in_build(e: &UqlError) -> bool {
     let all = [
         Feature::Text,
         Feature::Owl,
@@ -142,51 +139,10 @@ fn every_uql_block_in_the_docs_parses() {
     assert!(!uql_blocks(&docs("uql.md")).is_empty());
 }
 
-/// Print one plan and re-parse it; `Ok(())` when it round-trips (or the build lacks
-/// the op's feature), the reason otherwise.
-fn round_trip(plan: &Plan) -> Result<(), String> {
-    let text = plan.to_uql().map_err(|e| e.to_string())?;
-    match parse(&text) {
-        Ok(back) if back == canonicalize(plan) => Ok(()),
-        Ok(back) => Err(format!("`{text}` re-parsed to {back:?}")),
-        Err(e) if not_in_build(&e) => Ok(()),
-        Err(e) => Err(e.render(&text)),
-    }
-}
-
-#[test]
-fn every_op_variant_prints_and_reparses() {
-    assert!(
-        BUILDER_ONLY.is_empty(),
-        "the builder-only allowlist must stay empty"
-    );
-    for kind in OpKind::all() {
-        let plan = Plan::new(vec![uql_sample_op(kind)]);
-        if let Err(why) = round_trip(&plan) {
-            panic!("Op::{} has no faithful UQL spelling: {why}", kind.name());
-        }
-    }
-}
-
-#[test]
-fn every_pred_variant_prints_and_reparses() {
-    for kind in PredKind::all() {
-        let plan = Plan::new(vec![
-            Op::ScanAll {},
-            Op::Filter {
-                preds: vec![uql_sample_pred(kind)],
-            },
-        ]);
-        if let Err(why) = round_trip(&plan) {
-            panic!("Pred::{} has no faithful UQL spelling: {why}", kind.name());
-        }
-    }
-}
-
 #[cfg(feature = "federation")]
 #[test]
 fn credential_bearing_foreign_specs_are_refused() {
-    use medulla_types::wire::{ForeignSourceSpec, UqlPrintCode};
+    use medulla_types::wire::{ForeignSourceSpec, Op, Plan, UqlPrintCode};
     let sql = Plan::new(vec![Op::ForeignScan {
         source: Box::new(ForeignSourceSpec::Sql {
             dsn: ["postgres://", "u:", "secret", "@h/db"].concat(),

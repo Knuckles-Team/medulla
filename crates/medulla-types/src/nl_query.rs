@@ -8,6 +8,53 @@
 
 use serde::{Deserialize, Serialize};
 
+/// Most characters an [`NlTurn::question`] (and a rewritten question) may hold
+/// (MEDULLA-FEDERATED-QUERY-R058.8).
+pub const NL_TURN_QUESTION_MAX_CHARS: usize = 2000;
+/// Most characters an [`NlTurn::answer_summary`] may hold (MEDULLA-FEDERATED-QUERY-R058.8).
+pub const NL_TURN_ANSWER_SUMMARY_MAX_CHARS: usize = 1000;
+
+/// One earlier turn of a conversation, oldest first on the wire
+/// (MEDULLA-FEDERATED-QUERY-R058.8). A follow-up question is rewritten to a
+/// standalone question against these turns before planning.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct NlTurn {
+    /// The earlier question, 1 to 2000 characters.
+    pub question: String,
+    /// A summary of the earlier answer, at most 1000 characters.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub answer_summary: Option<String>,
+}
+
+/// Check `history` against the turn bounds and `max_turns`
+/// (MEDULLA-FEDERATED-QUERY-R058.8). The error names the offending field.
+pub fn validate_nl_history(history: &[NlTurn], max_turns: usize) -> Result<(), String> {
+    if history.len() > max_turns {
+        return Err(format!(
+            "history holds {} turns, more than max_history_turns {max_turns}",
+            history.len()
+        ));
+    }
+    for (i, turn) in history.iter().enumerate() {
+        let chars = turn.question.chars().count();
+        if chars == 0 || chars > NL_TURN_QUESTION_MAX_CHARS {
+            return Err(format!(
+                "history[{i}].question holds {chars} characters, outside 1..={NL_TURN_QUESTION_MAX_CHARS}"
+            ));
+        }
+        if let Some(summary) = &turn.answer_summary {
+            let chars = summary.chars().count();
+            if chars > NL_TURN_ANSWER_SUMMARY_MAX_CHARS {
+                return Err(format!(
+                    "history[{i}].answer_summary holds {chars} characters, more than {NL_TURN_ANSWER_SUMMARY_MAX_CHARS}"
+                ));
+            }
+        }
+    }
+    Ok(())
+}
+
 /// The executed UQL and its rows, the served form of `medulla_plan::nl::NlQueryResult` in
 /// executing mode.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -17,6 +64,10 @@ pub struct NlQueryExplainResult {
     pub uql: String,
     /// The `[node id, score | nil]` rows of that UQL, identical to `NlQuery`'s rows.
     pub rows: Vec<(String, Option<f32>)>,
+    /// The standalone question planned in place of a follow-up; `Some` exactly when the
+    /// request carried history (MEDULLA-FEDERATED-QUERY-R058.8).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rewritten_question: Option<String>,
 }
 
 /// The unexecuted natural-language candidate and the pins for the exact
@@ -34,6 +85,10 @@ pub struct NlQueryPlanResult {
     pub plan_digest: crate::contract::Digest256,
     /// SHA-256 of the exact UQL and typed empty parameter map.
     pub query_digest: crate::contract::Digest256,
+    /// The standalone question planned in place of a follow-up; `Some` exactly when the
+    /// request carried history (MEDULLA-FEDERATED-QUERY-R058.8).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rewritten_question: Option<String>,
 }
 
 #[cfg(test)]
@@ -46,6 +101,7 @@ mod tests {
         let result = NlQueryExplainResult {
             uql: "MATCH (:Doc) |> LIMIT 2".into(),
             rows: vec![("d1".into(), Some(0.5)), ("d2".into(), None)],
+            rewritten_question: None,
         };
         let bytes = rmp_serde::to_vec_named(&result).unwrap();
         let value: serde_json::Value = rmp_serde::from_slice(&bytes).unwrap();
@@ -64,9 +120,30 @@ mod tests {
             uql: "MATCH (:Doc) |> LIMIT 1".into(),
             plan_digest: digest,
             query_digest: digest,
+            rewritten_question: Some("Which tickets does Ann own?".into()),
         };
         let bytes = rmp_serde::to_vec_named(&result).unwrap();
         let back: NlQueryPlanResult = rmp_serde::from_slice(&bytes).unwrap();
         assert_eq!(back, result);
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R058.8
+    #[test]
+    fn history_bounds_name_the_field() {
+        let turn = |q: &str| NlTurn {
+            question: q.into(),
+            answer_summary: None,
+        };
+        assert_eq!(validate_nl_history(&[turn("who owns T1?")], 4), Ok(()));
+        let err = validate_nl_history(&[turn("a"), turn("b")], 1).unwrap_err();
+        assert!(err.contains("max_history_turns"), "{err}");
+        let err = validate_nl_history(&[turn("")], 4).unwrap_err();
+        assert!(err.contains("history[0].question"), "{err}");
+        let long = NlTurn {
+            question: "q".into(),
+            answer_summary: Some("x".repeat(1001)),
+        };
+        let err = validate_nl_history(&[long], 4).unwrap_err();
+        assert!(err.contains("history[0].answer_summary"), "{err}");
     }
 }

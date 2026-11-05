@@ -248,6 +248,10 @@ _UNCONDITIONAL_WRITES_AT_BASE = (
         "IncidentCorrelate",
         "IncidentRecordAnomaly",
         "IncidentSetStatus",
+        "MeetingSummaryCommit",
+        "MeetingSummaryContext",
+        "MeetingTranscriptRevision",
+        "LineageIngest",
         "SourceIngest",
         "TelemetryDerive",
     }
