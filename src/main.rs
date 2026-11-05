@@ -321,6 +321,11 @@ async fn run_inner() -> Result<(), Box<dyn std::error::Error>> {
     // exporter is layered on top. Off/unset ⇒ byte-for-byte the prior behavior.
     medulla_kernel::otel::init_tracing()?;
 
+    // MEDULLA-FEDERATED-QUERY-R608.2 — reasoning knobs: an out-of-range value refuses startup.
+    medulla_types::scheduler_config::install_reasoning_knobs(
+        medulla_types::scheduler_config::ReasoningKnobs::from_env()?,
+    );
+
     let (socket_path, socket_parent) = resolve_socket_path(args.socket_path.take());
     let socket_mode = server_startup::socket_mode_or_exit(&args.socket_mode);
 

@@ -94,6 +94,7 @@ mod run_rules_dispatch_tests {
                     min_confidence: 0.0,
                     derived_only: true,
                     explain: false,
+                    max_steps: None,
                 },
             ),
         )

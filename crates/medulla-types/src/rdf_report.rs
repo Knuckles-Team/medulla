@@ -115,7 +115,20 @@ pub struct RuleReasonResponse {
     pub consistent: bool,
     pub conflicts: Vec<String>,
     pub registered_rules: Vec<String>,
+    /// `false` when the fixpoint stopped at its step bound before converging
+    /// (MEDULLA-FEDERATED-QUERY-R608.1); the facts are then the partial derivation.
+    pub complete: bool,
+    /// Rule evaluations the fixpoint ran.
+    pub steps: u64,
+    /// Rule evaluations that derived at least one new fact or confidence.
+    pub rules_fired: u64,
+    /// [`RULE_FIXPOINT_BOUND`] when the step bound stopped the fixpoint.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bound_code: Option<String>,
 }
+
+/// Bound code of a rule fixpoint stopped at its step bound (not an error).
+pub const RULE_FIXPOINT_BOUND: &str = "RULE_FIXPOINT_BOUND";
 
 /// SHACL result severity -- `sh:Violation` / `sh:Warning` / `sh:Info`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -210,4 +223,31 @@ pub struct ProofNodeWire {
     pub axioms: Vec<String>,
     pub confidence: f64,
     pub premises: Vec<ProofNodeWire>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // spec: MEDULLA-FEDERATED-QUERY-R608.1
+    #[test]
+    fn rule_response_round_trips_with_bound_fields() {
+        let response = RuleReasonResponse {
+            consistent: true,
+            complete: false,
+            steps: 1_000,
+            rules_fired: 7,
+            bound_code: Some(RULE_FIXPOINT_BOUND.to_string()),
+            ..RuleReasonResponse::default()
+        };
+        let json = serde_json::to_value(&response).unwrap();
+        assert_eq!(json["complete"], false);
+        assert_eq!(json["steps"], 1_000);
+        assert_eq!(json["rules_fired"], 7);
+        assert_eq!(json["bound_code"], RULE_FIXPOINT_BOUND);
+        let back: RuleReasonResponse = serde_json::from_value(json).unwrap();
+        assert!(!back.complete);
+        assert_eq!((back.steps, back.rules_fired), (1_000, 7));
+        assert_eq!(back.bound_code.as_deref(), Some(RULE_FIXPOINT_BOUND));
+    }
 }
