@@ -315,9 +315,10 @@ fn admit_and_identify_submit_work_item(
         crypto,
     } = input;
     let inflight = count_submit_work_item_tenant_inflight(graph, context_tenant, nodes, crypto)?;
+    // spec: MEDULLA-DURABLE-KERNEL-R750.752 -- refuse before any row is written.
     if inflight >= max_inflight {
         return Err(format!(
-            "TENANT_QUOTA: tenant has {inflight} in-flight WorkItems (limit {max_inflight})"
+            "WORK_QUEUE_FULL: tenant has {inflight} in-flight WorkItems (limit {max_inflight})"
         ));
     }
     let work_item_id = resolve_submit_work_item_id(graph, context_tenant, request, nodes)?;
