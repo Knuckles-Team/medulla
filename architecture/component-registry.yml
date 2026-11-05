@@ -3813,6 +3813,7 @@ components:
       - "tests/data_plane/test_lineage_drain_served.py"
       - "tests/decide"
       - "tests/ingest"
+      - "tests/lifecycle"
       - "tests/_client_fixtures.py"
       - "tests/_decision_resident_fixture.py"
       - "tests/_harness_envelope.py"
