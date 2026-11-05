@@ -5,7 +5,7 @@ Consumer: arbora ARBORA-IDENTITY-R014
 
 ## Wire shape
 
-Arbora serves `medulla.security.IdentityModeTransition { expected_epoch, to }` (scope `security:admin`) and the credential operations of `Method::Identity { op }` (`UserOp::Create`, `CredentialOp::ChangePassword`, `TokenOp::IssuePasswordReset`, `MEDULLA-IDENTITY-R707`). Medulla replies with the new epoch. The password is verified with argon2id at the request boundary and the store never sees plaintext.
+Arbora serves the mode transition `ConfigOp::Transition { request: ModeTransition { expected_epoch, to, issuer_kid, local_fallback } }` and the credential operations through `Method::Identity { op }` (scope `identity:admin`; (`UserOp::Create`, `CredentialOp::ChangePassword`, `TokenOp::IssuePasswordReset`, `MEDULLA-IDENTITY-R707`). Medulla replies with the new epoch. The password is verified with argon2id at the request boundary and the store never sees plaintext.
 
 ## Refusal codes
 
@@ -13,7 +13,7 @@ Arbora serves `medulla.security.IdentityModeTransition { expected_epoch, to }` (
 
 ## Authoritative types
 
-`IdentityOp` in `crates/medulla-identity-types/src/identity/ops.rs`; `IdentityModeRecord` in `crates/medulla-identity-types/src/identity/mode.rs` (new).
+`IdentityOp` in `crates/medulla-identity-types/src/identity/ops.rs`; `AuthMode`, `IdentityConfig` and `ModeTransition` in `crates/medulla-identity-types/src/identity/store/modes.rs`.
 
 ## Test vectors
 

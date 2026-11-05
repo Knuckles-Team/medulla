@@ -164,72 +164,8 @@ fn every_wire_variant_has_exactly_one_descriptor_and_vice_versa() {
         missing.len(),
         extra.len(),
     );
-    // 410 -> 413: the three RF-ADR-008 agent-hierarchy variants beyond
-    // `AgentLibrary` -- `AgentGraph` and `AgentComponent` (landed 2026-09-10
-    // without this count being raised) and `AgentTemplate` (item C). This is
-    // the same census `scripts/method_policy_inventory.py` counts from the
-    // descriptor side; the two must agree.
-    // 413 -> 414: RF-019's `SemanticIndex`, the S1-S6 tiered semantic ingestion
-    // queue -- the first wire surface over the semantic stage queue rather than
-    // over semantic CONTENT.
-    // 414 -> 415: `SqlSourceBatch` (SQL source ingestion through the native SQL
-    // owner).
-    // 415 -> 425: the 2.27.x contract wave's ten new methods -- `Decide`,
-    // `ConnectorPack`, `GraphSchema`, `GraphSchemaList`, `MutationOutbox`,
-    // `Solve`, `AgentAssemble`, `DecisionCommit`, `DecisionEval`, `DecisionFit`.
-    // 425 -> 426: RF-ADR-009's served `SourceIngest` raw-record authority.
-    // 426 -> 427: authoritative source checkpoint/status recovery.
-    // 427 -> 428: governed source-system `WriteBack` authority.
-    // 428 -> 429: typed, bounded live fleet `ListRegisteredServers` authority.
-    // 429 -> 430: EH-345's `FleetCatalog` registry records and projection.
-    // 430 -> 436: graph-os MEDULLA-2..MEDULLA-5 -- `GetWorkItem`, `ListWorkItems`,
-    // `GetWorkItemOutcome`, `IssueControlLease`, `TransitionControlLease`,
-    // `GetControlLease`.
-    // 436 -> 437: the statistical `DecisionLog` (RF-ADR-010 DL-5/DL-5b).
-    // 437 -> 438: UQL-07's `Uql` statement surface.
-    // 438 -> 437: EH-434 retired `UnifiedQueryText` (one query-text surface: `Uql`).
-    // 437 -> 438: EH-400's `FreshnessFeed`.
-    // 438 -> 439: EH-346/EH-347 `PolicyEvolution`.
-    // 439 -> 440: EH-346 engine-internal `PolicyEvolutionStore`.
-    // 440 -> 447: `ListControlLeases` (graph-os MEDULLA-5) and the EH-348 work market --
-    // `GapUpsert`, `GapTransition`, `GapSettle`, `WorkOfferPut`, `GapGet`, `GapList`.
-    // 447 -> 449: EH-351/EH-352 `EdgeIndex` and `EdgeSearch` (query).
-    // 449 -> 451: EH-404's `RbacElevation` and EH-406's `ThrottleCapacityCell`.
-    // 451 -> 452: EH-408/EH-409's served `TelemetryDerive`.
-    // 452 -> 453: `FinanceMarket`, market bars and trend signals (EH-413..EH-418).
-    // 453 -> 454: EH-389's `GraphSchemaClasses` vocabulary read.
-    // 454 -> 455: `FinanceSignalModels`, fusion and the insider model (EH-423).
-    // 455 -> 456: `CheckAccess`, a principal's current access (EH-416).
-    // 456 -> 455: EH-524 added `TsDefineSeries`; EH-530 retired `FinanceRollingZscore` and `FinanceEwma` (served as UQL `DERIVE` / SQL `medulla_zscore`/`medulla_ewma`).
-    // 455 -> 456: EH-558's `RetireSealedRecord`, the owning op of a sealed record.
-    // 456 -> 457: EH-572's owner-scoped `QueryForeignColumns` read.
-    // 457 -> 459: the tenant-scoped operation audit-append `AuditAppend` and its
-    // paired read `AuditReadEvent`.
-    // 459 -> 460: `OntologyInspect`, the read-only typed vocabulary surface.
-    // 460 -> 462: `ApplyChangeEnvelopeDraft(s)`, the client path whose mutation
-    // authority the request boundary mints.
-    // 462 -> 463: the identity store's Identity method.
-    // 463 -> 464: EH-560's GovernedChange (two-person governed changes).
-    // 464 -> 465: MEDULLA-DECISION-ENGINE-R126.2.1's read-only `CapabilityCoverage`.
-    // 465 -> 466: MEDULLA-DECISION-ENGINE-R127.2.2 read-only guardrail entailment.
-    // 466 -> 468: MEDULLA-UNIFIED-DATA-PLANE-R651.7 `EnrichDocument` and
-    // MEDULLA-DECISION-ENGINE-R802 `SelectWebPages`.
-    // 468 -> 470: MEDULLA-DURABLE-KERNEL-R028.5 `PublishCurrentPlan` and `GetCurrentPlan`.
-    // 470 -> 471: MEDULLA-DURABLE-KERNEL-R028.4.1 owner-bound GetRunWorkItem.
-    // 471 -> 472: MEDULLA-FEDERATED-QUERY-R058.2.2.1 read-only `NlQueryExplain`.
-    // 472 -> 473: MEDULLA-FEDERATED-QUERY-R058.2.2.2 read-only `NlQueryPlan`.
-    // 473 -> 477: MEDULLA-FEDERATED-QUERY-R722.3's four public host-driven
-    // foreign-read lifecycle methods.
-    // 477 -> 481: `GetSessionUsage`, `IssueHostStartGrant`, `PublishRunCheckpoint`
-    // and `GetRunCheckpoint`.
-    // 481 -> 483: MEDULLA-FINANCE-PRIMITIVES-R900.3 `FinancePositionSize`, `FinanceDistributionShift`.
-    // 483 -> 492: MEDULLA-FINANCE-PRIMITIVES-R901.3/R613.3/R018.3 banking, execution and factor-rank methods.
-    // 492 -> 493: MEDULLA-UNIFIED-DATA-PLANE-R651.3 `DocumentDelete`.
-    assert_eq!(
-        variants.len(),
-        493,
-        "the wire method census changed; update this exact count deliberately"
-    );
+    // No exact count: the bijection above is the census. A hard-coded count made every
+    // two method-adding changes conflict on one line (MEDULLA-SDLC-R020).
 }
 
 // spec: MEDULLA-FEDERATED-QUERY-R020

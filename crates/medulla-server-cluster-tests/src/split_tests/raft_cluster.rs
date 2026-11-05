@@ -2145,11 +2145,9 @@ async fn heartbeat_flush_is_independent_per_peer_a_slow_peer_cannot_stall_the_ot
     };
     use openraft::raft::AppendEntriesResponse;
 
-    /// A raw-TCP "peer": answers each heartbeat batch after `delay`.
-    async fn heartbeat_peer(port: u16, delay: std::time::Duration) {
-        let listener = tokio::net::TcpListener::bind(("127.0.0.1", port))
-            .await
-            .expect("bind heartbeat peer");
+    /// A raw-TCP "peer": answers each heartbeat batch after `delay`. The caller binds
+    /// the listener first, so no heartbeat can race the peer's bind.
+    async fn heartbeat_peer(listener: tokio::net::TcpListener, delay: std::time::Duration) {
         while let Ok((mut stream, _)) = listener.accept().await {
             tokio::spawn(async move {
                 loop {
@@ -2179,15 +2177,28 @@ async fn heartbeat_flush_is_independent_per_peer_a_slow_peer_cannot_stall_the_ot
         }
     }
 
-    let ports = free_ports(2);
-    let fast = format!("127.0.0.1:{}", ports[0]);
-    let slow = format!("127.0.0.1:{}", ports[1]);
+    // Bind both peers before any heartbeat is sent (an ephemeral port per peer, so
+    // there is no pick-then-bind window either).
+    let fast_listener = tokio::net::TcpListener::bind(("127.0.0.1", 0))
+        .await
+        .expect("bind fast heartbeat peer");
+    let slow_listener = tokio::net::TcpListener::bind(("127.0.0.1", 0))
+        .await
+        .expect("bind slow heartbeat peer");
+    let fast = fast_listener
+        .local_addr()
+        .expect("fast peer addr")
+        .to_string();
+    let slow = slow_listener
+        .local_addr()
+        .expect("slow peer addr")
+        .to_string();
     let fast_task = tokio::spawn(heartbeat_peer(
-        ports[0],
+        fast_listener,
         std::time::Duration::from_millis(0),
     ));
     let slow_task = tokio::spawn(heartbeat_peer(
-        ports[1],
+        slow_listener,
         std::time::Duration::from_millis(500),
     ));
 

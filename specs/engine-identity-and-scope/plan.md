@@ -25,6 +25,8 @@ request -> admission (crates/medulla-server-api/src/oidc.rs, crates/medulla-serv
 - **Constraints**: A refusal changes no state. Every authority comes from the verified request context, never from a request field. No version suffix in a name.
 - **Scale/Scope**: 63 leaf rows over 7 user stories, 13 `FR-` labels and 5 `SC-` labels.
 
+**Knob convention.** An engine knob named `knob x.y` in this spec's rows is a typed field of the server configuration, read from the command line or from the environment variable `MEDULLA_<NAME>` (the dotted name upper-cased, dots as underscores) and bounds-checked at startup: a value outside the stated range refuses startup with the knob name. Decision knobs are the exception and live only in the `MEDULLA-DECISION-ENGINE-R179` registry. Rows do not restate this.
+
 ## Constitution Check
 
 - **R-I. The engine is native Rust and the only fact store**: pass. Identity, scope and metadata state live in the engine; Arbora composes the served operations.
@@ -39,7 +41,7 @@ request -> admission (crates/medulla-server-api/src/oidc.rs, crates/medulla-serv
 crates/medulla-server-api/src/oidc.rs, anonymous.rs         existing: verifier and anonymous authority
 crates/medulla-server-api/src/read_audit.rs                  new: read and claim audit sink
 crates/medulla-server-auth/src/auth.rs                       existing: admission, mode epoch, issuer material
-crates/medulla-isolation/src/isolation/                      existing: identity admin, scope_bound.rs; new: ownership.rs, share.rs, identity_store_admin/mode_authority.rs
+crates/medulla-isolation/src/isolation/                      existing: identity admin, scope_bound.rs; new: ownership.rs, share.rs
 crates/medulla-identity-types/src/identity/                  existing: ops, store, segment; new: mode.rs, ownership.rs, metadata.rs, delegation.rs
 crates/medulla-identity-types/src/tenancy.rs                 existing: tenant tree, secured read, scope predicate
 crates/medulla-h-query/src/query/segment_filter.rs           new: visible-unit filter and point-read check
