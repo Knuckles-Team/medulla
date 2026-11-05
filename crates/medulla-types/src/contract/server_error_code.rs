@@ -44,6 +44,8 @@ closed_error_codes! {
         DocumentNotFound => "DOCUMENT_NOT_FOUND",
         DocumentPropertiesInvalid => "DOCUMENT_PROPERTIES_INVALID",
         DocumentTextMissing => "DOCUMENT_TEXT_MISSING",
+        EcosystemDepthOutOfRange => "ECOSYSTEM_DEPTH_OUT_OF_RANGE",
+        EcosystemPackageUnknown => "ECOSYSTEM_PACKAGE_UNKNOWN",
         EmbeddingDimensionMismatch => "EMBEDDING_DIMENSION_MISMATCH",
         EmbeddingUnavailable => "EMBEDDING_UNAVAILABLE",
         EnrichmentUnavailable => "ENRICHMENT_UNAVAILABLE",

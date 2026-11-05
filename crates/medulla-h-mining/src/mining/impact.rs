@@ -14,10 +14,11 @@ use medulla_graph_algos::{
 };
 use medulla_protocol_types::result_contract::compute as results;
 use medulla_result_types::{
+    compute_result::mining::EcosystemQuery, compute_result::mining::EcosystemSeverity,
     compute_result::mining::ImpactOptions, compute_result::mining::ImpactPathRow,
     compute_result::mining::ImpactReport, compute_result::mining::ImpactSemantics,
-    compute_result::mining::RiskPropagationMiningResult, compute_result::mining::RiskScoreRow,
-    compute_result::mining::SeedAttributionRow,
+    compute_result::mining::PackageImpactRow, compute_result::mining::RiskPropagationMiningResult,
+    compute_result::mining::RiskScoreRow, compute_result::mining::SeedAttributionRow,
 };
 use medulla_types::solve_scalar::digest_text;
 
@@ -50,6 +51,9 @@ pub(crate) struct ImpactInputs<'a> {
     pub(crate) edges: &'a [(String, String, f64)],
     pub(crate) kind: ImpactKind,
     pub(crate) options: &'a ImpactOptions,
+    /// MEDULLA-SUPPLY-VOCAB-R009.3: the ecosystem finding, when the run walks
+    /// the stored dependency graph.
+    pub(crate) ecosystem: Option<&'a EcosystemQuery>,
 }
 
 impl ImpactInputs<'_> {
@@ -150,6 +154,7 @@ fn empty_report(semantics: ImpactSemantics, expected_spread: f64) -> ImpactRepor
         paths: Vec::new(),
         attribution: Vec::new(),
         attribution_note: None,
+        packages: Vec::new(),
     }
 }
 
@@ -271,6 +276,9 @@ pub(crate) fn handle_impact(
     inputs: &ImpactInputs<'_>,
     writeback: WritebackOptions,
 ) -> Response {
+    if let Some(query) = inputs.ecosystem {
+        return handle_ecosystem_impact(req_id, core, query);
+    }
     let run = run_impact(inputs);
     let written = if writeback.enabled {
         materialize_assessments(core, inputs, &run)
@@ -289,6 +297,128 @@ pub(crate) fn handle_impact(
             converged: true,
             written_back: written,
             impact: Some(run.report),
+        }),
+    )
+}
+
+/// Default of the `ecosystem.max_dependency_depth` knob, in hops.
+pub(crate) const DEFAULT_ECOSYSTEM_MAX_DEPTH: u32 = 8;
+/// Inclusive bounds of the `ecosystem.max_dependency_depth` knob.
+pub(crate) const ECOSYSTEM_MAX_DEPTH_RANGE: std::ops::RangeInclusive<u32> = 1..=64;
+/// Environment form of the `ecosystem.max_dependency_depth` knob.
+pub(crate) const ECOSYSTEM_MAX_DEPTH_ENV: &str = "MEDULLA_ECOSYSTEM_MAX_DEPENDENCY_DEPTH";
+/// Refusal of a finding against a package absent from the graph.
+pub(crate) const ECOSYSTEM_PACKAGE_UNKNOWN: &str = "ECOSYSTEM_PACKAGE_UNKNOWN";
+/// Refusal of a hop bound outside [`ECOSYSTEM_MAX_DEPTH_RANGE`].
+pub(crate) const ECOSYSTEM_DEPTH_OUT_OF_RANGE: &str = "ECOSYSTEM_DEPTH_OUT_OF_RANGE";
+
+/// The configured `ecosystem.max_dependency_depth`, or an error naming the
+/// out-of-range value.
+pub(crate) fn ecosystem_max_depth_knob() -> Result<u32, String> {
+    let Ok(raw) = std::env::var(ECOSYSTEM_MAX_DEPTH_ENV) else {
+        return Ok(DEFAULT_ECOSYSTEM_MAX_DEPTH);
+    };
+    match raw.trim().parse::<u32>() {
+        Ok(depth) if ECOSYSTEM_MAX_DEPTH_RANGE.contains(&depth) => Ok(depth),
+        _ => Err(format!(
+            "{ECOSYSTEM_DEPTH_OUT_OF_RANGE}: {ECOSYSTEM_MAX_DEPTH_ENV}={raw} is outside [1, 64]"
+        )),
+    }
+}
+
+fn core_severity(severity: EcosystemSeverity) -> medulla_core::ecosystem::Severity {
+    use medulla_core::ecosystem::Severity;
+    match severity {
+        EcosystemSeverity::Low => Severity::Low,
+        EcosystemSeverity::Medium => Severity::Medium,
+        EcosystemSeverity::High => Severity::High,
+        EcosystemSeverity::Critical => Severity::Critical,
+    }
+}
+
+fn wire_severity(severity: medulla_core::ecosystem::Severity) -> EcosystemSeverity {
+    use medulla_core::ecosystem::Severity;
+    match severity {
+        Severity::Low => EcosystemSeverity::Low,
+        Severity::Medium => EcosystemSeverity::Medium,
+        Severity::High => EcosystemSeverity::High,
+        Severity::Critical => EcosystemSeverity::Critical,
+    }
+}
+
+/// MEDULLA-SUPPLY-VOCAB-R009.3: propagate one finding from `query.package` to
+/// every transitive dependent of the request graph. Writes nothing.
+fn handle_ecosystem_impact(req_id: u64, core: &GraphCore, query: &EcosystemQuery) -> Response {
+    let depth = match query.max_depth {
+        Some(depth) if ECOSYSTEM_MAX_DEPTH_RANGE.contains(&depth) => depth,
+        Some(depth) => {
+            return Response::err(
+                req_id,
+                format!("{ECOSYSTEM_DEPTH_OUT_OF_RANGE}: max_depth {depth} is outside [1, 64]"),
+            )
+        }
+        None => match ecosystem_max_depth_knob() {
+            Ok(depth) => depth,
+            Err(error) => return Response::err(req_id, error),
+        },
+    };
+    let finding = medulla_core::ecosystem::PackageFinding {
+        id: query.finding_id.clone(),
+        severity: core_severity(query.severity),
+    };
+    let impacts = match medulla_core::ecosystem::propagate_package_risk_with(
+        core,
+        &query.package,
+        &finding,
+        depth as usize,
+        medulla_core::ecosystem::inherit_severity,
+    ) {
+        Ok(impacts) => impacts,
+        Err(medulla_core::ecosystem::PackageRefusal::UnknownPackage(package)) => {
+            return Response::err(
+                req_id,
+                format!("{ECOSYSTEM_PACKAGE_UNKNOWN}: no package '{package}' in the graph"),
+            )
+        }
+    };
+    let packages: Vec<PackageImpactRow> = impacts
+        .into_iter()
+        .map(|impact| PackageImpactRow {
+            package: impact.package,
+            severity: wire_severity(impact.severity),
+            path: impact.path,
+        })
+        .collect();
+    let rows = packages
+        .iter()
+        .map(|row| RiskScoreRow {
+            node: row.package.clone(),
+            score: 1.0,
+            hops: Some(row.path.len().saturating_sub(1) as u32),
+            lower: None,
+            upper: None,
+        })
+        .collect();
+    let mut report = empty_report(ImpactSemantics::Exact, packages.len() as f64);
+    report.hops = depth;
+    report.digest = digest_text(
+        IMPACT_DIGEST_DOMAIN,
+        &serde_json::json!({
+            "kernel": KERNEL_REVISION,
+            "ecosystem": query,
+            "depth": depth,
+            "packages": packages,
+        }),
+    );
+    report.packages = packages;
+    Response::ok(
+        req_id,
+        ResultPayload::of::<results::MineRiskPropagation>(RiskPropagationMiningResult {
+            scores: rows,
+            iterations: 1,
+            converged: true,
+            written_back: 0,
+            impact: Some(report),
         }),
     )
 }

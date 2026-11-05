@@ -2014,6 +2014,15 @@ name = "schema_drift_classify"
 path = "benches/schema_drift_classify.rs"
 harness = false
 
+# MEDULLA-SUPPLY-VOCAB-R009.6 nightly group `decide/ecosystem_impact`: one
+# ecosystem finding propagated over a 10,000-package dependency graph through
+# `medulla_core::ecosystem::propagate_package_risk_with`; prints p50/p99
+# (budget: p99 < 50 ms). Default features only. DEV-only; never gates a PR.
+[[bench]]
+name = "ecosystem_impact"
+path = "benches/ecosystem_impact.rs"
+harness = false
+
 # Massive-scale core micro-benchmark harness (CONCEPT:MEDULLA-096): in-process node/edge
 # write throughput, in-process query latency (single-hop + label lookup), and IVF-PQ
 # kNN search latency. Feature-LIGHT — builds under DEFAULT features (no server/redb),
