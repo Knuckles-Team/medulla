@@ -77,6 +77,11 @@ pub mod code_context;
 /// Plan is `query`-gated.
 pub mod uql;
 
+// MEDULLA-FEDERATED-QUERY-R651.1 — query understanding model (filters, intent, expansion port types).
+pub mod query_understanding;
+// MEDULLA-FEDERATED-QUERY-R652.1 — rerank scorer port, calibration curve and receipt types.
+pub mod rerank;
+
 // The natural-language → query planning seam (CONCEPT:MEDULLA-KG.query.core-query-input) + the concrete standalone
 // `UreqNlPlanner` (CONCEPT:MEDULLA-KG.query.fence-stripper). The `NlPlanner` trait + the `plan_and_execute*`
 // helpers are pure (only touch the existing `uql::parse` + `execute`), so they ride the
@@ -164,7 +169,7 @@ pub mod relational_connection;
 // Re-export the lexical surface (CONCEPT:AU-KG.query.text-spatial-time) so a caller wiring a text plan
 // names them through medulla-plan: the BM25 index, the hit row, and the RRF helper.
 #[cfg(feature = "text")]
-pub use medulla_text::{rrf_fuse, TextHit, TextIndex, RRF_K};
+pub use medulla_text::{RRF_K, TextHit, TextIndex, rrf_fuse};
 // The `PlanCtx::with_text` search-surface trait (CONCEPT:MEDULLA-KG.query.served-text-index-binding) — a facade
 // implements this over its OWN maintained persistent index (rather than a plain
 // `medulla_text::TextIndex`) to push a served `RankText`/`FuseRrf` leg down into it.
