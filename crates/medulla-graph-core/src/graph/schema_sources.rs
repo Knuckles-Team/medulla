@@ -1609,7 +1609,7 @@ mod tests {
             ),
             (
                 "infrastructure",
-                "b9a9741a05482e67d6eab6c61e298c8dc55031f5ad1fb82f82f2a937e2e56db7",
+                "67efacdeba4847c91a0ddf9b4918e5063aa624750345e1029ecc24b71022db46",
             ),
             (
                 "medical",
