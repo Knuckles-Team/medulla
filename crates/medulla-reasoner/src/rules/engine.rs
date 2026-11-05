@@ -305,18 +305,26 @@ impl Engine {
         Some(args)
     }
 
-    /// Run all rules to a fixpoint with congruence re-canonicalisation between rounds.
-    fn run(&mut self, rules: &[Rule]) {
-        let mut guard = 0;
-        loop {
-            guard += 1;
-            if guard > 10_000 {
-                break;
-            }
+    /// Run all rules to a fixpoint with congruence re-canonicalisation between
+    /// rounds, stopping after `max_steps` rule evaluations
+    /// (MEDULLA-FEDERATED-QUERY-R608.2); the facts derived so far stay in place.
+    fn run(&mut self, rules: &[Rule], max_steps: u64) -> FixpointStats {
+        let mut stats = FixpointStats {
+            steps: 0,
+            rules_fired: 0,
+            complete: true,
+        };
+        'rounds: loop {
             let mut changed = false;
             let pre_unions = self.same_pairs.len();
             for rule in rules {
+                if stats.steps >= max_steps {
+                    stats.complete = false;
+                    break 'rounds;
+                }
+                stats.steps += 1;
                 if self.apply_rule(rule) {
+                    stats.rules_fired += 1;
                     changed = true;
                 }
             }
@@ -329,7 +337,16 @@ impl Engine {
             }
         }
         self.check_conflicts();
+        stats
     }
+}
+
+/// Step accounting of one bounded fixpoint run.
+#[derive(Clone, Copy, Debug)]
+struct FixpointStats {
+    steps: u64,
+    rules_fired: u64,
+    complete: bool,
 }
 
 /// Evaluate one SWRL built-in body atom against the current binding.
@@ -434,6 +451,7 @@ pub(super) fn reason_facts(
     ont: &Ontology,
     facts: &[(String, Vec<String>, f64)],
     custom: &RuleSet,
+    max_steps: u64,
 ) -> super::RuleReasonResult {
     let mut eng = Engine::default();
     for (pred, args, conf) in facts {
@@ -449,7 +467,7 @@ pub(super) fn reason_facts(
 
     let mut all_rules = super::builtin_rules(ont);
     all_rules.extend(custom.rules().iter().cloned());
-    eng.run(&all_rules);
+    let stats = eng.run(&all_rules, max_steps);
 
     let mut facts_out: Vec<(String, Vec<String>, f64)> = Vec::new();
     let mut derived_out: Vec<(String, Vec<String>, f64)> = Vec::new();
@@ -472,5 +490,8 @@ pub(super) fn reason_facts(
         consistent: eng.conflicts.is_empty(),
         conflicts: eng.conflicts,
         derivations: super::proof::RuleDerivations::new(eng.conf, eng.justification),
+        steps: stats.steps,
+        rules_fired: stats.rules_fired,
+        complete: stats.complete,
     }
 }

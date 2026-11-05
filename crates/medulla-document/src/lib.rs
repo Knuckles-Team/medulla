@@ -29,12 +29,16 @@
 //! [`DocumentServingRuntime`]. Commits use the universal governed artifact protocol,
 //! maintain the lexical posting index atomically, and never retain source text.
 
+/// Document delete cascade planning (MEDULLA-UNIFIED-DATA-PLANE-R651.1/.2).
+pub mod cascade;
 mod decoder;
 mod document;
 mod header;
 mod html;
 /// Deterministic heading- and paragraph-aware chunking (MEDULLA-REPO-INGEST-R652).
 pub mod processing;
+/// Source table of contents build and bounded span location (MEDULLA-DECISION-ENGINE-R153.2).
+pub mod toc;
 /// Source-free transcript turn records shared by supported line-delimited
 /// coding-agent transcript dialects (MEDULLA-REPO-INGEST-R800.1).
 pub mod transcript;

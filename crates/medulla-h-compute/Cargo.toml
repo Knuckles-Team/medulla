@@ -43,10 +43,6 @@ medulla-server-auth = { path = "../medulla-server-auth" }
 medulla-quantum-core = { path = "../medulla-quantum-core", optional = true }
 medulla-quantum-sim = { path = "../medulla-quantum-sim", optional = true }
 
-[[bench]]
-name = "finance_kernels"
-harness = false
-
 [features]
 datascience = ["medulla-compute/datascience", "medulla-protocol-types/datascience", "medulla-result-types/datascience", "medulla-types/datascience"]
 finance = ["medulla-finance-quant/analytics", "medulla-compute/finance", "medulla-protocol-types/finance", "medulla-result-types/finance", "medulla-types/finance"]
@@ -60,9 +56,16 @@ viz = ["dep:medulla-viz-core", "medulla-protocol-types/viz", "medulla-server-api
 server = ["medulla-server-api/server"]
 
 [dev-dependencies]
+criterion = { version = "0.8", default-features = false }
 medulla-compute = { path = "../medulla-compute", features = ["test-support"] }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
 medulla-server-api = { path = "../medulla-server-api", features = ["test-support", "request-policy-fixture"] }
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
 medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }
 medulla-test-ambient-auth = { path = "../medulla-test-ambient-auth" }
+
+[[bench]]
+name = "finance_kernels"
+path = "benches/finance_kernels.rs"
+harness = false
+required-features = ["finance"]

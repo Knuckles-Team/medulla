@@ -109,3 +109,65 @@ fn verdict_follows_flip_fraction() {
         RoundVerdict::Unverified
     );
 }
+
+fn model(model_ref: &str, cost: u64, strength: u32, adequate: bool) -> ModelOption {
+    ModelOption {
+        model_ref: model_ref.into(),
+        cost,
+        strength,
+        adequate,
+    }
+}
+
+fn stage(id: &str, impact: Option<i64>) -> StageInput {
+    StageInput {
+        stage: id.into(),
+        impact,
+    }
+}
+
+#[test]
+fn stronger_models_go_to_high_impact_stages() {
+    let models = vec![
+        model("base", 1, 1, true),
+        model("strong", 5, 9, true),
+        model("cheap-but-unfit", 0, 0, false),
+    ];
+    let stages = vec![
+        stage("a", Some(2)),
+        stage("b", Some(7)),
+        stage("c", None),
+        stage("d", Some(7)),
+    ];
+    // Base total 4; one upgrade costs 4 more: budget fits exactly one.
+    let one = RunBudget {
+        max_cost: 8,
+        max_stronger_stages: 3,
+    };
+    let got = allocate_stage_models(&stages, &models, &one).unwrap();
+    let refs: Vec<&str> = got.iter().map(|a| a.model_ref.as_str()).collect();
+    assert_eq!(refs, ["base", "strong", "base", "base"]);
+    assert_eq!(got[2].impact, 0);
+    // The stronger-stage cap binds before cost.
+    let capped = RunBudget {
+        max_cost: 100,
+        max_stronger_stages: 2,
+    };
+    let got = allocate_stage_models(&stages, &models, &capped).unwrap();
+    let refs: Vec<&str> = got.iter().map(|a| a.model_ref.as_str()).collect();
+    assert_eq!(refs, ["base", "strong", "base", "strong"]);
+    // Refusals.
+    let poor = RunBudget {
+        max_cost: 3,
+        max_stronger_stages: 1,
+    };
+    let refused = allocate_stage_models(&stages, &models, &poor).unwrap_err();
+    assert_eq!(
+        refused,
+        AllocationRefusal::BudgetBelowMinimum { shortfall: 1 }
+    );
+    assert_eq!(refused.code(), "ALLOCATION_BUDGET_BELOW_MINIMUM");
+    let none = allocate_stage_models(&stages, &[model("x", 1, 1, false)], &one).unwrap_err();
+    assert_eq!(none, AllocationRefusal::NoAdequateModel { models: 1 });
+    assert_eq!(none.code(), "ALLOCATION_NO_ADEQUATE_MODEL");
+}

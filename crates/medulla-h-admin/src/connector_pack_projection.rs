@@ -224,6 +224,23 @@ pub mod worker {
             Err(_) => (Some(OutboxRejectReason::InvalidEvent), false),
             Ok(record) => match project(state, store, tenant, &record).await {
                 Ok(projected) => (None, projected),
+                Err(error)
+                    if crate::admin::connector_pack::reproject::is_retryable_projection_error(
+                        &error,
+                    ) =>
+                {
+                    // MEDULLA-TYPED-PACKS-R096.1: the head records the failed
+                    // state; the lease stays unresolved so the kernel
+                    // redelivers the row when it expires (the backoff) and
+                    // dead-letters it after its bounded attempts.
+                    tracing::warn!(
+                        code = "CONNECTOR_PACK_PROJECTION_FAILED",
+                        connector = record.connector.as_str(),
+                        %error,
+                        "connector pack projection failed with a retryable code; redelivered after the lease expires"
+                    );
+                    return Ok(false);
+                }
                 Err(error) => {
                     tracing::warn!(
                         code = "CONNECTOR_PACK_PROJECTION_FAILED",
@@ -297,9 +314,6 @@ pub mod worker {
             return Ok(false);
         }
         let anonymous = state.read().await.local_anonymous;
-        if !anonymous {
-            grant_projection_access(state, tenant, record).await?;
-        }
         let plan = store.prepare_connector_pack_projection(tenant, &record.connector)?;
         let verified = if anonymous {
             VerifiedRequestContext::anonymous_local(Some(format!("{CONSUMER}:{}", plan.record_id)))
@@ -315,6 +329,16 @@ pub mod worker {
                 "connector-pack:reproject",
                 true,
             )?;
+        if !anonymous {
+            if let Err(error) = grant_projection_access(state, tenant, record).await {
+                let error = format!("PACK_PROJECTION_GRANT_FAILED: {error}");
+                return Err(
+                    crate::admin::connector_pack::reproject::record_projection_failure(
+                        store, &context, &plan, &error,
+                    ),
+                );
+            }
+        }
         crate::admin::connector_pack::reproject::project_head(
             state, 0, &verified, store, context, &plan,
         )

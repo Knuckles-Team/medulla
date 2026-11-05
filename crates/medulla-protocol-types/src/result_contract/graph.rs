@@ -19,6 +19,7 @@ method_results! {
     HasNode(HasNode) => Bool<bool>;
     GetNodes(GetNodes) => NodeList<Vec<(String, serde_json::Value)>>;
     GetNodesByLabel(GetNodesByLabel) => NodeList<Vec<(String, serde_json::Value)>>;
+    WalletKeyTrustGet(WalletKeyTrustGet) => Json<medulla_types::finance_wallet_trust::WalletKeyTrust>;
     CompareAndSetNodeFields(CompareAndSetNodeFields) => Bool<bool>;
     CreateSummaryNode(CreateSummaryNode) => Text<String>;
     Consolidate(Consolidate) => Text<String>;
@@ -54,6 +55,12 @@ method_results! {
     RemoveNode(RemoveNode) => Text<String>;
     // The node's stored property object, verbatim; `null` when the node is absent or hidden.
     GetNodeProperties(GetNodeProperties) => RawOrNull<Dynamic> dynamic CallerProperties;
+    // The new record head after a served finance record put.
+    #[cfg(feature = "finance")]
+    FinanceRecordPut(FinanceRecordPut) => Count<u64>;
+    // The stored finance record node properties; `null` when absent.
+    #[cfg(feature = "finance")]
+    FinanceRecordGet(FinanceRecordGet) => RawOrNull<Dynamic> dynamic CallerProperties;
     // `(decayed count, evicted ids)`.
     Maintain(Maintain) => Raw<(usize, Vec<String>)>;
     AddSceneObject(AddSceneObject) => Text<String>;

@@ -11,13 +11,17 @@ use medulla_types::contract::BoundedVec;
 
 use medulla_types::solve_scalar::digest_text;
 
+mod aggregation;
 mod call;
+pub use aggregation::{
+    AggregationOp, TaskPlanAggregation, PLAN_AGGREGATION_INVALID, PLAN_AGGREGATION_NOT_OUTPUT,
+};
 pub use call::{
     task_bindings, TaskPlanBinding, TaskPlanCall, BINDING_KEY, MAX_BINDINGS_PER_CALL,
     MAX_BINDING_PATH_BYTES, MAX_BINDING_PATH_SEGMENTS, MAX_CALL_ARGUMENT_BYTES, MAX_TOOL_STEPS,
 };
 
-pub const TASK_PLAN_POLICY_REVISION: &str = "bounded-explicit-dag-v1";
+pub const TASK_PLAN_POLICY_REVISION: &str = "bounded-explicit-dag-v2";
 
 /// The Agent Library component id a host publishes the canonical task-plan
 /// feature schema under (MEDULLA-DECISION-ENGINE-R134.111.7).
@@ -72,6 +76,12 @@ pub struct TaskPlanTask {
     pub depends_on: BoundedVec<String, 64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub call: Option<TaskPlanCall>,
+    /// How the output task combines its dependency outputs (R134.1).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub aggregation: Option<TaskPlanAggregation>,
+    /// The component id of the chosen skill or specialist (R134.1).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub assignee: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -120,7 +130,8 @@ pub fn task_plan_policy_digest() -> String {
                 MAX_BINDING_PATH_BYTES,
             ),
             "lexical_ready_ids;sorted_dependencies;single_output_sink;no_retries;\
-             canonical_calls;direct_dependency_bindings;no_inferred_edges",
+             canonical_calls;direct_dependency_bindings;no_inferred_edges;\
+             aggregation_on_output_only;reducer_iff_reduce;explicit_assignee",
         ),
     )
 }
@@ -250,6 +261,7 @@ pub fn plan_explicit_tasks(proposal: &TaskPlanProposal) -> Result<TaskPlan, Stri
     let canonical = ordered(&tasks)?;
     call::check_bindings(&tasks)?;
     check_output(&tasks, &proposal.output_task_id)?;
+    aggregation::check_aggregation(&tasks, &proposal.output_task_id)?;
     let mut plan = TaskPlan {
         total_tasks: canonical.len() as u16,
         tasks: BoundedVec::new(canonical).expect("validated task bound"),

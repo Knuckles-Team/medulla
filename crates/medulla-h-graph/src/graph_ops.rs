@@ -30,6 +30,7 @@ use medulla_server_mutation::{
 mod algorithms;
 mod broker;
 mod edges;
+mod finance_records;
 mod gateway;
 #[cfg(feature = "broker")]
 mod gateway_broker;
@@ -39,10 +40,12 @@ mod gateway_mining_ml;
 mod hierarchy;
 mod memory;
 mod nodes;
+pub mod retention_cleanup;
 mod semantic;
 mod subgraph;
 mod terminal;
 mod union;
+mod wallet_trust;
 
 #[cfg(any(
     feature = "query",

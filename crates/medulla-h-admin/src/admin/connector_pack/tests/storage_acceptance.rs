@@ -126,3 +126,88 @@ async fn competing_imports_have_one_head_winner_without_loser_effects() {
     .contains("PACK_HEAD_CONFLICT"));
     assert_eq!(snapshot(&served).await, before);
 }
+
+// spec: MEDULLA-TYPED-PACKS-R002.1
+#[tokio::test]
+async fn body_staging() {
+    use medulla_server_blob::blob::engine_bodies::{read_engine_body, EngineBody};
+    use medulla_server_blob::blob::BlobStateExt;
+    use medulla_types::contract::Digest256;
+    use sha2::{Digest, Sha256};
+
+    let served = Served::new();
+    bind(&served, CONNECTOR, ADMIN).await;
+    let blob = served.state.read().await.blob_cursors().cloned().unwrap();
+    let bytes = b"a staged connector body".to_vec();
+    let address = Digest256::from_bytes(Sha256::digest(&bytes).into());
+    // A declared address that differs from the bytes refuses before staging.
+    let wrong = Digest256::from_bytes(Sha256::digest(b"other bytes").into());
+    let error = blob
+        .store
+        .put_engine_bodies(
+            TENANT,
+            &[EngineBody {
+                sha256: wrong,
+                body: bytes.clone(),
+            }],
+            1,
+        )
+        .unwrap_err();
+    assert!(error.starts_with("BODY_DIGEST_MISMATCH"), "{error}");
+    // Verified bytes stage under their own SHA-256 address.
+    let stored = blob
+        .store
+        .put_engine_bodies(
+            TENANT,
+            &[EngineBody {
+                sha256: address,
+                body: bytes.clone(),
+            }],
+            1,
+        )
+        .unwrap();
+    assert_eq!(stored.len(), 1);
+    assert_eq!(stored[0].sha256, address);
+    assert_eq!(
+        stored[0].holder_id,
+        format!("pack:{TENANT}:{}", address.to_hex())
+    );
+    let read = read_engine_body(
+        blob.store.as_ref(),
+        TENANT,
+        &stored[0].manifest_digest,
+        address,
+        bytes.len() as u64,
+    )
+    .unwrap();
+    assert_eq!(read, bytes);
+    let error = read_engine_body(
+        blob.store.as_ref(),
+        TENANT,
+        &stored[0].manifest_digest,
+        wrong,
+        bytes.len() as u64,
+    )
+    .unwrap_err();
+    assert!(error.starts_with("BODY_DIGEST_MISMATCH"), "{error}");
+    // Staging alone exposes no component: the served catalog has no entry.
+    let error = refused(
+        "Content of a staged-only body",
+        served
+            .call(
+                "content:storage-acceptance:staged",
+                medulla_protocol_types::protocol::Method::AgentComponent {
+                    op: medulla_agent_types::agent_component::AgentComponentOp::Content {
+                        request:
+                            medulla_agent_types::agent_component::AgentComponentContentRequest {
+                                tenant_id: TENANT.to_string(),
+                                component_id: format!("mcp:{CONNECTOR}/tool/staged"),
+                                entry_revision: None,
+                            },
+                    },
+                },
+            )
+            .await,
+    );
+    assert!(!error.is_empty());
+}
