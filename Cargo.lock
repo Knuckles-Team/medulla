@@ -5199,6 +5199,7 @@ dependencies = [
  "medulla-shacl",
  "medulla-sql",
  "medulla-sql-lang",
+ "medulla-store",
  "medulla-table-store",
  "medulla-tables",
  "medulla-test-ambient-auth",

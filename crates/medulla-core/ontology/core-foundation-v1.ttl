@@ -4,6 +4,7 @@
 @prefix bfo: <http://purl.obolibrary.org/obo/BFO_> .
 @prefix bibo: <http://purl.org/ontology/bibo/> .
 @prefix obo: <http://purl.obolibrary.org/obo/> .
+@prefix odrl: <http://www.w3.org/ns/odrl/2/> .
 @prefix fibo-org: <https://spec.edmcouncil.org/fibo/ontology/FND/Organizations/Organizations/> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
@@ -231,6 +232,24 @@ namespace; concepts are :partOf their pillar.""" ;
             owl:allValuesFrom bfo:0000001 ;
             owl:onProperty :governedBy ],
         bfo:0000031 .
+
+:RunScopePolicy a owl:Class ;
+    rdfs:label "RunScopePolicy" ;
+    rdfs:comment "MEDULLA-IDENTITY-R008.4: the stored bound on the tools and graphs one principal's run may name; id urn:policy:run-scope:<principal>." ;
+    rdfs:subClassOf :Policy ;
+    skos:closeMatch odrl:Policy .
+
+:allowedTools a owl:DatatypeProperty ;
+    rdfs:label "allowed_tools" ;
+    rdfs:comment "MEDULLA-IDENTITY-R008.4: the tool IRIs a :RunScopePolicy allows." ;
+    rdfs:domain :RunScopePolicy ;
+    rdfs:range xsd:anyURI .
+
+:allowedGraphs a owl:DatatypeProperty ;
+    rdfs:label "allowed_graphs" ;
+    rdfs:comment "MEDULLA-IDENTITY-R008.4: the graph names a :RunScopePolicy allows." ;
+    rdfs:domain :RunScopePolicy ;
+    rdfs:range xsd:string .
 
 :Preference a owl:Class ;
     rdfs:label "Preference" ;
