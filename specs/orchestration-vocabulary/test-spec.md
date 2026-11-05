@@ -129,18 +129,18 @@ R009 remains open until actual producer and native readback evidence exists.
 Planned proofs for the rows rewritten by the round-2 hygiene wave. No test named here has run.
 
 - `MEDULLA-ORCH-VOCAB-R010.6`: `tests/orchestration/test_harness_metrics_served.py::test_config_evidence_marks_insufficient_trace_counts`.
-- `MEDULLA-ORCH-VOCAB-R616.2`: `src/server/handlers/decide/stat_tests/assemble_vocabulary_tests.rs::synthesis_drafts_a_team_and_leaves_champion_unchanged`.
-- `MEDULLA-ORCH-VOCAB-R800.1`: `crates/medulla-types/src/orchestration/definitions.rs::tests::template_and_pattern_round_trip`.
-- `MEDULLA-ORCH-VOCAB-R005.100`: `src/server/handlers/decide/stat_tests/assemble_vocabulary_tests.rs::shield_declares_schema_and_digest_only`.
+- `MEDULLA-ORCH-VOCAB-R616.2`: `crates/medulla-h-decide/src/decide/stat_tests/assemble_vocabulary_tests.rs::synthesis_drafts_a_team_and_leaves_champion_unchanged`.
+- `MEDULLA-ORCH-VOCAB-R800.1`: `crates/medulla-work-types/src/orchestration/definitions.rs::tests::template_and_pattern_round_trip`.
+- `MEDULLA-ORCH-VOCAB-R005.100`: `crates/medulla-h-decide/src/decide/stat_tests/assemble_vocabulary_tests.rs::shield_declares_schema_and_digest_only`.
 - `MEDULLA-ORCH-VOCAB-R009.100`: `tests/orchestration/test_trace_export_served.py::test_parent_with_children_exports_complete_stable_digest`.
 - `MEDULLA-ORCH-VOCAB-R009.101.2`: `tests/orchestration/test_harness_session_index_served.py::test_search_covers_manifest_with_unavailable_third_source`.
 - `MEDULLA-ORCH-VOCAB-R010.100`: `tests/orchestration/test_evolution_metrics_served.py::test_missing_trace_is_partial_not_zero`.
 - `MEDULLA-ORCH-VOCAB-R012.7.1`: `crates/medulla-core/src/spec_folder/policy.rs::tests::both_formats_parse_to_one_type`.
 - `MEDULLA-ORCH-VOCAB-R012.7.2`: `tests/orchestration/test_policy_activation_served.py::test_index_yields_inactive_candidates_with_spans`.
 - `MEDULLA-ORCH-VOCAB-R012.8`: `tests/orchestration/test_policy_activation_served.py::test_graph_mutation_leaves_source_bytes_unchanged`.
-- `MEDULLA-ORCH-VOCAB-R750.750`: `crates/medulla-types/src/orchestration/org.rs::tests::records_round_trip_and_twin_needs_a_pin`.
-- `MEDULLA-ORCH-VOCAB-R750.751`: `src/server/handlers/decide/stat_tests/org_runtime_tests.rs::recruit_allocate_and_twin_replay`.
+- `MEDULLA-ORCH-VOCAB-R750.750`: `crates/medulla-work-types/src/orchestration/org.rs::tests::records_round_trip_and_twin_needs_a_pin`.
+- `MEDULLA-ORCH-VOCAB-R750.751`: `crates/medulla-h-decide/src/decide/stat_tests/org_runtime_tests.rs::recruit_allocate_and_twin_replay`.
 - `MEDULLA-ORCH-VOCAB-R750.752`: `tests/orchestration/test_org_runtime_served.py::test_four_faults_refuse_with_codes`.
-- `MEDULLA-ORCH-VOCAB-R751.750`: `crates/medulla-types/src/orchestration/teams.rs::tests::records_round_trip_and_digest_is_order_free`.
-- `MEDULLA-ORCH-VOCAB-R751.751`: `src/server/handlers/decide/stat_tests/team_tests.rs::specialist_promotes_only_through_the_gate`.
+- `MEDULLA-ORCH-VOCAB-R751.750`: `crates/medulla-work-types/src/orchestration/teams.rs::tests::records_round_trip_and_digest_is_order_free`.
+- `MEDULLA-ORCH-VOCAB-R751.751`: `crates/medulla-h-decide/src/decide/stat_tests/team_tests.rs::specialist_promotes_only_through_the_gate`.
 - `MEDULLA-ORCH-VOCAB-R751.752`: `tests/orchestration/test_team_evolution_served.py::test_team_and_social_faults_refuse_with_codes`.
