@@ -21,9 +21,9 @@
 //! Every algorithm -- derivation, solving, verification, execution, fitting --
 //! lives above this module. These are data types and their bounds.
 
+pub mod codes;
 pub mod comparative_analysis;
 pub mod context_package;
-pub mod codes;
 pub mod digest;
 pub mod errors;
 pub mod harness_contrast;
@@ -90,7 +90,10 @@ pub use record::{
     Elimination, EvidenceClass, PremiseClass, PremiseProvenance, PremiseRef, ResolutionKind,
     SlotAssignment, SolverIdentity, TemplateFacts, TraceFidelity, Violation, WhyNot,
 };
-pub use replay::{EvalMode, EvaluationRun, ReplaySpec};
+pub use replay::{
+    EvalMode, EvaluationRun, FeaturePowerReport, IcInterval, ReplaySpec, MAX_FEATURE_POWER_REPORTS,
+    MAX_IC_DECAY_LAGS,
+};
 pub use request::{
     AssemblyConstraints, AssemblyRequest, AssemblyRequirements, AssemblyResult, ClaimProvenance,
     ClaimedTaskMapping, CostBudget, DecisionCommitRequest, DecisionCommitResult, DecisionPolicyRef,
