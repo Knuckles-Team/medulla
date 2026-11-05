@@ -23,7 +23,7 @@ use super::terminal_outcome::lower_terminal_outcome_extensions;
 use medulla_kernel::kernel::persistence::ENGINE_LEDGER_PRINCIPAL;
 
 mod finish_helpers;
-use finish_helpers::{compiled_outbox, compiled_scope_identity};
+use finish_helpers::{compiled_outbox, compiled_scope_identity, finance_alert_intents};
 
 /// Resolve the current graph version without treating RAM as a substitute for a
 /// missing durable authority. Version zero is the sole implicit bootstrap state;
@@ -143,6 +143,9 @@ pub fn compile_methods_with_outbox(
     additional_outbox: Vec<MutationOutboxIntent>,
 ) -> Result<MutationBatch, String> {
     let (methods, mut terminal_outbox) = lower_terminal_outcome_extensions(ctx.batch_id, methods)?;
+    // MEDULLA-FINANCE-PRIMITIVES-R011.2.1: an alert's outbox fact is built here, from
+    // the very method that commits its event node, so both share one batch.
+    terminal_outbox.extend(finance_alert_intents(&methods)?);
     terminal_outbox.extend(additional_outbox);
     #[cfg(feature = "epistemic-tms")]
     let reasoning_events =
@@ -855,6 +858,61 @@ mod tests {
             .unwrap(),
             headers: BTreeMap::new(),
         }
+    }
+
+    fn alert(kind: medulla_types::finance_event_envelope::FinanceAlertKind, id: &str) -> Method {
+        Method::FinanceAlertRaise {
+            envelope: medulla_types::finance_event_envelope::FinanceAlertEnvelope {
+                event_id: id.into(),
+                kind,
+                listing_id: "NASDAQ:AAPL".into(),
+                occurred_at_unix_nanos: 1_760_000_000_000_000_000,
+                message: "alert".into(),
+            },
+        }
+    }
+
+    // spec: MEDULLA-FINANCE-PRIMITIVES-R011.2.1
+    #[test]
+    fn finance_alert_intents_preserve_schema_and_identity() {
+        use medulla_types::finance_event_envelope::FinanceAlertKind as Kind;
+        for (kind, schema) in [
+            (Kind::Price, "finance.alert.price.v1"),
+            (Kind::TrendFlip, "finance.alert.trend_flip.v1"),
+            (Kind::DcaDue, "finance.alert.dca_due.v1"),
+            (Kind::MarginThreshold, "finance.alert.margin_threshold.v1"),
+        ] {
+            let id = format!("finance.flip:{schema}");
+            let batch =
+                compile_methods_with_outbox(source_context(), vec![alert(kind, &id)], Vec::new())
+                    .unwrap();
+            batch.validate().unwrap();
+            let intent = batch
+                .outbox
+                .iter()
+                .find(|intent| intent.topic == "finance.events.v1")
+                .expect("the alert intent");
+            assert_eq!(intent.key, id);
+            assert_eq!(
+                intent.headers.get("schema").map(String::as_str),
+                Some(schema)
+            );
+            let Method::FinanceAlertRaise { envelope } = alert(kind, &id) else {
+                unreachable!()
+            };
+            assert_eq!(intent.payload, envelope.canonical_msgpack().unwrap());
+        }
+        let Method::FinanceAlertRaise { mut envelope } = alert(Kind::Price, "bad") else {
+            unreachable!()
+        };
+        envelope.message.clear();
+        let refused = compile_methods_with_outbox(
+            source_context(),
+            vec![Method::FinanceAlertRaise { envelope }],
+            Vec::new(),
+        )
+        .unwrap_err();
+        assert!(refused.starts_with("ALERT_ENVELOPE_INVALID"), "{refused}");
     }
 
     #[test]

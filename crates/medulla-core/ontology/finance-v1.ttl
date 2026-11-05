@@ -774,6 +774,36 @@
     rdfs:domain :LeverageTerms ;
     rdfs:range xsd:decimal .
 
+# MEDULLA-FINANCE-PRIMITIVES-R011.4: the idempotency record of one alert delivery,
+# schedule run or DCA proposal. Its node id is a SHA-256 of tenantKey, receiptKind,
+# idempotencyKey and receiptState, so a second write of the same receipt is a no-op.
+:FinanceReceipt a owl:Class ;
+    rdfs:label "Finance Receipt" ;
+    rdfs:comment "The idempotency record of one finance alert delivery, schedule run or DCA proposal: kind, claimed or completed state, tenant key, idempotency key and the time it was recorded. BFO:GenericallyDependentContinuant." ;
+    rdfs:subClassOf bfo:0000031 ;
+    skos:relatedMatch wd:Q47005 .
+
+:receiptKind a owl:DatatypeProperty ;
+    rdfs:label "receipt kind" ;
+    rdfs:comment "alert_delivery, schedule_run or dca_proposal." ;
+    rdfs:domain :FinanceReceipt ;
+    rdfs:range xsd:string .
+
+:receiptState a owl:DatatypeProperty ;
+    rdfs:label "receipt state" ;
+    rdfs:comment "claimed while the work is in flight, completed once it finished." ;
+    rdfs:domain :FinanceReceipt ;
+    rdfs:range xsd:string .
+
+:tenantKey a owl:DatatypeProperty ;
+    rdfs:label "tenant key" ;
+    rdfs:comment "The opaque tenant key the receipt belongs to." ;
+    rdfs:domain :FinanceReceipt ;
+    rdfs:range xsd:string .
+
+# idempotencyKey and recordedAt are the shared properties of the orchestration and
+# documentation modules; the shape constrains them without redeclaring their domain.
+
 # ── Finance method vocabulary: algorithms and analysis types (MEDULLA-CQ-CONN-R084.5) ──
 #
 # The selection vocabulary for "which algorithm applies to analysis type X for

@@ -102,6 +102,9 @@ pub const GATEWAY_ROUTED: &[&str] = &[
     // admitted (version gate, kind policy, tenant, SHACL shape, head) and then
     // commits as the one `AddNode` upsert through this gateway.
     "FinanceRecordPut",
+    // MEDULLA-FINANCE-PRIMITIVES-R011.2.3: the served alert door validates the
+    // envelope, then the event node and its outbox fact commit as one batch.
+    "FinanceAlertRaise",
     "PruneByLifecycle",
     "BatchUpdate",
     "ClearLedger",
@@ -659,6 +662,9 @@ pub const LOCAL_ONLY_METHODS: &[&str] = &[
     // admitted upsert through the process-local owner; no replicated command
     // carries the admission yet (MEDULLA-FINANCE-PRIMITIVES-R004.3.2).
     "FinanceRecordPut",
+    // The alert's compare-and-set against its stored envelope has no replicated
+    // command either (MEDULLA-FINANCE-PRIMITIVES-R011.2.3).
+    "FinanceAlertRaise",
 ];
 
 /// The local-only names that are NOT gateway-routed.
@@ -705,6 +711,7 @@ fn write_back_method_name(m: &Method) -> Option<&'static str> {
 fn finance_record_method_name(m: &Method) -> Option<&'static str> {
     match m {
         Method::FinanceRecordPut { .. } => Some("FinanceRecordPut"),
+        Method::FinanceAlertRaise { .. } => Some("FinanceAlertRaise"),
         _ => None,
     }
 }

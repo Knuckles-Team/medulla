@@ -665,6 +665,15 @@ $($variants)*
         kind: medulla_types::wire::FinanceRecordKind,
         record_id: String,
     },
+
+    // ── Served finance alerts (MEDULLA-FINANCE-PRIMITIVES-R011.2.3) ──────────
+    /// Raise one finance alert: the envelope is validated, then its event node and
+    /// its `finance.events.v1` outbox fact commit in one owner transaction. The
+    /// door takes no decision; callers evaluate the alert conditions.
+    #[cfg(feature = "finance")]
+    FinanceAlertRaise {
+        envelope: medulla_types::finance_event_envelope::FinanceAlertEnvelope,
+    },
         ]);
     };
 }

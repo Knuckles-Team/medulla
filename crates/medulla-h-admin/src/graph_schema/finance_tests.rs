@@ -74,6 +74,7 @@ fn finance_is_a_core_module_within_the_catalog_bound_and_the_corpus_stays_cohere
         ("StrategySpec", "0000031"),
         ("StrategyRun", "0000031"),
         ("LeverageTerms", "0000031"),
+        ("FinanceReceipt", "0000031"),
     ];
     for (class, category) in placed {
         assert!(
@@ -89,7 +90,7 @@ fn finance_is_a_core_module_within_the_catalog_bound_and_the_corpus_stays_cohere
 fn every_finance_class_is_mapped_and_nothing_external_is_imported() {
     let triples = medulla_rdf::mapping::parse_turtle(FINANCE).unwrap();
     let declared = declared_classes(&triples);
-    assert_eq!(declared.len(), 28);
+    assert_eq!(declared.len(), 29);
     let unmapped = unmapped_classes(&triples);
     assert!(unmapped.is_empty(), "unmapped classes {unmapped:?}");
     let imports: BTreeSet<&str> = triples
@@ -214,6 +215,7 @@ fn finance_shapes_are_their_own_document() {
             "StrategySpec",
             "StrategyRun",
             "LeverageTerms",
+            "FinanceReceipt",
             "FinanceAlgorithm",
         ],
     );
@@ -752,5 +754,42 @@ mod shapes {
             record.push((name, bad));
             assert!(!conforms(&node("LeverageTerms", &record)), "{name}={bad}");
         }
+    }
+
+    // spec: MEDULLA-FINANCE-PRIMITIVES-R011.4
+    #[test]
+    fn finance_receipt_shape_acceptance() {
+        assert_matrix(
+            "FinanceReceipt",
+            &[
+                field(
+                    "receiptKind",
+                    "\"alert_delivery\"",
+                    "\"schedule_run\"",
+                    "\"cfd\"",
+                ),
+                field(
+                    "receiptState",
+                    "\"claimed\"",
+                    "\"completed\"",
+                    "\"pending\"",
+                ),
+                field("tenantKey", "\"tenant-1\"", "\"tenant-2\"", "5"),
+                field("idempotencyKey", "\"key-1\"", "\"key-2\"", "\"\""),
+                field(
+                    "recordedAt",
+                    "\"2026-09-24T00:00:00Z\"^^xsd:dateTime",
+                    "\"2026-09-25T00:00:00Z\"^^xsd:dateTime",
+                    "\"yesterday\"",
+                ),
+            ],
+            &[
+                (
+                    "receiptKind",
+                    &["alert_delivery", "schedule_run", "dca_proposal"],
+                ),
+                ("receiptState", &["claimed", "completed"]),
+            ],
+        );
     }
 }

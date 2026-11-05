@@ -91,3 +91,17 @@ def test_workflow_invokes_the_check() -> None:
         "python scripts/check_decide_budgets.py target/decide-budgets.json" in workflow
     )
     assert "upload-artifact" in workflow
+
+
+def test_media_facts_bench_is_registered_and_nightly() -> None:
+    # spec: MEDULLA-DECISION-ENGINE-R050.3
+    bench = (ROOT / "benches/media_facts.rs").read_text(encoding="utf-8")
+    assert "validate_parts" in bench
+    assert "const PARTS: u32 = 128;" in bench
+    assert bench.count("ModelInputMediaType::") >= 4
+    cargo = (ROOT / "Cargo.toml").read_text(encoding="utf-8")
+    assert 'name = "media_facts"' in cargo
+    workflow = (ROOT / ".github/workflows/nightly-decide-budgets.yml").read_text(
+        encoding="utf-8"
+    )
+    assert "--bench media_facts" in workflow
