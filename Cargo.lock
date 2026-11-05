@@ -5252,6 +5252,7 @@ dependencies = [
  "medulla-server-cdc",
  "medulla-server-mutation",
  "medulla-server-ops",
+ "medulla-shacl",
  "medulla-test-ambient-auth",
  "medulla-tsdb",
  "medulla-types",

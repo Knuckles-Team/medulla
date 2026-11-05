@@ -3824,6 +3824,7 @@ components:
       - "tests/external_compute_e2e.rs"
       - "tests/finance_served_evidence.rs"
       - "tests/federated"
+      - "tests/finance_records_served.rs"
       - "tests/finance_served_numeric_kernels.rs"
       - "tests/finance_served_sizing.rs"
       - "tests/finance_wallet_trust_served.rs"
