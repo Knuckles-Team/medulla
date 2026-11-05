@@ -1,7 +1,7 @@
 //! Incremental (DBSP-style) materialized-view maintenance
 //! (MEDULLA-INCREMENTAL-VIEWS-R001).
 //!
-//! A dep-free Z-set delta model ([`zset`]) + a circuit compiler ([`circuit`]) that
+//! A dep-free Z-set delta model (`medulla_types::delta`) + a circuit compiler ([`circuit`]) that
 //! generalizes `src/server/cdc.rs`'s hand-rolled two-aggregate `ContinuousQuery`/
 //! `maintain()` (proved equal to a full re-run by its own unit tests) to an arbitrary
 //! SUPPORTED `wire::Plan`. A plan the compiler cannot handle returns [`UnsupportedOp`]
@@ -19,7 +19,7 @@
 //! `dag`/`dag_exec`.
 
 pub mod circuit;
-pub mod zset;
+#[cfg(any(test, feature = "test-support"))]
+pub mod oracle;
 
 pub use circuit::{Circuit, UnsupportedOp};
-pub use zset::{Delta, ZRow};

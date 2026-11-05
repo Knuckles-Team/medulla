@@ -170,17 +170,30 @@ impl PlanMatViewManager {
     /// output updates `current` and the watermark advances. Returns how many views it
     /// maintained. `Mode::Recompute` views are UNTOUCHED here (they ride `note_change`).
     pub fn apply_delta(&self, graph: &str, event: &medulla_types::wire::CdcEvent) -> usize {
+        let delta = super::incremental::event_to_delta(event);
+        self.apply_event_delta(graph, event.seq, &delta)
+    }
+
+    /// Fold an already-built `delta` (from the CDC event at `seq`) into every incremental
+    /// view over `graph`. A view whose circuit refuses the delta is demoted to recompute
+    /// mode with the typed reason code (MEDULLA-INCREMENTAL-VIEWS-R002.3).
+    fn apply_event_delta(
+        &self,
+        graph: &str,
+        seq: u64,
+        delta: &medulla_types::delta::Delta,
+    ) -> usize {
+        let mut demoted: Vec<(PlanMatView, String)> = Vec::new();
         let mut views = self.views.lock();
         let mut n = 0;
         for t in views.values_mut() {
             if t.mode != Mode::Incremental || t.def.graph != graph {
                 continue;
             }
-            if event.seq < t.through_seq {
+            if seq < t.through_seq {
                 continue;
             }
             if let Some(circuit) = t.circuit.as_mut() {
-                let delta = super::incremental::event_to_delta(event);
                 // O(delta) maintenance: fold the signed delta into the circuit's state
                 // ONLY (no O(view) result projection here — `Get` projects `current()`
                 // lazily). `touched` is the rows-touched instrument (bounded by the delta
@@ -188,20 +201,41 @@ impl PlanMatViewManager {
                 let touched = if delta.is_empty() {
                     0
                 } else {
-                    circuit.apply(&delta)
+                    match circuit.apply(delta) {
+                        Ok(touched) => touched,
+                        Err(err) => {
+                            tracing::warn!(
+                                target: "medulla::matview",
+                                view = %t.def.name,
+                                error = %err,
+                                "incremental matview demoted to recompute",
+                            );
+                            demoted.push((
+                                t.def.clone(),
+                                medulla_types::contract::ServerErrorCode::DeltaWeightOverflow
+                                    .as_str()
+                                    .to_string(),
+                            ));
+                            continue;
+                        }
+                    }
                 };
-                t.through_seq = event.seq + 1;
+                t.through_seq = seq + 1;
                 n += 1;
                 tracing::trace!(
                     target: "medulla::matview",
                     view = %t.def.name,
                     graph = %graph,
-                    seq = event.seq,
+                    seq,
                     delta = delta.len(),
                     touched,
                     "incremental matview maintained one CDC delta",
                 );
             }
+        }
+        drop(views);
+        for (def, reason) in demoted {
+            self.insert_recompute(def, Some(reason));
         }
         n
     }
@@ -389,6 +423,39 @@ mod tests {
         assert!(
             m.incremental_rows("v").unwrap().is_empty(),
             "stale seq is not folded"
+        );
+    }
+
+    // spec: MEDULLA-INCREMENTAL-VIEWS-R002.3
+    #[test]
+    fn apply_failure_demotes_with_typed_reason() {
+        use medulla_types::delta::{Delta, ZRow};
+        use medulla_types::wire::{Op, Plan};
+        let plan = Plan::new(vec![Op::Scan {
+            label: "Doc".into(),
+        }]);
+        let circuit = Circuit::compile(&plan).unwrap();
+        let def = PlanMatView {
+            name: "v".into(),
+            graph: "g".into(),
+            plan,
+        };
+        let m = PlanMatViewManager::default();
+        m.install_incremental(def, circuit, 0);
+
+        let props = serde_json::json!({"type": "Doc"})
+            .as_object()
+            .unwrap()
+            .clone();
+        let mut huge = ZRow::insert("a", props.clone());
+        huge.weight = i64::MAX;
+        let delta = Delta::from(vec![huge, ZRow::insert("a", props)]);
+        m.apply_event_delta("g", 0, &delta);
+
+        assert_eq!(m.mode("v"), Some(Mode::Recompute));
+        assert_eq!(
+            m.fallback_reason("v").as_deref(),
+            Some("DELTA_WEIGHT_OVERFLOW")
         );
     }
 

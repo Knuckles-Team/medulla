@@ -21,7 +21,8 @@
 
 use std::collections::BTreeMap;
 
-use medulla_exec::{incremental::Circuit, incremental::Delta, incremental::ZRow};
+use medulla_exec::incremental::Circuit;
+use medulla_types::delta::{Delta, ZRow};
 use medulla_types::wire::{Op, Plan, Pred, TimeAxis};
 use proptest::prelude::*;
 use serde_json::{json, Map, Value};
@@ -231,7 +232,7 @@ proptest! {
 
         for m in &mutations {
             let delta = apply_to_model(&mut model, m);
-            circuit.apply(&delta);
+            circuit.apply(&delta).expect("consolidate");
 
             let incremental = circuit.current();
             let recomputed = circuit.recompute(&model);

@@ -41,6 +41,7 @@ closed_error_codes! {
         ClusterMutationUnavailable => "CLUSTER_MUTATION_UNAVAILABLE",
         ComponentBodyUnavailable => "COMPONENT_BODY_UNAVAILABLE",
         ComponentWithdrawn => "COMPONENT_WITHDRAWN",
+        DeltaWeightOverflow => "DELTA_WEIGHT_OVERFLOW",
         DocumentNotFound => "DOCUMENT_NOT_FOUND",
         DocumentPropertiesInvalid => "DOCUMENT_PROPERTIES_INVALID",
         DocumentTextMissing => "DOCUMENT_TEXT_MISSING",

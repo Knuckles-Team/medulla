@@ -13,10 +13,8 @@
 
 #![cfg(feature = "query")]
 
-use medulla_exec::{
-    algebra::Op, algebra::Plan, algebra::Pred, incremental::Circuit, incremental::Delta,
-    incremental::ZRow,
-};
+use medulla_exec::{algebra::Op, algebra::Plan, algebra::Pred, incremental::Circuit};
+use medulla_types::delta::{Delta, ZRow};
 use serde_json::{json, Map, Value};
 
 fn doc_props(year: i64) -> Map<String, Value> {
@@ -34,7 +32,8 @@ fn seed(plan: &Plan, n: usize) -> Circuit {
         c.apply(&Delta::from(vec![ZRow::insert(
             format!("n{i}"),
             doc_props(2000 + (i as i64 % 25)),
-        )]));
+        )]))
+        .unwrap();
     }
     c
 }
@@ -80,7 +79,7 @@ fn maintenance_cost_is_o_delta_not_o_view() {
                 ZRow::retract("n0", doc_props(2000)),
                 ZRow::insert("n0", doc_props(2001)),
             ]);
-            let touched = c.apply(&delta);
+            let touched = c.apply(&delta).unwrap();
             let view_size = c.current().len();
             let ratio = touched as f64 / view_size as f64;
             println!(
@@ -123,13 +122,15 @@ fn single_insert_touches_one_stage_regardless_of_size() {
     for n in [1_000usize, 50_000] {
         let mut c = seed(&scan_only(), n);
         assert_eq!(
-            c.apply(&Delta::from(vec![ZRow::insert("fresh", doc_props(2010))])),
+            c.apply(&Delta::from(vec![ZRow::insert("fresh", doc_props(2010))]))
+                .unwrap(),
             1,
             "a single matching insert touches exactly one stage (view_size={n})"
         );
         let non_doc = json!({ "type": "Other" }).as_object().unwrap().clone();
         assert_eq!(
-            c.apply(&Delta::from(vec![ZRow::insert("skip", non_doc)])),
+            c.apply(&Delta::from(vec![ZRow::insert("skip", non_doc)]))
+                .unwrap(),
             0,
             "a non-matching row touches nothing (view_size={n})"
         );

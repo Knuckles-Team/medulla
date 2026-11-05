@@ -25,11 +25,18 @@
 use std::collections::BTreeMap;
 
 use medulla_exec::{
-    algebra::Op, algebra::Plan, algebra::Pred, exec::execute, exec::PlanCtx, incremental::Circuit,
-    incremental::Delta, incremental::ZRow, rowset::RowSet,
+    algebra::Op,
+    algebra::Plan,
+    algebra::Pred,
+    exec::execute,
+    exec::PlanCtx,
+    incremental::oracle::{assert_incremental_equals_recompute, OracleSubject},
+    incremental::Circuit,
+    rowset::RowSet,
 };
 use medulla_graph_core::graph::GraphCore;
 use medulla_semantic_index::semantic::SemanticStore;
+use medulla_types::delta::{Delta, ZRow};
 use medulla_types::wire::TimeAxis;
 use proptest::prelude::*;
 use serde_json::{json, Map, Value};
@@ -210,38 +217,73 @@ fn schema_keeper() -> (String, Node) {
 
 /// Run one plan against a churn stream, asserting `Circuit::current()` equals the real
 /// `execute` recompute after every mutation.
+/// The plan-vs-`execute` subject for the shared differential harness
+/// (MEDULLA-INCREMENTAL-VIEWS-R003): the circuit is the maintained side, `execute` over
+/// the same graph is the recompute side.
+struct PlanSubject<'p> {
+    plan: &'p Plan,
+    circuit: Circuit,
+    model: BTreeMap<String, Node>,
+    core: GraphCore,
+    semantic: SemanticStore,
+}
+
+fn keyed(rs: &RowSet) -> Vec<(String, i64)> {
+    norm(rs)
+        .into_iter()
+        .map(|(id, score)| (format!("{id}|{score:?}"), 1))
+        .collect()
+}
+
+impl OracleSubject for PlanSubject<'_> {
+    type Step = Mutation;
+
+    fn apply_step(&mut self, m: &Mutation) {
+        let delta = apply(&mut self.model, &self.core, m);
+        self.circuit.apply(&delta).expect("consolidate");
+    }
+
+    fn maintained(&self) -> Vec<(String, i64)> {
+        keyed(&self.circuit.current())
+    }
+
+    fn recomputed(&self) -> Vec<(String, i64)> {
+        let view = self.core.analysis_snapshot();
+        let ctx = PlanCtx::new(&view, &self.semantic);
+        keyed(&execute(self.plan, &ctx).expect("execute recompute"))
+    }
+}
+
 fn churn_matches_execute(plan: &Plan, mutations: &[Mutation]) -> Result<(), TestCaseError> {
     let mut circuit = Circuit::compile(plan).expect("plan is in the supported set");
     let mut model: BTreeMap<String, Node> = BTreeMap::new();
     let core = GraphCore::new();
-    let semantic = SemanticStore::new();
 
     // Keep the SQL schema stable (see `schema_keeper`).
     let (keeper_id, keeper_props) = schema_keeper();
     core.add_node(keeper_id.clone(), blob(&keeper_props));
-    circuit.apply(&Delta::from(vec![ZRow::insert(
-        keeper_id.clone(),
-        keeper_props.clone(),
-    )]));
+    circuit
+        .apply(&Delta::from(vec![ZRow::insert(
+            keeper_id.clone(),
+            keeper_props.clone(),
+        )]))
+        .unwrap();
     model.insert(keeper_id, keeper_props);
 
-    for m in mutations {
-        let delta = apply(&mut model, &core, m);
-        circuit.apply(&delta);
-
-        let view = core.analysis_snapshot();
-        let ctx = PlanCtx::new(&view, &semantic);
-        let recompute = execute(plan, &ctx).expect("execute recompute");
-        let incremental = circuit.current();
-        prop_assert_eq!(
-            norm(&incremental),
-            norm(&recompute),
-            "incremental diverged from execute after {:?}\n  plan {:?}",
-            m,
+    let mut subject = PlanSubject {
+        plan,
+        circuit,
+        model,
+        core,
+        semantic: SemanticStore::new(),
+    };
+    assert_incremental_equals_recompute(&mut subject, mutations).map_err(|e| {
+        TestCaseError::fail(format!(
+            "{e}\n  mutation {:?}\n  plan {:?}",
+            mutations.get(e.step),
             plan.ops
-        );
-    }
-    Ok(())
+        ))
+    })
 }
 
 proptest! {
@@ -279,7 +321,9 @@ fn scan_type_only_matches_execute() {
     ] {
         let props = v.as_object().unwrap().clone();
         core.add_node(id.into(), blob(&props));
-        circuit.apply(&Delta::from(vec![ZRow::insert(id, props)]));
+        circuit
+            .apply(&Delta::from(vec![ZRow::insert(id, props)]))
+            .unwrap();
     }
 
     let view = core.analysis_snapshot();

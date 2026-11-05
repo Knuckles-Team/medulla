@@ -49,6 +49,7 @@ pub mod ontology_diff;
 // MEDULLA-UNIFIED-DATA-PLANE-R019.3.1 — typed conformance-entry constructor for the
 // MongoDB/DocumentDB adapter, over the generic R022.1 report entry. Pure
 // data; actually running the comparison is a later child.
+pub mod delta;
 pub mod document_conformance;
 // MEDULLA-UNIFIED-DATA-PLANE-R020.1 — typed federated warehouse/lake source-kind
 // model (Snowflake, BigQuery, DuckDB, Iceberg) and its per-kind required-field
