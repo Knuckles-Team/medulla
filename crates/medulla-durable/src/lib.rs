@@ -80,8 +80,6 @@ pub mod hydration;
 pub mod mirror;
 pub mod project;
 pub mod route;
-// MEDULLA-DURABLE-KERNEL-R850.1 — ordered topic-log entry and cursor records.
-pub mod topic;
 // MEDULLA-UNIFIED-DATA-PLANE-R009 — named consumer checkpoint position and the
 // idempotent-apply guard (replaying a stale position is a no-op).
 pub mod idempotent_consumer;
@@ -98,4 +96,3 @@ pub use route::{
     route_call_shape, route_work_shape, CallShape, DurableBackendKind, DurableBackendRef,
     JobsBackend, MutationStoreSagaBackend, PythonDurableRunBackend, StatechartBackend, WorkShape,
 };
-pub use topic::{TopicCursor, TopicEntry};
