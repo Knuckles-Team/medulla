@@ -1,71 +1,95 @@
-# MEDULLA-BRANCH-MERGE plan
+# MEDULLA-BRANCH-MERGE — Implementation plan
 
-## Architecture
+Governing spec: [spec.md](spec.md). Rows: [requirements.md](requirements.md).
 
-Branch state has exactly two homes. Both are existing surfaces.
+## Summary
 
-1. **Branch registration** — an owner-store lineage entry. It binds
-   `(tenant, graph, name, base_engine_version, created_by, created_at)`. The owner-store layout
-   lineage registry already records format and lineage state. It refuses unsupported layouts with
-   typed errors (MEDULLA-DURABLE-KERNEL-R003). Branch registrations are new rows in that registry.
-   They replicate with the rest of owner-store state.
-2. **Branch commit chain** — append-only commits with parent pointers. A branch head is an engine
-   version. `main` and every branch are named heads over the same commit DAG. A branch is a
-   view. Creating it copies no rows.
+Branch state has two homes, both existing surfaces: a registry row in the owner-store lineage, and an append-only commit chain with parent pointers. A branch head is an engine version; `main` and every branch are named heads over one commit DAG, so creating a branch copies no rows. The merge pass computes over `(base_head, source_head, target_head)`, classifies each entity as unchanged, adopted or conflicted, validates adoptions through the existing authorities, resolves epistemic conflicts through the decision engine, and publishes one atomic change through the existing cross-modal transaction and raft path.
 
-The merge pass (R004/R005) computes over `(base_head, source_head, target_head)`. It classifies
-each entity as unchanged, adopted, or conflicted. It validates through the existing constraint
-and ABox authorities. It resolves epistemic conflicts. It publishes one atomic target change.
-The publication uses the existing cross-modal transaction and raft path.
+```text
+caller (arbora)
+  -> Method::CreateBranch / BranchMerge / BranchDiff / BranchReadAt   crates/medulla-protocol-types/src/protocol/method/method_11.rs
+  -> dispatch_graph_lifecycle_methods   crates/medulla-server-router/src/dispatch/router/graph_lifecycle.rs
+  -> graph_ops::branch                  crates/medulla-h-graph/src/graph_ops/branch.rs
+  -> PersistenceBackend::commit_mutation_batch_crossmodal   crates/medulla-server-api/src/api/persistence.rs
+```
 
-## Reuse (inventory before new components)
+No new store, no new consensus layer and no second writer authority.
 
-| Need | Existing owner |
-|---|---|
-| Durable registry rows + typed layout refusal | owner-store layout lineage (MEDULLA-DURABLE-KERNEL-R003) |
-| Commit-before-ack durability, raft replication | existing commit/raft path; command sealing (MEDULLA-DURABLE-KERNEL-R009) |
-| Idempotency, tenant-scoped | tenant-scoped lifecycle idempotency (MEDULLA-DURABLE-KERNEL-R019) |
-| Edge identity | `(source, target, relation_type)` triple (MEDULLA-REPO-INGEST-R009.1) |
-| Constraint / ABox validation on adopted entities | schema-repair validation authorities (MEDULLA-DECISION-ENGINE-R102.1) |
-| Epistemic neighbourhood, source reliability | `WITH KNOWLEDGE` fields, source-reliability authority |
-| Off-lock snapshot reads, tenant RLS | snapshot read path (MEDULLA-DURABLE-KERNEL-R023/R029) |
-| Change-feed vocabulary | change-envelope records (MEDULLA-UNIFIED-DATA-PLANE-R008.1) |
+## Technical Context
 
-No new store. No new consensus layer. No second writer authority.
+- **Language/Version**: Rust 2021 edition on the pinned toolchain; Python 3.14 (floor 3.12) for served tests.
+- **Primary Dependencies**: `crates/medulla-types`, `crates/medulla-storage`, `crates/medulla-server-api`, `crates/medulla-server-mutation`, `crates/medulla-raft`, `crates/medulla-h-graph`, `crates/medulla-compute`. No new third-party dependency.
+- **Storage**: one new owner layout (`BranchRegistry`) under the owner-store lineage of `MEDULLA-DURABLE-KERNEL-R003`; commits live in the existing mutation-batch tables.
+- **Testing**: served Python tests under `tests/test_branch_*.py` (L4) and one compute test `crates/medulla-compute/tests/line_merge.rs` (L2).
+- **Target Platform**: Linux x86_64 and aarch64.
+- **Project Type**: Handler, protocol and storage additions to the existing engine crates.
+- **Performance Goals**: Creating a branch is one registry write. A fast-forward merge scans no entity. Diff output is bounded by `branch.diff_page_size`.
+- **Constraints**: A merge never rebases silently and never claims a rollback. Every refusal precedes any write. Commit-before-ack.
+- **Scale/Scope**: 10 rows over 5 user stories, 8 `FR-` labels and 5 `SC-` labels.
 
-## Interfaces
+## Constitution Check
 
-Wire surface at the request boundary. Generated clients follow.
+- **R-I. The engine is native Rust and the only fact store**: pass. Branches and merges run in the engine.
+- **R-II. Every wait has a deadline**: pass. Merge publication reuses the commit path deadline.
+- **R-III. Every row sets budgets and names a benchmark**: pass. `branch.diff_page_size` bounds the diff; the fast-forward path scans nothing.
+- **R-IV. Crates are small, layered and cut over hard**: pass. Rows name post-split crates; the conflict decision crosses to `medulla-h-decide` through a `ConflictDecider` trait in `medulla-server-api`, so no handler calls a sibling handler.
+- **Organization standards**: pass. Rows follow the spec standard and the ecosystem boundaries.
 
-- `CreateBranch { tenant, graph, name, base_engine_version? }` returns the branch identity.
-- `Mutation` gains an optional `branch` target. The default is `main`. The commit receipt gains
-  the branch head it advanced.
-- `BranchMerge { tenant, graph, source, target, merge_base? }` returns the closed outcome
-  (`up_to_date` / `fast_forward` / `merged` / `conflict`). It returns the two-parent commit
-  receipt.
-- `BranchDiff { tenant, graph, from, to }` returns the typed change feed against a baseline.
-- `BranchReadAt { tenant, graph, branch, engine_version }` returns the as-of snapshot.
+## Project Structure
 
-## Live wiring
+```text
+crates/medulla-types/src/branch.rs                     new: Branch, BranchRef, BranchCommit, MergeOutcome, ConflictRecord
+crates/medulla-types/src/versioning.rs                 new: KgTransaction, KgCommit, KgDiff
+crates/medulla-storage/src/owner/branch_registry.rs    new: BranchRegistry owner layout
+crates/medulla-storage/src/owner/lineage.rs            existing: ALL_LAYOUTS gains the layout
+crates/medulla-server-api/src/api/conflict_decider.rs  new: ConflictDecider trait
+crates/medulla-h-graph/src/graph_ops/branch.rs         new: handlers and merge_conflicts
+crates/medulla-h-graph/src/graph_ops/branch/           new: merge.rs, conflict.rs, publish.rs, line_merge.rs
+crates/medulla-compute/src/line_merge.rs               new: merge_lines
+crates/medulla-protocol-types/src/protocol/method/method_11.rs  existing: four new Method variants
+tests/test_branch_*.py                                 new: served tests
+```
 
-Dispatch attaches to the existing request boundary. Authorization precedes results. Tenant RLS
-applies. Merge publication reuses the commit publication path. The raft command catalog gains no
-parallel mutation authority. The merge is a cross-modal transaction. Its effects seal like any
-other commit.
+## Phase 0: Research
 
-## Decisions
+No unknowns that block planning; no research.md.
 
-- **View semantics, not copy-on-branch.** Branch creation costs one registry row. It costs no
-  graph data.
-- **Entity identity reuses existing authorities.** No new identity scheme. A node uses
-  `(tenant, type, key)`. An edge uses `(source, target, relation_type)`.
-- **Conflicts are epistemic records, not resolution heuristics.** The engine never guesses. An
-  owner-pinned policy decides. Or the conflict stays open and queryable.
-- **Closed outcome vocabulary.** Clients and agents branch on the result. They never parse
-  prose.
+## Phase 1: Design
 
-## Quality gates
+1. **View semantics, not copy-on-branch.** Branch creation costs one registry row and no graph data.
+2. **Entity identity reuses existing authorities.** A node uses `(tenant, type, key)` and an edge uses `(source, target, relation_type)`.
+3. **Conflicts are epistemic records, not heuristics.** The engine never guesses. An owner-pinned policy decides, or the conflict stays open and queryable.
+4. **Closed outcome vocabulary.** Clients branch on `MergeOutcome`, never on prose.
+5. **One commit chain.** A source changeset is the payload of a branch commit; no second chain exists.
+6. **One line merge.** `merge_lines` in `medulla-compute` is the only diff3; `merge_file` adapts it.
 
-Standard per-repo gates apply. Clippy, test, jscpd, CCCC, dupehound, KISS. The merge pass is new
-code. It passes the no-duplicate-authority check against the existing commit and
-merge-adjacent modules. Release proof follows MEDULLA-CONTRACT.
+Data entities are in [data-model.md](data-model.md); the shortest served proof is in [quickstart.md](quickstart.md); the seam has a document in `contracts/`.
+
+## Phase 2: Task approach
+
+`tasks.md` holds one task per leaf row, producer first. The model and registry row precede writes, reads and merge. Tasks that edit `branch.rs` run in series; the line merge (T005) runs in parallel.
+
+## Complexity Tracking
+
+none
+
+## Build contract
+
+- `cargo clippy --workspace --all-targets -- -D warnings` and `cargo fmt --check` pass for every touched crate.
+- The architecture, complexity and duplication gates of `.config/pre-commit.yaml` pass with no baseline entry and no suppression.
+- The merge pass reuses the existing commit and validation authorities; the no-duplicate-authority check finds no parallel one.
+- A public item in a handler crate has a non-test caller in `crates/medulla-server-router`. `MEDULLA-CONTRACT-R055` gates this.
+- Spec rows pass `spec-standard`, `plan-conformance` and `spec-decomposition` with zero findings.
+- Release proof follows `MEDULLA-CONTRACT`.
+
+## Production caller chain
+
+- `Method::CreateBranch`, `Method::BranchMerge`, `Method::BranchDiff` and `Method::BranchReadAt` arms in `dispatch_graph_lifecycle_methods` (`crates/medulla-server-router/src/dispatch/router/graph_lifecycle.rs:7`, chained at `router.rs:145`) to the handlers in `crates/medulla-h-graph/src/graph_ops/branch.rs`.
+- `handle_branch_merge` to `merge_entities` (`branch/merge.rs`), `resolve` (`branch/conflict.rs`) and `publish_merge` (`branch/publish.rs`) to `commit_mutation_batch_crossmodal` (`crates/medulla-server-api/src/api/persistence.rs:314`).
+- A branch-scoped mutation to `compile_methods` (`crates/medulla-server-api/src/batch_compile/compile.rs`) and `commit_internal_graph_methods_with_nonce` (`crates/medulla-server-mutation/src/mutation_batch/commit/internal.rs:128`).
+- Obsolete paths to delete: none; every path above is new.
+
+## Cross-repo seams
+
+- Served branch operations: `MEDULLA-BRANCH-MERGE-R001` provides, `ARBORA-OPS-R006` consumes. Contract: [arbora-branch-operations.md](contracts/arbora-branch-operations.md).

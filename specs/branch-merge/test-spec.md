@@ -1,30 +1,36 @@
 # MEDULLA-BRANCH-MERGE test-spec
 
+Proof levels follow the integration proof standard of `specs/decision-engine/test-spec.md`: L2 property and golden vector, L3 served Rust, L4 served client. A row's acceptance test enters through the production dispatch with a tenant and principal context. No delivery is claimed; every test below is planned.
+
 ## Positive
 
-- `test_branch_create.py::test_branch_create_and_refusals`. Branch creation round-trips the
+- `tests/test_branch_create.py::test_branch_create_and_refusals`. Branch creation round-trips the
   identity. Each refusal (empty name, duplicate, reserved namespace, foreign tenant, unresolvable
   base) returns a typed error. Each leaves no registry entry. *(MEDULLA-BRANCH-MERGE-R001)*
-- `test_branch_scoped_mutation.py::test_branch_write_invisible_until_merge`. A write on a branch
+- `tests/test_branch_scoped_mutation.py::test_branch_write_invisible_until_merge`. A write on a branch
   shows on that branch. It stays invisible on main and on sibling branches. It is idempotent
   under a tenant-scoped branch idempotency key. *(MEDULLA-BRANCH-MERGE-R002)*
-- `test_branch_merge_base.py::test_merge_outcomes_up_to_date_and_fast_forward`. Four fixture
+- `tests/test_branch_merge_base.py::test_merge_outcomes_up_to_date_and_fast_forward`. Four fixture
   topologies (contained, descendant, diverged, disjoint) return the declared outcomes from the
   closed set. Fast-forward produces a single-parent receipt. Up-to-date publishes nothing.
   *(MEDULLA-BRANCH-MERGE-R003)*
-- `test_branch_three_way_merge.py::test_entity_level_outcomes`. Disjoint, one-sided, and
+- `tests/test_branch_three_way_merge.py::test_entity_level_outcomes`. Disjoint, one-sided, and
   both-sides fixtures each produce the expected published target state. Unchanged entities adopt
   without row copy. *(MEDULLA-BRANCH-MERGE-R004)*
-- `test_branch_epistemic_conflict.py::test_evidence_weighted_resolution_and_open_conflict`. Under
+- `tests/test_branch_epistemic_conflict.py::test_evidence_weighted_resolution_and_open_conflict`. Under
   a pinned epistemic policy, the winner selects per the policy. The resolved row keeps the
   contradiction link. It keeps both evidence refs. Without a policy, the conflict stays open with
   both candidates queryable. *(MEDULLA-BRANCH-MERGE-R005)*
-- `test_branch_time_travel.py::test_as_of_reads_and_diff`. As-of reads at three versions each
+- `tests/test_branch_time_travel.py::test_as_of_reads_and_diff`. As-of reads at three versions each
   equal that version's write set. The diff between versions equals the intervening commits.
   *(MEDULLA-BRANCH-MERGE-R006)*
-- `test_branch_merge_publish.py::test_atomic_two_parent_publication_and_replay`. The two-parent
+- `tests/test_branch_merge_publish.py::test_atomic_two_parent_publication_and_replay`. The two-parent
   receipt reads back byte-identically. Replay against the same inputs returns the original
   receipt. *(MEDULLA-BRANCH-MERGE-R007)*
+
+- `crates/medulla-compute/tests/line_merge.rs::clean_and_conflicting_hunks`. Disjoint hunks merge clean. Overlapping hunks and any binary overlap return `Conflict`. *(MEDULLA-BRANCH-MERGE-R008)*
+- `tests/test_branch_landing_gate.py::test_failing_gate_blocks_merge_and_target_unchanged`. A merge into a protected branch with one failing required gate refuses with `LANDING_GATE_BLOCKED` and leaves the target head unchanged. *(MEDULLA-BRANCH-MERGE-R009)*
+- `tests/test_branch_line_merge.py::test_disjoint_hunks_merge_and_overlap_conflicts`. Two edits to disjoint lines merge. One shared line conflicts with `SOURCE_CONFLICT`. *(MEDULLA-BRANCH-MERGE-R010)*
 
 ## Negative
 
@@ -59,13 +65,15 @@
 
 ## Test bindings
 
-Each row's acceptance test binds its ID where the test lands. The lines below record the planned
-homes now. The spec-trailers gate resolves the spec PR's trailer. No delivery is claimed.
+Each row's acceptance test binds its ID where the test lands. The lines below record the planned homes. The spec-trailers gate resolves the spec PR's trailer.
 
-- `# spec: MEDULLA-BRANCH-MERGE-R001` — `tests/test_branch_create.py`
-- `# spec: MEDULLA-BRANCH-MERGE-R002` — `tests/test_branch_scoped_mutation.py`
-- `# spec: MEDULLA-BRANCH-MERGE-R003` — `tests/test_branch_merge_base.py`
-- `# spec: MEDULLA-BRANCH-MERGE-R004` — `tests/test_branch_three_way_merge.py`
-- `# spec: MEDULLA-BRANCH-MERGE-R005` — `tests/test_branch_epistemic_conflict.py`
-- `# spec: MEDULLA-BRANCH-MERGE-R006` — `tests/test_branch_time_travel.py`
-- `# spec: MEDULLA-BRANCH-MERGE-R007` — `tests/test_branch_merge_publish.py`
+- `# spec: MEDULLA-BRANCH-MERGE-R001` — `tests/test_branch_create.py::test_branch_create_and_refusals` (planned, L4)
+- `# spec: MEDULLA-BRANCH-MERGE-R002` — `tests/test_branch_scoped_mutation.py::test_branch_write_invisible_until_merge` (planned, L4)
+- `# spec: MEDULLA-BRANCH-MERGE-R003` — `tests/test_branch_merge_base.py::test_merge_outcomes_up_to_date_and_fast_forward` (planned, L4)
+- `# spec: MEDULLA-BRANCH-MERGE-R004` — `tests/test_branch_three_way_merge.py::test_entity_level_outcomes` (planned, L4)
+- `# spec: MEDULLA-BRANCH-MERGE-R005` — `tests/test_branch_epistemic_conflict.py::test_evidence_weighted_resolution_and_open_conflict` (planned, L4)
+- `# spec: MEDULLA-BRANCH-MERGE-R006` — `tests/test_branch_time_travel.py::test_as_of_reads_and_diff` (planned, L4)
+- `# spec: MEDULLA-BRANCH-MERGE-R007` — `tests/test_branch_merge_publish.py::test_atomic_two_parent_publication_and_replay` (planned, L4)
+- `# spec: MEDULLA-BRANCH-MERGE-R008` — `crates/medulla-compute/tests/line_merge.rs::clean_and_conflicting_hunks` (planned, L2)
+- `# spec: MEDULLA-BRANCH-MERGE-R009` — `tests/test_branch_landing_gate.py::test_failing_gate_blocks_merge_and_target_unchanged` (planned, L3)
+- `# spec: MEDULLA-BRANCH-MERGE-R010` — `tests/test_branch_line_merge.py::test_disjoint_hunks_merge_and_overlap_conflicts` (planned, L4)
