@@ -902,6 +902,7 @@ mod tests {
         ("SourceIngest", "RF-ADR-009 stages raw CAS and an authoritative Connector Manifest mapping, then delegates its sole canonical graph/provenance/cursor commit to ApplyChangeEnvelope"),
         ("IndexRepository", "EH-280 runtime-conditional: an unscoped batch is a stateless parse; a scoped batch lowers its :Blob/:FileVersion/:Branch projection and delegates its sole graph commit to ApplyChangeEnvelope, exactly like SourceIngest"),
         ("EnrichDocument", "MEDULLA-UNIFIED-DATA-PLANE-R651.7 lowers chunk nodes, chunkOf edges, vectors and one enrichment record of a held Document and delegates its sole graph commit to ApplyChangeEnvelope, exactly like IndexRepository"),
+        ("LineageIngest", "MEDULLA-UNIFIED-DATA-PLANE-R702.3 lowers Dataset nodes, derivesInto edges and QuarantinedLineageEvent nodes of one drained batch and delegates its sole graph commit to ApplyChangeEnvelope, exactly like EnrichDocument"),
         ("RecomputeMaterialization", "fenced reasoning-projection coordinator resolves authoritative graph provenance and fsyncs its projection watermark"),
         // ── Server lifecycle: TxnParticipation::None, not a graph mutation. ──
         ("Shutdown", "server-lifecycle control-plane action, not a graph mutation"),

@@ -215,6 +215,8 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         ],
     ),
     ("AgentLibrary", &["STALE_AGENT_LIBRARY_REVISION"]),
+    // MEDULLA-UNIFIED-DATA-PLANE-R702.6.
+    ("LineageIngest", &["LINEAGE_EVENT_MALFORMED"]),
     ("WriteBack", &["CORRUPT_WRITE_BACK"]),
     ("TxnPlanWriteback", &["CORRUPT_WRITE_BACK"]),
     (

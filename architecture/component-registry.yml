@@ -3805,6 +3805,7 @@ components:
       - "tests/audit_line_formatting.rs"
       - "tests/common"
       - "tests/conftest.py"
+      - "tests/data_plane/test_lineage_drain_served.py"
       - "tests/decide"
       - "tests/_client_fixtures.py"
       - "tests/_decision_resident_fixture.py"
