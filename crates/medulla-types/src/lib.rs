@@ -262,6 +262,8 @@ pub mod keyset_page;
 // MEDULLA-TYPED-PACKS-R802.1/R805.1 — governance record models: stewardship and
 // data products. Pure data and field validation; served wiring lands in later children.
 pub mod data_product;
+// MEDULLA-TYPED-PACKS-R801.1 — business glossary term model (SKOS projection).
+pub mod glossary;
 pub mod stewardship;
 // MEDULLA-UNIFIED-DATA-PLANE-R004 — bounded, policy-gated column-sampling budget
 // for deterministic schema inference.
