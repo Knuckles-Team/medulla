@@ -1,6 +1,6 @@
 # MEDULLA-CQ-XSRC — Requirements quality checklist
 
-Fill this before landing. Check an item only when the spec text satisfies it; an unchecked item blocks landing. Copy the file to `specs/<family>/checklists/requirements.md`.
+Fill this before landing. Check an item only when the spec text satisfies it; an unchecked item blocks landing.
 
 ## Content quality
 
