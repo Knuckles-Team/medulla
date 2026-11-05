@@ -186,3 +186,25 @@ fn mattermost_mapping_terms_present() {
     assert_domain_range(&triples, "postedAt", "ChatMessage", "xsd:dateTime");
     assert_domain_range(&triples, "postedBy", "ChatMessage", "Person");
 }
+
+/// MEDULLA-MEDIA-VOCAB-R651: the engagement metric carries a name and a value.
+// spec: MEDULLA-MEDIA-VOCAB-R651
+#[test]
+fn engagement_metric_value_declared() {
+    let triples = load_vocabulary();
+    assert_typed(&triples, "EngagementMetric", "Class");
+    assert_typed(&triples, "engagementMetricName", "DatatypeProperty");
+    assert_typed(&triples, "engagementMetricValue", "DatatypeProperty");
+    assert_domain_range(
+        &triples,
+        "engagementMetricName",
+        "EngagementMetric",
+        "xsd:string",
+    );
+    assert_domain_range(
+        &triples,
+        "engagementMetricValue",
+        "EngagementMetric",
+        "xsd:nonNegativeInteger",
+    );
+}

@@ -44,7 +44,7 @@ class ReleasePublication(unittest.TestCase):
         self.assertTrue(all(leg["runner"] != "self-hosted" for leg in legs))
         # The tag pipeline builds only: ci.yml already ran every gate, and
         # `guard` proves it concluded success for the tagged commit.
-        self.assertEqual(jobs["build"]["needs"], "guard")
+        self.assertEqual(jobs["build"]["needs"], ["guard", "server-binary"])
         self.assertEqual(jobs["build-x86"]["needs"], "guard")
         self.assertEqual(jobs["build-sdist"]["needs"], "guard")
         self.assertFalse(

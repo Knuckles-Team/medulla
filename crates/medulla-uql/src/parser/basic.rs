@@ -143,6 +143,28 @@ impl<'a> Parser<'a> {
         })
     }
 
+    /// `DECAY HALF_LIFE num` (MEDULLA-FEDERATED-QUERY-R720.2): the half-life in seconds, > 0.
+    pub(super) fn decay(&mut self) -> Result<Op, UqlError> {
+        self.expect_kw("HALF_LIFE")?;
+        let half_life_secs = self.number("a DECAY half-life in seconds")?;
+        if !(half_life_secs.is_finite() && half_life_secs > 0.0) {
+            return Err(self.err_at(self.prev_start(), "the DECAY half-life must be > 0"));
+        }
+        Ok(Op::Decay { half_life_secs })
+    }
+
+    /// `CLUSTER BY EMBEDDING K int` (MEDULLA-FEDERATED-QUERY-R720.3): `k` ≥ 1 clusters.
+    pub(super) fn cluster_by_embedding(&mut self) -> Result<Op, UqlError> {
+        self.expect_kw("BY")?;
+        self.expect_kw("EMBEDDING")?;
+        self.expect_kw("K")?;
+        let k = self.parse_number::<usize>("a CLUSTER count")?;
+        if k == 0 {
+            return Err(self.err_at(self.prev_start(), "CLUSTER BY EMBEDDING needs K >= 1"));
+        }
+        Ok(Op::ClusterByEmbedding { k })
+    }
+
     /// `RETURN name {, name}` — each name a score channel this build produces, a series
     /// value channel `v0..vk` (EH-521) or a `DERIVE … AS name` alias declared earlier.
     pub(super) fn return_stage(&mut self) -> Result<Op, UqlError> {

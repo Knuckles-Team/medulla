@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import importlib.util
+import json
 import sys
 from pathlib import Path
 
@@ -89,6 +90,7 @@ def test_check_requires_both_client_copies_to_equal_fresh_bytes(
             'reason = "Embedded method codec"\n'
         )
     (config / "generated-artifacts.toml").write_text("\n".join(entries))
+    _qualify(codec, tmp_path, fresh)
     assert codec.check(tmp_path, fresh) == 0
     assert f"sha256={expected}" in capsys.readouterr().out
     (tmp_path / codec.CLIENT_DIRS[1] / codec.MODULE).write_bytes(b"stale")
@@ -100,6 +102,59 @@ def test_check_requires_both_client_copies_to_equal_fresh_bytes(
     )
     assert codec.check(tmp_path, fresh) == 1
     assert "does not match its pinned sha256" in capsys.readouterr().err
+
+
+def _qualify(codec, root, module, digests=None, size=None):
+    record = codec.qualification([module, module])
+    if digests is not None:
+        record["canonical_build_sha256"] = digests
+    if size is not None:
+        record["size_bytes"] = size
+    (root / codec.COMMITTED_PROVENANCE).write_text(json.dumps(record))
+
+
+# spec: MEDULLA-CONTRACT-R006.2
+@pytest.mark.spec("MEDULLA-CONTRACT-R006.2")
+def test_provenance_records_two_digests_and_both_copies_fresh(
+    codec, codec_repo, capsys
+):
+    root, _ = codec_repo
+    fresh = WASM + b"\x00\x01q"
+    assert codec.write(root, fresh, fresh) == 0
+    record = json.loads((root / codec.COMMITTED_PROVENANCE).read_text())
+    digest = hashlib.sha256(fresh).hexdigest()
+    assert record["canonical_build_sha256"] == [digest, digest]
+    assert record["size_bytes"] == len(fresh) <= record["max_bytes"] == codec.MAX_BYTES
+    assert codec.check(root, fresh, fresh) == 0
+    capsys.readouterr()
+
+    # Two canonical builds that differ refuse, before and after writing.
+    assert codec.check(root, fresh, fresh + b"x") == 1
+    assert "two canonical builds differ" in capsys.readouterr().err
+    assert codec.write(root, fresh, fresh + b"x") == 1
+
+    # One digest, an uppercase digest or a stale digest is refused.
+    for digests in ([digest], [digest.upper(), digest], [digest, "0" * 64]):
+        _qualify(codec, root, fresh, digests=digests)
+        assert codec.check(root, fresh) == 1
+        assert str(codec.COMMITTED_PROVENANCE) in capsys.readouterr().err
+    _qualify(codec, root, fresh, size=len(fresh) + 1)
+    assert codec.check(root, fresh) == 1
+    assert "size_bytes" in capsys.readouterr().err
+    (root / codec.COMMITTED_PROVENANCE).unlink()
+    assert codec.check(root, fresh) == 1
+
+    # Over budget refuses even with a matching record.
+    big = WASM + b"\x00" * (codec.MAX_BYTES)
+    _qualify(codec, root, big)
+    assert not codec._check_qualification(root, big)
+    assert "MAX_BYTES" in capsys.readouterr().err
+
+    # A stale committed copy refuses.
+    assert codec.write(root, fresh, fresh) == 0
+    (root / codec.CLIENT_DIRS[0] / codec.MODULE).write_bytes(b"stale")
+    assert codec.check(root, fresh, fresh) == 1
+    assert "STALE" in capsys.readouterr().err
 
 
 @pytest.fixture
@@ -296,8 +351,9 @@ def test_failed_build_never_exports_cached_module(codec, export_repo, monkeypatc
 
 @pytest.mark.spec("MEDULLA-CONTRACT-R006.1")
 def test_export_success_preserves_passing_check(codec, export_repo, monkeypatch):
-    _, directory, output = export_repo
+    root, directory, output = export_repo
     monkeypatch.setattr(codec, "build", lambda *_args: WASM)
+    _qualify(codec, root, WASM)
     assert codec.main(["--check", "--export-dir", str(directory)]) == 0
     assert output.read_text() == "fresh_export=true\n"
 

@@ -1,0 +1,2 @@
+# generated_files_stale: regenerate with MEDULLA_REGENERATE_DECISION_ONTOLOGY=1 cargo test -p medulla-capabilities --features contract-schema --test decision_ontology (MEDULLA-DECISION-ENGINE-R054.1)
+@prefix : <http://knuckles.team/kg#> .
