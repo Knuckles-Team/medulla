@@ -44,7 +44,7 @@ fn shell_centric_must_be_boolean() {
     }
 }
 
-// spec: MEDULLA-TYPED-PACKS-R066.2
+// spec: MEDULLA-TYPED-PACKS-R066.2, MEDULLA-TYPED-PACKS-R066.3
 #[test]
 fn shell_centric_is_single_valued_on_task_classes() {
     let class = "ex:ShellTask a <http://www.w3.org/2002/07/owl#Class> ; \
