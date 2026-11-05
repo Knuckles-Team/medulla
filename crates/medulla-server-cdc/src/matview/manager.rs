@@ -347,6 +347,7 @@ mod tests {
 
     /// MEDULLA-INCREMENTAL-VIEWS-R002.3: a delta the circuit refuses demotes the view to
     /// recompute mode with the typed reason code, and the view reads as stale.
+    // spec: MEDULLA-INCREMENTAL-VIEWS-R002.3
     #[test]
     fn apply_failure_demotes_with_typed_reason() {
         use medulla_types::delta::ZRow;
