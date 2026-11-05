@@ -70,6 +70,8 @@ pub mod freshness_router;
 // operations diagnosis and served CodeContext wiring remain later slices.
 #[cfg(feature = "query")]
 pub mod code_context;
+// MEDULLA-FEDERATED-QUERY-R653.1: serde-stable `CorpusRetrieve` request and row types.
+pub mod corpus_retrieval;
 
 /// The UQL text front-end (CONCEPT:AU-KG.query.top-nodes-by-degree) — `uql::parse(text) -> wire::Plan`. It
 /// is a pure parser (lexer + recursive descent, NO DataFusion), so it ships in a

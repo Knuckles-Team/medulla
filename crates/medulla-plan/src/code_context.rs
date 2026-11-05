@@ -8,6 +8,101 @@
 //! betweenness centrality with a stable symbol tie-break.
 
 use medulla_graph_algos::{graph_algos::betweenness_centrality, graph_algos::AdjacencyGraph};
+use serde::{Deserialize, Serialize};
+
+/// Which code-context question a request asks (MEDULLA-FEDERATED-QUERY-R654.1).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CodeQuestion {
+    How,
+    Usage,
+    Impact,
+}
+
+/// A served `CodeContext` request.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CodeContextRequest {
+    /// Qualified symbol name, or a suffix of one.
+    pub anchor: String,
+    pub question: CodeQuestion,
+    /// Walk depth in hops; `None` takes `knob code.context_depth`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub depth: Option<u32>,
+    /// Row cap; `None` takes the walk cap.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub limit: Option<u32>,
+}
+
+/// Outcome of a code-context walk.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CodeContextStatus {
+    Ok,
+    Ambiguous,
+    Degraded,
+}
+
+/// One symbol reached by the walk with its hop count from the anchor.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CodeNode {
+    pub symbol: String,
+    pub hops: u32,
+}
+
+/// A hub with its centrality inputs.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RankedHub {
+    pub symbol: String,
+    pub in_degree: u32,
+    pub out_degree: u32,
+    pub score: f64,
+}
+
+/// The served `CodeContext` answer.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CodeContextAnswer {
+    pub status: CodeContextStatus,
+    pub anchors: Vec<String>,
+    pub usages: Vec<CodeNode>,
+    pub impact: Vec<CodeNode>,
+    pub hubs: Vec<RankedHub>,
+    /// Candidate anchors when `status` is `ambiguous`.
+    pub candidates: Vec<String>,
+}
+
+/// The closed set of operations causal stages.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum OpsCausalStage {
+    Change,
+    Deploy,
+    Config,
+    Dependency,
+    Resource,
+    Symptom,
+}
+
+/// One link of a diagnosed causal chain.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CausalLink {
+    pub stage: OpsCausalStage,
+    pub node_id: String,
+    pub relationship: String,
+    pub evidence_ids: Vec<String>,
+}
+
+/// The served `Diagnose` answer: a symptom and its causal chain.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SymptomDiagnosis {
+    pub symptom: String,
+    pub chain: Vec<CausalLink>,
+}
 
 /// A directed caller-to-callee edge in a resolved code subgraph.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -69,6 +164,96 @@ pub fn rank_hubs(edges: &[CodeEdge], limit: usize) -> Vec<CodeHub> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // spec: MEDULLA-FEDERATED-QUERY-R654.1
+    #[test]
+    fn types_round_trip_and_reject_unknown_stage() {
+        let request = CodeContextRequest {
+            anchor: "repo/b.rs::parse".to_string(),
+            question: CodeQuestion::Impact,
+            depth: Some(3),
+            limit: None,
+        };
+        let text = serde_json::to_string(&request).unwrap();
+        assert_eq!(
+            text,
+            r#"{"anchor":"repo/b.rs::parse","question":"impact","depth":3}"#
+        );
+        assert_eq!(
+            serde_json::from_str::<CodeContextRequest>(&text).unwrap(),
+            request
+        );
+        assert!(
+            serde_json::from_str::<CodeContextRequest>(r#"{"anchor":"a","question":"why"}"#)
+                .is_err()
+        );
+
+        let answer = CodeContextAnswer {
+            status: CodeContextStatus::Ambiguous,
+            anchors: vec![],
+            usages: vec![CodeNode {
+                symbol: "repo/a.rs::main".to_string(),
+                hops: 1,
+            }],
+            impact: vec![],
+            hubs: vec![RankedHub {
+                symbol: "repo/b.rs::parse".to_string(),
+                in_degree: 1,
+                out_degree: 2,
+                score: 0.25,
+            }],
+            candidates: vec!["x::parse".to_string(), "y::parse".to_string()],
+        };
+        let text = serde_json::to_string(&answer).unwrap();
+        assert!(text.contains(r#""status":"ambiguous""#));
+        assert_eq!(
+            serde_json::from_str::<CodeContextAnswer>(&text).unwrap(),
+            answer
+        );
+
+        let stages = [
+            OpsCausalStage::Change,
+            OpsCausalStage::Deploy,
+            OpsCausalStage::Config,
+            OpsCausalStage::Dependency,
+            OpsCausalStage::Resource,
+            OpsCausalStage::Symptom,
+        ];
+        let names: Vec<String> = stages
+            .iter()
+            .map(|stage| serde_json::to_string(stage).unwrap())
+            .collect();
+        assert_eq!(
+            names,
+            [
+                r#""change""#,
+                r#""deploy""#,
+                r#""config""#,
+                r#""dependency""#,
+                r#""resource""#,
+                r#""symptom""#
+            ]
+        );
+        let diagnosis = SymptomDiagnosis {
+            symptom: "latency".to_string(),
+            chain: vec![CausalLink {
+                stage: OpsCausalStage::Deploy,
+                node_id: "deploy-7".to_string(),
+                relationship: "CAUSED".to_string(),
+                evidence_ids: vec!["ev-1".to_string()],
+            }],
+        };
+        let text = serde_json::to_string(&diagnosis).unwrap();
+        assert_eq!(
+            serde_json::from_str::<SymptomDiagnosis>(&text).unwrap(),
+            diagnosis
+        );
+        assert!(serde_json::from_str::<OpsCausalStage>(r#""weather""#).is_err());
+        assert!(
+            serde_json::from_str::<SymptomDiagnosis>(&text.replace("deploy\"", "weather\""))
+                .is_err()
+        );
+    }
 
     #[test]
     fn rank_hubs_is_deterministic_and_tie_breaks_symbols() {
