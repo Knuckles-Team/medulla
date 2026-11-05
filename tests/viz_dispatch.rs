@@ -275,6 +275,7 @@ async fn synthetic_graph_large_resolves_at_density_tier() {
     );
 }
 
+// spec: MEDULLA-FEDERATED-QUERY-R087.1
 #[tokio::test]
 async fn capability_matrix_is_reachable_over_the_wire() {
     let state = state();
