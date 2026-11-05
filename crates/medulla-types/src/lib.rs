@@ -288,8 +288,8 @@ pub mod wire;
 // CONCEPT:MEDULLA-KG.compute.uncertainty-values — surface the distribution VALUE at the crate root for callers.
 #[cfg(feature = "knowledge-batch")]
 pub use knowledge_stream::{
-    KnowledgeResultFamily, KnowledgeStreamBatch, KnowledgeStreamCursor, KnowledgeStreamProjection,
-    KnowledgeStreamQuery, KnowledgeStreamRequest, KNOWLEDGE_STREAM_SCHEMA_VERSION,
+    KNOWLEDGE_STREAM_SCHEMA_VERSION, KnowledgeResultFamily, KnowledgeStreamBatch,
+    KnowledgeStreamCursor, KnowledgeStreamProjection, KnowledgeStreamQuery, KnowledgeStreamRequest,
 };
 #[cfg(feature = "modality-serving")]
 pub use modality::{
