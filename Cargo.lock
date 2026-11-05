@@ -7008,6 +7008,7 @@ dependencies = [
  "hex",
  "jsonwebtoken",
  "medulla-capabilities",
+ "medulla-catalog-types",
  "medulla-graph-core",
  "medulla-graphql",
  "medulla-isolation",

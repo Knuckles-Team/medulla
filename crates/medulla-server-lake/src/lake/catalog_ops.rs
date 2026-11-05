@@ -323,6 +323,22 @@ impl LakeManager {
         self.load_table(namespace, table)
     }
 
+    /// The LSN the caller's visible table was materialized at; the lake snapshot
+    /// LSN is the graph state version (MEDULLA-FEDERATED-QUERY-R080.5).
+    pub(crate) fn table_lsn(
+        &self,
+        namespace: &str,
+        table: &str,
+        visibility: &LakeVisibility,
+    ) -> Option<u64> {
+        let tables = self.tables.lock();
+        let entry = tables.get(&(namespace.to_string(), table.to_string()))?;
+        if !visibility.allows(entry.owner_tenant.as_deref()) {
+            return None;
+        }
+        Some(entry.table.current_lsn().value())
+    }
+
     /// Register an empty table through the same materialization pipeline used by
     /// append and rewrite operations.
     pub fn create_table(

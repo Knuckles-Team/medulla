@@ -7,19 +7,17 @@
 //! every route re-derived the caller's visibility and four of them re-emitted
 //! the same audit event by hand.
 
+use medulla_catalog_types::lake_catalog::ProjectionAccess;
+use medulla_lake::catalog::{refuse_projection_write, CatalogOperation, TableEntry};
 use serde_json::{json, Value};
 
-use super::super::{
-    namespace_levels, CreateTableError, LakeManager, LakeVisibility, RenameTableError,
-};
+use super::super::{namespace_levels, LakeManager, LakeVisibility};
 use super::{
     carrier_denied_response, err_body, not_found, operation_scope, parse_as_of_lsn,
-    parse_pagination, percent_decode, schema_from_create_request, scope_authorized,
-    table_ident_namespace, visibility_for,
+    parse_pagination, percent_decode, scope_authorized, table_ident_namespace, visibility_for,
 };
 use medulla_server_api::carrier::CarrierAuthority;
 use medulla_server_api::http1::HttpMessage;
-use medulla_server_blob::blob::store::ChunkStore;
 
 /// Who the caller is for every routed operation: what it may see, and the
 /// owner label its audit events carry.
@@ -79,7 +77,6 @@ fn record_operation(
 /// target namespace or table even exists.
 pub(super) fn handle(
     lake: &LakeManager,
-    store: &dyn ChunkStore,
     req: &HttpMessage,
     carrier: Option<&CarrierAuthority>,
 ) -> (&'static str, String) {
@@ -113,7 +110,103 @@ pub(super) fn handle(
         return carrier_denied_response();
     }
 
-    catalog_route(lake, store, req, &seg_refs, &scope)
+    if let Some(refusal) = guard_projection_write(lake, req, &seg_refs, &scope) {
+        return refusal;
+    }
+
+    catalog_route(lake, req, &seg_refs, &scope)
+}
+
+/// Refuse every catalog write: the lake registers no authoritative table, so
+/// each POST, PUT, PATCH and DELETE is classified into a
+/// [`CatalogOperation`] and run through `refuse_projection_write` before any
+/// `LakeManager` call (MEDULLA-FEDERATED-QUERY-R080.3). A table the caller
+/// cannot see keeps the privacy-safe 404 (R080.4); every refusal leaves an
+/// audit record (R080.5).
+fn guard_projection_write(
+    lake: &LakeManager,
+    req: &HttpMessage,
+    segs: &[&str],
+    scope: &RequestScope,
+) -> Option<(&'static str, String)> {
+    if !matches!(req.method.as_str(), "POST" | "PUT" | "PATCH" | "DELETE") {
+        return None;
+    }
+    let body = || serde_json::from_str::<Value>(&req.text()).unwrap_or(Value::Null);
+    let (operation, table, addressed) = match (req.method.as_str(), segs) {
+        ("POST", ["v1", "namespaces", ns, "tables"]) => {
+            let name = body()
+                .get("name")
+                .and_then(Value::as_str)
+                .unwrap_or_default()
+                .to_string();
+            (CatalogOperation::CreateTable, format!("{ns}.{name}"), None)
+        }
+        ("POST", ["v1", "tables", "rename"]) => {
+            let source = body().get("source").cloned().unwrap_or(Value::Null);
+            let ns = table_ident_namespace(&source).unwrap_or_default();
+            let name = source
+                .get("name")
+                .and_then(Value::as_str)
+                .unwrap_or_default()
+                .to_string();
+            let addressed = Some((ns.clone(), name.clone()));
+            (
+                CatalogOperation::RenameTable,
+                format!("{ns}.{name}"),
+                addressed,
+            )
+        }
+        ("POST", ["v1", "namespaces", ns, "tables", table]) => (
+            CatalogOperation::CommitData,
+            format!("{ns}.{table}"),
+            Some(((*ns).to_string(), (*table).to_string())),
+        ),
+        ("DELETE", ["v1", "namespaces", ns, "tables", table]) => (
+            CatalogOperation::DropTable,
+            format!("{ns}.{table}"),
+            Some(((*ns).to_string(), (*table).to_string())),
+        ),
+        _ => (
+            CatalogOperation::Other(format!("{} {}", req.method, segs.join("/"))),
+            segs.join("/"),
+            None,
+        ),
+    };
+    if let Some((ns, name)) = addressed {
+        if lake
+            .load_table_visible(&ns, &name, &scope.visibility)
+            .is_none()
+        {
+            return Some(("404 Not Found", not_found("table")));
+        }
+    }
+    let (namespace, name) = table.split_once('.').unwrap_or(("", table.as_str()));
+    let entry = TableEntry {
+        namespace: namespace.to_string(),
+        name: name.to_string(),
+        metadata_location: String::new(),
+        metadata_json: None,
+        access: ProjectionAccess::ReadOnly,
+    };
+    let refusal = refuse_projection_write(&operation, &entry).err()?;
+    let message = format!("{}: {}", refusal.code, refusal.table);
+    record_operation(
+        lake,
+        "ProjectionWriteRefused",
+        &[
+            ("table", json!(refusal.table)),
+            ("operation", json!(refusal.operation)),
+            ("principal", json!(scope.owner_label())),
+        ],
+        &scope.owner_label(),
+        "405 Method Not Allowed",
+        false,
+    );
+    Some((
+        "405 Method Not Allowed",
+        err_body(&message, "ProjectionReadOnlyException", refusal.http_status),
+    ))
 }
 
 /// Catalog-level routes: configuration, namespace listing and inspection,
@@ -121,7 +214,6 @@ pub(super) fn handle(
 /// addresses one existing table.
 fn catalog_route(
     lake: &LakeManager,
-    store: &dyn ChunkStore,
     req: &HttpMessage,
     segs: &[&str],
     scope: &RequestScope,
@@ -148,16 +240,13 @@ fn catalog_route(
                     .to_string(),
             )
         }
-        ("POST", ["v1", "namespaces", ns, "tables"]) => create_table(lake, store, req, ns, scope),
-        ("POST", ["v1", "tables", "rename"]) => rename_table(lake, req, scope),
-        _ => table_route(lake, store, req, segs, scope),
+        _ => table_route(lake, req, segs, scope),
     }
 }
 
 /// Routes addressing ONE table under a namespace.
 fn table_route(
     lake: &LakeManager,
-    store: &dyn ChunkStore,
     req: &HttpMessage,
     segs: &[&str],
     scope: &RequestScope,
@@ -176,10 +265,6 @@ fn table_route(
                 ("404 Not Found", String::new())
             }
         }
-        ("POST", ["v1", "namespaces", ns, "tables", table]) => {
-            commit_table(lake, store, ns, table, scope)
-        }
-        ("DELETE", ["v1", "namespaces", ns, "tables", table]) => drop_table(lake, ns, table, scope),
         _ => ("404 Not Found", not_found("route")),
     }
 }
@@ -200,68 +285,24 @@ fn describe_namespace(
     )
 }
 
-/// `POST /v1/namespaces/<ns>/tables` — CreateTable.
-fn create_table(
-    lake: &LakeManager,
-    store: &dyn ChunkStore,
-    req: &HttpMessage,
-    ns: &str,
-    scope: &RequestScope,
-) -> (&'static str, String) {
-    let Ok(body) = serde_json::from_str::<Value>(&req.text()) else {
-        return (
-            "400 Bad Request",
-            err_body(
-                "malformed CreateTableRequest body",
-                "BadRequestException",
-                400,
-            ),
-        );
-    };
-    let Some(table) = body.get("name").and_then(Value::as_str).map(str::to_string) else {
-        return (
-            "400 Bad Request",
-            err_body(
-                "CreateTableRequest.name is required",
-                "BadRequestException",
-                400,
-            ),
-        );
-    };
-    let schema = match schema_from_create_request(&body) {
-        Ok(schema) => schema,
-        Err(error) => {
-            return (
-                "400 Bad Request",
-                err_body(&error, "BadRequestException", 400),
-            )
-        }
-    };
-    let (status, resp) = match lake.create_table(store, ns, &table, schema, scope.owner.as_deref())
-    {
-        Ok(created) => ("200 OK", created.to_string()),
-        Err(CreateTableError::AlreadyExists) => (
-            "409 Conflict",
-            err_body(
-                &format!("table {ns}.{table} already exists"),
-                "AlreadyExistsException",
-                409,
-            ),
-        ),
-        Err(CreateTableError::Other(error)) => (
-            "400 Bad Request",
-            err_body(&error, "BadRequestException", 400),
-        ),
+/// Record a successful current-snapshot load with the snapshot LSN served
+/// (MEDULLA-FEDERATED-QUERY-R080.5).
+fn record_load(lake: &LakeManager, ns: &str, table: &str, scope: &RequestScope) {
+    let Some(lsn) = lake.table_lsn(ns, table, &scope.visibility) else {
+        return;
     };
     record_operation(
         lake,
-        "CreateTable",
-        &[("namespace", json!(ns)), ("table", json!(table))],
+        "LoadTable",
+        &[
+            ("table", json!(format!("{ns}.{table}"))),
+            ("principal", json!(scope.owner_label())),
+            ("lsn", json!(lsn)),
+        ],
         &scope.owner_label(),
-        status,
-        status == "200 OK",
+        "200 OK",
+        true,
     );
-    (status, resp)
 }
 
 /// `GET /v1/namespaces/<ns>/tables/<table>` — LoadTable, optionally `?as_of=`.
@@ -292,10 +333,25 @@ fn load_table(
         }
     };
     let Some(lsn) = as_of else {
+        record_load(lake, ns, table, scope);
         return ("200 OK", current.to_string());
     };
     match lake.load_table_as_of(ns, table, lsn, &scope.visibility) {
-        Ok(Some(snapshot)) => ("200 OK", snapshot.to_string()),
+        Ok(Some(snapshot)) => {
+            record_operation(
+                lake,
+                "LoadTable",
+                &[
+                    ("table", json!(format!("{ns}.{table}"))),
+                    ("principal", json!(scope.owner_label())),
+                    ("lsn", json!(lsn)),
+                ],
+                &scope.owner_label(),
+                "200 OK",
+                true,
+            );
+            ("200 OK", snapshot.to_string())
+        }
         // The visibility check above and the manager's scoped check
         // intentionally both fail closed if a concurrent delete or policy
         // change removes the table between the two reads.
@@ -309,127 +365,4 @@ fn load_table(
             ),
         ),
     }
-}
-
-/// `POST /v1/namespaces/<ns>/tables/<table>` — CommitTable.
-fn commit_table(
-    lake: &LakeManager,
-    store: &dyn ChunkStore,
-    ns: &str,
-    table: &str,
-    scope: &RequestScope,
-) -> (&'static str, String) {
-    if lake
-        .load_table_visible(ns, table, &scope.visibility)
-        .is_none()
-    {
-        return ("404 Not Found", not_found("table"));
-    }
-    let (status, resp) = match lake.commit_table(store, ns, table) {
-        Ok(committed) => ("200 OK", committed.to_string()),
-        Err(error) => (
-            "400 Bad Request",
-            err_body(&error, "CommitFailedException", 400),
-        ),
-    };
-    record_operation(
-        lake,
-        "CommitTable",
-        &[("namespace", json!(ns)), ("table", json!(table))],
-        &scope.owner_label(),
-        status,
-        status == "200 OK",
-    );
-    (status, resp)
-}
-
-/// `DELETE /v1/namespaces/<ns>/tables/<table>` — DropTable.
-fn drop_table(
-    lake: &LakeManager,
-    ns: &str,
-    table: &str,
-    scope: &RequestScope,
-) -> (&'static str, String) {
-    let dropped = lake.drop_table(ns, table, &scope.visibility);
-    let (status, resp) = if dropped {
-        ("204 No Content", String::new())
-    } else {
-        ("404 Not Found", not_found("table"))
-    };
-    record_operation(
-        lake,
-        "DropTable",
-        &[("namespace", json!(ns)), ("table", json!(table))],
-        &scope.owner_label(),
-        status,
-        dropped,
-    );
-    (status, resp)
-}
-
-/// `POST /v1/tables/rename` — RenameTable across namespaces.
-fn rename_table(
-    lake: &LakeManager,
-    req: &HttpMessage,
-    scope: &RequestScope,
-) -> (&'static str, String) {
-    let Ok(body) = serde_json::from_str::<Value>(&req.text()) else {
-        return (
-            "400 Bad Request",
-            err_body(
-                "malformed RenameTableRequest body",
-                "BadRequestException",
-                400,
-            ),
-        );
-    };
-    let source = body.get("source").cloned().unwrap_or(Value::Null);
-    let destination = body.get("destination").cloned().unwrap_or(Value::Null);
-    let (Some(src_ns), Some(src_name)) = (
-        table_ident_namespace(&source),
-        source.get("name").and_then(Value::as_str),
-    ) else {
-        return (
-            "400 Bad Request",
-            err_body("source identifier is required", "BadRequestException", 400),
-        );
-    };
-    let (Some(dst_ns), Some(dst_name)) = (
-        table_ident_namespace(&destination),
-        destination.get("name").and_then(Value::as_str),
-    ) else {
-        return (
-            "400 Bad Request",
-            err_body(
-                "destination identifier is required",
-                "BadRequestException",
-                400,
-            ),
-        );
-    };
-    let (status, resp) =
-        match lake.rename_table(&src_ns, src_name, &dst_ns, dst_name, &scope.visibility) {
-            Ok(()) => ("204 No Content", String::new()),
-            Err(RenameTableError::SourceNotFound) => ("404 Not Found", not_found("table")),
-            Err(RenameTableError::DestinationExists) => (
-                "409 Conflict",
-                err_body(
-                    &format!("table {dst_ns}.{dst_name} already exists"),
-                    "AlreadyExistsException",
-                    409,
-                ),
-            ),
-        };
-    record_operation(
-        lake,
-        "RenameTable",
-        &[
-            ("source", json!(format!("{src_ns}.{src_name}"))),
-            ("destination", json!(format!("{dst_ns}.{dst_name}"))),
-        ],
-        &scope.owner_label(),
-        status,
-        status == "204 No Content",
-    );
-    (status, resp)
 }

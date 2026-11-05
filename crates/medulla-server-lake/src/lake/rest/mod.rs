@@ -51,7 +51,6 @@ use tokio::io::AsyncWriteExt;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::RwLock;
 
-use medulla_lake::schema::{LakeField, LakeSchema, LakeType};
 use medulla_server_api::carrier::CarrierAuthority;
 use medulla_server_api::http1;
 use medulla_server_api::http1::HttpMessage;
@@ -59,7 +58,6 @@ use medulla_server_api::http1::RequestLimits;
 use medulla_server_api::oidc::JwtValidator;
 use medulla_server_api::oidc::VerifiedTokenClaims;
 use medulla_server_api::state::ServerState;
-use medulla_server_blob::blob::store::ChunkStore;
 
 use super::{LakeManager, LakeVisibility};
 
@@ -77,10 +75,11 @@ const HTTP_LIMITS: RequestLimits = RequestLimits {
 };
 const HTTP_READ_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(15);
 
-/// Serve the Iceberg-REST catalog surface on `listener`, backed by `lake` (the tables +
-/// catalog) and `store` (the blob CAS a `CommitTable` compaction reads/writes through).
-pub async fn serve(listener: TcpListener, lake: Arc<LakeManager>, store: Arc<dyn ChunkStore>) {
-    serve_inner(listener, lake, store, None).await;
+/// Serve the read-only Iceberg-REST catalog surface on `listener`, backed by
+/// `lake` (the tables + catalog). Every catalog write is refused as a
+/// read-only projection (MEDULLA-FEDERATED-QUERY-R080.3).
+pub async fn serve(listener: TcpListener, lake: Arc<LakeManager>) {
+    serve_inner(listener, lake, None).await;
 }
 
 /// Production Iceberg listener linked to live engine isolation (BUG-222). A
@@ -93,10 +92,9 @@ pub async fn serve(listener: TcpListener, lake: Arc<LakeManager>, store: Arc<dyn
 pub async fn serve_with_security(
     listener: TcpListener,
     lake: Arc<LakeManager>,
-    store: Arc<dyn ChunkStore>,
     state: Arc<RwLock<ServerState>>,
 ) {
-    serve_inner(listener, lake, store, Some(state)).await;
+    serve_inner(listener, lake, Some(state)).await;
 }
 
 /// The Iceberg-REST surface's own OAuth2 bearer credential (BUG-222):
@@ -296,7 +294,6 @@ fn resolve_rate_limiter() -> Option<RateLimiter> {
 async fn serve_inner(
     listener: TcpListener,
     lake: Arc<LakeManager>,
-    store: Arc<dyn ChunkStore>,
     security_state: Option<Arc<RwLock<ServerState>>>,
 ) {
     if let Err(error) =
@@ -329,7 +326,6 @@ async fn serve_inner(
             continue;
         };
         let lake = lake.clone();
-        let store = store.clone();
         let security_state = security_state.clone();
         let credential = credential.clone();
         let rate_limiter = rate_limiter.clone();
@@ -363,13 +359,7 @@ async fn serve_inner(
                             .await;
                         }
                     }
-                    route(
-                        &lake,
-                        store.as_ref(),
-                        &req,
-                        security_state.as_ref(),
-                        credential.as_deref(),
-                    )
+                    route(&lake, &req, security_state.as_ref(), credential.as_deref())
                 }
                 _ => (
                     "400 Bad Request",
@@ -402,7 +392,6 @@ async fn respond(stream: &mut TcpStream, status: &str, body: String) {
 /// BEFORE the carrier gate applies to every other endpoint.
 fn route(
     lake: &LakeManager,
-    store: &dyn ChunkStore,
     req: &HttpMessage,
     security_state: Option<&Arc<RwLock<ServerState>>>,
     credential: Option<&IcebergCredential>,
@@ -440,7 +429,7 @@ fn route(
             }));
             carrier_denied_response()
         }
-        Ok(carrier) => handle(lake, store, req, carrier.as_ref()),
+        Ok(carrier) => handle(lake, req, carrier.as_ref()),
     }
 }
 
@@ -578,54 +567,6 @@ fn table_ident_namespace(v: &Value) -> Option<String> {
     Some(parts?.join("\u{1f}"))
 }
 
-/// Map an Iceberg schema field's `type` name onto this tier's [`LakeType`]
-/// intersection set (W03, GOC-75-W03). Unsupported types (nested struct/list/map,
-/// decimal, binary, fixed, date, time) are a typed `400 BadRequestException` rather
-/// than a silent, lossy coercion — the same "never lossy-drop a materialized column"
-/// discipline [`medulla_lake::schema`]'s own docs state.
-fn lake_type_from_iceberg(name: &str) -> Option<LakeType> {
-    match name {
-        "long" | "int" => Some(LakeType::Long),
-        "double" | "float" => Some(LakeType::Double),
-        "boolean" => Some(LakeType::Bool),
-        "string" | "uuid" => Some(LakeType::String),
-        "timestamp" | "timestamptz" => Some(LakeType::Timestamp),
-        _ => None,
-    }
-}
-
-/// Decode a `CreateTableRequest` body's `schema.fields[]` into a [`LakeSchema`].
-fn schema_from_create_request(body: &Value) -> Result<LakeSchema, String> {
-    let fields = body
-        .get("schema")
-        .and_then(|s| s.get("fields"))
-        .and_then(Value::as_array)
-        .ok_or_else(|| "CreateTableRequest.schema.fields is required".to_string())?;
-    if fields.is_empty() {
-        return Err("CreateTableRequest.schema.fields must not be empty".to_string());
-    }
-    let mut out = Vec::with_capacity(fields.len());
-    for f in fields {
-        let name = f
-            .get("name")
-            .and_then(Value::as_str)
-            .ok_or_else(|| "a schema field is missing its name".to_string())?;
-        let ty_name = f
-            .get("type")
-            .and_then(Value::as_str)
-            .ok_or_else(|| format!("field {name} is missing a scalar type"))?;
-        let ty = lake_type_from_iceberg(ty_name)
-            .ok_or_else(|| format!("field {name} has unsupported Iceberg type {ty_name:?}"))?;
-        let required = f.get("required").and_then(Value::as_bool).unwrap_or(false);
-        out.push(if required {
-            LakeField::required(name, ty)
-        } else {
-            LakeField::new(name, ty)
-        });
-    }
-    Ok(LakeSchema::new(out))
-}
-
 /// `POST /v1/oauth/tokens` (W03, GOC-75-W03). This engine is not an OAuth2
 /// authorization server — it mints no NEW tokens. It re-verifies an already
 /// Keycloak-issued bearer through the SAME [`JwtValidator`] + the SAME
@@ -707,6 +648,7 @@ use catalog::handle;
 #[cfg(test)]
 mod tests {
     use super::*;
+    use medulla_lake::schema::{LakeField, LakeSchema, LakeType};
     use medulla_server_blob::blob::store::RedbChunkStore;
     use medulla_tsdb::point::Point;
     use medulla_tsdb::store::SeriesStore;
@@ -754,25 +696,11 @@ mod tests {
         }
     }
 
-    fn current_snapshot(metadata: &Value) -> &Value {
-        let current_id = &metadata["current-snapshot-id"];
-        metadata["snapshots"]
-            .as_array()
-            .expect("Iceberg snapshots array")
-            .iter()
-            .find(|snapshot| &snapshot["snapshot-id"] == current_id)
-            .expect("current-snapshot-id references an emitted snapshot")
-    }
-
     /// Every existing (pre-W03) unit test call site of `handle()` runs with no
     /// live carrier — the exact behavior `serve()` (non-security) had before this
     /// lane; kept as a helper so those tests read unchanged.
-    fn handle_open(
-        lake: &LakeManager,
-        store: &dyn ChunkStore,
-        req: &HttpMessage,
-    ) -> (&'static str, String) {
-        handle(lake, store, req, None)
+    fn handle_open(lake: &LakeManager, req: &HttpMessage) -> (&'static str, String) {
+        handle(lake, req, None)
     }
 
     /// Pins the route -> required-scope table `scope_authorized` gates on.
@@ -806,27 +734,27 @@ mod tests {
 
     #[test]
     fn config_and_namespace_listing_shapes() {
-        let (mgr, store) = seed();
-        let (status, body) = handle_open(&mgr, &store, &req("GET", "/v1/config"));
+        let (mgr, _store) = seed();
+        let (status, body) = handle_open(&mgr, &req("GET", "/v1/config"));
         assert_eq!(status, "200 OK");
         let v: serde_json::Value = serde_json::from_str(&body).unwrap();
         assert!(v["defaults"].is_object());
 
-        let (status, body) = handle_open(&mgr, &store, &req("GET", "/v1/namespaces"));
+        let (status, body) = handle_open(&mgr, &req("GET", "/v1/namespaces"));
         assert_eq!(status, "200 OK");
         let v: serde_json::Value = serde_json::from_str(&body).unwrap();
         assert_eq!(v["namespaces"][0][0], "engine");
 
-        let (status, _) = handle_open(&mgr, &store, &req("GET", "/v1/namespaces/engine"));
+        let (status, _) = handle_open(&mgr, &req("GET", "/v1/namespaces/engine"));
         assert_eq!(status, "200 OK");
-        let (status, _) = handle_open(&mgr, &store, &req("GET", "/v1/namespaces/nope"));
+        let (status, _) = handle_open(&mgr, &req("GET", "/v1/namespaces/nope"));
         assert_eq!(status, "404 Not Found");
     }
 
     #[test]
     fn list_and_load_table_shapes_match_iceberg_rest_spec() {
-        let (mgr, store) = seed();
-        let (status, body) = handle_open(&mgr, &store, &req("GET", "/v1/namespaces/engine/tables"));
+        let (mgr, _store) = seed();
+        let (status, body) = handle_open(&mgr, &req("GET", "/v1/namespaces/engine/tables"));
         assert_eq!(status, "200 OK");
         let v: serde_json::Value = serde_json::from_str(&body).unwrap();
         let ids = v["identifiers"].as_array().unwrap();
@@ -836,7 +764,6 @@ mod tests {
 
         let (status, body) = handle_open(
             &mgr,
-            &store,
             &req("GET", "/v1/namespaces/engine/tables/rest_series1"),
         );
         assert_eq!(status, "200 OK");
@@ -856,16 +783,11 @@ mod tests {
         );
         assert!(v["config"].is_object());
 
-        let (status, _) = handle_open(
-            &mgr,
-            &store,
-            &req("GET", "/v1/namespaces/engine/tables/nope"),
-        );
+        let (status, _) = handle_open(&mgr, &req("GET", "/v1/namespaces/engine/tables/nope"));
         assert_eq!(status, "404 Not Found");
 
         let (status, body_head) = handle_open(
             &mgr,
-            &store,
             &req("HEAD", "/v1/namespaces/engine/tables/rest_series1"),
         );
         assert_eq!(status, "200 OK");
@@ -882,7 +804,7 @@ mod tests {
         let current_path = "/v1/namespaces/engine/tables/rest_series1";
 
         // The existing authenticated LoadTable shape remains the current view.
-        let (status, body) = handle(&mgr, &store, &req("GET", current_path), Some(&reader));
+        let (status, body) = handle(&mgr, &req("GET", current_path), Some(&reader));
         assert_eq!(status, "200 OK");
         let current: serde_json::Value = serde_json::from_str(&body).unwrap();
         let historical_lsn = current["metadata"]["current-snapshot-id"]
@@ -899,7 +821,6 @@ mod tests {
 
         let (status, body) = handle(
             &mgr,
-            &store,
             &req("GET", &format!("{current_path}?as_of={historical_lsn}")),
             Some(&reader),
         );
@@ -912,13 +833,12 @@ mod tests {
 
         let (status, _) = handle(
             &mgr,
-            &store,
             &req("GET", &format!("{current_path}?as_of=0")),
             Some(&reader),
         );
         assert_eq!(status, "404 Not Found");
 
-        let (status, body) = handle(&mgr, &store, &req("GET", current_path), Some(&reader));
+        let (status, body) = handle(&mgr, &req("GET", current_path), Some(&reader));
         assert_eq!(status, "200 OK");
         let current_after: serde_json::Value = serde_json::from_str(&body).unwrap();
         assert_eq!(
@@ -936,7 +856,7 @@ mod tests {
         let alice = carrier_for("asof-alice", "tenant-shared");
         let bob = carrier_for("asof-bob", "tenant-shared");
         let current_path = "/v1/namespaces/engine/tables/rest_series1";
-        let (status, body) = handle(&mgr, &store, &req("GET", current_path), Some(&alice));
+        let (status, body) = handle(&mgr, &req("GET", current_path), Some(&alice));
         assert_eq!(status, "200 OK");
         let current: serde_json::Value = serde_json::from_str(&body).unwrap();
         let current_lsn = current["metadata"]["current-snapshot-id"]
@@ -945,7 +865,7 @@ mod tests {
 
         for unavailable in [current_lsn + 1, u64::MAX] {
             let target = format!("{current_path}?as_of={unavailable}");
-            let (status, body) = handle(&mgr, &store, &req("GET", &target), Some(&alice));
+            let (status, body) = handle(&mgr, &req("GET", &target), Some(&alice));
             assert_eq!(status, "400 Bad Request");
             let error: serde_json::Value = serde_json::from_str(&body).unwrap();
             assert_eq!(error["error"]["type"], "InvalidSnapshotException");
@@ -957,7 +877,6 @@ mod tests {
 
         let (status, body) = handle(
             &mgr,
-            &store,
             &req("GET", &format!("{current_path}?as_of=not-a-number")),
             Some(&alice),
         );
@@ -965,27 +884,21 @@ mod tests {
         let error: serde_json::Value = serde_json::from_str(&body).unwrap();
         assert_eq!(error["error"]["type"], "InvalidAsOfException");
 
-        let (status, _) = handle(
+        seed_table(
             &mgr,
             &store,
-            &req_body(
-                "POST",
-                "/v1/namespaces/alice_ns/tables",
-                &create_table_body("alice_private"),
-            ),
-            Some(&alice),
+            "alice_ns",
+            "alice_private",
+            Some(&owner_of(&alice)),
         );
-        assert_eq!(status, "200 OK");
 
         let hidden_current = handle(
             &mgr,
-            &store,
             &req("GET", "/v1/namespaces/alice_ns/tables/alice_private"),
             Some(&bob),
         );
         let hidden_invalid = handle(
             &mgr,
-            &store,
             &req(
                 "GET",
                 "/v1/namespaces/alice_ns/tables/alice_private?as_of=not-a-number",
@@ -994,7 +907,6 @@ mod tests {
         );
         let hidden_overflow = handle(
             &mgr,
-            &store,
             &req(
                 "GET",
                 "/v1/namespaces/alice_ns/tables/alice_private?as_of=18446744073709551615",
@@ -1031,43 +943,6 @@ mod tests {
         }
     }
 
-    #[test]
-    fn commit_table_post_triggers_compaction_and_returns_load_table_shape() {
-        let (mgr, store) = seed();
-        let (status, body) = handle_open(
-            &mgr,
-            &store,
-            &HttpMessage {
-                method: "POST".to_string(),
-                target: "/v1/namespaces/engine/tables/rest_series1".to_string(),
-                version: "HTTP/1.1".to_string(),
-                headers: HashMap::new(),
-                body: json!({ "requirements": [], "updates": [] })
-                    .to_string()
-                    .into_bytes(),
-            },
-        );
-        assert_eq!(status, "200 OK");
-        let v: serde_json::Value = serde_json::from_str(&body).unwrap();
-        assert_eq!(
-            current_snapshot(&v["metadata"])["summary"]["total-data-files"],
-            "1"
-        );
-
-        let (status, _) = handle_open(
-            &mgr,
-            &store,
-            &HttpMessage {
-                method: "POST".to_string(),
-                target: "/v1/namespaces/engine/tables/nope".to_string(),
-                version: "HTTP/1.1".to_string(),
-                headers: HashMap::new(),
-                body: b"{}".to_vec(),
-            },
-        );
-        assert_eq!(status, "404 Not Found");
-    }
-
     // ── W03: CreateTable / DropTable / RenameTable / pagination / multi-level ──
 
     fn create_table_body(name: &str) -> String {
@@ -1085,193 +960,195 @@ mod tests {
         .to_string()
     }
 
+    /// Seed a table straight through the manager: the REST surface is a
+    /// read-only projection, so a test table never arrives through a write route.
+    fn seed_table(
+        mgr: &LakeManager,
+        store: &RedbChunkStore,
+        ns: &str,
+        name: &str,
+        owner: Option<&str>,
+    ) {
+        let schema = LakeSchema::new(vec![
+            LakeField::required("ts", LakeType::Timestamp),
+            LakeField::new("value", LakeType::Double),
+        ]);
+        mgr.create_table(store, ns, name, schema, owner).unwrap();
+    }
+
+    fn owner_of(carrier: &CarrierAuthority) -> String {
+        carrier.owner_scope().to_string()
+    }
+
+    fn error_body(body: &str) -> Value {
+        serde_json::from_str::<Value>(body).unwrap()["error"].clone()
+    }
+
+    /// MEDULLA-FEDERATED-QUERY-R080.3: every write route is refused, whatever
+    /// its method, before any manager call.
     #[test]
-    fn create_table_then_load_round_trips_and_rejects_duplicate() {
-        let (mgr, store) = seed();
-        let (status, body) = handle_open(
-            &mgr,
-            &store,
-            &req_body(
+    // spec: MEDULLA-FEDERATED-QUERY-R080.3
+    fn every_write_route_is_refused_as_projection_read_only() {
+        let (mgr, _store) = seed();
+        let rename = json!({"source": {"namespace": ["engine"], "name": "rest_series1"},
+            "destination": {"namespace": ["engine"], "name": "renamed"}})
+        .to_string();
+        let writes = [
+            req_body(
                 "POST",
                 "/v1/namespaces/engine/tables",
                 &create_table_body("brand_new"),
             ),
-        );
-        assert_eq!(status, "200 OK", "got: {body}");
-        let v: serde_json::Value = serde_json::from_str(&body).unwrap();
-        assert_eq!(
-            v["metadata"]["schemas"][0]["fields"]
-                .as_array()
+            req_body(
+                "POST",
+                "/v1/namespaces/engine/tables/rest_series1",
+                r#"{"requirements":[],"updates":[]}"#,
+            ),
+            req_body("POST", "/v1/tables/rename", &rename),
+            req("DELETE", "/v1/namespaces/engine/tables/rest_series1"),
+            req_body("PUT", "/v1/namespaces/engine/tables/rest_series1", "{}"),
+            req_body("PATCH", "/v1/namespaces/engine/tables/rest_series1", "{}"),
+            req_body("POST", "/v1/namespaces/engine/register", "{}"),
+        ];
+        let before = mgr.load_table("engine", "rest_series1").unwrap();
+        for write in &writes {
+            let (status, body) = handle_open(&mgr, write);
+            assert_eq!(
+                status, "405 Method Not Allowed",
+                "{} {}",
+                write.method, write.target
+            );
+            let error = error_body(&body);
+            assert_eq!(error["type"], "ProjectionReadOnlyException");
+            assert_eq!(error["code"], 405);
+            assert!(error["message"]
+                .as_str()
                 .unwrap()
-                .len(),
-            2
-        );
-
-        let (status, _) = handle_open(
-            &mgr,
-            &store,
-            &req("GET", "/v1/namespaces/engine/tables/brand_new"),
-        );
+                .starts_with(medulla_lake::catalog::PROJECTION_READ_ONLY));
+        }
+        assert_eq!(mgr.load_table("engine", "rest_series1").unwrap(), before);
         assert_eq!(
-            status, "200 OK",
-            "a freshly created table must be immediately loadable"
+            handle_open(&mgr, &req("GET", "/v1/namespaces/engine/tables/brand_new")).0,
+            "404 Not Found",
+            "a refused create must register nothing"
         );
+    }
 
-        // known-bad: creating the SAME table again is a typed 409, not a silent
-        // overwrite.
-        let (status, body) = handle_open(
+    /// MEDULLA-FEDERATED-QUERY-R080.4: the refusal names the table, changes
+    /// nothing, and a table the caller cannot see keeps the privacy-safe 404.
+    #[test]
+    // spec: MEDULLA-FEDERATED-QUERY-R080.4
+    fn projection_write_returns_405_and_leaves_graph_version() {
+        let (mgr, store) = seed();
+        let alice = carrier_for("alice", "tenant-shared");
+        let bob = carrier_for("bob", "tenant-shared");
+        seed_table(
             &mgr,
             &store,
+            "alice_ns",
+            "alice_secret",
+            Some(&owner_of(&alice)),
+        );
+        let lsn = |carrier: &CarrierAuthority| {
+            mgr.table_lsn("alice_ns", "alice_secret", &visibility_for(Some(carrier)))
+        };
+        let lsn_before = lsn(&alice);
+        assert!(lsn_before.is_some());
+        let before = mgr.load_table("alice_ns", "alice_secret").unwrap();
+
+        let (status, body) = handle(
+            &mgr,
             &req_body(
                 "POST",
-                "/v1/namespaces/engine/tables",
-                &create_table_body("brand_new"),
+                "/v1/namespaces/alice_ns/tables/alice_secret",
+                r#"{"requirements":[],"updates":[]}"#,
             ),
+            Some(&alice),
         );
-        assert_eq!(status, "409 Conflict", "got: {body}");
-        let v: serde_json::Value = serde_json::from_str(&body).unwrap();
-        assert_eq!(v["error"]["type"], "AlreadyExistsException");
-    }
-
-    #[test]
-    fn create_table_rejects_unsupported_type_and_missing_name() {
-        let (mgr, store) = seed();
-        let bad_type = json!({
-            "name": "t",
-            "schema": {"fields": [{"name": "c", "type": "decimal(10,2)"}]},
-        })
-        .to_string();
-        let (status, body) = handle_open(
-            &mgr,
-            &store,
-            &req_body("POST", "/v1/namespaces/engine/tables", &bad_type),
-        );
-        assert_eq!(status, "400 Bad Request", "got: {body}");
-
-        let no_name = json!({"schema": {"fields": [{"name": "c", "type": "long"}]}}).to_string();
-        let (status, _) = handle_open(
-            &mgr,
-            &store,
-            &req_body("POST", "/v1/namespaces/engine/tables", &no_name),
-        );
-        assert_eq!(status, "400 Bad Request");
-    }
-
-    #[test]
-    fn drop_table_removes_it_and_is_idempotent_404_on_repeat() {
-        let (mgr, store) = seed();
-        let (status, _) = handle_open(
-            &mgr,
-            &store,
-            &req("DELETE", "/v1/namespaces/engine/tables/rest_series1"),
-        );
-        assert_eq!(status, "204 No Content");
-
-        let (status, _) = handle_open(
-            &mgr,
-            &store,
-            &req("GET", "/v1/namespaces/engine/tables/rest_series1"),
-        );
+        assert_eq!(status, "405 Method Not Allowed");
+        let error = error_body(&body);
         assert_eq!(
-            status, "404 Not Found",
-            "a dropped table must no longer load"
+            error["message"],
+            "PROJECTION_READ_ONLY: alice_ns.alice_secret"
         );
+        assert_eq!(error["type"], "ProjectionReadOnlyException");
+        assert_eq!(lsn(&alice), lsn_before);
+        assert_eq!(mgr.load_table("alice_ns", "alice_secret").unwrap(), before);
 
-        // known-bad: dropping an already-dropped (or never-existed) table is a
-        // typed 404, not a 200/500.
-        let (status, _) = handle_open(
+        let hidden = handle(
             &mgr,
-            &store,
-            &req("DELETE", "/v1/namespaces/engine/tables/rest_series1"),
+            &req_body("POST", "/v1/namespaces/alice_ns/tables/alice_secret", "{}"),
+            Some(&bob),
+        );
+        let absent = handle(
+            &mgr,
+            &req_body("POST", "/v1/namespaces/alice_ns/tables/nope", "{}"),
+            Some(&bob),
+        );
+        assert_eq!(hidden.0, "404 Not Found");
+        assert_eq!(hidden, absent);
+        let (status, _) = handle(
+            &mgr,
+            &req("DELETE", "/v1/namespaces/alice_ns/tables/alice_secret"),
+            Some(&bob),
         );
         assert_eq!(status, "404 Not Found");
     }
 
+    /// MEDULLA-FEDERATED-QUERY-R080.5: a refusal and a read each leave one
+    /// audit record carrying the fields the row names.
     #[test]
-    fn rename_table_moves_identity_and_rejects_existing_destination() {
-        let (mgr, store) = seed();
-        let body = json!({"source": {"namespace": ["engine"], "name": "rest_series1"},
-                    "destination": {"namespace": ["engine"], "name": "renamed"}})
-        .to_string();
-        let (status, _) = handle_open(&mgr, &store, &req_body("POST", "/v1/tables/rename", &body));
-        assert_eq!(status, "204 No Content");
-
-        let (status, _) = handle_open(
+    // spec: MEDULLA-FEDERATED-QUERY-R080.5
+    fn refusal_and_read_leave_audit_records() {
+        let (mgr, _store) = seed();
+        let alice = carrier_for("alice", "tenant-shared");
+        let principal = owner_of(&alice);
+        let (status, _) = handle(
             &mgr,
-            &store,
+            &req("DELETE", "/v1/namespaces/engine/tables/rest_series1"),
+            Some(&alice),
+        );
+        assert_eq!(status, "405 Method Not Allowed");
+        let (status, _) = handle(
+            &mgr,
             &req("GET", "/v1/namespaces/engine/tables/rest_series1"),
+            Some(&alice),
         );
-        assert_eq!(
-            status, "404 Not Found",
-            "the OLD identifier must no longer resolve"
-        );
-        let (status, _) = handle_open(
-            &mgr,
-            &store,
-            &req("GET", "/v1/namespaces/engine/tables/renamed"),
-        );
-        assert_eq!(status, "200 OK", "the NEW identifier must resolve");
-
-        // known-bad: renaming a nonexistent source is a typed 404.
-        let bad_src = json!({"source": {"namespace": ["engine"], "name": "nope"},
-                              "destination": {"namespace": ["engine"], "name": "x"}})
-        .to_string();
-        let (status, _) = handle_open(
-            &mgr,
-            &store,
-            &req_body("POST", "/v1/tables/rename", &bad_src),
-        );
-        assert_eq!(status, "404 Not Found");
-
-        // known-bad: renaming onto an EXISTING destination is a typed 409, never a
-        // silent overwrite.
-        let (mgr2, store2) = seed();
-        handle_open(
-            &mgr2,
-            &store2,
-            &req_body(
-                "POST",
-                "/v1/namespaces/engine/tables",
-                &create_table_body("dest"),
-            ),
-        );
-        let collide = json!({"source": {"namespace": ["engine"], "name": "rest_series1"},
-                              "destination": {"namespace": ["engine"], "name": "dest"}})
-        .to_string();
-        let (status, _) = handle_open(
-            &mgr2,
-            &store2,
-            &req_body("POST", "/v1/tables/rename", &collide),
-        );
-        assert_eq!(status, "409 Conflict");
+        assert_eq!(status, "200 OK");
+        let events = mgr.recent_audit(10);
+        let refusal = events
+            .iter()
+            .find(|e| e["op"] == "ProjectionWriteRefused")
+            .unwrap_or_else(|| panic!("no refusal record: {events:?}"));
+        assert_eq!(refusal["table"], "engine.rest_series1");
+        assert_eq!(refusal["operation"], "drop_table");
+        assert_eq!(refusal["principal"], principal.as_str());
+        assert_eq!(refusal["outcome"], "deny");
+        let read = events
+            .iter()
+            .find(|e| e["op"] == "LoadTable")
+            .unwrap_or_else(|| panic!("no read record: {events:?}"));
+        let expected = mgr
+            .table_lsn("engine", "rest_series1", &LakeVisibility::Unfiltered)
+            .unwrap();
+        assert_eq!(read["lsn"], expected);
+        assert_eq!(read["table"], "engine.rest_series1");
+        assert_eq!(read["principal"], principal.as_str());
     }
 
     #[test]
     fn multi_level_namespace_round_trips_through_unit_separator() {
         let (mgr, store) = seed();
         // `accounting\x1ftax` percent-encoded as ONE path segment.
-        let (status, body) = handle_open(
-            &mgr,
-            &store,
-            &req_body(
-                "POST",
-                "/v1/namespaces/accounting%1Ftax/tables",
-                &create_table_body("ledger"),
-            ),
-        );
-        assert_eq!(status, "200 OK", "got: {body}");
+        seed_table(&mgr, &store, "accounting\u{1f}tax", "ledger", None);
 
-        let (status, body) =
-            handle_open(&mgr, &store, &req("GET", "/v1/namespaces/accounting%1Ftax"));
+        let (status, body) = handle_open(&mgr, &req("GET", "/v1/namespaces/accounting%1Ftax"));
         assert_eq!(status, "200 OK");
         let v: serde_json::Value = serde_json::from_str(&body).unwrap();
         assert_eq!(v["namespace"], json!(["accounting", "tax"]));
 
-        let (status, body) = handle_open(
-            &mgr,
-            &store,
-            &req("GET", "/v1/namespaces/accounting%1Ftax/tables"),
-        );
+        let (status, body) =
+            handle_open(&mgr, &req("GET", "/v1/namespaces/accounting%1Ftax/tables"));
         assert_eq!(status, "200 OK");
         let v: serde_json::Value = serde_json::from_str(&body).unwrap();
         assert_eq!(
@@ -1285,16 +1162,7 @@ mod tests {
     fn list_tables_pagination_pages_deterministically_and_terminates() {
         let (mgr, store) = seed();
         for i in 0..5 {
-            let (status, _) = handle_open(
-                &mgr,
-                &store,
-                &req_body(
-                    "POST",
-                    "/v1/namespaces/engine/tables",
-                    &create_table_body(&format!("paged_{i}")),
-                ),
-            );
-            assert_eq!(status, "200 OK");
+            seed_table(&mgr, &store, "engine", &format!("paged_{i}"), None);
         }
         // 6 total (5 new + the seeded rest_series1).
         let mut seen = std::collections::HashSet::new();
@@ -1305,7 +1173,7 @@ mod tests {
                 Some(t) => format!("/v1/namespaces/engine/tables?pageSize=2&pageToken={t}"),
                 None => "/v1/namespaces/engine/tables?pageSize=2".to_string(),
             };
-            let (status, body) = handle_open(&mgr, &store, &req("GET", &target));
+            let (status, body) = handle_open(&mgr, &req("GET", &target));
             assert_eq!(status, "200 OK");
             let v: serde_json::Value = serde_json::from_str(&body).unwrap();
             let ids = v["identifiers"].as_array().unwrap();
@@ -1368,32 +1236,18 @@ mod tests {
         let bob = carrier_for("bob", "tenant-shared");
 
         // Alice creates a table in a namespace only she should ever see.
-        let (status, _) = handle(
+        seed_table(
             &mgr,
             &store,
-            &req_body(
-                "POST",
-                "/v1/namespaces/alice_ns/tables",
-                &create_table_body("alice_secret"),
-            ),
-            Some(&alice),
+            "alice_ns",
+            "alice_secret",
+            Some(&owner_of(&alice)),
         );
-        assert_eq!(status, "200 OK");
         // Bob creates his own, disjoint namespace/table.
-        let (status, _) = handle(
-            &mgr,
-            &store,
-            &req_body(
-                "POST",
-                "/v1/namespaces/bob_ns/tables",
-                &create_table_body("bob_secret"),
-            ),
-            Some(&bob),
-        );
-        assert_eq!(status, "200 OK");
+        seed_table(&mgr, &store, "bob_ns", "bob_secret", Some(&owner_of(&bob)));
 
         // 1) Namespace listing: Alice sees her own namespace, NEVER Bob's.
-        let (_, body) = handle(&mgr, &store, &req("GET", "/v1/namespaces"), Some(&alice));
+        let (_, body) = handle(&mgr, &req("GET", "/v1/namespaces"), Some(&alice));
         let v: serde_json::Value = serde_json::from_str(&body).unwrap();
         let ns_names: Vec<String> = v["namespaces"]
             .as_array()
@@ -1409,12 +1263,7 @@ mod tests {
 
         // 2) Table listing: Bob's table listing of HIS OWN namespace shows his
         // table; Alice's namespace is invisible to him as a namespace at all.
-        let (status, _) = handle(
-            &mgr,
-            &store,
-            &req("GET", "/v1/namespaces/alice_ns"),
-            Some(&bob),
-        );
+        let (status, _) = handle(&mgr, &req("GET", "/v1/namespaces/alice_ns"), Some(&bob));
         assert_eq!(
             status, "404 Not Found",
             "cross-tenant leak: bob can see alice's namespace exists (via a non-404)"
@@ -1425,13 +1274,11 @@ mod tests {
         // table gets (no existence oracle via status code).
         let (status_bob, body_bob) = handle(
             &mgr,
-            &store,
             &req("GET", "/v1/namespaces/alice_ns/tables/alice_secret"),
             Some(&bob),
         );
         let (status_nonexistent, body_nonexistent) = handle(
             &mgr,
-            &store,
             &req("GET", "/v1/namespaces/alice_ns/tables/truly_does_not_exist"),
             Some(&bob),
         );
@@ -1450,7 +1297,6 @@ mod tests {
         // exactly his 1 table, not 2.
         let (_, body) = handle(
             &mgr,
-            &store,
             &req("GET", "/v1/namespaces/bob_ns/tables"),
             Some(&bob),
         );
@@ -1460,7 +1306,6 @@ mod tests {
         // 5) Mutation isolation: Bob cannot DROP Alice's table.
         let (status, _) = handle(
             &mgr,
-            &store,
             &req("DELETE", "/v1/namespaces/alice_ns/tables/alice_secret"),
             Some(&bob),
         );
@@ -1471,7 +1316,6 @@ mod tests {
         // Proven still alive for Alice.
         let (status, _) = handle(
             &mgr,
-            &store,
             &req("GET", "/v1/namespaces/alice_ns/tables/alice_secret"),
             Some(&alice),
         );
@@ -1483,7 +1327,6 @@ mod tests {
         // 6) Positive control: Alice CAN see/load/drop her own table throughout.
         let (status, _) = handle(
             &mgr,
-            &store,
             &req("GET", "/v1/namespaces/alice_ns/tables/alice_secret"),
             Some(&alice),
         );
@@ -1496,11 +1339,10 @@ mod tests {
     /// carries no owner tag.
     #[test]
     fn engine_internal_tables_remain_visible_to_every_authenticated_owner() {
-        let (mgr, store) = seed();
+        let (mgr, _store) = seed();
         let alice = carrier_for("alice", "tenant-shared");
         let (status, _) = handle(
             &mgr,
-            &store,
             &req("GET", "/v1/namespaces/engine/tables/rest_series1"),
             Some(&alice),
         );
@@ -1508,68 +1350,6 @@ mod tests {
     }
 
     // ── W05: audit trail + rate limiting ────────────────────────────────────────
-
-    #[test]
-    fn create_and_drop_table_appear_in_the_audit_trail() {
-        let (mgr, store) = seed();
-        handle_open(
-            &mgr,
-            &store,
-            &req_body(
-                "POST",
-                "/v1/namespaces/engine/tables",
-                &create_table_body("audited"),
-            ),
-        );
-        handle_open(
-            &mgr,
-            &store,
-            &req("DELETE", "/v1/namespaces/engine/tables/audited"),
-        );
-        let events = mgr.recent_audit(10);
-        assert!(
-            events.iter().any(|e| e["op"] == "CreateTable"
-                && e["table"] == "audited"
-                && e["outcome"] == "allow"),
-            "CreateTable must appear in the audit trail: {events:?}"
-        );
-        assert!(
-            events.iter().any(|e| e["op"] == "DropTable"
-                && e["table"] == "audited"
-                && e["outcome"] == "allow"),
-            "DropTable must appear in the audit trail: {events:?}"
-        );
-    }
-
-    #[test]
-    fn a_denied_cross_owner_drop_is_audited_as_a_denial() {
-        let (mgr, store) = seed();
-        let alice = carrier_for("alice", "tenant-shared");
-        let bob = carrier_for("bob", "tenant-shared");
-        handle(
-            &mgr,
-            &store,
-            &req_body(
-                "POST",
-                "/v1/namespaces/alice_ns/tables",
-                &create_table_body("alice_secret"),
-            ),
-            Some(&alice),
-        );
-        handle(
-            &mgr,
-            &store,
-            &req("DELETE", "/v1/namespaces/alice_ns/tables/alice_secret"),
-            Some(&bob),
-        );
-        let events = mgr.recent_audit(10);
-        assert!(
-            events
-                .iter()
-                .any(|e| e["op"] == "DropTable" && e["outcome"] == "deny"),
-            "a denied cross-owner drop must be audited as a denial: {events:?}"
-        );
-    }
 
     // ── NE-048: per-operation scope enforcement (P0 privilege-escalation fix) ──
     //
@@ -1589,25 +1369,17 @@ mod tests {
 
         // Seed a table with a write-capable carrier so CommitTable/DropTable/
         // RenameTable below have something real to target.
-        let (status, _) = handle(
+        seed_table(
             &mgr,
             &store,
-            &req_body(
-                "POST",
-                "/v1/namespaces/scoped_ns/tables",
-                &create_table_body("scoped_table"),
-            ),
-            Some(&writer),
-        );
-        assert_eq!(
-            status, "200 OK",
-            "setup: write-capable carrier must be able to create"
+            "scoped_ns",
+            "scoped_table",
+            Some(&owner_of(&writer)),
         );
 
         // CreateTable
         let (status, _) = handle(
             &mgr,
-            &store,
             &req_body(
                 "POST",
                 "/v1/namespaces/scoped_ns/tables",
@@ -1623,7 +1395,6 @@ mod tests {
         // CommitTable
         let (status, _) = handle(
             &mgr,
-            &store,
             &req_body("POST", "/v1/namespaces/scoped_ns/tables/scoped_table", "{}"),
             Some(&reader),
         );
@@ -1635,7 +1406,6 @@ mod tests {
         // DropTable
         let (status, _) = handle(
             &mgr,
-            &store,
             &req("DELETE", "/v1/namespaces/scoped_ns/tables/scoped_table"),
             Some(&reader),
         );
@@ -1652,7 +1422,6 @@ mod tests {
         .to_string();
         let (status, _) = handle(
             &mgr,
-            &store,
             &req_body("POST", "/v1/tables/rename", &rename_body),
             Some(&reader),
         );
@@ -1664,7 +1433,6 @@ mod tests {
         // The table must be completely unaffected by all four denied attempts.
         let (status, _) = handle(
             &mgr,
-            &store,
             &req("GET", "/v1/namespaces/scoped_ns/tables/scoped_table"),
             Some(&reader),
         );
@@ -1679,46 +1447,34 @@ mod tests {
         let (mgr, store) = seed();
         let writer = carrier_for_scopes("owner", "tenant-shared", &["kg:read", "kg:write"]);
         let reader = carrier_for_scopes("owner", "tenant-shared", &["kg:read"]);
-        let (status, _) = handle(
+        seed_table(
             &mgr,
             &store,
-            &req_body(
-                "POST",
-                "/v1/namespaces/scoped_ns/tables",
-                &create_table_body("scoped_table"),
-            ),
-            Some(&writer),
+            "scoped_ns",
+            "scoped_table",
+            Some(&owner_of(&writer)),
         );
-        assert_eq!(status, "200 OK");
 
-        let (status, _) = handle(&mgr, &store, &req("GET", "/v1/config"), Some(&reader));
+        let (status, _) = handle(&mgr, &req("GET", "/v1/config"), Some(&reader));
         assert_eq!(status, "200 OK");
-        let (status, _) = handle(&mgr, &store, &req("GET", "/v1/namespaces"), Some(&reader));
+        let (status, _) = handle(&mgr, &req("GET", "/v1/namespaces"), Some(&reader));
         assert_eq!(status, "200 OK");
-        let (status, _) = handle(
-            &mgr,
-            &store,
-            &req("GET", "/v1/namespaces/scoped_ns"),
-            Some(&reader),
-        );
+        let (status, _) = handle(&mgr, &req("GET", "/v1/namespaces/scoped_ns"), Some(&reader));
         assert_eq!(status, "200 OK");
         let (status, _) = handle(
             &mgr,
-            &store,
             &req("GET", "/v1/namespaces/scoped_ns/tables"),
             Some(&reader),
         );
         assert_eq!(status, "200 OK");
         let (status, _) = handle(
             &mgr,
-            &store,
             &req("GET", "/v1/namespaces/scoped_ns/tables/scoped_table"),
             Some(&reader),
         );
         assert_eq!(status, "200 OK");
         let (status, _) = handle(
             &mgr,
-            &store,
             &req("HEAD", "/v1/namespaces/scoped_ns/tables/scoped_table"),
             Some(&reader),
         );
@@ -1732,14 +1488,9 @@ mod tests {
         // lane fixes, but proof `operation_scope`/`scope_authorized` really
         // project per-operation minimum scope rather than just special-casing
         // "deny writes for read-only".
-        let (mgr, store) = seed();
+        let (mgr, _store) = seed();
         let writer_only = carrier_for_scopes("writer-only", "tenant-shared", &["kg:write"]);
-        let (status, _) = handle(
-            &mgr,
-            &store,
-            &req("GET", "/v1/namespaces"),
-            Some(&writer_only),
-        );
+        let (status, _) = handle(&mgr, &req("GET", "/v1/namespaces"), Some(&writer_only));
         assert_eq!(
             status, "403 Forbidden",
             "kg:write-only must be denied a read operation"
@@ -1750,40 +1501,34 @@ mod tests {
     fn both_scopes_carrier_retains_full_read_write_behavior() {
         let (mgr, store) = seed();
         let full = carrier_for_scopes("full", "tenant-shared", &["kg:read", "kg:write"]);
-        let (status, _) = handle(
+        seed_table(
             &mgr,
             &store,
-            &req_body(
-                "POST",
-                "/v1/namespaces/scoped_ns/tables",
-                &create_table_body("scoped_table"),
-            ),
-            Some(&full),
+            "scoped_ns",
+            "scoped_table",
+            Some(&owner_of(&full)),
         );
-        assert_eq!(status, "200 OK");
         let (status, _) = handle(
             &mgr,
-            &store,
             &req("GET", "/v1/namespaces/scoped_ns/tables/scoped_table"),
             Some(&full),
         );
         assert_eq!(status, "200 OK");
+        // The scope gate admits the write; the projection boundary then refuses it.
         let (status, _) = handle(
             &mgr,
-            &store,
             &req("DELETE", "/v1/namespaces/scoped_ns/tables/scoped_table"),
             Some(&full),
         );
-        assert_eq!(status, "204 No Content");
+        assert_eq!(status, "405 Method Not Allowed");
     }
 
     #[test]
     fn insufficient_scope_denial_is_audited() {
-        let (mgr, store) = seed();
+        let (mgr, _store) = seed();
         let reader = carrier_for_scopes("auditee", "tenant-shared", &["kg:read"]);
         let (status, _) = handle(
             &mgr,
-            &store,
             &req_body(
                 "POST",
                 "/v1/namespaces/scoped_ns/tables",
@@ -1824,10 +1569,10 @@ mod tests {
     async fn http_listener_serves_config_namespaces_and_load_table() {
         let (mgr, store) = seed();
         let lake = Arc::new(mgr);
-        let store: Arc<dyn ChunkStore> = Arc::new(store);
+        drop(store);
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let addr = listener.local_addr().unwrap();
-        tokio::spawn(serve(listener, lake, store));
+        tokio::spawn(serve(listener, lake));
 
         async fn get(addr: std::net::SocketAddr, path: &str) -> (String, String) {
             let mut sock = tokio::net::TcpStream::connect(addr).await.unwrap();

@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 /// class that the R083 arbitration policy does not understand.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum EvidenceClass {
+pub enum AnswerGrounding {
     /// An answer produced without retrieved evidence.
     Parametric,
     /// An answer conditioned on retrieved evidence.
@@ -29,7 +29,7 @@ pub struct Candidate {
     /// The producer's confidence in this candidate, before arbitration.
     pub confidence: f64,
     /// Whether the candidate is the model prior or retrieved evidence path.
-    pub evidence_class: EvidenceClass,
+    pub evidence_class: AnswerGrounding,
 }
 
 /// The closed set of outcomes from comparing the prior and retrieved answers.
@@ -55,7 +55,7 @@ pub struct ArbitrationVerdict {
 
 #[cfg(test)]
 mod tests {
-    use super::{ArbitrationChoice, ArbitrationVerdict, Candidate, EvidenceClass};
+    use super::{AnswerGrounding, ArbitrationChoice, ArbitrationVerdict, Candidate};
 
     #[test]
     fn verdict_carries_both_candidates() {
@@ -65,12 +65,12 @@ mod tests {
             prior: Candidate {
                 answer: "prior answer".to_owned(),
                 confidence: 0.91,
-                evidence_class: EvidenceClass::Parametric,
+                evidence_class: AnswerGrounding::Parametric,
             },
             retrieved: Candidate {
                 answer: "retrieved answer".to_owned(),
                 confidence: 0.88,
-                evidence_class: EvidenceClass::Retrieved,
+                evidence_class: AnswerGrounding::Retrieved,
             },
         };
 
@@ -83,5 +83,21 @@ mod tests {
         assert_eq!(decoded, verdict);
         assert_eq!(decoded.prior.answer, "prior answer");
         assert_eq!(decoded.retrieved.answer, "retrieved answer");
+    }
+
+    #[test]
+    // spec: MEDULLA-DECISION-ENGINE-R010.100.3
+    fn answer_grounding_round_trip() {
+        for (grounding, wire) in [
+            (AnswerGrounding::Parametric, "\"parametric\""),
+            (AnswerGrounding::Retrieved, "\"retrieved\""),
+        ] {
+            let encoded = serde_json::to_string(&grounding).expect("grounding must serialize");
+            assert_eq!(encoded, wire);
+            let decoded: AnswerGrounding =
+                serde_json::from_str(&encoded).expect("grounding must round-trip");
+            assert_eq!(decoded, grounding);
+        }
+        assert!(serde_json::from_str::<AnswerGrounding>("\"claim\"").is_err());
     }
 }
