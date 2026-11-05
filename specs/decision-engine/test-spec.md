@@ -1065,3 +1065,14 @@ Entries for rows whose named test is not yet in the tree.
 - `MEDULLA-DECISION-ENGINE-R097`: planned L1 `crates/medulla-server-api/src/request_replay.rs::tests::a_reused_nonce_is_rejected` and the blob-GC grace-period test beside the collector.
 - `MEDULLA-DECISION-ENGINE-R099.1`: planned L3 `crates/medulla-h-admin/src/graph_schema/world_model_tests.rs::wikidata_schema_mappings_validate_against_world_model_shapes` validates the fixture and resolves each entity by key.
 - `MEDULLA-DECISION-ENGINE-R099.2`: planned L3 `crates/medulla-h-ingest/src/web_ingest/tests.rs::entity_document_lowers_to_alignment_claims`.
+- `MEDULLA-DECISION-ENGINE-R117.1.1`: planned L2 `crates/medulla-tsdb/tests/derive_golden.rs::uql_sql_promql_outputs_agree_on_golden_reference` asserts all fifteen functions agree within 1e-9 on the three surfaces.
+- `MEDULLA-DECISION-ENGINE-R117.1.2`: planned L1 `crates/medulla-numeric/src/evaluation/skill.rs::tests::bootstrap_interval_is_reproducible` and planned L3 `crates/medulla-h-decide/src/decide/stat_tests/evaluator_tests.rs::decision_eval_reports_feature_power`.
+- `MEDULLA-DECISION-ENGINE-R118.1.2.1`: planned L1 `crates/medulla-decision-types/src/decision/reputation.rs::tests::source_reliability_round_trips`.
+- `MEDULLA-DECISION-ENGINE-R118.1.2.2`: planned L1 `crates/medulla-exec/src/exec/reliability.rs::tests::insufficient_history_abstains_instead_of_using_the_prior`.
+- `MEDULLA-DECISION-ENGINE-R118.1.2.3`: planned L1 `crates/medulla-h-query/src/query/explain_wire_b.rs::tests::caller_reliability_cannot_replace_the_governed_estimate`.
+- `MEDULLA-DECISION-ENGINE-R118.1.2.4`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/reputation_tests.rs::three_readers_agree_on_sparse_abstention_and_dense_estimate`.
+- `MEDULLA-DECISION-ENGINE-R119`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/replay_tests.rs::walk_forward_seals_trial_count_pbo_and_dm_figures` compares the sealed trial count, PBO and Diebold-Mariano figures to independently recomputed values and asserts the policy-dependent refusal.
+- `MEDULLA-DECISION-ENGINE-R120`: planned L1 `tests/test_decision_static_contracts.py::test_only_persisted_writes_count_as_admission_anchors` runs a read helper, a replay helper and a persisted write path through the script.
+- `MEDULLA-DECISION-ENGINE-R121.2`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/classes_tests.rs::graph_claim_and_evidence_control_answer_class`.
+- `MEDULLA-DECISION-ENGINE-R122`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/learning_tests.rs::synthetic_origin_records_are_excluded_from_real_calibration`.
+- `MEDULLA-DECISION-ENGINE-R124`: planned L1 `crates/medulla-numeric/tests/stat_kernels/clippy_policy.rs::the_declared_self_check_file_exists`.
