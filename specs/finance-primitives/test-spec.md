@@ -272,15 +272,13 @@ The typed unsupported-noise outcome must leave the prior checkpoint and paramete
 The server must expose that refusal through the real typed model route required by R002.9.
 Unknown noise-correlation policy must also refuse. No correlated-noise implementation is required by this correction.
 
-<!-- spec-definition-patch:owner-batch-20261012-finance-primitives -->
-## Planned finance owner acceptance — 2026-10-12
+## Planned finance owner acceptance
 
 All targets below are planned acceptance, not completed tests or receipts. Use the named producer/consumer boundary and retain existing coverage.
 
 - **`MEDULLA-FINANCE-PRIMITIVES-R015.1` / EG:43:** Stage and read back a sealed `OrderProposalSnapshotV1`. Prove revision-1 creation, predecessor-bound next revision, byte-identical idempotency, and same-revision mutation refusal. Stale CAS, R019 mismatch, missing evidence, unavailable/failing gates, and vetoes each preserve pointer, history, and receipt. Keep promotion refused until Graft SDK payload schema, complete hook registry, and Arbora confirmation contract are defined. Then verify the atomic promoted pointer, derivation edge, and `OrderAdmissionReceiptV1`. Bind proposal/revision/snapshot/decision/policy/gate/transaction revisions. The result admits host review only; it sends no external order. No host/Graft SDK effect test is claimed. Source `e3ad9b1e3121eb3278c3e2b52ce948817e317db3de48d5886a624ffe2ba9be47`.
 
 - **`MEDULLA-FINANCE-PRIMITIVES-R002.11` / EG:67:** A seeded three-state pinned HMM drives `RegimeForecastV1`. Callers cannot override `p0` or `T`. Check `p_h=p0*T^h` and each horizon's probability sum. Score held-out categorical Brier with `Brier_h=(1/N_h)Σ_nΣ_s(p_{n,h,s}-1[y_n=s])²` on unique rows. Bind sample/source/origin/horizon/state order/prediction/realized state/target time. Require origin before target. Require `N_h` to meet its policy floor. Match dataset/model/state-order/scoring revisions. A complete versioned per-horizon policy and `RegimeSizingPolicyV1` yield deterministic sizing. Refuse malformed/stale vectors/matrix, invalid horizons, missing/duplicate samples, and future leakage. Also refuse zero denominator, low sample counts, threshold failures, missing weights, or risk-cap excess. Prove refusal returns no sizing value. Policy values absent from source have no defaults. No live-order behavior is tested. Source `037f3edf5fe38f55ac24d6e0cc7bd85f1efc60cadf7c97b66b44978613a7acb6`.
-<!-- /spec-definition-patch -->
 
 ## Planned bindings
 
@@ -367,7 +365,7 @@ Each entry names the row, the exact post-split `path::name` and what it proves. 
 | MEDULLA-FINANCE-PRIMITIVES-R011.2.1 | `tests/finance_alert_outbox_served.rs::intent_reaches_outbox_with_flip_identity` (planned) | L3: a raise through signed dispatch leaves an outbox fact whose key is the `finance.flip` event id. |
 | MEDULLA-FINANCE-PRIMITIVES-R011.2.2 | `tests/finance_alert_outbox_served.rs::alert_and_outbox_commit_atomically` (planned) | L3: an injected commit failure leaves neither the event node nor the outbox fact; unauthorized tenants and conflicting revisions refuse; a claim by consumer `finance.alert.<kind>` returns the committed fact. |
 | MEDULLA-FINANCE-PRIMITIVES-R011.3 | `tests/finance_alert_outbox_served.rs::replay_preserves_one_outbox_fact` (planned) | L3: each kind raised twice and a server restart leave one event node and one outbox fact per event id. |
-| MEDULLA-FINANCE-PRIMITIVES-R012.2 | `tests/finance_ghostfolio_served.rs::ghostfolio_import_is_one_way_and_idempotent` (planned) | L3: a disposable fixture imported twice leaves one `Activity` per `ghostfolio_activity_id`; `write_back_to_ghostfolio` refuses. |
+| MEDULLA-FINANCE-PRIMITIVES-R012.2 | `tests/finance_tracker_import_served.rs::ghostfolio_import_is_one_way_and_idempotent` (planned) | L3: a disposable fixture imported twice leaves one `Activity` per `ghostfolio_activity_id`; `write_back_to_ghostfolio` refuses. |
 | MEDULLA-FINANCE-PRIMITIVES-R013 | `tests/finance_golden_served.rs::every_figure_carries_provenance` (planned) | Proves the served behavior of row MEDULLA-FINANCE-PRIMITIVES-R013 as its Verification cell states. |
 | MEDULLA-FINANCE-PRIMITIVES-R013.2.2 | `tests/finance_golden_served.rs::corporate_action_matches_published_reference` (planned) | L3: exact ticks match the published reference through signed dispatch; a mutated reference and each missing provenance field fail; the expected values are never computed by the implementation. |
 | MEDULLA-FINANCE-PRIMITIVES-R013.2.3 | `tests/finance_golden_served.rs::dst_session_matches_published_reference` (planned) | L3: exact ticks match the published reference through signed dispatch; a mutated reference and each missing provenance field fail; the expected values are never computed by the implementation. |
