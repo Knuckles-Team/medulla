@@ -222,5 +222,11 @@ closed_error_codes! {
         WebSelectionNoCandidates => "WEB_SELECTION_NO_CANDIDATES",
         WebSelectionQueryMissing => "WEB_SELECTION_QUERY_MISSING",
         WebSelectionTooManyCandidates => "WEB_SELECTION_TOO_MANY_CANDIDATES",
+        DurableUnitRunConflict => "DURABLE_UNIT_RUN_CONFLICT",
+        DurableUnitRunMissing => "DURABLE_UNIT_RUN_MISSING",
+        RunTraceShapeInvalid => "RUN_TRACE_SHAPE_INVALID",
+        ValidityInverted => "VALIDITY_INVERTED",
+        WindowContentConflict => "WINDOW_CONTENT_CONFLICT",
+        WindowRunRevisionMismatch => "WINDOW_RUN_REVISION_MISMATCH",
     }
 }

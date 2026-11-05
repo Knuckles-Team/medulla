@@ -668,6 +668,215 @@ fn probe_run_admission(
     Ok(Admission::New { head: None })
 }
 
+/// The `node_type` a run-trace vocabulary node declares.
+fn node_type(props: &Props) -> Option<&str> {
+    props.get("node_type").and_then(|value| value.as_str())
+}
+
+fn refuse_code(code: medulla_types::contract::ServerErrorCode, detail: String) -> String {
+    format!("{}: {}", code.as_str(), detail)
+}
+
+/// The closed `terminationReason` set of `RunTraceTerminationShape`.
+const TERMINATION_REASONS: [&str; 5] = [
+    "final_answer",
+    "context_overflow",
+    "stuck",
+    "step_budget",
+    "error",
+];
+/// The non-negative integer counters of `RunTraceCounterShape`.
+const TRACE_COUNTERS: [&str; 6] = [
+    "peakContextTokens",
+    "contextBudgetTokens",
+    "elisionCount",
+    "summarizationCount",
+    "turnCount",
+    "toolCallCount",
+];
+
+/// The first violated run-trace shape of `orchestration-v1.shapes.ttl`, if any.
+/// Optional measurements stay absent; a recorded zero is valid.
+fn run_trace_violation(props: &Props) -> Option<(&'static str, String)> {
+    if let Some(reason) = props.get("terminationReason") {
+        if !reason
+            .as_str()
+            .is_some_and(|reason| TERMINATION_REASONS.contains(&reason))
+        {
+            return Some((
+                "RunTraceTerminationShape",
+                format!("terminationReason {reason} is not in the closed set"),
+            ));
+        }
+    }
+    for counter in TRACE_COUNTERS {
+        if let Some(value) = props.get(counter) {
+            if value.as_u64().is_none() {
+                return Some((
+                    "RunTraceCounterShape",
+                    format!("{counter} must be a non-negative integer"),
+                ));
+            }
+        }
+    }
+    if let Some(cost) = props.get("costUsd") {
+        let parsed = match cost {
+            serde_json::Value::String(text) => text.parse::<f64>().ok(),
+            other => other.as_f64(),
+        };
+        if !parsed.is_some_and(|cost| cost.is_finite() && cost >= 0.0) {
+            return Some((
+                "RunTraceCounterShape",
+                "costUsd must be a non-negative decimal".to_string(),
+            ));
+        }
+    }
+    let peak = props.get("peakContextTokens").and_then(|v| v.as_u64());
+    let budget = props.get("contextBudgetTokens").and_then(|v| v.as_u64());
+    if let (Some(peak), Some(budget)) = (peak, budget) {
+        let overflow =
+            props.get("terminationReason").and_then(|v| v.as_str()) == Some("context_overflow");
+        if peak > budget && !overflow {
+            return Some((
+                "RunTraceBudgetShape",
+                "Peak context exceeds its budget without context_overflow.".to_string(),
+            ));
+        }
+    }
+    None
+}
+
+/// MEDULLA-ORCH-VOCAB-R009.15 — a `RunTrace` node is verified against the three
+/// run-trace shapes; a violation refuses with `RUN_TRACE_SHAPE_INVALID`, names
+/// the shape, and writes nothing. A valid trace is not a harness record, so it
+/// passes through (`None`).
+fn validate_run_trace_node(props: &Props) -> Result<Option<Admission>, String> {
+    if node_type(props) != Some("RunTrace") {
+        return Ok(None);
+    }
+    match run_trace_violation(props) {
+        Some((shape, detail)) => Err(refuse_code(
+            medulla_types::contract::ServerErrorCode::RunTraceShapeInvalid,
+            format!("{shape}: {detail}"),
+        )),
+        None => Ok(None),
+    }
+}
+
+/// Engine-owned keys stripped before a run-trace vocabulary record decodes.
+const ENGINE_KEYS: [&str; 4] = ["node_type", "tx_from", "error_rate", "run_trace_ref"];
+
+fn decode_record<T: for<'de> serde::Deserialize<'de>>(props: &Props) -> Result<T, String> {
+    let mut record = props.clone();
+    for key in ENGINE_KEYS {
+        record.remove(key);
+    }
+    serde_json::from_value(serde_json::Value::Object(record)).map_err(|err| err.to_string())
+}
+
+/// MEDULLA-ORCH-VOCAB-R009.18.2 — ingest one observation window. The window
+/// links to its `:RunTrace` (`run_trace_ref`, stamped with the error rate by
+/// [`stamp_new_record`]); a run revision other than the stored trace's refuses
+/// with `WINDOW_RUN_REVISION_MISMATCH`, a reused window id with different
+/// content with `WINDOW_CONTENT_CONFLICT`, and an equal re-send is a replay.
+fn validate_run_observation(
+    view: &HarnessView<'_>,
+    node_id: &str,
+    props: &Props,
+) -> Result<Option<Admission>, String> {
+    use medulla_types::contract::ServerErrorCode;
+    use medulla_types::run_observation::{RunObservationWindow, WINDOW_SAMPLES_MAX_DEFAULT};
+    if node_type(props) != Some("RunObservationWindow") {
+        return Ok(None);
+    }
+    let window: RunObservationWindow = decode_record(props)
+        .map_err(|err| format!("HarnessRecordMalformed: observation window '{node_id}': {err}"))?;
+    window
+        .validate(WINDOW_SAMPLES_MAX_DEFAULT)
+        .map_err(|err| format!("HarnessRecordMalformed: observation window '{node_id}': {err}"))?;
+    if window.window_id != node_id {
+        return Err(format!(
+            "HarnessRecordMalformed: node id '{node_id}' is not window '{}'",
+            window.window_id
+        ));
+    }
+    if let Some(trace) = view.props(&window.run_id) {
+        let stored_revision = trace.get("run_revision").and_then(|v| v.as_u64());
+        if stored_revision.is_some_and(|revision| revision != window.run_revision) {
+            return Err(refuse_code(
+                ServerErrorCode::WindowRunRevisionMismatch,
+                format!(
+                    "window '{node_id}' names run revision {} of '{}'",
+                    window.run_revision, window.run_id
+                ),
+            ));
+        }
+    }
+    if let Some(stored) = view.props(node_id) {
+        let same = decode_record::<RunObservationWindow>(&stored).is_ok_and(|s| s == window);
+        if !same {
+            return Err(refuse_code(
+                ServerErrorCode::WindowContentConflict,
+                format!("window '{node_id}' already holds different content"),
+            ));
+        }
+        return Ok(Some(Admission::Replay));
+    }
+    Ok(Some(Admission::New { head: None }))
+}
+
+/// MEDULLA-ORCH-VOCAB-R009.700/R009.701 — admit one durable run unit. A unit
+/// without a `run_id` refuses with `DURABLE_UNIT_RUN_MISSING`; a unit id reused
+/// with a different run refuses with `DURABLE_UNIT_RUN_CONFLICT`; an equal
+/// re-send is a replay. Another tenant's run is not in this view, so it reads
+/// as absent rather than as a conflict.
+fn validate_durable_unit(
+    view: &HarnessView<'_>,
+    node_id: &str,
+    props: &Props,
+) -> Result<Option<Admission>, String> {
+    use medulla_types::contract::ServerErrorCode;
+    use medulla_types::durable_unit::DurableUnit;
+    if node_type(props) != Some("DurableUnit") {
+        return Ok(None);
+    }
+    let run_missing = props
+        .get("run_id")
+        .and_then(|v| v.as_str())
+        .is_none_or(|run| run.trim().is_empty());
+    if run_missing {
+        return Err(refuse_code(
+            ServerErrorCode::DurableUnitRunMissing,
+            format!("durable unit '{node_id}' names no run_id"),
+        ));
+    }
+    let unit: DurableUnit = decode_record(props)
+        .map_err(|err| format!("HarnessRecordMalformed: durable unit '{node_id}': {err}"))?;
+    if unit.unit_id != node_id {
+        return Err(format!(
+            "HarnessRecordMalformed: node id '{node_id}' is not unit '{}'",
+            unit.unit_id
+        ));
+    }
+    if let Some(stored) = view.props(node_id) {
+        if let Ok(prior) = decode_record::<DurableUnit>(&stored) {
+            if prior.run_id != unit.run_id {
+                return Err(refuse_code(
+                    ServerErrorCode::DurableUnitRunConflict,
+                    format!(
+                        "unit '{node_id}' belongs to run '{}', not '{}'",
+                        prior.run_id, unit.run_id
+                    ),
+                ));
+            }
+            if prior == unit {
+                return Ok(Some(Admission::Replay));
+            }
+        }
+    }
+    Ok(Some(Admission::New { head: None }))
+}
+
 /// The graph-relative admission of one AddNode of ANY harness-record kind.
 /// `None` when the node is not a harness record (the write passes through).
 fn harness_add_node_admission(
@@ -676,6 +885,13 @@ fn harness_add_node_admission(
     props: &Props,
     engine_fills_pointer: bool,
 ) -> Result<Option<Admission>, String> {
+    validate_run_trace_node(props)?;
+    if let Some(admission) = validate_run_observation(view, node_id, props)? {
+        return Ok(Some(admission));
+    }
+    if let Some(admission) = validate_durable_unit(view, node_id, props)? {
+        return Ok(Some(admission));
+    }
     if is_harness_component_write(props) {
         return Ok(Some(component_admission(
             view,
@@ -715,6 +931,18 @@ fn stamp_new_record(props: &Props, head: Option<&str>, tx_now: u64) -> Result<Ve
     let lesson = is_harness_lesson_write(props);
     let mut stamped = props.clone();
     stamped.insert("tx_from".into(), serde_json::json!(tx_now));
+    if node_type(props) == Some("RunObservationWindow") {
+        // R009.18.2: the window links to its trace, and a zero
+        // `eligible_attempts` stores the error rate as Unknown.
+        let window: medulla_types::run_observation::RunObservationWindow =
+            decode_record(props).map_err(|err| format!("HarnessRecordMalformed: {err}"))?;
+        stamped.insert("run_trace_ref".into(), serde_json::json!(window.run_id));
+        stamped.insert(
+            "error_rate".into(),
+            serde_json::to_value(window.error_rate())
+                .map_err(|err| format!("HarnessRecordMalformed: {err}"))?,
+        );
+    }
     if component || lesson {
         if let Some(pointer_target) = head {
             let pointer_absent = if component {
