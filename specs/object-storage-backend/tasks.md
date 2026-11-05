@@ -1,9 +1,15 @@
-# MEDULLA-OBJECT-STORAGE-BACKEND tasks
+# MEDULLA-OBJECT-STORAGE-BACKEND — Tasks
 
-Ordered one-bite lanes. Compile slot: Medulla only, one cargo lane host-wide at a time.
+One task per row of `requirements.md`, producer first: the backend spec (R001) precedes the read path, the commit path, shared-root access, the archive and the cost gate. Each task names its row; the row holds the files, the caller chain and the proof. Rows that edit `crates/medulla-persistence/src/object_store_backend.rs` run in series.
 
-- [ ] MEDULLA-OBJECT-STORAGE-BACKEND-R001 — typed backend spec (`crates/medulla-types` wire type; `crates/medulla-storage` binding dispatch; lineage registry admission).
-- [ ] MEDULLA-OBJECT-STORAGE-BACKEND-R002 — object-store read path (segment fetch by manifest; `GraphView` integration; digest verification).
-- [ ] MEDULLA-OBJECT-STORAGE-BACKEND-R003 — object-store commit path (immutable segment write; CAS manifest publish; durability-class ack; stale-CAS refusal).
-- [ ] MEDULLA-OBJECT-STORAGE-BACKEND-R004 — shared-root multi-node access (cold open with bounded re-fetch; placement-grant gate; stale-cache discard).
-- [ ] MEDULLA-OBJECT-STORAGE-BACKEND-R005 — comparative cost gate (stamped JSONL harness; matched-run protocol; bounded regression guard; claim-ineligibility rule).
+## Tasks
+
+- [ ] T001 [US1] MEDULLA-OBJECT-STORAGE-BACKEND-R001 Typed object-store backend specification
+- [ ] T002 [US2] MEDULLA-OBJECT-STORAGE-BACKEND-R002 Object-store read path
+- [ ] T003 [US2] MEDULLA-OBJECT-STORAGE-BACKEND-R002.1 Hot-path proof of the cold open
+- [ ] T004 [US3] MEDULLA-OBJECT-STORAGE-BACKEND-R003 Object-store commit path (commit before ack)
+- [ ] T005 [US3] MEDULLA-OBJECT-STORAGE-BACKEND-R003.1 Hot-path proof of the commit
+- [ ] T006 [US3] MEDULLA-OBJECT-STORAGE-BACKEND-R003.2 Graph copy from the redb store with a verified digest
+- [ ] T007 [P] [US5] MEDULLA-OBJECT-STORAGE-BACKEND-R006 Archive segment put and get by sequence range
+- [ ] T008 [US4] MEDULLA-OBJECT-STORAGE-BACKEND-R004 Shared-root multi-node access
+- [ ] T009 [US6] MEDULLA-OBJECT-STORAGE-BACKEND-R005 Comparative cost gate across releases
