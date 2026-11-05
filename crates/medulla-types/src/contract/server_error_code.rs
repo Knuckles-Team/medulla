@@ -222,5 +222,6 @@ closed_error_codes! {
         WebSelectionNoCandidates => "WEB_SELECTION_NO_CANDIDATES",
         WebSelectionQueryMissing => "WEB_SELECTION_QUERY_MISSING",
         WebSelectionTooManyCandidates => "WEB_SELECTION_TOO_MANY_CANDIDATES",
+        WorkQueueFull => "WORK_QUEUE_FULL",
     }
 }

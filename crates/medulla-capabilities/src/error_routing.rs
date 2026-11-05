@@ -184,7 +184,10 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     ("AddNode", &["REPLAY_NONCE_CONSUMED"]),
     ("CypherQuery", &["REPLAY_NONCE_CONSUMED"]),
     ("GraphQl", &["REPLAY_NONCE_CONSUMED"]),
-    ("SubmitWorkItem", &["REPLAY_NONCE_CONSUMED"]),
+    (
+        "SubmitWorkItem",
+        &["REPLAY_NONCE_CONSUMED", "WORK_QUEUE_FULL"],
+    ),
     ("ClaimWorkItem", &["REPLAY_NONCE_CONSUMED"]),
     ("PublishRunCheckpoint", &["REPLAY_NONCE_CONSUMED"]),
     ("GetRunCheckpoint", &["CONFLICT"]),
