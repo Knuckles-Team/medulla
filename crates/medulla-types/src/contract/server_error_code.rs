@@ -265,5 +265,10 @@ closed_error_codes! {
         WindowContentConflict => "WINDOW_CONTENT_CONFLICT",
         WindowRunRevisionMismatch => "WINDOW_RUN_REVISION_MISMATCH",
         WorkQueueFull => "WORK_QUEUE_FULL",
+        KernelInputNonfinite => "KERNEL_INPUT_NONFINITE",
+        StateCovarianceInvalid => "STATE_COVARIANCE_INVALID",
+        StateDimensionMismatch => "STATE_DIMENSION_MISMATCH",
+        StateRetryConflict => "STATE_RETRY_CONFLICT",
+        StateRevisionUnsupported => "STATE_REVISION_UNSUPPORTED",
     }
 }
