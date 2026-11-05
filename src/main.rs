@@ -403,6 +403,8 @@ async fn run_inner() -> Result<(), Box<dyn std::error::Error>> {
         txn_limits,
     );
     server_state.local_anonymous = args.auth_mode == "none";
+    server_state.write_conflict_strategy =
+        server_startup::parse_write_conflict_strategy(&args.write_conflict_strategy);
     let state = Arc::new(RwLock::new(server_state));
 
     // Compose the ordinary process as a real local-placement server before any
