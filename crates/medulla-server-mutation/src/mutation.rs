@@ -905,6 +905,7 @@ mod tests {
         ("MeetingSummaryCommit", "MEDULLA-MEDIA-VOCAB-R001.101.3-.5 lowers meeting transcript, summary-context or summary rows and delegates its sole graph commit to ApplyChangeEnvelope, exactly like EnrichDocument"),
         ("MeetingSummaryContext", "MEDULLA-MEDIA-VOCAB-R001.101.3-.5 lowers meeting transcript, summary-context or summary rows and delegates its sole graph commit to ApplyChangeEnvelope, exactly like EnrichDocument"),
         ("MeetingTranscriptRevision", "MEDULLA-MEDIA-VOCAB-R001.101.3-.5 lowers meeting transcript, summary-context or summary rows and delegates its sole graph commit to ApplyChangeEnvelope, exactly like EnrichDocument"),
+        ("LineageIngest", "MEDULLA-UNIFIED-DATA-PLANE-R702.3 lowers Dataset nodes, derivesInto edges and QuarantinedLineageEvent nodes of one drained batch and delegates its sole graph commit to ApplyChangeEnvelope, exactly like EnrichDocument"),
         ("RecomputeMaterialization", "fenced reasoning-projection coordinator resolves authoritative graph provenance and fsyncs its projection watermark"),
         // ── Server lifecycle: TxnParticipation::None, not a graph mutation. ──
         ("Shutdown", "server-lifecycle control-plane action, not a graph mutation"),

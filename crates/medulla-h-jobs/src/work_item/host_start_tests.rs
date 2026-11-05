@@ -248,3 +248,92 @@ async fn signed_wrong_tenant_and_forged_provenance_refuse_without_mutation() {
         medulla_server_api::batch_compile::principal_fingerprint(ISSUER).unwrap()
     );
 }
+
+fn payload_json(response: Response) -> serde_json::Value {
+    assert!(response.error.is_none(), "{:?}", response.error);
+    match response.result.unwrap() {
+        medulla_protocol_types::protocol::ResultPayload::Json(value) => value,
+        medulla_protocol_types::protocol::ResultPayload::Raw(bytes) => {
+            rmp_serde::from_slice(&bytes).unwrap()
+        }
+        other => panic!("unexpected payload {other:?}"),
+    }
+}
+
+/// The installed Python client (`ControlLeaseClient` / `_control_lease_view`)
+/// accepts exactly these view keys; the arbora consumer reads through it.
+const CLIENT_VIEW_FIELDS: &[&str] = &[
+    "expires_at_ms",
+    "grant",
+    "hard_expires_at_ms",
+    "host_start_provenance",
+    "issued_at_ms",
+    "kind",
+    "lease_id",
+    "revision",
+    "status",
+];
+
+// spec: MEDULLA-DURABLE-KERNEL-R030.1.4
+#[tokio::test]
+async fn signed_dispatch_issues_and_arbora_client_reads_the_grant() {
+    let _env = medulla_kernel::crypto::acquire_test_env_read_lock().await;
+    let (_dir, state, _backend, request) = fixture().await;
+    let issued = payload_json(
+        call(
+            &state,
+            30,
+            "host-issue",
+            &["host:issue-start"],
+            Method::IssueHostStartGrant {
+                request: request.clone(),
+            },
+        )
+        .await,
+    );
+    let typed: ControlLeaseIssued = serde_json::from_value(issued.clone()).unwrap();
+    assert!(typed.lease.is_some(), "issue must return the lease view");
+    let read = payload_json(
+        call(
+            &state,
+            31,
+            "host-read",
+            &["lease:read"],
+            Method::GetControlLease {
+                tenant: TENANT.into(),
+                lease_id: "host-grant".into(),
+            },
+        )
+        .await,
+    );
+    let view = if read.get("lease_id").is_some() {
+        read.clone()
+    } else {
+        read.get("lease").cloned().unwrap_or(read.clone())
+    };
+    let keys: Vec<&str> = {
+        let mut keys: Vec<&str> = view
+            .as_object()
+            .expect("lease view is an object")
+            .keys()
+            .map(String::as_str)
+            .collect();
+        keys.sort_unstable();
+        keys
+    };
+    assert_eq!(keys, CLIENT_VIEW_FIELDS, "client view contract drifted");
+    assert_eq!(
+        view["kind"],
+        medulla_work_types::host_start::HOST_START_KIND
+    );
+    let binding: HostStartBinding = serde_json::from_value(view["grant"].clone())
+        .expect("grant carries exactly the Rust HostStartBinding fields");
+    assert_eq!(binding, request.binding);
+    assert_eq!(
+        view["host_start_provenance"]["issuer_ref"],
+        serde_json::json!(
+            medulla_server_api::batch_compile::principal_fingerprint(ISSUER).unwrap()
+        )
+    );
+    assert_eq!(view, issued["lease"]);
+}

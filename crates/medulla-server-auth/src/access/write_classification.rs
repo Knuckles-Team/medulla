@@ -419,6 +419,7 @@ pub fn requires_write(method: &Method) -> bool {
                 | Method::MeetingSummaryCommit { .. }
                 | Method::MeetingSummaryContext { .. }
                 | Method::MeetingTranscriptRevision { .. }
+                | Method::LineageIngest { .. }
                 | Method::TelemetryDerive { .. }
                 | Method::Reconcile { .. }
                 | Method::ApplyMutation { .. }

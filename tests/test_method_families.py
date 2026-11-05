@@ -247,6 +247,7 @@ _UNCONDITIONAL_WRITES_AT_BASE = (
         "MeetingSummaryCommit",
         "MeetingSummaryContext",
         "MeetingTranscriptRevision",
+        "LineageIngest",
         "SourceIngest",
         "TelemetryDerive",
     }

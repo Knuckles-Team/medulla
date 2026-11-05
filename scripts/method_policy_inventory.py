@@ -98,6 +98,7 @@ EXPECTED_DOMAIN_MODULES = (
     "cluster",
     "compute",
     "coordination",
+    "finance",
     "graph",
     "ingestion",
     "messaging",

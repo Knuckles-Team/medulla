@@ -82,6 +82,9 @@ mod association_hash_tests;
 mod core;
 mod executor_claim;
 mod executor_loop;
+// The `DatasetProfile` claim arm (MEDULLA-UNIFIED-DATA-PLANE-R761.3) is its caller.
+#[cfg_attr(not(test), allow(dead_code))]
+mod executor_profile;
 #[cfg(feature = "program-optimization")]
 mod executor_program;
 #[cfg(test)]
