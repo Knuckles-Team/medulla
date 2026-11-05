@@ -25,6 +25,8 @@ arbora / SDK client --> medulla dispatch (verified tenant + principal)
 - **Constraints**: One write authority; no unguarded fast path; a mirror or cache never becomes read authority; each refusal has a stable code; no version suffix in a name; hard cutover with no shim.
 - **Scale/Scope**: The active leaf rows of `requirements.md`, spread over 6 user stories, 15 `FR-` labels and 6 `SC-` criteria.
 
+**Knob convention.** An engine knob named `knob x.y` in this spec's rows is a typed field of the server configuration, read from the command line or from the environment variable `MEDULLA_<NAME>` (the dotted name upper-cased, dots as underscores) and bounds-checked at startup: a value outside the stated range refuses startup with the knob name. Decision knobs are the exception and live only in the `MEDULLA-DECISION-ENGINE-R179` registry. Rows do not restate this.
+
 ## Constitution Check
 
 - **R-I. The engine is native Rust and the only fact store**: pass. Every row lands in a Rust crate over the engine store.
