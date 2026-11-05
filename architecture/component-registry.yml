@@ -4100,6 +4100,7 @@ components:
       - "tests/usecase_observability_rca.rs"
       - "tests/viz_dispatch.rs"
       - "tests/web_document_enrich_served.rs"
+      - "tests/wire_listeners_one_store.rs"
       - "benches"
       - "examples"
     generated_roots: []
