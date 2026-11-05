@@ -62,9 +62,13 @@ These tests remain PENDING; this documentation change supplies no implementation
 - `MEDULLA-CQ-CONN-R085.5`: `tests/typed_packs/test_connector_auto_onboard_served.py::test_answer_cites_digest_revision_fetch_time_and_load_set`.
 - `MEDULLA-CQ-CONN-R085.6`: `tests/typed_packs/test_connector_auto_onboard_served.py::test_onboarded_connector_answers_a_cross_ontology_live_question`.
 
-## Planned bindings, range 1
+## Planned bindings
 
-The table-driven served test `tests/connector_competency/test_competency_served.py::test_case` (MEDULLA-CQ-CONN-R067.9) is parametrised by the case id of `tests/connector_competency/cases/<connector>.json`. Each entry below is one case of the first range of connector questions. The case imports the connector pack, approves the mapping, starts one `FixtureSource` per source, runs the `uql` of the case and checks the columns, `min_rows` and the provenance fields. A second case of each entry removes the pack or one other source and checks the named refusal or the `Unconnected` abstention. All entries are planned; none has run.
+Entries are grouped by the rows they bind. A test marked planned does not exist yet; its path is the post-split location it will be created at.
+
+### Question cases of the first connectors
+
+The table-driven served test `tests/connector_competency/test_competency_served.py::test_case` (MEDULLA-CQ-CONN-R067.9) is parametrised by the case id of `tests/connector_competency/cases/<connector>.json`. Each entry below is one case of the first set of connector questions. The case imports the connector pack, approves the mapping, starts one `FixtureSource` per source, runs the `uql` of the case and checks the columns, `min_rows` and the provenance fields. A second case of each entry removes the pack or one other source and checks the named refusal or the `Unconnected` abstention. All entries are planned; none has run.
 
 | Test ID | Requirement | Level | Setup and input | Expected observation | Evidence |
 |---|---|---|---|---|---|
@@ -143,9 +147,9 @@ The table-driven served test `tests/connector_competency/test_competency_served.
 | `test_competency_served::test_case[mealie.q1]` | MEDULLA-CQ-CONN-R037.1 | Served | Import the `mealie` pack, approve its mapping, replay `recordings/mealie/single.json`, run the case `uql`. | Non-empty rows with source, record id and as-of; with the pack removed the refusal code and the `Unconnected` audit naming `mealie`. | PENDING |
 | `test_competency_served::test_case[mealie.q2]` | MEDULLA-CQ-CONN-R037.2 | Served | Import the packs of `mealie` and the other sources, approve the mappings and the `owl:sameAs` links, replay `recordings/mealie/cross_<source>.json`, run the case `uql`. | Joined rows with provenance from every source used; with one other source dropped, the named `Unconnected` abstention and no empty success. | PENDING |
 
-## Planned bindings, range 2
+### Question cases, harness rows and infrastructure vocabulary
 
-Rows of the second range of connector questions, harness rows and infrastructure vocabulary rows. Served question entries run through `tests/connector_competency/test_competency_served.py::test_case` (MEDULLA-CQ-CONN-R067.9): import the pack of each source, approve the mapping, replay the recordings through `FixtureSource`, run the case `uql`, and check columns, `min_rows` and provenance; a second case drops the pack or one other source and checks the refusal or the `Unconnected` abstention. Harness and vocabulary entries name their own proving test.
+Rows of the second set of connector questions, harness rows and infrastructure vocabulary rows. Served question entries run through `tests/connector_competency/test_competency_served.py::test_case` (MEDULLA-CQ-CONN-R067.9): import the pack of each source, approve the mapping, replay the recordings through `FixtureSource`, run the case `uql`, and check columns, `min_rows` and provenance; a second case drops the pack or one other source and checks the refusal or the `Unconnected` abstention. Harness and vocabulary entries name their own proving test.
 
 | Test ID | Requirement | Level | Setup and input | Expected observation | Evidence |
 |---|---|---|---|---|---|
@@ -231,7 +235,7 @@ Rows of the second range of connector questions, harness rows and infrastructure
 | `crates/medulla-core/tests/connector_competency_r068_infrastructure.rs::ontology_audit_infrastructure_v1::runningReplicas_declared` | MEDULLA-CQ-CONN-R068.18 | Unit | Load the registered `core:infrastructure@1` source through the CoreSpec registry and ask for the term. | The module declares the term with the stated domain and range and the shape; a violating fixture fails the shape. | PENDING |
 | `crates/medulla-core/tests/connector_competency_r068_infrastructure.rs::ontology_audit_infrastructure_v1::stackSourceRepository_declared` | MEDULLA-CQ-CONN-R068.19 | Unit | Load the registered `core:infrastructure@1` source through the CoreSpec registry and ask for the term. | The module declares the term with the stated domain and range and the shape; a violating fixture fails the shape. | PENDING |
 
-## Planned bindings, range 3
+### Vocabulary rows R068.20 to R090
 
 Rows `MEDULLA-CQ-CONN-R068.20` to `MEDULLA-CQ-CONN-R090`. A test marked planned does not exist yet; its path is the post-split location it will be created at. Each entry names the row it binds and is added to the row as a `// spec:` comment (Rust) or marker (Python) when the test lands.
 

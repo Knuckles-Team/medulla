@@ -1,127 +1,293 @@
-# Implementable tasks
+# MEDULLA-CQ-CONN — Tasks
 
-Tasks mirror requirements.md rows; check a task only when its evidence is linked.
+One task per leaf row of `requirements.md`, producer first: the harness (US3) and the vocabulary (US4) precede the question rows (US1, US2) that read them. Each task names its row; the row holds the files, the caller chain and the proof.
 
-- [ ] **CQ-001 · MEDULLA-CQ-CONN-R001:** ansible-tower rollup (MEDULLA-CQ-CONN-R001.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-002 · MEDULLA-CQ-CONN-R002:** archimate rollup (MEDULLA-CQ-CONN-R002.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-003 · MEDULLA-CQ-CONN-R003:** archivebox rollup (MEDULLA-CQ-CONN-R003.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-004 · MEDULLA-CQ-CONN-R004:** aris rollup (MEDULLA-CQ-CONN-R004.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-005 · MEDULLA-CQ-CONN-R005:** arr rollup (MEDULLA-CQ-CONN-R005.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-006 · MEDULLA-CQ-CONN-R006:** atlassian rollup (MEDULLA-CQ-CONN-R006.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-007 · MEDULLA-CQ-CONN-R007:** audiobookshelf rollup (MEDULLA-CQ-CONN-R007.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-008 · MEDULLA-CQ-CONN-R008:** audio-transcriber rollup (MEDULLA-CQ-CONN-R008.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-009 · MEDULLA-CQ-CONN-R009:** caddy rollup (MEDULLA-CQ-CONN-R009.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-010 · MEDULLA-CQ-CONN-R010:** camunda rollup (MEDULLA-CQ-CONN-R010.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-011 · MEDULLA-CQ-CONN-R011:** ciso-assistant rollup (MEDULLA-CQ-CONN-R011.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-012 · MEDULLA-CQ-CONN-R012:** clarity rollup (MEDULLA-CQ-CONN-R012.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-013 · MEDULLA-CQ-CONN-R013:** container-manager rollup (MEDULLA-CQ-CONN-R013.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-014 · MEDULLA-CQ-CONN-R014:** data-science rollup (MEDULLA-CQ-CONN-R014.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-015 · MEDULLA-CQ-CONN-R015:** dockerhub rollup (MEDULLA-CQ-CONN-R015.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-016 · MEDULLA-CQ-CONN-R016:** documentdb rollup (MEDULLA-CQ-CONN-R016.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-017 · MEDULLA-CQ-CONN-R017:** egeria rollup (MEDULLA-CQ-CONN-R017.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-018 · MEDULLA-CQ-CONN-R018:** emerald-exchange rollup (MEDULLA-CQ-CONN-R018.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-019 · MEDULLA-CQ-CONN-R019:** erpnext rollup (MEDULLA-CQ-CONN-R019.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-020 · MEDULLA-CQ-CONN-R020:** fan-manager rollup (MEDULLA-CQ-CONN-R020.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-021 · MEDULLA-CQ-CONN-R021:** firefly-iii rollup (MEDULLA-CQ-CONN-R021.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-022 · MEDULLA-CQ-CONN-R022:** freshrss rollup (MEDULLA-CQ-CONN-R022.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-023 · MEDULLA-CQ-CONN-R023:** github rollup (MEDULLA-CQ-CONN-R023.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-024 · MEDULLA-CQ-CONN-R024:** gitlab rollup (MEDULLA-CQ-CONN-R024.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-025 · MEDULLA-CQ-CONN-R025:** gramps rollup (MEDULLA-CQ-CONN-R025.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-026 · MEDULLA-CQ-CONN-R026:** home-assistant rollup (MEDULLA-CQ-CONN-R026.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-027 · MEDULLA-CQ-CONN-R027:** jellyfin rollup (MEDULLA-CQ-CONN-R027.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-028 · MEDULLA-CQ-CONN-R028:** jena rollup (MEDULLA-CQ-CONN-R028.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-029 · MEDULLA-CQ-CONN-R029:** kafka rollup (MEDULLA-CQ-CONN-R029.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-030 · MEDULLA-CQ-CONN-R030:** keycloak rollup (MEDULLA-CQ-CONN-R030.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-031 · MEDULLA-CQ-CONN-R031:** langfuse rollup (MEDULLA-CQ-CONN-R031.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-032 · MEDULLA-CQ-CONN-R032:** leanix rollup (MEDULLA-CQ-CONN-R032.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-033 · MEDULLA-CQ-CONN-R033:** legal-peripherals rollup (MEDULLA-CQ-CONN-R033.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-034 · MEDULLA-CQ-CONN-R034:** lgtm rollup (MEDULLA-CQ-CONN-R034.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-035 · MEDULLA-CQ-CONN-R035:** listmonk rollup (MEDULLA-CQ-CONN-R035.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-036 · MEDULLA-CQ-CONN-R036:** mattermost rollup (MEDULLA-CQ-CONN-R036.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-037 · MEDULLA-CQ-CONN-R037:** mealie rollup (MEDULLA-CQ-CONN-R037.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-038 · MEDULLA-CQ-CONN-R038:** media-downloader rollup (MEDULLA-CQ-CONN-R038.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-039 · MEDULLA-CQ-CONN-R039:** microsoft rollup (MEDULLA-CQ-CONN-R039.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-040 · MEDULLA-CQ-CONN-R040:** nextcloud rollup (MEDULLA-CQ-CONN-R040.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-041 · MEDULLA-CQ-CONN-R041:** objectstore rollup (MEDULLA-CQ-CONN-R041.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-042 · MEDULLA-CQ-CONN-R042:** okta rollup (MEDULLA-CQ-CONN-R042.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-043 · MEDULLA-CQ-CONN-R043:** onetrust rollup (MEDULLA-CQ-CONN-R043.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-044 · MEDULLA-CQ-CONN-R044:** openbao rollup (MEDULLA-CQ-CONN-R044.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-045 · MEDULLA-CQ-CONN-R045:** owncast rollup (MEDULLA-CQ-CONN-R045.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-046 · MEDULLA-CQ-CONN-R046:** paperless-ngx rollup (MEDULLA-CQ-CONN-R046.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-047 · MEDULLA-CQ-CONN-R047:** plane rollup (MEDULLA-CQ-CONN-R047.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-048 · MEDULLA-CQ-CONN-R048:** portainer rollup (MEDULLA-CQ-CONN-R048.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-049 · MEDULLA-CQ-CONN-R049:** postiz rollup (MEDULLA-CQ-CONN-R049.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-050 · MEDULLA-CQ-CONN-R050:** pulselink rollup (MEDULLA-CQ-CONN-R050.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-051 · MEDULLA-CQ-CONN-R051:** qbittorrent rollup (MEDULLA-CQ-CONN-R051.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-052 · MEDULLA-CQ-CONN-R052:** repository-manager rollup (MEDULLA-CQ-CONN-R052.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-053 · MEDULLA-CQ-CONN-R053:** rom-manager rollup (MEDULLA-CQ-CONN-R053.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-054 · MEDULLA-CQ-CONN-R054:** salesforce rollup (MEDULLA-CQ-CONN-R054.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-055 · MEDULLA-CQ-CONN-R055:** scholarx rollup (MEDULLA-CQ-CONN-R055.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-056 · MEDULLA-CQ-CONN-R056:** searxng rollup (MEDULLA-CQ-CONN-R056.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-057 · MEDULLA-CQ-CONN-R057:** servicenow rollup (MEDULLA-CQ-CONN-R057.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-058 · MEDULLA-CQ-CONN-R058:** sql rollup (MEDULLA-CQ-CONN-R058.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-059 · MEDULLA-CQ-CONN-R059:** stirlingpdf rollup (MEDULLA-CQ-CONN-R059.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-060 · MEDULLA-CQ-CONN-R060:** systems-manager rollup (MEDULLA-CQ-CONN-R060.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-061 · MEDULLA-CQ-CONN-R061:** technitium-dns rollup (MEDULLA-CQ-CONN-R061.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-062 · MEDULLA-CQ-CONN-R062:** tunnel-manager rollup (MEDULLA-CQ-CONN-R062.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-063 · MEDULLA-CQ-CONN-R063:** twenty rollup (MEDULLA-CQ-CONN-R063.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-064 · MEDULLA-CQ-CONN-R064:** uptime rollup (MEDULLA-CQ-CONN-R064.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-065 · MEDULLA-CQ-CONN-R065:** vector rollup (MEDULLA-CQ-CONN-R065.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-066 · MEDULLA-CQ-CONN-R066:** wger rollup (MEDULLA-CQ-CONN-R066.1 single-source, .2 cross-source, .3 acceptance).
-- [ ] **CQ-067 · MEDULLA-CQ-CONN-R067:** contract kinds rollup (MEDULLA-CQ-CONN-R067.1 MCP, .2 A2A, .3 API, .4 GraphQL, .5 virtual graph, .6 declared materialisation).
-- [ ] **CQ-068 · MEDULLA-CQ-CONN-R068:** infrastructure-v1.ttl additions rollup (26 children).
-- [ ] **CQ-069 · MEDULLA-CQ-CONN-R069:** sdlc_lifecycle-v1.ttl additions plus software-v1 canonical Repository/Branch reuse (23 children).
-- [ ] **CQ-070 · MEDULLA-CQ-CONN-R070:** archimate-v1.ttl additions rollup (8 children).
-- [ ] **CQ-071 · MEDULLA-CQ-CONN-R071:** documentation-v1.ttl additions rollup (6 children).
-- [ ] **CQ-072 · MEDULLA-CQ-CONN-R072:** process_intelligence-v1.ttl additions rollup (7 children).
-- [ ] **CQ-073 · MEDULLA-CQ-CONN-R073:** government-v1.ttl additions rollup (11 children).
-- [ ] **CQ-074 · MEDULLA-CQ-CONN-R074:** core-foundation-v1.ttl additions rollup (6 children).
-- [ ] **CQ-075 · MEDULLA-CQ-CONN-R075:** finance-v1.ttl additions rollup (7 children).
-- [ ] **CQ-076 · MEDULLA-CQ-CONN-R076:** personal-v1.ttl additions rollup (9 children).
-- [ ] **CQ-077 · MEDULLA-CQ-CONN-R077:** virtual_graph-v1.ttl additions rollup (3 children).
-- [ ] **CQ-078 · MEDULLA-CQ-CONN-R078:** identity-v1.ttl additions rollup (5 children).
-- [ ] **CQ-079 · MEDULLA-CQ-CONN-R079:** orchestration-v1.ttl additions rollup (5 children).
-- [ ] **CQ-080 · MEDULLA-CQ-CONN-R080:** enterprise-v1.ttl additions rollup (4 children).
-- [ ] **CQ-081 · MEDULLA-CQ-CONN-R081:** nutrition-v1.ttl additions rollup (8 children).
-- [ ] **CQ-082 · MEDULLA-CQ-CONN-R082:** action-v1.ttl additions rollup (1 children).
-- [ ] **CQ-083 · MEDULLA-CQ-CONN-R083:** erpnext, salesforce and twenty use the `MEDULLA-SUPPLY-VOCAB` commercial vocabulary (single row).
+## Tasks
 
-## Restore noncommercial mapping proof
-
-Implement each acceptance task after its listed producer dependencies land.
-Keep the existing end-to-end competency assertions when adding the mapping assertions.
-A documentation edit alone must not complete these tasks.
-
-- [ ] `MEDULLA-CQ-CONN-R011.3`: Implement `connector_audit_reassignment::ciso_assistant` after its producer dependencies in `requirements.md`. Prove exact cells, registered IRIs, and refusal fixtures.
-- [ ] `MEDULLA-CQ-CONN-R015.3`: Implement `connector_audit_reassignment::dockerhub` after its producer dependencies in `requirements.md`. Prove exact cells, registered IRIs, and refusal fixtures.
-- [ ] `MEDULLA-CQ-CONN-R017.3`: Implement `connector_audit_reassignment::egeria` after its producer dependencies in `requirements.md`. Prove exact cells, registered IRIs, and refusal fixtures.
-- [ ] `MEDULLA-CQ-CONN-R023.3`: Implement `connector_audit_reassignment::github` after its producer dependencies in `requirements.md`. Prove exact cells, registered IRIs, and refusal fixtures.
-- [ ] `MEDULLA-CQ-CONN-R024.3`: Implement `connector_audit_reassignment::gitlab` after its producer dependencies in `requirements.md`. Prove exact cells, registered IRIs, and refusal fixtures.
-- [ ] `MEDULLA-CQ-CONN-R025.3`: Implement `connector_audit_reassignment::gramps` after its producer dependencies in `requirements.md`. Prove exact cells, registered IRIs, and refusal fixtures.
-- [ ] `MEDULLA-CQ-CONN-R026.3`: Implement `connector_audit_reassignment::home_assistant` after its producer dependencies in `requirements.md`. Prove exact cells, registered IRIs, and refusal fixtures.
-- [ ] `MEDULLA-CQ-CONN-R031.3`: Implement `connector_audit_reassignment::langfuse` after its producer dependencies in `requirements.md`. Prove exact cells, registered IRIs, and refusal fixtures.
-- [ ] `MEDULLA-CQ-CONN-R033.3`: Implement `connector_audit_reassignment::legal_peripherals` after its producer dependencies in `requirements.md`. Prove exact cells, registered IRIs, and refusal fixtures.
-- [ ] `MEDULLA-CQ-CONN-R040.3`: Implement `connector_audit_reassignment::nextcloud` after its producer dependencies in `requirements.md`. Prove exact cells, registered IRIs, and refusal fixtures.
-- [ ] `MEDULLA-CQ-CONN-R043.3`: Implement `connector_audit_reassignment::onetrust` after its producer dependencies in `requirements.md`. Prove exact cells, registered IRIs, and refusal fixtures.
-- [ ] `MEDULLA-CQ-CONN-R046.3`: Implement `connector_audit_reassignment::paperless_ngx` after its producer dependencies in `requirements.md`. Prove exact cells, registered IRIs, and refusal fixtures.
-- [ ] `MEDULLA-CQ-CONN-R052.3`: Implement `connector_audit_reassignment::repository_manager` after its producer dependencies in `requirements.md`. Prove exact cells, registered IRIs, and refusal fixtures.
-- [ ] `MEDULLA-CQ-CONN-R057.3`: Implement `connector_audit_reassignment::servicenow` after its producer dependencies in `requirements.md`. Prove exact cells, registered IRIs, and refusal fixtures.
-- [ ] `MEDULLA-CQ-CONN-R059.3`: Implement `connector_audit_reassignment::stirlingpdf` after its producer dependencies in `requirements.md`. Prove exact cells, registered IRIs, and refusal fixtures.
-
-## Connector-pack competency questions (R084)
-
-- [ ] **MEDULLA-CQ-CONN-R084:** Connector-pack competency questions. Pass the proving test in test-spec.md.
-- [ ] **MEDULLA-CQ-CONN-R084.1:** Finance algorithm and tool selection question. Pass the proving test in test-spec.md.
-- [ ] **MEDULLA-CQ-CONN-R084.2:** Positions and applicable risk analyses question. Pass the proving test in test-spec.md.
-- [ ] **MEDULLA-CQ-CONN-R084.3:** Capability to surface and contract question. Pass the proving test in test-spec.md.
-- [ ] **MEDULLA-CQ-CONN-R084.4:** Record governance question. Pass the proving test in test-spec.md.
-- [ ] **MEDULLA-CQ-CONN-R084.5:** Finance method vocabulary. Pass the proving test in test-spec.md.
-- [ ] **MEDULLA-CQ-CONN-R084.6:** Hot-path proof. Pass the proving test in test-spec.md.
-
-- [ ] **MEDULLA-CQ-CONN-R085:** Competency check: a question spans a connector's live data and the ontology (rollup).
-- [ ] **MEDULLA-CQ-CONN-R085.1:** Model.
-- [ ] **MEDULLA-CQ-CONN-R085.2:** Behavior.
-- [ ] **MEDULLA-CQ-CONN-R085.3:** Wiring.
-- [ ] **MEDULLA-CQ-CONN-R085.4:** Refusal.
-- [ ] **MEDULLA-CQ-CONN-R085.5:** Evidence.
-- [ ] **MEDULLA-CQ-CONN-R085.6:** Hot-path proof.
+- [ ] T001 [US3] MEDULLA-CQ-CONN-R067.1 MCP contract answers at query time
+- [ ] T002 [US3] MEDULLA-CQ-CONN-R067.2 A2A contract answers at query time
+- [ ] T003 [US3] MEDULLA-CQ-CONN-R067.3 API (REST) contract answers at query time
+- [ ] T004 [US3] MEDULLA-CQ-CONN-R067.4 GraphQL contract answers at query time
+- [ ] T005 [US3] MEDULLA-CQ-CONN-R067.5 Virtual graph over a relational or document store answers at query time
+- [ ] T006 [US3] MEDULLA-CQ-CONN-R067.6 Materialisation is declared, never implicit
+- [ ] T007 [US3] MEDULLA-CQ-CONN-R067.7 Case table schema and loader
+- [ ] T008 [US3] MEDULLA-CQ-CONN-R067.8 Fixture contract source
+- [ ] T009 [US3] MEDULLA-CQ-CONN-R067.9 Table-driven served acceptance test
+- [ ] T010 [US3] MEDULLA-CQ-CONN-R067.10 Abstention variants of the served acceptance test
+- [ ] T011 [US4] MEDULLA-CQ-CONN-R068.1 shapes companion for infrastructure-v1
+- [ ] T012 [US4] MEDULLA-CQ-CONN-R068.2 AutomationJob
+- [ ] T013 [US4] MEDULLA-CQ-CONN-R068.3 AutomationJobTemplate
+- [ ] T014 [US4] MEDULLA-CQ-CONN-R068.4 jobStatus
+- [ ] T015 [US4] MEDULLA-CQ-CONN-R068.5 ranAgainstHost
+- [ ] T016 [US4] MEDULLA-CQ-CONN-R068.6 routeHostname
+- [ ] T017 [US4] MEDULLA-CQ-CONN-R068.7 upstreamAddress
+- [ ] T018 [US4] MEDULLA-CQ-CONN-R068.9 alertSeverity
+- [ ] T019 [US4] MEDULLA-CQ-CONN-R068.10 alertState
+- [ ] T020 [US4] MEDULLA-CQ-CONN-R068.11 firingSince
+- [ ] T021 [US4] MEDULLA-CQ-CONN-R068.13 lastPushedAt
+- [ ] T022 [US4] MEDULLA-CQ-CONN-R068.14 pullCount
+- [ ] T023 [US4] MEDULLA-CQ-CONN-R068.15 entityState
+- [ ] T024 [US4] MEDULLA-CQ-CONN-R068.16 unavailableSince
+- [ ] T025 [US4] MEDULLA-CQ-CONN-R068.17 desiredReplicas
+- [ ] T026 [US4] MEDULLA-CQ-CONN-R068.18 runningReplicas
+- [ ] T027 [US4] MEDULLA-CQ-CONN-R068.19 stackSourceRepository
+- [ ] T028 [US4] MEDULLA-CQ-CONN-R068.20 ManagementEnvironment
+- [ ] T029 [US4] MEDULLA-CQ-CONN-R068.21 pendingUpdateCount
+- [ ] T030 [US4] MEDULLA-CQ-CONN-R068.22 uptimeSeconds
+- [ ] T031 [US4] MEDULLA-CQ-CONN-R068.23 recordType
+- [ ] T032 [US4] MEDULLA-CQ-CONN-R068.24 recordValue
+- [ ] T033 [US4] MEDULLA-CQ-CONN-R068.25 lastConnectionStatus
+- [ ] T034 [US4] MEDULLA-CQ-CONN-R068.26 lastConnectionError
+- [ ] T035 [US4] MEDULLA-CQ-CONN-R068.27 stackInEnvironment
+- [ ] T036 [US4] MEDULLA-CQ-CONN-R069.1 shapes companion for sdlc_lifecycle-v1
+- [ ] T037 [US4] MEDULLA-CQ-CONN-R069.2 Repository
+- [ ] T038 [US4] MEDULLA-CQ-CONN-R069.3 Branch
+- [ ] T039 [US4] MEDULLA-CQ-CONN-R069.4 branchOf
+- [ ] T040 [US4] MEDULLA-CQ-CONN-R069.5 headCommit
+- [ ] T041 [US4] MEDULLA-CQ-CONN-R069.6 isDefaultBranch
+- [ ] T042 [US4] MEDULLA-CQ-CONN-R069.7 blockedBy
+- [ ] T043 [US4] MEDULLA-CQ-CONN-R069.8 assignedTo
+- [ ] T044 [US4] MEDULLA-CQ-CONN-R069.9 ticketStatus
+- [ ] T045 [US4] MEDULLA-CQ-CONN-R069.10 closesTicket
+- [ ] T046 [US4] MEDULLA-CQ-CONN-R069.11 proposalState
+- [ ] T047 [US4] MEDULLA-CQ-CONN-R069.12 requestedReviewer
+- [ ] T048 [US4] MEDULLA-CQ-CONN-R069.13 PipelineJob
+- [ ] T049 [US4] MEDULLA-CQ-CONN-R069.14 pipelineJobOf
+- [ ] T050 [US4] MEDULLA-CQ-CONN-R069.15 IterationCycle
+- [ ] T051 [US4] MEDULLA-CQ-CONN-R069.16 inCycle
+- [ ] T052 [US4] MEDULLA-CQ-CONN-R069.17 WorkModule
+- [ ] T053 [US4] MEDULLA-CQ-CONN-R069.18 inModule
+- [ ] T054 [US4] MEDULLA-CQ-CONN-R069.19 ticketDueDate
+- [ ] T055 [US4] MEDULLA-CQ-CONN-R069.20 Worktree
+- [ ] T056 [US4] MEDULLA-CQ-CONN-R069.21 worktreeState
+- [ ] T057 [US4] MEDULLA-CQ-CONN-R069.22 tracksBranch
+- [ ] T058 [US4] MEDULLA-CQ-CONN-R069.23 proposalBranch
+- [ ] T059 [US4] MEDULLA-CQ-CONN-R069.24 cycleState
+- [ ] T060 [US4] MEDULLA-CQ-CONN-R069.25 pipelineStatus
+- [ ] T061 [US4] MEDULLA-CQ-CONN-R069.26 pipelineRunOf
+- [ ] T062 [US4] MEDULLA-CQ-CONN-R070.1 shapes companion for archimate-v1
+- [ ] T063 [US4] MEDULLA-CQ-CONN-R070.2 ApplicationComponent
+- [ ] T064 [US4] MEDULLA-CQ-CONN-R070.3 ArchimateRelationship
+- [ ] T065 [US4] MEDULLA-CQ-CONN-R070.4 relationshipType
+- [ ] T066 [US4] MEDULLA-CQ-CONN-R070.5 ConfigurationItem
+- [ ] T067 [US4] MEDULLA-CQ-CONN-R070.6 affectsConfigurationItem
+- [ ] T068 [US4] MEDULLA-CQ-CONN-R070.7 incidentState
+- [ ] T069 [US4] MEDULLA-CQ-CONN-R070.8 incidentAssignee
+- [ ] T070 [US4] MEDULLA-CQ-CONN-R071.1 Shapes companion for documentation-v1
+- [ ] T071 [US4] MEDULLA-CQ-CONN-R071.2 WebSnapshot
+- [ ] T072 [US4] MEDULLA-CQ-CONN-R071.3 ArchiveResult
+- [ ] T073 [US4] MEDULLA-CQ-CONN-R071.4 hasArchiveResult
+- [ ] T074 [US4] MEDULLA-CQ-CONN-R071.5 extractorName
+- [ ] T075 [US4] MEDULLA-CQ-CONN-R071.6 resultStatus
+- [ ] T076 [US4] MEDULLA-CQ-CONN-R072.1 EpcFunction
+- [ ] T077 [US4] MEDULLA-CQ-CONN-R072.2 EpcRuleOperator
+- [ ] T078 [US4] MEDULLA-CQ-CONN-R072.3 flowsTo
+- [ ] T079 [US4] MEDULLA-CQ-CONN-R072.4 ProcessInstance
+- [ ] T080 [US4] MEDULLA-CQ-CONN-R072.5 instanceOfProcessModel
+- [ ] T081 [US4] MEDULLA-CQ-CONN-R072.6 stoppedAtActivity
+- [ ] T082 [US4] MEDULLA-CQ-CONN-R072.7 raisedIncident
+- [ ] T083 [US4] MEDULLA-CQ-CONN-R073.1 shapes companion for government-v1
+- [ ] T084 [US4] MEDULLA-CQ-CONN-R073.2 RiskScenario
+- [ ] T085 [US4] MEDULLA-CQ-CONN-R073.3 mitigatesRisk
+- [ ] T086 [US4] MEDULLA-CQ-CONN-R073.4 inFramework
+- [ ] T087 [US4] MEDULLA-CQ-CONN-R073.5 riskAffectsService
+- [ ] T088 [US4] MEDULLA-CQ-CONN-R073.6 PrivacyAssessment
+- [ ] T089 [US4] MEDULLA-CQ-CONN-R073.7 ProcessingActivity
+- [ ] T090 [US4] MEDULLA-CQ-CONN-R073.8 assessmentCovers
+- [ ] T091 [US4] MEDULLA-CQ-CONN-R073.9 assessmentDueDate
+- [ ] T092 [US4] MEDULLA-CQ-CONN-R073.10 assessedVendor
+- [ ] T093 [US4] MEDULLA-CQ-CONN-R073.11 assessmentStatus
+- [ ] T094 [US4] MEDULLA-CQ-CONN-R074.1 shapes companion for core-foundation-v1
+- [ ] T095 [US4] MEDULLA-CQ-CONN-R074.2 GlossaryTerm
+- [ ] T096 [US4] MEDULLA-CQ-CONN-R074.3 termAssignedTo
+- [ ] T097 [US4] MEDULLA-CQ-CONN-R074.4 counterparty
+- [ ] T098 [US4] MEDULLA-CQ-CONN-R074.5 agreementExpiresAt
+- [ ] T099 [US4] MEDULLA-CQ-CONN-R074.6 hasRenewalAction
+- [ ] T100 [US4] MEDULLA-CQ-CONN-R075.1 Shapes companion for finance-v1 is already registered; bind its test
+- [ ] T101 [US4] MEDULLA-CQ-CONN-R075.2 orderQty
+- [ ] T102 [US4] MEDULLA-CQ-CONN-R075.3 Budget
+- [ ] T103 [US4] MEDULLA-CQ-CONN-R075.4 budgetLimit
+- [ ] T104 [US4] MEDULLA-CQ-CONN-R075.5 LedgerTransaction
+- [ ] T105 [US4] MEDULLA-CQ-CONN-R075.6 chargedToBudget
+- [ ] T106 [US4] MEDULLA-CQ-CONN-R075.7 transactionAmount
+- [ ] T107 [US4] MEDULLA-CQ-CONN-R076.1 birthPlace
+- [ ] T108 [US4] MEDULLA-CQ-CONN-R076.2 birthYear
+- [ ] T109 [US4] MEDULLA-CQ-CONN-R076.3 documentType
+- [ ] T110 [US4] MEDULLA-CQ-CONN-R076.4 dueDate
+- [ ] T111 [US4] MEDULLA-CQ-CONN-R076.5 totalAmount
+- [ ] T112 [US4] MEDULLA-CQ-CONN-R076.6 FileShare
+- [ ] T113 [US4] MEDULLA-CQ-CONN-R076.7 sharesFile
+- [ ] T114 [US4] MEDULLA-CQ-CONN-R076.8 isPublicLink
+- [ ] T115 [US4] MEDULLA-CQ-CONN-R076.9 shareExpiresAt
+- [ ] T116 [US4] MEDULLA-CQ-CONN-R077.1 NamedGraph
+- [ ] T117 [US4] MEDULLA-CQ-CONN-R077.2 tripleCount
+- [ ] T118 [US4] MEDULLA-CQ-CONN-R077.3 lastModifiedAt
+- [ ] T119 [US4] MEDULLA-CQ-CONN-R078.1 Shapes companion for identity-v1
+- [ ] T120 [US4] MEDULLA-CQ-CONN-R078.3 OidcClient
+- [ ] T121 [US4] MEDULLA-CQ-CONN-R078.4 roleGrantsAccessTo
+- [ ] T122 [US4] MEDULLA-CQ-CONN-R078.5 accountStatus
+- [ ] T123 [US4] MEDULLA-CQ-CONN-R079.1 Shapes companion for orchestration-v1 is already registered; bind its test
+- [ ] T124 [US4] MEDULLA-CQ-CONN-R079.2 promptVersion
+- [ ] T125 [US4] MEDULLA-CQ-CONN-R079.3 tokenCost
+- [ ] T126 [US4] MEDULLA-CQ-CONN-R079.4 tracePrompt
+- [ ] T127 [US4] MEDULLA-CQ-CONN-R079.5 evaluationScore
+- [ ] T128 [US4] MEDULLA-CQ-CONN-R080.1 Shapes companion for enterprise-v1
+- [ ] T129 [US4] MEDULLA-CQ-CONN-R080.2 factSheetType
+- [ ] T130 [US4] MEDULLA-CQ-CONN-R080.3 lifecyclePhase
+- [ ] T131 [US4] MEDULLA-CQ-CONN-R080.4 activeUserCount
+- [ ] T132 [US4] MEDULLA-CQ-CONN-R081.1 Recipe
+- [ ] T133 [US4] MEDULLA-CQ-CONN-R081.2 usesIngredient
+- [ ] T134 [US4] MEDULLA-CQ-CONN-R081.3 ShoppingListItem
+- [ ] T135 [US4] MEDULLA-CQ-CONN-R081.4 MealPlanEntry
+- [ ] T136 [US4] MEDULLA-CQ-CONN-R081.5 WorkoutRoutine
+- [ ] T137 [US4] MEDULLA-CQ-CONN-R081.6 Exercise
+- [ ] T138 [US4] MEDULLA-CQ-CONN-R081.7 includesExercise
+- [ ] T139 [US4] MEDULLA-CQ-CONN-R081.8 WorkoutSession
+- [ ] T140 [US4] MEDULLA-CQ-CONN-R082.1 failureReason
+- [ ] T141 [US4] MEDULLA-CQ-CONN-R087 Declare the web-resource change link
+- [ ] T142 [US4] MEDULLA-CQ-CONN-R089 Served vocabulary coverage test for the modules of R071 to R081
+- [ ] T143 [P] [US1] MEDULLA-CQ-CONN-R001.1 ansible-tower single-source question
+- [ ] T144 [P] [US2] MEDULLA-CQ-CONN-R001.2 ansible-tower cross-source question
+- [ ] T145 [P] [US1] MEDULLA-CQ-CONN-R002.1 archimate single-source question
+- [ ] T146 [P] [US2] MEDULLA-CQ-CONN-R002.2 archimate cross-source question
+- [ ] T147 [P] [US1] MEDULLA-CQ-CONN-R003.1 archivebox single-source question
+- [ ] T148 [P] [US2] MEDULLA-CQ-CONN-R003.2 archivebox cross-source question
+- [ ] T149 [P] [US1] MEDULLA-CQ-CONN-R004.1 aris single-source question
+- [ ] T150 [P] [US2] MEDULLA-CQ-CONN-R004.2 aris cross-source question
+- [ ] T151 [P] [US1] MEDULLA-CQ-CONN-R005.1 arr single-source question
+- [ ] T152 [P] [US2] MEDULLA-CQ-CONN-R005.2 arr cross-source question
+- [ ] T153 [P] [US1] MEDULLA-CQ-CONN-R006.1 atlassian single-source question
+- [ ] T154 [P] [US2] MEDULLA-CQ-CONN-R006.2 atlassian cross-source question
+- [ ] T155 [P] [US1] MEDULLA-CQ-CONN-R007.1 audiobookshelf single-source question
+- [ ] T156 [P] [US2] MEDULLA-CQ-CONN-R007.2 audiobookshelf cross-source question
+- [ ] T157 [P] [US1] MEDULLA-CQ-CONN-R008.1 audio-transcriber single-source question
+- [ ] T158 [P] [US2] MEDULLA-CQ-CONN-R008.2 audio-transcriber cross-source question
+- [ ] T159 [P] [US1] MEDULLA-CQ-CONN-R009.1 caddy single-source question
+- [ ] T160 [P] [US2] MEDULLA-CQ-CONN-R009.2 caddy cross-source question
+- [ ] T161 [P] [US1] MEDULLA-CQ-CONN-R010.1 camunda single-source question
+- [ ] T162 [P] [US2] MEDULLA-CQ-CONN-R010.2 camunda cross-source question
+- [ ] T163 [P] [US1] MEDULLA-CQ-CONN-R011.1 ciso-assistant single-source question
+- [ ] T164 [P] [US2] MEDULLA-CQ-CONN-R011.2 ciso-assistant cross-source question
+- [ ] T165 [P] [US1] MEDULLA-CQ-CONN-R012.1 clarity single-source question
+- [ ] T166 [P] [US2] MEDULLA-CQ-CONN-R012.2 clarity cross-source question
+- [ ] T167 [P] [US1] MEDULLA-CQ-CONN-R013.1 container-manager single-source question
+- [ ] T168 [P] [US2] MEDULLA-CQ-CONN-R013.2 container-manager cross-source question
+- [ ] T169 [P] [US1] MEDULLA-CQ-CONN-R014.1 data-science single-source question
+- [ ] T170 [P] [US2] MEDULLA-CQ-CONN-R014.2 data-science cross-source question
+- [ ] T171 [P] [US1] MEDULLA-CQ-CONN-R015.1 dockerhub single-source question
+- [ ] T172 [P] [US2] MEDULLA-CQ-CONN-R015.2 dockerhub cross-source question
+- [ ] T173 [P] [US1] MEDULLA-CQ-CONN-R016.1 documentdb single-source question
+- [ ] T174 [P] [US2] MEDULLA-CQ-CONN-R016.2 documentdb cross-source question
+- [ ] T175 [P] [US1] MEDULLA-CQ-CONN-R017.1 egeria single-source question
+- [ ] T176 [P] [US2] MEDULLA-CQ-CONN-R017.2 egeria cross-source question
+- [ ] T177 [P] [US1] MEDULLA-CQ-CONN-R018.1 emerald-exchange single-source question
+- [ ] T178 [P] [US2] MEDULLA-CQ-CONN-R018.2 emerald-exchange cross-source question
+- [ ] T179 [P] [US1] MEDULLA-CQ-CONN-R019.1 erpnext single-source question
+- [ ] T180 [P] [US2] MEDULLA-CQ-CONN-R019.2 erpnext cross-source question
+- [ ] T181 [P] [US1] MEDULLA-CQ-CONN-R020.1 fan-manager single-source question
+- [ ] T182 [P] [US2] MEDULLA-CQ-CONN-R020.2 fan-manager cross-source question
+- [ ] T183 [P] [US1] MEDULLA-CQ-CONN-R021.1 firefly-iii single-source question
+- [ ] T184 [P] [US2] MEDULLA-CQ-CONN-R021.2 firefly-iii cross-source question
+- [ ] T185 [P] [US1] MEDULLA-CQ-CONN-R022.1 freshrss single-source question
+- [ ] T186 [P] [US2] MEDULLA-CQ-CONN-R022.2 freshrss cross-source question
+- [ ] T187 [P] [US1] MEDULLA-CQ-CONN-R023.1 github single-source question
+- [ ] T188 [P] [US2] MEDULLA-CQ-CONN-R023.2 github cross-source question
+- [ ] T189 [P] [US1] MEDULLA-CQ-CONN-R024.1 gitlab single-source question
+- [ ] T190 [P] [US2] MEDULLA-CQ-CONN-R024.2 gitlab cross-source question
+- [ ] T191 [P] [US1] MEDULLA-CQ-CONN-R025.1 gramps single-source question
+- [ ] T192 [P] [US2] MEDULLA-CQ-CONN-R025.2 gramps cross-source question
+- [ ] T193 [P] [US1] MEDULLA-CQ-CONN-R026.1 home-assistant single-source question
+- [ ] T194 [P] [US2] MEDULLA-CQ-CONN-R026.2 home-assistant cross-source question
+- [ ] T195 [P] [US1] MEDULLA-CQ-CONN-R027.1 jellyfin single-source question
+- [ ] T196 [P] [US2] MEDULLA-CQ-CONN-R027.2 jellyfin cross-source question
+- [ ] T197 [P] [US1] MEDULLA-CQ-CONN-R028.1 jena single-source question
+- [ ] T198 [P] [US2] MEDULLA-CQ-CONN-R028.2 jena cross-source question
+- [ ] T199 [P] [US1] MEDULLA-CQ-CONN-R029.1 kafka single-source question
+- [ ] T200 [P] [US2] MEDULLA-CQ-CONN-R029.2 kafka cross-source question
+- [ ] T201 [P] [US1] MEDULLA-CQ-CONN-R030.1 keycloak single-source question
+- [ ] T202 [P] [US2] MEDULLA-CQ-CONN-R030.2 keycloak cross-source question
+- [ ] T203 [P] [US1] MEDULLA-CQ-CONN-R031.1 langfuse single-source question
+- [ ] T204 [P] [US2] MEDULLA-CQ-CONN-R031.2 langfuse cross-source question
+- [ ] T205 [P] [US1] MEDULLA-CQ-CONN-R032.1 leanix single-source question
+- [ ] T206 [P] [US2] MEDULLA-CQ-CONN-R032.2 leanix cross-source question
+- [ ] T207 [P] [US1] MEDULLA-CQ-CONN-R033.1 legal-peripherals single-source question
+- [ ] T208 [P] [US2] MEDULLA-CQ-CONN-R033.2 legal-peripherals cross-source question
+- [ ] T209 [P] [US1] MEDULLA-CQ-CONN-R034.1 lgtm single-source question
+- [ ] T210 [P] [US2] MEDULLA-CQ-CONN-R034.2 lgtm cross-source question
+- [ ] T211 [P] [US1] MEDULLA-CQ-CONN-R035.1 listmonk single-source question
+- [ ] T212 [P] [US2] MEDULLA-CQ-CONN-R035.2 listmonk cross-source question
+- [ ] T213 [P] [US1] MEDULLA-CQ-CONN-R036.1 mattermost single-source question
+- [ ] T214 [P] [US2] MEDULLA-CQ-CONN-R036.2 mattermost cross-source question
+- [ ] T215 [P] [US1] MEDULLA-CQ-CONN-R037.1 mealie single-source question
+- [ ] T216 [P] [US2] MEDULLA-CQ-CONN-R037.2 mealie cross-source question
+- [ ] T217 [P] [US1] MEDULLA-CQ-CONN-R038.1 media-downloader single-source question
+- [ ] T218 [P] [US2] MEDULLA-CQ-CONN-R038.2 media-downloader cross-source question
+- [ ] T219 [P] [US1] MEDULLA-CQ-CONN-R039.1 microsoft single-source question
+- [ ] T220 [P] [US2] MEDULLA-CQ-CONN-R039.2 microsoft cross-source question
+- [ ] T221 [P] [US1] MEDULLA-CQ-CONN-R040.1 nextcloud single-source question
+- [ ] T222 [P] [US2] MEDULLA-CQ-CONN-R040.2 nextcloud cross-source question
+- [ ] T223 [P] [US1] MEDULLA-CQ-CONN-R041.1 objectstore single-source question
+- [ ] T224 [P] [US2] MEDULLA-CQ-CONN-R041.2 objectstore cross-source question
+- [ ] T225 [P] [US1] MEDULLA-CQ-CONN-R042.1 okta single-source question
+- [ ] T226 [P] [US2] MEDULLA-CQ-CONN-R042.2 okta cross-source question
+- [ ] T227 [P] [US1] MEDULLA-CQ-CONN-R043.1 onetrust single-source question
+- [ ] T228 [P] [US2] MEDULLA-CQ-CONN-R043.2 onetrust cross-source question
+- [ ] T229 [P] [US1] MEDULLA-CQ-CONN-R044.1 openbao single-source question
+- [ ] T230 [P] [US2] MEDULLA-CQ-CONN-R044.2 openbao cross-source question
+- [ ] T231 [P] [US1] MEDULLA-CQ-CONN-R045.1 owncast single-source question
+- [ ] T232 [P] [US2] MEDULLA-CQ-CONN-R045.2 owncast cross-source question
+- [ ] T233 [P] [US1] MEDULLA-CQ-CONN-R046.1 paperless-ngx single-source question
+- [ ] T234 [P] [US2] MEDULLA-CQ-CONN-R046.2 paperless-ngx cross-source question
+- [ ] T235 [P] [US1] MEDULLA-CQ-CONN-R047.1 plane single-source question
+- [ ] T236 [P] [US2] MEDULLA-CQ-CONN-R047.2 plane cross-source question
+- [ ] T237 [P] [US1] MEDULLA-CQ-CONN-R048.1 portainer single-source question
+- [ ] T238 [P] [US2] MEDULLA-CQ-CONN-R048.2 portainer cross-source question
+- [ ] T239 [P] [US1] MEDULLA-CQ-CONN-R049.1 postiz single-source question
+- [ ] T240 [P] [US2] MEDULLA-CQ-CONN-R049.2 postiz cross-source question
+- [ ] T241 [P] [US1] MEDULLA-CQ-CONN-R050.1 pulselink single-source question
+- [ ] T242 [P] [US2] MEDULLA-CQ-CONN-R050.2 pulselink cross-source question
+- [ ] T243 [P] [US1] MEDULLA-CQ-CONN-R051.1 qbittorrent single-source question
+- [ ] T244 [P] [US2] MEDULLA-CQ-CONN-R051.2 qbittorrent cross-source question
+- [ ] T245 [P] [US1] MEDULLA-CQ-CONN-R052.1 repository-manager single-source question
+- [ ] T246 [P] [US2] MEDULLA-CQ-CONN-R052.2 repository-manager cross-source question
+- [ ] T247 [P] [US1] MEDULLA-CQ-CONN-R053.1 rom-manager single-source question
+- [ ] T248 [P] [US2] MEDULLA-CQ-CONN-R053.2 rom-manager cross-source question
+- [ ] T249 [P] [US1] MEDULLA-CQ-CONN-R054.1 salesforce single-source question
+- [ ] T250 [P] [US2] MEDULLA-CQ-CONN-R054.2 salesforce cross-source question
+- [ ] T251 [P] [US1] MEDULLA-CQ-CONN-R055.1 scholarx single-source question
+- [ ] T252 [P] [US2] MEDULLA-CQ-CONN-R055.2 scholarx cross-source question
+- [ ] T253 [P] [US1] MEDULLA-CQ-CONN-R056.1 searxng single-source question
+- [ ] T254 [P] [US2] MEDULLA-CQ-CONN-R056.2 searxng cross-source question
+- [ ] T255 [P] [US1] MEDULLA-CQ-CONN-R057.1 servicenow single-source question
+- [ ] T256 [P] [US2] MEDULLA-CQ-CONN-R057.2 servicenow cross-source question
+- [ ] T257 [P] [US1] MEDULLA-CQ-CONN-R058.1 sql single-source question
+- [ ] T258 [P] [US2] MEDULLA-CQ-CONN-R058.2 sql cross-source question
+- [ ] T259 [P] [US1] MEDULLA-CQ-CONN-R059.1 stirlingpdf single-source question
+- [ ] T260 [P] [US2] MEDULLA-CQ-CONN-R059.2 stirlingpdf cross-source question
+- [ ] T261 [P] [US1] MEDULLA-CQ-CONN-R060.1 systems-manager single-source question
+- [ ] T262 [P] [US2] MEDULLA-CQ-CONN-R060.2 systems-manager cross-source question
+- [ ] T263 [P] [US1] MEDULLA-CQ-CONN-R061.1 technitium-dns single-source question
+- [ ] T264 [P] [US2] MEDULLA-CQ-CONN-R061.2 technitium-dns cross-source question
+- [ ] T265 [P] [US1] MEDULLA-CQ-CONN-R062.1 tunnel-manager single-source question
+- [ ] T266 [P] [US2] MEDULLA-CQ-CONN-R062.2 tunnel-manager cross-source question
+- [ ] T267 [P] [US1] MEDULLA-CQ-CONN-R063.1 twenty single-source question
+- [ ] T268 [P] [US2] MEDULLA-CQ-CONN-R063.2 twenty cross-source question
+- [ ] T269 [P] [US1] MEDULLA-CQ-CONN-R064.1 uptime single-source question
+- [ ] T270 [P] [US2] MEDULLA-CQ-CONN-R064.2 uptime cross-source question
+- [ ] T271 [P] [US1] MEDULLA-CQ-CONN-R065.1 vector single-source question
+- [ ] T272 [P] [US2] MEDULLA-CQ-CONN-R065.2 vector cross-source question
+- [ ] T273 [P] [US1] MEDULLA-CQ-CONN-R066.1 wger single-source question
+- [ ] T274 [P] [US2] MEDULLA-CQ-CONN-R066.2 wger cross-source question
+- [ ] T275 [US5] MEDULLA-CQ-CONN-R084.1 Which finance algorithms apply to analysis type X for instrument or position type Y, and which connector...
+- [ ] T276 [US5] MEDULLA-CQ-CONN-R084.2 What are my trades and positions, and which risk analyses apply to them?
+- [ ] T277 [US5] MEDULLA-CQ-CONN-R084.3 Which connector features, tools, prompts and skills can satisfy capability C, and under which ingest contract?
+- [ ] T278 [US5] MEDULLA-CQ-CONN-R084.4 Which connector ingest contracts govern record R, with their mappings, access policy and provenance...
+- [ ] T279 [US5] MEDULLA-CQ-CONN-R084.5 Finance method vocabulary
+- [ ] T280 [US5] MEDULLA-CQ-CONN-R084.6 Hot-path proof for the pack questions
+- [ ] T281 [US5] MEDULLA-CQ-CONN-R085.1 Model: the connector auto-onboard fixture
+- [ ] T282 [US5] MEDULLA-CQ-CONN-R085.2 Behavior: a parent-term question returns native and live connector rows
+- [ ] T283 [US5] MEDULLA-CQ-CONN-R085.3 Wiring: the check uses the production import and scan
+- [ ] T284 [US5] MEDULLA-CQ-CONN-R085.4 Refusal: orphaned ontology and held source abstain by name
+- [ ] T285 [US5] MEDULLA-CQ-CONN-R085.5 Evidence: the answer cites digest, revision and fetch time, and lists the load set
+- [ ] T286 [US5] MEDULLA-CQ-CONN-R085.6 Hot-path proof: an onboarded fixture connector answers a cross-ontology live question
+- [ ] T287 [US5] MEDULLA-CQ-CONN-R090 Served proof of one federated read over two virtual graphs and engine facts
