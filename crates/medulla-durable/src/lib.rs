@@ -80,6 +80,8 @@ pub mod hydration;
 pub mod mirror;
 pub mod project;
 pub mod route;
+// MEDULLA-UNIFIED-DATA-PLANE-R710 — message-stream records normalize into a ChangeEnvelope.
+pub mod stream_adapter;
 // MEDULLA-UNIFIED-DATA-PLANE-R009 — named consumer checkpoint position and the
 // idempotent-apply guard (replaying a stale position is a no-op).
 pub mod idempotent_consumer;
@@ -95,4 +97,7 @@ pub use project::{project, unit_node_id, KgEdge, KgNode, KgProjection};
 pub use route::{
     route_call_shape, route_work_shape, CallShape, DurableBackendKind, DurableBackendRef,
     JobsBackend, MutationStoreSagaBackend, PythonDurableRunBackend, StatechartBackend, WorkShape,
+};
+pub use stream_adapter::{
+    accept_page, map_stream_message, StreamMapping, StreamMessage, StreamRefusal,
 };

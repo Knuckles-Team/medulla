@@ -18,6 +18,8 @@ The engine serves read-only federated query, retrieval, reasoning and analysis t
 - **Constraints**: read-only snapshot semantics, tenant and clearance predicates inside the plan, bounded waits, no outbound call outside the shared SSRF guard.
 - **Scale/Scope**: 508 rows; leaf rows are listed in [tasks.md](tasks.md).
 
+**Knob convention.** An engine knob named `knob x.y` in this spec's rows is a typed field of the server configuration, read from the command line or from the environment variable `MEDULLA_<NAME>` (the dotted name upper-cased, dots as underscores) and bounds-checked at startup: a value outside the stated range refuses startup with the knob name. Decision knobs are the exception and live only in the `MEDULLA-DECISION-ENGINE-R179` registry. Rows do not restate this.
+
 ## Constitution Check
 
 - I to XXVI of the organization constitution: pass. Each row names caller chain, files, types, codes, knobs, writes, dependencies and a test.

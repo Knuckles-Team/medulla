@@ -85,6 +85,7 @@ pub fn append_native_work_item_ops(ops: &mut Vec<&'static str>, available: bool)
             "PublishRunCheckpoint",
             "GetRunWorkItem",
             "GetSessionUsage",
+            "GetShardWriterWidth",
             "GetWorkItem",
             "ListWorkItems",
             "GetWorkItemOutcome",
@@ -551,6 +552,7 @@ mod native_resource_capability_tests {
             for op in [
                 "GetRunWorkItem",
                 "GetSessionUsage",
+                "GetShardWriterWidth",
                 "GetWorkItem",
                 "ListWorkItems",
                 "GetWorkItemOutcome",

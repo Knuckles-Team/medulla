@@ -513,3 +513,20 @@
             sh:nodeKind sh:IRI ;
             sh:path :appliesToInstrumentType ] ;
     sh:targetClass :FinanceAlgorithm .
+
+# MEDULLA-FINANCE-PRIMITIVES-R904: a wallet key trust record binds one 32-byte public
+# key (64 lower-case hex digits) to an account, wallet and network at a revision.
+:WalletKeyTrustShape a sh:NodeShape ;
+    sh:description "A wallet key trust record carries exactly one 32-byte public key as 64 lower-case hex digits and exactly one trust revision." ;
+    sh:name "Wallet Key Trust Shape" ;
+    sh:property [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:message "public_key must be exactly 32 bytes (64 lower-case hex digits)." ;
+            sh:minCount 1 ;
+            sh:pattern "^[0-9a-f]{64}$" ;
+            sh:path :public_key ],
+        [ sh:maxCount 1 ;
+            sh:message "A wallet key trust record has exactly one trust_revision." ;
+            sh:minCount 1 ;
+            sh:path :trust_revision ] ;
+    sh:targetClass :WalletKeyTrust .

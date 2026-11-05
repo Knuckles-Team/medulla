@@ -119,6 +119,13 @@ name = "nemesis"
 path = "src/bin/nemesis.rs"
 required-features = ["harness"]
 
+# Retry-budget decision for scripts/validate-raft-cluster.sh
+# (MEDULLA-DURABLE-KERNEL-R014.3.2): prints the decision for one failed attempt.
+[[bin]]
+name = "raft_flake_budget"
+path = "src/bin/raft_flake_budget.rs"
+required-features = ["raft"]
+
 # The offline tools (`restore`, `migrate-shards`, `medulla-engine-rf019-observe`,
 # `lake-fixture-export`) are subcommands of `medulla-server`
 # (`src/offline_tools/`); they are not separate executables.
@@ -2020,6 +2027,14 @@ harness = false
 [[bench]]
 name = "anonymous_authority"
 path = "benches/anonymous_authority.rs"
+harness = false
+
+# MEDULLA-UNIFIED-DATA-PLANE-R702.6 hot-path receipt, group `lineage_drain`: one
+# request drains 3 events, replays them and quarantines 2 malformed ones
+# (budget: p50 3 ms, p99 18 ms, memory 64 MiB). Nightly only; never gates a PR.
+[[bench]]
+name = "lineage_drain"
+path = "benches/lineage_drain.rs"
 harness = false
 
 # Massive-scale core micro-benchmark harness (CONCEPT:MEDULLA-096): in-process node/edge

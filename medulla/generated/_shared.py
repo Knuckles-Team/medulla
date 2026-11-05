@@ -150,8 +150,10 @@ class AgentComponentFactsModelProfile(BaseModel):
 class AgentComponentFactsSystemPrompt(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    body_sha256: str | None = None
     facts: Literal["system_prompt"]
     prompt_mode: PromptMode
+    schema_revision: Annotated[int, Field(ge=0)] | None = None
     token_estimate: Annotated[int, Field(ge=0)]
     variables: list[str]
 
