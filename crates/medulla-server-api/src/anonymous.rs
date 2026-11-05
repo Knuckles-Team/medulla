@@ -13,6 +13,16 @@ struct AnonymousOperation {
     idempotency_key: String,
 }
 
+/// Largest anonymous correlation metadata accepted after the `anon1.` prefix
+/// (MEDULLA-IDENTITY-R003.2): 2 KiB.
+pub const MAX_METADATA_BYTES: usize = 2048;
+/// Largest anonymous correlation (idempotency) key in UTF-8 bytes.
+pub const MAX_CORRELATION_KEY_BYTES: usize = 256;
+/// The typed refusal for metadata past either bound; the request boundary
+/// passes it through unchanged (MEDULLA-IDENTITY-R003.2).
+pub const OVERSIZE_REFUSAL: &str =
+    "ACCESS_DENIED: anonymous correlation metadata exceeds its 2 KiB or 256-byte key bound";
+
 pub fn request_authority(request: &Request) -> Result<VerifiedRequestContext, String> {
     if request.agent_id.is_some() {
         return Err("anonymous mode refuses caller identity claims".into());
@@ -23,12 +33,16 @@ pub fn request_authority(request: &Request) -> Result<VerifiedRequestContext, St
     let raw = request
         .auth_token
         .strip_prefix("anon1.")
-        .filter(|raw| raw.len() <= 2048)
         .ok_or("anonymous mode refuses credentials and malformed correlation envelopes")?;
+    if raw.len() > MAX_METADATA_BYTES {
+        return Err(OVERSIZE_REFUSAL.into());
+    }
     let operation: AnonymousOperation = serde_json::from_str(raw)
         .map_err(|_| "anonymous correlation metadata must contain only idempotency_key")?;
+    if operation.idempotency_key.len() > MAX_CORRELATION_KEY_BYTES {
+        return Err(OVERSIZE_REFUSAL.into());
+    }
     if operation.idempotency_key.trim().is_empty()
-        || operation.idempotency_key.len() > 256
         || operation.idempotency_key.chars().any(char::is_control)
     {
         return Err("anonymous idempotency_key must be 1..256 UTF-8 bytes without controls".into());
@@ -74,6 +88,29 @@ mod tests {
             assert!(request_authority(&request(&raw)).is_err());
         }
         assert!(request_authority(&request(&format!("anon1.{}", " ".repeat(2049)))).is_err());
+    }
+    // spec: MEDULLA-IDENTITY-R003.2
+    #[test]
+    fn anonymous_metadata_at_the_bound_admits_and_past_it_refuses_typed() {
+        let body = "{\"idempotency_key\":\"k\"}";
+        let at_bound = format!(
+            "anon1.{body}{}",
+            " ".repeat(MAX_METADATA_BYTES - body.len())
+        );
+        assert!(request_authority(&request(&at_bound)).is_ok());
+        let past = format!("{at_bound} ");
+        assert_eq!(
+            request_authority(&request(&past)).unwrap_err(),
+            OVERSIZE_REFUSAL
+        );
+        let long_key = format!(
+            "anon1.{}",
+            serde_json::json!({"idempotency_key": "a".repeat(MAX_CORRELATION_KEY_BYTES + 1)})
+        );
+        assert_eq!(
+            request_authority(&request(&long_key)).unwrap_err(),
+            OVERSIZE_REFUSAL
+        );
     }
     #[test]
     fn anonymous_refuses_credentials_claims_and_invalid_metadata() {
