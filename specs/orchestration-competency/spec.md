@@ -1,65 +1,113 @@
 # MEDULLA-CQ-ORCH — Orchestration competency questions
 
-Owner: Medulla. Cross-repo IDs: Arbora (intent-surface probes, rollup R009), Meristem (none required).
-Public provenance: none; spec-only change.
+Owner: medulla. Cross-repo IDs: ARBORA-FLEET-R052.4 (intent-surface probes, rollup R009), ARBORA-ACCEPTANCE-R006.7 (companion scenario), MERISTEM-HARNESS-CYCLE-R026.1 (consumer of the architecture view).
+Public provenance: none; this spec holds the exit-gate questions of the orchestration competency.
 
-## Purpose and user stories
+## Delivery mapping
 
-Exit gate: "How can I execute task XYZ?" is answered when it decomposes into seven separately answerable questions, each answered by one query over the ontology from real connected data, and a composed answer carries all seven parts with provenance, served through the engine's assembly (`graph.assemble()` / AgentAssemble, `MEDULLA-DECISION-ENGINE-R036`). It is not a second planner.
+Component: ontology and packs for the seven question vocabularies; decision engine for the composed answer.
 
-Questions (verbatim):
+Depends-on: `MEDULLA-DECISION-ENGINE-R036` (assembly), `MEDULLA-DECISION-ENGINE-R126` and `R127` (coverage and guardrails), `MEDULLA-ORCH-VOCAB-R800.1` (workflow type), `MEDULLA-TYPED-PACKS-R104` (seed import).
 
-1. "What steps do I need to follow to complete task XYZ?"
-2. "How many agents and what type of agents are needed to complete the task?"
-3. "Can we use an agent template we already have, or an external A2A agent we have added to our Agent Library, based on their capabilities?"
-4. "What standards, best practices, or guardrails should I follow?"
-5. "What skills, tools, prompts, and LLM models does each agent need to complete each subtask?"
-6. "What workflow do the agents need to follow?"
-7. "What does the agent graph shape (DAG) look like?"
+## User Scenarios & Testing
 
-Composed: "How can I execute task XYZ?" as one response carrying all seven parts with provenance (rollup R008).
-Probes through the intent surface: rollup R009, owned by Arbora.
+### User Story 1 - Answer each of the seven task questions from the ontology (Priority: P1)
 
-A question is **answered** when one query over the ontology returns a correct, provenance-carrying answer from real connected data. When the source is not connected, the answer is a typed abstention naming the missing source or capability, never an empty success.
+An operator asks how to complete task XYZ. The question decomposes into seven separately answerable questions: steps, staffing, template coverage, guardrails, per-agent bindings, workflow and graph shape. Each is one query over the ontology with its own shape and source authority.
 
-## Requirements and acceptance
+**Acceptance Scenarios**:
 
-- FR-001: Each of questions 1-7 has one rollup row and an end-to-end acceptance test asserting a non-empty, provenance-carrying answer or the typed abstention.
-- FR-002: The composed answer is produced by the assemble handler. No parallel planner, router, guardrail engine or topology chooser is added.
-- FR-003: Each probe in R009 is an acceptance test through the Arbora intent tools, recorded with its previously observed result.
-- SC-001: All 8 plus 1 rollups have passing acceptance children on a fixture graph.
+1. **Given** the fixture graph of a question, **When** its query runs with the task bound, **Then** the rows equal the expected rows and every row carries its source.
+2. **Given** a source that is not connected, **When** the source-authority mapping is read, **Then** the answer is the typed abstention and never an empty success.
+
+### User Story 2 - One composed answer to "how can I execute task XYZ?" (Priority: P1)
+
+A caller asks one question and gets all seven parts, each with premises and an evidence class, assembled by the existing assembly handler and not by a second planner.
+
+**Acceptance Scenarios**:
+
+1. **Given** task XYZ and two imported connector packs, **When** the caller sends `AgentExecutionAnswer`, **Then** all seven parts answer and `assembled_by` is `graph.assemble`.
+2. **Given** a part whose source is removed, **When** the same request runs, **Then** that part abstains with its code while the other six answer.
+
+### User Story 3 - Probe questions through the intent surface (Priority: P2)
+
+An operator probes the engine through six plain questions. Medulla owns the engine answer and its fixture; arbora owns the intent resolution.
+
+**Acceptance Scenarios**:
+
+1. **Given** twelve nodes across three labels, **When** the node-count probe runs, **Then** one row per label is returned and the counts sum to twelve.
+2. **Given** an empty library, **When** the agent-library probe runs, **Then** an empty list with the snapshot digest is returned, not an error.
+
+### User Story 4 - Architecture views derived from the graph (Priority: P2)
+
+A reader asks for the container view of a repository. The engine derives it from ingested code and diagram elements and cites the files that support each container.
+
+**Acceptance Scenarios**:
+
+1. **Given** a fixture repository of three packages and one diagram, **When** the view is read, **Then** three code containers, one diagram-only container and the call edges with counts return.
+2. **Given** a scope with no ingested source, **When** the view is read, **Then** the read refuses with `VIEW_NO_SUPPORTING_SOURCE`.
+
+### User Story 5 - Job, downtime and plan questions (Priority: P2)
+
+An operator asks which components to load for a job, which downtime jobs run next, which query plan is best, how to use a connector and what a connector seeded. Each answer carries provenance from facts that ingest and engine jobs produced.
+
+**Acceptance Scenarios**:
+
+1. **Given** two imported packs, **When** the load-set question runs for a job, **Then** a bounded non-empty answer with one premise per row returns.
+2. **Given** a seed imported twice with the catalog part changed, **When** the seed question runs, **Then** `catalog` is `replaced` and the other parts are `unchanged`.
+
+### User Story 6 - Business processes compile to stored workflows (Priority: P3)
+
+A harness submits a modeled process and a stored process model; the engine compiles or imports it into one versioned workflow that replays.
+
+**Acceptance Scenarios**:
+
+1. **Given** a process of 12 nodes, **When** it compiles twice, **Then** version 2 is written and a stale expected version is refused.
+2. **Given** an imported EPC model, **When** it is exported again, **Then** the AND, OR and XOR gates survive.
+
+### Edge Cases
+
+- A source that is not connected: typed abstention, never an empty success.
+- A part of the composed answer without data: its own abstention, no dropped field.
+- A cycle without a loop gate, an unmapped process element, an unknown repository: named refusal, durable state unchanged.
+- A request for another tenant's task, repository or process: refused or answered empty, never read.
+
+## Requirements
+
+- **FR-001**: each of questions 1 to 7 has an ontology gap closed, a shape, a source-authority mapping, a fixture and an acceptance test. Rows: `MEDULLA-CQ-ORCH-R001`, `MEDULLA-CQ-ORCH-R002`, `MEDULLA-CQ-ORCH-R003`, `MEDULLA-CQ-ORCH-R004`, `MEDULLA-CQ-ORCH-R005`, `MEDULLA-CQ-ORCH-R006`, `MEDULLA-CQ-ORCH-R007`.
+- **FR-002**: the composed answer is produced by the assemble handler and adds no planner, router or topology chooser. Rows: `MEDULLA-CQ-ORCH-R008`, `MEDULLA-CQ-ORCH-R012`.
+- **FR-003**: each probe is an engine-side acceptance test. Rows: `MEDULLA-CQ-ORCH-R009`.
+- **FR-004**: the graph serves architecture views derived from ingested code and diagrams. Rows: `MEDULLA-CQ-ORCH-R010`.
+- **FR-005**: the job, downtime and plan questions are answered from served reads. Rows: `MEDULLA-CQ-ORCH-R011`.
+- **FR-006**: modeled processes compile to stored workflows and stored process models import and export. Rows: `MEDULLA-CQ-ORCH-R700`, `MEDULLA-CQ-ORCH-R701`.
+
+## Success Criteria
+
+- **SC-001**: all seven question rollups have passing acceptance children on a fixture graph. Rows: `MEDULLA-CQ-ORCH-R001.5`.
+- **SC-002**: the composed answer carries seven parts with premises and an evidence class each. Rows: `MEDULLA-CQ-ORCH-R008.5`.
+- **SC-003**: no refusal changes durable state. Rows: `MEDULLA-CQ-ORCH-R700.4`, `MEDULLA-CQ-ORCH-R701.4`.
+
+## Assumptions
+
+- A question is answered when one query over the ontology returns a correct, provenance-carrying answer from connected data; otherwise the answer is a typed abstention naming the missing source or capability.
+- Virtual-first: the engine ingests a source's ontology and access contract and fetches data at query time; copying a source needs its own stated reason.
+- `AgentTemplate` lives in `orchestration-v1.ttl`, and step order reuses the core `:precedes` property.
+
+## Why a new spec
+
+The search of the decision-engine, federated-query, unified-data-plane and typed-packs specs found no owner for the seven task questions as one exit gate: those specs own the mechanisms and this spec owns the questions, fixtures and composed envelope that prove them.
 
 ## Scope and interfaces
 
-Owned: ontology gaps, SHACL shapes, source-authority mappings, fixtures and acceptance tests listed in `requirements.md`. Mechanisms are cited, not re-specified: `specs/decision-engine`, `specs/federated-query-and-reasoning`, `specs/unified-data-plane`, `specs/typed-packs-and-catalog`. Non-goals: a new planner; changes to the solver; Arbora tool implementation (owned by Arbora, rows marked cross-repo).
+Owned: ontology gaps, shapes, source-authority mappings, fixtures and acceptance tests, the composed envelope, the architecture view, the workflow compiler and importer, and the job questions. Mechanisms are cited, not re-specified. Non-goals: a new planner, solver changes, and arbora tool implementation.
 
 ## Traceability
 
-| Requirement | Design section | Test ID | Evidence |
-|---|---|---|---|
-| MEDULLA-CQ-ORCH-R001..R009 | design.md Q1..Q9 | each rollup's acceptance child | PENDING |
-
-## Open questions
-
-- Whether the AgentTemplate class belongs in `catalog-v1.ttl` (currently term-free) or `orchestration-v1.ttl`.
-- Whether step order reuses `swarm:` edges or adds a neutral `eg:precedes`.
-
-## Virtual-first: the engine reaches source data, it does not copy it
-
-What is ingested from a connected source is its **ontology and access contract**. The data stays in the source. The engine fetches it at query time through an ontology-driven virtual graph, selected by the ontology's source declarations. The contract kinds are A2A, MCP, API (REST), GraphQL and virtual-graph contracts over relational or document stores. A question is answered by federating over those contracts. Copying a source into the engine is an optimisation that needs its own stated reason (latency, availability, history). It is never the default and never a precondition for answering.
-
-<!-- spec-definition-patch:owner-batch-20261012-orchestration-competency -->
-## Reviewed owner residuals — 2026-10-12
-
-### `MEDULLA-CQ-ORCH-R010.7` — GRAPHOS:20
-
-Original objective: Before planning, query graph architecture and wiring. Report design differences. Each feature names its hot-path attach point. Refuse plans with unwired features.
-
-Medulla-owned residual: No cited contract requires architecture/wiring comparison before planning. No cited contract requires a hot-path attach point for every feature. No cited contract refuses unwired features. Capability gap reports and architecture views are inputs, not admission gates.
-
-Producer/consumer boundary: Medulla served impact view and capability query feed Meristem study-gap proposals. Meristem proposals feed Medulla planning admission. The preplanning comparison and unwired-feature refusal edge are absent.
-
-Preserve existing coverage: `MEDULLA-CQ-ORCH-R010.1`, `MEDULLA-CQ-ORCH-R010.2`, `MEDULLA-CQ-ORCH-R010.3`, `MEDULLA-CQ-ORCH-R010.4`, `MEDULLA-CQ-ORCH-R010.5`, `MEDULLA-CQ-ORCH-R010.6`, `MERISTEM-HARNESS-R019.5`, `MERISTEM-HARNESS-R019.6`, `MERISTEM-HARNESS-R019.7`.
-
-Owner source hash: `bbc3f62e74bc899e49191e1d9bf324afe5e6dc2553df9e8d8651aae1311a8418`. This definition adds no Meristem/Arbora/Graft SDK implementation or acceptance claim.
-<!-- /spec-definition-patch -->
+| Label | Rows | Design section | Test ID | Evidence |
+|---|---|---|---|---|
+| FR-001 | `MEDULLA-CQ-ORCH-R001` | plan.md Questions 1 to 7 | T-001 | PENDING |
+| FR-002 | `MEDULLA-CQ-ORCH-R008` | plan.md Composed answer | T-003 | PENDING |
+| FR-003 | `MEDULLA-CQ-ORCH-R009` | plan.md Probes | T-004 | PENDING |
+| FR-004 | `MEDULLA-CQ-ORCH-R010` | plan.md Architecture views | T-005 | PENDING |
+| FR-005 | `MEDULLA-CQ-ORCH-R011` | plan.md Job and plan questions | T-006 | PENDING |
+| FR-006 | `MEDULLA-CQ-ORCH-R700` | plan.md Workflows | T-007 | PENDING |

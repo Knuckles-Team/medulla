@@ -1,73 +1,76 @@
 # MEDULLA-CQ-ORCH — Implementation tasks
 
-Governing spec: [spec.md](spec.md). Design: [design.md](plan.md).
+Governing spec: [spec.md](spec.md). Design: [plan.md](plan.md).
 
-Producer first: ontology gaps, shapes and authority mappings before fixtures and acceptance tests. R009 children are owned by Arbora.
+Producer first: ontology terms, shapes and authority mappings, then fixtures and acceptance tests, then the composed envelope, the architecture view, the workflow compiler and the job questions. The arbora probes of R009 are proved in the engine here and in the arbora repository.
 
-- [ ] MEDULLA-CQ-ORCH-R001.1 Q1 Ontology gap: ordered step
-- [ ] MEDULLA-CQ-ORCH-R001.2 Q1 SHACL shape
-- [ ] MEDULLA-CQ-ORCH-R001.3 Q1 Source-authority mapping
-- [ ] MEDULLA-CQ-ORCH-R001.4 Q1 Query fixture
-- [ ] MEDULLA-CQ-ORCH-R001.5 Q1 Acceptance test
-- [ ] MEDULLA-CQ-ORCH-R002.1 Q2 Ontology gap: agent kind
-- [ ] MEDULLA-CQ-ORCH-R002.2 Q2 SHACL shape
-- [ ] MEDULLA-CQ-ORCH-R002.3 Q2 Source-authority mapping
-- [ ] MEDULLA-CQ-ORCH-R002.4 Q2 Query fixture
-- [ ] MEDULLA-CQ-ORCH-R002.5 Q2 Acceptance test
-- [ ] MEDULLA-CQ-ORCH-R003.1 Q3 Ontology gap: agent template
-- [ ] MEDULLA-CQ-ORCH-R003.2 Q3 SHACL shape
-- [ ] MEDULLA-CQ-ORCH-R003.3 Q3 Source-authority mapping
-- [ ] MEDULLA-CQ-ORCH-R003.4 Q3 Query fixture
-- [ ] MEDULLA-CQ-ORCH-R003.5 Q3 Acceptance test
-- [ ] MEDULLA-CQ-ORCH-R004.1 Q4 Ontology gap: best practice and rule scope
-- [ ] MEDULLA-CQ-ORCH-R004.2 Q4 SHACL shape
-- [ ] MEDULLA-CQ-ORCH-R004.3 Q4 Source-authority mapping
-- [ ] MEDULLA-CQ-ORCH-R004.4 Q4 Query fixture
-- [ ] MEDULLA-CQ-ORCH-R004.5 Q4 Acceptance test
-- [ ] MEDULLA-CQ-ORCH-R005.1 Q5 Ontology gap: model profile
-- [ ] MEDULLA-CQ-ORCH-R005.2 Q5 SHACL shape
-- [ ] MEDULLA-CQ-ORCH-R005.3 Q5 Source-authority mapping
-- [ ] MEDULLA-CQ-ORCH-R005.4 Q5 Query fixture
-- [ ] MEDULLA-CQ-ORCH-R005.5 Q5 Acceptance test
-- [ ] MEDULLA-CQ-ORCH-R006.1 Q6 Ontology gap: handoff
-- [ ] MEDULLA-CQ-ORCH-R006.2 Q6 SHACL shape
-- [ ] MEDULLA-CQ-ORCH-R006.3 Q6 Source-authority mapping
-- [ ] MEDULLA-CQ-ORCH-R006.4 Q6 Query fixture
-- [ ] MEDULLA-CQ-ORCH-R006.5 Q6 Acceptance test
-- [ ] MEDULLA-CQ-ORCH-R007.1 Q7 Ontology gap: slot edge
-- [ ] MEDULLA-CQ-ORCH-R007.2 Q7 SHACL shape
-- [ ] MEDULLA-CQ-ORCH-R007.3 Q7 Source-authority mapping
-- [ ] MEDULLA-CQ-ORCH-R007.4 Q7 Query fixture
-- [ ] MEDULLA-CQ-ORCH-R007.5 Q7 Acceptance test
-- [ ] MEDULLA-CQ-ORCH-R008.1 Composed Envelope type
-- [ ] MEDULLA-CQ-ORCH-R008.2 Composed Assemble wiring
-- [ ] MEDULLA-CQ-ORCH-R008.3 Composed Typed abstention per part
-- [ ] MEDULLA-CQ-ORCH-R008.4 Composed Query fixture
-- [ ] MEDULLA-CQ-ORCH-R008.5 Composed Acceptance test
-- [ ] MEDULLA-CQ-ORCH-R009.1 Probe (Arbora): How many nodes does the graph hold, by label?
-- [ ] MEDULLA-CQ-ORCH-R009.2 Probe (Arbora): How can I deploy a container with container-manager?
-- [ ] MEDULLA-CQ-ORCH-R009.3 Probe (Arbora): Which agents are in the Agent Library?
-- [ ] MEDULLA-CQ-ORCH-R009.4 Probe (Arbora): Why does Arbora use the intent surface?
-- [ ] MEDULLA-CQ-ORCH-R009.5 Probe (Arbora): Find a tool that lists Docker containers.
-- [ ] MEDULLA-CQ-ORCH-R009.6 Probe (Arbora): Delegate: list running containers.
-- [ ] MEDULLA-CQ-ORCH-R010.1 Add the architecture view types
-- [ ] MEDULLA-CQ-ORCH-R010.2 Derive containers from code and diagrams
-- [ ] MEDULLA-CQ-ORCH-R010.3 Serve the view through the query path
-- [ ] MEDULLA-CQ-ORCH-R010.4 Abstain when no source supports a container
-- [ ] MEDULLA-CQ-ORCH-R010.5 Cite the support of every container
-- [ ] MEDULLA-CQ-ORCH-R010.6 Prove the view through the served operation
-
-<!-- spec-definition-patch:owner-batch-20261012-orchestration-competency -->
-## Reviewed residual definition tasks — owner batch 2026-10-12
-
-- [ ] **MEDULLA-CQ-ORCH-R010.7:** Gate plan-producing Decide responses on a revision-matched architecture view and Meristem study-gap record. Require each feature's attach point and wiring edge. Reject missing or stale inputs before returning a plan.
-- [ ] **MEDULLA-CQ-ORCH-R010.7 acceptance:** Run `unwired_feature_refuses_before_task_plan`, `stale_architecture_or_study_gap_refuses`, and `test_plan_requires_pinned_architecture_and_attach_points`. Assert named refusals and no plan. Confirm Meristem proposal id/revision before cross-owner closure. Status remains SPECIFIED.
-<!-- /spec-definition-patch -->
-
-- [ ] **MEDULLA-CQ-ORCH-R011 (rollup):** Job, downtime and plan competency questions (rollup).
-- [ ] **MEDULLA-CQ-ORCH-R011.1 (Question):** Add the Q1 fixture and acceptance test.
-- [ ] **MEDULLA-CQ-ORCH-R011.2 (Question):** Add the Q2 fixture and acceptance test.
-- [ ] **MEDULLA-CQ-ORCH-R011.3 (Question):** Add the Q3 fixture and acceptance test.
-- [ ] **MEDULLA-CQ-ORCH-R011.4 (Question):** Add the Q4 fixture and acceptance test.
-- [ ] **MEDULLA-CQ-ORCH-R011.5 (Question):** Add the Q5 fixture and acceptance test.
-- [ ] **MEDULLA-CQ-ORCH-R011.6 (Hot-path proof):** Add the served hot-path test.
+- [ ] T001 [P] [US1] MEDULLA-CQ-ORCH-R001.1 Q1 Ontology gap: ordered step
+- [ ] T002 [P] [US1] MEDULLA-CQ-ORCH-R001.2 Q1 SHACL shape
+- [ ] T003 [P] [US1] MEDULLA-CQ-ORCH-R001.3 Q1 Source-authority mapping
+- [ ] T004 [US1] MEDULLA-CQ-ORCH-R001.4 Q1 Query fixture
+- [ ] T005 [US1] MEDULLA-CQ-ORCH-R001.5 Q1 Acceptance test
+- [ ] T006 [P] [US1] MEDULLA-CQ-ORCH-R002.1 Q2 Ontology gap: agent kind
+- [ ] T007 [P] [US1] MEDULLA-CQ-ORCH-R002.2 Q2 SHACL shape
+- [ ] T008 [P] [US1] MEDULLA-CQ-ORCH-R002.3 Q2 Source-authority mapping
+- [ ] T009 [US1] MEDULLA-CQ-ORCH-R002.4 Q2 Query fixture
+- [ ] T010 [US1] MEDULLA-CQ-ORCH-R002.5 Q2 Acceptance test
+- [ ] T011 [P] [US1] MEDULLA-CQ-ORCH-R003.1 Q3 Ontology gap: agent template
+- [ ] T012 [P] [US1] MEDULLA-CQ-ORCH-R003.2 Q3 SHACL shape
+- [ ] T013 [P] [US1] MEDULLA-CQ-ORCH-R003.3 Q3 Source-authority mapping
+- [ ] T014 [US1] MEDULLA-CQ-ORCH-R003.4 Q3 Query fixture
+- [ ] T015 [US1] MEDULLA-CQ-ORCH-R003.5 Q3 Acceptance test
+- [ ] T016 [P] [US1] MEDULLA-CQ-ORCH-R004.1 Q4 Ontology gap: best practice and rule scope
+- [ ] T017 [P] [US1] MEDULLA-CQ-ORCH-R004.2 Q4 SHACL shape
+- [ ] T018 [P] [US1] MEDULLA-CQ-ORCH-R004.3 Q4 Source-authority mapping
+- [ ] T019 [US1] MEDULLA-CQ-ORCH-R004.4 Q4 Query fixture
+- [ ] T020 [US1] MEDULLA-CQ-ORCH-R004.5 Q4 Acceptance test
+- [ ] T021 [P] [US1] MEDULLA-CQ-ORCH-R005.1 Q5 Ontology gap: model profile
+- [ ] T022 [P] [US1] MEDULLA-CQ-ORCH-R005.2 Q5 SHACL shape
+- [ ] T023 [P] [US1] MEDULLA-CQ-ORCH-R005.3 Q5 Source-authority mapping
+- [ ] T024 [US1] MEDULLA-CQ-ORCH-R005.4 Q5 Query fixture
+- [ ] T025 [US1] MEDULLA-CQ-ORCH-R005.5 Q5 Acceptance test
+- [ ] T026 [P] [US1] MEDULLA-CQ-ORCH-R006.1 Q6 Ontology gap: handoff
+- [ ] T027 [P] [US1] MEDULLA-CQ-ORCH-R006.2 Q6 SHACL shape
+- [ ] T028 [P] [US1] MEDULLA-CQ-ORCH-R006.3 Q6 Source-authority mapping
+- [ ] T029 [US1] MEDULLA-CQ-ORCH-R006.4 Q6 Query fixture
+- [ ] T030 [US1] MEDULLA-CQ-ORCH-R006.5 Q6 Acceptance test
+- [ ] T031 [P] [US1] MEDULLA-CQ-ORCH-R007.1 Q7 Ontology gap: slot edge
+- [ ] T032 [P] [US1] MEDULLA-CQ-ORCH-R007.2 Q7 SHACL shape
+- [ ] T033 [P] [US1] MEDULLA-CQ-ORCH-R007.3 Q7 Source-authority mapping
+- [ ] T034 [US1] MEDULLA-CQ-ORCH-R007.4 Q7 Query fixture
+- [ ] T035 [US1] MEDULLA-CQ-ORCH-R007.5 Q7 Acceptance test
+- [ ] T036 [US2] MEDULLA-CQ-ORCH-R008.1 Composed envelope type
+- [ ] T037 [US2] MEDULLA-CQ-ORCH-R008.2 Composed assemble wiring
+- [ ] T038 [US2] MEDULLA-CQ-ORCH-R008.3 Composed typed abstention per part
+- [ ] T039 [US2] MEDULLA-CQ-ORCH-R008.4 Composed ingest fixture
+- [ ] T040 [US2] MEDULLA-CQ-ORCH-R008.5 Composed acceptance test
+- [ ] T041 [US3] MEDULLA-CQ-ORCH-R009.1 Probe 1: node counts by label
+- [ ] T042 [US3] MEDULLA-CQ-ORCH-R009.2 Probe 2: deploy a container
+- [ ] T043 [US3] MEDULLA-CQ-ORCH-R009.3 Probe 3: agents in the Agent Library
+- [ ] T044 [US3] MEDULLA-CQ-ORCH-R009.4 Probe 4: why the intent surface
+- [ ] T045 [US3] MEDULLA-CQ-ORCH-R009.5 Probe 5: find a container-listing tool
+- [ ] T046 [US3] MEDULLA-CQ-ORCH-R009.6 Probe 6: delegate listing containers
+- [ ] T047 [US4] MEDULLA-CQ-ORCH-R010.1 Architecture view model
+- [ ] T048 [US4] MEDULLA-CQ-ORCH-R010.2 Architecture view derivation
+- [ ] T049 [US4] MEDULLA-CQ-ORCH-R010.3 Architecture view wiring
+- [ ] T050 [US4] MEDULLA-CQ-ORCH-R010.4 Architecture view refusal
+- [ ] T051 [US4] MEDULLA-CQ-ORCH-R010.5 Architecture view evidence
+- [ ] T052 [US4] MEDULLA-CQ-ORCH-R010.6 Architecture view hot-path proof
+- [ ] T053 [US5] MEDULLA-CQ-ORCH-R011.1 Job load-set question
+- [ ] T054 [US5] MEDULLA-CQ-ORCH-R011.2 Downtime next-job question
+- [ ] T055 [US5] MEDULLA-CQ-ORCH-R011.3 Best virtual query plan question
+- [ ] T056 [US5] MEDULLA-CQ-ORCH-R011.4 Connector usage guidance question
+- [ ] T057 [US5] MEDULLA-CQ-ORCH-R011.5 Connector seed changes question
+- [ ] T058 [US5] MEDULLA-CQ-ORCH-R011.6 Job, downtime and plan hot-path proof
+- [ ] T059 [US6] MEDULLA-CQ-ORCH-R700.2 Process compile behaviour
+- [ ] T060 [US6] MEDULLA-CQ-ORCH-R700.3 Process compile wiring and version store
+- [ ] T061 [US6] MEDULLA-CQ-ORCH-R700.4 Process compile refusal
+- [ ] T062 [US6] MEDULLA-CQ-ORCH-R700.5 Process compile evidence
+- [ ] T063 [US6] MEDULLA-CQ-ORCH-R700.6 Process compile hot-path proof
+- [ ] T064 [US6] MEDULLA-CQ-ORCH-R701.1 Imported process model and gate classification
+- [ ] T065 [US6] MEDULLA-CQ-ORCH-R701.2 Process model import and export behaviour
+- [ ] T066 [US6] MEDULLA-CQ-ORCH-R701.3 Process model import and export wiring
+- [ ] T067 [US6] MEDULLA-CQ-ORCH-R701.4 Process model import refusal
+- [ ] T068 [US6] MEDULLA-CQ-ORCH-R701.5 Process model import evidence
+- [ ] T069 [US6] MEDULLA-CQ-ORCH-R701.6 Process model import hot-path proof
+- [ ] T070 [US2] MEDULLA-CQ-ORCH-R012 Served proof of the execution question from onboarded connector operations
