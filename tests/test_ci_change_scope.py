@@ -487,10 +487,8 @@ def test_source_hook_modes_keep_manual_and_full_coverage() -> None:
     config = yaml.safe_load((ROOT / ".config/pre-commit.yaml").read_text())
     hooks = {hook["id"]: hook for repo in config["repos"] for hook in repo["hooks"]}
     for name in ("durable-table-registration",):
-        for suffix, stage, mode in (
-            ("", "pre-commit", "staged"),
-            ("-push", "pre-push", "push"),
-        ):
+        assert name not in hooks  # whole-repo scan: never at commit (R053.7.1)
+        for suffix, stage, mode in (("-push", "pre-push", "push"),):
             hook = hooks[name + suffix]
             assert f"--scope {mode}" in hook["entry"]
             assert hook["stages"] == [stage]
@@ -1010,3 +1008,49 @@ def test_tts_piper_job_skips_apt_when_native_packages_are_present() -> None:
     )
     assert f"sudo apt-get {opts} update" in run
     assert f"sudo apt-get {opts} install -y --no-install-recommends {packages}" in run
+
+
+# MEDULLA-CONTRACT-R053.7.1: whole-repo hooks never run at commit; each runs in PR CI.
+COMMIT_CONTEXT_HOOKS = {
+    "lane-guard"
+}  # inspects the commit's own checkout, not the tree
+
+
+def _hooks() -> list[dict]:
+    import yaml
+
+    root = Path(__file__).resolve().parents[1]
+    config = yaml.safe_load((root / ".config/pre-commit.yaml").read_text())
+    default = config.get("default_stages", ["pre-commit"])
+    hooks = []
+    for repo in config["repos"]:
+        for hook in repo["hooks"]:
+            hooks.append({**hook, "stages": hook.get("stages", default)})
+    return hooks
+
+
+def _whole_repo(hook: dict) -> bool:
+    return bool(hook.get("always_run")) or (
+        hook.get("pass_filenames") is False and "files" not in hook
+    )
+
+
+def test_whole_repo_hooks_run_at_push_or_ci_never_at_commit() -> None:
+    root = Path(__file__).resolve().parents[1]
+    workflow = (root / ".github/workflows/ci.yml").read_text()
+    listed = re.search(r"WHOLE_REPO_HOOKS: (.+)", workflow)
+    assert listed, "ci.yml lint job must list WHOLE_REPO_HOOKS"
+    ci_hooks = set(listed.group(1).split())
+    for hook in _hooks():
+        if hook["id"] in COMMIT_CONTEXT_HOOKS or not _whole_repo(hook):
+            continue
+        assert "pre-commit" not in hook["stages"], (
+            f"{hook['id']} scans the repo at commit"
+        )
+        if "pre-push" in hook["stages"]:
+            assert hook["id"] in ci_hooks, (
+                f"{hook['id']} runs at pre-push but not in CI"
+            )
+    by_id = {hook["id"]: hook for hook in _hooks()}
+    for hook_id in ci_hooks:
+        assert "pre-push" in by_id[hook_id]["stages"], hook_id
