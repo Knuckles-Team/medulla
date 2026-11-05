@@ -322,3 +322,31 @@ async def test_connection_pool_uses_the_shared_transport_function(
     await pool._create_client()
     assert calls == ["unix:///run/medulla.sock"]
     assert captured["socket_path"] == "/run/medulla.sock"
+
+
+@pytest.mark.spec("MEDULLA-PLACEMENT-R611.1")
+@pytest.mark.asyncio
+async def test_pool_and_breaker_types_validate() -> None:
+    async def factory(tenant: str) -> str:
+        return f"client-{tenant}"
+
+    pool: TenantPool[str] = TenantPool(factory)
+    assert pool._capacity == 64
+    breaker = Breaker()
+    assert breaker._threshold == 5 and breaker._reset_after == 10.0
+    assert breaker.state == "closed"
+    for bad_tenant in ("", None, 7):
+        with pytest.raises(ValueError):
+            await pool.acquire(bad_tenant)  # type: ignore[arg-type]
+    for capacity in (0, 1_025, True, 1.5):
+        with pytest.raises(ValueError):
+            TenantPool(factory, capacity=capacity)  # type: ignore[arg-type]
+    TenantPool(factory, capacity=1_024)
+    for failures in (0, 101, True):
+        with pytest.raises(ValueError):
+            Breaker(failure_threshold=failures)
+    for reset in (0.099, 600.001, 0, True):
+        with pytest.raises(ValueError):
+            Breaker(reset_after_s=reset)
+    Breaker(failure_threshold=100, reset_after_s=0.1)
+    Breaker(reset_after_s=600)

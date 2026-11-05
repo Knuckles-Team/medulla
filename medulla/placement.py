@@ -32,6 +32,14 @@ if TYPE_CHECKING:
 
 PLACEMENT_STALE = "PLACEMENT_STALE"
 
+# Client config keys (MEDULLA-PLACEMENT-R611.1): default, then inclusive bounds.
+POOL_SIZE_DEFAULT = 64  # placement.pool_size, clients
+POOL_SIZE_BOUNDS = (1, 1_024)
+BREAKER_FAILURES_DEFAULT = 5  # placement.breaker_failures, consecutive failures
+BREAKER_FAILURES_BOUNDS = (1, 100)
+BREAKER_HALF_OPEN_MS_DEFAULT = 10_000  # placement.breaker_half_open_ms, ms
+BREAKER_HALF_OPEN_MS_BOUNDS = (100, 600_000)
+
 TransportKind = Literal["unix", "tcp", "tls", "mtls"]
 BreakerState = Literal["closed", "open", "half_open"]
 
@@ -90,14 +98,22 @@ class Breaker:
     def __init__(
         self,
         *,
-        failure_threshold: int = 3,
-        reset_after_s: float = 5.0,
+        failure_threshold: int = BREAKER_FAILURES_DEFAULT,
+        reset_after_s: float = BREAKER_HALF_OPEN_MS_DEFAULT / 1_000,
         clock: Callable[[], float] = time.monotonic,
     ) -> None:
-        if failure_threshold < 1:
-            raise ValueError("failure_threshold must be at least 1")
-        if reset_after_s <= 0:
-            raise ValueError("reset_after_s must be positive")
+        low, high = BREAKER_FAILURES_BOUNDS
+        if isinstance(failure_threshold, bool) or not (
+            isinstance(failure_threshold, int) and low <= failure_threshold <= high
+        ):
+            raise ValueError(f"failure_threshold must be an integer in [{low}, {high}]")
+        low_ms, high_ms = BREAKER_HALF_OPEN_MS_BOUNDS
+        if isinstance(reset_after_s, bool) or not (
+            isinstance(reset_after_s, int | float) and low_ms <= reset_after_s * 1_000 <= high_ms
+        ):
+            raise ValueError(
+                f"reset_after_s must be between {low_ms / 1_000} and {high_ms / 1_000} seconds"
+            )
         self._threshold = failure_threshold
         self._reset_after = reset_after_s
         self._clock = clock
@@ -139,11 +155,12 @@ class TenantPool(Generic[ClientT]):
         self,
         factory: Callable[[str], Awaitable[ClientT]],
         *,
-        capacity: int = 64,
+        capacity: int = POOL_SIZE_DEFAULT,
         close: Callable[[ClientT], Awaitable[None]] | None = None,
     ) -> None:
-        if capacity < 1:
-            raise ValueError("capacity must be at least 1")
+        low, high = POOL_SIZE_BOUNDS
+        if isinstance(capacity, bool) or not (isinstance(capacity, int) and low <= capacity <= high):
+            raise ValueError(f"capacity must be an integer in [{low}, {high}]")
         self._factory = factory
         self._close = close
         self._capacity = capacity
