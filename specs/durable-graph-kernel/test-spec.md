@@ -500,3 +500,70 @@ The authored R030.1.3 signed negative fixture sends a foreign body tenant throug
 
 These composed-source fixtures require fresh native execution. Prior green
 checkpoint and admission runs do not qualify this new integration.
+
+## Planned bindings, range 2
+
+Planned test names do not claim passing results. Each path is the post-split location.
+
+- `MEDULLA-DURABLE-KERNEL-R082.2`: Planned: `crates/medulla-h-jobs/src/jobs/graph_tests.rs::mine_associate_refuses_malformed_transactions_and_accepts_defaults` (L2) submits a non-list-of-lists payload, then a payload with the three defaults.
+- `MEDULLA-DURABLE-KERNEL-R082.5`: Planned: `crates/medulla-h-jobs/src/jobs/graph_tests.rs::association_result_has_the_eleven_column_shape_and_recomputed_digest` (L3).
+- `MEDULLA-DURABLE-KERNEL-R082.6`: Planned: `crates/medulla-mining/src/mining/association.rs::tests::six_transaction_rules_match_the_recorded_order` (L1).
+- `MEDULLA-DURABLE-KERNEL-R082.7`: Planned: `crates/medulla-h-jobs/src/jobs/graph_tests.rs::cancel_deadline_and_cpu_budget_each_stop_the_kernel_with_their_reason` (L3).
+- `MEDULLA-DURABLE-KERNEL-R082.8`: Planned: `crates/medulla-h-jobs/src/jobs/graph_tests.rs::kernel_failed_twice_obeys_backoff_attempt_count_and_leaks_no_payload` (L3).
+- `MEDULLA-DURABLE-KERNEL-R082.9`: Planned: `crates/medulla-h-jobs/src/jobs/graph_tests.rs::analytics_config_accepts_range_ends_and_refuses_values_beyond_them` (L2).
+- `MEDULLA-DURABLE-KERNEL-R082.10`: Planned: `crates/medulla-h-jobs/src/jobs/graph_tests.rs::remote_worker_drives_the_full_sequence_and_scope_is_enforced` (L3).
+- `MEDULLA-DURABLE-KERNEL-R083`: Planned: `tests/kvcache_http_served.rs::two_consumers_share_one_block_and_a_version_mismatch_refuses` (L3).
+- `MEDULLA-DURABLE-KERNEL-R083.4`: Planned: `tests/test_kvcache_connector.py::test_put_from_one_client_is_read_by_another` (L4).
+- `MEDULLA-DURABLE-KERNEL-R083.4`: Planned: `tests/test_release_feature_matrix.py::test_full_contains_kvcache_server` (L2).
+- `MEDULLA-DURABLE-KERNEL-R084`: Planned: `tests/write_conflict_two_writers.rs::two_writers_one_commit_one_typed_conflict` (L3).
+- `MEDULLA-DURABLE-KERNEL-R084.2`: Planned: `crates/medulla-types/src/write_conflict.rs::tests::resolve_under_each_strategy` (L1).
+- `MEDULLA-DURABLE-KERNEL-R084.3`: Planned: `tests/write_conflict_two_writers.rs::stale_envelope_reaches_the_resolver` (L3).
+- `MEDULLA-DURABLE-KERNEL-R084.4`: Planned: `tests/write_conflict_two_writers.rs::conflict_codes_leave_state_unchanged` (L3).
+- `MEDULLA-DURABLE-KERNEL-R084.5`: Planned: `tests/write_conflict_two_writers.rs::conflict_evidence_names_scope_strategy_winner` (L3).
+- `MEDULLA-DURABLE-KERNEL-R085`: Planned: `tests/memory_sync_served.rs::complete_memory_sync_journey` (L3).
+- `MEDULLA-DURABLE-KERNEL-R085.1`: Planned: `tests/memory_sync_contract.rs::bounded_contract_round_trips_and_refuses_invalid_fields` (L1).
+- `MEDULLA-DURABLE-KERNEL-R085.2`: Planned: `tests/memory_sync_served.rs::authorized_read_list_and_cursor_isolation` (L3).
+- `MEDULLA-DURABLE-KERNEL-R085.3`: Planned: `tests/memory_sync_served.rs::competing_saves_retain_both_and_resolve_once` (L3).
+- `MEDULLA-DURABLE-KERNEL-R085.4`: Planned: `tests/memory_sync_served.rs::wire_methods_reach_durable_gateway` (L3).
+- `MEDULLA-DURABLE-KERNEL-R085.5`: Planned: `tests/memory_sync_served.rs::denied_and_malformed_requests_have_no_effects` (L3).
+- `MEDULLA-DURABLE-KERNEL-R085.6`: Planned: `tests/memory_sync_served.rs::provenance_and_materialization_ack_survive_restart` (L3).
+- `MEDULLA-DURABLE-KERNEL-R085.7`: Planned: `tests/memory_sync_served.rs::conflicts_survive_gc_and_retention_refusal` (L3).
+- `MEDULLA-DURABLE-KERNEL-R086`: Planned: `tests/safe_eviction_read_through.rs::served_safe_eviction_read_through_journey` (L3).
+- `MEDULLA-DURABLE-KERNEL-R086.1`: Planned: `crates/medulla-graph-core/src/graph/core_readthrough.rs::tests::read_through_model_outcomes` (L1).
+- `MEDULLA-DURABLE-KERNEL-R086.2`: Planned: `tests/safe_eviction_read_through.rs::selected_residents_leave_durable_rows_unchanged` (L3).
+- `MEDULLA-DURABLE-KERNEL-R086.3`: Planned: `tests/safe_eviction_read_through.rs::evicted_blob_reads_without_resident_growth` (L3).
+- `MEDULLA-DURABLE-KERNEL-R086.5`: Planned: `tests/safe_eviction_read_through.rs::served_evicted_reads_preserve_scope` (L3).
+- `MEDULLA-DURABLE-KERNEL-R086.6`: Planned: `tests/safe_eviction_read_through.rs::production_eviction_retains_unconfirmed_candidates` (L3).
+- `MEDULLA-DURABLE-KERNEL-R086.7`: Planned: `tests/safe_eviction_read_through.rs::backend_failure_is_not_absence_evidence` (L3).
+- `MEDULLA-DURABLE-KERNEL-R086.8`: Planned: `tests/safe_eviction_read_through.rs::restarted_engine_reads_an_evicted_node` (L3).
+- `MEDULLA-DURABLE-KERNEL-R095.1000`: Planned: `crates/medulla-types/src/agent_bus.rs::tests::participant_round_trips_and_bounds` (L1).
+- `MEDULLA-DURABLE-KERNEL-R095.1000`: Planned: `tests/agent_bus_served.rs::roster_survives_restart` (L3).
+- `MEDULLA-DURABLE-KERNEL-R095.1001`: Planned: `tests/agent_bus_served.rs::register_heartbeat_and_roster_mark_liveness` (L3).
+- `MEDULLA-DURABLE-KERNEL-R095.1002`: Planned: `tests/agent_bus_served.rs::bus_methods_listed_and_reach_the_gateway` (L3).
+- `MEDULLA-DURABLE-KERNEL-R095.1003`: Planned: `tests/agent_bus_served.rs::bus_refusals_write_nothing` (L3).
+- `MEDULLA-DURABLE-KERNEL-R095.1005`: Planned: `benches/bus_heartbeat.rs::bus_heartbeat` (nightly).
+- `MEDULLA-DURABLE-KERNEL-R028.1`: Planned: `tests/adopt_workitem_authenticated_replay.rs::checkpoint_with_memory_refs_commits_atomically_and_survives_restart` (L3).
+- `MEDULLA-DURABLE-KERNEL-R028.1`: Planned: `tests/adopt_workitem_authenticated_replay.rs::checkpoint_refuses_stale_fence_and_missing_memory_ref` (L3).
+- `MEDULLA-DURABLE-KERNEL-R028.1.2`: Planned: `tests/adopt_workitem_authenticated_replay.rs::checkpoint_retention_resume_fence_and_ordering` (L3).
+- `MEDULLA-DURABLE-KERNEL-R028.1.2.1`: Planned: `crates/medulla-work-store/src/redb_store/work_item/checkpoint/tests.rs::sixty_fifth_revision_prunes_the_oldest_and_completion_clears_all` (L2).
+- `MEDULLA-DURABLE-KERNEL-R028.1.2.1`: Planned: `tests/adopt_workitem_authenticated_replay.rs::retention_is_enforced_through_served_publish` (L3).
+- `MEDULLA-DURABLE-KERNEL-R028.1.2.2`: Planned: `tests/adopt_workitem_authenticated_replay.rs::cross_tenant_memory_ref_is_indistinguishable_from_absent` (L3).
+- `MEDULLA-DURABLE-KERNEL-R028.1.2.3`: Planned: `tests/adopt_workitem_authenticated_replay.rs::stale_holder_cannot_read_the_checkpoint_head` (L3).
+- `MEDULLA-DURABLE-KERNEL-R028.1.3`: Planned: `crates/medulla-storage/src/owner/lineage_tests.rs::checkpoint_only_layout_digest_is_stable` (L1).
+- `MEDULLA-DURABLE-KERNEL-R028.1.3`: Planned: `tests/operator_command_store_upgrade_cli.rs::pre_checkpoint_store_migrates_and_reads_back_identical_heads` (L4).
+- `MEDULLA-DURABLE-KERNEL-R028.1.3.2`: Planned: `tests/test_run_checkpoint_client.py::test_memory_refs_round_trip_against_a_served_engine` (L4).
+- `MEDULLA-DURABLE-KERNEL-R028.1.3.2`: Planned: `tests/test_run_checkpoint_client.py::test_checkpoint_models_match_the_rust_vectors` (L2).
+- `MEDULLA-DURABLE-KERNEL-R038.100`: Planned: `src/embedded.rs::tests::embedded_profile_reads_and_writes_an_ephemeral_namespace` (L2).
+- `MEDULLA-DURABLE-KERNEL-R038.100`: Planned: `tests/adopt_workitem_authenticated_replay.rs::served_profile_keeps_declared_class_and_refuses_mismatch` (L3).
+- `MEDULLA-DURABLE-KERNEL-R043.100`: Planned: `tests/graph_change_feed_served.rs::two_clients_see_ordered_deduplicable_changes_and_recover` (L3).
+- `MEDULLA-DURABLE-KERNEL-R042.100`: Planned: `tests/bench_claim_cli.rs::measurement_throughput_and_cost_are_recomputed_for_two_releases` (L2).
+- `MEDULLA-DURABLE-KERNEL-R099`: Planned: `tests/shard_write_fanout.rs::cross_graph_writes_fan_across_shard_writers` (L3).
+- `MEDULLA-DURABLE-KERNEL-R099.2`: Planned: `crates/medulla-server-graph/src/dispatch/change_envelope/multi_graph.rs::fanout_cap_tests::groups_keep_request_order_within_a_shard` (L1).
+- `MEDULLA-DURABLE-KERNEL-R099.3`: Planned: `tests/shard_write_fanout.rs::served_arm_returns_one_report_per_sub_batch` (L3).
+- `MEDULLA-DURABLE-KERNEL-R099.4`: Planned: `tests/shard_write_fanout.rs::oversize_refused_and_failed_sub_batch_reported` (L3).
+- `MEDULLA-DURABLE-KERNEL-R099.5`: Planned: `tests/shard_write_fanout.rs::report_and_metrics_name_every_sub_batch` (L3).
+- `MEDULLA-DURABLE-KERNEL-R084.6`: Planned: `tests/write_conflict_two_writers.rs::two_writers_one_commit_one_typed_conflict` (L3).
+- `MEDULLA-DURABLE-KERNEL-R085.8`: Planned: `tests/memory_sync_served.rs::complete_memory_sync_journey` (L3).
+- `MEDULLA-DURABLE-KERNEL-R086.9`: Planned: `tests/safe_eviction_read_through.rs::served_safe_eviction_read_through_journey` (L3).
+- `MEDULLA-DURABLE-KERNEL-R095.1004`: Planned: `tests/agent_bus_served.rs::roster_survives_restart` (L3).
+- `MEDULLA-DURABLE-KERNEL-R099.6`: Planned: `tests/shard_write_fanout.rs::cross_graph_writes_fan_across_shard_writers` (L3).
