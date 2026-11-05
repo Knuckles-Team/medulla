@@ -86,7 +86,7 @@ Six probe questions are answered by existing engine paths (`NlQuery`, `Decide`, 
 
 ### Architecture views
 
-Data flow: `Method::ArchitectureView` → `crates/medulla-h-mining/src/mining.rs::try_handle` → `handle_architecture_view` (new) → `derive_architecture_view` (new, `crates/medulla-core/src/architecture_view.rs`) → `ArchitectureView` with containers, edges and support paths. The view has its own read method; `handle_impact` serves risk propagation and is not the call site. Failure behaviour: a scope with no supporting source returns a typed refusal; a diagram element with no matching package stays a container with empty support. Decision: derive on read from the graph; a stored diagram per repository goes stale at the next ingest. Row R010.
+Data flow: `Method::ArchitectureView` → `crates/medulla-h-mining/src/mining.rs::try_handle` → `handle_architecture_view` (new) → `derive_architecture_view` (new, `crates/medulla-core/src/architecture_view.rs`) → `ArchitectureView` with containers, edges and support paths. `medulla-h-mining` depends on `medulla-core` for the derivation (a downward dependency; the layering holds). The view has its own read method; `handle_impact` serves risk propagation and is not the call site. Failure behaviour: a scope with no supporting source returns a typed refusal; a diagram element with no matching package stays a container with empty support. Decision: derive on read from the graph; a stored diagram per repository goes stale at the next ingest. Row R010.
 
 ### Job and plan questions
 
