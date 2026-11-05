@@ -240,5 +240,6 @@ closed_error_codes! {
         ValidityInverted => "VALIDITY_INVERTED",
         WindowContentConflict => "WINDOW_CONTENT_CONFLICT",
         WindowRunRevisionMismatch => "WINDOW_RUN_REVISION_MISMATCH",
+        WorkQueueFull => "WORK_QUEUE_FULL",
     }
 }
