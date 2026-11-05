@@ -236,6 +236,7 @@ mod tests {
     /// MEDULLA-FEDERATED-QUERY-R720.1: the epistemic fields round-trip through
     /// `from_epistemic_rows` and survive the traversal (membership) and vector (top-k)
     /// stages; `from_rows` keeps its tuple shape and sets them to `None`.
+    // spec: MEDULLA-FEDERATED-QUERY-R720.1
     #[test]
     fn epistemic_fields_survive_traversal_and_vector() {
         let a = Row {

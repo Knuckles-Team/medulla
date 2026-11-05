@@ -9,6 +9,7 @@ use medulla_rdf::geosparql::{
 
 /// MEDULLA-FEDERATED-QUERY-R709.1: the registry lists exactly the 11 GeoSPARQL query
 /// functions, and each one evaluates.
+// spec: MEDULLA-FEDERATED-QUERY-R709.1
 #[test]
 fn functions_registered() {
     let expected = [
@@ -46,6 +47,7 @@ fn functions_registered() {
 
 /// MEDULLA-FEDERATED-QUERY-R709.2: every Simple-Features relation returns exactly what the
 /// `medulla-geo` kernel predicate returns, including shared-boundary pairs.
+// spec: MEDULLA-FEDERATED-QUERY-R709.2
 #[test]
 fn topology_matches_kernel() {
     type Pred = fn(&Geometry, &Geometry) -> bool;
