@@ -250,17 +250,28 @@ def test_tag_release_creates_the_github_release_after_pypi() -> None:
 def test_release_compiles_the_server_once_per_platform_and_folds_those_bytes() -> None:
     release = _yaml(ROOT / ".github/workflows/release.yml")["jobs"]
     server, build = release["server-binary"], release["build"]
-    legs = lambda job: {m["name"]: m["target"] for m in job["strategy"]["matrix"]["include"]}  # noqa: E731
+
+    def legs(job: dict) -> dict:
+        return {m["name"]: m["target"] for m in job["strategy"]["matrix"]["include"]}
+
     assert legs(server) == legs(build)
-    assert any(s.get("uses") == "./.github/actions/server-binary" for s in server["steps"])
+    assert any(
+        s.get("uses") == "./.github/actions/server-binary" for s in server["steps"]
+    )
     upload = next(s for s in server["steps"] if "upload-artifact" in s.get("uses", ""))
     assert upload["with"]["name"] == "server-${{ matrix.name }}"
-    folds = [s for s in build["steps"] if s.get("uses") == "./.github/actions/folded-wheel"]
+    folds = [
+        s for s in build["steps"] if s.get("uses") == "./.github/actions/folded-wheel"
+    ]
     assert [f["with"]["pass"] for f in folds] == ["primary", "reproduction"]
-    assert {f["with"]["server-artifact"] for f in folds} == {"server-${{ matrix.name }}"}
+    assert {f["with"]["server-artifact"] for f in folds} == {
+        "server-${{ matrix.name }}"
+    }
     names = [s.get("name", "") for s in _yaml(ACTION)["runs"]["steps"]]
     assert names.index("Download the prebuilt server executable") < names.index(
         "Fold the server executable into the medulla wheel"
     )
     action = _yaml(ROOT / ".github/actions/server-binary/action.yml")["runs"]["steps"]
-    assert any(s.get("run", "") == "bash scripts/build_release_server.sh" for s in action)
+    assert any(
+        s.get("run", "") == "bash scripts/build_release_server.sh" for s in action
+    )
