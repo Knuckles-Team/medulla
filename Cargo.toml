@@ -2022,6 +2022,15 @@ name = "anonymous_authority"
 path = "benches/anonymous_authority.rs"
 harness = false
 
+# Replayable stream log budget (MEDULLA-DURABLE-KERNEL-R869): append p50 < 1 ms,
+# append p99 < 5 ms, read of 100 messages p99 < 3 ms over the in-process log.
+# Nightly suite. DEV-only; never linked into the engine binary.
+[[bench]]
+name = "stream_log"
+path = "benches/stream_log.rs"
+harness = false
+required-features = ["broker"]
+
 # Massive-scale core micro-benchmark harness (CONCEPT:MEDULLA-096): in-process node/edge
 # write throughput, in-process query latency (single-hop + label lookup), and IVF-PQ
 # kNN search latency. Feature-LIGHT — builds under DEFAULT features (no server/redb),
