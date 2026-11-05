@@ -2,12 +2,12 @@
 
 Governing spec: [spec.md](../spec.md).
 
-Provider: arbora ARBORA-FLEET-R015 (typed operations for agents, browser and fleet calls; a child row for the source fetch is filed in the arbora spec dir `fleet-catalog-and-tools`)
+Provider: arbora ARBORA-FLEET-R015.4 (child of ARBORA-FLEET-R015, in the arbora spec dir `fleet-catalog-and-tools`; it binds this seam to the source executor `ARBORA-FLEET-R043.7`)
 Consumer: medulla MEDULLA-FEDERATED-QUERY-R073.3
 
 ## Provider
 
-Repository: arbora. The operation `fleet.call` (`ARBORA-FLEET-R015`) calls the registered MCP server and tool, under the caller's identity and the shared outbound guard, and returns the rows of the call over the connector row contract of `contracts/connector-source-transport.md`. Medulla never calls MCP.
+Repository: arbora. Arbora's source executor (`ARBORA-FLEET-R015.4`, over `ARBORA-FLEET-R043.7`) calls the registered MCP server and tool through the governed fleet gateway, under the caller's identity and the shared outbound guard, and returns the rows of the call over the connector row contract of `contracts/connector-source-transport.md`. Medulla never calls MCP.
 
 ## Consumer
 
@@ -17,12 +17,12 @@ Repository: medulla. Row `MEDULLA-FEDERATED-QUERY-R073.3` keeps `ForeignSourceSp
 
 | Item | Shape |
 |---|---|
-| Request | `ConnectorRowRequest { source_label, server, tool, arguments, pushed_filter, budget }`; `arguments` are checked against the declared tool schema before the request is sent |
-| Reply | rows in the connector row contract, each with its source label; a partial reply names the missing source |
+| Request | `ConnectorRowRequest { source_label, server, tool, arguments, pushed_filter, budget }` (budget: `max_rows` 1 to 10000, `timeout_ms` 100 to 60000); `arguments` are checked against the declared tool schema before the request is sent |
+| Reply | `{source_label, rows, truncated, missing_source}`: rows in the connector row contract, each with its source label; a partial reply names the missing source |
 
 ## Refusal codes
 
-- `SOURCE_UNREACHABLE`: the call failed; the source abstains and the label is named.
+- `SOURCE_UNREACHABLE`: the call failed, timed out or returned a result that is not a row list; the source abstains and the label is named.
 - `UNSUPPORTED_SEARCH_ARGUMENT`: arguments outside the declared tool schema.
 - `OUTBOUND_TARGET_DENIED` and `FOREIGN_SOURCE_UNGRANTED`: as in the connector source transport contract.
 
