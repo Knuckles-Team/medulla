@@ -280,6 +280,8 @@ pub mod graph_change_feed;
 pub mod data_product;
 // MEDULLA-UNIFIED-DATA-PLANE-R651.1 — document delete request and receipt.
 pub mod document_ops;
+// MEDULLA-TYPED-PACKS-R801.1 — business glossary term model (SKOS projection).
+pub mod glossary;
 pub mod stewardship;
 // MEDULLA-UNIFIED-DATA-PLANE-R004 — bounded, policy-gated column-sampling budget
 // for deterministic schema inference.
