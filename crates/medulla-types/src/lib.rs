@@ -29,6 +29,8 @@ pub mod mysql_mariadb_connection;
 // `medulla-asr-whisper`.
 #[cfg(feature = "asr-native")]
 pub mod asr_wire;
+// MEDULLA-FEDERATED-QUERY-R086.100.1 — ordered n-ary inductive link prediction model.
+pub mod graphlearn_nary;
 // MEDULLA-DURABLE-KERNEL-R076.1 — authoritative scheduler policy data and validation.
 pub mod scheduler_config;
 // MEDULLA-INGEST-WORKER-R002.1/.2 — induced ontology proposals and admission scores.
