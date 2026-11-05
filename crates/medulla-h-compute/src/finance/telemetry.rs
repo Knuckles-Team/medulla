@@ -1,5 +1,5 @@
 //! Evidence spans for the served finance kernels (MEDULLA-FINANCE-PRIMITIVES-R900.5,
-//! R613.5).
+//! R613.5, R750.755).
 //!
 //! `kernel_span` opens one named `tracing` span per served kernel call, child of the
 //! request span. It records the verified `tenant`, the SHA-256 `inputs_digest` of the
@@ -19,6 +19,8 @@ pub(super) enum Kernel {
     DistributionShift,
     RegimeChain,
     ExecutionSchedule,
+    PatternClassify,
+    ProfitAttribution,
 }
 
 /// The outcome attribute of a kernel call that answered.
@@ -58,6 +60,20 @@ pub(super) fn kernel_span(kernel: Kernel, tenant: &str, method: &Method) -> Span
             tenant = %tenant,
             inputs_digest = %digest,
             outcome = Empty,
+        ),
+        Kernel::PatternClassify => tracing::info_span!(
+            "medulla.finance.pattern_classify",
+            tenant = %tenant,
+            inputs_digest = %digest,
+            outcome = Empty,
+            match_count = Empty,
+        ),
+        Kernel::ProfitAttribution => tracing::info_span!(
+            "medulla.finance.profit_attribution",
+            tenant = %tenant,
+            inputs_digest = %digest,
+            outcome = Empty,
+            active_return = Empty,
         ),
     }
 }

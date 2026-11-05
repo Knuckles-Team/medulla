@@ -64,6 +64,7 @@ async fn assemble_for(
         .iter()
         .map(|reference| store.assembly_template(&request.tenant_id, reference))
         .collect::<Result<Vec<_>, String>>()?;
+    let required_media = request.requirements.required_input_media.clone();
     let topology = super::topology_read::read(state, graph, verified, &request, &templates).await?;
     let mut inputs =
         inputs(request, candidates, templates, policy).map_err(|error| error.to_string())?;
@@ -78,6 +79,8 @@ async fn assemble_for(
         .await
         .map_err(|error| format!("assembly task failed: {error}"))?
         .map_err(|error| error.to_string())?;
+    let (model_revision, model_input) =
+        selected_model(&assembly.record, &entries, required_media.as_slice())?;
     Ok(medulla_decision_types::decision::AssemblyResult {
         schema_version: medulla_decision_types::decision::ASSEMBLY_RESULT_SCHEMA_VERSION,
         record: assembly.record,
@@ -85,7 +88,67 @@ async fn assemble_for(
         agents: medulla_types::contract::BoundedVec::new(assembly.agents)
             .map_err(|error| error.to_string())?,
         model: assembly.model,
+        model_revision,
+        model_input,
     })
+}
+
+/// The selected model slot's revision and declared input capabilities
+/// (MEDULLA-DECISION-ENGINE-R815). Both are `None` unless the record is
+/// `Solved`; a required media type the profile does not declare (or a profile
+/// that declares nothing) is refused with `MODEL_MEDIA_CAPABILITY_UNKNOWN`.
+#[cfg(feature = "decide")]
+pub(crate) fn selected_model(
+    record: &medulla_decision_types::decision::DecisionRecord,
+    entries: &[medulla_agent_types::agent_component::AgentComponentEntry],
+    required: &[medulla_agent_types::agent_component::ModelInputMediaType],
+) -> Result<
+    (
+        Option<String>,
+        Option<medulla_agent_types::agent_component::ModelInputCapabilities>,
+    ),
+    String,
+> {
+    use medulla_agent_types::agent_component::{AgentComponentFacts, AgentComponentKind};
+    use medulla_decision_types::decision::{DecisionErrorCode, DecisionOutcome};
+
+    let DecisionOutcome::Solved { slots, .. } = &record.outcome else {
+        return Ok((None, None));
+    };
+    let Some(slot) = slots
+        .iter()
+        .find(|slot| slot.component.kind == AgentComponentKind::ModelProfile)
+    else {
+        return Ok((None, None));
+    };
+    let revision = slot
+        .component
+        .definition_digest
+        .strip_prefix(medulla_types::solve_scalar::DIGEST_TEXT_PREFIX)
+        .unwrap_or(&slot.component.definition_digest)
+        .to_string();
+    let declared = entries
+        .iter()
+        .find(|entry| entry.component_id == slot.component.component_id)
+        .and_then(|entry| match &entry.facts {
+            AgentComponentFacts::ModelProfile {
+                input_capabilities, ..
+            } => input_capabilities.clone(),
+            _ => None,
+        });
+    if let Some(missing) = required.iter().find(|media| {
+        declared
+            .as_ref()
+            .is_none_or(|caps| !caps.media_types.contains(media))
+    }) {
+        return Err(format!(
+            "{}: model {} does not declare input media {}",
+            DecisionErrorCode::ModelMediaCapabilityUnknown.as_str(),
+            slot.component.component_id,
+            missing.as_str()
+        ));
+    }
+    Ok((Some(revision), declared))
 }
 
 /// The plan's tool set: the component identifier of every candidate entry.

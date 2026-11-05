@@ -42,6 +42,9 @@ pub mod orchestration;
 pub mod native_control;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod run_checkpoint;
+// MEDULLA-DURABLE-KERNEL-R750.750.1 — the signed agent-turn envelope and its
+// dispatch carrier.
+pub mod agent_turn;
 // GOC-19 — the WorkItem submission command-log admission core (tenant-scoped
 // idempotency replay + per-authority fencing), built on GOC-03's
 // `commit_descriptor::CommitDescriptor` currency. Unconditional, pure

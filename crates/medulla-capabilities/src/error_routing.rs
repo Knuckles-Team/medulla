@@ -150,6 +150,16 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         "ApplyChangeEnvelopeDraft",
         &["CARRIER_INNER_METHOD_REFUSED"],
     ),
+    // MEDULLA-UNIFIED-DATA-PLANE-R651.4.
+    (
+        "DocumentDelete",
+        &[
+            "CASCADE_TOO_LARGE",
+            "DOCUMENT_DELETE_UNAVAILABLE",
+            "DOCUMENT_HAS_REFERENCES",
+            "DOCUMENT_NOT_FOUND",
+        ],
+    ),
     // MEDULLA-UNIFIED-DATA-PLANE-R651.7.4 / MEDULLA-DECISION-ENGINE-R802.4.
     (
         "EnrichDocument",
@@ -180,6 +190,15 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     ("AnalyticsJob", &["INVALID_CONFIGURATION"]),
     // MEDULLA-FINANCE-PRIMITIVES-R018.3: mismatched factor record lengths.
     ("FinanceFactorRank", &["FACTOR_RECORD_INVALID"]),
+    // MEDULLA-FINANCE-PRIMITIVES-R750.752: stable codes of the research kernels.
+    (
+        "FinancePatternClassify",
+        &["PATTERN_WINDOW_SHORT", "PATTERN_INPUT_INVALID"],
+    ),
+    (
+        "FinanceProfitAttribution",
+        &["ATTRIBUTION_WEIGHTS_INVALID", "ATTRIBUTION_INPUT_INVALID"],
+    ),
     // MEDULLA-FINANCE-PRIMITIVES-R904: no current record for the binding in the caller's tenant.
     ("WalletKeyTrustGet", &["WALLET_KEY_TRUST_NOT_FOUND"]),
     ("GetNodes", &["RESULT_TOO_LARGE"]),
@@ -191,9 +210,18 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     ("AddNode", &["REPLAY_NONCE_CONSUMED"]),
     ("CypherQuery", &["REPLAY_NONCE_CONSUMED"]),
     ("GraphQl", &["REPLAY_NONCE_CONSUMED"]),
+    // MEDULLA-DURABLE-KERNEL-R865 (child input) and R750.750.1 (signed agent-turn envelope).
     (
         "SubmitWorkItem",
-        &["REPLAY_NONCE_CONSUMED", "WORK_QUEUE_FULL"],
+        &[
+            "CARRIER_SIGNATURE_INVALID",
+            "CHILD_TARGET_TERMINAL",
+            "ENVELOPE_FIELD_MISSING",
+            "IDEMPOTENCY_CONFLICT",
+            "REPLAY_NONCE_CONSUMED",
+            "REVISION_CONFLICT",
+            "WORK_QUEUE_FULL",
+        ],
     ),
     ("ClaimWorkItem", &["REPLAY_NONCE_CONSUMED"]),
     ("PublishRunCheckpoint", &["REPLAY_NONCE_CONSUMED"]),

@@ -14,6 +14,7 @@ enum FinanceRoute {
     Microstructure,
     Sizing,
     NumericKernels,
+    ResearchKernels,
     Backtest,
     Forensic,
     StateSpace,
@@ -85,6 +86,9 @@ fn route_for_market(method: &Method) -> Option<FinanceRoute> {
         | Method::FinanceMarketMakingQuote { .. }
         | Method::FinancePairsSignal { .. }
         | Method::FinanceFactorRank { .. } => Some(FinanceRoute::NumericKernels),
+        Method::FinancePatternClassify { .. } | Method::FinanceProfitAttribution { .. } => {
+            Some(FinanceRoute::ResearchKernels)
+        }
         Method::FinanceKellyFraction { .. }
         | Method::FinancePositionSize { .. }
         | Method::FinanceDistributionShift { .. }
@@ -148,6 +152,9 @@ pub fn try_handle(req_id: u64, tenant: &str, method: Method) -> Result<Response,
         FinanceRoute::Sizing => super::route_families::handle_sizing(req_id, tenant, method),
         FinanceRoute::NumericKernels => {
             super::numeric_kernels::handle_numeric_kernels(req_id, tenant, method)
+        }
+        FinanceRoute::ResearchKernels => {
+            super::research_kernels::handle_research_kernels(req_id, tenant, method)
         }
         FinanceRoute::Backtest => super::route_families::handle_backtest(req_id, method),
         FinanceRoute::Forensic => super::route_families::handle_forensic(req_id, method),

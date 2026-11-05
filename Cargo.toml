@@ -2021,6 +2021,14 @@ name = "schema_drift_classify"
 path = "benches/schema_drift_classify.rs"
 harness = false
 
+# Anonymous admission budget (MEDULLA-IDENTITY-R003.2): the bounded `anon1.`
+# decoder at the 2 KiB / 256-byte bound, p99 <= 100 µs and <= 8 KiB allocated per
+# decode (counting allocator local to the bench). Default features; nightly suite.
+[[bench]]
+name = "anonymous_authority"
+path = "benches/anonymous_authority.rs"
+harness = false
+
 # MEDULLA-UNIFIED-DATA-PLANE-R702.6 hot-path receipt, group `lineage_drain`: one
 # request drains 3 events, replays them and quarantines 2 malformed ones
 # (budget: p50 3 ms, p99 18 ms, memory 64 MiB). Nightly only; never gates a PR.
@@ -2048,6 +2056,16 @@ required-features = ["ann", "broker"]
 [[bench]]
 name = "cold_warm_reopen"
 path = "benches/cold_warm_reopen.rs"
+harness = false
+required-features = ["full"]
+
+# Decision budgets per question family (MEDULLA-DECISION-ENGINE-R178.1): one
+# Criterion group `decide/<family>` per `QuestionKind`, through the served
+# dispatch boundary; the nightly workflow checks its report against
+# `benches/baselines/decide.json` (R178.2, R178.3).
+[[bench]]
+name = "decide_budgets"
+path = "benches/decide_budgets.rs"
 harness = false
 required-features = ["full"]
 

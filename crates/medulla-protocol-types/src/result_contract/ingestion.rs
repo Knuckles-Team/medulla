@@ -59,6 +59,8 @@ method_results! {
     SourceIngestStatus(SourceIngestStatus) => Raw<SourceIngestStatusBody>;
     // MEDULLA-UNIFIED-DATA-PLANE-R651.7: chunk, vector and provenance counts.
     EnrichDocument(EnrichDocument) => Raw<medulla_source_types::source_ingestion::web_document::EnrichDocumentReceipt>;
+    // MEDULLA-UNIFIED-DATA-PLANE-R651.3/.5: what one committed cascade deleted.
+    DocumentDelete(DocumentDelete) => Raw<medulla_types::document_ops::DocumentDeleteReceipt>;
     // EH-408 / EH-409: counts plus the id of every fact node written.
     TelemetryDerive(TelemetryDerive) => Raw<TelemetryDeriveReceipt>;
     // MEDULLA-UNIFIED-DATA-PLANE-R702.3: edge, quarantine and replay counts.

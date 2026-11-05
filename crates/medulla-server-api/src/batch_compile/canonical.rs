@@ -576,6 +576,8 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::FinanceFactorRank { .. }
         | Method::WalletKeyTrustGet { .. }
         | Method::FinanceDistributionShift { .. }
+        | Method::FinancePatternClassify { .. }
+        | Method::FinanceProfitAttribution { .. }
         | Method::FinanceDownsideDeviation { .. }
         | Method::FinanceKalmanVolatility { .. }
         | Method::Reinforce { .. }
@@ -648,6 +650,8 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         // MEDULLA-UNIFIED-DATA-PLANE-R651.7: lowers to one ChangeEnvelope, which
         // carries its own domains; selection commits nothing.
         | Method::EnrichDocument { .. }
+        // MEDULLA-UNIFIED-DATA-PLANE-R651.3: lowers to one ChangeEnvelope.
+        | Method::DocumentDelete { .. }
         // MEDULLA-UNIFIED-DATA-PLANE-R702.3: lowers to one ChangeEnvelope.
         | Method::LineageIngest { .. }
         | Method::SelectWebPages { .. }

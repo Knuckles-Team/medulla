@@ -1331,6 +1331,8 @@ async fn spawn_redis_listener(
             .as_deref(),
         "127.0.0.1:6379",
     ) {
+        let auth_secret = state.read().await.auth_secret.clone();
+        medulla_wire_msg::redis_wire::validate_startup_policy(&addr, &auth_secret)?;
         let redis_state = state.clone();
         info!("redis-wire: serving Redis RESP protocol on {}", addr);
         tokio::spawn(async move {
@@ -1406,6 +1408,7 @@ async fn spawn_s3_listener(
             .as_deref(),
         "127.0.0.1:9000",
     ) {
+        medulla_wire_msg::s3::validate_startup_policy(&addr, "")?;
         let s3_state = state.clone();
         let selected_blob = {
             state

@@ -263,6 +263,8 @@ pub mod series_expr;
 // MEDULLA-SCM-R002 — the source changeset record and its structured trailers.
 pub mod source_changeset;
 pub mod source_symbol_edit;
+// MEDULLA-DECISION-ENGINE-R153.1 — source table of contents and line index.
+pub mod source_toc;
 #[cfg(feature = "statechart")]
 pub mod statechart;
 pub mod telemetry_derive;
