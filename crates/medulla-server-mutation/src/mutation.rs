@@ -901,6 +901,7 @@ mod tests {
         ("ApplyChangeEnvelopeDrafts", "client draft batch compiled at the request boundary into ApplyChangeEnvelopes under the verified context, then committed by that same native coordinator"),
         ("SourceIngest", "RF-ADR-009 stages raw CAS and an authoritative Connector Manifest mapping, then delegates its sole canonical graph/provenance/cursor commit to ApplyChangeEnvelope"),
         ("IndexRepository", "EH-280 runtime-conditional: an unscoped batch is a stateless parse; a scoped batch lowers its :Blob/:FileVersion/:Branch projection and delegates its sole graph commit to ApplyChangeEnvelope, exactly like SourceIngest"),
+        ("DocumentDelete", "MEDULLA-UNIFIED-DATA-PLANE-R651.3 lowers a planned Document cascade (RemoveEdge/RemoveNode) plus one content-free DocumentDeletion record and delegates its sole graph commit to ApplyChangeEnvelope, exactly like EnrichDocument"),
         ("EnrichDocument", "MEDULLA-UNIFIED-DATA-PLANE-R651.7 lowers chunk nodes, chunkOf edges, vectors and one enrichment record of a held Document and delegates its sole graph commit to ApplyChangeEnvelope, exactly like IndexRepository"),
         ("RecomputeMaterialization", "fenced reasoning-projection coordinator resolves authoritative graph provenance and fsyncs its projection watermark"),
         // ── Server lifecycle: TxnParticipation::None, not a graph mutation. ──

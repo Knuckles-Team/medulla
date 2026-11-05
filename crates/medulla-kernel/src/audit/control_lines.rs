@@ -194,6 +194,9 @@ fn source_control_audit_line(method: &Method) -> Option<String> {
         Method::EnrichDocument { request } => {
             Some(format!("ENRICH_DOCUMENT|{}", request.document_id))
         }
+        Method::DocumentDelete { request } => {
+            Some(format!("DOCUMENT_DELETE|{}", request.document_id))
+        }
         Method::WriteBack { op } => Some(format!(
             "WRITE_BACK|{}|{}",
             op.tenant_id(),
