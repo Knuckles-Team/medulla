@@ -331,7 +331,7 @@ impl<'a> IndexValidator<'a> {
             self.reject(
                 PackViolationCode::MalformedBody,
                 Some(&entry.uri),
-                "skill front-matter type is not skill, workflow, graph or mcp_skill",
+                "skill front-matter skill_type is not skill, workflow, graph or mcp_skill",
             );
         }
     }
