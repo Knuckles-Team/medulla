@@ -197,6 +197,8 @@ knobs! {
     memory_search_state_max_bytes: u64 = "memory.search_state_max_bytes", U64(1_048_576), [65_536, 1_048_576], "bytes", Tunable;
     /// TOC line-index stride.
     toc_line_index_stride: u64 = "toc.line_index_stride", U64(64), [16, 1_024], "lines", Tunable;
+    /// TOC maximum served span.
+    toc_max_span_lines: u64 = "toc.max_span_lines", U64(2_000), [10, 20_000], "lines", Tunable;
     /// Team signal maximum age.
     team_signal_max_age: u64 = "team.signal_max_age", U64(30), [1, 3_600], "seconds", Tunable;
     /// Held-item minimum passes.
@@ -231,6 +233,12 @@ knobs! {
     sdlc_delivery_max_automated_review_rounds: u64 = "sdlc.delivery.max_automated_review_rounds", U64(3), [1, 20], "rounds", Tunable;
     /// Owner approval is required for delivery.
     sdlc_delivery_owner_approval_required: bool = "sdlc.delivery.owner_approval_required", Bool(true), [true, true], "flag", Fixed;
+    /// Doji body-to-range ceiling (MEDULLA-FINANCE-PRIMITIVES-R750.751).
+    pattern_doji_body_max: f64 = "pattern.doji_body_max", F64(0.1), [0.01, 0.3], "ratio", Tunable;
+    /// Hammer and shooting-star shadow-to-body floor.
+    pattern_shadow_ratio_min: f64 = "pattern.shadow_ratio_min", F64(2.0), [1.5, 4.0], "ratio", Tunable;
+    /// Opposite-shadow ceiling as a fraction of the range.
+    pattern_wick_max: f64 = "pattern.wick_max", F64(0.1), [0.0, 0.3], "ratio", Tunable;
 }
 
 fn refusal(code: ServerErrorCode, knob: &str, detail: String) -> KnobRefusal {

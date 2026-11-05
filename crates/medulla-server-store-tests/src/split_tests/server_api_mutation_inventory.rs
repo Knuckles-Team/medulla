@@ -31,6 +31,7 @@ fn clustered_mutation_inventory_is_complete() {
     covered.insert("MeetingSummaryCommit");
     covered.insert("MeetingSummaryContext");
     covered.insert("MeetingTranscriptRevision");
+    covered.insert("DocumentDelete");
     covered.insert("LineageIngest");
     covered.insert("ServedModality");
     covered.insert("Shutdown");

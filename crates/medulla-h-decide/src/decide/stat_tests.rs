@@ -1030,6 +1030,10 @@ async fn graph_log_record(h: &Harness) -> StatisticalDecisionRecord {
     batch.records.as_slice()[0].clone()
 }
 
+// MEDULLA-DECISION-ENGINE-R815: the model media capability on the assembly answer.
+#[cfg(feature = "redb")]
+mod assemble_tests;
+
 mod retention_tests;
 
 mod log_tests;

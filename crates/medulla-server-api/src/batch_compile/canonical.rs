@@ -576,6 +576,8 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::FinanceFactorRank { .. }
         | Method::WalletKeyTrustGet { .. }
         | Method::FinanceDistributionShift { .. }
+        | Method::FinancePatternClassify { .. }
+        | Method::FinanceProfitAttribution { .. }
         | Method::FinanceDownsideDeviation { .. }
         | Method::FinanceKalmanVolatility { .. }
         | Method::Reinforce { .. }
@@ -652,6 +654,8 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::MeetingSummaryCommit { .. }
         | Method::MeetingSummaryContext { .. }
         | Method::MeetingTranscriptRevision { .. }
+        // MEDULLA-UNIFIED-DATA-PLANE-R651.3: lowers to one ChangeEnvelope.
+        | Method::DocumentDelete { .. }
         // MEDULLA-UNIFIED-DATA-PLANE-R702.3: lowers to one ChangeEnvelope.
         | Method::LineageIngest { .. }
         | Method::SelectWebPages { .. }

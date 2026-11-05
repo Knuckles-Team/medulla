@@ -107,6 +107,7 @@ pub(crate) const ACCESS_RS_MUTATES_UNCONDITIONAL: &[&str] = &[
     "MeetingSummaryCommit",
     "MeetingSummaryContext",
     "MeetingTranscriptRevision",
+    "DocumentDelete",
     "LineageIngest",
     "StartTrajectory",
     // EH-408/EH-409: always writes (one BatchUpdate of derived facts).
@@ -323,6 +324,7 @@ pub(crate) const NATIVE_GRAPHREDB_DURABLE: &[&str] = &[
     "MeetingSummaryCommit",
     "MeetingSummaryContext",
     "MeetingTranscriptRevision",
+    "DocumentDelete",
     "LineageIngest",
     // EH-408/EH-409: derived facts self-translate into ONE `BatchUpdate`
     // against the request graph, the same lowering shape as `FleetCatalog`.
@@ -519,6 +521,7 @@ pub(crate) const AUDIT_RS_AUDITED: &[&str] = &[
     "MeetingSummaryCommit",
     "MeetingSummaryContext",
     "MeetingTranscriptRevision",
+    "DocumentDelete",
     "LineageIngest",
     "SetPose",
     "Sql",
@@ -589,6 +592,7 @@ pub(crate) const CDC_RS_EMITS_CDC: &[&str] = &[
     "MeetingSummaryCommit",
     "MeetingSummaryContext",
     "MeetingTranscriptRevision",
+    "DocumentDelete",
     "LineageIngest",
     #[cfg(feature = "modality-serving")]
     "ServedModality",

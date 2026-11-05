@@ -11,6 +11,7 @@ mod span_capture;
 mod test_support;
 
 use medulla_protocol_types::protocol::{GraphType, Method, Response};
+use medulla_result_types::compute_result::finance::GroupInput;
 
 const SECRET: &str = "medulla-fin-r900-5-served-evidence-secret";
 const GRAPH: &str = "fin-r900-5";
@@ -93,4 +94,83 @@ async fn sizing_and_shift_spans_carry_digest_cap_and_outcome() {
         span.fields.get("outcome").map(String::as_str),
         Some("SIZING_INPUT_INVALID")
     );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+// spec: MEDULLA-FINANCE-PRIMITIVES-R750.755
+async fn research_kernel_spans_carry_digest_and_outcome() {
+    span_capture::install();
+    let classify = Method::FinancePatternClassify {
+        open: vec![10.0, 8.8],
+        high: vec![10.5, 11.2],
+        low: vec![8.5, 8.7],
+        close: vec![9.0, 11.0],
+    };
+    assert!(call(classify.clone()).await.error.is_none());
+    let span = one_span_with(
+        "medulla.finance.pattern_classify",
+        &classify,
+        &["tenant", "inputs_digest", "outcome", "match_count"],
+    );
+    assert_eq!(span.fields.get("outcome").map(String::as_str), Some("ok"));
+    assert_eq!(
+        span.fields.get("match_count").map(String::as_str),
+        Some("1")
+    );
+
+    let attribution = Method::FinanceProfitAttribution {
+        groups: vec![
+            GroupInput {
+                group: "equity".into(),
+                w_p: 0.6,
+                w_b: 0.5,
+                r_p: 0.08,
+                r_b: 0.06,
+            },
+            GroupInput {
+                group: "bonds".into(),
+                w_p: 0.4,
+                w_b: 0.5,
+                r_p: 0.02,
+                r_b: 0.03,
+            },
+        ],
+    };
+    assert!(call(attribution.clone()).await.error.is_none());
+    let span = one_span_with(
+        "medulla.finance.profit_attribution",
+        &attribution,
+        &["tenant", "inputs_digest", "outcome", "active_return"],
+    );
+    assert_eq!(span.fields.get("outcome").map(String::as_str), Some("ok"));
+    assert!(span.fields.get("active_return").is_some());
+
+    // A refusal records its stable code as the outcome.
+    let bad = Method::FinanceProfitAttribution { groups: vec![] };
+    assert!(call(bad.clone()).await.result.is_none());
+    let span = one_span_with(
+        "medulla.finance.profit_attribution",
+        &bad,
+        &["tenant", "inputs_digest", "outcome"],
+    );
+    assert_eq!(
+        span.fields.get("outcome").map(String::as_str),
+        Some("ATTRIBUTION_INPUT_INVALID")
+    );
+}
+
+fn one_span_with(name: &str, method: &Method, allowed: &[&str]) -> span_capture::Captured {
+    let digest = span_capture::digest_of(method);
+    assert_eq!(digest.len(), 64);
+    let spans = span_capture::spans(name, &digest);
+    assert_eq!(spans.len(), 1, "one {name} span: {spans:?}");
+    let span = spans.into_iter().next().unwrap();
+    assert!(span.fields.get("tenant").is_some_and(|t| !t.is_empty()));
+    for key in span.fields.keys() {
+        assert!(
+            allowed.contains(&key.as_str()),
+            "unexpected span field {key}"
+        );
+    }
+    span
 }

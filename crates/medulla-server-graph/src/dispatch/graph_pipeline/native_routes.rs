@@ -182,6 +182,10 @@ pub async fn route_native_store_ops(
         Ok(response) => return Ok(response),
         Err(method) => method,
     };
+    let method = match super::document_ops::route_document_ops(ctx, method).await {
+        Ok(response) => return Ok(response),
+        Err(method) => method,
+    };
     let method = match route_source_ingestion_or_resources(ctx, method).await {
         Ok(response) => return Ok(response),
         Err(method) => method,

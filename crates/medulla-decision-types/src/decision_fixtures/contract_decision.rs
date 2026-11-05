@@ -76,6 +76,7 @@ pub fn assembly_request() -> AssemblyRequest {
             pins: bounded(Vec::new()),
             denies: bounded(vec!["component-denied".to_string()]),
             topology: None,
+            required_input_media: bounded(Vec::new()),
         },
         candidates: LibraryCandidateScope {
             kinds: bounded(vec![AgentComponentKind::Tool]),

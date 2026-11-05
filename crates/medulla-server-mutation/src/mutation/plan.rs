@@ -786,6 +786,7 @@ fn cluster_mutation_route_admin(method: &Method) -> Option<ClusterMutationRoute>
             | Method::MeetingSummaryCommit { .. }
             | Method::MeetingSummaryContext { .. }
             | Method::MeetingTranscriptRevision { .. }
+            | Method::DocumentDelete { .. }
             | Method::LineageIngest { .. }
     ) {
         return Some(ClusterMutationRoute::VolatileControl);

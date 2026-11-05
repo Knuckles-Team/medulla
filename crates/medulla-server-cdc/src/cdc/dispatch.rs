@@ -280,6 +280,7 @@ fn source_ingestion_marker_event_id(method: &Method) -> Option<&'static str> {
         Method::MeetingTranscriptRevision { .. } => Some("__meeting_transcript_revision"),
         Method::MeetingSummaryContext { .. } => Some("__meeting_summary_context"),
         Method::MeetingSummaryCommit { .. } => Some("__meeting_summary_commit"),
+        Method::DocumentDelete { .. } => Some("__document_delete"),
         Method::LineageIngest { .. } => Some("__lineage_ingest"),
         _ => x9_marker_event_id(method),
     }
