@@ -35,6 +35,8 @@ mod header;
 mod html;
 /// Deterministic heading- and paragraph-aware chunking (MEDULLA-REPO-INGEST-R652).
 pub mod processing;
+/// Source table of contents build and bounded span location (MEDULLA-DECISION-ENGINE-R153.2).
+pub mod toc;
 /// Source-free transcript turn records shared by supported line-delimited
 /// coding-agent transcript dialects (MEDULLA-REPO-INGEST-R800.1).
 pub mod transcript;
