@@ -249,12 +249,24 @@ from ._shared import (
 DECISION_COMMIT_RESULT_SCHEMA_VERSION = 1
 
 
+class PromptBlueprintIdentity(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    body_sha256: str
+    component_id: str
+    entry_revision: Annotated[int, Field(ge=0)]
+    provenance: ComponentProvenance
+    schema_revision: Annotated[int, Field(ge=0)]
+    tenant_id: str
+
+
 class AgentComponentCommittedResult(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     batch_id: str
     committed_version: Annotated[int, Field(ge=0)]
     component: AgentComponentEntry
+    prompt_identity: PromptBlueprintIdentity | None = None
     schema_version: Annotated[int, Field(ge=0, le=65535)]
 
 
@@ -442,6 +454,7 @@ __all__ = [
     "PriceSourceConnectorPack",
     "PriceSourceOperator",
     "PriceSourcePublisher",
+    "PromptBlueprintIdentity",
     "PromptMode",
     "ProofNode",
     "ProofNodeBranch",

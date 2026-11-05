@@ -1,6 +1,7 @@
 @prefix : <http://knuckles.team/kg#> .
 @prefix bfo: <http://purl.obolibrary.org/obo/BFO_> .
 @prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix oa: <http://www.w3.org/ns/oa#> .
 @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
@@ -1127,3 +1128,73 @@
     rdfs:comment "Memory usage in percent at the hardware sample." ;
     rdfs:domain :HardwareSample ;
     rdfs:range xsd:decimal .
+
+# MEDULLA-MEDIA-VOCAB-R001.100.1: media tags. A tag is a producer's assertion
+# about one revision of a media item; it carries its provenance so a tag
+# without evidence is refused by the shape below.
+
+:MediaTag a owl:Class ;
+    rdfs:label "Media Tag" ;
+    rdfs:comment "One object or context tag a producer asserted about one revision of a media item, with its evidence and provenance." ;
+    rdfs:subClassOf :Observation ;
+    skos:closeMatch oa:Annotation .
+
+:taggedMedia a owl:ObjectProperty ;
+    rdfs:label "tagged media" ;
+    rdfs:comment "Links a media tag to the media item it describes." ;
+    rdfs:domain :MediaTag ;
+    skos:closeMatch oa:hasTarget .
+
+:taxonomyId a owl:DatatypeProperty ;
+    rdfs:label "taxonomy id" ;
+    rdfs:comment "The identifier of the tag taxonomy the tag value belongs to." ;
+    rdfs:domain :MediaTag ;
+    rdfs:range xsd:string .
+
+:taxonomyVersion a owl:DatatypeProperty ;
+    rdfs:label "taxonomy version" ;
+    rdfs:comment "The version of the tag taxonomy." ;
+    rdfs:domain :MediaTag ;
+    rdfs:range xsd:string .
+
+:tagKind a owl:DatatypeProperty ;
+    rdfs:label "tag kind" ;
+    rdfs:comment "The kind of a media tag: object or context." ;
+    rdfs:domain :MediaTag ;
+    rdfs:range xsd:string .
+
+:tagConfidence a owl:DatatypeProperty ;
+    rdfs:label "tag confidence" ;
+    rdfs:comment "The producer's confidence in the tag, a decimal in [0, 1]." ;
+    rdfs:domain :MediaTag ;
+    rdfs:range xsd:decimal .
+
+:evidenceRef a owl:DatatypeProperty ;
+    rdfs:label "evidence reference" ;
+    rdfs:comment "A reference to the evidence the tag was derived from (frame, span or region)." ;
+    rdfs:domain :MediaTag ;
+    rdfs:range xsd:string .
+
+:producerId a owl:DatatypeProperty ;
+    rdfs:label "producer id" ;
+    rdfs:comment "The identifier of the model or tool that produced the tag." ;
+    rdfs:domain :MediaTag ;
+    rdfs:range xsd:string .
+
+:producerRevision a owl:DatatypeProperty ;
+    rdfs:label "producer revision" ;
+    rdfs:comment "The revision of the producer that produced the tag." ;
+    rdfs:domain :MediaTag ;
+    rdfs:range xsd:string .
+
+:mediaRevision a owl:DatatypeProperty ;
+    rdfs:label "media revision" ;
+    rdfs:comment "The revision of the media item the tag was produced from." ;
+    rdfs:domain :MediaTag ;
+    rdfs:range xsd:string .
+
+:provenanceDigest a owl:DatatypeProperty ;
+    rdfs:label "provenance digest" ;
+    rdfs:comment "SHA-256 digest, 64 lower-case hex characters, over the tag's provenance fields." ;
+    rdfs:domain :MediaTag ;
+    rdfs:range xsd:string .

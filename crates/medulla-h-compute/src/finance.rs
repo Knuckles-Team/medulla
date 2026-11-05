@@ -13,12 +13,14 @@ mod numeric_kernels;
 mod route_families;
 mod routes;
 mod signal_models;
+mod telemetry;
 
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 
 /// Handle a `Finance*` method. `Err(method)` hands a non-finance method back to the
 /// dispatcher (routing fall-through). (CONCEPT:MEDULLA-KG.query.dispatch-convention — server dispatch convention)
-pub fn try_handle(req_id: u64, method: Method) -> Result<Response, Method> {
-    routes::try_handle(req_id, method)
+/// `tenant` is the verified request tenant; the evidence spans record it.
+pub fn try_handle(req_id: u64, tenant: &str, method: Method) -> Result<Response, Method> {
+    routes::try_handle(req_id, tenant, method)
 }

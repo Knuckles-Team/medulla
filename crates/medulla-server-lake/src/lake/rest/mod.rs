@@ -198,19 +198,73 @@ enum IcebergScope {
     Write,
 }
 
+/// Every Iceberg-REST route `handle` serves, with the minimum scope it needs
+/// (MEDULLA-UNIFIED-DATA-PLANE-R039.3). A `"*"` segment matches any one path
+/// segment. `GET /v1/config` is the only row without a scope; every other route
+/// needs `Read` or `Write`. `POST /v1/oauth/tokens` is not here: it is the one
+/// route `route` serves before a carrier is resolved ([`PRE_CARRIER_ROUTE`]).
+/// A route added to `handle` without a row here fails
+/// `tests::every_route_has_a_scope_row`.
+const ROUTE_TABLE: &[(&str, &[&str], Option<IcebergScope>)] = &[
+    (
+        "DELETE",
+        &["v1", "namespaces", "*", "tables", "*"],
+        Some(IcebergScope::Write),
+    ),
+    ("GET", &["v1", "config"], None),
+    ("GET", &["v1", "namespaces"], Some(IcebergScope::Read)),
+    ("GET", &["v1", "namespaces", "*"], Some(IcebergScope::Read)),
+    (
+        "GET",
+        &["v1", "namespaces", "*", "tables"],
+        Some(IcebergScope::Read),
+    ),
+    (
+        "GET",
+        &["v1", "namespaces", "*", "tables", "*"],
+        Some(IcebergScope::Read),
+    ),
+    (
+        "HEAD",
+        &["v1", "namespaces", "*", "tables", "*"],
+        Some(IcebergScope::Read),
+    ),
+    (
+        "POST",
+        &["v1", "namespaces", "*", "tables"],
+        Some(IcebergScope::Write),
+    ),
+    (
+        "POST",
+        &["v1", "namespaces", "*", "tables", "*"],
+        Some(IcebergScope::Write),
+    ),
+    (
+        "POST",
+        &["v1", "tables", "rename"],
+        Some(IcebergScope::Write),
+    ),
+];
+
+/// The one route served before a carrier exists (the OAuth2 token endpoint).
+const PRE_CARRIER_ROUTE: (&str, &[&str]) = ("POST", &["v1", "oauth", "tokens"]);
+
+fn route_matches(pattern: &[&str], segs: &[&str]) -> bool {
+    pattern.len() == segs.len()
+        && pattern
+            .iter()
+            .zip(segs)
+            .all(|(want, got)| *want == "*" || want == got)
+}
+
+/// The scope [`ROUTE_TABLE`] assigns to (method, path); `None` for
+/// `GET /v1/config` and for an unmatched pair, which `handle` answers with
+/// `404 Not Found`.
 fn operation_scope(method: &str, segs: &[&str]) -> Option<IcebergScope> {
-    match (method, segs) {
-        ("GET", ["v1", "namespaces"])
-        | ("GET", ["v1", "namespaces", _])
-        | ("GET", ["v1", "namespaces", _, "tables"])
-        | ("GET" | "HEAD", ["v1", "namespaces", _, "tables", _]) => Some(IcebergScope::Read),
-        ("POST", ["v1", "namespaces", _, "tables"])
-        | ("POST" | "DELETE", ["v1", "namespaces", _, "tables", _])
-        | ("POST", ["v1", "tables", "rename"]) => Some(IcebergScope::Write),
-        // `GET /v1/config` (static capability advertisement) and every unmatched
-        // (method, path) pair carry no scope to gate -- see the enum doc above.
-        _ => None,
-    }
+    ROUTE_TABLE
+        .iter()
+        .find(|(m, pattern, _)| *m == method && route_matches(pattern, segs))
+        .and_then(|(_, _, scope)| *scope)
 }
 
 /// Is `carrier` entitled to perform an operation requiring `scope`?
@@ -414,7 +468,7 @@ fn route(
         .collect();
     let seg_refs: Vec<&str> = segs.iter().map(String::as_str).collect();
 
-    if req.method == "POST" && seg_refs.as_slice() == ["v1", "oauth", "tokens"] {
+    if req.method == PRE_CARRIER_ROUTE.0 && seg_refs.as_slice() == PRE_CARRIER_ROUTE.1 {
         let (status, body) = handle_oauth_token(credential, req);
         if status != "200 OK" {
             lake.record_audit(json!({
@@ -658,6 +712,75 @@ use catalog::handle;
 mod tests {
     use super::*;
     use medulla_lake::schema::{LakeField, LakeSchema, LakeType};
+
+    /// The `(method, path)` patterns of every match arm in `catalog.rs`'s
+    /// `handle`, with each bound segment normalised to `"*"`.
+    fn handle_arms() -> std::collections::BTreeSet<(String, Vec<String>)> {
+        let source = include_str!("catalog.rs");
+        let mut arms = std::collections::BTreeSet::new();
+        for line in source.lines() {
+            let line = line.trim_start();
+            let Some(rest) = line.strip_prefix("(\"") else {
+                continue;
+            };
+            let Some((method, rest)) = rest.split_once('"') else {
+                continue;
+            };
+            let Some(rest) = rest.strip_prefix(", [") else {
+                continue;
+            };
+            let Some((path, tail)) = rest.split_once(']') else {
+                continue;
+            };
+            if !tail.starts_with(") =>") {
+                continue;
+            }
+            let segs = path
+                .split(',')
+                .map(str::trim)
+                .map(
+                    |seg| match seg.strip_prefix('"').and_then(|s| s.strip_suffix('"')) {
+                        Some(literal) => literal.to_string(),
+                        None => "*".to_string(),
+                    },
+                )
+                .collect();
+            arms.insert((method.to_string(), segs));
+        }
+        arms
+    }
+
+    /// R039.3: every route `handle` serves has exactly one scope row, every row
+    /// names a served route, and only `GET /v1/config` has no scope.
+    // spec: MEDULLA-UNIFIED-DATA-PLANE-R039.3
+    #[test]
+    fn every_route_has_a_scope_row() {
+        let arms = handle_arms();
+        assert!(arms.len() >= ROUTE_TABLE.len(), "parsed arms: {arms:?}");
+        let rows: std::collections::BTreeSet<(String, Vec<String>)> = ROUTE_TABLE
+            .iter()
+            .map(|(m, p, _)| (m.to_string(), p.iter().map(|s| s.to_string()).collect()))
+            .collect();
+        assert_eq!(rows.len(), ROUTE_TABLE.len(), "duplicate scope rows");
+        assert_eq!(arms, rows, "handle arms and ROUTE_TABLE differ");
+        let unscoped: Vec<_> = ROUTE_TABLE
+            .iter()
+            .filter(|(_, _, scope)| scope.is_none())
+            .map(|(m, p, _)| (*m, *p))
+            .collect();
+        assert_eq!(unscoped, vec![("GET", &["v1", "config"][..])]);
+        assert!(!ROUTE_TABLE
+            .iter()
+            .any(|(m, p, _)| *m == PRE_CARRIER_ROUTE.0 && *p == PRE_CARRIER_ROUTE.1));
+        for (method, pattern, scope) in ROUTE_TABLE {
+            let concrete: Vec<&str> = pattern
+                .iter()
+                .map(|s| if *s == "*" { "x" } else { s })
+                .collect();
+            assert_eq!(operation_scope(method, &concrete), *scope);
+        }
+        assert_eq!(operation_scope("PATCH", &["v1", "namespaces"]), None);
+    }
     use medulla_server_blob::blob::store::RedbChunkStore;
     use medulla_tsdb::point::Point;
     use medulla_tsdb::store::SeriesStore;

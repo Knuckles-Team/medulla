@@ -297,9 +297,27 @@ struct Ctx<'a> {
     active: &'a GraphView,
     proj: &'a Projection,
     service: Option<&'a dyn RemoteSparql>,
+    /// The first coded refusal a FILTER function raised (`CODE: detail`). A refusal is
+    /// not a SPARQL expression error: the query ends with it instead of failing the
+    /// row safe (MEDULLA-FEDERATED-QUERY-R709.4).
+    refusal: &'a std::sync::OnceLock<String>,
 }
 
 impl<'a> Ctx<'a> {
+    /// Record a coded refusal; the first one wins.
+    #[cfg(feature = "geosparql")]
+    fn refuse(&self, coded: String) {
+        let _ = self.refusal.set(coded);
+    }
+
+    /// End the evaluation with the recorded refusal, if any.
+    fn refused<T>(&self, outcome: Result<T, String>) -> Result<T, String> {
+        match self.refusal.get() {
+            Some(coded) => Err(coded.clone()),
+            None => outcome,
+        }
+    }
+
     /// Re-scope the context to a different active graph (entering a `GRAPH` block).
     fn with_active(&self, active: &'a GraphView) -> Ctx<'a> {
         Ctx {
@@ -307,6 +325,7 @@ impl<'a> Ctx<'a> {
             active,
             proj: self.proj,
             service: self.service,
+            refusal: self.refusal,
         }
     }
 }
@@ -426,40 +445,72 @@ fn evaluate_query(
         }
         None => ds,
     };
+    let refusal = std::sync::OnceLock::new();
     let ctx = Ctx {
         ds,
         active: ds.default,
         proj,
         service,
+        refusal: &refusal,
     };
+    ctx.refused(evaluate_form(&ctx, query))
+}
+
+/// Evaluate the query form under an already-scoped context.
+fn evaluate_form(ctx: &Ctx, query: &Query) -> Result<QueryOutcome, String> {
     match query {
         Query::Select { pattern, .. } => {
-            let solutions = eval_pattern(&ctx, pattern)?;
+            let solutions = eval_pattern(ctx, pattern)?;
             let vars = collect_vars(pattern);
             Ok(QueryOutcome::Solutions(SparqlResult { vars, solutions }))
         }
         Query::Ask { pattern, .. } => {
-            let solutions = eval_pattern(&ctx, pattern)?;
+            let solutions = eval_pattern(ctx, pattern)?;
             Ok(QueryOutcome::Boolean(!solutions.is_empty()))
         }
         #[cfg(feature = "rdf")]
         Query::Construct {
             template, pattern, ..
         } => {
-            let solutions = eval_pattern(&ctx, pattern)?;
+            let solutions = eval_pattern(ctx, pattern)?;
             Ok(QueryOutcome::Graph(construct_graph(template, &solutions)))
         }
         #[cfg(feature = "rdf")]
         Query::Describe { pattern, .. } => {
-            let solutions = eval_pattern(&ctx, pattern)?;
+            let solutions = eval_pattern(ctx, pattern)?;
             let vars = collect_vars(pattern);
             Ok(QueryOutcome::Graph(describe_resources(
-                &ctx, &vars, &solutions,
+                ctx, &vars, &solutions,
             )))
         }
         #[cfg(not(feature = "rdf"))]
         _ => Err("medulla-rdf SPARQL: CONSTRUCT/DESCRIBE need the `rdf` feature".into()),
     }
+}
+
+/// The GeoSPARQL functions `query_str` calls, sorted and deduplicated, each with
+/// whether a spatial index served it (MEDULLA-FEDERATED-QUERY-R709.5). The native
+/// evaluator has no spatial index on this path, so every function reports
+/// `index_used: false`: each candidate geometry is evaluated in the FILTER.
+pub fn spatial_functions(query_str: &str) -> Vec<medulla_types::rdf_report::SparqlSpatialUse> {
+    const GEOF: &str = "<http://www.opengis.net/def/function/geosparql/";
+    let Ok(query) = parse_query(query_str) else {
+        return Vec::new();
+    };
+    let text = query.to_string();
+    let mut names: Vec<&str> = text
+        .match_indices(GEOF)
+        .filter_map(|(at, _)| text[at + GEOF.len()..].split_once('>').map(|(n, _)| n))
+        .collect();
+    names.sort_unstable();
+    names.dedup();
+    names
+        .into_iter()
+        .map(|function| medulla_types::rdf_report::SparqlSpatialUse {
+            function: function.to_string(),
+            index_used: false,
+        })
+        .collect()
 }
 
 /// Evaluate just a WHERE graph pattern over a dataset → its raw solutions. Used by the
@@ -469,14 +520,16 @@ pub fn eval_where(
     pattern: &GraphPattern,
     proj: &Projection,
 ) -> Result<Vec<Solution>, String> {
+    let refusal = std::sync::OnceLock::new();
     let ctx = Ctx {
         ds,
         active: ds.default,
         proj,
         // UPDATE/DESCRIBE WHERE never spans a remote SERVICE (CONCEPT:MEDULLA-KG.query.sparql-service-federation-client).
         service: None,
+        refusal: &refusal,
     };
-    eval_pattern(&ctx, pattern)
+    ctx.refused(eval_pattern(&ctx, pattern))
 }
 
 #[cfg(test)]
