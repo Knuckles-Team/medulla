@@ -44,6 +44,7 @@ pub mod meeting_transcript;
 /// text generated from a typed Rust vocabulary, with a byte-equality regeneration test
 /// (MEDULLA-TYPED-PACKS-R090.1). The canonical ontology/shape corpus itself is owned by the
 /// typed vocabulary, not hand-edited Turtle.
+pub mod ontology;
 pub mod ontology_codegen;
 
 /// Single-writer-per-persist-dir guard, hoisted down from the facade's
