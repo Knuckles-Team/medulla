@@ -1,5 +1,5 @@
 //! Registered-core ontology audits for the connector-competency term rows
-//! (MEDULLA-CQ-CONN-R070/R073/R074/R076/R079/R082).
+//! (MEDULLA-CQ-CONN-R070/R072/R073/R074/R076/R077/R078/R079/R080/R082).
 //!
 //! Each module proves one ontology module: the term is declared with the
 //! required owl type, domain and range in the registered core source, and —
@@ -176,6 +176,14 @@ mod ontology_audit_orchestration_v1 {
         medulla_shacl::validate_turtle(&shapes, data)
             .expect("validation runs")
             .conforms
+    }
+
+    // spec: MEDULLA-CQ-CONN-R079.1
+    #[test]
+    fn shapes_module_loads() {
+        let (_triples, shapes) = documents();
+        let shape = format!("{KG}RunTraceTerminationShape");
+        assert!(has_iri(&shapes, &shape, RDF_TYPE, SHACL_NODE_SHAPE));
     }
 
     // spec: MEDULLA-CQ-CONN-R079.2
@@ -968,5 +976,338 @@ mod ontology_audit_core_foundation_v1 {
             RDFS_RANGE,
             &format!("{KG}Action")
         ));
+    }
+}
+
+#[allow(non_snake_case)]
+mod ontology_audit_process_intelligence_v1 {
+    use super::*;
+
+    fn triples() -> Vec<Triple> {
+        let ontology = registered_ontology("core:process_intelligence@1", "process_intelligence");
+        parse_turtle(&ontology).expect("the registered process-intelligence ontology parses")
+    }
+
+    // spec: MEDULLA-CQ-CONN-R072.1
+    #[test]
+    fn EpcFunction_declared() {
+        let triples = triples();
+        let class = format!("{KG}EpcFunction");
+        assert!(has_iri(&triples, &class, RDF_TYPE, OWL_CLASS));
+        assert!(has_iri(
+            &triples,
+            &class,
+            RDFS_SUBCLASSOF,
+            &format!("{KG}ProcessEventType")
+        ));
+    }
+
+    // spec: MEDULLA-CQ-CONN-R072.2
+    #[test]
+    fn EpcRuleOperator_declared() {
+        let triples = triples();
+        let class = format!("{KG}EpcRuleOperator");
+        assert!(has_iri(&triples, &class, RDF_TYPE, OWL_CLASS));
+        assert!(has_iri(
+            &triples,
+            &class,
+            RDFS_SUBCLASSOF,
+            &format!("{KG}ProcessEventType")
+        ));
+    }
+
+    // spec: MEDULLA-CQ-CONN-R072.3
+    #[test]
+    fn flowsTo_declared() {
+        let triples = triples();
+        let property = format!("{KG}flowsTo");
+        assert!(has_iri(&triples, &property, RDF_TYPE, OWL_OBJECT_PROPERTY));
+        assert!(domain_covers(&triples, &property, &format!("{KG}EpcFunction")));
+        assert!(domain_covers(&triples, &property, &format!("{KG}EpcRuleOperator")));
+        assert!(has_iri(&triples, &property, RDFS_RANGE, &format!("{KG}ProcessEventType")));
+    }
+
+    // spec: MEDULLA-CQ-CONN-R072.4
+    #[test]
+    fn ProcessInstance_declared() {
+        let triples = triples();
+        let class = format!("{KG}ProcessInstance");
+        assert!(has_iri(&triples, &class, RDF_TYPE, OWL_CLASS));
+    }
+
+    // spec: MEDULLA-CQ-CONN-R072.5
+    #[test]
+    fn instanceOfProcessModel_declared() {
+        let triples = triples();
+        let property = format!("{KG}instanceOfProcessModel");
+        assert!(has_iri(&triples, &property, RDF_TYPE, OWL_OBJECT_PROPERTY));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_DOMAIN,
+            &format!("{KG}ProcessInstance")
+        ));
+        assert!(has_iri(&triples, &property, RDFS_RANGE, &format!("{KG}ProcessModelVersion")));
+    }
+
+    // spec: MEDULLA-CQ-CONN-R072.6
+    #[test]
+    fn stoppedAtActivity_declared() {
+        let triples = triples();
+        let property = format!("{KG}stoppedAtActivity");
+        assert!(has_iri(&triples, &property, RDF_TYPE, OWL_OBJECT_PROPERTY));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_DOMAIN,
+            &format!("{KG}ProcessInstance")
+        ));
+        assert!(has_iri(&triples, &property, RDFS_RANGE, &format!("{KG}ProcessEventType")));
+    }
+
+    // spec: MEDULLA-CQ-CONN-R072.7
+    #[test]
+    fn raisedIncident_declared() {
+        let triples = triples();
+        let property = format!("{KG}raisedIncident");
+        assert!(has_iri(&triples, &property, RDF_TYPE, OWL_OBJECT_PROPERTY));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_DOMAIN,
+            &format!("{KG}ProcessInstance")
+        ));
+        assert!(has_iri(&triples, &property, RDFS_RANGE, &format!("{KG}ApplicationEvent")));
+    }
+}
+
+#[allow(non_snake_case)]
+mod ontology_audit_virtual_graph_v1 {
+    use super::*;
+
+    fn triples() -> Vec<Triple> {
+        let ontology = registered_ontology("core:virtual-graph@1", "virtual-graph");
+        parse_turtle(&ontology).expect("the registered virtual-graph ontology parses")
+    }
+
+    // spec: MEDULLA-CQ-CONN-R077.1
+    #[test]
+    fn NamedGraph_declared() {
+        let triples = triples();
+        let class = format!("{KG}NamedGraph");
+        assert!(has_iri(&triples, &class, RDF_TYPE, OWL_CLASS));
+        assert!(has_iri(
+            &triples,
+            &class,
+            RDFS_SUBCLASSOF,
+            &format!("{KG}Dataset")
+        ));
+    }
+
+    // spec: MEDULLA-CQ-CONN-R077.2
+    #[test]
+    fn tripleCount_declared() {
+        let triples = triples();
+        let property = format!("{KG}tripleCount");
+        assert!(has_iri(&triples, &property, RDF_TYPE, OWL_DATATYPE_PROPERTY));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_DOMAIN,
+            &format!("{KG}NamedGraph")
+        ));
+        assert!(has_iri(&triples, &property, RDFS_RANGE, &format!("{XSD}integer")));
+    }
+
+    // spec: MEDULLA-CQ-CONN-R077.3
+    #[test]
+    fn lastModifiedAt_declared() {
+        let triples = triples();
+        let property = format!("{KG}lastModifiedAt");
+        assert!(has_iri(&triples, &property, RDF_TYPE, OWL_DATATYPE_PROPERTY));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_DOMAIN,
+            &format!("{KG}NamedGraph")
+        ));
+        assert!(has_iri(&triples, &property, RDFS_RANGE, &format!("{XSD}dateTime")));
+    }
+}
+
+#[allow(non_snake_case)]
+mod ontology_audit_identity_v1 {
+    use super::*;
+
+    fn triples() -> Vec<Triple> {
+        let ontology = registered_ontology("core:identity@1", "identity");
+        parse_turtle(&ontology).expect("the registered identity ontology parses")
+    }
+
+    fn conforms(data: &str) -> bool {
+        let shapes = registered_shapes("core:identity-shapes@1", "identity-shapes");
+        medulla_shacl::validate_turtle(&shapes, data)
+            .expect("validation runs")
+            .conforms
+    }
+
+    // spec: MEDULLA-CQ-CONN-R078.1
+    #[test]
+    fn shapes_module_loads() {
+        let shapes = registered_shapes("core:identity-shapes@1", "identity-shapes");
+        let triples = parse_turtle(&shapes).expect("the registered identity shapes parse");
+        let shape = format!("{KG}IdentityUserShape");
+        assert!(has_iri(&triples, &shape, RDF_TYPE, SHACL_NODE_SHAPE));
+        assert!(has_iri(
+            &triples,
+            &shape,
+            SHACL_TARGET_CLASS,
+            &format!("{KG}IdentityUser")
+        ));
+    }
+
+    // spec: MEDULLA-CQ-CONN-R078.3
+    #[test]
+    fn OidcClient_declared() {
+        let triples = triples();
+        let class = format!("{KG}OidcClient");
+        assert!(has_iri(&triples, &class, RDF_TYPE, OWL_CLASS));
+        assert!(has_iri(
+            &triples,
+            &class,
+            RDFS_SUBCLASSOF,
+            &format!("{KG}Application")
+        ));
+    }
+
+    // spec: MEDULLA-CQ-CONN-R078.4
+    #[test]
+    fn roleGrantsAccessTo_declared() {
+        let triples = triples();
+        let property = format!("{KG}roleGrantsAccessTo");
+        assert!(has_iri(&triples, &property, RDF_TYPE, OWL_OBJECT_PROPERTY));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_DOMAIN,
+            &format!("{KG}IdentityRole")
+        ));
+        assert!(has_iri(&triples, &property, RDFS_RANGE, &format!("{KG}Application")));
+        // The range is the service-operations application class.
+        let service_operations = parse_turtle(&registered_ontology(
+            "core:service_operations@1",
+            "service_operations",
+        ))
+        .expect("the registered service-operations ontology parses");
+        assert!(has_iri(
+            &service_operations,
+            &format!("{KG}Application"),
+            RDF_TYPE,
+            OWL_CLASS
+        ));
+    }
+
+    // spec: MEDULLA-CQ-CONN-R078.5
+    #[test]
+    fn accountStatus_declared() {
+        let triples = triples();
+        let property = format!("{KG}accountStatus");
+        assert!(has_iri(&triples, &property, RDF_TYPE, OWL_DATATYPE_PROPERTY));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_DOMAIN,
+            &format!("{KG}IdentityUser")
+        ));
+        assert!(has_iri(&triples, &property, RDFS_RANGE, &format!("{XSD}string")));
+        assert!(conforms(
+            "@prefix : <http://knuckles.team/kg#> . :u a :IdentityUser ; :accountStatus \"ACTIVE\" ."
+        ));
+        assert!(!conforms(
+            "@prefix : <http://knuckles.team/kg#> . :u a :IdentityUser ; :accountStatus \"LOCKED\" ."
+        ));
+    }
+}
+
+#[allow(non_snake_case)]
+mod ontology_audit_enterprise_v1 {
+    use super::*;
+
+    fn triples() -> Vec<Triple> {
+        let ontology = registered_ontology("core:enterprise@1", "enterprise");
+        parse_turtle(&ontology).expect("the registered enterprise ontology parses")
+    }
+
+    fn conforms(data: &str) -> bool {
+        let shapes = registered_shapes("core:enterprise-shapes@1", "enterprise-shapes");
+        medulla_shacl::validate_turtle(&shapes, data)
+            .expect("validation runs")
+            .conforms
+    }
+
+    // spec: MEDULLA-CQ-CONN-R080.1
+    #[test]
+    fn shapes_module_loads() {
+        let shapes = registered_shapes("core:enterprise-shapes@1", "enterprise-shapes");
+        let triples = parse_turtle(&shapes).expect("the registered enterprise shapes parse");
+        let shape = format!("{KG}EAFactSheetShape");
+        assert!(has_iri(&triples, &shape, RDF_TYPE, SHACL_NODE_SHAPE));
+        assert!(has_iri(
+            &triples,
+            &shape,
+            SHACL_TARGET_CLASS,
+            &format!("{KG}EAFactSheet")
+        ));
+    }
+
+    // spec: MEDULLA-CQ-CONN-R080.2
+    #[test]
+    fn factSheetType_declared() {
+        let triples = triples();
+        let property = format!("{KG}factSheetType");
+        assert!(has_iri(&triples, &property, RDF_TYPE, OWL_DATATYPE_PROPERTY));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_DOMAIN,
+            &format!("{KG}EAFactSheet")
+        ));
+        assert!(has_iri(&triples, &property, RDFS_RANGE, &format!("{XSD}string")));
+    }
+
+    // spec: MEDULLA-CQ-CONN-R080.3
+    #[test]
+    fn lifecyclePhase_declared() {
+        let triples = triples();
+        let property = format!("{KG}lifecyclePhase");
+        assert!(has_iri(&triples, &property, RDF_TYPE, OWL_DATATYPE_PROPERTY));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_DOMAIN,
+            &format!("{KG}EAFactSheet")
+        ));
+        assert!(has_iri(&triples, &property, RDFS_RANGE, &format!("{XSD}string")));
+        assert!(conforms(
+            "@prefix : <http://knuckles.team/kg#> . :f a :EAFactSheet ; :lifecyclePhase \"phaseOut\" ."
+        ));
+        assert!(!conforms(
+            "@prefix : <http://knuckles.team/kg#> . :f a :EAFactSheet ; :lifecyclePhase \"retired\" ."
+        ));
+    }
+
+    // spec: MEDULLA-CQ-CONN-R080.4
+    #[test]
+    fn activeUserCount_declared() {
+        let triples = triples();
+        let property = format!("{KG}activeUserCount");
+        assert!(has_iri(&triples, &property, RDF_TYPE, OWL_DATATYPE_PROPERTY));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_DOMAIN,
+            &format!("{KG}EAFactSheet")
+        ));
+        assert!(has_iri(&triples, &property, RDFS_RANGE, &format!("{XSD}integer")));
     }
 }
