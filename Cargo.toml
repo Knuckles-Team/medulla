@@ -2039,7 +2039,8 @@ required-features = ["full"]
 # Decision budgets per question family (MEDULLA-DECISION-ENGINE-R178.1): one
 # Criterion group `decide/<family>` per `QuestionKind`, through the served
 # dispatch boundary; the nightly workflow checks its report against
-# `benches/baselines/decide.json` (R178.2, R178.3).
+# `benches/baselines/decide.json` (MEDULLA-DECISION-ENGINE-R178.2,
+# MEDULLA-DECISION-ENGINE-R178.3).
 [[bench]]
 name = "decide_budgets"
 path = "benches/decide_budgets.rs"
