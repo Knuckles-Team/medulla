@@ -313,8 +313,13 @@ mod tests {
         struct FixedReadThrough(Vec<u8>);
 
         impl medulla_graph_core::read_through::ReadThrough for FixedReadThrough {
-            fn read_node_blob(&self, node_id: &str) -> Option<Vec<u8>> {
-                (node_id == "shared-node").then(|| self.0.clone())
+            fn read_node_blob(
+                &self,
+                node_id: &str,
+            ) -> medulla_graph_core::read_through::NodeReadOutcome {
+                medulla_graph_core::read_through::NodeReadOutcome::from_option(
+                    (node_id == "shared-node").then(|| self.0.clone()),
+                )
             }
         }
 
