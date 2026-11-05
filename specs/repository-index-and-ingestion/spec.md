@@ -1,21 +1,91 @@
 # MEDULLA-REPO-INGEST — Repository index and native ingestion
 
-Status: **PROPOSED**. Delivery: **PARTIAL SOURCE PRESENT**. Acceptance: **NOT VERIFIED**. Owner: `Medulla`.
+Component: Repository index and ingestion
 
-**State legend:** `PROPOSED` means the build contract awaits review; `PARTIAL SOURCE PRESENT` means some implementation exists but this complete contract is not merged; `LANDED` requires an exact merged engine revision; `ACCEPTED` requires every applicable test and release receipt in [test-spec.md](test-spec.md). `NOT VERIFIED` means the latter receipts have not been collected. A prior row's `BUILT` label is historical source evidence, not whole-spec acceptance.
-
-## Purpose
+## Outcome
 
 A contributor can index a repository snapshot into a durable, queryable graph without an application-specific graph writer. A caller supplies authenticated, immutable source bytes and revision membership; the engine determines parse outcomes, resolves symbols across files, records provenance, commits the projection once, and reports enough evidence to retry failures. A query can find the exact source occurrence and revision behind an answer. This contract also defines the Medulla side of general source ingestion; it does not require access to any private workspace or service.
 
-## Users and acceptance stories
+## Scope
 
-1. **Repository contributor (P1):** indexing two refs that share a blob parses the blob once and keeps distinct branch membership. A changed path, rename, deletion, and re-index are reflected without losing historical revision identity.
-2. **Code intelligence consumer (P1):** a symbol query returns distinct declaration occurrences, deterministic in-batch `calls`, `inherits`, `realizes`, and `depends_on` links, and an exact repository/ref/revision/path/blob/line chain. Ambiguous or external references remain explicitly unresolved.
-3. **Source operator (P1):** a partially unsupported or malformed source batch yields per-file disposition; committed files and their receipts are replayable. A failed batch cannot advance a checkpoint or leave a partial graph. Budget refusals have a stable code the caller can use to split and retry.
-4. **Enrichment consumer (P2):** native parse and resolution commit promptly. Expensive enrichment is admitted by engine policy and placed in a durable queue, with a budget and visible terminal result. A query may request bounded on-demand enrichment without making the original index commit depend on an LLM or model service.
+Owner: `medulla` (native Rust). Medulla owns `Method::IndexRepository`, `IndexRepositoryScope`, `IndexResult`, `SourceIngest`, `ChangeEnvelope`, graph projection, CAS binding, native parsing/resolution, admission, durable work and queryable lineage. The connector connector SDK owns provider authentication, immutable snapshot fetch, paging, checksum validation and transport; it may retry based on Medulla's typed outcomes but cannot mint graph facts or checkpoint authority. Agent applications may request ingestion and consume receipts but cannot bypass Medulla's projection. Repository tooling may discover repositories and provide authenticated source coordinates, but is not a second graph writer.
 
-## Functional requirements
+This feature does not require a hosted Git provider, private manifest, local service inventory, model service or running cluster for its deterministic development tests. Served multi-node and provider integration remain separate release evidence.
+
+Non-goals: no coverage of independent engine work such as layout upgrades, community detection, domain-specific connectors, query grammar, or unrelated quality regressions. Those concerns have their own owner specs.
+
+Why a new spec: repository indexing and the Medulla side of source ingestion form one owned capability. The search `git grep -n "IndexRepository\|SourceIngest" -- specs` found no other owner. Foreign-source scope belongs to `federated-query-and-reasoning`, and isolation belongs to `durable-graph-kernel`.
+
+## User Scenarios & Testing
+
+### User Story 1 - Index a repository snapshot atomically (Priority: P1)
+
+The user is a repository contributor. The outcome is a durable graph of branches, files, symbols and edges that commits once and replays safely.
+
+**Acceptance scenarios**
+
+1. **Given** two refs that share one blob, **When** the snapshot is indexed, **Then** the blob parses once and each ref keeps its own membership.
+2. **Given** a batch above the commit budget, **When** it is submitted, **Then** the engine refuses it whole with `REPOSITORY_BATCH_TOO_LARGE` and commits nothing.
+3. **Given** two relations between the same two entities, **When** the batch lowers, **Then** the graph holds two distinct typed edges.
+
+Independent test: the bound tests of `MEDULLA-REPO-INGEST-R008` run this story through the served harness.
+
+### User Story 2 - Understand code after the native commit (Priority: P1)
+
+The user is a code intelligence consumer. The outcome is typed code, test, history and link facts that never delay the index response.
+
+**Acceptance scenarios**
+
+1. **Given** a committed snapshot, **When** post-commit enrichment runs, **Then** typed entities and rung-ranked edges commit in a second envelope.
+2. **Given** an edge that would overwrite a higher-rung edge, **When** enrichment applies it, **Then** the engine refuses and counts it.
+3. **Given** a repository with no declared entry point, **When** the code-health sweep runs, **Then** it reports `unknown` and never `dead`.
+
+Independent test: the bound tests of `MEDULLA-REPO-INGEST-R600.4` and `MEDULLA-REPO-INGEST-R700.4` cover the refusals.
+
+### User Story 3 - Ingest governed source observations (Priority: P1)
+
+The user is a source operator. The outcome is a checkpointed, replayable ingestion with stable refusal codes.
+
+**Acceptance scenarios**
+
+1. **Given** an envelope applied twice, **When** the second apply arrives, **Then** the engine returns the first commit and writes nothing.
+2. **Given** a stranded semantic intent, **When** a reconcile pass runs, **Then** the intent is re-admitted.
+3. **Given** a replayed request nonce, **When** it arrives after a restart, **Then** the engine refuses it.
+
+Independent test: the bound test of `MEDULLA-REPO-INGEST-R001` covers reconcile; `MEDULLA-REPO-INGEST-R005` covers replay.
+
+### User Story 4 - Hydrate stores and ingest documents and sessions (Priority: P2)
+
+The user is an operator. The outcome is an empty store that fills from configured sources, with documents chunked into verified section trees and agent sessions ingested as records.
+
+**Acceptance scenarios**
+
+1. **Given** an empty store and configured sources, **When** the server boots, **Then** it plans baseline hydration and submits jobs, and a second boot skips unchanged content.
+2. **Given** a document, **When** it is enriched, **Then** the section tree nests, covers the text and is stored with a processed-document record.
+3. **Given** a transcript whose prefix changed, **When** intake runs, **Then** the session restarts at the first differing ordinal.
+
+Independent test: `crates/medulla-document/src/runtime.rs::transcript_prefix_delta_restarts_at_first_changed_or_removed_line`.
+
+## Edge Cases
+
+- A tombstone removes only the named ref, path and blob membership.
+- A parser upgrade reparses an earlier unsupported or error blob without duplicating a successful revision.
+- A batch whose stated base revision differs refuses before any write.
+- A file that fails to parse is classed `Structural` and is never skipped.
+- A stale code-map generation refuses every page and cursor.
+
+## Assumptions
+
+- The connector SDK sends authenticated, immutable source bytes and revision membership.
+- Enrichment may fail without rolling back an accepted native snapshot.
+- The native commit stays within the 64 MiB durable ledger record budget.
+- Every new served method registers a descriptor in the served catalog.
+
+## Requirements
+
+### Functional requirements
+
+The table below states the behaviour. Each row of [requirements.md](requirements.md) binds it to code and proof.
 
 | ID | Requirement and acceptance rule |
 |---|---|
@@ -32,23 +102,23 @@ A contributor can index a repository snapshot into a durable, queryable graph wi
 | RI-11 | `SourceIngest` accepts typed observations with manifest references, raw evidence, exact expected checkpoint, and mode (`full`, `delta`, `reconcile`). Medulla resolves approved mappings and commits graph changes, live-set marker, tombstones, lineage, checkpoint and receipt atomically. Empty authoritative reconciliation requires the explicit approval and capability. `SourceIngestStatus` reads the durable checkpoint after restart. |
 | RI-12 | Change consumers apply source-position-idempotent graph/index/outbox updates. A Debezium-style change bridge maps an ordered source event into `ChangeEnvelope`, preserves source position and deletion semantics, and refuses unknown schema or out-of-order replay. Any accelerated read declares freshness; read-your-writes waits for the caller's committed position within a bounded timeout or reports stale. |
 
-## Success criteria
+The labelled requirements bind the table to rows:
 
-- **SC-01:** A two-ref fixture with a shared blob, divergent blob at one path, rename, deletion and restart gives exact membership and occurrence counts. A duplicate submission leaves graph version unchanged.
-- **SC-02:** Each input has exactly one parse outcome. A parser upgrade reparses an earlier unsupported/error blob without duplicating a successful revision.
-- **SC-03:** A real public repository benchmark records wall time, repository size, parser distribution and p50/p95 commit latency for native rungs. The performance target is **to be set from a checked-in benchmark baseline before the performance claim is accepted**; no absolute throughput is inferred from tiny fixtures.
-- **SC-04:** Concurrent, stale, oversized, unauthorized and interrupted writes fail with stable codes and leave unchanged graph version/checkpoint. Restart reads the last committed receipt.
-- **SC-05:** A code query can traverse `repository → ref → revision → file version → blob → symbol occurrence → evidence`, then follow resolved dependency and spec/test/release edges without consulting another data store.
+- FR-001 Repository batches lower to one governed envelope and commit once (`MEDULLA-REPO-INGEST-R009.2`, `MEDULLA-REPO-INGEST-R008`).
+- FR-002 Over-limit batches refuse whole with a stable code (`MEDULLA-REPO-INGEST-R007`, `MEDULLA-REPO-INGEST-R008`).
+- FR-003 Edge identity is the triple of source, target and relation type (`MEDULLA-REPO-INGEST-R009.1`).
+- FR-004 Heavy enrichment never blocks the native commit (`MEDULLA-REPO-INGEST-R006`, `MEDULLA-REPO-INGEST-R600.3`).
+- FR-005 Source ingestion applies envelopes idempotently with typed refusals (`MEDULLA-REPO-INGEST-R002.651.1`, `MEDULLA-REPO-INGEST-R002.653`).
+- FR-006 Documents, sessions and baseline hydration reuse the same writer (`MEDULLA-REPO-INGEST-R652.3`, `MEDULLA-REPO-INGEST-R800.3`, `MEDULLA-REPO-INGEST-R650.3`).
 
-## Boundaries and interfaces
+### Success criteria
 
-Medulla owns `Method::IndexRepository`, `IndexRepositoryScope`, `IndexResult`, `SourceIngest`, `ChangeEnvelope`, graph projection, CAS binding, native parsing/resolution, admission, durable work and queryable lineage. The connector Graft SDK owns provider authentication, immutable snapshot fetch, paging, checksum validation and transport; it may retry based on Medulla's typed outcomes but cannot mint graph facts or checkpoint authority. Agent applications may request ingestion and consume receipts but cannot bypass Medulla's projection. Repository tooling may discover repositories and provide authenticated source coordinates, but is not a second graph writer.
+- SC-001 A two-ref fixture with a shared blob gives exact membership and one parse per unique blob (`MEDULLA-REPO-INGEST-R009.2`).
+- SC-002 The native commit p99 stays at most 5 s on 5,000 files (`MEDULLA-REPO-INGEST-R006`).
+- SC-003 Concurrent, stale, oversized and interrupted writes fail with stable codes and leave the graph version unchanged (`MEDULLA-REPO-INGEST-R008`).
+- SC-004 A code query reaches specification, test and release edges without another store (`MEDULLA-REPO-INGEST-R009`).
 
-This feature does not require a hosted Git provider, private manifest, local service inventory, model service or running cluster for its deterministic development tests. Served multi-node and provider integration remain separate release evidence.
-
-## Traceability and evidence state
-
-The IDs below are stable migration identifiers, not links to a private source. Their full acceptance contract is the requirements above and the local design/test/tasks files. Historical `BUILT` or `LANDED` labels do not establish acceptance for this combined feature.
+## Traceability
 
 | Requirement | Stable IDs | Current evidence | Required acceptance proof |
 |---|---|---|---|
@@ -61,28 +131,4 @@ The IDs below are stable migration identifiers, not links to a private source. T
 
 Foreign-source scope MEDULLA-FEDERATED-QUERY-R013 belongs to `federated-query-and-reasoning`; UDF/lifecycle isolation MEDULLA-DURABLE-KERNEL-R018/MEDULLA-DURABLE-KERNEL-R019 belongs to `durable-graph-kernel`. The source change consumers, freshness router and Debezium bridge MEDULLA-UNIFIED-DATA-PLANE-R009/MEDULLA-UNIFIED-DATA-PLANE-R011/MEDULLA-UNIFIED-DATA-PLANE-R021 belong to `unified-data-plane`. This spec uses those contracts for repository indexing without claiming their implementation authority.
 
-The scope above does not claim coverage of independent engine work such as layout upgrades, community detection, domain-specific connectors, query grammar, or unrelated quality regressions. Those concerns require their own owner specs and acceptance evidence.
-
-Requirement IDs are defined in [requirements.md](requirements.md); delivery state per ID is in `status.json`.
-
-<!-- spec-definition-patch:owner-batch-20261012-repository-index-and-ingestion -->
-## Reviewed definition index — 2026-10-12
-
-Normative contracts, production wiring, owner references, open dependencies, and acceptance cases appear in `requirements.md`.
-This file indexes the definitions and their source records.
-Each child extends the listed parent. Existing parent obligations remain unchanged.
-No implementation or served evidence is claimed here.
-
-| Requirement | Parent | Source record | SHA-256 |
-|---|---|---|---|
-| `MEDULLA-REPO-INGEST-R002.1` | `MEDULLA-REPO-INGEST-R002` | `AU:23` | `3f7e133169a76ce2680ec667c28ea2c5543354ed8874d258c432e65346f2e529` |
-| `MEDULLA-REPO-INGEST-R006.1` | `MEDULLA-REPO-INGEST-R006` | `AU:70` | `902f964dd909186f3a31d1f8a84d146b715446e64dfeec62480c8151baa06996` |
-| `MEDULLA-REPO-INGEST-R006.2` | `MEDULLA-REPO-INGEST-R006` | `AU:92` | `771acc731a6e25746641adf30cde9ec91f4eb56edd6597f2d308a42947a3abb3` |
-| `MEDULLA-REPO-INGEST-R006.3` | `MEDULLA-REPO-INGEST-R006` | `EG:54` | `e69e6fa3a5c26ae763809d600cb7d264d028b9ce0d80f8ca6141e1a40cf0638e` |
-| `MEDULLA-REPO-INGEST-R006.4` | `MEDULLA-REPO-INGEST-R006` | `EG:55` | `340c1817f2a52dc6da4c9c13d93d215debbeb9fefd8b84b8d2400b86541d4d81` |
-| `MEDULLA-REPO-INGEST-R002.100` | `MEDULLA-REPO-INGEST-R002` | `AU:118` | `e8ad0c2417b7fa6ce53c46899f1adf8e925977becd0bd1813db6b62d3786af11` |
-| `MEDULLA-REPO-INGEST-R002.101` | `MEDULLA-REPO-INGEST-R002` | `PIPE:10` | `e0c431512565acb1a8ae00e09b63ec6fb7c8f9e81ef9c786a0fd7b26b2239455` |
-
-R006.3 binds each code-map page and cursor to one map generation and current source revision. After source changes, queries for changed and unchanged symbols refuse against the old generation. Reindex acceptance checks current spans and stable logical identity.
-
-<!-- /spec-definition-patch -->
+Requirement IDs are in [requirements.md](requirements.md). Delivery state per ID is in `status.json`.

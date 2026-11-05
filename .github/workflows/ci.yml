@@ -1407,13 +1407,39 @@ jobs:
   # skip the native jobs through changes.outputs.code and must still have a
   # successful security job and central light-gate result.
   # ── The one pull-request gate (MEDULLA-CONTRACT-R053.7). ─────────────────────
+  # Routes the CI job: only a code diff goes to the warm pool, so spec and docs
+  # only pull requests never queue behind long code runs. A failed pr-scope
+  # skips `ci`, and `ci-required` requires `ci` to succeed (MEDULLA-CONTRACT-R053.7).
+  pr-scope:
+    name: PR scope
+    if: github.event_name == 'pull_request'
+    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.scope.outputs.code }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Classify the diff
+        id: scope
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          python3 scripts/ci_change_scope.py --event pull_request --base "$BASE" --head "$HEAD" | grep '^code=' | tee -a "$GITHUB_OUTPUT"
+
   ci:
     timeout-minutes: ${{ github.event_name == 'pull_request' && 180 || 180 }}
     name: CI
     if: github.event_name == 'pull_request'
-    # Same-repository pull requests run on the warm self-hosted pool (persistent
-    # cargo target + local sccache); fork pull requests stay on GitHub-hosted.
-    runs-on: ${{ (vars.MEDULLA_WARM_CI_RUNNER == 'true' && github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]') && fromJSON('{"group":"medulla-warm","labels":["self-hosted","medulla-warm"]}') || 'ubuntu-24.04' }}
+    needs: pr-scope
+    # Same-repository code pull requests run on the warm self-hosted pool
+    # (persistent cargo target + local sccache); spec/docs-only and fork pull
+    # requests stay on GitHub-hosted.
+    runs-on: ${{ (needs.pr-scope.outputs.code == 'true' && vars.MEDULLA_WARM_CI_RUNNER == 'true' && github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]') && fromJSON('{"group":"medulla-warm","labels":["self-hosted","medulla-warm"]}') || 'ubuntu-24.04' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
