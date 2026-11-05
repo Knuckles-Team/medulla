@@ -1,0 +1,53 @@
+name: Nightly decide budgets
+
+# MEDULLA-DECISION-ENGINE-R178.3: run the per-family decision benchmark
+# (`benches/decide_budgets.rs`, R178.1) at 03:00 UTC on main, check its
+# report against the stored baseline with `scripts/check_decide_budgets.py`
+# (R178.2), upload the report, and fail on a regression or a budget breach.
+
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+
+jobs:
+  decide-budgets:
+    if: github.ref == 'refs/heads/main'
+    timeout-minutes: 180
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.14"
+
+      - id: rust-toolchain
+        uses: ./.github/actions/pinned-rust-toolchain
+
+      - name: Run the decide budget benchmark
+        env:
+          DECIDE_BUDGETS_REPORT: ${{ github.workspace }}/target/decide-budgets.json
+        run: cargo bench --features full --bench decide_budgets
+
+      - name: Check the report against the baseline
+        run: python scripts/check_decide_budgets.py target/decide-budgets.json
+
+      - name: Upload the report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: decide-budgets
+          path: |
+            target/decide-budgets.json
+            target/criterion
+          if-no-files-found: warn
