@@ -31,6 +31,8 @@ pub mod mysql_mariadb_connection;
 pub mod asr_wire;
 // MEDULLA-DURABLE-KERNEL-R076.1 — authoritative scheduler policy data and validation.
 pub mod scheduler_config;
+// MEDULLA-DURABLE-KERNEL-R071 — typed durable task-queue model with refusals.
+pub mod task_queue;
 // MEDULLA-INGEST-WORKER-R002.1/.2 — induced ontology proposals and admission scores.
 pub mod ontology_proposal;
 // MEDULLA-INGEST-WORKER-R003.1 — typed knowledge atoms with mandatory provenance.
@@ -259,6 +261,8 @@ pub mod types;
 pub mod tenant_cursor;
 // The three-bound keyset page shared by the tenant-bound native listings.
 pub mod keyset_page;
+// MEDULLA-DURABLE-KERNEL-R043.100.1 — graph change-feed types and snapshot digest.
+pub mod graph_change_feed;
 // MEDULLA-TYPED-PACKS-R802.1/R805.1 — governance record models: stewardship and
 // data products. Pure data and field validation; served wiring lands in later children.
 pub mod data_product;
