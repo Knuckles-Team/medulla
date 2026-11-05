@@ -230,10 +230,136 @@ pub fn maybe_push_http(event: &Value) {
         .send(&body);
 }
 
+/// The graph the lake sweep drains its run events into
+/// (MEDULLA-UNIFIED-DATA-PLANE-R702.3).
+pub const LINEAGE_GRAPH: &str = "lineage";
+const LINEAGE_SERVICE: &str = "lineage-drain";
+const LINEAGE_ACTOR: &str = "service:lineage-drain";
+
+fn dataset_refs(event: &Value, key: &str) -> Vec<medulla_catalog_types::lineage::DatasetRef> {
+    event[key]
+        .as_array()
+        .map(|items| {
+            items
+                .iter()
+                .map(|item| medulla_catalog_types::lineage::DatasetRef {
+                    namespace: item["namespace"].as_str().unwrap_or_default().to_string(),
+                    name: item["name"].as_str().unwrap_or_default().to_string(),
+                })
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// Map one OpenLineage `RunEvent` built by [`build_run_event`] to the typed
+/// lineage event `LineageIngest` drains. The run id keys the event, so the
+/// same run submitted twice replays.
+pub fn to_lineage_event(
+    event: &Value,
+    ended_at_ms: i64,
+) -> medulla_catalog_types::lineage::LineageEvent {
+    let run_id = event["run"]["runId"]
+        .as_str()
+        .unwrap_or_default()
+        .to_string();
+    medulla_catalog_types::lineage::LineageEvent {
+        event_id: run_id.clone(),
+        run: medulla_catalog_types::lineage::EtlRun {
+            run_id,
+            job: event["job"]["name"]
+                .as_str()
+                .unwrap_or_default()
+                .to_string(),
+            started_at_ms: ended_at_ms,
+            ended_at_ms: Some(ended_at_ms),
+        },
+        inputs: dataset_refs(event, "inputs"),
+        outputs: dataset_refs(event, "outputs"),
+    }
+}
+
+/// Submit the sweep's run events as one `Method::LineageIngest` through the
+/// installed dispatch seam, in process, as the fixed lineage service actor
+/// (MEDULLA-UNIFIED-DATA-PLANE-R702.3). Nothing to send is a no-op.
+pub async fn submit_events(
+    state: &std::sync::Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
+    events: &[Value],
+) -> Result<(), String> {
+    use medulla_server_api::authority_context::VerifiedRequestContext;
+    if events.is_empty() {
+        return Ok(());
+    }
+    let ended_at_ms = now_ms() as i64;
+    let events = events
+        .iter()
+        .map(|event| to_lineage_event(event, ended_at_ms))
+        .collect();
+    let anonymous = state.read().await.local_anonymous;
+    #[cfg(feature = "security")]
+    if !anonymous {
+        medulla_server_api::service_grant::ServiceGraphGrant {
+            actor: LINEAGE_ACTOR,
+            role_prefix: LINEAGE_SERVICE,
+            unbootstrapped: "LINEAGE_POLICY_UNBOOTSTRAPPED",
+        }
+        .ensure(&mut state.write().await.isolation, LINEAGE_GRAPH)?;
+    }
+    let session = format!("{LINEAGE_SERVICE}:{LINEAGE_GRAPH}");
+    let context = if anonymous {
+        VerifiedRequestContext::anonymous_local(Some(session))
+    } else {
+        let service = VerifiedRequestContext::authenticated_fixed_service_actor(
+            LINEAGE_SERVICE,
+            &["ingest:write"],
+        )?;
+        VerifiedRequestContext::from_verified_claims_with_nonce(
+            service.claims().clone(),
+            session,
+            Some(medulla_types::contract::Nonce::minted()),
+        )
+    };
+    debug_assert_eq!(LINEAGE_ACTOR, format!("service:{LINEAGE_SERVICE}"));
+    let request = medulla_protocol_types::protocol::Request {
+        id: 0,
+        graph: LINEAGE_GRAPH.to_string(),
+        auth_token: String::new(),
+        agent_id: Some(context.agent_id().to_string()),
+        method: medulla_protocol_types::protocol::Method::LineageIngest { events },
+    };
+    let response =
+        medulla_server_api::api::reentry::dispatch_verified_request(state, request, context).await;
+    match response.refusal_text() {
+        None => Ok(()),
+        Some(refusal) => Err(refusal.to_string()),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use medulla_lake::schema::{LakeField, LakeType};
+
+    // spec: MEDULLA-UNIFIED-DATA-PLANE-R702.3
+    #[test]
+    fn run_event_maps_to_a_drainable_lineage_event() {
+        let schema = LakeSchema::new(vec![LakeField::new("v", LakeType::Double)]);
+        let ev = build_run_event(
+            "ns",
+            "t",
+            LakeOp::Append,
+            &schema,
+            1,
+            1,
+            "loc",
+            3,
+            1,
+            Some(("medulla.tsdb", "s1")),
+        );
+        let mapped = to_lineage_event(&ev, 5);
+        assert_eq!(mapped.event_id, ev["run"]["runId"].as_str().unwrap());
+        let edges = medulla_catalog_types::lineage::map_lineage_event(&mapped).unwrap();
+        assert_eq!(edges.len(), 1);
+    }
 
     #[test]
     fn iso8601_formats_epoch_correctly() {

@@ -47,12 +47,15 @@ impl ParamValue {
         }
     }
 
-    fn render(&self) -> String {
+    /// Render as one JSON value token, for substitution into a JSON effect
+    /// body. A non-finite float renders as `null` (JSON has no NaN).
+    pub fn render_json(&self) -> String {
         match self {
             Self::Boolean(value) => value.to_string(),
             Self::Integer(value) => value.to_string(),
-            Self::Float(value) => value.to_string(),
-            Self::String(value) => value.clone(),
+            Self::Float(value) if value.is_finite() => value.to_string(),
+            Self::Float(_) => "null".to_string(),
+            Self::String(value) => serde_json::Value::String(value.clone()).to_string(),
         }
     }
 
@@ -116,7 +119,20 @@ pub enum EffectKind {
     WriteBack { source: String },
 }
 
-/// One effect; `template` names parameters as `{{name}}`.
+impl EffectKind {
+    /// The keys the JSON body of this effect kind carries, sorted.
+    pub fn body_keys(&self) -> &'static [&'static str] {
+        match self {
+            Self::SetProperty => &["node", "property", "value"],
+            Self::CreateNode => &["id", "label", "properties"],
+            Self::AddEdge => &["from", "label", "to"],
+            Self::WriteBack { .. } => &["body", "target"],
+        }
+    }
+}
+
+/// One effect; `template` is JSON text whose values may be `{{name}}`
+/// placeholders, each replaced by the parameter's JSON value.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ActionEffectSpec {
@@ -174,11 +190,21 @@ pub struct CriterionVerdict {
     pub passed: bool,
 }
 
-/// One resolved effect.
+/// How a resolved effect leaves the run: applied in the mutation batch, or
+/// proposed through the governed write-back path (never written directly).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum EffectDisposition {
+    Applied,
+    Proposed,
+}
+
+/// One resolved effect; `text` is its JSON body.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ResolvedEffect {
     pub kind: EffectKind,
     pub text: String,
+    pub disposition: EffectDisposition,
 }
 
 /// The stored record of one action run.
@@ -192,7 +218,8 @@ pub struct ActionRun {
     pub refusal: Option<ActionRefusal>,
 }
 
-/// Resolve `{{name}}` placeholders in one left-to-right pass.
+/// Resolve `{{name}}` placeholders in one left-to-right pass, O(template
+/// bytes): substituted text is never rescanned.
 pub fn resolve_template(
     template: &str,
     params: &BTreeMap<String, ParamValue>,
@@ -209,14 +236,49 @@ pub fn resolve_template(
         let value = params
             .get(name)
             .ok_or_else(|| ActionRefusal::UnknownParameter(name.to_string()))?;
-        out.push_str(&value.render());
+        out.push_str(&value.render_json());
         rest = &after[end + 2..];
     }
     out.push_str(rest);
     Ok(out)
 }
 
+/// Check that `body` is a JSON object carrying exactly the keys of `kind`.
+fn check_body(kind: &EffectKind, body: &str) -> Result<(), ActionRefusal> {
+    let value: serde_json::Value = serde_json::from_str(body)
+        .map_err(|e| ActionRefusal::InvalidSpec(format!("effect body is not JSON: {e}")))?;
+    let object = value
+        .as_object()
+        .ok_or_else(|| ActionRefusal::InvalidSpec("effect body is not an object".to_string()))?;
+    let keys: Vec<&str> = object.keys().map(String::as_str).collect();
+    if keys != kind.body_keys() {
+        return Err(ActionRefusal::InvalidSpec(format!(
+            "effect body keys {keys:?}, expected {:?}",
+            kind.body_keys()
+        )));
+    }
+    Ok(())
+}
+
 impl ActionSpec {
+    /// Registration check: every effect template, with each placeholder
+    /// standing in as `null`, is a JSON body of its kind, and every
+    /// placeholder names a declared parameter.
+    pub fn validate(&self) -> Result<(), ActionRefusal> {
+        let stand_in: BTreeMap<String, ParamValue> = self
+            .params
+            .iter()
+            .map(|p| (p.name.clone(), ParamValue::Float(f64::NAN)))
+            .collect();
+        for effect in &self.effects {
+            check_body(
+                &effect.kind,
+                &resolve_template(&effect.template, &stand_in)?,
+            )?;
+        }
+        Ok(())
+    }
+
     fn check_params(&self, args: &BTreeMap<String, ParamValue>) -> Result<(), ActionRefusal> {
         let declared: BTreeMap<&str, &ActionParameter> =
             self.params.iter().map(|p| (p.name.as_str(), p)).collect();
@@ -275,9 +337,14 @@ impl ActionSpec {
                         return Err(ActionRefusal::UnattachedWriteBack(source.clone()));
                     }
                 }
+                let disposition = match effect.kind {
+                    EffectKind::WriteBack { .. } => EffectDisposition::Proposed,
+                    _ => EffectDisposition::Applied,
+                };
                 Ok(ResolvedEffect {
                     kind: effect.kind.clone(),
                     text: resolve_template(&effect.template, args)?,
+                    disposition,
                 })
             })
             .collect()
@@ -358,14 +425,16 @@ mod tests {
             effects: vec![
                 ActionEffectSpec {
                     kind: EffectKind::SetProperty,
-                    template: "order/{{order}} refund={{amount}}".to_string(),
+                    template: r#"{"node":{{order}},"property":"refund","value":{{amount}}}"#
+                        .to_string(),
                 },
                 ActionEffectSpec {
                     kind: EffectKind::WriteBack {
                         source: "erp".to_string(),
                     },
-                    template: "UPDATE orders SET refunded={{amount}} WHERE id='{{order}}'"
-                        .to_string(),
+                    template:
+                        r#"{"body":{"refunded":{{amount}},"id":{{order}}},"target":"orders"}"#
+                            .to_string(),
                 },
             ],
         }
@@ -447,6 +516,85 @@ mod tests {
         let applied = spec().submit(args(10), &attached());
         assert_eq!(applied.status, ActionStatus::Applied);
         assert_eq!(applied.verdicts.len(), 2);
-        assert_eq!(applied.effects[0].text, "order/o-7 refund=10");
+        assert_eq!(
+            applied.effects[0].text,
+            r#"{"node":"o-7","property":"refund","value":10}"#
+        );
+    }
+
+    // spec: MEDULLA-UNIFIED-DATA-PLANE-R700.2
+    #[test]
+    fn template_resolution_is_single_pass() {
+        assert_eq!(spec().validate(), Ok(()));
+        // A value that looks like a placeholder is never re-expanded.
+        let mut tricky = args(10);
+        tricky.insert(
+            "order".to_string(),
+            ParamValue::String("{{amount}}\"x".to_string()),
+        );
+        let run = spec().submit(tricky, &attached());
+        assert_eq!(run.status, ActionStatus::Applied);
+        let body: serde_json::Value = serde_json::from_str(&run.effects[0].text).unwrap();
+        assert_eq!(body["node"], "{{amount}}\"x");
+        assert_eq!(run.effects[1].disposition, EffectDisposition::Proposed);
+        assert_eq!(run.effects[0].disposition, EffectDisposition::Applied);
+        for count in [10usize, 1_000, 100_000] {
+            let mut wide = spec();
+            wide.effects = (0..count)
+                .map(|i| ActionEffectSpec {
+                    kind: EffectKind::SetProperty,
+                    template: format!(
+                        r#"{{"node":{{{{order}}}},"property":"p{i}","value":{{{{amount}}}}}}"#
+                    ),
+                })
+                .collect();
+            assert_eq!(wide.validate(), Ok(()));
+            let run = wide.submit(args(7), &attached());
+            assert_eq!(run.status, ActionStatus::Applied);
+            assert_eq!(run.effects.len(), count);
+            let last: serde_json::Value =
+                serde_json::from_str(&run.effects[count - 1].text).unwrap();
+            assert_eq!(last["property"], format!("p{}", count - 1));
+            assert_eq!(last["value"], 7);
+        }
+        let mut bad = spec();
+        bad.effects[0].template = r#"{"node":{{order}}}"#.to_string();
+        assert_eq!(bad.validate().unwrap_err().code(), "ACTION_SPEC_INVALID");
+        bad.effects[0].template = r#"{"node":{{nope}},"property":"p","value":1}"#.to_string();
+        assert_eq!(
+            bad.validate().unwrap_err().code(),
+            "ACTION_UNKNOWN_PARAMETER"
+        );
+    }
+
+    // spec: MEDULLA-UNIFIED-DATA-PLANE-R700.2
+    #[test]
+    fn criteria_stop_at_first_failure() {
+        // Fails the first criterion: only its verdict is recorded.
+        let run = spec().submit(args(0), &attached());
+        assert_eq!(
+            run.verdicts,
+            vec![CriterionVerdict {
+                criterion: "positive".to_string(),
+                passed: false
+            }]
+        );
+        // Fails the second: the first passed verdict precedes it.
+        let run = spec().submit(args(900), &attached());
+        let order: Vec<(&str, bool)> = run
+            .verdicts
+            .iter()
+            .map(|v| (v.criterion.as_str(), v.passed))
+            .collect();
+        assert_eq!(order, vec![("positive", true), ("under_limit", false)]);
+        // Parameters are checked before any criterion.
+        let mut mistyped = args(900);
+        mistyped.insert("amount".to_string(), ParamValue::Boolean(true));
+        let run = spec().submit(mistyped, &attached());
+        assert!(run.verdicts.is_empty());
+        assert_eq!(
+            run.refusal.unwrap().code(),
+            "ACTION_PARAMETER_TYPE_MISMATCH"
+        );
     }
 }

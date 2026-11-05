@@ -108,6 +108,7 @@ fn still_wanted(cancel: &RequestCancel) -> Result<(), String> {
 mod tests {
     use super::*;
 
+    // spec: MEDULLA-TYPED-PACKS-R001.2
     #[test]
     fn section_ranges_are_checked_without_wrapping() {
         let bytes = b"abcdef";

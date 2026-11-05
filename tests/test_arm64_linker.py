@@ -251,4 +251,12 @@ def test_preparation_is_optional_and_cannot_replace_linker_preflight():
         if step.get("uses") == "./.github/actions/release-maturin"
     ]
     assert len(builds) == 2
-    assert all("prepare-script" not in step["with"] for step in builds)
+    numeric = next(step for step in builds if "numdist" in step["with"]["args"])
+    assert "prepare-script" not in numeric["with"]
+    # The engine build compiles the server in-container only when no prebuilt
+    # server artifact is supplied (single-job callers); release.yml's wheel jobs
+    # fold the binary built once by the server-binary job.
+    engine = next(step for step in builds if step is not numeric)
+    assert engine["with"]["prepare-script"] == (
+        "${{ inputs.server-artifact == '' && 'scripts/build_release_server.sh' || '' }}"
+    )

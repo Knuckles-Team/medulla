@@ -244,6 +244,10 @@ _UNCONDITIONAL_WRITES_AT_BASE = (
         "DecisionCommit",
         "EnrichDocument",
         "GraphSchema",
+        "MeetingSummaryCommit",
+        "MeetingSummaryContext",
+        "MeetingTranscriptRevision",
+        "LineageIngest",
         "SourceIngest",
         "TelemetryDerive",
     }

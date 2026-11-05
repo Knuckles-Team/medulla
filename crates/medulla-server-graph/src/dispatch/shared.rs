@@ -53,6 +53,41 @@ pub async fn ensure_graph_resident(state: &Arc<RwLock<ServerState>>, graph: &str
     let _ = (state, graph);
 }
 
+/// Typed refusal prefix for a catalog-known graph the internal lifecycle could not open.
+pub const CATALOG_GRAPH_OPEN_REFUSED: &str = "UNAVAILABLE: catalog graph did not open";
+
+/// Make a catalog-known graph resident for an internal lifecycle operation
+/// (MEDULLA-DURABLE-KERNEL-R861.3).
+///
+/// A catalog record is not a resident graph: after a restart the catalog can
+/// know a graph whose core is cold. This opens it through the same lazy-open
+/// path routed graph operations use and refuses, naming the graph and the
+/// cause, when the open does not publish it. Writes no record.
+pub async fn ensure_catalog_graph_resident(
+    state: &Arc<RwLock<ServerState>>,
+    graph: &str,
+) -> Result<(), String> {
+    {
+        let s = timed_read(state).await;
+        if s.registry.is_resident(graph) {
+            return Ok(());
+        }
+        if !s.registry.exists(graph) {
+            return Err(format!(
+                "{CATALOG_GRAPH_OPEN_REFUSED}: graph '{graph}': not in the graph catalog"
+            ));
+        }
+    }
+    ensure_graph_resident(state, graph).await;
+    if timed_read(state).await.registry.is_resident(graph) {
+        Ok(())
+    } else {
+        Err(format!(
+            "{CATALOG_GRAPH_OPEN_REFUSED}: graph '{graph}': the durable tier did not materialize it"
+        ))
+    }
+}
+
 pub fn authorized_graph_read(
     state: &ServerState,
     graph: &str,
@@ -414,3 +449,86 @@ pub const MAX_REGISTER_SERVER_RESOURCES_BYTES: usize = 16 * 1024;
 // this window (the stale-lease reaper never waits longer than the registered TTL).
 pub const MIN_REGISTER_SERVER_TTL_SECS: u64 = 1;
 pub const MAX_REGISTER_SERVER_TTL_SECS: u64 = 24 * 60 * 60;
+
+#[cfg(all(test, feature = "redb"))]
+mod internal_global_graph_residency_tests {
+    use super::{ensure_catalog_graph_resident, CATALOG_GRAPH_OPEN_REFUSED};
+    use medulla_protocol_types::protocol::{GraphType, Method};
+    use medulla_server_api::state::ServerState;
+    use medulla_server_auth::auth::build_current_test_request;
+    use medulla_server_auth::auth::dispatch_test_on_heap as dispatch_on_heap;
+
+    const SECRET: &str = "internal-lifecycle-residency";
+    const AGENT: &str = "unit-test-agent";
+
+    // spec: MEDULLA-DURABLE-KERNEL-R861.3
+    #[tokio::test(flavor = "multi_thread")]
+    async fn cold_catalog_graph_is_rematerialized_by_internal_lifecycle_ensure() {
+        let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
+        let dir = tempfile::tempdir().expect("tempdir");
+        let dir_s = dir.path().to_string_lossy().to_string();
+        let state = medulla_persistence::cold_offload::test_redb_state(
+            SECRET,
+            &dir_s,
+            ServerState::test_isolation(AGENT),
+            64,
+        )
+        .await;
+        medulla_server::seams_install::install_seams_on(&state).await;
+        let graph = "pack:cold";
+        let request = |id, method| {
+            build_current_test_request(SECRET, "tenant-shared", id, graph, AGENT, method)
+        };
+        let created = dispatch_on_heap(
+            &state,
+            request(
+                1,
+                Method::CreateGraph {
+                    graph_name: graph.into(),
+                    graph_type: GraphType::Agent,
+                },
+            ),
+        )
+        .await;
+        assert!(created.error.is_none(), "create: {:?}", created.error);
+        let added = dispatch_on_heap(
+            &state,
+            request(
+                2,
+                Method::AddNode {
+                    node_id: "n1".into(),
+                    properties_msgpack: rmp_serde::to_vec(&serde_json::json!({"k": "v"}))
+                        .expect("encode"),
+                },
+            ),
+        )
+        .await;
+        assert!(added.error.is_none(), "add: {:?}", added.error);
+        assert!(state.write().await.registry.evict_resident(graph));
+        assert!(!state.read().await.registry.is_resident(graph));
+        assert!(
+            state.read().await.registry.exists(graph),
+            "catalog keeps it"
+        );
+
+        ensure_catalog_graph_resident(&state, graph)
+            .await
+            .expect("cold catalog graph opens");
+        let core = state
+            .read()
+            .await
+            .registry
+            .get(graph)
+            .expect("resident")
+            .core
+            .clone();
+        assert_eq!(core.node_count(), 1);
+        assert!(core.get_node_properties("n1").is_some());
+
+        let refused = ensure_catalog_graph_resident(&state, "pack:absent")
+            .await
+            .expect_err("unknown graph refuses");
+        assert!(refused.starts_with(CATALOG_GRAPH_OPEN_REFUSED));
+        assert!(refused.contains("pack:absent"));
+    }
+}

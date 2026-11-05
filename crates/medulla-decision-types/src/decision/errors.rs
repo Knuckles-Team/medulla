@@ -41,5 +41,8 @@ closed_error_codes! {
         /// The record is structurally valid but not the decision the engine
         /// would commit: a derivation or evidence class does not re-check.
         DerivationRejected => "DERIVATION_REJECTED",
+        /// A required input media type is not declared by the selected
+        /// model profile, or the profile declares no input capabilities.
+        ModelMediaCapabilityUnknown => "MODEL_MEDIA_CAPABILITY_UNKNOWN",
     }
 }

@@ -46,6 +46,10 @@ pub struct TranscriptMessage {
     pub role: TranscriptRole,
     pub event_time_ms: i64,
     pub storage_time_ms: i64,
+    /// Time inside the narrated story, when the source supplies one
+    /// (MEDULLA-MEDIA-VOCAB-R654). Absent stays absent.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub narrative_time_ms: Option<i64>,
     pub text: String,
     #[serde(default)]
     pub concept_refs: Vec<String>,
@@ -128,6 +132,40 @@ impl TranscriptThread {
     }
 }
 
+/// The three clocks of a transcript segment (MEDULLA-MEDIA-VOCAB-R654):
+/// `(property, source payload field)`. Each property has `<property>_source`
+/// and `<property>_provenance` companions declared in `media-v1.ttl`.
+pub const SEGMENT_CLOCKS: [(&str, &str); 3] = [
+    ("storage_time", "storage_time_ms"),
+    ("event_time", "event_time_ms"),
+    ("narrative_time", "narrative_time_ms"),
+];
+
+/// Typed clock properties of one transcript segment, read from the source
+/// payload. A clock the source does not supply (or supplies as a non-integer)
+/// stays absent: nothing is derived or filled from another clock.
+pub fn segment_clock_properties(
+    payload: &serde_json::Map<String, serde_json::Value>,
+    provenance: &crate::source_ingestion::SourceRecordProvenance,
+) -> serde_json::Map<String, serde_json::Value> {
+    let mut out = serde_json::Map::new();
+    for (property, field) in SEGMENT_CLOCKS {
+        let Some(value) = payload.get(field).and_then(serde_json::Value::as_i64) else {
+            continue;
+        };
+        out.insert(property.into(), value.into());
+        out.insert(
+            format!("{property}_source"),
+            format!("{}/{}", provenance.server, provenance.tool).into(),
+        );
+        out.insert(
+            format!("{property}_provenance"),
+            provenance.source_uri.clone().into(),
+        );
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use serde_json::json;
@@ -189,6 +227,7 @@ mod tests {
             role: TranscriptRole::Assistant,
             event_time_ms: 1_700_000_000_000,
             storage_time_ms: 1_700_000_005_000,
+            narrative_time_ms: None,
             text: "hello".into(),
             concept_refs: vec!["concept:greeting".into()],
             provenance: TranscriptProvenance {

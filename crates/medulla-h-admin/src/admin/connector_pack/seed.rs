@@ -13,6 +13,8 @@ use medulla_catalog_types::{
     connector_pack::SeedGraphImport, connector_pack::SeedPart, connector_pack::SeedPartKey,
 };
 #[cfg(test)]
+use medulla_graph_core::graph::GraphSchemaSources;
+#[cfg(test)]
 use medulla_rdf::oxrdf::{BlankNode, Graph, NamedOrBlankNode, Term, Triple};
 #[cfg(test)]
 use medulla_types::contract::Digest256;
@@ -78,6 +80,7 @@ pub(crate) fn prepare_seed_import(
     seed: &SeedGraphImport,
     current: Option<&SeedGraphState>,
     shapes: &Graph,
+    sources: &GraphSchemaSources,
 ) -> Result<SeedImportPlan, String> {
     let total_bytes = seed.parts.values().try_fold(0usize, |total, part| {
         total
@@ -90,6 +93,7 @@ pub(crate) fn prepare_seed_import(
         ));
     }
 
+    let domain_predicates = domain_predicates(sources)?;
     let mut parts = current.map(|state| state.parts.clone()).unwrap_or_default();
     let mut changed_parts = BTreeSet::new();
     let mut total_triples = 0usize;
@@ -100,7 +104,7 @@ pub(crate) fn prepare_seed_import(
                 key, part.key
             ));
         }
-        let validated = validate_seed_part(part, shapes)?;
+        let validated = validate_seed_part(part, shapes, &domain_predicates)?;
         total_triples = total_triples
             .checked_add(validated.triple_count)
             .ok_or_else(|| "SEED_TOO_LARGE: seed triple count overflow".to_string())?;
@@ -158,9 +162,22 @@ pub(crate) fn canonical_digest(turtle: &str) -> Result<Digest256, String> {
 }
 
 #[cfg(test)]
-fn validate_seed_part(part: &SeedPart, shapes: &Graph) -> Result<SeedPartState, String> {
+fn validate_seed_part(
+    part: &SeedPart,
+    shapes: &Graph,
+    domain_predicates: &BTreeSet<String>,
+) -> Result<SeedPartState, String> {
     let triples = medulla_rdf::mapping::parse_turtle_bounded(&part.turtle, MAX_SEED_TRIPLES)
         .map_err(|error| format!("SEED_TURTLE_INVALID: {error}"))?;
+    if let Some(triple) = triples
+        .iter()
+        .find(|triple| domain_predicates.contains(triple.predicate.as_str()))
+    {
+        return Err(format!(
+            "SEED_BULK_DATA: {:?} uses domain predicate {} on {}",
+            part.key, triple.predicate, triple.subject
+        ));
+    }
     let mut data = Graph::new();
     for triple in &triples {
         data.insert(triple);
@@ -197,6 +214,45 @@ fn validate_seed_part(part: &SeedPart, shapes: &Graph) -> Result<SeedPartState, 
         canonical_nquads,
         triple_count: triples.len(),
     })
+}
+
+/// Every predicate declared by a schema source whose role is not `identity`,
+/// `catalog` or `reference` (R104.4). The importer assigns `domain` to the
+/// importing pack's own source, so those predicates are the pack's bulk-data
+/// vocabulary and no seed triple may use them.
+#[cfg(test)]
+fn domain_predicates(sources: &GraphSchemaSources) -> Result<BTreeSet<String>, String> {
+    const PROPERTY_TYPES: [&str; 4] = [
+        "http://www.w3.org/1999/02/22-rdf-syntax-ns#Property",
+        "http://www.w3.org/2002/07/owl#ObjectProperty",
+        "http://www.w3.org/2002/07/owl#DatatypeProperty",
+        "http://www.w3.org/2002/07/owl#AnnotationProperty",
+    ];
+    const RDF_TYPE: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
+    let mut predicates = BTreeSet::new();
+    for (id, source) in sources.all() {
+        if source.role.allows_seed_predicates() {
+            continue;
+        }
+        let Some(ontology) = source.ontology_ttl.as_deref() else {
+            continue;
+        };
+        let triples = medulla_rdf::mapping::parse_turtle_bounded(ontology, MAX_SEED_TRIPLES)
+            .map_err(|error| format!("SEED_INVALID: schema source {id} ontology: {error}"))?;
+        for triple in &triples {
+            if triple.predicate.as_str() != RDF_TYPE {
+                continue;
+            }
+            if let (NamedOrBlankNode::NamedNode(subject), Term::NamedNode(object)) =
+                (&triple.subject, &triple.object)
+            {
+                if PROPERTY_TYPES.contains(&object.as_str()) {
+                    predicates.insert(subject.as_str().to_string());
+                }
+            }
+        }
+    }
+    Ok(predicates)
 }
 
 /// Serialize a triple set as sorted, duplicate-free N-Quads with stable local
