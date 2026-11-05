@@ -38,3 +38,18 @@
         sh:message "A HostLimit row carries exactly one declared limit."
     ] ;
     sh:message "A host limit names its host, kind, one reading and one limit." .
+
+# A host that reports a reading also states the limit it is read against
+# (MEDULLA-CQ-XSRC-R008.2.2). A host with neither reading is accepted. Each
+# pair is `sh:or` of a negated reading property and a required limit property.
+:HostReadingLimitPairShape a sh:NodeShape ;
+    sh:targetClass :Host ;
+    sh:or ( [ sh:not [ sh:path :temperatureCelsius ; sh:minCount 1 ] ]
+            [ sh:path :temperatureLimitCelsius ; sh:minCount 1 ] ) ;
+    sh:message "HOST_LIMIT_MISSING" .
+
+:HostCapacityLimitPairShape a sh:NodeShape ;
+    sh:targetClass :Host ;
+    sh:or ( [ sh:not [ sh:path :capacityUtilization ; sh:minCount 1 ] ]
+            [ sh:path :capacityLimit ; sh:minCount 1 ] ) ;
+    sh:message "HOST_LIMIT_MISSING" .

@@ -509,6 +509,12 @@ to another (e.g., from direct container management to orchestrator-managed).""" 
     rdfs:domain :Host ;
     rdfs:range xsd:decimal .
 
+:capacityLimit a owl:DatatypeProperty ;
+    rdfs:label "capacity limit" ;
+    rdfs:comment "The declared capacity ceiling (disk, memory or cpu) a host's :capacityUtilization is measured against. The limit is stated as data on the host, never hard-coded in a query." ;
+    rdfs:domain :Host ;
+    rdfs:range xsd:decimal .
+
 :limitOf a owl:ObjectProperty ;
     rdfs:label "limit of" ;
     rdfs:comment "Links a HostLimit row to the host it constrains." ;

@@ -65,3 +65,14 @@
     rdfs:label "Intrusion Decision" ;
     rdfs:comment "An edge-security remediation decision (CrowdSec ban/captcha) against a scope value; the ban target is kept whole because the decision is about exactly that address (producer: caddy-mcp)." ;
     rdfs:subClassOf :SecurityAuditEvent .
+
+:OidcClient a owl:Class ;
+    rdfs:label "OIDC Client" ;
+    rdfs:comment "An OpenID Connect client registered with an identity provider; it is the application that signs users in (producer: keycloak)." ;
+    rdfs:subClassOf :Application .
+
+:roleGrantsAccessTo a owl:ObjectProperty ;
+    rdfs:label "role grants access to" ;
+    rdfs:comment "Links an :IdentityRole to an :Application the role grants access to." ;
+    rdfs:domain :IdentityRole ;
+    rdfs:range :Application .

@@ -422,3 +422,25 @@
     rdfs:comment "Links an ARIS :ProcessModel to the EPC node (function or rule operator) contained in its chart." ;
     rdfs:domain :ProcessModel ;
     rdfs:range :ProcessEventType .
+
+:ProcessInstance a owl:Class ;
+    rdfs:label "Process Instance" ;
+    rdfs:comment "One running or finished execution of a :ProcessModelVersion (producer: camunda)." .
+
+:instanceOfProcessModel a owl:ObjectProperty ;
+    rdfs:label "instance of process model" ;
+    rdfs:comment "Links a :ProcessInstance to the :ProcessModelVersion it executes." ;
+    rdfs:domain :ProcessInstance ;
+    rdfs:range :ProcessModelVersion .
+
+:stoppedAtActivity a owl:ObjectProperty ;
+    rdfs:label "stopped at activity" ;
+    rdfs:comment "Links a :ProcessInstance to the :ProcessEventType (activity) at which it stopped." ;
+    rdfs:domain :ProcessInstance ;
+    rdfs:range :ProcessEventType .
+
+:raisedIncident a owl:ObjectProperty ;
+    rdfs:label "raised incident" ;
+    rdfs:comment "Links a :ProcessInstance to the :ApplicationEvent (the archimate crosswalk anchor) it raised." ;
+    rdfs:domain :ProcessInstance ;
+    rdfs:range :ApplicationEvent .

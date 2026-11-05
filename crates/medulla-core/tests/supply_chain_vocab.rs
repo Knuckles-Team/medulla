@@ -2071,3 +2071,83 @@ ex:acmeCustomer a kg:Customer ;
         report.results
     );
 }
+
+const HOST_PAIR_PREFIX: &str = r#"
+@prefix infra: <http://knuckles.team/kg/infrastructure#> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+@prefix ex:    <http://knuckles.team/test/host-pair#> .
+"#;
+
+fn refuses_with_message(shapes: &str, data: &str, message: &str) {
+    let report = medulla_shacl::validate_turtle(shapes, data).expect("fixture parses");
+    assert!(
+        !report.conforms,
+        "the fixture must be refused: {:?}",
+        report.results
+    );
+    assert!(
+        report
+            .results
+            .iter()
+            .any(|result| result.message.as_deref() == Some(message)),
+        "the refusal carries {message}: {:?}",
+        report.results
+    );
+}
+
+// spec: MEDULLA-CQ-XSRC-R008.2.2
+#[test]
+fn host_limit_pair_shape() {
+    let accepts = |body: &str| {
+        let data = format!("{HOST_PAIR_PREFIX}{body}");
+        let report = medulla_shacl::validate_turtle(INFRA_SHAPES, &data).expect("fixture parses");
+        assert!(report.conforms, "{body}: {:?}", report.results);
+    };
+    // A host with neither reading, and hosts with each complete pair.
+    accepts("ex:h a infra:Host .");
+    accepts(
+        "ex:h a infra:Host ; infra:temperatureCelsius 61.5 ; infra:temperatureLimitCelsius 85 .",
+    );
+    accepts("ex:h a infra:Host ; infra:capacityUtilization 0.4 ; infra:capacityLimit 1 .");
+    // A limit without a reading is not a violation.
+    accepts("ex:h a infra:Host ; infra:temperatureLimitCelsius 85 .");
+    // A reading with no limit is refused, for both pairs.
+    for body in [
+        "ex:h a infra:Host ; infra:temperatureCelsius 61.5 .",
+        "ex:h a infra:Host ; infra:capacityUtilization 0.4 .",
+        "ex:h a infra:Host ; infra:temperatureCelsius 61.5 ; infra:capacityLimit 1 .",
+        "ex:h a infra:Host ; infra:capacityUtilization 0.4 ; infra:temperatureLimitCelsius 85 .",
+    ] {
+        refuses_with_message(
+            INFRA_SHAPES,
+            &format!("{HOST_PAIR_PREFIX}{body}"),
+            "HOST_LIMIT_MISSING",
+        );
+    }
+}
+
+// spec: MEDULLA-CQ-XSRC-R008.3.2
+#[test]
+fn customer_contract_shape() {
+    let shapes = commercial_shapes();
+    let valid = format!(
+        "{COMMERCE_DATA_PREFIX}
+ex:c a kg:CustomerContract ; kg:contractCustomer ex:org ; kg:coversService ex:svc .
+ex:org a kg:Customer .
+ex:svc a infra:Service ."
+    );
+    let report = medulla_shacl::validate_turtle(&shapes, &valid).expect("fixture parses");
+    assert!(report.conforms, "{:?}", report.results);
+    let no_customer = format!(
+        "{COMMERCE_DATA_PREFIX}
+ex:c a kg:CustomerContract ; kg:coversService ex:svc .
+ex:svc a infra:Service ."
+    );
+    refuses_with_message(&shapes, &no_customer, "CONTRACT_CUSTOMER_MISSING");
+    let no_service = format!(
+        "{COMMERCE_DATA_PREFIX}
+ex:c a kg:CustomerContract ; kg:contractCustomer ex:org .
+ex:org a kg:Customer ."
+    );
+    refuses_with_message(&shapes, &no_service, "CONTRACT_SERVICE_MISSING");
+}

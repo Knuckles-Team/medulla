@@ -1,0 +1,21 @@
+@prefix : <http://knuckles.team/kg#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+:WebSnapshotShape a sh:NodeShape ;
+    sh:targetClass :WebSnapshot ;
+    sh:property [ sh:path :sourceRef ; sh:minCount 1 ;
+        sh:message "A web snapshot needs its source URL (:sourceRef)." ] .
+
+:ArchiveResultShape a sh:NodeShape ;
+    sh:targetClass :ArchiveResult ;
+    sh:property [ sh:path :extractorName ; sh:minCount 1 ;
+        sh:message "An archive result needs its :extractorName." ],
+    [ sh:path :resultStatus ; sh:minCount 1 ;
+        sh:message "An archive result needs its :resultStatus." ] .
+
+:ArchiveResultStatusShape a sh:NodeShape ;
+    sh:targetClass :ArchiveResult ;
+    sh:property [ sh:path :resultStatus ;
+        sh:in ( "succeeded" "failed" "skipped" ) ;
+        sh:message "An archive result status is succeeded, failed or skipped." ] .

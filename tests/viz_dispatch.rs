@@ -295,6 +295,34 @@ async fn capability_matrix_is_reachable_over_the_wire() {
             let value: serde_json::Value = rmp_serde::from_slice(bytes).unwrap();
             let entries = value["entries"].as_array().expect("entries array");
             assert!(!entries.is_empty(), "capability matrix must not be empty");
+            // MEDULLA-FEDERATED-QUERY-R087.1: the static-export surface is in the
+            // matrix, and the export formats are exactly PNG, SVG and PDF on both
+            // the contract trait and its wire mirror; there is no HTML export.
+            assert!(
+                entries
+                    .iter()
+                    .any(|entry| entry["surface"] == serde_json::json!("static_export")),
+                "the matrix lists the static_export surface"
+            );
+            let wire = [VizFormat::Png, VizFormat::Svg, VizFormat::Pdf];
+            let contract = [
+                medulla_viz_core::StaticExportFormat::Png,
+                medulla_viz_core::StaticExportFormat::Svg,
+                medulla_viz_core::StaticExportFormat::Pdf,
+            ];
+            for (wire, contract) in wire.iter().zip(contract.iter()) {
+                assert_eq!(
+                    serde_json::to_value(wire).unwrap(),
+                    serde_json::to_value(contract).unwrap()
+                );
+            }
+            assert!(serde_json::from_value::<VizFormat>(serde_json::json!("html")).is_err());
+            assert!(
+                serde_json::from_value::<medulla_viz_core::StaticExportFormat>(serde_json::json!(
+                    "html"
+                ))
+                .is_err()
+            );
         }
         other => panic!("expected Raw result, got {other:?}"),
     }

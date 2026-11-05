@@ -747,7 +747,9 @@ fn core_specs() -> &'static [CoreSpec] {
         CoreSpec {
             module: "archimate",
             version: 1,
-            shapes: None,
+            shapes: Some(include_str!(
+                "../../../medulla-core/ontology/archimate-v1.shapes.ttl"
+            )),
             ontology: Some(include_str!(
                 "../../../medulla-core/ontology/archimate-v1.ttl"
             )),
@@ -835,6 +837,16 @@ fn core_specs() -> &'static [CoreSpec] {
             ontology: Some(include_str!(
                 "../../../medulla-core/ontology/documentation-v1.ttl"
             )),
+        },
+        // The documentation SHACL shapes are their own core source, the same
+        // pattern as orchestration-shapes and finance-shapes.
+        CoreSpec {
+            module: "documentation-shapes",
+            version: 1,
+            shapes: Some(include_str!(
+                "../../../medulla-core/ontology/documentation-v1.shapes.ttl"
+            )),
+            ontology: None,
         },
         CoreSpec {
             module: "energy_geopolitics",
@@ -1254,7 +1266,7 @@ mod tests {
     fn core_catalog_has_one_version_per_module_and_is_outside_dynamic_quota() {
         let sources = GraphSchemaSources::default();
         sources.validate().unwrap();
-        assert_eq!(sources.core.len(), 56);
+        assert_eq!(sources.core.len(), 57);
         assert!(sources.dynamic.is_empty());
         assert!(sources.core.keys().all(|id| id.starts_with("core:")));
     }
@@ -1576,12 +1588,16 @@ mod tests {
                 "d902c03b433aa907695f22b32515686b141f459b81b85cc3136ca95b858d5ca6",
             ),
             (
+                "documentation-shapes",
+                "4d216cfad35c108fe5b7708ca25c7163c6003376f8f0e5731cf16206915b7f27",
+            ),
+            (
                 "energy_geopolitics",
                 "36f99061e8c71f8c4b3d0fdb4c26e1993fbbc31bf033028bab2dfd95d1d14d20",
             ),
             (
                 "enterprise",
-                "7ec8ca794b81774227d8a660c1cd2cafd25230921d3b0eb89ee2690b2fd67a27",
+                "afc4f45cc9e83fe0b1cc1f1d7da677a81a23533d8c6d9f19c412c8c7b523b5a7",
             ),
             (
                 "governance-shapes",
@@ -1605,11 +1621,11 @@ mod tests {
             ),
             (
                 "identity",
-                "b32a277c15f100d26175c2a1a24af63151a50b8f6fb54f953cbc66626c1c8828",
+                "1f90ee14a47c5ee12a472f1857afab21d0da22ef13c0f564827216a6823f56f1",
             ),
             (
                 "infrastructure",
-                "b9a9741a05482e67d6eab6c61e298c8dc55031f5ad1fb82f82f2a937e2e56db7",
+                "d3b0e56625a9ef1385904f564ba9abcca1ef6597c1fd94266961b322b2f27d93",
             ),
             (
                 "medical",
@@ -1633,7 +1649,7 @@ mod tests {
             ),
             (
                 "process_intelligence",
-                "5bcd57f2f092c49158cc3b61d51566b0ce60674efe7ba0642b38c98a0ace6d0d",
+                "d36cd668054eb742ea1c733b8c48a041a166fad72c098cbd19243c625f39deb2",
             ),
             (
                 "sdd",
@@ -1689,7 +1705,7 @@ mod tests {
             ),
             (
                 "nutrition",
-                "06772fb766c86eda3c3acf70dda010a948f6917c496415a0df1a64ae2dac27ad",
+                "346f543aeabea7d23468fd187a4e4dbb711107029524fb7cf04c5d547568b3b5",
             ),
             (
                 "world-model-shapes",
@@ -1733,7 +1749,7 @@ mod tests {
             ),
             (
                 "virtual-graph",
-                "cbcec36092637964d49faf2178d3930bb2a0a32d7d0586b9b4acadf9fc2eaa57",
+                "c64cefcffe5855dd17d457dab3cdb644bc4cbcd940a4e4526d2f9c99ca9af9ff",
             ),
             (
                 "virtual-graph-shapes",
