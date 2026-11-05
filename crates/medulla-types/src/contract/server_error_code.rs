@@ -142,6 +142,8 @@ closed_error_codes! {
         InvalidFacts => "INVALID_FACTS",
         InvalidImporter => "INVALID_IMPORTER",
         InvalidRetirement => "INVALID_RETIREMENT",
+        KvBlockDigestMismatch => "KV_BLOCK_DIGEST_MISMATCH",
+        KvColdWriteFailed => "KV_COLD_WRITE_FAILED",
         MalformedBody => "MALFORMED_BODY",
         MalformedIndex => "MALFORMED_INDEX",
         MethodNotYetServed => "METHOD_NOT_YET_SERVED",
