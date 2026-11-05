@@ -1,8 +1,8 @@
 //! Data product, contract and access-request records (MEDULLA-TYPED-PACKS-R805.1).
 
 use medulla_types::data_product::{
-    ACCESS_PURPOSE_MISSING, AccessRequest, AccessRequestState, ContractPromise, ContractViolation,
-    DataContract, DataProduct, ProductPort, ProductPortKind, parse_product_version,
+    parse_product_version, AccessRequest, AccessRequestState, ContractPromise, ContractViolation,
+    DataContract, DataProduct, ProductPort, ProductPortKind, ACCESS_PURPOSE_MISSING,
 };
 
 fn round_trip<T>(value: &T) -> T
@@ -118,10 +118,8 @@ fn invalid_records_are_refused() {
         grant_ref: None,
     };
     assert_eq!(request.validate().unwrap_err().code, ACCESS_PURPOSE_MISSING);
-    assert!(
-        serde_json::from_value::<AccessRequest>(serde_json::json!({
-            "product": "p", "principal": "u", "purpose": "x", "state": "granted"
-        }))
-        .is_err()
-    );
+    assert!(serde_json::from_value::<AccessRequest>(serde_json::json!({
+        "product": "p", "principal": "u", "purpose": "x", "state": "granted"
+    }))
+    .is_err());
 }
