@@ -19,7 +19,18 @@ One row per leaf requirement. A planned test names the exact path that the row a
 |---|---|---|---|
 | `MEDULLA-CONTRACT-R001.1` | `tests/test_wire_vectors.py::test_manifest_lists_every_exported_type_and_digest` (planned) | L2 | (L2). The cross-repo journey is `tests/harness/test_consumer_agent_lifecycle.py::test_agent_advances_through_lifecycle_types` (L3) in meristem. A stale `contract_revision` is refused before the next step. |
 | `MEDULLA-CONTRACT-R001.2` | `tests/typed_packs/test_blueprint_roundtrip_served.py::test_blueprint_canonical_disk_roundtrip_has_no_difference` (planned) | L4 | with nested defaults, nulls, ordered arrays, Unicode and boundary numbers, and an exact byte compare after restart. |
-| `MEDULLA-CONTRACT-R001.3` | `crates/medulla-capabilities/tests/wire_vectors.rs::vectors_cover_every_wire_method_and_round_trip` (planned) | L1 | (L1). |
+| `MEDULLA-CONTRACT-R001.3` | `crates/medulla-capabilities/tests/wire_vectors.rs::vectors_cover_every_wire_method_and_round_trip` (planned) | L1 | (L1). `crates/medulla-capabilities/tests/wire_vectors/sample_builder.rs::tests::builder_emits_minimal_values_and_refuses_unsatisfiable_schemas` (planned) (L1). |
+| `MEDULLA-CONTRACT-R001.3.1` | `crates/medulla-capabilities/tests/wire_vectors.rs::domain_cluster_vectors_round_trip` (planned) | L1 | (L1). |
+| `MEDULLA-CONTRACT-R001.3.2` | `crates/medulla-capabilities/tests/wire_vectors.rs::domain_compute_vectors_round_trip` (planned) | L1 | (L1). |
+| `MEDULLA-CONTRACT-R001.3.3` | `crates/medulla-capabilities/tests/wire_vectors.rs::domain_coordination_vectors_round_trip` (planned) | L1 | (L1). |
+| `MEDULLA-CONTRACT-R001.3.4` | `crates/medulla-capabilities/tests/wire_vectors.rs::domain_graph_vectors_round_trip` (planned) | L1 | (L1). |
+| `MEDULLA-CONTRACT-R001.3.5` | `crates/medulla-capabilities/tests/wire_vectors.rs::domain_ingestion_vectors_round_trip` (planned) | L1 | (L1). |
+| `MEDULLA-CONTRACT-R001.3.6` | `crates/medulla-capabilities/tests/wire_vectors.rs::domain_messaging_vectors_round_trip` (planned) | L1 | (L1). |
+| `MEDULLA-CONTRACT-R001.3.7` | `crates/medulla-capabilities/tests/wire_vectors.rs::domain_query_vectors_round_trip` (planned) | L1 | (L1). |
+| `MEDULLA-CONTRACT-R001.3.8` | `crates/medulla-capabilities/tests/wire_vectors.rs::domain_reasoning_vectors_round_trip` (planned) | L1 | (L1). |
+| `MEDULLA-CONTRACT-R001.3.9` | `crates/medulla-capabilities/tests/wire_vectors.rs::domain_security_vectors_round_trip` (planned) | L1 | (L1). |
+| `MEDULLA-CONTRACT-R001.3.10` | `crates/medulla-capabilities/tests/wire_vectors.rs::domain_storage_vectors_round_trip` (planned) | L1 | (L1). |
+| `MEDULLA-CONTRACT-R001.3.11` | `crates/medulla-capabilities/tests/wire_vectors.rs::domain_transactions_vectors_round_trip` (planned) | L1 | (L1). |
 | `MEDULLA-CONTRACT-R001.4` | `tests/test_wire_vectors.py::test_models_round_trip_every_rust_vector` (planned) | L2 | (L2). `tests/test_wire_vectors.py::test_unknown_field_is_rejected` (L2). |
 | `MEDULLA-CONTRACT-R001.5` | `tests/test_wire_dto_strictness.py::test_every_wire_method_has_strict_models` (planned) | L3 | in this repo, and the SDK conformance kit case `engine_adapter_rejects_unknown_nested_field` (L3). |
 | `MEDULLA-CONTRACT-R002.1` | `tests/test_decide_auth_boundary.py::test_decide_refuses_a_request_tenant_that_does_not_match_the_verified_session` | L2 | `tests/test_decide_auth_boundary.py::test_decide_refuses_a_request_tenant_that_does_not_match_the_verified_session` passes against the live engine. |
