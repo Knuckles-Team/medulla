@@ -31,9 +31,9 @@ The engine holds the whole software lifecycle as typed records. This plan extend
 crates/medulla-compute/src/parser/spec_artifacts.rs   new   deterministic parser (R014.1)
 crates/medulla-core/ontology/sdd-spec-v1.ttl          new   ontology pack (R014.5)
 crates/medulla-source-types/src/lifecycle.rs                 existing  Proposal, Goal, ProjectMode types
-src/server/handlers/source_ingestion/spec_projection.rs   existing  incremental ingest and linking
+crates/medulla-h-ingest/src/source_ingestion/spec_projection.rs   existing  incremental ingest and linking
 src/server/handlers/lifecycle.rs                      existing  mode, goal and proposal methods
-src/server/handlers/decide/family/task_context.rs     new   run-context assembly (R015.2)
+crates/medulla-h-decide/src/decide/family/task_context.rs     new   run-context assembly (R015.2)
 specs/development-lifecycle/contracts/                new   seam contracts
 crates/medulla-core/ontology/sdlc_lifecycle-v1.ttl    existing  delivery classes (R019.1)
 crates/medulla-source-types/src/delivery.rs           new   delivery records (R019.2)
