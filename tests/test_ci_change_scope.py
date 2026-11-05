@@ -1035,6 +1035,7 @@ def _whole_repo(hook: dict) -> bool:
     )
 
 
+@pytest.mark.spec("MEDULLA-CONTRACT-R053.7.1")
 def test_whole_repo_hooks_run_at_push_or_ci_never_at_commit() -> None:
     root = Path(__file__).resolve().parents[1]
     workflow = (root / ".github/workflows/ci.yml").read_text()
