@@ -26,6 +26,7 @@ pub mod errors;
 pub mod harness_contrast;
 pub mod ingestion_admission;
 pub mod jobs;
+pub mod knobs;
 pub mod numeric;
 pub mod policy;
 pub mod rapid_r015;
