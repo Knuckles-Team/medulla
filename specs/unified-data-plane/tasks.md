@@ -9,67 +9,67 @@ Story map: US1 attach and understand a source, US2 dialect adapters and conforma
 - [ ] T001 [US1] MEDULLA-UNIFIED-DATA-PLANE-R001 Record attached-source and native-hosting decisions
 - [ ] T002 [US1] MEDULLA-UNIFIED-DATA-PLANE-R002.1 Verify the outbound target before persisting a `ForeignSourceSpec::Sql` registration (producer path)
 - [ ] T003 [US1] MEDULLA-UNIFIED-DATA-PLANE-R002.2 Verify the outbound target before persisting an OBDA `external_sources` registration (consumer path)
-- [ ] T004 [US1] MEDULLA-UNIFIED-DATA-PLANE-R003.1 `AttachedCatalogGraph` is a versioned, typed catalog with a reorder-stable content hash, refusing an ambiguous duplicate table name
-- [ ] T005 [US1] MEDULLA-UNIFIED-DATA-PLANE-R004.1 `ColumnSamplingBudget` is a bounded, policy-gated row/byte budget, refusing a zero or unbounded declaration
-- [ ] T006 [US1] MEDULLA-UNIFIED-DATA-PLANE-R005.1 `VirtualGraphMapping` carries a typed approval state, refusing a query against a proposed or model-suggested mapping
-- [ ] T007 [US1] MEDULLA-UNIFIED-DATA-PLANE-R006.1 `PushdownDecision` names an explicit fallback reason, refusing a decision that claims both success and a fallback
-- [ ] T008 [US1] MEDULLA-UNIFIED-DATA-PLANE-R008.1 `ChangeEnvelope`/`ChangeOp` are a typed change-capture record and a validated refusal rule, refusing a change with no durable position or a keyed table's update/delete with no key
-- [ ] T009 [US1] MEDULLA-UNIFIED-DATA-PLANE-R007.1 `DialectPushdownCapabilities` declares a dialect's supported pushdown operations, refusing an unknown operation name
-- [ ] T010 [US1] MEDULLA-UNIFIED-DATA-PLANE-R010.1 `ReplicaRefreshPolicy` is a typed per-table policy, refusing a declaration its own verification could never check
-- [ ] T011 [US1] MEDULLA-UNIFIED-DATA-PLANE-R009.1 `ConsumerCheckpoint` applies an incoming position idempotently, refusing an unnamed consumer
-- [ ] T012 [US1] MEDULLA-UNIFIED-DATA-PLANE-R011.1 `ReadYourWritesWait` is a bounded timeout, refusing a zero (unbounded) declaration; `FreshnessRoute` names exactly the three tiers
+- [ ] T004 [US1] MEDULLA-UNIFIED-DATA-PLANE-R003.1 Model: `AttachedCatalogGraph` is a versioned, typed catalog with a reorder-stable content hash, refusing an ambiguous duplicate table name
+- [ ] T005 [US1] MEDULLA-UNIFIED-DATA-PLANE-R004.1 Model: `ColumnSamplingBudget` is a bounded, policy-gated row/byte budget, refusing a zero or unbounded declaration
+- [ ] T006 [US1] MEDULLA-UNIFIED-DATA-PLANE-R005.1 Model: `VirtualGraphMapping` carries a typed approval state, refusing a query against a proposed or model-suggested mapping
+- [ ] T007 [US1] MEDULLA-UNIFIED-DATA-PLANE-R006.1 Model: `PushdownDecision` names an explicit fallback reason, refusing a decision that claims both success and a fallback
+- [ ] T008 [US1] MEDULLA-UNIFIED-DATA-PLANE-R008.1 Model: `ChangeEnvelope`/`ChangeOp` are a typed change-capture record and a validated refusal rule, refusing a change with no durable position or a keyed table's update/delete with no key
+- [ ] T009 [US1] MEDULLA-UNIFIED-DATA-PLANE-R007.1 Model: `DialectPushdownCapabilities` declares a dialect's supported pushdown operations, refusing an unknown operation name
+- [ ] T010 [US1] MEDULLA-UNIFIED-DATA-PLANE-R010.1 Model: `ReplicaRefreshPolicy` is a typed per-table policy, refusing a declaration its own verification could never check
+- [ ] T011 [US1] MEDULLA-UNIFIED-DATA-PLANE-R009.1 Model: `ConsumerCheckpoint` applies an incoming position idempotently, refusing an unnamed consumer
+- [ ] T012 [US1] MEDULLA-UNIFIED-DATA-PLANE-R011.1 Model: `ReadYourWritesWait` is a bounded timeout, refusing a zero (unbounded) declaration; `FreshnessRoute` names exactly the three tiers
 - [ ] T013 [US1] MEDULLA-UNIFIED-DATA-PLANE-R012.1 Typed model for attached-source write-back governance, proved by refusal tests
 - [ ] T014 [US2] MEDULLA-UNIFIED-DATA-PLANE-R013 Implement the Postgres attached-source adapter
 - [ ] T015 [US2] MEDULLA-UNIFIED-DATA-PLANE-R014.1 Typed MySQL/MariaDB dialect-entry model (producer-first split of R014)
 - [ ] T016 [US2] MEDULLA-UNIFIED-DATA-PLANE-R014.2.1 MySQL/MariaDB adapter skeleton: typed connection-config → driver-config mapping plus the connect/refusal path
 - [ ] T017 [US2] MEDULLA-UNIFIED-DATA-PLANE-R014.2.2 Live MySQL and MariaDB catalog read and type map
-- [ ] T018 [US2] MEDULLA-UNIFIED-DATA-PLANE-R015.1 `SqliteSourceCatalog` is a typed catalog model with a WITHOUT-ROWID capture-safety refusal
+- [ ] T018 [US2] MEDULLA-UNIFIED-DATA-PLANE-R015.1 Model: `SqliteSourceCatalog` is a typed catalog model with a WITHOUT-ROWID capture-safety refusal
 - [ ] T019 [US2] MEDULLA-UNIFIED-DATA-PLANE-R015.2.1 SQLite live-attach adapter skeleton: typed attach-config → driver-open-config mapping plus the refusal path
 - [ ] T020 [US2] MEDULLA-UNIFIED-DATA-PLANE-R015.2.2.1 Lock-free WAL snapshot reader
 - [ ] T021 [US2] MEDULLA-UNIFIED-DATA-PLANE-R015.2.2.2 Watermark polling into change envelopes
 - [ ] T022 [US2] MEDULLA-UNIFIED-DATA-PLANE-R015.2.2.3 Register, read and conformance for a SQLite file source
-- [ ] T023 [US2] MEDULLA-UNIFIED-DATA-PLANE-R016.1 `MssqlSourceCatalog` is a typed catalog model with a bracket-quoting identifier refusal
+- [ ] T023 [US2] MEDULLA-UNIFIED-DATA-PLANE-R016.1 Model: `MssqlSourceCatalog` is a typed catalog model with a bracket-quoting identifier refusal
 - [ ] T024 [US2] MEDULLA-UNIFIED-DATA-PLANE-R016.2.1 MSSQL adapter skeleton: typed connection-config → tiberius-shaped driver-config mapping plus the connect/refusal path
-- [ ] T025 [US2] MEDULLA-UNIFIED-DATA-PLANE-R017.1 `ClickHouseSourceCatalog` is a typed catalog model whose capture capability is always explicit
-- [ ] T026 [US2] MEDULLA-UNIFIED-DATA-PLANE-R017.2.1 `ClickHouseDriverConfig` builds from validated host/port/database, and `connect` refuses an unsafe or invalid destination before issuing any request
+- [ ] T025 [US2] MEDULLA-UNIFIED-DATA-PLANE-R017.1 Model: `ClickHouseSourceCatalog` is a typed catalog model whose capture capability is always explicit
+- [ ] T026 [US2] MEDULLA-UNIFIED-DATA-PLANE-R017.2.1 Model: `ClickHouseDriverConfig` builds from validated host/port/database, and `connect` refuses an unsafe or invalid destination before issuing any request
 - [ ] T027 [US2] MEDULLA-UNIFIED-DATA-PLANE-R017.2.2 Live ClickHouse HTTP query and pushdown
-- [ ] T028 [US2] MEDULLA-UNIFIED-DATA-PLANE-R018.1 `RelationalSourceCatalog` is a typed Oracle/Db2 catalog model with identifier and Debezium-capture refusals
-- [ ] T029 [US2] MEDULLA-UNIFIED-DATA-PLANE-R018.2.1 `RelationalDriverConfig` builds from a validated engine/host/port/service name, and `connect` refuses an unsafe or invalid destination before issuing any request
-- [ ] T030 [US2] MEDULLA-UNIFIED-DATA-PLANE-R019.1 `DocumentSourceCatalog` is a typed inferred-shape model with a refusal for a malformed field path
-- [ ] T031 [US2] MEDULLA-UNIFIED-DATA-PLANE-R019.2.1 `DocumentDriverConfig` builds from a validated host/port/database, and `connect` refuses an unsafe or invalid destination before issuing any request
-- [ ] T032 [US2] MEDULLA-UNIFIED-DATA-PLANE-R019.3.1 `build_document_conformance_entry` builds a MongoDB/DocumentDB conformance entry with a fixed adapter label, refusing a malformed outcome/deviation shape
-- [ ] T033 [US2] MEDULLA-UNIFIED-DATA-PLANE-R020.1 `WarehouseSourceKind`/`WarehouseSourceConfig` are a closed source-kind vocabulary with a per-kind required-field refusal
-- [ ] T034 [US2] MEDULLA-UNIFIED-DATA-PLANE-R020.2.1 `plan_pushdown` decides the Arrow-Flight-SQL-vs-native transport for a validated `WarehouseSourceConfig`, refusing an invalid config or an unmet Flight SQL preference
+- [ ] T028 [US2] MEDULLA-UNIFIED-DATA-PLANE-R018.1 Model: `RelationalSourceCatalog` is a typed Oracle/Db2 catalog model with identifier and Debezium-capture refusals
+- [ ] T029 [US2] MEDULLA-UNIFIED-DATA-PLANE-R018.2.1 Model: `RelationalDriverConfig` builds from a validated engine/host/port/service name, and `connect` refuses an unsafe or invalid destination before issuing any request
+- [ ] T030 [US2] MEDULLA-UNIFIED-DATA-PLANE-R019.1 Model: `DocumentSourceCatalog` is a typed inferred-shape model with a refusal for a malformed field path
+- [ ] T031 [US2] MEDULLA-UNIFIED-DATA-PLANE-R019.2.1 Model: `DocumentDriverConfig` builds from a validated host/port/database, and `connect` refuses an unsafe or invalid destination before issuing any request
+- [ ] T032 [US2] MEDULLA-UNIFIED-DATA-PLANE-R019.3.1 Model: `build_document_conformance_entry` builds a MongoDB/DocumentDB conformance entry with a fixed adapter label, refusing a malformed outcome/deviation shape
+- [ ] T033 [US2] MEDULLA-UNIFIED-DATA-PLANE-R020.1 Model: `WarehouseSourceKind`/`WarehouseSourceConfig` are a closed source-kind vocabulary with a per-kind required-field refusal
+- [ ] T034 [US2] MEDULLA-UNIFIED-DATA-PLANE-R020.2.1 Model: `plan_pushdown` decides the Arrow-Flight-SQL-vs-native transport for a validated `WarehouseSourceConfig`, refusing an invalid config or an unmet Flight SQL preference
 - [ ] T035 [US2] MEDULLA-UNIFIED-DATA-PLANE-R020.2.2 Live Iceberg and DuckDB pushdown
-- [ ] T036 [US2] MEDULLA-UNIFIED-DATA-PLANE-R020.3.1 `build_warehouse_conformance_entry` builds a warehouse/lake conformance entry whose adapter label is derived from the closed `WarehouseSourceKind`, refusing a blank engine version or a malformed outcome/deviation shape
-- [ ] T037 [US2] MEDULLA-UNIFIED-DATA-PLANE-R021.1 `DebeziumChangeEvent` is a typed envelope shape with an op-code and before/after refusal
+- [ ] T036 [US2] MEDULLA-UNIFIED-DATA-PLANE-R020.3.1 Model: `build_warehouse_conformance_entry` builds a warehouse/lake conformance entry whose adapter label is derived from the closed `WarehouseSourceKind`, refusing a blank engine version or a malformed outcome/deviation shape
+- [ ] T037 [US2] MEDULLA-UNIFIED-DATA-PLANE-R021.1 Model: `DebeziumChangeEvent` is a typed envelope shape with an op-code and before/after refusal
 - [ ] T038 [US2] MEDULLA-UNIFIED-DATA-PLANE-R021.2 Kafka consumer plus real conversion into ChangeEnvelope records
 - [ ] T039 [US2] MEDULLA-UNIFIED-DATA-PLANE-R021.3 Replay test feeding a captured Debezium event stream through the bridge
-- [ ] T040 [US2] MEDULLA-UNIFIED-DATA-PLANE-R022.1 `DialectConformanceEntry`/`ConformanceReport` are a typed per-engine-version result with a refusal for an auto-suppressed deviation
+- [ ] T040 [US2] MEDULLA-UNIFIED-DATA-PLANE-R022.1 Model: `DialectConformanceEntry`/`ConformanceReport` are a typed per-engine-version result with a refusal for an auto-suppressed deviation
 - [ ] T041 [US2] MEDULLA-UNIFIED-DATA-PLANE-R022.2 Matrix manifest and runner entry per engine version
-- [ ] T042 [US2] MEDULLA-UNIFIED-DATA-PLANE-R022.3.1 `compare_replay_to_snapshot` builds a `DialectConformanceEntry` from a replayed row-state map and a source-snapshot row-state map, refusing a blank engine version
+- [ ] T042 [US2] MEDULLA-UNIFIED-DATA-PLANE-R022.3.1 Model: `compare_replay_to_snapshot` builds a `DialectConformanceEntry` from a replayed row-state map and a source-snapshot row-state map, refusing a blank engine version
 - [ ] T043 [US2] MEDULLA-UNIFIED-DATA-PLANE-R022.3.2 Replay stream versus source snapshot
 - [ ] T044 [US2] MEDULLA-UNIFIED-DATA-PLANE-R022.4.1 Residency column
-- [ ] T045 [US3] MEDULLA-UNIFIED-DATA-PLANE-R023.1 `SharedPlatformClusterGroup` is a typed cluster-group and role-set model with engine-specific refusals
-- [ ] T046 [US3] MEDULLA-UNIFIED-DATA-PLANE-R024.1 `ApplicationAdmission` is a typed stage machine refusing early connector retirement
-- [ ] T047 [US3] MEDULLA-UNIFIED-DATA-PLANE-R024.2.1 `AdmissionRunner` drives `ApplicationAdmission` against a pluggable `PriorIngestConnector`, with a tested rollback path
+- [ ] T045 [US3] MEDULLA-UNIFIED-DATA-PLANE-R023.1 Model: `SharedPlatformClusterGroup` is a typed cluster-group and role-set model with engine-specific refusals
+- [ ] T046 [US3] MEDULLA-UNIFIED-DATA-PLANE-R024.1 Model: `ApplicationAdmission` is a typed stage machine refusing early connector retirement
+- [ ] T047 [US3] MEDULLA-UNIFIED-DATA-PLANE-R024.2.1 Model: `AdmissionRunner` drives `ApplicationAdmission` against a pluggable `PriorIngestConnector`, with a tested rollback path
 - [ ] T048 [US3] MEDULLA-UNIFIED-DATA-PLANE-R024.3.1 One fake-connector admission test per candidate application, confirming rollback and that the retired connector no longer writes
-- [ ] T049 [US3] MEDULLA-UNIFIED-DATA-PLANE-R026.1 `GrampsPilotProgress` is a typed P0-P5 phase gate refusing a wrong, unreviewed, or out-of-order exit
+- [ ] T049 [US3] MEDULLA-UNIFIED-DATA-PLANE-R026.1 Model: `GrampsPilotProgress` is a typed P0-P5 phase gate refusing a wrong, unreviewed, or out-of-order exit
 - [ ] T050 [US3] MEDULLA-UNIFIED-DATA-PLANE-R026.2.1 P0 adapter skeleton: typed baseline-digest → P0 phase-exit mapping plus the refusal path
 - [ ] T051 [US3] MEDULLA-UNIFIED-DATA-PLANE-R026.2.2 Live P0 to P2 on the synthetic fixture
 - [ ] T052 [US3] MEDULLA-UNIFIED-DATA-PLANE-R026.3.1 P3 adapter skeleton: typed proven-gap-fix → P3 phase-exit mapping plus the refusal path
 - [ ] T053 [US3] MEDULLA-UNIFIED-DATA-PLANE-R026.3.2 Live P4 restore and P5 schema understanding
-- [ ] T054 [US3] MEDULLA-UNIFIED-DATA-PLANE-R027.1 `FeatureFixRecord` is a typed inventory entry refusing a fix without complete captured-traffic/test proof
-- [ ] T055 [US3] MEDULLA-UNIFIED-DATA-PLANE-R027.2.1 `capture_feature_fix` assembles a `FeatureFixRecord` from a pluggable `TrafficCaptureSource`, refusing an unproven or incomplete capture
-- [ ] T056 [US3] MEDULLA-UNIFIED-DATA-PLANE-R027.3.1 `apply_proven_fix` applies a feature's fix only once its record is proven fixed, refusing -- without invoking the fix -- an unproven record
-- [ ] T057 [US3] MEDULLA-UNIFIED-DATA-PLANE-R028.1 `DeviationBaseline::reconcile` refuses a baseline update that drops a deviation without an explicit resolution
-- [ ] T058 [US3] MEDULLA-UNIFIED-DATA-PLANE-R028.2.1 `run_differential_harness` assembles a run's `DeviationBaseline` from one evaluator per declared corpus source and reconciles it against the prior baseline
-- [ ] T059 [US1] MEDULLA-UNIFIED-DATA-PLANE-R029.1 `SchemaContextCatalog::schema_context` is a typed answer lookup refusing an unknown table
+- [ ] T054 [US3] MEDULLA-UNIFIED-DATA-PLANE-R027.1 Model: `FeatureFixRecord` is a typed inventory entry refusing a fix without complete captured-traffic/test proof
+- [ ] T055 [US3] MEDULLA-UNIFIED-DATA-PLANE-R027.2.1 Model: `capture_feature_fix` assembles a `FeatureFixRecord` from a pluggable `TrafficCaptureSource`, refusing an unproven or incomplete capture
+- [ ] T056 [US3] MEDULLA-UNIFIED-DATA-PLANE-R027.3.1 Model: `apply_proven_fix` applies a feature's fix only once its record is proven fixed, refusing -- without invoking the fix -- an unproven record
+- [ ] T057 [US3] MEDULLA-UNIFIED-DATA-PLANE-R028.1 Model: `DeviationBaseline::reconcile` refuses a baseline update that drops a deviation without an explicit resolution
+- [ ] T058 [US3] MEDULLA-UNIFIED-DATA-PLANE-R028.2.1 Model: `run_differential_harness` assembles a run's `DeviationBaseline` from one evaluator per declared corpus source and reconciles it against the prior baseline
+- [ ] T059 [US1] MEDULLA-UNIFIED-DATA-PLANE-R029.1 Model: `SchemaContextCatalog::schema_context` is a typed answer lookup refusing an unknown table
 - [ ] T060 [US1] MEDULLA-UNIFIED-DATA-PLANE-R029.2 Wire the schema_context entry point through the served query path
-- [ ] T061 [US5] MEDULLA-UNIFIED-DATA-PLANE-R030.1 `EntityLinkProposal::assert_same_as` refuses an unapproved or non-Match candidate
+- [ ] T061 [US5] MEDULLA-UNIFIED-DATA-PLANE-R030.1 Model: `EntityLinkProposal::assert_same_as` refuses an unapproved or non-Match candidate
 - [ ] T062 [US5] MEDULLA-UNIFIED-DATA-PLANE-R030.2 Blocking and field-similarity candidate generation across Gramps/Immich/Twenty/Firefly
 - [ ] T063 [US5] MEDULLA-UNIFIED-DATA-PLANE-R030.3 Real Fellegi-Sunter scoring and the approval workflow
-- [ ] T064 [US3] MEDULLA-UNIFIED-DATA-PLANE-R031.1 `ApplicationAdmission`/`ConsolidationIsolationRegistry` are a typed admission model with identity and quota refusals
+- [ ] T064 [US3] MEDULLA-UNIFIED-DATA-PLANE-R031.1 Model: `ApplicationAdmission`/`ConsolidationIsolationRegistry` are a typed admission model with identity and quota refusals
 - [ ] T065 [US3] MEDULLA-UNIFIED-DATA-PLANE-R031.2 Per-source quota metering and fault isolation
 - [ ] T066 [US1] MEDULLA-UNIFIED-DATA-PLANE-R035 Share the compiled ontology cache with attached-schema graphs
 - [ ] T067 [US5] MEDULLA-UNIFIED-DATA-PLANE-R036 Derive HealthAnomaly and Incident facts with conformance checking
@@ -80,7 +80,7 @@ Story map: US1 attach and understand a source, US2 dialect adapters and conforma
 - [ ] T072 [US5] MEDULLA-UNIFIED-DATA-PLANE-R760.5 Evidence: served incident authority
 - [ ] T073 [US5] MEDULLA-UNIFIED-DATA-PLANE-R760.6 Hot-path proof: correlate 100,000 anomalies in one pass
 - [ ] T074 [US1] MEDULLA-UNIFIED-DATA-PLANE-R037 Virtual-graph vocabulary is a Medulla core schema source
-- [ ] T075 [US1] MEDULLA-UNIFIED-DATA-PLANE-R038.1 `MetadataContract`/`AccelerationPolicy` are typed models with a capability refusal and a watermark-missing live fallback
+- [ ] T075 [US1] MEDULLA-UNIFIED-DATA-PLANE-R038.1 Model: `MetadataContract`/`AccelerationPolicy` are typed models with a capability refusal and a watermark-missing live fallback
 - [ ] T076 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.3.1 Transactional row stores answer through one consistent snapshot: Model
 - [ ] T077 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.3.2 Behavior: one read-only transaction per source per query
 - [ ] T078 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.3.3 Wiring: `foreign_scan` opens the snapshot and the capability row declares it
