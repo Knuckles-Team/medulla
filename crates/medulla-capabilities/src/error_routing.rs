@@ -150,6 +150,16 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         "ApplyChangeEnvelopeDraft",
         &["CARRIER_INNER_METHOD_REFUSED"],
     ),
+    // MEDULLA-UNIFIED-DATA-PLANE-R651.4.
+    (
+        "DocumentDelete",
+        &[
+            "CASCADE_TOO_LARGE",
+            "DOCUMENT_DELETE_UNAVAILABLE",
+            "DOCUMENT_HAS_REFERENCES",
+            "DOCUMENT_NOT_FOUND",
+        ],
+    ),
     // MEDULLA-UNIFIED-DATA-PLANE-R651.7.4 / MEDULLA-DECISION-ENGINE-R802.4.
     (
         "EnrichDocument",

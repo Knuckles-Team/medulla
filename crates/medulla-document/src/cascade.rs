@@ -11,6 +11,10 @@ use sha2::{Digest, Sha256};
 
 /// Stable refusal code for a cascade above `document.max_cascade_nodes`.
 pub const CASCADE_TOO_LARGE: &str = "CASCADE_TOO_LARGE";
+/// Stable refusal code for an absent or invisible Document (R651.4).
+pub const DOCUMENT_NOT_FOUND: &str = "DOCUMENT_NOT_FOUND";
+/// Stable refusal code for a planned node still referenced from outside (R651.4).
+pub const DOCUMENT_HAS_REFERENCES: &str = "DOCUMENT_HAS_REFERENCES";
 /// Label of the cascade root.
 pub const DOCUMENT_LABEL: &str = "Document";
 /// In-edge labels the cascade follows toward the Document.
@@ -131,12 +135,18 @@ pub struct OrphanReport {
 pub enum CascadeRefusal {
     /// More than `max_nodes` nodes would be deleted.
     TooLarge { max_nodes: usize },
+    /// The Document is absent or not visible to the caller.
+    NotFound,
+    /// `outside` edges reach a planned node from a node outside the plan.
+    HasReferences { outside: usize },
 }
 
 impl CascadeRefusal {
     pub fn code(&self) -> &'static str {
         match self {
             Self::TooLarge { .. } => CASCADE_TOO_LARGE,
+            Self::NotFound => DOCUMENT_NOT_FOUND,
+            Self::HasReferences { .. } => DOCUMENT_HAS_REFERENCES,
         }
     }
 }
@@ -147,6 +157,12 @@ impl std::fmt::Display for CascadeRefusal {
             Self::TooLarge { max_nodes } => {
                 write!(f, "{}: cascade exceeds {max_nodes} nodes", self.code())
             }
+            Self::NotFound => write!(f, "{}: no visible Document", self.code()),
+            Self::HasReferences { outside } => write!(
+                f,
+                "{}: {outside} edges from outside the cascade reference it",
+                self.code()
+            ),
         }
     }
 }
@@ -164,7 +180,8 @@ pub trait CascadeReader {
 /// Breadth-first plan over the cascade in-edges, starting at the Document.
 ///
 /// O(planned nodes + edges). Every in- and out-edge of a planned node is
-/// deleted so no dangling edge survives.
+/// deleted so no dangling edge survives. An in-edge from a node outside the
+/// plan refuses the whole delete with `DOCUMENT_HAS_REFERENCES` (R651.4).
 pub fn plan_cascade(
     reader: &dyn CascadeReader,
     tenant: &str,
@@ -193,6 +210,13 @@ pub fn plan_cascade(
     }
     if nodes.len() > max_nodes {
         return Err(CascadeRefusal::TooLarge { max_nodes });
+    }
+    let outside = edges
+        .iter()
+        .filter(|edge| !nodes.contains(&edge.from))
+        .count();
+    if outside > 0 {
+        return Err(CascadeRefusal::HasReferences { outside });
     }
     Ok(CascadePlan::new(
         tenant.into(),

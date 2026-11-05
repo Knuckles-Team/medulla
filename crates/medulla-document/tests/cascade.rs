@@ -98,6 +98,7 @@ fn cascade_types_round_trip() {
     let request = DocumentDeleteRequest {
         tenant: "t1".into(),
         document_id: "doc-1".into(),
+        max_nodes: None,
     };
     let back: DocumentDeleteRequest =
         serde_json::from_value(serde_json::to_value(&request).unwrap()).unwrap();

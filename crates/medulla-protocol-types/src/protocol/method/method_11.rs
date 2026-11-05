@@ -239,6 +239,17 @@ $($variants)*
     SelectWebPages {
         request: Box<medulla_decision_outcome_types::decision::web_fetch_selection::SelectWebPagesRequest>,
     },
+
+    // ── Document delete (MEDULLA-UNIFIED-DATA-PLANE-R651.3..R651.5) ─────────
+    /// Delete one RLS-visible Document of the request graph and everything
+    /// derived from it (chunks, extracted facts, enrichment records) as one
+    /// atomic batch that also writes one content-free `DocumentDeletion`
+    /// record. Refuses with `DOCUMENT_NOT_FOUND`, `DOCUMENT_HAS_REFERENCES` or
+    /// `CASCADE_TOO_LARGE` and then changes nothing. See
+    /// [`medulla_types::document_ops`].
+    DocumentDelete {
+        request: Box<medulla_types::document_ops::DocumentDeleteRequest>,
+    },
         ]);
     };
 }
