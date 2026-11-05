@@ -69,10 +69,45 @@ pub enum SchemaSourceOrigin {
     },
 }
 
+/// What a schema source's vocabulary may describe in a connector seed graph
+/// (MEDULLA-TYPED-PACKS-R104.4). Only `Domain` vocabulary is bulk data and is
+/// refused in a seed triple; the importer assigns it, an archive never carries it.
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    Default,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    serde::Serialize,
+    serde::Deserialize,
+)]
+#[serde(rename_all = "snake_case")]
+pub enum SchemaSourceRole {
+    Identity,
+    Catalog,
+    Reference,
+    #[default]
+    Domain,
+}
+
+impl SchemaSourceRole {
+    /// Whether a seed triple may use a predicate declared by a source of this role.
+    pub fn allows_seed_predicates(self) -> bool {
+        !matches!(self, Self::Domain)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct GraphSchemaSource {
     pub origin: SchemaSourceOrigin,
+    /// Seed-graph role; engine-owned core vocabulary is `Reference`, every
+    /// other source starts as `Domain` until the importer says otherwise.
+    #[serde(default)]
+    pub role: SchemaSourceRole,
     pub shapes_ttl: Option<Arc<str>>,
     pub ontology_ttl: Option<Arc<str>>,
     pub shapes_sha256: Option<Digest256>,
@@ -107,14 +142,26 @@ impl GraphSchemaSource {
         let ontology_sha256 = ontology_ttl
             .as_deref()
             .map(|document| Digest256::sha256(document.as_bytes()));
+        let role = if matches!(&origin, SchemaSourceOrigin::Core { .. }) {
+            SchemaSourceRole::Reference
+        } else {
+            SchemaSourceRole::Domain
+        };
         Ok(Self {
             origin,
+            role,
             shapes_ttl,
             ontology_ttl,
             shapes_sha256,
             ontology_sha256,
             attached_at_ms,
         })
+    }
+
+    /// The same source with the seed-graph `role` the importer assigns.
+    pub fn with_role(mut self, role: SchemaSourceRole) -> Self {
+        self.role = role;
+        self
     }
 
     pub fn validate(&self) -> Result<(), String> {
