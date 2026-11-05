@@ -987,6 +987,14 @@ pub enum UqlResult {
         columns: Vec<String>,
         rows: Vec<UqlRow>,
         warnings: Vec<String>,
+        /// Graph revision the rows were read at. Rows and header share one snapshot.
+        /// The header carries no count of hidden rows: a hidden count would leak row
+        /// existence across visibility (MEDULLA-FEDERATED-QUERY-R088.1).
+        #[serde(default)]
+        snapshot_revision: u64,
+        /// Knowledge revision the per-row epistemic summaries were derived at.
+        #[serde(default)]
+        knowledge_revision: u64,
     },
     /// `EXPLAIN`: the canonical and the optimized plan, per-stage estimates, and
     /// whether the plan is incrementally maintainable (with the reason when not).
@@ -1015,6 +1023,14 @@ pub enum UqlResult {
         rows: Vec<UqlRow>,
         stages: Vec<UqlStageReport>,
         warnings: Vec<String>,
+        /// Graph revision the rows were read at. Rows and header share one snapshot.
+        /// The header carries no count of hidden rows: a hidden count would leak row
+        /// existence across visibility (MEDULLA-FEDERATED-QUERY-R088.1).
+        #[serde(default)]
+        snapshot_revision: u64,
+        /// Knowledge revision the per-row epistemic summaries were derived at.
+        #[serde(default)]
+        knowledge_revision: u64,
     },
 }
 
@@ -1169,5 +1185,69 @@ mod kernel_row_rejection_reason_contract {
         };
         assert!(err.to_string().contains("channel value was NaN"));
         assert_eq!(err.detail, "channel value was NaN");
+    }
+}
+
+#[cfg(all(test, feature = "query"))]
+mod tests {
+    use super::*;
+
+    // spec: MEDULLA-FEDERATED-QUERY-R088.1
+    #[test]
+    fn uql_header_round_trips_with_defaults() {
+        let rows = UqlResult::Rows {
+            columns: vec!["score".to_string()],
+            rows: vec![],
+            warnings: vec![],
+            snapshot_revision: 41,
+            knowledge_revision: 7,
+        };
+        let bytes = rmp_serde::to_vec_named(&rows).expect("rows encode");
+        let back: UqlResult = rmp_serde::from_slice(&bytes).expect("rows decode");
+        assert_eq!(back, rows);
+
+        let profile = UqlResult::Profile {
+            columns: vec![],
+            rows: vec![],
+            stages: vec![],
+            warnings: vec![],
+            snapshot_revision: 9,
+            knowledge_revision: 3,
+        };
+        let bytes = rmp_serde::to_vec_named(&profile).expect("profile encode");
+        let back: UqlResult = rmp_serde::from_slice(&bytes).expect("profile decode");
+        assert_eq!(back, profile);
+
+        // A pre-header payload decodes with both revisions defaulted to zero.
+        let legacy = serde_json::json!({"Rows": {"columns": [], "rows": [], "warnings": []}});
+        let decoded: UqlResult = serde_json::from_value(legacy).expect("defaults apply");
+        let UqlResult::Rows {
+            snapshot_revision,
+            knowledge_revision,
+            ..
+        } = decoded
+        else {
+            panic!("Rows expected");
+        };
+        assert_eq!((snapshot_revision, knowledge_revision), (0, 0));
+
+        // Fixed safety rule: the header never carries a hidden-row count.
+        let json = serde_json::to_value(&rows).expect("rows to json");
+        let body = json
+            .get("Rows")
+            .and_then(|v| v.as_object())
+            .expect("Rows body");
+        let mut keys: Vec<&str> = body.keys().map(String::as_str).collect();
+        keys.sort_unstable();
+        assert_eq!(
+            keys,
+            vec![
+                "columns",
+                "knowledge_revision",
+                "rows",
+                "snapshot_revision",
+                "warnings"
+            ]
+        );
     }
 }
