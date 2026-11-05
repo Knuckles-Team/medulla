@@ -180,7 +180,7 @@
 | `MEDULLA-TYPED-PACKS-R100.6` | **Rendered package hot-path proof.** Subsystem: ontology and packs. Entry point: the served fleet catalog list method. The test ingests a skill, lists it, changes the referenced code, ingests again and lists again. The second listing must show a new digest and graph revision. A second tenant never sees the skill. Caller chain: Python client → served `FleetCatalog` list → `list_page` (`crates/medulla-server-consensus/src/dispatch/consensus/fleet_catalog/read.rs:215`) → `skill_row` (`project.rs:277`), before and after a re-ingest through `source_sync`. Shape: Test only: `crates/medulla-capabilities/tests/skill_package_regeneration.rs` (the file exists; today it holds `rendered_package_round_trip`). Depends on: R100.3, R100.4, R100.5. | Test: `crates/medulla-capabilities/tests/skill_package_regeneration.rs::list_after_reingest_returns_new_digest` (planned) (L3). |
 
 <!-- spec-definition-patch:owner-batch-20261012-typed-packs-and-catalog -->
-## Reviewed residual definitions — owner batch 2026-10-12
+## Reviewed residual definitions
 
 | ID | Requirement | Verification |
 |---|---|---|
@@ -190,7 +190,7 @@
 <!-- /spec-definition-patch -->
 
 <!-- spec-definition-patch:reviewed-mapped-subsets-20261012 -->
-## Reviewed mapped definitions — 2026-10-12
+## Reviewed mapped definitions
 
 These append-only children preserve the existing parent contracts named below. All remain SPECIFIED; this definition records planned acceptance and does not claim implementation or served receipts.
 

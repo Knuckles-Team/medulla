@@ -310,7 +310,7 @@ R002.10 still requires a separately named Meristem owning requirement and produc
 Its existing valid/invalid model-transport acceptance is unchanged. Repository persistence evidence cannot substitute for that consumer proof.
 
 <!-- spec-definition-patch:owner-batch-20261012-typed-packs-and-catalog -->
-## Owner acceptance targets — 2026-10-12
+## Owner acceptance targets
 
 All tests below are planned and unexecuted; they create no implementation or served receipts.
 
@@ -320,7 +320,7 @@ All tests below are planned and unexecuted; they create no implementation or ser
 <!-- /spec-definition-patch -->
 
 <!-- spec-definition-patch:reviewed-mapped-subsets-20261012 -->
-## Planned mapped acceptance — 2026-10-12
+## Planned mapped acceptance
 
 No test named here has run; names describe acceptance obligations, not evidence.
 
@@ -536,68 +536,7 @@ The existing Resolve operation accepts optional `refresh`. False preserves the c
 
 R085.4–R085.7 preserve their parent obligations as rollups. Their .1 children cover pure store transitions; .2 children require durable owner execution. R085.5.3 covers request stamping only. R085.7.3, R085.4.3, R085.5.4 and R085.6.3 retain generated/served qualification. A passing unit filter is not evidence for unexecuted durable or served acceptance. Source markers bind only their matching layer.
 
-## 2026-10-20 combined identity producer evidence
-
-The final combined `medulla-types` `identity::tests` run passed all 108 tests in
-159.02 seconds. This includes the reference inspection, renewal ceiling,
-approval-key lifecycle and non-touch credential unit fixtures. The result
-supports R085.7.1, R085.4.1, R085.5.1 and R085.6.1 only within their stated
-pure-store acceptance. It does not execute the core durable or server fixtures.
-
-Canonical contract generation completed successfully in 219.05 seconds against
-the combined source. Codec generation/checks and remaining artifact checks are
-pending. A generator result does not prove execution of its generated routes.
-
-Core durable tests, server tests and served acceptance have not run for this
-candidate. Keep R085.7.2, R085.4.2, R085.5.2, R085.5.3 and R085.6.2 pending.
-The combined generated/served children R085.7.3, R085.4.3, R085.5.4 and R085.6.3
-remain SPECIFIED because their served acceptance is unexecuted. The parent
-criteria remain intact. These receipts do not qualify live enrollment, host
-admission or full signed-approval consumption.
-
-Reconciliation fixtures (2026-10-22, authored but not executed):
-- `reference_operations_refuse_service_principal_substitution_without_mutation`
-  refuses both reference operations for a service principal without mutation.
-- `renewal_clamps_idle_to_original_absolute_expiry_and_preserves_subject_mfa`
-  proves only last-seen and idle expiry change, clamps at the original absolute
-  deadline, and refuses renewal at that deadline without mutation.
-
-Additional R085.4.1 renewal regressions (authored 2026-10-22; execution pending):
-- Renewal refuses revoked, idle/absolute-expired, pending-MFA, disabled,
-  ambiguous, wrong-owner, wrong-tenant and delegated authority without mutation.
-- Repeated idle renewals retain the original principal, tenant, MFA timestamp,
-  scope ceiling and absolute deadline. Reaching the deadline requires issuer
-  reauthentication, not another renewal; a saturated idle window refuses.
-
-The additional R085.4.3 `reference_renewal_rechecks_boundary_and_global_revision`
-fixture is source-only until server execution. It covers caller-stamp replacement,
-delegation refusal, unrelated authority revision changes, and original expiry/MFA
-preservation. It does not qualify installed brokers or the Tuig scheduler.
-
-2026-10-22 isolated reconciliation attempt: pinned Rust 1.96.0,
-`cargo test --locked --offline -p medulla-types identity::tests::session_evidence`,
-no features, one build job, test/dev debuginfo disabled, incremental disabled,
-test opt-level 0. SIGKILL stopped the compiler process for `medulla-types` before test execution. This provides no native pass evidence. The earlier
-2026-10-20 receipts above describe the old candidate, not this reconciled tree.
-Durable, server, generated and end-to-end renewal qualification remain pending.
-
-
-## 2026-10-23 current-main reconciliation qualification
-
-The 2026-10-20 results above qualify only the original producer source, not
-this reconciled candidate. The 2026-10-22 compiler failure remains a failed
-attempt, not native evidence. This reconciliation preserves current-main
-caller/security behavior and includes the Human-owner guard with the producer.
-Its reference-inspection subtree uses R085.7 because current-main R085.3 owns a
-distinct served liveness response contract. Neither contract substitutes for
-the other. The additional renewal regressions remain authored, not executed.
-
-Fresh canonical contract and WASM generation must run against this exact source
-before promotion. Main's generated outputs are retained only as a visibly
-unqualified starting point, not represented as matching the added DTOs. Hosted
-source-only draft qualification is authorized; no failing merge or release is
-qualified. Durable, native server, installed broker and full signed-approval
-consumption acceptance remain open. No atomic approval consumption is added.
+## Bound tests
 
 - `MEDULLA-TYPED-PACKS-R105.3`: `crates/medulla-rdf/tests/connector_parent_classes.rs::recurring_connector_concepts_sit_under_their_upper_classes`.
 - `MEDULLA-TYPED-PACKS-R105.3.1`: `crates/medulla-rdf/tests/connector_parent_classes.rs::source_record_classes_have_narrow_parents`.
