@@ -3994,6 +3994,7 @@ components:
       - "tests/test_measurement_lite.py"
       - "tests/test_method_families.py"
       - "tests/test_method_policy_registry.py"
+      - "tests/jobs/test_association_submit_served.py"
       - "tests/test_mining.py"
       - "tests/test_modality_stream_clients.py"
       - "tests/test_msgpack.rs"
