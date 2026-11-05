@@ -868,57 +868,57 @@ Hot-path proof for `MEDULLA-DECISION-ENGINE-R803`: `tests/decide/test_harness_co
 
 | Row | Proving test |
 |---|---|
-| `MEDULLA-DECISION-ENGINE-R804` | See each child. |
-| `MEDULLA-DECISION-ENGINE-R804.1` | `crates/medulla-program/tests/native_program.rs::all_modalities_compile_and_require_evidence_before_promotion` |
-| `MEDULLA-DECISION-ENGINE-R804.2` | `crates/medulla-program/tests/native_program.rs::random_search_is_deterministic` |
-| `MEDULLA-DECISION-ENGINE-R804.3` | `tests/decide/test_program_optimize_served.py::test_optimize_job_returns_candidate` |
-| `MEDULLA-DECISION-ENGINE-R804.4` | `tests/decide/test_program_optimize_served.py::test_judge_only_corpus_refuses` |
-| `MEDULLA-DECISION-ENGINE-R804.5` | `crates/medulla-program/tests/native_program.rs::promotion_identity_and_model_trace_bind_to_one_revision` |
-| `MEDULLA-DECISION-ENGINE-R804.6` | `tests/decide/test_program_optimize_served.py::test_optimize_hot_path` |
-| `MEDULLA-DECISION-ENGINE-R805` | See each child. |
+| `MEDULLA-DECISION-ENGINE-R804` | `crates/medulla-h-jobs/src/jobs/program_tests.rs::judge_only_test_split_refuses` |
+| `MEDULLA-DECISION-ENGINE-R804.1` | Retired; see `MEDULLA-DECISION-ENGINE-R813.1`. |
+| `MEDULLA-DECISION-ENGINE-R804.2` | Retired; see `MEDULLA-DECISION-ENGINE-R810.2`. |
+| `MEDULLA-DECISION-ENGINE-R804.3` | Retired; see `MEDULLA-DECISION-ENGINE-R810.3`. |
+| `MEDULLA-DECISION-ENGINE-R804.4` | `crates/medulla-h-jobs/src/jobs/program_tests.rs::judge_only_test_split_refuses` |
+| `MEDULLA-DECISION-ENGINE-R804.5` | Retired; see `MEDULLA-DECISION-ENGINE-R810.5`. |
+| `MEDULLA-DECISION-ENGINE-R804.6` | Retired; see `MEDULLA-DECISION-ENGINE-R810.6`. |
+| `MEDULLA-DECISION-ENGINE-R805` | `crates/medulla-h-decide/src/decide/stat_tests/promotion_tests.rs::promote_then_roll_back_every_subject_kind` |
 | `MEDULLA-DECISION-ENGINE-R805.1` | `crates/medulla-decision-outcome-types/src/decision/promotion.rs::tests::records_round_trip` |
-| `MEDULLA-DECISION-ENGINE-R805.2` | `crates/medulla-decision-outcome-types/src/decision/promotion.rs::tests::regression_triggers_rollback` |
-| `MEDULLA-DECISION-ENGINE-R805.3` | `tests/decide/test_harness_promotion_served.py::test_promote_then_rollback` |
-| `MEDULLA-DECISION-ENGINE-R805.4` | `tests/decide/test_harness_promotion_served.py::test_promotion_refusals` |
-| `MEDULLA-DECISION-ENGINE-R805.5` | `tests/decide/test_harness_promotion_served.py::test_pointer_history_replays` |
-| `MEDULLA-DECISION-ENGINE-R805.6` | `cargo bench -p medulla-numeric --bench harness_promotion` |
+| `MEDULLA-DECISION-ENGINE-R805.2` | `crates/medulla-decision-stats/src/decision/promotion.rs::tests::regression_triggers_rollback`; `crates/medulla-h-decide/src/decide/stat_tests/promotion_tests.rs::promote_then_roll_back_every_subject_kind` |
+| `MEDULLA-DECISION-ENGINE-R805.3` | `crates/medulla-h-decide/src/decide/stat_tests/promotion_tests.rs::promote_then_roll_back_every_subject_kind` |
+| `MEDULLA-DECISION-ENGINE-R805.4` | `crates/medulla-h-decide/src/decide/stat_tests/promotion_tests.rs::promotion_refusals` |
+| `MEDULLA-DECISION-ENGINE-R805.5` | `crates/medulla-h-decide/src/decide/stat_tests/promotion_tests.rs::pointer_history_replays` |
+| `MEDULLA-DECISION-ENGINE-R805.6` | `crates/medulla-h-decide/src/decide/stat_tests/promotion_tests.rs::served_promotion_journey` |
 
 ## Agent-memory substrate claims (2026-10-22)
 
 | Case | Requirement | Proving test |
 |---|---|---|
-| Episodic-to-semantic promotion | `MEDULLA-DECISION-ENGINE-R651.7` | `tests/memory/test_consolidate_served.py::test_episodes_promote_to_semantic_fact` |
-| Reinforce and decay share one salience update | `MEDULLA-DECISION-ENGINE-R651.8` | `tests/memory/test_consolidate_served.py::test_reinforce_and_decay_share_salience` |
-| Contradiction records are tracked | `MEDULLA-DECISION-ENGINE-R700.7` | `tests/decision/test_contradiction_records.py::test_detected_contradiction_is_tracked` |
+| Episodic-to-semantic promotion | `MEDULLA-DECISION-ENGINE-R651.7` | `crates/medulla-h-graph/src/graph_ops/memory_surface_tests.rs::episodes_promote_to_a_linked_semantic_fact`; `tests/memory/test_consolidate_served.py::test_episodes_promote_to_semantic_fact` |
+| Reinforce and decay share one salience update | `MEDULLA-DECISION-ENGINE-R651.8` | `crates/medulla-graph-core/src/graph/txn_maintenance.rs::tests::reinforce_and_decay_share_importance_update`; `crates/medulla-h-graph/src/graph_ops/memory_surface_tests.rs::reinforce_then_decay_matches_the_half_life`; `tests/memory/test_consolidate_served.py::test_reinforce_and_decay_share_importance` |
+| Contradiction records are tracked | `MEDULLA-DECISION-ENGINE-R700.7` | `crates/medulla-h-decide/src/decide/stat_tests/belief_revision_tests.rs::contradiction_is_tracked_and_status_is_ordered` |
 
 ## MEDULLA-DECISION-ENGINE-R810 to R813 acceptance
 
 | Case | Row | Proving test and observation |
 |---|---|---|
-| Model | `MEDULLA-DECISION-ENGINE-R810.1` | `crates/medulla-program/tests/native_program.rs` round-trips each contract and lists the 13 kinds. |
-| Behavior | `MEDULLA-DECISION-ENGINE-R810.2` | `native_program.rs` tests compile each kind on a fixture corpus and cancel one run. |
-| Wiring | `MEDULLA-DECISION-ENGINE-R810.3` | A served test submits the job and reads the finished `ProgramRevision`. |
-| Refusal | `MEDULLA-DECISION-ENGINE-R810.4` | A served test submits each invalid request and asserts the code. |
-| Evidence | `MEDULLA-DECISION-ENGINE-R810.5` | A test reruns one job and compares the digests. |
-| Hot-path proof | `MEDULLA-DECISION-ENGINE-R810.6` | `tests/test_program_optimize_served.py::test_program_optimize_job_end_to_end` passes, and the benchmark meets the budget. |
-| Model | `MEDULLA-DECISION-ENGINE-R811.1` | `crates/medulla-decision-outcome-types/src/policy_evolution/tests.rs` round-trips each op and receipt. |
-| Behavior | `MEDULLA-DECISION-ENGINE-R811.2` | `policy_evolution/tests.rs` covers capture denial and split isolation. |
-| Wiring | `MEDULLA-DECISION-ENGINE-R811.3` | A served test runs capture, training and evaluation in order. |
-| Refusal | `MEDULLA-DECISION-ENGINE-R811.4` | `crates/medulla-server-graph/src/dispatch/policy_evolution/gate/tests.rs` asserts each code. |
-| Evidence | `MEDULLA-DECISION-ENGINE-R811.5` | A test reads back each receipt and compares the fields. |
-| Hot-path proof | `MEDULLA-DECISION-ENGINE-R811.6` | `tests/test_policy_evolution_served.py::test_capture_train_evaluate_served` passes. |
-| Model | `MEDULLA-DECISION-ENGINE-R812.1` | A unit test builds a champion, a challenger and a parent link. |
-| Behavior | `MEDULLA-DECISION-ENGINE-R812.2` | Unit tests cover win, loss, tie, rollback and the model-judge refusal. |
-| Wiring | `MEDULLA-DECISION-ENGINE-R812.3` | A served test promotes one challenger and rolls it back. |
-| Refusal | `MEDULLA-DECISION-ENGINE-R812.4` | A served test asserts each code and an unchanged champion. |
-| Evidence | `MEDULLA-DECISION-ENGINE-R812.5` | A test reads back the promotion record. |
-| Hot-path proof | `MEDULLA-DECISION-ENGINE-R812.6` | `tests/test_program_champion_served.py::test_promote_then_rollback` passes. |
-| Model | `MEDULLA-DECISION-ENGINE-R813.1` | A unit test round-trips one example per grader kind. |
-| Behavior | `MEDULLA-DECISION-ENGINE-R813.2` | Unit tests cover each grader kind and the skip. |
-| Wiring | `MEDULLA-DECISION-ENGINE-R813.3` | A served test ingests two scores and builds one corpus. |
-| Refusal | `MEDULLA-DECISION-ENGINE-R813.4` | A served test asserts each code. |
-| Evidence | `MEDULLA-DECISION-ENGINE-R813.5` | A test reads back one example. |
-| Hot-path proof | `MEDULLA-DECISION-ENGINE-R813.6` | `tests/test_trace_scores_to_corpus_served.py::test_scores_build_corpus_and_compile` passes. |
+| Model | `MEDULLA-DECISION-ENGINE-R810.1` | `crates/medulla-program/tests/native_program.rs::program_contracts_round_trip_and_optimizer_catalog_is_closed`; `crates/medulla-h-jobs/src/jobs/program_tests.rs::program_optimize_job_end_to_end` |
+| Behavior | `MEDULLA-DECISION-ENGINE-R810.2` | `crates/medulla-program/tests/native_program.rs::cancel_stops_within_one_candidate`; `crates/medulla-h-jobs/src/jobs/program_tests.rs::program_optimize_job_end_to_end` |
+| Wiring | `MEDULLA-DECISION-ENGINE-R810.3` | `crates/medulla-h-jobs/src/jobs/program_tests.rs::program_optimize_job_end_to_end` |
+| Refusal | `MEDULLA-DECISION-ENGINE-R810.4` | `crates/medulla-h-jobs/src/jobs/program_tests.rs::program_job_refusals` |
+| Evidence | `MEDULLA-DECISION-ENGINE-R810.5` | `crates/medulla-h-jobs/src/jobs/program_tests.rs::rerun_with_one_seed_gives_one_revision_digest` |
+| Hot-path proof | `MEDULLA-DECISION-ENGINE-R810.6` | `crates/medulla-h-jobs/src/jobs/program_tests.rs::served_program_job_journey` |
+| Model | `MEDULLA-DECISION-ENGINE-R811.1` | `crates/medulla-decision-outcome-types/src/policy_evolution/tests.rs::every_policy_operation_and_receipt_round_trips`; `crates/medulla-h-decide/src/decide/stat_tests/policy_evolution_tests.rs::capture_train_evaluate_and_promote` |
+| Behavior | `MEDULLA-DECISION-ENGINE-R811.2` | `crates/medulla-server-graph/src/dispatch/policy_evolution/gate/tests.rs::evaluation_overlapping_training_refuses`; `crates/medulla-h-decide/src/decide/stat_tests/policy_evolution_tests.rs::capture_train_evaluate_and_promote` |
+| Wiring | `MEDULLA-DECISION-ENGINE-R811.3` | `crates/medulla-h-decide/src/decide/stat_tests/policy_evolution_tests.rs::capture_train_evaluate_and_promote` |
+| Refusal | `MEDULLA-DECISION-ENGINE-R811.4` | `crates/medulla-h-decide/src/decide/stat_tests/policy_evolution_tests.rs::policy_evolution_refusals` |
+| Evidence | `MEDULLA-DECISION-ENGINE-R811.5` | `crates/medulla-h-decide/src/decide/stat_tests/policy_evolution_tests.rs::receipts_read_back_field_for_field` |
+| Hot-path proof | `MEDULLA-DECISION-ENGINE-R811.6` | `crates/medulla-h-decide/src/decide/stat_tests/policy_evolution_tests.rs::served_policy_evolution_journey` |
+| Model | `MEDULLA-DECISION-ENGINE-R812.1` | Retired; see `MEDULLA-DECISION-ENGINE-R805.7`. |
+| Behavior | `MEDULLA-DECISION-ENGINE-R812.2` | `crates/medulla-decision-stats/src/decision/promotion.rs::tests::challenger_win_loss_tie_and_judge_refusal`; `crates/medulla-h-decide/src/decide/stat_tests/promotion_tests.rs::promote_then_roll_back_every_subject_kind` |
+| Wiring | `MEDULLA-DECISION-ENGINE-R812.3` | Retired; see `MEDULLA-DECISION-ENGINE-R805.3`. |
+| Refusal | `MEDULLA-DECISION-ENGINE-R812.4` | Retired; see `MEDULLA-DECISION-ENGINE-R805.4`. |
+| Evidence | `MEDULLA-DECISION-ENGINE-R812.5` | Retired; see `MEDULLA-DECISION-ENGINE-R805.5`. |
+| Hot-path proof | `MEDULLA-DECISION-ENGINE-R812.6` | Retired; see `MEDULLA-DECISION-ENGINE-R805.6`. |
+| Model | `MEDULLA-DECISION-ENGINE-R813.1` | `crates/medulla-program/tests/native_program.rs::example_round_trips_per_grader_kind`; `crates/medulla-h-decide/src/decide/stat_tests/score_corpus_tests.rs::scores_build_a_corpus_and_compile` |
+| Behavior | `MEDULLA-DECISION-ENGINE-R813.2` | `crates/medulla-program/src/corpus.rs::tests::each_grader_kind_and_the_skip`; `crates/medulla-h-decide/src/decide/stat_tests/score_corpus_tests.rs::scores_build_a_corpus_and_compile` |
+| Wiring | `MEDULLA-DECISION-ENGINE-R813.3` | `crates/medulla-h-decide/src/decide/stat_tests/score_corpus_tests.rs::scores_build_a_corpus_and_compile` |
+| Refusal | `MEDULLA-DECISION-ENGINE-R813.4` | `crates/medulla-h-decide/src/decide/stat_tests/score_corpus_tests.rs::score_refusals` |
+| Evidence | `MEDULLA-DECISION-ENGINE-R813.5` | `crates/medulla-h-decide/src/decide/stat_tests/score_corpus_tests.rs::example_names_score_grader_author_and_run` |
+| Hot-path proof | `MEDULLA-DECISION-ENGINE-R813.6` | `crates/medulla-h-decide/src/decide/stat_tests/score_corpus_tests.rs::served_scores_to_program_journey` |
 
 Hot-path proof for `MEDULLA-DECISION-ENGINE-R810`: `tests/test_program_optimize_served.py::test_program_optimize_job_end_to_end`.
 
@@ -964,12 +964,12 @@ The bindings are static: no test claims that a path exists in a run-time output.
 - `MEDULLA-DECISION-ENGINE-R814.1`: See each child.
 - `MEDULLA-DECISION-ENGINE-R814.1.1`: `crates/medulla-rdf/tests/metadata_catalog_classes.rs::catalog_classes_roll_up_to_eg_core_and_align_to_w3c`, `::owner_steward_and_lineage_properties_specialise_prov`, `::catalog_shapes_accept_a_complete_catalog` and `::catalog_shapes_refuse_incomplete_or_open_vocabulary_records`.
 - `MEDULLA-DECISION-ENGINE-R814.1.2`: `crates/medulla-types/tests/prompt_candidate.rs::candidate_round_trips_and_kind_follows_role` (planned; typed record is absent from this candidate).
-- `MEDULLA-DECISION-ENGINE-R814.2`: `crates/medulla-core/tests/prompt_candidate.rs::assemble_selects_covering_candidate_and_abstains_without_one`.
-- `MEDULLA-DECISION-ENGINE-R814.3`: `tests/decision/test_prompt_candidates_served.py::test_assemble_reads_candidates_from_imported_pack`.
-- `MEDULLA-DECISION-ENGINE-R814.4`: `crates/medulla-core/tests/prompt_candidate.rs::unbound_prompt_refuses_and_rejected_connector_is_excluded`.
-- `MEDULLA-DECISION-ENGINE-R814.5`: `tests/decision/test_prompt_candidates_served.py::test_record_names_prompt_connector_digest_and_capability`.
-- `MEDULLA-DECISION-ENGINE-R814.6`: `tests/decision/test_prompt_candidates_served.py::test_dynamic_agent_gets_the_matching_connector_system_prompt`.
-- `MEDULLA-DECISION-ENGINE-R814.7`: `tests/decision/test_prompt_candidates_served.py::test_system_prompt_query_lists_candidates_for_a_task`. Vector: `SELECT ?prompt ?connector ?digest WHERE { ?prompt a :PromptCandidate ; :systemPromptFor ?t ; cp:ofConnector ?connector ; cp:digest ?digest . ?t :requiresCapability ?need . <Y> :requiresCapability ?need }`. `:systemPromptFor` ranges over `:Task`, so the join goes through the task. The query returns the prompt of the connector that serves task Y and not the other connector's prompt.
+- `MEDULLA-DECISION-ENGINE-R814.2`: `crates/medulla-h-decide/src/decide/stat_tests/prompt_candidate_tests.rs::assemble_selects_covering_candidate_and_abstains_without_one`.
+- `MEDULLA-DECISION-ENGINE-R814.3`: `tests/decide/test_prompt_candidates_served.py::test_assemble_reads_candidates_from_imported_pack`.
+- `MEDULLA-DECISION-ENGINE-R814.4`: `crates/medulla-h-decide/src/decide/stat_tests/prompt_candidate_tests.rs::unbound_prompt_refuses_and_rejected_connector_is_excluded`.
+- `MEDULLA-DECISION-ENGINE-R814.5`: `tests/decide/test_prompt_candidates_served.py::test_record_names_prompt_connector_digest_and_capability`.
+- `MEDULLA-DECISION-ENGINE-R814.6`: `tests/decide/test_prompt_candidates_served.py::test_dynamic_agent_gets_the_matching_connector_system_prompt`.
+- `MEDULLA-DECISION-ENGINE-R814.7`: `tests/decide/test_prompt_candidates_served.py::test_system_prompt_query_lists_candidates_for_a_task`. Vector: `SELECT ?prompt ?connector ?digest WHERE { ?prompt a :PromptCandidate ; :systemPromptFor ?t ; cp:ofConnector ?connector ; cp:digest ?digest . ?t :requiresCapability ?need . <Y> :requiresCapability ?need }`. `:systemPromptFor` ranges over `:Task`, so the join goes through the task. The query returns the prompt of the connector that serves task Y and not the other connector's prompt.
 - `MEDULLA-DECISION-ENGINE-R814.8`: `tests/decide/test_prompt_candidates_served.py::test_non_canonical_prompt_is_refused_with_field_path`.
 
 ## Model media declarations: source, generated consumers and qualification
@@ -1023,10 +1023,10 @@ Do not infer it from these fixtures or generated status.
 | Participant class and record | `MEDULLA-DECISION-ENGINE-R617.7` | `crates/medulla-types/src/participant.rs::tests::participant_round_trips_and_iri_is_stable`; `crates/medulla-core/tests/participant_shape.rs::person_without_represents_fails_shape`; `src/server/handlers/graph_ops/participant_memory_tests.rs::participant_journey` |
 | Session membership and speaking participant | `MEDULLA-DECISION-ENGINE-R617.8` | `src/server/handlers/graph_ops/participant_memory_tests.rs::ingest_adds_speakers_as_members`; `crates/medulla-types/src/participant.rs::tests::membership_edges_dedupe_speakers` |
 | Served participant writes | `MEDULLA-DECISION-ENGINE-R617.9` | `src/server/handlers/graph_ops/participant_memory_tests.rs::participant_methods_are_served_and_classified`; `tests/memory/test_participant_memory_served.py::test_participant_put_and_member_round_trip` |
-| Memory scope narrows and the ACL still applies | `MEDULLA-DECISION-ENGINE-R651.9` | `crates/medulla-types/src/memory_scope.rs::tests::scope_never_exceeds_visible_sessions`; `src/server/handlers/graph_ops/participant_memory_tests.rs::scope_narrows_recall_and_acl_still_applies` |
-| Observation configuration per participant per session | `MEDULLA-DECISION-ENGINE-R651.10` | `crates/medulla-numeric/src/decision/participant_derive.rs::tests::targets_follow_flags_and_never_repeat`; `src/server/handlers/graph_ops/participant_memory_tests.rs::observation_flags_decide_which_perspectives_exist` |
-| Appending a turn enqueues one derive job | `MEDULLA-DECISION-ENGINE-R651.11` | `src/server/handlers/graph_ops/participant_memory_tests.rs::turn_append_enqueues_one_ordered_job_per_key` |
-| Derive worker writes conclusions as claims | `MEDULLA-DECISION-ENGINE-R651.12` | `src/server/handlers/graph_ops/participant_memory_tests.rs::derive_job_writes_claims_with_turn_evidence`; `tests/memory/test_participant_memory_served.py::test_turns_become_perspective_claims` |
+| Memory scope narrows and the ACL still applies | `MEDULLA-DECISION-ENGINE-R651.9` | `crates/medulla-types/src/memory_scope.rs::tests::scope_never_exceeds_visible_sessions`; `crates/medulla-h-graph/src/graph_ops/participant_memory_tests.rs::scope_narrows_recall_and_acl_still_applies` |
+| Observation configuration per participant per session | `MEDULLA-DECISION-ENGINE-R651.10` | `crates/medulla-decision-stats/src/decision/participant_derive.rs::tests::targets_follow_flags_and_never_repeat`; `crates/medulla-h-graph/src/graph_ops/participant_memory_tests.rs::observation_flags_decide_which_perspectives_exist` |
+| Appending a turn enqueues one derive job | `MEDULLA-DECISION-ENGINE-R651.11` | `crates/medulla-h-graph/src/graph_ops/participant_memory_tests.rs::turn_append_enqueues_one_ordered_job_per_key` |
+| Derive worker writes conclusions as claims | `MEDULLA-DECISION-ENGINE-R651.12` | `crates/medulla-h-graph/src/graph_ops/participant_memory_tests.rs::derive_job_writes_claims_with_turn_evidence`; `tests/memory/test_participant_memory_served.py::test_turns_become_perspective_claims` |
 | Claims carry subject and observer | `MEDULLA-DECISION-ENGINE-R652.9` | `crates/medulla-epistemic/src/claims.rs::tests::observer_sees_own_and_visible_system_claims_only`; `src/server/handlers/decide/stat_tests/claims_tests.rs::perspective_claims_hide_other_observers` |
 | Scope narrows cross-session episode recall | `MEDULLA-DECISION-ENGINE-R155.7` | `src/server/handlers/graph_ops/participant_memory_tests.rs::scoped_recall_returns_only_scope_episodes` |
 | Memory events enter the graph outbox | `MEDULLA-DECISION-ENGINE-R073.6` | `src/server/handlers/graph_ops/participant_memory_tests.rs::each_memory_change_emits_one_atomic_event` |
@@ -1046,6 +1046,122 @@ Do not infer it from these fixtures or generated status.
 | Refusal | `MEDULLA-DECISION-ENGINE-R656.5` | `src/server/handlers/graph_ops/participant_memory_tests.rs::profile_refusals_change_no_state` |
 | Hot-path proof | `MEDULLA-DECISION-ENGINE-R656.6` | `tests/memory/test_assistant_profile_served.py::test_profile_constrains_a_run` |
 | Assistant profile constrains the HarnessConfig request | `MEDULLA-DECISION-ENGINE-R128.16` | `crates/medulla-server-served-tests/src/split_tests/medulla_h_decide_harness_config_tests.rs::allowlist_narrows_tool_subset` |
-| AgentAssemble respects the profile tool allowlist | `MEDULLA-DECISION-ENGINE-R036.107` | `src/server/handlers/decide/stat_tests/assemble_tests.rs::allowlist_removes_tools_and_admission_still_runs` |
-| Participant memory knobs | `MEDULLA-DECISION-ENGINE-R179.8` | `crates/medulla-types/src/memory_scope.rs::tests::knob_defaults_are_inside_bounds`; `src/server/handlers/decide/stat_tests/knob_tests.rs::participant_knobs_are_registered_and_tunable` |
+| AgentAssemble respects the profile tool allowlist | `MEDULLA-DECISION-ENGINE-R036.107` | `crates/medulla-h-decide/src/decide/stat_tests/assemble_tests.rs::allowlist_removes_tools_and_admission_still_runs` |
+| Participant memory knobs | `MEDULLA-DECISION-ENGINE-R179.8` | `crates/medulla-types/src/memory_scope.rs::tests::knob_defaults_are_inside_bounds`; `crates/medulla-h-decide/src/decide/stat_tests/knob_tests.rs::participant_knobs_are_registered_and_tunable` |
 | Participant memory refusal codes | `MEDULLA-DECISION-ENGINE-R010.100.4` | `crates/medulla-decision-types/src/decision/record/outcome.rs::tests::codes_are_unique_and_stable` |
+
+## Planned bindings, range 8
+
+Every row below has a planned test at its exact post-split path; the row text names the production caller it drives.
+
+| Row | Planned test |
+|---|---|
+| `MEDULLA-DECISION-ENGINE-R800.1` | `crates/medulla-program/tests/optimize_front.rs::dominated_candidate_is_dropped` |
+| `MEDULLA-DECISION-ENGINE-R800.2` | `crates/medulla-program/tests/optimize_front.rs::same_seed_reproduces_front_digest`; `crates/medulla-h-jobs/src/jobs/program_tests.rs::reflective_job_reports_front_and_next_parent` |
+| `MEDULLA-DECISION-ENGINE-R800.3` | `crates/medulla-h-jobs/src/jobs/program_tests.rs::reflective_job_reports_front_and_next_parent` |
+| `MEDULLA-DECISION-ENGINE-R800.4` | `crates/medulla-h-jobs/src/jobs/program_tests.rs::front_inputs_refuse_with_stable_codes` |
+| `MEDULLA-DECISION-ENGINE-R800.5` | `crates/medulla-h-jobs/src/jobs/program_tests.rs::front_digest_replays_under_one_seed` |
+| `MEDULLA-DECISION-ENGINE-R800.6` | `crates/medulla-h-jobs/src/jobs/program_tests.rs::served_reflective_job_journey` |
+| `MEDULLA-DECISION-ENGINE-R801.1` | `crates/medulla-types/src/usage.rs::tests::record_round_trips_digest_only`; `tests/usage/test_usage_ledger_served.py::test_append_then_read_cost_end_to_end` |
+| `MEDULLA-DECISION-ENGINE-R801.2` | `crates/medulla-persistence/src/usage_ledger/tests.rs::cost_uses_price_valid_at_record_time`; `crates/medulla-persistence/src/usage_ledger/tests.rs::alias_table_normalizes_model_keys`; `crates/medulla-persistence/src/usage_ledger/tests.rs::day_rollup_reads_buckets_not_records`; `tests/usage/test_usage_ledger_served.py::test_append_then_read_cost_end_to_end` |
+| `MEDULLA-DECISION-ENGINE-R801.3` | `crates/medulla-capabilities/src/scopes/tests.rs::usage_domain_registers_read_and_service_only_write_scopes` |
+| `MEDULLA-DECISION-ENGINE-R801.4` | `crates/medulla-persistence/src/usage_ledger/tests.rs::each_refusal_writes_nothing`; `crates/medulla-h-decide/src/usage/tests.rs::cross_tenant_read_is_empty` |
+| `MEDULLA-DECISION-ENGINE-R801.5` | `crates/medulla-persistence/src/usage_ledger/tests.rs::append_writes_one_audit_line`; `crates/medulla-persistence/src/usage_ledger/tests.rs::golden_cost_rollup_is_byte_identical` |
+| `MEDULLA-DECISION-ENGINE-R801.6` | `tests/usage/test_usage_ledger_served.py::test_append_then_read_cost_end_to_end` |
+| `MEDULLA-DECISION-ENGINE-R801.7` | `crates/medulla-h-decide/src/usage/tests.rs::read_is_tenant_scoped`; `tests/usage/test_usage_ledger_served.py::test_usage_read_is_tenant_scoped` |
+| `MEDULLA-DECISION-ENGINE-R801.8` | `crates/medulla-h-decide/src/usage/tests.rs::service_append_succeeds_and_human_is_refused`; `tests/usage/test_usage_ledger_served.py::test_service_append_and_price_put` |
+| `MEDULLA-DECISION-ENGINE-R810.7` | `crates/medulla-h-jobs/src/jobs/program_tests.rs::evaluated_revision_carries_held_out_evidence` |
+| `MEDULLA-DECISION-ENGINE-R811.7` | `crates/medulla-h-decide/src/decide/stat_tests/policy_evolution_tests.rs::knob_set_evaluation_names_its_policy_revision` |
+| `MEDULLA-DECISION-ENGINE-R811.8` | `crates/medulla-decision-outcome-types/src/decision/promotion.rs::tests::policy_evaluation_maps_to_held_out_evidence`; `crates/medulla-h-decide/src/decide/stat_tests/policy_evolution_tests.rs::capture_train_evaluate_and_promote` |
+| `MEDULLA-DECISION-ENGINE-R036.103` | `crates/medulla-isolation/src/rbac_persist.rs::tests::reservation_blocks_writes_and_survives_reopen`; `crates/medulla-h-decide/src/decide/stat_tests/commit_admission_tests.rs::cross_owner_admission_journey` |
+| `MEDULLA-DECISION-ENGINE-R036.104` | `crates/medulla-persistence-records/src/agent_library/admission_tests.rs::admission_participant_fences_and_replays`; `commit_admission_tests.rs::cross_owner_admission_journey` |
+| `MEDULLA-DECISION-ENGINE-R036.105` | `crates/medulla-raft-xshard/src/cross_shard_txn/certificate.rs::tests::certificate_binds_request_and_expires`; `commit_admission_tests.rs::cross_owner_admission_journey` |
+| `MEDULLA-DECISION-ENGINE-R036.106` | `crates/medulla-isolation/src/rbac_persist.rs::tests::upgrade_preserves_rows_and_creates_empty_grant_table`; `commit_admission_tests.rs::cross_owner_admission_journey` |
+| `MEDULLA-DECISION-ENGINE-R038.2` | `crates/medulla-h-decide/src/decide/stat_tests/tool_action_admission_tests.rs::untrusted_follow_up_is_denied`; `EvidenceClass::Observation` |
+| `MEDULLA-DECISION-ENGINE-R038.3` | `crates/medulla-h-decide/src/decide/stat_tests/held_item_admission_tests.rs::program_needs_independent_verifier_and_passes` |
+| `MEDULLA-DECISION-ENGINE-R039.3` | `crates/medulla-h-decide/src/decide/stat_tests/route_tests.rs::legal_preference_wins_and_illegal_is_recorded` |
+| `MEDULLA-DECISION-ENGINE-R805.8` | `crates/medulla-h-jobs/src/jobs/program_tests.rs::job_publishes_a_revision_without_moving_the_champion` |
+| `MEDULLA-DECISION-ENGINE-R805.9` | `crates/medulla-h-decide/src/decide/stat_tests/promotion_tests.rs::every_receipt_kind_resolves_to_held_out_evidence` |
+| `MEDULLA-DECISION-ENGINE-R134.111.1` | `crates/medulla-decision-types/src/decision/task_plan/tests.rs::task_plan_round_trips`; `crates/medulla-h-decide/src/decide/stat_tests/task_plan_tests.rs::decide_routes_task_plan` |
+| `MEDULLA-DECISION-ENGINE-R134.111.2` | `crates/medulla-decision-types/src/decision/task_plan/tests.rs::plan_respects_dependencies`; `crates/medulla-h-decide/src/decide/stat_tests/task_plan_tests.rs::decide_routes_task_plan` |
+| `MEDULLA-DECISION-ENGINE-R134.111.3` | `crates/medulla-h-decide/src/decide/stat_tests/task_plan_tests.rs::decide_routes_task_plan`; `tests/decide/test_task_plan_served.py::test_explicit_plan_end_to_end` |
+| `MEDULLA-DECISION-ENGINE-R134.111.4` | `crates/medulla-decision-types/src/decision/task_plan/tests.rs::invalid_graphs_refuse`; `crates/medulla-h-decide/src/decide/stat_tests/task_plan_tests.rs::invalid_task_requests_refuse` |
+| `MEDULLA-DECISION-ENGINE-R134.111.5` | `crates/medulla-h-decide/src/decide/stat_tests/task_plan_tests.rs::task_plan_cannot_use_score_replay`; `crates/medulla-h-decide/src/decide/stat_tests/task_plan_tests.rs::decide_routes_task_plan` |
+| `MEDULLA-DECISION-ENGINE-R134.111.6` | `crates/medulla-h-decide/src/decide/stat_tests/task_plan_tests.rs::maximum_bounded_plan_is_accepted` |
+| `MEDULLA-DECISION-ENGINE-R134.111.7` | `crates/medulla-decision-types/src/decision/task_plan/tests.rs::the_canonical_task_plan_feature_schema_is_valid_and_stable`; `crates/medulla-h-decide/src/decide/stat_tests/task_plan_tests.rs::canonical_task_plan_schema_publishes_once_and_routes` |
+| `MEDULLA-DECISION-ENGINE-R158.7` | `crates/medulla-h-decide/src/decide/stat_tests/run_adjustment_tests.rs::windows_drive_model_and_width_and_refuse_mid_run_widening` |
+| `MEDULLA-DECISION-ENGINE-R179.7` | `crates/medulla-h-decide/src/decide/stat_tests/harness_contrast_tests.rs::contrast_reads_the_pinned_harness_evolution_knobs` |
+| `MEDULLA-DECISION-ENGINE-R803.7` | `crates/medulla-h-decide/src/decide/stat_tests/harness_contrast_tests.rs::contrast_is_measured_from_stored_traces` |
+| `MEDULLA-DECISION-ENGINE-R803.8` | `crates/medulla-h-decide/src/decide/stat_tests/harness_adoption_tests.rs::adoption_contrast_and_lesson_commit_together`; `tests/decide/test_harness_adoption_served.py::test_adoption_logged_and_lesson_retrieved` |
+| `MEDULLA-DECISION-ENGINE-R805.10` | `crates/medulla-decision-outcome-types/src/decision/promotion.rs::tests::added_subject_kinds_round_trip_with_pointer_keys`; `crates/medulla-h-decide/src/decide/stat_tests/promotion_tests.rs::promote_then_roll_back_every_subject_kind` |
+| `MEDULLA-DECISION-ENGINE-R805.11` | `crates/medulla-decision-stats/src/decision/promotion.rs::tests::gate_rules_per_added_kind`; `crates/medulla-h-decide/src/decide/stat_tests/promotion_tests.rs::promote_then_roll_back_every_subject_kind` |
+| `MEDULLA-DECISION-ENGINE-R805.12` | `crates/medulla-h-decide/src/decide/stat_tests/promotion_tests.rs::harness_definitions_promote_and_roll_back` |
+| `MEDULLA-DECISION-ENGINE-R805.13` | `crates/medulla-h-decide/src/decide/stat_tests/promotion_tests.rs::pointer_read_returns_champion_and_refuses_unknown_key` |
+| `MEDULLA-DECISION-ENGINE-R815` | `crates/medulla-h-decide/src/decide/stat_tests/assemble_tests.rs::model_media_capability_and_unknown_code` |
+| `MEDULLA-DECISION-ENGINE-R816` | `src/server/handlers/observation_state_tests.rs::state_is_run_bound` |
+| `MEDULLA-DECISION-ENGINE-R817` | `tests/decide/test_revision_proposals_served.py::test_list_is_tenant_scoped_and_paged` |
+| `MEDULLA-DECISION-ENGINE-R818` | `crates/medulla-h-decide/src/decide/stat_tests/probe_selection_tests.rs::selects_declared_entries_and_refuses_empty` |
+| `MEDULLA-DECISION-ENGINE-R819` | `crates/medulla-h-decide/src/decide/stat_tests/serving_technique_tests.rs::verdict_follows_receipts_and_knobs` |
+| `MEDULLA-DECISION-ENGINE-R820` | `crates/medulla-h-decide/src/decide/stat_tests/process_remediation_tests.rs::verdicts_follow_thresholds` |
+| `MEDULLA-DECISION-ENGINE-R821` | `crates/medulla-h-decide/src/decide/stat_tests/retrieval_adoption_tests.rs::paired_run_adopts_and_refuses` |
+| `MEDULLA-DECISION-ENGINE-R822` | `crates/medulla-h-decide/src/decide/stat_tests/calibration_tests.rs::isotonic_fit_is_monotone_and_promoted` |
+| `MEDULLA-DECISION-ENGINE-R823` | `crates/medulla-h-decide/src/decide/stat_tests/reasoning_paradigm_tests.rs::legal_set_then_rank_and_abstain` |
+| `MEDULLA-DECISION-ENGINE-R824` | `crates/medulla-h-decide/src/decide/stat_tests/capacity_tests.rs::capacity_proposal_verdicts` |
+| `MEDULLA-DECISION-ENGINE-R825` | `crates/medulla-h-decide/src/decide/stat_tests/model_capacity_tests.rs::limit_narrows_on_latency_and_never_exceeds_ceiling` |
+| `MEDULLA-DECISION-ENGINE-R826` | `crates/medulla-h-decide/src/decide/stat_tests/ingest_shortfall_tests.rs::allocation_ties_and_purge_ineligibility` |
+| `MEDULLA-DECISION-ENGINE-R827` | `crates/medulla-h-decide/src/decide/stat_tests/revert_family_tests.rs::dependents_forbid_revert` |
+| `MEDULLA-DECISION-ENGINE-R828` | `crates/medulla-h-decide/src/decide/stat_tests/resolve_conflict_tests.rs::winner_by_margin_tie_and_abstain_codes` |
+| `MEDULLA-DECISION-ENGINE-R802.1` | `web_fetch_selection.rs::tests::question_round_trips` |
+| `MEDULLA-DECISION-ENGINE-R810` | `crates/medulla-h-jobs/src/jobs/program_tests.rs::program_optimize_job_end_to_end` |
+| `MEDULLA-DECISION-ENGINE-R810.2` | `crates/medulla-program/tests/native_program.rs::cancel_stops_within_one_candidate` |
+| `MEDULLA-DECISION-ENGINE-R810.4` | `crates/medulla-h-jobs/src/jobs/program_tests.rs::program_job_refusals` |
+| `MEDULLA-DECISION-ENGINE-R810.5` | `crates/medulla-h-jobs/src/jobs/program_tests.rs::rerun_with_one_seed_gives_one_revision_digest` |
+| `MEDULLA-DECISION-ENGINE-R810.6` | `crates/medulla-h-jobs/src/jobs/program_tests.rs::served_program_job_journey` |
+| `MEDULLA-DECISION-ENGINE-R811.2` | `crates/medulla-server-graph/src/dispatch/policy_evolution/gate/tests.rs::evaluation_overlapping_training_refuses` |
+| `MEDULLA-DECISION-ENGINE-R811.4` | `crates/medulla-h-decide/src/decide/stat_tests/policy_evolution_tests.rs::policy_evolution_refusals` |
+| `MEDULLA-DECISION-ENGINE-R811.5` | `crates/medulla-h-decide/src/decide/stat_tests/policy_evolution_tests.rs::receipts_read_back_field_for_field` |
+| `MEDULLA-DECISION-ENGINE-R811.6` | `crates/medulla-h-decide/src/decide/stat_tests/policy_evolution_tests.rs::served_policy_evolution_journey` |
+| `MEDULLA-DECISION-ENGINE-R812.2` | `crates/medulla-decision-stats/src/decision/promotion.rs::tests::challenger_win_loss_tie_and_judge_refusal` |
+| `MEDULLA-DECISION-ENGINE-R813` | `crates/medulla-h-decide/src/decide/stat_tests/score_corpus_tests.rs::scores_build_a_corpus_and_compile` |
+| `MEDULLA-DECISION-ENGINE-R813.1` | `crates/medulla-program/tests/native_program.rs::example_round_trips_per_grader_kind` |
+| `MEDULLA-DECISION-ENGINE-R813.2` | `crates/medulla-program/src/corpus.rs::tests::each_grader_kind_and_the_skip` |
+| `MEDULLA-DECISION-ENGINE-R813.4` | `crates/medulla-h-decide/src/decide/stat_tests/score_corpus_tests.rs::score_refusals` |
+| `MEDULLA-DECISION-ENGINE-R813.5` | `crates/medulla-h-decide/src/decide/stat_tests/score_corpus_tests.rs::example_names_score_grader_author_and_run` |
+| `MEDULLA-DECISION-ENGINE-R813.6` | `crates/medulla-h-decide/src/decide/stat_tests/score_corpus_tests.rs::served_scores_to_program_journey` |
+| `MEDULLA-DECISION-ENGINE-R036.107` | `crates/medulla-h-decide/src/decide/stat_tests/assemble_tests.rs::allowlist_removes_tools_and_admission_still_runs` |
+| `MEDULLA-DECISION-ENGINE-R804` | `crates/medulla-h-jobs/src/jobs/program_tests.rs::judge_only_test_split_refuses` |
+| `MEDULLA-DECISION-ENGINE-R805.2` | `crates/medulla-decision-stats/src/decision/promotion.rs::tests::regression_triggers_rollback` |
+| `MEDULLA-DECISION-ENGINE-R805.3` | `crates/medulla-h-decide/src/decide/stat_promotion.rs::qualified_champion` |
+| `MEDULLA-DECISION-ENGINE-R805.4` | `crates/medulla-h-decide/src/decide/stat_tests/promotion_tests.rs::promotion_refusals` |
+| `MEDULLA-DECISION-ENGINE-R805.5` | `crates/medulla-h-decide/src/decide/stat_tests/promotion_tests.rs::pointer_history_replays` |
+| `MEDULLA-DECISION-ENGINE-R805.6` | `crates/medulla-h-decide/src/decide/stat_tests/promotion_tests.rs::served_promotion_journey` |
+| `MEDULLA-DECISION-ENGINE-R805.7` | `crates/medulla-decision-outcome-types/src/decision/promotion.rs::tests::lifecycle_types_round_trip` |
+| `MEDULLA-DECISION-ENGINE-R651.7` | `crates/medulla-h-graph/src/graph_ops/memory_surface_tests.rs::episodes_promote_to_a_linked_semantic_fact` |
+| `MEDULLA-DECISION-ENGINE-R651.7` | `tests/memory/test_consolidate_served.py::test_episodes_promote_to_semantic_fact` |
+| `MEDULLA-DECISION-ENGINE-R651.8` | `crates/medulla-graph-core/src/graph/txn_maintenance.rs::tests::reinforce_and_decay_share_importance_update` |
+| `MEDULLA-DECISION-ENGINE-R651.8` | `crates/medulla-h-graph/src/graph_ops/memory_surface_tests.rs::reinforce_then_decay_matches_the_half_life` |
+| `MEDULLA-DECISION-ENGINE-R651.8` | `tests/memory/test_consolidate_served.py::test_reinforce_and_decay_share_importance` |
+| `MEDULLA-DECISION-ENGINE-R651.9` | `crates/medulla-types/src/memory_scope.rs::tests::scope_never_exceeds_visible_sessions` |
+| `MEDULLA-DECISION-ENGINE-R651.9` | `crates/medulla-h-graph/src/graph_ops/participant_memory_tests.rs::scope_narrows_recall_and_acl_still_applies` |
+| `MEDULLA-DECISION-ENGINE-R651.10` | `crates/medulla-decision-stats/src/decision/participant_derive.rs::tests::targets_follow_flags_and_never_repeat` |
+| `MEDULLA-DECISION-ENGINE-R651.10` | `crates/medulla-h-graph/src/graph_ops/participant_memory_tests.rs::observation_flags_decide_which_perspectives_exist` |
+| `MEDULLA-DECISION-ENGINE-R651.11` | `crates/medulla-h-graph/src/graph_ops/participant_memory_tests.rs::turn_append_enqueues_one_ordered_job_per_key` |
+| `MEDULLA-DECISION-ENGINE-R651.12` | `crates/medulla-h-graph/src/graph_ops/participant_memory_tests.rs::derive_job_writes_claims_with_turn_evidence` |
+| `MEDULLA-DECISION-ENGINE-R651.12` | `tests/memory/test_participant_memory_served.py::test_turns_become_perspective_claims` |
+| `MEDULLA-DECISION-ENGINE-R700.7` | `crates/medulla-h-decide/src/decide/stat_tests/belief_revision_tests.rs::contradiction_is_tracked_and_status_is_ordered` |
+| `MEDULLA-DECISION-ENGINE-R134.111.11` | `tests/test_task_plan_receipt_validation.py::test_receipt_refuses_a_different_call` |
+| `MEDULLA-DECISION-ENGINE-R134.111.13` | `tests/decide/test_task_plan_served.py::test_tool_step_bindings_end_to_end` |
+| `MEDULLA-DECISION-ENGINE-R179.8` | `crates/medulla-types/src/memory_scope.rs::tests::knob_defaults_are_inside_bounds` |
+| `MEDULLA-DECISION-ENGINE-R179.8` | `crates/medulla-h-decide/src/decide/stat_tests/knob_tests.rs::participant_knobs_are_registered_and_tunable` |
+| `MEDULLA-DECISION-ENGINE-R803.8` | `stat_log.rs::dispatch` |
+| `MEDULLA-DECISION-ENGINE-R814` | `tests/decide/test_prompt_candidates_served.py::test_dynamic_agent_gets_the_matching_connector_system_prompt` |
+| `MEDULLA-DECISION-ENGINE-R814.1.2` | `crates/medulla-types/tests/prompt_candidate.rs::candidate_round_trips_and_kind_follows_role` |
+| `MEDULLA-DECISION-ENGINE-R814.2` | `crates/medulla-compute/src/assemble/tests/prompt.rs::selection_scores_by_match_and_confidence_and_abstains` |
+| `MEDULLA-DECISION-ENGINE-R814.2` | `crates/medulla-h-decide/src/decide/stat_tests/prompt_candidate_tests.rs::prompt_candidate_journey` |
+| `MEDULLA-DECISION-ENGINE-R814.3` | `tests/decide/test_prompt_candidates_served.py::test_assemble_reads_candidates_from_imported_pack` |
+| `MEDULLA-DECISION-ENGINE-R814.4` | `crates/medulla-h-decide/src/decide/stat_tests/prompt_candidate_tests.rs::unbound_prompt_refuses_and_rejected_connector_is_excluded` |
+| `MEDULLA-DECISION-ENGINE-R814.5` | `tests/decide/test_prompt_candidates_served.py::test_record_names_prompt_connector_digest_and_capability` |
+| `MEDULLA-DECISION-ENGINE-R814.7` | `tests/decide/test_prompt_candidates_served.py::test_system_prompt_query_lists_candidates_for_a_task` |
+| `MEDULLA-DECISION-ENGINE-R814.8` | `tests/decide/test_prompt_candidates_served.py::test_non_canonical_prompt_is_refused_with_field_path` |
+| `MEDULLA-DECISION-ENGINE-R822` | `crates/medulla-h-decide/src/decide/stat_calibration.rs::fit_isotonic` |
+| `MEDULLA-DECISION-ENGINE-R828` | `src/server/handlers/branch.rs::merge_conflicts` |
