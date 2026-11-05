@@ -65,6 +65,9 @@ pub mod virtual_graph_mapping;
 // MEDULLA-UNIFIED-DATA-PLANE-R011 — typed freshness route and a bounded
 // read-your-writes wait, refusing an unbounded (zero-timeout) wait.
 pub mod freshness_router;
+// MEDULLA-FEDERATED-QUERY-R651.2 model-free query understanding: filters,
+// quoted phrases and a single-relationship intent; no model call.
+pub mod query_understanding;
 // MEDULLA-FEDERATED-QUERY-R654.2 bounded source slice: deterministic hub ranking
 // over an already-resolved code subgraph. Anchor resolution, bounded expansion,
 // operations diagnosis and served CodeContext wiring remain later slices.
