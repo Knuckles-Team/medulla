@@ -102,8 +102,8 @@ pub use text::{
     MIN_RECOVERY_CODE_CHARS, MIN_TOTP_SECRET_CHARS,
 };
 pub use views::{
-    AuthenticateOutcome, AuthenticateResult, IdentityReply, ResetDelivery, SessionView, UserView,
-    WebauthnCredentialView,
+    AuthenticateOutcome, AuthenticateResult, IdentityReply, ResetDelivery, SessionLiveness,
+    SessionView, UserView, WebauthnCredentialView,
 };
 
 /// The principal id of the built-in bootstrap user (§2.2.3).
@@ -220,6 +220,9 @@ medulla_types::closed_error_codes! {
         /// The principal's kind does not allow this (e.g. an API key for a
         /// service-only scope held by a human).
         KindMismatch => "IDENTITY_KIND_MISMATCH",
+        /// A liveness check named a session reference the store does not hold,
+        /// or one outside the caller's deployment tenant.
+        SessionReferenceUnknown => "SESSION_REFERENCE_UNKNOWN",
     }
 }
 

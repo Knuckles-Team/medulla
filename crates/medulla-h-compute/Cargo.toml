@@ -43,6 +43,10 @@ medulla-server-auth = { path = "../medulla-server-auth" }
 medulla-quantum-core = { path = "../medulla-quantum-core", optional = true }
 medulla-quantum-sim = { path = "../medulla-quantum-sim", optional = true }
 
+[[bench]]
+name = "finance_kernels"
+harness = false
+
 [features]
 datascience = ["medulla-compute/datascience", "medulla-protocol-types/datascience", "medulla-result-types/datascience", "medulla-types/datascience"]
 finance = ["medulla-finance-quant/analytics", "medulla-compute/finance", "medulla-protocol-types/finance", "medulla-result-types/finance", "medulla-types/finance"]
