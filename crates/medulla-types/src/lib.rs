@@ -267,6 +267,8 @@ pub mod graph_change_feed;
 // MEDULLA-TYPED-PACKS-R802.1/R805.1 — governance record models: stewardship and
 // data products. Pure data and field validation; served wiring lands in later children.
 pub mod data_product;
+// MEDULLA-UNIFIED-DATA-PLANE-R651.1 — document delete request and receipt.
+pub mod document_ops;
 pub mod stewardship;
 // MEDULLA-UNIFIED-DATA-PLANE-R004 — bounded, policy-gated column-sampling budget
 // for deterministic schema inference.

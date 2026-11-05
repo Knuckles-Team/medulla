@@ -79,6 +79,31 @@ pub struct AccessRequest {
     pub principal: String,
     pub purpose: String,
     pub state: AccessRequestState,
+    /// The sharing grant an approved request wrote, absent until approval.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub grant_ref: Option<String>,
+}
+
+/// One promise a data contract makes.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum ContractPromise {
+    Schema,
+    Quality { rule: String },
+    Freshness,
+}
+
+/// A broken promise observed against live state.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ContractViolation {
+    pub product: String,
+    pub promise: ContractPromise,
+    /// What was observed: a digest, a rule outcome or an age in seconds.
+    pub observed: String,
+    pub at_ms: u64,
 }
 
 /// A record that failed validation.
