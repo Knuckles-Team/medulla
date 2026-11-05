@@ -160,6 +160,7 @@ closed_error_codes! {
         PackRevisionNotVisible => "PACK_REVISION_NOT_VISIBLE",
         PackTooLarge => "PACK_TOO_LARGE",
         RaftNotConfigured => "RAFT_NOT_CONFIGURED",
+        RaftRetryBudgetExhausted => "RAFT_RETRY_BUDGET_EXHAUSTED",
         ReasoningProjectionRejectFailed => "REASONING_PROJECTION_REJECT_FAILED",
         RegistryCursorStale => "REGISTRY_CURSOR_STALE",
         RegistryLimit => "REGISTRY_LIMIT",
