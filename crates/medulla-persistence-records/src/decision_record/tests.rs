@@ -81,6 +81,8 @@ pub fn seed_library(store: &AgentLibraryStore) {
         prompt_mode: PromptMode::Static,
         token_estimate: 500,
         variables: Vec::new(),
+        body_sha256: None,
+        schema_revision: None,
     };
     let drafts = [
         draft(
