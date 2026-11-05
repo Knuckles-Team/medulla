@@ -1222,7 +1222,7 @@ Do not infer it from these fixtures or generated status.
 | Hot-path proof | `MEDULLA-DECISION-ENGINE-R656.6` | `tests/memory/test_assistant_profile_served.py::test_profile_constrains_a_run` |
 | Assistant profile constrains the HarnessConfig request | `MEDULLA-DECISION-ENGINE-R128.16` | `crates/medulla-server-served-tests/src/split_tests/medulla_h_decide_harness_config_tests.rs::allowlist_narrows_tool_subset` |
 | AgentAssemble respects the profile tool allowlist | `MEDULLA-DECISION-ENGINE-R036.107` | `crates/medulla-h-decide/src/decide/stat_tests/assemble_tests.rs::allowlist_removes_tools_and_admission_still_runs` |
-| Participant memory knobs | `MEDULLA-DECISION-ENGINE-R179.8` | `crates/medulla-types/src/memory_scope.rs::tests::knob_defaults_are_inside_bounds`; `crates/medulla-h-decide/src/decide/stat_tests/knob_tests.rs::participant_knobs_are_registered_and_tunable` |
+| Participant memory knobs | `MEDULLA-DECISION-ENGINE-R179.8` | `crates/medulla-decision-types/src/decision/knob_families/participant.rs::tests::knob_defaults_are_inside_bounds`; `crates/medulla-h-decide/src/decide/stat_tests/knob_tests.rs::participant_knobs_are_registered_and_tunable` |
 | Participant memory refusal codes | `MEDULLA-DECISION-ENGINE-R010.100.4` | `crates/medulla-decision-types/src/decision/record/outcome.rs::tests::codes_are_unique_and_stable` |
 
 ## Planned bindings, range 7
@@ -2031,7 +2031,7 @@ Every row below has a planned test at its exact post-split path; the row text na
 | `MEDULLA-DECISION-ENGINE-R805.12` | `crates/medulla-h-decide/src/decide/stat_tests/promotion_tests.rs::harness_definitions_promote_and_roll_back` |
 | `MEDULLA-DECISION-ENGINE-R805.13` | `crates/medulla-h-decide/src/decide/stat_tests/promotion_tests.rs::pointer_read_returns_champion_and_refuses_unknown_key` |
 | `MEDULLA-DECISION-ENGINE-R815` | `crates/medulla-h-decide/src/decide/stat_tests/assemble_tests.rs::model_media_capability_and_unknown_code` |
-| `MEDULLA-DECISION-ENGINE-R816` | `src/server/handlers/observation_state_tests.rs::state_is_run_bound` |
+| `MEDULLA-DECISION-ENGINE-R816` | `crates/medulla-h-graph/src/graph_ops/observation_state_tests.rs::state_is_run_bound` |
 | `MEDULLA-DECISION-ENGINE-R817` | `tests/decide/test_revision_proposals_served.py::test_list_is_tenant_scoped_and_paged` |
 | `MEDULLA-DECISION-ENGINE-R818` | `crates/medulla-h-decide/src/decide/stat_tests/probe_selection_tests.rs::selects_declared_entries_and_refuses_empty` |
 | `MEDULLA-DECISION-ENGINE-R819` | `crates/medulla-h-decide/src/decide/stat_tests/serving_technique_tests.rs::verdict_follows_receipts_and_knobs` |
@@ -2084,7 +2084,7 @@ Every row below has a planned test at its exact post-split path; the row text na
 | `MEDULLA-DECISION-ENGINE-R700.7` | `crates/medulla-h-decide/src/decide/stat_tests/belief_revision_tests.rs::contradiction_is_tracked_and_status_is_ordered` |
 | `MEDULLA-DECISION-ENGINE-R134.111.11` | `tests/test_task_plan_receipt_validation.py::test_receipt_refuses_a_different_call` |
 | `MEDULLA-DECISION-ENGINE-R134.111.13` | `tests/decide/test_task_plan_served.py::test_tool_step_bindings_end_to_end` |
-| `MEDULLA-DECISION-ENGINE-R179.8` | `crates/medulla-types/src/memory_scope.rs::tests::knob_defaults_are_inside_bounds` |
+| `MEDULLA-DECISION-ENGINE-R179.8` | `crates/medulla-decision-types/src/decision/knob_families/participant.rs::tests::knob_defaults_are_inside_bounds` |
 | `MEDULLA-DECISION-ENGINE-R179.8` | `crates/medulla-h-decide/src/decide/stat_tests/knob_tests.rs::participant_knobs_are_registered_and_tunable` |
 | `MEDULLA-DECISION-ENGINE-R803.8` | `stat_log.rs::dispatch` |
 | `MEDULLA-DECISION-ENGINE-R814` | `tests/decide/test_prompt_candidates_served.py::test_dynamic_agent_gets_the_matching_connector_system_prompt` |
