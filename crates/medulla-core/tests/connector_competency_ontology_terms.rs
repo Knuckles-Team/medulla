@@ -537,6 +537,54 @@ mod ontology_audit_archimate_v1 {
         parse_turtle(&ontology).expect("the registered archimate ontology parses")
     }
 
+    // spec: MEDULLA-CQ-CONN-R070.1
+    #[test]
+    fn shapes_module_loads() {
+        let shapes = registered_shapes("core:archimate@1", "archimate");
+        let parsed = parse_turtle(&shapes).expect("the archimate shapes parse");
+        assert!(has_iri(
+            &parsed,
+            &format!("{KG}ArchimateRelationshipShape"),
+            RDF_TYPE,
+            SHACL_NODE_SHAPE
+        ));
+    }
+
+    // spec: MEDULLA-CQ-CONN-R070.2
+    #[test]
+    fn ApplicationComponent_declared() {
+        assert_class(&triples(), "ApplicationComponent", Some("ApplicationLayer"));
+    }
+
+    // spec: MEDULLA-CQ-CONN-R070.3
+    #[test]
+    fn ArchimateRelationship_declared() {
+        assert_class(&triples(), "ArchimateRelationship", None);
+        let prefix = "@prefix : <http://knuckles.team/kg#> . ";
+        let ok = format!("{prefix}:a :b :c . :r a :ArchimateRelationship ; :relationshipType \"Serving\" ; :relSource :a ; :relTarget :c .");
+        assert!(shapes_conform("core:archimate@1", "archimate", &ok));
+        for violating in [
+            ":r a :ArchimateRelationship ; :relSource :a ; :relTarget :c .",
+            ":r a :ArchimateRelationship ; :relationshipType \"Serving\" ; :relTarget :c .",
+            ":r a :ArchimateRelationship ; :relationshipType \"Serving\" ; :relSource :a .",
+        ] {
+            let data = format!("{prefix}{violating}");
+            assert!(!shapes_conform("core:archimate@1", "archimate", &data));
+        }
+    }
+
+    // spec: MEDULLA-CQ-CONN-R070.4
+    #[test]
+    fn relationshipType_declared() {
+        assert_property(
+            &triples(),
+            "relationshipType",
+            OWL_DATATYPE_PROPERTY,
+            "ArchimateRelationship",
+            &format!("{XSD}string"),
+        );
+    }
+
     // spec: MEDULLA-CQ-CONN-R070.5
     #[test]
     fn ConfigurationItem_declared() {
@@ -968,5 +1016,410 @@ mod ontology_audit_core_foundation_v1 {
             RDFS_RANGE,
             &format!("{KG}Action")
         ));
+    }
+}
+
+// Shared term-audit helpers for the R070/R071/R072/R077/R078/R080/R081 rows.
+
+fn assert_class(triples: &[Triple], term: &str, parent: Option<&str>) {
+    let iri = format!("{KG}{term}");
+    assert!(
+        has_iri(triples, &iri, RDF_TYPE, OWL_CLASS),
+        "{term} is an owl:Class"
+    );
+    if let Some(parent) = parent {
+        assert!(
+            has_iri(triples, &iri, RDFS_SUBCLASSOF, &format!("{KG}{parent}")),
+            "{term} is a subclass of {parent}"
+        );
+    }
+}
+
+fn assert_property(triples: &[Triple], term: &str, kind: &str, domain: &str, range: &str) {
+    let iri = format!("{KG}{term}");
+    assert!(has_iri(triples, &iri, RDF_TYPE, kind), "{term} owl type");
+    assert!(
+        domain_covers(triples, &iri, &format!("{KG}{domain}")),
+        "{term} has domain {domain}"
+    );
+    assert!(
+        has_iri(triples, &iri, RDFS_RANGE, range),
+        "{term} has range {range}"
+    );
+}
+
+fn shapes_conform(source_id: &str, module: &str, data: &str) -> bool {
+    let shapes = registered_shapes(source_id, module);
+    medulla_shacl::validate_turtle(&shapes, data)
+        .expect("validation runs")
+        .conforms
+}
+
+#[allow(non_snake_case)]
+mod ontology_audit_documentation_v1 {
+    use super::*;
+
+    fn triples() -> Vec<Triple> {
+        let ontology = registered_ontology("core:documentation@1", "documentation");
+        parse_turtle(&ontology).expect("the registered ontology parses")
+    }
+
+    // spec: MEDULLA-CQ-CONN-R071.1
+    #[test]
+    fn shapes_module_loads() {
+        let shapes = registered_shapes("core:documentation-shapes@1", "documentation-shapes");
+        let parsed = parse_turtle(&shapes).expect("the documentation shapes parse");
+        assert!(has_iri(
+            &parsed,
+            &format!("{KG}WebSnapshotShape"),
+            RDF_TYPE,
+            SHACL_NODE_SHAPE
+        ));
+    }
+
+    // spec: MEDULLA-CQ-CONN-R071.2
+    #[test]
+    fn WebSnapshot_declared() {
+        assert_class(&triples(), "WebSnapshot", Some("Document"));
+        let prefix = "@prefix : <http://knuckles.team/kg#> . ";
+        let id = "core:documentation-shapes@1";
+        assert!(shapes_conform(
+            id,
+            "documentation-shapes",
+            &format!("{prefix}:s a :WebSnapshot ; :sourceRef \"https://example.org/\" .")
+        ));
+        assert!(!shapes_conform(
+            id,
+            "documentation-shapes",
+            &format!("{prefix}:s a :WebSnapshot .")
+        ));
+    }
+
+    // spec: MEDULLA-CQ-CONN-R071.3
+    #[test]
+    fn ArchiveResult_declared() {
+        assert_class(&triples(), "ArchiveResult", None);
+        let prefix = "@prefix : <http://knuckles.team/kg#> . ";
+        let id = "core:documentation-shapes@1";
+        assert!(shapes_conform(id, "documentation-shapes", &format!("{prefix}:r a :ArchiveResult ; :extractorName \"pdf\" ; :resultStatus \"succeeded\" .")));
+        assert!(!shapes_conform(
+            id,
+            "documentation-shapes",
+            &format!("{prefix}:r a :ArchiveResult ; :resultStatus \"succeeded\" .")
+        ));
+        assert!(!shapes_conform(
+            id,
+            "documentation-shapes",
+            &format!("{prefix}:r a :ArchiveResult ; :extractorName \"pdf\" .")
+        ));
+    }
+
+    // spec: MEDULLA-CQ-CONN-R071.4
+    #[test]
+    fn hasArchiveResult_declared() {
+        assert_property(
+            &triples(),
+            "hasArchiveResult",
+            OWL_OBJECT_PROPERTY,
+            "WebSnapshot",
+            &format!("{KG}ArchiveResult"),
+        );
+    }
+
+    // spec: MEDULLA-CQ-CONN-R071.5
+    #[test]
+    fn extractorName_declared() {
+        assert_property(
+            &triples(),
+            "extractorName",
+            OWL_DATATYPE_PROPERTY,
+            "ArchiveResult",
+            &format!("{XSD}string"),
+        );
+    }
+
+    // spec: MEDULLA-CQ-CONN-R071.6
+    #[test]
+    fn resultStatus_declared() {
+        assert_property(
+            &triples(),
+            "resultStatus",
+            OWL_DATATYPE_PROPERTY,
+            "ArchiveResult",
+            &format!("{XSD}string"),
+        );
+        let prefix = "@prefix : <http://knuckles.team/kg#> . ";
+        let id = "core:documentation-shapes@1";
+        for status in ["succeeded", "failed", "skipped"] {
+            let data = format!("{prefix}:r a :ArchiveResult ; :extractorName \"pdf\" ; :resultStatus \"{status}\" .");
+            assert!(shapes_conform(id, "documentation-shapes", &data));
+        }
+        let bad = format!(
+            "{prefix}:r a :ArchiveResult ; :extractorName \"pdf\" ; :resultStatus \"unknown\" ."
+        );
+        assert!(!shapes_conform(id, "documentation-shapes", &bad));
+    }
+}
+
+#[allow(non_snake_case)]
+mod ontology_audit_process_intelligence_v1 {
+    use super::*;
+
+    fn triples() -> Vec<Triple> {
+        let ontology = registered_ontology("core:process_intelligence@1", "process_intelligence");
+        parse_turtle(&ontology).expect("the registered ontology parses")
+    }
+
+    // spec: MEDULLA-CQ-CONN-R072.1
+    #[test]
+    fn EpcFunction_declared() {
+        assert_class(&triples(), "EpcFunction", Some("ProcessEventType"));
+    }
+
+    // spec: MEDULLA-CQ-CONN-R072.2
+    #[test]
+    fn EpcRuleOperator_declared() {
+        assert_class(&triples(), "EpcRuleOperator", None);
+    }
+
+    // spec: MEDULLA-CQ-CONN-R072.3
+    #[test]
+    fn flowsTo_declared() {
+        let triples = triples();
+        let property = format!("{KG}flowsTo");
+        assert!(has_iri(&triples, &property, RDF_TYPE, OWL_OBJECT_PROPERTY));
+        assert!(domain_covers(
+            &triples,
+            &property,
+            &format!("{KG}EpcFunction")
+        ));
+        assert!(domain_covers(
+            &triples,
+            &property,
+            &format!("{KG}EpcRuleOperator")
+        ));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_RANGE,
+            &format!("{KG}ProcessEventType")
+        ));
+    }
+
+    // spec: MEDULLA-CQ-CONN-R072.4
+    #[test]
+    fn ProcessInstance_declared() {
+        assert_class(&triples(), "ProcessInstance", None);
+    }
+
+    // spec: MEDULLA-CQ-CONN-R072.5
+    #[test]
+    fn instanceOfProcessModel_declared() {
+        assert_property(
+            &triples(),
+            "instanceOfProcessModel",
+            OWL_OBJECT_PROPERTY,
+            "ProcessInstance",
+            &format!("{KG}ProcessModelVersion"),
+        );
+    }
+
+    // spec: MEDULLA-CQ-CONN-R072.6
+    #[test]
+    fn stoppedAtActivity_declared() {
+        assert_property(
+            &triples(),
+            "stoppedAtActivity",
+            OWL_OBJECT_PROPERTY,
+            "ProcessInstance",
+            &format!("{KG}ProcessEventType"),
+        );
+    }
+
+    // spec: MEDULLA-CQ-CONN-R072.7
+    #[test]
+    fn raisedIncident_declared() {
+        assert_property(
+            &triples(),
+            "raisedIncident",
+            OWL_OBJECT_PROPERTY,
+            "ProcessInstance",
+            &format!("{KG}ApplicationEvent"),
+        );
+    }
+}
+
+#[allow(non_snake_case)]
+mod ontology_audit_virtual_graph_v1 {
+    use super::*;
+
+    fn triples() -> Vec<Triple> {
+        let ontology = registered_ontology("core:virtual-graph@1", "virtual-graph");
+        parse_turtle(&ontology).expect("the registered ontology parses")
+    }
+
+    // spec: MEDULLA-CQ-CONN-R077.1
+    #[test]
+    fn NamedGraph_declared() {
+        assert_class(&triples(), "NamedGraph", Some("Dataset"));
+    }
+
+    // spec: MEDULLA-CQ-CONN-R077.2
+    #[test]
+    fn tripleCount_declared() {
+        assert_property(
+            &triples(),
+            "tripleCount",
+            OWL_DATATYPE_PROPERTY,
+            "NamedGraph",
+            &format!("{XSD}integer"),
+        );
+    }
+
+    // spec: MEDULLA-CQ-CONN-R077.3
+    #[test]
+    fn lastModifiedAt_declared() {
+        assert_property(
+            &triples(),
+            "lastModifiedAt",
+            OWL_DATATYPE_PROPERTY,
+            "NamedGraph",
+            &format!("{XSD}dateTime"),
+        );
+    }
+}
+
+#[allow(non_snake_case)]
+mod ontology_audit_identity_v1 {
+    use super::*;
+
+    fn triples() -> Vec<Triple> {
+        let ontology = registered_ontology("core:identity@1", "identity");
+        parse_turtle(&ontology).expect("the registered ontology parses")
+    }
+
+    // spec: MEDULLA-CQ-CONN-R078.3
+    #[test]
+    fn OidcClient_declared() {
+        assert_class(&triples(), "OidcClient", Some("Application"));
+    }
+
+    // spec: MEDULLA-CQ-CONN-R078.4
+    #[test]
+    fn roleGrantsAccessTo_declared() {
+        assert_property(
+            &triples(),
+            "roleGrantsAccessTo",
+            OWL_OBJECT_PROPERTY,
+            "IdentityRole",
+            &format!("{KG}Application"),
+        );
+        let operations = registered_ontology("core:service_operations@1", "service_operations");
+        let operations = parse_turtle(&operations).expect("the service_operations ontology parses");
+        assert_class(&operations, "Application", None);
+    }
+}
+
+#[allow(non_snake_case)]
+mod ontology_audit_enterprise_v1 {
+    use super::*;
+
+    fn triples() -> Vec<Triple> {
+        let ontology = registered_ontology("core:enterprise@1", "enterprise");
+        parse_turtle(&ontology).expect("the registered ontology parses")
+    }
+
+    // spec: MEDULLA-CQ-CONN-R080.2
+    #[test]
+    fn factSheetType_declared() {
+        assert_property(
+            &triples(),
+            "factSheetType",
+            OWL_DATATYPE_PROPERTY,
+            "EAFactSheet",
+            &format!("{XSD}string"),
+        );
+    }
+
+    // spec: MEDULLA-CQ-CONN-R080.4
+    #[test]
+    fn activeUserCount_declared() {
+        assert_property(
+            &triples(),
+            "activeUserCount",
+            OWL_DATATYPE_PROPERTY,
+            "EAFactSheet",
+            &format!("{XSD}integer"),
+        );
+    }
+}
+
+#[allow(non_snake_case)]
+mod ontology_audit_nutrition_v1 {
+    use super::*;
+
+    fn triples() -> Vec<Triple> {
+        let ontology = registered_ontology("core:nutrition@1", "nutrition");
+        parse_turtle(&ontology).expect("the registered ontology parses")
+    }
+
+    // spec: MEDULLA-CQ-CONN-R081.1
+    #[test]
+    fn Recipe_declared() {
+        assert_class(&triples(), "Recipe", None);
+    }
+
+    // spec: MEDULLA-CQ-CONN-R081.2
+    #[test]
+    fn usesIngredient_declared() {
+        assert_property(
+            &triples(),
+            "usesIngredient",
+            OWL_OBJECT_PROPERTY,
+            "Recipe",
+            &format!("{KG}Food"),
+        );
+    }
+
+    // spec: MEDULLA-CQ-CONN-R081.3
+    #[test]
+    fn ShoppingListItem_declared() {
+        assert_class(&triples(), "ShoppingListItem", None);
+    }
+
+    // spec: MEDULLA-CQ-CONN-R081.4
+    #[test]
+    fn MealPlanEntry_declared() {
+        assert_class(&triples(), "MealPlanEntry", None);
+    }
+
+    // spec: MEDULLA-CQ-CONN-R081.5
+    #[test]
+    fn WorkoutRoutine_declared() {
+        assert_class(&triples(), "WorkoutRoutine", None);
+    }
+
+    // spec: MEDULLA-CQ-CONN-R081.6
+    #[test]
+    fn Exercise_declared() {
+        assert_class(&triples(), "Exercise", None);
+    }
+
+    // spec: MEDULLA-CQ-CONN-R081.7
+    #[test]
+    fn includesExercise_declared() {
+        assert_property(
+            &triples(),
+            "includesExercise",
+            OWL_OBJECT_PROPERTY,
+            "WorkoutRoutine",
+            &format!("{KG}Exercise"),
+        );
+    }
+
+    // spec: MEDULLA-CQ-CONN-R081.8
+    #[test]
+    fn WorkoutSession_declared() {
+        assert_class(&triples(), "WorkoutSession", None);
     }
 }

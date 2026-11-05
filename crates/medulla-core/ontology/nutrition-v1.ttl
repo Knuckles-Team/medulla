@@ -4,6 +4,7 @@
 @prefix wd: <http://www.wikidata.org/entity/> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
 @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
@@ -147,3 +148,45 @@
     rdfs:label "FoodData Central id" ;
     rdfs:domain :FoodCompositionRecord ;
     rdfs:range xsd:string .
+
+:Recipe a owl:Class ;
+    rdfs:label "Recipe" ;
+    rdfs:comment "A recipe: a named preparation made from ingredients (producer: mealie)." ;
+    skos:closeMatch schema:Recipe .
+
+:usesIngredient a owl:ObjectProperty ;
+    rdfs:label "uses ingredient" ;
+    rdfs:comment "Links a :Recipe to a :Food it uses as an ingredient." ;
+    rdfs:domain :Recipe ;
+    rdfs:range :Food .
+
+:ShoppingListItem a owl:Class ;
+    rdfs:label "Shopping List Item" ;
+    rdfs:comment "A shopping-list item that refers to a :Food (producer: mealie)." ;
+    skos:relatedMatch schema:ListItem .
+
+:MealPlanEntry a owl:Class ;
+    rdfs:label "Meal Plan Entry" ;
+    rdfs:comment "A planned meal on a date for a :Recipe (producer: mealie)." ;
+    skos:relatedMatch schema:Event .
+
+:WorkoutRoutine a owl:Class ;
+    rdfs:label "Workout Routine" ;
+    rdfs:comment "A planned set of exercises (producer: wger)." ;
+    skos:closeMatch schema:ExercisePlan .
+
+:Exercise a owl:Class ;
+    rdfs:label "Exercise" ;
+    rdfs:comment "An exercise a workout routine can include (producer: wger)." ;
+    skos:relatedMatch schema:ExerciseAction .
+
+:includesExercise a owl:ObjectProperty ;
+    rdfs:label "includes exercise" ;
+    rdfs:comment "Links a :WorkoutRoutine to an :Exercise it includes." ;
+    rdfs:domain :WorkoutRoutine ;
+    rdfs:range :Exercise .
+
+:WorkoutSession a owl:Class ;
+    rdfs:label "Workout Session" ;
+    rdfs:comment "A performed instance of a :WorkoutRoutine (producer: wger)." ;
+    skos:relatedMatch schema:ExerciseAction .

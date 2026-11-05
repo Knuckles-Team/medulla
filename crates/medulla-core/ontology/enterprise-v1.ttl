@@ -174,3 +174,15 @@ ArchiMate: Strategy → CourseOfAction.""" ;
     rdfs:subPropertyOf :supersedes ;
     rdfs:domain :ArchitectureDecisionRecord ;
     rdfs:range :ArchitectureDecisionRecord .
+
+:factSheetType a owl:DatatypeProperty ;
+    rdfs:label "fact sheet type" ;
+    rdfs:comment "The enterprise-architecture tool's type name of an :EAFactSheet (Application, BusinessCapability, ...; producer: leanix)." ;
+    rdfs:domain :EAFactSheet ;
+    rdfs:range xsd:string .
+
+:activeUserCount a owl:DatatypeProperty ;
+    rdfs:label "active user count" ;
+    rdfs:comment "The number of active users an :EAFactSheet reports (producer: leanix)." ;
+    rdfs:domain :EAFactSheet ;
+    rdfs:range xsd:integer .

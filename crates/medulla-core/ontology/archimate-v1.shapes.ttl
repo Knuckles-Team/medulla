@@ -1,0 +1,11 @@
+@prefix kg: <http://knuckles.team/kg#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+
+kg:ArchimateRelationshipShape a sh:NodeShape ;
+    sh:targetClass kg:ArchimateRelationship ;
+    sh:property [ sh:path kg:relationshipType ; sh:minCount 1 ;
+        sh:message "An ArchiMate relationship needs a :relationshipType." ],
+    [ sh:path kg:relSource ; sh:minCount 1 ;
+        sh:message "An ArchiMate relationship needs a :relSource." ],
+    [ sh:path kg:relTarget ; sh:minCount 1 ;
+        sh:message "An ArchiMate relationship needs a :relTarget." ] .
