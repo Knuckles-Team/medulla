@@ -4002,6 +4002,7 @@ components:
       - "tests/test_p2_analytics_gate_contract.py"
       - "tests/test_pb_clients.py"
       - "tests/test_persisted_mutation_contract.py"
+      - "tests/test_sole_write_envelope.py"
       - "tests/test_pinned_reference_resolution.py"
       - "tests/test_pipelining.py"
       - "tests/test_placement_r611.py"
