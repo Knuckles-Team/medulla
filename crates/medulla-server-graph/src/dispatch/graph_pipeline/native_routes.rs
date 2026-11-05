@@ -238,6 +238,9 @@ async fn route_work_item_reads(
     method: Method,
 ) -> Result<Response, Method> {
     let read = match method {
+        Method::GetShardWriterWidth { tenant } => {
+            return Ok(answer_shard_writer_width(ctx, tenant).await);
+        }
         method @ (Method::GetRunWorkItem { .. }
         | Method::GetSessionUsage { .. }
         | Method::GetCurrentPlan { .. }) => {
@@ -360,6 +363,31 @@ async fn answer_work_item_read(
         read,
     )
     .await
+}
+
+/// MEDULLA-DURABLE-KERNEL-R077: the configured shard-writer width, behind the
+/// same placement-leader gate as the WorkItem reads.
+#[cfg(feature = "redb")]
+async fn answer_shard_writer_width(ctx: GraphOpRouting<'_>, tenant: String) -> Response {
+    #[cfg(feature = "raft")]
+    if let Err(response) = enforce_native_read_leadership(
+        ctx.req_id,
+        ctx.graph_name,
+        ctx.multi_raft.as_ref(),
+        ctx.routed_raft.as_ref(),
+        "shard-writer width reads require the current placement leader",
+        "shard-writer width read linearizability barrier failed",
+    )
+    .await
+    {
+        return response;
+    }
+    medulla_h_jobs::worker_admission::answer_shard_writer_width(
+        ctx.req_id,
+        &tenant,
+        ctx.verified_context.tenant(),
+        ctx.persistence,
+    )
 }
 
 /// Every WorkItem-kernel write binds its body tenant to the verified carrier
