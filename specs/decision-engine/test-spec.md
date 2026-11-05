@@ -679,7 +679,7 @@ No test in this section has run.
 - `MEDULLA-DECISION-ENGINE-R172.7`: `crates/medulla-h-decide/src/decide/stat_tests/capability_designation_tests.rs::decide_routes_capability_designation`.
 - `MEDULLA-DECISION-ENGINE-R172.8`: `crates/medulla-h-decide/src/decide/stat_tests/capability_designation_tests.rs::capability_designation_refusals`.
 - `MEDULLA-DECISION-ENGINE-R172.9`: `crates/medulla-h-decide/src/decide/stat_tests/capability_designation_tests.rs::premises_name_scores_and_knobs`.
-- `MEDULLA-DECISION-ENGINE-R172.10`: `benches/decide_budgets.rs` group `decide/capability_designation`.
+- `MEDULLA-DECISION-ENGINE-R172.10`: `benches/decide_budgets.rs::capability_designation` (bench group `decide/capability_designation`).
 - `MEDULLA-DECISION-ENGINE-R172.11`: `tests/decide/test_capability_designation_served.py::test_designation_end_to_end`.
 - `MEDULLA-DECISION-ENGINE-R172.12`: Rollup closes when every child `.12.1` to `.12.6` passes its proving test, and `tests/decide/test_capability_designation_pack_served.py::test_designation_reads_imported_pack` passes.
 - `MEDULLA-DECISION-ENGINE-R172.12.1`: `crates/medulla-types/src/decision/capability_designation.rs::tests::pack_surface_fields_round_trip`.
@@ -1179,6 +1179,6 @@ Rows `MEDULLA-DECISION-ENGINE-R154.5` to `MEDULLA-DECISION-ENGINE-R172.12`. Ever
 | `crates/medulla-h-decide/src/decide/stat_tests/capability_designation_tests.rs::committed_library_write_is_visible_to_next_question` | L3 | `MEDULLA-DECISION-ENGINE-R172.7.2` | It publishes a component, asks, withdraws it, asks again and asserts both answers, plus a cross-tenant negative case |
 | `crates/medulla-h-decide/src/decide/stat_tests/capability_designation_tests.rs::capability_designation_refusals` | L3 | `MEDULLA-DECISION-ENGINE-R172.8` | Each case asserts its code, the outcome, and that no reward, index epoch or decision record changed |
 | `crates/medulla-h-decide/src/decide/stat_tests/capability_designation_tests.rs::premises_name_scores_and_knobs` | L3 | `MEDULLA-DECISION-ENGINE-R172.9` | It asserts every score term and knob premise for every designation, and that the outcome trace links its source ids |
-| `benches/decide_budgets.rs` (bench group named in the row) | L6 | `MEDULLA-DECISION-ENGINE-R172.10` | group `decide/capability_designation` (L6) reports p50, p99, recall@5 and resident bytes |
+| `benches/decide_budgets.rs::capability_designation` (bench group `decide/capability_designation`) | L6 | `MEDULLA-DECISION-ENGINE-R172.10` | group `decide/capability_designation` (L6) reports p50, p99, recall@5 and resident bytes |
 | `tests/decide/test_capability_designation_served.py::test_designation_end_to_end` | L4 | `MEDULLA-DECISION-ENGINE-R172.11` | runs against a loopback engine with authentication |
 | `tests/decide/test_capability_designation_pack_served.py::test_designation_reads_imported_pack` | L4 | `MEDULLA-DECISION-ENGINE-R172.12` | It imports a pack, asks for a target class and asserts the executing tool and subclass path |
