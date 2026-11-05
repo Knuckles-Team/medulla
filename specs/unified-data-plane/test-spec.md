@@ -79,19 +79,17 @@ Authenticated Iceberg catalog (R039): a valid token lists and loads its own tabl
 - `MEDULLA-UNIFIED-DATA-PLANE-R040.5`: `crates/medulla-types/src/embedding_promotion.rs::tests::verdict_is_stored_with_modality_entries`.
 - `MEDULLA-UNIFIED-DATA-PLANE-R040.6`: `tests/embedding/test_promotion_gate_served.py::test_regressed_modality_blocks_promotion`.
 
-<!-- spec-definition-patch:owner-batch-20261012-unified-data-plane -->
-## Planned owner acceptance — 2026-10-12
+## Planned acceptance: graph-backed projections
 
 These bullets define future acceptance targets. They are not test evidence or receipts. Exercise each row's actual producer/consumer boundary and retain existing covered behavior.
 
-- **`MEDULLA-UNIFIED-DATA-PLANE-R026.4`**: EG:64; source SHA-256 `c55bc629b1bfefc9d0346b75b8bb95e5a231b891e7e34297df17b960d6c9773c`.
+- **`MEDULLA-UNIFIED-DATA-PLANE-R026.4`**:
   - Read a mapped table through a served external client using an approved, pinned mapping. Bind schema/graph revisions and row digest.
   - Attempt INSERT, UPDATE, DELETE, and DDL through read-only and mutation-granted principals. Refuse each attempt and preserve graph revision.
   - Submit an authorized graph `MutationBatch`. Confirm the projection read reflects its committed revision.
   - Refuse stale/unapproved mappings and unauthorized graph mutations.
   - Hold application-level SQL/schema conformance until the R026 owner provides the approved target mapping and captured statement corpus.
   - Preserve MEDULLA-DURABLE-KERNEL-R035, MEDULLA-DURABLE-KERNEL-R043, MEDULLA-FEDERATED-QUERY-R080, MEDULLA-UNIFIED-DATA-PLANE-R026, and MEDULLA-FEDERATED-QUERY-R080.1 through R080.6.
-<!-- /spec-definition-patch -->
 
 ## MEDULLA-UNIFIED-DATA-PLANE-R038.3 acceptance
 

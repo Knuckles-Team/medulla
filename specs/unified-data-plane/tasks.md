@@ -1,279 +1,203 @@
-# Delivery tasks and traceability
+# MEDULLA-UNIFIED-DATA-PLANE — Tasks
 
-**State:** PROPOSED. All 33 entries are unchecked and waiting to be built. Each entry's requirement ID, as defined in [requirements.md](requirements.md), preserves traceability; this checklist and its linked evidence must be sufficient for a public contributor to understand status. Change a checkbox only with a linked merged commit and test evidence. A checkbox is never acceptance by itself. [Spec](spec.md) · [design](plan.md) · [tests](test-spec.md).
+One task per leaf row of `requirements.md`, producer first. Each task names its row; the row holds the files, the caller chain and the proof. A rollup row has no task of its own; its children carry the work.
 
-## Foundation and understanding
+Story map: US1 attach and understand a source, US2 dialect adapters and conformance, US3 application admission and native hosting, US4 source categories and the lake catalog, US5 entity links, change streams and incidents, US6 catalog analytics and served catalog operations, US7 documents, actions, history and embeddings.
 
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R001:** Decide attached-source default, consistency, native admission and pgrx boundary by ADR. Recorded in [docs/architecture/unified_data_plane_adr.md](../../docs/architecture/unified_data_plane_adr.md) (five decisions, each quoting the merged spec.md/plan.md text it formalizes); the separate pgrx go/no-go spike decision remains MEDULLA-UNIFIED-DATA-PLANE-R025.
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R002 (rollup):** Merge source registration, owner scope, secret references, verified outbound checks and five-part adapter contract; depends on MEDULLA-FEDERATED-QUERY-R013. Split by code root per SPEC-SIZING-AND-DEPENDENCIES.md (score > 6, 3 code roots): LANDED only when R002.1, R002.2 and R002.3 are all LANDED.
-  - [x] **MEDULLA-UNIFIED-DATA-PLANE-R002.1:** Verify the outbound destination before persisting a `ForeignSourceSpec::Sql` registration (producer path, `crates/medulla-server-ops/src/api/query_txn/foreign_catalog.rs` + `crates/medulla-federation/src/federation_ssrf.rs`). No dependency.
-  - [x] **MEDULLA-UNIFIED-DATA-PLANE-R002.2:** Verify the outbound destination before persisting an OBDA `external_sources` registration (consumer path, `crates/medulla-h-sparql/src/rdf/obda.rs`); depends on MEDULLA-UNIFIED-DATA-PLANE-R002.1.
-  - [x] **MEDULLA-UNIFIED-DATA-PLANE-R002.3:** Verify the outbound destination before persisting a kernel mirror-target registration (sink path). Depends on MEDULLA-UNIFIED-DATA-PLANE-R002.1 and the same-repo MEDULLA-DURABLE-KERNEL-R024 (BUILDING; no mirror-target registration code root exists yet).
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R003:** Build versioned typed catalog extraction with OBDA and `schema_context` consumers; depends on MEDULLA-UNIFIED-DATA-PLANE-R002.
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R003.1:** Typed, hashed `AttachedCatalogGraph` model with reorder-stable hashing and duplicate-table refusal; part of MEDULLA-UNIFIED-DATA-PLANE-R003 (parent rollup).
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R004:** Add bounded profiling, JSON shape, dependency inference and fixed-seed Leiden grouping; depends on MEDULLA-UNIFIED-DATA-PLANE-R003.
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R004.1:** Typed, bounded `ColumnSamplingBudget` with zero/over-ceiling refusal; part of MEDULLA-UNIFIED-DATA-PLANE-R004 (parent rollup).
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R005:** Approve and version R2RML named virtual graphs; depends on MEDULLA-UNIFIED-DATA-PLANE-R004 and MEDULLA-DECISION-ENGINE-R033.
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R005.1:** Typed `MappingApprovalState`/`VirtualGraphMapping` refusing an unapproved query; part of MEDULLA-UNIFIED-DATA-PLANE-R005 (parent rollup).
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R029:** Expose `schema_context` through Arbora; depends on MEDULLA-UNIFIED-DATA-PLANE-R004.
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R029.1:** `SchemaContextCatalog`/`SchemaContextAnswer` typed model plus unknown-table refusal (`crates/medulla-types/src/schema_context.rs`).
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R029.2:** Wire the real `schema_context` query entry point through Arbora, following the `code_context` pattern.
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R030:** Add cross-app entity proposals, approval and evidence; depends on MEDULLA-UNIFIED-DATA-PLANE-R005.
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R030.1:** `EntityLinkProposal` typed model plus unapproved/non-Match assertion refusal (`crates/medulla-types/src/entity_link_proposal.rs`).
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R030.2:** Blocking and field-similarity candidate generation across Gramps/Immich/Twenty/Firefly.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R030.3:** Real Fellegi-Sunter scoring and the approval workflow.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R031 (rollup):** Define isolation, quotas, compatibility, native admission and rollback; depends on MEDULLA-UNIFIED-DATA-PLANE-R002.
-  - [x] **MEDULLA-UNIFIED-DATA-PLANE-R031.1:** `ApplicationAdmission`/`ConsolidationIsolationRegistry` typed model plus identity/quota refusals (`crates/medulla-types/src/consolidation_isolation.rs`).
-  - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R031.2:** Real fault-isolation enforcement and quota metering.
+## Tasks
 
-## Query, change and write paths
-
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R006:** Typed OBDA join/aggregate/order/limit pushdown and explicit fallback; depends on MEDULLA-UNIFIED-DATA-PLANE-R005.
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R006.1:** Typed `PushdownDecision`/`PushdownFallbackReason` refusing a contradictory decision; part of MEDULLA-UNIFIED-DATA-PLANE-R006 (parent rollup).
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R007:** Attached table DataFusion providers and dialect-aware sub-plan pushdown; depends on MEDULLA-UNIFIED-DATA-PLANE-R002.
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R007.1:** Typed `DialectPushdownCapabilities` refusing an unknown operation name; part of MEDULLA-UNIFIED-DATA-PLANE-R007 (parent rollup).
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R008:** Durable source-position CDC, replay, lag and drift; depends on MEDULLA-UNIFIED-DATA-PLANE-R002.
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R008.1:** Typed `ChangeEnvelope`/`ChangeOp` model with source-position and keyless-table refusal rules; part of MEDULLA-UNIFIED-DATA-PLANE-R008 (parent rollup).
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R009:** Idempotent mapped graph, search/vector and event consumers; depends on MEDULLA-UNIFIED-DATA-PLANE-R005.
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R009.1:** Typed `ConsumerCheckpoint` with idempotent `apply_if_newer`; part of MEDULLA-UNIFIED-DATA-PLANE-R009 (parent rollup).
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R010:** Policy-controlled `medulla-lake` accelerated copy; depends on MEDULLA-UNIFIED-DATA-PLANE-R008.
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R010.1:** Typed per-table `AccelerationPolicy` model and validation; part of MEDULLA-UNIFIED-DATA-PLANE-R010 (parent rollup).
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R011:** Freshness-aware native/live/accelerated router and EXPLAIN; depends on MEDULLA-UNIFIED-DATA-PLANE-R007.
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R011.1:** Typed `FreshnessRoute`/`ReadYourWritesWait` refusing an unbounded wait; part of MEDULLA-UNIFIED-DATA-PLANE-R011 (parent rollup).
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R012:** Governed idempotent write-back through Graft SDK/app API and MEDULLA-DURABLE-KERNEL-R031 audit; depends on MEDULLA-UNIFIED-DATA-PLANE-R002.
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R012.1:** Typed `AttachedSourceWriteRequest`/`validate` model in `medulla-types::attached_source_governance` with refusal tests for missing approval, audit reservation, idempotency key and business-logic-bypassing direct writes. Depends on MEDULLA-UNIFIED-DATA-PLANE-R012.
-
-## Dialects and conformance
-
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R022:** Build native-source differential and CDC replay conformance harness; depends on MEDULLA-UNIFIED-DATA-PLANE-R002.
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R022.1:** `DialectConformanceEntry`/`ConformanceReport` typed model plus auto-suppression refusal (`crates/medulla-types/src/dialect_conformance.rs`).
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R022.2:** Containerized matrix runner per adapter/engine version.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R022.3 (rollup):** Change-capture replay comparison against a source snapshot.
-  - [x] **MEDULLA-UNIFIED-DATA-PLANE-R022.3.1:** `compare_replay_to_snapshot` pure comparison and conformance-entry construction (`crates/medulla-types/src/replay_conformance.rs`).
-  - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R022.3.2:** Live comparison against a real replay stream and source snapshot.
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R013:** Postgres catalog/query/pgoutput/type adapter; depends on MEDULLA-UNIFIED-DATA-PLANE-R002.
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R014:** Separate MySQL and MariaDB query/catalog/binlog/type entries; depends on MEDULLA-UNIFIED-DATA-PLANE-R002.
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R014.1:** Add the typed `SqlEngineKind`/`SqlEngineCaptureSupport`/`SqlEngineDialectEntry` model (`crates/medulla-types/src/attached_source_dialect.rs`) proving MySQL and MariaDB stay separate, explicitly declared dialect entries, with refusal tests for a missing version floor and an unreviewed type-map revision. The driver, rendering, catalog reader and binlog capture parts are `MEDULLA-UNIFIED-DATA-PLANE-R014.2`+ (not in scope for this slice; depend on `MEDULLA-UNIFIED-DATA-PLANE-R002`). Test: `crates/medulla-types/src/attached_source_dialect.rs::tests::mysql_and_mariadb_are_distinct_entries`.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R014.2 (rollup):** Remaining scope of R014 (driver, rendering, catalog reader, binlog capture). LANDED only once every child is.
-  - [x] **MEDULLA-UNIFIED-DATA-PLANE-R014.2.1:** Adapter skeleton — `MysqlMariadbConnectionConfig`/`MysqlMariadbDriverConfig` typed mapping plus the no-live-database refusal path (`crates/medulla-types/src/mysql_mariadb_connection.rs`), behind the existing `federation-sql` sqlx-mysql feature structure. Test: `crates/medulla-types/src/mysql_mariadb_connection.rs::tests`.
-  - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R014.2.2:** Live row-based binlog/GTID capture, information_schema catalog read, and per-engine (MySQL, MariaDB) conformance entries.
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R015 (rollup):** SQLite lock-safe file attach, WITHOUT ROWID and safe WAL/watermark capture; depends on MEDULLA-UNIFIED-DATA-PLANE-R002.
-  - [x] **MEDULLA-UNIFIED-DATA-PLANE-R015.1:** `SqliteSourceCatalog` typed model plus WITHOUT-ROWID capture-safety refusal (`crates/medulla-catalog-types/src/sqlite_attached_catalog.rs`).
-  - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R015.2 (rollup):** Lock-safe live read-only attach and real WAL-frame tailing/watermark polling. LANDED only once every child is.
-    - [x] **MEDULLA-UNIFIED-DATA-PLANE-R015.2.1:** Adapter skeleton — `SqliteAttachConfig`/`SqliteDriverOpenConfig` typed mapping plus the no-live-file refusal path (`crates/medulla-catalog-types/src/sqlite_live_attach.rs`). Test: `crates/medulla-catalog-types/src/sqlite_live_attach.rs::tests`.
-    - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R015.2.2:** Real lock-safe open, WAL-frame tailing, and watermark polling against a live, concurrently-written file.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R016 (rollup):** MSSQL catalog/T-SQL/CDC adapter; depends on MEDULLA-UNIFIED-DATA-PLANE-R002.
-  - [x] **MEDULLA-UNIFIED-DATA-PLANE-R016.1:** `MssqlSourceCatalog` typed model plus bracket-quoting identifier refusal (`crates/medulla-catalog-types/src/mssql_attached_catalog.rs`).
-  - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R016.2 (rollup):** tiberius driver connection, T-SQL TOP/OFFSET-FETCH rendering, and LSN-polled CDC/Change Tracking capture. LANDED only once every child is.
-    - [x] **MEDULLA-UNIFIED-DATA-PLANE-R016.2.1:** Adapter skeleton — `MssqlConnectionConfig`/`MssqlDriverConfig` typed mapping plus the no-live-server refusal path (`crates/medulla-catalog-types/src/mssql_driver_connection.rs`). Test: `crates/medulla-catalog-types/src/mssql_driver_connection.rs::tests`.
-    - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R016.2.2:** Real tiberius connection, T-SQL TOP/OFFSET-FETCH rendering, and LSN-polled CDC/Change Tracking capture loop.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R017 (rollup):** ClickHouse federation/acceleration adapter with explicit no-CDC capability; depends on MEDULLA-UNIFIED-DATA-PLANE-R002.
-  - [x] **MEDULLA-UNIFIED-DATA-PLANE-R017.1:** `ClickHouseSourceCatalog` typed model with always-explicit capture capability (`crates/medulla-catalog-types/src/clickhouse_attached_catalog.rs`).
-  - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R017.2 (rollup):** HTTP/native client connection and federated query pushdown.
-    - [x] **MEDULLA-UNIFIED-DATA-PLANE-R017.2.1:** `ClickHouseDriverConfig` typed driver config plus connect/refusal path (`crates/medulla-plan/src/clickhouse_connection.rs`).
-    - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R017.2.2:** Live HTTP/native client federated query pushdown.
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R018:** Oracle and Db2 catalog/query through driver/ODBC and Debezium capture; depends on MEDULLA-UNIFIED-DATA-PLANE-R021.
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R015:** SQLite lock-safe file attach, WITHOUT ROWID and safe WAL/watermark capture; depends on MEDULLA-UNIFIED-DATA-PLANE-R002.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R016:** MSSQL catalog/T-SQL/CDC adapter; depends on MEDULLA-UNIFIED-DATA-PLANE-R002.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R017:** ClickHouse federation/acceleration adapter with explicit no-CDC capability; depends on MEDULLA-UNIFIED-DATA-PLANE-R002.
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R018 (rollup):** Oracle and Db2 catalog/query through driver/ODBC and Debezium capture; depends on MEDULLA-UNIFIED-DATA-PLANE-R021.
-  - [x] **MEDULLA-UNIFIED-DATA-PLANE-R018.1:** `RelationalSourceCatalog` typed model plus identifier and Debezium-capture refusals (`crates/medulla-catalog-types/src/relational_attached_catalog.rs`).
-  - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R018.2 (rollup):** Driver/ODBC connection, catalog read, and Debezium bridge wiring.
-    - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R018.2.1:** `RelationalDriverConfig` typed driver config plus connect/refusal path (`crates/medulla-plan/src/relational_connection.rs`).
-    - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R018.2.2:** Live driver/ODBC catalog read and Debezium bridge wiring.
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R019:** MongoDB/DocumentDB document catalog and change streams; depends on MEDULLA-UNIFIED-DATA-PLANE-R002.
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R019.1:** `DocumentSourceCatalog` typed inferred-shape model plus field-path refusal (`crates/medulla-catalog-types/src/document_source_catalog.rs`).
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R019.2 (rollup):** Native MongoDB/DocumentDB driver connection and change-stream capture into `ChangeEnvelope`.
-  - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R019.2.1:** `DocumentDriverConfig` typed driver config plus connect/refusal path (`crates/medulla-plan/src/document_connection.rs`).
-  - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R019.2.2:** Live native driver connection and change-stream capture into `ChangeEnvelope`.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R019.3:** Conformance entry comparing Medulla query results and captured change stream against native MongoDB/DocumentDB.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R019.2:** Native MongoDB/DocumentDB driver connection and change-stream capture into `ChangeEnvelope`.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R019.3 (rollup):** Conformance entry comparing Medulla query results and captured change stream against native MongoDB/DocumentDB.
-  - [x] **MEDULLA-UNIFIED-DATA-PLANE-R019.3.1:** `build_document_conformance_entry` typed per-adapter conformance-entry constructor (`crates/medulla-types/src/document_conformance.rs`).
-  - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R019.3.2:** Live comparison against native MongoDB/DocumentDB.
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R020:** Snowflake, BigQuery, DuckDB and Iceberg federation; depends on MEDULLA-UNIFIED-DATA-PLANE-R007.
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R020.1:** `WarehouseSourceKind`/`WarehouseSourceConfig` typed model plus required-field refusal (`crates/medulla-types/src/warehouse_federation.rs`).
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R020.2 (rollup):** Query pushdown per kind (Arrow Flight SQL where offered), extending `medulla-query::sql::iceberg_federation` for Iceberg.
-  - [x] **MEDULLA-UNIFIED-DATA-PLANE-R020.2.1:** `plan_pushdown` typed transport-dispatch plus refusal path (`crates/medulla-plan/src/warehouse_pushdown.rs`).
-  - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R020.2.2:** Live Arrow Flight SQL / native query pushdown per kind.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R020.3 (rollup):** Conformance entry comparing federated query results against each native warehouse/lake engine.
-  - [x] **MEDULLA-UNIFIED-DATA-PLANE-R020.3.1:** `build_warehouse_conformance_entry` typed per-kind conformance-entry constructor (`crates/medulla-types/src/warehouse_conformance.rs`).
-  - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R020.3.2:** Live comparison against each native warehouse/lake engine.
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R021:** Debezium Kafka-to-`ChangeEnvelope` bridge; depends on MEDULLA-UNIFIED-DATA-PLANE-R008.
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R021.1:** `DebeziumChangeEvent` typed envelope shape plus op-code and before/after refusal (`crates/medulla-protocol-types/src/debezium_bridge.rs`).
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R021.2:** Kafka consumer plus real conversion into `ChangeEnvelope` records. (pure-function conversion slice: `DebeziumChangeEvent::to_draft` in `crates/medulla-protocol-types/src/debezium_bridge.rs`; the live Kafka consumer wiring remains open.)
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R021.3:** Replay test feeding a captured Debezium event stream through the bridge. (`replay_of_captured_fixture_stream_matches_source_changes` over `crates/medulla-types/fixtures/debezium_replay_stream.json`.)
-
-## Platform and app admission
-
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R023:** Build shared CloudNativePG and MariaDB platform with per-app roles, PITR and restore drill.
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R023.1:** `SharedPlatformClusterGroup`/`ApplicationRoleSet` typed model plus engine-specific refusal (`crates/medulla-types/src/shared_db_platform.rs`).
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R023.2 (rollup):** CloudNativePG/MariaDB operator wiring and PITR schedule to object storage.
-  - [x] **MEDULLA-UNIFIED-DATA-PLANE-R023.2.1:** `PitrSchedule` typed schedule contract plus engine/archiving-mode refusal (`crates/medulla-types/src/pitr_schedule.rs`).
-  - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R023.2.2:** Live operator CRD wiring and schedule installation.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R023.3 (rollup):** Restore-drill automation and post-restore data-match verification.
-  - [x] **MEDULLA-UNIFIED-DATA-PLANE-R023.3.1:** `RestoreDrillResult` typed drill-result contract plus digest-agreement refusal (`crates/medulla-types/src/restore_drill.rs`).
-  - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R023.3.2:** Live restore-drill automation and digest capture.
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R024:** Admit three apps including MariaDB with rollback and retire each ingest connector only after parity; depends on MEDULLA-UNIFIED-DATA-PLANE-R023.
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R024.1:** `ApplicationAdmission` typed stage machine plus early-retirement refusal (`crates/medulla-identity-types/src/platform_admission.rs`).
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R024.2:** Admission runner and tested rollback path per candidate application.
-  - [x] **MEDULLA-UNIFIED-DATA-PLANE-R024.2.1:** `AdmissionRunner`/`PriorIngestConnector` runner plus tested rollback path, against a fake connector (`crates/medulla-identity-types/src/platform_admission.rs`); no live candidate application needed.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R024.3:** Per-application admission test confirming rollback and that the retired connector no longer writes.
-  - [x] **MEDULLA-UNIFIED-DATA-PLANE-R024.3.1:** Fake-connector admission test run for each candidate application (gramps, immich, firefly) (`crates/medulla-identity-types/src/platform_admission.rs`); no live candidate application needed.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R032 (rollup) / Immich I0–I6:** Generated API client, MCP tools, registration, incremental per-user ingest, naming, approved links and operations. Implement I0–I6 as defined in [spec.md](spec.md).
-  - [x] **MEDULLA-UNIFIED-DATA-PLANE-R032.1:** `ImmichPilotProgress` typed phase-gate model (I0-I6) plus exit-artifact and skip-ahead refusals (`crates/medulla-types/src/immich_pilot_phase.rs`).
-  - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R032.2:** Run phase I0 (version-pinned OpenAPI client generation and digest).
-
-## Native hosting and app admission
-
-Native storage and wire work (MEDULLA-DURABLE-KERNEL-R032/MEDULLA-DURABLE-KERNEL-R033/MEDULLA-DURABLE-KERNEL-R034–MEDULLA-DURABLE-KERNEL-R036/MEDULLA-DURABLE-KERNEL-R037–MEDULLA-DURABLE-KERNEL-R042) is implemented and evidenced by `durable-graph-kernel`. The one-way Ghostfolio import MEDULLA-FINANCE-PRIMITIVES-R012 is implemented and evidenced by `finance-primitives`. This spec consumes their exact-head test receipts before app admission, without duplicating those work items.
-
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R025:** Separate pgrx companion spike and go/no-go ADR; depends on MEDULLA-UNIFIED-DATA-PLANE-R001.
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R025.1:** `PgrxSpikeDecision` typed model plus full-scope-evidence refusal (`crates/medulla-types/src/pgrx_spike.rs`).
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R025.2:** Run the spike across its declared scope areas.
-  - [x] **MEDULLA-UNIFIED-DATA-PLANE-R025.2.1:** `run_spike`/`PgrxSpikeAreaEvaluator` runner assembling a decision from fake evaluators (`crates/medulla-types/src/pgrx_spike.rs`); no live pgrx/Postgres instance needed.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R025.3:** Review the spike's results and recorded decision; produce the approved ADR.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R025.3 (rollup):** Review the spike's results and recorded decision; produce the approved ADR. LANDED only once every child is.
-  - [x] **MEDULLA-UNIFIED-DATA-PLANE-R025.3.1:** Review skeleton — `PgrxSpikeReviewRequest`/`ApprovedPgrxAdr` typed mapping plus the invalid-decision/empty-reviewer/empty-title refusal path (`crates/medulla-types/src/pgrx_spike_review.rs`). Test: `crates/medulla-types/src/pgrx_spike_review.rs::tests`.
-  - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R025.3.2:** Filing the approved ADR document against the live spike's actual results.
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R026 / Gramps P0–P5:** Baseline, real-Postgres control, unmodified Medulla replay, pilot fixes, restores and OBDA understanding; depends on MEDULLA-DURABLE-KERNEL-R036. Implement P0–P5 and their exit artifacts as defined in [spec.md](spec.md) and [test-spec.md](test-spec.md).
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R026.1:** `GrampsPilotProgress`/`PhaseExitArtifact` typed P0-P5 gate plus wrong/unreviewed/out-of-order refusal (`crates/medulla-types/src/gramps_pilot_phase.rs`).
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R026.2 (rollup):** Run P0-P2 (baseline digest, Postgres control, unmodified corpus replay). LANDED only once every child is.
-  - [x] **MEDULLA-UNIFIED-DATA-PLANE-R026.2.1:** P0 adapter skeleton — `GrampsBaselineDigest` typed mapping to the P0 phase exit plus the zero-count/empty-digest/unreviewed refusal path (`crates/medulla-types/src/gramps_baseline_digest.rs`). Test: `crates/medulla-types/src/gramps_baseline_digest.rs::tests`.
-  - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R026.2.2:** Real baseline capture, Postgres control, and unmodified corpus replay (P1-P2) against a live export.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R026.3 (rollup):** Run P3-P5 (proven-gap fixes, restore verification, schema-understanding demonstration). LANDED only once every child is.
-  - [x] **MEDULLA-UNIFIED-DATA-PLANE-R026.3.1:** P3 adapter skeleton — `GrampsProvenGapFix` typed mapping to the P3 phase exit plus the empty-field/same-test/unreviewed refusal path (`crates/medulla-types/src/gramps_gap_fix.rs`). Test: `crates/medulla-types/src/gramps_gap_fix.rs::tests`.
-  - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R026.3.2:** Real restore verification (P4) and schema-understanding demonstration (P5) against the live pilot.
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R027:** Fix Postgres features only when captured app traffic proves need; include B-tree indexes, collation, regex, bytea, sequences, savepoints, locks, notify, triggers/functions, JSONB, isolation, startup, SQLSTATE, schemas, constraints, types, materialized views, large objects and timezone; depends on MEDULLA-UNIFIED-DATA-PLANE-R026.
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R027.1:** `FeatureFixRecord`/`PgCompatFeature` typed inventory plus incomplete-proof refusal (`crates/medulla-catalog-types/src/pg_compat_feature.rs`).
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R027.2:** Capture application traffic per feature and record the proof reference.
-  - [x] **MEDULLA-UNIFIED-DATA-PLANE-R027.2.1:** `capture_feature_fix`/`TrafficCaptureSource` runner plus unproven/incomplete-capture refusal (`crates/medulla-catalog-types/src/pg_compat_feature.rs`); no live candidate application needed.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R027.3:** Implement each proven feature with its failing-then-passing test.
-  - [x] **MEDULLA-UNIFIED-DATA-PLANE-R027.3.1:** `apply_proven_fix` runner applying a feature's fix only once proven, against a fake fix closure (`crates/medulla-catalog-types/src/pg_compat_feature.rs`); no live Postgres-compatible target needed.
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R028:** Differential Postgres regression, generated and captured-traffic corpora with reviewed deviations and no ratchet; depends on MEDULLA-UNIFIED-DATA-PLANE-R022.
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R028.1:** `DeviationBaseline`/`PostgresDeviation` typed model plus no-silent-drop refusal (`crates/medulla-types/src/pg_diff_baseline.rs`).
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R028.2:** Run the Postgres regression suite and generated metamorphic query corpora against Medulla.
-  - [x] **MEDULLA-UNIFIED-DATA-PLANE-R028.2.1:** `run_differential_harness`/`DifferentialCaseEvaluator` runner assembling a baseline from fake evaluators (`crates/medulla-types/src/pg_diff_baseline.rs`); no live Postgres instance needed.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R028.3:** Run the captured-application-traffic corpus and publish the harness report.
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R033 (rollup) / Gramps P6:** Separate explicitly authorized production cutover, replica, independent nightly export and 30-day read-only SQLite fallback. Depends on MEDULLA-UNIFIED-DATA-PLANE-R026 and every P0–P5 acceptance artifact.
-  - [x] **MEDULLA-UNIFIED-DATA-PLANE-R033.1:** `GrampsCutoverGoAhead` typed model plus P5-exit/approver/fallback-window refusals (`crates/medulla-types/src/gramps_cutover_gate.rs`).
-  - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R033.2:** Real production cutover: Postgres replica, nightly independent XML export, and the rehearsed failover test.
-
-## Virtual graphs
-
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R037:** Ship `core:virtual-graph@1` with SHACL shapes and positive and negative fixtures.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R038 (rollup):** Write a hashed `MetadataContract` for every source kind. Add the acceleration policy. Prove live reads by default and copy only for declared hot subsets.
-  - [x] **MEDULLA-UNIFIED-DATA-PLANE-R038.1:** `MetadataContract`/`AccelerationPolicy` typed model plus capability refusal and watermark-missing live fallback (`crates/medulla-types/src/metadata_acceleration.rs`).
-  - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R038.2:** Real per-source-kind discovery writing the contract, the copy pipeline, and EXPLAIN's per-fragment live/copy reporting.
-
-## Completion record for each row
-
-For each row, add a subentry containing its merged commit, exact-head test run, conformance/quality reports, operational drill where relevant, cross-repository consumer and old-path deletion. Record one of `PROPOSED`, `IMPLEMENTED-UNVALIDATED`, `ACCEPTED`, `CUTOVER`, `DELETED` or `DONE` with dated evidence. Update [status.json](status.json) only from proved evidence. `ACCEPTED` requires all applicable gates in [test-spec.md](test-spec.md); `CUTOVER` and `DONE` additionally require rollout, rollback and consumer evidence. Preserve failed runs and corrections rather than rewriting history. Rows above remain unchecked until that evidence exists.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R039 (rollup):** Authenticated, tenant-scoped Iceberg REST catalog (rollup).
-  - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R039.1:** `CatalogPrincipal` typed model.
-  - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R039.2:** Catalog authorization refusal.
-  - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R039.3:** Locate and wire the REST listener.
-  - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R039.4:** Partition spec in emitted Iceberg metadata.
-  - [ ] **MEDULLA-UNIFIED-DATA-PLANE-R039.5:** End-to-end external read.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R040:** Per-modality retrieval gate blocks promotion of a shared embedding space.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R040.1:** Model. Add `ModalityCheck{modality, probe_set_digest, metric, floor, baseline}` and `PromotionVerdict` in new `crates/medulla-types/src/embedding_promotion.rs`. Closed `modality` values are `text`, `image` and `audio`. `EmbeddingVersion` at `crates/medulla-ann/src/version.rs:32` names a model and version but holds no check result.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R040.2:** Behavior. Add `evaluate_promotion(candidate, checks)` in `embedding_promotion.rs`. It computes recall at k per modality with `recall_at_k` at `crates/medulla-ann/src/recall.rs:28` on that modality probe set. A drop beyond the tolerance blocks promotion. The default tolerance is 0.02 absolute and is a named replaceable default. A modality with no probe set blocks promotion.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R040.3:** Wiring. The gate attaches before `EmbeddingVersionStore::tag_batch` at `crates/medulla-ann/src/version.rs:129` in the re-embed path. No production caller of `tag_batch` or `tag` exists today. This row creates the call site in the re-embed worker queued by `MEDULLA-FEDERATED-QUERY-R077.3`, and it reads the binding at `crates/medulla-table-store/src/tables/embedding_binding.rs:526`.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R040.4:** Refusal. A blocked promotion must leave the prior version active. The engine must return `PromotionBlocked` naming each regressed modality, its baseline and its measured value. The engine must not tag any vector with the candidate version.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R040.5:** Evidence. The engine must store each `PromotionVerdict` as a node linked to the candidate model and version. It carries the per-modality metric, floor and probe set digest. The node is readable through a graph query.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R040.6:** Hot-path proof. The entry point is a served row write on a bound text column. The test replaces the embedding model with a candidate that regresses the image check. The write passes through the re-embed worker and the wired gate. The test observes the blocked promotion and the prior version still active.
-
-<!-- spec-definition-patch:owner-batch-20261012-unified-data-plane -->
-## Implementation tasks — owner batch 2026-10-12
-
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R026.4 — projection boundary:** Route approved, revision-pinned R003/R005 mappings through the R026 projection read.
-  - Refuse projected DML/DDL for read-only and mutation-granted principals. Admit writes only through authorized graph `MutationBatch`.
-  - Verify that projection reads reflect committed graph mutations.
-  - **Hold:** The R026 owner must furnish the target application schema and captured statement corpus before app compatibility is claimed.
-  - Keep status SPECIFIED. Source SHA-256: `c55bc629b1bfefc9d0346b75b8bb95e5a231b891e7e34297df17b960d6c9773c`.
-<!-- /spec-definition-patch -->
-
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R038.3 (rollup):** Transactional row stores answer through one consistent snapshot (rollup).
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R038.3.1 (Model):** Add the typed model.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R038.3.2 (Behavior):** Implement the behavior.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R038.3.3 (Wiring):** Wire the production call site.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R038.3.4 (Refusal):** Add the typed refusals.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R038.3.5 (Evidence):** Emit the evidence.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R038.3.6 (Hot-path proof):** Add the served hot-path test.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R038.4 (rollup):** Metastore catalogs and ORC and Avro files answer in place (rollup).
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R038.4.1 (Model):** Add the typed model.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R038.4.2 (Behavior):** Implement the behavior.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R038.4.3 (Wiring):** Wire the production call site.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R038.4.4 (Refusal):** Add the typed refusals.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R038.4.5 (Evidence):** Emit the evidence.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R038.4.6 (Hot-path proof):** Add the served hot-path test.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R038.5 (rollup):** Search-index sources answer with relevance pushdown (rollup).
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R038.5.1 (Model):** Add the typed model.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R038.5.2 (Behavior):** Implement the behavior.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R038.5.3 (Wiring):** Wire the production call site.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R038.5.4 (Refusal):** Add the typed refusals.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R038.5.5 (Evidence):** Emit the evidence.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R038.5.6 (Hot-path proof):** Add the served hot-path test.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R038.6 (rollup):** openCypher and Gremlin answer over relational and lake sources without a copy (rollup).
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R038.6.1 (Model):** Add the typed model.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R038.6.2 (Behavior):** Implement the behavior.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R038.6.3 (Wiring):** Wire the production call site.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R038.6.4 (Refusal):** Add the typed refusals.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R038.6.5 (Evidence):** Emit the evidence.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R038.6.6 (Hot-path proof):** Add the served hot-path test.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R022.4:** Source-category coverage matrix.
-
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R038.7 (rollup):** Web metasearch sources answer at query time through a cached connector query (rollup).
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R038.7.1 (Model):** Add the typed model.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R038.7.2 (Behavior):** Implement the behavior.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R038.7.3 (Wiring):** Wire the production call site.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R038.7.4 (Refusal):** Add the typed refusals.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R038.7.5 (Evidence):** Emit the evidence.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R038.7.6 (Hot-path proof):** Add the served hot-path test.
-
-## Web page ingest (R022.4.1, R038.7.7, R651.7)
-
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R022.4.1:** Add the residency column to the matrix and its test.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R038.7.7:** Add the candidate set with query provenance.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R651.7 (rollup):** Fetched web pages enrich through the one document path.
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R651.7.1 (Model):** Add the enrichment request, receipt and closed fetch backends.
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R651.7.2 (Behavior):** Chunk, embed, link, replay an equal digest and supersede an old one.
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R651.7.3 (Wiring):** Serve `EnrichDocument` through the ChangeEnvelope authority.
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R651.7.4 (Refusal):** Add the typed refusals.
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R651.7.5 (Evidence):** Emit the enrichment receipt and record.
-- [x] **MEDULLA-UNIFIED-DATA-PLANE-R651.7.6 (Hot-path proof):** Add the served two-backend test and the chunking benchmark.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R651.7.7 (Extraction):** Extract entities, relations and claims from the enriched chunks.
-
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R761:** Dataset and column profiling (rollup).
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R761.1:** Model.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R761.2:** Behavior.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R761.3:** Wiring.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R761.4:** Refusal.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R761.5:** Evidence.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R761.6:** Hot-path proof.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R762:** Data quality rules, scores and quality incidents (rollup).
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R762.1:** Model.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R762.2:** Behavior.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R762.3:** Wiring.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R762.4:** Refusal.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R762.5:** Evidence.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R762.6:** Hot-path proof.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R763:** Column-level lineage from SQL text (rollup).
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R763.1:** Model.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R763.2:** Behavior.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R763.3:** Wiring.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R763.4:** Refusal.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R763.5:** Evidence.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R763.6:** Hot-path proof.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R764:** Asset usage statistics and catalog search (rollup).
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R764.1:** Model.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R764.2:** Behavior.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R764.3:** Wiring.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R764.4:** Refusal.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R764.5:** Evidence.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R764.6:** Hot-path proof.
-
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R762.7:** Rule proposals from profiles.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R762.8:** Quality results from outside checkers.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R764.7:** Usage from attached-source query logs.
-- [ ] **MEDULLA-UNIFIED-DATA-PLANE-R764.8:** Frequent users and usage suggestions.
+- [ ] T001 [US1] MEDULLA-UNIFIED-DATA-PLANE-R001 Record attached-source and native-hosting decisions
+- [ ] T002 [US1] MEDULLA-UNIFIED-DATA-PLANE-R002.1 Verify the outbound target before persisting a `ForeignSourceSpec::Sql` registration (producer path)
+- [ ] T003 [US1] MEDULLA-UNIFIED-DATA-PLANE-R002.2 Verify the outbound target before persisting an OBDA `external_sources` registration (consumer path)
+- [ ] T004 [US1] MEDULLA-UNIFIED-DATA-PLANE-R003.1 `AttachedCatalogGraph` is a versioned, typed catalog with a reorder-stable content hash, refusing an ambiguous duplicate table name
+- [ ] T005 [US1] MEDULLA-UNIFIED-DATA-PLANE-R004.1 `ColumnSamplingBudget` is a bounded, policy-gated row/byte budget, refusing a zero or unbounded declaration
+- [ ] T006 [US1] MEDULLA-UNIFIED-DATA-PLANE-R005.1 `VirtualGraphMapping` carries a typed approval state, refusing a query against a proposed or model-suggested mapping
+- [ ] T007 [US1] MEDULLA-UNIFIED-DATA-PLANE-R006.1 `PushdownDecision` names an explicit fallback reason, refusing a decision that claims both success and a fallback
+- [ ] T008 [US1] MEDULLA-UNIFIED-DATA-PLANE-R008.1 `ChangeEnvelope`/`ChangeOp` are a typed change-capture record and a validated refusal rule, refusing a change with no durable position or a keyed table's update/delete with no key
+- [ ] T009 [US1] MEDULLA-UNIFIED-DATA-PLANE-R007.1 `DialectPushdownCapabilities` declares a dialect's supported pushdown operations, refusing an unknown operation name
+- [ ] T010 [US1] MEDULLA-UNIFIED-DATA-PLANE-R010.1 `ReplicaRefreshPolicy` is a typed per-table policy, refusing a declaration its own verification could never check
+- [ ] T011 [US1] MEDULLA-UNIFIED-DATA-PLANE-R009.1 `ConsumerCheckpoint` applies an incoming position idempotently, refusing an unnamed consumer
+- [ ] T012 [US1] MEDULLA-UNIFIED-DATA-PLANE-R011.1 `ReadYourWritesWait` is a bounded timeout, refusing a zero (unbounded) declaration; `FreshnessRoute` names exactly the three tiers
+- [ ] T013 [US1] MEDULLA-UNIFIED-DATA-PLANE-R012.1 Typed model for attached-source write-back governance, proved by refusal tests
+- [ ] T014 [US2] MEDULLA-UNIFIED-DATA-PLANE-R013 Implement the Postgres attached-source adapter
+- [ ] T015 [US2] MEDULLA-UNIFIED-DATA-PLANE-R014.1 Typed MySQL/MariaDB dialect-entry model (producer-first split of R014)
+- [ ] T016 [US2] MEDULLA-UNIFIED-DATA-PLANE-R014.2.1 MySQL/MariaDB adapter skeleton: typed connection-config → driver-config mapping plus the connect/refusal path
+- [ ] T017 [US2] MEDULLA-UNIFIED-DATA-PLANE-R014.2.2 Live MySQL and MariaDB catalog read and type map
+- [ ] T018 [US2] MEDULLA-UNIFIED-DATA-PLANE-R015.1 `SqliteSourceCatalog` is a typed catalog model with a WITHOUT-ROWID capture-safety refusal
+- [ ] T019 [US2] MEDULLA-UNIFIED-DATA-PLANE-R015.2.1 SQLite live-attach adapter skeleton: typed attach-config → driver-open-config mapping plus the refusal path
+- [ ] T020 [US2] MEDULLA-UNIFIED-DATA-PLANE-R015.2.2.1 Lock-free WAL snapshot reader
+- [ ] T021 [US2] MEDULLA-UNIFIED-DATA-PLANE-R015.2.2.2 Watermark polling into change envelopes
+- [ ] T022 [US2] MEDULLA-UNIFIED-DATA-PLANE-R015.2.2.3 Register, read and conformance for a SQLite file source
+- [ ] T023 [US2] MEDULLA-UNIFIED-DATA-PLANE-R016.1 `MssqlSourceCatalog` is a typed catalog model with a bracket-quoting identifier refusal
+- [ ] T024 [US2] MEDULLA-UNIFIED-DATA-PLANE-R016.2.1 MSSQL adapter skeleton: typed connection-config → tiberius-shaped driver-config mapping plus the connect/refusal path
+- [ ] T025 [US2] MEDULLA-UNIFIED-DATA-PLANE-R017.1 `ClickHouseSourceCatalog` is a typed catalog model whose capture capability is always explicit
+- [ ] T026 [US2] MEDULLA-UNIFIED-DATA-PLANE-R017.2.1 `ClickHouseDriverConfig` builds from validated host/port/database, and `connect` refuses an unsafe or invalid destination before issuing any request
+- [ ] T027 [US2] MEDULLA-UNIFIED-DATA-PLANE-R017.2.2 Live ClickHouse HTTP query and pushdown
+- [ ] T028 [US2] MEDULLA-UNIFIED-DATA-PLANE-R018.1 `RelationalSourceCatalog` is a typed Oracle/Db2 catalog model with identifier and Debezium-capture refusals
+- [ ] T029 [US2] MEDULLA-UNIFIED-DATA-PLANE-R018.2.1 `RelationalDriverConfig` builds from a validated engine/host/port/service name, and `connect` refuses an unsafe or invalid destination before issuing any request
+- [ ] T030 [US2] MEDULLA-UNIFIED-DATA-PLANE-R019.1 `DocumentSourceCatalog` is a typed inferred-shape model with a refusal for a malformed field path
+- [ ] T031 [US2] MEDULLA-UNIFIED-DATA-PLANE-R019.2.1 `DocumentDriverConfig` builds from a validated host/port/database, and `connect` refuses an unsafe or invalid destination before issuing any request
+- [ ] T032 [US2] MEDULLA-UNIFIED-DATA-PLANE-R019.3.1 `build_document_conformance_entry` builds a MongoDB/DocumentDB conformance entry with a fixed adapter label, refusing a malformed outcome/deviation shape
+- [ ] T033 [US2] MEDULLA-UNIFIED-DATA-PLANE-R020.1 `WarehouseSourceKind`/`WarehouseSourceConfig` are a closed source-kind vocabulary with a per-kind required-field refusal
+- [ ] T034 [US2] MEDULLA-UNIFIED-DATA-PLANE-R020.2.1 `plan_pushdown` decides the Arrow-Flight-SQL-vs-native transport for a validated `WarehouseSourceConfig`, refusing an invalid config or an unmet Flight SQL preference
+- [ ] T035 [US2] MEDULLA-UNIFIED-DATA-PLANE-R020.2.2 Live Iceberg and DuckDB pushdown
+- [ ] T036 [US2] MEDULLA-UNIFIED-DATA-PLANE-R020.3.1 `build_warehouse_conformance_entry` builds a warehouse/lake conformance entry whose adapter label is derived from the closed `WarehouseSourceKind`, refusing a blank engine version or a malformed outcome/deviation shape
+- [ ] T037 [US2] MEDULLA-UNIFIED-DATA-PLANE-R021.1 `DebeziumChangeEvent` is a typed envelope shape with an op-code and before/after refusal
+- [ ] T038 [US2] MEDULLA-UNIFIED-DATA-PLANE-R021.2 Kafka consumer plus real conversion into ChangeEnvelope records
+- [ ] T039 [US2] MEDULLA-UNIFIED-DATA-PLANE-R021.3 Replay test feeding a captured Debezium event stream through the bridge
+- [ ] T040 [US2] MEDULLA-UNIFIED-DATA-PLANE-R022.1 `DialectConformanceEntry`/`ConformanceReport` are a typed per-engine-version result with a refusal for an auto-suppressed deviation
+- [ ] T041 [US2] MEDULLA-UNIFIED-DATA-PLANE-R022.2 Matrix manifest and runner entry per engine version
+- [ ] T042 [US2] MEDULLA-UNIFIED-DATA-PLANE-R022.3.1 `compare_replay_to_snapshot` builds a `DialectConformanceEntry` from a replayed row-state map and a source-snapshot row-state map, refusing a blank engine version
+- [ ] T043 [US2] MEDULLA-UNIFIED-DATA-PLANE-R022.3.2 Replay stream versus source snapshot
+- [ ] T044 [US2] MEDULLA-UNIFIED-DATA-PLANE-R022.4.1 Residency column
+- [ ] T045 [US3] MEDULLA-UNIFIED-DATA-PLANE-R023.1 `SharedPlatformClusterGroup` is a typed cluster-group and role-set model with engine-specific refusals
+- [ ] T046 [US3] MEDULLA-UNIFIED-DATA-PLANE-R024.1 `ApplicationAdmission` is a typed stage machine refusing early connector retirement
+- [ ] T047 [US3] MEDULLA-UNIFIED-DATA-PLANE-R024.2.1 `AdmissionRunner` drives `ApplicationAdmission` against a pluggable `PriorIngestConnector`, with a tested rollback path
+- [ ] T048 [US3] MEDULLA-UNIFIED-DATA-PLANE-R024.3.1 One fake-connector admission test per candidate application, confirming rollback and that the retired connector no longer writes
+- [ ] T049 [US3] MEDULLA-UNIFIED-DATA-PLANE-R026.1 `GrampsPilotProgress` is a typed P0-P5 phase gate refusing a wrong, unreviewed, or out-of-order exit
+- [ ] T050 [US3] MEDULLA-UNIFIED-DATA-PLANE-R026.2.1 P0 adapter skeleton: typed baseline-digest → P0 phase-exit mapping plus the refusal path
+- [ ] T051 [US3] MEDULLA-UNIFIED-DATA-PLANE-R026.2.2 Live P0 to P2 on the synthetic fixture
+- [ ] T052 [US3] MEDULLA-UNIFIED-DATA-PLANE-R026.3.1 P3 adapter skeleton: typed proven-gap-fix → P3 phase-exit mapping plus the refusal path
+- [ ] T053 [US3] MEDULLA-UNIFIED-DATA-PLANE-R026.3.2 Live P4 restore and P5 schema understanding
+- [ ] T054 [US3] MEDULLA-UNIFIED-DATA-PLANE-R027.1 `FeatureFixRecord` is a typed inventory entry refusing a fix without complete captured-traffic/test proof
+- [ ] T055 [US3] MEDULLA-UNIFIED-DATA-PLANE-R027.2.1 `capture_feature_fix` assembles a `FeatureFixRecord` from a pluggable `TrafficCaptureSource`, refusing an unproven or incomplete capture
+- [ ] T056 [US3] MEDULLA-UNIFIED-DATA-PLANE-R027.3.1 `apply_proven_fix` applies a feature's fix only once its record is proven fixed, refusing -- without invoking the fix -- an unproven record
+- [ ] T057 [US3] MEDULLA-UNIFIED-DATA-PLANE-R028.1 `DeviationBaseline::reconcile` refuses a baseline update that drops a deviation without an explicit resolution
+- [ ] T058 [US3] MEDULLA-UNIFIED-DATA-PLANE-R028.2.1 `run_differential_harness` assembles a run's `DeviationBaseline` from one evaluator per declared corpus source and reconciles it against the prior baseline
+- [ ] T059 [US1] MEDULLA-UNIFIED-DATA-PLANE-R029.1 `SchemaContextCatalog::schema_context` is a typed answer lookup refusing an unknown table
+- [ ] T060 [US1] MEDULLA-UNIFIED-DATA-PLANE-R029.2 Wire the schema_context entry point through the served query path
+- [ ] T061 [US5] MEDULLA-UNIFIED-DATA-PLANE-R030.1 `EntityLinkProposal::assert_same_as` refuses an unapproved or non-Match candidate
+- [ ] T062 [US5] MEDULLA-UNIFIED-DATA-PLANE-R030.2 Blocking and field-similarity candidate generation across Gramps/Immich/Twenty/Firefly
+- [ ] T063 [US5] MEDULLA-UNIFIED-DATA-PLANE-R030.3 Real Fellegi-Sunter scoring and the approval workflow
+- [ ] T064 [US3] MEDULLA-UNIFIED-DATA-PLANE-R031.1 `ApplicationAdmission`/`ConsolidationIsolationRegistry` are a typed admission model with identity and quota refusals
+- [ ] T065 [US3] MEDULLA-UNIFIED-DATA-PLANE-R031.2 Per-source quota metering and fault isolation
+- [ ] T066 [US1] MEDULLA-UNIFIED-DATA-PLANE-R035 Share the compiled ontology cache with attached-schema graphs
+- [ ] T067 [US5] MEDULLA-UNIFIED-DATA-PLANE-R036 Derive HealthAnomaly and Incident facts with conformance checking
+- [ ] T068 [US5] MEDULLA-UNIFIED-DATA-PLANE-R760.1 Model: served incident authority
+- [ ] T069 [US5] MEDULLA-UNIFIED-DATA-PLANE-R760.2 Behavior: served incident authority
+- [ ] T070 [US5] MEDULLA-UNIFIED-DATA-PLANE-R760.3 Wiring: five served methods over the incident authority
+- [ ] T071 [US5] MEDULLA-UNIFIED-DATA-PLANE-R760.4 Refusal: served incident authority
+- [ ] T072 [US5] MEDULLA-UNIFIED-DATA-PLANE-R760.5 Evidence: served incident authority
+- [ ] T073 [US5] MEDULLA-UNIFIED-DATA-PLANE-R760.6 Hot-path proof: correlate 100,000 anomalies in one pass
+- [ ] T074 [US1] MEDULLA-UNIFIED-DATA-PLANE-R037 Virtual-graph vocabulary is a Medulla core schema source
+- [ ] T075 [US1] MEDULLA-UNIFIED-DATA-PLANE-R038.1 `MetadataContract`/`AccelerationPolicy` are typed models with a capability refusal and a watermark-missing live fallback
+- [ ] T076 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.3.1 Transactional row stores answer through one consistent snapshot: Model
+- [ ] T077 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.3.2 Behavior: one read-only transaction per source per query
+- [ ] T078 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.3.3 Wiring: `foreign_scan` opens the snapshot and the capability row declares it
+- [ ] T079 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.3.4 Refusal: no snapshot, stale replica, or reachable write path
+- [ ] T080 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.3.5 Evidence: EXPLAIN and provenance name the snapshot
+- [ ] T081 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.3.6 Hot-path proof: a concurrent writer does not split the answer
+- [ ] T082 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.4.1 Model: metastore spec, file formats and table metadata
+- [ ] T083 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.4.3 Wiring: the `hive()` table function and discovery
+- [ ] T084 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.4.4 Refusal: schema mismatch, unsupported layout, unreachable catalog
+- [ ] T085 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.4.5 Evidence: the scan receipt counts partitions, files, stripes and bytes
+- [ ] T086 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.4.6 Hot-path proof: a pruned scan over a recorded metastore
+- [ ] T087 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.5.1 Model: `SearchIndexCapability` on the operation-bound source
+- [ ] T088 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.5.2 Behavior: push text match, nearest-neighbour search, filters and top-k
+- [ ] T089 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.5.3 Wiring: the search remote joins the shared fusion
+- [ ] T090 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.5.4 Refusal: vector-space mismatch, page overflow, invented scores
+- [ ] T091 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.5.5 Evidence: each fragment receipt names the index request
+- [ ] T092 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.5.6 Hot-path proof: pushed relevance with k replenished
+- [ ] T093 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.6.1 openCypher answers over relational and lake sources through the virtual view, without a copy: Model
+- [ ] T094 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.6.2 Behavior: compile node and relationship patterns to the virtual SPARQL path
+- [ ] T095 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.6.3 Wiring: a named view routes the read through view compilation
+- [ ] T096 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.6.4 Refusal: view writes, unmapped labels, over-deep paths, unsupported clauses
+- [ ] T097 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.6.5 Evidence: EXPLAIN names the pushed statement and mapping digest per fragment
+- [ ] T098 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.6.6 Hot-path proof: openCypher and SPARQL agree over one relational source
+- [ ] T099 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.7.1 Model: `WebSearchCapability` and `WebResult`
+- [ ] T100 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.7.2 Behavior: push query arguments and cache by argument digest with a time-to-live
+- [ ] T101 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.7.3 Wiring: web search reaches the connector call and the shared cache
+- [ ] T102 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.7.4 Refusal: unsupported arguments, expired entries, unreachable connector
+- [ ] T103 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.7.5 Evidence: each row carries connector, argument digest, engine, rank and retrieval time
+- [ ] T104 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.7.6 Hot-path proof: one connector call inside the TTL
+- [ ] T105 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.7.7 Candidate handoff: web results are fetch candidates, not stored records
+- [ ] T106 [US4] MEDULLA-UNIFIED-DATA-PLANE-R039.3 Every catalog route passes the carrier gate
+- [ ] T107 [US4] MEDULLA-UNIFIED-DATA-PLANE-R039.4 Partition spec and per-partition field summaries in emitted Iceberg metadata
+- [ ] T108 [US4] MEDULLA-UNIFIED-DATA-PLANE-R039.5 End-to-end external read through the authenticated catalog
+- [ ] T109 [US7] MEDULLA-UNIFIED-DATA-PLANE-R040.1 A per-modality retrieval gate blocks promotion of a shared embedding space: Model
+- [ ] T110 [US7] MEDULLA-UNIFIED-DATA-PLANE-R040.2 A per-modality retrieval gate blocks promotion of a shared embedding space: Behavior
+- [ ] T111 [US7] MEDULLA-UNIFIED-DATA-PLANE-R040.3 Wiring: the gate runs before a binding with a new model version goes `Live`
+- [ ] T112 [US7] MEDULLA-UNIFIED-DATA-PLANE-R040.4 Refusal: a blocked promotion leaves the prior version active
+- [ ] T113 [US7] MEDULLA-UNIFIED-DATA-PLANE-R040.5 Evidence: each `PromotionVerdict` is a graph node linked to the model and version
+- [ ] T114 [US7] MEDULLA-UNIFIED-DATA-PLANE-R040.6 Hot-path proof: a regressed image check blocks a served promotion
+- [ ] T115 [US3] MEDULLA-UNIFIED-DATA-PLANE-R026.4.1 Projection read binds mapping and graph revisions
+- [ ] T116 [US3] MEDULLA-UNIFIED-DATA-PLANE-R026.4.2 Projected tables refuse every SQL write
+- [ ] T117 [US3] MEDULLA-UNIFIED-DATA-PLANE-R026.4.3 Graph changes reach the projection only through MutationBatch
+- [ ] T118 [US7] MEDULLA-UNIFIED-DATA-PLANE-R750.750 Model: Conversation history source, run audit rows and step store
+- [ ] T119 [US7] MEDULLA-UNIFIED-DATA-PLANE-R750.751 Behavior: Conversation history source, run audit rows and step store
+- [ ] T120 [US7] MEDULLA-UNIFIED-DATA-PLANE-R750.752 Refusal: Conversation history source, run audit rows and step store
+- [ ] T121 [US7] MEDULLA-UNIFIED-DATA-PLANE-R750.753 Hot-path proof: scoped history search over one million steps
+- [ ] T122 [US7] MEDULLA-UNIFIED-DATA-PLANE-R651.1 Model: cascade plan, orphan report and delete receipt
+- [ ] T123 [US7] MEDULLA-UNIFIED-DATA-PLANE-R651.2 Behavior: plan from back-references, apply as one batch, verify the orphan report
+- [ ] T124 [US7] MEDULLA-UNIFIED-DATA-PLANE-R651.3 Wiring: the served `DocumentDelete` method reaches the cascade
+- [ ] T125 [US7] MEDULLA-UNIFIED-DATA-PLANE-R651.4 Refusal: missing document, live external references, oversized or partial cascade
+- [ ] T126 [US7] MEDULLA-UNIFIED-DATA-PLANE-R651.5 Evidence: the delete receipt and a content-free deletion record
+- [ ] T127 [US7] MEDULLA-UNIFIED-DATA-PLANE-R651.6 Hot-path proof: a 500-chunk delete leaves no orphan
+- [ ] T128 [US7] MEDULLA-UNIFIED-DATA-PLANE-R651.7.1 Fetched web pages enrich through the one document path: Model
+- [ ] T129 [US7] MEDULLA-UNIFIED-DATA-PLANE-R651.7.2 Fetched web pages enrich through the one document path: Behavior
+- [ ] T130 [US7] MEDULLA-UNIFIED-DATA-PLANE-R651.7.3 Fetched web pages enrich through the one document path: Wiring
+- [ ] T131 [US7] MEDULLA-UNIFIED-DATA-PLANE-R651.7.4 Fetched web pages enrich through the one document path: Refusal
+- [ ] T132 [US7] MEDULLA-UNIFIED-DATA-PLANE-R651.7.5 Fetched web pages enrich through the one document path: Evidence
+- [ ] T133 [US7] MEDULLA-UNIFIED-DATA-PLANE-R651.7.6 Fetched web pages enrich through the one document path: Hot-path proof
+- [ ] T134 [US7] MEDULLA-UNIFIED-DATA-PLANE-R651.7.7 Extraction: a worker submits facts for the enriched chunks and the engine grounds them
+- [ ] T135 [US7] MEDULLA-UNIFIED-DATA-PLANE-R700.1 Governed Actions: typed parameters, submission criteria, effects and write-back: Model
+- [ ] T136 [US7] MEDULLA-UNIFIED-DATA-PLANE-R700.2 Behavior: parameters, ordered criteria, one-pass templates, one mutation batch
+- [ ] T137 [US7] MEDULLA-UNIFIED-DATA-PLANE-R700.3 Wiring: `ActionRegister` and `ActionSubmit` reach the apply path and the outbox
+- [ ] T138 [US7] MEDULLA-UNIFIED-DATA-PLANE-R700.4 Governed Actions: typed parameters, submission criteria, effects and write-back: Refusal
+- [ ] T139 [US7] MEDULLA-UNIFIED-DATA-PLANE-R700.5 Governed Actions: typed parameters, submission criteria, effects and write-back: Evidence
+- [ ] T140 [US7] MEDULLA-UNIFIED-DATA-PLANE-R700.6 Hot-path proof: a failed criterion applies no effect
+- [ ] T141 [US6] MEDULLA-UNIFIED-DATA-PLANE-R701.1 Standards conformance: cohorts, drift scores and consolidation recommendations: Model
+- [ ] T142 [US6] MEDULLA-UNIFIED-DATA-PLANE-R701.2 Standards conformance: cohorts, drift scores and consolidation recommendations: Behavior
+- [ ] T143 [US6] MEDULLA-UNIFIED-DATA-PLANE-R701.3 Wiring: `StandardsDrift` reads the graph and stays a proposal across attached applications
+- [ ] T144 [US6] MEDULLA-UNIFIED-DATA-PLANE-R701.4 Standards conformance: cohorts, drift scores and consolidation recommendations: Refusal
+- [ ] T145 [US6] MEDULLA-UNIFIED-DATA-PLANE-R701.5 Standards conformance: cohorts, drift scores and consolidation recommendations: Evidence
+- [ ] T146 [US6] MEDULLA-UNIFIED-DATA-PLANE-R701.6 Hot-path proof: a missing standard scores unscored, never zero
+- [ ] T147 [US6] MEDULLA-UNIFIED-DATA-PLANE-R702.1 ETL runs record lineage and consume external lineage run events: Model
+- [ ] T148 [US6] MEDULLA-UNIFIED-DATA-PLANE-R702.2 ETL runs record lineage and consume external lineage run events: Behavior
+- [ ] T149 [US6] MEDULLA-UNIFIED-DATA-PLANE-R702.3 Wiring: `LineageIngest` is called by the lake sweep and the arbora route; lineage reads are plain graph queries
+- [ ] T150 [US6] MEDULLA-UNIFIED-DATA-PLANE-R702.4 ETL runs record lineage and consume external lineage run events: Refusal
+- [ ] T151 [US6] MEDULLA-UNIFIED-DATA-PLANE-R702.5 ETL runs record lineage and consume external lineage run events: Evidence
+- [ ] T152 [US6] MEDULLA-UNIFIED-DATA-PLANE-R702.6 Hot-path proof: replay adds no edges and malformed events quarantine
+- [ ] T153 [US5] MEDULLA-UNIFIED-DATA-PLANE-R710 Message-stream records normalize into a `ChangeEnvelope`: model and behavior
+- [ ] T154 [US5] MEDULLA-UNIFIED-DATA-PLANE-R711 Message-stream records normalize into a `ChangeEnvelope`: refusal, evidence and hot-path proof
+- [ ] T155 [US5] MEDULLA-UNIFIED-DATA-PLANE-R030.700 Identity evidence kinds and merge decisions for candidate links: model and behavior
+- [ ] T156 [US5] MEDULLA-UNIFIED-DATA-PLANE-R030.701 Identity evidence kinds and merge decisions: refusal, evidence and hot path
+- [ ] T157 [US1] MEDULLA-UNIFIED-DATA-PLANE-R038.2.1 Discovery writes one `MetadataContract` per registered source kind
+- [ ] T158 [US1] MEDULLA-UNIFIED-DATA-PLANE-R038.2.2 The copy route is bounded by rows and by watermark
+- [ ] T159 [US1] MEDULLA-UNIFIED-DATA-PLANE-R038.2.3 EXPLAIN states whether each fragment ran live or from a copy
+- [ ] T160 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.4.2.1 Listing pages at the knob size and partitions prune by pushed predicates
+- [ ] T161 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.4.2.2 ORC scans skip stripes by stripe statistics
+- [ ] T162 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.4.2.3 Avro scans project the reader schema
+- [ ] T163 [US7] MEDULLA-UNIFIED-DATA-PLANE-R750.754 Wiring: terminal commit writes audit rows and steps; `HistorySearch` reads them
+- [ ] T164 [US6] MEDULLA-UNIFIED-DATA-PLANE-R761.1 Dataset and column profiling: Model
+- [ ] T165 [US6] MEDULLA-UNIFIED-DATA-PLANE-R761.2 Behavior: pushed aggregates where the dialect allows, sampling otherwise, sketch for distinct counts
+- [ ] T166 [US6] MEDULLA-UNIFIED-DATA-PLANE-R761.3 Wiring: the `DatasetProfile` job kind attaches profiles to the catalog
+- [ ] T167 [US6] MEDULLA-UNIFIED-DATA-PLANE-R761.4 Refusal: out-of-scope dataset, unsupported source
+- [ ] T168 [US6] MEDULLA-UNIFIED-DATA-PLANE-R761.5 Evidence: each profile records its method and sample size
+- [ ] T169 [US6] MEDULLA-UNIFIED-DATA-PLANE-R761.6 Hot-path proof: profile ten columns of a native dataset
+- [ ] T170 [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.1 Data quality rules, scores and quality incidents: Model
+- [ ] T171 [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.2 Behavior: compile each rule kind, score it, count consecutive failures
+- [ ] T172 [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.3 Wiring: `QualityRulePut` and the `QualityEvaluate` job kind
+- [ ] T173 [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.4 Refusal: invalid rule, invalid threshold, unapproved rule
+- [ ] T174 [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.5 Evidence: each score records the compiled query digest and the row counts
+- [ ] T175 [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.6 Hot-path proof: evaluate 100 rules over a native dataset
+- [ ] T176 [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.7 Rule proposals from profiles
+- [ ] T177 [US6] MEDULLA-UNIFIED-DATA-PLANE-R762.8 Quality results from outside checkers arrive through `SourceIngest`
+- [ ] T178 [US6] MEDULLA-UNIFIED-DATA-PLANE-R763.1 Column-level lineage from SQL text: Model
+- [ ] T179 [US6] MEDULLA-UNIFIED-DATA-PLANE-R763.2 Derive column edges from SQL with the shared parser
+- [ ] T180 [US6] MEDULLA-UNIFIED-DATA-PLANE-R763.3 Wire column lineage into the catalog reader, the lineage drain and impact queries
+- [ ] T181 [US6] MEDULLA-UNIFIED-DATA-PLANE-R763.4 Quarantine SQL that does not parse
+- [ ] T182 [US6] MEDULLA-UNIFIED-DATA-PLANE-R763.5 Record query digest and parser version on each column edge
+- [ ] T183 [US6] MEDULLA-UNIFIED-DATA-PLANE-R763.6 Hot-path proof for column lineage
+- [ ] T184 [US6] MEDULLA-UNIFIED-DATA-PLANE-R763.7 Catalog carries view definitions
+- [ ] T185 [US6] MEDULLA-UNIFIED-DATA-PLANE-R764.1 Asset usage statistics and catalog search: Model
+- [ ] T186 [US6] MEDULLA-UNIFIED-DATA-PLANE-R764.2 Asset usage statistics and catalog search: Behavior
+- [ ] T187 [US6] MEDULLA-UNIFIED-DATA-PLANE-R764.3.1 Record asset usage from the server's own query dispatch
+- [ ] T188 [US6] MEDULLA-UNIFIED-DATA-PLANE-R764.4 Refuse unauthorized hits and oversized catalog queries
+- [ ] T189 [US6] MEDULLA-UNIFIED-DATA-PLANE-R764.5 List score components on each catalog hit
+- [ ] T190 [US6] MEDULLA-UNIFIED-DATA-PLANE-R764.6 Hot-path proof for catalog search
+- [ ] T191 [US6] MEDULLA-UNIFIED-DATA-PLANE-R764.7 Usage from attached-source query logs
+- [ ] T192 [US6] MEDULLA-UNIFIED-DATA-PLANE-R764.8 Frequent users and usage suggestions
+- [ ] T193 [US6] MEDULLA-UNIFIED-DATA-PLANE-R765 Serve the foreign source catalog: list, get, probe, share and unshare
+- [ ] T194 [US6] MEDULLA-UNIFIED-DATA-PLANE-R766 Engine work item kind for web research
+- [ ] T195 [US6] MEDULLA-UNIFIED-DATA-PLANE-R767 Tenant context view over approved sources

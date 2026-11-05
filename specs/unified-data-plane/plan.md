@@ -1,24 +1,106 @@
-# Design and implementation plan
+# MEDULLA-UNIFIED-DATA-PLANE — Implementation plan
 
-**State:** PROPOSED. [Requirements](spec.md) · [tests](test-spec.md) · [tasks](tasks.md) · [cross-repository contracts](plan.md).
+Governing spec: [spec.md](spec.md). Rows: [requirements.md](requirements.md). Tests: [test-spec.md](test-spec.md). Tasks: [tasks.md](tasks.md).
 
-## Authority and reuse
+## Summary
+
+Medulla attaches third-party databases and services through one owner-scoped source registry and answers questions over them without copying entity rows. Registration enters at `Method::RegisterForeignSource`. Reads enter at `Method::UnifiedQuery`, the SPARQL and openCypher methods and `Method::Sql`, and all of them reach one `foreign_scan` in `crates/medulla-federation`. Adapters supply connection, dialect rendering, catalog reading, type decoding and change capture. Approved R2RML or operation-bound mappings turn source rows into named virtual graphs. A change-captured copy is a derived read path chosen only when its watermark meets the request's freshness contract.
+
+```text
+arbora (admission, auth, principal) --> medulla dispatch
+  RegisterForeignSource | UnifiedQuery | Sparql* | CypherQuery | Sql | SemanticIndex | analytics jobs
+    registry (verify target, secret ref) > catalog graph (hash) > approved mapping
+      > planner (capability-aware pushdown) > foreign_scan > source session (one snapshot)
+      > fragment receipts (EXPLAIN, provenance) > residual local join
+  adapters --> ChangeEnvelope --> cursor --> graph / search / vector / lake consumers
+```
+
+| Concern | Owning code | Contract |
+|---|---|---|
+| Source registry | `crates/medulla-server-ops/src/api/query_txn/foreign_catalog.rs` | One record per source; target verified before persistence; secrets by reference only. |
+| Catalog and types | `crates/medulla-catalog-types`, `crates/medulla-types` | Typed, hashed, versioned catalog graph; closed `SourceCategory`; refusal codes. |
+| Planning and scans | `crates/medulla-plan`, `crates/medulla-federation`, `crates/medulla-exec` | Capability-aware pushdown; explicit fallback; one snapshot per source per query. |
+| Mappings | `crates/medulla-h-sparql/src/rdf/obda.rs` | Approved R2RML or operation-bound mappings only. |
+| Change capture | `crates/medulla-server-cdc`, `crates/medulla-stream` | `ChangeEnvelope`, per-subscription cursor, idempotent replay, incident authority. |
+| Lake tier | `crates/medulla-lake`, `crates/medulla-server-lake` | Iceberg metadata and the authenticated REST catalog. |
+| Analytics | `crates/medulla-h-query`, `crates/medulla-server-graph` | Profile, quality, column lineage, usage and catalog search jobs. |
+
+## Technical Context
+
+- **Language/Version**: Rust 2021 edition on the pinned toolchain of `rust-toolchain.toml`; Python 3.14 (floor 3.12) for served tests.
+- **Primary Dependencies**: The workspace crates of the Project Structure section, DataFusion providers for attached tables, `sqlx`, `tokio-postgres`, `tiberius` and the vendor or Arrow Flight SQL drivers of the dialect matrix.
+- **Storage**: The durable kernel holds source records, mappings, catalog artifacts, capture cursors and accelerated copies. Attached application data stays in its source database.
+- **Testing**: Rust unit tests per crate, served Rust tests under `tests/`, served Python tests under `tests/data_plane/`, `tests/federation/` and `tests/embedding/`, and containerized engine runs in the nightly conformance lane.
+- **Target Platform**: Linux x86_64 and aarch64 hosts without AVX2 assumptions.
+- **Project Type**: Library crates, handler crates and a server binary.
+- **Performance Goals**: One snapshot per source per query with a 5000 ms replica lag bound; one connector query per web cache miss inside a 900 s time-to-live; 50 ms p99 enrichment overhead per 100 KiB page; 100,000 anomalies correlated in one pass. Each value is a starting default that a measurement on the reference host replaces.
+- **Constraints**: Tenant filters survive every pushdown. Secrets and private application data never appear in EXPLAIN, logs, snapshots or fixtures. No capability is inferred from a dialect name. Each refusal has one stable code. No version suffix in a name.
+- **Scale/Scope**: The leaf rows of `requirements.md`, spread over 7 user stories, 19 `FR-` labels and 12 `SC-` criteria.
+
+## Constitution Check
+
+- **R-I. The engine is native Rust and the only fact store**: pass. No external Redis, graph mirror or second database becomes a read-path authority.
+- **R-II. Every wait has a deadline**: pass. Read-your-writes, statement execution, snapshot opening and connector calls each carry a timeout.
+- **R-III. Every row sets budgets and names a benchmark**: pass. Hot-path rows name the served proof and the default budget.
+- **R-IV. Crates are small, layered and cut over hard**: pass. Rows name the post-split crates; a lower layer never calls a higher one, and no handler crate calls a sibling handler crate.
+- **Organization standards**: pass. Rows follow the spec standard and the ecosystem boundaries; connector, served-door and harness parts sit in their owners' specs and link by ID.
+
+## Project Structure
+
+```text
+crates/medulla-server-ops/src/api/query_txn/    existing: foreign source catalog and registration
+crates/medulla-server-router/src/dispatch/      existing: dispatch arms and request boundary
+crates/medulla-server-graph/src/dispatch/       existing: graph pipeline dispatch and ingest arms
+crates/medulla-h-query/src/query/               existing: SQL, UnifiedQuery and openCypher handlers
+crates/medulla-h-sparql/src/rdf/                existing: OBDA rewriter and R2RML support
+crates/medulla-federation/src/federation_opt/   existing: foreign_scan, session and fragment receipts
+crates/medulla-exec/src/exec/                   existing: operator dispatch to the foreign scan
+crates/medulla-plan/                            existing: ForeignSourceSpec and pushdown planning
+crates/medulla-types/src/                       existing: typed models; new files marked in their rows
+crates/medulla-catalog-types/src/               existing: AttachedCatalogGraph
+crates/medulla-lake/ and crates/medulla-server-lake/  existing: metadata writer and Iceberg REST catalog
+crates/medulla-stream/                          existing: incident authority and stream records
+tests/data_plane/, tests/federation/            existing and new: served Python tests
+```
+
+New files that rows add are marked `new` in their own `Shape:` sentence.
+
+## Phase 0: Research
+
+No unknowns; no research.md.
+
+## Phase 1: Design
+
+The rules below bind every row. The sections after them hold the detail.
+
+1. **One registry (`MEDULLA-UNIFIED-DATA-PLANE-R002`).** SQL federation, OBDA and capture share one source identity. No second registration path exists.
+2. **Entity rows stay at the source (`MEDULLA-UNIFIED-DATA-PLANE-R038`).** Metadata and hot subsets materialize; everything else reads live through approved mappings.
+3. **Capabilities are declared, never inferred.** An adapter reports `unsupported` for capture or pushdown, and the planner and conformance runner read that state.
+4. **One consistent snapshot per source per query (`MEDULLA-UNIFIED-DATA-PLANE-R038.3`).** A transactional source answers every fragment from one read-only transaction.
+5. **Approval gates exposure.** A proposed mapping, rule or entity link exposes no data and asserts no edge until an operator approves it.
+6. **Fallbacks are visible.** EXPLAIN names every fragment that ran locally and every fragment that read a copy.
+7. **Integration-first proof.** A behavior row is VERIFIED only by a test that enters through the production dispatch with a tenant and principal context.
+8. **Ownership.** A medulla row keeps the source, mapping, query and catalog side. Served operations, connectors and deployment parts live in the owner's spec and link by ID.
+
+Data entities are in [data-model.md](data-model.md). The shortest served proof is in [quickstart.md](quickstart.md). Each seam to another repository has a document in `contracts/`.
+
+### Authority and reuse
 
 Use the existing Medulla foreign catalog and `medulla-plan::ForeignSourceSpec`, the server OBDA rewriter and R2RML support, `CdcHub`/`ChangeEnvelope`, `medulla-lake`, DataFusion providers, `KvStore`/GraphCore, DepClock cache, pgwire/MySQL/MSSQL/RESP listeners, and Medulla's native backup. Extend the actual owners in place; retire superseded registration paths after migration. Reuse the Graft SDK connector contract and Arbora query surface, with no duplicate engine-side connector catalog. MEDULLA-DURABLE-KERNEL-R024 moves fan-out mirror behavior into Medulla before the registry folds it in. Credentials stay as references to the deployment's secret provider.
 
-## Module ownership and request path
+### Module ownership and request path
 
 `crates/medulla-server-ops/src/api/query_txn/foreign_catalog.rs` is the server-side source-record boundary. `crates/medulla-plan` owns planning of bound foreign sources. `crates/medulla-h-sparql/src/rdf/obda.rs` and `crates/medulla-virtual-graph/src/obda.rs` own virtual graph rewriting. `crates/medulla-server-cdc/src/cdc.rs` and `src/server/cdc_sink/` own change envelopes and sinks; `crates/medulla-lake` owns accelerated columnar copies. `crates/medulla-query/src/tables/` owns native user-table storage. Wire listeners authenticate and classify requests before planning. Keep one registry, one source ID and one policy path across these modules.
 
 The request envelope carries tenant, actor, source grant, consistency mode, last committed source position (if any), timeout and trace ID. The server checks these before selecting a path. An attached table plan carries a bound source ID and catalog version, never a raw caller DSN. EXPLAIN can show route, pushdown fragments, source/copy position and fallback reason, with credentials and sensitive predicate values redacted. A prepared plan is invalidated on schema-version or grant change.
 
-### Source record and adapter interface
+#### Source record and adapter interface
 
 The durable record must contain `{source_id, tenant_id, owner_id, endpoint_binding, secret_ref, dialect, dialect_version, capabilities, allowed_catalog_scope, capture_config, current_catalog_version, status}`. Optional policies name acceleration, quotas, write-back and mirror targets. `endpoint_binding` is verified at registration and revalidated when a connection is created; DNS rebinding and private-address bypass are denied by outbound policy. Authorization is checked at registration, query planning and actual connection. Secrets are resolved only by the connection owner and never copied into a plan or trace.
 
 An adapter provides `connect`, `render`, `read_catalog`, `decode_types`, and `capture` or an explicit no-capture result. Capability flags are versioned and testable: projection, predicate, limit, join, aggregate, order, transaction snapshot, and capture mode. The renderer quotes identifiers and binds values using the source dialect; it never concatenates user values into SQL. The catalog reader records stable object IDs, schema version, keys, FKs, indexes, views, enums, JSON shape and source provenance. Unknown types remain opaque typed values rather than silent text casts.
 
-### SQL destination fixture contract
+#### SQL destination fixture contract
 
 The SQL registration fixtures for MEDULLA-UNIFIED-DATA-PLANE-R002.1 and the OBDA
 constructor fixtures for MEDULLA-UNIFIED-DATA-PLANE-R002.2 explicitly allow
@@ -33,9 +115,9 @@ OBDA constructor checks exercise destination validation only. They do not prove
 R002.2's mixed allowed/disallowed `register_table_sources` batch acceptance;
 that registry-level test remains required.
 
-## Contracts and data flow
+### Contracts and data flow
 
-1. **Source registry.** A source record binds stable ID, tenant/owner, verified endpoint, secret reference, dialect and version, read/write/mirror capabilities, quota, mapping versions and capture position. Provisioning is an authenticated governed mutation. One registry identity is passed to OBDA, SQL federation, CDC and mirror sinks. Do not resolve arbitrary request-supplied DSNs. Revocation blocks new plans and drains active readers under an explicit policy.
+1. **Source registry.** A source record binds stable ID, tenant/owner, verified endpoint, secret reference, dialect and version, read and write capabilities, quota, mapping versions and capture position. Provisioning is an authenticated governed mutation. One registry identity is passed to OBDA, SQL federation, CDC and mirror sinks. Do not resolve arbitrary request-supplied DSNs. Revocation blocks new plans and drains active readers under an explicit policy.
 2. **Adapter seam.** Each adapter implements connection, dialect SQL rendering, catalog extraction, type conversion, and capture or an explicit `unsupported` capability. Versioned capabilities drive planning and conformance. Postgres uses `pg_catalog` and `pgoutput`. MySQL and MariaDB use separate binlog/GTID fixtures. SQLite uses lock-safe read-only file access. MSSQL uses CDC/Change Tracking. ClickHouse and warehouses are federation-only unless a later approved contract adds capture. Oracle/Db2 use Debezium. Do not fabricate CDC from a periodic full scan.
 3. **Schema intelligence.** Hash a typed catalog snapshot. Collect bounded, policy-gated column and JSON shape statistics. Infer unary/n-ary inclusion dependencies, functional dependencies and candidate keys with support counts, then use fixed-seed Leiden grouping. View definitions and captured joins can provide co-query edges. Deterministic name/type/value/structure matchers propose ontology mapping first. Optional model suggestions remain proposals and cannot approve or activate a mapping. Approved mappings become immutable versioned R2RML named graphs. DDL drift creates a new catalog version and suspends affected mappings pending review. `schema_context` reads the same graph and explains owner, joins, class and impact. Catalog artifacts without an OBDA or context consumer are not admitted.
 4. **Queries.** The planner uses typed source values and capability-aware pushdown, including same-source joins/aggregates/order/limit. Fallback is explicit in EXPLAIN and retains tenant filters. The router compares freshness requirement, source position, copy position and latency policy before selecting native/live/accelerated. A bounded wait for the caller's last source commit is required for read-your-writes; timeout is a typed failure or policy-authorized live retry, never a silent stale result.
@@ -45,11 +127,11 @@ that registry-level test remains required.
 
 8. **Virtual-graph metadata.** Add `core:virtual-graph@1` and its shapes to the core ontology corpus. Extend the catalog reader so every source kind writes a hashed `MetadataContract`. Reuse the source registry identity and the R2RML mapping approval path. Add the acceleration policy fields to the source record. Copy no entity row outside that policy. (MEDULLA-UNIFIED-DATA-PLANE-R037, MEDULLA-UNIFIED-DATA-PLANE-R038)
 
-## Delivery sequence
+### Delivery sequence
 
-The dependency triggers in [tasks](tasks.md) control implementation. Begin with MEDULLA-UNIFIED-DATA-PLANE-R001 and the kernel-owned MEDULLA-DURABLE-KERNEL-R036 mirror interface. Build the conformance harness before T1 adapters. Then catalog/mapping/query/capture and three app admissions. Add acceleration, router and write-back after durable positions and audit reservation. T2/T3 dialects follow T1 evidence. Gramps P0–P5 is isolated from production. P6 is a separate operator cutover. The kernel's bursty lane begins after MEDULLA-DURABLE-KERNEL-R016 and supplies MEDULLA-DURABLE-KERNEL-R042 benchmark evidence before this spec makes a comparative claim. Keep feature changes partitioned by actual owner files, not requirement IDs.
+The dependency triggers in [tasks](tasks.md) control implementation. Begin with MEDULLA-UNIFIED-DATA-PLANE-R001 and the kernel-owned replay contract. Build the conformance harness before T1 adapters. Then catalog/mapping/query/capture and three app admissions. Add acceleration, router and write-back after durable positions and audit reservation. T2/T3 dialects follow T1 evidence. Gramps P0–P5 is isolated from production. P6 is a separate operator cutover. The kernel's bursty lane begins after MEDULLA-DURABLE-KERNEL-R016 and supplies MEDULLA-DURABLE-KERNEL-R042 benchmark evidence before this spec makes a comparative claim. Keep feature changes partitioned by actual owner files, not requirement IDs.
 
-### Dialect implementation matrix
+#### Dialect implementation matrix
 
 | Tier | Dialect | Driver, catalog and capture contract |
 |---|---|---|
@@ -62,45 +144,18 @@ The dependency triggers in [tasks](tasks.md) control implementation. Begin with 
 | 3 | MongoDB/DocumentDB | Native driver, bounded inferred document shape as catalog, change streams where supported. |
 | 3 | Snowflake, BigQuery, DuckDB, Iceberg | Vendor query or Arrow Flight SQL where offered; federation-only, with Iceberg extending existing federation. |
 
-### Native transaction and storage dependency
+#### Native transaction and storage dependency
 
 `durable-graph-kernel` owns the mixed graph/table atomicity ADR, hot/cold union, storage-engine evaluation, native and RESP/SQL wire routing, durability classes, batch admission, plan cache and benchmark receipt. This spec consumes their exact-head crash, isolation, restore and performance results before admitting an application. External app data remains under its source database transaction; a Medulla CDC cursor is a derived read position, never a distributed-commit claim. The separate pgrx spike cannot become a parallel database authority by default.
 
-## Design and quality constraints
+### Design and quality constraints
 
 - CCCC complexity, KISS file/symbol limits, jscpd and Dupehound duplicate gates, formatting, lint and hosted CI must be green on the exact proposed merge head. Record measured deltas and deleted/retired paths; do not add ratchets, suppressions, version-suffixed parallel implementations or a second source of truth.
 - SQL semantics and types need differential tests against the real engine; planner pushdown must not bypass tenant filters. Secrets and private app data must not appear in EXPLAIN, logs, snapshots or fixtures.
 - Preserve durable format and wire compatibility under the repository policy. New storage decisions require migration/rollback and crash recovery evidence. No benchmark claim follows merely from a structural simplification.
-- Cross-repository changes follow [cross-repo.md](plan.md); no owner repo should duplicate another's runtime logic.
+- Cross-repository changes follow the seams below; no owner repository duplicates another's runtime logic.
 
-## Cross-repository
-
-**State:** PROPOSED. Medulla owns attached-source identity, federation, mapping, CDC, mirrors, native storage and this specification. Other components implement only the consumer or deployment contract below. A contribution may implement one side at a time, but it cannot claim acceptance until the named counterparty behavior and negative cases pass. The requirement IDs cited below map these contracts to [tasks](tasks.md) and [requirements.md](requirements.md).
-
-### Boundary map
-
-| Component owner | Inputs to Medulla | Outputs and obligations | Acceptance |
-|---|---|---|---|
-| Agent utilities | Existing graph-source schema proposal pattern and legacy fan-out/Debezium behavior are migration inputs, not new runtime authorities (MEDULLA-DURABLE-KERNEL-R024). | Remove old ingest/mirror execution only after Medulla source registry, cursor replay, SQL-table mirror restore and catalog parity are live. | No duplicate source or mirror registry remains reachable; differential and restore reports identify old and new behavior. |
-| Agent connector Graft SDK | Connector identity, app API client and write-back idempotency key (MEDULLA-UNIFIED-DATA-PLANE-R012). | Carry tenant/actor/source ID and approval receipt to Medulla. Prefer an app API when the app owns validation, triggers or other business rules. | Replayed write returns the prior outcome. Missing audit reservation or approval produces no effect. |
-| Arbora | Authenticated request envelope, `schema_context` query and last committed source position (MEDULLA-UNIFIED-DATA-PLANE-R011). | Propagate tenant, actor, source grant, freshness mode, timeout and trace ID unchanged; display typed route/freshness errors. | Wrong tenant, stale copy, missing source and missing audit all fail closed; a valid context answer names owner, joins, class and impact. |
-| Immich API connector | Version-pinned OpenAPI schema and per-user authorized API reads (MEDULLA-UNIFIED-DATA-PLANE-R032). | MCP tools, incremental asset/album/person ingest and approved Person-link proposals; do not ingest face vectors in the pilot. | Synthetic four-user fixture: second ingest no-op, one new upload appears, unnamed people stay unlinked, cross-user photo/GPS access denied. |
-| Gramps integration | Synthetic import/export tree, real-Postgres control corpus and app driver behavior (MEDULLA-UNIFIED-DATA-PLANE-R026). | Keep production data unchanged during P0–P5; P6 is separate explicit authorization with replica, independent export and fallback. | P0–P5 digests, differential and restore artifacts pass before any production decision. |
-| Finance consumer | Finance-v1 Account/Activity semantics and provenance requirements (MEDULLA-FINANCE-PRIMITIVES-R012). | Import Ghostfolio activities one way through attached Postgres; maintain stable external IDs and source timestamps. | Reimport is idempotent, amounts remain exact, and retirement is a separate decision after Medulla accounting parity. |
-| Database deployment | Isolated CloudNativePG groups by major version/extension and a MariaDB group, per-app database and role, Medulla read/replication roles (MEDULLA-UNIFIED-DATA-PLANE-R023). | Logical replication enabled where supported; PITR to object storage, scheduled scratch restore and per-app rollback. An extension-heavy app keeps a compatible isolated group. | At least three apps attached including MariaDB; restore and app rollback pass without cross-app impact. |
-| Release/catalog maintainer | New connector package metadata and version pins (MEDULLA-UNIFIED-DATA-PLANE-R032). | Validate every required package catalog/registry entry and generated manifest using the existing release gate; preserve one authoritative package identity. | Missing site or version mismatch fails CI; no hand-maintained alternate fleet inventory. |
-
-### Shared wire contract
-
-Every cross-repository call carries `{tenant_id, actor_id, source_id, trace_id, policy_context}`. Query calls add `{consistency, last_source_position, timeout}`. Governed writes add `{idempotency_key, approval_receipt, audit_reservation}`. Source IDs refer to Medulla's registry; no counterparty accepts or forwards a caller-provided DSN or secret value. Position tokens are opaque to consumers and scoped to the source and subscription. A token from another source or tenant is rejected. Errors distinguish `DENIED`, `SOURCE_UNAVAILABLE`, `STALE_TIMEOUT`, `SCHEMA_DRIFT`, `CAPABILITY_UNSUPPORTED` and `OUTCOME_INDETERMINATE`; clients preserve these rather than returning an empty result.
-
-The deployment layer supplies a secret reference resolver and outbound network policy. Medulla resolves a reference at connection time and verifies the target address. Application connectors retain API-based business operations; database attachments are read-only until a specific governed write-back policy is approved. All interfaces are versioned by capability and tested at the exact paired commits named by the implementing pull requests.
-
-### Contribution requirements
-
-An integration pull request names the requirement IDs it closes, Medulla source-record/capability version, counterparty commit, synthetic fixtures, positive and denied request traces, and any old-path removal. An Medulla-only pull request keeps the row `IMPLEMENTED-UNVALIDATED` if the counterparty is not yet exercised. A deployment-only pull request does not declare the engine adapter accepted. Cross-component status is updated in [tasks](tasks.md) after the combined test and operational evidence are available.
-
-## Recovered requirement: authenticated Iceberg catalog
+### Authenticated Iceberg catalog (R039)
 
 Data flow: external engine token → `authorize_catalog_call` → tenant-scoped table list and load.
 Attach point: `crates/medulla-lake/src/catalog.rs`, which documents a deny-all stub today. The first routing step is R039.3, locate and wire the listener.
@@ -108,7 +163,7 @@ Reuses the verified request envelope, tenant model and existing Iceberg metadata
 Decision: reuse the engine envelope. Rejected: a separate OAuth token store, which adds a second authority.
 Lakekeeper-style external catalog interchange is not written here; the engine remains the catalog authority.
 
-## Per-modality promotion gate (R040)
+### Per-modality promotion gate (R040)
 
 Data flow: served row write -> re-embed worker (`MEDULLA-FEDERATED-QUERY-R077.3`) -> `evaluate_promotion` -> `EmbeddingVersionStore::tag_batch` (`crates/medulla-ann/src/version.rs:129`) -> verdict node.
 
@@ -120,8 +175,8 @@ Decision: gate on each modality separately, so an average cannot hide one regres
 
 Cross-repository: none.
 
-<!-- spec-definition-patch:owner-batch-20261012-unified-data-plane -->
-## Implementation plan — `MEDULLA-UNIFIED-DATA-PLANE-R026.4`
+
+### Graph-backed projections (R026.4)
 
 - Add the projection request/response to the existing approved R003/R005 mapping and query path. Pin mapping and graph revisions; preserve R026 P0–P5 phase evidence.
 - Enforce read-only behavior for projections at the query boundary, including callers with a separate graph mutation grant.
@@ -132,15 +187,14 @@ Cross-repository: none.
 - Also deny stale/unapproved mappings and unauthorized graph mutations.
 - Open dependency: the source names no target application, full relational schema, or captured statement corpus. The R026 pilot owner must supply and approve those artifacts before application compatibility is accepted.
 - Preserve MEDULLA-DURABLE-KERNEL-R035, MEDULLA-DURABLE-KERNEL-R043, MEDULLA-FEDERATED-QUERY-R080, MEDULLA-UNIFIED-DATA-PLANE-R026, MEDULLA-FEDERATED-QUERY-R080.1, MEDULLA-FEDERATED-QUERY-R080.2, MEDULLA-FEDERATED-QUERY-R080.3, MEDULLA-FEDERATED-QUERY-R080.4, MEDULLA-FEDERATED-QUERY-R080.5, MEDULLA-FEDERATED-QUERY-R080.6. Source SHA-256: `c55bc629b1bfefc9d0346b75b8bb95e5a231b891e7e34297df17b960d6c9773c`.
-<!-- /spec-definition-patch -->
 
-## Source categories: OLTP, metastore, search index, graph languages and the coverage matrix (R038.3 to R038.6, R022.4)
+### Source categories: OLTP, metastore, search index, graph languages and the coverage matrix (R038.3 to R038.6, R022.4)
 
 These rows extend the existing virtual-graph rollups. They add no second planner. Entity rows stay at the source (`MEDULLA-UNIFIED-DATA-PLANE-R038`). Mappings are R2RML-style (`MEDULLA-UNIFIED-DATA-PLANE-R005`). Pushdown reuses the federation optimizer (`MEDULLA-FEDERATED-QUERY-R038`, `MEDULLA-FEDERATED-QUERY-R041`). Connection protocols form the second axis in `MEDULLA-FEDERATED-QUERY-R073.2`.
 
 Call path: served query -> planner -> `foreign_scan` (`crates/medulla-federation/src/federation_opt/run.rs:26`) -> source session -> pushed fragment -> local residual.
 
-### Source-category coverage matrix (R022.4)
+#### Source-category coverage matrix (R022.4)
 
 | Category | Standard protocol or format | Pushdown | Mapping form | Hot-path proof | Residency |
 |---|---|---|---|---|---|
@@ -162,7 +216,7 @@ Call path: served query -> planner -> `foreign_scan` (`crates/medulla-federation
 
 Budgets: one snapshot per source per query and a 5000 ms replica lag bound. The statement timeout is 30 s, the path depth limit is 8, and catalog pages hold 1,000 tables. These are starting defaults. A measurement on this platform replaces them.
 
-## Web metasearch sources (R038.7)
+### Web metasearch sources (R038.7)
 
 A web metasearch connector answers a pattern over web results at query time. The connector tools take query text, categories, engines, a time range and a language. The engine maps each result to `cv:SearchResult` with URL, title, snippet, engine, rank and retrieval time.
 
@@ -172,7 +226,7 @@ Selection: a harness that asks Arbora to search the web receives the search tool
 
 Budget: a 900 s default time-to-live and one connector query per cache miss. These are starting defaults. A measurement on this platform replaces them.
 
-## Web page ingest (R022.4.1, R038.7.7, R651.7)
+### Web page ingest (R022.4.1, R038.7.7, R651.7)
 
 Search results stay virtual. A web metasearch pattern returns a `WebCandidateSet` with query provenance (`MEDULLA-UNIFIED-DATA-PLANE-R038.7.7`). The engine stores no result row. The fetch selection of `MEDULLA-DECISION-ENGINE-R802` chooses the pages to fetch.
 
@@ -184,11 +238,48 @@ Call path: arbora `research.web` (`ARBORA-OPS-R067`) -> Graft SDK fetch through 
 
 Budget: 50 ms p99 enrichment overhead per 100 KiB page and 64 MiB peak memory. These are starting defaults. A measurement on this platform replaces them.
 
-
-## Profiling, quality, column lineage and usage (R761 to R764)
+### Profiling, quality, column lineage and usage (R761 to R764)
 
 R761 and R762 are two new `AnalyticsJob` kinds. Both push aggregates to attached sources through
 R006 where the dialect allows it. R762 compiles graph rules to SHACL through `crates/medulla-shacl`.
 Three consecutive failures of one rule open one incident through R760. R763 extends the dataset
 lineage of R702 to columns by parsing SQL text with the shared planner parser. R764 counts asset
 use from the query audit and fuses a capped usage prior into catalog search.
+
+## Phase 2: Task approach
+
+`tasks.md` holds one task per leaf row in table order, producer first. A model row precedes the rows that wire it. A row lands in one slice with its caller, so no type lands without a production caller. Adapter tasks of different dialects run in parallel after the conformance harness exists. Tasks that edit the shared `foreign_scan` path or the shared dispatch arms run in sequence.
+
+## Complexity Tracking
+
+none
+
+## Build contract
+
+- `cargo clippy --workspace --all-targets -- -D warnings` and `cargo fmt --check` pass for every touched crate.
+- The architecture, complexity and duplication gates of `.config/pre-commit.yaml` pass with no baseline entry and no suppression.
+- SQL semantics and types have differential tests against the real engine; pushdown never bypasses a tenant filter.
+- Every hot-path row names a budget and a benchmark, per article R-III, and the default values of this plan are replaced by a measurement on the reference host.
+- A public item in a data-plane crate has a non-test caller under a handler or server crate. `MEDULLA-CONTRACT-R055` gates this.
+- Spec rows pass `spec-standard`, `plan-conformance` and `spec-decomposition` with zero findings.
+- A comparative performance claim waits for the durable kernel's benchmark receipt (`MEDULLA-DURABLE-KERNEL-R042`).
+
+## Production caller chain
+
+- `Method::RegisterForeignSource` arm (`crates/medulla-server-router/src/dispatch/request_boundary/saga.rs`) to `ForeignSourceCatalog::register` (`crates/medulla-server-ops/src/api/query_txn/foreign_catalog.rs`), which verifies the outbound target before it persists.
+- `Method::UnifiedQuery` through `dispatch_graph_op` (`crates/medulla-server-graph/src/dispatch/graph_pipeline.rs:68`) to `handle_unified_query` (`crates/medulla-h-query/src/query/sql_read.rs:309`) to `FederatedExec` (`crates/medulla-federation/src/federation_opt/federated.rs`) to `foreign_scan` (`crates/medulla-federation/src/federation_opt/run.rs:26`), reached from the operator dispatch at `crates/medulla-exec/src/exec/dispatch.rs:364`.
+- `Method::Sql` to `handle_sql` (`crates/medulla-h-query/src/query/sql_read.rs:136`), whose session registers `hive` and the other table functions in `register_pg_common` (`crates/medulla-sql/src/sql/exec.rs:75`).
+- `Method::CypherQuery` to `handle_cypher_query` (`crates/medulla-h-query/src/query/cypher.rs:47`) to `handle_cypher_read` (`cypher.rs:67`), which compiles a named view to the virtual SPARQL path.
+- Every scan records a `FragmentTrace` through `FederationSession::record` (`crates/medulla-federation/src/federation_opt/session.rs:113`), which feeds EXPLAIN and provenance.
+- The Iceberg REST listener starts in `spawn_iceberg_listener` (`src/main.rs:903`) and serves through `serve_inner` (`crates/medulla-server-lake/src/lake/rest/mod.rs:296`) to `route` (`mod.rs:403`) after `resolve_carrier` (`mod.rs:160`).
+- `Method::SemanticIndex` arm (`crates/medulla-server-router/src/dispatch/router/control_plane.rs:404`) to `handle_semantic_index` in `crates/medulla-h-retrieve`, where the promotion gate runs before a binding goes `Live`.
+- The Postgres wire listener `serve_prepared` (`crates/medulla-wire/src/pgwire/mod.rs:1940`) classifies each statement and refuses a write to a projected table.
+- Obsolete paths to delete: `CatalogPrincipal` and `authorize_catalog_call` in `crates/medulla-lake/src/catalog.rs`, which have no production caller once the carrier gate is the only authorization.
+
+## Cross-repo seams
+
+- Served catalog and schema operations: `MEDULLA-UNIFIED-DATA-PLANE-R765` provides, `ARBORA-OPS-R067` consumes. Contract: [arbora-served-operations.md](contracts/arbora-served-operations.md).
+- Governed write-back and its idempotency key: `MEDULLA-UNIFIED-DATA-PLANE-R012.1` provides, `SCION-GOVERNED-WRITEBACK-R001` consumes. Contract: [scion-governed-writeback.md](contracts/scion-governed-writeback.md).
+- Source ingest of fetched pages and outside quality results: `MEDULLA-UNIFIED-DATA-PLANE-R651.7.3` provides, `SCION-SOURCE-INGEST-R001` consumes. Contract: [scion-source-ingest.md](contracts/scion-source-ingest.md).
+- Gramps pilot corpus and phase exits: `MEDULLA-UNIFIED-DATA-PLANE-R026.2.2` provides, `CONN-GRAMPS-MCP-CONNECTOR-CONTENT-R001` consumes. Contract: [gramps-native-pilot.md](contracts/gramps-native-pilot.md).
+- Cross-application entity links: `MEDULLA-UNIFIED-DATA-PLANE-R030.3` provides, `CONN-IMMICH-API-R001` consumes. Contract: [immich-entity-links.md](contracts/immich-entity-links.md).
