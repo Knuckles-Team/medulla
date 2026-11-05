@@ -598,3 +598,144 @@ cases against the same frozen source archive before composing this evidence.
 | Behavior | `MEDULLA-FEDERATED-QUERY-R058.7` | `tests/nl_query_certified_definitions.rs::recorded_correction_grounds_the_next_plan`: the approved pair is in the next planning context; no scope returns `NL_CORRECTION_UNAUTHORIZED`. |
 | Behavior | `MEDULLA-FEDERATED-QUERY-R058.8` | `tests/nl_query_bounded_steps.rs::follow_up_is_rewritten_and_disclosed`: the rewritten question is disclosed; without history the question is unchanged. |
 | Behavior | `MEDULLA-FEDERATED-QUERY-R058.9` | `tests/nl_query_certified_definitions.rs::conflicting_sources_record_one_conflict`: one conflict fact; planning does not treat the term as certified. |
+
+## Planned bindings, range 4
+
+Each entry names the test the row binds once its code lands; the path is the post-split location.
+
+| Kind | Requirement | Test |
+|---|---|---|
+| Planned | `MEDULLA-FEDERATED-QUERY-R008.1` | `tests/data_plane/test_catalog_search_served.py::test_nl_catalog_question_returns_search_hits` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R703` | `tests/retrieval/test_access_check_served.py::test_denied_hit_never_enters_bundle` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R703.3` | `tests/retrieval/test_access_check_served.py::test_denied_hit_never_enters_bundle` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R703.4` | `tests/retrieval/test_access_check_served.py::test_missing_port_fails_closed` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R703.5` | `tests/retrieval/test_access_check_served.py::test_drop_reasons_read_back` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R703.6` | `cargo bench -p medulla-plan --bench access_check` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R704` | `tests/retrieval/test_knowledge_scope_served.py::test_agent_sees_only_scoped_sources` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R704.3` | `tests/retrieval/test_knowledge_scope_served.py::test_agent_sees_only_scoped_sources` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R704.4` | `tests/retrieval/test_knowledge_scope_served.py::test_scope_refusals` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R704.5` | `tests/retrieval/test_knowledge_scope_served.py::test_scope_digest_recorded` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R704.6` | `cargo bench -p medulla-plan --bench knowledge_scope` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R705` | `tests/retrieval/test_feedback_boost_served.py::test_upvote_raises_rank` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R705.3` | `tests/retrieval/test_feedback_boost_served.py::test_upvote_raises_rank` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R705.4` | `tests/retrieval/test_feedback_boost_served.py::test_feedback_refusals` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R705.5` | `tests/retrieval/test_feedback_boost_served.py::test_boost_listed_per_hit` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R705.6` | `cargo bench -p medulla-plan --bench feedback_boost` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R706` | `tests/federated/test_policy_mask_served.py::test_masked_column_over_sql_and_uql` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R706.2` | `crates/medulla-plan/tests/policy_mask.rs::masks_and_filters_rewrite_the_plan` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R706.3` | `tests/federated/test_policy_mask_served.py::test_masked_column_over_sql_and_uql` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R706.4` | `tests/federated/test_policy_mask_served.py::test_mask_refusals` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R706.5` | `tests/federated/test_policy_mask_served.py::test_explain_lists_policies` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R706.6` | `cargo bench -p medulla-plan --bench policy_mask` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R707` | `tests/federated/test_sparql_update_served.py::test_insert_then_select` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R707.1` | `crates/medulla-rdf/tests/sparql_update.rs::update_forms_parse` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R707.2` | `crates/medulla-rdf/tests/sparql_update.rs::multi_operation_update_is_atomic` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R707.2` | `tests/federated/test_sparql_update_served.py::test_graph_store_verbs` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R707.3` | `tests/federated/test_sparql_update_served.py::test_insert_then_select` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R707.4` | `tests/federated/test_sparql_update_served.py::test_update_refusals` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R707.5` | `tests/federated/test_sparql_update_served.py::test_update_receipt_reads_back` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R707.6` | `cargo bench -p medulla-rdf --bench sparql_update` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R708` | `tests/federated/test_stored_query_served.py::test_put_then_call` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R708.2` | `crates/medulla-plan/tests/stored_query.rs::on_change_refreshes` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R708.3` | `tests/federated/test_stored_query_served.py::test_put_then_call` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R708.4` | `tests/federated/test_stored_query_served.py::test_stored_query_refusals` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R708.5` | `tests/federated/test_stored_query_served.py::test_staleness_reported` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R708.6` | `cargo bench -p medulla-plan --bench stored_query` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R708.7` | `tests/federated/test_stored_query_served.py::test_workspace_share_schedule_and_lint` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R709` | `tests/federated/test_geosparql_served.py::test_within_query` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R709.1` | `crates/medulla-rdf/tests/geosparql.rs::functions_registered` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R709.2` | `crates/medulla-rdf/tests/geosparql.rs::topology_matches_kernel` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R709.3` | `tests/federated/test_geosparql_served.py::test_within_query` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R709.4` | `tests/federated/test_geosparql_served.py::test_geo_refusals` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R709.5` | `tests/federated/test_geosparql_served.py::test_explain_names_spatial_index` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R709.6` | `cargo bench -p medulla-rdf --bench geosparql` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R720` | `tests/uql_single_plan_all_modalities.rs::five_stage_kinds_one_plan` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R720.1` | `crates/medulla-exec/src/rowset.rs::tests::epistemic_fields_survive_traversal_and_vector` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R720.2` | `crates/medulla-plan/tests/uql_epistemic_stages.rs::confidence_asof_decay` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R720.3` | `crates/medulla-plan/tests/uql_epistemic_stages.rs::cluster_by_embedding_is_deterministic` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R720.4` | `tests/uql_single_plan_all_modalities.rs::program_runs_under_one_plan_id` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R720.5` | `tests/uql_single_plan_all_modalities.rs::decay_and_cluster_refusals` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R720.6` | `tests/uql_single_plan_all_modalities.rs::five_stage_kinds_one_plan` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R721` | `tests/advanced_crossmodal_roundtrip.rs::fresh_engine_answers_cross_modal_query` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R721.1` | `crates/medulla-modality/tests/rowset_views.rs::seven_modalities_implement_contract` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R721.2` | `crates/medulla-persistence/src/durable_stores.rs::tests::each_plan_modality_maps_to_one_store` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R721.3` | `crates/medulla-uql/src/parser/modality.rs::tests::unknown_modality_refuses_without_plan` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R721.4` | `tests/advanced_crossmodal_roundtrip.rs::fresh_engine_answers_cross_modal_query` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R722` | `tests/federated/test_pack_source_served.py::test_uql_joins_native_fact_to_live_connector_rows_with_zero_copy` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R722.2` | `crates/medulla-plan/tests/pack_source.rs::held_serves_none_approved_serves_rows_and_changed_contract_returns_to_held` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R722.3` | `tests/federated/test_pack_source_served.py::test_import_registers_through_the_one_catalog` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R722.4` | `tests/federated/test_pack_source_served.py::test_secret_guard_held_and_unavailable_refuse_with_named_codes` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R722.5` | `tests/federated/test_pack_source_served.py::test_rows_carry_contract_provenance_and_nothing_is_copied` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R722.6` | `tests/federated/test_pack_source_served.py::test_uql_joins_native_fact_to_live_connector_rows_with_zero_copy` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R040.5.1` | `crates/medulla-ann/src/low_storage.rs::tests::manifest_round_trip_and_sum` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R040.5.1` | `tests/retrieval/test_low_storage_ann_served.py::test_selectivity_bound_and_readback` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R040.5.2` | `crates/medulla-ann/src/low_storage.rs::tests::compact_decode_and_refusals` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R040.5.3` | `tests/retrieval/test_low_storage_ann_served.py::test_selective_regeneration_and_rescore` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R040.5.4` | `crates/medulla-semantic-index/src/semantic_embedding_batch.rs::tests::budgets_keys_and_duplicates` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R040.5.5` | `crates/medulla-ann/src/low_storage.rs::tests::pruning_disabled_identical_enabled_connected` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R040.5.6` | `tests/retrieval/test_low_storage_ann_served.py::test_selectivity_bound_and_readback` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R058.4.7.2.1` | `tests/nl_query_grounding.rs::decision_record_identifiers` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R058.4.7.2.2` | `tests/nl_query_grounding.rs::timeseries_identifiers` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R058.4.7.2.3` | `tests/nl_query_grounding.rs::cep_identifiers` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R058.4.7.2.4` | `tests/nl_query_grounding.rs::udf_identifiers` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R058.4.7.2.5` | `tests/nl_query_grounding.rs::rdf_identifiers` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R072.2` | `tests/federated/test_unified_query_source_plan_served.py::test_plan_sources_equal_authority_rows` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R073.3` | `crates/medulla-federation/src/federation_opt/tests.rs::mcp_remote_calls_bound_tool` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R073.3` | `tests/federation/test_web_metasearch_served.py::test_mcp_source_resolves` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R079.2.1` | `tests/lake_manifest_interoperability.rs::append_compaction_cow_delete` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R081.11` | `tests/retrieval_round_served.rs::round_with_no_parts_returns_rows_only` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R081.11` | `tests/retrieval/test_round_client.py::test_round_request_round_trips` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R081.101.1` | `crates/medulla-types/src/retrieval_round.rs::tests::document_state_round_trips_and_checks_coverage` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R081.101.2` | `crates/medulla-plan/src/doc_state.rs::tests::state_digest_is_stable_for_same_content` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R081.101.3` | `tests/retrieval_round_served.rs::compressed_state_rerank_is_order_independent` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R081.103.1` | `crates/medulla-types/src/viewport.rs::tests::request_bounds_and_token_union_round_trip` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R081.103.2` | `crates/medulla-decision-stats/src/viewport.rs::tests::bins_match_oracle_and_caps_hold` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R081.103.3` | `tests/viewport_served.rs::selection_tokens_resolve_only_within_pinned_revisions` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R081.103.4` | `tests/viewport_served.rs::viewport_bins_are_bounded_and_pinned` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R081.103.4` | `tests/test_viewport_client.py::test_viewport_round_trip` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R086.100.1` | `crates/medulla-types/src/graphlearn_nary.rs::tests::order_changes_digest_and_arity_is_bounded` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R086.100.2` | `crates/medulla-graph-algos/src/graphlearn/nary.rs::tests::unseen_member_scores_inductively` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R086.100.3` | `tests/graphlearn_nary_served.rs::refusals_and_unchanged_graph_revision` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R086.100.4` | `tests/graphlearn_nary_served.rs::nary_hypotheses_are_read_only_and_ordered` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R090.8` | `crates/medulla-h-graph/src/graph_ops/discover_plan.rs::tests::hop_cap_and_order` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R090.8` | `tests/retrieval/test_discover_planning_served.py::test_two_hop_neighbour_is_returned_with_path` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R091.7` | `crates/medulla-federation/src/federation_opt/plan_evolution.rs::tests::cache_and_materialize_candidates_respect_capability` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R091.7` | `tests/federation/test_plan_evolution_served.py::test_cache_candidate_kept_when_faster` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R091.8` | `crates/medulla-federation/src/federation_opt/plan_evolution.rs::tests::index_suggestion_threshold` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R091.8` | `tests/federation/test_plan_evolution_served.py::test_index_suggestion_is_a_fact_only` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R607.7` | `crates/medulla-graph-algos/src/graph_algos/analogy.rs::tests::isomorphic_subgraphs_match_and_boundary_score` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R607.7` | `tests/reasoning/test_topology_served.py::test_analogy_served` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R607.8` | `crates/medulla-graph-algos/src/graph_algos/synergy.rs::tests::two_community_bridge_ranks_first` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R607.8` | `tests/reasoning/test_topology_served.py::test_synergy_served` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R607.9` | `crates/medulla-graph-algos/src/graph_algos/positional.rs::tests::connected_set_outscores_scattered_set` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R607.9` | `tests/reasoning/test_topology_served.py::test_hyperedge_score_served` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R651.7` | `crates/medulla-h-query/src/query/expansion.rs::tests::parse_drops_duplicates_and_oversize` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R651.7` | `tests/retrieval/test_query_understanding_served.py::test_expansion_generation_with_scripted_provider` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R652.7` | `crates/medulla-plan/src/rerank.rs::tests::model_scorer_unavailable_falls_back` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R652.7` | `tests/retrieval/test_rerank_served.py::test_model_scorer_when_artifact_bound` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R653.8` | `crates/medulla-plan/src/corpus_retrieval.rs::tests::entity_context_order` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R653.8` | `tests/retrieval/test_corpus_retrieve_served.py::test_entity_mode` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R653.9` | `crates/medulla-plan/src/corpus_retrieval.rs::tests::session_hits_order` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R653.9` | `tests/retrieval/test_corpus_retrieve_served.py::test_session_mode` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R653.10` | `crates/medulla-plan/src/corpus_retrieval.rs::tests::lineage_depth_and_cycles` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R653.10` | `tests/retrieval/test_corpus_retrieve_served.py::test_lineage_mode` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R654.7` | `crates/medulla-plan/src/code_context.rs::tests::diagnose_orders_chain_by_stage` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R654.7` | `tests/retrieval/test_code_context_served.py::test_diagnose_chain` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R703.7` | `tests/retrieval/test_access_check_served.py::test_discover_excludes_checked_at_read_sources` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R706.7` | `tests/federated/test_policy_mask_served.py::test_cross_tenant_policy_not_applied` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R708.8` | `tests/federated/test_stored_query_served.py::test_share_scope_limits_calls` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R708.9` | `tests/federated/test_stored_query_served.py::test_workspace_share_schedule_and_lint` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R720.7` | `crates/medulla-plan/tests/uql_epistemic_stages.rs::require_nonempty_refuses_with_code` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R722.8` | `crates/medulla-plan/tests/pack_source.rs::undeclared_filters_stay_local_and_residual_always_runs` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R722.9` | `tests/test_uql_foreign_execution.py::test_driver_binding_rejects_payload_authority` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R722.10` | `tests/test_uql_foreign_execution.py::test_lifecycle_sequence_replay_expiry_and_terminal` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R723` | `tests/semantic_index/test_reembed_methods_served.py::test_admit_then_reembed_one_job` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R724` | `tests/served_schema_projections.rs::projections_follow_caller_grants_and_hide_other_boundaries` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R725` | `tests/served_viewport_bins.rs::bins_match_independent_reference_and_obey_limits` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R726` | `crates/medulla-sql-tests/tests/uql_evaluate_grammar.rs::parses_every_kernel_and_refuses_unknown` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R727` | `tests/query/test_nl_answer_atoms_served.py::test_answer_cites_atom_provenance` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R728` | `crates/medulla-plan/src/uql/tests/roundtrip.rs::every_op_and_pred_kind_round_trips` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R729` | `tests/federated/test_raw_pushdown_served.py::test_raw_source_search_is_budgeted_and_refuses_over_ceiling` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R730` | `tests/test_unified_planner_gate.py::test_failed_gate_records_the_freeze_decision` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R731` | `tests/query/test_latency_classes_served.py::test_interactive_budget_refuses_and_analytical_runs_as_job` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R732` | `tests/query/test_planner_evolution_served.py::test_recorded_plans_train_a_challenger_that_promotes_only_on_improvement` |
