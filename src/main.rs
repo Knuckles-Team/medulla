@@ -64,6 +64,11 @@ struct Args {
     )]
     exact_performance_probe_root: Option<std::path::PathBuf>,
 
+    /// Engine knob `<name>=<value>` (repeatable); overrides `MEDULLA_<NAME>`
+    /// and the default (MEDULLA-CONTRACT-R058).
+    #[arg(long = "knob", value_name = "NAME=VALUE")]
+    knob: Vec<String>,
+
     /// Service configuration shared with the startup steps.
     #[command(flatten)]
     server: server_startup::ServerArgs,
@@ -310,6 +315,16 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
 #[cfg(feature = "security")]
 async fn run_inner() -> Result<(), Box<dyn std::error::Error>> {
     let mut args = Args::parse();
+
+    // MEDULLA-CONTRACT-R058: every knob is read and bounds-checked once, before
+    // any listener binds; a refusal exits non-zero.
+    match medulla_server_api::knob_config::load_knobs(&args.knob, |name| std::env::var(name).ok()) {
+        Ok(knobs) => medulla_server_api::knob_config::install(knobs),
+        Err(refusal) => {
+            eprintln!("error: {refusal}");
+            std::process::exit(2);
+        }
+    }
 
     if args.exact_performance_probe {
         return run_exact_performance_probe(args.exact_performance_probe_root.as_deref());

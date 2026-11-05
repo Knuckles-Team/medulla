@@ -3868,6 +3868,7 @@ components:
       - "tests/test_arch_lint_policy.py"
       - "tests/test_architecture_gate_source_universe.py"
       - "tests/test_auth_enforcement.py"
+      - "tests/test_knob_startup_refusal.py"
       - "tests/test_batch_binary_client.py"
       - "tests/test_bench_gate.py"
       - "tests/test_bench_helix_compare.py"
