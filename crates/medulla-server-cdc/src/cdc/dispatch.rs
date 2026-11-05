@@ -269,7 +269,14 @@ fn op_family_marker_event_id(method: &Method) -> Option<&'static str> {
 /// derivation self-translates into one `BatchUpdate`, whose own node and edge
 /// events are the real ones.
 fn telemetry_derive_marker_event_id(method: &Method) -> Option<&'static str> {
-    matches!(method, Method::TelemetryDerive { .. }).then_some("__telemetry_derive")
+    match method {
+        Method::TelemetryDerive { .. } => Some("__telemetry_derive"),
+        // MEDULLA-UNIFIED-DATA-PLANE-R760.3: like `TelemetryDerive`.
+        Method::IncidentRecordAnomaly { .. }
+        | Method::IncidentCorrelate { .. }
+        | Method::IncidentSetStatus { .. } => Some("__incident"),
+        _ => None,
+    }
 }
 
 fn source_ingestion_marker_event_id(method: &Method) -> Option<&'static str> {

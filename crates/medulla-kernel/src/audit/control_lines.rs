@@ -94,9 +94,32 @@ fn rbac_elevation_audit_line(method: &Method) -> Option<String> {
 /// durable one. The line names the window, never the telemetry.
 fn telemetry_derive_audit_line(method: &Method) -> Option<String> {
     let Method::TelemetryDerive { from_ms, to_ms, .. } = method else {
-        return identity_audit_line(method);
+        return incident_audit_line(method);
     };
     Some(format!("TELEMETRY_DERIVE|{from_ms}|{to_ms}"))
+}
+
+/// MEDULLA-UNIFIED-DATA-PLANE-R760.3: defense-in-depth, like `TELEMETRY_DERIVE` --
+/// an incident write lowers into one `BATCH_UPDATE` line against the request
+/// graph, which is the durable one. The line names the call, never the evidence.
+fn incident_audit_line(method: &Method) -> Option<String> {
+    match method {
+        Method::IncidentRecordAnomaly { window_ms, .. } => {
+            Some(format!("INCIDENT_RECORD_ANOMALY|{window_ms}"))
+        }
+        Method::IncidentCorrelate {
+            anomalies,
+            window_ms,
+        } => Some(format!(
+            "INCIDENT_CORRELATE|{}|{window_ms}",
+            anomalies.len()
+        )),
+        Method::IncidentSetStatus {
+            incident_id,
+            status,
+        } => Some(format!("INCIDENT_SET_STATUS|{incident_id}|{status:?}")),
+        _ => identity_audit_line(method),
+    }
 }
 
 /// Defense-in-depth markers. The durable record of each is

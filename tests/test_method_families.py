@@ -240,10 +240,14 @@ _UNCONDITIONAL_WRITES_AT_BASE = (
         # DecisionCommit and GraphSchema (a4804f87c), SourceIngest (dcc5d53c0),
         # TelemetryDerive (EH-408/EH-409, a self-translating declared write),
         # EnrichDocument (MEDULLA-UNIFIED-DATA-PLANE-R651.7, a self-routed envelope
-        # write).
+        # write). The three incident writes (MEDULLA-UNIFIED-DATA-PLANE-R760.3)
+        # self-translate into one BatchUpdate, like TelemetryDerive.
         "DecisionCommit",
         "EnrichDocument",
         "GraphSchema",
+        "IncidentCorrelate",
+        "IncidentRecordAnomaly",
+        "IncidentSetStatus",
         "SourceIngest",
         "TelemetryDerive",
     }

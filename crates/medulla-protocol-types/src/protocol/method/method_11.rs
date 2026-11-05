@@ -175,6 +175,34 @@ $($variants)*
         policy_msgpack: Vec<u8>,
     },
 
+    // ── Served incidents (MEDULLA-UNIFIED-DATA-PLANE-R760.3) ───────────────
+    /// Record one anomaly in the caller's tenant (from the verified carrier)
+    /// and correlate it into an open incident over `window_ms`.
+    IncidentRecordAnomaly {
+        anomaly: medulla_types::incident::AnomalyReading,
+        window_ms: u64,
+    },
+    /// Correlate a set of anomalies in one pass: grouped by entity and
+    /// `window_ms` bucket, each group opens or joins an open incident.
+    IncidentCorrelate {
+        anomalies: Vec<medulla_types::incident::AnomalyReading>,
+        window_ms: u64,
+    },
+    /// One incident of the caller's tenant with its evidence. Read-only.
+    IncidentEvidence { incident_id: String },
+    /// The `Claim` nodes with an `about` edge to an entity in the incident's
+    /// evidence. Read-only.
+    IncidentRelatedClaims {
+        incident_id: String,
+        #[serde(default)]
+        limit: Option<u32>,
+    },
+    /// Move an incident one status forward (open -> acknowledged -> resolved).
+    IncidentSetStatus {
+        incident_id: String,
+        status: medulla_types::incident::IncidentStatus,
+    },
+
     // ── Market bars and trend signals (EH-413..EH-418) ─────────────────────
     /// Typed OHLCV bars over the time-series store, deterministic integer
     /// indicators, the per-series trend signal with its flip records, the

@@ -3806,6 +3806,7 @@ components:
       - "tests/common"
       - "tests/conftest.py"
       - "tests/decide"
+      - "tests/data_plane"
       - "tests/_client_fixtures.py"
       - "tests/_decision_resident_fixture.py"
       - "tests/_harness_envelope.py"

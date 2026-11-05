@@ -224,9 +224,10 @@ fn every_wire_variant_has_exactly_one_descriptor_and_vice_versa() {
     // and `GetRunCheckpoint`.
     // 481 -> 483: MEDULLA-FINANCE-PRIMITIVES-R900.3 `FinancePositionSize`, `FinanceDistributionShift`.
     // 483 -> 492: MEDULLA-FINANCE-PRIMITIVES-R901.3/R613.3/R018.3 banking, execution and factor-rank methods.
+    // 492 -> 497: MEDULLA-UNIFIED-DATA-PLANE-R760.3's five incident methods.
     assert_eq!(
         variants.len(),
-        492,
+        497,
         "the wire method census changed; update this exact count deliberately"
     );
 }
@@ -290,6 +291,28 @@ fn session_usage_requires_the_shared_usage_read_scope() {
         .find(|descriptor| descriptor.id.as_str() == "GetSessionUsage")
         .unwrap();
     assert_eq!(descriptor.policy.authz_action, "usage:read");
+}
+
+// spec: MEDULLA-UNIFIED-DATA-PLANE-R760.3
+#[test]
+fn incident_methods_listed() {
+    let variants = wire_method_variants();
+    let expected = [
+        ("IncidentRecordAnomaly", "incident:write", true),
+        ("IncidentCorrelate", "incident:write", true),
+        ("IncidentEvidence", "incident:read", false),
+        ("IncidentRelatedClaims", "incident:read", false),
+        ("IncidentSetStatus", "incident:write", true),
+    ];
+    for (id, scope, mutates) in expected {
+        assert!(variants.contains(id), "{id} is not a wire `Method` variant");
+        let descriptor = medulla_capabilities::method_descriptors()
+            .find(|descriptor| descriptor.id.as_str() == id)
+            .unwrap_or_else(|| panic!("{id} has no contract descriptor"));
+        assert_eq!(descriptor.policy.authz_action, scope, "{id}: scope");
+        assert_eq!(descriptor.policy.mutates, mutates, "{id}: mutates");
+        assert_eq!(descriptor.domain, "ingestion", "{id}: domain");
+    }
 }
 
 // spec: MEDULLA-TYPED-PACKS-R063

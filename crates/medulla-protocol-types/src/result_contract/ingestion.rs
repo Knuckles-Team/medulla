@@ -14,6 +14,7 @@ use medulla_source_types::{
 };
 #[cfg(feature = "asr-native")]
 use medulla_types::asr_wire::AsrTranscription;
+use medulla_types::incident::{IncidentRecord, IncidentRelatedClaim, IncidentWriteReceipt};
 use medulla_types::telemetry_derive::TelemetryDeriveReceipt;
 use medulla_types::{
     ingestion_wire::DiscoverHit, ingestion_wire::IndexResult, ingestion_wire::ParseResult,
@@ -61,6 +62,12 @@ method_results! {
     EnrichDocument(EnrichDocument) => Raw<medulla_source_types::source_ingestion::web_document::EnrichDocumentReceipt>;
     // EH-408 / EH-409: counts plus the id of every fact node written.
     TelemetryDerive(TelemetryDerive) => Raw<TelemetryDeriveReceipt>;
+    // MEDULLA-UNIFIED-DATA-PLANE-R760.3: the served incident authority.
+    IncidentRecordAnomaly(IncidentRecordAnomaly) => Raw<IncidentWriteReceipt>;
+    IncidentCorrelate(IncidentCorrelate) => Raw<IncidentWriteReceipt>;
+    IncidentEvidence(IncidentEvidence) => Raw<IncidentRecord>;
+    IncidentRelatedClaims(IncidentRelatedClaims) => Raw<Vec<IncidentRelatedClaim>>;
+    IncidentSetStatus(IncidentSetStatus) => Raw<IncidentWriteReceipt>;
     // `(node_id, weighted_similarity)` pairs, best first.
     SemanticSearch(SemanticSearch) => Raw<Vec<(String, f32)>>;
     Discover(Discover) => Json<Vec<DiscoverHit>>;

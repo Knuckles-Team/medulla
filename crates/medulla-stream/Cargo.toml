@@ -100,6 +100,11 @@ cdc-kafka = ["dep:rdkafka"]
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+# MEDULLA-UNIFIED-DATA-PLANE-R760.3: the served incident records and their
+# SHA-256 signature digest.
+medulla-types = { path = "../medulla-types" }
+sha2 = "0.10"
+hex = "0.4"
 # CA-11's Kafka producer (feature `cdc-kafka` only). See the feature's doc
 # above for why `cmake-build` + `ssl` + `sasl`.
 rdkafka = { version = "0.39", default-features = false, features = ["cmake-build", "ssl", "sasl"], optional = true }

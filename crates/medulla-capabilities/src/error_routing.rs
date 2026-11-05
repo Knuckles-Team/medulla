@@ -218,6 +218,30 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     ("WriteBack", &["CORRUPT_WRITE_BACK"]),
     ("TxnPlanWriteback", &["CORRUPT_WRITE_BACK"]),
     (
+        "IncidentCorrelate",
+        &["TENANT_SCOPE_REQUIRED", "ANOMALY_RESOURCE_REQUIRED"],
+    ),
+    (
+        "IncidentEvidence",
+        &["TENANT_SCOPE_REQUIRED", "INCIDENT_NOT_FOUND"],
+    ),
+    (
+        "IncidentRecordAnomaly",
+        &["TENANT_SCOPE_REQUIRED", "ANOMALY_RESOURCE_REQUIRED"],
+    ),
+    (
+        "IncidentRelatedClaims",
+        &["TENANT_SCOPE_REQUIRED", "INCIDENT_NOT_FOUND"],
+    ),
+    (
+        "IncidentSetStatus",
+        &[
+            "TENANT_SCOPE_REQUIRED",
+            "INCIDENT_STATUS_SKIP",
+            "INCIDENT_NOT_FOUND",
+        ],
+    ),
+    (
         "TelemetryDerive",
         &[
             "TELEMETRY_UNAVAILABLE",
