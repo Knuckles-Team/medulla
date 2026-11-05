@@ -1079,3 +1079,12 @@ Entries for rows whose named test is not yet in the tree.
 - `MEDULLA-DECISION-ENGINE-R128.14`: planned L1 `tests/test_generated_models.py::test_harness_config_kind_is_a_contract_question_kind` asserts the `QuestionKind` literal includes `harness_config`.
 - `MEDULLA-DECISION-ENGINE-R129.1`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/rule_promotion_tests.rs::attach_point_reads_published_invariants`.
 - `MEDULLA-DECISION-ENGINE-R129.5`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/rule_promotion_tests.rs::contradicting_rule_is_rejected_and_compatible_rule_promotes`.
+- `MEDULLA-DECISION-ENGINE-R102.1`: planned L1 `crates/medulla-catalog-types/src/graph_schema/shadow_branch.rs::tests::activation_requires_every_step_in_order` with the omitted-shadow-ingest and reordered-approval refusals.
+- `MEDULLA-DECISION-ENGINE-R103`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/scorer_tests.rs::each_forecast_horizon_reports_calibrated_confidence_or_abstains`.
+- `MEDULLA-DECISION-ENGINE-R104`: planned L1 `crates/medulla-nlq/src/decide_text/tests.rs::decide_text_and_uql_share_structured_error_shape` runs the same table-driven fixtures against both parsers.
+- `MEDULLA-DECISION-ENGINE-R107`: planned L2 `crates/medulla-agent-types/src/agent_topology.rs::tests::topology_types_stay_within_twelve_and_goldens_match` and a Python round-trip in tests/test_generated_models.py.
+- `MEDULLA-DECISION-ENGINE-R108`: planned L1 `crates/medulla-server-ops/src/api/admin/topology_shape.rs::tests::an_invalid_topology_is_rejected_at_publish`.
+- `MEDULLA-DECISION-ENGINE-R111.1`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/consumer_tests.rs::a_standalone_topology_decide_question_returns_a_typed_decision_record`.
+- `MEDULLA-DECISION-ENGINE-R112`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/consumer_tests.rs::exhausted_capacity_at_a_priority_is_a_lease_named_infeasible_result`.
+- `MEDULLA-DECISION-ENGINE-R114`: planned L5 `crates/medulla-h-decide/src/decide/stat_tests/consumer_tests.rs::subagent_allowance_reads_the_topology_facts_of_a_committed_record`.
+- `MEDULLA-DECISION-ENGINE-R116.1`: planned L1 `tests/test_generated_contract_inventory.py::test_published_contract_path_is_admitted_and_a_bespoke_facade_refused` (row conflicts with R116.2; owner decision pending).
