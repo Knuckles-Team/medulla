@@ -14,6 +14,7 @@ use serde_json::Value;
 /// This enum is intentionally closed: adding a strategy changes the durable
 /// conflict contract and must be reviewed with its resolution semantics.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum MergeStrategy {
     /// Reject the write without changing the stored state.
@@ -35,6 +36,63 @@ pub struct WriteConflict {
     pub actual: u64,
     /// Stable logical scope name used to select the merge policy.
     pub scope: String,
+}
+
+/// Which side of a resolved conflict the durable state reflects
+/// (MEDULLA-DURABLE-KERNEL-R084.5).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(rename_all = "snake_case")]
+pub enum ConflictWinner {
+    /// The stored state stands (a refusal).
+    Existing,
+    /// The incoming write replaced the stored values (`PreferNewer`).
+    Incoming,
+    /// The stored and incoming fields were merged (`FieldUnion`).
+    Merged,
+}
+
+impl ConflictWinner {
+    /// The stable metric label value.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Existing => "existing",
+            Self::Incoming => "incoming",
+            Self::Merged => "merged",
+        }
+    }
+
+    /// The winner a strategy yields when it resolves the conflict.
+    pub fn for_strategy(strategy: MergeStrategy) -> Self {
+        match strategy {
+            MergeStrategy::Refuse => Self::Existing,
+            MergeStrategy::PreferNewer => Self::Incoming,
+            MergeStrategy::FieldUnion => Self::Merged,
+        }
+    }
+}
+
+impl MergeStrategy {
+    /// The stable metric label value.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Refuse => "refuse",
+            Self::PreferNewer => "prefer_newer",
+            Self::FieldUnion => "field_union",
+        }
+    }
+}
+
+/// The record every conflict resolution returns: scope, strategy and winner
+/// (MEDULLA-DURABLE-KERNEL-R084.5). A refusal carries it in the error detail;
+/// a merge carries it in the commit response.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct WriteConflictEvidence {
+    pub conflict_scope: String,
+    pub strategy: MergeStrategy,
+    pub winner: ConflictWinner,
 }
 
 /// Resolve one node's stale write under `strategy` (MEDULLA-DURABLE-KERNEL-R084.2).
