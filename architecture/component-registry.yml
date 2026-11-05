@@ -1052,6 +1052,7 @@ components:
       - "crates/medulla-resource/src/lib.rs"
     test_roots:
       - "crates/medulla-capabilities/tests"
+      - "crates/medulla-durable/benches"
     generated_roots: []
     shared_roots: []
     shared_files: []

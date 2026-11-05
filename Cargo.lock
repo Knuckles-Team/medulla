@@ -4677,6 +4677,8 @@ dependencies = [
 name = "medulla-durable"
 version = "0.1.0"
 dependencies = [
+ "criterion",
+ "medulla-types",
  "rmp-serde",
  "serde",
  "serde_json",
