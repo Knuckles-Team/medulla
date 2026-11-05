@@ -1043,6 +1043,8 @@ mod tool_subset_tests;
 
 mod consumer_tests;
 
+mod knob_tests;
+
 #[cfg(feature = "query")]
 mod retrieval_tests;
 
