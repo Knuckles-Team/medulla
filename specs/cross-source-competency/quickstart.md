@@ -22,10 +22,10 @@ The ontology declarations (supplier, component, vulnerability, host limits, cont
 cargo test -p medulla-rdf --test supply_chain_declarations --test supply_chain_reasoning --test infrastructure_host_limits --test commercial_declarations
 ```
 
-The authority seed and mapping fixtures (`MEDULLA-CQ-XSRC-R002.5`, `R002.7`, `R003.1` to `R003.5`):
+The authority seed and mapping fixtures (`MEDULLA-CQ-XSRC-R002.5`, `R002.7`, `R003.1` to `R003.5`; the seed tests of `source_authority_fixture` are planned):
 
 ```
-cargo test -p medulla-rdf --test source_authority_fixture && cargo test -p medulla-core --test xsrc_mappings
+cargo test -p medulla-rdf --test source_authority_fixture && cargo test -p medulla-core --test supply_chain_vocab
 ```
 
 ## Served proofs
