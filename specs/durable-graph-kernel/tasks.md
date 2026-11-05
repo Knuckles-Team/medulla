@@ -1,312 +1,264 @@
-# Tasks
+# MEDULLA-DURABLE-KERNEL — Tasks
 
-Status key: `[ ]` queued, `[-]` in progress, `[x]` verified at cited main revision. All tasks below remain unchecked until an implementation PR supplies exact evidence.
+One task per active leaf row of `requirements.md`, producer first. Each task names its row; the row holds the files, the caller chain and the proof.
 
-- [ ] **K-01 (KG-01, KG-02):** Pin the current kernel revision and map every durable write entry point. Write the cross-store atomicity ADR and add all-or-none crash/retry tests (T-KG-01/02).
-- [ ] **K-02 (KG-03, KG-04):** Validate and cache owner bindings at one transaction boundary, retain golden layout lineage/refusal cases, implement bounded scrub and typed status (T-KG-03/04).
-- [ ] **K-03 (KG-05, KG-06):** Make head-only outbox attempts and reject/rewind semantics observable. Add cursor-based CDC/mirror replay, table mirroring, digest reconciliation and empty-default refusal (T-KG-05/06).
-- [ ] **K-04 (KG-07):** Enumerate all served read/write paths, thread immutable verified scope and build cross-principal/tenant denial fixtures including cache/UDF/foreign/TSDB (T-KG-07).
-- [ ] **K-05 (KG-08, KG-09):** Add durable audit reservation/outcome reconciliation and reserved two-person lease kinds. Generate any changed protocol/client contracts (T-KG-08/09).
-- [ ] **K-06 (KG-10):** Capture failure traces automatically, restore full multi-group workload, prove repeated loaded failover and independent progress (T-KG-10).
-- [ ] **K-07 (KG-11, KG-12):** Add explicit durability classes and loss-window metrics; build recoverable hot structures and linearizable typed primitives (T-KG-11).
-- [ ] **K-08 (KG-13, KG-14):** Route point/structure operations before SQL planning, implement one-admission pipeline batches and schema/policy-safe plan cache (T-KG-12).
-- [ ] **K-09 (KG-15):** Decide store engine by ADR, add hot/cold/tombstone parity and replication-out tooling, run differential/restore and published benchmark matrix (T-KG-13).
-- [x] **K-10 (additional hardening):** Close the native-kernel hardening and test-reliability requirements no task above names: upload-cursor non-reuse, owner-manifest lineage, polygon boundary predicates, ring-buffer eviction identity, dispatch-ordering guard reliability, idempotent CreateGraph/DeleteGraph retry, blob GC grace period, holder-scoped BlobRef/BlobUnref, outbox topic classes, AVX2 kernel coverage, placement/consensus routing after sealing, `.redb` registry classification, mutation-durability classification across feature builds, create-only sealed-record guard, publication-waiter cancellation, shared-chunk GC, legacy-layout migration refusal, bounded test threading, idle-upload reclaim, lossless v2 control-state lift, compiled-shape memoization benchmark, signed-dispatch ack-loss recovery, published-contract/BlobRef parity, isolated trace capture, channel-group leave result and no-key scrub-cursor fixture — **MEDULLA-DURABLE-KERNEL-R044–MEDULLA-DURABLE-KERNEL-R069** (see `requirements.md` for each ID's definition).
-- [ ] **K-11 (all):** Run configured CCCC, Dupehound, jscpd, KISS, rust architecture lint, clippy, focused tests and cloud CI at exact head. Record positive and negative evidence, then update delivery and acceptance state separately.
-- [-] **K-12 (operator store upgrades):** Give the registered offline store upgrades one operator entry point (`MEDULLA-DURABLE-KERNEL-R070`): a single upgrade registry in the storage kernel, an `inspect`/`apply` command on the server binary that holds the engine's own directory lock, a startup refusal that names the command, the operator procedure in the generated owner-store format document, and command tests on disposable predecessor stores.
-  - [ ] **MEDULLA-DURABLE-KERNEL-R070.1:** Migrate an older supported store at open under the held lock. Add the journal, typed refusals, logs, metric and switch.
-  - [ ] **MEDULLA-DURABLE-KERNEL-R070.2:** Prove at the served entry point that a previous-patch store migrates and serves.
-- [x] **K-13 (lazy agent-library open):** Add the missing startup test for `MEDULLA-DURABLE-KERNEL-R006`. Start the real server with the digest-verified binary. Use a directory fixture and a malformed-bytes fixture for `agent_library.redb`. Assert that an authenticated `Ping` succeeds and that an Agent Library operation fails on store open. Assert that `Ping` still succeeds afterward and that the process stays alive. Keep the `MEDULLA-DURABLE-KERNEL-R070` upgrade-required boot refusal intact. Recovered from the never-published agent claim `codex-medulla-r006-startup-test-01a101be`.
-- [x] **K-14 (R052 acceptance record):** Record the scoped acceptance of `MEDULLA-DURABLE-KERNEL-R052` in `status.json`. Cite merge `9871859d4e0cc01f0a5a2f1f07584da056cf424e`, PR 41, its merged-head receipt and CI run 36912559244. Change only the R052 row. Keep R052 delivery at `LANDED` and the whole-spec acceptance at `NOT_AUDITED`. Obtain an independent review of the exact diff first. Recovered from the never-branched agent claim `codex-r052-acceptance-record-01a0fe5f`.
+## Tasks
 
-## Decomposition children (tracked)
-
-- [ ] **MEDULLA-DURABLE-KERNEL-R011:** Clippy and targeted tests cover the full and all-features builds
-- [x] **MEDULLA-DURABLE-KERNEL-R011.1:** RequiredTestModuleCategory/RequiredTestModule typed category and validated declaration
-- [x] **MEDULLA-DURABLE-KERNEL-R011.2:** Concrete required-module manifest. See the exact paths and proving tests in `requirements.md`.
-- [ ] **MEDULLA-DURABLE-KERNEL-R011.3:** Pre-merge runtime execution. See the exact paths and proving tests in `requirements.md`.
-- [ ] **MEDULLA-DURABLE-KERNEL-R011.4:** Exact-head CI acceptance receipts. See the exact paths and proving tests in `requirements.md`.
-- [ ] **MEDULLA-DURABLE-KERNEL-R011.5:** Check required Clippy profile declarations and refusal cases. Runtime acceptance remains under R011.3 and R011.4.
-- [ ] **MEDULLA-DURABLE-KERNEL-R014:** Raft cluster tests pass reliably under load
-- [x] **MEDULLA-DURABLE-KERNEL-R014.1:** Typed flake-budget / retry-policy model for load-test retries
-- [-] **MEDULLA-DURABLE-KERNEL-R014.2:** Bounded representative CPU load; process tests passed, pending main validation. See the exact paths and proving tests in `requirements.md`.
-- [ ] **MEDULLA-DURABLE-KERNEL-R014.3:** Repeated loaded-test harness. See the exact paths and proving tests in `requirements.md`.
-- [-] **MEDULLA-DURABLE-KERNEL-R014.3.1:** Repeated execution and retained results; process tests pass, main validation pending.
-- [ ] **MEDULLA-DURABLE-KERNEL-R014.3.2:** Rust FlakeBudget-driven diagnostic retries.
-- [ ] **MEDULLA-DURABLE-KERNEL-R014.4:** Loaded leader-rebalance acceptance. See the exact paths and proving tests in `requirements.md`.
-- [ ] **MEDULLA-DURABLE-KERNEL-R014.5:** Loaded three-node placement acceptance. See the exact paths and proving tests in `requirements.md`.
-- [ ] **MEDULLA-DURABLE-KERNEL-R024:** External graph and database backends become Medulla federation sources
-- [x] **MEDULLA-DURABLE-KERNEL-R024.1:** PostgreSQL/AGE backend becomes a ForeignSourceSpec source
-- [x] **MEDULLA-DURABLE-KERNEL-R024.2:** Fan-out backend becomes a MirrorTargetSpec federation mirror target
-- [x] **MEDULLA-DURABLE-KERNEL-R024.2.1:** MirrorTargetSpec::FanOut typed spec, validation, and registration refusal
-- [x] **MEDULLA-DURABLE-KERNEL-R024.2.2:** MirrorTargetRegistry registration and name-resolution entry point
-- [ ] **MEDULLA-DURABLE-KERNEL-R024.3:** Cypher transpiler becomes a ForeignSourceSpec source
-- [ ] **MEDULLA-DURABLE-KERNEL-R024.4:** Mirror target becomes a ForeignSourceSpec mirror target
-- [x] **MEDULLA-DURABLE-KERNEL-R024.5:** Outbox-based mirror becomes a ForeignSourceSpec mirror target
-- [x] **MEDULLA-DURABLE-KERNEL-R024.6:** Brain-guarded backend becomes a ForeignSourceSpec source
-- [x] **MEDULLA-DURABLE-KERNEL-R024.7:** Trino backend becomes a ForeignSourceSpec source
-- [x] **MEDULLA-DURABLE-KERNEL-R024.8:** Spark job backend becomes a ForeignSourceSpec source
-- [x] **MEDULLA-DURABLE-KERNEL-R027:** Schema repair uses a reserved two-person approval lease
-- [x] **MEDULLA-DURABLE-KERNEL-R027.1:** Governed-change model types
-- [x] **MEDULLA-DURABLE-KERNEL-R027.2:** Governed-change dispatch wiring
-- [x] **MEDULLA-DURABLE-KERNEL-R027.3:** Governed-change raft catalog registration
-- [x] **MEDULLA-DURABLE-KERNEL-R031.1:** The audit append accounts the serving write version, including the maintenance batch a replayed attempt commits
-- [x] **MEDULLA-DURABLE-KERNEL-R031.2:** Stamp writes from the authoritative scope version and account a durable commit the serving projection missed.
-- [x] **MEDULLA-DURABLE-KERNEL-R032:** Native primary-key fast path bypasses the SQL planner
-- [x] **MEDULLA-DURABLE-KERNEL-R032.1:** PrimaryKeyOperation and FastPathDecision typed routing model with authorization/audit-checked invariant and refusal
-- [x] **MEDULLA-DURABLE-KERNEL-R033:** Hot-store engine choice is evaluated against captured workloads
-- [x] **MEDULLA-DURABLE-KERNEL-R033.1:** HotStoreEngine/WorkloadProfile/BenchmarkResult typed model with throughput-based winner selection and refusal
-- [x] **MEDULLA-DURABLE-KERNEL-R034:** Cross-store atomicity is proven and scoped to mixed transactions
-- [x] **MEDULLA-DURABLE-KERNEL-R034.1:** TransactionScope/CommitPath typed model proving single-store traffic cannot reach the cross-store commit path
-- [x] **MEDULLA-DURABLE-KERNEL-R035:** PostgreSQL wire protocol reaches operational and dump/restore parity
-- [x] **MEDULLA-DURABLE-KERNEL-R035.1:** PgOperationalSurface/PgCompatibilityMatrix typed model, fail-closed, with named-missing-surface refusal
-- [x] **MEDULLA-DURABLE-KERNEL-R036:** Mirror sinks reach fan-out parity and include Postgres table mirroring
-- [x] **MEDULLA-DURABLE-KERNEL-R036.1:** MirrorSinkKind/MirrorCursor typed model with non-empty-position guard on construction and advance
-- [x] **MEDULLA-DURABLE-KERNEL-R037:** Workload classifier routes point operations around the SQL planner
-- [x] **MEDULLA-DURABLE-KERNEL-R037.1:** WorkloadClass typed classifier with refusal for an unrecognized operation kind
-- [x] **MEDULLA-DURABLE-KERNEL-R037.2:** route dispatch entry point deciding DataFusion session allocation
-- [x] **MEDULLA-DURABLE-KERNEL-R038:** KV namespaces declare an explicit, enforced durability class
-- [x] **MEDULLA-DURABLE-KERNEL-R038.1:** DurabilityClass typed enum, declared loss-window bound, and refusal for an unrecognized class name
-- [x] **MEDULLA-DURABLE-KERNEL-R038.2:** DurabilityClass write-path entry point: write_plan and refuse_if_durable_log_write
-- [x] **MEDULLA-DURABLE-KERNEL-R039:** In-memory data structures rebuild from the redb durability log
-- [x] **MEDULLA-DURABLE-KERNEL-R039.1:** DataStructureKind/AtomicPrimitiveKind/DurabilityDeclaration typed model with always-redb-sole-authority invariant
-- [ ] **MEDULLA-DURABLE-KERNEL-R039.2:** Validate native control-lease consumption against engine-owned mutation time inside the row transaction; preserve conflict outcomes and revocation. Run the scoped native-record expiry regression before claiming acceptance.
-- [x] **MEDULLA-DURABLE-KERNEL-R040:** Pipelined requests commit as a single batch
-- [x] **MEDULLA-DURABLE-KERNEL-R040.1:** PipelineBatch/BatchCommitDecision typed model: one admission per batch, order-preserving replies, empty-batch refusal
-- [x] **MEDULLA-DURABLE-KERNEL-R041:** SQL plan cache keyed by statement digest and schema version
-- [x] **MEDULLA-DURABLE-KERNEL-R041.1:** PlanCacheKey/PlanCacheLookup typed key and pure lookup decision with stale-schema refusal
-- [x] **MEDULLA-DURABLE-KERNEL-R041.2:** PlanCache::prepare entry point at the SQL prepare site
-- [x] **MEDULLA-DURABLE-KERNEL-R042:** Benchmark gate defines and proves performance superiority claims
-- [x] **MEDULLA-DURABLE-KERNEL-R042.1:** BenchmarkClaim typed report record with refusal for an unpublished or non-passing claim
-- [ ] **MEDULLA-DURABLE-KERNEL-R071:** Typed durable task-queue model (enqueue/claim/ack) with refusal tests
-- [ ] **MEDULLA-DURABLE-KERNEL-R072:** Served task-queue RPC over the durable outbox
-- [ ] **MEDULLA-DURABLE-KERNEL-R073:** Generated client method for the task queue
-- [ ] **MEDULLA-DURABLE-KERNEL-R074:** Served worker registry
-- [ ] **MEDULLA-DURABLE-KERNEL-R075:** Reserved-worker admission decision
-- [ ] **MEDULLA-DURABLE-KERNEL-R076:** Scheduler config and lane floors (rollup; waits for both children)
-- [x] **MEDULLA-DURABLE-KERNEL-R076.1:** Pure authoritative SchedulerConfig, defaults, bounds and over-subscription refusal tests
-- [ ] **MEDULLA-DURABLE-KERNEL-R076.2:** Served setting and admission/queue integration consuming R076.1
-- [ ] **MEDULLA-DURABLE-KERNEL-R077:** Shard-writer width served by the scheduler surface
-- [ ] **MEDULLA-DURABLE-KERNEL-R078:** Bitemporal stamping served method
-- [ ] **MEDULLA-DURABLE-KERNEL-R079:** Served as-of filtering
-- [ ] **MEDULLA-DURABLE-KERNEL-R080:** Served supersession
-- [-] **MEDULLA-DURABLE-KERNEL-R080.1:** Atomic supersession refusal for missing successor endpoints; focused regression added, pending main validation
-- [ ] **MEDULLA-DURABLE-KERNEL-R080.2:** Already-closed-fact refusal and served supersession integration coverage
-- [ ] **MEDULLA-DURABLE-KERNEL-R081:** Generated client methods for bitemporal operations
-- [ ] **MEDULLA-DURABLE-KERNEL-R082:** Analytics worker parity: association-rule mining jobs run on the engine's own durable job plane
-- [ ] **MEDULLA-DURABLE-KERNEL-R082.1:** A submitted `MineAssociate` job is claimed and published by the colocated executor with no external worker
-- [x] **MEDULLA-DURABLE-KERNEL-R082.2:** `MineAssociate` submission refuses a payload outside the governed schema
-- [ ] **MEDULLA-DURABLE-KERNEL-R082.3:** Distinct-item cap and opaque-reference rule are decided and enforced at submit
-- [ ] **MEDULLA-DURABLE-KERNEL-R082.4:** Association-rule identity is byte-identical to the old worker's
-- [ ] **MEDULLA-DURABLE-KERNEL-R082.5:** The staged result has the 11-column knowledge-batch shape
-- [x] **MEDULLA-DURABLE-KERNEL-R082.6:** Rules are ordered and thresholded exactly as before
-- [ ] **MEDULLA-DURABLE-KERNEL-R082.7:** A running mining job observes cancellation, deadline and CPU budget
-- [ ] **MEDULLA-DURABLE-KERNEL-R082.8:** Failure codes and retry follow the durable retry policy
-- [ ] **MEDULLA-DURABLE-KERNEL-R082.9:** Colocated pool lease and poll interval are configurable
-- [ ] **MEDULLA-DURABLE-KERNEL-R082.10:** Remote workers remain supported through the existing coordinator operations
-- [ ] **MEDULLA-DURABLE-KERNEL-R082.11:** Cross-repo: Arbora hosts any remote worker process; Meristem does not
-
-- [-] **MEDULLA-DURABLE-KERNEL-R074.1:** Typed capacity record and pure registry lifecycle with native positive/refusal tests; pending merged-head validation.
-- [ ] **MEDULLA-DURABLE-KERNEL-R074.2:** Authenticated served registry integration, generated contracts and cross-owner/expiry dispatch tests.
-- [ ] **MEDULLA-DURABLE-KERNEL-R083 (rollup):** Shared versioned KV-cache tier (rollup).
-  - [ ] **MEDULLA-DURABLE-KERNEL-R083.1:** `KvBlockKey` typed model.
-  - [ ] **MEDULLA-DURABLE-KERNEL-R083.2:** Version-mismatch refusal.
-  - [ ] **MEDULLA-DURABLE-KERNEL-R083.3:** Budgeted eviction by importance.
-  - [ ] **MEDULLA-DURABLE-KERNEL-R083.4:** Locate and wire the served KV operation.
-  - [ ] **MEDULLA-DURABLE-KERNEL-R084:** Version-checked concurrent writes with a typed conflict (rollup).
-  - [ ] **MEDULLA-DURABLE-KERNEL-R084.1:** `WriteConflict` and `MergeStrategy` types
-  - [ ] **MEDULLA-DURABLE-KERNEL-R084.2:** Strategy resolution as a replaceable default
-  - [ ] **MEDULLA-DURABLE-KERNEL-R084.3:** Attach at the mutation version expectation
-  - [ ] **MEDULLA-DURABLE-KERNEL-R084.4:** Typed conflict refusal
-  - [ ] **MEDULLA-DURABLE-KERNEL-R084.5:** Conflict record in the mutation trace
-  - [ ] **MEDULLA-DURABLE-KERNEL-R084.6:** Two-writer proof
-
-
-## R085 producer sequence
-
-- [ ] **MEDULLA-DURABLE-KERNEL-R085.1:** Model. Implement the contract and planned acceptance in this directory.
-- [ ] **MEDULLA-DURABLE-KERNEL-R085.2:** Versioned reads and listing. Implement the contract and planned acceptance in this directory.
-- [ ] **MEDULLA-DURABLE-KERNEL-R085.3:** Sync decisions and compare-and-set. Implement the contract and planned acceptance in this directory.
-- [ ] **MEDULLA-DURABLE-KERNEL-R085.4:** Production wiring. Implement the contract and planned acceptance in this directory.
-- [ ] **MEDULLA-DURABLE-KERNEL-R085.5:** Authority and refusals. Implement the contract and planned acceptance in this directory.
-- [ ] **MEDULLA-DURABLE-KERNEL-R085.6:** Provenance and synchronization evidence. Implement the contract and planned acceptance in this directory.
-- [ ] **MEDULLA-DURABLE-KERNEL-R085.7:** Retention. Implement the contract and planned acceptance in this directory.
-- [ ] **MEDULLA-DURABLE-KERNEL-R085.8:** Real served acceptance. Implement the contract and planned acceptance in this directory.
-
-## R086 bounded acceptance slices
-
-Each child is one focused five-minute definition or proof slice. Split larger runtime work before delivery.
-This batch defines the slices; it runs none of their runtime tests.
-
-- [ ] **MEDULLA-DURABLE-KERNEL-R086:** Safe eviction and durable read-through (rollup). Follow the matching planned acceptance in test-spec.md.
-- [ ] **MEDULLA-DURABLE-KERNEL-R086.1:** Model. Follow the matching planned acceptance in test-spec.md.
-- [ ] **MEDULLA-DURABLE-KERNEL-R086.2:** Behavior: memory-only eviction. Follow the matching planned acceptance in test-spec.md.
-- [ ] **MEDULLA-DURABLE-KERNEL-R086.3:** Behavior: cache-miss read. Follow the matching planned acceptance in test-spec.md.
-- [ ] **MEDULLA-DURABLE-KERNEL-R086.4:** Wiring. Follow the matching planned acceptance in test-spec.md.
-- [ ] **MEDULLA-DURABLE-KERNEL-R086.5:** Scoped reads. Follow the matching planned acceptance in test-spec.md.
-- [ ] **MEDULLA-DURABLE-KERNEL-R086.6:** Refusal: unsafe eviction. Follow the matching planned acceptance in test-spec.md.
-- [ ] **MEDULLA-DURABLE-KERNEL-R086.7:** Refusal: unavailable reads. Follow the matching planned acceptance in test-spec.md.
-- [ ] **MEDULLA-DURABLE-KERNEL-R086.8:** Restart. Follow the matching planned acceptance in test-spec.md.
-- [ ] **MEDULLA-DURABLE-KERNEL-R086.9:** Evidence and hot-path proof. Follow the matching planned acceptance in test-spec.md.
-
-<!-- spec-definition-patch:owner-batch-20261012-durable-graph-kernel -->
-## Durable-kernel owner definition tasks — 2026-10-12
-
-- [ ] **MEDULLA-DURABLE-KERNEL-R028.1:** Implement the R085-backed checkpoint snapshot with run/work-item/fence/checkpoint identity and separate short-/long-term memory references. Enforce verified scope, digest and expected-head refusal rules. Preserve `MEDULLA-DURABLE-KERNEL-R028`, `MEDULLA-IDENTITY-R006`, and existing ARBORA-A2A/OPS streaming requirements.
-- [ ] **MEDULLA-DURABLE-KERNEL-R028.1 acceptance:** Checkpoint acceptance covers restart/readback and refusal of wrong scope or stale fence/revision. Also refuse digest mismatch, changed-body replay and unavailable storage. Test recovery from interruption between snapshot and pointer update. Meristem resume/Arbora stream continuation remain blocked until transaction/recovery, resume-binding and retention decisions are defined.
-- [ ] **MEDULLA-DURABLE-KERNEL-R028.1 status:** Keep SPECIFIED. No runtime or consumer receipt is claimed.
-
-- [ ] **MEDULLA-DURABLE-KERNEL-R028.1.1:** Qualify checkpoint-only native source and tests for immutable typed admission context. Check matching original legacy metadata, legacy-only fallback, owner binding and same-snapshot reads. Include fenced/revisioned publication and canonical MutationBatch retry receipts. Generate fresh checkpoint public contracts and graph layout identity from this exact source. Run native tests and offline predecessor migration/reopen proof before claiming delivery.
-- [ ] **MEDULLA-DURABLE-KERNEL-R028.1.2:** Complete memory-reference resolution/retention, current-run resume precedence and fence binding. Add durable context ordering and exact host-cursor continuation through AU and served hosts. Keep broad R028.1 open until these companion acceptance cases pass.
-- [ ] **MEDULLA-DURABLE-KERNEL-R028.1.3:** Hash-verified hosted checkpoint exports and 30 local facade tests are recorded in the plan. Source formatting, static checks and source review are not native runtime evidence. Final-source native, layout, migration and full repository gates remain pending.
-
-- [ ] **MEDULLA-DURABLE-KERNEL-R085.9:** Store complete canonical search state under R085 `active_context`, requiring `search_run_id`, `state_revision`, `transcript`, `evidence`, `constraints`, and `open_claims`. Preserve Meristem R013.13/R020.1 and Medulla R085.1/.4/.7.
-- [ ] **MEDULLA-DURABLE-KERNEL-R085.9 acceptance:** Exact restart/context-eviction readback. Malformed, missing-field, oversize, wrong-authority, stale-graph, digest and backend refusals. Stale conflict retains candidate without head advance. Meristem continuation receipt/schema is an explicit dependency hold.
-- [ ] **MEDULLA-DURABLE-KERNEL-R085.9 status:** Keep SPECIFIED. No implementation or served evidence is claimed.
-
-- [ ] **MEDULLA-DURABLE-KERNEL-R085.10:** Persist authorized session notes via R085 with note ID, source run/task/revision, content digest, provenance and graph/revision binding. Medulla returns only authorized versions and conflict state. It performs no auto-injection or relevance selection. Preserve Meristem R022.3 and Medulla R085.2/.5/.7.
-- [ ] **MEDULLA-DURABLE-KERNEL-R085.10 acceptance:** Acceptance covers durable readback, scope/revocation redaction, stale conflict retention and capacity refusal. Meristem must define capture trigger, kind mapping, relevance/staleness and conflict presentation before transparent reuse is accepted.
-- [ ] **MEDULLA-DURABLE-KERNEL-R085.10 status:** Keep SPECIFIED. No automatic capture/reuse behavior is claimed.
-
-<!-- /spec-definition-patch -->
-
-<!-- spec-definition-patch:final-mappings-20261012 -->
-## Final mapped definition tasks — 2026-10-12
-
-- [ ] `MEDULLA-DURABLE-KERNEL-R038.100`: implement the typed fields, decision/refusal behavior and owner boundary stated in requirements. Preserve `MEDULLA-DURABLE-KERNEL-R038`.
-- [ ] `MEDULLA-DURABLE-KERNEL-R038.100` acceptance: Start a fresh embedded profile without an external service and read/write an explicitly ephemeral namespace. Verify no persistent namespace is silently downgraded. Start served mode against its configured endpoint and verify its declared sync/async class and acknowledgment boundary. Refuse an unknown profile and an ephemeral-to-durable class mismatch. Read back profile and namespace declarations.
-<!-- /spec-definition-patch -->
-
-
-<!-- spec-definition-patch:owner-dispatch-20261012-tasks -->
-## Cross-owner graph feed tasks — 2026-10-12
-
-- [ ] `MEDULLA-DURABLE-KERNEL-R043.100`: define `OpenGraphSnapshotV1` and `ReadGraphChangesV1` on committed ChangeEnvelope records with a same-read high-water cursor, ordered replay ids and bounded retention. Include tombstone filtering and explicit expired-cursor/revocation outcomes. Verify independent durable readback and Medulla latency through first authorized feed read. Keep Arbora/Overstory browser commit-to-visible p95 as separate companion acceptance. Also set numeric layout limits for visible node/edge budgets, interactions and labels.
-- [ ] Add typed cursor-expiry, graph-incarnation and authorization-change outcomes. Expose versioned commit-to-visible timing fields.
-- [ ] Preserve R043's single MutationBatch write authority and prove two-client served delivery, reconnect ordering, independent readback and the ≤1000 ms p95 target.
-<!-- /spec-definition-patch -->
-
-## Benchmark measurement tasks — 2026-10-12
-
-- [ ] `MEDULLA-DURABLE-KERNEL-R042.100`: extend the existing typed `BenchmarkClaim.measured_result` with complete, revision-bound `BenchmarkMeasurementV1` fields and deterministic TPS/cost formulas. Preserve existing superiority gate.
-- [ ] Serve and replay exact arithmetic across releases. Exclude startup. Refuse missing token/price data, invalid elapsed time/currency and incomparable profiles.
-
-## Spec-audit closure tasks — 2026-10-15
-
-- [ ] **MEDULLA-DURABLE-KERNEL-R084.8:** Define tenant-scoped ordering and backend atomicity semantics. Extend conflict resolution paths and add integration tests covering two tenants, multiple backends, concurrent writes and failure/replay.
-- [ ] **MEDULLA-DURABLE-KERNEL-R057.1:** Model order-snapshot lifecycle with immutable-history and derivation-link binding. Integrate with sealed-record guard. Test snapshot creation, atomic promotion, history preservation and veto refusal.
-- [ ] **MEDULLA-DURABLE-KERNEL-R087.1:** Define typed changeset-review schema with five flaw classes, impact policy and finding-to-code evidence in `crates/medulla-source-types/src/changeset_review.rs`.
-- [ ] **MEDULLA-DURABLE-KERNEL-R087.2:** Serve `ChangesetReview` RPC endpoint. Integrate with Arbora producer and Meristem consumer. Regenerate contracts.
-- [ ] **MEDULLA-DURABLE-KERNEL-R088.1:** Model rule correction with lineage, versioned approval and replacement/revocation. Enforce two-principal requirement at type level.
-- [ ] **MEDULLA-DURABLE-KERNEL-R088.2:** Serve correction submission, approval and application through existing rule authority. Test two-principal validation, replacement flow and revocation refusal.
-- [ ] **MEDULLA-DURABLE-KERNEL-R089.1:** Typed step verification verdict with uncertainty bound and proof binding. Round-trip over wire.
-- [ ] **MEDULLA-DURABLE-KERNEL-R089.2:** Meristem consumer path refuses forward-chained conclusions from failed steps. Preserve AU-EG harness integration.
-- [ ] **MEDULLA-DURABLE-KERNEL-R090.1:** Route Arbora schema-selection request through Medulla admission. Validate candidate and bind schema revision/digest.
-- [ ] **MEDULLA-DURABLE-KERNEL-R090.2:** Serve digest readback with mismatch detection. Test accuracy and consistency across restart.
-- [ ] **MEDULLA-DURABLE-KERNEL-R090.3:** Enforce read-only on external triple-store projections. Refuse mutations with typed error. Trace lineage to Medulla revision.
-- [ ] **MEDULLA-DURABLE-KERNEL-R097.1:** Model typed temporal rule semantics with fact timeline and origin linkage.
-- [ ] **MEDULLA-DURABLE-KERNEL-R097.2:** Behavior forward-chaining produces facts in time-order and chains derivations.
-- [ ] **MEDULLA-DURABLE-KERNEL-R097.3:** Wiring fact admission and readback bind origin sentence and axiom references.
-- [ ] **MEDULLA-DURABLE-KERNEL-R097.4:** Refusal reject rules with missing temporal bounds or malformed axioms.
-- [ ] **MEDULLA-DURABLE-KERNEL-R097.5:** Evidence durable fact store preserves origin chain and temporal rule instance.
-- [ ] **MEDULLA-DURABLE-KERNEL-R097.6:** Hot-path proof fact production API returns origin chain; integration test traces derived fact to source axiom.
-- [ ] **MEDULLA-DURABLE-KERNEL-R098.1:** Model typed ordered argument list and hypothesis-class evidence enum.
-- [ ] **MEDULLA-DURABLE-KERNEL-R098.2:** Behavior unseen entities route through inductive hypothesis path and bind response.
-- [ ] **MEDULLA-DURABLE-KERNEL-R098.3:** Wiring hypothesis evidence class is accepted and binds to public hyperedge predictor.
-- [ ] **MEDULLA-DURABLE-KERNEL-R098.4:** Refusal reject hypotheses with empty argument list and non-hypothesis evidence claims.
-- [ ] **MEDULLA-DURABLE-KERNEL-R098.5:** Evidence hypothesis output never claims assertion and carries prediction confidence.
-- [ ] **MEDULLA-DURABLE-KERNEL-R098.6:** Hot-path proof prediction endpoint accepts ordered arguments and routes unseen entity to hypothesis response.
-- [ ] **MEDULLA-DURABLE-KERNEL-R099 (rollup):** Cross-graph writes fan out across shard writers.
-- [ ] **MEDULLA-DURABLE-KERNEL-R099.1 (Model):** Add the fan-out report type.
-- [ ] **MEDULLA-DURABLE-KERNEL-R099.2 (Behavior):** Group sub-batches by shard and submit them concurrently.
-- [ ] **MEDULLA-DURABLE-KERNEL-R099.3 (Wiring):** Attach the reports in `multi_graph_batch_update`.
-- [ ] **MEDULLA-DURABLE-KERNEL-R099.4 (Refusal):** Add the size refusal and per-graph outcomes.
-- [ ] **MEDULLA-DURABLE-KERNEL-R099.5 (Evidence):** Emit reports and shard metrics.
-- [ ] **MEDULLA-DURABLE-KERNEL-R099.6 (Hot-path proof):** Add the served fan-out test and the benchmark.
-- [ ] **MEDULLA-DURABLE-KERNEL-R100 (rollup):** Native property-graph mirror sinks.
-- [ ] **MEDULLA-DURABLE-KERNEL-R100.1 (Model):** Add the three sink kinds.
-- [ ] **MEDULLA-DURABLE-KERNEL-R100.2 (Behavior):** Implement the three drivers on the mirror-target trait.
-- [ ] **MEDULLA-DURABLE-KERNEL-R100.3 (Wiring):** Wire registration into `MutationOutbox` and the outbox consumer.
-- [ ] **MEDULLA-DURABLE-KERNEL-R100.4 (Refusal):** Declare and return the two refusals.
-- [ ] **MEDULLA-DURABLE-KERNEL-R100.5 (Evidence):** Emit batch receipts and digest reconciliation.
-- [ ] **MEDULLA-DURABLE-KERNEL-R100.6 (Hot-path proof):** Add the served outage test and the benchmark.
-
-- MEDULLA-DURABLE-KERNEL-R028.2: terminal event readback, restart identity, tenant isolation, missing/corrupt binding refusal and legacy unavailability. Receipt 2026-10-19 UTC on main `ed1f25ba023c29a8da6734819005c38bb34f18b9`: the five wired native tests from `2835f06de` (PR #622) ran and all passed (5 passed, 0 failed): `redb_store::mutation_batch_tests::terminal_extension_commits_rows_outbox_and_replays_after_reopen`, `redb_store::work_item::read::tests::an_outcome_read_returns_only_digest_verified_provenance_of_the_tenants_item`, `redb_store::work_item::read::tests::event_bindings_cannot_be_forged_and_missing_bound_event_is_not_legacy`, `redb_store::work_item::read::tests::a_bound_event_read_refuses_a_committed_batch_without_its_event`, `redb_store::work_item::read::tests::present_event_payload_corruption_is_refused`; `tests/test_work_item_read_client.py` passed 14/14, including `test_get_outcome_returns_the_verified_provenance_view`. Every acceptance bullet of the row is proven by these tests, so the pending condition is cleared.
-- [ ] **MEDULLA-DURABLE-KERNEL-R101 (rollup):** Downtime work is an ontology that drives the engine scheduler (rollup).
-- [ ] **MEDULLA-DURABLE-KERNEL-R101.1 (Model):** Add the typed model.
-- [ ] **MEDULLA-DURABLE-KERNEL-R101.2 (Behavior):** Implement the behavior.
-- [ ] **MEDULLA-DURABLE-KERNEL-R101.3 (Wiring):** Wire the production call site.
-- [ ] **MEDULLA-DURABLE-KERNEL-R101.4 (Refusal):** Add the typed refusals.
-- [ ] **MEDULLA-DURABLE-KERNEL-R101.5 (Evidence):** Emit the evidence.
-- [ ] **MEDULLA-DURABLE-KERNEL-R101.6 (Hot-path proof):** Add the served hot-path test.
-- [x] **MEDULLA-DURABLE-KERNEL-R102.1 (Served contract):** Mark the five KV methods stable and Python-served; typed results; regenerate the contract and client.
-- [x] **MEDULLA-DURABLE-KERNEL-R102.2 (Scope and authorization):** Scope served keys by tenant, principal, graph and namespace; enforce `kv:read`/`kv:write`.
-- [x] **MEDULLA-DURABLE-KERNEL-R102.3 (CAS and scan):** Version-stamped rows, version CAS, bounded cursor-paginated scan.
-- [x] **MEDULLA-DURABLE-KERNEL-R102.4 (Durable mutations):** Audit lines, policy flags and replay for the KV mutations.
-- [x] **MEDULLA-DURABLE-KERNEL-R102.5 (Hot-path proof):** Served latency test with p50/p99 budgets.
-- [x] **MEDULLA-DURABLE-KERNEL-R102.6 (Shared namespace):** `shared` flag scoped to tenant + graph, gated by `kv:shared:write`.
-
-- [ ] **MEDULLA-DURABLE-KERNEL-R028.3:** Validate fenced metadata CAS expiry at the native row boundary; native tests remain pending.
-- [ ] **MEDULLA-DURABLE-KERNEL-R039.3:** Implement and qualify atomic pending envelope registration and consumption. Keep human authority and task hierarchy outside this storage proof.
-- [ ] **MEDULLA-DURABLE-KERNEL-R039.4:** Qualify immutable plan binding and atomic plan/pending/WorkItem consumption with paired served requests explicitly unavailable until Arbora integration. Paired-consumption benchmark coverage and measurements remain pending.
-- [ ] **MEDULLA-DURABLE-KERNEL-R039.4.1:** Run native atomic storage, refusal and replay tests; keep paired served requests unavailable.
-- [ ] **MEDULLA-DURABLE-KERNEL-R039.4.2:** Add the paired-consumption scenario to the existing commit-path benchmark and retain a reproducible measurement receipt.
-
-- [ ] **MEDULLA-DURABLE-KERNEL-R028.4:** Bind verified run ownership during single WorkItem admission and prove transaction refusals.
-
-- [ ] **MEDULLA-DURABLE-KERNEL-R028.5:** Implement private native plan publication/readback. Native and served tests, replay/expiry/restart and performance acceptance remain pending.
-
-- [ ] **MEDULLA-DURABLE-KERNEL-R030.1:** Qualify dedicated issuer-bound host-start
-  records through canonical contract generation, typed and signed native tests,
-  and normal publication gates. Keep execution reservation, current session policy,
-  restart and benchmark acceptance pending; no live grant or host deployment.
-## Agent-memory substrate claims (2026-10-22)
-
-  - [ ] **MEDULLA-DURABLE-KERNEL-R083.5:** Tier ladder from accelerator memory to durable storage.
-  - [ ] **MEDULLA-DURABLE-KERNEL-R083.6:** Graph-guided paging policy.
-  - [ ] **MEDULLA-DURABLE-KERNEL-R083.7:** Long-context coherence across tiers.
-  - [ ] **MEDULLA-DURABLE-KERNEL-R083.8:** Tier refusals.
-  - [ ] **MEDULLA-DURABLE-KERNEL-R042.2:** Cross-modal query latency benchmark.
-  - [ ] **MEDULLA-DURABLE-KERNEL-R042.3:** KV-cache tiering benchmark.
-  - [ ] **MEDULLA-DURABLE-KERNEL-R042.4:** Ingest throughput benchmark.
-  - [ ] **MEDULLA-DURABLE-KERNEL-R042.5:** Wire protocol benchmark.
-  - [ ] **MEDULLA-DURABLE-KERNEL-R042.6:** Benchmark publication and regression gate.
-- [ ] **MEDULLA-DURABLE-KERNEL-R860:** Served wire protocol listeners (rollup).
-  - [ ] **MEDULLA-DURABLE-KERNEL-R860.1:** PostgreSQL wire listener.
-  - [ ] **MEDULLA-DURABLE-KERNEL-R860.2:** Bolt listener.
-  - [ ] **MEDULLA-DURABLE-KERNEL-R860.3:** RESP listener.
-  - [ ] **MEDULLA-DURABLE-KERNEL-R860.4:** S3-compatible object API.
-  - [ ] **MEDULLA-DURABLE-KERNEL-R860.5:** Listener refusals.
-  - [ ] **MEDULLA-DURABLE-KERNEL-R860.6:** Hot-path proof: one store behind four protocols.
-- [x] **MEDULLA-DURABLE-KERNEL-R861:** Graph lifecycle replay and graph listing survive a patch upgrade (rollup).
-  - [x] **MEDULLA-DURABLE-KERNEL-R861.1:** Lifecycle replay compares the stored identity.
-  - [x] **MEDULLA-DURABLE-KERNEL-R861.2:** Graph listing survives a restart and a patch upgrade.
-- [ ] **MEDULLA-DURABLE-KERNEL-R862:** A copied store or backup bundle restores onto new files (rollup).
-  - [ ] **MEDULLA-DURABLE-KERNEL-R862.1:** Restore reads bundle sources by content, not by physical identity.
-  - [ ] **MEDULLA-DURABLE-KERNEL-R862.2:** Wiring: an explicit command re-binds a copied data directory.
-  - [ ] **MEDULLA-DURABLE-KERNEL-R862.3:** Hot-path proof: a copied bundle restores and serves.
-- [ ] **MEDULLA-DURABLE-KERNEL-R028.5.1:** Add paired typed proposal and executable attachment fields; recompute exact plan equality and retain legacy codecs.
-- [ ] **MEDULLA-DURABLE-KERNEL-R028.5.2:** Bind the first attachment immutably through the existing owner transaction; preserve omitted attachments and refuse conflicts.
-- [ ] **MEDULLA-DURABLE-KERNEL-R028.5.3:** Verify native attachment replay, restart and scoped availability.
-- [ ] **MEDULLA-DURABLE-KERNEL-R028.5.4:** Implement and measure the attached-plan publication/readback benchmark; preserve this performance residual until a reproducible receipt exists.
-
-- [ ] **MEDULLA-DURABLE-KERNEL-R028.4.1:** Deliver immutable submission storage, owner-fenced recovery and native restart tests.
-- [ ] **MEDULLA-DURABLE-KERNEL-R028.4.2:** Measure recovery latency on a reproducible bounded workload.
-- [ ] **MEDULLA-DURABLE-KERNEL-R028.6:** Publish ordinary terminal completion types and atomic durable storage. Qualify exact usage, unknown usage, owner and fence refusal, immutable replay and reopen on this source revision. Keep served acceptance separate.
-
-- [x] **MEDULLA-DURABLE-KERNEL-R028.1.3.1:** Verify hosted artifact provenance and hashes. Import generated checkpoint contracts and codec. Pass the 30 scoped Python facade tests.
-- [ ] **MEDULLA-DURABLE-KERNEL-R028.1.3.2:** Qualify final-source native compilation, layout and migration, transaction/replay/restart behavior and full repository gates.
-
-- [ ] **MEDULLA-DURABLE-KERNEL-R028.4.3:** Qualify typed conversation head reservation in the existing native admission transaction. Complete native store tests, actual MutationBatch replay and changed-body refusal, graph-incarnation isolation and generated contract checks. Keep R028.1 and R751.750/R751.751 open for checkpoint-backed history, public transcript paging and served continuation.
-- [ ] **MEDULLA-DURABLE-KERNEL-R028.4.4:** Replay a repeated run admission from its retained owner receipt. Add the refreshed-context, restart, changed-input and missing-evidence replay tests and the pre-change store upgrade test.
-
-
-- [ ] **MEDULLA-DURABLE-KERNEL-R030.1:** Qualify dedicated issuer-bound host-start
-  records through canonical contract generation, typed and signed native tests,
-  and normal publication gates. Keep execution reservation, current session policy,
-  restart and benchmark acceptance pending; no live grant or host deployment.
-
-- [ ] **MEDULLA-DURABLE-KERNEL-R030.1.1:** Qualify typed assertions and dedicated Python client projection.
-- [ ] **MEDULLA-DURABLE-KERNEL-R030.1.2:** Qualify protected native storage, provenance and refusal persistence.
-- [ ] **MEDULLA-DURABLE-KERNEL-R030.1.3:** Qualify signed issuer scope and tenant boundaries.
-- [ ] **MEDULLA-DURABLE-KERNEL-R030.1.4:** Complete exact-source artifacts, native acceptance, installed consumer and benchmark evidence.
+- [ ] T001 [US4] MEDULLA-DURABLE-KERNEL-R001 Outbox head-only attempt accounting and rewind
+- [ ] T002 [US4] MEDULLA-DURABLE-KERNEL-R002 Outbox consumers get per-class topics and reject-driven rebuild
+- [ ] T003 [US3] MEDULLA-DURABLE-KERNEL-R003 Owner-store layout lineage registry with typed upgrade refusal
+- [ ] T004 [US4] MEDULLA-DURABLE-KERNEL-R004 Outbox attempt accounting is scoped to the head row
+- [ ] T005 [US4] MEDULLA-DURABLE-KERNEL-R005 Outbox delivery state remains local to the owning node
+- [ ] T006 [US3] MEDULLA-DURABLE-KERNEL-R006.1 A clean reopen writes nothing, and a fresh shard is ready in one commit
+- [ ] T007 [US3] MEDULLA-DURABLE-KERNEL-R006.2 Startup open has a time budget that holds under host load, and each open is diagnosable
+- [ ] T008 [US3] MEDULLA-DURABLE-KERNEL-R006.3 A clean-shutdown marker lets open skip the full recovery scan
+- [ ] T009 [US3] MEDULLA-DURABLE-KERNEL-R006.4 Pre-listener boot does not block on write-lock-holding maintenance
+- [ ] T010 [US3] MEDULLA-DURABLE-KERNEL-R006.5 Ts startup reconciliation replays the legacy gap once, then uses the cursor fast path
+- [ ] T011 MEDULLA-DURABLE-KERNEL-R007.1 Offline tools archive and restore to a target
+- [ ] T012 [US5] MEDULLA-DURABLE-KERNEL-R008 Raft unit tests pass under cluster features and run in CI
+- [ ] T013 [US5] MEDULLA-DURABLE-KERNEL-R009 Native raft commands are sealed as their bare method
+- [ ] T014 MEDULLA-DURABLE-KERNEL-R010 jscpd clone gate runs on every commit
+- [x] T015 MEDULLA-DURABLE-KERNEL-R011.1 RequiredTestModuleCategory/RequiredTestModule are a typed category and a validated declaration, refusing an unrecognized category name or an unselectable declaration
+- [x] T016 MEDULLA-DURABLE-KERNEL-R011.2 Concrete required-module manifest
+- [ ] T017 MEDULLA-DURABLE-KERNEL-R011.3 Pull requests execute the required runtime manifest through the shared gate
+- [ ] T018 MEDULLA-DURABLE-KERNEL-R011.5 Required Clippy profile declarations
+- [ ] T019 [US5] MEDULLA-DURABLE-KERNEL-R012 Raft native command sealing and placement routing are correct
+- [ ] T020 [US5] MEDULLA-DURABLE-KERNEL-R013 Raft cluster test failures capture a causal trace automatically
+- [x] T021 [US5] MEDULLA-DURABLE-KERNEL-R014.1 A typed flake-budget / retry-policy model bounds how a load-test run retries past a transient failure
+- [ ] T022 [US5] MEDULLA-DURABLE-KERNEL-R014.2 Bounded representative CPU load
+- [ ] T023 [US5] MEDULLA-DURABLE-KERNEL-R014.3.1 Repeated fail-closed loaded execution
+- [ ] T024 [US5] MEDULLA-DURABLE-KERNEL-R014.3.2 Bounded diagnostic retry integration
+- [ ] T025 [US5] MEDULLA-DURABLE-KERNEL-R014.4 Loaded leader-rebalance acceptance
+- [ ] T026 [US5] MEDULLA-DURABLE-KERNEL-R014.5 Loaded three-node placement acceptance
+- [ ] T027 [US5] MEDULLA-DURABLE-KERNEL-R015 Raft heartbeat flush and batch dispatch avoid head-of-line blocking
+- [ ] T028 [US5] MEDULLA-DURABLE-KERNEL-R016 Raft durability writes are batched to reduce commit latency
+- [ ] T029 MEDULLA-DURABLE-KERNEL-R017 Correctness-gated benchmark compares Medulla against HelixDB
+- [ ] T030 [US2] MEDULLA-DURABLE-KERNEL-R018 UDF registry and response-dedup cache are tenant-scoped
+- [ ] T031 [US2] MEDULLA-DURABLE-KERNEL-R019 Graph lifecycle idempotency keys are tenant-scoped
+- [ ] T032 [US3] MEDULLA-DURABLE-KERNEL-R020 Bounded background scrub detects node corruption between restarts
+- [ ] T033 [US3] MEDULLA-DURABLE-KERNEL-R021 Store-authority binding validates once per write transaction
+- [ ] T034 [US2] MEDULLA-DURABLE-KERNEL-R022 Just-in-time RBAC elevation requires two-person approval
+- [ ] T035 [US1] MEDULLA-DURABLE-KERNEL-R023 UQL enforces a read-only guarantee at compile time and by test
+- [x] T036 [US4] MEDULLA-DURABLE-KERNEL-R024.1 PostgreSQL/AGE backend becomes a ForeignSourceSpec source
+- [ ] T037 [US4] MEDULLA-DURABLE-KERNEL-R024.3 Cypher source binds the AGE backend only
+- [x] T038 [US4] MEDULLA-DURABLE-KERNEL-R024.6 Brain-guarded backend becomes a ForeignSourceSpec source
+- [x] T039 [US4] MEDULLA-DURABLE-KERNEL-R024.7 Trino backend becomes a ForeignSourceSpec source
+- [x] T040 [US4] MEDULLA-DURABLE-KERNEL-R024.8 Spark job backend becomes a ForeignSourceSpec source
+- [ ] T041 [US5] MEDULLA-DURABLE-KERNEL-R025 Raft admin follows the current leader and traces are leader-agnostic
+- [ ] T042 [US2] MEDULLA-DURABLE-KERNEL-R026 Auth modes share one principal and RBAC evaluation path
+- [x] T043 [US2] MEDULLA-DURABLE-KERNEL-R027.1 Governed-change model types
+- [x] T044 [US2] MEDULLA-DURABLE-KERNEL-R027.2 Governed-change dispatch wiring
+- [x] T045 [US2] MEDULLA-DURABLE-KERNEL-R027.3 Governed-change raft catalog registration
+- [ ] T046 [US2] MEDULLA-DURABLE-KERNEL-R029 Universal read-RLS gate checks the current TsScan dispatch path
+- [x] T047 [US2] MEDULLA-DURABLE-KERNEL-R031.1 The audit append accounts the serving write version
+- [x] T048 [US2] MEDULLA-DURABLE-KERNEL-R031.2 Writes are stamped from the authoritative scope version
+- [x] T049 MEDULLA-DURABLE-KERNEL-R032.1 PrimaryKeyOperation and FastPathDecision are typed. Routing refuses instead of silently bypassing checks
+- [x] T050 MEDULLA-DURABLE-KERNEL-R033.1 HotStoreEngine, WorkloadProfile, and BenchmarkResult are typed. Winner selection refuses rather than silently defaulting
+- [x] T051 [US1] MEDULLA-DURABLE-KERNEL-R034.1 TransactionScope and CommitPath are typed, and a single-store scope structurally can never map to the cross-store commit path
+- [x] T052 MEDULLA-DURABLE-KERNEL-R035.1 PgOperationalSurface and a fail-closed PgCompatibilityMatrix are typed
+- [ ] T053 MEDULLA-DURABLE-KERNEL-R035.2 pg_dump and pg_restore round trip over the wire
+- [ ] T054 MEDULLA-DURABLE-KERNEL-R035.3 pg_stat views and pg_locks are served read-only
+- [ ] T055 MEDULLA-DURABLE-KERNEL-R035.4 EXPLAIN returns the engine plan over the wire
+- [ ] T056 MEDULLA-DURABLE-KERNEL-R035.5 Query cancellation stops a running statement
+- [ ] T057 MEDULLA-DURABLE-KERNEL-R035.6 Pooler transaction mode keeps no session state across transactions
+- [x] T058 [US6] MEDULLA-DURABLE-KERNEL-R038.1 DurabilityClass is a typed enum with a declared loss-window bound and a refusal for an unrecognized name
+- [x] T059 [US6] MEDULLA-DURABLE-KERNEL-R038.2 The write path's durability selection: write_plan/refuse_if_durable_log_write are the one entry point a write admission calls
+- [x] T060 [US6] MEDULLA-DURABLE-KERNEL-R037.1 WorkloadClass is a typed classifier with a refusal for an unrecognized operation kind
+- [x] T061 [US6] MEDULLA-DURABLE-KERNEL-R037.2 route is the one dispatch entry point a wire listener calls to decide whether to allocate a DataFusion session
+- [x] T062 [US6] MEDULLA-DURABLE-KERNEL-R039.1 Every in-memory structure and atomic primitive is typed and structurally declares redb as its sole durability authority
+- [ ] T063 [US6] MEDULLA-DURABLE-KERNEL-R039.2 Control-lease consumption checks expiry inside its transaction
+- [ ] T064 [US6] MEDULLA-DURABLE-KERNEL-R039.3 Call-envelope storage and consumption is atomic
+- [ ] T065 [US6] MEDULLA-DURABLE-KERNEL-R039.4.1 Plan-bound call storage works end to end
+- [ ] T066 [US6] MEDULLA-DURABLE-KERNEL-R039.4.2 Paired consumption meets its commit-phase budget
+- [x] T067 [US6] MEDULLA-DURABLE-KERNEL-R041.1 PlanCacheKey/PlanCacheLookup are a typed key and a pure lookup decision, refusing to reuse a plan whose schema version has gone stale
+- [x] T068 [US6] MEDULLA-DURABLE-KERNEL-R041.2 PlanCache::prepare is the one entry point a SQL statement handler calls at prepare time
+- [x] T069 [US6] MEDULLA-DURABLE-KERNEL-R040.1 PipelineBatch and BatchCommitDecision are typed, proving one admission maps to exactly one commit with order-preserving replies
+- [x] T070 [US6] MEDULLA-DURABLE-KERNEL-R042.1 BenchmarkClaim is a typed report record that is only accepted as a superiority claim when published with its configuration and a passing result
+- [ ] T071 MEDULLA-DURABLE-KERNEL-R044 Upload cursor identifiers are never reused after a restart
+- [ ] T072 MEDULLA-DURABLE-KERNEL-R045 A single owner-manifest lineage check governs format upgrades
+- [ ] T073 MEDULLA-DURABLE-KERNEL-R046 Polygon interior and touch predicates are correct for shared boundaries
+- [ ] T074 MEDULLA-DURABLE-KERNEL-R047 Ring-buffer eviction test matches whole entry identifiers
+- [ ] T075 MEDULLA-DURABLE-KERNEL-R048 Dispatch-ordering guard test reliably locates its target function
+- [ ] T076 MEDULLA-DURABLE-KERNEL-R049 Idempotent retry of CreateGraph and DeleteGraph succeeds
+- [ ] T077 MEDULLA-DURABLE-KERNEL-R050 Blob garbage collection enforces a grace period before deletion
+- [ ] T078 MEDULLA-DURABLE-KERNEL-R051 BlobRef and BlobUnref are holder-scoped and idempotent
+- [ ] T079 MEDULLA-DURABLE-KERNEL-R052 Outbox delivery is organized by semantic class topics
+- [ ] T080 MEDULLA-DURABLE-KERNEL-R053 Downsampling has no hardware-specific path and equals its scalar reference
+- [ ] T081 MEDULLA-DURABLE-KERNEL-R054 Placement and consensus routing tests pass after command sealing changes
+- [ ] T082 MEDULLA-DURABLE-KERNEL-R055 Durable-store registry classifies every .redb literal
+- [ ] T083 MEDULLA-DURABLE-KERNEL-R056 Mutation durability classification is correct under every feature build
+- [ ] T084 MEDULLA-DURABLE-KERNEL-R058 Source-batch publication waiter cancellation is deterministic
+- [ ] T085 MEDULLA-DURABLE-KERNEL-R059 Garbage collection preserves chunks shared with a direct reference
+- [ ] T086 MEDULLA-DURABLE-KERNEL-R060 Unsupported legacy graph-data layouts are not silently migrated
+- [ ] T087 MEDULLA-DURABLE-KERNEL-R061 Test helpers use bounded channels and bounded joins
+- [ ] T088 MEDULLA-DURABLE-KERNEL-R062 Abandoned uploads are reclaimed after an idle TTL
+- [ ] T089 MEDULLA-DURABLE-KERNEL-R063.1 Schema-version fields exist and mismatches are refused, not lifted
+- [ ] T090 MEDULLA-DURABLE-KERNEL-R063.2 A version-2 graph metadata row is lifted to the current representation on read
+- [ ] T091 MEDULLA-DURABLE-KERNEL-R064 Compiled shape memoization is benchmarked against parsing per write
+- [ ] T092 [US1] MEDULLA-DURABLE-KERNEL-R065.1 The transaction coordinator lane is disjoint from graph lanes
+- [ ] T093 [US1] MEDULLA-DURABLE-KERNEL-R066 Published contract metadata matches BlobRef/BlobUnref idempotent behavior
+- [ ] T094 [US5] MEDULLA-DURABLE-KERNEL-R067 Trace capture isolates each test's events from concurrent noise
+- [ ] T095 MEDULLA-DURABLE-KERNEL-R068 Channel-group leave returns its own result
+- [ ] T096 MEDULLA-DURABLE-KERNEL-R069 Scrub cursor fixture reliably tests the no-key encryption state
+- [ ] T097 [US3] MEDULLA-DURABLE-KERNEL-R070.1 The engine migrates an older supported store when it opens it
+- [ ] T098 [US3] MEDULLA-DURABLE-KERNEL-R070.2 Hot-path proof: a previous-patch store migrates and serves at open
+- [ ] T099 MEDULLA-DURABLE-KERNEL-R072 Served task-queue methods over the durable job store
+- [ ] T100 MEDULLA-DURABLE-KERNEL-R073 Python client methods for the task queue
+- [ ] T101 MEDULLA-DURABLE-KERNEL-R074.1 Typed worker registry producer and pure lifecycle
+- [ ] T102 MEDULLA-DURABLE-KERNEL-R074.2 Worker registry is served with tenant ownership
+- [ ] T103 MEDULLA-DURABLE-KERNEL-R075 Reserved-worker admission returns a grant
+- [ ] T104 MEDULLA-DURABLE-KERNEL-R076.1 Authoritative scheduler config model and refusal
+- [ ] T105 MEDULLA-DURABLE-KERNEL-R076.2 Scheduler settings are served and consumed
+- [ ] T106 MEDULLA-DURABLE-KERNEL-R077 Shard-writer width is served
+- [ ] T107 MEDULLA-DURABLE-KERNEL-R078 The mutation chokepoint stamps transaction time and checks the valid interval
+- [ ] T108 MEDULLA-DURABLE-KERNEL-R079 As-of reads return the version valid and recorded at an instant
+- [ ] T109 MEDULLA-DURABLE-KERNEL-R080.1 Supersession refuses a missing successor endpoint without closing the prior fact
+- [ ] T110 MEDULLA-DURABLE-KERNEL-R080.2 Supersession refuses a missing or closed prior edge
+- [ ] T111 MEDULLA-DURABLE-KERNEL-R081 Python client methods for bitemporal operations
+- [ ] T112 MEDULLA-DURABLE-KERNEL-R082.1 A submitted MineAssociate job completes on the colocated executor
+- [ ] T113 MEDULLA-DURABLE-KERNEL-R082.2 MineAssociate submission refuses a payload outside the governed schema
+- [ ] T114 MEDULLA-DURABLE-KERNEL-R082.4 Association-rule identity is byte-identical to the old worker's
+- [ ] T115 MEDULLA-DURABLE-KERNEL-R082.5 The staged result has the 11-column knowledge-batch shape
+- [ ] T116 MEDULLA-DURABLE-KERNEL-R082.6 Rules are ordered and thresholded exactly as before
+- [ ] T117 MEDULLA-DURABLE-KERNEL-R082.7 A running mining job observes cancellation, deadline and CPU budget
+- [ ] T118 MEDULLA-DURABLE-KERNEL-R082.8 Failure codes are bounded and retry follows the durable retry policy
+- [ ] T119 MEDULLA-DURABLE-KERNEL-R082.9 The colocated pool lease and poll interval are configured through the scheduler config
+- [ ] T120 MEDULLA-DURABLE-KERNEL-R082.10 Remote workers run through the job coordinator operations
+- [ ] T121 MEDULLA-DURABLE-KERNEL-R083.1 KvBlockKey typed model
+- [ ] T122 MEDULLA-DURABLE-KERNEL-R083.2 Version-mismatch refusal
+- [ ] T123 MEDULLA-DURABLE-KERNEL-R083.3 Budgeted eviction by importance
+- [ ] T124 MEDULLA-DURABLE-KERNEL-R083.4 The served block routes are proven across two clients
+- [ ] T125 MEDULLA-DURABLE-KERNEL-R084.1 Model
+- [ ] T126 MEDULLA-DURABLE-KERNEL-R084.2 Behavior: write-conflict resolver
+- [ ] T127 MEDULLA-DURABLE-KERNEL-R084.3 Wiring: version check calls the resolver on the served envelope path
+- [ ] T128 MEDULLA-DURABLE-KERNEL-R084.4 Refusal: typed write conflict
+- [ ] T129 MEDULLA-DURABLE-KERNEL-R084.5 Evidence: conflict scope, strategy and winner
+- [ ] T130 MEDULLA-DURABLE-KERNEL-R084.6 Hot-path proof: two writers, one commit
+- [ ] T131 MEDULLA-DURABLE-KERNEL-R085.1 Model: memory snapshot, cursor, sync request and outcome
+- [ ] T132 MEDULLA-DURABLE-KERNEL-R085.2 Behavior: versioned reads and stable listing
+- [ ] T133 MEDULLA-DURABLE-KERNEL-R085.3 Behavior: sync decisions and compare-and-set
+- [ ] T134 MEDULLA-DURABLE-KERNEL-R085.4 Wiring: sync methods reach the durable gateway
+- [ ] T135 MEDULLA-DURABLE-KERNEL-R085.5 Refusals: authority before lookup, redaction and no effects
+- [ ] T136 MEDULLA-DURABLE-KERNEL-R085.6 Evidence: provenance and materialization acknowledgment
+- [ ] T137 MEDULLA-DURABLE-KERNEL-R085.7 Retention: conflicts and revisions survive restart and collection
+- [ ] T138 MEDULLA-DURABLE-KERNEL-R085.8 Hot-path proof: complete served memory-sync journey
+- [ ] T139 MEDULLA-DURABLE-KERNEL-R086.1 Model: durable node read outcome
+- [ ] T140 MEDULLA-DURABLE-KERNEL-R086.2 Behavior: memory-only eviction
+- [ ] T141 MEDULLA-DURABLE-KERNEL-R086.3 Behavior: cache-miss read serves durable bytes without growing RAM
+- [ ] T142 MEDULLA-DURABLE-KERNEL-R086.4 Wiring
+- [ ] T143 MEDULLA-DURABLE-KERNEL-R086.5 Scoped reads: graph authority and row visibility on the fallback
+- [ ] T144 MEDULLA-DURABLE-KERNEL-R086.6 Refusal: unsafe eviction keeps the candidate
+- [ ] T145 MEDULLA-DURABLE-KERNEL-R086.7 Refusal: unavailable reads
+- [ ] T146 MEDULLA-DURABLE-KERNEL-R086.8 Restart: an evicted node reads back after restart
+- [ ] T147 MEDULLA-DURABLE-KERNEL-R086.9 Evidence and hot-path proof: served eviction journey
+- [ ] T148 MEDULLA-DURABLE-KERNEL-R095.1000 Model: served agent bus roster
+- [ ] T149 MEDULLA-DURABLE-KERNEL-R095.1001 Behavior: register, heartbeat and roster
+- [ ] T150 MEDULLA-DURABLE-KERNEL-R095.1002 Wiring: bus methods reach the gateway and arbora
+- [ ] T151 MEDULLA-DURABLE-KERNEL-R095.1003 Refusal: bus scope and tenant isolation
+- [ ] T152 MEDULLA-DURABLE-KERNEL-R095.1004 Evidence: one row per session and restart durability
+- [ ] T153 MEDULLA-DURABLE-KERNEL-R095.1005 Hot-path proof: heartbeat benchmark
+- [ ] T154 [US2] MEDULLA-DURABLE-KERNEL-R028.1.1 Native context-bound checkpoint transaction
+- [ ] T155 [US2] MEDULLA-DURABLE-KERNEL-R028.1.2.1 Short-term memory retention bound
+- [ ] T156 [US2] MEDULLA-DURABLE-KERNEL-R028.1.2.2 Memory document existence and revision binding
+- [ ] T157 [US2] MEDULLA-DURABLE-KERNEL-R028.1.2.3 Fenced resume read
+- [x] T158 [US2] MEDULLA-DURABLE-KERNEL-R028.1.3.1 Hosted checkpoint exports and generated facade
+- [ ] T159 [US2] MEDULLA-DURABLE-KERNEL-R028.1.3.2 Python client parity for the checkpoint methods
+- [ ] T160 [US6] MEDULLA-DURABLE-KERNEL-R038.100 Embedded and served profiles preserve durability classes
+- [ ] T161 [US1] MEDULLA-DURABLE-KERNEL-R043.7 Attested envelope text admits @ and \ and refuses only host identity
+- [ ] T162 [US1] MEDULLA-DURABLE-KERNEL-R043.8 Envelope admission refusals carry a declared code and a safe diagnostic
+- [ ] T163 MEDULLA-DURABLE-KERNEL-R099.1 Model
+- [ ] T164 MEDULLA-DURABLE-KERNEL-R099.2 Behavior
+- [ ] T165 MEDULLA-DURABLE-KERNEL-R099.3 Wiring
+- [ ] T166 MEDULLA-DURABLE-KERNEL-R099.4 Refusal
+- [ ] T167 MEDULLA-DURABLE-KERNEL-R099.5 Evidence
+- [ ] T168 MEDULLA-DURABLE-KERNEL-R099.6 Hot-path proof
+- [ ] T169 [US2] MEDULLA-DURABLE-KERNEL-R028.2.1 Served WorkItem transition history read
+- [ ] T170 [US2] MEDULLA-DURABLE-KERNEL-R028.3 Fenced metadata CAS requires a live worker lease
+- [ ] T171 MEDULLA-DURABLE-KERNEL-R101.1 Model
+- [ ] T172 MEDULLA-DURABLE-KERNEL-R101.2 Behavior
+- [ ] T173 MEDULLA-DURABLE-KERNEL-R101.3 Wiring
+- [ ] T174 MEDULLA-DURABLE-KERNEL-R101.4 Refusal
+- [ ] T175 MEDULLA-DURABLE-KERNEL-R101.5 Evidence
+- [ ] T176 MEDULLA-DURABLE-KERNEL-R101.6 Hot-path proof
+- [x] T177 MEDULLA-DURABLE-KERNEL-R102.1 Served contract
+- [x] T178 MEDULLA-DURABLE-KERNEL-R102.2 Scope and authorization
+- [x] T179 MEDULLA-DURABLE-KERNEL-R102.3 Versioned compare-and-swap and bounded paginated scan
+- [x] T180 MEDULLA-DURABLE-KERNEL-R102.4 Durable, audited, replayable mutations
+- [x] T181 MEDULLA-DURABLE-KERNEL-R102.5 Hot-path proof
+- [x] T182 MEDULLA-DURABLE-KERNEL-R102.6 Opt-in shared namespace
+- [ ] T183 MEDULLA-DURABLE-KERNEL-R750.751 Behavior
+- [ ] T184 MEDULLA-DURABLE-KERNEL-R750.752 Refusal
+- [ ] T185 MEDULLA-DURABLE-KERNEL-R750.753 Hot-path proof
+- [ ] T186 MEDULLA-DURABLE-KERNEL-R820.1 Model
+- [ ] T187 MEDULLA-DURABLE-KERNEL-R820.2 Behavior
+- [ ] T188 MEDULLA-DURABLE-KERNEL-R820.3 Wiring
+- [ ] T189 MEDULLA-DURABLE-KERNEL-R820.4 Refusal
+- [ ] T190 MEDULLA-DURABLE-KERNEL-R820.5 Evidence
+- [ ] T191 MEDULLA-DURABLE-KERNEL-R820.6 Hot-path proof
+- [ ] T192 MEDULLA-DURABLE-KERNEL-R700.1 Model
+- [ ] T193 MEDULLA-DURABLE-KERNEL-R700.2 Behavior
+- [ ] T194 MEDULLA-DURABLE-KERNEL-R700.3 Wiring
+- [ ] T195 MEDULLA-DURABLE-KERNEL-R700.4 Refusal
+- [ ] T196 MEDULLA-DURABLE-KERNEL-R700.5 Evidence
+- [ ] T197 MEDULLA-DURABLE-KERNEL-R700.6 Hot-path proof
+- [ ] T198 MEDULLA-DURABLE-KERNEL-R800.1 Model
+- [ ] T199 MEDULLA-DURABLE-KERNEL-R800.2 Behavior
+- [ ] T200 MEDULLA-DURABLE-KERNEL-R800.3 Wiring
+- [ ] T201 MEDULLA-DURABLE-KERNEL-R800.4 Refusal
+- [ ] T202 MEDULLA-DURABLE-KERNEL-R800.5 Evidence
+- [ ] T203 MEDULLA-DURABLE-KERNEL-R800.6 Hot-path proof
+- [ ] T204 [US2] MEDULLA-DURABLE-KERNEL-R028.4.1 Recover immutable run submission records
+- [ ] T205 [US2] MEDULLA-DURABLE-KERNEL-R028.4.2 Owner-bound recovery meets a 10 ms p99
+- [ ] T206 MEDULLA-DURABLE-KERNEL-R083.5 Tier ladder from accelerator memory to durable storage
+- [ ] T207 MEDULLA-DURABLE-KERNEL-R083.6 Graph-guided paging policy
+- [ ] T208 MEDULLA-DURABLE-KERNEL-R083.7 Long-context coherence across tiers
+- [ ] T209 MEDULLA-DURABLE-KERNEL-R083.8 Tier refusals
+- [ ] T210 [US6] MEDULLA-DURABLE-KERNEL-R042.2 Cross-modal query latency benchmark
+- [ ] T211 [US6] MEDULLA-DURABLE-KERNEL-R042.3 KV-cache tiering benchmark
+- [ ] T212 [US6] MEDULLA-DURABLE-KERNEL-R042.5 Wire protocol latency benchmark
+- [ ] T213 [US6] MEDULLA-DURABLE-KERNEL-R042.6 Benchmark receipts are compared against the last published release
+- [ ] T214 MEDULLA-DURABLE-KERNEL-R860.1 PostgreSQL wire listener
+- [ ] T215 MEDULLA-DURABLE-KERNEL-R860.2 Bolt listener
+- [ ] T216 MEDULLA-DURABLE-KERNEL-R860.3 RESP listener
+- [ ] T217 MEDULLA-DURABLE-KERNEL-R860.4 S3-compatible object API
+- [ ] T218 MEDULLA-DURABLE-KERNEL-R860.5 Listener refusals
+- [ ] T219 MEDULLA-DURABLE-KERNEL-R860.6 Hot-path proof: one store behind four protocols
+- [ ] T220 [US2] MEDULLA-DURABLE-KERNEL-R028.5.1 Typed executable plan attachment
+- [ ] T221 [US2] MEDULLA-DURABLE-KERNEL-R028.5.2 Attachment is immutable once bound
+- [ ] T222 [US2] MEDULLA-DURABLE-KERNEL-R028.5.3 Attachment replay and recovery
+- [ ] T223 [US2] MEDULLA-DURABLE-KERNEL-R028.5.4 Attachment publication meets its latency and memory budget
+- [ ] T224 [US2] MEDULLA-DURABLE-KERNEL-R028.6 Commit ordinary run completion and observed usage atomically
+- [x] T225 MEDULLA-DURABLE-KERNEL-R861.1 Lifecycle replay compares the stored identity
+- [ ] T226 MEDULLA-DURABLE-KERNEL-R861.2 Graph listing survives a restart and a patch upgrade
+- [ ] T227 MEDULLA-DURABLE-KERNEL-R861.3 Internal lifecycle operations materialize a catalog-only graph
+- [ ] T228 [US3] MEDULLA-DURABLE-KERNEL-R862.1 Restore reads bundle sources by content, not by physical identity
+- [ ] T229 [US3] MEDULLA-DURABLE-KERNEL-R862.2 Wiring: an explicit command re-binds a copied data directory
+- [ ] T230 [US3] MEDULLA-DURABLE-KERNEL-R862.3 Hot-path proof: a copied bundle restores and serves
+- [ ] T231 MEDULLA-DURABLE-KERNEL-R863 SyncMemorySnapshot calls the memory-change admission gate
+- [ ] T232 [US2] MEDULLA-DURABLE-KERNEL-R028.4.3 Reserve ordered conversation turns with native run admission
+- [ ] T233 [US2] MEDULLA-DURABLE-KERNEL-R028.4.4 Repeated run admission replays the retained owner receipt
+- [ ] T234 [US2] MEDULLA-DURABLE-KERNEL-R030.1.1 Typed host-start assertions and client projection
+- [ ] T235 [US2] MEDULLA-DURABLE-KERNEL-R030.1.2 Durable native issuer provenance
+- [ ] T236 [US2] MEDULLA-DURABLE-KERNEL-R030.1.3 Signed dispatch for dedicated host-start issuance
+- [ ] T237 [US2] MEDULLA-DURABLE-KERNEL-R030.1.4 Host-start producer is proven through signed dispatch and the installed consumer
+- [ ] T238 MEDULLA-DURABLE-KERNEL-R035.7 Logical replication streams committed changes
+- [ ] T239 [US6] MEDULLA-DURABLE-KERNEL-R039.5 In-memory structures rebuild from the redb log
+- [ ] T240 [US6] MEDULLA-DURABLE-KERNEL-R042.7 The benchmark gate reads the engine parity records
+- [ ] T241 [US6] MEDULLA-DURABLE-KERNEL-R042.100.1 Measurement type and arithmetic
+- [ ] T242 [US6] MEDULLA-DURABLE-KERNEL-R042.100.2 Measurement admission refusals
+- [ ] T243 [US1] MEDULLA-DURABLE-KERNEL-R043.100.1 Feed types and snapshot digest
+- [ ] T244 [US1] MEDULLA-DURABLE-KERNEL-R043.100.2 OpenGraphSnapshot returns the exact high-water cursor
+- [ ] T245 [US1] MEDULLA-DURABLE-KERNEL-R043.100.3 ReadGraphChanges pages events and revokes cursors
+- [ ] T246 [US1] MEDULLA-DURABLE-KERNEL-R043.100.4 Python client methods for the feed
+- [ ] T247 [US1] MEDULLA-DURABLE-KERNEL-R043.101 Every store member commits through the envelope with an idempotent terminal outcome
+- [ ] T248 [US1] MEDULLA-DURABLE-KERNEL-R043.102 No direct table write exists outside the transaction crate
+- [ ] T249 MEDULLA-DURABLE-KERNEL-R094.7 Concept lineage between superseded and successor concepts
+- [ ] T250 MEDULLA-DURABLE-KERNEL-R750.750.1 The signed agent-turn envelope carries the admitted tool subset and the harness decision reference
+- [ ] T251 MEDULLA-DURABLE-KERNEL-R864 Serve scheduled loop control: status, schedules, run and pause
+- [ ] T252 MEDULLA-DURABLE-KERNEL-R865 Child message admission record
+- [ ] T253 MEDULLA-DURABLE-KERNEL-R866 One task queue store
+- [ ] T254 MEDULLA-DURABLE-KERNEL-R867 Capacity cells and leases admit shared resources with fences
+- [ ] T255 MEDULLA-DURABLE-KERNEL-R868 Delete the unwired topic-log and agent-peer record code
+- [ ] T256 MEDULLA-DURABLE-KERNEL-R869 Replayable append-only stream log with offset reads
+- [ ] T257 MEDULLA-DURABLE-KERNEL-R870 Read-RLS path-prefix predicate
+- [ ] T258 MEDULLA-DURABLE-KERNEL-R871 Tight agent loops stay inside a round-trip budget
