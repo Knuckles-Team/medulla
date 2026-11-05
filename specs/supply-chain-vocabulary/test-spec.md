@@ -52,4 +52,3 @@ Each entry below is planned. The test file or function does not exist in the tre
 - `MEDULLA-SUPPLY-VOCAB-R009.3`: `crates/medulla-h-mining/src/mining/impact/tests.rs::served_impact_lists_dependents` (planned, L3).
 - `MEDULLA-SUPPLY-VOCAB-R009`, `MEDULLA-SUPPLY-VOCAB-R009.6`: `crates/medulla-h-mining/src/mining/impact/tests.rs::served_impact_over_dependency_chain` (planned, L3).
 - `MEDULLA-SUPPLY-VOCAB-R001.4`, `MEDULLA-SUPPLY-VOCAB-R002.7`: after the shapes companion is wired into the `supply_chain` core source, the existing shape tests in `crates/medulla-core/tests/supply_chain_vocab.rs` also load it through `GraphSchemaSources::default()` (planned extension of `supplier_and_item_shapes_require_a_label`).
-
