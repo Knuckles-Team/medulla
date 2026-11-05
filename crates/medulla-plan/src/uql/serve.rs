@@ -18,7 +18,7 @@
 use std::collections::BTreeMap;
 use std::time::Instant;
 
-use medulla_types::wire::{Op, Plan, UqlResult, UqlRow, UqlStageReport, op_kind};
+use medulla_types::wire::{op_kind, Op, Plan, UqlResult, UqlRow, UqlStageReport};
 
 use medulla_uql::{Body, Mode, Statement};
 
@@ -26,7 +26,7 @@ mod annotate;
 mod dag;
 mod proof;
 use medulla_exec::cost::{Cardinality, ModalityCardinality, PlanStats};
-use medulla_exec::exec::{PlanCtx, StageChannels, apply, apply_with_channels, plan_optimize};
+use medulla_exec::exec::{apply, apply_with_channels, plan_optimize, PlanCtx, StageChannels};
 use medulla_exec::rowset::RowSet;
 
 // UQL-12, read-only by construction: the op dispatch every stage runs through takes the
