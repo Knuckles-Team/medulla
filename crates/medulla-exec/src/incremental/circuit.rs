@@ -558,47 +558,41 @@ mod tests {
 
     #[test]
     fn compile_accepts_supported_shapes() {
-        assert!(
-            Circuit::compile(&Plan::new(vec![Op::Scan {
+        assert!(Circuit::compile(&Plan::new(vec![Op::Scan {
+            label: "Doc".into()
+        }]))
+        .is_ok());
+        assert!(Circuit::compile(&Plan::new(vec![
+            Op::Scan {
                 label: "Doc".into()
-            }]))
-            .is_ok()
-        );
-        assert!(
-            Circuit::compile(&Plan::new(vec![
-                Op::Scan {
-                    label: "Doc".into()
-                },
-                Op::Filter {
-                    preds: vec![Pred::GtNum {
-                        prop: "year".into(),
-                        n: 2000.0
-                    }]
-                },
-                Op::AsOf {
-                    ts: 5.0,
-                    axis: TimeAxis::Valid
-                },
-                Op::Limit { k: 10 },
-            ]))
-            .is_ok()
-        );
+            },
+            Op::Filter {
+                preds: vec![Pred::GtNum {
+                    prop: "year".into(),
+                    n: 2000.0
+                }]
+            },
+            Op::AsOf {
+                ts: 5.0,
+                axis: TimeAxis::Valid
+            },
+            Op::Limit { k: 10 },
+        ]))
+        .is_ok());
     }
 
     #[cfg(feature = "timeseries")]
     #[test]
     fn compile_accepts_scan_window_under_timeseries() {
-        assert!(
-            Circuit::compile(&Plan::new(vec![
-                Op::Scan { label: "M".into() },
-                Op::WindowAgg {
-                    secs: 10.0,
-                    agg: "sum".into()
-                },
-                Op::Limit { k: 3 },
-            ]))
-            .is_ok()
-        );
+        assert!(Circuit::compile(&Plan::new(vec![
+            Op::Scan { label: "M".into() },
+            Op::WindowAgg {
+                secs: 10.0,
+                agg: "sum".into()
+            },
+            Op::Limit { k: 3 },
+        ]))
+        .is_ok());
     }
 
     #[cfg(feature = "timeseries")]
