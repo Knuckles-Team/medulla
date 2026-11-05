@@ -113,7 +113,8 @@ class Breaker:
             and low_ms <= reset_after_s * 1_000 <= high_ms
         ):
             raise ValueError(
-                f"reset_after_s must be between {low_ms / 1_000} and {high_ms / 1_000} seconds"
+                "reset_after_s must be between "
+                f"{low_ms / 1_000} and {high_ms / 1_000} seconds"
             )
         self._threshold = failure_threshold
         self._reset_after = reset_after_s
