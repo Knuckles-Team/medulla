@@ -178,6 +178,16 @@ $($variants)*
         policy_msgpack: Vec<u8>,
     },
 
+    // ── Dataset lineage (MEDULLA-UNIFIED-DATA-PLANE-R702.3) ─────────────────
+    /// Drain lineage run events into the request graph: each event maps to
+    /// content-addressed `Dataset` nodes and `derivesInto` edges; an event that
+    /// cannot map is kept as one `QuarantinedLineageEvent` node with its payload
+    /// digest. The batch commits as one governed ChangeEnvelope keyed by its
+    /// write-set digest, so a replayed event adds no edge.
+    LineageIngest {
+        events: Vec<medulla_catalog_types::lineage::LineageEvent>,
+    },
+
     // ── Market bars and trend signals (EH-413..EH-418) ─────────────────────
     /// Typed OHLCV bars over the time-series store, deterministic integer
     /// indicators, the per-series trend signal with its flip records, the

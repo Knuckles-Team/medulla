@@ -194,6 +194,7 @@ fn source_control_audit_line(method: &Method) -> Option<String> {
         Method::EnrichDocument { request } => {
             Some(format!("ENRICH_DOCUMENT|{}", request.document_id))
         }
+        Method::LineageIngest { events } => Some(format!("LINEAGE_INGEST|{}", events.len())),
         Method::WriteBack { op } => Some(format!(
             "WRITE_BACK|{}|{}",
             op.tenant_id(),

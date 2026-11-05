@@ -424,6 +424,9 @@ async fn route_source_ingestion_or_resources(
     method: Method,
 ) -> Result<Response, Method> {
     let source_method = match method {
+        Method::LineageIngest { events } => {
+            return Ok(super::lineage_ingest::route_lineage_ingest(ctx, events).await)
+        }
         Method::SourceIngest { request } => SourceIngestionRoute::Ingest(request),
         Method::SourceIngestStatus { connector, stream } => SourceIngestionRoute::Status(
             medulla_source_types::source_ingestion::SourceIngestStatusRequest { connector, stream },

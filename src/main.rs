@@ -1026,11 +1026,15 @@ async fn spawn_lake_materialize_sweep(_state: &Arc<tokio::sync::RwLock<ServerSta
                     let outcome = tokio::task::spawn_blocking(move || {
                         let mut drained = 0usize;
                         let mut errors = 0usize;
+                        let mut lineage_events = Vec::new();
                         match tsdb.list_series() {
                             Ok(series) => {
                                 for series_id in series {
                                     match lake_handle.drain_series(store.as_ref(), &tsdb, &series_id) {
-                                        Ok(Some(_)) => drained += 1,
+                                        Ok(Some(report)) => {
+                                            drained += 1;
+                                            lineage_events.push(report.lineage_event);
+                                        }
                                         Ok(None) => {}
                                         Err(e) => {
                                             errors += 1;
@@ -1043,10 +1047,22 @@ async fn spawn_lake_materialize_sweep(_state: &Arc<tokio::sync::RwLock<ServerSta
                             }
                             Err(e) => tracing::warn!("Lake materialize sweep: list_series failed: {e}"),
                         }
-                        (drained, errors)
+                        (drained, errors, lineage_events)
                     })
                     .await;
-                    if let Ok((drained, errors)) = outcome {
+                    if let Ok((drained, errors, lineage_events)) = outcome {
+                        // MEDULLA-UNIFIED-DATA-PLANE-R702.3: the sweep's run events
+                        // reach the lineage graph through `LineageIngest`.
+                        if let Err(error) = medulla_server_lake::lake::lineage::submit_events(
+                            &sweep_state,
+                            &lineage_events,
+                        )
+                        .await
+                        {
+                            tracing::warn!(
+                                "Lake materialize sweep: lineage drain refused: {error}"
+                            );
+                        }
                         if drained > 0 || errors > 0 {
                             tracing::info!(
                                 "Lake materialize sweep: {drained} series drained, {errors} errors"
