@@ -29,6 +29,8 @@ use medulla_server_mutation::{
 
 mod algorithms;
 mod broker;
+// MEDULLA-DURABLE-KERNEL-R095.1001 — served agent bus roster.
+pub mod bus;
 mod edges;
 mod gateway;
 #[cfg(feature = "broker")]

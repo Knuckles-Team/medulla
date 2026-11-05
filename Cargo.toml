@@ -2036,6 +2036,13 @@ path = "benches/cold_warm_reopen.rs"
 harness = false
 required-features = ["full"]
 
+# MEDULLA-DURABLE-KERNEL-R095.1005: served BusHeartbeat through the dispatch entry.
+[[bench]]
+name = "bus_heartbeat"
+path = "benches/bus_heartbeat.rs"
+harness = false
+required-features = ["full"]
+
 # Provenance-anchoring write-path overhead (provenance anchoring, CONCEPT:MEDULLA-KG.sharding.row-level-security):
 # N concurrent authoritative writers fanned into ONE redb backend, with vs.
 # without a concurrent (deliberately aggressive) anchor-sweep loop contending

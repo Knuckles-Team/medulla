@@ -88,6 +88,8 @@ pub const SCOPES: &[ScopeEntry] = &[
     entry("broker:admin", ServiceOnly, "engine"),
     entry("broker:consume", ServiceOnly, "engine"),
     entry("broker:publish", ServiceOnly, "engine"),
+    entry("bus:read", User, "engine"),
+    entry("bus:write", User, "engine"),
     entry("capacity:admin", ServiceOnly, "engine"),
     entry("capacity:lease", ServiceOnly, "engine"),
     entry("capacity:read", ServiceOnly, "engine"),

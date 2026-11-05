@@ -119,7 +119,8 @@ fn configure_authority_once() {
     );
 }
 
-fn context_for(agent_id: &str) -> RequestContextClaims {
+#[allow(dead_code)]
+pub fn context_for(agent_id: &str) -> RequestContextClaims {
     RequestContextClaims {
         principal: agent_id.to_string(),
         tenant: TEST_TENANT.to_string(),
@@ -170,13 +171,26 @@ pub fn signed_request_as(
     agent_id: &str,
     method: Method,
 ) -> Request {
+    signed_request_with_context(secret, id, graph, context_for(agent_id), method)
+}
+
+/// [`signed_request_as`] with caller-chosen claims, so a test can narrow the
+/// tenant or the scopes the verified request context carries.
+#[allow(dead_code)]
+pub fn signed_request_with_context(
+    secret: &str,
+    id: u64,
+    graph: &str,
+    context: RequestContextClaims,
+    method: Method,
+) -> Request {
     configure_authority();
-    let context = context_for(agent_id);
+    let agent_id = context.agent_id.clone();
     let mut request = Request {
         id,
         graph: graph.to_string(),
         auth_token: String::new(),
-        agent_id: Some(agent_id.to_string()),
+        agent_id: Some(agent_id),
         method,
     };
     let sequence = NONCE_SEQUENCE.fetch_add(1, Ordering::Relaxed);

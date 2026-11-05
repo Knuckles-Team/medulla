@@ -202,6 +202,8 @@ pub(super) async fn try_handle_node_reads(
         Method::GetNodeProperties { node_id } => {
             handle_get_node_properties(req_id, core, raw_core, read_authority, &node_id)
         }
+        // MEDULLA-DURABLE-KERNEL-R095.1001: the agent bus roster read.
+        Method::BusRoster { tenant, now_ms } => super::bus::roster(req_id, core, &tenant, now_ms),
         // CompareAndSetNodeFields/ClaimNext (CONCEPT:MEDULLA-P0-2 bypass guard, L11):
         // GATEWAY_ROUTED — see the AddNode/RemoveNode comment above.
         other => return ControlFlow::Continue(other),
