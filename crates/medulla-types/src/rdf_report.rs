@@ -106,6 +106,18 @@ pub struct SparqlRowProof {
     pub coverage: SparqlProofCoverage,
 }
 
+/// One GeoSPARQL function a SPARQL query calls, as EXPLAIN reports it
+/// (MEDULLA-FEDERATED-QUERY-R709.5).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct SparqlSpatialUse {
+    /// The function's local name under the `geof:` namespace (`sfWithin`, …).
+    pub function: String,
+    /// Whether a spatial index served the function; `false` means each candidate
+    /// geometry was evaluated in the FILTER.
+    pub index_used: bool,
+}
+
 /// The serialisable rule-reasoning response.
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]

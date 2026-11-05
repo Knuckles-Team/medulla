@@ -98,6 +98,8 @@ closed_error_codes! {
         ForeignReadTerminal => "FOREIGN_READ_TERMINAL",
         ForeignReadUnused => "FOREIGN_READ_UNUSED",
         ForeignSourcePolicyUnbootstrapped => "FOREIGN_SOURCE_POLICY_UNBOOTSTRAPPED",
+        GeoCrsUnsupported => "GEO_CRS_UNSUPPORTED",
+        GeoLiteralInvalid => "GEO_LITERAL_INVALID",
         GovernedActorUnstamped => "GOVERNED_ACTOR_UNSTAMPED",
         GovernedCollision => "GOVERNED_COLLISION",
         GovernedConflict => "GOVERNED_CONFLICT",
