@@ -86,7 +86,7 @@ Each leaf row binds the tests below. A test marked `(planned)` does not exist ye
 | Typed `ScopeBound` | `MEDULLA-IDENTITY-R008.2` | `crates/medulla-isolation/src/isolation/scope_bound.rs::tests::empty_policy_iri_is_refused` |
 | Pure subset check | `MEDULLA-IDENTITY-R008.3` | `crates/medulla-isolation/src/isolation/scope_bound.rs::tests::first_excess_tool_is_named` |
 | Bound is read from the stored policy node | `MEDULLA-IDENTITY-R008.4` | `crates/medulla-isolation/tests/scope_bound.rs::plan_scope_field_is_ignored` (planned); `crates/medulla-isolation/tests/scope_bound.rs::missing_policy_node_is_empty_bound` (planned) |
-| Typed refusal ScopeExceedsPolicy with an audit record | `MEDULLA-IDENTITY-R008.5` | `crates/medulla-isolation/tests/scope_bound.rs::excess_plan_is_refused_and_audited` (planned) |
+| Typed refusal ScopeExceedsPolicy with an audit record | `MEDULLA-IDENTITY-R008.5` | `crates/medulla-isolation/tests/scope_bound.rs::excess_plan_is_refused_and_audited` (planned); audit event `subject_iri` and `policy_iri` bounded at 2048 bytes |
 | End-to-end proof over the wire | `MEDULLA-IDENTITY-R008.6` | `tests/identity/test_scope_bound_served.py::test_plan_scope_is_bounded_by_policy` (planned) |
 | Wiring: visible-unit filter on the served read path | `MEDULLA-IDENTITY-R023.3` | `tests/identity/test_segment_retrieval_served.py::test_retrieve_filters_by_principal` (planned) |
 | Refusal: point read outside scope | `MEDULLA-IDENTITY-R023.4` | `tests/identity/test_segment_retrieval_served.py::test_out_of_scope_read_names_id_only` (planned) |
