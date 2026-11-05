@@ -1,6 +1,7 @@
 //! MEDULLA-IDENTITY-R707: the identity catalog's DDL dump round-trips and
 //! never carries a password hash, a session hash or a sealed value.
 
+use super::auth::set_password_op;
 use super::*;
 
 #[test]
