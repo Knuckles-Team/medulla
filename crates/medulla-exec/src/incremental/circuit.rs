@@ -63,8 +63,8 @@ use serde_json::{Map, Value};
 
 use medulla_types::wire::{Op, Plan, Pred, TimeAxis};
 
-use super::zset::Delta;
 use crate::rowset::RowSet;
+use medulla_types::delta::{Delta, DeltaError};
 
 /// The first `Op` in a plan with no incremental form — why a view falls back to
 /// recompute. `index` is the op's position in the plan; `reason` names it.
@@ -112,7 +112,7 @@ impl StagePred {
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 struct Stage {
     pred: StagePred,
-    members: HashMap<String, i32>,
+    members: HashMap<String, i64>,
 }
 
 impl Stage {
@@ -284,11 +284,16 @@ impl Circuit {
     /// `stages · delta.len()`, independent of view size). A row applies its signed weight
     /// to every membership stage whose predicate it satisfies (set mode), or to its
     /// time-bucket accumulator (window mode).
-    pub fn apply(&mut self, delta: &Delta) -> usize {
-        match &mut self.window {
-            Some(w) => apply_to_buckets(w, delta),
-            None => apply_to_stages(&mut self.stages, delta),
-        }
+    ///
+    /// The delta is cloned and consolidated first (MEDULLA-INCREMENTAL-VIEWS-R002.3); a
+    /// [`DeltaError`] returns `Err` and leaves the maintained state untouched.
+    pub fn apply(&mut self, delta: &Delta) -> Result<usize, DeltaError> {
+        let mut delta = delta.clone();
+        delta.consolidate()?;
+        Ok(match &mut self.window {
+            Some(w) => apply_to_buckets(w, &delta),
+            None => apply_to_stages(&mut self.stages, &delta),
+        })
     }
 
     /// The current materialized result from the MAINTAINED state (the hot-path read a
@@ -542,11 +547,11 @@ mod tests {
     }
 
     fn insert(id: &str, v: Value) -> Delta {
-        Delta::from(vec![super::super::zset::ZRow::insert(id, props(v))])
+        Delta::from(vec![medulla_types::delta::ZRow::insert(id, props(v))])
     }
     #[cfg(feature = "timeseries")]
     fn retract(id: &str, v: Value) -> Delta {
-        Delta::from(vec![super::super::zset::ZRow::retract(id, props(v))])
+        Delta::from(vec![medulla_types::delta::ZRow::retract(id, props(v))])
     }
 
     // ── compile classification ──
@@ -692,11 +697,14 @@ mod tests {
         }]);
         let mut c = Circuit::compile(&plan).unwrap();
         let mut model = node_map(&[]);
-        c.apply(&insert("a", json!({"type": "Doc"})));
+        c.apply(&insert("a", json!({"type": "Doc"})))
+            .expect("apply");
         model.insert("a".into(), props(json!({"type": "Doc"})));
-        c.apply(&insert("b", json!({"node_type": "Doc"})));
+        c.apply(&insert("b", json!({"node_type": "Doc"})))
+            .expect("apply");
         model.insert("b".into(), props(json!({"node_type": "Doc"})));
-        c.apply(&insert("c", json!({"type": "Other"})));
+        c.apply(&insert("c", json!({"type": "Other"})))
+            .expect("apply");
         model.insert("c".into(), props(json!({"type": "Other"})));
         assert_eq!(c.current(), c.recompute(&model));
         assert_eq!(c.current().ids(), vec!["a", "b"]);
@@ -711,17 +719,20 @@ mod tests {
         let mut c = Circuit::compile(&plan).unwrap();
         let mut model = node_map(&[]);
 
-        c.apply(&insert("a", json!({"type": "Doc"})));
+        c.apply(&insert("a", json!({"type": "Doc"})))
+            .expect("apply");
         model.insert("a".into(), props(json!({"type": "Doc"})));
-        c.apply(&insert("x", json!({"type": "Other"})));
+        c.apply(&insert("x", json!({"type": "Other"})))
+            .expect("apply");
         model.insert("x".into(), props(json!({"type": "Other"})));
         assert_eq!(c.current(), c.recompute(&model));
         assert_eq!(c.current().ids(), vec!["a"]);
 
         c.apply(&Delta::from(vec![
-            super::super::zset::ZRow::retract("a", props(json!({"type": "Doc"}))),
-            super::super::zset::ZRow::insert("a", props(json!({"type": "Other"}))),
-        ]));
+            medulla_types::delta::ZRow::retract("a", props(json!({"type": "Doc"}))),
+            medulla_types::delta::ZRow::insert("a", props(json!({"type": "Other"}))),
+        ]))
+        .expect("apply");
         model.insert("a".into(), props(json!({"type": "Other"})));
         assert_eq!(c.current(), c.recompute(&model));
         assert!(c.current().is_empty());
@@ -747,7 +758,7 @@ mod tests {
         // No Note nodes at all — only Docs. year>2000 Docs are sourced by the Filter.
         for (id, year) in [("a", 2005), ("b", 1990)] {
             let v = json!({"type": "Doc", "year": year});
-            c.apply(&insert(id, v.clone()));
+            c.apply(&insert(id, v.clone())).expect("apply");
             model.insert(id.into(), props(v));
         }
         assert_eq!(c.current(), c.recompute(&model));
@@ -756,7 +767,7 @@ mod tests {
         // Add a Note (year 2001) → the Scan set is now NON-empty, so the Filter NARROWS to
         // that Note only (the Docs drop out).
         let n = json!({"type": "Note", "year": 2001});
-        c.apply(&insert("note", n.clone()));
+        c.apply(&insert("note", n.clone())).expect("apply");
         model.insert("note".into(), props(n));
         assert_eq!(c.current(), c.recompute(&model));
         assert_eq!(c.current().ids(), vec!["note"]);
@@ -769,12 +780,21 @@ mod tests {
         }]);
         let mut c = Circuit::compile(&plan).unwrap();
         for i in 0..1000 {
-            c.apply(&insert(&format!("n{i}"), json!({"type": "Doc"})));
+            c.apply(&insert(&format!("n{i}"), json!({"type": "Doc"})))
+                .expect("apply");
         }
         // One more single-row delta into a 1000-row view touches exactly 1 stage entry.
-        assert_eq!(c.apply(&insert("z", json!({"type": "Doc"}))), 1);
+        assert_eq!(
+            c.apply(&insert("z", json!({"type": "Doc"})))
+                .expect("apply"),
+            1
+        );
         // A filtered-out row (type != Doc) touches nothing.
-        assert_eq!(c.apply(&insert("q", json!({"type": "Other"}))), 0);
+        assert_eq!(
+            c.apply(&insert("q", json!({"type": "Other"})))
+                .expect("apply"),
+            0
+        );
     }
 
     #[test]
@@ -795,16 +815,17 @@ mod tests {
 
         for (id, year) in [("a", 1999), ("b", 2001), ("c", 2005)] {
             let v = json!({"type": "Doc", "year": year});
-            c.apply(&insert(id, v.clone()));
+            c.apply(&insert(id, v.clone())).expect("apply");
             model.insert(id.into(), props(v));
         }
         assert_eq!(c.current(), c.recompute(&model));
         assert_eq!(c.current().ids(), vec!["b", "c"]);
 
         c.apply(&Delta::from(vec![
-            super::super::zset::ZRow::retract("b", props(json!({"type": "Doc", "year": 2001}))),
-            super::super::zset::ZRow::insert("b", props(json!({"type": "Doc", "year": 1990}))),
-        ]));
+            medulla_types::delta::ZRow::retract("b", props(json!({"type": "Doc", "year": 2001}))),
+            medulla_types::delta::ZRow::insert("b", props(json!({"type": "Doc", "year": 1990}))),
+        ]))
+        .expect("apply");
         model.insert("b".into(), props(json!({"type": "Doc", "year": 1990})));
         assert_eq!(c.current(), c.recompute(&model));
         assert_eq!(c.current().ids(), vec!["c"]);
@@ -823,9 +844,9 @@ mod tests {
         let mut model = node_map(&[]);
         let live = json!({"type": "E", "valid_from": 50, "valid_until": 150});
         let dead = json!({"type": "E", "valid_from": 0, "valid_until": 100});
-        c.apply(&insert("live", live.clone()));
+        c.apply(&insert("live", live.clone())).expect("apply");
         model.insert("live".into(), props(live));
-        c.apply(&insert("dead", dead.clone()));
+        c.apply(&insert("dead", dead.clone())).expect("apply");
         model.insert("dead".into(), props(dead));
         assert_eq!(c.current(), c.recompute(&model));
         assert_eq!(c.current().ids(), vec!["live"]);
@@ -847,7 +868,7 @@ mod tests {
         // bucket 0 [0,10): vf 3 val 5, vf 7 val 2 → sum 7; bucket 10 [10,20): vf 12 val 4 → 4
         for (id, vf, val) in [("a", 3, 5), ("b", 7, 2), ("c", 12, 4)] {
             let v = json!({"type": "M", "valid_from": vf, "value": val});
-            c.apply(&insert(id, v.clone()));
+            c.apply(&insert(id, v.clone())).expect("apply");
             model.insert(id.into(), props(v));
         }
         assert_eq!(c.current(), c.recompute(&model));
@@ -857,20 +878,22 @@ mod tests {
         c.apply(&retract(
             "a",
             json!({"type": "M", "valid_from": 3, "value": 5}),
-        ));
+        ))
+        .expect("apply");
         model.remove("a");
         assert_eq!(c.current(), c.recompute(&model));
 
         c.apply(&Delta::from(vec![
-            super::super::zset::ZRow::retract(
+            medulla_types::delta::ZRow::retract(
                 "c",
                 props(json!({"type": "M", "valid_from": 12, "value": 4})),
             ),
-            super::super::zset::ZRow::insert(
+            medulla_types::delta::ZRow::insert(
                 "c",
                 props(json!({"type": "M", "valid_from": 8, "value": 4})),
             ),
-        ]));
+        ]))
+        .expect("apply");
         model.insert(
             "c".into(),
             props(json!({"type": "M", "valid_from": 8, "value": 4})),
@@ -895,7 +918,7 @@ mod tests {
             let mut model = node_map(&[]);
             for (id, vf, val) in [("a", 1, 6), ("b", 2, 9), ("c", 11, 3)] {
                 let v = json!({"type": "M", "valid_from": vf, "value": val});
-                c.apply(&insert(id, v.clone()));
+                c.apply(&insert(id, v.clone())).expect("apply");
                 model.insert(id.into(), props(v));
             }
             assert_eq!(c.current(), c.recompute(&model), "agg={agg}");
@@ -919,7 +942,7 @@ mod tests {
             ("no_vf", json!({"type": "M", "value": 9})),
             ("no_val", json!({"type": "M", "valid_from": 2})),
         ] {
-            c.apply(&insert(id, v.clone()));
+            c.apply(&insert(id, v.clone())).expect("apply");
             model.insert(id.into(), props(v));
         }
         assert_eq!(c.current(), c.recompute(&model));
@@ -939,7 +962,7 @@ mod tests {
         let mut model = node_map(&[]);
         for id in ["d", "a", "c", "b"] {
             let v = json!({"type": "Doc"});
-            c.apply(&insert(id, v.clone()));
+            c.apply(&insert(id, v.clone())).expect("apply");
             model.insert(id.into(), props(v));
         }
         assert_eq!(c.current().ids(), vec!["a", "b"]);
