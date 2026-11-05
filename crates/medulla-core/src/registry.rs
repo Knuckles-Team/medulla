@@ -1370,7 +1370,7 @@ use material::{
     snapshot_changed,
 };
 pub use reserved::{
-    validate_graph_name, FOREIGN_SOURCE_RESOURCE_PREFIX, RESERVED_RBAC_RESOURCE_PREFIXES,
+    FOREIGN_SOURCE_RESOURCE_PREFIX, RESERVED_RBAC_RESOURCE_PREFIXES, validate_graph_name,
 };
 
 /// Register one graph's server-layer indexes. Spatial indexes are derived entirely
@@ -1460,8 +1460,13 @@ mod tests {
     }
 
     impl medulla_graph_core::read_through::ReadThrough for RecordingReadThrough {
-        fn read_node_blob(&self, _node_id: &str) -> Option<Vec<u8>> {
-            Some(self.graph_name.as_bytes().to_vec())
+        fn read_node_blob(
+            &self,
+            _node_id: &str,
+        ) -> medulla_graph_core::read_through::NodeReadOutcome {
+            medulla_graph_core::read_through::NodeReadOutcome::Present(
+                self.graph_name.as_bytes().to_vec(),
+            )
         }
     }
 
@@ -1712,10 +1717,12 @@ mod tests {
         let manifest = reg.materialization_handle(name).unwrap();
 
         handle.core.mark_dirty();
-        assert!(manifest
-            .write()
-            .unwrap()
-            .advance_committed_version(handle.core.version()));
+        assert!(
+            manifest
+                .write()
+                .unwrap()
+                .advance_committed_version(handle.core.version())
+        );
         assert_eq!(
             reg.materialization_manifest(name)
                 .unwrap()

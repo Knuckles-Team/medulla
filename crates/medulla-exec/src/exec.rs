@@ -36,8 +36,10 @@ mod reliability;
 // The OWL membership closure behind `REASON` (and its `WITH PROOF` explanation, EH-448).
 #[cfg(feature = "owl")]
 pub mod reason;
-pub use decisions::{DecisionSource, LearnedReliability};
+pub use decisions::DecisionSource;
 pub(crate) mod dispatch;
+// MEDULLA-FEDERATED-QUERY-R720.2/.3/.5 — the `DECAY` and `CLUSTER BY EMBEDDING` stages.
+mod decay_cluster;
 mod expand;
 #[cfg(feature = "federation")]
 pub mod foreign;
@@ -163,6 +165,10 @@ pub struct PlanCtx<'a> {
     /// (a trait object), so no feature gate: a plan that never uses `Op::RankEmbed` is
     /// unchanged whether or not an embedder is bound.
     pub embedder: Option<&'a dyn TextEmbedder>,
+    /// The "now" (epoch milliseconds) a `DECAY HALF_LIFE` stage measures row age against
+    /// (MEDULLA-FEDERATED-QUERY-R720.2). `None` (the default) reads the wall clock; a test
+    /// or a replay pins it via [`Self::with_now_ms`] so the decay repeats exactly.
+    pub now_ms: Option<i64>,
     /// The graph's own SHACL shapes for a `VALIDATE SHAPE` stage that names no `USING`
     /// shapes graph (EH-196): a served query binds an adapter over the graph's composed
     /// GraphSchema shapes. `None` makes such a stage a clean typed error. Gated on `owl`
@@ -365,6 +371,7 @@ impl<'a> PlanCtx<'a> {
             #[cfg(feature = "timeseries")]
             staged_series: None,
             embedder: None,
+            now_ms: None,
             #[cfg(feature = "owl")]
             decay: None,
             #[cfg(feature = "owl")]
@@ -375,6 +382,12 @@ impl<'a> PlanCtx<'a> {
             #[cfg(feature = "geo")]
             spatial: None,
         }
+    }
+
+    /// Pin the "now" a `DECAY` stage measures age against (epoch milliseconds).
+    pub fn with_now_ms(mut self, now_ms: i64) -> Self {
+        self.now_ms = Some(now_ms);
+        self
     }
 
     /// Bind the execution budget (UQL-09) — result-row, traversal and `MOTIF`/`DISCORD`

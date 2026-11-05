@@ -473,7 +473,20 @@ pub(super) fn handle_microstructure(req_id: u64, method: Method) -> Result<Respo
     })
 }
 
-pub(super) fn handle_sizing(req_id: u64, method: Method) -> Result<Response, Method> {
+pub(super) fn handle_sizing(req_id: u64, tenant: &str, method: Method) -> Result<Response, Method> {
+    use super::telemetry::{kernel_span, record_outcome, Kernel, OUTCOME_OK};
+    // MEDULLA-FINANCE-PRIMITIVES-R900.5: one evidence span per sizing / shift call.
+    let span = match &method {
+        Method::FinancePositionSize { .. } => {
+            Some(kernel_span(Kernel::PositionSize, tenant, &method))
+        }
+        Method::FinanceDistributionShift { .. } => {
+            Some(kernel_span(Kernel::DistributionShift, tenant, &method))
+        }
+        _ => None,
+    };
+    let span = span.unwrap_or_else(tracing::Span::none);
+    let _entered = span.enter();
     Ok(match method {
         // ── Position Sizing (CONCEPT:MEDULLA-KG.domains.market-microstructure-sizing-backtest) ────
         Method::FinanceKellyFraction { q, c, fraction } => {
@@ -499,11 +512,23 @@ pub(super) fn handle_sizing(req_id: u64, method: Method) -> Result<Response, Met
                 fraction.unwrap_or(DEFAULT_KELLY_FRACTION),
                 max_risk.unwrap_or(DEFAULT_MAX_RISK),
             ) {
-                Ok(input) => Response::ok(
-                    req_id,
-                    ResultPayload::scalar::<results::FinancePositionSize>(kelly_fraction(&input)),
-                ),
-                Err(error) => Response::err(req_id, format!("INVALID_ARGUMENT: {error}")),
+                Ok(input) => {
+                    let size = kelly_fraction(&input);
+                    let uncapped = kelly_fraction(&KellyInput {
+                        max_risk: f64::INFINITY,
+                        ..input
+                    });
+                    span.record("cap_applied", uncapped > input.max_risk);
+                    record_outcome(&span, OUTCOME_OK);
+                    Response::ok(
+                        req_id,
+                        ResultPayload::scalar::<results::FinancePositionSize>(size),
+                    )
+                }
+                Err(error) => {
+                    record_outcome(&span, error.code());
+                    Response::err(req_id, format!("INVALID_ARGUMENT: {error}"))
+                }
             }
         }
         Method::FinanceDistributionShift {
@@ -513,17 +538,23 @@ pub(super) fn handle_sizing(req_id: u64, method: Method) -> Result<Response, Met
         } => {
             match medulla_finance_quant::sizing::distribution_shift(&reference, &current, threshold)
             {
-                Ok(shift) => Response::ok(
-                    req_id,
-                    ResultPayload::of::<results::FinanceDistributionShift>(
-                        medulla_result_types::compute_result::finance::DistributionShift {
-                            statistic: shift.statistic,
-                            p_value: shift.p_value,
-                            shifted: shift.shifted,
-                        },
-                    ),
-                ),
-                Err(error) => Response::err(req_id, format!("INVALID_ARGUMENT: {error}")),
+                Ok(shift) => {
+                    record_outcome(&span, OUTCOME_OK);
+                    Response::ok(
+                        req_id,
+                        ResultPayload::of::<results::FinanceDistributionShift>(
+                            medulla_result_types::compute_result::finance::DistributionShift {
+                                statistic: shift.statistic,
+                                p_value: shift.p_value,
+                                shifted: shift.shifted,
+                            },
+                        ),
+                    )
+                }
+                Err(error) => {
+                    record_outcome(&span, error.code());
+                    Response::err(req_id, format!("INVALID_ARGUMENT: {error}"))
+                }
             }
         }
         Method::FinanceBayesianKelly {

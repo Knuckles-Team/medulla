@@ -24,3 +24,21 @@
             sh:message "worktreeState is active, stale, dangling or merged." ;
             sh:path :worktreeState ] ;
     sh:targetClass :Worktree .
+
+:IterationCycleShape a sh:NodeShape ;
+    sh:description "An iteration cycle carries at most one state from the closed active/upcoming/completed vocabulary." ;
+    sh:name "Iteration Cycle Shape" ;
+    sh:property [ sh:in ( "active" "upcoming" "completed" ) ;
+            sh:maxCount 1 ;
+            sh:message "cycleState is active, upcoming or completed." ;
+            sh:path :cycleState ] ;
+    sh:targetClass :IterationCycle .
+
+:PipelineRunShape a sh:NodeShape ;
+    sh:description "A pipeline run carries at most one latest status from the closed success/failed/running/cancelled vocabulary." ;
+    sh:name "Pipeline Run Shape" ;
+    sh:property [ sh:in ( "success" "failed" "running" "cancelled" ) ;
+            sh:maxCount 1 ;
+            sh:message "pipelineStatus is success, failed, running or cancelled." ;
+            sh:path :pipelineStatus ] ;
+    sh:targetClass :PipelineRun .

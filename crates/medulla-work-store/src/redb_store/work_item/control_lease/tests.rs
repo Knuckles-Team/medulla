@@ -162,6 +162,7 @@ fn a_lease_ends_once_on_its_read_revision_and_never_reactivates() {
     assert_eq!(missing.outcome, ControlLeaseTransitionOutcome::NotFound);
 }
 
+// spec: MEDULLA-DURABLE-KERNEL-R039.2
 #[test]
 fn a_single_use_lease_is_consumed_once_and_can_still_be_revoked() {
     let temp = open("lease-consume");

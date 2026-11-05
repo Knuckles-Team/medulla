@@ -128,6 +128,8 @@ pub fn prompt(component_id: &str, tokens: u32) -> CandidateFacts {
         prompt_mode: PromptMode::Static,
         token_estimate: tokens,
         variables: Vec::new(),
+        body_sha256: None,
+        schema_revision: None,
     };
     prompt
 }

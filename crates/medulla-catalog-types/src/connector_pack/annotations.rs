@@ -154,7 +154,7 @@ pub enum PackToolMode {
 mod tests {
     use super::*;
 
-    // spec: MEDULLA-TYPED-PACKS-R045.1
+    // spec: MEDULLA-TYPED-PACKS-R045.1, MEDULLA-TYPED-PACKS-R001.2
     #[test]
     fn new_fields_roundtrip() {
         for side_effects in [
