@@ -1,5 +1,8 @@
 # Knob table (MEDULLA-CONTRACT-R058)
 
+Provider: medulla MEDULLA-CONTRACT-R058
+Consumer: medulla MEDULLA-DURABLE-KERNEL-R083.5
+
 The initial `KNOB_TABLE` of `crates/medulla-server-api/src/knob_config.rs`: one entry per knob named by a spec row (`knob <name>`). Every knob is read from `--knob <name>=<value>`, then env `MEDULLA_<NAME>` (upper-case, dots to underscores), then the default. Ranges are inclusive. A `Fixed` knob has a one-value range; the evolution loop never changes it (MEDULLA-DECISION-ENGINE-R179).
 
 | Knob | Type | Default | Range | Unit | Class | Env |
