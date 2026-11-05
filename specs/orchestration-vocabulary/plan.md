@@ -51,7 +51,7 @@ tests/orchestration/                                        existing: served Pyt
 
 ## Phase 0: Research
 
-No unknowns; no research.md. The only open decision is the ledger scope of `MEDULLA-ORCH-VOCAB-R008.2`, which stays as written until the owner answers.
+No unknowns; no research.md. The generated-artifact ledger of `MEDULLA-ORCH-VOCAB-R008.2` covers every generated artifact.
 
 ## Phase 1: Design
 

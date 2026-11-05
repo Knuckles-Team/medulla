@@ -41,7 +41,7 @@ Each task line reads `- [ ] T001 [P] [US1] <ID> description`. One task per leaf 
 - [ ] T035 [US2] MEDULLA-ORCH-VOCAB-R007.2 Project the committed assembly back into the graph
 - [ ] T036 [US2] MEDULLA-ORCH-VOCAB-R007.4 Enforce slot agent-kind constraints before selection
 - [ ] T037 [P] [US3] MEDULLA-ORCH-VOCAB-R008.1 Register `orchestration-v1.shapes.ttl` with the shape loader
-- [ ] T038 [US3] MEDULLA-ORCH-VOCAB-R008.2 Keep the generated-artifact ledger in step with the ontology files
+- [ ] T038 [US3] MEDULLA-ORCH-VOCAB-R008.2 Keep the generated-artifact ledger complete and in step with every generated file
 - [ ] T039 [P] [US4] MEDULLA-ORCH-VOCAB-R009.1 Add property `:terminationReason`
 - [ ] T040 [P] [US4] MEDULLA-ORCH-VOCAB-R009.2 Add property `:peakContextTokens`
 - [ ] T041 [P] [US4] MEDULLA-ORCH-VOCAB-R009.3 Add property `:contextBudgetTokens`
