@@ -175,6 +175,7 @@ closed_error_codes! {
         PackTooLarge => "PACK_TOO_LARGE",
         PresetUnavailable => "PRESET_UNAVAILABLE",
         RaftNotConfigured => "RAFT_NOT_CONFIGURED",
+        RaftRetryBudgetExhausted => "RAFT_RETRY_BUDGET_EXHAUSTED",
         ReasoningProjectionRejectFailed => "REASONING_PROJECTION_REJECT_FAILED",
         RegistryCursorStale => "REGISTRY_CURSOR_STALE",
         RegistryLimit => "REGISTRY_LIMIT",
