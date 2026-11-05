@@ -644,9 +644,9 @@ $($variants)*
     /// `RECORD_DERIVED_READONLY` and writes nothing.
     #[cfg(feature = "finance")]
     FinanceRecordPut {
-        kind: medulla_types::wire_finance::FinanceRecordKind,
+        kind: medulla_types::wire::FinanceRecordKind,
         schema_version: String,
-        record: medulla_types::wire_finance::FinanceRecord,
+        record: medulla_types::wire::FinanceRecord,
         #[serde(default)]
         expected_head: Option<u64>,
     },
@@ -654,7 +654,7 @@ $($variants)*
     /// Read one finance-v1 record of any kind under the verified tenant.
     #[cfg(feature = "finance")]
     FinanceRecordGet {
-        kind: medulla_types::wire_finance::FinanceRecordKind,
+        kind: medulla_types::wire::FinanceRecordKind,
         record_id: String,
     },
         ]);

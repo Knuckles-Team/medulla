@@ -51,10 +51,10 @@ fn single_object_term(value: &str) -> bool {
 /// Validate a record against its `<Kind>Shape`.
 #[cfg(all(feature = "finance", feature = "shacl"))]
 pub(super) fn check_record_shape(
-    kind: medulla_types::wire_finance::FinanceRecordKind,
-    record: &medulla_types::wire_finance::FinanceRecord,
+    kind: medulla_types::wire::FinanceRecordKind,
+    record: &medulla_types::wire::FinanceRecord,
 ) -> Result<(), String> {
-    use medulla_types::wire_finance::finance_record_refusal::SHAPE_INVALID;
+    use medulla_types::wire::finance_record_refusal::SHAPE_INVALID;
     if !is_local_name(&record.record_id) {
         return Err(refuse(
             SHAPE_INVALID,
@@ -111,7 +111,7 @@ pub(super) fn admit_put(
     tenant_scope: &str,
     method: &Method,
 ) -> Result<(Method, u64), String> {
-    use medulla_types::wire_finance::{
+    use medulla_types::wire::{
         admit_finance_record_version, finance_record_refusal as code, FinanceRecordPolicy,
     };
     let Method::FinanceRecordPut {
