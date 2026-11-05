@@ -505,6 +505,46 @@ pub struct AgentComponentEntry {
     pub updated_at_ms: u64,
 }
 
+/// The four boundaries at which an agent lifecycle record is validated, each
+/// mapped to the one type that owns it (MEDULLA-DECISION-ENGINE-R168.1).
+pub const LIFECYCLE_BOUNDARIES: &[(&str, &str)] = &[
+    ("construction", "AgentComponentEntry::create"),
+    ("transition", "check_lifecycle_transition"),
+    ("persistence", "AgentLibraryStore"),
+    ("serialization", "AgentLibraryLifecycle"),
+];
+
+/// The allowed lifecycle transitions of one component (MEDULLA-DECISION-ENGINE-R168.2).
+///
+/// `Published -> Published` is a new revision, `Published -> Retired` a
+/// tombstone, `Published -> Withdrawn` a connector pack member no longer
+/// served (only an `mcp:` member), `Withdrawn -> Published` its republish.
+/// `Retired` is terminal. Exhaustive on purpose: a new lifecycle fails to
+/// compile until its row is decided here.
+pub fn check_lifecycle_transition(
+    component_id: &str,
+    prior: AgentLibraryLifecycle,
+    next: AgentLibraryLifecycle,
+) -> Result<(), String> {
+    use crate::agent_library::lifecycle::{
+        LIFECYCLE_RETIRED_TERMINAL, LIFECYCLE_TRANSITION_INVALID, WITHDRAWN_NOT_ALLOWED,
+    };
+    use AgentLibraryLifecycle::{Published, Retired, Withdrawn};
+    match (prior, next) {
+        (Published, Published) | (Published, Retired) | (Withdrawn, Published) => Ok(()),
+        (Published, Withdrawn) if component_id.starts_with("mcp:") => Ok(()),
+        (Published, Withdrawn) => Err(format!(
+            "{WITHDRAWN_NOT_ALLOWED}: only a connector pack member may be withdrawn"
+        )),
+        (Retired, Published) | (Retired, Retired) | (Retired, Withdrawn) => Err(format!(
+            "{LIFECYCLE_RETIRED_TERMINAL}: a retired component cannot change lifecycle"
+        )),
+        (Withdrawn, Withdrawn) | (Withdrawn, Retired) => Err(format!(
+            "{LIFECYCLE_TRANSITION_INVALID}: {prior:?} -> {next:?} is not an allowed transition"
+        )),
+    }
+}
+
 impl AgentComponentEntry {
     pub fn publish(
         draft: AgentComponentDraft,
@@ -570,8 +610,16 @@ impl AgentComponentEntry {
     pub fn retire(&self, entry_revision: u64, retired_at_ms: u64) -> Result<Self, String> {
         self.validate()?;
         if self.lifecycle == AgentLibraryLifecycle::Retired {
-            return Err("agent component entry is already retired".to_string());
+            return Err(format!(
+                "{}: agent component entry is already retired",
+                crate::agent_library::lifecycle::LIFECYCLE_RETIRED_TERMINAL
+            ));
         }
+        check_lifecycle_transition(
+            &self.component_id,
+            self.lifecycle,
+            AgentLibraryLifecycle::Retired,
+        )?;
         if entry_revision <= self.entry_revision {
             return Err("agent component tombstone revision must advance".to_string());
         }
@@ -1347,6 +1395,77 @@ impl AgentComponentOutboxEvent {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // spec: MEDULLA-DECISION-ENGINE-R168.1
+    #[test]
+    fn lifecycle_boundaries_are_listed() {
+        let names: Vec<&str> = LIFECYCLE_BOUNDARIES.iter().map(|(b, _)| *b).collect();
+        assert_eq!(
+            names,
+            ["construction", "transition", "persistence", "serialization"]
+        );
+        let owners: BTreeSet<&str> = LIFECYCLE_BOUNDARIES.iter().map(|(_, t)| *t).collect();
+        assert_eq!(
+            owners.len(),
+            LIFECYCLE_BOUNDARIES.len(),
+            "one type per boundary"
+        );
+        // Construction and serialization keep the lifecycle field.
+        let entry =
+            AgentComponentEntry::publish(draft("server-a", AgentComponentKind::Toolset), 1, 10)
+                .unwrap();
+        let encoded = serde_json::to_string(&entry).unwrap();
+        let restored: AgentComponentEntry = serde_json::from_str(&encoded).unwrap();
+        assert_eq!(restored, entry);
+        restored.validate().unwrap();
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R168.2
+    #[test]
+    fn lifecycle_transition_table() {
+        use crate::agent_library::lifecycle::{
+            LIFECYCLE_RETIRED_TERMINAL, LIFECYCLE_TRANSITION_INVALID, WITHDRAWN_NOT_ALLOWED,
+        };
+        use AgentLibraryLifecycle::{Published, Retired, Withdrawn};
+        let all = [Published, Retired, Withdrawn];
+        for prior in all {
+            for next in all {
+                let pack = check_lifecycle_transition("mcp:pack/tool", prior, next);
+                let native = check_lifecycle_transition("server-a", prior, next);
+                let expected_pack: Result<(), &str> = match (prior, next) {
+                    (Published, Published) | (Published, Retired) | (Published, Withdrawn) => {
+                        Ok(())
+                    }
+                    (Withdrawn, Published) => Ok(()),
+                    (Retired, _) => Err(LIFECYCLE_RETIRED_TERMINAL),
+                    (Withdrawn, Withdrawn) | (Withdrawn, Retired) => {
+                        Err(LIFECYCLE_TRANSITION_INVALID)
+                    }
+                };
+                match expected_pack {
+                    Ok(()) => assert!(pack.is_ok(), "{prior:?} -> {next:?} allowed"),
+                    Err(code) => assert!(
+                        pack.as_ref().unwrap_err().starts_with(code),
+                        "{prior:?} -> {next:?} refuses {code}: {pack:?}"
+                    ),
+                }
+                if (prior, next) == (Published, Withdrawn) {
+                    assert!(native.unwrap_err().starts_with(WITHDRAWN_NOT_ALLOWED));
+                } else {
+                    assert_eq!(native.is_ok(), pack.is_ok(), "{prior:?} -> {next:?}");
+                }
+            }
+        }
+        // The check runs on mutation: retire refuses a retired entry by code.
+        let entry =
+            AgentComponentEntry::publish(draft("server-a", AgentComponentKind::Toolset), 1, 10)
+                .unwrap();
+        let retired = entry.retire(2, 20).unwrap();
+        assert!(retired
+            .retire(3, 30)
+            .unwrap_err()
+            .starts_with(LIFECYCLE_RETIRED_TERMINAL));
+    }
 
     /// One named edit to a definition, for the digest-binding table below.
     type NamedMutation<T> = (&'static str, fn(&mut T));
