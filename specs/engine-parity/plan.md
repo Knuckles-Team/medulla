@@ -98,7 +98,7 @@ none
 - Wire login grant and revoke: `MEDULLA-ENGINE-PARITY-R007.4` provides, `ARBORA-OPS-R858.1` consumes. Contract: [arbora-wire-logins.md](contracts/arbora-wire-logins.md).
 - Engine capability report: `MEDULLA-ENGINE-PARITY-R020.2` provides, `ARBORA-OPS-R006` consumes. Contract: [arbora-engine-capabilities.md](contracts/arbora-engine-capabilities.md).
 
-## Consumers
+### Consumers
 
 | Rollups | Named consumer |
 |---|---|
@@ -109,4 +109,3 @@ none
 | R018 | Catalog profiling and quality jobs of MEDULLA-UNIFIED-DATA-PLANE-R761 and R762 |
 | R019 | Every attached-source adapter |
 | R020 | The benchmark gate of MEDULLA-DURABLE-KERNEL-R042 |
-
