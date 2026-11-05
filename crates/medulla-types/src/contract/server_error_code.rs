@@ -145,6 +145,7 @@ closed_error_codes! {
         MalformedBody => "MALFORMED_BODY",
         MalformedIndex => "MALFORMED_INDEX",
         MethodNotYetServed => "METHOD_NOT_YET_SERVED",
+        ModeTransitionForbidden => "MODE_TRANSITION_FORBIDDEN",
         OutboxOwnerUnavailable => "OUTBOX_OWNER_UNAVAILABLE",
         OutboxOwnerUnknown => "OUTBOX_OWNER_UNKNOWN",
         OutboxScopeMismatch => "OUTBOX_SCOPE_MISMATCH",
