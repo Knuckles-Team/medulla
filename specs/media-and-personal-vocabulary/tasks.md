@@ -101,7 +101,7 @@ Tasks mirror the leaf rows of requirements.md, producer first: vocabulary, shape
 - [ ] T095 [P] [US3] MEDULLA-MEDIA-VOCAB-R019.4 Update MEDULLA-CQ-CONN-R036 vocabulary column from MISSING to media-v1 / content-v1 once R019.1 is LANDED (wire one call site
 - [ ] T096 [P] [US4] MEDULLA-MEDIA-VOCAB-R020.1 Fixture and test: 'Which requested films are downloaded but not yet in the library?' across arr, qbittorrent, jellyfin
 - [ ] T097 [P] [US4] MEDULLA-MEDIA-VOCAB-R020.2 Fixture and test: 'Which feed articles are not archived and have no matching search result?' across freshrss, searxng, archivebox on
-- [ ] T098 [P] [US4] MEDULLA-MEDIA-VOCAB-R028 Cross-repo, owner audio-transcriber: transcript list/get operation by recording id and date
+- [ ] T098 [P] [US4] MEDULLA-MEDIA-VOCAB-R028 Transcript list/get operation belongs to audio-transcriber (pointer)
 - [ ] T099 [P] [US4] MEDULLA-MEDIA-VOCAB-R029 Cross-repo, owner audio-transcriber: expose avg_logprob (confidence) per segment
 - [ ] T100 [P] [US4] MEDULLA-MEDIA-VOCAB-R030 Cross-repo, owner scholarx: citing-papers operation: add sx_search action 'citations' returning papers that cite a given id
 - [ ] T101 [P] [US4] MEDULLA-MEDIA-VOCAB-R031 Cross-repo, owner searxng-mcp: pass through per-engine result counts and unresponsive_engines from the SearXNG response
