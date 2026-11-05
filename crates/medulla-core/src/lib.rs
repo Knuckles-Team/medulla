@@ -34,6 +34,8 @@ pub mod freshness;
 pub mod fs;
 // MEDULLA-SDLC — derived lifecycle edges, defect intake, requirement state and trace.
 pub mod lifecycle;
+/// MEDULLA-MEDIA-VOCAB-R001.101.2 — the pure meeting transcript revision function.
+pub mod meeting_transcript;
 /// CONCEPT:MEDULLA-KG.ontology.codegen-from-rust-vocabulary — deterministic ontology/SHACL-shape
 /// text generated from a typed Rust vocabulary, with a byte-equality regeneration test
 /// (MEDULLA-TYPED-PACKS-R090.1). The canonical ontology/shape corpus itself is owned by the
