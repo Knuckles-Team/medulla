@@ -1,11 +1,16 @@
-# MEDULLA-BRANCH-MERGE tasks
+# MEDULLA-BRANCH-MERGE — Tasks
 
-Ordered one-bite lanes. Compile slot: Medulla only, one cargo lane host-wide at a time.
+One task per leaf row of `requirements.md`, producer first: the branch model (US1) precedes the writes, reads and merge rows that use it. Each task names its row; the row holds the files, the caller chain and the proof. Rows that edit `crates/medulla-h-graph/src/graph_ops/branch.rs` run in series.
 
-- [ ] MEDULLA-BRANCH-MERGE-R001 — typed branch model and create (`crates/medulla-types` branch module + request boundary + owner-store lineage registry).
-- [ ] MEDULLA-BRANCH-MERGE-R002 — branch-scoped mutations (mutation path branch targeting; branch idempotency; commit-chain append).
-- [ ] MEDULLA-BRANCH-MERGE-R003 — merge-base and fast-forward (closed outcome vocabulary; chain walk).
-- [ ] MEDULLA-BRANCH-MERGE-R004 — entity-level three-way merge (per-entity classification; adoption with constraint/ABox validation; typed conflict).
-- [ ] MEDULLA-BRANCH-MERGE-R005 — epistemic conflict resolution (typed conflict record; owner-pinned policy; open-conflict state).
-- [ ] MEDULLA-BRANCH-MERGE-R006 — branch diff and time-travel reads (as-of-version snapshot reads; change-feed diff).
-- [ ] MEDULLA-BRANCH-MERGE-R007 — atomic merge publication (two-parent receipt; idempotent replay; stale-target refusal; cluster replication).
+## Tasks
+
+- [ ] T001 [US1] MEDULLA-BRANCH-MERGE-R001 Typed branch model and CreateBranch
+- [ ] T002 [US1] MEDULLA-BRANCH-MERGE-R002 Branch-scoped mutations on one commit chain
+- [ ] T003 [US2] MEDULLA-BRANCH-MERGE-R006 Branch diff and time-travel reads
+- [ ] T004 [US3] MEDULLA-BRANCH-MERGE-R003 Merge base and fast-forward
+- [ ] T005 [P] [US3] MEDULLA-BRANCH-MERGE-R008 Line-level three-way merge for file blobs
+- [ ] T006 [US3] MEDULLA-BRANCH-MERGE-R004 Entity-level three-way merge
+- [ ] T007 [US4] MEDULLA-BRANCH-MERGE-R005 Epistemic conflict resolution
+- [ ] T008 [US3] MEDULLA-BRANCH-MERGE-R007 Atomic merge publication
+- [ ] T009 [US3] MEDULLA-BRANCH-MERGE-R009 Landing policy check at merge publish
+- [ ] T010 [US3] MEDULLA-BRANCH-MERGE-R010 Line-granularity file merge for source changesets
