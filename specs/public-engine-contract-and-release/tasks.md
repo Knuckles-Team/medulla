@@ -100,3 +100,4 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T094 [US5] MEDULLA-CONTRACT-R056.17 The split leaves no crate-level lint allows
 - [ ] T095 [US5] MEDULLA-CONTRACT-R056.18 The ambient test auth posture does not change behaviour under workspace feature unification
 - [ ] T096 [US1] MEDULLA-CONTRACT-R057 The engine serves its method catalog at run time
+- [ ] T097 [US3] MEDULLA-CONTRACT-R053.7.1 A green build-train result for the head SHA satisfies the cargo half of PR CI

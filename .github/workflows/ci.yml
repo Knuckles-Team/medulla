@@ -14,7 +14,9 @@ name: CI
 # persistent cargo target and a local-disk sccache outside the checkout; a fork
 # pull request stays on GitHub-hosted ubuntu-24.04 with the Actions caches. A documentation- or
 # specs-only diff runs no cargo and only the shared spec gate set. `CI required` (the branch-protection context)
-# needs only that job on a pull request. Every other gate runs on main pushes,
+# needs only that job on a pull request. A green build-train commit status
+# (`medulla-train`, from an allowlisted owner account, on the exact head SHA)
+# skips the cargo steps of that job (step `Train attestation`). Every other gate runs on main pushes,
 # the nightly schedule and manual dispatch. Optional feature-combination
 # builds and benchmarks run on manual dispatch only. GitHub Pages deploys in
 # pages.yml.
@@ -1441,6 +1443,31 @@ jobs:
     # requests stay on GitHub-hosted.
     runs-on: ${{ (needs.pr-scope.outputs.code == 'true' && vars.MEDULLA_WARM_CI_RUNNER == 'true' && github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]') && fromJSON('{"group":"medulla-warm","labels":["self-hosted","medulla-warm"]}') || 'ubuntu-24.04' }}
     steps:
+      # A green build-train result for this exact head SHA satisfies the cargo
+      # half of PR CI (spec MEDULLA-CONTRACT-R053.7.1). The train poster adds the
+      # `medulla-train` commit status from an owner account after fmt, clippy on
+      # the affected crates and nextest passed on the branch tip. Only a
+      # same-repository pull request is ever attested (never a fork or
+      # dependabot). Lint and the spec-trailer check still run.
+      - name: Train attestation
+        id: attest
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ATTESTERS: ${{ vars.MEDULLA_TRAIN_ATTESTERS }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -uo pipefail
+          echo "attested=false" >> "$GITHUB_OUTPUT"
+          if [ -z "${ATTESTERS:-}" ]; then echo "no attester allowlist set: not attested"; exit 0; fi
+          statuses="$(gh api "repos/${{ github.repository }}/commits/${HEAD_SHA}/statuses?per_page=100")" || { echo "status lookup failed: not attested"; exit 0; }
+          hit="$(printf '%s' "$statuses" | jq -r --arg allow "$ATTESTERS" '($allow | split(",") | map(gsub("^\\s+|\\s+$"; ""))) as $ok | [.[] | select(.context == "medulla-train" and .state == "success" and (.creator.login as $who | $ok | index($who)))][0] // empty | "\(.target_url // "-") | \(.description // "")"')"
+          if [ -n "$hit" ]; then
+            echo "attested=true" >> "$GITHUB_OUTPUT"
+            echo "train attestation for ${HEAD_SHA}: $hit"
+          else
+            echo "no trusted medulla-train success status for ${HEAD_SHA}: running cargo"
+          fi
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
@@ -1538,7 +1565,7 @@ jobs:
           PY
 
       - name: Rust toolchain
-        if: runner.environment != 'self-hosted' && steps.gates-scope.outputs.scope != 'spec'
+        if: steps.attest.outputs.attested != 'true' && runner.environment != 'self-hosted' && steps.gates-scope.outputs.scope != 'spec'
         uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
         with:
           toolchain: stable
@@ -1577,7 +1604,7 @@ jobs:
         run: uvx --from 'git+https://github.com/Knuckles-Team/pipelines@main' pipelines-hook spec-trailers --base-ref "origin/${{ github.base_ref }}"
       - name: Select the affected crates
         id: crates
-        if: steps.scope.outputs.code == 'true' && steps.gates-scope.outputs.scope != 'spec'
+        if: steps.attest.outputs.attested != 'true' && steps.scope.outputs.code == 'true' && steps.gates-scope.outputs.scope != 'spec'
         run: |
           set -euo pipefail
           cargo metadata --format-version 1 --no-deps --locked > "$RUNNER_TEMP/cargo-metadata.json"
@@ -1585,34 +1612,34 @@ jobs:
           cat "$RUNNER_TEMP/cargo-runs.txt"
           if [ -s "$RUNNER_TEMP/cargo-runs.txt" ]; then echo "rust=true" >> "$GITHUB_OUTPUT"; else echo "rust=false" >> "$GITHUB_OUTPUT"; fi
       - name: Install librdkafka/Cyrus-SASL build headers
-        if: steps.crates.outputs.rust == 'true'
+        if: steps.attest.outputs.attested != 'true' && steps.crates.outputs.rust == 'true'
         run: |
           set -euo pipefail
           if dpkg -s libsasl2-dev libcurl4-openssl-dev >/dev/null 2>&1; then exit 0; fi
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends libsasl2-dev libcurl4-openssl-dev
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
-        if: runner.environment != 'self-hosted' && steps.crates.outputs.rust == 'true'
+        if: steps.attest.outputs.attested != 'true' && runner.environment != 'self-hosted' && steps.crates.outputs.rust == 'true'
         with:
           workspaces: ". -> target-isolated"
           shared-key: medulla-ci-gates-ubuntu-24.04-v1
           save-if: false
       - name: Provision pinned sqlite3 CLI (differential sqlite tests)
-        if: steps.crates.outputs.rust == 'true'
+        if: steps.attest.outputs.attested != 'true' && steps.crates.outputs.rust == 'true'
         run: |
           set -euo pipefail
           sqlite3_bin="$(scripts/fetch_sqlite3.sh "$RUNNER_TEMP/medulla-sqlite3")"
           echo "MEDULLA_SQLITE3=$sqlite3_bin" >> "$GITHUB_ENV"
       - name: Provision pinned Whisper real-model fixture
-        if: steps.crates.outputs.rust == 'true'
+        if: steps.attest.outputs.attested != 'true' && steps.crates.outputs.rust == 'true'
         run: scripts/fetch_whisper_test_fixture.sh "$RUNNER_TEMP/medulla-whisper-test" >> "$GITHUB_ENV"
       - name: Install cargo-nextest
-        if: steps.crates.outputs.rust == 'true'
+        if: steps.attest.outputs.attested != 'true' && steps.crates.outputs.rust == 'true'
         uses: taiki-e/install-action@86f7a0ffb25f40114606501a311ebcfaf882ea32 # v2
         with:
           tool: nextest
       - name: Clippy and nextest on the affected crates
-        if: steps.crates.outputs.rust == 'true'
+        if: steps.attest.outputs.attested != 'true' && steps.crates.outputs.rust == 'true'
         run: |
           set -uo pipefail
           rc=0

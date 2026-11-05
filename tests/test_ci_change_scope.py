@@ -1010,3 +1010,51 @@ def test_tts_piper_job_skips_apt_when_native_packages_are_present() -> None:
     )
     assert f"sudo apt-get {opts} update" in run
     assert f"sudo apt-get {opts} install -y --no-install-recommends {packages}" in run
+
+
+CARGO_STEPS = (
+    "Rust toolchain",
+    "Select the affected crates",
+    "Install librdkafka/Cyrus-SASL build headers",
+    "Provision pinned sqlite3 CLI (differential sqlite tests)",
+    "Provision pinned Whisper real-model fixture",
+    "Install cargo-nextest",
+    "Clippy and nextest on the affected crates",
+)
+
+
+def test_train_attestation_gates_the_cargo_steps() -> None:
+    jobs = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text())["jobs"]
+    steps = jobs["ci"]["steps"]
+    attest = steps[0]
+    assert attest["name"] == "Train attestation"
+    assert attest["id"] == "attest"
+    # Only a same-repository pull request, never dependabot, is attested.
+    condition = attest["if"]
+    assert "github.event_name == 'pull_request'" in condition
+    assert (
+        "github.event.pull_request.head.repo.full_name == github.repository"
+        in condition
+    )
+    assert "github.actor != 'dependabot[bot]'" in condition
+    # It requires the owner allowlist and the train status context.
+    assert attest["env"]["ATTESTERS"] == "${{ vars.MEDULLA_TRAIN_ATTESTERS }}"
+    run = attest["run"]
+    assert "/statuses" in run and "medulla-train" in run
+    assert '.state == "success"' in run and ".creator.login" in run
+    assert "attested=true" in run and "target_url" in run
+    # Every cargo, toolchain and cargo-cache step carries the attested guard.
+    guard = "steps.attest.outputs.attested != 'true'"
+    by_name = {step.get("name"): step for step in steps}
+    cargo = [by_name[name] for name in CARGO_STEPS]
+    cargo += [
+        step for step in steps if str(step.get("uses", "")).startswith("Swatinem/")
+    ]
+    assert len(cargo) == len(CARGO_STEPS) + 1
+    for step in cargo:
+        assert guard in step["if"], step
+    # Lint and the spec-trailer check still run when attested.
+    for name in ("Lint the changed files (pre-commit)", "Spec trailers"):
+        assert guard not in str(by_name[name].get("if", ""))
+    # Main pushes never use the attestation: the job exists on pull requests only.
+    assert jobs["ci"]["if"] == "github.event_name == 'pull_request'"
