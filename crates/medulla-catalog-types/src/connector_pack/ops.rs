@@ -278,6 +278,89 @@ mod tests {
         assert!(op.connector().is_some());
     }
 
+    /// The committed operation descriptors: wire tag, whether it commits
+    /// durable state, and the authorization action it needs.
+    const DESCRIPTORS: [(&str, bool, &str); 14] = [
+        ("approve_source", true, "agent:pack-control"),
+        ("attest_self_served_catalog", true, "admin:connector-pack"),
+        ("bind", true, "admin:connector-pack"),
+        (
+            "catalog_authority_status",
+            false,
+            "connector:catalog-attest",
+        ),
+        ("catalog_binding_status", false, "agent:pack-control"),
+        ("catalog_owner_principal", false, "agent:pack-control"),
+        (
+            "catalog_request_owner_principal",
+            false,
+            "agent:pack-control",
+        ),
+        ("import", true, "agent:pack-control"),
+        ("reconcile_bodies", true, "admin:connector-pack"),
+        ("reconcile_catalog", true, "admin:connector-pack"),
+        ("reproject", true, "admin:connector-pack"),
+        ("retire", true, "admin:connector-pack"),
+        ("status", false, "agent:pack-read"),
+        ("unbind", true, "admin:connector-pack"),
+    ];
+
+    // spec: MEDULLA-TYPED-PACKS-R001.3
+    #[test]
+    fn operation_and_result_shapes_are_stable() {
+        let mut observed = Vec::new();
+        for (label, op) in crate::catalog_fixtures::contract_pack::ops() {
+            let wire = serde_json::to_value(&op).unwrap();
+            let tag = wire["op"]
+                .as_str()
+                .expect("every op carries its tag")
+                .to_string();
+            assert_eq!(label, format!("ConnectorPack.{tag}"));
+            assert_eq!(serde_json::from_value::<ConnectorPackOp>(wire).unwrap(), op);
+            let packed = rmp_serde::to_vec_named(&op).unwrap();
+            assert_eq!(
+                rmp_serde::from_slice::<ConnectorPackOp>(&packed).unwrap(),
+                op
+            );
+            observed.push((tag, op.is_mutation(), op.authz_action().to_string()));
+        }
+        observed.sort();
+        let committed: Vec<_> = DESCRIPTORS
+            .iter()
+            .map(|(tag, mutation, action)| (tag.to_string(), *mutation, action.to_string()))
+            .collect();
+        assert_eq!(
+            observed, committed,
+            "an operation was added, removed or reshaped"
+        );
+
+        use crate::connector_pack::result::{PackDisposition, PackViolationCode, PackWarningCode};
+        for code in crate::catalog_fixtures::contract_pack::every_violation_code() {
+            let wire = serde_json::to_value(code).unwrap();
+            assert_eq!(
+                serde_json::from_value::<PackViolationCode>(wire).unwrap(),
+                code
+            );
+        }
+        for code in crate::catalog_fixtures::contract_pack::every_warning_code() {
+            let wire = serde_json::to_value(code).unwrap();
+            assert_eq!(
+                serde_json::from_value::<PackWarningCode>(wire).unwrap(),
+                code
+            );
+        }
+        for disposition in crate::catalog_fixtures::contract_pack::every_disposition() {
+            let wire = serde_json::to_value(disposition).unwrap();
+            assert_eq!(
+                serde_json::from_value::<PackDisposition>(wire).unwrap(),
+                disposition
+            );
+        }
+        assert!(
+            serde_json::from_value::<PackViolationCode>(serde_json::json!("NOT_A_CODE")).is_err()
+        );
+    }
+
     /// R010: pack admission is a single atomic `Import`, not a staged
     /// prepare/commit/abort protocol -- there is no such wire variant to
     /// even reach a handler, because `ConnectorPackOp` is `#[serde(tag =
