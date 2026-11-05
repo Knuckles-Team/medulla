@@ -212,6 +212,17 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         "RegisterForeignSource",
         &["FOREIGN_SOURCE_POLICY_UNBOOTSTRAPPED"],
     ),
+    // MEDULLA-FEDERATED-QUERY-R053.100 / R053.700 / R053.701: foreign Cypher,
+    // Trino and Spark refusals on the served `Uql` FOREIGN path.
+    (
+        "Uql",
+        &[
+            "CYPHER_KEY_INVALID",
+            "FENCE_FIELD_MISSING",
+            "PRESET_UNAVAILABLE",
+            "SNAPSHOT_UNKNOWN",
+        ],
+    ),
     (
         "MutationOutbox",
         &[
