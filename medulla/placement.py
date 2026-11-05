@@ -109,7 +109,8 @@ class Breaker:
             raise ValueError(f"failure_threshold must be an integer in [{low}, {high}]")
         low_ms, high_ms = BREAKER_HALF_OPEN_MS_BOUNDS
         if isinstance(reset_after_s, bool) or not (
-            isinstance(reset_after_s, int | float) and low_ms <= reset_after_s * 1_000 <= high_ms
+            isinstance(reset_after_s, int | float)
+            and low_ms <= reset_after_s * 1_000 <= high_ms
         ):
             raise ValueError(
                 f"reset_after_s must be between {low_ms / 1_000} and {high_ms / 1_000} seconds"
@@ -159,7 +160,9 @@ class TenantPool(Generic[ClientT]):
         close: Callable[[ClientT], Awaitable[None]] | None = None,
     ) -> None:
         low, high = POOL_SIZE_BOUNDS
-        if isinstance(capacity, bool) or not (isinstance(capacity, int) and low <= capacity <= high):
+        if isinstance(capacity, bool) or not (
+            isinstance(capacity, int) and low <= capacity <= high
+        ):
             raise ValueError(f"capacity must be an integer in [{low}, {high}]")
         self._factory = factory
         self._close = close
