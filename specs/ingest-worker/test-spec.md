@@ -41,10 +41,10 @@ The following tests define required acceptance; they do not record passing resul
 - `MEDULLA-INGEST-WORKER-R003.11`: `crates/medulla-h-ingest/src/source_ingestion.rs::tests::quarantine_finish_and_replay_preserve_outcome`.
 - `MEDULLA-INGEST-WORKER-R003.12`: `tests/ingest/test_document_normalization_served.py::test_document_batch_is_atomic`.
 - `MEDULLA-INGEST-WORKER-R003.13`: `crates/medulla-source-types/src/source_transcript.rs::tests::transcript_round_trips`.
-- `MEDULLA-INGEST-WORKER-R003.14`: `src/server/handlers/source_ingestion/transcript.rs::tests::source_sequence_and_identity_are_preserved`.
-- `MEDULLA-INGEST-WORKER-R003.15`: `src/server/handlers/source_ingestion/transcript.rs::tests::prepare_routes_declared_transcript_format`.
-- `MEDULLA-INGEST-WORKER-R003.16`: `src/server/handlers/source_ingestion/transcript.rs::tests::unknown_format_and_foreign_concept_are_refused`.
-- `MEDULLA-INGEST-WORKER-R003.17`: `src/server/handlers/source_ingestion/transcript.rs::tests::receipt_preserves_message_provenance`.
+- `MEDULLA-INGEST-WORKER-R003.14`: `crates/medulla-h-ingest/src/source_ingestion/transcript.rs::tests::source_sequence_and_identity_are_preserved`.
+- `MEDULLA-INGEST-WORKER-R003.15`: `crates/medulla-h-ingest/src/source_ingestion/transcript.rs::tests::prepare_routes_declared_transcript_format`.
+- `MEDULLA-INGEST-WORKER-R003.16`: `crates/medulla-h-ingest/src/source_ingestion/transcript.rs::tests::unknown_format_and_foreign_concept_are_refused`.
+- `MEDULLA-INGEST-WORKER-R003.17`: `crates/medulla-h-ingest/src/source_ingestion/transcript.rs::tests::receipt_preserves_message_provenance`.
 - `MEDULLA-INGEST-WORKER-R003.18`: `tests/ingest/test_transcript_served.py::test_thread_messages_are_shared_within_scope`.
 
 R003.9 and R003.15 must resolve trusted mappings once and pass that snapshot into validation before admission.

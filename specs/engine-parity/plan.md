@@ -60,7 +60,7 @@ A batch over two partitions uses the cross-store path of MEDULLA-DURABLE-KERNEL-
 
 ## PostgreSQL wire front end
 
-The listener already exists in `src/server/pgwire`. It has TLS startup policy, `CopyState`
+The listener already exists in `crates/medulla-wire/src/pgwire`. It has TLS startup policy, `CopyState`
 and an extended-query path. This spec completes the message flows (R006). It maps logins to
 engine principals and row security (R007). It emulates the catalog views that tools read at
 connect (R008). It publishes the dialect matrix (R009). MEDULLA-DURABLE-KERNEL-R035 keeps the

@@ -37,27 +37,27 @@ Governing spec: [spec.md](spec.md).
 | `MEDULLA-ENGINE-PARITY-R008.2` | Wiring and refusal | `tests/pgwire_roundtrip.rs::bi_tool_introspection_queries_pass` |
 | `MEDULLA-ENGINE-PARITY-R008.3` | Hot-path proof | `tests/pgwire_roundtrip.rs::introspection_latency` |
 | `MEDULLA-ENGINE-PARITY-R009` | SQL dialect compatibility matrix (rollup) | See each child. |
-| `MEDULLA-ENGINE-PARITY-R009.1` | Model and behavior | `crates/medulla-query/tests/compat.rs::matrix_loads_and_is_closed` |
-| `MEDULLA-ENGINE-PARITY-R009.2` | Wiring and refusal | `crates/medulla-query/tests/compat.rs::every_supported_entry_has_a_test` |
+| `MEDULLA-ENGINE-PARITY-R009.1` | Model and behavior | `crates/medulla-sql-tests/tests/compat.rs::matrix_loads_and_is_closed` |
+| `MEDULLA-ENGINE-PARITY-R009.2` | Wiring and refusal | `crates/medulla-sql-tests/tests/compat.rs::every_supported_entry_has_a_test` |
 | `MEDULLA-ENGINE-PARITY-R009.3` | Hot-path proof | `tests/test_sql_compat_conformance.py::test_supported_entries_pass` |
 | `MEDULLA-ENGINE-PARITY-R010` | Secondary, partial and expression indexes (rollup) | See each child. |
-| `MEDULLA-ENGINE-PARITY-R010.1` | Model and behavior | `crates/medulla-query/tests/index.rs::partial_index_holds_only_matching_rows` |
-| `MEDULLA-ENGINE-PARITY-R010.2` | Wiring and refusal | `crates/medulla-query/tests/index.rs::planner_uses_partial_index` |
+| `MEDULLA-ENGINE-PARITY-R010.1` | Model and behavior | `crates/medulla-sql-tests/tests/index.rs::partial_index_holds_only_matching_rows` |
+| `MEDULLA-ENGINE-PARITY-R010.2` | Wiring and refusal | `crates/medulla-sql-tests/tests/index.rs::planner_uses_partial_index` |
 | `MEDULLA-ENGINE-PARITY-R010.3` | Hot-path proof | `cargo bench -p medulla-query --bench index` |
 | `MEDULLA-ENGINE-PARITY-R011` | Constraints: unique, foreign key, check and shapes (rollup) | See each child. |
-| `MEDULLA-ENGINE-PARITY-R011.1` | Model and behavior | `crates/medulla-query/tests/constraint.rs::deferred_foreign_key_checks_at_commit` |
+| `MEDULLA-ENGINE-PARITY-R011.1` | Model and behavior | `crates/medulla-sql-tests/tests/constraint.rs::deferred_foreign_key_checks_at_commit` |
 | `MEDULLA-ENGINE-PARITY-R011.2` | Wiring and refusal | `tests/pgwire_roundtrip.rs::constraint_violations_return_sqlstate` |
 | `MEDULLA-ENGINE-PARITY-R011.3` | Hot-path proof | `cargo bench --bench engine_writes` |
 | `MEDULLA-ENGINE-PARITY-R012` | Triggers as reactive rules (rollup) | See each child. |
-| `MEDULLA-ENGINE-PARITY-R012.1` | Model and behavior | `crates/medulla-query/tests/trigger.rs::before_insert_rewrites_row` |
-| `MEDULLA-ENGINE-PARITY-R012.2` | Wiring and refusal | `crates/medulla-query/tests/trigger.rs::depth_bound_refuses` |
+| `MEDULLA-ENGINE-PARITY-R012.1` | Model and behavior | `crates/medulla-sql-tests/tests/trigger.rs::before_insert_rewrites_row` |
+| `MEDULLA-ENGINE-PARITY-R012.2` | Wiring and refusal | `crates/medulla-sql-tests/tests/trigger.rs::depth_bound_refuses` |
 | `MEDULLA-ENGINE-PARITY-R012.3` | Hot-path proof | `cargo bench -p medulla-query --bench trigger` |
 | `MEDULLA-ENGINE-PARITY-R013` | Sequences (rollup) | See each child. |
-| `MEDULLA-ENGINE-PARITY-R013.1` | Model and behavior | `crates/medulla-query/tests/sequence.rs::values_never_repeat_after_crash` |
+| `MEDULLA-ENGINE-PARITY-R013.1` | Model and behavior | `crates/medulla-sql-tests/tests/sequence.rs::values_never_repeat_after_crash` |
 | `MEDULLA-ENGINE-PARITY-R013.2` | Wiring and refusal | `tests/pgwire_roundtrip.rs::serial_column_uses_sequence` |
 | `MEDULLA-ENGINE-PARITY-R013.3` | Hot-path proof | `cargo bench -p medulla-query --bench sequence` |
 | `MEDULLA-ENGINE-PARITY-R014` | Views and materialized views as derived series (rollup) | See each child. |
-| `MEDULLA-ENGINE-PARITY-R014.1` | Model and behavior | `crates/medulla-query/tests/matview.rs::refresh_on_change_tracks_lineage` |
+| `MEDULLA-ENGINE-PARITY-R014.1` | Model and behavior | `crates/medulla-sql-tests/tests/matview.rs::refresh_on_change_tracks_lineage` |
 | `MEDULLA-ENGINE-PARITY-R014.2` | Wiring and refusal | `tests/pgwire_roundtrip.rs::view_and_matview_over_wire` |
 | `MEDULLA-ENGINE-PARITY-R014.3` | Hot-path proof | `cargo bench -p medulla-query --bench matview` |
 | `MEDULLA-ENGINE-PARITY-R015` | Change data capture by logical decoding (rollup) | See each child. |

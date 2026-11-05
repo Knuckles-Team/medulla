@@ -65,7 +65,7 @@ Medulla owns the `finance-v1` OWL/SHACL model, deterministic Rust calculations, 
 | Existing component | Reuse for this extension |
 |---|---|
 | `crates/medulla-core/ontology/finance-v1.ttl` and `.shapes.ttl` | Add account, activity, strategy, reference and risk classes under existing finance IRIs and validation. |
-| `crates/medulla-compute/src/finance/market/` | Use bar revision resolution, calendars, indicators, event IDs, `BacktestRun` and `AnalysisSnapshot`; do not fork market-history logic. |
+| `crates/medulla-finance-market/src/market/` | Use bar revision resolution, calendars, indicators, event IDs, `BacktestRun` and `AnalysisSnapshot`; do not fork market-history logic. |
 | `crates/medulla-compute/src/finance/` | Add fixed-point `accounting`, `strategy`, `risk` modules behind the existing compute crate. Reuse existing quantitative validation kernels. |
 | `crates/medulla-types/src/compute_result/market/` | Extend versioned request/result contracts; regenerate language clients from canonical Rust contracts. |
 | `src/server/handlers/finance/` | Dispatch new FinanceMarket suboperations or a cohesive typed finance operation family; keep public method authorization and result mapping centralized. |

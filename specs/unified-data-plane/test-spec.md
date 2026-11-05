@@ -160,13 +160,13 @@ Hot-path proof for `MEDULLA-UNIFIED-DATA-PLANE-R038.5`: `tests/federation/test_s
 
 | Model | `MEDULLA-UNIFIED-DATA-PLANE-R038.6.1` | `crates/medulla-types/src/virtual_graph_view.rs::tests::graph_view_round_trips`: A serde round trip keeps every field and rejects an unmapped label. |
 
-| Behavior | `MEDULLA-UNIFIED-DATA-PLANE-R038.6.2` | `crates/medulla-query/src/cypher/tests/virtual_view.rs::pattern_pushes_join`: One pattern renders one pushed SQL statement per same-source join. |
+| Behavior | `MEDULLA-UNIFIED-DATA-PLANE-R038.6.2` | `crates/medulla-cypher/src/cypher/tests/virtual_view.rs::pattern_pushes_join`: One pattern renders one pushed SQL statement per same-source join. |
 
-| Wiring | `MEDULLA-UNIFIED-DATA-PLANE-R038.6.3` | `crates/medulla-query/src/cypher/tests/virtual_view.rs::served_read_resolves_view`: A served openCypher read over a mapped source reaches the view resolution. |
+| Wiring | `MEDULLA-UNIFIED-DATA-PLANE-R038.6.3` | `crates/medulla-cypher/src/cypher/tests/virtual_view.rs::served_read_resolves_view`: A served openCypher read over a mapped source reaches the view resolution. |
 
-| Refusal | `MEDULLA-UNIFIED-DATA-PLANE-R038.6.4` | `crates/medulla-query/src/cypher/tests/virtual_view.rs::view_refusals`: Each case returns its code and runs no source statement. |
+| Refusal | `MEDULLA-UNIFIED-DATA-PLANE-R038.6.4` | `crates/medulla-cypher/src/cypher/tests/virtual_view.rs::view_refusals`: Each case returns its code and runs no source statement. |
 
-| Evidence | `MEDULLA-UNIFIED-DATA-PLANE-R038.6.5` | `crates/medulla-query/src/cypher/tests/virtual_view.rs::explain_names_mapping`: EXPLAIN names the mapping digest of each fragment. |
+| Evidence | `MEDULLA-UNIFIED-DATA-PLANE-R038.6.5` | `crates/medulla-cypher/src/cypher/tests/virtual_view.rs::explain_names_mapping`: EXPLAIN names the mapping digest of each fragment. |
 
 | Hot-path proof | `MEDULLA-UNIFIED-DATA-PLANE-R038.6.6` | `tests/federation/test_graph_language_virtual_served.py::test_cypher_and_gremlin_match_sparql_over_sql_source`: The three answers are equal, and the engine row count for that source stays unchanged. |
 
