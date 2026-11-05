@@ -6,6 +6,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [3.2.0] - 2026-11-04 — One distribution: the server ships in the medulla wheel
+
+### Changed
+- **`pip install medulla` now includes the server.** Every `medulla` platform wheel (Linux
+  x86_64 and aarch64 manylinux_2_28, macOS arm64, Windows x64) carries the native
+  `medulla-server` executable for its platform at `medulla/_bin/medulla-server`
+  (`medulla-server.exe` on Windows), next to the engine and numeric extension modules.
+  `medulla.server_binary.resolve_server_binary()` returns that path and nothing else; it
+  raises `ServerBinaryNotFoundError` when the server is absent (an install from the sdist,
+  which builds the extension modules only, or a source checkout).
+- **`medulla-server --version`** prints `medulla-server <version>`, the release version.
+- **The server image** (`medulla-server`, `linux/amd64` + `linux/arm64`) is built from the
+  Linux `medulla` wheels.
+
+### Removed
+- **`medulla-stem` is retired.** The separate server distribution, its `medulla_server`
+  import package (`binary_path()`, `BinaryNotFoundError`) and the `medulla[server]` extra are
+  gone, with no alias, shim or fallback. Replace `pip install medulla-stem` or
+  `pip install "medulla[server]"` with `pip install medulla`, and
+  `medulla_server.binary_path()` with `medulla.server_binary.resolve_server_binary()`. The
+  server is no longer a console script on `PATH`.
+- `release.yml` no longer has the `source_ref` / `packages` dispatch inputs; a dispatch builds
+  every wheel and publishes nothing.
+
 ## [3.1.1] - 2026-11-04 — The engine reports its release version
 
 ### Fixed
