@@ -447,7 +447,12 @@ pub async fn ensure_internal_global_graph(
     idempotency_key: &str,
 ) -> Result<(), String> {
     if state.read().await.registry.exists(graph_name) {
-        return Ok(());
+        // MEDULLA-DURABLE-KERNEL-R861.3: a catalog record is not a resident
+        // graph; open it through the routed lazy-open path or refuse typed.
+        return medulla_server_graph::dispatch::shared::ensure_catalog_graph_resident(
+            state, graph_name,
+        )
+        .await;
     }
     let create_identity = medulla_types::contract::Digest256::framed(
         b"eg/internal-graph-lifecycle/v1",

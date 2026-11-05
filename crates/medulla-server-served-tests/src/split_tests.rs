@@ -18,9 +18,14 @@ mod medulla_h_decide_decide_guardrail_tests;
 #[cfg(all(test, feature = "decide"))]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 mod medulla_h_decide_harness_config_tests;
+#[cfg(all(test, feature = "redb"))]
+mod medulla_h_ingest_meeting_transcript_tests;
 #[cfg(test)]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 mod medulla_h_ingest_repository_index_tests;
+#[cfg(test)]
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+mod medulla_h_ingest_transcript_clock_tests;
 #[cfg(all(test, feature = "query", feature = "modality-serving"))]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 mod medulla_h_ingest_web_ingest_tests;

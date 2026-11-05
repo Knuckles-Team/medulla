@@ -34,6 +34,8 @@
 //! `medulla` package's default build; see the root `Cargo.toml`'s `members` comment.
 
 pub mod catalog;
+#[cfg(feature = "contract-schema")]
+pub mod decision_ontology;
 mod descriptor;
 mod domains;
 pub mod error_routing;

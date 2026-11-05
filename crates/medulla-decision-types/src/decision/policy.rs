@@ -7,6 +7,9 @@
 
 use serde::{Deserialize, Serialize};
 
+use std::collections::BTreeMap;
+
+use super::knobs::{KnobName, KnobSpec, KnobValue};
 use super::numeric::{QuantisedValue, UnitRationalWire};
 use super::DecisionErrorCode;
 use medulla_types::contract::BoundedVec;
@@ -170,6 +173,11 @@ pub struct DecisionPolicy {
     /// keeps an existing policy's digest.
     #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
     pub reasoning: std::collections::BTreeMap<String, super::thought_search::ReasoningStrategy>,
+    /// Pinned knob values (MEDULLA-DECISION-ENGINE-R179.2). Families read
+    /// them only through [`DecisionPolicy::knob`]; an absent knob reads its
+    /// spec default. Empty keeps an existing policy's digest.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub knobs: BTreeMap<KnobName, KnobValue>,
 }
 
 /// The component attribute a published `DecisionPolicy` carries its body in:
@@ -180,7 +188,7 @@ pub const DECISION_POLICY_ATTRIBUTE: &str = "decision.policy";
 /// The policy a `DecisionPolicy` component's attributes carry, verified against
 /// its content digest and its own validating constructor.
 pub fn policy_from_attributes(
-    attributes: &std::collections::BTreeMap<String, String>,
+    attributes: &BTreeMap<String, String>,
     content_digest: &str,
 ) -> Result<DecisionPolicy, DecisionErrorCode> {
     let body = attributes
@@ -226,7 +234,17 @@ impl DecisionPolicy {
             statistical: None,
             topology: None,
             reasoning: std::collections::BTreeMap::new(),
+            knobs: BTreeMap::new(),
         }
+    }
+
+    /// The value of the knob `spec` names: the pinned value, or the spec
+    /// default when the policy pins none (R179.2).
+    pub fn knob(&self, spec: &KnobSpec) -> KnobValue {
+        self.knobs
+            .get(&spec.knob_name())
+            .copied()
+            .unwrap_or(spec.default)
     }
 
     /// The validating constructor: a decoded policy is usable only after this

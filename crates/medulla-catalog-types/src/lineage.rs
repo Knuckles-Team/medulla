@@ -13,6 +13,7 @@ use sha2::{Digest, Sha256};
 
 /// A content-addressed dataset id: `ds:` plus the SHA-256 of the canonical
 /// `namespace/name` reference.
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct DatasetId(String);
@@ -37,6 +38,7 @@ impl DatasetId {
 }
 
 /// One ETL run that read and wrote datasets.
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct EtlRun {
     pub run_id: String,
@@ -54,6 +56,7 @@ pub struct LineageEdge {
 }
 
 /// A dataset reference as it arrives on the lineage topic.
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DatasetRef {
     pub namespace: String,
@@ -61,6 +64,7 @@ pub struct DatasetRef {
 }
 
 /// One lineage event as received.
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct LineageEvent {
     pub event_id: String,
@@ -192,6 +196,32 @@ impl LineageDrain {
         }
         out
     }
+}
+
+/// The refusal of a lineage event that cannot be keyed (a blank `event_id`).
+pub const LINEAGE_EVENT_MALFORMED: &str = "LINEAGE_EVENT_MALFORMED";
+
+/// The node label of one dataset in the lineage graph.
+pub const DATASET_LABEL: &str = "Dataset";
+/// The node label of one quarantined lineage event.
+pub const QUARANTINED_LABEL: &str = "QuarantinedLineageEvent";
+/// The relationship of a dataset lineage edge (input to output).
+pub const DERIVES_RELATIONSHIP: &str = "derivesInto";
+
+/// What one served `LineageIngest` committed (MEDULLA-UNIFIED-DATA-PLANE-R702.3).
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct LineageIngestReceipt {
+    /// Events received.
+    pub received: u32,
+    /// Distinct dataset lineage edges in the committed write-set.
+    pub edges: u32,
+    /// Events kept as `QuarantinedLineageEvent` nodes.
+    pub quarantined: u32,
+    /// Events whose id repeated inside the request.
+    pub replayed: u32,
+    /// The envelope id; an identical event set replays the same id.
+    pub envelope_id: String,
 }
 
 /// How an output column derives from its input column.

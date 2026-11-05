@@ -217,6 +217,23 @@ $($variants)*
         threshold: f64,
     },
 
+    /// Classify price-action patterns over parallel `open`, `high`, `low`, `close` bars
+    /// (MEDULLA-FINANCE-PRIMITIVES-R750.754); the thresholds are the `pattern.*` server knobs.
+    FinancePatternClassify {
+        open: Vec<f64>,
+        high: Vec<f64>,
+        low: Vec<f64>,
+        close: Vec<f64>,
+    },
+
+    /// Brinson-Fachler profit attribution over per-group weights and returns
+    /// (MEDULLA-FINANCE-PRIMITIVES-R750.754).
+    // Embeds a `finance` result type → gated with the feature.
+    #[cfg(feature = "finance")]
+    FinanceProfitAttribution {
+        groups: Vec<medulla_result_types::compute_result::finance::GroupInput>,
+    },
+
     // ── Banking risk / execution / factor kernels (MEDULLA-FINANCE-PRIMITIVES-R901/R613/R018 .3) ──
     FinanceAmlScreen {
         rule_id: String,
@@ -290,6 +307,14 @@ $($variants)*
         signals: Vec<Vec<f64>>,
         provenance_keys: Vec<Vec<String>>,
         forward_returns: Vec<f64>,
+    },
+
+    /// MEDULLA-FINANCE-PRIMITIVES-R904: read the current wallet key trust record
+    /// of one `(account, wallet, network)` binding under the caller's tenant.
+    WalletKeyTrustGet {
+        account_id: String,
+        wallet_id: String,
+        network_id: String,
     },
 
     FinanceBayesianKelly {
@@ -632,6 +657,30 @@ $($variants)*
     #[cfg(feature = "asr-native")]
     Asr {
         op: medulla_types::asr_wire::AsrOp,
+    },
+
+
+    // ── Served finance records (MEDULLA-FINANCE-PRIMITIVES-R004.3.2) ─────────
+    /// Put one finance-v1 record of a client-writable kind: the schema version is
+    /// admitted first, the record is validated against its SHACL shape and
+    /// upserted as one graph node under the verified tenant. `expected_head` is
+    /// the head the writer last read (`None` for a new record); a mismatch
+    /// refuses with `RECORD_HEAD_CONFLICT`. A derived kind refuses with
+    /// `RECORD_DERIVED_READONLY` and writes nothing.
+    #[cfg(feature = "finance")]
+    FinanceRecordPut {
+        kind: medulla_types::wire::FinanceRecordKind,
+        schema_version: String,
+        record: medulla_types::wire::FinanceRecord,
+        #[serde(default)]
+        expected_head: Option<u64>,
+    },
+
+    /// Read one finance-v1 record of any kind under the verified tenant.
+    #[cfg(feature = "finance")]
+    FinanceRecordGet {
+        kind: medulla_types::wire::FinanceRecordKind,
+        record_id: String,
     },
         ]);
     };

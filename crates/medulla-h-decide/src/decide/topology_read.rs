@@ -14,7 +14,7 @@ use super::{capacity_premise, topology_schema, SharedState};
 use medulla_server_api::authority_context::VerifiedRequestContext;
 
 /// The request graph's core, behind the ordinary read ACL.
-async fn graph_core(
+pub(super) async fn graph_core(
     state: &SharedState,
     graph: &str,
     verified: &VerifiedRequestContext,

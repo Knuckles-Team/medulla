@@ -298,7 +298,11 @@ async fn handle_nl(
         graph: graph.clone(),
         auth_token: String::new(),
         agent_id: Some("service:local-query".to_string()),
-        method: medulla_protocol_types::protocol::Method::NlQuery { text, graph },
+        method: medulla_protocol_types::protocol::Method::NlQuery {
+            text,
+            graph,
+            history: Vec::new(),
+        },
     };
     let resp =
         medulla_server_api::api::reentry::dispatch_authenticated_local_query(state, request).await;

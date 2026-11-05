@@ -5,6 +5,7 @@ use medulla_mutation_types::mutation_scope::DurabilityDomain;
 #[cfg(feature = "redb")]
 use medulla_persistence::AsRedb;
 use medulla_persistence_records::agent_library::AgentLibraryStateExt;
+#[cfg(feature = "kv")]
 use medulla_server_blob::kv::KvStateExt;
 use std::sync::Arc;
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import signal
 import subprocess
 import time
@@ -327,3 +328,58 @@ def test_direct_repeat_requires_count(harness: tuple[dict[str, str], Path]) -> N
     assert result.returncode == 2
     assert "RAFT_LOAD_REPEATS must be an integer in 2..100" in result.stderr
     assert "Traceback" not in result.stderr
+
+
+@pytest.fixture(scope="module")
+def flake_budget_bin() -> Path:
+    cargo = shutil.which("cargo")
+    assert cargo, "cargo is required to build raft_flake_budget"
+    subprocess.run(
+        [cargo, "build", "-q", "--features", "raft", "--bin", "raft_flake_budget"],
+        cwd=ROOT,
+        check=True,
+        timeout=3600,
+    )
+    target = Path(os.environ.get("CARGO_TARGET_DIR", ROOT / "target"))
+    return target / "debug" / "raft_flake_budget"
+
+
+@pytest.mark.spec("MEDULLA-DURABLE-KERNEL-R014.3.2")
+def test_retry_budget_is_bounded(
+    harness: tuple[dict[str, str], Path], flake_budget_bin: Path
+) -> None:
+    first = subprocess.run(
+        [
+            str(flake_budget_bin),
+            "--attempt",
+            "1",
+            "--exit-code",
+            "1",
+            "--backoff-ms",
+            "10",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+    assert first.returncode == 0
+    assert first.stdout.strip() == "retry attempt=1 backoff_ms=10"
+    second = subprocess.run(
+        [str(flake_budget_bin), "--attempt", "2", "--exit-code", "1"],
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+    assert second.returncode == 3
+    assert second.stdout.strip() == "refused RAFT_RETRY_BUDGET_EXHAUSTED attempt=2"
+
+    env, _ = harness
+    del env["RAFT_LOAD_WORKERS"]
+    env.update(TEST_RC="7", RAFT_FLAKE_BUDGET_BIN=str(flake_budget_bin))
+    result = run(env)
+    assert result.returncode == 7
+    assert "retry budget: retry attempt=1" in result.stdout
+    assert (
+        "retry budget: refused RAFT_RETRY_BUDGET_EXHAUSTED attempt=2" in result.stdout
+    )
+    assert result.stdout.count("test result: FAILED") == 2

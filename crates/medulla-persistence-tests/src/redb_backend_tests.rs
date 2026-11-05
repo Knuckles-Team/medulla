@@ -1983,6 +1983,7 @@ async fn micro_linger_coalesces_concurrent_writers() {
             RedbGroupCommitConfig {
                 linger: Duration::from_millis(2),
                 shallow_threshold: 256,
+                enqueue_timeout: Duration::from_secs(5),
                 test_control: Some(control),
             },
         )

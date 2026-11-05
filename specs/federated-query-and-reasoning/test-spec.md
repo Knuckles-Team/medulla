@@ -422,6 +422,7 @@ Hot-path proof for `MEDULLA-FEDERATED-QUERY-R091`: `tests/federation/test_plan_e
 | `MEDULLA-FEDERATED-QUERY-R703.4` | `tests/retrieval/test_access_check_served.py::test_missing_port_fails_closed` |
 | `MEDULLA-FEDERATED-QUERY-R703.5` | `tests/retrieval/test_access_check_served.py::test_drop_reasons_read_back` |
 | `MEDULLA-FEDERATED-QUERY-R703.6` | `cargo bench -p medulla-plan --bench access_check` |
+| `MEDULLA-FEDERATED-QUERY-R703.100` | `scripts/tests/test_bench_gate_p99.py::test_p99_over_ceiling_fails_and_missing_sample_fails` |
 | `MEDULLA-FEDERATED-QUERY-R704` | See each child. |
 | `MEDULLA-FEDERATED-QUERY-R704.1` | `crates/medulla-plan/tests/knowledge_scope.rs::scope_round_trips` |
 | `MEDULLA-FEDERATED-QUERY-R704.2` | `crates/medulla-plan/tests/knowledge_scope.rs::scope_prefilters_before_truncation` |
@@ -464,6 +465,7 @@ Hot-path proof for `MEDULLA-FEDERATED-QUERY-R091`: `tests/federation/test_plan_e
 | `MEDULLA-FEDERATED-QUERY-R709.4` | `tests/test_geosparql_served.py::test_geo_refusals` |
 | `MEDULLA-FEDERATED-QUERY-R709.5` | `tests/test_geosparql_served.py::test_explain_names_spatial_index` |
 | `MEDULLA-FEDERATED-QUERY-R709.6` | `cargo bench -p medulla-rdf --bench geosparql` |
+| `MEDULLA-FEDERATED-QUERY-R709.7` | `crates/medulla-rdf/tests/geosparql.rs::indexed_and_scanned_results_are_equal` (planned) |
 
 ## Shared query workspace
 
@@ -848,6 +850,8 @@ Proving targets for rows `MEDULLA-FEDERATED-QUERY-R058.4.2` to `MEDULLA-FEDERATE
 - **MEDULLA-FEDERATED-QUERY-R058.4.7.1:** `context_tests.rs::evidence_questions_are_grounded_or_refused_over_servicenow_data` (planned), `nl_explain.rs::nl_query_grounds_names_on_the_graph_schema_before_running` (planned). Snapshot graph and authorized foreign-source grounding. A table holds the 26 validation-run questions over ingested ServiceNow fixture data. Each row asserts grounded UQL and the expected rows. A question with no graph data asserts the typed refusal (). A served test refuses an unknown property with its reason and runs a repaired name ().
 - **MEDULLA-FEDERATED-QUERY-R058.4.7.2:** `tests/nl_query_grounding.rs::source_native_identifiers_grounded` (planned). Source-native identifier grounding (rollup). The child acceptance criteria apply. Root journey test.
 - **MEDULLA-FEDERATED-QUERY-R058.4.9:** `tests/nl_query_grounding.rs::inline_adapter_refused_named_source_grounds` (planned). Inline foreign adapter grounding. It asserts the refusal for an inline HTTP adapter and success for a registered source.
+- **MEDULLA-FEDERATED-QUERY-R058.4.10:** `tests/nl_query_sql_served.rs::sql_dialect_plans_and_runs_a_select` (planned). Natural-language to SQL planner.
+- **MEDULLA-FEDERATED-QUERY-R058.4.11:** `tests/nl_query_sparql_served.rs::sparql_dialect_plans_and_runs_a_select` (planned). Natural-language to SPARQL planner.
 - **MEDULLA-FEDERATED-QUERY-R088:** `tests/uql_governed_summary.rs::governed_rows_carry_knowledge_and_header` (planned). UQL rows apply visibility before limits and carry a snapshot header (rollup). The fixture and expected result are stated in the row's Test cell.
 - **MEDULLA-FEDERATED-QUERY-R088.1:** `crates/medulla-types/src/wire_query_core.rs::tests::uql_header_round_trips_with_defaults` (planned). Model. The fixture and expected result are stated in the row's Test cell.
 - **MEDULLA-FEDERATED-QUERY-R088.2:** `tests/uql_governed_summary.rs::hidden_rows_do_not_displace_visible_rows` (planned). Behavior. Runs through Method::Uql with two principals and LIMIT 5.
@@ -911,7 +915,7 @@ Proving targets for rows `MEDULLA-FEDERATED-QUERY-R058.4.2` to `MEDULLA-FEDERATE
 - **MEDULLA-FEDERATED-QUERY-R653.6:** `tests/retrieval/test_corpus_retrieve_served.py::test_each_mode_is_served` (planned). Hot-path proof. Served test passes. cargo bench -p medulla-plan --bench corpus_retrieval meets the key.
 - **MEDULLA-FEDERATED-QUERY-R654:** `tests/retrieval/test_code_context_served.py::test_code_context_and_diagnose` (planned). Code, operations and deployment context (rollup). The fixture and expected result are stated in the row's Test cell.
 - **MEDULLA-FEDERATED-QUERY-R654.1:** `crates/medulla-plan/src/code_context.rs::tests::types_round_trip_and_reject_unknown_stage` (planned). Model. The fixture and expected result are stated in the row's Test cell.
-- **MEDULLA-FEDERATED-QUERY-R654.2:** `crates/medulla-plan/src/code_context.rs::tests::depth_cap_and_pagerank_order` (planned). Behavior: code context. The fixture and expected result are stated in the row's Test cell.
+- **MEDULLA-FEDERATED-QUERY-R654.2:** `crates/medulla-plan/src/code_context.rs::tests::depth_cap_and_hub_order` (planned). Behavior: code context. The fixture and expected result are stated in the row's Test cell.
 - **MEDULLA-FEDERATED-QUERY-R654.3:** `tests/retrieval/test_code_context_served.py::test_methods_reach_kernels` (planned). Wiring. Compares served output with the kernel.
 - **MEDULLA-FEDERATED-QUERY-R654.4:** `tests/retrieval/test_code_context_served.py::test_ambiguous_degraded_and_refusals` (planned). Refusal and degraded answers. Asserts the status values, both codes and zero writes.
 - **MEDULLA-FEDERATED-QUERY-R654.5:** `tests/retrieval/test_code_context_served.py::test_evidence_fields` (planned). Evidence. The fixture and expected result are stated in the row's Test cell.
@@ -954,6 +958,7 @@ Each entry names the test the row binds once its code lands; the path is the pos
 | Planned | `MEDULLA-FEDERATED-QUERY-R703.4` | `tests/retrieval/test_access_check_served.py::test_missing_port_fails_closed` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R703.5` | `tests/retrieval/test_access_check_served.py::test_drop_reasons_read_back` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R703.6` | `cargo bench -p medulla-plan --bench access_check` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R703.100` | `scripts/tests/test_bench_gate_p99.py::test_p99_over_ceiling_fails_and_missing_sample_fails` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R704` | `tests/retrieval/test_knowledge_scope_served.py::test_agent_sees_only_scoped_sources` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R704.3` | `tests/retrieval/test_knowledge_scope_served.py::test_agent_sees_only_scoped_sources` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R704.4` | `tests/retrieval/test_knowledge_scope_served.py::test_scope_refusals` |
@@ -992,6 +997,7 @@ Each entry names the test the row binds once its code lands; the path is the pos
 | Planned | `MEDULLA-FEDERATED-QUERY-R709.4` | `tests/federated/test_geosparql_served.py::test_geo_refusals` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R709.5` | `tests/federated/test_geosparql_served.py::test_explain_names_spatial_index` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R709.6` | `cargo bench -p medulla-rdf --bench geosparql` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R709.7` | `crates/medulla-rdf/tests/geosparql.rs::indexed_and_scanned_results_are_equal` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R720` | `tests/uql_single_plan_all_modalities.rs::five_stage_kinds_one_plan` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R720.1` | `crates/medulla-exec/src/rowset.rs::tests::epistemic_fields_survive_traversal_and_vector` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R720.2` | `crates/medulla-plan/tests/uql_epistemic_stages.rs::confidence_asof_decay` |
@@ -1023,7 +1029,7 @@ Each entry names the test the row binds once its code lands; the path is the pos
 | Planned | `MEDULLA-FEDERATED-QUERY-R058.4.7.2.4` | `tests/nl_query_grounding.rs::udf_identifiers` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R058.4.7.2.5` | `tests/nl_query_grounding.rs::rdf_identifiers` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R072.2` | `tests/federated/test_unified_query_source_plan_served.py::test_plan_sources_equal_authority_rows` |
-| Planned | `MEDULLA-FEDERATED-QUERY-R073.3` | `crates/medulla-federation/src/federation_opt/tests.rs::mcp_remote_calls_bound_tool` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R073.3` | `crates/medulla-federation/src/federation_opt/tests.rs::mcp_remote_delegates_to_connector_row_source` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R073.3` | `tests/federation/test_web_metasearch_served.py::test_mcp_source_resolves` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R079.2.1` | `tests/lake_manifest_interoperability.rs::append_compaction_cow_delete` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R081.11` | `tests/retrieval_round_served.rs::round_with_no_parts_returns_rows_only` |

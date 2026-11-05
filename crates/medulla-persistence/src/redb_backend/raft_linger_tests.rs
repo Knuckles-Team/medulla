@@ -23,6 +23,7 @@ async fn micro_linger_coalesces_shallow_raft_appends() {
         RedbGroupCommitConfig {
             linger: Duration::from_millis(2),
             shallow_threshold: 32,
+            enqueue_timeout: Duration::from_secs(5),
             test_control: Some(control),
         },
     )
