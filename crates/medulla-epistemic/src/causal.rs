@@ -945,6 +945,102 @@ fn cartesian(cards: &[usize]) -> Vec<Vec<usize>> {
     out
 }
 
+/// Fewest observations [`verify_fit`] accepts (MEDULLA-FEDERATED-QUERY-R608.2).
+pub const MIN_FIT_OBSERVATIONS: usize = 8;
+
+/// Why [`verify_fit`] returned no verdict (MEDULLA-FEDERATED-QUERY-R608.4).
+#[derive(Clone, Debug, PartialEq)]
+pub enum CausalFitError {
+    /// Fewer than [`MIN_FIT_OBSERVATIONS`] observation rows.
+    ObservationsInsufficient { observed: usize },
+    /// The model is not a valid DAG over the observed variables: a cycle, a
+    /// missing parent, or an observation row without a model variable.
+    ModelInvalid(String),
+}
+
+impl std::fmt::Display for CausalFitError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::ObservationsInsufficient { observed } => write!(
+                f,
+                "{observed} observations; at least {MIN_FIT_OBSERVATIONS} are required"
+            ),
+            Self::ModelInvalid(why) => write!(f, "causal model invalid: {why}"),
+        }
+    }
+}
+
+impl std::error::Error for CausalFitError {}
+
+/// Verify a linear structural causal model against observations
+/// (MEDULLA-FEDERATED-QUERY-R608.2). For each variable, predict it from its
+/// parents in each observed row; its nrmse is the RMSE of the residuals over the
+/// (population) standard deviation of the observed variable. A variable passes
+/// when nrmse is at most `nrmse_max`; the verdict is `consistent` only when every
+/// variable passes. Pure: it reads only its arguments.
+pub fn verify_fit(
+    graph: &CausalGraph,
+    observations: &[std::collections::BTreeMap<String, f64>],
+    nrmse_max: f64,
+) -> Result<medulla_types::causal_wire::CausalVerdict, CausalFitError> {
+    use medulla_types::causal_wire::{CausalVerdict, CausalVerdictKind, VariableFit};
+    if observations.len() < MIN_FIT_OBSERVATIONS {
+        return Err(CausalFitError::ObservationsInsufficient {
+            observed: observations.len(),
+        });
+    }
+    let value = |row: &std::collections::BTreeMap<String, f64>, id: &str| {
+        row.get(id).copied().ok_or_else(|| {
+            CausalFitError::ModelInvalid(format!("observation lacks variable '{id}'"))
+        })
+    };
+    let n = observations.len() as f64;
+    let mut per_variable = Vec::with_capacity(graph.order.len());
+    for id in &graph.order {
+        let eq = &graph.equations[id];
+        let mut observed = Vec::with_capacity(observations.len());
+        let mut sq_residual = 0.0_f64;
+        for row in observations {
+            let actual = value(row, id)?;
+            let mut predicted = eq.bias;
+            for (parent, weight) in &eq.parents {
+                predicted += weight * value(row, parent)?;
+            }
+            sq_residual += (actual - predicted).powi(2);
+            observed.push(actual);
+        }
+        let rmse = (sq_residual / n).sqrt();
+        let mean = observed.iter().sum::<f64>() / n;
+        let std = (observed.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / n).sqrt();
+        let nrmse = if std > 0.0 {
+            rmse / std
+        } else if rmse == 0.0 {
+            0.0
+        } else {
+            f64::INFINITY
+        };
+        per_variable.push(VariableFit {
+            id: id.clone(),
+            nrmse,
+            limit: nrmse_max,
+        });
+    }
+    let worst = per_variable
+        .iter()
+        .max_by(|a, b| a.nrmse.total_cmp(&b.nrmse))
+        .map(|fit| fit.id.clone());
+    let verdict = if per_variable.iter().all(|fit| fit.nrmse <= fit.limit) {
+        CausalVerdictKind::Consistent
+    } else {
+        CausalVerdictKind::Inconsistent
+    };
+    Ok(CausalVerdict {
+        verdict,
+        per_variable,
+        worst,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1406,5 +1502,51 @@ mod tests {
             CausalModelKind::DiscreteCpt
         );
         assert!(CausalModelKind::parse("nonsense").is_err());
+    }
+
+    /// A variable passes exactly at the nrmse limit and fails just above it.
+    // spec: MEDULLA-FEDERATED-QUERY-R608.2
+    #[test]
+    fn fit_verdict_at_boundary_nrmse() {
+        use medulla_types::causal_wire::CausalVerdictKind;
+        use std::collections::BTreeMap;
+        // y = 2x + residual; x alternates ±1 (std 1 for x around mean 0 with a
+        // root equation bias 0 so x's own residual equals x itself, std == rmse).
+        // y residual alternates ±0.5 while y's std is computed from the data.
+        let mut g = CausalGraph::new();
+        g.add_variable("x", vec![], 0.0, 1.0).unwrap();
+        g.add_variable("y", vec![("x", 2.0)], 0.0, 0.25).unwrap();
+        let rows: Vec<BTreeMap<String, f64>> = (0..8)
+            .map(|i| {
+                let x = if i % 2 == 0 { 1.0 } else { -1.0 };
+                let r = if (i / 2) % 2 == 0 { 0.5 } else { -0.5 };
+                BTreeMap::from([("x".to_string(), x), ("y".to_string(), 2.0 * x + r)])
+            })
+            .collect();
+        let verdict = verify_fit(&g, &rows, 1.0).unwrap();
+        let y = &verdict.per_variable[1];
+        assert_eq!(y.id, "y");
+        // y's population variance is 4 + 0.25 (x and r are uncorrelated by
+        // construction), its rmse is 0.5.
+        let expected = 0.5 / 4.25_f64.sqrt();
+        assert!((y.nrmse - expected).abs() < EPS);
+        // x is predicted by its bias 0: rmse == std, nrmse == 1.0 — at the limit.
+        assert!((verdict.per_variable[0].nrmse - 1.0).abs() < EPS);
+        assert_eq!(verdict.verdict, CausalVerdictKind::Consistent);
+        assert_eq!(verdict.worst.as_deref(), Some("x"));
+
+        let tight = verify_fit(&g, &rows, 1.0 - 1e-9).unwrap();
+        assert_eq!(tight.verdict, CausalVerdictKind::Inconsistent);
+
+        assert_eq!(
+            verify_fit(&g, &rows[..7], 1.0),
+            Err(CausalFitError::ObservationsInsufficient { observed: 7 })
+        );
+        let mut missing = rows.clone();
+        missing[0].remove("y");
+        assert!(matches!(
+            verify_fit(&g, &missing, 1.0),
+            Err(CausalFitError::ModelInvalid(_))
+        ));
     }
 }

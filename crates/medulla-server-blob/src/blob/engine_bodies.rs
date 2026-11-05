@@ -108,7 +108,10 @@ fn plan_bodies<'a>(
         }
         let actual = Digest256::from_bytes(Sha256::digest(&input.body).into());
         if actual != input.sha256 {
-            return Err("connector pack body digest differs from its bytes".to_string());
+            return Err(
+                "BODY_DIGEST_MISMATCH: connector pack body digest differs from its bytes"
+                    .to_string(),
+            );
         }
         let chunk_digest = (!input.body.is_empty()).then(|| hex_digest(&input.body));
         let manifest = BlobManifest {
