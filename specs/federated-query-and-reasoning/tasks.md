@@ -126,6 +126,8 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T120 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.4.7.1 Snapshot graph and authorized foreign-source grounding
 - [ ] T121 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.4.8 The hint offers mapped connector properties under their ontology names
 - [ ] T122 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.4.9 Inline foreign adapter grounding
+- [ ] T420 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.4.10 Natural-language to SQL planner
+- [ ] T421 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.4.11 Natural-language to SPARQL planner
 - [ ] T123 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.5 Configurable NL planner request
 - [ ] T124 [US1] MEDULLA-FEDERATED-QUERY-R058.6 NL answers are checked against certified definitions
 - [ ] T125 [US1] MEDULLA-FEDERATED-QUERY-R058.7 A certified correction is recorded as a fact and grounds later planning
