@@ -106,6 +106,12 @@ pub const DURABLE_STORES: &[DurableStore] = &[
          carry no recovery value, so they are deliberately not restored",
     ),
     excluded(
+        "branch_registry.redb",
+        "branch registry rows (MEDULLA-BRANCH-MERGE-R001) are not yet handed to the backup as a \
+         bundled store source; a restore comes up with no branches, and every branch is \
+         re-created from its base version",
+    ),
+    excluded(
         "cluster_hierarchy.redb",
         "VIZ-1 Leiden cluster hierarchy is DERIVED from the graph's own nodes and \
          edges and is fully recomputable by ClusterHierarchyRefresh (measured 23.5s \

@@ -42,8 +42,54 @@ pub async fn dispatch_graph_lifecycle_methods(
         },
 
         Method::ListGraphs => dispatch_boxed(list_graphs(state, verified_context, req.id)).await,
+        // MEDULLA-BRANCH-MERGE-R001: one branch registry row.
+        Method::CreateBranch {
+            tenant,
+            graph,
+            name,
+            base_engine_version,
+        } => {
+            create_branch(
+                state,
+                req.id,
+                verified_context,
+                (tenant, graph, name, base_engine_version),
+            )
+            .await
+        }
         other => return ControlFlow::Continue(other),
     })
+}
+
+/// `CreateBranch` (MEDULLA-BRANCH-MERGE-R001), served only by a `redb` build.
+async fn create_branch(
+    state: &Arc<RwLock<ServerState>>,
+    req_id: u64,
+    verified_context: &VerifiedRequestContext,
+    fields: (String, String, String, Option<u64>),
+) -> Response {
+    #[cfg(feature = "redb")]
+    {
+        let (tenant, graph, name, base_engine_version) = fields;
+        let request = medulla_h_graph::graph_ops::branch::CreateBranchRequest {
+            tenant,
+            graph,
+            name,
+            base_engine_version,
+        };
+        dispatch_boxed(medulla_h_graph::graph_ops::branch::handle_create_branch(
+            state,
+            req_id,
+            verified_context,
+            request,
+        ))
+        .await
+    }
+    #[cfg(not(feature = "redb"))]
+    {
+        let _ = (state, verified_context, fields);
+        Response::err(req_id, "CreateBranch requires the `redb` feature")
+    }
 }
 
 /// `ListGraphs`: every graph the verified caller may read, with its materialization

@@ -11,6 +11,8 @@
 pub mod acl;
 // MEDULLA-DURABLE-KERNEL-R095.1000 — served agent-bus participant roster model.
 pub mod agent_bus;
+// MEDULLA-BRANCH-MERGE-R001 — typed branch registry row and name rule.
+pub mod branch;
 // MEDULLA-CQ-ORCH-R010.1 — pure data model for graph-derived architecture views.
 pub mod architecture_view;
 // MEDULLA-UNIFIED-DATA-PLANE-R012.1 — typed model for governed attached-source write-back.

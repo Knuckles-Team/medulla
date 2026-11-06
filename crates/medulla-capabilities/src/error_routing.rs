@@ -260,6 +260,17 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     ),
     // MEDULLA-FINANCE-PRIMITIVES-R904: no current record for the binding in the caller's tenant.
     ("WalletKeyTrustGet", &["WALLET_KEY_TRUST_NOT_FOUND"]),
+    // MEDULLA-BRANCH-MERGE-R001: the five CreateBranch refusals.
+    (
+        "CreateBranch",
+        &[
+            "BRANCH_BASE_UNKNOWN",
+            "BRANCH_EXISTS",
+            "BRANCH_NAME_INVALID",
+            "BRANCH_NAME_RESERVED",
+            "BRANCH_TENANT_DENIED",
+        ],
+    ),
     // MEDULLA-IDENTITY-R701: no delegation record for the work item in the caller's tenant.
     ("GetDelegationRecord", &["DELEGATION_UNKNOWN"]),
     // MEDULLA-DECISION-ENGINE-R152.4: a zero budget, too many node ids or a fact with no source.

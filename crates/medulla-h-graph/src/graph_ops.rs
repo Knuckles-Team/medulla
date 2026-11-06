@@ -28,6 +28,9 @@ use medulla_server_mutation::{
 };
 
 mod algorithms;
+// MEDULLA-BRANCH-MERGE-R001 — served branch registry.
+#[cfg(feature = "redb")]
+pub mod branch;
 mod broker;
 // MEDULLA-DURABLE-KERNEL-R095.1001 — served agent bus roster.
 pub mod bus;

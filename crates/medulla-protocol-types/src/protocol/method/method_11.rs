@@ -311,6 +311,23 @@ $($variants)*
         request: Box<medulla_decision_outcome_types::decision::web_fetch_selection::SelectWebPagesRequest>,
     },
 
+    // ── Branches (MEDULLA-BRANCH-MERGE-R001) ──
+    /// Create one branch of `graph`: one branch registry row, no graph data
+    /// copied. `tenant` must be the verified request tenant
+    /// (`BRANCH_TENANT_DENIED`). `base_engine_version` defaults to the graph
+    /// head and may not exceed it (`BRANCH_BASE_UNKNOWN`). The name matches
+    /// `[a-z0-9][a-z0-9._/-]{0,127}` (`BRANCH_NAME_INVALID`); `main` and the
+    /// `eg/` prefix are reserved (`BRANCH_NAME_RESERVED`); a name with a row
+    /// refuses `BRANCH_EXISTS`. Every refusal writes nothing. See
+    /// [`medulla_types::branch`].
+    CreateBranch {
+        tenant: String,
+        graph: String,
+        name: String,
+        #[serde(default)]
+        base_engine_version: Option<u64>,
+    },
+
     // ── Context facts (MEDULLA-DECISION-ENGINE-R152) ──
     /// Cited facts of ranked nodes inside a token budget: for each node id in
     /// the caller's order, the visible literal properties and outgoing edges as

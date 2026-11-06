@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 const OWNER_LAYOUT_DOMAIN: &[u8] = b"eg/mutation-owner-layout/v1\0";
-const OWNER_LAYOUT_NAMES: [&str; 18] = [
+const OWNER_LAYOUT_NAMES: [&str; 19] = [
     "ledger_only",
     "rbac",
     "jobs",
@@ -25,8 +25,9 @@ const OWNER_LAYOUT_NAMES: [&str; 18] = [
     "cluster_hierarchy",
     "graph_shard",
     "agent_library",
+    "branch_registry",
 ];
-pub(crate) const OWNER_LAYOUT_DOMAINS: [DurabilityDomain; 18] = [
+pub(crate) const OWNER_LAYOUT_DOMAINS: [DurabilityDomain; 19] = [
     DurabilityDomain::ControlPlane,
     DurabilityDomain::ControlPlane,
     DurabilityDomain::AnalyticsJob,
@@ -46,6 +47,8 @@ pub(crate) const OWNER_LAYOUT_DOMAINS: [DurabilityDomain; 18] = [
     DurabilityDomain::GraphRows,
     // RF-020 Agent Library: a ControlPlane owner file, reusing the existing
     // native mutation ledger rather than introducing another durability domain.
+    DurabilityDomain::ControlPlane,
+    // MEDULLA-BRANCH-MERGE-R001 branch registry: a ControlPlane owner file.
     DurabilityDomain::ControlPlane,
 ];
 
@@ -89,6 +92,9 @@ pub enum OwnerLayout {
     /// The durable RF-020 Agent Library revisions and current heads
     /// (`agent_library.redb`).
     AgentLibrary,
+    /// The durable branch registry rows (`branch_registry.redb`,
+    /// MEDULLA-BRANCH-MERGE-R001).
+    BranchRegistry,
 }
 
 impl OwnerLayout {
