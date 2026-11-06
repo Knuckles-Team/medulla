@@ -2,6 +2,7 @@
 
 Provider: medulla MEDULLA-CONTRACT-R058
 Consumer: medulla MEDULLA-DURABLE-KERNEL-R083.5
+Consumer: medulla MEDULLA-DURABLE-KERNEL-R800.3
 
 The initial `KNOB_TABLE` of `crates/medulla-server-api/src/knob_config.rs`: one entry per knob named by a spec row (`knob <name>`). Every knob is read from `--knob <name>=<value>`, then env `MEDULLA_<NAME>` (upper-case, dots to underscores), then the default. Ranges are inclusive. A `Fixed` knob has a one-value range; the evolution loop never changes it (MEDULLA-DECISION-ENGINE-R179).
 
@@ -10,6 +11,8 @@ The initial `KNOB_TABLE` of `crates/medulla-server-api/src/knob_config.rs`: one 
 | `kvcache.hot_bytes` | u64 | 1073741824 | [67108864, 1099511627776] | bytes | Tunable | `MEDULLA_KVCACHE_HOT_BYTES` |
 | `kvcache.warm_bytes` | u64 | 4294967296 | [67108864, 1099511627776] | bytes | Tunable | `MEDULLA_KVCACHE_WARM_BYTES` |
 | `kvcache.cold_bytes` | u64 | 68719476736 | [67108864, 1099511627776] | bytes | Tunable | `MEDULLA_KVCACHE_COLD_BYTES` |
+| `kvcache.min_worth` | f64 | 0.001 | [0, 1000] | ms per byte per hit | Tunable | `MEDULLA_KVCACHE_MIN_WORTH` |
+| `kvcache.answer_max_bytes` | u64 | 268435456 | [1048576, 68719476736] | bytes | Tunable | `MEDULLA_KVCACHE_ANSWER_MAX_BYTES` |
 | `council.quorum_fraction` | f64 | 0.5 | [0.5, 1] | fraction | Tunable | `MEDULLA_COUNCIL_QUORUM_FRACTION` |
 | `designation.reward_decay` | f64 | 0.99 | [0.5, 1] | factor | Tunable | `MEDULLA_DESIGNATION_REWARD_DECAY` |
 | `designation.max_required_capabilities` | u64 | 32 | [32, 32] | count | Fixed | `MEDULLA_DESIGNATION_MAX_REQUIRED_CAPABILITIES` |

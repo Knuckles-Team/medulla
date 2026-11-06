@@ -2236,7 +2236,6 @@ components:
       - "crates/medulla-kvcache/src/cold_cutover_tests.rs"
       - "crates/medulla-kvcache/src/compress.rs"
       - "crates/medulla-kvcache/src/contract.rs"
-      - "crates/medulla-kvcache/src/graph_importance.rs"
       - "crates/medulla-kvcache/src/hash.rs"
       - "crates/medulla-kvcache/src/shared.rs"
       - "crates/medulla-kvcache/src/tiered.rs"
@@ -2246,6 +2245,7 @@ components:
       - "crates/medulla-kvcache/src/lib.rs"
     test_roots:
       - "crates/medulla-kvcache/tests"
+      - "crates/medulla-kvcache/benches"
     generated_roots: []
     shared_roots: []
     shared_files: []
@@ -2257,7 +2257,6 @@ components:
       observation recorded as evidence, NOT a second dependency-graph authority.
     observed_crate_edges:
       dependencies:
-        - "medulla-kvcache -> medulla-compute [medulla.compute]"
         - "medulla-kvcache -> medulla-modality [medulla.modality]"
       dev_dependencies: []
     observed_consumers: []
@@ -2624,6 +2623,7 @@ components:
     owned_source_roots:
       - "crates/medulla-compute/src/algorithms"
       - "crates/medulla-graph-algos/src/algorithms.rs"
+      - "crates/medulla-graph-algos/src/graph_importance.rs"
       - "crates/medulla-compute/src/ast"
       - "crates/medulla-compute/src/contract.rs"
       - "crates/medulla-compute/src/datascience"
@@ -2664,7 +2664,6 @@ components:
     observed_consumers:
       - "medulla.embedded-bindings (crates/medulla-pyengine -> crates/medulla-compute)"
       - "medulla.epistemic (crates/medulla-epistemic -> crates/medulla-compute)"
-      - "medulla.kv-cache (crates/medulla-kvcache -> crates/medulla-compute)"
       - "medulla.query-plan (crates/medulla-plan -> crates/medulla-compute)"
       - "medulla.query-plan (crates/medulla-query -> crates/medulla-compute)"
       - "medulla.timeseries (crates/medulla-tsdb -> crates/medulla-compute)"
@@ -4000,6 +3999,7 @@ components:
       - "tests/test_federated_query_file_size.py"
       - "tests/test_kvcache_config.py"
       - "tests/test_kvcache_connector.py"
+      - "tests/test_kvcache_policy_served.py"
       - "tests/test_lake_iceberg_delta_parity.py"
       - "tests/test_match_ontology_terms.py"
       - "tests/test_measurement_lite.py"

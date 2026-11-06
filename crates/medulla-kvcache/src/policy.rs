@@ -7,12 +7,92 @@
 //! was built at advances, or once its volatility window passes. Every refusal is a
 //! miss with no content: this policy never returns a stale or cross-tenant hit.
 //!
-//! The wiring into the served versioned KV tier is MEDULLA-DURABLE-KERNEL-R800.3.
+//! The wiring into the served answer cache and the shared block store is
+//! MEDULLA-DURABLE-KERNEL-R800.3; the decision counters are R800.5.
 
 use std::cmp::{Ordering, Reverse};
 use std::collections::{BinaryHeap, HashMap};
+use std::sync::OnceLock;
 
 use crate::tiered::Tier;
+
+/// One policy decision, as reported to the installed [`PolicyObserver`].
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum PolicyEvent {
+    /// An entry cleared the floor and became resident.
+    Admitted,
+    /// An admission was refused; nothing was stored.
+    Refused,
+    /// A resident left to make room.
+    Evicted,
+    /// A resident was dropped because a dependency advanced or its window passed.
+    Invalidated,
+    /// A fresh entry was served.
+    Hit,
+    /// No servable entry existed.
+    Miss,
+}
+
+impl PolicyEvent {
+    /// Every event, in counter order.
+    pub const ALL: [PolicyEvent; 6] = [
+        Self::Admitted,
+        Self::Refused,
+        Self::Evicted,
+        Self::Invalidated,
+        Self::Hit,
+        Self::Miss,
+    ];
+
+    /// The `event` label of the decision counter.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Admitted => "admitted",
+            Self::Refused => "refused",
+            Self::Evicted => "evicted",
+            Self::Invalidated => "invalidated",
+            Self::Hit => "hit",
+            Self::Miss => "miss",
+        }
+    }
+}
+
+/// One decision. It names a key digest and a tenant, never a key or a value.
+#[derive(Clone, Copy, Debug)]
+pub struct PolicyDecision<'a> {
+    /// The tier label the deciding [`PolicyTier`] carries.
+    pub tier: &'a str,
+    /// What was decided.
+    pub event: PolicyEvent,
+    /// The tenant the entry belongs to (an observer records a digest, not this).
+    pub tenant: &'a str,
+    /// The entry's key digest.
+    pub key_digest: &'a str,
+    /// The entry's worth at the decision.
+    pub worth: f64,
+    /// The closed refusal reason, for a refused admission.
+    pub reason: Option<&'static str>,
+}
+
+/// Receives every decision of every [`PolicyTier`] in the process.
+pub trait PolicyObserver: Send + Sync {
+    /// Record one decision. Must not block and must not call back into a tier.
+    fn record(&self, decision: &PolicyDecision<'_>);
+}
+
+static OBSERVER: OnceLock<Box<dyn PolicyObserver>> = OnceLock::new();
+
+/// Install the process-wide observer; the first install wins and `false` means one
+/// was already installed.
+pub fn install_observer(observer: Box<dyn PolicyObserver>) -> bool {
+    OBSERVER.set(observer).is_ok()
+}
+
+fn observe(decision: PolicyDecision<'_>) {
+    if let Some(observer) = OBSERVER.get() {
+        observer.record(&decision);
+    }
+}
 
 /// The generation of one dependency an entry was derived from.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -61,6 +141,30 @@ pub enum AdmissionRefusal {
     BelowMinWorth,
 }
 
+impl AdmissionRefusal {
+    /// The closed, content-free reason recorded in the decision trace.
+    pub fn reason(&self) -> &'static str {
+        match self {
+            Self::Oversize { .. } => "oversize",
+            Self::UnknownGeneration(_) => "unknown_generation",
+            Self::BelowMinWorth => "below_min_worth",
+        }
+    }
+}
+
+/// What one lookup found. A stale or expired entry is dropped on the way out and
+/// reported as `Invalidated`; both it and `Miss` carry no content.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum LookupOutcome {
+    /// A fresh entry was served.
+    Hit(Vec<u8>),
+    /// No entry was resident.
+    Miss,
+    /// An entry was resident but a dependency generation advanced or its window
+    /// passed; it was dropped.
+    Invalidated,
+}
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 struct Worth(f64);
 
@@ -89,6 +193,7 @@ struct Resident {
 
 /// One tier governed by a [`TierPolicy`].
 pub struct PolicyTier {
+    label: &'static str,
     policy: TierPolicy,
     generations: HashMap<String, u64>,
     entries: HashMap<TenantKey, Resident>,
@@ -100,6 +205,7 @@ pub struct PolicyTier {
 impl PolicyTier {
     pub fn new(policy: TierPolicy) -> Self {
         Self {
+            label: "tier",
             policy,
             generations: HashMap::new(),
             entries: HashMap::new(),
@@ -109,10 +215,23 @@ impl PolicyTier {
         }
     }
 
+    /// Name this tier in the decisions it reports (`answer`, `block`, ...).
+    pub fn with_label(mut self, label: &'static str) -> Self {
+        self.label = label;
+        self
+    }
+
     /// Declare or advance a dependency source's current generation. Entries built
     /// at an older generation stop being served.
     pub fn set_generation(&mut self, source: impl Into<String>, generation: u64) {
         self.generations.insert(source.into(), generation);
+    }
+
+    /// [`set_generation`](Self::set_generation) that never moves a source backwards, for
+    /// callers that learn generations from concurrent computations.
+    pub fn advance_generation(&mut self, source: impl Into<String>, generation: u64) {
+        let slot = self.generations.entry(source.into()).or_insert(generation);
+        *slot = (*slot).max(generation);
     }
 
     pub fn used_bytes(&self) -> u64 {
@@ -141,27 +260,43 @@ impl PolicyTier {
         content: Vec<u8>,
         expires_at_ms: u64,
     ) -> Result<(), AdmissionRefusal> {
-        if meta.bytes > self.policy.max_bytes {
-            return Err(AdmissionRefusal::Oversize {
-                bytes: meta.bytes,
-                max_bytes: self.policy.max_bytes,
-            });
-        }
-        if let Some(dep) = meta.deps.iter().find(|dep| !self.dep_is_current(dep)) {
-            return Err(AdmissionRefusal::UnknownGeneration(dep.clone()));
-        }
-        if meta.worth() < self.policy.min_worth {
-            return Err(AdmissionRefusal::BelowMinWorth);
+        self.admit_reporting(tenant, meta, content, expires_at_ms)
+            .map(|_| ())
+    }
+
+    /// [`admit`](Self::admit) that also returns the metadata of every resident it
+    /// evicted to make room, so a caller that keeps the bytes elsewhere can release
+    /// them. An entry replaced under its own key is not reported.
+    pub fn admit_reporting(
+        &mut self,
+        tenant: &str,
+        meta: CacheEntryMeta,
+        content: Vec<u8>,
+        expires_at_ms: u64,
+    ) -> Result<Vec<CacheEntryMeta>, AdmissionRefusal> {
+        if let Some(refusal) = self.refusal_for(&meta) {
+            self.report(
+                tenant,
+                &meta.key_digest,
+                PolicyEvent::Refused,
+                meta.worth(),
+                Some(refusal.reason()),
+            );
+            return Err(refusal);
         }
         let key = (tenant.to_string(), meta.key_digest.clone());
         self.remove(&key);
+        let mut evicted = Vec::new();
         while self.used_bytes + meta.bytes > self.policy.max_bytes {
-            if self.evict_lowest().is_none() {
-                break;
+            match self.evict_lowest() {
+                Some(gone) => evicted.push(gone),
+                None => break,
             }
         }
         self.used_bytes += meta.bytes;
-        let stamp = self.push_heap(&key, meta.worth());
+        let worth = meta.worth();
+        let stamp = self.push_heap(&key, worth);
+        self.report(tenant, &meta.key_digest, PolicyEvent::Admitted, worth, None);
         self.entries.insert(
             key,
             Resident {
@@ -171,42 +306,123 @@ impl PolicyTier {
                 stamp,
             },
         );
-        Ok(())
+        Ok(evicted)
+    }
+
+    fn refusal_for(&self, meta: &CacheEntryMeta) -> Option<AdmissionRefusal> {
+        if meta.bytes > self.policy.max_bytes {
+            return Some(AdmissionRefusal::Oversize {
+                bytes: meta.bytes,
+                max_bytes: self.policy.max_bytes,
+            });
+        }
+        if let Some(dep) = meta.deps.iter().find(|dep| !self.dep_is_current(dep)) {
+            return Some(AdmissionRefusal::UnknownGeneration(dep.clone()));
+        }
+        if meta.worth() < self.policy.min_worth {
+            return Some(AdmissionRefusal::BelowMinWorth);
+        }
+        None
+    }
+
+    fn report(
+        &self,
+        tenant: &str,
+        key_digest: &str,
+        event: PolicyEvent,
+        worth: f64,
+        reason: Option<&'static str>,
+    ) {
+        observe(PolicyDecision {
+            tier: self.label,
+            event,
+            tenant,
+            key_digest,
+            worth,
+            reason,
+        });
     }
 
     /// Serve `tenant`'s entry, counting a hit. A stale, expired or absent entry is
     /// a miss; a stale or expired entry is dropped on the way out.
     pub fn lookup(&mut self, tenant: &str, key_digest: &str, now_ms: u64) -> Option<Vec<u8>> {
+        match self.lookup_outcome(tenant, key_digest, now_ms) {
+            LookupOutcome::Hit(content) => Some(content),
+            LookupOutcome::Miss | LookupOutcome::Invalidated => None,
+        }
+    }
+
+    /// [`lookup`](Self::lookup) that says why it missed: absent, or dropped because a
+    /// dependency generation advanced or the volatility window passed.
+    pub fn lookup_outcome(&mut self, tenant: &str, key_digest: &str, now_ms: u64) -> LookupOutcome {
         let key = (tenant.to_string(), key_digest.to_string());
-        let fresh = {
-            let resident = self.entries.get(&key)?;
-            now_ms < resident.expires_at_ms
-                && resident
-                    .meta
-                    .deps
-                    .iter()
-                    .all(|dep| self.dep_is_current(dep))
+        let fresh = match self.entries.get(&key) {
+            None => {
+                self.report(tenant, key_digest, PolicyEvent::Miss, 0.0, None);
+                return LookupOutcome::Miss;
+            }
+            Some(resident) => {
+                now_ms < resident.expires_at_ms
+                    && resident
+                        .meta
+                        .deps
+                        .iter()
+                        .all(|dep| self.dep_is_current(dep))
+            }
         };
         if !fresh {
-            self.remove(&key);
-            return None;
+            let worth = self.remove(&key).map_or(0.0, |gone| gone.worth());
+            self.report(tenant, key_digest, PolicyEvent::Invalidated, worth, None);
+            return LookupOutcome::Invalidated;
         }
-        let worth = {
-            let resident = self.entries.get_mut(&key)?;
-            resident.meta.hits += 1;
-            resident.meta.worth()
+        let worth = match self.entries.get_mut(&key) {
+            Some(resident) => {
+                resident.meta.hits += 1;
+                resident.meta.worth()
+            }
+            None => return LookupOutcome::Miss,
         };
         let stamp = self.push_heap(&key, worth);
-        let resident = self.entries.get_mut(&key)?;
-        resident.stamp = stamp;
-        Some(resident.content.clone())
+        self.report(tenant, key_digest, PolicyEvent::Hit, worth, None);
+        match self.entries.get_mut(&key) {
+            Some(resident) => {
+                resident.stamp = stamp;
+                LookupOutcome::Hit(resident.content.clone())
+            }
+            None => LookupOutcome::Miss,
+        }
+    }
+
+    /// Drop `tenant`'s entry without counting a hit; `true` when one was resident.
+    pub fn invalidate(&mut self, tenant: &str, key_digest: &str) -> bool {
+        match self.remove(&(tenant.to_string(), key_digest.to_string())) {
+            Some(gone) => {
+                self.report(
+                    tenant,
+                    key_digest,
+                    PolicyEvent::Invalidated,
+                    gone.worth(),
+                    None,
+                );
+                true
+            }
+            None => false,
+        }
     }
 
     /// Remove and return the lowest-worth resident's metadata.
     pub fn evict_lowest(&mut self) -> Option<CacheEntryMeta> {
         while let Some(Reverse((_, stamp, key))) = self.heap.pop() {
             if self.entries.get(&key).is_some_and(|r| r.stamp == stamp) {
-                return self.remove(&key);
+                let gone = self.remove(&key)?;
+                self.report(
+                    &key.0,
+                    &gone.key_digest,
+                    PolicyEvent::Evicted,
+                    gone.worth(),
+                    None,
+                );
+                return Some(gone);
             }
         }
         None

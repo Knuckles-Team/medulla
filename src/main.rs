@@ -319,7 +319,19 @@ async fn run_inner() -> Result<(), Box<dyn std::error::Error>> {
     // MEDULLA-CONTRACT-R058: every knob is read and bounds-checked once, before
     // any listener binds; a refusal exits non-zero.
     match medulla_server_api::knob_config::load_knobs(&args.knob, |name| std::env::var(name).ok()) {
-        Ok(knobs) => medulla_server_api::knob_config::install(knobs),
+        Ok(knobs) => {
+            // MEDULLA-DURABLE-KERNEL-R800.3: the served answer cache admits answers by the
+            // loaded `kvcache.min_worth` and `kvcache.answer_max_bytes`, before any graph
+            // builds its cache.
+            #[cfg(feature = "result-cache")]
+            medulla_query_cache::result_cache::install_tier_policy(
+                medulla_query_cache::result_cache::TierPolicy {
+                    max_bytes: knobs.kvcache_answer_max_bytes,
+                    min_worth: knobs.kvcache_min_worth,
+                },
+            );
+            medulla_server_api::knob_config::install(knobs)
+        }
         Err(refusal) => {
             eprintln!("error: {refusal}");
             std::process::exit(2);

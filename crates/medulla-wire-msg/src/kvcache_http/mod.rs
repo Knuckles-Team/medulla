@@ -27,7 +27,13 @@
 //! * `HEAD /kv/<hash>`          → `200` if present + fresh, `404` if absent/stale.
 //! * `GET  /kv/<hash>/exists`   → `200` JSON `{"hash":…,"exists":bool}` (an
 //!   HTTP-method-agnostic existence probe for clients that cannot issue `HEAD`).
-//! * `GET  /kv/stats`           → `200` JSON occupancy + dedup + `stale_retired` stats.
+//! * `GET  /kv/stats`           → `200` JSON occupancy + dedup + `stale_retired` stats, plus
+//!   the tier-policy evidence (`policy`): the `medulla_kvcache_policy_total{tier,event}`
+//!   counters, the hit ratio and a replayable trace of the newest 1,024 decisions
+//!   (digests only, never a key, a value or a tenant name).
+//! * A `PUT` the tier policy refuses answers `202 Accepted` and stores nothing; the
+//!   optional `X-MEDULLA-Rebuild-Cost-Ms` header is the writer's claim of what recomputing
+//!   the block would cost.
 //! * `GET  /kv/version`         → `200` JSON `{"tracking":bool,"version":n|null}` (the
 //!   current data version, CONCEPT:MEDULLA-KG.storage.content-addressed-put).
 //! * `PUT  /kv/version/<n>`     → advance the data version to `<n>`, retiring every
@@ -103,10 +109,14 @@ use medulla_server_api::state::ServerState;
 mod fork;
 /// The networked (mutation-store-backed) shared backend — the durable, fleet-shared
 /// KV-cache over the engine's live `kv.redb` (feature `kv`). See [`shared_store`].
+mod metrics;
 #[cfg(feature = "kv")]
 mod shared_store;
 #[cfg(feature = "kv")]
-pub use shared_store::{rank_keys_by_importance, SharedKvStoreBackend, SharedKvStoreStats};
+pub use shared_store::{
+    rank_keys_by_importance, SharedKvStoreBackend, SharedKvStoreStats, StoreOutcome,
+    DEFAULT_BLOCK_POLICY,
+};
 
 /// Env var selecting the KV-cache backend (CONCEPT:MEDULLA-KG.backend.networked-shared-kv):
 /// `durable` (aliases `shared`/`store`) ⇒ the mutation-store-backed, FLEET-SHARED,
@@ -137,8 +147,22 @@ pub const KVCACHE_TOKEN_ENV: &str = "MEDULLA_KVCACHE_TOKEN";
 /// ([`DataVersion::Agnostic`], never version-invalidated) — so existing connectors are
 /// unaffected.
 pub const KVCACHE_DATA_VERSION_HEADER: &str = "x-medulla-data-version";
+/// Request header (MEDULLA-DURABLE-KERNEL-R800.3): the caller's claim, in whole
+/// milliseconds, of what recomputing the PUT block would cost. The tier policy weighs the
+/// block by it; absent, the block is priced at the worth floor.
+pub const KVCACHE_REBUILD_COST_HEADER: &str = "x-medulla-rebuild-cost-ms";
 const MAX_KVCACHE_BODY_BYTES: usize = 64 * 1024 * 1024;
 const HTTP_READ_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(15);
+
+/// How a `PUT /kv/<hash>` ended.
+enum PutStatus {
+    /// A new block was stored.
+    Created,
+    /// The block was already present.
+    Deduplicated,
+    /// The tier policy refused the block; nothing was stored.
+    Refused,
+}
 
 /// The KV-cache backing store: the shared, content-addressed, ref-counted index behind
 /// a `Mutex` (the index needs `&mut` to `put`/`release`; the guard is held only for the
@@ -208,6 +232,33 @@ impl KvCacheStore {
             .lock()
             .unwrap()
             .put_block(hash, block, derived_at))
+    }
+
+    /// [`put`](Self::put) that also carries the caller's rebuild-cost claim and reports a
+    /// tier-policy refusal as such rather than as a dedup.
+    fn put_priced(
+        &self,
+        hash: &str,
+        block: Vec<u8>,
+        derived_at: DataVersion,
+        rebuild_cost_ms: Option<u64>,
+    ) -> Result<PutStatus, String> {
+        #[cfg(feature = "kv")]
+        if let Some(durable) = &self.durable {
+            return Ok(
+                match durable.store_block_priced(hash, block, derived_at, rebuild_cost_ms)? {
+                    StoreOutcome::Created => PutStatus::Created,
+                    StoreOutcome::Deduplicated => PutStatus::Deduplicated,
+                    StoreOutcome::Refused(_) => PutStatus::Refused,
+                },
+            );
+        }
+        let _ = rebuild_cost_ms;
+        Ok(if self.put(hash, block, derived_at)? {
+            PutStatus::Created
+        } else {
+            PutStatus::Deduplicated
+        })
     }
 
     fn contains(&self, hash: &str) -> bool {
@@ -373,6 +424,7 @@ impl KvCacheStore {
                 "put_new": s.put_new,
                 "stale_missed": s.stale_missed,
                 "hit_rate": s.hit_rate(),
+                "policy": metrics::global().snapshot_json(),
             })
             .to_string();
         }
@@ -389,6 +441,7 @@ impl KvCacheStore {
             "get_hits": s.get_hits,
             "get_misses": s.get_misses,
             "stale_retired": s.stale_retired,
+            "policy": metrics::global().snapshot_json(),
         })
         .to_string()
     }
@@ -680,9 +733,16 @@ fn head(store: &KvCacheStore, hash: &str) -> KvResponse {
 /// — never a silent success.
 fn put_block(store: &KvCacheStore, req: &HttpMessage, hash: &str) -> KvResponse {
     let derived_at = parse_data_version(&req.headers);
-    match store.put(hash, req.body.clone(), derived_at) {
-        Ok(true) => KvResponse::empty("201 Created"),
-        Ok(false) => KvResponse::empty("200 OK"),
+    let rebuild_cost_ms = req
+        .headers
+        .get(KVCACHE_REBUILD_COST_HEADER)
+        .and_then(|value| value.trim().parse::<u64>().ok());
+    match store.put_priced(hash, req.body.clone(), derived_at, rebuild_cost_ms) {
+        Ok(PutStatus::Created) => KvResponse::empty("201 Created"),
+        Ok(PutStatus::Deduplicated) => KvResponse::empty("200 OK"),
+        // Accepted, not stored: the tier policy kept the block out, and a refusal is a
+        // miss for the next GET, never an error for the writer.
+        Ok(PutStatus::Refused) => KvResponse::empty("202 Accepted"),
         Err(error) => {
             tracing::warn!(
                 target: "medulla::kvcache",
@@ -714,6 +774,8 @@ pub async fn serve_with_security(
     addr: &str,
     state: Arc<RwLock<ServerState>>,
 ) -> std::io::Result<()> {
+    // Register the decision counters before the first block or answer is judged.
+    let _ = metrics::global();
     let store = Arc::new(resolve_store(&state).await?);
     let auth = resolve_auth()?;
     serve_with_store_inner(addr, store, auth).await
@@ -763,10 +825,18 @@ async fn resolve_store(state: &Arc<RwLock<ServerState>>) -> std::io::Result<KvCa
             instance = %instance_id,
             "kvcache: using the durable, fleet-shared mutation-store-backed backend"
         );
-        Ok(KvCacheStore::with_durable(SharedKvStoreBackend::new(
-            kv,
-            instance_id,
-        )))
+        // The block tier follows the server's loaded knobs, like the served answer cache.
+        let knobs = medulla_server_api::knob_config::knobs();
+        Ok(KvCacheStore::with_durable(
+            SharedKvStoreBackend::with_policy(
+                kv,
+                instance_id,
+                medulla_kvcache::TierPolicy {
+                    max_bytes: knobs.kvcache_answer_max_bytes,
+                    min_worth: knobs.kvcache_min_worth,
+                },
+            ),
+        ))
     }
     #[cfg(not(feature = "kv"))]
     {
