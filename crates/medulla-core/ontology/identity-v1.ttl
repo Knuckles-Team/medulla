@@ -2,6 +2,8 @@
 @prefix fibo-org: <https://spec.edmcouncil.org/fibo/ontology/FND/Organizations/Organizations/> .
 @prefix bibo: <http://purl.org/ontology/bibo/> .
 @prefix time: <http://www.w3.org/2006/time#> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix dc: <http://purl.org/dc/terms/> .
@@ -81,6 +83,52 @@
     rdfs:comment "The status of an identity user account: ACTIVE, SUSPENDED or DEACTIVATED." ;
     rdfs:domain :IdentityUser ;
     rdfs:range xsd:string .
+
+# ── Client session record (MEDULLA-IDENTITY-R705) ───────────────────────────────
+:ClientSession a owl:Class ;
+    rdfs:label "Client Session" ;
+    rdfs:comment "One client session opened against the engine (MCP session open); the node id is client_session:<tenant>:<session_id>. Mapped to PROV as a close match of prov:Activity." ;
+    skos:closeMatch prov:Activity ;
+    rdfs:subClassOf :Session .
+
+:principal a owl:DatatypeProperty ;
+    rdfs:label "principal" ;
+    rdfs:comment "The verified caller that opened the session; a write naming another principal is refused unless the caller holds identity:admin." ;
+    skos:closeMatch prov:wasAssociatedWith ;
+    rdfs:domain :ClientSession ;
+    rdfs:range xsd:string .
+
+:tenant a owl:DatatypeProperty ;
+    rdfs:label "tenant" ;
+    rdfs:comment "The tenant the session belongs to; reads filter by it." ;
+    rdfs:domain :ClientSession ;
+    rdfs:range xsd:string .
+
+:session_id a owl:DatatypeProperty ;
+    rdfs:label "session id" ;
+    rdfs:comment "The client-chosen session identifier; the node id is client_session:<tenant>:<session_id>." ;
+    rdfs:domain :ClientSession ;
+    rdfs:range xsd:string .
+
+:client a owl:DatatypeProperty ;
+    rdfs:label "client" ;
+    rdfs:comment "The MCP client that opened the session." ;
+    rdfs:domain :ClientSession ;
+    rdfs:range xsd:string .
+
+:started_at_ms a owl:DatatypeProperty ;
+    rdfs:label "started at (ms)" ;
+    rdfs:comment "Session start, milliseconds since the Unix epoch." ;
+    skos:closeMatch prov:startedAtTime ;
+    rdfs:domain :ClientSession ;
+    rdfs:range xsd:long .
+
+:ended_at_ms a owl:DatatypeProperty ;
+    rdfs:label "ended at (ms)" ;
+    rdfs:comment "Session end, milliseconds since the Unix epoch; unbound while the session is open." ;
+    skos:closeMatch prov:endedAtTime ;
+    rdfs:domain :ClientSession ;
+    rdfs:range xsd:long .
 
 # ── Core rooting (MEDULLA-TYPED-PACKS-R071.2) ───────────────────────────────────
 # Every class of this module above reaches the core class kg:DomainEntity through rdfs:subClassOf.
