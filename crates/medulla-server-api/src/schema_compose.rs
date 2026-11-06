@@ -47,6 +47,14 @@ pub struct ComposedSchema {
     pub(crate) abox_consistent: parking_lot::Mutex<bool>,
 }
 
+impl ComposedSchema {
+    /// Whether the full-ABox tableau has already accepted this composition, so
+    /// the next entering-schema check of the same sources is a memo hit.
+    pub fn abox_verified(&self) -> bool {
+        *self.abox_consistent.lock()
+    }
+}
+
 /// The validated composition of `sources`, compiled at most once per content
 /// identity (`composed_digest`, see [`compiled`]) and shared by every graph
 /// that composes the same schema.

@@ -14,8 +14,6 @@
 //! the Agent Library and jobs, a binding for a semantic index, a resource for
 //! the tenant's shared SQL catalog.
 
-#[cfg(feature = "redb")]
-use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 use std::sync::Arc;
 
 use tokio::sync::RwLock;
@@ -208,7 +206,7 @@ async fn resolve_native(
 ) -> Result<Owner, String> {
     match (store, scope) {
         (NativeOutboxStore::AgentLibrary, _) => Ok(Owner::AgentLibrary {
-            store: state.write().await.ensure_agent_library()?,
+            store: medulla_persistence_records::agent_library::shared_agent_library(state).await?,
             tenant_id: verified.tenant().to_string(),
         }),
         (NativeOutboxStore::Jobs, _) => jobs_owner(state).await,

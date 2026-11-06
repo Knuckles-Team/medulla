@@ -142,6 +142,7 @@ pub(crate) async fn commit_pack_projection(
             "PACK_PROJECTION_GRAPH_NOT_MATERIALIZED: projection graph is incomplete".into(),
         );
     }
+    prevalidate_pack_projection(&entry.core, connector, record_id, &documents).await?;
     #[cfg(feature = "streaming")]
     let cdc = state.read().await.cdc_hub().cloned();
     let method = Method::GraphSchema {
@@ -376,6 +377,83 @@ pub(crate) fn apply_pack_source(
     if_composed_digest: Option<&str>,
 ) -> Result<medulla_catalog_types::graph_schema::GraphSchemaCommitted, String> {
     use medulla_catalog_types::graph_schema::GraphSchemaCommitted;
+    let (sources, changed, records) = pack_candidate_sources(
+        &core.schema_sources(),
+        connector,
+        record_id,
+        documents,
+        if_composed_digest,
+    )?;
+    medulla_server_api::schema_compose::validate_entering_schema(&sources)?;
+    revalidate_pack_crosswalks(&sources, &records)?;
+    if changed {
+        core.install_schema_sources(Arc::new(sources.clone()));
+    }
+    Ok(GraphSchemaCommitted {
+        schema_version: medulla_catalog_types::graph_schema::GRAPH_SCHEMA_RESULT_SCHEMA_VERSION,
+        graph: graph_name.to_string(),
+        composed_digest: sources.composed_digest().to_hex(),
+        graph_version: core.version().saturating_add(u64::from(changed)),
+        changed,
+        edit_head: edits::head(core),
+    })
+}
+
+/// Decide the entering-schema check for a pack projection on the BLOCKING pool,
+/// before the commit kernel runs (BUG-009).
+///
+/// Composition (the terminology tableau) and the full-ABox tableau are CPU work
+/// that grows with the pack's ontology. Run inline inside the commit closure they
+/// held a tokio worker for minutes on a large pack, and every request queued
+/// behind that worker or the state lock stalled. The verdict lands on the
+/// content-keyed compiled entry (and its ABox memo), so the authoritative check
+/// inside [`apply_pack_source`] is then a cache hit. A refusal here is the
+/// refusal the commit would give for the same bytes; if the graph's sources
+/// change in between, the in-commit check recomputes, so correctness never
+/// depends on this warm-up.
+async fn prevalidate_pack_projection(
+    core: &Arc<GraphCore>,
+    connector: &medulla_types::contract::ResourceId,
+    record_id: &str,
+    documents: &PackProjectionDocuments,
+) -> Result<(), String> {
+    let (candidate, _, _) = pack_candidate_sources(
+        &core.schema_sources(),
+        connector,
+        record_id,
+        PackSourceDocuments {
+            shapes: documents.shapes.clone(),
+            ontologies: documents.ontologies.clone(),
+            crosswalks: documents.crosswalks.clone(),
+        },
+        None,
+    )?;
+    medulla_server_api::api::dispatch_support::blocking_task(
+        "pack projection schema validation",
+        move || medulla_server_api::schema_compose::validate_entering_schema(&candidate).map(drop),
+    )
+    .await
+}
+
+/// The graph's schema sources with `connector`'s pack source attached, whether
+/// the attach changed them, and the pack's crosswalk records. Pure: shared by
+/// [`apply_pack_source`] and the off-runtime pre-validation in
+/// [`commit_pack_projection`], so both validate byte-identical sources under one
+/// `composed_digest`.
+fn pack_candidate_sources(
+    current: &medulla_graph_core::graph::GraphSchemaSources,
+    connector: &medulla_types::contract::ResourceId,
+    record_id: &str,
+    documents: PackSourceDocuments,
+    if_composed_digest: Option<&str>,
+) -> Result<
+    (
+        medulla_graph_core::graph::GraphSchemaSources,
+        bool,
+        Vec<medulla_catalog_types::domain_pack::VocabularyCrosswalk>,
+    ),
+    String,
+> {
     let PackSourceDocuments {
         shapes,
         ontologies,
@@ -389,7 +467,7 @@ pub(crate) fn apply_pack_source(
         medulla_types::contract::Digest256::parse(expected)
             .map_err(|error| format!("invalid if_composed_digest: {error}"))?;
     }
-    let mut sources = (*core.schema_sources()).clone();
+    let mut sources = current.clone();
     if let Some(expected) = if_composed_digest {
         let actual = sources.composed_digest().to_hex();
         if expected != actual {
@@ -413,19 +491,7 @@ pub(crate) fn apply_pack_source(
     .with_crosswalks(records.clone());
     let source_id = format!("pack:{}", connector.as_str());
     let changed = sources.attach_dynamic(source_id, source)?;
-    medulla_server_api::schema_compose::validate_entering_schema(&sources)?;
-    revalidate_pack_crosswalks(&sources, &records)?;
-    if changed {
-        core.install_schema_sources(Arc::new(sources.clone()));
-    }
-    Ok(GraphSchemaCommitted {
-        schema_version: medulla_catalog_types::graph_schema::GRAPH_SCHEMA_RESULT_SCHEMA_VERSION,
-        graph: graph_name.to_string(),
-        composed_digest: sources.composed_digest().to_hex(),
-        graph_version: core.version().saturating_add(u64::from(changed)),
-        changed,
-        edit_head: edits::head(core),
-    })
+    Ok((sources, changed, records))
 }
 
 /// The crosswalk records of a pack head, in canonical order. A body that is not

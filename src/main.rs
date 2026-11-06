@@ -494,6 +494,15 @@ async fn run_inner() -> Result<(), Box<dyn std::error::Error>> {
     };
     server_startup::serve_transports(transports, &state, &shutdown).await?;
 
+    // Close the Agent Library so it writes its clean-shutdown marker and the next
+    // boot skips its O(rows) recovery scan (BUG-009).
+    #[cfg(feature = "redb")]
+    if !medulla_persistence_records::agent_library::close_agent_library(&state).await {
+        tracing::warn!(
+            "Agent Library still held at shutdown; it closes when the last holder drops it"
+        );
+    }
+
     // Graceful shutdown: the accept loop has exited, so flush any bounded writer
     // work that had not yet crossed its acknowledgement barrier.
     server_startup::flush_durable_state(persistence_shutdown);

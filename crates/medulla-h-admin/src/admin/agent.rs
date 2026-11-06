@@ -1,6 +1,5 @@
 //! Authenticated Agent Library operation handlers.
 
-use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 use std::sync::Arc;
 
 use tokio::sync::RwLock;
@@ -52,9 +51,8 @@ async fn ensure_agent_library(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
 ) -> Result<Arc<medulla_persistence_records::agent_library::AgentLibraryStore>, Response> {
-    let mut guard = state.write().await;
-    guard
-        .ensure_agent_library()
+    medulla_persistence_records::agent_library::shared_agent_library(state)
+        .await
         .map_err(|error| Response::err(req_id, error))
 }
 
