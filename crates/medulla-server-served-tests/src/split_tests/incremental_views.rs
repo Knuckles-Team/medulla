@@ -128,3 +128,145 @@ async fn ontology_retraction_updates_closure_incrementally() {
         expected.classification.subsumers
     );
 }
+
+/// Name of the plan view the served hot-path proof defines (the matview registry is process-wide).
+#[cfg(all(feature = "matview", feature = "redb"))]
+const VIEW: &str = "served_plan_view_r001_10";
+#[cfg(all(feature = "matview", feature = "redb"))]
+const COMMONS: &str = "__commons__";
+#[cfg(all(feature = "matview", feature = "redb"))]
+const ADDED: usize = 200;
+#[cfg(all(feature = "matview", feature = "redb"))]
+const CHANGED: usize = 50;
+
+/// `Scan Doc` then `Filter year > 2000`.
+#[cfg(all(feature = "matview", feature = "redb"))]
+fn doc_plan() -> medulla_types::wire::Plan {
+    use medulla_types::wire::{Op, Plan, Pred};
+    Plan::new(vec![
+        Op::Scan {
+            label: "Doc".into(),
+        },
+        Op::Filter {
+            preds: vec![Pred::GtNum {
+                prop: "year".into(),
+                n: 2000.0,
+            }],
+        },
+    ])
+}
+
+#[cfg(all(feature = "matview", feature = "redb"))]
+fn doc_props(year: u32) -> Vec<u8> {
+    rmp_serde::to_vec_named(&serde_json::json!({ "type": "Doc", "year": year }))
+        .expect("doc properties")
+}
+
+/// One served request through the dispatch path; the reply must be a success.
+#[cfg(all(feature = "matview", feature = "redb"))]
+async fn send(
+    state: &Arc<RwLock<ServerState>>,
+    id: u64,
+    method: Method,
+) -> medulla_protocol_types::protocol::Response {
+    let reply = crate::tests::dispatch_on_heap(state, request(id, COMMONS, method)).await;
+    assert!(
+        reply.error.is_none(),
+        "request {id} failed: {:?}",
+        reply.error
+    );
+    reply
+}
+
+/// Rows the served `PlanMatViewGet` returns, sorted by id.
+#[cfg(all(feature = "matview", feature = "redb"))]
+async fn served_rows(state: &Arc<RwLock<ServerState>>, id: u64) -> Vec<(String, Option<f32>)> {
+    let reply = send(state, id, Method::PlanMatViewGet { name: VIEW.into() }).await;
+    let Some(medulla_protocol_types::protocol::ResultPayload::Raw(bytes)) = reply.result else {
+        panic!("PlanMatViewGet returned a non-raw payload");
+    };
+    let mut rows: Vec<(String, Option<f32>)> = rmp_serde::from_slice(&bytes).expect("view rows");
+    rows.sort_by(|a, b| a.0.cmp(&b.0));
+    rows
+}
+
+/// The same plan recomputed over the graph as it stands now, sorted by id.
+#[cfg(all(feature = "matview", feature = "redb"))]
+async fn recomputed_rows(state: &Arc<RwLock<ServerState>>) -> Vec<(String, Option<f32>)> {
+    let core = state
+        .read()
+        .await
+        .registry
+        .get(COMMONS)
+        .expect("graph exists")
+        .core
+        .clone();
+    let def = medulla_server_cdc::matview::PlanMatView {
+        name: VIEW.into(),
+        graph: COMMONS.into(),
+        plan: doc_plan(),
+    };
+    let (snapshot, _) = core.analysis_snapshot_versioned();
+    let semantic = core.semantic_store.read().clone();
+    let mut rows =
+        medulla_server_cdc::matview::materialize(&def, &snapshot, &semantic).expect("recompute");
+    rows.sort_by(|a, b| a.0.cmp(&b.0));
+    rows
+}
+
+/// Read the view after a write: it equals a recompute and still runs incrementally.
+#[cfg(all(feature = "matview", feature = "redb"))]
+async fn assert_view_equals_recompute(state: &Arc<RwLock<ServerState>>, id: u64) {
+    let served = served_rows(state, id).await;
+    assert_eq!(
+        served,
+        recomputed_rows(state).await,
+        "read after request {id}"
+    );
+    assert_eq!(
+        medulla_server_cdc::matview::manager().mode(VIEW),
+        Some(medulla_server_cdc::matview::Mode::Incremental)
+    );
+}
+
+/// The writes of the proof, in order: add `ADDED` docs, update `CHANGED`, remove `CHANGED`.
+#[cfg(all(feature = "matview", feature = "redb"))]
+fn doc_writes() -> Vec<Method> {
+    let node = |i: usize| format!("d{i}");
+    let add = (0..ADDED).map(|i| Method::AddNode {
+        node_id: node(i),
+        properties_msgpack: doc_props(1980 + (i % 40) as u32),
+    });
+    // An update is `AddNode` over an existing id: it replaces the properties.
+    let update = (0..CHANGED).map(|i| Method::AddNode {
+        node_id: node(i),
+        properties_msgpack: doc_props(if i % 2 == 0 { 2015 } else { 1985 }),
+    });
+    let remove = (ADDED - CHANGED..ADDED).map(|i| Method::RemoveNode { node_id: node(i) });
+    add.chain(update).chain(remove).collect()
+}
+
+// spec: MEDULLA-INCREMENTAL-VIEWS-R001.10
+#[cfg(all(feature = "matview", feature = "redb"))]
+#[tokio::test(flavor = "multi_thread")]
+async fn plan_view_served_define_write_get_equals_recompute() {
+    let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
+    let state = test_state(&[CREATOR]);
+    if state.read().await.registry.get(COMMONS).is_none() {
+        create_test_graph(&state, COMMONS, 1).await;
+    }
+    let define = Method::PlanMatViewDefine {
+        name: VIEW.into(),
+        graph: COMMONS.into(),
+        plan: doc_plan(),
+    };
+    send(&state, 2, define).await;
+    assert_view_equals_recompute(&state, 3).await;
+    for (step, write) in doc_writes().into_iter().enumerate() {
+        let id = 10 + 2 * step as u64;
+        send(&state, id, write).await;
+        assert_view_equals_recompute(&state, id + 1).await;
+    }
+    let dropped = Method::PlanMatViewDrop { name: VIEW.into() };
+    send(&state, 10_000, dropped).await;
+}
