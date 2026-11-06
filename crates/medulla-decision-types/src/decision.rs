@@ -41,6 +41,7 @@ pub mod request;
 pub mod statistical;
 pub mod task_plan;
 pub mod thought_search;
+pub mod usage;
 
 /// Format identity (RF-ADR-006) of an assembly decision record.
 pub const DECISION_RECORD_SCHEMA_VERSION: u16 = 1;
