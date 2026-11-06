@@ -11,6 +11,8 @@ so a caller can never mistake it for a value the client validated.
 from __future__ import annotations
 
 import functools
+import re
+from collections.abc import Callable, Coroutine
 from types import ModuleType
 from typing import Any, NamedTuple
 
@@ -140,3 +142,62 @@ async def send_by_id(
         graph,
         idempotency_key=idempotency_key,
     )
+
+
+Sender = Callable[..., Coroutine[Any, Any, Any]]
+Decoder = Callable[[OpaqueResult], Any]
+
+
+def _snake(method: str) -> str:
+    return re.sub(r"(?<!^)(?=[A-Z])", "_", method).lower()
+
+
+def contract_sender(
+    method: str,
+    params_model: str,
+    expect: Callable[[str, Any], Any] | None = None,
+) -> Sender:
+    """One sender from its contract row: validate the params, send, check the result.
+
+    ``params_model`` names the ``models`` class mirroring the Rust request variant;
+    ``expect`` checks a scalar payload (``expect_bool`` and friends). Without it the
+    payload comes back as an ``OpaqueResult`` for the method's ``decode_*``.
+    """
+
+    async def send(
+        client: Any,
+        params: dict[str, Any] | None = None,
+        graph: str | None = None,
+        *,
+        idempotency_key: str | None = None,
+    ) -> Any:
+        getattr(models(), params_model).model_validate(params or {})
+        payload = await client._send(
+            method,
+            params,
+            graph,
+            idempotency_key=idempotency_key,
+        )
+        if expect is None:
+            return OpaqueResult(method, payload)
+        return expect(method, payload)
+
+    send.__name__ = send.__qualname__ = f"send_{_snake(method)}"
+    send.__doc__ = f"Send one engine-contract request.\n\nMethod:\n    {method}\n"
+    return send
+
+
+def contract_decoder(method: str, result_model: str, op: str = "") -> Decoder:
+    """Validate a method's ``OpaqueResult`` against the named ``models`` result model.
+
+    ``op`` names the request op whose body ``result_model`` is, for a method that
+    declares one result body per op.
+    """
+
+    def decode(result: OpaqueResult) -> Any:
+        return decode_result(method, getattr(models(), result_model), result)
+
+    suffix = f"_{op}" if op else ""
+    decode.__name__ = decode.__qualname__ = f"decode_{_snake(method)}{suffix}"
+    decode.__doc__ = f"Validate the {method} result against {result_model}."
+    return decode

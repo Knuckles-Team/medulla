@@ -121,6 +121,9 @@ fn owned_prefix(authority: &CarrierAuthority, domain: &str) -> String {
 /// expose the before image to the old owner and the after image to the new owner,
 /// never both merely because one side was authorized.
 fn sanitize_event(authority: &GraphReadAuthority, mut event: CdcEvent) -> Option<CdcEvent> {
+    if is_topic_marker(&event) {
+        return Some(event);
+    }
     let before_visible = event.had_before && authority.can_see_blob(&event.before);
     let after_visible = event.had_after && authority.can_see_blob(&event.after);
     if !before_visible {
@@ -132,6 +135,13 @@ fn sanitize_event(authority: &GraphReadAuthority, mut event: CdcEvent) -> Option
         event.after.clear();
     }
     (before_visible || after_visible).then_some(event)
+}
+
+/// A reserved `__`-named topic marker (an action outbox topic, an incident or
+/// ingestion marker) names no row and carries no image, so it discloses
+/// nothing a graph reader cannot already see and passes through as it is.
+fn is_topic_marker(event: &CdcEvent) -> bool {
+    event.node_id.starts_with("__") && !event.had_before && !event.had_after
 }
 
 fn sanitize_watch(authority: &GraphReadAuthority, batch: WatchBatch) -> WatchBatch {

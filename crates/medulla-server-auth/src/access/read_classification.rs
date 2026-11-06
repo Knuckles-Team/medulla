@@ -71,6 +71,9 @@ pub(super) const RLS_ROUTED: &[&str] = &[
     "BatchL2Normalize",
     "BestTrajectory",
     "BetweennessCentrality",
+    // `graph_ops::bus::roster` reads the core `terminal::try_handle` projected
+    // through `read_authority.project_core` (graph_ops/terminal.rs).
+    "BusRoster",
     "CdcRead",
     "CommunityDetectEphemeral",
     "CommunityDetection",
@@ -122,8 +125,16 @@ pub(super) const RLS_ROUTED: &[&str] = &[
     "HasNode",
     "HasNodesBatch",
     "InDegree",
+    // `dispatch::incident::load` keeps only incidents `can_see_node` admits.
+    "IncidentEvidence",
+    // `handle_incident_related_claims` reads claims from `project_core` of the
+    // request graph, after `load`'s `can_see_node` incident filter.
+    "IncidentRelatedClaims",
     "KnowledgeStream",
     "ListGraphs",
+    // `graph_ops::memory_snapshot::{list, read}` read the projected core of
+    // `terminal::try_handle`, like `BusRoster`.
+    "ListMemorySnapshots",
     "ListRegisteredServers",
     "ListTriggers",
     "LiveArtifactGet",
@@ -156,6 +167,7 @@ pub(super) const RLS_ROUTED: &[&str] = &[
     "PersonalizedPageRank",
     "PlanMatViewGet",
     "ReadContinuousQuery",
+    "ReadMemorySnapshot",
     "ResolveCandidates",
     "ResolveConflict",
     "RunRules",

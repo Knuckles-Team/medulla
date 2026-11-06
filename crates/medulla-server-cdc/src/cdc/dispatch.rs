@@ -278,6 +278,20 @@ fn telemetry_derive_marker_event_id(method: &Method) -> Option<&'static str> {
         // MEDULLA-UNIFIED-DATA-PLANE-R700.3: the action outbox topics.
         Method::ActionRegister { .. } => Some("__action_register"),
         Method::ActionSubmit { .. } => Some("__action_completed"),
+        _ => record_write_marker_event_id(method),
+    }
+}
+
+/// Defense-in-depth markers for the record writes that commit their own
+/// graph rows: the workflow registry and schema boundary (mutating ops only),
+/// finance records, alerts and factor records.
+fn record_write_marker_event_id(method: &Method) -> Option<&'static str> {
+    match method {
+        Method::WorkflowRegistry { op } if op.is_mutation() => Some("__workflow_registry"),
+        Method::SchemaProjections { op } if op.is_mutation() => Some("__schema_projections"),
+        Method::FinanceRecordPut { .. } => Some("__finance_record_put"),
+        Method::FinanceAlertRaise { .. } => Some("__finance_alert_raise"),
+        Method::FinanceFactorRecord { .. } => Some("__finance_factor_record"),
         _ => None,
     }
 }

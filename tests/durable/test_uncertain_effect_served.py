@@ -60,13 +60,18 @@ def _scrape(client) -> dict[str, float]:
 
 
 def _audit_lines(client) -> list[str]:
-    """The event lines of the audit chain, oldest first."""
+    """The operation-event lines of the whole audit chain, oldest first.
+
+    The chain is shared by every test of the session and also holds entries
+    that are not operation events, so it is read to its verified length and a
+    sequence that is not an operation event is skipped, not taken as the end.
+    """
     lines = []
-    for seq in range(1, 200):
+    for seq in range(client.admin.audit_verify()["entries"] + 1):
         try:
             lines.append(client.admin.audit_read_event(seq)["event_line"])
         except EngineResponseError:
-            break
+            continue
     return lines
 
 
@@ -380,9 +385,13 @@ def test_audit_and_metrics_after_uncertain_run(metered_client):
     attempt = claim.get("attempt", 1)
 
     lines = [line for line in _audit_lines(client) if item in line]
-    assert len(lines) == 2, lines
-    assert any("MarkWorkItemEffectStarted" in line for line in lines)
-    assert any("RecordEffectReceipt" in line for line in lines)
+    # Exactly one reservation+outcome pair per write; the outcome names the
+    # reservation it closes.
+    assert len(lines) == 4, lines
+    for op in ("MarkWorkItemEffectStarted", "RecordEffectReceipt"):
+        pair = [line for line in lines if f"op={op}|" in line]
+        assert [("status=reserved" in line) for line in pair] == [True, False], pair
+        assert "status=ok" in pair[1] and "|reservation=" in pair[1], pair
     for line in lines:
         assert f"{item}:{attempt}:" in line
         assert "send" not in line  # no request parameters in the audit row

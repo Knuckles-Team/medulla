@@ -10,6 +10,8 @@ from pydantic import BaseModel, ConfigDict
 
 from ._runtime import (
     OpaqueResult,
+    contract_decoder,
+    contract_sender,
     decode_result,
     expect_bool,
     expect_count,
@@ -1432,3 +1434,19 @@ def __getattr__(name: str) -> Any:
     if name == method or method not in _REQUEST_METHODS:
         raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
     return getattr(models(), f"Method{method}Params")
+
+
+# Contract rows sent through the shared runtime sender (mirror the Rust serde types).
+send_create_branch = contract_sender("CreateBranch", "MethodCreateBranchParams")
+decode_create_branch = contract_decoder("CreateBranch", "Branch")
+send_create_mat_view = contract_sender(
+    "CreateMatView", "MethodCreateMatViewParams", expect_count
+)
+send_get_mat_view = contract_sender("GetMatView", "MethodGetMatViewParams")
+decode_get_mat_view = contract_decoder("GetMatView", "DistResult")
+send_refresh_mat_view = contract_sender(
+    "RefreshMatView", "MethodRefreshMatViewParams", expect_count
+)
+send_register_udf = contract_sender(
+    "RegisterUdf", "MethodRegisterUdfParams", expect_string
+)

@@ -10,6 +10,8 @@ from pydantic import BaseModel, ConfigDict
 
 from ._runtime import (
     OpaqueResult,
+    contract_decoder,
+    contract_sender,
     decode_result,
     expect_string,
     models,
@@ -758,3 +760,62 @@ def __getattr__(name: str) -> Any:
     if name == method or method not in _REQUEST_METHODS:
         raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
     return getattr(models(), f"Method{method}Params")
+
+
+# Contract rows sent through the shared runtime sender (mirror the Rust serde types).
+send_document_delete = contract_sender("DocumentDelete", "MethodDocumentDeleteParams")
+decode_document_delete = contract_decoder("DocumentDelete", "DocumentDeleteReceipt")
+send_get_telemetry_snapshot = contract_sender(
+    "GetTelemetrySnapshot", "MethodGetTelemetrySnapshotParams"
+)
+decode_get_telemetry_snapshot = contract_decoder(
+    "GetTelemetrySnapshot", "GetTelemetrySnapshotResult"
+)
+send_incident_correlate = contract_sender(
+    "IncidentCorrelate", "MethodIncidentCorrelateParams"
+)
+decode_incident_correlate = contract_decoder(
+    "IncidentCorrelate", "IncidentWriteReceipt"
+)
+send_incident_evidence = contract_sender(
+    "IncidentEvidence", "MethodIncidentEvidenceParams"
+)
+decode_incident_evidence = contract_decoder("IncidentEvidence", "IncidentRecord")
+send_incident_record_anomaly = contract_sender(
+    "IncidentRecordAnomaly", "MethodIncidentRecordAnomalyParams"
+)
+decode_incident_record_anomaly = contract_decoder(
+    "IncidentRecordAnomaly", "IncidentWriteReceipt"
+)
+send_incident_related_claims = contract_sender(
+    "IncidentRelatedClaims", "MethodIncidentRelatedClaimsParams"
+)
+decode_incident_related_claims = contract_decoder(
+    "IncidentRelatedClaims", "IncidentRelatedClaimsResult"
+)
+send_incident_set_status = contract_sender(
+    "IncidentSetStatus", "MethodIncidentSetStatusParams"
+)
+decode_incident_set_status = contract_decoder(
+    "IncidentSetStatus", "IncidentWriteReceipt"
+)
+send_lineage_ingest = contract_sender("LineageIngest", "MethodLineageIngestParams")
+decode_lineage_ingest = contract_decoder("LineageIngest", "LineageIngestReceipt")
+send_meeting_summary_commit = contract_sender(
+    "MeetingSummaryCommit", "MethodMeetingSummaryCommitParams"
+)
+decode_meeting_summary_commit = contract_decoder(
+    "MeetingSummaryCommit", "MeetingSummaryCommitReceipt"
+)
+send_meeting_summary_context = contract_sender(
+    "MeetingSummaryContext", "MethodMeetingSummaryContextParams"
+)
+decode_meeting_summary_context = contract_decoder(
+    "MeetingSummaryContext", "MeetingSummaryContext"
+)
+send_meeting_transcript_revision = contract_sender(
+    "MeetingTranscriptRevision", "MethodMeetingTranscriptRevisionParams"
+)
+decode_meeting_transcript_revision = contract_decoder(
+    "MeetingTranscriptRevision", "MeetingTranscriptRevisionReceipt"
+)

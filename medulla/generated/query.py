@@ -10,6 +10,8 @@ from pydantic import BaseModel, ConfigDict
 
 from ._runtime import (
     OpaqueResult,
+    contract_decoder,
+    contract_sender,
     decode_result,
     models,
 )
@@ -1762,3 +1764,18 @@ def __getattr__(name: str) -> Any:
     if name == method or method not in _REQUEST_METHODS:
         raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
     return getattr(models(), f"Method{method}Params")
+
+
+# Contract rows sent through the shared runtime sender (mirror the Rust serde types).
+send_live_artifact_get = contract_sender(
+    "LiveArtifactGet", "MethodLiveArtifactGetParams"
+)
+decode_live_artifact_get = contract_decoder("LiveArtifactGet", "LiveArtifactView")
+send_live_artifact_put = contract_sender(
+    "LiveArtifactPut", "MethodLiveArtifactPutParams"
+)
+decode_live_artifact_put = contract_decoder("LiveArtifactPut", "LiveArtifact")
+send_live_artifact_refresh = contract_sender(
+    "LiveArtifactRefresh", "MethodLiveArtifactRefreshParams"
+)
+decode_live_artifact_refresh = contract_decoder("LiveArtifactRefresh", "RefreshEntry")

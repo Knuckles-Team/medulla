@@ -464,6 +464,11 @@ pub fn requires_write(method: &Method) -> bool {
                 // MEDULLA-FEDERATED-QUERY-R701.3: the artifact node and its refresh records.
                 | Method::LiveArtifactPut { .. }
                 | Method::LiveArtifactRefresh { .. }
+                // MEDULLA-FINANCE-PRIMITIVES-R004.3.2: finance records, alerts and
+                // factor records commit graph nodes through the gateway.
+                | Method::FinanceRecordPut { .. }
+                | Method::FinanceAlertRaise { .. }
+                | Method::FinanceFactorRecord { .. }
         )
     )
 }

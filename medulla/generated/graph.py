@@ -10,6 +10,8 @@ from pydantic import BaseModel, ConfigDict, TypeAdapter
 
 from ._runtime import (
     OpaqueResult,
+    contract_decoder,
+    contract_sender,
     decode_result,
     expect_bool,
     expect_count,
@@ -2792,3 +2794,72 @@ def __getattr__(name: str) -> Any:
     if name == method or method not in _REQUEST_METHODS:
         raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
     return getattr(models(), f"Method{method}Params")
+
+
+# Contract rows sent through the shared runtime sender (mirror the Rust serde types).
+send_add_scene_object = contract_sender(
+    "AddSceneObject", "MethodAddSceneObjectParams", expect_string
+)
+send_bus_heartbeat = contract_sender(
+    "BusHeartbeat", "MethodBusHeartbeatParams", expect_bool
+)
+send_bus_register = contract_sender(
+    "BusRegister", "MethodBusRegisterParams", expect_bool
+)
+send_bus_roster = contract_sender("BusRoster", "MethodBusRosterParams")
+decode_bus_roster = contract_decoder("BusRoster", "BusRoster")
+send_compact_nodes_by_type = contract_sender(
+    "CompactNodesByType", "MethodCompactNodesByTypeParams"
+)
+decode_compact_nodes_by_type = contract_decoder(
+    "CompactNodesByType", "CompactNodesResult"
+)
+send_context_facts = contract_sender("ContextFacts", "MethodContextFactsParams")
+decode_context_facts = contract_decoder("ContextFacts", "ContextFactsResult")
+send_finance_alert_raise = contract_sender(
+    "FinanceAlertRaise", "MethodFinanceAlertRaiseParams", expect_string
+)
+send_finance_factor_record = contract_sender(
+    "FinanceFactorRecord", "MethodFinanceFactorRecordParams"
+)
+decode_finance_factor_record = contract_decoder(
+    "FinanceFactorRecord", "FinanceFactorRecordResult"
+)
+send_list_memory_snapshots = contract_sender(
+    "ListMemorySnapshots", "MethodListMemorySnapshotsParams"
+)
+decode_list_memory_snapshots = contract_decoder(
+    "ListMemorySnapshots", "MemorySnapshotList"
+)
+send_policy_evolution_store = contract_sender(
+    "PolicyEvolutionStore", "MethodPolicyEvolutionStoreParams"
+)
+decode_policy_evolution_store = contract_decoder(
+    "PolicyEvolutionStore", "PolicyRecordStored"
+)
+send_read_memory_snapshot = contract_sender(
+    "ReadMemorySnapshot", "MethodReadMemorySnapshotParams"
+)
+decode_read_memory_snapshot = contract_decoder(
+    "ReadMemorySnapshot", "MemorySnapshotRead"
+)
+send_reparent = contract_sender("Reparent", "MethodReparentParams", expect_bool)
+send_scene_children = contract_sender(
+    "SceneChildren", "MethodSceneChildrenParams", expect_ids
+)
+send_schema_projections = contract_sender(
+    "SchemaProjections", "MethodSchemaProjectionsParams"
+)
+decode_schema_projections_list = contract_decoder(
+    "SchemaProjections", "SchemaProjections", "list"
+)
+decode_schema_projections_put = contract_decoder(
+    "SchemaProjections", "SchemaBoundary", "put"
+)
+send_set_pose = contract_sender("SetPose", "MethodSetPoseParams", expect_bool)
+send_sync_memory_snapshot = contract_sender(
+    "SyncMemorySnapshot", "MethodSyncMemorySnapshotParams"
+)
+decode_sync_memory_snapshot = contract_decoder("SyncMemorySnapshot", "SyncOutcome")
+send_world_transform = contract_sender("WorldTransform", "MethodWorldTransformParams")
+decode_world_transform = contract_decoder("WorldTransform", "WorldTransformResult")

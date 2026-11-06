@@ -34,6 +34,10 @@ WORK_ITEM_METHODS = {
     "GapSettle",
     "WorkOfferPut",
     "RetireSealedRecord",
+    # MEDULLA-DURABLE-KERNEL-R820.3: the uncertain-effect writes share the kernel.
+    "MarkWorkItemEffectStarted",
+    "RecordEffectReceipt",
+    "SubmitAdmittedRequest",
 }
 DEVELOPMENT_LANE_WRITES = {
     "ReserveDevelopmentLane",

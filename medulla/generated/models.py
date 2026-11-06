@@ -16208,6 +16208,7 @@ class MethodRunRulesParams(BaseModel):
 
     derived_only: bool | None = None
     explain: bool | None = None
+    max_steps: Annotated[int, Field(ge=0)] | None = None
     min_confidence: float | None = None
     ontology_ttl: str | None = None
     query_predicate: str | None = None
@@ -26584,6 +26585,1581 @@ WorkItemStatus = (
 WorldTransformResult = ScenePose | None
 
 
+class AccessRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    grant_ref: str | None = None
+    principal: str
+    product: str
+    purpose: str
+    state: AccessRequestState
+
+
+class AccessRequestState(str, Enum):
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+    REVOKED = "revoked"
+
+
+class ActionEffectSpec(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: EffectKind
+    template: str
+
+
+class ActionParameter(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    name: str
+    required: bool
+    ty: ParamType
+
+
+class ActionRefusalCriterionFailed(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    code: Literal["criterion_failed"]
+    detail: str
+
+
+class ActionRefusalInvalidSpec(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    code: Literal["invalid_spec"]
+    detail: str
+
+
+class ActionRefusalMissingParameter(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    code: Literal["missing_parameter"]
+    detail: str
+
+
+class ActionRefusalParameterTypeMismatch(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    code: Literal["parameter_type_mismatch"]
+    detail: str
+
+
+class ActionRefusalUnattachedWriteBack(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    code: Literal["unattached_write_back"]
+    detail: str
+
+
+class ActionRefusalUnknownParameter(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    code: Literal["unknown_parameter"]
+    detail: str
+
+
+class ActionRun(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    action: str
+    effects: list[ResolvedEffect]
+    params: dict[str, ParamValue]
+    refusal: ActionRefusal | None = None
+    status: ActionStatus
+    verdicts: list[CriterionVerdict]
+
+
+class ActionSpec(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    criteria: list[SubmissionCriterion]
+    effects: list[ActionEffectSpec]
+    name: str
+    params: list[ActionParameter]
+
+
+class ActionStatus(str, Enum):
+    APPLIED = "applied"
+    REFUSED = "refused"
+
+
+class AdmittedRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    bytes: _EgOctets
+    payload_digest: str
+    request_ref: str
+    session_ref: str
+    tenant: str
+
+
+class AdmittedRequestRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    payload_ref: str
+    request_ref: str
+    session_ref: str
+    tenant: str
+
+
+class AnomalyReading(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    at_ms: Annotated[int, Field(ge=0)]
+    baseline: float
+    entity_ref: str
+    observed: float
+    signal: str
+
+
+class ArtifactProvenance(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    derived_by: RefreshRecord | None = None
+    last_attempt: RefreshRecord | None = None
+
+
+class ArtifactSeal(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    digest: str
+
+
+class AttributionBreakdown(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    active_return: float
+    allocation: float
+    groups: list[GroupEffect]
+    interaction: float
+    selection: float
+
+
+class Branch(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    base_version: Annotated[int, Field(ge=0)]
+    created_at: Annotated[int, Field(ge=0)]
+    created_by: str
+    deleted: bool
+    graph: str
+    head_commit: str
+    name: str
+    tenant: str
+
+
+class BusParticipant(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    capabilities: list[str]
+    host_ref: str
+    last_seen_ms: Annotated[int, Field(ge=0)]
+    session_ref: str
+    tenant: str
+
+
+class BusRoster(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    participants: list[BusRosterEntry]
+
+
+class BusRosterEntry(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    live: bool
+    participant: BusParticipant
+    principal: str
+
+
+class ClaimGetResult(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    artifact: ResearchArtifact | None = None
+    claim: ClaimRecord | None = None
+
+
+class ClaimOpAdvance(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    claim_id: str
+    op: Literal["advance"]
+    to: ClaimState
+
+
+class ClaimOpCompileArtifact(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    artifact_id: str
+    claim_ids: list[str]
+    code_specs: list[str]
+    cohort_id: str
+    exploration_edges: list[tuple[str, str]]
+    op: Literal["compile_artifact"]
+
+
+class ClaimOpGet(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    artifact_id: str | None = None
+    claim_id: str | None = None
+    op: Literal["get"]
+
+
+class ClaimOpPropose(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    claim_id: str
+    op: Literal["propose"]
+
+
+class ClaimOpRecordEvidence(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    channel: EvidenceChannel | None = None
+    claim_id: str
+    evidence_id: str
+    feed: FeedItem | None = None
+    op: Literal["record_evidence"]
+    source_digest: str
+    stances: dict[str, Stance] | None = None
+    supports: bool
+    weight_ppm: Annotated[int, Field(ge=0)]
+
+
+class ClaimRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    claim_id: str
+    contradiction_pairs: list[tuple[str, str]]
+    evidence: list[Evidence]
+    feeds: list[FeedGrade]
+    log_odds_micro: int
+    stances: dict[str, Stance]
+    state: ClaimState
+    tenant_id: str
+    transitions: list[LifecycleTransition]
+
+
+class ClaimState(str, Enum):
+    PROPOSED = "proposed"
+    SUPPORTED = "supported"
+    CONTESTED = "contested"
+    ACCEPTED = "accepted"
+    RETIRED = "retired"
+
+
+class ContextFact(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    authority: EvidenceClass
+    fact_id: str
+    object: str
+    predicate: str
+    schema_version: Annotated[int, Field(ge=0)] | None = None
+    source_key: str
+    subject: str
+    token_estimate: Annotated[int, Field(ge=0)]
+
+
+class ContextFactsRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    max_facts_per_node: Annotated[int, Field(ge=0)] | None = None
+    node_ids: list[str]
+    schema_version: Annotated[int, Field(ge=0)] | None = None
+    token_budget: Annotated[int, Field(ge=0)]
+
+
+class ContextFactsResult(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    facts: list[ContextFact]
+    omitted_count: Annotated[int, Field(ge=0)]
+    schema_version: Annotated[int, Field(ge=0)] | None = None
+    token_estimate_total: Annotated[int, Field(ge=0)]
+
+
+class CriterionOp(str, Enum):
+    EQ = "eq"
+    NE = "ne"
+    LT = "lt"
+    LE = "le"
+    GT = "gt"
+    GE = "ge"
+
+
+class CriterionVerdict(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    criterion: str
+    passed: bool
+
+
+class DataContract(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    freshness_s: Annotated[int, Field(ge=0)]
+    product: str
+    quality_rules: list[str]
+    schema_digest: str
+
+
+class DataProduct(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    datasets: list[str]
+    id: str
+    owner: str
+    ports: list[ProductPort]
+    terms: list[str]
+    version: str
+
+
+class DataProductRegistered(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    product: str
+    version: str
+
+
+class DatasetRef(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    name: str
+    namespace: str
+
+
+class DelegationRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    expires_at: Annotated[int, Field(ge=0)]
+    principal: str
+    revoked_at: Annotated[int, Field(ge=0)] | None = None
+    tenant: str
+    tool: str
+
+
+class DelegationStanding(str, Enum):
+    ACTIVE = "active"
+    EXPIRED = "expired"
+    REVOKED = "revoked"
+
+
+class DelegationState(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    holds_tool_scope: bool
+    principal_active: bool
+    record: DelegationRecord
+    standing: DelegationStanding
+
+
+class DocumentDeleteReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    edges_deleted: Annotated[int, Field(ge=0)]
+    index_pending: Annotated[int, Field(ge=0)]
+    nodes_deleted: Annotated[int, Field(ge=0)]
+    plan_digest: str
+    tenant: str
+
+
+class DocumentDeleteRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    document_id: str
+    max_nodes: Annotated[int, Field(ge=0)] | None = None
+    tenant: str
+
+
+class EffectDisposition(str, Enum):
+    APPLIED = "applied"
+    PROPOSED = "proposed"
+
+
+class EffectKindAddEdge(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: Literal["add_edge"]
+
+
+class EffectKindCreateNode(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: Literal["create_node"]
+
+
+class EffectKindSetProperty(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: Literal["set_property"]
+
+
+class EffectKindWriteBack(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: Literal["write_back"]
+    source: str
+
+
+class EffectOutcome(str, Enum):
+    APPLIED = "applied"
+    NOT_APPLIED = "not_applied"
+    COMPENSATED = "compensated"
+
+
+class EffectReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    committed_at: Annotated[int, Field(ge=0)]
+    job_id: str
+    outcome: EffectOutcome
+    principal_ref: str
+    receipt_ref: str
+    request_ref: str
+
+
+class EffectRecordKey(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    attempt: Annotated[int, Field(ge=0)]
+    session_ref: str | None = None
+    tenant: str
+    work_item_id: str
+
+
+class EffectWriteResult(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    attempt: Annotated[int, Field(ge=0)]
+    changed_work_item_ids: list[str]
+    receipt: EffectReceipt | None = None
+    replayed: bool
+    revision: Annotated[int, Field(ge=0)]
+    work_item_id: str
+
+
+class EtlRun(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    ended_at_ms: int | None = None
+    job: str
+    run_id: str
+    started_at_ms: int
+
+
+class Evidence(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    channel: EvidenceChannel
+    claim_id: str
+    evidence_id: str
+    source_digest: str
+    supports: bool
+    tenant_id: str
+    weight_ppm: Annotated[int, Field(ge=0)]
+
+
+class EvidenceChannel(str, Enum):
+    OUTCOME = "outcome"
+    OPTIMIZATION = "optimization"
+    HEALTH = "health"
+    PROCESS = "process"
+    MINED = "mined"
+
+
+class FeedGrade(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    evidence_id: str
+    grade_ppm: Annotated[int, Field(ge=0)]
+    relevant: bool
+
+
+class FeedItem(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    fleet_topics: list[str]
+    text: str
+
+
+class FinanceAlertEnvelope(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    event_id: str
+    kind: FinanceAlertKind
+    listing_id: str
+    message: str
+    occurred_at_unix_nanos: int
+
+
+class FinanceAlertKind(str, Enum):
+    PRICE = "price"
+    TREND_FLIP = "trend_flip"
+    DCA_DUE = "dca_due"
+    MARGIN_THRESHOLD = "margin_threshold"
+
+
+class GroupEffect(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    allocation: float
+    group: str
+    interaction: float
+    selection: float
+
+
+class GroupInput(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    group: str
+    r_b: float
+    r_p: float
+    w_b: float
+    w_p: float
+
+
+class IncidentRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    evidence: list[AnomalyReading]
+    id: str
+    opened_at_ms: Annotated[int, Field(ge=0)]
+    severity: IncidentSeverity
+    signature_digest: str
+    status: IncidentStatus
+    status_history: list[IncidentStatus]
+    tenant: str
+
+
+class IncidentRelatedClaim(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    claim_id: str
+    entity_ref: str
+    properties: Any
+
+
+class IncidentSeverity(str, Enum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+
+
+class IncidentStatus(str, Enum):
+    OPEN = "open"
+    ACKNOWLEDGED = "acknowledged"
+    RESOLVED = "resolved"
+
+
+class IncidentWriteReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    incident_ids: list[str]
+    nodes_written: Annotated[int, Field(ge=0)]
+
+
+class LifecycleTransition(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    actor: str
+    at_ms: Annotated[int, Field(ge=0)]
+    claim_id: str
+    from_: ClaimState = Field(..., alias="from")
+    tenant_id: str
+    to: ClaimState
+
+
+class LineageEvent(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    event_id: str
+    inputs: list[DatasetRef]
+    outputs: list[DatasetRef]
+    run: EtlRun
+
+
+class LineageIngestReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    edges: Annotated[int, Field(ge=0)]
+    envelope_id: str
+    quarantined: Annotated[int, Field(ge=0)]
+    received: Annotated[int, Field(ge=0)]
+    replayed: Annotated[int, Field(ge=0)]
+
+
+class LiveArtifact(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    data: Any
+    id: str
+    provenance: ArtifactProvenance
+    source: QuerySource
+    template: str
+    version: Annotated[int, Field(ge=0)]
+
+
+class LiveArtifactView(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    artifact: LiveArtifact
+    refreshes: list[RefreshEntry]
+
+
+class MarkWorkItemEffectStartedRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    expected_revision: Annotated[int, Field(ge=0)]
+    fencing_token: Annotated[int, Field(ge=0)]
+    lease_epoch: Annotated[int, Field(ge=0)]
+    tenant: str
+    work_item_id: str
+    worker_id: str
+
+
+class MeetingSummaryCommitReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    citation_count: Annotated[int, Field(ge=0)]
+    claim_count: Annotated[int, Field(ge=0)]
+    summary_id: str
+    transcript_digest: str
+
+
+class MeetingSummaryCommitRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    claims: list[SummaryClaim]
+    meeting_id: str
+    receipt: SummaryReceipt
+    summary_id: str
+
+
+class MeetingSummaryContext(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    citations: list[str]
+    context_digest: str
+    meeting_id: str
+    policy_revision: str
+    spans: list[SummarySpan]
+    transcript_digest: str
+
+
+class MeetingSummaryContextRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    admission: SummaryAdmissionRef | None = None
+    meeting_id: str
+    policy: MeetingSummaryLimitPolicy
+    segments: list[SummarySegmentText]
+    transcript_digest: str
+
+
+class MeetingSummaryLimitPolicy(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    max_segment_bytes: Annotated[int, Field(ge=0)]
+    max_spans: Annotated[int, Field(ge=0)]
+    max_tokens: Annotated[int, Field(ge=0)]
+
+
+class MeetingTranscriptRevision(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    base_revision: Annotated[int, Field(ge=0)]
+    end_ms: Annotated[int, Field(ge=0)]
+    finalization_digest: str | None = None
+    idempotency_key: str
+    meeting_id: str
+    monotonic_event_sequence: Annotated[int, Field(ge=0)]
+    new_revision: Annotated[int, Field(ge=0)]
+    op: TranscriptRevisionOp
+    ordered_segment_ids: list[str]
+    provenance_ref: str
+    speaker_ref: str | None = None
+    start_ms: Annotated[int, Field(ge=0)]
+    text_digest: str
+
+
+class MeetingTranscriptRevisionReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    finalization_digest: str | None = None
+    meeting_id: str
+    replayed: bool
+    revision: Annotated[int, Field(ge=0)]
+
+
+class MemorySnapshotHead(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    content_digest: Digest256
+    content_len: Annotated[int, Field(ge=0)]
+    doc_id: DocId
+    graph_incarnation: str
+    parent_revision: Annotated[int, Field(ge=0)] | None = None
+    provenance: SnapshotProvenance
+    retain_until_ms: Annotated[int, Field(ge=0)] | None = None
+    revision: Annotated[int, Field(ge=0)]
+
+
+class MemorySnapshotList(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    heads: list[MemorySnapshotHead]
+    next_cursor: ListCursor | None = None
+
+
+class MemorySnapshotRead(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    content: str
+    head: MemorySnapshotHead
+
+
+class MethodAccessRequestDecideParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    approve: bool
+    principal: str
+    product: str
+    tenant: str
+
+
+class MethodAccessRequestOpenParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    request: AccessRequest
+    tenant: str
+
+
+class MethodActionRegisterParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    spec: ActionSpec
+
+
+class MethodActionSubmitParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    action: str
+    params: dict[str, ParamValue]
+
+
+class MethodBusHeartbeatParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    now_ms: Annotated[int, Field(ge=0)]
+    principal: str | None = None
+    session_ref: str
+
+
+class MethodBusRegisterParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    participant: BusParticipant
+    principal: str | None = None
+
+
+class MethodBusRosterParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    now_ms: Annotated[int, Field(ge=0)]
+    tenant: str
+
+
+class MethodClaimsParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: ClaimOp
+
+
+class MethodContextFactsParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    request: ContextFactsRequest
+
+
+class MethodCreateBranchParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    base_engine_version: Annotated[int, Field(ge=0)] | None = None
+    graph: str
+    name: str
+    tenant: str
+
+
+class MethodDataProductRegisterParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    contract: DataContract
+    product: DataProduct
+    tenant: str
+
+
+class MethodDocumentDeleteParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    request: DocumentDeleteRequest
+
+
+class MethodFinanceAlertRaiseParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    envelope: FinanceAlertEnvelope
+
+
+class MethodFinanceFactorRecordParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    factor_ids: list[str]
+    forward_returns: list[float]
+    provenance_keys: list[list[str]]
+    signals: list[list[float]]
+
+
+class MethodFinancePatternClassifyParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    close: list[float]
+    high: list[float]
+    low: list[float]
+    open: list[float]
+
+
+class MethodFinanceProfitAttributionParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    groups: list[GroupInput]
+
+
+class MethodGetAdmittedRequestParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    request: EffectRecordKey
+
+
+class MethodGetDelegationRecordParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    work_item_id: str
+
+
+class MethodGetEffectReceiptParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    request: EffectRecordKey
+
+
+class MethodGetShardWriterWidthParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    tenant: str
+
+
+class MethodGetTelemetrySnapshotParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    tenant: str
+
+
+class MethodGraphLearnPredictNaryParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    expected_graph_revision: Annotated[int, Field(ge=0)] | None = None
+    request: NaryRequest
+    source: GraphSource
+
+
+class MethodIncidentCorrelateParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    anomalies: list[AnomalyReading]
+    window_ms: Annotated[int, Field(ge=0)]
+
+
+class MethodIncidentEvidenceParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    incident_id: str
+
+
+class MethodIncidentRecordAnomalyParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    anomaly: AnomalyReading
+    window_ms: Annotated[int, Field(ge=0)]
+
+
+class MethodIncidentRelatedClaimsParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    incident_id: str
+    limit: Annotated[int, Field(ge=0)] | None = None
+
+
+class MethodIncidentSetStatusParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    incident_id: str
+    status: IncidentStatus
+
+
+class MethodLineageIngestParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    events: list[LineageEvent]
+
+
+class MethodListMemorySnapshotsParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    cursor: str | None = None
+    limit: Annotated[int, Field(ge=0)] | None = None
+    prefix: str
+
+
+class MethodLiveArtifactGetParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    id: str
+
+
+class MethodLiveArtifactPutParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    artifact: LiveArtifact
+
+
+class MethodLiveArtifactRefreshParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    expected_version: Annotated[int, Field(ge=0)]
+    id: str
+
+
+class MethodMarkWorkItemEffectStartedParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    request: MarkWorkItemEffectStartedRequest
+
+
+class MethodMeetingSummaryCommitParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    request: MeetingSummaryCommitRequest
+
+
+class MethodMeetingSummaryContextParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    request: MeetingSummaryContextRequest
+
+
+class MethodMeetingTranscriptRevisionParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    request: MeetingTranscriptRevision
+
+
+class MethodOntologyCanonicalHashParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    turtle: str
+
+
+class MethodReadMemorySnapshotParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    doc_id: str
+    revision: Annotated[int, Field(ge=0)] | None = None
+
+
+class MethodRecordEffectReceiptParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    request: RecordEffectReceiptRequest
+
+
+class MethodSchemaProjectionsParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: SchemaProjectionsOp
+
+
+class MethodSubmitAdmittedRequestParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    request: SubmitAdmittedRequestRequest
+
+
+class MethodSyncMemorySnapshotParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    request: SyncRequest
+    stamp: SyncStamp | None = None
+
+
+class MethodWalletKeyTrustGetParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    account_id: str
+    network_id: str
+    wallet_id: str
+
+
+class MethodWorkflowRegistryParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: WorkflowRegistryOp
+
+
+class NaryEvidenceClass(str, Enum):
+    OBSERVED_NEIGHBOURHOOD = "observed_neighbourhood"
+    INDUCTIVE_INFERENCE = "inductive_inference"
+
+
+class NaryHypothesis(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    evidence_class: NaryEvidenceClass
+    graph_revision: Annotated[int, Field(ge=0)]
+    model_revision: str
+    policy_revision: Annotated[int, Field(ge=0)]
+    score_q16: Annotated[int, Field(ge=0)]
+    source_ids: list[str]
+    tuple: list[str]
+
+
+class NaryPrediction(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    hypotheses: list[NaryHypothesis]
+    n_hypotheses: Annotated[int, Field(ge=0)]
+    request_digest: str
+
+
+class NaryRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    candidates: list[list[str]]
+    model: Any
+    relation_constraints: list[str] = Field(default_factory=list)
+    top_k: Annotated[int, Field(ge=0)] | None = None
+
+
+class OntologyCanonicalHashResult(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    hash: str
+
+
+class ParamType(str, Enum):
+    STRING = "string"
+    INTEGER = "integer"
+    FLOAT = "float"
+    BOOLEAN = "boolean"
+
+
+class PatternKind(str, Enum):
+    HAMMER = "hammer"
+    SHOOTING_STAR = "shooting_star"
+    BULLISH_ENGULFING = "bullish_engulfing"
+    BEARISH_ENGULFING = "bearish_engulfing"
+    DOJI = "doji"
+    INSIDE_BAR = "inside_bar"
+
+
+class PatternMatch(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    index: Annotated[int, Field(ge=0)]
+    kind: PatternKind
+    strength: float
+
+
+class ProductPort(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: ProductPortKind
+    name: str
+
+
+class ProductPortKind(str, Enum):
+    QUERY = "query"
+    API = "api"
+    STREAM = "stream"
+    FILE = "file"
+
+
+class QueryLanguage(str, Enum):
+    UQL = "uql"
+    SQL = "sql"
+    SPARQL = "sparql"
+
+
+class QuerySource(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    language: QueryLanguage
+    text: str
+
+
+class RecordEffectReceiptRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    attempt: Annotated[int, Field(ge=0)]
+    expected_revision: Annotated[int, Field(ge=0)]
+    receipt: EffectReceipt
+    tenant: str
+    work_item_id: str
+
+
+class RefreshEntry(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    new_version: Annotated[int, Field(ge=0)]
+    record: RefreshRecord
+
+
+class RefreshRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    ended_at_ms: Annotated[int, Field(ge=0)]
+    error: str | None = None
+    row_count: Annotated[int, Field(ge=0)]
+    started_at_ms: Annotated[int, Field(ge=0)]
+
+
+class ResearchArtifact(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    artifact_id: str
+    claim_ids: list[str]
+    code_specs: list[str]
+    cohort_id: str
+    exploration_edges: list[tuple[str, str]]
+    seal: ArtifactSeal | None = None
+    tenant_id: str
+
+
+class ResolutionKeepHead(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    resolution: Literal["keep_head"]
+
+
+class ResolutionMerged(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    content: str
+    content_digest: Digest256
+    resolution: Literal["merged"]
+
+
+class ResolutionTakeCandidate(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    resolution: Literal["take_candidate"]
+
+
+class ResolvedEffect(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    disposition: EffectDisposition
+    kind: EffectKind
+    text: str
+
+
+class SchemaBoundary(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    boundary_id: str
+    mapping_ref: str
+    required_scopes: list[str]
+    tables: list[str]
+
+
+class SchemaProjections(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    boundary_count: Annotated[int, Field(ge=0)] | None = None
+    entries: list[SchemaBoundary]
+
+
+class SchemaProjectionsOpList(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["list"]
+
+
+class SchemaProjectionsOpPut(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    boundary: SchemaBoundary
+    op: Literal["put"]
+
+
+class ShardWriterWidth(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    shard_writers: Annotated[int, Field(ge=0)]
+    tenant: str
+
+
+class SnapshotProvenance(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    actor: str
+    policy_digest: Digest256
+    request_id: RequestId
+
+
+class Stance(str, Enum):
+    SUPPORTS = "supports"
+    OPPOSES = "opposes"
+
+
+class SubmissionCriterion(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    name: str
+    op: CriterionOp
+    param: str
+    value: ParamValue
+
+
+class SubmitAdmittedRequestRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    attempt: Annotated[int, Field(ge=0)]
+    expected_revision: Annotated[int, Field(ge=0)]
+    request: AdmittedRequest
+    work_item_id: str
+
+
+class SummaryAdmissionRef(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    admission_digest: str
+    model: str
+    policy_revision: str
+    provider: str
+
+
+class SummaryCitation(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    end: Annotated[int, Field(ge=0)]
+    span_id: str
+    start: Annotated[int, Field(ge=0)]
+
+
+class SummaryClaim(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    citations: list[SummaryCitation]
+    claim_id: str
+    text: str
+
+
+class SummaryReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    input_context_digest: str
+    model: str
+    output_digest: str
+    owner_requirement_id: str
+    policy_revision: str
+    provider: str
+    receipt_digest: str
+    receipt_id: str
+
+
+class SummarySegmentText(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    segment_id: str
+    text: str
+
+
+class SummarySpan(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    segment_id: str
+    span_id: str
+    text: str
+
+
+class SyncActionAcknowledge(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    action: Literal["acknowledge"]
+    content_digest: Digest256
+    observation_generation: Annotated[int, Field(ge=0)]
+    revision: Annotated[int, Field(ge=0)]
+
+
+class SyncActionObserveFile(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    action: Literal["observe_file"]
+    observed_digest: Digest256
+
+
+class SyncActionResolve(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    action: Literal["resolve"]
+    candidate_revision: Annotated[int, Field(ge=0)]
+    expected_head_revision: Annotated[int, Field(ge=0)]
+    resolution: Resolution
+
+
+class SyncActionSubmit(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    action: Literal["submit"]
+    content: str
+    content_digest: Digest256
+    expected_revision: Annotated[int, Field(ge=0)] | None = None
+
+
+class SyncOutcomeAccepted(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    head: MemorySnapshotHead
+    outcome: Literal["accepted"]
+
+
+class SyncOutcomeAcknowledged(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    outcome: Literal["acknowledged"]
+    state: SyncState
+
+
+class SyncOutcomeConflictRetained(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    candidate_revision: Annotated[int, Field(ge=0)]
+    head: MemorySnapshotHead
+    outcome: Literal["conflict_retained"]
+
+
+class SyncOutcomeObserved(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    head_digest: Digest256
+    head_revision: Annotated[int, Field(ge=0)]
+    outcome: Literal["observed"]
+    state: SyncState
+
+
+class SyncOutcomeRefused(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    code: MemorySyncRefusal
+    outcome: Literal["refused"]
+
+
+class SyncOutcomeResolved(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    head: MemorySnapshotHead
+    outcome: Literal["resolved"]
+
+
+class SyncRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    action: SyncAction
+    doc_id: DocId
+    request_id: RequestId
+
+
+class SyncStamp(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    actor: str
+    graph_incarnation: str
+    policy_digest: Digest256
+
+
+class SyncState(str, Enum):
+    IN_SYNC = "in_sync"
+    PENDING = "pending"
+    CONFLICT = "conflict"
+    UNAVAILABLE = "unavailable"
+
+
+class TranscriptRevisionOp(str, Enum):
+    APPEND = "append"
+    CORRECT = "correct"
+    DELETE_SEGMENT = "delete_segment"
+    FINALIZE = "finalize"
+
+
+class WalletKeyTrust(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    account_id: str
+    key_id: str
+    network_id: str
+    public_key: str
+    revoked: bool | None = None
+    signer_ref: str
+    tenant_id: str
+    trust_revision: Annotated[int, Field(ge=0)]
+    valid_from: str
+    valid_until: str | None = None
+    wallet_id: str
+
+
+class WorkflowIdentity(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    content_digest: str
+    version: str
+    workflow_id: str
+
+
+class WorkflowLifecycle(str, Enum):
+    ACTIVE = "active"
+    WITHDRAWN = "withdrawn"
+    STALE = "stale"
+
+
+class WorkflowRegistrationEntry(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    identity: WorkflowIdentity
+    lifecycle: WorkflowLifecycle
+    owner_scope: str
+
+
+class WorkflowRegistryOpRead(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    identity: WorkflowIdentity
+    op: Literal["read"]
+
+
+class WorkflowRegistryOpRegister(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["register"]
+    registration: WorkflowRegistrationEntry
+
+
+ActionRefusal = Annotated[
+    ActionRefusalCriterionFailed
+    | ActionRefusalUnknownParameter
+    | ActionRefusalMissingParameter
+    | ActionRefusalParameterTypeMismatch
+    | ActionRefusalUnattachedWriteBack
+    | ActionRefusalInvalidSpec,
+    Field(discriminator="code"),
+]
+
+
+ActionRegisterResult = str
+
+
+ClaimOp = Annotated[
+    ClaimOpPropose
+    | ClaimOpAdvance
+    | ClaimOpRecordEvidence
+    | ClaimOpCompileArtifact
+    | ClaimOpGet,
+    Field(discriminator="op"),
+]
+
+
+DocId = str
+
+
+EffectKind = Annotated[
+    EffectKindSetProperty
+    | EffectKindCreateNode
+    | EffectKindAddEdge
+    | EffectKindWriteBack,
+    Field(discriminator="kind"),
+]
+
+
+FinanceFactorRecordResult = list[FactorRecordResult]
+
+
+FinancePatternClassifyResult = list[PatternMatch]
+
+
+GetAdmittedRequestResult = AdmittedRequestRecord | None
+
+
+GetEffectReceiptResult = EffectReceipt | None
+
+
+GetTelemetrySnapshotResult = dict[str, float]
+
+
+IncidentRelatedClaimsResult = list[IncidentRelatedClaim]
+
+
+ListCursor = str
+
+
+MemorySyncRefusal = str
+
+
+ParamValue = bool | int | float | str
+
+
+RequestId = str
+
+
+Resolution = Annotated[
+    ResolutionKeepHead | ResolutionTakeCandidate | ResolutionMerged,
+    Field(discriminator="resolution"),
+]
+
+
+SchemaProjectionsOp = Annotated[
+    SchemaProjectionsOpPut | SchemaProjectionsOpList,
+    Field(discriminator="op"),
+]
+
+
+SyncAction = Annotated[
+    SyncActionObserveFile
+    | SyncActionSubmit
+    | SyncActionResolve
+    | SyncActionAcknowledge,
+    Field(discriminator="action"),
+]
+
+
+SyncOutcome = Annotated[
+    SyncOutcomeAccepted
+    | SyncOutcomeConflictRetained
+    | SyncOutcomeResolved
+    | SyncOutcomeObserved
+    | SyncOutcomeAcknowledged
+    | SyncOutcomeRefused,
+    Field(discriminator="outcome"),
+]
+
+
+WorkflowRegistryOp = Annotated[
+    WorkflowRegistryOpRegister | WorkflowRegistryOpRead,
+    Field(discriminator="op"),
+]
+
+
 __all__ = [
     "AbstainReason",
     "AbstainReasonBudgetExhausted",
@@ -26602,7 +28178,22 @@ __all__ = [
     "AbstentionResolverModel",
     "AccessCheck",
     "AccessDecision",
+    "AccessRequest",
+    "AccessRequestState",
+    "ActionEffectSpec",
+    "ActionParameter",
+    "ActionRefusal",
+    "ActionRefusalCriterionFailed",
+    "ActionRefusalInvalidSpec",
+    "ActionRefusalMissingParameter",
+    "ActionRefusalParameterTypeMismatch",
+    "ActionRefusalUnattachedWriteBack",
+    "ActionRefusalUnknownParameter",
+    "ActionRegisterResult",
+    "ActionRun",
     "ActionSpace",
+    "ActionSpec",
+    "ActionStatus",
     "AdamResult",
     "AdapterDirection",
     "AdapterEvalReceipt",
@@ -26610,6 +28201,8 @@ __all__ = [
     "AdapterSpec",
     "AdapterSpecLora",
     "AdfResult",
+    "AdmittedRequest",
+    "AdmittedRequestRecord",
     "AgentComponentCommittedResult",
     "AgentComponentContentRequest",
     "AgentComponentContentResult",
@@ -26713,6 +28306,7 @@ __all__ = [
     "AnalyticsJobRecord",
     "AnomalyAlgorithm",
     "AnomalyMiningResult",
+    "AnomalyReading",
     "AnomalyRow",
     "ApiKeyIssue",
     "ApiKeyUse",
@@ -26725,6 +28319,8 @@ __all__ = [
     "ApprovalKeyRegistration",
     "ApprovalKeyRevocation",
     "ArrayEncoding",
+    "ArtifactProvenance",
+    "ArtifactSeal",
     "AsrOp",
     "AsrOpTranscribeFile",
     "AsrOpTranscribeFileBody",
@@ -26736,6 +28332,7 @@ __all__ = [
     "AssemblyResult",
     "AssociationMiningResult",
     "AssociationRuleRow",
+    "AttributionBreakdown",
     "AttributionInput",
     "AttributionInputProperty",
     "AttributionInputPropertyBody",
@@ -26890,8 +28487,12 @@ __all__ = [
     "BoundedVec_string_8",
     "BoundedVec_string_8192",
     "BoundedVec_uint64_8",
+    "Branch",
     "BrokerConsumeResult",
     "BrokerConsumeResultValue",
+    "BusParticipant",
+    "BusRoster",
+    "BusRosterEntry",
     "CalibrationMethod",
     "CalibrationStatement",
     "CalibrationWire",
@@ -27011,10 +28612,19 @@ __all__ = [
     "CheckpointContent",
     "CheckpointMemoryRef",
     "ClaimAuthor",
+    "ClaimGetResult",
     "ClaimNextResult",
     "ClaimNextResultValue",
+    "ClaimOp",
+    "ClaimOpAdvance",
+    "ClaimOpCompileArtifact",
+    "ClaimOpGet",
+    "ClaimOpPropose",
+    "ClaimOpRecordEvidence",
     "ClaimProvenance",
+    "ClaimRecord",
     "ClaimSource",
+    "ClaimState",
     "ClaimWorkItemRequest",
     "ClaimWorkItemRequestSchemaVersion",
     "ClaimWorkItemResult",
@@ -27127,6 +28737,9 @@ __all__ = [
     "ContentVersionPositionOpaqueValue",
     "ContentVersionPositionSequence",
     "ContentVersionPositionTimestampMillis",
+    "ContextFact",
+    "ContextFactsRequest",
+    "ContextFactsResult",
     "ContextPolicy",
     "ContextView",
     "ContextViewEdgesItem",
@@ -27147,6 +28760,8 @@ __all__ = [
     "CostModel",
     "CoverageDerivation",
     "CreateUserRequest",
+    "CriterionOp",
+    "CriterionVerdict",
     "CrossEntropyResult",
     "CurrentPlanPublished",
     "CurrentPlanSnapshot",
@@ -27157,9 +28772,13 @@ __all__ = [
     "CursorPositionTimestampMillis",
     "CvSplit",
     "CypherMode",
+    "DataContract",
+    "DataProduct",
+    "DataProductRegistered",
     "DataRevisionRef",
     "DataStatus",
     "DatalogReasoningResult",
+    "DatasetRef",
     "DatasetSource",
     "DatasetSourceInline",
     "DatasetSourceLogged",
@@ -27247,6 +28866,9 @@ __all__ = [
     "DeclaredText",
     "DegreeCentralityAllResult",
     "DegreeCentralityAllResultValueItem",
+    "DelegationRecord",
+    "DelegationStanding",
+    "DelegationState",
     "DelegationTarget",
     "DelegationTargetAgent",
     "DelegationTargetGraph",
@@ -27334,7 +28956,10 @@ __all__ = [
     "DistResultScores",
     "DistResultScoresBodyItem",
     "DistributionShift",
+    "DocId",
     "DocTerms",
+    "DocumentDeleteReceipt",
+    "DocumentDeleteRequest",
     "DpoResult",
     "DsLogSoftmaxResult",
     "DsPredictEstimatorResult",
@@ -27366,7 +28991,17 @@ __all__ = [
     "EdgeSourceComponentClassification",
     "EdgeSourceNativeOntology",
     "EdgeVectorMetric",
+    "EffectDisposition",
+    "EffectKind",
+    "EffectKindAddEdge",
+    "EffectKindCreateNode",
+    "EffectKindSetProperty",
+    "EffectKindWriteBack",
+    "EffectOutcome",
     "EffectPhase",
+    "EffectReceipt",
+    "EffectRecordKey",
+    "EffectWriteResult",
     "ElevationAction",
     "ElevationActor",
     "ElevationApproval",
@@ -27396,6 +29031,7 @@ __all__ = [
     "ErrorBudgetSample",
     "EstimatorParams",
     "EstimatorPrediction",
+    "EtlRun",
     "EvalCandidate",
     "EvalCandidateDraftArtifact",
     "EvalCandidatePublishedHead",
@@ -27405,6 +29041,7 @@ __all__ = [
     "EvaluationMetrics",
     "EvaluationRun",
     "EvaluationVerdict",
+    "Evidence",
     "EvidenceAddressWire",
     "EvidenceAddressWireAudioRange",
     "EvidenceAddressWireCharacterRange",
@@ -27420,6 +29057,7 @@ __all__ = [
     "EvidenceAddressWireVideoTimeRange",
     "EvidenceBundle",
     "EvidenceBundleSchemaVersion",
+    "EvidenceChannel",
     "EvidenceCitationWire",
     "EvidenceClaim",
     "EvidenceClass",
@@ -27459,17 +29097,22 @@ __all__ = [
     "FeatureStepEmbedding",
     "FeatureStepNodeVector",
     "FeatureStepNormalize",
+    "FeedGrade",
+    "FeedItem",
     "FetchBackend",
     "FidelityCounts",
     "FieldContract",
     "Fill",
     "FillRule",
     "FinalityFilter",
+    "FinanceAlertEnvelope",
+    "FinanceAlertKind",
     "FinanceAlphaCombinationEngineResult",
     "FinanceCombineAlphasResult",
     "FinanceCrossSectionalRankResult",
     "FinanceDrawdownSeriesResult",
     "FinanceFactorRankResult",
+    "FinanceFactorRecordResult",
     "FinanceKalmanVolatilityResult",
     "FinanceMarketOp",
     "FinanceMarketOpAnalysisSnapshot",
@@ -27492,6 +29135,7 @@ __all__ = [
     "FinanceOfiSeriesResult",
     "FinanceOrderBookImbalanceResult",
     "FinancePairsTradingResult",
+    "FinancePatternClassifyResult",
     "FinancePurgedCpcvResult",
     "FinanceRealizedVolTickResult",
     "FinanceSabrSmileResult",
@@ -27658,6 +29302,7 @@ __all__ = [
     "GenerationEvalItem",
     "GenerationEvalRequest",
     "GenerationReceipt",
+    "GetAdmittedRequestResult",
     "GetBlastRadiusResult",
     "GetChangeCursorResult",
     "GetChangeEnvelopeResult",
@@ -27668,6 +29313,7 @@ __all__ = [
     "GetEdgePropertiesBatchResult",
     "GetEdgesPageResult",
     "GetEdgesPageResultValueItem",
+    "GetEffectReceiptResult",
     "GetIdentityResult",
     "GetNeighborsBatchResult",
     "GetNeighborsBatchResultValueItem",
@@ -27678,6 +29324,7 @@ __all__ = [
     "GetRunCheckpointResult",
     "GetRunWorkItemResult",
     "GetShortestPathResult",
+    "GetTelemetrySnapshotResult",
     "GetWorkItemOutcomeResult",
     "GetWorkItemResult",
     "GovernedActor",
@@ -27724,6 +29371,8 @@ __all__ = [
     "GraphTextPropertyRef",
     "GraphType",
     "GraphlearnPrediction",
+    "GroupEffect",
+    "GroupInput",
     "GroupMembershipChange",
     "GroupRecord",
     "GroupReshardResult",
@@ -27872,6 +29521,12 @@ __all__ = [
     "ImpactReport",
     "ImpactSemantics",
     "IncarnationId",
+    "IncidentRecord",
+    "IncidentRelatedClaim",
+    "IncidentRelatedClaimsResult",
+    "IncidentSeverity",
+    "IncidentStatus",
+    "IncidentWriteReceipt",
     "Incumbent",
     "IndexBlock",
     "IndexBlockReason",
@@ -28039,6 +29694,9 @@ __all__ = [
     "LevelValue",
     "LibraryCandidateScope",
     "LibraryCoverage",
+    "LifecycleTransition",
+    "LineageEvent",
+    "LineageIngestReceipt",
     "LineageRecord",
     "LinearExplanation",
     "LinkPrediction",
@@ -28053,9 +29711,12 @@ __all__ = [
     "LiquiditySeries",
     "ListChannelsResult",
     "ListControlLeasesRequest",
+    "ListCursor",
     "ListGraphsResult",
     "ListQuery",
     "ListTriggersResult",
+    "LiveArtifact",
+    "LiveArtifactView",
     "LoadReport",
     "LocalFallback",
     "LogicalName",
@@ -28069,6 +29730,7 @@ __all__ = [
     "ManagedIndexTargetGraphEdges",
     "ManagedIndexTargetTableColumn",
     "MappingRule",
+    "MarkWorkItemEffectStartedRequest",
     "MarketMakingQuoteResult",
     "MatchOntologyTermsResult",
     "MaterialClass",
@@ -28082,13 +29744,28 @@ __all__ = [
     "McpSelfServedCatalogAttestRequest",
     "MeasuredFact_ShellProficiency",
     "MeasuredFact_StoppingBehaviour",
+    "MeetingSummaryCommitReceipt",
+    "MeetingSummaryCommitRequest",
+    "MeetingSummaryContext",
+    "MeetingSummaryContextRequest",
+    "MeetingSummaryLimitPolicy",
+    "MeetingTranscriptRevision",
+    "MeetingTranscriptRevisionReceipt",
+    "MemorySnapshotHead",
+    "MemorySnapshotList",
+    "MemorySnapshotRead",
+    "MemorySyncRefusal",
     "MergeProposal",
     "MerkleInclusionReport",
     "MerkleProofStep",
     "MerkleSide",
     "Method",
+    "MethodAccessRequestDecideParams",
+    "MethodAccessRequestOpenParams",
     "MethodAcquireCapacity",
     "MethodAcquireCapacityParams",
+    "MethodActionRegisterParams",
+    "MethodActionSubmitParams",
     "MethodAddEdge",
     "MethodAddEdgeParams",
     "MethodAddEmbedding",
@@ -28178,6 +29855,9 @@ __all__ = [
     "MethodBrokerRejectParams",
     "MethodBrokerRenewTag",
     "MethodBrokerRenewTagParams",
+    "MethodBusHeartbeatParams",
+    "MethodBusRegisterParams",
+    "MethodBusRosterParams",
     "MethodCancelRequest",
     "MethodCancelRequestParams",
     "MethodCancelWorkItem",
@@ -28213,6 +29893,7 @@ __all__ = [
     "MethodClaimNextParams",
     "MethodClaimWorkItem",
     "MethodClaimWorkItemParams",
+    "MethodClaimsParams",
     "MethodCleanupDevelopmentLane",
     "MethodCleanupDevelopmentLaneParams",
     "MethodClearGraph",
@@ -28246,6 +29927,8 @@ __all__ = [
     "MethodConnectorPackParams",
     "MethodConsolidate",
     "MethodConsolidateParams",
+    "MethodContextFactsParams",
+    "MethodCreateBranchParams",
     "MethodCreateChannel",
     "MethodCreateChannelParams",
     "MethodCreateGraph",
@@ -28258,6 +29941,7 @@ __all__ = [
     "MethodCreateSummaryNodeParams",
     "MethodCypherQuery",
     "MethodCypherQueryParams",
+    "MethodDataProductRegisterParams",
     "MethodDecayMemories",
     "MethodDecayMemoriesParams",
     "MethodDecayNode",
@@ -28297,6 +29981,7 @@ __all__ = [
     "MethodDiscoverParams",
     "MethodDistributedCompute",
     "MethodDistributedComputeParams",
+    "MethodDocumentDeleteParams",
     "MethodDropContinuousQuery",
     "MethodDropContinuousQueryParams",
     "MethodDropNamedGraph",
@@ -28361,6 +30046,7 @@ __all__ = [
     "MethodExportSqliteFileParams",
     "MethodFinanceAdfTest",
     "MethodFinanceAdfTestParams",
+    "MethodFinanceAlertRaiseParams",
     "MethodFinanceAlphaCombinationEngine",
     "MethodFinanceAlphaCombinationEngineParams",
     "MethodFinanceAmlScreen",
@@ -28411,6 +30097,7 @@ __all__ = [
     "MethodFinanceExpectedPnlRateParams",
     "MethodFinanceFactorRank",
     "MethodFinanceFactorRankParams",
+    "MethodFinanceFactorRecordParams",
     "MethodFinanceForensicReport",
     "MethodFinanceForensicReportParams",
     "MethodFinanceGlostenMilgromSpread",
@@ -28471,12 +30158,14 @@ __all__ = [
     "MethodFinancePairsSignalParams",
     "MethodFinancePairsTrading",
     "MethodFinancePairsTradingParams",
+    "MethodFinancePatternClassifyParams",
     "MethodFinancePositionSize",
     "MethodFinancePositionSizeParams",
     "MethodFinancePosteriorCredibleInterval",
     "MethodFinancePosteriorCredibleIntervalParams",
     "MethodFinanceProbabilityBacktestOverfit",
     "MethodFinanceProbabilityBacktestOverfitParams",
+    "MethodFinanceProfitAttributionParams",
     "MethodFinancePurgedCpcv",
     "MethodFinancePurgedCpcvParams",
     "MethodFinanceQueueImbalance",
@@ -28545,6 +30234,7 @@ __all__ = [
     "MethodGapTransitionParams",
     "MethodGapUpsert",
     "MethodGapUpsertParams",
+    "MethodGetAdmittedRequestParams",
     "MethodGetBlastRadius",
     "MethodGetBlastRadiusParams",
     "MethodGetChangeCursor",
@@ -28563,6 +30253,7 @@ __all__ = [
     "MethodGetControlLeaseParams",
     "MethodGetCurrentPlan",
     "MethodGetCurrentPlanParams",
+    "MethodGetDelegationRecordParams",
     "MethodGetEdgeProperties",
     "MethodGetEdgePropertiesBatch",
     "MethodGetEdgePropertiesBatchParams",
@@ -28572,6 +30263,7 @@ __all__ = [
     "MethodGetEdgesPage",
     "MethodGetEdgesPageParams",
     "MethodGetEdgesPageParamsAfter",
+    "MethodGetEffectReceiptParams",
     "MethodGetIdentity",
     "MethodGetIdentityParams",
     "MethodGetLedger",
@@ -28597,12 +30289,14 @@ __all__ = [
     "MethodGetRunWorkItemParams",
     "MethodGetSessionUsage",
     "MethodGetSessionUsageParams",
+    "MethodGetShardWriterWidthParams",
     "MethodGetShortestPath",
     "MethodGetShortestPathParams",
     "MethodGetSubgraph",
     "MethodGetSubgraphParams",
     "MethodGetSuccessors",
     "MethodGetSuccessorsParams",
+    "MethodGetTelemetrySnapshotParams",
     "MethodGetWorkItem",
     "MethodGetWorkItemOutcome",
     "MethodGetWorkItemOutcomeParams",
@@ -28613,6 +30307,7 @@ __all__ = [
     "MethodGraphLearnFit",
     "MethodGraphLearnFitParams",
     "MethodGraphLearnPredict",
+    "MethodGraphLearnPredictNaryParams",
     "MethodGraphLearnPredictParams",
     "MethodGraphLearnPredictParamsCandidatePairsItem",
     "MethodGraphQl",
@@ -28639,6 +30334,11 @@ __all__ = [
     "MethodImportSqliteFileParams",
     "MethodInDegree",
     "MethodInDegreeParams",
+    "MethodIncidentCorrelateParams",
+    "MethodIncidentEvidenceParams",
+    "MethodIncidentRecordAnomalyParams",
+    "MethodIncidentRelatedClaimsParams",
+    "MethodIncidentSetStatusParams",
     "MethodIndexRepository",
     "MethodIndexRepositoryParams",
     "MethodInvalidateEdge",
@@ -28665,22 +30365,31 @@ __all__ = [
     "MethodKvScanParams",
     "MethodLeaveChannel",
     "MethodLeaveChannelParams",
+    "MethodLineageIngestParams",
     "MethodListChannels",
     "MethodListControlLeases",
     "MethodListControlLeasesParams",
     "MethodListGraphs",
+    "MethodListMemorySnapshotsParams",
     "MethodListRegisteredServers",
     "MethodListRegisteredServersParams",
     "MethodListTriggers",
     "MethodListTriggersParams",
     "MethodListWorkItems",
     "MethodListWorkItemsParams",
+    "MethodLiveArtifactGetParams",
+    "MethodLiveArtifactPutParams",
+    "MethodLiveArtifactRefreshParams",
     "MethodMaintain",
     "MethodMaintainParams",
+    "MethodMarkWorkItemEffectStartedParams",
     "MethodMatchOntologyTerms",
     "MethodMatchOntologyTermsParams",
     "MethodMaterializationStatus",
     "MethodMaterializationStatusParams",
+    "MethodMeetingSummaryCommitParams",
+    "MethodMeetingSummaryContextParams",
+    "MethodMeetingTranscriptRevisionParams",
     "MethodMetrics",
     "MethodMineAnomaly",
     "MethodMineAnomalyParams",
@@ -28749,6 +30458,7 @@ __all__ = [
     "MethodObserveDevelopmentLaneParams",
     "MethodObserveScreen",
     "MethodObserveScreenParams",
+    "MethodOntologyCanonicalHashParams",
     "MethodOntologyInspect",
     "MethodOntologyInspectParams",
     "MethodOutDegree",
@@ -28819,6 +30529,7 @@ __all__ = [
     "MethodRbacElevationParams",
     "MethodReadContinuousQuery",
     "MethodReadContinuousQueryParams",
+    "MethodReadMemorySnapshotParams",
     "MethodRebalanceExecute",
     "MethodRebalanceExecuteParams",
     "MethodRebalancePlan",
@@ -28833,6 +30544,7 @@ __all__ = [
     "MethodReconcileCapacity",
     "MethodReconcileCapacityParams",
     "MethodReconcileParams",
+    "MethodRecordEffectReceiptParams",
     "MethodRefreshMatView",
     "MethodRefreshMatViewParams",
     "MethodRegisterContinuousQuery",
@@ -28901,6 +30613,7 @@ __all__ = [
     "MethodRunUdfParams",
     "MethodSceneChildren",
     "MethodSceneChildrenParams",
+    "MethodSchemaProjectionsParams",
     "MethodSelectWebPages",
     "MethodSelectWebPagesParams",
     "MethodSemanticIndex",
@@ -28950,6 +30663,7 @@ __all__ = [
     "MethodStreamTrim",
     "MethodStreamTrimParams",
     "MethodStronglyConnectedComponents",
+    "MethodSubmitAdmittedRequestParams",
     "MethodSubmitWorkItem",
     "MethodSubmitWorkItemParams",
     "MethodSubmitWorkItems",
@@ -28962,6 +30676,7 @@ __all__ = [
     "MethodSupersedeEdgeParams",
     "MethodSweepExpired",
     "MethodSweepExpiredParams",
+    "MethodSyncMemorySnapshotParams",
     "MethodTelemetryDerive",
     "MethodTelemetryDeriveParams",
     "MethodThrottleCapacityCell",
@@ -29041,12 +30756,14 @@ __all__ = [
     "MethodVf2SubgraphMatchParams",
     "MethodViz",
     "MethodVizParams",
+    "MethodWalletKeyTrustGetParams",
     "MethodWatch",
     "MethodWatchParams",
     "MethodWhatChanged",
     "MethodWhatChangedParams",
     "MethodWorkOfferPut",
     "MethodWorkOfferPutParams",
+    "MethodWorkflowRegistryParams",
     "MethodWorldTransform",
     "MethodWorldTransformParams",
     "MethodWriteBack",
@@ -29096,6 +30813,10 @@ __all__ = [
     "MutationStateDescriptor",
     "MutationSurface",
     "NamedEvaluator",
+    "NaryEvidenceClass",
+    "NaryHypothesis",
+    "NaryPrediction",
+    "NaryRequest",
     "NativeControlSchemaVersion",
     "NativeOutboxScope",
     "NativeOutboxScopeSemanticBinding",
@@ -29127,6 +30848,7 @@ __all__ = [
     "ObjectiveValue",
     "ObservationRef",
     "OneTimeTokenIssue",
+    "OntologyCanonicalHashResult",
     "OntologyClassView",
     "OntologyGapMiningResult",
     "OntologyGapRow",
@@ -29297,6 +31019,8 @@ __all__ = [
     "PageRankResultValueItem",
     "PairsSignalResult",
     "ParallelRelationRow",
+    "ParamType",
+    "ParamValue",
     "ParseFilesResult",
     "ParseResult",
     "PasswordChange",
@@ -29306,6 +31030,8 @@ __all__ = [
     "PathEdge",
     "PathRank",
     "PatternEdge",
+    "PatternKind",
+    "PatternMatch",
     "PenaltyPolicy",
     "PenaltyVerdict",
     "PendingCallConsumption",
@@ -29447,6 +31173,8 @@ __all__ = [
     "ProbQueryMarginal",
     "ProbQuerySample",
     "ProcessMiningResult",
+    "ProductPort",
+    "ProductPortKind",
     "PromotionMetrics",
     "PromptMode",
     "ProofNode",
@@ -29485,6 +31213,8 @@ __all__ = [
     "QuantumRankedCandidate",
     "QueryAdapterBody",
     "QueryForeignColumnsResult",
+    "QueryLanguage",
+    "QuerySource",
     "QueryVector",
     "QuestionKind",
     "QuestionSafety",
@@ -29521,6 +31251,7 @@ __all__ = [
     "ReconciliationObservation",
     "ReconciliationReceipt",
     "RecordContract",
+    "RecordEffectReceiptRequest",
     "RecordVisibility",
     "RecordVisibilityPrincipal",
     "RecordVisibilityTenant",
@@ -29532,6 +31263,8 @@ __all__ = [
     "ReducedRow",
     "ReductionMiningResult",
     "RefitSpec",
+    "RefreshEntry",
+    "RefreshRecord",
     "RegimeChainResult",
     "RegimeResult",
     "RegisteredServerCursor",
@@ -29549,11 +31282,18 @@ __all__ = [
     "RequestContextAuthenticationMethod",
     "RequestContextClaims",
     "RequestContextSchemaVersion",
+    "RequestId",
+    "ResearchArtifact",
     "ResetDelivery",
+    "Resolution",
+    "ResolutionKeepHead",
     "ResolutionKind",
+    "ResolutionMerged",
+    "ResolutionTakeCandidate",
     "ResolveCandidatesResult",
     "ResolveConflictResult",
     "ResolvedArtifactWire",
+    "ResolvedEffect",
     "ResourceCapacity",
     "ResourceCapacitySnapshot",
     "ResourceHostUpdateCapacitySnapshot",
@@ -29649,6 +31389,11 @@ __all__ = [
     "SceneQuat",
     "SceneVec3",
     "SchemaAuthority",
+    "SchemaBoundary",
+    "SchemaProjections",
+    "SchemaProjectionsOp",
+    "SchemaProjectionsOpList",
+    "SchemaProjectionsOpPut",
     "SchemaSourceOriginView",
     "SchemaSourceOriginViewAdmin",
     "SchemaSourceOriginViewApproved",
@@ -29898,6 +31643,7 @@ __all__ = [
     "ShapeKeep",
     "ShardLoadSummary",
     "ShardReshardReport",
+    "ShardWriterWidth",
     "SharedCap",
     "ShellProficiency",
     "ShexNodeResult",
@@ -29923,6 +31669,7 @@ __all__ = [
     "SlotType",
     "SnapshotClaim",
     "SnapshotNotices",
+    "SnapshotProvenance",
     "SolveModelSpec",
     "SolveRequest",
     "SolveResult",
@@ -30005,6 +31752,7 @@ __all__ = [
     "SqliteImportSource",
     "SqliteTableRows",
     "StaleMaterializationsResult",
+    "Stance",
     "StatechartAction",
     "StatechartActionAssign",
     "StatechartActionCustom",
@@ -30067,14 +31815,37 @@ __all__ = [
     "SubgraphNode",
     "SubgraphPatternRow",
     "SubgraphResult",
+    "SubmissionCriterion",
+    "SubmitAdmittedRequestRequest",
     "SubmitJobSpec",
     "SubmitWorkItemRequest",
     "SubmitWorkItemResult",
     "SubmitWorkItemsRequest",
     "SubmitWorkItemsResult",
+    "SummaryAdmissionRef",
+    "SummaryCitation",
+    "SummaryClaim",
+    "SummaryReceipt",
+    "SummarySegmentText",
+    "SummarySpan",
     "SuperTrendCheckpoint",
     "SurveillanceRisk",
     "SvmKernel",
+    "SyncAction",
+    "SyncActionAcknowledge",
+    "SyncActionObserveFile",
+    "SyncActionResolve",
+    "SyncActionSubmit",
+    "SyncOutcome",
+    "SyncOutcomeAccepted",
+    "SyncOutcomeAcknowledged",
+    "SyncOutcomeConflictRetained",
+    "SyncOutcomeObserved",
+    "SyncOutcomeRefused",
+    "SyncOutcomeResolved",
+    "SyncRequest",
+    "SyncStamp",
+    "SyncState",
     "TaskPlan",
     "TaskPlanCall",
     "TaskPlanProposal",
@@ -30154,6 +31925,7 @@ __all__ = [
     "TrainingRunStatusFailed",
     "TrainingRunStatusSucceeded",
     "TransactionSource",
+    "TranscriptRevisionOp",
     "TransitionControlLeaseRequest",
     "TreeNode",
     "TrendFlip",
@@ -30263,6 +32035,7 @@ __all__ = [
     "VizViewResult",
     "VolatilityClass",
     "WalkForward",
+    "WalletKeyTrust",
     "WatchBatch",
     "WebCandidate",
     "WebauthnCredential",
@@ -30295,6 +32068,12 @@ __all__ = [
     "WorkOfferRecorded",
     "WorkOfferView",
     "WorkerJobClaim",
+    "WorkflowIdentity",
+    "WorkflowLifecycle",
+    "WorkflowRegistrationEntry",
+    "WorkflowRegistryOp",
+    "WorkflowRegistryOpRead",
+    "WorkflowRegistryOpRegister",
     "WorldTransformResult",
     "WriteBackAttempt",
     "WriteBackAttemptKind",
