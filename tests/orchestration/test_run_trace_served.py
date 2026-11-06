@@ -40,7 +40,10 @@ def test_invalid_trace_refused_and_not_stored(clean_graph):
 @pytest.mark.spec("MEDULLA-ORCH-VOCAB-R009.17")
 def test_client_ingest_round_trips_harness_properties(clean_graph):
     traces = _traces()
-    assert len(traces) == 5
+    # One trace per termination reason plus the over-budget overflow, the same
+    # fixture set crates/medulla-core/tests/run_trace_ingest.rs counts.
+    assert len(traces) == 6
+    assert len({trace["terminationReason"] for trace in traces}) == 5
     for trace in traces:
         clean_graph.nodes.add("config-" + trace["id"], {"node_type": "HarnessConfig"})
     for trace in traces:

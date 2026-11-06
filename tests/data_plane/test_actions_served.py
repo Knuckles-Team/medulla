@@ -72,6 +72,25 @@ async def _node(client, node_id: str):
     return _body(raw)
 
 
+async def _feed_head(client) -> int:
+    """The next sequence the feed will assign: the shared graph's ring can hold
+    more than one default page, so the cursor is the head, never a page length."""
+    _events, _watermark, head, _epoch = await client.streaming.cdc_read_with_watermark(
+        GRAPH, 0, limit=1
+    )
+    return head
+
+
+async def _feed_after(client, head: int) -> list:
+    """Every event from ``head`` on, page by page."""
+    events: list = []
+    cursor = head
+    while page := await client.streaming.cdc_read(GRAPH, cursor):
+        events.extend(page)
+        cursor = page[-1]["seq"] + 1
+    return events
+
+
 async def _registered(client) -> tuple[str, str]:
     suffix = uuid.uuid4().hex[:8]
     name, account = f"approve_refund_{suffix}", f"acct-{suffix}"
@@ -88,7 +107,7 @@ async def test_register_submit_and_outbox_event(start_medulla_server) -> None:
     client = await _connect()
     try:
         name, account = await _registered(client)
-        cursor = len(await client.streaming.cdc_read(GRAPH, 0))
+        cursor = await _feed_head(client)
         run = _body(
             await client._send(
                 "ActionSubmit",
@@ -98,7 +117,7 @@ async def test_register_submit_and_outbox_event(start_medulla_server) -> None:
         )
         assert run["status"] == "applied"
         assert [v["passed"] for v in run["verdicts"]] == [True, True]
-        events = await client.streaming.cdc_read(GRAPH, cursor)
+        events = await _feed_after(client, cursor)
         assert any(e["node_id"] == "__action_completed" for e in events)
         assert any(str(e["node_id"]).startswith("action-run:") for e in events)
         assert (await _node(client, account))["refunded"] == 40
