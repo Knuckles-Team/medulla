@@ -211,3 +211,81 @@ async fn body_staging() {
     );
     assert!(!error.is_empty());
 }
+
+// spec: MEDULLA-TYPED-PACKS-R002.6
+#[tokio::test]
+async fn verified_body_read() {
+    use medulla_agent_types::agent_component::{
+        AgentComponentContentRequest, AgentComponentContentResult, AgentComponentOp,
+    };
+    use medulla_protocol_types::protocol::Method;
+    use medulla_server_blob::blob::engine_bodies::EngineBody;
+    use medulla_server_blob::blob::BlobStateExt;
+    use medulla_types::contract::Digest256;
+    use sha2::{Digest, Sha256};
+
+    let served = Served::new();
+    bind(&served, CONNECTOR, ADMIN).await;
+    let entry = tool(CONNECTOR, "verified", "A verified tool.");
+    imported(&served, &build_pack(CONNECTOR, &[entry.clone()]), None).await;
+    let content = |tenant: &str| Method::AgentComponent {
+        op: AgentComponentOp::Content {
+            request: AgentComponentContentRequest {
+                tenant_id: tenant.to_string(),
+                component_id: format!("mcp:{CONNECTOR}/tool/verified"),
+                entry_revision: None,
+            },
+        },
+    };
+    // The pinned revision's exact body reads back through the served import.
+    let read: AgentComponentContentResult = ok(
+        "Content",
+        served
+            .call("content:storage-acceptance:verified", content(TENANT))
+            .await,
+    );
+    assert_eq!(read.body, entry.body);
+    // A tenant other than the verified one refuses before any body read.
+    let denied = refused(
+        "Content of a foreign tenant",
+        served
+            .call(
+                "content:storage-acceptance:foreign",
+                content("tenant-other"),
+            )
+            .await,
+    );
+    assert!(denied.contains("ACCESS_DENIED"), "{denied}");
+    // Corrupt one committed chunk of the stored body (same length, one byte off).
+    let blob = served.state.read().await.blob_cursors().cloned().unwrap();
+    let address = Digest256::from_bytes(Sha256::digest(&entry.body).into());
+    let stored = blob
+        .store
+        .put_engine_bodies(
+            TENANT,
+            &[EngineBody {
+                sha256: address,
+                body: entry.body.clone(),
+            }],
+            1,
+        )
+        .unwrap();
+    let manifest = blob
+        .store
+        .get_manifest(&stored[0].manifest_digest)
+        .unwrap()
+        .unwrap();
+    let chunk = blob.store.get_chunk(&manifest.chunks[0]).unwrap().unwrap();
+    let mut corrupt = chunk.clone();
+    corrupt[0] ^= 0xff;
+    blob.store
+        .corrupt_chunk_for_test(&manifest.chunks[0], &corrupt)
+        .unwrap();
+    // The verified read refuses with the registered code and returns no bytes.
+    let response = served
+        .call("content:storage-acceptance:corrupt", content(TENANT))
+        .await;
+    assert!(response.result.is_none(), "a corrupt body returns no data");
+    let refusal = refused("Content of a corrupt body", response);
+    assert!(refusal.contains("BODY_DIGEST_MISMATCH"), "{refusal}");
+}

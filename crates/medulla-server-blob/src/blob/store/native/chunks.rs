@@ -24,3 +24,23 @@ pub(super) fn get_chunk(store: &RedbChunkStore, digest: &str) -> Result<Option<V
     store.flush_chunks()?;
     store.shared_read()?.chunk_bytes(digest)
 }
+
+/// Replace chunk `digest`'s committed bytes (delete, then insert under the same
+/// address) in one admitted maintenance write. Test support only.
+#[cfg(any(test, feature = "test-support"))]
+pub(super) fn corrupt_chunk_for_test(
+    store: &RedbChunkStore,
+    digest: &str,
+    bytes: &[u8],
+) -> Result<(), String> {
+    store.flush_chunks()?;
+    let at = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
+    store.maintain("blob_chunk_corrupt_for_test", digest, at, |wtx| {
+        let shared = shared_write(wtx, &store.shared)?;
+        if !shared.remove_chunk(digest)? {
+            return Err(format!("chunk {digest} is not committed"));
+        }
+        shared.insert_chunks_if_absent(&[(digest, bytes)])?;
+        Ok(())
+    })
+}

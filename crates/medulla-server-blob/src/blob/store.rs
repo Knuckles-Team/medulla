@@ -127,6 +127,14 @@ pub trait ChunkStore: Send + Sync {
         Err("blob backend does not expose named holders".to_string())
     }
 
+    /// Test-support fault injection (MEDULLA-TYPED-PACKS-R002.6, D113): replace the
+    /// committed bytes of chunk `digest` with `bytes` under the same address, so a
+    /// later verified read must refuse instead of returning them.
+    #[cfg(any(test, feature = "test-support"))]
+    fn corrupt_chunk_for_test(&self, _digest: &str, _bytes: &[u8]) -> Result<(), String> {
+        Err("blob backend does not support chunk fault injection".to_string())
+    }
+
     /// Mark-and-sweep GC over every owner under the default retention policy.
     fn sweep(&self) -> Result<SweepStats, String>;
 

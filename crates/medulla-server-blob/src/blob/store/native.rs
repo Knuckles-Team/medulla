@@ -32,6 +32,11 @@ impl_native_chunk_store! {
         chunks::get_chunk(self, digest)
     }
 
+    #[cfg(any(test, feature = "test-support"))]
+    fn corrupt_chunk_for_test(&self, digest: &str, bytes: &[u8]) -> Result<(), String> {
+        chunks::corrupt_chunk_for_test(self, digest, bytes)
+    }
+
     fn put_manifest(&self, blob_digest: &str, manifest: &BlobManifest) -> Result<(), String> {
         manifests::put_manifest(self, blob_digest, manifest)
     }

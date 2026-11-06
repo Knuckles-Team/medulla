@@ -351,3 +351,13 @@
     [ sh:path :runRevision ; sh:datatype xsd:integer ; sh:minInclusive 0 ],
     [ sh:path :startMs ; sh:datatype xsd:integer ; sh:minInclusive 0 ],
     [ sh:path :endMs ; sh:datatype xsd:integer ; sh:minInclusive 0 ] .
+
+# MEDULLA-TYPED-PACKS-R002.12 (D113): a prompt revision names one non-negative
+# revision number, one 64-hex body digest and the one prompt it revises.
+:PromptRevisionShape a sh:NodeShape ;
+    sh:targetClass :PromptRevision ;
+    sh:property [ sh:path :promptRevision ; sh:minCount 1 ; sh:maxCount 1 ;
+        sh:datatype xsd:integer ; sh:minInclusive 0 ],
+    [ sh:path :promptBodyDigest ; sh:minCount 1 ; sh:maxCount 1 ;
+        sh:datatype xsd:string ; sh:pattern "^[0-9a-f]{64}$" ],
+    [ sh:path :revisionOf ; sh:minCount 1 ; sh:maxCount 1 ; sh:class :Prompt ] .

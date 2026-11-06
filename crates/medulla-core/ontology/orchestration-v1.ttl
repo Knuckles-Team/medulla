@@ -623,6 +623,31 @@
 :Prompt a owl:Class ;
     rdfs:label "Prompt" .
 
+# MEDULLA-TYPED-PACKS-R002.12 (D113): one committed revision of a native prompt
+# component, the graph entity the native-component projection writes.
+:PromptRevision a owl:Class ;
+    rdfs:label "Prompt revision" ;
+    rdfs:comment "One committed revision of a prompt component: its revision number, the SHA-256 digest of its exact body, and the prompt it revises (closed by the prompt-revision shape)." ;
+    rdfs:subClassOf bfo:0000031 .
+
+:revisionOf a owl:ObjectProperty ;
+    rdfs:label "revision of" ;
+    rdfs:comment "Links a prompt revision to the prompt it revises." ;
+    rdfs:domain :PromptRevision ;
+    rdfs:range :Prompt .
+
+:promptRevision a owl:DatatypeProperty ;
+    rdfs:label "prompt revision" ;
+    rdfs:comment "The revision number of a prompt revision." ;
+    rdfs:domain :PromptRevision ;
+    rdfs:range xsd:integer .
+
+:promptBodyDigest a owl:DatatypeProperty ;
+    rdfs:label "prompt body digest" ;
+    rdfs:comment "The lowercase hex SHA-256 digest of a prompt revision's exact body." ;
+    rdfs:domain :PromptRevision ;
+    rdfs:range xsd:string .
+
 :Session a owl:Class ;
     rdfs:label "Session" ;
     rdfs:comment "CONCEPT:ORCH-1.40 — id-addressable anchor (session:{sid}) for a session's collections; lets 'list by session' be a reliable single-hop traversal on a property-index-free engine." .
