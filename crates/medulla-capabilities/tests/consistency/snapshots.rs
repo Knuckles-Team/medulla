@@ -373,6 +373,11 @@ pub(crate) const NATIVE_GRAPHREDB_DURABLE: &[&str] = &[
     "IncidentSetStatus",
     "ActionRegister",
     "ActionSubmit",
+    // MEDULLA-FEDERATED-QUERY-R701.3/R701.5: put and refresh commit the artifact
+    // node and its refresh record over the query gateway's staged graph, the same
+    // native commit point as `Sql`, `CypherQuery` and `GraphQl`.
+    "LiveArtifactPut",
+    "LiveArtifactRefresh",
     "Sql",
     // EH-351: create/refresh/drop commit the edge-index registration and its
     // generations in the tenant SQL catalog natively, as `Sql` DDL does.

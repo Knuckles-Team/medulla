@@ -37,6 +37,7 @@ class GraphSchemaCommitted(BaseModel):
 
     changed: bool
     composed_digest: str
+    edit_head: Digest256 | None = None
     graph: str
     graph_version: Annotated[int, Field(ge=0)]
     schema_version: Annotated[int, Field(ge=0, le=65535)]
@@ -82,6 +83,13 @@ class GraphSchemaOpWithdrawOntology(BaseModel):
     op: Literal["withdraw_ontology"]
 
 
+class GraphSchemaOpRevertEdit(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["revert_edit"]
+    subject_iri: str
+
+
 class GraphSchemaOpDetach(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -114,6 +122,7 @@ GraphSchemaOp = Annotated[
     | GraphSchemaOpAttachPack
     | GraphSchemaOpImportOntology
     | GraphSchemaOpWithdrawOntology
+    | GraphSchemaOpRevertEdit
     | GraphSchemaOpDetach
     | GraphSchemaOpAttachApproved
     | GraphSchemaOpValidateRepair,
@@ -271,6 +280,8 @@ GraphSchemaOpImportOntology.model_rebuild()
 
 GraphSchemaOpWithdrawOntology.model_rebuild()
 
+GraphSchemaOpRevertEdit.model_rebuild()
+
 GraphSchemaOpDetach.model_rebuild()
 
 GraphSchemaOpAttachApproved.model_rebuild()
@@ -312,6 +323,7 @@ __all__ = [
     "GraphSchemaOpAttachPack",
     "GraphSchemaOpDetach",
     "GraphSchemaOpImportOntology",
+    "GraphSchemaOpRevertEdit",
     "GraphSchemaOpValidateRepair",
     "GraphSchemaOpWithdrawOntology",
     "GraphSchemaSourceView",

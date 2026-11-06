@@ -123,7 +123,27 @@ const DOMAIN_PREFIXES: &[(&str, &[&str])] = &[
         &["CHANGE_BATCH_", "REPLAY_NONCE_", "WRITE_CONFLICT"],
     ),
 ];
+/// The node-write admission of run traces, step records, observation windows
+/// and durable units (MEDULLA-ORCH-VOCAB-R009.15..R009.18, R009.700/701,
+/// R013.1/R013.2) refuses with these codes on every node-write carrier.
+const HARNESS_RECORD_ADMISSION_ERRORS: &[&str] = &[
+    "DURABLE_UNIT_RUN_CONFLICT",
+    "DURABLE_UNIT_RUN_MISSING",
+    "RUN_TRACE_SHAPE_INVALID",
+    "STEP_DIGEST_INVALID",
+    "STEP_ORDER_INVALID",
+    "WINDOW_CONTENT_CONFLICT",
+    "WINDOW_RUN_REVISION_MISMATCH",
+];
+
 const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
+    // MEDULLA-FEDERATED-QUERY-R709: a GeoSPARQL operand that is not WKT or
+    // names an unsupported coordinate reference.
+    ("Sparql", &["GEO_CRS_UNSUPPORTED", "GEO_LITERAL_INVALID"]),
+    // MEDULLA-UNIFIED-DATA-PLANE-R038.3: a source that cannot give one snapshot.
+    ("UnifiedQuery", &["SNAPSHOT_UNAVAILABLE"]),
+    // MEDULLA-UNIFIED-DATA-PLANE-R038.5.1: an out-of-range search capability.
+    ("RegisterForeignSource", &["SEARCH_CAPABILITY_INVALID"]),
     // MEDULLA-TYPED-PACKS-R809: an unparsable or oversized Turtle payload.
     ("OntologyCanonicalHash", &["TURTLE_INVALID"]),
     // MEDULLA-DURABLE-KERNEL-R078: the served edge chokepoint refuses an
@@ -644,6 +664,7 @@ fn add_owner_errors(d: &MethodDescriptor, codes: &mut BTreeSet<&'static str>) {
             HarnessVocabularyErrorCode::ALL,
             HarnessVocabularyErrorCode::as_str,
         ));
+        codes.extend(HARNESS_RECORD_ADMISSION_ERRORS.iter().copied());
     }
     if d.domain == "security" {
         codes.insert("POLICY_NATIVE_AUTHORITY_REQUIRED");

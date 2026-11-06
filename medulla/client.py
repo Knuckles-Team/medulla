@@ -4760,6 +4760,7 @@ _WORK_ITEM_VIEW_FIELDS = frozenset(
         "metadata",
         "version",
         "updated_at_ms",
+        "effect_phase",
     }
 )
 

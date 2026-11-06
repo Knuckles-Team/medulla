@@ -354,6 +354,8 @@ class PackEntryKind(str, Enum):
     MODEL_PROFILE = "model_profile"
     A2A_CARD = "a2a_card"
     SKILL_FILE = "skill_file"
+    CROSSWALK = "crosswalk"
+    CONCEPT_PATH = "concept_path"
 
 
 class PackHeadRef(BaseModel):

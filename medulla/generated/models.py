@@ -444,6 +444,7 @@ from .graph_schema import (
     GraphSchemaOpAttachPack,
     GraphSchemaOpDetach,
     GraphSchemaOpImportOntology,
+    GraphSchemaOpRevertEdit,
     GraphSchemaOpValidateRepair,
     GraphSchemaOpWithdrawOntology,
     GraphSchemaSourcesView,
@@ -4641,6 +4642,12 @@ class EdgeFunctionRow(BaseModel):
     hidden_output: Annotated[int, Field(ge=0)]
 
 
+class EffectPhase(str, Enum):
+    UNSTARTED = "unstarted"
+    STARTED = "started"
+    RESOLVED = "resolved"
+
+
 class ElevationAction(str, Enum):
     READ = "read"
     WRITE = "write"
@@ -5902,6 +5909,7 @@ class ForeignOperationCapabilities(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     key_filter_pushdown: bool | None = None
+    search: SearchIndexCapability | None = None
 
 
 class ForeignReadAbortRequest(BaseModel):
@@ -20562,6 +20570,12 @@ class SceneVec3(BaseModel):
     z: float
 
 
+class ScoreKind(str, Enum):
+    BM25 = "bm25"
+    COSINE = "cosine"
+    OPAQUE = "opaque"
+
+
 class ScoredOption(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -20608,6 +20622,16 @@ class SealedRecordTombstone(BaseModel):
     record_class: str
     retired_at_ms: Annotated[int, Field(ge=0)]
     retired_by: str
+
+
+class SearchIndexCapability(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    filters: bool
+    full_text: bool
+    max_k: Annotated[int, Field(ge=0)]
+    score_kind: ScoreKind
+    vector: bool
 
 
 class SeedAttributionRow(BaseModel):
@@ -22885,6 +22909,7 @@ class SparqlResult(BaseModel):
 
     proofs: list[SparqlRowProof]
     rows: list[list[str | None]]
+    spatial: list[SparqlSpatialUse] = Field(default_factory=list)
     vars: list[str]
 
 
@@ -22894,6 +22919,13 @@ class SparqlRowProof(BaseModel):
     coverage: SparqlProofCoverage
     row: Annotated[int, Field(ge=0)]
     witnesses: list[SparqlWitnessTriple]
+
+
+class SparqlSpatialUse(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    function: str
+    index_used: bool
 
 
 class SparqlUpdateReport(BaseModel):
@@ -24763,6 +24795,7 @@ class WorkItemTransition_WorkItemCommitStatus(BaseModel):
 class WorkItemView(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    effect_phase: EffectPhase = EffectPhase.UNSTARTED
     input_ref: str
     kind: str
     metadata: dict[str, Any]
@@ -27333,6 +27366,7 @@ __all__ = [
     "EdgeSourceComponentClassification",
     "EdgeSourceNativeOntology",
     "EdgeVectorMetric",
+    "EffectPhase",
     "ElevationAction",
     "ElevationActor",
     "ElevationApproval",
@@ -27679,6 +27713,7 @@ __all__ = [
     "GraphSchemaOpAttachPack",
     "GraphSchemaOpDetach",
     "GraphSchemaOpImportOntology",
+    "GraphSchemaOpRevertEdit",
     "GraphSchemaOpValidateRepair",
     "GraphSchemaOpWithdrawOntology",
     "GraphSchemaSourceView",
@@ -29622,11 +29657,13 @@ __all__ = [
     "SchemaSourceOriginViewOperator",
     "SchemaSourceOriginViewPack",
     "ScopeTenantId",
+    "ScoreKind",
     "ScoredOption",
     "ScreenObservationResult",
     "SealedRecordRetireOutcome",
     "SealedRecordRetirement",
     "SealedRecordTombstone",
+    "SearchIndexCapability",
     "Secret",
     "SeedAttributionRow",
     "SelectWebPagesAnswer",
@@ -29924,6 +29961,7 @@ __all__ = [
     "SparqlProofCoverage",
     "SparqlResult",
     "SparqlRowProof",
+    "SparqlSpatialUse",
     "SparqlUpdateReport",
     "SparqlWitnessTriple",
     "SpatialOpKind",
