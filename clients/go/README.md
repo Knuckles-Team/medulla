@@ -129,3 +129,9 @@ Requires a server built with the matching features: `broker`, `security` (RBAC),
 prove the signed body and envelope MAC equal the engine's for every catalog method, and
 the same job rebuilds the embedded codec and byte-compares it. There is no live Go engine
 harness yet, so transport round-trips are not exercised.
+
+## Building the method codec
+
+`medulla_method_codec.wasm` is not committed (MEDULLA-SDLC-R020.1). Build it from the
+repository root before running the tests or packing a release:
+`python3 scripts/build_method_codec_wasm.py` (needs `rustup target add wasm32-unknown-unknown`).

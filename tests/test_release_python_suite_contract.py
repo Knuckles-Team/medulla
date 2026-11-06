@@ -571,7 +571,7 @@ COMPILER_CACHE_COMMANDS: dict[str, dict[str, tuple[str, ...]]] = {
                 "medulla-core -p medulla-compute --all-features --no-fail-fast"
             ),
         ),
-        ("Test (canonical capability policy and generated ledger)"): (
+        ("Test (canonical capability policy)"): (
             (
                 "python3 scripts/cargo_test_rescue.py cargo test --locked -p "
                 "medulla-capabilities --features canonical-ledger --no-fail-fast"

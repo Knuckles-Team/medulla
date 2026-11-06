@@ -284,10 +284,9 @@ jobs:
       - name: Lint (generated Cypher property keys are quoted)
         env: *medulla-validation-compiler-cache-env
         run: bash scripts/check_cypher_render.sh
-      # The checked ledger is the canonical all-Method projection. The ordinary
-      # feature-selected registry is intentionally smaller, so this named profile
-      # is the only meaningful exact generated-artifact comparison. This step is
-      - name: Test (canonical capability policy and generated ledger)
+      # The canonical-ledger profile selects every Method variant. The ordinary
+      # feature-selected registry is intentionally smaller.
+      - name: Test (canonical capability policy)
         env: *medulla-validation-compiler-cache-env
         run: python3 scripts/cargo_test_rescue.py cargo test --locked -p medulla-capabilities --features canonical-ledger --no-fail-fast
       # The facade's sqlite `.db` round-trip test diffs against a real sqlite3 CLI and
@@ -1111,8 +1110,8 @@ jobs:
 
   # ── Go and JavaScript clients (EH-372). Both sign the engine's own canonical
   # method body through the embedded WebAssembly build of crates/medulla-method-codec.
-  # The job rebuilds that module and requires both committed copies to match it
-  # byte-for-byte, then replays every contract method-body vector (body digest and
+  # The module is never committed (MEDULLA-SDLC-R020.1): the job builds it twice,
+  # requires the builds byte-identical, places it in both clients, then replays every contract method-body vector (body digest and
   # envelope MAC) through each client's signer, plus the clients' own unit tests.
   language-clients:
     timeout-minutes: ${{ github.event_name == 'pull_request' && 10 || 60 }}
@@ -1135,9 +1134,9 @@ jobs:
           save-if: ${{ github.ref == 'refs/heads/main' }}
       - name: Install the pinned toolchain's wasm32 target
         run: rustup target add wasm32-unknown-unknown
-      - name: Rebuild the embedded method-body codec and require the committed copies
+      - name: Build the embedded method-body codec into both clients
         id: method-codec
-        run: python3 scripts/build_method_codec_wasm.py --check --export-dir target/canonical-method-codec
+        run: python3 scripts/build_method_codec_wasm.py --export-dir target/canonical-method-codec
       - name: Upload freshly built canonical method codec
         if: ${{ !cancelled() && steps.method-codec.outputs.fresh_export == 'true' && hashFiles('target/canonical-method-codec/medulla_method_codec.provenance.json') != '' }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

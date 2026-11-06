@@ -4,15 +4,16 @@
 //! Each JSON schema of `DecideRequest`, `DecisionFitOp`, `DecisionEvalOp` and
 //! `StatisticalDecisionRecord` becomes one `owl:Class`; each of its top-level
 //! properties becomes one property axiom plus one `sh:property` with its
-//! datatype and cardinality. The committed outputs are
-//! `crates/medulla-core/ontology/decision.ttl` and `decision.shapes.ttl`.
-//! Every statement is sorted by IRI, so generation is byte-stable.
+//! datatype and cardinality. Nothing is committed: `medulla-graph-core`'s
+//! `build.rs` renders both documents into `OUT_DIR` at compile time
+//! (MEDULLA-SDLC-R020.1). Every statement is sorted by IRI, so generation is
+//! byte-stable.
 
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
 
-use medulla_decision_types::decision::statistical::{DecideRequest, StatisticalDecisionRecord};
-use medulla_decision_types::decision::{DecisionEvalOp, DecisionFitOp};
+use crate::decision::statistical::{DecideRequest, StatisticalDecisionRecord};
+use crate::decision::{DecisionEvalOp, DecisionFitOp};
 use serde_json::Value;
 
 /// Namespace every generated IRI lives in (the core ontology namespace).

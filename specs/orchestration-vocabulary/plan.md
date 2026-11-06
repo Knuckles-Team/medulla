@@ -53,7 +53,7 @@ tests/orchestration/                                        existing: served Pyt
 
 ## Phase 0: Research
 
-No unknowns; no research.md. The generated-artifact ledger of `MEDULLA-ORCH-VOCAB-R008.2` covers every generated artifact.
+No unknowns; no research.md. No generated artifact is committed (`MEDULLA-SDLC-R020.1`).
 
 ## Phase 1: Design
 

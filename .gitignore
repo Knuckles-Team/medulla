@@ -174,3 +174,7 @@ security-results/
 
 # Spec status is computed at read time (pipelines-hook spec-status --write), never committed.
 specs/*/status.json
+
+# MEDULLA-SDLC-R020.1: generated artifacts are built where they are consumed, never committed.
+/clients/go/medulla_method_codec.wasm
+/clients/js/medulla_method_codec.wasm

@@ -7,7 +7,6 @@ import sys
 import zlib
 from pathlib import Path
 
-from generated_artifacts import verify as verify_generated_artifacts
 from third_party_sources import ReviewedFinding
 from third_party_sources import verify as verify_third_party_sources
 
@@ -366,10 +365,7 @@ def _reviewed_security_evidence(
 
 
 def scan_repository(repo_path: Path) -> list[str]:
-    # A reviewed generated artifact (`.config/generated-artifacts.toml`) whose
-    # bytes equal its pinned sha256 is exempt from the text inspection a binary
-    # cannot pass; a missing or changed one is itself a violation.
-    generated, violations = verify_generated_artifacts(repo_path)
+    violations: list[str] = []
     third_party, source_errors, reviewed_findings = verify_third_party_sources(
         repo_path
     )
@@ -387,19 +383,18 @@ def scan_repository(repo_path: Path) -> list[str]:
         relative = file_path.relative_to(repo_path)
         violations.extend(naming_violations(relative))
         relative_name = relative.as_posix()
-        if relative_name not in generated:
-            if relative_name in reviewed_binaries:
-                continue
-            violations.extend(
-                secret_violations(
-                    file_path,
-                    relative,
-                    dict.fromkeys(
-                        reviewed_lines.get(relative_name, frozenset()),
-                        frozenset({"AWS access key"}),
-                    ),
-                )
+        if relative_name in reviewed_binaries:
+            continue
+        violations.extend(
+            secret_violations(
+                file_path,
+                relative,
+                dict.fromkeys(
+                    reviewed_lines.get(relative_name, frozenset()),
+                    frozenset({"AWS access key"}),
+                ),
             )
+        )
     return violations
 
 

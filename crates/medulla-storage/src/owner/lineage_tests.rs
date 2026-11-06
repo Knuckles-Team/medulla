@@ -180,18 +180,19 @@ fn an_undeclared_digest_is_unknown_not_a_predecessor() {
     assert_eq!(validate_against_lineage(&current), Ok(()));
 }
 
-/// X11-T8: the operator doc is exactly what the registry renders.
+/// X11-T8: the operator doc rendered from the registry names the refusal and
+/// is byte-stable; it is computed, never compared with a committed copy.
 #[test]
-fn the_owner_store_format_doc_is_generated_from_the_registry() {
-    let path =
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../docs/operations/owner-store-formats.md");
-    let checked_in = std::fs::read_to_string(&path).unwrap_or_default();
+fn the_owner_store_format_doc_is_rendered_from_the_registry() {
+    let rendered = render_owner_store_formats();
     assert_eq!(
-        checked_in,
+        rendered,
         render_owner_store_formats(),
-        "docs/operations/owner-store-formats.md is stale; regenerate it with \
-         `cargo run -p medulla-storage --example gen_owner_store_formats`"
+        "rendering is byte-stable"
     );
+    assert!(rendered.starts_with("# Owner-store formats\n"));
+    assert!(rendered.contains("OWNER_STORE_FORMAT_UNKNOWN"));
+    assert!(!rendered.contains("do not edit by hand"));
 }
 
 /// EH-150: a predecessor file that ALSO fails the table census -- a stray

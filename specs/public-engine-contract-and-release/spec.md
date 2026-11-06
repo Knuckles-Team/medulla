@@ -37,7 +37,7 @@ The user is a Go or JavaScript connector developer. The outcome is a signed body
 1. **Given** the committed body vectors, **When** the Go and JS clients replay them, **Then** each signed body equals the Rust output.
 2. **Given** a source or toolchain change, **When** the codec check rebuilds the WASM twice, **Then** both builds are identical and within the size budget.
 
-Independent test: `tests/test_build_method_codec_wasm.py::test_ci_upload_requires_fresh_step_signal_and_keeps_check` covers the export path; the vector tests cover the replay.
+Independent test: `tests/test_build_method_codec_wasm.py::test_ci_builds_the_codec_before_client_tests_and_uploads_it` covers the export path; the vector tests cover the replay.
 
 ### User Story 3 - Install one distribution that carries the server (Priority: P1)
 

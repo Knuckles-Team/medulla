@@ -68,208 +68,54 @@ def test_invalid_or_importing_modules_fail_closed(codec, module):
         codec.verify_no_imports(module)
 
 
-def test_check_requires_both_client_copies_to_equal_fresh_bytes(
-    codec, tmp_path, capsys
-):
-    for client in codec.CLIENT_DIRS:
-        (tmp_path / client).mkdir(parents=True)
-    fresh = WASM + b"\x00\x01x"
-    for client in codec.CLIENT_DIRS:
-        (tmp_path / client / codec.MODULE).write_bytes(fresh)
-    expected = hashlib.sha256(fresh).hexdigest()
-    config = tmp_path / ".config"
-    config.mkdir()
-    entries = []
-    for client in codec.CLIENT_DIRS:
-        entries.append(
-            "[[artifact]]\n"
-            f'path = "{client}/{codec.MODULE}"\n'
-            f'sha256 = "{expected}"\n'
-            'reproducer = "python3 scripts/build_method_codec_wasm.py --check"\n'
-            'proven_by = "language-clients"\n'
-            'reason = "Embedded method codec"\n'
-        )
-    (config / "generated-artifacts.toml").write_text("\n".join(entries))
-    _qualify(codec, tmp_path, fresh)
-    assert codec.check(tmp_path, fresh) == 0
-    assert f"sha256={expected}" in capsys.readouterr().out
-    (tmp_path / codec.CLIENT_DIRS[1] / codec.MODULE).write_bytes(b"stale")
-    assert codec.check(tmp_path, fresh) == 1
-    assert expected in capsys.readouterr().err
-    (tmp_path / codec.CLIENT_DIRS[1] / codec.MODULE).write_bytes(fresh)
-    (config / "generated-artifacts.toml").write_text(
-        (config / "generated-artifacts.toml").read_text().replace(expected, "0" * 64, 1)
-    )
-    assert codec.check(tmp_path, fresh) == 1
-    assert "does not match its pinned sha256" in capsys.readouterr().err
-
-
-def _qualify(codec, root, module, digests=None, size=None):
-    record = codec.qualification([module, module])
-    if digests is not None:
-        record["canonical_build_sha256"] = digests
-    if size is not None:
-        record["size_bytes"] = size
-    (root / codec.COMMITTED_PROVENANCE).write_text(json.dumps(record))
-
-
-# spec: MEDULLA-CONTRACT-R006.2
-@pytest.mark.spec("MEDULLA-CONTRACT-R006.2")
-def test_provenance_records_two_digests_and_both_copies_fresh(
-    codec, codec_repo, capsys
-):
-    root, _ = codec_repo
-    fresh = WASM + b"\x00\x01q"
-    assert codec.write(root, fresh, fresh) == 0
-    record = json.loads((root / codec.COMMITTED_PROVENANCE).read_text())
-    digest = hashlib.sha256(fresh).hexdigest()
-    assert record["canonical_build_sha256"] == [digest, digest]
-    assert record["size_bytes"] == len(fresh) <= record["max_bytes"] == codec.MAX_BYTES
-    assert codec.check(root, fresh, fresh) == 0
-    capsys.readouterr()
-
-    # Two canonical builds that differ refuse, before and after writing.
-    assert codec.check(root, fresh, fresh + b"x") == 1
-    assert "two canonical builds differ" in capsys.readouterr().err
-    assert codec.write(root, fresh, fresh + b"x") == 1
-
-    # One digest, an uppercase digest or a stale digest is refused.
-    for digests in ([digest], [digest.upper(), digest], [digest, "0" * 64]):
-        _qualify(codec, root, fresh, digests=digests)
-        assert codec.check(root, fresh) == 1
-        assert str(codec.COMMITTED_PROVENANCE) in capsys.readouterr().err
-    _qualify(codec, root, fresh, size=len(fresh) + 1)
-    assert codec.check(root, fresh) == 1
-    assert "size_bytes" in capsys.readouterr().err
-    (root / codec.COMMITTED_PROVENANCE).unlink()
-    assert codec.check(root, fresh) == 1
-
-    # Over budget refuses even with a matching record.
-    big = WASM + b"\x00" * (codec.MAX_BYTES)
-    _qualify(codec, root, big)
-    assert not codec._check_qualification(root, big)
-    assert "MAX_BYTES" in capsys.readouterr().err
-
-    # A stale committed copy refuses.
-    assert codec.write(root, fresh, fresh) == 0
-    (root / codec.CLIENT_DIRS[0] / codec.MODULE).write_bytes(b"stale")
-    assert codec.check(root, fresh, fresh) == 1
-    assert "STALE" in capsys.readouterr().err
-
-
 @pytest.fixture
 def codec_repo(codec, tmp_path):
     for client in codec.CLIENT_DIRS:
         (tmp_path / client).mkdir(parents=True)
-        (tmp_path / client / codec.MODULE).write_bytes(WASM)
-    ledger = tmp_path / ".config" / "generated-artifacts.toml"
-    ledger.parent.mkdir()
-    body = (ROOT / ".config" / "generated-artifacts.toml").read_text()
-    for entry in codec.generated_artifacts.load(ROOT).values():
-        body = body.replace(entry.sha256, hashlib.sha256(WASM).hexdigest())
-    ledger.write_text(body)
-    return tmp_path, ledger
+    return tmp_path, None
 
 
-def test_write_updates_both_existing_pins_and_preserves_metadata(codec, codec_repo):
-    root, ledger = codec_repo
-    original = ledger.read_text()
-    fresh = WASM + b"\x00\x01x"
-    assert codec.write(root, fresh) == 0
-    assert ledger.read_text() == original.replace(
-        hashlib.sha256(WASM).hexdigest(), hashlib.sha256(fresh).hexdigest()
-    )
-    assert codec.check(root, fresh) == 0
-    assert codec.write(root, fresh) == 0
-
-
-@pytest.mark.parametrize(
-    "change",
-    [
-        lambda body: "invalid = [",
-        lambda body: body.replace("language-clients", "other-job", 1),
-        lambda body: body.replace(" --check", " --wrong", 1),
-        lambda body: body.replace("clients/go/", "clients/other/", 1),
-        lambda body: body + body[body.index("[[artifact]]") :],
-        lambda body: body.replace('sha256 = "', 'digest = "', 1),
-    ],
-)
-def test_write_refuses_unexpected_ledger_before_changing_files(
-    codec, codec_repo, change
-):
-    root, ledger = codec_repo
-    ledger.write_text(change(ledger.read_text()))
-    before = ledger.read_bytes()
-    assert codec.write(root, WASM + b"\x00\x01x") == 1
-    assert ledger.read_bytes() == before
+# spec: MEDULLA-CONTRACT-R006.2
+@pytest.mark.spec("MEDULLA-CONTRACT-R006.2")
+def test_write_requires_two_identical_builds_within_budget(codec, codec_repo, capsys):
+    root, _ = codec_repo
+    fresh = WASM + b"\x00\x01q"
+    assert codec.write(root, fresh, WASM + b"\x00\x01r") == 1
+    assert "two canonical builds differ" in capsys.readouterr().err
     for client in codec.CLIENT_DIRS:
-        assert (root / client / codec.MODULE).read_bytes() == WASM
-
-
-def test_write_refuses_missing_ledger_without_creating_artifacts(codec, tmp_path):
-    assert codec.write(tmp_path, WASM) == 1
-    assert list(tmp_path.iterdir()) == []
-
-
-def test_write_preserves_unrelated_artifact_with_the_same_old_hash(codec, codec_repo):
-    root, ledger = codec_repo
-    unrelated = ledger.read_text().split("[[artifact]]")[1]
-    unrelated = "[[artifact]]" + unrelated.replace("clients/go/", "clients/unrelated/")
-    ledger.write_text(ledger.read_text() + unrelated)
-    assert codec.write(root, WASM + b"\x00\x01x") == 0
-    assert ledger.read_text().endswith(unrelated)
-
-
-@pytest.mark.parametrize("target", ["ledger", "codec"])
-def test_write_refuses_symlinks_before_changing_files(codec, codec_repo, target):
-    root, ledger = codec_repo
-    path = ledger if target == "ledger" else root / codec.CLIENT_DIRS[1] / codec.MODULE
-    saved = path.with_suffix(".original")
-    path.rename(saved)
-    path.symlink_to(saved)
-    original = saved.read_bytes()
-    assert codec.write(root, WASM + b"\x00\x01x") == 1
-    assert saved.read_bytes() == original
-    assert (root / codec.CLIENT_DIRS[0] / codec.MODULE).read_bytes() == WASM
-
-
-@pytest.mark.parametrize(
-    ("metadata_decoy", "refusal"),
-    [
-        pytest.param(False, "unsupported ledger hash layout", id="quoted-hash-key"),
-        pytest.param(True, "refused unexpected ledger changes", id="metadata-decoy"),
-    ],
-)
-def test_write_refuses_ambiguous_hash_layout_without_side_effects(
-    codec, codec_repo, capsys, metadata_decoy, refusal
-):
-    root, ledger = codec_repo
-    original = ledger.read_text().replace('sha256 = "', '"sha256" = "', 1)
-    if metadata_decoy:
-        reason = next(
-            line for line in original.splitlines() if line.startswith("reason =")
-        )
-        original = original.replace(
-            reason,
-            "reason = '''\nsha256 = \"" + hashlib.sha256(WASM).hexdigest() + "\"\n'''",
-            1,
-        )
-    ledger.write_text(original)
-    assert codec.write(root, WASM + b"\x00\x01x") == 1
-    assert refusal in capsys.readouterr().err
-    assert ledger.read_text() == original
+        assert not (root / client / codec.MODULE).exists()
+    assert codec.write(root, fresh, fresh) == 0
+    digest = hashlib.sha256(fresh).hexdigest()
+    assert f"sha256={digest}" in capsys.readouterr().out
     for client in codec.CLIENT_DIRS:
-        assert (root / client / codec.MODULE).read_bytes() == WASM
+        assert (root / client / codec.MODULE).read_bytes() == fresh
+
+
+def test_write_refuses_an_over_budget_module(codec, codec_repo, monkeypatch, capsys):
+    root, _ = codec_repo
+    monkeypatch.setattr(codec, "MAX_BYTES", 4)
+    assert codec.write(root, WASM, WASM) == 1
+    assert "over MAX_BYTES" in capsys.readouterr().err
+    for client in codec.CLIENT_DIRS:
+        assert not (root / client / codec.MODULE).exists()
+
+
+def test_write_refuses_symlinks_before_changing_files(codec, codec_repo, tmp_path):
+    root, _ = codec_repo
+    outside = tmp_path / "outside.wasm"
+    outside.write_bytes(b"keep")
+    (root / codec.CLIENT_DIRS[1] / codec.MODULE).symlink_to(outside)
+    assert codec.write(root, WASM, WASM) == 1
+    assert outside.read_bytes() == b"keep"
+    assert not (root / codec.CLIENT_DIRS[0] / codec.MODULE).exists()
 
 
 def test_write_refuses_invalid_module_without_changing_files(codec, codec_repo):
-    root, ledger = codec_repo
-    original = ledger.read_bytes()
+    root, _ = codec_repo
     with pytest.raises(ValueError, match="WebAssembly"):
-        codec.write(root, b"not a module")
-    assert ledger.read_bytes() == original
+        codec.write(root, b"invalid", b"invalid")
     for client in codec.CLIENT_DIRS:
-        assert (root / client / codec.MODULE).read_bytes() == WASM
+        assert not (root / client / codec.MODULE).exists()
 
 
 @pytest.fixture
@@ -301,13 +147,13 @@ def export_repo(codec, codec_repo, monkeypatch):
 
 
 @pytest.mark.spec("MEDULLA-CONTRACT-R006.1")
-def test_export_precedes_failing_freshness_check(codec, export_repo, monkeypatch):
-    import json
-
+def test_export_records_provenance_and_places_client_copies(
+    codec, export_repo, monkeypatch
+):
     root, directory, output = export_repo
     fresh = WASM + b"\x00\x01x"
     monkeypatch.setattr(codec, "build", lambda *_args: fresh)
-    assert codec.main(["--check", "--export-dir", str(directory)]) == 1
+    assert codec.main(["--export-dir", str(directory)]) == 0
     assert (directory / codec.MODULE).read_bytes() == fresh
     provenance = json.loads((directory / codec.PROVENANCE).read_text())
     assert provenance["sha256"] == hashlib.sha256(fresh).hexdigest()
@@ -325,7 +171,7 @@ def test_export_precedes_failing_freshness_check(codec, export_repo, monkeypatch
     )
     assert output.read_text() == "fresh_export=true\n"
     for client in codec.CLIENT_DIRS:
-        assert (root / client / codec.MODULE).read_bytes() == WASM
+        assert (root / client / codec.MODULE).read_bytes() == fresh
 
 
 @pytest.mark.spec("MEDULLA-CONTRACT-R006.1")
@@ -343,19 +189,10 @@ def test_failed_build_never_exports_cached_module(codec, export_repo, monkeypatc
 
     monkeypatch.setattr(codec.subprocess, "run", fail)
     with pytest.raises(codec.subprocess.CalledProcessError):
-        codec.main(["--check", "--export-dir", str(directory)])
+        codec.main(["--export-dir", str(directory)])
     assert list(directory.iterdir()) == []
     assert not output.exists()
     assert cached.read_bytes() == WASM
-
-
-@pytest.mark.spec("MEDULLA-CONTRACT-R006.1")
-def test_export_success_preserves_passing_check(codec, export_repo, monkeypatch):
-    root, directory, output = export_repo
-    monkeypatch.setattr(codec, "build", lambda *_args: WASM)
-    _qualify(codec, root, WASM)
-    assert codec.main(["--check", "--export-dir", str(directory)]) == 0
-    assert output.read_text() == "fresh_export=true\n"
 
 
 @pytest.mark.spec("MEDULLA-CONTRACT-R006.1")
@@ -363,7 +200,7 @@ def test_invalid_fresh_module_has_no_export_signal(codec, export_repo, monkeypat
     _, directory, output = export_repo
     monkeypatch.setattr(codec, "build", lambda *_args: b"invalid")
     with pytest.raises(ValueError, match="WebAssembly"):
-        codec.main(["--check", "--export-dir", str(directory)])
+        codec.main(["--export-dir", str(directory)])
     assert not output.exists()
     assert not (directory / codec.PROVENANCE).exists()
 
@@ -378,29 +215,29 @@ def test_failed_provenance_has_no_export_signal(codec, export_repo, monkeypatch)
 
     monkeypatch.setattr(codec.subprocess, "check_output", fail)
     with pytest.raises(codec.subprocess.CalledProcessError):
-        codec.main(["--check", "--export-dir", str(directory)])
+        codec.main(["--export-dir", str(directory)])
     assert not output.exists()
     assert not (directory / codec.PROVENANCE).exists()
 
 
 @pytest.mark.spec("MEDULLA-CONTRACT-R006.1")
-def test_ci_upload_requires_fresh_step_signal_and_keeps_check():
+def test_ci_builds_the_codec_before_client_tests_and_uploads_it():
     import yaml
 
     workflow = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text())
     steps = workflow["jobs"]["language-clients"]["steps"]
     build = next(step for step in steps if step.get("id") == "method-codec")
-    assert "--check --export-dir target/canonical-method-codec" in build["run"]
+    assert "--export-dir target/canonical-method-codec" in build["run"]
+    assert "--check" not in build["run"]
     assert not build.get("continue-on-error", False)
     upload = steps[steps.index(build) + 1]
     assert "!cancelled()" in upload["if"]
     assert "steps.method-codec.outputs.fresh_export == 'true'" in upload["if"]
     assert (
-        "hashFiles('target/canonical-method-codec/"
-        "medulla_method_codec.provenance.json') != ''" in upload["if"]
-    )
-    assert (
         upload["uses"]
         == "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9"
     )
     assert upload["with"]["if-no-files-found"] == "error"
+    names = [step.get("name", "") for step in steps]
+    first_client_test = min(i for i, name in enumerate(names) if "client tests" in name)
+    assert steps.index(build) < first_client_test

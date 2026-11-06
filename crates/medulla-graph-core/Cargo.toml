@@ -11,6 +11,9 @@ publish = false
 name = "medulla_graph_core"
 path = "src/lib.rs"
 
+[build-dependencies]
+medulla-decision-types = { path = "../medulla-decision-types", features = ["contract-schema"] }
+
 [dependencies]
 medulla-types = { path = "../medulla-types" }
 serde = { version = "1.0", features = ["derive", "rc"] }

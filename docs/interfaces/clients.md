@@ -157,7 +157,7 @@ and trust configuration remains outside these protocol payloads.
   request it DECODED (declaration order, serde defaults, sorted maps, float/byte widths),
   not the bytes sent. The thin clients compute it with the engine's own decoder and
   encoder: the embedded `medulla_method_codec.wasm` (`crates/medulla-method-codec`, built by
-  `scripts/build_method_codec_wasm.py`). Each client's vector test replays every
+  `scripts/build_method_codec_wasm.py` at the point of use; never committed). Each client's vector test replays every
   contract method-body vector (body digest + engine envelope MAC) through its signer. A
   request the engine can not decode is refused before it is sent.
 - **Correlation:** each response carries the request `id`. The Python client demuxes

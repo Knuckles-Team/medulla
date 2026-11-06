@@ -2,9 +2,9 @@
 //!
 //! No sample is hand-written: `sample_builder::build_sample` derives each request from the
 //! `Method` variant's schema and each result from the schema of the body that
-//! `medulla_protocol_types::result_contract` registers for the method. The committed vectors
-//! live in `tests/fixtures/wire_vectors/<domain>.json`. They are test data, not a generated
-//! contract: `MEDULLA_WRITE_VECTORS=1` rewrites them for a deliberate wire change.
+//! `medulla_protocol_types::result_contract` registers for the method. The vectors are
+//! computed at test time and never committed (MEDULLA-SDLC-R020.1): each row's request
+//! round-trips, its digest re-derives, and the rendering is byte-stable.
 //!
 //! Run: `cargo test -p medulla-capabilities --test wire_vectors`.
 #![cfg(feature = "contract-schema")]
@@ -13,7 +13,6 @@
 mod sample_builder;
 
 use std::collections::BTreeMap;
-use std::path::PathBuf;
 
 use medulla_capabilities::method_descriptors;
 use medulla_protocol_types::protocol::Method;
@@ -133,12 +132,6 @@ fn vector(
     Ok(json!({"method": method, "request": request, "result": result, "sha256": digest}))
 }
 
-fn fixture_path(domain: &str) -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../tests/fixtures/wire_vectors")
-        .join(format!("{domain}.json"))
-}
-
 /// The vectors of every wire method, grouped by domain and sorted by method id.
 fn all_vectors() -> &'static BTreeMap<&'static str, Vec<Value>> {
     static VECTORS: std::sync::OnceLock<BTreeMap<&'static str, Vec<Value>>> =
@@ -184,29 +177,26 @@ fn check_domain(domain: &str) {
 }
 
 fn check_rows(domain: &str, rows: &[Value]) {
-    let path = fixture_path(domain);
-    let expected = render(rows);
-    if std::env::var_os("MEDULLA_WRITE_VECTORS").is_some() {
-        std::fs::create_dir_all(path.parent().expect("fixture dir")).expect("create fixture dir");
-        std::fs::write(&path, expected).expect("write vectors");
-        return;
-    }
-    let committed = std::fs::read_to_string(&path).unwrap_or_else(|error| {
-        panic!(
-            "{}: {error}; rerun with MEDULLA_WRITE_VECTORS=1 to write the vectors",
-            path.display()
+    assert!(!rows.is_empty(), "{domain}: at least one wire method");
+    for row in rows {
+        let digest = Digest256::sha256(
+            json!({"method": row["method"], "request": row["request"], "result": row["result"]})
+                .to_string()
+                .as_bytes(),
         )
-    });
-    assert!(
-        !committed.contains('\r'),
-        "{} must use LF line endings",
-        path.display()
-    );
-    assert!(
-        committed == expected,
-        "{} differs from the generated vectors; a deliberate wire change reruns with \
-         MEDULLA_WRITE_VECTORS=1",
-        path.display()
+        .to_hex();
+        assert_eq!(
+            row["sha256"],
+            json!(digest),
+            "{domain}: row digest re-derives"
+        );
+    }
+    let rendered = render(rows);
+    assert!(!rendered.contains('\r'), "{domain}: LF line endings");
+    assert_eq!(
+        rendered,
+        render(&build_vectors()[domain]),
+        "{domain}: byte-stable"
     );
 }
 
