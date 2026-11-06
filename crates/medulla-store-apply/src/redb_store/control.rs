@@ -355,6 +355,17 @@ pub fn delete_matview_operator_state(shard: &Shard, name: &str) -> Result<(), St
     })
 }
 
+/// Read one persisted incremental-matview operator-state snapshot (`None` when absent).
+#[cfg(feature = "matview")]
+pub fn get_matview_operator_state(shard: &Shard, name: &str) -> Result<Option<Vec<u8>>, String> {
+    let read = shard.control_read()?;
+    let Ok(table) = read.open_owner_table(MATVIEW_OPERATOR_STATE) else {
+        return Ok(None);
+    };
+    let row = table.get(name).map_err(|e| e.to_string())?;
+    Ok(row.map(|value| value.value().to_vec()))
+}
+
 /// Scan every persisted incremental-matview operator-state snapshot `(name, blob)`.
 #[cfg(feature = "matview")]
 pub fn scan_matview_operator_state(shard: &Shard) -> Result<Vec<(String, Vec<u8>)>, String> {

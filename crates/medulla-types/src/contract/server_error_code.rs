@@ -324,6 +324,7 @@ closed_error_codes! {
         SqliteWatermarkInvalid => "SQLITE_WATERMARK_INVALID",
         StaleAgentLibraryRevision => "STALE_AGENT_LIBRARY_REVISION",
         StaleOutboxLease => "STALE_OUTBOX_LEASE",
+        StateBudgetExceeded => "STATE_BUDGET_EXCEEDED",
         StaleMappingReference => "STALE_MAPPING_REFERENCE",
         StaleRecomputeFence => "STALE_RECOMPUTE_FENCE",
         StaleRoute => "STALE_ROUTE",

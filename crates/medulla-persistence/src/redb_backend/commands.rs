@@ -517,6 +517,12 @@ pub enum Cmd {
         name: String,
         done: oneshot::Sender<Result<(), String>>,
     },
+    /// Read one persisted incremental-matview operator-state snapshot.
+    #[cfg(feature = "matview")]
+    MatViewOperatorStateGet {
+        name: String,
+        reply: std::sync::mpsc::SyncSender<Result<Option<Vec<u8>>, String>>,
+    },
     /// Scan every persisted incremental-matview operator-state snapshot.
     #[cfg(feature = "matview")]
     MatViewOperatorStateScan {

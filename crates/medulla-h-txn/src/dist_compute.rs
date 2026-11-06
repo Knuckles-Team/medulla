@@ -675,6 +675,11 @@ pub async fn reload_matviews(state: &Arc<RwLock<ServerState>>) -> Result<usize, 
     let Some(redb) = backend.as_redb() else {
         return Ok(0);
     };
+    // Spilled view state lives in the operator-state table (MEDULLA-INCREMENTAL-VIEWS-R007.4).
+    #[cfg(feature = "matview")]
+    matview::manager().install_spill(Arc::new(crate::matview_spill::RedbViewStateSpill::new(
+        backend.clone(),
+    )));
     let mut n = 0usize;
     // The algo-only Pregel matview store (cross-shard) — cluster-only.
     #[cfg(feature = "compute-dist")]
