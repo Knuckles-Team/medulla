@@ -618,6 +618,7 @@ mod tests {
         }
     }
 
+    /// Verifies MEDULLA-FINANCE-PRIMITIVES-R002.5: Define versioned state-space inputs and checkpoints
     // spec: MEDULLA-FINANCE-PRIMITIVES-R002.5
     #[test]
     fn state_space_model_and_refusals() {
