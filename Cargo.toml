@@ -2019,6 +2019,15 @@ path = "benches/redb_write_latency_bench.rs"
 harness = false
 required-features = ["full"]
 
+# Execution-kernel latency budget (MEDULLA-FINANCE-PRIMITIVES-R613.6): a 1000-slice
+# schedule solve and a 1_000_000-bar regime fit through the signed dispatch entry,
+# gated by scripts/bench_gate.py.
+[[bench]]
+name = "r613_finance_primitives"
+path = "benches/r613_finance_primitives.rs"
+harness = false
+required-features = ["full", "finance"]
+
 # Schema-drift classification hot-path receipt (MEDULLA-TYPED-PACKS-R712): the
 # five-way classifier of `medulla_types::graph_schema::drift` over a 1,000-field
 # approved contract, rotated over deterministic drift shapes; prints p50/p99
