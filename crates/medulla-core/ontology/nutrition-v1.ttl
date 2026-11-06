@@ -20,7 +20,7 @@
 <http://knuckles.team/kg/nutrition> a owl:Ontology ;
     rdfs:label "World Model — Nutrition" ;
     rdfs:comment "Chemical entities and nutrients (ChEBI terms as individuals), foods, consumption, nutritional requirements as dispositions borne by organisms, published reference intakes and food composition; mapped to ChEBI, FoodOn, RO and Wikidata." ;
-    owl:imports <http://knuckles.team/kg/core>, <http://knuckles.team/kg/life> .
+    owl:imports <http://knuckles.team/kg/life> .
 
 # ── Chemistry, food and nutrition ─────────────────────────────────────────────────
 
@@ -148,6 +148,12 @@
     rdfs:domain :FoodCompositionRecord ;
     rdfs:range xsd:string .
 
+:nutrientId a owl:DatatypeProperty ;
+    rdfs:label "nutrient identifier" ;
+    rdfs:comment "The source database's identifier of the nutrient a :NutrientAmount measures (a USDA FoodData Central nutrient number). It must have a row in the nutrient crosswalk, which names the :Nutrient chemical-entity term the amount is about; an identifier without a row is refused with NUTRIENT_ID_UNMAPPED." ;
+    rdfs:domain :NutrientAmount ;
+    rdfs:range xsd:string .
+
 :Recipe a owl:Class ;
     rdfs:label "Recipe" ;
     rdfs:comment "A recipe." .
@@ -183,3 +189,12 @@
 :WorkoutSession a owl:Class ;
     rdfs:label "Workout Session" ;
     rdfs:comment "A performed instance of a :WorkoutRoutine, with prov:endedAtTime." .
+
+# ── Core rooting (MEDULLA-TYPED-PACKS-R071.2) ───────────────────────────────────
+# Every class of this module above reaches the core class kg:DomainEntity through rdfs:subClassOf.
+<http://knuckles.team/kg#Exercise> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#MealPlanEntry> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#Recipe> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#ShoppingListItem> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#WorkoutRoutine> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#WorkoutSession> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .

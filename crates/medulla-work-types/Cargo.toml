@@ -29,5 +29,11 @@ jobs = ["medulla-types/jobs"]
 program-optimization = ["jobs", "medulla-types/program-optimization"]
 test-support = ["medulla-types/test-support"]
 
+# MEDULLA-UNIFIED-DATA-PLANE-R700.6 hot-path receipt; nightly only, never gates a PR.
+[[bench]]
+name = "action_apply"
+path = "benches/action_apply.rs"
+harness = false
+
 [dev-dependencies]
 medulla-types = { path = "../medulla-types", features = ["test-support"] }

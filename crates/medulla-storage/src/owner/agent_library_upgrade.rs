@@ -5,12 +5,13 @@
 //! writer rechecks the pinned descriptor, byte fingerprint, table census and
 //! strict typed evidence before its one immediate durable commit.
 
-use super::domain::{AgentLibraryOwner, GraphShardOwner};
+use super::domain::{AgentLibraryOwner, GraphShardOwner, SemanticIndexOwner};
 use super::identity::PhysicalStoreIdentity;
 use super::layout::{layout_digest_over, OwnerLayout};
 use super::lineage::{
     AGENT_LIBRARY_BEFORE_MCP_CATALOG, GRAPH_SHARD_BEFORE_AUDIT_REQUESTS,
     GRAPH_SHARD_BEFORE_CURRENT_PLANS, GRAPH_SHARD_BEFORE_ENRICHMENT,
+    SEMANTIC_INDEX_BEFORE_PROMOTION,
 };
 use super::persisted_layout::LayoutPredecessor;
 use super::registry::predecessor_evidence;
@@ -41,6 +42,8 @@ mod commit;
 enum UpgradeTarget {
     AgentLibrary,
     GraphShard(GraphShardSource),
+    /// The semantic index before the promotion-gate records.
+    SemanticIndex,
 }
 
 /// The graph-shard generation an offline upgrade starts from. Every one ends
@@ -55,6 +58,8 @@ pub enum GraphShardSource {
     BeforeCurrentPlans,
     /// Before private context-bound run checkpoints.
     BeforeRunCheckpoints,
+    /// Before work-item effect receipts and admitted requests.
+    BeforeEffectReceipts,
 }
 
 impl GraphShardSource {
@@ -76,6 +81,10 @@ impl GraphShardSource {
                 &super::lineage::GRAPH_SHARD_BEFORE_RUN_CHECKPOINTS,
                 super::lineage::GRAPH_SHARD_PRE_RUN_CHECKPOINTS_DIGEST,
             ),
+            Self::BeforeEffectReceipts => (
+                &super::lineage::GRAPH_SHARD_BEFORE_EFFECT_RECEIPTS,
+                super::lineage::GRAPH_SHARD_PRE_EFFECT_RECEIPTS_DIGEST,
+            ),
         }
     }
 
@@ -93,6 +102,7 @@ impl UpgradeTarget {
         match self {
             Self::AgentLibrary => OwnerLayout::AgentLibrary,
             Self::GraphShard(_) => OwnerLayout::GraphShard,
+            Self::SemanticIndex => OwnerLayout::SemanticIndex,
         }
     }
 
@@ -100,6 +110,7 @@ impl UpgradeTarget {
         match self {
             Self::AgentLibrary => &AGENT_LIBRARY_BEFORE_MCP_CATALOG,
             Self::GraphShard(source) => source.declared_generation(),
+            Self::SemanticIndex => &SEMANTIC_INDEX_BEFORE_PROMOTION,
         }
     }
 
@@ -107,6 +118,7 @@ impl UpgradeTarget {
         match self {
             Self::AgentLibrary => super::lineage::AGENT_LIBRARY_PRE_MCP_CATALOG_DIGEST,
             Self::GraphShard(source) => source.frozen_digest(),
+            Self::SemanticIndex => super::lineage::SEMANTIC_INDEX_PRE_PROMOTION_DIGEST,
         }
     }
 }
@@ -160,6 +172,23 @@ pub fn inspect_graph_shard_upgrade(
         private_integrity,
         options,
         UpgradeTarget::GraphShard(source),
+    )
+}
+
+/// Inspect a semantic index owner file from before the promotion-gate
+/// records (MEDULLA-UNIFIED-DATA-PLANE-R040.3).
+pub fn inspect_semantic_index_promotion_upgrade(
+    path: &Path,
+    expected_physical_identity: PhysicalStoreIdentity,
+    private_integrity: Option<Arc<dyn PrivatePayloadIntegrity>>,
+    options: SqlSourceCheckpointInspectionOptions,
+) -> Result<ValidatedOwnerLayoutUpgrade, String> {
+    inspect_layout_upgrade(
+        path,
+        expected_physical_identity,
+        private_integrity,
+        options,
+        UpgradeTarget::SemanticIndex,
     )
 }
 
@@ -222,6 +251,15 @@ pub fn upgrade_graph_shard(
     upgrade_layout(token, target)
 }
 
+/// Bring an inspected semantic index file to the current layout in one
+/// durable commit: every existing row is kept and the four promotion-gate
+/// tables are created empty.
+pub fn upgrade_semantic_index_promotion(
+    token: ValidatedOwnerLayoutUpgrade,
+) -> Result<(StorageKernel, OwnerLayoutUpgradeReport), String> {
+    upgrade_layout(token, UpgradeTarget::SemanticIndex)
+}
+
 fn upgrade_layout(
     token: ValidatedOwnerLayoutUpgrade,
     target: UpgradeTarget,
@@ -268,6 +306,12 @@ fn upgrade_layout(
             options,
         )?,
         UpgradeTarget::GraphShard(_) => StorageKernel::open_owner_with::<GraphShardOwner>(
+            &token.source.path,
+            current.physical_identity,
+            token.source.private_integrity,
+            options,
+        )?,
+        UpgradeTarget::SemanticIndex => StorageKernel::open_owner_with::<SemanticIndexOwner>(
             &token.source.path,
             current.physical_identity,
             token.source.private_integrity,

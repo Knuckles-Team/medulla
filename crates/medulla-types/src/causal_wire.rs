@@ -38,6 +38,7 @@ pub struct CausalVerdict {
 mod tests {
     use super::*;
 
+    /// Verifies MEDULLA-FEDERATED-QUERY-R608.1: Model
     // spec: MEDULLA-FEDERATED-QUERY-R608.1
     #[test]
     fn verdict_round_trips() {

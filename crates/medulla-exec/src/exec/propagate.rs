@@ -176,6 +176,7 @@ pub fn apply(op: &Op, input: &RowSet, ctx: &PlanCtx) -> Result<RowSet, String> {
         filter: EdgeFilter {
             rel: rel.as_deref(),
             preds: edge_preds,
+            pin: ctx.as_of_pin,
         },
         dir: *dir,
         hops: *hops,
@@ -229,6 +230,7 @@ pub fn impact_cone(
         filter: EdgeFilter {
             rel: edges.rel.as_deref(),
             preds: &[],
+            pin: None,
         },
         dir: edges.dir,
         hops,

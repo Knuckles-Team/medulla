@@ -10,7 +10,10 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use super::{VocabularyCrosswalk, VocabularyCrosswalkError, VocabularyCrosswalkRelation};
+use super::{
+    CrosswalkCoverage, DomainPack, UnmappedClass, UnmappedReason, VocabularyCrosswalk,
+    VocabularyCrosswalkError, VocabularyCrosswalkRelation,
+};
 
 /// Fixed bound: distinct source classes in one crosswalk set.
 pub const MAX_CROSSWALK_SOURCE_CLASSES: usize = 4096;
@@ -113,6 +116,63 @@ pub fn validate_crosswalks(
         }
     }
     Ok(())
+}
+
+/// Compute the crosswalk coverage of the selected pack revision
+/// (MEDULLA-TYPED-PACKS-R097.2.2).
+///
+/// Coverage runs over every class of the selected revision
+/// (`ctx.selected_sources`). The pack's crosswalks are validated first; a class
+/// is mapped only when a validated declared crosswalk names it as a source.
+/// The unmapped list is the exact sorted set difference. A missing mapping
+/// never infers equivalence, imports external authority or counts as covered,
+/// and the result depends only on the sets, never on input order.
+pub fn compute_coverage(
+    pack: &DomainPack,
+    ctx: &CrosswalkContext,
+) -> Result<CrosswalkCoverage, VocabularyCrosswalkError> {
+    validate_crosswalks(&pack.crosswalks, ctx)?;
+    let declared = &ctx.selected_sources;
+    let sources: BTreeSet<&String> = pack
+        .crosswalks
+        .iter()
+        .map(|crosswalk| &crosswalk.source_class_iri)
+        .collect();
+    let mapped: Vec<String> = declared
+        .iter()
+        .filter(|iri| sources.contains(iri))
+        .cloned()
+        .collect();
+    let unmapped: Vec<UnmappedClass> = declared
+        .iter()
+        .filter(|iri| !sources.contains(iri))
+        .map(|iri| UnmappedClass {
+            class_iri: iri.clone(),
+            reason: UnmappedReason::NoDeclaredMapping,
+        })
+        .collect();
+    Ok(CrosswalkCoverage {
+        declared: declared.len() as u32,
+        mapped,
+        unmapped,
+        source_digest: source_digest(&ctx.source_revision, declared),
+    })
+}
+
+/// SHA-256 over the source revision and the sorted class set, each field
+/// length-prefixed so no two distinct sets share an encoding.
+fn source_digest(revision: &str, classes: &BTreeSet<String>) -> String {
+    use sha2::{Digest, Sha256};
+    let mut hasher = Sha256::new();
+    hasher.update(b"medulla.crosswalk_coverage_source");
+    hasher.update((revision.len() as u64).to_be_bytes());
+    hasher.update(revision.as_bytes());
+    hasher.update((classes.len() as u64).to_be_bytes());
+    for class in classes {
+        hasher.update((class.len() as u64).to_be_bytes());
+        hasher.update(class.as_bytes());
+    }
+    hex::encode(hasher.finalize())
 }
 
 fn resolve_source<'a>(
@@ -427,5 +487,79 @@ mod tests {
         ));
         validate_crosswalks(&many[..MAX_CROSSWALK_SOURCE_CLASSES], &wide)
             .expect("exactly at the bound validates");
+    }
+
+    fn pack_of(
+        kind: crate::domain_pack::DomainPackKind,
+        crosswalks: Vec<VocabularyCrosswalk>,
+    ) -> DomainPack {
+        DomainPack {
+            kind,
+            version: 1,
+            classes: vec![crate::domain_pack::DomainClass {
+                local_name: "Person".to_string(),
+                label: "Person".to_string(),
+                aligns_to_upper_ontology: None,
+            }],
+            enumerations: Vec::new(),
+            properties: Vec::new(),
+            crosswalks,
+        }
+    }
+
+    // spec: MEDULLA-TYPED-PACKS-R097.2.2
+    #[test]
+    fn coverage_is_order_independent_for_medical_technology_labor() {
+        use crate::domain_pack::DomainPackKind::{Hr, Medical, Technology};
+        use VocabularyCrosswalkRelation::SeeAlso;
+        let ctx = context();
+        let declared: BTreeSet<String> = ctx.selected_sources.clone();
+        for kind in [Medical, Technology, Hr] {
+            let forward = pack_of(kind, golden());
+            let mut reversed_set = golden();
+            reversed_set.reverse();
+            let reversed = pack_of(kind, reversed_set);
+            let first = compute_coverage(&forward, &ctx).expect("coverage");
+            let second = compute_coverage(&reversed, &ctx).expect("coverage");
+            assert_eq!(
+                first, second,
+                "{kind:?}: reordered input, identical coverage"
+            );
+            assert_eq!(
+                serde_json::to_vec(&first).unwrap(),
+                serde_json::to_vec(&second).unwrap(),
+                "{kind:?}: identical bytes"
+            );
+            // The exact set difference: Interval is selected, never mapped.
+            assert_eq!(first.declared, 4);
+            assert_eq!(
+                first.mapped,
+                vec![
+                    format!("{CORE}Document"),
+                    format!("{CORE}Event"),
+                    format!("{CORE}Person"),
+                ]
+            );
+            assert_eq!(
+                first.unmapped,
+                vec![UnmappedClass {
+                    class_iri: format!("{CORE}Interval"),
+                    reason: UnmappedReason::NoDeclaredMapping,
+                }]
+            );
+            first.validate(&declared).expect("canonical report");
+        }
+
+        // No crosswalks: nothing is inferred, everything is unmapped.
+        let bare = compute_coverage(&pack_of(Hr, Vec::new()), &ctx).expect("coverage");
+        assert!(bare.mapped.is_empty());
+        assert_eq!(bare.unmapped.len(), 4);
+
+        // An invalid mapping refuses; an out-of-scope source is not unmapped.
+        let outside = record("Unselected", "Person", SeeAlso, "continuant");
+        assert!(matches!(
+            compute_coverage(&pack_of(Hr, vec![outside]), &ctx),
+            Err(VocabularyCrosswalkError::SourceOutOfScope { .. })
+        ));
     }
 }

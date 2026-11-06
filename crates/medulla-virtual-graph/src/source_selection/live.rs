@@ -188,7 +188,10 @@ fn origin_of(origin: &SchemaSourceOrigin) -> AuthorityOrigin {
         SchemaSourceOrigin::Operator => AuthorityOrigin::Operator,
         SchemaSourceOrigin::Admin { .. } => AuthorityOrigin::Admin,
         SchemaSourceOrigin::Approved { .. } => AuthorityOrigin::Approved,
-        SchemaSourceOrigin::Pack { .. } => AuthorityOrigin::Pack,
+        // A runtime ontology is connector-owned material, like a pack.
+        SchemaSourceOrigin::Pack { .. } | SchemaSourceOrigin::Ontology { .. } => {
+            AuthorityOrigin::Pack
+        }
         SchemaSourceOrigin::Ingestion { .. } => AuthorityOrigin::Ingestion,
     }
 }

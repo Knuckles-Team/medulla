@@ -105,6 +105,13 @@ pub const GATEWAY_ROUTED: &[&str] = &[
     // admitted (version gate, kind policy, tenant, SHACL shape, head) and then
     // commits as the one `AddNode` upsert through this gateway.
     "FinanceRecordPut",
+    // MEDULLA-FINANCE-PRIMITIVES-R011.2.3: the served alert door validates the
+    // envelope, then the event node and its outbox fact commit as one batch.
+    "FinanceAlertRaise",
+    // MEDULLA-DECISION-ENGINE-R166.3: `Register` commits one registration node
+    // through this gateway; `Read` is answered by the catalog admin route before
+    // the graph path and never reaches it.
+    "WorkflowRegistry",
     "PruneByLifecycle",
     "BatchUpdate",
     "ClearLedger",
@@ -648,6 +655,11 @@ pub const SELF_ROUTED_ADMIN_METHODS: &[&str] = &["RaftAddLearner", "RaftChangeMe
 /// rather than proposed as a native command that does not exist, or applied on
 /// one node only.
 pub const LOCAL_ONLY_METHODS: &[&str] = &[
+    // MEDULLA-TYPED-PACKS-R805.1: the policy-store records commit through the
+    // process-local `rbac.redb` owner; the replicated path is wired by R805.3.
+    "AccessRequestDecide",
+    "AccessRequestOpen",
+    "DataProductRegister",
     "AgentComponent",
     "AgentGraph",
     "AgentLibrary",
@@ -662,10 +674,14 @@ pub const LOCAL_ONLY_METHODS: &[&str] = &[
     "MutationOutbox",
     "EdgeIndex",
     "SqlSourceBatch",
-    // The finance record head check reads the stored head and commits the
-    // admitted upsert through the process-local owner; no replicated command
-    // carries the admission yet (MEDULLA-FINANCE-PRIMITIVES-R004.3.2).
-    "FinanceRecordPut",
+    // `FinanceRecordPut` is replicated: it is in `NATIVE_CONSENSUS_METHODS`
+    // (MEDULLA-FINANCE-PRIMITIVES-R004.3.2.9).
+    // The alert's compare-and-set against its stored envelope has no replicated
+    // command either (MEDULLA-FINANCE-PRIMITIVES-R011.2.3).
+    "FinanceAlertRaise",
+    // The registration upsert has no replicated command either
+    // (MEDULLA-DECISION-ENGINE-R166.3).
+    "WorkflowRegistry",
 ];
 
 /// The local-only names that are NOT gateway-routed.
@@ -680,6 +696,9 @@ fn native_local_only_method_name(m: &Method) -> Option<&'static str> {
         Method::AgentLibrary { .. } => Some("AgentLibrary"),
         Method::AgentTemplate { .. } => Some("AgentTemplate"),
         Method::ConnectorPack { .. } => Some("ConnectorPack"),
+        Method::DataProductRegister { .. } => Some("DataProductRegister"),
+        Method::AccessRequestOpen { .. } => Some("AccessRequestOpen"),
+        Method::AccessRequestDecide { .. } => Some("AccessRequestDecide"),
         _ => None,
     }
 }
@@ -713,6 +732,8 @@ fn write_back_method_name(m: &Method) -> Option<&'static str> {
 fn finance_record_method_name(m: &Method) -> Option<&'static str> {
     match m {
         Method::FinanceRecordPut { .. } => Some("FinanceRecordPut"),
+        Method::FinanceAlertRaise { .. } => Some("FinanceAlertRaise"),
+        Method::WorkflowRegistry { .. } => Some("WorkflowRegistry"),
         _ => None,
     }
 }
@@ -876,6 +897,8 @@ fn cluster_mutation_route_admin(method: &Method) -> Option<ClusterMutationRoute>
             | Method::IncidentRecordAnomaly { .. }
             | Method::IncidentCorrelate { .. }
             | Method::IncidentSetStatus { .. }
+            | Method::ActionRegister { .. }
+            | Method::ActionSubmit { .. }
     ) {
         return Some(ClusterMutationRoute::VolatileControl);
     }

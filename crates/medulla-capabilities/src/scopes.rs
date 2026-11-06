@@ -140,6 +140,7 @@ pub const SCOPES: &[ScopeEntry] = &[
     entry("graph:admin", Admin, "engine"),
     entry("graph:read", User, "engine"),
     entry("graph:write", User, "engine"),
+    entry("graphlearn:read", User, "engine"),
     entry("graphlearn:write", User, "engine"),
     entry("host:issue-start", ServiceOnly, "graph-os"),
     entry("identity:admin", Admin, "engine"),

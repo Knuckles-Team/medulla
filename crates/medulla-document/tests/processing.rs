@@ -5,6 +5,7 @@ use medulla_document::processing::{
     ProcessedDocument, SectionNode, SectionSource, SectionTreeCheck,
 };
 
+/// Verifies MEDULLA-REPO-INGEST-R652.1: Model
 // spec: MEDULLA-REPO-INGEST-R652.1
 #[test]
 fn types_round_trip() {

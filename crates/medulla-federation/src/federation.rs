@@ -141,6 +141,15 @@ pub fn source_for(spec: &ForeignSourceSpec) -> Box<dyn ForeignSource + '_> {
             score_field,
             ..
         } => sql_source(dsn, query, id_field, score_field.as_deref()),
+        ForeignSourceSpec::SqliteFile {
+            path,
+            table,
+            columns,
+        } => Box::new(crate::sqlite_foreign::SqliteFileSource {
+            path,
+            table,
+            columns,
+        }),
         ForeignSourceSpec::Trino { .. }
         | ForeignSourceSpec::Cypher { .. }
         | ForeignSourceSpec::SparkBatch { .. }
@@ -1134,9 +1143,18 @@ pub(crate) struct PgSnapshot {
 }
 
 #[cfg(feature = "federation-sql")]
-struct PgSnapshotJob {
-    statement: String,
-    reply: std::sync::mpsc::Sender<Result<RowSet, String>>,
+enum PgSnapshotJob {
+    /// Project each row to an id and optional score (the optimizer's key/limit path).
+    Ids {
+        statement: String,
+        reply: std::sync::mpsc::Sender<Result<RowSet, String>>,
+    },
+    /// Return each row as column to text value (the OBDA scan path).
+    Columns {
+        statement: String,
+        reply:
+            std::sync::mpsc::Sender<Result<Vec<std::collections::HashMap<String, String>>, String>>,
+    },
 }
 
 #[cfg(feature = "federation-sql")]
@@ -1186,14 +1204,20 @@ impl PgSnapshot {
                 };
                 let _ = ready_tx.send(Ok(token));
                 while let Ok(job) = job_rx.recv() {
-                    let source = SqlSource {
-                        dsn: &dsn,
-                        query: &job.statement,
-                        id_field: &id_field,
-                        score_field: score_field.as_deref(),
-                    };
-                    let out = source.fetch_on(&mut conn).await;
-                    let _ = job.reply.send(out);
+                    match job {
+                        PgSnapshotJob::Ids { statement, reply } => {
+                            let source = SqlSource {
+                                dsn: &dsn,
+                                query: &statement,
+                                id_field: &id_field,
+                                score_field: score_field.as_deref(),
+                            };
+                            let _ = reply.send(source.fetch_on(&mut conn).await);
+                        }
+                        PgSnapshotJob::Columns { statement, reply } => {
+                            let _ = reply.send(pg_columns_on(&mut conn, &statement).await);
+                        }
+                    }
                 }
                 let _ = sqlx::query("ROLLBACK").execute(&mut conn).await;
             });
@@ -1267,7 +1291,25 @@ impl crate::federation_opt::SnapshotConn for PgSnapshot {
         self.jobs
             .lock()
             .map_err(|_| "federation: postgres snapshot worker poisoned".to_string())?
-            .send(PgSnapshotJob {
+            .send(PgSnapshotJob::Ids {
+                statement: statement.to_string(),
+                reply,
+            })
+            .map_err(|_| "federation: postgres snapshot worker stopped".to_string())?;
+        answer
+            .recv()
+            .map_err(|_| "federation: postgres snapshot worker stopped".to_string())?
+    }
+
+    fn run_columns(
+        &self,
+        statement: &str,
+    ) -> Result<Vec<std::collections::HashMap<String, String>>, String> {
+        let (reply, answer) = std::sync::mpsc::channel();
+        self.jobs
+            .lock()
+            .map_err(|_| "federation: postgres snapshot worker poisoned".to_string())?
+            .send(PgSnapshotJob::Columns {
                 statement: statement.to_string(),
                 reply,
             })
@@ -1575,6 +1617,46 @@ async fn fetch_pg_columns(
         .await
         .map_err(|_| "federation: postgres read-only transaction cleanup failed".to_string())?;
     Ok(out)
+}
+
+/// Run one validated read statement on the connection that holds the query's snapshot
+/// transaction and return each row as column to text value. It never commits.
+#[cfg(feature = "federation-sql")]
+async fn pg_columns_on(
+    conn: &mut sqlx::postgres::PgConnection,
+    sql: &str,
+) -> Result<Vec<std::collections::HashMap<String, String>>, String> {
+    use futures_util::TryStreamExt;
+    use sqlx::{Column, Row};
+    validate_federated_sql(sql, SqlDialect::Postgres)?;
+    tokio::time::timeout(FEDERATED_SQL_QUERY_TIMEOUT, async {
+        let mut rows = sqlx::query(sqlx::AssertSqlSafe(sql.to_owned())).fetch(&mut *conn);
+        let mut out = Vec::new();
+        while let Some(row) = rows
+            .try_next()
+            .await
+            .map_err(|_| "federation: postgres query failed".to_string())?
+        {
+            if out.len() >= MAX_FEDERATED_SQL_ROWS {
+                return Err("federation: postgres result exceeds row limit".to_string());
+            }
+            let map = row
+                .columns()
+                .iter()
+                .enumerate()
+                .filter_map(|(i, col)| {
+                    row.try_get::<Option<String>, _>(i)
+                        .ok()
+                        .flatten()
+                        .map(|v| (col.name().to_string(), v))
+                })
+                .collect::<std::collections::HashMap<String, String>>();
+            out.push(map);
+        }
+        Ok::<_, String>(out)
+    })
+    .await
+    .map_err(|_| "federation: postgres query timed out".to_string())?
 }
 
 #[cfg(feature = "federation-sql")]
@@ -1971,6 +2053,9 @@ impl ForeignSourceRegistry {
                 validate_http_column_mapping(field_map)?;
                 field_map.columns.keys().cloned().collect()
             }
+            ForeignSourceSpec::SqliteFile { columns, .. } if !columns.is_empty() => {
+                columns.iter().cloned().collect()
+            }
             _ => return Err("federation: this source has no column mapping".to_string()),
         };
         let (projection_supported, filter_support): (
@@ -1981,6 +2066,10 @@ impl ForeignSourceRegistry {
             // HTTP APIs have no declared field-selection or filter parameters in
             // this spec. Fetch the mapped columns, then evaluate residuals here.
             ForeignSourceSpec::HttpJson { .. } => (false, |_| {
+                crate::federation_opt::PushdownSupport::Unsupported
+            }),
+            // A SQLite file declares no filter parameters: the local residual filters.
+            ForeignSourceSpec::SqliteFile { .. } => (false, |_| {
                 crate::federation_opt::PushdownSupport::Unsupported
             }),
             _ => unreachable!("only mapped source kinds reach column planning"),

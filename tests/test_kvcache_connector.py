@@ -179,6 +179,17 @@ def test_put_get_roundtrip(kv_server):
         assert conn.get("h1") == b"kv-block-bytes\x00\x0a\xff"
 
 
+@pytest.mark.spec("MEDULLA-DURABLE-KERNEL-R083.4")
+def test_put_from_one_client_is_read_by_another(kv_server):
+    base_url, state = kv_server
+    page = b"kv-page\x00shared\xff"
+    with _connector(base_url) as client_a, _connector(base_url) as client_b:
+        assert client_b.get("shared-prefix") is None  # B misses before A puts
+        assert client_a.put("shared-prefix", page) is True
+        assert client_b.get("shared-prefix") == page  # B reads A's block
+    assert len(state.blocks) == 1  # one copy serves both clients
+
+
 def test_put_dedup_status(kv_server):
     base_url, state = kv_server
     with _connector(base_url) as conn:

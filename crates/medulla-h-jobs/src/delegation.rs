@@ -53,7 +53,7 @@ use medulla_persistence_records::agent_library::AgentLibraryStore;
 mod admission;
 #[cfg(feature = "redb")]
 #[path = "delegation/validation.rs"]
-mod validation;
+pub(crate) mod validation;
 
 #[cfg(feature = "redb")]
 pub use admission::*;

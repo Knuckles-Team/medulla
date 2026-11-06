@@ -28,7 +28,7 @@ pub(crate) mod admin;
 mod approval;
 mod catalog_authority;
 #[cfg(all(feature = "redb", feature = "blob"))]
-mod import;
+pub(crate) mod import;
 pub(crate) mod reconcile;
 pub(crate) mod reproject;
 #[cfg(all(feature = "rdf", feature = "shacl"))]

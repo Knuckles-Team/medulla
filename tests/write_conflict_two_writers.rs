@@ -20,7 +20,7 @@ use serde_json::{json, Value};
 const SECRET: &str = "write-conflict-two-writers-secret";
 const TENANT: &str = "integration-test-tenant";
 
-fn state() -> test_support::SharedState {
+fn new_state() -> test_support::SharedState {
     common::configure_authority();
     test_support::durable_state(SECRET, common::current_isolation())
 }
@@ -154,7 +154,7 @@ async fn stale_envelope_reaches_the_resolver() {
         (MergeStrategy::PreferNewer, "prefer_newer", "incoming"),
         (MergeStrategy::FieldUnion, "field_union", "merged"),
     ] {
-        let state = state();
+        let state = new_state();
         let name = format!("wc-resolver-{label}");
         graph(&state, &name, strategy).await;
         let (stale, actual) = seeded(&state, &name, "doc:n").await;
@@ -197,7 +197,7 @@ async fn stale_envelope_reaches_the_resolver() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn conflict_codes_leave_state_unchanged() {
     // Refuse: WRITE_CONFLICT with the three values, nothing changes.
-    let state = state();
+    let state = new_state();
     graph(&state, "wc-codes-refuse", MergeStrategy::Refuse).await;
     let (stale, actual) = seeded(&state, "wc-codes-refuse", "doc:n").await;
     let before = properties(&state, "wc-codes-refuse", "doc:n").await;
@@ -225,7 +225,7 @@ async fn conflict_codes_leave_state_unchanged() {
 
     // FieldUnion: a field collision and an AddNode on an absent node are
     // both unmergeable, and neither changes state or version.
-    let state = state();
+    let state = new_state();
     graph(&state, "wc-codes-union", MergeStrategy::FieldUnion).await;
     let (stale, actual) = seeded(&state, "wc-codes-union", "doc:n").await;
     let before = properties(&state, "wc-codes-union", "doc:n").await;
@@ -264,7 +264,7 @@ async fn conflict_codes_leave_state_unchanged() {
 // spec: MEDULLA-DURABLE-KERNEL-R084.5
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn conflict_evidence_names_scope_strategy_winner() {
-    let state = state();
+    let state = new_state();
     graph(&state, "wc-evidence-refuse", MergeStrategy::Refuse).await;
     let (stale, _) = seeded(&state, "wc-evidence-refuse", "doc:n").await;
     let refusals = conflicts_total("refuse", "existing");
@@ -285,7 +285,7 @@ async fn conflict_evidence_names_scope_strategy_winner() {
     }
     assert!(moved("refuse", "existing", refusals));
 
-    let state = state();
+    let state = new_state();
     graph(&state, "wc-evidence-union", MergeStrategy::FieldUnion).await;
     let (stale, _) = seeded(&state, "wc-evidence-union", "doc:n").await;
     let merges = conflicts_total("field_union", "merged");
@@ -316,7 +316,7 @@ async fn conflict_evidence_names_scope_strategy_winner() {
 // spec: MEDULLA-DURABLE-KERNEL-R084.6
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn two_writers_one_commit_one_typed_conflict() {
-    let state = state();
+    let state = new_state();
     graph(&state, "wc-two-writers", MergeStrategy::Refuse).await;
     for round in 0..50u64 {
         let v = version(&state, "wc-two-writers").await;
@@ -373,7 +373,7 @@ async fn two_writers_one_commit_one_typed_conflict() {
     }
 
     // FieldUnion: two writers on disjoint properties of one node both commit.
-    let state = state();
+    let state = new_state();
     graph(&state, "wc-two-union", MergeStrategy::FieldUnion).await;
     let (_, v) = seeded(&state, "wc-two-union", "doc:n").await;
     let (left, right) = tokio::join!(

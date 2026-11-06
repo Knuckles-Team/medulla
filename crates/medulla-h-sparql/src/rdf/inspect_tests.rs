@@ -212,3 +212,99 @@ fn inspection_stops_at_the_first_triple_over_budget() {
         "{error}"
     );
 }
+
+fn core_crosswalk(
+    source: &str,
+    target: &str,
+) -> medulla_catalog_types::domain_pack::VocabularyCrosswalk {
+    use medulla_catalog_types::domain_pack::{
+        ApprovedTargetDeclaration, VocabularyCrosswalk, VocabularyCrosswalkRelation,
+        VOCABULARY_CROSSWALK_SCHEMA_VERSION,
+    };
+    let mut record = VocabularyCrosswalk {
+        schema_version: VOCABULARY_CROSSWALK_SCHEMA_VERSION,
+        source_class_iri: kg(source),
+        target_class_iri: format!("http://schema.org/{target}"),
+        relation: VocabularyCrosswalkRelation::SkosCloseMatch,
+        source_revision: GraphSchemaSources::default().composed_digest().to_hex(),
+        target_vocabulary_revision: "ab".repeat(32),
+        origin: "core-metadata-v1".to_string(),
+        content_digest: String::new(),
+        approved_target_declarations: vec![ApprovedTargetDeclaration {
+            class_iri: format!("http://schema.org/{target}"),
+            category: "continuant".to_string(),
+        }],
+    };
+    record.content_digest = record.compute_content_digest();
+    record
+}
+
+// spec: MEDULLA-TYPED-PACKS-R071.1.3
+#[test]
+fn inspection_returns_composed_crosswalks() {
+    use medulla_graph_core::graph::{GraphSchemaSource, SchemaSourceOrigin};
+
+    let records = vec![
+        core_crosswalk("Agent", "Person"),
+        core_crosswalk("Agent", "Organization"),
+    ];
+    let mut sources = GraphSchemaSources::default();
+    let source = GraphSchemaSource::new(
+        SchemaSourceOrigin::Pack {
+            connector: "metadata".to_string(),
+            record_id: "record-1".to_string(),
+        },
+        None,
+        None,
+        0,
+    )
+    .unwrap()
+    .with_crosswalks(records.clone());
+    sources
+        .attach_dynamic("pack:metadata".to_string(), source)
+        .unwrap();
+    let composed = sources.composed_digest().to_hex();
+    let core = GraphCore::new();
+    core.install_schema_sources(std::sync::Arc::new(sources));
+
+    let view = inspect(&core, &[], &[]).unwrap();
+    assert!(view.committed);
+    assert_eq!(view.composed_digest.as_deref(), Some(composed.as_str()));
+    let mut expected: Vec<(String, String, String)> = records
+        .iter()
+        .map(|record| {
+            (
+                record.source_class_iri.clone(),
+                record.target_class_iri.clone(),
+                record.content_digest.clone(),
+            )
+        })
+        .collect();
+    expected.sort();
+    let served: Vec<(String, String, String)> = view
+        .crosswalks
+        .iter()
+        .map(|crosswalk| {
+            (
+                crosswalk.source_class_iri.clone(),
+                crosswalk.target_class_iri.clone(),
+                crosswalk.crosswalk_digest.clone(),
+            )
+        })
+        .collect();
+    assert_eq!(served, expected);
+    for crosswalk in &view.crosswalks {
+        assert_eq!(crosswalk.source_id, "pack:metadata");
+        assert_eq!(crosswalk.relation, "skos_close_match");
+        assert_eq!(crosswalk.crosswalk_digest.len(), 64);
+        assert!(crosswalk
+            .crosswalk_digest
+            .chars()
+            .all(|c| c.is_ascii_digit() || ('a'..='f').contains(&c)));
+    }
+
+    // Inline inspection never claims activation and lists no crosswalk.
+    let inline_view = inline(&[VOCABULARY]).unwrap();
+    assert!(!inline_view.committed);
+    assert!(inline_view.crosswalks.is_empty());
+}

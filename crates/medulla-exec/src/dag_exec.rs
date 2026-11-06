@@ -73,6 +73,14 @@ where
     }
     let sink = dag.sink()?;
     let order = dag.topo_order()?;
+    let pinned;
+    let ctx = match crate::exec::AsOfPin::of_ops(dag.nodes.iter().map(|n| &n.op)) {
+        Some(pin) if ctx.as_of_pin.is_none() => {
+            pinned = ctx.clone().with_as_of_pin(Some(pin));
+            &pinned
+        }
+        _ => ctx,
+    };
 
     let mut outputs: Vec<Option<RowSet>> = vec![None; dag.len()];
     for id in order {

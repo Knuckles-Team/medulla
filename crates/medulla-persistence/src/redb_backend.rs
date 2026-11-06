@@ -62,10 +62,13 @@ use medulla_server_api::api::persistence::PersistenceBackend;
 // the `PersistenceBackend` async trait wiring on top.
 use medulla_store::redb_store::shard::Shard;
 
+pub use backend_effect_audit::EffectAudit;
+
 #[cfg(all(any(test, feature = "test-support"), feature = "security"))]
 pub mod audit_append_tests;
 mod backend_audit;
 mod backend_backup;
+mod backend_effect_audit;
 mod backend_load;
 mod backend_open;
 mod backend_routing;

@@ -23,6 +23,11 @@
 # Env:    CARGO_FEATURES (default "full,cluster"); RUST_LOG for engine traces.
 # Optional load: RAFT_LOAD_WORKERS=1..32; RAFT_LOAD_SECONDS=1..3600 (default 300).
 # Repeated loaded mode: RAFT_LOAD_REPEATS=2..100; RAFT_LOAD_OUTPUT defaults to target/raft-cluster-runs.
+# Loaded acceptance (R014.4, R014.5): RAFT_LOAD_ACCEPTANCE=1 defaults RAFT_LOAD_REPEATS to 5 and
+#         RAFT_LOAD_WORKERS to the CPU count (capped at 32). Every repeat appends one JSON record to
+#         $RAFT_LOAD_OUTPUT/run-*/results.jsonl with the fields: revision, command, hardware, workers,
+#         repeat_index, result ("pass" or "fail"), trace (the repeat's log, kept for a failed repeat),
+#         plus returncode and test. The generated status reads these records.
 # Retry budget (R014.3.2): a failed unloaded run is retried only as the
 #         `raft_flake_budget` bin decides (RAFT_RETRY_MAX, default 1; RAFT_FLAKE_BUDGET_BIN
 #         overrides the bin command). Past the budget it prints RAFT_RETRY_BUDGET_EXHAUSTED.
@@ -33,6 +38,11 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 FEATURES="${CARGO_FEATURES:-full,cluster}"
+if [[ -n "${RAFT_LOAD_ACCEPTANCE:-}" ]]; then
+  export RAFT_LOAD_REPEATS="${RAFT_LOAD_REPEATS-5}"
+  RAFT_LOAD_WORKERS="${RAFT_LOAD_WORKERS-$(( $(nproc) > 32 ? 32 : $(nproc) ))}"
+  export RAFT_LOAD_WORKERS
+fi
 if [[ -v RAFT_LOAD_WORKERS || -v RAFT_LOAD_SECONDS || -v RAFT_LOAD_REPEATS ]]; then
   python3 scripts/raft_cpu_load.py --check-config
 fi

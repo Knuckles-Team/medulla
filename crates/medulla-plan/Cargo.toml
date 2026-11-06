@@ -236,6 +236,8 @@ par-runtime = ["medulla-exec/par-runtime", "query", "dep:rayon"]
 # Arrow (verify with `cargo tree -p medulla-plan`) — the small-footprint contract stays intact.
 knowledge-batch = ["query", "dep:arrow", "medulla-retrieval/knowledge-batch", "medulla-protocol-types/knowledge-batch", "medulla-types/knowledge-batch"]
 [dependencies]
+medulla-durable = { path = "../medulla-durable" }
+medulla-sqlite-format = { path = "../medulla-sqlite-format" }
 medulla-uql = { path = "../medulla-uql" }
 medulla-nlq = { path = "../medulla-nlq" }
 medulla-federation = { path = "../medulla-federation" }
@@ -345,6 +347,10 @@ medulla-stream = { path = "../medulla-stream", optional = true }
 # (no DataFusion); `redb-store` adds pure-Rust redb (no C dep, no pyo3). A default/Pi build
 # links none of it. medulla-tsdb does NOT depend on medulla-plan — no dependency cycle.
 medulla-tsdb = { path = "../medulla-tsdb", optional = true }
+# MEDULLA-FEDERATED-QUERY-R006.1: the temporal-rule mutation builder reuses the
+# `ApplyMutation` request types and the authority scope they are bound to.
+medulla-identity-types = { path = "../medulla-identity-types" }
+medulla-mutation-types = { path = "../medulla-mutation-types" }
 serde = { version = "1.0", features = ["derive"] }
 # `float_roundtrip`: UQL's JSON literals (`JSON '[…]'`, JSONPath/CEP values) must parse back to
 # the EXACT f64 the printer wrote (UQL-06 print/parse identity). serde_json's default float

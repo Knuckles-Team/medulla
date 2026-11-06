@@ -29,6 +29,7 @@ fn request(fenced: bool) -> CasWorkItemMetadataRequest {
     }
 }
 
+/// Verifies MEDULLA-DURABLE-KERNEL-R028.3: Fenced metadata CAS requires a live worker lease
 // spec: MEDULLA-DURABLE-KERNEL-R028.3
 #[test]
 fn fenced_metadata_cas_uses_mutation_time_and_preserves_refused_rows() {

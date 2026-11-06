@@ -35,6 +35,8 @@ pub mod mysql_mariadb_connection;
 pub mod asr_wire;
 // MEDULLA-FEDERATED-QUERY-R608.1 — causal model fit verdict (`CausalVerify`).
 pub mod causal_wire;
+// MEDULLA-DECISION-ENGINE-R700.1 — belief revision wire types.
+pub mod belief_revision;
 // MEDULLA-DECISION-ENGINE-R652.1 — research claims, evidence and sealed artifacts.
 pub mod claims;
 // MEDULLA-FEDERATED-QUERY-R086.100.1 — ordered n-ary inductive link prediction model.
@@ -59,6 +61,11 @@ pub mod ingest_rules;
 pub mod sensitive_detect;
 // MEDULLA-TYPED-PACKS-R804.1 — ontology revision difference and impact records.
 pub mod code_health;
+// MEDULLA-DECISION-ENGINE-R152.1 — the `ContextFacts` wire types, shared with the protocol
+// crate (a wire type, not a decision type), and the evidence class they cite.
+pub mod context_facts;
+pub mod evidence_class;
+pub mod external_schema;
 pub mod ontology_diff;
 // MEDULLA-UNIFIED-DATA-PLANE-R019.3.1 — typed conformance-entry constructor for the
 // MongoDB/DocumentDB adapter, over the generic R022.1 report entry. Pure
@@ -174,6 +181,8 @@ pub mod entity_link_proposal;
 pub mod contract;
 // MEDULLA-INCREMENTAL-VIEWS-R002.1 — the signed-row Z-set delta of incremental views.
 pub mod delta;
+// MEDULLA-FEDERATED-QUERY-R006.1 — origin record of a temporal rule-derived fact.
+pub mod derived_fact;
 // MEDULLA-DURABLE-KERNEL-R032 — the native primary-key fast-path routing decision
 // (pgwire/MySQL/MSSQL point operations that bypass DataFusion planning).
 // Pure serde, no dep.
@@ -209,7 +218,6 @@ pub use write_conflict::{ConflictWinner, MergeStrategy, WriteConflict, WriteConf
 // MEDULLA-DURABLE-KERNEL-R085.1 — memory snapshot head, sync request/outcome, cursor and
 // the pure compare-and-set core. Pure serde; served handlers live above this crate.
 pub mod memory_sync;
-pub use write_conflict::{MergeStrategy, WriteConflict};
 // MEDULLA-DURABLE-KERNEL-R037 — the workload classification (point/structure/sql)
 // every wire listener routes an operation by. Pure, no dep.
 pub mod workload_class;
@@ -218,6 +226,8 @@ pub mod workload_class;
 pub mod step_verdict;
 // MEDULLA-DURABLE-KERNEL-R088.1 — rule-output correction with two-principal approval.
 pub mod rule_correction;
+// MEDULLA-DECISION-ENGINE-R702.1 — Learn-stage correction records and effects.
+pub mod correction;
 // MEDULLA-DURABLE-KERNEL-R852.1/.2/.4 — health anomalies and correlated incidents.
 pub mod health_incident;
 // MEDULLA-DECISION-ENGINE-R701.1 — failure records, patterns and gap topics.

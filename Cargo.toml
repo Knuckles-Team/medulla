@@ -299,7 +299,7 @@ ann-redb = ["medulla-server/ann-redb", "medulla-wire/ann-redb", "medulla-h-query
 # the mutation gateway (`src/server/mutation.rs`) is server-only, so the binary
 # linking the MethodPolicy ledger is exactly the `server` build, matching every other
 # server-only dependency in this list.
-server = ["medulla-resource-store/server", "medulla-lane-store/server", "medulla-server/server", "medulla-wire/server", "medulla-wire-msg/server", "medulla-h-admin/server", "medulla-h-txn/server", "medulla-h-query/server", "medulla-h-decide/server", "medulla-h-jobs/server", "medulla-h-ingest/server", "medulla-h-graph/server", "medulla-h-compute/server", "medulla-raft/server", "medulla-persistence/server", "medulla-server-api/server", "medulla-store/server", "medulla-kernel/server", "dep:tokio", "dep:clap", "dep:tracing-subscriber", "dep:async-trait", "dep:medulla-capabilities", "medulla-persistence-ops/server", "medulla-federation/server", "medulla-server-store-tests/server", "medulla-persistence-tests/server"]
+server = ["dep:medulla-enrich", "medulla-resource-store/server", "medulla-lane-store/server", "medulla-server/server", "medulla-wire/server", "medulla-wire-msg/server", "medulla-h-admin/server", "medulla-h-txn/server", "medulla-h-query/server", "medulla-h-decide/server", "medulla-h-jobs/server", "medulla-h-ingest/server", "medulla-h-graph/server", "medulla-h-compute/server", "medulla-raft/server", "medulla-persistence/server", "medulla-server-api/server", "medulla-store/server", "medulla-kernel/server", "dep:tokio", "dep:clap", "dep:tracing-subscriber", "dep:async-trait", "dep:medulla-capabilities", "medulla-persistence-ops/server", "medulla-federation/server", "medulla-server-store-tests/server", "medulla-persistence-tests/server"]
 # Pure-Rust TLS/mTLS for the native MessagePack TCP service. The one main build
 # includes it so remote-engine deployments can terminate TLS in the binary.
 server-tls = ["medulla-server/server-tls", "medulla-h-admin/server-tls", "server", "dep:rustls", "dep:tokio-rustls"]
@@ -1851,6 +1851,7 @@ medulla-raft = { path = "crates/medulla-raft" }
 medulla-h-compute = { path = "crates/medulla-h-compute" }
 medulla-h-graph = { path = "crates/medulla-h-graph" }
 medulla-h-ingest = { path = "crates/medulla-h-ingest" }
+medulla-enrich = { path = "crates/medulla-enrich", optional = true }
 medulla-h-jobs = { path = "crates/medulla-h-jobs" }
 medulla-h-decide = { path = "crates/medulla-h-decide" }
 medulla-h-query = { path = "crates/medulla-h-query" }
@@ -1936,7 +1937,7 @@ tracing-subscriber = "0.3"
 tokio-postgres = "0.7"
 # S3 round-trip test client (MEDULLA-DURABLE-KERNEL-R860.4): Authorization-header SigV4
 # signing over the in-tree reqwest; the full AWS SDK is not added.
-aws-sigv4 = { version = "1", default-features = false, features = ["sign-http"] }
+aws-sigv4 = { version = "1", default-features = false, features = ["sign-http", "http1"] }
 aws-credential-types = "1"
 reqwest = { version = "0.13", default-features = false }
 # Compile the `.wat` WASM UDF fixtures to wasm in the server-dispatch UDF test
@@ -1991,6 +1992,13 @@ medulla-server-router = { path = "crates/medulla-server-router" }
 name = "attached_conformance"
 path = "tests/attached_conformance.rs"
 
+# MEDULLA-UNIFIED-DATA-PLANE-R015.2.2: attached SQLite file source (watermark capture and
+# the live read under a concurrent writer).
+[[test]]
+name = "attached_sqlite_served"
+path = "tests/attached_sqlite_served.rs"
+required-features = ["federation", "durable"]
+
 [[bench]]
 name = "write_coalescer_bench"
 path = "benches/write_coalescer_bench.rs"
@@ -2028,6 +2036,15 @@ path = "benches/work_item_claim.rs"
 harness = false
 required-features = ["full"]
 
+# Hot-path effect-receipt latency (MEDULLA-DURABLE-KERNEL-R820.6): 32 writers
+# record 10,000 receipts through the real durable path; budget p50 < 150 us,
+# p99 < 700 us, memory < 16 MiB. Nightly only, never gates a pull request.
+[[bench]]
+name = "work_item_effect_receipt"
+path = "benches/work_item_effect_receipt.rs"
+harness = false
+required-features = ["full"]
+
 # Schema-drift classification hot-path receipt (MEDULLA-TYPED-PACKS-R712): the
 # five-way classifier of `medulla_types::graph_schema::drift` over a 1,000-field
 # approved contract, rotated over deterministic drift shapes; prints p50/p99
@@ -2049,6 +2066,13 @@ name = "anonymous_authority"
 path = "benches/anonymous_authority.rs"
 harness = false
 
+# MEDULLA-SUPPLY-VOCAB-R009.6 nightly group `decide/ecosystem_impact`: one
+# ecosystem finding propagated over a 10,000-package dependency graph through
+# `medulla_core::ecosystem::propagate_package_risk_with`; prints p50/p99
+# (budget: p99 < 50 ms). Default features only. DEV-only; never gates a PR.
+[[bench]]
+name = "ecosystem_impact"
+path = "benches/ecosystem_impact.rs"
 # MEDULLA-UNIFIED-DATA-PLANE-R702.6 hot-path receipt, group `lineage_drain`: one
 # request drains 3 events, replays them and quarantines 2 malformed ones
 # (budget: p50 3 ms, p99 18 ms, memory 64 MiB). Nightly only; never gates a PR.
@@ -2101,6 +2125,14 @@ name = "decide_budgets"
 path = "benches/decide_budgets.rs"
 harness = false
 required-features = ["full"]
+
+# Nightly media-facts qualification (MEDULLA-DECISION-ENGINE-R050.3): four media types at
+# 128 parts each through `ModelInputCapabilities::validate_parts`; merges its group into
+# the decide budget report. Never gates a PR.
+[[bench]]
+name = "media_facts"
+path = "benches/media_facts.rs"
+harness = false
 
 # Provenance-anchoring write-path overhead (provenance anchoring, CONCEPT:MEDULLA-KG.sharding.row-level-security):
 # N concurrent authoritative writers fanned into ONE redb backend, with vs.

@@ -96,6 +96,7 @@ pub(crate) async fn handle_uql(
     };
     #[cfg(feature = "result-cache")]
     let started = std::time::Instant::now();
+    let scope = ReadScope::resolve(ctx.state, ctx.read_authority, ctx.graph_name).await;
     let result = run_unified_off_lock_with(
         ctx.state,
         req_id,
@@ -103,6 +104,7 @@ pub(crate) async fn handle_uql(
         snap,
         binding,
         legs,
+        &scope,
         move |_plan, plan_ctx| {
             let mut result = medulla_plan::uql::serve::run_statement(&stmt_for_run, plan_ctx)?;
             if let medulla_types::wire::UqlResult::Rows {

@@ -138,6 +138,25 @@ async fn route_native_lifecycle_ops(
         ));
     }
 
+    // Governed actions (MEDULLA-UNIFIED-DATA-PLANE-R700.3): register a spec, submit
+    // against it; the effects and the run commit as one request-graph batch.
+    let method = match medulla_h_jobs::action::try_handle(
+        medulla_h_jobs::action::HandleContext {
+            state: ctx.state,
+            req_id,
+            graph_name,
+            caller,
+            verified_context,
+            core,
+        },
+        method,
+    )
+    .await
+    {
+        Ok(response) => return Ok(response),
+        Err(method) => method,
+    };
+
     // The WorkItem handler owns its six lifecycle Methods explicitly and keeps
     // their authoritative MutationBatch effect. Submission and reservation
     // operations deliberately fall through to their existing native route.
@@ -283,6 +302,12 @@ async fn route_work_item_reads(
             tenant,
             work_item_id,
         },
+        Method::GetEffectReceipt { request } => {
+            medulla_h_jobs::work_item_read::WorkItemRead::EffectReceipt(request)
+        }
+        Method::GetAdmittedRequest { request } => {
+            medulla_h_jobs::work_item_read::WorkItemRead::AdmittedRequest(request)
+        }
         Method::ListControlLeases { request } => {
             medulla_h_jobs::work_item_read::WorkItemRead::ControlLeases(request)
         }

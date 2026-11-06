@@ -120,6 +120,7 @@ async fn distribution_shift_runs_the_ks_kernel_through_dispatch() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+/// Verifies MEDULLA-FINANCE-PRIMITIVES-R900.6: Hot-path proof
 // spec: MEDULLA-FINANCE-PRIMITIVES-R900.6
 async fn distribution_shift_serves_100k_samples() {
     // Two 100k-value uniform grids, the second moved by 0.1: the two-sample KS

@@ -207,6 +207,7 @@ ex:img-2 a :ContainerImage ;
         );
     }
 
+    /// Verifies MEDULLA-CQ-CONN-R068.2: AutomationJob
     // spec: MEDULLA-CQ-CONN-R068.2
     #[test]
     fn AutomationJob_declared() {
@@ -223,6 +224,7 @@ ex:img-2 a :ContainerImage ;
         );
     }
 
+    /// Verifies MEDULLA-CQ-CONN-R068.3: AutomationJobTemplate
     // spec: MEDULLA-CQ-CONN-R068.3
     #[test]
     fn AutomationJobTemplate_declared() {
@@ -234,6 +236,7 @@ ex:img-2 a :ContainerImage ;
         );
     }
 
+    /// Verifies MEDULLA-CQ-CONN-R068.4: jobStatus
     // spec: MEDULLA-CQ-CONN-R068.4
     #[test]
     fn jobStatus_declared() {
@@ -258,6 +261,7 @@ ex:img-2 a :ContainerImage ;
         );
     }
 
+    /// Verifies MEDULLA-CQ-CONN-R068.5: ranAgainstHost
     // spec: MEDULLA-CQ-CONN-R068.5
     #[test]
     fn ranAgainstHost_declared() {
@@ -277,6 +281,7 @@ ex:img-2 a :ContainerImage ;
         );
     }
 
+    /// Verifies MEDULLA-CQ-CONN-R068.6: routeHostname
     // spec: MEDULLA-CQ-CONN-R068.6
     #[test]
     fn routeHostname_declared() {
@@ -301,6 +306,7 @@ ex:img-2 a :ContainerImage ;
         );
     }
 
+    /// Verifies MEDULLA-CQ-CONN-R068.7: upstreamAddress
     // spec: MEDULLA-CQ-CONN-R068.7
     #[test]
     fn upstreamAddress_declared() {
@@ -320,6 +326,7 @@ ex:img-2 a :ContainerImage ;
         );
     }
 
+    /// Verifies MEDULLA-CQ-CONN-R068.9: alertSeverity
     // spec: MEDULLA-CQ-CONN-R068.9
     #[test]
     fn alertSeverity_declared() {
@@ -339,6 +346,7 @@ ex:img-2 a :ContainerImage ;
         );
     }
 
+    /// Verifies MEDULLA-CQ-CONN-R068.10: alertState
     // spec: MEDULLA-CQ-CONN-R068.10
     #[test]
     fn alertState_declared() {
@@ -358,6 +366,7 @@ ex:img-2 a :ContainerImage ;
         );
     }
 
+    /// Verifies MEDULLA-CQ-CONN-R068.11: firingSince
     // spec: MEDULLA-CQ-CONN-R068.11
     #[test]
     fn firingSince_declared() {
@@ -377,6 +386,7 @@ ex:img-2 a :ContainerImage ;
         );
     }
 
+    /// Verifies MEDULLA-CQ-CONN-R068.17: desiredReplicas
     // spec: MEDULLA-CQ-CONN-R068.17
     #[test]
     fn desiredReplicas_declared() {
@@ -401,6 +411,7 @@ ex:img-2 a :ContainerImage ;
         );
     }
 
+    /// Verifies MEDULLA-CQ-CONN-R068.18: runningReplicas
     // spec: MEDULLA-CQ-CONN-R068.18
     #[test]
     fn runningReplicas_declared() {
@@ -425,6 +436,7 @@ ex:img-2 a :ContainerImage ;
         );
     }
 
+    /// Verifies MEDULLA-CQ-CONN-R068.19: stackSourceRepository
     // spec: MEDULLA-CQ-CONN-R068.19
     #[test]
     fn stackSourceRepository_declared() {
@@ -444,6 +456,7 @@ ex:img-2 a :ContainerImage ;
         );
     }
 
+    /// Verifies MEDULLA-CQ-CONN-R068.20: ManagementEnvironment
     // spec: MEDULLA-CQ-CONN-R068.20
     #[test]
     fn ManagementEnvironment_declared() {
@@ -455,6 +468,7 @@ ex:img-2 a :ContainerImage ;
         );
     }
 
+    /// Verifies MEDULLA-CQ-CONN-R068.21: pendingUpdateCount
     // spec: MEDULLA-CQ-CONN-R068.21
     #[test]
     fn pendingUpdateCount_declared() {
@@ -484,6 +498,7 @@ ex:img-2 a :ContainerImage ;
         );
     }
 
+    /// Verifies MEDULLA-CQ-CONN-R068.22: uptimeSeconds
     // spec: MEDULLA-CQ-CONN-R068.22
     #[test]
     fn uptimeSeconds_declared() {
@@ -508,6 +523,7 @@ ex:img-2 a :ContainerImage ;
         );
     }
 
+    /// Verifies MEDULLA-CQ-CONN-R068.23: recordType
     // spec: MEDULLA-CQ-CONN-R068.23
     #[test]
     fn recordType_declared() {
@@ -527,6 +543,7 @@ ex:img-2 a :ContainerImage ;
         );
     }
 
+    /// Verifies MEDULLA-CQ-CONN-R068.24: recordValue
     // spec: MEDULLA-CQ-CONN-R068.24
     #[test]
     fn recordValue_declared() {
@@ -546,6 +563,7 @@ ex:img-2 a :ContainerImage ;
         );
     }
 
+    /// Verifies MEDULLA-CQ-CONN-R068.25: lastConnectionStatus
     // spec: MEDULLA-CQ-CONN-R068.25
     #[test]
     fn lastConnectionStatus_declared() {
@@ -565,6 +583,7 @@ ex:img-2 a :ContainerImage ;
         );
     }
 
+    /// Verifies MEDULLA-CQ-CONN-R068.26: lastConnectionError
     // spec: MEDULLA-CQ-CONN-R068.26
     #[test]
     fn lastConnectionError_declared() {
@@ -584,6 +603,7 @@ ex:img-2 a :ContainerImage ;
         );
     }
 
+    /// Verifies MEDULLA-CQ-CONN-R068.27: stackInEnvironment
     // spec: MEDULLA-CQ-CONN-R068.27
     #[test]
     fn stackInEnvironment_declared() {

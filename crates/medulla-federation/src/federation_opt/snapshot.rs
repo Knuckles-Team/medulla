@@ -36,6 +36,15 @@ impl Default for SnapshotBound {
 pub trait SnapshotConn: Send + Sync {
     /// Run one read statement inside the held transaction.
     fn run(&self, statement: &str) -> Result<RowSet, String>;
+
+    /// Run one read statement inside the held transaction and return each row as
+    /// column to text value (a NULL column is omitted). The OBDA scan reads through this.
+    fn run_columns(
+        &self,
+        _statement: &str,
+    ) -> Result<Vec<std::collections::HashMap<String, String>>, String> {
+        Err("federation: this snapshot connection does not return columns".to_string())
+    }
 }
 
 /// One opened snapshot, kept in the session by source fingerprint.

@@ -1,5 +1,7 @@
 //! Modules moved here from `medulla_server::split_tests` (hard cutover, no re-exports).
 
+#[cfg(all(test, feature = "query", feature = "streaming"))]
+mod incremental_views;
 #[cfg(all(
     test,
     unix,
@@ -38,6 +40,8 @@ mod medulla_h_query_dispatch_pipeline_tests;
 #[cfg(all(test, feature = "query", feature = "ann-redb"))]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 mod medulla_h_query_sql_source_read_tests;
+#[cfg(all(test, feature = "promql"))]
+mod medulla_server_obs_telemetry_snapshot_tests;
 #[cfg(all(test, feature = "query"))]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 mod medulla_wire_wire_tests;

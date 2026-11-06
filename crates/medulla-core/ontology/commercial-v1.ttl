@@ -7,8 +7,7 @@
 
 <http://knuckles.team/kg/commercial> a owl:Ontology ;
     rdfs:label "Commercial" ;
-    rdfs:comment "Customer, contract and opportunity vocabulary: the commercial side of the supply chain. Reuses the ERPNext IRIs in the shared kg namespace; source mappings supply the relationships." ;
-    owl:imports <http://knuckles.team/kg/core> .
+    rdfs:comment "Customer, contract and opportunity vocabulary: the commercial side of the supply chain. Reuses the ERPNext IRIs in the shared kg namespace; source mappings supply the relationships." .
 
 :Customer a owl:Class ;
     rdfs:label "Customer" ;

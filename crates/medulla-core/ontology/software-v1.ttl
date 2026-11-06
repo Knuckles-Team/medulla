@@ -262,3 +262,18 @@
     rdfs:comment "A published, versioned snapshot of a software project with a tag, notes and attached assets. Distinct from a Deployment, which places a build on infrastructure." ;
     skos:altLabel "Software Release", "Version Release" ;
     rdfs:subClassOf bfo:0000031 .
+
+# ── Core rooting (MEDULLA-TYPED-PACKS-R071.2) ───────────────────────────────────
+# Every class of this module above reaches the core class kg:DomainEntity through rdfs:subClassOf.
+<http://knuckles.team/kg#Author> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#Commit> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#ComputerUseSession> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#Feature> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#GuiAction> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#Pattern> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#Resource> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#Route> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#ScreenObservation> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#UIElement> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#WorkspaceAction> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#WorkspaceObservation> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .

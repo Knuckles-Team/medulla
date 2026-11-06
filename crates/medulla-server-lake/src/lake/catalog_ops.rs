@@ -344,7 +344,7 @@ impl LakeManager {
         match change {
             SchemaChange::AddColumn(field) => {
                 let kind = "SCHEMA_ADD_COLUMN";
-                let added = evolve_entry_schema(entry, field);
+                let added = super::evolve_entry_schema(entry, field);
                 let mut record = LakeOperationRecord::new(
                     format!("{namespace}.{table}"),
                     entry.owner_tenant.clone(),

@@ -499,12 +499,39 @@ impl ForeignSourceCatalog {
 /// rather than only when a plan later tries to use it. Other variants are untouched here;
 /// their own gates still run where they ran before (see the module doc).
 fn verify_outbound_before_register(spec: &ForeignSourceSpec) -> Result<(), String> {
+    if let ForeignSourceSpec::SqliteFile { path, .. } = spec {
+        return verify_sqlite_root(path, medulla_server_api::knob_config::allowed_roots());
+    }
     #[cfg(feature = "federation-sql")]
     if let ForeignSourceSpec::Sql { dsn, .. } = spec {
         return medulla_federation::federation_ssrf::check_sql_dsn(dsn);
     }
     let _ = spec;
     Ok(())
+}
+
+/// `MEDULLA-UNIFIED-DATA-PLANE-R015.2.2.3` — a `SqliteFile` spec's canonical path must lie
+/// under one of `foreign.sqlite.allowed_roots`. The default is an empty list, so every
+/// path is refused (`SQLITE_FILE_DENIED`). Canonicalisation resolves `..` and symlinks, so
+/// neither can escape a root; a path that does not exist cannot be canonicalised and is
+/// refused too.
+fn verify_sqlite_root(path: &str, roots: &[std::path::PathBuf]) -> Result<(), String> {
+    let denied = medulla_types::contract::ServerErrorCode::SqliteFileDenied;
+    let Ok(canonical) = std::fs::canonicalize(path) else {
+        return Err(format!(
+            "{denied}: sqlite file path is not an existing file"
+        ));
+    };
+    let under_root = roots
+        .iter()
+        .any(|root| std::fs::canonicalize(root).is_ok_and(|root| canonical.starts_with(root)));
+    if under_root {
+        Ok(())
+    } else {
+        Err(format!(
+            "{denied}: sqlite file is outside foreign.sqlite.allowed_roots"
+        ))
+    }
 }
 
 /// Compare the approved operation to the catalog spec before binding host data.
@@ -588,6 +615,28 @@ mod tests {
                 columns: Default::default(),
             },
         }
+    }
+
+    #[test]
+    fn sqlite_file_is_registered_only_under_an_allowed_root() {
+        let base = std::env::temp_dir().join(format!("sqlite-roots-{}", std::process::id()));
+        let (allowed, other) = (base.join("allowed"), base.join("other"));
+        std::fs::create_dir_all(&allowed).unwrap();
+        std::fs::create_dir_all(&other).unwrap();
+        let inside = allowed.join("a.db");
+        let outside = other.join("b.db");
+        std::fs::write(&inside, b"").unwrap();
+        std::fs::write(&outside, b"").unwrap();
+        let roots = vec![allowed.clone()];
+        assert!(verify_sqlite_root(inside.to_str().unwrap(), &roots).is_ok());
+        // The default empty list refuses every path.
+        let refused = verify_sqlite_root(inside.to_str().unwrap(), &[]).unwrap_err();
+        assert!(refused.starts_with("SQLITE_FILE_DENIED"), "{refused}");
+        // A path outside the root, and a `..` escape out of it, are refused.
+        assert!(verify_sqlite_root(outside.to_str().unwrap(), &roots).is_err());
+        let escape = allowed.join("../other/b.db");
+        assert!(verify_sqlite_root(escape.to_str().unwrap(), &roots).is_err());
+        std::fs::remove_dir_all(&base).unwrap();
     }
 
     fn foreign_plan(name: &str) -> Vec<medulla_exec::algebra::Op> {
