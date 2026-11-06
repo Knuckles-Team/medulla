@@ -212,6 +212,19 @@ $($variants)*
         status: medulla_types::incident::IncidentStatus,
     },
 
+    // ── Governed actions (MEDULLA-UNIFIED-DATA-PLANE-R700.3) ───────────────
+    /// Validate and register one action spec in the request graph's registry.
+    ActionRegister {
+        spec: medulla_work_types::action_spec::ActionSpec,
+    },
+    /// Submit typed parameters to a registered action: a failing criterion
+    /// applies no effect; a passing submission applies every effect in one
+    /// batch. Either way the run is recorded.
+    ActionSubmit {
+        action: String,
+        params: std::collections::BTreeMap<String, medulla_work_types::action_spec::ParamValue>,
+    },
+
     // ── Dataset lineage (MEDULLA-UNIFIED-DATA-PLANE-R702.3) ─────────────────
     /// Drain lineage run events into the request graph: each event maps to
     /// content-addressed `Dataset` nodes and `derivesInto` edges; an event that

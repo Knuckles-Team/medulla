@@ -118,6 +118,8 @@ pub(crate) const ACCESS_RS_MUTATES_UNCONDITIONAL: &[&str] = &[
     "IncidentRecordAnomaly",
     "IncidentCorrelate",
     "IncidentSetStatus",
+    "ActionRegister",
+    "ActionSubmit",
     "SupersedeEdge",
     "SweepExpired",
     "UpdateResourceHost",
@@ -353,6 +355,8 @@ pub(crate) const NATIVE_GRAPHREDB_DURABLE: &[&str] = &[
     "IncidentRecordAnomaly",
     "IncidentCorrelate",
     "IncidentSetStatus",
+    "ActionRegister",
+    "ActionSubmit",
     "Sql",
     // EH-351: create/refresh/drop commit the edge-index registration and its
     // generations in the tenant SQL catalog natively, as `Sql` DDL does.
@@ -531,6 +535,8 @@ pub(crate) const AUDIT_RS_AUDITED: &[&str] = &[
     "IncidentRecordAnomaly",
     "IncidentCorrelate",
     "IncidentSetStatus",
+    "ActionRegister",
+    "ActionSubmit",
     // Defense-in-depth markers; the durable record is the identity store's
     // hash-chained audit trail, written in the same rbac.redb image as the
     // change it records.
@@ -618,6 +624,8 @@ pub(crate) const CDC_RS_EMITS_CDC: &[&str] = &[
     "IncidentRecordAnomaly",
     "IncidentCorrelate",
     "IncidentSetStatus",
+    "ActionRegister",
+    "ActionSubmit",
     "RemoveEdge",
     "RemoveNode",
     "RunDatalogReasoning",

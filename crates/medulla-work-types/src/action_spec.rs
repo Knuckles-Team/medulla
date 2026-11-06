@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 
 /// The type of one action parameter.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum ParamType {
     String,
@@ -20,6 +21,7 @@ pub enum ParamType {
 
 /// One typed parameter.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct ActionParameter {
     pub name: String,
@@ -29,6 +31,7 @@ pub struct ActionParameter {
 
 /// A typed parameter value.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(untagged)]
 pub enum ParamValue {
     Boolean(bool),
@@ -74,6 +77,7 @@ impl ParamValue {
 
 /// A comparison a criterion applies to one parameter.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum CriterionOp {
     Eq,
@@ -101,6 +105,7 @@ impl CriterionOp {
 
 /// One submission criterion: `param op value`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct SubmissionCriterion {
     pub name: String,
@@ -111,6 +116,7 @@ pub struct SubmissionCriterion {
 
 /// What an effect does.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case", tag = "kind")]
 pub enum EffectKind {
     SetProperty,
@@ -134,6 +140,7 @@ impl EffectKind {
 /// One effect; `template` is JSON text whose values may be `{{name}}`
 /// placeholders, each replaced by the parameter's JSON value.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct ActionEffectSpec {
     pub kind: EffectKind,
@@ -142,6 +149,7 @@ pub struct ActionEffectSpec {
 
 /// A declared action.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct ActionSpec {
     pub name: String,
@@ -152,6 +160,7 @@ pub struct ActionSpec {
 
 /// Where one action run ended.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum ActionStatus {
     Applied,
@@ -160,6 +169,7 @@ pub enum ActionStatus {
 
 /// A refused submission, with its stable code.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case", tag = "code", content = "detail")]
 pub enum ActionRefusal {
     CriterionFailed(String),
@@ -185,6 +195,7 @@ impl ActionRefusal {
 
 /// One criterion's verdict, as recorded.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct CriterionVerdict {
     pub criterion: String,
     pub passed: bool,
@@ -193,6 +204,7 @@ pub struct CriterionVerdict {
 /// How a resolved effect leaves the run: applied in the mutation batch, or
 /// proposed through the governed write-back path (never written directly).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum EffectDisposition {
     Applied,
@@ -201,6 +213,7 @@ pub enum EffectDisposition {
 
 /// One resolved effect; `text` is its JSON body.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct ResolvedEffect {
     pub kind: EffectKind,
     pub text: String,
@@ -209,6 +222,7 @@ pub struct ResolvedEffect {
 
 /// The stored record of one action run.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct ActionRun {
     pub action: String,
     pub params: BTreeMap<String, ParamValue>,

@@ -437,6 +437,9 @@ pub fn requires_write(method: &Method) -> bool {
                 | Method::IncidentRecordAnomaly { .. }
                 | Method::IncidentCorrelate { .. }
                 | Method::IncidentSetStatus { .. }
+                // MEDULLA-UNIFIED-DATA-PLANE-R700.3: action registration and submission.
+                | Method::ActionRegister { .. }
+                | Method::ActionSubmit { .. }
                 | Method::Reconcile { .. }
                 | Method::ApplyMutation { .. }
                 | Method::ApplyMultisigMutation { .. }

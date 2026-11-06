@@ -897,6 +897,8 @@ fn cluster_mutation_route_admin(method: &Method) -> Option<ClusterMutationRoute>
             | Method::IncidentRecordAnomaly { .. }
             | Method::IncidentCorrelate { .. }
             | Method::IncidentSetStatus { .. }
+            | Method::ActionRegister { .. }
+            | Method::ActionSubmit { .. }
     ) {
         return Some(ClusterMutationRoute::VolatileControl);
     }

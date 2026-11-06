@@ -380,6 +380,18 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     ("LineageIngest", &["LINEAGE_EVENT_MALFORMED"]),
     ("WriteBack", &["CORRUPT_WRITE_BACK"]),
     ("TxnPlanWriteback", &["CORRUPT_WRITE_BACK"]),
+    ("ActionRegister", &["ACTION_SPEC_INVALID"]),
+    (
+        "ActionSubmit",
+        &[
+            "ACTION_CRITERION_FAILED",
+            "ACTION_MISSING_PARAMETER",
+            "ACTION_NOT_REGISTERED",
+            "ACTION_PARAMETER_TYPE_MISMATCH",
+            "ACTION_UNKNOWN_PARAMETER",
+            "ACTION_WRITE_BACK_UNATTACHED",
+        ],
+    ),
     (
         "IncidentCorrelate",
         &["TENANT_SCOPE_REQUIRED", "ANOMALY_RESOURCE_REQUIRED"],
