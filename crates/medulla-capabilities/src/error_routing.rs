@@ -168,6 +168,11 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "DOCUMENT_NOT_FOUND",
         ],
     ),
+    // MEDULLA-SUPPLY-VOCAB-R009.3: ecosystem package risk propagation.
+    (
+        "MineRiskPropagation",
+        &["ECOSYSTEM_DEPTH_OUT_OF_RANGE", "ECOSYSTEM_PACKAGE_UNKNOWN"],
+    ),
     // MEDULLA-UNIFIED-DATA-PLANE-R651.7.4 / MEDULLA-DECISION-ENGINE-R802.4.
     (
         "EnrichDocument",
@@ -252,6 +257,15 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     ),
     // MEDULLA-FINANCE-PRIMITIVES-R904: no current record for the binding in the caller's tenant.
     ("WalletKeyTrustGet", &["WALLET_KEY_TRUST_NOT_FOUND"]),
+    // MEDULLA-DECISION-ENGINE-R152.4: a zero budget, too many node ids or a fact with no source.
+    (
+        "ContextFacts",
+        &[
+            "CONTEXT_FACTS_BUDGET_ZERO",
+            "CONTEXT_FACTS_TOO_MANY_NODES",
+            "FACT_PROVENANCE_MISSING",
+        ],
+    ),
     // MEDULLA-FINANCE-PRIMITIVES-R004.3.2: the record put's closed refusals.
     (
         "FinanceRecordPut",
@@ -270,6 +284,13 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "STRATEGY_CARD_LICENCE_MISSING",
         ],
     ),
+    // MEDULLA-FINANCE-PRIMITIVES-R011.2.3: the alert door's closed refusals.
+    (
+        "FinanceAlertRaise",
+        &["ALERT_ENVELOPE_INVALID", "ALERT_REVISION_CONFLICT"],
+    ),
+    // MEDULLA-FINANCE-PRIMITIVES-R011.4: an empty receipt idempotency key.
+    ("CreateNodeIfAbsent", &["RECEIPT_KEY_INVALID"]),
     ("GetNodes", &["RESULT_TOO_LARGE"]),
     ("GetEdges", &["RESULT_TOO_LARGE"]),
     (
@@ -455,6 +476,18 @@ fn add_owner_errors(d: &MethodDescriptor, codes: &mut BTreeSet<&'static str>) {
         );
         // These two codes already belong to the connector-pack typed catalog.
         codes.extend(["SOURCE_CONTRACT_MISMATCH", "SOURCE_REGISTRATION_NOT_FOUND"]);
+    }
+    // MEDULLA-IDENTITY-R610.4 / R610.5: every served graph read is scoped to the
+    // verified tenant and audited.
+    if matches!(
+        id,
+        "Uql" | "UnifiedQuery" | "Sql" | "NlQuery" | "NlQueryExplain"
+    ) {
+        codes.extend(["AUDIT_UNAVAILABLE", "QUERY_UNSCOPABLE"]);
+    }
+    // MEDULLA-IDENTITY-R023.4: a point read of a unit outside the caller's scope.
+    if id == "GetNodeProperties" {
+        codes.insert("UNIT_OUT_OF_SCOPE");
     }
     if d.policy.is_durable() {
         codes.insert("CORRUPT_MUTATION_LEDGER");

@@ -166,6 +166,14 @@ pub fn eval_relation(local: &str, a_wkt: &str, b_wkt: &str) -> Option<bool> {
     Some(relation(&a, &b))
 }
 
+/// The kernel test of the boolean `geof:` relation `local`, or `None` for an unknown name.
+pub(crate) fn relation_fn(local: &str) -> Option<SpatialRelation> {
+    SPATIAL_RELATIONS
+        .iter()
+        .find(|(name, _)| *name == local)
+        .map(|(_, relation)| *relation)
+}
+
 /// A boolean spatial relation over two geometry operands.
 type SpatialRelation = fn(&Geometry, &Geometry) -> bool;
 

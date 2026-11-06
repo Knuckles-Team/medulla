@@ -1991,6 +1991,13 @@ medulla-server-router = { path = "crates/medulla-server-router" }
 name = "attached_conformance"
 path = "tests/attached_conformance.rs"
 
+# MEDULLA-UNIFIED-DATA-PLANE-R015.2.2: attached SQLite file source (watermark capture and
+# the live read under a concurrent writer).
+[[test]]
+name = "attached_sqlite_served"
+path = "tests/attached_sqlite_served.rs"
+required-features = ["federation", "durable"]
+
 [[bench]]
 name = "write_coalescer_bench"
 path = "benches/write_coalescer_bench.rs"
@@ -2049,6 +2056,13 @@ name = "anonymous_authority"
 path = "benches/anonymous_authority.rs"
 harness = false
 
+# MEDULLA-SUPPLY-VOCAB-R009.6 nightly group `decide/ecosystem_impact`: one
+# ecosystem finding propagated over a 10,000-package dependency graph through
+# `medulla_core::ecosystem::propagate_package_risk_with`; prints p50/p99
+# (budget: p99 < 50 ms). Default features only. DEV-only; never gates a PR.
+[[bench]]
+name = "ecosystem_impact"
+path = "benches/ecosystem_impact.rs"
 # MEDULLA-UNIFIED-DATA-PLANE-R702.6 hot-path receipt, group `lineage_drain`: one
 # request drains 3 events, replays them and quarantines 2 malformed ones
 # (budget: p50 3 ms, p99 18 ms, memory 64 MiB). Nightly only; never gates a PR.
@@ -2101,6 +2115,14 @@ name = "decide_budgets"
 path = "benches/decide_budgets.rs"
 harness = false
 required-features = ["full"]
+
+# Nightly media-facts qualification (MEDULLA-DECISION-ENGINE-R050.3): four media types at
+# 128 parts each through `ModelInputCapabilities::validate_parts`; merges its group into
+# the decide budget report. Never gates a PR.
+[[bench]]
+name = "media_facts"
+path = "benches/media_facts.rs"
+harness = false
 
 # Provenance-anchoring write-path overhead (provenance anchoring, CONCEPT:MEDULLA-KG.sharding.row-level-security):
 # N concurrent authoritative writers fanned into ONE redb backend, with vs.

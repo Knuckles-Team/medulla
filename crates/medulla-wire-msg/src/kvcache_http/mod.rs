@@ -151,6 +151,13 @@ pub const KVCACHE_DATA_VERSION_HEADER: &str = "x-medulla-data-version";
 /// milliseconds, of what recomputing the PUT block would cost. The tier policy weighs the
 /// block by it; absent, the block is priced at the worth floor.
 pub const KVCACHE_REBUILD_COST_HEADER: &str = "x-medulla-rebuild-cost-ms";
+/// Request header (MEDULLA-DURABLE-KERNEL-R083.4): the model identity a block belongs to.
+/// Sent together with [`KVCACHE_MODEL_VERSION_HEADER`] or not at all.
+pub const KVCACHE_MODEL_ID_HEADER: &str = "x-medulla-model-id";
+/// Request header (MEDULLA-DURABLE-KERNEL-R083.4): the model revision that produced the
+/// block. A `GET` or `PUT` under another revision of the same model refuses with
+/// `KV_MODEL_VERSION_MISMATCH`.
+pub const KVCACHE_MODEL_VERSION_HEADER: &str = "x-medulla-model-version";
 const MAX_KVCACHE_BODY_BYTES: usize = 64 * 1024 * 1024;
 const HTTP_READ_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(15);
 
@@ -181,6 +188,48 @@ pub struct KvCacheStore {
     /// and survives an engine restart.
     #[cfg(feature = "kv")]
     durable: Option<SharedKvStoreBackend>,
+    /// The model revision each `(model id, block hash)` was stored under
+    /// (MEDULLA-DURABLE-KERNEL-R083.4), checked before any byte is served or replaced.
+    model_revisions: Mutex<HashMap<(String, String), String>>,
+}
+
+/// The model identity a request names, or the refusal for a half-stated one.
+struct ModelIdentity {
+    id: String,
+    version: String,
+}
+
+/// Read the model identity headers: both or neither.
+fn parse_model_identity(
+    headers: &HashMap<String, String>,
+) -> Result<Option<ModelIdentity>, KvResponse> {
+    let read = |name: &str| {
+        headers
+            .get(name)
+            .map(|value| value.trim().to_string())
+            .filter(|value| !value.is_empty())
+    };
+    match (
+        read(KVCACHE_MODEL_ID_HEADER),
+        read(KVCACHE_MODEL_VERSION_HEADER),
+    ) {
+        (None, None) => Ok(None),
+        (Some(id), Some(version)) => Ok(Some(ModelIdentity { id, version })),
+        _ => Err(KvResponse::error(
+            "400 Bad Request",
+            "BadRequest",
+            "model id and model version headers must be sent together",
+        )),
+    }
+}
+
+/// The refusal for a block requested or written under another model revision.
+fn model_version_mismatch(stored: &str, requested: &str) -> KvResponse {
+    KvResponse::error(
+        "409 Conflict",
+        medulla_types::contract::ServerErrorCode::KvModelVersionMismatch.as_str(),
+        &format!("block stored at model revision {stored:?}, requested {requested:?}"),
+    )
 }
 
 impl Default for KvCacheStore {
@@ -196,6 +245,7 @@ impl KvCacheStore {
             index: Mutex::new(SharedKvIndex::new()),
             #[cfg(feature = "kv")]
             durable: None,
+            model_revisions: Mutex::new(HashMap::new()),
         }
     }
 
@@ -207,6 +257,7 @@ impl KvCacheStore {
         Self {
             index: Mutex::new(SharedKvIndex::new()),
             durable: Some(backend),
+            model_revisions: Mutex::new(HashMap::new()),
         }
     }
 
@@ -259,6 +310,24 @@ impl KvCacheStore {
         } else {
             PutStatus::Deduplicated
         })
+    }
+
+    /// The revision `model` is stored under for `hash`, when it differs from the one named.
+    fn stored_revision_conflict(&self, model: &ModelIdentity, hash: &str) -> Option<String> {
+        let revisions = self.model_revisions.lock().unwrap();
+        revisions
+            .get(&(model.id.clone(), hash.to_string()))
+            .filter(|stored| **stored != model.version)
+            .cloned()
+    }
+
+    /// Record the revision `model` stored `hash` under (first write wins).
+    fn bind_revision(&self, model: &ModelIdentity, hash: &str) {
+        self.model_revisions
+            .lock()
+            .unwrap()
+            .entry((model.id.clone(), hash.to_string()))
+            .or_insert_with(|| model.version.clone());
     }
 
     fn contains(&self, hash: &str) -> bool {
@@ -704,13 +773,22 @@ fn block(store: &KvCacheStore, req: &HttpMessage, hash: &str) -> KvResponse {
     if hash.is_empty() {
         return KvResponse::error("400 Bad Request", "BadRequest", "empty hash");
     }
+    let model = match parse_model_identity(&req.headers) {
+        Ok(model) => model,
+        Err(refusal) => return refusal,
+    };
+    if let (Some(model), "GET") = (&model, req.method.as_str()) {
+        if let Some(stored) = store.stored_revision_conflict(model, hash) {
+            return model_version_mismatch(&stored, &model.version);
+        }
+    }
     match req.method.as_str() {
         "GET" => match store.get(hash) {
             Some(bytes) => KvResponse::bytes("200 OK", bytes),
             None => KvResponse::error("404 Not Found", "NoSuchBlock", "no block under that hash"),
         },
         "HEAD" => head(store, hash),
-        "PUT" => put_block(store, req, hash),
+        "PUT" => put_block(store, req, hash, model.as_ref()),
         _ => method_not_allowed(),
     }
 }
@@ -731,13 +809,27 @@ fn head(store: &KvCacheStore, hash: &str) -> KvResponse {
 /// absent ⇒ a pure content-addressed page, never version-invalidated. `201` on a
 /// brand-new block, `200` on a dedup hit, `500` on a durable-store write failure
 /// — never a silent success.
-fn put_block(store: &KvCacheStore, req: &HttpMessage, hash: &str) -> KvResponse {
+fn put_block(
+    store: &KvCacheStore,
+    req: &HttpMessage,
+    hash: &str,
+    model: Option<&ModelIdentity>,
+) -> KvResponse {
+    if let Some(model) = model {
+        if let Some(stored) = store.stored_revision_conflict(model, hash) {
+            return model_version_mismatch(&stored, &model.version);
+        }
+    }
     let derived_at = parse_data_version(&req.headers);
     let rebuild_cost_ms = req
         .headers
         .get(KVCACHE_REBUILD_COST_HEADER)
         .and_then(|value| value.trim().parse::<u64>().ok());
-    match store.put_priced(hash, req.body.clone(), derived_at, rebuild_cost_ms) {
+    let outcome = store.put_priced(hash, req.body.clone(), derived_at, rebuild_cost_ms);
+    if let (Some(model), Ok(PutStatus::Created | PutStatus::Deduplicated)) = (model, &outcome) {
+        store.bind_revision(model, hash);
+    }
+    match outcome {
         Ok(PutStatus::Created) => KvResponse::empty("201 Created"),
         Ok(PutStatus::Deduplicated) => KvResponse::empty("200 OK"),
         // Accepted, not stored: the tier policy kept the block out, and a refusal is a

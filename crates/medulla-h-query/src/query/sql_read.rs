@@ -9,6 +9,7 @@ struct SqlReadScope<'a> {
     graph_name: &'a str,
     caller: &'a str,
     authority: &'a medulla_server_api::carrier::CarrierAuthority,
+    read_authority: &'a GraphReadAuthority,
     persist_dir: &'a std::path::Path,
     #[cfg(feature = "security")]
     rls: &'a Arc<medulla_isolation::isolation::IsolationLayer>,
@@ -105,17 +106,25 @@ async fn handle_sql_read(scope: SqlReadScope<'_>, query: String) -> Response {
         graph_name,
         caller,
         authority,
+        read_authority,
         persist_dir,
         #[cfg(feature = "security")]
         rls,
     } = scope;
-    let (snap, _graph_version) = sql_read_snapshot(
+    let (snap, graph_version) = sql_read_snapshot(
         core,
         #[cfg(feature = "security")]
         caller,
         #[cfg(feature = "security")]
         rls,
     );
+    // MEDULLA-IDENTITY-R023.3 / R610.3: the served SQL read is narrowed to the verified
+    // caller's tenant and visible knowledge units like every other entry point.
+    let read_scope = ReadScope::resolve(state, Some(read_authority), graph_name).await;
+    let snap = match read_scope.narrow(req_id, graph_version, snap, &["n".to_owned()]) {
+        Ok(snap) => snap,
+        Err(refusal) => return refusal,
+    };
     let graph = medulla_server_auth::sql_catalog_acl::RequestGraph {
         name: graph_name.to_string(),
         core: Arc::clone(core),
@@ -186,6 +195,7 @@ pub(crate) async fn handle_sql(
                 graph_name: ctx.graph_name,
                 caller: ctx.caller,
                 authority,
+                read_authority,
                 persist_dir: persist_path,
                 #[cfg(feature = "security")]
                 rls: ctx.rls,
@@ -425,7 +435,8 @@ pub(crate) async fn handle_unified_query(
     // of cloning/rebuilding them per request, via the shared off-lock runner.
     #[cfg(feature = "result-cache")]
     let started = std::time::Instant::now();
-    let result = run_unified_off_lock(state, req_id, &core, snap, plan, legs).await;
+    let scope = ReadScope::resolve(state, ctx.read_authority, ctx.graph_name).await;
+    let result = run_unified_off_lock(state, req_id, &core, snap, plan, legs, &scope).await;
     Ok(served_response::<query_results::UnifiedQuery>(
         req_id,
         result,

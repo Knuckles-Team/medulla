@@ -710,6 +710,7 @@ fn session_authority(response: &Response) -> IdentityReply<RequestContextClaims>
 }
 
 // spec: MEDULLA-TYPED-PACKS-R085.4.3
+// spec: MEDULLA-IDENTITY-R710
 #[tokio::test]
 async fn reference_renewal_rechecks_boundary_and_global_revision() {
     use medulla_identity_types::identity::IDENTITY_SELF_SCOPE;

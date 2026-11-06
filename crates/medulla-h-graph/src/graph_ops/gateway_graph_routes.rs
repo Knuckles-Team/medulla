@@ -133,7 +133,10 @@ fn is_analytics(method: &Method) -> bool {
 }
 
 fn is_finance_record(method: &Method) -> bool {
-    matches!(method, Method::FinanceRecordPut { .. })
+    matches!(
+        method,
+        Method::FinanceRecordPut { .. } | Method::FinanceAlertRaise { .. }
+    )
 }
 
 /// A predicate selecting the methods one gateway route owns.
@@ -288,6 +291,11 @@ async fn try_handle_node_state(
             node_id,
             properties_msgpack,
         } => {
+            if let Some(refused) =
+                super::super::finance_records::refuse_invalid_receipt(ctx.req_id, method)
+            {
+                return Some(refused);
+            }
             let (node_id, properties_msgpack) = (node_id.clone(), properties_msgpack.clone());
             commit_gateway(ctx, plan, method, move |core| {
                 Ok(ResultPayload::Bool(

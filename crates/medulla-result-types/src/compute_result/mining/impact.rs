@@ -49,6 +49,47 @@ pub struct ImpactOptions {
     /// With writeback: the as-of time (unix ms) recorded on each assessment.
     /// Part of the request, so a WAL replay writes the same facts.
     pub as_of_ms: u64,
+    /// Ecosystem package risk (MEDULLA-SUPPLY-VOCAB-R009.3): when set, the run
+    /// walks the stored `DEPENDS_ON` graph from this package instead of the
+    /// request's `nodes` / `edges`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ecosystem: Option<EcosystemQuery>,
+}
+
+/// Severity of an ecosystem finding, least to most severe.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum EcosystemSeverity {
+    Low,
+    Medium,
+    High,
+    Critical,
+}
+
+/// One finding recorded against one ecosystem package, propagated to every
+/// transitive dependent (MEDULLA-SUPPLY-VOCAB-R009.3).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct EcosystemQuery {
+    /// Node id of the changed `:EcosystemPackage`.
+    pub package: String,
+    pub finding_id: String,
+    pub severity: EcosystemSeverity,
+    /// Hop bound of the reverse `DEPENDS_ON` walk; `None` uses the
+    /// `ecosystem.max_dependency_depth` knob (default 8, range [1, 64]).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_depth: Option<u32>,
+}
+
+/// One dependent reached by an ecosystem finding.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct PackageImpactRow {
+    pub package: String,
+    pub severity: EcosystemSeverity,
+    /// Shortest dependency path, changed package first, this dependent last.
+    pub path: Vec<String>,
 }
 
 impl Default for ImpactOptions {
@@ -62,6 +103,7 @@ impl Default for ImpactOptions {
             assess: Vec::new(),
             scope: String::new(),
             as_of_ms: 0,
+            ecosystem: None,
         }
     }
 }
@@ -136,6 +178,10 @@ pub struct ImpactReport {
     /// Why attribution was asked for but not produced.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub attribution_note: Option<String>,
+    /// Ecosystem runs: every transitive dependent with its shortest path and
+    /// severity. Empty and omitted otherwise.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub packages: Vec<PackageImpactRow>,
 }
 
 /// `MineRiskPropagation`.

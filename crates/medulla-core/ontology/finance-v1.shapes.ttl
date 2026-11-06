@@ -499,6 +499,37 @@
             sh:path :recordKnownAt ] ;
     sh:targetClass :LeverageTerms .
 
+:FinanceReceiptShape a sh:NodeShape ;
+    sh:description "A finance receipt names one closed receipt kind, one claimed or completed state, a tenant key, a non-empty idempotency key and the time it was recorded." ;
+    sh:name "Finance Receipt Shape" ;
+    sh:property [ sh:in ( "alert_delivery" "schedule_run" "dca_proposal" ) ;
+            sh:maxCount 1 ;
+            sh:message "receiptKind is alert_delivery, schedule_run or dca_proposal." ;
+            sh:minCount 1 ;
+            sh:path :receiptKind ],
+        [ sh:in ( "claimed" "completed" ) ;
+            sh:maxCount 1 ;
+            sh:message "receiptState is claimed or completed." ;
+            sh:minCount 1 ;
+            sh:path :receiptState ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:message "FinanceReceipt must have exactly one tenantKey." ;
+            sh:minCount 1 ;
+            sh:path :tenantKey ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:message "RECEIPT_KEY_INVALID: a FinanceReceipt needs exactly one non-empty idempotencyKey." ;
+            sh:minCount 1 ;
+            sh:minLength 1 ;
+            sh:path :idempotencyKey ],
+        [ sh:datatype xsd:dateTime ;
+            sh:maxCount 1 ;
+            sh:message "FinanceReceipt must have exactly one recordedAt." ;
+            sh:minCount 1 ;
+            sh:path :recordedAt ] ;
+    sh:targetClass :FinanceReceipt .
+
 # MEDULLA-CQ-CONN-R084.5: the finance method vocabulary is selected through declared
 # applicability, so a method record without either applicability axis is incomplete.
 :FinanceAlgorithmShape a sh:NodeShape ;
