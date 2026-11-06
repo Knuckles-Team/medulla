@@ -157,6 +157,6 @@ Gates for any change under these rows: `cargo test -p medulla-rdf --test orchest
 - arbora intent-surface probes: `ARBORA-FLEET-R052.4` (consumer rows R009.1 to R009.6) and `ARBORA-FLEET-R056`; contract `contracts/arbora-intent-probes.md`.
 - arbora acceptance scenario for the execution plan: `ARBORA-ACCEPTANCE-R006.7` (consumer row R012); contract `contracts/arbora-execution-scenario.md`.
 - meristem consumer of the architecture view: `MERISTEM-HARNESS-CYCLE-R026.1` (provider row R010.3); contract `contracts/meristem-architecture-view.md`.
-- arbora serves and runs process plans: `ARBORA-OPS-R898` (consumer of R704.5); the engine methods of R702, R703 and R705 are served as generated `eg.*` operations; contract `contracts/arbora-process-plan-run.md`.
-- meristem applies branch, decision and approval-wait steps: `MERISTEM-RUN-R018` (consumer of R704.5 and `MEDULLA-DECISION-ENGINE-R180`); contract `contracts/meristem-process-control-steps.md`.
-- Connectors: `CONN-CAMUNDA-MCP-CONNECTOR-CONTENT-R003` and `CONN-CAMUNDA-MCP-R004` (process engine, R703); `CONN-ARCHIMATE-MCP-CONNECTOR-CONTENT-R003` and `CONN-ARCHIMATE-MCP-CONNECTOR-CONTENT-R004` (architecture tool, R705); contract `contracts/connector-process-and-architecture-sync.md`.
+- arbora serves and runs process plans (consumer of `MEDULLA-CQ-ORCH-R704.5`); the engine methods of R702, R703 and R705 are served as generated `eg.*` operations; contract `contracts/arbora-process-plan-run.md` names the consumer rows.
+- meristem applies branch, decision and approval-wait steps (consumer of R704.5 and `MEDULLA-DECISION-ENGINE-R180`); contract `contracts/meristem-process-control-steps.md` names the consumer rows.
+- Connectors: the process engine connector `camunda-mcp` (`MEDULLA-CQ-ORCH-R703`) and the architecture-modelling connector `archimate-mcp` (`MEDULLA-CQ-ORCH-R705`); contract `contracts/connector-process-and-architecture-sync.md` names their rows.
