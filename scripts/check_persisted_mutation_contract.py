@@ -561,6 +561,11 @@ def _check_mutation_applier_inventory(
         "CasWorkItemMetadata",
         "PublishCurrentPlan",
         "PublishRunCheckpoint",
+        # MEDULLA-DURABLE-KERNEL-R820.3/R820.4: uncertain-effect writes commit in
+        # the same WorkItem kernel as the lease transitions they guard.
+        "MarkWorkItemEffectStarted",
+        "RecordEffectReceipt",
+        "SubmitAdmittedRequest",
         # graph-os MEDULLA-2: native control-lease writes in the same WorkItem kernel.
         "IssueHostStartGrant",
         "IssueControlLease",

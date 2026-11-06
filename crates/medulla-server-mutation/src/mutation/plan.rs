@@ -579,6 +579,7 @@ const METHOD_NAME_RESOLVERS: &[fn(&Method) -> Option<&'static str>] = &[
     native_local_only_decision_method_name,
     write_back_method_name,
     finance_record_method_name,
+    branch_registry_method_name,
 ];
 
 /// Extract a `Method` variant's name as a `&'static str`, covering exactly
@@ -708,6 +709,9 @@ pub const LOCAL_ONLY_METHODS: &[&str] = &[
     "WorkflowRegistry",
     // Nor does the schema boundary upsert (MEDULLA-FEDERATED-QUERY-R724).
     "SchemaProjections",
+    // The branch registry row commits through the process-local
+    // `branch_registry.redb` owner (MEDULLA-BRANCH-MERGE-R001).
+    "CreateBranch",
 ];
 
 /// The local-only names that are NOT gateway-routed.
@@ -762,6 +766,14 @@ fn finance_record_method_name(m: &Method) -> Option<&'static str> {
         Method::FinanceFactorRecord { .. } => Some("FinanceFactorRecord"),
         Method::WorkflowRegistry { .. } => Some("WorkflowRegistry"),
         Method::SchemaProjections { .. } => Some("SchemaProjections"),
+        _ => None,
+    }
+}
+
+/// Resolve the branch registry write (MEDULLA-BRANCH-MERGE-R001).
+fn branch_registry_method_name(m: &Method) -> Option<&'static str> {
+    match m {
+        Method::CreateBranch { .. } => Some("CreateBranch"),
         _ => None,
     }
 }

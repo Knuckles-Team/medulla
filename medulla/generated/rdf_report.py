@@ -27,12 +27,27 @@ class OntologyClassView(BaseModel):
     parents: list[str]
 
 
+class OntologyCrosswalkView(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    crosswalk_digest: str
+    origin: str
+    relation: str
+    source_class_iri: str
+    source_id: str
+    source_revision: str
+    target_class_iri: str
+    target_vocabulary_revision: str
+
+
 class OntologyInspection(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     canonical_digest: str | None = None
     classes: list[OntologyClassView]
+    committed: bool = False
     composed_digest: str | None = None
+    crosswalks: list[OntologyCrosswalkView] = Field(default_factory=list)
     datatype_properties: list[OntologyPropertyView]
     object_properties: list[OntologyPropertyView]
     ontologies: list[str]
@@ -165,6 +180,8 @@ DatalogReasoningResult.model_rebuild()
 
 OntologyClassView.model_rebuild()
 
+OntologyCrosswalkView.model_rebuild()
+
 OntologyInspection.model_rebuild()
 
 OntologyPropertyView.model_rebuild()
@@ -185,6 +202,7 @@ ShaclValidationResult.model_rebuild()
 __all__ = [
     "DatalogReasoningResult",
     "OntologyClassView",
+    "OntologyCrosswalkView",
     "OntologyInspection",
     "OntologyPropertyView",
     "OwlExplainResult",

@@ -94,6 +94,10 @@ closed_error_codes! {
         MemsyncStorageUnavailable => "MEMSYNC_STORAGE_UNAVAILABLE",
         MemsyncVersionMalformed => "MEMSYNC_VERSION_MALFORMED",
         DelegationUnknown => "DELEGATION_UNKNOWN",
+        // MEDULLA-UNIFIED-DATA-PLANE-R651.4: the DocumentDelete refusals.
+        CascadeTooLarge => "CASCADE_TOO_LARGE",
+        DocumentDeleteUnavailable => "DOCUMENT_DELETE_UNAVAILABLE",
+        DocumentHasReferences => "DOCUMENT_HAS_REFERENCES",
         DocumentNotFound => "DOCUMENT_NOT_FOUND",
         DocumentPropertiesInvalid => "DOCUMENT_PROPERTIES_INVALID",
         DocumentTextMissing => "DOCUMENT_TEXT_MISSING",
