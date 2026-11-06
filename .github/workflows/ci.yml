@@ -680,9 +680,11 @@ jobs:
       # tests: `cluster` (raft HA), `harness` (the in-process multi-node cluster
       # fixtures), and `calvin` (deterministic cross-shard ordering). Without
       # these steps a red raft suite, or an integration test that only fails to
-      # compile under this feature set, reaches a release unnoticed.
+      # compile under this feature set, reaches a release unnoticed. The raft
+      # unit tests live in the raft crates, not the facade lib, so the step
+      # selects those crates (a `raft::` filter on the facade matched no test).
       - name: Test (raft cluster — consensus, placement, and multi-group unit tests)
-        run: "python3 scripts/cargo_test_rescue.py cargo test --locked -p medulla-engine --features cluster,harness,calvin --lib --no-fail-fast -- raft::"
+        run: python3 scripts/cargo_test_rescue.py cargo test --locked -p medulla-engine -p medulla-raft -p medulla-raft-xshard -p medulla-server-consensus -p medulla-server-cluster-tests --features medulla-engine/cluster,medulla-engine/harness,medulla-engine/calvin --lib --no-fail-fast
       - name: Test (raft cluster — ack-lost commit retry reconciliation)
         run: python3 scripts/cargo_test_rescue.py cargo test --locked -p medulla-engine --features cluster,harness,calvin --test txn_reconcile_ack_lost_retry --no-fail-fast
 
@@ -1009,7 +1011,7 @@ jobs:
   # uses the full prepared server; the second builds the default feature matrix with
   # AST repository enrichment. The JUnit report is uploaded as the receipt.
   no-auth-uds:
-    timeout-minutes: 90
+    timeout-minutes: ${{ github.event_name == 'pull_request' && 90 || 90 }}
     name: Isolated mode over a private socket
     needs: [changes, python-server]
     if: *medulla-main-only
@@ -1041,6 +1043,9 @@ jobs:
             MEDULLA_TEST_AST_BINARY="$PWD/target-ast/debug/medulla-server" \
             python3 -m pytest tests/test_native_no_auth_uds_served.py -p no:cacheprovider \
             --timeout=900 -q -rfEs --junitxml="$RUNNER_TEMP/no-auth-uds.xml"
+      - name: Report AST server compiler cache reuse
+        if: always()
+        run: *medulla-validation-compiler-cache-stats
       - if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:

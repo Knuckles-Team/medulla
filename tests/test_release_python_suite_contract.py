@@ -295,6 +295,7 @@ def _assert_cache_job_settings(job_name: str, job: dict) -> None:
             "gates-plan-fuzz",
             "gates-facade",
             "python-server",
+            "no-auth-uds",
             "gates-pyo3",
         }
         else {"gates-crates": 30}.get(job_name, 10)
@@ -571,6 +572,9 @@ COMPILER_CACHE_COMMANDS: dict[str, dict[str, tuple[str, ...]]] = {
                 "medulla-core -p medulla-compute --all-features --no-fail-fast"
             ),
         ),
+        # The script wraps one `cargo test -p medulla-federation` key-quoting
+        # fixture run; the step itself names no cargo command.
+        ("Lint (generated Cypher property keys are quoted)"): (),
         ("Test (canonical capability policy)"): (
             (
                 "python3 scripts/cargo_test_rescue.py cargo test --locked -p "
@@ -590,6 +594,14 @@ COMPILER_CACHE_COMMANDS: dict[str, dict[str, tuple[str, ...]]] = {
             (
                 "python3 scripts/cargo_test_rescue.py cargo test -p medulla-jobs -p "
                 "medulla-statechart --test replay_determinism --no-fail-fast"
+            ),
+        ),
+    },
+    "no-auth-uds": {
+        ("Build the default + AST server binary"): (
+            (
+                "cargo build --locked --features ast --bin medulla-server "
+                "--target-dir target-ast"
             ),
         ),
     },

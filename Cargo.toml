@@ -119,15 +119,8 @@ name = "nemesis"
 path = "src/bin/nemesis.rs"
 required-features = ["harness"]
 
-# Retry-budget decision for scripts/validate-raft-cluster.sh
-# (MEDULLA-DURABLE-KERNEL-R014.3.2): prints the decision for one failed attempt.
-[[bin]]
-name = "raft_flake_budget"
-path = "src/bin/raft_flake_budget.rs"
-required-features = ["raft"]
-
 # The offline tools (`restore`, `migrate-shards`, `medulla-engine-rf019-observe`,
-# `lake-fixture-export`) are subcommands of `medulla-server`
+# `lake-fixture-export`, `raft-flake-budget`) are subcommands of `medulla-server`
 # (`src/offline_tools/`); they are not separate executables.
 
 # SQLite-style embedded usage (CONCEPT:KG-2.216). Needs the in-process library API.
@@ -2142,7 +2135,8 @@ required-features = ["full"]
 # Decision budgets per question family (MEDULLA-DECISION-ENGINE-R178.1): one
 # Criterion group `decide/<family>` per `QuestionKind`, through the served
 # dispatch boundary; the nightly workflow checks its report against
-# `benches/baselines/decide.json` (R178.2, R178.3).
+# `benches/baselines/decide.json` (MEDULLA-DECISION-ENGINE-R178.2,
+# MEDULLA-DECISION-ENGINE-R178.3).
 [[bench]]
 name = "decide_budgets"
 path = "benches/decide_budgets.rs"

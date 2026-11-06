@@ -236,9 +236,9 @@ def test_one_version_and_a_build_only_dispatch() -> None:
 
 
 def test_tag_release_creates_the_github_release_after_pypi() -> None:
-    """The GitHub release follows the PyPI check and links the one package."""
+    """The GitHub release follows the PyPI check and the codec requalification."""
     job = _yaml(RELEASE)["jobs"]["github-release"]
-    assert job["needs"] == ["verify-pypi"]
+    assert job["needs"] == ["verify-pypi", "method-codec"]
     assert job["permissions"] == {"contents": "write"}
     script = _script(job)
     assert "https://pypi.org/project/medulla/$version/" in script

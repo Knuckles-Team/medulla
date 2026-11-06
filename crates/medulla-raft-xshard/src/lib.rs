@@ -5,19 +5,24 @@
 
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
-#![cfg(feature = "raft")]
+// Every module needs the `raft` feature except `flake_budget`: the pure
+// retry-budget policy the `medulla-server raft-flake-budget` tool reads in
+// every server build (MEDULLA-DURABLE-KERNEL-R014.3.2).
 
 /// Pure, policy-only M3 cross-node elasticity proposals with resumable move identities.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+#[cfg(feature = "raft")]
 pub mod cross_node_elasticity;
 
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+#[cfg(feature = "raft")]
 pub mod cross_shard_txn;
 
 /// Bounded shard/Raft drain state machine (NE-167): admission is stopped and
 /// observed before a voter is removed, every acknowledgement is revision/fence
 /// bound, and restart recovery fails closed.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+#[cfg(feature = "raft")]
 pub mod drain;
 
 /// X4 — the distributed cross-shard DAG EXCHANGE operator (CONCEPT:MEDULLA-KG.query.dag-distributed-exchange),
@@ -29,6 +34,7 @@ pub mod drain;
 /// build does not link) — `cluster` implies both.
 #[cfg(feature = "query")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+#[cfg(feature = "raft")]
 pub mod exchange;
 
 /// Typed flake-budget / retry-policy model for running cluster tests reliably
@@ -46,6 +52,7 @@ pub mod flake_budget;
 /// incremental/streaming variant and materialized views.
 #[cfg(feature = "compute-dist")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+#[cfg(feature = "raft")]
 pub mod pregel;
 
 /// Shared setup helpers for in-process Raft harnesses.
@@ -56,6 +63,7 @@ pub mod pregel;
     feature = "test-support"
 ))]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+#[cfg(feature = "raft")]
 pub mod harness_support;
 
 /// The in-process Raft cluster fixture. It is shared by the `harness` gauntlets
@@ -65,6 +73,7 @@ pub mod harness_support;
 #[cfg(any(test, feature = "harness", feature = "compute-dist"))]
 #[path = "harness/fixture.rs"]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+#[cfg(feature = "raft")]
 pub mod fixture;
 
 /// Correctness + load harness (CONCEPT:AU-KG.ontology.emits-database-ontology-entities) — the standing proof-engine that
@@ -72,6 +81,7 @@ pub mod fixture;
 /// `harness` feature; never in a production tier build.
 #[cfg(any(test, feature = "harness"))]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+#[cfg(feature = "raft")]
 pub mod harness;
 
 // The online-resharding + tenant-hibernation gauntlet (CONCEPT:MEDULLA-KG.storage.100m-tenant) — proves a
@@ -79,6 +89,7 @@ pub mod harness;
 // rehydrates intact. Gated behind `harness` so a normal `raft` build links nothing.
 #[cfg(all(test, feature = "harness"))]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+#[cfg(feature = "raft")]
 mod reshard_harness;
 
 // The cross-shard READ gauntlet (CONCEPT:MEDULLA-KG.sharding.placement-catalog, DIST-P2-2) — proves a
@@ -87,6 +98,7 @@ mod reshard_harness;
 // leg errors loudly. Gated behind `harness` so a normal `raft` build links nothing.
 #[cfg(all(test, feature = "harness"))]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+#[cfg(feature = "raft")]
 mod xread_harness;
 
 /// In-process cross-shard 2PC **modality-spanning** coordinator-kill harness
@@ -99,6 +111,7 @@ mod xread_harness;
 /// `cargo test --features cluster` gate.
 #[cfg(feature = "compute-dist")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+#[cfg(feature = "raft")]
 pub mod xshard_modality_harness;
 
 // The ambient auth posture these tests run under (MEDULLA-CONTRACT-R056.18).

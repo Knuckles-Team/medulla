@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import json
 import os
-import shutil
 import signal
 import subprocess
 import time
 from pathlib import Path
 
 import pytest
+from conftest import find_server_binary
 
 ROOT = Path(__file__).resolve().parents[1]
 pytestmark = [pytest.mark.no_engine, pytest.mark.spec("MEDULLA-DURABLE-KERNEL-R014.2")]
@@ -331,26 +331,24 @@ def test_direct_repeat_requires_count(harness: tuple[dict[str, str], Path]) -> N
 
 
 @pytest.fixture(scope="module")
-def flake_budget_bin() -> Path:
-    cargo = shutil.which("cargo")
-    assert cargo, "cargo is required to build raft_flake_budget"
-    subprocess.run(
-        [cargo, "build", "-q", "--features", "raft", "--bin", "raft_flake_budget"],
-        cwd=ROOT,
-        check=True,
-        timeout=3600,
-    )
-    target = Path(os.environ.get("CARGO_TARGET_DIR", ROOT / "target"))
-    return target / "debug" / "raft_flake_budget"
+def flake_budget_cmd() -> list[str]:
+    """The retry-budget tool: a `medulla-server` subcommand of the suite's binary.
+
+    The suite never builds a second executable; the tool ships inside the one
+    `medulla-server` the suite already runs (`MEDULLA_TEST_BINARY` in CI).
+    """
+    binary = find_server_binary()
+    assert binary, "a built medulla-server is required (set MEDULLA_TEST_BINARY)"
+    return [binary, "raft-flake-budget"]
 
 
 @pytest.mark.spec("MEDULLA-DURABLE-KERNEL-R014.3.2")
 def test_retry_budget_is_bounded(
-    harness: tuple[dict[str, str], Path], flake_budget_bin: Path
+    harness: tuple[dict[str, str], Path], flake_budget_cmd: list[str]
 ) -> None:
     first = subprocess.run(
         [
-            str(flake_budget_bin),
+            *flake_budget_cmd,
             "--attempt",
             "1",
             "--exit-code",
@@ -365,7 +363,7 @@ def test_retry_budget_is_bounded(
     assert first.returncode == 0
     assert first.stdout.strip() == "retry attempt=1 backoff_ms=10"
     second = subprocess.run(
-        [str(flake_budget_bin), "--attempt", "2", "--exit-code", "1"],
+        [*flake_budget_cmd, "--attempt", "2", "--exit-code", "1"],
         capture_output=True,
         text=True,
         timeout=10,
@@ -375,7 +373,7 @@ def test_retry_budget_is_bounded(
 
     env, _ = harness
     del env["RAFT_LOAD_WORKERS"]
-    env.update(TEST_RC="7", RAFT_FLAKE_BUDGET_BIN=str(flake_budget_bin))
+    env.update(TEST_RC="7", RAFT_FLAKE_BUDGET_BIN=" ".join(flake_budget_cmd))
     result = run(env)
     assert result.returncode == 7
     assert "retry budget: retry attempt=1" in result.stdout

@@ -6042,6 +6042,7 @@ dependencies = [
  "medulla-modality",
  "medulla-protocol-types",
  "medulla-types",
+ "medulla-version",
  "medulla-work-types",
  "nalgebra",
  "ndarray 0.17.2",
