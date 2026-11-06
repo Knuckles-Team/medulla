@@ -25,7 +25,9 @@ use medulla_decision_outcome_types::decision::rapid_r056::StatisticalSolverCerti
 use medulla_decision_policy::{
     solve::solve, solve::verify, solve::Model, solve::SolveStatus, solve::SolverConfig,
 };
+use medulla_decision_types::decision::record::outcome::RefusalOrigin;
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
+use medulla_decision_types::decision::AbstainReason;
 use medulla_decision_types::{
     decision::statistical::tool_subset::ToolCoverageCandidate,
     decision::statistical::tool_subset::ToolSubsetRefusal,
@@ -144,13 +146,17 @@ fn request_body(request: &DecideRequest) -> Result<ToolSubsetRequestBody, String
     })
 }
 
-fn refusal_reason(kind: ToolSubsetRefusal) -> &'static str {
-    match kind {
+/// The registered code of the refusal on the `Decide` path, then its detail.
+fn refusal_reason(kind: ToolSubsetRefusal) -> String {
+    let code =
+        AbstainReason::from_refusal(RefusalOrigin::Decide(QuestionKind::ToolSubset), &kind).code();
+    let detail = match kind {
         ToolSubsetRefusal::CapabilityUncoverable => {
             "no candidate subset covers every required capability"
         }
         ToolSubsetRefusal::BudgetExceeded => "every covering subset exceeds the context budget",
-    }
+    };
+    format!("{}: {detail}", code.as_str())
 }
 
 /// The exact covering subset and the statistical-path certificate it carries.
