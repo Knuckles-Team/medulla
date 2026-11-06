@@ -81,18 +81,22 @@ async fn serve(
     verified: &VerifiedRequestContext,
     request: DecideRequest,
 ) -> Result<DecisionBatch, String> {
-    if request.tenant_id != verified.tenant() {
-        return Err(
-            "ACCESS_DENIED: Decide tenant must match the verified request tenant".to_string(),
-        );
-    }
-    require_supported_question_kind(request.question.kind)?;
-    if request.max_records == Some(0) {
-        return Err(refusal(
-            StatisticalErrorCode::ParameterInvalid,
-            "max_records must be at least 1",
-        ));
-    }
+    let family = telemetry::family(request.question.kind);
+    telemetry::stage(telemetry::Stage::Admit, &family, verified.tenant(), || {
+        if request.tenant_id != verified.tenant() {
+            return Err(
+                "ACCESS_DENIED: Decide tenant must match the verified request tenant".to_string(),
+            );
+        }
+        require_supported_question_kind(request.question.kind)?;
+        if request.max_records == Some(0) {
+            return Err(refusal(
+                StatisticalErrorCode::ParameterInvalid,
+                "max_records must be at least 1",
+            ));
+        }
+        Ok(())
+    })?;
     let (store, secret) = {
         let mut guard = state.write().await;
         (guard.ensure_agent_library()?, guard.auth_secret.clone())
@@ -100,30 +104,49 @@ async fn serve(
     // A `harness_contrast` question declares its candidates but still reads
     // its evidence (held versions, probe runs, stored contrasts) from the
     // graph named by its `graph` param, under the same RLS filter.
-    let graph_view = if request.question.kind == QuestionKind::HarnessContrast {
-        Some(
-            super::stat_harness_contrast::contrast_evidence_view(
-                state,
-                verified.agent_id(),
-                &request,
-            )
-            .await?,
-        )
-    } else {
-        super::candidates::filtered_graph_view(state, verified.agent_id(), &request.candidates)
-            .await?
-    };
+    let graph_view = telemetry::stage_async(
+        telemetry::Stage::Visibility,
+        &family,
+        verified.tenant(),
+        async {
+            if request.question.kind == QuestionKind::HarnessContrast {
+                super::stat_harness_contrast::contrast_evidence_view(
+                    state,
+                    verified.agent_id(),
+                    &request,
+                )
+                .await
+                .map(Some)
+            } else {
+                super::candidates::filtered_graph_view(
+                    state,
+                    verified.agent_id(),
+                    &request.candidates,
+                )
+                .await
+            }
+        },
+    )
+    .await?;
     let principal = verified.principal_persistence_id();
     let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     let started = Instant::now();
+    // The blocking pool thread has neither this task's subscriber nor its
+    // current span: carry both so the stage spans nest under the method span.
+    let parent = tracing::Span::current();
+    let dispatch = tracing::dispatcher::get_default(|current| current.clone());
     tokio::task::spawn_blocking(move || {
-        let ctx = ExecutionContext {
-            store: store.as_ref(),
-            tenant_id: &request.tenant_id,
-            now_ms,
-            server_secret: secret.as_bytes(),
-        };
-        decide_blocking(&ctx, &request, graph_view.as_ref(), principal, started)
+        tracing::dispatcher::with_default(&dispatch, || {
+            parent.in_scope(|| {
+                let ctx = ExecutionContext {
+                    store: store.as_ref(),
+                    tenant_id: &request.tenant_id,
+                    now_ms,
+                    server_secret: secret.as_bytes(),
+                };
+                decide_blocking(&ctx, &request, graph_view.as_ref(), principal, started)
+            })
+        })
     })
     .await
     .map_err(|error| format!("Decide task failed: {error}"))?
@@ -136,17 +159,25 @@ fn decide_blocking(
     principal: String,
     started: Instant,
 ) -> Result<DecisionBatch, String> {
+    use telemetry::Stage;
+    let family = telemetry::family(request.question.kind);
+    let (family, tenant) = (family.as_str(), ctx.tenant_id);
     let task_plan = super::stat_task_plan::task_plan(request)?;
-    let mut candidates = read_candidates(
-        ctx.store,
-        ctx.tenant_id,
-        &request.candidates,
-        graph_view,
-        &principal,
-        request.question.kind,
-    )?;
-    let pinned = pinned_inputs(ctx, &request.feature_schema, request.head.as_ref())?;
-    let policy = resolve_policy(ctx.store, ctx.tenant_id, &request.policy)?;
+    let mut candidates = telemetry::stage(Stage::Candidates, family, tenant, || {
+        read_candidates(
+            ctx.store,
+            ctx.tenant_id,
+            &request.candidates,
+            graph_view,
+            &principal,
+            request.question.kind,
+        )
+    })?;
+    let (pinned, policy) = telemetry::stage(Stage::Constraints, family, tenant, || {
+        let pinned = pinned_inputs(ctx, &request.feature_schema, request.head.as_ref())?;
+        let policy = resolve_policy(ctx.store, ctx.tenant_id, &request.policy)?;
+        Ok::<_, String>((pinned, policy))
+    })?;
     let reader = LogReader {
         tenant_id: ctx.tenant_id.to_string(),
         principal: principal.clone(),
@@ -164,48 +195,58 @@ fn decide_blocking(
         .as_ref()
         .map(|plan| Ok(super::stat_task_plan::outcome(plan)))
         .or_else(|| tool_subset_outcome(request));
-    let executed = match specialized {
-        Some(outcome_result) => Executed {
-            matrix: None,
-            ladder: LadderResult {
-                outcome: outcome_result?,
-                calibration: None,
-                explained: None,
-                audit: None,
-                logging: Vec::new(),
+    let executed = telemetry::stage(Stage::Solve, family, tenant, || {
+        Ok::<_, String>(match specialized {
+            Some(outcome_result) => Executed {
+                matrix: None,
+                ladder: LadderResult {
+                    outcome: outcome_result?,
+                    calibration: None,
+                    explained: None,
+                    audit: None,
+                    logging: Vec::new(),
+                },
+                reading: None,
+                seed: [0u8; 32],
+                harness_contrast: None,
             },
-            reading: None,
-            seed: [0u8; 32],
-            harness_contrast: None,
-        },
-        None => match super::stat_harness_contrast::contrast_executed(request, graph_view) {
-            Some(result) => result?,
-            None => execute(ctx, request, &pinned, &policy, &candidates.views)?,
-        },
-    };
-    let slices = live_slices(ctx, request, &pinned, &candidates.views)?;
-    let nl = binding(request, &executed.ladder.outcome, &candidates.entries)?;
-    let record = seal(
-        Sealing {
-            ctx,
-            request,
-            pinned: &pinned,
-            policy: &policy,
-            candidates: &candidates,
-            principal,
-            slices: &slices,
-        },
-        &executed,
-        nl,
-        task_plan,
-    )?;
-    telemetry::decided(&record, candidates.views.len(), started);
-    let records = BoundedVec::new(vec![record])
-        .map_err(|detail| refusal(StatisticalErrorCode::ParameterInvalid, detail))?;
-    Ok(DecisionBatch {
-        schema_version: STATISTICAL_DECISION_RECORD_SCHEMA_VERSION,
-        inputs_digest: records.as_slice()[0].inputs_digest.clone(),
-        records,
+            None => match super::stat_harness_contrast::contrast_executed(request, graph_view) {
+                Some(result) => result?,
+                None => execute(ctx, request, &pinned, &policy, &candidates.views)?,
+            },
+        })
+    })?;
+    let slices = telemetry::stage(Stage::Entailment, family, tenant, || {
+        live_slices(ctx, request, &pinned, &candidates.views)
+    })?;
+    let nl = telemetry::stage(Stage::Rank, family, tenant, || {
+        binding(request, &executed.ladder.outcome, &candidates.entries)
+    })?;
+    let record = telemetry::stage(Stage::Record, family, tenant, || {
+        seal(
+            Sealing {
+                ctx,
+                request,
+                pinned: &pinned,
+                policy: &policy,
+                candidates: &candidates,
+                principal,
+                slices: &slices,
+            },
+            &executed,
+            nl,
+            task_plan,
+        )
+    })?;
+    telemetry::stage(Stage::Conclude, family, tenant, || {
+        telemetry::decided(&record, candidates.views.len(), started);
+        let records = BoundedVec::new(vec![record])
+            .map_err(|detail| refusal(StatisticalErrorCode::ParameterInvalid, detail))?;
+        Ok(DecisionBatch {
+            schema_version: STATISTICAL_DECISION_RECORD_SCHEMA_VERSION,
+            inputs_digest: records.as_slice()[0].inputs_digest.clone(),
+            records,
+        })
     })
 }
 

@@ -362,6 +362,14 @@ pub enum AgentComponentFacts {
         token_estimate: u32,
         /// Names a dynamic prompt expects to be given. Empty for a static one.
         variables: Vec<String>,
+        /// Blueprint body pin: 64 lowercase hex characters. Set together with
+        /// `schema_revision`; a blueprint prompt carries both.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        body_sha256: Option<String>,
+        /// Blueprint schema pin. [`PROMPT_SCHEMA_REVISION`] is the only
+        /// supported version.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        schema_revision: Option<u32>,
     },
     Tool {
         effect: ToolEffect,
@@ -464,8 +472,13 @@ impl AgentComponentFacts {
             Self::SystemPrompt {
                 prompt_mode,
                 variables,
+                body_sha256,
+                schema_revision,
                 ..
-            } => validate_prompt(*prompt_mode, variables),
+            } => {
+                validate_prompt(*prompt_mode, variables)?;
+                validate_prompt_pins(body_sha256.as_deref(), *schema_revision)
+            }
             Self::Tool {
                 required_scopes,
                 input_schema_digest,
@@ -536,6 +549,170 @@ fn validate_prompt(prompt_mode: PromptMode, variables: &[String]) -> Result<(), 
         );
     }
     validate_names("variables", variables, MAX_VARIABLES)
+}
+
+/// The only prompt blueprint schema revision this engine supports.
+pub const PROMPT_SCHEMA_REVISION: u32 = 1;
+/// Refusal code for a malformed prompt identity or pin pair.
+pub const PROMPT_IDENTITY_INVALID: &str = "PROMPT_IDENTITY_INVALID";
+/// Refusal code for a malformed blueprint field or unsupported schema rule.
+pub const PROMPT_SCHEMA_INVALID: &str = "PROMPT_SCHEMA_INVALID";
+/// Refusal code for a blueprint over the configured byte limit.
+pub const PROMPT_OUTPUT_TOO_LARGE: &str = "PROMPT_OUTPUT_TOO_LARGE";
+
+/// The two blueprint pins: both present or both absent, a 64-lowercase-hex
+/// body hash and the one supported schema revision.
+pub(super) fn validate_prompt_pins(
+    body_sha256: Option<&str>,
+    schema_revision: Option<u32>,
+) -> Result<(), String> {
+    match (body_sha256, schema_revision) {
+        (None, None) => Ok(()),
+        (Some(body), Some(revision)) => {
+            if !is_lower_hex_64(body) {
+                return Err(format!(
+                    "{PROMPT_IDENTITY_INVALID}: body_sha256 must be 64 lowercase hex characters"
+                ));
+            }
+            if revision != PROMPT_SCHEMA_REVISION {
+                return Err(format!(
+                    "{PROMPT_IDENTITY_INVALID}: unsupported schema_revision {revision}"
+                ));
+            }
+            Ok(())
+        }
+        _ => Err(format!(
+            "{PROMPT_IDENTITY_INVALID}: body_sha256 and schema_revision are set together"
+        )),
+    }
+}
+
+pub(super) fn is_lower_hex_64(value: &str) -> bool {
+    value.len() == 64
+        && value
+            .bytes()
+            .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+}
+
+/// Byte limits for one prompt blueprint. The caller reads the server config
+/// key `prompt.max_blueprint_bytes` and passes it; this crate reads no config.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PromptLimits {
+    pub max_blueprint_bytes: u32,
+}
+
+/// Default for `prompt.max_blueprint_bytes`.
+pub const DEFAULT_MAX_BLUEPRINT_BYTES: u32 = 262_144;
+/// Admitted range for `prompt.max_blueprint_bytes`.
+pub const MAX_BLUEPRINT_BYTES_RANGE: std::ops::RangeInclusive<u32> = 1024..=4_194_304;
+
+impl Default for PromptLimits {
+    fn default() -> Self {
+        Self {
+            max_blueprint_bytes: DEFAULT_MAX_BLUEPRINT_BYTES,
+        }
+    }
+}
+
+/// Core blueprint fields and the JSON type each must have. Every other key is
+/// an extension value and is preserved as given.
+const BLUEPRINT_CORE_FIELDS: &[(&str, BlueprintField)] = &[
+    ("task", BlueprintField::Text),
+    ("schema_revision", BlueprintField::Integer),
+    ("role", BlueprintField::Text),
+    ("instructions", BlueprintField::TextList),
+    ("constraints", BlueprintField::TextList),
+    ("variables", BlueprintField::TextList),
+    ("output_format", BlueprintField::Text),
+];
+
+#[derive(Debug, Clone, Copy)]
+enum BlueprintField {
+    Text,
+    Integer,
+    TextList,
+}
+
+impl BlueprintField {
+    fn admits(self, value: &serde_json::Value) -> bool {
+        match self {
+            Self::Text => value.as_str().is_some_and(|text| !text.trim().is_empty()),
+            Self::Integer => value.as_u64().is_some(),
+            Self::TextList => value
+                .as_array()
+                .is_some_and(|items| items.iter().all(serde_json::Value::is_string)),
+        }
+    }
+}
+
+/// Validate one parsed prompt blueprint against the bounded profile.
+///
+/// The caller parses with the duplicate-key and nonfinite-number refusing
+/// parser first, so this sees a well-formed `Value`. A blueprint is an object
+/// with a non-empty `task`; core fields must have their declared types; a
+/// `schema_revision`, when present, must be the supported one; extension keys
+/// are kept untouched. The size is `serde_json::to_vec(value).len()`.
+pub fn validate_prompt_blueprint(
+    value: &serde_json::Value,
+    identity: &super::PromptBlueprintIdentity,
+    limits: &PromptLimits,
+) -> Result<ValidatedPrompt, &'static str> {
+    let size = serde_json::to_vec(value)
+        .map_err(|_| PROMPT_SCHEMA_INVALID)?
+        .len();
+    if size > limits.max_blueprint_bytes as usize {
+        return Err(PROMPT_OUTPUT_TOO_LARGE);
+    }
+    let object = value.as_object().ok_or(PROMPT_SCHEMA_INVALID)?;
+    if !object.contains_key("task") {
+        return Err(PROMPT_SCHEMA_INVALID);
+    }
+    for (name, field) in BLUEPRINT_CORE_FIELDS {
+        if let Some(found) = object.get(*name) {
+            if !field.admits(found) {
+                return Err(PROMPT_SCHEMA_INVALID);
+            }
+        }
+    }
+    if let Some(revision) = object.get("schema_revision").and_then(|v| v.as_u64()) {
+        if revision != u64::from(PROMPT_SCHEMA_REVISION) {
+            return Err(PROMPT_SCHEMA_INVALID);
+        }
+    }
+    Ok(ValidatedPrompt {
+        blueprint: value.clone(),
+        identity: identity.clone(),
+    })
+}
+
+/// A blueprint that passed [`validate_prompt_blueprint`], with the identity
+/// of the revision it belongs to. Only [`validate_prompt_blueprint`] builds
+/// one, so a renderer never sees an unvalidated blueprint.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ValidatedPrompt {
+    blueprint: serde_json::Value,
+    identity: super::PromptBlueprintIdentity,
+}
+
+impl ValidatedPrompt {
+    /// The validated blueprint object.
+    pub fn blueprint(&self) -> &serde_json::Value {
+        &self.blueprint
+    }
+
+    /// The identity of the prompt revision.
+    pub fn identity(&self) -> &super::PromptBlueprintIdentity {
+        &self.identity
+    }
+
+    /// The variable names the blueprint declares, sorted and deduplicated.
+    pub fn declared_variables(&self) -> std::collections::BTreeSet<&str> {
+        self.blueprint
+            .get("variables")
+            .and_then(serde_json::Value::as_array)
+            .map(|items| items.iter().filter_map(serde_json::Value::as_str).collect())
+            .unwrap_or_default()
+    }
 }
 
 /// The three facts BOTH selectable kinds carry. One function, so a model
@@ -648,6 +825,20 @@ fn validate_schema_digest(field: &str, value: Option<&str>) -> Result<(), String
 mod tests {
     use super::*;
 
+    fn test_prompt_identity() -> super::super::PromptBlueprintIdentity {
+        super::super::PromptBlueprintIdentity {
+            tenant_id: "tenant-a".into(),
+            component_id: "prompt:a".into(),
+            entry_revision: 1,
+            schema_revision: PROMPT_SCHEMA_REVISION,
+            body_sha256: "a".repeat(64),
+            provenance: super::super::ComponentProvenance::SourcePackage {
+                package_id: "pkg-a".into(),
+                package_version: "1.0.0".into(),
+            },
+        }
+    }
+
     // spec: MEDULLA-TYPED-PACKS-R048.2
     #[test]
     fn measured_fact_requires_run_ref() {
@@ -697,6 +888,60 @@ mod tests {
                 .is_err());
             }
         }
+    }
+
+    // spec: MEDULLA-TYPED-PACKS-R001.7
+    #[test]
+    fn prompt_blueprint_schema_refusals() {
+        let limits = PromptLimits::default();
+        let identity = test_prompt_identity();
+        let valid = serde_json::json!({
+            "task": "summarize",
+            "schema_revision": 1,
+            "instructions": ["be brief"],
+            "x-ext": {"nested": {"deep": [1, {"k": "v"}]}},
+        });
+        let validated = validate_prompt_blueprint(&valid, &identity, &limits).expect("valid");
+        assert_eq!(validated.blueprint(), &valid);
+        assert_eq!(validated.identity(), &identity);
+        // Extension values pass through untouched.
+        assert_eq!(valid["x-ext"]["nested"]["deep"][1]["k"], "v");
+
+        let missing_task = serde_json::json!({"role": "analyst"});
+        assert_eq!(
+            validate_prompt_blueprint(&missing_task, &identity, &limits),
+            Err(PROMPT_SCHEMA_INVALID)
+        );
+        for wrong in [
+            serde_json::json!({"task": 7}),
+            serde_json::json!({"task": "t", "instructions": "not a list"}),
+            serde_json::json!({"task": "t", "schema_revision": "1"}),
+            serde_json::json!({"task": "t", "schema_revision": 2}),
+            serde_json::json!(["task"]),
+        ] {
+            assert_eq!(
+                validate_prompt_blueprint(&wrong, &identity, &limits),
+                Err(PROMPT_SCHEMA_INVALID),
+                "{wrong}"
+            );
+        }
+        // A nonfinite number never reaches the function: serde_json cannot
+        // hold one, so the caller's parse step refuses it with the same code.
+        assert!(serde_json::from_str::<serde_json::Value>(r#"{"task":"t","w":NaN}"#).is_err());
+        assert_eq!(serde_json::Number::from_f64(f64::INFINITY), None);
+
+        let oversized = serde_json::json!({"task": "t", "pad": "x".repeat(2048)});
+        assert_eq!(
+            validate_prompt_blueprint(
+                &oversized,
+                &identity,
+                &PromptLimits {
+                    max_blueprint_bytes: 1024
+                }
+            ),
+            Err(PROMPT_OUTPUT_TOO_LARGE)
+        );
+        assert!(MAX_BLUEPRINT_BYTES_RANGE.contains(&DEFAULT_MAX_BLUEPRINT_BYTES));
     }
 
     #[test]

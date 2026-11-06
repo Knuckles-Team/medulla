@@ -266,6 +266,37 @@ pub struct ConversationTurnAdmission {
     pub predecessor_run_id: Option<String>,
 }
 
+/// Row key of the WorkItem lifecycle revision (MEDULLA-DURABLE-KERNEL-R865):
+/// 0 at creation, plus 1 on every state transition of the item, written in the
+/// same transaction as the transition. Kernel-owned; a generic writer may not
+/// touch it.
+pub const WORK_ITEM_LIFECYCLE_REVISION: &str = "lifecycle_revision";
+
+/// State of one child-input record.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum ChildInputState {
+    Queued,
+    Applied,
+}
+
+/// Admission of one message to a running child run
+/// (MEDULLA-DURABLE-KERNEL-R865). `expected_revision` is a compare-and-set
+/// against the child's `lifecycle_revision`; the same key and digest replay the
+/// stored record and a different digest under the key conflicts. This record
+/// is the write path; a Decide call writes nothing.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ChildInputAdmission {
+    pub child_run_id: String,
+    pub expected_revision: u64,
+    pub content_digest: String,
+    pub idempotency_key: String,
+    pub state: ChildInputState,
+}
+
 /// Native WorkItem admission request.  `context.tenant_id` and
 /// `context.graph` are checked against the verified request envelope; they are
 /// not caller-controlled routing hints.
@@ -273,6 +304,9 @@ pub struct ConversationTurnAdmission {
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct SubmitWorkItemRequest {
+    /// Optional child message admission; boxed like `conversation`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub child_input: Option<Box<ChildInputAdmission>>,
     /// Optional ordered conversation reservation, never a history or execution grant.
     /// Boxed to preserve the existing Method enum allocation-size bound.
     #[serde(default, skip_serializing_if = "Option::is_none")]

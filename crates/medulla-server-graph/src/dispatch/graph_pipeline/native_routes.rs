@@ -178,6 +178,14 @@ pub async fn route_native_store_ops(
         Ok(response) => return Ok(response),
         Err(method) => method,
     };
+    let method = match super::meeting_transcript::route_meeting_transcript(ctx, method).await {
+        Ok(response) => return Ok(response),
+        Err(method) => method,
+    };
+    let method = match super::document_ops::route_document_ops(ctx, method).await {
+        Ok(response) => return Ok(response),
+        Err(method) => method,
+    };
     let method = match route_source_ingestion_or_resources(ctx, method).await {
         Ok(response) => return Ok(response),
         Err(method) => method,
@@ -238,6 +246,9 @@ async fn route_work_item_reads(
     method: Method,
 ) -> Result<Response, Method> {
     let read = match method {
+        Method::GetShardWriterWidth { tenant } => {
+            return Ok(answer_shard_writer_width(ctx, tenant).await);
+        }
         method @ (Method::GetRunWorkItem { .. }
         | Method::GetSessionUsage { .. }
         | Method::GetCurrentPlan { .. }) => {
@@ -362,6 +373,31 @@ async fn answer_work_item_read(
     .await
 }
 
+/// MEDULLA-DURABLE-KERNEL-R077: the configured shard-writer width, behind the
+/// same placement-leader gate as the WorkItem reads.
+#[cfg(feature = "redb")]
+async fn answer_shard_writer_width(ctx: GraphOpRouting<'_>, tenant: String) -> Response {
+    #[cfg(feature = "raft")]
+    if let Err(response) = enforce_native_read_leadership(
+        ctx.req_id,
+        ctx.graph_name,
+        ctx.multi_raft.as_ref(),
+        ctx.routed_raft.as_ref(),
+        "shard-writer width reads require the current placement leader",
+        "shard-writer width read linearizability barrier failed",
+    )
+    .await
+    {
+        return response;
+    }
+    medulla_h_jobs::worker_admission::answer_shard_writer_width(
+        ctx.req_id,
+        &tenant,
+        ctx.verified_context.tenant(),
+        ctx.persistence,
+    )
+}
+
 /// Every WorkItem-kernel write binds its body tenant to the verified carrier
 /// tenant, and `fleet.` broker streams take writes only from the fleet event
 /// authority (`handlers::native_write_authority`). Replicated state-machine
@@ -396,6 +432,9 @@ async fn route_source_ingestion_or_resources(
     method: Method,
 ) -> Result<Response, Method> {
     let source_method = match method {
+        Method::LineageIngest { events } => {
+            return Ok(super::lineage_ingest::route_lineage_ingest(ctx, events).await)
+        }
         Method::SourceIngest { request } => SourceIngestionRoute::Ingest(request),
         Method::SourceIngestStatus { connector, stream } => SourceIngestionRoute::Status(
             medulla_source_types::source_ingestion::SourceIngestStatusRequest { connector, stream },

@@ -11,6 +11,7 @@ pub fn read_reserved_admitted() {}
 pub fn dispatch_deadline_exceeded() {}
 pub fn qos_admitted(_class: &str) {}
 pub fn qos_shed(_class: &str, _reason: &str) {}
+pub fn write_conflict(_strategy: &str, _winner: &str) {}
 pub fn qos_dispatch_finished(_class: &str, _seconds: f64) {}
 pub fn graph_op(_graph: &str) {}
 pub fn set_graph_size(_graph: &str, _nodes: i64, _edges: i64) {}

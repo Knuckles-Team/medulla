@@ -120,6 +120,18 @@ impl AgentLibraryStore {
         )
     }
 
+    /// The accepted lifecycle transitions of one component, oldest first,
+    /// read from its revision stream (MEDULLA-DECISION-ENGINE-R168.5).
+    pub fn component_lifecycle_transitions(
+        &self,
+        tenant_id: &str,
+        component_id: &str,
+    ) -> Result<Vec<medulla_agent_types::agent_component::LifecycleTransitionEntry>, String> {
+        medulla_agent_types::agent_component::lifecycle_transition_entries(
+            &self.component_revisions(tenant_id, component_id)?,
+        )
+    }
+
     /// Resolve a prior attempt's durable outcome without re-committing it.
     pub fn component_status(
         &self,
@@ -367,6 +379,17 @@ impl RevisionLayer for ComponentLayer {
         component.validate()
     }
 
+    fn resurrect_refusal() -> String {
+        format!(
+            "{}: retired agent components cannot be resurrected",
+            medulla_agent_types::agent_library::lifecycle::LIFECYCLE_RETIRED_TERMINAL
+        )
+    }
+
+    fn validate_chain(components: &[AgentComponentEntry]) -> Result<(), String> {
+        medulla_agent_types::agent_component::check_lifecycle_chain(components)
+    }
+
     fn verb(kind: AgentComponentMutationKind) -> RevisionVerb {
         component_verb(kind)
     }
@@ -400,11 +423,14 @@ impl RevisionLayer for ComponentLayer {
         batch_id: String,
         committed_version: u64,
     ) -> AgentComponentCommittedResult {
+        let prompt_identity =
+            medulla_agent_types::agent_component::PromptBlueprintIdentity::of_entry(&component);
         AgentComponentCommittedResult {
             schema_version: AGENT_COMPONENT_SCHEMA_VERSION,
             component,
             batch_id,
             committed_version,
+            prompt_identity,
         }
     }
 
@@ -527,6 +553,8 @@ pub(crate) fn seed_component_for_test(
                     prompt_mode: PromptMode::Static,
                     token_estimate: 128,
                     variables: Vec::new(),
+                    body_sha256: None,
+                    schema_revision: None,
                 },
                 AgentComponentKind::Tool => test_tool_facts(ToolEffect::Read),
                 AgentComponentKind::Toolset => AgentComponentFacts::Toolset {

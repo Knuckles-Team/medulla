@@ -15,6 +15,7 @@ path = "src/lib.rs"
 hex = "0.4"
 jsonwebtoken = { version = "11.1", optional = true, default-features = false, features = ["aws_lc_rs"] }
 medulla-capabilities = { path = "../medulla-capabilities" }
+medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-graphql = { path = "../medulla-graphql", optional = true }
 medulla-kernel = { path = "../medulla-kernel" }
 medulla-lake = { path = "../medulla-lake", optional = true }

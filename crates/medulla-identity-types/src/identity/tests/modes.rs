@@ -2,13 +2,12 @@
 
 use super::*;
 
-fn transition(to: AuthMode, epoch: u64, ack: Option<&str>) -> IdentityOp {
+fn transition(to: AuthMode, epoch: u64) -> IdentityOp {
     IdentityOp::Config(ConfigOp::Transition {
         request: ModeTransition {
             expected_epoch: epoch,
             to,
             local_fallback: None,
-            ack: ack.map(str::to_string),
             issuer_kid: format!("kid-{epoch}"),
         },
     })
@@ -79,33 +78,122 @@ fn every_op_but_initialize_needs_an_initialized_store() {
     );
 }
 
+/// A store whose mode reads `external`, flipped from a `local` store the
+/// same way the token tests build one: its administrator keeps a password.
+fn external_store(store: IdentityStore) -> IdentityStore {
+    let mut json = serde_json::to_value(&store).unwrap();
+    json["config"]["mode"] = serde_json::json!("external");
+    serde_json::from_value(json).unwrap()
+}
+
+/// `store` with the mode read as `none`.
+fn none_store() -> IdentityStore {
+    let mut json = serde_json::to_value(store_in(AuthMode::Local)).unwrap();
+    json["config"]["mode"] = serde_json::json!("none");
+    serde_json::from_value(json).unwrap()
+}
+
+// spec: MEDULLA-IDENTITY-R003.4
 #[test]
-fn none_to_local_needs_an_administrator_with_a_credential() {
-    let mut store = store_in(AuthMode::None);
+fn transition_to_or_from_none_is_forbidden() {
+    let edges = [
+        (none_store(), AuthMode::Local),
+        (none_store(), AuthMode::External),
+        (store_in(AuthMode::Local), AuthMode::None),
+        (external_store(store_in(AuthMode::Local)), AuthMode::None),
+    ];
+    for (mut store, to) in edges {
+        let before = store.clone();
+        // A stale epoch too: the `none` refusal comes before any other check.
+        for epoch in [1, 9] {
+            assert_eq!(
+                apply_kept(&mut store, &transition(to, epoch), &admin(), NOW),
+                Err(IdentityRefusal::ModeTransitionForbidden)
+            );
+        }
+        assert_eq!(store, before, "a refusal changes nothing");
+    }
     assert_eq!(
-        apply_kept(
-            &mut store,
-            &transition(AuthMode::Local, 1, None),
-            &admin(),
-            NOW
-        ),
-        Err(IdentityRefusal::PreconditionFailed)
+        IdentityRefusal::ModeTransitionForbidden.as_str(),
+        "MODE_TRANSITION_FORBIDDEN"
     );
-    let (op, stamp) = set_password(&store, BOOTSTRAP_PRINCIPAL);
-    apply_kept(&mut store, &op, &stamp, NOW).unwrap();
-    let reply = apply_kept(
-        &mut store,
-        &transition(AuthMode::Local, 1, None),
-        &admin(),
-        NOW,
-    )
-    .unwrap();
-    let IdentityReply::Config(config) = reply else {
+}
+
+// spec: MEDULLA-IDENTITY-R003.4
+#[test]
+fn stale_epoch_refuses_and_changes_nothing() {
+    let mut store = external_store(store_in(AuthMode::Local));
+    let before = store.clone();
+    assert_eq!(
+        apply_kept(&mut store, &transition(AuthMode::Local, 7), &admin(), NOW),
+        Err(IdentityRefusal::EpochConflict)
+    );
+    assert_eq!(store, before, "a stale epoch changes nothing");
+    let IdentityReply::Config(config) =
+        apply_kept(&mut store, &transition(AuthMode::Local, 1), &admin(), NOW).unwrap()
+    else {
         panic!("transition answers the config");
     };
     assert_eq!(config.mode, AuthMode::Local);
     assert_eq!(config.epoch, 2);
     assert_eq!(config.issuer_kid_current.as_deref(), Some("kid-1"));
+    assert_eq!(
+        apply_kept(
+            &mut store,
+            &transition(AuthMode::External, 1),
+            &admin(),
+            NOW
+        ),
+        Err(IdentityRefusal::EpochConflict),
+        "the epoch the accepted transition consumed is stale"
+    );
+}
+
+// spec: MEDULLA-IDENTITY-R003.5
+#[test]
+fn unmet_precondition_refuses_typed() {
+    let mut local = store_in(AuthMode::Local);
+    let before = local.clone();
+    assert_eq!(
+        apply_kept(
+            &mut local,
+            &transition(AuthMode::External, 1),
+            &admin(),
+            NOW
+        ),
+        Err(IdentityRefusal::PreconditionFailed),
+        "no enabled IdP links an administrator"
+    );
+    assert_eq!(
+        apply_kept(&mut local, &transition(AuthMode::Local, 1), &admin(), NOW),
+        Err(IdentityRefusal::IllegalTransition)
+    );
+    assert_eq!(local, before);
+
+    let mut json = serde_json::to_value(external_store(store_in(AuthMode::Local))).unwrap();
+    json["passwords"] = serde_json::json!({});
+    let mut external: IdentityStore = serde_json::from_value(json).unwrap();
+    let before = external.clone();
+    assert_eq!(
+        apply_kept(
+            &mut external,
+            &transition(AuthMode::Local, 1),
+            &admin(),
+            NOW
+        ),
+        Err(IdentityRefusal::PreconditionFailed),
+        "an administrator without a password blocks external -> local"
+    );
+    assert_eq!(
+        apply_kept(
+            &mut external,
+            &transition(AuthMode::External, 1),
+            &admin(),
+            NOW
+        ),
+        Err(IdentityRefusal::IllegalTransition)
+    );
+    assert_eq!(external, before, "a refusal changes nothing");
 }
 
 // spec: MEDULLA-IDENTITY-R003
@@ -115,25 +203,20 @@ fn a_stale_epoch_and_an_illegal_edge_are_refused() {
     assert_eq!(
         apply_kept(
             &mut store,
-            &transition(AuthMode::External, 7, None),
+            &transition(AuthMode::External, 7),
             &admin(),
             NOW
         ),
         Err(IdentityRefusal::EpochConflict)
     );
     assert_eq!(
-        apply_kept(
-            &mut store,
-            &transition(AuthMode::Local, 1, None),
-            &admin(),
-            NOW
-        ),
+        apply_kept(&mut store, &transition(AuthMode::Local, 1), &admin(), NOW),
         Err(IdentityRefusal::IllegalTransition)
     );
     assert_eq!(
         apply_kept(
             &mut store,
-            &transition(AuthMode::External, 1, None),
+            &transition(AuthMode::External, 1),
             &admin(),
             NOW
         ),
@@ -143,36 +226,11 @@ fn a_stale_epoch_and_an_illegal_edge_are_refused() {
 }
 
 #[test]
-fn entering_none_needs_loopback_and_the_exact_ack() {
-    let mut store = store_in(AuthMode::Local);
-    let mut loopback = admin();
-    loopback.engine_loopback = true;
-    let refused = [
-        (transition(AuthMode::None, 1, Some(NONE_MODE_ACK)), admin()),
-        (transition(AuthMode::None, 1, None), loopback.clone()),
-        (
-            transition(AuthMode::None, 1, Some("I-UNDERSTAND")),
-            loopback.clone(),
-        ),
-    ];
-    for (op, stamp) in refused {
-        assert_eq!(
-            apply_kept(&mut store, &op, &stamp, NOW),
-            Err(IdentityRefusal::PreconditionFailed)
-        );
-    }
-    let accepted = transition(AuthMode::None, 1, Some(NONE_MODE_ACK));
-    apply_kept(&mut store, &accepted, &loopback, NOW).unwrap();
-    assert_eq!(store.config().unwrap().mode, AuthMode::None);
-}
-
-#[test]
 fn a_delegated_administrator_cannot_transition() {
     let mut store = store_in(AuthMode::Local);
     let mut stamp = admin();
     stamp.actor.delegated = true;
-    stamp.engine_loopback = true;
-    let op = transition(AuthMode::None, 1, Some(NONE_MODE_ACK));
+    let op = transition(AuthMode::External, 1);
     assert_eq!(
         apply_kept(&mut store, &op, &stamp, NOW),
         Err(IdentityRefusal::NotAuthorized)
@@ -197,10 +255,9 @@ fn every_transition_revokes_every_session_and_keeps_every_account() {
     });
     apply_kept(&mut store, &authenticate, &sign_in, NOW).unwrap();
     assert!(store.session_principal("session-hash", NOW).is_some());
-    let mut loopback = admin();
-    loopback.engine_loopback = true;
-    let op = transition(AuthMode::None, 1, Some(NONE_MODE_ACK));
-    apply_kept(&mut store, &op, &loopback, NOW).unwrap();
+    let mut store = external_store(store);
+    let op = transition(AuthMode::Local, 1);
+    apply_kept(&mut store, &op, &admin(), NOW).unwrap();
     assert!(store.session_principal("session-hash", NOW).is_none());
     assert!(store.manages(BOOTSTRAP_PRINCIPAL));
     assert!(store.credential_of(BOOTSTRAP_PRINCIPAL).is_some());

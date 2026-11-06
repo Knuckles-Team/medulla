@@ -76,6 +76,8 @@ pub enum IncidentRefusal {
     },
     /// `INCIDENT_NOT_FOUND`: absent, or owned by another tenant.
     NotFound(String),
+    /// `ANOMALY_RESOURCE_REQUIRED`: an anomaly names no entity.
+    AnomalyResourceRequired,
 }
 
 impl IncidentRefusal {
@@ -84,6 +86,7 @@ impl IncidentRefusal {
             Self::TenantScopeRequired => "TENANT_SCOPE_REQUIRED",
             Self::StatusSkip { .. } => "INCIDENT_STATUS_SKIP",
             Self::NotFound(_) => "INCIDENT_NOT_FOUND",
+            Self::AnomalyResourceRequired => "ANOMALY_RESOURCE_REQUIRED",
         }
     }
 }
@@ -95,14 +98,15 @@ fn scope(tenant: Option<&str>) -> Result<&str, IncidentRefusal> {
     }
 }
 
-/// FNV-1a 64-bit digest, hex encoded: stable across runs and targets.
+/// SHA-256 digest, 64 lowercase hex characters: stable across runs and
+/// targets (MEDULLA-UNIFIED-DATA-PLANE-R760.3).
 fn digest(text: &str) -> String {
-    let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
-    for byte in text.as_bytes() {
-        hash ^= u64::from(*byte);
-        hash = hash.wrapping_mul(0x0000_0100_0000_01b3);
+    use sha2::{Digest, Sha256};
+    let mut out = String::with_capacity(64);
+    for byte in Sha256::digest(text.as_bytes()) {
+        out.push_str(&format!("{byte:02x}"));
     }
-    format!("{hash:016x}")
+    out
 }
 
 fn severity(evidence: &[AnomalyReading]) -> IncidentSeverity {
@@ -141,6 +145,9 @@ impl IncidentAuthority {
         window_ms: u64,
     ) -> Result<Vec<String>, IncidentRefusal> {
         let tenant = scope(tenant)?.to_string();
+        if anomalies.iter().any(|a| a.entity_ref.trim().is_empty()) {
+            return Err(IncidentRefusal::AnomalyResourceRequired);
+        }
         let window = window_ms.max(1);
         let mut groups: BTreeMap<(String, u64), Vec<AnomalyReading>> = BTreeMap::new();
         for anomaly in anomalies {
@@ -265,7 +272,7 @@ mod tests {
         assert_eq!(record.status, IncidentStatus::Open);
         assert_eq!(record.severity, IncidentSeverity::High);
         assert_eq!(record.opened_at_ms, 10);
-        assert_eq!(record.signature_digest.len(), 16);
+        assert_eq!(record.signature_digest.len(), 64);
         let json = serde_json::to_string(&record).unwrap();
         assert_eq!(
             serde_json::from_str::<IncidentRecord>(&json).unwrap(),

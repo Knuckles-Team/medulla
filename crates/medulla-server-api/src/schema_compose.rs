@@ -865,9 +865,11 @@ ex:parent a owl:AsymmetricProperty .
         // +29: the supply-chain fold (#972): commercial :customerLastActivityAt +5,
         // infrastructure :serviceRunsOn +6, supply_chain suppliesService one-direction with
         // :serviceSupplier and :suppliesServiceViaHost +18 (rdflib per-file deltas).
+        // +10: media :engagementMetricName and :engagementMetricValue (MEDULLA-MEDIA-VOCAB-R651).
+        // +55 (MEDULLA-MEDIA-VOCAB-R001.100.1): the media-tag class and its ten properties.
         // +1: retrieval :ScholarlyPaper rdfs:subClassOf :ResearchPaper
         // (MEDULLA-MEDIA-VOCAB-R002.5.4); the :cites domain and range change in place.
-        assert_eq!(composed.ontology.len(), 17_787);
+        assert_eq!(composed.ontology.len(), 17_852);
 
         let ontology_subjects: BTreeSet<String> = composed
             .ontology
@@ -949,8 +951,10 @@ ex:parent a owl:AsymmetricProperty .
         // +474: the #964 core modules and :mediaFileSizeBytes, as semantic axioms (see the total pin).
         // +95: the connector-competency terms, all semantic axioms (see the total pin).
         // +29: the #972 supply-chain fold, all semantic axioms (headers and imports unchanged).
+        // +10: the two engagement-metric properties (MEDULLA-MEDIA-VOCAB-R651).
+        // +55: the media-tag vocabulary, all semantic axioms (MEDULLA-MEDIA-VOCAB-R001.100.1).
         // +1: the :ScholarlyPaper → :ResearchPaper subclass axiom (R002.5.4).
-        assert_eq!(semantic_axioms, 17_518);
+        assert_eq!(semantic_axioms, 17_583);
 
         let count_type = |object: &str| {
             composed
@@ -1028,7 +1032,8 @@ ex:parent a owl:AsymmetricProperty .
             // +26: the #964 class placements (media +24, commercial +1, supply-chain +1).
             // +7: the connector-competency class placements (archimate, documentation,
             // infrastructure, process-intelligence).
-            731
+            // +1: :MediaTag specializes :Observation (MEDULLA-MEDIA-VOCAB-R001.100.1).
+            732
         );
     }
 

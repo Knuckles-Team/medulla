@@ -32,6 +32,24 @@ pub enum EncodeRefusal {
     TooManyCapabilities { declared: usize, max: usize },
 }
 
+impl medulla_decision_types::decision::record::outcome::DecisionRefusal for EncodeRefusal {
+    fn code(&self) -> medulla_decision_types::decision::record::outcome::RefusalCode {
+        match self {
+            Self::TooManyCapabilities { .. } => {
+                medulla_decision_types::decision::codes::ENCODE_TOO_MANY_CAPABILITIES
+            }
+        }
+    }
+
+    fn detail(&self) -> String {
+        match self {
+            Self::TooManyCapabilities { declared, max } => {
+                format!("{declared} capabilities declared; the encoding bound is {max}")
+            }
+        }
+    }
+}
+
 impl OptionFacts {
     /// The structured facts of one scoring candidate: its classification IRIs
     /// are its declared capabilities, its declared cost and p95 latency its
@@ -118,5 +136,19 @@ mod tests {
                 max: MAX_OPTION_CAPABILITIES,
             })
         );
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R010.100.2
+    #[test]
+    fn encode_refusal_maps_to_a_folded_code() {
+        use medulla_decision_types::decision::codes;
+        use medulla_decision_types::decision::record::outcome::DecisionRefusal;
+        let refusal = EncodeRefusal::TooManyCapabilities {
+            declared: 65,
+            max: 64,
+        };
+        assert_eq!(refusal.code(), codes::ENCODE_TOO_MANY_CAPABILITIES);
+        assert!(codes::FOLDED.contains(&refusal.code()));
+        assert!(refusal.detail().contains("65"));
     }
 }

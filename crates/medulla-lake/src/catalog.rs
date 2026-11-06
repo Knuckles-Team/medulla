@@ -20,12 +20,54 @@
 
 use std::collections::BTreeMap;
 
-use medulla_catalog_types::lake_catalog::ProjectionAccess;
+pub use medulla_catalog_types::lake_catalog::ProjectionAccess;
 use serde_json::{json, Value};
 
 /// The refusal code for a write that arrives through a projection
 /// (MEDULLA-FEDERATED-QUERY-R080.4).
 pub const PROJECTION_READ_ONLY: &str = "PROJECTION_READ_ONLY";
+
+/// The refusal code for a schema change that no approval covers
+/// (MEDULLA-FEDERATED-QUERY-R079.4).
+pub const SCHEMA_CHANGE_NOT_APPROVED: &str = "SCHEMA_CHANGE_NOT_APPROVED";
+
+/// The refusal code for a schema change that names a column the table lacks
+/// (MEDULLA-FEDERATED-QUERY-R079.4).
+pub const SCHEMA_COLUMN_UNKNOWN: &str = "SCHEMA_COLUMN_UNKNOWN";
+
+/// The refusal code for a publication the manifest writer cannot make faithfully:
+/// a missing graph-version binding, or an unsupported manifest, schema or
+/// partition feature (MEDULLA-FEDERATED-QUERY-R079.2.1, R079.3, R079.4).
+pub const MANIFEST_PUBLICATION_INVALID: &str = "MANIFEST_PUBLICATION_INVALID";
+
+/// A lake publication or schema change refused with a stable code and a reason
+/// (MEDULLA-FEDERATED-QUERY-R079.4). A refusal never makes a snapshot visible.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PublicationRefusal {
+    /// One of [`SCHEMA_CHANGE_NOT_APPROVED`], [`SCHEMA_COLUMN_UNKNOWN`] or
+    /// [`MANIFEST_PUBLICATION_INVALID`].
+    pub code: &'static str,
+    /// Why the publication was refused.
+    pub reason: String,
+}
+
+impl PublicationRefusal {
+    /// A refusal with `code` and `reason`.
+    pub fn new(code: &'static str, reason: impl Into<String>) -> Self {
+        PublicationRefusal {
+            code,
+            reason: reason.into(),
+        }
+    }
+}
+
+impl std::fmt::Display for PublicationRefusal {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}: {}", self.code, self.reason)
+    }
+}
+
+impl std::error::Error for PublicationRefusal {}
 
 /// One registered table's catalog entry (CONCEPT:MEDULLA-KG.storage.lsn-as-snapshot-returns).
 #[derive(Clone, Debug, PartialEq)]
@@ -228,154 +270,6 @@ impl IcebergRestCatalog {
             "metadata": metadata,
             "config": {},
         }))
-    }
-}
-
-/// The caller of a catalog route (MEDULLA-UNIFIED-DATA-PLANE-R039.1). Its fields
-/// are private: the only constructor reads a verified request envelope, so
-/// a principal never comes from unverified client input.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct CatalogPrincipal {
-    tenant: String,
-    subject: String,
-    scopes: Vec<String>,
-}
-
-/// The claims the server tier extracted from a request envelope, and
-/// whether it verified the envelope signature.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct CatalogEnvelope {
-    pub tenant: String,
-    pub subject: String,
-    pub scopes: Vec<String>,
-    pub signature_verified: bool,
-}
-
-/// A refused catalog call, with its stable code.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum CatalogAuthError {
-    /// `CATALOG_UNSIGNED`: the envelope signature was not verified.
-    Unsigned,
-    /// `CATALOG_PRINCIPAL_INVALID`: blank tenant or subject.
-    InvalidPrincipal,
-    /// `CATALOG_UNAUTHENTICATED`: no principal on the call.
-    Unauthenticated,
-    /// `CATALOG_CROSS_TENANT`: the principal's tenant does not own the table.
-    CrossTenant,
-    /// `CATALOG_SCOPE_MISSING`: the principal lacks the route's scope.
-    ScopeMissing(String),
-}
-
-impl CatalogAuthError {
-    pub fn code(&self) -> &'static str {
-        match self {
-            Self::Unsigned => "CATALOG_UNSIGNED",
-            Self::InvalidPrincipal => "CATALOG_PRINCIPAL_INVALID",
-            Self::Unauthenticated => "CATALOG_UNAUTHENTICATED",
-            Self::CrossTenant => "CATALOG_CROSS_TENANT",
-            Self::ScopeMissing(_) => "CATALOG_SCOPE_MISSING",
-        }
-    }
-}
-
-impl CatalogPrincipal {
-    /// Build a principal from a verified envelope; refuse an unsigned one or
-    /// one with a blank tenant or subject.
-    pub fn from_verified_envelope(envelope: &CatalogEnvelope) -> Result<Self, CatalogAuthError> {
-        if !envelope.signature_verified {
-            return Err(CatalogAuthError::Unsigned);
-        }
-        if envelope.tenant.trim().is_empty() || envelope.subject.trim().is_empty() {
-            return Err(CatalogAuthError::InvalidPrincipal);
-        }
-        Ok(Self {
-            tenant: envelope.tenant.clone(),
-            subject: envelope.subject.clone(),
-            scopes: envelope.scopes.clone(),
-        })
-    }
-
-    pub fn tenant(&self) -> &str {
-        &self.tenant
-    }
-
-    pub fn subject(&self) -> &str {
-        &self.subject
-    }
-
-    pub fn scopes(&self) -> &[String] {
-        &self.scopes
-    }
-}
-
-/// Authorize one catalog call (MEDULLA-UNIFIED-DATA-PLANE-R039.2): refuse an
-/// absent principal, a principal of another tenant than the table's, and a
-/// principal without `required_scope`.
-pub fn authorize_catalog_call(
-    principal: Option<&CatalogPrincipal>,
-    table_tenant: &str,
-    required_scope: &str,
-) -> Result<(), CatalogAuthError> {
-    let principal = principal.ok_or(CatalogAuthError::Unauthenticated)?;
-    if principal.tenant != table_tenant {
-        return Err(CatalogAuthError::CrossTenant);
-    }
-    if !principal.scopes.iter().any(|scope| scope == required_scope) {
-        return Err(CatalogAuthError::ScopeMissing(required_scope.to_string()));
-    }
-    Ok(())
-}
-
-#[cfg(test)]
-mod principal_tests {
-    use super::*;
-
-    fn envelope(verified: bool) -> CatalogEnvelope {
-        CatalogEnvelope {
-            tenant: "acme".to_string(),
-            subject: "svc:trino".to_string(),
-            scopes: vec!["catalog.read".to_string()],
-            signature_verified: verified,
-        }
-    }
-
-    // spec: MEDULLA-UNIFIED-DATA-PLANE-R039.1
-    #[test]
-    fn principal_builds_only_from_verified_envelope() {
-        let principal = CatalogPrincipal::from_verified_envelope(&envelope(true)).unwrap();
-        assert_eq!(principal.tenant(), "acme");
-        assert_eq!(principal.subject(), "svc:trino");
-        assert_eq!(principal.scopes(), ["catalog.read".to_string()]);
-        let unsigned = CatalogPrincipal::from_verified_envelope(&envelope(false)).unwrap_err();
-        assert_eq!(unsigned.code(), "CATALOG_UNSIGNED");
-        let mut blank = envelope(true);
-        blank.tenant = " ".to_string();
-        assert_eq!(
-            CatalogPrincipal::from_verified_envelope(&blank).unwrap_err(),
-            CatalogAuthError::InvalidPrincipal
-        );
-    }
-
-    // spec: MEDULLA-UNIFIED-DATA-PLANE-R039.2
-    #[test]
-    fn cross_tenant_call_is_refused() {
-        let principal = CatalogPrincipal::from_verified_envelope(&envelope(true)).unwrap();
-        assert_eq!(
-            authorize_catalog_call(Some(&principal), "acme", "catalog.read"),
-            Ok(())
-        );
-        let error = authorize_catalog_call(Some(&principal), "globex", "catalog.read").unwrap_err();
-        assert_eq!(error.code(), "CATALOG_CROSS_TENANT");
-        let error = authorize_catalog_call(Some(&principal), "acme", "catalog.write").unwrap_err();
-        assert_eq!(error.code(), "CATALOG_SCOPE_MISSING");
-    }
-
-    // spec: MEDULLA-UNIFIED-DATA-PLANE-R039.2
-    #[test]
-    fn absent_principal_is_refused() {
-        let error = authorize_catalog_call(None, "acme", "catalog.read").unwrap_err();
-        assert_eq!(error, CatalogAuthError::Unauthenticated);
-        assert_eq!(error.code(), "CATALOG_UNAUTHENTICATED");
     }
 }
 

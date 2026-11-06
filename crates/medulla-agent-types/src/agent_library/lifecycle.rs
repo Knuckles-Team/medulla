@@ -38,3 +38,22 @@ pub fn refuse_withdrawn(layer: &str, lifecycle: AgentLibraryLifecycle) -> Result
         )),
     }
 }
+
+/// A lifecycle change outside the allowed transition table
+/// (MEDULLA-DECISION-ENGINE-R168.4).
+pub const LIFECYCLE_TRANSITION_INVALID: &str = "LIFECYCLE_TRANSITION_INVALID";
+/// Any change away from `Retired`, which is terminal (MEDULLA-DECISION-ENGINE-R168.4).
+pub const LIFECYCLE_RETIRED_TERMINAL: &str = "LIFECYCLE_RETIRED_TERMINAL";
+/// A stored or submitted lifecycle record that fails validation
+/// (MEDULLA-DECISION-ENGINE-R168.4).
+pub const LIFECYCLE_STATE_MALFORMED: &str = "LIFECYCLE_STATE_MALFORMED";
+/// Withdrawal on a layer or member without withdrawal authority.
+pub const WITHDRAWN_NOT_ALLOWED: &str = "WITHDRAWN_NOT_ALLOWED";
+
+/// The lifecycle family's stable refusal codes (MEDULLA-DECISION-ENGINE-R168.4).
+pub const REFUSALS: &[&str] = &[
+    LIFECYCLE_TRANSITION_INVALID,
+    LIFECYCLE_RETIRED_TERMINAL,
+    LIFECYCLE_STATE_MALFORMED,
+    WITHDRAWN_NOT_ALLOWED,
+];

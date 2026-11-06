@@ -20,24 +20,18 @@ macro_rules! persistence_mutations {
             // dropped. With NO catalog (the default) this is byte-for-byte the MEDULLA-026 path.
             if self.catalog.is_some() {
                 let guard = self.routing_epoch.clone().read_owned().await;
-                let tx = self.shard_for(graph_fname).tx.clone();
+                let sender = self.shard_for(graph_fname).deadline_sender();
                 tokio::task::spawn_blocking(move || {
                     let _routing = guard;
-                    tx.send(cmd).map_err(|_| ())
+                    sender.send(cmd)
                 })
                 .await
-                .map_err(|e| format!("redb record_durable join error: {e}"))?
-                .map_err(|_| {
-                    "redb writer thread is gone; durable mutation not persisted".to_string()
-                })?;
+                .map_err(|e| format!("redb record_durable join error: {e}"))??;
             } else {
-                let tx = self.shard_for(graph_fname).tx.clone();
-                tokio::task::spawn_blocking(move || tx.send(cmd).map_err(|_| ()))
+                let sender = self.shard_for(graph_fname).deadline_sender();
+                tokio::task::spawn_blocking(move || sender.send(cmd))
                     .await
-                    .map_err(|e| format!("redb record_durable join error: {e}"))?
-                    .map_err(|_| {
-                        "redb writer thread is gone; durable mutation not persisted".to_string()
-                    })?;
+                    .map_err(|e| format!("redb record_durable join error: {e}"))??;
             }
             // Await the writer's post-commit signal. A dropped sender (writer gone /
             // commit thread died) is a durability failure, surfaced as Err.

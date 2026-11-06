@@ -194,6 +194,21 @@ fn source_control_audit_line(method: &Method) -> Option<String> {
         Method::EnrichDocument { request } => {
             Some(format!("ENRICH_DOCUMENT|{}", request.document_id))
         }
+        Method::MeetingTranscriptRevision { request } => Some(format!(
+            "MEETING_TRANSCRIPT_REVISION|{}|{}",
+            request.meeting_id, request.new_revision
+        )),
+        Method::MeetingSummaryContext { request } => {
+            Some(format!("MEETING_SUMMARY_CONTEXT|{}", request.meeting_id))
+        }
+        Method::MeetingSummaryCommit { request } => Some(format!(
+            "MEETING_SUMMARY_COMMIT|{}|{}",
+            request.meeting_id, request.summary_id
+        )),
+        Method::DocumentDelete { request } => {
+            Some(format!("DOCUMENT_DELETE|{}", request.document_id))
+        }
+        Method::LineageIngest { events } => Some(format!("LINEAGE_INGEST|{}", events.len())),
         Method::WriteBack { op } => Some(format!(
             "WRITE_BACK|{}|{}",
             op.tenant_id(),
@@ -550,6 +565,10 @@ pub(super) fn memory_audit_line(method: &Method) -> Option<String> {
         Method::DecayMemories { .. } => Some("DECAY_MEMORIES".to_string()),
         Method::EvictBelow { .. } => Some("EVICT_BELOW".to_string()),
         Method::Maintain { .. } => Some("MAINTAIN".to_string()),
+        Method::BusRegister { participant, .. } => {
+            Some(format!("BUS_REGISTER|{}", participant.session_ref))
+        }
+        Method::BusHeartbeat { session_ref, .. } => Some(format!("BUS_HEARTBEAT|{session_ref}")),
         _ => None,
     }
 }

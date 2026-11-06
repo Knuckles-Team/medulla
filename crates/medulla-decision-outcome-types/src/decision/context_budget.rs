@@ -110,6 +110,33 @@ pub enum ContextBudgetRefusal {
     },
 }
 
+impl medulla_decision_types::decision::record::outcome::DecisionRefusal for ContextBudgetRefusal {
+    fn code(&self) -> medulla_decision_types::decision::record::outcome::RefusalCode {
+        match self {
+            Self::BudgetExhausted { .. } => {
+                medulla_decision_types::decision::codes::CONTEXT_BUDGET_EXHAUSTED
+            }
+            Self::TooManyItems { .. } => {
+                medulla_decision_types::decision::codes::CONTEXT_BUDGET_TOO_MANY_ITEMS
+            }
+        }
+    }
+
+    fn detail(&self) -> String {
+        match self {
+            Self::BudgetExhausted { limit, observed } => {
+                format!("{limit:?} exceeded: observed {observed}")
+            }
+            Self::TooManyItems {
+                max_items,
+                observed,
+            } => {
+                format!("{observed} items exceed the bound of {max_items}")
+            }
+        }
+    }
+}
+
 fn leaf(prompt_tokens: u64, depth: u8) -> (u64, u64) {
     let chunks = 1u64 << depth;
     (chunks, prompt_tokens.div_ceil(chunks))

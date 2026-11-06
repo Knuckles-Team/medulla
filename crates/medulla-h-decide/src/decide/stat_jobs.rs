@@ -533,9 +533,25 @@ fn submit_job(
                     ));
                 }
             }
-            DecisionJobOutput::Replay { run } => telemetry::replayed(run, started),
+            DecisionJobOutput::Replay { run } => {
+                telemetry::replayed(run, started);
+                telemetry::stage_done(
+                    telemetry::Stage::Replay,
+                    "replay",
+                    &identity.tenant_id,
+                    true,
+                    started,
+                );
+            }
             DecisionJobOutput::Fit { draft, .. } => {
-                telemetry::fitted(draft.n_training, draft.calibration.is_some(), started)
+                telemetry::fitted(draft.n_training, draft.calibration.is_some(), started);
+                telemetry::stage_done(
+                    telemetry::Stage::Learn,
+                    "fit",
+                    &identity.tenant_id,
+                    true,
+                    started,
+                );
             }
         },
         DecisionJobState::Failed { code } => telemetry::refused("DecisionJob", code),

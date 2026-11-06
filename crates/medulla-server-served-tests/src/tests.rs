@@ -1748,8 +1748,8 @@ pub mod nl_explain;
 #[cfg(feature = "wasm-udf")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod udf_tenancy;
-// Served ShEx data-selection proof for MEDULLA-FEDERATED-QUERY-R084.2.
-#[cfg(feature = "shex")]
+// Served ShEx proofs (MEDULLA-FEDERATED-QUERY-R084.2, R084.6-R084.8). Compiled in every
+// build: the refusal proof also covers the build without the `shex` feature.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod shex_served;
 

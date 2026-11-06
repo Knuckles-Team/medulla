@@ -32,6 +32,7 @@ mod eliminate;
 mod facts;
 mod model;
 mod objective;
+pub mod prompt;
 mod seal;
 mod search;
 mod template;
