@@ -140,6 +140,8 @@ pub(crate) const ACCESS_RS_MUTATES_CONDITIONAL: &[&str] = &[
     "ConnectorPack",
     "DecisionEval",
     "DecisionFit",
+    // MEDULLA-DECISION-ENGINE-R166.3: `Register` writes; `Read` is a graph read.
+    "WorkflowRegistry",
     // EH-345: record_discovery/set_override/clear_override write; list/lookup read.
     "FleetCatalog",
     "DecisionLog",
@@ -301,6 +303,9 @@ pub(crate) const NATIVE_GRAPHREDB_DURABLE: &[&str] = &[
     // MEDULLA-FINANCE-PRIMITIVES-R004.3.2: an admitted record put self-translates
     // into `Method::AddNode`, which carries the durable effect.
     "FinanceRecordPut",
+    // MEDULLA-DECISION-ENGINE-R166.3: a registration self-translates into the
+    // one `Method::AddNode` upsert, which carries the durable effect.
+    "WorkflowRegistry",
     "FromMsgpack",
     "GraphQl",
     "IcvConfigure",

@@ -181,4 +181,6 @@ method_results! {
     ClaimsRecordEvidence(Claims / "record_evidence") => Raw<medulla_types::claims::ClaimRecord>;
     ClaimsCompileArtifact(Claims / "compile_artifact") => Raw<medulla_types::claims::ResearchArtifact>;
     ClaimsGet(Claims / "get") => Raw<medulla_types::claims::ClaimGetResult>;
+    WorkflowRegistryRegister(WorkflowRegistry / "register") => Raw<medulla_work_types::orchestration::workflows::WorkflowRegistrationEntry>;
+    WorkflowRegistryRead(WorkflowRegistry / "read") => Raw<medulla_work_types::orchestration::workflows::WorkflowRegistrationEntry>;
 }

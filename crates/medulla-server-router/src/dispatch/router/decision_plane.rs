@@ -171,6 +171,26 @@ async fn dispatch_catalog_admin_methods(
             })
             .await
         }
+        // MEDULLA-DECISION-ENGINE-R166.3: `Read` is a graph read served here and
+        // holds no write; `Register` continues to the mutation gateway.
+        Method::WorkflowRegistry { op } if !op.is_mutation() => {
+            let medulla_work_types::orchestration::workflows::WorkflowRegistryOp::Read { identity } =
+                *op
+            else {
+                unreachable!("only Register mutates");
+            };
+            dispatch_boxed(async {
+                medulla_h_admin::admin::handle_workflow_registry_read(
+                    state,
+                    req.id,
+                    &req.graph,
+                    verified_context,
+                    identity,
+                )
+                .await
+            })
+            .await
+        }
         Method::MutationOutbox { op } => {
             dispatch_boxed(async {
                 medulla_h_jobs::mutation_outbox::handle_mutation_outbox(
