@@ -313,6 +313,7 @@ async fn execution_results_carry_evidence_and_refusal_trace() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+/// Verifies MEDULLA-FINANCE-PRIMITIVES-R613.6: Execution kernel latency budget
 // spec: MEDULLA-FINANCE-PRIMITIVES-R613.6
 async fn r613_budget_inputs_complete() {
     // The bench inputs are accepted at full size: a 1000-slice schedule and a regime

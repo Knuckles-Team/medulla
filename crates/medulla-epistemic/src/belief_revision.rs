@@ -311,6 +311,7 @@ mod tests {
         }
     }
 
+    /// Verifies MEDULLA-DECISION-ENGINE-R700.2: Behavior
     // spec: MEDULLA-DECISION-ENGINE-R700.2
     #[test]
     fn pass_cost_is_linear_in_changed_claims() {
@@ -373,6 +374,7 @@ mod tests {
         assert!(out.friction[0].opposes);
     }
 
+    /// Verifies MEDULLA-DECISION-ENGINE-R700.5: Evidence
     // spec: MEDULLA-DECISION-ENGINE-R700.5
     #[test]
     fn replay_matches_the_recorded_posterior() {

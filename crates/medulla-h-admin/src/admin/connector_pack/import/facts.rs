@@ -236,6 +236,7 @@ mod tests {
         facts(&entry, &Digest256::from_bytes([0; 32])).unwrap()
     }
 
+    /// Verifies MEDULLA-TYPED-PACKS-R045.5: Admission records an unproven read-only claim
     // spec: MEDULLA-TYPED-PACKS-R045.5
     #[test]
     fn mcp_hint_read_only_is_unproven() {

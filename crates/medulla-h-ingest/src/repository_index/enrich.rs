@@ -811,6 +811,7 @@ mod tests {
         }
     }
 
+    /// Verifies MEDULLA-REPO-INGEST-R600.3: Wiring
     // spec: MEDULLA-REPO-INGEST-R600.3
     #[test]
     fn follow_on_carries_only_the_digest_and_scope_and_names_one_envelope() {

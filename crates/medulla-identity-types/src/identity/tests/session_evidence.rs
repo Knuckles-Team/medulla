@@ -32,6 +32,7 @@ fn resolve(
 }
 
 // spec: MEDULLA-TYPED-PACKS-R085.1
+/// Verifies MEDULLA-IDENTITY-R708: Durable session record projection on Resolve
 // spec: MEDULLA-IDENTITY-R708
 #[test]
 fn projection_survives_persistence_and_reports_post_touch_facts() {
@@ -168,6 +169,7 @@ fn resolve_preserves_creation_tenant_and_exact_mfa_timestamp() {
 }
 
 // spec: MEDULLA-TYPED-PACKS-R085.7.1
+/// Verifies MEDULLA-IDENTITY-R713: Original session reference inspection
 // spec: MEDULLA-IDENTITY-R713
 #[test]
 fn original_reference_inspection_is_owner_bound_and_does_not_touch() {
@@ -546,6 +548,7 @@ fn liveness(
     apply_kept(store, &op, &broker(), now)
 }
 
+/// Verifies MEDULLA-IDENTITY-R709: Served session-liveness check by opaque session reference
 // spec: MEDULLA-IDENTITY-R709
 #[test]
 fn liveness_reports_live_revoked_expired_and_not_session_bound() {

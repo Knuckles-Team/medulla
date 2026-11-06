@@ -112,6 +112,7 @@ fn day_rollup_reads_buckets_not_records() {
     assert!(row_count(&store, "usage:") >= 50);
 }
 
+/// Verifies MEDULLA-DECISION-ENGINE-R801.4: Ledger refusals write nothing
 #[test]
 fn each_refusal_writes_nothing() {
     // spec: MEDULLA-DECISION-ENGINE-R801.4
@@ -165,6 +166,7 @@ fn each_refusal_writes_nothing() {
     assert_eq!(store.price_entries(TENANT).unwrap().len(), 2);
 }
 
+/// Verifies MEDULLA-DECISION-ENGINE-R801.5: Audit line and golden cost report
 #[test]
 fn append_writes_one_audit_line() {
     // spec: MEDULLA-DECISION-ENGINE-R801.5
@@ -215,6 +217,7 @@ fn golden_cost_rollup_is_byte_identical() {
     assert_eq!(bytes[0], GOLDEN.trim_end());
 }
 
+/// Verifies MEDULLA-DECISION-ENGINE-R801.2: Append, derived cost, name normalization and day buckets
 #[test]
 fn recent_runs_flags_errored_runs_newest_first() {
     // spec: MEDULLA-DECISION-ENGINE-R801.2

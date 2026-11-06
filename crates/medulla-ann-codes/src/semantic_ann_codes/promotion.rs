@@ -591,6 +591,7 @@ mod tests {
         codes.install_model_config(config(fixture, 2)).unwrap();
     }
 
+    /// Verifies MEDULLA-UNIFIED-DATA-PLANE-R040.3: Wiring: the gate runs in the activation path before a binding with a new model version goes `Live`
     // spec: MEDULLA-UNIFIED-DATA-PLANE-R040.3
     #[test]
     fn activation_runs_gate() {

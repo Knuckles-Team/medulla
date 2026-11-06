@@ -32,6 +32,7 @@ fn grant() -> StandaloneGrant {
     }
 }
 
+/// Verifies MEDULLA-TYPED-PACKS-R107.1: Model
 // spec: MEDULLA-TYPED-PACKS-R107.1
 #[test]
 fn version_and_grant_round_trip() {

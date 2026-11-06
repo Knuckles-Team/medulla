@@ -103,6 +103,7 @@ async fn full_queue_refuses_commit_queue_full() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
+/// Verifies MEDULLA-ENGINE-PARITY-R001.3: Hot-path proof
 // spec: MEDULLA-ENGINE-PARITY-R001.3
 #[tokio::test(flavor = "multi_thread")]
 async fn sixty_four_writers_share_one_fsync() {

@@ -120,6 +120,7 @@ def _feature_closure(features: dict[str, list[str]], start: str) -> set[str]:
 
 def features_map_one_to_one(root: Path = ROOT) -> list[str]:
     """R056.16: each handler and wire crate is optional; `full` enables all."""
+    # Verifies MEDULLA-CONTRACT-R056.16: Cargo features map to crates one to one
     # spec: MEDULLA-CONTRACT-R056.16
     manifest_path = root / "crates/medulla-server/Cargo.toml"
     manifest = tomllib.loads(manifest_path.read_text(encoding="utf-8"))

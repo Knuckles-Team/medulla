@@ -802,6 +802,7 @@ mod snapshot_reads {
         );
     }
 
+    /// Verifies MEDULLA-UNIFIED-DATA-PLANE-R038.3.3: Wiring: `foreign_scan` opens the snapshot and the capability row declares it
     // spec: MEDULLA-UNIFIED-DATA-PLANE-R038.3.3
     #[test]
     fn foreign_scan_opens_snapshot() {
@@ -835,6 +836,7 @@ mod snapshot_reads {
         assert!(session.snapshot_of(&remote.fingerprint()).is_some());
     }
 
+    /// Verifies MEDULLA-UNIFIED-DATA-PLANE-R038.3.4: Refusal: no snapshot, stale replica, or reachable write path
     // spec: MEDULLA-UNIFIED-DATA-PLANE-R038.3.4
     #[test]
     fn snapshot_refusals() {
@@ -883,6 +885,7 @@ mod snapshot_reads {
         );
     }
 
+    /// Verifies MEDULLA-UNIFIED-DATA-PLANE-R038.3.5: Evidence: EXPLAIN and provenance name the snapshot
     // spec: MEDULLA-UNIFIED-DATA-PLANE-R038.3.5
     #[test]
     fn provenance_names_snapshot() {
@@ -913,6 +916,7 @@ mod snapshot_reads {
         assert!(render_trace(&trace).contains("snapshot=snap-0 isolation=repeatable_read"));
     }
 
+    /// Verifies MEDULLA-UNIFIED-DATA-PLANE-R038.2.3: EXPLAIN states whether each fragment ran live or from a copy
     // spec: MEDULLA-UNIFIED-DATA-PLANE-R038.2.3
     #[test]
     fn trace_names_route_per_fragment() {
