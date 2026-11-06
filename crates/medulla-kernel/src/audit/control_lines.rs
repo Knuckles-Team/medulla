@@ -118,6 +118,46 @@ fn incident_audit_line(method: &Method) -> Option<String> {
             incident_id,
             status,
         } => Some(format!("INCIDENT_SET_STATUS|{incident_id}|{status:?}")),
+        _ => record_write_audit_line(method),
+    }
+}
+
+/// Defense-in-depth, like `INCIDENT_*`: these writes commit their own durable
+/// rows (graph nodes through the gateway, or rbac.redb policy rows with that
+/// store's hash-chained trail). The line names the call and its target, never
+/// the record body. Reads of the op families log nothing.
+fn record_write_audit_line(method: &Method) -> Option<String> {
+    match method {
+        Method::WorkflowRegistry { op } => {
+            op.is_mutation().then(|| "WORKFLOW_REGISTRY".to_string())
+        }
+        Method::SchemaProjections { op } => {
+            op.is_mutation().then(|| "SCHEMA_PROJECTIONS".to_string())
+        }
+        Method::FinanceRecordPut { kind, .. } => Some(format!("FINANCE_RECORD_PUT|{kind:?}")),
+        Method::FinanceAlertRaise { envelope } => {
+            Some(format!("FINANCE_ALERT_RAISE|{}", envelope.event_id))
+        }
+        Method::FinanceFactorRecord { factor_ids, .. } => {
+            Some(format!("FINANCE_FACTOR_RECORD|{}", factor_ids.len()))
+        }
+        Method::LiveArtifactPut { artifact } => Some(format!(
+            "LIVE_ARTIFACT_PUT|{}|{}",
+            artifact.id, artifact.version
+        )),
+        Method::LiveArtifactRefresh {
+            id,
+            expected_version,
+        } => Some(format!("LIVE_ARTIFACT_REFRESH|{id}|{expected_version}")),
+        Method::DataProductRegister { product, .. } => {
+            Some(format!("DATA_PRODUCT_REGISTER|{}", product.id))
+        }
+        Method::AccessRequestOpen { request, .. } => {
+            Some(format!("ACCESS_REQUEST_OPEN|{}", request.product))
+        }
+        Method::AccessRequestDecide {
+            product, approve, ..
+        } => Some(format!("ACCESS_REQUEST_DECIDE|{product}|{approve}")),
         _ => identity_audit_line(method),
     }
 }

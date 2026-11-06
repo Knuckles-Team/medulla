@@ -129,6 +129,19 @@ pub(crate) const ACCESS_RS_MUTATES_UNCONDITIONAL: &[&str] = &[
     "UpdateResourceHost",
     "TouchNodes",
     "UnbindQueue",
+    // MEDULLA-BRANCH-MERGE-R001: one branch registry row.
+    "CreateBranch",
+    // MEDULLA-FEDERATED-QUERY-R701.3: the artifact node and its refresh records.
+    "LiveArtifactPut",
+    "LiveArtifactRefresh",
+    // MEDULLA-TYPED-PACKS-R805.1: data-product and access-request policy writes.
+    "DataProductRegister",
+    "AccessRequestOpen",
+    "AccessRequestDecide",
+    // MEDULLA-FINANCE-PRIMITIVES: finance records, alerts and factor records.
+    "FinanceRecordPut",
+    "FinanceAlertRaise",
+    "FinanceFactorRecord",
 ];
 
 /// Mirrors `src/server/access.rs::requires_write`'s RUNTIME-CONDITIONAL set: the Mine*/
@@ -609,6 +622,17 @@ pub(crate) const AUDIT_RS_AUDITED: &[&str] = &[
     "KvCas",
     "KvDelete",
     "KvPut",
+    // `record_write_audit_line`: record writes that commit their own rows.
+    "WorkflowRegistry",
+    "SchemaProjections",
+    "FinanceRecordPut",
+    "FinanceAlertRaise",
+    "FinanceFactorRecord",
+    "LiveArtifactPut",
+    "LiveArtifactRefresh",
+    "DataProductRegister",
+    "AccessRequestOpen",
+    "AccessRequestDecide",
 ];
 
 /// Mirrors `src/server/cdc.rs::emit_for_method`'s explicit match (everything else falls to
@@ -663,6 +687,12 @@ pub(crate) const CDC_RS_EMITS_CDC: &[&str] = &[
     "LineageIngest",
     #[cfg(feature = "modality-serving")]
     "ServedModality",
+    // `record_write_marker_event_id`: defense-in-depth markers.
+    "WorkflowRegistry",
+    "SchemaProjections",
+    "FinanceRecordPut",
+    "FinanceAlertRaise",
+    "FinanceFactorRecord",
 ];
 
 // ── KNOWN_DIVERGENCE ────────────────────────────────────────────────────────────────

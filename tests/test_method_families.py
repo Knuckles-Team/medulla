@@ -280,6 +280,9 @@ _UNCONDITIONAL_WRITES_AT_BASE = (
         "LiveArtifactPut",
         "LiveArtifactRefresh",
         "SyncMemorySnapshot",
+        "FinanceRecordPut",
+        "FinanceAlertRaise",
+        "FinanceFactorRecord",
     }
 )
 

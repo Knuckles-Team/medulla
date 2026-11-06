@@ -426,6 +426,9 @@ fn rdf_adapter_marks_rdf_surface() {
 const CLASSIFICATION_GOLDEN: &[(&str, &str)] = &[
     ("CreateGraph", "Lifecycle"),
     ("DeleteGraph", "Lifecycle"),
+    // MEDULLA-BRANCH-MERGE-R001: the branch registry row is a control-plane
+    // record (branch_registry.redb), not graph data.
+    ("CreateBranch", "ControlPlane"),
     ("MultiGraphBatchUpdate", "MultiGraph"),
     ("Commit", "CrossModal"),
     ("BlobBegin", "BlobStore"),
@@ -454,6 +457,11 @@ const CLASSIFICATION_GOLDEN: &[(&str, &str)] = &[
     ("PublishCurrentPlan", "ControlPlane"),
     ("IssueHostStartGrant", "ControlPlane"),
     ("PublishRunCheckpoint", "ControlPlane"),
+    // MEDULLA-DURABLE-KERNEL-R820.3: the uncertain-effect writes commit through
+    // the WorkItem kernel, like the other fenced WorkItem writes.
+    ("MarkWorkItemEffectStarted", "ControlPlane"),
+    ("RecordEffectReceipt", "ControlPlane"),
+    ("SubmitAdmittedRequest", "ControlPlane"),
     ("IssueControlLease", "ControlPlane"),
     ("TransitionControlLease", "ControlPlane"),
     ("PolicyEvolutionStore", "ControlPlane"),

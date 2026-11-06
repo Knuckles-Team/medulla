@@ -640,4 +640,12 @@ pub(super) const NOT_YET_AUDITED: &[(&str, &str)] = &[
     ("ClusterHierarchyRefresh", "VIZ-1: recomputes the hierarchy by reading the whole graph; writes only the derived cluster_hierarchy store. Widest read of the three; disclosure question untraced"),
     ("ClusterHierarchyClusters", "VIZ-1: reads the derived cluster_hierarchy store, not graph rows; cluster membership still reflects graph structure, and that disclosure question is untraced"),
     ("ClusterHierarchyExpand", "VIZ-1: same store and same untraced disclosure question as ClusterHierarchyClusters"),
+    // Served reads that joined without an RLS classification. Each handler
+    // reads under the verified tenant, but whether it filters rows through a
+    // GraphView has not been traced; park them visibly until it is.
+    ("BusRoster", "agent-bus roster of the verified tenant; row-level filtering untraced"),
+    ("IncidentEvidence", "MEDULLA-UNIFIED-DATA-PLANE-R760.3: reads the incident and its evidence nodes; row-level filtering untraced"),
+    ("IncidentRelatedClaims", "MEDULLA-UNIFIED-DATA-PLANE-R760.3: reads Claim nodes about the evidence entities; row-level filtering untraced"),
+    ("ListMemorySnapshots", "memory-sync snapshot listing under the verified tenant; row-level filtering untraced"),
+    ("ReadMemorySnapshot", "memory-sync snapshot read under the verified tenant; row-level filtering untraced"),
 ];
