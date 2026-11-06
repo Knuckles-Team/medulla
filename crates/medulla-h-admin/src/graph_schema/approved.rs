@@ -257,7 +257,8 @@ fn breaks_contract(
 
 /// Stage the candidate on a clone of the schema sources, then re-validate up to
 /// `knob schema_repair.shadow_sample_nodes` current nodes of the request graph against
-/// the candidate's record contract. Report nodes are not data and are skipped.
+/// the candidate's record contract. Report and control-lease nodes are not data
+/// and are skipped.
 pub(super) fn shadow_ingest(
     core: &GraphCore,
     op: &GraphSchemaOp,
@@ -289,6 +290,9 @@ pub(super) fn shadow_ingest(
         let Some(properties) = core.get_node_properties(&id) else {
             continue;
         };
+        if is_control_lease(&properties) {
+            continue;
+        }
         nodes_ingested += 1;
         if breaks_contract(&properties, contract) {
             violations += 1;
@@ -299,6 +303,22 @@ pub(super) fn shadow_ingest(
         nodes_ingested,
         violations,
     })
+}
+
+/// Whether a node is a control-lease row (an approval lives in the request
+/// graph beside the data it governs); a lease is not data.
+fn is_control_lease(properties: &[u8]) -> bool {
+    rmp_serde::from_slice::<serde_json::Value>(properties)
+        .ok()
+        .and_then(|record| {
+            record
+                .get("node_type")
+                .and_then(serde_json::Value::as_str)
+                .map(|node_type| {
+                    node_type == medulla_work_types::control_lease::CONTROL_LEASE_NODE_TYPE
+                })
+        })
+        .unwrap_or(false)
 }
 
 /// Store the report as the control row of its candidate (replacing an earlier one).

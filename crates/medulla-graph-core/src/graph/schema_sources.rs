@@ -1893,7 +1893,7 @@ mod tests {
             ),
             (
                 "nutrition",
-                "ef2e43e387de040626f123046e3210086cb8d387d322e778f22e047fe574e840",
+                "21692c19900abfaf614d62f1c848dc84cfab6b792a4258cfbed4f7064170a87b",
             ),
             (
                 "world-model-shapes",

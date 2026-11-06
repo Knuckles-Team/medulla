@@ -873,7 +873,10 @@ ex:parent a owl:AsymmetricProperty .
         // (MEDULLA-MEDIA-VOCAB-R002.5.4); the :cites domain and range change in place.
         // -40 +210 (MEDULLA-TYPED-PACKS-R071.2): the 40 `owl:imports <.../core>` edges
         // are removed and 210 module classes gain their `rdfs:subClassOf` core parent.
-        assert_eq!(composed.ontology.len(), 18_022);
+        // +739: the measured composed count after the re-rooted modules
+        // (MEDULLA-TYPED-PACKS-R071.2), the generated decision module's core parents (+4),
+        // the nutrition schema.org mappings (+6) and the vocabulary landed since.
+        assert_eq!(composed.ontology.len(), 18_761);
 
         let ontology_subjects: BTreeSet<String> = composed
             .ontology

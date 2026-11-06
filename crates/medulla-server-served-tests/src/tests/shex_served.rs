@@ -411,8 +411,15 @@ const SCOPE_MAP: [(&str, &str); 3] = [
 async fn live_validation_obeys_read_authority() {
     let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
     let state = multi_tenant_state().await;
+    // The fixture owns worker1's graph only; worker2 owns its own.
+    state
+        .write()
+        .await
+        .registry
+        .create_graph("agent:worker2", GraphType::Agent, Some("worker2".into()))
+        .unwrap();
 
-    // Create both tenants' graphs with a served write, then seed RDF rows.
+    // Seed both tenants' graphs with a served write, then RDF rows.
     assert_ok(
         &dispatch_on_heap(
             &state,
