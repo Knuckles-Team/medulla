@@ -187,7 +187,7 @@ Focused `cargo test` on the named files per row; `spec-status` and `spec-decompo
 
 Organization constitution Article XXXI requires a closed set of states, one transition function and a typed refusal for each machine. Rows `MEDULLA-PLACEMENT-R780`, `MEDULLA-PLACEMENT-R781`, `MEDULLA-PLACEMENT-R782`, `MEDULLA-PLACEMENT-R783` apply it here. Each machine returns `TransitionRefused` (MEDULLA-ORCH-VOCAB-R811.4), stores its state in one field, and is described in `crates/medulla-core/ontology/state-machines-v1.ttl` with classes that roll up to the core state-machine classes. The change is a hard cutover: the old literals, flags and inferred states are deleted in the same release.
 
-#### Machine wiring
+## Machine wiring
 
 - `LaneHoldMachine`: entry point served reserve and cleanup operations → `reserve.rs` and `cleanup.rs` under `crates/medulla-result-types/src/epistemic_operations/` → `HoldState::apply` in `crates/medulla-result-types/src/epistemic_operations/hold_machine.rs` → stored state field. Attach points: `reserve.rs:358` and `cleanup.rs:67,131,368`. Wiring row: MEDULLA-PLACEMENT-R780.1. Hot-path proof row: `terminal_work_item_releases_hold` of MEDULLA-PLACEMENT-R780.2.
 - `ResourceReservationMachine`: entry point served resource lifecycle methods → `resource/write_lifecycle.rs` → `ResourceReservationRecordState::apply` in `crates/medulla-result-types/src/epistemic_operations/resource_core.rs` → stored state field. Attach points: `write_lifecycle.rs:115`. Wiring row: MEDULLA-PLACEMENT-R781.1. Hot-path proof row: `no_writer_sets_state_outside_apply` of MEDULLA-PLACEMENT-R781.1.

@@ -1127,6 +1127,6 @@ none
 
 Organization constitution Article XXXI requires a closed set of states, one transition function and a typed refusal for each machine. Rows `MEDULLA-DURABLE-KERNEL-R872` apply it here. Each machine returns `TransitionRefused` (MEDULLA-ORCH-VOCAB-R811.4), stores its state in one field, and is described in `crates/medulla-core/ontology/state-machines-v1.ttl` with classes that roll up to the core state-machine classes. The change is a hard cutover: the old literals, flags and inferred states are deleted in the same release.
 
-#### Machine wiring
+## Machine wiring
 
 - `SemanticIndexUpgradeMachine`: entry point the semantic index upgrade runtime → `upgrade.rs` → `UpgradePhase::apply` in `crates/medulla-h-retrieve/src/semantic_index_runtime/upgrade.rs` → stored state field. Attach points: `upgrade.rs:132,752`. Wiring row: MEDULLA-DURABLE-KERNEL-R872.1. Hot-path proof row: `no_writer_sets_state_outside_apply` of MEDULLA-DURABLE-KERNEL-R872.1.
