@@ -23,6 +23,8 @@ mod annotations;
 mod catalog_attributes;
 mod concept_path;
 pub(crate) mod crosswalk;
+#[cfg(feature = "rdf")]
+mod contract_rdf;
 mod desired;
 mod facts;
 mod front_matter;

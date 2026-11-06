@@ -62,6 +62,9 @@ pub enum PackViolationCode {
     // A nutrient amount whose identifier has no chemical-entity crosswalk entry
     // (MEDULLA-MEDIA-VOCAB-R655).
     NutrientIdUnmapped,
+    // The connector declaration's ingest contract breaks the contract shapes
+    // (MEDULLA-TYPED-PACKS-R101.2).
+    ContractShaclViolation,
 }
 
 /// Something worth saying that did not stop the import.
