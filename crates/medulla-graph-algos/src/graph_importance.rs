@@ -1,20 +1,20 @@
 //! Graph-guided paging adapter (CONCEPT:MEDULLA-KG.memory.graph-guided-paging) — the optional glue
 //! between `medulla-compute`'s existing (now sparse) PageRank / centrality primitives and
-//! [`crate::tiered::TieredCache`]'s importance-scored eviction.
+//! [`medulla_kvcache::TieredCache`]'s importance-scored eviction.
 //!
-//! [`TieredCache::set_importance`](crate::tiered::TieredCache::set_importance) /
-//! [`apply_importance_scores`](crate::tiered::TieredCache::apply_importance_scores) are
-//! dependency-free — they just take an `f64` per key, so the core crate never links
-//! `medulla-compute`. This module is the convenience wiring for the common case: a KV/context
-//! cache whose keys ARE (or map 1:1 to) graph node ids, where the "which blocks matter
-//! for a 10M+ token / huge-context regime even when not recently touched" signal is the
-//! resident graph's own topology. Behind the `graph` feature (OFF by default) so a
-//! base/pi build of this crate carries no `medulla-compute`.
+//! `TieredCache::set_importance` / `apply_importance_scores` are dependency-free — they
+//! just take an `f64` per key, so the cache crate never links a graph crate. This module
+//! is the convenience wiring for the common case: a KV/context cache whose keys ARE (or
+//! map 1:1 to) graph node ids, where the "which blocks matter for a 10M+ token /
+//! huge-context regime even when not recently touched" signal is the resident graph's own
+//! topology. It lives here, not in the cache crate, so the cache crate stays below the
+//! graph crates in the dependency graph.
 //!
 //! Typical use (see the module tests for a full example):
 //!
 //! ```ignore
-//! use medulla_kvcache::{TieredCache, graph_importance};
+//! use medulla_graph_algos::graph_importance;
+//! use medulla_kvcache::TieredCache;
 //!
 //! let scores = graph_importance::pagerank_importance(&graph_view, 0.85, 20);
 //! cache.apply_importance_scores(scores);
@@ -22,11 +22,12 @@
 
 use std::collections::HashMap;
 
-use medulla_graph_algos::algorithms;
 use medulla_graph_core::graph::GraphView;
 
+use crate::algorithms;
+
 /// Run PageRank over `core` and return `(node_id, score)` pairs shaped for
-/// [`crate::tiered::TieredCache::apply_importance_scores`] when the cache is keyed
+/// `medulla_kvcache::TieredCache::apply_importance_scores` when the cache is keyed
 /// directly by node id (`TieredCache<String, V>`). Thin re-export of
 /// `medulla_graph_algos::algorithms::pagerank` — the sparse power-iteration implementation
 /// already used elsewhere in the engine (CONCEPT:MEDULLA-KG.compute.sparse-pagerank), so
@@ -48,7 +49,7 @@ pub fn degree_centrality_importance(core: &GraphView) -> Vec<(String, f64)> {
 }
 
 /// Map `scores` (node id → importance) through `key_of` to build the `HashMap<K, f64>`
-/// [`crate::tiered::TieredCache::apply_importance_scores`] consumes, for caches whose key
+/// `medulla_kvcache::TieredCache::apply_importance_scores` consumes, for caches whose key
 /// type isn't a bare node-id `String` (e.g. a KV block key that embeds the node id plus a
 /// span/offset). Entries where `key_of` returns `None` (the node has no corresponding
 /// cache key, e.g. it was never materialized as a context block) are dropped.
@@ -66,9 +67,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tiered::{Tier, TieredCache};
-    use crate::value::Block;
     use medulla_graph_core::graph::GraphCore;
+    use medulla_kvcache::{Block, Tier, TieredCache};
 
     fn payload() -> Vec<u8> {
         b"{}".to_vec()

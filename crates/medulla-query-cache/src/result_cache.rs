@@ -51,6 +51,10 @@ use parking_lot::Mutex;
 
 use crate::dep_scope::DepSet;
 
+pub use admission::{dep_generations, install_tier_policy, DepAdmission, DEFAULT_TIER_POLICY};
+pub use medulla_kvcache::TierPolicy;
+
+mod admission;
 mod dependency;
 mod hashing;
 mod lifecycle;
@@ -75,6 +79,10 @@ fn cap_from_env() -> usize {
 /// populate it after a miss. Empty + zero-cost until first use.
 pub struct ResultCache {
     inner: Mutex<Inner>,
+    /// Admission ledger of the dependency-scoped answers: it decides whether an answer is
+    /// kept, beside the dependency check that decides whether a kept answer is still
+    /// valid. It holds bookkeeping only; the bytes live in `inner`.
+    policy: Mutex<medulla_kvcache::PolicyTier>,
     cap: usize,
     hits: std::sync::atomic::AtomicU64,
     misses: std::sync::atomic::AtomicU64,
@@ -105,17 +113,25 @@ pub fn cache_result(
     }
 }
 
-/// [`ResultCache::put_dep`] for an encoded method result: only a MessagePack `Raw` payload
-/// is cacheable, so any other payload is not stored.
+/// [`ResultCache::put_dep`] for an encoded method result, after the answer tier admits
+/// it: only a MessagePack `Raw` payload is cacheable, and an answer the policy refuses
+/// is not stored (a refusal is a miss).
 pub fn cache_dep_result(
     cache: &ResultCache,
     query_hash: u128,
     actor_scope_hash: u64,
     computed_at: u64,
     deps: DepSet,
+    admission: DepAdmission<'_>,
     payload: &medulla_protocol_types::protocol::ResultPayload,
 ) {
     if let medulla_protocol_types::protocol::ResultPayload::Raw(bytes) = payload {
+        if cache
+            .admit_dep(query_hash, actor_scope_hash, &admission, bytes.len() as u64)
+            .is_err()
+        {
+            return;
+        }
         cache.put_dep(
             query_hash,
             actor_scope_hash,

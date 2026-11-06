@@ -13,6 +13,7 @@ these have **zero** release-build impact. Each is registered `harness = false` i
 | `write_coalescer_bench` | MEDULLA-KG.txn.write-path-benchmarks | `--features server` | `__commons__` write-lock contention curve vs the batch window |
 | `redb_group_commit_bench` | MEDULLA-024 | `--features full` | durable group-commit ops-per-fsync vs the linger knob |
 | `redb_write_latency_bench` | EH-290 | `--features full` | per-write durable latency p50/p95/p99 by `commit_phase` span, swept over graph size, beside raw-redb Immediate/None floors (plain `main`, not criterion) |
+| `work_item_claim` | MEDULLA-DURABLE-KERNEL-R750.753 | `--features full` | claim latency over a 1,000-row ready queue; fails above p50 1 ms or p99 5 ms (plain `main`, nightly only) |
 
 ## MEDULLA-KG.compute.massive-scale-benchmark — massive-scale core harness
 

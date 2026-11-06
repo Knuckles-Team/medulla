@@ -63,6 +63,7 @@ medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-s
 medulla-decision-types = { path = "../medulla-decision-types", features = ["test-support"] }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
 tempfile = "3"
+regex = "1"
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
 
 [features]
@@ -159,7 +160,7 @@ asr-native = ["medulla-types/asr-native", "medulla-protocol-types/asr-native"]
 viz = ["medulla-types/viz", "medulla-protocol-types/viz"]
 # MEDULLA-DECISION-ENGINE-R054.1: the decision-contract ontology generator
 # (`decision_ontology`) reads the decision types' JSON schemas.
-contract-schema = ["dep:schemars", "medulla-decision-types/contract-schema"]
+contract-schema = ["dep:schemars", "medulla-decision-types/contract-schema", "medulla-protocol-types/contract-schema"]
 
 [dependencies]
 # The served method catalog (MEDULLA-CONTRACT-R057) renders as JSON.
@@ -176,3 +177,7 @@ medulla-work-types = { path = "../medulla-work-types" }
 [[test]]
 name = "decision_ontology"
 required-features = ["contract-schema"]
+
+[[test]]
+name = "wire_vectors"
+required-features = ["contract-schema", "canonical-ledger"]

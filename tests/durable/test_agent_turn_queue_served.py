@@ -91,15 +91,14 @@ def test_full_queue_stale_head_and_bad_capability_refuse(queue_client):
     assert _absent(client, "ctx-b-" + stem)
 
     # An unverifiable claim capability refuses as ACCESS_DENIED.
-    denied = client.work_items.verify_capability(
-        {
-            "schema_version": "1",
-            "work_item_id": first["work_item_id"],
-            "capability": b"forged",
-        }
-    )
-    assert denied["valid"] is False
-    assert denied["decision"] in {"unauthorized", "malformed"}
+    with pytest.raises(EngineResponseError, match="ACCESS_DENIED"):
+        client.work_items.verify_capability(
+            {
+                "schema_version": "1",
+                "work_item_id": first["work_item_id"],
+                "capability": b"forged",
+            }
+        )
 
     # Cancel of a terminal item is a Noop and changes nothing.
     terminal = client.work_items.get(
@@ -124,3 +123,59 @@ def test_full_queue_stale_head_and_bad_capability_refuse(queue_client):
         )
         is None
     )
+
+
+# spec: MEDULLA-DURABLE-KERNEL-R750.753
+@pytest.mark.spec("MEDULLA-DURABLE-KERNEL-R750.753")
+def test_cancel_reaches_leased_worker_on_renew(queue_client):
+    client = queue_client
+    stem = uuid.uuid4().hex
+    now = int(time.time() * 1000)
+    item = client.work_items.submit(_turn("hot-" + stem))["work_item_id"]
+    claim = client.work_items.claim(
+        {
+            "schema_version": "1",
+            "tenant_ref": TEST_TENANT,
+            "work_item_id": item,
+            "queue_ref": None,
+            "resource_class": None,
+            "fairness_group": None,
+            "worker_ref": "worker-" + stem,
+            "now_ms": now,
+            "lease_ms": 30_000,
+            "max_tenant_in_flight": 4096,
+        },
+        idempotency_key=stem + ":claim",
+    )
+    assert claim["claimed"] is True
+    lease = {
+        "tenant": TEST_TENANT,
+        "work_item_id": item,
+        "worker_id": claim["lease_holder_ref"],
+        "lease_epoch": claim["lease_epoch"],
+        "fencing_token": claim["fencing_token"],
+    }
+
+    # A cancel against a leased item preserves the lease and reports in_flight.
+    cancelled = client.work_items.cancel(
+        tenant=TEST_TENANT,
+        work_item_id=item,
+        idempotency_key=stem + ":cancel",
+        now_ms=now + 1,
+    )
+    assert cancelled["status"] == "in_flight"
+
+    # The leased worker observes the cancel on its next renewal.
+    renewed = client.work_items.renew(
+        **lease, now_ms=now + 2, lease_ms=30_000, idempotency_key=stem + ":renew"
+    )
+    assert renewed["cancel_requested"] is True
+
+    client.work_items.commit_result(
+        **lease,
+        idempotency_key=stem + ":commit",
+        outcome="cancelled",
+        now_ms=now + 3,
+    )
+    final = client.work_items.get(tenant=TEST_TENANT, work_item_id=item)
+    assert final["status"] == "cancelled"

@@ -6,6 +6,7 @@ const OP_LEVEL_ACTIONS: &[&str] = &[
     "admin:connector-pack",
     "admin:decision-log",
     "admin:fleet-catalog",
+    "agent:claim-read",
     "agent:component-read",
     "agent:decision-evaluate",
     "agent:decision-read",

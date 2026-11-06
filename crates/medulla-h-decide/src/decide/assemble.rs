@@ -51,20 +51,48 @@ async fn assemble_for(
 ) -> Result<medulla_decision_types::decision::AssemblyResult, String> {
     use medulla_compute::assemble::{assemble, inputs, RecordIdentity};
 
-    if request.tenant_id != verified.tenant() {
-        return Err("ACCESS_DENIED: assembly tenant must match the verified request tenant".into());
-    }
-    let store = state.write().await.ensure_agent_library()?;
-    let policy = resolve_policy(&store, &request)?;
-    let entries = store.assembly_candidates(&request.tenant_id, &request.candidates)?;
-    admit_tool_set(state, graph, verified, &entries).await?;
-    let candidates = medulla_persistence_records::decision_record::candidate_facts(&entries)?;
-    let templates = request
-        .templates
-        .iter()
-        .map(|reference| store.assembly_template(&request.tenant_id, reference))
-        .collect::<Result<Vec<_>, String>>()?;
-    let topology = super::topology_read::read(state, graph, verified, &request, &templates).await?;
+    use super::telemetry::{self, Stage};
+    const FAMILY: &str = "assembly";
+    let tenant = verified.tenant();
+
+    let (store, policy) = telemetry::stage_async(Stage::Admit, FAMILY, tenant, async {
+        if request.tenant_id != verified.tenant() {
+            return Err(
+                "ACCESS_DENIED: assembly tenant must match the verified request tenant".to_string(),
+            );
+        }
+        let store = state.write().await.ensure_agent_library()?;
+        let policy = resolve_policy(&store, &request)?;
+        Ok::<_, String>((store, policy))
+    })
+    .await?;
+    let entries = telemetry::stage(Stage::Candidates, FAMILY, tenant, || {
+        store.assembly_candidates(&request.tenant_id, &request.candidates)
+    })?;
+    telemetry::stage_async(
+        Stage::Visibility,
+        FAMILY,
+        tenant,
+        admit_tool_set(state, graph, verified, &entries),
+    )
+    .await?;
+    let (candidates, templates) = telemetry::stage(Stage::Constraints, FAMILY, tenant, || {
+        let candidates = medulla_persistence_records::decision_record::candidate_facts(&entries)?;
+        let templates = request
+            .templates
+            .iter()
+            .map(|reference| store.assembly_template(&request.tenant_id, reference))
+            .collect::<Result<Vec<_>, String>>()?;
+        Ok::<_, String>((candidates, templates))
+    })?;
+    let required_media = request.requirements.required_input_media.clone();
+    let topology = telemetry::stage_async(
+        Stage::Entailment,
+        FAMILY,
+        tenant,
+        super::topology_read::read(state, graph, verified, &request, &templates),
+    )
+    .await?;
     let mut inputs =
         inputs(request, candidates, templates, policy).map_err(|error| error.to_string())?;
     inputs.topology = topology;
@@ -74,18 +102,91 @@ async fn assemble_for(
         created_at_ms: medulla_kernel::kernel::dispatch_support::authoritative_now_ms(),
     };
     // Bounded by the node budget, but CPU work all the same.
-    let assembly = tokio::task::spawn_blocking(move || assemble(inputs, identity))
-        .await
-        .map_err(|error| format!("assembly task failed: {error}"))?
-        .map_err(|error| error.to_string())?;
-    Ok(medulla_decision_types::decision::AssemblyResult {
-        schema_version: medulla_decision_types::decision::ASSEMBLY_RESULT_SCHEMA_VERSION,
-        record: assembly.record,
-        graph: assembly.graph,
-        agents: medulla_types::contract::BoundedVec::new(assembly.agents)
-            .map_err(|error| error.to_string())?,
-        model: assembly.model,
+    let assembly = telemetry::stage_async(Stage::Solve, FAMILY, tenant, async {
+        tokio::task::spawn_blocking(move || assemble(inputs, identity))
+            .await
+            .map_err(|error| format!("assembly task failed: {error}"))?
+            .map_err(|error| error.to_string())
     })
+    .await?;
+    let (model_revision, model_input) = telemetry::stage(Stage::Rank, FAMILY, tenant, || {
+        selected_model(&assembly.record, &entries, required_media.as_slice())
+    })?;
+    let result = telemetry::stage(Stage::Record, FAMILY, tenant, || {
+        Ok::<_, String>(medulla_decision_types::decision::AssemblyResult {
+            schema_version: medulla_decision_types::decision::ASSEMBLY_RESULT_SCHEMA_VERSION,
+            record: assembly.record,
+            graph: assembly.graph,
+            agents: medulla_types::contract::BoundedVec::new(assembly.agents)
+                .map_err(|error| error.to_string())?,
+            model: assembly.model,
+            model_revision,
+            model_input,
+        })
+    })?;
+    telemetry::stage(Stage::Conclude, FAMILY, tenant, || {
+        telemetry::assembled(&result.record);
+        Ok::<_, String>(())
+    })?;
+    Ok(result)
+}
+
+/// The selected model slot's revision and declared input capabilities
+/// (MEDULLA-DECISION-ENGINE-R815). Both are `None` unless the record is
+/// `Solved`; a required media type the profile does not declare (or a profile
+/// that declares nothing) is refused with `MODEL_MEDIA_CAPABILITY_UNKNOWN`.
+#[cfg(feature = "decide")]
+pub(crate) fn selected_model(
+    record: &medulla_decision_types::decision::DecisionRecord,
+    entries: &[medulla_agent_types::agent_component::AgentComponentEntry],
+    required: &[medulla_agent_types::agent_component::ModelInputMediaType],
+) -> Result<
+    (
+        Option<String>,
+        Option<medulla_agent_types::agent_component::ModelInputCapabilities>,
+    ),
+    String,
+> {
+    use medulla_agent_types::agent_component::{AgentComponentFacts, AgentComponentKind};
+    use medulla_decision_types::decision::{DecisionErrorCode, DecisionOutcome};
+
+    let DecisionOutcome::Solved { slots, .. } = &record.outcome else {
+        return Ok((None, None));
+    };
+    let Some(slot) = slots
+        .iter()
+        .find(|slot| slot.component.kind == AgentComponentKind::ModelProfile)
+    else {
+        return Ok((None, None));
+    };
+    let revision = slot
+        .component
+        .definition_digest
+        .strip_prefix(medulla_types::solve_scalar::DIGEST_TEXT_PREFIX)
+        .unwrap_or(&slot.component.definition_digest)
+        .to_string();
+    let declared = entries
+        .iter()
+        .find(|entry| entry.component_id == slot.component.component_id)
+        .and_then(|entry| match &entry.facts {
+            AgentComponentFacts::ModelProfile {
+                input_capabilities, ..
+            } => input_capabilities.clone(),
+            _ => None,
+        });
+    if let Some(missing) = required.iter().find(|media| {
+        declared
+            .as_ref()
+            .is_none_or(|caps| !caps.media_types.contains(media))
+    }) {
+        return Err(format!(
+            "{}: model {} does not declare input media {}",
+            DecisionErrorCode::ModelMediaCapabilityUnknown.as_str(),
+            slot.component.component_id,
+            missing.as_str()
+        ));
+    }
+    Ok((Some(revision), declared))
 }
 
 /// The plan's tool set: the component identifier of every candidate entry.

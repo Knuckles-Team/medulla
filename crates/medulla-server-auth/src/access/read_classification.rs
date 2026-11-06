@@ -94,6 +94,7 @@ pub(super) const RLS_ROUTED: &[&str] = &[
     "ExplainPolicy",
     "ExplainProvenance",
     "ExplainProvenanceByIds",
+    "FinanceRecordGet",
     "FindCycle",
     "FiredTriggers",
     "Fork",
@@ -353,6 +354,11 @@ pub(super) const REASON_NATIVE_WORK_ITEM_TENANT_READ: &str =
 // record, a count or a pooled rate is formed.
 pub(super) const REASON_DECISION_LOG_VISIBILITY: &str =
     "DecisionLog reads committed decision records and evaluations from the tenant-bound agent_library.redb control owner, filtered by each record's own visibility (tenant for library-sourced, committing principal for graph-sourced) before any record or aggregate is formed -- never a GraphView/core.analysis_snapshot() row read";
+// MEDULLA-DECISION-ENGINE-R652.5: `Claims.Get` reads one claim or one sealed artifact from the
+// tenant-keyed statechart store; the instance id derives from the verified tenant, so another
+// tenant's id never resolves.
+pub(super) const REASON_CLAIMS_TENANT_STATE: &str =
+    "Claims.Get reads one claim or one sealed research artifact from the statecharts.redb instance keyed by the verified request tenant and the caller's id (another tenant derives another key and gets CLAIM_NOT_FOUND), behind agent:claim-read -- never a GraphView/core.analysis_snapshot() row read";
 // EH-400: `FreshnessFeed` returns change METADATA, not rows: invalidation events are (version,
 // class names, edge-type names) straight from the dependency clock; the volatility policy is
 // annotations on schema classes (visible to every reader of the graph, see `RLS_SCHEMA_KEY`);
@@ -388,6 +394,8 @@ pub(super) const NON_ROW_SCOPED: &[(&str, &str)] = &[
     ("Decide", REASON_DECIDE_LIBRARY_SNAPSHOT),
     // REASON_DECISION_LOG_VISIBILITY
     ("DecisionLog", REASON_DECISION_LOG_VISIBILITY),
+    // REASON_CLAIMS_TENANT_STATE (MEDULLA-DECISION-ENGINE-R652.5)
+    ("Claims", REASON_CLAIMS_TENANT_STATE),
     // REASON_FRESHNESS_METADATA
     ("FreshnessFeed", REASON_FRESHNESS_METADATA),
     // REASON_AGENT_LIBRARY_TENANT_SNAPSHOT
@@ -498,6 +506,8 @@ pub(super) const NON_ROW_SCOPED: &[(&str, &str)] = &[
     ("FinancePairsSignal", REASON_PURE_COMPUTE),
     ("FinanceFactorRank", REASON_PURE_COMPUTE),
     ("FinanceDistributionShift", REASON_PURE_COMPUTE),
+    ("FinancePatternClassify", REASON_PURE_COMPUTE),
+    ("FinanceProfitAttribution", REASON_PURE_COMPUTE),
     ("FinanceKyleLambda", REASON_PURE_COMPUTE),
     ("FinanceLogitQuotes", REASON_PURE_COMPUTE),
     ("FinanceMarket", REASON_PURE_COMPUTE),
