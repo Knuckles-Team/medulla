@@ -17,6 +17,10 @@ pub mod delegation;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod development_lane;
 
+/// MEDULLA-UNIFIED-DATA-PLANE-R750.754: served `HistorySearch` over stored steps.
+#[cfg(feature = "query")]
+pub mod history;
+
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[cfg(feature = "jobs")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)

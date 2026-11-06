@@ -138,6 +138,25 @@ async fn route_native_lifecycle_ops(
         ));
     }
 
+    // MEDULLA-UNIFIED-DATA-PLANE-R750.754: the stored-step search reads the
+    // `Step` nodes the terminal WorkItem commit wrote.
+    #[cfg(feature = "query")]
+    let method = match medulla_h_jobs::history::try_handle(
+        medulla_h_jobs::history::HandleContext {
+            req_id,
+            state: ctx.state,
+            core,
+            read_authority: ctx.read_authority,
+            verified_context,
+        },
+        method,
+    )
+    .await
+    {
+        Ok(response) => return Ok(response),
+        Err(method) => method,
+    };
+
     // The WorkItem handler owns its six lifecycle Methods explicitly and keeps
     // their authoritative MutationBatch effect. Submission and reservation
     // operations deliberately fall through to their existing native route.

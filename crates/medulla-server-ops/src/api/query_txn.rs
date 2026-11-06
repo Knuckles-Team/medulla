@@ -57,6 +57,20 @@ pub trait QueryApi: Send + Sync {
         Err("this seam method is not built into the installed implementation".to_string())
     }
 
+    /// Run a graph-only `plan` (no foreign or series leg) over `view` with the core
+    /// indexes bound, projecting the rows as `[id, score|nil]`
+    /// (MEDULLA-UNIFIED-DATA-PLANE-R750.754: `HistorySearch`).
+    #[cfg(feature = "query")]
+    #[allow(unused_variables)]
+    fn run_graph_plan_rows(
+        &self,
+        plan: medulla_exec::algebra::Plan,
+        view: &medulla_graph_core::graph::GraphView,
+        core: &Arc<medulla_graph_core::graph::GraphCore>,
+    ) -> Result<Vec<(String, Option<f32>)>, String> {
+        Err("this seam method is not built into the installed implementation".to_string())
+    }
+
     /// Route one gateway-routed data-mining method (`Mine*`) through the mining handler's
     /// commit gateway; `None` hands a method it does not own back to the caller.
     #[cfg(feature = "mining")]

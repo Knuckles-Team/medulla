@@ -121,6 +121,9 @@ pub(super) const RLS_ROUTED: &[&str] = &[
     "HasEdge",
     "HasNode",
     "HasNodesBatch",
+    // MEDULLA-UNIFIED-DATA-PLANE-R750.754: runs its plan over the caller's
+    // `filter_view` view (`medulla_h_jobs::history`).
+    "HistorySearch",
     "InDegree",
     "KnowledgeStream",
     "ListGraphs",

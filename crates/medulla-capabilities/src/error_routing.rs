@@ -132,6 +132,8 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     // MEDULLA-DECISION-ENGINE-R652.3: a stale write and a malformed op.
     ("Claims", &["PARAMETER_INVALID", "REVISION_CONFLICT"]),
     ("GetRunWorkItem", &["RUN_ADMISSION_UNAVAILABLE"]),
+    // MEDULLA-UNIFIED-DATA-PLANE-R750.753: a scope outside the caller grant.
+    ("HistorySearch", &["HISTORY_SCOPE_FORBIDDEN"]),
     // MEDULLA-UNIFIED-DATA-PLANE-R040.4: a blocked embedding-model promotion.
     ("SemanticIndex", &["PROMOTION_BLOCKED"]),
     // Local-only authority: a clustered server refuses it with the typed

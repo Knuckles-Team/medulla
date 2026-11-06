@@ -208,7 +208,7 @@ pub struct CommitWorkItemResultInput<'args, 'table, 'crypto> {
 }
 
 pub fn apply_commit_work_item_result_row(
-    input: CommitWorkItemResultInput<'_, '_, '_>,
+    mut input: CommitWorkItemResultInput<'_, '_, '_>,
 ) -> Result<Option<medulla_protocol_types::protocol::ResultPayload>, String> {
     let current = input
         .nodes
@@ -362,6 +362,7 @@ pub fn apply_commit_work_item_result_row(
         )?;
     }
     if committed_status != "retry_scheduled" {
+        commit_run_history(&mut input, committed_status, &mut changed)?;
         if let Some(extension) = input.outcome_extension {
             apply_receipt_rows(
                 input.graph,
@@ -576,6 +577,30 @@ fn record_outcome_refs(
         serde_json::json!(bundle.tool_call_refs),
     );
     Ok(())
+}
+
+/// MEDULLA-UNIFIED-DATA-PLANE-R750.754: the terminal commit writes the run's
+/// audit row, tool calls and `Step` nodes in its own transaction.
+fn commit_run_history(
+    input: &mut CommitWorkItemResultInput<'_, '_, '_>,
+    committed_status: &str,
+    changed: &mut Vec<String>,
+) -> Result<(), String> {
+    let Some((completion, history)) = input
+        .run_completion
+        .and_then(|completion| completion.history.as_ref().map(|h| (completion, h)))
+    else {
+        return Ok(());
+    };
+    let (run, calls, steps) =
+        history.records(medulla_work_types::run_history::HistoryCommitFacts {
+            tenant: input.tenant,
+            run_id: &completion.run_id,
+            outcome: committed_status,
+            at_ms: i64::try_from(input.now_ms).unwrap_or(i64::MAX),
+        });
+    let rows = super::history::history_rows(&run, &calls, &steps)?;
+    super::history::write_history_rows(input.graph, rows, &mut *input.nodes, input.crypto, changed)
 }
 
 fn apply_receipt_rows(

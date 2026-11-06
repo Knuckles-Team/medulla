@@ -89,6 +89,8 @@ pub fn append_native_work_item_ops(ops: &mut Vec<&'static str>, available: bool)
             "GetWorkItem",
             "ListWorkItems",
             "GetWorkItemOutcome",
+            // MEDULLA-UNIFIED-DATA-PLANE-R750.754: search over committed run steps.
+            "HistorySearch",
             // graph-os MEDULLA-2: native control leases share the WorkItem kernel.
             "IssueHostStartGrant",
             "IssueControlLease",

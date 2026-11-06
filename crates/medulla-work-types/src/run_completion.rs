@@ -59,6 +59,9 @@ pub struct RunCompletionInput {
     pub run_id: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub usage: Option<RunUsage>,
+    /// The run's audit row, tool calls and steps (MEDULLA-UNIFIED-DATA-PLANE-R750.754).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub history: Option<crate::run_history::RunHistoryInput>,
 }
 impl RunCompletionInput {
     pub fn validate(&self) -> Result<(), String> {

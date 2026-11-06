@@ -70,6 +70,8 @@ method_results! {
     TelemetryDerive(TelemetryDerive) => Raw<TelemetryDeriveReceipt>;
     // MEDULLA-ORCH-VOCAB-R804: the tenant's latest stored metric values by name.
     GetTelemetrySnapshot(GetTelemetrySnapshot) => Json<std::collections::BTreeMap<String, f64>>;
+    // MEDULLA-UNIFIED-DATA-PLANE-R750.754: ranked stored steps of one scope.
+    HistorySearch(HistorySearch) => Raw<Vec<medulla_work_types::run_history::HistoryHit>>;
     // MEDULLA-UNIFIED-DATA-PLANE-R760.3: the served incident authority.
     IncidentRecordAnomaly(IncidentRecordAnomaly) => Raw<IncidentWriteReceipt>;
     IncidentCorrelate(IncidentCorrelate) => Raw<IncidentWriteReceipt>;

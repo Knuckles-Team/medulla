@@ -61,6 +61,30 @@ impl medulla_server_ops::api::query_txn::QueryApi for QuerySeam {
         )
     }
 
+    #[cfg(feature = "query")]
+    fn run_graph_plan_rows(
+        &self,
+        plan: medulla_exec::algebra::Plan,
+        view: &medulla_graph_core::graph::GraphView,
+        core: &Arc<medulla_graph_core::graph::GraphCore>,
+    ) -> Result<Vec<(String, Option<f32>)>, String> {
+        self.run_unified_staged_rows(
+            plan,
+            view,
+            core,
+            &[],
+            #[cfg(feature = "federation")]
+            None,
+            #[cfg(feature = "tsdb")]
+            medulla_server_ops::api::query_txn::query_support::TsdbLegBind {
+                tsdb: None,
+                tsdb_tenant: None,
+                tsdb_graph: None,
+                staged_series: None,
+            },
+        )
+    }
+
     #[cfg(feature = "mining")]
     async fn mining_gateway_try_handle(
         &self,

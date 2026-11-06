@@ -14,6 +14,7 @@ use sha2::{Digest, Sha256};
 /// A redacted identity: `redacted:` plus a SHA-256 prefix of the raw value.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(transparent)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct RedactedIdentity(String);
 
 impl RedactedIdentity {
@@ -71,6 +72,114 @@ pub struct StoredStep {
     pub text: String,
 }
 
+/// One tool call a terminal commit reports (MEDULLA-UNIFIED-DATA-PLANE-R750.754).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ToolCallInput {
+    pub call_id: String,
+    pub tool: String,
+    pub trace_node: String,
+    pub args_digest: String,
+}
+
+/// One conversation step a terminal commit reports.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct StepInput {
+    pub index: u32,
+    pub speaker: RedactedIdentity,
+    pub text: String,
+}
+
+/// The run history an ordinary terminal commit carries: the run's audit facts,
+/// its tool calls and its steps. The engine supplies tenant, run id, outcome and
+/// commit time; the caller never does.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct RunHistoryInput {
+    pub scope: String,
+    pub actor: RedactedIdentity,
+    pub trace_node: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub tool_calls: Vec<ToolCallInput>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub steps: Vec<StepInput>,
+}
+
+/// The engine-owned facts of the commit that writes a run's history.
+#[derive(Clone, Copy, Debug)]
+pub struct HistoryCommitFacts<'a> {
+    pub tenant: &'a str,
+    pub run_id: &'a str,
+    pub outcome: &'a str,
+    pub at_ms: i64,
+}
+
+/// The audit row, tool-call rows and steps one commit writes.
+pub type HistoryRecords = (RunAuditRecord, Vec<ToolCallRecord>, Vec<StoredStep>);
+
+impl RunHistoryInput {
+    /// Lower the carried history to its stored records under the commit's facts.
+    pub fn records(&self, facts: HistoryCommitFacts<'_>) -> HistoryRecords {
+        let run = RunAuditRecord {
+            tenant: facts.tenant.to_string(),
+            scope: self.scope.clone(),
+            run_id: facts.run_id.to_string(),
+            trace_node: self.trace_node.clone(),
+            actor: self.actor.clone(),
+            outcome: facts.outcome.to_string(),
+            at_ms: facts.at_ms,
+        };
+        let calls = self
+            .tool_calls
+            .iter()
+            .map(|call| ToolCallRecord {
+                tenant: facts.tenant.to_string(),
+                run_id: facts.run_id.to_string(),
+                call_id: call.call_id.clone(),
+                tool: call.tool.clone(),
+                trace_node: call.trace_node.clone(),
+                args_digest: call.args_digest.clone(),
+                at_ms: facts.at_ms,
+            })
+            .collect();
+        let steps = self
+            .steps
+            .iter()
+            .map(|step| StoredStep {
+                tenant: facts.tenant.to_string(),
+                scope: self.scope.clone(),
+                run_id: facts.run_id.to_string(),
+                index: step.index,
+                speaker: step.speaker.clone(),
+                text: step.text.clone(),
+            })
+            .collect();
+        (run, calls, steps)
+    }
+}
+
+/// Validate one commit's history rows with the [`StepStore`] rules: every
+/// identity is redacted and keys are unique per run, call and step.
+pub fn validate_history(
+    run: &RunAuditRecord,
+    calls: &[ToolCallRecord],
+    steps: &[StoredStep],
+) -> Result<(), HistoryRefusal> {
+    let mut store = StepStore::default();
+    store.append_run(run.clone())?;
+    for call in calls {
+        store.append_call(call.clone());
+    }
+    for step in steps {
+        store.store_step(step.clone())?;
+    }
+    Ok(())
+}
+
 /// A refused history call, with its stable code.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum HistoryRefusal {
@@ -82,9 +191,25 @@ pub enum HistoryRefusal {
 
 impl HistoryRefusal {
     pub fn code(&self) -> &'static str {
+        use medulla_types::contract::ServerErrorCode;
         match self {
-            Self::IdentityNotRedacted => "IDENTITY_NOT_REDACTED",
-            Self::ScopeForbidden(_) => "HISTORY_SCOPE_FORBIDDEN",
+            Self::IdentityNotRedacted => ServerErrorCode::IdentityNotRedacted.as_str(),
+            Self::ScopeForbidden(_) => ServerErrorCode::HistoryScopeForbidden.as_str(),
+        }
+    }
+
+    /// The wire refusal text: the registered code, then the detail.
+    pub fn message(&self) -> String {
+        match self {
+            Self::IdentityNotRedacted => {
+                format!("{}: history identity is not redacted", self.code())
+            }
+            Self::ScopeForbidden(scope) => {
+                format!(
+                    "{}: scope '{scope}' is outside the caller grant",
+                    self.code()
+                )
+            }
         }
     }
 }
@@ -105,6 +230,7 @@ pub struct HistoryCaller {
 
 /// One ranked search hit.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct HistoryHit {
     pub run_id: String,
     pub index: u32,

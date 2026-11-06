@@ -18,6 +18,11 @@ $($variants)*
     /// owner. Missing and foreign rows return null; missing original admission
     /// evidence refuses explicitly. Independent of current lease or terminal state.
     GetRunWorkItem { tenant: String, run_id: String },
+    /// Search the verified tenant's stored conversation steps in `scope`
+    /// (MEDULLA-UNIFIED-DATA-PLANE-R750.753/.754): tenant and scope filter
+    /// before the lexical rank, at most `k` hits. A scope outside the caller's
+    /// grant refuses `HISTORY_SCOPE_FORBIDDEN`. Read-only; gated `history:read`.
+    HistorySearch { scope: String, query: String, k: u32 },
 
     // ── Typed WorkItem reads (EH-219) ──────────────────────────────────────
     /// The caller's view of one native WorkItem row, or `null` when no row with

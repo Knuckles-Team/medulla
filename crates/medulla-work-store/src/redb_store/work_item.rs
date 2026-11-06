@@ -73,6 +73,7 @@ mod conversation;
 pub mod current_plan;
 mod dispatch;
 pub mod effect;
+pub mod history;
 mod lease;
 mod market;
 mod policy_record;

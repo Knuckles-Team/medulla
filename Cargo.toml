@@ -2072,6 +2072,14 @@ name = "lineage_drain"
 path = "benches/lineage_drain.rs"
 harness = false
 
+# Scoped history search hot path (MEDULLA-UNIFIED-DATA-PLANE-R750.753): p50 12 ms,
+# p99 35 ms, peak memory 128 MiB over one million Step nodes. Nightly only.
+[[bench]]
+name = "history_search"
+path = "benches/history_search.rs"
+harness = false
+required-features = ["text", "obs"]
+
 # Replayable stream log budget (MEDULLA-DURABLE-KERNEL-R869): append p50 < 1 ms,
 # append p99 < 5 ms, read of 100 messages p99 < 3 ms over the in-process log.
 # Nightly suite. DEV-only; never linked into the engine binary.
