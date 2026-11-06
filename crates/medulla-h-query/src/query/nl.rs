@@ -344,7 +344,8 @@ async fn run_nl_query(
         .map_err(|denied| Response::err(req_id, denied))?;
     // The same off-lock run as `Uql`: persistent vector/lexical/spatial/
     // shape indexes and the caller's owner-scoped foreign registry are bound inside it.
-    match run_unified_off_lock(state, req_id, &core, Arc::new(snap), plan, legs).await? {
+    let scope = ReadScope::resolve(state, ctx.read_authority, ctx.graph_name).await;
+    match run_unified_off_lock(state, req_id, &core, Arc::new(snap), plan, legs, &scope).await? {
         Ok(rows) => Ok((uql, rows, rewritten)),
         Err(msg) => Err(Response::err(
             req_id,

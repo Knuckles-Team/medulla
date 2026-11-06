@@ -167,6 +167,10 @@ mod cypher;
 pub(crate) use cypher::*;
 mod planning;
 pub use planning::*;
+#[cfg(feature = "query")]
+mod segment_filter;
+#[cfg(feature = "query")]
+pub(crate) use segment_filter::*;
 #[cfg(all(feature = "query", feature = "result-cache"))]
 mod foreign_watermarks;
 #[cfg(all(feature = "query", feature = "result-cache"))]

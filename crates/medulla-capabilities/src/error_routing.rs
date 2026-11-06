@@ -472,6 +472,18 @@ fn add_owner_errors(d: &MethodDescriptor, codes: &mut BTreeSet<&'static str>) {
         // These two codes already belong to the connector-pack typed catalog.
         codes.extend(["SOURCE_CONTRACT_MISMATCH", "SOURCE_REGISTRATION_NOT_FOUND"]);
     }
+    // MEDULLA-IDENTITY-R610.4 / R610.5: every served graph read is scoped to the
+    // verified tenant and audited.
+    if matches!(
+        id,
+        "Uql" | "UnifiedQuery" | "Sql" | "NlQuery" | "NlQueryExplain"
+    ) {
+        codes.extend(["AUDIT_UNAVAILABLE", "QUERY_UNSCOPABLE"]);
+    }
+    // MEDULLA-IDENTITY-R023.4: a point read of a unit outside the caller's scope.
+    if id == "GetNodeProperties" {
+        codes.insert("UNIT_OUT_OF_SCOPE");
+    }
     if d.policy.is_durable() {
         codes.insert("CORRUPT_MUTATION_LEDGER");
     }

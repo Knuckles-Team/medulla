@@ -97,7 +97,8 @@ pub use requests_provision::{
 pub use scope::{ScopeClass, ScopeClassifier};
 pub use segment::{
     highest_version, owner_or_matching_scope, visible_units, visible_units_with, KnowledgeUnit,
-    ShareScope, UnitPrincipal, VisibilityRules, DEFAULT_VISIBILITY_RULES,
+    SegmentReadAudit, ShareScope, UnitOutOfScope, UnitPrincipal, VisibilityRules,
+    DEFAULT_VISIBILITY_RULES, MAX_AUDITED_UNIT_IDS, READ_SCOPE_REFUSALS,
 };
 pub use sql_dump::{parse_dump, render_dump, DumpRow, MAX_DUMP_BYTES};
 pub use stamp::{IdentityActor, IdentityStamp, PasswordCheck, Secret};
