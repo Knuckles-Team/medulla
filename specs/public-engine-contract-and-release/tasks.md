@@ -73,6 +73,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T067 [US3] MEDULLA-CONTRACT-R053.5 The `release-server` profile sizes the standalone server
 - [ ] T068 [US3] MEDULLA-CONTRACT-R053.6 Callers of the old binary names use the subcommands
 - [ ] T069 [US3] MEDULLA-CONTRACT-R053.7 A tag publishes only a commit main CI already passed
+- [ ] T109 [US3] MEDULLA-CONTRACT-R053.7.1 Whole-repo hooks run at pre-push or in CI, never at commit
 - [ ] T070 [US3] MEDULLA-CONTRACT-R053.8 The wheel base is the extension crate; each platform publishes independently
 - [ ] T071 [US3] MEDULLA-CONTRACT-R053.9 Every release wheel folds in the server built for its own platform
 - [ ] T072 [US3] MEDULLA-CONTRACT-R053.10 The packaged server reports the release version
@@ -100,3 +101,15 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T094 [US5] MEDULLA-CONTRACT-R056.17 The split leaves no crate-level lint allows
 - [ ] T095 [US5] MEDULLA-CONTRACT-R056.18 The ambient test auth posture does not change behaviour under workspace feature unification
 - [ ] T096 [US1] MEDULLA-CONTRACT-R057 The engine serves its method catalog at run time
+- [ ] T097 [US1] MEDULLA-CONTRACT-R058 A typed server-config knob loader
+- [ ] T098 [US1] MEDULLA-CONTRACT-R001.3.1 Wire vectors for the cluster method domain
+- [ ] T099 [US1] MEDULLA-CONTRACT-R001.3.2 Wire vectors for the compute method domain
+- [ ] T100 [US1] MEDULLA-CONTRACT-R001.3.3 Wire vectors for the coordination method domain
+- [ ] T101 [US1] MEDULLA-CONTRACT-R001.3.4 Wire vectors for the graph method domain
+- [ ] T102 [US1] MEDULLA-CONTRACT-R001.3.5 Wire vectors for the ingestion method domain
+- [ ] T103 [US1] MEDULLA-CONTRACT-R001.3.6 Wire vectors for the messaging method domain
+- [ ] T104 [US1] MEDULLA-CONTRACT-R001.3.7 Wire vectors for the query method domain
+- [ ] T105 [US1] MEDULLA-CONTRACT-R001.3.8 Wire vectors for the reasoning method domain
+- [ ] T106 [US1] MEDULLA-CONTRACT-R001.3.9 Wire vectors for the security method domain
+- [ ] T107 [US1] MEDULLA-CONTRACT-R001.3.10 Wire vectors for the storage method domain
+- [ ] T108 [US1] MEDULLA-CONTRACT-R001.3.11 Wire vectors for the transactions method domain

@@ -41,7 +41,7 @@ request -> admission (crates/medulla-server-api/src/oidc.rs, crates/medulla-serv
 crates/medulla-server-api/src/oidc.rs, anonymous.rs         existing: verifier and anonymous authority
 crates/medulla-server-api/src/read_audit.rs                  new: read and claim audit sink
 crates/medulla-server-auth/src/auth.rs                       existing: admission, mode epoch, issuer material
-crates/medulla-isolation/src/isolation/                      existing: identity admin, scope_bound.rs; new: ownership.rs, share.rs, identity_store_admin/mode_authority.rs
+crates/medulla-isolation/src/isolation/                      existing: identity admin, scope_bound.rs; new: ownership.rs, share.rs
 crates/medulla-identity-types/src/identity/                  existing: ops, store, segment; new: mode.rs, ownership.rs, metadata.rs, delegation.rs
 crates/medulla-identity-types/src/tenancy.rs                 existing: tenant tree, secured read, scope predicate
 crates/medulla-h-query/src/query/segment_filter.rs           new: visible-unit filter and point-read check

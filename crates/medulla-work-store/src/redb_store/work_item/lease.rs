@@ -89,6 +89,7 @@ pub fn apply_renew_work_item_lease_row(
         lease_epoch,
         fencing_token,
         now_ms.saturating_add(lease_ms),
+        super::cancel::cancel_requested(&props),
     )
     .map(Some)
 }
@@ -99,6 +100,7 @@ fn lease_renewed(
     lease_epoch: u64,
     fencing_token: u64,
     lease_expires_at_ms: u64,
+    cancel_requested: bool,
 ) -> Result<medulla_protocol_types::protocol::ResultPayload, String> {
     medulla_protocol_types::protocol::ResultPayload::of::<
         medulla_protocol_types::result_contract::coordination::RenewWorkItemLease,
@@ -110,6 +112,7 @@ fn lease_renewed(
             lease_epoch: Some(lease_epoch),
             fencing_token: Some(fencing_token),
             lease_expires_at_ms: Some(lease_expires_at_ms),
+            cancel_requested,
             changed_work_item_ids: vec![work_item_id.to_string()],
         },
     )
@@ -129,6 +132,7 @@ fn lease_renewal_refused(
             lease_epoch: None,
             fencing_token: None,
             lease_expires_at_ms: None,
+            cancel_requested: false,
             changed_work_item_ids: Vec::new(),
         },
     )

@@ -102,6 +102,7 @@ repos:
     pass_filenames: false
     args: [".", "--min-confidence", "95", "--exclude", "vendor,node_modules,dotnet,.venv,venv,node_modules,.git,build,dist,target"]
     require_serial: true
+    stages: [pre-push, manual]  # whole-repo scan (MEDULLA-CONTRACT-R053.7.1)
 - repo: https://github.com/codespell-project/codespell
   rev: 57b21406f092110c18776e39b0bda50d37c945c8 # v2.4.3
   hooks:
@@ -158,6 +159,7 @@ repos:
     language: system
     pass_filenames: false
     always_run: true
+    stages: [pre-push, manual]  # whole-repo scan (MEDULLA-CONTRACT-R053.7.1)
   - id: complexity-staged
     name: Complexity (cccc) - no NEW function over cyclomatic 10 / cognitive 15, none regressed
     entry: python3 scripts/check_complexity_staged.py
@@ -300,12 +302,14 @@ repos:
     language: system
     pass_filenames: false
     always_run: true
+    stages: [pre-push, manual]  # whole-repo scan (MEDULLA-CONTRACT-R053.7.1)
   - id: epistemic-operations-protocol
     name: Epistemic Operations manifest ⇄ Rust DTO parity
     entry: python3 scripts/check_epistemic_operations_protocol.py
     language: system
     pass_filenames: false
     always_run: true
+    stages: [pre-push, manual]  # whole-repo scan (MEDULLA-CONTRACT-R053.7.1)
   # RF-ADR-006: component, crate, type, trait, function, module and table names
   # carry no V<n>/_v<n> suffix. Pure stdlib, no cargo, no wheel; always_run so a
   # `--files`-scoped commit cannot skip it (the whole point is a tree-wide sweep).
@@ -316,6 +320,7 @@ repos:
     additional_dependencies: [pytest]
     pass_filenames: false
     always_run: true
+    stages: [pre-push, manual]  # whole-repo scan (MEDULLA-CONTRACT-R053.7.1)
   # w5-ci-gates-local (D-W5CG-1): rust-ci.yml `lint-and-test`'s first four
   # architecture-gate steps ran ONLY in CI before this — pure-stdlib, no cargo,
   # no wheel build, each <0.3s measured cold on this worktree. Same shape as
@@ -327,12 +332,14 @@ repos:
     language: system
     pass_filenames: false
     always_run: true
+    stages: [pre-push, manual]  # whole-repo scan (MEDULLA-CONTRACT-R053.7.1)
   - id: p2-analytics-reasoning-architecture
     name: P2 analytics and reasoning architecture gate
     entry: python3 scripts/check_p2_analytics_reasoning_architecture.py
     language: system
     pass_filenames: false
     always_run: true
+    stages: [pre-push, manual]  # whole-repo scan (MEDULLA-CONTRACT-R053.7.1)
   # Currently RED on main pending w3-medulla-ci-green landing (D-EGCG-1: ROS2 CDC does
   # not fail closed under active row ownership, fix built+verified in that lane's
   # worktree, not yet merged). Wiring it here is deliberate, not a mistake: this
@@ -347,12 +354,14 @@ repos:
     language: system
     pass_filenames: false
     always_run: true
+    stages: [pre-push, manual]  # whole-repo scan (MEDULLA-CONTRACT-R053.7.1)
   - id: exact-release-campaigns-architecture
     name: Exact protocol/multimodal/KnowledgeBatch/reasoning campaign architecture gate
     entry: python3 scripts/check_exact_release_campaigns.py
     language: system
     pass_filenames: false
     always_run: true
+    stages: [pre-push, manual]  # whole-repo scan (MEDULLA-CONTRACT-R053.7.1)
   # CX wD10 WD10-R-EGGATES (BUG-CX-112): these four were wired to neither
   # pre-commit nor CI. Two (persisted-mutation-contract, current-only-
   # architecture) had also gone stale following the 2026-08-25 durable_apply
@@ -379,24 +388,28 @@ repos:
     language: system
     pass_filenames: false
     always_run: true
+    stages: [pre-push, manual]  # whole-repo scan (MEDULLA-CONTRACT-R053.7.1)
   - id: sole-write-envelope
     name: Sole write envelope gate (no direct redb table write outside the transaction crates)
     entry: python3 scripts/check_sole_write_envelope.py
     language: system
     pass_filenames: false
     always_run: true
+    stages: [pre-push, manual]  # whole-repo scan
   - id: current-only-architecture
     name: Current-only mutation/projection persistence architecture gate
     entry: python3 scripts/check_current_only_architecture.py
     language: system
     pass_filenames: false
     always_run: true
+    stages: [pre-push, manual]  # whole-repo scan (MEDULLA-CONTRACT-R053.7.1)
   - id: exact-fault-restart-harness-architecture
     name: Exact-binary fault/restart certification harness architecture gate
     entry: python3 scripts/check_exact_fault_restart_harness.py
     language: system
     pass_filenames: false
     always_run: true
+    stages: [pre-push, manual]  # whole-repo scan (MEDULLA-CONTRACT-R053.7.1)
   # GRAPH-POLICY-LEASE-CONTRACT.md §3 hardening (`MintAuthorization`,
   # crates/medulla-isolation/src/isolation.rs): keeps `mint_policy_decision_lease` to its one
   # traced production call site (crates/medulla-server-router/src/dispatch.rs) so a second caller can
@@ -409,6 +422,7 @@ repos:
     language: system
     pass_filenames: false
     always_run: true
+    stages: [pre-push, manual]  # whole-repo scan (MEDULLA-CONTRACT-R053.7.1)
   # ── WIRING gates ──────────────────────────────────────────────────────────
   # Every gate above this block measures code SHAPE: complexity, size,
   # duplication, layering, lint. Each of the four below measures whether a
@@ -430,7 +444,7 @@ repos:
     language: system
     pass_filenames: false
     always_run: true
-    stages: [pre-commit, manual]
+    stages: [pre-push, manual]  # whole-repo scan (MEDULLA-CONTRACT-R053.7.1)
   - id: registry-test-ownership
     name: Every tracked tests/ file is owned in the component registry
     entry: python3 scripts/check_registry_test_ownership.py
@@ -442,14 +456,6 @@ repos:
     files: ^(tests/|architecture/component-registry\.yml$|scripts/check_registry_test_ownership\.py$|\.config/pre-commit\.yaml$|pyproject\.toml$|uv\.lock$|\.python-version$)
     pass_filenames: false
     stages: [pre-commit, pre-push, manual]
-  - id: durable-table-registration
-    name: Every durable table is in the owner registry, manifest and census
-    entry: python3 -m scripts.source_gate_scope --scope staged --scanner durable-table-registration
-    language: system
-    pass_filenames: true
-    always_run: true
-    require_serial: true
-    stages: [pre-commit]
   - id: durable-table-registration-push
     name: Every durable table is in the owner registry, manifest and census
     entry: python3 -m scripts.source_gate_scope --scope push --scanner durable-table-registration
@@ -779,6 +785,7 @@ repos:
     language: python
     pass_filenames: false
     always_run: true
+    stages: [pre-push, manual]  # whole-repo scan (MEDULLA-CONTRACT-R053.7.1)
 - repo: local
   hooks:
   - id: guardrail-tracked-privacy
@@ -796,6 +803,7 @@ repos:
     # org, same as agent-utilities.
     pass_filenames: false
     always_run: true
+    stages: [pre-push, manual]  # whole-repo scan (MEDULLA-CONTRACT-R053.7.1)
 
   - id: check-root-hygiene
     name: Repository root hygiene (manifest-declared entries only)
@@ -803,12 +811,14 @@ repos:
     language: system
     pass_filenames: false
     always_run: true
+    stages: [pre-push, manual]  # whole-repo scan (MEDULLA-CONTRACT-R053.7.1)
   - id: check-gitignore-convergence
     name: .gitignore carries the fleet-shared REQUIRED set
     entry: python3 scripts/check_gitignore_convergence.py
     language: system
     pass_filenames: false
     always_run: true
+    stages: [pre-push, manual]  # whole-repo scan (MEDULLA-CONTRACT-R053.7.1)
 - repo: local
   hooks:
   - id: check-public-specs

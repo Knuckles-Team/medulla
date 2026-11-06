@@ -18,6 +18,7 @@ pub(super) async fn try_handle_graph_domains(
     let mut method = method;
     method = super::nodes::try_handle_node_gateway_writes(ctx, method).await?;
     method = super::nodes::try_handle_node_reads(ctx, method).await?;
+    method = super::wallet_trust::try_handle_finance(ctx, method).await?;
     method = super::nodes::try_handle_node_gateway_claims(ctx, method).await?;
     method = super::broker::try_handle_broker_exchange(ctx, method).await?;
     method = super::broker::try_handle_broker_consumption(ctx, method).await?;
@@ -41,6 +42,7 @@ pub(super) async fn try_handle_graph_domains(
     method = super::memory::try_handle_lifecycle_context(ctx, method).await?;
     method = super::memory::try_handle_ledger(ctx, method).await?;
     method = super::subgraph::try_handle_subgraph_reads(ctx, method).await?;
+    method = super::finance_records::handle_record_get(ctx, method).await?;
     method = super::union::try_handle_cross_graph_union(ctx, method).await?;
     let _ = super::union::try_handle_subgraph_comparison(ctx, method).await?;
     ControlFlow::Break(Response::err(
