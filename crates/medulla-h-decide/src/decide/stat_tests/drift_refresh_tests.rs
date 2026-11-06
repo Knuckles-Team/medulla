@@ -44,8 +44,7 @@ fn vocabulary_drift_refreshes_changed_shards() {
         changed = shards
             .iter_mut()
             .enumerate()
-            .filter(|(_, m)| !m.evaluate(&thresholds).is_empty())
-            .map(|(id, _)| id as u32)
+            .filter_map(|(id, m)| (!m.evaluate(&thresholds).is_empty()).then_some(id as u32))
             .collect();
     }
     assert_eq!(changed, vec![1]);
