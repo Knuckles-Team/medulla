@@ -438,7 +438,10 @@ macro_rules! visit_owner_tables {
                 $visit!(WRITE_BACK_RECEIPTS);
                 $visit!(WRITE_BACK_RECEIPT_HEADS);
             }
-            OwnerLayout::BranchRegistry => $visit!(crate::owner::branch_registry::BRANCH_REGISTRY),
+            OwnerLayout::BranchRegistry => {
+                $visit!(crate::owner::branch_registry::BRANCH_REGISTRY);
+                $visit!(crate::owner::branch_registry::BRANCH_COMMITS);
+            }
         }
     }};
 }
@@ -784,7 +787,7 @@ pub fn owner_table_names(layout: OwnerLayout) -> &'static [&'static str] {
             "write_back_receipts",
             "write_back_receipt_heads",
         ],
-        OwnerLayout::BranchRegistry => &["branch_registry"],
+        OwnerLayout::BranchRegistry => &["branch_registry", "branch_commits"],
     }
 }
 

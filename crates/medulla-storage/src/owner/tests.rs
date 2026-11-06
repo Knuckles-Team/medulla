@@ -57,8 +57,9 @@ fn owner_layout_registry_has_frozen_cardinality() {
     assert_eq!(owner_table_names(OwnerLayout::TenantCatalog).len(), 1);
     assert_eq!(owner_table_names(OwnerLayout::NodeInfo).len(), 2);
     assert_eq!(owner_table_names(OwnerLayout::ClusterHierarchy).len(), 1);
-    // MEDULLA-BRANCH-MERGE-R001: `branch_registry.redb` holds one row table.
-    assert_eq!(owner_table_names(OwnerLayout::BranchRegistry).len(), 1);
+    // MEDULLA-BRANCH-MERGE-R001/R002: `branch_registry.redb` holds the row
+    // table and the append-only branch commit log.
+    assert_eq!(owner_table_names(OwnerLayout::BranchRegistry).len(), 2);
     // Eight, not two: `agent_library.redb` is ONE physical authority carrying
     // all four RF-ADR-008 layers, each as a revisions+heads pair, plus the
     // ConnectorPack catalog's five tables and governed write-back's four --

@@ -250,6 +250,11 @@ async fn dispatch_request_method_inner(
     authority: DispatchAuthority,
 ) -> Response {
     let method = req.method;
+    let method =
+        match route_branch_reference(state, &req.graph, req.id, verified_context, method).await {
+            ControlFlow::Break(response) => return response,
+            ControlFlow::Continue(method) => method,
+        };
     let req = DispatchHeader {
         id: req.id,
         graph: req.graph,
@@ -275,4 +280,56 @@ async fn dispatch_request_method_inner(
         method,
     ))
     .await
+}
+
+/// MEDULLA-BRANCH-MERGE-R002 (D111 v2): the signed graph reference is parsed
+/// once, here, at admission. A bare graph names `main` and continues on the
+/// ordinary chain unchanged; `<graph>@branch/<name>` runs on that branch's
+/// copy-on-write view and never reaches the main graph.
+async fn route_branch_reference(
+    state: &Arc<RwLock<ServerState>>,
+    reference: &str,
+    req_id: u64,
+    verified_context: &VerifiedRequestContext,
+    method: Method,
+) -> ControlFlow<Response, Method> {
+    let target = match medulla_types::branch::parse_graph_reference(reference) {
+        Ok(target) => target,
+        Err(code) => {
+            return ControlFlow::Break(Response::err(
+                req_id,
+                format!("{}: graph reference refused", code.as_str()),
+            ))
+        }
+    };
+    let Some(branch) = target.branch else {
+        return ControlFlow::Continue(method);
+    };
+    #[cfg(feature = "redb")]
+    {
+        let write = medulla_h_graph::graph_ops::branch_write::BranchWrite {
+            req_id,
+            graph: &target.graph,
+            branch: &branch,
+            verified: verified_context,
+            method,
+        };
+        ControlFlow::Break(
+            dispatch_boxed(
+                medulla_h_graph::graph_ops::branch_write::handle_branch_write(state, write),
+            )
+            .await,
+        )
+    }
+    #[cfg(not(feature = "redb"))]
+    {
+        let _ = (state, verified_context, method, branch);
+        ControlFlow::Break(Response::err(
+            req_id,
+            format!(
+                "{}: branch writes require the `redb` feature",
+                medulla_types::contract::ServerErrorCode::BranchMethodUnsupported.as_str()
+            ),
+        ))
+    }
 }

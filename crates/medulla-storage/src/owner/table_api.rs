@@ -179,6 +179,7 @@ pub(crate) fn owner_table_access(table: &str) -> OwnerTableAccess {
         | "node_info_meta"
         | "cluster_hierarchy"
         | "branch_registry"
+        | "branch_commits"
         | "agent_library"
         | "agent_library_heads"
         | "agent_graph"

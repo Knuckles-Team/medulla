@@ -39,6 +39,13 @@ const SHARED_ENGINE_ERRORS: &[&str] = &[
     "ENGINE_RESOURCE_EXHAUSTED",
     "ENGINE_DEADLINE_EXCEEDED",
     "OPERATION_REDIRECTED",
+    // MEDULLA-BRANCH-MERGE-R002: a `<graph>@branch/<name>` reference is parsed
+    // once at admission, before any method handler.
+    "BRANCH_DELETED",
+    "BRANCH_METHOD_UNSUPPORTED",
+    "BRANCH_NAME_INVALID",
+    "BRANCH_TENANT_DENIED",
+    "BRANCH_UNKNOWN",
 ];
 const SHARED_SERVER_ERRORS: &[&str] = &[
     "AUTHENTICATION_REQUIRED",

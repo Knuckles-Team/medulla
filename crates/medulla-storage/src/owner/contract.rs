@@ -207,7 +207,8 @@ fn domain_owner_key_type(name: &str) -> Option<&'static str> {
         | "tenant_catalog"
         | "node_info_meta"
         | "cluster_hierarchy"
-        | "branch_registry" => Some("&str"),
+        | "branch_registry"
+        | "branch_commits" => Some("&str"),
         // Likewise: every layer's revision table is keyed `(tenant, id,
         // revision)`, which is what makes a retained revision addressable
         // after the head moves past it.
@@ -359,6 +360,7 @@ fn value_type_id(name: &str) -> &'static str {
         | "node_info_meta"
         | "cluster_hierarchy"
         | "branch_registry"
+        | "branch_commits"
         | "agent_library"
         | "agent_graph"
         | "agent_component"
@@ -432,6 +434,7 @@ fn ledger_and_job_codec(name: &str) -> Option<&'static str> {
         | "node_info_meta"
         | "cluster_hierarchy"
         | "branch_registry"
+        | "branch_commits"
         | "agent_library"
         | "agent_graph"
         | "agent_component"
@@ -573,6 +576,7 @@ fn ledger_and_job_capabilities(name: &str) -> Option<u16> {
         | "job_idempotency_ledger"
         | "analytics_job_knowledge_batches"
         | "statechart_defs"
+        | "branch_commits"
         | "viz_provenance" => CAP_READ | CAP_INSERT,
         "cas_chunks" | "cas_blobs" => CAP_READ | CAP_INSERT | CAP_DELETE,
         "rbac"

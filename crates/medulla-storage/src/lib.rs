@@ -40,7 +40,7 @@ pub use owner::blob_shared::{
     BlobSharedRead, BlobSharedServiceHandle, BlobSharedServiceVerifier, BlobSharedTable,
     BlobSharedWrite, CasChunkRows, CasRefcountRows,
 };
-pub use owner::branch_registry::BRANCH_REGISTRY;
+pub use owner::branch_registry::{BRANCH_COMMITS, BRANCH_REGISTRY};
 pub use owner::domain::{
     AgentLibraryOwner, BlobOwner, BranchRegistryOwner, ClusterHierarchyOwner, ColdTierOwner,
     GraphShardOwner, JobsOwner, KvOwner, LedgerOnlyOwner, NodeInfoOwner, OwnerDomain,

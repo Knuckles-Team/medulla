@@ -10,7 +10,7 @@
 use std::path::Path;
 use std::sync::Arc;
 
-use medulla_types::branch::{Branch, BranchRef};
+use medulla_types::branch::{Branch, BranchRef, StoredBranchCommit};
 use medulla_types::contract::ServerErrorCode;
 use redb::{ReadableTable, ReadableTableMetadata};
 
@@ -115,6 +115,70 @@ impl BranchRegistry {
     }
 }
 
+fn commit_key(branch: &BranchRef, sequence: u64) -> String {
+    format!("{}#{sequence:020}", branch.registry_key())
+}
+
+fn encode_commit(stored: &StoredBranchCommit) -> Result<Vec<u8>, String> {
+    rmp_serde::to_vec_named(stored).map_err(|error| error.to_string())
+}
+
+fn decode_commit(bytes: &[u8]) -> Result<StoredBranchCommit, String> {
+    rmp_serde::from_slice(bytes).map_err(|error| error.to_string())
+}
+
+/// MEDULLA-BRANCH-MERGE-R002: the branch's single, append-only commit chain.
+impl BranchRegistry {
+    /// Every commit of `branch`, in commit order.
+    pub fn commits(&self, branch: &BranchRef) -> Result<Vec<StoredBranchCommit>, String> {
+        let read = self.durable.read()?;
+        let table = read.open_owner_table(medulla_storage::BRANCH_COMMITS)?;
+        let (start, end) = (
+            format!("{}#", branch.registry_key()),
+            format!("{}$", branch.registry_key()),
+        );
+        let rows = table
+            .range(start.as_str()..end.as_str())
+            .map_err(|error| error.to_string())?;
+        rows.map(|row| {
+            let (_, value) = row.map_err(|error| error.to_string())?;
+            decode_commit(value.value())
+        })
+        .collect()
+    }
+
+    /// Append `stored` as commit number `sequence` and move the registry row's
+    /// head to it, in one admitted write. The caller holds the branch lane, so
+    /// `sequence` is the chain length it read.
+    pub fn append_commit(
+        &self,
+        branch: &BranchRef,
+        sequence: u64,
+        stored: &StoredBranchCommit,
+    ) -> Result<(), String> {
+        let (row_key, log_key) = (branch.registry_key(), commit_key(branch, sequence));
+        let bytes = encode_commit(stored)?;
+        let head = stored.commit.id.clone();
+        self.durable.maintain("branch_commit", |owner| {
+            let mut rows = owner.open_table(medulla_storage::BRANCH_REGISTRY)?;
+            let mut row = rows
+                .get(row_key.as_str())
+                .map_err(|error| error.to_string())?
+                .map(|value| decode(value.value()))
+                .transpose()?
+                .ok_or_else(|| ServerErrorCode::BranchUnknown.as_str().to_string())?;
+            row.head_commit = head;
+            let row = encode(&row)?;
+            rows.insert(row_key.as_str(), row.as_slice())
+                .map_err(|error| error.to_string())?;
+            let mut log = owner.open_table(medulla_storage::BRANCH_COMMITS)?;
+            log.insert(log_key.as_str(), bytes.as_slice())
+                .map(|_| ())
+                .map_err(|error| error.to_string())
+        })
+    }
+}
+
 /// The registry is a bundled durable store: a backup copies the owner file
 /// through its recovery seam, so a restore comes up with every branch, the
 /// way the Agent Library owner file is carried.
@@ -202,5 +266,69 @@ mod tests {
             Err(BranchCreateError::Refused(ServerErrorCode::BranchExists))
         );
         assert_eq!(registry.get(&reference).unwrap(), Some(branch("f1")));
+    }
+
+    fn stored(id: &str, key: &str) -> StoredBranchCommit {
+        StoredBranchCommit {
+            commit: medulla_types::branch::BranchCommit {
+                id: id.into(),
+                branch: "f1".into(),
+                parents: vec!["v3".into()],
+                engine_version: 4,
+                manifest_digest: "d".into(),
+                actor: "agent".into(),
+                created_at: 2,
+            },
+            idempotency_key: key.into(),
+            write_set: vec![1],
+            result: vec![2],
+        }
+    }
+
+    // spec: MEDULLA-BRANCH-MERGE-R002
+    #[test]
+    fn commits_append_in_order_move_the_head_and_survive_reopen() {
+        let dir = tempfile::tempdir().unwrap();
+        let persist = dir.path().to_str().unwrap();
+        let reference = BranchRef {
+            tenant: "t".into(),
+            graph: "g".into(),
+            name: "f1".into(),
+        };
+        let sibling = BranchRef {
+            name: "f10".into(),
+            ..reference.clone()
+        };
+        {
+            let registry = BranchRegistry::open(persist).unwrap();
+            registry.create(&branch("f1")).unwrap();
+            registry.create(&branch("f10")).unwrap();
+            registry
+                .append_commit(&reference, 0, &stored("c0", "k0"))
+                .unwrap();
+            registry
+                .append_commit(&reference, 1, &stored("c1", "k1"))
+                .unwrap();
+            assert!(registry
+                .append_commit(
+                    &BranchRef {
+                        name: "nope".into(),
+                        ..reference.clone()
+                    },
+                    0,
+                    &stored("x", "k")
+                )
+                .is_err());
+        }
+        let registry = BranchRegistry::open(persist).unwrap();
+        let ids: Vec<String> = registry
+            .commits(&reference)
+            .unwrap()
+            .into_iter()
+            .map(|stored| stored.commit.id)
+            .collect();
+        assert_eq!(ids, vec!["c0".to_string(), "c1".to_string()]);
+        assert!(registry.commits(&sibling).unwrap().is_empty());
+        assert_eq!(registry.get(&reference).unwrap().unwrap().head_commit, "c1");
     }
 }
