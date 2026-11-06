@@ -176,4 +176,9 @@ method_results! {
     DecisionLogVerify(DecisionLog / "verify") => Raw<DecisionLogVerification>;
     DecisionLogResolve(DecisionLog / "resolve") => Raw<StoredResolution>;
     DecisionLogLearn(DecisionLog / "learn") => Raw<LearningRecorded>;
+    ClaimsPropose(Claims / "propose") => Raw<medulla_types::claims::ClaimRecord>;
+    ClaimsAdvance(Claims / "advance") => Raw<medulla_types::claims::ClaimRecord>;
+    ClaimsRecordEvidence(Claims / "record_evidence") => Raw<medulla_types::claims::ClaimRecord>;
+    ClaimsCompileArtifact(Claims / "compile_artifact") => Raw<medulla_types::claims::ResearchArtifact>;
+    ClaimsGet(Claims / "get") => Raw<medulla_types::claims::ClaimGetResult>;
 }

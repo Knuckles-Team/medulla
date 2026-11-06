@@ -380,6 +380,10 @@ pub struct ServerState {
     pub lake: Option<ErasedHandle>,
     /// Installed crate-split seam implementations (MEDULLA-CONTRACT-R056.8).
     pub seams: crate::api::registry::SeamRegistry,
+    /// Policy applied to a stale `ApplyChangeEnvelope` version expectation
+    /// (MEDULLA-DURABLE-KERNEL-R084.3). Startup sets it from `ServerArgs`;
+    /// the default `Refuse` returns a typed `WRITE_CONFLICT`.
+    pub write_conflict_strategy: medulla_types::write_conflict::MergeStrategy,
 }
 
 #[cfg(feature = "raft")]
@@ -469,6 +473,7 @@ impl ServerState {
             channels: ChannelManager::default(),
             auth_secret: auth_secret.into(),
             local_anonymous: false,
+            write_conflict_strategy: Default::default(),
             persist_dir: None,
             persistence: None,
             #[cfg(feature = "redb")]

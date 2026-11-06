@@ -34,6 +34,22 @@ pub enum HeadKindRefusal {
     NotAStatisticalHead { name: String },
 }
 
+impl crate::decision::record::outcome::DecisionRefusal for HeadKindRefusal {
+    fn code(&self) -> crate::decision::record::outcome::RefusalCode {
+        match self {
+            Self::NotAStatisticalHead { .. } => crate::decision::codes::HEAD_KIND_NOT_STATISTICAL,
+        }
+    }
+
+    fn detail(&self) -> String {
+        match self {
+            Self::NotAStatisticalHead { name } => {
+                format!("{name:?} is not a fitted statistical head")
+            }
+        }
+    }
+}
+
 impl fmt::Display for HeadKindRefusal {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {

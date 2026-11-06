@@ -8,6 +8,7 @@ enum Route {
     Coalescable,
     NodeState,
     Memory,
+    Bus,
     Scene,
     Trajectory,
     Edges,
@@ -52,6 +53,14 @@ fn is_memory(method: &Method) -> bool {
             | Method::DecayMemories { .. }
             | Method::EvictBelow { .. }
             | Method::Maintain { .. }
+    )
+}
+
+/// The served agent bus writes (MEDULLA-DURABLE-KERNEL-R095.1001).
+fn is_bus(method: &Method) -> bool {
+    matches!(
+        method,
+        Method::BusRegister { .. } | Method::BusHeartbeat { .. }
     )
 }
 
@@ -140,6 +149,7 @@ const ROUTE_MATCHERS: &[(RouteMatcher, Route)] = &[
     ),
     (is_node_state, Route::NodeState),
     (is_memory, Route::Memory),
+    (is_bus, Route::Bus),
     (is_scene, Route::Scene),
     (is_trajectory, Route::Trajectory),
     (is_edges, Route::Edges),
@@ -163,6 +173,7 @@ fn route_handler(route: Route) -> RouteHandler {
         Route::Coalescable
         | Route::NodeState
         | Route::Memory
+        | Route::Bus
         | Route::Scene
         | Route::Trajectory => RouteHandler::Core,
         Route::Edges
@@ -201,6 +212,7 @@ async fn try_handle_core(
         Route::Coalescable => try_handle_coalescable(ctx, plan, method).await,
         Route::NodeState => try_handle_node_state(ctx, plan, method).await,
         Route::Memory => try_handle_memory(ctx, plan, method).await,
+        Route::Bus => try_handle_bus(ctx, plan, method).await,
         Route::Scene => try_handle_scene(ctx, plan, method).await,
         Route::Trajectory => try_handle_trajectory(ctx, plan, method).await,
         _ => None,
@@ -329,6 +341,24 @@ async fn try_handle_node_state(
             })
             .await
         }
+        _ => return None,
+    };
+    Some(response)
+}
+
+async fn try_handle_bus(
+    ctx: &MutationCtx<'_>,
+    plan: &MutationPlan,
+    method: &Method,
+) -> Option<Response> {
+    use crate::graph_ops::bus;
+    let response = match method {
+        Method::BusRegister { participant, .. } => bus::register(ctx, plan, participant).await,
+        Method::BusHeartbeat {
+            session_ref,
+            now_ms,
+            ..
+        } => bus::heartbeat(ctx, plan, session_ref, *now_ms).await,
         _ => return None,
     };
     Some(response)

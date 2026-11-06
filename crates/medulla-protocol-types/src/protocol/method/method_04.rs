@@ -217,6 +217,23 @@ $($variants)*
         threshold: f64,
     },
 
+    /// Classify price-action patterns over parallel `open`, `high`, `low`, `close` bars
+    /// (MEDULLA-FINANCE-PRIMITIVES-R750.754); the thresholds are the `pattern.*` server knobs.
+    FinancePatternClassify {
+        open: Vec<f64>,
+        high: Vec<f64>,
+        low: Vec<f64>,
+        close: Vec<f64>,
+    },
+
+    /// Brinson-Fachler profit attribution over per-group weights and returns
+    /// (MEDULLA-FINANCE-PRIMITIVES-R750.754).
+    // Embeds a `finance` result type → gated with the feature.
+    #[cfg(feature = "finance")]
+    FinanceProfitAttribution {
+        groups: Vec<medulla_result_types::compute_result::finance::GroupInput>,
+    },
+
     // ── Banking risk / execution / factor kernels (MEDULLA-FINANCE-PRIMITIVES-R901/R613/R018 .3) ──
     FinanceAmlScreen {
         rule_id: String,

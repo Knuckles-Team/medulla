@@ -77,6 +77,9 @@ pub const GATEWAY_ROUTED: &[&str] = &[
     "Reparent",
     "StartTrajectory",
     "AppendStep",
+    // MEDULLA-DURABLE-KERNEL-R095.1002: agent bus roster rows on the request graph.
+    "BusRegister",
+    "BusHeartbeat",
     "AddEmbedding",
     "InvalidateEdge",
     "SupersedeEdge",
@@ -213,6 +216,9 @@ fn memory_method_name(m: &Method) -> Option<&'static str> {
         Method::DecayMemories { .. } => Some("DecayMemories"),
         Method::EvictBelow { .. } => Some("EvictBelow"),
         Method::Maintain { .. } => Some("Maintain"),
+        Method::BusRegister { .. } => Some("BusRegister"),
+        Method::BusHeartbeat { .. } => Some("BusHeartbeat"),
+        Method::BusRoster { .. } => Some("BusRoster"),
         _ => None,
     }
 }
@@ -651,6 +657,7 @@ pub const LOCAL_ONLY_METHODS: &[&str] = &[
     "AgentTemplate",
     "ConnectorPack",
     "WriteBack",
+    "Claims",
     "DecisionCommit",
     "DecisionEval",
     "DecisionFit",
@@ -687,6 +694,7 @@ fn native_local_only_method_name(m: &Method) -> Option<&'static str> {
 /// [`native_local_only_method_name`]).
 fn native_local_only_decision_method_name(m: &Method) -> Option<&'static str> {
     match m {
+        Method::Claims { .. } => Some("Claims"),
         Method::DecisionCommit { .. } => Some("DecisionCommit"),
         Method::DecisionEval { .. } => Some("DecisionEval"),
         Method::DecisionFit { .. } => Some("DecisionFit"),
@@ -807,6 +815,10 @@ fn cluster_mutation_route_admin(method: &Method) -> Option<ClusterMutationRoute>
             | Method::SourceIngest { .. }
             | Method::IndexRepository { .. }
             | Method::EnrichDocument { .. }
+            | Method::MeetingSummaryCommit { .. }
+            | Method::MeetingSummaryContext { .. }
+            | Method::MeetingTranscriptRevision { .. }
+            | Method::DocumentDelete { .. }
             | Method::LineageIngest { .. }
     ) {
         return Some(ClusterMutationRoute::VolatileControl);
@@ -868,6 +880,9 @@ fn cluster_mutation_route_admin(method: &Method) -> Option<ClusterMutationRoute>
             | Method::FleetCatalog { .. }
             | Method::PolicyEvolution { .. }
             | Method::TelemetryDerive { .. }
+            | Method::IncidentRecordAnomaly { .. }
+            | Method::IncidentCorrelate { .. }
+            | Method::IncidentSetStatus { .. }
     ) {
         return Some(ClusterMutationRoute::VolatileControl);
     }

@@ -49,7 +49,7 @@ const MAX_DEF_ITEMS: usize = 500_000;
 /// Lazily-opened local statechart store (`{persist_dir}/statecharts.redb`). Mirrors
 /// `jobs.rs::job_store`: a served process must have a configured persistence root;
 /// there is no process-temp store that can vanish across a restart.
-fn statechart_store(persist_dir: Option<&str>) -> Result<Arc<StatechartStore>, String> {
+pub fn statechart_store(persist_dir: Option<&str>) -> Result<Arc<StatechartStore>, String> {
     static STORE: OnceLock<Result<Arc<StatechartStore>, String>> = OnceLock::new();
     let persist_dir = persist_dir
         .filter(|value| !value.is_empty())

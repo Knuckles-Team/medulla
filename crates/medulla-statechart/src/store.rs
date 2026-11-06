@@ -81,9 +81,10 @@ use serde::{de::DeserializeOwned, Serialize};
 
 mod batches;
 
+pub use batches::instance_id_for_request;
 use batches::{
     creation_batch, decode_instance_result, definition_batch, instance_batch,
-    instance_id_for_request, instance_mutation_identity, STATECHART_PHYSICAL_STORE,
+    instance_mutation_identity, STATECHART_PHYSICAL_STORE,
 };
 
 use crate::action::apply_all;

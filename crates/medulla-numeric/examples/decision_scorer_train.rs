@@ -119,6 +119,7 @@ fn main() {
             estimators: &[],
             head_digest: &head_digest,
             policy_digest: "sha256:offline-policy",
+            feature_power: None,
         },
     )
     .expect("evaluates");

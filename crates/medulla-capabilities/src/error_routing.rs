@@ -105,6 +105,8 @@ const METHOD_PREFIXES: &[(&str, &[&str])] = &[
         &["DECISION_", "COMPONENT_", "CORRUPT_DECISION_"],
     ),
     ("Decide", &["DECISION_", "COMPONENT_", "CORRUPT_DECISION_"]),
+    // MEDULLA-DECISION-ENGINE-R652.4: the claim surface's refusal codes.
+    ("Claims", &["ARTIFACT_", "CLAIM_", "EVIDENCE_"]),
     ("RbacElevation", &["ELEVATION_"]),
     ("GovernedChange", &["GOVERNED_"]),
     ("Identity", &["IDENTITY_"]),
@@ -117,7 +119,7 @@ const DOMAIN_PREFIXES: &[(&str, &[&str])] = &[
     ),
     (
         "transactions",
-        &["CHANGE_BATCH_", "REPLAY_NONCE_", "STALE_GRAPH_"],
+        &["CHANGE_BATCH_", "REPLAY_NONCE_", "WRITE_CONFLICT"],
     ),
 ];
 const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
@@ -127,6 +129,8 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         &["SCOPE_EXCEEDS_POLICY", "SCOPE_POLICY_UNREADABLE"],
     ),
     ("AnalyticsJob", &["INVALID_CONFIGURATION"]),
+    // MEDULLA-DECISION-ENGINE-R652.3: a stale write and a malformed op.
+    ("Claims", &["PARAMETER_INVALID", "REVISION_CONFLICT"]),
     ("GetRunWorkItem", &["RUN_ADMISSION_UNAVAILABLE"]),
     // Local-only authority: a clustered server refuses it with the typed
     // `LOCAL_ONLY_CLUSTER_REFUSAL` (server-mutation) instead of proposing it.
@@ -136,8 +140,12 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         "AgentComponent",
         &[
             "COMPONENT_WITHDRAWN",
+            "LIFECYCLE_RETIRED_TERMINAL",
+            "LIFECYCLE_STATE_MALFORMED",
+            "LIFECYCLE_TRANSITION_INVALID",
             "MALFORMED_GUARDRAIL_RULE",
             "RESERVED_COMPONENT_ID",
+            "WITHDRAWN_NOT_ALLOWED",
         ],
     ),
     (
@@ -149,6 +157,16 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     (
         "ApplyChangeEnvelopeDraft",
         &["CARRIER_INNER_METHOD_REFUSED"],
+    ),
+    // MEDULLA-UNIFIED-DATA-PLANE-R651.4.
+    (
+        "DocumentDelete",
+        &[
+            "CASCADE_TOO_LARGE",
+            "DOCUMENT_DELETE_UNAVAILABLE",
+            "DOCUMENT_HAS_REFERENCES",
+            "DOCUMENT_NOT_FOUND",
+        ],
     ),
     // MEDULLA-UNIFIED-DATA-PLANE-R651.7.4 / MEDULLA-DECISION-ENGINE-R802.4.
     (
@@ -164,6 +182,49 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "WEB_BACKEND_INVALID",
         ],
     ),
+    // MEDULLA-MEDIA-VOCAB-R001.101.3-.5 (codes of R001.101.6).
+    (
+        "MeetingSummaryCommit",
+        &[
+            "CITATION_OUTSIDE_TEXT",
+            "RECEIPT_MISMATCH",
+            "RECEIPT_UNKNOWN",
+            "TRANSCRIPT_NOT_FINAL",
+            "TRANSCRIPT_STALE",
+        ],
+    ),
+    (
+        "MeetingSummaryContext",
+        &[
+            "SUMMARY_ADMISSION_MISSING",
+            "SUMMARY_LIMIT_EXCEEDED",
+            "SUMMARY_LIMIT_INVALID",
+            "TRANSCRIPT_NOT_FINAL",
+            "TRANSCRIPT_STALE",
+        ],
+    ),
+    (
+        "MeetingTranscriptRevision",
+        &["TRANSCRIPT_BASE_CONFLICT", "TRANSCRIPT_EVENT_CONFLICT"],
+    ),
+    (
+        "BusHeartbeat",
+        &[
+            "BUS_FIELD_TOO_LARGE",
+            "BUS_SCOPE_REQUIRED",
+            "BUS_SESSION_FOREIGN",
+        ],
+    ),
+    (
+        "BusRegister",
+        &[
+            "BUS_FIELD_TOO_LARGE",
+            "BUS_ROSTER_FULL",
+            "BUS_SCOPE_REQUIRED",
+            "BUS_SESSION_FOREIGN",
+        ],
+    ),
+    ("BusRoster", &["BUS_SCOPE_REQUIRED"]),
     (
         "SelectWebPages",
         &[
@@ -180,6 +241,15 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     ("AnalyticsJob", &["INVALID_CONFIGURATION"]),
     // MEDULLA-FINANCE-PRIMITIVES-R018.3: mismatched factor record lengths.
     ("FinanceFactorRank", &["FACTOR_RECORD_INVALID"]),
+    // MEDULLA-FINANCE-PRIMITIVES-R750.752: stable codes of the research kernels.
+    (
+        "FinancePatternClassify",
+        &["PATTERN_WINDOW_SHORT", "PATTERN_INPUT_INVALID"],
+    ),
+    (
+        "FinanceProfitAttribution",
+        &["ATTRIBUTION_WEIGHTS_INVALID", "ATTRIBUTION_INPUT_INVALID"],
+    ),
     // MEDULLA-FINANCE-PRIMITIVES-R904: no current record for the binding in the caller's tenant.
     ("WalletKeyTrustGet", &["WALLET_KEY_TRUST_NOT_FOUND"]),
     // MEDULLA-FINANCE-PRIMITIVES-R004.3.2: the record put's closed refusals.
@@ -190,6 +260,14 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "RECORD_DERIVED_READONLY",
             "RECORD_HEAD_CONFLICT",
             "RECORD_SHAPE_INVALID",
+            // MEDULLA-FINANCE-PRIMITIVES-R751.752: the research records' refusals.
+            "DEBATE_ROUND_OUT_OF_ORDER",
+            "RECORD_IMMUTABLE",
+            "RECORD_TENANT_MISMATCH",
+            "SCORE_EVIDENCE_MISSING",
+            "SCORE_RANGE_INVALID",
+            "SCORE_WEIGHTS_INVALID",
+            "STRATEGY_CARD_LICENCE_MISSING",
         ],
     ),
     // MEDULLA-FINANCE-PRIMITIVES-R011.2.3: the alert door's closed refusals.
@@ -205,12 +283,21 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         "CreateGraph",
         &["REPLAY_NONCE_CONSUMED", "RESERVED_GRAPH_NAME"],
     ),
-    ("AddNode", &["REPLAY_NONCE_CONSUMED"]),
+    ("AddNode", &["COMMIT_QUEUE_FULL", "REPLAY_NONCE_CONSUMED"]),
     ("CypherQuery", &["REPLAY_NONCE_CONSUMED"]),
     ("GraphQl", &["REPLAY_NONCE_CONSUMED"]),
+    // MEDULLA-DURABLE-KERNEL-R865 (child input) and R750.750.1 (signed agent-turn envelope).
     (
         "SubmitWorkItem",
-        &["REPLAY_NONCE_CONSUMED", "WORK_QUEUE_FULL"],
+        &[
+            "CARRIER_SIGNATURE_INVALID",
+            "CHILD_TARGET_TERMINAL",
+            "ENVELOPE_FIELD_MISSING",
+            "IDEMPOTENCY_CONFLICT",
+            "REPLAY_NONCE_CONSUMED",
+            "REVISION_CONFLICT",
+            "WORK_QUEUE_FULL",
+        ],
     ),
     ("ClaimWorkItem", &["REPLAY_NONCE_CONSUMED"]),
     ("PublishRunCheckpoint", &["REPLAY_NONCE_CONSUMED"]),
@@ -257,6 +344,30 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     ("LineageIngest", &["LINEAGE_EVENT_MALFORMED"]),
     ("WriteBack", &["CORRUPT_WRITE_BACK"]),
     ("TxnPlanWriteback", &["CORRUPT_WRITE_BACK"]),
+    (
+        "IncidentCorrelate",
+        &["TENANT_SCOPE_REQUIRED", "ANOMALY_RESOURCE_REQUIRED"],
+    ),
+    (
+        "IncidentEvidence",
+        &["TENANT_SCOPE_REQUIRED", "INCIDENT_NOT_FOUND"],
+    ),
+    (
+        "IncidentRecordAnomaly",
+        &["TENANT_SCOPE_REQUIRED", "ANOMALY_RESOURCE_REQUIRED"],
+    ),
+    (
+        "IncidentRelatedClaims",
+        &["TENANT_SCOPE_REQUIRED", "INCIDENT_NOT_FOUND"],
+    ),
+    (
+        "IncidentSetStatus",
+        &[
+            "TENANT_SCOPE_REQUIRED",
+            "INCIDENT_STATUS_SKIP",
+            "INCIDENT_NOT_FOUND",
+        ],
+    ),
     (
         "TelemetryDerive",
         &[

@@ -58,6 +58,50 @@ pub enum AbstainReason {
         code: RefusalCode,
         detail: String,
     },
+    /// A refusal raised on a decision-plane method that is not a `Decide`
+    /// question (`DecisionLog`, `DecisionEval`, `AgentAssemble`,
+    /// `PolicyEvolution`, `DecisionCommit`), folded from its typed refusal enum.
+    Surface {
+        surface: RefusalSurface,
+        code: RefusalCode,
+        detail: String,
+    },
+}
+
+/// The decision-plane method, other than `Decide`, that raised a refusal.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum RefusalSurface {
+    DecisionLog,
+    DecisionEval,
+    Assemble,
+    PolicyEvolution,
+    DecisionCommit,
+}
+
+/// Where a refusal was raised. The caller that raises it knows the origin.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RefusalOrigin {
+    /// The `Decide` path, with the request's question kind.
+    Decide(crate::decision::statistical::QuestionKind),
+    /// A decision-plane method other than `Decide`.
+    Surface(RefusalSurface),
+}
+
+impl RefusalOrigin {
+    pub const POLICY_EVOLUTION: Self = Self::Surface(RefusalSurface::PolicyEvolution);
+    pub const ASSEMBLE: Self = Self::Surface(RefusalSurface::Assemble);
+}
+
+/// A typed refusal enum of the decision plane. Each variant maps to exactly one
+/// registered code (`crate::decision::codes`), so no refusal reaches the wire as
+/// a catch-all (MEDULLA-DECISION-ENGINE-R010.100.2).
+pub trait DecisionRefusal {
+    /// The registered code of this refusal.
+    fn code(&self) -> RefusalCode;
+    /// The human detail that accompanies the code.
+    fn detail(&self) -> String;
 }
 
 /// A stable refusal code: one entry of a family `REFUSALS` table or of the
@@ -137,9 +181,27 @@ impl AbstainReason {
             Self::RecordTooLarge { .. } => 7,
             Self::PolicyLoosening { .. } => 8,
             Self::InsufficientConfidence => 9,
-            Self::Family { code, .. } => return *code,
+            Self::Family { code, .. } | Self::Surface { code, .. } => return *code,
         };
         FIXED_CODES[index]
+    }
+
+    /// Fold a typed refusal into the abstention that reports it, under the
+    /// origin the raising caller passes.
+    pub fn from_refusal(origin: RefusalOrigin, refusal: &impl DecisionRefusal) -> Self {
+        let (code, detail) = (refusal.code(), refusal.detail());
+        match origin {
+            RefusalOrigin::Decide(family) => Self::Family {
+                family,
+                code,
+                detail,
+            },
+            RefusalOrigin::Surface(surface) => Self::Surface {
+                surface,
+                code,
+                detail,
+            },
+        }
     }
 }
 
@@ -194,6 +256,7 @@ mod tests {
     fn codes_are_unique_and_stable() {
         let mut all: Vec<&str> = FIXED_CODES.iter().map(|code| code.as_str()).collect();
         all.extend(codes::SHARED.iter().map(|code| code.as_str()));
+        all.extend(codes::FOLDED.iter().map(|code| code.as_str()));
         for (_, table) in codes::FAMILY_TABLES {
             all.extend(table.iter().map(|code| code.as_str()));
         }
@@ -239,6 +302,114 @@ mod tests {
             family
         );
         let unregistered = wire.replace("PARAMETER_INVALID", "NOT_A_CODE");
+        assert!(serde_json::from_str::<AbstainReason>(&unregistered).is_err());
+    }
+
+    fn registered(code: &str) -> bool {
+        use medulla_types::contract::{EngineErrorCode, ServerErrorCode};
+        ServerErrorCode::ALL.iter().any(|c| c.as_str() == code)
+            || EngineErrorCode::ALL.iter().any(|c| c.as_str() == code)
+            || DecisionErrorCode::ALL.iter().any(|c| c.as_str() == code)
+            || crate::decision::harness_contrast::HarnessContrastErrorCode::ALL
+                .iter()
+                .any(|c| c.as_str() == code)
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R010.100.2
+    #[test]
+    fn every_decision_refusal_enum_maps_to_a_registered_code() {
+        use crate::decision::harness_contrast::{
+            HarnessContrastAbstainReason as Reason, HarnessContrastRefusal as Contrast,
+        };
+        use crate::decision::rapid_r015::HeadKindRefusal;
+        use crate::decision::statistical::tool_subset::ToolSubsetRefusal;
+        use crate::decision::statistical::QuestionKind;
+
+        // Every folded code is a registered wire code, and resolves back.
+        for code in codes::FOLDED {
+            assert!(
+                registered(code.as_str()),
+                "{} is not registered",
+                code.as_str()
+            );
+            assert_eq!(codes::resolve(code.as_str()), Some(*code));
+        }
+        let head = HeadKindRefusal::NotAStatisticalHead { name: "llm".into() };
+        let refusals: Vec<(&str, RefusalCode)> = vec![
+            ("head", DecisionRefusal::code(&head)),
+            (
+                "subset/uncoverable",
+                DecisionRefusal::code(&ToolSubsetRefusal::CapabilityUncoverable),
+            ),
+            (
+                "subset/budget",
+                DecisionRefusal::code(&ToolSubsetRefusal::BudgetExceeded),
+            ),
+            (
+                "contrast/min",
+                DecisionRefusal::code(&Contrast::MinCandidates),
+            ),
+            (
+                "contrast/many",
+                DecisionRefusal::code(&Contrast::TooManyCandidates),
+            ),
+            (
+                "contrast/unknown",
+                DecisionRefusal::code(&Contrast::VersionUnknown),
+            ),
+            (
+                "contrast/trace",
+                DecisionRefusal::code(&Contrast::TraceMismatch),
+            ),
+            (
+                "abstain/none",
+                DecisionRefusal::code(&Reason::NoImprovement),
+            ),
+            (
+                "abstain/trace",
+                DecisionRefusal::code(&Reason::TraceMismatch),
+            ),
+            (
+                "abstain/evidence",
+                DecisionRefusal::code(&Reason::InsufficientEvidence),
+            ),
+        ];
+        let mut seen = std::collections::BTreeSet::new();
+        for (name, code) in &refusals {
+            assert!(
+                registered(code.as_str()),
+                "{name}: {} is not registered",
+                code.as_str()
+            );
+            assert!(
+                codes::resolve(code.as_str()).is_some(),
+                "{name} does not resolve"
+            );
+            // Typed variants map to distinct codes: no catch-all.
+            assert!(seen.insert(code.as_str()), "{name} shares a code");
+        }
+
+        // The folded abstention carries the origin the caller passed.
+        let on_decide = AbstainReason::from_refusal(
+            RefusalOrigin::Decide(QuestionKind::ToolSubset),
+            &ToolSubsetRefusal::BudgetExceeded,
+        );
+        assert_eq!(on_decide.code(), codes::TOOL_SUBSET_BUDGET_EXCEEDED);
+        assert!(matches!(
+            on_decide,
+            AbstainReason::Family {
+                family: QuestionKind::ToolSubset,
+                ..
+            }
+        ));
+        let on_assemble = AbstainReason::from_refusal(RefusalOrigin::ASSEMBLE, &head);
+        assert_eq!(on_assemble.code(), codes::HEAD_KIND_NOT_STATISTICAL);
+        let wire = serde_json::to_string(&on_assemble).expect("encodes");
+        assert_eq!(
+            serde_json::from_str::<AbstainReason>(&wire).expect("decodes"),
+            on_assemble
+        );
+        let unregistered = wire.replace("HEAD_KIND_NOT_STATISTICAL", "NOT_A_CODE");
         assert!(serde_json::from_str::<AbstainReason>(&unregistered).is_err());
     }
 }

@@ -46,7 +46,25 @@ pub(crate) struct IcebergCommit {
     pub lsn: Lsn,
     pub timestamp_ms: i64,
     pub schema_id: i32,
+    pub binding: Option<PublicationBinding>,
 }
+
+/// The graph position a published snapshot is bound to
+/// (MEDULLA-FEDERATED-QUERY-R079.3). It lands in the snapshot summary under
+/// [`GRAPH_VERSION_KEY`] and [`SOURCE_LSN_KEY`], so a catalog reader can correlate
+/// the snapshot with the committed graph version and the source log position.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct PublicationBinding {
+    /// The committed graph version the snapshot was materialized at.
+    pub graph_version: u64,
+    /// The source log position the materialized rows were read up to.
+    pub source_lsn: u64,
+}
+
+/// Snapshot summary key holding the committed graph version.
+pub const GRAPH_VERSION_KEY: &str = "medulla.graph-version";
+/// Snapshot summary key holding the source log position.
+pub const SOURCE_LSN_KEY: &str = "medulla.source-lsn";
 
 pub(crate) struct IcebergBuildContext<'a> {
     pub schema_versions: &'a [(i32, LakeSchema)],
@@ -73,6 +91,7 @@ fn projected_commit(
             lsn,
             timestamp_ms,
             schema_id,
+            binding: None,
         })
 }
 
@@ -155,6 +174,10 @@ fn snapshot_value(
         "manifest-list": manifest_list_path(ctx.location, commit.lsn.value() as i64),
         "schema-id": commit.schema_id,
     });
+    if let Some(binding) = commit.binding {
+        value["summary"][GRAPH_VERSION_KEY] = json!(binding.graph_version.to_string());
+        value["summary"][SOURCE_LSN_KEY] = json!(binding.source_lsn.to_string());
+    }
     if let Some(parent_lsn) = parent {
         value["parent-snapshot-id"] = json!(parent_lsn.value() as i64);
     }

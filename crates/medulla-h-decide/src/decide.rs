@@ -8,6 +8,7 @@
 pub type SharedState = std::sync::Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>;
 
 pub(crate) mod assemble;
+pub(crate) mod claims;
 pub(crate) mod commit;
 pub(crate) mod coverage;
 #[cfg(all(test, feature = "decide"))]
@@ -109,6 +110,7 @@ mod topology_read;
 mod topology_schema;
 
 pub use assemble::handle_agent_assemble;
+pub use claims::handle_claims;
 pub use commit::handle_decision_commit;
 pub use coverage::handle_capability_coverage;
 pub use guardrail::handle_guardrail_entailment;

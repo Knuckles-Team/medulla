@@ -1,10 +1,19 @@
+use medulla_kvcache::{PolicyTier, TierPolicy};
+
 use super::{
-    cap_from_env, dependency::DependencyEntries, versioned::VersionedEntries, Inner, ResultCache,
+    admission::installed_tier_policy, cap_from_env, dependency::DependencyEntries,
+    versioned::VersionedEntries, Inner, ResultCache,
 };
 
 impl ResultCache {
     pub fn new() -> Self {
-        Self::with_cap(cap_from_env())
+        Self::with_policy(installed_tier_policy())
+    }
+
+    /// Construct a cache whose answer admission follows `policy`: the byte budget of
+    /// the answer tier and the worth floor an answer must clear to be kept.
+    pub fn with_policy(policy: TierPolicy) -> Self {
+        Self::with_cap_and_policy(cap_from_env(), policy)
     }
 
     /// Construct a cache with an EXPLICIT capacity, bypassing the env override.
@@ -13,7 +22,13 @@ impl ResultCache {
     /// `MEDULLA_RESULT_CACHE_CAP` (which would otherwise let one test's
     /// `set_var`/`remove_var` leak into a concurrently-constructed cache).
     pub fn with_cap(cap: usize) -> Self {
+        Self::with_cap_and_policy(cap, installed_tier_policy())
+    }
+
+    /// [`with_cap`](Self::with_cap) with an explicit admission policy.
+    pub fn with_cap_and_policy(cap: usize, policy: TierPolicy) -> Self {
         ResultCache {
+            policy: parking_lot::Mutex::new(PolicyTier::new(policy).with_label("answer")),
             inner: parking_lot::Mutex::new(Inner {
                 versioned: VersionedEntries::new(),
                 dependency: DependencyEntries::new(),

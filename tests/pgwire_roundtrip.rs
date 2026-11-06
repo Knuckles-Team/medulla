@@ -282,6 +282,7 @@ async fn wire_eg_embed_is_reachable_over_a_pgwire_only_session() {
     assert_eq!(data_rows, 1, "a bound embedder must return exactly one row");
 }
 
+// spec: MEDULLA-DURABLE-KERNEL-R860.1
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn wire_insert_then_select_round_trip() {
     let state = seeded_state();
@@ -305,6 +306,18 @@ async fn wire_insert_then_select_round_trip() {
         .await
         .expect("SELECT after insert");
     let ids = simple_ids(rows);
+    assert_eq!(ids, vec!["n9".to_string()]);
+
+    // The same row through the extended protocol (Parse/Bind/Execute).
+    let stmt = client
+        .prepare("SELECT id FROM nodes WHERE rank = $1")
+        .await
+        .expect("prepare after insert");
+    let rows = client
+        .query(&stmt, &[&9_i64])
+        .await
+        .expect("extended SELECT after insert");
+    let ids: Vec<String> = rows.iter().map(|r| r.get::<_, String>(0)).collect();
     assert_eq!(ids, vec!["n9".to_string()]);
 }
 

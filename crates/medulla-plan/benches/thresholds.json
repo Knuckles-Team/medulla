@@ -10,5 +10,10 @@
     "selective_filter_rank": 400000000,
     "cold_reopen_read": 500000000,
     "warm_read": 50000000
+  },
+  "latency_p99_ns_max": {
+    "access_check_256": 1000000,
+    "feedback_boost_256": 200000,
+    "knowledge_scope_50": 2000000
   }
 }
