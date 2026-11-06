@@ -226,6 +226,7 @@ closed_error_codes! {
         PackProjectionStoreBusy => "PACK_PROJECTION_STORE_BUSY",
         PackRevisionNotVisible => "PACK_REVISION_NOT_VISIBLE",
         PackTooLarge => "PACK_TOO_LARGE",
+        PartitionColumnUnknown => "PARTITION_COLUMN_UNKNOWN",
         PatternInputInvalid => "PATTERN_INPUT_INVALID",
         PatternWindowShort => "PATTERN_WINDOW_SHORT",
         PresetUnavailable => "PRESET_UNAVAILABLE",

@@ -236,6 +236,33 @@ fn name_mapping(schema: Option<&LakeSchema>) -> String {
     serde_json::to_string(&mapping).unwrap_or_else(|_| "[]".to_string())
 }
 
+/// The first partition field id; Iceberg numbers partition fields from 1000.
+pub const FIRST_PARTITION_FIELD_ID: i32 = 1000;
+
+/// The fields of the one partition spec (MEDULLA-UNIFIED-DATA-PLANE-R039.4): one
+/// `identity` field over the partition column, or none for an unpartitioned table.
+/// Shared with the Avro manifest header so both name the same spec.
+pub(crate) fn partition_spec_fields(schema: Option<&LakeSchema>) -> Value {
+    match schema.and_then(LakeSchema::partition_source) {
+        Some((field, source_id)) => json!([{
+            "source-id": source_id,
+            "field-id": FIRST_PARTITION_FIELD_ID,
+            "name": field.name,
+            "transform": "identity",
+        }]),
+        None => json!([]),
+    }
+}
+
+/// `last-partition-id`: 999 (none assigned) unpartitioned, 1000 with the one field.
+fn last_partition_id(schema: Option<&LakeSchema>) -> i32 {
+    if schema.and_then(LakeSchema::partition_source).is_some() {
+        FIRST_PARTITION_FIELD_ID
+    } else {
+        FIRST_PARTITION_FIELD_ID - 1
+    }
+}
+
 fn metadata_document(
     ctx: &IcebergBuildContext<'_>,
     schema: Option<&LakeSchema>,
@@ -268,8 +295,8 @@ fn metadata_document(
         "current-schema-id": current_schema_id,
         "schemas": schemas,
         "default-spec-id": 0,
-        "partition-specs": [ { "spec-id": 0, "fields": [] } ],
-        "last-partition-id": 999,
+        "partition-specs": [ { "spec-id": 0, "fields": partition_spec_fields(schema) } ],
+        "last-partition-id": last_partition_id(schema),
         "default-sort-order-id": 0,
         "sort-orders": [ { "order-id": 0, "fields": [] } ],
         "properties": {

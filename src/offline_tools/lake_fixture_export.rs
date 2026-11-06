@@ -192,6 +192,50 @@ fn commit(
     Ok(ib.metadata_location)
 }
 
+/// The table identity-partitioned by [`PARTITION_COLUMN`]
+/// (MEDULLA-UNIFIED-DATA-PLANE-R039.4).
+const PARTITIONED_TABLE: &str = "quotes_by_active";
+const PARTITION_COLUMN: &str = "active";
+
+/// Write the partitioned fixture table: the same rows as the plain table, one
+/// commit per `active` value (true, false, null), so every data file holds exactly
+/// one partition value. Returns the table location and its latest metadata.
+fn write_partitioned(out_dir: &str) -> (String, String) {
+    let location = Path::new(out_dir)
+        .join(NAMESPACE)
+        .join(PARTITIONED_TABLE)
+        .to_string_lossy()
+        .into_owned();
+    fs::create_dir_all(&location).unwrap_or_else(|e| panic!("create partitioned root: {e}"));
+    let schema = schema()
+        .with_partition_column(PARTITION_COLUMN)
+        .expect("the partition column is in the fixture schema");
+    let mut table = LakeTable::new(NAMESPACE, PARTITIONED_TABLE, schema, location.clone());
+    let mut metadata_location = String::new();
+    let mut lsn = 0u64;
+    for value in [Some(true), Some(false), None] {
+        let rows: Vec<FixtureRow> = BATCH_1
+            .iter()
+            .chain(BATCH_2.iter())
+            .filter(|row| row.3 == value)
+            .copied()
+            .collect();
+        if rows.is_empty() {
+            continue;
+        }
+        lsn += 1;
+        metadata_location = commit(
+            &mut table,
+            &location,
+            &to_batch(&rows),
+            Lsn(lsn),
+            1_700_000_000_000 + lsn as i64 * 100_000,
+        )
+        .expect("write partitioned fixture commit");
+    }
+    (location, metadata_location)
+}
+
 fn row_json((id, price, symbol, active, ts): &FixtureRow) -> serde_json::Value {
     serde_json::json!({
         "id": id,
@@ -249,6 +293,8 @@ pub(crate) fn run(argv: Vec<std::ffi::OsString>) {
     let metadata_location = commit(&mut table, &location, &batch2, Lsn(4), 1_700_000_300_000)
         .expect("write second fixture commit");
 
+    let (partitioned_location, partitioned_metadata_location) = write_partitioned(&out_dir);
+
     let rows: Vec<serde_json::Value> = BATCH_1.iter().chain(BATCH_2.iter()).map(row_json).collect();
     let summary = serde_json::json!({
         "namespace": NAMESPACE,
@@ -259,6 +305,10 @@ pub(crate) fn run(argv: Vec<std::ffi::OsString>) {
         "tombstone_as_of_metadata_location": tombstone_as_of.metadata_location,
         "unrelated_as_of_metadata_location": unrelated_as_of.metadata_location,
         "precreation_metadata_location": null,
+        "partitioned_table": PARTITIONED_TABLE,
+        "partitioned_location": partitioned_location,
+        "partitioned_metadata_location": partitioned_metadata_location,
+        "partition_column": PARTITION_COLUMN,
         "row_count": rows.len(),
         "rows": rows,
     });

@@ -93,11 +93,46 @@ impl LakeField {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct LakeSchema {
     pub fields: Vec<LakeField>,
+    /// The column the table is identity-partitioned by
+    /// (MEDULLA-UNIFIED-DATA-PLANE-R039.4); `None` is an unpartitioned table, whose
+    /// emitted metadata stays byte-identical. Defaulted and skipped when absent so
+    /// older serialized schemas round-trip unchanged.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub partition_column: Option<String>,
 }
+
+/// The refusal when a partition column is not in the schema
+/// (MEDULLA-UNIFIED-DATA-PLANE-R039.4): the wire code of the registered
+/// `ServerErrorCode::PartitionColumnUnknown`.
+pub const PARTITION_COLUMN_UNKNOWN: &str = "PARTITION_COLUMN_UNKNOWN";
 
 impl LakeSchema {
     pub fn new(fields: Vec<LakeField>) -> Self {
-        LakeSchema { fields }
+        LakeSchema {
+            fields,
+            partition_column: None,
+        }
+    }
+
+    /// Identity-partition the table by `column` (MEDULLA-UNIFIED-DATA-PLANE-R039.4).
+    /// Refuses `PARTITION_COLUMN_UNKNOWN` when the column is not in the schema.
+    pub fn with_partition_column(mut self, column: impl Into<String>) -> Result<Self, String> {
+        let column = column.into();
+        if self.index_of(&column).is_none() {
+            return Err(format!(
+                "{PARTITION_COLUMN_UNKNOWN}: partition column '{column}' is not in the schema"
+            ));
+        }
+        self.partition_column = Some(column);
+        Ok(self)
+    }
+
+    /// The partition column and its 1-based Iceberg source field id, when the
+    /// table is partitioned by a column of this schema.
+    pub fn partition_source(&self) -> Option<(&LakeField, i32)> {
+        let column = self.partition_column.as_deref()?;
+        let index = self.index_of(column)?;
+        Some((&self.fields[index], index as i32 + 1))
     }
 
     pub fn len(&self) -> usize {
