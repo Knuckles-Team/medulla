@@ -46,6 +46,8 @@ use std::hash::Hash;
 
 use crate::cold::{ColdStore, MemoryColdStore};
 use crate::compress::{Codec, StoredBlock};
+use crate::contract::KvTierError;
+use crate::hash::content_hash;
 use crate::value::CacheValue;
 use crate::version::DataVersion;
 
@@ -113,7 +115,7 @@ pub struct CacheStats {
     pub demotions_to_warm: u64,
     /// Lifetime WARM→COLD demotions.
     pub demotions_to_cold: u64,
-    /// Lifetime blocks dropped (fell out of the COLD budget, or a cold write failed).
+    /// Lifetime blocks dropped (fell out of the COLD budget, or failed its digest check).
     pub drops: u64,
     /// Lifetime entries RETIRED as stale by a data-version bump (CONCEPT:MEDULLA-KG.storage.content-addressed-put) — either
     /// eagerly on [`TieredCache::set_data_version`] or lazily on a [`TieredCache::get`] of
@@ -155,6 +157,14 @@ where
     /// never goes stale — so a cache used purely for content-addressed pages (`put`, never
     /// `set_data_version`) is unaffected and zero-cost.
     versions: HashMap<K, DataVersion>,
+    /// The content digest of each resident block at its first write
+    /// (MEDULLA-DURABLE-KERNEL-R083.8): every page-in from WARM or COLD is checked
+    /// against it, and a mismatch drops the block and refuses with
+    /// [`KvTierError::BlockDigestMismatch`].
+    digests: HashMap<K, String>,
+    /// A refusal raised while rebalancing tiers (a failed durable cold write), taken
+    /// by the fallible entry point that triggered the rebalance.
+    pending_refusal: Option<KvTierError>,
     /// The cache's current data version; [`DataVersion::Agnostic`] until a
     /// [`TieredCache::set_data_version`] call (tracking inactive = nothing stale).
     current_version: DataVersion,
@@ -220,6 +230,8 @@ where
             importance: HashMap::new(),
             importance_weight: 1.0,
             versions: HashMap::new(),
+            digests: HashMap::new(),
+            pending_refusal: None,
             current_version: DataVersion::Agnostic,
             hot_cap,
             warm_cap,
@@ -320,6 +332,30 @@ where
         self.put_versioned(key, value, DataVersion::Agnostic);
     }
 
+    /// [`put`](Self::put) that reports a tier refusal (MEDULLA-DURABLE-KERNEL-R083.8): a
+    /// durable cold write that fails during the rebalance keeps the block in WARM and
+    /// returns [`KvTierError::ColdWriteFailed`]. The served `PUT /kv/<hash>` path uses
+    /// this; `put` keeps the block either way and is the infallible in-RAM form.
+    pub fn try_put(&mut self, key: K, value: V) -> Result<(), KvTierError> {
+        self.try_put_versioned(key, value, DataVersion::Agnostic)
+    }
+
+    /// [`put_versioned`](Self::put_versioned) that reports a tier refusal
+    /// (MEDULLA-DURABLE-KERNEL-R083.8); see [`try_put`](Self::try_put).
+    pub fn try_put_versioned(
+        &mut self,
+        key: K,
+        value: V,
+        derived_at: DataVersion,
+    ) -> Result<(), KvTierError> {
+        self.pending_refusal = None;
+        self.put_versioned(key, value, derived_at);
+        match self.pending_refusal.take() {
+            Some(refusal) => Err(refusal),
+            None => Ok(()),
+        }
+    }
+
     /// Insert / overwrite a block stamped with the [`DataVersion`] it was `derived_at`
     /// (CONCEPT:MEDULLA-KG.storage.content-addressed-put). Once the cache's current version moves past it (via
     /// [`set_data_version`](Self::set_data_version)) the entry is retired / misses. Tiering
@@ -332,6 +368,8 @@ where
         let bytes = value.byte_len();
         self.hot_bytes += bytes;
         self.versions.insert(key.clone(), derived_at);
+        self.digests
+            .insert(key.clone(), content_hash(&value.as_bytes()));
         self.hot.insert(
             key,
             HotEntry {
@@ -366,6 +404,7 @@ where
         for k in stale {
             self.remove_resident(&k);
             self.versions.remove(&k);
+            self.digests.remove(&k);
             self.invalidations += 1;
         }
     }
@@ -386,29 +425,39 @@ where
     /// [`set_data_version`](Self::set_data_version)'s eager sweep) so stale LLM/agent
     /// context is never served.
     pub fn get(&mut self, key: &K) -> Option<V> {
+        self.try_get(key).ok().flatten()
+    }
+
+    /// [`get`](Self::get) that reports a tier refusal (MEDULLA-DURABLE-KERNEL-R083.8): a
+    /// WARM or COLD page-in whose content digest differs from the digest recorded at
+    /// first write drops the block and returns [`KvTierError::BlockDigestMismatch`]; the
+    /// served `GET /kv/<hash>` path uses this. `get` reads such a block as a miss.
+    pub fn try_get(&mut self, key: &K) -> Result<Option<V>, KvTierError> {
         if self.is_stale(key) {
             self.remove_resident(key);
             self.versions.remove(key);
+            self.digests.remove(key);
             self.invalidations += 1;
             self.misses += 1;
-            return None;
+            return Ok(None);
         }
         let clk = self.tick();
         if let Some(e) = self.hot.get_mut(key) {
             e.score += 1.0;
             e.last = clk;
             self.hits += 1;
-            return Some(e.value.clone());
+            return Ok(Some(e.value.clone()));
         }
         // WARM hit → decompress + promote to HOT.
         if let Some(w) = self.warm.remove(key) {
             self.warm_bytes -= w.block.stored_len();
             let bytes = w.block.decode();
+            self.verify_digest(key, &bytes)?;
             let value = V::from_bytes(&bytes);
             self.hits += 1;
             self.promotions += 1;
             self.insert_hot(key.clone(), value, w.score + 1.0, clk);
-            return self.hot.get(key).map(|e| e.value.clone());
+            return Ok(self.hot.get(key).map(|e| e.value.clone()));
         }
         // COLD hit → read blob + decompress + promote to HOT.
         if let Some(m) = self.cold_meta.remove(key) {
@@ -421,15 +470,41 @@ where
                     codec: m.codec,
                     orig_len: m.orig_len,
                 };
-                let value = V::from_bytes(&sb.decode());
+                let bytes = sb.decode();
+                self.verify_digest(key, &bytes)?;
+                let value = V::from_bytes(&bytes);
                 self.hits += 1;
                 self.promotions += 1;
                 self.insert_hot(key.clone(), value, m.score + 1.0, clk);
-                return self.hot.get(key).map(|e| e.value.clone());
+                return Ok(self.hot.get(key).map(|e| e.value.clone()));
             }
         }
         self.misses += 1;
-        None
+        Ok(None)
+    }
+
+    /// Compare a paged-in block with the digest recorded at its first write
+    /// (MEDULLA-DURABLE-KERNEL-R083.8). The block has already left its tier; on a
+    /// mismatch it is dropped for good and the read refuses.
+    fn verify_digest(&mut self, key: &K, bytes: &[u8]) -> Result<(), KvTierError> {
+        let matches = self
+            .digests
+            .get(key)
+            .is_none_or(|digest| *digest == content_hash(bytes));
+        if matches {
+            return Ok(());
+        }
+        self.forget(key);
+        self.drops += 1;
+        self.misses += 1;
+        Err(KvTierError::BlockDigestMismatch)
+    }
+
+    /// Clear the per-key side tables of a block that left the cache entirely.
+    fn forget(&mut self, key: &K) {
+        self.versions.remove(key);
+        self.importance.remove(key);
+        self.digests.remove(key);
     }
 
     /// Look up `key` and, on a hit, promote its currently-COLD graph neighbours
@@ -521,8 +596,7 @@ where
     /// whether it existed.
     pub fn evict(&mut self, key: &K) -> bool {
         self.pinned.remove(key);
-        self.versions.remove(key);
-        self.importance.remove(key);
+        self.forget(key);
         self.remove_resident(key)
     }
 
@@ -663,32 +737,29 @@ where
     fn enforce_warm(&mut self) {
         while self.warm_bytes > self.warm_cap {
             let Some(k) = self.lowest_warm() else { break };
+            // Demote WARM → COLD: spill the compressed bytes to the cold device.
+            if self.cold_store.put(&k, &self.warm[&k].block.data).is_err() {
+                // MEDULLA-DURABLE-KERNEL-R083.8: a failed durable write keeps the block
+                // in WARM (a demotion never drops bytes) and refuses the put that caused
+                // the pressure. Stop rebalancing: the device is refusing writes.
+                self.pending_refusal = Some(KvTierError::ColdWriteFailed);
+                break;
+            }
             let w = self.warm.remove(&k).expect("lowest_warm key present");
             self.warm_bytes -= w.block.stored_len();
-            // Demote WARM → COLD: spill the compressed bytes to the cold device.
             let stored_len = w.block.stored_len();
-            match self.cold_store.put(&k, &w.block.data) {
-                Ok(()) => {
-                    self.cold_bytes += stored_len;
-                    self.cold_meta.insert(
-                        k,
-                        ColdMeta {
-                            codec: w.block.codec,
-                            orig_len: w.block.orig_len,
-                            stored_len,
-                            score: w.score,
-                            last: w.last,
-                        },
-                    );
-                    self.demotions_to_cold += 1;
-                }
-                Err(_) => {
-                    // Cold device rejected the write — the block is dropped.
-                    self.versions.remove(&k); // it left the cache entirely (MEDULLA-364)
-                    self.importance.remove(&k); // CONCEPT:MEDULLA-KG.memory.graph-guided-paging
-                    self.drops += 1;
-                }
-            }
+            self.cold_bytes += stored_len;
+            self.cold_meta.insert(
+                k,
+                ColdMeta {
+                    codec: w.block.codec,
+                    orig_len: w.block.orig_len,
+                    stored_len,
+                    score: w.score,
+                    last: w.last,
+                },
+            );
+            self.demotions_to_cold += 1;
         }
         self.enforce_cold();
     }
@@ -701,8 +772,7 @@ where
             let m = self.cold_meta.remove(&k).expect("lowest_cold key present");
             self.cold_bytes -= m.stored_len;
             let _ = self.cold_store.remove(&k);
-            self.versions.remove(&k); // it left the cache entirely (MEDULLA-364)
-            self.importance.remove(&k); // CONCEPT:MEDULLA-KG.memory.graph-guided-paging
+            self.forget(&k); // it left the cache entirely (MEDULLA-364)
             self.drops += 1;
         }
     }

@@ -172,6 +172,9 @@ fn receipt_of(
     let (active_embedded, shadow_embedded) = (gens.active.embedded(), gens.shadow.embedded());
     let lower = to_q16(wilson_lower(tally.wins, tally.wins + tally.losses));
     let score_psi_q16 = score_psi(tally);
+    if let Some(psi) = score_psi_q16 {
+        medulla_kernel::metrics::head_drift("embedding_generation", psi);
+    }
     let passed = shadow_embedded >= active_embedded
         && tally.n >= u64::from(request.min_eval_items)
         && lower > to_q16(0.5)

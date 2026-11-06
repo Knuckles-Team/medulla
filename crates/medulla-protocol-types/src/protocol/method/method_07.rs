@@ -307,6 +307,11 @@ $($variants)*
         /// fact multiplies the response size.
         #[serde(default)]
         explain: bool,
+        /// Fixpoint bound in rule evaluations; `None` uses `knob
+        /// reasoning.rule_max_steps` (MEDULLA-FEDERATED-QUERY-R608.1). On the bound
+        /// the response is the partial derivation with `complete = false`.
+        #[serde(default)]
+        max_steps: Option<u64>,
     },
 
 

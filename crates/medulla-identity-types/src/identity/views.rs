@@ -192,6 +192,19 @@ pub struct ResetDelivery {
     pub email: Option<String>,
 }
 
+/// The closed answer of `session_liveness`. It carries no token, principal
+/// or expiry: only the stored state of the named reference.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum SessionLiveness {
+    Live,
+    Revoked,
+    Expired,
+    /// The reference names an API key or an external identity, not a session.
+    NotSessionBound,
+}
+
 /// Every identity op's answer.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", content = "value", rename_all = "snake_case")]
@@ -213,6 +226,8 @@ pub enum IdentityReply<C = ()> {
     Sessions(Vec<SessionView>),
     /// Original durable session facts; never an admission credential.
     SessionRecord(super::projection::SessionRecordProjection),
+    /// `session_liveness`: the stored state of one session reference.
+    SessionLiveness(SessionLiveness),
     /// Facts from one GLOBAL identity/RBAC authority revision, not a per-session counter.
     SessionAuthority {
         record: super::projection::SessionRecordProjection,
@@ -250,6 +265,7 @@ impl IdentityReply {
             Self::Authenticate(value) => IdentityReply::Authenticate(value),
             Self::Sessions(value) => IdentityReply::Sessions(value),
             Self::SessionRecord(value) => IdentityReply::SessionRecord(value),
+            Self::SessionLiveness(value) => IdentityReply::SessionLiveness(value),
             Self::SessionAuthority {
                 record,
                 scopes,

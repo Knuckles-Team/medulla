@@ -187,6 +187,14 @@ mod imp {
                 .expect("unique metric");
             m
         };
+        // MEDULLA-DURABLE-KERNEL-R084.5: one count per resolved stale envelope.
+        // `strategy` ∈ {refuse,prefer_newer,field_union}; `winner` ∈
+        // {existing,incoming,merged} (bounded, 3 × 3).
+        static ref WRITE_CONFLICTS: IntCounterVec = counter_vec(
+            "medulla_write_conflicts_total",
+            "Stale change-envelope write conflicts, by merge strategy and winner",
+            &["strategy", "winner"],
+        );
         static ref GRAPH_OPS: IntCounterVec = counter_vec(
             "medulla_graph_ops_total",
             "Graph-targeted operations admitted past the ACL, by graph (bounded cardinality)",
@@ -572,6 +580,11 @@ mod imp {
     /// (W2.4). Under pressure the lowest class is shed first (`backpressure`).
     pub fn qos_shed(class: &str, reason: &str) {
         QOS_SHED.with_label_values(&[class, reason]).inc();
+    }
+
+    /// Record one resolved write conflict (MEDULLA-DURABLE-KERNEL-R084.5).
+    pub fn write_conflict(strategy: &str, winner: &str) {
+        WRITE_CONFLICTS.with_label_values(&[strategy, winner]).inc();
     }
 
     /// Record a QoS-admitted request finishing dispatch after `seconds` (W2.4): observes

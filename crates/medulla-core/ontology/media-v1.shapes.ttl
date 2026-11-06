@@ -57,6 +57,24 @@
         sh:message "A DownloadRequest state is requested, wanted, grabbed, importing, imported or failed."
     ] .
 
+# MEDULLA-MEDIA-VOCAB-R001.100.1: a media tag names its item, the item
+# revision, its producer, its evidence and its provenance digest. A tag
+# without provenance is refused.
+
+:MediaTagProvenanceShape a sh:NodeShape ;
+    sh:targetClass :MediaTag ;
+    sh:property [ sh:path :taggedMedia ; sh:minCount 1 ; sh:message "A MediaTag names the media item it tags." ] ;
+    sh:property [ sh:path :mediaRevision ; sh:minCount 1 ; sh:message "A MediaTag names the media revision it was produced from." ] ;
+    sh:property [ sh:path :producerId ; sh:minCount 1 ; sh:message "A MediaTag names its producer." ] ;
+    sh:property [ sh:path :evidenceRef ; sh:minCount 1 ; sh:message "A MediaTag names its evidence." ] ;
+    sh:property [ sh:path :provenanceDigest ; sh:minCount 1 ; sh:message "A MediaTag carries its provenance digest." ] ;
+    sh:property [ sh:path :tagKind ; sh:in ( "object" "context" ) ; sh:message "A MediaTag kind is object or context." ] ;
+    sh:property [
+        sh:path :tagConfidence ;
+        sh:minInclusive 0.0 ; sh:maxInclusive 1.0 ;
+        sh:message "A MediaTag confidence lies in [0, 1]."
+    ] .
+
 :MediaVocabShapePrefixes a owl:Ontology ;
     sh:declare [ sh:prefix "kg" ; sh:namespace "http://knuckles.team/kg#"^^xsd:anyURI ] ;
     sh:declare [ sh:prefix "dc" ; sh:namespace "http://purl.org/dc/terms/"^^xsd:anyURI ] .

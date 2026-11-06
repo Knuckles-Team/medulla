@@ -119,7 +119,8 @@ fn configure_authority_once() {
     );
 }
 
-fn context_for(agent_id: &str) -> RequestContextClaims {
+#[allow(dead_code)]
+pub fn context_for(agent_id: &str) -> RequestContextClaims {
     RequestContextClaims {
         principal: agent_id.to_string(),
         tenant: TEST_TENANT.to_string(),
@@ -170,13 +171,26 @@ pub fn signed_request_as(
     agent_id: &str,
     method: Method,
 ) -> Request {
+    signed_request_with_context(secret, id, graph, context_for(agent_id), method)
+}
+
+/// [`signed_request_as`] with caller-chosen claims, so a test can narrow the
+/// tenant or the scopes the verified request context carries.
+#[allow(dead_code)]
+pub fn signed_request_with_context(
+    secret: &str,
+    id: u64,
+    graph: &str,
+    context: RequestContextClaims,
+    method: Method,
+) -> Request {
     configure_authority();
-    let context = context_for(agent_id);
+    let agent_id = context.agent_id.clone();
     let mut request = Request {
         id,
         graph: graph.to_string(),
         auth_token: String::new(),
-        agent_id: Some(agent_id.to_string()),
+        agent_id: Some(agent_id),
         method,
     };
     let sequence = NONCE_SEQUENCE.fetch_add(1, Ordering::Relaxed);
@@ -356,4 +370,46 @@ pub fn signed_register_identity_request(args: SignedRegisterIdentity<'_>) -> Req
         },
     );
     request
+}
+
+/// [`signed_request`] whose verified context carries exactly `scopes`, so a
+/// test can prove a scope-gated method refuses a caller without its scope.
+#[allow(dead_code)]
+pub fn signed_request_with_scopes(
+    secret: &str,
+    id: u64,
+    graph: &str,
+    scopes: &[&str],
+    method: Method,
+) -> Request {
+    configure_authority();
+    let mut context = context_for(TEST_AGENT);
+    context.scopes = scopes.iter().map(|scope| scope.to_string()).collect();
+    let mut request = Request {
+        id,
+        graph: graph.to_string(),
+        auth_token: String::new(),
+        agent_id: Some(TEST_AGENT.to_string()),
+        method,
+    };
+    let sequence = NONCE_SEQUENCE.fetch_add(1, Ordering::Relaxed);
+    let nonce = format!("integration-{}-{id}-{sequence}", std::process::id());
+    let idempotency_key = format!("integration-request-{}-{id}-{sequence}", std::process::id());
+    request.auth_token = compute_verified_envelope_token(
+        secret,
+        &request,
+        &VerifiedEnvelopeParams {
+            context: &context,
+            timestamp: now_secs(),
+            nonce: &nonce,
+            idempotency_key: &idempotency_key,
+        },
+    );
+    request
+}
+
+/// The tenant every integration-test signer's verified context names.
+#[allow(dead_code)]
+pub fn test_tenant() -> &'static str {
+    TEST_TENANT
 }

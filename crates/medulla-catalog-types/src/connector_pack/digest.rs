@@ -529,7 +529,7 @@ mod harness_tool_fact_tests {
 mod tests {
     use super::*;
 
-    // spec: MEDULLA-TYPED-PACKS-R070
+    // spec: MEDULLA-TYPED-PACKS-R070, MEDULLA-TYPED-PACKS-R001.4
     /// Every committed sample of the vector file under
     /// `crates/medulla-types/tests/fixtures/` must equal the bytes the current
     /// Rust type produces: the test deserializes each committed wire fixture
