@@ -4512,6 +4512,7 @@ dependencies = [
  "medulla-protocol-types",
  "medulla-types",
  "medulla-work-types",
+ "regex",
  "schemars 1.2.3",
  "serde_json",
  "tempfile",
