@@ -16,6 +16,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use medulla_decision_stats::decision::features::FeatureMatrix;
 use medulla_decision_stats::decision::ladder::LadderResult;
+use medulla_decision_types::decision::record::outcome::RefusalOrigin;
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::{
     decision::harness_contrast::decide_contrast, decision::harness_contrast::matrix_values,
@@ -177,7 +178,10 @@ fn refusal_text(
             "the named probe trace does not agree with the stored evidence".to_string()
         }
     };
-    format!("{}: {detail}", kind.code())
+    let code =
+        AbstainReason::from_refusal(RefusalOrigin::Decide(QuestionKind::HarnessContrast), &kind)
+            .code();
+    format!("{}: {detail}", code.as_str())
 }
 
 /// Read the evidence out of the view and run the kernel.
