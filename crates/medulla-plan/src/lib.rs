@@ -170,7 +170,7 @@ pub mod relational_connection;
 // Re-export the lexical surface (CONCEPT:AU-KG.query.text-spatial-time) so a caller wiring a text plan
 // names them through medulla-plan: the BM25 index, the hit row, and the RRF helper.
 #[cfg(feature = "text")]
-pub use medulla_text::{RRF_K, TextHit, TextIndex, rrf_fuse};
+pub use medulla_text::{rrf_fuse, TextHit, TextIndex, RRF_K};
 // The `PlanCtx::with_text` search-surface trait (CONCEPT:MEDULLA-KG.query.served-text-index-binding) — a facade
 // implements this over its OWN maintained persistent index (rather than a plain
 // `medulla_text::TextIndex`) to push a served `RankText`/`FuseRrf` leg down into it.
