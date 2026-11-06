@@ -92,6 +92,7 @@ pub const DURABLE_STORES: &[DurableStore] = &[
     bundled("kv.redb"),
     bundled("node_info.redb"),
     bundled("agent_library.redb"),
+    bundled("branch_registry.redb"),
     bundled("rbac.redb"),
     // ── deliberately excluded, declared in the manifest ─────────────────────────
     excluded(
@@ -198,6 +199,11 @@ pub fn bundled_store_authority(
         "agent_library.redb" => Some((
             AGENT_LIBRARY_PHYSICAL_STORE,
             medulla_storage::OwnerLayout::AgentLibrary,
+        )),
+        #[cfg(feature = "redb")]
+        "branch_registry.redb" => Some((
+            super::branch_registry_store::BRANCH_REGISTRY_PHYSICAL_STORE,
+            medulla_storage::OwnerLayout::BranchRegistry,
         )),
         "rbac.redb" => Some((
             "eg-core:rbac-security-control",

@@ -123,6 +123,9 @@ pub mod node_info_store;
 // never a KG node/edge write (see the `Method::ClusterHierarchyRefresh` doc for
 // why membership is deliberately NOT represented as graph edges). Redb-only, like
 // every other own-file side store in this module.
+// MEDULLA-BRANCH-MERGE-R001: the durable branch registry owner file.
+#[cfg(feature = "redb")]
+pub mod branch_registry_store;
 #[cfg(feature = "redb")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod cluster_hierarchy_store;

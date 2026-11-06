@@ -346,7 +346,8 @@ pub fn layout_predecessors(layout: OwnerLayout) -> &'static [LayoutPredecessor] 
         | OwnerLayout::ColdTier
         | OwnerLayout::TenantCatalog
         | OwnerLayout::NodeInfo
-        | OwnerLayout::ClusterHierarchy => &[],
+        | OwnerLayout::ClusterHierarchy
+        | OwnerLayout::BranchRegistry => &[],
         OwnerLayout::GraphShard => &[
             GRAPH_SHARD_BEFORE_STORAGE_SCRUB,
             GRAPH_SHARD_BEFORE_ENRICHMENT,
@@ -360,7 +361,7 @@ pub fn layout_predecessors(layout: OwnerLayout) -> &'static [LayoutPredecessor] 
 }
 
 /// Every layout, in registry order.
-pub const ALL_LAYOUTS: [OwnerLayout; 18] = [
+pub const ALL_LAYOUTS: [OwnerLayout; 19] = [
     OwnerLayout::LedgerOnly,
     OwnerLayout::Rbac,
     OwnerLayout::Jobs,
@@ -379,6 +380,7 @@ pub const ALL_LAYOUTS: [OwnerLayout; 18] = [
     OwnerLayout::ClusterHierarchy,
     OwnerLayout::GraphShard,
     OwnerLayout::AgentLibrary,
+    OwnerLayout::BranchRegistry,
 ];
 
 /// The digest each layout had when its lineage was last declared, hex.
@@ -427,6 +429,9 @@ pub fn pinned_layout_digest(layout: OwnerLayout) -> &'static str {
         }
         OwnerLayout::AgentLibrary => {
             "e112d8118e4e62b002799b84bba8c69162e477071861a81d3893277736727ea0"
+        }
+        OwnerLayout::BranchRegistry => {
+            "f8b3f0bc54cc11357787200c0091ebf8ccd7ae67af7fbea1930837e1d24019b4"
         }
     }
 }

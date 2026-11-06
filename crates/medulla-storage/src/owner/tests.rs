@@ -57,6 +57,8 @@ fn owner_layout_registry_has_frozen_cardinality() {
     assert_eq!(owner_table_names(OwnerLayout::TenantCatalog).len(), 1);
     assert_eq!(owner_table_names(OwnerLayout::NodeInfo).len(), 2);
     assert_eq!(owner_table_names(OwnerLayout::ClusterHierarchy).len(), 1);
+    // MEDULLA-BRANCH-MERGE-R001: `branch_registry.redb` holds one row table.
+    assert_eq!(owner_table_names(OwnerLayout::BranchRegistry).len(), 1);
     // Eight, not two: `agent_library.redb` is ONE physical authority carrying
     // all four RF-ADR-008 layers, each as a revisions+heads pair, plus the
     // ConnectorPack catalog's five tables and governed write-back's four --
@@ -163,7 +165,9 @@ fn every_owner_surface_has_one_closed_cutover_disposition() {
     // `audit_requests` in GraphShard, also DomainService: service 150 = 149 + 1.
     // 152 -> 153: private current-plan snapshots are DomainService rows.
     // 153 -> 154: private run-checkpoint snapshots are DomainService rows.
-    assert_eq!((names.len(), service, shared), (154, 152, 2));
+    // 154 -> 155: the branch registry's one DomainService row table
+    // (MEDULLA-BRANCH-MERGE-R001): service 153 = 152 + 1.
+    assert_eq!((names.len(), service, shared), (155, 153, 2));
 }
 
 #[test]
@@ -299,6 +303,7 @@ fn every_owner_table_declares_its_partition_boundary() {
                             | OwnerLayout::NodeInfo
                             | OwnerLayout::ClusterHierarchy
                             | OwnerLayout::AgentLibrary
+                            | OwnerLayout::BranchRegistry
                             | OwnerLayout::GraphShard
                     ));
                 }

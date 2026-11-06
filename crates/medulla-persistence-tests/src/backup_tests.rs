@@ -369,6 +369,69 @@ async fn backup_restore_carries_non_shard_durable_stores() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
+/// MEDULLA-BRANCH-MERGE-R001 — the branch registry owner file is bundled, so a
+/// restore comes up with every branch (the Agent Library owner-file pattern).
+// spec: MEDULLA-BRANCH-MERGE-R001
+#[tokio::test(flavor = "multi_thread")]
+async fn backup_restore_carries_the_branch_registry() {
+    use medulla_persistence::branch_registry_store::BranchRegistry;
+    use medulla_types::branch::{Branch, BranchRef};
+    #[cfg(feature = "security")]
+    let _env_lock = medulla_kernel::crypto::acquire_test_env_lock().await;
+    let root = std::env::temp_dir().join(format!("medulla-backup-branch-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&root);
+    let (src, bundle, restored) = (
+        root.join("live"),
+        root.join("bundle"),
+        root.join("restored"),
+    );
+    std::fs::create_dir_all(&src).unwrap();
+    let src_s = src.to_string_lossy().to_string();
+    seed(&src_s, 1, &["alpha"]).await;
+
+    let branch = Branch {
+        tenant: "t".into(),
+        graph: "alpha".into(),
+        name: "feature/one".into(),
+        base_version: 1,
+        head_commit: "alpha@1".into(),
+        created_by: "agent".into(),
+        created_at: 1,
+        deleted: false,
+    };
+    let registry = BranchRegistry::open(&src_s).expect("open branch registry");
+    registry.create(&branch).expect("create branch");
+    let backend = RedbBackend::open_with_shards(src_s.clone(), 256, 1).expect("reopen");
+    let extra: Vec<&dyn medulla_server_api::api::persistence::BundledStoreSource> = vec![&registry];
+    let report = backend
+        .backup(&bundle, "test-engine", 7, "branches", &extra)
+        .expect("backup");
+    backend.shutdown();
+    drop(registry);
+    assert!(
+        report.bundled_stores.contains_key("branch_registry.redb"),
+        "branch_registry.redb bundled, got {:?}",
+        report.bundled_stores
+    );
+    let manifest = read_manifest(&bundle).expect("manifest validates");
+    assert!(!manifest
+        .excluded_stores
+        .contains_key("branch_registry.redb"));
+
+    let restore = restore_bundle(&bundle, &restored, 1).expect("restore");
+    assert!(restore
+        .restored_stores
+        .contains(&"branch_registry.redb".to_string()));
+    let reopened = BranchRegistry::open(&restored.to_string_lossy()).expect("reopen restored");
+    let reference = BranchRef {
+        tenant: branch.tenant.clone(),
+        graph: branch.graph.clone(),
+        name: branch.name.clone(),
+    };
+    assert_eq!(reopened.get(&reference).unwrap(), Some(branch));
+    let _ = std::fs::remove_dir_all(&root);
+}
+
 /// BUG-PE-054 — an unregistered durable store cannot be smuggled into a bundle.
 /// The registry is the single list; anything else must fail loudly at backup time.
 #[tokio::test(flavor = "multi_thread")]

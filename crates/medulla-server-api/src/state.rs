@@ -194,6 +194,10 @@ pub struct ServerState {
     /// outside the global state lock. The slot retains the shared winning handle.
     #[cfg(feature = "redb")]
     pub agent_library_open: Arc<Mutex<Option<ErasedHandle>>>,
+    /// The branch registry owner (MEDULLA-BRANCH-MERGE-R001), opened once
+    /// under `persist_dir` by the first branch request and then shared.
+    #[cfg(feature = "redb")]
+    pub branch_registry: Arc<Mutex<Option<ErasedHandle>>>,
     /// Cold-tenant access tracker (CONCEPT:MEDULLA-KG.sharding.medulla-r6/MEDULLA-040, R6), feature `redb`. The
     /// dispatch read+write path calls `touch(graph)` on every graph access so the
     /// periodic cold-offload sweep (`offload_cold_tenants`) can hibernate graphs idle
@@ -480,6 +484,8 @@ impl ServerState {
             agent_library: None,
             #[cfg(feature = "redb")]
             agent_library_open: Arc::default(),
+            #[cfg(feature = "redb")]
+            branch_registry: Arc::default(),
             #[cfg(feature = "redb")]
             cold_tracker: None,
             #[cfg(feature = "viz-static-export")]
