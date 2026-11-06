@@ -2019,6 +2019,15 @@ path = "benches/redb_write_latency_bench.rs"
 harness = false
 required-features = ["full"]
 
+# Hot-path claim latency (MEDULLA-DURABLE-KERNEL-R750.753): claims 1,000 ready
+# WorkItem rows one at a time through the real durable path; budget p50 < 1 ms,
+# p99 < 5 ms. Nightly only, never gates a pull request. `--features full` only.
+[[bench]]
+name = "work_item_claim"
+path = "benches/work_item_claim.rs"
+harness = false
+required-features = ["full"]
+
 # Schema-drift classification hot-path receipt (MEDULLA-TYPED-PACKS-R712): the
 # five-way classifier of `medulla_types::graph_schema::drift` over a 1,000-field
 # approved contract, rotated over deterministic drift shapes; prints p50/p99
