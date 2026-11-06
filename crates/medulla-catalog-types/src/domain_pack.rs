@@ -15,8 +15,8 @@ use std::collections::BTreeSet;
 mod crosswalk;
 
 pub use crosswalk::{
-    validate_crosswalks, CrosswalkContext, PinnedHierarchy, MAX_CROSSWALK_IRI_BYTES,
-    MAX_CROSSWALK_MAPPINGS, MAX_CROSSWALK_SOURCE_CLASSES,
+    compute_coverage, validate_crosswalks, CrosswalkContext, PinnedHierarchy,
+    MAX_CROSSWALK_IRI_BYTES, MAX_CROSSWALK_MAPPINGS, MAX_CROSSWALK_SOURCE_CLASSES,
 };
 
 /// The four domains this requirement names. Closed: a fifth domain is a new
@@ -30,6 +30,9 @@ pub enum DomainPackKind {
     Legal,
     Medical,
     Government,
+    /// Technology vocabularies (MEDULLA-TYPED-PACKS-R097.2.1). Labor packs
+    /// use `Hr`; medical packs use `Medical`.
+    Technology,
 }
 
 /// One `owl:Class` in a domain pack, optionally aligned to an upper-ontology
@@ -342,6 +345,105 @@ pub struct DomainPack {
     pub classes: Vec<DomainClass>,
     pub enumerations: Vec<DomainEnumeration>,
     pub properties: Vec<DomainProperty>,
+    /// Declared mappings from this pack's classes to target vocabularies
+    /// (MEDULLA-TYPED-PACKS-R097.2.1).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub crosswalks: Vec<VocabularyCrosswalk>,
+}
+
+/// Why a declared class has no crosswalk entry in a coverage report.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UnmappedReason {
+    /// No validated crosswalk names the class; equivalence is never inferred.
+    NoDeclaredMapping,
+}
+
+/// One class of the selected pack revision that no crosswalk maps.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct UnmappedClass {
+    pub class_iri: String,
+    pub reason: UnmappedReason,
+}
+
+/// The crosswalk coverage of one selected pack revision
+/// (MEDULLA-TYPED-PACKS-R097.2.1): the exact sorted mapped and unmapped class
+/// sets, the declared total and the digest of the source set they were
+/// computed over.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CrosswalkCoverage {
+    /// Classes declared by the selected pack revision.
+    pub declared: u32,
+    /// Classes with a validated declared crosswalk, sorted.
+    pub mapped: Vec<String>,
+    /// Declared classes without one, sorted by IRI.
+    pub unmapped: Vec<UnmappedClass>,
+    /// SHA-256 (64 lowercase hex characters) over the source revision and the
+    /// sorted declared class set.
+    pub source_digest: String,
+}
+
+/// A coverage report that does not describe its declared class set.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+pub enum CrosswalkCoverageError {
+    #[error("coverage entry {0:?} is outside the declared class set")]
+    EntryOutsideDeclared(String),
+    #[error("coverage lists the class {0:?} more than once or out of order")]
+    NotCanonical(String),
+    #[error("coverage maps and leaves unmapped the class {0:?}")]
+    MappedAndUnmapped(String),
+    #[error("coverage declared total {declared} differs from the {listed} classes it lists")]
+    TotalMismatch { declared: u32, listed: usize },
+    #[error("coverage source_digest is not 64 lowercase hexadecimal characters")]
+    MalformedSourceDigest,
+}
+
+impl CrosswalkCoverage {
+    /// Check the report against the class set it covers: every entry is a
+    /// declared class, both lists are sorted and unique, the two sets are
+    /// disjoint and together they are exactly the declared total.
+    pub fn validate(
+        &self,
+        declared_classes: &BTreeSet<String>,
+    ) -> Result<(), CrosswalkCoverageError> {
+        let mapped = self.mapped.iter();
+        let unmapped = self.unmapped.iter().map(|entry| &entry.class_iri);
+        for iri in mapped.clone().chain(unmapped.clone()) {
+            if !declared_classes.contains(iri) {
+                return Err(CrosswalkCoverageError::EntryOutsideDeclared(iri.clone()));
+            }
+        }
+        for list in [
+            mapped.clone().collect::<Vec<_>>(),
+            unmapped.clone().collect(),
+        ] {
+            if let Some(pair) = list.windows(2).find(|pair| pair[0] >= pair[1]) {
+                return Err(CrosswalkCoverageError::NotCanonical(pair[1].clone()));
+            }
+        }
+        let mapped_set: BTreeSet<&String> = mapped.collect();
+        if let Some(both) = unmapped.clone().find(|iri| mapped_set.contains(iri)) {
+            return Err(CrosswalkCoverageError::MappedAndUnmapped(both.clone()));
+        }
+        let listed = self.mapped.len() + self.unmapped.len();
+        if self.declared as usize != listed {
+            return Err(CrosswalkCoverageError::TotalMismatch {
+                declared: self.declared,
+                listed,
+            });
+        }
+        let digest = &self.source_digest;
+        if digest.len() != 64
+            || !digest
+                .bytes()
+                .all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f'))
+        {
+            return Err(CrosswalkCoverageError::MalformedSourceDigest);
+        }
+        Ok(())
+    }
 }
 
 impl DomainPack {
@@ -413,6 +515,7 @@ mod tests {
                 domain_class: "EEOCategory".to_string(),
                 range: "xsd:string".to_string(),
             }],
+            crosswalks: Vec::new(),
         }
     }
 
@@ -686,6 +789,69 @@ mod tests {
         assert!(matches!(
             crosswalk.validate(),
             Err(VocabularyCrosswalkError::EmptyOrigin)
+        ));
+    }
+
+    // spec: MEDULLA-TYPED-PACKS-R097.2.1
+    #[test]
+    fn coverage_round_trips_three_domains() {
+        let declared: BTreeSet<String> = ["urn:c:A", "urn:c:B", "urn:c:C"]
+            .iter()
+            .map(|iri| iri.to_string())
+            .collect();
+        let coverage = CrosswalkCoverage {
+            declared: 3,
+            mapped: vec!["urn:c:A".to_string()],
+            unmapped: vec![
+                UnmappedClass {
+                    class_iri: "urn:c:B".to_string(),
+                    reason: UnmappedReason::NoDeclaredMapping,
+                },
+                UnmappedClass {
+                    class_iri: "urn:c:C".to_string(),
+                    reason: UnmappedReason::NoDeclaredMapping,
+                },
+            ],
+            source_digest: "ab".repeat(32),
+        };
+        for kind in [
+            DomainPackKind::Medical,
+            DomainPackKind::Technology,
+            DomainPackKind::Hr,
+        ] {
+            let mut pack = hr_fixture();
+            pack.kind = kind;
+            pack.crosswalks = vec![crosswalk_fixture()];
+            pack.validate().expect("valid pack");
+            let encoded = serde_json::to_vec(&pack).expect("serialize");
+            let decoded: DomainPack = serde_json::from_slice(&encoded).expect("deserialize");
+            assert_eq!(decoded, pack);
+        }
+        let encoded = serde_json::to_vec(&coverage).expect("serialize");
+        let decoded: CrosswalkCoverage = serde_json::from_slice(&encoded).expect("deserialize");
+        assert_eq!(decoded, coverage);
+        decoded.validate(&declared).expect("canonical coverage");
+
+        // Unknown kinds and unknown fields refuse.
+        let mut value = serde_json::to_value(hr_fixture()).unwrap();
+        value["kind"] = serde_json::json!("astrology");
+        assert!(serde_json::from_value::<DomainPack>(value).is_err());
+        let mut value = serde_json::to_value(&coverage).unwrap();
+        value["extra"] = serde_json::json!(1);
+        assert!(serde_json::from_value::<CrosswalkCoverage>(value).is_err());
+
+        // An entry outside the declared class set refuses.
+        let mut outside = coverage.clone();
+        outside.mapped = vec!["urn:c:Z".to_string()];
+        assert!(matches!(
+            outside.validate(&declared),
+            Err(CrosswalkCoverageError::EntryOutsideDeclared(_))
+        ));
+        let mut short = coverage;
+        short.declared = 2;
+        assert!(matches!(
+            short.validate(&declared),
+            Err(CrosswalkCoverageError::TotalMismatch { .. })
         ));
     }
 }
