@@ -10,6 +10,7 @@
 
 mod market;
 mod numeric_kernels;
+mod research_kernels;
 mod route_families;
 mod routes;
 mod signal_models;

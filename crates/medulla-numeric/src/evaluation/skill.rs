@@ -268,6 +268,92 @@ fn block_bootstrap(xs: &[f64], block: usize, resamples: usize, seed: u64) -> Opt
     Some((at(0.025), at(0.975)))
 }
 
+/// Spearman rank correlation of two equal-length series over their finite pairs;
+/// `0` when fewer than two pairs remain or a side is constant (no skill).
+fn rank_ic(xs: &[f64], ys: &[f64]) -> f64 {
+    let (xs, ys): (Vec<f64>, Vec<f64>) = xs
+        .iter()
+        .zip(ys)
+        .filter(|(x, y)| x.is_finite() && y.is_finite())
+        .map(|(&x, &y)| (x, y))
+        .unzip();
+    if xs.len() < 2 {
+        return 0.0;
+    }
+    crate::series::window::pearson(
+        &crate::series::window::ranks(&xs),
+        &crate::series::window::ranks(&ys),
+    )
+    .unwrap_or(0.0)
+}
+
+/// The rank information coefficient of `features[t]` against `targets[t + lag]`
+/// (observations in time order) for every lag from 1 to `max_lag`: the decay
+/// curve of a feature's predictive power. A lag whose pairs are constant or
+/// fewer than two reads `0`.
+pub fn ic_decay(features: &[f64], targets: &[f64], max_lag: usize) -> Result<Vec<f64>> {
+    if features.len() != targets.len() {
+        return Err(NumericError::shape("features and targets differ in length"));
+    }
+    if max_lag == 0 {
+        return Err(NumericError::bounds("a decay curve needs at least one lag"));
+    }
+    if max_lag >= features.len() {
+        return Err(NumericError::bounds(
+            "the longest lag must be shorter than the series",
+        ));
+    }
+    Ok((1..=max_lag)
+        .map(|lag| {
+            let n = features.len() - lag;
+            rank_ic(&features[..n], &targets[lag..])
+        })
+        .collect())
+}
+
+/// A seeded bootstrap interval of the same-observation rank information
+/// coefficient of `features` against `targets`: `resamples` resamples of the
+/// pairs with replacement, then the `(1 - level) / 2` and `(1 + level) / 2`
+/// quantiles of the resampled coefficients. The same inputs and seed give the
+/// same interval.
+pub fn bootstrap_ic_interval(
+    features: &[f64],
+    targets: &[f64],
+    resamples: usize,
+    level: f64,
+    seed: u64,
+) -> Result<(f64, f64)> {
+    if features.len() != targets.len() {
+        return Err(NumericError::shape("features and targets differ in length"));
+    }
+    if resamples == 0 {
+        return Err(NumericError::bounds(
+            "a bootstrap needs at least one resample",
+        ));
+    }
+    if !(level > 0.0 && level < 1.0) {
+        return Err(NumericError::bounds("the interval level is inside (0, 1)"));
+    }
+    let n = features.len();
+    if n < 3 {
+        return Err(NumericError::bounds(
+            "an interval needs at least three observations",
+        ));
+    }
+    let mut rng = ChaCha8Rng::seed_from_u64(seed);
+    let mut ics: Vec<f64> = (0..resamples)
+        .map(|_| {
+            let picks: Vec<usize> = (0..n).map(|_| rng.gen_range(0..n)).collect();
+            let xs: Vec<f64> = picks.iter().map(|&i| features[i]).collect();
+            let ys: Vec<f64> = picks.iter().map(|&i| targets[i]).collect();
+            rank_ic(&xs, &ys)
+        })
+        .collect();
+    ics.sort_by(f64::total_cmp);
+    let at = |q: f64| ics[((q * (resamples - 1) as f64).round() as usize).min(resamples - 1)];
+    Ok((at((1.0 - level) / 2.0), at((1.0 + level) / 2.0)))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -428,5 +514,32 @@ mod tests {
         assert!(binary_brier_score(&[0.5, 0.5], &[1.0]).is_err());
         assert!(binary_brier_score(&[], &[]).is_err());
         assert!(binary_brier_score(&[f64::NAN], &[1.0]).is_err());
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R117.1.2
+    #[test]
+    fn bootstrap_interval_is_reproducible() {
+        let (feature, outcome) = leading(120);
+        let first = bootstrap_ic_interval(&feature, &outcome, 200, 0.9, 11).unwrap();
+        let again = bootstrap_ic_interval(&feature, &outcome, 200, 0.9, 11).unwrap();
+        assert_eq!(first, again);
+        assert!(first.0 <= first.1);
+        let other = bootstrap_ic_interval(&feature, &outcome, 200, 0.9, 12).unwrap();
+        assert_ne!(first, other);
+        let wide = bootstrap_ic_interval(&feature, &outcome, 200, 0.99, 11).unwrap();
+        assert!(wide.0 <= first.0 && first.1 <= wide.1);
+        assert!(bootstrap_ic_interval(&feature, &outcome, 0, 0.9, 1).is_err());
+        assert!(bootstrap_ic_interval(&feature, &outcome, 10, 1.0, 1).is_err());
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R117.1.2
+    #[test]
+    fn ic_decay_peaks_where_the_target_lags_the_feature() {
+        let (feature, outcome) = leading(200);
+        let decay = ic_decay(&feature, &outcome, 5).unwrap();
+        assert_eq!(decay.len(), 5);
+        assert!(ic_decay(&feature, &outcome, 0).is_err());
+        assert!(ic_decay(&feature, &outcome[1..], 2).is_err());
+        assert!(ic_decay(&feature[..3], &outcome[..3], 3).is_err());
     }
 }

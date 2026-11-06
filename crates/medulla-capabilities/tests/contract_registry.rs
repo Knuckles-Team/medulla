@@ -229,6 +229,28 @@ fn session_usage_requires_the_shared_usage_read_scope() {
     assert_eq!(descriptor.policy.authz_action, "usage:read");
 }
 
+// spec: MEDULLA-UNIFIED-DATA-PLANE-R760.3
+#[test]
+fn incident_methods_listed() {
+    let variants = wire_method_variants();
+    let expected = [
+        ("IncidentRecordAnomaly", "incident:write", true),
+        ("IncidentCorrelate", "incident:write", true),
+        ("IncidentEvidence", "incident:read", false),
+        ("IncidentRelatedClaims", "incident:read", false),
+        ("IncidentSetStatus", "incident:write", true),
+    ];
+    for (id, scope, mutates) in expected {
+        assert!(variants.contains(id), "{id} is not a wire `Method` variant");
+        let descriptor = medulla_capabilities::method_descriptors()
+            .find(|descriptor| descriptor.id.as_str() == id)
+            .unwrap_or_else(|| panic!("{id} has no contract descriptor"));
+        assert_eq!(descriptor.policy.authz_action, scope, "{id}: scope");
+        assert_eq!(descriptor.policy.mutates, mutates, "{id}: mutates");
+        assert_eq!(descriptor.domain, "ingestion", "{id}: domain");
+    }
+}
+
 // spec: MEDULLA-TYPED-PACKS-R063
 /// The agent-layer shared schema version constants, each with its pinned value
 /// and every record type that embeds it.

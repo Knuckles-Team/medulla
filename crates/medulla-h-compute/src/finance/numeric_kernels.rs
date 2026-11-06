@@ -21,12 +21,25 @@ use medulla_finance_quant::execution::AlmgrenChriss;
 use medulla_finance_quant::execution::Ident;
 use medulla_finance_quant::factor;
 use medulla_finance_quant::factor::FactorInput;
+use medulla_protocol_types::protocol::IntoResponsePayload;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
 
 fn refuse(req_id: u64, error: impl std::fmt::Display) -> Response {
     Response::err(req_id, format!("INVALID_ARGUMENT: {error}"))
+}
+
+/// A banking kernel answered: record `ok` on its evidence span (R901.5).
+fn banking_ok(span: &tracing::Span, req_id: u64, payload: impl IntoResponsePayload) -> Response {
+    telemetry::record_outcome(span, telemetry::OUTCOME_OK);
+    Response::ok(req_id, payload)
+}
+
+/// A banking kernel refused: record its stable code on the evidence span (R901.5).
+fn banking_refusal(req_id: u64, span: &tracing::Span, error: banking::BankingError) -> Response {
+    telemetry::record_outcome(span, error.code());
+    refuse(req_id, error)
 }
 
 /// The serde name of a closed-enum value (`report-required`, `short_spread`, ...).
@@ -51,6 +64,19 @@ pub(super) fn handle_numeric_kernels(
         Method::FinanceExecutionSchedule { .. } => {
             telemetry::kernel_span(telemetry::Kernel::ExecutionSchedule, tenant, &method)
         }
+        // MEDULLA-FINANCE-PRIMITIVES-R901.5: the banking kernels add `rule_set_version`.
+        Method::FinanceAmlScreen { .. } => {
+            telemetry::kernel_span(telemetry::Kernel::AmlScreen, tenant, &method)
+        }
+        Method::FinanceCapitalRatios { .. } => {
+            telemetry::kernel_span(telemetry::Kernel::CapitalRatios, tenant, &method)
+        }
+        Method::FinanceExpectedLoss { .. } => {
+            telemetry::kernel_span(telemetry::Kernel::ExpectedLoss, tenant, &method)
+        }
+        Method::FinanceSettlementChain { .. } => {
+            telemetry::kernel_span(telemetry::Kernel::SettlementChain, tenant, &method)
+        }
         _ => tracing::Span::none(),
     };
     let _entered = span.enter();
@@ -67,19 +93,29 @@ pub(super) fn handle_numeric_kernels(
                 threshold_minor,
             };
             match banking::screen_transaction(&rule, amount_minor) {
-                Ok(alert) => Response::ok(
-                    req_id,
-                    ResultPayload::of::<results::FinanceAmlScreen>(wire::AmlScreenResult {
-                        alert: alert.map(|a| wire::AmlAlertResult {
-                            rule_id: a.rule_id,
-                            rule_version: a.rule_version,
-                            kind: name(&a.kind),
-                            severity: name(&a.severity),
-                            amount_minor: a.amount_minor,
+                Ok(alert) => {
+                    telemetry::record_outcome(
+                        &span,
+                        if alert.is_some() {
+                            telemetry::OUTCOME_ALERT
+                        } else {
+                            telemetry::OUTCOME_OK
+                        },
+                    );
+                    Response::ok(
+                        req_id,
+                        ResultPayload::of::<results::FinanceAmlScreen>(wire::AmlScreenResult {
+                            alert: alert.map(|a| wire::AmlAlertResult {
+                                rule_id: a.rule_id,
+                                rule_version: a.rule_version,
+                                kind: name(&a.kind),
+                                severity: name(&a.severity),
+                                amount_minor: a.amount_minor,
+                            }),
                         }),
-                    }),
-                ),
-                Err(error) => refuse(req_id, error),
+                    )
+                }
+                Err(error) => banking_refusal(req_id, &span, error),
             }
         }
         Method::FinanceCapitalRatios {
@@ -95,7 +131,8 @@ pub(super) fn handle_numeric_kernels(
             risk_weighted_assets,
             total_exposure,
         }) {
-            Ok(r) => Response::ok(
+            Ok(r) => banking_ok(
+                &span,
                 req_id,
                 ResultPayload::of::<results::FinanceCapitalRatios>(wire::CapitalRatiosResult {
                     cet1_ratio: r.cet1_ratio,
@@ -107,15 +144,16 @@ pub(super) fn handle_numeric_kernels(
                     leverage_meets_minimum: r.leverage_meets_minimum,
                 }),
             ),
-            Err(error) => refuse(req_id, error),
+            Err(error) => banking_refusal(req_id, &span, error),
         },
         Method::FinanceExpectedLoss { pd, lgd, ead_minor } => {
             match banking::expected_loss(&CreditExposure { pd, lgd, ead_minor }) {
-                Ok(loss) => Response::ok(
+                Ok(loss) => banking_ok(
+                    &span,
                     req_id,
                     ResultPayload::scalar::<results::FinanceExpectedLoss>(loss),
                 ),
-                Err(error) => refuse(req_id, error),
+                Err(error) => banking_refusal(req_id, &span, error),
             }
         }
         Method::FinanceSettlementChain {
@@ -126,7 +164,8 @@ pub(super) fn handle_numeric_kernels(
         } => {
             let hops: Vec<&str> = correspondents.iter().map(String::as_str).collect();
             match banking::settlement_chain(&origin, &hops, &beneficiary, amount_minor) {
-                Ok(legs) => Response::ok(
+                Ok(legs) => banking_ok(
+                    &span,
                     req_id,
                     ResultPayload::of::<results::FinanceSettlementChain>(
                         legs.into_iter()
@@ -139,7 +178,7 @@ pub(super) fn handle_numeric_kernels(
                             .collect(),
                     ),
                 ),
-                Err(error) => refuse(req_id, error),
+                Err(error) => banking_refusal(req_id, &span, error),
             }
         }
         Method::FinanceRegimeChain {

@@ -1030,6 +1030,10 @@ async fn graph_log_record(h: &Harness) -> StatisticalDecisionRecord {
     batch.records.as_slice()[0].clone()
 }
 
+// MEDULLA-DECISION-ENGINE-R815: the model media capability on the assembly answer.
+#[cfg(feature = "redb")]
+mod assemble_tests;
+
 mod retention_tests;
 
 mod log_tests;
@@ -1081,4 +1085,11 @@ mod replay_tests;
 
 mod task_plan_tests;
 
+// MEDULLA-DECISION-ENGINE-R072.100: one span per pipeline stage.
+mod telemetry_tests;
+
 mod run_observation_tests;
+
+// MEDULLA-DECISION-ENGINE-R652: research claims, evidence and sealed artifacts.
+#[cfg(feature = "statechart")]
+mod claims_tests;

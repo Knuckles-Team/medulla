@@ -147,3 +147,39 @@
     rdfs:label "FoodData Central id" ;
     rdfs:domain :FoodCompositionRecord ;
     rdfs:range xsd:string .
+
+:Recipe a owl:Class ;
+    rdfs:label "Recipe" ;
+    rdfs:comment "A recipe." .
+
+:usesIngredient a owl:ObjectProperty ;
+    rdfs:label "uses ingredient" ;
+    rdfs:comment "Links a :Recipe to a :Food it uses as an ingredient." ;
+    rdfs:domain :Recipe ;
+    rdfs:range :Food .
+
+:ShoppingListItem a owl:Class ;
+    rdfs:label "Shopping List Item" ;
+    rdfs:comment "A shopping-list item that refers to a :Food." .
+
+:MealPlanEntry a owl:Class ;
+    rdfs:label "Meal Plan Entry" ;
+    rdfs:comment "A planned meal on a date for a :Recipe." .
+
+:WorkoutRoutine a owl:Class ;
+    rdfs:label "Workout Routine" ;
+    rdfs:comment "A planned set of exercises." .
+
+:Exercise a owl:Class ;
+    rdfs:label "Exercise" ;
+    rdfs:comment "An exercise." .
+
+:includesExercise a owl:ObjectProperty ;
+    rdfs:label "includes exercise" ;
+    rdfs:comment "Links a :WorkoutRoutine to an :Exercise it includes." ;
+    rdfs:domain :WorkoutRoutine ;
+    rdfs:range :Exercise .
+
+:WorkoutSession a owl:Class ;
+    rdfs:label "Workout Session" ;
+    rdfs:comment "A performed instance of a :WorkoutRoutine, with prov:endedAtTime." .

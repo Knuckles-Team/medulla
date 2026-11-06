@@ -225,6 +225,12 @@ pub enum SessionOp {
         session_ref: String,
         tenant: String,
     },
+    /// Report whether a session reference is live, revoked, expired or not
+    /// session-bound, from stored state only; never touches the session.
+    Liveness {
+        session_ref: String,
+        tenant: String,
+    },
     /// Extend idle expiry within the original absolute lifetime using a global authority CAS.
     RenewReference {
         session_ref: String,
@@ -478,6 +484,7 @@ impl SessionOp {
             Self::InspectReference { .. } => {
                 meta("inspect_session_reference", false, OpAuthority::SelfService)
             }
+            Self::Liveness { .. } => meta("session_liveness", false, OpAuthority::Broker),
             Self::RenewReference { .. } => {
                 meta("renew_session_reference", true, OpAuthority::SelfService)
             }

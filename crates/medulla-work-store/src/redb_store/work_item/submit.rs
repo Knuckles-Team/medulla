@@ -743,6 +743,7 @@ pub fn apply_submit_work_item_rows<'txn, 'crypto>(
     } = scope;
     let context_tenant = request.context.tenant_id.as_str();
     let owner = super::run_owner::admit_owner(graph, request, admitted_actor)?;
+    validate_dispatch_carrier(request)?;
 
     let (max_inflight, dependencies, dependency_rows) =
         validate_and_resolve_submit_work_item_dependencies(graph, request, nodes, crypto)?;
@@ -760,6 +761,8 @@ pub fn apply_submit_work_item_rows<'txn, 'crypto>(
 
     let conversation_head =
         super::conversation::reserve(graph, request, admitted_actor, nodes, crypto)?;
+    let child_input =
+        super::conversation::reserve_child_input(graph, request, admitted_actor, nodes, crypto)?;
 
     let now_s = authoritative_now_ms as f64 / 1000.0;
     let pending_dependencies = dependency_rows
@@ -797,6 +800,7 @@ pub fn apply_submit_work_item_rows<'txn, 'crypto>(
         outbox_id,
     });
     result.changed_work_item_ids.extend(conversation_head);
+    result.changed_work_item_ids.extend(child_input);
     Ok(result)
 }
 
@@ -882,6 +886,29 @@ fn validate_batch_child(
     }
     if child.context.tenant_id != tenant || sanitize(&child.context.graph) != graph {
         return Err("SubmitWorkItems child context scope mismatch".to_string());
+    }
+    Ok(())
+}
+
+/// MEDULLA-DURABLE-KERNEL-R750.750.1: an `agent_turn` that carries a dispatch
+/// carrier is shape-checked at enqueue (presence and bounds of the admitted
+/// subset, decision reference and harness digest). The signature is verified
+/// by the worker before it claims the turn.
+fn validate_dispatch_carrier(
+    request: &medulla_work_types::native_control::SubmitWorkItemRequest,
+) -> Result<(), String> {
+    use medulla_work_types::agent_turn::{DispatchCarrier, DISPATCH_CARRIER_METADATA_KEY};
+    if request.kind != "agent_turn" {
+        return Ok(());
+    }
+    let Some(raw) = request.metadata.get(DISPATCH_CARRIER_METADATA_KEY) else {
+        return Ok(());
+    };
+    let carrier: DispatchCarrier = serde_json::from_value(raw.clone())
+        .map_err(|_| "INVALID_ARGUMENT: dispatch carrier is malformed".to_string())?;
+    carrier.envelope.validate().map_err(|e| e.to_string())?;
+    if request.run_id.as_deref() != Some(carrier.envelope.run_id.as_str()) {
+        return Err("INVALID_ARGUMENT: dispatch carrier run does not match the turn".into());
     }
     Ok(())
 }
