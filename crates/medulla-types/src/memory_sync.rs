@@ -29,6 +29,8 @@ pub struct MemorySyncError {
 /// The refusal codes of the memory-sync surface (MEDULLA-DURABLE-KERNEL-R085.5
 /// and R085.7). Each is a registered [`ServerErrorCode`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[cfg_attr(feature = "contract-schema", schemars(with = "String"))]
 pub enum MemorySyncRefusal {
     NotAvailable,
     VersionMalformed,
@@ -101,8 +103,10 @@ fn refusal(code: MemorySyncRefusal, detail: &'static str) -> MemorySyncError {
 }
 
 /// A document id: at most 256 bytes of `[a-z0-9._:/-]`, never empty.
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(try_from = "String", into = "String")]
+#[cfg_attr(feature = "contract-schema", schemars(with = "String"))]
 pub struct DocId(String);
 
 impl DocId {
@@ -140,8 +144,10 @@ impl From<DocId> for String {
 }
 
 /// A caller-chosen request id: 1 to 128 bytes, no control characters.
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(try_from = "String", into = "String")]
+#[cfg_attr(feature = "contract-schema", schemars(with = "String"))]
 pub struct RequestId(String);
 
 impl RequestId {
@@ -177,8 +183,10 @@ impl From<RequestId> for String {
 }
 
 /// An opaque list cursor token (R085.2 signs and verifies it).
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(try_from = "String", into = "String")]
+#[cfg_attr(feature = "contract-schema", schemars(with = "String"))]
 pub struct ListCursor(String);
 
 impl ListCursor {
@@ -211,6 +219,7 @@ impl From<ListCursor> for String {
 }
 
 /// Who wrote a revision, under which policy, for which request.
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct SnapshotProvenance {
@@ -220,6 +229,7 @@ pub struct SnapshotProvenance {
 }
 
 /// The accepted head of one document.
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct MemorySnapshotHead {
@@ -258,6 +268,7 @@ impl MemorySnapshotHead {
 }
 
 /// How an `Resolve` action settles a retained candidate.
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "resolution", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Resolution {
@@ -270,6 +281,7 @@ pub enum Resolution {
 }
 
 /// The action one sync request carries.
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "action", rename_all = "snake_case", deny_unknown_fields)]
 pub enum SyncAction {
@@ -294,6 +306,7 @@ pub enum SyncAction {
 }
 
 /// One sync request.
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct SyncRequest {
@@ -340,6 +353,7 @@ impl SyncRequest {
 }
 
 /// Whether the client's file matches the accepted head.
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum SyncState {
@@ -350,6 +364,7 @@ pub enum SyncState {
 }
 
 /// The tagged result of one sync request. `Refused` holds no head field.
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "outcome", rename_all = "snake_case", deny_unknown_fields)]
 pub enum SyncOutcome {
@@ -378,6 +393,7 @@ pub enum SyncOutcome {
 
 /// The bounded knobs of the memory-sync surface; defaults and bounds are the
 /// rows' (R085.2, R085.3, R085.7).
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct MemorySyncConfig {
@@ -442,6 +458,36 @@ impl MemorySyncConfig {
             1_099_511_627_776,
         )
     }
+}
+
+/// The engine-stamped values of one sync request: the verified actor, the
+/// policy digest and the graph incarnation. Replay reads them from the log.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct SyncStamp {
+    pub actor: String,
+    pub policy_digest: Digest256,
+    pub graph_incarnation: String,
+}
+
+/// The served `ReadMemorySnapshot` result: the head or a retained revision
+/// with its bytes (MEDULLA-DURABLE-KERNEL-R085.2).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct MemorySnapshotRead {
+    pub head: MemorySnapshotHead,
+    pub content: String,
+}
+
+/// The served `ListMemorySnapshots` result: heads in `doc_id` order.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct MemorySnapshotList {
+    pub heads: Vec<MemorySnapshotHead>,
+    pub next_cursor: Option<ListCursor>,
 }
 
 /// What the store must do for one request (MEDULLA-DURABLE-KERNEL-R085.3).

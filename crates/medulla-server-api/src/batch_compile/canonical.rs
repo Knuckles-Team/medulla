@@ -418,6 +418,9 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::BusRegister { .. }
         | Method::BusHeartbeat { .. }
         | Method::BusRoster { .. }
+        | Method::ReadMemorySnapshot { .. }
+        | Method::ListMemorySnapshots { .. }
+        | Method::SyncMemorySnapshot { .. }
         | Method::FinanceMomentum { .. }
         | Method::ObserveScreen { .. }
         | Method::GetEdgePropertiesBatch { .. }

@@ -606,6 +606,9 @@ pub(super) fn memory_audit_line(method: &Method) -> Option<String> {
             Some(format!("BUS_REGISTER|{}", participant.session_ref))
         }
         Method::BusHeartbeat { session_ref, .. } => Some(format!("BUS_HEARTBEAT|{session_ref}")),
+        Method::SyncMemorySnapshot { request, .. } => {
+            Some(format!("MEMORY_SYNC|{}", request.doc_id.as_str()))
+        }
         _ => None,
     }
 }

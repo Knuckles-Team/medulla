@@ -389,6 +389,28 @@ $($variants)*
         request: Box<medulla_types::document_ops::DocumentDeleteRequest>,
     },
 
+    // ── Memory snapshots (MEDULLA-DURABLE-KERNEL-R085.4) ────────────────────
+    /// Read one document's head, or the retained `revision`, with its bytes.
+    /// Needs `memory:read`. See [`medulla_types::memory_sync`].
+    ReadMemorySnapshot {
+        doc_id: String,
+        revision: Option<u64>,
+    },
+    /// List document heads whose id starts with `prefix`, in `doc_id` order.
+    /// `limit` defaults to 50 (maximum 200). Needs `memory:read`.
+    ListMemorySnapshots {
+        prefix: String,
+        limit: Option<u32>,
+        cursor: Option<String>,
+    },
+    /// Observe, submit, resolve or acknowledge one document. The engine fills
+    /// `stamp` from the verified request context. Needs `memory:write`.
+    SyncMemorySnapshot {
+        request: Box<medulla_types::memory_sync::SyncRequest>,
+        #[serde(default)]
+        stamp: Option<medulla_types::memory_sync::SyncStamp>,
+    },
+
     // ── Data products (MEDULLA-TYPED-PACKS-R805.1) ──────────────────────────
     /// Register one data product with its contract in the `rbac.redb` policy
     /// store, keyed by tenant and product id. `tenant` must equal the verified

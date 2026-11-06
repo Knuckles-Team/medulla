@@ -148,11 +148,43 @@ fn enforce_bus_scope(
     ))
 }
 
+/// The scope a served memory snapshot method needs (MEDULLA-DURABLE-KERNEL-R085.5).
+fn required_memory_scope(method: &Method) -> Option<&'static str> {
+    match method {
+        Method::ReadMemorySnapshot { .. } | Method::ListMemorySnapshots { .. } => {
+            Some("memory:read")
+        }
+        Method::SyncMemorySnapshot { .. } => Some("memory:write"),
+        _ => None,
+    }
+}
+
+/// Refuse a memory snapshot method without its scope before any lookup. The
+/// refusal is `MEMSYNC_NOT_AVAILABLE`, the same bytes an absent document gets.
+fn enforce_memory_scope(
+    req: &Request,
+    verified_context: &VerifiedRequestContext,
+) -> Result<(), Response> {
+    let Some(required_scope) = required_memory_scope(&req.method) else {
+        return Ok(());
+    };
+    if verified_context.allows_action(required_scope) || verified_context.allows_action("kg:admin")
+    {
+        return Ok(());
+    }
+    medulla_kernel::metrics::access_denied();
+    Err(Response::err(
+        req.id,
+        medulla_types::contract::ServerErrorCode::MemsyncNotAvailable.as_str(),
+    ))
+}
+
 fn check_resource_and_capacity_controller_scope(
     req: &Request,
     verified_context: &VerifiedRequestContext,
 ) -> Result<(), Response> {
     enforce_bus_scope(req, verified_context)?;
+    enforce_memory_scope(req, verified_context)?;
     // Resource authority is checked BEFORE capacity authority; a request that
     // violates both must keep reporting the resource refusal.
     enforce_controller_scope(

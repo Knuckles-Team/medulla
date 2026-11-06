@@ -80,6 +80,8 @@ pub const GATEWAY_ROUTED: &[&str] = &[
     // MEDULLA-DURABLE-KERNEL-R095.1002: agent bus roster rows on the request graph.
     "BusRegister",
     "BusHeartbeat",
+    // MEDULLA-DURABLE-KERNEL-R085.4: memory snapshot sync rows on the request graph.
+    "SyncMemorySnapshot",
     "AddEmbedding",
     "InvalidateEdge",
     "SupersedeEdge",
@@ -233,6 +235,9 @@ fn memory_method_name(m: &Method) -> Option<&'static str> {
         Method::BusRegister { .. } => Some("BusRegister"),
         Method::BusHeartbeat { .. } => Some("BusHeartbeat"),
         Method::BusRoster { .. } => Some("BusRoster"),
+        Method::ReadMemorySnapshot { .. } => Some("ReadMemorySnapshot"),
+        Method::ListMemorySnapshots { .. } => Some("ListMemorySnapshots"),
+        Method::SyncMemorySnapshot { .. } => Some("SyncMemorySnapshot"),
         _ => None,
     }
 }

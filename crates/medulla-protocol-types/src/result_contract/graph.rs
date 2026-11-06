@@ -31,6 +31,9 @@ method_results! {
     BusRegister(BusRegister) => Bool<bool>;
     BusHeartbeat(BusHeartbeat) => Bool<bool>;
     BusRoster(BusRoster) => Json<medulla_types::agent_bus::BusRoster>;
+    ReadMemorySnapshot(ReadMemorySnapshot) => Json<medulla_types::memory_sync::MemorySnapshotRead>;
+    ListMemorySnapshots(ListMemorySnapshots) => Json<medulla_types::memory_sync::MemorySnapshotList>;
+    SyncMemorySnapshot(SyncMemorySnapshot) => Json<medulla_types::memory_sync::SyncOutcome>;
     DecayMemories(DecayMemories) => Count<u64>;
     EvictBelow(EvictBelow) => Ids<Vec<String>>;
     SummaryChildren(SummaryChildren) => Ids<Vec<String>>;

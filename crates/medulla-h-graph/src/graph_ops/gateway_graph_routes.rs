@@ -62,7 +62,9 @@ fn is_memory(method: &Method) -> bool {
 fn is_bus(method: &Method) -> bool {
     matches!(
         method,
-        Method::BusRegister { .. } | Method::BusHeartbeat { .. }
+        Method::BusRegister { .. }
+            | Method::BusHeartbeat { .. }
+            | Method::SyncMemorySnapshot { .. }
     )
 }
 
@@ -388,6 +390,9 @@ async fn try_handle_bus(
     use crate::graph_ops::bus;
     let response = match method {
         Method::BusRegister { participant, .. } => bus::register(ctx, plan, participant).await,
+        Method::SyncMemorySnapshot { request, .. } => {
+            super::memory_snapshot::sync(ctx, plan, request).await
+        }
         Method::BusHeartbeat {
             session_ref,
             now_ms,
