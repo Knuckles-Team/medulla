@@ -241,3 +241,9 @@
     rdfs:comment "Share of sessions with dead clicks on the web resource in the measured window." ;
     rdfs:domain :WebResource ;
     rdfs:range xsd:decimal .
+
+:changesResource a owl:ObjectProperty ;
+    rdfs:label "changes resource" ;
+    rdfs:comment "Links a merged :Change to the :WebResource page it altered." ;
+    rdfs:domain :Change ;
+    rdfs:range :WebResource .

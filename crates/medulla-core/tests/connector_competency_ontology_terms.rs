@@ -1,5 +1,5 @@
 //! Registered-core ontology audits for the connector-competency term rows
-//! (MEDULLA-CQ-CONN-R070/R071/R072/R073/R074/R076/R077/R078/R079/R080/R082).
+//! (MEDULLA-CQ-CONN-R070/R071/R072/R073/R074/R076/R077/R078/R079/R080/R081/R082/R087).
 //!
 //! Each module proves one ontology module: the term is declared with the
 //! required owl type, domain and range in the registered core source, and —
@@ -1660,4 +1660,123 @@ mod ontology_audit_enterprise_v1 {
             &format!("{XSD}integer")
         ));
     }
+}
+
+#[allow(non_snake_case)]
+mod ontology_audit_nutrition_v1 {
+    use super::*;
+
+    fn triples() -> Vec<Triple> {
+        let ontology = registered_ontology("core:nutrition@1", "nutrition");
+        parse_turtle(&ontology).expect("the registered nutrition ontology parses")
+    }
+
+    // spec: MEDULLA-CQ-CONN-R081.1
+    #[test]
+    fn Recipe_declared() {
+        let triples = triples();
+        let class = format!("{KG}Recipe");
+        assert!(has_iri(&triples, &class, RDF_TYPE, OWL_CLASS));
+    }
+
+    // spec: MEDULLA-CQ-CONN-R081.2
+    #[test]
+    fn usesIngredient_declared() {
+        let triples = triples();
+        let property = format!("{KG}usesIngredient");
+        assert!(has_iri(&triples, &property, RDF_TYPE, OWL_OBJECT_PROPERTY));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_DOMAIN,
+            &format!("{KG}Recipe")
+        ));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_RANGE,
+            &format!("{KG}Food")
+        ));
+    }
+
+    // spec: MEDULLA-CQ-CONN-R081.3
+    #[test]
+    fn ShoppingListItem_declared() {
+        let triples = triples();
+        let class = format!("{KG}ShoppingListItem");
+        assert!(has_iri(&triples, &class, RDF_TYPE, OWL_CLASS));
+    }
+
+    // spec: MEDULLA-CQ-CONN-R081.4
+    #[test]
+    fn MealPlanEntry_declared() {
+        let triples = triples();
+        let class = format!("{KG}MealPlanEntry");
+        assert!(has_iri(&triples, &class, RDF_TYPE, OWL_CLASS));
+    }
+
+    // spec: MEDULLA-CQ-CONN-R081.5
+    #[test]
+    fn WorkoutRoutine_declared() {
+        let triples = triples();
+        let class = format!("{KG}WorkoutRoutine");
+        assert!(has_iri(&triples, &class, RDF_TYPE, OWL_CLASS));
+    }
+
+    // spec: MEDULLA-CQ-CONN-R081.6
+    #[test]
+    fn Exercise_declared() {
+        let triples = triples();
+        let class = format!("{KG}Exercise");
+        assert!(has_iri(&triples, &class, RDF_TYPE, OWL_CLASS));
+    }
+
+    // spec: MEDULLA-CQ-CONN-R081.7
+    #[test]
+    fn includesExercise_declared() {
+        let triples = triples();
+        let property = format!("{KG}includesExercise");
+        assert!(has_iri(&triples, &property, RDF_TYPE, OWL_OBJECT_PROPERTY));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_DOMAIN,
+            &format!("{KG}WorkoutRoutine")
+        ));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_RANGE,
+            &format!("{KG}Exercise")
+        ));
+    }
+
+    // spec: MEDULLA-CQ-CONN-R081.8
+    #[test]
+    fn WorkoutSession_declared() {
+        let triples = triples();
+        let class = format!("{KG}WorkoutSession");
+        assert!(has_iri(&triples, &class, RDF_TYPE, OWL_CLASS));
+    }
+}
+
+// spec: MEDULLA-CQ-CONN-R087
+#[test]
+fn changes_resource_declared() {
+    let triples = parse_turtle(&registered_ontology("core:retrieval@1", "retrieval"))
+        .expect("the registered retrieval ontology parses");
+    let property = format!("{KG}changesResource");
+    assert!(has_iri(&triples, &property, RDF_TYPE, OWL_OBJECT_PROPERTY));
+    assert!(has_iri(
+        &triples,
+        &property,
+        RDFS_DOMAIN,
+        &format!("{KG}Change")
+    ));
+    assert!(has_iri(
+        &triples,
+        &property,
+        RDFS_RANGE,
+        &format!("{KG}WebResource")
+    ));
 }
