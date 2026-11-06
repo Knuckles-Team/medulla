@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pytest
@@ -37,7 +38,32 @@ def _path_deps(crate: str) -> set[str]:
     return names
 
 
+# The four handler crates whose seam traits (`DecideApi`, `QueryApi`, `AdminApi`,
+# `TxnApi`) replace direct cross-handler calls (MEDULLA-CONTRACT-R056.8).
+SEAM_HANDLERS = (
+    "medulla-h-decide",
+    "medulla-h-query",
+    "medulla-h-admin",
+    "medulla-h-txn",
+)
+# Crates above the kernel that the store (R056.2) and the kernel (R056.3) must not name.
+UPPER_LAYER = tuple(
+    crate for crate in BACKBONE if crate not in ("medulla-kernel", "medulla-store")
+)
+
+
+def _declares_module(crate: str, module: str) -> bool:
+    pattern = re.compile(rf"^\s*(pub(\([a-z:]+\))?\s+)?mod\s+{module}\b", re.MULTILINE)
+    return any(
+        pattern.search(path.read_text())
+        for path in (REPO / "crates" / crate / "src").rglob("*.rs")
+    )
+
+
 @pytest.mark.spec("MEDULLA-CONTRACT-R056")
+@pytest.mark.spec("MEDULLA-CONTRACT-R056.2")
+@pytest.mark.spec("MEDULLA-CONTRACT-R056.3")
+@pytest.mark.spec("MEDULLA-CONTRACT-R056.8")
 def test_backbone_crates_exist_and_depend_only_downward() -> None:
     members = _members()
     missing = [crate for crate in BACKBONE if crate not in members]
@@ -49,6 +75,22 @@ def test_backbone_crates_exist_and_depend_only_downward() -> None:
         if dep in BACKBONE[index + 1 :]
     ]
     assert not upward, f"backbone crates depend upward: {upward}"
+    # R056.2: the store depends on the kernel and leaf crates only.
+    store_deps = _path_deps("medulla-store")
+    assert "medulla-kernel" in store_deps
+    assert not store_deps & set(UPPER_LAYER), store_deps & set(UPPER_LAYER)
+    assert not {d for d in store_deps if d.startswith(("medulla-h-", "medulla-server"))}
+    # R056.3: only the kernel declares `persist` and `store_authority`.
+    for module in ("persist", "store_authority"):
+        assert _declares_module("medulla-kernel", module), module
+    assert not _declares_module("medulla-store", "store_authority")
+    assert not _declares_module("medulla-server-api", "store_authority")
+    assert not _declares_module("medulla-persistence", "store_authority")
+    # R056.8: the four seam handler crates hold no edge to each other.
+    for crate in SEAM_HANDLERS:
+        assert crate in members, crate
+        edges = _path_deps(crate) & set(SEAM_HANDLERS)
+        assert not edges, f"{crate} depends on {sorted(edges)}"
 
 
 # The wire protocols of `medulla-wire`: (Cargo feature, `src/lib.rs` module).
