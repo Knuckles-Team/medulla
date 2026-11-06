@@ -31,18 +31,23 @@
 //!   materialized ([`crate::parquet_io::materialize_with_column_stats`]) and carried on
 //!   the [`FileEntry`]; a reader (Spark/Trino) uses the bounds to **skip whole files**.
 //!   A file recorded without stats (bare `record_file`) emits the maps as null.
-//! * **Partition `field_summary`:** medulla-lake materializes an UNPARTITIONED spec
-//!   (`partition-spec` = `[]`), so the `manifest_file.partitions` list has ZERO
-//!   entries (one `field_summary` per partition-spec field, of which there are none) —
-//!   it is correctly emitted as null, NOT stubbed. Data-file lower/upper bounds are the
-//!   file-skipping mechanism that actually applies to an unpartitioned table.
+//! * **Partition `field_summary`:** an unpartitioned table (`partition-spec` = `[]`)
+//!   has ZERO `manifest_file.partitions` entries, emitted as null, NOT stubbed. A
+//!   table identity-partitioned by one column (MEDULLA-UNIFIED-DATA-PLANE-R039.4)
+//!   writes one `field_summary` (`contains_null`, `lower_bound`, `upper_bound`)
+//!   over the live files' stats of that column, so a reader prunes the manifest.
 //! * Container codec is Avro **null** (uncompressed) — universally readable.
 
 use apache_avro::types::Value as AvroValue;
 use apache_avro::{Reader, Schema, Writer};
 
-use crate::iceberg::{iceberg_schema, manifest_file_path, manifest_list_path};
-use crate::schema::{CellValue, LakeSchema};
+use std::cmp::Ordering;
+
+use crate::iceberg::{
+    iceberg_schema, manifest_file_path, manifest_list_path, partition_spec_fields,
+    FIRST_PARTITION_FIELD_ID,
+};
+use crate::schema::{CellValue, LakeField, LakeSchema, LakeType};
 use crate::snapshot::{ColumnStat, FileEntry, Lsn, SnapshotLog};
 
 /// Iceberg v2 `manifest_entry` Avro schema (CONCEPT:MEDULLA-KG.storage.medulla-iceberg-avro-manifest + per-column stats MEDULLA-350).
@@ -319,6 +324,7 @@ fn manifest_entry_value(
     f: &FileEntry,
     status: EntryStatus,
     snapshot_id: i64,
+    partition: Option<(&LakeField, i32)>,
 ) -> AvroValue {
     let mut data_file = vec![
         ("content".into(), AvroValue::Int(0)), // 0 = DATA
@@ -327,7 +333,7 @@ fn manifest_entry_value(
             AvroValue::String(format!("{location}/{}", f.path)),
         ),
         ("file_format".into(), AvroValue::String("PARQUET".into())),
-        ("partition".into(), AvroValue::Record(vec![])), // unpartitioned spec
+        ("partition".into(), partition_value(f, partition)),
         ("record_count".into(), AvroValue::Long(f.num_rows as i64)),
         (
             "file_size_in_bytes".into(),
@@ -369,8 +375,9 @@ fn write_manifest(
     files: &[(&FileEntry, EntryStatus)],
     snapshot_id: i64,
 ) -> Result<Vec<u8>, String> {
-    let avro_schema =
-        Schema::parse_str(MANIFEST_ENTRY_SCHEMA).map_err(|e| format!("manifest schema: {e}"))?;
+    let partition = schema.partition_source();
+    let avro_schema = Schema::parse_str(&manifest_entry_schema(partition))
+        .map_err(|e| format!("manifest schema: {e}"))?;
     let mut writer =
         Writer::new(&avro_schema, Vec::new()).map_err(|e| format!("manifest avro writer: {e}"))?;
 
@@ -383,10 +390,11 @@ fn write_manifest(
     // though this single Avro manifest's header names only the current one.
     let ib_schema = iceberg_schema(schema, schema_id).to_string();
     let schema_id_str = schema_id.to_string();
+    let partition_spec = partition_spec_fields(Some(schema)).to_string();
     let meta: [(&str, &str); 6] = [
         ("schema", ib_schema.as_str()),
         ("schema-id", schema_id_str.as_str()),
-        ("partition-spec", "[]"),
+        ("partition-spec", partition_spec.as_str()),
         ("partition-spec-id", "0"),
         ("format-version", "2"),
         ("content", "data"),
@@ -399,7 +407,13 @@ fn write_manifest(
 
     for (f, status) in files {
         writer
-            .append_value(manifest_entry_value(location, f, *status, snapshot_id))
+            .append_value(manifest_entry_value(
+                location,
+                f,
+                *status,
+                snapshot_id,
+                partition,
+            ))
             .map_err(|e| format!("append manifest_entry: {e}"))?;
     }
     writer
@@ -426,6 +440,7 @@ fn write_manifest_list(
     snapshot_id: i64,
     min_sequence_number: i64,
     counts: &ManifestCounts,
+    partitions: AvroValue,
 ) -> Result<Vec<u8>, String> {
     let avro_schema = Schema::parse_str(MANIFEST_FILE_SCHEMA)
         .map_err(|e| format!("manifest_file schema: {e}"))?;
@@ -470,14 +485,9 @@ fn write_manifest_list(
             "deleted_rows_count".into(),
             AvroValue::Long(counts.deleted_rows as i64),
         ),
-        // Unpartitioned spec → the `partitions` list has one `field_summary` per
-        // partition-spec field, of which there are none, so it is correctly null (NOT
-        // stubbed) (CONCEPT:MEDULLA-KG.storage.iceberg-avro-manifest-carries). Data-file lower/upper bounds (MEDULLA-350) are the
-        // file-skipping mechanism that applies to an unpartitioned table.
-        (
-            "partitions".into(),
-            AvroValue::Union(0, Box::new(AvroValue::Null)),
-        ),
+        // One `field_summary` per partition-spec field (MEDULLA-UNIFIED-DATA-PLANE-R039.4);
+        // an unpartitioned spec has none, so the list is null (NOT stubbed).
+        ("partitions".into(), partitions),
     ]);
     writer
         .append_value(record)
@@ -534,6 +544,7 @@ pub fn build_iceberg_manifests(
         snapshot_id,
         min_sequence_number,
         &counts,
+        partition_summaries(schema.partition_source(), &files),
     )?;
 
     Ok(IcebergManifests {
@@ -594,6 +605,224 @@ pub struct ManifestListSummary {
     pub file_counts: [i32; 3],
     /// ADDED, EXISTING and DELETED row counts.
     pub row_counts: [i64; 3],
+    /// One field summary per partition-spec field; empty when unpartitioned
+    /// (MEDULLA-UNIFIED-DATA-PLANE-R039.4).
+    pub partitions: Vec<PartitionFieldSummary>,
+}
+
+/// One decoded `field_summary` of a manifest list entry
+/// (MEDULLA-UNIFIED-DATA-PLANE-R039.4). Bounds are Iceberg single-value binary.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PartitionFieldSummary {
+    pub contains_null: bool,
+    pub contains_nan: Option<bool>,
+    pub lower_bound: Option<Vec<u8>>,
+    pub upper_bound: Option<Vec<u8>>,
+}
+
+impl PartitionFieldSummary {
+    /// Whether a manifest with this summary may hold rows whose partition value
+    /// equals `value` (MEDULLA-UNIFIED-DATA-PLANE-R039.4). `false` means a reader
+    /// prunes the whole manifest. Missing bounds never prune.
+    pub fn may_contain(&self, ty: LakeType, value: &CellValue) -> bool {
+        if matches!(value, CellValue::Null) {
+            return self.contains_null;
+        }
+        let bound = |bytes: &Option<Vec<u8>>| bytes.as_deref().and_then(|b| decode_binary(ty, b));
+        let (Some(lower), Some(upper)) = (bound(&self.lower_bound), bound(&self.upper_bound))
+        else {
+            return true;
+        };
+        !matches!(cell_order(value, &lower), Some(Ordering::Less))
+            && !matches!(cell_order(value, &upper), Some(Ordering::Greater))
+    }
+}
+
+/// Decode an Iceberg single-value binary back to a cell of type `ty`.
+fn decode_binary(ty: LakeType, bytes: &[u8]) -> Option<CellValue> {
+    let eight = || <[u8; 8]>::try_from(bytes).ok();
+    Some(match ty {
+        LakeType::Long => CellValue::Long(i64::from_le_bytes(eight()?)),
+        LakeType::Timestamp => CellValue::Timestamp(i64::from_le_bytes(eight()?)),
+        LakeType::Double => CellValue::Double(f64::from_le_bytes(eight()?)),
+        LakeType::Bool => CellValue::Bool(*bytes.first()? != 0),
+        LakeType::String => CellValue::String(String::from_utf8(bytes.to_vec()).ok()?),
+    })
+}
+
+/// The order of two cells of the same type; `None` across types or for NaN.
+fn cell_order(a: &CellValue, b: &CellValue) -> Option<Ordering> {
+    match (a, b) {
+        (CellValue::Long(x), CellValue::Long(y))
+        | (CellValue::Timestamp(x), CellValue::Timestamp(y)) => Some(x.cmp(y)),
+        (CellValue::Double(x), CellValue::Double(y)) => x.partial_cmp(y),
+        (CellValue::Bool(x), CellValue::Bool(y)) => Some(x.cmp(y)),
+        (CellValue::String(x), CellValue::String(y)) => Some(x.cmp(y)),
+        _ => None,
+    }
+}
+
+/// The Avro type of an identity partition value of `ty`.
+fn partition_avro_type(ty: LakeType) -> &'static str {
+    match ty {
+        LakeType::Long => r#""long""#,
+        LakeType::Double => r#""double""#,
+        LakeType::Bool => r#""boolean""#,
+        LakeType::String => r#""string""#,
+        LakeType::Timestamp => {
+            r#"{"type": "long", "logicalType": "timestamp-micros", "adjust-to-utc": true}"#
+        }
+    }
+}
+
+/// The `manifest_entry` schema with the `data_file.partition` record of the spec:
+/// empty when unpartitioned (byte-identical to before), else one optional field
+/// with the partition field id.
+fn manifest_entry_schema(partition: Option<(&LakeField, i32)>) -> String {
+    let Some((field, _)) = partition else {
+        return MANIFEST_ENTRY_SCHEMA.to_string();
+    };
+    let record = format!(
+        r#"{{"type": "record", "name": "r102", "fields": [{{"name": {}, "type": ["null", {}], "default": null, "field-id": {FIRST_PARTITION_FIELD_ID}}}]}}"#,
+        serde_json::Value::String(field.name.clone()),
+        partition_avro_type(field.ty),
+    );
+    MANIFEST_ENTRY_SCHEMA.replacen(
+        r#"{"type": "record", "name": "r102", "fields": []}"#,
+        &record,
+        1,
+    )
+}
+
+/// The file's column stat for the partition source field.
+fn source_stat(f: &FileEntry, source_id: i32) -> Option<&ColumnStat> {
+    f.column_stats
+        .as_ref()?
+        .iter()
+        .find(|stat| stat.field_id == source_id)
+}
+
+/// The identity partition value of one data file: its single value when the
+/// file's bounds agree, else null.
+fn partition_value(f: &FileEntry, partition: Option<(&LakeField, i32)>) -> AvroValue {
+    let Some((field, source_id)) = partition else {
+        return AvroValue::Record(vec![]);
+    };
+    let single = source_stat(f, source_id).and_then(|stat| match (&stat.lower, &stat.upper) {
+        (Some(lower), Some(upper)) if lower == upper && stat.null_count == 0 => Some(lower),
+        _ => None,
+    });
+    let value = match single {
+        Some(CellValue::Long(x)) => AvroValue::Union(1, Box::new(AvroValue::Long(*x))),
+        Some(CellValue::Timestamp(x)) => {
+            AvroValue::Union(1, Box::new(AvroValue::TimestampMicros(*x)))
+        }
+        Some(CellValue::Double(x)) => AvroValue::Union(1, Box::new(AvroValue::Double(*x))),
+        Some(CellValue::Bool(x)) => AvroValue::Union(1, Box::new(AvroValue::Boolean(*x))),
+        Some(CellValue::String(x)) => AvroValue::Union(1, Box::new(AvroValue::String(x.clone()))),
+        Some(CellValue::Null) | None => AvroValue::Union(0, Box::new(AvroValue::Null)),
+    };
+    AvroValue::Record(vec![(field.name.clone(), value)])
+}
+
+/// The manifest list `partitions` value (MEDULLA-UNIFIED-DATA-PLANE-R039.4): null
+/// when unpartitioned, else one `field_summary` over the live files' stats of the
+/// partition column. A live file without stats makes the bounds unknown (null)
+/// and `contains_null` true, so a reader never prunes on a guess.
+fn partition_summaries(
+    partition: Option<(&LakeField, i32)>,
+    files: &[(&FileEntry, EntryStatus)],
+) -> AvroValue {
+    let Some((field, source_id)) = partition else {
+        return AvroValue::Union(0, Box::new(AvroValue::Null));
+    };
+    let mut contains_null = false;
+    let mut contains_nan = false;
+    let mut unknown = false;
+    let mut lower: Option<CellValue> = None;
+    let mut upper: Option<CellValue> = None;
+    for (file, status) in files {
+        if matches!(status, EntryStatus::Deleted) {
+            continue;
+        }
+        let Some(stat) = source_stat(file, source_id) else {
+            unknown = true;
+            continue;
+        };
+        contains_null |= stat.null_count > 0;
+        contains_nan |= stat.nan_count > 0;
+        if let Some(lo) = &stat.lower {
+            if lower
+                .as_ref()
+                .is_none_or(|cur| cell_order(lo, cur) == Some(Ordering::Less))
+            {
+                lower = Some(lo.clone());
+            }
+        }
+        if let Some(hi) = &stat.upper {
+            if upper
+                .as_ref()
+                .is_none_or(|cur| cell_order(hi, cur) == Some(Ordering::Greater))
+            {
+                upper = Some(hi.clone());
+            }
+        }
+    }
+    if unknown {
+        contains_null = true;
+        lower = None;
+        upper = None;
+    }
+    let optional_bytes = |cell: Option<CellValue>| match cell {
+        Some(cell) => AvroValue::Union(1, Box::new(AvroValue::Bytes(iceberg_binary(&cell)))),
+        None => AvroValue::Union(0, Box::new(AvroValue::Null)),
+    };
+    let nan = if matches!(field.ty, LakeType::Double) && !unknown {
+        AvroValue::Union(1, Box::new(AvroValue::Boolean(contains_nan)))
+    } else {
+        AvroValue::Union(0, Box::new(AvroValue::Null))
+    };
+    let summary = AvroValue::Record(vec![
+        ("contains_null".into(), AvroValue::Boolean(contains_null)),
+        ("contains_nan".into(), nan),
+        ("lower_bound".into(), optional_bytes(lower)),
+        ("upper_bound".into(), optional_bytes(upper)),
+    ]);
+    AvroValue::Union(1, Box::new(AvroValue::Array(vec![summary])))
+}
+
+/// Decode the `partitions` union of a manifest list record.
+fn decode_partitions(value: AvroValue) -> Result<Vec<PartitionFieldSummary>, String> {
+    // `take_field` already unwrapped the `["null", array]` union.
+    let items = match value {
+        AvroValue::Null => return Ok(Vec::new()),
+        AvroValue::Array(items) => items,
+        other => return Err(format!("partitions is not an array: {other:?}")),
+    };
+    let optional_bytes = |value: AvroValue| match value {
+        AvroValue::Bytes(bytes) => Some(bytes),
+        _ => None,
+    };
+    items
+        .into_iter()
+        .map(|item| {
+            let mut fields = record_fields(item)?;
+            let contains_null = match take_field(&mut fields, "contains_null")? {
+                AvroValue::Boolean(flag) => flag,
+                other => return Err(format!("contains_null is not a boolean: {other:?}")),
+            };
+            let contains_nan = match take_field(&mut fields, "contains_nan")? {
+                AvroValue::Boolean(flag) => Some(flag),
+                _ => None,
+            };
+            Ok(PartitionFieldSummary {
+                contains_null,
+                contains_nan,
+                lower_bound: optional_bytes(take_field(&mut fields, "lower_bound")?),
+                upper_bound: optional_bytes(take_field(&mut fields, "upper_bound")?),
+            })
+        })
+        .collect()
 }
 
 fn record_fields(value: AvroValue) -> Result<Vec<(String, AvroValue)>, String> {
@@ -683,6 +912,7 @@ pub fn read_manifest_list(bytes: &[u8]) -> Result<Vec<ManifestListSummary>, Stri
                     required_long(&mut fields, "existing_rows_count")?,
                     required_long(&mut fields, "deleted_rows_count")?,
                 ],
+                partitions: decode_partitions(take_field(&mut fields, "partitions")?)?,
             })
         })
         .collect()
