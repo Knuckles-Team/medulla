@@ -867,9 +867,9 @@ ex:parent a owl:AsymmetricProperty .
         // :serviceSupplier and :suppliesServiceViaHost +18 (rdflib per-file deltas).
         // +10: media :engagementMetricName and :engagementMetricValue (MEDULLA-MEDIA-VOCAB-R651).
         // +55 (MEDULLA-MEDIA-VOCAB-R001.100.1): the media-tag class and its ten properties.
-        // +55 (MEDULLA-MEDIA-VOCAB-R001.100.1): the media-tag class and its ten properties.
-        // +10: media :engagementMetricName and :engagementMetricValue (MEDULLA-MEDIA-VOCAB-R651).
-        assert_eq!(composed.ontology.len(), 17_851);
+        // +1: retrieval :ScholarlyPaper rdfs:subClassOf :ResearchPaper
+        // (MEDULLA-MEDIA-VOCAB-R002.5.4); the :cites domain and range change in place.
+        assert_eq!(composed.ontology.len(), 17_852);
 
         let ontology_subjects: BTreeSet<String> = composed
             .ontology
@@ -953,9 +953,8 @@ ex:parent a owl:AsymmetricProperty .
         // +29: the #972 supply-chain fold, all semantic axioms (headers and imports unchanged).
         // +10: the two engagement-metric properties (MEDULLA-MEDIA-VOCAB-R651).
         // +55: the media-tag vocabulary, all semantic axioms (MEDULLA-MEDIA-VOCAB-R001.100.1).
-        // +55: the media-tag vocabulary, all semantic axioms (MEDULLA-MEDIA-VOCAB-R001.100.1).
-        // +10: the two engagement-metric properties (MEDULLA-MEDIA-VOCAB-R651).
-        assert_eq!(semantic_axioms, 17_582);
+        // +1: the :ScholarlyPaper → :ResearchPaper subclass axiom (R002.5.4).
+        assert_eq!(semantic_axioms, 17_583);
 
         let count_type = |object: &str| {
             composed
