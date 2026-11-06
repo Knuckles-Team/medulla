@@ -205,6 +205,7 @@ fn profile_remote_fragment_has_redacted_golden_output_and_provenance() {
         snapshot: None,
         read_at_ms: 0,
         consistency: medulla_federation::federation_opt::Consistency::Snapshot,
+        search: None,
     });
     let federated = medulla_federation::federation_opt::FederatedExec::with_session(&session);
     let ctx = PlanCtx::new(&view, &semantic).with_foreign_executor(&federated);
