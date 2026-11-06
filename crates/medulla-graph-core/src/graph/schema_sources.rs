@@ -1450,7 +1450,7 @@ mod tests {
     fn core_catalog_has_one_version_per_module_and_is_outside_dynamic_quota() {
         let sources = GraphSchemaSources::default();
         sources.validate().unwrap();
-        assert_eq!(sources.core.len(), 57);
+        assert_eq!(sources.core.len(), 60);
         assert!(sources.dynamic.is_empty());
         assert!(sources.core.keys().all(|id| id.starts_with("core:")));
     }
@@ -1964,7 +1964,7 @@ mod tests {
             // The generated decision module (ontology plus shapes); the pin follows the ontology.
             (
                 "decision",
-                "c08a00a850230172f691396c651b4cdcfa2f5ae499db874fd777d18cd6cb66ea",
+                "15c7aacce36cbf473f086497eb3e06caec75c8333538388a0f2f728af9101760",
             ),
         ];
         let catalog = current_core_catalog();
