@@ -384,6 +384,7 @@ mod tests {
     }
 
     // spec: MEDULLA-INCREMENTAL-VIEWS-R001.6
+    /// Verifies MEDULLA-INCREMENTAL-VIEWS-R001.6: Define, change and read are wired
     #[test]
     fn apply_delta_maintains_incremental_view_end_to_end() {
         use medulla_types::wire::{Op, Plan, Pred};
@@ -457,6 +458,7 @@ mod tests {
     }
 
     // spec: MEDULLA-INCREMENTAL-VIEWS-R001.7
+    /// Verifies MEDULLA-INCREMENTAL-VIEWS-R001.7: A fallback keeps a typed reason
     #[test]
     fn note_fallback_records_queryable_reason() {
         // The first-class fallback: an unsupported-op plan is Recompute mode AND exposes

@@ -353,6 +353,7 @@ mod window {
         #![proptest_config(ProptestConfig::with_cases(48))]
 
         // spec: MEDULLA-INCREMENTAL-VIEWS-R001.4
+        /// Verifies MEDULLA-INCREMENTAL-VIEWS-R001.4: Tumbling window aggregates equal the executor
         /// WindowAgg incremental == real `exec::window_aggregate` recompute, every step.
         #[test]
         fn window_matches_execute(
