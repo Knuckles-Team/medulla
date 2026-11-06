@@ -328,6 +328,28 @@ $($variants)*
     DocumentDelete {
         request: Box<medulla_types::document_ops::DocumentDeleteRequest>,
     },
+
+    // ── Data products (MEDULLA-TYPED-PACKS-R805.1) ──────────────────────────
+    /// Register one data product with its contract in the `rbac.redb` policy
+    /// store, keyed by tenant and product id. `tenant` must equal the verified
+    /// request tenant. See [`medulla_types::data_product`].
+    DataProductRegister {
+        tenant: String,
+        product: medulla_types::data_product::DataProduct,
+        contract: medulla_types::data_product::DataContract,
+    },
+    /// Open one access request against a registered product (state `pending`).
+    AccessRequestOpen {
+        tenant: String,
+        request: medulla_types::data_product::AccessRequest,
+    },
+    /// Approve or reject the pending access request of `principal` for `product`.
+    AccessRequestDecide {
+        tenant: String,
+        product: String,
+        principal: String,
+        approve: bool,
+    },
         ]);
     };
 }

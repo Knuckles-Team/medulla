@@ -47,6 +47,15 @@ use medulla_protocol_types::protocol::MethodWriteFamily;
 
 /// The operation-conditional agent-layer and semantic-index surfaces.
 fn requires_write_agent_surface(method: &Method) -> Option<bool> {
+    // MEDULLA-TYPED-PACKS-R805.1: data-product and access-request policy writes.
+    if matches!(
+        method,
+        Method::DataProductRegister { .. }
+            | Method::AccessRequestOpen { .. }
+            | Method::AccessRequestDecide { .. }
+    ) {
+        return Some(true);
+    }
     // Agent Library is a runtime-conditional native ControlPlane surface:
     // publish/retire commit durable owner rows, while current/history/status
     // are authenticated tenant-bound snapshots and must remain reads.
