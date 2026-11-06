@@ -13,10 +13,6 @@ fn transition(to: AuthMode, epoch: u64) -> IdentityOp {
     })
 }
 
-fn set_password(store: &IdentityStore, principal: &str) -> (IdentityOp, IdentityStamp) {
-    super::auth::set_password_op(store, principal, "$argon2id$set")
-}
-
 #[test]
 fn initialize_runs_once_and_only_for_the_first_run_authority() {
     let mut store = IdentityStore::default();

@@ -4,9 +4,6 @@
 //! the one place the two meet. A source identifier with no row here is refused,
 //! never guessed.
 
-/// The chemical-entity namespace the table targets.
-const CHEBI: &str = "http://purl.obolibrary.org/obo/CHEBI_";
-
 macro_rules! chebi {
     ($id:literal) => {
         concat!("http://purl.obolibrary.org/obo/CHEBI_", $id)
@@ -45,6 +42,9 @@ pub fn chemical_entity_for_nutrient(nutrient_id: &str) -> Result<&'static str, N
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The chemical-entity namespace the table targets.
+    const CHEBI: &str = "http://purl.obolibrary.org/obo/CHEBI_";
 
     #[test]
     fn every_row_targets_a_chemical_entity_and_ids_are_unique() {
