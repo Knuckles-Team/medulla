@@ -236,6 +236,8 @@ par-runtime = ["medulla-exec/par-runtime", "query", "dep:rayon"]
 # Arrow (verify with `cargo tree -p medulla-plan`) — the small-footprint contract stays intact.
 knowledge-batch = ["query", "dep:arrow", "medulla-retrieval/knowledge-batch", "medulla-protocol-types/knowledge-batch", "medulla-types/knowledge-batch"]
 [dependencies]
+medulla-durable = { path = "../medulla-durable" }
+medulla-sqlite-format = { path = "../medulla-sqlite-format" }
 medulla-uql = { path = "../medulla-uql" }
 medulla-nlq = { path = "../medulla-nlq" }
 medulla-federation = { path = "../medulla-federation" }

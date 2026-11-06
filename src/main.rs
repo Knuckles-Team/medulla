@@ -319,7 +319,22 @@ async fn run_inner() -> Result<(), Box<dyn std::error::Error>> {
     // MEDULLA-CONTRACT-R058: every knob is read and bounds-checked once, before
     // any listener binds; a refusal exits non-zero.
     match medulla_server_api::knob_config::load_knobs(&args.knob, |name| std::env::var(name).ok()) {
-        Ok(knobs) => medulla_server_api::knob_config::install(knobs),
+        Ok(knobs) => {
+            #[cfg(feature = "federation")]
+            medulla_federation::sqlite_foreign::set_busy_timeout_ms(
+                knobs.foreign_sqlite_busy_timeout_ms,
+            );
+            medulla_server_api::knob_config::install(knobs)
+        }
+        Err(refusal) => {
+            eprintln!("error: {refusal}");
+            std::process::exit(2);
+        }
+    }
+    match medulla_server_api::knob_config::load_allowed_roots(&args.knob, |name| {
+        std::env::var(name).ok()
+    }) {
+        Ok(roots) => medulla_server_api::knob_config::install_allowed_roots(roots),
         Err(refusal) => {
             eprintln!("error: {refusal}");
             std::process::exit(2);

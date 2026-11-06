@@ -53,6 +53,7 @@ impl Identity {
             ForeignSourceSpec::RemoteEngine { .. } => "remote-engine",
             ForeignSourceSpec::HttpJson { .. } => "http-json",
             ForeignSourceSpec::Sql { .. } => "sql",
+            ForeignSourceSpec::SqliteFile { .. } => "sqlite-file",
             ForeignSourceSpec::Trino { .. }
             | ForeignSourceSpec::Cypher { .. }
             | ForeignSourceSpec::SparkBatch { .. }

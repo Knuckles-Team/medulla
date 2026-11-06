@@ -100,6 +100,9 @@ mod engine_peer_tests;
 /// (MEDULLA-UNIFIED-DATA-PLANE-R018.2.1). Pure `std`, always compiled: no driver/ODBC
 /// client dependency is needed until the live slice (`R018.2.2`) issues real reads.
 pub mod relational_connection;
+/// Watermark change capture for an attached SQLite file
+/// (MEDULLA-UNIFIED-DATA-PLANE-R015.2.2.2). Pure `std` over the SQLite format reader.
+pub mod sqlite_capture;
 
 // The hierarchical-retrieval surface (CONCEPT:MEDULLA-KG.retrieval.bounded-drill): the retriever + its accessor
 // traits + the structured result + the flat-top-k baseline, so a caller names them
@@ -170,7 +173,7 @@ pub mod relational_connection;
 // Re-export the lexical surface (CONCEPT:AU-KG.query.text-spatial-time) so a caller wiring a text plan
 // names them through medulla-plan: the BM25 index, the hit row, and the RRF helper.
 #[cfg(feature = "text")]
-pub use medulla_text::{RRF_K, TextHit, TextIndex, rrf_fuse};
+pub use medulla_text::{rrf_fuse, TextHit, TextIndex, RRF_K};
 // The `PlanCtx::with_text` search-surface trait (CONCEPT:MEDULLA-KG.query.served-text-index-binding) — a facade
 // implements this over its OWN maintained persistent index (rather than a plain
 // `medulla_text::TextIndex`) to push a served `RankText`/`FuseRrf` leg down into it.

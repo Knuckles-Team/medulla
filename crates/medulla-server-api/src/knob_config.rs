@@ -245,6 +245,10 @@ knobs! {
     eval_bootstrap_resamples: u64 = "eval.bootstrap_resamples", U64(1_000), [100, 10_000], "resamples", Tunable;
     /// Coverage of a feature-power IC interval.
     eval_ci_level: f64 = "eval.ci_level", F64(0.95), [0.5, 0.999], "fraction", Tunable;
+    /// Longest wait for a stable WAL snapshot of an attached SQLite file (MEDULLA-UNIFIED-DATA-PLANE-R015.2.2.1).
+    foreign_sqlite_busy_timeout_ms: u64 = "foreign.sqlite.busy_timeout_ms", U64(1_000), [0, 60_000], "ms", Tunable;
+    /// Watermark poll interval of an attached SQLite file (MEDULLA-UNIFIED-DATA-PLANE-R015.2.2.2).
+    foreign_sqlite_poll_interval_ms: u64 = "foreign.sqlite.poll_interval_ms", U64(5_000), [100, 3_600_000], "ms", Tunable;
 }
 
 fn refusal(code: ServerErrorCode, knob: &str, detail: String) -> KnobRefusal {
@@ -309,7 +313,8 @@ pub fn load_knobs(
             ));
         };
         let name = name.trim();
-        if !KNOB_TABLE.iter().any(|spec| spec.name == name) {
+        if name != FOREIGN_SQLITE_ALLOWED_ROOTS && !KNOB_TABLE.iter().any(|spec| spec.name == name)
+        {
             return Err(refusal(
                 ServerErrorCode::KnobUnknown,
                 name,
@@ -319,6 +324,55 @@ pub fn load_knobs(
         cli.push((name.to_string(), value.to_string()));
     }
     resolve_all(&cli, &env)
+}
+
+/// The list-valued server config key naming the directories an attached SQLite file may
+/// live under (MEDULLA-UNIFIED-DATA-PLANE-R015.2.2.3). It is a path list, not a scalar, so
+/// it is read here beside the scalar table; the default is the empty list, which refuses
+/// every path.
+pub const FOREIGN_SQLITE_ALLOWED_ROOTS: &str = "foreign.sqlite.allowed_roots";
+
+/// Read `foreign.sqlite.allowed_roots`: the last `--knob` for the key, else
+/// `MEDULLA_FOREIGN_SQLITE_ALLOWED_ROOTS`, split on `:`. Every entry must be an absolute
+/// path; a relative one refuses startup with `KNOB_INVALID`.
+pub fn load_allowed_roots(
+    args: &[String],
+    env: impl Fn(&str) -> Option<String>,
+) -> Result<Vec<std::path::PathBuf>, KnobRefusal> {
+    let from_cli = args.iter().rev().find_map(|arg| {
+        let (name, value) = arg.split_once('=')?;
+        (name.trim() == FOREIGN_SQLITE_ALLOWED_ROOTS).then(|| value.to_string())
+    });
+    let raw = from_cli.or_else(|| env("MEDULLA_FOREIGN_SQLITE_ALLOWED_ROOTS"));
+    let mut roots = Vec::new();
+    for entry in raw.iter().flat_map(|raw| raw.split(':')) {
+        if entry.trim().is_empty() {
+            continue;
+        }
+        let path = std::path::PathBuf::from(entry.trim());
+        if !path.is_absolute() {
+            return Err(refusal(
+                ServerErrorCode::KnobInvalid,
+                FOREIGN_SQLITE_ALLOWED_ROOTS,
+                format!("root {entry:?} is not an absolute path"),
+            ));
+        }
+        roots.push(path);
+    }
+    Ok(roots)
+}
+
+static ALLOWED_ROOTS: OnceLock<Vec<std::path::PathBuf>> = OnceLock::new();
+
+/// Hand the startup-loaded SQLite roots to the registration gate; the first install wins.
+pub fn install_allowed_roots(roots: Vec<std::path::PathBuf>) {
+    let _ = ALLOWED_ROOTS.set(roots);
+}
+
+/// The roots an attached SQLite file may live under; empty until installed, so every
+/// path is refused.
+pub fn allowed_roots() -> &'static [std::path::PathBuf] {
+    ALLOWED_ROOTS.get().map_or(&[], Vec::as_slice)
 }
 
 static INSTALLED: OnceLock<KnobConfig> = OnceLock::new();

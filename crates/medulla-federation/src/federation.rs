@@ -141,6 +141,15 @@ pub fn source_for(spec: &ForeignSourceSpec) -> Box<dyn ForeignSource + '_> {
             score_field,
             ..
         } => sql_source(dsn, query, id_field, score_field.as_deref()),
+        ForeignSourceSpec::SqliteFile {
+            path,
+            table,
+            columns,
+        } => Box::new(crate::sqlite_foreign::SqliteFileSource {
+            path,
+            table,
+            columns,
+        }),
         ForeignSourceSpec::Trino { .. }
         | ForeignSourceSpec::Cypher { .. }
         | ForeignSourceSpec::SparkBatch { .. }
@@ -1782,6 +1791,9 @@ impl ForeignSourceRegistry {
                 validate_http_column_mapping(field_map)?;
                 field_map.columns.keys().cloned().collect()
             }
+            ForeignSourceSpec::SqliteFile { columns, .. } if !columns.is_empty() => {
+                columns.iter().cloned().collect()
+            }
             _ => return Err("federation: this source has no column mapping".to_string()),
         };
         let (projection_supported, filter_support): (
@@ -1792,6 +1804,10 @@ impl ForeignSourceRegistry {
             // HTTP APIs have no declared field-selection or filter parameters in
             // this spec. Fetch the mapped columns, then evaluate residuals here.
             ForeignSourceSpec::HttpJson { .. } => (false, |_| {
+                crate::federation_opt::PushdownSupport::Unsupported
+            }),
+            // A SQLite file declares no filter parameters: the local residual filters.
+            ForeignSourceSpec::SqliteFile { .. } => (false, |_| {
                 crate::federation_opt::PushdownSupport::Unsupported
             }),
             _ => unreachable!("only mapped source kinds reach column planning"),
