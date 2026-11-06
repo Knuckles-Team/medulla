@@ -135,6 +135,12 @@ fn property_shape(namespace: &str, name: &str, field: &FieldContract) -> String 
     shape
 }
 
+/// The class the repair shapes of the source `name` target: the records the
+/// contract governs.
+pub fn repair_record_class(name: &str) -> String {
+    format!("urn:eg:source:{}#Record", local_name(name))
+}
+
 /// The SHACL shapes document of `contract` for the source `name`.
 pub fn render_repair_shapes(name: &str, contract: &RecordContract) -> String {
     let namespace = format!("urn:eg:source:{}#", local_name(name));
@@ -173,6 +179,16 @@ mod tests {
             },
         );
         RecordContract { fields }
+    }
+
+    #[test]
+    fn the_record_class_is_the_shapes_target_class() {
+        let shapes = render_repair_shapes("drift-served", &contract());
+        let class = repair_record_class("drift-served");
+        assert!(
+            shapes.contains(&format!("sh:targetClass <{class}>")),
+            "{shapes}"
+        );
     }
 
     #[test]

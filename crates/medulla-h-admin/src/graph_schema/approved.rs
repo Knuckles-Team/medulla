@@ -255,19 +255,32 @@ fn breaks_contract(
         })
 }
 
-/// Whether one node's properties are a control-lease row rather than data.
-fn is_control_row(properties: &[u8]) -> bool {
-    matches!(
+/// `rdf:type`, the relationship of a typing edge.
+const RDF_TYPE: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
+
+/// Whether the node `id` is a record of `class`, the class the candidate's
+/// shapes target: a `type` property naming the class, or an `rdf:type` edge to
+/// the class node. Bookkeeping rows (approval leases, edit-chain and report
+/// nodes) are never of that class, so the shadow ingest leaves them out.
+fn is_target_record(core: &GraphCore, id: &str, properties: &[u8], class: &str) -> bool {
+    let typed = matches!(
         rmp_serde::from_slice::<serde_json::Value>(properties),
         Ok(serde_json::Value::Object(row))
-            if medulla_work_types::control_lease::is_control_lease_row(&row)
-    )
+            if row.get("type").and_then(serde_json::Value::as_str) == Some(class)
+    );
+    typed
+        || core
+            .get_edge_properties(id, &format!("<{class}>"))
+            .iter()
+            .any(|edge| {
+                medulla_types::msgpack::decode_edge_relationship(edge).as_deref() == Some(RDF_TYPE)
+            })
 }
 
 /// Stage the candidate on a clone of the schema sources, then re-validate up to
 /// `knob schema_repair.shadow_sample_nodes` current nodes of the request graph against
-/// the candidate's record contract. Report and control-lease nodes are not data
-/// and are skipped.
+/// the candidate's record contract. Only records of the class the candidate's
+/// shapes target are sampled; bookkeeping nodes are not data.
 pub(super) fn shadow_ingest(
     core: &GraphCore,
     op: &GraphSchemaOp,
@@ -287,21 +300,23 @@ pub(super) fn shadow_ingest(
     };
     let mut staged: GraphSchemaSources = (*core.schema_sources()).clone();
     staged.attach_dynamic(source_id.clone(), source(op, None)?)?;
+    let name = source_id
+        .strip_prefix(medulla_catalog_types::graph_schema::approval::APPROVED_SOURCE_PREFIX)
+        .ok_or_else(|| "approved schema source id lacks its namespace".to_string())?;
+    let class = medulla_catalog_types::graph_schema::repair::repair_record_class(name);
     let cap = medulla_server_api::knob_config::knobs().schema_repair_shadow_sample_nodes;
     let mut ids = core.node_ids();
     ids.retain(|id| !id.starts_with(SHADOW_REPORT_PREFIX));
     ids.sort();
     let (mut nodes_ingested, mut violations) = (0u64, 0u64);
-    for id in ids
-        .into_iter()
-        .take(usize::try_from(cap).unwrap_or(usize::MAX))
-    {
+    for id in ids {
+        if nodes_ingested >= cap {
+            break;
+        }
         let Some(properties) = core.get_node_properties(&id) else {
             continue;
         };
-        // A control lease (the candidate's approval lease among them) is a
-        // control row beside the data, like the report itself: not ingested.
-        if is_control_row(&properties) {
+        if !is_target_record(core, &id, &properties, &class) {
             continue;
         }
         nodes_ingested += 1;

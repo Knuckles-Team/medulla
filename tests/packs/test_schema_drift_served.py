@@ -157,8 +157,10 @@ async def validate_repair(
 # One record of the request graph per contract: conforming data the shadow
 # ingest re-validates before the attach (MEDULLA-DECISION-ENGINE-R102.2).
 RECORD_ID = "schema-drift-record"
-BASELINE_RECORD = {"id": 1, "name": "alpha"}
-DRIFTED_RECORD = {"name": 7}
+# The class the candidate's shapes target; only its records are sampled.
+RECORD_CLASS = "urn:eg:source:drift-served#Record"
+BASELINE_RECORD = {"type": RECORD_CLASS, "id": 1, "name": "alpha"}
+DRIFTED_RECORD = {"type": RECORD_CLASS, "name": 7}
 
 
 async def approved_attach(
