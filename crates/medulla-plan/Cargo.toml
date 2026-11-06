@@ -575,6 +575,11 @@ path = "tests/incremental_execute_oracle.rs"
 required-features = ["query"]
 
 [[test]]
+name = "incremental_oracle_coverage"
+path = "tests/incremental_oracle_coverage.rs"
+required-features = ["query"]
+
+[[test]]
 name = "incremental_o_delta"
 path = "tests/incremental_o_delta.rs"
 required-features = ["query"]
