@@ -63,6 +63,7 @@ pub mod code_health;
 // crate (a wire type, not a decision type), and the evidence class they cite.
 pub mod context_facts;
 pub mod evidence_class;
+pub mod external_schema;
 pub mod ontology_diff;
 // MEDULLA-UNIFIED-DATA-PLANE-R019.3.1 — typed conformance-entry constructor for the
 // MongoDB/DocumentDB adapter, over the generic R022.1 report entry. Pure
