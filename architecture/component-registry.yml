@@ -2237,7 +2237,6 @@ components:
       - "crates/medulla-kvcache/src/cold_cutover_tests.rs"
       - "crates/medulla-kvcache/src/compress.rs"
       - "crates/medulla-kvcache/src/contract.rs"
-      - "crates/medulla-kvcache/src/graph_importance.rs"
       - "crates/medulla-kvcache/src/hash.rs"
       - "crates/medulla-kvcache/src/shared.rs"
       - "crates/medulla-kvcache/src/tiered.rs"
@@ -2247,6 +2246,7 @@ components:
       - "crates/medulla-kvcache/src/lib.rs"
     test_roots:
       - "crates/medulla-kvcache/tests"
+      - "crates/medulla-kvcache/benches"
     generated_roots: []
     shared_roots: []
     shared_files: []
@@ -2258,7 +2258,6 @@ components:
       observation recorded as evidence, NOT a second dependency-graph authority.
     observed_crate_edges:
       dependencies:
-        - "medulla-kvcache -> medulla-compute [medulla.compute]"
         - "medulla-kvcache -> medulla-modality [medulla.modality]"
       dev_dependencies: []
     observed_consumers: []
@@ -2625,6 +2624,7 @@ components:
     owned_source_roots:
       - "crates/medulla-compute/src/algorithms"
       - "crates/medulla-graph-algos/src/algorithms.rs"
+      - "crates/medulla-graph-algos/src/graph_importance.rs"
       - "crates/medulla-compute/src/ast"
       - "crates/medulla-compute/src/contract.rs"
       - "crates/medulla-compute/src/datascience"
@@ -2665,7 +2665,6 @@ components:
     observed_consumers:
       - "medulla.embedded-bindings (crates/medulla-pyengine -> crates/medulla-compute)"
       - "medulla.epistemic (crates/medulla-epistemic -> crates/medulla-compute)"
-      - "medulla.kv-cache (crates/medulla-kvcache -> crates/medulla-compute)"
       - "medulla.query-plan (crates/medulla-plan -> crates/medulla-compute)"
       - "medulla.query-plan (crates/medulla-query -> crates/medulla-compute)"
       - "medulla.timeseries (crates/medulla-tsdb -> crates/medulla-compute)"
@@ -3803,6 +3802,11 @@ components:
       - "tests/adopt_graph_delete_recreate_cache_and_rbac_restart.rs"
       - "tests/adopt_lake_asof_lsn_gap.rs"
       - "tests/adopt_obs_restart_tenant_isolation.rs"
+      - "tests/lake_catalog_schema_evolution.rs"
+      - "tests/lake_manifest_interoperability.rs"
+      - "tests/jobs/__init__.py"
+      - "tests/shex_served.rs"
+      - "tests/test_check_decide_budgets.py"
       - "tests/adopt_workitem_authenticated_replay.rs"
       - "tests/agent_bus_served.rs"
       - "tests/adopt_workitem_metadata_cas_lifecycle.rs"
@@ -3814,6 +3818,7 @@ components:
       - "tests/conftest.py"
       - "tests/data_plane/test_lineage_drain_served.py"
       - "tests/decide"
+      - "tests/data_plane"
       - "tests/ingest"
       - "tests/durable"
       - "tests/lifecycle"
@@ -3836,8 +3841,8 @@ components:
       - "tests/finance_served_research_kernels.rs"
       - "tests/finance_served_sizing.rs"
       - "tests/finance_wallet_trust_served.rs"
-      - "tests/shex_served.rs"
       - "tests/fixtures"
+      - "tests/golden/usage_cost_rollup.json"
       - "tests/graph_tile_stream.rs"
       - "tests/graphql_crossmodal_durable.rs"
       - "tests/incremental_server_indexes.rs"
@@ -3899,8 +3904,6 @@ components:
       - "tests/test_cargo_test_rescue.py"
       - "tests/test_cep_standing_queries.py"
       - "tests/test_certify_exact_multimodal_assert_page.py"
-      - "tests/jobs/__init__.py"
-      - "tests/test_check_decide_budgets.py"
       - "tests/test_check_complexity_staged.py"
       - "tests/test_quality_gate_script.py"
       - "tests/test_contract_architecture_evidence.py"
@@ -4015,6 +4018,7 @@ components:
       - "tests/test_federated_query_file_size.py"
       - "tests/test_kvcache_config.py"
       - "tests/test_kvcache_connector.py"
+      - "tests/test_kvcache_policy_served.py"
       - "tests/test_lake_iceberg_delta_parity.py"
       - "tests/test_match_ontology_terms.py"
       - "tests/test_measurement_lite.py"
@@ -4034,6 +4038,7 @@ components:
       - "tests/test_obda_client.py"
       - "tests/test_object_path.py"
       - "tests/test_orphan_modules_gate.py"
+      - "tests/test_otlp_log_client_served.py"
       - "tests/test_p2_analytics_gate_contract.py"
       - "tests/test_pb_clients.py"
       - "tests/test_persisted_mutation_contract.py"
@@ -4063,6 +4068,7 @@ components:
       - "tests/test_release_python_suite_contract.py"
       - "tests/test_ci_change_scope.py"
       - "tests/test_merge_safe_registries.py"
+      - "tests/attached_conformance.rs"
       - "tests/test_ci_parity.py"
       - "tests/test_no_crate_level_lint_allows.py"
       - "tests/test_ci_light_gates_topology.py"

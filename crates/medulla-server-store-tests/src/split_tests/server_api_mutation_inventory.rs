@@ -54,6 +54,9 @@ fn clustered_mutation_inventory_is_complete() {
     covered.insert("FleetCatalog");
     covered.insert("PolicyEvolution");
     covered.insert("TelemetryDerive");
+    covered.insert("IncidentRecordAnomaly");
+    covered.insert("IncidentCorrelate");
+    covered.insert("IncidentSetStatus");
 
     let missing: Vec<_> = expected.difference(&covered).copied().collect();
     let stale: Vec<_> = covered.difference(&expected).copied().collect();

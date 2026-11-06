@@ -91,9 +91,10 @@ impl ForeignExecutor for FederatedExec<'_> {
                 };
                 ForeignFragmentReport {
                     stage: format!(
-                        "REMOTE {source} strategy={:?} keys={} limit={:?} requests={} fetched={} kept={} estimate={estimate}",
+                        "REMOTE {source} strategy={:?} keys={} limit={:?} requests={} fetched={} kept={} estimate={estimate} mode={}",
                         fragment.strategy, fragment.keys_pushed, fragment.limit_pushed,
                         fragment.requests, fragment.rows_fetched, fragment.rows_kept,
+                        super::trace::mode_word(fragment.mode),
                     ),
                     estimated_rows: match fragment.estimate {
                         EstimateProvenance::Learned { rows, .. } => rows,

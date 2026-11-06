@@ -2,6 +2,10 @@
 
 use serde::Serialize;
 
+use super::snapshot::Consistency;
+pub use medulla_types::metadata_acceleration::FragmentExecutionMode;
+use medulla_types::metadata_acceleration::{SnapshotIsolation, SnapshotSemantics};
+
 /// How a fragment was fetched.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 pub enum FetchStrategy {
@@ -50,13 +54,35 @@ pub struct FragmentTrace {
     /// Wall time spent in the fragment.
     pub elapsed_ms: u64,
     pub estimate: EstimateProvenance,
+    /// `live` or `copy`, set by the route that ran.
+    pub mode: FragmentExecutionMode,
+    /// The copy's watermark, when `mode` is `Copy`.
+    pub watermark: Option<String>,
+    /// Rows the copy served, when `mode` is `Copy`.
+    pub copy_rows: Option<u64>,
+    /// The snapshot every fragment of this source read, when one was opened.
+    pub snapshot: Option<SnapshotSemantics>,
+    /// Unix milliseconds at which the fragment started reading.
+    pub read_at_ms: u64,
+    /// How the query's fragments of this source relate in time.
+    pub consistency: Consistency,
 }
 
 impl FragmentTrace {
-    pub(crate) fn new(source: String, strategy: FetchStrategy) -> Self {
+    pub(crate) fn new(
+        source: String,
+        strategy: FetchStrategy,
+        mode: FragmentExecutionMode,
+    ) -> Self {
         Self {
             source,
             strategy,
+            mode,
+            watermark: None,
+            copy_rows: None,
+            snapshot: None,
+            read_at_ms: 0,
+            consistency: Consistency::Snapshot,
             keys_pushed: 0,
             limit_pushed: None,
             requests: 0,
@@ -96,13 +122,28 @@ pub(crate) fn redacted_label(label: &str) -> String {
     format!("{kind}#{digest}")
 }
 
+/// `live` or `copy`, as printed per fragment.
+pub(crate) const fn mode_word(mode: FragmentExecutionMode) -> &'static str {
+    match mode {
+        FragmentExecutionMode::Live => "live",
+        FragmentExecutionMode::Copy => "copy",
+    }
+}
+
+const fn isolation_word(isolation: SnapshotIsolation) -> &'static str {
+    match isolation {
+        SnapshotIsolation::Snapshot => "snapshot",
+        SnapshotIsolation::RepeatableRead => "repeatable_read",
+    }
+}
+
 /// One line per fragment for a log/EXPLAIN view, without registered source names.
 pub fn render_trace(trace: &[FragmentTrace]) -> String {
     trace
         .iter()
         .map(|t| {
             format!(
-                "{} {:?} keys={} limit={:?} requests={} fetched={} kept={} ms={} estimate={:?}",
+                "{} {:?} keys={} limit={:?} requests={} fetched={} kept={} ms={} estimate={:?} mode={}{}{}",
                 redacted_label(&t.source),
                 t.strategy,
                 t.keys_pushed,
@@ -111,7 +152,20 @@ pub fn render_trace(trace: &[FragmentTrace]) -> String {
                 t.rows_fetched,
                 t.rows_kept,
                 t.elapsed_ms,
-                t.estimate
+                t.estimate,
+                mode_word(t.mode),
+                t.snapshot
+                    .as_ref()
+                    .map(|snap| format!(
+                        " snapshot={} isolation={}",
+                        snap.snapshot_token,
+                        isolation_word(snap.isolation)
+                    ))
+                    .unwrap_or_default(),
+                match t.consistency {
+                    Consistency::PerFragment => " consistency=per_fragment",
+                    Consistency::Snapshot => "",
+                }
             )
         })
         .collect::<Vec<_>>()
@@ -120,13 +174,14 @@ pub fn render_trace(trace: &[FragmentTrace]) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{render_trace, FetchStrategy, FragmentTrace};
+    use super::{render_trace, FetchStrategy, FragmentExecutionMode, FragmentTrace};
 
     #[test]
     fn telemetry_trace_redacts_registered_names_and_keeps_counts() {
         let mut fragment = FragmentTrace::new(
             "registered:https://user:redact-me@example.invalid/db#deadbeef".into(),
             FetchStrategy::BindJoin,
+            FragmentExecutionMode::Live,
         );
         fragment.keys_pushed = 3;
         fragment.requests = 2;
@@ -143,7 +198,11 @@ mod tests {
 
     #[test]
     fn telemetry_trace_fails_closed_for_malformed_source_labels() {
-        let fragment = FragmentTrace::new("untrusted:redact-me".into(), FetchStrategy::FullFetch);
+        let fragment = FragmentTrace::new(
+            "untrusted:redact-me".into(),
+            FetchStrategy::FullFetch,
+            FragmentExecutionMode::Live,
+        );
         let output = render_trace(&[fragment]);
         assert!(output.starts_with("source#unknown FullFetch"), "{output}");
         assert!(!output.contains("redact-me"));

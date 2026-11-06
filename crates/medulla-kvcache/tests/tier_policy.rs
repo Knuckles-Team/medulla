@@ -1,5 +1,5 @@
 use medulla_kvcache::{
-    AdmissionRefusal, CacheEntryMeta, GenerationRef, PolicyTier, Tier, TierPolicy,
+    AdmissionRefusal, CacheEntryMeta, GenerationRef, LookupOutcome, PolicyTier, Tier, TierPolicy,
 };
 
 const FOREVER: u64 = u64::MAX;
@@ -138,4 +138,77 @@ fn oversize_entry_is_refused() {
     assert!(cache.lookup("t1", "resident", 0).is_some());
     assert_eq!(cache.len(), 1, "refusals stored nothing");
     assert_eq!(cache.used_bytes(), 50);
+}
+
+// spec: MEDULLA-DURABLE-KERNEL-R800.3
+#[test]
+fn dependency_advance_invalidates_answer() {
+    let mut cache = tier(1_000, 0.001);
+    cache.set_generation("label:Person", 4);
+    let mut answer = meta("answer", 100, 1, 50);
+    answer.deps = vec![GenerationRef {
+        source: "label:Person".into(),
+        generation: 4,
+    }];
+    cache
+        .admit("t1", answer.clone(), b"gen4".to_vec(), FOREVER)
+        .unwrap();
+    assert_eq!(
+        cache.lookup_outcome("t1", "answer", 0),
+        LookupOutcome::Hit(b"gen4".to_vec())
+    );
+
+    // A write advances the dependency: the answer is dropped, the next call recomputes.
+    cache.set_generation("label:Person", 5);
+    assert_eq!(
+        cache.lookup_outcome("t1", "answer", 0),
+        LookupOutcome::Invalidated
+    );
+    assert_eq!(cache.lookup_outcome("t1", "answer", 0), LookupOutcome::Miss);
+    assert_eq!(cache.used_bytes(), 0);
+
+    // The recomputed answer built at the new generation is admitted again.
+    answer.deps[0].generation = 5;
+    cache
+        .admit("t1", answer, b"gen5".to_vec(), FOREVER)
+        .unwrap();
+    assert_eq!(cache.lookup("t1", "answer", 0), Some(b"gen5".to_vec()));
+}
+
+// spec: MEDULLA-DURABLE-KERNEL-R800.5
+#[test]
+fn foreign_tenant_key_misses() {
+    let mut cache = tier(1_000, 0.0);
+    cache
+        .admit(
+            "t1",
+            meta("shared-key", 10, 1, 1),
+            b"mine".to_vec(),
+            FOREVER,
+        )
+        .unwrap();
+
+    assert_eq!(
+        cache.lookup_outcome("t2", "shared-key", 0),
+        LookupOutcome::Miss,
+        "another tenant never sees the entry"
+    );
+    assert!(!cache.invalidate("t2", "shared-key"));
+    assert_eq!(cache.lookup("t1", "shared-key", 0), Some(b"mine".to_vec()));
+
+    // The same digest under two tenants is two entries.
+    cache
+        .admit(
+            "t2",
+            meta("shared-key", 10, 1, 1),
+            b"theirs".to_vec(),
+            FOREVER,
+        )
+        .unwrap();
+    assert_eq!(cache.lookup("t1", "shared-key", 0), Some(b"mine".to_vec()));
+    assert_eq!(
+        cache.lookup("t2", "shared-key", 0),
+        Some(b"theirs".to_vec())
+    );
+    assert_eq!(cache.len(), 2);
 }

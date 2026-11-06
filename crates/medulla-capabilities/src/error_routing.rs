@@ -105,6 +105,8 @@ const METHOD_PREFIXES: &[(&str, &[&str])] = &[
         &["DECISION_", "COMPONENT_", "CORRUPT_DECISION_"],
     ),
     ("Decide", &["DECISION_", "COMPONENT_", "CORRUPT_DECISION_"]),
+    // MEDULLA-DECISION-ENGINE-R652.4: the claim surface's refusal codes.
+    ("Claims", &["ARTIFACT_", "CLAIM_", "EVIDENCE_"]),
     ("RbacElevation", &["ELEVATION_"]),
     ("GovernedChange", &["GOVERNED_"]),
     ("Identity", &["IDENTITY_"]),
@@ -127,6 +129,8 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         &["SCOPE_EXCEEDS_POLICY", "SCOPE_POLICY_UNREADABLE"],
     ),
     ("AnalyticsJob", &["INVALID_CONFIGURATION"]),
+    // MEDULLA-DECISION-ENGINE-R652.3: a stale write and a malformed op.
+    ("Claims", &["PARAMETER_INVALID", "REVISION_CONFLICT"]),
     ("GetRunWorkItem", &["RUN_ADMISSION_UNAVAILABLE"]),
     // Local-only authority: a clustered server refuses it with the typed
     // `LOCAL_ONLY_CLUSTER_REFUSAL` (server-mutation) instead of proposing it.
@@ -333,6 +337,30 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     ("LineageIngest", &["LINEAGE_EVENT_MALFORMED"]),
     ("WriteBack", &["CORRUPT_WRITE_BACK"]),
     ("TxnPlanWriteback", &["CORRUPT_WRITE_BACK"]),
+    (
+        "IncidentCorrelate",
+        &["TENANT_SCOPE_REQUIRED", "ANOMALY_RESOURCE_REQUIRED"],
+    ),
+    (
+        "IncidentEvidence",
+        &["TENANT_SCOPE_REQUIRED", "INCIDENT_NOT_FOUND"],
+    ),
+    (
+        "IncidentRecordAnomaly",
+        &["TENANT_SCOPE_REQUIRED", "ANOMALY_RESOURCE_REQUIRED"],
+    ),
+    (
+        "IncidentRelatedClaims",
+        &["TENANT_SCOPE_REQUIRED", "INCIDENT_NOT_FOUND"],
+    ),
+    (
+        "IncidentSetStatus",
+        &[
+            "TENANT_SCOPE_REQUIRED",
+            "INCIDENT_STATUS_SKIP",
+            "INCIDENT_NOT_FOUND",
+        ],
+    ),
     (
         "TelemetryDerive",
         &[

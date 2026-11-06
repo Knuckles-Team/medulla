@@ -12,8 +12,8 @@
 //! premises and abstentions, same encoded bytes.
 
 use std::collections::BTreeMap;
-use std::collections::BTreeSet;
 
+use medulla_identity_types::authority_audit::AuditSourceMode;
 use serde::{Deserialize, Serialize};
 
 /// The unified report: impact per service, the items behind each, the sources
@@ -89,6 +89,8 @@ pub struct ServiceImpactItem {
 pub enum ReportError {
     /// A `ServiceImpact` item named no source.
     MissingItemSource,
+    /// A `sources_used` entry was `accelerated` with no watermark.
+    AcceleratedWithoutWatermark { source: String },
 }
 
 impl std::fmt::Display for ReportError {
@@ -98,6 +100,12 @@ impl std::fmt::Display for ReportError {
                 write!(
                     f,
                     "a service-impact item named no source; items are refused, not defaulted"
+                )
+            }
+            Self::AcceleratedWithoutWatermark { source } => {
+                write!(
+                    f,
+                    "source {source} is accelerated but carries no watermark; freshness is refused, not defaulted"
                 )
             }
         }
@@ -150,6 +158,50 @@ pub struct SourceUsed {
     /// The `vg:SourceAuthority` row that named this source for the class, with
     /// its rank.
     pub authority_premise: String,
+    /// How the source was served (MEDULLA-CQ-XSRC-R006.2): `live` against the
+    /// source, or `accelerated` from a copy.
+    pub mode: AuditSourceMode,
+    /// The copy's watermark; present exactly for an `accelerated` entry.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub watermark: Option<String>,
+    /// The copy's age in seconds at answer time, for an `accelerated` entry.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub age_seconds: Option<u64>,
+}
+
+impl SourceUsed {
+    /// Build one entry, refusing an `accelerated` entry without a watermark
+    /// (MEDULLA-CQ-XSRC-R006.2). A `live` entry carries no watermark or age.
+    pub fn try_new(
+        source: &str,
+        class_served: &str,
+        authority_premise: &str,
+        mode: AuditSourceMode,
+        watermark: Option<&str>,
+        age_seconds: Option<u64>,
+    ) -> Result<Self, ReportError> {
+        let (watermark, age_seconds) = match mode {
+            AuditSourceMode::Live => (None, None),
+            AuditSourceMode::Accelerated => match watermark {
+                Some(watermark) if !watermark.trim().is_empty() => {
+                    (Some(watermark.to_string()), age_seconds)
+                }
+                _ => {
+                    return Err(ReportError::AcceleratedWithoutWatermark {
+                        source: source.to_string(),
+                    })
+                }
+            },
+        };
+        Ok(Self {
+            source: source.to_string(),
+            class_served: class_served.to_string(),
+            authority_premise: authority_premise.to_string(),
+            mode,
+            watermark,
+            age_seconds,
+        })
+    }
 }
 
 /// A typed abstention: why a class or source is absent from the answer.
@@ -165,6 +217,18 @@ pub enum ReportAbstention {
     Disconnected { class: String },
     /// The mapping that would serve `class` is not approved.
     UnapprovedMapping { class: String, mapping: String },
+    /// The copy serving `class` is older than its freshness bound and no live
+    /// route exists (MEDULLA-CQ-XSRC-R006.3).
+    Stale { source: String, class: String },
+    /// The authority row's contract kind disagrees with the connection's
+    /// source kind.
+    ContractMismatch { source: String, class: String },
+    /// An unresolvable tie between authority rows for `class`.
+    Ambiguous { source: String, class: String },
+    /// The authority row for `class` is proposed, not approved.
+    Proposed { source: String, class: String },
+    /// The source's role cannot answer a question that needs current state.
+    RoleInsufficient { source: String, class: String },
 }
 
 impl ReportAbstention {
@@ -174,6 +238,11 @@ impl ReportAbstention {
             Self::Uncovered { class } => (1, String::new(), class.clone()),
             Self::Disconnected { class } => (2, String::new(), class.clone()),
             Self::UnapprovedMapping { class, mapping } => (3, mapping.clone(), class.clone()),
+            Self::Stale { source, class } => (4, source.clone(), class.clone()),
+            Self::ContractMismatch { source, class } => (5, source.clone(), class.clone()),
+            Self::Ambiguous { source, class } => (6, source.clone(), class.clone()),
+            Self::Proposed { source, class } => (7, source.clone(), class.clone()),
+            Self::RoleInsufficient { source, class } => (8, source.clone(), class.clone()),
         }
     }
 }
@@ -206,6 +275,12 @@ pub struct SourcePremise {
     pub row: String,
     /// The row's rank (lower wins).
     pub rank: u64,
+    /// How the source was served: `live` or `accelerated` (MEDULLA-CQ-XSRC-R006.2).
+    pub mode: AuditSourceMode,
+    /// The copy's watermark, required for an `accelerated` premise.
+    pub watermark: Option<String>,
+    /// The copy's age in seconds, for an `accelerated` premise.
+    pub age_seconds: Option<u64>,
 }
 
 /// Pure assembly (MEDULLA-CQ-XSRC-R006.4): the planned query's rows, the authority
@@ -239,23 +314,27 @@ pub fn assemble_supply_chain_report(
         })
         .collect();
 
-    let mut sources: BTreeSet<(String, String, String, u64)> = BTreeSet::new();
+    let mut sources: BTreeMap<(String, String, String), SourceUsed> = BTreeMap::new();
     for premise in premises {
-        sources.insert((
-            premise.source.clone(),
-            premise.class_served.clone(),
-            format!("{} (rank {})", premise.row, premise.rank),
-            premise.rank,
-        ));
+        let authority_premise = format!("{} (rank {})", premise.row, premise.rank);
+        let entry = SourceUsed::try_new(
+            &premise.source,
+            &premise.class_served,
+            &authority_premise,
+            premise.mode,
+            premise.watermark.as_deref(),
+            premise.age_seconds,
+        )?;
+        sources.insert(
+            (
+                premise.source.clone(),
+                premise.class_served.clone(),
+                authority_premise,
+            ),
+            entry,
+        );
     }
-    let sources_used = sources
-        .into_iter()
-        .map(|(source, class_served, authority_premise, _)| SourceUsed {
-            source,
-            class_served,
-            authority_premise,
-        })
-        .collect();
+    let sources_used = sources.into_values().collect();
 
     let mut abstentions = abstentions.to_vec();
     abstentions.sort_by_key(|abstention| abstention.sort_key());
@@ -305,6 +384,9 @@ mod tests {
                 class_served: "http://knuckles.team/kg/infrastructure#ContainerImage".to_string(),
                 row: "xsaa:container-image-dockerhub".to_string(),
                 rank: 1,
+                mode: AuditSourceMode::Live,
+                watermark: None,
+                age_seconds: None,
             }],
             &[ReportAbstention::Uncovered {
                 class: "http://knuckles.team/kg#SupplyChainItem".to_string(),
@@ -374,12 +456,18 @@ mod tests {
                 class_served: "http://knuckles.team/kg#Supplier".to_string(),
                 row: "xsaa:supplier-erpnext".to_string(),
                 rank: 1,
+                mode: AuditSourceMode::Live,
+                watermark: None,
+                age_seconds: None,
             },
             SourcePremise {
                 source: "dockerhub-mcp".to_string(),
                 class_served: "http://knuckles.team/kg/infrastructure#ContainerImage".to_string(),
                 row: "xsaa:container-image-dockerhub".to_string(),
                 rank: 1,
+                mode: AuditSourceMode::Live,
+                watermark: None,
+                age_seconds: None,
             },
             // A duplicate premise must not duplicate the source.
             SourcePremise {
@@ -387,6 +475,9 @@ mod tests {
                 class_served: "http://knuckles.team/kg/infrastructure#ContainerImage".to_string(),
                 row: "xsaa:container-image-dockerhub".to_string(),
                 rank: 1,
+                mode: AuditSourceMode::Live,
+                watermark: None,
+                age_seconds: None,
             },
         ];
         let abstentions = vec![
@@ -411,5 +502,67 @@ mod tests {
             expected,
             "assembly must be byte-for-byte deterministic"
         );
+    }
+
+    // spec: MEDULLA-CQ-XSRC-R006.2
+    #[test]
+    fn freshness_modes() {
+        let premise = |mode, watermark: Option<&str>, age_seconds| SourcePremise {
+            source: "gitlab-mcp".to_string(),
+            class_served: "http://knuckles.team/kg#Vulnerability".to_string(),
+            row: "xsaa:vulnerability-gitlab".to_string(),
+            rank: 1,
+            mode,
+            watermark: watermark.map(str::to_string),
+            age_seconds,
+        };
+        // Live: no watermark and no age.
+        let live =
+            assemble_supply_chain_report(&[], &[premise(AuditSourceMode::Live, None, None)], &[])
+                .unwrap();
+        assert_eq!(live.sources_used[0].mode, AuditSourceMode::Live);
+        assert_eq!(live.sources_used[0].watermark, None);
+        assert_eq!(live.sources_used[0].age_seconds, None);
+        let encoded = serde_json::to_string(&live).unwrap();
+        assert!(encoded.contains("\"mode\":\"live\""));
+        assert!(!encoded.contains("watermark"));
+        // Accelerated: the watermark and age are carried and round-trip.
+        let accelerated = assemble_supply_chain_report(
+            &[],
+            &[premise(
+                AuditSourceMode::Accelerated,
+                Some("2026-11-05T10:00:00Z"),
+                Some(120),
+            )],
+            &[],
+        )
+        .unwrap();
+        let used = &accelerated.sources_used[0];
+        assert_eq!(used.mode, AuditSourceMode::Accelerated);
+        assert_eq!(used.watermark.as_deref(), Some("2026-11-05T10:00:00Z"));
+        assert_eq!(used.age_seconds, Some(120));
+        let encoded = serde_json::to_string(&accelerated).unwrap();
+        let decoded: SupplyChainImpactReport = serde_json::from_str(&encoded).unwrap();
+        assert_eq!(decoded, accelerated);
+        // Refusal: an accelerated entry without a watermark.
+        assert_eq!(
+            assemble_supply_chain_report(
+                &[],
+                &[premise(AuditSourceMode::Accelerated, None, Some(5))],
+                &[]
+            ),
+            Err(ReportError::AcceleratedWithoutWatermark {
+                source: "gitlab-mcp".to_string()
+            })
+        );
+        assert!(SourceUsed::try_new(
+            "s",
+            "c",
+            "p",
+            AuditSourceMode::Accelerated,
+            Some("  "),
+            None
+        )
+        .is_err());
     }
 }

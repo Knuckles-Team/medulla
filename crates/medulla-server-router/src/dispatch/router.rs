@@ -41,6 +41,7 @@ mod data_plane_arms;
 mod decision_plane;
 mod graph_lifecycle;
 mod identity_access;
+mod incident;
 mod lifecycle;
 mod resource_cost;
 mod service_control;
@@ -63,6 +64,7 @@ use data_plane::{
 };
 use graph_lifecycle::dispatch_graph_lifecycle_methods;
 use identity_access::dispatch_identity_and_access_methods;
+use incident::dispatch_incident_methods;
 #[cfg(feature = "security")]
 use lifecycle::apply_rbac_admin;
 pub(in crate::dispatch) use lifecycle::{create_graph, GraphLifecycleRequest};
@@ -141,6 +143,7 @@ async fn dispatch_control_plane_methods(
     let method = dispatch_service_control_methods(ctx, method).await?;
     let method = dispatch_source_ingest_methods(ctx, method).await?;
     let method = dispatch_telemetry_methods(ctx, method).await?;
+    let method = dispatch_incident_methods(ctx, method).await?;
     let method = dispatch_resource_cost_methods(ctx, method).await?;
     let method = dispatch_graph_lifecycle_methods(ctx, method).await?;
     let method = dispatch_agent_library_methods(ctx, method).await?;

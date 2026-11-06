@@ -97,6 +97,7 @@ fn requires_write_decision_surface(method: &Method) -> Option<bool> {
     match method {
         Method::ConnectorPack { op } => Some(op.is_mutation()),
         Method::DecisionFit { op } => Some(op.is_mutation()),
+        Method::Claims { op } => Some(op.is_mutation()),
         Method::DecisionLog { op } => Some(op.is_mutation()),
         Method::DecisionEval { op } => Some(op.is_mutation()),
         Method::MutationOutbox { op } => Some(op.is_mutation()),
@@ -422,6 +423,10 @@ pub fn requires_write(method: &Method) -> bool {
                 | Method::DocumentDelete { .. }
                 | Method::LineageIngest { .. }
                 | Method::TelemetryDerive { .. }
+                // MEDULLA-UNIFIED-DATA-PLANE-R760.3: incident writes.
+                | Method::IncidentRecordAnomaly { .. }
+                | Method::IncidentCorrelate { .. }
+                | Method::IncidentSetStatus { .. }
                 | Method::Reconcile { .. }
                 | Method::ApplyMutation { .. }
                 | Method::ApplyMultisigMutation { .. }

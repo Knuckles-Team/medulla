@@ -4336,6 +4336,32 @@ fn media_vocab_mattermost_vocabulary_docs_truth() {
     vocab_cell_is("R036", "media-v1 / content-v1");
 }
 
+// spec: MEDULLA-MEDIA-VOCAB-R002.5.4
+#[test]
+fn paper_classes_and_cites_reconciled() {
+    let triples = load(&format!("{CONTENT}\n{RETRIEVAL}"));
+    assert!(declared_classes(&triples).contains(&format!("{KG}ResearchPaper")));
+    assert!(declared_classes(&triples).contains(&format!("{KG}ScholarlyPaper")));
+    assert!(has_iri(
+        &triples,
+        &format!("{KG}ScholarlyPaper"),
+        &format!("{RDFS}subClassOf"),
+        &format!("{KG}ResearchPaper")
+    ));
+    assert_domain_range(&triples, "cites", "ResearchPaper", "ResearchPaper");
+    for stale in ["domain", "range"] {
+        assert!(
+            !has_iri(
+                &triples,
+                &format!("{KG}cites"),
+                &format!("{RDFS}{stale}"),
+                &format!("{KG}ScholarlyPaper")
+            ),
+            ":cites {stale} no longer names :ScholarlyPaper"
+        );
+    }
+}
+
 // spec: MEDULLA-MEDIA-VOCAB-R001.100.1
 #[test]
 fn media_tag_terms_and_shape() {

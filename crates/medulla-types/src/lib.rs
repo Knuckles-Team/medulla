@@ -18,6 +18,8 @@ pub mod attached_source_governance;
 // MEDULLA-UNIFIED-DATA-PLANE-R014.1 — typed model distinguishing the MySQL and
 // MariaDB attached-source dialect entries. See module docs.
 pub mod attached_source_dialect;
+// MEDULLA-UNIFIED-DATA-PLANE-R760 — the served incident records.
+pub mod incident;
 // MEDULLA-UNIFIED-DATA-PLANE-R014.2.1 — MySQL/MariaDB adapter skeleton: typed
 // connection config → sqlx-shaped driver config, with a connect refusal
 // path that needs no live database. Binlog/GTID capture and the per-engine
@@ -33,6 +35,8 @@ pub mod mysql_mariadb_connection;
 pub mod asr_wire;
 // MEDULLA-FEDERATED-QUERY-R608.1 — causal model fit verdict (`CausalVerify`).
 pub mod causal_wire;
+// MEDULLA-DECISION-ENGINE-R652.1 — research claims, evidence and sealed artifacts.
+pub mod claims;
 // MEDULLA-FEDERATED-QUERY-R086.100.1 — ordered n-ary inductive link prediction model.
 pub mod graphlearn_nary;
 // MEDULLA-DURABLE-KERNEL-R076.1 — authoritative scheduler policy data and validation.
@@ -275,12 +279,16 @@ pub mod runtime_limit;
 pub mod series_expr;
 // MEDULLA-SCM-R002 — the source changeset record and its structured trailers.
 pub mod source_changeset;
+// MEDULLA-UNIFIED-DATA-PLANE-R038.5.1 — the search-index capability of an operation-bound source.
+pub mod search_source;
+// MEDULLA-UNIFIED-DATA-PLANE-R038.7.1 — the web metasearch capability and its result record.
 pub mod source_symbol_edit;
 // MEDULLA-DECISION-ENGINE-R153.1 — source table of contents and line index.
 pub mod source_toc;
 #[cfg(feature = "statechart")]
 pub mod statechart;
 pub mod telemetry_derive;
+pub mod web_source;
 // MEDULLA-FEDERATED-QUERY-R607.1 — topology analytics result model.
 #[cfg(any(test, feature = "test-support"))]
 pub mod test_support;

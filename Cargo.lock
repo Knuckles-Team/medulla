@@ -5156,6 +5156,7 @@ dependencies = [
  "medulla-compute",
  "medulla-core",
  "medulla-graph-core",
+ "medulla-kvcache",
  "medulla-modality",
  "medulla-semantic-index",
  "medulla-types",
@@ -5320,11 +5321,13 @@ dependencies = [
  "medulla-decision-policy",
  "medulla-decision-stats",
  "medulla-decision-types",
+ "medulla-epistemic",
  "medulla-exec",
  "medulla-finance",
  "medulla-finance-market",
  "medulla-graph-core",
  "medulla-h-graph",
+ "medulla-h-jobs",
  "medulla-index-types",
  "medulla-isolation",
  "medulla-kernel",
@@ -5344,6 +5347,7 @@ dependencies = [
  "medulla-shacl",
  "medulla-sql",
  "medulla-sql-lang",
+ "medulla-statechart",
  "medulla-store",
  "medulla-table-store",
  "medulla-tables",
@@ -5873,7 +5877,6 @@ name = "medulla-kvcache"
 version = "0.1.0"
 dependencies = [
  "lz4_flex 0.14.0",
- "medulla-compute",
  "medulla-graph-algos",
  "medulla-graph-core",
  "medulla-modality",
@@ -6414,6 +6417,7 @@ dependencies = [
 name = "medulla-query-cache"
 version = "0.1.0"
 dependencies = [
+ "medulla-kvcache",
  "medulla-protocol-types",
  "parking_lot",
  "tracing",
@@ -7399,6 +7403,7 @@ dependencies = [
  "serde_bytes",
  "serde_json",
  "sha1 0.10.7",
+ "sha2 0.10.9",
  "tempfile",
  "tokio",
  "tracing",
@@ -7847,7 +7852,9 @@ dependencies = [
 name = "medulla-stream"
 version = "0.1.0"
 dependencies = [
+ "hex",
  "medulla-modality",
+ "medulla-types",
  "rdkafka",
  "serde",
  "serde_json",

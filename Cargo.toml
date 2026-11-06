@@ -1985,6 +1985,12 @@ criterion = "0.8"
 medulla-wire-core = { path = "crates/medulla-wire-core" }
 medulla-server-router = { path = "crates/medulla-server-router" }
 
+# MEDULLA-UNIFIED-DATA-PLANE-R022: attached-source conformance (change-capture replay
+# against the source's own row state).
+[[test]]
+name = "attached_conformance"
+path = "tests/attached_conformance.rs"
+
 [[bench]]
 name = "write_coalescer_bench"
 path = "benches/write_coalescer_bench.rs"

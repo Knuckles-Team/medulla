@@ -149,10 +149,95 @@ pub struct IcebergManifests {
     pub manifest_list_avro: Vec<u8>,
     /// The Iceberg snapshot id these manifests describe (derived from the LSN).
     pub snapshot_id: i64,
-    /// Number of ADDED data files listed.
+    /// Number of ADDED data files listed (files this snapshot's commit introduced).
     pub added_files: usize,
-    /// Total record count across the listed data files.
+    /// Total record count across the ADDED data files.
     pub added_rows: u64,
+    /// Number of EXISTING data files listed (live files carried from earlier snapshots).
+    pub existing_files: usize,
+    /// Total record count across the EXISTING data files.
+    pub existing_rows: u64,
+    /// Number of DELETED data files listed (files this snapshot's commit retired:
+    /// compaction and copy-on-write deletion).
+    pub deleted_files: usize,
+    /// Total record count across the DELETED data files.
+    pub deleted_rows: u64,
+}
+
+/// The status a data file carries in a manifest entry (Iceberg v2 `manifest_entry.status`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum EntryStatus {
+    /// Live and introduced by an earlier snapshot.
+    Existing,
+    /// Introduced by this snapshot's commit.
+    Added,
+    /// Retired by this snapshot's commit.
+    Deleted,
+}
+
+impl EntryStatus {
+    fn code(self) -> i32 {
+        match self {
+            EntryStatus::Existing => 0,
+            EntryStatus::Added => 1,
+            EntryStatus::Deleted => 2,
+        }
+    }
+}
+
+/// Classify every file that belongs in the manifest of the snapshot committed at
+/// `lsn`: live files are ADDED when this commit introduced them and EXISTING
+/// otherwise; files this commit retired are DELETED; files retired by an earlier
+/// commit are not listed. Append, compaction and copy-on-write deletion all fall out
+/// of this one rule (a rewrite is DELETED old files plus ADDED new files).
+fn classify_files(snapshot: &SnapshotLog, lsn: Lsn) -> Vec<(&FileEntry, EntryStatus)> {
+    snapshot
+        .all_files()
+        .iter()
+        .filter_map(|file| match file.removed_at {
+            None if file.added_at == lsn => Some((file, EntryStatus::Added)),
+            None => Some((file, EntryStatus::Existing)),
+            Some(removed) if removed == lsn => Some((file, EntryStatus::Deleted)),
+            Some(_) => None,
+        })
+        .collect()
+}
+
+/// Refuse a snapshot the manifest writer cannot publish faithfully
+/// (`MANIFEST_PUBLICATION_INVALID`, with a reason). Nothing is written on refusal.
+fn validate_publication(snapshot: &SnapshotLog) -> Result<(), String> {
+    let refuse = |reason: String| {
+        Err(format!(
+            "{}: {reason}",
+            crate::catalog::MANIFEST_PUBLICATION_INVALID
+        ))
+    };
+    for file in snapshot.all_files() {
+        if file.path.is_empty() {
+            return refuse("a data file has an empty path".to_string());
+        }
+        if file
+            .removed_at
+            .is_some_and(|removed| removed < file.added_at)
+        {
+            return refuse(format!(
+                "data file {} is retired before it was added",
+                file.path
+            ));
+        }
+        if let Some(stats) = &file.column_stats {
+            if let Some(stat) = stats
+                .iter()
+                .find(|stat| stat.value_count != file.num_rows as i64)
+            {
+                return refuse(format!(
+                    "data file {} column {} counts {} values for {} rows",
+                    file.path, stat.field_id, stat.value_count, file.num_rows
+                ));
+            }
+        }
+    }
+    Ok(())
 }
 
 /// Serialize a scalar to Iceberg **single-value binary** (CONCEPT:MEDULLA-KG.storage.iceberg-avro-manifest-carries) — the encoding
@@ -229,7 +314,12 @@ fn stats_fields(stats: Option<&Vec<ColumnStat>>) -> [(String, AvroValue); 6] {
 /// newly-added file leaves `sequence_number` / `file_sequence_number` null so the reader
 /// inherits the manifest's sequence number, per the v2 inheritance rule. The `data_file`
 /// carries the per-column Iceberg stats maps (CONCEPT:MEDULLA-KG.storage.iceberg-avro-manifest-carries) when they were gathered.
-fn manifest_entry_value(location: &str, f: &FileEntry, snapshot_id: i64) -> AvroValue {
+fn manifest_entry_value(
+    location: &str,
+    f: &FileEntry,
+    status: EntryStatus,
+    snapshot_id: i64,
+) -> AvroValue {
     let mut data_file = vec![
         ("content".into(), AvroValue::Int(0)), // 0 = DATA
         (
@@ -246,21 +336,26 @@ fn manifest_entry_value(location: &str, f: &FileEntry, snapshot_id: i64) -> Avro
     ];
     data_file.extend(stats_fields(f.column_stats.as_ref()));
     let data_file = AvroValue::Record(data_file);
+    // An ADDED file belongs to this snapshot and inherits the manifest sequence
+    // number (null). An EXISTING or DELETED file carries the snapshot and data
+    // sequence number it was originally added under (v2 requires them explicit).
+    let (entry_snapshot, sequence) = match status {
+        EntryStatus::Added => (snapshot_id, None),
+        EntryStatus::Existing => (f.added_at.value() as i64, Some(f.added_at.value() as i64)),
+        EntryStatus::Deleted => (snapshot_id, Some(f.added_at.value() as i64)),
+    };
+    let sequence_value = |sequence: Option<i64>| match sequence {
+        Some(n) => AvroValue::Union(1, Box::new(AvroValue::Long(n))),
+        None => AvroValue::Union(0, Box::new(AvroValue::Null)),
+    };
     AvroValue::Record(vec![
-        ("status".into(), AvroValue::Int(1)), // 1 = ADDED
+        ("status".into(), AvroValue::Int(status.code())),
         (
             "snapshot_id".into(),
-            AvroValue::Union(1, Box::new(AvroValue::Long(snapshot_id))),
+            AvroValue::Union(1, Box::new(AvroValue::Long(entry_snapshot))),
         ),
-        // null → inherit the manifest sequence number (v2 rule for ADDED files).
-        (
-            "sequence_number".into(),
-            AvroValue::Union(0, Box::new(AvroValue::Null)),
-        ),
-        (
-            "file_sequence_number".into(),
-            AvroValue::Union(0, Box::new(AvroValue::Null)),
-        ),
+        ("sequence_number".into(), sequence_value(sequence)),
+        ("file_sequence_number".into(), sequence_value(sequence)),
         ("data_file".into(), data_file),
     ])
 }
@@ -271,7 +366,7 @@ fn write_manifest(
     schema: &LakeSchema,
     schema_id: i32,
     location: &str,
-    live: &[&FileEntry],
+    files: &[(&FileEntry, EntryStatus)],
     snapshot_id: i64,
 ) -> Result<Vec<u8>, String> {
     let avro_schema =
@@ -302,14 +397,25 @@ fn write_manifest(
             .map_err(|e| format!("manifest metadata {k}: {e}"))?;
     }
 
-    for f in live {
+    for (f, status) in files {
         writer
-            .append_value(manifest_entry_value(location, f, snapshot_id))
+            .append_value(manifest_entry_value(location, f, *status, snapshot_id))
             .map_err(|e| format!("append manifest_entry: {e}"))?;
     }
     writer
         .into_inner()
         .map_err(|e| format!("manifest avro: {e}"))
+}
+
+/// File and row counts per entry status, for the manifest list record.
+#[derive(Default)]
+struct ManifestCounts {
+    added_files: usize,
+    added_rows: u64,
+    existing_files: usize,
+    existing_rows: u64,
+    deleted_files: usize,
+    deleted_rows: u64,
 }
 
 /// Write the Avro **manifest list** with one `manifest_file` record pointing at the
@@ -318,8 +424,8 @@ fn write_manifest_list(
     manifest_path: &str,
     manifest_len: i64,
     snapshot_id: i64,
-    added_files: usize,
-    added_rows: u64,
+    min_sequence_number: i64,
+    counts: &ManifestCounts,
 ) -> Result<Vec<u8>, String> {
     let avro_schema = Schema::parse_str(MANIFEST_FILE_SCHEMA)
         .map_err(|e| format!("manifest_file schema: {e}"))?;
@@ -335,20 +441,35 @@ fn write_manifest_list(
         ("partition_spec_id".into(), AvroValue::Int(0)),
         ("content".into(), AvroValue::Int(0)), // 0 = data manifest
         ("sequence_number".into(), AvroValue::Long(snapshot_id)),
-        ("min_sequence_number".into(), AvroValue::Long(snapshot_id)),
+        (
+            "min_sequence_number".into(),
+            AvroValue::Long(min_sequence_number),
+        ),
         ("added_snapshot_id".into(), AvroValue::Long(snapshot_id)),
         (
             "added_files_count".into(),
-            AvroValue::Int(added_files as i32),
+            AvroValue::Int(counts.added_files as i32),
         ),
-        ("existing_files_count".into(), AvroValue::Int(0)),
-        ("deleted_files_count".into(), AvroValue::Int(0)),
+        (
+            "existing_files_count".into(),
+            AvroValue::Int(counts.existing_files as i32),
+        ),
+        (
+            "deleted_files_count".into(),
+            AvroValue::Int(counts.deleted_files as i32),
+        ),
         (
             "added_rows_count".into(),
-            AvroValue::Long(added_rows as i64),
+            AvroValue::Long(counts.added_rows as i64),
         ),
-        ("existing_rows_count".into(), AvroValue::Long(0)),
-        ("deleted_rows_count".into(), AvroValue::Long(0)),
+        (
+            "existing_rows_count".into(),
+            AvroValue::Long(counts.existing_rows as i64),
+        ),
+        (
+            "deleted_rows_count".into(),
+            AvroValue::Long(counts.deleted_rows as i64),
+        ),
         // Unpartitioned spec → the `partitions` list has one `field_summary` per
         // partition-spec field, of which there are none, so it is correctly null (NOT
         // stubbed) (CONCEPT:MEDULLA-KG.storage.iceberg-avro-manifest-carries). Data-file lower/upper bounds (MEDULLA-350) are the
@@ -378,20 +499,41 @@ pub fn build_iceberg_manifests(
 ) -> Result<IcebergManifests, String> {
     let lsn: Lsn = snapshot.current_lsn();
     let snapshot_id: i64 = lsn.value() as i64;
-    let live = snapshot.live_files();
-    let added_files = live.len();
-    let added_rows: u64 = live.iter().map(|f| f.num_rows).sum();
+    validate_publication(snapshot)?;
+    let files = classify_files(snapshot, lsn);
+    let mut counts = ManifestCounts::default();
+    for (file, status) in &files {
+        match status {
+            EntryStatus::Added => {
+                counts.added_files += 1;
+                counts.added_rows += file.num_rows;
+            }
+            EntryStatus::Existing => {
+                counts.existing_files += 1;
+                counts.existing_rows += file.num_rows;
+            }
+            EntryStatus::Deleted => {
+                counts.deleted_files += 1;
+                counts.deleted_rows += file.num_rows;
+            }
+        }
+    }
+    let min_sequence_number = files
+        .iter()
+        .map(|(file, _)| file.added_at.value() as i64)
+        .min()
+        .unwrap_or(snapshot_id);
 
     let manifest_path = manifest_file_path(location, snapshot_id);
     let manifest_list_path = manifest_list_path(location, snapshot_id);
 
-    let manifest_avro = write_manifest(schema, schema_id, location, &live, snapshot_id)?;
+    let manifest_avro = write_manifest(schema, schema_id, location, &files, snapshot_id)?;
     let manifest_list_avro = write_manifest_list(
         &manifest_path,
         manifest_avro.len() as i64,
         snapshot_id,
-        added_files,
-        added_rows,
+        min_sequence_number,
+        &counts,
     )?;
 
     Ok(IcebergManifests {
@@ -400,8 +542,12 @@ pub fn build_iceberg_manifests(
         manifest_list_path,
         manifest_list_avro,
         snapshot_id,
-        added_files,
-        added_rows,
+        added_files: counts.added_files,
+        added_rows: counts.added_rows,
+        existing_files: counts.existing_files,
+        existing_rows: counts.existing_rows,
+        deleted_files: counts.deleted_files,
+        deleted_rows: counts.deleted_rows,
     })
 }
 
@@ -414,4 +560,130 @@ pub fn read_avro_records(bytes: &[u8]) -> Result<Vec<AvroValue>, String> {
         out.push(rec.map_err(|e| format!("avro record: {e}"))?);
     }
     Ok(out)
+}
+
+/// One decoded `manifest_entry` (MEDULLA-FEDERATED-QUERY-R079.2.1): the fields an
+/// acceptance check compares against the snapshot.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ManifestEntrySummary {
+    /// `0` EXISTING, `1` ADDED, `2` DELETED.
+    pub status: i32,
+    /// The entry's snapshot id.
+    pub snapshot_id: Option<i64>,
+    /// The explicit data sequence number (`None` when inherited).
+    pub sequence_number: Option<i64>,
+    /// The data file path.
+    pub file_path: String,
+    /// The data file row count.
+    pub record_count: i64,
+    /// The data file size in bytes.
+    pub file_size_in_bytes: i64,
+}
+
+/// One decoded `manifest_file` record of a manifest list
+/// (MEDULLA-FEDERATED-QUERY-R079.2.1).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ManifestListSummary {
+    /// The manifest file path.
+    pub manifest_path: String,
+    /// The manifest file length in bytes.
+    pub manifest_length: i64,
+    /// The snapshot that added the manifest.
+    pub added_snapshot_id: i64,
+    /// ADDED, EXISTING and DELETED file counts.
+    pub file_counts: [i32; 3],
+    /// ADDED, EXISTING and DELETED row counts.
+    pub row_counts: [i64; 3],
+}
+
+fn record_fields(value: AvroValue) -> Result<Vec<(String, AvroValue)>, String> {
+    match value {
+        AvroValue::Record(fields) => Ok(fields),
+        other => Err(format!("expected an avro record, got {other:?}")),
+    }
+}
+
+fn take_field(fields: &mut Vec<(String, AvroValue)>, name: &str) -> Result<AvroValue, String> {
+    let at = fields
+        .iter()
+        .position(|(field, _)| field == name)
+        .ok_or_else(|| format!("avro record has no field {name}"))?;
+    let mut value = fields.swap_remove(at).1;
+    while let AvroValue::Union(_, inner) = value {
+        value = *inner;
+    }
+    Ok(value)
+}
+
+fn as_long(value: AvroValue, name: &str) -> Result<Option<i64>, String> {
+    match value {
+        AvroValue::Null => Ok(None),
+        AvroValue::Long(n) => Ok(Some(n)),
+        AvroValue::Int(n) => Ok(Some(i64::from(n))),
+        other => Err(format!("field {name} is not an integer: {other:?}")),
+    }
+}
+
+fn required_long(fields: &mut Vec<(String, AvroValue)>, name: &str) -> Result<i64, String> {
+    as_long(take_field(fields, name)?, name)?.ok_or_else(|| format!("field {name} is null"))
+}
+
+/// Decode every `manifest_entry` of a manifest Avro file
+/// (MEDULLA-FEDERATED-QUERY-R079.2.1).
+pub fn read_manifest_entries(bytes: &[u8]) -> Result<Vec<ManifestEntrySummary>, String> {
+    read_avro_records(bytes)?
+        .into_iter()
+        .map(|record| {
+            let mut fields = record_fields(record)?;
+            let status = required_long(&mut fields, "status")? as i32;
+            let snapshot_id = as_long(take_field(&mut fields, "snapshot_id")?, "snapshot_id")?;
+            let sequence_number = as_long(
+                take_field(&mut fields, "sequence_number")?,
+                "sequence_number",
+            )?;
+            let mut data_file = record_fields(take_field(&mut fields, "data_file")?)?;
+            let file_path = match take_field(&mut data_file, "file_path")? {
+                AvroValue::String(path) => path,
+                other => return Err(format!("file_path is not a string: {other:?}")),
+            };
+            Ok(ManifestEntrySummary {
+                status,
+                snapshot_id,
+                sequence_number,
+                file_path,
+                record_count: required_long(&mut data_file, "record_count")?,
+                file_size_in_bytes: required_long(&mut data_file, "file_size_in_bytes")?,
+            })
+        })
+        .collect()
+}
+
+/// Decode every `manifest_file` record of a manifest-list Avro file
+/// (MEDULLA-FEDERATED-QUERY-R079.2.1).
+pub fn read_manifest_list(bytes: &[u8]) -> Result<Vec<ManifestListSummary>, String> {
+    read_avro_records(bytes)?
+        .into_iter()
+        .map(|record| {
+            let mut fields = record_fields(record)?;
+            let manifest_path = match take_field(&mut fields, "manifest_path")? {
+                AvroValue::String(path) => path,
+                other => return Err(format!("manifest_path is not a string: {other:?}")),
+            };
+            Ok(ManifestListSummary {
+                manifest_path,
+                manifest_length: required_long(&mut fields, "manifest_length")?,
+                added_snapshot_id: required_long(&mut fields, "added_snapshot_id")?,
+                file_counts: [
+                    required_long(&mut fields, "added_files_count")? as i32,
+                    required_long(&mut fields, "existing_files_count")? as i32,
+                    required_long(&mut fields, "deleted_files_count")? as i32,
+                ],
+                row_counts: [
+                    required_long(&mut fields, "added_rows_count")?,
+                    required_long(&mut fields, "existing_rows_count")?,
+                    required_long(&mut fields, "deleted_rows_count")?,
+                ],
+            })
+        })
+        .collect()
 }
