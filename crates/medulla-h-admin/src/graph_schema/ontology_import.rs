@@ -189,6 +189,7 @@ pub(crate) fn import_ontology(
         revision,
         importer: authority.importer.clone(),
         at: authority.at_ms,
+        change_impact: None,
     });
     if history.len() > MAX_ONTOLOGY_REVISION_HISTORY {
         let excess = history.len() - MAX_ONTOLOGY_REVISION_HISTORY;

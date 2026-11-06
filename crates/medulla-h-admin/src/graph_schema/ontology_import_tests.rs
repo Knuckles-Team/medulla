@@ -87,12 +87,14 @@ fn import_is_idempotent_by_digest_and_revises() {
                 revision: 1,
                 importer: "alice".to_string(),
                 at: 10,
+                change_impact: None,
             },
             OntologyRevisionEntry {
                 digest: Digest256::sha256(EX_B.as_bytes()),
                 revision: 2,
                 importer: "alice".to_string(),
                 at: 20,
+                change_impact: None,
             },
         ]
     );

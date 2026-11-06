@@ -93,6 +93,14 @@ pub enum GraphSchemaOp {
         #[serde(default)]
         if_composed_digest: Option<String>,
     },
+    /// Diff one connector-owned ontology revision against another revision or a
+    /// candidate document (MEDULLA-TYPED-PACKS-R804.1). Reads only.
+    DiffOntology {
+        connector: ResourceId,
+        ontology_iri: String,
+        from_revision: u64,
+        to: DiffTarget,
+    },
     /// EH-403: attach or replace a governed repair candidate under
     /// `approved:<name>`. The candidate is a TYPED record contract; EG renders
     /// its SHACL (AUD-27: callers never send RDF). The engine refuses it unless
@@ -124,6 +132,17 @@ pub enum GraphSchemaOp {
     },
 }
 
+/// What a diff compares the `from_revision` against.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum DiffTarget {
+    /// Another stored revision of the same ontology.
+    Revision(u64),
+    /// A candidate Turtle document that is not stored.
+    Candidate { turtle: String },
+}
+
 impl GraphSchemaOp {
     /// Every operation writes: even a detach that finds nothing has to be
     /// ordered against concurrent attaches.
@@ -138,6 +157,7 @@ impl GraphSchemaOp {
             Self::AttachPack { .. } => "attach_pack",
             Self::ImportOntology { .. } => "import_ontology",
             Self::WithdrawOntology { .. } => "withdraw_ontology",
+            Self::DiffOntology { .. } => "diff_ontology",
             Self::Detach { .. } => "detach",
             Self::AttachApproved { .. } => "attach_approved",
             Self::ValidateRepair { .. } => "validate_repair",
@@ -155,9 +175,9 @@ impl GraphSchemaOp {
             // The exact source key is available from [`ontology_source_key`].
             // This borrowed token preserves the existing audit-line API until
             // the runtime operation gets its dedicated result/wiring surface.
-            Self::ImportOntology { connector, .. } | Self::WithdrawOntology { connector, .. } => {
-                connector.as_str()
-            }
+            Self::ImportOntology { connector, .. }
+            | Self::WithdrawOntology { connector, .. }
+            | Self::DiffOntology { connector, .. } => connector.as_str(),
         }
     }
 
@@ -179,7 +199,9 @@ impl GraphSchemaOp {
             | Self::ValidateRepair {
                 if_composed_digest, ..
             } => if_composed_digest.as_deref(),
-            Self::ImportOntology { .. } | Self::WithdrawOntology { .. } => None,
+            Self::ImportOntology { .. }
+            | Self::WithdrawOntology { .. }
+            | Self::DiffOntology { .. } => None,
         }
     }
 
@@ -227,6 +249,11 @@ fn validate_operation_payload(operation: &GraphSchemaOp) -> Result<(), String> {
             validate_document("shapes_ttl", shapes_ttl.as_deref())
         }
         GraphSchemaOp::WithdrawOntology {
+            connector,
+            ontology_iri,
+            ..
+        }
+        | GraphSchemaOp::DiffOntology {
             connector,
             ontology_iri,
             ..
@@ -400,6 +427,10 @@ pub struct OntologyRevisionEntry {
     pub importer: String,
     /// Acceptance time, unix milliseconds.
     pub at: u64,
+    /// What the revision changed for held data and consumers
+    /// (MEDULLA-TYPED-PACKS-R804.1); `None` for the first revision.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub change_impact: Option<medulla_types::ontology_diff::ChangeImpact>,
 }
 
 /// One attached source, without its documents.

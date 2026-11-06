@@ -235,6 +235,10 @@ pub(crate) async fn handle_gateway(
         GraphSchemaOp::ImportOntology { .. } | GraphSchemaOp::WithdrawOntology { .. } => {
             handle_ontology_gateway(tenant_id, ctx, plan, method, op).await
         }
+        GraphSchemaOp::DiffOntology { .. } => Response::err(
+            ctx.req_id,
+            "ONTOLOGY_INVALID: diff_ontology is not served by this build",
+        ),
     }
 }
 
@@ -520,7 +524,8 @@ fn apply(
         GraphSchemaOp::AttachPack { .. }
         | GraphSchemaOp::ValidateRepair { .. }
         | GraphSchemaOp::ImportOntology { .. }
-        | GraphSchemaOp::WithdrawOntology { .. } => {
+        | GraphSchemaOp::WithdrawOntology { .. }
+        | GraphSchemaOp::DiffOntology { .. } => {
             unreachable!(
                 "attach-pack, validate-repair and runtime ontologies have their own routes"
             )
