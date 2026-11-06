@@ -103,3 +103,15 @@ medulla-server = { path = "../medulla-server", features = ["alignment", "asr-whi
 medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }
 medulla-test-ambient-auth = { path = "../medulla-test-ambient-auth" }
 tempfile = "3"
+criterion = "0.8"
+
+# Nightly hot-path proofs of the repository enrichment hooks.
+[[bench]]
+name = "r601_history_served"
+path = "benches/r601_history_served.rs"
+harness = false
+
+[[bench]]
+name = "r602_links_served"
+path = "benches/r602_links_served.rs"
+harness = false

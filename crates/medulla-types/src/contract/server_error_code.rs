@@ -442,6 +442,7 @@ closed_error_codes! {
         QueryUnscopable => "QUERY_UNSCOPABLE",
         UnitOutOfScope => "UNIT_OUT_OF_SCOPE",
         LayerCycle => "LAYER_CYCLE",
+        InvalidCommitDigest => "INVALID_COMMIT_DIGEST",
         RuleVersionUnsupported => "RULE_VERSION_UNSUPPORTED",
         AdmittedRequestDigestMismatch => "ADMITTED_REQUEST_DIGEST_MISMATCH",
         AdmittedRequestTooLarge => "ADMITTED_REQUEST_TOO_LARGE",

@@ -27,6 +27,32 @@ class ExtractedNode(BaseModel):
     properties: dict[str, str]
 
 
+class IndexChangeKind(str, Enum):
+    ADDED = "added"
+    MODIFIED = "modified"
+    DELETED = "deleted"
+    RENAMED = "renamed"
+
+
+class IndexCommit(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    author: str
+    changes: BoundedVec_IndexCommitChange_1024 = Field(default_factory=list)
+    digest: str
+    parents: list[str] = Field(default_factory=list)
+    timestamp_ms: Annotated[int, Field(ge=0)]
+
+
+class IndexCommitChange(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    added_lines: Annotated[int, Field(ge=0)]
+    kind: IndexChangeKind
+    path: str
+    removed_lines: Annotated[int, Field(ge=0)]
+
+
 class IndexDiagnostic(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -74,6 +100,7 @@ class IndexRefStatus(str, Enum):
 class IndexRepositoryScope(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    commits: BoundedVec_IndexCommit_100000 = Field(default_factory=list)
     file_versions: BoundedVec_IndexFileVersion_262144 = Field(default_factory=list)
     refs: BoundedVec_IndexRef_4096
     repository_id: str
@@ -108,6 +135,22 @@ class IndexTombstone(BaseModel):
     successor_path: str | None = None
 
 
+BoundedVec_IndexCommit_100000 = Annotated[
+    list[IndexCommit],
+    Field(
+        max_length=100000,
+    ),
+]
+
+
+BoundedVec_IndexCommitChange_1024 = Annotated[
+    list[IndexCommitChange],
+    Field(
+        max_length=1024,
+    ),
+]
+
+
 BoundedVec_IndexDiagnostic_8 = Annotated[list[IndexDiagnostic], Field(max_length=8)]
 
 
@@ -133,6 +176,10 @@ ExtractedEdge.model_rebuild()
 
 ExtractedNode.model_rebuild()
 
+IndexCommit.model_rebuild()
+
+IndexCommitChange.model_rebuild()
+
 IndexDiagnostic.model_rebuild()
 
 IndexFileOutcome.model_rebuild()
@@ -149,12 +196,17 @@ IndexTombstone.model_rebuild()
 
 
 __all__ = [
+    "BoundedVec_IndexCommitChange_1024",
+    "BoundedVec_IndexCommit_100000",
     "BoundedVec_IndexDiagnostic_8",
     "BoundedVec_IndexFileVersion_262144",
     "BoundedVec_IndexRef_4096",
     "BoundedVec_IndexTombstone_262144",
     "ExtractedEdge",
     "ExtractedNode",
+    "IndexChangeKind",
+    "IndexCommit",
+    "IndexCommitChange",
     "IndexDiagnostic",
     "IndexFileOutcome",
     "IndexFileStatus",

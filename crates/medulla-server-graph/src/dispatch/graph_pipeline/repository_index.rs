@@ -75,6 +75,9 @@ async fn index_scoped(
             // MEDULLA-REPO-INGEST-R801: packages and layers lower beside the
             // entity nodes; a layer cycle refuses the batch before any commit.
             medulla_h_ingest::repository_index::ecosystem::project(&files, &mut result)?;
+            // MEDULLA-REPO-INGEST-R601.3 / R602.3: commits, routes, IaC resources
+            // and service prefixes lower beside them for the enrichment hooks.
+            medulla_h_ingest::repository_index::scope_facts::project(&files, &scope, &mut result)?;
             Ok::<_, String>((result, files, scope.repository_id.clone()))
         })
         .await?

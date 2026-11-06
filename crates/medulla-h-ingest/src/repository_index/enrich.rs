@@ -17,12 +17,15 @@
 //! replays the same envelope instead of committing twice. Hooks of R601.3,
 //! R602.3 and R603.3 attach inside [`run_after_commit`].
 
+pub mod hooks;
+
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use medulla_enrich::code::{
     CodeEntity, CodeKind, EdgeRelation, EnrichInput, EnrichOutput, EnrichRunReport, EnrichmentEdge,
     Rung, StructuralFacts, TestQualityThresholds,
 };
+use medulla_enrich::history::HistoryConfig;
 use medulla_enrich::Id;
 use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
 use medulla_protocol_types::change_envelope::ChangeEnvelope;
@@ -79,6 +82,11 @@ impl FollowOn {
     /// The committed index envelope this item enriches.
     pub fn index_envelope_id(&self) -> String {
         format!("{INDEX_PREFIX}{}", self.index_digest)
+    }
+
+    /// The enrichment run node of this item.
+    pub fn run_id(&self) -> String {
+        format!("repository-enrich-run:{}", self.index_digest)
     }
 
     /// The enrichment envelope this item commits.
@@ -434,7 +442,7 @@ fn lower_output(
         }
     }
     let refused = report.rung_conflicts_refused + left_out.len() as u64;
-    let run_id = format!("repository-enrich-run:{}", item.index_digest);
+    let run_id = item.run_id();
     let mut methods = vec![add_node(
         run_id.clone(),
         &[
@@ -508,12 +516,14 @@ fn lower_output(
 
 /// Run the enrichment of one claimed follow-on work item over its committed
 /// index envelope and lower the output as the `repository-enrich:<digest>`
-/// write-set. R601.3, R602.3 and R603.3 attach their hooks here. `stored`
-/// answers the rung of the fact already stored on a subject.
+/// write-set. R601.3 (history) and R602.3 (service links) attach their hooks
+/// here; R603.3 attaches the same way. `stored` answers the rung of the fact
+/// already stored on a subject, `history` bounds the history pass.
 pub fn run_after_commit(
     index: &ChangeEnvelope,
     item: &FollowOn,
     stored: &dyn Fn(&str) -> Option<ProvenanceRung>,
+    history: &HistoryConfig,
 ) -> Result<IndexWriteSet, String> {
     if index.envelope_id != item.index_envelope_id() {
         return Err("CONFLICT: repository enrichment read the wrong index envelope".into());
@@ -522,7 +532,13 @@ pub fn run_after_commit(
     let (output, report) =
         medulla_enrich::code::enrich_repository(&facts.input, &TestQualityThresholds::default())
             .map_err(|error| error.to_string())?;
-    let methods = lower_output(item, &facts, &output, &report, stored)?;
+    let mut methods = lower_output(item, &facts, &output, &report, stored)?;
+    methods.extend(hooks::run_hooks(
+        &committed_rows(index),
+        &item.run_id(),
+        stored,
+        history,
+    )?);
     IndexWriteSet::with_digest(ENVELOPE_PREFIX, &item.index_digest, methods)
 }
 
@@ -540,11 +556,26 @@ pub fn spawn(
     let timeout_ms =
         medulla_types::scheduler_config::enrich_timeout_ms_from(|key| std::env::var(key).ok())
             .map_err(|error| error.to_string())?;
+    let history = history_config(|key| std::env::var(key).ok())?;
     #[cfg(all(feature = "redb", not(feature = "raft")))]
-    tokio::spawn(worker::run(state, timeout_ms));
+    tokio::spawn(worker::run(state, timeout_ms, history));
     #[cfg(not(all(feature = "redb", not(feature = "raft"))))]
-    drop((state, timeout_ms));
+    drop((state, timeout_ms, history));
     Ok(())
+}
+
+/// The history pass bounds from the `history_*` scheduler keys; an
+/// out-of-range value refuses startup.
+pub fn history_config(lookup: impl Fn(&str) -> Option<String>) -> Result<HistoryConfig, String> {
+    let [max_commits, support_floor, confidence_floor_milli, max_files] =
+        medulla_types::scheduler_config::history_knobs_from(lookup)
+            .map_err(|error| error.to_string())?;
+    Ok(HistoryConfig {
+        max_commits: usize::try_from(max_commits).map_err(|error| error.to_string())?,
+        support_floor,
+        confidence_floor_milli,
+        max_files_per_commit: usize::try_from(max_files).map_err(|error| error.to_string())?,
+    })
 }
 
 #[cfg(all(feature = "redb", not(feature = "raft")))]
@@ -560,16 +591,22 @@ mod worker {
     use medulla_server_api::state::ServerState;
     use tokio::sync::RwLock;
 
-    use super::{decode_follow_on, run_after_commit, FollowOn, CONSUMER, SERVICE, TOPIC};
+    use super::{
+        decode_follow_on, run_after_commit, FollowOn, HistoryConfig, CONSUMER, SERVICE, TOPIC,
+    };
 
     const IDLE: Duration = Duration::from_millis(500);
     const LEASE_MS: u64 = 10 * 60 * 1_000;
     const MAX_GRAPHS_PER_SWEEP: usize = 16;
 
-    pub(super) async fn run(state: Arc<RwLock<ServerState>>, timeout_ms: u64) {
+    pub(super) async fn run(
+        state: Arc<RwLock<ServerState>>,
+        timeout_ms: u64,
+        history: HistoryConfig,
+    ) {
         let mut next_graph = 0_usize;
         loop {
-            match sweep(&state, &mut next_graph, timeout_ms).await {
+            match sweep(&state, &mut next_graph, timeout_ms, history).await {
                 Ok(true) => {}
                 Ok(false) => tokio::time::sleep(IDLE).await,
                 Err(error) => {
@@ -585,6 +622,7 @@ mod worker {
         state: &Arc<RwLock<ServerState>>,
         next_graph: &mut usize,
         timeout_ms: u64,
+        history: HistoryConfig,
     ) -> Result<bool, String> {
         let mut graphs: Vec<String> = state
             .read()
@@ -606,7 +644,7 @@ mod worker {
         let mut first_error = None;
         for offset in 0..count {
             let graph = &graphs[(start + offset) % graphs.len()];
-            match sweep_graph(state, graph, timeout_ms).await {
+            match sweep_graph(state, graph, timeout_ms, history).await {
                 Ok(true) => progressed = true,
                 Ok(false) => {}
                 Err(error) => {
@@ -621,6 +659,7 @@ mod worker {
         state: &Arc<RwLock<ServerState>>,
         graph: &str,
         timeout_ms: u64,
+        history: HistoryConfig,
     ) -> Result<bool, String> {
         let persistence = state
             .read()
@@ -639,7 +678,16 @@ mod worker {
             .await?;
         let mut progressed = false;
         for lease in outcome.claims {
-            match claimed(state, persistence.as_ref(), graph, &lease, timeout_ms).await {
+            match claimed(
+                state,
+                persistence.as_ref(),
+                graph,
+                &lease,
+                timeout_ms,
+                history,
+            )
+            .await
+            {
                 Ok(()) => {
                     let now = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
                     persistence.ack_mutation_outbox(&fname, &lease, now).await?;
@@ -663,6 +711,7 @@ mod worker {
         graph: &str,
         lease: &MutationOutboxLease,
         timeout_ms: u64,
+        history: HistoryConfig,
     ) -> Result<(), String> {
         let item = decode_follow_on(&lease.record.intent)?;
         if item.scope.graph != graph {
@@ -699,7 +748,7 @@ mod worker {
                     let value = medulla_types::msgpack::decode_property_value(&bytes).ok()?;
                     crate::ingestion_rung::stored_rung(&value)
                 };
-                run_after_commit(&index, &run_item, &stored)
+                run_after_commit(&index, &run_item, &stored, &history)
             }),
         )
         .await

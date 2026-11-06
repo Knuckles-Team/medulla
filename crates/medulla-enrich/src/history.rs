@@ -138,9 +138,9 @@ impl Default for HistoryConfig {
     fn default() -> Self {
         Self {
             max_commits: 100_000,
-            support_floor: 2,
-            confidence_floor_milli: 500,
-            max_files_per_commit: 64,
+            support_floor: 3,
+            confidence_floor_milli: 300,
+            max_files_per_commit: 200,
         }
     }
 }
@@ -322,24 +322,25 @@ mod tests {
         let history = [
             commit(1, &["a.rs", "b.rs"]),
             commit(2, &["a.rs", "b.rs"]),
-            commit(3, &["a.rs", "c.rs"]),
+            commit(3, &["a.rs", "b.rs"]),
+            commit(4, &["a.rs", "c.rs"]),
         ];
         let mut graph = HistoryGraph::default();
         let first = graph.ingest_history(&history, &config);
-        assert_eq!(first.commits_added, 3);
-        assert_eq!(graph.file_churn[&id("a.rs")].commits, 3);
-        assert_eq!(graph.author_churn[&id("alice")].added_lines, 12);
+        assert_eq!(first.commits_added, 4);
+        assert_eq!(graph.file_churn[&id("a.rs")].commits, 4);
+        assert_eq!(graph.author_churn[&id("alice")].added_lines, 16);
         let coupling = graph.coupling(&config);
-        // a-b: support 2 (at the floor), confidence 2/2; a-c: support 1 (below).
+        // a-b: support 3 (at the floor), confidence 3/3; a-c: support 1 (below).
         assert_eq!(coupling.len(), 1);
         assert_eq!(
             (coupling[0].support, coupling[0].confidence_milli),
-            (2, 1000)
+            (3, 1000)
         );
         // A re-run adds only unseen commits.
         let again = graph.ingest_history(&history, &config);
-        assert_eq!((again.commits_added, again.commits_skipped), (0, 3));
-        assert_eq!(graph.file_churn[&id("a.rs")].commits, 3);
+        assert_eq!((again.commits_added, again.commits_skipped), (0, 4));
+        assert_eq!(graph.file_churn[&id("a.rs")].commits, 4);
     }
 
     // spec: MEDULLA-REPO-INGEST-R601.4
@@ -375,12 +376,16 @@ mod tests {
         let config = HistoryConfig::default();
         let mut graph = HistoryGraph::default();
         let ok = graph.ingest_history(
-            &[commit(1, &["a.rs", "b.rs"]), commit(2, &["a.rs", "b.rs"])],
+            &[
+                commit(1, &["a.rs", "b.rs"]),
+                commit(2, &["a.rs", "b.rs"]),
+                commit(3, &["a.rs", "b.rs"]),
+            ],
             &config,
         );
         assert_eq!(
             (ok.commits_added, ok.commits_skipped, ok.coupling_edges),
-            (2, 0, 1)
+            (3, 0, 1)
         );
         assert_eq!(ok.truncated, None);
         let bounded = HistoryConfig {
