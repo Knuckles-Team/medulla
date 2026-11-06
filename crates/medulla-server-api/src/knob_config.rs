@@ -94,6 +94,18 @@ impl KnobType for u64 {
     }
 }
 
+impl KnobType for u32 {
+    fn parse(raw: &str) -> Option<Self> {
+        raw.trim().parse().ok()
+    }
+    fn of(value: KnobValue) -> Self {
+        match value {
+            KnobValue::U64(v) => u32::try_from(v).expect("u32 knob bounds fit in u32"),
+            other => unreachable!("knob table type mismatch: {other:?}"),
+        }
+    }
+}
+
 impl KnobType for f64 {
     fn parse(raw: &str) -> Option<Self> {
         raw.trim().parse::<f64>().ok().filter(|v| v.is_finite())
@@ -239,6 +251,22 @@ knobs! {
     pattern_shadow_ratio_min: f64 = "pattern.shadow_ratio_min", F64(2.0), [1.5, 4.0], "ratio", Tunable;
     /// Opposite-shadow ceiling as a fraction of the range.
     pattern_wick_max: f64 = "pattern.wick_max", F64(0.1), [0.0, 0.3], "ratio", Tunable;
+    /// Claim pacing bucket capacity for the background class (MEDULLA-PLACEMENT-R750.753).
+    claim_pacing_background_capacity: u32 = "claim_pacing.background_capacity", U64(64), [1, 100_000], "tokens", Tunable;
+    /// Claim pacing refill rate for the background class.
+    claim_pacing_background_refill_per_s: u32 = "claim_pacing.background_refill_per_s", U64(32), [1, 100_000], "tokens per second", Tunable;
+    /// Claim pacing bucket capacity for the low class (MEDULLA-PLACEMENT-R750.753).
+    claim_pacing_low_capacity: u32 = "claim_pacing.low_capacity", U64(64), [1, 100_000], "tokens", Tunable;
+    /// Claim pacing refill rate for the low class.
+    claim_pacing_low_refill_per_s: u32 = "claim_pacing.low_refill_per_s", U64(32), [1, 100_000], "tokens per second", Tunable;
+    /// Claim pacing bucket capacity for the normal class (MEDULLA-PLACEMENT-R750.753).
+    claim_pacing_normal_capacity: u32 = "claim_pacing.normal_capacity", U64(64), [1, 100_000], "tokens", Tunable;
+    /// Claim pacing refill rate for the normal class.
+    claim_pacing_normal_refill_per_s: u32 = "claim_pacing.normal_refill_per_s", U64(32), [1, 100_000], "tokens per second", Tunable;
+    /// Claim pacing bucket capacity for the foreground class (MEDULLA-PLACEMENT-R750.753).
+    claim_pacing_foreground_capacity: u32 = "claim_pacing.foreground_capacity", U64(64), [1, 100_000], "tokens", Tunable;
+    /// Claim pacing refill rate for the foreground class.
+    claim_pacing_foreground_refill_per_s: u32 = "claim_pacing.foreground_refill_per_s", U64(32), [1, 100_000], "tokens per second", Tunable;
 }
 
 fn refusal(code: ServerErrorCode, knob: &str, detail: String) -> KnobRefusal {

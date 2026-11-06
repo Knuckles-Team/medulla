@@ -34,8 +34,34 @@ fn open_job_store(persist_path: &Path) -> Result<Arc<JobStore>, String> {
         authority.principal(),
         &proof,
     )
-    .map(Arc::new)
+    .map(|store| {
+        store.set_claim_pacing(claim_pacing_from_knobs());
+        Arc::new(store)
+    })
     .map_err(|_| "analytics job projection is unavailable".to_string())
+}
+
+/// The startup-loaded `claim_pacing.*` knobs (MEDULLA-PLACEMENT-R750.753),
+/// indexed like `PriorityClass::ALL`: foreground, normal, low, background.
+fn claim_pacing_from_knobs() -> medulla_jobs::ClaimPacing {
+    let k = medulla_server_api::knob_config::knobs();
+    medulla_jobs::ClaimPacing {
+        per_class: [
+            (
+                k.claim_pacing_foreground_capacity,
+                k.claim_pacing_foreground_refill_per_s,
+            ),
+            (
+                k.claim_pacing_normal_capacity,
+                k.claim_pacing_normal_refill_per_s,
+            ),
+            (k.claim_pacing_low_capacity, k.claim_pacing_low_refill_per_s),
+            (
+                k.claim_pacing_background_capacity,
+                k.claim_pacing_background_refill_per_s,
+            ),
+        ],
+    }
 }
 
 pub(super) fn reproducibility_manifest(
