@@ -313,7 +313,14 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         "CreateGraph",
         &["REPLAY_NONCE_CONSUMED", "RESERVED_GRAPH_NAME"],
     ),
-    ("AddNode", &["COMMIT_QUEUE_FULL", "REPLAY_NONCE_CONSUMED"]),
+    (
+        "AddNode",
+        &[
+            "CLIENT_SESSION_PRINCIPAL_MISMATCH",
+            "COMMIT_QUEUE_FULL",
+            "REPLAY_NONCE_CONSUMED",
+        ],
+    ),
     ("CypherQuery", &["REPLAY_NONCE_CONSUMED"]),
     ("GraphQl", &["REPLAY_NONCE_CONSUMED"]),
     // MEDULLA-DURABLE-KERNEL-R865 (child input) and R750.750.1 (signed agent-turn envelope).
