@@ -1729,7 +1729,7 @@ mod tests {
             ),
             (
                 "capability",
-                "ebcddf9f166e7e0e6cabbb0126a304c6dd5e0713da2503ec9b2fa08b381504cd",
+                "0bef554581e3c54e61a374e0428bd8923be382601e66312b881df0d307aa37b8",
             ),
             (
                 "argumentation",
