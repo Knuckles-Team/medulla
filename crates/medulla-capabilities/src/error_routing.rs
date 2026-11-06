@@ -316,6 +316,34 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     ("ClaimWorkItem", &["REPLAY_NONCE_CONSUMED"]),
     ("PublishRunCheckpoint", &["REPLAY_NONCE_CONSUMED"]),
     ("GetRunCheckpoint", &["CONFLICT"]),
+    // MEDULLA-DURABLE-KERNEL-R820.4 uncertain-effect refusals.
+    (
+        "MarkWorkItemEffectStarted",
+        &[
+            "REPLAY_NONCE_CONSUMED",
+            "REVISION_CONFLICT",
+            "WORK_ITEM_CLAIM_STALE",
+        ],
+    ),
+    (
+        "RecordEffectReceipt",
+        &[
+            "EFFECT_RECEIPT_CONFLICT",
+            "EFFECT_RECEIPT_MISMATCH",
+            "REPLAY_NONCE_CONSUMED",
+            "REVISION_CONFLICT",
+        ],
+    ),
+    (
+        "SubmitAdmittedRequest",
+        &[
+            "ADMITTED_REQUEST_DIGEST_MISMATCH",
+            "ADMITTED_REQUEST_TOO_LARGE",
+            "CONFLICT",
+            "REPLAY_NONCE_CONSUMED",
+            "REVISION_CONFLICT",
+        ],
+    ),
     ("TsListSeries", &["REPLAY_NONCE_CONSUMED"]),
     // delegation/validation.rs refuses a retired Agent Library head or entry.
     (

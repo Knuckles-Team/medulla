@@ -294,3 +294,28 @@ fn predecessor_document_keeps_operator_clauses_when_splitting_sentences() {
         "unchanged table data"
     );
 }
+
+// spec: MEDULLA-DURABLE-KERNEL-R820.4
+#[test]
+fn effect_receipt_predecessor_refuses_naming_store_upgrade() {
+    let predecessor = &GRAPH_SHARD_BEFORE_EFFECT_RECEIPTS;
+    assert_eq!(predecessor.owner_tables.len(), 61);
+    assert!(predecessor
+        .owner_tables
+        .contains(&"work_item_run_checkpoints"));
+    assert!(!predecessor
+        .owner_tables
+        .contains(&"work_item_effect_receipts"));
+    assert!(!predecessor
+        .owner_tables
+        .contains(&"work_item_admitted_requests"));
+    let manifest = predecessor_manifest(predecessor);
+    assert_eq!(
+        manifest.layout_digest,
+        GRAPH_SHARD_PRE_EFFECT_RECEIPTS_DIGEST
+    );
+    let error = validate_against_lineage(&manifest).unwrap_err();
+    assert!(error.starts_with("GRAPH_SHARD_FORMAT_UPGRADE_REQUIRED:"));
+    assert!(error.contains(predecessor.label));
+    assert!(error.contains("store-upgrade"), "{error}");
+}

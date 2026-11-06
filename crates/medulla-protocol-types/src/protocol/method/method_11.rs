@@ -28,6 +28,30 @@ $($variants)*
         tenant: String,
         work_item_id: String,
     },
+    /// Record, under the live claim, that the worker is about to cause an
+    /// external effect (MEDULLA-DURABLE-KERNEL-R820.3). Scope `work:write`.
+    MarkWorkItemEffectStarted {
+        request: medulla_work_types::work_item_read::MarkWorkItemEffectStartedRequest,
+    },
+    /// Resolve a started effect with its one receipt for `(work_item_id,
+    /// attempt)`. An identical replay returns the stored receipt.
+    RecordEffectReceipt {
+        request: medulla_work_types::work_item_read::RecordEffectReceiptRequest,
+    },
+    /// Store the admitted request's digest and payload ref once under
+    /// `(work_item_id, attempt)`.
+    SubmitAdmittedRequest {
+        request: medulla_work_types::work_item_read::SubmitAdmittedRequestRequest,
+    },
+    /// The receipt of `(work_item_id, attempt)`, or `null`. Scope `work:read`.
+    GetEffectReceipt {
+        request: medulla_work_types::work_item_read::EffectRecordKey,
+    },
+    /// The admitted request's digest and payload ref, or `null` when absent
+    /// or another tenant's or session's. Scope `work:read`.
+    GetAdmittedRequest {
+        request: medulla_work_types::work_item_read::EffectRecordKey,
+    },
     /// One bounded page of `tenant`'s WorkItems, optionally of one `kind`.
     /// Pages by the limit / scan / byte bounds of `AgentComponent.Search`; an
     /// empty page may still carry `next_cursor`. The cursor is opaque and

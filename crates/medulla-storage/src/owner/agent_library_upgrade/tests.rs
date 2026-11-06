@@ -140,6 +140,8 @@ const GRAPH_GENERATIONS: [GraphGeneration; 2] = [
             "audit_requests",
             "work_item_current_plans",
             "work_item_run_checkpoints",
+            "work_item_effect_receipts",
+            "work_item_admitted_requests",
         ],
     },
     GraphGeneration {
@@ -149,6 +151,8 @@ const GRAPH_GENERATIONS: [GraphGeneration; 2] = [
             "audit_requests",
             "work_item_current_plans",
             "work_item_run_checkpoints",
+            "work_item_effect_receipts",
+            "work_item_admitted_requests",
         ],
     },
 ];
@@ -297,11 +301,11 @@ fn a_graph_upgrade_refuses_another_generation_and_another_stores_token() {
 
 /// Both private-snapshot generations must reject ordinary opens and preserve
 /// unrelated native rows when their explicitly named predecessor is upgraded.
-fn assert_graph_upgrade_preserves_rows(
+fn assert_graph_upgrade_preserves_rows<K: redb::Key + 'static>(
     predecessor: &LayoutPredecessor,
     expected_digest: [u8; 32],
     source: GraphShardSource,
-    added: redb::TableDefinition<'_, (&str, &str), &[u8]>,
+    added: redb::TableDefinition<'_, K, &[u8]>,
 ) {
     let directory = private_local_tempdir();
     let path = directory.path().join("graph-snapshot-predecessor.redb");
@@ -358,5 +362,16 @@ fn checkpoint_upgrade_preserves_existing_graph_rows() {
         super::super::lineage::GRAPH_SHARD_PRE_RUN_CHECKPOINTS_DIGEST,
         GraphShardSource::BeforeRunCheckpoints,
         super::super::graph_shard::RUN_CHECKPOINTS,
+    );
+}
+
+// spec: MEDULLA-DURABLE-KERNEL-R820.4
+#[test]
+fn effect_receipt_upgrade_preserves_existing_graph_rows() {
+    assert_graph_upgrade_preserves_rows(
+        &super::super::lineage::GRAPH_SHARD_BEFORE_EFFECT_RECEIPTS,
+        super::super::lineage::GRAPH_SHARD_PRE_EFFECT_RECEIPTS_DIGEST,
+        GraphShardSource::BeforeEffectReceipts,
+        super::super::graph_shard::EFFECT_RECEIPTS,
     );
 }

@@ -89,6 +89,12 @@ pub fn append_native_work_item_ops(ops: &mut Vec<&'static str>, available: bool)
             "GetWorkItem",
             "ListWorkItems",
             "GetWorkItemOutcome",
+            // MEDULLA-DURABLE-KERNEL-R820.3: the uncertain-effect protocol.
+            "MarkWorkItemEffectStarted",
+            "RecordEffectReceipt",
+            "SubmitAdmittedRequest",
+            "GetEffectReceipt",
+            "GetAdmittedRequest",
             // graph-os MEDULLA-2: native control leases share the WorkItem kernel.
             "IssueHostStartGrant",
             "IssueControlLease",

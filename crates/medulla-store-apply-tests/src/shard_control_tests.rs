@@ -119,7 +119,9 @@ fn the_canonical_bootstrap_matches_the_declared_shard_census() {
     // `audit_requests`.
     // 59 -> 60: the private current-plan snapshot table `work_item_current_plans`.
     // 60 -> 61: the private checkpoint table `work_item_run_checkpoints`.
-    assert_eq!(declared.len(), 61);
+    // 61 -> 63: the effect tables `work_item_effect_receipts` and
+    // `work_item_admitted_requests` (R820.1).
+    assert_eq!(declared.len(), 63);
 
     for retired in [
         "mutation_batches",

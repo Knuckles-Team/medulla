@@ -234,7 +234,10 @@ fn work_item_terminal_key(method: &Method) -> Result<Option<String>, String> {
         } => Some(idempotency_key.clone()),
         Method::ClaimWorkItem { .. }
         | Method::RenewWorkItemLease { .. }
-        | Method::CasWorkItemMetadata { .. } => None,
+        | Method::CasWorkItemMetadata { .. }
+        | Method::MarkWorkItemEffectStarted { .. }
+        | Method::RecordEffectReceipt { .. }
+        | Method::SubmitAdmittedRequest { .. } => None,
         Method::ReserveWorkItemResources { request }
         | Method::ReleaseWorkItemResources { request }
         | Method::ReclaimWorkItemResources { request } => Some(request.idempotency_key.clone()),

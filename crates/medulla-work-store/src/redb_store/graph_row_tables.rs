@@ -12,6 +12,8 @@ use medulla_store::redb_store::*;
 /// what keeps the writers below inside the argument cap without threading six
 /// same-shaped handles positionally through every one of them.
 pub struct GraphRowTables<'g> {
+    pub effect_receipts: super::work_item::effect::EffectTable<'g>,
+    pub admitted_requests: super::work_item::effect::EffectTable<'g>,
     pub run_checkpoints: ScopedOwnerTableMut<'g, (&'static str, &'static str), &'static [u8]>,
     pub current_plans: ScopedOwnerTableMut<'g, (&'static str, &'static str), &'static [u8]>,
     pub nodes: ScopedOwnerTableMut<'g, (&'static str, &'static str), &'static [u8]>,
@@ -56,6 +58,9 @@ impl<'g> GraphRowTables<'g> {
     ) -> Result<Self, String> {
         Ok(Self {
             nodes: member.open_scoped_table(NODES)?,
+            effect_receipts: member.open_scoped_table(super::work_item::effect::EFFECT_RECEIPTS)?,
+            admitted_requests: member
+                .open_scoped_table(super::work_item::effect::ADMITTED_REQUESTS)?,
             run_checkpoints: member
                 .open_scoped_table(super::work_item::checkpoint::RUN_CHECKPOINTS)?,
             current_plans: member

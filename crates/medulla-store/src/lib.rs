@@ -23,6 +23,9 @@ macro_rules! work_item_kernel_writes {
             | ::medulla_protocol_types::protocol::Method::PublishCurrentPlan { .. }
             | ::medulla_protocol_types::protocol::Method::IssueHostStartGrant { .. }
             | ::medulla_protocol_types::protocol::Method::PublishRunCheckpoint { .. }
+            | ::medulla_protocol_types::protocol::Method::MarkWorkItemEffectStarted { .. }
+            | ::medulla_protocol_types::protocol::Method::RecordEffectReceipt { .. }
+            | ::medulla_protocol_types::protocol::Method::SubmitAdmittedRequest { .. }
             | ::medulla_protocol_types::protocol::Method::IssueControlLease { .. }
             | ::medulla_protocol_types::protocol::Method::TransitionControlLease { .. }
             | ::medulla_protocol_types::protocol::Method::PolicyEvolutionStore { .. }

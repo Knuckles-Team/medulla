@@ -55,6 +55,8 @@ pub enum GraphShardSource {
     BeforeCurrentPlans,
     /// Before private context-bound run checkpoints.
     BeforeRunCheckpoints,
+    /// Before work-item effect receipts and admitted requests.
+    BeforeEffectReceipts,
 }
 
 impl GraphShardSource {
@@ -75,6 +77,10 @@ impl GraphShardSource {
             Self::BeforeRunCheckpoints => (
                 &super::lineage::GRAPH_SHARD_BEFORE_RUN_CHECKPOINTS,
                 super::lineage::GRAPH_SHARD_PRE_RUN_CHECKPOINTS_DIGEST,
+            ),
+            Self::BeforeEffectReceipts => (
+                &super::lineage::GRAPH_SHARD_BEFORE_EFFECT_RECEIPTS,
+                super::lineage::GRAPH_SHARD_PRE_EFFECT_RECEIPTS_DIGEST,
             ),
         }
     }

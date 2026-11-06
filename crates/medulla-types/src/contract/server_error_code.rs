@@ -388,5 +388,11 @@ closed_error_codes! {
         ArtifactSealViolation => "ARTIFACT_SEAL_VIOLATION",
         QueryUnscopable => "QUERY_UNSCOPABLE",
         UnitOutOfScope => "UNIT_OUT_OF_SCOPE",
+        AdmittedRequestDigestMismatch => "ADMITTED_REQUEST_DIGEST_MISMATCH",
+        AdmittedRequestTooLarge => "ADMITTED_REQUEST_TOO_LARGE",
+        EffectReceiptConflict => "EFFECT_RECEIPT_CONFLICT",
+        EffectReceiptMismatch => "EFFECT_RECEIPT_MISMATCH",
+        GraphShardFormatUpgradeRequired => "GRAPH_SHARD_FORMAT_UPGRADE_REQUIRED",
+        WorkItemClaimStale => "WORK_ITEM_CLAIM_STALE",
     }
 }
