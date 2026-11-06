@@ -415,6 +415,20 @@ $($variants)*
         writeback: bool,
     },
 
+    /// Score ordered n-ary candidate tuples with a fitted model (MEDULLA-FEDERATED-QUERY-R086.100.3).
+    /// Read-only: the request carries no `writeback` and the result is hypotheses only.
+    #[cfg(feature = "graphlearn")]
+    GraphLearnPredictNary {
+        /// Model, ordered candidate tuples, relation constraints and `top_k`.
+        request: medulla_types::graphlearn_nary::NaryRequest,
+        /// The subgraph providing the structural features and the member vertices.
+        source: GraphSource,
+        /// Pin the graph revision (the `graph_revision` of an earlier hypothesis);
+        /// a moved graph refuses with `NARY_REVISION_STALE`. `None` ⇒ unpinned.
+        #[serde(default)]
+        expected_graph_revision: Option<u64>,
+    },
+
 
     // ── ML Pipeline (CONCEPT:MEDULLA-KG.mining.ml-pipeline) ──
     // A composable train→eval→serve→predict pipeline over a versioned `:Model`
