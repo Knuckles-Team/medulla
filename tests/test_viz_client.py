@@ -206,6 +206,7 @@ def test_inline_columns_scatter_renders_a_real_png(viz_client):
 
 
 # spec: MEDULLA-FEDERATED-QUERY-R087.3
+# Verifies MEDULLA-FEDERATED-QUERY-R087.3: Wiring of Native visualization static export
 def test_render_round_trip(viz_client):
     """Every static export format renders through the Python client against a
     loopback engine, and an identical repeat is served from the cache."""
