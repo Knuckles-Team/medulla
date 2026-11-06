@@ -3966,6 +3966,7 @@ components:
       - "tests/test_error_contract_client.py"
       - "tests/test_finance_liquidity_panel.py"
       - "tests/test_finance_market.py"
+      - "tests/test_finance_record_client.py"
       - "tests/test_finance_pine_companion.py"
       - "tests/test_finance_signal_models.py"
       - "tests/test_fleet_catalog_client.py"
