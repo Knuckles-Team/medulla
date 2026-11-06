@@ -65,6 +65,9 @@ method_results! {
     // The claimed node's id and its updated properties, or nil when nothing matched.
     ClaimNext(ClaimNext) => Raw<Option<(String, serde_json::Value)>>;
     ClaimWorkItem(ClaimWorkItem) => Raw<ClaimWorkItemResult>;
+    // MEDULLA-UNIFIED-DATA-PLANE-R700.3: the registered action name; the stored run.
+    ActionRegister(ActionRegister) => Raw<String>;
+    ActionSubmit(ActionSubmit) => Raw<medulla_work_types::action_spec::ActionRun>;
     AcquireCapacity(AcquireCapacity) => Raw<CapacityAcquireResult>;
     RenewCapacity(RenewCapacity) => Raw<CapacityMutationResult>;
     ReleaseCapacity(ReleaseCapacity) => Raw<CapacityMutationResult>;

@@ -681,6 +681,9 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::IncidentEvidence { .. }
         | Method::IncidentRelatedClaims { .. }
         | Method::IncidentSetStatus { .. }
+        // MEDULLA-UNIFIED-DATA-PLANE-R700.3: self-translates into a request-graph `BatchUpdate`.
+        | Method::ActionRegister { .. }
+        | Method::ActionSubmit { .. }
         | Method::WriteBack { .. }
         | Method::DecisionFit { .. }
         | Method::DecisionEval { .. }

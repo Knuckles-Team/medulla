@@ -5,6 +5,8 @@ use crate::{DurabilityDomain, Stability, TxnParticipation};
 use super::{make_policy, spec, PolicyFlags, PolicyRow, PYTHON};
 
 pub(crate) const ROWS: &[PolicyRow] = &[
+    ("ActionRegister", spec(make_policy(true, DurabilityDomain::GraphRedb, "actions:write", PolicyFlags { idempotent: true, audited: true, emits_cdc: true }, TxnParticipation::Atomic), PYTHON, Stability::Stable), "MEDULLA-UNIFIED-DATA-PLANE-R700.3: validates the ActionSpec and self-translates it into ONE BatchUpdate (the ActionSpec node) against the request graph through dispatch_graph_op"),
+    ("ActionSubmit", spec(make_policy(true, DurabilityDomain::GraphRedb, "actions:write", PolicyFlags { idempotent: false, audited: true, emits_cdc: true }, TxnParticipation::Atomic), PYTHON, Stability::Stable), "MEDULLA-UNIFIED-DATA-PLANE-R700.3: submits against the registered ActionSpec and self-translates the applied effects and the ActionRun node into ONE BatchUpdate against the request graph through dispatch_graph_op"),
     ("ClaimNext", spec(make_policy(true, DurabilityDomain::GraphRedb, "node:write", PolicyFlags { idempotent: false, audited: true, emits_cdc: false }, TxnParticipation::Atomic), PYTHON, Stability::Stable), ""),
     ("ClaimWorkItem", spec(make_policy(true, DurabilityDomain::GraphRedb, "work:claim", PolicyFlags { idempotent: false, audited: true, emits_cdc: false }, TxnParticipation::Atomic), PYTHON, Stability::Stable), "engine-native tenant/fair WorkItem lease claim"),
     ("AcquireCapacity", spec(make_policy(true, DurabilityDomain::GraphRedb, "capacity:lease", PolicyFlags { idempotent: true, audited: true, emits_cdc: false }, TxnParticipation::Atomic), PYTHON, Stability::Stable), "atomic multi-dimensional capacity admission with epoch/fence ownership"),
