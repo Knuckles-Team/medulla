@@ -293,6 +293,8 @@ closed_error_codes! {
         SourceIngestionReplayInvalid => "SOURCE_INGESTION_REPLAY_INVALID",
         SourceIngestionStatusInvalid => "SOURCE_INGESTION_STATUS_INVALID",
         SourceIngestionUnavailable => "SOURCE_INGESTION_UNAVAILABLE",
+        SourceUnreachable => "SOURCE_UNREACHABLE",
+        UnsupportedSearchArgument => "UNSUPPORTED_SEARCH_ARGUMENT",
         SourceMappingAuthorityUnavailable => "SOURCE_MAPPING_AUTHORITY_UNAVAILABLE",
         SourceMappingSelectorInvalid => "SOURCE_MAPPING_SELECTOR_INVALID",
         SourceMappingSelectorMismatch => "SOURCE_MAPPING_SELECTOR_MISMATCH",

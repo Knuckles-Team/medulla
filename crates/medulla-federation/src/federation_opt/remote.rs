@@ -195,6 +195,16 @@ fn from_spec<'a>(spec: &'a ForeignSourceSpec, name: Option<&'a str>) -> Box<dyn 
         ForeignSourceSpec::RemoteEngine { .. } => {
             Box::new(super::engine::EngineRemote::new(spec, identity))
         }
+        ForeignSourceSpec::Mcp {
+            server,
+            tool,
+            capabilities,
+        } => Box::new(super::mcp::McpRemote::new(
+            (server, tool),
+            capabilities.key_filter_pushdown,
+            super::mcp::registered_port(),
+            identity,
+        )),
         other => Box::new(Opaque {
             source: OpaqueSource::Spec(crate::federation::source_for(other)),
             identity,

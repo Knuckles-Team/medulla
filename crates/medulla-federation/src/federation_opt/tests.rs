@@ -934,3 +934,103 @@ mod snapshot_reads {
         assert!(lines[1].ends_with("mode=copy"), "{}", lines[1]);
     }
 }
+
+// ── operation-bound MCP source through the connector port ────────────────────────
+
+/// A connector port that records its requests and answers from a fixed reply.
+struct FakePort {
+    declared: Option<Vec<String>>,
+    reply: Result<Vec<String>, String>,
+    seen: Mutex<Vec<super::mcp::ConnectorRowRequest>>,
+}
+
+impl super::mcp::ConnectorRowSource for FakePort {
+    fn declared_arguments(&self, _server: &str, _tool: &str) -> Option<Vec<String>> {
+        self.declared.clone()
+    }
+    fn rows(
+        &self,
+        request: &super::mcp::ConnectorRowRequest,
+    ) -> Result<super::mcp::ConnectorRows, String> {
+        self.seen.lock().unwrap().push(request.clone());
+        self.reply.clone().map(|ids| super::mcp::ConnectorRows {
+            source_label: request.source_label.clone(),
+            rows: RowSet::from_ids(ids),
+            truncated: false,
+            missing_source: None,
+        })
+    }
+}
+
+fn mcp_remote(port: Option<Arc<FakePort>>) -> super::mcp::McpRemote {
+    let spec = ForeignSourceSpec::Mcp {
+        server: "objects-mcp".into(),
+        tool: "list_objects".into(),
+        capabilities: medulla_types::wire::ForeignOperationCapabilities {
+            key_filter_pushdown: true,
+            ..Default::default()
+        },
+    };
+    super::mcp::McpRemote::new(
+        ("objects-mcp", "list_objects"),
+        true,
+        port.map(|p| p as Arc<dyn super::mcp::ConnectorRowSource>),
+        Identity::of_spec(&spec, None),
+    )
+}
+
+fn fake_port(declared: Option<&[&str]>, reply: Result<Vec<String>, String>) -> Arc<FakePort> {
+    Arc::new(FakePort {
+        declared: declared.map(|names| names.iter().map(|n| n.to_string()).collect()),
+        reply,
+        seen: Mutex::new(Vec::new()),
+    })
+}
+
+// spec: MEDULLA-FEDERATED-QUERY-R073.3
+#[test]
+fn mcp_remote_delegates_to_connector_row_source() {
+    let port = fake_port(Some(&["keys"]), Ok(vec!["d1".into(), "d2".into()]));
+    let remote = mcp_remote(Some(port.clone()));
+    let rows = remote
+        .fetch(&RemoteRequest::keys(vec!["d1".into(), "d2".into()]))
+        .unwrap();
+    assert_eq!(ids(&rows), vec!["d1".to_string(), "d2".to_string()]);
+    let seen = port.seen.lock().unwrap();
+    assert_eq!(seen.len(), 1, "one tool call for one request");
+    assert_eq!(seen[0].server, "objects-mcp");
+    assert_eq!(seen[0].tool, "list_objects");
+    assert_eq!(seen[0].source_label, remote.label());
+    assert_eq!(
+        seen[0].pushed_filter,
+        vec!["d1".to_string(), "d2".to_string()]
+    );
+    drop(seen);
+
+    let refused: [(Option<Arc<FakePort>>, RemoteRequest, &str); 4] = [
+        (None, RemoteRequest::full(), "SOURCE_UNREACHABLE"),
+        (
+            Some(fake_port(None, Ok(vec![]))),
+            RemoteRequest::full(),
+            "SOURCE_UNREACHABLE",
+        ),
+        (
+            Some(fake_port(Some(&["keys"]), Err("timed out".into()))),
+            RemoteRequest::full(),
+            "SOURCE_UNREACHABLE",
+        ),
+        (
+            Some(fake_port(Some(&[]), Ok(vec![]))),
+            RemoteRequest::keys(vec!["d1".into()]),
+            "UNSUPPORTED_SEARCH_ARGUMENT",
+        ),
+    ];
+    for (port, request, code) in refused {
+        let error = mcp_remote(port).fetch(&request).expect_err(code);
+        assert!(error.starts_with(code), "{code}: {error}");
+        assert!(
+            error.contains("mcp#"),
+            "the refusal names the source label: {error}"
+        );
+    }
+}

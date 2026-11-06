@@ -27,6 +27,7 @@ mod columns;
 pub mod engine;
 mod http;
 mod limiter;
+pub mod mcp;
 #[cfg(feature = "federation-sql")]
 mod obda_snapshot;
 pub(crate) mod oq2;
