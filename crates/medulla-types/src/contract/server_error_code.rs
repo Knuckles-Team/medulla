@@ -453,5 +453,6 @@ closed_error_codes! {
         PartitionLimitExceeded => "PARTITION_LIMIT_EXCEEDED",
         SchemaIncompatible => "SCHEMA_INCOMPATIBLE",
         UnsupportedTableLayout => "UNSUPPORTED_TABLE_LAYOUT",
+        TurtleInvalid => "TURTLE_INVALID",
     }
 }

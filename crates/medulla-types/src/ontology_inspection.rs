@@ -75,6 +75,15 @@ pub struct OntologyPropertyView {
     pub symmetric: bool,
 }
 
+/// The canonical digest `OntologyCanonicalHash` returns: the SHA-256 of the
+/// payload's RDFC-1.0 canonical N-Quads, as 64 lowercase hex characters.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct OntologyCanonicalHashResult {
+    pub hash: String,
+}
+
 /// One committed vocabulary crosswalk, as plain strings: `medulla-types` cannot
 /// name the pack record type (MEDULLA-TYPED-PACKS-R071.1.3, R071.1.5).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

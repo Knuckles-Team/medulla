@@ -8,7 +8,7 @@ use medulla_catalog_types::{
     graph_schema::GraphSchemaClassesView, graph_schema::GraphSchemaCommitted,
     graph_schema::GraphSchemaSourcesView,
 };
-use medulla_types::ontology_inspection::OntologyInspection;
+use medulla_types::ontology_inspection::{OntologyCanonicalHashResult, OntologyInspection};
 use medulla_types::types::DatalogReasoningResult;
 use medulla_types::{
     rdf_report::RuleReasonResponse, rdf_report::ShaclValidationReport,
@@ -39,5 +39,6 @@ method_results! {
     RunRules(RunRules) => Raw<RuleReasonResponse>;
     ShaclValidate(ShaclValidate) => Json<ShaclValidationReport>;
     OntologyInspect(OntologyInspect) => Json<OntologyInspection>;
+    OntologyCanonicalHash(OntologyCanonicalHash) => Json<OntologyCanonicalHashResult>;
     ShexValidate(ShexValidate) => Json<ShexValidationReport>;
 }
