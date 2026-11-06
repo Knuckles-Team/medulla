@@ -990,3 +990,48 @@
     rdfs:label "research kernel version" ;
     rdfs:comment "The research kernel version that computed a stored score (research-1)." ;
     rdfs:range xsd:string .
+
+# MEDULLA-FINANCE-PRIMITIVES-R018.5: a ranked factor recorded with the evidence it
+# rests on. Each Factor node carries a derivedFrom edge to every input it was
+# computed from and the medulla-numeric kernel revision that computed its scores.
+
+:Factor a owl:Class ;
+    rdfs:label "Factor" ;
+    rdfs:comment "One ranked predictive factor with its information coefficient and information ratio, linked by derivedFrom to the inputs it was computed from (R018.5). BFO:GenericallyDependentContinuant." ;
+    rdfs:subClassOf bfo:0000031 ;
+    skos:broadMatch bfo:0000031 .
+
+:factorId a owl:DatatypeProperty ;
+    rdfs:label "factor id" ;
+    rdfs:domain :Factor ;
+    rdfs:range xsd:string .
+
+:informationCoefficient a owl:DatatypeProperty ;
+    rdfs:label "information coefficient" ;
+    rdfs:comment "The rank correlation of the factor signal with forward returns." ;
+    rdfs:domain :Factor ;
+    rdfs:range xsd:decimal .
+
+:informationRatio a owl:DatatypeProperty ;
+    rdfs:label "information ratio" ;
+    rdfs:comment "The information coefficient scaled by the square root of the factor breadth." ;
+    rdfs:domain :Factor ;
+    rdfs:range xsd:decimal .
+
+:factorRank a owl:DatatypeProperty ;
+    rdfs:label "factor rank" ;
+    rdfs:comment "The one-based rank by absolute information ratio; 1 is strongest." ;
+    rdfs:domain :Factor ;
+    rdfs:range xsd:integer .
+
+:irKernelVersion a owl:DatatypeProperty ;
+    rdfs:label "ir kernel version" ;
+    rdfs:comment "The medulla-numeric kernel revision that computed the information ratio." ;
+    rdfs:domain :Factor ;
+    rdfs:range xsd:string .
+
+:icKernelVersion a owl:DatatypeProperty ;
+    rdfs:label "ic kernel version" ;
+    rdfs:comment "The medulla-numeric kernel revision that computed the information coefficient." ;
+    rdfs:domain :Factor ;
+    rdfs:range xsd:string .

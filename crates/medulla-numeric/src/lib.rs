@@ -22,6 +22,11 @@
 //! float transcendentals crate-wide), reductions are serial and ordered, and
 //! digests are taken over quantised integers.
 
+/// The revision of this numeric kernel. A stored evidence record names it so a
+/// later reader knows which kernel computed the value
+/// (MEDULLA-FINANCE-PRIMITIVES-R018.5).
+pub const KERNEL_REVISION: &str = env!("CARGO_PKG_VERSION");
+
 pub mod cluster;
 pub mod elementwise;
 pub mod error;

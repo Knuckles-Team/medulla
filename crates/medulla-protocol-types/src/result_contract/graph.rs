@@ -68,6 +68,9 @@ method_results! {
     // The event id of a raised finance alert.
     #[cfg(feature = "finance")]
     FinanceAlertRaise(FinanceAlertRaise) => Text<String>;
+    // The ranked factors of a served factor record, strongest first.
+    #[cfg(feature = "finance")]
+    FinanceFactorRecord(FinanceFactorRecord) => Raw<Vec<medulla_result_types::compute_result::finance::FactorRecordResult>>;
     // `(decayed count, evicted ids)`.
     Maintain(Maintain) => Raw<(usize, Vec<String>)>;
     AddSceneObject(AddSceneObject) => Text<String>;

@@ -136,7 +136,9 @@ fn is_analytics(method: &Method) -> bool {
 fn is_finance_record(method: &Method) -> bool {
     matches!(
         method,
-        Method::FinanceRecordPut { .. } | Method::FinanceAlertRaise { .. }
+        Method::FinanceRecordPut { .. }
+            | Method::FinanceAlertRaise { .. }
+            | Method::FinanceFactorRecord { .. }
     )
 }
 
