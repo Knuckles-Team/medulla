@@ -1,4 +1,6 @@
 #[cfg(feature = "query")]
+use super::live_artifact::{dispatch_live_artifact, is_live_artifact_method};
+#[cfg(feature = "query")]
 use super::uql_statement::handle_uql;
 use super::*;
 use medulla_server_api::api::reentry::TryHandleContext;
@@ -89,6 +91,10 @@ async fn dispatch_query_family(
     #[cfg(feature = "query")]
     if is_sql_query_method(&method) {
         return dispatch_sql_query(hctx, method).await;
+    }
+    #[cfg(feature = "query")]
+    if is_live_artifact_method(&method) {
+        return dispatch_live_artifact(hctx, method).await;
     }
     #[cfg(feature = "query")]
     if is_explain_method(&method) {

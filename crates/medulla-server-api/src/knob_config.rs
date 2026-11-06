@@ -311,6 +311,8 @@ knobs! {
     graphlearn_nary_max_candidates: u64 = "graphlearn.nary_max_candidates", U64(1_000), [1, 100_000], "tuples", Tunable;
     /// Lowest probability an n-ary hypothesis may score and still be returned.
     graphlearn_nary_min_score: f64 = "graphlearn.nary_min_score", F64(0.5), [0.0, 1.0], "probability", Tunable;
+    /// Refresh records kept per live artifact (MEDULLA-FEDERATED-QUERY-R701.5).
+    artifact_refresh_history: u64 = "artifact.refresh_history", U64(20), [1, 1_000], "records", Tunable;
 }
 
 fn refusal(code: ServerErrorCode, knob: &str, detail: String) -> KnobRefusal {

@@ -4160,6 +4160,8 @@ components:
       - "tests/durable/test_uncertain_effect_served.py"
       - "tests/dispatch/__init__.py"
       - "tests/dispatch/test_agent_turn_envelope_served.py"
+      - "tests/query/__init__.py"
+      - "tests/query/test_live_artifact_served.py"
       - "tests/test_child_input_served.py"
       - "tests/test_work_item_retry_identity.py"
       - "tests/test_work_market_client.py"

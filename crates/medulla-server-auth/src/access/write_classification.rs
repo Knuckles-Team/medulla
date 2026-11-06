@@ -458,6 +458,9 @@ pub fn requires_write(method: &Method) -> bool {
                 | Method::DeleteGraph { .. }
                 | Method::ClaimNext { .. }
                 | Method::MintWorkItemClaimCapability { .. }
+                // MEDULLA-FEDERATED-QUERY-R701.3: the artifact node and its refresh records.
+                | Method::LiveArtifactPut { .. }
+                | Method::LiveArtifactRefresh { .. }
         )
     )
 }

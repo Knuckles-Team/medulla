@@ -614,6 +614,10 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::DsKMeans { .. }
         | Method::FinanceAvellanedaStoikov { .. }
         | Method::CypherQuery { .. }
+        // MEDULLA-FEDERATED-QUERY-R701.3: graph-row writes through the staged query gateway.
+        | Method::LiveArtifactPut { .. }
+        | Method::LiveArtifactGet { .. }
+        | Method::LiveArtifactRefresh { .. }
         | Method::GetEdges
         | Method::DsComputeStats { .. }
         | Method::AgentTemplate { .. }

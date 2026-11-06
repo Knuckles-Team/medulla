@@ -516,7 +516,10 @@ pub(super) async fn commit_conditional_commit_staged(
 /// Part of [`GATEWAY_ROUTED`], but handed back by `try_handle_gateway` so it reaches
 /// its dedicated wrap in `dispatch.rs`.
 pub fn is_query_gateway_method(m: &Method) -> bool {
-    matches!(method_variant_name(m), "Sql" | "CypherQuery" | "GraphQl")
+    matches!(
+        method_variant_name(m),
+        "Sql" | "CypherQuery" | "GraphQl" | "LiveArtifactPut" | "LiveArtifactRefresh"
+    )
 }
 
 /// SQL table/catalog writes and GraphQL cross-modal operations own native domain
