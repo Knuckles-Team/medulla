@@ -1086,3 +1086,7 @@ mod replay_tests;
 mod task_plan_tests;
 
 mod run_observation_tests;
+
+// MEDULLA-DECISION-ENGINE-R652: research claims, evidence and sealed artifacts.
+#[cfg(feature = "statechart")]
+mod claims_tests;

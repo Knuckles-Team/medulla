@@ -25,6 +25,8 @@ pub enum KnobClass {
 pub enum KnobValue {
     /// Unsigned integer.
     U64(u64),
+    /// Signed integer.
+    I64(i64),
     /// Floating point.
     F64(f64),
     /// Flag.
@@ -89,6 +91,18 @@ impl KnobType for u64 {
     fn of(value: KnobValue) -> Self {
         match value {
             KnobValue::U64(v) => v,
+            other => unreachable!("knob table type mismatch: {other:?}"),
+        }
+    }
+}
+
+impl KnobType for i64 {
+    fn parse(raw: &str) -> Option<Self> {
+        raw.trim().parse().ok()
+    }
+    fn of(value: KnobValue) -> Self {
+        match value {
+            KnobValue::I64(v) => v,
             other => unreachable!("knob table type mismatch: {other:?}"),
         }
     }
@@ -239,6 +253,26 @@ knobs! {
     pattern_shadow_ratio_min: f64 = "pattern.shadow_ratio_min", F64(2.0), [1.5, 4.0], "ratio", Tunable;
     /// Opposite-shadow ceiling as a fraction of the range.
     pattern_wick_max: f64 = "pattern.wick_max", F64(0.1), [0.0, 0.3], "ratio", Tunable;
+    /// Claim evidence weight cap (MEDULLA-DECISION-ENGINE-R652.2).
+    claims_weight_cap_ppm: u64 = "claims.weight_cap_ppm", U64(6_000_000), [1_000_000, 12_000_000], "ppm", Tunable;
+    /// Claim log-odds floor to enter `accepted`.
+    claims_accept_min_micro: i64 = "claims.accept_min_micro", I64(2_944_439), [0, 12_000_000], "micro-nats", Tunable;
+    /// Claim log-odds ceiling to enter `contested`.
+    claims_contest_max_micro: i64 = "claims.contest_max_micro", I64(-1_000_000), [-12_000_000, 0], "micro-nats", Tunable;
+    /// Claim research-feed relevance floor (MEDULLA-DECISION-ENGINE-R652.7).
+    claims_feed_relevance_min: u64 = "claims.feed_relevance_min", U64(300_000), [0, 1_000_000], "ppm", Tunable;
+    /// Claim channel prior for health evidence.
+    claims_prior_health: u64 = "claims.prior_health", U64(600_000), [0, 1_000_000], "ppm", Tunable;
+    /// Claim channel prior for mined evidence.
+    claims_prior_mined: u64 = "claims.prior_mined", U64(300_000), [0, 1_000_000], "ppm", Tunable;
+    /// Claim channel prior for optimization evidence.
+    claims_prior_optimization: u64 = "claims.prior_optimization", U64(800_000), [0, 1_000_000], "ppm", Tunable;
+    /// Claim channel prior for outcome evidence.
+    claims_prior_outcome: u64 = "claims.prior_outcome", U64(1_000_000), [0, 1_000_000], "ppm", Tunable;
+    /// Claim channel prior for process evidence.
+    claims_prior_process: u64 = "claims.prior_process", U64(500_000), [0, 1_000_000], "ppm", Tunable;
+    /// Claim log-odds floor to enter `supported`.
+    claims_support_min_micro: i64 = "claims.support_min_micro", I64(1_000_000), [0, 6_000_000], "micro-nats", Tunable;
 }
 
 fn refusal(code: ServerErrorCode, knob: &str, detail: String) -> KnobRefusal {

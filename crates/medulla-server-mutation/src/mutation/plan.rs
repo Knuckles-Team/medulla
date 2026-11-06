@@ -643,6 +643,7 @@ pub const LOCAL_ONLY_METHODS: &[&str] = &[
     "AgentTemplate",
     "ConnectorPack",
     "WriteBack",
+    "Claims",
     "DecisionCommit",
     "DecisionEval",
     "DecisionFit",
@@ -672,6 +673,7 @@ fn native_local_only_method_name(m: &Method) -> Option<&'static str> {
 /// [`native_local_only_method_name`]).
 fn native_local_only_decision_method_name(m: &Method) -> Option<&'static str> {
     match m {
+        Method::Claims { .. } => Some("Claims"),
         Method::DecisionCommit { .. } => Some("DecisionCommit"),
         Method::DecisionEval { .. } => Some("DecisionEval"),
         Method::DecisionFit { .. } => Some("DecisionFit"),

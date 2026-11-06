@@ -4678,6 +4678,8 @@ dependencies = [
 name = "medulla-durable"
 version = "0.1.0"
 dependencies = [
+ "criterion",
+ "medulla-types",
  "rmp-serde",
  "serde",
  "serde_json",
@@ -5183,11 +5185,13 @@ dependencies = [
  "medulla-decision-policy",
  "medulla-decision-stats",
  "medulla-decision-types",
+ "medulla-epistemic",
  "medulla-exec",
  "medulla-finance",
  "medulla-finance-market",
  "medulla-graph-core",
  "medulla-h-graph",
+ "medulla-h-jobs",
  "medulla-index-types",
  "medulla-isolation",
  "medulla-kernel",
@@ -5207,6 +5211,7 @@ dependencies = [
  "medulla-shacl",
  "medulla-sql",
  "medulla-sql-lang",
+ "medulla-statechart",
  "medulla-store",
  "medulla-table-store",
  "medulla-tables",

@@ -278,5 +278,11 @@ closed_error_codes! {
         ChildTargetTerminal => "CHILD_TARGET_TERMINAL",
         EnvelopeFieldMissing => "ENVELOPE_FIELD_MISSING",
         RevisionConflict => "REVISION_CONFLICT",
+        ClaimIllegalTransition => "CLAIM_ILLEGAL_TRANSITION",
+        ClaimGuardNotMet => "CLAIM_GUARD_NOT_MET",
+        ClaimNotFound => "CLAIM_NOT_FOUND",
+        EvidenceNoChannel => "EVIDENCE_NO_CHANNEL",
+        EvidenceWeightOutOfRange => "EVIDENCE_WEIGHT_OUT_OF_RANGE",
+        ArtifactSealViolation => "ARTIFACT_SEAL_VIOLATION",
     }
 }

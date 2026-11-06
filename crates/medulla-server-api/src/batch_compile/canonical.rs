@@ -662,6 +662,7 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::DecisionFit { .. }
         | Method::DecisionEval { .. }
         | Method::DecisionLog { .. }
+        | Method::Claims { .. }
         | Method::GraphSchema { .. }
         | Method::GraphSchemaList
         | Method::GraphSchemaClasses { .. }

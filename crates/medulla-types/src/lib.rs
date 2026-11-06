@@ -31,6 +31,8 @@ pub mod mysql_mariadb_connection;
 pub mod asr_wire;
 // MEDULLA-FEDERATED-QUERY-R608.1 — causal model fit verdict (`CausalVerify`).
 pub mod causal_wire;
+// MEDULLA-DECISION-ENGINE-R652.1 — research claims, evidence and sealed artifacts.
+pub mod claims;
 // MEDULLA-FEDERATED-QUERY-R086.100.1 — ordered n-ary inductive link prediction model.
 pub mod graphlearn_nary;
 // MEDULLA-DURABLE-KERNEL-R076.1 — authoritative scheduler policy data and validation.

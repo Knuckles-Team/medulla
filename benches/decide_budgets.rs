@@ -26,6 +26,7 @@ use medulla_h_decide::decide::stat_test_support::{publish_route_schema, request,
 use medulla_protocol_types::protocol::{Method, Request, Response};
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
+use medulla_types::claims::{ClaimOp, EvidenceChannel};
 use std::hint::black_box;
 use tokio::runtime::{Builder, Runtime};
 
@@ -171,6 +172,102 @@ fn percentile_ms(sorted: &[Duration], p: f64) -> f64 {
     sorted[idx].as_secs_f64() * 1000.0
 }
 
+/// Evidence items per claim the `decide/claims` group holds (R652.6).
+const CLAIM_EVIDENCE_ITEMS: usize = 50;
+
+/// One claim operation through the served handler.
+fn claims(rt: &Runtime, h: &Harness, op: ClaimOp) -> Response {
+    let verified = VerifiedRequestContext::verified_for_test_in_tenant("bench", TENANT);
+    rt.block_on(medulla_h_decide::decide::handle_claims(
+        &h.state, 1, &verified, op,
+    ))
+}
+
+/// The `decide/claims` group (MEDULLA-DECISION-ENGINE-R652.6): a claim holding
+/// 50 evidence items is read, its cohort artifact compiled (a replay of the
+/// stored seal) and the sealed artifact read back with its seal verified.
+fn bench_claims(c: &mut Criterion, rt: &Runtime, report: &mut BTreeMap<String, serde_json::Value>) {
+    let h = rt.block_on(Harness::new());
+    let ok = |response: Response| {
+        assert!(
+            response.error.is_none(),
+            "claims bench fixture: {response:?}"
+        );
+        response
+    };
+    ok(claims(
+        rt,
+        &h,
+        ClaimOp::Propose {
+            claim_id: "bench-claim".to_string(),
+        },
+    ));
+    for index in 0..CLAIM_EVIDENCE_ITEMS {
+        ok(claims(
+            rt,
+            &h,
+            ClaimOp::RecordEvidence {
+                evidence_id: format!("bench-e{index}"),
+                claim_id: "bench-claim".to_string(),
+                channel: Some(EvidenceChannel::Outcome),
+                supports: index % 5 != 0,
+                weight_ppm: 20_000,
+                source_digest: format!("sha256:{index:064x}"),
+                stances: BTreeMap::new(),
+                feed: None,
+            },
+        ));
+    }
+    let compile = || ClaimOp::CompileArtifact {
+        artifact_id: "bench-artifact".to_string(),
+        cohort_id: "bench-cohort".to_string(),
+        claim_ids: vec!["bench-claim".to_string()],
+        code_specs: vec!["bench-spec".to_string()],
+        exploration_edges: Vec::new(),
+    };
+    let journey = || {
+        black_box(ok(claims(
+            rt,
+            &h,
+            ClaimOp::Get {
+                claim_id: Some("bench-claim".to_string()),
+                artifact_id: None,
+            },
+        )));
+        black_box(ok(claims(rt, &h, compile())));
+        black_box(ok(claims(
+            rt,
+            &h,
+            ClaimOp::Get {
+                claim_id: None,
+                artifact_id: Some("bench-artifact".to_string()),
+            },
+        )));
+    };
+    let group_name = "decide/claims".to_string();
+    let mut group = c.benchmark_group(&group_name);
+    group.bench_function("served", |b| b.iter(journey));
+    group.finish();
+
+    let before = high_water_mib();
+    let mut samples: Vec<Duration> = (0..REPORT_SAMPLES)
+        .map(|_| {
+            let start = Instant::now();
+            journey();
+            start.elapsed()
+        })
+        .collect();
+    samples.sort();
+    report.insert(
+        group_name,
+        serde_json::json!({
+            "p50_ms": percentile_ms(&samples, 0.50),
+            "p99_ms": percentile_ms(&samples, 0.99),
+            "peak_mib": (high_water_mib() - before).max(0.0),
+        }),
+    );
+}
+
 fn bench_decide(c: &mut Criterion) {
     let rt = Builder::new_current_thread().enable_all().build().unwrap();
     let mut report: BTreeMap<String, serde_json::Value> = BTreeMap::new();
@@ -201,6 +298,7 @@ fn bench_decide(c: &mut Criterion) {
             }),
         );
     }
+    bench_claims(c, &rt, &mut report);
     if let Ok(path) = std::env::var("DECIDE_BUDGETS_REPORT") {
         let body = serde_json::to_vec_pretty(&serde_json::json!({ "groups": report })).unwrap();
         std::fs::write(&path, body).expect("write decide budget report");
