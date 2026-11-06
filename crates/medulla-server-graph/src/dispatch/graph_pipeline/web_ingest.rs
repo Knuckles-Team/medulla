@@ -51,6 +51,15 @@ async fn enrich(
         Err(error) => return Response::err(req_id, error),
     };
     let records = ctx.core.get_nodes_by_label(web::ENRICHMENT_TYPE, 0);
+    if let Some(stored) = web::outranking_rung(&doc_id, &records) {
+        return Response::err(
+            req_id,
+            format!(
+                "RUNG_OUTRANKED: Document '{doc_id}' holds a {} fact; an embedding candidate does not replace it",
+                medulla_h_ingest::ingestion_rung::rung_label(stored)
+            ),
+        );
+    }
     let (current, prior) = web::prior_enrichments(&doc_id, &document.digest_hex, records);
     if let Some(record) = current {
         let receipt = web::replay_receipt(&doc_id, &document.digest_hex, &record);

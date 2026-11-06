@@ -852,3 +852,78 @@ fn medulla_317_end_to_end_materialize_and_export() {
     let loaded = cat.load_table("market", "quotes").expect("load");
     assert_eq!(loaded["metadata"]["current-snapshot-id"], 100);
 }
+
+/// MEDULLA-UNIFIED-DATA-PLANE-R039.4: a table partitioned by `symbol` emits one
+/// `identity` partition field (field id 1000, `last-partition-id` 1000) and the
+/// manifest list carries the column's field summary, which prunes the manifest
+/// for a value outside its bounds. An unknown column refuses
+/// `PARTITION_COLUMN_UNKNOWN`; an unpartitioned table keeps the empty spec.
+#[cfg(feature = "lake")]
+#[test]
+// spec: MEDULLA-UNIFIED-DATA-PLANE-R039.4
+fn partition_spec_emitted_and_manifest_pruned() {
+    use medulla_lake::iceberg_avro::read_manifest_list;
+
+    let refused = sample_schema()
+        .with_partition_column("missing")
+        .unwrap_err();
+    assert!(refused.starts_with("PARTITION_COLUMN_UNKNOWN"), "{refused}");
+
+    let schema = sample_schema()
+        .with_partition_column("symbol")
+        .expect("symbol is a column");
+    let mut table = LakeTable::new("market", "quotes", schema.clone(), "s3://lake/quotes");
+    let rows = vec![
+        vec![
+            CellValue::Long(1),
+            CellValue::Double(1.0),
+            CellValue::String("AAPL".into()),
+            CellValue::Bool(true),
+            CellValue::Timestamp(1_700_000_000_000_000),
+        ],
+        vec![
+            CellValue::Long(2),
+            CellValue::Double(2.0),
+            CellValue::String("MSFT".into()),
+            CellValue::Bool(false),
+            CellValue::Timestamp(1_700_000_060_000_000),
+        ],
+    ];
+    let batch = LakeBatch::new(schema, rows).expect("valid batch");
+    table.materialize(&batch, Lsn(9)).expect("materialize");
+
+    // The spec reads back from the emitted metadata.
+    let metadata =
+        iceberg::parse_metadata(&table.iceberg(1_700_000_000_000).metadata_json).unwrap();
+    let fields = metadata["partition-specs"][0]["fields"]
+        .as_array()
+        .expect("spec fields");
+    assert_eq!(fields.len(), 1);
+    assert_eq!(fields[0]["source-id"], 3, "symbol is field 3");
+    assert_eq!(fields[0]["field-id"], 1000);
+    assert_eq!(fields[0]["name"], "symbol");
+    assert_eq!(fields[0]["transform"], "identity");
+    assert_eq!(metadata["last-partition-id"], 1000);
+
+    // The manifest list carries the summary; it prunes a value outside the bounds.
+    let manifests = table.iceberg_manifests().expect("build avro manifests");
+    let list = read_manifest_list(&manifests.manifest_list_avro).expect("manifest list");
+    assert_eq!(list.len(), 1);
+    let summary = &list[0].partitions[0];
+    assert!(!summary.contains_null);
+    assert_eq!(summary.lower_bound.as_deref(), Some("AAPL".as_bytes()));
+    assert_eq!(summary.upper_bound.as_deref(), Some("MSFT".as_bytes()));
+    assert!(summary.may_contain(LakeType::String, &CellValue::String("GOOG".into())));
+    assert!(!summary.may_contain(LakeType::String, &CellValue::String("TSLA".into())));
+    assert!(!summary.may_contain(LakeType::String, &CellValue::Null));
+
+    // An unpartitioned table keeps the empty spec and no summaries.
+    let plain = LakeTable::new("market", "quotes", sample_schema(), "s3://lake/quotes");
+    let plain_meta =
+        iceberg::parse_metadata(&plain.iceberg(1_700_000_000_000).metadata_json).unwrap();
+    assert_eq!(
+        plain_meta["partition-specs"][0]["fields"],
+        serde_json::json!([])
+    );
+    assert_eq!(plain_meta["last-partition-id"], 999);
+}

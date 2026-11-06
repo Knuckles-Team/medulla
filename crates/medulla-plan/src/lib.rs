@@ -78,6 +78,9 @@ pub mod corpus_retrieval;
 /// Plan is `query`-gated.
 pub mod uql;
 
+/// Temporal rule derivation with a persisted origin chain (MEDULLA-FEDERATED-QUERY-R006.1).
+pub mod rules;
+
 // MEDULLA-FEDERATED-QUERY-R651.1 — query understanding model (filters, intent, expansion port types).
 pub mod query_understanding;
 // MEDULLA-FEDERATED-QUERY-R652.1 — rerank scorer port, calibration curve and receipt types.
@@ -100,6 +103,9 @@ mod engine_peer_tests;
 /// (MEDULLA-UNIFIED-DATA-PLANE-R018.2.1). Pure `std`, always compiled: no driver/ODBC
 /// client dependency is needed until the live slice (`R018.2.2`) issues real reads.
 pub mod relational_connection;
+/// Watermark change capture for an attached SQLite file
+/// (MEDULLA-UNIFIED-DATA-PLANE-R015.2.2.2). Pure `std` over the SQLite format reader.
+pub mod sqlite_capture;
 
 // The hierarchical-retrieval surface (CONCEPT:MEDULLA-KG.retrieval.bounded-drill): the retriever + its accessor
 // traits + the structured result + the flat-top-k baseline, so a caller names them

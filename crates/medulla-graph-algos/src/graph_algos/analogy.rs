@@ -154,6 +154,7 @@ mod tests {
         }
     }
 
+    /// Verifies MEDULLA-FEDERATED-QUERY-R607.7: Behavior: analogy
     // spec: MEDULLA-FEDERATED-QUERY-R607.7
     #[test]
     fn isomorphic_subgraphs_match_and_boundary_score() {

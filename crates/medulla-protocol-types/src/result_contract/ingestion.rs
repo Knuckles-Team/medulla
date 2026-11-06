@@ -68,6 +68,8 @@ method_results! {
     DocumentDelete(DocumentDelete) => Raw<medulla_types::document_ops::DocumentDeleteReceipt>;
     // EH-408 / EH-409: counts plus the id of every fact node written.
     TelemetryDerive(TelemetryDerive) => Raw<TelemetryDeriveReceipt>;
+    // MEDULLA-ORCH-VOCAB-R804: the tenant's latest stored metric values by name.
+    GetTelemetrySnapshot(GetTelemetrySnapshot) => Json<std::collections::BTreeMap<String, f64>>;
     // MEDULLA-UNIFIED-DATA-PLANE-R760.3: the served incident authority.
     IncidentRecordAnomaly(IncidentRecordAnomaly) => Raw<IncidentWriteReceipt>;
     IncidentCorrelate(IncidentCorrelate) => Raw<IncidentWriteReceipt>;

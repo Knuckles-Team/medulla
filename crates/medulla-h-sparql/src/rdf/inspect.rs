@@ -9,7 +9,8 @@ use std::collections::{BTreeMap, BTreeSet};
 use medulla_rdf::oxrdf::{NamedOrBlankNode, Term, Triple};
 use medulla_types::contract::Digest256;
 use medulla_types::ontology_inspection::{
-    OntologyClassView, OntologyInspection, OntologyPropertyView, MAX_INSPECT_DOCUMENTS,
+    OntologyClassView, OntologyCrosswalkView, OntologyInspection, OntologyPropertyView,
+    MAX_INSPECT_DOCUMENTS,
 };
 
 use medulla_graph_core::graph::GraphCore;
@@ -61,6 +62,7 @@ struct Inspected {
     triples: Vec<Triple>,
     schema_digests: Vec<String>,
     composed_digest: Option<String>,
+    crosswalks: Vec<OntologyCrosswalkView>,
 }
 
 fn inspect(
@@ -144,7 +146,63 @@ fn composed_documents(
     if let Some(missing) = wanted.iter().find(|id| !found.contains(**id)) {
         return Err(format!("unknown GraphSchema source '{missing}'"));
     }
-    parsed(&selected, Some(sources.composed_digest().to_hex()))
+    let mut inspected = parsed(&selected, Some(sources.composed_digest().to_hex()))?;
+    inspected.crosswalks = crosswalk_views(sources, &wanted);
+    Ok(inspected)
+}
+
+/// The committed crosswalks of the selected sources, sorted by source class,
+/// target class and source id (MEDULLA-TYPED-PACKS-R071.1.3, R071.1.5).
+fn crosswalk_views(
+    sources: &GraphSchemaSources,
+    wanted: &BTreeSet<&str>,
+) -> Vec<OntologyCrosswalkView> {
+    let mut views: Vec<OntologyCrosswalkView> = sources
+        .all()
+        .filter(|(id, _)| wanted.is_empty() || wanted.contains(id))
+        .flat_map(|(id, source)| {
+            source
+                .crosswalks
+                .iter()
+                .map(move |record| OntologyCrosswalkView {
+                    source_id: id.to_string(),
+                    source_class_iri: record.source_class_iri.clone(),
+                    target_class_iri: record.target_class_iri.clone(),
+                    relation: relation_name(record.relation).to_string(),
+                    source_revision: record.source_revision.clone(),
+                    target_vocabulary_revision: record.target_vocabulary_revision.clone(),
+                    origin: record.origin.clone(),
+                    crosswalk_digest: record.content_digest.clone(),
+                })
+        })
+        .collect();
+    views.sort_by(|left, right| {
+        (
+            &left.source_class_iri,
+            &left.target_class_iri,
+            &left.source_id,
+        )
+            .cmp(&(
+                &right.source_class_iri,
+                &right.target_class_iri,
+                &right.source_id,
+            ))
+    });
+    views
+}
+
+/// The relation's wire name, as `VocabularyCrosswalkRelation` serializes it.
+fn relation_name(
+    relation: medulla_catalog_types::domain_pack::VocabularyCrosswalkRelation,
+) -> &'static str {
+    use medulla_catalog_types::domain_pack::VocabularyCrosswalkRelation as R;
+    match relation {
+        R::SeeAlso => "see_also",
+        R::SkosExactMatch => "skos_exact_match",
+        R::SkosCloseMatch => "skos_close_match",
+        R::SkosBroadMatch => "skos_broad_match",
+        R::SkosNarrowMatch => "skos_narrow_match",
+    }
 }
 
 fn parsed(
@@ -172,10 +230,12 @@ fn parsed(
         triples,
         schema_digests: digests.into_iter().collect(),
         composed_digest,
+        crosswalks: Vec::new(),
     })
 }
 
 fn inspection_of(inspected: Inspected) -> OntologyInspection {
+    let committed = inspected.composed_digest.is_some();
     let facts = Facts::collect(&inspected.triples);
     let lines: BTreeSet<String> = inspected
         .triples
@@ -195,6 +255,8 @@ fn inspection_of(inspected: Inspected) -> OntologyInspection {
         object_properties: facts.properties(OWL_OBJECT_PROPERTY),
         datatype_properties: facts.properties(OWL_DATATYPE_PROPERTY),
         shape_target_classes: facts.targets.into_iter().collect(),
+        committed,
+        crosswalks: inspected.crosswalks,
     }
 }
 

@@ -15,6 +15,32 @@ pub enum Error {
     /// Underlying filesystem I/O failure.
     #[error("io error: {0}")]
     Io(#[from] std::io::Error),
+    /// A lock-free WAL read was refused (MEDULLA-UNIFIED-DATA-PLANE-R015.2.2.1).
+    #[error("{0}")]
+    Refused(#[from] SqliteReadRefusal),
+}
+
+/// Why a lock-free read of a live SQLite file was refused. The server maps each
+/// refusal that has a wire token to its registered `ServerErrorCode` through [`SqliteReadRefusal::code`].
+#[derive(Debug, Error)]
+pub enum SqliteReadRefusal {
+    /// A checkpoint changed the WAL salts during the read and the busy timeout elapsed
+    /// before a stable snapshot was read.
+    #[error("SQLITE_SNAPSHOT_UNSTABLE: the WAL changed during the read and did not settle")]
+    SnapshotUnstable,
+    /// The WAL or main file could not be read.
+    #[error("io error reading the WAL snapshot: {0}")]
+    Io(#[from] std::io::Error),
+}
+
+impl SqliteReadRefusal {
+    /// The wire token of this refusal; the server's `ServerErrorCode` registers it.
+    pub fn code(&self) -> Option<&'static str> {
+        match self {
+            Self::SnapshotUnstable => Some("SQLITE_SNAPSHOT_UNSTABLE"),
+            Self::Io(_) => None,
+        }
+    }
 }
 
 impl Error {

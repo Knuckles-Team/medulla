@@ -252,6 +252,7 @@ mod tests {
         assert!(err.contains("expected a Spark batch source"), "{err}");
     }
 
+    /// Verifies MEDULLA-FEDERATED-QUERY-R053.700: `Trino` and `Spark` sources with idempotent submission: model and behavior
     // spec: MEDULLA-FEDERATED-QUERY-R053.700
     #[test]
     fn submission_id_idempotent_and_fenced() {

@@ -214,9 +214,24 @@ impl<'a> Parser<'a> {
     }
 
     gated! { "epistemic",
-        /// `CONFIDENCE`.
+        /// `CONFIDENCE [threshold]` (MEDULLA-FEDERATED-QUERY-R720.2): the threshold, when given,
+        /// is a belief confidence in 0..=1.
         fn confidence(&mut self) -> Result<Op, UqlError> {
-            Ok(Op::ConfidenceOp {})
+            let has_threshold = matches!(
+                self.peek_kind(),
+                Some(Tok::Num(_) | Tok::Param(_))
+            );
+            if !has_threshold {
+                return Ok(Op::ConfidenceOp { threshold: None });
+            }
+            let t = self.number("a CONFIDENCE threshold")?;
+            if !(0.0..=1.0).contains(&t) {
+                return Err(self.err_at(
+                    self.prev_start(),
+                    "the CONFIDENCE threshold must be between 0 and 1",
+                ));
+            }
+            Ok(Op::ConfidenceOp { threshold: Some(t) })
         }
     }
 

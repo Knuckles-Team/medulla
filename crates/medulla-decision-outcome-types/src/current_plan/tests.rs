@@ -17,6 +17,7 @@ fn current_plan_status_matches_scaffold_contract() {
     assert!(request.validate().is_err());
 }
 
+/// Verifies MEDULLA-DURABLE-KERNEL-R028.5.1: Typed executable plan attachment
 // spec: MEDULLA-DURABLE-KERNEL-R028.5.1
 #[test]
 fn current_plan_task_plan_validation_and_legacy_roundtrip() {

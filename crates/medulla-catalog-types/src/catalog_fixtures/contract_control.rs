@@ -43,6 +43,7 @@ pub fn graph_schema_ops() -> Vec<(&'static str, GraphSchemaOp)> {
                 source_id: "approved:contract-sample".to_string(),
                 contract: repair_contract(),
                 approval_lease_id: "action_approval:contract-sample".to_string(),
+                expected_digest: None,
                 if_composed_digest: Some(medulla_types::test_support::wave::digest_text(0xd3)),
             },
         ),

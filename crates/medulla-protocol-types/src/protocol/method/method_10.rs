@@ -112,6 +112,13 @@ $($variants)*
         op: Box<medulla_catalog_types::connector_pack::ConnectorPackOp>,
     },
 
+    /// Workflow registry (MEDULLA-DECISION-ENGINE-R166.3): `Register` stores one
+    /// registration as a tenant graph node through the mutation gateway; `Read`
+    /// returns one registration by exact identity. Not a `Decide` stage.
+    WorkflowRegistry {
+        op: Box<medulla_work_types::orchestration::workflows::WorkflowRegistryOp>,
+    },
+
     /// RF-ADR-009 native ingestion authority. Resolves the exact Connector
     /// Manifest mapping under the verified tenant, admits raw records to CAS,
     /// maps them and atomically commits graph material, provenance and cursor.

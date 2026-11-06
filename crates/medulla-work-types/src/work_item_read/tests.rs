@@ -272,3 +272,38 @@ fn effect_records_round_trip_with_golden_digest() {
         serde_json::from_value(serde_json::to_value(&request).expect("ser")).expect("de");
     assert_eq!(request_back, request);
 }
+
+// spec: MEDULLA-DURABLE-KERNEL-R820.4
+#[test]
+fn admitted_request_refusals_are_registered_codes() {
+    let bytes = b"{\"call\":\"send\"}".to_vec();
+    let request = AdmittedRequest {
+        request_ref: AdmittedRequest::request_ref_of(&bytes),
+        tenant: "t".into(),
+        session_ref: "s".into(),
+        payload_digest: "blob:p".into(),
+        bytes: bytes.clone(),
+    };
+    let record = request.admit().expect("admits");
+    assert_eq!(record.request_ref, request.request_ref);
+    assert_eq!(record.payload_ref, "blob:p");
+
+    let tampered = AdmittedRequest {
+        bytes: b"{\"call\":\"drop\"}".to_vec(),
+        ..request.clone()
+    };
+    let error = tampered.admit().unwrap_err();
+    assert!(
+        error.starts_with("ADMITTED_REQUEST_DIGEST_MISMATCH:"),
+        "{error}"
+    );
+
+    let big = vec![0u8; MAX_ADMITTED_REQUEST_BYTES + 1];
+    let oversized = AdmittedRequest {
+        request_ref: AdmittedRequest::request_ref_of(&big),
+        bytes: big,
+        ..request
+    };
+    let error = oversized.admit().unwrap_err();
+    assert!(error.starts_with("ADMITTED_REQUEST_TOO_LARGE:"), "{error}");
+}

@@ -533,6 +533,14 @@ $($variants)*
         agent_id: String,
     },
 
+    /// Read one WorkItem's delegation record (MEDULLA-IDENTITY-R701): its
+    /// current standing, and whether the principal is active and holds the tool
+    /// scope. Resolves under the verified request tenant; an unknown id and a
+    /// foreign-tenant id both refuse `DELEGATION_UNKNOWN`. Gated `identity:read`.
+    GetDelegationRecord {
+        work_item_id: String,
+    },
+
     /// Would `agent_id`'s own request of `access` on the REQUEST graph be
     /// admitted right now? Answers from the same isolation/RBAC decision the
     /// engine applies to that principal's requests, so a service that acts on
@@ -681,6 +689,15 @@ $($variants)*
     FinanceRecordGet {
         kind: medulla_types::wire::FinanceRecordKind,
         record_id: String,
+    },
+
+    // ── Served finance alerts (MEDULLA-FINANCE-PRIMITIVES-R011.2.3) ──────────
+    /// Raise one finance alert: the envelope is validated, then its event node and
+    /// its `finance.events.v1` outbox fact commit in one owner transaction. The
+    /// door takes no decision; callers evaluate the alert conditions.
+    #[cfg(feature = "finance")]
+    FinanceAlertRaise {
+        envelope: medulla_types::finance_event_envelope::FinanceAlertEnvelope,
     },
         ]);
     };

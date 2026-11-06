@@ -26,6 +26,13 @@ pub fn admits_repository_text(value: &str) -> bool {
     material::validate_repository_text(value).is_ok()
 }
 
+/// Whether `value` passes the caller-attested material rule. Engine producers
+/// that commit through the public envelope method use it to redact a value
+/// before lowering instead of having the whole envelope refused.
+pub fn admits_attested_text(value: &str) -> bool {
+    material::validate_attested_text(value).is_ok()
+}
+
 pub const CHANGE_ENVELOPE_VERSION: u16 = 1;
 
 /// Server cap on the number of envelopes one `ApplyChangeEnvelopes` batch may carry.

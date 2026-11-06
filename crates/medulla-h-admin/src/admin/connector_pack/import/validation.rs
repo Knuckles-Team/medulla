@@ -362,6 +362,14 @@ impl<'a> IndexValidator<'a> {
         if let Err(detail) = validate_ontology_imports(text, &entry.uri, &self.ontology_iris) {
             self.reject(PackViolationCode::OntologyInvalid, Some(&entry.uri), detail);
         } else {
+            #[cfg(feature = "rdf")]
+            for detail in super::nutrition::nutrient_amount_violations(text) {
+                self.reject(
+                    PackViolationCode::NutrientIdUnmapped,
+                    Some(&entry.uri),
+                    &detail,
+                );
+            }
             self.ontologies.push(text.to_string());
         }
     }
@@ -637,6 +645,8 @@ fn json_kind(kind: PackEntryKind) -> bool {
             | PackEntryKind::Prompt
             | PackEntryKind::ModelProfile
             | PackEntryKind::A2aCard
+            | PackEntryKind::Crosswalk
+            | PackEntryKind::ConceptPath
     )
 }
 
@@ -656,6 +666,8 @@ fn text_kind(kind: PackEntryKind) -> bool {
             | PackEntryKind::Resource
             | PackEntryKind::ResourceTemplate
             | PackEntryKind::SkillFile
+            | PackEntryKind::Crosswalk
+            | PackEntryKind::ConceptPath
     )
 }
 

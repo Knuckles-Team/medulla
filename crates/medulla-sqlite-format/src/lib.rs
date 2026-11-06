@@ -21,9 +21,11 @@ mod record;
 mod schema;
 mod value;
 mod varint;
+mod wal;
 mod writer;
 
-pub use error::{Error, Result};
+pub use error::{Error, Result, SqliteReadRefusal};
 pub use reader::Reader;
 pub use value::{ColumnDef, Row, Value};
+pub use wal::WalSnapshot;
 pub use writer::Writer;

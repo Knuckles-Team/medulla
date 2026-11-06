@@ -320,6 +320,10 @@ async fn run_inner() -> Result<(), Box<dyn std::error::Error>> {
     // any listener binds; a refusal exits non-zero.
     match medulla_server_api::knob_config::load_knobs(&args.knob, |name| std::env::var(name).ok()) {
         Ok(knobs) => {
+            #[cfg(feature = "federation")]
+            medulla_federation::sqlite_foreign::set_busy_timeout_ms(
+                knobs.foreign_sqlite_busy_timeout_ms,
+            );
             // MEDULLA-DURABLE-KERNEL-R800.3: the served answer cache admits answers by the
             // loaded `kvcache.min_worth` and `kvcache.answer_max_bytes`, before any graph
             // builds its cache.
@@ -332,6 +336,15 @@ async fn run_inner() -> Result<(), Box<dyn std::error::Error>> {
             );
             medulla_server_api::knob_config::install(knobs)
         }
+        Err(refusal) => {
+            eprintln!("error: {refusal}");
+            std::process::exit(2);
+        }
+    }
+    match medulla_server_api::knob_config::load_allowed_roots(&args.knob, |name| {
+        std::env::var(name).ok()
+    }) {
+        Ok(roots) => medulla_server_api::knob_config::install_allowed_roots(roots),
         Err(refusal) => {
             eprintln!("error: {refusal}");
             std::process::exit(2);
@@ -522,6 +535,7 @@ async fn spawn_optional_service_listeners(
     recover_durable_catalog(state).await?;
     medulla_h_admin::connector_pack_projection::spawn(state.clone());
     medulla_h_ingest::repository_enrichment_worker::spawn(state.clone());
+    medulla_h_ingest::repository_index::enrich::spawn(state.clone())?;
     #[cfg(feature = "epistemic-tms")]
     medulla_h_retrieve::reasoning_projection::spawn(state.clone());
     // Sampled authorization denials reach the identity audit trail.

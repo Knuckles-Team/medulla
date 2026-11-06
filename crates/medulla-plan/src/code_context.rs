@@ -31,7 +31,7 @@ pub struct CodeContextRequest {
     /// Walk depth in hops; `None` takes `knob code.context_depth`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub depth: Option<u32>,
-    /// Row cap; `None` takes the walk cap.
+    /// Visited-node cap; `None` takes `knob code.max_nodes`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub limit: Option<u32>,
 }
@@ -68,8 +68,11 @@ pub struct RankedHub {
 #[serde(deny_unknown_fields)]
 pub struct CodeContextAnswer {
     pub status: CodeContextStatus,
+    /// The resolved anchor; empty when `status` is `ambiguous`.
     pub anchors: Vec<String>,
+    /// Symbols that reach the anchor (callers), by hop count.
     pub usages: Vec<CodeNode>,
+    /// Symbols the anchor reaches (callees), by hop count.
     pub impact: Vec<CodeNode>,
     pub hubs: Vec<RankedHub>,
     /// Candidate anchors when `status` is `ambiguous`.
@@ -77,7 +80,7 @@ pub struct CodeContextAnswer {
 }
 
 /// The closed set of operations causal stages.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum OpsCausalStage {
     Change,
@@ -107,7 +110,7 @@ pub struct SymptomDiagnosis {
 }
 
 /// A directed caller-to-callee edge in a resolved code subgraph.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CodeEdge {
     pub caller: String,
     pub callee: String,
@@ -187,60 +190,6 @@ pub struct CodeIndex {
     pub missing_repositories: Vec<String>,
 }
 
-/// One code-context request.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CodeContextRequest {
-    pub anchor: String,
-    pub depth: Option<u32>,
-    pub max_nodes: Option<usize>,
-}
-
-/// Answer status.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum CodeContextStatus {
-    Ok,
-    Ambiguous,
-    Degraded,
-}
-
-impl CodeContextStatus {
-    pub fn as_str(self) -> &'static str {
-        match self {
-            Self::Ok => "ok",
-            Self::Ambiguous => "ambiguous",
-            Self::Degraded => "degraded",
-        }
-    }
-}
-
-/// A visited symbol and its hop count from the anchor.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ContextNode {
-    pub symbol: String,
-    pub hops: u32,
-}
-
-/// A hub with its centrality inputs.
-#[derive(Debug, Clone, PartialEq)]
-pub struct ContextHub {
-    pub symbol: String,
-    pub in_degree: usize,
-    pub out_degree: usize,
-    pub score: f64,
-}
-
-/// The code-context answer; evidence is inline.
-#[derive(Debug, Clone, PartialEq)]
-pub struct CodeContextAnswer {
-    pub status: CodeContextStatus,
-    pub anchor: Option<String>,
-    pub candidates: Vec<String>,
-    pub missing_repositories: Vec<String>,
-    pub nodes: Vec<ContextNode>,
-    pub edges: Vec<CodeEdge>,
-    pub hubs: Vec<ContextHub>,
-}
-
 /// Typed refusals of the code-context methods.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CodeContextError {
@@ -298,12 +247,9 @@ pub fn code_context(
     }
     let depth = depth.max(1);
     let max_nodes = request
-        .max_nodes
-        .unwrap_or(DEFAULT_MAX_NODES)
+        .limit
+        .map_or(DEFAULT_MAX_NODES, |limit| limit as usize)
         .clamp(MIN_MAX_NODES, MAX_MAX_NODES);
-    let mut missing = index.missing_repositories.clone();
-    missing.sort();
-    missing.dedup();
     let candidates = resolve_anchor(index, &request.anchor);
     let anchor = match candidates.as_slice() {
         [] => {
@@ -315,111 +261,125 @@ pub fn code_context(
         _ => {
             return Ok(CodeContextAnswer {
                 status: CodeContextStatus::Ambiguous,
-                anchor: None,
-                candidates,
-                missing_repositories: missing,
-                nodes: Vec::new(),
-                edges: Vec::new(),
+                anchors: Vec::new(),
+                usages: Vec::new(),
+                impact: Vec::new(),
                 hubs: Vec::new(),
+                candidates,
             })
         }
     };
 
-    let mut adjacency: BTreeMap<&str, BTreeSet<&str>> = BTreeMap::new();
+    let mut forward: BTreeMap<&str, BTreeSet<&str>> = BTreeMap::new();
+    let mut backward: BTreeMap<&str, BTreeSet<&str>> = BTreeMap::new();
     for edge in &index.edges {
-        adjacency
+        forward
             .entry(edge.caller.as_str())
             .or_default()
             .insert(edge.callee.as_str());
-        adjacency
+        backward
             .entry(edge.callee.as_str())
             .or_default()
             .insert(edge.caller.as_str());
     }
-    let mut hops: BTreeMap<String, u32> = BTreeMap::new();
-    hops.insert(anchor.clone(), 0);
-    let mut queue = VecDeque::from([(anchor.clone(), 0u32)]);
-    'walk: while let Some((symbol, hop)) = queue.pop_front() {
-        if hop >= depth {
-            continue;
-        }
-        for next in adjacency.get(symbol.as_str()).into_iter().flatten() {
-            if hops.contains_key(*next) {
+    let walk = |adjacency: &BTreeMap<&str, BTreeSet<&str>>| -> BTreeMap<String, u32> {
+        let mut hops: BTreeMap<String, u32> = BTreeMap::new();
+        hops.insert(anchor.clone(), 0);
+        let mut queue = VecDeque::from([(anchor.clone(), 0u32)]);
+        'walk: while let Some((symbol, hop)) = queue.pop_front() {
+            if hop >= depth {
                 continue;
             }
-            if hops.len() >= max_nodes {
-                break 'walk;
+            for next in adjacency.get(symbol.as_str()).into_iter().flatten() {
+                if hops.contains_key(*next) {
+                    continue;
+                }
+                if hops.len() >= max_nodes {
+                    break 'walk;
+                }
+                hops.insert((*next).to_string(), hop + 1);
+                queue.push_back(((*next).to_string(), hop + 1));
             }
-            hops.insert((*next).to_string(), hop + 1);
-            queue.push_back(((*next).to_string(), hop + 1));
         }
-    }
+        hops
+    };
+    let want_usages = matches!(request.question, CodeQuestion::How | CodeQuestion::Usage);
+    let want_impact = matches!(request.question, CodeQuestion::How | CodeQuestion::Impact);
+    let callers = if want_usages {
+        walk(&backward)
+    } else {
+        BTreeMap::new()
+    };
+    let callees = if want_impact {
+        walk(&forward)
+    } else {
+        BTreeMap::new()
+    };
 
+    let visited: BTreeSet<&str> = callers
+        .keys()
+        .chain(callees.keys())
+        .map(String::as_str)
+        .collect();
     let mut edges: Vec<CodeEdge> = index
         .edges
         .iter()
-        .filter(|edge| hops.contains_key(&edge.caller) && hops.contains_key(&edge.callee))
+        .filter(|edge| {
+            visited.contains(edge.caller.as_str()) && visited.contains(edge.callee.as_str())
+        })
         .cloned()
         .collect();
     edges.sort_by(|a, b| (&a.caller, &a.callee).cmp(&(&b.caller, &b.callee)));
     edges.dedup();
-    let mut in_degree: BTreeMap<&str, usize> = BTreeMap::new();
-    let mut out_degree: BTreeMap<&str, usize> = BTreeMap::new();
+    let mut in_degree: BTreeMap<&str, u32> = BTreeMap::new();
+    let mut out_degree: BTreeMap<&str, u32> = BTreeMap::new();
     for edge in &edges {
         *out_degree.entry(edge.caller.as_str()).or_default() += 1;
         *in_degree.entry(edge.callee.as_str()).or_default() += 1;
     }
-    let hubs = rank_hubs(&edges, hops.len())
+    let hubs = rank_hubs(&edges, visited.len())
         .into_iter()
-        .map(|hub| ContextHub {
+        .map(|hub| RankedHub {
             in_degree: in_degree.get(hub.symbol.as_str()).copied().unwrap_or(0),
             out_degree: out_degree.get(hub.symbol.as_str()).copied().unwrap_or(0),
             score: hub.centrality,
             symbol: hub.symbol,
         })
         .collect();
-    let mut nodes: Vec<ContextNode> = hops
-        .into_iter()
-        .map(|(symbol, hops)| ContextNode { symbol, hops })
-        .collect();
-    nodes.sort_by(|a, b| a.hops.cmp(&b.hops).then_with(|| a.symbol.cmp(&b.symbol)));
+    let to_nodes = |hops: BTreeMap<String, u32>| -> Vec<CodeNode> {
+        let mut nodes: Vec<CodeNode> = hops
+            .into_iter()
+            .filter(|(symbol, _)| *symbol != anchor)
+            .map(|(symbol, hops)| CodeNode { symbol, hops })
+            .collect();
+        nodes.sort_by(|a, b| a.hops.cmp(&b.hops).then_with(|| a.symbol.cmp(&b.symbol)));
+        nodes
+    };
     Ok(CodeContextAnswer {
-        status: if missing.is_empty() {
+        status: if index.missing_repositories.is_empty() {
             CodeContextStatus::Ok
         } else {
             CodeContextStatus::Degraded
         },
-        anchor: Some(anchor),
-        candidates: Vec::new(),
-        missing_repositories: missing,
-        nodes,
-        edges,
+        anchors: vec![anchor.clone()],
+        usages: to_nodes(callers),
+        impact: to_nodes(callees),
         hubs,
+        candidates: Vec::new(),
     })
 }
 
-/// Causal stage of an operations node, in chain order.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum OpsStage {
-    Change,
-    Deploy,
-    Config,
-    Dependency,
-    Resource,
-    Symptom,
-}
-
 /// Stage by ontology label (`infrastructure-v1.ttl`).
-pub const OPS_STAGE_BY_LABEL: &[(&str, OpsStage)] = &[
-    ("Change", OpsStage::Change),
-    ("Deployment", OpsStage::Deploy),
-    ("ConfigItem", OpsStage::Config),
-    ("Service", OpsStage::Dependency),
-    ("Host", OpsStage::Resource),
-    ("HealthAnomaly", OpsStage::Symptom),
+pub const OPS_STAGE_BY_LABEL: &[(&str, OpsCausalStage)] = &[
+    ("Change", OpsCausalStage::Change),
+    ("Deployment", OpsCausalStage::Deploy),
+    ("ConfigItem", OpsCausalStage::Config),
+    ("Service", OpsCausalStage::Dependency),
+    ("Host", OpsCausalStage::Resource),
+    ("HealthAnomaly", OpsCausalStage::Symptom),
 ];
 
-fn stage_of(label: &str) -> Option<OpsStage> {
+fn stage_of(label: &str) -> Option<OpsCausalStage> {
     OPS_STAGE_BY_LABEL
         .iter()
         .find(|(name, _)| *name == label)
@@ -450,31 +410,6 @@ pub struct OpsLink {
     pub evidence_ids: Vec<String>,
 }
 
-/// A chain entry with its causal stage.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CausalNode {
-    pub id: String,
-    pub stage: OpsStage,
-    pub at_ms: i64,
-    pub hops: u32,
-}
-
-/// A walked link with the evidence ids of the edge.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CausalLink {
-    pub from: String,
-    pub to: String,
-    pub evidence_ids: Vec<String>,
-}
-
-/// The diagnosis of one symptom.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct SymptomDiagnosis {
-    pub symptom: String,
-    pub chain: Vec<CausalNode>,
-    pub links: Vec<CausalLink>,
-}
-
 /// Walk `dependsOn` and change links backward from a `HealthAnomaly` symptom
 /// to depth 3 and order the chain by stage, then time.
 pub fn diagnose(
@@ -485,14 +420,15 @@ pub fn diagnose(
     let by_id: BTreeMap<&str, &OpsNode> = nodes.iter().map(|n| (n.id.as_str(), n)).collect();
     let Some(start) = by_id
         .get(symptom)
-        .filter(|node| stage_of(&node.label) == Some(OpsStage::Symptom))
+        .filter(|node| stage_of(&node.label) == Some(OpsCausalStage::Symptom))
     else {
         return Err(CodeContextError::AnchorUnknown {
             anchor: symptom.to_string(),
         });
     };
-    let mut hops: BTreeMap<&str, u32> = BTreeMap::from([(start.id.as_str(), 0)]);
-    let mut walked: Vec<CausalLink> = Vec::new();
+    // node id -> (hops, relationship and evidence of the link that reached it)
+    let mut reached: BTreeMap<&str, (u32, &'static str, Vec<String>)> =
+        BTreeMap::from([(start.id.as_str(), (0, "symptom", Vec::new()))]);
     let mut queue = VecDeque::from([(start.id.as_str(), 0u32)]);
     while let Some((id, hop)) = queue.pop_front() {
         if hop >= DIAGNOSE_DEPTH {
@@ -502,44 +438,45 @@ pub fn diagnose(
             let Some(cause) = by_id.get(link.from.as_str()) else {
                 continue;
             };
-            if stage_of(&cause.label).is_none() {
+            if stage_of(&cause.label).is_none() || reached.contains_key(cause.id.as_str()) {
                 continue;
             }
-            walked.push(CausalLink {
-                from: link.from.clone(),
-                to: link.to.clone(),
-                evidence_ids: link.evidence_ids.clone(),
-            });
-            if !hops.contains_key(cause.id.as_str()) {
-                hops.insert(cause.id.as_str(), hop + 1);
-                queue.push_back((cause.id.as_str(), hop + 1));
-            }
+            let relationship = match link.kind {
+                OpsLinkKind::DependsOn => "depends_on",
+                OpsLinkKind::Change => "change",
+            };
+            reached.insert(
+                cause.id.as_str(),
+                (hop + 1, relationship, link.evidence_ids.clone()),
+            );
+            queue.push_back((cause.id.as_str(), hop + 1));
         }
     }
-    let mut chain: Vec<CausalNode> = hops
+    let mut ordered: Vec<(OpsCausalStage, i64, CausalLink)> = reached
         .iter()
-        .filter_map(|(id, hop)| {
+        .filter_map(|(id, (_, relationship, evidence_ids))| {
             let node = by_id.get(id)?;
-            Some(CausalNode {
-                id: node.id.clone(),
-                stage: stage_of(&node.label)?,
-                at_ms: node.at_ms,
-                hops: *hop,
-            })
+            let stage = stage_of(&node.label)?;
+            Some((
+                stage,
+                node.at_ms,
+                CausalLink {
+                    stage,
+                    node_id: node.id.clone(),
+                    relationship: (*relationship).to_string(),
+                    evidence_ids: evidence_ids.clone(),
+                },
+            ))
         })
         .collect();
-    chain.sort_by(|a, b| {
-        a.stage
-            .cmp(&b.stage)
-            .then(a.at_ms.cmp(&b.at_ms))
-            .then_with(|| a.id.cmp(&b.id))
+    ordered.sort_by(|a, b| {
+        a.0.cmp(&b.0)
+            .then(a.1.cmp(&b.1))
+            .then_with(|| a.2.node_id.cmp(&b.2.node_id))
     });
-    walked.sort_by(|a, b| (&a.from, &a.to).cmp(&(&b.from, &b.to)));
-    walked.dedup();
     Ok(SymptomDiagnosis {
         symptom: symptom.to_string(),
-        chain,
-        links: walked,
+        chain: ordered.into_iter().map(|(_, _, link)| link).collect(),
     })
 }
 
@@ -685,28 +622,27 @@ mod tests {
         };
         let request = |depth| CodeContextRequest {
             anchor: "main".into(),
+            question: CodeQuestion::Impact,
             depth,
-            max_nodes: None,
+            limit: None,
         };
         let answer = code_context(&index, &request(Some(2))).unwrap();
         assert_eq!(answer.status, CodeContextStatus::Ok);
-        assert_eq!(answer.anchor.as_deref(), Some("a::main"));
+        assert_eq!(answer.anchors, vec!["a::main".to_string()]);
+        assert!(answer.usages.is_empty());
         let visited: Vec<_> = answer
-            .nodes
+            .impact
             .iter()
             .map(|n| (n.symbol.as_str(), n.hops))
             .collect();
-        assert_eq!(
-            visited,
-            vec![("a::main", 0), ("b::parse", 1), ("c::normalize", 2)]
-        );
+        assert_eq!(visited, vec![("b::parse", 1), ("c::normalize", 2)]);
         assert_eq!(answer.hubs[0].symbol, "b::parse");
         assert_eq!(
             (answer.hubs[0].in_degree, answer.hubs[0].out_degree),
             (1, 1)
         );
         let default = code_context(&index, &request(None)).unwrap();
-        assert_eq!(default.nodes.len(), 4);
+        assert_eq!(default.impact.len(), 3);
         let hubs: Vec<_> = default.hubs.iter().map(|h| h.symbol.as_str()).collect();
         assert_eq!(&hubs[..2], &["b::parse", "c::normalize"]);
         assert_eq!(
@@ -715,6 +651,7 @@ mod tests {
         );
     }
 
+    /// Verifies MEDULLA-FEDERATED-QUERY-R654.7: Behavior: symptom diagnosis
     // spec: MEDULLA-FEDERATED-QUERY-R654.7
     #[test]
     fn diagnose_orders_chain_by_stage() {
@@ -748,19 +685,23 @@ mod tests {
         let chain: Vec<_> = diagnosis
             .chain
             .iter()
-            .map(|n| (n.id.as_str(), n.stage))
+            .map(|n| (n.node_id.as_str(), n.stage))
             .collect();
         assert_eq!(
             chain,
             vec![
-                ("chg", OpsStage::Change),
-                ("deploy", OpsStage::Deploy),
-                ("svc", OpsStage::Dependency),
-                ("host", OpsStage::Resource),
-                ("anomaly", OpsStage::Symptom),
+                ("chg", OpsCausalStage::Change),
+                ("deploy", OpsCausalStage::Deploy),
+                ("svc", OpsCausalStage::Dependency),
+                ("host", OpsCausalStage::Resource),
+                ("anomaly", OpsCausalStage::Symptom),
             ]
         );
-        assert!(diagnosis.links.iter().all(|l| l.evidence_ids.len() == 1));
+        assert!(diagnosis
+            .chain
+            .iter()
+            .filter(|l| l.stage != OpsCausalStage::Symptom)
+            .all(|l| l.evidence_ids.len() == 1));
         assert!(diagnose(&nodes, &links, "svc").is_err());
     }
 }

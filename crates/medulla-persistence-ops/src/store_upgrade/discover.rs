@@ -14,6 +14,12 @@ use medulla_persistence::durable_stores::{bundled_store_authority, BackupScope, 
 #[cfg(feature = "query")]
 pub(super) const SQL_PHYSICAL_STORE: &str = "eg-query:sql-user-tables";
 
+/// The directory and physical-identity prefix of the tenant semantic index
+/// owner files. Restated, as [`SQL_PHYSICAL_STORE`] is: each file's identity
+/// is this prefix and its own file name, so it has no one static identity.
+pub(super) const SEMANTIC_INDEX_DIR: &str = "semantic-index";
+pub(super) const SEMANTIC_TENANT_PHYSICAL_PREFIX: &str = "eg-core:semantic-index:v3";
+
 /// One owner store file found under the data directory.
 pub(super) struct StoreFile {
     /// Path relative to the data directory, as reported to the operator.
@@ -46,6 +52,7 @@ pub(super) fn discover(data_dir: &Path) -> Result<Vec<StoreFile>, String> {
     let mut stores = shard_files(data_dir)?;
     stores.extend(named_files(data_dir));
     stores.extend(sql_catalog_files(data_dir)?);
+    stores.extend(semantic_index_files(data_dir)?);
     Ok(stores)
 }
 
@@ -62,6 +69,44 @@ pub(super) fn served_identity(layout: OwnerLayout) -> Option<&'static str> {
             .find(|(_, declared)| *declared == layout)
             .map(|(identity, _)| identity),
     }
+}
+
+/// The physical identity the server opens `store` under as a `layout` store.
+/// A semantic index tenant file's identity names the file itself.
+pub(super) fn store_identity(store: &StoreFile, layout: OwnerLayout) -> Option<String> {
+    if layout == OwnerLayout::SemanticIndex {
+        let file_name = store.path.file_name()?.to_str()?;
+        return Some(format!("{SEMANTIC_TENANT_PHYSICAL_PREFIX}:{file_name}"));
+    }
+    served_identity(layout).map(str::to_string)
+}
+
+/// Every tenant semantic index owner file, by file name.
+fn semantic_index_files(data_dir: &Path) -> Result<Vec<StoreFile>, String> {
+    let directory = data_dir.join(SEMANTIC_INDEX_DIR);
+    let entries = match std::fs::read_dir(&directory) {
+        Ok(entries) => entries,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
+        Err(error) => return Err(format!("read semantic index directory failed: {error}")),
+    };
+    let mut paths = Vec::new();
+    for entry in entries {
+        let path = entry
+            .map_err(|error| format!("read semantic index entry failed: {error}"))?
+            .path();
+        let is_tenant_file = path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .is_some_and(|name| name.starts_with("semantic_tenant-") && name.ends_with(".redb"));
+        if is_regular_file(&path) && is_tenant_file {
+            paths.push(path);
+        }
+    }
+    paths.sort();
+    Ok(paths
+        .into_iter()
+        .map(|path| StoreFile::new(data_dir, path, Some(OwnerLayout::SemanticIndex)))
+        .collect())
 }
 
 fn is_regular_file(path: &Path) -> bool {

@@ -237,6 +237,10 @@ knobs! {
     federated_raw_scan_cost_per_kib: f64 = "federated.raw_scan_cost_per_kib", F64(1.0), [1.0, 100.0], "cost units per KiB", Tunable;
     /// Interactive query node budget.
     query_interactive_node_budget: u64 = "query.interactive_node_budget", U64(100_000), [1_000, 10_000_000], "nodes", Tunable;
+    /// Context facts kept per node.
+    context_facts_max_facts_per_node: u64 = "context_facts.max_facts_per_node", U64(16), [1, 256], "facts", Tunable;
+    /// Bytes per token in the context facts estimate.
+    context_facts_bytes_per_token: u64 = "context_facts.bytes_per_token", U64(4), [2, 8], "bytes", Tunable;
     /// Ingest link minimum shared mentions.
     ingest_link_min_shared_mentions: u64 = "ingest.link_min_shared_mentions", U64(2), [1, 20], "count", Tunable;
     /// Media blob size cap.
@@ -257,6 +261,10 @@ knobs! {
     pattern_shadow_ratio_min: f64 = "pattern.shadow_ratio_min", F64(2.0), [1.5, 4.0], "ratio", Tunable;
     /// Opposite-shadow ceiling as a fraction of the range.
     pattern_wick_max: f64 = "pattern.wick_max", F64(0.1), [0.0, 0.3], "ratio", Tunable;
+    /// Read-audit queue depth: a full queue refuses the read (MEDULLA-IDENTITY-R610.5).
+    identity_read_audit_queue_depth: u64 = "identity.read_audit_queue_depth", U64(4_096), [64, 65_536], "entries", Tunable;
+    /// Metric look-back of the tenant telemetry snapshot read (MEDULLA-ORCH-VOCAB-R804).
+    telemetry_snapshot_window: u64 = "telemetry.snapshot_window", U64(300), [10, 86_400], "seconds", Tunable;
     /// Usage ledger batch size cap.
     usage_max_batch: u64 = "usage.max_batch", U64(1_000), [1, 10_000], "records", Tunable;
     /// OTLP log batch record cap (MEDULLA-CONTRACT-R050).
@@ -291,6 +299,18 @@ knobs! {
     claims_prior_process: u64 = "claims.prior_process", U64(500_000), [0, 1_000_000], "ppm", Tunable;
     /// Claim log-odds floor to enter `supported`.
     claims_support_min_micro: i64 = "claims.support_min_micro", I64(1_000_000), [0, 6_000_000], "micro-nats", Tunable;
+    /// Longest wait for a stable WAL snapshot of an attached SQLite file (MEDULLA-UNIFIED-DATA-PLANE-R015.2.2.1).
+    foreign_sqlite_busy_timeout_ms: u64 = "foreign.sqlite.busy_timeout_ms", U64(1_000), [0, 60_000], "ms", Tunable;
+    /// Watermark poll interval of an attached SQLite file (MEDULLA-UNIFIED-DATA-PLANE-R015.2.2.2).
+    foreign_sqlite_poll_interval_ms: u64 = "foreign.sqlite.poll_interval_ms", U64(5_000), [100, 3_600_000], "ms", Tunable;
+    /// Hop bound of the reverse `DEPENDS_ON` walk of an ecosystem finding (MEDULLA-SUPPLY-VOCAB-R009.3).
+    ecosystem_max_dependency_depth: u64 = "ecosystem.max_dependency_depth", U64(8), [1, 64], "hops", Tunable;
+    /// Largest n-ary link-prediction tuple (MEDULLA-FEDERATED-QUERY-R086.100.1).
+    graphlearn_nary_max_arity: u64 = "graphlearn.nary_max_arity", U64(6), [3, 12], "members", Tunable;
+    /// Most candidate tuples one n-ary link-prediction request carries.
+    graphlearn_nary_max_candidates: u64 = "graphlearn.nary_max_candidates", U64(1_000), [1, 100_000], "tuples", Tunable;
+    /// Lowest probability an n-ary hypothesis may score and still be returned.
+    graphlearn_nary_min_score: f64 = "graphlearn.nary_min_score", F64(0.5), [0.0, 1.0], "probability", Tunable;
 }
 
 fn refusal(code: ServerErrorCode, knob: &str, detail: String) -> KnobRefusal {
@@ -355,7 +375,8 @@ pub fn load_knobs(
             ));
         };
         let name = name.trim();
-        if !KNOB_TABLE.iter().any(|spec| spec.name == name) {
+        if name != FOREIGN_SQLITE_ALLOWED_ROOTS && !KNOB_TABLE.iter().any(|spec| spec.name == name)
+        {
             return Err(refusal(
                 ServerErrorCode::KnobUnknown,
                 name,
@@ -365,6 +386,55 @@ pub fn load_knobs(
         cli.push((name.to_string(), value.to_string()));
     }
     resolve_all(&cli, &env)
+}
+
+/// The list-valued server config key naming the directories an attached SQLite file may
+/// live under (MEDULLA-UNIFIED-DATA-PLANE-R015.2.2.3). It is a path list, not a scalar, so
+/// it is read here beside the scalar table; the default is the empty list, which refuses
+/// every path.
+pub const FOREIGN_SQLITE_ALLOWED_ROOTS: &str = "foreign.sqlite.allowed_roots";
+
+/// Read `foreign.sqlite.allowed_roots`: the last `--knob` for the key, else
+/// `MEDULLA_FOREIGN_SQLITE_ALLOWED_ROOTS`, split on `:`. Every entry must be an absolute
+/// path; a relative one refuses startup with `KNOB_INVALID`.
+pub fn load_allowed_roots(
+    args: &[String],
+    env: impl Fn(&str) -> Option<String>,
+) -> Result<Vec<std::path::PathBuf>, KnobRefusal> {
+    let from_cli = args.iter().rev().find_map(|arg| {
+        let (name, value) = arg.split_once('=')?;
+        (name.trim() == FOREIGN_SQLITE_ALLOWED_ROOTS).then(|| value.to_string())
+    });
+    let raw = from_cli.or_else(|| env("MEDULLA_FOREIGN_SQLITE_ALLOWED_ROOTS"));
+    let mut roots = Vec::new();
+    for entry in raw.iter().flat_map(|raw| raw.split(':')) {
+        if entry.trim().is_empty() {
+            continue;
+        }
+        let path = std::path::PathBuf::from(entry.trim());
+        if !path.is_absolute() {
+            return Err(refusal(
+                ServerErrorCode::KnobInvalid,
+                FOREIGN_SQLITE_ALLOWED_ROOTS,
+                format!("root {entry:?} is not an absolute path"),
+            ));
+        }
+        roots.push(path);
+    }
+    Ok(roots)
+}
+
+static ALLOWED_ROOTS: OnceLock<Vec<std::path::PathBuf>> = OnceLock::new();
+
+/// Hand the startup-loaded SQLite roots to the registration gate; the first install wins.
+pub fn install_allowed_roots(roots: Vec<std::path::PathBuf>) {
+    let _ = ALLOWED_ROOTS.set(roots);
+}
+
+/// The roots an attached SQLite file may live under; empty until installed, so every
+/// path is refused.
+pub fn allowed_roots() -> &'static [std::path::PathBuf] {
+    ALLOWED_ROOTS.get().map_or(&[], Vec::as_slice)
 }
 
 static INSTALLED: OnceLock<KnobConfig> = OnceLock::new();

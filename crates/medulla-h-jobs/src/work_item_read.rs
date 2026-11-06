@@ -71,6 +71,10 @@ pub enum WorkItemRead {
     },
     /// EH-348: one page of Gaps.
     Gaps(medulla_work_types::work_market::GapListRequest),
+    /// MEDULLA-DURABLE-KERNEL-R820.3: the receipt of one attempt.
+    EffectReceipt(medulla_work_types::work_item_read::EffectRecordKey),
+    /// MEDULLA-DURABLE-KERNEL-R820.3: the admitted request of one attempt.
+    AdmittedRequest(medulla_work_types::work_item_read::EffectRecordKey),
 }
 
 impl WorkItemRead {
@@ -89,6 +93,7 @@ impl WorkItemRead {
             Self::ControlLeases(request) => &request.tenant,
             Self::ControlLease { tenant, .. } | Self::Gap { tenant, .. } => tenant,
             Self::Gaps(request) => &request.tenant,
+            Self::EffectReceipt(key) | Self::AdmittedRequest(key) => &key.tenant,
         }
     }
 }
@@ -217,6 +222,16 @@ async fn serve_native(
         }
         WorkItemRead::Gaps(request) => {
             ResultPayload::of::<GapList>(backend.list_gaps(graph, request).await?)
+        }
+        WorkItemRead::EffectReceipt(key) => {
+            ResultPayload::of::<
+                medulla_protocol_types::result_contract::coordination::GetEffectReceipt,
+            >(backend.read_effect_receipt(graph, key).await?)
+        }
+        WorkItemRead::AdmittedRequest(key) => {
+            ResultPayload::of::<
+                medulla_protocol_types::result_contract::coordination::GetAdmittedRequest,
+            >(backend.read_admitted_request(graph, key).await?)
         }
     }
 }

@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 import multiprocessing
 import os
+import platform
 import signal
 import subprocess
 import sys
@@ -179,12 +180,24 @@ def repeat_count() -> int:
     return int(raw)
 
 
+def revision() -> str:
+    done = subprocess.run(
+        ["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=False
+    )
+    return done.stdout.strip() if done.returncode == 0 else "unknown"
+
+
+def hardware() -> str:
+    return f"{platform.machine()} cpus={os.cpu_count()} {platform.node()}"
+
+
 def repeated(argv: list[str], count: int, seconds: int) -> int:
     root = Path(os.environ.get("RAFT_LOAD_OUTPUT", "target/raft-cluster-runs"))
     root.mkdir(parents=True, exist_ok=True)
     run = Path(tempfile.mkdtemp(prefix="run-", dir=root))
     print(f"Repeated cluster evidence: {run}", flush=True)
     failed = 0
+    rev, hw = revision(), hardware()
     with (run / "results.jsonl").open("w") as results:
         for repetition in range(1, repeat_count() + 1):
             for index, name in enumerate(CLUSTER_TESTS):
@@ -196,11 +209,15 @@ def repeated(argv: list[str], count: int, seconds: int) -> int:
                 results.write(
                     json.dumps(
                         {
-                            "repetition": repetition,
+                            "revision": rev,
+                            "command": " ".join([*argv, name]),
+                            "hardware": hw,
+                            "workers": count,
+                            "repeat_index": repetition,
+                            "result": "pass" if rc == 0 else "fail",
+                            "trace": log.name,
                             "test": name,
                             "returncode": rc,
-                            "trace": log.name,
-                            "workers": count,
                         }
                     )
                     + "\n"

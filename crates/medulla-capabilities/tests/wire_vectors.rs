@@ -220,7 +220,7 @@ fn vectors_cover_every_wire_method_and_round_trip() {
         wire_methods().len(),
         "every wire method has a vector"
     );
-    for (domain, rows) in &vectors {
+    for (domain, rows) in vectors.iter() {
         let methods: Vec<&str> = rows
             .iter()
             .filter_map(|row| row["method"].as_str())
@@ -232,66 +232,77 @@ fn vectors_cover_every_wire_method_and_round_trip() {
     }
 }
 
+/// Verifies MEDULLA-CONTRACT-R001.3.1: Wire vectors for the cluster method domain
 // spec: MEDULLA-CONTRACT-R001.3.1
 #[test]
 fn domain_cluster_vectors_round_trip() {
     check_domain("cluster");
 }
 
+/// Verifies MEDULLA-CONTRACT-R001.3.2: Wire vectors for the compute method domain
 // spec: MEDULLA-CONTRACT-R001.3.2
 #[test]
 fn domain_compute_vectors_round_trip() {
     check_domain("compute");
 }
 
+/// Verifies MEDULLA-CONTRACT-R001.3.3: Wire vectors for the coordination method domain
 // spec: MEDULLA-CONTRACT-R001.3.3
 #[test]
 fn domain_coordination_vectors_round_trip() {
     check_domain("coordination");
 }
 
+/// Verifies MEDULLA-CONTRACT-R001.3.4: Wire vectors for the graph method domain
 // spec: MEDULLA-CONTRACT-R001.3.4
 #[test]
 fn domain_graph_vectors_round_trip() {
     check_domain("graph");
 }
 
+/// Verifies MEDULLA-CONTRACT-R001.3.5: Wire vectors for the ingestion method domain
 // spec: MEDULLA-CONTRACT-R001.3.5
 #[test]
 fn domain_ingestion_vectors_round_trip() {
     check_domain("ingestion");
 }
 
+/// Verifies MEDULLA-CONTRACT-R001.3.6: Wire vectors for the messaging method domain
 // spec: MEDULLA-CONTRACT-R001.3.6
 #[test]
 fn domain_messaging_vectors_round_trip() {
     check_domain("messaging");
 }
 
+/// Verifies MEDULLA-CONTRACT-R001.3.7: Wire vectors for the query method domain
 // spec: MEDULLA-CONTRACT-R001.3.7
 #[test]
 fn domain_query_vectors_round_trip() {
     check_domain("query");
 }
 
+/// Verifies MEDULLA-CONTRACT-R001.3.8: Wire vectors for the reasoning method domain
 // spec: MEDULLA-CONTRACT-R001.3.8
 #[test]
 fn domain_reasoning_vectors_round_trip() {
     check_domain("reasoning");
 }
 
+/// Verifies MEDULLA-CONTRACT-R001.3.9: Wire vectors for the security method domain
 // spec: MEDULLA-CONTRACT-R001.3.9
 #[test]
 fn domain_security_vectors_round_trip() {
     check_domain("security");
 }
 
+/// Verifies MEDULLA-CONTRACT-R001.3.10: Wire vectors for the storage method domain
 // spec: MEDULLA-CONTRACT-R001.3.10
 #[test]
 fn domain_storage_vectors_round_trip() {
     check_domain("storage");
 }
 
+/// Verifies MEDULLA-CONTRACT-R001.3.11: Wire vectors for the transactions method domain
 // spec: MEDULLA-CONTRACT-R001.3.11
 #[test]
 fn domain_transactions_vectors_round_trip() {

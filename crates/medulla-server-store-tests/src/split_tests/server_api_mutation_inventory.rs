@@ -57,6 +57,8 @@ fn clustered_mutation_inventory_is_complete() {
     covered.insert("IncidentRecordAnomaly");
     covered.insert("IncidentCorrelate");
     covered.insert("IncidentSetStatus");
+    covered.insert("ActionRegister");
+    covered.insert("ActionSubmit");
 
     let missing: Vec<_> = expected.difference(&covered).copied().collect();
     let stale: Vec<_> = covered.difference(&expected).copied().collect();

@@ -76,7 +76,7 @@ fn classes_page(
         .into_iter()
         .filter(|(position, _)| after.as_ref().is_none_or(|after| *position > after))
         .take(limit + 1)
-        .map(|(position, source_id)| term_view(position, source_id))
+        .map(|(position, source_id)| term_view(position, source_id, sources))
         .collect();
     let next_cursor = (page.len() > limit).then(|| {
         page.truncate(limit);
@@ -97,12 +97,29 @@ fn classes_page(
     })
 }
 
-fn term_view(position: &GraphSchemaTermPosition, source_id: &str) -> GraphSchemaTermView {
+fn term_view(
+    position: &GraphSchemaTermPosition,
+    source_id: &str,
+    sources: &GraphSchemaSources,
+) -> GraphSchemaTermView {
     GraphSchemaTermView {
         iri: position.iri.clone(),
         local_name: term_local_name(&position.iri).to_string(),
         kind: position.kind,
         source_id: source_id.to_string(),
+        ontology_revision: active_ontology_revision(sources, source_id),
+    }
+}
+
+/// The active runtime-ontology revision of `source_id` (MEDULLA-TYPED-PACKS-R103.5).
+/// Only the active revision composes, so a term a later revision dropped is
+/// never listed with an older revision number.
+fn active_ontology_revision(sources: &GraphSchemaSources, source_id: &str) -> Option<u64> {
+    match sources.dynamic.get(source_id).map(|source| &source.origin) {
+        Some(medulla_graph_core::graph::SchemaSourceOrigin::Ontology { revision, .. }) => {
+            Some(*revision)
+        }
+        _ => None,
     }
 }
 

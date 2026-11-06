@@ -18,6 +18,7 @@ enum Route {
     Policy,
     Analytics,
     FinanceRecords,
+    WorkflowRegistry,
     Other,
 }
 
@@ -133,7 +134,14 @@ fn is_analytics(method: &Method) -> bool {
 }
 
 fn is_finance_record(method: &Method) -> bool {
-    matches!(method, Method::FinanceRecordPut { .. })
+    matches!(
+        method,
+        Method::FinanceRecordPut { .. } | Method::FinanceAlertRaise { .. }
+    )
+}
+
+fn is_workflow_registry(method: &Method) -> bool {
+    matches!(method, Method::WorkflowRegistry { .. })
 }
 
 /// A predicate selecting the methods one gateway route owns.
@@ -156,6 +164,7 @@ const ROUTE_MATCHERS: &[(RouteMatcher, Route)] = &[
     (is_policy, Route::Policy),
     (is_analytics, Route::Analytics),
     (is_finance_record, Route::FinanceRecords),
+    (is_workflow_registry, Route::WorkflowRegistry),
 ];
 
 fn route_for(method: &Method) -> Route {
@@ -177,11 +186,16 @@ fn route_handler(route: Route) -> RouteHandler {
         | Route::Lifecycle
         | Route::Import
         | Route::Analytics
-        | Route::FinanceRecords => RouteHandler::Admin,
+        | Route::FinanceRecords
+        | Route::WorkflowRegistry => RouteHandler::Admin,
         #[cfg(any(feature = "shacl", feature = "reasoning"))]
         Route::Policy => RouteHandler::Admin,
         Route::Other => RouteHandler::None,
     }
+}
+
+fn engine_now_ms() -> u64 {
+    medulla_kernel::kernel::dispatch_support::authoritative_now_ms()
 }
 
 pub(super) async fn try_handle(
@@ -191,6 +205,14 @@ pub(super) async fn try_handle(
     plan: &MutationPlan,
     method: &Method,
 ) -> Option<Response> {
+    // MEDULLA-DURABLE-KERNEL-R078: the engine clock overwrites `tx_now` before the
+    // method is logged, so replay reads the logged value.
+    let stamped =
+        match medulla_server_api::mutation_apply::stamp_transaction_time(method, engine_now_ms()) {
+            Ok(stamped) => stamped,
+            Err(refusal) => return Some(Response::err(ctx.req_id, refusal)),
+        };
+    let method = stamped.as_ref().unwrap_or(method);
     let route = route_for(method);
     match route_handler(route) {
         RouteHandler::Core => try_handle_core(ctx, plan, method, route).await,
@@ -238,6 +260,9 @@ async fn try_handle_admin(
         Route::FinanceRecords => {
             super::super::finance_records::handle_record(ctx, tenant_id, method).await
         }
+        Route::WorkflowRegistry => {
+            super::super::workflow_registry::handle_workflow_register(ctx, tenant_id, method).await
+        }
         _ => None,
     }
 }
@@ -276,6 +301,11 @@ async fn try_handle_node_state(
             node_id,
             properties_msgpack,
         } => {
+            if let Some(refused) =
+                super::super::finance_records::refuse_invalid_receipt(ctx.req_id, method)
+            {
+                return Some(refused);
+            }
             let (node_id, properties_msgpack) = (node_id.clone(), properties_msgpack.clone());
             commit_gateway(ctx, plan, method, move |core| {
                 Ok(ResultPayload::Bool(
@@ -546,6 +576,12 @@ async fn try_handle_edges(
                 *tx_now,
             );
             commit_gateway(ctx, plan, method, move |core| {
+                core.check_invalidation_interval(
+                    &source_id,
+                    &target_id,
+                    &relationship,
+                    invalid_at,
+                )?;
                 let n =
                     core.invalidate_edge(&source_id, &target_id, &relationship, invalid_at, tx_now);
                 Ok(ResultPayload::Count(n as u64))

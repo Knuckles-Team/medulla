@@ -494,6 +494,8 @@ pub(crate) fn apply_native_work_item_family_operation(
             command_sequences: &mut tables.graph.command_sequences,
             committed_at_ms,
             crypto,
+            effect_receipts: &mut tables.graph.effect_receipts,
+            admitted_requests: &mut tables.graph.admitted_requests,
         },
     )?
     .ok_or_else(|| "WorkItem mutation produced no durable result".to_string())?;

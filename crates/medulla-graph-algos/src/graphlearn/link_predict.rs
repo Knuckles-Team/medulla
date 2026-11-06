@@ -114,6 +114,11 @@ pub struct KanLinkModel {
     /// Training AUC recorded at fit time (positives vs sampled negatives).
     #[serde(default)]
     pub train_auc: f64,
+    /// Sorted ids of the nodes present when the model was fitted, so an n-ary
+    /// prediction can tell an unseen member from an observed one. Empty for a
+    /// model fitted without ids (every member then scores as unseen).
+    #[serde(default)]
+    pub fitted_nodes: Vec<String>,
 }
 
 fn default_model_alpha() -> f64 {

@@ -139,8 +139,7 @@ the spec↔ticket link flow (CONCEPT:KG-2.9).""" ;
     management, requirements engineering, and quality assurance.
     Maps to ArchiMate 3.2 for enterprise architecture governance.
 
-    CONCEPT:KG-2.7 — Context Graph Architecture (SDD Layer)""" ;
-    owl:imports <http://knuckles.team/kg/core> .
+    CONCEPT:KG-2.7 — Context Graph Architecture (SDD Layer)""" .
 
 :AcceptanceCriteria a owl:Class ;
     rdfs:label "Acceptance Criteria" ;

@@ -157,7 +157,7 @@ pub fn op_kind(op: &Op) -> OpKind {
         #[cfg(feature = "epistemic")]
         Op::SourceReliability { .. } => OpKind::SourceReliability,
         #[cfg(feature = "epistemic")]
-        Op::ConfidenceOp {} => OpKind::ConfidenceOp,
+        Op::ConfidenceOp { .. } => OpKind::ConfidenceOp,
         #[cfg(feature = "epistemic")]
         Op::ExplainBelief { .. } => OpKind::ExplainBelief,
         Op::Decay { .. } => OpKind::Decay,

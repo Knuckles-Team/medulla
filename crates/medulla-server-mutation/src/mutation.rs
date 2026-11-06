@@ -744,6 +744,9 @@ mod tests {
         // Each commits through the agent-library owner's own medulla-transaction
         // write, not a `(ctx, plan, method, apply)` graph mutation, and each
         // has process-local ordering only (see `plan::LOCAL_ONLY_METHODS`).
+        ("DataProductRegister", "MEDULLA-TYPED-PACKS-R805.1 data product and contract rows in the rbac.redb policy store; local-only authority"),
+        ("AccessRequestOpen", "MEDULLA-TYPED-PACKS-R805.1 pending access-request row in the rbac.redb policy store; local-only authority"),
+        ("AccessRequestDecide", "MEDULLA-TYPED-PACKS-R805.1 approve or reject transition of an access-request row in the rbac.redb policy store; local-only authority"),
         ("ConnectorPack", "native MutationBatch in agent_library.redb: pack head, members, component revisions, body holders, import record, receipt and outbox in one WTX; local-only authority"),
         ("WriteBack", "native MutationBatch in agent_library.redb: immutable source change set plus append-only attempt and reconciliation receipts; local-only authority"),
         ("DecisionCommit", "native MutationBatch in agent_library.redb: one DecisionRecord component revision, receipt and outbox in one WTX after re-derivation and catalog compare-and-set; local-only authority"),
@@ -768,6 +771,9 @@ mod tests {
         ("CancelWorkItem", "dedicated engine-native MutationBatch pending-cancellation transition in mutation_batch.rs/redb_store.rs"),
         ("DeferWorkItem", "dedicated engine-native MutationBatch fenced deferral transition in mutation_batch.rs/redb_store.rs"),
         ("PublishCurrentPlan", "dedicated engine-native MutationBatch owner/fence/revision current-plan publication in store_native.rs"),
+        ("MarkWorkItemEffectStarted", "dedicated engine-native MutationBatch live-claim effect-start CAS in redb_store/work_item/effect.rs (R820.3)"),
+        ("RecordEffectReceipt", "dedicated engine-native MutationBatch one-receipt-per-attempt write in redb_store/work_item/effect.rs (R820.3)"),
+        ("SubmitAdmittedRequest", "dedicated engine-native MutationBatch admitted-request record in redb_store/work_item/effect.rs (R820.3)"),
         ("PublishRunCheckpoint", "dedicated engine-native MutationBatch owner/fence/CAS checkpoint publication in store_native.rs"),
         ("CasWorkItemMetadata", "dedicated engine-native MutationBatch scheduling-metadata CAS transition in mutation_batch.rs/redb_store.rs (BUG-111)"),
         ("IssueHostStartGrant", "dedicated issuer-bound host-start record in protected ControlLease storage"),
@@ -884,6 +890,8 @@ mod tests {
         ("FleetCatalog", "EH-345: each write op TRANSLATES into exactly one Method::CreateNodeIfAbsent or Method::CompareAndSetNodeFields against __commons__ through the ordinary dispatch_graph_op path (which IS gateway-routed), exactly like RegisterServer above; list/lookup are reads"),
         ("PolicyEvolution", "EH-346/EH-347: each write op TRANSLATES into exactly one Method::CreateNodeIfAbsent of an immutable content-addressed record in the request graph through the ordinary dispatch_graph_op path (which IS gateway-routed), exactly like FleetCatalog above; get is a read"),
         ("TelemetryDerive", "EH-408/EH-409: reads stored telemetry and the request graph's declared individuals, then TRANSLATES every derived fact into exactly one Method::BatchUpdate against the request graph through the ordinary dispatch_graph_op path (which IS gateway-routed), exactly like FleetCatalog above"),
+        ("ActionRegister", "MEDULLA-UNIFIED-DATA-PLANE-R700.3: validates the spec, then TRANSLATES it into exactly one Method::BatchUpdate (the ActionSpec node) against the request graph through the ordinary dispatch_graph_op path (which IS gateway-routed), exactly like TelemetryDerive above"),
+        ("ActionSubmit", "MEDULLA-UNIFIED-DATA-PLANE-R700.3: submits against the registered spec, then TRANSLATES the applied effects and the ActionRun node into exactly one Method::BatchUpdate against the request graph through the ordinary dispatch_graph_op path (which IS gateway-routed), exactly like TelemetryDerive above"),
         ("IncidentRecordAnomaly", "MEDULLA-UNIFIED-DATA-PLANE-R760.3: loads the tenant's unresolved incidents, applies the call, then TRANSLATES the changed incidents and HealthAnomaly evidence into exactly one Method::BatchUpdate against the request graph through the ordinary dispatch_graph_op path (which IS gateway-routed), exactly like TelemetryDerive above"),
         ("IncidentCorrelate", "MEDULLA-UNIFIED-DATA-PLANE-R760.3: loads the tenant's unresolved incidents, applies the call, then TRANSLATES the changed incidents and HealthAnomaly evidence into exactly one Method::BatchUpdate against the request graph through the ordinary dispatch_graph_op path (which IS gateway-routed), exactly like TelemetryDerive above"),
         ("IncidentSetStatus", "MEDULLA-UNIFIED-DATA-PLANE-R760.3: loads the tenant's unresolved incidents, applies the call, then TRANSLATES the changed incidents and HealthAnomaly evidence into exactly one Method::BatchUpdate against the request graph through the ordinary dispatch_graph_op path (which IS gateway-routed), exactly like TelemetryDerive above"),

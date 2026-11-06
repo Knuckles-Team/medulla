@@ -131,8 +131,7 @@
     rdfs:comment """CONCEPT:AU-KG.ingest.semantic-event-contract — canonical OCEL-shaped
     event/object truth, temporal Event Knowledge Graph state, process perspectives,
     and governed neural graph proposals. Symbolic source truth remains authoritative;
-    neural outputs are proposal-only until the existing review lifecycle accepts them.""" ;
-    owl:imports <http://knuckles.team/kg/core> .
+    neural outputs are proposal-only until the existing review lifecycle accepts them.""" .
 
 :Deviation a owl:Class ;
     rdfs:label "Process Deviation" ;
@@ -444,3 +443,20 @@
     rdfs:comment "Links a :ProcessInstance to the :ApplicationEvent incident it raised (the archimate crosswalk)." ;
     rdfs:domain :ProcessInstance ;
     rdfs:range :ApplicationEvent .
+
+# ── Core rooting (MEDULLA-TYPED-PACKS-R071.2) ───────────────────────────────────
+# Every class of this module above reaches the core class kg:DomainEntity through rdfs:subClassOf.
+<http://knuckles.team/kg#BusinessObjectType> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#ConformanceRun> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#Deviation> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#EntityResolutionProposal> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#EpcFunction> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#EpcRuleOperator> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#ExtractionRun> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#NeuralRelationPrediction> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#NeuralRepresentation> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#ObjectCentricEventLog> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#ObjectState> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#ProcessEventType> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#ProcessInstance> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#ProcessModelVersion> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .

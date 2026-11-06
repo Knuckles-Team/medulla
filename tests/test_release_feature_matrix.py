@@ -462,3 +462,9 @@ def test_feature_matrix_builds_the_jobs_only_handler_crate(release_matrix):
     assert (
         "medulla-work-types/program-optimization" in jobs_crate["features"]["jobs"]
     ), "the jobs feature must compile JobKind::ProgramOptimize in"
+
+
+@pytest.mark.spec("MEDULLA-DURABLE-KERNEL-R083.4")
+def test_full_contains_kvcache_server():
+    root = tomllib.loads((ROOT / "Cargo.toml").read_text())
+    assert "kvcache-server" in root["features"]["full"]

@@ -22,5 +22,10 @@
       "r613/schedule_1000": null,
       "r613/regime_1m": null
     }
+  },
+  "latency_p99_ns_max": {
+    "access_check_256": 1000000,
+    "feedback_boost_256": 200000,
+    "knowledge_scope_50": 2000000
   }
 }

@@ -225,6 +225,7 @@ pub(super) fn foreign_scan(source: &ForeignSourceSpec, join: bool) -> Printed {
         | ForeignSourceSpec::Mcp { .. }
         | ForeignSourceSpec::A2a { .. }
         | ForeignSourceSpec::GraphQl { .. }
+        | ForeignSourceSpec::SqliteFile { .. }
         | ForeignSourceSpec::BrainGuarded { .. } => Err(refuse(
             UqlPrintCode::CredentialBearingSpec,
             "a self-describing foreign spec may contain endpoint or artifact details; register it and use \

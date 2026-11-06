@@ -117,3 +117,8 @@ tokio = { version = "1.53", features = ["sync", "rt", "macros"] }
 # OFF) — a default/node/full build links none of it and `Event` carries no new
 # required trait. See `src/contract.rs`.
 medulla-modality = { path = "../medulla-modality", optional = true }
+
+[[bench]]
+name = "incident_correlate"
+path = "benches/incident_correlate.rs"
+harness = false

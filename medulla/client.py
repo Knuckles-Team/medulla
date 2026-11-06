@@ -4470,6 +4470,140 @@ class WorkItemClient:
             return None
         return _work_item_view(value)
 
+    # -- MEDULLA-DURABLE-KERNEL-R820.3 uncertain-effect protocol -------------
+
+    async def mark_effect_started(
+        self,
+        *,
+        tenant: str,
+        work_item_id: str,
+        worker_id: str,
+        lease_epoch: int,
+        fencing_token: int,
+        expected_revision: int,
+        idempotency_key: str | None = None,
+    ) -> dict[str, Any]:
+        """Record, under the live claim, that an external effect is starting.
+
+        A stale fence refuses ``WORK_ITEM_CLAIM_STALE``; a moved row refuses
+        ``REVISION_CONFLICT``. A refusal changes nothing.
+        """
+        request = {
+            "tenant": _string("MarkWorkItemEffectStarted.tenant", tenant),
+            "work_item_id": _string(
+                "MarkWorkItemEffectStarted.work_item_id", work_item_id
+            ),
+            "worker_id": _string("MarkWorkItemEffectStarted.worker_id", worker_id),
+            "lease_epoch": _integer(
+                "MarkWorkItemEffectStarted.lease_epoch", lease_epoch
+            ),
+            "fencing_token": _integer(
+                "MarkWorkItemEffectStarted.fencing_token", fencing_token
+            ),
+            "expected_revision": _integer(
+                "MarkWorkItemEffectStarted.expected_revision", expected_revision
+            ),
+        }
+        return await self._client._send(
+            "MarkWorkItemEffectStarted",
+            {"request": request},
+            None,
+            idempotency_key=idempotency_key
+            or f"effect-start:{work_item_id}:{expected_revision}",
+        )
+
+    async def record_effect_receipt(
+        self,
+        *,
+        tenant: str,
+        work_item_id: str,
+        attempt: int,
+        expected_revision: int,
+        receipt: dict[str, Any],
+        idempotency_key: str | None = None,
+    ) -> dict[str, Any]:
+        """Resolve a started effect with its one receipt for this attempt.
+
+        An identical replay returns the stored receipt; a different receipt
+        refuses ``EFFECT_RECEIPT_CONFLICT``; a receipt naming another job,
+        request, principal or attempt refuses ``EFFECT_RECEIPT_MISMATCH``.
+        """
+        if not isinstance(receipt, dict):
+            raise TypeError("RecordEffectReceipt.receipt must be a mapping")
+        request = {
+            "tenant": _string("RecordEffectReceipt.tenant", tenant),
+            "work_item_id": _string("RecordEffectReceipt.work_item_id", work_item_id),
+            "attempt": _integer("RecordEffectReceipt.attempt", attempt),
+            "expected_revision": _integer(
+                "RecordEffectReceipt.expected_revision", expected_revision
+            ),
+            "receipt": receipt,
+        }
+        return await self._client._send(
+            "RecordEffectReceipt",
+            {"request": request},
+            None,
+            idempotency_key=idempotency_key
+            or f"effect-receipt:{work_item_id}:{attempt}",
+        )
+
+    async def submit_admitted_request(
+        self,
+        *,
+        work_item_id: str,
+        attempt: int,
+        expected_revision: int,
+        request: dict[str, Any],
+        idempotency_key: str | None = None,
+    ) -> dict[str, Any]:
+        """Store the admitted request's digest and payload ref once.
+
+        Bytes that do not hash to ``request_ref`` refuse
+        ``ADMITTED_REQUEST_DIGEST_MISMATCH``; above 1 MiB refuse
+        ``ADMITTED_REQUEST_TOO_LARGE``.
+        """
+        if not isinstance(request, dict):
+            raise TypeError("SubmitAdmittedRequest.request must be a mapping")
+        body = {
+            "work_item_id": _string("SubmitAdmittedRequest.work_item_id", work_item_id),
+            "attempt": _integer("SubmitAdmittedRequest.attempt", attempt),
+            "expected_revision": _integer(
+                "SubmitAdmittedRequest.expected_revision", expected_revision
+            ),
+            "request": request,
+        }
+        return await self._client._send(
+            "SubmitAdmittedRequest",
+            {"request": body},
+            None,
+            idempotency_key=idempotency_key
+            or f"admitted-request:{work_item_id}:{attempt}",
+        )
+
+    async def get_effect_receipt(
+        self, *, tenant: str, work_item_id: str, attempt: int
+    ) -> dict[str, Any] | None:
+        """The receipt of ``(work_item_id, attempt)``, or ``None``."""
+        key = {
+            "tenant": _string("GetEffectReceipt.tenant", tenant),
+            "work_item_id": _string("GetEffectReceipt.work_item_id", work_item_id),
+            "attempt": _integer("GetEffectReceipt.attempt", attempt),
+        }
+        return await self._client._send("GetEffectReceipt", {"request": key}, None)
+
+    async def get_admitted_request(
+        self, *, tenant: str, session_ref: str, work_item_id: str, attempt: int
+    ) -> dict[str, Any] | None:
+        """The admitted request digest and payload ref, or ``None`` when
+        absent or another tenant's or session's."""
+        key = {
+            "tenant": _string("GetAdmittedRequest.tenant", tenant),
+            "session_ref": _string("GetAdmittedRequest.session_ref", session_ref),
+            "work_item_id": _string("GetAdmittedRequest.work_item_id", work_item_id),
+            "attempt": _integer("GetAdmittedRequest.attempt", attempt),
+        }
+        return await self._client._send("GetAdmittedRequest", {"request": key}, None)
+
     async def get_run(self, *, tenant: str, run_id: str) -> dict[str, Any] | None:
         """Read this verified owner's immutable original run admission.
 
@@ -6729,6 +6863,32 @@ class GraphOperationsClient:
                 self._client,
                 {"keywords": keywords, "query_embedding": query_embedding, "k": k},
             )
+        ).payload
+
+    async def context_facts(
+        self,
+        node_ids: list[str],
+        token_budget: int,
+        max_facts_per_node: int | None = None,
+    ) -> dict[str, Any]:
+        """Cited facts of ranked nodes inside a token budget
+        (MEDULLA-DECISION-ENGINE-R152).
+
+        Pass the ids ``discover`` ranked. Returns ``{schema_version, facts,
+        omitted_count, token_estimate_total}``; each fact carries ``fact_id``,
+        ``subject``, ``predicate``, ``object``, ``source_key``, ``authority`` and
+        ``token_estimate``. Only nodes visible to the caller yield facts. A zero
+        budget, more than 512 ids or a fact with no source is refused.
+        """
+        request: dict[str, Any] = {
+            "schema_version": 1,
+            "node_ids": node_ids,
+            "token_budget": token_budget,
+        }
+        if max_facts_per_node is not None:
+            request["max_facts_per_node"] = max_facts_per_node
+        return (
+            await _gen.graph.send_context_facts(self._client, {"request": request})
         ).payload
 
     async def match_ontology_terms(self, query: str) -> list[dict[str, Any]]:
@@ -9047,6 +9207,31 @@ class FinanceClient:
                 },
             )
         ).payload
+
+    # ── Served finance records (MEDULLA-FINANCE-PRIMITIVES-R004.3.3.2) ────
+    async def record_put(
+        self,
+        kind: str,
+        schema_version: str,
+        record: dict[str, Any],
+        expected_head: int | None = None,
+    ) -> int:
+        """Put one finance-v1 record; the engine validates version, tenant and shape."""
+        return await _gen.compute.send_finance_record_put(
+            self._client,
+            {
+                "kind": kind,
+                "schema_version": schema_version,
+                "record": record,
+                "expected_head": expected_head,
+            },
+        )
+
+    async def record_get(self, kind: str, record_id: str) -> Any:
+        """Read one finance-v1 record under the verified tenant (None when absent)."""
+        return await _gen.compute.send_finance_record_get(
+            self._client, {"kind": kind, "record_id": record_id}
+        )
 
     # ── Position sizing
     # (CONCEPT:MEDULLA-KG.domains.market-microstructure-sizing-backtest)
@@ -12785,6 +12970,63 @@ class RdfClient:
         return (
             await _gen.reasoning.send_shacl_validate(
                 self._client, {"shapes": shapes, "data_graph": data_graph}
+            )
+        ).model_dump(mode="json")
+
+    async def import_ontology(
+        self,
+        connector: str,
+        ontology_iri: str,
+        version: str,
+        ontology_ttl: str,
+        *,
+        shapes_ttl: str | None = None,
+        expected_prior_revision: int | None = None,
+        graph: str | None = None,
+        idempotency_key: str | None = None,
+    ) -> dict[str, Any]:
+        """Import or revise one connector-owned runtime ontology (GraphSchema).
+
+        The engine binds the authenticated principal as the importer; the
+        request carries no importer. The same body digest as the active revision
+        answers unchanged; a new digest commits the next revision. The digest is
+        the SHA-256 of ``ontology_ttl``.
+        """
+        op = {
+            "op": "import_ontology",
+            "connector": connector,
+            "ontology_iri": ontology_iri,
+            "version": version,
+            "ontology_ttl": ontology_ttl,
+            "shapes_ttl": shapes_ttl,
+            "content_digest": hashlib.sha256(ontology_ttl.encode("utf-8")).hexdigest(),
+            "expected_prior_revision": expected_prior_revision,
+        }
+        return (
+            await _gen.reasoning.send_graph_schema(
+                self._client, {"op": op}, graph, idempotency_key=idempotency_key
+            )
+        ).model_dump(mode="json")
+
+    async def withdraw_ontology(
+        self,
+        connector: str,
+        ontology_iri: str,
+        expected_revision: int,
+        *,
+        graph: str | None = None,
+        idempotency_key: str | None = None,
+    ) -> dict[str, Any]:
+        """Withdraw one runtime ontology as a whole; only its bound importer may."""
+        op = {
+            "op": "withdraw_ontology",
+            "connector": connector,
+            "ontology_iri": ontology_iri,
+            "expected_revision": expected_revision,
+        }
+        return (
+            await _gen.reasoning.send_graph_schema(
+                self._client, {"op": op}, graph, idempotency_key=idempotency_key
             )
         ).model_dump(mode="json")
 

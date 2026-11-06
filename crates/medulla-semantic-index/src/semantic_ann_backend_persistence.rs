@@ -20,6 +20,15 @@ pub struct AnnIndexImage {
     pub ids: Vec<u8>,
 }
 
+impl AnnIndexImage {
+    /// The image's stored vector ids, in row order: `0..n` over its row-id
+    /// sidecar. The promotion gate tags exactly these (MEDULLA-UNIFIED-DATA-
+    /// PLANE-R040.3).
+    pub fn vector_ids(&self) -> std::io::Result<Vec<u64>> {
+        Ok((0..decode_ids(&self.ids)?.len() as u64).collect())
+    }
+}
+
 impl AnnIndex {
     /// This index's durable image. Restoring it is `from_image` — NO rebuild.
     pub fn to_image(&self) -> std::io::Result<AnnIndexImage> {

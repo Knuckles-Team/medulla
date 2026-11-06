@@ -70,8 +70,11 @@ async fn index_scoped(
     // malformed membership must never pin unreferenced source bytes forever.
     let (mut result, files, repository_id) =
         medulla_server_api::compute::compute_off_lock(req_id, move || {
-            let result =
+            let mut result =
                 medulla_compute::parser::branch_index::index_branches(files.clone(), &scope)?;
+            // MEDULLA-REPO-INGEST-R801: packages and layers lower beside the
+            // entity nodes; a layer cycle refuses the batch before any commit.
+            medulla_h_ingest::repository_index::ecosystem::project(&files, &mut result)?;
             Ok::<_, String>((result, files, scope.repository_id.clone()))
         })
         .await?
@@ -212,6 +215,11 @@ pub async fn route_repository_index(
     placement_epoch: u64,
     fencing_token: Option<u64>,
 ) -> Response {
+    let follow_on_scope = medulla_h_ingest::repository_index::enrich::FollowOnScope {
+        tenant: ctx.tenant_scope.to_string(),
+        graph: ctx.graph_name.to_string(),
+        repository_id: scope.repository_id.clone(),
+    };
     let result = match index_scoped(ctx, files_msgpack, scope).await {
         Ok(result) => result,
         Err(response) => return response,
@@ -231,16 +239,26 @@ pub async fn route_repository_index(
         Ok(pending) => pending,
         Err(error) => return Response::err(ctx.req_id, error),
     };
+    // MEDULLA-REPO-INGEST-R600.3: the durable follow-on work item commits in
+    // this batch's own outbox and is claimed after the index commits.
+    let follow_on = match medulla_h_ingest::repository_index::enrich::follow_on_intent(
+        &envelope_id,
+        follow_on_scope,
+    ) {
+        Ok(intent) => intent,
+        Err(error) => return Response::err(ctx.req_id, error),
+    };
     #[cfg(all(feature = "ast", feature = "redb"))]
     let outbox = pending
         .as_ref()
         .map(|entry| entry.intent.clone())
         .into_iter()
+        .chain(std::iter::once(follow_on))
         .collect();
     #[cfg(all(feature = "ast", feature = "redb"))]
     let source_budget = pending_source_budget(pending.as_ref());
     #[cfg(not(all(feature = "ast", feature = "redb")))]
-    let outbox = Vec::new();
+    let outbox = vec![follow_on];
     let commit_ctx = commit_context(&ctx, placement_epoch, fencing_token);
     let envelope = match medulla_h_ingest::repository_index::build_envelope_with_outbox(
         &commit_ctx,

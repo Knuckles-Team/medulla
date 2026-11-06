@@ -14,6 +14,7 @@ pub const MAX_K_RANGE: (u32, u32) = (1, 10_000);
 
 /// What the remote score means.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum ScoreKind {
     /// A BM25 relevance score.
@@ -26,6 +27,7 @@ pub enum ScoreKind {
 
 /// The search modes, filter support and result cap of one bound search operation.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct SearchIndexCapability {
     /// The operation answers a full-text query.
@@ -88,6 +90,7 @@ mod tests {
         }
     }
 
+    /// Verifies MEDULLA-UNIFIED-DATA-PLANE-R038.5.1: Model: `SearchIndexCapability` on the operation-bound source
     // spec: MEDULLA-UNIFIED-DATA-PLANE-R038.5.1
     #[test]
     fn search_capability_round_trips() {
