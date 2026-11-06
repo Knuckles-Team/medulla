@@ -612,6 +612,12 @@ fn apply_supersede_edge(
     core: &GraphCore,
     input: SupersedeEdgeInput,
 ) -> Result<ResultPayload, String> {
+    core.check_invalidation_interval(
+        &input.prior_source,
+        &input.prior_target,
+        &input.prior_relationship,
+        input.valid_at,
+    )?;
     match core.supersede_edge(
         input.source_id,
         input.target_id,

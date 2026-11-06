@@ -29,7 +29,7 @@ fn refuse(error: WorkflowRegistryError, detail: impl std::fmt::Display) -> Strin
 }
 
 /// What an admitted `Register` does.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug)]
 pub(super) enum Admitted {
     /// The same record is already stored: return it, commit nothing.
     Same(WorkflowRegistrationEntry),

@@ -194,6 +194,10 @@ fn route_handler(route: Route) -> RouteHandler {
     }
 }
 
+fn engine_now_ms() -> u64 {
+    medulla_kernel::kernel::dispatch_support::authoritative_now_ms()
+}
+
 pub(super) async fn try_handle(
     state: &Arc<RwLock<ServerState>>,
     tenant_id: &str,
@@ -201,6 +205,14 @@ pub(super) async fn try_handle(
     plan: &MutationPlan,
     method: &Method,
 ) -> Option<Response> {
+    // MEDULLA-DURABLE-KERNEL-R078: the engine clock overwrites `tx_now` before the
+    // method is logged, so replay reads the logged value.
+    let stamped =
+        match medulla_server_api::mutation_apply::stamp_transaction_time(method, engine_now_ms()) {
+            Ok(stamped) => stamped,
+            Err(refusal) => return Some(Response::err(ctx.req_id, refusal)),
+        };
+    let method = stamped.as_ref().unwrap_or(method);
     let route = route_for(method);
     match route_handler(route) {
         RouteHandler::Core => try_handle_core(ctx, plan, method, route).await,
@@ -564,6 +576,12 @@ async fn try_handle_edges(
                 *tx_now,
             );
             commit_gateway(ctx, plan, method, move |core| {
+                core.check_invalidation_interval(
+                    &source_id,
+                    &target_id,
+                    &relationship,
+                    invalid_at,
+                )?;
                 let n =
                     core.invalidate_edge(&source_id, &target_id, &relationship, invalid_at, tx_now);
                 Ok(ResultPayload::Count(n as u64))

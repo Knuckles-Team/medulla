@@ -3991,6 +3991,7 @@ components:
       - "tests/test_medulla.py"
       - "tests/test_generated_union_variants.py"
       - "tests/test_index_repository_result_contract.py"
+      - "tests/test_repository_enrich_served.py"
       - "tests/test_exact_fault_restart_harness.py"
       - "tests/test_exact_multimodal_campaign_contract.py"
       - "tests/test_exact_performance_certification.py"

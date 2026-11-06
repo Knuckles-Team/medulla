@@ -1,5 +1,6 @@
 use super::shard_writer::{send_with_deadline, DeadlineSendError};
 use super::*;
+use medulla_protocol_types::protocol::Method;
 use std::sync::mpsc::sync_channel;
 
 // spec: MEDULLA-ENGINE-PARITY-R001.1

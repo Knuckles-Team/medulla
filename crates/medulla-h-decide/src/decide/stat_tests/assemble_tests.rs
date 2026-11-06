@@ -116,6 +116,8 @@ fn seed(store: &AgentLibraryStore, capabilities: Option<ModelInputCapabilities>)
             prompt_mode: PromptMode::Static,
             token_estimate: 1_000,
             variables: Vec::new(),
+            body_sha256: None,
+            schema_revision: None,
         }),
     );
     publish(store, 3, ("skill-a", AgentComponentKind::Skill), None);

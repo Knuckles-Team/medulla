@@ -224,6 +224,43 @@ impl<'a> GraphTxn<'a> {
         })
     }
 
+    /// MEDULLA-DURABLE-KERNEL-R078: refuse closing an open edge before its own
+    /// `valid_from`. Read-only, run by the served handler under the graph lane before
+    /// the logged invalidation applies; a closed or absent edge passes so the
+    /// existing `EDGE_ALREADY_CLOSED` / `EDGE_NOT_FOUND` refusals stay authoritative.
+    pub fn check_invalidation_interval(
+        &self,
+        source_id: &str,
+        target_id: &str,
+        relationship: &str,
+        invalid_at: u64,
+    ) -> Result<(), String> {
+        let key = (source_id.to_string(), target_id.to_string());
+        let Some(entry) = self.edge_properties.get(&key) else {
+            return Ok(());
+        };
+        for blob in entry.value().iter() {
+            let Ok(val) = decode_property_value(blob.as_slice()) else {
+                continue;
+            };
+            if val.get("relationship").and_then(|v| v.as_str()) != Some(relationship) {
+                continue;
+            }
+            let open = val.get("tx_to").and_then(|v| v.as_u64()).is_none()
+                && val.get("valid_until").and_then(|v| v.as_u64()).is_none();
+            let valid_from = val.get("valid_from").and_then(|v| v.as_u64());
+            if let (true, Some(valid_from)) = (open, valid_from) {
+                if invalid_at < valid_from {
+                    return Err(format!(
+                        "{}: valid_until {invalid_at} precedes valid_from {valid_from}",
+                        medulla_types::contract::ServerErrorCode::ValidityInverted
+                    ));
+                }
+            }
+        }
+        Ok(())
+    }
+
     pub fn invalidate_edge(
         &mut self,
         source_id: &str,

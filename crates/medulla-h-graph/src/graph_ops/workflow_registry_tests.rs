@@ -62,10 +62,10 @@ fn register_read_and_refuse_unknown() {
         Err(WorkflowRegistryError::Unauthorized)
     );
     // Registration is idempotent.
-    assert_eq!(
-        admit_registration(&core, TENANT, "scope-a", &request).unwrap(),
-        Admitted::Same(entry)
-    );
+    match admit_registration(&core, TENANT, "scope-a", &request).unwrap() {
+        Admitted::Same(again) => assert_eq!(again, entry),
+        Admitted::Write(..) => panic!("an equal registration commits nothing"),
+    }
     // An unknown identity refuses.
     let mut unknown = identity();
     unknown.version = "2.0.0".into();

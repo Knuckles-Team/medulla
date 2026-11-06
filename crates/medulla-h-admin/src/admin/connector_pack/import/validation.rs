@@ -637,6 +637,8 @@ fn json_kind(kind: PackEntryKind) -> bool {
             | PackEntryKind::Prompt
             | PackEntryKind::ModelProfile
             | PackEntryKind::A2aCard
+            | PackEntryKind::Crosswalk
+            | PackEntryKind::ConceptPath
     )
 }
 
@@ -656,6 +658,8 @@ fn text_kind(kind: PackEntryKind) -> bool {
             | PackEntryKind::Resource
             | PackEntryKind::ResourceTemplate
             | PackEntryKind::SkillFile
+            | PackEntryKind::Crosswalk
+            | PackEntryKind::ConceptPath
     )
 }
 
