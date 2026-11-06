@@ -196,7 +196,7 @@ fn apply_to_buckets(w: &mut WindowState, delta: &Delta, bytes: &mut u64) -> usiz
         let existed = w.buckets.contains_key(&start);
         let b = w.buckets.entry(start).or_default();
         b.sum += row.weight as f64 * val;
-        b.count += row.weight as i64;
+        b.count += row.weight;
         let kept = b.count > 0;
         if !kept {
             w.buckets.remove(&start);
