@@ -27,6 +27,8 @@ mod desired;
 mod facts;
 mod front_matter;
 mod json;
+#[cfg(feature = "rdf")]
+mod nutrition;
 mod planning;
 mod skill_files;
 mod validation;

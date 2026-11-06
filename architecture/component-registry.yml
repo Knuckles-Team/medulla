@@ -3935,6 +3935,7 @@ components:
       - "tests/test_cluster_topology_client.py"
       - "tests/test_compare_wheel_reproducibility.py"
       - "tests/test_compute_primitives.py"
+      - "tests/media/test_nutrition_served.py"
       - "tests/test_concept_parity.py"
       - "tests/test_configure_rust_path_remap.py"
       - "tests/test_connector_pack_planted.py"

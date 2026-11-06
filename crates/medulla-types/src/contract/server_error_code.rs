@@ -62,6 +62,7 @@ closed_error_codes! {
         CrosswalkSourceOutOfScope => "CROSSWALK_SOURCE_OUT_OF_SCOPE",
         CrosswalkSourceUnknown => "CROSSWALK_SOURCE_UNKNOWN",
         CrosswalkTargetUnknown => "CROSSWALK_TARGET_UNKNOWN",
+        NutrientIdUnmapped => "NUTRIENT_ID_UNMAPPED",
         ComponentBodyUnavailable => "COMPONENT_BODY_UNAVAILABLE",
         ComponentWithdrawn => "COMPONENT_WITHDRAWN",
         MemsyncContentMalformed => "MEMSYNC_CONTENT_MALFORMED",
