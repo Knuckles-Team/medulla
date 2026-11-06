@@ -23,6 +23,8 @@ sha2 = "0.10"
 medulla-modality = { path = "../medulla-modality", optional = true }
 medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-source-types = { path = "../medulla-source-types" }
+medulla-decision-types = { path = "../medulla-decision-types" }
+thiserror = "2.0"
 
 [features]
 default = []
