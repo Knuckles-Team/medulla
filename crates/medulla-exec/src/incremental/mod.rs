@@ -19,5 +19,8 @@
 //! `dag`/`dag_exec`.
 
 pub mod circuit;
+/// The one differential oracle harness (MEDULLA-INCREMENTAL-VIEWS-R003).
+#[cfg(any(test, feature = "test-support"))]
+pub mod oracle;
 
 pub use circuit::{Circuit, UnsupportedOp};
