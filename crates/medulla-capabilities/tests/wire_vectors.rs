@@ -11,8 +11,12 @@
 //! Run: `cargo test -p medulla-capabilities --test wire_vectors`.
 #![cfg(feature = "contract-schema")]
 
+#[path = "wire_vectors/pattern_sample.rs"]
+mod pattern_sample;
 #[path = "wire_vectors/sample_builder.rs"]
 mod sample_builder;
+#[path = "wire_vectors/sample_repair.rs"]
+mod sample_repair;
 
 use std::collections::BTreeMap;
 
@@ -22,7 +26,7 @@ use medulla_protocol_types::result_contract::{visit_all, MethodResult, ResultVis
 use medulla_types::contract::Digest256;
 use serde_json::{json, Map, Value};
 
-use sample_builder::{build_node, build_sample};
+use sample_builder::{build_node_with, build_sample};
 
 /// The result bodies of each method, keyed by method id then op tag (empty for one body).
 #[derive(Default)]
@@ -88,6 +92,28 @@ fn request_variant<'a>(root: &'a Value, method: &str) -> Option<&'a Value> {
         })
 }
 
+/// Per-type sample hooks: the types whose decoder re-derives a digest over the value's own
+/// fields. Each sample comes from the type's own constructor, never from hand-written JSON.
+fn sample_hook(reference: &str) -> Option<Value> {
+    let sample = match reference.strip_prefix("#/$defs/")? {
+        "MutationScopeIdentity" => serde_json::to_value(
+            medulla_mutation_types::mutation_scope::MutationScopeIdentity::fixed_native(
+                "tenant-a",
+                medulla_mutation_types::mutation_scope::DurabilityDomain::ControlPlane,
+                "agent-library",
+                "agent-library:v1",
+            )
+            .expect("a fixed native identity"),
+        ),
+        "SqlSourceJson" => serde_json::to_value(
+            medulla_protocol_types::storage_wire::source_batch::SqlSourceJson::new(json!({}))
+                .expect("an empty JSON object"),
+        ),
+        _ => return None,
+    };
+    Some(sample.expect("a constructed sample serializes"))
+}
+
 /// One vector row: the method id, its sample request and result, and the canonical-bytes digest.
 fn vector(
     method_schema: &schemars::Schema,
@@ -97,7 +123,14 @@ fn vector(
     let root = method_schema.as_value();
     let variant = request_variant(root, method)
         .ok_or_else(|| format!("{method}: no Method schema variant carries this tag"))?;
-    let request = build_node(root, variant, method).map_err(|error| error.to_string())?;
+    let request =
+        build_node_with(root, variant, method, &sample_hook).map_err(|error| error.to_string())?;
+    let request = sample_repair::repair(request, |value| {
+        serde_json::from_value::<Method>(value.clone())
+            .map(drop)
+            .map_err(|error| error.to_string())
+    })
+    .map_err(|error| format!("{method}: request does not deserialize: {error}"))?;
 
     // The generated request must deserialize, and its encoding must be a fixed point:
     // serde fills omitted defaulted fields on decode, so the vector carries the decoded

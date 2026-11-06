@@ -1,8 +1,10 @@
 //! Deterministic smallest-valid sample builder over JSON Schema (MEDULLA-CONTRACT-R001.3).
 //!
 //! The builder is a pure function of the schema: it reads no clock, no random source and no
-//! environment. It emits only required properties, the schema `minimum` (or 0) for numbers,
-//! the shortest string that satisfies `minLength` and `pattern`, `false` for booleans,
+//! environment. It emits every property it can build, required and optional (a decoder may
+//! require a field its schema leaves optional; an optional property that cannot be built is
+//! omitted), the schema `minimum` (or 0) for numbers, the shortest string that satisfies
+//! `minLength` and `pattern`, `false` for booleans,
 //! `minItems` elements for arrays, an empty map, the first listed alternative of an `enum`,
 //! `oneOf` or `anyOf`, and the `const` value for `const`.
 
@@ -49,9 +51,25 @@ pub fn build_sample(schema: &schemars::Schema, method: &str) -> Result<Value, Sa
 /// Build the smallest valid value of `node`, resolving `$ref` against `root`. Used for one
 /// variant of an enum schema, where the root is the whole enum.
 pub fn build_node(root: &Value, node: &Value, method: &str) -> Result<Value, SampleBuildError> {
+    build_node_with(root, node, method, &|_| None)
+}
+
+/// A per-type sample hook: the sample of the `$ref` it names, built by the type's own
+/// constructor, for a type whose decoder checks a rule no schema can state (a digest over
+/// its own fields). `None` builds the type from its schema.
+pub type SampleHook<'a> = &'a dyn Fn(&str) -> Option<Value>;
+
+/// [`build_node`], with `hook` consulted at every `$ref` before the schema.
+pub fn build_node_with(
+    root: &Value,
+    node: &Value,
+    method: &str,
+    hook: SampleHook<'_>,
+) -> Result<Value, SampleBuildError> {
     let mut walk = Walk {
         root,
         method,
+        hook,
         refs: Vec::new(),
     };
     walk.node(node, "")
@@ -60,6 +78,7 @@ pub fn build_node(root: &Value, node: &Value, method: &str) -> Result<Value, Sam
 struct Walk<'a> {
     root: &'a Value,
     method: &'a str,
+    hook: SampleHook<'a>,
     /// The `$ref` targets on the current path, outermost first.
     refs: Vec<String>,
 }
@@ -79,8 +98,8 @@ impl Walk<'_> {
             Value::Object(object) => object,
             _ => return Err(self.unsatisfiable(path)),
         };
-        if let Some(reference) = object.get("$ref").and_then(Value::as_str) {
-            return self.reference(reference, path);
+        if let Some(composite) = self.composite(object, path) {
+            return self.with_siblings(composite?, object, path);
         }
         if let Some(value) = object.get("const") {
             return Ok(value.clone());
@@ -91,14 +110,6 @@ impl Walk<'_> {
             .and_then(|values| values.first())
         {
             return Ok(first.clone());
-        }
-        for keyword in ["oneOf", "anyOf"] {
-            if let Some(alternatives) = object.get(keyword).and_then(Value::as_array) {
-                return self.first_alternative(alternatives, path, keyword);
-            }
-        }
-        if let Some(parts) = object.get("allOf").and_then(Value::as_array) {
-            return self.all_of(parts, path);
         }
         match schema_type(object) {
             Some("null") | None if !looks_structured(object) => Ok(Value::Null),
@@ -115,7 +126,48 @@ impl Walk<'_> {
         }
     }
 
+    /// A `$ref`, `oneOf`, `anyOf` or `allOf` node, or `None` when the node has none.
+    fn composite(
+        &mut self,
+        object: &Map<String, Value>,
+        path: &str,
+    ) -> Option<Result<Value, SampleBuildError>> {
+        if let Some(reference) = object.get("$ref").and_then(Value::as_str) {
+            return Some(self.reference(reference, path));
+        }
+        for keyword in ["oneOf", "anyOf"] {
+            if let Some(alternatives) = object.get(keyword).and_then(Value::as_array) {
+                return Some(self.first_alternative(alternatives, path, keyword));
+            }
+        }
+        let parts = object.get("allOf").and_then(Value::as_array)?;
+        Some(self.all_of(parts, path))
+    }
+
+    /// Merge the sibling `properties` of a composite node (an internally tagged enum puts
+    /// its tag beside the variant's `$ref` or `oneOf`) into the composite's object value.
+    fn with_siblings(
+        &mut self,
+        composite: Value,
+        object: &Map<String, Value>,
+        path: &str,
+    ) -> Result<Value, SampleBuildError> {
+        let Value::Object(mut merged) = composite else {
+            return Ok(composite);
+        };
+        if !object.contains_key("properties") && !object.contains_key("required") {
+            return Ok(Value::Object(merged));
+        }
+        if let Value::Object(siblings) = self.object(object, path)? {
+            merged.extend(siblings);
+        }
+        Ok(Value::Object(merged))
+    }
+
     fn reference(&mut self, reference: &str, path: &str) -> Result<Value, SampleBuildError> {
+        if let Some(sample) = (self.hook)(reference) {
+            return Ok(sample);
+        }
         let Some(pointer) = reference.strip_prefix('#') else {
             return Err(SampleBuildError::UnresolvedRef {
                 method: self.method.to_string(),
@@ -215,6 +267,12 @@ impl Walk<'_> {
                 }
             }
         }
+        if let Some(candidate) = super::pattern_sample::synthesize(pattern) {
+            let length = candidate.chars().count();
+            if length >= min && length <= max && regex.is_match(&candidate) {
+                return Ok(Value::String(candidate));
+            }
+        }
         for candidate in [
             "a0", "a_b", "a.b", "a-b", "a/b", "a:b", "a@b", "0.0.0", "1.0",
         ] {
@@ -264,10 +322,10 @@ impl Walk<'_> {
             .map(|names| names.iter().filter_map(Value::as_str).collect())
             .unwrap_or_default();
         let mut built = Map::new();
-        for name in required {
+        for name in &required {
             let property = object
                 .get("properties")
-                .and_then(|properties| properties.get(name))
+                .and_then(|properties| properties.get(*name))
                 .or_else(|| object.get("additionalProperties").filter(|v| v.is_object()));
             let value = match property {
                 Some(schema) => self.node(schema, &format!("{path}/properties/{name}"))?,
@@ -275,7 +333,29 @@ impl Walk<'_> {
             };
             built.insert(name.to_string(), value);
         }
+        self.optional_properties(object, &required, path, &mut built);
         Ok(Value::Object(built))
+    }
+
+    /// Every optional property that builds; one that cannot be built is left out.
+    fn optional_properties(
+        &mut self,
+        object: &Map<String, Value>,
+        required: &BTreeSet<&str>,
+        path: &str,
+        built: &mut Map<String, Value>,
+    ) {
+        let Some(properties) = object.get("properties").and_then(Value::as_object) else {
+            return;
+        };
+        for (name, schema) in properties {
+            if required.contains(name.as_str()) {
+                continue;
+            }
+            if let Ok(value) = self.node(schema, &format!("{path}/properties/{name}")) {
+                built.insert(name.clone(), value);
+            }
+        }
     }
 }
 
@@ -329,7 +409,7 @@ mod tests {
             sample,
             json!({
                 "n": 3, "x": 0.0, "s": "aa", "p": "0", "b": false, "v": [0, 0], "m": {},
-                "tag": "fixed", "e": "first", "r": {"a": false}
+                "tag": "fixed", "e": "first", "r": {"a": false}, "unused": ""
             })
         );
         assert_eq!(build_sample(&root, "Demo").unwrap(), sample);
@@ -351,6 +431,21 @@ mod tests {
                 method: "Demo".into(),
                 reference: "#/$defs/Nowhere".into()
             })
+        );
+        let prefixed = schema(json!({"type": "string", "pattern": "^v1:[0-9a-f]{64}$"}));
+        assert_eq!(
+            build_sample(&prefixed, "Demo").unwrap(),
+            json!(format!("v1:{}", "0".repeat(64)))
+        );
+        let tagged = schema(json!({
+            "$ref": "#/$defs/Leaf",
+            "required": ["family"],
+            "properties": {"family": {"const": "user"}},
+            "$defs": {"Leaf": {"type": "object", "required": ["a"], "properties": {"a": {"type": "boolean"}}}}
+        }));
+        assert_eq!(
+            build_sample(&tagged, "Demo").unwrap(),
+            json!({"a": false, "family": "user"})
         );
         let impossible = schema(json!({"type": "string", "minLength": 4, "maxLength": 2}));
         assert!(matches!(
