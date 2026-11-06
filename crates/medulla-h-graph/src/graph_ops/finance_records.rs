@@ -202,6 +202,13 @@ pub(super) fn admit_put(
 /// tenant, shape, expected head) over the leader's applied core, so a put that
 /// fails any of them proposes nothing and writes nothing. Replica apply runs the
 /// same admission again through the one gateway path before its one upsert.
+/// Compiled with the same features as its `graph_ops` re-export.
+#[cfg(any(
+    feature = "query",
+    feature = "cypher",
+    feature = "graphql",
+    feature = "rdf"
+))]
 pub fn precheck_replicated_put(
     core: &GraphCore,
     tenant_id: &str,

@@ -487,7 +487,7 @@ impl JobStore {
 
     /// Replace the claim pacing bucket sizes; existing pacers restart full.
     pub fn set_claim_pacing(&self, config: ClaimPacing) {
-        let mut state = self.pacing.lock().unwrap_or_else(|e| e.into_inner());
+        let mut state = recover_pacing(self.pacing.lock());
         *state = (config, BTreeMap::new());
     }
 
@@ -501,7 +501,7 @@ impl JobStore {
         now_ms: i64,
     ) -> bool {
         let now = u64::try_from(now_ms).unwrap_or(0);
-        let mut guard = self.pacing.lock().unwrap_or_else(|e| e.into_inner());
+        let mut guard = recover_pacing(self.pacing.lock());
         let (config, pacers) = &mut *guard;
         let config = *config;
         let tenant_pacers = pacers.entry(tenant_index_key(tenant)).or_insert_with(|| {
@@ -2773,6 +2773,24 @@ fn internal_job_batch(
         .map_err(codec_err)?;
     batch.validate().map_err(codec_err)?;
     Ok(batch)
+}
+
+/// Take the claim-pacing lock, recovering after a poisoned hold and reporting it.
+///
+/// Pacing state is advisory and rebuildable: a torn update costs at most one
+/// mis-paced claim, and `set_claim_pacing` restarts every pacer full, so serving
+/// continues. `medulla-jobs` sits below the kernel's `lock_recovery`, so it
+/// reports locally, like the learned-cost store in `medulla-exec`.
+fn recover_pacing<G>(locked: std::sync::LockResult<G>) -> G {
+    // Invariant `reporting-recovery`: docs/architecture/liveness_invariants.md.
+    #[allow(clippy::disallowed_methods)]
+    locked.unwrap_or_else(|poisoned| {
+        eprintln!(
+            "medulla-jobs: recovered the poisoned claim-pacing lock; a previous holder \
+             panicked mid-update. Pacers are advisory and rebuildable, so serving continues."
+        );
+        poisoned.into_inner()
+    })
 }
 
 #[cfg(test)]

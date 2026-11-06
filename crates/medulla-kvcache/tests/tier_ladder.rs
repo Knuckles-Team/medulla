@@ -50,11 +50,14 @@ impl ColdStore<String> for ControlledCold {
     }
 }
 
+/// A shared switch the test flips to make the cold tier refuse or corrupt.
+type Switch = Rc<Cell<bool>>;
+
 fn controlled_cache(
     hot: usize,
     warm: usize,
     cold: usize,
-) -> (TieredCache<String, Block>, Rc<Cell<bool>>, Rc<Cell<bool>>) {
+) -> (TieredCache<String, Block>, Switch, Switch) {
     let refuse = Rc::new(Cell::new(false));
     let corrupt = Rc::new(Cell::new(false));
     let store = ControlledCold {

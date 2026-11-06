@@ -15,7 +15,8 @@ use medulla_work_types::orchestration::workflows::{
 };
 
 /// The closed refusal codes of the workflow registry; each is a registered
-/// `ServerErrorCode`.
+/// `ServerErrorCode`. Only the registration test reads the closed list.
+#[cfg(test)]
 pub const REFUSALS: &[&str] = &[
     "WORKFLOW_ID_MISSING",
     "WORKFLOW_VERSION_MISSING",
@@ -33,8 +34,9 @@ fn refuse(error: WorkflowRegistryError, detail: impl std::fmt::Display) -> Strin
 pub(super) enum Admitted {
     /// The same record is already stored: return it, commit nothing.
     Same(WorkflowRegistrationEntry),
-    /// Commit this node upsert, then return the entry.
-    Write(Method, WorkflowRegistrationEntry),
+    /// Commit this node upsert, then return the entry. The method is boxed so
+    /// the enum stays the size of the small variant.
+    Write(Box<Method>, WorkflowRegistrationEntry),
 }
 
 /// Admit one registration against the stored node, writing nothing.
@@ -65,7 +67,7 @@ pub(super) fn admit_registration(
         .and_then(|blob| medulla_types::msgpack::decode_property_object(&blob).ok());
     if let Some(stored) = stored
         .as_ref()
-        .and_then(|props| WorkflowRegistrationEntry::from_node_properties(props))
+        .and_then(WorkflowRegistrationEntry::from_node_properties)
     {
         if stored.owner_scope != tenant_scope {
             return Err(refuse(
@@ -80,10 +82,10 @@ pub(super) fn admit_registration(
     let properties_msgpack = rmp_serde::to_vec_named(&entry.node_properties(tenant_id))
         .map_err(|error| format!("INVALID_ARGUMENT: workflow encoding failed: {error}"))?;
     Ok(Admitted::Write(
-        Method::AddNode {
+        Box::new(Method::AddNode {
             node_id,
             properties_msgpack,
-        },
+        }),
         entry,
     ))
 }
@@ -112,7 +114,7 @@ pub(super) async fn handle_workflow_register(
                     ResultPayload::of::<WorkflowRegistryRegister>(entry),
                 ));
             }
-            Ok(Admitted::Write(write, entry)) => (write, entry),
+            Ok(Admitted::Write(write, entry)) => (*write, entry),
             Err(error) => return Some(Response::err(ctx.req_id, error)),
         };
     let plan = MutationPlan::for_method(&write);
