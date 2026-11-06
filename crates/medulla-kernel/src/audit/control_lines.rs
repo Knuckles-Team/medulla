@@ -485,6 +485,20 @@ pub(super) fn work_item_audit_line(method: &Method) -> Option<String> {
 /// fall-through. Never logs the grant body: identity and the lifecycle edge only.
 fn control_lease_audit_line(method: &Method) -> Option<String> {
     match method {
+        // MEDULLA-DURABLE-KERNEL-R820.3: identity and attempt only, never the
+        // receipt or request body.
+        Method::MarkWorkItemEffectStarted { request } => Some(format!(
+            "MARK_WORK_ITEM_EFFECT_STARTED|{}|{}|{}",
+            request.tenant, request.work_item_id, request.lease_epoch
+        )),
+        Method::RecordEffectReceipt { request } => Some(format!(
+            "RECORD_EFFECT_RECEIPT|{}|{}|{}",
+            request.tenant, request.work_item_id, request.attempt
+        )),
+        Method::SubmitAdmittedRequest { request } => Some(format!(
+            "SUBMIT_ADMITTED_REQUEST|{}|{}|{}",
+            request.request.tenant, request.work_item_id, request.attempt
+        )),
         Method::IssueHostStartGrant { request } => Some(format!(
             "ISSUE_HOST_START_GRANT|{}|{}",
             request.tenant, request.lease_id

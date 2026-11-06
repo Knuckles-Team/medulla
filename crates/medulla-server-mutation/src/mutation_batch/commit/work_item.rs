@@ -39,6 +39,9 @@ fn derive_work_item_identity(
             Method::ClaimWorkItem { .. }
                 | Method::RenewWorkItemLease { .. }
                 | Method::CasWorkItemMetadata { .. }
+                | Method::MarkWorkItemEffectStarted { .. }
+                | Method::RecordEffectReceipt { .. }
+                | Method::SubmitAdmittedRequest { .. }
         ) {
             let mut digest = Sha256::new();
             digest.update(b"epistemic-graph.authenticated-work-item.v1");
@@ -107,6 +110,9 @@ fn publication_tenant(method: &Method) -> Result<String, String> {
     match method {
         Method::PublishCurrentPlan { request } => Ok(request.tenant.clone()),
         Method::PublishRunCheckpoint { request } => Ok(request.tenant.clone()),
+        Method::MarkWorkItemEffectStarted { request } => Ok(request.tenant.clone()),
+        Method::RecordEffectReceipt { request } => Ok(request.tenant.clone()),
+        Method::SubmitAdmittedRequest { request } => Ok(request.request.tenant.clone()),
         other => control_lease_tenant(other),
     }
 }

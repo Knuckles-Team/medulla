@@ -429,5 +429,11 @@ closed_error_codes! {
         UnitOutOfScope => "UNIT_OUT_OF_SCOPE",
         LayerCycle => "LAYER_CYCLE",
         RuleVersionUnsupported => "RULE_VERSION_UNSUPPORTED",
+        AdmittedRequestDigestMismatch => "ADMITTED_REQUEST_DIGEST_MISMATCH",
+        AdmittedRequestTooLarge => "ADMITTED_REQUEST_TOO_LARGE",
+        EffectReceiptConflict => "EFFECT_RECEIPT_CONFLICT",
+        EffectReceiptMismatch => "EFFECT_RECEIPT_MISMATCH",
+        GraphShardFormatUpgradeRequired => "GRAPH_SHARD_FORMAT_UPGRADE_REQUIRED",
+        WorkItemClaimStale => "WORK_ITEM_CLAIM_STALE",
     }
 }

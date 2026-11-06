@@ -4470,6 +4470,140 @@ class WorkItemClient:
             return None
         return _work_item_view(value)
 
+    # -- MEDULLA-DURABLE-KERNEL-R820.3 uncertain-effect protocol -------------
+
+    async def mark_effect_started(
+        self,
+        *,
+        tenant: str,
+        work_item_id: str,
+        worker_id: str,
+        lease_epoch: int,
+        fencing_token: int,
+        expected_revision: int,
+        idempotency_key: str | None = None,
+    ) -> dict[str, Any]:
+        """Record, under the live claim, that an external effect is starting.
+
+        A stale fence refuses ``WORK_ITEM_CLAIM_STALE``; a moved row refuses
+        ``REVISION_CONFLICT``. A refusal changes nothing.
+        """
+        request = {
+            "tenant": _string("MarkWorkItemEffectStarted.tenant", tenant),
+            "work_item_id": _string(
+                "MarkWorkItemEffectStarted.work_item_id", work_item_id
+            ),
+            "worker_id": _string("MarkWorkItemEffectStarted.worker_id", worker_id),
+            "lease_epoch": _integer(
+                "MarkWorkItemEffectStarted.lease_epoch", lease_epoch
+            ),
+            "fencing_token": _integer(
+                "MarkWorkItemEffectStarted.fencing_token", fencing_token
+            ),
+            "expected_revision": _integer(
+                "MarkWorkItemEffectStarted.expected_revision", expected_revision
+            ),
+        }
+        return await self._client._send(
+            "MarkWorkItemEffectStarted",
+            {"request": request},
+            None,
+            idempotency_key=idempotency_key
+            or f"effect-start:{work_item_id}:{expected_revision}",
+        )
+
+    async def record_effect_receipt(
+        self,
+        *,
+        tenant: str,
+        work_item_id: str,
+        attempt: int,
+        expected_revision: int,
+        receipt: dict[str, Any],
+        idempotency_key: str | None = None,
+    ) -> dict[str, Any]:
+        """Resolve a started effect with its one receipt for this attempt.
+
+        An identical replay returns the stored receipt; a different receipt
+        refuses ``EFFECT_RECEIPT_CONFLICT``; a receipt naming another job,
+        request, principal or attempt refuses ``EFFECT_RECEIPT_MISMATCH``.
+        """
+        if not isinstance(receipt, dict):
+            raise TypeError("RecordEffectReceipt.receipt must be a mapping")
+        request = {
+            "tenant": _string("RecordEffectReceipt.tenant", tenant),
+            "work_item_id": _string("RecordEffectReceipt.work_item_id", work_item_id),
+            "attempt": _integer("RecordEffectReceipt.attempt", attempt),
+            "expected_revision": _integer(
+                "RecordEffectReceipt.expected_revision", expected_revision
+            ),
+            "receipt": receipt,
+        }
+        return await self._client._send(
+            "RecordEffectReceipt",
+            {"request": request},
+            None,
+            idempotency_key=idempotency_key
+            or f"effect-receipt:{work_item_id}:{attempt}",
+        )
+
+    async def submit_admitted_request(
+        self,
+        *,
+        work_item_id: str,
+        attempt: int,
+        expected_revision: int,
+        request: dict[str, Any],
+        idempotency_key: str | None = None,
+    ) -> dict[str, Any]:
+        """Store the admitted request's digest and payload ref once.
+
+        Bytes that do not hash to ``request_ref`` refuse
+        ``ADMITTED_REQUEST_DIGEST_MISMATCH``; above 1 MiB refuse
+        ``ADMITTED_REQUEST_TOO_LARGE``.
+        """
+        if not isinstance(request, dict):
+            raise TypeError("SubmitAdmittedRequest.request must be a mapping")
+        body = {
+            "work_item_id": _string("SubmitAdmittedRequest.work_item_id", work_item_id),
+            "attempt": _integer("SubmitAdmittedRequest.attempt", attempt),
+            "expected_revision": _integer(
+                "SubmitAdmittedRequest.expected_revision", expected_revision
+            ),
+            "request": request,
+        }
+        return await self._client._send(
+            "SubmitAdmittedRequest",
+            {"request": body},
+            None,
+            idempotency_key=idempotency_key
+            or f"admitted-request:{work_item_id}:{attempt}",
+        )
+
+    async def get_effect_receipt(
+        self, *, tenant: str, work_item_id: str, attempt: int
+    ) -> dict[str, Any] | None:
+        """The receipt of ``(work_item_id, attempt)``, or ``None``."""
+        key = {
+            "tenant": _string("GetEffectReceipt.tenant", tenant),
+            "work_item_id": _string("GetEffectReceipt.work_item_id", work_item_id),
+            "attempt": _integer("GetEffectReceipt.attempt", attempt),
+        }
+        return await self._client._send("GetEffectReceipt", {"request": key}, None)
+
+    async def get_admitted_request(
+        self, *, tenant: str, session_ref: str, work_item_id: str, attempt: int
+    ) -> dict[str, Any] | None:
+        """The admitted request digest and payload ref, or ``None`` when
+        absent or another tenant's or session's."""
+        key = {
+            "tenant": _string("GetAdmittedRequest.tenant", tenant),
+            "session_ref": _string("GetAdmittedRequest.session_ref", session_ref),
+            "work_item_id": _string("GetAdmittedRequest.work_item_id", work_item_id),
+            "attempt": _integer("GetAdmittedRequest.attempt", attempt),
+        }
+        return await self._client._send("GetAdmittedRequest", {"request": key}, None)
+
     async def get_run(self, *, tenant: str, run_id: str) -> dict[str, Any] | None:
         """Read this verified owner's immutable original run admission.
 

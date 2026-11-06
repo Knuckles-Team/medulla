@@ -10,9 +10,23 @@
 //! stored one. Every write is a compare-and-set on the item's row revision.
 
 use super::*;
+use medulla_types::contract::ServerErrorCode;
 use medulla_work_types::work_item_read::{
-    EffectPhase, EffectReceipt, WORK_ITEM_EFFECT_PHASE, WORK_ITEM_ROW_REVISION,
+    AdmittedRequestRecord, EffectPhase, EffectReceipt, EffectRecordKey, EffectWriteResult,
+    MarkWorkItemEffectStartedRequest, RecordEffectReceiptRequest, SubmitAdmittedRequestRequest,
+    WORK_ITEM_EFFECT_PHASE, WORK_ITEM_ROW_REVISION,
 };
+
+/// The one receipt per `(graph, work_item_id, attempt)` (R820.1).
+pub const EFFECT_RECEIPTS: redb::TableDefinition<(&str, &str, u64), &[u8]> =
+    redb::TableDefinition::new("work_item_effect_receipts");
+/// The admitted request record per `(graph, work_item_id, attempt)` (R820.1).
+pub const ADMITTED_REQUESTS: redb::TableDefinition<(&str, &str, u64), &[u8]> =
+    redb::TableDefinition::new("work_item_admitted_requests");
+
+/// A writable effect-record table of one graph member.
+pub type EffectTable<'t> =
+    ScopedOwnerTableMut<'t, (&'static str, &'static str, u64), &'static [u8]>;
 
 /// Whether `props` records a started, unresolved effect.
 pub fn effect_started(props: &serde_json::Map<String, serde_json::Value>) -> bool {
@@ -133,6 +147,274 @@ pub fn apply_record_effect_receipt(
     );
     bump_revision(props, now_s);
     Ok(ReceiptWrite::Store(receipt))
+}
+
+impl EffectRefusal {
+    /// The registered refusal this maps to on the wire.
+    pub fn to_wire(&self) -> String {
+        match self {
+            Self::ClaimStale => format!(
+                "{}: no live claim matches the presented fence",
+                ServerErrorCode::WorkItemClaimStale
+            ),
+            Self::RevisionConflict { current } => format!(
+                "{}: WorkItem row revision is {current}",
+                ServerErrorCode::RevisionConflict
+            ),
+            Self::ReceiptMismatch => format!(
+                "{}: receipt does not match the work item",
+                ServerErrorCode::EffectReceiptMismatch
+            ),
+            Self::ReceiptConflict => format!(
+                "{}: a different receipt is stored for this attempt",
+                ServerErrorCode::EffectReceiptConflict
+            ),
+        }
+    }
+}
+
+type Row = serde_json::Map<String, serde_json::Value>;
+
+/// The WorkItem row of `tenant`, or the not-found refusal a foreign tenant
+/// also gets: another tenant's item is never named.
+fn tenant_row(
+    nodes: &ScopedOwnerTableMut<'_, (&'static str, &'static str), &'static [u8]>,
+    graph: &str,
+    tenant: &str,
+    work_item_id: &str,
+    crypto: DurableCrypto<'_>,
+) -> Result<Row, String> {
+    let row: Option<Row> = nodes
+        .get((graph, work_item_id))?
+        .map(|bytes| decode_durable(&crypto.unseal(bytes.value())?))
+        .transpose()?;
+    row.filter(|row| {
+        property_string(row, "node_type") == "WorkItem" && property_string(row, "tenant") == tenant
+    })
+    .ok_or_else(|| {
+        format!(
+            "{}: WorkItem unavailable",
+            medulla_types::contract::EngineErrorCode::AccessDenied
+        )
+    })
+}
+
+/// Write `row` after an effect transition already bumped its revision.
+/// `write_work_item_props` bumps it once more, so the stored revision is put
+/// back by one first: each effect write moves the revision by exactly one.
+fn write_bumped_row(
+    nodes: &mut ScopedOwnerTableMut<'_, (&'static str, &'static str), &'static [u8]>,
+    graph: &str,
+    work_item_id: &str,
+    row: &mut Row,
+    crypto: DurableCrypto<'_>,
+) -> Result<(), String> {
+    let bumped = row_revision(row);
+    row.insert(
+        WORK_ITEM_ROW_REVISION.into(),
+        serde_json::Value::from(bumped.saturating_sub(1)),
+    );
+    write_work_item_props(nodes, graph, work_item_id, row, crypto)
+}
+
+fn decode_record<T: serde::de::DeserializeOwned>(
+    table: &EffectTable<'_>,
+    key: (&str, &str, u64),
+    crypto: DurableCrypto<'_>,
+) -> Result<Option<T>, String> {
+    table
+        .get(key)?
+        .map(|bytes| decode_durable(&crypto.unseal(bytes.value())?))
+        .transpose()
+}
+
+fn put_record<T: serde::Serialize>(
+    table: &mut EffectTable<'_>,
+    key: (&str, &str, u64),
+    record: &T,
+    crypto: DurableCrypto<'_>,
+) -> Result<(), String> {
+    let bytes = rmp_serde::to_vec_named(record).map_err(|e| e.to_string())?;
+    table.insert(key, crypto.seal(&bytes).as_ref())?;
+    Ok(())
+}
+
+/// The served `MarkWorkItemEffectStarted` arm. Refusals write nothing.
+pub fn apply_mark_effect_started_row(
+    graph: &str,
+    request: &MarkWorkItemEffectStartedRequest,
+    nodes: &mut ScopedOwnerTableMut<'_, (&'static str, &'static str), &'static [u8]>,
+    committed_at_ms: u64,
+    crypto: DurableCrypto<'_>,
+) -> Result<EffectWriteResult, String> {
+    let mut row = tenant_row(nodes, graph, &request.tenant, &request.work_item_id, crypto)?;
+    let before = row_revision(&row);
+    let fence = EffectFence {
+        tenant: &request.tenant,
+        worker_id: &request.worker_id,
+        lease_epoch: request.lease_epoch,
+        fencing_token: request.fencing_token,
+        expected_revision: request.expected_revision,
+    };
+    let revision = apply_mark_effect_started(&mut row, &fence, committed_at_ms as f64 / 1000.0)
+        .map_err(|refusal| refusal.to_wire())?;
+    let replayed = revision == before;
+    if !replayed {
+        write_bumped_row(nodes, graph, &request.work_item_id, &mut row, crypto)?;
+    }
+    Ok(EffectWriteResult {
+        changed_work_item_ids: if replayed {
+            Vec::new()
+        } else {
+            vec![request.work_item_id.clone()]
+        },
+        work_item_id: request.work_item_id.clone(),
+        attempt: property_u64(&row, "attempt"),
+        revision,
+        replayed,
+        receipt: None,
+    })
+}
+
+/// The served `RecordEffectReceipt` arm: the receipt and the `Resolved` phase
+/// commit in one transaction. The receipt must name this item (job ID), the
+/// admitted request of this attempt (or the item's input when none was
+/// admitted) and the worker holding the started claim, at the started attempt.
+pub fn apply_record_effect_receipt_row(
+    graph: &str,
+    request: &RecordEffectReceiptRequest,
+    nodes: &mut ScopedOwnerTableMut<'_, (&'static str, &'static str), &'static [u8]>,
+    receipts: &mut EffectTable<'_>,
+    admitted: &EffectTable<'_>,
+    committed_at_ms: u64,
+    crypto: DurableCrypto<'_>,
+) -> Result<EffectWriteResult, String> {
+    let mut row = tenant_row(nodes, graph, &request.tenant, &request.work_item_id, crypto)?;
+    let key = (graph, request.work_item_id.as_str(), request.attempt);
+    if property_u64(&row, "attempt") != request.attempt {
+        return Err(EffectRefusal::ReceiptMismatch.to_wire());
+    }
+    let stored: Option<EffectReceipt> = decode_record(receipts, key, crypto)?;
+    if stored.is_none() && !effect_started(&row) {
+        return Err(EffectRefusal::ReceiptMismatch.to_wire());
+    }
+    let admitted_record: Option<AdmittedRequestRecord> = decode_record(admitted, key, crypto)?;
+    let request_ref = admitted_record.map_or_else(
+        || property_string(&row, "payload_ref").to_string(),
+        |record| record.request_ref,
+    );
+    let principal_ref = property_string(&row, "lease_owner").to_string();
+    let write = apply_record_effect_receipt(
+        &mut row,
+        &request.work_item_id,
+        (&request_ref, &principal_ref),
+        request.receipt.clone(),
+        stored.as_ref(),
+        request.expected_revision,
+        committed_at_ms as f64 / 1000.0,
+    )
+    .map_err(|refusal| refusal.to_wire())?;
+    let (receipt, replayed) = match write {
+        ReceiptWrite::Replay(receipt) => (receipt, true),
+        ReceiptWrite::Store(receipt) => {
+            put_record(receipts, key, &receipt, crypto)?;
+            write_bumped_row(nodes, graph, &request.work_item_id, &mut row, crypto)?;
+            (receipt, false)
+        }
+    };
+    Ok(EffectWriteResult {
+        changed_work_item_ids: if replayed {
+            Vec::new()
+        } else {
+            vec![request.work_item_id.clone()]
+        },
+        work_item_id: request.work_item_id.clone(),
+        attempt: request.attempt,
+        revision: row_revision(&row),
+        replayed,
+        receipt: Some(receipt),
+    })
+}
+
+/// The served `SubmitAdmittedRequest` arm: stores the digest and payload ref
+/// once under `(work_item_id, attempt)`. An identical resubmission replays; a
+/// different request under the same key refuses as a conflict.
+pub fn apply_submit_admitted_request_row(
+    graph: &str,
+    request: &SubmitAdmittedRequestRequest,
+    nodes: &ScopedOwnerTableMut<'_, (&'static str, &'static str), &'static [u8]>,
+    admitted: &mut EffectTable<'_>,
+    crypto: DurableCrypto<'_>,
+) -> Result<EffectWriteResult, String> {
+    let record = request.request.admit()?;
+    let row = tenant_row(nodes, graph, &record.tenant, &request.work_item_id, crypto)?;
+    check_revision(&row, request.expected_revision).map_err(|refusal| refusal.to_wire())?;
+    let key = (graph, request.work_item_id.as_str(), request.attempt);
+    let replayed = match decode_record::<AdmittedRequestRecord>(admitted, key, crypto)? {
+        Some(stored) if stored == record => true,
+        Some(_) => {
+            return Err(format!(
+                "{}: a different request is admitted for this attempt",
+                medulla_types::contract::EngineErrorCode::Conflict
+            ))
+        }
+        None => {
+            put_record(admitted, key, &record, crypto)?;
+            false
+        }
+    };
+    Ok(EffectWriteResult {
+        changed_work_item_ids: Vec::new(),
+        work_item_id: request.work_item_id.clone(),
+        attempt: request.attempt,
+        revision: row_revision(&row),
+        replayed,
+        receipt: None,
+    })
+}
+
+/// `GetEffectReceipt`: the receipt of `(work_item_id, attempt)`, `None` when
+/// absent or when the item is not the caller tenant's.
+pub fn read_effect_receipt(
+    shard: &Shard,
+    graph: &str,
+    key: &EffectRecordKey,
+    crypto: DurableCrypto<'_>,
+) -> Result<Option<EffectReceipt>, String> {
+    if super::read_work_item(shard, graph, &key.tenant, &key.work_item_id, crypto)?.is_none() {
+        return Ok(None);
+    }
+    let handle = shard.graph(graph)?;
+    let read = shard.read(&handle)?;
+    let table = read.scoped_owner_table(EFFECT_RECEIPTS)?;
+    table
+        .get((graph, key.work_item_id.as_str(), key.attempt))?
+        .map(|bytes| decode_durable(&crypto.unseal(bytes.value())?))
+        .transpose()
+}
+
+/// `GetAdmittedRequest`: the digest and payload ref, `None` when absent or
+/// when the record belongs to another tenant or session.
+pub fn read_admitted_request(
+    shard: &Shard,
+    graph: &str,
+    key: &EffectRecordKey,
+    crypto: DurableCrypto<'_>,
+) -> Result<Option<AdmittedRequestRecord>, String> {
+    let handle = shard.graph(graph)?;
+    let read = shard.read(&handle)?;
+    let table = read.scoped_owner_table(ADMITTED_REQUESTS)?;
+    let record: Option<AdmittedRequestRecord> = table
+        .get((graph, key.work_item_id.as_str(), key.attempt))?
+        .map(|bytes| decode_durable(&crypto.unseal(bytes.value())?))
+        .transpose()?;
+    Ok(record.filter(|record| {
+        record.tenant == key.tenant
+            && key
+                .session_ref
+                .as_deref()
+                .is_some_and(|session| session == record.session_ref)
+    }))
 }
 
 #[cfg(test)]
