@@ -3261,7 +3261,7 @@ mod tests {
     // spec: MEDULLA-INCREMENTAL-VIEWS-R011.5
     fn retract_equals_fresh_run_randomized() {
         use rand::{Rng, SeedableRng};
-        let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(0x5eed_11_5);
+        let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(0x05ee_d115);
         for _ in 0..40 {
             let statements: Vec<String> = (0..rng.gen_range(6..24))
                 .map(|_| random_statement(&mut rng))
