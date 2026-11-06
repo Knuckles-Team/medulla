@@ -49,6 +49,7 @@ mod gateway_graph;
 mod gateway_mining_ml;
 mod hierarchy;
 mod memory;
+mod memory_cursor;
 pub mod memory_snapshot;
 mod nodes;
 pub mod retention_cleanup;

@@ -223,6 +223,8 @@ knobs! {
     schema_repair_shadow_sample_nodes: u64 = "schema_repair.shadow_sample_nodes", U64(10_000), [100, 1_000_000], "nodes", Tunable;
     /// Reputation minimum independent labels.
     reputation_min_support: u64 = "reputation.min_support", U64(10), [5, 1_000], "labels", Tunable;
+    /// Lifetime of a signed memory snapshot list cursor (MEDULLA-DURABLE-KERNEL-R085.2).
+    memory_sync_cursor_ttl_s: u64 = "memory_sync.cursor_ttl_s", U64(900), [60, 86_400], "seconds", Tunable;
     /// Memory search-state size cap.
     memory_search_state_max_bytes: u64 = "memory.search_state_max_bytes", U64(1_048_576), [65_536, 1_048_576], "bytes", Tunable;
     /// TOC line-index stride.
