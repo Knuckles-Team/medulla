@@ -810,6 +810,16 @@ fn core_specs() -> &'static [CoreSpec] {
                 "../../../medulla-core/ontology/enterprise-v1.ttl"
             )),
         },
+        // The enterprise SHACL shapes are their own core source, the same
+        // pattern as orchestration-shapes and finance-shapes.
+        CoreSpec {
+            module: "enterprise-shapes",
+            version: 1,
+            shapes: Some(include_str!(
+                "../../../medulla-core/ontology/enterprise-v1.shapes.ttl"
+            )),
+            ontology: None,
+        },
         CoreSpec {
             module: "governance-shapes",
             version: 1,
@@ -945,6 +955,16 @@ fn core_specs() -> &'static [CoreSpec] {
             ontology: Some(include_str!(
                 "../../../medulla-core/ontology/identity-v1.ttl"
             )),
+        },
+        // The identity SHACL shapes are their own core source, the same
+        // pattern as orchestration-shapes and finance-shapes.
+        CoreSpec {
+            module: "identity-shapes",
+            version: 1,
+            shapes: Some(include_str!(
+                "../../../medulla-core/ontology/identity-v1.shapes.ttl"
+            )),
+            ontology: None,
         },
         CoreSpec {
             module: "infrastructure",
@@ -1688,7 +1708,11 @@ mod tests {
             ),
             (
                 "enterprise",
-                "7ec8ca794b81774227d8a660c1cd2cafd25230921d3b0eb89ee2690b2fd67a27",
+                "78a7fcc27e4f1067979a8684b479c623e193c1bd3947d54f8d81559470952851",
+            ),
+            (
+                "enterprise-shapes",
+                "df333980776e43addf5473dc9e875fd465b491e5a1e424bddf42f4eb22d9910d",
             ),
             (
                 "governance-shapes",
@@ -1712,7 +1736,11 @@ mod tests {
             ),
             (
                 "identity",
-                "b32a277c15f100d26175c2a1a24af63151a50b8f6fb54f953cbc66626c1c8828",
+                "afe61400366cc8781758ffb804c989adc0f44f2031e2db09be3cff03ff237358",
+            ),
+            (
+                "identity-shapes",
+                "753ea0407a1f691351684761e2f500e3d3df3e611e5a8c249befc740350efdf8",
             ),
             (
                 "infrastructure",
@@ -1740,7 +1768,7 @@ mod tests {
             ),
             (
                 "process_intelligence",
-                "5bcd57f2f092c49158cc3b61d51566b0ce60674efe7ba0642b38c98a0ace6d0d",
+                "b16945235367ae4271649cd351e4ef6ce3174b3979189e8fc0ad7c46d659dde7",
             ),
             (
                 "sdd",
@@ -1845,7 +1873,7 @@ mod tests {
             ),
             (
                 "virtual-graph",
-                "cbcec36092637964d49faf2178d3930bb2a0a32d7d0586b9b4acadf9fc2eaa57",
+                "c8fb6b85d5a7d25a1ee72288ff2ee3bf6e144f748f7ae5b123a76ac038665e94",
             ),
             (
                 "virtual-graph-shapes",
