@@ -113,6 +113,7 @@ fn validate(
         composed_digest: current,
         graph_version: core.version(),
         changed: false,
+        edit_head: super::edits::head(core),
     })
 }
 

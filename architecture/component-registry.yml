@@ -3954,6 +3954,7 @@ components:
       - "tests/typed_packs/ontology_pack_support.py"
       - "tests/typed_packs/test_ontology_corpus_served.py"
       - "tests/typed_packs/test_ontology_crosswalk_served.py"
+      - "tests/typed_packs/test_ontology_edits_served.py"
       - "tests/test_decide_auth_boundary.py"
       - "tests/test_installed_wheel_decision_client_boundary.py"
       - "tests/operator_command_store_upgrade_cli.rs"

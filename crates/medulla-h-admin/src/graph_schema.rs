@@ -14,6 +14,7 @@
 
 mod approved;
 pub(crate) mod attach_pack;
+mod edits;
 #[cfg(test)]
 mod finance_tests;
 mod ontology_import;
@@ -259,7 +260,9 @@ pub(crate) async fn handle_gateway(
         GraphSchemaOp::ValidateRepair { .. } => {
             approved::handle_validate(ctx, plan, method, op).await
         }
-        GraphSchemaOp::ImportOntology { .. } | GraphSchemaOp::WithdrawOntology { .. } => {
+        GraphSchemaOp::ImportOntology { .. }
+        | GraphSchemaOp::WithdrawOntology { .. }
+        | GraphSchemaOp::RevertEdit { .. } => {
             handle_ontology_gateway(tenant_id, ctx, plan, method, op).await
         }
     }
@@ -291,6 +294,9 @@ async fn handle_ontology_gateway(
         let committed = match &op {
             GraphSchemaOp::WithdrawOntology { .. } => {
                 ontology_import::withdraw_ontology(core, &graph_name, &op, &authority)
+            }
+            GraphSchemaOp::RevertEdit { subject_iri } => {
+                ontology_import::revert_edit(core, &graph_name, subject_iri)
             }
             _ => ontology_import::import_ontology(core, &graph_name, &op, &authority),
         };
@@ -404,6 +410,7 @@ pub(crate) fn apply_pack_source(
         composed_digest: sources.composed_digest().to_hex(),
         graph_version: core.version().saturating_add(u64::from(changed)),
         changed,
+        edit_head: edits::head(core),
     })
 }
 
@@ -533,6 +540,7 @@ fn apply(
     use medulla_catalog_types::{graph_schema::GraphSchemaCommitted, graph_schema::GraphSchemaOp};
 
     op.validate()?;
+    let before = edits::source_digest(core, op.source_token());
     let mut sources = (*core.schema_sources()).clone();
     check_expected_digest(&sources, op.expected_composed_digest())?;
     let changed = match op {
@@ -547,7 +555,8 @@ fn apply(
         GraphSchemaOp::AttachPack { .. }
         | GraphSchemaOp::ValidateRepair { .. }
         | GraphSchemaOp::ImportOntology { .. }
-        | GraphSchemaOp::WithdrawOntology { .. } => {
+        | GraphSchemaOp::WithdrawOntology { .. }
+        | GraphSchemaOp::RevertEdit { .. } => {
             unreachable!(
                 "attach-pack, validate-repair and runtime ontologies have their own routes"
             )
@@ -562,6 +571,7 @@ fn apply(
     if changed {
         core.install_schema_sources(Arc::new(sources));
     }
+    let edit_head = edits::after_attach(core, op, before, changed)?;
     ResultPayload::of::<medulla_protocol_types::result_contract::reasoning::GraphSchema>(
         GraphSchemaCommitted {
             schema_version: medulla_catalog_types::graph_schema::GRAPH_SCHEMA_RESULT_SCHEMA_VERSION,
@@ -569,6 +579,7 @@ fn apply(
             composed_digest,
             graph_version: core.version().saturating_add(u64::from(changed)),
             changed,
+            edit_head,
         },
     )
 }

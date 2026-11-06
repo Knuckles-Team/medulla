@@ -13052,6 +13052,25 @@ class RdfClient:
             )
         ).model_dump(mode="json")
 
+    async def revert_edit(
+        self,
+        subject_iri: str,
+        *,
+        graph: str | None = None,
+        idempotency_key: str | None = None,
+    ) -> dict[str, Any]:
+        """Append the inversions of every ontology edit of ``subject_iri``.
+
+        Inversions are appended newest first; no edit is deleted. A subject
+        whose edit is sealed by a governed change refuses ``EDIT_SEALED``.
+        """
+        op = {"op": "revert_edit", "subject_iri": subject_iri}
+        return (
+            await _gen.reasoning.send_graph_schema(
+                self._client, {"op": op}, graph, idempotency_key=idempotency_key
+            )
+        ).model_dump(mode="json")
+
     async def validate_committed(
         self, *, data_triples: list[dict[str, Any]]
     ) -> dict[str, Any]:
