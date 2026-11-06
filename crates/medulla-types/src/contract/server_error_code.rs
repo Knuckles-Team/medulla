@@ -7,6 +7,8 @@ closed_error_codes! {
     /// Existing server refusal vocabulary pending typed handler migration.
     pub enum ServerErrorCode {
         AbortedAtomicGraphBatch => "ABORTED_ATOMIC_GRAPH_BATCH",
+        AlertEnvelopeInvalid => "ALERT_ENVELOPE_INVALID",
+        AlertRevisionConflict => "ALERT_REVISION_CONFLICT",
         AnomalyResourceRequired => "ANOMALY_RESOURCE_REQUIRED",
         ArchiveDigestMismatch => "ARCHIVE_DIGEST_MISMATCH",
         ArchiveMissing => "ARCHIVE_MISSING",
@@ -212,6 +214,7 @@ closed_error_codes! {
         RaftNotConfigured => "RAFT_NOT_CONFIGURED",
         RaftRetryBudgetExhausted => "RAFT_RETRY_BUDGET_EXHAUSTED",
         ReasoningProjectionRejectFailed => "REASONING_PROJECTION_REJECT_FAILED",
+        ReceiptKeyInvalid => "RECEIPT_KEY_INVALID",
         RecordDerivedReadonly => "RECORD_DERIVED_READONLY",
         RecordHeadConflict => "RECORD_HEAD_CONFLICT",
         RecordImmutable => "RECORD_IMMUTABLE",

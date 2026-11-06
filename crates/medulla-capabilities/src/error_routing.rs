@@ -279,6 +279,13 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "STRATEGY_CARD_LICENCE_MISSING",
         ],
     ),
+    // MEDULLA-FINANCE-PRIMITIVES-R011.2.3: the alert door's closed refusals.
+    (
+        "FinanceAlertRaise",
+        &["ALERT_ENVELOPE_INVALID", "ALERT_REVISION_CONFLICT"],
+    ),
+    // MEDULLA-FINANCE-PRIMITIVES-R011.4: an empty receipt idempotency key.
+    ("CreateNodeIfAbsent", &["RECEIPT_KEY_INVALID"]),
     ("GetNodes", &["RESULT_TOO_LARGE"]),
     ("GetEdges", &["RESULT_TOO_LARGE"]),
     (

@@ -65,6 +65,9 @@ method_results! {
     // The stored finance record node properties; `null` when absent.
     #[cfg(feature = "finance")]
     FinanceRecordGet(FinanceRecordGet) => RawOrNull<Dynamic> dynamic CallerProperties;
+    // The event id of a raised finance alert.
+    #[cfg(feature = "finance")]
+    FinanceAlertRaise(FinanceAlertRaise) => Text<String>;
     // `(decayed count, evicted ids)`.
     Maintain(Maintain) => Raw<(usize, Vec<String>)>;
     AddSceneObject(AddSceneObject) => Text<String>;

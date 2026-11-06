@@ -168,6 +168,7 @@ fn resolve_preserves_creation_tenant_and_exact_mfa_timestamp() {
 }
 
 // spec: MEDULLA-TYPED-PACKS-R085.7.1
+// spec: MEDULLA-IDENTITY-R713
 #[test]
 fn original_reference_inspection_is_owner_bound_and_does_not_touch() {
     let mut store = opened();
@@ -204,6 +205,7 @@ fn original_reference_inspection_is_owner_bound_and_does_not_touch() {
 }
 
 // spec: MEDULLA-TYPED-PACKS-R085.7.1
+// spec: MEDULLA-IDENTITY-R713
 #[test]
 fn reference_inspection_refuses_pending_disabled_and_ambiguous_records() {
     let original = opened();
@@ -385,6 +387,7 @@ fn renewal_clamps_idle_to_original_absolute_expiry_and_preserves_subject_mfa() {
 }
 
 // spec: MEDULLA-TYPED-PACKS-R085.4.1
+// spec: MEDULLA-IDENTITY-R710
 #[test]
 fn renewal_refuses_invalid_authority_without_mutation() {
     for reason in [

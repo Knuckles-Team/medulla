@@ -35,6 +35,7 @@ mod context_facts;
 #[cfg(test)]
 mod context_facts_tests;
 mod edges;
+mod finance_alerts;
 mod finance_records;
 mod gateway;
 #[cfg(feature = "broker")]

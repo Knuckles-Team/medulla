@@ -39,6 +39,11 @@ jobs:
           DECIDE_BUDGETS_REPORT: ${{ github.workspace }}/target/decide-budgets.json
         run: cargo bench --features full --bench decide_budgets
 
+      - name: Run the media facts qualification
+        env:
+          DECIDE_BUDGETS_REPORT: ${{ github.workspace }}/target/decide-budgets.json
+        run: cargo bench --bench media_facts
+
       - name: Check the report against the baseline
         run: python scripts/check_decide_budgets.py target/decide-budgets.json
 

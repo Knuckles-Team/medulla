@@ -24,6 +24,14 @@ fn capabilities(bytes: u64) -> ModelInputCapabilities {
 }
 
 fn model(connector: &str, vision: bool, bytes: u64) -> Content {
+    model_with(connector, vision, capabilities(bytes))
+}
+
+fn model_with(
+    connector: &str,
+    vision: bool,
+    input_capabilities: ModelInputCapabilities,
+) -> Content {
     Content {
         kind: PackEntryKind::ModelProfile,
         uri: format!("model-profile://{connector}/model"),
@@ -37,7 +45,7 @@ fn model(connector: &str, vision: bool, bytes: u64) -> Content {
                     "provider": "fixture", "model_identity": "fixture/model",
                     "context_window_tokens": 8192, "max_output_tokens": 1024,
                     "supports_tools": false, "supports_structured_output": false,
-                    "supports_vision": vision, "input_capabilities": capabilities(bytes)
+                    "supports_vision": vision, "input_capabilities": input_capabilities
                 }))
                 .unwrap(),
             ),
@@ -151,5 +159,56 @@ async fn nonvision_image_pack_refuses_without_owner_or_body_mutation() {
             counts,
             "refused declarations create no engine bodies"
         );
+    }
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R050.3
+#[tokio::test]
+async fn four_media_types_at_128_parts_import() {
+    // The declaration ceilings: 64 MiB aggregate, 128 parts.
+    const MAX_MODEL_INPUT_BYTES: u64 = 64 * 1024 * 1024;
+    const PARTS: u32 = 128;
+    let part_bytes = MAX_MODEL_INPUT_BYTES / u64::from(PARTS);
+    for media in [
+        ModelInputMediaType::Text,
+        ModelInputMediaType::Png,
+        ModelInputMediaType::Jpeg,
+        ModelInputMediaType::Webp,
+    ] {
+        let connector = format!("model-media-{}", media.as_str().replace('/', "-"));
+        let declared = ModelInputCapabilities {
+            media_types: vec![media],
+            max_aggregate_bytes: MAX_MODEL_INPUT_BYTES,
+            max_parts: PARTS,
+        };
+        let served = Served::new();
+        bind(&served, &connector, ADMIN).await;
+        imported(
+            &served,
+            &build_pack(
+                &connector,
+                &[model_with(&connector, true, declared.clone())],
+            ),
+            None,
+        )
+        .await;
+        let store = served.state.write().await.ensure_agent_library().unwrap();
+        let id = format!("mcp:{connector}/model_profile/model");
+        let stored = store.current_component(TENANT, &id).unwrap().unwrap();
+        let AgentComponentFacts::ModelProfile {
+            input_capabilities: Some(facts),
+            ..
+        } = &stored.facts
+        else {
+            panic!("{media:?}: the imported profile keeps its declaration");
+        };
+        assert_eq!(*facts, declared);
+        // 128 parts of the declared type fill the 64 MiB ceiling exactly; one more
+        // part, or one more byte, is refused.
+        let parts = vec![(media.as_str(), part_bytes); PARTS as usize];
+        facts.validate_parts(&parts).unwrap();
+        let mut over = parts.clone();
+        over.push((media.as_str(), 1));
+        assert!(facts.validate_parts(&over).is_err());
     }
 }

@@ -2102,6 +2102,14 @@ path = "benches/decide_budgets.rs"
 harness = false
 required-features = ["full"]
 
+# Nightly media-facts qualification (MEDULLA-DECISION-ENGINE-R050.3): four media types at
+# 128 parts each through `ModelInputCapabilities::validate_parts`; merges its group into
+# the decide budget report. Never gates a PR.
+[[bench]]
+name = "media_facts"
+path = "benches/media_facts.rs"
+harness = false
+
 # Provenance-anchoring write-path overhead (provenance anchoring, CONCEPT:MEDULLA-KG.sharding.row-level-security):
 # N concurrent authoritative writers fanned into ONE redb backend, with vs.
 # without a concurrent (deliberately aggressive) anchor-sweep loop contending
