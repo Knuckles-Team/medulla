@@ -45,6 +45,26 @@ pub enum ToolSubsetRefusal {
     BudgetExceeded,
 }
 
+impl crate::decision::record::outcome::DecisionRefusal for ToolSubsetRefusal {
+    fn code(&self) -> crate::decision::record::outcome::RefusalCode {
+        match self {
+            Self::CapabilityUncoverable => {
+                crate::decision::codes::TOOL_SUBSET_CAPABILITY_UNCOVERABLE
+            }
+            Self::BudgetExceeded => crate::decision::codes::TOOL_SUBSET_BUDGET_EXCEEDED,
+        }
+    }
+
+    fn detail(&self) -> String {
+        match self {
+            Self::CapabilityUncoverable => {
+                "no candidate subset covers every required capability".to_string()
+            }
+            Self::BudgetExceeded => "every covering subset exceeds the context budget".to_string(),
+        }
+    }
+}
+
 /// Greedily select the smallest tool subset that covers every required
 /// capability without exceeding `context_budget_tokens`.
 ///

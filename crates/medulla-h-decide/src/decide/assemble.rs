@@ -51,21 +51,48 @@ async fn assemble_for(
 ) -> Result<medulla_decision_types::decision::AssemblyResult, String> {
     use medulla_compute::assemble::{assemble, inputs, RecordIdentity};
 
-    if request.tenant_id != verified.tenant() {
-        return Err("ACCESS_DENIED: assembly tenant must match the verified request tenant".into());
-    }
-    let store = state.write().await.ensure_agent_library()?;
-    let policy = resolve_policy(&store, &request)?;
-    let entries = store.assembly_candidates(&request.tenant_id, &request.candidates)?;
-    admit_tool_set(state, graph, verified, &entries).await?;
-    let candidates = medulla_persistence_records::decision_record::candidate_facts(&entries)?;
-    let templates = request
-        .templates
-        .iter()
-        .map(|reference| store.assembly_template(&request.tenant_id, reference))
-        .collect::<Result<Vec<_>, String>>()?;
+    use super::telemetry::{self, Stage};
+    const FAMILY: &str = "assembly";
+    let tenant = verified.tenant();
+
+    let (store, policy) = telemetry::stage_async(Stage::Admit, FAMILY, tenant, async {
+        if request.tenant_id != verified.tenant() {
+            return Err(
+                "ACCESS_DENIED: assembly tenant must match the verified request tenant".to_string(),
+            );
+        }
+        let store = state.write().await.ensure_agent_library()?;
+        let policy = resolve_policy(&store, &request)?;
+        Ok::<_, String>((store, policy))
+    })
+    .await?;
+    let entries = telemetry::stage(Stage::Candidates, FAMILY, tenant, || {
+        store.assembly_candidates(&request.tenant_id, &request.candidates)
+    })?;
+    telemetry::stage_async(
+        Stage::Visibility,
+        FAMILY,
+        tenant,
+        admit_tool_set(state, graph, verified, &entries),
+    )
+    .await?;
+    let (candidates, templates) = telemetry::stage(Stage::Constraints, FAMILY, tenant, || {
+        let candidates = medulla_persistence_records::decision_record::candidate_facts(&entries)?;
+        let templates = request
+            .templates
+            .iter()
+            .map(|reference| store.assembly_template(&request.tenant_id, reference))
+            .collect::<Result<Vec<_>, String>>()?;
+        Ok::<_, String>((candidates, templates))
+    })?;
     let required_media = request.requirements.required_input_media.clone();
-    let topology = super::topology_read::read(state, graph, verified, &request, &templates).await?;
+    let topology = telemetry::stage_async(
+        Stage::Entailment,
+        FAMILY,
+        tenant,
+        super::topology_read::read(state, graph, verified, &request, &templates),
+    )
+    .await?;
     let mut inputs =
         inputs(request, candidates, templates, policy).map_err(|error| error.to_string())?;
     inputs.topology = topology;
@@ -75,22 +102,33 @@ async fn assemble_for(
         created_at_ms: medulla_kernel::kernel::dispatch_support::authoritative_now_ms(),
     };
     // Bounded by the node budget, but CPU work all the same.
-    let assembly = tokio::task::spawn_blocking(move || assemble(inputs, identity))
-        .await
-        .map_err(|error| format!("assembly task failed: {error}"))?
-        .map_err(|error| error.to_string())?;
-    let (model_revision, model_input) =
-        selected_model(&assembly.record, &entries, required_media.as_slice())?;
-    Ok(medulla_decision_types::decision::AssemblyResult {
-        schema_version: medulla_decision_types::decision::ASSEMBLY_RESULT_SCHEMA_VERSION,
-        record: assembly.record,
-        graph: assembly.graph,
-        agents: medulla_types::contract::BoundedVec::new(assembly.agents)
-            .map_err(|error| error.to_string())?,
-        model: assembly.model,
-        model_revision,
-        model_input,
+    let assembly = telemetry::stage_async(Stage::Solve, FAMILY, tenant, async {
+        tokio::task::spawn_blocking(move || assemble(inputs, identity))
+            .await
+            .map_err(|error| format!("assembly task failed: {error}"))?
+            .map_err(|error| error.to_string())
     })
+    .await?;
+    let (model_revision, model_input) = telemetry::stage(Stage::Rank, FAMILY, tenant, || {
+        selected_model(&assembly.record, &entries, required_media.as_slice())
+    })?;
+    let result = telemetry::stage(Stage::Record, FAMILY, tenant, || {
+        Ok::<_, String>(medulla_decision_types::decision::AssemblyResult {
+            schema_version: medulla_decision_types::decision::ASSEMBLY_RESULT_SCHEMA_VERSION,
+            record: assembly.record,
+            graph: assembly.graph,
+            agents: medulla_types::contract::BoundedVec::new(assembly.agents)
+                .map_err(|error| error.to_string())?,
+            model: assembly.model,
+            model_revision,
+            model_input,
+        })
+    })?;
+    telemetry::stage(Stage::Conclude, FAMILY, tenant, || {
+        telemetry::assembled(&result.record);
+        Ok::<_, String>(())
+    })?;
+    Ok(result)
 }
 
 /// The selected model slot's revision and declared input capabilities

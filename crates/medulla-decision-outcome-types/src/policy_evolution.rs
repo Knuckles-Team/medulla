@@ -341,6 +341,18 @@ impl PolicyRefusal {
     }
 }
 
+impl medulla_decision_types::decision::record::outcome::DecisionRefusal for PolicyRefusal {
+    fn code(&self) -> medulla_decision_types::decision::record::outcome::RefusalCode {
+        medulla_decision_types::decision::record::outcome::RefusalCode::new(PolicyRefusal::code(
+            self,
+        ))
+    }
+
+    fn detail(&self) -> String {
+        PolicyRefusal::detail(self).to_string()
+    }
+}
+
 impl std::fmt::Display for PolicyRefusal {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(formatter, "{}: {}", self.code(), self.detail())

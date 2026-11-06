@@ -27,6 +27,48 @@ use serde_json::{json, Value};
 /// (MEDULLA-FEDERATED-QUERY-R080.4).
 pub const PROJECTION_READ_ONLY: &str = "PROJECTION_READ_ONLY";
 
+/// The refusal code for a schema change that no approval covers
+/// (MEDULLA-FEDERATED-QUERY-R079.4).
+pub const SCHEMA_CHANGE_NOT_APPROVED: &str = "SCHEMA_CHANGE_NOT_APPROVED";
+
+/// The refusal code for a schema change that names a column the table lacks
+/// (MEDULLA-FEDERATED-QUERY-R079.4).
+pub const SCHEMA_COLUMN_UNKNOWN: &str = "SCHEMA_COLUMN_UNKNOWN";
+
+/// The refusal code for a publication the manifest writer cannot make faithfully:
+/// a missing graph-version binding, or an unsupported manifest, schema or
+/// partition feature (MEDULLA-FEDERATED-QUERY-R079.2.1, R079.3, R079.4).
+pub const MANIFEST_PUBLICATION_INVALID: &str = "MANIFEST_PUBLICATION_INVALID";
+
+/// A lake publication or schema change refused with a stable code and a reason
+/// (MEDULLA-FEDERATED-QUERY-R079.4). A refusal never makes a snapshot visible.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PublicationRefusal {
+    /// One of [`SCHEMA_CHANGE_NOT_APPROVED`], [`SCHEMA_COLUMN_UNKNOWN`] or
+    /// [`MANIFEST_PUBLICATION_INVALID`].
+    pub code: &'static str,
+    /// Why the publication was refused.
+    pub reason: String,
+}
+
+impl PublicationRefusal {
+    /// A refusal with `code` and `reason`.
+    pub fn new(code: &'static str, reason: impl Into<String>) -> Self {
+        PublicationRefusal {
+            code,
+            reason: reason.into(),
+        }
+    }
+}
+
+impl std::fmt::Display for PublicationRefusal {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}: {}", self.code, self.reason)
+    }
+}
+
+impl std::error::Error for PublicationRefusal {}
+
 /// One registered table's catalog entry (CONCEPT:MEDULLA-KG.storage.lsn-as-snapshot-returns).
 #[derive(Clone, Debug, PartialEq)]
 pub struct TableEntry {

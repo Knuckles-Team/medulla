@@ -670,7 +670,7 @@ Each line binds one row to its proving test. A test marked planned does not exis
 - `MEDULLA-TYPED-PACKS-R071.1`: `tests/typed_packs/test_ontology_crosswalk_served.py::test_core_metadata_crosswalks` (planned)
 - `MEDULLA-TYPED-PACKS-R071.1.1`: `crates/medulla-catalog-types/src/domain_pack.rs::tests::crosswalk_round_trips_every_field` (planned); `tests/typed_packs/test_ontology_crosswalk_served.py::test_core_metadata_crosswalks` (planned)
 - `MEDULLA-TYPED-PACKS-R071.1.2`: `crates/medulla-catalog-types/src/domain_pack/crosswalk.rs::tests::golden_person_event_document_tuples` (planned)
-- `MEDULLA-TYPED-PACKS-R071.1.3`: `crates/medulla-h-sparql/src/rdf/inspect_tests.rs::inspection_returns_composed_crosswalks` (planned)
+- `MEDULLA-TYPED-PACKS-R071.1.3`: `crates/medulla-h-sparql/src/rdf/inspect_tests.rs::inspection_returns_composed_crosswalks` (planned); the pack carries `crosswalk` and `concept_path` entries covered by `pack_digest`, and the revision is the composed schema digest
 - `MEDULLA-TYPED-PACKS-R071.1.4`: `tests/typed_packs/test_ontology_crosswalk_served.py::test_crosswalk_refusals_leave_state_unchanged` (planned)
 - `MEDULLA-TYPED-PACKS-R071.1.5`: `tests/typed_packs/test_ontology_crosswalk_served.py::test_crosswalk_evidence_matches_committed_records` (planned)
 - `MEDULLA-TYPED-PACKS-R071.1.6`: `tests/typed_packs/test_ontology_crosswalk_served.py::test_core_metadata_crosswalks` (planned)
@@ -717,7 +717,7 @@ Each line binds one row to its proving test. A test marked planned does not exis
 - **MEDULLA-TYPED-PACKS-R002.12:** `crates/medulla-h-admin/src/admin/connector_pack/tests/outbox.rs::native_component_event_projects` (planned). Proves the row at its served entry point; no receipt is asserted.
 - **MEDULLA-TYPED-PACKS-R002.13:** `crates/medulla-h-admin/src/admin/prompt_receipt.rs::tests::receipt_verification` (planned). Proves the row at its served entry point; no receipt is asserted.
 - **MEDULLA-TYPED-PACKS-R002.13:** `tests/test_prompt_blueprints_served.py::test_receipt_verdicts` (planned). Proves the row at its served entry point; no receipt is asserted.
-- **MEDULLA-TYPED-PACKS-R071.2:** `crates/medulla-core/tests/ontology_modules_extend_core.rs::no_module_imports_core_and_every_class_reaches_core` (planned). Proves the row at its served entry point; no receipt is asserted.
+- **MEDULLA-TYPED-PACKS-R071.2:** `crates/medulla-core/tests/ontology_modules_extend_core.rs::no_module_imports_core_and_every_class_reaches_core` (planned). Proves the row at its served entry point; no receipt is asserted. It also asserts every module class has an `rdfs:subClassOf` path to a core class (the 208 formerly unrooted classes included).
 - **MEDULLA-TYPED-PACKS-R071.2:** `tests/typed_packs/test_ontology_corpus_served.py::test_modules_extend_core_through_subclass` (planned). Proves the row at its served entry point; no receipt is asserted.
 - **MEDULLA-TYPED-PACKS-R071.100:** `tests/typed_packs/test_concept_path_admission_served.py::test_duplicate_or_conflicting_paths_refuse_without_iri_changes` (planned). Proves the row at its served entry point; no receipt is asserted.
 - **MEDULLA-TYPED-PACKS-R101:** `crates/medulla-shacl/tests/connector_pack_shapes.rs::each_contract_shape_accepts_valid_and_refuses_invalid` (planned). Proves the row at its served entry point; no receipt is asserted.

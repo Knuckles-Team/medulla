@@ -7,7 +7,10 @@
 //! count, exploration/audit flags, effective sample sizes and latency. The
 //! dashboards and alert rules over them belong to W6 (LGTM spanmetrics).
 
+use std::future::Future;
 use std::time::Instant;
+
+use tracing::Instrument;
 
 use medulla_decision_types::decision::replay::EvaluationRun;
 use medulla_decision_types::{
@@ -20,6 +23,146 @@ use medulla_decision_types::{
 /// The span one served statistical call runs in.
 pub(super) fn span(method: &'static str, tenant_id: &str) -> tracing::Span {
     tracing::info_span!("medulla.decide.method", method, tenant = tenant_id)
+}
+
+/// One stage of the decision pipeline (MEDULLA-DECISION-ENGINE-R072.100). The
+/// set is closed, so the `stage` metric label is bounded.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum Stage {
+    Admit,
+    Visibility,
+    Candidates,
+    Constraints,
+    Entailment,
+    Solve,
+    Rank,
+    Conclude,
+    Record,
+    Commit,
+    Learn,
+    Replay,
+}
+
+impl Stage {
+    /// The stage token in the span name `medulla.decide.<stage>` and the metric label.
+    pub(super) fn as_str(self) -> &'static str {
+        match self {
+            Stage::Admit => "admit",
+            Stage::Visibility => "visibility",
+            Stage::Candidates => "candidates",
+            Stage::Constraints => "constraints",
+            Stage::Entailment => "entailment",
+            Stage::Solve => "solve",
+            Stage::Rank => "rank",
+            Stage::Conclude => "conclude",
+            Stage::Record => "record",
+            Stage::Commit => "commit",
+            Stage::Learn => "learn",
+            Stage::Replay => "replay",
+        }
+    }
+}
+
+/// The span of one pipeline stage: `medulla.decide.<stage>` with the
+/// attributes `family`, `tenant`, `outcome` and `duration_ms` (the last two
+/// are recorded when the stage ends).
+pub(super) fn stage_span(stage: Stage, family: &str, tenant: &str) -> tracing::Span {
+    macro_rules! named {
+        ($name:literal) => {
+            tracing::info_span!(
+                $name,
+                family,
+                tenant,
+                outcome = tracing::field::Empty,
+                duration_ms = tracing::field::Empty
+            )
+        };
+    }
+    match stage {
+        Stage::Admit => named!("medulla.decide.admit"),
+        Stage::Visibility => named!("medulla.decide.visibility"),
+        Stage::Candidates => named!("medulla.decide.candidates"),
+        Stage::Constraints => named!("medulla.decide.constraints"),
+        Stage::Entailment => named!("medulla.decide.entailment"),
+        Stage::Solve => named!("medulla.decide.solve"),
+        Stage::Rank => named!("medulla.decide.rank"),
+        Stage::Conclude => named!("medulla.decide.conclude"),
+        Stage::Record => named!("medulla.decide.record"),
+        Stage::Commit => named!("medulla.decide.commit"),
+        Stage::Learn => named!("medulla.decide.learn"),
+        Stage::Replay => named!("medulla.decide.replay"),
+    }
+}
+
+fn end_stage(span: &tracing::Span, stage: Stage, family: &str, ok: bool, started: Instant) {
+    let elapsed = started.elapsed();
+    span.record("outcome", if ok { "ok" } else { "error" });
+    span.record("duration_ms", elapsed.as_millis() as u64);
+    medulla_kernel::metrics::decide_stage_seconds(family, stage.as_str(), elapsed.as_secs_f64());
+}
+
+/// Run one synchronous stage inside its span.
+pub(super) fn stage<T, E>(
+    stage: Stage,
+    family: &str,
+    tenant: &str,
+    run: impl FnOnce() -> Result<T, E>,
+) -> Result<T, E> {
+    let span = stage_span(stage, family, tenant);
+    let started = Instant::now();
+    let result = span.in_scope(run);
+    end_stage(&span, stage, family, result.is_ok(), started);
+    result
+}
+
+/// Run one asynchronous stage inside its span.
+pub(super) async fn stage_async<T, E>(
+    stage: Stage,
+    family: &str,
+    tenant: &str,
+    run: impl Future<Output = Result<T, E>>,
+) -> Result<T, E> {
+    let span = stage_span(stage, family, tenant);
+    let started = Instant::now();
+    let result = run.instrument(span.clone()).await;
+    end_stage(&span, stage, family, result.is_ok(), started);
+    result
+}
+
+/// A stage whose work already finished (a job run): one span, closed at once,
+/// carrying the work's own duration.
+pub(super) fn stage_done(stage: Stage, family: &str, tenant: &str, ok: bool, started: Instant) {
+    let span = stage_span(stage, family, tenant);
+    end_stage(&span, stage, family, ok, started);
+}
+
+/// The metric and span family label of a question kind.
+pub(super) fn family(kind: medulla_decision_types::decision::statistical::QuestionKind) -> String {
+    format!("{kind:?}").to_ascii_lowercase()
+}
+
+/// One solved or abstained assembly: abstention codes and the solver's node use.
+pub(super) fn assembled(record: &medulla_decision_types::decision::DecisionRecord) {
+    use medulla_decision_types::decision::DecisionOutcome;
+    match &record.outcome {
+        DecisionOutcome::Solved { certificate, .. } => medulla_kernel::metrics::solver_nodes_ratio(
+            certificate.nodes_expanded,
+            record.inputs.solver.node_budget,
+        ),
+        DecisionOutcome::Abstained { reasons } => {
+            for reason in reasons.iter() {
+                medulla_kernel::metrics::decide_abstentions(&variant_token(&format!("{reason:?}")));
+            }
+        }
+    }
+}
+
+fn variant_token(debug: &str) -> String {
+    debug
+        .split([' ', '{', '('])
+        .next()
+        .unwrap_or("")
+        .to_string()
 }
 
 fn outcome_label(outcome: &StatisticalOutcome) -> (&'static str, String) {
@@ -48,6 +191,11 @@ fn outcome_label(outcome: &StatisticalOutcome) -> (&'static str, String) {
 pub(super) fn decided(record: &StatisticalDecisionRecord, candidates: usize, started: Instant) {
     let (outcome, reasons) = outcome_label(&record.outcome);
     let evidence = format!("{:?}", record.evidence_class);
+    if outcome == "abstained" {
+        for code in reasons.split(',').filter(|code| !code.is_empty()) {
+            medulla_kernel::metrics::decide_abstentions(code);
+        }
+    }
     medulla_kernel::metrics::decision_answered(outcome, &evidence, &reasons);
     medulla_kernel::metrics::decision_latency("Decide", started.elapsed().as_secs_f64());
     if record.inputs.exploration.is_some() {

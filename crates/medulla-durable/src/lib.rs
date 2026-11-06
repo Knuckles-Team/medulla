@@ -73,8 +73,6 @@
 // tests only (child of MEDULLA-UNIFIED-DATA-PLANE-R008, "Normalize change capture into
 // a durable, replayable framework"). No CdcHub, durable position storage, or
 // replay here — see `change_envelope`'s module doc for exact scope.
-// MEDULLA-DURABLE-KERNEL-R095.1000 — served agent-bus participant and hub-peer records.
-pub mod agent_bus;
 pub mod change_envelope;
 pub mod hydration;
 pub mod mirror;
@@ -86,7 +84,6 @@ pub mod stream_adapter;
 // idempotent-apply guard (replaying a stale position is a no-op).
 pub mod idempotent_consumer;
 
-pub use agent_bus::{BusParticipant, HubPeer};
 pub use change_envelope::{ChangeEnvelope, ChangeOp, InvalidChangeEnvelope};
 pub use hydration::{
     classify_file, plan_baseline, split_repository, BaselinePlan, BaselineSources, CoverageReport,

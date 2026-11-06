@@ -411,6 +411,9 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::FinanceVwap { .. }
         | Method::FinanceDrawdownSeries { .. }
         | Method::DecayNode { .. }
+        | Method::BusRegister { .. }
+        | Method::BusHeartbeat { .. }
+        | Method::BusRoster { .. }
         | Method::FinanceMomentum { .. }
         | Method::ObserveScreen { .. }
         | Method::GetEdgePropertiesBatch { .. }
@@ -650,6 +653,10 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         // MEDULLA-UNIFIED-DATA-PLANE-R651.7: lowers to one ChangeEnvelope, which
         // carries its own domains; selection commits nothing.
         | Method::EnrichDocument { .. }
+        // MEDULLA-MEDIA-VOCAB-R001.101.3-.5: each lowers to one ChangeEnvelope.
+        | Method::MeetingSummaryCommit { .. }
+        | Method::MeetingSummaryContext { .. }
+        | Method::MeetingTranscriptRevision { .. }
         // MEDULLA-UNIFIED-DATA-PLANE-R651.3: lowers to one ChangeEnvelope.
         | Method::DocumentDelete { .. }
         // MEDULLA-UNIFIED-DATA-PLANE-R702.3: lowers to one ChangeEnvelope.
@@ -658,10 +665,18 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         // EH-408/EH-409: self-translates into a request-graph `BatchUpdate`,
         // which carries its own domain.
         | Method::TelemetryDerive { .. }
+        // MEDULLA-UNIFIED-DATA-PLANE-R760.3: incident writes self-translate into a
+        // request-graph `BatchUpdate`; the two reads commit nothing.
+        | Method::IncidentRecordAnomaly { .. }
+        | Method::IncidentCorrelate { .. }
+        | Method::IncidentEvidence { .. }
+        | Method::IncidentRelatedClaims { .. }
+        | Method::IncidentSetStatus { .. }
         | Method::WriteBack { .. }
         | Method::DecisionFit { .. }
         | Method::DecisionEval { .. }
         | Method::DecisionLog { .. }
+        | Method::Claims { .. }
         | Method::GraphSchema { .. }
         | Method::GraphSchemaList
         | Method::GraphSchemaClasses { .. }

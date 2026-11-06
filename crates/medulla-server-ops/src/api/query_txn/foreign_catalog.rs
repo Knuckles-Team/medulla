@@ -161,6 +161,7 @@ impl ForeignSourceCatalog {
         name: String,
         spec: ForeignSourceSpec,
     ) -> Result<(), String> {
+        validate_search_capability(&spec)?;
         verify_outbound_before_register(&spec)?;
         let key = CatalogKey {
             owner_scope: owner.owner_scope().to_string(),
@@ -788,5 +789,21 @@ mod tests {
                 .expect("an allowed SQL destination must still register");
             assert!(catalog.spec_for(&a, "ok_sql").is_some());
         }
+    }
+}
+
+/// An operation-bound spec that declares a search index must declare a valid one
+/// (`SEARCH_CAPABILITY_INVALID`, MEDULLA-UNIFIED-DATA-PLANE-R038.5.1).
+fn validate_search_capability(spec: &ForeignSourceSpec) -> Result<(), String> {
+    let capabilities = match spec {
+        ForeignSourceSpec::Api { capabilities, .. }
+        | ForeignSourceSpec::Mcp { capabilities, .. }
+        | ForeignSourceSpec::A2a { capabilities, .. }
+        | ForeignSourceSpec::GraphQl { capabilities, .. } => capabilities,
+        _ => return Ok(()),
+    };
+    match capabilities.search {
+        Some(search) => search.validate().map_err(|refusal| refusal.to_string()),
+        None => Ok(()),
     }
 }

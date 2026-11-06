@@ -22,6 +22,12 @@ reads two artifacts and fails (exit 1) on a regression:
      never flakes on machine variance. A bench with no estimates (feature not built) is
      skipped.
 
+  3. **p99 latency** — `latency_p99_ns_max` in thresholds.json, keyed by criterion
+     benchmark id. The gate reads `target/criterion/<id>/new/sample.json`, takes each
+     sample's per-iteration time `times[i] / iters[i]` (ns) and its nearest-rank 99th
+     percentile. Fewer than 100 samples or a missing `sample.json` is a failure, never
+     a skip.
+
 Usage:
   python3 scripts/bench_gate.py \
       [--thresholds crates/medulla-plan/benches/thresholds.json] \
@@ -114,6 +120,59 @@ def _check_latency(
     return reported, failures
 
 
+MIN_P99_SAMPLES = 100
+
+
+def _nearest_rank_p99(per_iter_ns: list[float]) -> float:
+    """Nearest-rank 99th percentile: the value at rank ceil(0.99 * n)."""
+    ordered = sorted(per_iter_ns)
+    rank = -(-99 * len(ordered) // 100)
+    return ordered[rank - 1]
+
+
+def _check_one_p99(
+    criterion_dir: Path, name: str, ceiling: float
+) -> tuple[str, str | None]:
+    """p99 gate for a single bench. A missing or short sample.json is a failure."""
+    sample = criterion_dir / name / "new" / "sample.json"
+    if not sample.exists():
+        return (
+            f"  {name}: p99 FAIL (no sample.json)",
+            f"{name} p99 sample.json missing (ceiling {float(ceiling):.0f} ns)",
+        )
+    data = load_json(sample)
+    iters = [float(i) for i in data["iters"]]
+    times = [float(t) for t in data["times"]]
+    if len(times) != len(iters) or len(times) < MIN_P99_SAMPLES:
+        return (
+            f"  {name}: p99 FAIL ({len(times)} samples)",
+            f"{name} p99 needs at least {MIN_P99_SAMPLES} samples, found {len(times)}",
+        )
+    p99 = _nearest_rank_p99([t / i for t, i in zip(times, iters, strict=True)])
+    ok = p99 <= float(ceiling)
+    line = (
+        f"  {name}: p99 {p99:.0f} ns  (ceiling {float(ceiling):.0f} ns)  "
+        f"{'OK' if ok else 'FAIL'}"
+    )
+    if ok:
+        return line, None
+    return line, f"{name} p99 {p99:.0f} ns > ceiling {float(ceiling):.0f} ns"
+
+
+def _check_p99(
+    criterion_dir: Path, ceilings: dict[str, float]
+) -> tuple[list[str], list[str]]:
+    """p99 gate: report + failures across every bench with a committed p99 ceiling."""
+    reported: list[str] = []
+    failures: list[str] = []
+    for name, ceiling in ceilings.items():
+        line, failure = _check_one_p99(criterion_dir, name, ceiling)
+        reported.append(line)
+        if failure is not None:
+            failures.append(failure)
+    return reported, failures
+
+
 def _emit_result(reported: list[str], failures: list[str]) -> int:
     print(
         "medulla-plan perf/recall gate (CONCEPT:MEDULLA-KG.query.perf-recall-ci-gate):"
@@ -139,8 +198,13 @@ def main() -> int:
     recall_reported, recall_failures = _check_recall(args.recall_json, recall_floor)
     latency_reported, latency_failures = _check_latency(args.criterion_dir, ceilings)
 
+    p99_reported, p99_failures = _check_p99(
+        args.criterion_dir, thresholds.get("latency_p99_ns_max", {})
+    )
+
     return _emit_result(
-        recall_reported + latency_reported, recall_failures + latency_failures
+        recall_reported + latency_reported + p99_reported,
+        recall_failures + latency_failures + p99_failures,
     )
 
 

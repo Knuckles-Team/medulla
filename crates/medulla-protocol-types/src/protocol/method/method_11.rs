@@ -178,6 +178,34 @@ $($variants)*
         policy_msgpack: Vec<u8>,
     },
 
+    // ── Served incidents (MEDULLA-UNIFIED-DATA-PLANE-R760.3) ───────────────
+    /// Record one anomaly in the caller's tenant (from the verified carrier)
+    /// and correlate it into an open incident over `window_ms`.
+    IncidentRecordAnomaly {
+        anomaly: medulla_types::incident::AnomalyReading,
+        window_ms: u64,
+    },
+    /// Correlate a set of anomalies in one pass: grouped by entity and
+    /// `window_ms` bucket, each group opens or joins an open incident.
+    IncidentCorrelate {
+        anomalies: Vec<medulla_types::incident::AnomalyReading>,
+        window_ms: u64,
+    },
+    /// One incident of the caller's tenant with its evidence. Read-only.
+    IncidentEvidence { incident_id: String },
+    /// The `Claim` nodes with an `about` edge to an entity in the incident's
+    /// evidence. Read-only.
+    IncidentRelatedClaims {
+        incident_id: String,
+        #[serde(default)]
+        limit: Option<u32>,
+    },
+    /// Move an incident one status forward (open -> acknowledged -> resolved).
+    IncidentSetStatus {
+        incident_id: String,
+        status: medulla_types::incident::IncidentStatus,
+    },
+
     // ── Dataset lineage (MEDULLA-UNIFIED-DATA-PLANE-R702.3) ─────────────────
     /// Drain lineage run events into the request graph: each event maps to
     /// content-addressed `Dataset` nodes and `derivesInto` edges; an event that
@@ -238,6 +266,47 @@ $($variants)*
     /// [`crate::decision::web_fetch_selection`].
     SelectWebPages {
         request: Box<medulla_decision_outcome_types::decision::web_fetch_selection::SelectWebPagesRequest>,
+    },
+
+    // ── Agent bus roster (MEDULLA-DURABLE-KERNEL-R095.1002) ────────────────
+    /// Register (replace) one session's participant row on the request
+    /// graph's bus. `participant.last_seen_ms` is the request clock. The engine
+    /// stamps `participant.tenant` and `principal` from the verified request
+    /// context; caller values are overwritten. Needs `bus:write`.
+    BusRegister {
+        participant: medulla_types::agent_bus::BusParticipant,
+        #[serde(default)]
+        principal: String,
+    },
+    /// Set one registered session's `last_seen_ms` to `now_ms`. Refuses a
+    /// session registered by another principal. Needs `bus:write`.
+    BusHeartbeat {
+        session_ref: String,
+        now_ms: u64,
+        #[serde(default)]
+        principal: String,
+    },
+    /// The tenant's participants by `session_ref`, each marked live when
+    /// `now_ms - last_seen_ms` is within `bus.participant_ttl_s`. `tenant`
+    /// must equal the verified request tenant. Needs `bus:read`.
+    BusRoster { tenant: String, now_ms: u64 },
+    // ── Meeting transcripts (MEDULLA-MEDIA-VOCAB-R001.101.3 / .4 / .5) ──────
+    /// Apply one transcript revision event (`append`, `correct`,
+    /// `delete_segment`, `finalize`) to the request graph's meeting transcript
+    /// and commit its `TranscriptSegment` nodes and revision node as one
+    /// ChangeEnvelope. An exact replay answers the stored revision.
+    MeetingTranscriptRevision {
+        request: Box<medulla_types::meeting_transcript::MeetingTranscriptRevision>,
+    },
+    /// Cut a bounded summary context from the current finalized transcript and
+    /// record one `SummaryContext` node keyed by its digest.
+    MeetingSummaryContext {
+        request: Box<medulla_types::meeting_transcript::MeetingSummaryContextRequest>,
+    },
+    /// Commit a produced summary: the receipt must match its stored context and
+    /// every citation must lie inside a context span.
+    MeetingSummaryCommit {
+        request: Box<medulla_types::meeting_transcript::MeetingSummaryCommitRequest>,
     },
 
     // ── Document delete (MEDULLA-UNIFIED-DATA-PLANE-R651.3..R651.5) ─────────

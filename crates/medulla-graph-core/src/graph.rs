@@ -59,7 +59,7 @@ use core_helpers::{HexLedger, edge_endpoint_not_found, push_ledger_impl};
 pub use schema_sources::{
     CORE_SOURCE_PREFIX, GraphSchemaSource, GraphSchemaSources, MAX_CORE_SCHEMA_SOURCES,
     MAX_SCHEMA_DOCUMENT_TRIPLES, MAX_TOTAL_DYNAMIC_SCHEMA_BYTES, OPERATOR_SOURCE_ID,
-    SchemaSourceOrigin, current_core_set_digest, lift_v2_integrity_policy,
+    SchemaSourceOrigin, SchemaSourceRole, current_core_set_digest, lift_v2_integrity_policy,
 };
 pub use snapshot::{GRAPH_SNAPSHOT_SCHEMA_VERSION, GraphSnapshot, LegacyIntegrityPolicy};
 pub use view::GraphView;

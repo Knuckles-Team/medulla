@@ -59,6 +59,7 @@ pub fn policy() -> DecisionPolicy {
         cold_start: ColdStart::DeterministicOnly,
         statistical: None,
         topology: None,
+        reasoning: std::collections::BTreeMap::new(),
         knobs: Default::default(),
     }
 }
