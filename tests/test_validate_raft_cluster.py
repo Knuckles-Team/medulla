@@ -231,7 +231,7 @@ def test_repeats_both_cluster_tests(harness: tuple[dict[str, str], Path]) -> Non
         .splitlines()
     ]
     assert len(rows) == 4
-    assert {row["repetition"] for row in rows} == {1, 2}
+    assert {row["repeat_index"] for row in rows} == {1, 2}
     assert {row["test"] for row in rows} == {
         "raft::tests::multi_node_group_join_then_leader_rebalance",
         "raft::tests::placement_admin_wire_rpc::placement_admin_wire_rpcs_move_data_across_a_real_three_node_cluster",
@@ -383,3 +383,70 @@ def test_retry_budget_is_bounded(
         "retry budget: refused RAFT_RETRY_BUDGET_EXHAUSTED attempt=2" in result.stdout
     )
     assert result.stdout.count("test result: FAILED") == 2
+
+
+RECORD_FIELDS = {
+    "revision",
+    "command",
+    "hardware",
+    "workers",
+    "repeat_index",
+    "result",
+    "trace",
+}
+LEADER_TEST = "raft::tests::multi_node_group_join_then_leader_rebalance"
+PLACEMENT_TEST = (
+    "raft::tests::placement_admin_wire_rpc::"
+    "placement_admin_wire_rpcs_move_data_across_a_real_three_node_cluster"
+)
+
+
+def acceptance_rows(
+    harness: tuple[dict[str, str], Path], **options: str
+) -> tuple[int, list[dict[str, object]], Path]:
+    env, record = harness
+    del env["RAFT_LOAD_WORKERS"]
+    env.update(
+        RAFT_LOAD_ACCEPTANCE="1",
+        RAFT_LOAD_OUTPUT=str(record.parent / "runs"),
+        TEST_SECONDS="0",
+        **options,
+    )
+    result = subprocess.run(
+        ["bash", str(ROOT / "scripts/validate-raft-cluster.sh")],
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    manifest = next((record.parent / "runs").glob("*/results.jsonl"))
+    rows = [json.loads(line) for line in manifest.read_text().splitlines()]
+    return result.returncode, rows, manifest.parent
+
+
+@pytest.mark.spec("MEDULLA-DURABLE-KERNEL-R014.4")
+def test_leader_rebalance_records_every_repeat(
+    harness: tuple[dict[str, str], Path],
+) -> None:
+    rc, rows, _ = acceptance_rows(harness)
+    assert rc == 0
+    mine = [row for row in rows if row["test"] == LEADER_TEST]
+    assert [row["repeat_index"] for row in mine] == [1, 2, 3, 4, 5]
+    assert all(RECORD_FIELDS <= row.keys() for row in mine)
+    assert all(
+        row["result"] == "pass" and int(str(row["workers"])) >= 1 for row in mine
+    )
+
+
+@pytest.mark.spec("MEDULLA-DURABLE-KERNEL-R014.5")
+def test_placement_admin_records_every_repeat(
+    harness: tuple[dict[str, str], Path],
+) -> None:
+    rc, rows, run_dir = acceptance_rows(harness, FAIL_FIRST="1")
+    assert rc == 37
+    mine = [row for row in rows if row["test"] == PLACEMENT_TEST]
+    assert [row["repeat_index"] for row in mine] == [1, 2, 3, 4, 5]
+    assert all(RECORD_FIELDS <= row.keys() for row in mine)
+    failed = [row for row in rows if row["result"] == "fail"]
+    assert len(failed) == 1
+    assert (run_dir / str(failed[0]["trace"])).exists()
