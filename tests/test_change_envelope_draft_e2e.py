@@ -78,3 +78,25 @@ def test_changes_apply_batch_commits_every_draft(clean_graph):
     assert [result["status"] for result in results] == ["applied"] * 3, results
     for index in range(3):
         assert clean_graph.nodes.properties(f"doc:batch-{index}") is not None
+
+
+# spec: MEDULLA-REPO-INGEST-R002.651.1
+def test_replayed_envelope_writes_nothing(clean_graph):
+    graph = _graph_name(clean_graph)
+    draft = _envelope(graph, "doc:replay-1", "changes-e2e:doc:replay-1:1", 1)
+    first = clean_graph.changes.apply(draft)
+    assert first["replayed"] is False
+    before = (
+        clean_graph.nodes.properties("doc:replay-1"),
+        clean_graph.changes.get("envelope:doc:replay-1:1"),
+        clean_graph.changes.content_version("doc:replay-1"),
+    )
+    second = clean_graph.changes.apply(draft)
+    assert second["replayed"] is True
+    assert second["envelope_id"] == first["envelope_id"]
+    after = (
+        clean_graph.nodes.properties("doc:replay-1"),
+        clean_graph.changes.get("envelope:doc:replay-1:1"),
+        clean_graph.changes.content_version("doc:replay-1"),
+    )
+    assert after == before

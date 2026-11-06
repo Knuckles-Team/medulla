@@ -4799,12 +4799,14 @@ name = "medulla-document"
 version = "0.1.0"
 dependencies = [
  "medulla-catalog-types",
+ "medulla-decision-types",
  "medulla-modality",
  "medulla-source-types",
  "medulla-types",
  "serde",
  "serde_json",
  "sha2 0.10.9",
+ "thiserror 2.0.21",
 ]
 
 [[package]]

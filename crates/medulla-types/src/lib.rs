@@ -365,3 +365,9 @@ pub mod ingest_drain;
 pub mod durable_unit;
 // MEDULLA-ORCH-VOCAB-R009.18.1 — the measured-or-unknown run observation window.
 pub mod run_observation;
+// MEDULLA-REPO-INGEST-R002.1.1: skill-document compilation records.
+pub mod skill_plan;
+// MEDULLA-REPO-INGEST-R002.650: ingest capability types.
+pub mod ingest_capabilities;
+// MEDULLA-REPO-INGEST-R002.100: independent ingest readback receipt.
+pub mod ingest_readback;

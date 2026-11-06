@@ -455,5 +455,16 @@ closed_error_codes! {
         PartitionLimitExceeded => "PARTITION_LIMIT_EXCEEDED",
         SchemaIncompatible => "SCHEMA_INCOMPATIBLE",
         UnsupportedTableLayout => "UNSUPPORTED_TABLE_LAYOUT",
+        ReadbackDenied => "READBACK_DENIED",
+        ReadbackMismatch => "READBACK_MISMATCH",
+        ReadbackPartial => "READBACK_PARTIAL",
+        ReadbackStale => "READBACK_STALE",
+        SkillCapabilityUnresolved => "SKILL_CAPABILITY_UNRESOLVED",
+        SkillCycle => "SKILL_CYCLE",
+        SkillDependencyUnresolved => "SKILL_DEPENDENCY_UNRESOLVED",
+        SkillSpanMissing => "SKILL_SPAN_MISSING",
+        SkillStepIdDuplicate => "SKILL_STEP_ID_DUPLICATE",
+        SkillStepIdMissing => "SKILL_STEP_ID_MISSING",
+        SkillTypeUnsupported => "SKILL_TYPE_UNSUPPORTED",
     }
 }
