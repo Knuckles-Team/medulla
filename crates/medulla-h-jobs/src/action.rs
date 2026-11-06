@@ -202,7 +202,7 @@ fn run_node(ctx: &HandleContext<'_>, run: &ActionRun) -> Result<(String, Value),
 #[cfg(feature = "streaming")]
 async fn emit_outbox(ctx: &HandleContext<'_>, run_id: &str) {
     use medulla_server_cdc::cdc::CdcStateExt;
-    use medulla_types::wire_streaming::CdcKind;
+    use medulla_types::wire::CdcKind;
     let state = ctx.state.read().await;
     let Some(hub) = state.cdc_hub() else { return };
     hub.emit(
