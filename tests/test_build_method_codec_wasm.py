@@ -26,9 +26,7 @@ def codec(monkeypatch):
     return module
 
 
-def test_build_uses_only_cargo_and_returns_the_verified_rust_module(
-    codec, monkeypatch, tmp_path
-):
+def test_build_runs_cargo_then_the_pinned_wasm_opt(codec, monkeypatch, tmp_path):
     target = tmp_path / "target"
     module_path = target / codec.TARGET / codec.PROFILE / codec.MODULE
     module_path.parent.mkdir(parents=True)
@@ -43,7 +41,15 @@ def test_build_uses_only_cargo_and_returns_the_verified_rust_module(
         codec, "encoded_rustflags", lambda *_args, **_kwargs: ("flags", (), ())
     )
     monkeypatch.setenv("RUSTFLAGS", "-C target-cpu=native")
-    assert codec.build(tmp_path, target) == module_path.read_bytes()
+    optimized = WASM + b"\x00\x01y"
+    monkeypatch.setattr(
+        codec,
+        "optimize",
+        lambda module, tdir: (
+            optimized if (module, tdir) == (module_path, target) else b""
+        ),
+    )
+    assert codec.build(tmp_path, target) == optimized
     assert len(calls) == 1
     command, cwd, env, check = calls[0]
     assert command[:2] == ["cargo", "build"]
@@ -52,6 +58,45 @@ def test_build_uses_only_cargo_and_returns_the_verified_rust_module(
     assert env["CARGO_TARGET_DIR"] == str(target)
     assert env["CARGO_ENCODED_RUSTFLAGS"] == "flags"
     assert "RUSTFLAGS" not in env
+
+
+def test_optimize_runs_wasm_opt_oz_on_the_linked_module(codec, monkeypatch, tmp_path):
+    module = tmp_path / "m.wasm"
+    module.write_bytes(WASM)
+    tool = tmp_path / "wasm-opt"
+    calls = []
+
+    def run(command, *, check):
+        calls.append(command)
+        Path(command[-1]).write_bytes(WASM + b"\x00\x01z")
+
+    monkeypatch.setattr(codec, "wasm_opt", lambda _target: tool)
+    monkeypatch.setattr(codec.subprocess, "run", run)
+    assert codec.optimize(module, tmp_path) == WASM + b"\x00\x01z"
+    (command,) = calls
+    assert command[0] == str(tool) and "-Oz" in command
+    assert command[-3:] == [str(module), "-o", str(module.with_suffix(".opt.wasm"))]
+
+
+def test_wasm_opt_refuses_an_archive_with_the_wrong_digest(
+    codec, monkeypatch, tmp_path
+):
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_exc):
+            return False
+
+        def read(self):
+            return b"tampered"
+
+    monkeypatch.setattr(codec.platform, "system", lambda: "Linux")
+    monkeypatch.setattr(codec.platform, "machine", lambda: "x86_64")
+    monkeypatch.setattr(codec.urllib.request, "urlopen", lambda *_a, **_k: Response())
+    with pytest.raises(RuntimeError, match="sha256"):
+        codec.wasm_opt(tmp_path)
+    assert not list(tmp_path.rglob("wasm-opt"))
 
 
 @pytest.mark.parametrize(
