@@ -109,7 +109,7 @@ async def test_batch_and_lifecycle_surfaces_use_binary_msgpack_blobs() -> None:
 
     edges = EdgeClient(fake)
     await edges.add("node:1", "node:2", {"relationship": "mentions"})
-    await edges.supersede(
+    await edges.supersede_edge(
         "node:1",
         "node:3",
         "node:1",
