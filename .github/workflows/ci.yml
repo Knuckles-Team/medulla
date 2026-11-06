@@ -310,6 +310,8 @@ jobs:
       - &medulla-locked-pytest
         name: Install locked pytest for generated-client checks
         run: uv pip install --python "$(command -v python3)" pytest==9.1.1 iniconfig==2.3.1 packaging==26.3 pluggy==1.7.0 pygments==2.21.0
+      - name: Sole write envelope gate (MEDULLA-DURABLE-KERNEL-R043.102)
+        run: python3 scripts/check_sole_write_envelope.py
       - name: Epistemic Operations manifest ⇄ Rust DTO parity
         run: python3 scripts/check_epistemic_operations_protocol.py
 

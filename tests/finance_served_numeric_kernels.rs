@@ -255,7 +255,7 @@ async fn factor_rank_abstains_on_thin_input() {
     );
 }
 
-fn schedule(slices: u32, risk_aversion: f64) -> Method {
+fn schedule(slices: usize, risk_aversion: f64) -> Method {
     Method::FinanceExecutionSchedule {
         symbol: "AAPL".into(),
         total_shares: 1_000.0,
@@ -313,6 +313,7 @@ async fn execution_results_carry_evidence_and_refusal_trace() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+/// Verifies MEDULLA-FINANCE-PRIMITIVES-R613.6: Execution kernel latency budget
 // spec: MEDULLA-FINANCE-PRIMITIVES-R613.6
 async fn r613_budget_inputs_complete() {
     // The bench inputs are accepted at full size: a 1000-slice schedule and a regime

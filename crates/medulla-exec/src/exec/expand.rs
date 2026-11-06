@@ -29,6 +29,9 @@ pub(crate) fn scan_all(view: &GraphView) -> RowSet {
 pub(crate) struct EdgeFilter<'p> {
     pub rel: Option<&'p str>,
     pub preds: &'p [Pred],
+    /// MEDULLA-DURABLE-KERNEL-R079: only edge versions live at the pinned `AS OF`
+    /// instants are followed or emitted.
+    pub pin: Option<crate::exec::AsOfPin>,
 }
 
 impl EdgeFilter<'_> {
@@ -50,7 +53,9 @@ impl EdgeFilter<'_> {
             let rel_ok = self
                 .rel
                 .is_none_or(|rel| props.get("relationship").and_then(Value::as_str) == Some(rel));
-            rel_ok && crate::pred_eval::all_hold(props, self.preds)
+            rel_ok
+                && crate::exec::pin_admits(self.pin, props)
+                && crate::pred_eval::all_hold(props, self.preds)
         })
     }
 }

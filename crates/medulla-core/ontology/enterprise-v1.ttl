@@ -115,8 +115,7 @@ deployments can consume via owl:imports. It covers:
 - Enterprise governance properties (Policy, Principle, Goal)
 - SHACL-ready governance constraints
 
-CONCEPT:KG-2.7 — Context Graph Architecture (Enterprise Core)""" ;
-    owl:imports <http://knuckles.team/kg/core> .
+CONCEPT:KG-2.7 — Context Graph Architecture (Enterprise Core)""" .
 
 :Agent rdfs:subClassOf :ApplicationLayer .
 
@@ -174,3 +173,33 @@ ArchiMate: Strategy → CourseOfAction.""" ;
     rdfs:subPropertyOf :supersedes ;
     rdfs:domain :ArchitectureDecisionRecord ;
     rdfs:range :ArchitectureDecisionRecord .
+
+:factSheetType a owl:DatatypeProperty ;
+    rdfs:label "fact sheet type" ;
+    rdfs:comment "The type of an EA fact sheet." ;
+    rdfs:domain :EAFactSheet ;
+    rdfs:range xsd:string .
+
+:lifecyclePhase a owl:DatatypeProperty ;
+    rdfs:label "lifecycle phase" ;
+    rdfs:comment "The lifecycle phase of an EA fact sheet: plan, active, phaseOut or endOfLife." ;
+    rdfs:domain :EAFactSheet ;
+    rdfs:range xsd:string .
+
+:activeUserCount a owl:DatatypeProperty ;
+    rdfs:label "active user count" ;
+    rdfs:comment "The number of active users of an EA fact sheet's application." ;
+    rdfs:domain :EAFactSheet ;
+    rdfs:range xsd:integer .
+
+# ── Core rooting (MEDULLA-TYPED-PACKS-R071.2) ───────────────────────────────────
+# Every class of this module above reaches the core class kg:DomainEntity through rdfs:subClassOf.
+<http://knuckles.team/kg#ApplicationLayer> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#ArchiMateElement> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#ArchitectureDecisionRecord> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#BusinessLayer> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#EAFactSheet> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#MotivationLayer> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#ProcessModel> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#StrategyLayer> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#TechnologyLayer> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .

@@ -82,6 +82,104 @@ pub fn is_durable_mutation(m: &Method) -> bool {
     medulla_core::durable_apply::is_durable_mutation(m)
 }
 
+/// MEDULLA-DURABLE-KERNEL-R078: stamp transaction time on a served edge mutation
+/// before it is logged, and check the valid interval.
+///
+/// `tx_now` is the engine clock, never the caller's: it overwrites the `tx_now`
+/// field of `InvalidateEdge` / `SupersedeEdge` and becomes `tx_from` of every added
+/// edge blob (`AddEdge`, and the successor of `SupersedeEdge`). A caller's
+/// `valid_from` is kept; it defaults to `tx_now` (to `valid_at` for the successor of
+/// a supersession, which is contiguous with the closed prior). A blob whose
+/// `valid_until` precedes its `valid_from` refuses with `VALIDITY_INVERTED`.
+///
+/// Returns `Ok(None)` for every other method, and for a blob that is not a property
+/// map (other validation owns that refusal). Replay applies the logged, stamped
+/// method and never calls this.
+pub fn stamp_transaction_time(m: &Method, tx_now: u64) -> Result<Option<Method>, String> {
+    match m {
+        Method::AddEdge {
+            source_id,
+            target_id,
+            properties_msgpack,
+        } => Ok(
+            stamp_edge_blob(properties_msgpack, tx_now, tx_now)?.map(|properties_msgpack| {
+                Method::AddEdge {
+                    source_id: source_id.clone(),
+                    target_id: target_id.clone(),
+                    properties_msgpack,
+                }
+            }),
+        ),
+        Method::InvalidateEdge {
+            source_id,
+            target_id,
+            relationship,
+            invalid_at,
+            ..
+        } => Ok(Some(Method::InvalidateEdge {
+            source_id: source_id.clone(),
+            target_id: target_id.clone(),
+            relationship: relationship.clone(),
+            invalid_at: *invalid_at,
+            tx_now,
+        })),
+        Method::SupersedeEdge {
+            source_id,
+            target_id,
+            properties_msgpack,
+            prior_source,
+            prior_target,
+            prior_relationship,
+            valid_at,
+            ..
+        } => {
+            let properties_msgpack = stamp_edge_blob(properties_msgpack, tx_now, *valid_at)?
+                .unwrap_or_else(|| properties_msgpack.clone());
+            Ok(Some(Method::SupersedeEdge {
+                source_id: source_id.clone(),
+                target_id: target_id.clone(),
+                properties_msgpack,
+                prior_source: prior_source.clone(),
+                prior_target: prior_target.clone(),
+                prior_relationship: prior_relationship.clone(),
+                valid_at: *valid_at,
+                tx_now,
+            }))
+        }
+        _ => Ok(None),
+    }
+}
+
+fn stamp_edge_blob(
+    blob: &[u8],
+    tx_now: u64,
+    default_valid_from: u64,
+) -> Result<Option<Vec<u8>>, String> {
+    let Ok(mut value) = medulla_types::msgpack::decode_property_value(blob) else {
+        return Ok(None);
+    };
+    let Some(object) = value.as_object_mut() else {
+        return Ok(None);
+    };
+    let valid_from = object
+        .get("valid_from")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(default_valid_from);
+    if let Some(valid_until) = object.get("valid_until").and_then(|v| v.as_u64()) {
+        if valid_until < valid_from {
+            return Err(format!(
+                "{}: valid_until {valid_until} precedes valid_from {valid_from}",
+                medulla_types::contract::ServerErrorCode::ValidityInverted
+            ));
+        }
+    }
+    object.insert("valid_from".into(), serde_json::json!(valid_from));
+    object.insert("tx_from".into(), serde_json::json!(tx_now));
+    rmp_serde::to_vec_named(&value)
+        .map(Some)
+        .map_err(|error| format!("INVALID_ARGUMENT: edge properties re-encode failed: {error}"))
+}
+
 /// Apply one durable mutation to a graph core. Mirrors the dispatch mutation
 /// handlers for exactly the `is_durable_mutation` set.
 ///

@@ -7,7 +7,7 @@
 #[cfg(feature = "metrics")]
 mod imp {
     use lazy_static::lazy_static;
-    use prometheus::{HistogramOpts, HistogramVec, IntCounterVec, Opts};
+    use prometheus::{Histogram, HistogramOpts, HistogramVec, IntCounterVec, IntGaugeVec, Opts};
 
     use super::super::imp::REGISTRY;
 
@@ -19,7 +19,48 @@ mod imp {
         metric
     }
 
+    use super::super::imp::gauge_vec;
+
     lazy_static! {
+        static ref ABSTENTIONS: IntCounterVec = counter_vec(
+            "medulla_decide_abstentions_total",
+            "Decisions that abstained, by closed abstention code",
+            &["code"],
+        );
+        static ref HEAD_DRIFT: IntGaugeVec = gauge_vec(
+            "medulla_head_drift",
+            "Latest drift reading (Q16 population stability index) by head",
+            &["head"],
+        );
+        static ref SOLVER_NODES_RATIO: Histogram = {
+            let metric = Histogram::with_opts(
+                HistogramOpts::new(
+                    "medulla_solver_nodes_ratio",
+                    "Solver nodes expanded over the node budget, per solved assembly",
+                )
+                .buckets(vec![0.01, 0.05, 0.1, 0.25, 0.5, 0.75, 0.9, 1.0]),
+            )
+            .expect("valid metric");
+            REGISTRY
+                .register(Box::new(metric.clone()))
+                .expect("unique metric");
+            metric
+        };
+        static ref STAGE_SECONDS: HistogramVec = {
+            let metric = HistogramVec::new(
+                HistogramOpts::new(
+                    "medulla_decide_stage_seconds",
+                    "Decide pipeline stage latency, by family and stage",
+                )
+                .buckets(prometheus::exponential_buckets(0.0001, 2.5, 14).expect("valid buckets")),
+                &["family", "stage"],
+            )
+            .expect("valid metric");
+            REGISTRY
+                .register(Box::new(metric.clone()))
+                .expect("unique metric");
+            metric
+        };
         static ref DECISIONS: IntCounterVec = counter_vec(
             "medulla_decisions_total",
             "Statistical decisions answered, by outcome and evidence class",
@@ -70,6 +111,30 @@ mod imp {
         };
     }
 
+    /// One finished pipeline stage.
+    pub fn decide_stage_seconds(family: &str, stage: &str, seconds: f64) {
+        STAGE_SECONDS
+            .with_label_values(&[family, stage])
+            .observe(seconds);
+    }
+
+    /// One abstention, by its closed code.
+    pub fn decide_abstentions(code: &str) {
+        ABSTENTIONS.with_label_values(&[code]).inc();
+    }
+
+    /// Nodes expanded over the node budget for one solved assembly.
+    pub fn solver_nodes_ratio(nodes: u64, budget: u64) {
+        if budget > 0 {
+            SOLVER_NODES_RATIO.observe(nodes as f64 / budget as f64);
+        }
+    }
+
+    /// The latest drift reading of one head.
+    pub fn head_drift(head: &str, drift_q16: i64) {
+        HEAD_DRIFT.with_label_values(&[head]).set(drift_q16);
+    }
+
     /// One answered decision.
     pub fn decision_answered(outcome: &str, evidence: &str, reason: &str) {
         DECISIONS
@@ -116,6 +181,10 @@ mod imp {
 #[cfg(not(feature = "metrics"))]
 #[allow(missing_docs)] // no-op shims; the metrics build documents the same functions
 mod imp {
+    pub fn decide_stage_seconds(_family: &str, _stage: &str, _seconds: f64) {}
+    pub fn decide_abstentions(_code: &str) {}
+    pub fn solver_nodes_ratio(_nodes: u64, _budget: u64) {}
+    pub fn head_drift(_head: &str, _drift_q16: i64) {}
     pub fn decision_answered(_outcome: &str, _evidence: &str, _reason: &str) {}
     pub fn decision_refused(_method: &str, _code: &str) {}
     pub fn decision_explored(_explored: bool) {}

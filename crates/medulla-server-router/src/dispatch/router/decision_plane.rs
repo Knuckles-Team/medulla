@@ -137,6 +137,12 @@ async fn dispatch_decision_methods(
             })
             .await
         }
+        Method::Claims { op } => {
+            dispatch_boxed(async {
+                medulla_h_decide::decide::handle_claims(state, req.id, verified_context, *op).await
+            })
+            .await
+        }
         Method::Solve { request } => {
             dispatch_boxed(async { medulla_h_decide::solve::handle_solve(req.id, *request).await })
                 .await
@@ -162,6 +168,26 @@ async fn dispatch_catalog_admin_methods(
             dispatch_boxed(async {
                 medulla_h_admin::admin::handle_connector_pack(state, req.id, verified_context, *op)
                     .await
+            })
+            .await
+        }
+        // MEDULLA-DECISION-ENGINE-R166.3: `Read` is a graph read served here and
+        // holds no write; `Register` continues to the mutation gateway.
+        Method::WorkflowRegistry { op } if !op.is_mutation() => {
+            let medulla_work_types::orchestration::workflows::WorkflowRegistryOp::Read { identity } =
+                *op
+            else {
+                unreachable!("only Register mutates");
+            };
+            dispatch_boxed(async {
+                medulla_h_admin::admin::handle_workflow_registry_read(
+                    state,
+                    req.id,
+                    &req.graph,
+                    verified_context,
+                    identity,
+                )
+                .await
             })
             .await
         }

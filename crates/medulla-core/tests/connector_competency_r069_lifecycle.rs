@@ -568,7 +568,10 @@ ex:rec-1 a :IterationCycle ;
         let violating = valid.replace("\"active\"", "\"paused\"");
         let report = medulla_shacl::validate_turtle(&shapes, &violating)
             .expect("violating cycleState fixture parses before validation");
-        assert!(!report.conforms, "a cycleState outside the closed vocabulary fails the shape");
+        assert!(
+            !report.conforms,
+            "a cycleState outside the closed vocabulary fails the shape"
+        );
         assert!(
             report
                 .results
@@ -616,7 +619,10 @@ ex:rec-1 a :PipelineRun ;
         let violating = valid.replace("\"running\"", "\"queued\"");
         let report = medulla_shacl::validate_turtle(&shapes, &violating)
             .expect("violating pipelineStatus fixture parses before validation");
-        assert!(!report.conforms, "a pipelineStatus outside the closed vocabulary fails the shape");
+        assert!(
+            !report.conforms,
+            "a pipelineStatus outside the closed vocabulary fails the shape"
+        );
         assert!(
             report
                 .results

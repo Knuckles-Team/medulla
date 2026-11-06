@@ -885,3 +885,12 @@ BFO:GenericallyDependentContinuant — an information entity.""" ;
     rdfs:comment "Links a :ContainerStack to the :ManagementEnvironment that hosts it." ;
     rdfs:domain :ContainerStack ;
     rdfs:range :ManagementEnvironment .
+
+# ── Core rooting (MEDULLA-TYPED-PACKS-R071.2) ───────────────────────────────────
+# Every class of this module above reaches the core class kg:System through rdfs:subClassOf.
+<http://knuckles.team/kg/infrastructure#BladeServer> rdfs:subClassOf <http://knuckles.team/kg#System> .
+<http://knuckles.team/kg/infrastructure#Host> rdfs:subClassOf <http://knuckles.team/kg#System> .
+<http://knuckles.team/kg/infrastructure#K8sService> rdfs:subClassOf <http://knuckles.team/kg#System> .
+<http://knuckles.team/kg/infrastructure#Node> rdfs:subClassOf <http://knuckles.team/kg#System> .
+<http://knuckles.team/kg/infrastructure#Service> rdfs:subClassOf <http://knuckles.team/kg#System> .
+<http://knuckles.team/kg/infrastructure#SwarmService> rdfs:subClassOf <http://knuckles.team/kg#System> .

@@ -118,6 +118,9 @@ method_results! {
     ConnectorPackCatalogOwnerPrincipal(ConnectorPack / "catalog_owner_principal") => Raw<String>;
     ConnectorPackCatalogBindingStatus(ConnectorPack / "catalog_binding_status") => Raw<Option<McpCatalogSnapshotBinding>>;
     ConnectorPackCatalogRequestOwnerPrincipal(ConnectorPack / "catalog_request_owner_principal") => Raw<String>;
+    DataProductRegister(DataProductRegister) => Raw<medulla_types::data_product::DataProductRegistered>;
+    AccessRequestOpen(AccessRequestOpen) => Raw<medulla_types::data_product::AccessRequest>;
+    AccessRequestDecide(AccessRequestDecide) => Raw<medulla_types::data_product::AccessRequest>;
     WriteBackCreate(WriteBack / "create") => Raw<SourceChangeSet>;
     WriteBackGet(WriteBack / "get") => Raw<Option<SourceChangeSet>>;
     WriteBackRecordAttempt(WriteBack / "record_attempt") => Raw<WriteBackReceipt>;

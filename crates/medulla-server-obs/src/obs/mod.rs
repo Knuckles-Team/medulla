@@ -52,6 +52,8 @@ mod parse;
 pub mod retention;
 mod snapshot;
 mod state;
+#[cfg(feature = "promql")]
+pub mod telemetry_snapshot;
 pub(crate) mod writer;
 
 pub use writer::writer_auth_configured;

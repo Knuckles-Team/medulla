@@ -76,6 +76,7 @@ pub(super) const RLS_ROUTED: &[&str] = &[
     "CommunityDetection",
     "ComputeSimilarityEdges",
     "ConnectedComponents",
+    "ContextFacts",
     "DegreeCentrality",
     "DegreeCentralityAll",
     "DiffAgainst",
@@ -116,6 +117,7 @@ pub(super) const RLS_ROUTED: &[&str] = &[
     "GetSubgraph",
     "GetSuccessors",
     "GraphColoring",
+    "GraphLearnPredictNary",
     "HasEdge",
     "HasNode",
     "HasNodesBatch",
@@ -250,6 +252,10 @@ pub(super) const REASON_EPISTEMIC_CAUSAL_PURE_COMPUTE: &str =
 // boot precisely because no such RPC existed).
 pub(super) const REASON_IDENTITY_STORE_ADMIN_GATED: &str =
     "src/server/dispatch.rs's GetIdentity arm answers from IsolationLayer::get_identity -- a point read of the in-memory RBAC identity map (`agents: HashMap<String, AgentIdentity>`, crates/medulla-core/src/isolation.rs), the SAME store RegisterIdentity writes and RbacAdmin governs. It is control-plane principal metadata (agent_id/role/teams/roles), not one resolved graph's rows: it never constructs a GraphView/GraphCore and never calls project_core/filter_view, so there is no per-node `_owner`/`_visibility`/`_grants` for RLS to filter on. Authority is the same `security:admin` authz_action the rest of the Zero-Trust Consensus family carries (crates/medulla-capabilities/src/lib.rs), so it grants no visibility to any caller who could not already call RegisterIdentity/RbacAdmin against that identical store";
+pub(super) const REASON_DELEGATION_RECORD_TENANT_SCOPED: &str =
+    "GetDelegationRecord answers from the engine identity store's delegation table (crates/medulla-identity-types/src/identity/store/delegation.rs), a point read keyed by WorkItem id under the verified request tenant: another tenant's record resolves as absent. It is control-plane identity metadata, not one resolved graph's rows, so there is no per-node RLS to filter on; authority is the exact identity:read scope";
+pub(super) const REASON_TELEMETRY_TENANT_SCOPED: &str =
+    "GetTelemetrySnapshot reads the in-process observability series store (crates/medulla-server-obs/src/obs/telemetry_snapshot.rs), never a GraphView/GraphCore: it keeps only series whose `medulla_tenant` label equals the verified request tenant and refuses a tenant argument that differs, so authority is the verified tenant plus the exact telemetry:read scope rather than per-node _owner/_visibility/_grants";
 pub(super) const REASON_IDENTITY_ACCESS_CHECK: &str =
     "src/server/dispatch/router/identity_access.rs's CheckAccess arm answers IsolationLayer::check_access (the same decision check_graph_access applies to a principal's own requests) for one named principal on the REQUEST graph, after first requiring the CALLER's own Read access to that graph. It returns one boolean, never a GraphView row, identity or policy, so there is nothing for RLS to filter; its own authz_action is security:check (not security:admin), which reveals no more than whether that principal's request would be admitted";
 pub(super) const REASON_CLUSTER_TOPOLOGY_READ: &str =
@@ -353,6 +359,11 @@ pub(super) const REASON_NATIVE_WORK_ITEM_TENANT_READ: &str =
 // record, a count or a pooled rate is formed.
 pub(super) const REASON_DECISION_LOG_VISIBILITY: &str =
     "DecisionLog reads committed decision records and evaluations from the tenant-bound agent_library.redb control owner, filtered by each record's own visibility (tenant for library-sourced, committing principal for graph-sourced) before any record or aggregate is formed -- never a GraphView/core.analysis_snapshot() row read";
+// MEDULLA-DECISION-ENGINE-R652.5: `Claims.Get` reads one claim or one sealed artifact from the
+// tenant-keyed statechart store; the instance id derives from the verified tenant, so another
+// tenant's id never resolves.
+pub(super) const REASON_CLAIMS_TENANT_STATE: &str =
+    "Claims.Get reads one claim or one sealed research artifact from the statecharts.redb instance keyed by the verified request tenant and the caller's id (another tenant derives another key and gets CLAIM_NOT_FOUND), behind agent:claim-read -- never a GraphView/core.analysis_snapshot() row read";
 // EH-400: `FreshnessFeed` returns change METADATA, not rows: invalidation events are (version,
 // class names, edge-type names) straight from the dependency clock; the volatility policy is
 // annotations on schema classes (visible to every reader of the graph, see `RLS_SCHEMA_KEY`);
@@ -388,6 +399,8 @@ pub(super) const NON_ROW_SCOPED: &[(&str, &str)] = &[
     ("Decide", REASON_DECIDE_LIBRARY_SNAPSHOT),
     // REASON_DECISION_LOG_VISIBILITY
     ("DecisionLog", REASON_DECISION_LOG_VISIBILITY),
+    // REASON_CLAIMS_TENANT_STATE (MEDULLA-DECISION-ENGINE-R652.5)
+    ("Claims", REASON_CLAIMS_TENANT_STATE),
     // REASON_FRESHNESS_METADATA
     ("FreshnessFeed", REASON_FRESHNESS_METADATA),
     // REASON_AGENT_LIBRARY_TENANT_SNAPSHOT
@@ -434,6 +447,11 @@ pub(super) const NON_ROW_SCOPED: &[(&str, &str)] = &[
     ("ClusterMembers", REASON_CLUSTER_TOPOLOGY_READ),
     ("GetIdentity", REASON_IDENTITY_STORE_ADMIN_GATED),
     ("CheckAccess", REASON_IDENTITY_ACCESS_CHECK),
+    ("GetTelemetrySnapshot", REASON_TELEMETRY_TENANT_SCOPED),
+    (
+        "GetDelegationRecord",
+        REASON_DELEGATION_RECORD_TENANT_SCOPED,
+    ),
     // REASON_CHANNEL_MEMBERSHIP
     ("GetChannelMembers", REASON_CHANNEL_MEMBERSHIP),
     ("GetChannelMessages", REASON_CHANNEL_MEMBERSHIP),
@@ -572,6 +590,8 @@ pub(super) const NON_ROW_SCOPED: &[(&str, &str)] = &[
     ("QueryDevelopmentLane", REASON_NATIVE_DEVELOPMENT_LANE_READ),
     // REASON_NATIVE_WORK_ITEM_TENANT_READ
     ("GetWorkItem", REASON_NATIVE_WORK_ITEM_TENANT_READ),
+    ("GetEffectReceipt", REASON_NATIVE_WORK_ITEM_TENANT_READ),
+    ("GetAdmittedRequest", REASON_NATIVE_WORK_ITEM_TENANT_READ),
     ("GetCurrentPlan", REASON_NATIVE_WORK_ITEM_TENANT_READ),
     ("GetRunCheckpoint", REASON_NATIVE_WORK_ITEM_TENANT_READ),
     ("GetRunWorkItem", REASON_NATIVE_WORK_ITEM_TENANT_READ),

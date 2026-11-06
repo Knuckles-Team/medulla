@@ -124,6 +124,7 @@ mod tests {
         x.to_string()
     }
 
+    /// Verifies MEDULLA-FEDERATED-QUERY-R607.9: Behavior: hyperedge scoring
     // spec: MEDULLA-FEDERATED-QUERY-R607.9
     #[test]
     fn connected_set_outscores_scattered_set() {

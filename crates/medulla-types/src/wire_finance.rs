@@ -281,4 +281,157 @@ mod finance_record_version_tests {
     fn an_empty_schema_version_is_refused() {
         assert!(admit_finance_record_version("").is_err());
     }
+
+    /// The committed round-trip vectors of the eight non-research records, built
+    /// from the serde types (MEDULLA-FINANCE-PRIMITIVES-R004.3.3.2). Set
+    /// `MEDULLA_EMIT_FINANCE_VECTORS=1` to rewrite the fixture; otherwise a drifted
+    /// fixture fails.
+    fn record_vectors() -> serde_json::Value {
+        const TENANT: &str = "integration-test-tenant";
+        const MARKETS: &str = "http://example.org/markets#";
+        let digest = format!("\"sha256:{}\"", "0".repeat(64));
+        let iri = |name: &str| format!("<{MARKETS}{name}>");
+        let common = [
+            ("recordSchemaVersion", "\"finance-v1\"".to_string()),
+            ("recordTenant", format!("\"{TENANT}\"")),
+            ("recordSource", "\"broker-export\"".to_string()),
+            (
+                "recordEffectiveAt",
+                "\"2026-10-01T00:00:00Z\"^^xsd:dateTime".to_string(),
+            ),
+            (
+                "recordKnownAt",
+                "\"2026-10-02T00:00:00Z\"^^xsd:dateTime".to_string(),
+            ),
+        ];
+        let kinds: Vec<(FinanceRecordKind, Vec<(&str, String)>)> = vec![
+            (
+                FinanceRecordKind::Account,
+                vec![
+                    ("accountId", "\"acct-1\"".into()),
+                    ("baseCurrency", "\"USD\"".into()),
+                    ("accountKind", "\"taxable\"".into()),
+                ],
+            ),
+            (
+                FinanceRecordKind::Activity,
+                vec![
+                    ("activityPosition", iri("pos1")),
+                    ("activityKind", "\"buy\"".into()),
+                    ("activityQuantity", "\"10\"^^xsd:decimal".into()),
+                    (
+                        "activityTradeDate",
+                        "\"2026-10-01T14:30:00Z\"^^xsd:dateTime".into(),
+                    ),
+                ],
+            ),
+            (
+                FinanceRecordKind::Lot,
+                vec![
+                    ("lotPosition", iri("pos1")),
+                    ("lotOpenedBy", iri("act1")),
+                    ("lotQuantity", "\"10\"^^xsd:decimal".into()),
+                    ("lotUnitCostBasis", "\"100.00\"^^xsd:decimal".into()),
+                ],
+            ),
+            (
+                FinanceRecordKind::Position,
+                vec![
+                    ("positionAccount", iri("acct1")),
+                    ("positionInstrument", iri("btc")),
+                    ("positionQuantity", "\"10\"^^xsd:decimal".into()),
+                    ("costBasisMethod", "\"fifo\"".into()),
+                ],
+            ),
+            (
+                FinanceRecordKind::PortfolioGroup,
+                vec![
+                    ("portfolioGroupName", "\"Retirement\"".into()),
+                    ("portfolioView", "\"holdings\"".into()),
+                    ("portfolioMember", iri("acct1")),
+                ],
+            ),
+            (
+                FinanceRecordKind::StrategySpec,
+                vec![
+                    ("strategySpecId", "\"dca-weekly\"".into()),
+                    ("strategySpecVersion", "\"1\"^^xsd:integer".into()),
+                    ("strategySpecKind", "\"dca_fixed_amount\"".into()),
+                    ("strategySpecDigest", digest.clone()),
+                    ("strategySpecUniverse", iri("btc")),
+                    ("strategySpecCurrency", "\"USD\"".into()),
+                ],
+            ),
+            (
+                FinanceRecordKind::StrategyRun,
+                vec![
+                    ("strategyRunStatus", "\"proposed\"".into()),
+                    ("strategyRunInputDigest", digest),
+                ],
+            ),
+            (
+                FinanceRecordKind::LeverageTerms,
+                vec![
+                    ("leverageInstrument", iri("btc")),
+                    ("leverageProductType", "\"margin\"".into()),
+                    ("leveragePolicyVersion", "\"us-2026-10\"".into()),
+                    ("leverageMultiplier", "\"2.0\"^^xsd:decimal".into()),
+                    ("leverageCurrency", "\"USD\"".into()),
+                    ("leverageInitialMargin", "\"5000.00\"^^xsd:decimal".into()),
+                    (
+                        "leverageMaintenanceMargin",
+                        "\"4000.00\"^^xsd:decimal".into(),
+                    ),
+                ],
+            ),
+        ];
+        let vectors: Vec<serde_json::Value> = kinds
+            .into_iter()
+            .map(|(kind, fields)| {
+                let record = FinanceRecord {
+                    record_id: format!("rec_{}", kind.class_name().to_lowercase()),
+                    tenant: TENANT.to_string(),
+                    fields: fields
+                        .into_iter()
+                        .chain(common.iter().cloned())
+                        .map(|(name, value)| (name.to_string(), value))
+                        .collect(),
+                };
+                serde_json::json!({
+                    "kind": kind,
+                    "schema_version": FINANCE_V1_SCHEMA_VERSION,
+                    "client_writable": kind.policy() == FinanceRecordPolicy::ClientWritable,
+                    "record": record,
+                })
+            })
+            .collect();
+        serde_json::json!({ "vectors": vectors })
+    }
+
+    // spec: MEDULLA-FINANCE-PRIMITIVES-R004.3.3.2
+    #[test]
+    fn emit_record_vectors() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/fixtures/finance_record_vectors.json");
+        let generated = record_vectors();
+        if std::env::var_os("MEDULLA_EMIT_FINANCE_VECTORS").is_some() {
+            let text = serde_json::to_string_pretty(&generated).expect("vectors serialise");
+            std::fs::write(&path, format!("{text}\n")).expect("write fixture");
+        }
+        let committed: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&path).expect("fixture present"))
+                .expect("fixture is JSON");
+        assert_eq!(
+            committed, generated,
+            "tests/fixtures/finance_record_vectors.json drifted from the serde types; rerun with MEDULLA_EMIT_FINANCE_VECTORS=1"
+        );
+        for vector in generated["vectors"].as_array().expect("vectors") {
+            let record: FinanceRecord =
+                serde_json::from_value(vector["record"].clone()).expect("record decodes");
+            assert_eq!(
+                serde_json::to_value(&record).expect("record encodes"),
+                vector["record"]
+            );
+        }
+    }
 }

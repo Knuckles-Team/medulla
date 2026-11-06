@@ -4,6 +4,66 @@ use crate::dispatch::request_boundary::dispatch;
 use crate::dispatch::*;
 use medulla_server_blob::blob::BlobStateExt;
 
+/// MEDULLA-CONTRACT-R056.5: one served method per domain goes through the
+/// handler registry and gets today's response; the registry walks the handlers
+/// in the order of the former plane chain.
+// spec: MEDULLA-CONTRACT-R056.5
+#[cfg(all(test, feature = "security"))]
+#[tokio::test(flavor = "multi_thread")]
+async fn registry_serves_one_method_per_domain() {
+    use medulla_isolation::isolation::IsolationLayer;
+    use medulla_protocol_types::protocol::Request;
+    use medulla_server_auth::auth::sign_current_test_request;
+    use medulla_types::acl::{AgentIdentity, AgentRole};
+    use std::sync::Arc;
+
+    const SECRET: &str = "registry-test-secret";
+    let names = crate::dispatch::router::method_handler_registry().names();
+    let position = |name: &str| {
+        names
+            .iter()
+            .position(|candidate| *candidate == name)
+            .unwrap_or_else(|| panic!("handler {name} is not registered"))
+    };
+    assert_eq!(position("service_control"), 0);
+    assert!(position("service_control") < position("graph_lifecycle"));
+    assert!(position("graph_lifecycle") < position("identity_access"));
+    assert!(position("identity_access") < position("transactions"));
+    let mut isolation = IsolationLayer::new();
+    isolation.register_agent(AgentIdentity {
+        agent_id: "root".to_string(),
+        role: AgentRole::System,
+        teams: Vec::new(),
+        roles: Vec::new(),
+    });
+    let state = Arc::new(RwLock::new(
+        crate::dispatch::test_support::new_state_for_test(SECRET, isolation),
+    ));
+    for (id, method) in [
+        (1_u64, Method::Ping),
+        (2, Method::Health),
+        (3, Method::ListGraphs),
+    ] {
+        let request = sign_current_test_request(
+            SECRET,
+            Request {
+                id,
+                graph: "__commons__".into(),
+                auth_token: String::new(),
+                agent_id: Some("root".to_string()),
+                method,
+            },
+        );
+        let response = Box::pin(dispatch(&state, request)).await;
+        assert_eq!(response.id, id);
+        assert!(
+            response.error.is_none(),
+            "method {id} refused: {:?}",
+            response.error
+        );
+    }
+}
+
 // ── Admin-scope enforcement dispatch round-trip (CONCEPT:MEDULLA-KG.compute.feature, MEDULLA-P0-6) ──────
 //
 // Drives `Method::RegisterIdentity` and `Method::RbacAdmin` through the SAME

@@ -196,6 +196,32 @@ pub(super) fn admit_put(
     ))
 }
 
+/// MEDULLA-FINANCE-PRIMITIVES-R004.3.2.9: the leader's checks before it proposes
+/// the replicated `FinanceRecordPut`. They are exactly the admission of
+/// [`admit_put`] (version gate, kind policy with `RECORD_DERIVED_READONLY` first,
+/// tenant, shape, expected head) over the leader's applied core, so a put that
+/// fails any of them proposes nothing and writes nothing. Replica apply runs the
+/// same admission again through the one gateway path before its one upsert.
+pub fn precheck_replicated_put(
+    core: &GraphCore,
+    tenant_id: &str,
+    tenant_scope: &str,
+    method: &Method,
+) -> Result<(), String> {
+    #[cfg(all(feature = "finance", feature = "shacl"))]
+    {
+        admit_put(core, tenant_id, tenant_scope, method).map(|_| ())
+    }
+    #[cfg(not(all(feature = "finance", feature = "shacl")))]
+    {
+        let _ = (core, tenant_id, tenant_scope, method);
+        Err(
+            "METHOD_NOT_YET_SERVED: FinanceRecordPut needs the finance and shacl features"
+                .to_string(),
+        )
+    }
+}
+
 /// The `Route::FinanceRecords` entry: admit the put, then commit it as the
 /// `AddNode` upsert through the coalescable gateway.
 pub(super) async fn handle_record(
@@ -203,6 +229,9 @@ pub(super) async fn handle_record(
     tenant_id: &str,
     method: &Method,
 ) -> Option<Response> {
+    if matches!(method, Method::FinanceAlertRaise { .. }) {
+        return super::finance_alerts::raise(ctx, tenant_id, method).await;
+    }
     let Method::FinanceRecordPut { kind, record, .. } = method else {
         return None;
     };
@@ -238,6 +267,39 @@ pub(super) async fn handle_record(
             "METHOD_NOT_YET_SERVED: FinanceRecordPut needs the finance and shacl features",
         ))
     }
+}
+
+/// MEDULLA-FINANCE-PRIMITIVES-R011.4: a `FinanceReceipt` written through
+/// `CreateNodeIfAbsent` must carry a non-empty `idempotencyKey` (the
+/// `FinanceReceiptShape` rule); an empty or missing key refuses
+/// `RECEIPT_KEY_INVALID` and writes nothing. Any other node is not this rule's
+/// concern.
+pub(super) fn refuse_invalid_receipt(req_id: u64, method: &Method) -> Option<Response> {
+    let Method::CreateNodeIfAbsent {
+        properties_msgpack, ..
+    } = method
+    else {
+        return None;
+    };
+    let props = medulla_types::msgpack::decode_property_object(properties_msgpack).ok()?;
+    let is_receipt = [props.get("type"), props.get("finance_kind")]
+        .into_iter()
+        .flatten()
+        .any(|class| class.as_str() == Some("FinanceReceipt"));
+    if !is_receipt {
+        return None;
+    }
+    let key_present = props
+        .get("idempotencyKey")
+        .and_then(|value| value.as_str())
+        .is_some_and(|key| !key.trim().is_empty());
+    if key_present {
+        return None;
+    }
+    Some(Response::err(
+        req_id,
+        "RECEIPT_KEY_INVALID: a FinanceReceipt needs a non-empty idempotencyKey",
+    ))
 }
 
 /// Admit one put, then commit it: the one `AddNode` upsert for a finance record,

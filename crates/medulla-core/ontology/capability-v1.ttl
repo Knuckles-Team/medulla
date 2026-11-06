@@ -226,8 +226,7 @@ Also defines:
   - DevelopmentDomain — runtime-extensible domain classification
   - DevelopmentStandard — standards linked to domains via `appliesToDomain`
 
-CONCEPT:KG-2.7 — Capability Abstraction Layer""" ;
-    owl:imports <http://knuckles.team/kg/core> .
+CONCEPT:KG-2.7 — Capability Abstraction Layer""" .
 
 :CICDCapability a owl:Class ;
     rdfs:label "CI/CD Capability" ;
@@ -440,3 +439,11 @@ or more subclasses.  Business requirements reference capability classes via
 
 [] a owl:AllDisjointClasses ;
     owl:members ( :AuthenticationCapability :CICDCapability :CRMCapability :DNSCapability :MonitoringCapability :VPNCapability ) .
+
+# ── Core rooting (MEDULLA-TYPED-PACKS-R071.2) ───────────────────────────────────
+# Every class of this module above reaches the core class kg:DomainEntity through rdfs:subClassOf.
+<http://knuckles.team/kg#AuthenticatedTool> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#HighAvailabilityService> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#RedundantCapability> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#SecureTask> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#WarmSnapshot> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .

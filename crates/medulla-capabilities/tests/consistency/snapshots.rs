@@ -30,11 +30,16 @@ pub(crate) const ACCESS_RS_MUTATES_UNCONDITIONAL: &[&str] = &[
     "BrokerNackTag",
     "BrokerReject",
     "BrokerRenewTag",
+    "BusHeartbeat",
+    "BusRegister",
     "CancelWorkItem",
     "CasWorkItemMetadata",
     "PublishCurrentPlan",
     "IssueHostStartGrant",
     "PublishRunCheckpoint",
+    "MarkWorkItemEffectStarted",
+    "RecordEffectReceipt",
+    "SubmitAdmittedRequest",
     "IssueControlLease",
     "TransitionControlLease",
     "PolicyEvolutionStore",
@@ -112,6 +117,12 @@ pub(crate) const ACCESS_RS_MUTATES_UNCONDITIONAL: &[&str] = &[
     "StartTrajectory",
     // EH-408/EH-409: always writes (one BatchUpdate of derived facts).
     "TelemetryDerive",
+    // MEDULLA-UNIFIED-DATA-PLANE-R760.3: like `TelemetryDerive`.
+    "IncidentRecordAnomaly",
+    "IncidentCorrelate",
+    "IncidentSetStatus",
+    "ActionRegister",
+    "ActionSubmit",
     "SupersedeEdge",
     "SweepExpired",
     "UpdateResourceHost",
@@ -130,9 +141,12 @@ pub(crate) const ACCESS_RS_MUTATES_CONDITIONAL: &[&str] = &[
     // shape as the four agent layers below: `requires_write` delegates to the
     // op's own `is_mutation()`, while the registry row carries the conservative
     // `mutates = true` upper bound.
+    "Claims",
     "ConnectorPack",
     "DecisionEval",
     "DecisionFit",
+    // MEDULLA-DECISION-ENGINE-R166.3: `Register` writes; `Read` is a graph read.
+    "WorkflowRegistry",
     // EH-345: record_discovery/set_override/clear_override write; list/lookup read.
     "FleetCatalog",
     "DecisionLog",
@@ -200,11 +214,16 @@ pub(crate) const MUTATION_APPLY_DURABLE_GRAPHREDB: &[&str] = &[
     "AddTriples",
     "AppendStep",
     "BatchUpdate",
+    "BusHeartbeat",
+    "BusRegister",
     "CancelWorkItem",
     "CasWorkItemMetadata",
     "PublishCurrentPlan",
     "IssueHostStartGrant",
     "PublishRunCheckpoint",
+    "MarkWorkItemEffectStarted",
+    "RecordEffectReceipt",
+    "SubmitAdmittedRequest",
     "IssueControlLease",
     "TransitionControlLease",
     "PolicyEvolutionStore",
@@ -286,9 +305,15 @@ pub(crate) const NATIVE_GRAPHREDB_DURABLE: &[&str] = &[
     "DecaySweep",
     "DeleteGraph",
     "EvictLRU",
+    // MEDULLA-FINANCE-PRIMITIVES-R011.2.3: the alert door commits its event node
+    // and its finance.events.v1 outbox fact as one batch at its own commit point.
+    "FinanceAlertRaise",
     // MEDULLA-FINANCE-PRIMITIVES-R004.3.2: an admitted record put self-translates
     // into `Method::AddNode`, which carries the durable effect.
     "FinanceRecordPut",
+    // MEDULLA-DECISION-ENGINE-R166.3: a registration self-translates into the
+    // one `Method::AddNode` upsert, which carries the durable effect.
+    "WorkflowRegistry",
     "FromMsgpack",
     "GraphQl",
     "IcvConfigure",
@@ -332,6 +357,12 @@ pub(crate) const NATIVE_GRAPHREDB_DURABLE: &[&str] = &[
     // EH-408/EH-409: derived facts self-translate into ONE `BatchUpdate`
     // against the request graph, the same lowering shape as `FleetCatalog`.
     "TelemetryDerive",
+    // MEDULLA-UNIFIED-DATA-PLANE-R760.3: like `TelemetryDerive`.
+    "IncidentRecordAnomaly",
+    "IncidentCorrelate",
+    "IncidentSetStatus",
+    "ActionRegister",
+    "ActionSubmit",
     "Sql",
     // EH-351: create/refresh/drop commit the edge-index registration and its
     // generations in the tenant SQL catalog natively, as `Sql` DDL does.
@@ -414,11 +445,16 @@ pub(crate) const AUDIT_RS_AUDITED: &[&str] = &[
     "BrokerNackTag",
     "BrokerReject",
     "BrokerRenewTag",
+    "BusHeartbeat",
+    "BusRegister",
     "CancelWorkItem",
     "CasWorkItemMetadata",
     "PublishCurrentPlan",
     "IssueHostStartGrant",
     "PublishRunCheckpoint",
+    "MarkWorkItemEffectStarted",
+    "RecordEffectReceipt",
+    "SubmitAdmittedRequest",
     "IssueControlLease",
     "TransitionControlLease",
     "PolicyEvolutionStore",
@@ -504,6 +540,12 @@ pub(crate) const AUDIT_RS_AUDITED: &[&str] = &[
     "RbacElevation",
     // EH-408/EH-409: defense-in-depth marker, like `FleetCatalog`.
     "TelemetryDerive",
+    // MEDULLA-UNIFIED-DATA-PLANE-R760.3: like `TelemetryDerive`.
+    "IncidentRecordAnomaly",
+    "IncidentCorrelate",
+    "IncidentSetStatus",
+    "ActionRegister",
+    "ActionSubmit",
     // Defense-in-depth markers; the durable record is the identity store's
     // hash-chained audit trail, written in the same rbac.redb image as the
     // change it records.
@@ -587,6 +629,12 @@ pub(crate) const CDC_RS_EMITS_CDC: &[&str] = &[
     "PolicyEvolution",
     // EH-408/EH-409: defense-in-depth marker, like `FleetCatalog`.
     "TelemetryDerive",
+    // MEDULLA-UNIFIED-DATA-PLANE-R760.3: like `TelemetryDerive`.
+    "IncidentRecordAnomaly",
+    "IncidentCorrelate",
+    "IncidentSetStatus",
+    "ActionRegister",
+    "ActionSubmit",
     "RemoveEdge",
     "RemoveNode",
     "RunDatalogReasoning",

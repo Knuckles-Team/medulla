@@ -100,8 +100,11 @@ cdc-kafka = ["dep:rdkafka"]
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-# MEDULLA-UNIFIED-DATA-PLANE-R760.3: the incident signature digest.
+# MEDULLA-UNIFIED-DATA-PLANE-R760.3: the served incident records and their
+# SHA-256 signature digest.
+medulla-types = { path = "../medulla-types" }
 sha2 = "0.10"
+hex = "0.4"
 # CA-11's Kafka producer (feature `cdc-kafka` only). See the feature's doc
 # above for why `cmake-build` + `ssl` + `sasl`.
 rdkafka = { version = "0.39", default-features = false, features = ["cmake-build", "ssl", "sasl"], optional = true }
@@ -114,3 +117,8 @@ tokio = { version = "1.53", features = ["sync", "rt", "macros"] }
 # OFF) — a default/node/full build links none of it and `Event` carries no new
 # required trait. See `src/contract.rs`.
 medulla-modality = { path = "../medulla-modality", optional = true }
+
+[[bench]]
+name = "incident_correlate"
+path = "benches/incident_correlate.rs"
+harness = false

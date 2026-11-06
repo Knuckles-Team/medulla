@@ -53,15 +53,16 @@ mod view;
 
 use analysis_support::apply_decay;
 pub use analysis_support::{
-    DEFAULT_VF2_MAX_RESULTS, DEFAULT_VF2_MAX_STEPS, match_props, vf2_match_views,
+    match_props, vf2_match_views, DEFAULT_VF2_MAX_RESULTS, DEFAULT_VF2_MAX_STEPS,
 };
-use core_helpers::{HexLedger, edge_endpoint_not_found, push_ledger_impl};
+use core_helpers::{edge_endpoint_not_found, push_ledger_impl, HexLedger};
 pub use schema_sources::{
-    CORE_SOURCE_PREFIX, GraphSchemaSource, GraphSchemaSources, MAX_CORE_SCHEMA_SOURCES,
-    MAX_SCHEMA_DOCUMENT_TRIPLES, MAX_TOTAL_DYNAMIC_SCHEMA_BYTES, OPERATOR_SOURCE_ID,
-    SchemaSourceOrigin, SchemaSourceRole, current_core_set_digest, lift_v2_integrity_policy,
+    current_core_set_digest, lift_v2_integrity_policy, GraphSchemaSource, GraphSchemaSources,
+    OntologyRevisionEntry, SchemaSourceOrigin, SchemaSourceRole, CORE_SOURCE_PREFIX,
+    MAX_CORE_SCHEMA_SOURCES, MAX_ONTOLOGY_REVISION_HISTORY, MAX_SCHEMA_DOCUMENT_TRIPLES,
+    MAX_TOTAL_DYNAMIC_SCHEMA_BYTES, OPERATOR_SOURCE_ID,
 };
-pub use snapshot::{GRAPH_SNAPSHOT_SCHEMA_VERSION, GraphSnapshot, LegacyIntegrityPolicy};
+pub use snapshot::{GraphSnapshot, LegacyIntegrityPolicy, GRAPH_SNAPSHOT_SCHEMA_VERSION};
 pub use view::GraphView;
 #[cfg(feature = "result-cache")]
 pub use view::ProjectionScope;
@@ -964,10 +965,9 @@ mod tests {
         // The staged edge is now BFS-reachable: b is an outgoing neighbor of a.
         assert!(neighbor_ids(&view, a_idx).contains(&"b".to_string()));
         // Edge properties recorded on the overlaid view.
-        assert!(
-            view.edge_properties
-                .contains_key(&("a".to_string(), "b".to_string()))
-        );
+        assert!(view
+            .edge_properties
+            .contains_key(&("a".to_string(), "b".to_string())));
         // The live core is untouched (no committed edge).
         assert!(core.get_edge_properties("a", "b").is_empty());
         // An edge to a missing endpoint is dropped and reports false.
@@ -975,11 +975,9 @@ mod tests {
         // Removing the staged edge hides it again.
         view.overlay_remove_edge("a", "b");
         assert!(!neighbor_ids(&view, a_idx).contains(&"b".to_string()));
-        assert!(
-            !view
-                .edge_properties
-                .contains_key(&("a".to_string(), "b".to_string()))
-        );
+        assert!(!view
+            .edge_properties
+            .contains_key(&("a".to_string(), "b".to_string())));
     }
 
     #[test]
@@ -1441,7 +1439,7 @@ mod tests {
         std::env::remove_var("MEDULLA_MAX_INDEXED_JSON_PATHS");
         std::env::remove_var("MEDULLA_INDEXED_JSON_PATHS");
         let core = json_graph(); // 3 nodes: n1/n3 rust, n2 go; n1/n2 have tags
-        // Equality: 2 of 3 nodes match `$.meta.lang = rust`.
+                                 // Equality: 2 of 3 nodes match `$.meta.lang = rust`.
         let sel_rust = core
             .json_path_selectivity("$.meta.lang", Some("rust"))
             .unwrap();
@@ -1462,11 +1460,9 @@ mod tests {
         // planner falls back to its default estimate (same bound as the count methods).
         std::env::set_var("MEDULLA_MAX_INDEXED_JSON_PATHS", "1");
         let capped = json_graph();
-        assert!(
-            capped
-                .json_path_selectivity("$.meta.lang", Some("rust"))
-                .is_some()
-        );
+        assert!(capped
+            .json_path_selectivity("$.meta.lang", Some("rust"))
+            .is_some());
         assert!(capped.json_path_selectivity("$.meta.year", None).is_none());
         std::env::remove_var("MEDULLA_MAX_INDEXED_JSON_PATHS");
     }
@@ -1496,8 +1492,8 @@ mod tests {
     /// unsubscribes.
     #[test]
     fn change_notifier_emits_on_write() {
-        use std::sync::Arc;
         use std::sync::atomic::{AtomicU64, Ordering};
+        use std::sync::Arc;
 
         let core = GraphCore::new();
         core.changes().set_graph("g1");
@@ -1551,8 +1547,8 @@ mod tests {
 
     #[test]
     fn change_notifier_callbacks_run_outside_the_subscriber_mutex() {
-        use std::sync::Arc;
         use std::sync::atomic::{AtomicU64, Ordering};
+        use std::sync::Arc;
 
         struct Counter(AtomicU64);
         impl ChangeSink for Counter {
@@ -1698,8 +1694,8 @@ mod tests {
     #[test]
     fn bloom_guard_skips_durable_read_for_never_inserted_key_once_complete() {
         use std::collections::HashMap;
-        use std::sync::Mutex;
         use std::sync::atomic::{AtomicUsize, Ordering};
+        use std::sync::Mutex;
 
         #[derive(Debug, Default)]
         struct CountingStore {
@@ -2044,34 +2040,30 @@ mod tests {
         let g = capability_graph();
         // The two validation cases (a product name, not a tool name).
         let hits = g.match_ontology_terms("Can you list the stacks I have on portainer?");
-        assert!(
-            hits.iter()
-                .any(|h| h.term == "portainer" && h.node_type == "Tool")
-        );
+        assert!(hits
+            .iter()
+            .any(|h| h.term == "portainer" && h.node_type == "Tool"));
         // the match carries the owning fleet server so a caller can bind its toolset
-        assert!(
-            hits.iter()
-                .any(|h| h.term == "portainer" && h.mcp_server == "portainer-mcp")
-        );
+        assert!(hits
+            .iter()
+            .any(|h| h.term == "portainer" && h.mcp_server == "portainer-mcp"));
 
         let gh = g.match_ontology_terms("use the github mcp to fetch open issues");
         assert!(gh.iter().any(|h| h.term == "github"));
         // also matches the exact tool name when spelled out
-        assert!(
-            g.match_ontology_terms("call github_issues now")
-                .iter()
-                .any(|h| h.term == "github_issues")
-        );
+        assert!(g
+            .match_ontology_terms("call github_issues now")
+            .iter()
+            .any(|h| h.term == "github_issues"));
     }
 
     #[test]
     fn match_ontology_terms_is_whole_word_and_typed() {
         let g = capability_graph();
         // 'portainer' inside a larger word must NOT match (whole-word gate).
-        assert!(
-            g.match_ontology_terms("teleportainerish gibberish")
-                .is_empty()
-        );
+        assert!(g
+            .match_ontology_terms("teleportainerish gibberish")
+            .is_empty());
         // trivial chat names no capability → no escalation signal.
         assert!(g.match_ontology_terms("hey, how are you today?").is_empty());
         // a non-capability node's name ("deploy") is never a term.
@@ -2090,11 +2082,10 @@ mod tests {
                 "type": "Tool", "name": "gitlab_mr", "synonyms": ["gitlab", "gitlab-mcp"]
             })),
         );
-        assert!(
-            g.match_ontology_terms("anything about gitlab?")
-                .iter()
-                .any(|h| h.term == "gitlab")
-        );
+        assert!(g
+            .match_ontology_terms("anything about gitlab?")
+            .iter()
+            .any(|h| h.term == "gitlab"));
     }
 
     #[test]
@@ -2173,11 +2164,9 @@ mod tests {
             2
         );
         assert!(!view.node_map.contains_key("outside"));
-        assert!(
-            !view
-                .edge_properties
-                .contains_key(&("a".to_string(), "outside".to_string()))
-        );
+        assert!(!view
+            .edge_properties
+            .contains_key(&("a".to_string(), "outside".to_string())));
     }
 
     /// CONCEPT:MEDULLA-KG.ingest.resets-socket-so-assimilation — `get_edges_page` walked with `limit=1` recovers
@@ -2863,13 +2852,12 @@ mod tests {
         g.add_node("a".into(), props(serde_json::json!({"_owner": "alice"})));
         g.add_node("b".into(), props(serde_json::json!({"_owner": "bob"})));
         let _ = g.analysis_snapshot(); // warm the index
-        assert!(
-            g.visibility_index
-                .read()
-                .as_ref()
-                .expect("warmed above")
-                .contains_key("a")
-        );
+        assert!(g
+            .visibility_index
+            .read()
+            .as_ref()
+            .expect("warmed above")
+            .contains_key("a"));
 
         let captured = g.get_node_properties("a");
         g.remove_node("a".into());
@@ -3638,10 +3626,9 @@ mod tests {
     #[test]
     fn eg099_append_step_on_absent_trajectory_is_none() {
         let g = GraphCore::new();
-        assert!(
-            g.append_step("ghost", serde_json::json!("x"), 1.0, None, None, 0)
-                .is_none()
-        );
+        assert!(g
+            .append_step("ghost", serde_json::json!("x"), 1.0, None, None, 0)
+            .is_none());
         assert!(g.trajectory_steps("ghost").is_empty());
     }
 

@@ -47,6 +47,15 @@ use medulla_protocol_types::protocol::MethodWriteFamily;
 
 /// The operation-conditional agent-layer and semantic-index surfaces.
 fn requires_write_agent_surface(method: &Method) -> Option<bool> {
+    // MEDULLA-TYPED-PACKS-R805.1: data-product and access-request policy writes.
+    if matches!(
+        method,
+        Method::DataProductRegister { .. }
+            | Method::AccessRequestOpen { .. }
+            | Method::AccessRequestDecide { .. }
+    ) {
+        return Some(true);
+    }
     // Agent Library is a runtime-conditional native ControlPlane surface:
     // publish/retire commit durable owner rows, while current/history/status
     // are authenticated tenant-bound snapshots and must remain reads.
@@ -97,10 +106,12 @@ fn requires_write_decision_surface(method: &Method) -> Option<bool> {
     match method {
         Method::ConnectorPack { op } => Some(op.is_mutation()),
         Method::DecisionFit { op } => Some(op.is_mutation()),
+        Method::Claims { op } => Some(op.is_mutation()),
         Method::DecisionLog { op } => Some(op.is_mutation()),
         Method::DecisionEval { op } => Some(op.is_mutation()),
         Method::MutationOutbox { op } => Some(op.is_mutation()),
         Method::EdgeIndex { op } => Some(op.is_mutation()),
+        Method::WorkflowRegistry { op } => Some(op.is_mutation()),
         Method::FleetCatalog { op } => Some(op.is_mutation()),
         Method::PolicyEvolution { op } => Some(op.is_mutation()),
         _ => None,
@@ -422,6 +433,13 @@ pub fn requires_write(method: &Method) -> bool {
                 | Method::DocumentDelete { .. }
                 | Method::LineageIngest { .. }
                 | Method::TelemetryDerive { .. }
+                // MEDULLA-UNIFIED-DATA-PLANE-R760.3: incident writes.
+                | Method::IncidentRecordAnomaly { .. }
+                | Method::IncidentCorrelate { .. }
+                | Method::IncidentSetStatus { .. }
+                // MEDULLA-UNIFIED-DATA-PLANE-R700.3: action registration and submission.
+                | Method::ActionRegister { .. }
+                | Method::ActionSubmit { .. }
                 | Method::Reconcile { .. }
                 | Method::ApplyMutation { .. }
                 | Method::ApplyMultisigMutation { .. }

@@ -36,6 +36,12 @@ pub enum PackEntryKind {
     // a doc comment would make schemars split this variant out of the enum
     // and the generated Python type would stop being an Enum.
     SkillFile,
+    // One vocabulary crosswalk (MEDULLA-TYPED-PACKS-R071.1.3): the body is a
+    // `VocabularyCrosswalk` JSON record. Plain comment, like its siblings'.
+    Crosswalk,
+    // One proposed canonical concept path (MEDULLA-TYPED-PACKS-R071.100): the
+    // body is a `ConceptPathRecord` JSON record.
+    ConceptPath,
 }
 
 /// Exact identity of the served MCP catalog snapshot this pack came from.

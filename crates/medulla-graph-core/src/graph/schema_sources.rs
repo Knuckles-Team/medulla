@@ -66,8 +66,27 @@ pub enum SchemaSourceOrigin {
     Approved {
         name: String,
         approval_lease_id: String,
+        /// Digest of the shadow-ingest report the attach was admitted under.
+        #[serde(default)]
+        shadow_report_digest: Option<String>,
+    },
+    /// MEDULLA-TYPED-PACKS-R103.2: a connector-owned runtime ontology under
+    /// `ontology:<connector>/<ontology_iri>`. `revision` is the active (and only
+    /// composed) revision; `importer` is the principal bound by the first
+    /// accepted revision; `history` is metadata only (no earlier bodies), the
+    /// newest [`MAX_ONTOLOGY_REVISION_HISTORY`] entries.
+    Ontology {
+        connector: String,
+        ontology_iri: String,
+        revision: u64,
+        importer: String,
+        history: Vec<OntologyRevisionEntry>,
     },
 }
+
+pub use medulla_catalog_types::graph_schema::{
+    OntologyRevisionEntry, MAX_ONTOLOGY_REVISION_HISTORY,
+};
 
 /// What a schema source's vocabulary may describe in a connector seed graph
 /// (MEDULLA-TYPED-PACKS-R104.4). Only `Domain` vocabulary is bulk data and is
@@ -112,6 +131,11 @@ pub struct GraphSchemaSource {
     pub ontology_ttl: Option<Arc<str>>,
     pub shapes_sha256: Option<Digest256>,
     pub ontology_sha256: Option<Digest256>,
+    /// Validated vocabulary crosswalks committed with this source
+    /// (MEDULLA-TYPED-PACKS-R071.1.3). They are references between governed
+    /// vocabularies, never schema axioms, so they are outside the composed digest.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub crosswalks: Vec<medulla_catalog_types::domain_pack::VocabularyCrosswalk>,
     /// Deterministic provenance time. Replicated handlers must never read the
     /// local wall clock; until the commit envelope exposes a consensus time,
     /// live attachments use the documented sentinel `0`.
@@ -154,8 +178,18 @@ impl GraphSchemaSource {
             ontology_ttl,
             shapes_sha256,
             ontology_sha256,
+            crosswalks: Vec::new(),
             attached_at_ms,
         })
+    }
+
+    /// The same source carrying the crosswalks the importer validated.
+    pub fn with_crosswalks(
+        mut self,
+        crosswalks: Vec<medulla_catalog_types::domain_pack::VocabularyCrosswalk>,
+    ) -> Self {
+        self.crosswalks = crosswalks;
+        self
     }
 
     /// The same source with the seed-graph `role` the importer assigns.
@@ -165,6 +199,7 @@ impl GraphSchemaSource {
     }
 
     pub fn validate(&self) -> Result<(), String> {
+        validate_ontology_origin(&self.origin)?;
         if self.shapes_ttl.is_none()
             && self.ontology_ttl.is_none()
             && !matches!(&self.origin, SchemaSourceOrigin::Pack { .. })
@@ -197,6 +232,7 @@ impl GraphSchemaSource {
         // document together with its recorded digest so this remains distinct
         // from full-record equality.
         self.origin == other.origin
+            && self.crosswalks == other.crosswalks
             && same_schema_document(
                 self.shapes_ttl.as_deref(),
                 self.shapes_sha256,
@@ -224,6 +260,36 @@ fn same_schema_document(
     right_digest: Option<Digest256>,
 ) -> bool {
     left_document == right_document && left_digest == right_digest
+}
+
+/// A runtime-ontology record names its active revision as the newest history
+/// entry, within the fixed history bound, with strictly increasing revisions.
+fn validate_ontology_origin(origin: &SchemaSourceOrigin) -> Result<(), String> {
+    let SchemaSourceOrigin::Ontology {
+        revision,
+        importer,
+        history,
+        ..
+    } = origin
+    else {
+        return Ok(());
+    };
+    if importer.is_empty() || *revision == 0 {
+        return Err("runtime ontology record needs an importer and a revision".to_string());
+    }
+    if history.is_empty() || history.len() > MAX_ONTOLOGY_REVISION_HISTORY {
+        return Err(format!(
+            "runtime ontology history must hold 1..={MAX_ONTOLOGY_REVISION_HISTORY} entries"
+        ));
+    }
+    if history
+        .windows(2)
+        .any(|pair| pair[1].revision <= pair[0].revision)
+        || history.last().map(|entry| entry.revision) != Some(*revision)
+    {
+        return Err("runtime ontology history does not end at the active revision".to_string());
+    }
+    Ok(())
 }
 
 fn validate_document_digest(
@@ -602,7 +668,8 @@ fn validate_dynamic_identity(source_id: &str, origin: &SchemaSourceOrigin) -> Re
 }
 
 /// Whether `origin` is the authority its key prefix asserts (`admin:<name>`,
-/// `pack:<connector>`, `ingest:<mapping>`, `approved:<name>`, `operator`).
+/// `pack:<connector>`, `ingest:<mapping>`, `approved:<name>`,
+/// `ontology:<connector>/<iri>`, `operator`).
 fn origin_owns_key(source_id: &str, origin: &SchemaSourceOrigin) -> bool {
     match origin {
         SchemaSourceOrigin::Core { .. } => false,
@@ -616,7 +683,19 @@ fn origin_owns_key(source_id: &str, origin: &SchemaSourceOrigin) -> bool {
         SchemaSourceOrigin::Approved {
             name,
             approval_lease_id,
+            ..
         } => keyed(source_id, "approved:", name) && !approval_lease_id.is_empty(),
+        SchemaSourceOrigin::Ontology {
+            connector,
+            ontology_iri,
+            importer,
+            ..
+        } => {
+            !connector.is_empty()
+                && !ontology_iri.is_empty()
+                && !importer.is_empty()
+                && source_id == format!("ontology:{connector}/{ontology_iri}")
+        }
     }
 }
 
@@ -655,7 +734,21 @@ fn validate_replacement_progression(
                 revision: replacement_revision,
             },
         ) => current_mapping == replacement_mapping && replacement_revision > current_revision,
-        (SchemaSourceOrigin::Pack { .. }, _) | (SchemaSourceOrigin::Ingestion { .. }, _) => false,
+        (
+            SchemaSourceOrigin::Ontology {
+                revision: current_revision,
+                importer: current_importer,
+                ..
+            },
+            SchemaSourceOrigin::Ontology {
+                revision: replacement_revision,
+                importer: replacement_importer,
+                ..
+            },
+        ) => current_importer == replacement_importer && replacement_revision > current_revision,
+        (SchemaSourceOrigin::Pack { .. }, _)
+        | (SchemaSourceOrigin::Ingestion { .. }, _)
+        | (SchemaSourceOrigin::Ontology { .. }, _) => false,
         _ => true,
     };
     if advances {
@@ -810,6 +903,16 @@ fn core_specs() -> &'static [CoreSpec] {
                 "../../../medulla-core/ontology/enterprise-v1.ttl"
             )),
         },
+        // The enterprise SHACL shapes are their own core source, the same
+        // pattern as orchestration-shapes and finance-shapes.
+        CoreSpec {
+            module: "enterprise-shapes",
+            version: 1,
+            shapes: Some(include_str!(
+                "../../../medulla-core/ontology/enterprise-v1.shapes.ttl"
+            )),
+            ontology: None,
+        },
         CoreSpec {
             module: "governance-shapes",
             version: 1,
@@ -945,6 +1048,16 @@ fn core_specs() -> &'static [CoreSpec] {
             ontology: Some(include_str!(
                 "../../../medulla-core/ontology/identity-v1.ttl"
             )),
+        },
+        // The identity SHACL shapes are their own core source, the same
+        // pattern as orchestration-shapes and finance-shapes.
+        CoreSpec {
+            module: "identity-shapes",
+            version: 1,
+            shapes: Some(include_str!(
+                "../../../medulla-core/ontology/identity-v1.shapes.ttl"
+            )),
+            ontology: None,
         },
         CoreSpec {
             module: "infrastructure",
@@ -1301,7 +1414,15 @@ fn origin_bytes(origin: &SchemaSourceOrigin) -> Vec<u8> {
         SchemaSourceOrigin::Approved {
             name,
             approval_lease_id,
+            ..
         } => format!("approved\0{name}\0{approval_lease_id}").into_bytes(),
+        SchemaSourceOrigin::Ontology {
+            connector,
+            ontology_iri,
+            revision,
+            importer,
+            ..
+        } => format!("ontology\0{connector}\0{ontology_iri}\0{revision}\0{importer}").into_bytes(),
     }
 }
 
@@ -1373,12 +1494,10 @@ mod tests {
         )
         .unwrap();
         let mut sources = GraphSchemaSources::default();
-        assert!(
-            sources
-                .attach_dynamic("admin:oversized".to_string(), source)
-                .unwrap_err()
-                .contains("exceeds")
-        );
+        assert!(sources
+            .attach_dynamic("admin:oversized".to_string(), source)
+            .unwrap_err()
+            .contains("exceeds"));
         assert!(sources.dynamic.is_empty());
     }
 
@@ -1439,16 +1558,12 @@ mod tests {
             0,
         )
         .unwrap();
-        assert!(
-            sources
-                .attach_dynamic("core:forged@1".to_string(), core)
-                .is_err()
-        );
-        assert!(
-            sources
-                .attach_dynamic("pack:wrong".to_string(), admin_source("wrong", 0))
-                .is_err()
-        );
+        assert!(sources
+            .attach_dynamic("core:forged@1".to_string(), core)
+            .is_err());
+        assert!(sources
+            .attach_dynamic("pack:wrong".to_string(), admin_source("wrong", 0))
+            .is_err());
         let mismatched_pack = GraphSchemaSource::new(
             SchemaSourceOrigin::Pack {
                 connector: "actual".to_string(),
@@ -1459,16 +1574,12 @@ mod tests {
             0,
         )
         .unwrap();
-        assert!(
-            sources
-                .attach_dynamic("pack:claimed".to_string(), mismatched_pack)
-                .is_err()
-        );
-        assert!(
-            sources
-                .attach_dynamic("admin:claimed".to_string(), admin_source("actual", 0))
-                .is_err()
-        );
+        assert!(sources
+            .attach_dynamic("pack:claimed".to_string(), mismatched_pack)
+            .is_err());
+        assert!(sources
+            .attach_dynamic("admin:claimed".to_string(), admin_source("actual", 0))
+            .is_err());
         assert!(sources.dynamic.is_empty());
     }
 
@@ -1501,22 +1612,16 @@ mod tests {
         let mut sources = GraphSchemaSources::default();
         let ontology_a = "@prefix owl: <http://www.w3.org/2002/07/owl#> . # a";
         let ontology_b = "@prefix owl: <http://www.w3.org/2002/07/owl#> . # b";
-        assert!(
-            sources
-                .attach_dynamic("pack:github".to_string(), pack("r2", ontology_a))
-                .unwrap()
-        );
-        assert!(
-            !sources
-                .attach_dynamic("pack:github".to_string(), pack("r2", ontology_a))
-                .unwrap()
-        );
-        assert!(
-            sources
-                .attach_dynamic("pack:github".to_string(), pack("r1", ontology_b))
-                .unwrap_err()
-                .contains("SCHEMA_SOURCE_REGRESSION")
-        );
+        assert!(sources
+            .attach_dynamic("pack:github".to_string(), pack("r2", ontology_a))
+            .unwrap());
+        assert!(!sources
+            .attach_dynamic("pack:github".to_string(), pack("r2", ontology_a))
+            .unwrap());
+        assert!(sources
+            .attach_dynamic("pack:github".to_string(), pack("r1", ontology_b))
+            .unwrap_err()
+            .contains("SCHEMA_SOURCE_REGRESSION"));
         let numeric_pack = |record_id: &str, document: &'static str| {
             GraphSchemaSource::new(
                 SchemaSourceOrigin::Pack {
@@ -1529,38 +1634,28 @@ mod tests {
             )
             .unwrap()
         };
-        assert!(
-            sources
-                .attach_dynamic(
-                    "pack:numeric".to_string(),
-                    numeric_pack("pack:numeric:2:aaaa", ontology_a),
-                )
-                .unwrap()
-        );
-        assert!(
-            sources
-                .attach_dynamic(
-                    "pack:numeric".to_string(),
-                    numeric_pack("pack:numeric:10:bbbb", ontology_b),
-                )
-                .unwrap()
-        );
-        assert!(
-            sources
-                .attach_dynamic("ingest:cmdb".to_string(), ingest(2, ontology_a))
-                .unwrap()
-        );
-        assert!(
-            sources
-                .attach_dynamic("ingest:cmdb".to_string(), ingest(1, ontology_b))
-                .unwrap_err()
-                .contains("SCHEMA_SOURCE_REGRESSION")
-        );
-        assert!(
-            sources
-                .attach_dynamic("ingest:cmdb".to_string(), ingest(3, ontology_b))
-                .unwrap()
-        );
+        assert!(sources
+            .attach_dynamic(
+                "pack:numeric".to_string(),
+                numeric_pack("pack:numeric:2:aaaa", ontology_a),
+            )
+            .unwrap());
+        assert!(sources
+            .attach_dynamic(
+                "pack:numeric".to_string(),
+                numeric_pack("pack:numeric:10:bbbb", ontology_b),
+            )
+            .unwrap());
+        assert!(sources
+            .attach_dynamic("ingest:cmdb".to_string(), ingest(2, ontology_a))
+            .unwrap());
+        assert!(sources
+            .attach_dynamic("ingest:cmdb".to_string(), ingest(1, ontology_b))
+            .unwrap_err()
+            .contains("SCHEMA_SOURCE_REGRESSION"));
+        assert!(sources
+            .attach_dynamic("ingest:cmdb".to_string(), ingest(3, ontology_b))
+            .unwrap());
     }
 
     #[test]
@@ -1579,45 +1674,37 @@ mod tests {
         };
         let mut sources = GraphSchemaSources::default();
         let ontology = "@prefix owl: <http://www.w3.org/2002/07/owl#> .";
-        assert!(
-            sources
-                .attach_dynamic(
-                    "pack:graph-os".to_string(),
-                    pack("pack:graph-os:1:aaaa", Some(ontology)),
-                )
-                .unwrap()
-        );
-        assert!(
-            sources
-                .attach_dynamic(
-                    "pack:graph-os".to_string(),
-                    pack("pack:graph-os:2:bbbb", None),
-                )
-                .unwrap()
-        );
+        assert!(sources
+            .attach_dynamic(
+                "pack:graph-os".to_string(),
+                pack("pack:graph-os:1:aaaa", Some(ontology)),
+            )
+            .unwrap());
+        assert!(sources
+            .attach_dynamic(
+                "pack:graph-os".to_string(),
+                pack("pack:graph-os:2:bbbb", None),
+            )
+            .unwrap());
         let tombstone = sources.dynamic.get("pack:graph-os").unwrap();
         assert!(tombstone.shapes_ttl.is_none() && tombstone.ontology_ttl.is_none());
-        assert!(
-            sources
-                .attach_dynamic(
-                    "pack:graph-os".to_string(),
-                    pack("pack:graph-os:1:cccc", Some(ontology)),
-                )
-                .unwrap_err()
-                .contains("SCHEMA_SOURCE_REGRESSION")
-        );
+        assert!(sources
+            .attach_dynamic(
+                "pack:graph-os".to_string(),
+                pack("pack:graph-os:1:cccc", Some(ontology)),
+            )
+            .unwrap_err()
+            .contains("SCHEMA_SOURCE_REGRESSION"));
     }
 
     #[test]
     fn core_catalog_cannot_be_partially_installed() {
         let mut sources = GraphSchemaSources::default();
         sources.core.pop_first();
-        assert!(
-            sources
-                .validate()
-                .unwrap_err()
-                .contains("immutable catalog")
-        );
+        assert!(sources
+            .validate()
+            .unwrap_err()
+            .contains("immutable catalog"));
     }
 
     #[test]
@@ -1628,7 +1715,7 @@ mod tests {
         let expected = [
             (
                 "a2a",
-                "cb29dbc911f8cdac78e4206fe914927342b9abc8ff9fe21d640498434f193898",
+                "3206052c6dbff90471ba7d8bdac1541b29c2580be77802880b95f8c73deb8f72",
             ),
             (
                 "action",
@@ -1636,35 +1723,35 @@ mod tests {
             ),
             (
                 "archimate",
-                "9295524cd22d38e15c8efb1b0ef4ee15590068e112a84f5cad903c5c73663e98",
+                "3a941335df1079a0dc192eba041af4db2a41653f95f7dc5d516a7adf4edfbae3",
             ),
             (
                 "capability",
-                "e20f971c54e0c49672d10bc83fd44c3f2a343412e77fedc7f0501ec75fb482f2",
+                "ebcddf9f166e7e0e6cabbb0126a304c6dd5e0713da2503ec9b2fa08b381504cd",
             ),
             (
                 "argumentation",
-                "24e316b2d064ab433bb40d3c055c67d2e9ca7bb764456988f9a5828ecb29be9b",
+                "3802cfc9bff937f93a638bf2ca1b0fcd9a6b4432b3a02be12d404e22d1582cd0",
             ),
             (
                 "calendar",
-                "c1c17692f1cedd26fb4a4cdab4ee3db655c570d7448f5123f8ad4efafe36e6d0",
+                "67047ac0aa2a3bd0b41de948c729e5b0da579fb093c09e4f5492925da5d5b008",
             ),
             (
                 "catalog",
-                "60b86fdb76138be025edde422ee7338c91994fa5aafee385f98795b61d4e49b1",
+                "25bb360d41fea58b0ec3b3fc277aaaf42fa8ff5b17a66787ba81b7236e361912",
             ),
             (
                 "company",
-                "db896668d88d609de6a9b0652bcaa09feb788281ab5d3b576d68b2de5166fd50",
+                "e68b101468aa5e90b959cadf63482576db212aae64cbe51c84d28a3c17e85ca7",
             ),
             (
                 "company_infra",
-                "416c839ba3cc5e53631cc7b601c8542cbe3d12fd78587c31cd62b8d2662ce1d3",
+                "f5c16236b1d96b4ad01a61b9176250fe9f58045d3a9d4d9ed25284f137b5ec34",
             ),
             (
                 "connector-pack",
-                "d682c64cb20840bbf25912c878bf579929827162bffc0864b000be99db5fda07",
+                "525610e5402416835050f0812a1181f6cfe594495b27abac2abd85477db3c2a8",
             ),
             (
                 "concepts",
@@ -1680,15 +1767,19 @@ mod tests {
             ),
             (
                 "documentation",
-                "d902c03b433aa907695f22b32515686b141f459b81b85cc3136ca95b858d5ca6",
+                "f61c25413211d5cc92523c548d2d50a8d26a8a5473cb59de5bf7ab16e20155b1",
             ),
             (
                 "energy_geopolitics",
-                "36f99061e8c71f8c4b3d0fdb4c26e1993fbbc31bf033028bab2dfd95d1d14d20",
+                "bc3d0a535e8c5d21e50e82126c7d83244d445fb178d1dab0a995599f95c258a9",
             ),
             (
                 "enterprise",
-                "7ec8ca794b81774227d8a660c1cd2cafd25230921d3b0eb89ee2690b2fd67a27",
+                "6e56d784c9990665934153422b00df5d73210cbfebe262b0918ffc92c5bff97c",
+            ),
+            (
+                "enterprise-shapes",
+                "df333980776e43addf5473dc9e875fd465b491e5a1e424bddf42f4eb22d9910d",
             ),
             (
                 "governance-shapes",
@@ -1696,7 +1787,7 @@ mod tests {
             ),
             (
                 "government",
-                "1603a25737cb7457590c0bf9a16564c0a8ba173316d09c65f0fa01a537f09fa4",
+                "6fc9f53374146e50161e5fe2aa83a5902b5c9e86fe03be69f089ddd6d39de310",
             ),
             (
                 "government-shapes",
@@ -1704,27 +1795,31 @@ mod tests {
             ),
             (
                 "harness",
-                "e762f8807d827551a37b6e3b6fd573fc66039b83310acdd63a3835be63168e91",
+                "e11026fc84868a7f8a18b344bb8af0600022c9c6c75f9ef43fb7f02553d34c6a",
             ),
             (
                 "hr",
-                "6eb8eb2231b041b9bb58aa9c131c41349c4326f869725ac63cb6799899836b3f",
+                "bce983d484bd2d1681cacc16d6c13c9ffa229c474e0e85340f0398baf848bf6f",
             ),
             (
                 "identity",
-                "b32a277c15f100d26175c2a1a24af63151a50b8f6fb54f953cbc66626c1c8828",
+                "b1cda78978579fa6d54a04e2885aa5a4f443259e35b6101dd1b4d2ff65d0b8d5",
+            ),
+            (
+                "identity-shapes",
+                "753ea0407a1f691351684761e2f500e3d3df3e611e5a8c249befc740350efdf8",
             ),
             (
                 "infrastructure",
-                "67efacdeba4847c91a0ddf9b4918e5063aa624750345e1029ecc24b71022db46",
+                "0f3ea4c94f2475ceed54dbf3cfe18a7d33122ca1e1089abc4284113fc3c65141",
             ),
             (
                 "medical",
-                "e143acf6c6189f36c092a1fc1715e56b13a2e82d9ce6be36c54fb2475ef9b61d",
+                "512fe88b3d8a190be089a674869a193e25ca09c591cb7cd307139e7039e75554",
             ),
             (
                 "native_source_connector",
-                "aff5b66926ab41858fb8b549aae343f3286f317cf875534bb3e5e0cd89e9a35c",
+                "48a1e90706248bde126d4c3d2d2f34c136cca5797a00612c6a13c994358efda2",
             ),
             (
                 "orchestration",
@@ -1740,27 +1835,27 @@ mod tests {
             ),
             (
                 "process_intelligence",
-                "5bcd57f2f092c49158cc3b61d51566b0ce60674efe7ba0642b38c98a0ace6d0d",
+                "52a426363a7d0a7d50ed8e84237be6196c96c9eb383cf7128bf0d637b33c8694",
             ),
             (
                 "sdd",
-                "7fc49c182c7f1d0a3af1caf8cdf72f623fa200c1057eafb77c121538e372c050",
+                "383283f769da7e57cb0ddda6af8319b3253501f8e777d3cd368d864f0e9d0f11",
             ),
             (
                 "service_operations",
-                "a50574c51353dacee487673774dc7779666239846adb5667d549e22b0f2fc949",
+                "3bf4054b73e1a47ff17d28f9f2b8f662cefafd05e5feac911ec5fcf28312147d",
             ),
             (
                 "dataplatform",
-                "665654965e1654c57ead46670dcec5b491e440d983c247167130031ee80640bb",
+                "bf130bc753323c5430a6b604f93fd03a87ae6d98b7563ca0c4b9f54b442bac26",
             ),
             (
                 "data-platform",
-                "0f95936c3e5317d79598369974870262f29cca2e0b5dddbdf69892164b7bbe62",
+                "0cbf52870a519d293be4267b8a9d9b26fc97a378fa6e4f20f30980db6c9cdae9",
             ),
             (
                 "it4it_delivery",
-                "d5c898494bfb99a8bd5368c139e1767b41d66561d007d73e48fe7b7f1ed4355b",
+                "7f919c5765dc4e80aac74455b3ce1dd029b89a4d47ad08b038e024b89cb0c395",
             ),
             (
                 "media",
@@ -1768,7 +1863,7 @@ mod tests {
             ),
             (
                 "retrieval",
-                "0ed0901d7f65bf09a8c00f3a168672f21d8e10db827b65a6d3be467c39f43d26",
+                "8619ae4a42a9545427ce72d1fe61744977d337037937ef62b96305c732aa6767",
             ),
             (
                 "sdlc_lifecycle",
@@ -1776,27 +1871,27 @@ mod tests {
             ),
             (
                 "software",
-                "78b30a26ff70a29269f05e9b863a7419bfbb9eae3b1eee05c74f79a2c5a2cb1d",
+                "be96d5d3c1dc265ec3e9647d6d5aa5948cd226196d08cd6e5918ca904ba0fe4d",
             ),
             (
                 "system",
-                "06cb25a6d2ef673cbfa25ceefb3d200f69ec6ab0d21fd7bb8bb049f0ed051824",
+                "77fd37067abaff0c7cc52cfcdd0de5fcec73c6de1c9fad453e311fdf313e2720",
             ),
             (
                 "trm",
-                "2e5d9cffcfc8e8915470641e85766f3ce775919539f22c57746d5a5e29d6c55d",
+                "020d260f068b338a340cb9639e5391ae3b7272099afa16ad36ac5bd9ad182b44",
             ),
             (
                 "life",
-                "c5f0d321f894e5852f868a1d85d7a2a11bfad5ea91921f2d8f6a6e0a89a03566",
+                "4da55226e90f23254343fd91dc59433e4361baed5ce84ffb29c5b544e48a44dd",
             ),
             (
                 "environment",
-                "21af644bc9b2499efb9cde3e73a6b9b9eee05ccb118382beb7c1a2f8c07e56a8",
+                "0617000bebceac047fc2dd836d1a2efc681d7632f83479cd46098c3d84f72a53",
             ),
             (
                 "nutrition",
-                "06772fb766c86eda3c3acf70dda010a948f6917c496415a0df1a64ae2dac27ad",
+                "47d4455d70579c541591d9434957457a843907f36deb4a22fb762deeb8c0db0a",
             ),
             (
                 "world-model-shapes",
@@ -1804,7 +1899,7 @@ mod tests {
             ),
             (
                 "swarm-topology",
-                "7288d5236ddae0c7ede3214392ee4c48c99d5cf0d958b64bd68061a05160ffbd",
+                "6a537da068d767d250805becbd376d4ea82b8f80f2cd6e259e900e6a50051adb",
             ),
             (
                 "swarm-topology-shapes",
@@ -1829,11 +1924,11 @@ mod tests {
             ),
             (
                 "worldview",
-                "1c42096ed2fdbd70d2f65b1f7b0a40bba7f7c83f4929a8cc5f16090ba1903fb1",
+                "ff0bc0c9407d2e400ae56b3aa185a6bcc6e41980496c664ebd037c247bf1206a",
             ),
             (
                 "metadata_catalog",
-                "ff5be56deb01101a40a7c1fb078576b5287a210bfee11e7b0e444ea8be2817a6",
+                "63847a25c0a66b121048f881be89b64bb487af02d306ed84a32b26e0e9a31b99",
             ),
             (
                 "metadata_catalog-shapes",
@@ -1845,7 +1940,7 @@ mod tests {
             ),
             (
                 "virtual-graph",
-                "cbcec36092637964d49faf2178d3930bb2a0a32d7d0586b9b4acadf9fc2eaa57",
+                "a6b6917d16902e3e3f5d7a58ad2bdb50e342ea10837bbb49ee9161eef976e3bc",
             ),
             (
                 "virtual-graph-shapes",
@@ -1855,11 +1950,11 @@ mod tests {
             // shapes companion) joins the catalog; the pin follows the ontology.
             (
                 "commercial",
-                "ca878cd9d46952541a01907179a922bdbf28b25f1a4e54eb7fc9202cb7483635",
+                "9ff80088ba38249ee5421ae50ad263ac9fb06f8f441c1152652b5f56a79ec321",
             ),
             (
                 "supply_chain",
-                "d06f36d5b305d9fe9e38b3fc2257d0f305ad326e70cd5a8bb5b68fcf73f41203",
+                "d7b82d00c2d5ba05b188af74169b1ebd9b6283a580d8cb49427fb9c51b3ea1a8",
             ),
             // MEDULLA-TYPED-PACKS-R101.1/R102.1: the connector-pack module (ontology
             // plus its surface shapes companion) joins the catalog; the pin

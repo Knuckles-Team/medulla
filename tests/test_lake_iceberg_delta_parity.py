@@ -391,6 +391,31 @@ class TestIcebergReadParity:
         assert filtered["symbol"].tolist() == ["GOOG", "AMZN"]
 
 
+@_SKIP_PYICEBERG
+@pytest.mark.spec("MEDULLA-UNIFIED-DATA-PLANE-R039.4")
+def test_partitioned_table_reads_in_pyiceberg(lake_fixture):
+    """The table identity-partitioned by `active` opens in pyiceberg with its one
+    identity partition field, reads every fixture row, and a partition predicate
+    returns exactly the matching rows."""
+    from pyiceberg.expressions import EqualTo
+
+    table = StaticTable.from_metadata(lake_fixture["partitioned_metadata_location"])
+    fields = table.spec().fields
+    assert len(fields) == 1
+    assert fields[0].field_id == 1000
+    assert fields[0].name == lake_fixture["partition_column"]
+    assert str(fields[0].transform) == "identity"
+
+    arrow_table = table.scan().to_arrow()
+    assert arrow_table.num_rows == lake_fixture["row_count"]
+
+    expected = sorted(
+        row["id"] for row in lake_fixture["rows"] if row["active"] is True
+    )
+    active = table.scan(row_filter=EqualTo("active", True)).to_arrow()
+    assert sorted(active.column("id").to_pylist()) == expected
+
+
 # --------------------------------------------------------------------------------- #
 # Delta read parity (deltalake / delta-rs)
 # --------------------------------------------------------------------------------- #

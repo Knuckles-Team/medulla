@@ -243,6 +243,7 @@ mod tests {
         );
     }
 
+    /// Verifies MEDULLA-FEDERATED-QUERY-R053.100: Generated `Cypher` property keys use backtick quoting with a build gate
     // spec: MEDULLA-FEDERATED-QUERY-R053.100
     #[test]
     fn key_quoting_fixtures() {

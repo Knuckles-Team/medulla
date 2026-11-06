@@ -319,7 +319,32 @@ async fn run_inner() -> Result<(), Box<dyn std::error::Error>> {
     // MEDULLA-CONTRACT-R058: every knob is read and bounds-checked once, before
     // any listener binds; a refusal exits non-zero.
     match medulla_server_api::knob_config::load_knobs(&args.knob, |name| std::env::var(name).ok()) {
-        Ok(knobs) => medulla_server_api::knob_config::install(knobs),
+        Ok(knobs) => {
+            #[cfg(feature = "federation")]
+            medulla_federation::sqlite_foreign::set_busy_timeout_ms(
+                knobs.foreign_sqlite_busy_timeout_ms,
+            );
+            // MEDULLA-DURABLE-KERNEL-R800.3: the served answer cache admits answers by the
+            // loaded `kvcache.min_worth` and `kvcache.answer_max_bytes`, before any graph
+            // builds its cache.
+            #[cfg(feature = "result-cache")]
+            medulla_query_cache::result_cache::install_tier_policy(
+                medulla_query_cache::result_cache::TierPolicy {
+                    max_bytes: knobs.kvcache_answer_max_bytes,
+                    min_worth: knobs.kvcache_min_worth,
+                },
+            );
+            medulla_server_api::knob_config::install(knobs)
+        }
+        Err(refusal) => {
+            eprintln!("error: {refusal}");
+            std::process::exit(2);
+        }
+    }
+    match medulla_server_api::knob_config::load_allowed_roots(&args.knob, |name| {
+        std::env::var(name).ok()
+    }) {
+        Ok(roots) => medulla_server_api::knob_config::install_allowed_roots(roots),
         Err(refusal) => {
             eprintln!("error: {refusal}");
             std::process::exit(2);
@@ -343,6 +368,7 @@ async fn run_inner() -> Result<(), Box<dyn std::error::Error>> {
 
     let (socket_path, socket_parent) = resolve_socket_path(args.socket_path.take());
     let socket_mode = server_startup::socket_mode_or_exit(&args.socket_mode);
+    server_startup::bus_participant_ttl_or_exit(args.server.bus_participant_ttl_s);
 
     // ── Security gate: an auth secret and a durable-state directory are mandatory ──
     server_startup::validate_auth_mode(&args, socket_mode)?;
@@ -509,6 +535,7 @@ async fn spawn_optional_service_listeners(
     recover_durable_catalog(state).await?;
     medulla_h_admin::connector_pack_projection::spawn(state.clone());
     medulla_h_ingest::repository_enrichment_worker::spawn(state.clone());
+    medulla_h_ingest::repository_index::enrich::spawn(state.clone())?;
     #[cfg(feature = "epistemic-tms")]
     medulla_h_retrieve::reasoning_projection::spawn(state.clone());
     // Sampled authorization denials reach the identity audit trail.

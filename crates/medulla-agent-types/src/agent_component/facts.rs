@@ -654,8 +654,9 @@ impl BlueprintField {
 /// are kept untouched. The size is `serde_json::to_vec(value).len()`.
 pub fn validate_prompt_blueprint(
     value: &serde_json::Value,
+    identity: &super::PromptBlueprintIdentity,
     limits: &PromptLimits,
-) -> Result<(), &'static str> {
+) -> Result<ValidatedPrompt, &'static str> {
     let size = serde_json::to_vec(value)
         .map_err(|_| PROMPT_SCHEMA_INVALID)?
         .len();
@@ -678,7 +679,40 @@ pub fn validate_prompt_blueprint(
             return Err(PROMPT_SCHEMA_INVALID);
         }
     }
-    Ok(())
+    Ok(ValidatedPrompt {
+        blueprint: value.clone(),
+        identity: identity.clone(),
+    })
+}
+
+/// A blueprint that passed [`validate_prompt_blueprint`], with the identity
+/// of the revision it belongs to. Only [`validate_prompt_blueprint`] builds
+/// one, so a renderer never sees an unvalidated blueprint.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ValidatedPrompt {
+    blueprint: serde_json::Value,
+    identity: super::PromptBlueprintIdentity,
+}
+
+impl ValidatedPrompt {
+    /// The validated blueprint object.
+    pub fn blueprint(&self) -> &serde_json::Value {
+        &self.blueprint
+    }
+
+    /// The identity of the prompt revision.
+    pub fn identity(&self) -> &super::PromptBlueprintIdentity {
+        &self.identity
+    }
+
+    /// The variable names the blueprint declares, sorted and deduplicated.
+    pub fn declared_variables(&self) -> std::collections::BTreeSet<&str> {
+        self.blueprint
+            .get("variables")
+            .and_then(serde_json::Value::as_array)
+            .map(|items| items.iter().filter_map(serde_json::Value::as_str).collect())
+            .unwrap_or_default()
+    }
 }
 
 /// The three facts BOTH selectable kinds carry. One function, so a model
@@ -791,6 +825,20 @@ fn validate_schema_digest(field: &str, value: Option<&str>) -> Result<(), String
 mod tests {
     use super::*;
 
+    fn test_prompt_identity() -> super::super::PromptBlueprintIdentity {
+        super::super::PromptBlueprintIdentity {
+            tenant_id: "tenant-a".into(),
+            component_id: "prompt:a".into(),
+            entry_revision: 1,
+            schema_revision: PROMPT_SCHEMA_REVISION,
+            body_sha256: "a".repeat(64),
+            provenance: super::super::ComponentProvenance::SourcePackage {
+                package_id: "pkg-a".into(),
+                package_version: "1.0.0".into(),
+            },
+        }
+    }
+
     // spec: MEDULLA-TYPED-PACKS-R048.2
     #[test]
     fn measured_fact_requires_run_ref() {
@@ -842,23 +890,27 @@ mod tests {
         }
     }
 
+    /// Verifies MEDULLA-TYPED-PACKS-R001.7: Prompt payload validation
     // spec: MEDULLA-TYPED-PACKS-R001.7
     #[test]
     fn prompt_blueprint_schema_refusals() {
         let limits = PromptLimits::default();
+        let identity = test_prompt_identity();
         let valid = serde_json::json!({
             "task": "summarize",
             "schema_revision": 1,
             "instructions": ["be brief"],
             "x-ext": {"nested": {"deep": [1, {"k": "v"}]}},
         });
-        assert_eq!(validate_prompt_blueprint(&valid, &limits), Ok(()));
+        let validated = validate_prompt_blueprint(&valid, &identity, &limits).expect("valid");
+        assert_eq!(validated.blueprint(), &valid);
+        assert_eq!(validated.identity(), &identity);
         // Extension values pass through untouched.
         assert_eq!(valid["x-ext"]["nested"]["deep"][1]["k"], "v");
 
         let missing_task = serde_json::json!({"role": "analyst"});
         assert_eq!(
-            validate_prompt_blueprint(&missing_task, &limits),
+            validate_prompt_blueprint(&missing_task, &identity, &limits),
             Err(PROMPT_SCHEMA_INVALID)
         );
         for wrong in [
@@ -869,7 +921,7 @@ mod tests {
             serde_json::json!(["task"]),
         ] {
             assert_eq!(
-                validate_prompt_blueprint(&wrong, &limits),
+                validate_prompt_blueprint(&wrong, &identity, &limits),
                 Err(PROMPT_SCHEMA_INVALID),
                 "{wrong}"
             );
@@ -883,6 +935,7 @@ mod tests {
         assert_eq!(
             validate_prompt_blueprint(
                 &oversized,
+                &identity,
                 &PromptLimits {
                     max_blueprint_bytes: 1024
                 }

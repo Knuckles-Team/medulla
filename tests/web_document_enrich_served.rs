@@ -473,3 +473,89 @@ async fn refusals() {
     assert!(format!("{:?}", empty.error).contains("DOCUMENT_TEXT_MISSING"));
     assert_eq!(graph_version(&state), version, "a refusal writes nothing");
 }
+
+// spec: MEDULLA-DECISION-ENGINE-R080.2
+#[test]
+fn persisted_facts_carry_their_rung_and_resist_overwrite() {
+    test_support::on_engine(rung_and_overwrite);
+}
+
+async fn rung_and_overwrite() {
+    let (_dir, _backend, state) = durable_graph().await;
+    let text = page_text("");
+    add_document(
+        &state,
+        2,
+        "doc:a",
+        &text,
+        "https://example.org/a",
+        NOW - HOUR,
+        "sha256:aa",
+    )
+    .await;
+    let receipt = enrich(&state, 3, "doc:a", FetchBackend::Webarchiver).await;
+    let record = chunk_props(&state, 4, &receipt.enrichment_id).await;
+    assert_eq!(
+        record["producing_rung"], "embeddings",
+        "the stored enrichment fact carries its producing rung"
+    );
+
+    // A fact an AST rung already established on the same Document.
+    add_document(
+        &state,
+        5,
+        "doc:b",
+        &text,
+        "https://example.org/b",
+        NOW - HOUR,
+        "sha256:bb",
+    )
+    .await;
+    let seeded = "enrichment:doc:b:ast-seed";
+    call(
+        &state,
+        6,
+        Method::AddNode {
+            node_id: seeded.into(),
+            properties_msgpack: rmp_serde::to_vec_named(&serde_json::json!({
+                "type": "DocumentEnrichment",
+                "document_id": "doc:b",
+                "content_digest": format!("sha256:{}", "ab".repeat(32)),
+                "chunk_count": 0,
+                "producing_rung": "ast_extraction",
+            }))
+            .unwrap(),
+        },
+    )
+    .await;
+    let version = graph_version(&state);
+    let refused = test_support::dispatch(
+        &state,
+        test_support::request(
+            SECRET,
+            7,
+            GRAPH,
+            Method::EnrichDocument {
+                request: Box::new(EnrichDocumentRequest {
+                    document_id: "doc:b".into(),
+                    text_property: None,
+                    fetch_backend: Some(FetchBackend::Webarchiver),
+                    max_chunk_bytes: Some(600),
+                    overlap_bytes: Some(80),
+                }),
+            },
+        ),
+    )
+    .await;
+    assert!(
+        format!("{:?}", refused.error).contains("RUNG_OUTRANKED"),
+        "the embedding candidate is refused: {:?}",
+        refused.error
+    );
+    assert_eq!(graph_version(&state), version, "a refusal writes nothing");
+    let kept = chunk_props(&state, 8, seeded).await;
+    assert_eq!(
+        kept["producing_rung"], "ast_extraction",
+        "the stored lower-rung fact stays in place"
+    );
+}

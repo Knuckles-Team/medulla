@@ -271,6 +271,7 @@ async fn each_invalid_record_returns_its_code() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+/// Verifies MEDULLA-FINANCE-PRIMITIVES-R751.753: Hot-path proof
 // spec: MEDULLA-FINANCE-PRIMITIVES-R751.753
 async fn debate_to_strategy_card_round_trip() {
     use FinanceRecordKind as Kind;

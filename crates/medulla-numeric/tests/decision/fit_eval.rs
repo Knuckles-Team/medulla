@@ -105,6 +105,7 @@ fn the_receipt_passes_on_held_out_gold_and_names_failed_gates_otherwise() {
         estimators: &[],
         head_digest: "sha256:head",
         policy_digest: "sha256:policy",
+        feature_power: None,
     };
     let receipt =
         evaluate(&head, &holdout, &admitted.items, admitted.exclusions, &spec).expect("evaluates");
@@ -149,6 +150,7 @@ fn off_policy_evaluation_reports_support_and_ess() {
         estimators: &estimators,
         head_digest: "sha256:head",
         policy_digest: "sha256:policy",
+        feature_power: None,
     };
     let receipt =
         evaluate(&head, &logs, &admitted.items, admitted.exclusions, &spec).expect("evaluates");
@@ -195,6 +197,7 @@ fn an_off_policy_estimate_on_unsupported_actions_blocks_promotion() {
         estimators: &[OpeEstimatorKind::Ips],
         head_digest: "sha256:head",
         policy_digest: "sha256:policy",
+        feature_power: None,
     };
     let receipt =
         evaluate(&head, &logs, &admitted.items, admitted.exclusions, &spec).expect("evaluates");
@@ -231,6 +234,7 @@ fn a_pool_below_min_support_is_excluded_and_cannot_support_promotion() {
         estimators: &[OpeEstimatorKind::Ips],
         head_digest: "sha256:head",
         policy_digest: "sha256:policy",
+        feature_power: None,
     };
     let receipt =
         evaluate(&head, &logs, &admitted.items, admitted.exclusions, &spec).expect("evaluates");
@@ -257,6 +261,7 @@ fn the_eval_receipt_records_the_calibration_method() {
         estimators: &[],
         head_digest: "sha256:head",
         policy_digest: "sha256:policy",
+        feature_power: None,
     };
     let receipt =
         evaluate(&head, &holdout, &admitted.items, admitted.exclusions, &spec).expect("evaluates");

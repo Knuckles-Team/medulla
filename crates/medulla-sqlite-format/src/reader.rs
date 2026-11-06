@@ -7,13 +7,16 @@
 //! calling in (mirroring how the facade already bounds `MEDULLA_SQLITE_MAX_BYTES`).
 
 use std::path::Path;
+use std::time::Duration;
 
 use crate::error::{Error, Result};
 use crate::header::DatabaseHeader;
 use crate::overflow::table_leaf_split;
 use crate::page::{PageHeader, PageType};
 use crate::record::decode_record;
-use crate::schema::{is_without_rowid, parse_columns, SchemaRow};
+use crate::schema::{
+    index_leading_column, is_without_rowid, parse_columns, rowid_alias, SchemaRow,
+};
 use crate::value::{ColumnDef, Row};
 use crate::varint::read_varint;
 
@@ -30,6 +33,26 @@ impl Reader {
     pub fn open(path: &Path) -> Result<Self> {
         let bytes = std::fs::read(path)?;
         Self::from_bytes(bytes)
+    }
+
+    /// Open `main` through its `-wal` file as one consistent snapshot, without taking a
+    /// lock and without writing either file (MEDULLA-UNIFIED-DATA-PLANE-R015.2.2.1). The
+    /// WAL pages overlay the main file's pages, then the one page decoder reads them. A
+    /// checkpoint racing the read retries until `busy_timeout`, then refuses with
+    /// `SQLITE_SNAPSHOT_UNSTABLE`.
+    pub fn open_with_wal(main: &Path, wal: &Path, busy_timeout: Duration) -> Result<Self> {
+        Self::open_with_wal_observed(main, wal, busy_timeout, &mut |_| {})
+    }
+
+    /// [`Reader::open_with_wal`] with `observe(attempt)` called after each read and before
+    /// the salts are re-checked, so a test can race a checkpoint into the read.
+    pub fn open_with_wal_observed(
+        main: &Path,
+        wal: &Path,
+        busy_timeout: Duration,
+        observe: &mut dyn FnMut(u32),
+    ) -> Result<Self> {
+        Self::from_bytes(crate::wal::read_stable(main, wal, busy_timeout, observe)?)
     }
 
     /// Parse an in-memory `.db` image (used by tests and `open`).
@@ -124,6 +147,41 @@ impl Reader {
         let mut out = Vec::new();
         for (_, payload) in self.collect_table_rows(root)? {
             out.push(decode_record(&payload)?);
+        }
+        Ok(out)
+    }
+
+    /// The columns that lead an index on `table`, plus the `INTEGER PRIMARY KEY` rowid
+    /// alias, which is indexed by construction.
+    pub fn indexed_leading_columns(&self, table: &str) -> Result<Vec<String>> {
+        let schema = self.schema_row(table)?;
+        let mut out: Vec<String> = rowid_alias(&schema.sql).into_iter().collect();
+        out.extend(
+            self.schema
+                .iter()
+                .filter(|r| r.kind == "index" && r.tbl_name == table)
+                .filter_map(|r| index_leading_column(&r.sql)),
+        );
+        Ok(out)
+    }
+
+    /// Every row of `table` with its rowid, in rowid order. A column declared
+    /// `INTEGER PRIMARY KEY` aliases the rowid: SQLite stores NULL in its record slot, so
+    /// that slot is filled from the rowid here, as `SELECT` would return it.
+    pub fn scan_table_with_rowids(&self, table: &str) -> Result<Vec<(i64, Row)>> {
+        let schema = self.schema_row(table)?;
+        let columns = parse_columns(&schema.sql)?;
+        let alias =
+            rowid_alias(&schema.sql).and_then(|name| columns.iter().position(|c| c.name == name));
+        let mut out = Vec::new();
+        for (rowid, payload) in self.collect_table_rows(schema.root_page as u32)? {
+            let mut row = decode_record(&payload)?;
+            if let Some(slot) = alias.filter(|slot| *slot < row.len()) {
+                if row[slot] == crate::value::Value::Null {
+                    row[slot] = crate::value::Value::Integer(rowid);
+                }
+            }
+            out.push((rowid, row));
         }
         Ok(out)
     }

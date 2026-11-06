@@ -3,6 +3,7 @@
 //! once, what is refused, and that nothing the command does not upgrade is
 //! ever written.
 
+use super::discover::served_identity;
 use super::*;
 use medulla_persistence::durable_stores::AGENT_LIBRARY_PHYSICAL_STORE;
 use medulla_persistence_records::agent_library::AgentLibraryStore;
@@ -136,8 +137,9 @@ fn every_registered_upgrade_is_one_the_command_can_run() {
         if layout == OwnerLayout::Sql && !cfg!(feature = "query") {
             continue;
         }
+        // A semantic index tenant file's identity names the file itself.
         assert!(
-            served_identity(layout).is_some(),
+            served_identity(layout).is_some() || layout == OwnerLayout::SemanticIndex,
             "{} is registered, but this command knows no physical identity for a {} store",
             upgrade.predecessor.label,
             layout.canonical_name()

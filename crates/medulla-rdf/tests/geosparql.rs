@@ -86,3 +86,90 @@ fn topology_matches_kernel() {
         }
     }
 }
+
+/// MEDULLA-FEDERATED-QUERY-R709.7: the R-tree path and the scan path return the same rows for
+/// every spatial function over 1,000 fixtures, after inserts and after deletes.
+/// Verifies MEDULLA-FEDERATED-QUERY-R709.7: Per-graph spatial index over geo literals
+// spec: MEDULLA-FEDERATED-QUERY-R709.7
+#[test]
+fn indexed_and_scanned_results_are_equal() {
+    use medulla_rdf::spatial_index::{eval_relation_over, SpatialIndex, TermId};
+    use std::collections::BTreeMap;
+
+    let mut seed = 0x2545_f491_4f6c_dd1du64;
+    let mut next = move || {
+        seed ^= seed << 13;
+        seed ^= seed >> 7;
+        seed ^= seed << 17;
+        (seed % 10_000) as f64 / 100.0
+    };
+    let mut literals: BTreeMap<TermId, String> = BTreeMap::new();
+    for i in 0..1_000u64 {
+        let (x, y) = (next(), next());
+        let wkt = match i % 3 {
+            0 => format!("POINT({x} {y})"),
+            1 => format!("LINESTRING({x} {y}, {} {})", x + 3.0, y + 1.5),
+            _ => format!(
+                "POLYGON(({x} {y}, {} {y}, {} {}, {x} {}, {x} {y}))",
+                x + 4.0,
+                x + 4.0,
+                y + 4.0,
+                y + 4.0
+            ),
+        };
+        literals.insert(TermId(i), wkt);
+    }
+    let constants = [
+        "POLYGON((20 20, 60 20, 60 60, 20 60, 20 20))",
+        "POINT(50 50)",
+        "LINESTRING(0 0, 100 100)",
+        "POLYGON((0 0, 100 0, 100 100, 0 100, 0 0))",
+    ];
+    let functions = [
+        ("sfWithin", None),
+        ("sfIntersects", None),
+        ("sfContains", None),
+        ("sfOverlaps", None),
+        ("sfEquals", None),
+        ("sfTouches", None),
+        ("sfCrosses", None),
+        ("sfDisjoint", None),
+        ("distance", Some(5.0)),
+    ];
+    let compare = |index: &SpatialIndex, literals: &BTreeMap<TermId, String>| {
+        let all: Vec<(TermId, String)> = literals.iter().map(|(t, s)| (*t, s.clone())).collect();
+        for constant in constants {
+            for (name, bound) in functions {
+                let scanned = eval_relation_over(name, bound, constant, &all, None)
+                    .expect("scan")
+                    .expect("known function");
+                let indexed = eval_relation_over(name, bound, constant, &all, Some(index))
+                    .expect("indexed")
+                    .expect("known function");
+                assert_eq!(indexed, scanned, "{name}({constant}) agrees on both paths");
+            }
+        }
+    };
+
+    let mut index = SpatialIndex::new("urn:graph:fixture");
+    let inserts: Vec<(TermId, &str)> = literals.iter().map(|(t, s)| (*t, s.as_str())).collect();
+    index.apply(&inserts, &[]).expect("insert");
+    assert_eq!(index.len(), 1_000);
+    compare(&index, &literals);
+
+    let deleted: Vec<TermId> = (0..1_000u64).step_by(4).map(TermId).collect();
+    for t in &deleted {
+        literals.remove(t);
+    }
+    index.apply(&[], &deleted).expect("delete");
+    assert_eq!(index.len(), 750);
+    compare(&index, &literals);
+
+    let refused = index.apply(&[(TermId(5_000), "NOTGEOM(1 2)")], &[]);
+    assert!(refused.is_err(), "an invalid literal refuses the write");
+    assert_eq!(
+        index.len(),
+        750,
+        "a refused write leaves the index unchanged"
+    );
+}

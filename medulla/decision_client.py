@@ -407,6 +407,67 @@ def record_outcome_op(
     return learn_op(tenant_id, "record_outcome", outcome=outcome)
 
 
+def claim_propose_op(claim_id: str) -> dict[str, Any]:
+    """Create a claim in ``proposed``."""
+    return {"op": "propose", "claim_id": claim_id}
+
+
+def claim_advance_op(claim_id: str, to: str) -> dict[str, Any]:
+    """Move a claim along one lifecycle edge (``to`` is the target state)."""
+    return {"op": "advance", "claim_id": claim_id, "to": to}
+
+
+def claim_evidence_op(
+    evidence_id: str,
+    claim_id: str,
+    channel: str | None,
+    *,
+    supports: bool,
+    weight_ppm: int,
+    source_digest: str,
+    stances: Mapping[str, str] | None = None,
+    feed: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Record one piece of evidence; ``stances`` maps perspective to stance."""
+    return {
+        "op": "record_evidence",
+        "evidence_id": evidence_id,
+        "claim_id": claim_id,
+        "channel": channel,
+        "supports": supports,
+        "weight_ppm": weight_ppm,
+        "source_digest": source_digest,
+        "stances": dict(stances or {}),
+        "feed": dict(feed) if feed is not None else None,
+    }
+
+
+def claim_compile_op(
+    artifact_id: str,
+    cohort_id: str,
+    claim_ids: Sequence[str],
+    *,
+    code_specs: Sequence[str] = (),
+    exploration_edges: Sequence[Sequence[str]] = (),
+) -> dict[str, Any]:
+    """Seal and store a research artifact over a cohort of claims."""
+    return {
+        "op": "compile_artifact",
+        "artifact_id": artifact_id,
+        "cohort_id": cohort_id,
+        "claim_ids": list(claim_ids),
+        "code_specs": list(code_specs),
+        "exploration_edges": [list(edge) for edge in exploration_edges],
+    }
+
+
+def claim_get_op(
+    *, claim_id: str | None = None, artifact_id: str | None = None
+) -> dict[str, Any]:
+    """Read one claim or one sealed artifact (exactly one id)."""
+    return {"op": "get", "claim_id": claim_id, "artifact_id": artifact_id}
+
+
 def _payload(result: Any) -> Any:
     return getattr(result, "payload", result)
 
@@ -446,6 +507,17 @@ class DecisionClient:
         )
         return _payload(result)
 
+    async def claims(
+        self, op: Mapping[str, Any], *, idempotency_key: str | None = None
+    ) -> Any:
+        """Send ``Claims`` (research claims, evidence and sealed artifacts)."""
+        from medulla.generated.coordination import send_claims
+
+        result = await send_claims(
+            self.client, {"op": dict(op)}, self.graph, idempotency_key=idempotency_key
+        )
+        return _payload(result)
+
 
 __all__ = [
     "Q32_ONE",
@@ -453,6 +525,11 @@ __all__ = [
     "DecisionClient",
     "DeclaredOption",
     "aggregate_op",
+    "claim_advance_op",
+    "claim_compile_op",
+    "claim_evidence_op",
+    "claim_get_op",
+    "claim_propose_op",
     "commit_op",
     "decide_request",
     "declared",

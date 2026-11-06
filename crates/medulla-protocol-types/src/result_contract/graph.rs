@@ -20,11 +20,15 @@ method_results! {
     GetNodes(GetNodes) => NodeList<Vec<(String, serde_json::Value)>>;
     GetNodesByLabel(GetNodesByLabel) => NodeList<Vec<(String, serde_json::Value)>>;
     WalletKeyTrustGet(WalletKeyTrustGet) => Json<medulla_types::finance_wallet_trust::WalletKeyTrust>;
+    ContextFacts(ContextFacts) => Json<medulla_types::context_facts::ContextFactsResult>;
     CompareAndSetNodeFields(CompareAndSetNodeFields) => Bool<bool>;
     CreateSummaryNode(CreateSummaryNode) => Text<String>;
     Consolidate(Consolidate) => Text<String>;
     Reinforce(Reinforce) => Bool<bool>;
     DecayNode(DecayNode) => Bool<bool>;
+    BusRegister(BusRegister) => Bool<bool>;
+    BusHeartbeat(BusHeartbeat) => Bool<bool>;
+    BusRoster(BusRoster) => Json<medulla_types::agent_bus::BusRoster>;
     DecayMemories(DecayMemories) => Count<u64>;
     EvictBelow(EvictBelow) => Ids<Vec<String>>;
     SummaryChildren(SummaryChildren) => Ids<Vec<String>>;
@@ -61,6 +65,9 @@ method_results! {
     // The stored finance record node properties; `null` when absent.
     #[cfg(feature = "finance")]
     FinanceRecordGet(FinanceRecordGet) => RawOrNull<Dynamic> dynamic CallerProperties;
+    // The event id of a raised finance alert.
+    #[cfg(feature = "finance")]
+    FinanceAlertRaise(FinanceAlertRaise) => Text<String>;
     // `(decayed count, evicted ids)`.
     Maintain(Maintain) => Raw<(usize, Vec<String>)>;
     AddSceneObject(AddSceneObject) => Text<String>;

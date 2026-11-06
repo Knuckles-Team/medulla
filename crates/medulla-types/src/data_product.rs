@@ -106,6 +106,15 @@ pub struct ContractViolation {
     pub at_ms: u64,
 }
 
+/// The receipt of a registered data product.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct DataProductRegistered {
+    pub product: String,
+    pub version: String,
+}
+
 /// A record that failed validation.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DataProductError {

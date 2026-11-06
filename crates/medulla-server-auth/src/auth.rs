@@ -1851,6 +1851,7 @@ pub fn verify_multisig_mutation_signatures(
 
 #[cfg(test)]
 mod tests {
+    /// Verifies MEDULLA-DURABLE-KERNEL-R750.750.1: The signed agent-turn envelope carries the admitted tool subset and the harness decision reference
     // spec: MEDULLA-DURABLE-KERNEL-R750.750.1
     #[test]
     fn dispatch_carrier_verifies_and_any_changed_field_refuses() {

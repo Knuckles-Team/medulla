@@ -30,6 +30,7 @@ fn key(model_version: &str, index: usize) -> String {
     format!("{}/{}/{}", k.model_id, k.model_version, k.token_prefix_hash)
 }
 
+/// Verifies MEDULLA-DURABLE-KERNEL-R083.7: Long-context coherence across tiers
 // spec: MEDULLA-DURABLE-KERNEL-R083.7
 #[test]
 #[ignore = "nightly: 10M-token long-context coherence run"]

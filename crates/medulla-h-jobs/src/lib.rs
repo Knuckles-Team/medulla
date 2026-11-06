@@ -9,6 +9,10 @@
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod agent_lifecycle_statechart;
 
+/// MEDULLA-UNIFIED-DATA-PLANE-R700.3: served governed actions.
+#[allow(missing_docs)]
+pub mod action;
+
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod delegation;

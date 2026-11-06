@@ -123,6 +123,20 @@ fn handle_get_node_properties(
             Err(error) => return durable_read_unavailable(req_id, &error),
         },
     };
+    // MEDULLA-IDENTITY-R023.4: a knowledge unit the caller may not see refuses with the
+    // unit id only. The caller comes from the verified read authority.
+    if let Some(blob) = props.as_ref() {
+        let caller =
+            medulla_server_api::read_scope::ReadCaller::from_authority(Some(read_authority), "");
+        if let Err(refusal) = medulla_server_api::read_scope::check_unit_read(
+            node_id,
+            blob,
+            || Arc::new(g.analysis_snapshot()),
+            &caller,
+        ) {
+            return Response::err(req_id, refusal.to_string());
+        }
+    }
     Response::ok(
         req_id,
         ResultPayload::of_encoded_or_null::<
@@ -231,6 +245,8 @@ pub(super) async fn try_handle_node_reads(
         Method::GetNodeProperties { node_id } => {
             handle_get_node_properties(req_id, core, raw_core, read_authority, &node_id)
         }
+        // MEDULLA-DURABLE-KERNEL-R095.1001: the agent bus roster read.
+        Method::BusRoster { tenant, now_ms } => super::bus::roster(req_id, core, &tenant, now_ms),
         // CompareAndSetNodeFields/ClaimNext (CONCEPT:MEDULLA-P0-2 bypass guard, L11):
         // GATEWAY_ROUTED — see the AddNode/RemoveNode comment above.
         other => return ControlFlow::Continue(other),

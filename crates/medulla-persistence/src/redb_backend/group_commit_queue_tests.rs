@@ -1,5 +1,6 @@
 use super::shard_writer::{send_with_deadline, DeadlineSendError};
 use super::*;
+use medulla_protocol_types::protocol::Method;
 use std::sync::mpsc::sync_channel;
 
 // spec: MEDULLA-ENGINE-PARITY-R001.1
@@ -24,6 +25,7 @@ fn enqueue_timeout_parses_and_clamps() {
     );
 }
 
+/// Verifies MEDULLA-ENGINE-PARITY-R001.2: Wiring and refusal
 // spec: MEDULLA-ENGINE-PARITY-R001.2
 #[test]
 fn send_with_deadline_refuses_full_and_enqueues_nothing() {

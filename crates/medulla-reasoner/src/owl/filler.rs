@@ -24,7 +24,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use super::{iri, short, Justification, Ontology, Reasoner, OWL_THING};
+use super::{iri, role_entry, short, Derivation, Ontology, Reasoner, OWL_THING};
 
 /// Marks a completion-internal refined filler. Canonical class ids start with `<`
 /// (IRIs) or `{` (nominal tokens), so `[` cannot collide with an ontology class.
@@ -208,6 +208,11 @@ pub(super) struct RefinedFillers {
 }
 
 impl RefinedFillers {
+    /// Whether no refined filler has been introduced.
+    pub(super) fn is_empty(&self) -> bool {
+        self.by_name.is_empty()
+    }
+
     /// The base class and constraint set of `filler` (`(filler, ∅)` when it is an
     /// ordinary class).
     fn origin(&self, filler: &str) -> (String, BTreeSet<String>) {
@@ -289,14 +294,13 @@ fn refine_pair(reasoner: &mut Reasoner, rules: &FillerRules, role: &str, a: &str
     if !reasoner.add_role_weighted(role, a, &filler, conf) {
         return false;
     }
-    reasoner
-        .just
-        .entry((format!("R:{role}"), format!("{a}->{filler}")))
-        .or_insert(Justification {
-            rule: "CR-filler",
-            axioms: missing.into_iter().map(|c| c.label).collect(),
-            premises: vec![(a.to_string(), b.to_string())],
-        });
+    let derivation = Derivation {
+        rule: "CR-filler",
+        axioms: missing.into_iter().map(|c| c.label).collect(),
+        premises: vec![(a.to_string(), b.to_string())],
+        roles: Vec::new(),
+    };
+    reasoner.store_justification(role_entry(role, a, &filler), derivation);
     true
 }
 

@@ -18,6 +18,7 @@ use std::sync::Arc;
 
 use medulla_graph_algos::graph_algos::AdjacencyGraph;
 use medulla_graph_algos::graphlearn::edge_fn::Basis;
+use medulla_graph_algos::graphlearn::nary;
 use medulla_graph_algos::{
     graphlearn::link_predict, graphlearn::link_predict::FeatureCtx,
     graphlearn::link_predict::KanLinkConfig, graphlearn::link_predict::KanLinkModel,
@@ -25,8 +26,10 @@ use medulla_graph_algos::{
 use medulla_protocol_types::result_contract::compute as results;
 use medulla_result_types::{
     compute_result::graphlearn::EdgeFunctionRow, compute_result::graphlearn::LinkPrediction,
-    compute_result::graphlearn::LinkPredictorFit, compute_result::graphlearn::PredictedLink,
+    compute_result::graphlearn::LinkPredictorFit, compute_result::graphlearn::NaryPrediction,
+    compute_result::graphlearn::PredictedLink,
 };
+use medulla_types::graphlearn_nary::{NaryBounds, NaryHypothesis, NaryRefusal, NaryRequest};
 
 use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::protocol::GraphLearnParams;
@@ -60,6 +63,10 @@ pub fn try_handle(
         Method::GraphLearnPredict { .. } => unreachable!(
             "GraphLearnPredict is mutation::GATEWAY_ROUTED; dispatch_graph_op must \
              route it through try_handle_gateway before it ever reaches this fallback handler"
+        ),
+        Method::GraphLearnPredictNary { .. } => unreachable!(
+            "GraphLearnPredictNary needs the read authority; the graph-scoped domain stage \
+             routes it to handle_predict_nary before this fallback handler"
         ),
         other => Err(other),
     }
@@ -170,6 +177,14 @@ pub fn handle_fit(
     let ctx = FeatureCtx::build(&graph, config.alpha);
     let model = link_predict::fit_link_predictor(&ctx, &positives, &config);
 
+    // Record which nodes the model saw, so an n-ary prediction can tell an unseen
+    // member from an observed one (MEDULLA-FEDERATED-QUERY-R086.100.3).
+    let mut model = model;
+    let mut fitted: Vec<String> = (0..graph.node_count())
+        .map(|i| graph.node_at(i).clone())
+        .collect();
+    fitted.sort_unstable();
+    model.fitted_nodes = fitted;
     let model_json = serde_json::to_value(&model).unwrap_or(serde_json::Value::Null);
 
     let written = if writeback {
@@ -322,6 +337,134 @@ pub fn handle_predict(
             n_predicted,
             model: model_id,
             written_back: written,
+        }),
+    )
+}
+
+/// The n-ary bounds from the registered knobs (`graphlearn.nary_*`).
+fn nary_bounds() -> NaryBounds {
+    let knobs = crate::knob_config::knobs();
+    NaryBounds {
+        max_arity: knobs.graphlearn_nary_max_arity as usize,
+        max_candidates: knobs.graphlearn_nary_max_candidates as usize,
+    }
+}
+
+fn nary_refusal(req_id: u64, refusal: &NaryRefusal) -> Response {
+    Response::err(req_id, refusal.to_string())
+}
+
+/// `GraphLearnPredictNary` (MEDULLA-FEDERATED-QUERY-R086.100.3): score ordered n-ary
+/// candidate tuples against a fitted model and return read-only hypotheses.
+///
+/// Reads the caller's row-level-security snapshot only: a member the caller cannot see
+/// refuses `NARY_SOURCE_UNAUTHORIZED`, a member that is not a vertex of `source` refuses
+/// `NARY_SOURCE_UNRESOLVED`, and a pinned `expected_graph_revision` that no longer matches
+/// refuses `NARY_REVISION_STALE`. The graph is never written.
+pub fn handle_predict_nary(
+    req_id: u64,
+    core: &Arc<GraphCore>,
+    read_authority: Option<&crate::carrier::GraphReadAuthority>,
+    request: NaryRequest,
+    source: GraphSource,
+    expected_graph_revision: Option<u64>,
+) -> Response {
+    let Some(authority) = read_authority else {
+        return Response::err(
+            req_id,
+            "ACCESS_DENIED: n-ary prediction requires the verified read authority".to_string(),
+        );
+    };
+    if let Err(refusal) = request.validate(&nary_bounds()) {
+        return nary_refusal(req_id, &refusal);
+    }
+    let graph_revision = core.version();
+    if let Some(expected) = expected_graph_revision {
+        if expected != graph_revision {
+            return nary_refusal(
+                req_id,
+                &NaryRefusal::RevisionStale {
+                    expected,
+                    actual: graph_revision,
+                },
+            );
+        }
+    }
+    let model: KanLinkModel = match serde_json::from_value(request.model.clone()) {
+        Ok(m) => m,
+        Err(e) => return Response::err(req_id, format!("MALFORMED_BODY: invalid model blob: {e}")),
+    };
+
+    let visible = authority.project_core(core);
+    for member in request.candidates.iter().flatten() {
+        if !visible.has_node(member) {
+            let refusal = if core.has_node(member) {
+                NaryRefusal::SourceUnauthorized
+            } else {
+                NaryRefusal::SourceUnresolved
+            };
+            return nary_refusal(req_id, &refusal);
+        }
+    }
+
+    let (graph, _) = build_graph_with_set(&visible, &source);
+    let mut candidates: Vec<Vec<usize>> = Vec::with_capacity(request.candidates.len());
+    for tuple in &request.candidates {
+        let mut compact = Vec::with_capacity(tuple.len());
+        for member in tuple {
+            let Some(index) = graph.index_of(member) else {
+                return nary_refusal(req_id, &NaryRefusal::SourceUnresolved);
+            };
+            compact.push(index);
+        }
+        let satisfies = request.relation_constraints.is_empty()
+            || tuple.windows(2).all(|pair| {
+                request.relation_constraints.iter().any(|relation| {
+                    edge_matches_relation(&visible, &pair[0], &pair[1], "any", relation)
+                })
+            });
+        if satisfies {
+            candidates.push(compact);
+        }
+    }
+
+    let ctx = FeatureCtx::build(&graph, model.alpha);
+    let seen: HashSet<usize> = model
+        .fitted_nodes
+        .iter()
+        .filter_map(|id| graph.index_of(id))
+        .collect();
+    let mut scored = nary::score_nary(
+        &model,
+        &ctx,
+        &candidates,
+        &seen,
+        crate::knob_config::knobs().graphlearn_nary_min_score,
+    );
+    if request.top_k > 0 && scored.len() > request.top_k {
+        scored.truncate(request.top_k);
+    }
+
+    let model_revision = model_digest(&model);
+    let policy_revision = medulla_core::freshness::policy_version(core);
+    let hypotheses: Vec<NaryHypothesis> = scored
+        .into_iter()
+        .map(|s| NaryHypothesis {
+            tuple: s.tuple.iter().map(|&i| graph.node_at(i).clone()).collect(),
+            score_q16: NaryHypothesis::q16(s.score),
+            evidence_class: s.evidence_class,
+            source_ids: vec![source.node_label.clone()],
+            graph_revision,
+            model_revision: model_revision.clone(),
+            policy_revision,
+        })
+        .collect();
+    Response::ok(
+        req_id,
+        ResultPayload::of::<results::GraphLearnPredictNary>(NaryPrediction {
+            n_hypotheses: hypotheses.len(),
+            hypotheses,
+            request_digest: request.digest(),
         }),
     )
 }
