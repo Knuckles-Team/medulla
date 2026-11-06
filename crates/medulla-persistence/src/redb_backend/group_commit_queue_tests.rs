@@ -25,6 +25,7 @@ fn enqueue_timeout_parses_and_clamps() {
     );
 }
 
+/// Verifies MEDULLA-ENGINE-PARITY-R001.2: Wiring and refusal
 // spec: MEDULLA-ENGINE-PARITY-R001.2
 #[test]
 fn send_with_deadline_refuses_full_and_enqueues_nothing() {
