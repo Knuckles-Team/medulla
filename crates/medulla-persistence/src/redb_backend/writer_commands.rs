@@ -697,6 +697,14 @@ macro_rules! writer_command_arms {
             false
         }
         #[cfg(feature = "matview")]
+        Cmd::MatViewOperatorStateGet { name, reply } => {
+            flush(pending);
+            let _ = reply.send(medulla_store_apply::redb_store::control::get_matview_operator_state(
+                shard, &name,
+            ));
+            false
+        }
+        #[cfg(feature = "matview")]
         Cmd::MatViewOperatorStateScan { reply } => {
             flush(pending);
             let _ = reply.send(medulla_store_apply::redb_store::control::scan_matview_operator_state(shard));

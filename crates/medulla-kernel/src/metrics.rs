@@ -898,6 +898,9 @@ pub use work_item::{work_item_uncertain_effect, work_item_uncertain_open_add};
 // Materialized-view metrics (MEDULLA-INCREMENTAL-VIEWS-R005.4).
 mod views;
 pub use views::{set_view_state_bytes, view_changes_applied, view_demoted, view_shadow_checked};
+// Materialized-view metrics (MEDULLA-INCREMENTAL-VIEWS-R005.4).
+
+// Uncertain-effect series (MEDULLA-DURABLE-KERNEL-R820.5).
 
 // ── No-op shims (feature `metrics` disabled) ─────────────────────────────
 #[cfg(not(feature = "metrics"))]

@@ -341,6 +341,10 @@ knobs! {
     graphlearn_nary_min_score: f64 = "graphlearn.nary_min_score", F64(0.5), [0.0, 1.0], "probability", Tunable;
     /// Refresh records kept per live artifact (MEDULLA-FEDERATED-QUERY-R701.5).
     artifact_refresh_history: u64 = "artifact.refresh_history", U64(20), [1, 1_000], "records", Tunable;
+    /// Largest maintained state of one incremental view; past it the view demotes to recompute (MEDULLA-INCREMENTAL-VIEWS-R007.2).
+    view_state_bytes: u64 = "view.state_bytes", U64(268_435_456), [1_048_576, 17_179_869_184], "bytes", Tunable;
+    /// Resident maintained state of all incremental views; past it the least recently changed view spills (MEDULLA-INCREMENTAL-VIEWS-R007.3).
+    views_memory_bytes: u64 = "views.memory_bytes", U64(1_073_741_824), [16_777_216, 68_719_476_736], "bytes", Tunable;
 }
 
 fn refusal(code: ServerErrorCode, knob: &str, detail: String) -> KnobRefusal {
