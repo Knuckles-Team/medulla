@@ -52,6 +52,7 @@ pub const APPROVER_GROUPS: &[(&str, &str)] = &[
 
 /// The registry, sorted by scope.
 pub const SCOPES: &[ScopeEntry] = &[
+    entry("actions:write", User, "engine"),
     entry("admin:backup", Admin, "engine"),
     entry("admin:cluster", Admin, "engine"),
     entry("admin:cluster-read", ServiceOnly, "engine"),
@@ -98,6 +99,9 @@ pub const SCOPES: &[ScopeEntry] = &[
     entry("capacity:lease", ServiceOnly, "engine"),
     entry("capacity:read", ServiceOnly, "engine"),
     entry("capacity:throttle", ServiceOnly, "engine"),
+    entry("catalog:access-decide", User, "engine"),
+    entry("catalog:access-request", User, "engine"),
+    entry("catalog:data-product", User, "engine"),
     entry("cdc:admin", Admin, "engine"),
     entry("cdc:read", User, "engine"),
     entry("cep:admin", Admin, "engine"),
@@ -150,6 +154,8 @@ pub const SCOPES: &[ScopeEntry] = &[
     entry("identity:provision", ServiceOnly, "engine"),
     entry("identity:read", Admin, "engine"),
     entry("identity:self", User, "engine"),
+    entry("incident:read", User, "engine"),
+    entry("incident:write", User, "engine"),
     entry("ingest:read", User, "engine"),
     entry("ingest:write", User, "engine"),
     entry("jobs:write", User, "engine"),
@@ -214,6 +220,7 @@ pub const SCOPES: &[ScopeEntry] = &[
     entry("resource:reserve", ServiceOnly, "engine"),
     entry("scene:read", User, "engine"),
     entry("scene:write", User, "engine"),
+    entry("scheduler:read", User, "engine"),
     entry("schema:projections", User, "engine"),
     entry("security:admin", Admin, "engine"),
     entry("security:audit", Admin, "engine"),
@@ -228,7 +235,6 @@ pub const SCOPES: &[ScopeEntry] = &[
     entry("semantic:source-admit", ServiceOnly, "engine"),
     entry("semantic:stage-claim", ServiceOnly, "engine"),
     entry("semantic:stage-complete", ServiceOnly, "engine"),
-    entry("scheduler:read", User, "engine"),
     entry("semantic:stage-read", User, "engine"),
     entry("service:admin", Admin, "engine"),
     entry("service:control", User, "engine"),
@@ -264,6 +270,7 @@ pub const SCOPES: &[ScopeEntry] = &[
     entry("work:read", User, "engine"),
     entry("work:submit", User, "engine"),
     entry("work:write", User, "engine"),
+    entry("workflow:registry", User, "engine"),
 ];
 
 /// The registry entry of `scope`.

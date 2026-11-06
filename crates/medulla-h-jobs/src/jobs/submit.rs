@@ -235,7 +235,10 @@ pub(super) async fn resolve_submit_graph_core(
 ) -> Result<Arc<medulla_graph_core::graph::GraphCore>, Response> {
     let s = state.read().await;
     let Some(entry) = s.registry.get(graph) else {
-        return Err(Response::err(req_id, format!("unknown graph '{graph}'")));
+        return Err(Response::err(
+            req_id,
+            format!("INVALID_ARGUMENT: unknown graph '{graph}'"),
+        ));
     };
     if let Err(error) = check_graph_access(
         &s.isolation,

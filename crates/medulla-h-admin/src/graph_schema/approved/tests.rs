@@ -356,12 +356,13 @@ async fn schema_repair_requires_real_shadow_ingest_before_activation() {
         .iter()
         .all(|source| source.source_id != SOURCE));
 
-    // A clean report over current data lets the same approval attach.
+    // A clean report over current data lets the same approval attach. The
+    // approval lease is issued first: a control row, never ingested as data.
     let clean = Served::new().await;
-    clean.clean_shadow().await;
     clean
         .approval("action_approval:shadow", &candidate(), true)
         .await;
+    clean.clean_shadow().await;
     let committed: GraphSchemaCommitted =
         decode(clean.attach_approved("action_approval:shadow").await);
     assert!(committed.changed);

@@ -9,8 +9,10 @@ attach-approved / shadow validate) against the session engine:
   required field missing) is quarantined, never applied: ``AttachApproved``
   refuses without a consumed approval lease, and ``ValidateRepair`` runs the
   shadow-graph check without attaching anything;
-* only after the approval lease is consumed does the drifted candidate
-  activate — the unapproved candidate is never activated.
+* only after the approval lease is consumed and a clean shadow ingest of the
+  current data is stored (``ValidateRepair``, MEDULLA-DECISION-ENGINE-R102.2)
+  does the drifted candidate activate — the unapproved candidate is never
+  activated, and data that breaks the candidate keeps it out.
 """
 
 from __future__ import annotations
@@ -152,6 +154,55 @@ async def validate_repair(
     return committed.changed
 
 
+# One record of the request graph per contract: conforming data the shadow
+# ingest re-validates before the attach (MEDULLA-DECISION-ENGINE-R102.2).
+RECORD_ID = "schema-drift-record"
+BASELINE_RECORD = {"id": 1, "name": "alpha"}
+DRIFTED_RECORD = {"name": 7}
+
+
+async def approved_attach(
+    client: MedullaClient,
+    lease_id: str,
+    contract: dict[str, Fields],
+    record: dict[str, object],
+) -> None:
+    """Seed one conforming record, approve the candidate, store its clean shadow
+    ingest report, then attach it."""
+    await client.nodes.add(RECORD_ID, record)
+    await issue_approval_lease(client, lease_id, candidate_digest(contract))
+    await consume_approval_lease(client, lease_id)
+    await validate_repair(client, contract["fields"])
+    await attach_approved(client, lease_id, contract["fields"])
+
+
+async def connect_isolated_graph() -> tuple[MedullaClient, str]:
+    """A client on a fresh graph of its own, so the shadow ingest sees only the
+    record the caller seeds."""
+    graph = f"schema-drift-{uuid.uuid4().hex[:8]}"
+    admin = await MedullaClient.connect(
+        socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+        verified_context=request_context(),
+    )
+    try:
+        await admin.tenants.create(graph)
+    finally:
+        await admin.close()
+    client = await MedullaClient.connect(
+        socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+        verified_context=request_context(),
+        graph_name=graph,
+    )
+    return client, graph
+
+
+async def close_isolated_graph(client: MedullaClient, graph: str) -> None:
+    try:
+        await client.tenants.delete(graph)
+    finally:
+        await client.close()
+
+
 def only_source(listed: GraphSchemaSourcesView, expected_lease_id: str) -> bool:
     """Exactly one source sits under SOURCE_ID, attached by
     ``AttachApproved`` under ``expected_lease_id``."""
@@ -177,6 +228,7 @@ async def test_breaking_drift_quarantines_and_activation_needs_approval() -> Non
     try:
         # 1. The baseline activates ONLY through a consumed approval lease.
         await client.graph.clear()
+        await client.nodes.add(RECORD_ID, BASELINE_RECORD)
         await issue_approval_lease(
             client, "approval:baseline", candidate_digest(BASELINE)
         )
@@ -184,6 +236,11 @@ async def test_breaking_drift_quarantines_and_activation_needs_approval() -> Non
             await attach_approved(client, "approval:baseline", BASELINE["fields"])
         assert refused.value.code == "SCHEMA_APPROVAL_REQUIRED"
         await consume_approval_lease(client, "approval:baseline")
+        # An approved candidate still needs a stored shadow ingest of the data.
+        with pytest.raises(EngineResponseError) as refused:
+            await attach_approved(client, "approval:baseline", BASELINE["fields"])
+        assert refused.value.code == "SCHEMA_REPAIR_SHADOW_MISSING"
+        await validate_repair(client, BASELINE["fields"])
         await attach_approved(client, "approval:baseline", BASELINE["fields"])
         baseline_listed = await reasoning.send_graph_schema_list(client, {})
         assert any(
@@ -213,9 +270,17 @@ async def test_breaking_drift_quarantines_and_activation_needs_approval() -> Non
             "the drifted delta was never applied: the baseline is still in force"
         )
 
-        # 5. Only after the approval is consumed does the drifted candidate
-        # activate — replaced under the same key, lease recorded.
+        # 5. A consumed approval is not enough while the current data breaks
+        # the drifted contract: the stored shadow report holds a violation.
         await consume_approval_lease(client, "approval:drift")
+        with pytest.raises(EngineResponseError) as refused:
+            await attach_approved(client, "approval:drift", DRIFTED["fields"])
+        assert refused.value.code == "SCHEMA_REPAIR_SHADOW_VIOLATIONS"
+
+        # 6. Once the data is repaired and re-validated, the drifted candidate
+        # activates — replaced under the same key, lease recorded.
+        await client.nodes.add(RECORD_ID, DRIFTED_RECORD)
+        await validate_repair(client, DRIFTED["fields"])
         await attach_approved(client, "approval:drift", DRIFTED["fields"])
         final = await reasoning.send_graph_schema_list(client, {})
         assert only_source(final, "approval:drift"), "the drifted candidate activated"

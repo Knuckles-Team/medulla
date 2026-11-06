@@ -199,27 +199,31 @@ fn run_node(ctx: &HandleContext<'_>, run: &ActionRun) -> Result<(String, Value),
 
 /// The outbox of one committed submit: the `ActionRun` node's change event,
 /// carrying its committed post-image, then the `__action_completed` marker.
+/// The marker carries the same post-image: a CDC reader sees an event only
+/// through a blob its read authority admits, so a bare marker would reach no
+/// subscriber, and this way exactly the readers of the run see its completion.
 #[cfg(feature = "streaming")]
 async fn emit_outbox(ctx: &HandleContext<'_>, run_id: &str) {
     use medulla_server_cdc::cdc::CdcStateExt;
     use medulla_types::wire::CdcKind;
     let state = ctx.state.read().await;
     let Some(hub) = state.cdc_hub() else { return };
+    let committed = ctx.core.get_node_properties(run_id);
     hub.emit(
         ctx.graph_name,
         CdcKind::UpdateNode,
         run_id.to_string(),
         String::new(),
         None,
-        ctx.core.get_node_properties(run_id),
+        committed.clone(),
     );
     hub.emit(
         ctx.graph_name,
         CdcKind::UpdateNode,
         "__action_completed".to_string(),
-        String::new(),
+        run_id.to_string(),
         None,
-        None,
+        committed,
     );
 }
 

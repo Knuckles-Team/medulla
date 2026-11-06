@@ -135,5 +135,6 @@ async def test_branch_aware_scope_travels_as_the_typed_wire_field() -> None:
                 "blob_digest": _ZERO_DIGEST,
             }
         ],
+        "commits": [],
     }
     assert [call.graph for call in client.sent] == ["repositories"]

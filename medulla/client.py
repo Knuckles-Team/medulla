@@ -3537,7 +3537,9 @@ def _submit_work_item_request_shape(value: Any) -> dict[str, Any]:
             "max_tenant_in_flight",
         }
     )
-    return _exact_mapping("SubmitWorkItems child", value, allowed)
+    return _closed_mapping(
+        "SubmitWorkItems child", value, allowed, _SUBMIT_WORK_ITEM_OPTIONAL_FIELDS
+    )
 
 
 _SUBMIT_WORK_ITEM_REQUEST_FIELDS = frozenset(
@@ -3561,6 +3563,8 @@ _SUBMIT_WORK_ITEM_REQUEST_FIELDS = frozenset(
         "max_tenant_in_flight",
     }
 )
+# Optional admission fields the Rust request omits when absent.
+_SUBMIT_WORK_ITEM_OPTIONAL_FIELDS = frozenset({"run_id", "conversation", "child_input"})
 _SUBMIT_WORK_ITEM_STRING_FIELDS = (
     "idempotency_key",
     "kind",
@@ -3922,7 +3926,7 @@ class WorkItemClient:
             "SubmitWorkItem request",
             request,
             _SUBMIT_WORK_ITEM_REQUEST_FIELDS,
-            frozenset({"run_id"}),
+            _SUBMIT_WORK_ITEM_OPTIONAL_FIELDS,
         )
         if value["schema_version"] != "1":
             raise ValueError("SubmitWorkItem schema_version must be 1")

@@ -27,12 +27,13 @@ from medulla.client import EngineResponseError, MedullaClient
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "packs"))
 from test_schema_drift_served import (
     BASELINE,
+    BASELINE_RECORD,
     DRIFTED,
+    DRIFTED_RECORD,
     SOURCE_ID,
-    attach_approved,
-    candidate_digest,
-    consume_approval_lease,
-    issue_approval_lease,
+    approved_attach,
+    close_isolated_graph,
+    connect_isolated_graph,
 )
 
 HEADER = "@prefix owl: <http://www.w3.org/2002/07/owl#> .\n"
@@ -102,12 +103,16 @@ def test_schema_ops_append_edits_and_revert_edit_inverts() -> None:
 @pytest.mark.spec("MEDULLA-TYPED-PACKS-R651.4")
 def test_broken_chain_sealed_revert_and_naming_refuse() -> None:
     async def exercise(client: MedullaClient) -> None:
-        # A governed attach seals its edit; reverting across it refuses.
-        await issue_approval_lease(client, "approval:edits", candidate_digest(BASELINE))
-        await consume_approval_lease(client, "approval:edits")
-        await attach_approved(client, "approval:edits", BASELINE["fields"])
-        with pytest.raises(EngineResponseError, match="EDIT_SEALED"):
-            await client.rdf.revert_edit(SOURCE_ID)
+        # A governed attach seals its edit; reverting across it refuses. The
+        # attach runs on a graph holding only its conforming record, which the
+        # shadow ingest re-validates first.
+        governed, graph = await connect_isolated_graph()
+        try:
+            await approved_attach(governed, "approval:edits", BASELINE, BASELINE_RECORD)
+            with pytest.raises(EngineResponseError, match="EDIT_SEALED"):
+                await governed.rdf.revert_edit(SOURCE_ID)
+        finally:
+            await close_isolated_graph(governed, graph)
         # Naming: a snake_case class is a finding (warn) or refused (refuse).
         iri = unique_iri()
         bad = class_body(iri, "bad_name")
@@ -167,23 +172,33 @@ def test_import_edit_chain_revert_and_sealed_refusal() -> None:
         await client.rdf.revert_edit(iri, idempotency_key=f"r:{uuid.uuid4().hex}")
         chain = await edits_of(client, iri)
         assert len(chain) == 4
-        # A second tenant keeps its own chain.
+        # A second tenant keeps its own chain, in a graph of its own: it sees
+        # none of the first tenant's edits and its import starts a new chain.
         context = request_context()
         context["tenant"] = "tenant-edits-b"
+        other_graph = f"edits-b-{uuid.uuid4().hex[:8]}"
         other = await MedullaClient.connect(
-            socket_path=os.environ["GRAPH_SERVICE_SOCKET"], verified_context=context
+            socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+            verified_context=context,
+            graph_name=other_graph,
         )
         try:
+            await other.tenants.create(other_graph)
             assert await edits_of(other, iri) == []
+            await import_body(other, "edits-e", iri, class_body(iri, "Alpha"))
+            own = await edits_of(other, iri)
+            assert [e["kind"] for e in own] == ["add"]
+            assert own[0]["prev_digest"] is None
+            await other.tenants.delete(other_graph)
         finally:
             await other.close()
         # A sealed edit refuses a revert.
-        await issue_approval_lease(
-            client, "approval:edits-6", candidate_digest(DRIFTED)
-        )
-        await consume_approval_lease(client, "approval:edits-6")
-        await attach_approved(client, "approval:edits-6", DRIFTED["fields"])
-        with pytest.raises(EngineResponseError, match="EDIT_SEALED"):
-            await client.rdf.revert_edit(SOURCE_ID)
+        governed, graph = await connect_isolated_graph()
+        try:
+            await approved_attach(governed, "approval:edits-6", DRIFTED, DRIFTED_RECORD)
+            with pytest.raises(EngineResponseError, match="EDIT_SEALED"):
+                await governed.rdf.revert_edit(SOURCE_ID)
+        finally:
+            await close_isolated_graph(governed, graph)
 
     asyncio.run(with_client(exercise))

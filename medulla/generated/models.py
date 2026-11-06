@@ -2570,6 +2570,21 @@ class CheckpointMemoryRef(BaseModel):
     revision: Annotated[int, Field(ge=0)]
 
 
+class ChildInputState(str, Enum):
+    QUEUED = "queued"
+    APPLIED = "applied"
+
+
+class ChildInputAdmission(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    child_run_id: str
+    content_digest: str
+    expected_revision: Annotated[int, Field(ge=0)]
+    idempotency_key: str
+    state: ChildInputState
+
+
 class ClaimAuthor(str, Enum):
     AGENT = "agent"
     PERSON = "person"
@@ -23583,6 +23598,7 @@ class SubmitWorkItemRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     catalog_digest: str
+    child_input: ChildInputAdmission | None = None
     command_digest: str
     context: RequestContext
     conversation: ConversationTurnAdmission | None = None

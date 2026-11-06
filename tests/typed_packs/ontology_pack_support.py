@@ -145,10 +145,26 @@ async def connect() -> MedullaClient:
 
 
 async def core_revision(client: MedullaClient) -> str:
-    """The pinned vocabulary revision: the composed digest of the core catalog."""
-    view = await reasoning.send_ontology_inspect(
-        client, {"documents": [], "source_ids": []}
+    """The pinned vocabulary revision: the composed digest of the core catalog.
+
+    The shared graph's composed digest moves as soon as any test attaches a
+    pack or an approved source to it, so the core digest is read from a fresh
+    graph whose schema is the core catalog alone.
+    """
+    graph = f"core-revision-{uuid.uuid4().hex[:8]}"
+    await client.tenants.create(graph)
+    fresh = await MedullaClient.connect(
+        socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+        verified_context=request_context(),
+        graph_name=graph,
     )
+    try:
+        view = await reasoning.send_ontology_inspect(
+            fresh, {"documents": [], "source_ids": []}
+        )
+        await fresh.tenants.delete(graph)
+    finally:
+        await fresh.close()
     assert view.composed_digest
     return view.composed_digest
 

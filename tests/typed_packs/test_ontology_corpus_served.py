@@ -13,12 +13,16 @@ import pytest
 from ontology_pack_support import connect, inspect_committed
 
 KG = "http://knuckles.team/kg#"
+INFRA = "http://knuckles.team/kg/infrastructure#"
+BFO_ENTITY = "http://purl.obolibrary.org/obo/BFO_0000001"
 CORE_DOCUMENT = "http://knuckles.team/kg/core"
-# Module class -> the core class its module names as parent.
+# Module class -> the core class its module names as parent. The archimate
+# module mixes continuants, processes and information entities, so it roots
+# under bfo:Entity: no narrower core parent is consistent with BFO disjointness.
 MODULE_TO_CORE = {
-    f"{KG}BusinessProcess": f"{KG}DomainEntity",
+    f"{KG}BusinessProcess": BFO_ENTITY,
     f"{KG}AgentRole": f"{KG}Role",
-    f"{KG}Host": f"{KG}System",
+    f"{INFRA}Host": f"{KG}System",
     f"{KG}TRMStandard": f"{KG}Policy",
     f"{KG}Hook": f"{KG}Framework",
 }

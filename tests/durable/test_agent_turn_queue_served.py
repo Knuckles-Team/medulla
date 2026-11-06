@@ -114,12 +114,15 @@ def test_full_queue_stale_head_and_bad_capability_refuse(queue_client):
         == terminal
     )
 
-    # Cross-tenant: a foreign tenant sees no item and the refusal touched none.
-    assert (
+    # Cross-tenant: a foreign tenant is refused (it never sees the item) and the
+    # refusal touched nothing.
+    with pytest.raises(EngineResponseError, match="ACCESS_DENIED"):
         client.work_items.get(
             tenant="tenant-foreign", work_item_id=first["work_item_id"]
         )
-        is None
+    assert (
+        client.work_items.get(tenant=TEST_TENANT, work_item_id=first["work_item_id"])
+        == terminal
     )
 
 

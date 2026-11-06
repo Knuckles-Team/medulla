@@ -512,7 +512,10 @@ async fn handle_submit(
         &spec.worker_region,
         &spec.required_capabilities,
     ) {
-        return Response::err(req_id, "analytics job placement constraints are invalid");
+        return Response::err(
+            req_id,
+            "INVALID_ARGUMENT: analytics job placement constraints are invalid",
+        );
     }
     // The immutable input-snapshot handle is stamped by the SERVER from the live
     // graph's OCC version, never accepted from the caller (CONCEPT:INT-P2-1: a

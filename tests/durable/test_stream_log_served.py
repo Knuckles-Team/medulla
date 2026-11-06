@@ -8,6 +8,7 @@ and after an engine restart the same reads return the same messages.
 
 from concurrent.futures import ThreadPoolExecutor
 
+import msgpack
 import pytest
 
 pytestmark = [
@@ -25,12 +26,21 @@ def _payload(value):
     return bytes(value)
 
 
+def _raw(value):
+    """A raw method result travels as the MessagePack of its value."""
+    if isinstance(value, (bytes, bytearray)):
+        return msgpack.unpackb(value, raw=False)
+    return value
+
+
 def _read(rpc, ok, sock, from_offset, limit=0):
-    rows = ok(
-        rpc(
-            sock,
-            "StreamRead",
-            {"stream": STREAM, "from_offset": from_offset, "max": limit},
+    rows = _raw(
+        ok(
+            rpc(
+                sock,
+                "StreamRead",
+                {"stream": STREAM, "from_offset": from_offset, "max": limit},
+            )
         )
     )
     return [(int(offset), _payload(body)) for offset, body in rows or []]
@@ -112,16 +122,16 @@ def test_order_cursor_and_restart(tmp_path):
         commit = {"stream": STREAM, "group": "g", "offset": cursor}
         ok(rpc(sock, "StreamCommitOffset", commit, key="commit"))
         ok(rpc(sock, "StreamCommitOffset", commit, key="commit-again"))
-        committed = ok(
-            rpc(sock, "StreamCommittedOffset", {"stream": STREAM, "group": "g"})
+        committed = _raw(
+            ok(rpc(sock, "StreamCommittedOffset", {"stream": STREAM, "group": "g"}))
         )
         assert committed == cursor
 
     with server(tmp_path) as sock:
         assert _read(rpc, ok, sock, 0) == expected
         assert _read(rpc, ok, sock, 100, 10) == expected[100:110]
-        committed = ok(
-            rpc(sock, "StreamCommittedOffset", {"stream": STREAM, "group": "g"})
+        committed = _raw(
+            ok(rpc(sock, "StreamCommittedOffset", {"stream": STREAM, "group": "g"}))
         )
         assert committed == cursor
         nxt = ok(
