@@ -190,6 +190,7 @@ mod operation_bound_source_kinds {
     fn specs_with_pushdown(key_filter_pushdown: bool) -> Vec<(ForeignSourceSpec, &'static str)> {
         let capabilities = ForeignOperationCapabilities {
             key_filter_pushdown,
+            ..ForeignOperationCapabilities::default()
         };
         vec![
             (
@@ -1116,6 +1117,194 @@ impl ForeignSource for SqlSource<'_> {
             score_field: self.score_field,
         };
         source.fetch_columns()
+    }
+}
+
+/// A Postgres connection held open for one query's snapshot (MEDULLA-UNIFIED-DATA-PLANE-R038.3.2).
+///
+/// A dedicated thread owns the connection and its current-thread runtime. It opens
+/// `BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY`, bounds each statement with
+/// `statement_timeout`, and names the snapshot with `pg_export_snapshot()` (a standby, which
+/// cannot export, reports `pg_current_snapshot()`). Every fragment of the source runs on that
+/// same transaction through [`crate::federation_opt::SnapshotConn::run`]. Dropping the last
+/// handle ends the thread, which rolls the transaction back.
+#[cfg(feature = "federation-sql")]
+pub(crate) struct PgSnapshot {
+    jobs: std::sync::Mutex<std::sync::mpsc::Sender<PgSnapshotJob>>,
+}
+
+#[cfg(feature = "federation-sql")]
+struct PgSnapshotJob {
+    statement: String,
+    reply: std::sync::mpsc::Sender<Result<RowSet, String>>,
+}
+
+#[cfg(feature = "federation-sql")]
+impl PgSnapshot {
+    /// Open the snapshot. Refuses a standby over `bound.replica_lag_bound_ms` with
+    /// `REPLICA_LAG_EXCEEDED` before the transaction starts.
+    pub(crate) fn open(
+        dsn: &str,
+        id_field: &str,
+        score_field: Option<&str>,
+        bound: &crate::federation_opt::SnapshotBound,
+    ) -> Result<(Self, String), String> {
+        use std::sync::mpsc;
+        if dsn.is_empty() || dsn.len() > MAX_FEDERATED_SQL_DSN_BYTES || dsn.contains('\0') {
+            return Err("federation: invalid SQL connection configuration".to_string());
+        }
+        crate::federation_ssrf::check_sql_dsn(dsn)?;
+        let (ready_tx, ready_rx) = mpsc::channel::<Result<String, String>>();
+        let (job_tx, job_rx) = mpsc::channel::<PgSnapshotJob>();
+        let worker = Self {
+            jobs: std::sync::Mutex::new(job_tx),
+        };
+        let (dsn, id_field, score_field, bound) = (
+            dsn.to_string(),
+            id_field.to_string(),
+            score_field.map(str::to_string),
+            *bound,
+        );
+        std::thread::spawn(move || {
+            let runtime = match tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+            {
+                Ok(runtime) => runtime,
+                Err(e) => {
+                    let _ = ready_tx.send(Err(format!("federation: build tokio runtime: {e}")));
+                    return;
+                }
+            };
+            runtime.block_on(async move {
+                let (mut conn, token) = match Self::begin(&dsn, &bound).await {
+                    Ok(opened) => opened,
+                    Err(e) => {
+                        let _ = ready_tx.send(Err(e));
+                        return;
+                    }
+                };
+                let _ = ready_tx.send(Ok(token));
+                while let Ok(job) = job_rx.recv() {
+                    let source = SqlSource {
+                        dsn: &dsn,
+                        query: &job.statement,
+                        id_field: &id_field,
+                        score_field: score_field.as_deref(),
+                    };
+                    let out = source.fetch_on(&mut conn).await;
+                    let _ = job.reply.send(out);
+                }
+                let _ = sqlx::query("ROLLBACK").execute(&mut conn).await;
+            });
+        });
+        let token = ready_rx
+            .recv()
+            .map_err(|_| "federation: postgres snapshot worker stopped".to_string())??;
+        Ok((worker, token))
+    }
+
+    async fn begin(
+        dsn: &str,
+        bound: &crate::federation_opt::SnapshotBound,
+    ) -> Result<(sqlx::postgres::PgConnection, String), String> {
+        use sqlx::Connection;
+        let mut conn = tokio::time::timeout(
+            FEDERATED_SQL_CONNECT_TIMEOUT,
+            sqlx::postgres::PgConnection::connect(dsn),
+        )
+        .await
+        .map_err(|_| "federation: postgres connection timed out".to_string())?
+        .map_err(|_| "federation: postgres connection failed".to_string())?;
+        let unavailable = |_| "federation: postgres snapshot unavailable".to_string();
+        let standby: bool = sqlx::query_scalar("SELECT pg_is_in_recovery()")
+            .fetch_one(&mut conn)
+            .await
+            .map_err(unavailable)?;
+        if standby {
+            let lag_ms: Option<f64> = sqlx::query_scalar(
+                "SELECT (EXTRACT(EPOCH FROM (now() - pg_last_xact_replay_timestamp())) * 1000)::float8",
+            )
+            .fetch_one(&mut conn)
+            .await
+            .map_err(unavailable)?;
+            // A standby that has replayed nothing has no provable lag: it is over the bound.
+            if lag_ms.is_none_or(|lag| lag > bound.replica_lag_bound_ms as f64) {
+                return Err(format!(
+                    "{}: the replica's replay lag is over {} ms",
+                    crate::federation_opt::REPLICA_LAG_EXCEEDED,
+                    bound.replica_lag_bound_ms
+                ));
+            }
+        }
+        sqlx::query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY")
+            .execute(&mut conn)
+            .await
+            .map_err(unavailable)?;
+        sqlx::query(sqlx::AssertSqlSafe(format!(
+            "SET LOCAL statement_timeout = {}",
+            bound.statement_timeout_ms
+        )))
+        .execute(&mut conn)
+        .await
+        .map_err(unavailable)?;
+        let token: String = if standby {
+            sqlx::query_scalar("SELECT pg_current_snapshot()::text")
+        } else {
+            sqlx::query_scalar("SELECT pg_export_snapshot()")
+        }
+        .fetch_one(&mut conn)
+        .await
+        .map_err(unavailable)?;
+        Ok((conn, token))
+    }
+}
+
+#[cfg(feature = "federation-sql")]
+impl crate::federation_opt::SnapshotConn for PgSnapshot {
+    fn run(&self, statement: &str) -> Result<RowSet, String> {
+        let (reply, answer) = std::sync::mpsc::channel();
+        self.jobs
+            .lock()
+            .map_err(|_| "federation: postgres snapshot worker poisoned".to_string())?
+            .send(PgSnapshotJob {
+                statement: statement.to_string(),
+                reply,
+            })
+            .map_err(|_| "federation: postgres snapshot worker stopped".to_string())?;
+        answer
+            .recv()
+            .map_err(|_| "federation: postgres snapshot worker stopped".to_string())?
+    }
+}
+
+#[cfg(feature = "federation-sql")]
+impl SqlSource<'_> {
+    /// Run this statement on a connection that already holds the query's snapshot
+    /// transaction: validated, bounded in rows and time, and never committed.
+    async fn fetch_on(&self, conn: &mut sqlx::postgres::PgConnection) -> Result<RowSet, String> {
+        use futures_util::TryStreamExt;
+        validate_federated_sql(self.query, SqlDialect::Postgres)?;
+        self.validate_projection_fields()?;
+        let out = tokio::time::timeout(FEDERATED_SQL_QUERY_TIMEOUT, async {
+            let mut rows =
+                sqlx::query(sqlx::AssertSqlSafe(self.query.to_owned())).fetch(&mut *conn);
+            let mut out = Vec::new();
+            while let Some(row) = rows
+                .try_next()
+                .await
+                .map_err(|_| "federation: postgres query failed".to_string())?
+            {
+                if out.len() >= MAX_FEDERATED_SQL_ROWS {
+                    return Err("federation: postgres result exceeds row limit".to_string());
+                }
+                out.push(self.project_pg_row(&row)?);
+            }
+            Ok::<_, String>(out)
+        })
+        .await
+        .map_err(|_| "federation: postgres query timed out".to_string())??;
+        Ok(RowSet::from_rows(out))
     }
 }
 

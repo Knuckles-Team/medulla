@@ -249,6 +249,10 @@ knobs! {
     eval_bootstrap_resamples: u64 = "eval.bootstrap_resamples", U64(1_000), [100, 10_000], "resamples", Tunable;
     /// Coverage of a feature-power IC interval.
     eval_ci_level: f64 = "eval.ci_level", F64(0.95), [0.5, 0.999], "fraction", Tunable;
+    /// Longest replay lag at which a declared replica may serve a snapshot read.
+    federation_replica_lag_bound_ms: u64 = "federation.replica_lag_bound_ms", U64(5_000), [0, 600_000], "ms", Tunable;
+    /// Longest a federated source statement may run.
+    federation_statement_timeout_ms: u64 = "federation.statement_timeout_ms", U64(30_000), [1_000, 600_000], "ms", Tunable;
 }
 
 fn refusal(code: ServerErrorCode, knob: &str, detail: String) -> KnobRefusal {
