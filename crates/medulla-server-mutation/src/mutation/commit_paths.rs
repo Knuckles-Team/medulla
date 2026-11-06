@@ -274,7 +274,16 @@ pub(super) async fn resolve_authoritative_base_snapshot(
     fname: &str,
 ) -> Result<(medulla_graph_core::graph::GraphSnapshot, u64), Response> {
     match persistence.read_authoritative_graph_snapshot(fname).await {
-        Ok(Some(snapshot)) => Ok(snapshot),
+        // The durable image carries the rows; the mutation ledger is the live
+        // projection's. Row-local fast-path commits append to the live ledger
+        // without staging a durable image, so the stored ledger lags it. Staging
+        // on the stored ledger made every later staged delta fail its ledger
+        // pre-image and republish the stored image, discarding the logged
+        // methods replay depends on (MEDULLA-DURABLE-KERNEL-R078).
+        Ok(Some((mut snapshot, version))) => {
+            snapshot.ledger = ctx.core.get_ledger();
+            Ok((snapshot, version))
+        }
         Ok(None) => {
             match medulla_server_api::batch_compile::authoritative_graph_version(
                 persistence,

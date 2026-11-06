@@ -757,8 +757,10 @@ fn verify_sigv4(auth: &S3Auth, req: &S3Request, header: &str) -> bool {
     let Some(canonical_headers) = canonical_sigv4_headers(req, &signed_headers) else {
         return false;
     };
+    // SigV4: every canonical header line ends with a newline, so the header block
+    // and the signed-header list are separated by an empty line.
     let canonical_request = format!(
-        "{}\n{}\n{}\n{}\n{}\n{}",
+        "{}\n{}\n{}\n{}\n\n{}\n{}",
         req.method,
         aws_uri_encode(&req.path, false),
         canonical_query(&req.query),
@@ -1502,7 +1504,7 @@ mod tests {
         let canonical_headers =
             format!("host:{host}\nx-amz-content-sha256:{payload_hash}\nx-amz-date:{amz_date}");
         let canonical_request = format!(
-            "{method}\n{}\n{}\n{canonical_headers}\n{signed_headers_raw}\n{payload_hash}",
+            "{method}\n{}\n{}\n{canonical_headers}\n\n{signed_headers_raw}\n{payload_hash}",
             aws_uri_encode(path, false),
             canonical_query(query),
         );

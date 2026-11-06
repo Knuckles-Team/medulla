@@ -227,7 +227,6 @@ _UNCONDITIONAL_WRITES_AT_BASE = (
         "AddEmbedding",
         "PruneByLifecycle",
         "BatchUpdate",
-        "EvictLRU",
         "DecaySweep",
         "TouchNodes",
         "FromMsgpack",

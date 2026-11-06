@@ -86,7 +86,6 @@ pub const GATEWAY_ROUTED: &[&str] = &[
     "InvalidateEdge",
     "SupersedeEdge",
     "ClearGraph",
-    "EvictLRU",
     "DecaySweep",
     "TouchNodes",
     "FromMsgpack",
@@ -268,7 +267,6 @@ fn embedding_edge_method_name(m: &Method) -> Option<&'static str> {
 fn graph_maintenance_method_name(m: &Method) -> Option<&'static str> {
     match m {
         Method::ClearGraph => Some("ClearGraph"),
-        Method::EvictLRU { .. } => Some("EvictLRU"),
         Method::DecaySweep { .. } => Some("DecaySweep"),
         Method::TouchNodes { .. } => Some("TouchNodes"),
         Method::FromMsgpack { .. } => Some("FromMsgpack"),

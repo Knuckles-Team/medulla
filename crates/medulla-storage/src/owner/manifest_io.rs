@@ -25,6 +25,41 @@ pub(crate) fn validate_manifest_read(
     read_exact_manifest(&table, expected, layout)
 }
 
+/// [`validate_manifest_read`] for a store's serving reads, which also require
+/// the persisted manifest to equal the one the store opened with (`cached`).
+/// `known` holds the stored bytes of a manifest that already passed both
+/// checks: the single manifest row holding exactly those bytes decodes to the
+/// same validated manifest, so only a changed row pays the decode and lineage
+/// validation again.
+pub(crate) fn validate_cached_manifest_read(
+    rtx: &ReadTransaction,
+    cached: &OwnerManifest,
+    known: &std::sync::OnceLock<Vec<u8>>,
+) -> Result<(), String> {
+    let table = rtx
+        .open_table(OWNER_MANIFEST)
+        .map_err(|error| error.to_string())?;
+    if let Some(bytes) = known.get() {
+        let matches = crate::physical::incarnation::read_single_slot(
+            &table,
+            MANIFEST_KEY,
+            "mutation store must contain exactly one owner manifest",
+            |stored| Ok(stored == bytes.as_slice()),
+        )?;
+        if matches == Some(true) {
+            return Ok(());
+        }
+    }
+    let persisted = read_exact_manifest(&table, &cached.physical_identity, cached.layout)?;
+    if persisted != *cached {
+        return Err("mutation read manifest authority changed".to_string());
+    }
+    if let Some(stored) = table.get(MANIFEST_KEY).map_err(|error| error.to_string())? {
+        let _ = known.set(stored.value().to_vec());
+    }
+    Ok(())
+}
+
 pub(crate) fn validate_manifest_write(
     wtx: &WriteTransaction,
     expected: &PhysicalStoreIdentity,

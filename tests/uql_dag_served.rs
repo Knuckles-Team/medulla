@@ -201,6 +201,9 @@ async fn as_of_returns_the_right_version_at_two_instants_on_both_axes() {
     for (id, node, year) in [(1, "d1", 2020), (2, "d2", 2021), (3, "d3", 2022)] {
         add_doc(&state, id, node, year).await;
     }
+    // The engine stamps transaction time with its own clock
+    // (MEDULLA-DURABLE-KERNEL-R078), so the transaction-axis instants are read
+    // from that clock around each write rather than chosen by the caller.
     add_edge_with(
         &state,
         4,
@@ -209,6 +212,8 @@ async fn as_of_returns_the_right_version_at_two_instants_on_both_axes() {
         serde_json::json!({"relationship": "CITES", "valid_from": 100, "tx_from": 100}),
     )
     .await;
+    let between_writes = engine_instant_after_a_tick().await;
+    tokio::time::sleep(std::time::Duration::from_millis(2)).await;
     let superseded = test_support::dispatch(
         &state,
         test_support::commons_request(
@@ -230,6 +235,7 @@ async fn as_of_returns_the_right_version_at_two_instants_on_both_axes() {
     )
     .await;
     assert!(superseded.error.is_none(), "{:?}", superseded.error);
+    let after_supersession = engine_instant_after_a_tick().await;
 
     let walk = |pins: &str| format!("MATCH (:Doc) WHERE year = 2020 |> {pins}TRAVERSE CITES");
     // Valid axis.
@@ -246,17 +252,34 @@ async fn as_of_returns_the_right_version_at_two_instants_on_both_axes() {
         .is_empty());
     // Transaction axis.
     assert_eq!(
-        reached_ids(&state, 9, &walk("AS OF TX @120 |> ")).await,
+        reached_ids(&state, 9, &walk(&format!("AS OF TX @{between_writes} |> "))).await,
         ["d2"]
     );
     assert_eq!(
-        reached_ids(&state, 10, &walk("AS OF TX @300 |> ")).await,
+        reached_ids(
+            &state,
+            10,
+            &walk(&format!("AS OF TX @{after_supersession} |> "))
+        )
+        .await,
         ["d3"]
     );
-    // Both axes: what was believed at 300 and valid at 150 is nothing.
-    assert!(
-        reached_ids(&state, 11, &walk("AS OF @150 |> AS OF TX @300 |> "))
-            .await
-            .is_empty()
-    );
+    // Both axes: what was believed after the supersession and valid at 150 is nothing.
+    assert!(reached_ids(
+        &state,
+        11,
+        &walk(&format!("AS OF @150 |> AS OF TX @{after_supersession} |> "))
+    )
+    .await
+    .is_empty());
+}
+
+/// An engine-clock instant (epoch milliseconds) strictly after every write that
+/// returned before this call: wait out the current millisecond, then read it.
+async fn engine_instant_after_a_tick() -> u64 {
+    tokio::time::sleep(std::time::Duration::from_millis(2)).await;
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .expect("system clock is after the epoch")
+        .as_millis() as u64
 }

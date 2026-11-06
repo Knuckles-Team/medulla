@@ -417,7 +417,7 @@ pub(super) async fn try_handle_graph_algorithms(
         }
         Method::MinimumSpanningTree => handle_minimum_spanning_tree(req_id, core).await,
         Method::Metrics => handle_metrics(req_id, core, raw_ledger_len).await,
-        // EvictLRU/DecaySweep/TouchNodes/FromMsgpack/Reconcile (CONCEPT:MEDULLA-P0-2
+        // DecaySweep/TouchNodes/FromMsgpack/Reconcile (CONCEPT:MEDULLA-P0-2
         // bypass guard, L11): GATEWAY_ROUTED — see the AddNode/RemoveNode
         // comment above. `ToMsgpack` is a pure read and keeps its normal arm.
         other => return ControlFlow::Continue(other),

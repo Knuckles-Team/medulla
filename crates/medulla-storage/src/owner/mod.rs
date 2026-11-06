@@ -21,7 +21,8 @@ pub(crate) mod sql_checkpoint_upgrade;
 pub(crate) mod table_api;
 
 pub(crate) use manifest_io::{
-    read_current_manifest, validate_manifest_read, validate_manifest_write, write_new_manifest,
+    read_current_manifest, validate_cached_manifest_read, validate_manifest_read,
+    validate_manifest_write, write_new_manifest,
 };
 pub(crate) use registry::{
     copy_declared_owner_tables, hash_declared_owner_tables, open_declared_owner_tables,

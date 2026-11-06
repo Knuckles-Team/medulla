@@ -14,6 +14,62 @@ fn handle_to_msgpack(req_id: u64, core: &Arc<GraphCore>) -> Response {
     )
 }
 
+/// `EvictLRU`: a local cache-residency operation (MEDULLA-DURABLE-KERNEL-R086.2,
+/// R086.6), never a commit.
+///
+/// It drops only the resident copies of LRU candidates the durable tier confirms
+/// through `durable_node_presence`, then leaves every durable row, the ledger and
+/// the graph version untouched: it commits no batch, bumps no version, emits no
+/// CDC and is not replicated (residency is per process). It used to run through
+/// the commit gateway, which committed an empty batch and advanced the graph
+/// version for an operation that changes no content. The caller passes the RAW
+/// core (before any row projection), because residency belongs to the live
+/// projection, not to a caller's filtered view.
+///
+/// A candidate stays resident when the backend is absent, presence errors, the
+/// presence length differs, or its entry is `false`. The count is the number
+/// actually evicted; `EVICTION_UNCONFIRMED` is a response detail, never an error.
+pub(super) fn handle_evict_lru(
+    req_id: u64,
+    graph_name: &str,
+    core: &GraphCore,
+    persistence: Option<&Arc<dyn PersistenceBackend>>,
+    max_nodes: usize,
+) -> Response {
+    let candidates = core.lru_eviction_candidates(max_nodes);
+    let candidate_count = candidates.len();
+    let evicted = match persistence {
+        _ if candidates.is_empty() => 0,
+        Some(backend) => {
+            let fname = medulla_kernel::persist::sanitize(graph_name);
+            match backend.durable_node_presence(&fname, &candidates) {
+                Ok(presence) if presence.len() == candidates.len() => {
+                    let durable = candidates
+                        .into_iter()
+                        .zip(presence)
+                        .filter_map(|(node_id, present)| present.then_some(node_id))
+                        .collect::<Vec<_>>();
+                    core.evict_resident_nodes(&durable)
+                }
+                // Durability unconfirmed: keep the nodes resident rather than
+                // risk evicting something that is not on disk yet.
+                Ok(_) | Err(_) => 0,
+            }
+        }
+        // No durable tier to fall back to, so eviction would lose the node.
+        None => 0,
+    };
+    let mut response = Response::ok(req_id, ResultPayload::Json(serde_json::json!(evicted)));
+    if evicted < candidate_count {
+        response.error_detail = Some(
+            medulla_types::contract::ServerErrorCode::EvictionUnconfirmed
+                .as_str()
+                .to_string(),
+        );
+    }
+    response
+}
+
 /// Route memory maintenance operations.
 pub(super) async fn try_handle_memory_maintenance(
     ctx: GraphOpsContext<'_>,
@@ -149,10 +205,6 @@ pub(super) async fn try_handle_lifecycle_serialization(
 ) -> ControlFlow<Response, Method> {
     let GraphOpsContext { req_id, core, .. } = ctx;
     ControlFlow::Break(match method {
-            Method::EvictLRU { .. } => unreachable!(
-                "EvictLRU is mutation::GATEWAY_ROUTED; dispatch_graph_op must route it \
-                 through try_handle_gateway before it ever reaches this terminal handler"
-            ),
             Method::DecaySweep { .. } => unreachable!(
                 "DecaySweep is mutation::GATEWAY_ROUTED; dispatch_graph_op must route it \
                  through try_handle_gateway before it ever reaches this terminal handler"

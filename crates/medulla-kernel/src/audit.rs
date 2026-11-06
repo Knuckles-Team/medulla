@@ -94,11 +94,10 @@ pub fn decode_entry(blob: &[u8]) -> Option<(Hash, Hash, &[u8])> {
 /// acknowledged durable mutation chains into the audit log. A method with no
 /// durable effect (`DurabilityDomain::None`) never reaches this function via the
 /// redb write path at all, so it is intentionally absent (still falls through to
-/// the final `_ => return None` for a direct caller). `ApplyMutation`/`EvictLRU`/
-/// `IcvConfigure` are NOT such methods (all three are `GraphRedb`-durable and
+/// the final `_ => return None` for a direct caller). `ApplyMutation`/
+/// `IcvConfigure` are NOT such methods (both are `GraphRedb`-durable and
 /// GATEWAY_ROUTED) -- W1c gave each an explicit arm below, closing what used to be
-/// a real audit-visibility gap for `ApplyMutation`/`IcvConfigure` (`EvictLRU`
-/// already had one). The one reserved digest-guarded `ApplyMutation` arm is
+/// a real audit-visibility gap. The one reserved digest-guarded `ApplyMutation` arm is
 /// different from its general fallback further down: the MutationBatch compiler
 /// creates that specific `event_type`/`query` shape internally as a digest-only
 /// receipt for an authoritative staged-state commit.

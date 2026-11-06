@@ -276,9 +276,12 @@ async fn factor_rank_abstains_on_thin_input() {
     );
 }
 
+/// A schedule whose inputs no other test in this binary sends: the evidence test
+/// counts the spans recorded for this exact input digest, and the process-wide span
+/// capture also sees the concurrent tests that send their own `AAPL` schedules.
 fn schedule(slices: usize, risk_aversion: f64) -> Method {
     Method::FinanceExecutionSchedule {
-        symbol: "AAPL".into(),
+        symbol: "EVIDENCE".into(),
         total_shares: 1_000.0,
         horizon: 1.0,
         slices,
@@ -439,7 +442,9 @@ async fn factor_rank_records_nodes_with_edges_and_versions() {
     assert_eq!(stored["icKernelVersion"], stored["irKernelVersion"]);
     let mut edges = successors(&mut session, "finance:Factor:f1").await;
     edges.sort();
-    assert_eq!(edges, provenance_of("f1"));
+    let mut expected = provenance_of("f1");
+    expected.sort();
+    assert_eq!(edges, expected);
 
     // An empty provenance list refuses and writes nothing.
     let mut refused = Session::open().await;

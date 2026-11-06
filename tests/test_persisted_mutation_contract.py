@@ -510,15 +510,17 @@ def test_native_command_catalog_rejects_drift_and_comment_spoofs() -> None:
     source = module.read_compiler_family(
         "crates/medulla-raft/src/raft/mod.rs"
     ).production
-    entry = "            record EvictLRU => GraphState,\n"
+    entry = "            record DecaySweep => GraphState,\n"
     assert entry in source
     catalog = module._native_method_catalog(source)
-    assert catalog["EvictLRU"] == "GraphState"
-    assert "EvictLRU" not in module._native_method_catalog(source.replace(entry, "", 1))
+    assert catalog["DecaySweep"] == "GraphState"
+    assert "DecaySweep" not in module._native_method_catalog(
+        source.replace(entry, "", 1)
+    )
     with pytest.raises(SystemExit, match="duplicate entry"):
         module._native_method_catalog(source.replace(entry, entry + entry, 1))
     # A commented-out entry is not an entry.
-    assert "EvictLRU" not in module._native_method_catalog(
+    assert "DecaySweep" not in module._native_method_catalog(
         source.replace(entry, f"            // {entry.strip()}\n", 1)
     )
     with pytest.raises(SystemExit, match="share one catalog"):

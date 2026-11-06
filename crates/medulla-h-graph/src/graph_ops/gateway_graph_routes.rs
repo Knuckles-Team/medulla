@@ -95,10 +95,7 @@ fn is_edges(method: &Method) -> bool {
 fn is_lifecycle(method: &Method) -> bool {
     matches!(
         method,
-        Method::ClearGraph
-            | Method::EvictLRU { .. }
-            | Method::DecaySweep { .. }
-            | Method::TouchNodes { .. }
+        Method::ClearGraph | Method::DecaySweep { .. } | Method::TouchNodes { .. }
     )
 }
 
@@ -653,7 +650,6 @@ async fn try_handle_lifecycle(
             })
             .await
         }
-        Method::EvictLRU { max_nodes } => apply_evict_lru(ctx, plan, method, *max_nodes).await,
         Method::DecaySweep {
             half_life_secs,
             floor,
