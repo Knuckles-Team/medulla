@@ -13,7 +13,7 @@
 <http://knuckles.team/kg/data-platform> a owl:Ontology ;
     rdfs:label "Data-platform vocabulary" ;
     rdfs:comment "Shared typed terms for attached data stores and their source observations." ;
-    owl:imports <http://knuckles.team/kg/core>, <http://knuckles.team/kg/virtual-graph> .
+    owl:imports <http://knuckles.team/kg/virtual-graph> .
 
 dp:DataStore a owl:Class ;
     rdfs:label "Data store" ;
@@ -386,3 +386,34 @@ dp:leaseExpiresAt a owl:DatatypeProperty ;
     rdfs:label "lease expires at" ;
     rdfs:comment "When the lease on a policy or grant observation expires." ;
     rdfs:range xsd:dateTime .
+
+# ── Core rooting (MEDULLA-TYPED-PACKS-R071.2) ───────────────────────────────────
+# Every class of this module above reaches the core class kg:DomainEntity through rdfs:subClassOf.
+<http://knuckles.team/kg/data-platform#AccessPolicy> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/data-platform#AnalyticsSite> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/data-platform#BehaviorMetric> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/data-platform#Bucket> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/data-platform#Collection> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/data-platform#Column> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/data-platform#ConsumerGroup> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/data-platform#DataStore> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/data-platform#Database> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/data-platform#DocumentField> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/data-platform#EmbeddingSpace> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/data-platform#EvaluationResult> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/data-platform#ForeignKey> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/data-platform#Model> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/data-platform#Partition> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/data-platform#PartitionLag> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/data-platform#PolicyPathGrant> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/data-platform#RotationState> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/data-platform#Schema> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/data-platform#SecretEngine> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/data-platform#SecretPath> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/data-platform#StoreMapping> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/data-platform#StoredObject> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/data-platform#Table> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/data-platform#Topic> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/data-platform#TrainingRun> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/data-platform#VectorCollection> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/data-platform#View> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .

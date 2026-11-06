@@ -25,8 +25,7 @@
 
 <http://knuckles.team/kg/identity> a owl:Ontology ;
     rdfs:label "Identity & Access Ontology" ;
-    rdfs:comment "Users/groups/roles/app-assignments for cross-tool access governance (CONCEPT:KG-2.9)." ;
-    owl:imports <http://knuckles.team/kg/core> .
+    rdfs:comment "Users/groups/roles/app-assignments for cross-tool access governance (CONCEPT:KG-2.9)." .
 
 :IdentityGroup a owl:Class ;
     rdfs:label "Identity Group" ;
@@ -82,3 +81,8 @@
     rdfs:comment "The status of an identity user account: ACTIVE, SUSPENDED or DEACTIVATED." ;
     rdfs:domain :IdentityUser ;
     rdfs:range xsd:string .
+
+# ── Core rooting (MEDULLA-TYPED-PACKS-R071.2) ───────────────────────────────────
+# Every class of this module above reaches the core class kg:DomainEntity through rdfs:subClassOf.
+<http://knuckles.team/kg#IdentityGroup> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#IdentityRole> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .

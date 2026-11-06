@@ -21,7 +21,7 @@
 <http://knuckles.team/kg/environment> a owl:Ontology ;
     rdfs:label "World Model — Environment" ;
     rdfs:comment "Environmental systems, habitats, ecosystems, weather and climate systems and weather observations; BFO-placed, mapped to ENVO, SOSA and Wikidata, wired to the geopolitical Region/Country and WeatherEvent." ;
-    owl:imports <http://knuckles.team/kg/core>, <http://knuckles.team/kg/life> .
+    owl:imports <http://knuckles.team/kg/life> .
 
 # ── Environmental systems, habitats, weather and climate ──────────────────────────
 

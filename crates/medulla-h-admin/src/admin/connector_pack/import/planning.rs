@@ -681,8 +681,10 @@ fn import_record(
 /// visible as soon as it commits.
 fn projection_for(entries: &[PackEntryRecord]) -> PackProjectionState {
     let projects = entries.iter().any(|entry| {
-        matches!(entry.kind, PackEntryKind::Ontology | PackEntryKind::Shapes)
-            && entry.disposition != PackDisposition::Withdrawn
+        matches!(
+            entry.kind,
+            PackEntryKind::Ontology | PackEntryKind::Shapes | PackEntryKind::Crosswalk
+        ) && entry.disposition != PackDisposition::Withdrawn
     });
     if projects {
         PackProjectionState::Pending

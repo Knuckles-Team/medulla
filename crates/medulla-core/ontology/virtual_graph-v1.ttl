@@ -15,8 +15,7 @@
 
 <http://knuckles.team/kg/virtual-graph> a owl:Ontology ;
     rdfs:label "Virtual graph" ;
-    rdfs:comment "Attached-source connections, their discovered metadata contracts, and the approved mappings onto the core ontology." ;
-    owl:imports <http://knuckles.team/kg/core> .
+    rdfs:comment "Attached-source connections, their discovered metadata contracts, and the approved mappings onto the core ontology." .
 
 # --- Properties --------------------------------------------------------------
 
@@ -194,3 +193,11 @@ vg:SourceAuthority a owl:Class ;
     rdfs:comment "When a named graph was last modified." ;
     rdfs:domain :NamedGraph ;
     rdfs:range xsd:dateTime .
+
+# ── Core rooting (MEDULLA-TYPED-PACKS-R071.2) ───────────────────────────────────
+# Every class of this module above reaches the core class kg:DomainEntity through rdfs:subClassOf.
+<http://knuckles.team/kg/virtual-graph#EndpointRef> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/virtual-graph#PredicateFieldPair> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/virtual-graph#SourceAuthority> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/virtual-graph#SourceConnection> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/virtual-graph#VirtualMapping> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .

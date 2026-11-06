@@ -93,6 +93,7 @@ impl AgentLibraryStore {
                 member.kind,
                 medulla_catalog_types::connector_pack::PackEntryKind::Ontology
                     | medulla_catalog_types::connector_pack::PackEntryKind::Shapes
+                    | medulla_catalog_types::connector_pack::PackEntryKind::Crosswalk
             ) || member.lifecycle != AgentLibraryLifecycle::Published
             {
                 continue;

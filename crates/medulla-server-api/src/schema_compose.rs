@@ -869,7 +869,9 @@ ex:parent a owl:AsymmetricProperty .
         // +55 (MEDULLA-MEDIA-VOCAB-R001.100.1): the media-tag class and its ten properties.
         // +1: retrieval :ScholarlyPaper rdfs:subClassOf :ResearchPaper
         // (MEDULLA-MEDIA-VOCAB-R002.5.4); the :cites domain and range change in place.
-        assert_eq!(composed.ontology.len(), 17_852);
+        // -40 +210 (MEDULLA-TYPED-PACKS-R071.2): the 40 `owl:imports <.../core>` edges
+        // are removed and 210 module classes gain their `rdfs:subClassOf` core parent.
+        assert_eq!(composed.ontology.len(), 18_022);
 
         let ontology_subjects: BTreeSet<String> = composed
             .ontology
@@ -921,7 +923,8 @@ ex:parent a owl:AsymmetricProperty .
         // +3: the C2 train's government-shapes and foundation-shapes imports and the
         // connector-pack shapes companion.
         // +2: the connector-seed and virtual-graph catalog imports.
-        assert_eq!(imports, 119);
+        // -40 (MEDULLA-TYPED-PACKS-R071.2): no module imports the core document.
+        assert_eq!(imports, 79);
         // +20 (EH-408/409/410): infrastructure :BehaviourObservation,
         // :ConformanceViolation, :Deployment, :K8sService and :SwarmService,
         // 4 axioms each; +5: the :scheduledBy property. +24 (EH-410): the six feed
@@ -954,7 +957,8 @@ ex:parent a owl:AsymmetricProperty .
         // +10: the two engagement-metric properties (MEDULLA-MEDIA-VOCAB-R651).
         // +55: the media-tag vocabulary, all semantic axioms (MEDULLA-MEDIA-VOCAB-R001.100.1).
         // +1: the :ScholarlyPaper → :ResearchPaper subclass axiom (R002.5.4).
-        assert_eq!(semantic_axioms, 17_583);
+        // +210 (MEDULLA-TYPED-PACKS-R071.2): the core-rooting `rdfs:subClassOf` axioms.
+        assert_eq!(semantic_axioms, 17_793);
 
         let count_type = |object: &str| {
             composed
