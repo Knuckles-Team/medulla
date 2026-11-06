@@ -1085,4 +1085,7 @@ mod replay_tests;
 
 mod task_plan_tests;
 
+// MEDULLA-DECISION-ENGINE-R072.100: one span per pipeline stage.
+mod telemetry_tests;
+
 mod run_observation_tests;
