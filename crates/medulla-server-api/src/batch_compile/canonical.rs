@@ -679,6 +679,9 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::DecisionLog { .. }
         | Method::Claims { .. }
         | Method::GraphSchema { .. }
+        // MEDULLA-FINANCE-PRIMITIVES-R004.3.2.9: the replicated put applies as
+        // the one gateway `AddNode`/`BatchUpdate` graph write.
+        | Method::FinanceRecordPut { .. }
         | Method::GraphSchemaList
         | Method::GraphSchemaClasses { .. }
         // EH-219 / graph-os MEDULLA-2/3 typed reads: MVCC snapshot reads that commit

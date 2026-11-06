@@ -665,10 +665,8 @@ pub const LOCAL_ONLY_METHODS: &[&str] = &[
     "MutationOutbox",
     "EdgeIndex",
     "SqlSourceBatch",
-    // The finance record head check reads the stored head and commits the
-    // admitted upsert through the process-local owner; no replicated command
-    // carries the admission yet (MEDULLA-FINANCE-PRIMITIVES-R004.3.2).
-    "FinanceRecordPut",
+    // `FinanceRecordPut` is replicated: it is in `NATIVE_CONSENSUS_METHODS`
+    // (MEDULLA-FINANCE-PRIMITIVES-R004.3.2.9).
     // The alert's compare-and-set against its stored envelope has no replicated
     // command either (MEDULLA-FINANCE-PRIMITIVES-R011.2.3).
     "FinanceAlertRaise",

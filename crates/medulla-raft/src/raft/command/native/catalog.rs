@@ -177,6 +177,10 @@ macro_rules! native_method_catalog {
             record FinishDevelopmentLane => GraphState,
             record CleanupDevelopmentLane => GraphState,
             record UpdateDevelopmentLaneQuota => GraphState,
+
+            // MEDULLA-FINANCE-PRIMITIVES-R004.3.2.9: the leader-checked finance
+            // record put; replica apply re-reads the head before its one upsert.
+            record FinanceRecordPut => FinanceRecordPut,
         }
     };
 }
@@ -218,6 +222,7 @@ macro_rules! native_domains {
             ClusterAdmin,
             GraphLifecycle,
             Multisig,
+            FinanceRecordPut,
         }
     };
 }
