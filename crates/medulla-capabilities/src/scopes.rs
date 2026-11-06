@@ -83,6 +83,8 @@ pub const SCOPES: &[ScopeEntry] = &[
     entry("approvals:decide", Approver, "graph-os"),
     entry("approvals:read", Approver, "graph-os"),
     entry("asr:transcribe", User, "engine"),
+    // MEDULLA-FEDERATED-QUERY-R724: sees a tenant's total schema boundary count.
+    entry("audit:operator", Admin, "engine"),
     entry("blob:admin", Admin, "engine"),
     entry("blob:read", User, "engine"),
     entry("blob:write", User, "engine"),
@@ -192,9 +194,11 @@ pub const SCOPES: &[ScopeEntry] = &[
     entry("query:decide", User, "engine"),
     entry("query:graphql", User, "engine"),
     entry("query:nl", User, "engine"),
+    entry("query:read", User, "engine"),
     entry("query:sql", User, "engine"),
     entry("query:stream", User, "engine"),
     entry("query:unified", User, "engine"),
+    entry("query:write", User, "engine"),
     entry("rbac:approve-elevation", Approver, "engine"),
     entry("rbac:elevation", User, "engine"),
     entry("rbac:elevation-read", User, "engine"),
@@ -210,6 +214,7 @@ pub const SCOPES: &[ScopeEntry] = &[
     entry("resource:reserve", ServiceOnly, "engine"),
     entry("scene:read", User, "engine"),
     entry("scene:write", User, "engine"),
+    entry("schema:projections", User, "engine"),
     entry("security:admin", Admin, "engine"),
     entry("security:audit", Admin, "engine"),
     // AuditAppend: binds to the calling service's verified claims

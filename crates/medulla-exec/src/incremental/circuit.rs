@@ -64,7 +64,7 @@ use serde_json::{Map, Value};
 use medulla_types::wire::{Op, Plan, Pred, TimeAxis};
 
 use crate::rowset::RowSet;
-use medulla_types::delta::{Delta, DeltaError};
+use medulla_types::delta::{Delta, DeltaError, ZRow};
 
 /// The first `Op` in a plan with no incremental form — why a view falls back to
 /// recompute. `index` is the op's position in the plan; `reason` names it.
@@ -171,10 +171,15 @@ struct WindowState {
     buckets: BTreeMap<i64, Bucket>,
 }
 
+/// Accounted bytes of one membership entry, before its id (MEDULLA-INCREMENTAL-VIEWS-R007.1).
+const ENTRY_BYTES: u64 = 48;
+/// Accounted bytes of one window bucket (MEDULLA-INCREMENTAL-VIEWS-R007.1).
+const BUCKET_BYTES: u64 = 64;
+
 /// Window mode: fold one delta into the time-bucket accumulators, returning how many
 /// buckets it touched. A bucket whose net count falls to zero is dropped, so retractions
-/// leave no empty residue.
-fn apply_to_buckets(w: &mut WindowState, delta: &Delta) -> usize {
+/// leave no empty residue. `bytes` follows the bucket count.
+fn apply_to_buckets(w: &mut WindowState, delta: &Delta, bytes: &mut u64) -> usize {
     let mut touched = 0usize;
     for row in &delta.rows {
         if row.weight == 0 || !label_matches(&row.props, &w.label) {
@@ -188,35 +193,49 @@ fn apply_to_buckets(w: &mut WindowState, delta: &Delta) -> usize {
         let Some(start) = w.bucket_start(ts) else {
             continue;
         };
+        let existed = w.buckets.contains_key(&start);
         let b = w.buckets.entry(start).or_default();
         b.sum += row.weight as f64 * val;
         b.count += row.weight as i64;
-        if b.count <= 0 {
+        let kept = b.count > 0;
+        if !kept {
             w.buckets.remove(&start);
         }
+        account(bytes, existed, kept, BUCKET_BYTES);
         touched += 1;
     }
     touched
 }
 
+/// Move `bytes` by `cost` when an entry appeared (`!existed && kept`) or vanished.
+fn account(bytes: &mut u64, existed: bool, kept: bool, cost: u64) {
+    match (existed, kept) {
+        (false, true) => *bytes += cost,
+        (true, false) => *bytes = bytes.saturating_sub(cost),
+        _ => {}
+    }
+}
+
+/// Fold one signed row into a membership stage; an id whose net weight falls to zero
+/// leaves the stage.
+fn fold_member(stage: &mut Stage, row: &ZRow, bytes: &mut u64) {
+    let existed = stage.members.contains_key(&row.id);
+    let e = stage.members.entry(row.id.clone()).or_insert(0);
+    *e += row.weight;
+    let kept = *e > 0;
+    if !kept {
+        stage.members.remove(&row.id);
+    }
+    account(bytes, existed, kept, ENTRY_BYTES + row.id.len() as u64);
+}
+
 /// Set mode: apply each row's signed weight to every membership stage whose predicate it
-/// satisfies, returning how many stage entries it touched. An id whose net weight falls to
-/// zero leaves the stage.
-fn apply_to_stages(stages: &mut [Stage], delta: &Delta) -> usize {
+/// satisfies, returning how many stage entries it touched. `bytes` follows the entries.
+fn apply_to_stages(stages: &mut [Stage], delta: &Delta, bytes: &mut u64) -> usize {
     let mut touched = 0usize;
-    for row in &delta.rows {
-        if row.weight == 0 {
-            continue;
-        }
-        for stage in stages.iter_mut() {
-            if !stage.pred.holds(&row.props) {
-                continue;
-            }
-            let e = stage.members.entry(row.id.clone()).or_insert(0);
-            *e += row.weight;
-            if *e <= 0 {
-                stage.members.remove(&row.id);
-            }
+    for row in delta.rows.iter().filter(|row| row.weight != 0) {
+        for stage in stages.iter_mut().filter(|s| s.pred.holds(&row.props)) {
+            fold_member(stage, row, bytes);
             touched += 1;
         }
     }
@@ -240,6 +259,9 @@ pub struct Circuit {
     window: Option<WindowState>,
     /// Trailing `Limit`, applied at read.
     limit: Option<usize>,
+    /// Accounted maintained state, kept by `apply` (MEDULLA-INCREMENTAL-VIEWS-R007.1).
+    #[serde(default)]
+    state_bytes: u64,
 }
 
 impl Circuit {
@@ -291,9 +313,28 @@ impl Circuit {
         let mut delta = delta.clone();
         delta.consolidate()?;
         Ok(match &mut self.window {
-            Some(w) => apply_to_buckets(w, &delta),
-            None => apply_to_stages(&mut self.stages, &delta),
+            Some(w) => apply_to_buckets(w, &delta, &mut self.state_bytes),
+            None => apply_to_stages(&mut self.stages, &delta, &mut self.state_bytes),
         })
+    }
+
+    /// The maintained state in bytes: per stage, members times `48 + id length`; in window
+    /// mode, buckets times 64. O(1): `apply` keeps the figure (MEDULLA-INCREMENTAL-VIEWS-R007.1).
+    pub fn state_bytes(&self) -> u64 {
+        self.state_bytes
+    }
+
+    /// Rebuild the accounted figure from the state itself, for a circuit decoded from a row
+    /// written before the figure existed.
+    pub fn recount_state_bytes(&mut self) {
+        let buckets = self.window.as_ref().map_or(0, |w| w.buckets.len() as u64);
+        let members: u64 = self
+            .stages
+            .iter()
+            .flat_map(|stage| stage.members.keys())
+            .map(|id| ENTRY_BYTES + id.len() as u64)
+            .sum();
+        self.state_bytes = members + buckets * BUCKET_BYTES;
     }
 
     /// The current materialized result from the MAINTAINED state (the hot-path read a
@@ -626,6 +667,7 @@ mod tests {
     }
 
     // spec: MEDULLA-INCREMENTAL-VIEWS-R001.2
+    /// Verifies MEDULLA-INCREMENTAL-VIEWS-R001.2: Compile or name the first unsupported op
     #[test]
     fn compile_rejects_unsupported_ops_with_index() {
         // Traverse → fallback, naming its index.
@@ -711,6 +753,7 @@ mod tests {
     }
 
     // spec: MEDULLA-INCREMENTAL-VIEWS-R001.1
+    /// Verifies MEDULLA-INCREMENTAL-VIEWS-R001.1: Signed row deltas
     #[test]
     fn scan_add_update_remove_matches_recompute() {
         let plan = Plan::new(vec![Op::Scan {
@@ -795,6 +838,41 @@ mod tests {
                 .expect("apply"),
             0
         );
+    }
+
+    // spec: MEDULLA-INCREMENTAL-VIEWS-R007.1
+    /// Verifies MEDULLA-INCREMENTAL-VIEWS-R007.1: State accounting
+    #[test]
+    fn state_bytes_tracks_inserts_and_retracts() {
+        let plan = Plan::new(vec![Op::Scan {
+            label: "Doc".into(),
+        }]);
+        let mut c = Circuit::compile(&plan).unwrap();
+        assert_eq!(c.state_bytes(), 0);
+        let doc = json!({"type": "Doc"});
+        c.apply(&insert("a", doc.clone())).unwrap();
+        c.apply(&insert("bcd", doc.clone())).unwrap();
+        assert_eq!(c.state_bytes(), (48 + 1) + (48 + 3));
+        // A filtered-out row and a repeated insert of a present id add no entry.
+        c.apply(&insert("x", json!({"type": "Other"}))).unwrap();
+        c.apply(&insert("a", doc.clone())).unwrap();
+        assert_eq!(c.state_bytes(), (48 + 1) + (48 + 3));
+        // Retracts net the weight to zero in stages: `a` holds weight 2, `bcd` weight 1.
+        let retract = |id: &str| {
+            Delta::from(vec![medulla_types::delta::ZRow::retract(
+                id,
+                props(doc.clone()),
+            )])
+        };
+        c.apply(&retract("bcd")).unwrap();
+        assert_eq!(c.state_bytes(), 48 + 1);
+        c.apply(&retract("a")).unwrap();
+        assert_eq!(c.state_bytes(), 48 + 1, "weight 2 needs two retracts");
+        c.apply(&retract("a")).unwrap();
+        assert_eq!(c.state_bytes(), 0);
+        let before = c.state_bytes();
+        c.recount_state_bytes();
+        assert_eq!(c.state_bytes(), before, "recount agrees with accounting");
     }
 
     #[test]

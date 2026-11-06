@@ -81,7 +81,9 @@ def _declares_module(crate: str, module: str) -> bool:
     )
 
 
+# Verifies MEDULLA-CONTRACT-R056.13: Lane order and parallel groups.
 @pytest.mark.spec("MEDULLA-CONTRACT-R056")
+@pytest.mark.spec("MEDULLA-CONTRACT-R056.13")
 @pytest.mark.spec("MEDULLA-CONTRACT-R056.2")
 @pytest.mark.spec("MEDULLA-CONTRACT-R056.3")
 @pytest.mark.spec("MEDULLA-CONTRACT-R056.4")

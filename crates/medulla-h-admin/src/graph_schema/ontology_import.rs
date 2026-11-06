@@ -20,6 +20,9 @@ use medulla_graph_core::graph::{
     GraphCore, GraphSchemaSource, SchemaSourceOrigin, MAX_SCHEMA_DOCUMENT_TRIPLES,
 };
 use medulla_types::contract::{Digest256, ServerErrorCode};
+use medulla_types::ontology_edit::NamingFinding;
+
+use super::edits;
 
 /// The verified authority one import or withdrawal runs under. `importer` is
 /// the authenticated request principal; the request body carries none.
@@ -104,7 +107,33 @@ fn committed(
         composed_digest: composed.to_hex(),
         graph_version: core.version().saturating_add(u64::from(changed)),
         changed,
+        edit_head: edits::head(core),
     }
+}
+
+/// Parse both bodies within the triple bound, then lint the ontology's names
+/// under the `ontology.naming_mode` knob (R651.2).
+fn check_bodies(
+    ontology_ttl: &str,
+    shapes_ttl: Option<&str>,
+) -> Result<Vec<NamingFinding>, String> {
+    parse_bounded("ontology_ttl", ontology_ttl)?;
+    if let Some(shapes) = shapes_ttl {
+        parse_bounded("shapes_ttl", shapes)?;
+    }
+    edits::lint(ontology_ttl, edits::naming_mode())
+}
+
+/// The revision history after `revision`, bounded to its newest entries.
+fn next_history(
+    prior: Option<(u64, String, Vec<OntologyRevisionEntry>)>,
+    entry: OntologyRevisionEntry,
+) -> Vec<OntologyRevisionEntry> {
+    let mut history = prior.map(|(_, _, history)| history).unwrap_or_default();
+    history.push(entry);
+    let excess = history.len().saturating_sub(MAX_ONTOLOGY_REVISION_HISTORY);
+    history.drain(..excess);
+    history
 }
 
 /// Import or revise one runtime ontology (R103.2, refusals R103.4).
@@ -144,10 +173,7 @@ pub(crate) fn import_ontology(
             ),
         ));
     }
-    parse_bounded("ontology_ttl", ontology_ttl)?;
-    if let Some(shapes) = shapes_ttl.as_deref() {
-        parse_bounded("shapes_ttl", shapes)?;
-    }
+    let findings = check_bodies(ontology_ttl, shapes_ttl.as_deref())?;
     let source_id = ontology_source_key(connector, ontology_iri);
     let prior = prior_record(core, &source_id);
     if let Some((_, importer, _)) = &prior {
@@ -183,17 +209,15 @@ pub(crate) fn import_ontology(
         }
     }
     let revision = prior_revision + 1;
-    let mut history = prior.map(|(_, _, history)| history).unwrap_or_default();
-    history.push(OntologyRevisionEntry {
-        digest,
-        revision,
-        importer: authority.importer.clone(),
-        at: authority.at_ms,
-    });
-    if history.len() > MAX_ONTOLOGY_REVISION_HISTORY {
-        let excess = history.len() - MAX_ONTOLOGY_REVISION_HISTORY;
-        history.drain(..excess);
-    }
+    let history = next_history(
+        prior,
+        OntologyRevisionEntry {
+            digest,
+            revision,
+            importer: authority.importer.clone(),
+            at: authority.at_ms,
+        },
+    );
     let source = GraphSchemaSource::new(
         SchemaSourceOrigin::Ontology {
             connector: connector.as_str().to_string(),
@@ -206,14 +230,17 @@ pub(crate) fn import_ontology(
         Some(Arc::from(ontology_ttl.as_str())),
         authority.at_ms,
     )?;
+    let before = edits::source_digest(core, &source_id);
     let mut staged = (*sources).clone();
     staged
-        .attach_dynamic(source_id, source)
+        .attach_dynamic(source_id.clone(), source)
         .map_err(composition_refusal)?;
     medulla_server_api::schema_compose::validate_entering_schema(&staged)
         .map_err(composition_refusal)?;
     let composed = staged.composed_digest();
     core.install_schema_sources(Arc::new(staged));
+    edits::record_change(core, ontology_iri, &source_id, before, None)?;
+    edits::store_findings(core, &findings)?;
     Ok(committed(core, graph_name, composed, true))
 }
 
@@ -255,13 +282,33 @@ pub(crate) fn withdraw_ontology(
             format!("expected revision {expected_revision}, active revision {revision}"),
         ));
     }
+    let before = edits::source_digest(core, &source_id);
     let mut staged = (*core.schema_sources()).clone();
     staged.detach_dynamic(&source_id);
     medulla_server_api::schema_compose::validate_and_compose(&staged)
         .map_err(composition_refusal)?;
     let composed = staged.composed_digest();
     core.install_schema_sources(Arc::new(staged));
+    edits::record_change(core, ontology_iri, &source_id, before, None)?;
     Ok(committed(core, graph_name, composed, true))
+}
+
+/// `RevertEdit`: append the inversions of every edit of one subject, newest
+/// first (R651.3). The edit chain records the revert; earlier bodies are not
+/// kept, so the composed schema does not change.
+pub(crate) fn revert_edit(
+    core: &GraphCore,
+    graph_name: &str,
+    subject_iri: &str,
+) -> Result<GraphSchemaCommitted, String> {
+    let head_before = edits::head(core);
+    let head = edits::revert_subject(core, subject_iri)?;
+    Ok(committed(
+        core,
+        graph_name,
+        core.schema_sources().composed_digest(),
+        head != head_before,
+    ))
 }
 
 #[cfg(test)]

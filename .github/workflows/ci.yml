@@ -1479,7 +1479,17 @@ jobs:
           HEAD: ${{ github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail
-          python3 scripts/ci_change_scope.py --event pull_request --base "$BASE" --head "$HEAD" | grep '^code=' | tee -a "$GITHUB_OUTPUT"
+          git diff --name-only "$BASE...$HEAD" > "$RUNNER_TEMP/changed.txt"
+          python3 scripts/ci_change_scope.py --event pull_request --base "$BASE" --head "$HEAD" | grep '^code=' | tee "$RUNNER_TEMP/scope.txt"
+          cat "$RUNNER_TEMP/scope.txt" >> "$GITHUB_OUTPUT"
+          # A docs/spec diff is spec-only only when no workspace package reads
+          # a changed path (MEDULLA-CONTRACT-R053.7.2): a later code=true wins.
+          if grep -q '^code=false' "$RUNNER_TEMP/scope.txt"; then
+            cargo metadata --format-version 1 --no-deps --locked > "$RUNNER_TEMP/cargo-metadata.json"
+            if python3 scripts/ci_affected_crates.py "$RUNNER_TEMP/cargo-metadata.json" < "$RUNNER_TEMP/changed.txt" | grep -q .; then
+              echo "code=true" >> "$GITHUB_OUTPUT"
+            fi
+          fi
 
   ci:
     timeout-minutes: ${{ github.event_name == 'pull_request' && 180 || 180 }}
@@ -1540,7 +1550,16 @@ jobs:
           set -euo pipefail
           git diff --name-only "$BASE...$HEAD" > "$RUNNER_TEMP/changed.txt"
           cat "$RUNNER_TEMP/changed.txt"
-          python3 scripts/ci_change_scope.py --event pull_request --base "$BASE" --head "$HEAD" | grep '^code=' | tee -a "$GITHUB_OUTPUT"
+          python3 scripts/ci_change_scope.py --event pull_request --base "$BASE" --head "$HEAD" | grep '^code=' | tee "$RUNNER_TEMP/scope.txt"
+          cat "$RUNNER_TEMP/scope.txt" >> "$GITHUB_OUTPUT"
+          # Same answer as pr-scope: a changed path read by a package's sources
+          # selects that package, so the diff is not spec-only.
+          echo "crates=false" >> "$GITHUB_OUTPUT"
+          cargo metadata --format-version 1 --no-deps --locked > "$RUNNER_TEMP/cargo-metadata.json"
+          if python3 scripts/ci_affected_crates.py "$RUNNER_TEMP/cargo-metadata.json" < "$RUNNER_TEMP/changed.txt" | grep -q .; then
+            echo "crates=true" >> "$GITHUB_OUTPUT"
+            echo "code=true" >> "$GITHUB_OUTPUT"
+          fi
       # The shared fleet classifier (pipelines change-scope): a spec or docs only
       # diff runs only the spec gate set; every other hook id goes to SKIP.
       - name: Classify the change (shared gate-to-class map)
@@ -1548,6 +1567,23 @@ jobs:
         env:
           BASE: ${{ github.event.pull_request.base.sha }}
         run: uvx --from 'git+https://github.com/Knuckles-Team/pipelines@main' pipelines-hook change-scope --base-ref "$BASE" --config .config/pre-commit.yaml
+      # Spec-only means the shared classifier says spec and no workspace package
+      # is selected for the changed paths (MEDULLA-CONTRACT-R053.7.2).
+      - name: Resolve the spec-only decision
+        id: spec-scope
+        env:
+          SHARED_SCOPE: ${{ steps.gates-scope.outputs.scope }}
+          SHARED_SKIP: ${{ steps.gates-scope.outputs.skip-hooks }}
+          CRATES: ${{ steps.scope.outputs.crates }}
+        run: |
+          set -euo pipefail
+          if [ "$SHARED_SCOPE" = spec ] && [ "$CRATES" != true ]; then
+            echo "scope=spec" >> "$GITHUB_OUTPUT"
+            echo "skip-hooks=$SHARED_SKIP" >> "$GITHUB_OUTPUT"
+          else
+            echo "scope=code" >> "$GITHUB_OUTPUT"
+            echo "skip-hooks=" >> "$GITHUB_OUTPUT"
+          fi
       - name: Install uv, pre-commit and the hooks' one third-party import
         run: uv pip install --python "$(command -v python)" pre-commit==4.6.2 pyyaml==6.0.3
       - name: Check out meristem gate scripts
@@ -1588,15 +1624,15 @@ jobs:
           PY
 
       - name: Rust toolchain
-        if: runner.environment != 'self-hosted' && steps.gates-scope.outputs.scope != 'spec'
+        if: runner.environment != 'self-hosted' && steps.spec-scope.outputs.scope != 'spec'
         uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
         with:
           toolchain: stable
       - name: Report gates not applicable to this change
-        if: steps.gates-scope.outputs.scope == 'spec'
+        if: steps.spec-scope.outputs.scope == 'spec'
         run: |
           echo "cargo build, clippy and nextest: not applicable: spec/docs-only change"
-          echo "skipped hooks: ${{ steps.gates-scope.outputs.skip-hooks }}"
+          echo "skipped hooks: ${{ steps.spec-scope.outputs.skip-hooks }}"
       - name: Install pre-commit environments
         id: hook-install
         run: |
@@ -1618,7 +1654,7 @@ jobs:
           key: pre-commit-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.config/pre-commit.yaml') }}-${{ steps.hook-rev.outputs.sha }}-partial-${{ github.run_id }}-${{ github.run_attempt }}
       - name: Lint the changed files (pre-commit)
         env:
-          SCOPE_SKIP: ${{ steps.gates-scope.outputs.skip-hooks }}
+          SCOPE_SKIP: ${{ steps.spec-scope.outputs.skip-hooks }}
           BASE: ${{ github.event.pull_request.base.sha }}
           HEAD: ${{ github.event.pull_request.head.sha }}
         run: SKIP="lane-guard,cargo-deny-advisories${SCOPE_SKIP:+,$SCOPE_SKIP}" pre-commit run --config .config/pre-commit.yaml --from-ref "$BASE" --to-ref "$HEAD" --show-diff-on-failure
@@ -1640,7 +1676,7 @@ jobs:
         run: uvx --from 'git+https://github.com/Knuckles-Team/pipelines@main' pipelines-hook spec-trailers --base-ref "origin/${{ github.base_ref }}"
       - name: Select the affected crates
         id: crates
-        if: steps.scope.outputs.code == 'true' && steps.gates-scope.outputs.scope != 'spec'
+        if: steps.scope.outputs.code == 'true' && steps.spec-scope.outputs.scope != 'spec'
         run: |
           set -euo pipefail
           cargo metadata --format-version 1 --no-deps --locked > "$RUNNER_TEMP/cargo-metadata.json"

@@ -20,6 +20,8 @@ method_results! {
     GetNodes(GetNodes) => NodeList<Vec<(String, serde_json::Value)>>;
     GetNodesByLabel(GetNodesByLabel) => NodeList<Vec<(String, serde_json::Value)>>;
     WalletKeyTrustGet(WalletKeyTrustGet) => Json<medulla_types::finance_wallet_trust::WalletKeyTrust>;
+    SchemaProjectionsPut(SchemaProjections / "put") => Raw<medulla_catalog_types::schema_boundary::SchemaBoundary>;
+    SchemaProjectionsList(SchemaProjections / "list") => Raw<medulla_catalog_types::schema_boundary::SchemaProjections>;
     ContextFacts(ContextFacts) => Json<medulla_types::context_facts::ContextFactsResult>;
     CompareAndSetNodeFields(CompareAndSetNodeFields) => Bool<bool>;
     CreateSummaryNode(CreateSummaryNode) => Text<String>;
@@ -68,6 +70,9 @@ method_results! {
     // The event id of a raised finance alert.
     #[cfg(feature = "finance")]
     FinanceAlertRaise(FinanceAlertRaise) => Text<String>;
+    // The ranked factors of a served factor record, strongest first.
+    #[cfg(feature = "finance")]
+    FinanceFactorRecord(FinanceFactorRecord) => Raw<Vec<medulla_result_types::compute_result::finance::FactorRecordResult>>;
     // `(decayed count, evicted ids)`.
     Maintain(Maintain) => Raw<(usize, Vec<String>)>;
     AddSceneObject(AddSceneObject) => Text<String>;

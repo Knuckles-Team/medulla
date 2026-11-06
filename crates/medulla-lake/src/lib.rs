@@ -50,6 +50,8 @@ pub mod acceleration_policy;
 pub mod catalog;
 pub mod delta;
 pub mod iceberg;
+#[cfg(feature = "metastore")]
+pub mod metastore;
 pub mod schema;
 pub mod snapshot;
 

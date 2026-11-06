@@ -36,6 +36,9 @@ pub mod domain_pack;
 // connector-pack `AgentComponent`s. Pure serde; the handler lives in the server.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod fleet_catalog;
+// MEDULLA-FEDERATED-QUERY-R724 — authorization-segmented schema boundary records
+// and the `Method::SchemaProjections` ops.
+pub mod schema_boundary;
 // MEDULLA-FEDERATED-QUERY-R722.3 — host-driven bounded foreign-read lifecycle DTOs.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod foreign_read;

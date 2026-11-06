@@ -183,6 +183,8 @@ pub mod contract;
 pub mod delta;
 // MEDULLA-FEDERATED-QUERY-R006.1 — origin record of a temporal rule-derived fact.
 pub mod derived_fact;
+// MEDULLA-TYPED-PACKS-R651.1 — append-only ontology edit chain records.
+pub mod ontology_edit;
 // MEDULLA-DURABLE-KERNEL-R032 — the native primary-key fast-path routing decision
 // (pgwire/MySQL/MSSQL point operations that bypass DataFusion planning).
 // Pure serde, no dep.

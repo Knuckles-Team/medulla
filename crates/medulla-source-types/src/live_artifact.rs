@@ -21,6 +21,7 @@ pub const LIVE_ARTIFACT_TEMPLATE_UNSAFE: &str = "LIVE_ARTIFACT_TEMPLATE_UNSAFE";
 pub const LIVE_ARTIFACT_DEPTH_EXCEEDED: &str = "LIVE_ARTIFACT_DEPTH_EXCEEDED";
 pub const LIVE_ARTIFACT_SIZE_EXCEEDED: &str = "LIVE_ARTIFACT_SIZE_EXCEEDED";
 pub const LIVE_ARTIFACT_VERSION_CONFLICT: &str = "LIVE_ARTIFACT_VERSION_CONFLICT";
+pub const LIVE_ARTIFACT_NOT_FOUND: &str = "LIVE_ARTIFACT_NOT_FOUND";
 
 /// Template constructs that execute code in some renderer. A template is plain
 /// text with `{{path}}` placeholders and nothing else.
@@ -73,6 +74,25 @@ pub struct RefreshRecord {
     pub row_count: u64,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
+}
+
+/// One stored refresh attempt and the version it produced
+/// (MEDULLA-FEDERATED-QUERY-R701.5). A failed attempt keeps the prior version.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct RefreshEntry {
+    pub record: RefreshRecord,
+    pub new_version: u64,
+}
+
+/// A stored artifact with its retained refresh history, newest first.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct LiveArtifactView {
+    pub artifact: LiveArtifact,
+    pub refreshes: Vec<RefreshEntry>,
 }
 
 /// Where the current data came from.

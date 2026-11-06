@@ -88,6 +88,10 @@ pub enum GraphSchemaOp {
         ontology_iri: String,
         expected_revision: u64,
     },
+    /// Append the inversions of every edit of `subject_iri`, newest first
+    /// (MEDULLA-TYPED-PACKS-R651.3). The edit chain records the revert; it
+    /// never deletes an edit.
+    RevertEdit { subject_iri: String },
     Detach {
         source_id: String,
         #[serde(default)]
@@ -138,6 +142,7 @@ impl GraphSchemaOp {
             Self::AttachPack { .. } => "attach_pack",
             Self::ImportOntology { .. } => "import_ontology",
             Self::WithdrawOntology { .. } => "withdraw_ontology",
+            Self::RevertEdit { .. } => "revert_edit",
             Self::Detach { .. } => "detach",
             Self::AttachApproved { .. } => "attach_approved",
             Self::ValidateRepair { .. } => "validate_repair",
@@ -158,6 +163,7 @@ impl GraphSchemaOp {
             Self::ImportOntology { connector, .. } | Self::WithdrawOntology { connector, .. } => {
                 connector.as_str()
             }
+            Self::RevertEdit { subject_iri } => subject_iri,
         }
     }
 
@@ -179,7 +185,9 @@ impl GraphSchemaOp {
             | Self::ValidateRepair {
                 if_composed_digest, ..
             } => if_composed_digest.as_deref(),
-            Self::ImportOntology { .. } | Self::WithdrawOntology { .. } => None,
+            Self::ImportOntology { .. }
+            | Self::WithdrawOntology { .. }
+            | Self::RevertEdit { .. } => None,
         }
     }
 
@@ -231,6 +239,7 @@ fn validate_operation_payload(operation: &GraphSchemaOp) -> Result<(), String> {
             ontology_iri,
             ..
         } => validate_ontology_identity(connector, ontology_iri),
+        GraphSchemaOp::RevertEdit { subject_iri } => validate_source_key_shape(subject_iri),
         GraphSchemaOp::Detach { source_id, .. } => validate_source_id(source_id),
         GraphSchemaOp::AttachApproved {
             source_id,
@@ -429,6 +438,10 @@ pub struct GraphSchemaCommitted {
     pub graph_version: u64,
     /// False when the request was a no-op against the current set.
     pub changed: bool,
+    /// Digest of the newest ontology edit once the request committed
+    /// (MEDULLA-TYPED-PACKS-R651.5); absent when the graph has no edits.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub edit_head: Option<Digest256>,
 }
 
 /// What a runtime ontology import or withdrawal returns once R103.2 wires the

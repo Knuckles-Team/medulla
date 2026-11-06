@@ -699,6 +699,18 @@ $($variants)*
     FinanceAlertRaise {
         envelope: medulla_types::finance_event_envelope::FinanceAlertEnvelope,
     },
+
+    /// MEDULLA-FINANCE-PRIMITIVES-R018.5: rank factors like `FinanceFactorRank` (same
+    /// four fields) and record each as a `Factor` node with a `derivedFrom` edge to
+    /// every input in its `provenance_keys`, in one batch. `FinanceFactorRank` stays
+    /// the read-only form; gateway routing keys on this variant.
+    #[cfg(feature = "finance")]
+    FinanceFactorRecord {
+        factor_ids: Vec<String>,
+        signals: Vec<Vec<f64>>,
+        provenance_keys: Vec<Vec<String>>,
+        forward_returns: Vec<f64>,
+    },
         ]);
     };
 }

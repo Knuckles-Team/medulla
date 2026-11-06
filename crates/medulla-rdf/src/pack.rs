@@ -129,6 +129,30 @@ pub fn declared_classes_and_ontologies(text: &str) -> (BTreeSet<String>, BTreeSe
     (classes, ontologies)
 }
 
+/// Named object and datatype properties one document declares. Malformed
+/// Turtle declares nothing.
+pub fn declared_properties(text: &str) -> BTreeSet<String> {
+    use crate::oxrdf::{NamedOrBlankNode, Term};
+
+    const PROPERTY_TYPES: [&str; 2] = [
+        "http://www.w3.org/2002/07/owl#ObjectProperty",
+        "http://www.w3.org/2002/07/owl#DatatypeProperty",
+    ];
+    crate::mapping::parse_turtle(text)
+        .unwrap_or_default()
+        .into_iter()
+        .filter_map(|triple| match (&triple.subject, &triple.object) {
+            (NamedOrBlankNode::NamedNode(subject), Term::NamedNode(object))
+                if triple.predicate.as_str() == RDF_TYPE_IRI
+                    && PROPERTY_TYPES.contains(&object.as_str()) =>
+            {
+                Some(subject.as_str().to_string())
+            }
+            _ => None,
+        })
+        .collect()
+}
+
 /// The classes a set of pack ontologies declares that do not join the parent
 /// graph: a declared class that is not itself a parent class and has no named
 /// `rdfs:subClassOf` path, through any of these documents, to a parent class.

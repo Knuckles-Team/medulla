@@ -53,6 +53,7 @@ const SHARED_SERVER_ERRORS: &[&str] = &[
 
 /// A method-specific family wins over the wider domain family.
 const METHOD_PREFIXES: &[(&str, &[&str])] = &[
+    ("LiveArtifact", &["LIVE_ARTIFACT_"]),
     (
         "Source",
         &[
@@ -249,6 +250,8 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     ("AnalyticsJob", &["INVALID_CONFIGURATION"]),
     // MEDULLA-FINANCE-PRIMITIVES-R018.3: mismatched factor record lengths.
     ("FinanceFactorRank", &["FACTOR_RECORD_INVALID"]),
+    // MEDULLA-FINANCE-PRIMITIVES-R018.5: an empty provenance list or an unresolved key.
+    ("FinanceFactorRecord", &["FACTOR_RECORD_INVALID"]),
     // MEDULLA-FINANCE-PRIMITIVES-R750.752: stable codes of the research kernels.
     (
         "FinancePatternClassify",
@@ -260,6 +263,12 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     ),
     // MEDULLA-FINANCE-PRIMITIVES-R904: no current record for the binding in the caller's tenant.
     ("WalletKeyTrustGet", &["WALLET_KEY_TRUST_NOT_FOUND"]),
+    // MEDULLA-FEDERATED-QUERY-R724: a put with bad bounds, an unregistered scope or
+    // an unknown mapping.
+    (
+        "SchemaProjections",
+        &["SCHEMA_BOUNDARY_INVALID", "BOUNDARY_MAPPING_UNKNOWN"],
+    ),
     // MEDULLA-IDENTITY-R701: no delegation record for the work item in the caller's tenant.
     ("GetDelegationRecord", &["DELEGATION_UNKNOWN"]),
     // MEDULLA-DECISION-ENGINE-R152.4: a zero budget, too many node ids or a fact with no source.

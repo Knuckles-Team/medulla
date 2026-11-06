@@ -550,6 +550,25 @@ $($variants)*
         #[serde(default)]
         buffer: u32,
     },
+
+    // ── Live artifacts (MEDULLA-FEDERATED-QUERY-R701.3) ──
+    /// Create or replace a live artifact: a bounded JSON document re-derived from a
+    /// stored query. Durable write; the artifact is a node of label `LiveArtifact`.
+    LiveArtifactPut {
+        artifact: medulla_source_types::live_artifact::LiveArtifact,
+    },
+
+    /// Read a live artifact with its retained refresh history, newest first.
+    LiveArtifactGet {
+        id: String,
+    },
+
+    /// Re-run the stored query and apply the outcome by compare-and-set on `version`.
+    /// A failed run keeps the prior data and is recorded as a refresh attempt.
+    LiveArtifactRefresh {
+        id: String,
+        expected_version: u64,
+    },
         ]);
     };
 }

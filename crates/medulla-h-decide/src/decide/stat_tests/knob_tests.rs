@@ -36,6 +36,7 @@ const FAMILY: &[KnobSpec] = &[
     },
 ];
 
+/// Verifies MEDULLA-DECISION-ENGINE-R179.2: Policy carries knob values; families read them.
 // spec: MEDULLA-DECISION-ENGINE-R179.2
 #[tokio::test]
 async fn decide_reads_the_pinned_knob_value_and_falls_back_to_the_default() {
@@ -62,6 +63,7 @@ async fn decide_reads_the_pinned_knob_value_and_falls_back_to_the_default() {
     assert_eq!(default.policy.knob(&FAMILY[0]), KnobValue::Integer(8));
 }
 
+/// Verifies MEDULLA-DECISION-ENGINE-R179.4: Knob refusals.
 // spec: MEDULLA-DECISION-ENGINE-R179.4
 #[test]
 fn knob_revision_refusals() {

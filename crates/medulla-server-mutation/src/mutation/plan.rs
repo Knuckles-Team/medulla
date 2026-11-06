@@ -108,10 +108,16 @@ pub const GATEWAY_ROUTED: &[&str] = &[
     // MEDULLA-FINANCE-PRIMITIVES-R011.2.3: the served alert door validates the
     // envelope, then the event node and its outbox fact commit as one batch.
     "FinanceAlertRaise",
+    // MEDULLA-FINANCE-PRIMITIVES-R018.5: the served factor record ranks, then
+    // commits the Factor nodes and their derivedFrom edges as one batch.
+    "FinanceFactorRecord",
     // MEDULLA-DECISION-ENGINE-R166.3: `Register` commits one registration node
     // through this gateway; `Read` is answered by the catalog admin route before
     // the graph path and never reaches it.
     "WorkflowRegistry",
+    // MEDULLA-FEDERATED-QUERY-R724: `Put` commits one boundary node through this
+    // gateway; `List` is a query-surface read (see [`is_gateway_routed`]).
+    "SchemaProjections",
     "PruneByLifecycle",
     "BatchUpdate",
     "ClearLedger",
@@ -181,6 +187,10 @@ pub const GATEWAY_ROUTED: &[&str] = &[
     "Sql",
     "CypherQuery",
     "GraphQl",
+    // MEDULLA-FEDERATED-QUERY-R701.3: the live-artifact writes run in the query handler over
+    // the staged graph, like the query-surface writes above.
+    "LiveArtifactPut",
+    "LiveArtifactRefresh",
     // ── L11 rollout batch 4: native RDF write surface (GraphRedb-durable,
     // audited) — routed via `commit_conditional_mutation_async` at the rdf
     // dispatch site because parsing and graph projection require `state`.
@@ -478,6 +488,8 @@ fn query_method_name(m: &Method) -> Option<&'static str> {
     match m {
         Method::Sql { .. } => Some("Sql"),
         Method::CypherQuery { .. } => Some("CypherQuery"),
+        Method::LiveArtifactPut { .. } => Some("LiveArtifactPut"),
+        Method::LiveArtifactRefresh { .. } => Some("LiveArtifactRefresh"),
         #[cfg(feature = "graphql")]
         Method::GraphQl { .. } => Some("GraphQl"),
         _ => None,
@@ -580,6 +592,11 @@ pub fn method_variant_name(m: &Method) -> &'static str {
 /// `medulla_h_graph::graph_ops::try_handle_gateway`, where one kernel owns apply,
 /// durability, audit, and CDC.
 pub fn is_gateway_routed(m: &Method) -> bool {
+    // MEDULLA-FEDERATED-QUERY-R724: a `SchemaProjections` list is a read and is
+    // served by the query surface, not the mutation gateway.
+    if let Method::SchemaProjections { op } = m {
+        return op.is_mutation();
+    }
     GATEWAY_ROUTED.contains(&method_variant_name(m))
 }
 
@@ -679,9 +696,13 @@ pub const LOCAL_ONLY_METHODS: &[&str] = &[
     // The alert's compare-and-set against its stored envelope has no replicated
     // command either (MEDULLA-FINANCE-PRIMITIVES-R011.2.3).
     "FinanceAlertRaise",
+    // The factor batch has no replicated command either (MEDULLA-FINANCE-PRIMITIVES-R018.5).
+    "FinanceFactorRecord",
     // The registration upsert has no replicated command either
     // (MEDULLA-DECISION-ENGINE-R166.3).
     "WorkflowRegistry",
+    // Nor does the schema boundary upsert (MEDULLA-FEDERATED-QUERY-R724).
+    "SchemaProjections",
 ];
 
 /// The local-only names that are NOT gateway-routed.
@@ -733,7 +754,9 @@ fn finance_record_method_name(m: &Method) -> Option<&'static str> {
     match m {
         Method::FinanceRecordPut { .. } => Some("FinanceRecordPut"),
         Method::FinanceAlertRaise { .. } => Some("FinanceAlertRaise"),
+        Method::FinanceFactorRecord { .. } => Some("FinanceFactorRecord"),
         Method::WorkflowRegistry { .. } => Some("WorkflowRegistry"),
+        Method::SchemaProjections { .. } => Some("SchemaProjections"),
         _ => None,
     }
 }

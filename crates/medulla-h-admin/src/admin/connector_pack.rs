@@ -36,6 +36,8 @@ pub(crate) mod seed;
 #[cfg(all(test, feature = "rdf", feature = "shacl"))]
 mod seed_tests;
 mod self_served_catalog;
+#[cfg(feature = "rdf")]
+mod surface_vocab;
 #[cfg(all(test, feature = "redb", feature = "blob"))]
 mod tests;
 

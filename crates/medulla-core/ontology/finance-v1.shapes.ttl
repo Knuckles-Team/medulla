@@ -697,3 +697,42 @@
             sh:minCount 1 ;
             sh:path :cardSummary ] ;
     sh:targetClass :StrategyCard .
+
+# MEDULLA-FINANCE-PRIMITIVES-R018.5: a recorded factor names its id, scores, rank and
+# the kernel revisions that computed them. The derivedFrom edges are checked by the
+# write handler.
+:FactorShape a sh:NodeShape ;
+    sh:description "A factor has one id, one information coefficient, one information ratio, a positive rank and the kernel revisions." ;
+    sh:name "Factor Shape" ;
+    sh:property [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:message "Factor must have exactly one factorId." ;
+            sh:minCount 1 ;
+            sh:path :factorId ],
+        [ sh:datatype xsd:decimal ;
+            sh:maxCount 1 ;
+            sh:message "Factor must have exactly one informationCoefficient." ;
+            sh:minCount 1 ;
+            sh:path :informationCoefficient ],
+        [ sh:datatype xsd:decimal ;
+            sh:maxCount 1 ;
+            sh:message "Factor must have exactly one informationRatio." ;
+            sh:minCount 1 ;
+            sh:path :informationRatio ],
+        [ sh:datatype xsd:integer ;
+            sh:maxCount 1 ;
+            sh:message "factorRank is one positive integer." ;
+            sh:minCount 1 ;
+            sh:minInclusive 1 ;
+            sh:path :factorRank ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:message "Factor must have exactly one irKernelVersion." ;
+            sh:minCount 1 ;
+            sh:path :irKernelVersion ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:message "Factor must have exactly one icKernelVersion." ;
+            sh:minCount 1 ;
+            sh:path :icKernelVersion ] ;
+    sh:targetClass :Factor .

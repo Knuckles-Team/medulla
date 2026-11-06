@@ -34,6 +34,9 @@ method_results! {
     KnowledgeStream(KnowledgeStream) => Raw<KnowledgeStreamBatch>;
     // `[node id, score | nil]` rows of the cross-modal plan.
     UnifiedQuery(UnifiedQuery) => Raw<Vec<(String, Option<f32>)>>;
+    LiveArtifactPut(LiveArtifactPut) => Json<medulla_source_types::live_artifact::LiveArtifact>;
+    LiveArtifactGet(LiveArtifactGet) => Json<medulla_source_types::live_artifact::LiveArtifactView>;
+    LiveArtifactRefresh(LiveArtifactRefresh) => Json<medulla_source_types::live_artifact::RefreshEntry>;
     #[cfg(feature = "federation")]
     QueryForeignColumns(QueryForeignColumns) => Raw<Vec<medulla_types::wire::ForeignColumnRow>>;
     #[cfg(feature = "federation")]

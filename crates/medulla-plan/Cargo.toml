@@ -467,6 +467,8 @@ wat = "1"
 # with the full feature set. `default-features = false` drops criterion's optional
 # `rayon`/HTML plotting deps the gate does not need.
 criterion = { version = "0.8", default-features = false }
+# The live-artifact refresh bench (MEDULLA-FEDERATED-QUERY-R701.6) measures `LiveArtifact::refresh`.
+medulla-source-types = { path = "../medulla-source-types" }
 
 # ── Perf / recall CI benchmark (CONCEPT:MEDULLA-KG.query.hybrid-latency-benches/recall-oracle-bench/synthetic-bench-dataset) ──────────────────────────
 # Representative hybrid pipelines (MATCH→TRAVERSE→RANK, REASON→RANK→TRAVERSE,
@@ -506,6 +508,14 @@ name = "filtered_rank"
 path = "benches/filtered_rank.rs"
 harness = false
 required-features = ["query", "text"]
+
+# ── Live-artifact refresh bench (MEDULLA-FEDERATED-QUERY-R701.6) ──────────────────────
+# One 1,000-row compare-and-set refresh; the key `live_artifact_refresh` in
+# `thresholds.json` caps p50 at 5 ms and p99 at 30 ms.
+[[bench]]
+name = "live_artifact_refresh"
+path = "benches/live_artifact_refresh.rs"
+harness = false
 
 # ── Integration test targets, explicitly gated (D-EGTC-10 / w5-medulla-ci-truly-green) ──
 # Every file under `tests/` names `query`-gated (or narrower) public API
@@ -562,6 +572,11 @@ required-features = ["federation"]
 [[test]]
 name = "incremental_execute_oracle"
 path = "tests/incremental_execute_oracle.rs"
+required-features = ["query"]
+
+[[test]]
+name = "incremental_oracle_coverage"
+path = "tests/incremental_oracle_coverage.rs"
 required-features = ["query"]
 
 [[test]]

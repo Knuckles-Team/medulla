@@ -1,4 +1,6 @@
 #[cfg(feature = "query")]
+use super::live_artifact::{dispatch_live_artifact, is_live_artifact_method};
+#[cfg(feature = "query")]
 use super::uql_statement::handle_uql;
 use super::*;
 use medulla_server_api::api::reentry::TryHandleContext;
@@ -91,6 +93,10 @@ async fn dispatch_query_family(
         return dispatch_sql_query(hctx, method).await;
     }
     #[cfg(feature = "query")]
+    if is_live_artifact_method(&method) {
+        return dispatch_live_artifact(hctx, method).await;
+    }
+    #[cfg(feature = "query")]
     if is_explain_method(&method) {
         return dispatch_explain_method(hctx, method).await;
     }
@@ -119,7 +125,10 @@ async fn dispatch_query_family(
 fn is_sql_query_method(method: &Method) -> bool {
     matches!(
         method,
-        Method::Sql { .. } | Method::UnifiedQuery { .. } | Method::Uql { .. }
+        Method::Sql { .. }
+            | Method::UnifiedQuery { .. }
+            | Method::Uql { .. }
+            | Method::SchemaProjections { .. }
     )
 }
 
@@ -141,6 +150,8 @@ async fn dispatch_sql_query(ctx: &QueryHandlerCtx<'_>, method: Method) -> Result
             prepare,
             foreign_execution,
         } => handle_uql(ctx, text, params, prepare, foreign_execution).await,
+        // MEDULLA-FEDERATED-QUERY-R724: the scope-filtered boundary list.
+        Method::SchemaProjections { op } => handle_schema_projections(ctx, op),
         other => Err(other),
     }
 }

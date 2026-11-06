@@ -2027,6 +2027,15 @@ path = "benches/redb_write_latency_bench.rs"
 harness = false
 required-features = ["full"]
 
+# Execution-kernel latency budget (MEDULLA-FINANCE-PRIMITIVES-R613.6): a 1000-slice
+# schedule solve and a 1_000_000-bar regime fit through the signed dispatch entry,
+# gated by scripts/bench_gate.py.
+[[bench]]
+name = "r613_finance_primitives"
+path = "benches/r613_finance_primitives.rs"
+harness = false
+required-features = ["full", "finance"]
+
 # Hot-path claim latency (MEDULLA-DURABLE-KERNEL-R750.753): claims 1,000 ready
 # WorkItem rows one at a time through the real durable path; budget p50 < 1 ms,
 # p99 < 5 ms. Nightly only, never gates a pull request. `--features full` only.
@@ -2056,6 +2065,13 @@ required-features = ["full"]
 [[bench]]
 name = "schema_drift_classify"
 path = "benches/schema_drift_classify.rs"
+harness = false
+
+# Ontology edit chain (MEDULLA-TYPED-PACKS-R651.6): append plus revert of 100 of
+# 10,000 edits, p99 under 5 ms. Default features; nightly suite.
+[[bench]]
+name = "ontology_edit_revert"
+path = "benches/ontology_edit_revert.rs"
 harness = false
 
 # Anonymous admission budget (MEDULLA-IDENTITY-R003.2): the bounded `anon1.`

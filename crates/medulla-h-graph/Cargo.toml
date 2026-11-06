@@ -15,6 +15,8 @@ path = "src/lib.rs"
 hex = "0.4"
 hmac = "0.12"
 medulla-agent-types = { path = "../medulla-agent-types" }
+medulla-capabilities = { path = "../medulla-capabilities" }
+medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-compute = { path = "../medulla-compute" }
 medulla-core = { path = "../medulla-core" }
 medulla-kernel = { path = "../medulla-kernel" }
@@ -47,13 +49,14 @@ medulla-server-mutation = { path = "../medulla-server-mutation" }
 medulla-server-cdc = { path = "../medulla-server-cdc" }
 medulla-server-auth = { path = "../medulla-server-auth" }
 medulla-finance = { path = "../medulla-finance", optional = true }
+medulla-finance-quant = { path = "../medulla-finance-quant", optional = true }
 medulla-shacl = { path = "../medulla-shacl", optional = true }
 
 [features]
 broker = ["medulla-core/broker", "medulla-graph-core/broker", "medulla-kernel/broker", "medulla-protocol-types/broker", "medulla-server-api/broker", "medulla-server-auth/broker", "medulla-server-cdc/broker", "medulla-server-mutation/broker", "medulla-types/broker"]
 cypher = ["medulla-kernel/cypher", "medulla-persistence/cypher", "medulla-server-api/cypher", "medulla-server-auth/cypher", "medulla-server-mutation/cypher"]
 decide = ["dep:medulla-numeric", "medulla-numeric/decision", "numeric", "redb", "shacl", "medulla-compute/decide", "medulla-persistence-records/decide", "medulla-persistence/decide", "medulla-raft/decide", "medulla-server-api/decide", "medulla-server-ops/decide", "epistemic", "mining", "owl", "owl-dl", "query", "server", "sparql"]
-finance = ["dep:medulla-finance", "medulla-protocol-types/finance", "medulla-types/finance"]
+finance = ["dep:medulla-finance", "dep:medulla-finance-quant", "medulla-result-types/finance", "medulla-protocol-types/finance", "medulla-types/finance"]
 epistemic = ["query", "medulla-kernel/epistemic", "medulla-protocol-types/epistemic", "medulla-raft/epistemic", "medulla-server-api/epistemic", "medulla-server-auth/epistemic", "medulla-server-cdc/epistemic", "medulla-server-mutation/epistemic", "medulla-server-ops/epistemic", "medulla-types/epistemic"]
 graphlearn = ["medulla-compute/graphlearn", "medulla-graph-algos/graphlearn", "medulla-kernel/graphlearn", "medulla-protocol-types/graphlearn", "medulla-result-types/graphlearn", "medulla-server-api/graphlearn", "medulla-server-mutation/graphlearn", "medulla-types/graphlearn"]
 graphql = ["security", "medulla-kernel/graphql", "medulla-protocol-types/graphql", "medulla-raft/graphql", "medulla-server-api/graphql", "medulla-server-auth/graphql", "medulla-server-mutation/graphql", "medulla-server-ops/graphql", "medulla-types/graphql", "server"]

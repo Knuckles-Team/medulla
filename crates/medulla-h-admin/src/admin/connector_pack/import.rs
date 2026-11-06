@@ -22,6 +22,8 @@ use medulla_server_blob::blob::BlobCursors;
 mod annotations;
 mod catalog_attributes;
 mod concept_path;
+#[cfg(feature = "rdf")]
+mod contract_rdf;
 pub(crate) mod crosswalk;
 mod desired;
 mod facts;

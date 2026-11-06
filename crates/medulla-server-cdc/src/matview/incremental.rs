@@ -88,7 +88,9 @@ pub fn encode_operator_state(circuit: &Circuit) -> Result<Vec<u8>, String> {
 }
 
 /// Decode a `matview_operator_state` redb row back into a circuit.
-#[allow(dead_code)]
 pub fn decode_operator_state(blob: &[u8]) -> Result<Circuit, String> {
-    rmp_serde::from_slice(blob).map_err(|e| format!("decode matview operator state: {e}"))
+    let mut circuit: Circuit =
+        rmp_serde::from_slice(blob).map_err(|e| format!("decode matview operator state: {e}"))?;
+    circuit.recount_state_bytes();
+    Ok(circuit)
 }

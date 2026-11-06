@@ -27,6 +27,10 @@ struct DeclaredMapping {
     fields: BTreeMap<String, String>,
     #[serde(default)]
     datatypes: BTreeMap<String, String>,
+    /// The key rule (MEDULLA-TYPED-PACKS-R101.2); read by the contract shapes only.
+    #[serde(default)]
+    #[allow(dead_code)]
+    key_fields: Vec<String>,
 }
 
 /// Decode `schema_mappings` from the declaration JSON, keyed by record type.

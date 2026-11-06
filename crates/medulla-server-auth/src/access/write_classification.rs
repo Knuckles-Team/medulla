@@ -112,6 +112,7 @@ fn requires_write_decision_surface(method: &Method) -> Option<bool> {
         Method::MutationOutbox { op } => Some(op.is_mutation()),
         Method::EdgeIndex { op } => Some(op.is_mutation()),
         Method::WorkflowRegistry { op } => Some(op.is_mutation()),
+        Method::SchemaProjections { op } => Some(op.is_mutation()),
         Method::FleetCatalog { op } => Some(op.is_mutation()),
         Method::PolicyEvolution { op } => Some(op.is_mutation()),
         _ => None,
@@ -458,6 +459,9 @@ pub fn requires_write(method: &Method) -> bool {
                 | Method::DeleteGraph { .. }
                 | Method::ClaimNext { .. }
                 | Method::MintWorkItemClaimCapability { .. }
+                // MEDULLA-FEDERATED-QUERY-R701.3: the artifact node and its refresh records.
+                | Method::LiveArtifactPut { .. }
+                | Method::LiveArtifactRefresh { .. }
         )
     )
 }

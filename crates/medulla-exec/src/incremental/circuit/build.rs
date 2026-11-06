@@ -109,6 +109,7 @@ impl CircuitBuild {
             stages: self.stages,
             window: self.window,
             limit: self.limit,
+            state_bytes: 0,
         }
     }
 }

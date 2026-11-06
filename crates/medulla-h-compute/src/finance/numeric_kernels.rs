@@ -344,13 +344,7 @@ pub(super) fn handle_numeric_kernels(
                     ResultPayload::of::<results::FinanceFactorRank>(
                         records
                             .into_iter()
-                            .map(|r| wire::FactorRecordResult {
-                                factor_id: r.factor_id,
-                                information_coefficient: r.information_coefficient,
-                                information_ratio: r.information_ratio,
-                                rank: r.rank,
-                                input_provenance_keys: r.input_provenance_keys,
-                            })
+                            .map(wire::FactorRecordResult::from)
                             .collect(),
                     ),
                 ),

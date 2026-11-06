@@ -5376,9 +5376,12 @@ dependencies = [
  "hex",
  "hmac 0.12.1",
  "medulla-agent-types",
+ "medulla-capabilities",
+ "medulla-catalog-types",
  "medulla-compute",
  "medulla-core",
  "medulla-finance",
+ "medulla-finance-quant",
  "medulla-graph-algos",
  "medulla-graph-core",
  "medulla-isolation",
@@ -5598,6 +5601,7 @@ dependencies = [
  "medulla-server-ops",
  "medulla-shacl",
  "medulla-shex",
+ "medulla-source-types",
  "medulla-sql",
  "medulla-sql-lang",
  "medulla-sql-udfs",
@@ -5822,12 +5826,14 @@ dependencies = [
 name = "medulla-jobs"
 version = "0.1.0"
 dependencies = [
+ "criterion",
  "hex",
  "medulla-core",
  "medulla-graph-core",
  "medulla-jobs",
  "medulla-mutation-types",
  "medulla-protocol-types",
+ "medulla-resource",
  "medulla-result-types",
  "medulla-storage",
  "medulla-transaction",
@@ -5917,6 +5923,7 @@ dependencies = [
  "polars-parquet",
  "serde",
  "serde_json",
+ "sha2 0.10.9",
  "tempfile",
 ]
 
@@ -6255,6 +6262,7 @@ dependencies = [
  "medulla-retrieval",
  "medulla-semantic-index",
  "medulla-shacl",
+ "medulla-source-types",
  "medulla-sql",
  "medulla-sqlite-format",
  "medulla-stream",

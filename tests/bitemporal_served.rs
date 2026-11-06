@@ -86,6 +86,7 @@ async fn add_node(state: &test_support::SharedState, id: u64, graph: &str, node_
 }
 
 // spec: MEDULLA-DURABLE-KERNEL-R080.2
+/// Verifies MEDULLA-DURABLE-KERNEL-R080.2: Supersession refuses a missing or closed prior edge.
 #[tokio::test]
 async fn second_supersession_refuses_with_edge_already_closed_and_history_is_unchanged() {
     let state = state();

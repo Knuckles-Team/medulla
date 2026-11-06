@@ -83,6 +83,7 @@ async def _history(client: MedullaClient, component_id: str) -> list[dict[str, A
 @pytest.mark.spec("MEDULLA-DECISION-ENGINE-R168.4")
 @pytest.mark.asyncio
 async def test_malformed_lifecycle_refuses() -> None:
+    """Verifies MEDULLA-DECISION-ENGINE-R168.4: Lifecycle refusals."""
     client = await _client()
     component_id = _new_id()
     try:
@@ -106,6 +107,7 @@ async def test_malformed_lifecycle_refuses() -> None:
 @pytest.mark.spec("MEDULLA-DECISION-ENGINE-R168.5")
 @pytest.mark.asyncio
 async def test_transition_entry_names_states_and_digest() -> None:
+    """Verifies MEDULLA-DECISION-ENGINE-R168.5: Lifecycle evidence."""
     client = await _client()
     component_id = _new_id()
     try:

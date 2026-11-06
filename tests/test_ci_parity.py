@@ -42,6 +42,7 @@ def _run(tmp_path: Path, fail_stage: str) -> tuple[int, list[str]]:
     return proc.returncode, log.read_text().split()
 
 
+@pytest.mark.spec("MEDULLA-SDLC-R008")
 @pytest.mark.parametrize("fail_stage", ["", "commit", "pre-push", "manual"])
 def test_parity_exit_follows_every_stage(tmp_path: Path, fail_stage: str) -> None:
     code, stages = _run(tmp_path, fail_stage)

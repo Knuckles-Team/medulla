@@ -2144,8 +2144,8 @@ const TERMS: &[(&str, &str, &str, &str, &str)] = &[
         RETRIEVAL,
         "cites",
         "ObjectProperty",
-        "ScholarlyPaper",
-        "ScholarlyPaper",
+        "ResearchPaper",
+        "ResearchPaper",
     ),
     (
         RETRIEVAL,

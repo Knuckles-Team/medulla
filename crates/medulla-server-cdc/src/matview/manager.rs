@@ -6,11 +6,17 @@
 //! a new field through the shared `ServerState` (owned by another lane).
 
 use std::collections::HashMap;
-use std::sync::OnceLock;
+use std::sync::{Arc, OnceLock};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use medulla_exec::incremental::Circuit;
+use medulla_server_api::knob_config;
+use medulla_types::contract::ServerErrorCode;
 use medulla_types::delta::Delta;
-use parking_lot::Mutex;
+use parking_lot::{Mutex, RwLock};
+
+use super::incremental::{decode_operator_state, encode_operator_state};
+use super::spill::{settle_target, ViewStateSpill};
 
 /// The durable DEFINITION of a plan-backed materialized view (CONCEPT:MEDULLA-KG.storage.plan-backed-matview):
 /// a named `wire::Plan` over ONE `graph`. Serialized (MessagePack) into the disjoint
@@ -35,6 +41,23 @@ pub enum Mode {
     /// Its plan has an op with no incremental form (Traverse/Reason/…): today's
     /// recompute-on-`Get` path, unchanged. A CDC change flags it stale.
     Recompute,
+    /// Incremental, with its circuit spilled out of memory (MEDULLA-INCREMENTAL-VIEWS-R007.3).
+    Spilled,
+}
+
+/// Where an incremental view's circuit lives (MEDULLA-INCREMENTAL-VIEWS-R007.3).
+enum CircuitSlot {
+    Resident(Circuit),
+    /// Spilled to the store; `pending` holds the bytes until the store acknowledges them.
+    Spilled {
+        pending: Option<Arc<Vec<u8>>>,
+    },
+}
+
+fn now_ms() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |d| d.as_millis() as u64)
 }
 
 /// In-RAM per-view tracking: the definition + freshness flag + (for `Incremental` views)
@@ -53,7 +76,7 @@ struct Tracked {
     /// deltas into. Its maintained STATE (membership map / bucket accumulators) is the
     /// authoritative result; the RowSet is projected lazily by `current()` at read, so
     /// per-delta maintenance stays O(delta), not O(view). `None` ⇒ `Mode::Recompute`.
-    circuit: Option<Circuit>,
+    circuit: Option<CircuitSlot>,
     /// The typed reason this view fell back to `Mode::Recompute` (the first unsupported
     /// op) — first-class + queryable (MEDULLA-INCREMENTAL-VIEWS-R001), never a
     /// silent drop. `None` for an `Incremental` view or a boot-reloaded view.
@@ -62,12 +85,51 @@ struct Tracked {
     /// `cdc::ContinuousQuery::through_seq`). Deltas with `seq < through_seq` are already
     /// folded and skipped.
     through_seq: u64,
+    /// Unix milliseconds of the last change folded in (or of install); orders spills.
+    last_change_ms: u64,
+}
+
+impl Tracked {
+    /// Drop the circuit and fall back to recompute with `reason`; the next read recomputes.
+    fn demote(&mut self, reason: String) {
+        self.mode = Mode::Recompute;
+        self.circuit = None;
+        self.fallback_reason = Some(reason);
+        self.through_seq = 0;
+        self.stale = true;
+    }
+
+    fn resident_bytes(&self) -> u64 {
+        match &self.circuit {
+            Some(CircuitSlot::Resident(circuit)) => circuit.state_bytes(),
+            _ => 0,
+        }
+    }
+}
+
+/// A view over its per-view state ceiling falls back to recompute with a typed reason
+/// (MEDULLA-INCREMENTAL-VIEWS-R007.2).
+fn enforce_view_ceiling(t: &mut Tracked, ceiling: u64) {
+    if t.resident_bytes() <= ceiling {
+        return;
+    }
+    let reason = ServerErrorCode::StateBudgetExceeded.as_str();
+    medulla_kernel::metrics::view_demoted("plan", reason);
+    tracing::warn!(
+        target: "medulla::matview",
+        view = %t.def.name,
+        ceiling,
+        reason,
+        "incremental matview exceeded its state ceiling and falls back to recompute",
+    );
+    t.demote(reason.to_string());
 }
 
 /// The process-global plan-backed matview registry.
 #[derive(Default)]
 pub struct PlanMatViewManager {
     views: Mutex<HashMap<String, Tracked>>,
+    spill: RwLock<Option<Arc<dyn ViewStateSpill>>>,
 }
 
 static MANAGER: OnceLock<PlanMatViewManager> = OnceLock::new();
@@ -101,6 +163,7 @@ impl PlanMatViewManager {
                 circuit: None,
                 fallback_reason,
                 through_seq: 0,
+                last_change_ms: 0,
             },
         );
     }
@@ -116,16 +179,120 @@ impl PlanMatViewManager {
                 def,
                 stale: false,
                 mode: Mode::Incremental,
-                circuit: Some(circuit),
+                circuit: Some(CircuitSlot::Resident(circuit)),
                 fallback_reason: None,
                 through_seq,
+                last_change_ms: now_ms(),
             },
         );
     }
 
     /// The maintenance mode of `name`, if tracked.
     pub fn mode(&self, name: &str) -> Option<Mode> {
-        self.views.lock().get(name).map(|t| t.mode)
+        self.views.lock().get(name).map(|t| match t.circuit {
+            Some(CircuitSlot::Spilled { .. }) => Mode::Spilled,
+            _ => t.mode,
+        })
+    }
+
+    /// Install the store that backs spilled view state (MEDULLA-INCREMENTAL-VIEWS-R007.3).
+    pub fn install_spill(&self, spill: Arc<dyn ViewStateSpill>) {
+        *self.spill.write() = Some(spill);
+    }
+
+    /// The store acknowledged the write of `bytes` for `name`: the pending copy is released.
+    pub fn spill_acknowledged(&self, name: &str, bytes: &Arc<Vec<u8>>) {
+        let mut views = self.views.lock();
+        if let Some(CircuitSlot::Spilled { pending }) =
+            views.get_mut(name).and_then(|t| t.circuit.as_mut())
+        {
+            if pending
+                .as_ref()
+                .is_some_and(|held| Arc::ptr_eq(held, bytes))
+            {
+                *pending = None;
+            }
+        }
+    }
+
+    /// Bring a spilled circuit back into memory from `pending` or the store. A view whose
+    /// state cannot be read falls back to recompute, so no answer rests on lost state.
+    fn ensure_resident(&self, t: &mut Tracked) -> bool {
+        let Some(CircuitSlot::Spilled { pending }) = &t.circuit else {
+            return t.circuit.is_some();
+        };
+        let blob = match pending {
+            Some(bytes) => Some(bytes.as_ref().clone()),
+            None => self.spill.read().as_ref().and_then(|s| s.get(&t.def.name)),
+        };
+        match blob.map(|b| decode_operator_state(&b)) {
+            Some(Ok(circuit)) => {
+                t.circuit = Some(CircuitSlot::Resident(circuit));
+                true
+            }
+            other => {
+                let why = other
+                    .and_then(Result::err)
+                    .unwrap_or_else(|| "missing".into());
+                t.demote(format!("spilled view state unreadable: {why}"));
+                false
+            }
+        }
+    }
+
+    /// Spill the least recently changed resident views (never one of `keep`) until the
+    /// resident total is under 90 percent of `budget`. Returns the spilled blobs, to be
+    /// handed to the store after the lock is released.
+    fn spill_over_budget(
+        &self,
+        views: &mut HashMap<String, Tracked>,
+        keep: &[String],
+        budget: u64,
+    ) -> Vec<(String, Arc<Vec<u8>>)> {
+        let mut out = Vec::new();
+        if self.spill.read().is_none() {
+            return out;
+        }
+        let mut total: u64 = views.values().map(Tracked::resident_bytes).sum();
+        if total <= budget {
+            return out;
+        }
+        let mut order: Vec<(u64, String)> = views
+            .values()
+            .filter(|t| t.resident_bytes() > 0 && !keep.contains(&t.def.name))
+            .map(|t| (t.last_change_ms, t.def.name.clone()))
+            .collect();
+        order.sort();
+        for (_, name) in order {
+            if total <= settle_target(budget) {
+                break;
+            }
+            let Some(t) = views.get_mut(&name) else {
+                continue;
+            };
+            let Some(CircuitSlot::Resident(circuit)) = &t.circuit else {
+                continue;
+            };
+            let Ok(blob) = encode_operator_state(circuit) else {
+                continue;
+            };
+            total = total.saturating_sub(circuit.state_bytes());
+            let bytes = Arc::new(blob);
+            t.circuit = Some(CircuitSlot::Spilled {
+                pending: Some(bytes.clone()),
+            });
+            out.push((name, bytes));
+        }
+        out
+    }
+
+    fn flush_spills(&self, puts: Vec<(String, Arc<Vec<u8>>)>) {
+        let Some(spill) = self.spill.read().clone() else {
+            return;
+        };
+        for (name, bytes) in puts {
+            spill.put(&name, bytes);
+        }
     }
 
     /// The typed fallback reason for a `Mode::Recompute` view (why its plan was not
@@ -143,26 +310,37 @@ impl PlanMatViewManager {
     /// `Recompute`-mode view — the caller then takes the recompute path). This projection
     /// is O(view); the per-delta maintenance in `apply_delta` is O(delta).
     pub fn incremental_rows(&self, name: &str) -> Option<Vec<(String, Option<f32>)>> {
-        let views = self.views.lock();
-        let t = views.get(name)?;
-        if t.mode != Mode::Incremental {
+        let mut views = self.views.lock();
+        let t = views.get_mut(name)?;
+        if t.mode != Mode::Incremental || !self.ensure_resident(t) {
             return None;
         }
-        let circuit = t.circuit.as_ref()?;
-        Some(
-            circuit
-                .current()
-                .rows()
-                .iter()
-                .map(|r| (r.id.clone(), r.score))
-                .collect(),
-        )
+        let Some(CircuitSlot::Resident(circuit)) = &t.circuit else {
+            return None;
+        };
+        let rows = circuit
+            .current()
+            .rows()
+            .iter()
+            .map(|r| (r.id.clone(), r.score))
+            .collect();
+        let puts = self.spill_over_budget(
+            &mut views,
+            &[name.to_string()],
+            knob_config::knobs().views_memory_bytes,
+        );
+        drop(views);
+        self.flush_spills(puts);
+        Some(rows)
     }
 
     /// A snapshot of an `Incremental` view's compiled circuit (for durable operator-state
     /// persistence). `None` for unknown/`Recompute` views.
     pub fn circuit_snapshot(&self, name: &str) -> Option<Circuit> {
-        self.views.lock().get(name).and_then(|t| t.circuit.clone())
+        match self.views.lock().get(name)?.circuit.as_ref()? {
+            CircuitSlot::Resident(circuit) => Some(circuit.clone()),
+            CircuitSlot::Spilled { .. } => None,
+        }
     }
 
     /// INCREMENTAL CDC maintenance (MEDULLA-INCREMENTAL-VIEWS-R001): fold one
@@ -181,55 +359,71 @@ impl PlanMatViewManager {
     /// reason code (`DELTA_WEIGHT_OVERFLOW`) and marked stale, so the next read
     /// recomputes it.
     fn apply_signed(&self, graph: &str, seq: u64, delta: &Delta) -> usize {
-        let mut demoted: Vec<(PlanMatView, String)> = Vec::new();
-        let mut n = 0;
-        {
+        let knobs = knob_config::knobs();
+        self.apply_limited(
+            graph,
+            seq,
+            delta,
+            (knobs.view_state_bytes, knobs.views_memory_bytes),
+        )
+    }
+
+    /// [`Self::apply_signed`] under explicit `(per-view ceiling, resident budget)` limits.
+    fn apply_limited(&self, graph: &str, seq: u64, delta: &Delta, limits: (u64, u64)) -> usize {
+        let (ceiling, budget) = limits;
+        let mut changed = Vec::new();
+        let puts = {
             let mut views = self.views.lock();
             for t in views.values_mut() {
-                if t.mode != Mode::Incremental || t.def.graph != graph {
+                if t.mode != Mode::Incremental || t.def.graph != graph || seq < t.through_seq {
                     continue;
                 }
-                if seq < t.through_seq {
-                    continue;
-                }
-                if let Some(circuit) = t.circuit.as_mut() {
-                    // O(delta) maintenance: fold the signed delta into the circuit's state
-                    // ONLY (no O(view) result projection here — `Get` projects `current()`
-                    // lazily). `touched` is the rows-touched instrument (bounded by the
-                    // delta size, independent of view size — the O(delta) cost proof).
-                    let touched = if delta.is_empty() {
-                        0
-                    } else {
-                        match circuit.apply(delta) {
-                            Ok(touched) => touched,
-                            Err(err) => {
-                                demoted.push((t.def.clone(), err.code().as_str().to_string()));
-                                continue;
-                            }
-                        }
-                    };
-                    t.through_seq = seq + 1;
-                    n += 1;
-                    tracing::trace!(
-                        target: "medulla::matview",
-                        view = %t.def.name,
-                        graph = %graph,
-                        seq,
-                        delta = delta.len(),
-                        touched,
-                        "incremental matview maintained one CDC delta",
-                    );
+                if self.fold_one(t, seq, delta, ceiling) {
+                    changed.push(t.def.name.clone());
                 }
             }
+            self.spill_over_budget(&mut views, &changed, budget)
+        };
+        self.flush_spills(puts);
+        changed.len()
+    }
+
+    /// Fold `delta` into one view's circuit. A refused delta or an over-ceiling state
+    /// demotes the view. Returns whether the view was maintained.
+    fn fold_one(&self, t: &mut Tracked, seq: u64, delta: &Delta, ceiling: u64) -> bool {
+        if !self.ensure_resident(t) {
+            return false;
         }
-        for (def, reason) in demoted {
-            let name = def.name.clone();
-            self.insert_recompute(def, Some(reason));
-            if let Some(t) = self.views.lock().get_mut(&name) {
-                t.stale = true;
+        let Some(CircuitSlot::Resident(circuit)) = t.circuit.as_mut() else {
+            return false;
+        };
+        // O(delta) maintenance: fold the signed delta into the circuit's state ONLY (no
+        // O(view) result projection here: `Get` projects `current()` lazily). `touched` is
+        // the rows-touched instrument (bounded by the delta size, independent of view size).
+        let touched = if delta.is_empty() {
+            0
+        } else {
+            match circuit.apply(delta) {
+                Ok(touched) => touched,
+                Err(err) => {
+                    t.demote(err.code().as_str().to_string());
+                    return false;
+                }
             }
-        }
-        n
+        };
+        t.through_seq = seq + 1;
+        t.last_change_ms = now_ms();
+        tracing::trace!(
+            target: "medulla::matview",
+            view = %t.def.name,
+            graph = %t.def.graph,
+            seq,
+            delta = delta.len(),
+            touched,
+            "incremental matview maintained one CDC delta",
+        );
+        enforce_view_ceiling(t, ceiling);
+        true
     }
 
     /// The stored definition for `name`, if any.
@@ -348,6 +542,7 @@ mod tests {
     /// MEDULLA-INCREMENTAL-VIEWS-R002.3: a delta the circuit refuses demotes the view to
     /// recompute mode with the typed reason code, and the view reads as stale.
     // spec: MEDULLA-INCREMENTAL-VIEWS-R002.3
+    /// Verifies MEDULLA-INCREMENTAL-VIEWS-R002.3: Wiring: the circuit consolidates before it folds.
     #[test]
     fn apply_failure_demotes_with_typed_reason() {
         use medulla_types::delta::ZRow;
@@ -384,6 +579,7 @@ mod tests {
     }
 
     // spec: MEDULLA-INCREMENTAL-VIEWS-R001.6
+    /// Verifies MEDULLA-INCREMENTAL-VIEWS-R001.6: Define, change and read are wired
     #[test]
     fn apply_delta_maintains_incremental_view_end_to_end() {
         use medulla_types::wire::{Op, Plan, Pred};
@@ -457,6 +653,7 @@ mod tests {
     }
 
     // spec: MEDULLA-INCREMENTAL-VIEWS-R001.7
+    /// Verifies MEDULLA-INCREMENTAL-VIEWS-R001.7: A fallback keeps a typed reason
     #[test]
     fn note_fallback_records_queryable_reason() {
         // The first-class fallback: an unsupported-op plan is Recompute mode AND exposes
@@ -536,5 +733,101 @@ mod tests {
         assert!(m.drop_view("v"));
         assert!(!m.drop_view("v"), "second drop is a no-op");
         assert!(m.get("v").is_none());
+    }
+
+    /// `n` Doc inserts with ids `<prefix>0..`.
+    fn docs(prefix: &str, n: usize) -> Delta {
+        use medulla_types::delta::ZRow;
+        let props = serde_json::json!({"type": "Doc"})
+            .as_object()
+            .cloned()
+            .unwrap();
+        Delta::from(
+            (0..n)
+                .map(|i| ZRow::insert(format!("{prefix}{i}"), props.clone()))
+                .collect::<Vec<_>>(),
+        )
+    }
+
+    fn scan_view(m: &PlanMatViewManager, name: &str, graph: &str, label: &str) {
+        use medulla_types::wire::{Op, Plan};
+        let plan = Plan::new(vec![Op::Scan {
+            label: label.into(),
+        }]);
+        let circuit = Circuit::compile(&plan).unwrap();
+        let def = PlanMatView {
+            name: name.into(),
+            graph: graph.into(),
+            plan,
+        };
+        m.install_incremental(def, circuit, 0);
+    }
+
+    // spec: MEDULLA-INCREMENTAL-VIEWS-R007.2
+    /// Verifies MEDULLA-INCREMENTAL-VIEWS-R007.2: Per-view ceiling demotes
+    #[test]
+    fn view_over_ceiling_demotes_with_typed_reason() {
+        let m = PlanMatViewManager::default();
+        scan_view(&m, "big", "g", "Doc");
+        scan_view(&m, "small", "g", "Other");
+        m.apply_limited("g", 0, &docs("d", 100), (1_000, u64::MAX));
+        assert_eq!(m.mode("big"), Some(Mode::Recompute));
+        assert_eq!(
+            m.fallback_reason("big").as_deref(),
+            Some("STATE_BUDGET_EXCEEDED")
+        );
+        assert!(m.is_stale("big"));
+        assert!(m.incremental_rows("big").is_none());
+        assert_eq!(m.mode("small"), Some(Mode::Incremental));
+    }
+
+    /// A spill sink that remembers the last blob it was given per view.
+    #[derive(Default)]
+    struct MemorySpill {
+        store: Mutex<HashMap<String, Arc<Vec<u8>>>>,
+    }
+
+    impl ViewStateSpill for MemorySpill {
+        fn put(&self, name: &str, bytes: Arc<Vec<u8>>) {
+            self.store.lock().insert(name.to_string(), bytes);
+        }
+        fn get(&self, name: &str) -> Option<Vec<u8>> {
+            self.store.lock().get(name).map(|b| b.as_ref().clone())
+        }
+    }
+
+    // spec: MEDULLA-INCREMENTAL-VIEWS-R007.3
+    /// Verifies MEDULLA-INCREMENTAL-VIEWS-R007.3: Spill and reload by least recent change
+    #[test]
+    fn least_recent_view_spills_and_reloads_equal() {
+        let m = PlanMatViewManager::default();
+        let sink = Arc::new(MemorySpill::default());
+        m.install_spill(sink.clone());
+        scan_view(&m, "va", "ga", "Doc");
+        scan_view(&m, "vb", "gb", "Doc");
+        let limits = (u64::MAX, 700);
+        m.apply_limited("ga", 0, &docs("a", 10), limits);
+        let before = m.incremental_rows("va").unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(3));
+        m.apply_limited("gb", 0, &docs("b", 10), limits);
+        assert_eq!(m.mode("va"), Some(Mode::Spilled), "the older view spills");
+        assert_eq!(
+            m.mode("vb"),
+            Some(Mode::Incremental),
+            "the changed view stays"
+        );
+        assert!(sink.get("va").is_some());
+        // A read reloads it from `pending`, equal to what it held.
+        assert_eq!(m.incremental_rows("va").unwrap(), before);
+        assert_eq!(m.mode("va"), Some(Mode::Incremental));
+        // After a change to `va`, `vb` is the least recent and spills; once acknowledged,
+        // the reload comes from the store alone.
+        std::thread::sleep(std::time::Duration::from_millis(3));
+        m.apply_limited("ga", 1, &docs("c", 1), limits);
+        assert_eq!(m.mode("vb"), Some(Mode::Spilled));
+        let put = sink.store.lock().get("vb").cloned().unwrap();
+        m.spill_acknowledged("vb", &put);
+        drop(put);
+        assert_eq!(m.incremental_rows("vb").unwrap().len(), 10);
     }
 }

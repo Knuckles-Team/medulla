@@ -147,6 +147,8 @@ pub(crate) const ACCESS_RS_MUTATES_CONDITIONAL: &[&str] = &[
     "DecisionFit",
     // MEDULLA-DECISION-ENGINE-R166.3: `Register` writes; `Read` is a graph read.
     "WorkflowRegistry",
+    // MEDULLA-FEDERATED-QUERY-R724: `put` writes; `list` is a graph read.
+    "SchemaProjections",
     // EH-345: record_discovery/set_override/clear_override write; list/lookup read.
     "FleetCatalog",
     "DecisionLog",
@@ -308,12 +310,18 @@ pub(crate) const NATIVE_GRAPHREDB_DURABLE: &[&str] = &[
     // MEDULLA-FINANCE-PRIMITIVES-R011.2.3: the alert door commits its event node
     // and its finance.events.v1 outbox fact as one batch at its own commit point.
     "FinanceAlertRaise",
+    // MEDULLA-FINANCE-PRIMITIVES-R018.5: a factor record self-translates into the
+    // one `Method::BatchUpdate`, which carries the durable effect.
+    "FinanceFactorRecord",
     // MEDULLA-FINANCE-PRIMITIVES-R004.3.2: an admitted record put self-translates
     // into `Method::AddNode`, which carries the durable effect.
     "FinanceRecordPut",
     // MEDULLA-DECISION-ENGINE-R166.3: a registration self-translates into the
     // one `Method::AddNode` upsert, which carries the durable effect.
     "WorkflowRegistry",
+    // MEDULLA-FEDERATED-QUERY-R724: a boundary put self-translates into the one
+    // `Method::AddNode` upsert, which carries the durable effect.
+    "SchemaProjections",
     "FromMsgpack",
     "GraphQl",
     "IcvConfigure",

@@ -14,6 +14,7 @@
 
 mod approved;
 pub(crate) mod attach_pack;
+mod edits;
 #[cfg(test)]
 mod finance_tests;
 mod ontology_import;
@@ -52,6 +53,17 @@ pub(crate) struct PackSchemaDocument {
     pub(crate) body: Arc<str>,
 }
 
+/// Everything one pack head projects into its pack graph: the schema documents
+/// of the reserved source, and the connector surface triples
+/// (MEDULLA-TYPED-PACKS-R102.2) as one N-Triples document.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct PackProjectionDocuments {
+    pub(crate) shapes: Vec<PackSchemaDocument>,
+    pub(crate) ontologies: Vec<PackSchemaDocument>,
+    pub(crate) crosswalks: Vec<PackSchemaDocument>,
+    pub(crate) surface: Option<Arc<str>>,
+}
+
 /// Tenant-safe, non-reversible physical graph identity for one connector pack.
 ///
 /// Both inputs are canonical identifiers from verified/typed authority.  The
@@ -80,16 +92,13 @@ pub fn pack_projection_graph_name(
 /// newer head with no semantic documents installs an empty Pack-origin
 /// tombstone, preserving the record high-water mark so stale schema cannot be
 /// resurrected.
-#[allow(clippy::too_many_arguments)]
 pub(crate) async fn commit_pack_projection(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     verified: &medulla_server_api::authority_context::VerifiedRequestContext,
     connector: &medulla_types::contract::ResourceId,
     record_id: &str,
-    shapes: Vec<PackSchemaDocument>,
-    ontologies: Vec<PackSchemaDocument>,
-    crosswalks: Vec<PackSchemaDocument>,
+    documents: PackProjectionDocuments,
     idempotency_key: &str,
 ) -> Result<medulla_catalog_types::graph_schema::GraphSchemaCommitted, String> {
     let graph_name = pack_projection_graph_name(verified.tenant(), connector)?;
@@ -167,17 +176,20 @@ pub(crate) async fn commit_pack_projection(
     let record_id = record_id.to_string();
     let response =
         medulla_server_ops::api::ingest::graph::commit_gateway(&ctx, &plan, &method, move |core| {
-            apply_pack_source(
+            let committed = apply_pack_source(
                 core,
                 &result_graph_name,
                 &connector,
                 &record_id,
-                shapes,
-                ontologies,
-                crosswalks,
+                documents.shapes,
+                documents.ontologies,
+                documents.crosswalks,
                 None,
+            )?;
+            write_pack_surface(core, &result_graph_name, documents.surface.as_deref())?;
+            ResultPayload::of::<medulla_protocol_types::result_contract::reasoning::GraphSchema>(
+                committed,
             )
-            .and_then(ResultPayload::of::<medulla_protocol_types::result_contract::reasoning::GraphSchema>)
         })
         .await;
     if let Some(refusal) = response.refusal_text() {
@@ -188,6 +200,22 @@ pub(crate) async fn commit_pack_projection(
             .map_err(|error| format!("GraphSchema projection result decode failed: {error}")),
         _ => Err("GraphSchema projection returned an undeclared result encoding".to_string()),
     }
+}
+
+/// Write one pack head's surface triples into its graph, inside the gateway.
+#[cfg(all(feature = "redb", feature = "blob", feature = "shacl"))]
+fn write_pack_surface(core: &GraphCore, graph: &str, surface: Option<&str>) -> Result<(), String> {
+    crate::admin::connector_pack::reproject::surface::write_surface(core, graph, surface)
+}
+
+/// A build without the pack projection substrates has no surface to write.
+#[cfg(not(all(feature = "redb", feature = "blob", feature = "shacl")))]
+fn write_pack_surface(
+    _core: &GraphCore,
+    _graph: &str,
+    _surface: Option<&str>,
+) -> Result<(), String> {
+    Ok(())
 }
 
 /// Attach, replace or detach one keyed schema source, inside the gateway.
@@ -232,7 +260,9 @@ pub(crate) async fn handle_gateway(
         GraphSchemaOp::ValidateRepair { .. } => {
             approved::handle_validate(ctx, plan, method, op).await
         }
-        GraphSchemaOp::ImportOntology { .. } | GraphSchemaOp::WithdrawOntology { .. } => {
+        GraphSchemaOp::ImportOntology { .. }
+        | GraphSchemaOp::WithdrawOntology { .. }
+        | GraphSchemaOp::RevertEdit { .. } => {
             handle_ontology_gateway(tenant_id, ctx, plan, method, op).await
         }
     }
@@ -264,6 +294,9 @@ async fn handle_ontology_gateway(
         let committed = match &op {
             GraphSchemaOp::WithdrawOntology { .. } => {
                 ontology_import::withdraw_ontology(core, &graph_name, &op, &authority)
+            }
+            GraphSchemaOp::RevertEdit { subject_iri } => {
+                ontology_import::revert_edit(core, &graph_name, subject_iri)
             }
             _ => ontology_import::import_ontology(core, &graph_name, &op, &authority),
         };
@@ -377,6 +410,7 @@ pub(crate) fn apply_pack_source(
         composed_digest: sources.composed_digest().to_hex(),
         graph_version: core.version().saturating_add(u64::from(changed)),
         changed,
+        edit_head: edits::head(core),
     })
 }
 
@@ -506,6 +540,7 @@ fn apply(
     use medulla_catalog_types::{graph_schema::GraphSchemaCommitted, graph_schema::GraphSchemaOp};
 
     op.validate()?;
+    let before = edits::source_digest(core, op.source_token());
     let mut sources = (*core.schema_sources()).clone();
     check_expected_digest(&sources, op.expected_composed_digest())?;
     let changed = match op {
@@ -520,7 +555,8 @@ fn apply(
         GraphSchemaOp::AttachPack { .. }
         | GraphSchemaOp::ValidateRepair { .. }
         | GraphSchemaOp::ImportOntology { .. }
-        | GraphSchemaOp::WithdrawOntology { .. } => {
+        | GraphSchemaOp::WithdrawOntology { .. }
+        | GraphSchemaOp::RevertEdit { .. } => {
             unreachable!(
                 "attach-pack, validate-repair and runtime ontologies have their own routes"
             )
@@ -535,6 +571,7 @@ fn apply(
     if changed {
         core.install_schema_sources(Arc::new(sources));
     }
+    let edit_head = edits::after_attach(core, op, before, changed)?;
     ResultPayload::of::<medulla_protocol_types::result_contract::reasoning::GraphSchema>(
         GraphSchemaCommitted {
             schema_version: medulla_catalog_types::graph_schema::GRAPH_SCHEMA_RESULT_SCHEMA_VERSION,
@@ -542,6 +579,7 @@ fn apply(
             composed_digest,
             graph_version: core.version().saturating_add(u64::from(changed)),
             changed,
+            edit_head,
         },
     )
 }

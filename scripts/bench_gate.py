@@ -58,6 +58,11 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     )
     ap.add_argument("--criterion-dir", type=Path, default=repo / "target" / "criterion")
     ap.add_argument(
+        "--finance-report",
+        type=Path,
+        default=repo / "target" / "finance-r613-report.json",
+    )
+    ap.add_argument(
         "--recall-json", type=Path, default=repo / "target" / "medulla_plan_recall.json"
     )
     return ap
@@ -117,6 +122,43 @@ def _check_latency(
         reported.append(line)
         if failure is not None:
             failures.append(failure)
+    return reported, failures
+
+
+def _check_finance_p99(report_path: Path, section: dict) -> tuple[list[str], list[str]]:
+    """MEDULLA-FINANCE-PRIMITIVES-R613.6: p99 budget and 10 percent regression gate.
+
+    A group over its absolute p99 budget fails; a group more than the tolerance
+    above its stored baseline fails. A missing report is skipped (the bench is
+    feature-gated), as the latency gate skips a bench that was not built.
+    """
+    if not report_path.exists():
+        return [f"  finance r613: (skipped — no report at {report_path.name})"], []
+    groups = load_json(report_path)["groups"]
+    tolerance = float(section["regression_tolerance"])
+    baselines = section.get("baseline_p99_ms", {})
+    reported: list[str] = []
+    failures: list[str] = []
+    for name, budget in section["p99_ms_max"].items():
+        if name not in groups:
+            failures.append(f"{name} missing from {report_path.name}")
+            continue
+        p99 = float(groups[name]["p99_ms"])
+        base = baselines.get(name)
+        over_budget = p99 > float(budget)
+        regressed = base is not None and p99 > float(base) * (1.0 + tolerance)
+        ok = not (over_budget or regressed)
+        reported.append(
+            f"  {name}: p99 {p99:.3f} ms  (budget {float(budget):.1f} ms)  "
+            f"{'OK' if ok else 'FAIL'}"
+        )
+        if over_budget:
+            failures.append(f"{name} p99 {p99:.3f} ms > budget {float(budget):.1f} ms")
+        if regressed:
+            failures.append(
+                f"{name} p99 {p99:.3f} ms regressed over {tolerance:.0%} above "
+                f"baseline {float(base):.3f} ms"
+            )
     return reported, failures
 
 
@@ -198,13 +240,18 @@ def main() -> int:
     recall_reported, recall_failures = _check_recall(args.recall_json, recall_floor)
     latency_reported, latency_failures = _check_latency(args.criterion_dir, ceilings)
 
+    finance_reported, finance_failures = (
+        _check_finance_p99(args.finance_report, thresholds["finance_r613"])
+        if "finance_r613" in thresholds
+        else ([], [])
+    )
     p99_reported, p99_failures = _check_p99(
         args.criterion_dir, thresholds.get("latency_p99_ns_max", {})
     )
 
     return _emit_result(
-        recall_reported + latency_reported + p99_reported,
-        recall_failures + latency_failures + p99_failures,
+        recall_reported + latency_reported + finance_reported + p99_reported,
+        recall_failures + latency_failures + finance_failures + p99_failures,
     )
 
 

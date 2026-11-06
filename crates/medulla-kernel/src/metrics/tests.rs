@@ -112,3 +112,30 @@ async fn test_http_exposition_endpoint() {
     assert!(text.starts_with("HTTP/1.1 200 OK"), "got: {text}");
     assert!(text.contains("medulla_requests_total"));
 }
+
+// spec: MEDULLA-INCREMENTAL-VIEWS-R005.4
+/// Verifies MEDULLA-INCREMENTAL-VIEWS-R005.4: Prometheus view metrics
+#[test]
+fn view_metrics_render_with_bounded_labels() {
+    view_changes_applied("plan", 3);
+    view_demoted("plan", "MATVIEW_NOT_INCREMENTAL");
+    view_shadow_checked("sql", "match");
+    set_view_state_bytes("plan", 128);
+    let out = render();
+    for needle in [
+        "medulla_view_changes_applied_total{family=\"plan\"}",
+        "medulla_view_demotions_total{family=\"plan\",reason_code=\"MATVIEW_NOT_INCREMENTAL\"}",
+        "medulla_view_shadow_checks_total{family=\"sql\",outcome=\"match\"}",
+        "medulla_view_state_bytes{family=\"plan\"}",
+        "medulla_views_resident_state_bytes",
+    ] {
+        assert!(out.contains(needle), "missing {needle} in:\n{out}");
+    }
+    // Only the family, reason code and outcome label names exist: no view or graph label.
+    for line in out.lines().filter(|l| l.starts_with("medulla_view")) {
+        assert!(
+            !line.contains("view=") && !line.contains("graph="),
+            "{line}"
+        );
+    }
+}

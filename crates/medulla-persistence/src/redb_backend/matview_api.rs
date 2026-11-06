@@ -122,6 +122,20 @@ impl RedbBackend {
         })?
     }
 
+    /// Read one persisted incremental-matview operator-state snapshot (`None` when absent).
+    #[cfg(feature = "matview")]
+    pub fn matview_operator_state_get(&self, name: &str) -> Result<Option<Vec<u8>>, String> {
+        let (reply, rx) = std::sync::mpsc::sync_channel(1);
+        self.shard0()
+            .tx
+            .send(Cmd::MatViewOperatorStateGet {
+                name: name.to_string(),
+                reply,
+            })
+            .map_err(|_| "redb writer thread is gone".to_string())?;
+        await_writer_reply(&rx, "matview_operator_state_get")?
+    }
+
     /// Scan every persisted incremental-matview operator-state snapshot `(name, blob)`.
     #[cfg(feature = "matview")]
     pub fn matview_operator_state_scan(&self) -> MatViewScanResult {
@@ -131,5 +145,39 @@ impl RedbBackend {
             .send(Cmd::MatViewOperatorStateScan { reply })
             .map_err(|_| "redb writer thread is gone".to_string())?;
         await_writer_reply(&rx, "matview_operator_state_scan")?
+    }
+}
+
+#[cfg(all(test, feature = "matview"))]
+mod tests {
+    use super::*;
+
+    // spec: MEDULLA-INCREMENTAL-VIEWS-R007.4
+    /// Verifies MEDULLA-INCREMENTAL-VIEWS-R007.4: Wiring: the store backs the spill
+    #[tokio::test(flavor = "multi_thread")]
+    async fn operator_state_get_reads_one_row() {
+        let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
+        let dir = tempfile::tempdir().expect("tempdir");
+        let backend =
+            RedbBackend::open_with_shards(dir.path().to_string_lossy().into_owned(), 64, 1)
+                .expect("open");
+        assert_eq!(backend.matview_operator_state_get("v1"), Ok(None));
+        backend
+            .matview_operator_state_put("v1", b"one".to_vec())
+            .await
+            .expect("put v1");
+        backend
+            .matview_operator_state_put("v2", b"two".to_vec())
+            .await
+            .expect("put v2");
+        assert_eq!(
+            backend.matview_operator_state_get("v1"),
+            Ok(Some(b"one".to_vec()))
+        );
+        assert_eq!(
+            backend.matview_operator_state_get("v2"),
+            Ok(Some(b"two".to_vec()))
+        );
+        assert_eq!(backend.matview_operator_state_get("absent"), Ok(None));
     }
 }

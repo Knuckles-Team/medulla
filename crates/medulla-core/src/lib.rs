@@ -55,4 +55,8 @@ pub mod ontology_codegen;
 /// MEDULLA-PYENGINE-PLAN.md` §9.2 Gate A / BUG-PE-003) that makes an unconfigured silent
 /// fallback path structurally unrepresentable.
 pub mod persist_lock;
+/// Quality rule compilation, scoring and failure tracking (MEDULLA-UNIFIED-DATA-PLANE-R762.2).
+pub mod quality;
 pub mod registry;
+/// MEDULLA-INCREMENTAL-VIEWS-R005.1 — the process-global view status board.
+pub mod view_status;

@@ -74,6 +74,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T068 [US3] MEDULLA-CONTRACT-R053.6 Callers of the old binary names use the subcommands
 - [ ] T069 [US3] MEDULLA-CONTRACT-R053.7 A tag publishes only a commit main CI already passed
 - [ ] T109 [US3] MEDULLA-CONTRACT-R053.7.1 Whole-repo hooks run at pre-push or in CI, never at commit
+- [ ] T110 [US3] MEDULLA-CONTRACT-R053.7.2 A spec or docs file that a package's sources read selects that package on a pull request
 - [ ] T070 [US3] MEDULLA-CONTRACT-R053.8 The wheel base is the extension crate; each platform publishes independently
 - [ ] T071 [US3] MEDULLA-CONTRACT-R053.9 Every release wheel folds in the server built for its own platform
 - [ ] T072 [US3] MEDULLA-CONTRACT-R053.10 The packaged server reports the release version

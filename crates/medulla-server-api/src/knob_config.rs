@@ -96,6 +96,18 @@ impl KnobType for u64 {
     }
 }
 
+impl KnobType for u32 {
+    fn parse(raw: &str) -> Option<Self> {
+        raw.trim().parse().ok()
+    }
+    fn of(value: KnobValue) -> Self {
+        match value {
+            KnobValue::U64(v) => u32::try_from(v).expect("u32 knob bounds fit in u32"),
+            other => unreachable!("knob table type mismatch: {other:?}"),
+        }
+    }
+}
+
 impl KnobType for i64 {
     fn parse(raw: &str) -> Option<Self> {
         raw.trim().parse().ok()
@@ -261,6 +273,22 @@ knobs! {
     pattern_shadow_ratio_min: f64 = "pattern.shadow_ratio_min", F64(2.0), [1.5, 4.0], "ratio", Tunable;
     /// Opposite-shadow ceiling as a fraction of the range.
     pattern_wick_max: f64 = "pattern.wick_max", F64(0.1), [0.0, 0.3], "ratio", Tunable;
+    /// Claim pacing bucket capacity for the background class (MEDULLA-PLACEMENT-R750.753).
+    claim_pacing_background_capacity: u32 = "claim_pacing.background_capacity", U64(64), [1, 100_000], "tokens", Tunable;
+    /// Claim pacing refill rate for the background class.
+    claim_pacing_background_refill_per_s: u32 = "claim_pacing.background_refill_per_s", U64(32), [1, 100_000], "tokens per second", Tunable;
+    /// Claim pacing bucket capacity for the low class (MEDULLA-PLACEMENT-R750.753).
+    claim_pacing_low_capacity: u32 = "claim_pacing.low_capacity", U64(64), [1, 100_000], "tokens", Tunable;
+    /// Claim pacing refill rate for the low class.
+    claim_pacing_low_refill_per_s: u32 = "claim_pacing.low_refill_per_s", U64(32), [1, 100_000], "tokens per second", Tunable;
+    /// Claim pacing bucket capacity for the normal class (MEDULLA-PLACEMENT-R750.753).
+    claim_pacing_normal_capacity: u32 = "claim_pacing.normal_capacity", U64(64), [1, 100_000], "tokens", Tunable;
+    /// Claim pacing refill rate for the normal class.
+    claim_pacing_normal_refill_per_s: u32 = "claim_pacing.normal_refill_per_s", U64(32), [1, 100_000], "tokens per second", Tunable;
+    /// Claim pacing bucket capacity for the foreground class (MEDULLA-PLACEMENT-R750.753).
+    claim_pacing_foreground_capacity: u32 = "claim_pacing.foreground_capacity", U64(64), [1, 100_000], "tokens", Tunable;
+    /// Claim pacing refill rate for the foreground class.
+    claim_pacing_foreground_refill_per_s: u32 = "claim_pacing.foreground_refill_per_s", U64(32), [1, 100_000], "tokens per second", Tunable;
     /// Read-audit queue depth: a full queue refuses the read (MEDULLA-IDENTITY-R610.5).
     identity_read_audit_queue_depth: u64 = "identity.read_audit_queue_depth", U64(4_096), [64, 65_536], "entries", Tunable;
     /// Metric look-back of the tenant telemetry snapshot read (MEDULLA-ORCH-VOCAB-R804).
@@ -311,6 +339,14 @@ knobs! {
     graphlearn_nary_max_candidates: u64 = "graphlearn.nary_max_candidates", U64(1_000), [1, 100_000], "tuples", Tunable;
     /// Lowest probability an n-ary hypothesis may score and still be returned.
     graphlearn_nary_min_score: f64 = "graphlearn.nary_min_score", F64(0.5), [0.0, 1.0], "probability", Tunable;
+    /// Refresh records kept per live artifact (MEDULLA-FEDERATED-QUERY-R701.5).
+    artifact_refresh_history: u64 = "artifact.refresh_history", U64(20), [1, 1_000], "records", Tunable;
+    /// Largest maintained state of one incremental view; past it the view demotes to recompute (MEDULLA-INCREMENTAL-VIEWS-R007.2).
+    view_state_bytes: u64 = "view.state_bytes", U64(268_435_456), [1_048_576, 17_179_869_184], "bytes", Tunable;
+    /// Resident maintained state of all incremental views; past it the least recently changed view spills (MEDULLA-INCREMENTAL-VIEWS-R007.3).
+    views_memory_bytes: u64 = "views.memory_bytes", U64(1_073_741_824), [16_777_216, 68_719_476_736], "bytes", Tunable;
+    /// Ontology naming convention mode: 0 warns, 1 refuses (MEDULLA-TYPED-PACKS-R651.2).
+    ontology_naming_mode: u64 = "ontology.naming_mode", U64(0), [0, 1], "mode", Tunable;
 }
 
 fn refusal(code: ServerErrorCode, knob: &str, detail: String) -> KnobRefusal {
