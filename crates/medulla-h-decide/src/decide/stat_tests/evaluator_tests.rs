@@ -5,6 +5,7 @@
 
 use super::consumer_tests::declared_abstention;
 use super::retrieval_tests::{clone_record, executed_template, grant, principal_of, sql};
+use super::scorer_tests::{evaluated, scorer_fit};
 use super::*;
 use medulla_decision_types::decision::statistical::log::NamedEvaluator;
 use serde_json::json;
@@ -202,4 +203,47 @@ async fn a_role_grant_admits_its_holders_but_never_the_committer() {
     let seen: Option<DecisionLogEntry> =
         decode(super::super::log::handle_decision_log(&h.state, 9, &verified, get).await).unwrap();
     assert!(seen.is_none(), "a role grant is evaluation-only: no read");
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R117.1.2
+#[tokio::test]
+async fn decision_eval_reports_feature_power() {
+    let h = Harness::new().await;
+    let fixture = route_fixture(&h).await;
+    let data = dataset(&fixture.schema_digest, &fixture.ids, &fixture.values, 400);
+    let job: DecisionJobRecord = decode(
+        super::super::jobs::handle_decision_fit(
+            &h.state,
+            2,
+            &verified(),
+            scorer_fit(&fixture, &data),
+        )
+        .await,
+    )
+    .unwrap();
+    let DecisionJobOutput::Fit {
+        draft_sha256,
+        draft_length,
+        ..
+    } = succeeded(&job).clone()
+    else {
+        panic!("fit output")
+    };
+    let receipt = evaluated(&h, 3, (draft_sha256.clone(), draft_length), data.clone()).await;
+    let power = receipt.feature_power.as_slice();
+    assert_eq!(
+        power.len(),
+        data.feature_names.len(),
+        "one report per feature"
+    );
+    let knobs = medulla_server_api::knob_config::knobs();
+    for (report, name) in power.iter().zip(data.feature_names.iter()) {
+        assert_eq!(&report.feature, name);
+        assert_eq!(report.ic_decay.len() as u64, knobs.eval_ic_max_lag);
+        assert!(report.ic_interval.lower <= report.ic_interval.upper);
+        assert!(report.effective_sample_size.value > 0);
+    }
+    // The bootstrap seed is the dataset digest: the same dataset, the same report.
+    let again = evaluated(&h, 4, (draft_sha256, draft_length), data).await;
+    assert_eq!(again.feature_power, receipt.feature_power);
 }

@@ -6,7 +6,7 @@
 
 use super::*;
 
-fn scorer_fit(fixture: &RouteFixture, data: &LabelledDataset) -> DecisionFitOp {
+pub(super) fn scorer_fit(fixture: &RouteFixture, data: &LabelledDataset) -> DecisionFitOp {
     DecisionFitOp::Submit {
         request: Box::new(DecisionFitRequest {
             tenant_id: TENANT.to_string(),
@@ -26,7 +26,7 @@ fn scorer_fit(fixture: &RouteFixture, data: &LabelledDataset) -> DecisionFitOp {
     }
 }
 
-async fn evaluated(
+pub(super) async fn evaluated(
     h: &Harness,
     request_id: u64,
     (sha256, length): (String, u64),

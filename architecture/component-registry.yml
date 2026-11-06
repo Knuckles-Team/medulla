@@ -4062,6 +4062,7 @@ components:
       - "tests/test_merge_safe_registries.py"
       - "tests/jobs/__init__.py"
       - "tests/shex_served.rs"
+      - "tests/attached_conformance.rs"
       - "tests/test_check_decide_budgets.py"
       - "tests/test_ci_parity.py"
       - "tests/test_no_crate_level_lint_allows.py"

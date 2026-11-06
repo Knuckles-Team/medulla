@@ -239,6 +239,12 @@ knobs! {
     pattern_shadow_ratio_min: f64 = "pattern.shadow_ratio_min", F64(2.0), [1.5, 4.0], "ratio", Tunable;
     /// Opposite-shadow ceiling as a fraction of the range.
     pattern_wick_max: f64 = "pattern.wick_max", F64(0.1), [0.0, 0.3], "ratio", Tunable;
+    /// Longest lag of a feature-power IC decay curve (MEDULLA-DECISION-ENGINE-R117.1.2).
+    eval_ic_max_lag: u64 = "eval.ic_max_lag", U64(5), [1, 64], "lags", Tunable;
+    /// Bootstrap resamples of a feature-power IC interval.
+    eval_bootstrap_resamples: u64 = "eval.bootstrap_resamples", U64(1_000), [100, 10_000], "resamples", Tunable;
+    /// Coverage of a feature-power IC interval.
+    eval_ci_level: f64 = "eval.ci_level", F64(0.95), [0.5, 0.999], "fraction", Tunable;
 }
 
 fn refusal(code: ServerErrorCode, knob: &str, detail: String) -> KnobRefusal {
