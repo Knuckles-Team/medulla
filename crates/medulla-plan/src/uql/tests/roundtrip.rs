@@ -28,6 +28,7 @@ fn round_trip(plan: &Plan) -> Result<(), String> {
     }
 }
 
+/// Verifies MEDULLA-FEDERATED-QUERY-R728: Exhaustive OpKind and PredKind printer and parser round trip.
 /// Every `OpKind` and `PredKind` variant the one `kinds!` macro generates prints,
 /// parses and canonicalizes, against the empty builder-only allowlist
 /// (MEDULLA-FEDERATED-QUERY-R728).
@@ -206,6 +207,7 @@ fn op() -> impl Strategy<Value = Op> {
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(512))]
 
+    /// Verifies MEDULLA-FEDERATED-QUERY-R728: 512 print, parse and compare cases.
     #[test]
     fn roundtrip_property_512_cases(ops in prop::collection::vec(op(), 1..6)) {
         let plan = Plan::new(ops);
