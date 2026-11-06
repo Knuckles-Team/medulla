@@ -375,6 +375,7 @@ fn refusals_render_their_stable_code_first() {
     );
 }
 
+/// Verifies MEDULLA-DECISION-ENGINE-R010.100.2: Fold existing per-feature refusal enums
 // spec: MEDULLA-DECISION-ENGINE-R010.100.2
 #[test]
 fn outcome_refusal_enums_map_to_folded_codes() {

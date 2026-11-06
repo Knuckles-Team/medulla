@@ -76,6 +76,7 @@ pub struct BeliefReviseRequest {
 mod tests {
     use super::*;
 
+    /// Verifies MEDULLA-DECISION-ENGINE-R700.1: Model
     // spec: MEDULLA-DECISION-ENGINE-R700.1
     #[test]
     fn belief_types_round_trip_with_golden_vector() {
