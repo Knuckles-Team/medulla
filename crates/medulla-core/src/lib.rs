@@ -58,3 +58,5 @@ pub mod persist_lock;
 /// Quality rule compilation, scoring and failure tracking (MEDULLA-UNIFIED-DATA-PLANE-R762.2).
 pub mod quality;
 pub mod registry;
+/// MEDULLA-INCREMENTAL-VIEWS-R005.1 — the process-global view status board.
+pub mod view_status;
