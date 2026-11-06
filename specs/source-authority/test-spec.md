@@ -60,3 +60,7 @@ Each entry below is planned. The test file or function does not exist in the tre
 - `MEDULLA-SRC-AUTH-R012.7`: `crates/medulla-h-graph/src/graph_ops/source_sync_tests.rs::sync_refusals_leave_state_unchanged` (planned, L3): the test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-SRC-AUTH-R012.8`: `crates/medulla-h-graph/src/graph_ops/source_sync_tests.rs::report_lists_conflicts_with_both_digests` (planned, L3): the test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-SRC-AUTH-R012.9`: `tests/federated/test_source_sync_served.py::test_two_way_sync_applies_proposes_and_records_conflicts` (planned, L4): the test does not exist yet; the owning change adds it at this exact path.
+
+### MEDULLA-SRC-AUTH-R013 tests
+
+- `MEDULLA-SRC-AUTH-R013`: `crates/medulla-rdf/tests/source_authority_fixture.rs::data_location_yields_a_proposed_pack_row` (planned, L2): the test does not exist yet; the owning change adds it at this exact path.

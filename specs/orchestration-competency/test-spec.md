@@ -106,6 +106,8 @@ Every row below names a test that does not exist yet. The test file and function
 | T-092 | MEDULLA-CQ-ORCH-R703.8 | L4 | `tests/competency/test_process_sync_served.py::test_unconfigured_aris_source_is_unavailable` | An unconfigured ARIS source is unavailable, never an empty success |
 | T-093 | MEDULLA-CQ-ORCH-R704.9 | L1 | `crates/medulla-compute/src/process_plan/tests.rs::plan_code_names_no_source_format` | The plan reads only the canonical form proves its row as stated in requirements.md |
 | T-094 | MEDULLA-CQ-ORCH-R704.9 | L1 | `crates/medulla-compute/src/process_plan/tests.rs::equal_canonical_digest_gives_equal_plan_digest` | Equal canonical digests give equal plan digests |
+| T-041.1 | MEDULLA-CQ-ORCH-R012.1 | L4 | `tests/orchestration/test_orchestration_competency_served.py::test_steps_carry_contract_params_results_and_refusals` | Each step carries the contract's tool, order, params, result fields and refusal codes |
+| T-041.2 | MEDULLA-CQ-ORCH-R012.2 | L4 | `tests/orchestration/test_orchestration_competency_served.py::test_step_names_linked_skill_and_agent_prompt` | Each step names its linked skill and the task's agent prompts |
 
 ## Negative and boundary cases
 

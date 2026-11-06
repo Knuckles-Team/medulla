@@ -120,3 +120,5 @@ Producer first: ontology terms, shapes and authority mappings, then fixtures and
 - [ ] T108 [US4] MEDULLA-CQ-ORCH-R705.8 Architecture exchange refusal
 - [ ] T109 [US4] MEDULLA-CQ-ORCH-R705.9 Architecture exchange evidence
 - [ ] T110 [US4] MEDULLA-CQ-ORCH-R705.10 Architecture exchange hot-path proof
+- [ ] T117 [US2] MEDULLA-CQ-ORCH-R012.1 Steps come from imported tool-use contracts
+- [ ] T118 [US2] MEDULLA-CQ-ORCH-R012.2 The guiding skill and agent prompt come from imported links

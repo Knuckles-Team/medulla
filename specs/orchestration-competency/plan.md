@@ -173,3 +173,4 @@ Gates for any change under these rows: `cargo test -p medulla-rdf --test orchest
 - meristem applies branch, decision and approval-wait steps (consumer of R704.5 and `MEDULLA-DECISION-ENGINE-R180`); contract `contracts/meristem-process-control-steps.md` names the consumer rows.
 - Connectors: the process engine connector `camunda-mcp` (`MEDULLA-CQ-ORCH-R703`), the ARIS connector `aris-mcp` (`MEDULLA-CQ-ORCH-R701` and `R703`) and the architecture-modelling connector `archimate-mcp` (`MEDULLA-CQ-ORCH-R705`); contract `contracts/connector-process-and-architecture-sync.md` names their rows.
 - Process source contract: provider `MEDULLA-CQ-ORCH-R701`, consumers `camunda-mcp` and `aris-mcp`; contract `contracts/process-source-canonical.md`.
+- scion-sdk contract vocabulary: `SCION-CONNECTOR-CONTROL-R916.3` provides the served `contracts.ttl` (consumer rows R012.1 and R012.2); contract `contracts/scion-surface-contracts.md`.
