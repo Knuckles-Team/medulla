@@ -5,6 +5,7 @@ use serde::Serialize;
 use super::snapshot::Consistency;
 pub use medulla_types::metadata_acceleration::FragmentExecutionMode;
 use medulla_types::metadata_acceleration::{SnapshotIsolation, SnapshotSemantics};
+use medulla_types::search_source::ScoreKind;
 
 /// How a fragment was fetched.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
@@ -66,6 +67,23 @@ pub struct FragmentTrace {
     pub read_at_ms: u64,
     /// How the query's fragments of this source relate in time.
     pub consistency: Consistency,
+    /// The index request this fragment pushed, when it was a pushed search
+    /// (MEDULLA-UNIFIED-DATA-PLANE-R038.5.5).
+    pub search: Option<SearchReceipt>,
+}
+
+/// The receipt of one pushed search. The fragment's `source` label names the source; the
+/// endpoint never appears.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct SearchReceipt {
+    /// SHA-256 over the canonical pushed request, 64 lowercase hex characters.
+    pub query_digest: String,
+    /// The `k` the request carried.
+    pub k: u32,
+    /// What the returned scores mean.
+    pub score_kind: ScoreKind,
+    /// Results the source returned across every page.
+    pub returned: usize,
 }
 
 impl FragmentTrace {
@@ -83,6 +101,7 @@ impl FragmentTrace {
             snapshot: None,
             read_at_ms: 0,
             consistency: Consistency::Snapshot,
+            search: None,
             keys_pushed: 0,
             limit_pushed: None,
             requests: 0,

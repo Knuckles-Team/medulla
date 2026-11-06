@@ -307,6 +307,8 @@ knobs! {
     federation_replica_lag_bound_ms: u64 = "federation.replica_lag_bound_ms", U64(5_000), [0, 600_000], "ms", Tunable;
     /// Longest a federated source statement may run.
     federation_statement_timeout_ms: u64 = "federation.statement_timeout_ms", U64(30_000), [1_000, 600_000], "ms", Tunable;
+    /// Most rows a copy-served fragment may hold (MEDULLA-UNIFIED-DATA-PLANE-R038.2.2).
+    acceleration_max_copy_rows: u64 = "acceleration.max_copy_rows", U64(1_000_000), [1, 100_000_000], "rows", Tunable;
     /// Claim evidence weight cap (MEDULLA-DECISION-ENGINE-R652.2).
     claims_weight_cap_ppm: u64 = "claims.weight_cap_ppm", U64(6_000_000), [1_000_000, 12_000_000], "ppm", Tunable;
     /// Claim log-odds floor to enter `accepted`.

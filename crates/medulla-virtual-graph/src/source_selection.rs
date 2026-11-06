@@ -1000,12 +1000,20 @@ fn resolve_mode(
         row.freshness_max_age_seconds
             .is_some_and(|max_age| query.now_epoch_seconds.saturating_sub(**watermark) <= max_age)
     });
+    let now_ms = query.now_epoch_seconds.saturating_mul(1000);
+    let valid_through_ms = fixture
+        .copy_watermarks
+        .get(&row.row)
+        .zip(row.freshness_max_age_seconds)
+        .map_or(0, |(mark, max_age)| {
+            mark.saturating_add(max_age).saturating_mul(1000)
+        });
     let policy = AccelerationPolicy {
         source_supports_copy: fixture.copy_capable.contains(&row.source),
         hot_subset_predicate: row.class.clone(),
         freshness_watermark: fresh_watermark.map(u64::to_string),
     };
-    match policy.resolve_mode() {
+    match policy.resolve_mode(now_ms, valid_through_ms) {
         FragmentExecutionMode::Copy => Ok((AuditSourceMode::Accelerated, Some(reason.clone()))),
         FragmentExecutionMode::Live if fixture.copy_only.contains(&row.source) => {
             Err(NotUsedReason::Stale)

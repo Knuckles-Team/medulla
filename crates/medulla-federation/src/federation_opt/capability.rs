@@ -136,6 +136,23 @@ pub struct RemoteRequest {
     pub limit: Option<usize>,
     /// The page of a paged read.
     pub page: Option<PageRequest>,
+    /// The relevance search pushed into a search-capable source
+    /// (MEDULLA-UNIFIED-DATA-PLANE-R038.5.2).
+    pub search: Option<SearchPush>,
+}
+
+/// What a search-capable source is asked to evaluate in its own request: a text match, a
+/// nearest-neighbour query, structured filters and the top `k` results.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize)]
+pub struct SearchPush {
+    /// The full-text query, when the search has one.
+    pub text: Option<String>,
+    /// The embedding space of a vector query, when the search has one.
+    pub vector_space: Option<String>,
+    /// Structured filters, as field and value pairs.
+    pub filters: Vec<(String, String)>,
+    /// The most results the source returns for this request.
+    pub k: u32,
 }
 
 impl RemoteRequest {
