@@ -159,6 +159,10 @@ pub trait TxnApi: Send + Sync {
     async fn reload_matviews(&self, state: &Arc<RwLock<ServerState>>) -> Result<usize, String> {
         Err("this seam method is not built into the installed implementation".to_string())
     }
+
+    /// Start the shadow-check task of incremental plan views (MEDULLA-INCREMENTAL-VIEWS-R008.3).
+    #[allow(unused_variables)]
+    fn spawn_shadow_checks(&self, state: Arc<RwLock<ServerState>>) {}
 }
 
 /// Wire protocol behaviour reachable from crates below `medulla-wire`.

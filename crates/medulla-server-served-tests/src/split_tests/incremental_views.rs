@@ -128,3 +128,98 @@ async fn ontology_retraction_updates_closure_incrementally() {
         expected.classification.subsumers
     );
 }
+
+#[cfg(feature = "matview")]
+mod shadow_checks {
+    use super::*;
+
+    const SHADOW_VIEW: &str = "shadow-docs";
+    const SHADOW_BUDGET: Duration = Duration::from_secs(2);
+
+    fn doc_properties() -> Vec<u8> {
+        rmp_serde::to_vec_named(&serde_json::json!({ "type": "Doc" })).expect("doc properties")
+    }
+
+    /// Dispatch `count` `AddNode` writes with ids `<prefix>0..`.
+    async fn write_docs(state: &Arc<RwLock<ServerState>>, graph: &str, prefix: &str, count: u64) {
+        for i in 0..count {
+            let write = Method::AddNode {
+                node_id: format!("{prefix}{i}"),
+                properties_msgpack: doc_properties(),
+            };
+            let request = request(100 + i, graph, write);
+            let reply =
+                medulla_server_router::dispatch::request_boundary::dispatch(state, request).await;
+            assert!(reply.error.is_none(), "AddNode failed: {:?}", reply.error);
+        }
+    }
+
+    /// Poll until the view leaves incremental mode or the budget runs out.
+    async fn wait_for_demotion(name: &str) {
+        let manager = medulla_server_cdc::matview::manager();
+        let deadline = tokio::time::Instant::now() + SHADOW_BUDGET;
+        while manager.mode(name) == Some(medulla_server_cdc::matview::Mode::Incremental)
+            && tokio::time::Instant::now() < deadline
+        {
+            tokio::time::sleep(Duration::from_millis(50)).await;
+        }
+    }
+
+    // spec: MEDULLA-INCREMENTAL-VIEWS-R008.4
+    #[tokio::test(flavor = "multi_thread")]
+    async fn corrupted_state_is_caught_and_demoted() {
+        let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
+        let args = ["view.shadow_every=10", "view.shadow_tick_ms=100"].map(String::from);
+        let knobs = medulla_server_api::knob_config::load_knobs(&args, |_| None).expect("knobs");
+        medulla_server_api::knob_config::install(knobs);
+        let state = test_state(&[CREATOR]);
+        create_test_graph(&state, "shadow", 1).await;
+        let plan = medulla_types::wire::Plan::new(vec![medulla_types::wire::Op::Scan {
+            label: "Doc".into(),
+        }]);
+        let define = Method::PlanMatViewDefine {
+            name: SHADOW_VIEW.into(),
+            graph: "shadow".into(),
+            plan,
+        };
+        let reply = medulla_server_router::dispatch::request_boundary::dispatch(
+            &state,
+            request(2, "shadow", define),
+        )
+        .await;
+        assert!(reply.error.is_none(), "define failed: {:?}", reply.error);
+        let seam = medulla_server_ops::api::query_txn::txn_seam(&state).await;
+        seam.expect("txn seam").spawn_shadow_checks(state.clone());
+
+        write_docs(&state, "shadow", "a", 10).await;
+        let manager = medulla_server_cdc::matview::manager();
+        assert!(
+            manager.corrupt_for_test(SHADOW_VIEW),
+            "the circuit held a member"
+        );
+        write_docs(&state, "shadow", "b", 10).await;
+        wait_for_demotion(SHADOW_VIEW).await;
+
+        assert_eq!(
+            manager.mode(SHADOW_VIEW),
+            Some(medulla_server_cdc::matview::Mode::Recompute)
+        );
+        assert_eq!(
+            manager.fallback_reason(SHADOW_VIEW).as_deref(),
+            Some("SHADOW_MISMATCH")
+        );
+        let get = Method::PlanMatViewGet {
+            name: SHADOW_VIEW.into(),
+        };
+        let reply = medulla_server_router::dispatch::request_boundary::dispatch(
+            &state,
+            request(3, "shadow", get),
+        )
+        .await;
+        let Some(medulla_protocol_types::protocol::ResultPayload::Raw(bytes)) = reply.result else {
+            panic!("PlanMatViewGet answered {reply:?}");
+        };
+        let rows: Vec<(String, Option<f32>)> = rmp_serde::from_slice(&bytes).expect("rows");
+        assert_eq!(rows.len(), 20, "the recompute holds every written document");
+    }
+}

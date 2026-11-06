@@ -119,4 +119,9 @@ impl medulla_server_ops::api::query_txn::TxnApi for TxnSeam {
     async fn reload_matviews(&self, state: &Arc<RwLock<ServerState>>) -> Result<usize, String> {
         crate::dist_compute::reload_matviews(state).await
     }
+
+    #[cfg(feature = "matview")]
+    fn spawn_shadow_checks(&self, state: Arc<RwLock<ServerState>>) {
+        crate::matview_shadow::spawn_shadow_checks(state);
+    }
 }

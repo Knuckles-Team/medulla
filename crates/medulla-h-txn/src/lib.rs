@@ -10,6 +10,9 @@
 pub mod dist_compute;
 
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
+#[cfg(feature = "matview")]
+pub mod matview_shadow;
+
 #[cfg(feature = "sqlite-file")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod sqlite_file;

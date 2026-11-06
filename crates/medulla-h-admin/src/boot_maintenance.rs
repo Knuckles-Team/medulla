@@ -52,6 +52,9 @@ fn spawn_matview_reload(state: Arc<RwLock<ServerState>>) {
         let started = Instant::now();
         tracing::info!("post-bind maintenance: materialized-view reload started");
         let txn = medulla_server_ops::api::query_txn::txn_seam(&state).await;
+        if let Some(txn) = &txn {
+            txn.spawn_shadow_checks(state.clone());
+        }
         let reloaded = match txn {
             Some(txn) => txn.reload_matviews(&state).await,
             None => Err("INTERNAL: transaction seam is not installed".to_string()),

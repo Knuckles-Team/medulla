@@ -372,7 +372,7 @@ where
 /// Clone a graph's `GraphCore` out from under the registry read lock. `None` = the graph
 /// does not exist.
 #[cfg(feature = "matview")]
-async fn resolve_core(
+pub(crate) async fn resolve_core(
     state: &Arc<RwLock<ServerState>>,
     graph: &str,
 ) -> Option<std::sync::Arc<medulla_graph_core::graph::GraphCore>> {

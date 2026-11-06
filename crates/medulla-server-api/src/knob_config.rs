@@ -311,6 +311,10 @@ knobs! {
     graphlearn_nary_max_candidates: u64 = "graphlearn.nary_max_candidates", U64(1_000), [1, 100_000], "tuples", Tunable;
     /// Lowest probability an n-ary hypothesis may score and still be returned.
     graphlearn_nary_min_score: f64 = "graphlearn.nary_min_score", F64(0.5), [0.0, 1.0], "probability", Tunable;
+    /// Applied changes between two shadow checks of an incremental view (MEDULLA-INCREMENTAL-VIEWS-R008.1).
+    view_shadow_every: u64 = "view.shadow_every", U64(1_000), [10, 1_000_000], "applied changes", Tunable;
+    /// Period of the incremental-view shadow check task (MEDULLA-INCREMENTAL-VIEWS-R008.1).
+    view_shadow_tick_ms: u64 = "view.shadow_tick_ms", U64(1_000), [100, 60_000], "ms", Tunable;
 }
 
 fn refusal(code: ServerErrorCode, knob: &str, detail: String) -> KnobRefusal {

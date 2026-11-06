@@ -309,6 +309,19 @@ impl Circuit {
         }
     }
 
+    /// Drop one member (the least id) of the last membership stage, so the maintained state
+    /// diverges from a recompute. `false` when no stage holds a member. Test seam of the
+    /// shadow check (MEDULLA-INCREMENTAL-VIEWS-R008.4).
+    #[cfg(feature = "test-support")]
+    pub fn drop_one_member_for_test(&mut self) -> bool {
+        let members = self.stages.last_mut().map(|stage| &mut stage.members);
+        let victim = members.as_ref().and_then(|m| m.keys().min().cloned());
+        match (members, victim) {
+            (Some(members), Some(id)) => members.remove(&id).is_some(),
+            _ => false,
+        }
+    }
+
     /// INDEPENDENT full recompute from the complete current node set — NO maintained
     /// state, a from-scratch scan reproducing `exec`. Used by the circuit-vs-circuit
     /// oracle to isolate delta-maintenance from the shared per-row predicates. `nodes` is
