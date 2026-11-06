@@ -378,3 +378,41 @@ async def test_connection_pool_uses_the_shared_transport_function(
     await pool._create_client()
     assert calls == ["unix:///run/medulla.sock"]
     assert captured["socket_path"] == "/run/medulla.sock"
+
+
+# --- R611.6: journey ---------------------------------------------------------
+
+
+@pytest.mark.spec("MEDULLA-PLACEMENT-R611.6")
+@pytest.mark.asyncio
+async def test_pool_breaker_and_stale_route_journey() -> None:
+    """A stale route is refetched once, the accepted route is then served from
+    the cache, the breaker opens on failures and the pool stays bounded."""
+    engine = _FakeEngine([], [_route(1, stale=True), _route(4)])
+    created: list[str] = []
+
+    async def factory(tenant: str) -> str:
+        created.append(tenant)
+        return tenant
+
+    pool: TenantPool[str] = TenantPool(factory, capacity=2)
+    directory = PlacementDirectory(engine, tenant_pool=pool)  # type: ignore[arg-type]
+    assert directory.cached_route("t", "p") is None
+
+    route = await directory.route("t", "p")
+    assert route["epoch"] == 4
+    assert engine.route_calls == [0, 0]
+    assert directory.cached_route("t", "p") == route
+    assert directory.metrics().stale_rejects == 1
+
+    endpoint = route["endpoints"][0]
+    breaker = directory.breaker(endpoint)
+    for _ in range(PlacementConfig().breaker_failures):
+        breaker.record_failure()
+    assert not breaker.allow()
+    assert directory.metrics().breaker_state[endpoint] == "open"
+
+    for tenant in ("t1", "t2", "t3"):
+        await pool.acquire(tenant)
+    assert len(pool) == 2
+    assert directory.metrics().evictions == 1
