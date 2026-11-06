@@ -66,6 +66,9 @@ pub enum SchemaSourceOrigin {
     Approved {
         name: String,
         approval_lease_id: String,
+        /// Digest of the shadow-ingest report the attach was admitted under.
+        #[serde(default)]
+        shadow_report_digest: Option<String>,
     },
     /// MEDULLA-TYPED-PACKS-R103.2: a connector-owned runtime ontology under
     /// `ontology:<connector>/<ontology_iri>`. `revision` is the active (and only
@@ -664,6 +667,7 @@ fn origin_owns_key(source_id: &str, origin: &SchemaSourceOrigin) -> bool {
         SchemaSourceOrigin::Approved {
             name,
             approval_lease_id,
+            ..
         } => keyed(source_id, "approved:", name) && !approval_lease_id.is_empty(),
         SchemaSourceOrigin::Ontology {
             connector,
@@ -1394,6 +1398,7 @@ fn origin_bytes(origin: &SchemaSourceOrigin) -> Vec<u8> {
         SchemaSourceOrigin::Approved {
             name,
             approval_lease_id,
+            ..
         } => format!("approved\0{name}\0{approval_lease_id}").into_bytes(),
         SchemaSourceOrigin::Ontology {
             connector,

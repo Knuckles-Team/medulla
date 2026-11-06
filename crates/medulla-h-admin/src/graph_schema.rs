@@ -455,7 +455,8 @@ fn apply(
             sources.attach_dynamic(source_id.clone(), admin_source(op)?)?
         }
         GraphSchemaOp::AttachApproved { source_id, .. } => {
-            sources.attach_dynamic(source_id.clone(), approved::source(op)?)?
+            let source = approved::admitted_source(core, &sources, op)?;
+            sources.attach_dynamic(source_id.clone(), source)?
         }
         GraphSchemaOp::Detach { source_id, .. } => sources.detach_dynamic(source_id),
         GraphSchemaOp::AttachPack { .. }

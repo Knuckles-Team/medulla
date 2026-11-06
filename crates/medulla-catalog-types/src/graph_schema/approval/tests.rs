@@ -135,6 +135,7 @@ fn approved_op(source_id: &str, lease_id: &str) -> GraphSchemaOp {
         source_id: source_id.to_string(),
         contract: contract(),
         approval_lease_id: lease_id.to_string(),
+        expected_digest: None,
         if_composed_digest: None,
     }
 }
