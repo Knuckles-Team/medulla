@@ -34,22 +34,25 @@ pub fn request_authority(request: &Request) -> Result<VerifiedRequestContext, St
     if request.auth_token.is_empty() {
         return Ok(VerifiedRequestContext::anonymous_local(None));
     }
-    let raw = request
-        .auth_token
-        .strip_prefix("anon1.")
-        .ok_or("ACCESS_DENIED: anonymous mode refuses credentials and malformed correlation envelopes")?;
+    let raw = request.auth_token.strip_prefix("anon1.").ok_or(
+        "ACCESS_DENIED: anonymous mode refuses credentials and malformed correlation envelopes",
+    )?;
     if raw.len() > MAX_METADATA_BYTES {
         return Err(OVERSIZE_REFUSAL.into());
     }
-    let operation: AnonymousOperation = serde_json::from_str(raw)
-        .map_err(|_| "ACCESS_DENIED: anonymous correlation metadata must contain only idempotency_key")?;
+    let operation: AnonymousOperation = serde_json::from_str(raw).map_err(|_| {
+        "ACCESS_DENIED: anonymous correlation metadata must contain only idempotency_key"
+    })?;
     if operation.idempotency_key.len() > MAX_CORRELATION_KEY_BYTES {
         return Err(OVERSIZE_REFUSAL.into());
     }
     if operation.idempotency_key.trim().is_empty()
         || operation.idempotency_key.chars().any(char::is_control)
     {
-        return Err("ACCESS_DENIED: anonymous idempotency_key must be 1..256 UTF-8 bytes without controls".into());
+        return Err(
+            "ACCESS_DENIED: anonymous idempotency_key must be 1..256 UTF-8 bytes without controls"
+                .into(),
+        );
     }
     Ok(VerifiedRequestContext::anonymous_local(Some(
         operation.idempotency_key,
