@@ -184,7 +184,12 @@ pub(super) async fn handle_shex_validate(
 ) -> Response {
     let schema = match medulla_shex::Schema::from_shexj(&schema) {
         Ok(s) => s,
-        Err(e) => return Response::err(req_id, format!("ShexValidate: bad schema: {e}")),
+        Err(e) => {
+            return Response::err(
+                req_id,
+                format!("INVALID_ARGUMENT: ShexValidate: bad schema: {e}"),
+            )
+        }
     };
     // Data graph: an inline Turtle document, else the live graph's exported RDF.
     let data = if data_graph.trim().is_empty() {
@@ -198,13 +203,21 @@ pub(super) async fn handle_shex_validate(
                 g
             }
             Err(e) => {
-                return Response::err(req_id, format!("ShexValidate: export live graph: {e}"))
+                return Response::err(
+                    req_id,
+                    format!("INVALID_ARGUMENT: ShexValidate: export live graph: {e}"),
+                )
             }
         }
     } else {
         match medulla_shex::graph_from_turtle(&data_graph) {
             Ok(g) => g,
-            Err(e) => return Response::err(req_id, format!("ShexValidate: bad data graph: {e}")),
+            Err(e) => {
+                return Response::err(
+                    req_id,
+                    format!("INVALID_ARGUMENT: ShexValidate: bad data graph: {e}"),
+                )
+            }
         }
     };
     let pairs: Vec<(&str, &str)> = shape_map

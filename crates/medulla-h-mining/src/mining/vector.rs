@@ -662,7 +662,7 @@ pub(crate) fn handle_reduce(
     if matches!(request.algorithm, ReduceAlgorithm::Lda) && request.labels.len() != rows.len() {
         return Response::err(
             req_id,
-            "mining: LDA requires one label per row (supervised)",
+            "INVALID_ARGUMENT: mining: LDA requires one label per row (supervised)",
         );
     }
     let algo = reduce_algo(

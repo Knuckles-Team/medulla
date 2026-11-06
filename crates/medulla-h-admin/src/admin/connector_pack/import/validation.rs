@@ -602,34 +602,6 @@ fn finish_validation(validator: &mut IndexValidator<'_>) {
     }
 }
 
-/// How the deployment treats a pack ontology class with no subclass path to the
-/// parent catalog. `warn` (the default while the fleet's vocabularies are being
-/// linked) imports the pack and reports `ONTOLOGY_ORPHAN`; `refuse` rejects it.
-#[cfg(feature = "rdf")]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum OrphanPolicy {
-    Warn,
-    Refuse,
-}
-
-/// `MEDULLA_ONTOLOGY_ORPHANS=warn|refuse`, read once; any other value
-/// keeps the default.
-#[cfg(feature = "rdf")]
-fn orphan_policy() -> OrphanPolicy {
-    static POLICY: std::sync::OnceLock<OrphanPolicy> = std::sync::OnceLock::new();
-    *POLICY.get_or_init(|| {
-        match std::env::var("MEDULLA_ONTOLOGY_ORPHANS")
-            .unwrap_or_default()
-            .trim()
-            .to_ascii_lowercase()
-            .as_str()
-        {
-            "refuse" => OrphanPolicy::Refuse,
-            _ => OrphanPolicy::Warn,
-        }
-    })
-}
-
 /// The bounded `ONTOLOGY_ORPHAN` detail: the count, then as many class IRIs as
 /// fit in one kibibyte.
 #[cfg(feature = "rdf")]
@@ -672,13 +644,10 @@ fn parent_classes() -> &'static BTreeSet<String> {
     })
 }
 
+/// Refuse a pack whose ontology declares a class with no subclass path to a
+/// parent-catalog class (MEDULLA-TYPED-PACKS-R105.1).
 #[cfg(feature = "rdf")]
 fn flag_ontology_orphans(validator: &mut IndexValidator<'_>) {
-    flag_ontology_orphans_with(validator, orphan_policy());
-}
-
-#[cfg(feature = "rdf")]
-fn flag_ontology_orphans_with(validator: &mut IndexValidator<'_>, policy: OrphanPolicy) {
     if validator.ontologies.is_empty() {
         return;
     }
@@ -688,14 +657,7 @@ fn flag_ontology_orphans_with(validator: &mut IndexValidator<'_>, policy: Orphan
         return;
     }
     let detail = orphan_detail(&orphans);
-    match policy {
-        OrphanPolicy::Refuse => validator.reject(PackViolationCode::OntologyOrphan, None, &detail),
-        OrphanPolicy::Warn => validator.warnings.push(PackWarning {
-            code: PackWarningCode::OntologyOrphan,
-            uri: None,
-            detail,
-        }),
-    }
+    validator.reject(PackViolationCode::OntologyOrphan, None, &detail);
 }
 
 #[cfg(not(feature = "rdf"))]

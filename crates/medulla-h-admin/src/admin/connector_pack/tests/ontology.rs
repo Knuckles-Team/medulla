@@ -27,9 +27,13 @@ fn ontology(connector: &str, body: String) -> Content {
 }
 
 fn disjoint_classes(individual_in_both: bool) -> String {
+    // Both classes join the parent catalog (MEDULLA-TYPED-PACKS-R105.1), so
+    // only the ABox decides the outcome.
+    const SUB: &str = "http://www.w3.org/2000/01/rdf-schema#subClassOf";
+    const ROOT: &str = "http://knuckles.team/kg#DomainEntity";
     let mut body = format!(
-        "<https://example.org/A> a <{OWL}Class> .\n\
-         <https://example.org/B> a <{OWL}Class> .\n\
+        "<https://example.org/A> a <{OWL}Class> ; <{SUB}> <{ROOT}> .\n\
+         <https://example.org/B> a <{OWL}Class> ; <{SUB}> <{ROOT}> .\n\
          <https://example.org/A> <{OWL}disjointWith> <https://example.org/B> .\n\
          <https://example.org/x> a <https://example.org/A> .\n"
     );
@@ -125,8 +129,8 @@ async fn a_cancelled_import_does_not_block_the_next_bind() {
 }
 
 /// MEDULLA-TYPED-PACKS-R105.1: a connector class that subclasses a parent-catalog
-/// class joins the parent graph with no warning; a class with no such path is
-/// imported and reported as `ONTOLOGY_ORPHAN`, naming the class.
+/// class joins the parent graph; a class with no such path refuses the import
+/// with `ONTOLOGY_ORPHAN`, naming the class.
 fn parent_linked(orphan: bool) -> String {
     const SUB: &str = "http://www.w3.org/2000/01/rdf-schema#subClassOf";
     let mut body = format!(
@@ -143,38 +147,36 @@ fn parent_linked(orphan: bool) -> String {
     body
 }
 
-fn orphan_warnings(result: &PackImportResult) -> Vec<String> {
-    match result {
-        PackImportResult::Imported { receipt } => receipt
-            .warnings
-            .iter()
-            .filter(|w| {
-                w.code == medulla_catalog_types::connector_pack::PackWarningCode::OntologyOrphan
-            })
-            .map(|w| w.detail.clone())
-            .collect(),
-        other => panic!("the ontology must import: {other:?}"),
-    }
-}
-
 // spec: MEDULLA-TYPED-PACKS-R105.1
 #[tokio::test]
-async fn a_class_linked_to_a_parent_class_imports_without_an_orphan_warning() {
+async fn a_class_linked_to_a_parent_class_imports() {
     let result = import_ontology("r105-linked", parent_linked(false)).await;
-    assert!(orphan_warnings(&result).is_empty(), "{result:?}");
+    assert!(
+        matches!(result, PackImportResult::Imported { .. }),
+        "{result:?}"
+    );
 }
 
 // spec: MEDULLA-TYPED-PACKS-R105.1
 #[tokio::test]
-async fn an_orphan_class_is_imported_and_flagged_by_name() {
+async fn an_orphan_class_refuses_the_import_by_name() {
     let result = import_ontology("r105-orphan", parent_linked(true)).await;
-    let warnings = orphan_warnings(&result);
-    assert_eq!(warnings.len(), 1, "{result:?}");
+    let PackImportResult::Rejected { violations, .. } = result else {
+        panic!("an orphan class must refuse the import: {result:?}");
+    };
+    let violations = violations.as_slice();
+    assert_eq!(violations.len(), 1, "{violations:?}");
+    assert_eq!(violations[0].code, PackViolationCode::OntologyOrphan);
     assert!(
-        warnings[0].contains("https://example.org/conn#Widget"),
-        "{warnings:?}"
+        violations[0]
+            .detail
+            .contains("https://example.org/conn#Widget"),
+        "{violations:?}"
     );
-    assert!(!warnings[0].contains("conn#Lease"), "{warnings:?}");
+    assert!(
+        !violations[0].detail.contains("conn#Lease"),
+        "{violations:?}"
+    );
 }
 
 /// Source declarations share the admitted member write, its tenant and body digest.

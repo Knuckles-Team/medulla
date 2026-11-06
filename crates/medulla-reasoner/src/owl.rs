@@ -589,8 +589,25 @@ fn handle_subclass_of(idx: &TripleIndex, ont: &mut Ontology, s: &str, o: &Term, 
         return;
     }
     if let (Some(lhs), Some(rhs)) = (parse_class_expr(idx, s), parse_class_expr(idx, &ok)) {
-        push_subclass(ont, lhs, rhs, format!("{} ⊑ {}", short(s), short(&ok)), c);
+        let label = format!("{} ⊑ {}", expr_label(s, &lhs), expr_label(&ok, &rhs));
+        push_subclass(ont, lhs, rhs, label, c);
     }
+}
+
+/// The label form of one parsed class expression: the local name of a named
+/// class, and the canonical concept for an anonymous one. A blank-node id is
+/// local to one parse, so labelling by it would make the same axiom read from
+/// another document a different axiom, and `retract_axioms` (which removes by
+/// label) would keep it.
+fn expr_label(id: &str, parsed: &[Concept]) -> String {
+    if !id.starts_with("_:") {
+        return short(id);
+    }
+    parsed
+        .iter()
+        .map(Concept::key)
+        .collect::<Vec<_>>()
+        .join(" ⊓ ")
 }
 
 fn push_all_values_subclass(
@@ -693,14 +710,15 @@ fn push_equivalent_class_biconditional(
         return;
     };
     // A ≡ B  ⇒  A ⊑ B  AND  B ⊑ A.
+    let (left, right) = (expr_label(s, &a), expr_label(sk, &b));
     push_subclass(
         ont,
         a.clone(),
         b.clone(),
-        format!("{} ≡ {} (→⊑)", short(s), short(sk)),
+        format!("{left} ≡ {right} (→⊑)"),
         c,
     );
-    push_subclass(ont, b, a, format!("{} ≡ {} (←⊑)", short(s), short(sk)), c);
+    push_subclass(ont, b, a, format!("{left} ≡ {right} (←⊑)"), c);
 }
 
 fn handle_equivalent_property(ont: &mut Ontology, s: &str, o: &Term, c: f64) {

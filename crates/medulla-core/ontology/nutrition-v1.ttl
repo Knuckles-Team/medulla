@@ -4,6 +4,7 @@
 @prefix wd: <http://www.wikidata.org/entity/> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
 @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
@@ -156,7 +157,8 @@
 
 :Recipe a owl:Class ;
     rdfs:label "Recipe" ;
-    rdfs:comment "A recipe." .
+    rdfs:comment "A recipe." ;
+    skos:exactMatch schema:Recipe .
 
 :usesIngredient a owl:ObjectProperty ;
     rdfs:label "uses ingredient" ;
@@ -166,19 +168,23 @@
 
 :ShoppingListItem a owl:Class ;
     rdfs:label "Shopping List Item" ;
-    rdfs:comment "A shopping-list item that refers to a :Food." .
+    rdfs:comment "A shopping-list item that refers to a :Food." ;
+    skos:broadMatch schema:ListItem .
 
 :MealPlanEntry a owl:Class ;
     rdfs:label "Meal Plan Entry" ;
-    rdfs:comment "A planned meal on a date for a :Recipe." .
+    rdfs:comment "A planned meal on a date for a :Recipe." ;
+    skos:relatedMatch schema:Recipe .
 
 :WorkoutRoutine a owl:Class ;
     rdfs:label "Workout Routine" ;
-    rdfs:comment "A planned set of exercises." .
+    rdfs:comment "A planned set of exercises." ;
+    skos:closeMatch schema:ExercisePlan .
 
 :Exercise a owl:Class ;
     rdfs:label "Exercise" ;
-    rdfs:comment "An exercise." .
+    rdfs:comment "An exercise." ;
+    skos:broadMatch schema:PhysicalActivity .
 
 :includesExercise a owl:ObjectProperty ;
     rdfs:label "includes exercise" ;
@@ -188,7 +194,8 @@
 
 :WorkoutSession a owl:Class ;
     rdfs:label "Workout Session" ;
-    rdfs:comment "A performed instance of a :WorkoutRoutine, with prov:endedAtTime." .
+    rdfs:comment "A performed instance of a :WorkoutRoutine, with prov:endedAtTime." ;
+    skos:closeMatch schema:ExerciseAction .
 
 # ── Core rooting (MEDULLA-TYPED-PACKS-R071.2) ───────────────────────────────────
 # Every class of this module above reaches the core class kg:DomainEntity through rdfs:subClassOf.

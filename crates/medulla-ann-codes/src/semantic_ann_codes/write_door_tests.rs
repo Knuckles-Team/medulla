@@ -121,7 +121,7 @@ const MINT_PATH: [(&str, &[&str]); 3] = [
 const DURABLE_DOORS: [&str; 2] = ["commit_metadata_fenced", "replay_operation_if_recorded"];
 
 /// Every `pub` / `pub(crate)` function that reaches a durable door.
-const WRITING_ENTRY_POINTS: [&str; 12] = [
+const WRITING_ENTRY_POINTS: [&str; 13] = [
     "clear_source_reconciliation_checkpoint",
     "complete_generation_stage",
     "complete_stage",
@@ -129,6 +129,8 @@ const WRITING_ENTRY_POINTS: [&str; 12] = [
     "enqueue_reconciliation_tombstone",
     "enqueue_stage_intent",
     "finalize_generation",
+    // MEDULLA-UNIFIED-DATA-PLANE-R040.4: the S4/S5 probe receipt and check record.
+    "record_probe_measurement",
     "refresh_binding_operation_with_s1",
     "store_binding",
     "store_binding_operation",

@@ -161,6 +161,10 @@ impl Schema {
     pub fn from_shexj(json: &str) -> Result<Schema, String> {
         let root: Value =
             serde_json::from_str(json).map_err(|e| format!("ShExJ: invalid JSON: {e}"))?;
+        // A ShExJ schema is one JSON object; any other JSON value is not a schema.
+        if !root.is_object() {
+            return Err("ShExJ: a schema must be a JSON object".to_string());
+        }
         let mut schema = Schema::default();
 
         if let Some(arr) = root.get("shapes").and_then(Value::as_array) {

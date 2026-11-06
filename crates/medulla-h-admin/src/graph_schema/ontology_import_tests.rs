@@ -213,22 +213,40 @@ mod served {
 
     const SECRET: &str = "runtime-ontology-import-served-secret";
     const AGENT: &str = "ontology-importer";
-    const TENANT: &str = "tenant-a";
+    /// The fixed `cfg(test)` deployment tenant the request-context policy admits.
+    const TENANT: &str = "tenant-shared";
     const GRAPH: &str = "onto-g";
 
-    async fn state() -> Arc<RwLock<ServerState>> {
-        let state = medulla_server::seams_install::new_state_for_test(
+    /// A served engine with a durable graph backend: the import commits through
+    /// the authoritative MutationBatch path, which needs one.
+    async fn state() -> (tempfile::TempDir, Arc<RwLock<ServerState>>) {
+        let dir = tempfile::tempdir().unwrap();
+        let mut state = medulla_server::seams_install::new_state_for_test(
             SECRET,
             ServerState::test_isolation(AGENT),
         );
+        state.persist_dir = Some(dir.path().to_string_lossy().into_owned());
+        let backend = medulla_persistence::redb_backend::RedbBackend::open(
+            dir.path().join("graphs").to_string_lossy().into_owned(),
+            64,
+        )
+        .expect("open the served graph backend");
+        state.persistence = Some(Arc::new(backend));
         let state = Arc::new(RwLock::new(state));
-        state
-            .write()
-            .await
-            .registry
-            .create_graph(GRAPH, GraphType::Global, None)
-            .expect("create graph");
-        state
+        let request = build_current_test_request(
+            SECRET,
+            TENANT,
+            0,
+            "__commons__",
+            AGENT,
+            Method::CreateGraph {
+                graph_name: GRAPH.to_string(),
+                graph_type: GraphType::Global,
+            },
+        );
+        let created = dispatch_test_on_heap(&state, request).await;
+        assert!(created.error.is_none(), "{:?}", created.error_detail);
+        (dir, state)
     }
 
     async fn call(state: &Arc<RwLock<ServerState>>, req_id: u64, method: Method) -> Response {
@@ -275,7 +293,7 @@ mod served {
     // spec: MEDULLA-TYPED-PACKS-R103.3
     #[tokio::test]
     async fn gateway_routes_ontology_import() {
-        let state = state().await;
+        let (_dir, state) = state().await;
         let committed = call(&state, 1, schema(import_op(EX_A, None))).await;
         assert!(committed.error.is_none(), "{:?}", committed.error_detail);
         match ontology_origin(&state).await {
@@ -295,7 +313,7 @@ mod served {
     // spec: MEDULLA-TYPED-PACKS-R103.5
     #[tokio::test]
     async fn revision_records_digest_importer_and_classes() {
-        let state = state().await;
+        let (_dir, state) = state().await;
         assert!(call(&state, 1, schema(import_op(EX_A, None)))
             .await
             .error

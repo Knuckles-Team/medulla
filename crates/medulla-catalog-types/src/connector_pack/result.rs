@@ -44,7 +44,7 @@ pub enum PackViolationCode {
     PackMassWithdrawal,
     RetiredEntryReturned,
     // A pack ontology class has no subclass path to the parent catalog
-    // (MEDULLA-TYPED-PACKS-R105), and the deployment refuses orphans.
+    // (MEDULLA-TYPED-PACKS-R105.1); the import is refused.
     OntologyOrphan,
     // Crosswalk refusals (MEDULLA-TYPED-PACKS-R071.1.4).
     CrosswalkSourceUnknown,
@@ -78,9 +78,6 @@ pub enum PackWarningCode {
     EmptyDescription,
     UnresolvedCapabilityIri,
     DuplicateShapeIri,
-    // A pack ontology class has no subclass path to the parent catalog
-    // (MEDULLA-TYPED-PACKS-R105); imported and flagged.
-    OntologyOrphan,
     // The import replaced stored head or member rows that no longer decode
     // (MEDULLA-TYPED-PACKS-R041.2).
     UndecodableRecordReplaced,

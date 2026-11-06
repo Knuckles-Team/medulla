@@ -164,6 +164,18 @@ impl Served {
     }
 
     async fn attach_expecting(&self, lease_id: &str, expected_digest: Option<String>) -> Response {
+        self.attach_keyed(&format!("attach:{lease_id}"), lease_id, expected_digest)
+            .await
+    }
+
+    /// One `AttachApproved` under its own idempotency key: a repeated key is a
+    /// replay of the first answer, not a second attach.
+    async fn attach_keyed(
+        &self,
+        key: &str,
+        lease_id: &str,
+        expected_digest: Option<String>,
+    ) -> Response {
         let op = GraphSchemaOp::AttachApproved {
             source_id: SOURCE.to_string(),
             contract: contract(),
@@ -172,8 +184,7 @@ impl Served {
             if_composed_digest: None,
         };
         let method = Method::GraphSchema { op: Box::new(op) };
-        self.call(GRAPH, &format!("attach:{lease_id}"), method)
-            .await
+        self.call(GRAPH, key, method).await
     }
 
     /// Write one node whose properties are `record`.
@@ -404,10 +415,14 @@ async fn expected_digest_is_checked_before_the_attach_and_reads_back() {
             .await,
     );
     assert!(attached.changed);
-    // The same digest again is a no-op.
+    // The same digest again, as a new request, is a no-op.
     let again: GraphSchemaCommitted = decode(
         served
-            .attach_expecting("action_approval:digest", Some(digest.clone()))
+            .attach_keyed(
+                "attach-again:action_approval:digest",
+                "action_approval:digest",
+                Some(digest.clone()),
+            )
             .await,
     );
     assert!(!again.changed);

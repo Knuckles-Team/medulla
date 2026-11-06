@@ -32,6 +32,20 @@ fn mismatch(response: &Response) -> bool {
 async fn client_session_node_round_trip_and_principal_mismatch_refused() {
     // spec: MEDULLA-IDENTITY-R705
     let state = state();
+    // The graph ACL admits only registered principals; both callers write
+    // their session node to the shared graph.
+    for agent_id in ["usr:ann", "usr:root"] {
+        state
+            .write()
+            .await
+            .isolation
+            .register_agent(medulla_types::acl::AgentIdentity {
+                agent_id: agent_id.to_string(),
+                role: medulla_types::acl::AgentRole::Agent,
+                teams: Vec::new(),
+                roles: Vec::new(),
+            });
+    }
     let own_id = client_session_node_id(TENANT, "s1");
     let other_tenant_id = client_session_node_id("tenant-other", "s1");
     let caller = || context("usr:ann", &[WRITE_SCOPE]);

@@ -20,6 +20,7 @@ use medulla_protocol_types::result_contract::ingestion::{
     IncidentSetStatus as IncidentSetStatusResult,
 };
 use medulla_server_api::authority_context::VerifiedRequestContext;
+use medulla_server_api::carrier::GraphReadAuthority;
 use medulla_server_api::state::ServerState;
 use medulla_server_graph::dispatch::graph_pipeline::dispatch_graph_op;
 use medulla_server_graph::dispatch::shared::{timed_read, typed_response};
@@ -85,7 +86,7 @@ pub async fn handle_incident_evidence(
     incident_id: String,
 ) -> Response {
     let result = async {
-        let (_, authority) = load(state, &target).await?;
+        let (_, _, authority) = load(state, &target).await?;
         let tenant = Some(target.verified.tenant());
         authority
             .evidence(tenant, &incident_id)
@@ -105,13 +106,19 @@ pub async fn handle_incident_related_claims(
     limit: Option<u32>,
 ) -> Response {
     let result = async {
-        let (graph, authority) = load(state, &target).await?;
+        let (graph, read_authority, authority) = load(state, &target).await?;
         let tenant = Some(target.verified.tenant());
         let record = authority.evidence(tenant, &incident_id).map_err(refusal)?;
         let limit = limit
             .unwrap_or(DEFAULT_CLAIM_LIMIT)
             .clamp(1, MAX_CLAIM_LIMIT) as usize;
-        Ok(related_claims(&graph, record, limit))
+        // The claim walk reads arbitrary rows, so it sees only the caller's
+        // RLS projection of the graph.
+        Ok(related_claims(
+            &read_authority.project_core(&graph),
+            record,
+            limit,
+        ))
     }
     .await;
     typed_response::<IncidentRelatedClaimsResult>(target.req_id, result)
@@ -125,7 +132,7 @@ pub async fn handle_incident_set_status(
     status: IncidentStatus,
 ) -> Response {
     let result = async {
-        let (_, mut authority) = load(state, &target).await?;
+        let (_, _, mut authority) = load(state, &target).await?;
         let tenant = Some(target.verified.tenant());
         authority
             .set_status(tenant, &incident_id, status)
@@ -142,7 +149,7 @@ async fn correlate(
     anomalies: Vec<AnomalyReading>,
     window_ms: u64,
 ) -> Result<IncidentWriteReceipt, String> {
-    let (_, mut authority) = load(state, target).await?;
+    let (_, _, mut authority) = load(state, target).await?;
     let tenant = Some(target.verified.tenant());
     let touched = authority
         .correlate(tenant, anomalies, window_ms)
@@ -163,7 +170,7 @@ fn refusal(error: IncidentRefusal) -> String {
 async fn load(
     state: &Arc<RwLock<ServerState>>,
     target: &IncidentTarget<'_>,
-) -> Result<(Arc<GraphCore>, IncidentAuthority), String> {
+) -> Result<(Arc<GraphCore>, GraphReadAuthority, IncidentAuthority), String> {
     let tenant = target.verified.tenant();
     if tenant.trim().is_empty() {
         return Err(IncidentRefusal::TenantScopeRequired.code().to_string());
@@ -186,7 +193,8 @@ async fn load(
         })
         .filter_map(|(_, properties)| incident_record(&properties))
         .filter(|record| record.tenant == tenant && record.status != IncidentStatus::Resolved);
-    Ok((core.clone(), IncidentAuthority::load(records)))
+    let incidents = IncidentAuthority::load(records);
+    Ok((core.clone(), authority, incidents))
 }
 
 fn incident_record(properties: &[u8]) -> Option<IncidentRecord> {

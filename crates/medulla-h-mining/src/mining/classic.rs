@@ -198,7 +198,7 @@ pub(crate) fn handle_forecast(req_id: u64, core: &GraphCore, request: ForecastRe
     if values.is_empty() {
         return Response::err(
             req_id,
-            "mining: forecast requires a non-empty `values` series",
+            "INVALID_ARGUMENT: mining: forecast requires a non-empty `values` series",
         );
     }
     let algo = forecast_algo(algorithm, p, d, q, period, alpha, beta, gamma);

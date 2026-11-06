@@ -562,8 +562,10 @@ pub fn decode_meta_record(graph: &str, blob: &[u8]) -> Result<GraphMetaRecord, S
         // A legacy row cannot decode into the versioned record at all (it has no
         // schema_version/incarnation_id and the struct denies unknown fields), so
         // the fallback is keyed on the decode failing, not on a version compare.
-        Err(current_error) => decode_legacy_meta_record(graph, blob)
-            .ok_or_else(|| format!("decode graph metadata for {graph}: {current_error}"))?,
+        Err(current_error) => match decode_legacy_meta_record(graph, blob) {
+            Some(record) => record,
+            None => return Err(undecodable_meta_error(graph, blob, &current_error)),
+        },
     };
     if record.schema_version != GRAPH_META_SCHEMA_VERSION {
         return Err(format!(
@@ -578,6 +580,29 @@ pub fn decode_meta_record(graph: &str, blob: &[u8]) -> Result<GraphMetaRecord, S
         ));
     }
     Ok(record)
+}
+
+/// Why a graph metadata row decodes neither as the current nor as a legacy
+/// record. The bounded decoder drops the record's own refusal, so a row that
+/// names a schema version this build does not read is reported by that version
+/// with the registered `GRAPH_META_VERSION_UNSUPPORTED` code
+/// (MEDULLA-DURABLE-KERNEL-R063.2); anything else is a format error.
+fn undecodable_meta_error(graph: &str, blob: &[u8], current_error: &str) -> String {
+    #[derive(serde::Deserialize)]
+    struct VersionProbe {
+        schema_version: u16,
+    }
+    match decode_durable::<VersionProbe>(blob) {
+        Ok(VersionProbe { schema_version })
+            if schema_version != GRAPH_META_SCHEMA_VERSION && schema_version != 2 =>
+        {
+            format!(
+                "{}: graph metadata for {graph} has unsupported schema version {schema_version}",
+                medulla_types::contract::ServerErrorCode::GraphMetaVersionUnsupported.as_str(),
+            )
+        }
+        _ => format!("decode graph metadata for {graph}: {current_error}"),
+    }
 }
 
 /// The durable identity row of one graph, as the catalog stores it.

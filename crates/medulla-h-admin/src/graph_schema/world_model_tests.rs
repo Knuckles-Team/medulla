@@ -28,25 +28,24 @@ const BORNE_BY_ORGANISM: &str = "<http://example.org/world#BorneByOrganism>";
 const IN_WEATHER_SYSTEM: &str = "<http://example.org/world#InWeatherSystem>";
 const BFO_PROCESS: &str = "<http://purl.obolibrary.org/obo/BFO_0000015>";
 const RDFS_SUBCLASS_OF: &str = "http://www.w3.org/2000/01/rdf-schema#subClassOf";
-const CORE_IRI: &str = "http://knuckles.team/kg/core";
 const LIFE_IRI: &str = "http://knuckles.team/kg/life";
-/// The three world-model modules with the imports each declares (core, and life for
-/// the modules that use organisms and taxa).
+/// The three world-model modules with the imports each declares (life, for the
+/// modules that use organisms and taxa; core is a root, never an import).
 const WORLD_MODEL_MODULES: &[(&str, &str, &[&str])] = &[
     (
         "life",
         include_str!("../../../medulla-core/ontology/life-v1.ttl"),
-        &[CORE_IRI],
+        &[],
     ),
     (
         "environment",
         include_str!("../../../medulla-core/ontology/environment-v1.ttl"),
-        &[CORE_IRI, LIFE_IRI],
+        &[LIFE_IRI],
     ),
     (
         "nutrition",
         include_str!("../../../medulla-core/ontology/nutrition-v1.ttl"),
-        &[CORE_IRI, LIFE_IRI],
+        &[LIFE_IRI],
     ),
 ];
 /// The modules the world-model wiring touches; entailment tests reason over these

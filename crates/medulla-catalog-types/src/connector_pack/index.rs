@@ -185,7 +185,7 @@ mod tests {
         let kinds: std::collections::BTreeSet<PackEntryKind> = std::iter::once(index.server.kind)
             .chain(index.entries.iter().map(|entry| entry.kind))
             .collect();
-        assert_eq!(kinds.len(), 11, "the fixture carries every entry kind");
+        assert_eq!(kinds.len(), 13, "the fixture carries every entry kind");
 
         let mut unknown_kind = json.clone();
         unknown_kind["entries"][0]["kind"] = serde_json::json!("plugin");

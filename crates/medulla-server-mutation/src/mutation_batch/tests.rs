@@ -426,6 +426,8 @@ fn rdf_adapter_marks_rdf_surface() {
 const CLASSIFICATION_GOLDEN: &[(&str, &str)] = &[
     ("CreateGraph", "Lifecycle"),
     ("DeleteGraph", "Lifecycle"),
+    // MEDULLA-BRANCH-MERGE-R001: the branch registry row is control-plane state.
+    ("CreateBranch", "ControlPlane"),
     ("MultiGraphBatchUpdate", "MultiGraph"),
     ("Commit", "CrossModal"),
     ("BlobBegin", "BlobStore"),
@@ -454,6 +456,11 @@ const CLASSIFICATION_GOLDEN: &[(&str, &str)] = &[
     ("PublishCurrentPlan", "ControlPlane"),
     ("IssueHostStartGrant", "ControlPlane"),
     ("PublishRunCheckpoint", "ControlPlane"),
+    // The uncertain-effect phase, its receipt and the admitted-request submit
+    // are work-item control-plane rows.
+    ("MarkWorkItemEffectStarted", "ControlPlane"),
+    ("RecordEffectReceipt", "ControlPlane"),
+    ("SubmitAdmittedRequest", "ControlPlane"),
     ("IssueControlLease", "ControlPlane"),
     ("TransitionControlLease", "ControlPlane"),
     ("PolicyEvolutionStore", "ControlPlane"),

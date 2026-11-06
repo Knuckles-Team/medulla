@@ -386,8 +386,11 @@ mod tests {
                 codes::resolve(code.as_str()).is_some(),
                 "{name} does not resolve"
             );
-            // Typed variants map to distinct codes: no catch-all.
-            assert!(seen.insert(code.as_str()), "{name} shares a code");
+            // The typed variants of one enum map to distinct codes: no
+            // catch-all. Two enums naming the same condition (a contrast
+            // refusal and an abstention over mismatched traces) share it.
+            let family = name.split('/').next().unwrap_or(name);
+            assert!(seen.insert((family, code.as_str())), "{name} shares a code");
         }
 
         // The folded abstention carries the origin the caller passed.

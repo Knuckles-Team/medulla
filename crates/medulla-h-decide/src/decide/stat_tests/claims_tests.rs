@@ -373,7 +373,11 @@ async fn claim_evidence_reads_back_through_a_second_principal() {
     assert_eq!(read.evidence[0].weight_ppm, 1_000_000);
     assert_eq!(read.log_odds_micro, -1_000_000);
     assert_eq!(read.transitions.len(), 1);
-    assert_eq!(read.transitions[0].actor, "claim-writer");
+    // A transition records the writer by its persistence id, the form every
+    // durable store keys a principal under.
+    let writer_id = VerifiedRequestContext::verified_for_test_in_tenant("claim-writer", TENANT)
+        .principal_persistence_id();
+    assert_eq!(read.transitions[0].actor, writer_id);
     assert_eq!(
         read.contradiction_pairs,
         vec![("south".to_string(), "north".to_string())]

@@ -49,7 +49,7 @@ pub(crate) fn handle_root_cause(
     let Some(out) = run_root_cause(&nodes, &scores, &edges, &symptom, max_hops, decay) else {
         return Response::err(
             req_id,
-            "mining: root_cause requires `symptom` to be present in `nodes`",
+            "INVALID_ARGUMENT: mining: root_cause requires `symptom` to be present in `nodes`",
         );
     };
     let written = if writeback.enabled {
@@ -223,7 +223,7 @@ pub(crate) fn handle_risk_propagation(
     if nodes.is_empty() && ecosystem.is_none() {
         return Response::err(
             req_id,
-            "mining: risk_propagation requires non-empty `nodes`",
+            "INVALID_ARGUMENT: mining: risk_propagation requires non-empty `nodes`",
         );
     }
     if let Some((kind, options)) = impact_model(&model) {
@@ -540,7 +540,7 @@ pub(crate) fn handle_retrieval_quality(
     if traces.is_empty() {
         return Response::err(
             req_id,
-            "mining: retrieval_quality requires non-empty `traces`",
+            "INVALID_ARGUMENT: mining: retrieval_quality requires non-empty `traces`",
         );
     }
     let specs: Vec<retrieval_quality::RetrievalTrace> =

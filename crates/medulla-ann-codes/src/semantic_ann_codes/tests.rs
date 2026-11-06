@@ -3282,9 +3282,9 @@ fn real_s6_generation_two_finalization_demotes_live_one_and_rolls_back_on_refusa
         ..
     } = seeded_s6_publication("s6-finalize-generation-two");
     // The first attempt deliberately removes the old binding after the S6
-    // lease is claimed.  Finalization has already admitted the transition
-    // rows when the prior-live demotion discovers the missing row, so the
-    // transaction must roll every staged artifact back.
+    // lease is claimed. The promotion gate (MEDULLA-UNIFIED-DATA-PLANE-R040.3)
+    // reads the live generation before the activation write and discovers the
+    // missing row, so no staged artifact is written.
     let mut budget = medulla_transaction::OutboxClaimBudget::new(1, 5_000, 11).unwrap();
     let first_lease = codes
         .claim_stage_leases(consumer, &mut budget)
@@ -3335,7 +3335,9 @@ fn real_s6_generation_two_finalization_demotes_live_one_and_rolls_back_on_refusa
         )
         .expect_err("S6 must roll back when the prior live generation disappears");
     assert!(
-        refused.to_string().contains("missing prior binding"),
+        refused
+            .to_string()
+            .contains("semantic binding head names a missing binding row"),
         "{refused}"
     );
     assert_eq!(codes.read_binding().unwrap().unwrap(), generation_two);

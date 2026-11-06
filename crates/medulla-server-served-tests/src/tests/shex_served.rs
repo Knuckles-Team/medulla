@@ -215,10 +215,10 @@ fn shex_validate(schema: &str, data_graph: &str, pairs: &[(&str, &str)]) -> Meth
     }
 }
 
-fn error_text(response: &Response) -> &str {
+/// The refusal as `CODE: detail`, the text `Response::err` accepts.
+fn error_text(response: &Response) -> String {
     response
-        .error
-        .as_deref()
+        .refusal_text()
         .unwrap_or_else(|| panic!("expected a refusal, got {:?}", response.result))
 }
 
@@ -385,9 +385,9 @@ async fn parse_and_dispatch_failures_are_distinct() {
 
         // Three distinct failures, three distinct prefixes.
         for (a, b) in [
-            (bad_schema, bad_data),
-            (bad_schema, export),
-            (bad_data, export),
+            (&bad_schema, &bad_data),
+            (&bad_schema, &export),
+            (&bad_data, &export),
         ] {
             assert_ne!(a, b);
         }

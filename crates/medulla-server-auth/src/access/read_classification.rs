@@ -71,6 +71,9 @@ pub(super) const RLS_ROUTED: &[&str] = &[
     "BatchL2Normalize",
     "BestTrajectory",
     "BetweennessCentrality",
+    // MEDULLA-DURABLE-KERNEL-R095.1001: the roster reads the terminal
+    // handler's `project_core` view (`graph_ops::terminal`).
+    "BusRoster",
     "CdcRead",
     "CommunityDetectEphemeral",
     "CommunityDetection",
@@ -122,8 +125,16 @@ pub(super) const RLS_ROUTED: &[&str] = &[
     "HasNode",
     "HasNodesBatch",
     "InDegree",
+    // MEDULLA-UNIFIED-DATA-PLANE-R760.3: `dispatch::incident::load` keeps
+    // only `can_see_node` incidents; the related-claim walk reads the
+    // `project_core` view.
+    "IncidentEvidence",
+    "IncidentRelatedClaims",
     "KnowledgeStream",
     "ListGraphs",
+    // MEDULLA-DURABLE-KERNEL-R085.2: snapshot reads use the terminal
+    // handler's `project_core` view (`graph_ops::terminal`).
+    "ListMemorySnapshots",
     "ListRegisteredServers",
     "ListTriggers",
     "LiveArtifactGet",
@@ -156,6 +167,7 @@ pub(super) const RLS_ROUTED: &[&str] = &[
     "PersonalizedPageRank",
     "PlanMatViewGet",
     "ReadContinuousQuery",
+    "ReadMemorySnapshot",
     "ResolveCandidates",
     "ResolveConflict",
     "RunRules",

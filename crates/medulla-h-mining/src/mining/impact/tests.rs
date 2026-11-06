@@ -200,7 +200,7 @@ fn ecosystem_method(package: &str, severity: EcosystemSeverity) -> Method {
 fn error_of(core: &Arc<GraphCore>, method: Method) -> String {
     let resp = dispatch_for_test(9, Arc::clone(core), method).expect("a mining method");
     assert!(resp.result.is_none(), "expected a refusal");
-    format!("{:?}", resp.error)
+    resp.refusal_text().unwrap_or_default()
 }
 
 fn packages(v: &serde_json::Value) -> Vec<(String, String, Vec<String>)> {

@@ -491,13 +491,16 @@ fn medulla_333_iceberg_avro_manifest_roundtrip() {
     use apache_avro::types::Value as AvroValue;
     use medulla_lake::iceberg_avro::read_avro_records;
 
+    // Both files land in the one snapshot the manifest describes, so both
+    // entries are ADDED; a file of an earlier snapshot is EXISTING.
     let mut table = LakeTable::new("market", "quotes", sample_schema(), "s3://lake/quotes");
-    table.record_file("data/part-0.parquet", 512, 3, Lsn(41));
+    table.record_file("data/part-0.parquet", 512, 3, Lsn(42));
     table.record_file("data/part-1.parquet", 640, 4, Lsn(42));
 
     let m = table.iceberg_manifests().expect("build avro manifests");
     assert_eq!(m.snapshot_id, 42);
     assert_eq!(m.added_files, 2);
+    assert_eq!(m.existing_files, 0);
     assert_eq!(m.added_rows, 7);
     assert!(m.manifest_path.ends_with("-m0.avro"));
     assert!(m.manifest_list_path.ends_with("-manifest-list.avro"));

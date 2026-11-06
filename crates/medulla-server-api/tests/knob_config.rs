@@ -37,8 +37,12 @@ fn loader_reads_cli_then_env_then_default_and_refuses_bad_values() {
             assert_eq!(spec.min, spec.max, "{} is Fixed", spec.name);
         }
     }
+    let topology = KNOB_TABLE
+        .iter()
+        .find(|spec| spec.name == "topology.max_width")
+        .expect("topology.max_width is a knob");
     assert_eq!(
-        KNOB_TABLE[6].env_name(),
+        topology.env_name(),
         "MEDULLA_TOPOLOGY_MAX_WIDTH",
         "dots become underscores"
     );
