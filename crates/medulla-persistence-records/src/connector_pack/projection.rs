@@ -65,7 +65,7 @@ impl AgentLibraryStore {
                 "PACK_PROJECTION_NO_HEAD: connector has no committed pack".to_string()
             })?;
         let head: ConnectorPackHeadRow =
-            crate::agent_row::decode(head.value(), "connector pack head")?;
+            super::undecodable::decode_stored(head.value(), "connector pack head")?;
         let record = imports
             .get((tenant_id, connector.as_str(), head.head.binding_revision))
             .map_err(|error| error.to_string())?
@@ -73,7 +73,7 @@ impl AgentLibraryStore {
                 "CORRUPT_CONNECTOR_PACK: head has no retained import record".to_string()
             })?;
         let record: PackImportRecord =
-            crate::agent_row::decode(record.value(), "connector pack import record")?;
+            super::undecodable::decode_stored(record.value(), "connector pack import record")?;
         validate_head_record(tenant_id, connector, &head, &record)?;
 
         let mut bodies = Vec::new();
@@ -88,7 +88,7 @@ impl AgentLibraryStore {
                 break;
             }
             let member: ConnectorPackMemberRow =
-                crate::agent_row::decode(value.value(), "connector pack member")?;
+                super::undecodable::decode_stored(value.value(), "connector pack member")?;
             if !matches!(
                 member.kind,
                 medulla_catalog_types::connector_pack::PackEntryKind::Ontology
@@ -119,7 +119,7 @@ impl AgentLibraryStore {
                     )
                 })?;
             let holder: ConnectorPackBodyHolderRow =
-                crate::agent_row::decode(holder.value(), "connector pack body holder")?;
+                super::undecodable::decode_stored(holder.value(), "connector pack body holder")?;
             if holder.engine_manifest_digest != member.engine_manifest_digest
                 || holder.length != member.body_length
             {
@@ -324,7 +324,7 @@ fn apply_projection_rows(
         .map_err(|error| error.to_string())?
         .ok_or_else(|| "PACK_PLAN_STALE: connector pack head disappeared".to_string())?;
     let mut head: ConnectorPackHeadRow =
-        crate::agent_row::decode(current.value(), "connector pack head")?;
+        super::undecodable::decode_stored(current.value(), "connector pack head")?;
     drop(current);
     if head.head.binding_revision != plan.head.binding_revision
         || head.head.pack_digest != plan.head.pack_digest
@@ -339,7 +339,7 @@ fn apply_projection_rows(
         .map_err(|error| error.to_string())?
         .ok_or_else(|| "PACK_PLAN_STALE: connector pack record disappeared".to_string())?;
     let mut record: PackImportRecord =
-        crate::agent_row::decode(current.value(), "connector pack import record")?;
+        super::undecodable::decode_stored(current.value(), "connector pack import record")?;
     drop(current);
     validate_head_record(tenant, &plan.connector, &head, &record)?;
     record.projection = projection.clone();

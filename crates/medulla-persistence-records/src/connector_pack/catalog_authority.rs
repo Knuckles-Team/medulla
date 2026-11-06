@@ -168,7 +168,7 @@ fn current_component_in(
         .get((tenant_id, component_id, current_revision))
         .map_err(|error| error.to_string())?
         .ok_or_else(|| "MCP server component head is missing".to_string())?;
-    crate::agent_row::decode(row.value(), "MCP server component").map(Some)
+    super::undecodable::decode_stored(row.value(), "MCP server component").map(Some)
 }
 
 fn catalog_binding_invalid(row: &McpCatalogAuthorityRow, configuration_digest: Digest256) -> bool {
@@ -193,7 +193,7 @@ impl AgentLibraryStore {
         let row = table
             .get((tenant_id, server_name, scope_hex.as_str()))
             .map_err(|error| error.to_string())?
-            .map(|value| crate::agent_row::decode(value.value(), "MCP scoped catalog"))
+            .map(|value| super::undecodable::decode_stored(value.value(), "MCP scoped catalog"))
             .transpose()?;
         Ok(row)
     }
@@ -319,7 +319,7 @@ fn write_catalog_rows(
             .get(config_key)
             .map_err(|error| error.to_string())?
             .map(|row| {
-                crate::agent_row::decode::<McpJoinedConfigurationRow>(
+                super::undecodable::decode_stored::<McpJoinedConfigurationRow>(
                     row.value(),
                     "MCP joined configuration",
                 )
@@ -339,7 +339,7 @@ fn write_catalog_rows(
             .get(scope_key)
             .map_err(|error| error.to_string())?
             .map(|row| {
-                crate::agent_row::decode::<McpCatalogAuthorityRow>(
+                super::undecodable::decode_stored::<McpCatalogAuthorityRow>(
                     row.value(),
                     "MCP scoped catalog",
                 )

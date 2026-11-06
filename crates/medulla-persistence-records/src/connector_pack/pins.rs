@@ -54,7 +54,7 @@ pub(super) fn resolve_pack_pins_in_write(
                 .map_err(|error| error.to_string())?
                 .ok_or_else(|| "agent component head points to a missing revision".to_string())?;
             let head: medulla_agent_types::agent_component::AgentComponentEntry =
-                crate::agent_row::decode(head.value(), "agent component")?;
+                super::undecodable::decode_stored(head.value(), "agent component")?;
             if head.lifecycle != AgentLibraryLifecycle::Published || head.definition_digest != key.1
             {
                 return Err(stale(&component.entry.component_id, key.0));

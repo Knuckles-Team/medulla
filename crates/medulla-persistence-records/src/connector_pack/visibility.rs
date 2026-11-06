@@ -46,7 +46,8 @@ pub(crate) fn pack_component_visible(
     let Some(bytes) = head(connector)? else {
         return Ok(false);
     };
-    let row: ConnectorPackHeadRow = crate::agent_row::decode(&bytes, "connector pack head")?;
+    let row: ConnectorPackHeadRow =
+        super::undecodable::decode_stored(&bytes, "connector pack head")?;
     Ok(row.head.visible_record_id.as_deref() == Some(row.head.record_id.as_str()))
 }
 

@@ -76,7 +76,13 @@ impl AgentLibraryStore {
             noun: "connector pack",
         };
         self.commit_pack_write(&plan.context, identity, effects, |write, staged| {
-            let receipt = import_receipt(&plan, staged)?;
+            let replaced = super::undecodable::replace_undecodable_rows(
+                write,
+                &plan.record.tenant_id,
+                plan.record.connector.as_str(),
+            )?;
+            let mut receipt = import_receipt(&plan, staged)?;
+            super::undecodable::record_replacement(&mut receipt, replaced)?;
             apply_pack_rows(write, &plan, &receipt)?;
             Ok(PackImportResult::Imported {
                 receipt: Box::new(receipt),
@@ -446,10 +452,9 @@ fn compare_head(
             plan.record.connector.as_str(),
         ))
         .map_err(|error| error.to_string())?
-        .map(|value| {
-            crate::agent_row::decode::<ConnectorPackHeadRow>(value.value(), "connector pack head")
-        })
-        .transpose()?;
+        // An undecodable head is replaced by this import (R041.2), so it
+        // compares as absent.
+        .and_then(|value| crate::agent_row::try_decode::<ConnectorPackHeadRow>(value.value()).ok());
     let actual_head = actual.as_ref().map(|row| PackHeadRef {
         binding_revision: row.head.binding_revision,
         pack_digest: row.head.pack_digest,

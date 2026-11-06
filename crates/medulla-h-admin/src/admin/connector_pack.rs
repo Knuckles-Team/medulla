@@ -312,8 +312,13 @@ async fn preflight_import(
 ) -> Result<Preflight, String> {
     validate_import_identity(verified, request)?;
     let store = agent_library_store(state).await?;
-    let status =
-        store.connector_pack_status(&request.context.tenant_id, &request.index.connector)?;
+    // An import replaces stored rows that no longer decode (R041.2); every
+    // other read refuses them with PACK_RECORD_UNDECODABLE.
+    let status = store.connector_pack_status_with(
+        &request.context.tenant_id,
+        &request.index.connector,
+        medulla_persistence_records::connector_pack::undecodable::UndecodableRows::Replace,
+    )?;
     authorize_importer(&store, verified, &request.index.connector)?;
     if let Some(result) = replay_or_unchanged(request, &status)? {
         return Ok(Preflight::Unchanged(result));

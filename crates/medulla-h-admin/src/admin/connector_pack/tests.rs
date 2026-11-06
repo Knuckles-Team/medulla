@@ -43,6 +43,7 @@ mod self_served_catalog;
 #[cfg(all(feature = "owl", feature = "shacl"))]
 mod source_approval;
 mod storage_acceptance;
+mod undecodable;
 mod withdrawal;
 
 const SECRET: &str = "connector-pack-served-fixture-secret"; // sanitizer:ignore

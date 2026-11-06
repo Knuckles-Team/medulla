@@ -75,8 +75,11 @@ fn run_import(
     archive: &[u8],
     cancel: &RequestCancel,
 ) -> Result<PackImportResult, String> {
-    let prior =
-        store.connector_pack_members(&request.context.tenant_id, &request.index.connector)?;
+    let prior = store.connector_pack_members_with(
+        &request.context.tenant_id,
+        &request.index.connector,
+        medulla_persistence_records::connector_pack::undecodable::UndecodableRows::Replace,
+    )?;
     let prepared = interruptible(cancel, || prepare(store, chunks, &request, archive, prior))??;
     let prepared = match prepared {
         Prepared::Rejected(result) => return Ok(result),

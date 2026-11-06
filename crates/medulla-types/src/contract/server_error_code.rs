@@ -241,6 +241,7 @@ closed_error_codes! {
         PackProjectionNoHead => "PACK_PROJECTION_NO_HEAD",
         PackProjectionPolicyUnbootstrapped => "PACK_PROJECTION_POLICY_UNBOOTSTRAPPED",
         PackProjectionPreviouslyFailed => "PACK_PROJECTION_PREVIOUSLY_FAILED",
+        PackRecordUndecodable => "PACK_RECORD_UNDECODABLE",
         PackProjectionStoreBusy => "PACK_PROJECTION_STORE_BUSY",
         PackRevisionNotVisible => "PACK_REVISION_NOT_VISIBLE",
         PackTooLarge => "PACK_TOO_LARGE",
