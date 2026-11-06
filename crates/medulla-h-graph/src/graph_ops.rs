@@ -62,6 +62,7 @@ mod workflow_registry_tests;
     feature = "graphql",
     feature = "rdf"
 ))]
+pub use finance_records::precheck_replicated_put;
 pub use gateway::mining_response_to_gateway_result as gateway_response_result;
 pub use gateway::try_handle_gateway;
 pub use terminal::try_handle;

@@ -196,6 +196,32 @@ pub(super) fn admit_put(
     ))
 }
 
+/// MEDULLA-FINANCE-PRIMITIVES-R004.3.2.9: the leader's checks before it proposes
+/// the replicated `FinanceRecordPut`. They are exactly the admission of
+/// [`admit_put`] (version gate, kind policy with `RECORD_DERIVED_READONLY` first,
+/// tenant, shape, expected head) over the leader's applied core, so a put that
+/// fails any of them proposes nothing and writes nothing. Replica apply runs the
+/// same admission again through the one gateway path before its one upsert.
+pub fn precheck_replicated_put(
+    core: &GraphCore,
+    tenant_id: &str,
+    tenant_scope: &str,
+    method: &Method,
+) -> Result<(), String> {
+    #[cfg(all(feature = "finance", feature = "shacl"))]
+    {
+        admit_put(core, tenant_id, tenant_scope, method).map(|_| ())
+    }
+    #[cfg(not(all(feature = "finance", feature = "shacl")))]
+    {
+        let _ = (core, tenant_id, tenant_scope, method);
+        Err(
+            "METHOD_NOT_YET_SERVED: FinanceRecordPut needs the finance and shacl features"
+                .to_string(),
+        )
+    }
+}
+
 /// The `Route::FinanceRecords` entry: admit the put, then commit it as the
 /// `AddNode` upsert through the coalescable gateway.
 pub(super) async fn handle_record(
