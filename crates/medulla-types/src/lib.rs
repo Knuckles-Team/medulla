@@ -35,6 +35,8 @@ pub mod causal_wire;
 pub mod graphlearn_nary;
 // MEDULLA-DURABLE-KERNEL-R076.1 — authoritative scheduler policy data and validation.
 pub mod scheduler_config;
+// MEDULLA-DECISION-ENGINE-R653.1 — improvement-loop records and the `Loops` op body.
+pub mod loops;
 // MEDULLA-DURABLE-KERNEL-R071 — typed durable task-queue model with refusals.
 pub mod task_queue;
 // MEDULLA-INGEST-WORKER-R002.1/.2 — induced ontology proposals and admission scores.
