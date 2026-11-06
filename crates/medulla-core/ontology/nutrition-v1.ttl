@@ -148,6 +148,12 @@
     rdfs:domain :FoodCompositionRecord ;
     rdfs:range xsd:string .
 
+:nutrientId a owl:DatatypeProperty ;
+    rdfs:label "nutrient identifier" ;
+    rdfs:comment "The source database's identifier of the nutrient a :NutrientAmount measures (a USDA FoodData Central nutrient number). It must have a row in the nutrient crosswalk, which names the :Nutrient chemical-entity term the amount is about; an identifier without a row is refused with NUTRIENT_ID_UNMAPPED." ;
+    rdfs:domain :NutrientAmount ;
+    rdfs:range xsd:string .
+
 :Recipe a owl:Class ;
     rdfs:label "Recipe" ;
     rdfs:comment "A recipe." .

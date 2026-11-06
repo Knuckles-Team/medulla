@@ -59,6 +59,9 @@ pub enum PackViolationCode {
     ConceptPathParentConflict,
     ConceptPathIriConflict,
     ConceptPathStaleRevision,
+    // A nutrient amount whose identifier has no chemical-entity crosswalk entry
+    // (MEDULLA-MEDIA-VOCAB-R655).
+    NutrientIdUnmapped,
 }
 
 /// Something worth saying that did not stop the import.

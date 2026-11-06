@@ -356,6 +356,7 @@ pub fn every_violation_code() -> Vec<PackViolationCode> {
         PackViolationCode::ConceptPathParentConflict,
         PackViolationCode::ConceptPathIriConflict,
         PackViolationCode::ConceptPathStaleRevision,
+        PackViolationCode::NutrientIdUnmapped,
     ]
 }
 

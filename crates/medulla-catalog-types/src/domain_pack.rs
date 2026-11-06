@@ -13,10 +13,14 @@
 use std::collections::BTreeSet;
 
 mod crosswalk;
+mod nutrient_crosswalk;
 
 pub use crosswalk::{
     compute_coverage, validate_crosswalks, CrosswalkContext, PinnedHierarchy,
     MAX_CROSSWALK_IRI_BYTES, MAX_CROSSWALK_MAPPINGS, MAX_CROSSWALK_SOURCE_CLASSES,
+};
+pub use nutrient_crosswalk::{
+    chemical_entity_for_nutrient, NutrientIdUnmapped, NUTRIENT_CROSSWALK,
 };
 
 /// The four domains this requirement names. Closed: a fifth domain is a new
