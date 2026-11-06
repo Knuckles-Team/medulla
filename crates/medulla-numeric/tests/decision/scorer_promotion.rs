@@ -59,6 +59,7 @@ fn receipt(head: &DecisionHeadBody, data: &LabelledDataset) -> DecisionEvalRecei
         estimators: &[],
         head_digest: "sha256:scorer",
         policy_digest: "sha256:policy",
+        feature_power: None,
     };
     evaluate(head, data, &admitted.items, admitted.exclusions, &spec).expect("evaluates")
 }

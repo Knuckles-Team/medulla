@@ -243,6 +243,12 @@ knobs! {
     usage_max_batch: u64 = "usage.max_batch", U64(1_000), [1, 10_000], "records", Tunable;
     /// OTLP log batch record cap (MEDULLA-CONTRACT-R050).
     obs_max_batch_records: u64 = "obs.max_batch_records", U64(1_000), [1, 10_000], "records", Tunable;
+    /// Longest lag of a feature-power IC decay curve (MEDULLA-DECISION-ENGINE-R117.1.2).
+    eval_ic_max_lag: u64 = "eval.ic_max_lag", U64(5), [1, 64], "lags", Tunable;
+    /// Bootstrap resamples of a feature-power IC interval.
+    eval_bootstrap_resamples: u64 = "eval.bootstrap_resamples", U64(1_000), [100, 10_000], "resamples", Tunable;
+    /// Coverage of a feature-power IC interval.
+    eval_ci_level: f64 = "eval.ci_level", F64(0.95), [0.5, 0.999], "fraction", Tunable;
 }
 
 fn refusal(code: ServerErrorCode, knob: &str, detail: String) -> KnobRefusal {

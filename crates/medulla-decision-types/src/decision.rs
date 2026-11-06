@@ -93,7 +93,10 @@ pub use record::{
     Elimination, EvidenceClass, PremiseClass, PremiseProvenance, PremiseRef, ResolutionKind,
     SlotAssignment, SolverIdentity, TemplateFacts, TraceFidelity, Violation, WhyNot,
 };
-pub use replay::{EvalMode, EvaluationRun, ReplaySpec};
+pub use replay::{
+    EvalMode, EvaluationRun, FeaturePowerReport, IcInterval, ReplaySpec, MAX_FEATURE_POWER_REPORTS,
+    MAX_IC_DECAY_LAGS,
+};
 pub use request::{
     AssemblyConstraints, AssemblyRequest, AssemblyRequirements, AssemblyResult, ClaimProvenance,
     ClaimedTaskMapping, CostBudget, DecisionCommitRequest, DecisionCommitResult, DecisionPolicyRef,
