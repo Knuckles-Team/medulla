@@ -343,6 +343,7 @@ pub fn every_violation_code() -> Vec<PackViolationCode> {
         PackViolationCode::PackMassWithdrawal,
         PackViolationCode::RetiredEntryReturned,
         PackViolationCode::OntologyOrphan,
+        PackViolationCode::ContractShaclViolation,
     ]
 }
 

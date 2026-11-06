@@ -21,6 +21,8 @@ use medulla_server_blob::blob::BlobCursors;
 
 mod annotations;
 mod catalog_attributes;
+#[cfg(feature = "rdf")]
+mod contract_rdf;
 mod desired;
 mod facts;
 mod front_matter;

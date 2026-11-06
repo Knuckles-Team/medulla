@@ -46,6 +46,9 @@ pub enum PackViolationCode {
     // A pack ontology class has no subclass path to the parent catalog
     // (MEDULLA-TYPED-PACKS-R105), and the deployment refuses orphans.
     OntologyOrphan,
+    // The connector declaration's ingest contract breaks the contract shapes
+    // (MEDULLA-TYPED-PACKS-R101.2).
+    ContractShaclViolation,
 }
 
 /// Something worth saying that did not stop the import.
