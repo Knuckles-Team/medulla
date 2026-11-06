@@ -89,6 +89,7 @@ mod tests {
     }
 
     // spec: MEDULLA-INGEST-WORKER-R001.1006
+    /// Verifies MEDULLA-INGEST-WORKER-R001.1006: Model: data-prep declaration.
     #[test]
     fn declaration_round_trips_and_rejects_unknown_fields() {
         let value = declaration();

@@ -196,6 +196,7 @@ mod tests {
     use super::*;
 
     // spec: MEDULLA-INGEST-WORKER-R605.1
+    /// Verifies MEDULLA-INGEST-WORKER-R605.1: Model: drains, page checkpoints, graph routes and stage profiles.
     #[test]
     fn types_round_trip_and_reject_bad_ids() {
         let id = "ab".repeat(32);
