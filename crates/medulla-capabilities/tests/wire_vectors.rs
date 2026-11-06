@@ -2,9 +2,11 @@
 //!
 //! No sample is hand-written: `sample_builder::build_sample` derives each request from the
 //! `Method` variant's schema and each result from the schema of the body that
-//! `medulla_protocol_types::result_contract` registers for the method. The committed vectors
-//! live in `tests/fixtures/wire_vectors/<domain>.json`. They are test data, not a generated
-//! contract: `MEDULLA_WRITE_VECTORS=1` rewrites them for a deliberate wire change.
+//! `medulla_protocol_types::result_contract` registers for the method. No vector file is
+//! committed (owner rule: no committed generated artifacts): each domain test rebuilds its
+//! samples in-process and checks them against an independent second build, the domain's
+//! method set and each row's canonical digest. An external client that needs the vectors
+//! generates them at test time from this same builder.
 //!
 //! Run: `cargo test -p medulla-capabilities --test wire_vectors`.
 #![cfg(feature = "contract-schema")]
@@ -13,7 +15,6 @@
 mod sample_builder;
 
 use std::collections::BTreeMap;
-use std::path::PathBuf;
 
 use medulla_capabilities::method_descriptors;
 use medulla_protocol_types::protocol::Method;
@@ -98,14 +99,20 @@ fn vector(
         .ok_or_else(|| format!("{method}: no Method schema variant carries this tag"))?;
     let request = build_node(root, variant, method).map_err(|error| error.to_string())?;
 
-    // The generated request must deserialize back to an equal `Method`.
-    let decoded: Method = serde_json::from_value(request.clone())
+    // The generated request must deserialize, and its encoding must be a fixed point:
+    // serde fills omitted defaulted fields on decode, so the vector carries the decoded
+    // encoding, which must decode back to the same encoding.
+    let decoded: Method = serde_json::from_value(request)
         .map_err(|error| format!("{method}: request does not deserialize: {error}"))?;
-    let reencoded = serde_json::to_value(&decoded)
+    let request = serde_json::to_value(&decoded)
+        .map_err(|error| format!("{method}: request does not serialize: {error}"))?;
+    let again: Method = serde_json::from_value(request.clone())
+        .map_err(|error| format!("{method}: encoded request does not deserialize: {error}"))?;
+    let reencoded = serde_json::to_value(&again)
         .map_err(|error| format!("{method}: request does not serialize: {error}"))?;
     if canonical(&reencoded) != canonical(&request) {
         return Err(format!(
-            "{method}: request does not round-trip\n  built:   {request}\n  decoded: {reencoded}"
+            "{method}: request does not round-trip\n  encoded: {request}\n  again:   {reencoded}"
         ));
     }
 
@@ -133,12 +140,6 @@ fn vector(
     Ok(json!({"method": method, "request": request, "result": result, "sha256": digest}))
 }
 
-fn fixture_path(domain: &str) -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../tests/fixtures/wire_vectors")
-        .join(format!("{domain}.json"))
-}
-
 /// The vectors of every wire method, grouped by domain and sorted by method id.
 fn all_vectors() -> &'static BTreeMap<&'static str, Vec<Value>> {
     static VECTORS: std::sync::OnceLock<BTreeMap<&'static str, Vec<Value>>> =
@@ -147,12 +148,17 @@ fn all_vectors() -> &'static BTreeMap<&'static str, Vec<Value>> {
 }
 
 fn build_vectors() -> BTreeMap<&'static str, Vec<Value>> {
+    build_vectors_where(|_| true)
+}
+
+/// The vectors of the wire methods whose domain passes `keep`, from a fresh build.
+fn build_vectors_where(keep: impl Fn(&str) -> bool) -> BTreeMap<&'static str, Vec<Value>> {
     let method_schema = schemars::schema_for!(Method);
     let mut results = ResultSchemas::default();
     visit_all(&mut results);
     let mut failures = Vec::new();
     let mut by_domain: BTreeMap<&'static str, Vec<Value>> = BTreeMap::new();
-    for (domain, method) in wire_methods() {
+    for (domain, method) in wire_methods().into_iter().filter(|(d, _)| keep(d)) {
         match vector(&method_schema, &results, method) {
             Ok(row) => by_domain.entry(domain).or_default().push(row),
             Err(error) => failures.push(error),
@@ -167,47 +173,54 @@ fn build_vectors() -> BTreeMap<&'static str, Vec<Value>> {
     by_domain
 }
 
-fn render(rows: &[Value]) -> String {
-    let mut text =
-        serde_json::to_string_pretty(&Value::Array(rows.to_vec())).expect("vectors serialize");
-    text.push('\n');
-    text
+/// The method ids of `rows`, in row order.
+fn row_methods(rows: &[Value]) -> Vec<&str> {
+    rows.iter()
+        .filter_map(|row| row["method"].as_str())
+        .collect()
 }
 
-/// Compare one domain's generated rows with its committed file.
+/// The digest a row carries must be the digest of its own method, request and result.
+fn digest_mismatch(row: &Value) -> Option<String> {
+    let body = json!({"method": row["method"], "request": row["request"], "result": row["result"]});
+    let digest = Digest256::sha256(body.to_string().as_bytes()).to_hex();
+    (row["sha256"].as_str() != Some(digest.as_str()))
+        .then(|| format!("{}: digest does not match its row", row["method"]))
+}
+
+/// Check one domain's rows in-process: the domain's method set, a second independent build,
+/// and each row's digest. Every failure names the method id.
 fn check_domain(domain: &str) {
     let vectors = all_vectors();
     let rows = vectors
         .get(domain)
         .unwrap_or_else(|| panic!("domain {domain} has no wire-callable method"));
-    check_rows(domain, rows);
-}
-
-fn check_rows(domain: &str, rows: &[Value]) {
-    let path = fixture_path(domain);
-    let expected = render(rows);
-    if std::env::var_os("MEDULLA_WRITE_VECTORS").is_some() {
-        std::fs::create_dir_all(path.parent().expect("fixture dir")).expect("create fixture dir");
-        std::fs::write(&path, expected).expect("write vectors");
-        return;
-    }
-    let committed = std::fs::read_to_string(&path).unwrap_or_else(|error| {
-        panic!(
-            "{}: {error}; rerun with MEDULLA_WRITE_VECTORS=1 to write the vectors",
-            path.display()
-        )
-    });
-    assert!(
-        !committed.contains('\r'),
-        "{} must use LF line endings",
-        path.display()
+    let expected: Vec<&str> = wire_methods()
+        .into_iter()
+        .filter(|(d, _)| *d == domain)
+        .map(|(_, method)| method)
+        .collect();
+    let built = row_methods(rows);
+    let mut failures: Vec<String> = expected
+        .iter()
+        .filter(|method| !built.contains(method))
+        .map(|method| format!("{method}: no vector for this {domain} method"))
+        .collect();
+    failures.extend(
+        built
+            .iter()
+            .filter(|method| !expected.contains(method))
+            .map(|method| format!("{method}: vector names no {domain} method")),
     );
-    assert!(
-        committed == expected,
-        "{} differs from the generated vectors; a deliberate wire change reruns with \
-         MEDULLA_WRITE_VECTORS=1",
-        path.display()
+    let fresh = build_vectors_where(|d| d == domain);
+    let again = fresh.get(domain).map(Vec::as_slice).unwrap_or_default();
+    failures.extend(
+        rows.iter()
+            .filter(|row| !again.contains(row))
+            .map(|row| format!("{}: vector differs between two builds", row["method"])),
     );
+    failures.extend(rows.iter().filter_map(digest_mismatch));
+    assert!(failures.is_empty(), "{domain}:\n{}", failures.join("\n"));
 }
 
 // spec: MEDULLA-CONTRACT-R001.3
@@ -228,7 +241,7 @@ fn vectors_cover_every_wire_method_and_round_trip() {
         let mut sorted = methods.clone();
         sorted.sort();
         assert_eq!(methods, sorted, "{domain}: rows are sorted by method id");
-        check_rows(domain, rows);
+        check_domain(domain);
     }
 }
 
