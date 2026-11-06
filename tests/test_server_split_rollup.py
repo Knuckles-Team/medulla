@@ -23,6 +23,21 @@ BACKBONE = (
 )
 
 
+# Step 6 handler crates: one per domain, depending on server-api and leaf crates only.
+HANDLERS = (
+    "medulla-h-compute",
+    "medulla-h-ingest",
+    "medulla-h-graph",
+    "medulla-h-jobs",
+)
+HANDLER_FORBIDDEN = {
+    "medulla-server",
+    "medulla-server-router",
+    "medulla-wire",
+    *HANDLERS,
+}
+
+
 def _members() -> set[str]:
     workspace = tomllib.loads((REPO / "Cargo.toml").read_text())["workspace"]
     return {Path(member).name for member in workspace["members"]}
@@ -156,3 +171,17 @@ def test_wire_crate_gates_one_feature_per_protocol() -> None:
     ]
     dependents = [crate for crate in handlers if "medulla-wire" in _path_deps(crate)]
     assert not dependents, f"handler crates depend on medulla-wire: {dependents}"
+
+
+@pytest.mark.spec("MEDULLA-CONTRACT-R056.7")
+def test_handler_crates_depend_on_server_api_and_leaves_only() -> None:
+    members = _members()
+    missing = [crate for crate in HANDLERS if crate not in members]
+    assert not missing, f"handler crates missing from the workspace: {missing}"
+    bad = [
+        f"{crate} -> {dep}"
+        for crate in HANDLERS
+        for dep in _path_deps(crate) & HANDLER_FORBIDDEN
+    ]
+    assert not bad, f"handler crates depend on the router, server or each other: {bad}"
+    assert all("medulla-server-api" in _path_deps(crate) for crate in HANDLERS)
