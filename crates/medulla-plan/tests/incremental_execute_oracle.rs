@@ -253,6 +253,7 @@ proptest! {
     // spec: MEDULLA-INCREMENTAL-VIEWS-R001.3
     /// Membership (Scan/Filter/AsOf) incremental == real `execute` recompute, every step.
     // spec: MEDULLA-INCREMENTAL-VIEWS-R002.4
+    /// Verifies MEDULLA-INCREMENTAL-VIEWS-R002.4: Proof: shipped graph behavior is unchanged.
     #[test]
     fn membership_matches_execute(
         plan in arb_membership_plan(),
