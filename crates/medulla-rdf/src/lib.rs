@@ -68,3 +68,8 @@ pub mod update;
 /// `medulla-geo` crate. Behind `geosparql` (implies `sparql` + pulls `medulla-geo`); OUT of `pi`.
 #[cfg(feature = "geosparql")]
 pub mod geosparql;
+
+/// Per-graph R-tree over the bounding boxes of a graph's `geo:wktLiteral` objects, maintained
+/// on write and consulted by the spatial functions (MEDULLA-FEDERATED-QUERY-R709.7).
+#[cfg(feature = "geosparql")]
+pub mod spatial_index;

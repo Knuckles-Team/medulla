@@ -2893,6 +2893,7 @@ components:
     owned_source_roots:
       - "crates/medulla-reasoner/src/contract.rs"
       - "crates/medulla-rdf/src/geosparql.rs"
+      - "crates/medulla-rdf/src/spatial_index.rs"
       - "crates/medulla-rdf/src/guard.rs"
       - "crates/medulla-rdf/src/jsonld.rs"
       - "crates/medulla-rdf/src/mapping.rs"
