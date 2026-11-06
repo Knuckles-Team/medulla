@@ -434,6 +434,7 @@ mod tests {
         assert_eq!(audio.probe_set_digest, None);
     }
 
+    /// Verifies MEDULLA-UNIFIED-DATA-PLANE-R040.5: Evidence: each `PromotionVerdict` is a typed record linked to the model, version and binding
     // spec: MEDULLA-UNIFIED-DATA-PLANE-R040.5
     #[test]
     fn verdict_is_stored_with_modality_entries() {

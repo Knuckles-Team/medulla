@@ -90,6 +90,7 @@ mod tests {
         }
     }
 
+    /// Verifies MEDULLA-UNIFIED-DATA-PLANE-R038.5.1: Model: `SearchIndexCapability` on the operation-bound source
     // spec: MEDULLA-UNIFIED-DATA-PLANE-R038.5.1
     #[test]
     fn search_capability_round_trips() {

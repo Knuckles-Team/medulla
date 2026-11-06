@@ -92,6 +92,7 @@ mod tests {
         }
     }
 
+    /// Verifies MEDULLA-UNIFIED-DATA-PLANE-R038.7.1: Model: `WebSearchCapability` and `WebResult`
     // spec: MEDULLA-UNIFIED-DATA-PLANE-R038.7.1
     #[test]
     fn web_result_round_trips() {
