@@ -347,6 +347,8 @@ knobs! {
     views_memory_bytes: u64 = "views.memory_bytes", U64(1_073_741_824), [16_777_216, 68_719_476_736], "bytes", Tunable;
     /// Ontology naming convention mode: 0 warns, 1 refuses (MEDULLA-TYPED-PACKS-R651.2).
     ontology_naming_mode: u64 = "ontology.naming_mode", U64(0), [0, 1], "mode", Tunable;
+    /// Deepest variable-length path an openCypher view read may compile (MEDULLA-UNIFIED-DATA-PLANE-R038.6.2).
+    federation_cypher_max_path_depth: u64 = "federation.cypher_max_path_depth", U64(8), [1, 16], "hops", Tunable;
 }
 
 fn refusal(code: ServerErrorCode, knob: &str, detail: String) -> KnobRefusal {

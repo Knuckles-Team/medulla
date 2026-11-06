@@ -66,6 +66,10 @@ pub struct FragmentTrace {
     pub read_at_ms: u64,
     /// How the query's fragments of this source relate in time.
     pub consistency: Consistency,
+    /// The statement pushed to the source, when the fragment came from a graph view.
+    pub pushed_statement: Option<String>,
+    /// SHA-256 of the fragment's mapping, 64 lowercase hex characters (MEDULLA-UNIFIED-DATA-PLANE-R038.6.5).
+    pub mapping_digest: Option<String>,
 }
 
 impl FragmentTrace {
@@ -83,6 +87,8 @@ impl FragmentTrace {
             snapshot: None,
             read_at_ms: 0,
             consistency: Consistency::Snapshot,
+            pushed_statement: None,
+            mapping_digest: None,
             keys_pushed: 0,
             limit_pushed: None,
             requests: 0,
@@ -137,13 +143,28 @@ const fn isolation_word(isolation: SnapshotIsolation) -> &'static str {
     }
 }
 
+/// ` mapping_digest=… pushed_statement=…` for a view fragment. A digest that is not
+/// 64 lowercase hex characters is not printed.
+fn view_words(t: &FragmentTrace) -> String {
+    let digest = t
+        .mapping_digest
+        .as_deref()
+        .filter(|d| d.len() == 64 && d.bytes().all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f')))
+        .map(|d| format!(" mapping_digest={d}"));
+    let statement = t
+        .pushed_statement
+        .as_deref()
+        .map(|s| format!(" pushed_statement={s:?}"));
+    digest.into_iter().chain(statement).collect()
+}
+
 /// One line per fragment for a log/EXPLAIN view, without registered source names.
 pub fn render_trace(trace: &[FragmentTrace]) -> String {
     trace
         .iter()
         .map(|t| {
             format!(
-                "{} {:?} keys={} limit={:?} requests={} fetched={} kept={} ms={} estimate={:?} mode={}{}{}",
+                "{} {:?} keys={} limit={:?} requests={} fetched={} kept={} ms={} estimate={:?} mode={}{}{}{}",
                 redacted_label(&t.source),
                 t.strategy,
                 t.keys_pushed,
@@ -165,7 +186,8 @@ pub fn render_trace(trace: &[FragmentTrace]) -> String {
                 match t.consistency {
                     Consistency::PerFragment => " consistency=per_fragment",
                     Consistency::Snapshot => "",
-                }
+                },
+                view_words(t)
             )
         })
         .collect::<Vec<_>>()
@@ -206,5 +228,28 @@ mod tests {
         let output = render_trace(&[fragment]);
         assert!(output.starts_with("source#unknown FullFetch"), "{output}");
         assert!(!output.contains("redact-me"));
+    }
+
+    // spec: MEDULLA-UNIFIED-DATA-PLANE-R038.6.5
+    #[test]
+    fn view_fragment_trace_prints_statement_and_digest() {
+        let mut fragment = FragmentTrace::new(
+            "sql:registered#deadbeef".into(),
+            FetchStrategy::FullFetch,
+            FragmentExecutionMode::Live,
+        );
+        fragment.pushed_statement = Some("SELECT * FROM \"person\"".into());
+        fragment.mapping_digest = Some("ab".repeat(32));
+        let output = render_trace(&[fragment.clone()]);
+        assert!(
+            output.contains(&format!(" mapping_digest={}", "ab".repeat(32))),
+            "{output}"
+        );
+        assert!(
+            output.contains(" pushed_statement=\"SELECT * FROM \\\"person\\\"\""),
+            "{output}"
+        );
+        fragment.mapping_digest = Some("AB".repeat(32));
+        assert!(!render_trace(&[fragment]).contains("mapping_digest="));
     }
 }

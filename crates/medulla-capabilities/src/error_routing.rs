@@ -330,7 +330,24 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "REPLAY_NONCE_CONSUMED",
         ],
     ),
-    ("CypherQuery", &["REPLAY_NONCE_CONSUMED"]),
+    (
+        "CypherQuery",
+        &[
+            "PATH_DEPTH_EXCEEDED",
+            "REPLAY_NONCE_CONSUMED",
+            "UNMAPPED_LABEL",
+            "VIEW_CLAUSE_UNSUPPORTED",
+            "VIRTUAL_VIEW_READ_ONLY",
+        ],
+    ),
+    (
+        "RegisterGraphView",
+        &[
+            "GRAPH_VIEW_DIGEST_MISSING",
+            "UNMAPPED_LABEL",
+            "UNMAPPED_RELATIONSHIP",
+        ],
+    ),
     ("GraphQl", &["REPLAY_NONCE_CONSUMED"]),
     // MEDULLA-DURABLE-KERNEL-R865 (child input) and R750.750.1 (signed agent-turn envelope).
     (
