@@ -18,7 +18,12 @@ pub const REPUTATION_INSUFFICIENT_HISTORY: RefusalCode =
 pub const REFUSALS: &[RefusalCode] = &[REPUTATION_INSUFFICIENT_HISTORY];
 
 /// What the caller's visible decision log says about one subject's reliability.
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+///
+/// Decoding is strict: an unknown field is refused on every state, the unit
+/// `absent` state included (serde's derived internally tagged decoder skips
+/// `deny_unknown_fields` on unit variants, so decoding goes through
+/// [`SourceReliabilityWire`]).
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 #[serde(tag = "state", rename_all = "snake_case", deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum SourceReliability {
@@ -33,6 +38,78 @@ pub enum SourceReliability {
         upper: f64,
         trials: u64,
     },
+}
+
+/// The closed `state` tag of [`SourceReliability`].
+#[derive(Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum SourceReliabilityState {
+    Absent,
+    InsufficientHistory,
+    Estimated,
+}
+
+/// The flat decoding form of [`SourceReliability`]: every field a state may
+/// carry, refusing any other.
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct SourceReliabilityWire {
+    state: SourceReliabilityState,
+    trials: Option<u64>,
+    min_support: Option<u64>,
+    mean: Option<f64>,
+    lower: Option<f64>,
+    upper: Option<f64>,
+}
+
+impl<'de> Deserialize<'de> for SourceReliability {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        use serde::de::Error;
+        let wire = SourceReliabilityWire::deserialize(deserializer)?;
+        let SourceReliabilityWire {
+            state,
+            trials,
+            min_support,
+            mean,
+            lower,
+            upper,
+        } = wire;
+        let extra = |state: &str| D::Error::custom(format!("unexpected field for state `{state}`"));
+        let missing = |field: &'static str| D::Error::missing_field(field);
+        match state {
+            SourceReliabilityState::Absent => {
+                if trials.is_some()
+                    || min_support.is_some()
+                    || mean.is_some()
+                    || lower.is_some()
+                    || upper.is_some()
+                {
+                    return Err(extra("absent"));
+                }
+                Ok(Self::Absent)
+            }
+            SourceReliabilityState::InsufficientHistory => {
+                if mean.is_some() || lower.is_some() || upper.is_some() {
+                    return Err(extra("insufficient_history"));
+                }
+                Ok(Self::InsufficientHistory {
+                    trials: trials.ok_or_else(|| missing("trials"))?,
+                    min_support: min_support.ok_or_else(|| missing("min_support"))?,
+                })
+            }
+            SourceReliabilityState::Estimated => {
+                if min_support.is_some() {
+                    return Err(extra("estimated"));
+                }
+                Ok(Self::Estimated {
+                    mean: mean.ok_or_else(|| missing("mean"))?,
+                    lower: lower.ok_or_else(|| missing("lower"))?,
+                    upper: upper.ok_or_else(|| missing("upper"))?,
+                    trials: trials.ok_or_else(|| missing("trials"))?,
+                })
+            }
+        }
+    }
 }
 
 impl SourceReliability {

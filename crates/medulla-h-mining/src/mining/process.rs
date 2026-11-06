@@ -22,7 +22,7 @@ pub(crate) fn handle_causal_impact(
     if series.is_empty() {
         return Response::err(
             req_id,
-            "mining: causal_impact requires a non-empty `series`",
+            "INVALID_ARGUMENT: mining: causal_impact requires a non-empty `series`",
         );
     }
     let effect = if control.is_empty() {
@@ -154,7 +154,10 @@ pub(crate) fn handle_process(
     writeback: WritebackOptions,
 ) -> Response {
     if traces.is_empty() {
-        return Response::err(req_id, "mining: process mining requires non-empty `traces`");
+        return Response::err(
+            req_id,
+            "INVALID_ARGUMENT: mining: process mining requires non-empty `traces`",
+        );
     }
     let (labels, model) = process_mining::alpha_lite_labeled(&traces);
     let written = if writeback.enabled {

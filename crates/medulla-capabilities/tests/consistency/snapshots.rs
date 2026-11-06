@@ -122,6 +122,20 @@ pub(crate) const ACCESS_RS_MUTATES_UNCONDITIONAL: &[&str] = &[
     "IncidentSetStatus",
     "ActionRegister",
     "ActionSubmit",
+    // MEDULLA-FINANCE-PRIMITIVES-R004.3.2/R011.2.3/R018.5: gateway-routed record,
+    // alert and factor writes.
+    "FinanceRecordPut",
+    "FinanceAlertRaise",
+    "FinanceFactorRecord",
+    // MEDULLA-BRANCH-MERGE-R001: one branch registry row.
+    "CreateBranch",
+    // MEDULLA-FEDERATED-QUERY-R701.3: the artifact node and its refresh records.
+    "LiveArtifactPut",
+    "LiveArtifactRefresh",
+    // MEDULLA-TYPED-PACKS-R805.1: data-product and access-request policy writes.
+    "DataProductRegister",
+    "AccessRequestOpen",
+    "AccessRequestDecide",
     "SupersedeEdge",
     "SweepExpired",
     "SyncMemorySnapshot",
@@ -572,6 +586,23 @@ pub(crate) const AUDIT_RS_AUDITED: &[&str] = &[
     "IncidentSetStatus",
     "ActionRegister",
     "ActionSubmit",
+    // Gateway-routed writes that commit as the one AddNode upsert or one
+    // BatchUpdate (MEDULLA-DECISION-ENGINE-R166.3, MEDULLA-FINANCE-PRIMITIVES-R004.3.2,
+    // R011.2.3, R018.5, MEDULLA-FEDERATED-QUERY-R724); markers like `FleetCatalog`.
+    "WorkflowRegistry",
+    "FinanceRecordPut",
+    "FinanceAlertRaise",
+    "FinanceFactorRecord",
+    "SchemaProjections",
+    // MEDULLA-FEDERATED-QUERY-R701.3/R701.5: committed over the query gateway's
+    // staged graph, the same audited commit point as `Sql`.
+    "LiveArtifactPut",
+    "LiveArtifactRefresh",
+    // MEDULLA-TYPED-PACKS-R805.1: the rbac.redb policy store's hash-chained
+    // audit trail records the write, like `RbacElevation`.
+    "DataProductRegister",
+    "AccessRequestOpen",
+    "AccessRequestDecide",
     // Defense-in-depth markers; the durable record is the identity store's
     // hash-chained audit trail, written in the same rbac.redb image as the
     // change it records.
@@ -673,6 +704,14 @@ pub(crate) const CDC_RS_EMITS_CDC: &[&str] = &[
     "IncidentSetStatus",
     "ActionRegister",
     "ActionSubmit",
+    // The AddNode / BatchUpdate lowering emits the change event, like `FleetCatalog`
+    // (MEDULLA-DECISION-ENGINE-R166.3, MEDULLA-FINANCE-PRIMITIVES-R004.3.2, R011.2.3,
+    // R018.5, MEDULLA-FEDERATED-QUERY-R724).
+    "WorkflowRegistry",
+    "FinanceRecordPut",
+    "FinanceAlertRaise",
+    "FinanceFactorRecord",
+    "SchemaProjections",
     "RemoveEdge",
     "RemoveNode",
     "RunDatalogReasoning",

@@ -1729,7 +1729,7 @@ mod tests {
             ),
             (
                 "capability",
-                "ebcddf9f166e7e0e6cabbb0126a304c6dd5e0713da2503ec9b2fa08b381504cd",
+                "0bef554581e3c54e61a374e0428bd8923be382601e66312b881df0d307aa37b8",
             ),
             (
                 "argumentation",
@@ -1893,7 +1893,7 @@ mod tests {
             ),
             (
                 "nutrition",
-                "ef2e43e387de040626f123046e3210086cb8d387d322e778f22e047fe574e840",
+                "21692c19900abfaf614d62f1c848dc84cfab6b792a4258cfbed4f7064170a87b",
             ),
             (
                 "world-model-shapes",

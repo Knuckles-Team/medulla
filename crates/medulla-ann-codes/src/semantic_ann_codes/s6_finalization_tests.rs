@@ -246,8 +246,10 @@ fn s6_rolls_back_when_the_active_pointer_names_a_future_generation() {
         &fixture.s6_checkpoint,
         &fixture.image,
     ));
+    // The promotion gate's live read (MEDULLA-UNIFIED-DATA-PLANE-R040.3)
+    // refuses the future pointer before the activation write.
     assert!(
-        refused.contains("S6 active pointer names a future generation"),
+        refused.contains("semantic active pointer names a future binding generation"),
         "{refused}"
     );
     assert_eq!(

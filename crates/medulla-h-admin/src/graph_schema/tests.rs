@@ -53,14 +53,14 @@ fn attach_list_and_detach_share_one_authoritative_source_set() {
             _ => None,
         })
         .collect();
-    // The listing reports the exact immutable catalog: 54 sources carrying
-    // 46 ontology documents and 9 shape documents. Commercial owns both kinds
-    // in one source; every other source owns exactly one document kind.
+    // The listing reports the exact immutable catalog of 60 core sources.
+    // Eight sources own both document kinds; every other source owns exactly
+    // one document kind.
     let catalog = core.schema_sources();
     let catalog_ids: std::collections::BTreeSet<_> =
         catalog.core.keys().map(String::as_str).collect();
     assert_eq!(core_ids, catalog_ids);
-    assert_eq!(core_ids.len(), 56);
+    assert_eq!(core_ids.len(), 60);
     for anchor in [
         "core:catalog@1",
         "core:foundation@1",
@@ -75,7 +75,7 @@ fn attach_list_and_detach_share_one_authoritative_source_set() {
             .iter()
             .filter(|source| source.ontology_sha256.is_some())
             .count(),
-        46
+        47
     );
     assert_eq!(
         initial
@@ -83,16 +83,19 @@ fn attach_list_and_detach_share_one_authoritative_source_set() {
             .iter()
             .filter(|source| source.shapes_sha256.is_some())
             .count(),
-        15
+        21
     );
     for source in &initial.core_sources {
         let expected = if matches!(
             source.source_id.as_str(),
-            "core:commercial@1"
+            "core:archimate@1"
+                | "core:commercial@1"
                 | "core:connector-pack@1"
                 | "core:data-platform@1"
+                | "core:decision@1"
                 | "core:harness@1"
                 | "core:infrastructure@1"
+                | "core:sdlc_lifecycle@1"
         ) {
             (true, true)
         } else {

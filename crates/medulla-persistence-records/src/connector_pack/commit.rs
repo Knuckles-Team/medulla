@@ -93,12 +93,13 @@ impl AgentLibraryStore {
 
 fn validate_plan(store: &AgentLibraryStore, plan: &ConnectorPackCommitPlan) -> Result<(), String> {
     validate_context(store, &plan.context)?;
-    let expected_binding_revision = match &plan.expected_head {
-        Some(head) => head.binding_revision.checked_add(1).ok_or_else(|| {
-            "CORRUPT_CONNECTOR_PACK: connector pack binding revision overflow".to_string()
-        })?,
-        None => 1,
-    };
+    let expected_binding_revision = store.connector_pack_next_import_revision(
+        &plan.record.tenant_id,
+        &plan.record.connector,
+        plan.expected_head
+            .as_ref()
+            .map(|head| head.binding_revision),
+    )?;
     if plan.context.tenant_id != plan.record.tenant_id
         || plan.record.binding_revision != expected_binding_revision
         || plan.record.previous_pack_digest

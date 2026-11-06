@@ -125,7 +125,7 @@ pub(super) fn prepare(
     if !violations.is_empty() {
         return rejected(request, violations);
     }
-    let mut plan = PlanCollector::new(store, blob, request);
+    let mut plan = PlanCollector::new(store, blob, request)?;
     plan.relations = declared_relations(&all, &desired);
     for entry in &all {
         let wanted = desired
@@ -222,6 +222,8 @@ struct PlanCollector<'a> {
     store: &'a AgentLibraryStore,
     blob: &'a dyn medulla_server_blob::blob::ChunkStore,
     request: &'a ConnectorPackImportRequest,
+    /// The binding revision this import commits at.
+    revision: u64,
     record_id: String,
     components: Vec<ConnectorPackComponentCommit>,
     members: Vec<ConnectorPackMemberRow>,
@@ -239,12 +241,21 @@ impl<'a> PlanCollector<'a> {
         store: &'a AgentLibraryStore,
         blob: &'a dyn medulla_server_blob::blob::ChunkStore,
         request: &'a ConnectorPackImportRequest,
-    ) -> Self {
-        Self {
+    ) -> Result<Self, String> {
+        let revision = store.connector_pack_next_import_revision(
+            &request.context.tenant_id,
+            &request.index.connector,
+            request
+                .expected_head
+                .as_ref()
+                .map(|head| head.binding_revision),
+        )?;
+        Ok(Self {
             store,
             blob,
             request,
-            record_id: pack_record_id(request),
+            revision,
+            record_id: pack_record_id(request, revision),
             components: Vec::new(),
             members: Vec::new(),
             holder_specs: Vec::new(),
@@ -252,7 +263,7 @@ impl<'a> PlanCollector<'a> {
             records: Vec::new(),
             server_pin: None,
             relations: BTreeMap::new(),
-        }
+        })
     }
 
     fn add_entry(
@@ -503,6 +514,7 @@ impl<'a> PlanCollector<'a> {
         warnings.truncate(medulla_catalog_types::connector_pack::MAX_PACK_VIOLATIONS);
         let record = import_record(
             self.request,
+            self.revision,
             self.record_id,
             self.records,
             warnings,
@@ -572,14 +584,11 @@ fn same_source_contract(
         && left.key_field == right.key_field
 }
 
-fn pack_record_id(request: &ConnectorPackImportRequest) -> String {
+fn pack_record_id(request: &ConnectorPackImportRequest, revision: u64) -> String {
     format!(
         "pack:{}:{}:{}",
         request.index.connector.as_str(),
-        request
-            .expected_head
-            .as_ref()
-            .map_or(1, |head| head.binding_revision.saturating_add(1)),
+        revision,
         &request.index.pack_digest.to_hex()[..16]
     )
 }
@@ -640,6 +649,7 @@ fn declared_relations(
 
 fn import_record(
     request: &ConnectorPackImportRequest,
+    revision: u64,
     record_id: String,
     entries: Vec<PackEntryRecord>,
     warnings: Vec<PackWarning>,
@@ -649,10 +659,7 @@ fn import_record(
         schema_version: PACK_IMPORT_RECORD_SCHEMA_VERSION,
         tenant_id: request.context.tenant_id.clone(),
         connector: request.index.connector.clone(),
-        binding_revision: request
-            .expected_head
-            .as_ref()
-            .map_or(1, |head| head.binding_revision + 1),
+        binding_revision: revision,
         record_id,
         pack_digest: request.index.pack_digest,
         catalog: request.index.catalog.clone(),

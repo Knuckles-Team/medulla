@@ -85,9 +85,6 @@ async fn core_class_redeclaration_is_refused() {
 // spec: MEDULLA-TYPED-PACKS-R102.3
 #[tokio::test]
 async fn pack_class_without_core_path_is_refused() {
-    // The refuse-only behaviour (MEDULLA-TYPED-PACKS-R105.1) needs no switch;
-    // until that deletion lands, the switch selects the same behaviour.
-    std::env::set_var("MEDULLA_ONTOLOGY_ORPHANS", "refuse");
     let codes = refusal_codes("r102-orphan", "ex:Widget a owl:Class .\n").await;
     assert_eq!(codes, [PackViolationCode::OntologyOrphan]);
 }

@@ -66,6 +66,9 @@ async fn served_decide_emits_one_span_per_stage() {
     let capture = std::sync::Arc::new(Capture::default());
     let dispatch = tracing::Dispatch::new(Sink(capture.clone()));
     let _guard = tracing::dispatcher::set_default(&dispatch);
+    // Another test thread may have registered the stage callsites while no
+    // subscriber wanted them; recompute their interest with this one in place.
+    tracing::callsite::rebuild_interest_cache();
 
     let h = Harness::new().await;
     let (schema_pin, _) = publish_route_schema(&h);

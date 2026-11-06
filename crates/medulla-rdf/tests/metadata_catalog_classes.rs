@@ -49,8 +49,15 @@ fn catalog_ontology_declares_root_and_cross_domain_imports() {
         &format!("{RDF}type"),
         &format!("{OWL}Ontology")
     ));
+    // Core is the root the classes extend, never an import
+    // (MEDULLA-TYPED-PACKS-R071.2).
+    assert!(!has_iri(
+        &triples,
+        METADATA_CATALOG,
+        &format!("{OWL}imports"),
+        "http://knuckles.team/kg/core"
+    ));
     for imported in [
-        "http://knuckles.team/kg/core",
         "http://knuckles.team/kg/capability",
         "http://knuckles.team/kg/orchestration",
         "http://knuckles.team/kg/service_operations",

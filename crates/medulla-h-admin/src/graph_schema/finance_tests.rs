@@ -90,7 +90,7 @@ fn finance_is_a_core_module_within_the_catalog_bound_and_the_corpus_stays_cohere
     }
 }
 
-/// Every class is mapped and only the core foundation is imported.
+/// Every class is mapped and nothing is imported.
 // spec: MEDULLA-FINANCE-PRIMITIVES-R014
 #[test]
 fn every_finance_class_is_mapped_and_nothing_external_is_imported() {
@@ -104,7 +104,9 @@ fn every_finance_class_is_mapped_and_nothing_external_is_imported() {
         .filter(|triple| triple.predicate.as_str() == OWL_IMPORTS)
         .filter_map(object_iri)
         .collect();
-    assert_eq!(imports, BTreeSet::from(["http://knuckles.team/kg/core"]));
+    // Core is the root every class extends, never an import
+    // (MEDULLA-TYPED-PACKS-R071.2).
+    assert!(imports.is_empty(), "{imports:?}");
 }
 
 /// The wiring connectors rely on: a listing's parts are typed by the properties, a
@@ -229,6 +231,8 @@ fn finance_shapes_are_their_own_document() {
             "SentimentFusion",
             "GeopoliticalRisk",
             "StrategyCard",
+            "WalletKeyTrust",
+            "Factor",
         ],
     );
 }

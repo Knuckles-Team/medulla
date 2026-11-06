@@ -100,10 +100,10 @@ pub const SCOPES: &[ScopeEntry] = &[
     entry("capacity:lease", ServiceOnly, "engine"),
     entry("capacity:read", ServiceOnly, "engine"),
     entry("capacity:throttle", ServiceOnly, "engine"),
-    // MEDULLA-TYPED-PACKS-R805: a data-product steward decides an access request.
-    entry("catalog:access-decide", User, "engine"),
+    // MEDULLA-TYPED-PACKS-R805.1: approve or reject a data-product access request.
+    entry("catalog:access-decide", Domain, "engine"),
     entry("catalog:access-request", User, "engine"),
-    entry("catalog:data-product", User, "engine"),
+    entry("catalog:data-product", Domain, "engine"),
     entry("cdc:admin", Admin, "engine"),
     entry("cdc:read", User, "engine"),
     entry("cep:admin", Admin, "engine"),

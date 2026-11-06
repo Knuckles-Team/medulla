@@ -117,8 +117,8 @@ fn relations_ontology() -> Content {
         body: b"@prefix owl: <http://www.w3.org/2002/07/owl#> .\n\
             @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n\
             @prefix ex: <https://example.org/demo#> .\n\
-            ex:Document a owl:Class .\n\
-            ex:Section a owl:Class .\n\
+            ex:Document a owl:Class ; rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .\n\
+            ex:Section a owl:Class ; rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .\n\
             ex:contains a owl:ObjectProperty ; rdfs:domain ex:Document ; rdfs:range ex:Section .\n"
             .to_vec(),
         input_schema: None,

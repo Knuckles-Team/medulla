@@ -86,9 +86,16 @@ mod tests {
     /// unclassified internal error.
     #[test]
     fn every_refusal_is_reported_as_a_declared_wire_code() {
+        // The two codes their rows name outside the `IDENTITY_` family
+        // (MEDULLA-IDENTITY-R003.4 mode transitions, R709 session liveness).
+        const NAMED_OUTSIDE_FAMILY: [&str; 2] =
+            ["MODE_TRANSITION_FORBIDDEN", "SESSION_REFERENCE_UNKNOWN"];
         for refusal in medulla_identity_types::identity::IdentityRefusal::ALL {
             let code = refusal.to_string();
-            assert!(code.starts_with("IDENTITY_"), "{code}");
+            assert!(
+                code.starts_with("IDENTITY_") || NAMED_OUTSIDE_FAMILY.contains(&code.as_str()),
+                "{code}"
+            );
             assert!(declared_error_code(&code), "{code}");
         }
     }

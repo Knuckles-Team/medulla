@@ -775,8 +775,10 @@ ex:parent a owl:AsymmetricProperty .
         // SourceRecord and OpaqueSourceReference (MEDULLA-TYPED-PACKS-R105.3.1); plus 138 for
         // the world model: BFO material entity and object, the RO/BFO-aligned shared
         // relations, and the shared reference-term / quantity / observation vocabulary.
-        // plus 24 for the CQ-CONN chunk 5 core-foundation terms and shapes (MEDULLA-CQ-CONN-R074).
-        assert_eq!(triples.len(), 1_119);
+        // plus 24 for the CQ-CONN chunk 5 core-foundation terms and shapes (MEDULLA-CQ-CONN-R074);
+        // plus 15 for the run-scope policy class and its two properties (MEDULLA-IDENTITY-R008.4)
+        // and 4 for the pack object-model `:ValueType` term (MEDULLA-TYPED-PACKS-R650.1).
+        assert_eq!(triples.len(), 1_138);
         for required in [
             "http://knuckles.team/kg#Concept",
             "http://knuckles.team/kg#Evidence",
@@ -871,7 +873,10 @@ ex:parent a owl:AsymmetricProperty .
         // (MEDULLA-MEDIA-VOCAB-R002.5.4); the :cites domain and range change in place.
         // -40 +210 (MEDULLA-TYPED-PACKS-R071.2): the 40 `owl:imports <.../core>` edges
         // are removed and 210 module classes gain their `rdfs:subClassOf` core parent.
-        assert_eq!(composed.ontology.len(), 18_022);
+        // +739: the measured composed count after the re-rooted modules
+        // (MEDULLA-TYPED-PACKS-R071.2), the generated decision module's core parents (+4),
+        // the nutrition schema.org mappings (+6) and the vocabulary landed since.
+        assert_eq!(composed.ontology.len(), 18_761);
 
         let ontology_subjects: BTreeSet<String> = composed
             .ontology

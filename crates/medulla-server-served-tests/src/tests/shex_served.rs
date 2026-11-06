@@ -215,10 +215,10 @@ fn shex_validate(schema: &str, data_graph: &str, pairs: &[(&str, &str)]) -> Meth
     }
 }
 
-fn error_text(response: &Response) -> &str {
+/// The refusal as `CODE: detail`, the text `Response::err` accepts.
+fn error_text(response: &Response) -> String {
     response
-        .error
-        .as_deref()
+        .refusal_text()
         .unwrap_or_else(|| panic!("expected a refusal, got {:?}", response.result))
 }
 
@@ -385,9 +385,9 @@ async fn parse_and_dispatch_failures_are_distinct() {
 
         // Three distinct failures, three distinct prefixes.
         for (a, b) in [
-            (bad_schema, bad_data),
-            (bad_schema, export),
-            (bad_data, export),
+            (&bad_schema, &bad_data),
+            (&bad_schema, &export),
+            (&bad_data, &export),
         ] {
             assert_ne!(a, b);
         }
@@ -411,8 +411,15 @@ const SCOPE_MAP: [(&str, &str); 3] = [
 async fn live_validation_obeys_read_authority() {
     let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
     let state = multi_tenant_state().await;
+    // The fixture owns worker1's graph only; worker2 owns its own.
+    state
+        .write()
+        .await
+        .registry
+        .create_graph("agent:worker2", GraphType::Agent, Some("worker2".into()))
+        .unwrap();
 
-    // Create both tenants' graphs with a served write, then seed RDF rows.
+    // Seed both tenants' graphs with a served write, then RDF rows.
     assert_ok(
         &dispatch_on_heap(
             &state,

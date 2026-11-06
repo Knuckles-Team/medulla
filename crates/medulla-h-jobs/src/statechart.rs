@@ -50,24 +50,34 @@ const MAX_DEF_ITEMS: usize = 500_000;
 /// `jobs.rs::job_store`: a served process must have a configured persistence root;
 /// there is no process-temp store that can vanish across a restart.
 pub fn statechart_store(persist_dir: Option<&str>) -> Result<Arc<StatechartStore>, String> {
-    static STORE: OnceLock<Result<Arc<StatechartStore>, String>> = OnceLock::new();
+    // One open store per persistence directory: the redb file admits one
+    // owner, and a process (a test binary, an embedded engine) may serve more
+    // than one directory over its life. A failed open is not remembered.
+    static STORES: OnceLock<
+        std::sync::Mutex<std::collections::HashMap<std::path::PathBuf, Arc<StatechartStore>>>,
+    > = OnceLock::new();
     let persist_dir = persist_dir
         .filter(|value| !value.is_empty())
         .ok_or_else(|| {
             "statechart engine requires a configured durable persistence directory".to_string()
         })?;
-    STORE
-        .get_or_init(|| {
-            StatechartStore::open_in_dir(
-                Path::new(persist_dir),
-                medulla_kernel::store_authority::process_authority().as_ref(),
-                medulla_kernel::store_authority::process_authority().principal(),
-                &medulla_kernel::store_authority::process_authority().proof(),
-            )
-            .map(Arc::new)
-            .map_err(|_| "statechart instance store is unavailable".to_string())
-        })
-        .clone()
+    let mut stores = STORES
+        .get_or_init(Default::default)
+        .lock()
+        .map_err(|_| "statechart instance store registry is poisoned".to_string())?;
+    if let Some(store) = stores.get(Path::new(persist_dir)) {
+        return Ok(store.clone());
+    }
+    let store = StatechartStore::open_in_dir(
+        Path::new(persist_dir),
+        medulla_kernel::store_authority::process_authority().as_ref(),
+        medulla_kernel::store_authority::process_authority().principal(),
+        &medulla_kernel::store_authority::process_authority().proof(),
+    )
+    .map(Arc::new)
+    .map_err(|_| "statechart instance store is unavailable".to_string())?;
+    stores.insert(Path::new(persist_dir).to_path_buf(), store.clone());
+    Ok(store)
 }
 
 /// Handle `Method::Statechart { op }` (CONCEPT:INT-P2-2). Self-contained: resolves its

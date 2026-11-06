@@ -19,10 +19,16 @@ impl Reasoner {
     /// Remove the axioms stated by `removed` and return the classification of the
     /// remaining axioms (equal to [`Reasoner::from_triples`] over them, then
     /// `classify`). Cost follows the over-deleted region, except when the reasoner has
-    /// not classified yet or has introduced refined fillers: those rebuild.
+    /// not classified yet, has introduced refined fillers, or loses a role axiom:
+    /// those rebuild.
     pub fn retract_axioms(&mut self, removed: &[Triple]) -> Classification {
-        let labels = self.remove_axioms(parse_ontology(removed));
-        if self.s.is_empty() || !self.refined.is_empty() {
+        let gone = parse_ontology(removed);
+        // Role pairs propagate up the role hierarchy and along chains from
+        // pairs the over-delete never revisits, so removing a role axiom
+        // rebuilds rather than re-deriving the touched region only.
+        let role_axiom = !gone.sub_roles.is_empty() || !gone.chains.is_empty();
+        let labels = self.remove_axioms(gone);
+        if self.s.is_empty() || !self.refined.is_empty() || role_axiom {
             return self.rebuild();
         }
         let overdeleted = self.overdelete(labels);

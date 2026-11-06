@@ -82,6 +82,7 @@ fn the_view_carries_no_lease_authority_and_projects_revision_and_time() {
     assert_eq!(
         keys,
         [
+            "effect_phase",
             "input_ref",
             "kind",
             "metadata",

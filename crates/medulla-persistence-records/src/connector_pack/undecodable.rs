@@ -69,6 +69,39 @@ fn decode_or_skip<T: DeserializeOwned>(
 }
 
 impl AgentLibraryStore {
+    /// The binding revision the next import of `connector` commits at. With an
+    /// expected head it follows that head; without one it follows the newest
+    /// retained import record, so an import that replaces an undecodable head
+    /// (which reads as absent, MEDULLA-TYPED-PACKS-R041.2) never collides with
+    /// the import history that head was committed at.
+    pub fn connector_pack_next_import_revision(
+        &self,
+        tenant_id: &str,
+        connector: &ResourceId,
+        expected_head_revision: Option<u64>,
+    ) -> Result<u64, String> {
+        if let Some(revision) = expected_head_revision {
+            return revision.checked_add(1).ok_or_else(|| {
+                "CORRUPT_CONNECTOR_PACK: connector pack binding revision overflow".to_string()
+            });
+        }
+        medulla_agent_types::agent_library::validate_key(tenant_id, connector.as_str())?;
+        let read = self.read()?;
+        let imports = read.open_owner_table(medulla_storage::CONNECTOR_PACK_IMPORTS)?;
+        let newest = imports
+            .range((tenant_id, connector.as_str(), 0)..=(tenant_id, connector.as_str(), u64::MAX))
+            .map_err(|error| error.to_string())?
+            .next_back()
+            .transpose()
+            .map_err(|error| error.to_string())?
+            .map(|(key, _)| key.value().2);
+        newest.map_or(Ok(1), |revision| {
+            revision.checked_add(1).ok_or_else(|| {
+                "CORRUPT_CONNECTOR_PACK: connector pack binding revision overflow".to_string()
+            })
+        })
+    }
+
     /// Read one connector's catalog state, treating undecodable rows by `mode`.
     pub fn connector_pack_status_with(
         &self,

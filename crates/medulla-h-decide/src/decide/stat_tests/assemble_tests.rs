@@ -148,6 +148,21 @@ fn request(required: Vec<ModelInputMediaType>) -> AssemblyRequest {
 }
 
 async fn assemble(h: &Harness, request: AssemblyRequest) -> Result<AssemblyResult, String> {
+    // Assembly reads the caller's run-scope bound from the request graph
+    // (MEDULLA-IDENTITY-R008.4), so the graph it names must exist.
+    {
+        let mut state = h.state.write().await;
+        if state.registry.get("default").is_none() {
+            state
+                .registry
+                .create_graph(
+                    "default",
+                    medulla_protocol_types::protocol::GraphType::Global,
+                    None,
+                )
+                .expect("create the request graph");
+        }
+    }
     let verified = VerifiedRequestContext::verified_for_test_in_tenant("asker", TENANT);
     let response =
         super::super::assemble::handle_agent_assemble(&h.state, 1, ("default", &verified), request)

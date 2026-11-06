@@ -316,7 +316,7 @@ pub(super) fn shadow_ingest(
         let Some(properties) = core.get_node_properties(&id) else {
             continue;
         };
-        if !is_target_record(core, &id, &properties, &class) {
+        if is_control_lease(&properties) || !is_target_record(core, &id, &properties, &class) {
             continue;
         }
         nodes_ingested += 1;
@@ -329,6 +329,22 @@ pub(super) fn shadow_ingest(
         nodes_ingested,
         violations,
     })
+}
+
+/// Whether a node is a control-lease row (an approval lives in the request
+/// graph beside the data it governs); a lease is not data.
+fn is_control_lease(properties: &[u8]) -> bool {
+    rmp_serde::from_slice::<serde_json::Value>(properties)
+        .ok()
+        .and_then(|record| {
+            record
+                .get("node_type")
+                .and_then(serde_json::Value::as_str)
+                .map(|node_type| {
+                    node_type == medulla_work_types::control_lease::CONTROL_LEASE_NODE_TYPE
+                })
+        })
+        .unwrap_or(false)
 }
 
 /// Store the report as the control row of its candidate (replacing an earlier one).

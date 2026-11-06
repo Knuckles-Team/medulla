@@ -115,7 +115,20 @@ mod tests {
                 }
             }
         }
-        let fit_ctx = FeatureCtx::build(&graph(10, &edges), 0.5);
+        // One embedding row per clique; the model is fitted over the same
+        // nine-feature channel it later scores with.
+        let embeddings = |n: usize| -> Vec<Vec<f64>> {
+            (0..n)
+                .map(|i| {
+                    if i < 5 {
+                        vec![1.0, 0.0]
+                    } else {
+                        vec![0.0, 1.0]
+                    }
+                })
+                .collect()
+        };
+        let fit_ctx = FeatureCtx::build_with_embeddings(&graph(10, &edges), 0.5, embeddings(10));
         let model = fit_link_predictor(&fit_ctx, &edges, &KanLinkConfig::default());
         let seen: HashSet<usize> = (0..10).collect();
 
@@ -123,16 +136,7 @@ mod tests {
         let mut now = edges.clone();
         now.extend([(10, 0), (10, 1), (10, 2), (10, 3)]);
         let g = graph(11, &now);
-        let emb: Vec<Vec<f64>> = (0..11)
-            .map(|i| {
-                if i < 5 {
-                    vec![1.0, 0.0]
-                } else {
-                    vec![0.0, 1.0]
-                }
-            })
-            .collect();
-        let mut ctx = FeatureCtx::build_with_embeddings(&g, 0.5, emb);
+        let mut ctx = FeatureCtx::build_with_embeddings(&g, 0.5, embeddings(11));
         let unseen: HashSet<usize> = [10].into_iter().collect();
         ctx.impute_unseen_embeddings(&unseen);
 

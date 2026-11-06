@@ -29,9 +29,10 @@ const PRINCIPAL: &str = "meeting-transcript-writer";
 const MEETING: &str = "meeting-1";
 
 fn state(dir: &std::path::Path) -> Arc<RwLock<medulla_server_api::state::ServerState>> {
+    // The graph ACL admits only a principal the provisioned policy knows.
     let mut state = medulla_server::seams_install::new_state_for_test(
         SECRET,
-        medulla_isolation::isolation::IsolationLayer::new(),
+        medulla_server_api::state::ServerState::test_isolation(PRINCIPAL),
     );
     state.persist_dir = Some(dir.to_string_lossy().into_owned());
     Arc::new(RwLock::new(state))

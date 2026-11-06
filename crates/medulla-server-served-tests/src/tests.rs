@@ -404,7 +404,7 @@ fn assert_ok(resp: &Response) {
     assert!(
         resp.error.is_none(),
         "expected success, got error: {:?}",
-        resp.error
+        resp.refusal_text()
     );
 }
 
@@ -5319,7 +5319,11 @@ ex:myHeart a ex:HumanHeart .
         Some(ResultPayload::Raw(b)) => rmp_serde::from_slice(&b).unwrap(),
         other => panic!("expected Raw(OwlReasonResult), got {other:?}"),
     };
-    assert!(res.consistent, "ontology is consistent");
+    assert!(
+        res.consistent,
+        "ontology is consistent; unsatisfiable: {:?}",
+        res.unsatisfiable
+    );
     // Confidence is aligned + present (hard ontology ⇒ all 1.0).
     assert_eq!(res.subclasses.len(), res.subclass_conf.len());
     assert_eq!(res.instances.len(), res.instance_conf.len());
