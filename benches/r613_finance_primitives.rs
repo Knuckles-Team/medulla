@@ -26,7 +26,7 @@ use tokio::runtime::Builder;
 
 const SECRET: &str = "medulla-fin-r613-bench-secret";
 const GRAPH: &str = "fin-r613-bench";
-const SCHEDULE_SLICES: u32 = 1_000;
+const SCHEDULE_SLICES: usize = 1_000;
 const REGIME_BARS: usize = 1_000_000;
 const SCHEDULE_SAMPLES: usize = 200;
 const REGIME_SAMPLES: usize = 20;
