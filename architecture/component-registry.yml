@@ -4001,6 +4001,7 @@ components:
       - "tests/test_generated_client_contract.py"
       - "tests/test_generated_contract_inventory.py"
       - "tests/test_generated_graph_schema_contract.py"
+      - "tests/test_graph_schema_vectors.py"
       - "tests/test_generated_lane_claim_contract.py"
       - "tests/test_generated_models.py"
       - "tests/test_generated_octet_arrays.py"
