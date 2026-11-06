@@ -48,7 +48,8 @@ def within_query(polygon: str) -> str:
 def test_within_query(clean_graph):
     seed_points(clean_graph)
     rows = clean_graph.rdf.sparql(within_query(SQUARE))
-    assert sorted(row["f"] for row in rows) == ["http://ex/a", "http://ex/b"]
+    # A resource binding is the engine's canonical node id: the bracketed IRI.
+    assert sorted(row["f"] for row in rows) == ["<http://ex/a>", "<http://ex/b>"]
 
 
 @pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R709.4")

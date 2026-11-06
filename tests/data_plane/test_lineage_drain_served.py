@@ -69,6 +69,7 @@ def test_lake_sweep_run_event_reaches_lineage_graph(start_medulla_server) -> Non
     """Verifies MEDULLA-UNIFIED-DATA-PLANE-R702.3: sweep-fed lineage wiring."""
     graph = f"lineage-{uuid.uuid4().hex[:8]}"
     client = _client()
+    client.tenants.create(graph)
     try:
         # The shape the lake sweep submits: a tsdb series drained into a table.
         event = _event(
@@ -83,6 +84,7 @@ def test_lake_sweep_run_event_reaches_lineage_graph(start_medulla_server) -> Non
             _dataset_id("engine", "engine.s1"),
         )
     finally:
+        client.tenants.delete(graph)
         client.close()
 
 
@@ -91,6 +93,7 @@ def test_replay_adds_no_edges_and_bad_events_quarantine(start_medulla_server) ->
     """Verifies MEDULLA-UNIFIED-DATA-PLANE-R702.6: replay and quarantine proof."""
     graph = f"lineage-{uuid.uuid4().hex[:8]}"
     client = _client()
+    client.tenants.create(graph)
     try:
         valid = [
             _event("e1", [("ns", "a")], [("ns", "b")]),
@@ -119,4 +122,5 @@ def test_replay_adds_no_edges_and_bad_events_quarantine(start_medulla_server) ->
         assert len(nodes) == 2
         assert _decode(client._send("EdgeCount", {}, graph)) == edges_after_first
     finally:
+        client.tenants.delete(graph)
         client.close()

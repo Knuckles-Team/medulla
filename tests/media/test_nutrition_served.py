@@ -71,7 +71,7 @@ def test_food_pack_import_answers_composition_query() -> None:
                 ],
             )
             assert accepted["result"] != "rejected", accepted
-            rows = await client.sparql(
+            rows = await client.rdf.sparql(
                 "PREFIX : <http://knuckles.team/kg#> "
                 "SELECT ?id WHERE { ?amount a :NutrientAmount ; :nutrientId ?id }"
             )

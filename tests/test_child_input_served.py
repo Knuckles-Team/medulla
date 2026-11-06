@@ -33,6 +33,8 @@ def _run(run_id: str, child_input: dict | None = None) -> dict:
         idempotency_key=run_id,
         kind="agent_turn",
         child_input=child_input,
+        # The child run and each message admission are in flight together.
+        max_tenant_in_flight=64,
     )
     request["context"].update(
         request_id=run_id,

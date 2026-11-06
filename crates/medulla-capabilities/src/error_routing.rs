@@ -95,6 +95,9 @@ const METHOD_PREFIXES: &[(&str, &[&str])] = &[
         "GraphSchema",
         &[
             "ATTACH_PACK_",
+            // MEDULLA-TYPED-PACKS-R651.4: the ontology edit chain's refusals.
+            "EDIT_",
+            "NAMING_VIOLATION",
             "PACK_PROJECTION_",
             "OWL_",
             "REASONING_",
@@ -174,7 +177,17 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         "AgentAssemble",
         &["SCOPE_EXCEEDS_POLICY", "SCOPE_POLICY_UNREADABLE"],
     ),
-    ("AnalyticsJob", &["INVALID_CONFIGURATION"]),
+    // MEDULLA-PLACEMENT-R750.753: the job store's typed refusals
+    // (`medulla_h_jobs::jobs::job_refusal`).
+    (
+        "AnalyticsJob",
+        &[
+            "CLAIM_PACED",
+            "CONFLICT",
+            "INVALID_CONFIGURATION",
+            "PRIORITY_OUT_OF_RANGE",
+        ],
+    ),
     // MEDULLA-DECISION-ENGINE-R652.3: a stale write and a malformed op.
     ("Claims", &["PARAMETER_INVALID", "REVISION_CONFLICT"]),
     ("GetRunWorkItem", &["RUN_ADMISSION_UNAVAILABLE"]),
@@ -313,7 +326,16 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         ],
     ),
     // MEDULLA-REPO-INGEST-R007/R008: an over-budget batch is refused whole.
-    ("IndexRepository", &["REPOSITORY_BATCH_TOO_LARGE"]),
+    // MEDULLA-REPO-INGEST-R801: a cycle among architecture layers, and a malformed
+    // commit digest of the scoped history, refuse the batch.
+    (
+        "IndexRepository",
+        &[
+            "INVALID_COMMIT_DIGEST",
+            "LAYER_CYCLE",
+            "REPOSITORY_BATCH_TOO_LARGE",
+        ],
+    ),
     // `ensure_job_workers` refuses an invalid analytics worker timing.
     ("AnalyticsJob", &["INVALID_CONFIGURATION"]),
     // MEDULLA-FINANCE-PRIMITIVES-R018.3: mismatched factor record lengths.
@@ -411,12 +433,15 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     ),
     ("CypherQuery", &["REPLAY_NONCE_CONSUMED"]),
     ("GraphQl", &["REPLAY_NONCE_CONSUMED"]),
-    // MEDULLA-DURABLE-KERNEL-R865 (child input) and R750.750.1 (signed agent-turn envelope).
+    // MEDULLA-DURABLE-KERNEL-R865 (child input), R750.750.1 (signed agent-turn
+    // envelope) and R750.752 (conversation head).
     (
         "SubmitWorkItem",
         &[
             "CARRIER_SIGNATURE_INVALID",
             "CHILD_TARGET_TERMINAL",
+            // MEDULLA-DURABLE-KERNEL-R750.752: a moved conversation head.
+            "CONVERSATION_CONFLICT",
             "ENVELOPE_FIELD_MISSING",
             "IDEMPOTENCY_CONFLICT",
             "REPLAY_NONCE_CONSUMED",

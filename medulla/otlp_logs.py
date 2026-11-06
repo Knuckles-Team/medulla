@@ -79,16 +79,16 @@ class OtlpLogBatch(_Strict):
         return self
 
 
-def _post_logs(obs_addr: str, body: bytes, timeout: float) -> tuple[int, str]:
+def _post_logs(
+    obs_addr: str, body: bytes, timeout: float, bearer_token: str | None
+) -> tuple[int, str]:
     host, _, port = obs_addr.rpartition(":")
+    headers = {"content-type": "application/json"}
+    if bearer_token is not None:
+        headers["authorization"] = f"Bearer {bearer_token}"
     conn = http.client.HTTPConnection(host, int(port), timeout=timeout)
     try:
-        conn.request(
-            "POST",
-            "/v1/logs",
-            body=body,
-            headers={"content-type": "application/json"},
-        )
+        conn.request("POST", "/v1/logs", body=body, headers=headers)
         response = conn.getresponse()
         return response.status, response.read().decode("utf-8", errors="replace")
     finally:
@@ -96,20 +96,29 @@ def _post_logs(obs_addr: str, body: bytes, timeout: float) -> tuple[int, str]:
 
 
 async def ingest_otlp_logs(
-    batch: OtlpLogBatch | dict[str, Any], *, obs_addr: str, timeout: float = 30.0
+    batch: OtlpLogBatch | dict[str, Any],
+    *,
+    obs_addr: str,
+    bearer_token: str | None = None,
+    timeout: float = 30.0,
 ) -> dict[str, Any]:
     """Post ``batch`` to the engine's ``--obs-addr`` listener (``POST /v1/logs``).
 
     A mapping is validated into an :class:`OtlpLogBatch` first, so an oversize
     or malformed batch raises ``pydantic.ValidationError`` without any
-    network traffic. Returns the engine's OTLP ``partialSuccess`` body; an
-    engine refusal raises :class:`RuntimeError` carrying the stable code
-    (``LOG_BATCH_TOO_LARGE``).
+    network traffic. The listener admits ingest only from a verified
+    telemetry writer, so ``bearer_token`` is the writer's JWT (scope
+    ``telemetry:write`` and a tenant claim); the engine binds every record to
+    that tenant. Returns the engine's OTLP ``partialSuccess`` body; an engine
+    refusal raises :class:`RuntimeError` carrying the stable code
+    (``ACCESS_DENIED``, ``LOG_BATCH_TOO_LARGE``).
     """
     if not isinstance(batch, OtlpLogBatch):
         batch = OtlpLogBatch.model_validate(batch)
     body = batch.to_json().encode("utf-8")
-    status, text = await asyncio.to_thread(_post_logs, obs_addr, body, timeout)
+    status, text = await asyncio.to_thread(
+        _post_logs, obs_addr, body, timeout, bearer_token
+    )
     if status != 200:
         raise RuntimeError(f"{status}: {text}")
     return json.loads(text)

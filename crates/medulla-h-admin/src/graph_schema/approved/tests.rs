@@ -35,6 +35,11 @@ const TENANT: &str = "tenant-shared";
 const ADMIN: &str = "schema-approval-admin";
 const GRAPH: &str = "drift-live";
 const SOURCE: &str = "approved:container-manager-mcp";
+
+/// The class the candidate's shapes target: the records the shadow ingest samples.
+fn record_class() -> String {
+    medulla_catalog_types::graph_schema::repair::repair_record_class("container-manager-mcp")
+}
 fn contract_with(field: &str) -> RecordContract {
     RecordContract {
         fields: [(
@@ -200,7 +205,8 @@ impl Served {
 
     /// A clean current node plus a stored clean report: the state `AttachApproved` needs.
     async fn clean_shadow(&self) {
-        self.node("person-1", json!({"name": "alice"})).await;
+        self.node("person-1", json!({"type": record_class(), "name": "alice"}))
+            .await;
         self.shadow_validate("shadow-clean").await;
     }
 }
@@ -342,7 +348,23 @@ async fn schema_repair_requires_real_shadow_ingest_before_activation() {
     assert!(refusal(&empty).starts_with("SCHEMA_REPAIR_SHADOW_MISSING"));
 
     // A current node that breaks the contract is a violation.
-    served.node("person-bad", json!({"title": "no name"})).await;
+    // A node outside the contract's target class is not sampled at all.
+    served
+        .node(
+            "bookkeeping",
+            json!({"type": "OntologyEdit", "title": "no name"}),
+        )
+        .await;
+    served.shadow_validate("shadow-untargeted").await;
+    let untargeted = served.attach_approved("action_approval:shadow").await;
+    assert!(refusal(&untargeted).starts_with("SCHEMA_REPAIR_SHADOW_MISSING"));
+
+    served
+        .node(
+            "person-bad",
+            json!({"type": record_class(), "title": "no name"}),
+        )
+        .await;
     served.shadow_validate("shadow-violating").await;
     let violating = served.attach_approved("action_approval:shadow").await;
     assert!(refusal(&violating).starts_with("SCHEMA_REPAIR_SHADOW_VIOLATIONS"));
@@ -356,12 +378,13 @@ async fn schema_repair_requires_real_shadow_ingest_before_activation() {
         .iter()
         .all(|source| source.source_id != SOURCE));
 
-    // A clean report over current data lets the same approval attach.
+    // A clean report over current data lets the same approval attach. The
+    // approval lease is issued first: a control row, never ingested as data.
     let clean = Served::new().await;
-    clean.clean_shadow().await;
     clean
         .approval("action_approval:shadow", &candidate(), true)
         .await;
+    clean.clean_shadow().await;
     let committed: GraphSchemaCommitted =
         decode(clean.attach_approved("action_approval:shadow").await);
     assert!(committed.changed);

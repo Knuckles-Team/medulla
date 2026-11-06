@@ -167,6 +167,7 @@ class GraphSchemaTermView(BaseModel):
     iri: str
     kind: GraphSchemaTermKind
     local_name: str
+    ontology_revision: Annotated[int, Field(ge=0)] | None = None
     source_id: str
 
 
@@ -230,6 +231,27 @@ class SchemaSourceOriginViewApproved(BaseModel):
     approval_lease_id: str
     name: str
     origin: Literal["approved"]
+    shadow_report_digest: str | None = None
+
+
+class OntologyRevisionEntry(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    at: Annotated[int, Field(ge=0)]
+    digest: Digest256
+    importer: str
+    revision: Annotated[int, Field(ge=0)]
+
+
+class SchemaSourceOriginViewOntology(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    connector: str
+    history: list[OntologyRevisionEntry]
+    importer: str
+    ontology_iri: str
+    origin: Literal["ontology"]
+    revision: Annotated[int, Field(ge=0)]
 
 
 SchemaSourceOriginView = Annotated[
@@ -238,7 +260,8 @@ SchemaSourceOriginView = Annotated[
     | SchemaSourceOriginViewAdmin
     | SchemaSourceOriginViewPack
     | SchemaSourceOriginViewIngestion
-    | SchemaSourceOriginViewApproved,
+    | SchemaSourceOriginViewApproved
+    | SchemaSourceOriginViewOntology,
     Field(discriminator="origin"),
 ]
 
@@ -308,6 +331,10 @@ SchemaSourceOriginViewIngestion.model_rebuild()
 
 SchemaSourceOriginViewApproved.model_rebuild()
 
+OntologyRevisionEntry.model_rebuild()
+
+SchemaSourceOriginViewOntology.model_rebuild()
+
 
 __all__ = [
     "BoundedVec_GraphSchemaSourceView_32",
@@ -331,12 +358,14 @@ __all__ = [
     "GraphSchemaTermKind",
     "GraphSchemaTermView",
     "JsonType",
+    "OntologyRevisionEntry",
     "RecordContract",
     "SchemaSourceOriginView",
     "SchemaSourceOriginViewAdmin",
     "SchemaSourceOriginViewApproved",
     "SchemaSourceOriginViewCore",
     "SchemaSourceOriginViewIngestion",
+    "SchemaSourceOriginViewOntology",
     "SchemaSourceOriginViewOperator",
     "SchemaSourceOriginViewPack",
 ]

@@ -89,7 +89,7 @@ BODY_MUTATIONS: tuple[Mutation, ...] = (
         "a front-matter type outside skill/workflow/graph/mcp_skill",
         "skill",
         "body",
-        _skill("name: @NAME@\ndescription: synthetic\ntype: macro\n"),
+        _skill("name: @NAME@\ndescription: synthetic\nskill_type: macro\n"),
     ),
     BodyCase(
         "G9",

@@ -157,7 +157,9 @@ fn add_routes_and_resources(files: &[(String, Vec<u8>)], result: &mut IndexResul
         };
         if ROUTE_EXTENSIONS.contains(&extension(path)) {
             for (method, route) in text.lines().filter_map(route_in_line) {
-                let id = format!("http-route:{method}:{route}@{path}");
+                // File first, route last (a route may hold ':'), like the
+                // IaC ids below; '@' is refused by the persistence privacy policy.
+                let id = format!("http-route:{path}:{method}:{route}");
                 if seen.insert(id.clone()) {
                     let props = [
                         ("method", &*method),

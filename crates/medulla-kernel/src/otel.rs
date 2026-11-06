@@ -39,15 +39,53 @@ pub fn init_tracing() -> Result<(), String> {
     init_fmt_only()
 }
 
-/// The engine's original fmt subscriber (INFO, no target) — the exact behavior
-/// prior to MEDULLA-091. Used whenever OTLP export is off (feature absent, endpoint
-/// unset, or exporter init failed).
+/// The engine's fmt subscriber (no target). Used whenever OTLP export is off
+/// (feature absent, endpoint unset, or exporter init failed). The level is INFO
+/// unless `RUST_LOG` names `target=level` directives, so an operator can read
+/// debug-level diagnostics (for example the text behind an unclassified refusal).
 fn init_fmt_only() -> Result<(), String> {
-    tracing_subscriber::fmt()
-        .with_max_level(tracing::Level::INFO)
-        .with_target(false)
+    use tracing_subscriber::layer::SubscriberExt;
+    use tracing_subscriber::util::SubscriberInitExt;
+
+    tracing_subscriber::registry()
+        .with(log_filter())
+        .with(tracing_subscriber::fmt::layer().with_target(false))
         .try_init()
         .map_err(|error| format!("tracing subscriber initialization failed: {error}"))
+}
+
+/// The `RUST_LOG` directives, or INFO for every target when it is unset or does
+/// not parse.
+fn log_filter() -> tracing_subscriber::filter::Targets {
+    parse_log_filter(std::env::var("RUST_LOG").ok().as_deref())
+}
+
+fn parse_log_filter(directives: Option<&str>) -> tracing_subscriber::filter::Targets {
+    let info = || {
+        tracing_subscriber::filter::Targets::new()
+            .with_default(tracing_subscriber::filter::LevelFilter::INFO)
+    };
+    directives
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .and_then(|value| value.parse().ok())
+        .unwrap_or_else(info)
+}
+
+#[cfg(test)]
+mod log_filter_tests {
+    use super::parse_log_filter;
+    use tracing::Level;
+
+    #[test]
+    fn rust_log_directives_raise_one_target_and_default_to_info() {
+        let unset = parse_log_filter(None);
+        assert!(unset.would_enable("medulla_types::response", &Level::INFO));
+        assert!(!unset.would_enable("medulla_types::response", &Level::DEBUG));
+        let raised = parse_log_filter(Some("info,medulla_types::response=debug"));
+        assert!(raised.would_enable("medulla_types::response", &Level::DEBUG));
+        assert!(!raised.would_enable("other", &Level::DEBUG));
+    }
 }
 
 /// Build the OTLP batch exporter and install a Registry carrying BOTH the fmt

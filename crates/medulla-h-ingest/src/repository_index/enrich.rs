@@ -781,7 +781,8 @@ mod worker {
         } else {
             let service = VerifiedRequestContext::authenticated_fixed_service_actor(
                 SERVICE,
-                &["graph:write", "repository:enrich:commit"],
+                // `ApplyChangeEnvelope` authorizes `ingest:write`.
+                &["graph:write", "ingest:write", "repository:enrich:commit"],
             )?;
             VerifiedRequestContext::from_verified_claims_with_nonce(
                 service.claims().clone(),

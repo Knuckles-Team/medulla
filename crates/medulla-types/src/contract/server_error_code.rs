@@ -57,6 +57,7 @@ closed_error_codes! {
         ChangeBatchUnavailableUnderPlacement => "CHANGE_BATCH_UNAVAILABLE_UNDER_PLACEMENT",
         ChunkConfigInvalid => "CHUNK_CONFIG_INVALID",
         CommitQueueFull => "COMMIT_QUEUE_FULL",
+        ConversationConflict => "CONVERSATION_CONFLICT",
         CitationOutsideText => "CITATION_OUTSIDE_TEXT",
         ClaimPaced => "CLAIM_PACED",
         PriorityOutOfRange => "PRIORITY_OUT_OF_RANGE",

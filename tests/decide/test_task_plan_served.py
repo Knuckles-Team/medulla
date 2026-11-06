@@ -253,7 +253,7 @@ def test_explicit_plan_end_to_end(authenticated_plan_client):
         assert plan["tasks"][2]["depends_on"] == ["b"]
         assert plan["max_concurrency"] == 2
         assert plan["total_tasks"] == plan["max_steps"] == 4
-        assert plan["policy_revision"] == "bounded-explicit-dag-v1"
+        assert plan["policy_revision"] == "bounded-explicit-dag-v2"
         assert record["evidence_class"] == "claim"
         assert record["resolution_kind"] == "constraint"
         assert record["outcome"] == {
