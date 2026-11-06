@@ -21,9 +21,7 @@ pytestmark = [pytest.mark.no_engine]
 def queue_client(request):
     from decide import test_run_work_item_served as served
 
-    yield from served.authenticated_plan_client.__pytest_wrapped__.obj(
-        request.getfixturevalue("tmp_path")
-    )
+    yield from served.authenticated_plan_session(request.getfixturevalue("tmp_path"))
 
 
 def _run(run_id: str, child_input: dict | None = None) -> dict:
