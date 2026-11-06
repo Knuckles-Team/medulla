@@ -28,6 +28,7 @@ pub mod admission;
 pub mod aggregate;
 pub mod bm25;
 pub mod candidate;
+pub mod drift;
 pub mod evaluate;
 mod evaluate_bandit;
 pub mod exploration;
