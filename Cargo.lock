@@ -5680,6 +5680,7 @@ dependencies = [
  "medulla-exec",
  "medulla-federation",
  "medulla-graph-core",
+ "medulla-h-retrieve",
  "medulla-isolation",
  "medulla-kernel",
  "medulla-nlq",

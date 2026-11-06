@@ -61,6 +61,8 @@ pub(super) async fn handle_sparql(
         #[cfg(feature = "security")]
         rls,
     );
+    #[cfg(all(feature = "geosparql", not(feature = "result-cache")))]
+    let version = core.version();
     #[cfg(not(feature = "result-cache"))]
     let snap = sparql_snapshot_uncached(
         &core,
@@ -69,10 +71,14 @@ pub(super) async fn handle_sparql(
         #[cfg(feature = "security")]
         rls,
     );
+    #[cfg(feature = "geosparql")]
+    let spatial = spatial_binding(&core, version);
     evaluate_sparql(
         req_id,
         snap,
         (query, proj, mode),
+        #[cfg(feature = "geosparql")]
+        spatial,
         #[cfg(feature = "result-cache")]
         core,
         #[cfg(feature = "result-cache")]
@@ -167,21 +173,37 @@ fn sparql_snapshot_uncached(
     Arc::new(core.analysis_snapshot())
 }
 
+/// MEDULLA-FEDERATED-QUERY-R709.7: the graph's maintained spatial index, bound to
+/// the snapshot version the query reads. The plan uses it only while the index
+/// still reflects exactly that version.
+#[cfg(feature = "geosparql")]
+fn spatial_binding(
+    core: &Arc<GraphCore>,
+    version: u64,
+) -> Option<medulla_rdf::spatial_index::SpatialBinding> {
+    let served = medulla_h_retrieve::secondary_indexes::ServedSpatialIndex::new(core.clone());
+    served
+        .available()
+        .then(|| medulla_rdf::spatial_index::SpatialBinding::new(Arc::new(served), version))
+}
+
 async fn evaluate_sparql(
     req_id: u64,
     snap: Arc<GraphView>,
     (query, proj, mode): (String, medulla_rdf::sparql::Projection, SparqlProofMode),
+    #[cfg(feature = "geosparql")] spatial: Option<medulla_rdf::spatial_index::SpatialBinding>,
     #[cfg(feature = "result-cache")] core: Arc<GraphCore>,
     #[cfg(feature = "result-cache")] hash: u128,
     #[cfg(feature = "result-cache")] version: u64,
 ) -> Response {
     match compute_off_lock(req_id, move || {
-        run_sparql(
-            &medulla_rdf::sparql::Dataset::new(&snap, Vec::new()),
-            &query,
-            &proj,
-            mode,
-        )
+        let ds = medulla_rdf::sparql::Dataset::new(&snap, Vec::new());
+        #[cfg(feature = "geosparql")]
+        let ds = match spatial {
+            Some(binding) => ds.with_spatial(binding),
+            None => ds,
+        };
+        run_sparql(&ds, &query, &proj, mode)
     })
     .await
     {
@@ -241,7 +263,7 @@ fn run_sparql(
     // served it (MEDULLA-FEDERATED-QUERY-R709.5).
     let spatial = match mode {
         SparqlProofMode::Rows => Vec::new(),
-        SparqlProofMode::RowsWithProofs => medulla_rdf::sparql::spatial_functions(query),
+        SparqlProofMode::RowsWithProofs => medulla_rdf::sparql::spatial_functions(ds, query),
     };
     Ok(medulla_protocol_types::protocol::SparqlResult {
         vars,

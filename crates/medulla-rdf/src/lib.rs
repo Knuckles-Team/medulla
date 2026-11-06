@@ -73,7 +73,7 @@ pub mod update;
 #[cfg(feature = "geosparql")]
 pub mod geosparql;
 
-/// Per-graph R-tree over the bounding boxes of a graph's `geo:wktLiteral` objects, maintained
-/// on write and consulted by the spatial functions (MEDULLA-FEDERATED-QUERY-R709.7).
+/// The spatial-index seam of SPARQL: the `SpatialAccessor` trait the maintained graph index
+/// implements, and its version-checked binding (MEDULLA-FEDERATED-QUERY-R709.7).
 #[cfg(feature = "geosparql")]
 pub mod spatial_index;

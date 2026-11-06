@@ -72,8 +72,30 @@ def test_geo_refusals(clean_graph):
 def test_explain_names_spatial_index(clean_graph):
     seed_points(clean_graph)
     explained = clean_graph.rdf.sparql_result(within_query(SQUARE), explain=True)
-    assert [(use.function, use.index_used) for use in explained.spatial] == [
-        ("sfWithin", False)
-    ]
+    assert [use.function for use in explained.spatial] == ["sfWithin"]
     plain = clean_graph.rdf.sparql_result(within_query(SQUARE))
     assert plain.spatial == []
+
+
+# spec: MEDULLA-FEDERATED-QUERY-R709.7
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R709.7")
+def test_explain_reports_index_used(clean_graph):
+    """The maintained graph spatial index serves the sfWithin FILTER as an index
+    scan (EXPLAIN ``index_used``), with the same rows as the scan, including
+    after a write moves a point out of the window."""
+    seed_points(clean_graph)
+    explained = clean_graph.rdf.sparql_result(within_query(SQUARE), explain=True)
+    assert [(use.function, use.index_used) for use in explained.spatial] == [
+        ("sfWithin", True)
+    ]
+    assert sorted(row["f"] for row in clean_graph.rdf.sparql(within_query(SQUARE))) == [
+        "http://ex/a",
+        "http://ex/b",
+    ]
+    # sfDisjoint takes the complement of the candidate set.
+    disjoint = within_query(SQUARE).replace("sfWithin", "sfDisjoint")
+    explained = clean_graph.rdf.sparql_result(disjoint, explain=True)
+    assert [(use.function, use.index_used) for use in explained.spatial] == [
+        ("sfDisjoint", True)
+    ]
+    assert [row["f"] for row in clean_graph.rdf.sparql(disjoint)] == ["http://ex/c"]

@@ -79,14 +79,17 @@ pub(super) fn eval_pattern_filter(
     expr: &Expression,
     inner: &GraphPattern,
 ) -> Result<Vec<Solution>, String> {
-    let inner_sols = match ServiceCall::of(inner) {
-        Some(call) => call.eval_filtered(ctx, expr)?,
-        None => eval_pattern(ctx, inner)?,
+    #[cfg(feature = "geosparql")]
+    let scanned = super::spatial_scan::try_index_scan(ctx, expr, inner);
+    #[cfg(not(feature = "geosparql"))]
+    let scanned: Option<(Vec<Solution>, Vec<Solution>)> = None;
+    let (inner_sols, accepted) = match (scanned, ServiceCall::of(inner)) {
+        (Some(scan), _) => scan,
+        (None, Some(call)) => (call.eval_filtered(ctx, expr)?, Vec::new()),
+        (None, None) => (eval_pattern(ctx, inner)?, Vec::new()),
     };
-    Ok(inner_sols
-        .into_iter()
-        .filter(|s| eval_filter(ctx, expr, s))
-        .collect())
+    let tested = inner_sols.into_iter().filter(|s| eval_filter(ctx, expr, s));
+    Ok(accepted.into_iter().chain(tested).collect())
 }
 
 /// JOIN: inner (hash) join of the two sides' solutions.

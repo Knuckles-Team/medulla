@@ -53,6 +53,8 @@ mod scalar;
 use self::scalar::*;
 
 mod bool_builtins;
+#[cfg(feature = "geosparql")]
+mod spatial_scan;
 use bool_builtins::{eval_bool_str_relation, term_type_test};
 // EH-197 — witness proofs for SELECT rows (child module: it reuses the private
 // pattern matcher and join rather than re-implementing them).
@@ -244,13 +246,35 @@ pub struct Dataset<'a> {
     default: &'a GraphView,
     /// `(bare graph IRI, that graph's view)` — the named graphs of the dataset.
     named: Vec<(String, &'a GraphView)>,
+    /// The default graph's spatial index, bound to the snapshot version it reads
+    /// (MEDULLA-FEDERATED-QUERY-R709.7).
+    #[cfg(feature = "geosparql")]
+    spatial: Option<crate::spatial_index::SpatialBinding>,
 }
 
 impl<'a> Dataset<'a> {
+    /// Attach the default graph's spatial index (MEDULLA-FEDERATED-QUERY-R709.7).
+    #[cfg(feature = "geosparql")]
+    pub fn with_spatial(mut self, binding: crate::spatial_index::SpatialBinding) -> Self {
+        self.spatial = Some(binding);
+        self
+    }
+
+    /// The default graph's spatial accessor, when it reflects the snapshot read.
+    #[cfg(feature = "geosparql")]
+    pub fn spatial_accessor(&self) -> Option<&dyn crate::spatial_index::SpatialAccessor> {
+        self.spatial.as_ref()?.current()
+    }
+
     /// A multi-graph dataset. `default` is the default graph; `named` is the set of
     /// named graphs keyed by their BARE graph IRI (no angle brackets).
     pub fn new(default: &'a GraphView, named: Vec<(String, &'a GraphView)>) -> Self {
-        Self { default, named }
+        Self {
+            default,
+            named,
+            #[cfg(feature = "geosparql")]
+            spatial: None,
+        }
     }
 
     fn named_view(&self, iri: &str) -> Option<&'a GraphView> {
@@ -440,7 +464,12 @@ fn evaluate_query(
                     .collect(),
                 None => ds.named.clone(),
             };
-            scoped_ds = Dataset { default, named };
+            scoped_ds = Dataset {
+                default,
+                named,
+                #[cfg(feature = "geosparql")]
+                spatial: None,
+            };
             &scoped_ds
         }
         None => ds,
@@ -489,10 +518,14 @@ fn evaluate_form(ctx: &Ctx, query: &Query) -> Result<QueryOutcome, String> {
 }
 
 /// The GeoSPARQL functions `query_str` calls, sorted and deduplicated, each with
-/// whether a spatial index served it (MEDULLA-FEDERATED-QUERY-R709.5). The native
-/// evaluator has no spatial index on this path, so every function reports
-/// `index_used: false`: each candidate geometry is evaluated in the FILTER.
-pub fn spatial_functions(query_str: &str) -> Vec<medulla_types::rdf_report::SparqlSpatialUse> {
+/// whether a spatial index served it (MEDULLA-FEDERATED-QUERY-R709.5/.7). A function
+/// reports `index_used: true` when the plan scans the dataset's spatial index for
+/// it (a version-checked index scan); otherwise each candidate geometry is
+/// evaluated in the FILTER.
+pub fn spatial_functions(
+    ds: &Dataset,
+    query_str: &str,
+) -> Vec<medulla_types::rdf_report::SparqlSpatialUse> {
     const GEOF: &str = "<http://www.opengis.net/def/function/geosparql/";
     let Ok(query) = parse_query(query_str) else {
         return Vec::new();
@@ -504,13 +537,44 @@ pub fn spatial_functions(query_str: &str) -> Vec<medulla_types::rdf_report::Spar
         .collect();
     names.sort_unstable();
     names.dedup();
+    let indexed = indexed_spatial_functions(ds, &query);
     names
         .into_iter()
         .map(|function| medulla_types::rdf_report::SparqlSpatialUse {
             function: function.to_string(),
-            index_used: false,
+            index_used: indexed.iter().any(|name| name == function),
         })
         .collect()
+}
+
+/// The spatial functions the plan of `query` serves from the spatial index.
+fn indexed_spatial_functions(ds: &Dataset, query: &Query) -> Vec<String> {
+    #[cfg(feature = "geosparql")]
+    {
+        let pattern = match query {
+            Query::Select { pattern, .. }
+            | Query::Ask { pattern, .. }
+            | Query::Construct { pattern, .. }
+            | Query::Describe { pattern, .. } => pattern,
+        };
+        let refusal = std::sync::OnceLock::new();
+        let proj = Projection::raw();
+        let ctx = Ctx {
+            ds,
+            active: ds.default,
+            proj: &proj,
+            service: None,
+            refusal: &refusal,
+        };
+        let mut out = Vec::new();
+        spatial_scan::indexed_functions(&ctx, pattern, &mut out);
+        out.into_iter().map(str::to_string).collect()
+    }
+    #[cfg(not(feature = "geosparql"))]
+    {
+        let _ = (ds, query);
+        Vec::new()
+    }
 }
 
 /// Evaluate just a WHERE graph pattern over a dataset → its raw solutions. Used by the

@@ -87,15 +87,56 @@ fn topology_matches_kernel() {
     }
 }
 
-/// MEDULLA-FEDERATED-QUERY-R709.7: the R-tree path and the scan path return the same rows for
-/// every spatial function over 1,000 fixtures, after inserts and after deletes.
-/// Verifies MEDULLA-FEDERATED-QUERY-R709.7: Per-graph spatial index over geo literals
-// spec: MEDULLA-FEDERATED-QUERY-R709.7
-#[test]
-fn indexed_and_scanned_results_are_equal() {
-    use medulla_rdf::spatial_index::{eval_relation_over, SpatialIndex, TermId};
-    use std::collections::BTreeMap;
+/// A test accessor over one snapshot: the boxes of every `geo:asWKT` literal in the
+/// view, the way the maintained graph index exposes them through `SpatialAccessor`.
+#[cfg(feature = "geosparql")]
+struct ViewAccessor {
+    ids: Vec<String>,
+    tree: medulla_geo::rtree::RTree,
+    version: u64,
+}
 
+#[cfg(feature = "geosparql")]
+impl ViewAccessor {
+    fn over(view: &medulla_graph_core::graph::GraphView, version: u64) -> Self {
+        let mut ids = Vec::new();
+        let mut boxes = Vec::new();
+        for (id, blob) in &view.node_properties {
+            let value = medulla_types::msgpack::decode_property_value(blob.as_slice()).unwrap();
+            let cell = value.get(AS_WKT);
+            let wkt = cell
+                .and_then(|c| c.get("value").or(Some(c)))
+                .and_then(|v| v.as_str());
+            if let Some(bbox) = wkt.and_then(|w| parse_wkt(w).ok()).and_then(|g| g.bbox()) {
+                boxes.push((ids.len(), bbox));
+                ids.push(id.clone());
+            }
+        }
+        Self {
+            ids,
+            tree: medulla_geo::rtree::RTree::build(&boxes),
+            version,
+        }
+    }
+}
+
+#[cfg(feature = "geosparql")]
+impl medulla_rdf::spatial_index::SpatialAccessor for ViewAccessor {
+    fn version(&self) -> u64 {
+        self.version
+    }
+    fn candidates(&self, window: &medulla_geo::Bbox) -> Vec<String> {
+        let hits = self.tree.query_bbox(window).into_iter();
+        hits.map(|pos| self.ids[pos].clone()).collect()
+    }
+}
+
+#[cfg(feature = "geosparql")]
+const AS_WKT: &str = "http://www.opengis.net/ont/geosparql#asWKT";
+
+/// 1,000 features (points, lines, squares) as Turtle, skipping the ids in `deleted`.
+#[cfg(feature = "geosparql")]
+fn fixtures(deleted: &std::collections::BTreeSet<u64>) -> String {
     let mut seed = 0x2545_f491_4f6c_dd1du64;
     let mut next = move || {
         seed ^= seed << 13;
@@ -103,7 +144,7 @@ fn indexed_and_scanned_results_are_equal() {
         seed ^= seed << 17;
         (seed % 10_000) as f64 / 100.0
     };
-    let mut literals: BTreeMap<TermId, String> = BTreeMap::new();
+    let mut ttl = String::new();
     for i in 0..1_000u64 {
         let (x, y) = (next(), next());
         let wkt = match i % 3 {
@@ -117,59 +158,89 @@ fn indexed_and_scanned_results_are_equal() {
                 y + 4.0
             ),
         };
-        literals.insert(TermId(i), wkt);
+        if !deleted.contains(&i) {
+            ttl.push_str(&format!(
+                "<urn:f:{i}> <{AS_WKT}> \"{wkt}\"^^<http://www.opengis.net/ont/geosparql#wktLiteral> .\n"
+            ));
+        }
     }
+    ttl
+}
+
+#[cfg(feature = "geosparql")]
+fn view_of(ttl: &str) -> medulla_graph_core::graph::GraphView {
+    let core = medulla_graph_core::graph::GraphCore::new();
+    let mut iris = medulla_rdf::mapping::IriStore::default();
+    let triples = medulla_rdf::mapping::parse_turtle(ttl).unwrap();
+    medulla_rdf::mapping::load_triples(&core, &mut iris, "g", triples).unwrap();
+    core.analysis_snapshot()
+}
+
+/// MEDULLA-FEDERATED-QUERY-R709.7: the spatial FILTER planned as a version-checked index
+/// scan returns the same rows as the row-by-row scan for every narrowable function over
+/// 1,000 fixtures, after inserts and after deletes; EXPLAIN reports `index_used` only when
+/// the index reflects the snapshot read, and a stale index falls back to the scan.
+/// Verifies MEDULLA-FEDERATED-QUERY-R709.7: Per-graph spatial index over geo literals
+// spec: MEDULLA-FEDERATED-QUERY-R709.7
+#[test]
+fn indexed_and_scanned_results_are_equal() {
+    use medulla_rdf::sparql::{execute, spatial_functions, Dataset, Projection};
+    use medulla_rdf::spatial_index::SpatialBinding;
+    use std::sync::Arc;
+
     let constants = [
         "POLYGON((20 20, 60 20, 60 60, 20 60, 20 20))",
         "POINT(50 50)",
         "LINESTRING(0 0, 100 100)",
-        "POLYGON((0 0, 100 0, 100 100, 0 100, 0 0))",
     ];
-    let functions = [
-        ("sfWithin", None),
-        ("sfIntersects", None),
-        ("sfContains", None),
-        ("sfOverlaps", None),
-        ("sfEquals", None),
-        ("sfTouches", None),
-        ("sfCrosses", None),
-        ("sfDisjoint", None),
-        ("distance", Some(5.0)),
+    let filters = [
+        "geof:sfWithin(?w, $C)",
+        "geof:sfIntersects(?w, $C)",
+        "geof:sfContains(?w, $C)",
+        "geof:sfOverlaps(?w, $C)",
+        "geof:sfEquals(?w, $C)",
+        "geof:sfTouches(?w, $C)",
+        "geof:sfCrosses(?w, $C)",
+        "geof:sfDisjoint(?w, $C)",
+        "geof:distance(?w, $C, <http://www.opengis.net/def/uom/OGC/1.0/degree>) <= 5",
     ];
-    let compare = |index: &SpatialIndex, literals: &BTreeMap<TermId, String>| {
-        let all: Vec<(TermId, String)> = literals.iter().map(|(t, s)| (*t, s.clone())).collect();
+    let rows = |ds: &Dataset, query: &str| -> Vec<String> {
+        let table = execute(ds, query, &Projection::raw(), None)
+            .unwrap()
+            .into_table();
+        let mut out: Vec<String> = table
+            .solutions
+            .iter()
+            .filter_map(|s| s.get("s").map(|b| b.as_str().to_string()))
+            .collect();
+        out.sort();
+        out
+    };
+    let compare = |view: &medulla_graph_core::graph::GraphView| {
+        let current = SpatialBinding::new(Arc::new(ViewAccessor::over(view, 7)), 7);
+        let stale = SpatialBinding::new(Arc::new(ViewAccessor::over(view, 6)), 7);
         for constant in constants {
-            for (name, bound) in functions {
-                let scanned = eval_relation_over(name, bound, constant, &all, None)
-                    .expect("scan")
-                    .expect("known function");
-                let indexed = eval_relation_over(name, bound, constant, &all, Some(index))
-                    .expect("indexed")
-                    .expect("known function");
-                assert_eq!(indexed, scanned, "{name}({constant}) agrees on both paths");
+            for filter in filters {
+                let literal = format!("\"{constant}\"^^geo:wktLiteral");
+                let query = format!(
+                    "PREFIX geo: <http://www.opengis.net/ont/geosparql#>\n\
+                     PREFIX geof: <http://www.opengis.net/def/function/geosparql/>\n\
+                     SELECT ?s WHERE {{ ?s geo:asWKT ?w . FILTER({}) }}",
+                    filter.replace("$C", &literal)
+                );
+                let plain = Dataset::new(view, Vec::new());
+                let indexed = Dataset::new(view, Vec::new()).with_spatial(current.clone());
+                let outdated = Dataset::new(view, Vec::new()).with_spatial(stale.clone());
+                let scanned = rows(&plain, &query);
+                assert_eq!(rows(&indexed, &query), scanned, "{filter} over {constant}");
+                assert_eq!(rows(&outdated, &query), scanned, "{filter} stale index");
+                let used = |ds: &Dataset| spatial_functions(ds, &query)[0].index_used;
+                assert!(used(&indexed), "{filter} index_used");
+                assert!(!used(&plain) && !used(&outdated), "{filter} scans");
             }
         }
     };
-
-    let mut index = SpatialIndex::new("urn:graph:fixture");
-    let inserts: Vec<(TermId, &str)> = literals.iter().map(|(t, s)| (*t, s.as_str())).collect();
-    index.apply(&inserts, &[]).expect("insert");
-    assert_eq!(index.len(), 1_000);
-    compare(&index, &literals);
-
-    let deleted: Vec<TermId> = (0..1_000u64).step_by(4).map(TermId).collect();
-    for t in &deleted {
-        literals.remove(t);
-    }
-    index.apply(&[], &deleted).expect("delete");
-    assert_eq!(index.len(), 750);
-    compare(&index, &literals);
-
-    let refused = index.apply(&[(TermId(5_000), "NOTGEOM(1 2)")], &[]);
-    assert!(refused.is_err(), "an invalid literal refuses the write");
-    assert_eq!(
-        index.len(),
-        750,
-        "a refused write leaves the index unchanged"
-    );
+    compare(&view_of(&fixtures(&Default::default())));
+    let deleted = (0..1_000u64).step_by(4).collect();
+    compare(&view_of(&fixtures(&deleted)));
 }

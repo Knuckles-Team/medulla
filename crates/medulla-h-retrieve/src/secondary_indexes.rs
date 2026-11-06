@@ -530,6 +530,36 @@ fn extract_bbox(props: &serde_json::Map<String, serde_json::Value>) -> Option<me
     medulla_geo::parse_wkt(wkt).ok()?.bbox()
 }
 
+/// MEDULLA-FEDERATED-QUERY-R709.7 (D112): the RDF geometry predicate whose
+/// `geo:wktLiteral` objects the index also keeps, under its own layer, so a SPARQL
+/// spatial FILTER can scan this one index instead of a second one.
+#[cfg(feature = "geo")]
+pub const RDF_WKT_PREDICATE: &str = "http://www.opengis.net/ont/geosparql#asWKT";
+/// The layer RDF geometry literals are kept under.
+#[cfg(feature = "geo")]
+pub const RDF_WKT_LAYER: &str = "geo:asWKT";
+
+/// The `(layer, bbox)` a node's props index under: the `type` layer and `geometry`
+/// WKT of a property-graph node, else its RDF `geo:asWKT` literal (a typed
+/// `{value, datatype}` cell or a bare string) under [`RDF_WKT_LAYER`].
+#[cfg(feature = "geo")]
+fn extract_entry(
+    props: &serde_json::Map<String, serde_json::Value>,
+) -> Option<(Option<String>, medulla_geo::Bbox)> {
+    if let Some(bbox) = extract_bbox(props) {
+        return Some((extract_layer(props), bbox));
+    }
+    let cell = props.get(RDF_WKT_PREDICATE)?;
+    let wkt = cell.get("value").unwrap_or(cell).as_str()?.trim();
+    // A leading `<crs-iri>` token names the reference system; the geometry follows.
+    let wkt = match wkt.strip_prefix('<') {
+        Some(rest) => rest.split_once('>')?.1.trim(),
+        None => wkt,
+    };
+    let bbox = medulla_geo::parse_wkt(wkt).ok()?.bbox()?;
+    Some((Some(RDF_WKT_LAYER.to_string()), bbox))
+}
+
 /// One layer's cached packed Hilbert R-tree over `items` — invalidated (removed) by
 /// [`SpatialState`] whenever a write touches ANY member of that layer, rebuilt lazily on
 /// the NEXT query. `ids[i]` is the original item id backing the tree's positional index
@@ -712,11 +742,10 @@ impl SecondaryIndex for GraphSpatialIndex {
             let Some(props) = nc.properties_msgpack.as_deref().and_then(decode_props) else {
                 continue;
             };
-            let Some(bbox) = extract_bbox(&props) else {
+            let Some((layer, bbox)) = extract_entry(&props) else {
                 continue;
             };
-            let layer =
-                extract_layer(&props).or_else(|| st.items.get(&nc.id).map(|(l, _)| l.clone()));
+            let layer = layer.or_else(|| st.items.get(&nc.id).map(|(l, _)| l.clone()));
             if let Some(layer) = layer {
                 st.upsert(&nc.id, layer, bbox);
             }
@@ -750,7 +779,7 @@ impl SecondaryIndex for GraphSpatialIndex {
                 else {
                     continue;
                 };
-                if let (Some(layer), Some(bbox)) = (extract_layer(&props), extract_bbox(&props)) {
+                if let Some((Some(layer), bbox)) = extract_entry(&props) {
                     rebuilt.upsert(&id, layer, bbox);
                 }
             }
@@ -807,6 +836,29 @@ impl medulla_exec::exec::SpatialSource for ServedSpatialIndex {
             &self.core,
             IndexKind::Spatial,
             |index: &GraphSpatialIndex| index.query_bbox(layer, bbox),
+        )
+        .unwrap_or_default()
+    }
+}
+
+/// MEDULLA-FEDERATED-QUERY-R709.7 (D112 revised): the maintained index serves a
+/// SPARQL spatial FILTER through the `SpatialAccessor` seam `medulla-rdf` defines.
+/// `version` is the graph version the index covers right now, or `u64::MAX` when it
+/// does not cover the graph (never equal to a snapshot version, so the plan scans).
+#[cfg(all(feature = "geo", feature = "geosparql"))]
+impl medulla_rdf::spatial_index::SpatialAccessor for ServedSpatialIndex {
+    fn version(&self) -> u64 {
+        read_current_index(&self.core, IndexKind::Spatial, |_: &GraphSpatialIndex| ())
+            .map(|()| source_counts(&self.core).0)
+            .unwrap_or(u64::MAX)
+    }
+
+    fn candidates(&self, window: &medulla_geo::Bbox) -> Vec<String> {
+        let bbox = [window.minx, window.miny, window.maxx, window.maxy];
+        read_current_index(
+            &self.core,
+            IndexKind::Spatial,
+            |index: &GraphSpatialIndex| index.query_bbox(RDF_WKT_LAYER, bbox),
         )
         .unwrap_or_default()
     }

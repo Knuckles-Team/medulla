@@ -40,6 +40,7 @@ medulla-exec = { path = "../medulla-exec" }
 medulla-federation = { path = "../medulla-federation" }
 medulla-nlq = { path = "../medulla-nlq" }
 
+medulla-h-retrieve = { path = "../medulla-h-retrieve", optional = true }
 medulla-plan = { path = "../medulla-plan", optional = true }
 medulla-storage = { path = "../medulla-storage", optional = true }
 medulla-transaction = { path = "../medulla-transaction", optional = true }
@@ -50,6 +51,7 @@ federation = ["query", "dep:medulla-plan", "medulla-exec/federation", "medulla-f
 federation-opensearch = ["federation-search"]
 federation-search = ["federation", "dep:ureq", "medulla-federation/federation-search", "medulla-server-api/federation-search", "medulla-server-ops/federation-search"]
 federation-sql = ["federation", "dep:medulla-plan", "medulla-federation/federation-sql", "medulla-plan?/federation-sql", "medulla-server-api/federation-sql", "medulla-server-ops/federation-sql"]
+geosparql = ["sparql", "dep:medulla-h-retrieve", "medulla-h-retrieve?/geosparql", "medulla-rdf?/geosparql"]
 nl-query = ["query", "dep:medulla-plan", "medulla-nlq/nl-query", "medulla-plan?/nl-query", "medulla-server-api/nl-query", "medulla-server-blob/nl-query"]
 obda = ["sparql", "query", "medulla-protocol-types/obda", "medulla-types/obda"]
 owl = ["sparql", "dep:medulla-rdf", "medulla-exec/owl", "medulla-nlq/owl", "medulla-plan?/owl", "medulla-protocol-types/owl", "medulla-rdf?/owl", "medulla-reasoner/owl", "medulla-server-api/owl", "medulla-server-ops/owl", "medulla-types/owl"]
