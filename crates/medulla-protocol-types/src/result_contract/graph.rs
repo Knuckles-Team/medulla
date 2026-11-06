@@ -20,6 +20,8 @@ method_results! {
     GetNodes(GetNodes) => NodeList<Vec<(String, serde_json::Value)>>;
     GetNodesByLabel(GetNodesByLabel) => NodeList<Vec<(String, serde_json::Value)>>;
     WalletKeyTrustGet(WalletKeyTrustGet) => Json<medulla_types::finance_wallet_trust::WalletKeyTrust>;
+    SchemaProjectionsPut(SchemaProjections / "put") => Raw<medulla_catalog_types::schema_boundary::SchemaBoundary>;
+    SchemaProjectionsList(SchemaProjections / "list") => Raw<medulla_catalog_types::schema_boundary::SchemaProjections>;
     ContextFacts(ContextFacts) => Json<medulla_types::context_facts::ContextFactsResult>;
     CompareAndSetNodeFields(CompareAndSetNodeFields) => Bool<bool>;
     CreateSummaryNode(CreateSummaryNode) => Text<String>;

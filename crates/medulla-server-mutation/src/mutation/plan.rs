@@ -112,6 +112,9 @@ pub const GATEWAY_ROUTED: &[&str] = &[
     // through this gateway; `Read` is answered by the catalog admin route before
     // the graph path and never reaches it.
     "WorkflowRegistry",
+    // MEDULLA-FEDERATED-QUERY-R724: `Put` commits one boundary node through this
+    // gateway; `List` is a query-surface read (see [`is_gateway_routed`]).
+    "SchemaProjections",
     "PruneByLifecycle",
     "BatchUpdate",
     "ClearLedger",
@@ -586,6 +589,11 @@ pub fn method_variant_name(m: &Method) -> &'static str {
 /// `medulla_h_graph::graph_ops::try_handle_gateway`, where one kernel owns apply,
 /// durability, audit, and CDC.
 pub fn is_gateway_routed(m: &Method) -> bool {
+    // MEDULLA-FEDERATED-QUERY-R724: a `SchemaProjections` list is a read and is
+    // served by the query surface, not the mutation gateway.
+    if let Method::SchemaProjections { op } = m {
+        return op.is_mutation();
+    }
     GATEWAY_ROUTED.contains(&method_variant_name(m))
 }
 
@@ -688,6 +696,8 @@ pub const LOCAL_ONLY_METHODS: &[&str] = &[
     // The registration upsert has no replicated command either
     // (MEDULLA-DECISION-ENGINE-R166.3).
     "WorkflowRegistry",
+    // Nor does the schema boundary upsert (MEDULLA-FEDERATED-QUERY-R724).
+    "SchemaProjections",
 ];
 
 /// The local-only names that are NOT gateway-routed.
@@ -740,6 +750,7 @@ fn finance_record_method_name(m: &Method) -> Option<&'static str> {
         Method::FinanceRecordPut { .. } => Some("FinanceRecordPut"),
         Method::FinanceAlertRaise { .. } => Some("FinanceAlertRaise"),
         Method::WorkflowRegistry { .. } => Some("WorkflowRegistry"),
+        Method::SchemaProjections { .. } => Some("SchemaProjections"),
         _ => None,
     }
 }

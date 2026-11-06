@@ -125,7 +125,10 @@ async fn dispatch_query_family(
 fn is_sql_query_method(method: &Method) -> bool {
     matches!(
         method,
-        Method::Sql { .. } | Method::UnifiedQuery { .. } | Method::Uql { .. }
+        Method::Sql { .. }
+            | Method::UnifiedQuery { .. }
+            | Method::Uql { .. }
+            | Method::SchemaProjections { .. }
     )
 }
 
@@ -147,6 +150,8 @@ async fn dispatch_sql_query(ctx: &QueryHandlerCtx<'_>, method: Method) -> Result
             prepare,
             foreign_execution,
         } => handle_uql(ctx, text, params, prepare, foreign_execution).await,
+        // MEDULLA-FEDERATED-QUERY-R724: the scope-filtered boundary list.
+        Method::SchemaProjections { op } => handle_schema_projections(ctx, op),
         other => Err(other),
     }
 }

@@ -724,7 +724,10 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::EdgeSearch { .. }
         // MEDULLA-DECISION-ENGINE-R166.3: a registration commits as the one
         // request-graph `AddNode` upsert; a read commits nothing.
-        | Method::WorkflowRegistry { .. } => default_mutation_domain(surface),
+        | Method::WorkflowRegistry { .. }
+        // MEDULLA-FEDERATED-QUERY-R724: a put commits as the one request-graph
+        // `AddNode` upsert; a list commits nothing.
+        | Method::SchemaProjections { .. } => default_mutation_domain(surface),
         Method::FinanceSabrImpliedVol { .. }
         | Method::CatalogAssign { .. }
         | Method::EvictBelow { .. }

@@ -5376,6 +5376,8 @@ dependencies = [
  "hex",
  "hmac 0.12.1",
  "medulla-agent-types",
+ "medulla-capabilities",
+ "medulla-catalog-types",
  "medulla-compute",
  "medulla-core",
  "medulla-finance",

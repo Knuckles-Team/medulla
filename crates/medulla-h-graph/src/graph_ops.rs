@@ -47,6 +47,7 @@ mod hierarchy;
 mod memory;
 mod nodes;
 pub mod retention_cleanup;
+mod schema_boundary;
 mod semantic;
 mod subgraph;
 mod terminal;
