@@ -1448,7 +1448,17 @@ mod tests {
     fn core_catalog_has_one_version_per_module_and_is_outside_dynamic_quota() {
         let sources = GraphSchemaSources::default();
         sources.validate().unwrap();
-        assert_eq!(sources.core.len(), 57);
+        // Completeness, not a census pin (MEDULLA-SDLC-R020): every declared
+        // module is composed exactly once, under its own versioned id.
+        let declared: BTreeSet<String> = core_specs()
+            .iter()
+            .map(|spec| format!("core:{}@{}", spec.module, spec.version))
+            .collect();
+        assert_eq!(declared.len(), core_specs().len(), "duplicate core module");
+        assert_eq!(
+            sources.core.keys().cloned().collect::<BTreeSet<_>>(),
+            declared
+        );
         assert!(sources.dynamic.is_empty());
         assert!(sources.core.keys().all(|id| id.starts_with("core:")));
     }
@@ -1709,276 +1719,29 @@ mod tests {
 
     #[test]
     fn core_artifact_bytes_and_legacy_iri_namespace_are_pinned() {
-        // Pin the exact bytes compiled by `include_str!`, rather than a
-        // pre-write renderer buffer (which may retain an extra terminal blank
-        // line). Runtime source identities are derived from these bytes.
-        let expected = [
-            (
-                "a2a",
-                "3206052c6dbff90471ba7d8bdac1541b29c2580be77802880b95f8c73deb8f72",
-            ),
-            (
-                "action",
-                "eb539c1652be9fa0bc9c60881221e081a17c6afb9c3cdb9d21cd73521819c98a",
-            ),
-            (
-                "archimate",
-                "3a941335df1079a0dc192eba041af4db2a41653f95f7dc5d516a7adf4edfbae3",
-            ),
-            (
-                "capability",
-                "ebcddf9f166e7e0e6cabbb0126a304c6dd5e0713da2503ec9b2fa08b381504cd",
-            ),
-            (
-                "argumentation",
-                "3802cfc9bff937f93a638bf2ca1b0fcd9a6b4432b3a02be12d404e22d1582cd0",
-            ),
-            (
-                "calendar",
-                "67047ac0aa2a3bd0b41de948c729e5b0da579fb093c09e4f5492925da5d5b008",
-            ),
-            (
-                "catalog",
-                "25bb360d41fea58b0ec3b3fc277aaaf42fa8ff5b17a66787ba81b7236e361912",
-            ),
-            (
-                "company",
-                "e68b101468aa5e90b959cadf63482576db212aae64cbe51c84d28a3c17e85ca7",
-            ),
-            (
-                "company_infra",
-                "f5c16236b1d96b4ad01a61b9176250fe9f58045d3a9d4d9ed25284f137b5ec34",
-            ),
-            (
-                "connector-pack",
-                "525610e5402416835050f0812a1181f6cfe594495b27abac2abd85477db3c2a8",
-            ),
-            (
-                "concepts",
-                "6713cdc3435cd0f4f76991b37667583f522d4610ba0aa6191aab052c81feb8b3",
-            ),
-            (
-                "foundation",
-                "4a4a2ce28ed70060e4daa1625db6ccd5e00062982dc77c8f534db837a0118dd7",
-            ),
-            (
-                "foundation-shapes",
-                "405805a8b246426bffcaacc5e3caf1b54d6e1340a281379ca7a5678c87f69cfe",
-            ),
-            (
-                "documentation",
-                "f61c25413211d5cc92523c548d2d50a8d26a8a5473cb59de5bf7ab16e20155b1",
-            ),
-            (
-                "energy_geopolitics",
-                "bc3d0a535e8c5d21e50e82126c7d83244d445fb178d1dab0a995599f95c258a9",
-            ),
-            (
-                "enterprise",
-                "6e56d784c9990665934153422b00df5d73210cbfebe262b0918ffc92c5bff97c",
-            ),
-            (
-                "enterprise-shapes",
-                "df333980776e43addf5473dc9e875fd465b491e5a1e424bddf42f4eb22d9910d",
-            ),
-            (
-                "governance-shapes",
-                "8195ee0454e851d182b14c9d30e1bcfa2638b44719964cd51e08d75cdc13b12d",
-            ),
-            (
-                "government",
-                "6fc9f53374146e50161e5fe2aa83a5902b5c9e86fe03be69f089ddd6d39de310",
-            ),
-            (
-                "government-shapes",
-                "cf6514787314e925a4afb5e9019e9a45d40af8f1393ca5005375ffa4559fed0a",
-            ),
-            (
-                "harness",
-                "e11026fc84868a7f8a18b344bb8af0600022c9c6c75f9ef43fb7f02553d34c6a",
-            ),
-            (
-                "hr",
-                "bce983d484bd2d1681cacc16d6c13c9ffa229c474e0e85340f0398baf848bf6f",
-            ),
-            (
-                "identity",
-                "b1cda78978579fa6d54a04e2885aa5a4f443259e35b6101dd1b4d2ff65d0b8d5",
-            ),
-            (
-                "identity-shapes",
-                "753ea0407a1f691351684761e2f500e3d3df3e611e5a8c249befc740350efdf8",
-            ),
-            (
-                "infrastructure",
-                "43aa6d86e29488f412eb804b8e353eca23f67e4bf5cfdc749aeeb68fc98efc4b",
-            ),
-            (
-                "medical",
-                "512fe88b3d8a190be089a674869a193e25ca09c591cb7cd307139e7039e75554",
-            ),
-            (
-                "native_source_connector",
-                "48a1e90706248bde126d4c3d2d2f34c136cca5797a00612c6a13c994358efda2",
-            ),
-            (
-                "orchestration",
-                "4fad6ec67c290ced83c2fb2094c4803495d0626c754145202ccae65bd4b8b569",
-            ),
-            (
-                "orchestration-shapes",
-                "62c239552be131ed21d89eeb9ef223af12de40a6e60c10e0d1ca2dc855f2f96e",
-            ),
-            (
-                "personal",
-                "5099df9af829db1d2b9d19896b7b4297d800b2bdfb343c5f97550e2b4d4147c2",
-            ),
-            (
-                "process_intelligence",
-                "52a426363a7d0a7d50ed8e84237be6196c96c9eb383cf7128bf0d637b33c8694",
-            ),
-            (
-                "sdd",
-                "383283f769da7e57cb0ddda6af8319b3253501f8e777d3cd368d864f0e9d0f11",
-            ),
-            (
-                "service_operations",
-                "3bf4054b73e1a47ff17d28f9f2b8f662cefafd05e5feac911ec5fcf28312147d",
-            ),
-            (
-                "dataplatform",
-                "bf130bc753323c5430a6b604f93fd03a87ae6d98b7563ca0c4b9f54b442bac26",
-            ),
-            (
-                "data-platform",
-                "0cbf52870a519d293be4267b8a9d9b26fc97a378fa6e4f20f30980db6c9cdae9",
-            ),
-            (
-                "it4it_delivery",
-                "7f919c5765dc4e80aac74455b3ce1dd029b89a4d47ad08b038e024b89cb0c395",
-            ),
-            (
-                "media",
-                "35e04e76c65e03f700bae25793022f0eefdf3d0f755ac40b65726665df5a78ac",
-            ),
-            (
-                "retrieval",
-                "8619ae4a42a9545427ce72d1fe61744977d337037937ef62b96305c732aa6767",
-            ),
-            (
-                "sdlc_lifecycle",
-                "17ee3ad6857ae44628eb8699c0ea93c7195d40e1b48351ee60d0d340d969644f",
-            ),
-            (
-                "software",
-                "be96d5d3c1dc265ec3e9647d6d5aa5948cd226196d08cd6e5918ca904ba0fe4d",
-            ),
-            (
-                "system",
-                "77fd37067abaff0c7cc52cfcdd0de5fcec73c6de1c9fad453e311fdf313e2720",
-            ),
-            (
-                "trm",
-                "020d260f068b338a340cb9639e5391ae3b7272099afa16ad36ac5bd9ad182b44",
-            ),
-            (
-                "life",
-                "4da55226e90f23254343fd91dc59433e4361baed5ce84ffb29c5b544e48a44dd",
-            ),
-            (
-                "environment",
-                "0617000bebceac047fc2dd836d1a2efc681d7632f83479cd46098c3d84f72a53",
-            ),
-            (
-                "nutrition",
-                "47d4455d70579c541591d9434957457a843907f36deb4a22fb762deeb8c0db0a",
-            ),
-            (
-                "world-model-shapes",
-                "f2be16c304237069bc97b91afc01ac90c846a3f466b7d7ace89ed3e210acdb8d",
-            ),
-            (
-                "swarm-topology",
-                "6a537da068d767d250805becbd376d4ea82b8f80f2cd6e259e900e6a50051adb",
-            ),
-            (
-                "swarm-topology-shapes",
-                "1072f280c5761d749574f913967ab1fbdef04681795e43db961c8b5e9c3a4413",
-            ),
-            // R004.1 and R004.2.1/.2 added the asset-class migration and portfolio
-            // records; semantic acceptance/refusal fixtures live in
-            // src/server/graph_schema/finance_tests.rs. Pin both updated artifacts.
-            // R004.2.3-R004.2.6 added the portfolio-group, strategy and leverage records.
-            (
-                "finance",
-                "57e4049671f6950d37ed62eac3dfbe8d0130a92ef53f0ed95d347738b3e8b49f",
-            ),
-            // MEDULLA-CQ-CONN-R071.1: the documentation shapes companion.
-            (
-                "documentation-shapes",
-                "ff2a265a10d6331770bcf2155a5f8e3c74e15522de4bf570e867ee95b6310cb2",
-            ),
-            (
-                "finance-shapes",
-                "0afc4138a767f75b324255540840beb66f53989db86c88b54e9aa303e3699e03",
-            ),
-            (
-                "worldview",
-                "ff0bc0c9407d2e400ae56b3aa185a6bcc6e41980496c664ebd037c247bf1206a",
-            ),
-            (
-                "metadata_catalog",
-                "63847a25c0a66b121048f881be89b64bb487af02d306ed84a32b26e0e9a31b99",
-            ),
-            (
-                "metadata_catalog-shapes",
-                "e29bccfcec0ccf8812fffbd33a642bb9df71304bb72d7328fcdd17b25a02b0f6",
-            ),
-            (
-                "temporal-shapes",
-                "9bb13dd655059b6757b33621446f960bd6992bcb5aea31d5a85f4483c86bba59",
-            ),
-            (
-                "virtual-graph",
-                "a6b6917d16902e3e3f5d7a58ad2bdb50e342ea10837bbb49ee9161eef976e3bc",
-            ),
-            (
-                "virtual-graph-shapes",
-                "57bf2d274d3be29000b236f466bf65960455652fc0d022c7f2ece3dc180b8340",
-            ),
-            // MEDULLA-SUPPLY-VOCAB-R003.13: the commercial module (ontology plus its
-            // shapes companion) joins the catalog; the pin follows the ontology.
-            (
-                "commercial",
-                "9ff80088ba38249ee5421ae50ad263ac9fb06f8f441c1152652b5f56a79ec321",
-            ),
-            (
-                "supply_chain",
-                "d7b82d00c2d5ba05b188af74169b1ebd9b6283a580d8cb49427fb9c51b3ea1a8",
-            ),
-            // MEDULLA-TYPED-PACKS-R101.1/R102.1: the connector-pack module (ontology
-            // plus its surface shapes companion) joins the catalog; the pin
-            // follows the ontology.
-        ];
+        // Completeness, not byte pins (MEDULLA-SDLC-R020): every declared core
+        // module is composed, each source's digest is the SHA-256 of the exact
+        // bytes `include_str!` compiled, and the set digest covers them all.
         let catalog = current_core_catalog();
-        let pinned_modules: BTreeSet<_> = expected.iter().map(|(module, _)| *module).collect();
         assert_eq!(
-            pinned_modules.len(),
-            expected.len(),
-            "duplicate core artifact pin"
-        );
-        assert_eq!(
-            expected.len(),
             catalog.len(),
-            "every core source needs a byte pin"
+            core_specs().len(),
+            "every module is composed"
         );
-        for (module, digest) in expected {
-            let source = &catalog[&format!("core:{module}@1")];
-            // A module can carry both documents (commercial: ontology plus its
-            // shapes companion); the pin follows the ontology, the module's
-            // primary artifact, with the shapes-only modules unchanged.
-            let actual = source.ontology_sha256.or(source.shapes_sha256).unwrap();
-            assert_eq!(actual.to_hex(), digest, "artifact drift for {module}");
+        for spec in core_specs() {
+            let source = &catalog[&format!("core:{}@{}", spec.module, spec.version)];
+            let pairs = [
+                (spec.ontology, source.ontology_sha256),
+                (spec.shapes, source.shapes_sha256),
+            ];
+            for (document, digest) in pairs {
+                assert_eq!(
+                    document.map(|bytes| Digest256::sha256(bytes.as_bytes())),
+                    digest,
+                    "artifact digest for {}",
+                    spec.module
+                );
+            }
             let document = source
                 .ontology_ttl
                 .as_deref()
@@ -1986,6 +1749,10 @@ mod tests {
                 .unwrap();
             assert!(document.contains("http://knuckles.team/kg"));
             assert!(!document.contains("@prefix eg:"));
+            assert!(matches!(
+                &source.origin,
+                SchemaSourceOrigin::Core { set_digest, .. } if *set_digest == current_core_set_digest()
+            ));
         }
     }
 

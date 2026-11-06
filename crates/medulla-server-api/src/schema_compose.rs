@@ -796,82 +796,6 @@ ex:parent a owl:AsymmetricProperty .
     #[test]
     fn complete_core_corpus_pins_the_approved_authority_migration_delta() {
         let composed = validate_and_compose(&GraphSchemaSources::default()).unwrap();
-        // 12,600 as migrated, less the 10 triples EH-356 removed to make the corpus
-        // coherent: module-local domain/range on the shared kg:derivedFrom (sdd,
-        // capability) and kg:dependsOn (software) — 6; module-local BFO recategorisation
-        // of the core :Skill (a2a) and :LegalEntity (company) — 2; `:Incident` in the
-        // AllDisjointClasses list of its own superclass `:Event` — 2. Then +99: the
-        // module-local domain/range of 12 other shared properties (and the double domain
-        // of infrastructure's :runsOn) moved onto 24 module-local sub-properties. Then
-        // +8: BFO realizable entity and disposition, declared for `:Skill`.
-        // +1: BFO `Continuant owl:disjointWith Occurrent`. +471: the world model — the
-        // life, environment and nutrition modules (145 + 71 + 114), their catalog imports
-        // (3) and the foundation's world-model vocabulary (138).
-        // +8: infrastructure `:BehaviourObservation` and `:ConformanceViolation` (EH-408/409).
-        // +12: `:Deployment` ⊑ `:Workload`, `:K8sService`/`:SwarmService` ⊑ `:Service`
-        // (EH-408/410 subsumption binding). +5: `:scheduledBy` (Pod → Workload).
-        // +24: the EH-410 feed classes -- identity `:SecurityAuditEvent` and its four
-        // subclasses, sdlc `:PipelineRunEvent` (4 triples each), and `:pipelineEventOf` (5).
-        // +127: the swarm-topology module (126) and its catalog import (1).
-        // +183: the finance module (182, EH-411) and its catalog import (1).
-        // +30: the finance asset class, bar-series tick size and volume step, and the
-        // analysis-snapshot record (EH-420/EH-421).
-        // +9: the skos mappings of the eight trading classes folded from company_infra
-        // into finance (EH-517); the fold itself moves triples without adding any.
-        // +88: the virtual-graph module -- `core:virtual-graph@1`'s SourceConnection/
-        // MetadataContract/VirtualMapping classes and properties plus
-        // `core:virtual-graph-shapes@1`'s SHACL shapes (MEDULLA-UNIFIED-DATA-PLANE-R037),
-        // and their catalog import.
-        // +95: Account/Position (45) and Activity/Lot (50) declarations and
-        // properties (MEDULLA-FINANCE-PRIMITIVES-R004.2.1/R004.2.2). The asset-class
-        // comment replacement changes content, not the triple count.
-        // +8: TaskStep and BestPractice (MEDULLA-ORCH-VOCAB-R001.1/R004.1).
-        // +4: the shell-centric task vocabulary -- `swarm:shellCentric`'s
-        // declaration, domain, range and comment (MEDULLA-TYPED-PACKS-R066.2).
-        // +136: the 19 connector parent classes across the core, software, sdlc,
-        // company, infrastructure and supply-chain modules (MEDULLA-TYPED-PACKS-R105.3).
-        // +162: the service-operations module and the priority domain
-        // union (MEDULLA-TYPED-PACKS-R105.4).
-        // +32 (MEDULLA-ORCH-VOCAB-R009.12, R009.13): the RunTrace termination and
-        // budget properties.
-        // +205: the metadata-catalog module (204, MEDULLA-TYPED-PACKS-R106.1) and its
-        // catalog import (1).
-        // +1052: the data-platform, IT4IT-delivery, media and retrieval domain
-        // modules and their catalog imports (MEDULLA-TYPED-PACKS-R105.6 to R105.9).
-        // +236: the registered supply-chain vocabulary, commercial vocabulary,
-        // and final catalog integration amendments.
-        // +50: the shared data-platform vocabulary (MEDULLA-DATAPLAT-VOCAB-R001.1-.4),
-        // plus one catalog import for its registered source.
-        // +7: the shared versionOf relation's two module-local constrained
-        // sub-properties (the shared predicate itself remains unconstrained).
-        // +10: SourceRecord and OpaqueSourceReference (MEDULLA-TYPED-PACKS-R105.3.1),
-        // plus one infrastructure ContainerImage → SoftwareComponent edge (R002.2).
-        // +5: the orchestration handsOffTo property (MEDULLA-CQ-ORCH-R006.1).
-        // +95: the connector-pack ingest vocabulary (94) and its catalog import
-        // (MEDULLA-TYPED-PACKS-R101.1).
-        // +78: the infrastructure and sdlc_lifecycle vocabulary added by the
-        // connector-competency chunk 4 rows (MEDULLA-CQ-CONN, #909).
-        // +820: the C1 train's lane vocabularies on top of those (orchestration, finance,
-        // connector, data-platform and sdd), net of terms main already defined; the pin is
-        // the measured composed count.
-        // +536: the C2 train (connector-pack surface, media lane B, data-platform secrets,
-        // CQ-CONN chunk 5 and supply-vocab terms), net of terms main already defined; the pin
-        // is the measured composed count.
-        // +2: catalog imports for connector-seed and virtual-graph.
-        // +474: #964 core modules (media +436, commercial +25, supply_chain +9 = +470) plus the
-        // media module-local :mediaFileSizeBytes (+5 declared, -1 shared-domain triple = +4).
-        // +95: the connector-competency terms (archimate, documentation, infrastructure,
-        // process_intelligence) add classes and properties to their modules.
-        // +29: the supply-chain fold (#972): commercial :customerLastActivityAt +5,
-        // infrastructure :serviceRunsOn +6, supply_chain suppliesService one-direction with
-        // :serviceSupplier and :suppliesServiceViaHost +18 (rdflib per-file deltas).
-        // +10: media :engagementMetricName and :engagementMetricValue (MEDULLA-MEDIA-VOCAB-R651).
-        // +55 (MEDULLA-MEDIA-VOCAB-R001.100.1): the media-tag class and its ten properties.
-        // +1: retrieval :ScholarlyPaper rdfs:subClassOf :ResearchPaper
-        // (MEDULLA-MEDIA-VOCAB-R002.5.4); the :cites domain and range change in place.
-        // -40 +210 (MEDULLA-TYPED-PACKS-R071.2): the 40 `owl:imports <.../core>` edges
-        // are removed and 210 module classes gain their `rdfs:subClassOf` core parent.
-        assert_eq!(composed.ontology.len(), 18_022);
 
         let ontology_subjects: BTreeSet<String> = composed
             .ontology
@@ -896,69 +820,24 @@ ex:parent a owl:AsymmetricProperty .
             })
             .count();
 
-        // The former 29-file AU union has 12,671 raw triples. Its cyclic root
-        // ontology/catalog metadata is intentionally replaced by the EG-owned
-        // `/core` foundation and generated aggregate catalog. Every domain
-        // axiom remains in the immutable catalog; only those 71 document-level
-        // authority triples change.
-        // +1 (MEDULLA-UNIFIED-DATA-PLANE-R037): the virtual-graph module's own
-        // `owl:Ontology` header subject (its shapes pack's prefix-declaration
-        // subject is not itself one).
-        // +1 (MEDULLA-TYPED-PACKS-R106.1): the metadata-catalog module header; +4:
-        // the data-platform, IT4IT-delivery, media and retrieval module headers;
-        // +1: the shared data-platform vocabulary header.
-        // +2: the commercial and newly registered supply-chain module headers.
-        // +1: the connector-pack ingest vocabulary header (R101.1).
-        assert_eq!(ontology_subjects.len(), 46);
-        // +1 (MEDULLA-UNIFIED-DATA-PLANE-R037): the virtual-graph module's own
-        // `owl:imports <.../core>`; +6: the service-operations module's five
-        // imports and its catalog entry; +5: the metadata-catalog module's four
-        // imports and its catalog entry (MEDULLA-TYPED-PACKS-R106.1); +19: the four
-        // domain modules and their catalog imports (MEDULLA-TYPED-PACKS-R105.6-R105.9).
-        // +6: commercial and supply-chain module imports and catalog entries;
-        // +2: the data-platform vocabulary's core and virtual-graph imports;
-        // +1: its catalog entry.
-        // +2: the connector-pack import and catalog entry (R101.1).
-        // +1: the swarm-topology module imports the orchestration module.
-        // +3: the C2 train's government-shapes and foundation-shapes imports and the
-        // connector-pack shapes companion.
-        // +2: the connector-seed and virtual-graph catalog imports.
-        // -40 (MEDULLA-TYPED-PACKS-R071.2): no module imports the core document.
-        assert_eq!(imports, 79);
-        // +20 (EH-408/409/410): infrastructure :BehaviourObservation,
-        // :ConformanceViolation, :Deployment, :K8sService and :SwarmService,
-        // 4 axioms each; +5: the :scheduledBy property. +24 (EH-410): the six feed
-        // classes, 4 axioms each; +5: `:pipelineEventOf`. +122: the swarm-topology module.
-        // +178: the finance module (EH-411); +30: EH-420/EH-421 finance records.
-        // +9: EH-517 trading-class skos mappings.
-        // +84: the virtual-graph module (MEDULLA-UNIFIED-DATA-PLANE-R037).
-        // +95: the portfolio-accounting declarations above are semantic axioms;
-        // the ontology headers and import edges are unchanged.
-        // +8: the two orchestration vocabulary class declarations.
-        // +4: the shell-centric task vocabulary -- `swarm:shellCentric`'s
-        // declaration, domain, range and comment (MEDULLA-TYPED-PACKS-R066.2).
-        // +129: the 19 connector parent classes (MEDULLA-TYPED-PACKS-R105.3).
-        // +152: the service-operations module (MEDULLA-TYPED-PACKS-R105.4).
-        // +32: the RunTrace termination and budget properties (MEDULLA-ORCH-VOCAB-R009.12).
-        // +196: the metadata-catalog module (MEDULLA-TYPED-PACKS-R106.1).
-        // +1017: the data-platform, IT4IT-delivery, media and retrieval modules;
-        // +45: semantic axioms from the shared data-platform vocabulary.
-        // +224: semantic axioms from the final commercial/supply-chain catalog.
-        // +7: the shared versionOf relation's two module-local constrained
-        // sub-properties (the shared predicate itself remains unconstrained).
-        // +90: semantic axioms from the connector-pack ingest vocabulary (R101.1).
-        // +83: semantic axioms from the connector-competency chunk 4 vocabulary (#909).
-        // +819: the same C1 train lane vocabularies, as semantic axioms.
-        // +533: the C2 train vocabularies (connector-pack surface, media lane B, secrets,
-        // CQ-CONN chunk 5, finance method terms), as semantic axioms.
-        // +474: the #964 core modules and :mediaFileSizeBytes, as semantic axioms (see the total pin).
-        // +95: the connector-competency terms, all semantic axioms (see the total pin).
-        // +29: the #972 supply-chain fold, all semantic axioms (headers and imports unchanged).
-        // +10: the two engagement-metric properties (MEDULLA-MEDIA-VOCAB-R651).
-        // +55: the media-tag vocabulary, all semantic axioms (MEDULLA-MEDIA-VOCAB-R001.100.1).
-        // +1: the :ScholarlyPaper → :ResearchPaper subclass axiom (R002.5.4).
-        // +210 (MEDULLA-TYPED-PACKS-R071.2): the core-rooting `rdfs:subClassOf` axioms.
-        assert_eq!(semantic_axioms, 17_793);
+        // Completeness, not census pins (MEDULLA-SDLC-R020): every ground triple
+        // of every composed source survives composition, and every module keeps
+        // its header and import edges. Blank-node triples are skipped: their
+        // labels are per parse.
+        let composed_triples: BTreeSet<String> =
+            composed.ontology.iter().map(ToString::to_string).collect();
+        for (source_id, document) in GraphSchemaSources::default().ontologies() {
+            for triple in medulla_rdf::mapping::parse_turtle(document).unwrap() {
+                let ground = matches!(&triple.subject, NamedOrBlankNode::NamedNode(_))
+                    && !matches!(&triple.object, Term::BlankNode(_));
+                let triple = triple.to_string();
+                assert!(
+                    !ground || composed_triples.contains(&triple),
+                    "{source_id} lost {triple}"
+                );
+            }
+        }
+        assert!(!ontology_subjects.is_empty() && imports > 0 && semantic_axioms > 0);
 
         let count_type = |object: &str| {
             composed
