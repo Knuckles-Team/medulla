@@ -17,8 +17,8 @@ use crate::dispatch::shared::timed_read;
 use medulla_decision_outcome_types::{
     policy_evolution::PolicyEvolutionRecord, policy_evolution::PolicyRecordGetRequest,
     policy_evolution::PolicyRecordKind, policy_evolution::PolicyRecordReceipt,
-    policy_evolution::PolicyRecordStored, policy_evolution::PolicyWriteDisposition,
-    policy_evolution::StoredPolicyRecord,
+    policy_evolution::PolicyRecordStored, policy_evolution::PolicyRefusal,
+    policy_evolution::PolicyWriteDisposition, policy_evolution::StoredPolicyRecord,
 };
 use medulla_protocol_types::{
     result_contract::graph::ModelPolicyVersionRegister,
@@ -33,6 +33,8 @@ use crate::dispatch::*;
 mod blobs;
 mod gate;
 mod store;
+#[cfg(test)]
+mod tests;
 
 use store::GraphRecords;
 
@@ -60,6 +62,20 @@ pub async fn handle_policy_evolution(
         }
         Err(request) => get(state, &target, verified, request).await,
     }
+}
+
+/// The wire text of a policy refusal, folded under the `PolicyEvolution`
+/// origin (MEDULLA-DECISION-ENGINE-R010.100.2): `CODE: detail`.
+fn refuse(refusal: PolicyRefusal) -> String {
+    use medulla_decision_types::decision::record::outcome::{
+        AbstainReason, DecisionRefusal, RefusalOrigin,
+    };
+    let folded = AbstainReason::from_refusal(RefusalOrigin::POLICY_EVOLUTION, &refusal);
+    format!(
+        "{}: {}",
+        folded.code().as_str(),
+        DecisionRefusal::detail(&refusal)
+    )
 }
 
 /// Encode a receipt as the kind's declared result, or answer the refusal.
@@ -97,14 +113,10 @@ async fn admit_against_graph(
         core: current.registry.get(graph).map(|entry| entry.core.as_ref()),
         tenant_id,
     };
-    if records
-        .view(record_id)
-        .map_err(|refusal| refusal.to_string())?
-        .is_some()
-    {
+    if records.view(record_id).map_err(refuse)?.is_some() {
         return Ok(true);
     }
-    gate::admit(record, &records).map_err(|refusal| refusal.to_string())?;
+    gate::admit(record, &records).map_err(refuse)?;
     Ok(false)
 }
 
@@ -114,7 +126,7 @@ async fn commit(
     verified: &VerifiedRequestContext,
     record: PolicyEvolutionRecord,
 ) -> Result<PolicyRecordReceipt, String> {
-    record.validate().map_err(|refusal| refusal.to_string())?;
+    record.validate().map_err(refuse)?;
     let tenant_id = verified.tenant();
     let record_id = record.record_id(tenant_id)?;
     let recorded = admit_against_graph(state, target.graph, tenant_id, &record_id, &record).await?;
@@ -123,7 +135,7 @@ async fn commit(
     } else {
         blobs::verify_held_blobs(state, verified, &record)
             .await
-            .map_err(|refusal| refusal.to_string())?;
+            .map_err(refuse)?;
         write_node(state, target, verified, &record_id, &record).await?
     };
     Ok(PolicyRecordReceipt {
@@ -213,7 +225,7 @@ async fn get(
     };
     let view = records
         .view(request.record_id.as_str())
-        .map_err(|refusal| refusal.to_string())
+        .map_err(refuse)
         .and_then(ResultPayload::of::<PolicyRecordGet>);
     match view {
         Ok(payload) => Response::ok(target.req_id, payload),

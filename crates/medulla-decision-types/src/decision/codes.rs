@@ -169,7 +169,10 @@ pub const FOLDED: &[RefusalCode] = &[
 /// kind. A family module joins this list in the change that declares its table.
 pub const FAMILY_TABLES: &[(QuestionKind, &[RefusalCode])] = &[];
 
-/// Resolve a wire string to its registered code, shared codes first.
+/// Resolve a wire string to its registered code, shared codes first. The
+/// assembly and commit surface's closed `DecisionErrorCode` set is registered
+/// too: an assembly refusal folds under `RefusalOrigin::ASSEMBLE` with its own
+/// code (MEDULLA-DECISION-ENGINE-R010.100.2).
 pub fn resolve(code: &str) -> Option<RefusalCode> {
     SHARED
         .iter()
@@ -178,4 +181,13 @@ pub fn resolve(code: &str) -> Option<RefusalCode> {
         .chain(super::usage::REFUSALS.iter())
         .copied()
         .find(|registered| registered.as_str() == code)
+        .or_else(|| decision_error_code(code))
+}
+
+/// The registered code of one `DecisionErrorCode` token.
+fn decision_error_code(code: &str) -> Option<RefusalCode> {
+    super::DecisionErrorCode::ALL
+        .iter()
+        .find(|registered| registered.as_str() == code)
+        .map(|registered| RefusalCode::new(registered.as_str()))
 }

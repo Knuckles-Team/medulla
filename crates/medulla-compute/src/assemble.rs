@@ -86,6 +86,19 @@ impl std::fmt::Display for AssembleError {
 
 impl std::error::Error for AssembleError {}
 
+/// An assembly refusal is a typed decision refusal under its closed code, so
+/// the `AgentAssemble` caller folds it under `RefusalOrigin::ASSEMBLE`
+/// (MEDULLA-DECISION-ENGINE-R010.100.2).
+impl medulla_decision_types::decision::record::outcome::DecisionRefusal for AssembleError {
+    fn code(&self) -> medulla_decision_types::decision::record::outcome::RefusalCode {
+        medulla_decision_types::decision::record::outcome::RefusalCode::new(self.code.as_str())
+    }
+
+    fn detail(&self) -> String {
+        self.detail.clone()
+    }
+}
+
 /// The complete inputs of one assembly over `candidates` (any order) under
 /// `policy`: candidates sorted, and every digest computed from what it names.
 pub fn inputs(

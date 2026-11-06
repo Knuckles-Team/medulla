@@ -94,7 +94,7 @@ async fn assemble_for(
     )
     .await?;
     let mut inputs =
-        inputs(request, candidates, templates, policy).map_err(|error| error.to_string())?;
+        inputs(request, candidates, templates, policy).map_err(|error| assembly_refusal(&error))?;
     inputs.topology = topology;
     let identity = RecordIdentity {
         tenant_id: verified.tenant().to_string(),
@@ -106,7 +106,7 @@ async fn assemble_for(
         tokio::task::spawn_blocking(move || assemble(inputs, identity))
             .await
             .map_err(|error| format!("assembly task failed: {error}"))?
-            .map_err(|error| error.to_string())
+            .map_err(|error| assembly_refusal(&error))
     })
     .await?;
     let (model_revision, model_input) = telemetry::stage(Stage::Rank, FAMILY, tenant, || {
@@ -129,6 +129,15 @@ async fn assemble_for(
         Ok::<_, String>(())
     })?;
     Ok(result)
+}
+
+/// The wire text of an assembly refusal, folded under the `Assemble` origin
+/// (MEDULLA-DECISION-ENGINE-R010.100.2): `CODE: detail`.
+#[cfg(feature = "decide")]
+pub(crate) fn assembly_refusal(error: &medulla_compute::assemble::AssembleError) -> String {
+    use medulla_decision_types::decision::record::outcome::{AbstainReason, RefusalOrigin};
+    let folded = AbstainReason::from_refusal(RefusalOrigin::ASSEMBLE, error);
+    format!("{}: {}", folded.code().as_str(), error.detail)
 }
 
 /// The selected model slot's revision and declared input capabilities
