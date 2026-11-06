@@ -132,6 +132,8 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     // MEDULLA-DECISION-ENGINE-R652.3: a stale write and a malformed op.
     ("Claims", &["PARAMETER_INVALID", "REVISION_CONFLICT"]),
     ("GetRunWorkItem", &["RUN_ADMISSION_UNAVAILABLE"]),
+    // MEDULLA-UNIFIED-DATA-PLANE-R040.4: a blocked embedding-model promotion.
+    ("SemanticIndex", &["PROMOTION_BLOCKED"]),
     // Local-only authority: a clustered server refuses it with the typed
     // `LOCAL_ONLY_CLUSTER_REFUSAL` (server-mutation) instead of proposing it.
     ("SqlSourceBatch", &["CLUSTER_MUTATION_UNAVAILABLE"]),
