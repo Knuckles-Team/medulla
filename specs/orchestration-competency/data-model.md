@@ -29,3 +29,8 @@ This file describes the ontology terms, record types and nodes that the rows of 
 ### Refusal tables
 
 - The composed answer, the architecture view, the compiler and the importer each declare a `REFUSALS` const collected by the uniqueness test of `MEDULLA-DECISION-ENGINE-R010.100.1`.
+
+## State machine types
+
+- Rows `MEDULLA-CQ-ORCH-R810`, `MEDULLA-CQ-ORCH-R811`: each machine type stores one state field and exposes one `apply` (or `step`) function that returns `TransitionRefused` for an illegal transition.
+- Removed fields: the dual-truth flags and literals named in the rows (for example `terminal`, `tombstone`, `reclaimed`, `cancel_requested`, `active`, `revoked`, `destination_installed`).

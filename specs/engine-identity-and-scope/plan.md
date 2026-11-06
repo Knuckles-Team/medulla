@@ -328,3 +328,7 @@ none
 - Graph ownership plan and apply: `MEDULLA-IDENTITY-R700` provides, `ARBORA-IDENTITY-R652` consumes. Contract: [graph-ownership-grants.md](contracts/graph-ownership-grants.md).
 - Session reference, liveness, approval keys and credential observation: `MEDULLA-IDENTITY-R708` to `MEDULLA-IDENTITY-R713` provide, `ARBORA-IDENTITY-R029.6` consumes. Contract: [session-and-approval-operations.md](contracts/session-and-approval-operations.md).
 - Resource access decision and client session vocabulary: `MEDULLA-IDENTITY-R704` and `MEDULLA-IDENTITY-R705` provide, `ARBORA-IDENTITY-R019.3` and `ARBORA-IDENTITY-R026.2` consume. Contract: [resource-access-and-client-session.md](contracts/resource-access-and-client-session.md).
+
+### Explicit state machines
+
+Organization constitution Article XXXI requires a closed set of states, one transition function and a typed refusal for each machine. Rows `MEDULLA-IDENTITY-R720`, `MEDULLA-IDENTITY-R721`, `MEDULLA-IDENTITY-R722` apply it here. Each machine returns `TransitionRefused` (MEDULLA-ORCH-VOCAB-R811.4), stores its state in one field, and is described in `crates/medulla-core/ontology/state-machines-v1.ttl` with classes that roll up to the core state-machine classes. The change is a hard cutover: the old literals, flags and inferred states are deleted in the same release.

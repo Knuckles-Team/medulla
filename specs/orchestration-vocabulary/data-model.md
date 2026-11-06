@@ -43,3 +43,8 @@ This file names the records and graph terms that the rows add. Each entity has o
 - Fields: rule id, scope, closed severity, source reference with span, clause digest, status.
 - Owner: `crates/medulla-types/src/policy_document.rs`.
 - Relation: activation moves the `GovernedSet` pointer of the repository.
+
+## State machine types
+
+- Rows `MEDULLA-ORCH-VOCAB-R811`, `MEDULLA-ORCH-VOCAB-R812`, `MEDULLA-ORCH-VOCAB-R813`: each machine type stores one state field and exposes one `apply` (or `step`) function that returns `TransitionRefused` for an illegal transition.
+- Removed fields: the dual-truth flags and literals named in the rows (for example `terminal`, `tombstone`, `reclaimed`, `cancel_requested`, `active`, `revoked`, `destination_installed`).

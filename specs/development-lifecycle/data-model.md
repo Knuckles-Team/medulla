@@ -41,3 +41,8 @@ Governing plan: [plan.md](plan.md). This file lists the records that the deliver
 - Closed sets: `DeliveryReportState`, `DeliveryOutcome`, `FeedbackKind` and `ArmingVerdict`.
 
 The derived stage is not a record. `derive_stage` computes it on each read (R019.7).
+
+## State machine types
+
+- Rows `MEDULLA-SDLC-R030`: each machine type stores one state field and exposes one `apply` (or `step`) function that returns `TransitionRefused` for an illegal transition.
+- Removed fields: the dual-truth flags and literals named in the rows (for example `terminal`, `tombstone`, `reclaimed`, `cancel_requested`, `active`, `revoked`, `destination_installed`).

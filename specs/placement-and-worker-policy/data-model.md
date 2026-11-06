@@ -54,3 +54,8 @@ Governing plan: [plan.md](plan.md). This file lists the types, vocabulary and se
 ## Host capability types
 
 `HostCapabilities { host_iri, capabilities, headroom, declared_at_ms }` (`crates/medulla-work-types/src/host_capabilities.rs`, new), the closed enum `JobCapability` with `JOB_CAPABILITY_STRINGS` (`crates/medulla-work-types/src/job_capability.rs`, new) and the `host_iri` field of `WorkerRecord` (`crates/medulla-work-types/src/worker_registry.rs`) (R004.3). One `HostCapabilities` node per host lives in the scheduler system graph.
+
+## State machine types
+
+- Rows `MEDULLA-PLACEMENT-R780`, `MEDULLA-PLACEMENT-R781`, `MEDULLA-PLACEMENT-R782`, `MEDULLA-PLACEMENT-R783`: each machine type stores one state field and exposes one `apply` (or `step`) function that returns `TransitionRefused` for an illegal transition.
+- Removed fields: the dual-truth flags and literals named in the rows (for example `terminal`, `tombstone`, `reclaimed`, `cancel_requested`, `active`, `revoked`, `destination_installed`).

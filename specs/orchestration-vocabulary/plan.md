@@ -135,3 +135,7 @@ none
 - Harness session index: `MEDULLA-ORCH-VOCAB-R009.101.1` provides, `SCION-SOURCE-INGEST-R013` consumes. Contract: [scion-harness-session-ingest.md](contracts/scion-harness-session-ingest.md).
 - Policy activation: `MEDULLA-ORCH-VOCAB-R806` provides, `ARBORA-OPS-R050.2` consumes. Contract: [arbora-policy-activation.md](contracts/arbora-policy-activation.md).
 - Organization runtime and teams: `MEDULLA-ORCH-VOCAB-R750.751` provides, `MERISTEM-HARNESS-CYCLE-R074` consumes. Contract: [meristem-org-runtime.md](contracts/meristem-org-runtime.md).
+
+### Explicit state machines
+
+Organization constitution Article XXXI requires a closed set of states, one transition function and a typed refusal for each machine. Rows `MEDULLA-ORCH-VOCAB-R811`, `MEDULLA-ORCH-VOCAB-R812`, `MEDULLA-ORCH-VOCAB-R813` apply it here. Each machine returns `TransitionRefused` (MEDULLA-ORCH-VOCAB-R811.4), stores its state in one field, and is described in `crates/medulla-core/ontology/state-machines-v1.ttl` with classes that roll up to the core state-machine classes. The change is a hard cutover: the old literals, flags and inferred states are deleted in the same release.

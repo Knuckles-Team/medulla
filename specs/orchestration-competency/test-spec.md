@@ -108,6 +108,12 @@ Every row below names a test that does not exist yet. The test file and function
 | T-094 | MEDULLA-CQ-ORCH-R704.9 | L1 | `crates/medulla-compute/src/process_plan/tests.rs::equal_canonical_digest_gives_equal_plan_digest` | Equal canonical digests give equal plan digests |
 | T-041.1 | MEDULLA-CQ-ORCH-R012.1 | L4 | `tests/orchestration/test_orchestration_competency_served.py::test_steps_carry_contract_params_results_and_refusals` | Each step carries the contract's tool, order, params, result fields and refusal codes |
 | T-041.2 | MEDULLA-CQ-ORCH-R012.2 | L4 | `tests/orchestration/test_orchestration_competency_served.py::test_step_names_linked_skill_and_agent_prompt` | Each step names its linked skill and the task's agent prompts |
+| T-095 | MEDULLA-CQ-ORCH-R810 | L2 | Broker message is one explicit state machine (rollup) | Every legal edge applies; every other state and event pair is refused with TransitionRefused | `crates/medulla-core/src/broker/message_machine.rs::tests::every_transition_and_refusal_is_covered` |
+| T-096 | MEDULLA-CQ-ORCH-R810.1 | L2 | Broker message transition function | Every legal edge applies; every other state and event pair is refused with TransitionRefused | `crates/medulla-core/src/broker/message_machine.rs::tests::every_legal_transition_applies` |
+| T-097 | MEDULLA-CQ-ORCH-R810.2 | L2 | Describe the broker message machine in the ontology | Every legal edge applies; every other state and event pair is refused with TransitionRefused | `crates/medulla-rdf/tests/state_machine_vocabulary.rs::broker_message_machine_matches_edge_table` |
+| T-098 | MEDULLA-CQ-ORCH-R811 | L2 | Analytics job is one explicit state machine (rollup) | Every legal edge applies; every other state and event pair is refused with TransitionRefused | `crates/medulla-jobs/src/job_machine.rs::tests::every_transition_and_refusal_is_covered` |
+| T-099 | MEDULLA-CQ-ORCH-R811.1 | L2 | Analytics job transition function | Every legal edge applies; every other state and event pair is refused with TransitionRefused | `crates/medulla-jobs/src/job_machine.rs::tests::every_legal_transition_applies` |
+| T-100 | MEDULLA-CQ-ORCH-R811.2 | L2 | Route all job writers through step and describe the machine | Every legal edge applies; every other state and event pair is refused with TransitionRefused | `crates/medulla-jobs/src/tests/job_machine_cutover.rs::no_site_sets_state_outside_step` |
 
 ## Negative and boundary cases
 

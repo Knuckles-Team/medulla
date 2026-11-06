@@ -1122,3 +1122,7 @@ none
 - Committed graph change feed: `MEDULLA-DURABLE-KERNEL-R043.100` provides, `ARBORA-OPS-R062` consumes. Contract: [graph-change-feed.md](contracts/graph-change-feed.md).
 - Run checkpoint and memory references: `MEDULLA-DURABLE-KERNEL-R028.1` provides, `ARBORA-A2A-R001.2` consumes. Contract: [run-checkpoint.md](contracts/run-checkpoint.md).
 - Host-start grant: `MEDULLA-DURABLE-KERNEL-R030.1` provides, `ARBORA-HOST-R010.7.1` consumes. Contract: [host-start-grant.md](contracts/host-start-grant.md).
+
+### Explicit state machines
+
+Organization constitution Article XXXI requires a closed set of states, one transition function and a typed refusal for each machine. Rows `MEDULLA-DURABLE-KERNEL-R872` apply it here. Each machine returns `TransitionRefused` (MEDULLA-ORCH-VOCAB-R811.4), stores its state in one field, and is described in `crates/medulla-core/ontology/state-machines-v1.ttl` with classes that roll up to the core state-machine classes. The change is a hard cutover: the old literals, flags and inferred states are deleted in the same release.

@@ -174,3 +174,7 @@ Gates for any change under these rows: `cargo test -p medulla-rdf --test orchest
 - Connectors: the process engine connector `camunda-mcp` (`MEDULLA-CQ-ORCH-R703`), the ARIS connector `aris-mcp` (`MEDULLA-CQ-ORCH-R701` and `R703`) and the architecture-modelling connector `archimate-mcp` (`MEDULLA-CQ-ORCH-R705`); contract `contracts/connector-process-and-architecture-sync.md` names their rows.
 - Process source contract: provider `MEDULLA-CQ-ORCH-R701`, consumers `camunda-mcp` and `aris-mcp`; contract `contracts/process-source-canonical.md`.
 - scion-sdk contract vocabulary: `SCION-CONNECTOR-CONTROL-R916.3` provides the served `contracts.ttl` (consumer rows R012.1 and R012.2); contract `contracts/scion-surface-contracts.md`.
+
+### Explicit state machines
+
+Organization constitution Article XXXI requires a closed set of states, one transition function and a typed refusal for each machine. Rows `MEDULLA-CQ-ORCH-R810`, `MEDULLA-CQ-ORCH-R811` apply it here. Each machine returns `TransitionRefused` (MEDULLA-ORCH-VOCAB-R811.4), stores its state in one field, and is described in `crates/medulla-core/ontology/state-machines-v1.ttl` with classes that roll up to the core state-machine classes. The change is a hard cutover: the old literals, flags and inferred states are deleted in the same release.

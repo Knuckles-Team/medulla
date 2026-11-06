@@ -56,3 +56,8 @@ A term is reused from an open vocabulary when an equivalent exists; otherwise it
 - `ClientSession` (`MEDULLA-IDENTITY-R705`): minted in the identity pack, extends the engine core session class, `skos:closeMatch prov:Activity`. Its properties map as `principal` to `prov:wasAssociatedWith` (`skos:closeMatch`), `started_at_ms` to `prov:startedAtTime` and `ended_at_ms` to `prov:endedAtTime` (`skos:closeMatch`; the values are epoch milliseconds, not `xsd:dateTime`).
 - `RunScopePolicy` (`MEDULLA-IDENTITY-R008.4`): minted in `core-foundation-v1.ttl`, extends the core policy class, `skos:closeMatch odrl:Policy`. `allowed_tools` and `allowed_graphs` have no open-vocabulary equivalent.
 - `identity_metadata` module (`MEDULLA-IDENTITY-R023.8`): minted with `Preference`, `ClientMetadata` and `InteractionNetwork`, each extending a core class; `InteractionNetwork` carries `skos:closeMatch foaf:knows` on its relation edge. `Preference` and `ClientMetadata` have no open-vocabulary equivalent.
+
+## State machine types
+
+- Rows `MEDULLA-IDENTITY-R720`, `MEDULLA-IDENTITY-R721`, `MEDULLA-IDENTITY-R722`: each machine type stores one state field and exposes one `apply` (or `step`) function that returns `TransitionRefused` for an illegal transition.
+- Removed fields: the dual-truth flags and literals named in the rows (for example `terminal`, `tombstone`, `reclaimed`, `cancel_requested`, `active`, `revoked`, `destination_installed`).

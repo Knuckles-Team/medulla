@@ -16,3 +16,8 @@ The types below are the durable entities that rows of this spec define or extend
 ## Relationships
 
 A MutationBatch commits graph, table, KV and time-series members together or none. An outbox row follows a committed batch and keeps its delivery state on the owning node. A TaskEnqueue becomes a job of the job store, and a TaskClaim leases it to a registered worker. A GraphChangeEvent follows a committed change envelope and never precedes it.
+
+## State machine types
+
+- Rows `MEDULLA-DURABLE-KERNEL-R872`: each machine type stores one state field and exposes one `apply` (or `step`) function that returns `TransitionRefused` for an illegal transition.
+- Removed fields: the dual-truth flags and literals named in the rows (for example `terminal`, `tombstone`, `reclaimed`, `cancel_requested`, `active`, `revoked`, `destination_installed`).

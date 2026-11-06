@@ -161,3 +161,15 @@ Each task line reads `- [ ] T001 [P] [US1] <ID> description`. One task per leaf 
 - [ ] T156 [US9] MEDULLA-ORCH-VOCAB-R014.8 Process vocabulary hot-path proof
 - [ ] T157 [US9] MEDULLA-ORCH-VOCAB-R014.9 Canonical step kind vocabulary
 - [ ] T158 [US9] MEDULLA-ORCH-VOCAB-R014.10 EPC classes extend the core EPC terms in the ARIS pack
+- [ ] T159 [US9] MEDULLA-ORCH-VOCAB-R811 Core state-machine vocabulary
+- [ ] T160 [US9] MEDULLA-ORCH-VOCAB-R811.1 Add the core state-machine classes
+- [ ] T161 [US9] MEDULLA-ORCH-VOCAB-R811.2 Add the core state-machine properties
+- [ ] T162 [US9] MEDULLA-ORCH-VOCAB-R811.3 Add state-machine shapes
+- [ ] T163 [US9] MEDULLA-ORCH-VOCAB-R811.4 Add the typed transition refusal
+- [ ] T164 [US9] MEDULLA-ORCH-VOCAB-R811.5 Register the source and prove the served pass-through
+- [ ] T165 [US9] MEDULLA-ORCH-VOCAB-R812 WorkItem queue row is one explicit state machine
+- [ ] T166 [US9] MEDULLA-ORCH-VOCAB-R812.1 Work item transition function and edge table
+- [ ] T167 [US9] MEDULLA-ORCH-VOCAB-R812.2 Route every work item writer through apply and drop the legacy literal
+- [ ] T168 [US9] MEDULLA-ORCH-VOCAB-R812.3 Describe the work item machine in the ontology
+- [ ] T169 [US9] MEDULLA-ORCH-VOCAB-R812.4 Serve the typed refusal for work item transitions
+- [ ] T170 [US9] MEDULLA-ORCH-VOCAB-R813 Lane work item derives terminal from status
