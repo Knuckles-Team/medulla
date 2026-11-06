@@ -163,6 +163,21 @@ pub async fn prepare(
     )
 }
 
+/// `prepare` dispatches on the batch kind; only `Records` has an admission
+/// path until the owning rows add theirs.
+#[cfg(all(feature = "redb", feature = "blob"))]
+fn admit_kind(
+    kind: medulla_source_types::source_ingestion::batch_kind::SourceBatchKind,
+) -> Result<(), String> {
+    match kind {
+        medulla_source_types::source_ingestion::batch_kind::SourceBatchKind::Records => Ok(()),
+        _ => Err(format!(
+            "{}: batch kind {kind:?} has no admission path",
+            medulla_types::contract::ServerErrorCode::SourceBatchKindUnavailable.as_str()
+        )),
+    }
+}
+
 #[cfg(all(feature = "redb", feature = "blob"))]
 pub async fn prepare(
     ctx: PrepareContext<'_>,
@@ -170,6 +185,7 @@ pub async fn prepare(
 ) -> Result<PreparedSourceIngestion, String> {
     authorize_ingestion(&ctx)?;
     let batch = request.as_batch();
+    admit_kind(batch.kind)?;
     let batch_digest = request.batch_digest()?;
     let batch_id = format!("source-ingest:{}", batch_digest.to_hex());
     let authority = CarrierAuthority::from_verified(ctx.verified)?;

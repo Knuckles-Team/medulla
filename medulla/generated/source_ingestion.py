@@ -7,7 +7,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Annotated, Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field
 
 from ._shared import (
     Digest256,
@@ -67,6 +67,44 @@ class SourceIngestStatus(BaseModel):
     stream: str
 
 
+class SourceBatchKind(str, Enum):
+    RECORDS = "records"
+    ACCESS = "access"
+    GROUPS = "groups"
+    ENUMERATION = "enumeration"
+    CONTAINERS = "containers"
+    PROPOSALS = "proposals"
+    FACTS = "facts"
+    TRANSCRIPTS = "transcripts"
+
+
+SOURCE_BATCH_EXTENSION_BOUNDS = {
+    "access": 1024,
+    "groups": 64,
+    "enumeration": 16384,
+    "containers": 1024,
+    "proposals": 64,
+    "facts": 1024,
+    "transcripts": 1024,
+}
+
+
+def _single_tagged_extension(value: dict[str, list[Any]]) -> dict[str, list[Any]]:
+    """Mirror the Rust externally tagged enum: one known key within its bound."""
+    if len(value) != 1:
+        raise ValueError("a batch extension carries exactly one kind")
+    ((key, items),) = value.items()
+    bound = SOURCE_BATCH_EXTENSION_BOUNDS.get(key)
+    if bound is None or len(items) > bound:
+        raise ValueError(f"unknown or oversized batch extension: {key}")
+    return value
+
+
+SourceBatchExtension = Annotated[
+    dict[str, list[Any]], AfterValidator(_single_tagged_extension)
+]
+
+
 class SourceIngestionBatch(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -74,6 +112,8 @@ class SourceIngestionBatch(BaseModel):
     connector: str
     empty_authoritative_approval: str | None = None
     expected_previous_checkpoint: SourceCheckpoint | None = None
+    extension: SourceBatchExtension | None = None
+    kind: SourceBatchKind = SourceBatchKind.RECORDS
     mode: SourceIngestionMode
     provider_checkpoint: SourceCheckpoint
     records: BoundedVec_SourceRecord_1024
@@ -270,9 +310,11 @@ class SourceIngestionRequest(SourceIngestionBatch):
             "authoritative_live_ids": value["authoritative_live_ids"],
             "empty_authoritative_approval": value["empty_authoritative_approval"],
             "withdrawals": value["withdrawals"],
+            "kind": value["kind"],
+            "extension": value["extension"],
         }
         return framed_named_msgpack_digest(
-            b"eg/source-ingestion-batch/v2",
+            b"eg/source-ingestion-batch/v3",
             projection,
             canonical_json_paths={
                 "records[*].payload",

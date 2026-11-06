@@ -315,6 +315,8 @@ closed_error_codes! {
         SourceAuthoritativeLiveIdUnknown => "SOURCE_AUTHORITATIVE_LIVE_ID_UNKNOWN",
         SourceAuthoritativeLiveIdWithdrawn => "SOURCE_AUTHORITATIVE_LIVE_ID_WITHDRAWN",
         SourceWriteForbidden => "SOURCE_WRITE_FORBIDDEN",
+        SourceBatchKindMismatch => "SOURCE_BATCH_KIND_MISMATCH",
+        SourceBatchKindUnavailable => "SOURCE_BATCH_KIND_UNAVAILABLE",
         SourceBindingInvalid => "SOURCE_BINDING_INVALID",
         SourceBindingMismatch => "SOURCE_BINDING_MISMATCH",
         SourceBindingNotRegistered => "SOURCE_BINDING_NOT_REGISTERED",

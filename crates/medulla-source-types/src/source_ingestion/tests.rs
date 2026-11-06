@@ -45,6 +45,8 @@ fn request() -> SourceIngestionBatch {
         authoritative_live_ids: None,
         empty_authoritative_approval: None,
         withdrawals: BoundedVec::new(Vec::new()).unwrap(),
+        kind: Default::default(),
+        extension: None,
     }
 }
 
@@ -801,4 +803,51 @@ fn r003_11_a_different_root_is_not_blocked_by_an_unrelated_claim() {
     let placement_mining = MigratedIngestionCapabilityRoot::PlacementMiningResearch;
     let already_claimed = vec![MigratedIngestionCapabilityRoot::StandardizationProcessing];
     assert!(placement_mining.claim(&already_claimed).is_ok());
+}
+
+/// Verifies MEDULLA-INGEST-WORKER-R902.3.1: batch kind and typed batch extension
+#[test]
+fn batch_kind_requires_matching_extension() {
+    use super::batch_kind::{SourceBatchExtension, SourceBatchKind};
+    let access = || SourceBatchExtension::Access(BoundedVec::new(Vec::new()).unwrap());
+    let groups = || SourceBatchExtension::Groups(BoundedVec::new(Vec::new()).unwrap());
+    let empty = |kind, extension| {
+        let mut batch = request();
+        batch.records = BoundedVec::new(Vec::new()).unwrap();
+        batch.kind = kind;
+        batch.extension = extension;
+        batch
+    };
+    let mut with_records = request();
+    with_records.extension = Some(access());
+    let mut non_record_with_records = request();
+    non_record_with_records.kind = SourceBatchKind::Access;
+    non_record_with_records.extension = Some(access());
+    let cases = [
+        (request(), true),
+        (with_records, false),
+        (empty(SourceBatchKind::Access, Some(access())), true),
+        (empty(SourceBatchKind::Access, None), false),
+        (empty(SourceBatchKind::Access, Some(groups())), false),
+        (non_record_with_records, false),
+    ];
+    for (batch, valid) in cases {
+        let outcome = SourceIngestionRequest::new(batch);
+        assert_eq!(outcome.is_ok(), valid, "{outcome:?}");
+        if let Err(message) = outcome {
+            assert!(
+                message.starts_with("SOURCE_BATCH_KIND_MISMATCH"),
+                "{message}"
+            );
+        }
+    }
+}
+
+#[test]
+fn digest_domain_names_the_kind_and_extension() {
+    assert_eq!(
+        SOURCE_INGESTION_DIGEST_DOMAIN,
+        "eg/source-ingestion-batch/v3"
+    );
+    assert!(SOURCE_INGESTION_DIGEST_PROJECTION_FIELDS.ends_with(&["kind", "extension"]));
 }

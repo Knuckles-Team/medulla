@@ -15,6 +15,7 @@ use medulla_types::{
     contract::ResourceId, contract::MAX_MUTATION_ENVELOPE_BYTES, contract::MAX_RECORD_BYTES,
 };
 
+pub mod batch_kind;
 #[cfg(any(test, feature = "test-support"))]
 pub mod fixtures;
 #[cfg(test)]
@@ -31,7 +32,7 @@ pub const MAX_MAPPING_REFERENCE_BYTES: usize = 1_024;
 pub const MAX_SOURCE_TEXT_BYTES: usize = 8_192;
 /// Shared Rust/generated-client digest marker. The generated Python model must
 /// preserve this declaration order when producing named MessagePack.
-pub const SOURCE_INGESTION_DIGEST_DOMAIN: &str = "eg/source-ingestion-batch/v2";
+pub const SOURCE_INGESTION_DIGEST_DOMAIN: &str = "eg/source-ingestion-batch/v3";
 pub const SOURCE_INGESTION_DIGEST_PROJECTION_FIELDS: &[&str] = &[
     "connector",
     "mode",
@@ -43,6 +44,8 @@ pub const SOURCE_INGESTION_DIGEST_PROJECTION_FIELDS: &[&str] = &[
     "authoritative_live_ids",
     "empty_authoritative_approval",
     "withdrawals",
+    "kind",
+    "extension",
 ];
 /// Only these JSON-valued leaves are recursively key-sorted. Sorting their
 /// containing DTO maps would destroy Rust named-struct declaration order.
@@ -257,6 +260,12 @@ pub struct SourceIngestionBatch {
     /// Provider-declared tombstones are accepted only for `delta`.
     #[serde(default)]
     pub withdrawals: SourceWithdrawals,
+    /// Batch kind (MEDULLA-INGEST-WORKER-R902.3.1); `Records` by default.
+    #[serde(default)]
+    pub kind: batch_kind::SourceBatchKind,
+    /// The payload of every non-record kind; absent for `Records`.
+    #[serde(default)]
+    pub extension: Option<batch_kind::SourceBatchExtension>,
 }
 
 /// A request whose structural invariants and byte bound were checked during
@@ -483,6 +492,7 @@ pub struct SourceIngestStatus {
 }
 
 fn validate_batch(batch: &SourceIngestionBatch) -> Result<(), String> {
+    batch_kind::validate_kind(batch)?;
     validate_cursor_fields(
         &batch.provider_checkpoint,
         "provider checkpoint",
