@@ -92,6 +92,7 @@ pub const DURABLE_STORES: &[DurableStore] = &[
     bundled("kv.redb"),
     bundled("node_info.redb"),
     bundled("agent_library.redb"),
+    bundled("branch_registry.redb"),
     bundled("rbac.redb"),
     // ── deliberately excluded, declared in the manifest ─────────────────────────
     excluded(
@@ -104,12 +105,6 @@ pub const DURABLE_STORES: &[DurableStore] = &[
         "request-replay.redb",
         "anti-replay nonce window only; entries expire with the request window and \
          carry no recovery value, so they are deliberately not restored",
-    ),
-    excluded(
-        "branch_registry.redb",
-        "branch registry rows (MEDULLA-BRANCH-MERGE-R001) are not yet handed to the backup as a \
-         bundled store source; a restore comes up with no branches, and every branch is \
-         re-created from its base version",
     ),
     excluded(
         "cluster_hierarchy.redb",
@@ -204,6 +199,11 @@ pub fn bundled_store_authority(
         "agent_library.redb" => Some((
             AGENT_LIBRARY_PHYSICAL_STORE,
             medulla_storage::OwnerLayout::AgentLibrary,
+        )),
+        #[cfg(feature = "redb")]
+        "branch_registry.redb" => Some((
+            super::branch_registry_store::BRANCH_REGISTRY_PHYSICAL_STORE,
+            medulla_storage::OwnerLayout::BranchRegistry,
         )),
         "rbac.redb" => Some((
             "eg-core:rbac-security-control",

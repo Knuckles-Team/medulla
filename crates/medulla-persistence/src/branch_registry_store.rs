@@ -8,10 +8,11 @@
 //! creates of one name cannot both land.
 
 use std::path::Path;
+use std::sync::Arc;
 
 use medulla_types::branch::{Branch, BranchRef};
 use medulla_types::contract::ServerErrorCode;
-use redb::ReadableTable;
+use redb::{ReadableTable, ReadableTableMetadata};
 
 /// The owner file name under the persist dir.
 pub const BRANCH_REGISTRY_FILE: &str = "branch_registry.redb";
@@ -112,6 +113,52 @@ impl BranchRegistry {
             Err(error) => Err(BranchCreateError::Store(error)),
         }
     }
+}
+
+/// The registry is a bundled durable store: a backup copies the owner file
+/// through its recovery seam, so a restore comes up with every branch, the
+/// way the Agent Library owner file is carried.
+impl medulla_server_api::api::persistence::BundledStoreSource for BranchRegistry {
+    fn file_name(&self) -> &'static str {
+        BRANCH_REGISTRY_FILE
+    }
+
+    fn copy_into(&self, destination: &Path) -> Result<u64, String> {
+        let rows = {
+            let read = self.durable.read()?;
+            read.open_owner_table(medulla_storage::BRANCH_REGISTRY)?
+                .len()
+                .map_err(|error| error.to_string())?
+        };
+        let counts = medulla_storage::backup_recovery_store(self.durable.kernel(), destination)?;
+        Ok(rows.saturating_add(counts.batches))
+    }
+
+    fn is_durable(&self) -> bool {
+        true
+    }
+}
+
+/// Open (once) the shared branch registry handle `ServerState` retains, under
+/// the configured persist directory. Every caller (the served `CreateBranch`,
+/// the backup) shares this one handle: redb's per-file lock admits one opener.
+pub fn shared_branch_registry(
+    state: &medulla_server_api::state::ServerState,
+) -> Result<Arc<BranchRegistry>, String> {
+    let mut guard = state.branch_registry.lock();
+    if let Some(registry) = guard
+        .as_ref()
+        .and_then(|handle| Arc::clone(handle).downcast::<BranchRegistry>().ok())
+    {
+        return Ok(registry);
+    }
+    let persist_dir = state
+        .persist_dir
+        .as_deref()
+        .ok_or_else(|| "branch registry requires a configured persist directory".to_string())?;
+    let registry = Arc::new(BranchRegistry::open(persist_dir)?);
+    *guard = Some(Arc::clone(&registry) as medulla_server_api::state::ErasedHandle);
+    Ok(registry)
 }
 
 #[cfg(test)]

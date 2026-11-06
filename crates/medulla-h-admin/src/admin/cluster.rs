@@ -319,6 +319,14 @@ async fn handle_backup(
             Err(error) => return Ok(Response::err(req_id, error)),
         }
     };
+    #[cfg(feature = "redb")]
+    let branch_registry = {
+        let guard = state.read().await;
+        match medulla_persistence::branch_registry_store::shared_branch_registry(&guard) {
+            Ok(registry) => Some(registry),
+            Err(error) => return Ok(Response::err(req_id, error)),
+        }
+    };
     let mut extra_stores: Vec<&dyn medulla_server_api::api::persistence::BundledStoreSource> =
         Vec::new();
     #[cfg(feature = "security")]
@@ -332,6 +340,10 @@ async fn handle_backup(
     #[cfg(feature = "redb")]
     if let Some(agent_library) = agent_library.as_deref() {
         extra_stores.push(agent_library);
+    }
+    #[cfg(feature = "redb")]
+    if let Some(branch_registry) = branch_registry.as_deref() {
+        extra_stores.push(branch_registry);
     }
     match backend.backup(
         &stage,

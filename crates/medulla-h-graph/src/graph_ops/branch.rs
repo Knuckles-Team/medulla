@@ -7,10 +7,12 @@
 
 use std::sync::Arc;
 
-use medulla_persistence::branch_registry_store::{BranchCreateError, BranchRegistry};
+use medulla_persistence::branch_registry_store::{
+    shared_branch_registry, BranchCreateError, BranchRegistry,
+};
 use medulla_protocol_types::protocol::{Response, ResultPayload};
 use medulla_server_api::authority_context::VerifiedRequestContext;
-use medulla_server_api::state::{ErasedHandle, ServerState};
+use medulla_server_api::state::ServerState;
 use medulla_types::branch::{validate_branch_name, Branch};
 use medulla_types::contract::ServerErrorCode;
 use tokio::sync::RwLock;
@@ -49,20 +51,6 @@ fn resolve_base(head: Option<u64>, requested: Option<u64>) -> Result<u64, Server
     Ok(base)
 }
 
-/// Open (once) the shared branch registry under the persist dir.
-fn open_registry(s: &ServerState, persist_dir: &str) -> Result<Arc<BranchRegistry>, String> {
-    let mut guard = s.branch_registry.lock();
-    if let Some(registry) = guard
-        .as_ref()
-        .and_then(|handle| Arc::clone(handle).downcast::<BranchRegistry>().ok())
-    {
-        return Ok(registry);
-    }
-    let registry = Arc::new(BranchRegistry::open(persist_dir)?);
-    *guard = Some(Arc::clone(&registry) as ErasedHandle);
-    Ok(registry)
-}
-
 /// The graph head version and the registry handle, read under one state lock.
 async fn graph_head_and_registry(
     state: &Arc<RwLock<ServerState>>,
@@ -70,11 +58,7 @@ async fn graph_head_and_registry(
 ) -> Result<(Option<u64>, Arc<BranchRegistry>), String> {
     let s = state.read().await;
     let head = s.registry.get(graph).map(|entry| entry.core.version());
-    let persist_dir = s
-        .persist_dir
-        .as_deref()
-        .ok_or_else(|| "branch registry requires a configured persist directory".to_string())?;
-    Ok((head, open_registry(&s, persist_dir)?))
+    Ok((head, shared_branch_registry(&s)?))
 }
 
 fn now_ms() -> u64 {
