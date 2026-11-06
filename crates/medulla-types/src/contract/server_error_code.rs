@@ -206,6 +206,7 @@ closed_error_codes! {
         PatternInputInvalid => "PATTERN_INPUT_INVALID",
         PatternWindowShort => "PATTERN_WINDOW_SHORT",
         PresetUnavailable => "PRESET_UNAVAILABLE",
+        PromotionBlocked => "PROMOTION_BLOCKED",
         RaftNotConfigured => "RAFT_NOT_CONFIGURED",
         RaftRetryBudgetExhausted => "RAFT_RETRY_BUDGET_EXHAUSTED",
         ReasoningProjectionRejectFailed => "REASONING_PROJECTION_REJECT_FAILED",

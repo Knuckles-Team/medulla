@@ -83,6 +83,10 @@ declared_owner_tables!(
     SemanticAnnRows: SemanticIndexOwner => ((String, String, u64), Vec<u8>, "semantic_ann_manifests"),
     SemanticVectorRows: SemanticIndexOwner => ((String, String, u64, String), Vec<u8>, "semantic_vectors"),
     AnnCodeRows: SemanticIndexOwner => ((String, String, u64, String), Vec<u8>, "eg_ann"),
+    SemanticModalityCheckRows: SemanticIndexOwner => ((String, String, u64, String, String), Vec<u8>, "modality_check_records"),
+    SemanticStageReceiptRows: SemanticIndexOwner => ((String, String, u64, String, String), Vec<u8>, "stage_receipts"),
+    SemanticPromotionVerdictRows: SemanticIndexOwner => ((String, String, u64), Vec<u8>, "promotion_verdicts"),
+    SemanticEmbeddingVersionTagRows: SemanticIndexOwner => ((String, String, u64), Vec<u8>, "embedding_version_tags"),
     AgentLibraryRevisionRows: AgentLibraryOwner => ((String, String, u64), Vec<u8>, "agent_library"),
     AgentLibraryHeadRows: AgentLibraryOwner => ((String, String), u64, "agent_library_heads"),
     // The other three RF-ADR-008 layers share the AgentLibrary owner file, so
@@ -160,6 +164,10 @@ pub(crate) fn owner_table_access(table: &str) -> OwnerTableAccess {
         | "semantic_lexical_manifests"
         | "semantic_ann_manifests"
         | "semantic_vectors"
+        | "modality_check_records"
+        | "stage_receipts"
+        | "promotion_verdicts"
+        | "embedding_version_tags"
         | "eg_ann"
         | "eg_kvcache_cold"
         | "path_index"
