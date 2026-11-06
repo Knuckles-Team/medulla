@@ -64,7 +64,10 @@ impl Served {
     }
 
     async fn raise(&mut self, envelope: FinanceAlertEnvelope) -> Response {
-        self.call(Method::FinanceAlertRaise { envelope }).await
+        self.call(Method::FinanceAlertRaise {
+            envelope: Box::new(envelope),
+        })
+        .await
     }
 
     async fn node(&mut self, node_id: &str) -> Option<serde_json::Value> {

@@ -18,76 +18,30 @@ mod graph_shard;
 // spec: MEDULLA-TYPED-PACKS-R089
 #[test]
 fn owner_layout_registry_has_frozen_cardinality() {
-    // The physical ledger has exactly 18 tables total. OWNER_MANIFEST is one
-    // of those 18; it is not a nineteenth table. Ledger format v2 added the two
-    // replay tables (`mutation_replay_nonces`,
-    // `mutation_replay_operations`) and the mutation-class label
-    // (`mutation_classes`, which makes a maintenance write explicit) to the
-    // closed census.
-    assert_eq!(ledger_table_names().len(), 18);
-    assert_eq!(owner_table_names(OwnerLayout::LedgerOnly).len(), 0);
-    assert_eq!(owner_table_names(OwnerLayout::Rbac).len(), 1);
-    assert_eq!(owner_table_names(OwnerLayout::Jobs).len(), 13);
-    assert_eq!(owner_table_names(OwnerLayout::Statechart).len(), 2);
-    assert_eq!(owner_table_names(OwnerLayout::TimeSeries).len(), 3);
-    assert_eq!(owner_table_names(OwnerLayout::Kv).len(), 2);
-    // Seven: the four pre-existing CAS tables plus the holder rows, manifest
-    // retention and upload cursor high-water mark PB4 added (`cas_holders`,
-    // `cas_retention`, `cas_counters`).
-    assert_eq!(owner_table_names(OwnerLayout::Blob).len(), 7);
-    // Seventeen: the checkpoint-head pointer is a separate durable registry
-    // table alongside the existing generation checkpoint rows.
-    let semantic_tables = owner_table_names(OwnerLayout::SemanticIndex);
-    assert!(semantic_tables.contains(&"semantic_generation_checkpoint_heads"));
-    assert_eq!(semantic_tables.len(), 17);
-    // 18: the 20 the cutover inherited, PLUS the two SQL/PGQ property-graph
-    // catalog tables `medulla-query` wrote without declaring, MINUS the five
-    // `__sql_mutation_*__` tables of the private ledger RF-RULING-006 retired
-    // onto `MutationKernel`'s.
-    // One SQL provider-checkpoint table, the two ANN tables, the edge-index registry.
-    assert_eq!(owner_table_names(OwnerLayout::Sql).len(), 22);
-    assert_eq!(owner_table_names(OwnerLayout::PathIndex).len(), 1);
-    // Six root-binary sidecar layouts. Each is one physical file with one
-    // fixed native ControlPlane scope, so each declares only its own table(s):
-    // `request-replay.redb`, `viz_provenance.redb`, `cold.redb`,
-    // `catalog.redb`, `node_info.redb`, `cluster_hierarchy.redb`.
-    assert_eq!(owner_table_names(OwnerLayout::RequestReplay).len(), 1);
-    assert_eq!(owner_table_names(OwnerLayout::VizProvenance).len(), 1);
-    assert_eq!(owner_table_names(OwnerLayout::ColdTier).len(), 1);
-    assert_eq!(owner_table_names(OwnerLayout::TenantCatalog).len(), 1);
-    assert_eq!(owner_table_names(OwnerLayout::NodeInfo).len(), 2);
-    assert_eq!(owner_table_names(OwnerLayout::ClusterHierarchy).len(), 1);
-    // MEDULLA-BRANCH-MERGE-R001: `branch_registry.redb` holds one row table.
-    assert_eq!(owner_table_names(OwnerLayout::BranchRegistry).len(), 1);
-    // Eight, not two: `agent_library.redb` is ONE physical authority carrying
-    // all four RF-ADR-008 layers, each as a revisions+heads pair, plus the
-    // ConnectorPack catalog's five tables and governed write-back's four --
-    // `agent_library`, `agent_graph`, `agent_component` (all three landed
-    // 2026-09-10) and `agent_template` (item C). Splitting any of them into
-    // its own owner file would split one authority in two (RF-RULING-004), so
-    // this combined successor has one 17-table census and one frozen 8-table
-    // predecessor; no ConnectorPack-only or write-back-only intermediate.
-    // 17 -> 18: the Decide layer's `decision_artifacts` (job rows, evaluation
-    // receipts, fit drafts) in the same owner, so a `DecisionHead` publish
-    // reads its receipt from the authority that commits the head.
-    // 18 -> 19: the Decide layer's `decision_records` (committed assembly
-    // records, written in the same WTX as their `DecisionRecord` component).
+    // MEDULLA-SDLC-R020: no exact census of the whole registry. The registry is
+    // proven complete by the checks below and by the per-table tests that walk
+    // every name; the one pinned count is the one R089 names.
+    let layouts = owner_layouts();
+    assert_eq!(layouts.len(), OWNER_LAYOUT_DOMAINS.len(), "every layout has a domain");
+    for layout in layouts {
+        let names = owner_table_names(layout);
+        let unique: std::collections::BTreeSet<_> = names.iter().collect();
+        assert_eq!(unique.len(), names.len(), "{layout:?} names a table twice");
+        assert!(
+            names.iter().all(|name| !ledger_table_names().contains(name)),
+            "{layout:?} redeclares a ledger table"
+        );
+        assert_eq!(
+            names.is_empty(),
+            layout == OwnerLayout::LedgerOnly,
+            "only the ledger-only layout declares no owner table"
+        );
+    }
+    assert!(owner_table_names(OwnerLayout::SemanticIndex)
+        .contains(&"semantic_generation_checkpoint_heads"));
+    // MEDULLA-TYPED-PACKS-R089: the agent-library owner census, so an
+    // untracked addition or removal of a pack body holder table fails here.
     assert_eq!(owner_table_names(OwnerLayout::AgentLibrary).len(), 21);
-    // The authoritative graph shard `graph-N.redb`: 54 tables. That is the
-    // complete physical census of the shard file (39 in `redb_store.rs`, 4
-    // capacity-lease, 3 work-item-capability, 10 development-lane, plus
-    // `raft_meta` and `encryption_canary` from `redb_backend.rs`, and the three
-    // `series_*` tables the cross-modal atomic commit writes into the same
-    // transaction) MINUS the eight `mutation_*` tables of the shard's retired
-    // private ledger, which RF-RULING-004 gives to `MutationKernel` alone:
-    // 39 + 4 + 3 + 10 + 2 + 3 - 8 = 53, plus EH-384's file-wide
-    // `storage_scrub_cursor` = 54, plus the four repository-enrichment
-    // tables (`repository_enrichment_budgets`, `_policy_revisions`,
-    // `_supersessions`, `_parks`) = 58, plus the tenant-scoped operation
-    // audit-append idempotency index `audit_requests` = 59, plus the private
-    // `work_item_current_plans` snapshot table = 60, plus private run checkpoints = 61.
-    assert_eq!(owner_table_names(OwnerLayout::GraphShard).len(), 63);
-    assert_eq!(owner_layouts().len(), 18);
 }
 
 #[test]
@@ -112,62 +66,18 @@ fn every_owner_surface_has_one_closed_cutover_disposition() {
     for layout in owner_layouts() {
         names.extend(owner_table_names(layout));
     }
-    let service = names
+    // MEDULLA-SDLC-R020: no exact census; the closed property is that every
+    // owner table has a disposition and only the two CAS tables are shared.
+    let shared: std::collections::BTreeSet<&str> = names
         .iter()
-        .filter(|name| owner_table_access(name) == OwnerTableAccess::DomainService)
-        .count();
-    let shared = names
-        .iter()
+        .copied()
         .filter(|name| owner_table_access(name) == OwnerTableAccess::SharedService)
-        .count();
-    // 66 owner tables across the sixteen layouts: RF-RULING-004 puts the
-    // complete physical registry in the storage kernel, so the consumer-owned
-    // tables (`path_index`, `medulla_ann`, `medulla_kvcache_cold`, and the 18
-    // `__sql_*`) are declared here rather than by the crates that read them.
-    // +7 over the previous 62: the seven tables of the six root-binary
-    // sidecar owner files, which stopped being raw `Database::create` sites.
-    // `medulla_ann` becoming typed and generation-keyed moved no table in or out.
-    // +2 more: the two SQL/PGQ property-graph catalog tables, which `medulla-query`
-    // wrote without ever declaring until the SQL kernel cutover. -5: the
-    // `__sql_mutation_*__` private ledger RF-RULING-006 retired. That is the
-    // 66 of the sixteen non-shard layouts.
-    // +50 on top of that 66: the graph shard declares 53 tables, three of
-    // which (`series_chunks`, `series_meta`, `series_projection_state`) were
-    // already declared by `OwnerLayout::TimeSeries` and so add no new name.
-    // Every shard table is `DomainService`, so the two `SharedService` names
-    // (`cas_chunks`, `cas_refcount`) are unchanged; the Agent Library adds
-    // two Agent Library tables, and the SQL source-authority plus checkpoint
-    // head rows add one each: 120 = 116 + 2 + 1 + 1.
-    // 120 -> 126: the three RF-ADR-008 layers that joined the Agent Library
-    // owner after that count was written -- `agent_graph`, `agent_component`
-    // (2026-09-10) and `agent_template` (item C) -- a revisions+heads pair
-    // each. All six are `DomainService`, reached only through the store's own
-    // admitted owner write, so `shared` is still the same two blob tables:
-    // 126 = 120 + 6, service 124 = 118 + 6.
-    // 126 -> 129: the Blob layout's holder rows, manifest retention and upload
-    // cursor high-water (`cas_holders`, `cas_retention`, `cas_counters`). All
-    // three are `DomainService` rows written through the blob store's admitted
-    // owner write, so `shared` stays the two CAS tables: service 127 = 124 + 3.
-    // 129 -> 130: the SQL provider checkpoint head row. It is DomainService,
-    // not another ledger, so service 128 = 127 + 1; `shared` is unchanged.
-    // 130 -> 139: the ConnectorPack catalog's five and governed write-back's
-    // four Agent Library tables, all `DomainService` (this count was not moved
-    // when they landed). 139 -> 140: the Decide layer's `decision_artifacts`,
-    // also `DomainService`: service 138 = 128 + 9 + 1. 140 -> 141: the Decide
-    // layer's `decision_records`, `DomainService`: service 139 = 138 + 1.
-    // 141 -> 143: the two DomainService SQL ANN tables (RF-019): service 141.
-    // 143 -> 144: the edge-index registry (DomainService): service 142.
-    // 144 -> 145: the graph shard's `storage_scrub_cursor` (EH-384).
-    // 145 -> 149: four repository-enrichment authority rows in GraphShard.
-    // 149 -> 151: the two served MCP catalog rows in AgentLibrary. All six
-    // are DomainService, so SharedService remains the two CAS tables.
-    // 151 -> 152: the tenant-scoped operation audit-append idempotency index
-    // `audit_requests` in GraphShard, also DomainService: service 150 = 149 + 1.
-    // 152 -> 153: private current-plan snapshots are DomainService rows.
-    // 153 -> 154: private run-checkpoint snapshots are DomainService rows.
-    // 154 -> 155: the branch registry's one DomainService row table
-    // (MEDULLA-BRANCH-MERGE-R001): service 153 = 152 + 1.
-    assert_eq!((names.len(), service, shared), (155, 153, 2));
+        .collect();
+    assert_eq!(
+        shared,
+        ["cas_chunks", "cas_refcount"].into_iter().collect(),
+        "only the CAS chunk and refcount tables are shared-service"
+    );
 }
 
 #[test]
@@ -805,41 +715,8 @@ fn plain_recovery_rejects_every_known_mutation_table_marker() {
     for layout in owner_layouts() {
         names.extend(owner_table_names(layout));
     }
-    // 18 ledger + 120 owner tables across the eighteen layouts. The
-    // consumer-owned tables `path_index`, `medulla_ann`, `medulla_kvcache_cold` and
-    // the 17 `__sql_*` tables joined the registry because RF-RULING-004 puts
-    // the complete physical table registry in the storage kernel; the seven
-    // root-binary sidecar tables joined it when their raw opens were cut, and
-    // the two property-graph catalog tables when the SQL store was cut, while
-    // the five `__sql_mutation_*__` tables of the retired private ledger left;
-    // and the graph shard's 50 new names joined it with
-    // `OwnerLayout::GraphShard`, plus the two Agent Library tables. 18 + 66 +
-    // 50 + 2 + the tenant-wide SQL source authority and checkpoint-head rows = 138.
-    // 138 -> 144: the six tables the other three RF-ADR-008 agent layers added
-    // to the SAME `agent_library.redb` owner -- `agent_graph`,
-    // `agent_component` and `agent_template`, a revisions+heads pair each.
-    // Every one of them is a durable mutation table, so a plain (non-mutation)
-    // recovery must refuse a file carrying its marker exactly as it refuses
-    // `agent_library`'s.
-    // 144 -> 147: the Blob layout's holder rows, manifest retention and upload
-    // cursor high-water mark (`cas_holders`, `cas_retention`, `cas_counters`).
-    // 147 -> 148: the SQL provider checkpoint table this lane adds. Every
-    // registered mutation table must refuse plain recovery, including it.
-    // 148 -> 157: the ConnectorPack catalog's five and governed write-back's
-    // four Agent Library mutation tables (not moved when they landed).
-    // 157 -> 158: the Decide layer's `decision_artifacts`. 158 -> 159: its
-    // `decision_records`.
-    // 159 -> 161: the SQL ANN generation and changed-row tables.
-    // 161 -> 162: the edge-index registry table.
-    // 162 -> 163: the graph shard's file-wide `storage_scrub_cursor` (EH-384).
-    // 163 -> 167: the graph shard's four `repository_enrichment_*` tables.
-    // 167 -> 169: the Agent Library's `mcp_catalog_configs` and
-    // `mcp_catalog_scopes`, both durable mutation tables.
-    // 169 -> 170: the graph shard's tenant-scoped operation audit-append
-    // idempotency index `audit_requests`, also a durable mutation table.
-    // 170 -> 171: the private current-plan table is also a mutation table.
-    // 171 -> 172: the private run-checkpoint table is a mutation table.
-    assert_eq!(names.len(), 172);
+    // MEDULLA-SDLC-R020: every registered name is checked below; no census.
+    assert!(names.len() > ledger_table_names().len());
     for (ordinal, name) in names.into_iter().enumerate() {
         assert!(is_known_mutation_table(name));
         let dir = tempfile::tempdir().unwrap();

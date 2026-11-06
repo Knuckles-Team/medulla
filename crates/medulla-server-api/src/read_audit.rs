@@ -33,13 +33,45 @@ impl ReadAuditSink {
         Self { queue }
     }
 
-    /// The process sink, sized by `identity.read_audit_queue_depth`. Call from
-    /// inside the server runtime.
+    /// The process sink, sized by `identity.read_audit_queue_depth`.
+    ///
+    /// Its drain runs on a dedicated thread with its own runtime, so the sink
+    /// outlives whichever runtime first touched it: a drain task spawned on a
+    /// caller's runtime dies with that runtime, after which every later read
+    /// would be refused `AUDIT_UNAVAILABLE` against a closed queue.
     pub fn global() -> &'static Self {
         static SINK: OnceLock<ReadAuditSink> = OnceLock::new();
         SINK.get_or_init(|| {
             let depth = crate::knob_config::knobs().identity_read_audit_queue_depth;
-            Self::spawn(usize::try_from(depth).unwrap_or(4_096))
+            let depth = usize::try_from(depth).unwrap_or(4_096).max(1);
+            let (queue, mut inbox) = mpsc::channel::<ReadAuditWrite>(depth);
+            let drain = std::thread::Builder::new()
+                .name("medulla-read-audit".to_owned())
+                .spawn(move || {
+                    let runtime = match tokio::runtime::Builder::new_current_thread()
+                        .enable_all()
+                        .build()
+                    {
+                        Ok(runtime) => runtime,
+                        Err(error) => {
+                            tracing::error!(%error, "read audit drain runtime failed to start");
+                            return;
+                        }
+                    };
+                    runtime.block_on(async move {
+                        while let Some(write) = inbox.recv().await {
+                            if let Err(error) = write.await {
+                                tracing::error!(%error, "read audit append failed");
+                            }
+                        }
+                    });
+                });
+            if let Err(error) = drain {
+                // The inbox dropped with the closure, so every enqueue refuses
+                // AUDIT_UNAVAILABLE: no read goes unaudited.
+                tracing::error!(%error, "read audit drain thread failed to start");
+            }
+            Self { queue }
         })
     }
 

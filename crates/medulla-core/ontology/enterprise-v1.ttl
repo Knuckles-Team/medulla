@@ -193,13 +193,13 @@ ArchiMate: Strategy → CourseOfAction.""" ;
     rdfs:range xsd:integer .
 
 # ── Core rooting (MEDULLA-TYPED-PACKS-R071.2) ───────────────────────────────────
-# Every class of this module above reaches the core class kg:DomainEntity through rdfs:subClassOf.
-<http://knuckles.team/kg#ApplicationLayer> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
-<http://knuckles.team/kg#ArchiMateElement> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
-<http://knuckles.team/kg#ArchitectureDecisionRecord> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
-<http://knuckles.team/kg#BusinessLayer> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
-<http://knuckles.team/kg#EAFactSheet> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
-<http://knuckles.team/kg#MotivationLayer> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
-<http://knuckles.team/kg#ProcessModel> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
-<http://knuckles.team/kg#StrategyLayer> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
-<http://knuckles.team/kg#TechnologyLayer> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+# Every class of this module above reaches the core class bfo:Entity (BFO_0000001) through rdfs:subClassOf: the module mixes continuants, processes and information entities, so no narrower core parent is consistent with the BFO disjointness axioms.
+<http://knuckles.team/kg#ApplicationLayer> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<http://knuckles.team/kg#ArchiMateElement> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<http://knuckles.team/kg#ArchitectureDecisionRecord> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<http://knuckles.team/kg#BusinessLayer> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<http://knuckles.team/kg#EAFactSheet> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<http://knuckles.team/kg#MotivationLayer> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<http://knuckles.team/kg#ProcessModel> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<http://knuckles.team/kg#StrategyLayer> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<http://knuckles.team/kg#TechnologyLayer> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .

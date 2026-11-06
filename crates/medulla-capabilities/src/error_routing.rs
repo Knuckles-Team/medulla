@@ -126,6 +126,29 @@ const DOMAIN_PREFIXES: &[(&str, &[&str])] = &[
 const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     // MEDULLA-TYPED-PACKS-R809: an unparsable or oversized Turtle payload.
     ("OntologyCanonicalHash", &["TURTLE_INVALID"]),
+    // MEDULLA-DURABLE-KERNEL-R078: the served edge chokepoint refuses an
+    // inverted validity interval; invalidation and supersession keep their
+    // closed-edge and missing-edge refusals.
+    ("AddEdge", &["VALIDITY_INVERTED"]),
+    (
+        "InvalidateEdge",
+        &["VALIDITY_INVERTED", "EDGE_ALREADY_CLOSED", "EDGE_NOT_FOUND"],
+    ),
+    (
+        "SupersedeEdge",
+        &["VALIDITY_INVERTED", "EDGE_ALREADY_CLOSED", "EDGE_NOT_FOUND"],
+    ),
+    // The n-ary hypothesis read's typed refusals (medulla_types::graphlearn_nary).
+    (
+        "GraphLearnPredictNary",
+        &[
+            "NARY_ARITY_INVALID",
+            "NARY_CONSTRAINT_INVALID",
+            "NARY_REVISION_STALE",
+            "NARY_SOURCE_UNAUTHORIZED",
+            "NARY_SOURCE_UNRESOLVED",
+        ],
+    ),
     // MEDULLA-IDENTITY-R008.4/R008.5: the stored run-scope bound.
     (
         "AgentAssemble",

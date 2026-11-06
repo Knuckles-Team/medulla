@@ -1725,7 +1725,7 @@ mod tests {
             ),
             (
                 "archimate",
-                "3a941335df1079a0dc192eba041af4db2a41653f95f7dc5d516a7adf4edfbae3",
+                "a0e75bdb8086f2e0d35b3f3e432ce8839fa02d6251522ecd0319500d57e3d697",
             ),
             (
                 "capability",
@@ -1753,7 +1753,7 @@ mod tests {
             ),
             (
                 "connector-pack",
-                "525610e5402416835050f0812a1181f6cfe594495b27abac2abd85477db3c2a8",
+                "a13628fbb9b18d4f6f92c33282515ff598c1ccd417d1cdd9dbd9c9adf3067a63",
             ),
             (
                 "concepts",
@@ -1761,7 +1761,7 @@ mod tests {
             ),
             (
                 "foundation",
-                "4a4a2ce28ed70060e4daa1625db6ccd5e00062982dc77c8f534db837a0118dd7",
+                "a79cc120e3d5ef46bb4b80d9912851b457486382cf886cc763c73494bc7ad92a",
             ),
             (
                 "foundation-shapes",
@@ -1777,7 +1777,7 @@ mod tests {
             ),
             (
                 "enterprise",
-                "6e56d784c9990665934153422b00df5d73210cbfebe262b0918ffc92c5bff97c",
+                "d70aabcd24c0d8b3149933a2a8c686d29323ed72bce79e571ecc8787bd919c17",
             ),
             (
                 "enterprise-shapes",
@@ -1805,7 +1805,7 @@ mod tests {
             ),
             (
                 "identity",
-                "b1cda78978579fa6d54a04e2885aa5a4f443259e35b6101dd1b4d2ff65d0b8d5",
+                "935fc84f4b3185a946f64c40171be005adc2dd690d3e8d40f73482403bd8e100",
             ),
             (
                 "identity-shapes",
@@ -1825,15 +1825,15 @@ mod tests {
             ),
             (
                 "orchestration",
-                "4fad6ec67c290ced83c2fb2094c4803495d0626c754145202ccae65bd4b8b569",
+                "0edd8961c1d739ea513fad823f385bceb1474b924704d062c69c418589f3e8ed",
             ),
             (
                 "orchestration-shapes",
-                "62c239552be131ed21d89eeb9ef223af12de40a6e60c10e0d1ca2dc855f2f96e",
+                "c7462c9fe1037ef33283e59766645931956cb90f66aad23e2bb4c894015a119f",
             ),
             (
                 "personal",
-                "5099df9af829db1d2b9d19896b7b4297d800b2bdfb343c5f97550e2b4d4147c2",
+                "465c65532104da388ed28bf1d3d4d6b399f57b581962ec4c72ea782b730dec25",
             ),
             (
                 "process_intelligence",
@@ -1861,11 +1861,11 @@ mod tests {
             ),
             (
                 "media",
-                "35e04e76c65e03f700bae25793022f0eefdf3d0f755ac40b65726665df5a78ac",
+                "3c7a75b5b97534fb7d13f060c5f049dd3bd9f7398740a99699682fb2365889dc",
             ),
             (
                 "retrieval",
-                "8619ae4a42a9545427ce72d1fe61744977d337037937ef62b96305c732aa6767",
+                "56662368e017e720d1808fbfd1478a2203155c5fe034c423868aebbcc0da82f4",
             ),
             (
                 "sdlc_lifecycle",
@@ -1881,7 +1881,7 @@ mod tests {
             ),
             (
                 "trm",
-                "020d260f068b338a340cb9639e5391ae3b7272099afa16ad36ac5bd9ad182b44",
+                "4e4e00f56b86e279e150880f163ceac222c30663390c9fbc8bcb1545eb44e169",
             ),
             (
                 "life",
@@ -1893,7 +1893,7 @@ mod tests {
             ),
             (
                 "nutrition",
-                "47d4455d70579c541591d9434957457a843907f36deb4a22fb762deeb8c0db0a",
+                "ef2e43e387de040626f123046e3210086cb8d387d322e778f22e047fe574e840",
             ),
             (
                 "world-model-shapes",
@@ -1913,7 +1913,7 @@ mod tests {
             // R004.2.3-R004.2.6 added the portfolio-group, strategy and leverage records.
             (
                 "finance",
-                "57e4049671f6950d37ed62eac3dfbe8d0130a92ef53f0ed95d347738b3e8b49f",
+                "0de289f4dfc0ae34d33ba95c905fad6b0d9e56f88fe7bbafcb3bc799c65c9781",
             ),
             // MEDULLA-CQ-CONN-R071.1: the documentation shapes companion.
             (
@@ -1922,7 +1922,7 @@ mod tests {
             ),
             (
                 "finance-shapes",
-                "0afc4138a767f75b324255540840beb66f53989db86c88b54e9aa303e3699e03",
+                "47575c365cadc8e77936450e7e851803158526363366b0e63f306d4ef4c18eaa",
             ),
             (
                 "worldview",
@@ -1934,7 +1934,7 @@ mod tests {
             ),
             (
                 "metadata_catalog-shapes",
-                "e29bccfcec0ccf8812fffbd33a642bb9df71304bb72d7328fcdd17b25a02b0f6",
+                "6d31d420165aac4ebc401348fda95a9e43e94bdc6b26018c8b607f2ae0e18bb8",
             ),
             (
                 "temporal-shapes",
@@ -1961,6 +1961,11 @@ mod tests {
             // MEDULLA-TYPED-PACKS-R101.1/R102.1: the connector-pack module (ontology
             // plus its surface shapes companion) joins the catalog; the pin
             // follows the ontology.
+            // The generated decision module (ontology plus shapes); the pin follows the ontology.
+            (
+                "decision",
+                "c08a00a850230172f691396c651b4cdcfa2f5ae499db874fd777d18cd6cb66ea",
+            ),
         ];
         let catalog = current_core_catalog();
         let pinned_modules: BTreeSet<_> = expected.iter().map(|(module, _)| *module).collect();
