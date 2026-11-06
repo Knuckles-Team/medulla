@@ -316,6 +316,7 @@ mod tests {
     }
 
     // spec: MEDULLA-DECISION-ENGINE-R010.100.2
+    /// Verifies MEDULLA-DECISION-ENGINE-R010.100.2: Fold existing per-feature refusal enums
     #[test]
     fn every_decision_refusal_enum_maps_to_a_registered_code() {
         use crate::decision::harness_contrast::{
