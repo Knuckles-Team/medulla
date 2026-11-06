@@ -156,3 +156,107 @@ async fn served_dag_explain_and_profile_report_each_node() {
     assert_eq!(rows.len(), 2, "served DAG result keeps the joined rows");
     assert!(rows.iter().all(|row| row.channels == vec![Some(1.0)]));
 }
+
+// spec: MEDULLA-DURABLE-KERNEL-R079
+async fn add_edge_with(
+    state: &test_support::SharedState,
+    id: u64,
+    source: &str,
+    target: &str,
+    properties: serde_json::Value,
+) {
+    let response = test_support::dispatch(
+        state,
+        test_support::commons_request(
+            SECRET,
+            id,
+            Method::AddEdge {
+                source_id: source.to_string(),
+                target_id: target.to_string(),
+                properties_msgpack: test_support::json_bytes(properties),
+            },
+        ),
+    )
+    .await;
+    assert!(response.error.is_none(), "AddEdge: {:?}", response.error);
+}
+
+async fn reached_ids(state: &test_support::SharedState, id: u64, text: &str) -> Vec<String> {
+    let UqlResult::Rows { rows, .. } = decode(uql(state, id, text).await) else {
+        panic!("expected served rows")
+    };
+    let mut ids: Vec<String> = rows.into_iter().map(|row| row.id).collect();
+    ids.sort();
+    ids
+}
+
+/// Versions written through the served `SupersedeEdge` answer correctly at two
+/// instants on both axes: a traversal follows only the edge valid then, and the
+/// instant before the first version reaches nothing.
+// spec: MEDULLA-DURABLE-KERNEL-R079
+#[tokio::test]
+async fn as_of_returns_the_right_version_at_two_instants_on_both_axes() {
+    let state = state();
+    // `d1` (year 2020) seeds the walk; `d2` and `d3` are the two targets.
+    for (id, node, year) in [(1, "d1", 2020), (2, "d2", 2021), (3, "d3", 2022)] {
+        add_doc(&state, id, node, year).await;
+    }
+    add_edge_with(
+        &state,
+        4,
+        "d1",
+        "d2",
+        serde_json::json!({"relationship": "CITES", "valid_from": 100, "tx_from": 100}),
+    )
+    .await;
+    let superseded = test_support::dispatch(
+        &state,
+        test_support::commons_request(
+            SECRET,
+            5,
+            Method::SupersedeEdge {
+                source_id: "d1".to_string(),
+                target_id: "d3".to_string(),
+                properties_msgpack: test_support::json_bytes(
+                    serde_json::json!({"relationship": "CITES"}),
+                ),
+                prior_source: "d1".to_string(),
+                prior_target: "d2".to_string(),
+                prior_relationship: "CITES".to_string(),
+                valid_at: 200,
+                tx_now: 250,
+            },
+        ),
+    )
+    .await;
+    assert!(superseded.error.is_none(), "{:?}", superseded.error);
+
+    let walk = |pins: &str| format!("MATCH (:Doc) WHERE year = 2020 |> {pins}TRAVERSE CITES");
+    // Valid axis.
+    assert_eq!(
+        reached_ids(&state, 6, &walk("AS OF @150 |> ")).await,
+        ["d2"]
+    );
+    assert_eq!(
+        reached_ids(&state, 7, &walk("AS OF @250 |> ")).await,
+        ["d3"]
+    );
+    assert!(reached_ids(&state, 8, &walk("AS OF @50 |> "))
+        .await
+        .is_empty());
+    // Transaction axis.
+    assert_eq!(
+        reached_ids(&state, 9, &walk("AS OF TX @120 |> ")).await,
+        ["d2"]
+    );
+    assert_eq!(
+        reached_ids(&state, 10, &walk("AS OF TX @300 |> ")).await,
+        ["d3"]
+    );
+    // Both axes: what was believed at 300 and valid at 150 is nothing.
+    assert!(
+        reached_ids(&state, 11, &walk("AS OF @150 |> AS OF TX @300 |> "))
+            .await
+            .is_empty()
+    );
+}

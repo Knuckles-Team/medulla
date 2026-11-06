@@ -23,6 +23,14 @@
 # Env:    CARGO_FEATURES (default "full,cluster"); RUST_LOG for engine traces.
 # Optional load: RAFT_LOAD_WORKERS=1..32; RAFT_LOAD_SECONDS=1..3600 (default 300).
 # Repeated loaded mode: RAFT_LOAD_REPEATS=2..100; RAFT_LOAD_OUTPUT defaults to target/raft-cluster-runs.
+# Loaded acceptance (R014.4, R014.5): RAFT_LOAD_ACCEPTANCE=1 defaults RAFT_LOAD_REPEATS to 5 and
+#         RAFT_LOAD_WORKERS to the CPU count (capped at 32). Every repeat appends one JSON record to
+#         $RAFT_LOAD_OUTPUT/run-*/results.jsonl with the fields: revision, command, hardware, workers,
+#         repeat_index, result ("pass" or "fail"), trace (the repeat's log, kept for a failed repeat),
+#         plus returncode and test. The generated status reads these records.
+# Retry budget (R014.3.2): a failed unloaded run is retried only as the
+#         `raft_flake_budget` bin decides (RAFT_RETRY_MAX, default 1; RAFT_FLAKE_BUDGET_BIN
+#         overrides the bin command). Past the budget it prints RAFT_RETRY_BUDGET_EXHAUSTED.
 # Exit:   0 = all proofs green; non-zero = a proof failed (see output).
 # ----------------------------------------------------------------------------
 set -euo pipefail
@@ -30,6 +38,11 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 FEATURES="${CARGO_FEATURES:-full,cluster}"
+if [[ -n "${RAFT_LOAD_ACCEPTANCE:-}" ]]; then
+  export RAFT_LOAD_REPEATS="${RAFT_LOAD_REPEATS-5}"
+  RAFT_LOAD_WORKERS="${RAFT_LOAD_WORKERS-$(( $(nproc) > 32 ? 32 : $(nproc) ))}"
+  export RAFT_LOAD_WORKERS
+fi
 if [[ -v RAFT_LOAD_WORKERS || -v RAFT_LOAD_SECONDS || -v RAFT_LOAD_REPEATS ]]; then
   python3 scripts/raft_cpu_load.py --check-config
 fi
@@ -66,25 +79,28 @@ fi
 if [[ -v RAFT_LOAD_WORKERS ]]; then
   exec python3 scripts/raft_cpu_load.py -- cargo test --features "${FEATURES}" --lib raft -- --test-threads=1 --nocapture "${TESTS[@]}"
 fi
-set +e
-# Optional bounded diagnostic retry (MEDULLA-DURABLE-KERNEL-R014.3.2): when
-# RAFT_RETRY_MAX is set, the decision to retry a failed run comes from the
-# `raft_flake_budget` bin, never from this script. Every failed attempt's log is kept.
+if [[ -n "${RAFT_FLAKE_BUDGET_BIN:-}" ]]; then
+  read -r -a BUDGET_BIN <<<"${RAFT_FLAKE_BUDGET_BIN}"
+else
+  BUDGET_BIN=(cargo run -q --features "${FEATURES}" --bin raft_flake_budget --)
+fi
 attempt=1
 while :; do
-  cargo test --features "${FEATURES}" --lib raft -- --test-threads=1 --nocapture "${TESTS[@]}" 2>&1 \
-    | tee "${RAFT_RETRY_LOG_DIR:-${TMPDIR:-/tmp}}/raft-cluster-attempt-${attempt}.log"
-  rc=${PIPESTATUS[0]}
-  [[ "${rc}" -eq 0 || ! -v RAFT_RETRY_MAX ]] && break
-  decision=$(cargo run -q --features "${FEATURES}" --bin raft_flake_budget -- \
-    "${RAFT_RETRY_MAX}" "${RAFT_RETRY_BACKOFF_MS:-1000}" "${RAFT_RETRY_MAX_BACKOFF_MS:-30000}" "${attempt}" "${rc}")
-  echo "retry decision after attempt ${attempt}: ${decision}"
-  case "${decision}" in
-    "retry "*) sleep "$(awk -v ms="${decision#retry }" 'BEGIN{print ms/1000}')"; attempt=$((attempt + 1)) ;;
-    *) break ;;
-  esac
+  set +e
+  cargo test --features "${FEATURES}" --lib raft -- --test-threads=1 --nocapture "${TESTS[@]}"
+  rc=$?
+  set -e
+  [ "${rc}" -eq 0 ] && break
+  set +e
+  decision="$("${BUDGET_BIN[@]}" --attempt "${attempt}" --exit-code "${rc}" --max-retries "${RAFT_RETRY_MAX:-1}")"
+  brc=$?
+  set -e
+  echo "retry budget: ${decision}"
+  [ "${brc}" -eq 0 ] || break
+  backoff_ms="${decision##*backoff_ms=}"
+  sleep "$((backoff_ms / 1000)).$(printf '%03d' $((backoff_ms % 1000)))"
+  attempt=$((attempt + 1))
 done
-set -e
 
 echo
 if [ "${rc}" -eq 0 ]; then

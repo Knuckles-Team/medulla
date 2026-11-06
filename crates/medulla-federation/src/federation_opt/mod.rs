@@ -27,10 +27,14 @@ mod columns;
 pub mod engine;
 mod http;
 mod limiter;
+pub mod mcp;
+#[cfg(feature = "federation-sql")]
+mod obda_snapshot;
 pub(crate) mod oq2;
 pub mod remote;
 mod run;
 mod session;
+mod snapshot;
 mod sql;
 mod stats;
 mod strategy;
@@ -41,7 +45,10 @@ mod bounds_tests;
 #[cfg(test)]
 mod tests;
 
-pub use budget::{BUDGET_EXCEEDED, REQUIRES_KEYS, RESULT_INCOMPLETE};
+pub use budget::{
+    BUDGET_EXCEEDED, REPLICA_LAG_EXCEEDED, REQUIRES_KEYS, RESULT_INCOMPLETE, SNAPSHOT_UNAVAILABLE,
+    SOURCE_WRITE_FORBIDDEN,
+};
 pub use cache::{FragmentCacheScope, SourceWatermark};
 pub use capability::{
     connection_protocol_row, ConnectionProtocol, ForeignSourceCapability, FullFetch, KeyLookup,
@@ -54,10 +61,15 @@ pub use columns::{
     sql_filter_support, ColumnPlan, ColumnPredicate, Comparison, ForeignRow, ForeignRows,
     PushdownSupport,
 };
+#[cfg(feature = "federation-sql")]
+pub use obda_snapshot::ObdaSnapshotReader;
 pub use oq2::{target_capabilities as oq2_target_capabilities, Oq2ReadMode, Oq2TargetCapabilities};
 pub use session::FederationSession;
+pub use snapshot::{Consistency, SnapshotBound, SnapshotConn, SnapshotHandle};
 pub use stats::{stats_snapshot, SourceStats};
-pub use trace::{render_trace, EstimateProvenance, FetchStrategy, FragmentTrace};
+pub use trace::{
+    render_trace, EstimateProvenance, FetchStrategy, FragmentExecutionMode, FragmentTrace,
+};
 
 mod federated;
 pub use federated::FederatedExec;

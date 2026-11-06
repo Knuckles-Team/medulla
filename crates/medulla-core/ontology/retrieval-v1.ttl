@@ -10,7 +10,7 @@
     rdfs:label "Search, Retrieval and Information Sources Ontology" ;
     rdfs:comment "Search, retrieval and information-source concepts aligned to OpenSearch (query, result item, description document), DCMI Terms (source, bibliographic resource, references), DataCite-style citation and PROV-O (entity origin). InformationSource is the single shared source class that a genealogy source specialises later. Reuses Document, Dataset, Rendition and RunEvent from the core (MEDULLA-TYPED-PACKS-R105.9)." ;
     dcterms:source "OpenSearch; DCMI Terms; W3C PROV-O" ;
-    owl:imports <http://knuckles.team/kg/core>, <http://knuckles.team/kg/orchestration>, <http://knuckles.team/kg/service_operations>, <http://knuckles.team/kg/dataplatform> .
+    owl:imports <http://knuckles.team/kg/orchestration>, <http://knuckles.team/kg/service_operations>, <http://knuckles.team/kg/dataplatform> .
 
 :InformationSource a owl:Class ;
     rdfs:label "Information Source" ;
@@ -192,7 +192,8 @@
 :ScholarlyPaper a owl:Class ;
     rdfs:label "Scholarly Paper" ;
     rdfs:comment "A scholarly paper with its citations and publication year (ScholarX paper)." ;
-    rdfs:subClassOf :Document, :ResearchPaper .
+    rdfs:subClassOf :Document  ;
+    rdfs:subClassOf :ResearchPaper .
 
 :resourceUrl a owl:DatatypeProperty ;
     rdfs:label "resource URL" ;
@@ -241,3 +242,9 @@
     rdfs:comment "Share of sessions with dead clicks on the web resource in the measured window." ;
     rdfs:domain :WebResource ;
     rdfs:range xsd:decimal .
+
+:changesResource a owl:ObjectProperty ;
+    rdfs:label "changes resource" ;
+    rdfs:comment "Links a merged :Change to the :WebResource page it altered." ;
+    rdfs:domain :Change ;
+    rdfs:range :WebResource .

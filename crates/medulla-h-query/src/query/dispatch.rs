@@ -1,4 +1,6 @@
 #[cfg(feature = "query")]
+use super::live_artifact::{dispatch_live_artifact, is_live_artifact_method};
+#[cfg(feature = "query")]
 use super::uql_statement::handle_uql;
 use super::*;
 use medulla_server_api::api::reentry::TryHandleContext;
@@ -91,6 +93,10 @@ async fn dispatch_query_family(
         return dispatch_sql_query(hctx, method).await;
     }
     #[cfg(feature = "query")]
+    if is_live_artifact_method(&method) {
+        return dispatch_live_artifact(hctx, method).await;
+    }
+    #[cfg(feature = "query")]
     if is_explain_method(&method) {
         return dispatch_explain_method(hctx, method).await;
     }
@@ -119,7 +125,10 @@ async fn dispatch_query_family(
 fn is_sql_query_method(method: &Method) -> bool {
     matches!(
         method,
-        Method::Sql { .. } | Method::UnifiedQuery { .. } | Method::Uql { .. }
+        Method::Sql { .. }
+            | Method::UnifiedQuery { .. }
+            | Method::Uql { .. }
+            | Method::SchemaProjections { .. }
     )
 }
 
@@ -141,6 +150,8 @@ async fn dispatch_sql_query(ctx: &QueryHandlerCtx<'_>, method: Method) -> Result
             prepare,
             foreign_execution,
         } => handle_uql(ctx, text, params, prepare, foreign_execution).await,
+        // MEDULLA-FEDERATED-QUERY-R724: the scope-filtered boundary list.
+        Method::SchemaProjections { op } => handle_schema_projections(ctx, op),
         other => Err(other),
     }
 }
@@ -323,11 +334,23 @@ async fn dispatch_external_query_method(
 ) -> Result<Response, Method> {
     match method {
         #[cfg(feature = "nl-query")]
-        Method::NlQuery { text, graph } => handle_nl_query(ctx, text, graph).await,
+        Method::NlQuery {
+            text,
+            graph,
+            history,
+        } => handle_nl_query(ctx, text, graph, history).await,
         #[cfg(feature = "nl-query")]
-        Method::NlQueryExplain { text, graph } => handle_nl_query_explain(ctx, text, graph).await,
+        Method::NlQueryExplain {
+            text,
+            graph,
+            history,
+        } => handle_nl_query_explain(ctx, text, graph, history).await,
         #[cfg(feature = "nl-query")]
-        Method::NlQueryPlan { text, graph } => handle_nl_query_plan_only(ctx, text, graph).await,
+        Method::NlQueryPlan {
+            text,
+            graph,
+            history,
+        } => handle_nl_query_plan_only(ctx, text, graph, history).await,
         #[cfg(feature = "graphql")]
         Method::GraphQl { query, variables } => handle_graphql(ctx, query, variables).await,
         #[cfg(feature = "cypher")]
@@ -528,7 +551,13 @@ async fn handle_sql_with_lease(
     let persist_dir = state.read().await.persist_dir.clone().ok_or_else(|| {
         "ENGINE_UNAVAILABLE: SQL error: tenant SQL catalog requires the configured persistence directory".to_string()
     })?;
-    let (snap, _graph_version) = lease_filtered_snapshot(core, policy_lease, store)?;
+    let (snap, graph_version) = lease_filtered_snapshot(core, policy_lease, store)?;
+    // MEDULLA-IDENTITY-R023.3 / R610.3: the policy-aware SQL read is narrowed too.
+    let read_scope = ReadScope::resolve(state, Some(read_authority), ctx.graph_name).await;
+    let snap = match read_scope.narrow(req_id, graph_version, snap, &["n".to_owned()]) {
+        Ok(snap) => snap,
+        Err(refusal) => return Ok(refusal),
+    };
     let graph = medulla_server_auth::sql_catalog_acl::RequestGraph {
         name: ctx.graph_name.to_string(),
         core: Arc::clone(core),
@@ -563,7 +592,8 @@ async fn handle_cross_modal_with_lease(
     let legs = ServedPlanLegs::resolve(state, ctx.graph_name, ctx.read_authority, &plan, None, &[])
         .await?;
     let (snap, _version) = lease_filtered_snapshot(core, policy_lease, store)?;
-    let resp = match run_unified_off_lock(state, req_id, core, snap, plan, legs).await {
+    let scope = ReadScope::resolve(state, ctx.read_authority, ctx.graph_name).await;
+    let resp = match run_unified_off_lock(state, req_id, core, snap, plan, legs, &scope).await {
         Ok(Ok(rows)) => result_response::<query_results::UnifiedQuery>(req_id, &rows),
         Ok(Err(msg)) => Response::err(
             req_id,

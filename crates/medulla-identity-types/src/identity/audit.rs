@@ -66,6 +66,9 @@ pub enum IdentityEvent {
     PasswordResetRequested,
     /// An administrator registered or repaired the engine's System identity.
     SystemIdentityRepaired,
+    /// A WorkItem delegation record was written or revoked.
+    DelegationRecorded,
+    DelegationRevoked,
 }
 
 /// One tamper-evident entry.

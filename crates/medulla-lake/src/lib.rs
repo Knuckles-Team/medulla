@@ -50,6 +50,8 @@ pub mod acceleration_policy;
 pub mod catalog;
 pub mod delta;
 pub mod iceberg;
+#[cfg(feature = "metastore")]
+pub mod metastore;
 pub mod schema;
 pub mod snapshot;
 
@@ -355,27 +357,60 @@ pub fn has_iceberg_snapshot_as_of(table: &LakeTable, lsn: Lsn) -> bool {
 /// metadata. The caller must publish that candidate only after its data, Delta,
 /// manifest, manifest-list, and metadata artifacts are all durable; failed
 /// candidates are discarded, so live history never advertises a dangling list.
+///
+/// The generation carries no graph binding; a publication that must be bound to a
+/// graph version uses [`record_iceberg_commit_bound`].
 pub fn record_iceberg_commit(table: &mut LakeTable, timestamp_ms: i64) {
+    push_iceberg_commit(table, timestamp_ms, None);
+}
+
+/// Record the candidate's current Iceberg generation bound to a graph position
+/// (MEDULLA-FEDERATED-QUERY-R079.3). The binding is written into the snapshot
+/// summary as `medulla.graph-version` and `medulla.source-lsn`. A generation that
+/// would be recorded without a binding is refused with
+/// `MANIFEST_PUBLICATION_INVALID` and the table is left unchanged.
+pub fn record_iceberg_commit_bound(
+    table: &mut LakeTable,
+    timestamp_ms: i64,
+    binding: Option<iceberg::PublicationBinding>,
+) -> Result<(), catalog::PublicationRefusal> {
+    if binding.is_none() && has_unrecorded_generation(table) {
+        return Err(catalog::PublicationRefusal::new(
+            catalog::MANIFEST_PUBLICATION_INVALID,
+            "the snapshot has no graph-version binding",
+        ));
+    }
+    push_iceberg_commit(table, timestamp_ms, binding);
+    Ok(())
+}
+
+fn has_unrecorded_generation(table: &LakeTable) -> bool {
     let lsn = table.snapshot.current_lsn();
-    if lsn == Lsn::ZERO
-        || !table
+    lsn != Lsn::ZERO
+        && table
             .snapshot
             .all_files()
             .iter()
             .any(|file| file.added_at == lsn)
-    {
+        && table
+            .iceberg_history
+            .iter()
+            .all(|existing| existing.lsn != lsn)
+}
+
+fn push_iceberg_commit(
+    table: &mut LakeTable,
+    timestamp_ms: i64,
+    binding: Option<iceberg::PublicationBinding>,
+) {
+    if !has_unrecorded_generation(table) {
         return;
     }
-    let commit = iceberg::IcebergCommit {
+    let lsn = table.snapshot.current_lsn();
+    table.iceberg_history.push(iceberg::IcebergCommit {
         lsn,
         timestamp_ms,
         schema_id: table.schema_id,
-    };
-    if table
-        .iceberg_history
-        .iter()
-        .all(|existing| existing.lsn != commit.lsn)
-    {
-        table.iceberg_history.push(commit);
-    }
+        binding,
+    });
 }

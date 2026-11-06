@@ -84,6 +84,9 @@ fn publication_body_tenants(method: &Method) -> Vec<&str> {
     match method {
         Method::PublishCurrentPlan { request } => vec![request.tenant.as_str()],
         Method::PublishRunCheckpoint { request } => vec![request.tenant.as_str()],
+        Method::MarkWorkItemEffectStarted { request } => vec![request.tenant.as_str()],
+        Method::RecordEffectReceipt { request } => vec![request.tenant.as_str()],
+        Method::SubmitAdmittedRequest { request } => vec![request.request.tenant.as_str()],
         other => governance_body_tenants(other),
     }
 }

@@ -391,11 +391,7 @@ CONCEPT:KG-2.12 — Company Operations Domain
 
 Imports HR, Legal, Banking, and Enterprise ontologies for full
 cross-domain reasoning about company operations.""" ;
-    owl:imports <http://knuckles.team/kg/core>,
-        <http://knuckles.team/kg/banking>,
-        <http://knuckles.team/kg/enterprise>,
-        <http://knuckles.team/kg/hr>,
-        <http://knuckles.team/kg/legal> .
+    owl:imports <http://knuckles.team/kg/banking>, <http://knuckles.team/kg/enterprise>, <http://knuckles.team/kg/hr>, <http://knuckles.team/kg/legal> .
 
 :AgentActAsBrandConsultant a :AgentRole ;
     rdfs:label "Act As Brand Consultant" ;
@@ -1511,3 +1507,7 @@ and entity type. BFO:IndependentContinuant.""" ;
     rdfs:comment "A dated checkpoint that groups work items toward a delivery target; open until its target is reached." ;
     skos:altLabel "Release Milestone", "Project Milestone" ;
     rdfs:subClassOf bfo:0000031 .
+
+# ── Core rooting (MEDULLA-TYPED-PACKS-R071.2) ───────────────────────────────────
+# Every class of this module above reaches the core class kg:Role through rdfs:subClassOf.
+<http://knuckles.team/kg#AgentRole> rdfs:subClassOf <http://knuckles.team/kg#Role> .

@@ -58,6 +58,45 @@ pub(super) fn compiled_scope_identity(
     Ok((identity, version_expectation))
 }
 
+/// The `finance.events.v1` outbox intent of one finance alert
+/// (MEDULLA-FINANCE-PRIMITIVES-R011.2.1). The topic is the finance event topic,
+/// the key is the envelope `event_id` (the idempotency identity, so a `finance.flip`
+/// event keeps its existing id), the payload is the canonical msgpack of the
+/// envelope and the one header `schema` holds the kind's schema name:
+/// [`compiled_outbox`] adds the scope and actor headers itself.
+pub(super) fn finance_alert_intent(
+    envelope: &medulla_types::finance_event_envelope::FinanceAlertEnvelope,
+) -> Result<MutationOutboxIntent, String> {
+    envelope
+        .validate()
+        .map_err(|error| format!("ALERT_ENVELOPE_INVALID: {error}"))?;
+    Ok(MutationOutboxIntent {
+        topic: medulla_types::finance_event_envelope::FINANCE_EVENTS_TOPIC.to_string(),
+        key: envelope.event_id.clone(),
+        payload: envelope.canonical_msgpack()?,
+        headers: BTreeMap::from([(
+            "schema".to_string(),
+            envelope.outbox_event_schema().to_string(),
+        )]),
+    })
+}
+
+/// The finance alert intents of every `FinanceAlertRaise` in `methods`, in order.
+/// An invalid envelope refuses and compiles nothing.
+pub(super) fn finance_alert_intents(
+    methods: &[medulla_protocol_types::protocol::Method],
+) -> Result<Vec<MutationOutboxIntent>, String> {
+    methods
+        .iter()
+        .filter_map(|method| match method {
+            medulla_protocol_types::protocol::Method::FinanceAlertRaise { envelope } => {
+                Some(finance_alert_intent(envelope))
+            }
+            _ => None,
+        })
+        .collect()
+}
+
 /// Construct every intent before minting the envelope that covers their bytes.
 pub(super) fn compiled_outbox(
     outbox_plan: CompiledOutbox,

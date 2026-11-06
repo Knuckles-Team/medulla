@@ -34,3 +34,64 @@ cp:FeatureShape a sh:NodeShape ;
         sh:message "A feature is realised by at least one tool, prompt or skill."
     ] ;
     sh:message "A feature names at least one realised-by member." .
+
+# --- Contract shapes (MEDULLA-TYPED-PACKS-R101.2) --------------------------------
+# One node shape per contract class. The data graph is built by `contract_graph`
+# (medulla-h-admin, import/contract_rdf.rs): a missing required key leaves its
+# triple out, and the shape below refuses it.
+
+cp:IngestContractShape a sh:NodeShape ;
+    sh:targetClass cp:IngestContract ;
+    sh:property [ sh:path cp:contractOf ; sh:minCount 1 ; sh:maxCount 1 ; sh:nodeKind sh:IRI ;
+        sh:message "A contract names exactly one connector." ] ;
+    sh:property [ sh:path cp:contractVersion ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
+        sh:message "A contract names exactly one version." ] ;
+    sh:property [ sh:path cp:contractDigest ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
+        sh:message "A contract names exactly one digest." ] ;
+    sh:property [ sh:path cp:hasCursorPolicy ; sh:maxCount 1 ;
+        sh:message "A contract names at most one cursor policy." ] ;
+    sh:property [ sh:path cp:hasAccessPolicy ; sh:maxCount 1 ;
+        sh:message "A contract names at most one access policy." ] ;
+    sh:property [ sh:path cp:requiresProvenance ; sh:maxCount 1 ;
+        sh:message "A contract names at most one provenance requirement." ] ;
+    sh:property [ sh:path cp:privacyClass ; sh:minCount 1 ; sh:maxCount 1 ;
+        sh:in ( "public" "internal" "personal" "secret" ) ;
+        sh:message "cp:privacyClass is one of public, internal, personal, secret." ] .
+
+cp:SourceObjectShape a sh:NodeShape ;
+    sh:targetClass cp:SourceObject ;
+    sh:property [ sh:path cp:objectName ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
+        sh:message "A source object names its object." ] ;
+    sh:property [ sh:path cp:ontologyClass ; sh:minCount 1 ; sh:maxCount 1 ; sh:nodeKind sh:IRI ;
+        sh:message "A source object names exactly one ontology class." ] ;
+    sh:property [ sh:path cp:hasKeyRule ; sh:minCount 1 ; sh:maxCount 1 ;
+        sh:message "A source object names exactly one key rule." ] .
+
+cp:KeyRuleShape a sh:NodeShape ;
+    sh:targetClass cp:KeyRule ;
+    sh:property [ sh:path cp:keyField ; sh:minCount 1 ; sh:datatype xsd:string ;
+        sh:message "A key rule names at least one key field." ] .
+
+cp:FieldMappingShape a sh:NodeShape ;
+    sh:targetClass cp:FieldMapping ;
+    sh:property [ sh:path cp:sourceField ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
+        sh:message "A field mapping names exactly one source field." ] ;
+    sh:property [ sh:path cp:mapsPredicate ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
+        sh:message "A field mapping names exactly one predicate." ] .
+
+cp:CursorPolicyShape a sh:NodeShape ;
+    sh:targetClass cp:CursorPolicy ;
+    sh:property [ sh:path cp:cursorKind ; sh:minCount 1 ; sh:maxCount 1 ;
+        sh:in ( "opaque" "timestamp" "commit" "offset" "page_token" ) ;
+        sh:message "cp:cursorKind is one of opaque, timestamp, commit, offset, page_token." ] .
+
+cp:AccessPolicyShape a sh:NodeShape ;
+    sh:targetClass cp:AccessPolicy ;
+    sh:property [ sh:path cp:defaultAcl ; sh:minCount 1 ; sh:maxCount 1 ;
+        sh:in ( "quarantine" "inherit" "public" ) ;
+        sh:message "cp:defaultAcl is one of quarantine, inherit, public." ] .
+
+cp:ProvenanceRequirementShape a sh:NodeShape ;
+    sh:targetClass cp:ProvenanceRequirement ;
+    sh:property [ sh:path cp:requiredField ; sh:minCount 1 ; sh:datatype xsd:string ;
+        sh:message "A provenance requirement names at least one required field." ] .

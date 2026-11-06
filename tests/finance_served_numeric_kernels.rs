@@ -4,6 +4,8 @@
 #![cfg(all(feature = "server", feature = "security", feature = "finance"))]
 
 mod common;
+#[path = "common/span_capture.rs"]
+mod span_capture;
 #[path = "common/test_support.rs"]
 mod test_support;
 
@@ -13,21 +15,42 @@ use serde_json::Value;
 const SECRET: &str = "medulla-fin-served-numeric-kernels-secret";
 const GRAPH: &str = "fin-numeric-kernels";
 
+/// One signed session over a fresh durable state; calls share the graph.
+struct Session {
+    state: test_support::SharedState,
+    next_id: u64,
+}
+
+impl Session {
+    async fn open() -> Self {
+        common::configure_authority();
+        let state = test_support::durable_state(SECRET, common::current_isolation());
+        let mut session = Self { state, next_id: 0 };
+        let create = Method::CreateGraph {
+            graph_name: GRAPH.to_string(),
+            graph_type: GraphType::Global,
+        };
+        let created = session.send(create).await;
+        assert!(
+            created.error.is_none(),
+            "CreateGraph: {:?}",
+            created.error_detail
+        );
+        session
+    }
+
+    async fn send(&mut self, method: Method) -> Response {
+        self.next_id += 1;
+        test_support::dispatch(
+            &self.state,
+            test_support::request(SECRET, self.next_id, GRAPH, method),
+        )
+        .await
+    }
+}
+
 async fn call(method: Method) -> Response {
-    common::configure_authority();
-    let state = test_support::durable_state(SECRET, common::current_isolation());
-    let create = Method::CreateGraph {
-        graph_name: GRAPH.to_string(),
-        graph_type: GraphType::Global,
-    };
-    let created =
-        test_support::dispatch(&state, test_support::request(SECRET, 1, GRAPH, create)).await;
-    assert!(
-        created.error.is_none(),
-        "CreateGraph: {:?}",
-        created.error_detail
-    );
-    test_support::dispatch(&state, test_support::request(SECRET, 2, GRAPH, method)).await
+    Session::open().await.send(method).await
 }
 
 fn body(response: &Response) -> Value {
@@ -251,4 +274,218 @@ async fn factor_rank_abstains_on_thin_input() {
         &call(rank(vec![], vec![])).await,
         "FACTOR_INSUFFICIENT_DATA",
     );
+}
+
+fn schedule(slices: usize, risk_aversion: f64) -> Method {
+    Method::FinanceExecutionSchedule {
+        symbol: "AAPL".into(),
+        total_shares: 1_000.0,
+        horizon: 1.0,
+        slices,
+        volatility: 1.0,
+        risk_aversion,
+        temporary_impact: 1.0,
+        permanent_impact: 0.0,
+        continuous: false,
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+// spec: MEDULLA-FINANCE-PRIMITIVES-R613.5
+async fn execution_results_carry_evidence_and_refusal_trace() {
+    span_capture::install();
+    // Success: the result carries its parameters, objective and solver status.
+    let ok_method = schedule(4, 1.0);
+    let plan = body(&call(ok_method.clone()).await);
+    assert_eq!(plan["slices"], 4);
+    assert_eq!(plan["risk_aversion"], 1.0);
+    assert!(plan["objective"].as_f64().is_some_and(f64::is_finite));
+    assert_eq!(plan["solver_status"], "closed_form");
+    let ok_spans = span_capture::spans(
+        "medulla.finance.execution_schedule",
+        &span_capture::digest_of(&ok_method),
+    );
+    assert_eq!(ok_spans.len(), 1, "one evidence span: {ok_spans:?}");
+    assert_eq!(
+        ok_spans[0].fields.get("outcome").map(String::as_str),
+        Some("ok")
+    );
+
+    // Refusal: a trace event names the code and the refused field.
+    let bad_method = schedule(4, 0.0);
+    refusal_code_in_detail(&call(bad_method.clone()).await, "EXEC_PARAM_INVALID");
+    let bad_spans = span_capture::spans(
+        "medulla.finance.execution_schedule",
+        &span_capture::digest_of(&bad_method),
+    );
+    assert_eq!(bad_spans.len(), 1);
+    assert_eq!(
+        bad_spans[0].fields.get("outcome").map(String::as_str),
+        Some("EXEC_PARAM_INVALID")
+    );
+    let events = span_capture::events_in("medulla.finance.execution_schedule");
+    assert!(
+        events.iter().any(|e| {
+            e.fields.get("code").map(String::as_str) == Some("EXEC_PARAM_INVALID")
+                && e.fields.get("field").map(String::as_str) == Some("risk_aversion")
+        }),
+        "refusal trace event: {events:?}"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+/// Verifies MEDULLA-FINANCE-PRIMITIVES-R613.6: Execution kernel latency budget
+// spec: MEDULLA-FINANCE-PRIMITIVES-R613.6
+async fn r613_budget_inputs_complete() {
+    // The bench inputs are accepted at full size: a 1000-slice schedule and a regime
+    // fit over 1_000_000 bars.
+    let plan = body(&call(schedule(1_000, 1.0)).await);
+    assert_eq!(plan["trades"].as_array().map(Vec::len), Some(1_000));
+    let returns: Vec<f64> = (0..1_000_000).map(|i| [0.02, -0.02, 0.0][i % 3]).collect();
+    let regime = body(
+        &call(Method::FinanceRegimeChain {
+            returns,
+            threshold: 0.01,
+            horizon: 1,
+        })
+        .await,
+    );
+    assert_eq!(regime["transitions"], 999_999);
+}
+
+const FACTOR_IDS: [&str; 3] = ["f0", "f1", "f2"];
+
+fn factor_signals() -> (Vec<Vec<f64>>, Vec<f64>) {
+    let forward = vec![0.01, 0.02, 0.03, 0.04, 0.05, 0.06];
+    let inverse = forward.iter().map(|v| -v).collect();
+    let noisy = vec![0.3, -0.1, 0.2, -0.4, 0.1, 0.0];
+    (vec![noisy, forward.clone(), inverse], forward)
+}
+
+fn record(provenance: Vec<Vec<String>>) -> Method {
+    let (signals, forward_returns) = factor_signals();
+    Method::FinanceFactorRecord {
+        factor_ids: FACTOR_IDS.iter().map(|id| id.to_string()).collect(),
+        signals,
+        provenance_keys: provenance,
+        forward_returns,
+    }
+}
+
+fn provenance_of(factor: &str) -> Vec<String> {
+    vec![format!("src:{factor}"), format!("bars:{factor}")]
+}
+
+/// Store the provenance nodes a factor record must resolve.
+async fn seed_provenance(session: &mut Session) {
+    let props = rmp_serde::to_vec_named(&serde_json::json!({"type": "Bar"})).expect("props");
+    for factor in FACTOR_IDS {
+        for node_id in provenance_of(factor) {
+            let added = session
+                .send(Method::AddNode {
+                    node_id,
+                    properties_msgpack: props.clone(),
+                })
+                .await;
+            assert!(added.error.is_none(), "seed: {:?}", added.error_detail);
+        }
+    }
+}
+
+async fn node(session: &mut Session, node_id: &str) -> Option<Value> {
+    let response = session
+        .send(Method::GetNodeProperties {
+            node_id: node_id.to_string(),
+        })
+        .await;
+    assert!(response.error.is_none(), "get: {:?}", response.error_detail);
+    match response.result.as_ref() {
+        Some(ResultPayload::Raw(bytes)) => rmp_serde::from_slice(bytes).expect("node"),
+        _ => None,
+    }
+}
+
+async fn successors(session: &mut Session, node_id: &str) -> Vec<String> {
+    let response = session
+        .send(Method::GetSuccessors {
+            node_id: node_id.to_string(),
+        })
+        .await;
+    match response.result {
+        Some(ResultPayload::Ids(ids)) => ids,
+        other => panic!("expected ids, got {other:?}"),
+    }
+}
+
+fn all_provenance() -> Vec<Vec<String>> {
+    FACTOR_IDS.iter().map(|id| provenance_of(id)).collect()
+}
+
+#[tokio::test(flavor = "multi_thread")]
+// spec: MEDULLA-FINANCE-PRIMITIVES-R018.5
+async fn factor_rank_records_nodes_with_edges_and_versions() {
+    let mut session = Session::open().await;
+    seed_provenance(&mut session).await;
+    let ranked = session.send(record(all_provenance())).await;
+    assert!(ranked.error.is_none(), "record: {:?}", ranked.error_detail);
+    let stored = node(&mut session, "finance:Factor:f1")
+        .await
+        .expect("factor node");
+    assert_eq!(stored["type"], "Factor");
+    assert_eq!(
+        stored["irKernelVersion"],
+        medulla_finance_quant::factor::KERNEL_REVISION
+    );
+    assert_eq!(stored["icKernelVersion"], stored["irKernelVersion"]);
+    let mut edges = successors(&mut session, "finance:Factor:f1").await;
+    edges.sort();
+    assert_eq!(edges, provenance_of("f1"));
+
+    // An empty provenance list refuses and writes nothing.
+    let mut refused = Session::open().await;
+    seed_provenance(&mut refused).await;
+    let mut provenance = all_provenance();
+    provenance[1].clear();
+    let response = refused.send(record(provenance)).await;
+    assert!(response.result.is_none());
+    let detail = response.error_detail.as_deref().unwrap_or_default();
+    assert!(
+        response.error.as_deref() == Some("FACTOR_RECORD_INVALID")
+            || detail.contains("FACTOR_RECORD_INVALID"),
+        "{response:?}"
+    );
+    assert!(node(&mut refused, "finance:Factor:f1").await.is_none());
+}
+
+#[tokio::test(flavor = "multi_thread")]
+// spec: MEDULLA-FINANCE-PRIMITIVES-R018.6
+async fn factor_rank_hot_path_writes_three_nodes() {
+    let mut session = Session::open().await;
+    seed_provenance(&mut session).await;
+    // The read-only form writes none.
+    let (signals, forward) = factor_signals();
+    let read_only = session.send(rank(signals, forward)).await;
+    assert!(read_only.error.is_none());
+    for id in FACTOR_IDS {
+        assert!(node(&mut session, &format!("finance:Factor:{id}"))
+            .await
+            .is_none());
+    }
+    // One record request writes three nodes and their edge sets, in rank order.
+    let recorded = body(&session.send(record(all_provenance())).await);
+    let order: Vec<&str> = recorded
+        .as_array()
+        .expect("ranked records")
+        .iter()
+        .map(|r| r["factor_id"].as_str().expect("id"))
+        .collect();
+    assert_eq!(order.last(), Some(&"f0"), "the noisy factor ranks last");
+    for (index, id) in order.iter().enumerate() {
+        let stored = node(&mut session, &format!("finance:Factor:{id}"))
+            .await
+            .expect("factor node");
+        assert_eq!(stored["factorRank"], index as u64 + 1);
+        let edges = successors(&mut session, &format!("finance:Factor:{id}")).await;
+        assert_eq!(edges.len(), 2, "{id} edge set");
+    }
 }

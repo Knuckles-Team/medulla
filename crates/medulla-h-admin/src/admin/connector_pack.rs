@@ -28,7 +28,7 @@ pub(crate) mod admin;
 mod approval;
 mod catalog_authority;
 #[cfg(all(feature = "redb", feature = "blob"))]
-mod import;
+pub(crate) mod import;
 pub(crate) mod reconcile;
 pub(crate) mod reproject;
 #[cfg(all(feature = "rdf", feature = "shacl"))]
@@ -36,6 +36,8 @@ pub(crate) mod seed;
 #[cfg(all(test, feature = "rdf", feature = "shacl"))]
 mod seed_tests;
 mod self_served_catalog;
+#[cfg(feature = "rdf")]
+mod surface_vocab;
 #[cfg(all(test, feature = "redb", feature = "blob"))]
 mod tests;
 

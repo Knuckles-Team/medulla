@@ -1,5 +1,6 @@
 use medulla_types::sensitive_detect::{Detection, SensitiveDetectionMethod, SensitiveDetector};
 
+/// Verifies MEDULLA-TYPED-PACKS-R803.1: Model
 // spec: MEDULLA-TYPED-PACKS-R803.1
 #[test]
 fn records_round_trip() {

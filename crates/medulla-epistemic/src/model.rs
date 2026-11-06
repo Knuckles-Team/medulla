@@ -151,6 +151,22 @@ impl BiTemporalRecord {
     pub fn live_at(&self, valid_ts: Option<u64>, tx_ts: Option<u64>) -> bool {
         valid_ts.is_none_or(|t| self.live_at_valid(t)) && tx_ts.is_none_or(|t| self.live_at_tx(t))
     }
+
+    /// MEDULLA-DURABLE-KERNEL-R079: the windows of one edge version, read from its
+    /// stored property map. `SupersedeEdge` writes the history into these four
+    /// fields (each superseded version closes the previous `valid_until` and
+    /// `tx_to`, and opens the next `valid_from` and `tx_from`), so this is the one
+    /// helper that assembles an edge version's windows; an edge with no
+    /// supersession history reads its own fields. An absent field is an open end.
+    pub fn from_properties(properties: &serde_json::Map<String, serde_json::Value>) -> Self {
+        let field = |key: &str| properties.get(key).and_then(serde_json::Value::as_u64);
+        Self {
+            valid_from: field("valid_from"),
+            valid_until: field("valid_until"),
+            tx_from: field("tx_from"),
+            tx_to: field("tx_to"),
+        }
+    }
 }
 
 /// A computed snapshot of what the engine believes about one node, given its evidence

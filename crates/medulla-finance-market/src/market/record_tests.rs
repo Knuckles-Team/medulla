@@ -48,7 +48,7 @@ fn revised() -> (Vec<BarRecord>, i64) {
     (all, known)
 }
 
-// spec: MEDULLA-FEDERATED-QUERY-R019
+// spec: MEDULLA-FEDERATED-QUERY-R019, MEDULLA-FINANCE-PRIMITIVES-R903
 #[test]
 fn a_revision_appends_revision_records_and_never_rewrites() {
     let (records, revised_at) = revised();

@@ -78,7 +78,33 @@ impl FinanceAlertEnvelope {
     pub fn outbox_event_schema(&self) -> &'static str {
         self.kind.outbox_event_schema()
     }
+
+    /// The canonical msgpack of the envelope: a named map in field order. The
+    /// nanosecond timestamp is an `i128`, which msgpack has no integer for, so it
+    /// is written as its decimal string; equal envelopes always give equal bytes.
+    pub fn canonical_msgpack(&self) -> Result<Vec<u8>, String> {
+        #[derive(Serialize)]
+        struct Canonical<'a> {
+            event_id: &'a str,
+            kind: FinanceAlertKind,
+            listing_id: &'a str,
+            occurred_at_unix_nanos: String,
+            message: &'a str,
+        }
+        rmp_serde::to_vec_named(&Canonical {
+            event_id: &self.event_id,
+            kind: self.kind,
+            listing_id: &self.listing_id,
+            occurred_at_unix_nanos: self.occurred_at_unix_nanos.to_string(),
+            message: &self.message,
+        })
+        .map_err(|error| format!("finance alert envelope encoding failed: {error}"))
+    }
 }
+
+/// The outbox topic every finance alert intent publishes on.
+#[cfg(feature = "finance")]
+pub const FINANCE_EVENTS_TOPIC: &str = "finance.events.v1";
 
 #[cfg(all(test, feature = "finance"))]
 mod tests {
@@ -126,6 +152,16 @@ mod tests {
         let mut envelope = valid();
         envelope.message = String::new();
         assert!(envelope.validate().is_err());
+    }
+
+    // spec: MEDULLA-FINANCE-PRIMITIVES-R011.2.1
+    #[test]
+    fn equal_envelopes_have_equal_canonical_bytes() {
+        let first = valid().canonical_msgpack().unwrap();
+        assert_eq!(first, valid().canonical_msgpack().unwrap());
+        let mut other = valid();
+        other.message = "bearish trend flip".to_string();
+        assert_ne!(first, other.canonical_msgpack().unwrap());
     }
 
     #[test]

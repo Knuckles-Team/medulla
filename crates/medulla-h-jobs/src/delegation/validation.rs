@@ -108,6 +108,14 @@ pub(crate) async fn placement_authority(
 
 #[cfg(feature = "redb")]
 pub(crate) fn decode_submit_result(payload: ResultPayload) -> Result<SubmitWorkItemResult, String> {
+    decode_native_result(payload)
+}
+
+/// The typed body of a native WorkItem result, from either wire shape.
+#[cfg(feature = "redb")]
+pub(crate) fn decode_native_result<T: serde::de::DeserializeOwned>(
+    payload: ResultPayload,
+) -> Result<T, String> {
     match payload {
         ResultPayload::Raw(bytes) => medulla_types::msgpack::decode_bounded(
             &bytes,
@@ -149,6 +157,7 @@ pub(crate) fn lower_work_item(
     provenance_refs: Vec<String>,
 ) -> SubmitWorkItemRequest {
     SubmitWorkItemRequest {
+        child_input: None,
         conversation: None,
         run_id: None,
         schema_version: NativeControlSchemaVersion::V1,

@@ -9,6 +9,10 @@
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod dist_compute;
 
+/// The durable store behind spilled incremental view state (MEDULLA-INCREMENTAL-VIEWS-R007.4).
+#[cfg(feature = "matview")]
+pub mod matview_spill;
+
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[cfg(feature = "sqlite-file")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)

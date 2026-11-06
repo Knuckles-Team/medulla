@@ -23,6 +23,7 @@ use medulla_types::solve_scalar::digest_text;
 
 use super::admission::Regime;
 use super::evaluate_bandit::{bandit_gates, BanditReport};
+use super::feature_power::{feature_power, FeaturePowerKnobs};
 use super::head_eval::{
     act_rule, calibration_statement, cost_macs, read_rows, scaled_softmax, top_index, RowsReading,
 };
@@ -49,6 +50,8 @@ pub struct EvalSpec<'a> {
     /// `sha256:<hex>` of the head body evaluated.
     pub head_digest: &'a str,
     pub policy_digest: &'a str,
+    /// The feature-power knobs; `None` leaves the receipt without feature power.
+    pub feature_power: Option<FeaturePowerKnobs>,
 }
 
 /// One item read by the head: probabilities, or `None` out of distribution.
@@ -298,6 +301,10 @@ pub fn evaluate(
         exclusions,
         pooled: bounded(report.pooled)?,
         failed_gates: bounded(failed.clone())?,
+        feature_power: match &spec.feature_power {
+            Some(knobs) => bounded(feature_power(dataset, items, knobs)?)?,
+            None => Default::default(),
+        },
         passed: failed.is_empty(),
         synthetic: dataset.synthetic,
     };

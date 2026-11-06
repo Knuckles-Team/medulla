@@ -38,6 +38,18 @@ pub struct PredictedLink {
     pub score: f64,
 }
 
+/// `GraphLearnPredictNary`: ordered tuple hypotheses, never a write
+/// (MEDULLA-FEDERATED-QUERY-R086.100.3).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct NaryPrediction {
+    /// Hypotheses in descending score order; ties keep request order.
+    pub hypotheses: Vec<medulla_types::graphlearn_nary::NaryHypothesis>,
+    pub n_hypotheses: usize,
+    /// Order-sensitive digest of the request that produced them.
+    pub request_digest: String,
+}
+
 /// `GraphLearnPredict`: scored links and the model digest that scored them.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]

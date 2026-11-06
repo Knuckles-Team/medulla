@@ -82,6 +82,9 @@ mod association_hash_tests;
 mod core;
 mod executor_claim;
 mod executor_loop;
+// The `DatasetProfile` claim arm (MEDULLA-UNIFIED-DATA-PLANE-R761.3) is its caller.
+#[cfg_attr(not(test), allow(dead_code))]
+mod executor_profile;
 #[cfg(feature = "program-optimization")]
 mod executor_program;
 #[cfg(test)]
@@ -156,6 +159,12 @@ pub(super) fn job_refusal(error: &medulla_jobs::JobError) -> String {
     let code = match error {
         medulla_jobs::JobError::InvalidTransition { .. } => "CONFLICT",
         medulla_jobs::JobError::NotFound(_) => "INVALID_ARGUMENT",
+        medulla_jobs::JobError::ClaimPaced => {
+            medulla_types::contract::ServerErrorCode::ClaimPaced.as_str()
+        }
+        medulla_jobs::JobError::PriorityOutOfRange(_) => {
+            medulla_types::contract::ServerErrorCode::PriorityOutOfRange.as_str()
+        }
         // A lost optimistic-concurrency race is a retryable conflict, not a fault.
         medulla_jobs::JobError::Redb(message) if message.contains("STALE_VERSION") => "CONFLICT",
         medulla_jobs::JobError::Redb(_) | medulla_jobs::JobError::Codec(_) => "INTERNAL",

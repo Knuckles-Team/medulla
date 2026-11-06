@@ -198,6 +198,23 @@ pub const SEMANTIC_ANN: TableDefinition<'static, (&str, &str, u64), &[u8]> =
     TableDefinition::new("semantic_ann_manifests");
 pub const SEMANTIC_VECTORS: TableDefinition<'static, (&str, &str, u64, &str), &[u8]> =
     TableDefinition::new("semantic_vectors");
+/// MEDULLA-UNIFIED-DATA-PLANE-R040.3: one `ModalityCheckRecord` per model,
+/// binding and modality, keyed `(tenant, binding, model_version, model_id,
+/// modality)`. Written by the S4 and S5 stages.
+pub const SEMANTIC_MODALITY_CHECKS: TableDefinition<'static, (&str, &str, u64, &str, &str), &[u8]> =
+    TableDefinition::new("modality_check_records");
+/// MEDULLA-UNIFIED-DATA-PLANE-R040.3: the measured recall at k of one stage
+/// and modality, keyed `(tenant, binding, generation, stage, modality)`.
+pub const SEMANTIC_STAGE_RECEIPTS: TableDefinition<'static, (&str, &str, u64, &str, &str), &[u8]> =
+    TableDefinition::new("stage_receipts");
+/// MEDULLA-UNIFIED-DATA-PLANE-R040.5: the stored `PromotionVerdict` of one
+/// gated activation, keyed `(tenant, binding, generation)`.
+pub const SEMANTIC_PROMOTION_VERDICTS: TableDefinition<'static, (&str, &str, u64), &[u8]> =
+    TableDefinition::new("promotion_verdicts");
+/// MEDULLA-UNIFIED-DATA-PLANE-R040.3: the per-binding embedding-version tag of
+/// one stored vector, keyed `(tenant, binding, vector_id)`.
+pub const SEMANTIC_EMBEDDING_VERSION_TAGS: TableDefinition<'static, (&str, &str, u64), &[u8]> =
+    TableDefinition::new("embedding_version_tags");
 // Root-binary sidecar owner files. Each is one physical file with one fixed
 // native `ControlPlane` serving scope, so each declares its own layout rather
 // than sharing one: the census is exact, and a shared layout would force every
@@ -381,6 +398,10 @@ macro_rules! visit_owner_tables {
                 $visit!(SEMANTIC_ANN);
                 $visit!(SEMANTIC_VECTORS);
                 $visit!(ANN_CODES);
+                $visit!(SEMANTIC_MODALITY_CHECKS);
+                $visit!(SEMANTIC_STAGE_RECEIPTS);
+                $visit!(SEMANTIC_PROMOTION_VERDICTS);
+                $visit!(SEMANTIC_EMBEDDING_VERSION_TAGS);
             }
             OwnerLayout::RequestReplay => $visit!(REQUEST_REPLAY),
             OwnerLayout::VizProvenance => $visit!(VIZ_PROVENANCE),
@@ -564,6 +585,10 @@ pub(crate) fn prove_semantic_partition(
     partition!(SEMANTIC_ANN);
     partition!(SEMANTIC_VECTORS);
     partition!(ANN_CODES);
+    partition!(SEMANTIC_MODALITY_CHECKS);
+    partition!(SEMANTIC_STAGE_RECEIPTS);
+    partition!(SEMANTIC_PROMOTION_VERDICTS);
+    partition!(SEMANTIC_EMBEDDING_VERSION_TAGS);
     Ok(())
 }
 
@@ -723,6 +748,10 @@ pub fn owner_table_names(layout: OwnerLayout) -> &'static [&'static str] {
             "semantic_ann_manifests",
             "semantic_vectors",
             "eg_ann",
+            "modality_check_records",
+            "stage_receipts",
+            "promotion_verdicts",
+            "embedding_version_tags",
         ],
         OwnerLayout::RequestReplay => &["verified_request_replay"],
         OwnerLayout::VizProvenance => &["viz_provenance"],

@@ -17,6 +17,11 @@ use medulla_persistence_records::connector_pack::CONNECTOR_DECLARATION_URI;
 use super::facts::uri_prefix;
 use super::json::parse_bounded_json;
 
+#[cfg(feature = "rdf")]
+mod core_classes;
+#[cfg(feature = "rdf")]
+mod surface;
+
 pub(super) fn validate_index(
     request: &ConnectorPackImportRequest,
     archive: &[u8],
@@ -314,8 +319,58 @@ impl<'a> IndexValidator<'a> {
                 Some(&entry.uri),
                 "connector declaration schema mappings are invalid",
             );
+            return;
+        }
+        self.validate_contract(entry, body);
+    }
+
+    /// MEDULLA-TYPED-PACKS-R101.2: a declaration that carries a `contract` is
+    /// mapped to RDF and checked against the contract shapes.
+    #[cfg(all(feature = "rdf", feature = "shacl"))]
+    fn validate_contract(&mut self, entry: &PackEntry, body: &[u8]) {
+        let Ok(declaration) = serde_json::from_slice::<serde_json::Value>(body) else {
+            return;
+        };
+        if declaration.get("contract").is_none() {
+            return;
+        }
+        let refusal = |validator: &mut Self, detail: &str| {
+            validator.reject(
+                PackViolationCode::ContractShaclViolation,
+                Some(&entry.uri),
+                detail,
+            );
+        };
+        let Some(shapes) = super::contract_rdf::contract_shapes() else {
+            return refusal(self, "contract shapes are not registered");
+        };
+        let data = match super::contract_rdf::contract_graph(
+            self.request.index.connector.as_str(),
+            &declaration,
+        ) {
+            Ok(data) => data,
+            Err(_) => return refusal(self, "contract declaration is not mappable to RDF"),
+        };
+        let report = medulla_shacl::graph_from_turtle(shapes)
+            .and_then(|shapes| medulla_shacl::validate(&shapes, &data));
+        match report {
+            Ok(report) if report.conforms => {}
+            Ok(report) => {
+                let detail = report
+                    .results
+                    .iter()
+                    .filter_map(|result| result.message.as_deref())
+                    .next()
+                    .unwrap_or("contract does not conform to the contract shapes")
+                    .to_string();
+                refusal(self, &detail);
+            }
+            Err(_) => refusal(self, "contract shapes could not be evaluated"),
         }
     }
+
+    #[cfg(not(all(feature = "rdf", feature = "shacl")))]
+    fn validate_contract(&mut self, _entry: &PackEntry, _body: &[u8]) {}
 
     fn validate_skill_body(&mut self, entry: &PackEntry, body: &[u8]) {
         if entry.kind != PackEntryKind::Skill {
@@ -331,7 +386,7 @@ impl<'a> IndexValidator<'a> {
             self.reject(
                 PackViolationCode::MalformedBody,
                 Some(&entry.uri),
-                "skill front-matter type is not skill, workflow, graph or mcp_skill",
+                "skill front-matter skill_type is not skill, workflow, graph or mcp_skill",
             );
         }
     }
@@ -362,6 +417,14 @@ impl<'a> IndexValidator<'a> {
         if let Err(detail) = validate_ontology_imports(text, &entry.uri, &self.ontology_iris) {
             self.reject(PackViolationCode::OntologyInvalid, Some(&entry.uri), detail);
         } else {
+            #[cfg(feature = "rdf")]
+            for detail in super::nutrition::nutrient_amount_violations(text) {
+                self.reject(
+                    PackViolationCode::NutrientIdUnmapped,
+                    Some(&entry.uri),
+                    &detail,
+                );
+            }
             self.ontologies.push(text.to_string());
         }
     }
@@ -532,11 +595,17 @@ fn finish_validation(validator: &mut IndexValidator<'_>) {
         validator.reject(code, None, detail);
     }
     flag_ontology_orphans(validator);
+    #[cfg(feature = "rdf")]
+    {
+        core_classes::flag_core_conflicts(validator);
+        surface::check_surface(validator);
+    }
 }
 
 /// How the deployment treats a pack ontology class with no subclass path to the
 /// parent catalog. `warn` (the default while the fleet's vocabularies are being
 /// linked) imports the pack and reports `ONTOLOGY_ORPHAN`; `refuse` rejects it.
+#[cfg(feature = "rdf")]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum OrphanPolicy {
     Warn,
@@ -545,6 +614,7 @@ enum OrphanPolicy {
 
 /// `MEDULLA_ONTOLOGY_ORPHANS=warn|refuse`, read once; any other value
 /// keeps the default.
+#[cfg(feature = "rdf")]
 fn orphan_policy() -> OrphanPolicy {
     static POLICY: std::sync::OnceLock<OrphanPolicy> = std::sync::OnceLock::new();
     *POLICY.get_or_init(|| {
@@ -562,12 +632,20 @@ fn orphan_policy() -> OrphanPolicy {
 
 /// The bounded `ONTOLOGY_ORPHAN` detail: the count, then as many class IRIs as
 /// fit in one kibibyte.
+#[cfg(feature = "rdf")]
 fn orphan_detail(orphans: &[String]) -> String {
-    let mut detail = format!(
+    let lead = format!(
         "{} class(es) have no rdfs:subClassOf path to the parent catalog: ",
         orphans.len()
     );
-    for (index, class) in orphans.iter().enumerate() {
+    class_list_detail(&lead, orphans)
+}
+
+/// `lead`, then as many of `classes` as fit in one kibibyte.
+#[cfg(feature = "rdf")]
+fn class_list_detail(lead: &str, classes: &[String]) -> String {
+    let mut detail = lead.to_string();
+    for (index, class) in classes.iter().enumerate() {
         let item = if index == 0 {
             class.clone()
         } else {
@@ -634,6 +712,8 @@ fn json_kind(kind: PackEntryKind) -> bool {
             | PackEntryKind::Prompt
             | PackEntryKind::ModelProfile
             | PackEntryKind::A2aCard
+            | PackEntryKind::Crosswalk
+            | PackEntryKind::ConceptPath
     )
 }
 
@@ -653,6 +733,8 @@ fn text_kind(kind: PackEntryKind) -> bool {
             | PackEntryKind::Resource
             | PackEntryKind::ResourceTemplate
             | PackEntryKind::SkillFile
+            | PackEntryKind::Crosswalk
+            | PackEntryKind::ConceptPath
     )
 }
 

@@ -19,8 +19,7 @@
 
 <http://knuckles.team/kg/finance> a owl:Ontology ;
     rdfs:label "Finance — Markets and Trend Signals" ;
-    rdfs:comment "Financial instruments, trading venues and listings; OHLCV bar series held in the time-series store; versioned indicator specifications, the per-series signal state and the trend-flip records it emits; macro-policy events and backtest-run provenance records; trading strategies, signals, debates, exchange backends, order audit records, positions and risk snapshots. Informational only: no class here authorises an order." ;
-    owl:imports <http://knuckles.team/kg/core> .
+    rdfs:comment "Financial instruments, trading venues and listings; OHLCV bar series held in the time-series store; versioned indicator specifications, the per-series signal state and the trend-flip records it emits; macro-policy events and backtest-run provenance records; trading strategies, signals, debates, exchange backends, order audit records, positions and risk snapshots. Informational only: no class here authorises an order." .
 
 # ── Instruments, venues and listings ──────────────────────────────────────────────
 
@@ -774,6 +773,36 @@
     rdfs:domain :LeverageTerms ;
     rdfs:range xsd:decimal .
 
+# MEDULLA-FINANCE-PRIMITIVES-R011.4: the idempotency record of one alert delivery,
+# schedule run or DCA proposal. Its node id is a SHA-256 of tenantKey, receiptKind,
+# idempotencyKey and receiptState, so a second write of the same receipt is a no-op.
+:FinanceReceipt a owl:Class ;
+    rdfs:label "Finance Receipt" ;
+    rdfs:comment "The idempotency record of one finance alert delivery, schedule run or DCA proposal: kind, claimed or completed state, tenant key, idempotency key and the time it was recorded. BFO:GenericallyDependentContinuant." ;
+    rdfs:subClassOf bfo:0000031 ;
+    skos:relatedMatch wd:Q47005 .
+
+:receiptKind a owl:DatatypeProperty ;
+    rdfs:label "receipt kind" ;
+    rdfs:comment "alert_delivery, schedule_run or dca_proposal." ;
+    rdfs:domain :FinanceReceipt ;
+    rdfs:range xsd:string .
+
+:receiptState a owl:DatatypeProperty ;
+    rdfs:label "receipt state" ;
+    rdfs:comment "claimed while the work is in flight, completed once it finished." ;
+    rdfs:domain :FinanceReceipt ;
+    rdfs:range xsd:string .
+
+:tenantKey a owl:DatatypeProperty ;
+    rdfs:label "tenant key" ;
+    rdfs:comment "The opaque tenant key the receipt belongs to." ;
+    rdfs:domain :FinanceReceipt ;
+    rdfs:range xsd:string .
+
+# idempotencyKey and recordedAt are the shared properties of the orchestration and
+# documentation modules; the shape constrains them without redeclaring their domain.
+
 # ── Finance method vocabulary: algorithms and analysis types (MEDULLA-CQ-CONN-R084.5) ──
 #
 # The selection vocabulary for "which algorithm applies to analysis type X for
@@ -815,3 +844,194 @@
     rdfs:domain :FinanceAlgorithm ;
     rdfs:range [ a owl:Class ;
             owl:unionOf ( :FinancialInstrument :Position ) ] .
+
+# MEDULLA-FINANCE-PRIMITIVES-R751.750: strategy research records. Each is immutable once
+# written; the fused scores are computed by the engine from the weighted components and
+# are never caller-supplied. Informational only: no record here authorises an order.
+
+:DebateRound a owl:Class ;
+    rdfs:label "Debate Round" ;
+    rdfs:comment "One bull or bear round of a trading debate, citing the evidence nodes its argument rests on (R751.750). Extends the trading debate it belongs to." ;
+    rdfs:subClassOf :TradingDebate ;
+    skos:broadMatch wd:Q179875 .
+
+:debateId a owl:DatatypeProperty ;
+    rdfs:label "debate id" ;
+    rdfs:comment "The debate a round belongs to." ;
+    rdfs:domain :DebateRound ;
+    rdfs:range xsd:string .
+
+:roundIndex a owl:DatatypeProperty ;
+    rdfs:label "round index" ;
+    rdfs:comment "The one-based position of a round in its debate; each round is the prior index plus one." ;
+    rdfs:domain :DebateRound ;
+    rdfs:range xsd:integer .
+
+:debateSide a owl:DatatypeProperty ;
+    rdfs:label "debate side" ;
+    rdfs:comment "bull or bear." ;
+    rdfs:domain :DebateRound ;
+    rdfs:range xsd:string .
+
+:debateArgument a owl:DatatypeProperty ;
+    rdfs:label "debate argument" ;
+    rdfs:domain :DebateRound ;
+    rdfs:range xsd:string .
+
+:TradeJournalEntry a owl:Class ;
+    rdfs:label "Trade Journal Entry" ;
+    rdfs:comment "A trader's journal entry: the rationale for a trade, the strategy run it reviews and the bias audits its submitter claims (R751.750). BFO:GenericallyDependentContinuant." ;
+    rdfs:subClassOf bfo:0000031 ;
+    skos:relatedMatch wd:Q1574928 .
+
+:journalId a owl:DatatypeProperty ;
+    rdfs:label "journal id" ;
+    rdfs:domain :TradeJournalEntry ;
+    rdfs:range xsd:string .
+
+:entryAt a owl:DatatypeProperty ;
+    rdfs:label "entry at" ;
+    rdfs:comment "When the journal entry was written." ;
+    rdfs:domain :TradeJournalEntry ;
+    rdfs:range xsd:dateTime .
+
+:journalRationale a owl:DatatypeProperty ;
+    rdfs:label "journal rationale" ;
+    rdfs:domain :TradeJournalEntry ;
+    rdfs:range xsd:string .
+
+:strategyRunRef a owl:DatatypeProperty ;
+    rdfs:label "strategy run ref" ;
+    rdfs:comment "The strategy run a journal entry reviews." ;
+    rdfs:domain :TradeJournalEntry ;
+    rdfs:range xsd:string .
+
+:BiasAudit a owl:Class ;
+    rdfs:label "Bias Audit" ;
+    rdfs:comment "A bias finding stored as a claim by the submitter of a journal entry; the engine computes no bias finding (R751.751). BFO:GenericallyDependentContinuant." ;
+    rdfs:subClassOf bfo:0000031 ;
+    skos:relatedMatch wd:Q1574928 .
+
+:biasKind a owl:DatatypeProperty ;
+    rdfs:label "bias kind" ;
+    rdfs:comment "recency, confirmation, loss_aversion, overconfidence." ;
+    rdfs:domain :BiasAudit ;
+    rdfs:range xsd:string .
+
+:biasFinding a owl:DatatypeProperty ;
+    rdfs:label "bias finding" ;
+    rdfs:domain :BiasAudit ;
+    rdfs:range xsd:string .
+
+:SentimentFusion a owl:Class ;
+    rdfs:label "Sentiment Fusion" ;
+    rdfs:comment "The weighted fusion of sentiment components about one listing, a score in [-1, 1] computed by the engine (R751.751). BFO:GenericallyDependentContinuant." ;
+    rdfs:subClassOf bfo:0000031 ;
+    skos:relatedMatch wd:Q4456825 .
+
+:subjectListing a owl:DatatypeProperty ;
+    rdfs:label "subject listing" ;
+    rdfs:comment "The listing a sentiment fusion is about." ;
+    rdfs:domain :SentimentFusion ;
+    rdfs:range xsd:string .
+
+:sentimentScore a owl:DatatypeProperty ;
+    rdfs:label "sentiment score" ;
+    rdfs:comment "The fused sentiment, sum(weight * score) / sum(weight), in [-1, 1]." ;
+    rdfs:domain :SentimentFusion ;
+    rdfs:range xsd:decimal .
+
+:GeopoliticalRisk a owl:Class ;
+    rdfs:label "Geopolitical Risk" ;
+    rdfs:comment "The weighted fusion of risk components about one region, a score in [0, 1] computed by the engine (R751.751). BFO:GenericallyDependentContinuant." ;
+    rdfs:subClassOf bfo:0000031 ;
+    skos:relatedMatch wd:Q4456825 .
+
+:geoRegion a owl:DatatypeProperty ;
+    rdfs:label "geo region" ;
+    rdfs:domain :GeopoliticalRisk ;
+    rdfs:range xsd:string .
+
+:geoRiskScore a owl:DatatypeProperty ;
+    rdfs:label "geo risk score" ;
+    rdfs:comment "The fused risk, sum(weight * score) / sum(weight), in [0, 1]." ;
+    rdfs:domain :GeopoliticalRisk ;
+    rdfs:range xsd:decimal .
+
+:StrategyCard a owl:Class ;
+    rdfs:label "Strategy Card" ;
+    rdfs:comment "A shareable summary of one strategy specification with the licence class that governs its reuse (R751.750). BFO:GenericallyDependentContinuant." ;
+    rdfs:subClassOf bfo:0000031 ;
+    skos:relatedMatch wd:Q1574928 .
+
+:cardId a owl:DatatypeProperty ;
+    rdfs:label "card id" ;
+    rdfs:domain :StrategyCard ;
+    rdfs:range xsd:string .
+
+:strategySpecRef a owl:DatatypeProperty ;
+    rdfs:label "strategy spec ref" ;
+    rdfs:comment "The strategy specification a card describes." ;
+    rdfs:domain :StrategyCard ;
+    rdfs:range xsd:string .
+
+:licenceClass a owl:DatatypeProperty ;
+    rdfs:label "licence class" ;
+    rdfs:comment "open, restricted or proprietary." ;
+    rdfs:domain :StrategyCard ;
+    rdfs:range xsd:string .
+
+:cardSummary a owl:DatatypeProperty ;
+    rdfs:label "card summary" ;
+    rdfs:domain :StrategyCard ;
+    rdfs:range xsd:string .
+
+:researchKernelVersion a owl:DatatypeProperty ;
+    rdfs:label "research kernel version" ;
+    rdfs:comment "The research kernel version that computed a stored score (research-1)." ;
+    rdfs:range xsd:string .
+
+# MEDULLA-FINANCE-PRIMITIVES-R018.5: a ranked factor recorded with the evidence it
+# rests on. Each Factor node carries a derivedFrom edge to every input it was
+# computed from and the medulla-numeric kernel revision that computed its scores.
+
+:Factor a owl:Class ;
+    rdfs:label "Factor" ;
+    rdfs:comment "One ranked predictive factor with its information coefficient and information ratio, linked by derivedFrom to the inputs it was computed from (R018.5). BFO:GenericallyDependentContinuant." ;
+    rdfs:subClassOf bfo:0000031 ;
+    skos:broadMatch bfo:0000031 .
+
+:factorId a owl:DatatypeProperty ;
+    rdfs:label "factor id" ;
+    rdfs:domain :Factor ;
+    rdfs:range xsd:string .
+
+:informationCoefficient a owl:DatatypeProperty ;
+    rdfs:label "information coefficient" ;
+    rdfs:comment "The rank correlation of the factor signal with forward returns." ;
+    rdfs:domain :Factor ;
+    rdfs:range xsd:decimal .
+
+:informationRatio a owl:DatatypeProperty ;
+    rdfs:label "information ratio" ;
+    rdfs:comment "The information coefficient scaled by the square root of the factor breadth." ;
+    rdfs:domain :Factor ;
+    rdfs:range xsd:decimal .
+
+:factorRank a owl:DatatypeProperty ;
+    rdfs:label "factor rank" ;
+    rdfs:comment "The one-based rank by absolute information ratio; 1 is strongest." ;
+    rdfs:domain :Factor ;
+    rdfs:range xsd:integer .
+
+:irKernelVersion a owl:DatatypeProperty ;
+    rdfs:label "ir kernel version" ;
+    rdfs:comment "The medulla-numeric kernel revision that computed the information ratio." ;
+    rdfs:domain :Factor ;
+    rdfs:range xsd:string .
+
+:icKernelVersion a owl:DatatypeProperty ;
+    rdfs:label "ic kernel version" ;
+    rdfs:comment "The medulla-numeric kernel revision that computed the information coefficient." ;
+    rdfs:domain :Factor ;
+    rdfs:range xsd:string .

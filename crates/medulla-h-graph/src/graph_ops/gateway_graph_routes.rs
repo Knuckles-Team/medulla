@@ -8,6 +8,7 @@ enum Route {
     Coalescable,
     NodeState,
     Memory,
+    Bus,
     Scene,
     Trajectory,
     Edges,
@@ -16,6 +17,9 @@ enum Route {
     #[cfg(any(feature = "shacl", feature = "reasoning"))]
     Policy,
     Analytics,
+    FinanceRecords,
+    WorkflowRegistry,
+    SchemaProjections,
     Other,
 }
 
@@ -51,6 +55,14 @@ fn is_memory(method: &Method) -> bool {
             | Method::DecayMemories { .. }
             | Method::EvictBelow { .. }
             | Method::Maintain { .. }
+    )
+}
+
+/// The served agent bus writes (MEDULLA-DURABLE-KERNEL-R095.1001).
+fn is_bus(method: &Method) -> bool {
+    matches!(
+        method,
+        Method::BusRegister { .. } | Method::BusHeartbeat { .. }
     )
 }
 
@@ -122,6 +134,23 @@ fn is_analytics(method: &Method) -> bool {
     )
 }
 
+fn is_finance_record(method: &Method) -> bool {
+    matches!(
+        method,
+        Method::FinanceRecordPut { .. }
+            | Method::FinanceAlertRaise { .. }
+            | Method::FinanceFactorRecord { .. }
+    )
+}
+
+fn is_workflow_registry(method: &Method) -> bool {
+    matches!(method, Method::WorkflowRegistry { .. })
+}
+
+fn is_schema_projections(method: &Method) -> bool {
+    matches!(method, Method::SchemaProjections { .. })
+}
+
 /// A predicate selecting the methods one gateway route owns.
 type RouteMatcher = fn(&Method) -> bool;
 
@@ -132,6 +161,7 @@ const ROUTE_MATCHERS: &[(RouteMatcher, Route)] = &[
     ),
     (is_node_state, Route::NodeState),
     (is_memory, Route::Memory),
+    (is_bus, Route::Bus),
     (is_scene, Route::Scene),
     (is_trajectory, Route::Trajectory),
     (is_edges, Route::Edges),
@@ -140,6 +170,9 @@ const ROUTE_MATCHERS: &[(RouteMatcher, Route)] = &[
     #[cfg(any(feature = "shacl", feature = "reasoning"))]
     (is_policy, Route::Policy),
     (is_analytics, Route::Analytics),
+    (is_finance_record, Route::FinanceRecords),
+    (is_workflow_registry, Route::WorkflowRegistry),
+    (is_schema_projections, Route::SchemaProjections),
 ];
 
 fn route_for(method: &Method) -> Route {
@@ -154,13 +187,24 @@ fn route_handler(route: Route) -> RouteHandler {
         Route::Coalescable
         | Route::NodeState
         | Route::Memory
+        | Route::Bus
         | Route::Scene
         | Route::Trajectory => RouteHandler::Core,
-        Route::Edges | Route::Lifecycle | Route::Import | Route::Analytics => RouteHandler::Admin,
+        Route::Edges
+        | Route::Lifecycle
+        | Route::Import
+        | Route::Analytics
+        | Route::FinanceRecords
+        | Route::WorkflowRegistry
+        | Route::SchemaProjections => RouteHandler::Admin,
         #[cfg(any(feature = "shacl", feature = "reasoning"))]
         Route::Policy => RouteHandler::Admin,
         Route::Other => RouteHandler::None,
     }
+}
+
+fn engine_now_ms() -> u64 {
+    medulla_kernel::kernel::dispatch_support::authoritative_now_ms()
 }
 
 pub(super) async fn try_handle(
@@ -170,6 +214,14 @@ pub(super) async fn try_handle(
     plan: &MutationPlan,
     method: &Method,
 ) -> Option<Response> {
+    // MEDULLA-DURABLE-KERNEL-R078: the engine clock overwrites `tx_now` before the
+    // method is logged, so replay reads the logged value.
+    let stamped =
+        match medulla_server_api::mutation_apply::stamp_transaction_time(method, engine_now_ms()) {
+            Ok(stamped) => stamped,
+            Err(refusal) => return Some(Response::err(ctx.req_id, refusal)),
+        };
+    let method = stamped.as_ref().unwrap_or(method);
     let route = route_for(method);
     match route_handler(route) {
         RouteHandler::Core => try_handle_core(ctx, plan, method, route).await,
@@ -188,6 +240,7 @@ async fn try_handle_core(
         Route::Coalescable => try_handle_coalescable(ctx, plan, method).await,
         Route::NodeState => try_handle_node_state(ctx, plan, method).await,
         Route::Memory => try_handle_memory(ctx, plan, method).await,
+        Route::Bus => try_handle_bus(ctx, plan, method).await,
         Route::Scene => try_handle_scene(ctx, plan, method).await,
         Route::Trajectory => try_handle_trajectory(ctx, plan, method).await,
         _ => None,
@@ -202,9 +255,10 @@ async fn try_handle_admin(
     method: &Method,
     route: Route,
 ) -> Option<Response> {
-    // Only the policy route (shacl/reasoning builds) reads the state and tenant.
+    // Only the policy route (shacl/reasoning builds) reads the state; the
+    // finance record route reads the tenant.
     #[cfg(not(any(feature = "shacl", feature = "reasoning")))]
-    let _ = (state, tenant_id);
+    let _ = state;
     match route {
         Route::Edges => try_handle_edges(ctx, plan, method).await,
         Route::Lifecycle => try_handle_lifecycle(ctx, plan, method).await,
@@ -212,6 +266,15 @@ async fn try_handle_admin(
         #[cfg(any(feature = "shacl", feature = "reasoning"))]
         Route::Policy => try_handle_policy(state, tenant_id, ctx, plan, method).await,
         Route::Analytics => try_handle_analytics(ctx, plan, method).await,
+        Route::FinanceRecords => {
+            super::super::finance_records::handle_record(ctx, tenant_id, method).await
+        }
+        Route::WorkflowRegistry => {
+            super::super::workflow_registry::handle_workflow_register(ctx, tenant_id, method).await
+        }
+        Route::SchemaProjections => {
+            super::super::schema_boundary::handle_boundary_put(ctx, method).await
+        }
         _ => None,
     }
 }
@@ -250,6 +313,11 @@ async fn try_handle_node_state(
             node_id,
             properties_msgpack,
         } => {
+            if let Some(refused) =
+                super::super::finance_records::refuse_invalid_receipt(ctx.req_id, method)
+            {
+                return Some(refused);
+            }
             let (node_id, properties_msgpack) = (node_id.clone(), properties_msgpack.clone());
             commit_gateway(ctx, plan, method, move |core| {
                 Ok(ResultPayload::Bool(
@@ -307,6 +375,24 @@ async fn try_handle_node_state(
             })
             .await
         }
+        _ => return None,
+    };
+    Some(response)
+}
+
+async fn try_handle_bus(
+    ctx: &MutationCtx<'_>,
+    plan: &MutationPlan,
+    method: &Method,
+) -> Option<Response> {
+    use crate::graph_ops::bus;
+    let response = match method {
+        Method::BusRegister { participant, .. } => bus::register(ctx, plan, participant).await,
+        Method::BusHeartbeat {
+            session_ref,
+            now_ms,
+            ..
+        } => bus::heartbeat(ctx, plan, session_ref, *now_ms).await,
         _ => return None,
     };
     Some(response)
@@ -502,6 +588,12 @@ async fn try_handle_edges(
                 *tx_now,
             );
             commit_gateway(ctx, plan, method, move |core| {
+                core.check_invalidation_interval(
+                    &source_id,
+                    &target_id,
+                    &relationship,
+                    invalid_at,
+                )?;
                 let n =
                     core.invalidate_edge(&source_id, &target_id, &relationship, invalid_at, tx_now);
                 Ok(ResultPayload::Count(n as u64))

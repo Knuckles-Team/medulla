@@ -10,6 +10,8 @@ use medulla_protocol_types::result_contract::compute as results;
 use medulla_result_types::compute_result::finance as wire;
 use serde::Serialize;
 
+use super::telemetry;
+
 use medulla_finance::banking;
 use medulla_finance::banking::AmlRule;
 use medulla_finance::banking::CapitalInputs;
@@ -19,12 +21,25 @@ use medulla_finance_quant::execution::AlmgrenChriss;
 use medulla_finance_quant::execution::Ident;
 use medulla_finance_quant::factor;
 use medulla_finance_quant::factor::FactorInput;
+use medulla_protocol_types::protocol::IntoResponsePayload;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
 
 fn refuse(req_id: u64, error: impl std::fmt::Display) -> Response {
     Response::err(req_id, format!("INVALID_ARGUMENT: {error}"))
+}
+
+/// A banking kernel answered: record `ok` on its evidence span (R901.5).
+fn banking_ok(span: &tracing::Span, req_id: u64, payload: impl IntoResponsePayload) -> Response {
+    telemetry::record_outcome(span, telemetry::OUTCOME_OK);
+    Response::ok(req_id, payload)
+}
+
+/// A banking kernel refused: record its stable code on the evidence span (R901.5).
+fn banking_refusal(req_id: u64, span: &tracing::Span, error: banking::BankingError) -> Response {
+    telemetry::record_outcome(span, error.code());
+    refuse(req_id, error)
 }
 
 /// The serde name of a closed-enum value (`report-required`, `short_spread`, ...).
@@ -35,7 +50,36 @@ fn name<T: Serialize>(value: &T) -> String {
         .unwrap_or_default()
 }
 
-pub(super) fn handle_numeric_kernels(req_id: u64, method: Method) -> Result<Response, Method> {
+pub(super) fn handle_numeric_kernels(
+    req_id: u64,
+    tenant: &str,
+    method: Method,
+) -> Result<Response, Method> {
+    // MEDULLA-FINANCE-PRIMITIVES-R613.5: regime and execution calls carry an evidence
+    // span; a refusal emits the `EXEC_PARAM_INVALID` trace event with the field name.
+    let span = match &method {
+        Method::FinanceRegimeChain { .. } => {
+            telemetry::kernel_span(telemetry::Kernel::RegimeChain, tenant, &method)
+        }
+        Method::FinanceExecutionSchedule { .. } => {
+            telemetry::kernel_span(telemetry::Kernel::ExecutionSchedule, tenant, &method)
+        }
+        // MEDULLA-FINANCE-PRIMITIVES-R901.5: the banking kernels add `rule_set_version`.
+        Method::FinanceAmlScreen { .. } => {
+            telemetry::kernel_span(telemetry::Kernel::AmlScreen, tenant, &method)
+        }
+        Method::FinanceCapitalRatios { .. } => {
+            telemetry::kernel_span(telemetry::Kernel::CapitalRatios, tenant, &method)
+        }
+        Method::FinanceExpectedLoss { .. } => {
+            telemetry::kernel_span(telemetry::Kernel::ExpectedLoss, tenant, &method)
+        }
+        Method::FinanceSettlementChain { .. } => {
+            telemetry::kernel_span(telemetry::Kernel::SettlementChain, tenant, &method)
+        }
+        _ => tracing::Span::none(),
+    };
+    let _entered = span.enter();
     Ok(match method {
         Method::FinanceAmlScreen {
             rule_id,
@@ -49,19 +93,29 @@ pub(super) fn handle_numeric_kernels(req_id: u64, method: Method) -> Result<Resp
                 threshold_minor,
             };
             match banking::screen_transaction(&rule, amount_minor) {
-                Ok(alert) => Response::ok(
-                    req_id,
-                    ResultPayload::of::<results::FinanceAmlScreen>(wire::AmlScreenResult {
-                        alert: alert.map(|a| wire::AmlAlertResult {
-                            rule_id: a.rule_id,
-                            rule_version: a.rule_version,
-                            kind: name(&a.kind),
-                            severity: name(&a.severity),
-                            amount_minor: a.amount_minor,
+                Ok(alert) => {
+                    telemetry::record_outcome(
+                        &span,
+                        if alert.is_some() {
+                            telemetry::OUTCOME_ALERT
+                        } else {
+                            telemetry::OUTCOME_OK
+                        },
+                    );
+                    Response::ok(
+                        req_id,
+                        ResultPayload::of::<results::FinanceAmlScreen>(wire::AmlScreenResult {
+                            alert: alert.map(|a| wire::AmlAlertResult {
+                                rule_id: a.rule_id,
+                                rule_version: a.rule_version,
+                                kind: name(&a.kind),
+                                severity: name(&a.severity),
+                                amount_minor: a.amount_minor,
+                            }),
                         }),
-                    }),
-                ),
-                Err(error) => refuse(req_id, error),
+                    )
+                }
+                Err(error) => banking_refusal(req_id, &span, error),
             }
         }
         Method::FinanceCapitalRatios {
@@ -77,7 +131,8 @@ pub(super) fn handle_numeric_kernels(req_id: u64, method: Method) -> Result<Resp
             risk_weighted_assets,
             total_exposure,
         }) {
-            Ok(r) => Response::ok(
+            Ok(r) => banking_ok(
+                &span,
                 req_id,
                 ResultPayload::of::<results::FinanceCapitalRatios>(wire::CapitalRatiosResult {
                     cet1_ratio: r.cet1_ratio,
@@ -89,15 +144,16 @@ pub(super) fn handle_numeric_kernels(req_id: u64, method: Method) -> Result<Resp
                     leverage_meets_minimum: r.leverage_meets_minimum,
                 }),
             ),
-            Err(error) => refuse(req_id, error),
+            Err(error) => banking_refusal(req_id, &span, error),
         },
         Method::FinanceExpectedLoss { pd, lgd, ead_minor } => {
             match banking::expected_loss(&CreditExposure { pd, lgd, ead_minor }) {
-                Ok(loss) => Response::ok(
+                Ok(loss) => banking_ok(
+                    &span,
                     req_id,
                     ResultPayload::scalar::<results::FinanceExpectedLoss>(loss),
                 ),
-                Err(error) => refuse(req_id, error),
+                Err(error) => banking_refusal(req_id, &span, error),
             }
         }
         Method::FinanceSettlementChain {
@@ -108,7 +164,8 @@ pub(super) fn handle_numeric_kernels(req_id: u64, method: Method) -> Result<Resp
         } => {
             let hops: Vec<&str> = correspondents.iter().map(String::as_str).collect();
             match banking::settlement_chain(&origin, &hops, &beneficiary, amount_minor) {
-                Ok(legs) => Response::ok(
+                Ok(legs) => banking_ok(
+                    &span,
                     req_id,
                     ResultPayload::of::<results::FinanceSettlementChain>(
                         legs.into_iter()
@@ -121,7 +178,7 @@ pub(super) fn handle_numeric_kernels(req_id: u64, method: Method) -> Result<Resp
                             .collect(),
                     ),
                 ),
-                Err(error) => refuse(req_id, error),
+                Err(error) => banking_refusal(req_id, &span, error),
             }
         }
         Method::FinanceRegimeChain {
@@ -129,26 +186,32 @@ pub(super) fn handle_numeric_kernels(req_id: u64, method: Method) -> Result<Resp
             threshold,
             horizon,
         } => match execution::fit_regime_chain(&returns, threshold, horizon) {
-            Ok(f) => Response::ok(
-                req_id,
-                ResultPayload::of::<results::FinanceRegimeChain>(wire::RegimeChainResult {
-                    states: f
-                        .matrix
-                        .states
-                        .iter()
-                        .map(|s| s.as_str().to_owned())
-                        .collect(),
-                    probabilities: f.matrix.probabilities,
-                    current_state: f.current_state,
-                    forecast: f.forecast,
-                    horizon: f.horizon,
-                    threshold: f.threshold,
-                    hit_rate: f.hit_rate,
-                    transitions: f.transitions,
-                    solver_status: name(&f.solver_status),
-                }),
-            ),
-            Err(error) => refuse(req_id, error),
+            Ok(f) => {
+                telemetry::record_outcome(&span, telemetry::OUTCOME_OK);
+                Response::ok(
+                    req_id,
+                    ResultPayload::of::<results::FinanceRegimeChain>(wire::RegimeChainResult {
+                        states: f
+                            .matrix
+                            .states
+                            .iter()
+                            .map(|s| s.as_str().to_owned())
+                            .collect(),
+                        probabilities: f.matrix.probabilities,
+                        current_state: f.current_state,
+                        forecast: f.forecast,
+                        horizon: f.horizon,
+                        threshold: f.threshold,
+                        hit_rate: f.hit_rate,
+                        transitions: f.transitions,
+                        solver_status: name(&f.solver_status),
+                    }),
+                )
+            }
+            Err(error) => {
+                telemetry::refusal_event(&span, error.code(), error.field);
+                refuse(req_id, error)
+            }
         },
         Method::FinanceExecutionSchedule {
             symbol,
@@ -172,27 +235,33 @@ pub(super) fn handle_numeric_kernels(req_id: u64, method: Method) -> Result<Resp
                 permanent_impact,
             });
             match params.and_then(|p| execution::almgren_chriss_schedule(&p, continuous)) {
-                Ok(plan) => Response::ok(
-                    req_id,
-                    ResultPayload::of::<results::FinanceExecutionSchedule>(
-                        wire::ExecutionScheduleResult {
-                            symbol: plan.params.symbol.as_str().to_owned(),
-                            continuous: plan.continuous,
-                            total_shares: plan.params.total_shares,
-                            horizon: plan.params.horizon,
-                            slices: plan.params.slices,
-                            volatility: plan.params.volatility,
-                            risk_aversion: plan.params.risk_aversion,
-                            temporary_impact: plan.params.temporary_impact,
-                            permanent_impact: plan.params.permanent_impact,
-                            holdings: plan.holdings,
-                            trades: plan.trades,
-                            objective: plan.objective,
-                            solver_status: name(&plan.solver_status),
-                        },
-                    ),
-                ),
-                Err(error) => refuse(req_id, error),
+                Ok(plan) => {
+                    telemetry::record_outcome(&span, telemetry::OUTCOME_OK);
+                    Response::ok(
+                        req_id,
+                        ResultPayload::of::<results::FinanceExecutionSchedule>(
+                            wire::ExecutionScheduleResult {
+                                symbol: plan.params.symbol.as_str().to_owned(),
+                                continuous: plan.continuous,
+                                total_shares: plan.params.total_shares,
+                                horizon: plan.params.horizon,
+                                slices: plan.params.slices,
+                                volatility: plan.params.volatility,
+                                risk_aversion: plan.params.risk_aversion,
+                                temporary_impact: plan.params.temporary_impact,
+                                permanent_impact: plan.params.permanent_impact,
+                                holdings: plan.holdings,
+                                trades: plan.trades,
+                                objective: plan.objective,
+                                solver_status: name(&plan.solver_status),
+                            },
+                        ),
+                    )
+                }
+                Err(error) => {
+                    telemetry::refusal_event(&span, error.code(), error.field);
+                    refuse(req_id, error)
+                }
             }
         }
         Method::FinanceMarketMakingQuote {
@@ -275,13 +344,7 @@ pub(super) fn handle_numeric_kernels(req_id: u64, method: Method) -> Result<Resp
                     ResultPayload::of::<results::FinanceFactorRank>(
                         records
                             .into_iter()
-                            .map(|r| wire::FactorRecordResult {
-                                factor_id: r.factor_id,
-                                information_coefficient: r.information_coefficient,
-                                information_ratio: r.information_ratio,
-                                rank: r.rank,
-                                input_provenance_keys: r.input_provenance_keys,
-                            })
+                            .map(wire::FactorRecordResult::from)
                             .collect(),
                     ),
                 ),

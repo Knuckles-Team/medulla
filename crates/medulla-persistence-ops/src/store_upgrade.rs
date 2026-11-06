@@ -35,7 +35,7 @@ pub use auto_migrate::{
     AUTO_MIGRATE_ENV, AUTO_MIGRATE_STAGING_ENV,
 };
 
-use discover::{discover, served_identity, StoreFile};
+use discover::{discover, store_identity, StoreFile};
 pub use report::{
     Report, StoreReport, StoreStatus, EXIT_BLOCKED, EXIT_FAILED, EXIT_NOTHING_TO_DO,
     EXIT_UNDETERMINED, EXIT_UPGRADE_AVAILABLE,
@@ -299,11 +299,11 @@ fn admit(
             layout.canonical_name()
         ));
     }
-    let identity = served_identity(layout)
+    let identity = store_identity(store, layout)
         .ok_or_else(|| format!("this build serves no {} store", layout.canonical_name()))?;
     upgrade.inspect(
         &store.path,
-        PhysicalStoreIdentity::new(identity)?,
+        PhysicalStoreIdentity::new(&identity)?,
         None,
         staging.options(&store.path)?,
     )

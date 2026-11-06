@@ -46,6 +46,28 @@ pub enum PackViolationCode {
     // A pack ontology class has no subclass path to the parent catalog
     // (MEDULLA-TYPED-PACKS-R105), and the deployment refuses orphans.
     OntologyOrphan,
+    // Crosswalk refusals (MEDULLA-TYPED-PACKS-R071.1.4).
+    CrosswalkSourceUnknown,
+    CrosswalkSourceOutOfScope,
+    CrosswalkTargetUnknown,
+    CrosswalkConflict,
+    CrosswalkCategoryConflict,
+    CrosswalkLimitExceeded,
+    // Concept path refusals (MEDULLA-TYPED-PACKS-R071.100).
+    ConceptPathMalformed,
+    ConceptPathDuplicateAlias,
+    ConceptPathParentConflict,
+    ConceptPathIriConflict,
+    ConceptPathStaleRevision,
+    // A nutrient amount whose identifier has no chemical-entity crosswalk entry
+    // (MEDULLA-MEDIA-VOCAB-R655).
+    NutrientIdUnmapped,
+    // The connector declaration's ingest contract breaks the contract shapes
+    // (MEDULLA-TYPED-PACKS-R101.2).
+    ContractShaclViolation,
+    // A pack ontology states an axiom about a core class it should only reuse
+    // by IRI (MEDULLA-TYPED-PACKS-R102.3).
+    OntologyCoreConflict,
 }
 
 /// Something worth saying that did not stop the import.

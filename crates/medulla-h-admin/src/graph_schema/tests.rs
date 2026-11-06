@@ -60,7 +60,7 @@ fn attach_list_and_detach_share_one_authoritative_source_set() {
     let catalog_ids: std::collections::BTreeSet<_> =
         catalog.core.keys().map(String::as_str).collect();
     assert_eq!(core_ids, catalog_ids);
-    assert_eq!(core_ids.len(), 59);
+    assert_eq!(core_ids.len(), 56);
     for anchor in [
         "core:catalog@1",
         "core:foundation@1",
@@ -83,13 +83,12 @@ fn attach_list_and_detach_share_one_authoritative_source_set() {
             .iter()
             .filter(|source| source.shapes_sha256.is_some())
             .count(),
-        19
+        15
     );
     for source in &initial.core_sources {
         let expected = if matches!(
             source.source_id.as_str(),
-            "core:archimate@1"
-                | "core:commercial@1"
+            "core:commercial@1"
                 | "core:connector-pack@1"
                 | "core:data-platform@1"
                 | "core:harness@1"
@@ -286,6 +285,7 @@ fn internal_pack_projection_owns_identity_and_rejects_regression() {
             "ontology://graph-os/a.ttl",
             Arc::clone(&ontology_a),
         )],
+        Vec::new(),
         None,
     )
     .unwrap();
@@ -314,6 +314,7 @@ fn internal_pack_projection_owns_identity_and_rejects_regression() {
             "ontology://graph-os/a.ttl",
             Arc::clone(&ontology_a),
         )],
+        Vec::new(),
         Some(&first.composed_digest),
     )
     .unwrap();
@@ -328,6 +329,7 @@ fn internal_pack_projection_owns_identity_and_rejects_regression() {
         "pack:graph-os:0:bbbb",
         Vec::new(),
         vec![pack_document("ontology://graph-os/b.ttl", ontology_b)],
+        Vec::new(),
         None,
     )
     .unwrap_err();
@@ -352,6 +354,7 @@ fn internal_pack_projection_withdrawal_retains_record_high_water() {
             "ontology://agent-utilities/a.ttl",
             Arc::clone(&ontology),
         )],
+        Vec::new(),
         None,
     )
     .unwrap();
@@ -360,6 +363,7 @@ fn internal_pack_projection_withdrawal_retains_record_high_water() {
         "pack__test",
         &connector,
         "pack:agent-utilities:2:bbbb",
+        Vec::new(),
         Vec::new(),
         Vec::new(),
         None,
@@ -384,6 +388,7 @@ fn internal_pack_projection_withdrawal_retains_record_high_water() {
         "pack:agent-utilities:1:cccc",
         Vec::new(),
         vec![pack_document("ontology://agent-utilities/a.ttl", ontology)],
+        Vec::new(),
         None,
     )
     .unwrap_err()
@@ -493,6 +498,7 @@ fn attach_pack_into_a_spare_graph_copies_a_static_snapshot() {
         "pack:graph-os:1:aaaa",
         Vec::new(),
         vec![pack_document("ontology://graph-os/a.ttl", Arc::clone(&v1))],
+        Vec::new(),
         None,
     )
     .unwrap();
@@ -514,6 +520,7 @@ fn attach_pack_into_a_spare_graph_copies_a_static_snapshot() {
         "pack:graph-os:2:bbbb",
         Vec::new(),
         vec![pack_document("ontology://graph-os/a.ttl", Arc::clone(&v2))],
+        Vec::new(),
         None,
     )
     .unwrap();

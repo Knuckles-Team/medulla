@@ -27,7 +27,7 @@ pub(crate) fn is_epistemic_op(op: &Op) -> bool {
     matches!(
         op,
         Op::ExplainBelief { .. }
-            | Op::ConfidenceOp {}
+            | Op::ConfidenceOp { .. }
             | Op::SourceReliability { .. }
             | Op::BeliefAsOf { .. }
             | Op::SupportedBy { .. }
@@ -64,6 +64,8 @@ pub fn apply(op: &Op, input: RowSet, ctx: &PlanCtx) -> Result<RowSet, String> {
         | Op::Foreign { .. }
         | Op::DecisionScan { .. }
         | Op::Attribute { .. }
+        | Op::Decay { .. }
+        | Op::ClusterByEmbedding { .. }
         | Op::Limit { .. } => apply_core_ops(op, input, ctx),
 
         // Each gate names only the variants its own feature compiles: an `owl` build
@@ -115,7 +117,7 @@ pub fn apply(op: &Op, input: RowSet, ctx: &PlanCtx) -> Result<RowSet, String> {
         | Op::SupportedBy { .. }
         | Op::BeliefAsOf { .. }
         | Op::SourceReliability { .. }
-        | Op::ConfidenceOp {}
+        | Op::ConfidenceOp { .. }
         | Op::ExplainBelief { .. } => apply_epistemic(op, input, ctx),
 
         // SOURCE/FUSE (time-series, CONCEPT:MEDULLA-KG.query.multi-rate-sensor-stream /
@@ -256,6 +258,7 @@ fn apply_graph_navigation(op: &Op, input: RowSet, ctx: &PlanCtx) -> Result<RowSe
             let filter = expand::EdgeFilter {
                 rel: rel.as_deref(),
                 preds: edge_preds,
+                pin: ctx.as_of_pin,
             };
             expand::expand_op(ctx.view, &input, *dir, (*min, *max), &filter, &ctx.budget)
         }
@@ -282,6 +285,8 @@ pub(super) fn apply_core_ops(op: &Op, input: RowSet, ctx: &PlanCtx) -> Result<Ro
             method,
         } => super::attribution::attribute(ctx, input, attribute_spec(players, *value, method))
             .map(|attributed| attributed.rows),
+        Op::Decay { half_life_secs } => super::decay_cluster::decay(ctx, input, *half_life_secs),
+        Op::ClusterByEmbedding { k } => super::decay_cluster::cluster_by_embedding(ctx, input, *k),
         Op::Rank { .. }
         | Op::RankEmbed { .. }
         | Op::RankNodeDistance { .. }
@@ -453,7 +458,7 @@ pub(super) fn apply_epistemic(op: &Op, input: RowSet, ctx: &PlanCtx) -> Result<R
         Op::SourceReliability { source_id } => {
             super::reliability::source_reliability_op(ctx, input, source_id)
         }
-        Op::ConfidenceOp {} => Ok(confidence_op(ctx, input)),
+        Op::ConfidenceOp { threshold } => Ok(confidence_op(ctx, input, *threshold)),
         Op::ExplainBelief { node_id } => Ok(explain_belief_op(ctx, input, node_id)),
         _ => unreachable!("apply routed a non epistemic Op here"),
     }

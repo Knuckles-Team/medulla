@@ -338,6 +338,7 @@ fn native_request(
         candidate.reserved_compute_units.into(),
     );
     Ok(SubmitWorkItemRequest {
+        child_input: None,
         conversation: None,
         run_id: None,
         schema_version: NativeControlSchemaVersion::V1,

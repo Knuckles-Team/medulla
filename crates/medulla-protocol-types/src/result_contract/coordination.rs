@@ -65,6 +65,9 @@ method_results! {
     // The claimed node's id and its updated properties, or nil when nothing matched.
     ClaimNext(ClaimNext) => Raw<Option<(String, serde_json::Value)>>;
     ClaimWorkItem(ClaimWorkItem) => Raw<ClaimWorkItemResult>;
+    // MEDULLA-UNIFIED-DATA-PLANE-R700.3: the registered action name; the stored run.
+    ActionRegister(ActionRegister) => Raw<String>;
+    ActionSubmit(ActionSubmit) => Raw<medulla_work_types::action_spec::ActionRun>;
     AcquireCapacity(AcquireCapacity) => Raw<CapacityAcquireResult>;
     RenewCapacity(RenewCapacity) => Raw<CapacityMutationResult>;
     ReleaseCapacity(ReleaseCapacity) => Raw<CapacityMutationResult>;
@@ -90,8 +93,16 @@ method_results! {
     GetRunCheckpoint(GetRunCheckpoint) => Raw<Option<medulla_work_types::run_checkpoint::RunCheckpointRead>>;
     GetCurrentPlan(GetCurrentPlan) => Raw<Option<medulla_decision_outcome_types::current_plan::CurrentPlanSnapshot>>;
     GetSessionUsage(GetSessionUsage) => Raw<medulla_work_types::run_usage::SessionUsage>;
+    GetShardWriterWidth(GetShardWriterWidth) => Raw<medulla_work_types::worker_registry::ShardWriterWidth>;
     GetRunWorkItem(GetRunWorkItem) => Raw<Option<medulla_work_types::work_item_read::RunWorkItemView>>;
     GetWorkItem(GetWorkItem) => Raw<Option<WorkItemView>>;
+    // MEDULLA-DURABLE-KERNEL-R820.3 uncertain-effect protocol. Reads are
+    // `null` when absent or not visible to the verified tenant (and session).
+    MarkWorkItemEffectStarted(MarkWorkItemEffectStarted) => Raw<medulla_work_types::work_item_read::EffectWriteResult>;
+    RecordEffectReceipt(RecordEffectReceipt) => Raw<medulla_work_types::work_item_read::EffectWriteResult>;
+    SubmitAdmittedRequest(SubmitAdmittedRequest) => Raw<medulla_work_types::work_item_read::EffectWriteResult>;
+    GetEffectReceipt(GetEffectReceipt) => Raw<Option<medulla_work_types::work_item_read::EffectReceipt>>;
+    GetAdmittedRequest(GetAdmittedRequest) => Raw<Option<medulla_work_types::work_item_read::AdmittedRequestRecord>>;
     ListWorkItems(ListWorkItems) => Raw<WorkItemPage>;
     // graph-os MEDULLA-3: `null` when the WorkItem is not visible or has no bundle.
     GetWorkItemOutcome(GetWorkItemOutcome) => Raw<Option<WorkItemOutcomeView>>;
@@ -175,4 +186,11 @@ method_results! {
     DecisionLogVerify(DecisionLog / "verify") => Raw<DecisionLogVerification>;
     DecisionLogResolve(DecisionLog / "resolve") => Raw<StoredResolution>;
     DecisionLogLearn(DecisionLog / "learn") => Raw<LearningRecorded>;
+    ClaimsPropose(Claims / "propose") => Raw<medulla_types::claims::ClaimRecord>;
+    ClaimsAdvance(Claims / "advance") => Raw<medulla_types::claims::ClaimRecord>;
+    ClaimsRecordEvidence(Claims / "record_evidence") => Raw<medulla_types::claims::ClaimRecord>;
+    ClaimsCompileArtifact(Claims / "compile_artifact") => Raw<medulla_types::claims::ResearchArtifact>;
+    ClaimsGet(Claims / "get") => Raw<medulla_types::claims::ClaimGetResult>;
+    WorkflowRegistryRegister(WorkflowRegistry / "register") => Raw<medulla_work_types::orchestration::workflows::WorkflowRegistrationEntry>;
+    WorkflowRegistryRead(WorkflowRegistry / "read") => Raw<medulla_work_types::orchestration::workflows::WorkflowRegistrationEntry>;
 }

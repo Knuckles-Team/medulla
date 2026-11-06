@@ -21,19 +21,27 @@
 //! Every algorithm -- derivation, solving, verification, execution, fitting --
 //! lives above this module. These are data types and their bounds.
 
+pub mod codes;
+pub mod comparative_analysis;
+pub mod context_package;
 pub mod digest;
 pub mod errors;
 pub mod harness_contrast;
+pub mod indexless_retrieval;
 pub mod ingestion_admission;
 pub mod jobs;
+pub mod knobs;
 pub mod numeric;
 pub mod policy;
 pub mod rapid_r015;
 pub mod record;
 pub mod replay;
+pub mod reputation;
 pub mod request;
 pub mod statistical;
 pub mod task_plan;
+pub mod thought_search;
+pub mod usage;
 
 /// Format identity (RF-ADR-006) of an assembly decision record.
 pub const DECISION_RECORD_SCHEMA_VERSION: u16 = 1;
@@ -85,7 +93,10 @@ pub use record::{
     Elimination, EvidenceClass, PremiseClass, PremiseProvenance, PremiseRef, ResolutionKind,
     SlotAssignment, SolverIdentity, TemplateFacts, TraceFidelity, Violation, WhyNot,
 };
-pub use replay::{EvalMode, EvaluationRun, ReplaySpec};
+pub use replay::{
+    EvalMode, EvaluationRun, FeaturePowerReport, IcInterval, ReplaySpec, MAX_FEATURE_POWER_REPORTS,
+    MAX_IC_DECAY_LAGS,
+};
 pub use request::{
     AssemblyConstraints, AssemblyRequest, AssemblyRequirements, AssemblyResult, ClaimProvenance,
     ClaimedTaskMapping, CostBudget, DecisionCommitRequest, DecisionCommitResult, DecisionPolicyRef,

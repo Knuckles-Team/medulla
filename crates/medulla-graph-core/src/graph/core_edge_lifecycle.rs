@@ -1,6 +1,18 @@
 use super::*;
 
 impl GraphCore {
+    /// See [`GraphTxn::check_invalidation_interval`].
+    pub fn check_invalidation_interval(
+        &self,
+        source_id: &str,
+        target_id: &str,
+        relationship: &str,
+        invalid_at: u64,
+    ) -> Result<(), String> {
+        self.txn()
+            .check_invalidation_interval(source_id, target_id, relationship, invalid_at)
+    }
+
     pub fn invalidate_edge(
         &self,
         source_id: &str,

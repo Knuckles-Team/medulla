@@ -14,6 +14,7 @@ use medulla_source_types::{
 };
 #[cfg(feature = "asr-native")]
 use medulla_types::asr_wire::AsrTranscription;
+use medulla_types::incident::{IncidentRecord, IncidentRelatedClaim, IncidentWriteReceipt};
 use medulla_types::telemetry_derive::TelemetryDeriveReceipt;
 use medulla_types::{
     ingestion_wire::DiscoverHit, ingestion_wire::IndexResult, ingestion_wire::ParseResult,
@@ -59,8 +60,24 @@ method_results! {
     SourceIngestStatus(SourceIngestStatus) => Raw<SourceIngestStatusBody>;
     // MEDULLA-UNIFIED-DATA-PLANE-R651.7: chunk, vector and provenance counts.
     EnrichDocument(EnrichDocument) => Raw<medulla_source_types::source_ingestion::web_document::EnrichDocumentReceipt>;
+    // MEDULLA-MEDIA-VOCAB-R001.101.3 / .4 / .5: meeting transcript surface.
+    MeetingTranscriptRevision(MeetingTranscriptRevision) => Raw<medulla_types::meeting_transcript::MeetingTranscriptRevisionReceipt>;
+    MeetingSummaryContext(MeetingSummaryContext) => Raw<medulla_types::meeting_transcript::MeetingSummaryContext>;
+    MeetingSummaryCommit(MeetingSummaryCommit) => Raw<medulla_types::meeting_transcript::MeetingSummaryCommitReceipt>;
+    // MEDULLA-UNIFIED-DATA-PLANE-R651.3/.5: what one committed cascade deleted.
+    DocumentDelete(DocumentDelete) => Raw<medulla_types::document_ops::DocumentDeleteReceipt>;
     // EH-408 / EH-409: counts plus the id of every fact node written.
     TelemetryDerive(TelemetryDerive) => Raw<TelemetryDeriveReceipt>;
+    // MEDULLA-ORCH-VOCAB-R804: the tenant's latest stored metric values by name.
+    GetTelemetrySnapshot(GetTelemetrySnapshot) => Json<std::collections::BTreeMap<String, f64>>;
+    // MEDULLA-UNIFIED-DATA-PLANE-R760.3: the served incident authority.
+    IncidentRecordAnomaly(IncidentRecordAnomaly) => Raw<IncidentWriteReceipt>;
+    IncidentCorrelate(IncidentCorrelate) => Raw<IncidentWriteReceipt>;
+    IncidentEvidence(IncidentEvidence) => Raw<IncidentRecord>;
+    IncidentRelatedClaims(IncidentRelatedClaims) => Raw<Vec<IncidentRelatedClaim>>;
+    IncidentSetStatus(IncidentSetStatus) => Raw<IncidentWriteReceipt>;
+    // MEDULLA-UNIFIED-DATA-PLANE-R702.3: edge, quarantine and replay counts.
+    LineageIngest(LineageIngest) => Raw<medulla_catalog_types::lineage::LineageIngestReceipt>;
     // `(node_id, weighted_similarity)` pairs, best first.
     SemanticSearch(SemanticSearch) => Raw<Vec<(String, f32)>>;
     Discover(Discover) => Json<Vec<DiscoverHit>>;

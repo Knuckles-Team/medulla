@@ -109,9 +109,24 @@ fn origin_view(
         Origin::Approved {
             name,
             approval_lease_id,
+            shadow_report_digest,
         } => View::Approved {
             name: name.clone(),
             approval_lease_id: approval_lease_id.clone(),
+            shadow_report_digest: shadow_report_digest.clone(),
+        },
+        Origin::Ontology {
+            connector,
+            ontology_iri,
+            revision,
+            importer,
+            history,
+        } => View::Ontology {
+            connector: connector.clone(),
+            ontology_iri: ontology_iri.clone(),
+            revision: *revision,
+            importer: importer.clone(),
+            history: history.clone(),
         },
     }
 }

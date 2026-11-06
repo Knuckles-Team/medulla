@@ -11,6 +11,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use medulla_decision_outcome_types::decision::ingestion_ladder::ProvenanceRung;
 use medulla_document::processing::{chunk_text, ChunkSpan, ChunkingConfig, CHUNKER_VERSION};
 use medulla_source_types::{
     source_ingestion::web_document::EnrichDocumentReceipt,
@@ -110,6 +111,25 @@ pub fn enrichment_id(document_id: &str, digest_hex: &str) -> String {
 
 fn chunk_id(document_id: &str, digest_hex: &str, ordinal: u32) -> String {
     format!("chunk:{document_id}:{}:{ordinal}", &digest_hex[..16])
+}
+
+/// The ladder rung the embedding producer writes under
+/// (MEDULLA-DECISION-ENGINE-R080.2).
+pub const PRODUCING_RUNG: ProvenanceRung = ProvenanceRung::Embeddings;
+
+/// The lowest rung among the Document's stored enrichment records that
+/// outranks this producer, if any. The embedding candidate then leaves the
+/// stored lower-rung fact in place and the call is refused
+/// (MEDULLA-DECISION-ENGINE-R080.2): `resolve_rung` decides against the stored
+/// record on the same subject and property.
+pub fn outranking_rung(document_id: &str, records: &[(String, Vec<u8>)]) -> Option<ProvenanceRung> {
+    records
+        .iter()
+        .filter_map(|(_, bytes)| medulla_types::msgpack::decode_property_value(bytes).ok())
+        .filter(|value| value["document_id"].as_str() == Some(document_id))
+        .filter_map(|value| crate::ingestion_rung::stored_rung(&value))
+        .filter(|stored| crate::ingestion_rung::outranked(Some(*stored), PRODUCING_RUNG))
+        .min()
 }
 
 /// An earlier enrichment of the same Document under another digest.
@@ -280,6 +300,8 @@ pub fn lower(plan: EnrichmentPlan<'_>) -> Result<(IndexWriteSet, EnrichDocumentR
             "overlap_bytes": plan.config.overlap_bytes,
             "chunk_count": plan.spans.len(),
             "vector_count": plan.vectors.len(),
+            (crate::ingestion_rung::PRODUCING_RUNG):
+                crate::ingestion_rung::rung_label(PRODUCING_RUNG),
         }),
     )?);
     methods.push(edge(plan.document_id, &record_id, HAS_ENRICHMENT)?);

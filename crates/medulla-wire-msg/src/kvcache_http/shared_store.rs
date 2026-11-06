@@ -50,9 +50,12 @@
 
 use std::collections::HashSet;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
-use medulla_kvcache::{Block, DataVersion, SharedKvBackend};
+use medulla_kvcache::{
+    AdmissionRefusal, Block, CacheEntryMeta, DataVersion, PolicyTier, SharedKvBackend, Tier,
+    TierPolicy,
+};
 
 use medulla_server_blob::kv::KvStore;
 
@@ -67,6 +70,27 @@ const FRAME_HEADER: usize = 9;
 /// Emit the periodic hit-rate metric once every this many accesses (mirrors
 /// `result_cache::maybe_log_rate`'s 1024-access cadence — cheap, never floods).
 const HIT_RATE_LOG_EVERY: u64 = 1024;
+
+/// The tenant every shared block is ledgered under: the cache is fleet-shared, so a block
+/// belongs to the deployment, not to one caller.
+const SHARED_TENANT: &str = "shared";
+/// The `KnobConfig` defaults of `kvcache.answer_max_bytes` (256 MiB) and
+/// `kvcache.min_worth` (0.001), for a backend built without the loaded knobs.
+pub const DEFAULT_BLOCK_POLICY: TierPolicy = TierPolicy {
+    max_bytes: 268_435_456,
+    min_worth: 0.001,
+};
+
+/// What [`SharedKvStoreBackend::store_block_priced`] did with a block.
+#[derive(Clone, Debug, PartialEq)]
+pub enum StoreOutcome {
+    /// A new block was stored.
+    Created,
+    /// The block was already present (or its version stamp was refreshed).
+    Deduplicated,
+    /// The tier policy refused the block; nothing was stored. A refusal is a miss.
+    Refused(AdmissionRefusal),
+}
 
 /// Occupancy + hit-rate counters for a [`SharedKvStoreBackend`], shaped like
 /// [`medulla_kvcache::SharedStats`] / the `/kv/stats` JSON so a dashboard consumes either
@@ -112,6 +136,9 @@ pub struct SharedKvStoreBackend {
     /// This serving instance's id — stamped on every metric so cross-instance reuse is
     /// visible in the logs (e.g. instance B logging a hit on a hash instance A stored).
     instance_id: String,
+    /// Admission ledger of the stored blocks: bookkeeping only, the bytes live in `store`.
+    policy: Mutex<PolicyTier>,
+    min_worth: f64,
     get_hits: AtomicU64,
     get_misses: AtomicU64,
     dedup_hits: AtomicU64,
@@ -124,9 +151,20 @@ impl SharedKvStoreBackend {
     /// Wrap a durable [`KvStore`] as a fleet-shared KV-cache backend. `instance_id`
     /// labels this serving instance in the metrics/logs.
     pub fn new(store: Arc<KvStore>, instance_id: impl Into<String>) -> Self {
+        Self::with_policy(store, instance_id, DEFAULT_BLOCK_POLICY)
+    }
+
+    /// [`new`](Self::new) with the tier policy the server loaded from its knobs.
+    pub fn with_policy(
+        store: Arc<KvStore>,
+        instance_id: impl Into<String>,
+        policy: TierPolicy,
+    ) -> Self {
         Self {
             store,
             instance_id: instance_id.into(),
+            min_worth: policy.min_worth,
+            policy: Mutex::new(PolicyTier::new(policy).with_label("block")),
             get_hits: AtomicU64::new(0),
             get_misses: AtomicU64::new(0),
             dedup_hits: AtomicU64::new(0),
@@ -180,6 +218,7 @@ impl SharedKvStoreBackend {
             DataVersion::At(_) => version.is_fresh(self.current_version()),
         };
         if fresh {
+            self.note_served(hash, block.len() as u64);
             self.get_hits.fetch_add(1, Ordering::Relaxed);
             self.trace_access(hash, true);
             self.maybe_log_rate();
@@ -191,6 +230,15 @@ impl SharedKvStoreBackend {
     }
 
     fn miss(&self, hash: &str, _stale: bool) -> Option<Block> {
+        {
+            let mut policy = self.ledger();
+            if policy.contains(SHARED_TENANT, hash) {
+                // The ledger still holds a block the store no longer serves.
+                policy.invalidate(SHARED_TENANT, hash);
+            } else {
+                policy.lookup(SHARED_TENANT, hash, 0);
+            }
+        }
         self.get_misses.fetch_add(1, Ordering::Relaxed);
         self.trace_access(hash, false);
         self.maybe_log_rate();
@@ -199,7 +247,8 @@ impl SharedKvStoreBackend {
 
     /// Store `block` under `hash`, framed with the [`DataVersion`] it was derived at.
     /// Returns `Ok(true)` iff a NEW entry was created; `Ok(false)` on a dedup hit against
-    /// an already-present block (the cross-instance / prefix-cache win). A durable write
+    /// an already-present block (the cross-instance / prefix-cache win) or when the tier
+    /// policy refused the block (a refusal is a miss, not an error). A durable write
     /// failure is surfaced as `Err` so the HTTP surface can 500 rather than silently
     /// claim the block is cached. Public so the HTTP `KvCacheStore` (which holds this
     /// backend by shared `&self`) can route a PUT here without the trait's `&mut self`.
@@ -209,6 +258,21 @@ impl SharedKvStoreBackend {
         block: Block,
         derived_at: DataVersion,
     ) -> Result<bool, String> {
+        Ok(matches!(
+            self.store_block_priced(hash, block, derived_at, None)?,
+            StoreOutcome::Created
+        ))
+    }
+
+    /// [`store_block`](Self::store_block) with the caller's claim of what rebuilding the
+    /// block would cost. A block admitted without a claim is priced at the worth floor.
+    pub fn store_block_priced(
+        &self,
+        hash: &str,
+        block: Block,
+        derived_at: DataVersion,
+        rebuild_cost_ms: Option<u64>,
+    ) -> Result<StoreOutcome, String> {
         // Whether a row occupying this key is FRESH right now — not merely whether
         // SOME row physically occupies it. An `Agnostic` page is fresh forever
         // (content-addressed: any present row is byte-identical), so this matches
@@ -239,21 +303,91 @@ impl SharedKvStoreBackend {
         if existing_is_fresh && derived_at.is_agnostic() {
             self.dedup_hits.fetch_add(1, Ordering::Relaxed);
             self.trace_put(hash, false);
-            return Ok(false);
+            return Ok(StoreOutcome::Deduplicated);
         }
+        // The tier policy decides whether the block is kept at all, and which
+        // lower-worth blocks leave to make room.
+        let evicted = match self.admit(hash, block.len() as u64, rebuild_cost_ms) {
+            Ok(evicted) => evicted,
+            Err(refusal) => {
+                self.trace_put(hash, false);
+                return Ok(StoreOutcome::Refused(refusal));
+            }
+        };
         let frame = encode_frame(&block, derived_at);
         self.store.put(BLOCK_NS, hash, frame)?;
+        for gone in evicted {
+            if let Err(error) = self.store.delete(BLOCK_NS, &gone.key_digest) {
+                tracing::warn!(
+                    target: "medulla::kvcache",
+                    instance = %self.instance_id,
+                    hash = %gone.key_digest,
+                    error = %error,
+                    "kvcache could not delete a policy-evicted block"
+                );
+            }
+        }
         if existing_is_fresh {
             // A versioned re-publish of an ALREADY-fresh value REFRESHES the
             // entry's version stamp (un-stales it) — still a dedup.
             self.dedup_hits.fetch_add(1, Ordering::Relaxed);
             self.trace_put(hash, false);
-            Ok(false)
+            Ok(StoreOutcome::Deduplicated)
         } else {
             self.put_new.fetch_add(1, Ordering::Relaxed);
             self.trace_put(hash, true);
-            Ok(true)
+            Ok(StoreOutcome::Created)
         }
+    }
+
+    fn ledger(&self) -> std::sync::MutexGuard<'_, PolicyTier> {
+        // The ledger holds counters and heap entries only; a panic elsewhere leaves it
+        // consistent enough to keep serving.
+        self.policy
+            .lock()
+            .unwrap_or_else(|poison| poison.into_inner())
+    }
+
+    /// The meta a block of `bytes` is admitted under. With no claim the rebuild cost is
+    /// the smallest whole number of milliseconds that reaches the worth floor.
+    fn block_meta(&self, hash: &str, bytes: u64, rebuild_cost_ms: Option<u64>) -> CacheEntryMeta {
+        let rebuild_cost_ms = rebuild_cost_ms
+            .unwrap_or_else(|| (self.min_worth * bytes as f64 * (1.0 + 1e-9)).ceil() as u64);
+        CacheEntryMeta {
+            key_digest: hash.to_string(),
+            tier: Tier::Warm,
+            bytes,
+            // The publish that carries the block is its first use.
+            hits: 1,
+            rebuild_cost_ms,
+            deps: Vec::new(),
+        }
+    }
+
+    /// Offer one block to the tier; returns the metadata of the blocks it evicted.
+    fn admit(
+        &self,
+        hash: &str,
+        bytes: u64,
+        rebuild_cost_ms: Option<u64>,
+    ) -> Result<Vec<CacheEntryMeta>, AdmissionRefusal> {
+        let meta = self.block_meta(hash, bytes, rebuild_cost_ms);
+        self.ledger()
+            .admit_reporting(SHARED_TENANT, meta, Vec::new(), u64::MAX)
+    }
+
+    /// Record a served block as a hit. A block stored before this process started has
+    /// no ledger entry yet; it is adopted at the worth floor first.
+    fn note_served(&self, hash: &str, bytes: u64) {
+        let mut policy = self.ledger();
+        if !policy.contains(SHARED_TENANT, hash) {
+            let meta = self.block_meta(hash, bytes, None);
+            // An adopted block the tier refuses (it alone exceeds the budget) is still
+            // served this once; it simply is not ledgered.
+            let _ = policy.admit_reporting(SHARED_TENANT, meta, Vec::new(), u64::MAX);
+            return;
+        }
+        policy.lookup(SHARED_TENANT, hash, 0);
     }
 
     /// Whether a fresh (non-stale) block exists under `hash`.
@@ -329,7 +463,7 @@ impl SharedKvStoreBackend {
     /// Graph-topology-aware paging (CONCEPT:MEDULLA-KG.memory.graph-guided-paging): page the
     /// top-`budget` PRESENT blocks from the shared durable store into RAM, in the caller's
     /// graph-locality order. `ranked_keys` is a block-key ranking a caller derives from the
-    /// resident graph's own topology (e.g. `medulla_kvcache::graph_importance::pagerank_importance`
+    /// resident graph's own topology (e.g. `medulla_graph_algos::graph_importance::pagerank_importance`
     /// over a `GraphView`, mapped node-id → block-key) — so the KV blocks of the most
     /// graph-central nodes are the ones paged into the fast tier first, exactly like
     /// `TieredCache::apply_importance_scores` shapes eviction by centrality. Returns the

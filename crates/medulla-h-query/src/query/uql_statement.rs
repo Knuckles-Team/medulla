@@ -73,7 +73,9 @@ pub(crate) async fn handle_uql(
         Err(error) => return Ok(Response::err(req_id, error)),
     };
     #[cfg(feature = "result-cache")]
-    if let Some(response) = cached_served_response::<query_results::Uql>(req_id, ctx.core, &key) {
+    if let Some(response) =
+        cached_served_response::<query_results::Uql>(req_id, ctx.core, ctx.graph_name, &key)
+    {
         return Ok(response);
     }
     let (snap, version) = sql_read_snapshot(
@@ -83,8 +85,18 @@ pub(crate) async fn handle_uql(
         #[cfg(feature = "security")]
         ctx.rls,
     );
-    #[cfg(not(feature = "result-cache"))]
-    let _ = version;
+    // MEDULLA-FEDERATED-QUERY-R088.3: the header names the one snapshot the rows
+    // (and their `WITH KNOWLEDGE` summaries) were read from. The epistemic layer
+    // is resolved over that same snapshot, so its revision is the snapshot
+    // revision; 0 when the build has no epistemic layer.
+    let knowledge_revision = if cfg!(feature = "epistemic") {
+        version
+    } else {
+        0
+    };
+    #[cfg(feature = "result-cache")]
+    let started = std::time::Instant::now();
+    let scope = ReadScope::resolve(ctx.state, ctx.read_authority, ctx.graph_name).await;
     let result = run_unified_off_lock_with(
         ctx.state,
         req_id,
@@ -92,8 +104,23 @@ pub(crate) async fn handle_uql(
         snap,
         binding,
         legs,
+        &scope,
         move |_plan, plan_ctx| {
             let mut result = medulla_plan::uql::serve::run_statement(&stmt_for_run, plan_ctx)?;
+            if let medulla_types::wire::UqlResult::Rows {
+                snapshot_revision,
+                knowledge_revision: reported_knowledge_revision,
+                ..
+            }
+            | medulla_types::wire::UqlResult::Profile {
+                snapshot_revision,
+                knowledge_revision: reported_knowledge_revision,
+                ..
+            } = &mut result
+            {
+                *snapshot_revision = version;
+                *reported_knowledge_revision = knowledge_revision;
+            }
             #[cfg(feature = "federation")]
             if let medulla_types::wire::UqlResult::Explain {
                 plan_digest: reported_plan_digest,
@@ -115,7 +142,13 @@ pub(crate) async fn handle_uql(
         #[cfg(feature = "result-cache")]
         ctx.core,
         #[cfg(feature = "result-cache")]
-        key.map(|(hash, dep)| CacheSlot { hash, dep, version }),
+        key.map(|(hash, dep)| CacheSlot {
+            hash,
+            dep,
+            version,
+            tenant: ctx.graph_name.to_string(),
+            started,
+        }),
     ))
 }
 

@@ -9,7 +9,7 @@
 <http://knuckles.team/kg/supply_chain> a owl:Ontology ;
     rdfs:label "Supply Chain" ;
     rdfs:comment "Shared supplier, procurement-item and software supply-chain vocabulary. Connector records reuse these IRIs; source mappings supply the relationships." ;
-    owl:imports <http://knuckles.team/kg/core>, <http://knuckles.team/kg/trm>, <http://knuckles.team/kg/infrastructure> .
+    owl:imports <http://knuckles.team/kg/trm>, <http://knuckles.team/kg/infrastructure> .
 
 :Supplier a owl:Class ;
     rdfs:label "Supplier" ;

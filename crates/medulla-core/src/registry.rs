@@ -1460,8 +1460,13 @@ mod tests {
     }
 
     impl medulla_graph_core::read_through::ReadThrough for RecordingReadThrough {
-        fn read_node_blob(&self, _node_id: &str) -> Option<Vec<u8>> {
-            Some(self.graph_name.as_bytes().to_vec())
+        fn read_node_blob(
+            &self,
+            _node_id: &str,
+        ) -> medulla_graph_core::read_through::NodeReadOutcome {
+            medulla_graph_core::read_through::NodeReadOutcome::Present(
+                self.graph_name.as_bytes().to_vec(),
+            )
         }
     }
 

@@ -256,8 +256,7 @@ escalation chain traversal.""" .
     rdfs:comment """HR/Workforce Management domain ontology.
 Provides BFO-aligned classes for employee lifecycle, organizational
 hierarchy, competency tracking, and performance management.
-Aligned to HR-XML, W3C ORG, and SFIA frameworks.""" ;
-    owl:imports <http://knuckles.team/kg/core> .
+Aligned to HR-XML, W3C ORG, and SFIA frameworks.""" .
 
 :PositionRole a owl:Class ;
     rdfs:label "Position Role" ;

@@ -19,11 +19,18 @@ method_results! {
     HasNode(HasNode) => Bool<bool>;
     GetNodes(GetNodes) => NodeList<Vec<(String, serde_json::Value)>>;
     GetNodesByLabel(GetNodesByLabel) => NodeList<Vec<(String, serde_json::Value)>>;
+    WalletKeyTrustGet(WalletKeyTrustGet) => Json<medulla_types::finance_wallet_trust::WalletKeyTrust>;
+    SchemaProjectionsPut(SchemaProjections / "put") => Raw<medulla_catalog_types::schema_boundary::SchemaBoundary>;
+    SchemaProjectionsList(SchemaProjections / "list") => Raw<medulla_catalog_types::schema_boundary::SchemaProjections>;
+    ContextFacts(ContextFacts) => Json<medulla_types::context_facts::ContextFactsResult>;
     CompareAndSetNodeFields(CompareAndSetNodeFields) => Bool<bool>;
     CreateSummaryNode(CreateSummaryNode) => Text<String>;
     Consolidate(Consolidate) => Text<String>;
     Reinforce(Reinforce) => Bool<bool>;
     DecayNode(DecayNode) => Bool<bool>;
+    BusRegister(BusRegister) => Bool<bool>;
+    BusHeartbeat(BusHeartbeat) => Bool<bool>;
+    BusRoster(BusRoster) => Json<medulla_types::agent_bus::BusRoster>;
     DecayMemories(DecayMemories) => Count<u64>;
     EvictBelow(EvictBelow) => Ids<Vec<String>>;
     SummaryChildren(SummaryChildren) => Ids<Vec<String>>;
@@ -54,6 +61,18 @@ method_results! {
     RemoveNode(RemoveNode) => Text<String>;
     // The node's stored property object, verbatim; `null` when the node is absent or hidden.
     GetNodeProperties(GetNodeProperties) => RawOrNull<Dynamic> dynamic CallerProperties;
+    // The new record head after a served finance record put.
+    #[cfg(feature = "finance")]
+    FinanceRecordPut(FinanceRecordPut) => Count<u64>;
+    // The stored finance record node properties; `null` when absent.
+    #[cfg(feature = "finance")]
+    FinanceRecordGet(FinanceRecordGet) => RawOrNull<Dynamic> dynamic CallerProperties;
+    // The event id of a raised finance alert.
+    #[cfg(feature = "finance")]
+    FinanceAlertRaise(FinanceAlertRaise) => Text<String>;
+    // The ranked factors of a served factor record, strongest first.
+    #[cfg(feature = "finance")]
+    FinanceFactorRecord(FinanceFactorRecord) => Raw<Vec<medulla_result_types::compute_result::finance::FactorRecordResult>>;
     // `(decayed count, evicted ids)`.
     Maintain(Maintain) => Raw<(usize, Vec<String>)>;
     AddSceneObject(AddSceneObject) => Text<String>;

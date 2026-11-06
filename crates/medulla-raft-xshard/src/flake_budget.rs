@@ -11,6 +11,11 @@
 //! ad hoc loop. A malformed budget is REFUSED at construction, never
 //! silently clamped into something that retries forever or not at all.
 
+/// Refusal code returned once a diagnostic run has no retry left
+/// (MEDULLA-DURABLE-KERNEL-R014.3.2). Registered as
+/// `medulla_types::contract::ServerErrorCode::RaftRetryBudgetExhausted`.
+pub const RAFT_RETRY_BUDGET_EXHAUSTED: &str = "RAFT_RETRY_BUDGET_EXHAUSTED";
+
 /// How many transient failures a test run under load may retry past, and at
 /// what backoff.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -45,14 +50,15 @@ pub enum DiagnosticRetryDecision {
     Retry { attempt: usize, backoff_ms: u64 },
     /// The recorded failure is terminal for this diagnostic run.
     Exhausted { attempt: usize },
-    /// A retry beyond `max_retries` was requested; nothing was recorded.
-    /// `code` is [`RAFT_RETRY_BUDGET_EXHAUSTED`].
-    Refused { attempt: usize, code: &'static str },
+    /// The failure lies beyond `max_retries + 1` attempts: the caller already
+    /// had its terminal attempt, so it must stop and report `code`.
+    Refused {
+        /// One-based execution number of the refused failure.
+        attempt: usize,
+        /// Always [`RAFT_RETRY_BUDGET_EXHAUSTED`].
+        code: &'static str,
+    },
 }
-
-/// Refusal code for a retry requested past the declared budget
-/// (MEDULLA-DURABLE-KERNEL-R014.3.2).
-pub const RAFT_RETRY_BUDGET_EXHAUSTED: &str = "RAFT_RETRY_BUDGET_EXHAUSTED";
 
 /// Retains diagnostic failures across optional retries without allowing a retry
 /// past the declared [`FlakeBudget`].
@@ -84,18 +90,18 @@ impl DiagnosticRetryLog {
             .checked_add(1)
             .ok_or_else(|| "diagnostic retry attempt count overflowed".to_string())?;
         let max_attempts = (budget.max_retries as usize).saturating_add(1);
-        if attempt > max_attempts {
-            return Ok(DiagnosticRetryDecision::Refused {
-                attempt,
-                code: RAFT_RETRY_BUDGET_EXHAUSTED,
-            });
-        }
-
+        // Every failed attempt is retained, a refused one included, so the
+        // diagnostic receipt never loses a trace.
         self.failures.push(DiagnosticFailure {
             attempt,
             trace: trace.into(),
         });
-        if attempt <= budget.max_retries as usize {
+        if attempt > max_attempts {
+            Ok(DiagnosticRetryDecision::Refused {
+                attempt,
+                code: RAFT_RETRY_BUDGET_EXHAUSTED,
+            })
+        } else if attempt <= budget.max_retries as usize {
             let backoff_ms = budget.backoff_for(attempt as u32)?;
             Ok(DiagnosticRetryDecision::Retry {
                 attempt,
@@ -281,25 +287,30 @@ mod tests {
                 code: RAFT_RETRY_BUDGET_EXHAUSTED,
             })
         );
-        assert_eq!(log.failures().len(), 2);
+        assert_eq!(log.failures().len(), 3);
     }
 
     // spec: MEDULLA-DURABLE-KERNEL-R014.3.2
     #[test]
     fn retry_beyond_budget_returns_refused_with_code() {
-        let budget = FlakeBudget::new(2, 10, 100).unwrap();
+        let budget = FlakeBudget::new(1, 10, 100).unwrap();
         let mut log = DiagnosticRetryLog::new();
-        for n in 1..=3 {
-            log.record_failure(&budget, format!("trace {n}")).unwrap();
-        }
-        let decision = log.record_failure(&budget, "beyond budget").unwrap();
+        log.record_failure(&budget, "attempt one").unwrap();
+        log.record_failure(&budget, "attempt two").unwrap();
+        let decision = log.record_failure(&budget, "attempt three").unwrap();
         assert_eq!(
             decision,
             DiagnosticRetryDecision::Refused {
-                attempt: 4,
-                code: "RAFT_RETRY_BUDGET_EXHAUSTED",
+                attempt: 3,
+                code: RAFT_RETRY_BUDGET_EXHAUSTED,
             }
         );
-        assert_eq!(log.failures().len(), 3, "a refusal records no attempt");
+        assert_eq!(
+            RAFT_RETRY_BUDGET_EXHAUSTED,
+            medulla_types::contract::ServerErrorCode::RaftRetryBudgetExhausted.as_str()
+        );
+        let attempts: Vec<_> = log.failures().iter().map(|f| f.attempt).collect();
+        assert_eq!(attempts, [1, 2, 3]);
+        assert_eq!(log.failures()[2].trace, "attempt three");
     }
 }

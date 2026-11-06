@@ -39,6 +39,43 @@
     ] ;
     sh:message "A host limit names its host, kind, one reading and one limit." .
 
+:AutomationJobShape a sh:NodeShape ;
+    sh:targetClass :AutomationJob ;
+    sh:property [
+        sh:path :jobStatus ; sh:minCount 1 ;
+        sh:message "An AutomationJob carries a jobStatus."
+    ] ;
+    sh:property [
+        sh:path :jobStatus ;
+        sh:in ( "successful" "failed" "running" "canceled" ) ;
+        sh:message "jobStatus is successful, failed, running or canceled."
+    ] .
+
+:ProxyRouteShape a sh:NodeShape ;
+    sh:targetClass :ProxyRoute ;
+    sh:property [
+        sh:path :routeHostname ; sh:minCount 1 ;
+        sh:message "A ProxyRoute carries a routeHostname."
+    ] .
+
+:ContainerStackShape a sh:NodeShape ;
+    sh:targetClass :ContainerStack ;
+    sh:property [
+        sh:path :desiredReplicas ; sh:minInclusive 0 ;
+        sh:message "desiredReplicas must be at least 0."
+    ] ;
+    sh:property [
+        sh:path :runningReplicas ; sh:minInclusive 0 ;
+        sh:message "runningReplicas must be at least 0."
+    ] .
+
+:OperatingSystemShape a sh:NodeShape ;
+    sh:targetClass :OperatingSystem ;
+    sh:property [
+        sh:path :pendingUpdateCount ; sh:minInclusive 0 ;
+        sh:message "pendingUpdateCount must be at least 0."
+    ] .
+
 # A host that reports a reading also states the limit it is read against
 # (MEDULLA-CQ-XSRC-R008.2.2). A host with neither reading is accepted. Each
 # pair is `sh:or` of a negated reading property and a required limit property.

@@ -13,6 +13,9 @@ use std::fmt;
 use medulla_numeric::evaluation::skill::{information_coefficient, information_ratio};
 use serde::{Deserialize, Serialize};
 
+/// The `medulla-numeric` kernel revision that computed a ranked factor.
+pub const KERNEL_REVISION: &str = medulla_numeric::KERNEL_REVISION;
+
 /// The stable code of an abstention on too little data.
 pub const FACTOR_INSUFFICIENT_DATA: &str = "FACTOR_INSUFFICIENT_DATA";
 
@@ -86,6 +89,18 @@ impl FactorRecord {
             rank,
             input_provenance_keys,
         })
+    }
+}
+
+impl From<FactorRecord> for medulla_result_types::compute_result::finance::FactorRecordResult {
+    fn from(record: FactorRecord) -> Self {
+        Self {
+            factor_id: record.factor_id,
+            information_coefficient: record.information_coefficient,
+            information_ratio: record.information_ratio,
+            rank: record.rank,
+            input_provenance_keys: record.input_provenance_keys,
+        }
     }
 }
 

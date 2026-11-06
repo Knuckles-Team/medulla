@@ -307,6 +307,11 @@ $($variants)*
         /// fact multiplies the response size.
         #[serde(default)]
         explain: bool,
+        /// Fixpoint bound in rule evaluations; `None` uses `knob
+        /// reasoning.rule_max_steps` (MEDULLA-FEDERATED-QUERY-R608.1). On the bound
+        /// the response is the partial derivation with `complete = false`.
+        #[serde(default)]
+        max_steps: Option<u64>,
     },
 
 
@@ -544,6 +549,25 @@ $($variants)*
         pattern_msgpack: Vec<u8>,
         #[serde(default)]
         buffer: u32,
+    },
+
+    // ── Live artifacts (MEDULLA-FEDERATED-QUERY-R701.3) ──
+    /// Create or replace a live artifact: a bounded JSON document re-derived from a
+    /// stored query. Durable write; the artifact is a node of label `LiveArtifact`.
+    LiveArtifactPut {
+        artifact: medulla_source_types::live_artifact::LiveArtifact,
+    },
+
+    /// Read a live artifact with its retained refresh history, newest first.
+    LiveArtifactGet {
+        id: String,
+    },
+
+    /// Re-run the stored query and apply the outcome by compare-and-set on `version`.
+    /// A failed run keeps the prior data and is recorded as a refresh attempt.
+    LiveArtifactRefresh {
+        id: String,
+        expected_version: u64,
     },
         ]);
     };

@@ -16,6 +16,7 @@ mod approved;
 pub(crate) mod attach_pack;
 #[cfg(test)]
 mod finance_tests;
+mod ontology_import;
 #[cfg(all(test, feature = "shacl"))]
 mod swarm_topology_tests;
 #[cfg(test)]
@@ -51,6 +52,17 @@ pub(crate) struct PackSchemaDocument {
     pub(crate) body: Arc<str>,
 }
 
+/// Everything one pack head projects into its pack graph: the schema documents
+/// of the reserved source, and the connector surface triples
+/// (MEDULLA-TYPED-PACKS-R102.2) as one N-Triples document.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct PackProjectionDocuments {
+    pub(crate) shapes: Vec<PackSchemaDocument>,
+    pub(crate) ontologies: Vec<PackSchemaDocument>,
+    pub(crate) crosswalks: Vec<PackSchemaDocument>,
+    pub(crate) surface: Option<Arc<str>>,
+}
+
 /// Tenant-safe, non-reversible physical graph identity for one connector pack.
 ///
 /// Both inputs are canonical identifiers from verified/typed authority.  The
@@ -79,15 +91,13 @@ pub fn pack_projection_graph_name(
 /// newer head with no semantic documents installs an empty Pack-origin
 /// tombstone, preserving the record high-water mark so stale schema cannot be
 /// resurrected.
-#[allow(clippy::too_many_arguments)]
 pub(crate) async fn commit_pack_projection(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     verified: &medulla_server_api::authority_context::VerifiedRequestContext,
     connector: &medulla_types::contract::ResourceId,
     record_id: &str,
-    shapes: Vec<PackSchemaDocument>,
-    ontologies: Vec<PackSchemaDocument>,
+    documents: PackProjectionDocuments,
     idempotency_key: &str,
 ) -> Result<medulla_catalog_types::graph_schema::GraphSchemaCommitted, String> {
     let graph_name = pack_projection_graph_name(verified.tenant(), connector)?;
@@ -165,16 +175,20 @@ pub(crate) async fn commit_pack_projection(
     let record_id = record_id.to_string();
     let response =
         medulla_server_ops::api::ingest::graph::commit_gateway(&ctx, &plan, &method, move |core| {
-            apply_pack_source(
+            let committed = apply_pack_source(
                 core,
                 &result_graph_name,
                 &connector,
                 &record_id,
-                shapes,
-                ontologies,
+                documents.shapes,
+                documents.ontologies,
+                documents.crosswalks,
                 None,
+            )?;
+            write_pack_surface(core, &result_graph_name, documents.surface.as_deref())?;
+            ResultPayload::of::<medulla_protocol_types::result_contract::reasoning::GraphSchema>(
+                committed,
             )
-            .and_then(ResultPayload::of::<medulla_protocol_types::result_contract::reasoning::GraphSchema>)
         })
         .await;
     if let Some(refusal) = response.refusal_text() {
@@ -185,6 +199,22 @@ pub(crate) async fn commit_pack_projection(
             .map_err(|error| format!("GraphSchema projection result decode failed: {error}")),
         _ => Err("GraphSchema projection returned an undeclared result encoding".to_string()),
     }
+}
+
+/// Write one pack head's surface triples into its graph, inside the gateway.
+#[cfg(all(feature = "redb", feature = "blob", feature = "shacl"))]
+fn write_pack_surface(core: &GraphCore, graph: &str, surface: Option<&str>) -> Result<(), String> {
+    crate::admin::connector_pack::reproject::surface::write_surface(core, graph, surface)
+}
+
+/// A build without the pack projection substrates has no surface to write.
+#[cfg(not(all(feature = "redb", feature = "blob", feature = "shacl")))]
+fn write_pack_surface(
+    _core: &GraphCore,
+    _graph: &str,
+    _surface: Option<&str>,
+) -> Result<(), String> {
+    Ok(())
 }
 
 /// Attach, replace or detach one keyed schema source, inside the gateway.
@@ -230,16 +260,45 @@ pub(crate) async fn handle_gateway(
             approved::handle_validate(ctx, plan, method, op).await
         }
         GraphSchemaOp::ImportOntology { .. } | GraphSchemaOp::WithdrawOntology { .. } => {
-            Response::err(
-                ctx.req_id,
-                format!(
-                    "{}: runtime ontology import is delivered by R103.2",
-                    medulla_catalog_types::graph_schema::GraphSchemaErrorCode::OntologyImportNotWired
-                        .as_str()
-                ),
-            )
+            handle_ontology_gateway(tenant_id, ctx, plan, method, op).await
         }
     }
+}
+
+/// R103.3: route `ImportOntology` / `WithdrawOntology` through the gateway with
+/// the authenticated request principal as the importer.
+async fn handle_ontology_gateway(
+    tenant_id: &str,
+    ctx: &MutationCtx<'_>,
+    plan: &MutationPlan,
+    method: &Method,
+    op: &medulla_catalog_types::graph_schema::GraphSchemaOp,
+) -> Response {
+    use medulla_catalog_types::graph_schema::GraphSchemaOp;
+
+    let authority = ontology_import::OntologyAuthority {
+        importer: ctx.caller.unwrap_or_default().to_string(),
+        tenant: tenant_id.to_string(),
+        at_ms: std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |elapsed| {
+                u64::try_from(elapsed.as_millis()).unwrap_or(u64::MAX)
+            }),
+    };
+    let op = op.clone();
+    let graph_name = ctx.graph_name.to_string();
+    medulla_server_ops::api::ingest::graph::commit_gateway(ctx, plan, method, move |core| {
+        let committed = match &op {
+            GraphSchemaOp::WithdrawOntology { .. } => {
+                ontology_import::withdraw_ontology(core, &graph_name, &op, &authority)
+            }
+            _ => ontology_import::import_ontology(core, &graph_name, &op, &authority),
+        };
+        committed.and_then(
+            ResultPayload::of::<medulla_protocol_types::result_contract::reasoning::GraphSchema>,
+        )
+    })
+    .await
 }
 
 async fn handle_attach_pack_gateway(
@@ -273,6 +332,7 @@ async fn handle_attach_pack_gateway(
             &resolved.record_id,
             resolved.shapes,
             resolved.ontologies,
+            resolved.crosswalks,
             expected_digest.as_deref(),
         )
         .and_then(
@@ -297,6 +357,7 @@ pub(crate) fn apply_pack_source(
     record_id: &str,
     shapes: Vec<PackSchemaDocument>,
     ontologies: Vec<PackSchemaDocument>,
+    crosswalks: Vec<PackSchemaDocument>,
     if_composed_digest: Option<&str>,
 ) -> Result<medulla_catalog_types::graph_schema::GraphSchemaCommitted, String> {
     use medulla_catalog_types::graph_schema::GraphSchemaCommitted;
@@ -319,6 +380,7 @@ pub(crate) fn apply_pack_source(
     }
     let shapes_ttl = compose_pack_documents("SHAPES", shapes)?;
     let ontology_ttl = compose_pack_documents("ONTOLOGY", ontologies)?;
+    let records = parse_pack_crosswalks(&crosswalks)?;
     let source = medulla_graph_core::graph::GraphSchemaSource::new(
         medulla_graph_core::graph::SchemaSourceOrigin::Pack {
             connector: connector.as_str().to_string(),
@@ -327,10 +389,12 @@ pub(crate) fn apply_pack_source(
         shapes_ttl,
         ontology_ttl,
         0,
-    )?;
+    )?
+    .with_crosswalks(records.clone());
     let source_id = format!("pack:{}", connector.as_str());
     let changed = sources.attach_dynamic(source_id, source)?;
     medulla_server_api::schema_compose::validate_entering_schema(&sources)?;
+    revalidate_pack_crosswalks(&sources, &records)?;
     if changed {
         core.install_schema_sources(Arc::new(sources.clone()));
     }
@@ -343,11 +407,62 @@ pub(crate) fn apply_pack_source(
     })
 }
 
+/// The crosswalk records of a pack head, in canonical order. A body that is not
+/// a crosswalk record refuses activation (MEDULLA-TYPED-PACKS-R071.1.3).
+fn parse_pack_crosswalks(
+    documents: &[PackSchemaDocument],
+) -> Result<Vec<medulla_catalog_types::domain_pack::VocabularyCrosswalk>, String> {
+    let mut records = Vec::with_capacity(documents.len());
+    for document in documents {
+        let record =
+            crate::admin::connector_pack::import::crosswalk::parse_record(document.body.as_bytes())
+                .map_err(|error| {
+                    format!(
+                        "{}: crosswalk member '{}': {error}",
+                        medulla_types::contract::ServerErrorCode::MalformedBody.as_str(),
+                        document.uri
+                    )
+                })?;
+        records.push(record);
+    }
+    records.sort_by(|left, right| {
+        (
+            &left.source_class_iri,
+            &left.target_class_iri,
+            &left.content_digest,
+        )
+            .cmp(&(
+                &right.source_class_iri,
+                &right.target_class_iri,
+                &right.content_digest,
+            ))
+    });
+    Ok(records)
+}
+
+/// Re-validate the head's crosswalks against the composed schema before they
+/// become active, with the same rules the import applied.
+fn revalidate_pack_crosswalks(
+    sources: &medulla_graph_core::graph::GraphSchemaSources,
+    records: &[medulla_catalog_types::domain_pack::VocabularyCrosswalk],
+) -> Result<(), String> {
+    use crate::admin::connector_pack::import::{crosswalk, vocabulary};
+
+    if records.is_empty() {
+        return Ok(());
+    }
+    let pinned = vocabulary::pin_composed(
+        &medulla_graph_core::graph::GraphSchemaSources::default(),
+        sources,
+    )?;
+    crosswalk::validate_set(records, &pinned).map_err(|refusal| refusal.activation_error())
+}
+
 /// Parse each pack member independently, scope its blank nodes by immutable
 /// member URI, then render a deterministic N-Triples/Turtle union. Sorting the
 /// URI first makes pack archive order irrelevant; parsing before union is what
 /// prevents two local `_:b0` labels from becoming one RDF node.
-fn compose_pack_documents(
+pub(crate) fn compose_pack_documents(
     kind: &str,
     mut documents: Vec<PackSchemaDocument>,
 ) -> Result<Option<Arc<str>>, String> {
@@ -425,18 +540,17 @@ fn apply(
             sources.attach_dynamic(source_id.clone(), admin_source(op)?)?
         }
         GraphSchemaOp::AttachApproved { source_id, .. } => {
-            sources.attach_dynamic(source_id.clone(), approved::source(op)?)?
+            let source = approved::admitted_source(core, &sources, op)?;
+            sources.attach_dynamic(source_id.clone(), source)?
         }
         GraphSchemaOp::Detach { source_id, .. } => sources.detach_dynamic(source_id),
-        GraphSchemaOp::AttachPack { .. } | GraphSchemaOp::ValidateRepair { .. } => {
-            unreachable!("attach-pack and validate-repair have their own routes")
-        }
-        GraphSchemaOp::ImportOntology { .. } | GraphSchemaOp::WithdrawOntology { .. } => {
-            return Err(format!(
-                "{}: runtime ontology import is delivered by R103.2",
-                medulla_catalog_types::graph_schema::GraphSchemaErrorCode::OntologyImportNotWired
-                    .as_str()
-            ));
+        GraphSchemaOp::AttachPack { .. }
+        | GraphSchemaOp::ValidateRepair { .. }
+        | GraphSchemaOp::ImportOntology { .. }
+        | GraphSchemaOp::WithdrawOntology { .. } => {
+            unreachable!(
+                "attach-pack, validate-repair and runtime ontologies have their own routes"
+            )
         }
     };
     if matches!(op, GraphSchemaOp::Detach { .. }) {

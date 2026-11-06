@@ -59,6 +59,12 @@ impl FragmentCacheScope {
         Some(Key(digest.finalize().into()))
     }
 
+    /// The checkpoint a named source's copy is valid at, while it is fresh.
+    pub(super) fn watermark_of(&self, name: &str) -> Option<String> {
+        let source = self.sources.get(name)?;
+        (now_ms() <= source.valid_through_ms).then(|| source.watermark.clone())
+    }
+
     pub(super) fn get(
         &self,
         name: &str,

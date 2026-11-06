@@ -11,6 +11,9 @@ $($variants)*
     GetCurrentPlan { tenant: String, run_id: String },
     /// Caller-owned committed measurements from one bounded snapshot.
     GetSessionUsage { tenant: String, context_id: String },
+    /// The configured shard-writer count `k` for the verified tenant's graphs
+    /// (MEDULLA-DURABLE-KERNEL-R077); write-lane slot grants are capped at it.
+    GetShardWriterWidth { tenant: String },
     /// Historical native run admission, visible only to its verified immutable
     /// owner. Missing and foreign rows return null; missing original admission
     /// evidence refuses explicitly. Independent of current lease or terminal state.
@@ -24,6 +27,30 @@ $($variants)*
     GetWorkItem {
         tenant: String,
         work_item_id: String,
+    },
+    /// Record, under the live claim, that the worker is about to cause an
+    /// external effect (MEDULLA-DURABLE-KERNEL-R820.3). Scope `work:write`.
+    MarkWorkItemEffectStarted {
+        request: medulla_work_types::work_item_read::MarkWorkItemEffectStartedRequest,
+    },
+    /// Resolve a started effect with its one receipt for `(work_item_id,
+    /// attempt)`. An identical replay returns the stored receipt.
+    RecordEffectReceipt {
+        request: medulla_work_types::work_item_read::RecordEffectReceiptRequest,
+    },
+    /// Store the admitted request's digest and payload ref once under
+    /// `(work_item_id, attempt)`.
+    SubmitAdmittedRequest {
+        request: medulla_work_types::work_item_read::SubmitAdmittedRequestRequest,
+    },
+    /// The receipt of `(work_item_id, attempt)`, or `null`. Scope `work:read`.
+    GetEffectReceipt {
+        request: medulla_work_types::work_item_read::EffectRecordKey,
+    },
+    /// The admitted request's digest and payload ref, or `null` when absent
+    /// or another tenant's or session's. Scope `work:read`.
+    GetAdmittedRequest {
+        request: medulla_work_types::work_item_read::EffectRecordKey,
     },
     /// One bounded page of `tenant`'s WorkItems, optionally of one `kind`.
     /// Pages by the limit / scan / byte bounds of `AgentComponent.Search`; an
@@ -175,6 +202,63 @@ $($variants)*
         policy_msgpack: Vec<u8>,
     },
 
+    /// The caller tenant's stored metrics as `{name: latest value}` over the last
+    /// `telemetry.snapshot_window` seconds (MEDULLA-ORCH-VOCAB-R804). `tenant`
+    /// must be the verified request tenant, otherwise `ACCESS_DENIED`. Read-only;
+    /// derives nothing. Gated `telemetry:read`.
+    GetTelemetrySnapshot { tenant: String },
+
+    // ── Served incidents (MEDULLA-UNIFIED-DATA-PLANE-R760.3) ───────────────
+    /// Record one anomaly in the caller's tenant (from the verified carrier)
+    /// and correlate it into an open incident over `window_ms`.
+    IncidentRecordAnomaly {
+        anomaly: medulla_types::incident::AnomalyReading,
+        window_ms: u64,
+    },
+    /// Correlate a set of anomalies in one pass: grouped by entity and
+    /// `window_ms` bucket, each group opens or joins an open incident.
+    IncidentCorrelate {
+        anomalies: Vec<medulla_types::incident::AnomalyReading>,
+        window_ms: u64,
+    },
+    /// One incident of the caller's tenant with its evidence. Read-only.
+    IncidentEvidence { incident_id: String },
+    /// The `Claim` nodes with an `about` edge to an entity in the incident's
+    /// evidence. Read-only.
+    IncidentRelatedClaims {
+        incident_id: String,
+        #[serde(default)]
+        limit: Option<u32>,
+    },
+    /// Move an incident one status forward (open -> acknowledged -> resolved).
+    IncidentSetStatus {
+        incident_id: String,
+        status: medulla_types::incident::IncidentStatus,
+    },
+
+    // ── Governed actions (MEDULLA-UNIFIED-DATA-PLANE-R700.3) ───────────────
+    /// Validate and register one action spec in the request graph's registry.
+    ActionRegister {
+        spec: medulla_work_types::action_spec::ActionSpec,
+    },
+    /// Submit typed parameters to a registered action: a failing criterion
+    /// applies no effect; a passing submission applies every effect in one
+    /// batch. Either way the run is recorded.
+    ActionSubmit {
+        action: String,
+        params: std::collections::BTreeMap<String, medulla_work_types::action_spec::ParamValue>,
+    },
+
+    // ── Dataset lineage (MEDULLA-UNIFIED-DATA-PLANE-R702.3) ─────────────────
+    /// Drain lineage run events into the request graph: each event maps to
+    /// content-addressed `Dataset` nodes and `derivesInto` edges; an event that
+    /// cannot map is kept as one `QuarantinedLineageEvent` node with its payload
+    /// digest. The batch commits as one governed ChangeEnvelope keyed by its
+    /// write-set digest, so a replayed event adds no edge.
+    LineageIngest {
+        events: Vec<medulla_catalog_types::lineage::LineageEvent>,
+    },
+
     // ── Market bars and trend signals (EH-413..EH-418) ─────────────────────
     /// Typed OHLCV bars over the time-series store, deterministic integer
     /// indicators, the per-series trend signal with its flip records, the
@@ -225,6 +309,89 @@ $($variants)*
     /// [`crate::decision::web_fetch_selection`].
     SelectWebPages {
         request: Box<medulla_decision_outcome_types::decision::web_fetch_selection::SelectWebPagesRequest>,
+    },
+
+    // ── Context facts (MEDULLA-DECISION-ENGINE-R152) ──
+    /// Cited facts of ranked nodes inside a token budget: for each node id in
+    /// the caller's order, the visible literal properties and outgoing edges as
+    /// facts that name their source and evidence class. Reads only, through the
+    /// caller's graph view, so a hidden node yields no fact. See
+    /// [`medulla_types::context_facts`].
+    ContextFacts {
+        request: medulla_types::context_facts::ContextFactsRequest,
+    },
+    // ── Agent bus roster (MEDULLA-DURABLE-KERNEL-R095.1002) ────────────────
+    /// Register (replace) one session's participant row on the request
+    /// graph's bus. `participant.last_seen_ms` is the request clock. The engine
+    /// stamps `participant.tenant` and `principal` from the verified request
+    /// context; caller values are overwritten. Needs `bus:write`.
+    BusRegister {
+        participant: medulla_types::agent_bus::BusParticipant,
+        #[serde(default)]
+        principal: String,
+    },
+    /// Set one registered session's `last_seen_ms` to `now_ms`. Refuses a
+    /// session registered by another principal. Needs `bus:write`.
+    BusHeartbeat {
+        session_ref: String,
+        now_ms: u64,
+        #[serde(default)]
+        principal: String,
+    },
+    /// The tenant's participants by `session_ref`, each marked live when
+    /// `now_ms - last_seen_ms` is within `bus.participant_ttl_s`. `tenant`
+    /// must equal the verified request tenant. Needs `bus:read`.
+    BusRoster { tenant: String, now_ms: u64 },
+    // ── Meeting transcripts (MEDULLA-MEDIA-VOCAB-R001.101.3 / .4 / .5) ──────
+    /// Apply one transcript revision event (`append`, `correct`,
+    /// `delete_segment`, `finalize`) to the request graph's meeting transcript
+    /// and commit its `TranscriptSegment` nodes and revision node as one
+    /// ChangeEnvelope. An exact replay answers the stored revision.
+    MeetingTranscriptRevision {
+        request: Box<medulla_types::meeting_transcript::MeetingTranscriptRevision>,
+    },
+    /// Cut a bounded summary context from the current finalized transcript and
+    /// record one `SummaryContext` node keyed by its digest.
+    MeetingSummaryContext {
+        request: Box<medulla_types::meeting_transcript::MeetingSummaryContextRequest>,
+    },
+    /// Commit a produced summary: the receipt must match its stored context and
+    /// every citation must lie inside a context span.
+    MeetingSummaryCommit {
+        request: Box<medulla_types::meeting_transcript::MeetingSummaryCommitRequest>,
+    },
+
+    // ── Document delete (MEDULLA-UNIFIED-DATA-PLANE-R651.3..R651.5) ─────────
+    /// Delete one RLS-visible Document of the request graph and everything
+    /// derived from it (chunks, extracted facts, enrichment records) as one
+    /// atomic batch that also writes one content-free `DocumentDeletion`
+    /// record. Refuses with `DOCUMENT_NOT_FOUND`, `DOCUMENT_HAS_REFERENCES` or
+    /// `CASCADE_TOO_LARGE` and then changes nothing. See
+    /// [`medulla_types::document_ops`].
+    DocumentDelete {
+        request: Box<medulla_types::document_ops::DocumentDeleteRequest>,
+    },
+
+    // ── Data products (MEDULLA-TYPED-PACKS-R805.1) ──────────────────────────
+    /// Register one data product with its contract in the `rbac.redb` policy
+    /// store, keyed by tenant and product id. `tenant` must equal the verified
+    /// request tenant. See [`medulla_types::data_product`].
+    DataProductRegister {
+        tenant: String,
+        product: medulla_types::data_product::DataProduct,
+        contract: medulla_types::data_product::DataContract,
+    },
+    /// Open one access request against a registered product (state `pending`).
+    AccessRequestOpen {
+        tenant: String,
+        request: medulla_types::data_product::AccessRequest,
+    },
+    /// Approve or reject the pending access request of `principal` for `product`.
+    AccessRequestDecide {
+        tenant: String,
+        product: String,
+        principal: String,
+        approve: bool,
     },
         ]);
     };

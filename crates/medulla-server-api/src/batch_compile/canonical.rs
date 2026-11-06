@@ -229,7 +229,9 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         // Wire-unconditional, same reason as `datascience` above: `full` does not
         // list `graphlearn`, but `medulla-capabilities` forces `medulla-types/graphlearn` on
         // regardless.
-        Method::GraphLearnPredict { .. } | Method::GraphLearnFit { .. } => {
+        Method::GraphLearnPredict { .. }
+        | Method::GraphLearnPredictNary { .. }
+        | Method::GraphLearnFit { .. } => {
             default_mutation_domain(surface)
         }
         // Wire-unconditional, same reason as `datascience` above: `medulla-capabilities`
@@ -411,6 +413,9 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::FinanceVwap { .. }
         | Method::FinanceDrawdownSeries { .. }
         | Method::DecayNode { .. }
+        | Method::BusRegister { .. }
+        | Method::BusHeartbeat { .. }
+        | Method::BusRoster { .. }
         | Method::FinanceMomentum { .. }
         | Method::ObserveScreen { .. }
         | Method::GetEdgePropertiesBatch { .. }
@@ -545,6 +550,7 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::GetNeighborsBatch { .. }
         | Method::GetNodeProperties { .. }
         | Method::GetIdentity { .. }
+        | Method::GetDelegationRecord { .. }
         | Method::CheckAccess { .. }
         | Method::TsListSeries
         | Method::UpdateDevelopmentLaneQuota { .. }
@@ -574,7 +580,11 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::FinanceMarketMakingQuote { .. }
         | Method::FinancePairsSignal { .. }
         | Method::FinanceFactorRank { .. }
+        | Method::WalletKeyTrustGet { .. }
+        | Method::ContextFacts { .. }
         | Method::FinanceDistributionShift { .. }
+        | Method::FinancePatternClassify { .. }
+        | Method::FinanceProfitAttribution { .. }
         | Method::FinanceDownsideDeviation { .. }
         | Method::FinanceKalmanVolatility { .. }
         | Method::Reinforce { .. }
@@ -604,6 +614,10 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::DsKMeans { .. }
         | Method::FinanceAvellanedaStoikov { .. }
         | Method::CypherQuery { .. }
+        // MEDULLA-FEDERATED-QUERY-R701.3: graph-row writes through the staged query gateway.
+        | Method::LiveArtifactPut { .. }
+        | Method::LiveArtifactGet { .. }
+        | Method::LiveArtifactRefresh { .. }
         | Method::GetEdges
         | Method::DsComputeStats { .. }
         | Method::AgentTemplate { .. }
@@ -642,28 +656,58 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::DecisionCommit { .. }
         | Method::Solve { .. }
         | Method::ConnectorPack { .. }
+        // MEDULLA-TYPED-PACKS-R805.1: rbac.redb policy-store records.
+        | Method::DataProductRegister { .. }
+        | Method::AccessRequestOpen { .. }
+        | Method::AccessRequestDecide { .. }
         | Method::SourceIngest { .. }
         | Method::SourceIngestStatus { .. }
         // MEDULLA-UNIFIED-DATA-PLANE-R651.7: lowers to one ChangeEnvelope, which
         // carries its own domains; selection commits nothing.
         | Method::EnrichDocument { .. }
+        // MEDULLA-MEDIA-VOCAB-R001.101.3-.5: each lowers to one ChangeEnvelope.
+        | Method::MeetingSummaryCommit { .. }
+        | Method::MeetingSummaryContext { .. }
+        | Method::MeetingTranscriptRevision { .. }
+        // MEDULLA-UNIFIED-DATA-PLANE-R651.3: lowers to one ChangeEnvelope.
+        | Method::DocumentDelete { .. }
+        // MEDULLA-UNIFIED-DATA-PLANE-R702.3: lowers to one ChangeEnvelope.
+        | Method::LineageIngest { .. }
         | Method::SelectWebPages { .. }
         // EH-408/EH-409: self-translates into a request-graph `BatchUpdate`,
         // which carries its own domain.
         | Method::TelemetryDerive { .. }
+        | Method::GetTelemetrySnapshot { .. }
+        // MEDULLA-UNIFIED-DATA-PLANE-R760.3: incident writes self-translate into a
+        // request-graph `BatchUpdate`; the two reads commit nothing.
+        | Method::IncidentRecordAnomaly { .. }
+        | Method::IncidentCorrelate { .. }
+        | Method::IncidentEvidence { .. }
+        | Method::IncidentRelatedClaims { .. }
+        | Method::IncidentSetStatus { .. }
+        // MEDULLA-UNIFIED-DATA-PLANE-R700.3: self-translates into a request-graph `BatchUpdate`.
+        | Method::ActionRegister { .. }
+        | Method::ActionSubmit { .. }
         | Method::WriteBack { .. }
         | Method::DecisionFit { .. }
         | Method::DecisionEval { .. }
         | Method::DecisionLog { .. }
+        | Method::Claims { .. }
         | Method::GraphSchema { .. }
+        // MEDULLA-FINANCE-PRIMITIVES-R004.3.2.9: the replicated put applies as
+        // the one gateway `AddNode`/`BatchUpdate` graph write.
+        | Method::FinanceRecordPut { .. }
         | Method::GraphSchemaList
         | Method::GraphSchemaClasses { .. }
         // EH-219 / graph-os MEDULLA-2/3 typed reads: MVCC snapshot reads that commit
         // nothing, so like every other read they carry the surface-keyed default.
         | Method::GetCurrentPlan { .. }
         | Method::GetRunCheckpoint { .. }
+        | Method::GetEffectReceipt { .. }
+        | Method::GetAdmittedRequest { .. }
         | Method::GetRunWorkItem { .. }
         | Method::GetSessionUsage { .. }
+        | Method::GetShardWriterWidth { .. }
         | Method::GetWorkItem { .. }
         | Method::ListWorkItems { .. }
         | Method::GetWorkItemOutcome { .. }
@@ -677,7 +721,13 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         // EH-351/EH-352: edge-index maintenance writes the tenant SQL owner
         // file through its own maintenance writes; a search commits nothing.
         | Method::EdgeIndex { .. }
-        | Method::EdgeSearch { .. } => default_mutation_domain(surface),
+        | Method::EdgeSearch { .. }
+        // MEDULLA-DECISION-ENGINE-R166.3: a registration commits as the one
+        // request-graph `AddNode` upsert; a read commits nothing.
+        | Method::WorkflowRegistry { .. }
+        // MEDULLA-FEDERATED-QUERY-R724: a put commits as the one request-graph
+        // `AddNode` upsert; a list commits nothing.
+        | Method::SchemaProjections { .. } => default_mutation_domain(surface),
         Method::FinanceSabrImpliedVol { .. }
         | Method::CatalogAssign { .. }
         | Method::EvictBelow { .. }

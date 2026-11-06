@@ -123,3 +123,142 @@ fn surface_shapes_accept_valid_and_refuse_invalid() {
         bare_feature.results
     );
 }
+
+const CONTRACT: &str = r#"@prefix cp: <http://knuckles.team/kg/connector-pack#> .
+@prefix c: <http://knuckles.team/kg/connector-pack/contract/acme/> .
+@prefix kg: <http://knuckles.team/kg#> .
+
+<http://knuckles.team/kg/connector-pack/contract/acme> a cp:IngestContract ;
+    cp:contractOf <http://knuckles.team/kg/connector-pack/connector/acme> ;
+    cp:contractVersion "1" ;
+    cp:contractDigest "sha256:abc" ;
+    cp:privacyClass "internal" ;
+    cp:hasSourceObject c:ticket ;
+    cp:hasCursorPolicy c:cursor ;
+    cp:hasAccessPolicy c:access ;
+    cp:requiresProvenance c:provenance .
+
+c:ticket a cp:SourceObject ;
+    cp:objectName "ticket" ;
+    cp:ontologyClass kg:Ticket ;
+    cp:hasKeyRule c:ticket%2Fkey ;
+    cp:hasFieldMapping c:ticket%2Ffield%2Ftitle .
+
+c:ticket%2Fkey a cp:KeyRule ; cp:keyField "id" .
+
+c:ticket%2Ffield%2Ftitle a cp:FieldMapping ;
+    cp:sourceField "title" ;
+    cp:mapsPredicate "http://knuckles.team/kg#title" .
+
+c:cursor a cp:CursorPolicy ; cp:cursorKind "timestamp" .
+
+c:access a cp:AccessPolicy ;
+    cp:defaultAcl "quarantine" ;
+    cp:aclField "acl" ;
+    cp:tenantField "tenant" ;
+    cp:readRole "reader" .
+
+c:provenance a cp:ProvenanceRequirement ; cp:requiredField "source_id" .
+"#;
+
+fn refused(data: &str, why: &str) {
+    let report = validate_turtle(SHAPES, data).expect("shapes and data parse");
+    assert!(!report.conforms, "{why} must be refused");
+}
+
+// spec: MEDULLA-TYPED-PACKS-R101.2
+#[test]
+fn each_contract_shape_accepts_valid_and_refuses_invalid() {
+    let valid = validate_turtle(SHAPES, CONTRACT).expect("shapes and contract parse");
+    assert!(valid.conforms, "valid contract: {:?}", valid.results);
+
+    // Contract: exactly one connector, version and digest; a closed privacy class.
+    refused(
+        &CONTRACT.replace("    cp:contractVersion \"1\" ;\n", ""),
+        "a contract without a version",
+    );
+    refused(
+        &CONTRACT.replace("    cp:contractDigest \"sha256:abc\" ;\n", ""),
+        "a contract without a digest",
+    );
+    refused(
+        &CONTRACT.replace(
+            "cp:privacyClass \"internal\"",
+            "cp:privacyClass \"classified\"",
+        ),
+        "an unknown privacy class",
+    );
+    refused(
+        &CONTRACT.replace(
+            "cp:contractOf <http://knuckles.team/kg/connector-pack/connector/acme>",
+            "cp:contractOf <http://knuckles.team/kg/connector-pack/connector/acme>, <http://knuckles.team/kg/connector-pack/connector/other>",
+        ),
+        "a contract naming two connectors",
+    );
+    for kind in ["opaque", "timestamp", "commit", "offset", "page_token"] {
+        let ok = validate_turtle(
+            SHAPES,
+            &CONTRACT.replace(
+                "cp:cursorKind \"timestamp\"",
+                &format!("cp:cursorKind \"{kind}\""),
+            ),
+        )
+        .unwrap();
+        assert!(ok.conforms, "cursor kind {kind}: {:?}", ok.results);
+    }
+    refused(
+        &CONTRACT.replace("cp:cursorKind \"timestamp\"", "cp:cursorKind \"watermark\""),
+        "an unknown cursor kind",
+    );
+    for acl in ["quarantine", "inherit", "public"] {
+        let ok = validate_turtle(
+            SHAPES,
+            &CONTRACT.replace(
+                "cp:defaultAcl \"quarantine\"",
+                &format!("cp:defaultAcl \"{acl}\""),
+            ),
+        )
+        .unwrap();
+        assert!(ok.conforms, "default ACL {acl}: {:?}", ok.results);
+    }
+    refused(
+        &CONTRACT.replace("cp:defaultAcl \"quarantine\"", "cp:defaultAcl \"open\""),
+        "an unknown default ACL",
+    );
+
+    // Source object: exactly one ontology class and one key rule.
+    refused(
+        &CONTRACT.replace("    cp:ontologyClass kg:Ticket ;\n", ""),
+        "a source object without an ontology class",
+    );
+    refused(
+        &CONTRACT.replace("    cp:hasKeyRule c:ticket%2Fkey ;\n", ""),
+        "a source object without a key rule",
+    );
+    refused(
+        &CONTRACT.replace("cp:keyField \"id\"", "cp:objectName \"id\""),
+        "a key rule without a key field",
+    );
+
+    // Field mapping: one source field and one predicate.
+    refused(
+        &CONTRACT.replace("    cp:sourceField \"title\" ;\n", ""),
+        "a field mapping without a source field",
+    );
+    refused(
+        &CONTRACT.replace(
+            "    cp:mapsPredicate \"http://knuckles.team/kg#title\" .",
+            "    cp:sourceField \"title\" .",
+        ),
+        "a field mapping without a predicate",
+    );
+
+    // Provenance requirement: at least one required field.
+    refused(
+        &CONTRACT.replace(
+            "cp:requiredField \"source_id\"",
+            "cp:keyField \"source_id\"",
+        ),
+        "a provenance requirement without a required field",
+    );
+}

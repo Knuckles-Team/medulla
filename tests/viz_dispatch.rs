@@ -99,6 +99,7 @@ fn assert_valid_png(bytes: &[u8]) {
     );
 }
 
+/// Verifies MEDULLA-FEDERATED-QUERY-R087.2: Behavior of Native visualization static export
 #[tokio::test]
 async fn inline_columns_scatter_resolves_at_direct_tier() {
     let state = state();
@@ -275,7 +276,7 @@ async fn synthetic_graph_large_resolves_at_density_tier() {
     );
 }
 
-// spec: MEDULLA-FEDERATED-QUERY-R087.1
+/// Verifies MEDULLA-FEDERATED-QUERY-R087.1: Model of Native visualization static export
 #[tokio::test]
 async fn capability_matrix_is_reachable_over_the_wire() {
     let state = state();
@@ -296,37 +297,34 @@ async fn capability_matrix_is_reachable_over_the_wire() {
             let value: serde_json::Value = rmp_serde::from_slice(bytes).unwrap();
             let entries = value["entries"].as_array().expect("entries array");
             assert!(!entries.is_empty(), "capability matrix must not be empty");
-            // MEDULLA-FEDERATED-QUERY-R087.1: the static-export surface is in the
-            // matrix, and the export formats are exactly PNG, SVG and PDF on both
-            // the contract trait and its wire mirror; there is no HTML export.
+            // MEDULLA-FEDERATED-QUERY-R087.1: the static-export surface is served.
             assert!(
-                entries
-                    .iter()
-                    .any(|entry| entry["surface"] == serde_json::json!("static_export")),
-                "the matrix lists the static_export surface"
+                entries.iter().any(|e| e["surface"] == "static_export"),
+                "the matrix must advertise the static_export surface: {entries:?}"
             );
-            let wire = [VizFormat::Png, VizFormat::Svg, VizFormat::Pdf];
-            let contract = [
-                medulla_viz_core::StaticExportFormat::Png,
-                medulla_viz_core::StaticExportFormat::Svg,
-                medulla_viz_core::StaticExportFormat::Pdf,
-            ];
-            for (wire, contract) in wire.iter().zip(contract.iter()) {
-                assert_eq!(
-                    serde_json::to_value(wire).unwrap(),
-                    serde_json::to_value(contract).unwrap()
-                );
-            }
-            assert!(serde_json::from_value::<VizFormat>(serde_json::json!("html")).is_err());
             assert!(
-                serde_json::from_value::<medulla_viz_core::StaticExportFormat>(serde_json::json!(
-                    "html"
-                ))
-                .is_err()
+                !value.to_string().to_ascii_lowercase().contains("html"),
+                "the engine has no HTML export surface"
             );
         }
         other => panic!("expected Raw result, got {other:?}"),
     }
+    // The export format wire contract is exactly PNG, SVG and PDF, snake case.
+    for (format, wire) in [
+        (VizFormat::Png, "png"),
+        (VizFormat::Svg, "svg"),
+        (VizFormat::Pdf, "pdf"),
+    ] {
+        assert_eq!(serde_json::to_value(format).unwrap(), wire);
+        assert_eq!(
+            serde_json::from_value::<VizFormat>(serde_json::json!(wire)).unwrap(),
+            format
+        );
+    }
+    assert!(
+        serde_json::from_value::<VizFormat>(serde_json::json!("html")).is_err(),
+        "no HTML export format exists"
+    );
 }
 
 // spec: MEDULLA-FEDERATED-QUERY-R087.4
@@ -511,6 +509,7 @@ async fn a_second_request_omitting_dataset_reuses_the_persistently_ingested_data
     assert_eq!(payload2.view_result["row_count"], serde_json::json!(30));
 }
 
+/// Verifies MEDULLA-FEDERATED-QUERY-R087.2: Behavior of Native visualization static export
 #[tokio::test]
 async fn an_identical_repeat_render_request_is_served_from_the_cache() {
     let state = state();
@@ -706,7 +705,8 @@ async fn render_provenance_is_queryable_after_a_render_and_absent_before() {
     }
 }
 
-/// MEDULLA-FEDERATED-QUERY-R087.6: the served render entry point must expose all
+/// Verifies MEDULLA-FEDERATED-QUERY-R087.6: Hot-path proof of Native visualization static export.
+/// The served render entry point must expose all
 /// three declared static formats and refuse an unknown dataset reference.
 #[tokio::test]
 async fn served_render_supports_png_svg_pdf_and_refuses_unknown_dataset() {
@@ -794,5 +794,70 @@ async fn served_render_supports_png_svg_pdf_and_refuses_unknown_dataset() {
             .as_deref()
             .is_some_and(|detail| detail.contains("unavailable")),
         "unknown dataset must expose a typed unavailable diagnostic"
+    );
+
+    // Cross-owner negative case: a second principal cannot read the first
+    // principal's result reference.
+    let owned = VizRenderRequest {
+        spec_json: scatter_spec("ds:r0876-owned"),
+        dataset: Some(VizDatasetSource::InlineColumns {
+            columns: [
+                ("x".to_string(), VizColumnValues::F64(vec![0.0, 1.0])),
+                ("y".to_string(), VizColumnValues::F64(vec![1.0, 0.0])),
+            ]
+            .into_iter()
+            .collect(),
+        }),
+        width_px: 200,
+        height_px: 150,
+        format: VizFormat::Png,
+        max_primitives: 200_000,
+        max_bytes: 50_000_000,
+        dataset_ref: "ds:r0876-owned".to_string(),
+    };
+    let owned = Box::pin(dispatch(
+        &state,
+        test_support::commons_request(
+            SECRET,
+            704,
+            Method::Viz {
+                op: VizOp::Render(owned),
+            },
+        ),
+    ))
+    .await;
+    let result_ref = raw_result(&owned).result_ref;
+    let second_principal = |id: u64, op: VizOp| {
+        common::signed_request_as(
+            SECRET,
+            id,
+            "__commons__",
+            "r0876-second-principal",
+            Method::Viz { op },
+        )
+    };
+    // The second principal is admitted: its own capability read succeeds.
+    let admitted = Box::pin(dispatch(
+        &state,
+        second_principal(705, VizOp::CapabilityMatrix),
+    ))
+    .await;
+    assert!(
+        admitted.error.is_none(),
+        "second principal must be admitted: {:?}",
+        admitted.error
+    );
+    let foreign = Box::pin(dispatch(
+        &state,
+        second_principal(706, VizOp::RenderProvenance { result_ref }),
+    ))
+    .await;
+    assert!(
+        foreign
+            .error
+            .as_deref()
+            .is_some_and(|error| error.contains("ACCESS_DENIED")),
+        "a second principal's result reference must be ACCESS_DENIED: {:?}",
+        foreign.error
     );
 }

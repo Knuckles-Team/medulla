@@ -308,6 +308,235 @@ pub struct DerivedSeriesReceipt {
     pub last_ts: Option<i64>,
 }
 
+/// The kernel revision every state-space model and checkpoint pins.
+pub const STATE_SPACE_KERNEL_REVISION: &str = "medulla-series-kernels/3";
+
+/// The four state-space profiles a model revision selects (R002.6).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum StateSpaceProfile {
+    Volatility,
+    MeanReversion,
+    Hedge,
+    Factor,
+}
+
+/// How process and measurement noise relate. `uncorrelated` is the only admitted value.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum NoisePolicy {
+    Uncorrelated,
+}
+
+/// A versioned state-space model registered by `TsDefineStateSpace`. Matrices are row-major.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct StateSpaceModel {
+    pub profile: StateSpaceProfile,
+    pub model_revision: u64,
+    pub kernel_revision: String,
+    pub state_dim: u32,
+    pub obs_dim: u32,
+    /// Transition `F` (`state_dim x state_dim`).
+    pub transition: Vec<f64>,
+    /// Process covariance `Q` (`state_dim x state_dim`).
+    pub process_noise: Vec<f64>,
+    /// Measurement covariance `R` (`obs_dim x obs_dim`).
+    pub measurement_noise: Vec<f64>,
+    /// Initial state (`state_dim`).
+    pub initial_mean: Vec<f64>,
+    /// Initial covariance (`state_dim x state_dim`).
+    pub initial_covariance: Vec<f64>,
+    pub noise_policy: NoisePolicy,
+    pub symmetry_tol: f64,
+    pub numeric_policy: String,
+}
+
+/// One ordered observation of a state-space series.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct StateSpaceObservation {
+    pub sequence: u64,
+    pub event_time_ms: i64,
+    pub known_at_ms: i64,
+    pub source_revision: String,
+    pub values: Vec<f64>,
+}
+
+/// The filter state a derived checkpoint carries (rides in `DerivedState.checkpoints`).
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct StateSpaceCheckpoint {
+    pub mean: Vec<f64>,
+    /// Row-major `state_dim x state_dim`.
+    pub covariance: Vec<f64>,
+    /// The sequence of the last applied observation.
+    pub cursor: u64,
+    pub model_revision: u64,
+    pub kernel_revision: String,
+    pub noise_policy: NoisePolicy,
+    pub symmetry_tol: f64,
+    pub numeric_policy: String,
+}
+
+/// A typed state-space input refusal; every one leaves state unchanged.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum StateSpaceRefusal {
+    RetryConflict,
+    RevisionUnsupported,
+    CovarianceInvalid,
+    DimensionMismatch,
+    InputNonfinite,
+}
+
+impl StateSpaceRefusal {
+    /// The registered wire code.
+    pub fn code(self) -> crate::contract::ServerErrorCode {
+        use crate::contract::ServerErrorCode as C;
+        match self {
+            Self::RetryConflict => C::StateRetryConflict,
+            Self::RevisionUnsupported => C::StateRevisionUnsupported,
+            Self::CovarianceInvalid => C::StateCovarianceInvalid,
+            Self::DimensionMismatch => C::StateDimensionMismatch,
+            Self::InputNonfinite => C::KernelInputNonfinite,
+        }
+    }
+}
+
+/// What an observation retry resolves to.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RetryOutcome {
+    /// A new sequence: apply it.
+    Fresh,
+    /// The exact prior observation: return the prior result.
+    Replay,
+}
+
+fn all_finite(values: &[f64]) -> bool {
+    values.iter().all(|v| v.is_finite())
+}
+
+/// A symmetric (within `tol`) matrix with a non-negative diagonal.
+fn covariance_ok(m: &[f64], n: usize, tol: f64) -> bool {
+    (0..n)
+        .all(|i| m[i * n + i] >= 0.0 && (0..i).all(|j| (m[i * n + j] - m[j * n + i]).abs() <= tol))
+}
+
+impl StateSpaceModel {
+    /// Admit the model: supported revision, consistent shapes, finite values, valid covariances.
+    pub fn check(&self) -> Result<(), StateSpaceRefusal> {
+        use StateSpaceRefusal as R;
+        if self.kernel_revision != STATE_SPACE_KERNEL_REVISION {
+            return Err(R::RevisionUnsupported);
+        }
+        let (n, m) = (self.state_dim as usize, self.obs_dim as usize);
+        if n == 0 || m == 0 {
+            return Err(R::DimensionMismatch);
+        }
+        let shapes = [
+            (self.transition.len(), n * n),
+            (self.process_noise.len(), n * n),
+            (self.measurement_noise.len(), m * m),
+            (self.initial_mean.len(), n),
+            (self.initial_covariance.len(), n * n),
+        ];
+        if shapes.iter().any(|(got, want)| got != want) {
+            return Err(R::DimensionMismatch);
+        }
+        let numbers = [
+            &self.transition,
+            &self.process_noise,
+            &self.measurement_noise,
+            &self.initial_mean,
+            &self.initial_covariance,
+        ];
+        if !numbers.iter().all(|v| all_finite(v)) || !self.symmetry_tol.is_finite() {
+            return Err(R::InputNonfinite);
+        }
+        if self.symmetry_tol < 0.0
+            || !covariance_ok(&self.process_noise, n, self.symmetry_tol)
+            || !covariance_ok(&self.measurement_noise, m, self.symmetry_tol)
+            || !covariance_ok(&self.initial_covariance, n, self.symmetry_tol)
+        {
+            return Err(R::CovarianceInvalid);
+        }
+        Ok(())
+    }
+
+    /// The checkpoint before any observation.
+    pub fn initial_checkpoint(&self) -> StateSpaceCheckpoint {
+        StateSpaceCheckpoint {
+            mean: self.initial_mean.clone(),
+            covariance: self.initial_covariance.clone(),
+            cursor: 0,
+            model_revision: self.model_revision,
+            kernel_revision: self.kernel_revision.clone(),
+            noise_policy: self.noise_policy,
+            symmetry_tol: self.symmetry_tol,
+            numeric_policy: self.numeric_policy.clone(),
+        }
+    }
+}
+
+impl StateSpaceObservation {
+    /// Admit the observation against its model: width and finiteness.
+    pub fn check(&self, model: &StateSpaceModel) -> Result<(), StateSpaceRefusal> {
+        if self.values.len() != model.obs_dim as usize {
+            return Err(StateSpaceRefusal::DimensionMismatch);
+        }
+        if !all_finite(&self.values) {
+            return Err(StateSpaceRefusal::InputNonfinite);
+        }
+        Ok(())
+    }
+
+    /// Resolve a delivery against the last applied observation: the exact same
+    /// observation is a replay, the same sequence with different content conflicts.
+    pub fn retry_against(
+        &self,
+        last: Option<&StateSpaceObservation>,
+    ) -> Result<RetryOutcome, StateSpaceRefusal> {
+        match last {
+            Some(prior) if prior.sequence == self.sequence => {
+                if prior == self {
+                    Ok(RetryOutcome::Replay)
+                } else {
+                    Err(StateSpaceRefusal::RetryConflict)
+                }
+            }
+            _ => Ok(RetryOutcome::Fresh),
+        }
+    }
+}
+
+impl StateSpaceCheckpoint {
+    /// Admit the checkpoint against its model: revisions, shapes, finiteness, covariance.
+    pub fn check(&self, model: &StateSpaceModel) -> Result<(), StateSpaceRefusal> {
+        use StateSpaceRefusal as R;
+        if self.kernel_revision != STATE_SPACE_KERNEL_REVISION
+            || self.model_revision != model.model_revision
+        {
+            return Err(R::RevisionUnsupported);
+        }
+        let n = model.state_dim as usize;
+        if self.mean.len() != n || self.covariance.len() != n * n {
+            return Err(R::DimensionMismatch);
+        }
+        if !all_finite(&self.mean)
+            || !all_finite(&self.covariance)
+            || !self.symmetry_tol.is_finite()
+        {
+            return Err(R::InputNonfinite);
+        }
+        if self.symmetry_tol < 0.0 || !covariance_ok(&self.covariance, n, self.symmetry_tol) {
+            return Err(R::CovarianceInvalid);
+        }
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -354,5 +583,134 @@ mod tests {
             vec![],
         );
         assert_eq!(e.channels(), vec!["v0", "v1"]);
+    }
+
+    fn state_space_model(profile: StateSpaceProfile, n: usize, m: usize) -> StateSpaceModel {
+        let eye = |k: usize, s: f64| -> Vec<f64> {
+            (0..k * k)
+                .map(|i| if i / k == i % k { s } else { 0.0 })
+                .collect()
+        };
+        StateSpaceModel {
+            profile,
+            model_revision: 1,
+            kernel_revision: STATE_SPACE_KERNEL_REVISION.into(),
+            state_dim: n as u32,
+            obs_dim: m as u32,
+            transition: eye(n, 1.0),
+            process_noise: eye(n, 0.01),
+            measurement_noise: eye(m, 0.5),
+            initial_mean: vec![0.0; n],
+            initial_covariance: eye(n, 1.0),
+            noise_policy: NoisePolicy::Uncorrelated,
+            symmetry_tol: 1e-9,
+            numeric_policy: "ieee754-f64".into(),
+        }
+    }
+
+    fn state_space_observation(sequence: u64, values: Vec<f64>) -> StateSpaceObservation {
+        StateSpaceObservation {
+            sequence,
+            event_time_ms: 1_000 * sequence as i64,
+            known_at_ms: 1_000 * sequence as i64 + 5,
+            source_revision: "r1".into(),
+            values,
+        }
+    }
+
+    /// Verifies MEDULLA-FINANCE-PRIMITIVES-R002.5: Define versioned state-space inputs and checkpoints
+    // spec: MEDULLA-FINANCE-PRIMITIVES-R002.5
+    #[test]
+    fn state_space_model_and_refusals() {
+        use StateSpaceRefusal as R;
+        let profiles = [
+            (StateSpaceProfile::Volatility, 1, 1),
+            (StateSpaceProfile::MeanReversion, 1, 1),
+            (StateSpaceProfile::Hedge, 2, 1),
+            (StateSpaceProfile::Factor, 3, 1),
+        ];
+        for (profile, n, m) in profiles {
+            let model = state_space_model(profile, n, m);
+            assert_eq!(model.check(), Ok(()));
+            let json = serde_json::to_string(&model).unwrap();
+            assert_eq!(
+                serde_json::from_str::<StateSpaceModel>(&json).unwrap(),
+                model
+            );
+            let checkpoint = model.initial_checkpoint();
+            assert_eq!(checkpoint.check(&model), Ok(()));
+            let json = serde_json::to_string(&checkpoint).unwrap();
+            assert_eq!(
+                serde_json::from_str::<StateSpaceCheckpoint>(&json).unwrap(),
+                checkpoint
+            );
+            let obs = state_space_observation(1, vec![0.25; m]);
+            assert_eq!(obs.check(&model), Ok(()));
+            let json = serde_json::to_string(&obs).unwrap();
+            assert_eq!(
+                serde_json::from_str::<StateSpaceObservation>(&json).unwrap(),
+                obs
+            );
+        }
+        assert!(serde_json::from_str::<NoisePolicy>("\"correlated\"").is_err());
+
+        let model = state_space_model(StateSpaceProfile::Hedge, 2, 1);
+        let mut bad = model.clone();
+        bad.kernel_revision = "medulla-series-kernels/2".into();
+        assert_eq!(bad.check(), Err(R::RevisionUnsupported));
+        let mut bad = model.clone();
+        bad.transition.pop();
+        assert_eq!(bad.check(), Err(R::DimensionMismatch));
+        let mut bad = model.clone();
+        bad.process_noise[0] = f64::NAN;
+        assert_eq!(bad.check(), Err(R::InputNonfinite));
+        let mut bad = model.clone();
+        bad.initial_covariance[1] = 0.5;
+        assert_eq!(bad.check(), Err(R::CovarianceInvalid));
+        let mut bad = model.clone();
+        bad.measurement_noise[0] = -1.0;
+        assert_eq!(bad.check(), Err(R::CovarianceInvalid));
+
+        let obs = state_space_observation(7, vec![1.5]);
+        assert_eq!(obs.retry_against(None), Ok(RetryOutcome::Fresh));
+        assert_eq!(
+            obs.retry_against(Some(&obs.clone())),
+            Ok(RetryOutcome::Replay)
+        );
+        let earlier = state_space_observation(6, vec![9.0]);
+        assert_eq!(obs.retry_against(Some(&earlier)), Ok(RetryOutcome::Fresh));
+        let changed = state_space_observation(7, vec![1.6]);
+        assert_eq!(changed.retry_against(Some(&obs)), Err(R::RetryConflict));
+        assert_eq!(
+            state_space_observation(8, vec![1.0, 2.0]).check(&model),
+            Err(R::DimensionMismatch)
+        );
+        assert_eq!(
+            state_space_observation(8, vec![f64::INFINITY]).check(&model),
+            Err(R::InputNonfinite)
+        );
+
+        let mut checkpoint = model.initial_checkpoint();
+        checkpoint.model_revision = 2;
+        assert_eq!(checkpoint.check(&model), Err(R::RevisionUnsupported));
+        let mut checkpoint = model.initial_checkpoint();
+        checkpoint.mean.push(0.0);
+        assert_eq!(checkpoint.check(&model), Err(R::DimensionMismatch));
+        let mut checkpoint = model.initial_checkpoint();
+        checkpoint.covariance[0] = f64::INFINITY;
+        assert_eq!(checkpoint.check(&model), Err(R::InputNonfinite));
+        let mut checkpoint = model.initial_checkpoint();
+        checkpoint.covariance[2] = 3.0;
+        assert_eq!(checkpoint.check(&model), Err(R::CovarianceInvalid));
+
+        for r in [
+            R::RetryConflict,
+            R::RevisionUnsupported,
+            R::CovarianceInvalid,
+            R::DimensionMismatch,
+            R::InputNonfinite,
+        ] {
+            assert!(crate::contract::ServerErrorCode::ALL.contains(&r.code()));
+        }
     }
 }

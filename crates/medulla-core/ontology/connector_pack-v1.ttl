@@ -18,7 +18,7 @@
 <http://knuckles.team/kg/connector-pack> a owl:Ontology ;
     rdfs:label "Connector pack" ;
     rdfs:comment "The ingest contract and connector surface of one typed connector pack: contract terms specialised from the virtual-graph vocabulary, and the connector, feature, tool, prompt and skill surface linked to the domain classes it serves." ;
-    owl:imports <http://knuckles.team/kg/core>, <http://knuckles.team/kg/virtual-graph>, <http://knuckles.team/kg/capability>, <http://knuckles.team/kg/orchestration> .
+    owl:imports <http://knuckles.team/kg/virtual-graph>, <http://knuckles.team/kg/capability>, <http://knuckles.team/kg/orchestration> .
 
 # --- Ingest contract (MEDULLA-TYPED-PACKS-R101.1) --------------------------------
 
@@ -148,6 +148,48 @@ cp:requiresProvenance a owl:ObjectProperty ;
     rdfs:domain cp:IngestContract ;
     rdfs:range cp:ProvenanceRequirement .
 
+cp:objectName a owl:DatatypeProperty ;
+    rdfs:label "object name" ;
+    rdfs:comment "The source-side record type name one source object ingests." ;
+    rdfs:domain cp:SourceObject ;
+    rdfs:range xsd:string .
+
+cp:ontologyClass a owl:ObjectProperty ;
+    rdfs:label "ontology class" ;
+    rdfs:comment "The one class of the composed schema one source object ingests into (closed by the contract shapes)." ;
+    rdfs:domain cp:SourceObject ;
+    rdfs:range owl:Class .
+
+cp:hasFieldMapping a owl:ObjectProperty ;
+    rdfs:label "has field mapping" ;
+    rdfs:comment "One source-field-to-predicate binding of a source object." ;
+    rdfs:domain cp:SourceObject ;
+    rdfs:range cp:FieldMapping .
+
+cp:sourceField a owl:DatatypeProperty ;
+    rdfs:label "source field" ;
+    rdfs:comment "The source field one field mapping reads." ;
+    rdfs:domain cp:FieldMapping ;
+    rdfs:range xsd:string .
+
+cp:mapsPredicate a owl:DatatypeProperty ;
+    rdfs:label "maps predicate" ;
+    rdfs:comment "The predicate of the composed schema one field mapping writes." ;
+    rdfs:domain cp:FieldMapping ;
+    rdfs:range xsd:string .
+
+cp:keyField a owl:DatatypeProperty ;
+    rdfs:label "key field" ;
+    rdfs:comment "One source field that is part of a key rule." ;
+    rdfs:domain cp:KeyRule ;
+    rdfs:range xsd:string .
+
+cp:requiredField a owl:DatatypeProperty ;
+    rdfs:label "required field" ;
+    rdfs:comment "One field a provenance requirement demands from every record." ;
+    rdfs:domain cp:ProvenanceRequirement ;
+    rdfs:range xsd:string .
+
 cp:governedBy a owl:ObjectProperty ;
     rdfs:label "governed by" ;
     rdfs:comment "Links an ingested node to the ingest contract that governs it: the contract's classes, key rule, cursor and access policy all apply to the node." ;
@@ -225,3 +267,32 @@ cp:componentId a owl:DatatypeProperty ;
     rdfs:comment "The stable identity the engine stamps on one surface node: a tool, prompt, skill or server member." ;
     rdfs:domain [ a owl:Class ; owl:unionOf (cp:Connector cp:Tool cp:Prompt cp:Skill) ] ;
     rdfs:range xsd:string .
+
+cp:entryRevision a owl:DatatypeProperty ;
+    rdfs:label "entry revision" ;
+    rdfs:comment "The pack entry revision the engine stamps on one surface node (MEDULLA-TYPED-PACKS-R102.6)." ;
+    rdfs:domain [ a owl:Class ; owl:unionOf (cp:Connector cp:Tool cp:Prompt cp:Skill) ] ;
+    rdfs:range xsd:integer .
+
+cp:packDigest a owl:DatatypeProperty ;
+    rdfs:label "pack digest" ;
+    rdfs:comment "The SHA-256 pack digest (64 lowercase hex characters) of the head one surface node was projected from (MEDULLA-TYPED-PACKS-R102.6)." ;
+    rdfs:domain [ a owl:Class ; owl:unionOf (cp:Connector cp:Tool cp:Prompt cp:Skill) ] ;
+    rdfs:range xsd:string .
+
+cp:lifecycle a owl:DatatypeProperty ;
+    rdfs:label "lifecycle" ;
+    rdfs:comment "Whether one surface node's member is active, retired or withdrawn in the pack head; a withdrawn member keeps its node (MEDULLA-TYPED-PACKS-R102.2)." ;
+    rdfs:domain [ a owl:Class ; owl:unionOf (cp:Connector cp:Tool cp:Prompt cp:Skill) ] ;
+    rdfs:range xsd:string .
+
+# ── Core rooting (MEDULLA-TYPED-PACKS-R071.2) ───────────────────────────────────
+# Every class of this module above reaches the core class kg:DomainEntity through rdfs:subClassOf.
+<http://knuckles.team/kg/connector-pack#AccessPolicy> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/connector-pack#CursorPolicy> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/connector-pack#Feature> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/connector-pack#FieldMapping> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/connector-pack#KeyRule> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/connector-pack#PrivacyClass> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/connector-pack#ProvenanceRequirement> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/connector-pack#SourceObject> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .

@@ -57,7 +57,7 @@ mod imp {
         m
     }
 
-    fn gauge(name: &str, help: &str) -> IntGauge {
+    pub(super) fn gauge(name: &str, help: &str) -> IntGauge {
         let m = IntGauge::new(name, help).expect("valid metric");
         REGISTRY
             .register(Box::new(m.clone()))
@@ -187,6 +187,14 @@ mod imp {
                 .expect("unique metric");
             m
         };
+        // MEDULLA-DURABLE-KERNEL-R084.5: one count per resolved stale envelope.
+        // `strategy` ∈ {refuse,prefer_newer,field_union}; `winner` ∈
+        // {existing,incoming,merged} (bounded, 3 × 3).
+        static ref WRITE_CONFLICTS: IntCounterVec = counter_vec(
+            "medulla_write_conflicts_total",
+            "Stale change-envelope write conflicts, by merge strategy and winner",
+            &["strategy", "winner"],
+        );
         static ref GRAPH_OPS: IntCounterVec = counter_vec(
             "medulla_graph_ops_total",
             "Graph-targeted operations admitted past the ACL, by graph (bounded cardinality)",
@@ -574,6 +582,11 @@ mod imp {
         QOS_SHED.with_label_values(&[class, reason]).inc();
     }
 
+    /// Record one resolved write conflict (MEDULLA-DURABLE-KERNEL-R084.5).
+    pub fn write_conflict(strategy: &str, winner: &str) {
+        WRITE_CONFLICTS.with_label_values(&[strategy, winner]).inc();
+    }
+
     /// Record a QoS-admitted request finishing dispatch after `seconds` (W2.4): observes
     /// the per-class latency histogram and releases the per-class in-flight gauge.
     pub fn qos_dispatch_finished(class: &str, seconds: f64) {
@@ -879,9 +892,15 @@ pub use outbox::{outbox_dead_lettered, set_outbox_head};
 mod store_migration;
 pub use store_migration::store_migration_step;
 
-// Write-conflict outcomes (MEDULLA-DURABLE-KERNEL-R084.5).
-mod write_conflict;
-pub use write_conflict::{write_conflict, write_conflict_count};
+// Uncertain-effect series (MEDULLA-DURABLE-KERNEL-R820.5).
+mod work_item;
+pub use work_item::{work_item_uncertain_effect, work_item_uncertain_open_add};
+// Materialized-view metrics (MEDULLA-INCREMENTAL-VIEWS-R005.4).
+mod views;
+pub use views::{set_view_state_bytes, view_changes_applied, view_demoted, view_shadow_checked};
+// Materialized-view metrics (MEDULLA-INCREMENTAL-VIEWS-R005.4).
+
+// Uncertain-effect series (MEDULLA-DURABLE-KERNEL-R820.5).
 
 // ── No-op shims (feature `metrics` disabled) ─────────────────────────────
 #[cfg(not(feature = "metrics"))]
@@ -889,34 +908,11 @@ mod noop;
 #[cfg(not(feature = "metrics"))]
 pub use noop::*;
 
-/// Minimal HTTP/1.1 exposition endpoint. Every request to the bound address
-/// (whatever the path) receives the full registry — keeps the listener free
-/// of an HTTP-framework dependency and completely separate from the
-/// length-prefixed MessagePack RPC ports.
+// The exposition endpoint, in its own file so this one stays under the line cap.
 #[cfg(all(feature = "metrics", feature = "server"))]
-pub async fn serve(listener: tokio::net::TcpListener) {
-    use tokio::io::{AsyncReadExt, AsyncWriteExt};
-
-    loop {
-        let Ok((mut stream, _)) = listener.accept().await else {
-            continue;
-        };
-        tokio::spawn(async move {
-            // Drain (up to one read of) the request head; the path is
-            // irrelevant for a single-purpose exposition endpoint.
-            let mut buf = [0u8; 1024];
-            let _ = stream.read(&mut buf).await;
-            let body = render();
-            let resp = format!(
-                "HTTP/1.1 200 OK\r\ncontent-type: text/plain; version=0.0.4; charset=utf-8\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{}",
-                body.len(),
-                body
-            );
-            let _ = stream.write_all(resp.as_bytes()).await;
-            let _ = stream.shutdown().await;
-        });
-    }
-}
+mod serve;
+#[cfg(all(feature = "metrics", feature = "server"))]
+pub use serve::serve;
 
 #[cfg(all(test, feature = "metrics"))]
 mod tests;

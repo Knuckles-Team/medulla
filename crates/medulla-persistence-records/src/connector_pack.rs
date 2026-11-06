@@ -161,7 +161,7 @@ impl AgentLibraryStore {
         Ok(declaration.entry_revision)
     }
 
-    /// Resolve all ontology/SHACL members of the current *visible* pack head in
+    /// Resolve all ontology/SHACL/crosswalk members of the current *visible* pack head in
     /// one Agent Library snapshot. A committed-but-unprojected head is not
     /// attachable: using it would let GraphSchema publish schema from a pack
     /// whose component revision is still intentionally hidden.
@@ -205,7 +205,10 @@ impl AgentLibraryStore {
                 super::agent_row::decode(value.value(), "connector pack member")?;
             if member.lifecycle != AgentLibraryLifecycle::Published
                 || member.last_record_id != visible_record_id
-                || !matches!(member.kind, PackEntryKind::Ontology | PackEntryKind::Shapes)
+                || !matches!(
+                    member.kind,
+                    PackEntryKind::Ontology | PackEntryKind::Shapes | PackEntryKind::Crosswalk
+                )
             {
                 continue;
             }

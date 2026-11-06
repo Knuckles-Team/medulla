@@ -1,0 +1,165 @@
+{
+  "vectors": [
+    {
+      "client_writable": true,
+      "kind": "Account",
+      "record": {
+        "fields": {
+          "accountId": "\"acct-1\"",
+          "accountKind": "\"taxable\"",
+          "baseCurrency": "\"USD\"",
+          "recordEffectiveAt": "\"2026-10-01T00:00:00Z\"^^xsd:dateTime",
+          "recordKnownAt": "\"2026-10-02T00:00:00Z\"^^xsd:dateTime",
+          "recordSchemaVersion": "\"finance-v1\"",
+          "recordSource": "\"broker-export\"",
+          "recordTenant": "\"integration-test-tenant\""
+        },
+        "record_id": "rec_account",
+        "tenant": "integration-test-tenant"
+      },
+      "schema_version": "finance-v1"
+    },
+    {
+      "client_writable": true,
+      "kind": "Activity",
+      "record": {
+        "fields": {
+          "activityKind": "\"buy\"",
+          "activityPosition": "<http://example.org/markets#pos1>",
+          "activityQuantity": "\"10\"^^xsd:decimal",
+          "activityTradeDate": "\"2026-10-01T14:30:00Z\"^^xsd:dateTime",
+          "recordEffectiveAt": "\"2026-10-01T00:00:00Z\"^^xsd:dateTime",
+          "recordKnownAt": "\"2026-10-02T00:00:00Z\"^^xsd:dateTime",
+          "recordSchemaVersion": "\"finance-v1\"",
+          "recordSource": "\"broker-export\"",
+          "recordTenant": "\"integration-test-tenant\""
+        },
+        "record_id": "rec_activity",
+        "tenant": "integration-test-tenant"
+      },
+      "schema_version": "finance-v1"
+    },
+    {
+      "client_writable": false,
+      "kind": "Lot",
+      "record": {
+        "fields": {
+          "lotOpenedBy": "<http://example.org/markets#act1>",
+          "lotPosition": "<http://example.org/markets#pos1>",
+          "lotQuantity": "\"10\"^^xsd:decimal",
+          "lotUnitCostBasis": "\"100.00\"^^xsd:decimal",
+          "recordEffectiveAt": "\"2026-10-01T00:00:00Z\"^^xsd:dateTime",
+          "recordKnownAt": "\"2026-10-02T00:00:00Z\"^^xsd:dateTime",
+          "recordSchemaVersion": "\"finance-v1\"",
+          "recordSource": "\"broker-export\"",
+          "recordTenant": "\"integration-test-tenant\""
+        },
+        "record_id": "rec_lot",
+        "tenant": "integration-test-tenant"
+      },
+      "schema_version": "finance-v1"
+    },
+    {
+      "client_writable": false,
+      "kind": "Position",
+      "record": {
+        "fields": {
+          "costBasisMethod": "\"fifo\"",
+          "positionAccount": "<http://example.org/markets#acct1>",
+          "positionInstrument": "<http://example.org/markets#btc>",
+          "positionQuantity": "\"10\"^^xsd:decimal",
+          "recordEffectiveAt": "\"2026-10-01T00:00:00Z\"^^xsd:dateTime",
+          "recordKnownAt": "\"2026-10-02T00:00:00Z\"^^xsd:dateTime",
+          "recordSchemaVersion": "\"finance-v1\"",
+          "recordSource": "\"broker-export\"",
+          "recordTenant": "\"integration-test-tenant\""
+        },
+        "record_id": "rec_position",
+        "tenant": "integration-test-tenant"
+      },
+      "schema_version": "finance-v1"
+    },
+    {
+      "client_writable": true,
+      "kind": "PortfolioGroup",
+      "record": {
+        "fields": {
+          "portfolioGroupName": "\"Retirement\"",
+          "portfolioMember": "<http://example.org/markets#acct1>",
+          "portfolioView": "\"holdings\"",
+          "recordEffectiveAt": "\"2026-10-01T00:00:00Z\"^^xsd:dateTime",
+          "recordKnownAt": "\"2026-10-02T00:00:00Z\"^^xsd:dateTime",
+          "recordSchemaVersion": "\"finance-v1\"",
+          "recordSource": "\"broker-export\"",
+          "recordTenant": "\"integration-test-tenant\""
+        },
+        "record_id": "rec_portfoliogroup",
+        "tenant": "integration-test-tenant"
+      },
+      "schema_version": "finance-v1"
+    },
+    {
+      "client_writable": true,
+      "kind": "StrategySpec",
+      "record": {
+        "fields": {
+          "recordEffectiveAt": "\"2026-10-01T00:00:00Z\"^^xsd:dateTime",
+          "recordKnownAt": "\"2026-10-02T00:00:00Z\"^^xsd:dateTime",
+          "recordSchemaVersion": "\"finance-v1\"",
+          "recordSource": "\"broker-export\"",
+          "recordTenant": "\"integration-test-tenant\"",
+          "strategySpecCurrency": "\"USD\"",
+          "strategySpecDigest": "\"sha256:0000000000000000000000000000000000000000000000000000000000000000\"",
+          "strategySpecId": "\"dca-weekly\"",
+          "strategySpecKind": "\"dca_fixed_amount\"",
+          "strategySpecUniverse": "<http://example.org/markets#btc>",
+          "strategySpecVersion": "\"1\"^^xsd:integer"
+        },
+        "record_id": "rec_strategyspec",
+        "tenant": "integration-test-tenant"
+      },
+      "schema_version": "finance-v1"
+    },
+    {
+      "client_writable": false,
+      "kind": "StrategyRun",
+      "record": {
+        "fields": {
+          "recordEffectiveAt": "\"2026-10-01T00:00:00Z\"^^xsd:dateTime",
+          "recordKnownAt": "\"2026-10-02T00:00:00Z\"^^xsd:dateTime",
+          "recordSchemaVersion": "\"finance-v1\"",
+          "recordSource": "\"broker-export\"",
+          "recordTenant": "\"integration-test-tenant\"",
+          "strategyRunInputDigest": "\"sha256:0000000000000000000000000000000000000000000000000000000000000000\"",
+          "strategyRunStatus": "\"proposed\""
+        },
+        "record_id": "rec_strategyrun",
+        "tenant": "integration-test-tenant"
+      },
+      "schema_version": "finance-v1"
+    },
+    {
+      "client_writable": true,
+      "kind": "LeverageTerms",
+      "record": {
+        "fields": {
+          "leverageCurrency": "\"USD\"",
+          "leverageInitialMargin": "\"5000.00\"^^xsd:decimal",
+          "leverageInstrument": "<http://example.org/markets#btc>",
+          "leverageMaintenanceMargin": "\"4000.00\"^^xsd:decimal",
+          "leverageMultiplier": "\"2.0\"^^xsd:decimal",
+          "leveragePolicyVersion": "\"us-2026-10\"",
+          "leverageProductType": "\"margin\"",
+          "recordEffectiveAt": "\"2026-10-01T00:00:00Z\"^^xsd:dateTime",
+          "recordKnownAt": "\"2026-10-02T00:00:00Z\"^^xsd:dateTime",
+          "recordSchemaVersion": "\"finance-v1\"",
+          "recordSource": "\"broker-export\"",
+          "recordTenant": "\"integration-test-tenant\""
+        },
+        "record_id": "rec_leverageterms",
+        "tenant": "integration-test-tenant"
+      },
+      "schema_version": "finance-v1"
+    }
+  ]
+}

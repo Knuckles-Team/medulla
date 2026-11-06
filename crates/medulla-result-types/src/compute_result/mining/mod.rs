@@ -9,8 +9,8 @@ mod patterns;
 mod vector;
 
 pub use impact::{
-    ImpactOptions, ImpactPathRow, ImpactReport, ImpactSemantics, RiskModel,
-    RiskPropagationMiningResult, RiskScoreRow, SeedAttributionRow,
+    EcosystemQuery, EcosystemSeverity, ImpactOptions, ImpactPathRow, ImpactReport, ImpactSemantics,
+    PackageImpactRow, RiskModel, RiskPropagationMiningResult, RiskScoreRow, SeedAttributionRow,
 };
 pub use insight::{
     CausalImpactMiningResult, CausalRelationRow, CommunityMiningResult, CommunityRow,

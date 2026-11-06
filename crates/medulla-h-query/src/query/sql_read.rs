@@ -9,6 +9,7 @@ struct SqlReadScope<'a> {
     graph_name: &'a str,
     caller: &'a str,
     authority: &'a medulla_server_api::carrier::CarrierAuthority,
+    read_authority: &'a GraphReadAuthority,
     persist_dir: &'a std::path::Path,
     #[cfg(feature = "security")]
     rls: &'a Arc<medulla_isolation::isolation::IsolationLayer>,
@@ -105,17 +106,25 @@ async fn handle_sql_read(scope: SqlReadScope<'_>, query: String) -> Response {
         graph_name,
         caller,
         authority,
+        read_authority,
         persist_dir,
         #[cfg(feature = "security")]
         rls,
     } = scope;
-    let (snap, _graph_version) = sql_read_snapshot(
+    let (snap, graph_version) = sql_read_snapshot(
         core,
         #[cfg(feature = "security")]
         caller,
         #[cfg(feature = "security")]
         rls,
     );
+    // MEDULLA-IDENTITY-R023.3 / R610.3: the served SQL read is narrowed to the verified
+    // caller's tenant and visible knowledge units like every other entry point.
+    let read_scope = ReadScope::resolve(state, Some(read_authority), graph_name).await;
+    let snap = match read_scope.narrow(req_id, graph_version, snap, &["n".to_owned()]) {
+        Ok(snap) => snap,
+        Err(refusal) => return refusal,
+    };
     let graph = medulla_server_auth::sql_catalog_acl::RequestGraph {
         name: graph_name.to_string(),
         core: Arc::clone(core),
@@ -186,6 +195,7 @@ pub(crate) async fn handle_sql(
                 graph_name: ctx.graph_name,
                 caller: ctx.caller,
                 authority,
+                read_authority,
                 persist_dir: persist_path,
                 #[cfg(feature = "security")]
                 rls: ctx.rls,
@@ -205,6 +215,10 @@ pub(crate) struct CacheSlot {
     pub(crate) hash: u128,
     pub(crate) dep: Option<medulla_query_cache::dep_scope::DepSet>,
     pub(crate) version: u64,
+    /// The graph whose tenant owns the answer.
+    pub(crate) tenant: String,
+    /// When execution began: the answer's rebuild cost is the time since.
+    pub(crate) started: std::time::Instant,
 }
 
 #[cfg(all(feature = "query", feature = "result-cache"))]
@@ -212,14 +226,27 @@ impl CacheSlot {
     /// Store `payload` under this slot.
     pub(crate) fn store(&self, core: &GraphCore, payload: &ResultPayload) {
         match &self.dep {
-            Some(deps) => medulla_query_cache::result_cache::cache_dep_result(
-                core.result_cache(),
-                self.hash,
-                0,
-                self.version,
-                deps.clone(),
-                payload,
-            ),
+            Some(deps) => {
+                let admission = medulla_query_cache::result_cache::DepAdmission {
+                    tenant: &self.tenant,
+                    // Whole milliseconds, at least one: the clock's resolution is the cheapest
+                    // an answer can claim to cost.
+                    rebuild_cost_ms: (self.started.elapsed().as_millis() as u64).max(1),
+                    generations: medulla_query_cache::result_cache::dep_generations(
+                        deps,
+                        &core.dep_probe(),
+                    ),
+                };
+                medulla_query_cache::result_cache::cache_dep_result(
+                    core.result_cache(),
+                    self.hash,
+                    0,
+                    self.version,
+                    deps.clone(),
+                    admission,
+                    payload,
+                )
+            }
             None => medulla_query_cache::result_cache::cache_result(
                 core.result_cache(),
                 self.hash,
@@ -259,11 +286,14 @@ pub(crate) fn served_cache_hash(
 #[cfg(all(feature = "query", feature = "result-cache"))]
 pub(crate) fn cached_payload(
     core: &GraphCore,
+    tenant: &str,
     hash: u128,
     dep: &Option<medulla_query_cache::dep_scope::DepSet>,
 ) -> Option<Vec<u8>> {
     match dep {
-        Some(_) => core.result_cache().get_dep(hash, 0, core.dep_probe()),
+        Some(_) => core
+            .result_cache()
+            .get_dep_admitted(tenant, hash, 0, core.dep_probe()),
         None => core.result_cache().get(hash, core.version()),
     }
 }
@@ -387,7 +417,7 @@ pub(crate) async fn handle_unified_query(
     };
     #[cfg(feature = "result-cache")]
     if let Some(response) =
-        cached_served_response::<query_results::UnifiedQuery>(req_id, &core, &key)
+        cached_served_response::<query_results::UnifiedQuery>(req_id, &core, ctx.graph_name, &key)
     {
         return Ok(response);
     }
@@ -403,7 +433,10 @@ pub(crate) async fn handle_unified_query(
     // CONCEPT:MEDULLA-KG.query.served-vector-index-binding / served-text-index-binding — push the
     // vector kNN AND lexical legs down into the LIVE persistent indexes instead
     // of cloning/rebuilding them per request, via the shared off-lock runner.
-    let result = run_unified_off_lock(state, req_id, &core, snap, plan, legs).await;
+    #[cfg(feature = "result-cache")]
+    let started = std::time::Instant::now();
+    let scope = ReadScope::resolve(state, ctx.read_authority, ctx.graph_name).await;
+    let result = run_unified_off_lock(state, req_id, &core, snap, plan, legs, &scope).await;
     Ok(served_response::<query_results::UnifiedQuery>(
         req_id,
         result,
@@ -411,7 +444,13 @@ pub(crate) async fn handle_unified_query(
         #[cfg(feature = "result-cache")]
         &core,
         #[cfg(feature = "result-cache")]
-        key.map(|(hash, dep)| CacheSlot { hash, dep, version }),
+        key.map(|(hash, dep)| CacheSlot {
+            hash,
+            dep,
+            version,
+            tenant: ctx.graph_name.to_string(),
+            started,
+        }),
     ))
 }
 

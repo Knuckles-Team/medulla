@@ -102,12 +102,21 @@ use super::method_variant_name;
     feature = "rdf"
 ))]
 use super::{
-    advance_authoritative_manifest, commit_finalize, commit_mutation, commit_prepare,
-    commit_staged_replay_probe, commit_staged_with_receipt, consensus_apply_is_authorized,
-    diff_and_serialize_staged_mutation, resolve_authoritative_base_snapshot, CommitFinalizeOptions,
-    CommitPrep, DurableBatchAttempt, DurableBatchTarget, MutationCtx, MutationPlan, StagedMutation,
-    StagedReceipt,
+    advance_authoritative_manifest, commit_finalize, commit_prepare, commit_staged_replay_probe,
+    commit_staged_with_receipt, consensus_apply_is_authorized, diff_and_serialize_staged_mutation,
+    resolve_authoritative_base_snapshot, CommitFinalizeOptions, CommitPrep, DurableBatchAttempt,
+    DurableBatchTarget, MutationCtx, MutationPlan, StagedMutation, StagedReceipt,
 };
+
+// Only the runtime-conditional entry point below commits a full mutation, so this
+// import follows that function's feature gate, not the wider one above.
+#[cfg(any(
+    feature = "mining",
+    feature = "graphlearn",
+    feature = "ml-pipeline",
+    feature = "modality-serving"
+))]
+use super::commit_mutation;
 
 /// The gateway entry point for a RUNTIME-CONDITIONAL method (CONCEPT:MEDULLA-P0-2, L11
 /// rollout continued) -- one whose `medulla_capabilities::policy()` `mutates: true` is
@@ -507,7 +516,10 @@ pub(super) async fn commit_conditional_commit_staged(
 /// Part of [`GATEWAY_ROUTED`], but handed back by `try_handle_gateway` so it reaches
 /// its dedicated wrap in `dispatch.rs`.
 pub fn is_query_gateway_method(m: &Method) -> bool {
-    matches!(method_variant_name(m), "Sql" | "CypherQuery" | "GraphQl")
+    matches!(
+        method_variant_name(m),
+        "Sql" | "CypherQuery" | "GraphQl" | "LiveArtifactPut" | "LiveArtifactRefresh"
+    )
 }
 
 /// SQL table/catalog writes and GraphQL cross-modal operations own native domain

@@ -48,8 +48,7 @@
     agents and the skills they expose, so the Knowledge Graph can discover and
     reason over external agents.
 
-    CONCEPT:KG-2.10 — A2A Agent-Card Assimilation""" ;
-    owl:imports <http://knuckles.team/kg/core> .
+    CONCEPT:KG-2.10 — A2A Agent-Card Assimilation""" .
 
 :Skill a owl:Class ;
     rdfs:label "Skill" ;

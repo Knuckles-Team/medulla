@@ -236,6 +236,8 @@ par-runtime = ["medulla-exec/par-runtime", "query", "dep:rayon"]
 # Arrow (verify with `cargo tree -p medulla-plan`) — the small-footprint contract stays intact.
 knowledge-batch = ["query", "dep:arrow", "medulla-retrieval/knowledge-batch", "medulla-protocol-types/knowledge-batch", "medulla-types/knowledge-batch"]
 [dependencies]
+medulla-durable = { path = "../medulla-durable" }
+medulla-sqlite-format = { path = "../medulla-sqlite-format" }
 medulla-uql = { path = "../medulla-uql" }
 medulla-nlq = { path = "../medulla-nlq" }
 medulla-federation = { path = "../medulla-federation" }
@@ -345,6 +347,10 @@ medulla-stream = { path = "../medulla-stream", optional = true }
 # (no DataFusion); `redb-store` adds pure-Rust redb (no C dep, no pyo3). A default/Pi build
 # links none of it. medulla-tsdb does NOT depend on medulla-plan — no dependency cycle.
 medulla-tsdb = { path = "../medulla-tsdb", optional = true }
+# MEDULLA-FEDERATED-QUERY-R006.1: the temporal-rule mutation builder reuses the
+# `ApplyMutation` request types and the authority scope they are bound to.
+medulla-identity-types = { path = "../medulla-identity-types" }
+medulla-mutation-types = { path = "../medulla-mutation-types" }
 serde = { version = "1.0", features = ["derive"] }
 # `float_roundtrip`: UQL's JSON literals (`JSON '[…]'`, JSONPath/CEP values) must parse back to
 # the EXACT f64 the printer wrote (UQL-06 print/parse identity). serde_json's default float
@@ -461,6 +467,8 @@ wat = "1"
 # with the full feature set. `default-features = false` drops criterion's optional
 # `rayon`/HTML plotting deps the gate does not need.
 criterion = { version = "0.8", default-features = false }
+# The live-artifact refresh bench (MEDULLA-FEDERATED-QUERY-R701.6) measures `LiveArtifact::refresh`.
+medulla-source-types = { path = "../medulla-source-types" }
 
 # ── Perf / recall CI benchmark (CONCEPT:MEDULLA-KG.query.hybrid-latency-benches/recall-oracle-bench/synthetic-bench-dataset) ──────────────────────────
 # Representative hybrid pipelines (MATCH→TRAVERSE→RANK, REASON→RANK→TRAVERSE,
@@ -500,6 +508,14 @@ name = "filtered_rank"
 path = "benches/filtered_rank.rs"
 harness = false
 required-features = ["query", "text"]
+
+# ── Live-artifact refresh bench (MEDULLA-FEDERATED-QUERY-R701.6) ──────────────────────
+# One 1,000-row compare-and-set refresh; the key `live_artifact_refresh` in
+# `thresholds.json` caps p50 at 5 ms and p99 at 30 ms.
+[[bench]]
+name = "live_artifact_refresh"
+path = "benches/live_artifact_refresh.rs"
+harness = false
 
 # ── Integration test targets, explicitly gated (D-EGTC-10 / w5-medulla-ci-truly-green) ──
 # Every file under `tests/` names `query`-gated (or narrower) public API
@@ -556,6 +572,11 @@ required-features = ["federation"]
 [[test]]
 name = "incremental_execute_oracle"
 path = "tests/incremental_execute_oracle.rs"
+required-features = ["query"]
+
+[[test]]
+name = "incremental_oracle_coverage"
+path = "tests/incremental_oracle_coverage.rs"
 required-features = ["query"]
 
 [[test]]

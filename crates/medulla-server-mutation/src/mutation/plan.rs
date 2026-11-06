@@ -77,6 +77,9 @@ pub const GATEWAY_ROUTED: &[&str] = &[
     "Reparent",
     "StartTrajectory",
     "AppendStep",
+    // MEDULLA-DURABLE-KERNEL-R095.1002: agent bus roster rows on the request graph.
+    "BusRegister",
+    "BusHeartbeat",
     "AddEmbedding",
     "InvalidateEdge",
     "SupersedeEdge",
@@ -98,6 +101,23 @@ pub const GATEWAY_ROUTED: &[&str] = &[
     // one gateway so it is ordered, audited and CDC-emitted with every other
     // write to that graph.
     "GraphSchema",
+    // MEDULLA-FINANCE-PRIMITIVES-R004.3.2: the served finance record put is
+    // admitted (version gate, kind policy, tenant, SHACL shape, head) and then
+    // commits as the one `AddNode` upsert through this gateway.
+    "FinanceRecordPut",
+    // MEDULLA-FINANCE-PRIMITIVES-R011.2.3: the served alert door validates the
+    // envelope, then the event node and its outbox fact commit as one batch.
+    "FinanceAlertRaise",
+    // MEDULLA-FINANCE-PRIMITIVES-R018.5: the served factor record ranks, then
+    // commits the Factor nodes and their derivedFrom edges as one batch.
+    "FinanceFactorRecord",
+    // MEDULLA-DECISION-ENGINE-R166.3: `Register` commits one registration node
+    // through this gateway; `Read` is answered by the catalog admin route before
+    // the graph path and never reaches it.
+    "WorkflowRegistry",
+    // MEDULLA-FEDERATED-QUERY-R724: `Put` commits one boundary node through this
+    // gateway; `List` is a query-surface read (see [`is_gateway_routed`]).
+    "SchemaProjections",
     "PruneByLifecycle",
     "BatchUpdate",
     "ClearLedger",
@@ -167,6 +187,10 @@ pub const GATEWAY_ROUTED: &[&str] = &[
     "Sql",
     "CypherQuery",
     "GraphQl",
+    // MEDULLA-FEDERATED-QUERY-R701.3: the live-artifact writes run in the query handler over
+    // the staged graph, like the query-surface writes above.
+    "LiveArtifactPut",
+    "LiveArtifactRefresh",
     // ── L11 rollout batch 4: native RDF write surface (GraphRedb-durable,
     // audited) — routed via `commit_conditional_mutation_async` at the rdf
     // dispatch site because parsing and graph projection require `state`.
@@ -206,6 +230,9 @@ fn memory_method_name(m: &Method) -> Option<&'static str> {
         Method::DecayMemories { .. } => Some("DecayMemories"),
         Method::EvictBelow { .. } => Some("EvictBelow"),
         Method::Maintain { .. } => Some("Maintain"),
+        Method::BusRegister { .. } => Some("BusRegister"),
+        Method::BusHeartbeat { .. } => Some("BusHeartbeat"),
+        Method::BusRoster { .. } => Some("BusRoster"),
         _ => None,
     }
 }
@@ -461,6 +488,8 @@ fn query_method_name(m: &Method) -> Option<&'static str> {
     match m {
         Method::Sql { .. } => Some("Sql"),
         Method::CypherQuery { .. } => Some("CypherQuery"),
+        Method::LiveArtifactPut { .. } => Some("LiveArtifactPut"),
+        Method::LiveArtifactRefresh { .. } => Some("LiveArtifactRefresh"),
         #[cfg(feature = "graphql")]
         Method::GraphQl { .. } => Some("GraphQl"),
         _ => None,
@@ -544,6 +573,7 @@ const METHOD_NAME_RESOLVERS: &[fn(&Method) -> Option<&'static str>] = &[
     native_local_only_method_name,
     native_local_only_decision_method_name,
     write_back_method_name,
+    finance_record_method_name,
 ];
 
 /// Extract a `Method` variant's name as a `&'static str`, covering exactly
@@ -562,6 +592,11 @@ pub fn method_variant_name(m: &Method) -> &'static str {
 /// `medulla_h_graph::graph_ops::try_handle_gateway`, where one kernel owns apply,
 /// durability, audit, and CDC.
 pub fn is_gateway_routed(m: &Method) -> bool {
+    // MEDULLA-FEDERATED-QUERY-R724: a `SchemaProjections` list is a read and is
+    // served by the query surface, not the mutation gateway.
+    if let Method::SchemaProjections { op } = m {
+        return op.is_mutation();
+    }
     GATEWAY_ROUTED.contains(&method_variant_name(m))
 }
 
@@ -637,12 +672,18 @@ pub const SELF_ROUTED_ADMIN_METHODS: &[&str] = &["RaftAddLearner", "RaftChangeMe
 /// rather than proposed as a native command that does not exist, or applied on
 /// one node only.
 pub const LOCAL_ONLY_METHODS: &[&str] = &[
+    // MEDULLA-TYPED-PACKS-R805.1: the policy-store records commit through the
+    // process-local `rbac.redb` owner; the replicated path is wired by R805.3.
+    "AccessRequestDecide",
+    "AccessRequestOpen",
+    "DataProductRegister",
     "AgentComponent",
     "AgentGraph",
     "AgentLibrary",
     "AgentTemplate",
     "ConnectorPack",
     "WriteBack",
+    "Claims",
     "DecisionCommit",
     "DecisionEval",
     "DecisionFit",
@@ -650,6 +691,18 @@ pub const LOCAL_ONLY_METHODS: &[&str] = &[
     "MutationOutbox",
     "EdgeIndex",
     "SqlSourceBatch",
+    // `FinanceRecordPut` is replicated: it is in `NATIVE_CONSENSUS_METHODS`
+    // (MEDULLA-FINANCE-PRIMITIVES-R004.3.2.9).
+    // The alert's compare-and-set against its stored envelope has no replicated
+    // command either (MEDULLA-FINANCE-PRIMITIVES-R011.2.3).
+    "FinanceAlertRaise",
+    // The factor batch has no replicated command either (MEDULLA-FINANCE-PRIMITIVES-R018.5).
+    "FinanceFactorRecord",
+    // The registration upsert has no replicated command either
+    // (MEDULLA-DECISION-ENGINE-R166.3).
+    "WorkflowRegistry",
+    // Nor does the schema boundary upsert (MEDULLA-FEDERATED-QUERY-R724).
+    "SchemaProjections",
 ];
 
 /// The local-only names that are NOT gateway-routed.
@@ -664,6 +717,9 @@ fn native_local_only_method_name(m: &Method) -> Option<&'static str> {
         Method::AgentLibrary { .. } => Some("AgentLibrary"),
         Method::AgentTemplate { .. } => Some("AgentTemplate"),
         Method::ConnectorPack { .. } => Some("ConnectorPack"),
+        Method::DataProductRegister { .. } => Some("DataProductRegister"),
+        Method::AccessRequestOpen { .. } => Some("AccessRequestOpen"),
+        Method::AccessRequestDecide { .. } => Some("AccessRequestDecide"),
         _ => None,
     }
 }
@@ -672,6 +728,7 @@ fn native_local_only_method_name(m: &Method) -> Option<&'static str> {
 /// [`native_local_only_method_name`]).
 fn native_local_only_decision_method_name(m: &Method) -> Option<&'static str> {
     match m {
+        Method::Claims { .. } => Some("Claims"),
         Method::DecisionCommit { .. } => Some("DecisionCommit"),
         Method::DecisionEval { .. } => Some("DecisionEval"),
         Method::DecisionFit { .. } => Some("DecisionFit"),
@@ -688,6 +745,18 @@ fn native_local_only_decision_method_name(m: &Method) -> Option<&'static str> {
 fn write_back_method_name(m: &Method) -> Option<&'static str> {
     match m {
         Method::WriteBack { .. } => Some("WriteBack"),
+        _ => None,
+    }
+}
+
+/// Resolve the served finance record put (MEDULLA-FINANCE-PRIMITIVES-R004.3.2).
+fn finance_record_method_name(m: &Method) -> Option<&'static str> {
+    match m {
+        Method::FinanceRecordPut { .. } => Some("FinanceRecordPut"),
+        Method::FinanceAlertRaise { .. } => Some("FinanceAlertRaise"),
+        Method::FinanceFactorRecord { .. } => Some("FinanceFactorRecord"),
+        Method::WorkflowRegistry { .. } => Some("WorkflowRegistry"),
+        Method::SchemaProjections { .. } => Some("SchemaProjections"),
         _ => None,
     }
 }
@@ -783,6 +852,11 @@ fn cluster_mutation_route_admin(method: &Method) -> Option<ClusterMutationRoute>
             | Method::SourceIngest { .. }
             | Method::IndexRepository { .. }
             | Method::EnrichDocument { .. }
+            | Method::MeetingSummaryCommit { .. }
+            | Method::MeetingSummaryContext { .. }
+            | Method::MeetingTranscriptRevision { .. }
+            | Method::DocumentDelete { .. }
+            | Method::LineageIngest { .. }
     ) {
         return Some(ClusterMutationRoute::VolatileControl);
     }
@@ -843,6 +917,11 @@ fn cluster_mutation_route_admin(method: &Method) -> Option<ClusterMutationRoute>
             | Method::FleetCatalog { .. }
             | Method::PolicyEvolution { .. }
             | Method::TelemetryDerive { .. }
+            | Method::IncidentRecordAnomaly { .. }
+            | Method::IncidentCorrelate { .. }
+            | Method::IncidentSetStatus { .. }
+            | Method::ActionRegister { .. }
+            | Method::ActionSubmit { .. }
     ) {
         return Some(ClusterMutationRoute::VolatileControl);
     }

@@ -1,66 +1,102 @@
-//! Prints the bounded diagnostic-retry decision for one failed attempt.
+//! `raft_flake_budget` — the retry-budget decision for `scripts/validate-raft-cluster.sh`
+//! (MEDULLA-DURABLE-KERNEL-R014.3.2).
 //!
-//! MEDULLA-DURABLE-KERNEL-R014.3.2: `scripts/validate-raft-cluster.sh` reads its
-//! retry budget through this bin instead of looping on its own.
+//! The script calls this bin after a failed cluster-proof attempt. The bin replays the
+//! failures through [`DiagnosticRetryLog::record_failure`] under the declared
+//! [`FlakeBudget`] and prints the decision for the named attempt:
 //!
-//! Usage: `raft_flake_budget <max_retries> <backoff_ms> <max_backoff_ms> <attempt> <exit_code>`
-//! where `attempt` is the one-based number of the execution that just finished.
+//! * `pass attempt=<n>` (exit 0) when the attempt's exit code is 0;
+//! * `retry attempt=<n> backoff_ms=<ms>` (exit 0) when another attempt is allowed;
+//! * `refused RAFT_RETRY_BUDGET_EXHAUSTED attempt=<n>` (exit 3) otherwise.
 //!
-//! Output (one line) and exit code:
-//! - `pass`                                  exit 0 (the attempt exited 0)
-//! - `retry <backoff_ms>`                    exit 0
-//! - `exhausted`                             exit 1 (terminal failure)
-//! - `refused RAFT_RETRY_BUDGET_EXHAUSTED`   exit 3
-//! - a usage or budget error on stderr       exit 2
+//! Usage:
+//!   raft_flake_budget --attempt <n> --exit-code <rc>
+//!       [--max-retries 1] [--backoff-ms 1000] [--max-backoff-ms 30000]
+//!
+//! A malformed argument or budget exits 2.
 
 use medulla_raft_xshard::flake_budget::{DiagnosticRetryDecision, DiagnosticRetryLog, FlakeBudget};
 
-fn parse<T: std::str::FromStr>(args: &[String], index: usize, name: &str) -> Result<T, String> {
-    args.get(index)
-        .ok_or_else(|| format!("missing argument {name}"))?
-        .parse()
-        .map_err(|_| format!("{name} must be a non-negative integer"))
+const REFUSED_EXIT: i32 = 3;
+const USAGE_EXIT: i32 = 2;
+
+struct Opts {
+    attempt: usize,
+    exit_code: i32,
+    max_retries: u32,
+    backoff_ms: u64,
+    max_backoff_ms: u64,
 }
 
-fn decide(args: &[String]) -> Result<(String, i32), String> {
-    let budget = FlakeBudget::new(
-        parse(args, 0, "max_retries")?,
-        parse(args, 1, "backoff_ms")?,
-        parse(args, 2, "max_backoff_ms")?,
-    )?;
-    let attempt: usize = parse(args, 3, "attempt")?;
-    let exit_code: i32 = parse(args, 4, "exit_code")?;
-    if attempt == 0 {
-        return Err("attempt is one-based".into());
+fn parse() -> Result<Opts, String> {
+    let mut attempt = None;
+    let mut exit_code = None;
+    let mut opts = Opts {
+        attempt: 0,
+        exit_code: 0,
+        max_retries: 1,
+        backoff_ms: 1_000,
+        max_backoff_ms: 30_000,
+    };
+    let mut args = std::env::args().skip(1);
+    while let Some(flag) = args.next() {
+        let value = args.next().ok_or_else(|| format!("{flag} needs a value"))?;
+        let bad = |error: std::num::ParseIntError| format!("{flag} {value}: {error}");
+        match flag.as_str() {
+            "--attempt" => attempt = Some(value.parse::<usize>().map_err(bad)?),
+            "--exit-code" => exit_code = Some(value.parse::<i32>().map_err(bad)?),
+            "--max-retries" => opts.max_retries = value.parse().map_err(bad)?,
+            "--backoff-ms" => opts.backoff_ms = value.parse().map_err(bad)?,
+            "--max-backoff-ms" => opts.max_backoff_ms = value.parse().map_err(bad)?,
+            other => return Err(format!("unknown argument {other}")),
+        }
     }
-    if exit_code == 0 {
-        return Ok(("pass".into(), 0));
+    opts.attempt = attempt.ok_or("--attempt is required")?;
+    opts.exit_code = exit_code.ok_or("--exit-code is required")?;
+    if opts.attempt == 0 {
+        return Err("--attempt is one-based".to_string());
     }
+    Ok(opts)
+}
+
+fn decide(opts: &Opts) -> Result<(String, i32), String> {
+    if opts.exit_code == 0 {
+        return Ok((format!("pass attempt={}", opts.attempt), 0));
+    }
+    let budget = FlakeBudget::new(opts.max_retries, opts.backoff_ms, opts.max_backoff_ms)?;
     let mut log = DiagnosticRetryLog::new();
     let mut decision = None;
-    for n in 1..=attempt {
-        decision = Some(log.record_failure(&budget, format!("attempt {n} exit {exit_code}"))?);
+    for attempt in 1..=opts.attempt {
+        decision = Some(log.record_failure(&budget, format!("attempt {attempt} failed"))?);
     }
-    Ok(match decision {
-        Some(DiagnosticRetryDecision::Retry { backoff_ms, .. }) => {
-            (format!("retry {backoff_ms}"), 0)
-        }
-        Some(DiagnosticRetryDecision::Exhausted { .. }) => ("exhausted".into(), 1),
-        Some(DiagnosticRetryDecision::Refused { code, .. }) => (format!("refused {code}"), 3),
-        None => return Err("attempt is one-based".into()),
+    Ok(match decision.ok_or("no attempt recorded")? {
+        DiagnosticRetryDecision::Retry {
+            attempt,
+            backoff_ms,
+        } => (
+            format!("retry attempt={attempt} backoff_ms={backoff_ms}"),
+            0,
+        ),
+        DiagnosticRetryDecision::Exhausted { attempt }
+        | DiagnosticRetryDecision::Refused { attempt, .. } => (
+            format!(
+                "refused {} attempt={attempt}",
+                medulla_raft_xshard::flake_budget::RAFT_RETRY_BUDGET_EXHAUSTED
+            ),
+            REFUSED_EXIT,
+        ),
     })
 }
 
 fn main() {
-    let args: Vec<String> = std::env::args().skip(1).collect();
-    match decide(&args) {
+    match parse().and_then(|opts| decide(&opts)) {
         Ok((line, code)) => {
             println!("{line}");
             std::process::exit(code);
         }
-        Err(message) => {
-            eprintln!("raft_flake_budget: {message}");
-            std::process::exit(2);
+        Err(error) => {
+            eprintln!("raft_flake_budget: {error}");
+            std::process::exit(USAGE_EXIT);
         }
     }
 }

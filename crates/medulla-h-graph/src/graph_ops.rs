@@ -29,7 +29,15 @@ use medulla_server_mutation::{
 
 mod algorithms;
 mod broker;
+// MEDULLA-DURABLE-KERNEL-R095.1001 — served agent bus roster.
+pub mod bus;
+mod context_facts;
+#[cfg(test)]
+mod context_facts_tests;
 mod edges;
+mod finance_alerts;
+mod finance_factors;
+mod finance_records;
 mod gateway;
 #[cfg(feature = "broker")]
 mod gateway_broker;
@@ -39,10 +47,16 @@ mod gateway_mining_ml;
 mod hierarchy;
 mod memory;
 mod nodes;
+pub mod retention_cleanup;
+mod schema_boundary;
 mod semantic;
 mod subgraph;
 mod terminal;
 mod union;
+mod wallet_trust;
+mod workflow_registry;
+#[cfg(test)]
+mod workflow_registry_tests;
 
 #[cfg(any(
     feature = "query",
@@ -50,6 +64,7 @@ mod union;
     feature = "graphql",
     feature = "rdf"
 ))]
+pub use finance_records::precheck_replicated_put;
 pub use gateway::mining_response_to_gateway_result as gateway_response_result;
 pub use gateway::try_handle_gateway;
 pub use terminal::try_handle;

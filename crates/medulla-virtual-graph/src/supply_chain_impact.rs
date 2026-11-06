@@ -9,6 +9,7 @@
 //! cross-repo (owner: Arbora) and is not claimed here; this slice fixes the
 //! method body and proves its output matches the typed model.
 
+use medulla_identity_types::authority_audit::AuditSourceMode;
 use medulla_source_types::{
     supply_chain_report::assemble_supply_chain_report, supply_chain_report::ImpactRow,
     supply_chain_report::ReportAbstention, supply_chain_report::ReportError,
@@ -31,31 +32,48 @@ pub fn supply_chain_impact(
 ) -> Result<SupplyChainImpactReport, ReportError> {
     let results = select_sources(fixture, roots, hop_budget);
     let mut premises: Vec<SourcePremise> = Vec::new();
-    let mut abstentions: Vec<ReportAbstention> = Vec::new();
     for result in &results {
-        match result {
-            CoverageResult::Covered {
-                premises: covered_premises,
-                ..
-            } => {
-                for premise in covered_premises {
-                    if let Premise::Authority {
-                        row,
-                        source,
-                        class,
-                        rank,
-                        ..
-                    } = premise
-                    {
-                        premises.push(SourcePremise {
-                            source: source.clone(),
-                            class_served: class.clone(),
-                            row: row.clone(),
-                            rank: *rank,
-                        });
-                    }
+        if let CoverageResult::Covered {
+            premises: covered_premises,
+            ..
+        } = result
+        {
+            for premise in covered_premises {
+                if let Premise::Authority {
+                    row,
+                    source,
+                    class,
+                    rank,
+                    ..
+                } = premise
+                {
+                    // The planner serves live when no copy has a watermark
+                    // (MEDULLA-UNIFIED-DATA-PLANE-R038.1).
+                    premises.push(SourcePremise {
+                        source: source.clone(),
+                        class_served: class.clone(),
+                        row: row.clone(),
+                        rank: *rank,
+                        mode: AuditSourceMode::Live,
+                        watermark: None,
+                        age_seconds: None,
+                    });
                 }
             }
+        }
+    }
+    let abstentions = abstentions_from(&results);
+    assemble_supply_chain_report(rows, &premises, &abstentions)
+}
+
+/// Map the planner's coverage results onto the report's typed abstentions
+/// (MEDULLA-CQ-XSRC-R006.3): one variant per source-authority reason, with no
+/// second list. Covered results produce none.
+pub fn abstentions_from(results: &[CoverageResult]) -> Vec<ReportAbstention> {
+    let mut abstentions = Vec::new();
+    for result in results {
+        match result {
+            CoverageResult::Covered { .. } => {}
             CoverageResult::Uncovered { class, .. } => {
                 abstentions.push(ReportAbstention::Uncovered {
                     class: class.clone(),
@@ -73,23 +91,27 @@ pub fn supply_chain_impact(
                 ..
             } => {
                 let source = source.clone().unwrap_or_default();
+                let class = class.clone();
                 abstentions.push(match reason {
-                    AbstainReason::Unconnected => ReportAbstention::Unconnected {
-                        class: class.clone(),
-                        source,
-                    },
+                    AbstainReason::Unconnected => ReportAbstention::Unconnected { source, class },
                     AbstainReason::UnapprovedMapping => ReportAbstention::UnapprovedMapping {
-                        class: class.clone(),
+                        class,
                         mapping: source,
                     },
-                    _ => ReportAbstention::Uncovered {
-                        class: class.clone(),
-                    },
+                    AbstainReason::Stale => ReportAbstention::Stale { source, class },
+                    AbstainReason::ContractMismatch => {
+                        ReportAbstention::ContractMismatch { source, class }
+                    }
+                    AbstainReason::Ambiguous => ReportAbstention::Ambiguous { source, class },
+                    AbstainReason::Proposed => ReportAbstention::Proposed { source, class },
+                    AbstainReason::RoleInsufficient => {
+                        ReportAbstention::RoleInsufficient { source, class }
+                    }
                 });
             }
         }
     }
-    assemble_supply_chain_report(rows, &premises, &abstentions)
+    abstentions
 }
 
 #[cfg(test)]
@@ -150,5 +172,62 @@ mod tests {
             ReportAbstention::Unconnected { source, class }
                 if source == "dockerhub-mcp" && class == "ContainerImage"
         )));
+    }
+
+    // spec: MEDULLA-CQ-XSRC-R006.3
+    #[test]
+    fn one_report_per_abstention_kind() {
+        use medulla_identity_types::authority_audit::NotUsedReason;
+        use std::collections::BTreeSet;
+
+        let reasons = [
+            NotUsedReason::Unconnected,
+            NotUsedReason::UnapprovedMapping,
+            NotUsedReason::Stale,
+            NotUsedReason::ContractMismatch,
+            NotUsedReason::Ambiguous,
+            NotUsedReason::Proposed,
+            NotUsedReason::RoleInsufficient,
+        ];
+        let kind = |value: serde_json::Value, field: &str| -> String {
+            value
+                .get(field)
+                .and_then(serde_json::Value::as_str)
+                .map(str::to_string)
+                .unwrap_or_else(|| value.as_str().unwrap().to_string())
+        };
+        let mut report_kinds = BTreeSet::new();
+        for reason in reasons {
+            let results = vec![CoverageResult::Abstained {
+                class: "Vulnerability".to_string(),
+                facet: None,
+                reason,
+                source: Some("gitlab-mcp".to_string()),
+                premises: Vec::new(),
+            }];
+            // A report with an abstention is still returned, never an error.
+            let report = assemble_supply_chain_report(&[], &[], &abstentions_from(&results))
+                .expect("a report with an abstention is returned");
+            assert_eq!(report.abstentions.len(), 1);
+            let reported = kind(
+                serde_json::to_value(&report.abstentions[0]).unwrap(),
+                "kind",
+            );
+            assert_eq!(
+                reported,
+                kind(serde_json::to_value(reason).unwrap(), "kind")
+            );
+            report_kinds.insert(reported);
+        }
+        let engine_kinds: BTreeSet<String> = reasons
+            .iter()
+            .map(|reason| kind(serde_json::to_value(reason).unwrap(), "kind"))
+            .collect();
+        assert_eq!(report_kinds, engine_kinds);
+        // Uncovered and Disconnected stay alongside the engine reasons.
+        let extra = abstentions_from(&[CoverageResult::Disconnected {
+            class: "Legacy".to_string(),
+        }]);
+        assert!(matches!(extra[0], ReportAbstention::Disconnected { .. }));
     }
 }

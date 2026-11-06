@@ -87,13 +87,14 @@ fn bind_served_statement(
 fn cached_served_response<M>(
     req_id: u64,
     core: &GraphCore,
+    tenant: &str,
     key: &Option<(u128, Option<medulla_query_cache::dep_scope::DepSet>)>,
 ) -> Option<Response>
 where
     M: MethodResult<Encoding = encoding::Raw>,
 {
     key.as_ref()
-        .and_then(|(hash, dep)| cached_payload(core, *hash, dep))
+        .and_then(|(hash, dep)| cached_payload(core, tenant, *hash, dep))
         .map(|bytes| Response::ok(req_id, ResultPayload::of_cache_hit::<M>(bytes)))
 }
 
@@ -152,6 +153,10 @@ pub use dispatch::try_handle;
 pub use dispatch::{try_handle_with_policy, PolicyAwareQuery};
 mod sql_read;
 pub(crate) use sql_read::*;
+#[cfg(feature = "query")]
+mod schema_projections;
+#[cfg(feature = "query")]
+pub(crate) use schema_projections::handle_schema_projections;
 mod explain_handlers;
 pub(crate) use explain_handlers::*;
 mod nl;
@@ -166,6 +171,10 @@ mod cypher;
 pub(crate) use cypher::*;
 mod planning;
 pub use planning::*;
+#[cfg(feature = "query")]
+mod segment_filter;
+#[cfg(feature = "query")]
+pub(crate) use segment_filter::*;
 #[cfg(all(feature = "query", feature = "result-cache"))]
 mod foreign_watermarks;
 #[cfg(all(feature = "query", feature = "result-cache"))]
@@ -196,6 +205,8 @@ mod sql_dispatch;
 pub(crate) use sql_dispatch::*;
 mod sql_catalog;
 pub(crate) use sql_catalog::*;
+#[cfg(feature = "query")]
+mod live_artifact;
 #[cfg(feature = "query")]
 mod uql_statement;
 

@@ -2,12 +2,12 @@
 @prefix sh: <http://www.w3.org/ns/shacl#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-# Identity ABox shapes (MEDULLA-CQ-CONN-R078.x): each term row adds its NodeShape here.
+# Identity ABox shapes (MEDULLA-CQ-CONN-R078.x).
 
-:IdentityUserAccountStatusShape a sh:NodeShape ;
-    sh:description "An identity user account status is one of the provider lifecycle states." ;
-    sh:name "Identity User Account Status Shape" ;
+:IdentityUserShape a sh:NodeShape ;
+    sh:description "An identity user's account status is one of the closed values." ;
+    sh:name "Identity User Shape" ;
     sh:property [ sh:in ( "ACTIVE" "SUSPENDED" "DEACTIVATED" ) ;
-            sh:message "An identity user accountStatus must be ACTIVE, SUSPENDED or DEACTIVATED." ;
+            sh:message "accountStatus must be ACTIVE, SUSPENDED or DEACTIVATED." ;
             sh:path :accountStatus ] ;
     sh:targetClass :IdentityUser .

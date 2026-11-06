@@ -1,11 +1,19 @@
 @prefix kg: <http://knuckles.team/kg#> .
 @prefix sh: <http://www.w3.org/ns/shacl#> .
 
+# ArchiMate ABox shapes: the records the archimate connector writes under the
+# archimate module.
+
 kg:ArchimateRelationshipShape a sh:NodeShape ;
-    sh:targetClass kg:ArchimateRelationship ;
-    sh:property [ sh:path kg:relationshipType ; sh:minCount 1 ;
-        sh:message "An ArchiMate relationship needs a :relationshipType." ],
-    [ sh:path kg:relSource ; sh:minCount 1 ;
-        sh:message "An ArchiMate relationship needs a :relSource." ],
-    [ sh:path kg:relTarget ; sh:minCount 1 ;
-        sh:message "An ArchiMate relationship needs a :relTarget." ] .
+    sh:description "An ArchiMate relationship names its type, its source element and its target element." ;
+    sh:name "ArchiMate Relationship Shape" ;
+    sh:property [ sh:minCount 1 ;
+            sh:message "An ArchiMate relationship has a relationshipType." ;
+            sh:path kg:relationshipType ],
+        [ sh:minCount 1 ;
+            sh:message "An ArchiMate relationship has a relSource." ;
+            sh:path kg:relSource ],
+        [ sh:minCount 1 ;
+            sh:message "An ArchiMate relationship has a relTarget." ;
+            sh:path kg:relTarget ] ;
+    sh:targetClass kg:ArchimateRelationship .

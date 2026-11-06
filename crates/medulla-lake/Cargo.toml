@@ -49,12 +49,15 @@ lake = ["dep:polars-core", "dep:polars-io", "dep:polars-parquet", "dep:apache-av
 # into any tier aggregate (default/lake) — it is a capability-discovery/testing seam,
 # not a serving feature. `cargo test -p medulla-lake --features contract` runs the suite.
 contract = ["dep:medulla-modality"]
+# Hive-metastore catalog model, partition pruning and scan receipt (MEDULLA-UNIFIED-DATA-PLANE-R038.4).
+metastore = ["dep:sha2"]
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
 # `ProjectionAccess` (MEDULLA-FEDERATED-QUERY-R080.1) is the canonical lake-catalog vocabulary.
 medulla-types = { path = "../medulla-types" }
 serde_json = "1.0"
+sha2 = { version = "0.10", optional = true }
 # ModalityContract retrofit (CONCEPT:E4). Optional, only under `contract` (default
 # OFF) — a default/lake build links none of it and `LakeBatch` carries no new
 # required trait. See `src/contract.rs`.

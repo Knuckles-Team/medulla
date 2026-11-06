@@ -16,12 +16,35 @@ use medulla_server_blob::blob::BlobStateExt;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
+/// The closed list of projection failure codes the outbox consumer retries
+/// (MEDULLA-TYPED-PACKS-R096.1): a body read from the chunk store failed, the
+/// projection grant could not be written, or the commit lost a transient race.
+/// Every other code is not retryable.
 #[cfg(all(feature = "redb", feature = "blob", feature = "shacl"))]
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct PackProjectionDocuments {
-    shapes: Vec<crate::graph_schema::PackSchemaDocument>,
-    ontologies: Vec<crate::graph_schema::PackSchemaDocument>,
+pub(crate) const RETRYABLE_PROJECTION_CODES: &[&str] = &[
+    "PACK_PROJECTION_BLOB_UNAVAILABLE",
+    "PACK_PROJECTION_GRANT_FAILED",
+    "PACK_PROJECTION_STORE_BUSY",
+];
+
+/// Whether a projection failure carries one of [`RETRYABLE_PROJECTION_CODES`].
+#[cfg(all(feature = "redb", feature = "blob", feature = "shacl"))]
+pub(crate) fn is_retryable_projection_error(error: &str) -> bool {
+    let code = error.split_once(':').map_or(error, |(code, _)| code).trim();
+    RETRYABLE_PROJECTION_CODES.contains(&code)
 }
+
+/// Test seam: the connector whose next projection body read reports the chunk
+/// store unavailable.
+#[cfg(all(test, feature = "redb", feature = "blob", feature = "shacl"))]
+pub(crate) static INJECT_BLOB_UNAVAILABLE: std::sync::Mutex<Option<String>> =
+    std::sync::Mutex::new(None);
+
+#[cfg(all(feature = "redb", feature = "blob", feature = "shacl"))]
+pub(crate) mod surface;
+
+#[cfg(all(feature = "redb", feature = "blob", feature = "shacl"))]
+use crate::graph_schema::PackProjectionDocuments;
 
 pub(crate) async fn serve(
     state: &Arc<RwLock<ServerState>>,
@@ -128,6 +151,16 @@ async fn materialize_current_projection(
     state: &Arc<RwLock<ServerState>>,
     plan: &ConnectorPackProjectionPlan,
 ) -> Result<PackProjectionDocuments, String> {
+    #[cfg(test)]
+    {
+        let mut inject = INJECT_BLOB_UNAVAILABLE
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        if inject.as_deref() == Some(plan.connector.as_str()) {
+            *inject = None;
+            return Err("PACK_PROJECTION_BLOB_UNAVAILABLE: injected chunk store failure".into());
+        }
+    }
     let blob = state
         .read()
         .await
@@ -151,11 +184,17 @@ async fn commit_schema_projection(
         verified,
         &plan.connector,
         &plan.record_id,
-        documents.shapes,
-        documents.ontologies,
+        documents,
         verified.idempotency_key(),
     )
     .await
+    .map_err(|error| {
+        if projection_error_code(&error) == "BUSY" {
+            format!("PACK_PROJECTION_STORE_BUSY: {error}")
+        } else {
+            error
+        }
+    })
 }
 
 #[cfg(all(feature = "redb", feature = "blob", feature = "shacl"))]
@@ -190,7 +229,7 @@ fn finish_projection(
 }
 
 #[cfg(all(feature = "redb", feature = "blob", feature = "shacl"))]
-fn record_projection_failure(
+pub(crate) fn record_projection_failure(
     store: &medulla_persistence_records::agent_library::AgentLibraryStore,
     context: &medulla_agent_types::agent_library::AgentLibraryMutationContext,
     plan: &ConnectorPackProjectionPlan,
@@ -218,11 +257,13 @@ async fn materialize_projection_documents(
     let store = Arc::clone(&blob.store);
     let tenant_id = plan.tenant_id.clone();
     let bodies = plan.bodies.clone();
-    tokio::task::spawn_blocking(move || {
+    let mut documents = tokio::task::spawn_blocking(move || {
         projection_documents_from_store(store.as_ref(), &tenant_id, &bodies)
     })
     .await
-    .map_err(|error| format!("connector pack projection body task failed: {error}"))?
+    .map_err(|error| format!("connector pack projection body task failed: {error}"))??;
+    documents.surface = surface::surface_triples(plan, &documents.ontologies)?;
+    Ok(documents)
 }
 
 #[cfg(all(feature = "redb", feature = "blob", feature = "shacl"))]
@@ -233,8 +274,10 @@ fn projection_documents_from_store(
 ) -> Result<PackProjectionDocuments, String> {
     let mut shapes = Vec::new();
     let mut ontologies = Vec::new();
+    let mut crosswalks = Vec::new();
     let mut shapes_length = 0usize;
     let mut ontology_length = 0usize;
+    let mut crosswalk_length = 0usize;
     for body in bodies {
         let bytes = medulla_server_blob::blob::engine_bodies::read_engine_body(
             store,
@@ -242,19 +285,38 @@ fn projection_documents_from_store(
             &body.engine_manifest_digest,
             body.body_sha256,
             body.length,
-        )?;
+        )
+        .map_err(blob_read_failure)?;
         let text = std::str::from_utf8(&bytes)
             .map_err(|_| "BODY_MISSING: projected schema body is not UTF-8".to_string())?;
         let (target, total_length) = match body.kind {
             PackEntryKind::Ontology => (&mut ontologies, &mut ontology_length),
             PackEntryKind::Shapes => (&mut shapes, &mut shapes_length),
+            PackEntryKind::Crosswalk => (&mut crosswalks, &mut crosswalk_length),
             _ => {
                 return Err("CORRUPT_CONNECTOR_PACK: projection contains a non-schema body".into())
             }
         };
         push_schema_document(target, total_length, &body.uri, text)?;
     }
-    Ok(PackProjectionDocuments { shapes, ontologies })
+    Ok(PackProjectionDocuments {
+        shapes,
+        ontologies,
+        crosswalks,
+        surface: None,
+    })
+}
+
+/// A body read that failed without its own stable code is a chunk store
+/// failure, which is retryable; a coded failure (`BODY_MISSING`, a digest
+/// mismatch) keeps its code and is not.
+#[cfg(all(feature = "redb", feature = "blob", feature = "shacl"))]
+fn blob_read_failure(error: String) -> String {
+    if projection_error_code(&error) == "PACK_PROJECTION_FAILED" {
+        format!("PACK_PROJECTION_BLOB_UNAVAILABLE: {error}")
+    } else {
+        error
+    }
 }
 
 #[cfg(all(feature = "redb", feature = "blob", feature = "shacl"))]

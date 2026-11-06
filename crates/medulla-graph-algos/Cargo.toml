@@ -32,3 +32,4 @@ graphlearn = ["medulla-compute/graphlearn", "medulla-types/graphlearn"]
 [dev-dependencies]
 medulla-compute = { path = "../medulla-compute", features = ["test-support"] }
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-kvcache = { path = "../medulla-kvcache" }

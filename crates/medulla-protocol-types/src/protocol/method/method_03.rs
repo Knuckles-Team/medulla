@@ -109,6 +109,16 @@ $($variants)*
         op: Box<medulla_catalog_types::fleet_catalog::FleetCatalogOp>,
     },
 
+    /// MEDULLA-FEDERATED-QUERY-R724: authorization-segmented schema projections.
+    /// `put` stores one `SchemaBoundary` record of the verified tenant as a graph
+    /// node through the mutation gateway (an unknown `mapping_ref` refuses
+    /// `BOUNDARY_MAPPING_UNKNOWN`); `list` returns the boundaries whose
+    /// `required_scopes` the verified token holds, and the total count only to
+    /// `audit:operator`.
+    SchemaProjections {
+        op: Box<medulla_catalog_types::schema_boundary::SchemaProjectionsOp>,
+    },
+
 
     // ── Placement-catalog wire consumption (CONCEPT:MEDULLA-KG.sharding.placement-route-rpc, DIST-P2-4) ──
     // Exposes the engine's sole placement authority over the wire. The response is

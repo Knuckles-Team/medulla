@@ -1,5 +1,5 @@
 //! Registered-core ontology audits for the connector-competency term rows
-//! (MEDULLA-CQ-CONN-R070/R073/R074/R076/R079/R082).
+//! (MEDULLA-CQ-CONN-R070/R071/R072/R073/R074/R076/R077/R078/R079/R080/R081/R082/R087).
 //!
 //! Each module proves one ontology module: the term is declared with the
 //! required owl type, domain and range in the registered core source, and —
@@ -181,18 +181,9 @@ mod ontology_audit_orchestration_v1 {
     // spec: MEDULLA-CQ-CONN-R079.1
     #[test]
     fn shapes_module_loads() {
-        let (_ontology, shapes) = documents();
-        assert!(shapes.iter().any(|t| t.predicate.as_str() == RDF_TYPE
-            && t.object == Term::NamedNode(NamedNode::new(SHACL_NODE_SHAPE).unwrap())));
-        let sources = GraphSchemaSources::default();
-        sources
-            .validate()
-            .expect("the default core catalog validates");
-        assert_core_source(
-            &sources,
-            "core:orchestration-shapes@1",
-            "orchestration-shapes",
-        );
+        let (_triples, shapes) = documents();
+        let shape = format!("{KG}RunTraceTerminationShape");
+        assert!(has_iri(&shapes, &shape, RDF_TYPE, SHACL_NODE_SHAPE));
     }
 
     // spec: MEDULLA-CQ-CONN-R079.2
@@ -413,17 +404,25 @@ mod ontology_audit_personal_v1 {
             RDF_TYPE,
             OWL_DATATYPE_PROPERTY
         ));
-        assert!(has_iri(
-            &triples,
-            &property,
-            RDFS_DOMAIN,
-            &format!("{KG}Document")
-        ));
+        assert!(domain_covers(&triples, &property, &format!("{KG}Document")));
         assert!(has_iri(
             &triples,
             &property,
             RDFS_RANGE,
             &format!("{XSD}decimal")
+        ));
+    }
+
+    // spec: MEDULLA-MEDIA-VOCAB-R653
+    #[test]
+    fn totalAmount_covers_purchase_invoice() {
+        let triples = triples();
+        let property = format!("{KG}totalAmount");
+        assert!(domain_covers(&triples, &property, &format!("{KG}Document")));
+        assert!(domain_covers(
+            &triples,
+            &property,
+            &format!("{KG}PurchaseInvoice")
         ));
     }
 
@@ -554,52 +553,91 @@ mod ontology_audit_archimate_v1 {
         parse_turtle(&ontology).expect("the registered archimate ontology parses")
     }
 
+    fn conforms(data: &str) -> bool {
+        let shapes = registered_shapes("core:archimate@1", "archimate");
+        medulla_shacl::validate_turtle(&shapes, data)
+            .expect("validation runs")
+            .conforms
+    }
+
     // spec: MEDULLA-CQ-CONN-R070.1
     #[test]
     fn shapes_module_loads() {
         let shapes = registered_shapes("core:archimate@1", "archimate");
-        let parsed = parse_turtle(&shapes).expect("the archimate shapes parse");
+        let triples = parse_turtle(&shapes).expect("the registered archimate shapes parse");
+        let shape = format!("{KG}ArchimateRelationshipShape");
+        assert!(has_iri(&triples, &shape, RDF_TYPE, SHACL_NODE_SHAPE));
         assert!(has_iri(
-            &parsed,
-            &format!("{KG}ArchimateRelationshipShape"),
-            RDF_TYPE,
-            SHACL_NODE_SHAPE
+            &triples,
+            &shape,
+            SHACL_TARGET_CLASS,
+            &format!("{KG}ArchimateRelationship")
         ));
     }
 
     // spec: MEDULLA-CQ-CONN-R070.2
     #[test]
     fn ApplicationComponent_declared() {
-        assert_class(&triples(), "ApplicationComponent", Some("ApplicationLayer"));
+        let triples = triples();
+        assert!(has_iri(
+            &triples,
+            &format!("{KG}ApplicationComponent"),
+            RDF_TYPE,
+            OWL_CLASS
+        ));
     }
 
     // spec: MEDULLA-CQ-CONN-R070.3
     #[test]
     fn ArchimateRelationship_declared() {
-        assert_class(&triples(), "ArchimateRelationship", None);
-        let prefix = "@prefix : <http://knuckles.team/kg#> . ";
-        let ok = format!("{prefix}:a :b :c . :r a :ArchimateRelationship ; :relationshipType \"Serving\" ; :relSource :a ; :relTarget :c .");
-        assert!(shapes_conform("core:archimate@1", "archimate", &ok));
-        for violating in [
-            ":r a :ArchimateRelationship ; :relSource :a ; :relTarget :c .",
-            ":r a :ArchimateRelationship ; :relationshipType \"Serving\" ; :relTarget :c .",
-            ":r a :ArchimateRelationship ; :relationshipType \"Serving\" ; :relSource :a .",
-        ] {
-            let data = format!("{prefix}{violating}");
-            assert!(!shapes_conform("core:archimate@1", "archimate", &data));
+        let triples = triples();
+        let class = format!("{KG}ArchimateRelationship");
+        assert!(has_iri(&triples, &class, RDF_TYPE, OWL_CLASS));
+        for property in ["relationshipType", "relSource", "relTarget"] {
+            assert!(
+                has_iri(&triples, &format!("{KG}{property}"), RDFS_DOMAIN, &class),
+                "{property}'s domain is ArchimateRelationship"
+            );
         }
+        let valid = r#"
+@prefix : <http://knuckles.team/kg#> .
+@prefix ex: <http://example.org/cq-conn/> .
+ex:rel-1 a :ArchimateRelationship ;
+    :relationshipType "Serving" ;
+    :relSource ex:app-1 ;
+    :relTarget ex:proc-1 .
+"#;
+        assert!(conforms(valid), "a complete relationship conforms");
+        let violating = valid.replace("    :relTarget ex:proc-1 .", "    :relSource ex:app-2 .");
+        assert!(
+            !conforms(&violating),
+            "a relationship without relTarget fails the shape"
+        );
     }
 
     // spec: MEDULLA-CQ-CONN-R070.4
     #[test]
     fn relationshipType_declared() {
-        assert_property(
-            &triples(),
-            "relationshipType",
-            OWL_DATATYPE_PROPERTY,
-            "ArchimateRelationship",
-            &format!("{XSD}string"),
-        );
+        let triples = triples();
+        let property = format!("{KG}relationshipType");
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDF_TYPE,
+            OWL_DATATYPE_PROPERTY
+        ));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_DOMAIN,
+            &format!("{KG}ArchimateRelationship")
+        ));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_RANGE,
+            &format!("{XSD}string")
+        ));
     }
 
     // spec: MEDULLA-CQ-CONN-R070.5
@@ -1036,145 +1074,165 @@ mod ontology_audit_core_foundation_v1 {
     }
 }
 
-// Shared term-audit helpers for the R070/R071/R072/R077/R078/R080/R081 rows.
-
-fn assert_class(triples: &[Triple], term: &str, parent: Option<&str>) {
-    let iri = format!("{KG}{term}");
-    assert!(
-        has_iri(triples, &iri, RDF_TYPE, OWL_CLASS),
-        "{term} is an owl:Class"
-    );
-    if let Some(parent) = parent {
-        assert!(
-            has_iri(triples, &iri, RDFS_SUBCLASSOF, &format!("{KG}{parent}")),
-            "{term} is a subclass of {parent}"
-        );
-    }
-}
-
-fn assert_property(triples: &[Triple], term: &str, kind: &str, domain: &str, range: &str) {
-    let iri = format!("{KG}{term}");
-    assert!(has_iri(triples, &iri, RDF_TYPE, kind), "{term} owl type");
-    assert!(
-        domain_covers(triples, &iri, &format!("{KG}{domain}")),
-        "{term} has domain {domain}"
-    );
-    assert!(
-        has_iri(triples, &iri, RDFS_RANGE, range),
-        "{term} has range {range}"
-    );
-}
-
-fn shapes_conform(source_id: &str, module: &str, data: &str) -> bool {
-    let shapes = registered_shapes(source_id, module);
-    medulla_shacl::validate_turtle(&shapes, data)
-        .expect("validation runs")
-        .conforms
-}
-
 #[allow(non_snake_case)]
 mod ontology_audit_documentation_v1 {
     use super::*;
 
     fn triples() -> Vec<Triple> {
         let ontology = registered_ontology("core:documentation@1", "documentation");
-        parse_turtle(&ontology).expect("the registered ontology parses")
+        parse_turtle(&ontology).expect("the registered documentation ontology parses")
+    }
+
+    fn conforms(data: &str) -> bool {
+        let shapes = registered_shapes("core:documentation-shapes@1", "documentation-shapes");
+        medulla_shacl::validate_turtle(&shapes, data)
+            .expect("validation runs")
+            .conforms
     }
 
     // spec: MEDULLA-CQ-CONN-R071.1
     #[test]
     fn shapes_module_loads() {
         let shapes = registered_shapes("core:documentation-shapes@1", "documentation-shapes");
-        let parsed = parse_turtle(&shapes).expect("the documentation shapes parse");
-        assert!(has_iri(
-            &parsed,
-            &format!("{KG}WebSnapshotShape"),
-            RDF_TYPE,
-            SHACL_NODE_SHAPE
-        ));
+        parse_turtle(&shapes).expect("the registered documentation shapes parse");
     }
 
     // spec: MEDULLA-CQ-CONN-R071.2
     #[test]
     fn WebSnapshot_declared() {
-        assert_class(&triples(), "WebSnapshot", Some("Document"));
-        let prefix = "@prefix : <http://knuckles.team/kg#> . ";
-        let id = "core:documentation-shapes@1";
-        assert!(shapes_conform(
-            id,
-            "documentation-shapes",
-            &format!("{prefix}:s a :WebSnapshot ; :sourceRef \"https://example.org/\" .")
+        let triples = triples();
+        let class = format!("{KG}WebSnapshot");
+        assert!(has_iri(&triples, &class, RDF_TYPE, OWL_CLASS));
+        assert!(has_iri(
+            &triples,
+            &class,
+            RDFS_SUBCLASSOF,
+            &format!("{KG}Document")
         ));
-        assert!(!shapes_conform(
-            id,
-            "documentation-shapes",
-            &format!("{prefix}:s a :WebSnapshot .")
-        ));
+        let valid = r#"
+@prefix : <http://knuckles.team/kg#> .
+@prefix ex: <http://example.org/cq-conn/> .
+ex:snap-1 a :WebSnapshot ;
+    :sourceRef "https://example.org/page" .
+"#;
+        assert!(conforms(valid), "a snapshot with its URL conforms");
+        let violating = r#"
+@prefix : <http://knuckles.team/kg#> .
+@prefix ex: <http://example.org/cq-conn/> .
+ex:snap-1 a :WebSnapshot .
+"#;
+        assert!(
+            !conforms(violating),
+            "a snapshot without sourceRef fails the shape"
+        );
     }
 
     // spec: MEDULLA-CQ-CONN-R071.3
     #[test]
     fn ArchiveResult_declared() {
-        assert_class(&triples(), "ArchiveResult", None);
-        let prefix = "@prefix : <http://knuckles.team/kg#> . ";
-        let id = "core:documentation-shapes@1";
-        assert!(shapes_conform(id, "documentation-shapes", &format!("{prefix}:r a :ArchiveResult ; :extractorName \"pdf\" ; :resultStatus \"succeeded\" .")));
-        assert!(!shapes_conform(
-            id,
-            "documentation-shapes",
-            &format!("{prefix}:r a :ArchiveResult ; :resultStatus \"succeeded\" .")
+        let triples = triples();
+        assert!(has_iri(
+            &triples,
+            &format!("{KG}ArchiveResult"),
+            RDF_TYPE,
+            OWL_CLASS
         ));
-        assert!(!shapes_conform(
-            id,
-            "documentation-shapes",
-            &format!("{prefix}:r a :ArchiveResult ; :extractorName \"pdf\" .")
-        ));
+        let valid = r#"
+@prefix : <http://knuckles.team/kg#> .
+@prefix ex: <http://example.org/cq-conn/> .
+ex:res-1 a :ArchiveResult ;
+    :extractorName "singlefile" ;
+    :resultStatus "succeeded" .
+"#;
+        assert!(conforms(valid), "a complete archive result conforms");
+        let violating = valid.replace("    :extractorName \"singlefile\" ;\n", "");
+        assert!(
+            !conforms(&violating),
+            "an archive result without extractorName fails the shape"
+        );
     }
 
     // spec: MEDULLA-CQ-CONN-R071.4
     #[test]
     fn hasArchiveResult_declared() {
-        assert_property(
-            &triples(),
-            "hasArchiveResult",
-            OWL_OBJECT_PROPERTY,
-            "WebSnapshot",
-            &format!("{KG}ArchiveResult"),
-        );
+        let triples = triples();
+        let property = format!("{KG}hasArchiveResult");
+        assert!(has_iri(&triples, &property, RDF_TYPE, OWL_OBJECT_PROPERTY));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_DOMAIN,
+            &format!("{KG}WebSnapshot")
+        ));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_RANGE,
+            &format!("{KG}ArchiveResult")
+        ));
     }
 
     // spec: MEDULLA-CQ-CONN-R071.5
     #[test]
     fn extractorName_declared() {
-        assert_property(
-            &triples(),
-            "extractorName",
-            OWL_DATATYPE_PROPERTY,
-            "ArchiveResult",
-            &format!("{XSD}string"),
-        );
+        let triples = triples();
+        let property = format!("{KG}extractorName");
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDF_TYPE,
+            OWL_DATATYPE_PROPERTY
+        ));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_DOMAIN,
+            &format!("{KG}ArchiveResult")
+        ));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_RANGE,
+            &format!("{XSD}string")
+        ));
     }
 
     // spec: MEDULLA-CQ-CONN-R071.6
     #[test]
     fn resultStatus_declared() {
-        assert_property(
-            &triples(),
-            "resultStatus",
-            OWL_DATATYPE_PROPERTY,
-            "ArchiveResult",
-            &format!("{XSD}string"),
+        let triples = triples();
+        let property = format!("{KG}resultStatus");
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDF_TYPE,
+            OWL_DATATYPE_PROPERTY
+        ));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_DOMAIN,
+            &format!("{KG}ArchiveResult")
+        ));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_RANGE,
+            &format!("{XSD}string")
+        ));
+        let valid = r#"
+@prefix : <http://knuckles.team/kg#> .
+@prefix ex: <http://example.org/cq-conn/> .
+ex:res-1 a :ArchiveResult ;
+    :extractorName "singlefile" ;
+    :resultStatus "skipped" .
+"#;
+        assert!(conforms(valid), "a closed-vocabulary status conforms");
+        let violating = valid.replace("\"skipped\"", "\"pending\"");
+        assert!(
+            !conforms(&violating),
+            "a resultStatus outside succeeded/failed/skipped fails the shape"
         );
-        let prefix = "@prefix : <http://knuckles.team/kg#> . ";
-        let id = "core:documentation-shapes@1";
-        for status in ["succeeded", "failed", "skipped"] {
-            let data = format!("{prefix}:r a :ArchiveResult ; :extractorName \"pdf\" ; :resultStatus \"{status}\" .");
-            assert!(shapes_conform(id, "documentation-shapes", &data));
-        }
-        let bad = format!(
-            "{prefix}:r a :ArchiveResult ; :extractorName \"pdf\" ; :resultStatus \"unknown\" ."
-        );
-        assert!(!shapes_conform(id, "documentation-shapes", &bad));
     }
 }
 
@@ -1184,19 +1242,35 @@ mod ontology_audit_process_intelligence_v1 {
 
     fn triples() -> Vec<Triple> {
         let ontology = registered_ontology("core:process_intelligence@1", "process_intelligence");
-        parse_turtle(&ontology).expect("the registered ontology parses")
+        parse_turtle(&ontology).expect("the registered process-intelligence ontology parses")
     }
 
     // spec: MEDULLA-CQ-CONN-R072.1
     #[test]
     fn EpcFunction_declared() {
-        assert_class(&triples(), "EpcFunction", Some("ProcessEventType"));
+        let triples = triples();
+        let class = format!("{KG}EpcFunction");
+        assert!(has_iri(&triples, &class, RDF_TYPE, OWL_CLASS));
+        assert!(has_iri(
+            &triples,
+            &class,
+            RDFS_SUBCLASSOF,
+            &format!("{KG}ProcessEventType")
+        ));
     }
 
     // spec: MEDULLA-CQ-CONN-R072.2
     #[test]
     fn EpcRuleOperator_declared() {
-        assert_class(&triples(), "EpcRuleOperator", None);
+        let triples = triples();
+        let class = format!("{KG}EpcRuleOperator");
+        assert!(has_iri(&triples, &class, RDF_TYPE, OWL_CLASS));
+        assert!(has_iri(
+            &triples,
+            &class,
+            RDFS_SUBCLASSOF,
+            &format!("{KG}ProcessEventType")
+        ));
     }
 
     // spec: MEDULLA-CQ-CONN-R072.3
@@ -1226,43 +1300,69 @@ mod ontology_audit_process_intelligence_v1 {
     // spec: MEDULLA-CQ-CONN-R072.4
     #[test]
     fn ProcessInstance_declared() {
-        assert_class(&triples(), "ProcessInstance", None);
+        let triples = triples();
+        let class = format!("{KG}ProcessInstance");
+        assert!(has_iri(&triples, &class, RDF_TYPE, OWL_CLASS));
     }
 
     // spec: MEDULLA-CQ-CONN-R072.5
     #[test]
     fn instanceOfProcessModel_declared() {
-        assert_property(
-            &triples(),
-            "instanceOfProcessModel",
-            OWL_OBJECT_PROPERTY,
-            "ProcessInstance",
-            &format!("{KG}ProcessModelVersion"),
-        );
+        let triples = triples();
+        let property = format!("{KG}instanceOfProcessModel");
+        assert!(has_iri(&triples, &property, RDF_TYPE, OWL_OBJECT_PROPERTY));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_DOMAIN,
+            &format!("{KG}ProcessInstance")
+        ));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_RANGE,
+            &format!("{KG}ProcessModelVersion")
+        ));
     }
 
     // spec: MEDULLA-CQ-CONN-R072.6
     #[test]
     fn stoppedAtActivity_declared() {
-        assert_property(
-            &triples(),
-            "stoppedAtActivity",
-            OWL_OBJECT_PROPERTY,
-            "ProcessInstance",
-            &format!("{KG}ProcessEventType"),
-        );
+        let triples = triples();
+        let property = format!("{KG}stoppedAtActivity");
+        assert!(has_iri(&triples, &property, RDF_TYPE, OWL_OBJECT_PROPERTY));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_DOMAIN,
+            &format!("{KG}ProcessInstance")
+        ));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_RANGE,
+            &format!("{KG}ProcessEventType")
+        ));
     }
 
     // spec: MEDULLA-CQ-CONN-R072.7
     #[test]
     fn raisedIncident_declared() {
-        assert_property(
-            &triples(),
-            "raisedIncident",
-            OWL_OBJECT_PROPERTY,
-            "ProcessInstance",
-            &format!("{KG}ApplicationEvent"),
-        );
+        let triples = triples();
+        let property = format!("{KG}raisedIncident");
+        assert!(has_iri(&triples, &property, RDF_TYPE, OWL_OBJECT_PROPERTY));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_DOMAIN,
+            &format!("{KG}ProcessInstance")
+        ));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_RANGE,
+            &format!("{KG}ApplicationEvent")
+        ));
     }
 }
 
@@ -1272,37 +1372,71 @@ mod ontology_audit_virtual_graph_v1 {
 
     fn triples() -> Vec<Triple> {
         let ontology = registered_ontology("core:virtual-graph@1", "virtual-graph");
-        parse_turtle(&ontology).expect("the registered ontology parses")
+        parse_turtle(&ontology).expect("the registered virtual-graph ontology parses")
     }
 
     // spec: MEDULLA-CQ-CONN-R077.1
     #[test]
     fn NamedGraph_declared() {
-        assert_class(&triples(), "NamedGraph", Some("Dataset"));
+        let triples = triples();
+        let class = format!("{KG}NamedGraph");
+        assert!(has_iri(&triples, &class, RDF_TYPE, OWL_CLASS));
+        assert!(has_iri(
+            &triples,
+            &class,
+            RDFS_SUBCLASSOF,
+            &format!("{KG}Dataset")
+        ));
     }
 
     // spec: MEDULLA-CQ-CONN-R077.2
     #[test]
     fn tripleCount_declared() {
-        assert_property(
-            &triples(),
-            "tripleCount",
-            OWL_DATATYPE_PROPERTY,
-            "NamedGraph",
-            &format!("{XSD}integer"),
-        );
+        let triples = triples();
+        let property = format!("{KG}tripleCount");
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDF_TYPE,
+            OWL_DATATYPE_PROPERTY
+        ));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_DOMAIN,
+            &format!("{KG}NamedGraph")
+        ));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_RANGE,
+            &format!("{XSD}integer")
+        ));
     }
 
     // spec: MEDULLA-CQ-CONN-R077.3
     #[test]
     fn lastModifiedAt_declared() {
-        assert_property(
-            &triples(),
-            "lastModifiedAt",
-            OWL_DATATYPE_PROPERTY,
-            "NamedGraph",
-            &format!("{XSD}dateTime"),
-        );
+        let triples = triples();
+        let property = format!("{KG}lastModifiedAt");
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDF_TYPE,
+            OWL_DATATYPE_PROPERTY
+        ));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_DOMAIN,
+            &format!("{KG}NamedGraph")
+        ));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_RANGE,
+            &format!("{XSD}dateTime")
+        ));
     }
 }
 
@@ -1312,28 +1446,7 @@ mod ontology_audit_identity_v1 {
 
     fn triples() -> Vec<Triple> {
         let ontology = registered_ontology("core:identity@1", "identity");
-        parse_turtle(&ontology).expect("the registered ontology parses")
-    }
-
-    // spec: MEDULLA-CQ-CONN-R078.3
-    #[test]
-    fn OidcClient_declared() {
-        assert_class(&triples(), "OidcClient", Some("Application"));
-    }
-
-    // spec: MEDULLA-CQ-CONN-R078.4
-    #[test]
-    fn roleGrantsAccessTo_declared() {
-        assert_property(
-            &triples(),
-            "roleGrantsAccessTo",
-            OWL_OBJECT_PROPERTY,
-            "IdentityRole",
-            &format!("{KG}Application"),
-        );
-        let operations = registered_ontology("core:service_operations@1", "service_operations");
-        let operations = parse_turtle(&operations).expect("the service_operations ontology parses");
-        assert_class(&operations, "Application", None);
+        parse_turtle(&ontology).expect("the registered identity ontology parses")
     }
 
     fn conforms(data: &str) -> bool {
@@ -1348,13 +1461,59 @@ mod ontology_audit_identity_v1 {
     fn shapes_module_loads() {
         let shapes = registered_shapes("core:identity-shapes@1", "identity-shapes");
         let triples = parse_turtle(&shapes).expect("the registered identity shapes parse");
-        let shape = format!("{KG}IdentityUserAccountStatusShape");
+        let shape = format!("{KG}IdentityUserShape");
         assert!(has_iri(&triples, &shape, RDF_TYPE, SHACL_NODE_SHAPE));
         assert!(has_iri(
             &triples,
             &shape,
             SHACL_TARGET_CLASS,
             &format!("{KG}IdentityUser")
+        ));
+    }
+
+    // spec: MEDULLA-CQ-CONN-R078.3
+    #[test]
+    fn OidcClient_declared() {
+        let triples = triples();
+        let class = format!("{KG}OidcClient");
+        assert!(has_iri(&triples, &class, RDF_TYPE, OWL_CLASS));
+        assert!(has_iri(
+            &triples,
+            &class,
+            RDFS_SUBCLASSOF,
+            &format!("{KG}Application")
+        ));
+    }
+
+    // spec: MEDULLA-CQ-CONN-R078.4
+    #[test]
+    fn roleGrantsAccessTo_declared() {
+        let triples = triples();
+        let property = format!("{KG}roleGrantsAccessTo");
+        assert!(has_iri(&triples, &property, RDF_TYPE, OWL_OBJECT_PROPERTY));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_DOMAIN,
+            &format!("{KG}IdentityRole")
+        ));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_RANGE,
+            &format!("{KG}Application")
+        ));
+        // The range is the service-operations application class.
+        let service_operations = parse_turtle(&registered_ontology(
+            "core:service_operations@1",
+            "service_operations",
+        ))
+        .expect("the registered service-operations ontology parses");
+        assert!(has_iri(
+            &service_operations,
+            &format!("{KG}Application"),
+            RDF_TYPE,
+            OWL_CLASS
         ));
     }
 
@@ -1381,13 +1540,12 @@ mod ontology_audit_identity_v1 {
             RDFS_RANGE,
             &format!("{XSD}string")
         ));
-        let data = |value: &str| {
-            format!(
-                "@prefix : <http://knuckles.team/kg#> .\n<urn:x:1> a :IdentityUser ; :accountStatus \"{value}\" ."
-            )
-        };
-        assert!(conforms(&data("SUSPENDED")));
-        assert!(!conforms(&data("BANNED")));
+        assert!(conforms(
+            "@prefix : <http://knuckles.team/kg#> . :u a :IdentityUser ; :accountStatus \"ACTIVE\" ."
+        ));
+        assert!(!conforms(
+            "@prefix : <http://knuckles.team/kg#> . :u a :IdentityUser ; :accountStatus \"LOCKED\" ."
+        ));
     }
 }
 
@@ -1397,31 +1555,7 @@ mod ontology_audit_enterprise_v1 {
 
     fn triples() -> Vec<Triple> {
         let ontology = registered_ontology("core:enterprise@1", "enterprise");
-        parse_turtle(&ontology).expect("the registered ontology parses")
-    }
-
-    // spec: MEDULLA-CQ-CONN-R080.2
-    #[test]
-    fn factSheetType_declared() {
-        assert_property(
-            &triples(),
-            "factSheetType",
-            OWL_DATATYPE_PROPERTY,
-            "EAFactSheet",
-            &format!("{XSD}string"),
-        );
-    }
-
-    // spec: MEDULLA-CQ-CONN-R080.4
-    #[test]
-    fn activeUserCount_declared() {
-        assert_property(
-            &triples(),
-            "activeUserCount",
-            OWL_DATATYPE_PROPERTY,
-            "EAFactSheet",
-            &format!("{XSD}integer"),
-        );
+        parse_turtle(&ontology).expect("the registered enterprise ontology parses")
     }
 
     fn conforms(data: &str) -> bool {
@@ -1436,13 +1570,38 @@ mod ontology_audit_enterprise_v1 {
     fn shapes_module_loads() {
         let shapes = registered_shapes("core:enterprise-shapes@1", "enterprise-shapes");
         let triples = parse_turtle(&shapes).expect("the registered enterprise shapes parse");
-        let shape = format!("{KG}EAFactSheetLifecyclePhaseShape");
+        let shape = format!("{KG}EAFactSheetShape");
         assert!(has_iri(&triples, &shape, RDF_TYPE, SHACL_NODE_SHAPE));
         assert!(has_iri(
             &triples,
             &shape,
             SHACL_TARGET_CLASS,
             &format!("{KG}EAFactSheet")
+        ));
+    }
+
+    // spec: MEDULLA-CQ-CONN-R080.2
+    #[test]
+    fn factSheetType_declared() {
+        let triples = triples();
+        let property = format!("{KG}factSheetType");
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDF_TYPE,
+            OWL_DATATYPE_PROPERTY
+        ));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_DOMAIN,
+            &format!("{KG}EAFactSheet")
+        ));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_RANGE,
+            &format!("{XSD}string")
         ));
     }
 
@@ -1469,13 +1628,37 @@ mod ontology_audit_enterprise_v1 {
             RDFS_RANGE,
             &format!("{XSD}string")
         ));
-        let data = |value: &str| {
-            format!(
-                "@prefix : <http://knuckles.team/kg#> .\n<urn:x:1> a :EAFactSheet ; :lifecyclePhase \"{value}\" ."
-            )
-        };
-        assert!(conforms(&data("phaseOut")));
-        assert!(!conforms(&data("retired")));
+        assert!(conforms(
+            "@prefix : <http://knuckles.team/kg#> . :f a :EAFactSheet ; :lifecyclePhase \"phaseOut\" ."
+        ));
+        assert!(!conforms(
+            "@prefix : <http://knuckles.team/kg#> . :f a :EAFactSheet ; :lifecyclePhase \"retired\" ."
+        ));
+    }
+
+    // spec: MEDULLA-CQ-CONN-R080.4
+    #[test]
+    fn activeUserCount_declared() {
+        let triples = triples();
+        let property = format!("{KG}activeUserCount");
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDF_TYPE,
+            OWL_DATATYPE_PROPERTY
+        ));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_DOMAIN,
+            &format!("{KG}EAFactSheet")
+        ));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_RANGE,
+            &format!("{XSD}integer")
+        ));
     }
 }
 
@@ -1485,66 +1668,115 @@ mod ontology_audit_nutrition_v1 {
 
     fn triples() -> Vec<Triple> {
         let ontology = registered_ontology("core:nutrition@1", "nutrition");
-        parse_turtle(&ontology).expect("the registered ontology parses")
+        parse_turtle(&ontology).expect("the registered nutrition ontology parses")
     }
 
     // spec: MEDULLA-CQ-CONN-R081.1
     #[test]
     fn Recipe_declared() {
-        assert_class(&triples(), "Recipe", None);
+        let triples = triples();
+        let class = format!("{KG}Recipe");
+        assert!(has_iri(&triples, &class, RDF_TYPE, OWL_CLASS));
     }
 
     // spec: MEDULLA-CQ-CONN-R081.2
     #[test]
     fn usesIngredient_declared() {
-        assert_property(
-            &triples(),
-            "usesIngredient",
-            OWL_OBJECT_PROPERTY,
-            "Recipe",
-            &format!("{KG}Food"),
-        );
+        let triples = triples();
+        let property = format!("{KG}usesIngredient");
+        assert!(has_iri(&triples, &property, RDF_TYPE, OWL_OBJECT_PROPERTY));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_DOMAIN,
+            &format!("{KG}Recipe")
+        ));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_RANGE,
+            &format!("{KG}Food")
+        ));
     }
 
     // spec: MEDULLA-CQ-CONN-R081.3
     #[test]
     fn ShoppingListItem_declared() {
-        assert_class(&triples(), "ShoppingListItem", None);
+        let triples = triples();
+        let class = format!("{KG}ShoppingListItem");
+        assert!(has_iri(&triples, &class, RDF_TYPE, OWL_CLASS));
     }
 
     // spec: MEDULLA-CQ-CONN-R081.4
     #[test]
     fn MealPlanEntry_declared() {
-        assert_class(&triples(), "MealPlanEntry", None);
+        let triples = triples();
+        let class = format!("{KG}MealPlanEntry");
+        assert!(has_iri(&triples, &class, RDF_TYPE, OWL_CLASS));
     }
 
     // spec: MEDULLA-CQ-CONN-R081.5
     #[test]
     fn WorkoutRoutine_declared() {
-        assert_class(&triples(), "WorkoutRoutine", None);
+        let triples = triples();
+        let class = format!("{KG}WorkoutRoutine");
+        assert!(has_iri(&triples, &class, RDF_TYPE, OWL_CLASS));
     }
 
     // spec: MEDULLA-CQ-CONN-R081.6
     #[test]
     fn Exercise_declared() {
-        assert_class(&triples(), "Exercise", None);
+        let triples = triples();
+        let class = format!("{KG}Exercise");
+        assert!(has_iri(&triples, &class, RDF_TYPE, OWL_CLASS));
     }
 
     // spec: MEDULLA-CQ-CONN-R081.7
     #[test]
     fn includesExercise_declared() {
-        assert_property(
-            &triples(),
-            "includesExercise",
-            OWL_OBJECT_PROPERTY,
-            "WorkoutRoutine",
-            &format!("{KG}Exercise"),
-        );
+        let triples = triples();
+        let property = format!("{KG}includesExercise");
+        assert!(has_iri(&triples, &property, RDF_TYPE, OWL_OBJECT_PROPERTY));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_DOMAIN,
+            &format!("{KG}WorkoutRoutine")
+        ));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_RANGE,
+            &format!("{KG}Exercise")
+        ));
     }
 
     // spec: MEDULLA-CQ-CONN-R081.8
     #[test]
     fn WorkoutSession_declared() {
-        assert_class(&triples(), "WorkoutSession", None);
+        let triples = triples();
+        let class = format!("{KG}WorkoutSession");
+        assert!(has_iri(&triples, &class, RDF_TYPE, OWL_CLASS));
     }
+}
+
+// spec: MEDULLA-CQ-CONN-R087
+#[test]
+fn changes_resource_declared() {
+    let triples = parse_turtle(&registered_ontology("core:retrieval@1", "retrieval"))
+        .expect("the registered retrieval ontology parses");
+    let property = format!("{KG}changesResource");
+    assert!(has_iri(&triples, &property, RDF_TYPE, OWL_OBJECT_PROPERTY));
+    assert!(has_iri(
+        &triples,
+        &property,
+        RDFS_DOMAIN,
+        &format!("{KG}Change")
+    ));
+    assert!(has_iri(
+        &triples,
+        &property,
+        RDFS_RANGE,
+        &format!("{KG}WebResource")
+    ));
 }

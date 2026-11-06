@@ -23,6 +23,9 @@ macro_rules! work_item_kernel_writes {
             | ::medulla_protocol_types::protocol::Method::PublishCurrentPlan { .. }
             | ::medulla_protocol_types::protocol::Method::IssueHostStartGrant { .. }
             | ::medulla_protocol_types::protocol::Method::PublishRunCheckpoint { .. }
+            | ::medulla_protocol_types::protocol::Method::MarkWorkItemEffectStarted { .. }
+            | ::medulla_protocol_types::protocol::Method::RecordEffectReceipt { .. }
+            | ::medulla_protocol_types::protocol::Method::SubmitAdmittedRequest { .. }
             | ::medulla_protocol_types::protocol::Method::IssueControlLease { .. }
             | ::medulla_protocol_types::protocol::Method::TransitionControlLease { .. }
             | ::medulla_protocol_types::protocol::Method::PolicyEvolutionStore { .. }
@@ -54,6 +57,9 @@ macro_rules! work_item_resource_writes {
 /// `medulla_tsdb::point::Point` only where the SERIES tables are actually written. Kept as a
 /// named alias so the `&[MeasurementBatch]` params don't trip the `type_complexity` lint.
 pub type MeasurementBatch = (String, usize, u64, Vec<String>, Vec<(i64, Vec<f64>)>);
+
+#[cfg(feature = "statechart")]
+pub mod claim_statechart;
 
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[cfg(feature = "statechart")]

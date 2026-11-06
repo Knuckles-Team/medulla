@@ -17,9 +17,11 @@
 pub mod incremental;
 mod lifecycle;
 mod manager;
+mod spill;
 
 pub use lifecycle::{decode_def, encode_def, materialize, plan_hash};
 pub use manager::{manager, Mode, PlanMatView, PlanMatViewManager};
+pub use spill::ViewStateSpill;
 
 /// CDC hook (CONCEPT:MEDULLA-KG.storage.matview-cdc-invalidation): mark every `Recompute`-mode
 /// plan-backed matview over `graph` stale. Called from `CdcHub::emit` per committed change

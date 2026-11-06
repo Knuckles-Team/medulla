@@ -276,6 +276,8 @@ SEND_BY_METHOD = {
     "FinancePurgedCpcv": compute.send_finance_purged_cpcv,
     "FinanceQueueImbalance": compute.send_finance_queue_imbalance,
     "FinanceRealizedVolTick": compute.send_finance_realized_vol_tick,
+    "FinanceRecordGet": compute.send_finance_record_get,
+    "FinanceRecordPut": compute.send_finance_record_put,
     "FinanceRegimeChain": compute.send_finance_regime_chain,
     "FinanceRiskMetrics": compute.send_finance_risk_metrics,
     "FinanceRiskParity": compute.send_finance_risk_parity,

@@ -265,9 +265,6 @@ pub struct ServerState {
     /// Idle TTL (seconds) after which an open txn is auto-rolled-back by the sweep
     /// (`MEDULLA_TXN_TTL_SECS`, default 300).
     pub txn_ttl_secs: u64,
-    /// Engine-wide policy for a stale `ApplyChangeEnvelope` version claim
-    /// (MEDULLA-DURABLE-KERNEL-R084.3). Defaults to `Refuse`.
-    pub write_conflict_strategy: medulla_types::MergeStrategy,
     /// Cap on concurrently-open txns per graph (`MEDULLA_TXN_MAX_PER_GRAPH`,
     /// default 256). `BeginTxn` over the cap is rejected — bounds memory the same
     /// way `per_graph_inflight` bounds request concurrency.
@@ -383,6 +380,10 @@ pub struct ServerState {
     pub lake: Option<ErasedHandle>,
     /// Installed crate-split seam implementations (MEDULLA-CONTRACT-R056.8).
     pub seams: crate::api::registry::SeamRegistry,
+    /// Policy applied to a stale `ApplyChangeEnvelope` version expectation
+    /// (MEDULLA-DURABLE-KERNEL-R084.3). Startup sets it from `ServerArgs`;
+    /// the default `Refuse` returns a typed `WRITE_CONFLICT`.
+    pub write_conflict_strategy: medulla_types::write_conflict::MergeStrategy,
 }
 
 #[cfg(feature = "raft")]
@@ -472,6 +473,7 @@ impl ServerState {
             channels: ChannelManager::default(),
             auth_secret: auth_secret.into(),
             local_anonymous: false,
+            write_conflict_strategy: Default::default(),
             persist_dir: None,
             persistence: None,
             #[cfg(feature = "redb")]
@@ -491,7 +493,6 @@ impl ServerState {
             open_txns: Arc::default(),
             txn_id_gen: Arc::new(TxnIdGen),
             txn_ttl_secs: 300,
-            write_conflict_strategy: medulla_types::MergeStrategy::Refuse,
             txn_max_per_graph: 256,
             txn_max_per_agent: 256,
             #[cfg(feature = "blob")]

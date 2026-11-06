@@ -21,13 +21,20 @@ use medulla_server_blob::blob::BlobCursors;
 
 mod annotations;
 mod catalog_attributes;
+mod concept_path;
+#[cfg(feature = "rdf")]
+mod contract_rdf;
+pub(crate) mod crosswalk;
 mod desired;
 mod facts;
 mod front_matter;
 mod json;
+#[cfg(feature = "rdf")]
+mod nutrition;
 mod planning;
 mod skill_files;
 mod validation;
+pub(crate) mod vocabulary;
 
 #[cfg(test)]
 use json::{json_size, parse_bounded_json, MAX_JSON_DEPTH};
@@ -108,6 +115,7 @@ fn still_wanted(cancel: &RequestCancel) -> Result<(), String> {
 mod tests {
     use super::*;
 
+    // spec: MEDULLA-TYPED-PACKS-R001.2
     #[test]
     fn section_ranges_are_checked_without_wrapping() {
         let bytes = b"abcdef";

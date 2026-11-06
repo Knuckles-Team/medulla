@@ -65,17 +65,26 @@ pub mod virtual_graph_mapping;
 // MEDULLA-UNIFIED-DATA-PLANE-R011 — typed freshness route and a bounded
 // read-your-writes wait, refusing an unbounded (zero-timeout) wait.
 pub mod freshness_router;
-// MEDULLA-FEDERATED-QUERY-R654.2 bounded source slice: deterministic hub ranking
-// over an already-resolved code subgraph. Anchor resolution, bounded expansion,
-// operations diagnosis and served CodeContext wiring remain later slices.
+// MEDULLA-FEDERATED-QUERY-R654.2/.7: code context (anchor resolution, bounded
+// expansion, hub ranking) and symptom diagnosis kernels.
 #[cfg(feature = "query")]
 pub mod code_context;
+// MEDULLA-FEDERATED-QUERY-R653.1: serde-stable `CorpusRetrieve` request and row types.
+pub mod corpus_retrieval;
 
 /// The UQL text front-end (CONCEPT:AU-KG.query.top-nodes-by-degree) — `uql::parse(text) -> wire::Plan`. It
 /// is a pure parser (lexer + recursive descent, NO DataFusion), so it ships in a
 /// default/Pi build alongside the algebra/cost/IR; only EXECUTION of the resulting
 /// Plan is `query`-gated.
 pub mod uql;
+
+/// Temporal rule derivation with a persisted origin chain (MEDULLA-FEDERATED-QUERY-R006.1).
+pub mod rules;
+
+// MEDULLA-FEDERATED-QUERY-R651.1 — query understanding model (filters, intent, expansion port types).
+pub mod query_understanding;
+// MEDULLA-FEDERATED-QUERY-R652.1 — rerank scorer port, calibration curve and receipt types.
+pub mod rerank;
 
 // The natural-language → query planning seam (CONCEPT:MEDULLA-KG.query.core-query-input) + the concrete standalone
 // `UreqNlPlanner` (CONCEPT:MEDULLA-KG.query.fence-stripper). The `NlPlanner` trait + the `plan_and_execute*`
@@ -94,6 +103,9 @@ mod engine_peer_tests;
 /// (MEDULLA-UNIFIED-DATA-PLANE-R018.2.1). Pure `std`, always compiled: no driver/ODBC
 /// client dependency is needed until the live slice (`R018.2.2`) issues real reads.
 pub mod relational_connection;
+/// Watermark change capture for an attached SQLite file
+/// (MEDULLA-UNIFIED-DATA-PLANE-R015.2.2.2). Pure `std` over the SQLite format reader.
+pub mod sqlite_capture;
 
 // The hierarchical-retrieval surface (CONCEPT:MEDULLA-KG.retrieval.bounded-drill): the retriever + its accessor
 // traits + the structured result + the flat-top-k baseline, so a caller names them
