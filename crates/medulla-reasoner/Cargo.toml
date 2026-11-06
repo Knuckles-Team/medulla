@@ -29,6 +29,11 @@ tracing = "0.1"
 rand_chacha = "0.3"
 cudarc = { version = "0.17", optional = true, default-features = false, features = ["driver", "nvrtc", "dynamic-loading", "cuda-12060"] }
 
+[[bench]]
+name = "owl_retract"
+harness = false
+required-features = ["owl"]
+
 [features]
 gpu-cuda = ["dep:cudarc", "reasoning"]
 reasoning = []
