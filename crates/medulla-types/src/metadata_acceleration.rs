@@ -14,6 +14,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::contract::ServerErrorCode;
+
 /// A versioned, hashed metadata-discovery result for one registered
 /// source. Carries no entity row data — only the discovered shape and its
 /// content hash.
@@ -133,20 +135,63 @@ pub struct AccelerationPolicy {
 
 impl AccelerationPolicy {
     /// Resolve how a fragment under this policy must run: `Copy` only when
-    /// the source supports copying, a hot-subset predicate is declared, and
-    /// a freshness watermark is present; `Live` otherwise. A missing
-    /// watermark disables the copied route — it never silently serves a
-    /// copy of unknown freshness.
-    pub fn resolve_mode(&self) -> FragmentExecutionMode {
+    /// the source supports copying, a hot-subset predicate is declared, a
+    /// freshness watermark is present and `now_ms <= valid_through_ms`;
+    /// `Live` otherwise. A missing or expired watermark disables the copied
+    /// route — it never silently serves a copy of unknown freshness, and the
+    /// caller queues a refresh of the replica.
+    pub fn resolve_mode(&self, now_ms: u64, valid_through_ms: u64) -> FragmentExecutionMode {
         if self.source_supports_copy
             && !self.hot_subset_predicate.is_empty()
             && self.freshness_watermark.is_some()
+            && now_ms <= valid_through_ms
         {
             FragmentExecutionMode::Copy
         } else {
             FragmentExecutionMode::Live
         }
     }
+}
+
+/// A copy fill was refused; the route stays `Live`.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct CopyRefusal {
+    /// `COPY_ROW_CAP_EXCEEDED` or `COPY_CAPABILITY_MISSING`.
+    pub code: ServerErrorCode,
+    /// What the replica held against what the policy allows.
+    pub detail: String,
+}
+
+impl std::fmt::Display for CopyRefusal {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}: {}", self.code, self.detail)
+    }
+}
+
+impl std::error::Error for CopyRefusal {}
+
+/// Admit a copy fill of `row_count` rows under `policy`, capped at `max_copy_rows`
+/// (the knob `acceleration.max_copy_rows`). The source must support copying and the
+/// replica must hold a watermark; a replica over the cap aborts the fill.
+pub fn copy_admitted(
+    policy: &AccelerationPolicy,
+    row_count: u64,
+    max_copy_rows: u64,
+) -> Result<(), CopyRefusal> {
+    let refuse = |code, detail: String| Err(CopyRefusal { code, detail });
+    if !policy.source_supports_copy || policy.freshness_watermark.is_none() {
+        return refuse(
+            ServerErrorCode::CopyCapabilityMissing,
+            "the source has no copy capability or the replica has no watermark".to_string(),
+        );
+    }
+    if row_count > max_copy_rows {
+        return refuse(
+            ServerErrorCode::CopyRowCapExceeded,
+            format!("{row_count} rows exceed acceleration.max_copy_rows {max_copy_rows}"),
+        );
+    }
+    Ok(())
 }
 
 /// A `MetadataContract` or `AccelerationPolicy` failed validation.
@@ -177,9 +222,10 @@ pub fn validate_contract(contract: &MetadataContract) -> Result<(), InvalidMetad
 /// acceleration the source cannot provide.
 pub fn validate_policy(policy: &AccelerationPolicy) -> Result<(), InvalidMetadataContract> {
     if !policy.hot_subset_predicate.is_empty() && !policy.source_supports_copy {
-        return Err(InvalidMetadataContract(
-            "hot-subset predicate declared but source has no copy capability".to_string(),
-        ));
+        return Err(InvalidMetadataContract(format!(
+            "{}: hot-subset predicate declared but source has no copy capability",
+            ServerErrorCode::CopyCapabilityMissing
+        )));
     }
     Ok(())
 }
@@ -196,6 +242,8 @@ mod tests {
             content_hash: "deadbeef".to_string(),
         }
     }
+
+    const NOW: u64 = 1_000;
 
     fn policy(copy: bool, predicate: &str, watermark: Option<&str>) -> AccelerationPolicy {
         AccelerationPolicy {
@@ -228,21 +276,21 @@ mod tests {
             Some("lsn:42"),
         );
         assert!(validate_policy(&p).is_ok());
-        assert_eq!(p.resolve_mode(), FragmentExecutionMode::Copy);
+        assert_eq!(p.resolve_mode(NOW, NOW + 1), FragmentExecutionMode::Copy);
     }
 
     // spec: MEDULLA-UNIFIED-DATA-PLANE-R038.1
     #[test]
     fn missing_watermark_falls_back_to_live() {
         let p = policy(true, "updated_at > now() - interval '1 day'", None);
-        assert_eq!(p.resolve_mode(), FragmentExecutionMode::Live);
+        assert_eq!(p.resolve_mode(NOW, NOW + 1), FragmentExecutionMode::Live);
     }
 
     // spec: MEDULLA-UNIFIED-DATA-PLANE-R038.1
     #[test]
     fn cold_mapping_with_no_predicate_is_live() {
         let p = policy(true, "", None);
-        assert_eq!(p.resolve_mode(), FragmentExecutionMode::Live);
+        assert_eq!(p.resolve_mode(NOW, NOW + 1), FragmentExecutionMode::Live);
     }
 
     // spec: MEDULLA-UNIFIED-DATA-PLANE-R038.1
@@ -257,6 +305,36 @@ mod tests {
             panic!("a predicate declared without copy capability must be refused");
         };
         assert!(error.0.contains("copy capability"), "{error}");
+    }
+
+    // spec: MEDULLA-UNIFIED-DATA-PLANE-R038.2.2
+    #[test]
+    fn expired_watermark_falls_back_to_live() {
+        let p = policy(true, "hot", Some("lsn:42"));
+        assert_eq!(p.resolve_mode(NOW, NOW), FragmentExecutionMode::Copy);
+        assert_eq!(p.resolve_mode(NOW + 1, NOW), FragmentExecutionMode::Live);
+    }
+
+    // spec: MEDULLA-UNIFIED-DATA-PLANE-R038.2.2
+    #[test]
+    fn copy_fill_is_bounded_by_the_row_cap_and_the_capability() {
+        let p = policy(true, "hot", Some("lsn:42"));
+        assert_eq!(copy_admitted(&p, 10, 10), Ok(()));
+        for (policy, rows, code) in [
+            (p.clone(), 11, ServerErrorCode::CopyRowCapExceeded),
+            (
+                policy(false, "", Some("lsn:42")),
+                1,
+                ServerErrorCode::CopyCapabilityMissing,
+            ),
+            (
+                policy(true, "hot", None),
+                1,
+                ServerErrorCode::CopyCapabilityMissing,
+            ),
+        ] {
+            assert_eq!(copy_admitted(&policy, rows, 10).unwrap_err().code, code);
+        }
     }
 
     // spec: MEDULLA-UNIFIED-DATA-PLANE-R038.3.1

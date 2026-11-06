@@ -33,6 +33,7 @@ mod obda_snapshot;
 pub(crate) mod oq2;
 pub mod remote;
 mod run;
+mod search;
 mod session;
 mod snapshot;
 mod sql;
@@ -53,7 +54,8 @@ pub use cache::{FragmentCacheScope, SourceWatermark};
 pub use capability::{
     connection_protocol_row, ConnectionProtocol, ForeignSourceCapability, FullFetch, KeyLookup,
     LimitPushdown, PageRequest, Paging, ProtocolPushdownRow, ProtocolTransfer, PushdownKind,
-    RemoteRequest, SourceCapabilities, SourceCostModel, SourceRate, CONNECTION_PROTOCOL_MATRIX,
+    RemoteRequest, SearchPush, SourceCapabilities, SourceCostModel, SourceRate,
+    CONNECTION_PROTOCOL_MATRIX,
 };
 #[cfg(feature = "federation-sql")]
 pub(crate) use columns::render_sql_columns;
@@ -64,11 +66,15 @@ pub use columns::{
 #[cfg(feature = "federation-sql")]
 pub use obda_snapshot::ObdaSnapshotReader;
 pub use oq2::{target_capabilities as oq2_target_capabilities, Oq2ReadMode, Oq2TargetCapabilities};
+pub use search::{
+    fetch_top_k, pushed_k, query_digest, SearchHit, SearchOutcome, SearchRemote, Shortfall,
+};
 pub use session::FederationSession;
 pub use snapshot::{Consistency, SnapshotBound, SnapshotConn, SnapshotHandle};
 pub use stats::{stats_snapshot, SourceStats};
 pub use trace::{
     render_trace, EstimateProvenance, FetchStrategy, FragmentExecutionMode, FragmentTrace,
+    SearchReceipt,
 };
 
 mod federated;

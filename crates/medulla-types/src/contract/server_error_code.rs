@@ -72,6 +72,8 @@ closed_error_codes! {
         ConceptPathMalformed => "CONCEPT_PATH_MALFORMED",
         ConceptPathParentConflict => "CONCEPT_PATH_PARENT_CONFLICT",
         ConceptPathStaleRevision => "CONCEPT_PATH_STALE_REVISION",
+        CopyCapabilityMissing => "COPY_CAPABILITY_MISSING",
+        CopyRowCapExceeded => "COPY_ROW_CAP_EXCEEDED",
         CrosswalkCategoryConflict => "CROSSWALK_CATEGORY_CONFLICT",
         CrosswalkConflict => "CROSSWALK_CONFLICT",
         CrosswalkLimitExceeded => "CROSSWALK_LIMIT_EXCEEDED",

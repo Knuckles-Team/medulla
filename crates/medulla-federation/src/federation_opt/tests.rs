@@ -1038,3 +1038,142 @@ fn mcp_remote_delegates_to_connector_row_source() {
         );
     }
 }
+
+// ── pushed relevance search (MEDULLA-UNIFIED-DATA-PLANE-R038.5) ──────────────────────
+
+mod search_pushdown {
+    use super::*;
+    use crate::federation_opt::{
+        fetch_top_k, query_digest, SearchHit, SearchPush, SearchRemote, Shortfall,
+    };
+    use medulla_types::search_source::{ScoreKind, SearchIndexCapability};
+
+    /// A ten-document index that records every request it receives.
+    struct Recording {
+        identity: Identity,
+        max_k: u32,
+        seen: Mutex<Vec<RemoteRequest>>,
+    }
+
+    impl Recording {
+        fn new(max_k: u32) -> Self {
+            Self {
+                identity: Identity {
+                    label: "mcp:search#00000000".into(),
+                    fingerprint: fingerprint(b"search"),
+                    cache_name: None,
+                },
+                max_k,
+                seen: Mutex::new(Vec::new()),
+            }
+        }
+    }
+
+    impl SearchRemote for Recording {
+        fn identity(&self) -> &Identity {
+            &self.identity
+        }
+
+        fn capability(&self) -> SearchIndexCapability {
+            SearchIndexCapability {
+                full_text: true,
+                vector: false,
+                filters: true,
+                max_k: self.max_k,
+                score_kind: ScoreKind::Bm25,
+            }
+        }
+
+        fn fetch(&self, request: &RemoteRequest) -> Result<Vec<SearchHit>, String> {
+            self.seen.lock().unwrap().push(request.clone());
+            let page = request.page.expect("a pushed search is paged");
+            Ok((page.offset..(page.offset + page.size).min(10))
+                .map(|n| SearchHit {
+                    id: format!("d{n}"),
+                    score: 1.0 - n as f32 / 10.0,
+                    attributes: vec![("n".into(), n.to_string())],
+                })
+                .collect())
+        }
+    }
+
+    fn wanted(k: u32) -> SearchPush {
+        SearchPush {
+            text: Some("needle".into()),
+            vector_space: None,
+            filters: vec![("lang".into(), "en".into())],
+            k,
+        }
+    }
+
+    /// The local residual keeps every third document: d0, d3, d6, d9.
+    fn every_third(hit: &SearchHit) -> bool {
+        hit.attributes[0].1.parse::<usize>().unwrap() % 3 == 0
+    }
+
+    fn run(remote: &Recording, k: u32) -> crate::federation_opt::SearchOutcome {
+        let session = FederationSession::new(FederationBudget::default());
+        fetch_top_k(&session, remote, &wanted(k), &every_third).unwrap()
+    }
+
+    // spec: MEDULLA-UNIFIED-DATA-PLANE-R038.5.2
+    #[test]
+    fn relevance_pushdown_replenishes() {
+        let remote = Recording::new(100);
+        let outcome = run(&remote, 3);
+        let ids: Vec<_> = outcome.hits.iter().map(|hit| hit.id.as_str()).collect();
+        assert_eq!(ids, ["d0", "d3", "d6"], "k final rows through the residual");
+        assert_eq!(outcome.shortfall, None);
+        let seen = remote.seen.lock().unwrap();
+        let pushed: Vec<_> = seen
+            .iter()
+            .map(|r| (r.search.as_ref().unwrap().k, r.page.unwrap().offset))
+            .collect();
+        assert_eq!(pushed, [(6, 0), (6, 6)], "min(2k, max_k), paged on");
+        // The operation's cap bounds the pushed k.
+        let capped = Recording::new(4);
+        run(&capped, 3);
+        assert!(capped
+            .seen
+            .lock()
+            .unwrap()
+            .iter()
+            .all(|r| r.search.as_ref().unwrap().k == 4));
+        // An index that runs dry stops with the typed shortfall.
+        let short = run(&Recording::new(100), 5);
+        assert_eq!(short.hits.len(), 4);
+        assert_eq!(
+            short.shortfall,
+            Some(Shortfall {
+                requested: 5,
+                returned: 4
+            })
+        );
+    }
+
+    // spec: MEDULLA-UNIFIED-DATA-PLANE-R038.5.5
+    #[test]
+    fn search_receipt() {
+        let remote = Recording::new(100);
+        let session = FederationSession::new(FederationBudget::default());
+        fetch_top_k(&session, &remote, &wanted(3), &every_third).unwrap();
+        let trace = session.trace();
+        assert_eq!(trace.len(), 1);
+        let receipt = trace[0].search.clone().expect("a search receipt");
+        let first = remote.seen.lock().unwrap()[0].search.clone().unwrap();
+        assert_eq!(receipt.query_digest, query_digest(&first));
+        assert_eq!(receipt.query_digest.len(), 64);
+        assert!(receipt
+            .query_digest
+            .bytes()
+            .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)));
+        assert_eq!(
+            (receipt.k, receipt.score_kind, receipt.returned),
+            (6, ScoreKind::Bm25, 10)
+        );
+        assert_eq!(
+            trace[0].source, "mcp:search#00000000",
+            "the label, never an endpoint"
+        );
+    }
+}
