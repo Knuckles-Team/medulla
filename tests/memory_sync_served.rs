@@ -61,15 +61,14 @@ async fn read(state: &test_support::SharedState, id: u64, revision: Option<u64>)
 // spec: MEDULLA-DURABLE-KERNEL-R085.3
 #[tokio::test(flavor = "multi_thread")]
 async fn competing_saves_retain_both_and_resolve_once() {
-    let (_dir, _backend, state) =
-        test_support::durable_graph_state(
-            SECRET,
-            ENCRYPTION_KEY,
-            "memory-sync-served",
-            common::current_isolation(),
-            GRAPH,
-        )
-        .await;
+    let (_dir, _backend, state) = test_support::durable_graph_state(
+        SECRET,
+        ENCRYPTION_KEY,
+        "memory-sync-served",
+        common::current_isolation(),
+        GRAPH,
+    )
+    .await;
     let first: SyncOutcome = json_of(send(&state, 2, submit("r1", None, "one")).await);
     assert!(matches!(first, SyncOutcome::Accepted { ref head } if head.revision == 1));
     let second: SyncOutcome = json_of(send(&state, 3, submit("r2", Some(1), "two")).await);
