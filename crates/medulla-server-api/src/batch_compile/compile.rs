@@ -862,13 +862,15 @@ mod tests {
 
     fn alert(kind: medulla_types::finance_event_envelope::FinanceAlertKind, id: &str) -> Method {
         Method::FinanceAlertRaise {
-            envelope: Box::new(medulla_types::finance_event_envelope::FinanceAlertEnvelope {
-                event_id: id.into(),
-                kind,
-                listing_id: "NASDAQ:AAPL".into(),
-                occurred_at_unix_nanos: 1_760_000_000_000_000_000,
-                message: "alert".into(),
-            }),
+            envelope: Box::new(
+                medulla_types::finance_event_envelope::FinanceAlertEnvelope {
+                    event_id: id.into(),
+                    kind,
+                    listing_id: "NASDAQ:AAPL".into(),
+                    occurred_at_unix_nanos: 1_760_000_000_000_000_000,
+                    message: "alert".into(),
+                },
+            ),
         }
     }
 

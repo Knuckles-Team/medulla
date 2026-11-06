@@ -22,13 +22,19 @@ fn owner_layout_registry_has_frozen_cardinality() {
     // proven complete by the checks below and by the per-table tests that walk
     // every name; the one pinned count is the one R089 names.
     let layouts = owner_layouts();
-    assert_eq!(layouts.len(), OWNER_LAYOUT_DOMAINS.len(), "every layout has a domain");
+    assert_eq!(
+        layouts.len(),
+        OWNER_LAYOUT_DOMAINS.len(),
+        "every layout has a domain"
+    );
     for layout in layouts {
         let names = owner_table_names(layout);
         let unique: std::collections::BTreeSet<_> = names.iter().collect();
         assert_eq!(unique.len(), names.len(), "{layout:?} names a table twice");
         assert!(
-            names.iter().all(|name| !ledger_table_names().contains(name)),
+            names
+                .iter()
+                .all(|name| !ledger_table_names().contains(name)),
             "{layout:?} redeclares a ledger table"
         );
         assert_eq!(
