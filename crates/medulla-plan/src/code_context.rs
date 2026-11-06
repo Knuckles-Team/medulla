@@ -651,6 +651,7 @@ mod tests {
         );
     }
 
+    /// Verifies MEDULLA-FEDERATED-QUERY-R654.7: Behavior: symptom diagnosis
     // spec: MEDULLA-FEDERATED-QUERY-R654.7
     #[test]
     fn diagnose_orders_chain_by_stage() {

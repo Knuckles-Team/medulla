@@ -406,6 +406,7 @@ mod tests {
         AdjacencyGraph::from_edges(edges)
     }
 
+    /// Verifies MEDULLA-FEDERATED-QUERY-R607.2: Behavior: partitions
     // spec: MEDULLA-FEDERATED-QUERY-R607.2
     #[test]
     fn planted_partition_is_recovered_and_ids_are_stable() {
