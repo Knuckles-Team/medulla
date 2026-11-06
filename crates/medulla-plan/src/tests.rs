@@ -1238,3 +1238,88 @@ mod point_lookup_tests {
         }
     }
 }
+
+/// MEDULLA-DURABLE-KERNEL-R079: `AS OF` filters edge visibility, not only node rows.
+#[cfg(test)]
+mod as_of_edge_tests {
+    use medulla_exec::algebra::{Op, Plan};
+    use medulla_exec::exec::{PlanCtx, PlanExt};
+    use medulla_graph_core::graph::GraphCore;
+    use medulla_semantic_index::semantic::SemanticStore;
+    use medulla_types::wire::TimeAxis;
+    use serde_json::json;
+
+    fn blob(v: serde_json::Value) -> Vec<u8> {
+        rmp_serde::to_vec_named(&v).unwrap()
+    }
+
+    /// `a -CITES-> b` is recorded at 100, then superseded at valid 200 / tx 250 by
+    /// `a -CITES-> c`. Nodes carry no windows, so only the edges decide visibility.
+    fn superseded_graph() -> GraphCore {
+        let core = GraphCore::new();
+        core.add_node("a".into(), blob(json!({"type": "Seed"})));
+        core.add_node("b".into(), blob(json!({"type": "E"})));
+        core.add_node("c".into(), blob(json!({"type": "E"})));
+        core.add_edge(
+            "a".into(),
+            "b".into(),
+            blob(json!({"relationship": "CITES", "valid_from": 100, "tx_from": 100})),
+        )
+        .unwrap();
+        core.supersede_edge(
+            "a".into(),
+            "c".into(),
+            blob(json!({"relationship": "CITES"})),
+            "a",
+            "b",
+            "CITES",
+            200,
+            250,
+        )
+        .unwrap();
+        core
+    }
+
+    fn reached(core: &GraphCore, pins: &[(f64, TimeAxis)]) -> Vec<String> {
+        let view = core.analysis_snapshot();
+        let semantic = SemanticStore::new();
+        let ctx = PlanCtx::new(&view, &semantic);
+        let mut ops = vec![Op::Scan {
+            label: "Seed".into(),
+        }];
+        ops.extend(pins.iter().map(|&(ts, axis)| Op::AsOf { ts, axis }));
+        ops.push(Op::Traverse {
+            rel: "CITES".into(),
+            min: 1,
+            max: 1,
+        });
+        let mut ids = Plan::new(ops).execute(&ctx).unwrap().ids();
+        ids.sort();
+        ids
+    }
+
+    // spec: MEDULLA-DURABLE-KERNEL-R079
+    #[test]
+    fn as_of_returns_the_right_version_at_two_instants_on_both_axes() {
+        let core = superseded_graph();
+        // Valid axis: the first version at 150, the second at 250, none before 100.
+        assert_eq!(reached(&core, &[(150.0, TimeAxis::Valid)]), ["b"]);
+        assert_eq!(reached(&core, &[(250.0, TimeAxis::Valid)]), ["c"]);
+        assert!(reached(&core, &[(50.0, TimeAxis::Valid)]).is_empty());
+        // The window is half-open: the close instant belongs to the next version.
+        assert_eq!(reached(&core, &[(200.0, TimeAxis::Valid)]), ["c"]);
+        // Transaction axis: believed b at 120, c at 300.
+        assert_eq!(reached(&core, &[(120.0, TimeAxis::Transaction)]), ["b"]);
+        assert_eq!(reached(&core, &[(300.0, TimeAxis::Transaction)]), ["c"]);
+        // Both axes at once answer what was believed and valid at two instants.
+        let both = [(150.0, TimeAxis::Valid), (300.0, TimeAxis::Transaction)];
+        assert!(
+            reached(&core, &both).is_empty(),
+            "b was closed in tx by 300"
+        );
+        let both = [(250.0, TimeAxis::Valid), (300.0, TimeAxis::Transaction)];
+        assert_eq!(reached(&core, &both), ["c"]);
+        // No pin: every recorded version is followed.
+        assert_eq!(reached(&core, &[]), ["b", "c"]);
+    }
+}
