@@ -649,6 +649,10 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::DecisionCommit { .. }
         | Method::Solve { .. }
         | Method::ConnectorPack { .. }
+        // MEDULLA-TYPED-PACKS-R805.1: rbac.redb policy-store records.
+        | Method::DataProductRegister { .. }
+        | Method::AccessRequestOpen { .. }
+        | Method::AccessRequestDecide { .. }
         | Method::SourceIngest { .. }
         | Method::SourceIngestStatus { .. }
         // MEDULLA-UNIFIED-DATA-PLANE-R651.7: lowers to one ChangeEnvelope, which

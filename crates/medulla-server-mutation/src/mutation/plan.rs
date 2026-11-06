@@ -651,6 +651,11 @@ pub const SELF_ROUTED_ADMIN_METHODS: &[&str] = &["RaftAddLearner", "RaftChangeMe
 /// rather than proposed as a native command that does not exist, or applied on
 /// one node only.
 pub const LOCAL_ONLY_METHODS: &[&str] = &[
+    // MEDULLA-TYPED-PACKS-R805.1: the policy-store records commit through the
+    // process-local `rbac.redb` owner; the replicated path is wired by R805.3.
+    "AccessRequestDecide",
+    "AccessRequestOpen",
+    "DataProductRegister",
     "AgentComponent",
     "AgentGraph",
     "AgentLibrary",
@@ -686,6 +691,9 @@ fn native_local_only_method_name(m: &Method) -> Option<&'static str> {
         Method::AgentLibrary { .. } => Some("AgentLibrary"),
         Method::AgentTemplate { .. } => Some("AgentTemplate"),
         Method::ConnectorPack { .. } => Some("ConnectorPack"),
+        Method::DataProductRegister { .. } => Some("DataProductRegister"),
+        Method::AccessRequestOpen { .. } => Some("AccessRequestOpen"),
+        Method::AccessRequestDecide { .. } => Some("AccessRequestDecide"),
         _ => None,
     }
 }

@@ -744,6 +744,9 @@ mod tests {
         // Each commits through the agent-library owner's own medulla-transaction
         // write, not a `(ctx, plan, method, apply)` graph mutation, and each
         // has process-local ordering only (see `plan::LOCAL_ONLY_METHODS`).
+        ("DataProductRegister", "MEDULLA-TYPED-PACKS-R805.1 data product and contract rows in the rbac.redb policy store; local-only authority"),
+        ("AccessRequestOpen", "MEDULLA-TYPED-PACKS-R805.1 pending access-request row in the rbac.redb policy store; local-only authority"),
+        ("AccessRequestDecide", "MEDULLA-TYPED-PACKS-R805.1 approve or reject transition of an access-request row in the rbac.redb policy store; local-only authority"),
         ("ConnectorPack", "native MutationBatch in agent_library.redb: pack head, members, component revisions, body holders, import record, receipt and outbox in one WTX; local-only authority"),
         ("WriteBack", "native MutationBatch in agent_library.redb: immutable source change set plus append-only attempt and reconciliation receipts; local-only authority"),
         ("DecisionCommit", "native MutationBatch in agent_library.redb: one DecisionRecord component revision, receipt and outbox in one WTX after re-derivation and catalog compare-and-set; local-only authority"),

@@ -301,30 +301,13 @@ pub(crate) fn handle_impact(
     )
 }
 
-/// Default of the `ecosystem.max_dependency_depth` knob, in hops.
-pub(crate) const DEFAULT_ECOSYSTEM_MAX_DEPTH: u32 = 8;
-/// Inclusive bounds of the `ecosystem.max_dependency_depth` knob.
+/// Inclusive bounds of a request's `max_depth`, the same as the
+/// `ecosystem.max_dependency_depth` knob.
 pub(crate) const ECOSYSTEM_MAX_DEPTH_RANGE: std::ops::RangeInclusive<u32> = 1..=64;
-/// Environment form of the `ecosystem.max_dependency_depth` knob.
-pub(crate) const ECOSYSTEM_MAX_DEPTH_ENV: &str = "MEDULLA_ECOSYSTEM_MAX_DEPENDENCY_DEPTH";
 /// Refusal of a finding against a package absent from the graph.
 pub(crate) const ECOSYSTEM_PACKAGE_UNKNOWN: &str = "ECOSYSTEM_PACKAGE_UNKNOWN";
 /// Refusal of a hop bound outside [`ECOSYSTEM_MAX_DEPTH_RANGE`].
 pub(crate) const ECOSYSTEM_DEPTH_OUT_OF_RANGE: &str = "ECOSYSTEM_DEPTH_OUT_OF_RANGE";
-
-/// The configured `ecosystem.max_dependency_depth`, or an error naming the
-/// out-of-range value.
-pub(crate) fn ecosystem_max_depth_knob() -> Result<u32, String> {
-    let Ok(raw) = std::env::var(ECOSYSTEM_MAX_DEPTH_ENV) else {
-        return Ok(DEFAULT_ECOSYSTEM_MAX_DEPTH);
-    };
-    match raw.trim().parse::<u32>() {
-        Ok(depth) if ECOSYSTEM_MAX_DEPTH_RANGE.contains(&depth) => Ok(depth),
-        _ => Err(format!(
-            "{ECOSYSTEM_DEPTH_OUT_OF_RANGE}: {ECOSYSTEM_MAX_DEPTH_ENV}={raw} is outside [1, 64]"
-        )),
-    }
-}
 
 fn core_severity(severity: EcosystemSeverity) -> medulla_core::ecosystem::Severity {
     use medulla_core::ecosystem::Severity;
@@ -357,10 +340,7 @@ fn handle_ecosystem_impact(req_id: u64, core: &GraphCore, query: &EcosystemQuery
                 format!("{ECOSYSTEM_DEPTH_OUT_OF_RANGE}: max_depth {depth} is outside [1, 64]"),
             )
         }
-        None => match ecosystem_max_depth_knob() {
-            Ok(depth) => depth,
-            Err(error) => return Response::err(req_id, error),
-        },
+        None => medulla_server_api::knob_config::knobs().ecosystem_max_dependency_depth as u32,
     };
     let finding = medulla_core::ecosystem::PackageFinding {
         id: query.finding_id.clone(),
