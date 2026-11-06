@@ -565,6 +565,10 @@ pub(super) fn memory_audit_line(method: &Method) -> Option<String> {
         Method::DecayMemories { .. } => Some("DECAY_MEMORIES".to_string()),
         Method::EvictBelow { .. } => Some("EVICT_BELOW".to_string()),
         Method::Maintain { .. } => Some("MAINTAIN".to_string()),
+        Method::BusRegister { participant, .. } => {
+            Some(format!("BUS_REGISTER|{}", participant.session_ref))
+        }
+        Method::BusHeartbeat { session_ref, .. } => Some(format!("BUS_HEARTBEAT|{session_ref}")),
         _ => None,
     }
 }

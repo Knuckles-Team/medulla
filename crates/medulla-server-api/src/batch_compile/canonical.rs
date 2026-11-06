@@ -411,6 +411,9 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::FinanceVwap { .. }
         | Method::FinanceDrawdownSeries { .. }
         | Method::DecayNode { .. }
+        | Method::BusRegister { .. }
+        | Method::BusHeartbeat { .. }
+        | Method::BusRoster { .. }
         | Method::FinanceMomentum { .. }
         | Method::ObserveScreen { .. }
         | Method::GetEdgePropertiesBatch { .. }

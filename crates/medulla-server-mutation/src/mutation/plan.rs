@@ -77,6 +77,9 @@ pub const GATEWAY_ROUTED: &[&str] = &[
     "Reparent",
     "StartTrajectory",
     "AppendStep",
+    // MEDULLA-DURABLE-KERNEL-R095.1002: agent bus roster rows on the request graph.
+    "BusRegister",
+    "BusHeartbeat",
     "AddEmbedding",
     "InvalidateEdge",
     "SupersedeEdge",
@@ -210,6 +213,9 @@ fn memory_method_name(m: &Method) -> Option<&'static str> {
         Method::DecayMemories { .. } => Some("DecayMemories"),
         Method::EvictBelow { .. } => Some("EvictBelow"),
         Method::Maintain { .. } => Some("Maintain"),
+        Method::BusRegister { .. } => Some("BusRegister"),
+        Method::BusHeartbeat { .. } => Some("BusHeartbeat"),
+        Method::BusRoster { .. } => Some("BusRoster"),
         _ => None,
     }
 }

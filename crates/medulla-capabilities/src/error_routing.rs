@@ -204,6 +204,24 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         &["TRANSCRIPT_BASE_CONFLICT", "TRANSCRIPT_EVENT_CONFLICT"],
     ),
     (
+        "BusHeartbeat",
+        &[
+            "BUS_FIELD_TOO_LARGE",
+            "BUS_SCOPE_REQUIRED",
+            "BUS_SESSION_FOREIGN",
+        ],
+    ),
+    (
+        "BusRegister",
+        &[
+            "BUS_FIELD_TOO_LARGE",
+            "BUS_ROSTER_FULL",
+            "BUS_SCOPE_REQUIRED",
+            "BUS_SESSION_FOREIGN",
+        ],
+    ),
+    ("BusRoster", &["BUS_SCOPE_REQUIRED"]),
+    (
         "SelectWebPages",
         &[
             "SELECTION_UNAVAILABLE",
