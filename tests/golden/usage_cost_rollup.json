@@ -1,0 +1,1 @@
+[{"model_key":"gpt-x","day":0,"calls":2,"tokens_in":3000,"tokens_out":1500,"tokens_cached":200,"errors":1,"cost_micro":30960},{"model_key":"gpt-x","day":1,"calls":1,"tokens_in":4000,"tokens_out":2000,"tokens_cached":1000,"errors":0,"cost_micro":39300}]

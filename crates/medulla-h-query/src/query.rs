@@ -87,13 +87,14 @@ fn bind_served_statement(
 fn cached_served_response<M>(
     req_id: u64,
     core: &GraphCore,
+    tenant: &str,
     key: &Option<(u128, Option<medulla_query_cache::dep_scope::DepSet>)>,
 ) -> Option<Response>
 where
     M: MethodResult<Encoding = encoding::Raw>,
 {
     key.as_ref()
-        .and_then(|(hash, dep)| cached_payload(core, *hash, dep))
+        .and_then(|(hash, dep)| cached_payload(core, tenant, *hash, dep))
         .map(|bytes| Response::ok(req_id, ResultPayload::of_cache_hit::<M>(bytes)))
 }
 

@@ -25,6 +25,9 @@ method_results! {
     Consolidate(Consolidate) => Text<String>;
     Reinforce(Reinforce) => Bool<bool>;
     DecayNode(DecayNode) => Bool<bool>;
+    BusRegister(BusRegister) => Bool<bool>;
+    BusHeartbeat(BusHeartbeat) => Bool<bool>;
+    BusRoster(BusRoster) => Json<medulla_types::agent_bus::BusRoster>;
     DecayMemories(DecayMemories) => Count<u64>;
     EvictBelow(EvictBelow) => Ids<Vec<String>>;
     SummaryChildren(SummaryChildren) => Ids<Vec<String>>;

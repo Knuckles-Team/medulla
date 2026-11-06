@@ -25,6 +25,8 @@ pub enum KnobClass {
 pub enum KnobValue {
     /// Unsigned integer.
     U64(u64),
+    /// Signed integer.
+    I64(i64),
     /// Floating point.
     F64(f64),
     /// Flag.
@@ -89,6 +91,18 @@ impl KnobType for u64 {
     fn of(value: KnobValue) -> Self {
         match value {
             KnobValue::U64(v) => v,
+            other => unreachable!("knob table type mismatch: {other:?}"),
+        }
+    }
+}
+
+impl KnobType for i64 {
+    fn parse(raw: &str) -> Option<Self> {
+        raw.trim().parse().ok()
+    }
+    fn of(value: KnobValue) -> Self {
+        match value {
+            KnobValue::I64(v) => v,
             other => unreachable!("knob table type mismatch: {other:?}"),
         }
     }
@@ -173,6 +187,10 @@ knobs! {
     kvcache_warm_bytes: u64 = "kvcache.warm_bytes", U64(4_294_967_296), [67_108_864, 1_099_511_627_776], "bytes", Tunable;
     /// KV-cache cold tier capacity.
     kvcache_cold_bytes: u64 = "kvcache.cold_bytes", U64(68_719_476_736), [67_108_864, 1_099_511_627_776], "bytes", Tunable;
+    /// KV-cache admission floor: milliseconds saved per byte per hit.
+    kvcache_min_worth: f64 = "kvcache.min_worth", F64(0.001), [0.0, 1000.0], "ms per byte per hit", Tunable;
+    /// KV-cache served-answer tier capacity.
+    kvcache_answer_max_bytes: u64 = "kvcache.answer_max_bytes", U64(268_435_456), [1_048_576, 68_719_476_736], "bytes", Tunable;
     /// Council agreement quorum.
     council_quorum_fraction: f64 = "council.quorum_fraction", F64(0.5), [0.5, 1.0], "fraction", Tunable;
     /// Designation reward decay.
@@ -239,6 +257,40 @@ knobs! {
     pattern_shadow_ratio_min: f64 = "pattern.shadow_ratio_min", F64(2.0), [1.5, 4.0], "ratio", Tunable;
     /// Opposite-shadow ceiling as a fraction of the range.
     pattern_wick_max: f64 = "pattern.wick_max", F64(0.1), [0.0, 0.3], "ratio", Tunable;
+    /// Usage ledger batch size cap.
+    usage_max_batch: u64 = "usage.max_batch", U64(1_000), [1, 10_000], "records", Tunable;
+    /// OTLP log batch record cap (MEDULLA-CONTRACT-R050).
+    obs_max_batch_records: u64 = "obs.max_batch_records", U64(1_000), [1, 10_000], "records", Tunable;
+    /// Longest lag of a feature-power IC decay curve (MEDULLA-DECISION-ENGINE-R117.1.2).
+    eval_ic_max_lag: u64 = "eval.ic_max_lag", U64(5), [1, 64], "lags", Tunable;
+    /// Bootstrap resamples of a feature-power IC interval.
+    eval_bootstrap_resamples: u64 = "eval.bootstrap_resamples", U64(1_000), [100, 10_000], "resamples", Tunable;
+    /// Coverage of a feature-power IC interval.
+    eval_ci_level: f64 = "eval.ci_level", F64(0.95), [0.5, 0.999], "fraction", Tunable;
+    /// Longest replay lag at which a declared replica may serve a snapshot read.
+    federation_replica_lag_bound_ms: u64 = "federation.replica_lag_bound_ms", U64(5_000), [0, 600_000], "ms", Tunable;
+    /// Longest a federated source statement may run.
+    federation_statement_timeout_ms: u64 = "federation.statement_timeout_ms", U64(30_000), [1_000, 600_000], "ms", Tunable;
+    /// Claim evidence weight cap (MEDULLA-DECISION-ENGINE-R652.2).
+    claims_weight_cap_ppm: u64 = "claims.weight_cap_ppm", U64(6_000_000), [1_000_000, 12_000_000], "ppm", Tunable;
+    /// Claim log-odds floor to enter `accepted`.
+    claims_accept_min_micro: i64 = "claims.accept_min_micro", I64(2_944_439), [0, 12_000_000], "micro-nats", Tunable;
+    /// Claim log-odds ceiling to enter `contested`.
+    claims_contest_max_micro: i64 = "claims.contest_max_micro", I64(-1_000_000), [-12_000_000, 0], "micro-nats", Tunable;
+    /// Claim research-feed relevance floor (MEDULLA-DECISION-ENGINE-R652.7).
+    claims_feed_relevance_min: u64 = "claims.feed_relevance_min", U64(300_000), [0, 1_000_000], "ppm", Tunable;
+    /// Claim channel prior for health evidence.
+    claims_prior_health: u64 = "claims.prior_health", U64(600_000), [0, 1_000_000], "ppm", Tunable;
+    /// Claim channel prior for mined evidence.
+    claims_prior_mined: u64 = "claims.prior_mined", U64(300_000), [0, 1_000_000], "ppm", Tunable;
+    /// Claim channel prior for optimization evidence.
+    claims_prior_optimization: u64 = "claims.prior_optimization", U64(800_000), [0, 1_000_000], "ppm", Tunable;
+    /// Claim channel prior for outcome evidence.
+    claims_prior_outcome: u64 = "claims.prior_outcome", U64(1_000_000), [0, 1_000_000], "ppm", Tunable;
+    /// Claim channel prior for process evidence.
+    claims_prior_process: u64 = "claims.prior_process", U64(500_000), [0, 1_000_000], "ppm", Tunable;
+    /// Claim log-odds floor to enter `supported`.
+    claims_support_min_micro: i64 = "claims.support_min_micro", I64(1_000_000), [0, 6_000_000], "micro-nats", Tunable;
 }
 
 fn refusal(code: ServerErrorCode, knob: &str, detail: String) -> KnobRefusal {

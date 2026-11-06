@@ -279,6 +279,7 @@ fn derive_session(op: &mut SessionOp, stamp: &mut IdentityStamp) -> Derived {
         SessionOp::RevokeAll { .. }
         | SessionOp::List { .. }
         | SessionOp::InspectReference { .. }
+        | SessionOp::Liveness { .. }
         | SessionOp::RenewReference { .. } => return Ok(()),
     };
     stamp.token_hashes = vec![take_token(&mut request.session_token, Floor::Lookup)?];

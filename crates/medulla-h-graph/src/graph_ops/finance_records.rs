@@ -9,6 +9,13 @@
 //! upsert through the same coalescable gateway `Method::AddNode` uses, so the
 //! durable log, audit and CDC see an ordinary node write.
 //!
+//! The five strategy research kinds (R751.754) are create-only: their `fields` hold
+//! JSON text, the handler computes the fused scores with
+//! `medulla_finance::research::fuse_scores`, resolves every evidence node of the
+//! writer's tenant, and commits the record node plus one `derivedFrom` edge per
+//! evidence node as one `BatchUpdate`. Each write emits the span
+//! `medulla.finance.record_write`.
+//!
 //! `FinanceRecordGet` is a terminal read over the RLS-projected core: the stored
 //! record node, refused with `ACCESS_DENIED` when it belongs to another tenant.
 
@@ -137,6 +144,16 @@ pub(super) fn admit_put(
             kind.class_name()
         ));
     }
+    if kind.is_research() {
+        return admit_research(
+            core,
+            tenant_scope,
+            *kind,
+            schema_version,
+            record,
+            *expected_head,
+        );
+    }
     check_record_shape(*kind, record)?;
     let node_id = kind.node_id(&record.record_id);
     let stored = stored_props(core, &node_id);
@@ -186,33 +203,440 @@ pub(super) async fn handle_record(
     tenant_id: &str,
     method: &Method,
 ) -> Option<Response> {
-    if !matches!(method, Method::FinanceRecordPut { .. }) {
+    let Method::FinanceRecordPut { kind, record, .. } = method else {
         return None;
-    }
+    };
     #[cfg(all(feature = "finance", feature = "shacl"))]
     {
-        let (upsert, head) = match admit_put(ctx.core, tenant_id, ctx.tenant_scope, method) {
-            Ok(admitted) => admitted,
-            Err(error) => return Some(Response::err(ctx.req_id, error)),
-        };
-        let plan = MutationPlan::for_method(&upsert);
-        let owned = upsert.clone();
-        let response =
-            super::gateway::commit_gateway_coalescable(ctx, &plan, &upsert, move |core| {
-                medulla_server_mutation::mutation::apply_coalescable_write(core, &owned)
-                    .map(|_| ResultPayload::Count(head))
-            })
+        use tracing::Instrument;
+        // MEDULLA-FINANCE-PRIMITIVES-R751.755: one span per record write.
+        let span = tracing::info_span!(
+            "medulla.finance.record_write",
+            tenant = tenant_id,
+            record_class = kind.class_name(),
+            record_id = record.record_id.as_str(),
+            outcome = tracing::field::Empty,
+        );
+        let response = commit_put(ctx, tenant_id, method)
+            .instrument(span.clone())
             .await;
+        span.record(
+            "outcome",
+            if response.error.is_none() {
+                "committed"
+            } else {
+                "refused"
+            },
+        );
         Some(response)
     }
     #[cfg(not(all(feature = "finance", feature = "shacl")))]
     {
-        let _ = tenant_id;
+        let _ = (tenant_id, kind, record);
         Some(Response::err(
             ctx.req_id,
             "METHOD_NOT_YET_SERVED: FinanceRecordPut needs the finance and shacl features",
         ))
     }
+}
+
+/// Admit one put, then commit it: the one `AddNode` upsert for a finance record,
+/// the one `BatchUpdate` (record node plus `derivedFrom` edges) for a research
+/// record, both through the gateway as one atomic mutation.
+#[cfg(all(feature = "finance", feature = "shacl"))]
+async fn commit_put(ctx: &MutationCtx<'_>, tenant_id: &str, method: &Method) -> Response {
+    let (write, head) = match admit_put(ctx.core, tenant_id, ctx.tenant_scope, method) {
+        Ok(admitted) => admitted,
+        Err(error) => return Response::err(ctx.req_id, error),
+    };
+    let plan = MutationPlan::for_method(&write);
+    if let Method::BatchUpdate { operations_msgpack } = &write {
+        let operations = operations_msgpack.clone();
+        return medulla_server_ops::api::ingest::graph::commit_gateway(
+            ctx,
+            &plan,
+            &write,
+            move |core| {
+                medulla_graph_algos::algorithms::batch_update(core, &operations)
+                    .map(|_| ResultPayload::Count(head))
+            },
+        )
+        .await;
+    }
+    let owned = write.clone();
+    super::gateway::commit_gateway_coalescable(ctx, &plan, &write, move |core| {
+        medulla_server_mutation::mutation::apply_coalescable_write(core, &owned)
+            .map(|_| ResultPayload::Count(head))
+    })
+    .await
+}
+
+// ── strategy research records (MEDULLA-FINANCE-PRIMITIVES-R751.754) ──────────
+
+/// The node property naming the kernel version that computed a research record.
+#[cfg(all(feature = "finance", feature = "shacl"))]
+const KERNEL_VERSION_KEY: &str = "research_kernel_version";
+
+/// The edge label from a research record to each evidence node it rests on.
+#[cfg(all(feature = "finance", feature = "shacl"))]
+const DERIVED_FROM: &str = "derivedFrom";
+
+#[cfg(all(feature = "finance", feature = "shacl"))]
+fn research_refuse(error: medulla_finance::research::ResearchRecordError) -> String {
+    refuse(error.code(), error.detail())
+}
+
+#[cfg(all(feature = "finance", feature = "shacl"))]
+fn shape_invalid(detail: impl std::fmt::Display) -> String {
+    refuse(
+        medulla_types::wire::finance_record_refusal::SHAPE_INVALID,
+        detail,
+    )
+}
+
+/// A Turtle string literal for one value.
+#[cfg(all(feature = "finance", feature = "shacl"))]
+fn turtle_string(value: &str) -> String {
+    serde_json::to_string(value).unwrap_or_else(|_| "\"\"".to_string())
+}
+
+/// A Turtle `xsd:decimal` literal for one score.
+#[cfg(all(feature = "finance", feature = "shacl"))]
+fn turtle_decimal(value: f64) -> String {
+    format!("\"{value}\"^^xsd:decimal")
+}
+
+/// Validate one subject's scalar properties against `<class>Shape`.
+#[cfg(all(feature = "finance", feature = "shacl"))]
+fn check_scalars(class: &str, subject: &str, terms: &[(&str, String)]) -> Result<(), String> {
+    let mut data = format!("{TURTLE_PREFIXES}<urn:medulla:finance:{subject}> a :{class}");
+    for (name, term) in terms {
+        data.push_str(&format!(" ;\n    :{name} {term}"));
+    }
+    data.push_str(" .\n");
+    let report = medulla_shacl::validate_turtle(FINANCE_SHAPES, &data).map_err(shape_invalid)?;
+    if report.conforms {
+        Ok(())
+    } else {
+        Err(shape_invalid(format!(
+            "{subject} violates {class}Shape ({} result(s))",
+            report.results.len()
+        )))
+    }
+}
+
+/// Resolve every evidence id to a node of the writer's tenant. Returns the ids
+/// sorted and de-duplicated, the targets of the `derivedFrom` edges.
+#[cfg(all(feature = "finance", feature = "shacl"))]
+fn resolve_evidence<'a>(
+    core: &GraphCore,
+    tenant_scope: &str,
+    refs: impl IntoIterator<Item = &'a str>,
+) -> Result<Vec<String>, String> {
+    use medulla_finance::research::ResearchRecordError as Error;
+    let mut ids = std::collections::BTreeSet::new();
+    for id in refs {
+        if id.is_empty() {
+            return Err(research_refuse(Error::ScoreEvidenceMissing(
+                "an evidence reference is empty".to_string(),
+            )));
+        }
+        let Some(props) = stored_props(core, id) else {
+            return Err(research_refuse(Error::ScoreEvidenceMissing(format!(
+                "evidence node {id} does not resolve"
+            ))));
+        };
+        let owner = props
+            .get(TENANT_SCOPE_KEY)
+            .or_else(|| props.get("tenant_scope"))
+            .and_then(|v| v.as_str());
+        if owner.is_some_and(|owner| owner != tenant_scope) {
+            return Err(research_refuse(Error::RecordTenantMismatch(format!(
+                "evidence node {id} belongs to another tenant"
+            ))));
+        }
+        ids.insert(id.to_owned());
+    }
+    Ok(ids.into_iter().collect())
+}
+
+/// One research record after validation: the JSON it stores, the Turtle scalars
+/// its shape checks and the evidence ids it cites.
+#[cfg(all(feature = "finance", feature = "shacl"))]
+struct ResearchRecord {
+    stored: serde_json::Value,
+    checks: Vec<(&'static str, String, Vec<(&'static str, String)>)>,
+    evidence: Vec<String>,
+}
+
+#[cfg(all(feature = "finance", feature = "shacl"))]
+fn parse_research<T: serde::de::DeserializeOwned>(
+    fields: &serde_json::Map<String, serde_json::Value>,
+) -> Result<T, String> {
+    serde_json::from_value(serde_json::Value::Object(fields.clone())).map_err(shape_invalid)
+}
+
+#[cfg(all(feature = "finance", feature = "shacl"))]
+fn to_json<T: serde::Serialize>(value: &T) -> Result<serde_json::Value, String> {
+    serde_json::to_value(value).map_err(shape_invalid)
+}
+
+/// Validate one research put and build its record. Reads the graph for evidence
+/// and debate order; computes the fused scores.
+#[cfg(all(feature = "finance", feature = "shacl"))]
+fn build_research(
+    core: &GraphCore,
+    tenant_scope: &str,
+    kind: medulla_types::wire::FinanceRecordKind,
+    record: &medulla_types::wire::FinanceRecord,
+) -> Result<ResearchRecord, String> {
+    use medulla_finance::research::{fuse_scores, ResearchRecordError as Error};
+    use medulla_types::finance_research as types;
+    use medulla_types::wire::FinanceRecordKind as Kind;
+
+    let mut fields = serde_json::Map::new();
+    for (name, text) in &record.fields {
+        let value = serde_json::from_str(text)
+            .map_err(|_| shape_invalid(format!("field '{name}' is not JSON text")))?;
+        fields.insert(name.clone(), value);
+    }
+    let id = record.record_id.as_str();
+    let version = (
+        "researchKernelVersion",
+        turtle_string(types::RESEARCH_KERNEL_VERSION),
+    );
+    match kind {
+        Kind::DebateRound => {
+            let round: types::DebateRound = parse_research(&fields)?;
+            let local = |name: &str| {
+                is_local_name(name)
+                    .then_some(())
+                    .ok_or_else(|| shape_invalid("debateId must be a [A-Za-z0-9_] name"))
+            };
+            local(&round.debate_id)?;
+            if round.round_index == 0 || id != format!("{}_r{}", round.debate_id, round.round_index)
+            {
+                return Err(shape_invalid(
+                    "record_id must be <debateId>_r<roundIndex> with a roundIndex of 1 or more",
+                ));
+            }
+            if round.round_index > 1 {
+                let prior =
+                    kind.node_id(&format!("{}_r{}", round.debate_id, round.round_index - 1));
+                let owned = stored_props(core, &prior).is_some_and(|props| {
+                    props.get(TENANT_SCOPE_KEY).and_then(|v| v.as_str()) == Some(tenant_scope)
+                });
+                if !owned {
+                    return Err(research_refuse(Error::DebateRoundOutOfOrder(format!(
+                        "round {} follows round {}, which is not stored",
+                        round.round_index,
+                        round.round_index - 1
+                    ))));
+                }
+            }
+            let evidence = resolve_evidence(
+                core,
+                tenant_scope,
+                round.evidence_refs.iter().map(String::as_str),
+            )?;
+            let side = to_json(&round.side)?;
+            let terms = vec![
+                ("debateId", turtle_string(&round.debate_id)),
+                ("roundIndex", round.round_index.to_string()),
+                (
+                    "debateSide",
+                    turtle_string(side.as_str().unwrap_or_default()),
+                ),
+                ("debateArgument", turtle_string(&round.argument)),
+            ];
+            Ok(ResearchRecord {
+                stored: to_json(&round)?,
+                checks: vec![("DebateRound", id.to_owned(), terms)],
+                evidence,
+            })
+        }
+        Kind::TradeJournalEntry => {
+            let entry: types::TradeJournalEntry = parse_research(&fields)?;
+            let evidence = resolve_evidence(
+                core,
+                tenant_scope,
+                entry
+                    .bias_audits
+                    .iter()
+                    .flat_map(|audit| audit.evidence_refs.iter().map(String::as_str)),
+            )?;
+            let mut terms = vec![
+                ("journalId", turtle_string(&entry.journal_id)),
+                (
+                    "entryAt",
+                    format!("{}^^xsd:dateTime", turtle_string(&entry.entry_at)),
+                ),
+                ("journalRationale", turtle_string(&entry.rationale)),
+            ];
+            if let Some(run) = &entry.strategy_run_ref {
+                terms.push(("strategyRunRef", turtle_string(run)));
+            }
+            let mut checks = vec![("TradeJournalEntry", id.to_owned(), terms)];
+            for (index, audit) in entry.bias_audits.iter().enumerate() {
+                let bias = to_json(&audit.bias_kind)?;
+                checks.push((
+                    "BiasAudit",
+                    format!("{id}_bias{index}"),
+                    vec![
+                        ("biasKind", turtle_string(bias.as_str().unwrap_or_default())),
+                        ("biasFinding", turtle_string(&audit.finding)),
+                    ],
+                ));
+            }
+            Ok(ResearchRecord {
+                stored: to_json(&entry)?,
+                checks,
+                evidence,
+            })
+        }
+        Kind::SentimentFusion => {
+            let input: types::SentimentFusionInput = parse_research(&fields)?;
+            let score = fuse_scores(&input.components, -1.0, 1.0).map_err(research_refuse)?;
+            let evidence = resolve_evidence(
+                core,
+                tenant_scope,
+                input.components.iter().map(|c| c.evidence_ref.as_str()),
+            )?;
+            let terms = vec![
+                ("subjectListing", turtle_string(&input.subject_listing)),
+                ("sentimentScore", turtle_decimal(score)),
+                version,
+            ];
+            let stored = types::SentimentFusion {
+                subject_listing: input.subject_listing,
+                score,
+                components: input.components,
+            };
+            Ok(ResearchRecord {
+                stored: to_json(&stored)?,
+                checks: vec![("SentimentFusion", id.to_owned(), terms)],
+                evidence,
+            })
+        }
+        Kind::GeopoliticalRisk => {
+            let input: types::GeopoliticalRiskInput = parse_research(&fields)?;
+            let score = fuse_scores(&input.components, 0.0, 1.0).map_err(research_refuse)?;
+            let evidence = resolve_evidence(
+                core,
+                tenant_scope,
+                input.components.iter().map(|c| c.evidence_ref.as_str()),
+            )?;
+            let terms = vec![
+                ("geoRegion", turtle_string(&input.region)),
+                ("geoRiskScore", turtle_decimal(score)),
+                version,
+            ];
+            let stored = types::GeopoliticalRisk {
+                region: input.region,
+                score,
+                components: input.components,
+            };
+            Ok(ResearchRecord {
+                stored: to_json(&stored)?,
+                checks: vec![("GeopoliticalRisk", id.to_owned(), terms)],
+                evidence,
+            })
+        }
+        Kind::StrategyCard => {
+            if !fields.contains_key("licenceClass") {
+                return Err(research_refuse(Error::StrategyCardLicenceMissing(
+                    "a strategy card needs a licenceClass".to_string(),
+                )));
+            }
+            let card: types::StrategyCard = parse_research(&fields)?;
+            let licence = to_json(&card.licence_class)?;
+            let terms = vec![
+                ("cardId", turtle_string(&card.card_id)),
+                ("strategySpecRef", turtle_string(&card.strategy_spec_ref)),
+                (
+                    "licenceClass",
+                    turtle_string(licence.as_str().unwrap_or_default()),
+                ),
+                ("cardSummary", turtle_string(&card.summary)),
+            ];
+            Ok(ResearchRecord {
+                stored: to_json(&card)?,
+                checks: vec![("StrategyCard", id.to_owned(), terms)],
+                evidence: Vec::new(),
+            })
+        }
+        _ => unreachable!("build_research is only called for research kinds"),
+    }
+}
+
+/// Admit one research `FinanceRecordPut` and return the single `BatchUpdate`
+/// (the record node and its `derivedFrom` edges) it commits as, with the head.
+#[cfg(all(feature = "finance", feature = "shacl"))]
+fn admit_research(
+    core: &GraphCore,
+    tenant_scope: &str,
+    kind: medulla_types::wire::FinanceRecordKind,
+    schema_version: &str,
+    record: &medulla_types::wire::FinanceRecord,
+    expected_head: Option<u64>,
+) -> Result<(Method, u64), String> {
+    use medulla_finance::research::ResearchRecordError as Error;
+    use medulla_types::wire::finance_record_refusal as code;
+    if !is_local_name(&record.record_id) {
+        return Err(shape_invalid(
+            "record_id must be a non-empty [A-Za-z0-9_] name",
+        ));
+    }
+    let node_id = kind.node_id(&record.record_id);
+    if let Some(props) = stored_props(core, &node_id) {
+        if props.get(TENANT_SCOPE_KEY).and_then(|v| v.as_str()) != Some(tenant_scope) {
+            return Err(format!(
+                "ACCESS_DENIED: {node_id} belongs to another tenant"
+            ));
+        }
+        return Err(research_refuse(Error::RecordImmutable(format!(
+            "{node_id} is stored and cannot be rewritten"
+        ))));
+    }
+    if expected_head.is_some() {
+        return Err(refuse(
+            code::HEAD_CONFLICT,
+            format!("{node_id} is new; the writer expected head {expected_head:?}"),
+        ));
+    }
+    let built = build_research(core, tenant_scope, kind, record)?;
+    for (class, subject, terms) in &built.checks {
+        check_scalars(class, subject, terms)?;
+    }
+    let head = 1_u64;
+    let props = serde_json::json!({
+        "type": kind.class_name(),
+        "finance_kind": kind.class_name(),
+        "record_id": record.record_id,
+        "schema_version": schema_version,
+        "tenant": record.tenant,
+        TENANT_SCOPE_KEY: tenant_scope,
+        HEAD_KEY: head,
+        KERNEL_VERSION_KEY: medulla_types::finance_research::RESEARCH_KERNEL_VERSION,
+        "evidence_ids": built.evidence,
+        "fields": built.stored,
+    });
+    let mut operations = vec![serde_json::json!({
+        "op": "add_node",
+        "id": node_id,
+        "properties": props,
+    })];
+    for evidence in &built.evidence {
+        operations.push(serde_json::json!({
+            "op": "add_edge",
+            "source": node_id,
+            "target": evidence,
+            "properties": {"relationship": DERIVED_FROM},
+        }));
+    }
+    let operations_msgpack = rmp_serde::to_vec_named(&operations)
+        .map_err(|error| format!("INVALID_ARGUMENT: finance record encoding failed: {error}"))?;
+    Ok((Method::BatchUpdate { operations_msgpack }, head))
 }
 
 /// `FinanceRecordGet` over the RLS-projected core (`terminal.rs`).

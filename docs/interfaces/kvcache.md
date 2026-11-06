@@ -77,7 +77,7 @@ Select it with `MEDULLA_KVCACHE_BACKEND=durable`. Then:
   node invalidates stale context for all of them (pure content-addressed pages are immune). Stale disk is
   reclaimed out of band via the bounded `retire_stale` sweep (reads gate lazily meanwhile).
 - **Graph-topology-aware paging** — `page_in_ranked` pages the most graph-central nodes' KV blocks into RAM
-  first, using the resident graph's own PageRank/centrality (`medulla_kvcache::graph_importance`) as the locality
+  first, using the resident graph's own PageRank/centrality (`medulla_graph_algos::graph_importance`) as the locality
   signal, and seeds the LMCacheMPConnector snapshot→branch working layer.
 - **Hit-rate metrics** — atomic `get_hits`/`get_misses`/`dedup_hits`/`put_new`/`stale_missed` feed `/kv/stats`
   and a periodic `tracing` hit-rate line (`target: medulla::kvcache`), in the W3.7 Seam-6 export shape.

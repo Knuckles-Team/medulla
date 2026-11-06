@@ -71,6 +71,8 @@ mod backend_open;
 mod backend_routing;
 mod backend_shard_routes;
 pub mod commands;
+#[cfg(test)]
+mod group_commit_queue_tests;
 #[cfg(any(feature = "compute-dist", feature = "matview"))]
 mod matview_api;
 #[cfg(feature = "raft")]
@@ -537,6 +539,9 @@ pub struct RedbGroupCommitConfig {
     /// this — a deep batch already coalesces well, so lingering buys nothing and
     /// just adds latency (adaptive).
     pub shallow_threshold: usize,
+    /// Longest a durable write waits for room in the bounded writer channel
+    /// before it is refused with `COMMIT_QUEUE_FULL` (MEDULLA-ENGINE-PARITY-R001.1).
+    pub enqueue_timeout: Duration,
     /// Test-only gate used to hold the writer at the start of the linger window
     /// while the fixture queues the rest of its burst. Production opens never set
     /// this, so the live writer path has no synchronization hook.
@@ -551,7 +556,31 @@ impl RedbGroupCommitConfig {
     ///   * `MEDULLA_REDB_GROUP_SHALLOW` — shallow durable-work threshold
     ///     (default `32`); the writer lingers only while the pending graph-mutation
     ///     plus Raft-entry count is under it.
+    ///   * `MEDULLA_REDB_ENQUEUE_TIMEOUT_MS` — bounded enqueue wait in ms
+    ///     (default `5000`, clamped to `100..=60000`).
     pub fn from_env() -> Self {
+        Self::from_values(
+            std::env::var("MEDULLA_REDB_ENQUEUE_TIMEOUT_MS")
+                .ok()
+                .as_deref(),
+        )
+    }
+
+    /// Bounds of `MEDULLA_REDB_ENQUEUE_TIMEOUT_MS` in milliseconds.
+    pub const ENQUEUE_TIMEOUT_MS_MIN: u64 = 100;
+    pub const ENQUEUE_TIMEOUT_MS_MAX: u64 = 60_000;
+    pub const ENQUEUE_TIMEOUT_MS_DEFAULT: u64 = 5_000;
+
+    /// Resolve `enqueue_timeout` from the raw `MEDULLA_REDB_ENQUEUE_TIMEOUT_MS`
+    /// text (absent or unparsable = default; out of range is clamped).
+    pub fn parse_enqueue_timeout(raw: Option<&str>) -> Duration {
+        let ms = raw
+            .and_then(|s| s.trim().parse::<u64>().ok())
+            .unwrap_or(Self::ENQUEUE_TIMEOUT_MS_DEFAULT);
+        Duration::from_millis(ms.clamp(Self::ENQUEUE_TIMEOUT_MS_MIN, Self::ENQUEUE_TIMEOUT_MS_MAX))
+    }
+
+    fn from_values(enqueue_timeout_ms: Option<&str>) -> Self {
         let linger_us = std::env::var("MEDULLA_REDB_GROUP_LINGER_US")
             .ok()
             .and_then(|s| s.trim().parse::<u64>().ok())
@@ -564,6 +593,7 @@ impl RedbGroupCommitConfig {
             linger: Duration::from_micros(linger_us),
             // Never above the 4096 early-flush bound; at least 1.
             shallow_threshold: shallow.clamp(1, 4096),
+            enqueue_timeout: Self::parse_enqueue_timeout(enqueue_timeout_ms),
             #[cfg(any(test, feature = "test-support"))]
             test_control: None,
         }
@@ -590,6 +620,9 @@ pub struct RedbCommitStats {
     pub ops: AtomicU64,
     /// How many of those commits paid a micro-linger window.
     pub lingered: AtomicU64,
+    /// Durable writes refused with `COMMIT_QUEUE_FULL` because the writer channel
+    /// stayed full for the whole enqueue timeout.
+    pub refused_full: AtomicU64,
     /// True only while the writer is blocked in the bounded micro-linger receive.
     linger_waiting: AtomicBool,
 }
@@ -601,6 +634,12 @@ impl RedbCommitStats {
         if lingered {
             self.lingered.fetch_add(1, Ordering::Relaxed);
         }
+    }
+    pub(crate) fn record_refused_full(&self) {
+        self.refused_full.fetch_add(1, Ordering::Relaxed);
+    }
+    pub fn refused_full(&self) -> u64 {
+        self.refused_full.load(Ordering::Relaxed)
     }
     pub fn commits(&self) -> u64 {
         self.commits.load(Ordering::Relaxed)

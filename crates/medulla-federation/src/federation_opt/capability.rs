@@ -66,6 +66,12 @@ pub struct SourceCapabilities {
     pub paging: Paging,
     pub full_fetch: FullFetch,
     pub rate: SourceRate,
+    /// The source can give every fragment of one query one read-only snapshot
+    /// (MEDULLA-UNIFIED-DATA-PLANE-R038.3.3).
+    pub snapshot_reads: bool,
+    /// The source evaluates a relevance search (full text and/or vector) in its own request
+    /// and returns a remote score (MEDULLA-UNIFIED-DATA-PLANE-R038.5.1).
+    pub search_push: bool,
 }
 
 impl SourceCapabilities {
@@ -77,7 +83,21 @@ impl SourceCapabilities {
             paging: Paging::Single,
             full_fetch: FullFetch::Allowed,
             rate: SourceRate::new(4, 0),
+            snapshot_reads: false,
+            search_push: false,
         }
+    }
+
+    /// The same capabilities for a source that gives each query one read-only snapshot.
+    pub const fn with_snapshot_reads(mut self) -> Self {
+        self.snapshot_reads = true;
+        self
+    }
+
+    /// The same capabilities for a source that evaluates a relevance search remotely.
+    pub const fn with_search_push(mut self) -> Self {
+        self.search_push = true;
+        self
     }
 
     /// A source that can only be fetched whole (a remote engine today, a registry-only

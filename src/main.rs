@@ -319,7 +319,19 @@ async fn run_inner() -> Result<(), Box<dyn std::error::Error>> {
     // MEDULLA-CONTRACT-R058: every knob is read and bounds-checked once, before
     // any listener binds; a refusal exits non-zero.
     match medulla_server_api::knob_config::load_knobs(&args.knob, |name| std::env::var(name).ok()) {
-        Ok(knobs) => medulla_server_api::knob_config::install(knobs),
+        Ok(knobs) => {
+            // MEDULLA-DURABLE-KERNEL-R800.3: the served answer cache admits answers by the
+            // loaded `kvcache.min_worth` and `kvcache.answer_max_bytes`, before any graph
+            // builds its cache.
+            #[cfg(feature = "result-cache")]
+            medulla_query_cache::result_cache::install_tier_policy(
+                medulla_query_cache::result_cache::TierPolicy {
+                    max_bytes: knobs.kvcache_answer_max_bytes,
+                    min_worth: knobs.kvcache_min_worth,
+                },
+            );
+            medulla_server_api::knob_config::install(knobs)
+        }
         Err(refusal) => {
             eprintln!("error: {refusal}");
             std::process::exit(2);
@@ -343,6 +355,7 @@ async fn run_inner() -> Result<(), Box<dyn std::error::Error>> {
 
     let (socket_path, socket_parent) = resolve_socket_path(args.socket_path.take());
     let socket_mode = server_startup::socket_mode_or_exit(&args.socket_mode);
+    server_startup::bus_participant_ttl_or_exit(args.server.bus_participant_ttl_s);
 
     // ── Security gate: an auth secret and a durable-state directory are mandatory ──
     server_startup::validate_auth_mode(&args, socket_mode)?;
@@ -423,6 +436,8 @@ async fn run_inner() -> Result<(), Box<dyn std::error::Error>> {
         txn_limits,
     );
     server_state.local_anonymous = args.auth_mode == "none";
+    server_state.write_conflict_strategy =
+        server_startup::parse_write_conflict_strategy(&args.write_conflict_strategy);
     let state = Arc::new(RwLock::new(server_state));
 
     // Compose the ordinary process as a real local-placement server before any

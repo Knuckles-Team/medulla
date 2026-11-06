@@ -11,58 +11,8 @@
 
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
-use serde::{Deserialize, Serialize};
-
-/// One anomaly reading as recorded through `incident.record_anomaly`.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct AnomalyReading {
-    pub entity_ref: String,
-    pub signal: String,
-    pub observed: f64,
-    pub baseline: f64,
-    pub at_ms: u64,
-}
-
-/// Incident severity, from the largest relative deviation in its evidence.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum IncidentSeverity {
-    Low,
-    Medium,
-    High,
-}
-
-/// Incident status; it only moves forward one step at a time.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum IncidentStatus {
-    Open,
-    Acknowledged,
-    Resolved,
-}
-
-impl IncidentStatus {
-    fn next(self) -> Option<Self> {
-        match self {
-            Self::Open => Some(Self::Acknowledged),
-            Self::Acknowledged => Some(Self::Resolved),
-            Self::Resolved => None,
-        }
-    }
-}
-
-/// One served incident and its evidence.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct IncidentRecord {
-    pub id: String,
-    pub tenant: String,
-    pub signature_digest: String,
-    pub severity: IncidentSeverity,
-    pub status: IncidentStatus,
-    pub opened_at_ms: u64,
-    pub evidence: Vec<AnomalyReading>,
-    pub status_history: Vec<IncidentStatus>,
-}
+use medulla_types::incident::{AnomalyReading, IncidentRecord, IncidentSeverity, IncidentStatus};
+use sha2::{Digest, Sha256};
 
 /// A refused call, with its stable code. A refusal changes no state.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -76,7 +26,7 @@ pub enum IncidentRefusal {
     },
     /// `INCIDENT_NOT_FOUND`: absent, or owned by another tenant.
     NotFound(String),
-    /// `ANOMALY_RESOURCE_REQUIRED`: an anomaly names no entity.
+    /// `ANOMALY_RESOURCE_REQUIRED`: an anomaly names no resource.
     AnomalyResourceRequired,
 }
 
@@ -98,15 +48,17 @@ fn scope(tenant: Option<&str>) -> Result<&str, IncidentRefusal> {
     }
 }
 
-/// SHA-256 digest, 64 lowercase hex characters: stable across runs and
-/// targets (MEDULLA-UNIFIED-DATA-PLANE-R760.3).
+/// SHA-256 digest, 64 lowercase hex characters: stable across runs and targets.
 fn digest(text: &str) -> String {
-    use sha2::{Digest, Sha256};
-    let mut out = String::with_capacity(64);
-    for byte in Sha256::digest(text.as_bytes()) {
-        out.push_str(&format!("{byte:02x}"));
+    hex::encode(Sha256::digest(text.as_bytes()))
+}
+
+/// Every anomaly must name the resource it is about.
+fn require_resources(anomalies: &[AnomalyReading]) -> Result<(), IncidentRefusal> {
+    if anomalies.iter().any(|a| a.entity_ref.trim().is_empty()) {
+        return Err(IncidentRefusal::AnomalyResourceRequired);
     }
-    out
+    Ok(())
 }
 
 fn severity(evidence: &[AnomalyReading]) -> IncidentSeverity {
@@ -131,10 +83,32 @@ fn severity(evidence: &[AnomalyReading]) -> IncidentSeverity {
 pub struct IncidentAuthority {
     incidents: BTreeMap<String, IncidentRecord>,
     open_by_signature: HashMap<(String, String), String>,
-    next_id: u64,
 }
 
 impl IncidentAuthority {
+    /// An authority over already-committed incidents (the served handlers
+    /// load the tenant's unresolved incidents, apply one call, and commit
+    /// what changed).
+    pub fn load(records: impl IntoIterator<Item = IncidentRecord>) -> Self {
+        let mut authority = Self::default();
+        for record in records {
+            if record.status != IncidentStatus::Resolved {
+                authority.open_by_signature.insert(
+                    (record.tenant.clone(), record.signature_digest.clone()),
+                    record.id.clone(),
+                );
+            }
+            authority.incidents.insert(record.id.clone(), record);
+        }
+        authority
+    }
+
+    /// The current record of each id in `ids` (ids the authority does not
+    /// hold are skipped).
+    pub fn records<'a>(&'a self, ids: &'a [String]) -> impl Iterator<Item = &'a IncidentRecord> {
+        ids.iter().filter_map(|id| self.incidents.get(id))
+    }
+
     /// Correlate `anomalies` for `tenant`: one pass groups them by entity
     /// and `window_ms` bucket; each group opens an incident or joins the open
     /// incident with the same signature. Returns the touched incident ids.
@@ -145,9 +119,7 @@ impl IncidentAuthority {
         window_ms: u64,
     ) -> Result<Vec<String>, IncidentRefusal> {
         let tenant = scope(tenant)?.to_string();
-        if anomalies.iter().any(|a| a.entity_ref.trim().is_empty()) {
-            return Err(IncidentRefusal::AnomalyResourceRequired);
-        }
+        require_resources(&anomalies)?;
         let window = window_ms.max(1);
         let mut groups: BTreeMap<(String, u64), Vec<AnomalyReading>> = BTreeMap::new();
         for anomaly in anomalies {
@@ -180,9 +152,13 @@ impl IncidentAuthority {
             record.severity = record.severity.max(severity(&record.evidence));
             return id.clone();
         }
-        self.next_id += 1;
-        let id = format!("inc-{}-{}", tenant, self.next_id);
         let opened_at_ms = evidence.iter().map(|a| a.at_ms).min().unwrap_or(0);
+        // Content-derived, so a fresh authority over loaded incidents never
+        // reuses the id of a committed one.
+        let id = format!(
+            "inc-{}",
+            &digest(&format!("{signature}|{opened_at_ms}"))[..32]
+        );
         let record = IncidentRecord {
             id: id.clone(),
             tenant: tenant.to_string(),
@@ -273,6 +249,10 @@ mod tests {
         assert_eq!(record.severity, IncidentSeverity::High);
         assert_eq!(record.opened_at_ms, 10);
         assert_eq!(record.signature_digest.len(), 64);
+        assert!(record
+            .signature_digest
+            .bytes()
+            .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)));
         let json = serde_json::to_string(&record).unwrap();
         assert_eq!(
             serde_json::from_str::<IncidentRecord>(&json).unwrap(),

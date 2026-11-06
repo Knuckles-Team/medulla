@@ -58,6 +58,7 @@
 
 mod catalog_ops;
 pub mod lineage;
+pub mod operation_record;
 // OpenLineage transport (CA-15, feature `lineage-transport`). A best-effort HTTP push to
 // `MEDULLA_OPENLINEAGE_URL` already existed at `lineage::maybe_push_http`
 // (CA-17's stub note, preserved here) -- this module wires it into a composable
@@ -83,6 +84,7 @@ use medulla_tsdb::store::SeriesStore;
 
 use medulla_server_blob::blob::store::ChunkStore;
 
+pub use catalog_ops::SchemaChange;
 use catalog_ops::{
     prepare_materialization, publish_artifacts, rollback_artifacts, stage_artifacts,
 };
@@ -178,6 +180,10 @@ struct MaterializeInput<'a> {
     expected_lsn: Option<Lsn>,
     /// Complete table mutation revision the candidate must still observe at publication.
     expected_revision: Option<u64>,
+    /// The source log position the rows were read up to. It binds the snapshot to
+    /// the graph (`medulla.source-lsn`); `None` refuses the publication
+    /// (MEDULLA-FEDERATED-QUERY-R079.3).
+    source_lsn: Option<u64>,
 }
 
 fn materialization_base(
@@ -440,6 +446,8 @@ pub struct LakeManager {
     /// the in-process inspection surface (`recent_audit`) tests and callers use
     /// to prove an event landed, mirroring `recent_lineage`.
     audit: Mutex<VecDeque<Value>>,
+    /// Bounded ring of lake operation evidence (MEDULLA-FEDERATED-QUERY-R079.5).
+    operations: Mutex<VecDeque<operation_record::LakeOperationRecord>>,
     /// Coalesced ranges of every successfully persisted write LSN.  This is
     /// deliberately separate from each table's snapshot log: a committed
     /// global LSN can resolve to that table's latest earlier emitted snapshot,
@@ -466,6 +474,7 @@ impl LakeManager {
             drain_cursor: Mutex::new(HashMap::new()),
             lineage: Mutex::new(VecDeque::new()),
             audit: Mutex::new(VecDeque::new()),
+            operations: Mutex::new(VecDeque::new()),
             committed_lsns: Mutex::new(CommittedLsnLedger::default()),
             // Starts at 1 — `Lsn::ZERO`/0 is reserved by medulla-lake for "nothing committed
             // yet" (an as-of-0 read is always empty).
@@ -562,6 +571,30 @@ impl LakeManager {
         store: &dyn ChunkStore,
         input: MaterializeInput<'_>,
     ) -> Result<MaterializeReport, String> {
+        let table = format!("{}.{}", input.namespace, input.table);
+        let tenant = input.owner_tenant.map(str::to_string);
+        let kind = input.op_hint;
+        let source_lsn = input.source_lsn;
+        let result = self.commit_materialization(store, input);
+        if let Err(reason) = &result {
+            // A failed publication writes a refusal record and never a success record.
+            let mut record = operation_record::LakeOperationRecord::refused(
+                table,
+                tenant,
+                kind.as_str(),
+                reason.clone(),
+            );
+            record.source_lsn = source_lsn;
+            self.record_operation(record);
+        }
+        result
+    }
+
+    fn commit_materialization(
+        &self,
+        store: &dyn ChunkStore,
+        input: MaterializeInput<'_>,
+    ) -> Result<MaterializeReport, String> {
         let lsn = self.alloc_lsn();
         let ts_ms = lineage::now_ms();
         let key = (input.namespace.to_string(), input.table.to_string());
@@ -589,6 +622,7 @@ impl LakeManager {
         self.record_committed_lsn(lsn);
         drop(cat);
         drop(tables);
+        self.record_operation(prepared.evidence);
 
         let op = materialization_op(is_new, input.op_hint);
         let event = lineage::build_run_event(
@@ -655,6 +689,7 @@ impl LakeManager {
                 retire_paths: &[],
                 expected_lsn: None,
                 expected_revision: None,
+                source_lsn: Some(max_ts.max(0) as u64),
             },
         )?;
         self.drain_cursor
@@ -749,6 +784,7 @@ impl LakeManager {
                 retire_paths: &live_paths,
                 expected_lsn: Some(source_lsn),
                 expected_revision: Some(source_revision),
+                source_lsn: Some(source_lsn.value()),
             },
         )?;
         Ok(Some(report))
@@ -785,6 +821,23 @@ impl LakeManager {
             .get_mut(&(namespace.to_string(), table.to_string()))
             .ok_or_else(|| format!("no such table: {namespace}.{table}"))?;
         Ok(evolve_entry_schema(entry, field))
+    }
+
+    // ── Operation evidence (MEDULLA-FEDERATED-QUERY-R079.5) ─────────────────────
+
+    /// Keep one operation record in the bounded ring.
+    pub(crate) fn record_operation(&self, record: operation_record::LakeOperationRecord) {
+        let mut ring = self.operations.lock();
+        ring.push_back(record);
+        while ring.len() > operation_record::OPERATION_RING_CAP {
+            ring.pop_front();
+        }
+    }
+
+    /// The `n` most recent lake operation records (newest last).
+    pub fn recent_operations(&self, n: usize) -> Vec<operation_record::LakeOperationRecord> {
+        let ring = self.operations.lock();
+        ring.iter().rev().take(n).rev().cloned().collect()
     }
 
     // ── OpenLineage ─────────────────────────────────────────────────────────────
