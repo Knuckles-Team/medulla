@@ -136,8 +136,12 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         "AgentComponent",
         &[
             "COMPONENT_WITHDRAWN",
+            "LIFECYCLE_RETIRED_TERMINAL",
+            "LIFECYCLE_STATE_MALFORMED",
+            "LIFECYCLE_TRANSITION_INVALID",
             "MALFORMED_GUARDRAIL_RULE",
             "RESERVED_COMPONENT_ID",
+            "WITHDRAWN_NOT_ALLOWED",
         ],
     ),
     (

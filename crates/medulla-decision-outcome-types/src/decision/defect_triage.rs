@@ -18,6 +18,27 @@ pub enum TriageAbstainReason {
     InsufficientEvidence,
 }
 
+impl medulla_decision_types::decision::record::outcome::DecisionRefusal for TriageAbstainReason {
+    fn code(&self) -> medulla_decision_types::decision::record::outcome::RefusalCode {
+        match self {
+            Self::NoSymbolMatch => medulla_decision_types::decision::codes::TRIAGE_NO_SYMBOL_MATCH,
+            Self::NoOwner => medulla_decision_types::decision::codes::TRIAGE_NO_OWNER,
+            Self::InsufficientEvidence => {
+                medulla_decision_types::decision::codes::TRIAGE_INSUFFICIENT_EVIDENCE
+            }
+        }
+    }
+
+    fn detail(&self) -> String {
+        match self {
+            Self::NoSymbolMatch => "no symbol matches the symptom",
+            Self::NoOwner => "no owner for the suspected symbols",
+            Self::InsufficientEvidence => "not enough evidence to triage",
+        }
+        .to_string()
+    }
+}
+
 /// The triage of one defect.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]

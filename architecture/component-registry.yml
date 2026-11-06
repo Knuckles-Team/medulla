@@ -3815,6 +3815,7 @@ components:
       - "tests/decide"
       - "tests/ingest"
       - "tests/durable"
+      - "tests/lifecycle"
       - "tests/_client_fixtures.py"
       - "tests/_decision_resident_fixture.py"
       - "tests/_harness_envelope.py"

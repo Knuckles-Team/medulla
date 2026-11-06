@@ -120,6 +120,18 @@ impl AgentLibraryStore {
         )
     }
 
+    /// The accepted lifecycle transitions of one component, oldest first,
+    /// read from its revision stream (MEDULLA-DECISION-ENGINE-R168.5).
+    pub fn component_lifecycle_transitions(
+        &self,
+        tenant_id: &str,
+        component_id: &str,
+    ) -> Result<Vec<medulla_agent_types::agent_component::LifecycleTransitionEntry>, String> {
+        medulla_agent_types::agent_component::lifecycle_transition_entries(
+            &self.component_revisions(tenant_id, component_id)?,
+        )
+    }
+
     /// Resolve a prior attempt's durable outcome without re-committing it.
     pub fn component_status(
         &self,
@@ -365,6 +377,17 @@ impl RevisionLayer for ComponentLayer {
 
     fn validate_entry(component: &AgentComponentEntry) -> Result<(), String> {
         component.validate()
+    }
+
+    fn resurrect_refusal() -> String {
+        format!(
+            "{}: retired agent components cannot be resurrected",
+            medulla_agent_types::agent_library::lifecycle::LIFECYCLE_RETIRED_TERMINAL
+        )
+    }
+
+    fn validate_chain(components: &[AgentComponentEntry]) -> Result<(), String> {
+        medulla_agent_types::agent_component::check_lifecycle_chain(components)
     }
 
     fn verb(kind: AgentComponentMutationKind) -> RevisionVerb {

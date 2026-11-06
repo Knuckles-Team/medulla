@@ -546,6 +546,78 @@ pub fn check_lifecycle_transition(
     }
 }
 
+/// Refuse a retained revision chain whose lifecycle states are not a legal path
+/// (MEDULLA-DECISION-ENGINE-R168.4).
+///
+/// The first revision is `Published`; each later revision follows the previous
+/// one by one and by an allowed transition. The engine reports the malformed
+/// state and does not repair or default it.
+pub fn check_lifecycle_chain(entries: &[AgentComponentEntry]) -> Result<(), String> {
+    use crate::agent_library::lifecycle::LIFECYCLE_STATE_MALFORMED;
+    let Some(first) = entries.first() else {
+        return Ok(());
+    };
+    if first.lifecycle != AgentLibraryLifecycle::Published {
+        return Err(format!(
+            "{LIFECYCLE_STATE_MALFORMED}: revision {} of {} starts as {:?}, not published",
+            first.entry_revision, first.component_id, first.lifecycle
+        ));
+    }
+    for pair in entries.windows(2) {
+        let (prior, next) = (&pair[0], &pair[1]);
+        if next.component_id != prior.component_id
+            || next.entry_revision != prior.entry_revision.saturating_add(1)
+        {
+            return Err(format!(
+                "{LIFECYCLE_STATE_MALFORMED}: revision {} of {} does not follow revision {}",
+                next.entry_revision, next.component_id, prior.entry_revision
+            ));
+        }
+        check_lifecycle_transition(&next.component_id, prior.lifecycle, next.lifecycle)?;
+    }
+    Ok(())
+}
+
+/// The evidence class of a lifecycle transition entry (MEDULLA-DECISION-ENGINE-R168.5).
+pub const LIFECYCLE_EVIDENCE_CLASS: &str = "Observation";
+
+/// One accepted lifecycle transition, as the revision stream retains it
+/// (MEDULLA-DECISION-ENGINE-R168.5): the prior lifecycle, the next lifecycle and
+/// the component digest.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct LifecycleTransitionEntry {
+    pub component_id: String,
+    /// The revision that carries the transition.
+    pub entry_revision: u64,
+    pub prior: AgentLibraryLifecycle,
+    pub next: AgentLibraryLifecycle,
+    pub component_digest: String,
+    pub evidence_class: String,
+}
+
+/// The transition entries of one component's revision stream, oldest first.
+///
+/// Every revision after the first is one accepted transition. The chain is
+/// checked first, so a malformed stream yields its refusal and no entries.
+pub fn lifecycle_transition_entries(
+    entries: &[AgentComponentEntry],
+) -> Result<Vec<LifecycleTransitionEntry>, String> {
+    check_lifecycle_chain(entries)?;
+    Ok(entries
+        .windows(2)
+        .map(|pair| LifecycleTransitionEntry {
+            component_id: pair[1].component_id.clone(),
+            entry_revision: pair[1].entry_revision,
+            prior: pair[0].lifecycle,
+            next: pair[1].lifecycle,
+            component_digest: pair[1].definition_digest.clone(),
+            evidence_class: LIFECYCLE_EVIDENCE_CLASS.to_string(),
+        })
+        .collect())
+}
+
 impl AgentComponentEntry {
     pub fn publish(
         draft: AgentComponentDraft,
@@ -1582,6 +1654,62 @@ mod tests {
             .retire(3, 30)
             .unwrap_err()
             .starts_with(LIFECYCLE_RETIRED_TERMINAL));
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R168.4
+    #[test]
+    fn malformed_lifecycle_chains_refuse_by_code() {
+        use crate::agent_library::lifecycle::{
+            LIFECYCLE_RETIRED_TERMINAL, LIFECYCLE_STATE_MALFORMED,
+        };
+        let first =
+            AgentComponentEntry::publish(draft("server-a", AgentComponentKind::Toolset), 1, 10)
+                .unwrap();
+        let retired = first.retire(2, 20).unwrap();
+        assert!(check_lifecycle_chain(&[first.clone(), retired.clone()]).is_ok());
+        // A stream cannot start retired.
+        let mut headless = retired.clone();
+        headless.entry_revision = 1;
+        assert!(check_lifecycle_chain(&[headless])
+            .unwrap_err()
+            .starts_with(LIFECYCLE_STATE_MALFORMED));
+        // A gap in the revision numbers.
+        let mut gap = retired.clone();
+        gap.entry_revision = 3;
+        assert!(check_lifecycle_chain(&[first.clone(), gap])
+            .unwrap_err()
+            .starts_with(LIFECYCLE_STATE_MALFORMED));
+        // A revision after the terminal state.
+        let mut resurrected = first.clone();
+        resurrected.entry_revision = 3;
+        assert!(
+            check_lifecycle_chain(&[first.clone(), retired.clone(), resurrected])
+                .unwrap_err()
+                .starts_with(LIFECYCLE_RETIRED_TERMINAL)
+        );
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R168.5
+    #[test]
+    fn transition_entries_name_both_states_and_the_digest() {
+        let first =
+            AgentComponentEntry::publish(draft("server-a", AgentComponentKind::Toolset), 1, 10)
+                .unwrap();
+        let retired = first.retire(2, 20).unwrap();
+        let entries = lifecycle_transition_entries(&[first.clone(), retired.clone()]).unwrap();
+        assert_eq!(
+            entries,
+            vec![LifecycleTransitionEntry {
+                component_id: "server-a".into(),
+                entry_revision: 2,
+                prior: AgentLibraryLifecycle::Published,
+                next: AgentLibraryLifecycle::Retired,
+                component_digest: retired.definition_digest.clone(),
+                evidence_class: "Observation".into(),
+            }]
+        );
+        // One entry per accepted transition, none for the first revision.
+        assert!(lifecycle_transition_entries(&[first]).unwrap().is_empty());
     }
 
     /// One named edit to a definition, for the digest-binding table below.
