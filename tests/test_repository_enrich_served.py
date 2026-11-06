@@ -24,10 +24,15 @@ _REVISION = "c" * 40
 _WAIT_S = 30.0
 
 
-def _scope(repository_id: str, files: list[tuple[str, bytes]]) -> IndexRepositoryScope:
+def _scope(
+    repository_id: str,
+    files: list[tuple[str, bytes]],
+    commits: list[dict[str, Any]] | None = None,
+) -> IndexRepositoryScope:
     return IndexRepositoryScope.model_validate(
         {
             "repository_id": repository_id,
+            "commits": commits or [],
             "refs": [
                 {
                     "ref_name": "refs/heads/main",
@@ -47,9 +52,16 @@ def _scope(repository_id: str, files: list[tuple[str, bytes]]) -> IndexRepositor
     )
 
 
-def _index(client: Any, repository_id: str, files: list[tuple[str, bytes]]) -> Any:
+def _index(
+    client: Any,
+    repository_id: str,
+    files: list[tuple[str, bytes]],
+    commits: list[dict[str, Any]] | None = None,
+) -> Any:
     try:
-        return client.graph.index_repository(files, scope=_scope(repository_id, files))
+        return client.graph.index_repository(
+            files, scope=_scope(repository_id, files, commits)
+        )
     except Exception as exc:
         text = str(exc)
         if "AST feature not enabled" in text or "requires durable persistence" in text:
@@ -156,3 +168,76 @@ def test_packages_and_layers_are_typed_nodes_read_through_uql(clean_graph) -> No
     ]
     with pytest.raises(Exception, match="LAYER_CYCLE"):
         _index(clean_graph, "repo-cyclic", cyclic)
+
+
+def _commit(number: int, paths: list[str]) -> dict[str, Any]:
+    return {
+        "digest": f"{number:040x}",
+        "author": "alice",
+        "timestamp_ms": number,
+        "parents": [],
+        "changes": [
+            {"path": p, "kind": "modified", "added_lines": 2, "removed_lines": 1}
+            for p in paths
+        ],
+    }
+
+
+_HISTORY = [_commit(n, ["pkg/a.py", "pkg/b.py"]) for n in (1, 2, 3)]
+
+
+def _wait_for_ids(client: Any, query: str, count: int) -> list[str]:
+    deadline = time.monotonic() + _WAIT_S
+    ids = _ids(client, query)
+    while len(ids) < count and time.monotonic() < deadline:
+        time.sleep(0.25)
+        ids = _ids(client, query)
+    return ids
+
+
+# Verifies MEDULLA-REPO-INGEST-R601.3: Wiring.
+@pytest.mark.spec("MEDULLA-REPO-INGEST-R601.3")
+def test_second_hydration_skips_stored_commits(clean_graph) -> None:
+    _index(clean_graph, "repo-history", _CALLS_A, _HISTORY)
+    applied = _wait_for_ids(clean_graph, "MATCH (:CommitHistory)", 3)
+    assert len(applied) == 3, applied
+    assert _ids(clean_graph, 'MATCH (:RepositoryHookRun) WHERE commits_added = "3"')
+
+    # The second hydration sends the stored commits again plus one new commit.
+    more = [*_HISTORY, _commit(4, ["pkg/a.py"])]
+    _index(clean_graph, "repo-history", _CALLS_B, more)
+    assert len(_wait_for_ids(clean_graph, "MATCH (:CommitHistory)", 4)) == 4
+    skipped = _ids(
+        clean_graph,
+        'MATCH (:RepositoryHookRun) WHERE commits_skipped = "3"',
+    )
+    assert len(skipped) == 1, "the stored commits were skipped, not applied twice"
+
+
+_OWNED = [
+    ("services/billing/pyproject.toml", b'[project]\nname = "billing"\n'),
+    (
+        "services/billing/api.py",
+        b'@app.get("/invoices")\ndef ping():\n    return pong()\n\n'
+        b"def pong():\n    return ping()\n",
+    ),
+    (
+        "services/billing/main.tf",
+        b'resource "aws_s3_bucket" "invoices" {\n}\n',
+    ),
+]
+
+
+# Verifies MEDULLA-REPO-INGEST-R602.3: Wiring.
+@pytest.mark.spec("MEDULLA-REPO-INGEST-R602.3")
+def test_link_pass_runs_after_features(clean_graph) -> None:
+    _index(clean_graph, "repo-links", _OWNED)
+    assert len(_wait_for_runs(clean_graph, 1)) == 1
+    assert _ids(clean_graph, "MATCH (:CodeFeature)"), "features come first"
+
+    for node_type in ("HttpRoute", "IacResource"):
+        owners = _ids(
+            clean_graph,
+            f"MATCH (:{node_type}) |> TRAVERSE -[:ownedByService]->{{1,1}}",
+        )
+        assert "package:billing" in owners, (node_type, owners)

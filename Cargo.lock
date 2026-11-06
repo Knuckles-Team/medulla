@@ -5422,6 +5422,7 @@ name = "medulla-h-ingest"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "criterion",
  "hex",
  "hmac 0.12.1",
  "medulla-agent-types",

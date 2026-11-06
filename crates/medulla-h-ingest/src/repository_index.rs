@@ -29,6 +29,7 @@ use medulla_protocol_types::protocol::ResultPayload;
 
 pub mod ecosystem;
 pub mod enrich;
+pub mod scope_facts;
 
 /// The projection edge a tombstone is reported as; it lowers to a removal.
 const TOMBSTONE_EDGE: &str = "removesFileVersion";

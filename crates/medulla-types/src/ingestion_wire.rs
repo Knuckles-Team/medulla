@@ -154,6 +154,46 @@ pub const MAX_INDEX_SCOPE_REFS: usize = 4_096;
 /// Upper bound on ref memberships (or tombstones) in one branch-aware batch.
 pub const MAX_INDEX_SCOPE_FILE_VERSIONS: usize = 262_144;
 
+/// Upper bound on commits one branch-aware `IndexRepository` batch may carry.
+pub const MAX_INDEX_SCOPE_COMMITS: usize = 100_000;
+/// Upper bound on the file changes of one commit in an index scope.
+pub const MAX_INDEX_COMMIT_CHANGES: usize = 1_024;
+
+/// How a commit changed one file.
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum IndexChangeKind {
+    Added,
+    Modified,
+    Deleted,
+    Renamed,
+}
+
+/// One file a commit changed, with its line counts.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct IndexCommitChange {
+    pub path: String,
+    pub kind: IndexChangeKind,
+    pub added_lines: u32,
+    pub removed_lines: u32,
+}
+
+/// One commit of the repository history (MEDULLA-REPO-INGEST-R601.3). The
+/// digest is a lowercase 40- or 64-hex commit id.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct IndexCommit {
+    pub digest: String,
+    pub author: String,
+    pub timestamp_ms: u64,
+    #[serde(default)]
+    pub parents: Vec<String>,
+    #[serde(default)]
+    pub changes: BoundedVec<IndexCommitChange, MAX_INDEX_COMMIT_CHANGES>,
+}
+
 /// Whether a declared ref still exists at the indexed revision (EH-280).
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[serde(rename_all = "snake_case")]
@@ -213,6 +253,9 @@ pub struct IndexRepositoryScope {
     pub file_versions: BoundedVec<IndexFileVersion, MAX_INDEX_SCOPE_FILE_VERSIONS>,
     #[serde(default)]
     pub tombstones: BoundedVec<IndexTombstone, MAX_INDEX_SCOPE_FILE_VERSIONS>,
+    /// Commit history to enrich. Absent means no history.
+    #[serde(default)]
+    pub commits: BoundedVec<IndexCommit, MAX_INDEX_SCOPE_COMMITS>,
 }
 
 /// Result of `Method::ObserveScreen`: one captured frame as session/frame/UI-element

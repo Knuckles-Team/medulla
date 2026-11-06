@@ -71,6 +71,73 @@ pub fn enrich_timeout_ms_from(
     Ok(value)
 }
 
+/// Commit-history enrichment settings (MEDULLA-REPO-INGEST-R601.3), as
+/// `(key, environment key, default, inclusive bounds)`.
+pub const HISTORY_KNOBS: [(&str, &str, u64, (u64, u64)); 4] = [
+    (
+        "history_max_commits",
+        "MEDULLA_HISTORY_MAX_COMMITS",
+        100_000,
+        (1, 1_000_000),
+    ),
+    (
+        "history_support_floor",
+        "MEDULLA_HISTORY_SUPPORT_FLOOR",
+        3,
+        (1, 1_000),
+    ),
+    (
+        "history_confidence_floor_milli",
+        "MEDULLA_HISTORY_CONFIDENCE_FLOOR_MILLI",
+        300,
+        (0, 1_000),
+    ),
+    (
+        "history_max_files_per_commit",
+        "MEDULLA_HISTORY_MAX_FILES_PER_COMMIT",
+        200,
+        (2, 10_000),
+    ),
+];
+
+fn default_history_max_commits() -> u64 {
+    HISTORY_KNOBS[0].2
+}
+
+fn default_history_support_floor() -> u64 {
+    HISTORY_KNOBS[1].2
+}
+
+fn default_history_confidence_floor_milli() -> u64 {
+    HISTORY_KNOBS[2].2
+}
+
+fn default_history_max_files_per_commit() -> u64 {
+    HISTORY_KNOBS[3].2
+}
+
+/// The startup values of the four history keys, in [`HISTORY_KNOBS`] order:
+/// the defaults, or the `MEDULLA_HISTORY_*` overrides; out of range refuses
+/// startup.
+pub fn history_knobs_from(
+    lookup: impl Fn(&str) -> Option<String>,
+) -> Result<[u64; 4], InvalidSchedulerConfig> {
+    let mut values = [0; 4];
+    for (slot, (_, env, default, bounds)) in values.iter_mut().zip(HISTORY_KNOBS) {
+        *slot = match lookup(env) {
+            Some(raw) => raw
+                .trim()
+                .parse()
+                .map_err(|_| InvalidSchedulerConfig::InvalidEnvValue(env))?,
+            None => default,
+        };
+        if !(bounds.0..=bounds.1).contains(slot) {
+            return Err(InvalidSchedulerConfig::HistoryKnobOutOfRange(env));
+        }
+    }
+    Ok(values)
+}
+
 /// Default bound on the containers of one architecture view (MEDULLA-CQ-ORCH-R010.2).
 pub const DEFAULT_ARCHITECTURE_VIEW_MAX_CONTAINERS: u32 = 512;
 /// Accepted range of `architecture_view_max_containers`.
@@ -108,6 +175,18 @@ pub struct SchedulerConfig {
     /// Bound of one repository enrichment run, in milliseconds.
     #[serde(default = "default_enrich_timeout_ms")]
     pub enrich_timeout_ms: u64,
+    /// Most commits one history run applies.
+    #[serde(default = "default_history_max_commits")]
+    pub history_max_commits: u64,
+    /// Fewest co-changing commits for a coupling edge.
+    #[serde(default = "default_history_support_floor")]
+    pub history_support_floor: u64,
+    /// Lowest coupling confidence kept, in thousandths.
+    #[serde(default = "default_history_confidence_floor_milli")]
+    pub history_confidence_floor_milli: u64,
+    /// Most files of one commit that enter pair counting.
+    #[serde(default = "default_history_max_files_per_commit")]
+    pub history_max_files_per_commit: u64,
 }
 
 /// Invalid scheduler policy, refused before it can govern admission.
@@ -121,6 +200,7 @@ pub enum InvalidSchedulerConfig {
     HydrationScopeCapOutOfRange,
     HydrationSplitTargetOutOfRange,
     EnrichTimeoutOutOfRange,
+    HistoryKnobOutOfRange(&'static str),
     InvalidEnvValue(&'static str),
 }
 
@@ -159,6 +239,9 @@ impl std::fmt::Display for InvalidSchedulerConfig {
                 "scheduler enrich_timeout_ms must be within [{}, {}]",
                 ENRICH_TIMEOUT_MS_BOUNDS.0, ENRICH_TIMEOUT_MS_BOUNDS.1
             ),
+            Self::HistoryKnobOutOfRange(key) => {
+                write!(f, "{key} is outside its accepted range")
+            }
             Self::InvalidEnvValue(key) => write!(f, "{key} must be an unsigned integer"),
         }
     }
@@ -193,6 +276,17 @@ impl SchedulerConfig {
             .contains(&self.enrich_timeout_ms)
         {
             return Err(InvalidSchedulerConfig::EnrichTimeoutOutOfRange);
+        }
+        let history = [
+            self.history_max_commits,
+            self.history_support_floor,
+            self.history_confidence_floor_milli,
+            self.history_max_files_per_commit,
+        ];
+        for (value, (_, env, _, bounds)) in history.into_iter().zip(HISTORY_KNOBS) {
+            if !(bounds.0..=bounds.1).contains(&value) {
+                return Err(InvalidSchedulerConfig::HistoryKnobOutOfRange(env));
+            }
         }
         let mut available = self.total_workers;
         for (lane, floor) in &self.lane_floors {
@@ -231,6 +325,17 @@ impl SchedulerConfig {
         }
         if lookup(ENV_ENRICH_TIMEOUT_MS).is_some() {
             self.enrich_timeout_ms = enrich_timeout_ms_from(&lookup)?;
+        }
+        if HISTORY_KNOBS
+            .iter()
+            .any(|(_, env, ..)| lookup(env).is_some())
+        {
+            [
+                self.history_max_commits,
+                self.history_support_floor,
+                self.history_confidence_floor_milli,
+                self.history_max_files_per_commit,
+            ] = history_knobs_from(&lookup)?;
         }
         self.validate()
     }
