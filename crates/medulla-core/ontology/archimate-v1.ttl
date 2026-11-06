@@ -137,12 +137,12 @@ Realization, Assignment, ...).""" .
     rdfs:domain :ArchimateRelationship .
 
 # ── Core rooting (MEDULLA-TYPED-PACKS-R071.2) ───────────────────────────────────
-# Every class of this module above reaches the core class kg:DomainEntity through rdfs:subClassOf.
-<http://knuckles.team/kg#ApplicationComponent> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
-<http://knuckles.team/kg#ApplicationEvent> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
-<http://knuckles.team/kg#ArchimateRelationship> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
-<http://knuckles.team/kg#BusinessActor> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
-<http://knuckles.team/kg#BusinessCapability> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
-<http://knuckles.team/kg#BusinessProcess> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
-<http://knuckles.team/kg#BusinessTask> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
-<http://knuckles.team/kg#ErpNextIssue> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+# Every class of this module above reaches the core class bfo:Entity (BFO_0000001) through rdfs:subClassOf: the module mixes continuants, processes and information entities, so no narrower core parent is consistent with the BFO disjointness axioms.
+<http://knuckles.team/kg#ApplicationComponent> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<http://knuckles.team/kg#ApplicationEvent> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<http://knuckles.team/kg#ArchimateRelationship> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<http://knuckles.team/kg#BusinessActor> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<http://knuckles.team/kg#BusinessCapability> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<http://knuckles.team/kg#BusinessProcess> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<http://knuckles.team/kg#BusinessTask> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+<http://knuckles.team/kg#ErpNextIssue> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .

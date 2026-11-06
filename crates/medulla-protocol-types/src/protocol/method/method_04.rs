@@ -697,7 +697,7 @@ $($variants)*
     /// door takes no decision; callers evaluate the alert conditions.
     #[cfg(feature = "finance")]
     FinanceAlertRaise {
-        envelope: medulla_types::finance_event_envelope::FinanceAlertEnvelope,
+        envelope: Box<medulla_types::finance_event_envelope::FinanceAlertEnvelope>,
     },
 
     /// MEDULLA-FINANCE-PRIMITIVES-R018.5: rank factors like `FinanceFactorRank` (same
