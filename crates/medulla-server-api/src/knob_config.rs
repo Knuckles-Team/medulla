@@ -257,6 +257,8 @@ knobs! {
     pattern_shadow_ratio_min: f64 = "pattern.shadow_ratio_min", F64(2.0), [1.5, 4.0], "ratio", Tunable;
     /// Opposite-shadow ceiling as a fraction of the range.
     pattern_wick_max: f64 = "pattern.wick_max", F64(0.1), [0.0, 0.3], "ratio", Tunable;
+    /// Read-audit queue depth: a full queue refuses the read (MEDULLA-IDENTITY-R610.5).
+    identity_read_audit_queue_depth: u64 = "identity.read_audit_queue_depth", U64(4_096), [64, 65_536], "entries", Tunable;
     /// Usage ledger batch size cap.
     usage_max_batch: u64 = "usage.max_batch", U64(1_000), [1, 10_000], "records", Tunable;
     /// OTLP log batch record cap (MEDULLA-CONTRACT-R050).

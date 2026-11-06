@@ -27,6 +27,7 @@ closed_error_codes! {
         AuditIdempotencyConflict => "AUDIT_IDEMPOTENCY_CONFLICT",
         AuditReservationMismatch => "AUDIT_RESERVATION_MISMATCH",
         AuditReservationRequired => "AUDIT_RESERVATION_REQUIRED",
+        AuditUnavailable => "AUDIT_UNAVAILABLE",
         AuditWriterUnavailable => "AUDIT_WRITER_UNAVAILABLE",
         AuthenticationRequired => "AUTHENTICATION_REQUIRED",
         BodyDigestMismatch => "BODY_DIGEST_MISMATCH",
@@ -368,5 +369,7 @@ closed_error_codes! {
         EvidenceNoChannel => "EVIDENCE_NO_CHANNEL",
         EvidenceWeightOutOfRange => "EVIDENCE_WEIGHT_OUT_OF_RANGE",
         ArtifactSealViolation => "ARTIFACT_SEAL_VIOLATION",
+        QueryUnscopable => "QUERY_UNSCOPABLE",
+        UnitOutOfScope => "UNIT_OUT_OF_SCOPE",
     }
 }

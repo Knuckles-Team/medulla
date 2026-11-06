@@ -41,6 +41,32 @@ pub struct UnitPrincipal {
     pub tenant: String,
 }
 
+/// The refusal for a point read of a unit the reader may not see. The text
+/// carries the unit id and nothing else, and an absent unit refuses the same
+/// way, so the refusal reveals no existence.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+#[error("UNIT_OUT_OF_SCOPE: {0}")]
+pub struct UnitOutOfScope(pub String);
+
+/// The refusals of the read-scope family, as wire tokens.
+pub const READ_SCOPE_REFUSALS: &[&str] =
+    &["AUDIT_UNAVAILABLE", "QUERY_UNSCOPABLE", "UNIT_OUT_OF_SCOPE"];
+
+/// The most unit ids one read-audit line names.
+pub const MAX_AUDITED_UNIT_IDS: usize = 256;
+
+/// The audit line of one filtered read (MEDULLA-IDENTITY-R023.5).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SegmentReadAudit {
+    pub principal: String,
+    pub tenant: String,
+    /// Up to [`MAX_AUDITED_UNIT_IDS`] ids of the units the read could see.
+    pub unit_ids: Vec<String>,
+    pub hidden_count: usize,
+    /// The commit revision the read used.
+    pub revision: u64,
+}
+
 /// Whether `reader` may see `unit`: its own units, or a unit whose owner shares
 /// it at a scope the reader matches. `Private` never leaves its owner.
 pub type ShareRule = fn(&UnitPrincipal, &KnowledgeUnit, &BTreeMap<String, UnitPrincipal>) -> bool;

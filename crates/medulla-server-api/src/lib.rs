@@ -66,6 +66,12 @@ pub mod oidc;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod outbox_operator;
 
+/// The read and claim audit sink (MEDULLA-IDENTITY-R610.5).
+pub mod read_audit;
+
+/// Read scope: visible knowledge units and tenant placement (MEDULLA-IDENTITY-R023.3).
+pub mod read_scope;
+
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod request_replay;
