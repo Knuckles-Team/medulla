@@ -5513,6 +5513,7 @@ name = "medulla-h-mining"
 version = "0.1.0"
 dependencies = [
  "hex",
+ "medulla-core",
  "medulla-epistemic",
  "medulla-exec",
  "medulla-graph-algos",

@@ -168,6 +168,11 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "DOCUMENT_NOT_FOUND",
         ],
     ),
+    // MEDULLA-SUPPLY-VOCAB-R009.3: ecosystem package risk propagation.
+    (
+        "MineRiskPropagation",
+        &["ECOSYSTEM_DEPTH_OUT_OF_RANGE", "ECOSYSTEM_PACKAGE_UNKNOWN"],
+    ),
     // MEDULLA-UNIFIED-DATA-PLANE-R651.7.4 / MEDULLA-DECISION-ENGINE-R802.4.
     (
         "EnrichDocument",
