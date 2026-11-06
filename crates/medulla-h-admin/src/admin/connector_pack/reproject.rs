@@ -41,12 +41,10 @@ pub(crate) static INJECT_BLOB_UNAVAILABLE: std::sync::Mutex<Option<String>> =
     std::sync::Mutex::new(None);
 
 #[cfg(all(feature = "redb", feature = "blob", feature = "shacl"))]
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct PackProjectionDocuments {
-    shapes: Vec<crate::graph_schema::PackSchemaDocument>,
-    ontologies: Vec<crate::graph_schema::PackSchemaDocument>,
-    crosswalks: Vec<crate::graph_schema::PackSchemaDocument>,
-}
+pub(crate) mod surface;
+
+#[cfg(all(feature = "redb", feature = "blob", feature = "shacl"))]
+use crate::graph_schema::PackProjectionDocuments;
 
 pub(crate) async fn serve(
     state: &Arc<RwLock<ServerState>>,
@@ -186,9 +184,7 @@ async fn commit_schema_projection(
         verified,
         &plan.connector,
         &plan.record_id,
-        documents.shapes,
-        documents.ontologies,
-        documents.crosswalks,
+        documents,
         verified.idempotency_key(),
     )
     .await
@@ -261,11 +257,13 @@ async fn materialize_projection_documents(
     let store = Arc::clone(&blob.store);
     let tenant_id = plan.tenant_id.clone();
     let bodies = plan.bodies.clone();
-    tokio::task::spawn_blocking(move || {
+    let mut documents = tokio::task::spawn_blocking(move || {
         projection_documents_from_store(store.as_ref(), &tenant_id, &bodies)
     })
     .await
-    .map_err(|error| format!("connector pack projection body task failed: {error}"))?
+    .map_err(|error| format!("connector pack projection body task failed: {error}"))??;
+    documents.surface = surface::surface_triples(plan, &documents.ontologies)?;
+    Ok(documents)
 }
 
 #[cfg(all(feature = "redb", feature = "blob", feature = "shacl"))]
@@ -305,6 +303,7 @@ fn projection_documents_from_store(
         shapes,
         ontologies,
         crosswalks,
+        surface: None,
     })
 }
 

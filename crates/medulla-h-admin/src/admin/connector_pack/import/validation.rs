@@ -17,6 +17,11 @@ use medulla_persistence_records::connector_pack::CONNECTOR_DECLARATION_URI;
 use super::facts::uri_prefix;
 use super::json::parse_bounded_json;
 
+#[cfg(feature = "rdf")]
+mod core_classes;
+#[cfg(feature = "rdf")]
+mod surface;
+
 pub(super) fn validate_index(
     request: &ConnectorPackImportRequest,
     archive: &[u8],
@@ -314,8 +319,58 @@ impl<'a> IndexValidator<'a> {
                 Some(&entry.uri),
                 "connector declaration schema mappings are invalid",
             );
+            return;
+        }
+        self.validate_contract(entry, body);
+    }
+
+    /// MEDULLA-TYPED-PACKS-R101.2: a declaration that carries a `contract` is
+    /// mapped to RDF and checked against the contract shapes.
+    #[cfg(all(feature = "rdf", feature = "shacl"))]
+    fn validate_contract(&mut self, entry: &PackEntry, body: &[u8]) {
+        let Ok(declaration) = serde_json::from_slice::<serde_json::Value>(body) else {
+            return;
+        };
+        if declaration.get("contract").is_none() {
+            return;
+        }
+        let refusal = |validator: &mut Self, detail: &str| {
+            validator.reject(
+                PackViolationCode::ContractShaclViolation,
+                Some(&entry.uri),
+                detail,
+            );
+        };
+        let Some(shapes) = super::contract_rdf::contract_shapes() else {
+            return refusal(self, "contract shapes are not registered");
+        };
+        let data = match super::contract_rdf::contract_graph(
+            self.request.index.connector.as_str(),
+            &declaration,
+        ) {
+            Ok(data) => data,
+            Err(_) => return refusal(self, "contract declaration is not mappable to RDF"),
+        };
+        let report = medulla_shacl::graph_from_turtle(shapes)
+            .and_then(|shapes| medulla_shacl::validate(&shapes, &data));
+        match report {
+            Ok(report) if report.conforms => {}
+            Ok(report) => {
+                let detail = report
+                    .results
+                    .iter()
+                    .filter_map(|result| result.message.as_deref())
+                    .next()
+                    .unwrap_or("contract does not conform to the contract shapes")
+                    .to_string();
+                refusal(self, &detail);
+            }
+            Err(_) => refusal(self, "contract shapes could not be evaluated"),
         }
     }
+
+    #[cfg(not(all(feature = "rdf", feature = "shacl")))]
+    fn validate_contract(&mut self, _entry: &PackEntry, _body: &[u8]) {}
 
     fn validate_skill_body(&mut self, entry: &PackEntry, body: &[u8]) {
         if entry.kind != PackEntryKind::Skill {
@@ -540,6 +595,11 @@ fn finish_validation(validator: &mut IndexValidator<'_>) {
         validator.reject(code, None, detail);
     }
     flag_ontology_orphans(validator);
+    #[cfg(feature = "rdf")]
+    {
+        core_classes::flag_core_conflicts(validator);
+        surface::check_surface(validator);
+    }
 }
 
 /// How the deployment treats a pack ontology class with no subclass path to the
@@ -574,11 +634,18 @@ fn orphan_policy() -> OrphanPolicy {
 /// fit in one kibibyte.
 #[cfg(feature = "rdf")]
 fn orphan_detail(orphans: &[String]) -> String {
-    let mut detail = format!(
+    let lead = format!(
         "{} class(es) have no rdfs:subClassOf path to the parent catalog: ",
         orphans.len()
     );
-    for (index, class) in orphans.iter().enumerate() {
+    class_list_detail(&lead, orphans)
+}
+
+/// `lead`, then as many of `classes` as fit in one kibibyte.
+#[cfg(feature = "rdf")]
+fn class_list_detail(lead: &str, classes: &[String]) -> String {
+    let mut detail = lead.to_string();
+    for (index, class) in classes.iter().enumerate() {
         let item = if index == 0 {
             class.clone()
         } else {
