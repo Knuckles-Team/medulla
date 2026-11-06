@@ -6,12 +6,27 @@ session-scoped server and ``clean_graph`` sync client from conftest.py.
 
 from __future__ import annotations
 
+import time
+
 import pytest
 
 from medulla.client import _as_of_uql
 
 SEED = "MATCH (:Doc) WHERE year = 2020"
 WALK = "TRAVERSE CITES"
+
+
+def _now_ms() -> int:
+    """Wall-clock milliseconds, the unit of the engine's transaction clock."""
+    return time.time_ns() // 1_000_000
+
+
+def _tick() -> int:
+    """A millisecond strictly between the engine stamps before and after it."""
+    time.sleep(0.01)
+    instant = _now_ms()
+    time.sleep(0.01)
+    return instant
 
 
 def _reached(client, ts, axis):
@@ -21,19 +36,25 @@ def _reached(client, ts, axis):
 
 @pytest.mark.spec("MEDULLA-DURABLE-KERNEL-R081")
 def test_supersede_invalidate_and_as_of_end_to_end(clean_graph):
+    # Transaction time is the engine clock (MEDULLA-DURABLE-KERNEL-R078): a
+    # caller's tx_from / tx_now is overwritten, so the tx-axis pins bracket the
+    # engine's own stamps with wall-clock instants taken between the writes.
     for node, year in (("d1", 2020), ("d2", 2021), ("d3", 2022)):
         clean_graph.nodes.add(node, {"type": "Doc", "year": year})
-    clean_graph.edges.add(
-        "d1", "d2", {"relationship": "CITES", "valid_from": 100, "tx_from": 100}
-    )
+    before_add = _tick()
+    clean_graph.edges.add("d1", "d2", {"relationship": "CITES", "valid_from": 100})
+    between = _tick()
     clean_graph.edges.supersede_edge(
-        "d1", "d3", "d1", "d2", "CITES", 200, 250, {"relationship": "CITES"}
+        "d1", "d3", "d1", "d2", "CITES", 200, _now_ms(), {"relationship": "CITES"}
     )
+    after = _tick()
     cases = [
         (150, "valid", ["d2"]),
         (250, "valid", ["d3"]),
         (50, "valid", []),
-        (120, "tx", ["d2"]),
+        (before_add, "tx", []),
+        (between, "tx", ["d2"]),
+        (after, "tx", ["d3"]),
     ]
     for ts, axis, expected in cases:
         assert _reached(clean_graph, ts, axis) == expected, (ts, axis)

@@ -24,9 +24,7 @@ pytestmark = [pytest.mark.no_engine]
 def effect_client(request):
     from decide import test_run_work_item_served as served
 
-    yield from served.authenticated_plan_client.__pytest_wrapped__.obj(
-        request.getfixturevalue("tmp_path")
-    )
+    yield from served.authenticated_plan_session(request.getfixturevalue("tmp_path"))
 
 
 @pytest.fixture
@@ -43,9 +41,7 @@ def metered_client(request, monkeypatch):
         "strict_server_env",
         lambda *a, **k: served_env(*a, **k) | {"GRAPH_SERVICE_METRICS_ADDR": address},
     )
-    client_iter = served.authenticated_plan_client.__pytest_wrapped__.obj(
-        request.getfixturevalue("tmp_path")
-    )
+    client_iter = served.authenticated_plan_session(request.getfixturevalue("tmp_path"))
     client = next(client_iter)
     client.metrics_url = "http://" + address + "/metrics"
     yield client

@@ -22,10 +22,14 @@ pub const MAX_CORRELATION_KEY_BYTES: usize = 256;
 /// passes it through unchanged (MEDULLA-IDENTITY-R003.2).
 pub const OVERSIZE_REFUSAL: &str =
     "ACCESS_DENIED: anonymous correlation metadata exceeds its 2 KiB or 256-byte key bound";
+/// Prefix of every anonymous-mode refusal. Isolated mode needs no credential, so a
+/// presented credential or identity claim is denied, not "authentication required";
+/// the request boundary passes these refusals through unchanged (MEDULLA-IDENTITY-R003.3).
+pub const REFUSAL_PREFIX: &str = "ACCESS_DENIED: anonymous ";
 
 pub fn request_authority(request: &Request) -> Result<VerifiedRequestContext, String> {
     if request.agent_id.is_some() {
-        return Err("anonymous mode refuses caller identity claims".into());
+        return Err("ACCESS_DENIED: anonymous mode refuses caller identity claims".into());
     }
     if request.auth_token.is_empty() {
         return Ok(VerifiedRequestContext::anonymous_local(None));
@@ -33,19 +37,19 @@ pub fn request_authority(request: &Request) -> Result<VerifiedRequestContext, St
     let raw = request
         .auth_token
         .strip_prefix("anon1.")
-        .ok_or("anonymous mode refuses credentials and malformed correlation envelopes")?;
+        .ok_or("ACCESS_DENIED: anonymous mode refuses credentials and malformed correlation envelopes")?;
     if raw.len() > MAX_METADATA_BYTES {
         return Err(OVERSIZE_REFUSAL.into());
     }
     let operation: AnonymousOperation = serde_json::from_str(raw)
-        .map_err(|_| "anonymous correlation metadata must contain only idempotency_key")?;
+        .map_err(|_| "ACCESS_DENIED: anonymous correlation metadata must contain only idempotency_key")?;
     if operation.idempotency_key.len() > MAX_CORRELATION_KEY_BYTES {
         return Err(OVERSIZE_REFUSAL.into());
     }
     if operation.idempotency_key.trim().is_empty()
         || operation.idempotency_key.chars().any(char::is_control)
     {
-        return Err("anonymous idempotency_key must be 1..256 UTF-8 bytes without controls".into());
+        return Err("ACCESS_DENIED: anonymous idempotency_key must be 1..256 UTF-8 bytes without controls".into());
     }
     Ok(VerifiedRequestContext::anonymous_local(Some(
         operation.idempotency_key,
@@ -123,10 +127,12 @@ mod tests {
             "anon1.{\"idempotency_key\":\"x\",\"mac\":\"signature\"}",
             "anon1.{\"idempotency_key\":\"x\",\"idempotency_key\":\"y\"}",
         ] {
-            assert!(request_authority(&request(value)).is_err(), "{value}");
+            let refusal = request_authority(&request(value)).unwrap_err();
+            assert!(refusal.starts_with(REFUSAL_PREFIX), "{value}: {refusal}");
         }
         let mut identity = request("");
         identity.agent_id = Some("admin".into());
-        assert!(request_authority(&identity).is_err());
+        let refusal = request_authority(&identity).unwrap_err();
+        assert!(refusal.starts_with(REFUSAL_PREFIX), "{refusal}");
     }
 }

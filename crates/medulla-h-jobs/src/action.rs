@@ -5,8 +5,10 @@
 //! [`ActionSpec::submit`] and commits ONE `BatchUpdate` through the request
 //! boundary: every applied effect plus the `ActionRun` node (the verdicts and
 //! the parameter digest). A refused run commits only its `ActionRun` node and
-//! answers with the refusal's registered code. The `__action_completed` CDC
-//! topic is emitted by the CDC marker for `ActionSubmit`.
+//! answers with the refusal's registered code. A `BatchUpdate` emits no
+//! per-row change events, so after the batch commits the handler emits the
+//! outbox itself: the `ActionRun` node's change event (its post-image is the
+//! payload) and the `__action_completed` topic marker.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
@@ -98,8 +100,10 @@ async fn handle_action_submit(
     // refused as unattached until the governed proposal path is wired.
     let run = spec.submit(params, &BTreeSet::new());
     let mut operations = applied_operations(ctx, &run)?;
-    operations.push(run_node(ctx, &run)?);
+    let (run_id, node) = run_node(ctx, &run)?;
+    operations.push(node);
     commit(ctx, operations).await?;
+    emit_outbox(ctx, &run_id).await;
     match &run.refusal {
         Some(refusal) => Err(refuse(refusal)),
         None => Ok(run),
@@ -173,7 +177,7 @@ fn hex_digest(text: &str) -> String {
 }
 
 /// The `ActionRun` node: verdicts, parameters and the effect receipts.
-fn run_node(ctx: &HandleContext<'_>, run: &ActionRun) -> Result<Value, String> {
+fn run_node(ctx: &HandleContext<'_>, run: &ActionRun) -> Result<(String, Value), String> {
     let body = serde_json::to_string(run).map_err(|e| e.to_string())?;
     let params_digest = hex_digest(&serde_json::to_string(&run.params).map_err(|e| e.to_string())?);
     let key = format!(
@@ -190,8 +194,36 @@ fn run_node(ctx: &HandleContext<'_>, run: &ActionRun) -> Result<Value, String> {
     properties.insert("params_digest".into(), params_digest.into());
     properties.insert(RUN_BODY.into(), body.into());
     debug_assert!(run.status == ActionStatus::Applied || run.refusal.is_some());
-    Ok(upsert_node(ctx, run_id, properties))
+    Ok((run_id.clone(), upsert_node(ctx, run_id, properties)))
 }
+
+/// The outbox of one committed submit: the `ActionRun` node's change event,
+/// carrying its committed post-image, then the `__action_completed` marker.
+#[cfg(feature = "streaming")]
+async fn emit_outbox(ctx: &HandleContext<'_>, run_id: &str) {
+    use medulla_server_cdc::cdc::{CdcKind, CdcStateExt};
+    let state = ctx.state.read().await;
+    let Some(hub) = state.cdc_hub() else { return };
+    hub.emit(
+        ctx.graph_name,
+        CdcKind::UpdateNode,
+        run_id.to_string(),
+        String::new(),
+        None,
+        ctx.core.get_node_properties(run_id),
+    );
+    hub.emit(
+        ctx.graph_name,
+        CdcKind::UpdateNode,
+        "__action_completed".to_string(),
+        String::new(),
+        None,
+        None,
+    );
+}
+
+#[cfg(not(feature = "streaming"))]
+async fn emit_outbox(_ctx: &HandleContext<'_>, _run_id: &str) {}
 
 /// Commit `operations` as ONE `BatchUpdate` through the request boundary.
 async fn commit(ctx: &HandleContext<'_>, operations: Vec<Value>) -> Result<(), String> {

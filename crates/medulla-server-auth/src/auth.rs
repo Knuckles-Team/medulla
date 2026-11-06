@@ -1172,8 +1172,10 @@ pub fn authentication_refusal(error: &str) -> String {
         }
         return audience.to_string();
     }
-    if error == medulla_server_api::anonymous::OVERSIZE_REFUSAL {
-        // MEDULLA-IDENTITY-R003.2: the bounded anonymous decoder's typed refusal.
+    if error.starts_with(medulla_server_api::anonymous::REFUSAL_PREFIX) {
+        // MEDULLA-IDENTITY-R003.2/R003.3: the anonymous decoder's typed refusals
+        // (oversize metadata, presented credentials, identity claims). They
+        // carry only fixed text, never caller data.
         return error.to_string();
     }
     if error.starts_with("NODE_MISMATCH:") {

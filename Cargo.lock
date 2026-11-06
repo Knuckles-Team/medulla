@@ -5505,6 +5505,7 @@ dependencies = [
  "medulla-server",
  "medulla-server-api",
  "medulla-server-auth",
+ "medulla-server-cdc",
  "medulla-server-mutation",
  "medulla-server-ops",
  "medulla-statechart",

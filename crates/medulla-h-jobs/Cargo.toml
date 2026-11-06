@@ -48,6 +48,7 @@ medulla-persistence-records = { path = "../medulla-persistence-records" }
 medulla-server-ops = { path = "../medulla-server-ops" }
 medulla-server-mutation = { path = "../medulla-server-mutation" }
 medulla-server-auth = { path = "../medulla-server-auth" }
+medulla-server-cdc = { path = "../medulla-server-cdc", optional = true }
 medulla-retrieval = { path = "../medulla-retrieval" }
 
 [features]
@@ -61,6 +62,8 @@ raft = ["redb", "medulla-kernel/raft", "medulla-persistence/raft", "medulla-raft
 redb = ["medulla-kernel/redb", "medulla-persistence-records/redb", "medulla-persistence/redb", "medulla-raft/redb", "medulla-server-api/redb", "medulla-server-mutation/redb", "medulla-server-ops/redb"]
 statechart = ["dep:medulla-statechart", "medulla-capabilities/statechart", "medulla-persistence/statechart", "medulla-protocol-types/statechart", "medulla-raft/statechart", "medulla-server-api/statechart", "medulla-server-mutation/statechart", "medulla-types/statechart", "server"]
 decide = ["medulla-capabilities/decide", "medulla-compute/decide", "medulla-persistence-records/decide", "medulla-persistence/decide", "medulla-raft/decide", "medulla-retrieval/decide", "medulla-server-api/decide", "medulla-server-ops/decide", "epistemic", "jobs", "numeric", "query", "redb", "server"]
+# The governed-action outbox events (MEDULLA-UNIFIED-DATA-PLANE-R700.3).
+streaming = ["dep:medulla-server-cdc", "medulla-server-cdc/streaming"]
 server = ["medulla-kernel/server", "medulla-persistence/server", "medulla-raft/server", "medulla-server-api/server"]
 viz = ["medulla-capabilities/viz", "medulla-persistence/viz", "medulla-protocol-types/viz", "medulla-raft/viz", "medulla-server-api/viz", "medulla-types/viz"]
 modality-serving = ["dep:medulla-modality", "medulla-capabilities/modality-serving", "medulla-kernel/modality-serving", "medulla-persistence/modality-serving", "medulla-protocol-types/modality-serving", "medulla-raft/modality-serving", "medulla-server-api/modality-serving", "medulla-server-auth/modality-serving", "medulla-server-mutation/modality-serving", "medulla-server-ops/modality-serving", "medulla-types/modality-serving", "redb", "server"]

@@ -25,8 +25,8 @@ pytestmark = [
 ]
 
 
-@pytest.fixture
-def authenticated_plan_client(tmp_path):
+def authenticated_plan_session(tmp_path):
+    """Yield a client of a fresh authenticated server; shared by sibling suites."""
     from test_native_no_auth_served import server
 
     # Public loopback fixture value, matching the authenticated TaskPlan suite.
@@ -57,6 +57,11 @@ def authenticated_plan_client(tmp_path):
             auth_secret=test_auth_secret,
             verified_context=request_context(),
         )
+
+
+@pytest.fixture
+def authenticated_plan_client(tmp_path):
+    yield from authenticated_plan_session(tmp_path)
 
 
 def test_authenticated_run_recovery_preserves_exact_admission(request):
