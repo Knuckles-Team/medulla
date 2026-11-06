@@ -305,8 +305,16 @@ pub fn code_context(
     };
     let want_usages = matches!(request.question, CodeQuestion::How | CodeQuestion::Usage);
     let want_impact = matches!(request.question, CodeQuestion::How | CodeQuestion::Impact);
-    let callers = if want_usages { walk(&backward) } else { BTreeMap::new() };
-    let callees = if want_impact { walk(&forward) } else { BTreeMap::new() };
+    let callers = if want_usages {
+        walk(&backward)
+    } else {
+        BTreeMap::new()
+    };
+    let callees = if want_impact {
+        walk(&forward)
+    } else {
+        BTreeMap::new()
+    };
 
     let visited: BTreeSet<&str> = callers
         .keys()
@@ -316,7 +324,9 @@ pub fn code_context(
     let mut edges: Vec<CodeEdge> = index
         .edges
         .iter()
-        .filter(|edge| visited.contains(edge.caller.as_str()) && visited.contains(edge.callee.as_str()))
+        .filter(|edge| {
+            visited.contains(edge.caller.as_str()) && visited.contains(edge.callee.as_str())
+        })
         .cloned()
         .collect();
     edges.sort_by(|a, b| (&a.caller, &a.callee).cmp(&(&b.caller, &b.callee)));
@@ -625,10 +635,7 @@ mod tests {
             .iter()
             .map(|n| (n.symbol.as_str(), n.hops))
             .collect();
-        assert_eq!(
-            visited,
-            vec![("b::parse", 1), ("c::normalize", 2)]
-        );
+        assert_eq!(visited, vec![("b::parse", 1), ("c::normalize", 2)]);
         assert_eq!(answer.hubs[0].symbol, "b::parse");
         assert_eq!(
             (answer.hubs[0].in_degree, answer.hubs[0].out_degree),

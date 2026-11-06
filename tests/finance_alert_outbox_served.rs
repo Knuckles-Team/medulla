@@ -255,7 +255,11 @@ async fn replay_preserves_one_outbox_fact() {
         assert!(first.error.is_none(), "{:?}", first.error_detail);
         let second = served.raise(envelope(kind, &id)).await;
         assert!(second.error.is_none(), "{:?}", second.error_detail);
-        assert!(first.result.is_some() && format!("{:?}", first.result) == format!("{:?}", second.result), "{kind:?}");
+        assert!(
+            first.result.is_some()
+                && format!("{:?}", first.result) == format!("{:?}", second.result),
+            "{kind:?}"
+        );
     }
     let facts = served.claim("finance.alert.price").await;
     assert_eq!(facts.len(), 4, "one outbox fact per event id: {facts:?}");

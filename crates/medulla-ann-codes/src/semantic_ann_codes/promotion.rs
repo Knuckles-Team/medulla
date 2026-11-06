@@ -29,12 +29,12 @@ use medulla_storage::{
     SEMANTIC_PROMOTION_VERDICTS, SEMANTIC_STAGE_RECEIPTS,
 };
 use medulla_transaction::AdmittedOwnerWrite;
-use redb::ReadableTable;
 use medulla_types::embedding_promotion::{
     decode_promotion_record, encode_promotion_record, evaluate_promotion, ModalityCheck,
     ModalityCheckRecord, PromotionCandidate, PromotionMetric, PromotionModality, PromotionStage,
     PromotionVerdict, SemanticModelConfig, StageReceipt, DEFAULT_PROMOTION_TOLERANCE,
 };
+use redb::ReadableTable;
 
 /// The refusal code of a blocked promotion: the registered
 /// `ServerErrorCode::PromotionBlocked`.
