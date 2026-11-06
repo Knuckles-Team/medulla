@@ -92,6 +92,7 @@ async fn spawn_s3() -> String {
     format!("http://{addr}")
 }
 
+/// Verifies MEDULLA-DURABLE-KERNEL-R860.4: S3-compatible object API.
 // spec: MEDULLA-DURABLE-KERNEL-R860.4
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn put_get_list_delete() {
