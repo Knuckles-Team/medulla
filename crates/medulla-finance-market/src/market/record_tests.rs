@@ -5,6 +5,7 @@ use super::backtest_run::{seal, verify};
 use super::confidence::flip_confidence;
 use super::golden_tests::{daily, request, series};
 use super::resolve::resolve;
+use super::rollup::rollup;
 use super::scan::SignalIndex;
 use super::signal::{advance, initial_state, replay, signal_key};
 use super::{
@@ -12,7 +13,7 @@ use super::{
     FillRule, FinalityFilter, FlipAbstainReason, FlipConfidence, FlipConfidenceRequest,
     FlipFeatures, FlipOutcomeSample, FlipRecordStatus, IndicatorKind, IndicatorSpec, ScanFilter,
     SignalState, Timeframe, TradeFill, UniverseMember, ValidationInputs, INVALID_REQUEST,
-    LOOK_AHEAD,
+    LOOK_AHEAD, OUT_OF_ORDER,
 };
 
 const DAY: i64 = super::calendar::NS_PER_DAY;
@@ -459,4 +460,70 @@ fn pbo_uses_all_cpcv_splits_from_the_records_performance() {
     assert_eq!(result.validation.cpcv_splits, 15);
     assert_eq!(result.validation.probability_backtest_overfit, 1.0);
     assert_ne!(result.digest, skilled.digest);
+}
+
+// spec: MEDULLA-FINANCE-PRIMITIVES-R903
+#[test]
+fn rollup_alignment_provisional_to_final_and_revision_replay() {
+    use super::calendar::days_from_civil;
+    use super::{BarStatus, TradingCalendar};
+    const HOUR: i64 = 3_600_000_000_000;
+    let day = days_from_civil(2026, 9, 24) * DAY;
+    let hourly = |i: i64, close: i64, status: BarStatus| BarRecord {
+        open_time: day + i * HOUR,
+        close_time: day + (i + 1) * HOUR,
+        open: close - 1,
+        high: close + 2,
+        low: close - 3,
+        close,
+        volume: 10,
+        status,
+        revision: 0,
+        known_at: day + (i + 1) * HOUR,
+    };
+    let parts: Vec<BarRecord> = (0..4)
+        .map(|i| hourly(i, 100 + i, BarStatus::Final))
+        .collect();
+    let four = Timeframe::Hours { n: 4 };
+    let cal = TradingCalendar::Utc24x7;
+
+    // Alignment: first open, highest high, lowest low, last close, summed volume.
+    let bar = &rollup(&parts, &cal, four, day + 4 * HOUR).unwrap()[0];
+    assert_eq!((bar.open_time, bar.close_time), (day, day + 4 * HOUR));
+    assert_eq!((bar.open, bar.high, bar.low, bar.close), (99, 105, 97, 103));
+    assert_eq!((bar.volume, bar.status), (40, BarStatus::Final));
+
+    // Provisional until the watermark reaches the bucket end.
+    let early = &rollup(&parts, &cal, four, day + 3 * HOUR).unwrap()[0];
+    assert_eq!(early.status, BarStatus::Provisional);
+
+    // A revised part replaces the prior bar under the same bucket identity and
+    // the earlier revision stays readable through point-in-time resolution.
+    let mut records = parts.clone();
+    let mut correction = parts[3].clone();
+    correction.revision = 1;
+    correction.close = 110;
+    correction.high = 111;
+    correction.known_at = day + 10 * HOUR;
+    records.push(correction);
+    let then = resolve(&records, Some(day + 5 * HOUR), FinalityFilter::FinalOnly).unwrap();
+    let now = resolve(&records, None, FinalityFilter::FinalOnly).unwrap();
+    let rolled_then = &rollup(&then, &cal, four, day + 4 * HOUR).unwrap()[0];
+    let rolled_now = &rollup(&now, &cal, four, day + 4 * HOUR).unwrap()[0];
+    assert_eq!(rolled_then.open_time, rolled_now.open_time);
+    assert_eq!((rolled_then.close, rolled_then.revision), (103, 0));
+    assert_eq!(
+        (rolled_now.close, rolled_now.high, rolled_now.revision),
+        (110, 111, 1)
+    );
+
+    // A bar straddling its target bucket is refused.
+    let mut straddle = parts[..1].to_vec();
+    straddle[0].close_time = day + 5 * HOUR;
+    assert_eq!(
+        rollup(&straddle, &cal, four, day + 8 * HOUR)
+            .unwrap_err()
+            .code,
+        OUT_OF_ORDER
+    );
 }

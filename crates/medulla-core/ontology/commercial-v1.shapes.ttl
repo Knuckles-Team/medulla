@@ -16,11 +16,11 @@ kg:CustomerContractShape a sh:NodeShape ;
     sh:targetClass kg:CustomerContract ;
     sh:property [
         sh:path kg:contractCustomer ; sh:minCount 1 ; sh:maxCount 1 ; sh:class kg:Customer ;
-        sh:message "A CustomerContract names exactly one customer."
+        sh:message "CONTRACT_CUSTOMER_MISSING"
     ] ;
     sh:property [
         sh:path kg:coversService ; sh:minCount 1 ; sh:class infra:Service ;
-        sh:message "A CustomerContract covers at least one service."
+        sh:message "CONTRACT_SERVICE_MISSING"
     ] ;
     sh:message "A contract names a customer and at least one covered service." .
 

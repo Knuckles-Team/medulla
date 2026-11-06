@@ -23,6 +23,7 @@ fn host_limit_breach_terms_listed_with_host_domain() {
         "temperatureCelsius",
         "temperatureLimitCelsius",
         "capacityUtilization",
+        "capacityLimit",
     ] {
         let subject = format!("{INFRA}{name}");
         assert!(has_iri(
