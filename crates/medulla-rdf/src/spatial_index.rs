@@ -115,12 +115,12 @@ enum Narrowing {
     Within(f64),
 }
 
+/// A boolean test of `(literal, constant)`.
+type GeometryTest = Box<dyn Fn(&Geometry, &Geometry) -> bool>;
+
 /// A relation's test of `(literal, constant)` and how the tree narrows it; `None` for a
 /// function that is not a boolean spatial relation over a constant.
-fn plan(
-    local: &str,
-    bound: Option<f64>,
-) -> Option<(Narrowing, Box<dyn Fn(&Geometry, &Geometry) -> bool>)> {
+fn plan(local: &str, bound: Option<f64>) -> Option<(Narrowing, GeometryTest)> {
     if local == "distance" {
         let bound = bound?;
         return Some((
@@ -134,7 +134,7 @@ fn plan(
         Narrowing::Meets
     };
     let relation = crate::geosparql::relation_fn(local)?;
-    Some((narrowing, Box::new(move |a, b| relation(a, b))))
+    Some((narrowing, Box::new(relation)))
 }
 
 /// The terms among `literals` for which `local(literal, constant)` holds (`distance` holds

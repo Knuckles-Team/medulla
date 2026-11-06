@@ -195,7 +195,10 @@ async fn surface_nodes_carry_pack_digest() {
         .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)));
     for name in ["a", "b"] {
         let node = tool_node(connector, name);
-        assert_eq!(values(&triples, &node, &cp("packDigest")), [digest.clone()]);
+        assert_eq!(
+            values(&triples, &node, &cp("packDigest")),
+            std::slice::from_ref(&digest)
+        );
         let revision = values(&triples, &node, &cp("entryRevision"));
         assert_eq!(revision.len(), 1, "{name}");
         assert!(revision[0].parse::<u64>().unwrap() >= 1, "{name}");

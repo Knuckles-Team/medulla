@@ -153,9 +153,8 @@ async fn materialize_current_projection(
 ) -> Result<PackProjectionDocuments, String> {
     #[cfg(test)]
     {
-        let mut inject = INJECT_BLOB_UNAVAILABLE
-            .lock()
-            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        use medulla_kernel::lock_recovery::LockRecovery;
+        let mut inject = INJECT_BLOB_UNAVAILABLE.lock_or_panic("injected blob failure");
         if inject.as_deref() == Some(plan.connector.as_str()) {
             *inject = None;
             return Err("PACK_PROJECTION_BLOB_UNAVAILABLE: injected chunk store failure".into());

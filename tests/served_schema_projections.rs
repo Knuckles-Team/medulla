@@ -115,7 +115,7 @@ async fn projections_follow_caller_grants_and_hide_other_boundaries() {
         (&["audit:operator"], &[], Some(2)),
     ];
     for (scopes, expected, count) in cases {
-        let response = test_support::dispatch(&state, list(*scopes, next())).await;
+        let response = test_support::dispatch(&state, list(scopes, next())).await;
         let out = projections(&response);
         let ids: Vec<&str> = out.entries.iter().map(|b| b.boundary_id.as_str()).collect();
         assert_eq!(ids, *expected, "scopes {scopes:?}");

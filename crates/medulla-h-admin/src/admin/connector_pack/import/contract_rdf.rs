@@ -8,7 +8,7 @@
 //! `CONTRACT_SHACL_VIOLATION`.
 
 use medulla_catalog_types::connector_pack::PackViolationCode;
-use medulla_rdf::oxrdf::{Graph, Literal, NamedNode, Subject, Term, Triple};
+use medulla_rdf::oxrdf::{Graph, Literal, NamedNode, NamedOrBlankNode, Term, Triple};
 use serde_json::Value;
 
 use crate::admin::connector_pack::surface_vocab::{CONNECTOR_BASE, CP, RDF_TYPE};
@@ -43,7 +43,7 @@ impl Builder {
 
     fn typed(&mut self, subject: &NamedNode, class: &str) {
         self.graph.insert(&Triple::new(
-            Subject::from(subject.clone()),
+            NamedOrBlankNode::from(subject.clone()),
             NamedNode::new_unchecked(RDF_TYPE),
             Term::from(cp(class)),
         ));
@@ -51,7 +51,7 @@ impl Builder {
 
     fn link(&mut self, subject: &NamedNode, predicate: &str, object: &NamedNode) {
         self.graph.insert(&Triple::new(
-            Subject::from(subject.clone()),
+            NamedOrBlankNode::from(subject.clone()),
             cp(predicate),
             Term::from(object.clone()),
         ));
@@ -59,7 +59,7 @@ impl Builder {
 
     fn text(&mut self, subject: &NamedNode, predicate: &str, value: &str) {
         self.graph.insert(&Triple::new(
-            Subject::from(subject.clone()),
+            NamedOrBlankNode::from(subject.clone()),
             cp(predicate),
             Term::from(Literal::new_simple_literal(value)),
         ));

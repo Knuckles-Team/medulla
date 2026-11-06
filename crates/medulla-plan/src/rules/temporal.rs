@@ -99,7 +99,7 @@ impl TemporalRule {
                 return Err(invalid("body predicates join with `&`"));
             }
         }
-        if (tokens.len() - 4) % 2 == 0 {
+        if (tokens.len() - 4).is_multiple_of(2) {
             return Err(invalid("rule body ends with `&`"));
         }
         Ok(Self {
@@ -651,10 +651,13 @@ mod tests {
             record: out.facts[0].clone(),
             prior_digest: None,
         };
-        let payload =
-            derive_facts_mutation(OpaqueId::new("m:1").unwrap(), scope(), &[first.clone()])
-                .unwrap()
-                .unwrap();
+        let payload = derive_facts_mutation(
+            OpaqueId::new("m:1").unwrap(),
+            scope(),
+            std::slice::from_ref(&first),
+        )
+        .unwrap()
+        .unwrap();
         payload.canonical_payload_digest().unwrap();
         let tomb = retraction(&first.record);
         assert_eq!((tomb.revision, tomb.tombstone), (2, true));

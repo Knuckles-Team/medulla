@@ -154,7 +154,7 @@ fn live_file_reads_and_capture_under_concurrent_writer() {
         poll(&mut cp);
     }
     for writer in writers {
-        writer.join().unwrap();
+        medulla_kernel::test_rendezvous::join_bounded(writer, "sqlite writer");
     }
     poll(&mut cp);
     assert_eq!(seen.len(), WRITERS * PER_WRITER);

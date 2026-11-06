@@ -143,7 +143,7 @@ async fn research_kernel_spans_carry_digest_and_outcome() {
         &["tenant", "inputs_digest", "outcome", "active_return"],
     );
     assert_eq!(span.fields.get("outcome").map(String::as_str), Some("ok"));
-    assert!(span.fields.get("active_return").is_some());
+    assert!(span.fields.contains_key("active_return"));
 
     // A refusal records its stable code as the outcome.
     let bad = Method::FinanceProfitAttribution { groups: vec![] };

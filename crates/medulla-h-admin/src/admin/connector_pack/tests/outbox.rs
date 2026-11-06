@@ -623,9 +623,10 @@ async fn rejected_projection_is_visible_and_retried() {
         None,
     )
     .await;
-    *INJECT_BLOB_UNAVAILABLE
-        .lock()
-        .unwrap_or_else(std::sync::PoisonError::into_inner) = Some(schema.to_string());
+    *medulla_kernel::lock_recovery::LockRecovery::lock_or_panic(
+        &INJECT_BLOB_UNAVAILABLE,
+        "injected blob failure",
+    ) = Some(schema.to_string());
     let subscribed = AtomicBool::new(false);
     sweep(&served.state, &subscribed).await.unwrap();
     let status: MutationOutboxStatusView = ok(

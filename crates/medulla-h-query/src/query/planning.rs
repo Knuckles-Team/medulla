@@ -877,7 +877,16 @@ pub(crate) async fn run_unified_off_lock(
     legs: ServedPlanLegs,
     scope: &ReadScope,
 ) -> UnifiedRunOutcome {
-    run_unified_off_lock_with(state, req_id, core, snap, plan, legs, scope, execute_rows).await
+    let read = UnifiedRead { snap, plan, legs };
+    run_unified_off_lock_with(state, req_id, core, read, scope, execute_rows).await
+}
+
+/// What one off-lock unified read runs: the snapshot, the plan and its bound legs.
+#[cfg(feature = "query")]
+pub(crate) struct UnifiedRead {
+    pub(crate) snap: Arc<medulla_graph_core::graph::GraphView>,
+    pub(crate) plan: medulla_exec::algebra::Plan,
+    pub(crate) legs: ServedPlanLegs,
 }
 
 /// [`run_unified_off_lock`] with a caller-chosen finisher (see [`run_unified_with`]).
@@ -886,9 +895,7 @@ pub(crate) async fn run_unified_off_lock_with<T, F>(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     core: &Arc<GraphCore>,
-    snap: Arc<medulla_graph_core::graph::GraphView>,
-    plan: medulla_exec::algebra::Plan,
-    legs: ServedPlanLegs,
+    read: UnifiedRead,
     scope: &ReadScope,
     finish: F,
 ) -> Result<Result<T, String>, Response>
@@ -898,6 +905,7 @@ where
         + Send
         + 'static,
 {
+    let UnifiedRead { snap, plan, legs } = read;
     // MEDULLA-IDENTITY-R023.3 / R610.3: the one read chokepoint narrows the snapshot to
     // the verified caller's tenant and visible knowledge units, after the row-level
     // security view and before any answer is computed or cached.

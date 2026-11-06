@@ -70,6 +70,10 @@ const MAX_FEDERATED_SQL_ID_BYTES: usize = 64 * 1024;
 const FEDERATED_SQL_CONNECT_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
 #[cfg(feature = "federation-sql")]
 const FEDERATED_SQL_QUERY_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(30);
+/// How long a held Postgres snapshot waits for its next statement before the worker
+/// rolls the transaction back and stops: an idle open snapshot pins the source's vacuum.
+#[cfg(feature = "federation-sql")]
+const PG_SNAPSHOT_IDLE_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(300);
 
 /// The federation seam: turn an EXTERNAL source into the cross-modal [`RowSet`]
 /// currency, so a `ForeignScan` composes with every local op. One method, one shape —
@@ -1139,7 +1143,10 @@ impl ForeignSource for SqlSource<'_> {
 /// handle ends the thread, which rolls the transaction back.
 #[cfg(feature = "federation-sql")]
 pub(crate) struct PgSnapshot {
-    jobs: std::sync::Mutex<std::sync::mpsc::Sender<PgSnapshotJob>>,
+    jobs: std::sync::Mutex<std::sync::mpsc::SyncSender<PgSnapshotJob>>,
+    /// How long a caller waits for one statement's reply: the statement timeout plus
+    /// connect-sized slack for the transfer.
+    reply_deadline: std::time::Duration,
 }
 
 #[cfg(feature = "federation-sql")]
@@ -1147,13 +1154,14 @@ enum PgSnapshotJob {
     /// Project each row to an id and optional score (the optimizer's key/limit path).
     Ids {
         statement: String,
-        reply: std::sync::mpsc::Sender<Result<RowSet, String>>,
+        reply: std::sync::mpsc::SyncSender<Result<RowSet, String>>,
     },
     /// Return each row as column to text value (the OBDA scan path).
     Columns {
         statement: String,
-        reply:
-            std::sync::mpsc::Sender<Result<Vec<std::collections::HashMap<String, String>>, String>>,
+        reply: std::sync::mpsc::SyncSender<
+            Result<Vec<std::collections::HashMap<String, String>>, String>,
+        >,
     },
 }
 
@@ -1172,10 +1180,15 @@ impl PgSnapshot {
             return Err("federation: invalid SQL connection configuration".to_string());
         }
         crate::federation_ssrf::check_sql_dsn(dsn)?;
-        let (ready_tx, ready_rx) = mpsc::channel::<Result<String, String>>();
-        let (job_tx, job_rx) = mpsc::channel::<PgSnapshotJob>();
+        // Bounded: one ready message; at most one queued job, so a further caller
+        // waits for the worker to take the previous one (backpressure, not memory).
+        let (ready_tx, ready_rx) = mpsc::sync_channel::<Result<String, String>>(1);
+        let (job_tx, job_rx) = mpsc::sync_channel::<PgSnapshotJob>(1);
+        let reply_deadline = std::time::Duration::from_millis(bound.statement_timeout_ms)
+            + FEDERATED_SQL_CONNECT_TIMEOUT;
         let worker = Self {
             jobs: std::sync::Mutex::new(job_tx),
+            reply_deadline,
         };
         let (dsn, id_field, score_field, bound) = (
             dsn.to_string(),
@@ -1203,7 +1216,9 @@ impl PgSnapshot {
                     }
                 };
                 let _ = ready_tx.send(Ok(token));
-                while let Ok(job) = job_rx.recv() {
+                // Dropping the last handle disconnects the channel; an idle snapshot
+                // past PG_SNAPSHOT_IDLE_TIMEOUT is released the same way.
+                while let Ok(job) = job_rx.recv_timeout(PG_SNAPSHOT_IDLE_TIMEOUT) {
                     match job {
                         PgSnapshotJob::Ids { statement, reply } => {
                             let source = SqlSource {
@@ -1222,9 +1237,10 @@ impl PgSnapshot {
                 let _ = sqlx::query("ROLLBACK").execute(&mut conn).await;
             });
         });
+        // Opening runs the connect plus a few bounded statements.
         let token = ready_rx
-            .recv()
-            .map_err(|_| "federation: postgres snapshot worker stopped".to_string())??;
+            .recv_timeout(FEDERATED_SQL_CONNECT_TIMEOUT + reply_deadline)
+            .map_err(|_| "federation: postgres snapshot worker did not open".to_string())??;
         Ok((worker, token))
     }
 
@@ -1287,7 +1303,7 @@ impl PgSnapshot {
 #[cfg(feature = "federation-sql")]
 impl crate::federation_opt::SnapshotConn for PgSnapshot {
     fn run(&self, statement: &str) -> Result<RowSet, String> {
-        let (reply, answer) = std::sync::mpsc::channel();
+        let (reply, answer) = std::sync::mpsc::sync_channel(1);
         self.jobs
             .lock()
             .map_err(|_| "federation: postgres snapshot worker poisoned".to_string())?
@@ -1296,16 +1312,16 @@ impl crate::federation_opt::SnapshotConn for PgSnapshot {
                 reply,
             })
             .map_err(|_| "federation: postgres snapshot worker stopped".to_string())?;
-        answer
-            .recv()
-            .map_err(|_| "federation: postgres snapshot worker stopped".to_string())?
+        answer.recv_timeout(self.reply_deadline).map_err(|_| {
+            "federation: postgres snapshot worker stopped or did not reply".to_string()
+        })?
     }
 
     fn run_columns(
         &self,
         statement: &str,
     ) -> Result<Vec<std::collections::HashMap<String, String>>, String> {
-        let (reply, answer) = std::sync::mpsc::channel();
+        let (reply, answer) = std::sync::mpsc::sync_channel(1);
         self.jobs
             .lock()
             .map_err(|_| "federation: postgres snapshot worker poisoned".to_string())?
@@ -1314,9 +1330,9 @@ impl crate::federation_opt::SnapshotConn for PgSnapshot {
                 reply,
             })
             .map_err(|_| "federation: postgres snapshot worker stopped".to_string())?;
-        answer
-            .recv()
-            .map_err(|_| "federation: postgres snapshot worker stopped".to_string())?
+        answer.recv_timeout(self.reply_deadline).map_err(|_| {
+            "federation: postgres snapshot worker stopped or did not reply".to_string()
+        })?
     }
 }
 

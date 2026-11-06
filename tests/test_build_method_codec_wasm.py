@@ -99,6 +99,40 @@ def test_wasm_opt_refuses_an_archive_with_the_wrong_digest(
     assert not list(tmp_path.rglob("wasm-opt"))
 
 
+@pytest.mark.spec("MEDULLA-CONTRACT-R006")
+def test_wasm_opt_returns_the_binary_the_pinned_archive_unpacks(
+    codec, monkeypatch, tmp_path
+):
+    import io
+    import tarfile
+
+    buffer = io.BytesIO()
+    with tarfile.open(fileobj=buffer, mode="w:gz") as bundle:
+        member = tarfile.TarInfo(f"binaryen-{codec.BINARYEN_VERSION}/bin/wasm-opt")
+        member.size = 2
+        member.mode = 0o755
+        bundle.addfile(member, io.BytesIO(b"#!"))
+    archive = buffer.getvalue()
+
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_exc):
+            return False
+
+        def read(self):
+            return archive
+
+    monkeypatch.setattr(codec.platform, "system", lambda: "Linux")
+    monkeypatch.setattr(codec.platform, "machine", lambda: "x86_64")
+    monkeypatch.setattr(codec, "BINARYEN_SHA256", hashlib.sha256(archive).hexdigest())
+    monkeypatch.setattr(codec.urllib.request, "urlopen", lambda *_a, **_k: Response())
+    binary = codec.wasm_opt(tmp_path)
+    assert binary.is_file()
+    assert codec.wasm_opt(tmp_path) == binary
+
+
 @pytest.mark.parametrize(
     "module",
     [

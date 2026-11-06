@@ -98,7 +98,8 @@ def wasm_opt(target_dir: Path) -> Path:
     if platform.system() != "Linux" or platform.machine() != "x86_64":
         raise RuntimeError("the pinned binaryen archive is x86_64 Linux only")
     home = target_dir / f"binaryen-{BINARYEN_VERSION}"
-    binary = home / BINARYEN_VERSION / "bin" / "wasm-opt"
+    # The release archive unpacks to ``binaryen-<version>/bin/wasm-opt``.
+    binary = home / f"binaryen-{BINARYEN_VERSION}" / "bin" / "wasm-opt"
     if binary.is_file():
         return binary
     home.mkdir(parents=True, exist_ok=True)

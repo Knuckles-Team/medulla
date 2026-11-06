@@ -20,8 +20,11 @@ use std::sync::atomic::{AtomicBool, Ordering};
 const TEST_BUCKET_NS: u64 = 3_600_000_000_000;
 const LOCATION: &str = "lake://engine/interop";
 
+/// One manifest entry: `(status, path, rows, bytes)`.
+type ManifestEntry = (i32, String, i64, i64);
+
 /// Decoded view of one committed snapshot: `(status, path, rows, bytes)` per entry.
-fn decode(table: &LakeTable) -> (Vec<(i32, String, i64, i64)>, [i32; 3], [i64; 3]) {
+fn decode(table: &LakeTable) -> (Vec<ManifestEntry>, [i32; 3], [i64; 3]) {
     let manifests = table.iceberg_manifests().expect("manifests build");
     let entries = read_manifest_entries(&manifests.manifest_avro).expect("manifest decodes");
     let lists = read_manifest_list(&manifests.manifest_list_avro).expect("manifest list decodes");

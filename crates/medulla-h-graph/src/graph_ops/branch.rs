@@ -135,7 +135,9 @@ mod tests {
     // spec: MEDULLA-BRANCH-MERGE-R001
     #[test]
     fn base_defaults_to_head_and_never_passes_it() {
-        let cases: &[(Option<u64>, Option<u64>, Result<u64, ServerErrorCode>)] = &[
+        // (head, requested base, expected base)
+        type Case = (Option<u64>, Option<u64>, Result<u64, ServerErrorCode>);
+        let cases: &[Case] = &[
             (Some(7), None, Ok(7)),
             (Some(7), Some(3), Ok(3)),
             (Some(7), Some(7), Ok(7)),

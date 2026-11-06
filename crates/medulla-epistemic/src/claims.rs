@@ -291,7 +291,8 @@ mod tests {
             evidence("e4", EvidenceChannel::Process, true, 0),
             evidence("e5", EvidenceChannel::Mined, true, 1_000_000),
         ];
-        let expected = 1_000_000 + 400_000 - 150_000 + 0 + 300_000;
+        // e4 carries zero weight, so it adds nothing.
+        let expected = 1_000_000 + 400_000 - 150_000 + 300_000;
         assert_eq!(combine_evidence(&items, &k), expected);
 
         // The weight cap binds a weight above it.
@@ -416,7 +417,8 @@ mod tests {
         );
         assert_eq!(again, artifact, "compile is deterministic");
 
-        let mutations: Vec<Box<dyn Fn(&mut ResearchArtifact)>> = vec![
+        type Mutation = Box<dyn Fn(&mut ResearchArtifact)>;
+        let mutations: Vec<Mutation> = vec![
             Box::new(|a| a.tenant_id.push('x')),
             Box::new(|a| a.artifact_id.push('x')),
             Box::new(|a| a.cohort_id.push('x')),

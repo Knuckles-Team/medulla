@@ -202,6 +202,13 @@ pub(super) fn admit_put(
 /// tenant, shape, expected head) over the leader's applied core, so a put that
 /// fails any of them proposes nothing and writes nothing. Replica apply runs the
 /// same admission again through the one gateway path before its one upsert.
+/// Compiled with the same features as its `graph_ops` re-export.
+#[cfg(any(
+    feature = "query",
+    feature = "cypher",
+    feature = "graphql",
+    feature = "rdf"
+))]
 pub fn precheck_replicated_put(
     core: &GraphCore,
     tenant_id: &str,
@@ -428,9 +435,12 @@ fn resolve_evidence<'a>(
 /// One research record after validation: the JSON it stores, the Turtle scalars
 /// its shape checks and the evidence ids it cites.
 #[cfg(all(feature = "finance", feature = "shacl"))]
+type ShapeCheck = (&'static str, String, Vec<(&'static str, String)>);
+
+#[cfg(all(feature = "finance", feature = "shacl"))]
 struct ResearchRecord {
     stored: serde_json::Value,
-    checks: Vec<(&'static str, String, Vec<(&'static str, String)>)>,
+    checks: Vec<ShapeCheck>,
     evidence: Vec<String>,
 }
 

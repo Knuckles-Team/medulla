@@ -115,7 +115,9 @@ mod tests {
         put(&core, "tenant-a", "sales", "sales:read");
         put(&core, "tenant-a", "hr", "hr:read");
         put(&core, "tenant-b", "other", "sales:read");
-        let cases: &[(&str, &[&str], &[&str], Option<u64>)] = &[
+        // (tenant, held scopes, expected projections, expected refusal count)
+        type Case<'a> = (&'a str, &'a [&'a str], &'a [&'a str], Option<u64>);
+        let cases: &[Case<'_>] = &[
             ("tenant-a", &["sales:read"], &["sales"], None),
             (
                 "tenant-a",

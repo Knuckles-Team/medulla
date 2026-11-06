@@ -11,8 +11,10 @@ use super::repository_index::commit_context;
 use super::*;
 
 /// Default for `knob document.max_cascade_nodes`.
+#[cfg(all(feature = "query", feature = "modality-serving"))]
 pub const DEFAULT_MAX_CASCADE_NODES: usize = 100_000;
 /// Environment override of `knob document.max_cascade_nodes`.
+#[cfg(all(feature = "query", feature = "modality-serving"))]
 pub const MAX_CASCADE_NODES_ENV: &str = "MEDULLA_DOCUMENT_MAX_CASCADE_NODES";
 
 /// Route the document lifecycle methods; hand any other method back.
@@ -27,6 +29,7 @@ pub async fn route_document_ops(
 }
 
 /// `knob document.max_cascade_nodes`: the environment value, else the default.
+#[cfg(all(feature = "query", feature = "modality-serving"))]
 pub fn max_cascade_nodes() -> usize {
     std::env::var(MAX_CASCADE_NODES_ENV)
         .ok()

@@ -2089,6 +2089,8 @@ harness = false
 [[bench]]
 name = "ecosystem_impact"
 path = "benches/ecosystem_impact.rs"
+harness = false
+
 # MEDULLA-UNIFIED-DATA-PLANE-R702.6 hot-path receipt, group `lineage_drain`: one
 # request drains 3 events, replays them and quarantines 2 malformed ones
 # (budget: p50 3 ms, p99 18 ms, memory 64 MiB). Nightly only; never gates a PR.
@@ -2132,6 +2134,9 @@ required-features = ["full"]
 [[bench]]
 name = "bus_heartbeat"
 path = "benches/bus_heartbeat.rs"
+harness = false
+required-features = ["full"]
+
 # Decision budgets per question family (MEDULLA-DECISION-ENGINE-R178.1): one
 # Criterion group `decide/<family>` per `QuestionKind`, through the served
 # dispatch boundary; the nightly workflow checks its report against
