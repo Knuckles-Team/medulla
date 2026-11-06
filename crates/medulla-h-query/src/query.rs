@@ -153,6 +153,10 @@ pub use dispatch::try_handle;
 pub use dispatch::{try_handle_with_policy, PolicyAwareQuery};
 mod sql_read;
 pub(crate) use sql_read::*;
+#[cfg(feature = "query")]
+mod schema_projections;
+#[cfg(feature = "query")]
+pub(crate) use schema_projections::handle_schema_projections;
 mod explain_handlers;
 pub(crate) use explain_handlers::*;
 mod nl;

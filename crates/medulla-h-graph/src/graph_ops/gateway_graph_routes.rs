@@ -19,6 +19,7 @@ enum Route {
     Analytics,
     FinanceRecords,
     WorkflowRegistry,
+    SchemaProjections,
     Other,
 }
 
@@ -144,6 +145,10 @@ fn is_workflow_registry(method: &Method) -> bool {
     matches!(method, Method::WorkflowRegistry { .. })
 }
 
+fn is_schema_projections(method: &Method) -> bool {
+    matches!(method, Method::SchemaProjections { .. })
+}
+
 /// A predicate selecting the methods one gateway route owns.
 type RouteMatcher = fn(&Method) -> bool;
 
@@ -165,6 +170,7 @@ const ROUTE_MATCHERS: &[(RouteMatcher, Route)] = &[
     (is_analytics, Route::Analytics),
     (is_finance_record, Route::FinanceRecords),
     (is_workflow_registry, Route::WorkflowRegistry),
+    (is_schema_projections, Route::SchemaProjections),
 ];
 
 fn route_for(method: &Method) -> Route {
@@ -187,7 +193,8 @@ fn route_handler(route: Route) -> RouteHandler {
         | Route::Import
         | Route::Analytics
         | Route::FinanceRecords
-        | Route::WorkflowRegistry => RouteHandler::Admin,
+        | Route::WorkflowRegistry
+        | Route::SchemaProjections => RouteHandler::Admin,
         #[cfg(any(feature = "shacl", feature = "reasoning"))]
         Route::Policy => RouteHandler::Admin,
         Route::Other => RouteHandler::None,
@@ -262,6 +269,9 @@ async fn try_handle_admin(
         }
         Route::WorkflowRegistry => {
             super::super::workflow_registry::handle_workflow_register(ctx, tenant_id, method).await
+        }
+        Route::SchemaProjections => {
+            super::super::schema_boundary::handle_boundary_put(ctx, method).await
         }
         _ => None,
     }

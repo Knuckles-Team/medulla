@@ -40,6 +40,8 @@ pub struct CarrierAuthority {
     admin: bool,
     can_read: bool,
     can_write: bool,
+    /// The verified token's scopes, sorted (MEDULLA-FEDERATED-QUERY-R724).
+    scopes: Vec<String>,
     /// The verified identity actor: the identity store decides from it, against
     /// its current state, whether its SQL relations are visible.
     #[cfg(feature = "security")]
@@ -97,8 +99,8 @@ impl CarrierAuthority {
         // explicit inputs.
         let mut roles = context.claims().roles.clone();
         roles.sort();
-        let mut scopes = context.claims().scopes.clone();
-        scopes.sort();
+        let mut sorted_scopes = context.claims().scopes.clone();
+        sorted_scopes.sort();
         let mut authority_fields: Vec<&[u8]> = vec![
             tenant.as_bytes(),
             principal.as_bytes(),
@@ -109,7 +111,7 @@ impl CarrierAuthority {
             context.claims().policy_version.as_bytes(),
         ];
         authority_fields.extend(roles.iter().map(String::as_bytes));
-        authority_fields.extend(scopes.iter().map(String::as_bytes));
+        authority_fields.extend(sorted_scopes.iter().map(String::as_bytes));
         let authority_digest = Digest256::framed(b"eg/carrier-authority/v1", &authority_fields)?;
         let scopes = &context.claims().scopes;
         let admin = scopes
@@ -143,9 +145,15 @@ impl CarrierAuthority {
             admin,
             can_read,
             can_write,
+            scopes: sorted_scopes,
             #[cfg(feature = "security")]
             identity_actor: crate::identity_view::identity_actor(context),
         })
+    }
+
+    /// The verified token's scopes, sorted.
+    pub fn scopes(&self) -> &[String] {
+        &self.scopes
     }
 
     pub fn tenant_scope(&self) -> &str {
