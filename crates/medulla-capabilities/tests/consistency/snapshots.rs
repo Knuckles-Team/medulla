@@ -125,6 +125,7 @@ pub(crate) const ACCESS_RS_MUTATES_UNCONDITIONAL: &[&str] = &[
     "ActionSubmit",
     "SupersedeEdge",
     "SweepExpired",
+    "SyncMemorySnapshot",
     "UpdateResourceHost",
     "TouchNodes",
     "UnbindQueue",
@@ -277,6 +278,7 @@ pub(crate) const MUTATION_APPLY_DURABLE_GRAPHREDB: &[&str] = &[
     "SetPose",
     "StartTrajectory",
     "SupersedeEdge",
+    "SyncMemorySnapshot",
     #[cfg(feature = "modality-serving")]
     "ServedModality",
 ];
@@ -586,6 +588,7 @@ pub(crate) const AUDIT_RS_AUDITED: &[&str] = &[
     "StreamTrim",
     "SupersedeEdge",
     "SweepExpired",
+    "SyncMemorySnapshot",
     "UnbindQueue",
     "UpdateResourceHost",
     "ReserveDevelopmentLane",

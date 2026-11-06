@@ -247,6 +247,14 @@ pub(super) async fn try_handle_node_reads(
         }
         // MEDULLA-DURABLE-KERNEL-R095.1001: the agent bus roster read.
         Method::BusRoster { tenant, now_ms } => super::bus::roster(req_id, core, &tenant, now_ms),
+        Method::ReadMemorySnapshot { doc_id, revision } => {
+            super::memory_snapshot::read(req_id, core, &doc_id, revision)
+        }
+        Method::ListMemorySnapshots {
+            prefix,
+            limit,
+            cursor,
+        } => super::memory_snapshot::list(req_id, core, &prefix, limit, cursor.as_deref()),
         // CompareAndSetNodeFields/ClaimNext (CONCEPT:MEDULLA-P0-2 bypass guard, L11):
         // GATEWAY_ROUTED — see the AddNode/RemoveNode comment above.
         other => return ControlFlow::Continue(other),

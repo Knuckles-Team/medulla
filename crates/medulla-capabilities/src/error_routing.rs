@@ -234,6 +234,29 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         ],
     ),
     ("BusRoster", &["BUS_SCOPE_REQUIRED"]),
+    // MEDULLA-DURABLE-KERNEL-R085.5.
+    (
+        "ReadMemorySnapshot",
+        &["MEMSYNC_NOT_AVAILABLE", "MEMSYNC_VERSION_MALFORMED"],
+    ),
+    (
+        "ListMemorySnapshots",
+        &[
+            "MEMSYNC_CURSOR_EXPIRED",
+            "MEMSYNC_CURSOR_INVALID",
+            "MEMSYNC_NOT_AVAILABLE",
+        ],
+    ),
+    (
+        "SyncMemorySnapshot",
+        &[
+            "MEMSYNC_CONTENT_MALFORMED",
+            "MEMSYNC_CONTENT_TOO_LARGE",
+            "MEMSYNC_DIGEST_MISMATCH",
+            "MEMSYNC_NOT_AVAILABLE",
+            "MEMSYNC_VERSION_MALFORMED",
+        ],
+    ),
     (
         "SelectWebPages",
         &[

@@ -92,7 +92,8 @@ impl Method {
             | Self::StartTrajectory { .. }
             | Self::AppendStep { .. }
             | Self::BusRegister { .. }
-            | Self::BusHeartbeat { .. } => MethodWriteFamily::MemoryScene,
+            | Self::BusHeartbeat { .. }
+            | Self::SyncMemorySnapshot { .. } => MethodWriteFamily::MemoryScene,
             #[cfg(feature = "broker")]
             Self::DeclareExchange { .. }
             | Self::DeleteExchange { .. }

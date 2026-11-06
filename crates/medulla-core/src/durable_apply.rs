@@ -119,7 +119,24 @@ pub fn apply(core: &GraphCore, m: &Method) {
     if apply_agent_bus(core, m) {
         return;
     }
+    if apply_memory_snapshot(core, m) {
+        return;
+    }
     let _ = apply_memory(core, m);
+}
+
+/// Memory snapshot rows (MEDULLA-DURABLE-KERNEL-R085.3): the logged method
+/// carries the engine stamp, so replay rebuilds the same rows.
+fn apply_memory_snapshot(core: &GraphCore, m: &Method) -> bool {
+    let Method::SyncMemorySnapshot {
+        request,
+        stamp: Some(stamp),
+    } = m
+    else {
+        return matches!(m, Method::SyncMemorySnapshot { .. });
+    };
+    let _ = crate::memory_snapshot_store::apply_sync(core, request, stamp);
+    true
 }
 
 /// Agent bus roster rows (MEDULLA-DURABLE-KERNEL-R095.1001): the logged method
