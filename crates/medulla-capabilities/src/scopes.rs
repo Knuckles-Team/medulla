@@ -52,6 +52,8 @@ pub const APPROVER_GROUPS: &[(&str, &str)] = &[
 
 /// The registry, sorted by scope.
 pub const SCOPES: &[ScopeEntry] = &[
+    // MEDULLA-UNIFIED-DATA-PLANE-R700.3: register and submit typed actions.
+    entry("actions:write", User, "engine"),
     entry("admin:backup", Admin, "engine"),
     entry("admin:cluster", Admin, "engine"),
     entry("admin:cluster-read", ServiceOnly, "engine"),
@@ -98,6 +100,10 @@ pub const SCOPES: &[ScopeEntry] = &[
     entry("capacity:lease", ServiceOnly, "engine"),
     entry("capacity:read", ServiceOnly, "engine"),
     entry("capacity:throttle", ServiceOnly, "engine"),
+    // MEDULLA-TYPED-PACKS-R805: a data-product steward decides an access request.
+    entry("catalog:access-decide", User, "engine"),
+    entry("catalog:access-request", User, "engine"),
+    entry("catalog:data-product", User, "engine"),
     entry("cdc:admin", Admin, "engine"),
     entry("cdc:read", User, "engine"),
     entry("cep:admin", Admin, "engine"),
@@ -150,6 +156,9 @@ pub const SCOPES: &[ScopeEntry] = &[
     entry("identity:provision", ServiceOnly, "engine"),
     entry("identity:read", Admin, "engine"),
     entry("identity:self", User, "engine"),
+    // MEDULLA-UNIFIED-DATA-PLANE-R760.3: served incidents.
+    entry("incident:read", User, "engine"),
+    entry("incident:write", User, "engine"),
     entry("ingest:read", User, "engine"),
     entry("ingest:write", User, "engine"),
     entry("jobs:write", User, "engine"),
@@ -264,6 +273,8 @@ pub const SCOPES: &[ScopeEntry] = &[
     entry("work:read", User, "engine"),
     entry("work:submit", User, "engine"),
     entry("work:write", User, "engine"),
+    // MEDULLA-DECISION-ENGINE-R166.3: the workflow registry.
+    entry("workflow:registry", User, "engine"),
 ];
 
 /// The registry entry of `scope`.
