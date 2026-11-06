@@ -77,6 +77,10 @@ _WORK_ITEM_METHODS = frozenset(
         "GapSettle",
         "WorkOfferPut",
         "RetireSealedRecord",
+        # MEDULLA-DURABLE-KERNEL-R820.3: the uncertain-effect writes join the family.
+        "MarkWorkItemEffectStarted",
+        "RecordEffectReceipt",
+        "SubmitAdmittedRequest",
     }
 )
 _RESOURCE_AND_CAPACITY_WRITES = frozenset(
@@ -145,8 +149,16 @@ _DURABLE_AT_BASE = (
         "GapSettle",
         "WorkOfferPut",
         "RetireSealedRecord",
+        "MarkWorkItemEffectStarted",
+        "RecordEffectReceipt",
+        "SubmitAdmittedRequest",
         "ClearGraph",
         "AddEmbedding",
+        # Durable writes that joined after the base: the agent-bus roster rows and
+        # the memory-sync snapshot.
+        "BusHeartbeat",
+        "BusRegister",
+        "SyncMemorySnapshot",
     }
 )
 
@@ -185,6 +197,9 @@ _ATOMIC_BATCH_ROWS_AT_BASE = frozenset(
         "GapSettle",
         "WorkOfferPut",
         "RetireSealedRecord",
+        "MarkWorkItemEffectStarted",
+        "RecordEffectReceipt",
+        "SubmitAdmittedRequest",
         "ReserveWorkItemResources",
         "ReleaseWorkItemResources",
         "ReclaimWorkItemResources",
@@ -254,6 +269,17 @@ _UNCONDITIONAL_WRITES_AT_BASE = (
         "LineageIngest",
         "SourceIngest",
         "TelemetryDerive",
+        # Declared writes added after the base: typed actions, the agent bus, the
+        # branch registry, document deletion, live artifacts and memory sync.
+        "ActionRegister",
+        "ActionSubmit",
+        "BusHeartbeat",
+        "BusRegister",
+        "CreateBranch",
+        "DocumentDelete",
+        "LiveArtifactPut",
+        "LiveArtifactRefresh",
+        "SyncMemorySnapshot",
     }
 )
 

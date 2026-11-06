@@ -11,6 +11,8 @@ from pydantic import BaseModel, ConfigDict, TypeAdapter
 from . import decision_commit as _decision_commit
 from ._runtime import (
     OpaqueResult,
+    contract_decoder,
+    contract_sender,
     decode_result,
     expect_bool,
     expect_count,
@@ -2183,3 +2185,20 @@ def __getattr__(name: str) -> Any:
     if name == method or method not in _REQUEST_METHODS:
         raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
     return getattr(models(), f"Method{method}Params")
+
+
+# Contract rows sent through the shared runtime sender (mirror the Rust serde types).
+send_access_request_decide = contract_sender(
+    "AccessRequestDecide", "MethodAccessRequestDecideParams"
+)
+decode_access_request_decide = contract_decoder("AccessRequestDecide", "AccessRequest")
+send_access_request_open = contract_sender(
+    "AccessRequestOpen", "MethodAccessRequestOpenParams"
+)
+decode_access_request_open = contract_decoder("AccessRequestOpen", "AccessRequest")
+send_data_product_register = contract_sender(
+    "DataProductRegister", "MethodDataProductRegisterParams"
+)
+decode_data_product_register = contract_decoder(
+    "DataProductRegister", "DataProductRegistered"
+)

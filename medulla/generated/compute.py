@@ -11,6 +11,8 @@ from pydantic import BaseModel, ConfigDict
 from . import solve as _solve
 from ._runtime import (
     OpaqueResult,
+    contract_decoder,
+    contract_sender,
     decode_result,
     expect_count,
     expect_float,
@@ -6421,3 +6423,33 @@ def __getattr__(name: str) -> Any:
     if name == method or method not in _REQUEST_METHODS:
         raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
     return getattr(models(), f"Method{method}Params")
+
+
+# Contract rows sent through the shared runtime sender (mirror the Rust serde types).
+send_distributed_compute = contract_sender(
+    "DistributedCompute", "MethodDistributedComputeParams"
+)
+decode_distributed_compute = contract_decoder("DistributedCompute", "DistResult")
+send_finance_pattern_classify = contract_sender(
+    "FinancePatternClassify", "MethodFinancePatternClassifyParams"
+)
+decode_finance_pattern_classify = contract_decoder(
+    "FinancePatternClassify", "FinancePatternClassifyResult"
+)
+send_finance_profit_attribution = contract_sender(
+    "FinanceProfitAttribution", "MethodFinanceProfitAttributionParams"
+)
+decode_finance_profit_attribution = contract_decoder(
+    "FinanceProfitAttribution", "AttributionBreakdown"
+)
+send_graph_learn_predict_nary = contract_sender(
+    "GraphLearnPredictNary", "MethodGraphLearnPredictNaryParams"
+)
+decode_graph_learn_predict_nary = contract_decoder(
+    "GraphLearnPredictNary", "NaryPrediction"
+)
+send_run_udf = contract_sender("RunUdf", "MethodRunUdfParams")
+send_wallet_key_trust_get = contract_sender(
+    "WalletKeyTrustGet", "MethodWalletKeyTrustGetParams"
+)
+decode_wallet_key_trust_get = contract_decoder("WalletKeyTrustGet", "WalletKeyTrust")

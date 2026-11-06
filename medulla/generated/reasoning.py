@@ -10,6 +10,8 @@ from pydantic import BaseModel, ConfigDict
 
 from ._runtime import (
     OpaqueResult,
+    contract_decoder,
+    contract_sender,
     decode_result,
     expect_bool,
     models,
@@ -626,3 +628,16 @@ def __getattr__(name: str) -> Any:
     if name == method or method not in _REQUEST_METHODS:
         raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
     return getattr(models(), f"Method{method}Params")
+
+
+# Contract rows sent through the shared runtime sender (mirror the Rust serde types).
+send_ontology_canonical_hash = contract_sender(
+    "OntologyCanonicalHash", "MethodOntologyCanonicalHashParams"
+)
+decode_ontology_canonical_hash = contract_decoder(
+    "OntologyCanonicalHash", "OntologyCanonicalHashResult"
+)
+send_run_rules = contract_sender("RunRules", "MethodRunRulesParams")
+decode_run_rules = contract_decoder("RunRules", "RuleReasonResponse")
+send_shex_validate = contract_sender("ShexValidate", "MethodShexValidateParams")
+decode_shex_validate = contract_decoder("ShexValidate", "ShexValidationReport")

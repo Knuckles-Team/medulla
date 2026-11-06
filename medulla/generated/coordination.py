@@ -8,6 +8,8 @@ from typing import TYPE_CHECKING, Any
 
 from ._runtime import (
     OpaqueResult,
+    contract_decoder,
+    contract_sender,
     decode_result,
     models,
 )
@@ -2931,3 +2933,65 @@ def __getattr__(name: str) -> Any:
     if name == method or method not in _REQUEST_METHODS:
         raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
     return getattr(models(), f"Method{method}Params")
+
+
+# Contract rows sent through the shared runtime sender (mirror the Rust serde types).
+send_action_register = contract_sender("ActionRegister", "MethodActionRegisterParams")
+decode_action_register = contract_decoder("ActionRegister", "ActionRegisterResult")
+send_action_submit = contract_sender("ActionSubmit", "MethodActionSubmitParams")
+decode_action_submit = contract_decoder("ActionSubmit", "ActionRun")
+send_claims = contract_sender("Claims", "MethodClaimsParams")
+decode_claims_advance = contract_decoder("Claims", "ClaimRecord", "advance")
+decode_claims_compile_artifact = contract_decoder(
+    "Claims", "ResearchArtifact", "compile_artifact"
+)
+decode_claims_get = contract_decoder("Claims", "ClaimGetResult", "get")
+decode_claims_propose = contract_decoder("Claims", "ClaimRecord", "propose")
+decode_claims_record_evidence = contract_decoder(
+    "Claims", "ClaimRecord", "record_evidence"
+)
+send_get_admitted_request = contract_sender(
+    "GetAdmittedRequest", "MethodGetAdmittedRequestParams"
+)
+decode_get_admitted_request = contract_decoder(
+    "GetAdmittedRequest", "GetAdmittedRequestResult"
+)
+send_get_effect_receipt = contract_sender(
+    "GetEffectReceipt", "MethodGetEffectReceiptParams"
+)
+decode_get_effect_receipt = contract_decoder(
+    "GetEffectReceipt", "GetEffectReceiptResult"
+)
+send_get_shard_writer_width = contract_sender(
+    "GetShardWriterWidth", "MethodGetShardWriterWidthParams"
+)
+decode_get_shard_writer_width = contract_decoder(
+    "GetShardWriterWidth", "ShardWriterWidth"
+)
+send_mark_work_item_effect_started = contract_sender(
+    "MarkWorkItemEffectStarted", "MethodMarkWorkItemEffectStartedParams"
+)
+decode_mark_work_item_effect_started = contract_decoder(
+    "MarkWorkItemEffectStarted", "EffectWriteResult"
+)
+send_record_effect_receipt = contract_sender(
+    "RecordEffectReceipt", "MethodRecordEffectReceiptParams"
+)
+decode_record_effect_receipt = contract_decoder(
+    "RecordEffectReceipt", "EffectWriteResult"
+)
+send_submit_admitted_request = contract_sender(
+    "SubmitAdmittedRequest", "MethodSubmitAdmittedRequestParams"
+)
+decode_submit_admitted_request = contract_decoder(
+    "SubmitAdmittedRequest", "EffectWriteResult"
+)
+send_workflow_registry = contract_sender(
+    "WorkflowRegistry", "MethodWorkflowRegistryParams"
+)
+decode_workflow_registry_read = contract_decoder(
+    "WorkflowRegistry", "WorkflowRegistrationEntry", "read"
+)
+decode_workflow_registry_register = contract_decoder(
+    "WorkflowRegistry", "WorkflowRegistrationEntry", "register"
+)
