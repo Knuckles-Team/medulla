@@ -40,6 +40,7 @@ mod declaration;
 pub(crate) mod outbox;
 mod pins;
 pub mod projection;
+pub mod undecodable;
 pub(crate) mod visibility;
 
 pub use declaration::{
@@ -181,7 +182,7 @@ impl AgentLibraryStore {
                 "ATTACH_PACK_HEAD_UNAVAILABLE: connector has no pack head".to_string()
             })?;
         let head: ConnectorPackHeadRow =
-            super::agent_row::decode(head.value(), "connector pack head")?;
+            undecodable::decode_stored(head.value(), "connector pack head")?;
         let visible_record_id = head.head.visible_record_id.as_deref().ok_or_else(|| {
             "ATTACH_PACK_HEAD_NOT_VISIBLE: connector head has not completed projection".to_string()
         })?;
@@ -202,7 +203,7 @@ impl AgentLibraryStore {
                 break;
             }
             let member: ConnectorPackMemberRow =
-                super::agent_row::decode(value.value(), "connector pack member")?;
+                undecodable::decode_stored(value.value(), "connector pack member")?;
             if member.lifecycle != AgentLibraryLifecycle::Published
                 || member.last_record_id != visible_record_id
                 || !matches!(
@@ -244,25 +245,7 @@ impl AgentLibraryStore {
         tenant_id: &str,
         connector: &ResourceId,
     ) -> Result<Vec<ConnectorPackMemberRow>, String> {
-        medulla_agent_types::agent_library::validate_key(tenant_id, connector.as_str())?;
-        let read = self.read()?;
-        let members = read.open_owner_table(medulla_storage::CONNECTOR_PACK_MEMBERS)?;
-        let mut rows = Vec::new();
-        for row in members
-            .range((tenant_id, connector.as_str(), "")..)
-            .map_err(|error| error.to_string())?
-        {
-            let (key, value) = row.map_err(|error| error.to_string())?;
-            let (row_tenant, row_connector, _) = key.value();
-            if row_tenant != tenant_id || row_connector != connector.as_str() {
-                break;
-            }
-            rows.push(super::agent_row::decode(
-                value.value(),
-                "connector pack member",
-            )?);
-        }
-        Ok(rows)
+        self.connector_pack_members_with(tenant_id, connector, undecodable::UndecodableRows::Refuse)
     }
 
     /// Resolve a component revision and its engine-body holder in one Agent
@@ -292,7 +275,7 @@ impl AgentLibraryStore {
             .map_err(|error| error.to_string())?
             .ok_or_else(|| "agent component revision does not exist".to_string())?;
         let entry: medulla_agent_types::agent_component::AgentComponentEntry =
-            super::agent_row::decode(entry.value(), "agent component revision")?;
+            undecodable::decode_stored(entry.value(), "agent component revision")?;
         let body_hex = entry
             .content_ref
             .as_deref()
@@ -309,7 +292,7 @@ impl AgentLibraryStore {
             .map_err(|error| error.to_string())?
             .ok_or_else(|| "COMPONENT_BODY_UNAVAILABLE: revision has no body holder".to_string())?;
         let holder: ConnectorPackBodyHolderRow =
-            super::agent_row::decode(holder.value(), "connector pack body holder")?;
+            undecodable::decode_stored(holder.value(), "connector pack body holder")?;
         let media_type = entry
             .attributes
             .get(medulla_agent_types::agent_component::COMPONENT_MEDIA_TYPE_ATTRIBUTE)
@@ -329,56 +312,14 @@ impl AgentLibraryStore {
         })
     }
 
-    /// Read one connector's catalog state from one owner snapshot.
+    /// Read one connector's catalog state from one owner snapshot. A stored
+    /// row that does not decode refuses with `PACK_RECORD_UNDECODABLE`.
     pub fn connector_pack_status(
         &self,
         tenant_id: &str,
         connector: &ResourceId,
     ) -> Result<ConnectorPackStatus, String> {
-        medulla_agent_types::agent_library::validate_key(tenant_id, connector.as_str())?;
-        let read = self.read()?;
-        let heads = read.open_owner_table(medulla_storage::CONNECTOR_PACK_HEADS)?;
-        let members = read.open_owner_table(medulla_storage::CONNECTOR_PACK_MEMBERS)?;
-        let bindings = read.open_owner_table(medulla_storage::CONNECTOR_PACK_BINDINGS)?;
-
-        let head = heads
-            .get((tenant_id, connector.as_str()))
-            .map_err(|error| error.to_string())?
-            .map(|row| {
-                super::agent_row::decode::<ConnectorPackHeadRow>(row.value(), "connector pack head")
-            })
-            .transpose()?;
-        let binding = bindings
-            .get((tenant_id, connector.as_str()))
-            .map_err(|error| error.to_string())?
-            .map(|row| {
-                super::agent_row::decode::<ConnectorPackBindingRow>(
-                    row.value(),
-                    "connector pack binding",
-                )
-            })
-            .transpose()?;
-
-        let mut counts = PackMemberCounts::default();
-        for row in members
-            .range((tenant_id, connector.as_str(), "")..)
-            .map_err(|error| error.to_string())?
-        {
-            let (key, value) = row.map_err(|error| error.to_string())?;
-            let (row_tenant, row_connector, _) = key.value();
-            if row_tenant != tenant_id || row_connector != connector.as_str() {
-                break;
-            }
-            let member: ConnectorPackMemberRow =
-                super::agent_row::decode(value.value(), "connector pack member")?;
-            match member.lifecycle {
-                AgentLibraryLifecycle::Published => counts.published += 1,
-                AgentLibraryLifecycle::Withdrawn => counts.withdrawn += 1,
-                AgentLibraryLifecycle::Retired => counts.retired += 1,
-            }
-        }
-
-        status_from_rows(tenant_id, connector, head, binding, counts)
+        self.connector_pack_status_with(tenant_id, connector, undecodable::UndecodableRows::Refuse)
     }
 
     pub fn connector_pack_importer(
@@ -386,8 +327,10 @@ impl AgentLibraryStore {
         tenant_id: &str,
         connector: &ResourceId,
     ) -> Result<Option<String>, String> {
-        let status = self.connector_pack_status(tenant_id, connector)?;
-        Ok(status.importer)
+        medulla_agent_types::agent_library::validate_key(tenant_id, connector.as_str())?;
+        Ok(self
+            .connector_pack_binding(tenant_id, connector)?
+            .map(|row| row.importer))
     }
 
     /// Resolve an exact mapping reference against the current pack head.
@@ -469,7 +412,7 @@ impl AgentLibraryStore {
                 "UNKNOWN_MAPPING_REFERENCE: connector has no imported pack".to_string()
             })?;
         let head: ConnectorPackHeadRow =
-            super::agent_row::decode(head.value(), "connector pack head")?;
+            undecodable::decode_stored(head.value(), "connector pack head")?;
         let mut declaration = None;
         for row in members
             .range((tenant_id, connector.as_str(), "")..)
@@ -481,7 +424,7 @@ impl AgentLibraryStore {
                 break;
             }
             let member: ConnectorPackMemberRow =
-                super::agent_row::decode(value.value(), "connector pack member")?;
+                undecodable::decode_stored(value.value(), "connector pack member")?;
             if member.kind == PackEntryKind::Resource
                 && member.uri == CONNECTOR_DECLARATION_URI
                 && member.lifecycle == AgentLibraryLifecycle::Published

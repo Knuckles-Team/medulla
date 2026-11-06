@@ -369,6 +369,7 @@ pub fn every_warning_code() -> Vec<PackWarningCode> {
         PackWarningCode::UnresolvedCapabilityIri,
         PackWarningCode::DuplicateShapeIri,
         PackWarningCode::OntologyOrphan,
+        PackWarningCode::UndecodableRecordReplaced,
     ]
 }
 

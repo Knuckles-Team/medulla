@@ -49,6 +49,7 @@ mod storage_acceptance;
 #[cfg(all(feature = "owl", feature = "shacl"))]
 #[path = "../../connector_pack_projection/surface_tests.rs"]
 mod surface_tests;
+mod undecodable;
 mod withdrawal;
 
 const SECRET: &str = "connector-pack-served-fixture-secret"; // sanitizer:ignore

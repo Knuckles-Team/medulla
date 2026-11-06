@@ -66,6 +66,8 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T060 [US2] MEDULLA-TYPED-PACKS-R039 Mass-withdrawal guard requires an explicit admin override
 - [ ] T061 [US2] MEDULLA-TYPED-PACKS-R040 Validation stops at a bounded violation count
 - [ ] T062 [US2] MEDULLA-TYPED-PACKS-R041 Write-time refusal codes for pack import conflicts
+- [ ] T062.1 [US2] MEDULLA-TYPED-PACKS-R041.1 An undecodable stored pack row refuses with a typed code
+- [ ] T062.2 [US2] MEDULLA-TYPED-PACKS-R041.2 An import replaces undecodable stored pack rows, audited
 - [ ] T063 [US2] MEDULLA-TYPED-PACKS-R042.1 Native capability annotation admission
 - [ ] T064 [US2] MEDULLA-TYPED-PACKS-R042.2 Served capability claim and refusal proof
 - [ ] T065 [US2] MEDULLA-TYPED-PACKS-R043 Modality annotations on pack entries

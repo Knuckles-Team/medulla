@@ -61,6 +61,30 @@ pub(super) fn decode<T: serde::de::DeserializeOwned>(
         .map_err(|_| format!("{what} is invalid or exceeds resource limits"))
 }
 
+/// The longest decode reason a refusal carries.
+const MAX_DECODE_REASON_BYTES: usize = 256;
+
+/// Decode one agent-hierarchy row, bounded, keeping why it failed.
+///
+/// For a refusal that must say what changed shape (a removed field, an
+/// unknown variant): the reason is the decoder's message, cut to
+/// [`MAX_DECODE_REASON_BYTES`] on a character boundary.
+pub(super) fn decode_with_reason<T: serde::de::DeserializeOwned>(
+    bytes: &[u8],
+) -> Result<T, String> {
+    medulla_types::msgpack::validate_single_value(bytes, AGENT_ROW_LIMITS)
+        .map_err(|_| "row is not one MessagePack value within its resource limits".to_string())?;
+    rmp_serde::from_slice(bytes).map_err(|error| bounded_reason(&error.to_string()))
+}
+
+fn bounded_reason(reason: &str) -> String {
+    let mut end = reason.len().min(MAX_DECODE_REASON_BYTES);
+    while !reason.is_char_boundary(end) {
+        end -= 1;
+    }
+    reason[..end].to_string()
+}
+
 /// Decode one agent-hierarchy row, bounded, surrendering the decode error.
 ///
 /// For the one caller that must distinguish "this row is not a `T`" from "this

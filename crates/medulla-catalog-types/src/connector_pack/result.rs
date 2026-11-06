@@ -81,6 +81,9 @@ pub enum PackWarningCode {
     // A pack ontology class has no subclass path to the parent catalog
     // (MEDULLA-TYPED-PACKS-R105); imported and flagged.
     OntologyOrphan,
+    // The import replaced stored head or member rows that no longer decode
+    // (MEDULLA-TYPED-PACKS-R041.2).
+    UndecodableRecordReplaced,
 }
 
 /// One rejection, attributed to the entry that caused it where possible.

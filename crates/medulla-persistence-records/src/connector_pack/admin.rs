@@ -301,7 +301,11 @@ fn retire_discriminator(uris: &[String]) -> Result<String, String> {
     Ok(Digest256::framed(b"eg/connector-pack-retire/v1", &fields)?.to_hex())
 }
 
-fn admin_operation(kind: &str, connector: &ResourceId, detail: &str) -> Vec<MutationOperation> {
+pub(super) fn admin_operation(
+    kind: &str,
+    connector: &ResourceId,
+    detail: &str,
+) -> Vec<MutationOperation> {
     vec![MutationOperation {
         ordinal: 0,
         surface: MutationSurface::Lifecycle,
