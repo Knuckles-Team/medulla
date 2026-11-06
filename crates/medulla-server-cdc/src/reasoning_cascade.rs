@@ -37,11 +37,10 @@
 //!    triples the persistent per-graph `Reasoner` already ingested, and feed
 //!    ONLY the new ones to `add_axioms` — the genuine incremental delta
 //!    re-seed. EL⁺ completion is MONOTONE (it can only ADD subsumers, never
-//!    retract), so a write that REMOVES a TBox triple can't be handled
-//!    incrementally without serving a stale (unsound) closure; on a detected
-//!    retraction this rebuilds the reasoner from scratch over the current
-//!    triple set instead (still just calling the reasoner's own two entry
-//!    points as designed, never touching `medulla-rdf`).
+//!    retract), so the triples a write REMOVED go to `retract_axioms`
+//!    (delete and re-derive) before the new ones go to `add_axioms`; the
+//!    closure is never rebuilt from scratch while the cascade holds the
+//!    graph's reasoner.
 //!
 //! The refreshed [`Classification`] is cached per graph (readable via
 //! [`ReasoningCascade::last_refresh`]) — this module owns no query/wire
@@ -117,10 +116,8 @@ pub struct CascadeRefresh {
     /// New (sub, sup) subsumption pairs vs. the PRIOR cached classification —
     /// the "closure delta" tracing field.
     pub closure_delta: usize,
-    /// `true` when a retraction forced a from-scratch rebuild instead of an
-    /// incremental `add_axioms` delta (see module docs — EL completion cannot
-    /// retract).
-    pub rebuilt_from_scratch: bool,
+    /// How many TBox triples this refresh retracted through `retract_axioms`.
+    pub retracted_triples: usize,
 }
 
 /// Per-graph cascade bookkeeping: the debounce clock, the coalesced-write
@@ -276,19 +273,17 @@ impl ReasoningCascade {
         let view = core.analysis_snapshot();
         let current_vec: Vec<Triple> = tbox_triples_from_view(&view);
         let current_set: HashSet<Triple> = current_vec.iter().cloned().collect();
-        let removed = known_triples
+        let removed_triples: Vec<Triple> = known_triples
             .iter()
             .filter(|t| !current_set.contains(t))
-            .count();
+            .cloned()
+            .collect();
         let new_triples: Vec<Triple> = current_vec
             .iter()
             .filter(|t| !known_triples.contains(t))
             .cloned()
             .collect();
-        // Only clone the full triple set when a retraction actually forces a
-        // from-scratch rebuild (the uncommon path) — the common monotone-growth
-        // path never pays this.
-        let full_for_rebuild = (removed > 0).then(|| current_vec.clone());
+        let retracted_triples = removed_triples.len();
 
         let prev_pairs = self
             .graphs
@@ -299,24 +294,13 @@ impl ReasoningCascade {
         // CPU-bound EL⁺/RL fixpoint work off the tokio reactor thread (matches
         // `medulla_server::compute::compute_off_lock`'s convention for reasoning/
         // analysis passes — this sweep task must never stall other work).
-        let (reasoner, classification, rebuilt) = tokio::task::spawn_blocking(move || {
-            match full_for_rebuild {
-                Some(full) => {
-                    // EL completion is MONOTONE — it cannot retract a subsumer
-                    // derived from an axiom that no longer exists, so a
-                    // retraction needs a fresh closure over the CURRENT triples
-                    // rather than an incremental add. Still just the reasoner's
-                    // own two entry points, used as designed.
-                    let mut fresh = Reasoner::from_triples(&full);
-                    let cls = fresh.classify_weighted();
-                    (fresh, cls, true)
-                }
-                None => {
-                    let mut reasoner = reasoner;
-                    let cls = reasoner.add_axioms(parse_ontology(&new_triples));
-                    (reasoner, cls, false)
-                }
+        let (reasoner, classification) = tokio::task::spawn_blocking(move || {
+            let mut reasoner = reasoner;
+            if !removed_triples.is_empty() {
+                reasoner.retract_axioms(&removed_triples);
             }
+            let cls = reasoner.add_axioms(parse_ontology(&new_triples));
+            (reasoner, cls)
         })
         .await
         .expect("reasoning cascade blocking task panicked");
@@ -334,7 +318,7 @@ impl ReasoningCascade {
                 refreshed_at,
                 coalesced_writes: coalesced,
                 closure_delta,
-                rebuilt_from_scratch: rebuilt,
+                retracted_triples,
             });
         }
 
@@ -343,7 +327,7 @@ impl ReasoningCascade {
             debounce_ms = self.debounce.as_millis() as u64,
             closure_delta,
             coalesced_writes = coalesced,
-            rebuilt_from_scratch = rebuilt,
+            retracted_triples,
             "reasoning cascade: closure refreshed"
         );
         true
@@ -570,10 +554,7 @@ mod tests {
             !first.classification.entails_subclass(a, c),
             "A subClassOf C must NOT be entailed yet (B subClassOf C not written)"
         );
-        assert!(
-            !first.rebuilt_from_scratch,
-            "pure growth uses the incremental delta re-seed"
-        );
+        assert_eq!(first.retracted_triples, 0, "pure growth retracts nothing");
 
         // The opted-in axiom write: B ⊑ C.
         add_subclass_edge(&core, b, c);
@@ -607,48 +588,63 @@ mod tests {
         assert_eq!(cascade.refresh_count("g-seed"), 2);
     }
 
-    // ── A pure retraction still yields a sound (rebuilt) closure ─────────
+    // ── A retraction updates the closure by delete and re-derive ─────────
 
-    // spec: MEDULLA-INCREMENTAL-VIEWS-R011.3
-    #[tokio::test(flavor = "multi_thread")]
-    async fn a_retraction_rebuilds_instead_of_serving_a_stale_entailment() {
+    /// Classify `A ⊑ B ⊑ C`, retract `B ⊑ C`, and return the refresh that followed.
+    async fn retract_middle_edge(graph: &str) -> CascadeRefresh {
         let state = test_state();
         let a = "<http://ex/A>";
         let b = "<http://ex/B>";
         let c = "<http://ex/C>";
-        let core = create_graph(&state, "g-retract").await;
-        add_class_node(&core, a);
-        add_class_node(&core, b);
-        add_class_node(&core, c);
+        let core = create_graph(&state, graph).await;
+        for class in [a, b, c] {
+            add_class_node(&core, class);
+        }
         add_subclass_edge(&core, a, b);
         add_subclass_edge(&core, b, c);
 
         let cascade = ReasoningCascade::new(
-            ["g-retract".to_string()].into_iter().collect(),
+            [graph.to_string()].into_iter().collect(),
             Duration::from_millis(40),
         );
-        cascade.note_write("g-retract");
+        cascade.note_write(graph);
         tokio::time::sleep(Duration::from_millis(250)).await;
         assert_eq!(cascade.refresh_due(&state).await, 1);
-        assert!(cascade
-            .last_refresh("g-retract")
-            .unwrap()
-            .classification
-            .entails_subclass(a, c));
+        let before = cascade.last_refresh(graph).unwrap();
+        assert!(before.classification.entails_subclass(a, c));
 
         // Retract B ⊑ C.
         core.remove_edge(b.to_string(), c.to_string());
-        cascade.note_write("g-retract");
+        cascade.note_write(graph);
         tokio::time::sleep(Duration::from_millis(250)).await;
         assert_eq!(cascade.refresh_due(&state).await, 1);
 
-        let after = cascade.last_refresh("g-retract").unwrap();
+        cascade.last_refresh(graph).unwrap()
+    }
+
+    // spec: MEDULLA-INCREMENTAL-VIEWS-R011.6
+    #[tokio::test(flavor = "multi_thread")]
+    async fn retraction_updates_closure_without_full_rebuild() {
+        let after = retract_middle_edge("g-retract-dred").await;
         assert!(
-            after.rebuilt_from_scratch,
-            "a retraction must force a from-scratch rebuild, not an incremental add"
+            after.retracted_triples > 0,
+            "the removed triple was retracted"
         );
+        assert!(after
+            .classification
+            .entails_subclass("<http://ex/A>", "<http://ex/B>"));
+    }
+
+    // ── A retraction never serves a stale entailment ─────────────────────
+
+    // spec: MEDULLA-INCREMENTAL-VIEWS-R011.3
+    #[tokio::test(flavor = "multi_thread")]
+    async fn a_retraction_rebuilds_instead_of_serving_a_stale_entailment() {
+        let after = retract_middle_edge("g-retract-stale").await;
         assert!(
-            !after.classification.entails_subclass(a, c),
+            !after
+                .classification
+                .entails_subclass("<http://ex/A>", "<http://ex/C>"),
             "the retracted axiom's consequence must be GONE, not served stale"
         );
     }

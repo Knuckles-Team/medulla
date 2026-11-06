@@ -1,5 +1,7 @@
 //! Modules moved here from `medulla_server::split_tests` (hard cutover, no re-exports).
 
+#[cfg(all(test, feature = "query", feature = "streaming"))]
+mod incremental_views;
 #[cfg(all(
     test,
     unix,
