@@ -79,7 +79,6 @@ pub(crate) const ACCESS_RS_MUTATES_UNCONDITIONAL: &[&str] = &[
     "DeleteGraph",
     "DropNamedGraph",
     "EvictBelow",
-    "EvictLRU",
     "FromMsgpack",
     "ImportSqliteFile",
     "IcvConfigure",
@@ -308,7 +307,6 @@ pub(crate) const NATIVE_GRAPHREDB_DURABLE: &[&str] = &[
     "CypherQuery",
     "DecaySweep",
     "DeleteGraph",
-    "EvictLRU",
     // MEDULLA-FINANCE-PRIMITIVES-R011.2.3: the alert door commits its event node
     // and its finance.events.v1 outbox fact as one batch at its own commit point.
     "FinanceAlertRaise",

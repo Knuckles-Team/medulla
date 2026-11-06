@@ -1,5 +1,5 @@
 use crate::codec::{decode_ledger_record, encode_bounded};
-use crate::owner::{validate_declared_owner_tables, validate_manifest_read};
+use crate::owner::{validate_cached_manifest_read, validate_declared_owner_tables};
 use crate::physical::incarnation::{
     require_persisted_root, StoreIdentityDigest, STORAGE_KERNEL_SCHEMA_VERSION,
 };
@@ -202,11 +202,8 @@ pub(crate) fn binding_for_read(
     store.validate_physical_root()?;
     let handle = &store.handle;
     let cached = store.manifest();
-    let persisted = validate_manifest_read(rtx, &cached.physical_identity, cached.layout)?;
-    if persisted != *cached {
-        return Err("mutation read manifest authority changed".to_string());
-    }
-    validate_declared_owner_tables(rtx, persisted.layout)?;
+    validate_cached_manifest_read(rtx, cached, store.validated_manifest_bytes())?;
+    validate_declared_owner_tables(rtx, cached.layout)?;
     reject_prototype_names(
         rtx.list_tables()
             .map_err(|error| error.to_string())?

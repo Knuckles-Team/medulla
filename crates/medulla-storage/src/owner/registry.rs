@@ -799,7 +799,18 @@ pub(crate) fn is_known_mutation_table(name: &str) -> bool {
             .any(|layout| owner_table_names(*layout).contains(&name))
 }
 
+/// The owner table registry is compiled in, so its equality with the canonical
+/// manifest contract cannot change while the process runs. Every scoped read and
+/// write validates it; compute it once rather than on every point read (the
+/// durable cold read of MEDULLA-DURABLE-KERNEL-R086.9 paid it per call).
 fn validate_owner_registry_equality() -> Result<(), String> {
+    static RESULT: std::sync::OnceLock<Result<(), String>> = std::sync::OnceLock::new();
+    RESULT
+        .get_or_init(validate_owner_registry_equality_uncached)
+        .clone()
+}
+
+fn validate_owner_registry_equality_uncached() -> Result<(), String> {
     validate_ledger_registry_types()?;
     for layout in owner_layouts() {
         let mut declared = Vec::new();

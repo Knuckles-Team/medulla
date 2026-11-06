@@ -414,7 +414,6 @@ pub fn requires_write(method: &Method) -> bool {
                 | Method::ClearGraph
                 | Method::AddEmbedding { .. }
                 | Method::PruneByLifecycle { .. }
-                | Method::EvictLRU { .. }
                 | Method::DecaySweep { .. }
                 | Method::TouchNodes { .. }
                 | Method::FromMsgpack { .. }

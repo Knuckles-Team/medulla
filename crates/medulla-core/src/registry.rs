@@ -908,7 +908,9 @@ impl GraphRegistry {
         // CONCEPT:MEDULLA-KG.storage.bloom-negative-lookup-guard — this is the FULL/eager
         // (non-paged) load: every durable node (if any) was just replayed through
         // `add_node` above, so the bloom filter now reflects the complete set.
-        core.mark_bloom_complete();
+        if self.lazy_open_proves_node_set(ticket) {
+            core.mark_bloom_complete();
+        }
         if let Some(version) = source_snapshot_version.filter(|version| *version > 0) {
             if core.adopt_materialized_version(version).is_err() {
                 return false;
@@ -923,6 +925,16 @@ impl GraphRegistry {
         self.install_graph(ticket, core);
         self.record_complete_manifest(ticket, source_snapshot_version);
         true
+    }
+
+    /// Whether a lazy open's loaded material is the graph's complete node set, so a
+    /// Bloom negative may answer "absent" without a durable lookup. Material from a
+    /// materializer is the durable set. Without one, the open loads nothing: that
+    /// empty core is the complete set only when no durable read-through backs it.
+    /// With a read-through and no materializer (a read-through-only restart,
+    /// MEDULLA-DURABLE-KERNEL-R086.8), every miss must reach the durable tier.
+    fn lazy_open_proves_node_set(&self, ticket: &LazyOpenTicket) -> bool {
+        ticket.materializer.is_some() || self.read_through_factory.is_none()
     }
 
     /// The admission rules every lazy publish shares: the ticket must still be current,
@@ -1073,7 +1085,7 @@ impl GraphRegistry {
         // it on the eventual final page instead, so a not-yet-paged-in node is
         // never mistaken for a genuine absence in the meantime.
         let complete = cursor.is_none();
-        if complete {
+        if complete && self.lazy_open_proves_node_set(ticket) {
             core.mark_bloom_complete();
         }
         if let Some(version) = source_snapshot_version.filter(|version| *version > 0) {

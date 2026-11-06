@@ -64,6 +64,16 @@ impl GraphCore {
             for node_id in node_ids {
                 semantic.remove_embedding(node_id);
             }
+            drop(semantic);
+            // Eviction changes residency, not content, so `version()` stays put
+            // (MEDULLA-DURABLE-KERNEL-R086.2). The version-keyed row projections
+            // would then keep serving the evicted rows from their resident copy,
+            // holding the memory eviction freed and hiding the durable read.
+            #[cfg(feature = "security")]
+            {
+                self.invalidate_projection_cache();
+                self.invalidate_filtered_view_cache();
+            }
         }
         removed
     }

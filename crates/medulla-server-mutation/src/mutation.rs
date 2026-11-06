@@ -422,7 +422,6 @@ mod tests {
                 tx_now: 0,
             },
             Method::ClearGraph,
-            Method::EvictLRU { max_nodes: 1 },
             Method::DecaySweep {
                 half_life_secs: 1.0,
                 floor: 0.0,

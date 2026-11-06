@@ -141,6 +141,11 @@ pub(crate) struct PhysicalStore {
     validations: WriteValidationCounters,
     /// How this open validated and phase timings (R006.2 diagnosability).
     open_report: OpenReport,
+    /// The stored manifest bytes a scoped read last decoded, validated and
+    /// found equal to `owner_manifest`. A later read whose single manifest row
+    /// holds these exact bytes decodes to the same validated manifest, so it
+    /// skips the decode and lineage validation (MEDULLA-DURABLE-KERNEL-R086.9).
+    validated_manifest_bytes: std::sync::OnceLock<Vec<u8>>,
     /// Clean-shutdown marker (R006.3). MUST stay the last field: its `Drop`
     /// has to run after `database` has been dropped. A live `ValidatedWrite`
     /// holds a second handle, which can only delay that `Drop`, never run it
@@ -166,6 +171,10 @@ impl PhysicalStore {
         };
         self.marker = Some(Arc::new(marker));
         self
+    }
+
+    pub(crate) fn validated_manifest_bytes(&self) -> &std::sync::OnceLock<Vec<u8>> {
+        &self.validated_manifest_bytes
     }
 
     pub(crate) fn open_report(&self) -> OpenReport {
@@ -277,6 +286,7 @@ impl PhysicalStore {
             options: StoreOpenOptions::default(),
             validations: WriteValidationCounters::default(),
             open_report: OpenReport::default(),
+            validated_manifest_bytes: std::sync::OnceLock::new(),
             marker: None,
         }
     }

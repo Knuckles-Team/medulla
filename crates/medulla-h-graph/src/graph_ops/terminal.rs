@@ -111,6 +111,18 @@ pub async fn try_handle(
     // `filter_view` applies per node, so this short-circuit cannot answer
     // differently from the projection it skips.
     match &method {
+        // MEDULLA-DURABLE-KERNEL-R086.2: residency belongs to the live core, so
+        // eviction runs on the raw core before any row projection is built.
+        Method::EvictLRU { max_nodes } => {
+            let persistence = { state.read().await.persistence.clone() };
+            return super::memory::handle_evict_lru(
+                req_id,
+                graph_name,
+                &core,
+                persistence.as_ref(),
+                *max_nodes,
+            );
+        }
         Method::HasNode { node_id } => {
             return Response::ok(
                 req_id,

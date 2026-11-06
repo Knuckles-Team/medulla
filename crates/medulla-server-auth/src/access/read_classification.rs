@@ -210,6 +210,8 @@ pub(super) const REASON_AUDIT_CHAIN_ADMIN_GATED: &str =
 // mutations had committed.
 pub(super) const REASON_LEDGER_ADMIN_OBSERVABILITY: &str =
     "src/server/handlers/graph_ops.rs's GetLedger arm reads raw_core.get_ledger() (captured before project_core shadows core, same pattern as raw_ledger_len for Metrics.total_mutations) -- the mutation ledger is process-observability, not row-visible data, and is gated by its own ledger:read RBAC authz_action (medulla_capabilities::policy) enforced in dispatch.rs before any handler runs, not by per-row RLS";
+pub(super) const REASON_RESIDENCY_CACHE_CONTROL: &str =
+    "EvictLRU (medulla_h_graph::graph_ops::memory::handle_evict_lru, MEDULLA-DURABLE-KERNEL-R086.2) drops resident copies the durable tier confirms on the raw core and answers only the evicted count -- it returns no row, so there is nothing for RLS to filter; it is gated by its own node:admin authz_action enforced before any handler runs";
 pub(super) const REASON_VERIFIED_TENANT_CLAIM: &str =
     "dispatch.rs compares the request's tenant against verified_context.claims().tenant before serving it (GetChangeEnvelope/GetContentVersion/GetChangeCursor) -- an explicit verified-tenant-claim check, not a graph row";
 pub(super) const REASON_NATIVE_CAPACITY_TENANT_GATED: &str =
@@ -436,6 +438,8 @@ pub(super) const NON_ROW_SCOPED: &[(&str, &str)] = &[
     ("AuditProveInclusion", REASON_AUDIT_CHAIN_ADMIN_GATED),
     // REASON_LEDGER_ADMIN_OBSERVABILITY
     ("GetLedger", REASON_LEDGER_ADMIN_OBSERVABILITY),
+    // REASON_RESIDENCY_CACHE_CONTROL
+    ("EvictLRU", REASON_RESIDENCY_CACHE_CONTROL),
     // REASON_VERIFIED_TENANT_CLAIM
     ("GetChangeCursor", REASON_VERIFIED_TENANT_CLAIM),
     ("GetChangeEnvelope", REASON_VERIFIED_TENANT_CLAIM),

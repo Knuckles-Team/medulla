@@ -11,7 +11,6 @@ use super::{NativeMutationCommand, SealedNativeMethod};
 macro_rules! native_method_catalog {
     ($consumer:ident) => {
         $consumer! {
-            record EvictLRU => GraphState,
             record DecaySweep => GraphState,
             record TouchNodes => GraphState,
             record FromMsgpack => GraphState,

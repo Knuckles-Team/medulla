@@ -205,6 +205,20 @@ fn decode_raw<T: serde::de::DeserializeOwned>(response: &Response, label: &str) 
     .unwrap_or_else(|error| panic!("decode {label} result: {error:?}"))
 }
 
+/// Decode a `Json<T>` result (the `IssueControlLease` and `TransitionControlLease`
+/// contracts in `result_contract::coordination`).
+fn decode_json<T: serde::de::DeserializeOwned>(response: &Response, label: &str) -> T {
+    assert_eq!(
+        response.error, None,
+        "{label} returned an error: {response:?}"
+    );
+    match response.result.as_ref() {
+        Some(ResultPayload::Json(value)) => serde_json::from_value(value.clone())
+            .unwrap_or_else(|error| panic!("decode {label} result: {error:?}")),
+        other => panic!("{label} did not return a typed JSON result: {other:?}"),
+    }
+}
+
 async fn reopen(dir: &str) -> RedbBackend {
     for remaining in (0..=100).rev() {
         match RedbBackend::open(dir.to_string(), 8192) {
@@ -1681,7 +1695,7 @@ async fn lease_consumption_expiry_through_signed_dispatch() {
         ("lease-lapsed", now_ms - 2_000, now_ms - 1_000),
     ];
     for (index, (lease_id, issued, expires)) in cases.into_iter().enumerate() {
-        let issued: ControlLeaseIssued = decode_raw(
+        let issued: ControlLeaseIssued = decode_json(
             &test_support::dispatch(
                 &state,
                 signed_request(
@@ -1706,7 +1720,7 @@ async fn lease_consumption_expiry_through_signed_dispatch() {
         )
     };
 
-    let live: ControlLeaseTransition = decode_raw(
+    let live: ControlLeaseTransition = decode_json(
         &test_support::dispatch(
             &state,
             signed_request(
@@ -1726,7 +1740,7 @@ async fn lease_consumption_expiry_through_signed_dispatch() {
         "GetControlLease(before)",
     );
     let before = before.expect("lapsed lease is readable");
-    let lapsed: ControlLeaseTransition = decode_raw(
+    let lapsed: ControlLeaseTransition = decode_json(
         &test_support::dispatch(
             &state,
             signed_request(
@@ -1751,7 +1765,7 @@ async fn lease_consumption_expiry_through_signed_dispatch() {
         (ControlLeaseStatus::Active, 1)
     );
 
-    let revoked: ControlLeaseTransition = decode_raw(
+    let revoked: ControlLeaseTransition = decode_json(
         &test_support::dispatch(
             &state,
             signed_request(
