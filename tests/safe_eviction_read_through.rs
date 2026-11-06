@@ -28,11 +28,10 @@ fn process_cpu_time() -> std::time::Duration {
 /// One engine at a time in this binary. The R086.9 journey records a cold-read
 /// latency percentile, which must measure the engine's read rather than the
 /// scheduler sharing the host with this file's other engines.
-fn serial() -> std::sync::MutexGuard<'static, ()> {
-    static SERIAL: std::sync::Mutex<()> = std::sync::Mutex::new(());
-    SERIAL
-        .lock()
-        .unwrap_or_else(std::sync::PoisonError::into_inner)
+/// `parking_lot` does not poison, so one failed journey does not fail the rest.
+fn serial() -> parking_lot::MutexGuard<'static, ()> {
+    static SERIAL: parking_lot::Mutex<()> = parking_lot::Mutex::new(());
+    SERIAL.lock()
 }
 
 async fn durable(
