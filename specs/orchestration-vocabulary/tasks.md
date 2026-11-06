@@ -159,3 +159,5 @@ Each task line reads `- [ ] T001 [P] [US1] <ID> description`. One task per leaf 
 - [ ] T154 [US9] MEDULLA-ORCH-VOCAB-R014.6 DMN shapes
 - [ ] T155 [US9] MEDULLA-ORCH-VOCAB-R014.7 Register the BPMN and DMN sources
 - [ ] T156 [US9] MEDULLA-ORCH-VOCAB-R014.8 Process vocabulary hot-path proof
+- [ ] T157 [US9] MEDULLA-ORCH-VOCAB-R014.9 Canonical step kind vocabulary
+- [ ] T158 [US9] MEDULLA-ORCH-VOCAB-R014.10 EPC classes extend the core EPC terms in the ARIS pack

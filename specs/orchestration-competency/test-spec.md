@@ -46,10 +46,10 @@ Every row below names a test that does not exist yet. The test file and function
 | T-032 | MEDULLA-CQ-ORCH-R700.4 | L3 | `tests/process_compile_served.rs::compile_refusals_leave_state_unchanged` | Process compile refusal proves its row as stated in requirements.md |
 | T-033 | MEDULLA-CQ-ORCH-R700.5 | L3 | `tests/process_compile_served.rs::replay_reproduces_recorded_digest` | Process compile evidence proves its row as stated in requirements.md |
 | T-034 | MEDULLA-CQ-ORCH-R700.6 | L4 | `tests/competency/test_process_compile_served.py::test_cycle_without_gate_refused` | Process compile hot-path proof proves its row as stated in requirements.md |
-| T-035 | MEDULLA-CQ-ORCH-R701.1 | L1 | `crates/medulla-types/src/process_import.rs::tests::imported_process_round_trips` | Imported process model and gate classification proves its row as stated in requirements.md |
-| T-036 | MEDULLA-CQ-ORCH-R701.2 | L1 | `crates/medulla-core/tests/process_import.rs::import_export_round_trip_is_lossless` | Process model import and export behaviour proves its row as stated in requirements.md |
+| T-035 | MEDULLA-CQ-ORCH-R701.1 | L1 | `crates/medulla-types/src/process_import.rs::tests::canonical_workflow_round_trips` | Canonical workflow records proves its row as stated in requirements.md |
+| T-036 | MEDULLA-CQ-ORCH-R701.2 | L1 | `crates/medulla-core/tests/process_import.rs::canonical_ids_and_digest_are_stable` | Canonical form rules, admission and export proves its row as stated in requirements.md |
 | T-037 | MEDULLA-CQ-ORCH-R701.3 | L3 | `tests/process_import_served.rs::import_stores_versioned_workflow_and_export_reads_it` | Process model import and export wiring proves its row as stated in requirements.md |
-| T-038 | MEDULLA-CQ-ORCH-R701.4 | L3 | `tests/process_import_served.rs::import_refusals_leave_state_unchanged` | Process model import refusal proves its row as stated in requirements.md |
+| T-038 | MEDULLA-CQ-ORCH-R701.4 | L3 | `tests/process_import_served.rs::import_refusals_leave_state_unchanged` | Process model import and export refusal proves its row as stated in requirements.md |
 | T-039 | MEDULLA-CQ-ORCH-R701.5 | L3 | `tests/process_import_served.rs::stored_steps_keep_source_ids` | Process model import evidence proves its row as stated in requirements.md |
 | T-040 | MEDULLA-CQ-ORCH-R701.6 | L4 | `tests/competency/test_governance_roundtrip_served.py::test_roundtrip_preserves_gates` | Process model import hot-path proof proves its row as stated in requirements.md |
 | T-041 | MEDULLA-CQ-ORCH-R012 | L3 | `tests/orchestration/test_orchestration_competency_served.py::test_execute_task_names_onboarded_operations_with_provenance` | Served proof of the execution question from onboarded connector operations proves its row as stated in requirements.md |
@@ -97,10 +97,19 @@ Every row below names a test that does not exist yet. The test file and function
 | T-083 | MEDULLA-CQ-ORCH-R705.8 | L3 | `tests/architecture_exchange_served.rs::exchange_refusals_leave_state_unchanged` | Architecture exchange refusal proves its row as stated in requirements.md |
 | T-084 | MEDULLA-CQ-ORCH-R705.9 | L3 | `tests/architecture_exchange_served.rs::nodes_keep_identifier_and_document_digest` | Architecture exchange evidence proves its row as stated in requirements.md |
 | T-085 | MEDULLA-CQ-ORCH-R705.10 | L4 | `tests/competency/test_architecture_exchange_served.py::test_export_import_and_sync_round_trip` | Architecture exchange hot-path proof proves its row as stated in requirements.md |
+| T-086 | MEDULLA-CQ-ORCH-R701.7 | L1 | `crates/medulla-core/tests/process_import.rs::bpmn_classes_map_through_annotations` | BPMN maps onto the canonical form through class annotations proves its row as stated in requirements.md |
+| T-087 | MEDULLA-CQ-ORCH-R701.8 | L1 | `crates/medulla-core/tests/process_import.rs::losses_are_listed_never_dropped` | Round-trip and loss rules proves its row as stated in requirements.md |
+| T-088 | MEDULLA-CQ-ORCH-R701.9 | L3 | `tests/process_equivalence_served.rs::bpmn_and_epc_give_one_workflow_and_one_plan` | Cross-source equivalence proof proves its row as stated in requirements.md |
+| T-089 | MEDULLA-CQ-ORCH-R701.9 | L4 | `tests/competency/test_process_equivalence_served.py::test_bpmn_and_epc_plan_digests_match` | Cross-source equivalence proof proves its row through the served client |
+| T-090 | MEDULLA-CQ-ORCH-R701.10 | L2 | `crates/medulla-rdf/tests/process_sync.rs::aris_location_row_passes_shapes` | Process sources are declared in the ontology proves its row as stated in requirements.md |
+| T-091 | MEDULLA-CQ-ORCH-R703.8 | L4 | `tests/competency/test_process_sync_served.py::test_aris_repository_sync_then_deploy` | ARIS repository sync hot-path proof proves its row as stated in requirements.md |
+| T-092 | MEDULLA-CQ-ORCH-R703.8 | L4 | `tests/competency/test_process_sync_served.py::test_unconfigured_aris_source_is_unavailable` | An unconfigured ARIS source is unavailable, never an empty success |
+| T-093 | MEDULLA-CQ-ORCH-R704.9 | L1 | `crates/medulla-compute/src/process_plan/tests.rs::plan_code_names_no_source_format` | The plan reads only the canonical form proves its row as stated in requirements.md |
+| T-094 | MEDULLA-CQ-ORCH-R704.9 | L1 | `crates/medulla-compute/src/process_plan/tests.rs::equal_canonical_digest_gives_equal_plan_digest` | Equal canonical digests give equal plan digests |
 
 ## Negative and boundary cases
 
-A source that is not connected: typed abstention naming the source. A planted-invalid shape input: rejected. A part of the composed answer without data: a typed abstention for that part only, never a dropped field. Cross-tenant requests: empty answers or `ACCESS_DENIED` before any read. A refusal of the compiler, the importer or the architecture view changes no durable state.
+A source that is not connected: typed abstention naming the source. A planted-invalid shape input: rejected. A part of the composed answer without data: a typed abstention for that part only, never a dropped field. Cross-tenant requests: empty answers or `ACCESS_DENIED` before any read. A refusal of the compiler, the importer or the architecture view changes no durable state. A strict export to a format that cannot hold a construct refuses `PROCESS_EXPORT_LOSSY` and lists every loss; a non-strict export lists them and never drops one silently. An unconfigured ARIS connector is `SOURCE_UNAVAILABLE` with its typed code, never an empty success.
 
 ## Quality and release proof
 

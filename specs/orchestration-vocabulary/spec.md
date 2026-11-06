@@ -103,6 +103,7 @@ The user is an analyst or a planner. The outcome is that BPMN 2.0 and DMN elemen
 **Acceptance scenarios**
 
 1. **Given** a user task and a gateway as `:Bpmn` nodes, **When** a query asks for core classes, **Then** both return. The shapes refuse a flow without a target.
+2. **Given** the `camunda-mcp` and `aris-mcp` pack ontologies, **When** they import, **Then** every BPMN and EPC class states one canonical step kind from the closed list and reaches a core process term, and no pack re-parents a core term.
 
 Independent test: the bound tests of `MEDULLA-ORCH-VOCAB-R014.8` run this story through a production entry point.
 
@@ -126,6 +127,7 @@ Independent test: the bound tests of `MEDULLA-ORCH-VOCAB-R014.8` run this story 
 - **FR-007**: Organization, team, definition and workflow records are graph facts with named selection rules. Rows: `MEDULLA-ORCH-VOCAB-R750`, `MEDULLA-ORCH-VOCAB-R751`, `MEDULLA-ORCH-VOCAB-R800`, `MEDULLA-ORCH-VOCAB-R808`, `MEDULLA-ORCH-VOCAB-R809`.
 - **FR-008**: Harness components and the improvement library keep versioned, evidenced history. Rows: `MEDULLA-ORCH-VOCAB-R801`, `MEDULLA-ORCH-VOCAB-R802`, `MEDULLA-ORCH-VOCAB-R810`.
 - **FR-009**: BPMN 2.0 and DMN classes and the step binding properties roll up to six core process terms. Rows: `MEDULLA-ORCH-VOCAB-R014`.
+- **FR-010**: every process class of every source, BPMN or EPC, states its canonical step kind with one closed annotation, so sources map onto one canonical workflow. Rows: `MEDULLA-ORCH-VOCAB-R014.9`, `MEDULLA-ORCH-VOCAB-R014.10`.
 
 ## Success Criteria
 
@@ -138,6 +140,7 @@ Independent test: the bound tests of `MEDULLA-ORCH-VOCAB-R014.8` run this story 
 - **SC-007**: A policy rule that contradicts an invariant is never activated. Rows: `MEDULLA-ORCH-VOCAB-R012.7.3`.
 - **SC-008**: A published definition revision is never changed by an edit. Rows: `MEDULLA-ORCH-VOCAB-R800.3`, `MEDULLA-ORCH-VOCAB-R800.4`.
 - **SC-009**: Every `:Bpmn` and `:Dmn` class has exactly one core ancestor. Rows: `MEDULLA-ORCH-VOCAB-R014.2`, `MEDULLA-ORCH-VOCAB-R014.3`.
+- **SC-010**: Every `:dagNodeKind` value in the core and pack ontologies is in the closed list. Rows: `MEDULLA-ORCH-VOCAB-R014.9`.
 
 ## Assumptions
 

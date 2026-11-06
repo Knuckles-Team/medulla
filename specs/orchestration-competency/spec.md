@@ -56,14 +56,16 @@ An operator asks which components to load for a job, which downtime jobs run nex
 1. **Given** two imported packs, **When** the load-set question runs for a job, **Then** a bounded non-empty answer with one premise per row returns.
 2. **Given** a seed imported twice with the catalog part changed, **When** the seed question runs, **Then** `catalog` is `replaced` and the other parts are `unchanged`.
 
-### User Story 6 - Business processes compile to stored workflows (Priority: P3)
+### User Story 6 - Every process source meets in one canonical workflow (Priority: P2)
 
-A harness submits a modeled process and a stored process model; the engine compiles or imports it into one versioned workflow that replays.
+A harness submits a modeled process, a BPMN document or the canonical form of an ARIS EPC model. The engine compiles or admits it into one versioned canonical workflow that replays. BPMN and EPC are interchangeable: the same process authored in either gives one workflow and one agent DAG, and an export to a format that cannot hold a construct lists the loss instead of dropping it.
 
 **Acceptance Scenarios**:
 
 1. **Given** a process of 12 nodes, **When** it compiles twice, **Then** version 2 is written and a stale expected version is refused.
 2. **Given** an imported EPC model, **When** it is exported again, **Then** the AND, OR and XOR gates survive.
+3. **Given** the invoice approval process authored once as BPMN and once as an ARIS AML export, **When** both are imported and planned, **Then** the two workflows share one canonical digest and the two plans share one plan digest.
+4. **Given** a workflow with a boundary event, **When** it is exported strictly to EPC, **Then** the export refuses `PROCESS_EXPORT_LOSSY` and lists the loss.
 
 ### User Story 7 - Process documents round-trip and sync with the process engine (Priority: P2)
 
@@ -76,7 +78,7 @@ An operator imports a BPMN 2.0 or DMN document and exports it again unchanged. T
 
 ### User Story 8 - A process model becomes an agent DAG plan (Priority: P2)
 
-A caller asks for the plan of a stored workflow. Each task binds to a tool, a prompt, a decision or an approval; each gateway becomes a branch or join.
+A caller asks for the plan of a stored workflow. The plan reads only the canonical form. Each step binds by its canonical kind to a tool, a prompt, a decision or an approval; each gate becomes a branch or join.
 
 **Acceptance Scenarios**:
 
@@ -97,9 +99,9 @@ A caller asks for the plan of a stored workflow. Each task binds to a tool, a pr
 - **FR-003**: each probe is an engine-side acceptance test. Rows: `MEDULLA-CQ-ORCH-R009`.
 - **FR-004**: the graph serves architecture views derived from ingested code and diagrams. Rows: `MEDULLA-CQ-ORCH-R010`.
 - **FR-005**: the job, downtime and plan questions are answered from served reads. Rows: `MEDULLA-CQ-ORCH-R011`.
-- **FR-006**: modeled processes compile to stored workflows and stored process models import and export. Rows: `MEDULLA-CQ-ORCH-R700`, `MEDULLA-CQ-ORCH-R701`.
-- **FR-007**: BPMN 2.0 and DMN documents import natively and export round-trip safe, and process models sync two ways with the process engine. Rows: `MEDULLA-CQ-ORCH-R702`, `MEDULLA-CQ-ORCH-R703`.
-- **FR-008**: a stored workflow becomes one canonical agent DAG plan with tool, agent, decision, approval, branch and join steps. Rows: `MEDULLA-CQ-ORCH-R704`.
+- **FR-006**: modeled processes compile to stored workflows, and every process source (BPMN process engine, ARIS EPC repository) imports to and exports from one canonical workflow under stated round-trip and loss rules. Rows: `MEDULLA-CQ-ORCH-R700`, `MEDULLA-CQ-ORCH-R701`.
+- **FR-007**: BPMN 2.0 and DMN documents import natively and export round-trip safe, and process models sync two ways with every process source. Rows: `MEDULLA-CQ-ORCH-R702`, `MEDULLA-CQ-ORCH-R703`.
+- **FR-008**: a stored canonical workflow becomes one canonical agent DAG plan with tool, agent, decision, approval, branch and join steps, built from the canonical form only. Rows: `MEDULLA-CQ-ORCH-R704`.
 - **FR-009**: the architecture model exports and imports in the ArchiMate Open Exchange Format and syncs with the architecture-modelling connector. Rows: `MEDULLA-CQ-ORCH-R705`.
 
 ## Success Criteria
@@ -109,6 +111,8 @@ A caller asks for the plan of a stored workflow. Each task binds to a tool, a pr
 - **SC-003**: no refusal changes durable state. Rows: `MEDULLA-CQ-ORCH-R700.4`, `MEDULLA-CQ-ORCH-R701.4`, `MEDULLA-CQ-ORCH-R702.12`, `MEDULLA-CQ-ORCH-R703.4`, `MEDULLA-CQ-ORCH-R705.8`.
 - **SC-004**: import, export and import again keep the canonical digest for BPMN, DMN and ArchiMate documents. Rows: `MEDULLA-CQ-ORCH-R702.14`, `MEDULLA-CQ-ORCH-R702.15`, `MEDULLA-CQ-ORCH-R705.10`.
 - **SC-005**: every task of a process plan has a binding or a named abstention. Rows: `MEDULLA-CQ-ORCH-R704.8`.
+- **SC-006**: one process authored as BPMN and as EPC gives one canonical digest and one plan digest. Rows: `MEDULLA-CQ-ORCH-R701.9`, `MEDULLA-CQ-ORCH-R704.9`.
+- **SC-007**: no export drops a construct silently; every loss is listed, and a strict export refuses. Rows: `MEDULLA-CQ-ORCH-R701.8`.
 
 ## Assumptions
 
@@ -122,7 +126,7 @@ The search of the decision-engine, federated-query, unified-data-plane and typed
 
 ## Scope and interfaces
 
-Owned: ontology gaps, shapes, source-authority mappings, fixtures and acceptance tests, the composed envelope and the job questions. Also owned: the architecture view and its ArchiMate exchange, and the workflow compiler and importer. Also owned: BPMN and DMN document exchange, the process engine sync adapter and the process-to-plan translation. Mechanisms are cited, not re-specified. Non-goals: a new planner, solver changes, and arbora tool implementation.
+Owned: ontology gaps, shapes, source-authority mappings, fixtures and acceptance tests, the composed envelope and the job questions. Also owned: the architecture view and its ArchiMate exchange, and the workflow compiler and importer. Also owned: the canonical workflow form and the process source contract, BPMN and DMN document exchange, the process sync adapter and the process-to-plan translation. The EPC format mapping belongs to the ARIS connector (`CONN-ARIS-MCP`). Mechanisms are cited, not re-specified. Non-goals: a new planner, solver changes, and arbora tool implementation.
 
 ## Traceability
 
@@ -133,7 +137,7 @@ Owned: ontology gaps, shapes, source-authority mappings, fixtures and acceptance
 | FR-003 | `MEDULLA-CQ-ORCH-R009` | plan.md Probes | T-004 | PENDING |
 | FR-004 | `MEDULLA-CQ-ORCH-R010` | plan.md Architecture views | T-005 | PENDING |
 | FR-005 | `MEDULLA-CQ-ORCH-R011` | plan.md Job and plan questions | T-006 | PENDING |
-| FR-006 | `MEDULLA-CQ-ORCH-R700` | plan.md Workflows | T-007 | PENDING |
+| FR-006 | `MEDULLA-CQ-ORCH-R700`, `MEDULLA-CQ-ORCH-R701` | plan.md Workflows | T-007 | PENDING |
 | FR-007 | `MEDULLA-CQ-ORCH-R702`, `MEDULLA-CQ-ORCH-R703` | plan.md Process documents and engine sync | T-042 | PENDING |
 | FR-008 | `MEDULLA-CQ-ORCH-R704` | plan.md Process plans | T-066 | PENDING |
 | FR-009 | `MEDULLA-CQ-ORCH-R705` | plan.md Architecture exchange | T-075 | PENDING |

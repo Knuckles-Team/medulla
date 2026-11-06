@@ -67,12 +67,16 @@ Producer first: ontology terms, shapes and authority mappings, then fixtures and
 - [ ] T061 [US6] MEDULLA-CQ-ORCH-R700.4 Process compile refusal
 - [ ] T062 [US6] MEDULLA-CQ-ORCH-R700.5 Process compile evidence
 - [ ] T063 [US6] MEDULLA-CQ-ORCH-R700.6 Process compile hot-path proof
-- [ ] T064 [US6] MEDULLA-CQ-ORCH-R701.1 Imported process model and gate classification
-- [ ] T065 [US6] MEDULLA-CQ-ORCH-R701.2 Process model import and export behaviour
+- [ ] T064 [US6] MEDULLA-CQ-ORCH-R701.1 Canonical workflow records
+- [ ] T065 [US6] MEDULLA-CQ-ORCH-R701.2 Canonical form rules, admission and export
 - [ ] T066 [US6] MEDULLA-CQ-ORCH-R701.3 Process model import and export wiring
-- [ ] T067 [US6] MEDULLA-CQ-ORCH-R701.4 Process model import refusal
+- [ ] T067 [US6] MEDULLA-CQ-ORCH-R701.4 Process model import and export refusal
 - [ ] T068 [US6] MEDULLA-CQ-ORCH-R701.5 Process model import evidence
 - [ ] T069 [US6] MEDULLA-CQ-ORCH-R701.6 Process model import hot-path proof
+- [ ] T111 [US6] MEDULLA-CQ-ORCH-R701.7 BPMN maps onto the canonical form through class annotations
+- [ ] T112 [US6] MEDULLA-CQ-ORCH-R701.8 Round-trip and loss rules
+- [ ] T113 [US6] MEDULLA-CQ-ORCH-R701.10 Process sources are declared in the ontology
+- [ ] T114 [US6] MEDULLA-CQ-ORCH-R701.9 Cross-source equivalence proof
 - [ ] T070 [US2] MEDULLA-CQ-ORCH-R012 Served proof of the execution question from onboarded connector operations
 - [ ] T071 [US7] MEDULLA-CQ-ORCH-R702.1 Process document records
 - [ ] T072 [US7] MEDULLA-CQ-ORCH-R702.2 BPMN 2.0 reader
@@ -96,6 +100,7 @@ Producer first: ontology terms, shapes and authority mappings, then fixtures and
 - [ ] T090 [US7] MEDULLA-CQ-ORCH-R703.5 Process sync evidence
 - [ ] T091 [US7] MEDULLA-CQ-ORCH-R703.6 Process sync conflict proof
 - [ ] T092 [US7] MEDULLA-CQ-ORCH-R703.7 Process sync and deploy hot-path proof
+- [ ] T115 [US7] MEDULLA-CQ-ORCH-R703.8 ARIS repository sync hot-path proof
 - [ ] T093 [US8] MEDULLA-CQ-ORCH-R704.1 Process plan request and binding records
 - [ ] T094 [US8] MEDULLA-CQ-ORCH-R704.2 Explicit step bindings from the graph
 - [ ] T095 [US8] MEDULLA-CQ-ORCH-R704.3 Ranked fallback for unbound steps
@@ -104,6 +109,7 @@ Producer first: ontology terms, shapes and authority mappings, then fixtures and
 - [ ] T098 [US8] MEDULLA-CQ-ORCH-R704.6 Process plan refusal
 - [ ] T099 [US8] MEDULLA-CQ-ORCH-R704.7 Process plan evidence
 - [ ] T100 [US8] MEDULLA-CQ-ORCH-R704.8 Process plan hot-path proof
+- [ ] T116 [US8] MEDULLA-CQ-ORCH-R704.9 The plan reads only the canonical form
 - [ ] T101 [US4] MEDULLA-CQ-ORCH-R705.1 Ontology-driven element and relationship mapping
 - [ ] T102 [US4] MEDULLA-CQ-ORCH-R705.2 Architecture exchange records
 - [ ] T103 [US4] MEDULLA-CQ-ORCH-R705.3 Open Exchange Format reader
