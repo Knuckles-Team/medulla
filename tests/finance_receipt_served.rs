@@ -61,10 +61,10 @@ async fn finance_receipt_is_idempotent_by_key() {
 
     let first = call(&state, 3, receipt("key-1")).await;
     assert!(first.error.is_none(), "{:?}", first.error_detail);
-    assert_eq!(first.result, Some(ResultPayload::Bool(true)));
+    assert!(matches!(first.result, Some(ResultPayload::Bool(true))));
     let second = call(&state, 4, receipt("key-1")).await;
     assert!(second.error.is_none(), "{:?}", second.error_detail);
-    assert_eq!(second.result, Some(ResultPayload::Bool(false)));
+    assert!(matches!(second.result, Some(ResultPayload::Bool(false))));
 
     let Method::CreateNodeIfAbsent { node_id, .. } = receipt("key-1") else {
         unreachable!()
