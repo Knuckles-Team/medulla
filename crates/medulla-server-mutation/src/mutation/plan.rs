@@ -108,6 +108,10 @@ pub const GATEWAY_ROUTED: &[&str] = &[
     // MEDULLA-FINANCE-PRIMITIVES-R011.2.3: the served alert door validates the
     // envelope, then the event node and its outbox fact commit as one batch.
     "FinanceAlertRaise",
+    // MEDULLA-DECISION-ENGINE-R166.3: `Register` commits one registration node
+    // through this gateway; `Read` is answered by the catalog admin route before
+    // the graph path and never reaches it.
+    "WorkflowRegistry",
     "PruneByLifecycle",
     "BatchUpdate",
     "ClearLedger",
@@ -677,6 +681,9 @@ pub const LOCAL_ONLY_METHODS: &[&str] = &[
     // The alert's compare-and-set against its stored envelope has no replicated
     // command either (MEDULLA-FINANCE-PRIMITIVES-R011.2.3).
     "FinanceAlertRaise",
+    // The registration upsert has no replicated command either
+    // (MEDULLA-DECISION-ENGINE-R166.3).
+    "WorkflowRegistry",
 ];
 
 /// The local-only names that are NOT gateway-routed.
@@ -728,6 +735,7 @@ fn finance_record_method_name(m: &Method) -> Option<&'static str> {
     match m {
         Method::FinanceRecordPut { .. } => Some("FinanceRecordPut"),
         Method::FinanceAlertRaise { .. } => Some("FinanceAlertRaise"),
+        Method::WorkflowRegistry { .. } => Some("WorkflowRegistry"),
         _ => None,
     }
 }

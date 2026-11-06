@@ -18,6 +18,7 @@ enum Route {
     Policy,
     Analytics,
     FinanceRecords,
+    WorkflowRegistry,
     Other,
 }
 
@@ -139,6 +140,10 @@ fn is_finance_record(method: &Method) -> bool {
     )
 }
 
+fn is_workflow_registry(method: &Method) -> bool {
+    matches!(method, Method::WorkflowRegistry { .. })
+}
+
 /// A predicate selecting the methods one gateway route owns.
 type RouteMatcher = fn(&Method) -> bool;
 
@@ -159,6 +164,7 @@ const ROUTE_MATCHERS: &[(RouteMatcher, Route)] = &[
     (is_policy, Route::Policy),
     (is_analytics, Route::Analytics),
     (is_finance_record, Route::FinanceRecords),
+    (is_workflow_registry, Route::WorkflowRegistry),
 ];
 
 fn route_for(method: &Method) -> Route {
@@ -180,7 +186,8 @@ fn route_handler(route: Route) -> RouteHandler {
         | Route::Lifecycle
         | Route::Import
         | Route::Analytics
-        | Route::FinanceRecords => RouteHandler::Admin,
+        | Route::FinanceRecords
+        | Route::WorkflowRegistry => RouteHandler::Admin,
         #[cfg(any(feature = "shacl", feature = "reasoning"))]
         Route::Policy => RouteHandler::Admin,
         Route::Other => RouteHandler::None,
@@ -252,6 +259,9 @@ async fn try_handle_admin(
         Route::Analytics => try_handle_analytics(ctx, plan, method).await,
         Route::FinanceRecords => {
             super::super::finance_records::handle_record(ctx, tenant_id, method).await
+        }
+        Route::WorkflowRegistry => {
+            super::super::workflow_registry::handle_workflow_register(ctx, tenant_id, method).await
         }
         _ => None,
     }

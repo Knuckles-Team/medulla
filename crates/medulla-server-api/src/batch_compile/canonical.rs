@@ -705,7 +705,10 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         // EH-351/EH-352: edge-index maintenance writes the tenant SQL owner
         // file through its own maintenance writes; a search commits nothing.
         | Method::EdgeIndex { .. }
-        | Method::EdgeSearch { .. } => default_mutation_domain(surface),
+        | Method::EdgeSearch { .. }
+        // MEDULLA-DECISION-ENGINE-R166.3: a registration commits as the one
+        // request-graph `AddNode` upsert; a read commits nothing.
+        | Method::WorkflowRegistry { .. } => default_mutation_domain(surface),
         Method::FinanceSabrImpliedVol { .. }
         | Method::CatalogAssign { .. }
         | Method::EvictBelow { .. }

@@ -52,6 +52,9 @@ mod subgraph;
 mod terminal;
 mod union;
 mod wallet_trust;
+mod workflow_registry;
+#[cfg(test)]
+mod workflow_registry_tests;
 
 #[cfg(any(
     feature = "query",

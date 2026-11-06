@@ -286,6 +286,17 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "STRATEGY_CARD_LICENCE_MISSING",
         ],
     ),
+    // MEDULLA-DECISION-ENGINE-R166.3/R166.4: the workflow registry's closed refusals.
+    (
+        "WorkflowRegistry",
+        &[
+            "WORKFLOW_ID_MISSING",
+            "WORKFLOW_VERSION_MISSING",
+            "WORKFLOW_DIGEST_INVALID",
+            "WORKFLOW_IDENTITY_UNKNOWN",
+            "WORKFLOW_UNAUTHORIZED",
+        ],
+    ),
     // MEDULLA-FINANCE-PRIMITIVES-R011.2.3: the alert door's closed refusals.
     (
         "FinanceAlertRaise",

@@ -45,6 +45,157 @@ pub enum WorkflowRegistryError {
     VersionMissing,
     ContentDigestInvalid,
     IdentityUnknown,
+    /// The workflow exists but its owner scope is not the caller's.
+    Unauthorized,
+}
+
+impl WorkflowRegistryError {
+    /// The registered `ServerErrorCode` token this refusal is reported under
+    /// (MEDULLA-DECISION-ENGINE-R166.4).
+    pub fn code(self) -> &'static str {
+        use medulla_types::contract::ServerErrorCode as Code;
+        match self {
+            Self::WorkflowIdMissing => Code::WorkflowIdMissing,
+            Self::VersionMissing => Code::WorkflowVersionMissing,
+            Self::ContentDigestInvalid => Code::WorkflowDigestInvalid,
+            Self::IdentityUnknown => Code::WorkflowIdentityUnknown,
+            Self::Unauthorized => Code::WorkflowUnauthorized,
+        }
+        .as_str()
+    }
+}
+
+/// Where a registered workflow stands (MEDULLA-DECISION-ENGINE-R166.3).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum WorkflowLifecycle {
+    Active,
+    Withdrawn,
+    Stale,
+}
+
+impl WorkflowLifecycle {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Active => "active",
+            Self::Withdrawn => "withdrawn",
+            Self::Stale => "stale",
+        }
+    }
+
+    pub fn parse(text: &str) -> Option<Self> {
+        match text {
+            "active" => Some(Self::Active),
+            "withdrawn" => Some(Self::Withdrawn),
+            "stale" => Some(Self::Stale),
+            _ => None,
+        }
+    }
+}
+
+/// One served registration: the immutable identity, the scope that owns it and
+/// its lifecycle state.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct WorkflowRegistrationEntry {
+    pub identity: WorkflowIdentity,
+    /// On `Register`, empty or the verified tenant scope; the engine stores the
+    /// verified scope and refuses any other value.
+    pub owner_scope: String,
+    pub lifecycle: WorkflowLifecycle,
+}
+
+impl WorkflowRegistrationEntry {
+    /// The graph node id a registration of `identity` is stored under.
+    pub fn node_id(identity: &WorkflowIdentity) -> String {
+        format!(
+            "workflow:{}:{}:{}",
+            identity.workflow_id, identity.version, identity.content_digest
+        )
+    }
+
+    /// The tenant graph node properties this registration is stored as.
+    pub fn node_properties(&self, tenant_id: &str) -> serde_json::Value {
+        serde_json::json!({
+            "type": WORKFLOW_NODE_TYPE,
+            "workflow_id": self.identity.workflow_id,
+            "version": self.identity.version,
+            "content_digest": self.identity.content_digest,
+            "owner_scope": self.owner_scope,
+            "lifecycle": self.lifecycle.as_str(),
+            "tenant": tenant_id,
+        })
+    }
+
+    /// Read a registration back from stored node properties; `None` when the
+    /// node is not a workflow registration.
+    pub fn from_node_properties(
+        properties: &serde_json::Map<String, serde_json::Value>,
+    ) -> Option<Self> {
+        let text = |key: &str| properties.get(key)?.as_str().map(str::to_string);
+        if text("type")? != WORKFLOW_NODE_TYPE {
+            return None;
+        }
+        Some(Self {
+            identity: WorkflowIdentity {
+                workflow_id: text("workflow_id")?,
+                version: text("version")?,
+                content_digest: text("content_digest")?,
+            },
+            owner_scope: text("owner_scope")?,
+            lifecycle: WorkflowLifecycle::parse(&text("lifecycle")?)?,
+        })
+    }
+}
+
+/// The graph node type of a stored registration.
+pub const WORKFLOW_NODE_TYPE: &str = "WorkflowRegistration";
+
+/// Answer a `Read` of `identity` from the stored node properties the caller can
+/// see (`None` when no visible node exists), on behalf of `caller_scope`.
+///
+/// The visible registration is loaded into a [`WorkflowRegistry`] and read back
+/// by exact identity, so an invalid or unknown identity refuses with the
+/// registry's own error and no default workflow is ever returned. A registration
+/// owned by another scope refuses [`WorkflowRegistryError::Unauthorized`].
+pub fn read_registration(
+    stored: Option<&serde_json::Map<String, serde_json::Value>>,
+    caller_scope: &str,
+    identity: &WorkflowIdentity,
+) -> Result<WorkflowRegistrationEntry, WorkflowRegistryError> {
+    let entry = stored.and_then(WorkflowRegistrationEntry::from_node_properties);
+    let mut registry = WorkflowRegistry::default();
+    if let Some(entry) = &entry {
+        registry.register(entry.identity.clone())?;
+    }
+    registry.read(identity)?;
+    let entry = entry.ok_or(WorkflowRegistryError::IdentityUnknown)?;
+    if entry.owner_scope != caller_scope {
+        return Err(WorkflowRegistryError::Unauthorized);
+    }
+    Ok(entry)
+}
+
+/// One workflow registry operation (`Method::WorkflowRegistry`).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "op", rename_all = "snake_case", deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum WorkflowRegistryOp {
+    /// Store one registration; registering the same record again is a no-op.
+    Register {
+        registration: WorkflowRegistrationEntry,
+    },
+    /// Read one registration by exact identity.
+    Read { identity: WorkflowIdentity },
+}
+
+impl WorkflowRegistryOp {
+    /// Whether this operation changes durable state.
+    pub fn is_mutation(&self) -> bool {
+        matches!(self, Self::Register { .. })
+    }
 }
 
 /// Deterministic, serializable registration records with exact-identity lookup.
