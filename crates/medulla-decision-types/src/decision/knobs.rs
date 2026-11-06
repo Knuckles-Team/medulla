@@ -184,6 +184,7 @@ mod tests {
         },
     ];
 
+    /// Verifies MEDULLA-DECISION-ENGINE-R179.1: Knob registry types.
     // spec: MEDULLA-DECISION-ENGINE-R179.1
     #[test]
     fn knob_specs_round_trip_and_defaults_lie_within_bounds() {
