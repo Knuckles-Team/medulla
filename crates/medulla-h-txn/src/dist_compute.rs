@@ -485,9 +485,8 @@ async fn index_matview(state: &Arc<RwLock<ServerState>>, def: PlanMatView) {
         let s = state.read().await;
         s.cdc_hub().map(|hub| hub.head_seq(&def.graph)).unwrap_or(0)
     };
-    // Best-effort durable operator-state snapshot (observability + a future resume seam;
-    // reload today conservatively re-materializes in Recompute mode, per the CDC-ring
-    // staleness guard — never a silent gap).
+    // Best-effort durable operator-state snapshot (observability; boot reseeds the
+    // circuit from the current graph through this same function and rewrites the row).
     if let Ok(blob) = matview::incremental::encode_operator_state(&circuit) {
         let backend = { state.read().await.persistence.clone() };
         if let Some(redb) = backend.as_ref().and_then(|b| b.as_redb()) {
@@ -693,15 +692,15 @@ pub async fn reload_matviews(state: &Arc<RwLock<ServerState>>) -> Result<usize, 
         }
     }
     // Re-hydrate the PLAN-BACKED matview manager from its disjoint durable table
-    // (CONCEPT:MEDULLA-KG.storage.plan-backed-matview). The result rows are NOT persisted (they
-    // ride the version-keyed result cache), so a reloaded view materializes lazily on its
-    // first `Get` (its cache lookup MISSES — nothing cached yet — and recomputes).
+    // (CONCEPT:MEDULLA-KG.storage.plan-backed-matview). Each reloaded definition is compiled and
+    // reseeded from the current graph exactly as at definition (MEDULLA-INCREMENTAL-VIEWS-R006);
+    // a view that fails to compile reloads in recompute mode with its typed reason.
     #[cfg(feature = "matview")]
     {
         for (name, blob) in redb.plan_matview_scan()? {
             match matview::decode_def(&blob) {
                 Ok(def) => {
-                    matview::manager().define(def);
+                    index_matview(state, def).await;
                     n += 1;
                 }
                 Err(e) => tracing::warn!("skipping corrupt plan matview '{name}': {e}"),

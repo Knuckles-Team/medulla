@@ -128,3 +128,60 @@ async fn ontology_retraction_updates_closure_incrementally() {
         expected.classification.subsumers
     );
 }
+
+/// Verifies MEDULLA-INCREMENTAL-VIEWS-R006: a persisted plan view reloads at boot
+/// compiled and reseeded in incremental mode, and the operator-state row is rewritten.
+// spec: MEDULLA-INCREMENTAL-VIEWS-R006
+#[cfg(all(feature = "matview", feature = "redb"))]
+#[tokio::test(flavor = "multi_thread")]
+async fn restart_reloads_plan_view_in_incremental_mode() {
+    use medulla_persistence::AsRedb;
+    use medulla_protocol_types::protocol::GraphType;
+    use medulla_server_cdc::matview::{encode_def, manager, Mode, PlanMatView};
+    use medulla_types::wire::{Op, Plan};
+
+    const VIEW: &str = "r006-restart-view";
+    let _env_lock = medulla_kernel::crypto::acquire_test_env_lock().await;
+    let dir = tempfile::tempdir().unwrap();
+    let persist = dir.path().to_string_lossy().into_owned();
+    let backend: Arc<dyn medulla_server_api::api::persistence::PersistenceBackend> = Arc::new(
+        medulla_persistence::redb_backend::RedbBackend::open(persist.clone(), 64).unwrap(),
+    );
+    let mut state = medulla_server::seams_install::new_state_for_test(
+        "r006-reload-secret", // sanitizer:ignore
+        ServerState::test_isolation(CREATOR),
+    );
+    state.persist_dir = Some(persist);
+    state.persistence = Some(backend.clone());
+    let _ = state.registry.create_graph(GRAPH, GraphType::Global, None);
+    let state = Arc::new(RwLock::new(state));
+
+    // The durable definition a previous process left behind; the in-RAM index is empty.
+    let view = PlanMatView {
+        name: VIEW.to_string(),
+        graph: GRAPH.to_string(),
+        plan: Plan::new(vec![Op::Scan {
+            label: "Doc".into(),
+        }]),
+    };
+    let redb = backend.as_redb().expect("redb backend");
+    redb.plan_matview_put(VIEW, encode_def(&view).unwrap())
+        .await
+        .unwrap();
+    assert!(manager().mode(VIEW).is_none());
+
+    let txn = medulla_server_ops::api::query_txn::txn_seam(&state)
+        .await
+        .expect("transaction seam installed");
+    assert!(txn.reload_matviews(&state).await.unwrap() >= 1);
+
+    assert_eq!(manager().mode(VIEW), Some(Mode::Incremental));
+    assert!(manager().fallback_reason(VIEW).is_none());
+    assert!(
+        redb.matview_operator_state_scan()
+            .unwrap()
+            .iter()
+            .any(|(name, _)| name == VIEW),
+        "the operator-state row is rewritten by the reseed"
+    );
+}
