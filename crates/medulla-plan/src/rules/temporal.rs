@@ -651,10 +651,13 @@ mod tests {
             record: out.facts[0].clone(),
             prior_digest: None,
         };
-        let payload =
-            derive_facts_mutation(OpaqueId::new("m:1").unwrap(), scope(), &[first.clone()])
-                .unwrap()
-                .unwrap();
+        let payload = derive_facts_mutation(
+            OpaqueId::new("m:1").unwrap(),
+            scope(),
+            std::slice::from_ref(&first),
+        )
+        .unwrap()
+        .unwrap();
         payload.canonical_payload_digest().unwrap();
         let tomb = retraction(&first.record);
         assert_eq!((tomb.revision, tomb.tombstone), (2, true));
