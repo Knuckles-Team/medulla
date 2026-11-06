@@ -5826,12 +5826,14 @@ dependencies = [
 name = "medulla-jobs"
 version = "0.1.0"
 dependencies = [
+ "criterion",
  "hex",
  "medulla-core",
  "medulla-graph-core",
  "medulla-jobs",
  "medulla-mutation-types",
  "medulla-protocol-types",
+ "medulla-resource",
  "medulla-result-types",
  "medulla-storage",
  "medulla-transaction",
