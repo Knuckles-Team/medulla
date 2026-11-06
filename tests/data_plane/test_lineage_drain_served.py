@@ -66,6 +66,7 @@ def _has_edge(client: Any, graph: str, source: str, target: str) -> bool:
 
 @pytest.mark.spec("MEDULLA-UNIFIED-DATA-PLANE-R702.3")
 def test_lake_sweep_run_event_reaches_lineage_graph(start_medulla_server) -> None:
+    """Verifies MEDULLA-UNIFIED-DATA-PLANE-R702.3: sweep-fed lineage wiring."""
     graph = f"lineage-{uuid.uuid4().hex[:8]}"
     client = _client()
     try:
@@ -87,6 +88,7 @@ def test_lake_sweep_run_event_reaches_lineage_graph(start_medulla_server) -> Non
 
 @pytest.mark.spec("MEDULLA-UNIFIED-DATA-PLANE-R702.6")
 def test_replay_adds_no_edges_and_bad_events_quarantine(start_medulla_server) -> None:
+    """Verifies MEDULLA-UNIFIED-DATA-PLANE-R702.6: replay and quarantine proof."""
     graph = f"lineage-{uuid.uuid4().hex[:8]}"
     client = _client()
     try:
