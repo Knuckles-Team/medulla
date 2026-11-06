@@ -7089,6 +7089,7 @@ dependencies = [
  "medulla-core",
  "medulla-decision-outcome-types",
  "medulla-decision-stats",
+ "medulla-decision-types",
  "medulla-document",
  "medulla-graph-core",
  "medulla-graphql",

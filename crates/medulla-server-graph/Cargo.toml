@@ -53,6 +53,7 @@ medulla-isolation = { path = "../medulla-isolation" }
 medulla-semantic-index = { path = "../medulla-semantic-index" }
 medulla-decision-stats = { path = "../medulla-decision-stats" }
 medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types" }
+medulla-decision-types = { path = "../medulla-decision-types" }
 medulla-source-types = { path = "../medulla-source-types" }
 medulla-work-types = { path = "../medulla-work-types" }
 medulla-store-apply = { path = "../medulla-store-apply" }
