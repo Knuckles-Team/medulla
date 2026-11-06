@@ -74,6 +74,7 @@ closed_error_codes! {
         MemsyncRetentionExhausted => "MEMSYNC_RETENTION_EXHAUSTED",
         MemsyncStorageUnavailable => "MEMSYNC_STORAGE_UNAVAILABLE",
         MemsyncVersionMalformed => "MEMSYNC_VERSION_MALFORMED",
+        DelegationUnknown => "DELEGATION_UNKNOWN",
         DocumentNotFound => "DOCUMENT_NOT_FOUND",
         DocumentPropertiesInvalid => "DOCUMENT_PROPERTIES_INVALID",
         DocumentTextMissing => "DOCUMENT_TEXT_MISSING",

@@ -7468,6 +7468,7 @@ dependencies = [
  "medulla-server-blob",
  "medulla-server-cdc",
  "medulla-server-graph",
+ "medulla-server-obs",
  "medulla-server-ops",
  "medulla-server-router",
  "medulla-source-types",

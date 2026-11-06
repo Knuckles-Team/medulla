@@ -35,6 +35,12 @@ pub async fn dispatch_identity_and_access_methods(
         method @ Method::GetIdentity { .. } => {
             dispatch_identity_and_access_methods_arm_1(ctx, method).await
         }
+        // WorkItem delegation record read (MEDULLA-IDENTITY-R701), gated `identity:read`.
+        #[cfg(feature = "security")]
+        Method::GetDelegationRecord { work_item_id } => {
+            dispatch_get_delegation_record(state, req.id, verified_context, &work_item_id).await
+        }
+
         // A principal's CURRENT access to the request graph, for an executor
         // acting on that principal's behalf (gated `security:check`).
         Method::CheckAccess { agent_id, access } => {
@@ -395,4 +401,47 @@ fn multisig_mutation_response(response: Response) -> Response {
             >,
         ),
     )
+}
+
+/// `GetDelegationRecord`: the stored delegation of one WorkItem under the verified
+/// request tenant. A foreign-tenant record resolves exactly as an absent one.
+#[cfg(feature = "security")]
+async fn dispatch_get_delegation_record(
+    state: &Arc<RwLock<ServerState>>,
+    req_id: u64,
+    context: &VerifiedRequestContext,
+    work_item_id: &str,
+) -> Response {
+    let Some(tenant) =
+        medulla_server_identity::dispatch::identity_store::resolution_context::record_tenant(
+            context,
+        )
+    else {
+        return Response::err(
+            req_id,
+            "ACCESS_DENIED: the request carries no verified tenant",
+        );
+    };
+    let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
+    let found = {
+        let guard = timed_read(state).await;
+        guard.isolation.rbac().identity_store().delegation_state(
+            work_item_id,
+            &tenant,
+            now_ms,
+            &medulla_capabilities::scopes::ScopeRegistry,
+        )
+    };
+    match found {
+        Some(delegation) => Response::ok(
+            req_id,
+            ResultPayload::of::<
+                medulla_protocol_types::result_contract::security::GetDelegationRecord,
+            >(delegation),
+        ),
+        None => Response::err(
+            req_id,
+            "DELEGATION_UNKNOWN: no delegation record for this work item",
+        ),
+    }
 }

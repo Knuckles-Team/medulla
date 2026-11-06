@@ -30,6 +30,7 @@ mod access_ops;
 mod approval_keys;
 mod auth;
 mod authority;
+mod delegation;
 mod external;
 mod import;
 mod invariants;
@@ -76,6 +77,9 @@ pub struct IdentityStore {
     pub(super) approval_keys: BTreeMap<String, super::approval_key::ApprovalKeyRecord>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(super) config: Option<IdentityConfig>,
+    /// WorkItem id → delegation record (MEDULLA-IDENTITY-R701).
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub(super) delegations: BTreeMap<String, super::delegation::DelegationRecord>,
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub(super) users: BTreeMap<String, super::model::UserRecord>,
     /// Normalized username → principal id.
@@ -131,6 +135,7 @@ fn reshapes_authority(op: &IdentityOp) -> bool {
         | IdentityOp::User(_)
         | IdentityOp::Access(_)
         | IdentityOp::Idp(_) => op.is_mutation(),
+        IdentityOp::Delegation(_) => false,
         IdentityOp::Credential(op) => {
             matches!(op, super::ops::CredentialOp::ExternalLogin { .. })
         }
@@ -269,6 +274,7 @@ impl IdentityStore {
             IdentityOp::Mfa(op) => self.apply_mfa(op, stamp, ctx),
             IdentityOp::Access(op) => self.apply_access(op, stamp, ctx),
             IdentityOp::Idp(op) => self.apply_idp(op, stamp, ctx),
+            IdentityOp::Delegation(op) => self.apply_delegation(op, stamp, ctx),
         }
     }
 
