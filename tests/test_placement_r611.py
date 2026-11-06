@@ -15,6 +15,7 @@ from medulla.client import MedullaClient
 from medulla.placement import (
     PLACEMENT_STALE,
     Breaker,
+    PlacementConfig,
     PlacementDirectory,
     PlacementStaleError,
     TenantPool,
@@ -81,6 +82,61 @@ pytestmark = pytest.mark.no_engine
 
 
 # --- R611.1 / R611.2: model and behaviour -----------------------------------
+
+
+@pytest.mark.spec("MEDULLA-PLACEMENT-R611.1")
+@pytest.mark.asyncio
+async def test_pool_and_breaker_types_validate() -> None:
+    defaults = PlacementConfig()
+    assert (defaults.pool_size, defaults.breaker_failures) == (64, 5)
+    assert defaults.breaker_half_open_ms == 10_000
+    config = PlacementConfig.from_mapping(
+        {
+            "placement.pool_size": 1_024,
+            "placement.breaker_failures": 1,
+            "placement.breaker_half_open_ms": 100,
+            "other.key": "ignored",
+        }
+    )
+    assert config.pool_size == 1_024
+    for key, bad in (
+        ("placement.pool_size", 0),
+        ("placement.pool_size", 1_025),
+        ("placement.breaker_failures", 101),
+        ("placement.breaker_half_open_ms", 99),
+        ("placement.breaker_half_open_ms", 600_001),
+        ("placement.breaker_failures", True),
+        ("placement.unknown", 1),
+    ):
+        with pytest.raises(ValueError):
+            PlacementConfig.from_mapping({key: bad})
+
+    now = [0.0]
+    breaker = PlacementConfig(breaker_failures=1).breaker(clock=lambda: now[0])
+    assert breaker.state == "closed"
+    breaker.record_failure()
+    assert breaker.state == "open"
+    now[0] = 10.0
+    assert breaker.state == "half_open"
+    with pytest.raises(ValueError):
+        Breaker(failure_threshold=0)
+    with pytest.raises(ValueError):
+        Breaker(reset_after_s=0.0)
+
+    async def factory(tenant: str) -> str:
+        return tenant
+
+    pool: TenantPool[str] = TenantPool(factory, capacity=defaults.pool_size)
+    assert await pool.acquire("tenant-a:prod") == "tenant-a:prod"
+    for bad_tenant in ("", "tenant a", "tenant\n", "t" * 1_025, "tenänt", 7):
+        with pytest.raises(ValueError):
+            await pool.acquire(bad_tenant)
+    with pytest.raises(ValueError):
+        TenantPool(factory, capacity=1_025)
+    directory = PlacementDirectory(_FakeEngine([]))
+    with pytest.raises(ValueError):
+        await directory.route("bad tenant", "p")
+    assert directory.breaker("tcp://n1:9100").state == "closed"
 
 
 @pytest.mark.spec("MEDULLA-PLACEMENT-R611.2")
@@ -322,3 +378,41 @@ async def test_connection_pool_uses_the_shared_transport_function(
     await pool._create_client()
     assert calls == ["unix:///run/medulla.sock"]
     assert captured["socket_path"] == "/run/medulla.sock"
+
+
+# --- R611.6: journey ---------------------------------------------------------
+
+
+@pytest.mark.spec("MEDULLA-PLACEMENT-R611.6")
+@pytest.mark.asyncio
+async def test_pool_breaker_and_stale_route_journey() -> None:
+    """A stale route is refetched once, the accepted route is then served from
+    the cache, the breaker opens on failures and the pool stays bounded."""
+    engine = _FakeEngine([], [_route(1, stale=True), _route(4)])
+    created: list[str] = []
+
+    async def factory(tenant: str) -> str:
+        created.append(tenant)
+        return tenant
+
+    pool: TenantPool[str] = TenantPool(factory, capacity=2)
+    directory = PlacementDirectory(engine, tenant_pool=pool)  # type: ignore[arg-type]
+    assert directory.cached_route("t", "p") is None
+
+    route = await directory.route("t", "p")
+    assert route["epoch"] == 4
+    assert engine.route_calls == [0, 0]
+    assert directory.cached_route("t", "p") == route
+    assert directory.metrics().stale_rejects == 1
+
+    endpoint = route["endpoints"][0]
+    breaker = directory.breaker(endpoint)
+    for _ in range(PlacementConfig().breaker_failures):
+        breaker.record_failure()
+    assert not breaker.allow()
+    assert directory.metrics().breaker_state[endpoint] == "open"
+
+    for tenant in ("t1", "t2", "t3"):
+        await pool.acquire(tenant)
+    assert len(pool) == 2
+    assert directory.metrics().evictions == 1

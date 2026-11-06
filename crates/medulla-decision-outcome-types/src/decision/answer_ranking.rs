@@ -112,6 +112,38 @@ pub enum AnswerRankingRefusal {
     IncompleteComparisons { missing: usize },
 }
 
+impl medulla_decision_types::decision::record::outcome::DecisionRefusal for AnswerRankingRefusal {
+    fn code(&self) -> medulla_decision_types::decision::record::outcome::RefusalCode {
+        use medulla_decision_types::decision::codes;
+        match self {
+            Self::VerifierNamed { .. } => codes::ANSWER_RANKING_VERIFIER_NAMED,
+            Self::TooFewCandidates { .. } => codes::ANSWER_RANKING_TOO_FEW_CANDIDATES,
+            Self::RevisionBoundExceeded { .. } => codes::ANSWER_RANKING_REVISION_BOUND_EXCEEDED,
+            Self::InvalidRetain { .. } => codes::ANSWER_RANKING_INVALID_RETAIN,
+            Self::DuplicateCandidate { .. } => codes::ANSWER_RANKING_DUPLICATE_CANDIDATE,
+            Self::UnknownCandidate { .. } => codes::ANSWER_RANKING_UNKNOWN_CANDIDATE,
+            Self::DuplicateComparison { .. } => codes::ANSWER_RANKING_DUPLICATE_COMPARISON,
+            Self::IncompleteComparisons { .. } => codes::ANSWER_RANKING_INCOMPLETE_COMPARISONS,
+        }
+    }
+
+    fn detail(&self) -> String {
+        match self {
+            Self::VerifierNamed { verifier } => format!("verifier {verifier} is not allowed"),
+            Self::TooFewCandidates { count } => format!("{count} candidates"),
+            Self::RevisionBoundExceeded { needed, bound } => {
+                format!("{needed} revisions needed, bound {bound}")
+            }
+            Self::InvalidRetain { retain_top_k } => format!("retain_top_k {retain_top_k}"),
+            Self::DuplicateCandidate { candidate_id } | Self::UnknownCandidate { candidate_id } => {
+                candidate_id.clone()
+            }
+            Self::DuplicateComparison { first, second } => format!("{first} / {second}"),
+            Self::IncompleteComparisons { missing } => format!("{missing} pairs missing"),
+        }
+    }
+}
+
 fn check_shape(request: &AnswerRankingRequest) -> Result<BTreeSet<&str>, AnswerRankingRefusal> {
     if let Some(verifier) = &request.verifier {
         return Err(AnswerRankingRefusal::VerifierNamed {

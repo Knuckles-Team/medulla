@@ -167,7 +167,7 @@ fn confidence_op_ranks_by_propagated_belief() {
         Op::Scan {
             label: "Claim".into(),
         },
-        Op::ConfidenceOp {},
+        Op::ConfidenceOp { threshold: None },
     ]);
     let rows = plan.execute(&ctx).unwrap();
     // Three `Claim` nodes: claim1 (support+contradiction+attack), derived1 (support from

@@ -10,12 +10,17 @@
 //!   `ORDER BY` still decides which rows come first; skipped for `FETCH`, `LIMIT … BY`,
 //!   `OFFSET`-comma and non-literal limits.
 
+use std::sync::{Arc, Mutex};
+
 use medulla_types::wire::ForeignSourceSpec;
 
+use super::budget::SOURCE_WRITE_FORBIDDEN;
 use super::capability::{KeyLookup, LimitPushdown, RemoteRequest, SourceCapabilities};
 use super::remote::{Identity, RemoteFetch};
+use super::snapshot::{SnapshotBound, SnapshotConn};
 use medulla_exec::rowset::RowSet;
 use medulla_exec::sql_text::{quote_identifier, render_literal, validate_identifier, SqlDialect};
+use medulla_types::metadata_acceleration::{SnapshotIsolation, SnapshotSemantics};
 
 /// Keys per `IN` list (well under every driver's bind/statement limits).
 const MAX_SQL_KEYS: usize = 1000;
@@ -35,6 +40,8 @@ pub(crate) struct SqlRemote<'a> {
     spec: SqlSpec<'a>,
     identity: Identity,
     dialect: Option<SqlDialect>,
+    /// The connection the query's snapshot holds; every statement reuses it while it is set.
+    held: Mutex<Option<Arc<dyn SnapshotConn>>>,
 }
 
 impl<'a> SqlRemote<'a> {
@@ -44,11 +51,21 @@ impl<'a> SqlRemote<'a> {
             spec,
             identity,
             dialect,
+            held: Mutex::new(None),
         }
     }
 
-    /// Run `query` through the validated `SqlSource` path.
+    /// Run `query` through the validated `SqlSource` path, or through the held snapshot
+    /// connection when the query opened one. A statement that is not a `SELECT` is refused
+    /// with `SOURCE_WRITE_FORBIDDEN` before any connection is used.
     fn run(&self, query: String) -> Result<RowSet, String> {
+        if let Some(dialect) = self.dialect {
+            ensure_select(&query, dialect)?;
+        }
+        let held = self.held.lock().ok().and_then(|slot| slot.clone());
+        if let Some(conn) = held {
+            return conn.run(&query);
+        }
         let spec = ForeignSourceSpec::Sql {
             dsn: self.spec.dsn.to_string(),
             query,
@@ -95,7 +112,44 @@ impl RemoteFetch for SqlRemote<'_> {
             Some(_) => LimitPushdown::Native,
             None => LimitPushdown::Unsupported,
         };
-        SourceCapabilities::single_full_fetch(key_lookup, limit)
+        let caps = SourceCapabilities::single_full_fetch(key_lookup, limit);
+        if cfg!(feature = "federation-sql") && dialect == SqlDialect::Postgres {
+            caps.with_snapshot_reads()
+        } else {
+            caps
+        }
+    }
+
+    fn open_snapshot(&self, bound: &SnapshotBound) -> Result<Option<SnapshotSemantics>, String> {
+        #[cfg(feature = "federation-sql")]
+        if self.dialect == Some(SqlDialect::Postgres) {
+            let (conn, token) = crate::federation::PgSnapshot::open(
+                self.spec.dsn,
+                self.spec.id_field,
+                self.spec.score_field,
+                bound,
+            )?;
+            if let Ok(mut slot) = self.held.lock() {
+                *slot = Some(Arc::new(conn));
+            }
+            return Ok(Some(SnapshotSemantics {
+                isolation: SnapshotIsolation::RepeatableRead,
+                snapshot_token: token,
+                replica_lag_bound_ms: bound.replica_lag_bound_ms,
+            }));
+        }
+        let _ = bound;
+        Ok(None)
+    }
+
+    fn held_snapshot(&self) -> Option<Arc<dyn SnapshotConn>> {
+        self.held.lock().ok().and_then(|slot| slot.clone())
+    }
+
+    fn adopt_snapshot(&self, conn: Arc<dyn SnapshotConn>) {
+        if let Ok(mut slot) = self.held.lock() {
+            *slot = Some(conn);
+        }
     }
 
     fn identity(&self) -> &Identity {
@@ -115,6 +169,30 @@ impl RemoteFetch for SqlRemote<'_> {
     fn key_expressible(&self, key: &str) -> bool {
         let mysql_backslash = self.dialect == Some(SqlDialect::MySql) && key.contains('\\');
         !(key.contains('\0') || mysql_backslash)
+    }
+}
+
+/// Refuse any statement that is not one `SELECT` query (`SOURCE_WRITE_FORBIDDEN`).
+#[cfg(feature = "federation-sql")]
+pub(super) fn ensure_select(statement: &str, dialect: SqlDialect) -> Result<(), String> {
+    use sqlparser::ast::Statement;
+    match parse_one(statement_body(statement), dialect) {
+        Some(Statement::Query(_)) => Ok(()),
+        _ => Err(format!(
+            "{SOURCE_WRITE_FORBIDDEN}: a federated read plan may hold only a SELECT statement"
+        )),
+    }
+}
+
+#[cfg(not(feature = "federation-sql"))]
+pub(super) fn ensure_select(statement: &str, _dialect: SqlDialect) -> Result<(), String> {
+    let head = statement.trim_start().to_ascii_lowercase();
+    if head.starts_with("select") || head.starts_with("with") {
+        Ok(())
+    } else {
+        Err(format!(
+            "{SOURCE_WRITE_FORBIDDEN}: a federated read plan may hold only a SELECT statement"
+        ))
     }
 }
 

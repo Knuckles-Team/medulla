@@ -596,7 +596,7 @@ fn source_reliability_clause_parses() {
 #[test]
 fn confidence_clause_parses() {
     let p = parse("MATCH (:Claim) |> CONFIDENCE |> LIMIT 5").unwrap();
-    assert_eq!(p.ops[1], Op::ConfidenceOp {});
+    assert_eq!(p.ops[1], Op::ConfidenceOp { threshold: None });
 }
 
 /// `EXPLAIN BELIEF <id>` lowers to `Op::ExplainBelief`.

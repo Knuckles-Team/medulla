@@ -281,6 +281,9 @@ jobs:
         env: &medulla-validation-compiler-cache-env
           RUSTC_WRAPPER: sccache
         run: python3 scripts/cargo_test_rescue.py cargo test -p medulla-types -p medulla-core -p medulla-compute --all-features --no-fail-fast
+      - name: Lint (generated Cypher property keys are quoted)
+        env: *medulla-validation-compiler-cache-env
+        run: bash scripts/check_cypher_render.sh
       # The checked ledger is the canonical all-Method projection. The ordinary
       # feature-selected registry is intentionally smaller, so this named profile
       # is the only meaningful exact generated-artifact comparison. This step is
@@ -307,6 +310,8 @@ jobs:
       - &medulla-locked-pytest
         name: Install locked pytest for generated-client checks
         run: uv pip install --python "$(command -v python3)" pytest==9.1.1 iniconfig==2.3.1 packaging==26.3 pluggy==1.7.0 pygments==2.21.0
+      - name: Sole write envelope gate (MEDULLA-DURABLE-KERNEL-R043.102)
+        run: python3 scripts/check_sole_write_envelope.py
       - name: Epistemic Operations manifest ⇄ Rust DTO parity
         run: python3 scripts/check_epistemic_operations_protocol.py
 
@@ -999,6 +1004,51 @@ jobs:
           rm -rf "$BT"
           exit $rc
 
+  # Isolated-mode qualification over a private Unix socket (MEDULLA-IDENTITY-R003.3,
+  # D53): a main-push gate, never a pull-request gate (MEDULLA-CONTRACT-R053.7: a PR
+  # needs only the `ci` job). The runner permits Unix sockets in the job container. One run
+  # uses the full prepared server; the second builds the default feature matrix with
+  # AST repository enrichment. The JUnit report is uploaded as the receipt.
+  no-auth-uds:
+    timeout-minutes: 90
+    name: Isolated mode over a private socket
+    needs: [changes, python-server]
+    if: *medulla-main-only
+    runs-on: *medulla-native-validation-runner
+    env: *medulla-validation-compiler-cache-backend
+    steps:
+      - *medulla-python-checkout
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version-file: '.python-version'
+      - *medulla-gates-uv
+      - *medulla-gates-pydeps
+      - name: Install pytest
+        run: python -m pip install --disable-pip-version-check pytest pytest-timeout pyyaml
+      - *medulla-gates-toolchain
+      - *medulla-validation-compiler-cache
+      - name: Build the default + AST server binary
+        env: *medulla-validation-compiler-cache-env
+        run: cargo build --locked --features ast --bin medulla-server --target-dir target-ast
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: python-server-${{ github.sha }}
+          path: ${{ runner.temp }}/python-server/
+      - name: Verify and restore the exact-revision server
+        run: bash scripts/python_suite_artifact.sh unpack server
+      - name: Test anonymous mode over the private socket
+        run: |
+          MEDULLA_TEST_BINARY="$PWD/target-isolated/debug/medulla-server" \
+            MEDULLA_TEST_AST_BINARY="$PWD/target-ast/debug/medulla-server" \
+            python3 -m pytest tests/test_native_no_auth_uds_served.py -p no:cacheprovider \
+            --timeout=900 -q -rfEs --junitxml="$RUNNER_TEMP/no-auth-uds.xml"
+      - if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: no-auth-uds-receipt-${{ github.sha }}
+          path: ${{ runner.temp }}/no-auth-uds.xml
+          if-no-files-found: error
+
   # ── medulla-tts-piper synthesis against a REAL onnxruntime.
   #
   # `--all-features` builds medulla-tts-piper with `ort-load-dynamic`, so `ort` dlopens
@@ -1433,7 +1483,7 @@ jobs:
           python3 scripts/ci_change_scope.py --event pull_request --base "$BASE" --head "$HEAD" | grep '^code=' | tee "$RUNNER_TEMP/scope.txt"
           cat "$RUNNER_TEMP/scope.txt" >> "$GITHUB_OUTPUT"
           # A docs/spec diff is spec-only only when no workspace package reads
-          # a changed path (MEDULLA-CONTRACT-R053.7.1): a later code=true wins.
+          # a changed path (MEDULLA-CONTRACT-R053.7.2): a later code=true wins.
           if grep -q '^code=false' "$RUNNER_TEMP/scope.txt"; then
             cargo metadata --format-version 1 --no-deps --locked > "$RUNNER_TEMP/cargo-metadata.json"
             if python3 scripts/ci_affected_crates.py "$RUNNER_TEMP/cargo-metadata.json" < "$RUNNER_TEMP/changed.txt" | grep -q .; then
@@ -1518,7 +1568,7 @@ jobs:
           BASE: ${{ github.event.pull_request.base.sha }}
         run: uvx --from 'git+https://github.com/Knuckles-Team/pipelines@main' pipelines-hook change-scope --base-ref "$BASE" --config .config/pre-commit.yaml
       # Spec-only means the shared classifier says spec and no workspace package
-      # is selected for the changed paths (MEDULLA-CONTRACT-R053.7.1).
+      # is selected for the changed paths (MEDULLA-CONTRACT-R053.7.2).
       - name: Resolve the spec-only decision
         id: spec-scope
         env:
@@ -1608,6 +1658,19 @@ jobs:
           BASE: ${{ github.event.pull_request.base.sha }}
           HEAD: ${{ github.event.pull_request.head.sha }}
         run: SKIP="lane-guard,cargo-deny-advisories${SCOPE_SKIP:+,$SCOPE_SKIP}" pre-commit run --config .config/pre-commit.yaml --from-ref "$BASE" --to-ref "$HEAD" --show-diff-on-failure
+      # Whole-repo scans run at pre-push locally, never at commit; PR CI runs
+      # them here so every one still gates the merge (MEDULLA-CONTRACT-R053.7.1).
+      - name: Whole-repo gates (pre-push stage)
+        env:
+          SCOPE_SKIP: ${{ steps.gates-scope.outputs.skip-hooks }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+          WHOLE_REPO_HOOKS: vulture check-bumpversion canonical-property-schema epistemic-operations-protocol no-version-suffixes p2-modality-architecture p2-analytics-reasoning-architecture universal-read-rls-architecture exact-release-campaigns-architecture persisted-mutation-contract current-only-architecture exact-fault-restart-harness-architecture mint-lease-call-sites orphan-modules durable-table-registration-push security-sanitizer guardrail-tracked-privacy check-root-hygiene check-gitignore-convergence
+        run: |
+          set -euo pipefail
+          for hook in $WHOLE_REPO_HOOKS; do
+            SKIP="${SCOPE_SKIP}" pre-commit run "$hook" --config .config/pre-commit.yaml --hook-stage pre-push --from-ref "$BASE" --to-ref "$HEAD" --show-diff-on-failure
+          done
       - name: Spec trailers
         if: ${{ !cancelled() }}
         run: uvx --from 'git+https://github.com/Knuckles-Team/pipelines@main' pipelines-hook spec-trailers --base-ref "origin/${{ github.base_ref }}"
@@ -1684,6 +1747,7 @@ jobs:
       - python-kernels
       - python-server
       - python-suite
+      - no-auth-uds
       - tts-piper-inference
       - language-clients
       - quality-advisory
@@ -1712,6 +1776,7 @@ jobs:
           PYTHON_KERNELS_RESULT: ${{ needs.python-kernels.result }}
           PYTHON_SERVER_RESULT: ${{ needs.python-server.result }}
           PYTHON_SUITE_RESULT: ${{ needs.python-suite.result }}
+          NO_AUTH_UDS_RESULT: ${{ needs.no-auth-uds.result }}
           TTS_PIPER_INFERENCE_RESULT: ${{ needs.tts-piper-inference.result }}
           LANGUAGE_CLIENTS_RESULT: ${{ needs.language-clients.result }}
           QUALITY_ADVISORY_RESULT: ${{ needs.quality-advisory.result }}
@@ -1761,6 +1826,11 @@ jobs:
             "language-clients=$LANGUAGE_CLIENTS_RESULT"
             "quality-advisory=$QUALITY_ADVISORY_RESULT"
           )
+          # Main-push gates: required only outside pull requests (the PR branch
+          # above has already exited).
+          if [[ "$EVENT_NAME" != pull_request ]]; then
+            results+=("no-auth-uds=$NO_AUTH_UDS_RESULT")
+          fi
           failures=()
           for entry in "${results[@]}"; do
             job="${entry%%=*}"

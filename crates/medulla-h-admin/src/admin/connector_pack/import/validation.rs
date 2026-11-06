@@ -331,7 +331,7 @@ impl<'a> IndexValidator<'a> {
             self.reject(
                 PackViolationCode::MalformedBody,
                 Some(&entry.uri),
-                "skill front-matter type is not skill, workflow, graph or mcp_skill",
+                "skill front-matter skill_type is not skill, workflow, graph or mcp_skill",
             );
         }
     }
@@ -362,6 +362,14 @@ impl<'a> IndexValidator<'a> {
         if let Err(detail) = validate_ontology_imports(text, &entry.uri, &self.ontology_iris) {
             self.reject(PackViolationCode::OntologyInvalid, Some(&entry.uri), detail);
         } else {
+            #[cfg(feature = "rdf")]
+            for detail in super::nutrition::nutrient_amount_violations(text) {
+                self.reject(
+                    PackViolationCode::NutrientIdUnmapped,
+                    Some(&entry.uri),
+                    &detail,
+                );
+            }
             self.ontologies.push(text.to_string());
         }
     }
@@ -537,6 +545,7 @@ fn finish_validation(validator: &mut IndexValidator<'_>) {
 /// How the deployment treats a pack ontology class with no subclass path to the
 /// parent catalog. `warn` (the default while the fleet's vocabularies are being
 /// linked) imports the pack and reports `ONTOLOGY_ORPHAN`; `refuse` rejects it.
+#[cfg(feature = "rdf")]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum OrphanPolicy {
     Warn,
@@ -545,6 +554,7 @@ enum OrphanPolicy {
 
 /// `MEDULLA_ONTOLOGY_ORPHANS=warn|refuse`, read once; any other value
 /// keeps the default.
+#[cfg(feature = "rdf")]
 fn orphan_policy() -> OrphanPolicy {
     static POLICY: std::sync::OnceLock<OrphanPolicy> = std::sync::OnceLock::new();
     *POLICY.get_or_init(|| {
@@ -562,6 +572,7 @@ fn orphan_policy() -> OrphanPolicy {
 
 /// The bounded `ONTOLOGY_ORPHAN` detail: the count, then as many class IRIs as
 /// fit in one kibibyte.
+#[cfg(feature = "rdf")]
 fn orphan_detail(orphans: &[String]) -> String {
     let mut detail = format!(
         "{} class(es) have no rdfs:subClassOf path to the parent catalog: ",
@@ -634,6 +645,8 @@ fn json_kind(kind: PackEntryKind) -> bool {
             | PackEntryKind::Prompt
             | PackEntryKind::ModelProfile
             | PackEntryKind::A2aCard
+            | PackEntryKind::Crosswalk
+            | PackEntryKind::ConceptPath
     )
 }
 
@@ -653,6 +666,8 @@ fn text_kind(kind: PackEntryKind) -> bool {
             | PackEntryKind::Resource
             | PackEntryKind::ResourceTemplate
             | PackEntryKind::SkillFile
+            | PackEntryKind::Crosswalk
+            | PackEntryKind::ConceptPath
     )
 }
 

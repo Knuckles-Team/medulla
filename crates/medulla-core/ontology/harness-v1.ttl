@@ -263,8 +263,7 @@
     rdfs:comment """Ontology extension mapping the Claude Code best practices,
 developer harness extension points, plugins, hooks, symbol engines,
 optimization patterns, and human-in-the-loop DRI roles.
-Aligned to ArchiMate 3.2 layers.""" ;
-    owl:imports <http://knuckles.team/kg/core> .
+Aligned to ArchiMate 3.2 layers.""" .
 
 :HarnessExtensionPoint a owl:Class ;
     rdfs:label "Harness Extension Point" ;
@@ -323,3 +322,23 @@ Aligned to ArchiMate 3.2 layers.""" ;
     rdfs:label "Harness Hook" ;
     rdfs:comment "One of the eight lifecycle hook points a processor attaches to (task_start, step_start, before_model, after_model, before_tool, after_tool, step_end, task_end). Distinct from the dev-CLI :Hook (CONCEPT:KG-2.109)." ;
     rdfs:subClassOf :ApplicationLayer .
+
+# ── Core rooting (MEDULLA-TYPED-PACKS-R071.2) ───────────────────────────────────
+# Every class of this module above reaches the core class kg:Framework through rdfs:subClassOf.
+<http://knuckles.team/kg#AgentManagerDRI> rdfs:subClassOf <http://knuckles.team/kg#Framework> .
+<http://knuckles.team/kg#ContextFile> rdfs:subClassOf <http://knuckles.team/kg#Framework> .
+<http://knuckles.team/kg#GovernanceWorkingGroup> rdfs:subClassOf <http://knuckles.team/kg#Framework> .
+<http://knuckles.team/kg#Harness> rdfs:subClassOf <http://knuckles.team/kg#Framework> .
+<http://knuckles.team/kg#HarnessDimension> rdfs:subClassOf <http://knuckles.team/kg#Framework> .
+<http://knuckles.team/kg#HarnessEdit> rdfs:subClassOf <http://knuckles.team/kg#Framework> .
+<http://knuckles.team/kg#HarnessExtensionPoint> rdfs:subClassOf <http://knuckles.team/kg#Framework> .
+<http://knuckles.team/kg#HarnessHook> rdfs:subClassOf <http://knuckles.team/kg#Framework> .
+<http://knuckles.team/kg#HarnessPathology> rdfs:subClassOf <http://knuckles.team/kg#Framework> .
+<http://knuckles.team/kg#HarnessVariant> rdfs:subClassOf <http://knuckles.team/kg#Framework> .
+<http://knuckles.team/kg#Hook> rdfs:subClassOf <http://knuckles.team/kg#Framework> .
+<http://knuckles.team/kg#LSPServer> rdfs:subClassOf <http://knuckles.team/kg#Framework> .
+<http://knuckles.team/kg#OptimizationPattern> rdfs:subClassOf <http://knuckles.team/kg#Framework> .
+<http://knuckles.team/kg#Plugin> rdfs:subClassOf <http://knuckles.team/kg#Framework> .
+<http://knuckles.team/kg#Processor> rdfs:subClassOf <http://knuckles.team/kg#Framework> .
+<http://knuckles.team/kg#ReconstructionTrajectory> rdfs:subClassOf <http://knuckles.team/kg#Framework> .
+<http://knuckles.team/kg#SubagentConfig> rdfs:subClassOf <http://knuckles.team/kg#Framework> .

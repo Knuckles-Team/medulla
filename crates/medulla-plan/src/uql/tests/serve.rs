@@ -198,6 +198,12 @@ fn profile_remote_fragment_has_redacted_golden_output_and_provenance() {
             samples: 8,
             rows: 12.5,
         },
+        mode: medulla_federation::federation_opt::FragmentExecutionMode::Live,
+        watermark: None,
+        copy_rows: None,
+        snapshot: None,
+        read_at_ms: 0,
+        consistency: medulla_federation::federation_opt::Consistency::Snapshot,
     });
     let federated = medulla_federation::federation_opt::FederatedExec::with_session(&session);
     let ctx = PlanCtx::new(&view, &semantic).with_foreign_executor(&federated);
@@ -207,6 +213,8 @@ fn profile_remote_fragment_has_redacted_golden_output_and_provenance() {
         rows: vec![],
         stages: vec![],
         warnings: vec![],
+        snapshot_revision: 0,
+        knowledge_revision: 0,
     };
     crate::uql::serve::attach_federation_report(&mut result, &stmt, &ctx);
     let UqlResult::Profile { stages, .. } = result else {
@@ -217,8 +225,10 @@ fn profile_remote_fragment_has_redacted_golden_output_and_provenance() {
         stages[0].stage,
         "LOCAL evaluation (per-stage reports above)"
     );
-    assert_eq!(stages[1].stage,
-        "REMOTE sql#deadbeef strategy=BindJoin keys=3 limit=Some(7) requests=2 fetched=5 kept=4 estimate=learned(samples=8, rows=12.50)");
+    assert_eq!(
+        stages[1].stage,
+        "REMOTE sql#deadbeef strategy=BindJoin keys=3 limit=Some(7) requests=2 fetched=5 kept=4 estimate=learned(samples=8, rows=12.50) mode=live"
+    );
     assert_eq!(
         (stages[1].estimated_rows, stages[1].rows, stages[1].micros),
         (12.5, Some(4), Some(6000))

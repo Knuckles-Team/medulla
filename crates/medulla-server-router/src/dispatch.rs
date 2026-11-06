@@ -42,6 +42,10 @@ pub mod request_boundary;
 pub mod router;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod seam;
+// MEDULLA-UNIFIED-DATA-PLANE-R760.3: the five served incident methods over the
+// incident authority of `medulla-stream`.
+#[cfg(any(feature = "obs", feature = "stream"))]
+pub mod incident;
 // EH-408 / EH-409: stored telemetry → ontology-bound facts. Needs the
 // observability store (`obs`) and the schema reasoner (`shacl`).
 #[cfg(all(feature = "obs", feature = "shacl"))]

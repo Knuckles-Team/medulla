@@ -600,6 +600,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f2032f911046de80f0a198e0901378627c33f59ea0ac00e363d481118bd70a53"
 
 [[package]]
+name = "aws-credential-types"
+version = "1.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "576e8da35751dc85409ec1cd15999f692c277a1fbe9336780fe6f15e49dd637d"
+dependencies = [
+ "aws-smithy-async",
+ "aws-smithy-runtime-api",
+ "aws-smithy-types",
+ "zeroize",
+]
+
+[[package]]
 name = "aws-lc-rs"
 version = "1.18.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -621,6 +633,106 @@ dependencies = [
  "dunce",
  "fs_extra",
  "pkg-config",
+]
+
+[[package]]
+name = "aws-sigv4"
+version = "1.6.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f385da9b7757ed4c8214797ad663ff534fb622006143530aa80e21f8e06ff85c"
+dependencies = [
+ "aws-credential-types",
+ "aws-smithy-http",
+ "aws-smithy-runtime-api",
+ "aws-smithy-types",
+ "bytes",
+ "form_urlencoded",
+ "hex",
+ "hmac 0.13.0",
+ "http",
+ "percent-encoding",
+ "sha2 0.11.1",
+ "time",
+ "tracing",
+]
+
+[[package]]
+name = "aws-smithy-async"
+version = "1.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "de681a9df7ff79823b759ee17061076ec049cd61a8fa28ece4293d89c9f6964e"
+dependencies = [
+ "futures-util",
+ "pin-project-lite",
+ "tokio",
+]
+
+[[package]]
+name = "aws-smithy-http"
+version = "0.64.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "19af609dd5edf8b056cd0bb001c706c8b3b1458055328b334ec13d7f46f6aaa8"
+dependencies = [
+ "aws-smithy-runtime-api",
+ "aws-smithy-types",
+ "bytes",
+ "bytes-utils",
+ "futures-core",
+ "futures-util",
+ "http",
+ "http-body",
+ "http-body-util",
+ "percent-encoding",
+ "pin-project-lite",
+ "tracing",
+]
+
+[[package]]
+name = "aws-smithy-runtime-api"
+version = "1.19.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8c4e85cffe9944b10d576b075432bd8f98dbc081e8681cb37d5b2d87dc27bc84"
+dependencies = [
+ "aws-smithy-async",
+ "aws-smithy-runtime-api-macros",
+ "aws-smithy-types",
+ "bytes",
+ "http",
+ "pin-project-lite",
+ "tokio",
+ "tracing",
+ "zeroize",
+]
+
+[[package]]
+name = "aws-smithy-runtime-api-macros"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ce237f890a2283c9b328955c3b0918d2d5bf66a1cb6ceccd36a0047246fbc6e6"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.119",
+]
+
+[[package]]
+name = "aws-smithy-types"
+version = "1.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cf183d70774ea2cfcc101ca74a8884e4c76be8b9df65cd303f6a1175c88e8f80"
+dependencies = [
+ "base64-simd",
+ "bytes",
+ "bytes-utils",
+ "http",
+ "http-body",
+ "http-body-util",
+ "itoa",
+ "num-integer",
+ "pin-project-lite",
+ "ryu",
+ "serde",
+ "time",
 ]
 
 [[package]]
@@ -657,6 +769,16 @@ name = "base64"
 version = "0.23.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ac07cdecf99051d9a5238b80f35af32cdeba5b336e55d957b318b50137e18da5"
+
+[[package]]
+name = "base64-simd"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "339abbe78e73178762e23bea9dfd08e697eb3f3301cd4be981c0f78ba5859195"
+dependencies = [
+ "outref",
+ "vsimd",
+]
 
 [[package]]
 name = "base64ct"
@@ -964,6 +1086,16 @@ name = "bytes"
 version = "1.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fc652a48c352aef3ea3aed32080501cf3ef6ed5da78602a020c991775b0aff04"
+
+[[package]]
+name = "bytes-utils"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7dafe3a8757b027e2be6e4e5601ed563c55989fcf1546e933c66c8eb3a058d35"
+dependencies = [
+ "bytes",
+ "either",
+]
 
 [[package]]
 name = "cast"
@@ -4381,6 +4513,8 @@ dependencies = [
  "medulla-protocol-types",
  "medulla-types",
  "medulla-work-types",
+ "regex",
+ "schemars 1.2.3",
  "serde_json",
  "tempfile",
 ]
@@ -4677,6 +4811,8 @@ dependencies = [
 name = "medulla-durable"
 version = "0.1.0"
 dependencies = [
+ "criterion",
+ "medulla-types",
  "rmp-serde",
  "serde",
  "serde_json",
@@ -4691,6 +4827,8 @@ dependencies = [
  "argon2",
  "arrow",
  "async-trait",
+ "aws-credential-types",
+ "aws-sigv4",
  "chacha20poly1305",
  "chrono",
  "clap",
@@ -4722,6 +4860,7 @@ dependencies = [
  "medulla-direct-state",
  "medulla-document",
  "medulla-durable",
+ "medulla-enrich",
  "medulla-epistemic",
  "medulla-exec",
  "medulla-federation",
@@ -4847,6 +4986,7 @@ dependencies = [
  "rand 0.8.8",
  "rayon",
  "redb",
+ "reqwest 0.13.5",
  "rmp-serde",
  "rustix 1.1.5",
  "rustls",
@@ -4909,11 +5049,13 @@ dependencies = [
  "medulla-catalog-types",
  "medulla-compute",
  "medulla-core",
+ "medulla-decision-types",
  "medulla-epistemic",
  "medulla-finance",
  "medulla-geo",
  "medulla-graph-algos",
  "medulla-graph-core",
+ "medulla-mining",
  "medulla-numeric",
  "medulla-rdf",
  "medulla-reasoner",
@@ -4944,6 +5086,7 @@ dependencies = [
  "hmac 0.12.1",
  "medulla-exec",
  "medulla-protocol-types",
+ "medulla-sqlite-format",
  "medulla-types",
  "medulla-uql",
  "parking_lot",
@@ -5016,6 +5159,7 @@ dependencies = [
  "medulla-compute",
  "medulla-core",
  "medulla-graph-core",
+ "medulla-kvcache",
  "medulla-modality",
  "medulla-semantic-index",
  "medulla-types",
@@ -5126,12 +5270,15 @@ dependencies = [
  "tokio-rustls",
  "tracing",
  "tracing-subscriber",
+ "unicode-normalization",
 ]
 
 [[package]]
 name = "medulla-h-compute"
 version = "0.1.0"
 dependencies = [
+ "criterion",
+ "hex",
  "medulla-compute",
  "medulla-core",
  "medulla-finance",
@@ -5158,7 +5305,9 @@ dependencies = [
  "rmp-serde",
  "serde",
  "serde_json",
+ "sha2 0.10.9",
  "tokio",
+ "tracing",
 ]
 
 [[package]]
@@ -5176,10 +5325,13 @@ dependencies = [
  "medulla-decision-policy",
  "medulla-decision-stats",
  "medulla-decision-types",
+ "medulla-epistemic",
  "medulla-exec",
  "medulla-finance",
  "medulla-finance-market",
  "medulla-graph-core",
+ "medulla-h-graph",
+ "medulla-h-jobs",
  "medulla-index-types",
  "medulla-isolation",
  "medulla-kernel",
@@ -5199,6 +5351,8 @@ dependencies = [
  "medulla-shacl",
  "medulla-sql",
  "medulla-sql-lang",
+ "medulla-statechart",
+ "medulla-store",
  "medulla-table-store",
  "medulla-tables",
  "medulla-test-ambient-auth",
@@ -5224,6 +5378,7 @@ dependencies = [
  "medulla-agent-types",
  "medulla-compute",
  "medulla-core",
+ "medulla-finance",
  "medulla-graph-algos",
  "medulla-graph-core",
  "medulla-isolation",
@@ -5244,6 +5399,7 @@ dependencies = [
  "medulla-server-cdc",
  "medulla-server-mutation",
  "medulla-server-ops",
+ "medulla-shacl",
  "medulla-test-ambient-auth",
  "medulla-tsdb",
  "medulla-types",
@@ -5269,8 +5425,11 @@ dependencies = [
  "medulla-catalog-types",
  "medulla-compute",
  "medulla-core",
+ "medulla-decision-outcome-types",
  "medulla-decision-stats",
  "medulla-document",
+ "medulla-enrich",
+ "medulla-graph-algos",
  "medulla-graph-core",
  "medulla-image",
  "medulla-isolation",
@@ -5295,6 +5454,7 @@ dependencies = [
  "medulla-table-store",
  "medulla-tables",
  "medulla-test-ambient-auth",
+ "medulla-transaction",
  "medulla-types",
  "medulla-video",
  "medulla-work-types",
@@ -5360,6 +5520,7 @@ name = "medulla-h-mining"
 version = "0.1.0"
 dependencies = [
  "hex",
+ "medulla-core",
  "medulla-epistemic",
  "medulla-exec",
  "medulla-graph-algos",
@@ -5410,6 +5571,7 @@ dependencies = [
  "medulla-graphql",
  "medulla-h-retrieve",
  "medulla-h-sparql",
+ "medulla-identity-types",
  "medulla-index-types",
  "medulla-isolation",
  "medulla-kernel",
@@ -5440,6 +5602,7 @@ dependencies = [
  "medulla-sql-lang",
  "medulla-sql-udfs",
  "medulla-storage",
+ "medulla-store",
  "medulla-table-store",
  "medulla-tables",
  "medulla-tensor",
@@ -5725,7 +5888,6 @@ name = "medulla-kvcache"
 version = "0.1.0"
 dependencies = [
  "lz4_flex 0.14.0",
- "medulla-compute",
  "medulla-graph-algos",
  "medulla-graph-core",
  "medulla-modality",
@@ -6073,6 +6235,7 @@ dependencies = [
  "medulla-compute",
  "medulla-core",
  "medulla-decision-types",
+ "medulla-durable",
  "medulla-epistemic",
  "medulla-exec",
  "medulla-federation",
@@ -6080,7 +6243,9 @@ dependencies = [
  "medulla-geo",
  "medulla-graph-algos",
  "medulla-graph-core",
+ "medulla-identity-types",
  "medulla-modality",
+ "medulla-mutation-types",
  "medulla-nlq",
  "medulla-numeric",
  "medulla-protocol-types",
@@ -6091,6 +6256,7 @@ dependencies = [
  "medulla-semantic-index",
  "medulla-shacl",
  "medulla-sql",
+ "medulla-sqlite-format",
  "medulla-stream",
  "medulla-tensor",
  "medulla-text",
@@ -6266,6 +6432,7 @@ dependencies = [
 name = "medulla-query-cache"
 version = "0.1.0"
 dependencies = [
+ "medulla-kvcache",
  "medulla-protocol-types",
  "parking_lot",
  "tracing",
@@ -6725,6 +6892,7 @@ dependencies = [
  "medulla-tsdb",
  "medulla-types",
  "medulla-wasm",
+ "medulla-work-types",
  "rmp-serde",
  "serde",
  "serde_json",
@@ -7007,6 +7175,7 @@ dependencies = [
  "hex",
  "jsonwebtoken",
  "medulla-capabilities",
+ "medulla-catalog-types",
  "medulla-graph-core",
  "medulla-graphql",
  "medulla-isolation",
@@ -7249,6 +7418,7 @@ dependencies = [
  "serde_bytes",
  "serde_json",
  "sha1 0.10.7",
+ "sha2 0.10.9",
  "tempfile",
  "tokio",
  "tracing",
@@ -7298,6 +7468,7 @@ dependencies = [
  "medulla-server-blob",
  "medulla-server-cdc",
  "medulla-server-graph",
+ "medulla-server-obs",
  "medulla-server-ops",
  "medulla-server-router",
  "medulla-source-types",
@@ -7417,6 +7588,7 @@ version = "0.1.0"
 dependencies = [
  "hex",
  "medulla-catalog-types",
+ "medulla-identity-types",
  "medulla-types",
  "rmp-serde",
  "schemars 1.2.3",
@@ -7697,10 +7869,13 @@ dependencies = [
 name = "medulla-stream"
 version = "0.1.0"
 dependencies = [
+ "hex",
  "medulla-modality",
+ "medulla-types",
  "rdkafka",
  "serde",
  "serde_json",
+ "sha2 0.10.9",
  "tokio",
 ]
 
@@ -9028,6 +9203,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "outref"
+version = "0.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1a80800c0488c3a21695ea981a54918fbb37abf04f4d0720c453632255e2ff0e"
+
+[[package]]
 name = "ownedbytes"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -9061,7 +9242,7 @@ dependencies = [
  "oxiri",
  "oxrdf",
  "ryu-js",
- "thiserror 1.0.69",
+ "thiserror 2.0.21",
 ]
 
 [[package]]
@@ -9073,7 +9254,7 @@ dependencies = [
  "oxilangtag",
  "oxiri",
  "rand 0.9.5",
- "thiserror 1.0.69",
+ "thiserror 2.0.21",
 ]
 
 [[package]]
@@ -9086,7 +9267,7 @@ dependencies = [
  "oxilangtag",
  "oxiri",
  "oxrdf",
- "thiserror 1.0.69",
+ "thiserror 2.0.21",
 ]
 
 [[package]]
@@ -10013,7 +10194,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b570b25f7617e43d59005d0990ccb79e950a423952cea19671b7a876da390adf"
 dependencies = [
  "anyhow",
- "itertools 0.12.1",
+ "itertools 0.14.0",
  "proc-macro2",
  "quote",
  "syn 2.0.119",
@@ -10163,7 +10344,7 @@ dependencies = [
  "quinn-udp",
  "rustc-hash 2.1.3",
  "rustls",
- "socket2 0.6.5",
+ "socket2 0.5.10",
  "thiserror 2.0.21",
  "tokio",
  "tracing",
@@ -10202,7 +10383,7 @@ dependencies = [
  "cfg_aliases",
  "libc",
  "once_cell",
- "socket2 0.6.5",
+ "socket2 0.5.10",
  "tracing",
  "windows-sys 0.52.0",
 ]
@@ -11414,7 +11595,7 @@ dependencies = [
  "oxrdf",
  "peg",
  "rand 0.9.5",
- "thiserror 1.0.69",
+ "thiserror 2.0.21",
 ]
 
 [[package]]
@@ -11950,7 +12131,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.3.4",
+ "getrandom 0.4.3",
  "once_cell",
  "rustix 1.1.5",
  "windows-sys 0.52.0",
@@ -13004,6 +13185,12 @@ name = "version_check"
 version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
+
+[[package]]
+name = "vsimd"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5c3082ca00d5a5ef149bb8b555a72ae84c9c59f7250f013ac822ac2e49b19c64"
 
 [[package]]
 name = "wait-timeout"

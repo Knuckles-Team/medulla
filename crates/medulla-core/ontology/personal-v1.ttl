@@ -141,8 +141,8 @@ that created it. Enables provenance: voice → text → task → calendar.""" ;
 
 :totalAmount a owl:DatatypeProperty ;
     rdfs:label "total amount" ;
-    rdfs:comment "The total amount on a Document, e.g. an invoice (Paperless-ngx)." ;
-    rdfs:domain :Document ;
+    rdfs:comment "The total amount on a Document or a PurchaseInvoice." ;
+    rdfs:domain [ a owl:Class ; owl:unionOf ( :Document :PurchaseInvoice ) ] ;
     rdfs:range xsd:decimal .
 
 :transcribedFrom a owl:ObjectProperty ;
@@ -168,8 +168,7 @@ Enables cross-domain reasoning: voice messages → tasks → calendar
 events → incident correlation.
 
 Standards alignment: schema:Event, iCalendar (RFC 5545),
-W3C PROV-O provenance.""" ;
-    owl:imports <http://knuckles.team/kg/core> .
+W3C PROV-O provenance.""" .
 
 :FileShare a owl:Class ;
     rdfs:label "File Share" ;

@@ -38,6 +38,7 @@ mod component_content;
 pub(crate) mod connector_pack;
 #[cfg(feature = "redb")]
 pub(crate) mod saga;
+mod workflow_registry;
 
 #[cfg(all(any(test, feature = "test-support"), feature = "redb"))]
 pub use agent::bind_agent_library_draft;
@@ -50,6 +51,7 @@ pub use backup::backup_bundle_name;
 #[cfg(feature = "redb")]
 pub use cluster::try_handle;
 pub use connector_pack::handle_connector_pack;
+pub use workflow_registry::handle_workflow_registry_read;
 
 /// Non-redb build: every admin method returns a clean "not available" error.
 #[cfg(not(feature = "redb"))]

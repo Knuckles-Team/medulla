@@ -95,7 +95,7 @@ pub async fn route_gateway_and_stateless_domains(
     // Feature-gated: in a slim build the line is absent and the method flows
     // straight through to graph_ops (whose catch-all reports "not available").
     #[cfg(feature = "finance")]
-    let method = match medulla_h_compute::finance::try_handle(req_id, method) {
+    let method = match medulla_h_compute::finance::try_handle(req_id, tenant_id, method) {
         Ok(r) => return Ok(r),
         Err(m) => m,
     };
@@ -147,6 +147,26 @@ pub async fn route_graph_scoped_domains(
     // like mining — the KAN link-predictor reads the live subgraph and write-back
     // materializes `:PredictedEdge`/`:EdgeFunction` nodes into the core. A method
     // whose feature is off falls through to the graph_ops not-available catch-all.
+    #[cfg(feature = "graphlearn")]
+    let method = match method {
+        Method::GraphLearnPredictNary {
+            request,
+            source,
+            expected_graph_revision,
+        } => {
+            return Ok(
+                medulla_server_api::handlers::graphlearn::handle_predict_nary(
+                    req_id,
+                    core,
+                    read_authority.as_ref(),
+                    request,
+                    source,
+                    expected_graph_revision,
+                ),
+            );
+        }
+        other => other,
+    };
     #[cfg(feature = "graphlearn")]
     let method =
         match medulla_server_api::handlers::graphlearn::try_handle(req_id, core.clone(), method) {

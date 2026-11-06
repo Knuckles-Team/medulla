@@ -1,0 +1,13 @@
+@prefix : <http://knuckles.team/kg#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# Enterprise ABox shapes (MEDULLA-CQ-CONN-R080.x).
+
+:EAFactSheetShape a sh:NodeShape ;
+    sh:description "An EA fact sheet's lifecycle phase is one of the closed values." ;
+    sh:name "EA Fact Sheet Shape" ;
+    sh:property [ sh:in ( "plan" "active" "phaseOut" "endOfLife" ) ;
+            sh:message "lifecyclePhase must be plan, active, phaseOut or endOfLife." ;
+            sh:path :lifecyclePhase ] ;
+    sh:targetClass :EAFactSheet .

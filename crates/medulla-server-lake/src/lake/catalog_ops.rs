@@ -7,10 +7,34 @@ use medulla_server_blob::blob::store::BlobManifest;
 use medulla_server_blob::blob::store::ChunkStore;
 use medulla_server_blob::blob::store::DEFAULT_CHUNK_SIZE;
 
+use medulla_lake::catalog::{
+    PublicationRefusal, MANIFEST_PUBLICATION_INVALID, SCHEMA_CHANGE_NOT_APPROVED,
+    SCHEMA_COLUMN_UNKNOWN,
+};
+use medulla_lake::schema::LakeField;
+
+use super::operation_record::{sha256_hex, LakeOperationRecord, OperationOutcome};
 use super::{
     CreateTableError, LakeManager, LakeOp, LakeVisibility, LoadTableAsOfError, MaterializeInput,
     RenameTableError, TableEntry,
 };
+
+/// One schema change a table can be asked to apply
+/// (MEDULLA-FEDERATED-QUERY-R079.4).
+#[derive(Clone, Debug)]
+pub enum SchemaChange {
+    /// Append a new nullable column for future writes.
+    AddColumn(LakeField),
+    /// Drop an existing column (unsupported; refused with a reason).
+    DropColumn(String),
+    /// Rename an existing column (unsupported; refused with a reason).
+    RenameColumn {
+        /// The existing column.
+        from: String,
+        /// The requested new name.
+        to: String,
+    },
+}
 
 pub(super) struct StagedArtifact {
     path: String,
@@ -26,6 +50,8 @@ pub(super) struct PreparedMaterialization {
     pub(super) snapshot_id: i64,
     pub(super) metadata_location: String,
     pub(super) artifacts: Vec<(String, Vec<u8>)>,
+    /// Evidence of the published artifacts (MEDULLA-FEDERATED-QUERY-R079.5).
+    pub(super) evidence: LakeOperationRecord,
 }
 
 fn stage_path_bytes(
@@ -135,9 +161,39 @@ pub(super) fn prepare_materialization(
         .last()
         .ok_or_else(|| "materialization produced no Delta commit".to_string())?;
     let manifests = candidate.table.iceberg_manifests()?;
-    medulla_lake::record_iceberg_commit(&mut candidate.table, ts_ms);
+    // MEDULLA-FEDERATED-QUERY-R079.3: the snapshot is bound to the committed graph
+    // version (this materialization's LSN) and the source log position. A missing
+    // source position refuses the publication before any artifact is staged.
+    let binding = input
+        .source_lsn
+        .map(|source_lsn| medulla_lake::iceberg::PublicationBinding {
+            graph_version: lsn.value(),
+            source_lsn,
+        });
+    medulla_lake::record_iceberg_commit_bound(&mut candidate.table, ts_ms, binding)
+        .map_err(|refusal| refusal.to_string())?;
     candidate.mutation_revision = candidate.mutation_revision.wrapping_add(1);
     let iceberg = candidate.table.iceberg(ts_ms);
+    let mut evidence = LakeOperationRecord::new(
+        format!("{}.{}", input.namespace, input.table),
+        input.owner_tenant.map(str::to_string),
+        if existing.is_none() {
+            LakeOp::Create.as_str()
+        } else {
+            input.op_hint.as_str()
+        },
+        OperationOutcome::Committed,
+    );
+    evidence.graph_version = Some(lsn.value());
+    evidence.source_lsn = input.source_lsn;
+    evidence.schema_version = Some(candidate.table.schema_id());
+    evidence.snapshot_id = Some(manifests.snapshot_id);
+    evidence.manifest_location = Some(manifests.manifest_path.clone());
+    evidence.manifest_list_location = Some(manifests.manifest_list_path.clone());
+    evidence.metadata_location = Some(iceberg.metadata_location.clone());
+    evidence.manifest_digest = Some(sha256_hex(&manifests.manifest_avro));
+    evidence.manifest_list_digest = Some(sha256_hex(&manifests.manifest_list_avro));
+    evidence.metadata_digest = Some(sha256_hex(iceberg.metadata_json.as_bytes()));
     let artifacts = vec![
         (format!("{location}/{rel_path}"), bytes),
         (
@@ -160,6 +216,7 @@ pub(super) fn prepare_materialization(
         snapshot_id: manifests.snapshot_id,
         metadata_location: iceberg.metadata_location,
         artifacts,
+        evidence,
     })
 }
 
@@ -211,12 +268,107 @@ impl LakeManager {
         }
         let ts_ms = super::lineage::now_ms();
         let iceberg = entry.table.iceberg_as_of(requested, ts_ms as i64);
-        let metadata = serde_json::from_str(&iceberg.metadata_json).unwrap_or(Value::Null);
+        let metadata: Value = serde_json::from_str(&iceberg.metadata_json).unwrap_or(Value::Null);
+        // R079.5: a time-travel read records the snapshot it resolved.
+        let mut record = LakeOperationRecord::new(
+            format!("{namespace}.{table}"),
+            entry.owner_tenant.clone(),
+            "TIME_TRAVEL_READ",
+            OperationOutcome::Read,
+        );
+        record.schema_version = Some(entry.table.schema_id());
+        record.snapshot_id = metadata["current-snapshot-id"].as_i64();
+        record.metadata_location = Some(iceberg.metadata_location.clone());
+        record.metadata_digest = Some(sha256_hex(iceberg.metadata_json.as_bytes()));
+        self.record_operation(record);
         Ok(Some(json!({
             "metadata-location": iceberg.metadata_location,
             "metadata": metadata,
             "config": {},
         })))
+    }
+
+    /// Apply one schema change to a table (MEDULLA-FEDERATED-QUERY-R079.4).
+    ///
+    /// `approved` states whether the change was approved: an unapproved change is
+    /// refused `SCHEMA_CHANGE_NOT_APPROVED`. A change to a column the table lacks
+    /// is refused `SCHEMA_COLUMN_UNKNOWN`. Only the additive `AddColumn` change is
+    /// supported; dropping or renaming an existing column is refused
+    /// `MANIFEST_PUBLICATION_INVALID` (an unsupported schema feature) with a reason.
+    /// A refusal changes no visible version and is kept as a `Refused` record.
+    /// Returns `Ok(true)` when the column was added, `Ok(false)` when it already
+    /// existed.
+    pub fn apply_schema_change(
+        &self,
+        namespace: &str,
+        table: &str,
+        change: SchemaChange,
+        approved: bool,
+    ) -> Result<bool, PublicationRefusal> {
+        let table_name = format!("{namespace}.{table}");
+        let outcome = self.evaluate_schema_change(namespace, table, change, approved);
+        match &outcome {
+            Ok(_) => {}
+            Err(refusal) => self.record_operation(LakeOperationRecord::refused(
+                table_name,
+                None,
+                "SCHEMA_CHANGE",
+                refusal.to_string(),
+            )),
+        }
+        outcome
+    }
+
+    fn evaluate_schema_change(
+        &self,
+        namespace: &str,
+        table: &str,
+        change: SchemaChange,
+        approved: bool,
+    ) -> Result<bool, PublicationRefusal> {
+        if !approved {
+            return Err(PublicationRefusal::new(
+                SCHEMA_CHANGE_NOT_APPROVED,
+                format!("no approval covers the schema change to {namespace}.{table}"),
+            ));
+        }
+        let mut tables = self.tables.lock();
+        let entry = tables
+            .get_mut(&(namespace.to_string(), table.to_string()))
+            .ok_or_else(|| {
+                PublicationRefusal::new(
+                    MANIFEST_PUBLICATION_INVALID,
+                    format!("no such table: {namespace}.{table}"),
+                )
+            })?;
+        match change {
+            SchemaChange::AddColumn(field) => {
+                let kind = "SCHEMA_ADD_COLUMN";
+                let added = super::evolve_entry_schema(entry, field);
+                let mut record = LakeOperationRecord::new(
+                    format!("{namespace}.{table}"),
+                    entry.owner_tenant.clone(),
+                    kind,
+                    OperationOutcome::Committed,
+                );
+                record.schema_version = Some(entry.table.schema_id());
+                drop(tables);
+                self.record_operation(record);
+                Ok(added)
+            }
+            SchemaChange::DropColumn(name) | SchemaChange::RenameColumn { from: name, .. } => {
+                if entry.table.schema.index_of(&name).is_none() {
+                    return Err(PublicationRefusal::new(
+                        SCHEMA_COLUMN_UNKNOWN,
+                        format!("{namespace}.{table} has no column {name}"),
+                    ));
+                }
+                Err(PublicationRefusal::new(
+                    MANIFEST_PUBLICATION_INVALID,
+                    format!("unsupported schema feature: only additive column changes publish; column {name} is kept"),
+                ))
+            }
+        }
     }
 
     pub fn namespace_exists(&self, namespace: &str) -> bool {
@@ -323,6 +475,21 @@ impl LakeManager {
         self.load_table(namespace, table)
     }
 
+    /// The snapshot LSN of a visible table: the graph state version its
+    /// current projection was materialized at (MEDULLA-FEDERATED-QUERY-R080.5).
+    pub fn table_lsn(
+        &self,
+        namespace: &str,
+        table: &str,
+        visibility: &LakeVisibility,
+    ) -> Option<u64> {
+        let tables = self.tables.lock();
+        let entry = tables.get(&(namespace.to_string(), table.to_string()))?;
+        visibility
+            .allows(entry.owner_tenant.as_deref())
+            .then(|| entry.table.current_lsn().value())
+    }
+
     /// Register an empty table through the same materialization pipeline used by
     /// append and rewrite operations.
     pub fn create_table(
@@ -355,6 +522,7 @@ impl LakeManager {
                 retire_paths: &[],
                 expected_lsn: None,
                 expected_revision: None,
+                source_lsn: Some(0),
             },
         )
         .map_err(CreateTableError::Other)?;

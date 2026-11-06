@@ -119,6 +119,12 @@ pub enum NativeMutationCommand {
     GraphLifecycle { sealed_method: SealedNativeMethod },
     /// Threshold-authorized mutation translation.
     Multisig { sealed_method: SealedNativeMethod },
+    /// One leader-checked finance record put (MEDULLA-FINANCE-PRIMITIVES-R004.3.2.9).
+    /// The sealed `Method::FinanceRecordPut` carries the tenant, kind, schema
+    /// version, validated record and `expected_head`; replica apply re-reads the
+    /// stored head and writes the one upsert only when it still equals
+    /// `expected_head`, else it answers `RECORD_HEAD_CONFLICT` and writes nothing.
+    FinanceRecordPut { sealed_method: SealedNativeMethod },
 }
 
 /// One exhaustive layout for the typed command envelope. Both accessors are
@@ -163,6 +169,7 @@ macro_rules! native_command_layout {
                 ClusterAdmin => NativeMutationDomain::ClusterAdmin;
                 GraphLifecycle => NativeMutationDomain::GraphLifecycle;
                 Multisig => NativeMutationDomain::Multisig;
+                FinanceRecordPut => NativeMutationDomain::FinanceRecordPut;
             }
         }
     };

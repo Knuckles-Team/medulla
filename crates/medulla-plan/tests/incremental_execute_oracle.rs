@@ -26,10 +26,11 @@ use std::collections::BTreeMap;
 
 use medulla_exec::{
     algebra::Op, algebra::Plan, algebra::Pred, exec::execute, exec::PlanCtx, incremental::Circuit,
-    incremental::Delta, incremental::ZRow, rowset::RowSet,
+    rowset::RowSet,
 };
 use medulla_graph_core::graph::GraphCore;
 use medulla_semantic_index::semantic::SemanticStore;
+use medulla_types::delta::{Delta, ZRow};
 use medulla_types::wire::TimeAxis;
 use proptest::prelude::*;
 use serde_json::{json, Map, Value};
@@ -219,15 +220,17 @@ fn churn_matches_execute(plan: &Plan, mutations: &[Mutation]) -> Result<(), Test
     // Keep the SQL schema stable (see `schema_keeper`).
     let (keeper_id, keeper_props) = schema_keeper();
     core.add_node(keeper_id.clone(), blob(&keeper_props));
-    circuit.apply(&Delta::from(vec![ZRow::insert(
-        keeper_id.clone(),
-        keeper_props.clone(),
-    )]));
+    circuit
+        .apply(&Delta::from(vec![ZRow::insert(
+            keeper_id.clone(),
+            keeper_props.clone(),
+        )]))
+        .expect("apply");
     model.insert(keeper_id, keeper_props);
 
     for m in mutations {
         let delta = apply(&mut model, &core, m);
-        circuit.apply(&delta);
+        circuit.apply(&delta).expect("apply");
 
         let view = core.analysis_snapshot();
         let ctx = PlanCtx::new(&view, &semantic);
@@ -249,6 +252,7 @@ proptest! {
 
     // spec: MEDULLA-INCREMENTAL-VIEWS-R001.3
     /// Membership (Scan/Filter/AsOf) incremental == real `execute` recompute, every step.
+    // spec: MEDULLA-INCREMENTAL-VIEWS-R002.4
     #[test]
     fn membership_matches_execute(
         plan in arb_membership_plan(),
@@ -279,7 +283,9 @@ fn scan_type_only_matches_execute() {
     ] {
         let props = v.as_object().unwrap().clone();
         core.add_node(id.into(), blob(&props));
-        circuit.apply(&Delta::from(vec![ZRow::insert(id, props)]));
+        circuit
+            .apply(&Delta::from(vec![ZRow::insert(id, props)]))
+            .expect("apply");
     }
 
     let view = core.analysis_snapshot();

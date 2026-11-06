@@ -12,7 +12,6 @@ use crate::value::{ColumnDef, Value};
 pub struct SchemaRow {
     pub kind: String, // "table" | "index" | "view" | "trigger"
     pub name: String,
-    #[allow(dead_code)] // part of the sqlite_schema row shape; not needed by the importer
     pub tbl_name: String,
     pub root_page: i64,
     pub sql: String,
@@ -67,6 +66,32 @@ pub fn parse_columns(sql: &str) -> Result<Vec<ColumnDef>> {
 
     // Split on top-level commas.
     parse_column_entries(split_top_level(inner))
+}
+
+/// The column that aliases the rowid: declared exactly `INTEGER … PRIMARY KEY`. SQLite
+/// stores NULL in that column's record slot and keeps the value in the cell's rowid.
+pub fn rowid_alias(sql: &str) -> Option<String> {
+    let open = sql.find('(')?;
+    let close = find_column_list_close(sql.as_bytes(), open)?;
+    split_top_level(&sql[open + 1..close])
+        .iter()
+        .filter_map(|entry| {
+            let column = parse_column_entry(entry)?;
+            let rest = first_token(entry.trim()).1.to_ascii_uppercase();
+            let collapsed = rest.split_whitespace().collect::<Vec<_>>().join(" ");
+            (column.decl_type.eq_ignore_ascii_case("INTEGER") && collapsed.contains("PRIMARY KEY"))
+                .then_some(column.name)
+        })
+        .next()
+}
+
+/// The leading column of a `CREATE [UNIQUE] INDEX … ON table (col …)` statement.
+pub fn index_leading_column(sql: &str) -> Option<String> {
+    let open = sql.find('(')?;
+    let close = find_column_list_close(sql.as_bytes(), open)?;
+    let first = split_top_level(&sql[open + 1..close]).into_iter().next()?;
+    let name = unquote(&first_token(first.trim()).0);
+    (!name.is_empty()).then_some(name)
 }
 
 /// Find the closing paren for the opening paren at `open`, respecting quoted text.

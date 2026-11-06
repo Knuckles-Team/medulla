@@ -94,6 +94,12 @@ $($variants)*
     DecisionLog {
         op: Box<medulla_decision_types::decision::statistical::log::DecisionLogOp>,
     },
+    /// Research claims: propose, advance along the lifecycle, record evidence
+    /// on five channels, compile a sealed research artifact and read them back.
+    /// The `Claims` handler is the single writer of claim state.
+    Claims {
+        op: Box<medulla_types::claims::ClaimOp>,
+    },
     /// General bounded 0-1 integer programme with an independently verifiable
     /// certificate. Pure compute: no store, no clock, no float.
     Solve {
@@ -104,6 +110,13 @@ $($variants)*
     /// Atomic connector MCP pack import and its admin surface.
     ConnectorPack {
         op: Box<medulla_catalog_types::connector_pack::ConnectorPackOp>,
+    },
+
+    /// Workflow registry (MEDULLA-DECISION-ENGINE-R166.3): `Register` stores one
+    /// registration as a tenant graph node through the mutation gateway; `Read`
+    /// returns one registration by exact identity. Not a `Decide` stage.
+    WorkflowRegistry {
+        op: Box<medulla_work_types::orchestration::workflows::WorkflowRegistryOp>,
     },
 
     /// RF-ADR-009 native ingestion authority. Resolves the exact Connector

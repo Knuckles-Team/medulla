@@ -234,7 +234,10 @@ fn work_item_terminal_key(method: &Method) -> Result<Option<String>, String> {
         } => Some(idempotency_key.clone()),
         Method::ClaimWorkItem { .. }
         | Method::RenewWorkItemLease { .. }
-        | Method::CasWorkItemMetadata { .. } => None,
+        | Method::CasWorkItemMetadata { .. }
+        | Method::MarkWorkItemEffectStarted { .. }
+        | Method::RecordEffectReceipt { .. }
+        | Method::SubmitAdmittedRequest { .. } => None,
         Method::ReserveWorkItemResources { request }
         | Method::ReleaseWorkItemResources { request }
         | Method::ReclaimWorkItemResources { request } => Some(request.idempotency_key.clone()),
@@ -375,6 +378,7 @@ fn identity_payload_digest(
 mod current_plan_identity_tests {
     use super::*;
 
+    /// Verifies MEDULLA-DURABLE-KERNEL-R028.5.3: Attachment replay and recovery
     // spec: MEDULLA-DURABLE-KERNEL-R028.5.3
     #[test]
     fn publication_attachment_changes_content_not_retry_identity() {

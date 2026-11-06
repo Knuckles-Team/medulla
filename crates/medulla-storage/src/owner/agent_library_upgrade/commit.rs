@@ -1,14 +1,19 @@
-//! The one durable write of an inspected Agent Library or GraphShard layout.
+//! The one durable write of an inspected Agent Library, GraphShard or
+//! SemanticIndex layout.
 
 use super::{
     successor, validate_census, validate_descriptor, validate_predecessor, GraphShardSource,
     UpgradeTarget, ValidatedOwnerLayoutUpgrade,
 };
 use crate::owner::graph_shard::{
-    AUDIT_REQUESTS, CURRENT_PLANS, REPOSITORY_ENRICHMENT_BUDGETS, REPOSITORY_ENRICHMENT_PARKS,
+    ADMITTED_REQUESTS, AUDIT_REQUESTS, CURRENT_PLANS, EFFECT_RECEIPTS,
+    REPOSITORY_ENRICHMENT_BUDGETS, REPOSITORY_ENRICHMENT_PARKS,
     REPOSITORY_ENRICHMENT_POLICY_REVISIONS, REPOSITORY_ENRICHMENT_SUPERSESSIONS, RUN_CHECKPOINTS,
 };
-use crate::owner::registry::{predecessor_evidence, MCP_CATALOG_CONFIGS, MCP_CATALOG_SCOPES};
+use crate::owner::registry::{
+    predecessor_evidence, MCP_CATALOG_CONFIGS, MCP_CATALOG_SCOPES, SEMANTIC_EMBEDDING_VERSION_TAGS,
+    SEMANTIC_MODALITY_CHECKS, SEMANTIC_PROMOTION_VERDICTS, SEMANTIC_STAGE_RECEIPTS,
+};
 use crate::owner::sql_checkpoint_upgrade::{
     begin_immediate_upgrade_write, read_upgrade_write_manifest, stage_upgrade_manifest,
 };
@@ -68,6 +73,7 @@ fn open_successor_tables(write: &WriteTransaction, target: UpgradeTarget) -> Res
                 .map_err(|error| error.to_string())?;
         }
         UpgradeTarget::GraphShard(source) => open_graph_shard_tables(write, source)?,
+        UpgradeTarget::SemanticIndex => open_promotion_tables(write)?,
     }
     Ok(())
 }
@@ -83,6 +89,12 @@ fn open_graph_shard_tables(
     if source == GraphShardSource::BeforeEnrichment {
         open_enrichment_tables(write)?;
     }
+    write
+        .open_table(EFFECT_RECEIPTS)
+        .map_err(|error| error.to_string())?;
+    write
+        .open_table(ADMITTED_REQUESTS)
+        .map_err(|error| error.to_string())?;
     write
         .open_table(RUN_CHECKPOINTS)
         .map_err(|error| error.to_string())?;
@@ -109,4 +121,22 @@ fn open_enrichment_tables(write: &WriteTransaction) -> Result<(), String> {
         .open_table(REPOSITORY_ENRICHMENT_PARKS)
         .map_err(|error| error.to_string())?;
     Ok(())
+}
+
+/// Create, empty, the four promotion-gate tables of the semantic index
+/// (MEDULLA-UNIFIED-DATA-PLANE-R040.3).
+fn open_promotion_tables(write: &WriteTransaction) -> Result<(), String> {
+    write
+        .open_table(SEMANTIC_MODALITY_CHECKS)
+        .map_err(|error| error.to_string())?;
+    write
+        .open_table(SEMANTIC_STAGE_RECEIPTS)
+        .map_err(|error| error.to_string())?;
+    write
+        .open_table(SEMANTIC_PROMOTION_VERDICTS)
+        .map_err(|error| error.to_string())?;
+    write
+        .open_table(SEMANTIC_EMBEDDING_VERSION_TAGS)
+        .map(|_| ())
+        .map_err(|error| error.to_string())
 }

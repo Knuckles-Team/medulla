@@ -59,6 +59,8 @@ pub fn entry_kind_token(kind: PackEntryKind) -> &'static str {
         PackEntryKind::ModelProfile => "model_profile",
         PackEntryKind::A2aCard => "a2a_card",
         PackEntryKind::SkillFile => "skill_file",
+        PackEntryKind::Crosswalk => "crosswalk",
+        PackEntryKind::ConceptPath => "concept_path",
     }
 }
 
@@ -451,6 +453,7 @@ mod harness_tool_fact_tests {
         agent_component::ToolFactDeclarer, agent_component::ToolSideEffects,
     };
 
+    /// Verifies MEDULLA-TYPED-PACKS-R045.3: The annotation digest covers the new fields without moving old vectors
     // spec: MEDULLA-TYPED-PACKS-R045.3
     #[test]
     fn absent_new_fields_keep_golden_vectors() {
@@ -529,7 +532,7 @@ mod harness_tool_fact_tests {
 mod tests {
     use super::*;
 
-    // spec: MEDULLA-TYPED-PACKS-R070
+    // spec: MEDULLA-TYPED-PACKS-R070, MEDULLA-TYPED-PACKS-R001.4
     /// Every committed sample of the vector file under
     /// `crates/medulla-types/tests/fixtures/` must equal the bytes the current
     /// Rust type produces: the test deserializes each committed wire fixture

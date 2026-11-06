@@ -55,22 +55,17 @@ pub mod tiered;
 pub mod value;
 pub mod version;
 
-// ModalityContract retrofit (CONCEPT:E4): `impl ModalityContract for StoredBlock`,
-// behind the crate's own opt-in `contract` feature (default OFF). See `src/contract.rs`.
-#[cfg(feature = "contract")]
-mod contract;
-
-// Graph-guided paging adapter (CONCEPT:MEDULLA-KG.memory.graph-guided-paging): computes
-// PageRank/centrality importance scores over an `medulla-compute::GraphView` and shapes them
-// for `TieredCache::apply_importance_scores`. Behind the crate's own opt-in `graph`
-// feature (default OFF, pulls `medulla-compute`) — the core `TieredCache::set_importance`
-// mechanism itself stays dependency-free either way. See `src/graph_importance.rs`.
-#[cfg(feature = "graph")]
-pub mod graph_importance;
+// The tier refusal enum (MEDULLA-DURABLE-KERNEL-R083.8), in every build, plus the
+// ModalityContract retrofit (CONCEPT:E4) behind the opt-in `contract` feature.
+pub mod contract;
 
 pub use compress::{Codec, StoredBlock};
+pub use contract::KvTierError;
 pub use hash::content_hash;
-pub use policy::{AdmissionRefusal, CacheEntryMeta, GenerationRef, PolicyTier, TierPolicy};
+pub use policy::{
+    install_observer, AdmissionRefusal, CacheEntryMeta, GenerationRef, LookupOutcome,
+    PolicyDecision, PolicyEvent, PolicyObserver, PolicyTier, TierPolicy,
+};
 pub use shared::{
     BranchId, ForkStats, ReleaseOutcome, SharedKvBackend, SharedKvIndex, SharedStats, SnapshotId,
 };

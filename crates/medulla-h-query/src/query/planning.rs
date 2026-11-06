@@ -355,8 +355,15 @@ pub fn run_unified_with<T>(
     // EH-563 — one federation-optimizer session per served query that touches a foreign
     // source: the server budget, the plan's LIMIT hints and the per-fragment trace.
     #[cfg(feature = "federation")]
-    let federation = plan_touches_foreign(&ops)
-        .then(medulla_federation::federation_opt::FederationSession::from_env);
+    let federation = plan_touches_foreign(&ops).then(|| {
+        let session = medulla_federation::federation_opt::FederationSession::from_env();
+        let knobs = medulla_server_api::knob_config::knobs();
+        session.set_snapshot_bound(medulla_federation::federation_opt::SnapshotBound {
+            replica_lag_bound_ms: knobs.federation_replica_lag_bound_ms,
+            statement_timeout_ms: knobs.federation_statement_timeout_ms,
+        });
+        session
+    });
 
     // CONCEPT:MEDULLA-KG.query.served-text-index-binding — bind a live BM25 lexical search surface into the
     // served `PlanCtx` so a served `UnifiedQuery`/`Uql` whose plan carries
@@ -868,8 +875,9 @@ pub(crate) async fn run_unified_off_lock(
     snap: Arc<medulla_graph_core::graph::GraphView>,
     plan: medulla_exec::algebra::Plan,
     legs: ServedPlanLegs,
+    scope: &ReadScope,
 ) -> UnifiedRunOutcome {
-    run_unified_off_lock_with(state, req_id, core, snap, plan, legs, execute_rows).await
+    run_unified_off_lock_with(state, req_id, core, snap, plan, legs, scope, execute_rows).await
 }
 
 /// [`run_unified_off_lock`] with a caller-chosen finisher (see [`run_unified_with`]).
@@ -881,6 +889,7 @@ pub(crate) async fn run_unified_off_lock_with<T, F>(
     snap: Arc<medulla_graph_core::graph::GraphView>,
     plan: medulla_exec::algebra::Plan,
     legs: ServedPlanLegs,
+    scope: &ReadScope,
     finish: F,
 ) -> Result<Result<T, String>, Response>
 where
@@ -889,6 +898,15 @@ where
         + Send
         + 'static,
 {
+    // MEDULLA-IDENTITY-R023.3 / R610.3: the one read chokepoint narrows the snapshot to
+    // the verified caller's tenant and visible knowledge units, after the row-level
+    // security view and before any answer is computed or cached.
+    let snap = scope.narrow(
+        req_id,
+        core.version(),
+        snap,
+        &medulla_server_api::read_scope::bound_variables(&plan),
+    )?;
     let core_for_ctx = core.clone();
     let ServedPlanLegs {
         #[cfg(feature = "tsdb")]

@@ -34,6 +34,8 @@
 //! `medulla` package's default build; see the root `Cargo.toml`'s `members` comment.
 
 pub mod catalog;
+#[cfg(feature = "contract-schema")]
+pub mod decision_ontology;
 mod descriptor;
 mod domains;
 pub mod error_routing;
@@ -556,6 +558,12 @@ fn control_family_policy(method: &Method) -> Option<MethodPolicy> {
         Method::DecisionEval { op } => {
             Some(decision_job_policy(op.is_mutation(), "admin:decision-eval"))
         }
+        Method::Claims { op } => Some(native_owner_policy(
+            op.is_mutation(),
+            DurabilityDomain::StatechartRedb,
+            op.authz_action(),
+            TxnParticipation::Atomic,
+        )),
         Method::DecisionLog { op } => {
             Some(decision_job_policy(op.is_mutation(), op.authz_action()))
         }

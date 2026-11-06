@@ -258,13 +258,17 @@ fn semantic_key_type(name: &str) -> Option<&'static str> {
         // `medulla_ann` is keyed `(tenant, binding, generation, part)` like the rest
         // of the generation-scoped semantic payload, not by a flat name.
         | "eg_ann" => Some("(&str,&str,u64,&str)"),
-        "semantic_generation_checkpoint_heads" => Some("(&str,&str,u64,&str,&str)"),
+        "semantic_generation_checkpoint_heads"
+        | "modality_check_records"
+        | "stage_receipts" => Some("(&str,&str,u64,&str,&str)"),
         "semantic_stage_transitions" => Some("(&str,&str,&str)"),
         "semantic_dead_letters" => Some("(&str,&str,&str,u32)"),
         "semantic_bindings"
         | "semantic_tombstones"
         | "semantic_lexical_manifests"
-        | "semantic_ann_manifests" => Some("(&str,&str,u64)"),
+        | "semantic_ann_manifests"
+        | "promotion_verdicts"
+        | "embedding_version_tags" => Some("(&str,&str,u64)"),
         "semantic_binding_heads"
         | "semantic_binding_state_transitions"
         | "semantic_active_pointers" => Some("(&str,&str)"),
@@ -367,7 +371,11 @@ fn value_type_id(name: &str) -> &'static str {
         | "decision_records"
         | "write_back_change_sets"
         | "write_back_idempotency"
-        | "write_back_receipts" => "&[u8]",
+        | "write_back_receipts"
+        | "modality_check_records"
+        | "stage_receipts"
+        | "promotion_verdicts"
+        | "embedding_version_tags" => "&[u8]",
         name => graph_shard::value_type(name)
             .unwrap_or_else(|| unreachable!("table outside closed owner manifest: {name}")),
     }
@@ -485,7 +493,11 @@ fn semantic_codec(name: &str) -> Option<&'static str> {
         | "semantic_generation_checkpoint_heads"
         | "semantic_lexical_manifests"
         | "semantic_ann_manifests"
-        | "semantic_vectors" => "semantic-index-bytes-v1",
+        | "semantic_vectors"
+        | "modality_check_records"
+        | "stage_receipts"
+        | "promotion_verdicts"
+        | "embedding_version_tags" => "semantic-index-bytes-v1",
         _ => return None,
     })
 }
@@ -631,7 +643,11 @@ fn mutation_and_semantic_capabilities(name: &str) -> Option<u16> {
         | "semantic_graph_projection_manifests"
         | "semantic_authorization_receipts"
         | "semantic_generation_checkpoints"
-        | "semantic_generation_checkpoint_heads" => CAP_READ | CAP_INSERT | CAP_UPDATE | CAP_DELETE,
+        | "semantic_generation_checkpoint_heads"
+        | "modality_check_records"
+        | "stage_receipts"
+        | "promotion_verdicts"
+        | "embedding_version_tags" => CAP_READ | CAP_INSERT | CAP_UPDATE | CAP_DELETE,
         _ => return None,
     })
 }

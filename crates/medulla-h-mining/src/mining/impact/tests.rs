@@ -5,6 +5,7 @@
 use std::sync::Arc;
 
 use medulla_result_types::{
+    compute_result::mining::EcosystemQuery, compute_result::mining::EcosystemSeverity,
     compute_result::mining::ImpactOptions, compute_result::mining::RiskModel,
 };
 
@@ -146,4 +147,157 @@ fn assess_limits_writeback_and_records_a_cleared_node() {
     let written = assessments(&core);
     assert_eq!(written[0].1["of"], "api");
     assert_eq!(written[0].1["probability"], 0.0);
+}
+
+// ── Ecosystem package risk (MEDULLA-SUPPLY-VOCAB-R009.3 / R009.6) ──────────
+
+fn dependency_graph(edges: &[(&str, &str)]) -> Arc<GraphCore> {
+    let core = Arc::new(GraphCore::new());
+    let mut ids: Vec<&str> = edges.iter().flat_map(|(a, b)| [*a, *b]).collect();
+    ids.sort_unstable();
+    ids.dedup();
+    for id in ids {
+        core.add_node(
+            id.into(),
+            rmp_serde::to_vec_named(&serde_json::json!({"type": "EcosystemPackage"})).unwrap(),
+        );
+    }
+    for (dependent, dependency) in edges {
+        core.add_edge(
+            (*dependent).into(),
+            (*dependency).into(),
+            rmp_serde::to_vec_named(&serde_json::json!({"relationship": "DEPENDS_ON"})).unwrap(),
+        )
+        .unwrap();
+    }
+    core
+}
+
+fn ecosystem_method(package: &str, severity: EcosystemSeverity) -> Method {
+    let options = ImpactOptions {
+        ecosystem: Some(EcosystemQuery {
+            package: package.into(),
+            finding_id: "finding-1".into(),
+            severity,
+            max_depth: None,
+        }),
+        ..ImpactOptions::default()
+    };
+    Method::MineRiskPropagation {
+        nodes: Vec::new(),
+        seed: Vec::new(),
+        edges: Vec::new(),
+        damping: 0.85,
+        tolerance: 1e-9,
+        max_iterations: 100,
+        model: RiskModel::NoisyOr(options),
+        writeback: false,
+        #[cfg(feature = "epistemic")]
+        as_claim: false,
+    }
+}
+
+fn error_of(core: &Arc<GraphCore>, method: Method) -> String {
+    let resp = dispatch_for_test(9, Arc::clone(core), method).expect("a mining method");
+    assert!(resp.result.is_none(), "expected a refusal");
+    format!("{:?}", resp.error)
+}
+
+fn packages(v: &serde_json::Value) -> Vec<(String, String, Vec<String>)> {
+    v["impact"]["packages"]
+        .as_array()
+        .expect("packages listed")
+        .iter()
+        .map(|row| {
+            (
+                row["package"].as_str().unwrap().to_string(),
+                row["severity"].as_str().unwrap().to_string(),
+                row["path"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(|p| p.as_str().unwrap().to_string())
+                    .collect(),
+            )
+        })
+        .collect()
+}
+
+// spec: MEDULLA-SUPPLY-VOCAB-R009.3
+#[test]
+fn served_impact_lists_dependents() {
+    // Tenant A's graph: app -> lib -> core, tool -> core.
+    let tenant_a = dependency_graph(&[("lib", "core"), ("app", "lib"), ("tool", "core")]);
+    let v = json(&tenant_a, ecosystem_method("core", EcosystemSeverity::High));
+    let path = |ids: &[&str]| ids.iter().map(|s| s.to_string()).collect::<Vec<_>>();
+    assert_eq!(
+        packages(&v),
+        vec![
+            ("lib".into(), "high".into(), path(&["core", "lib"])),
+            ("tool".into(), "high".into(), path(&["core", "tool"])),
+            ("app".into(), "high".into(), path(&["core", "lib", "app"])),
+        ]
+    );
+    assert_eq!(v["written_back"], 0, "an ecosystem run writes nothing");
+    assert_eq!(v["impact"]["hops"], 8, "the knob default bounds the walk");
+    // An unknown package is the typed refusal.
+    let refused = error_of(
+        &tenant_a,
+        ecosystem_method("absent", EcosystemSeverity::Low),
+    );
+    assert!(refused.contains("ECOSYSTEM_PACKAGE_UNKNOWN"), "{refused}");
+    // Cross-tenant: tenant B's graph never sees tenant A's packages.
+    let tenant_b = dependency_graph(&[("other", "base")]);
+    let refused = error_of(&tenant_b, ecosystem_method("core", EcosystemSeverity::High));
+    assert!(refused.contains("ECOSYSTEM_PACKAGE_UNKNOWN"), "{refused}");
+    // A hop bound outside [1, 64] is refused.
+    let mut deep = ecosystem_method("core", EcosystemSeverity::High);
+    if let Method::MineRiskPropagation {
+        model: RiskModel::NoisyOr(options),
+        ..
+    } = &mut deep
+    {
+        options.ecosystem.as_mut().unwrap().max_depth = Some(65);
+    }
+    let refused = error_of(&tenant_a, deep);
+    assert!(
+        refused.contains("ECOSYSTEM_DEPTH_OUT_OF_RANGE"),
+        "{refused}"
+    );
+    // Without an ecosystem query, empty `nodes` is still refused.
+    let refused = error_of(
+        &tenant_a,
+        Method::MineRiskPropagation {
+            nodes: Vec::new(),
+            seed: Vec::new(),
+            edges: Vec::new(),
+            damping: 0.85,
+            tolerance: 1e-9,
+            max_iterations: 100,
+            model: RiskModel::NoisyOr(ImpactOptions::default()),
+            writeback: false,
+            #[cfg(feature = "epistemic")]
+            as_claim: false,
+        },
+    );
+    assert!(refused.contains("non-empty `nodes`"), "{refused}");
+}
+
+// spec: MEDULLA-SUPPLY-VOCAB-R009.6
+#[test]
+fn served_impact_over_dependency_chain() {
+    // Five packages with one diamond: b and c both depend on a; d depends on
+    // both; e depends on d.
+    let core = dependency_graph(&[("b", "a"), ("c", "a"), ("d", "b"), ("d", "c"), ("e", "d")]);
+    let v = json(&core, ecosystem_method("a", EcosystemSeverity::Critical));
+    let rows = packages(&v);
+    let reached: Vec<&str> = rows.iter().map(|(p, _, _)| p.as_str()).collect();
+    assert_eq!(reached, ["b", "c", "d", "e"], "every transitive dependent");
+    assert!(rows.iter().all(|(_, s, _)| s == "critical"));
+    let path_of = |id: &str| rows.iter().find(|(p, _, _)| p == id).unwrap().2.clone();
+    // The diamond is reached once, along its shortest (first) path.
+    assert_eq!(path_of("d"), ["a", "b", "d"]);
+    assert_eq!(path_of("e"), ["a", "b", "d", "e"]);
+    assert_eq!(v["scores"].as_array().unwrap().len(), 4);
+    assert_eq!(v["scores"][3]["hops"], 3);
 }

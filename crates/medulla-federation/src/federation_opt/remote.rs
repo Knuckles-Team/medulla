@@ -1,12 +1,16 @@
 //! The pushdown seam: one remote source as the optimizer sees it, and the resolution of a
 //! wire [`ForeignSourceSpec`] (or a registered name) to it.
 
+use std::sync::Arc;
+
 use medulla_types::wire::ForeignSourceSpec;
 
 use super::capability::{RemoteRequest, SourceCapabilities};
+use super::snapshot::{SnapshotBound, SnapshotConn};
 use super::stats::{fingerprint, short, Fingerprint};
 use crate::federation::{ForeignSource, ForeignSourceRegistry, SharedForeignSource};
 use medulla_exec::rowset::RowSet;
+use medulla_types::metadata_acceleration::SnapshotSemantics;
 
 /// A foreign source that can answer a [`RemoteRequest`]. `fetch` must return a SUPERSET of
 /// the rows the request selects: every row whose id is in `keys` (when keys are given), the
@@ -35,6 +39,18 @@ pub trait RemoteFetch {
     fn key_expressible(&self, _key: &str) -> bool {
         true
     }
+    /// Open the query's one read-only snapshot of this source (MEDULLA-UNIFIED-DATA-PLANE-R038.3.2).
+    /// `Ok(None)` for a source without snapshots. A declared replica whose replay lag is over
+    /// `bound.replica_lag_bound_ms` refuses with `REPLICA_LAG_EXCEEDED` before any read.
+    fn open_snapshot(&self, _bound: &SnapshotBound) -> Result<Option<SnapshotSemantics>, String> {
+        Ok(None)
+    }
+    /// The connection [`Self::open_snapshot`] opened, for the session to hand to later fragments.
+    fn held_snapshot(&self) -> Option<Arc<dyn SnapshotConn>> {
+        None
+    }
+    /// Read through the connection an earlier fragment of this query opened.
+    fn adopt_snapshot(&self, _conn: Arc<dyn SnapshotConn>) {}
 }
 
 /// The spec-derived identity of a source: its kind and fingerprint.
@@ -53,6 +69,7 @@ impl Identity {
             ForeignSourceSpec::RemoteEngine { .. } => "remote-engine",
             ForeignSourceSpec::HttpJson { .. } => "http-json",
             ForeignSourceSpec::Sql { .. } => "sql",
+            ForeignSourceSpec::SqliteFile { .. } => "sqlite-file",
             ForeignSourceSpec::Trino { .. }
             | ForeignSourceSpec::Cypher { .. }
             | ForeignSourceSpec::SparkBatch { .. }
@@ -178,6 +195,16 @@ fn from_spec<'a>(spec: &'a ForeignSourceSpec, name: Option<&'a str>) -> Box<dyn 
         ForeignSourceSpec::RemoteEngine { .. } => {
             Box::new(super::engine::EngineRemote::new(spec, identity))
         }
+        ForeignSourceSpec::Mcp {
+            server,
+            tool,
+            capabilities,
+        } => Box::new(super::mcp::McpRemote::new(
+            (server, tool),
+            capabilities.key_filter_pushdown,
+            super::mcp::registered_port(),
+            identity,
+        )),
         other => Box::new(Opaque {
             source: OpaqueSource::Spec(crate::federation::source_for(other)),
             identity,

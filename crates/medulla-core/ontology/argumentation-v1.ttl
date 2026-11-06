@@ -65,8 +65,7 @@ importing an RA/CA-node also writes the underlying SUPPORTS/ATTACKS edge so
 medulla-epistemic's Dung argumentation (Method::ResolveConflict — grounded/
 preferred/stable semantics) computes acceptability natively, with no
 duplicated solver. See agent_utilities/knowledge_graph/argumentation/aif.py
-and docs/architecture/aif-argumentation.md.""" ;
-    owl:imports <http://knuckles.team/kg/core> .
+and docs/architecture/aif-argumentation.md.""" .
 
 :AIFConflictApplicationNode a owl:Class ;
     rdfs:label "AIF Conflict Application Node (CA)" ;
@@ -140,3 +139,7 @@ and docs/architecture/aif-argumentation.md.""" ;
 
 [] a owl:AllDisjointClasses ;
     owl:members ( :AIFInferenceScheme :AIFConflictScheme :AIFPreferenceScheme ) .
+
+# ── Core rooting (MEDULLA-TYPED-PACKS-R071.2) ───────────────────────────────────
+# Every class of this module above reaches the core class kg:Concept through rdfs:subClassOf.
+<http://knuckles.team/kg#AIFNode> rdfs:subClassOf <http://knuckles.team/kg#Concept> .

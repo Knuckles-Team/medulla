@@ -72,6 +72,11 @@ pub struct ServerArgs {
     #[arg(long, env = "GRAPH_SERVICE_PERSIST_DIR")]
     pub persist_dir: Option<String>,
 
+    /// Policy for a stale change-envelope version expectation
+    /// (MEDULLA-DURABLE-KERNEL-R084.3): refuse, prefer_newer or field_union.
+    #[arg(long, env = "MEDULLA_WRITE_CONFLICT_STRATEGY", default_value = "refuse", value_parser = ["refuse", "prefer_newer", "field_union"])]
+    pub write_conflict_strategy: String,
+
     /// Ebbinghaus decay sweep interval in seconds (0 = disabled).
     #[arg(long, default_value = "0", env = "GRAPH_SERVICE_DECAY_INTERVAL")]
     pub decay_interval: u64,
@@ -167,6 +172,31 @@ pub struct ServerArgs {
     /// tiny daemon.
     #[arg(long, default_value = "0", env = "MEDULLA_IDLE_SHUTDOWN_SECS")]
     pub idle_shutdown_secs: u64,
+
+    /// `bus.participant_ttl_s`: a bus participant is live while its last
+    /// heartbeat is at most this many seconds old (MEDULLA-DURABLE-KERNEL-R095.1001).
+    /// Bounds [10, 3600].
+    #[arg(long, default_value = "90", env = "MEDULLA_BUS_PARTICIPANT_TTL_S")]
+    pub bus_participant_ttl_s: u64,
+
+    /// Knob `identity.ownership_writer_share` (MEDULLA-IDENTITY-R700.2): the
+    /// fraction of a graph's writes that earns a non-owner writer the
+    /// `Writer` disposition. Range [0.01, 0.5]; out of range refuses startup.
+    #[arg(
+        long,
+        env = "MEDULLA_IDENTITY_OWNERSHIP_WRITER_SHARE",
+        default_value_t = medulla_isolation::isolation::ownership::DEFAULT_OWNERSHIP_WRITER_SHARE,
+        value_parser = parse_ownership_writer_share
+    )]
+    pub identity_ownership_writer_share: f64,
+}
+
+fn parse_ownership_writer_share(raw: &str) -> Result<f64, String> {
+    let value: f64 = raw
+        .parse()
+        .map_err(|error| format!("identity.ownership_writer_share: {error}"))?;
+    medulla_isolation::isolation::ownership::OwnershipWriterShare::new(value)
+        .map(|share| share.get())
 }
 
 pub fn native_tcp_addr_is_loopback(addr: &str) -> bool {
@@ -199,6 +229,13 @@ pub fn socket_mode_or_exit(raw: &str) -> u32 {
             2,
         )
     })
+}
+
+/// Apply `--bus-participant-ttl-s`; an out-of-bounds value exits before any listener binds.
+pub fn bus_participant_ttl_or_exit(ttl_s: u64) {
+    if let Err(reason) = medulla_h_graph::graph_ops::bus::set_participant_ttl_s(ttl_s) {
+        exit_with(format_args!("invalid --bus-participant-ttl-s: {reason}"), 2);
+    }
 }
 
 /// Security gate: an auth secret and a durable-state directory are mandatory.
@@ -599,6 +636,17 @@ pub fn open_durable_stores(
         blob: open_blob_substrate(persist_dir),
         #[cfg(feature = "kv")]
         kv: open_kv_store(persist_dir),
+    }
+}
+
+/// Map the `--write-conflict-strategy` value to the typed policy
+/// (MEDULLA-DURABLE-KERNEL-R084.3). Clap already restricts the value set.
+pub fn parse_write_conflict_strategy(value: &str) -> medulla_types::write_conflict::MergeStrategy {
+    use medulla_types::write_conflict::MergeStrategy;
+    match value {
+        "prefer_newer" => MergeStrategy::PreferNewer,
+        "field_union" => MergeStrategy::FieldUnion,
+        _ => MergeStrategy::Refuse,
     }
 }
 

@@ -23,6 +23,9 @@ pub mod batch_compile;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod carrier;
 
+/// `ClientSession` record admission (MEDULLA-IDENTITY-R705).
+pub mod client_session;
+
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod compute;
@@ -48,6 +51,9 @@ pub mod icv_guard;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod identity_view;
 
+/// Typed server-config knob loader (MEDULLA-CONTRACT-R058).
+pub mod knob_config;
+
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[cfg(any(feature = "server", feature = "redb"))]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
@@ -62,6 +68,12 @@ pub mod oidc;
 #[cfg(feature = "redb")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod outbox_operator;
+
+/// The read and claim audit sink (MEDULLA-IDENTITY-R610.5).
+pub mod read_audit;
+
+/// Read scope: visible knowledge units and tenant placement (MEDULLA-IDENTITY-R023.3).
+pub mod read_scope;
 
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)

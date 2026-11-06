@@ -56,6 +56,7 @@ medulla-server-cdc = { path = "../medulla-server-cdc" }
 medulla-server-auth = { path = "../medulla-server-auth" }
 medulla-exec = { path = "../medulla-exec" }
 medulla-federation = { path = "../medulla-federation" }
+unicode-normalization = "0.1"
 
 [features]
 test-support = ["medulla-server-auth/test-support", "medulla-agent-types/test-support", "medulla-catalog-types/test-support", "medulla-decision-types/test-support", "medulla-kernel/test-support", "medulla-persistence/test-support", "medulla-protocol-types/test-support", "medulla-raft/test-support", "medulla-server-api/test-support", "medulla-store/test-support", "medulla-types/test-support", "medulla-source-types/test-support", "medulla-work-types/test-support", "medulla-persistence-records/test-support", "medulla-server-ops/test-support", "medulla-server-blob/test-support", "medulla-server-mutation/test-support", "medulla-exec/test-support", "medulla-federation/test-support"]

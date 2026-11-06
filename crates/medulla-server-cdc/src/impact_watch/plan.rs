@@ -208,6 +208,7 @@ pub fn plan_watch(
         assess: region,
         scope: watch.id.clone(),
         as_of_ms,
+        ecosystem: None,
     };
     Ok(Some(Method::MineRiskPropagation {
         nodes,

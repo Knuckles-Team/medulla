@@ -31,9 +31,11 @@ mod access;
 mod approval_key;
 mod audit;
 mod config;
+mod delegation;
 mod denials;
 mod model;
 mod ops;
+mod ownership;
 mod password_policy;
 mod projection;
 mod relations;
@@ -58,7 +60,10 @@ pub use audit::{
 };
 pub use config::{
     AuthMode, IdentityConfig, LocalFallback, ModeTransition, RegistrationPolicy,
-    DEFAULT_PASSWORD_MIN_CHARS, MAX_PASSWORD_CHARS, NONE_MODE_ACK,
+    DEFAULT_PASSWORD_MIN_CHARS, MAX_PASSWORD_CHARS,
+};
+pub use delegation::{
+    DelegationRecord, DelegationRecordWrite, DelegationStanding, DelegationState,
 };
 pub use denials::{DenialSample, DenialSampler, MAX_DENIAL_SAMPLES};
 pub use model::{
@@ -66,9 +71,13 @@ pub use model::{
     TotpRecord, UserKind, UserRecord, UserStatus, WebauthnRecord,
 };
 pub use ops::{
-    AccessOp, ConfigOp, CredentialOp, IdentityOp, IdpOp, MfaOp, OpAuthority, OpMeta, SessionOp,
-    TokenOp, UserOp, IDENTITY_ADMIN_SCOPE, IDENTITY_AUTHENTICATE_SCOPE, IDENTITY_PROVISION_SCOPE,
-    IDENTITY_READ_SCOPE, IDENTITY_SELF_SCOPE,
+    AccessOp, ConfigOp, CredentialOp, DelegationOp, IdentityOp, IdpOp, MfaOp, OpAuthority, OpMeta,
+    SessionOp, TokenOp, UserOp, IDENTITY_ADMIN_SCOPE, IDENTITY_AUTHENTICATE_SCOPE,
+    IDENTITY_PROVISION_SCOPE, IDENTITY_READ_SCOPE, IDENTITY_SELF_SCOPE,
+};
+pub use ownership::{
+    plan_digest, GrantPlanEntry, GraphOwnershipSignals, InvalidOwnership, OwnershipDisposition,
+    RollbackEntry, MAX_OWNERSHIP_ROLES, MAX_OWNERSHIP_WRITERS, OWNERSHIP_SCHEMA_VERSION,
 };
 pub use password_policy::check_password;
 pub use projection::{
@@ -92,7 +101,8 @@ pub use requests_provision::{
 pub use scope::{ScopeClass, ScopeClassifier};
 pub use segment::{
     highest_version, owner_or_matching_scope, visible_units, visible_units_with, KnowledgeUnit,
-    ShareScope, UnitPrincipal, VisibilityRules, DEFAULT_VISIBILITY_RULES,
+    SegmentReadAudit, ShareScope, UnitOutOfScope, UnitPrincipal, VisibilityRules,
+    DEFAULT_VISIBILITY_RULES, MAX_AUDITED_UNIT_IDS, READ_SCOPE_REFUSALS,
 };
 pub use sql_dump::{parse_dump, render_dump, DumpRow, MAX_DUMP_BYTES};
 pub use stamp::{IdentityActor, IdentityStamp, PasswordCheck, Secret};
@@ -102,8 +112,8 @@ pub use text::{
     MIN_RECOVERY_CODE_CHARS, MIN_TOTP_SECRET_CHARS,
 };
 pub use views::{
-    AuthenticateOutcome, AuthenticateResult, IdentityReply, ResetDelivery, SessionView, UserView,
-    WebauthnCredentialView,
+    AuthenticateOutcome, AuthenticateResult, IdentityReply, ResetDelivery, SessionLiveness,
+    SessionView, UserView, WebauthnCredentialView,
 };
 
 /// The principal id of the built-in bootstrap user (§2.2.3).
@@ -203,6 +213,9 @@ medulla_types::closed_error_codes! {
         PreconditionFailed => "IDENTITY_PRECONDITION_FAILED",
         /// The transition is not in the state machine.
         IllegalTransition => "IDENTITY_ILLEGAL_TRANSITION",
+        /// A served transition names `none` as its source or target; only
+        /// the offline operator conversion leaves `none`.
+        ModeTransitionForbidden => "MODE_TRANSITION_FORBIDDEN",
         /// A built-in object cannot be removed or renamed.
         BuiltIn => "IDENTITY_BUILT_IN",
         /// The boundary did not stamp what this op needs (defense in depth: a
@@ -220,6 +233,9 @@ medulla_types::closed_error_codes! {
         /// The principal's kind does not allow this (e.g. an API key for a
         /// service-only scope held by a human).
         KindMismatch => "IDENTITY_KIND_MISMATCH",
+        /// A liveness check named a session reference the store does not hold,
+        /// or one outside the caller's deployment tenant.
+        SessionReferenceUnknown => "SESSION_REFERENCE_UNKNOWN",
     }
 }
 

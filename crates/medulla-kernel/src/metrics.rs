@@ -187,6 +187,14 @@ mod imp {
                 .expect("unique metric");
             m
         };
+        // MEDULLA-DURABLE-KERNEL-R084.5: one count per resolved stale envelope.
+        // `strategy` ∈ {refuse,prefer_newer,field_union}; `winner` ∈
+        // {existing,incoming,merged} (bounded, 3 × 3).
+        static ref WRITE_CONFLICTS: IntCounterVec = counter_vec(
+            "medulla_write_conflicts_total",
+            "Stale change-envelope write conflicts, by merge strategy and winner",
+            &["strategy", "winner"],
+        );
         static ref GRAPH_OPS: IntCounterVec = counter_vec(
             "medulla_graph_ops_total",
             "Graph-targeted operations admitted past the ACL, by graph (bounded cardinality)",
@@ -574,6 +582,11 @@ mod imp {
         QOS_SHED.with_label_values(&[class, reason]).inc();
     }
 
+    /// Record one resolved write conflict (MEDULLA-DURABLE-KERNEL-R084.5).
+    pub fn write_conflict(strategy: &str, winner: &str) {
+        WRITE_CONFLICTS.with_label_values(&[strategy, winner]).inc();
+    }
+
     /// Record a QoS-admitted request finishing dispatch after `seconds` (W2.4): observes
     /// the per-class latency histogram and releases the per-class in-flight gauge.
     pub fn qos_dispatch_finished(class: &str, seconds: f64) {
@@ -878,6 +891,10 @@ pub use outbox::{outbox_dead_lettered, set_outbox_head};
 // Automatic store migration at open (MEDULLA-DURABLE-KERNEL-R070.1).
 mod store_migration;
 pub use store_migration::store_migration_step;
+
+// Uncertain-effect series (MEDULLA-DURABLE-KERNEL-R820.5).
+mod work_item;
+pub use work_item::{work_item_uncertain_effect, work_item_uncertain_open_add};
 
 // ── No-op shims (feature `metrics` disabled) ─────────────────────────────
 #[cfg(not(feature = "metrics"))]

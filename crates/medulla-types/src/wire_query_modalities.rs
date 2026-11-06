@@ -493,6 +493,19 @@ pub enum ForeignSourceSpec {
         #[serde(default)]
         capabilities: ForeignOperationCapabilities,
     },
+    /// One table of a local SQLite file, read in place through the lock-free WAL
+    /// snapshot reader (MEDULLA-UNIFIED-DATA-PLANE-R015.2.2.3). Registration refuses a
+    /// path outside `foreign.sqlite.allowed_roots` (`SQLITE_FILE_DENIED`). The row id is
+    /// the SQLite rowid.
+    SqliteFile {
+        /// Path of the database file.
+        path: String,
+        /// The table to read.
+        table: String,
+        /// The exposed columns; empty exposes every declared column.
+        #[serde(default)]
+        columns: Vec<String>,
+    },
     /// A brain-guarded source (MEDULLA-DURABLE-KERNEL-R024.6): an inner query that
     /// MUST pass a named semantic/policy guard check (the "brain") before any
     /// row crosses the federation boundary. `guard_policy` names the guard a
@@ -524,6 +537,10 @@ pub struct ForeignOperationCapabilities {
     /// The bound operation accepts a server-side key filter (e.g. `id IN (...)`).
     #[serde(default)]
     pub key_filter_pushdown: bool,
+    /// The bound operation is a search index and evaluates a relevance search itself
+    /// (MEDULLA-UNIFIED-DATA-PLANE-R038.5.1). Registration validates it.
+    #[serde(default)]
+    pub search: Option<crate::search_source::SearchIndexCapability>,
 }
 
 /// A WRITE-side mirror target (MEDULLA-DURABLE-KERNEL-R024's mirror-target half,

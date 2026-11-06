@@ -60,6 +60,7 @@ fn measures_ece_and_empirical_coverage_across_option_sets_of_varying_size() {
         estimators: &[],
         head_digest: "sha256:variable-option-scorer",
         policy_digest: "sha256:policy",
+        feature_power: None,
     };
     for size in SIZES {
         let holdout = variable_dataset(&[size], 10_001);

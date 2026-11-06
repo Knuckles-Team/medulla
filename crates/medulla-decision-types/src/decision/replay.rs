@@ -194,3 +194,39 @@ pub struct EvaluationRun {
     pub validation: ReplayValidation,
     pub synthetic: bool,
 }
+
+/// Most lags one feature-power decay curve reports (`knob eval.ic_max_lag`).
+pub const MAX_IC_DECAY_LAGS: usize = 64;
+/// Most features one evaluation reports feature power for.
+pub const MAX_FEATURE_POWER_REPORTS: usize = 32;
+
+/// A bootstrap confidence interval on a feature's rank information coefficient.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct IcInterval {
+    /// The coverage of the interval (`knob eval.ci_level`).
+    pub level: QuantisedValue,
+    pub lower: QuantisedValue,
+    pub upper: QuantisedValue,
+}
+
+/// How much predictive power one feature carries, measured over the items
+/// an evaluation admitted, in time order.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct FeaturePowerReport {
+    pub feature: String,
+    /// Rank information coefficient of the feature against the same item's outcome.
+    pub rank_ic: QuantisedValue,
+    /// Rank information coefficient of the feature against the outcome `k`
+    /// items later, for `k` = 1 to `knob eval.ic_max_lag`, in lag order.
+    pub ic_decay: BoundedVec<QuantisedValue, MAX_IC_DECAY_LAGS>,
+    /// `rank_ic * sqrt(effective_sample_size)`.
+    pub information_ratio: QuantisedValue,
+    /// Items discounted by the feature's lag-1 autocorrelation.
+    pub effective_sample_size: QuantisedValue,
+    /// Seeded by the dataset digest, so the same dataset gives the same interval.
+    pub ic_interval: IcInterval,
+}

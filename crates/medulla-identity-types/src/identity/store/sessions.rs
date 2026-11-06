@@ -45,6 +45,12 @@ impl IdentityStore {
                 session_ref,
                 tenant,
             } => self.inspect_session_reference(session_ref, tenant, stamp, ctx),
+            SessionOp::Liveness {
+                session_ref,
+                tenant,
+            } => self
+                .session_liveness(session_ref, tenant, stamp, ctx.now_ms)
+                .map(IdentityReply::SessionLiveness),
             SessionOp::RenewReference {
                 session_ref,
                 tenant,

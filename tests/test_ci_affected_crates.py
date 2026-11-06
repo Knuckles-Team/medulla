@@ -135,7 +135,7 @@ def test_pyo3_features_name_only_selected_packages() -> None:
     assert both == mod.PYO3_FEATURES
 
 
-@pytest.mark.spec("MEDULLA-CONTRACT-R053.7.1")
+@pytest.mark.spec("MEDULLA-CONTRACT-R053.7.2")
 def test_spec_file_read_by_a_test_selects_its_package(tmp_path, monkeypatch) -> None:
     """A changed ``specs/`` file selects every package whose sources read it."""
     reader = tmp_path / "crates" / "medulla-types" / "tests"
@@ -156,7 +156,7 @@ def test_spec_file_read_by_a_test_selects_its_package(tmp_path, monkeypatch) -> 
     mod._sources.cache_clear()
 
 
-@pytest.mark.spec("MEDULLA-CONTRACT-R053.7.1")
+@pytest.mark.spec("MEDULLA-CONTRACT-R053.7.2")
 def test_pr_spec_only_decision_uses_the_crate_selection() -> None:
     ci = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8"))
     for job in ("pr-scope", "ci"):

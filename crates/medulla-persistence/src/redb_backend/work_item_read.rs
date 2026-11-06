@@ -293,4 +293,34 @@ impl RedbBackend {
         })
         .await
     }
+
+    /// `GetEffectReceipt` (MEDULLA-DURABLE-KERNEL-R820.3).
+    pub async fn read_effect_receipt(
+        &self,
+        graph_fname: &str,
+        key: medulla_work_types::work_item_read::EffectRecordKey,
+    ) -> Result<Option<medulla_work_types::work_item_read::EffectReceipt>, String> {
+        let graph = graph_fname.to_owned();
+        self.read_snapshot(graph_fname, move |shard, crypto| {
+            medulla_work_store::redb_store::work_item::effect::read_effect_receipt(
+                shard, &graph, &key, crypto,
+            )
+        })
+        .await
+    }
+
+    /// `GetAdmittedRequest` (MEDULLA-DURABLE-KERNEL-R820.3).
+    pub async fn read_admitted_request(
+        &self,
+        graph_fname: &str,
+        key: medulla_work_types::work_item_read::EffectRecordKey,
+    ) -> Result<Option<medulla_work_types::work_item_read::AdmittedRequestRecord>, String> {
+        let graph = graph_fname.to_owned();
+        self.read_snapshot(graph_fname, move |shard, crypto| {
+            medulla_work_store::redb_store::work_item::effect::read_admitted_request(
+                shard, &graph, &key, crypto,
+            )
+        })
+        .await
+    }
 }

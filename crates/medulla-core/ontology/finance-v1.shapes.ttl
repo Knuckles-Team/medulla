@@ -499,6 +499,37 @@
             sh:path :recordKnownAt ] ;
     sh:targetClass :LeverageTerms .
 
+:FinanceReceiptShape a sh:NodeShape ;
+    sh:description "A finance receipt names one closed receipt kind, one claimed or completed state, a tenant key, a non-empty idempotency key and the time it was recorded." ;
+    sh:name "Finance Receipt Shape" ;
+    sh:property [ sh:in ( "alert_delivery" "schedule_run" "dca_proposal" ) ;
+            sh:maxCount 1 ;
+            sh:message "receiptKind is alert_delivery, schedule_run or dca_proposal." ;
+            sh:minCount 1 ;
+            sh:path :receiptKind ],
+        [ sh:in ( "claimed" "completed" ) ;
+            sh:maxCount 1 ;
+            sh:message "receiptState is claimed or completed." ;
+            sh:minCount 1 ;
+            sh:path :receiptState ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:message "FinanceReceipt must have exactly one tenantKey." ;
+            sh:minCount 1 ;
+            sh:path :tenantKey ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:message "RECEIPT_KEY_INVALID: a FinanceReceipt needs exactly one non-empty idempotencyKey." ;
+            sh:minCount 1 ;
+            sh:minLength 1 ;
+            sh:path :idempotencyKey ],
+        [ sh:datatype xsd:dateTime ;
+            sh:maxCount 1 ;
+            sh:message "FinanceReceipt must have exactly one recordedAt." ;
+            sh:minCount 1 ;
+            sh:path :recordedAt ] ;
+    sh:targetClass :FinanceReceipt .
+
 # MEDULLA-CQ-CONN-R084.5: the finance method vocabulary is selected through declared
 # applicability, so a method record without either applicability axis is incomplete.
 :FinanceAlgorithmShape a sh:NodeShape ;
@@ -513,3 +544,156 @@
             sh:nodeKind sh:IRI ;
             sh:path :appliesToInstrumentType ] ;
     sh:targetClass :FinanceAlgorithm .
+
+# MEDULLA-FINANCE-PRIMITIVES-R904: a wallet key trust record binds one 32-byte public
+# key (64 lower-case hex digits) to an account, wallet and network at a revision.
+:WalletKeyTrustShape a sh:NodeShape ;
+    sh:description "A wallet key trust record carries exactly one 32-byte public key as 64 lower-case hex digits and exactly one trust revision." ;
+    sh:name "Wallet Key Trust Shape" ;
+    sh:property [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:message "public_key must be exactly 32 bytes (64 lower-case hex digits)." ;
+            sh:minCount 1 ;
+            sh:pattern "^[0-9a-f]{64}$" ;
+            sh:path :public_key ],
+        [ sh:maxCount 1 ;
+            sh:message "A wallet key trust record has exactly one trust_revision." ;
+            sh:minCount 1 ;
+            sh:path :trust_revision ] ;
+    sh:targetClass :WalletKeyTrust .
+
+# MEDULLA-FINANCE-PRIMITIVES-R751.750: strategy research records. The scalar fields of each
+# record; the evidence lists and score components are checked by the write handler.
+:DebateRoundShape a sh:NodeShape ;
+    sh:description "A debate round names its debate, a positive round index, a bull or bear side and an argument." ;
+    sh:name "Debate Round Shape" ;
+    sh:property [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:message "DebateRound must have exactly one debateId." ;
+            sh:minCount 1 ;
+            sh:path :debateId ],
+        [ sh:datatype xsd:integer ;
+            sh:maxCount 1 ;
+            sh:message "roundIndex is one positive integer." ;
+            sh:minCount 1 ;
+            sh:minInclusive 1 ;
+            sh:path :roundIndex ],
+        [ sh:in ( "bull" "bear" ) ;
+            sh:maxCount 1 ;
+            sh:message "debateSide is bull or bear." ;
+            sh:minCount 1 ;
+            sh:path :debateSide ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:message "DebateRound must have exactly one debateArgument." ;
+            sh:minCount 1 ;
+            sh:path :debateArgument ] ;
+    sh:targetClass :DebateRound .
+
+:TradeJournalEntryShape a sh:NodeShape ;
+    sh:description "A journal entry names its id, the time it was written and its rationale; the strategy run is optional." ;
+    sh:name "Trade Journal Entry Shape" ;
+    sh:property [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:message "TradeJournalEntry must have exactly one journalId." ;
+            sh:minCount 1 ;
+            sh:path :journalId ],
+        [ sh:datatype xsd:dateTime ;
+            sh:maxCount 1 ;
+            sh:message "TradeJournalEntry must have exactly one entryAt." ;
+            sh:minCount 1 ;
+            sh:path :entryAt ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:message "TradeJournalEntry must have exactly one journalRationale." ;
+            sh:minCount 1 ;
+            sh:path :journalRationale ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:message "strategyRunRef is at most one string." ;
+            sh:path :strategyRunRef ] ;
+    sh:targetClass :TradeJournalEntry .
+
+:BiasAuditShape a sh:NodeShape ;
+    sh:description "A bias audit names one bias from the closed vocabulary and the finding text." ;
+    sh:name "Bias Audit Shape" ;
+    sh:property [ sh:in ( "recency" "confirmation" "loss_aversion" "overconfidence" ) ;
+            sh:maxCount 1 ;
+            sh:message "biasKind is recency, confirmation, loss_aversion or overconfidence." ;
+            sh:minCount 1 ;
+            sh:path :biasKind ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:message "BiasAudit must have exactly one biasFinding." ;
+            sh:minCount 1 ;
+            sh:path :biasFinding ] ;
+    sh:targetClass :BiasAudit .
+
+:SentimentFusionShape a sh:NodeShape ;
+    sh:description "A sentiment fusion names its listing and carries one fused score in [-1, 1] with the kernel version that computed it." ;
+    sh:name "Sentiment Fusion Shape" ;
+    sh:property [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:message "SentimentFusion must have exactly one subjectListing." ;
+            sh:minCount 1 ;
+            sh:path :subjectListing ],
+        [ sh:datatype xsd:decimal ;
+            sh:maxCount 1 ;
+            sh:maxInclusive 1 ;
+            sh:message "sentimentScore is one decimal in [-1, 1]." ;
+            sh:minCount 1 ;
+            sh:minInclusive -1 ;
+            sh:path :sentimentScore ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:message "SentimentFusion must have exactly one researchKernelVersion." ;
+            sh:minCount 1 ;
+            sh:path :researchKernelVersion ] ;
+    sh:targetClass :SentimentFusion .
+
+:GeopoliticalRiskShape a sh:NodeShape ;
+    sh:description "A geopolitical risk names its region and carries one fused score in [0, 1] with the kernel version that computed it." ;
+    sh:name "Geopolitical Risk Shape" ;
+    sh:property [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:message "GeopoliticalRisk must have exactly one geoRegion." ;
+            sh:minCount 1 ;
+            sh:path :geoRegion ],
+        [ sh:datatype xsd:decimal ;
+            sh:maxCount 1 ;
+            sh:maxInclusive 1 ;
+            sh:message "geoRiskScore is one decimal in [0, 1]." ;
+            sh:minCount 1 ;
+            sh:minInclusive 0 ;
+            sh:path :geoRiskScore ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:message "GeopoliticalRisk must have exactly one researchKernelVersion." ;
+            sh:minCount 1 ;
+            sh:path :researchKernelVersion ] ;
+    sh:targetClass :GeopoliticalRisk .
+
+:StrategyCardShape a sh:NodeShape ;
+    sh:description "A strategy card names its id, its strategy specification, a licence class and a summary." ;
+    sh:name "Strategy Card Shape" ;
+    sh:property [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:message "StrategyCard must have exactly one cardId." ;
+            sh:minCount 1 ;
+            sh:path :cardId ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:message "StrategyCard must have exactly one strategySpecRef." ;
+            sh:minCount 1 ;
+            sh:path :strategySpecRef ],
+        [ sh:in ( "open" "restricted" "proprietary" ) ;
+            sh:maxCount 1 ;
+            sh:message "licenceClass is open, restricted or proprietary." ;
+            sh:minCount 1 ;
+            sh:path :licenceClass ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:message "StrategyCard must have exactly one cardSummary." ;
+            sh:minCount 1 ;
+            sh:path :cardSummary ] ;
+    sh:targetClass :StrategyCard .

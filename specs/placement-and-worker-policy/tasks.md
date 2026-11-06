@@ -66,3 +66,9 @@ Each task line reads `- [ ] T001 [P] [US1] <ID>-R012.4 description`. `[P]` marks
 - [x] T060 [US4] MEDULLA-PLACEMENT-R751.751 Behavior: Unified scheduling, leader election and cost-bounded resource allocation.
 - [x] T061 [US4] MEDULLA-PLACEMENT-R751.752 Refusal: Unified scheduling, leader election and cost-bounded resource allocation.
 - [ ] T062 [US4] MEDULLA-PLACEMENT-R751.753 Wiring and hot-path proof: tick loop of the executor.
+- [ ] T063 [US4] MEDULLA-PLACEMENT-R751.754 Owned schedule record.
+- [ ] T064 [US4] MEDULLA-PLACEMENT-R751.755 Per-schedule budget.
+- [ ] T065 [US4] MEDULLA-PLACEMENT-R751.756 Pause and resume.
+- [ ] T066 [US4] MEDULLA-PLACEMENT-R751.757 Skip, never queue.
+- [ ] T067 [US4] MEDULLA-PLACEMENT-R751.758 Run observability.
+- [ ] T068 [US4] MEDULLA-PLACEMENT-R751.759 Wiring and hot-path proof: owned schedule lifecycle.

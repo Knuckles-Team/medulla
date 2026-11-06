@@ -107,3 +107,12 @@ pub fn candidates_catalog_digest(candidates: &[CandidateFacts]) -> String {
         .collect();
     catalog_digest(&members)
 }
+
+/// Domain of a thought-search best path (MEDULLA-DECISION-ENGINE-R750.751).
+pub const THOUGHT_PATH_DIGEST_DOMAIN: &str = "eg/thought-path/v1";
+
+/// The digest of a root-to-best thought path: its node ids and scores, in
+/// path order.
+pub fn thought_path_digest(path: &[(u32, super::numeric::QuantisedValue)]) -> String {
+    digest_text(THOUGHT_PATH_DIGEST_DOMAIN, &path)
+}

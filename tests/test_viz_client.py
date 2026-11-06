@@ -205,6 +205,41 @@ def test_inline_columns_scatter_renders_a_real_png(viz_client):
     assert bytes(png_bytes[:4]) == _PNG_SIGNATURE
 
 
+# spec: MEDULLA-FEDERATED-QUERY-R087.3
+def test_render_round_trip(viz_client):
+    """Every static export format renders through the Python client against a
+    loopback engine, and an identical repeat is served from the cache."""
+    expected = {
+        "png": ("image/png", _PNG_SIGNATURE),
+        "svg": ("image/svg+xml", b"<svg"),
+        "pdf": ("application/pdf", b"%PDF-1.4"),
+    }
+    for fmt, (content_type, prefix) in expected.items():
+        kwargs = dict(
+            spec=_scatter_spec(f"ds:round-trip-{fmt}"),
+            dataset={
+                "InlineColumns": {
+                    "columns": {
+                        "x": {"F64": [0.0, 1.0, 2.0]},
+                        "y": {"F64": [2.0, 1.0, 0.0]},
+                    }
+                }
+            },
+            width_px=200,
+            height_px=150,
+            format=fmt,
+            dataset_ref=f"ds:round-trip-{fmt}",
+        )
+        first = viz_client.viz.render(**kwargs)
+        assert first["content_type"] == content_type
+        body = bytes(first["bytes"])
+        assert body.startswith(prefix)
+        assert first["result_ref"]
+        repeat = viz_client.viz.render(**kwargs)
+        assert repeat["cached"] is True
+        assert bytes(repeat["bytes"]) == body
+
+
 def test_synthetic_scatter_clusters_forces_density_tier(viz_client):
     result = viz_client.viz.render(
         spec=_scatter_spec("ds:synthetic-scatter"),

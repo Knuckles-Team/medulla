@@ -108,6 +108,10 @@ pub struct GraphSchemaTermView {
     pub kind: GraphSchemaTermKind,
     /// The first source (core before dynamic, then by key) declaring the term.
     pub source_id: String,
+    /// The active runtime-ontology revision that declares the term, when its
+    /// source is a runtime ontology (MEDULLA-TYPED-PACKS-R103.5).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ontology_revision: Option<u64>,
 }
 
 /// One page of the composed schema's declared terms.

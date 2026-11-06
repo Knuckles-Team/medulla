@@ -84,6 +84,9 @@ pub async fn route_consensus_before_gateway(
             medulla_server_mutation::mutation::ClusterMutationRoute::ConsensusNative
         )
     {
+        if matches!(req.method, Method::FinanceRecordPut { .. }) {
+            precheck_finance_record_put_on_leader(state, &req, verified_context).await?;
+        }
         return Err(propose_native_mutation(
             state,
             &req.graph,
@@ -132,4 +135,50 @@ pub async fn route_consensus_before_gateway(
     }
 
     Ok(req)
+}
+
+/// MEDULLA-FINANCE-PRIMITIVES-R004.3.2.9: on the leader of the put's group, run
+/// every admission check before the proposal, so a refused put proposes nothing.
+/// A follower skips the checks: its proposal is redirected to the leader (the
+/// stale-route reply names it), and the leader checks against its applied state.
+#[cfg(feature = "raft")]
+async fn precheck_finance_record_put_on_leader(
+    state: &Arc<RwLock<ServerState>>,
+    req: &Request,
+    verified_context: &VerifiedRequestContext,
+) -> Result<(), Response> {
+    use medulla_raft::raft::RaftStateExt;
+    let (core, multi) = {
+        let current = timed_read(state).await;
+        (
+            current
+                .registry
+                .get(&req.graph)
+                .map(|entry| entry.core.clone()),
+            current.multi_raft(),
+        )
+    };
+    // No placement authority or no local group: the proposal answers the typed
+    // placement refusal itself.
+    let Some(multi) = multi else {
+        return Ok(());
+    };
+    let Some(routed) = multi.handle_for_graph(&req.graph).await else {
+        return Ok(());
+    };
+    if routed.handle.current_leader().await != Some(routed.handle.node_id) {
+        return Ok(());
+    }
+    let Some(core) = core else {
+        return Ok(());
+    };
+    let authority = medulla_server_api::carrier::CarrierAuthority::from_verified(verified_context)
+        .map_err(|error| Response::err(req.id, error))?;
+    medulla_h_graph::graph_ops::precheck_replicated_put(
+        &core,
+        verified_context.tenant(),
+        authority.tenant_scope(),
+        &req.method,
+    )
+    .map_err(|error| Response::err(req.id, error))
 }

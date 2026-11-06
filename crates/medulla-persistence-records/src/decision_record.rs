@@ -331,6 +331,7 @@ fn committed_replay(
             component: existing,
             batch_id: String::new(),
             committed_version: 0,
+            prompt_identity: None,
         },
         replayed: true,
     })
