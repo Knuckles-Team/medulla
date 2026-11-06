@@ -77,6 +77,7 @@ from .generated.server_registry import (
     RegisteredServerListRequest,
     RegisteredServerView,
 )
+from .otlp_logs import OtlpLogBatch
 from .parser import RustASTParser
 from .policy_evolution import PolicyEvolutionClient, PolicyEvolutionRefused
 
@@ -103,6 +104,7 @@ _add_editable_native_overlay()
 
 __all__ = [
     "MedullaClient",
+    "OtlpLogBatch",
     "ConnectorPackClient",
     "ConnectorPackArchive",
     "ConnectorPackArchiveBuilder",

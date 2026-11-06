@@ -136,6 +136,7 @@ mod tests {
         .unwrap()
         .is_empty());
     }
+    /// Verifies MEDULLA-FEDERATED-QUERY-R722.4: Refusal
     // spec: MEDULLA-FEDERATED-QUERY-R722.4
     #[test]
     fn publisher_approval_and_literal_credentials_refuse() {

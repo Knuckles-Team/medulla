@@ -425,14 +425,59 @@ fn populated_scenario(limits: &Limits) -> Vec<String> {
         scanned(&full_phases)
     );
     let mut failures = Vec::new();
-    check(
-        &mut failures,
-        &format!("populated marker reopen (fastest of {ATTEMPTS})"),
-        fast,
-        limits.populated_marker_reopen,
-        &fast_all,
-    );
+    // The R006.3 claim is structural: every owner store of every marker reopen
+    // skipped its recovery scan, and removing the markers brings the scan back.
+    // That is counted from the open's own phase lines, so host load cannot move it.
+    for (i, attempt) in fast_attempts.iter().enumerate() {
+        let skipped = skipped(&attempt.phases);
+        if scanned(&attempt.phases) != 0 || skipped < SHARDS + SIDECARS {
+            failures.push(format!(
+                "populated marker reopen attempt {i} did not take the marker fast path \
+                 (skipped {skipped} of {} stores, scanned {})\n--- per-store open phases ---\n{}",
+                SHARDS + SIDECARS,
+                scanned(&attempt.phases),
+                attempt.phases
+            ));
+        }
+    }
+    if scanned(&full_phases) < SHARDS {
+        failures.push(format!(
+            "populated reopen without markers did not run the full scan on every shard\n\
+             --- per-store open phases ---\n{full_phases}"
+        ));
+    }
+    // The wall-clock budget is a performance claim about the open itself. Under
+    // arbitrary co-tenant load (build hosts sit at load 50+) file-open alone was
+    // measured at 9 s with the fast path taken, so the budget is held only by
+    // the bench gate, which runs this test on a quiet host with
+    // `MEDULLA_SHARD_OPEN_BENCH=1`.
+    if wall_budget_enforced(limits) {
+        check(
+            &mut failures,
+            &format!("populated marker reopen (fastest of {ATTEMPTS})"),
+            fast,
+            limits.populated_marker_reopen,
+            &fast_all,
+        );
+    }
     failures
+}
+
+/// Owner stores a K-shard backend opens beside its shards.
+const SIDECARS: usize = 3;
+const BENCH_ENV: &str = "MEDULLA_SHARD_OPEN_BENCH";
+
+/// The populated wall budget is enforced by the bench gate and by the stress
+/// check (whose limits are already sized for ten parallel copies).
+fn wall_budget_enforced(limits: &Limits) -> bool {
+    limits.label == STRESS.label || std::env::var_os(BENCH_ENV).is_some_and(|v| v == "1")
+}
+
+fn skipped(phases: &str) -> usize {
+    phases
+        .lines()
+        .filter(|line| line.contains("recovery_scan_skipped=true"))
+        .count()
 }
 
 // spec: MEDULLA-DURABLE-KERNEL-R006.2

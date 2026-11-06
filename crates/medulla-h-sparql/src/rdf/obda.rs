@@ -181,13 +181,16 @@ fn sparql_virtual(
     external_sources: &[medulla_protocol_types::protocol::ObdaExternalSource],
 ) -> Result<medulla_protocol_types::protocol::SparqlResult, String> {
     let mut reg = medulla_virtual_graph::obda::ObdaSourceRegistry::new();
+    // MEDULLA-UNIFIED-DATA-PLANE-R038.3.6 — one federation session per request: every scan of
+    // one external source reads the snapshot its first scan opened.
+    let share = request_share();
     for table in tables {
         let src = TableStoreSource::load(authority, persist_dir, table)?;
         reg.register(table.clone(), std::sync::Arc::new(src));
     }
     // W4.11 — register each LIVE external relational source (CONCEPT:MEDULLA-KG.query.obda-predicate-pushdown).
     // The query's projection + row-level FILTERs are pushed into a real SELECT … WHERE ….
-    register_table_sources(&mut reg, external_sources)?;
+    register_table_sources(&mut reg, external_sources, &share)?;
 
     // Auto-detect standard R2RML Turtle (carries the `rr:` namespace) vs. the compact
     // MEDULLA-101 textual mapping form (`SOURCE`/`SUBJECT`/… directives).
@@ -213,6 +216,7 @@ fn sparql_virtual(
         vars,
         rows,
         proofs: Vec::new(),
+        spatial: Vec::new(),
     })
 }
 
@@ -224,10 +228,11 @@ fn sparql_virtual(
 fn register_table_sources(
     registry: &mut medulla_virtual_graph::obda::ObdaSourceRegistry,
     external_sources: &[medulla_protocol_types::protocol::ObdaExternalSource],
+    share: &SnapshotShare,
 ) -> Result<(), String> {
     let mut refused = Vec::new();
     for source in external_sources {
-        match SqlObdaSource::connect(&source.dsn, &source.table) {
+        match SqlObdaSource::connect(&source.dsn, &source.table, share) {
             Ok(source_impl) => {
                 registry.register(source.name.clone(), std::sync::Arc::new(source_impl));
             }
@@ -297,12 +302,12 @@ impl SqlObdaSource {
     /// external source whose DSN names a disallowed destination is refused here —
     /// before `reg.register` in `sparql_virtual` ever reaches it — instead of only
     /// failing the first time `run_select` dials out.
-    fn connect(dsn: &str, table: &str) -> Result<Self, String> {
+    fn connect(dsn: &str, table: &str, share: &SnapshotShare) -> Result<Self, String> {
         let dialect = obda_dialect(dsn)?;
         medulla_exec::sql_text::validate_identifier(table).map_err(|e| format!("obda: {e}"))?;
         #[cfg(feature = "federation-sql")]
         medulla_federation::federation_ssrf::check_sql_dsn(dsn)?;
-        let executor = federation_sql_executor(dsn)?;
+        let executor = federation_sql_executor(dsn, share)?;
         Ok(Self {
             table: table.to_string(),
             dialect,
@@ -628,18 +633,50 @@ fn literal(value: &str, numeric: bool, dialect: ObdaSqlDialect) -> Result<String
         .map_err(|e| format!("obda: {e}"))
 }
 
+/// What the external sources of one OBDA request share: the reader that holds each source's
+/// one snapshot (MEDULLA-UNIFIED-DATA-PLANE-R038.3.6).
+#[cfg(all(feature = "obda", feature = "federation-sql"))]
+type SnapshotShare = std::sync::Arc<medulla_federation::federation_opt::ObdaSnapshotReader>;
+#[cfg(all(feature = "obda", not(feature = "federation-sql")))]
+type SnapshotShare = ();
+
+/// One federation session per `sparql_virtual` request, under the snapshot knobs, as
+/// `planning.rs` opens one for a `UnifiedQuery`.
+#[cfg(all(feature = "obda", feature = "federation-sql"))]
+fn request_share() -> SnapshotShare {
+    let session = medulla_federation::federation_opt::FederationSession::from_env();
+    let knobs = medulla_server_api::knob_config::knobs();
+    session.set_snapshot_bound(medulla_federation::federation_opt::SnapshotBound {
+        replica_lag_bound_ms: knobs.federation_replica_lag_bound_ms,
+        statement_timeout_ms: knobs.federation_statement_timeout_ms,
+    });
+    std::sync::Arc::new(medulla_federation::federation_opt::ObdaSnapshotReader::new(
+        std::sync::Arc::new(session),
+    ))
+}
+
+#[cfg(all(feature = "obda", not(feature = "federation-sql")))]
+fn request_share() -> SnapshotShare {}
+
 /// Build the LIVE `federation-sql` executor for `dsn`, or a clean "rebuild with federation-sql"
 /// error when the feature is off (the wire variant + rewrite still exist — only the driver is
 /// absent, exactly like `medulla_plan::federation::SqlSource`'s not-built placeholder).
 #[cfg(all(feature = "obda", feature = "federation-sql"))]
-fn federation_sql_executor(dsn: &str) -> Result<std::sync::Arc<dyn ObdaSqlExecutor>, String> {
+fn federation_sql_executor(
+    dsn: &str,
+    share: &SnapshotShare,
+) -> Result<std::sync::Arc<dyn ObdaSqlExecutor>, String> {
     Ok(std::sync::Arc::new(FederationSqlExecutor {
         dsn: dsn.to_string(),
+        share: std::sync::Arc::clone(share),
     }))
 }
 
 #[cfg(all(feature = "obda", not(feature = "federation-sql")))]
-fn federation_sql_executor(_dsn: &str) -> Result<std::sync::Arc<dyn ObdaSqlExecutor>, String> {
+fn federation_sql_executor(
+    _dsn: &str,
+    _share: &SnapshotShare,
+) -> Result<std::sync::Arc<dyn ObdaSqlExecutor>, String> {
     Err(
         "obda: a live external SQL source needs a server built with the `federation-sql` \
          feature (no SQL driver in this build)"
@@ -653,6 +690,8 @@ fn federation_sql_executor(_dsn: &str) -> Result<std::sync::Arc<dyn ObdaSqlExecu
 #[cfg(all(feature = "obda", feature = "federation-sql"))]
 struct FederationSqlExecutor {
     dsn: String,
+    /// The request's snapshot reader (MEDULLA-UNIFIED-DATA-PLANE-R038.3.6).
+    share: SnapshotShare,
 }
 
 #[cfg(all(feature = "obda", feature = "federation-sql"))]
@@ -661,7 +700,7 @@ impl ObdaSqlExecutor for FederationSqlExecutor {
         &self,
         sql: &str,
     ) -> Result<Vec<medulla_virtual_graph::obda::ForeignRow>, String> {
-        medulla_federation::federation::fetch_sql_columns(&self.dsn, sql)
+        self.share.fetch_columns(&self.dsn, sql)
     }
 }
 
@@ -679,7 +718,11 @@ mod outbound_verification_tests {
         let _allow = medulla_server_api::test_support::FederationAllowGuard::blocking("");
         // Same fixture `crates/medulla-plan/src/federation_ssrf.rs` already proves is
         // refused: loopback on a non-default port, no allow-list entry.
-        let Err(err) = SqlObdaSource::connect("postgres://u@127.0.0.1:5433/db", "people") else {
+        let Err(err) = SqlObdaSource::connect(
+            "postgres://u@127.0.0.1:5433/db",
+            "people",
+            &super::request_share(),
+        ) else {
             panic!("a disallowed OBDA destination must be refused");
         };
         assert!(err.contains("federation:"), "unexpected error: {err}");
@@ -692,8 +735,12 @@ mod outbound_verification_tests {
         // Same fixture `crates/medulla-plan/src/federation_ssrf.rs` already proves is
         // admitted: loopback with an explicit exact allowlist entry. `connect` only
         // validates and stores the DSN here; it dials lazily inside `run_select`.
-        SqlObdaSource::connect("postgres://u@127.0.0.1:5432/db", "people")
-            .expect("an allowed OBDA destination must still connect");
+        SqlObdaSource::connect(
+            "postgres://u@127.0.0.1:5432/db",
+            "people",
+            &super::request_share(),
+        )
+        .expect("an allowed OBDA destination must still connect");
     }
 
     // spec: MEDULLA-UNIFIED-DATA-PLANE-R002.2
@@ -715,7 +762,8 @@ mod outbound_verification_tests {
             },
         ];
 
-        let error = register_table_sources(&mut registry, &sources).unwrap_err();
+        let error =
+            register_table_sources(&mut registry, &sources, &super::request_share()).unwrap_err();
         assert!(error.contains("blocked"), "{error}");
         assert!(registry.get("blocked").is_none());
         assert!(registry.get("allowed").is_some());

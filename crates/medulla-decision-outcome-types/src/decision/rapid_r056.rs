@@ -31,6 +31,36 @@ pub enum CertificateRefusal {
     BranchBudgetExceeded { branch_count: u64, budget: u64 },
 }
 
+impl medulla_decision_types::decision::record::outcome::DecisionRefusal for CertificateRefusal {
+    fn code(&self) -> medulla_decision_types::decision::record::outcome::RefusalCode {
+        match self {
+            Self::ModelDigestMismatch { .. } => {
+                medulla_decision_types::decision::codes::CERTIFICATE_MODEL_DIGEST_MISMATCH
+            }
+            Self::BranchBudgetExceeded { .. } => {
+                medulla_decision_types::decision::codes::CERTIFICATE_BRANCH_BUDGET_EXCEEDED
+            }
+        }
+    }
+
+    fn detail(&self) -> String {
+        match self {
+            Self::ModelDigestMismatch {
+                certified,
+                expected,
+            } => {
+                format!("certified against {certified}, expected {expected}")
+            }
+            Self::BranchBudgetExceeded {
+                branch_count,
+                budget,
+            } => {
+                format!("{branch_count} branches exceed the solver budget of {budget}")
+            }
+        }
+    }
+}
+
 impl StatisticalSolverCertificate {
     /// Verify this certificate was produced against `expected_model_digest`.
     /// A statistical-path certificate that does not match fails closed, with

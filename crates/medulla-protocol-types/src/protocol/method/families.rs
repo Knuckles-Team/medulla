@@ -64,6 +64,9 @@ impl Method {
             | Self::PublishCurrentPlan { .. }
             | Self::IssueHostStartGrant { .. }
             | Self::PublishRunCheckpoint { .. }
+            | Self::MarkWorkItemEffectStarted { .. }
+            | Self::RecordEffectReceipt { .. }
+            | Self::SubmitAdmittedRequest { .. }
             | Self::IssueControlLease { .. }
             | Self::TransitionControlLease { .. }
             | Self::PolicyEvolutionStore { .. }
@@ -87,7 +90,9 @@ impl Method {
             | Self::SetPose { .. }
             | Self::Reparent { .. }
             | Self::StartTrajectory { .. }
-            | Self::AppendStep { .. } => MethodWriteFamily::MemoryScene,
+            | Self::AppendStep { .. }
+            | Self::BusRegister { .. }
+            | Self::BusHeartbeat { .. } => MethodWriteFamily::MemoryScene,
             #[cfg(feature = "broker")]
             Self::DeclareExchange { .. }
             | Self::DeleteExchange { .. }

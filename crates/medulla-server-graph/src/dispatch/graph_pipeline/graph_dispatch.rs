@@ -127,6 +127,13 @@ async fn capture_graph_dispatch<'a>(
     Ok(capture)
 }
 
+/// MEDULLA-IDENTITY-R705: a `ClientSession` node write must name the verified caller.
+fn refuse_client_session(capture: &GraphDispatchCapture<'_>, method: &Method) -> Option<Response> {
+    medulla_server_api::client_session::admit_node_write(method, capture.verified_context)
+        .err()
+        .map(|code| Response::err(capture.req_id, code.as_str()))
+}
+
 pub async fn dispatch_graph_op_inner(
     state: &Arc<RwLock<ServerState>>,
     ctx: GraphOpContext<'_>,
@@ -161,6 +168,9 @@ pub async fn dispatch_graph_op_inner(
         Ok(routed_raft) => routed_raft,
         Err(resp) => return resp,
     };
+    if let Some(refusal) = refuse_client_session(&capture, &method) {
+        return refusal;
+    }
     stamp_resource_and_capacity_timestamps(&mut method);
 
     let routing = GraphOpRouting {

@@ -28,4 +28,6 @@ pub mod edge_fn;
 // `CALL gds.fastRP`/`gds.node2vec` Cypher procs. Pure-Rust, deterministic, no heavy dep.
 pub mod embeddings;
 pub mod link_predict;
+// MEDULLA-FEDERATED-QUERY-R086.100.2 — ordered n-ary tuple scoring.
+pub mod nary;
 pub mod neighbor_aggregate;

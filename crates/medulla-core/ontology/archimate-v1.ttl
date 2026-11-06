@@ -55,8 +55,7 @@ context (:Incident/:Change from ServiceNow, :ErpNextIssue from ERPNext); it only
 relates them to the canonical anchors declared here.
 CONCEPT:KG-2.9 (Enterprise OS — vendor-neutral crosswalk). See
 docs/architecture/vendor_neutral_enterprise_ontology.md §1.""" ;
-    owl:imports <http://knuckles.team/kg/core>,
-        <http://knuckles.team/kg/enterprise> .
+    owl:imports <http://knuckles.team/kg/enterprise> .
 
 :ErpNextIssue a owl:Class ;
     rdfs:label "ERPNext Issue" ;
@@ -136,3 +135,14 @@ Realization, Assignment, ...).""" .
     rdfs:label "relationship target" ;
     rdfs:comment "The element a reified :ArchimateRelationship points to." ;
     rdfs:domain :ArchimateRelationship .
+
+# ── Core rooting (MEDULLA-TYPED-PACKS-R071.2) ───────────────────────────────────
+# Every class of this module above reaches the core class kg:DomainEntity through rdfs:subClassOf.
+<http://knuckles.team/kg#ApplicationComponent> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#ApplicationEvent> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#ArchimateRelationship> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#BusinessActor> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#BusinessCapability> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#BusinessProcess> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#BusinessTask> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#ErpNextIssue> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .

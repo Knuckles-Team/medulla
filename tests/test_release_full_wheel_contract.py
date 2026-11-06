@@ -822,6 +822,7 @@ def test_tag_pipeline_builds_checks_and_publishes_only() -> None:
     jobs = doc["jobs"]
     assert set(jobs) == {
         "guard",
+        "server-binary",
         "build",
         "build-x86",
         "build-sdist",
@@ -831,8 +832,9 @@ def test_tag_pipeline_builds_checks_and_publishes_only() -> None:
         "verify-pypi",
         "github-release",
     }
-    for name in ("build", "build-x86", "build-sdist"):
+    for name in ("server-binary", "build-x86", "build-sdist"):
         assert jobs[name]["needs"] == "guard"
+    assert jobs["build"]["needs"] == ["guard", "server-binary"]
     guard = jobs["guard"]
     assert guard["permissions"]["actions"] == "read"
     script = "\n".join(step.get("run", "") for step in guard["steps"])

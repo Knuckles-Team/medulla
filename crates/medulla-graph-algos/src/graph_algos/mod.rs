@@ -48,6 +48,7 @@
 //! surface that exposes these through medulla-query is owned by another agent and is
 //! *not* wired in this module.
 
+pub mod analogy;
 pub mod astar;
 pub mod centrality;
 pub mod coloring;
@@ -60,13 +61,17 @@ pub mod leiden;
 pub mod louvain;
 pub mod mincut;
 pub mod pagerank;
+pub mod positional;
 pub mod random_walk;
 pub mod shortest_path;
 pub mod similarity;
+pub mod spectral;
 pub mod steiner;
+pub mod synergy;
 pub mod triangle;
 pub mod yen;
 
+pub use analogy::{analogy_matches, AnalogyPair, LabeledGraph};
 pub use astar::{a_star, haversine_km};
 pub use centrality::{
     article_rank, betweenness_centrality, closeness_centrality, degree_centrality,
@@ -85,12 +90,18 @@ pub use leiden::{
 pub use louvain::{louvain, LouvainConfig, LouvainResult};
 pub use mincut::{stoer_wagner, MincutPartition};
 pub use pagerank::{pagerank, PageRankConfig, PageRankResult};
+pub use positional::{hyperedge_scores, positional_encodings, HyperedgeError};
 pub use random_walk::{random_walk, RandomWalkConfig};
 pub use shortest_path::{all_pairs_shortest_paths, dijkstra, shortest_path, DijkstraResult};
 pub use similarity::{
     all_pairs_similarity, cosine_similarity, jaccard_similarity, knn_similarity,
     knn_similarity_approx, Direction, KnnSimilarityApproxConfig, Metric, SimilarityPair,
 };
+pub use spectral::{
+    check_topology_graph, checked_mincut, spectral_partition, SpectralPartition,
+    TopologyKernelError,
+};
 pub use steiner::{steiner_tree, SteinerTreeResult};
+pub use synergy::{synergy_bridges, Bridge};
 pub use triangle::{local_clustering_coefficient, triangle_count};
 pub use yen::{yen_k_shortest_paths, RankedPath};

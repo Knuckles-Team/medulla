@@ -21,6 +21,9 @@ use search::handle_search;
 
 /// Hard network bounds for the dependency-free observability HTTP listener.
 pub(super) const MAX_HTTP_BODY_BYTES: usize = 16 * 1024 * 1024;
+/// The largest OTLP log batch body the engine accepts on `POST /v1/logs`
+/// (MEDULLA-CONTRACT-R050); a larger body is refused as `LOG_BATCH_TOO_LARGE`.
+pub(super) const MAX_OTLP_LOG_BATCH_BYTES: usize = 4 * 1024 * 1024;
 const HTTP_LIMITS: RequestLimits = RequestLimits {
     max_head_bytes: 64 * 1024,
     max_body_bytes: MAX_HTTP_BODY_BYTES,
@@ -282,6 +285,14 @@ async fn handle_ingest(
         return handle_search(state, path, query, body).await;
     }
 
+    // MEDULLA-CONTRACT-R050: an OTLP log batch above 4 MiB is refused before parsing.
+    if path == "/v1/logs" && body.len() > MAX_OTLP_LOG_BATCH_BYTES {
+        return log_batch_too_large(format!(
+            "log batch of {} bytes exceeds the {MAX_OTLP_LOG_BATCH_BYTES} byte limit",
+            body.len()
+        ));
+    }
+
     // The `stream` query param is the default stream for shapes that don't name one.
     let default_stream = query_param(query, "stream").unwrap_or_else(|| "default".to_string());
 
@@ -298,6 +309,14 @@ async fn handle_ingest(
         Ok(r) => r,
         Err(e) => return ("400 Bad Request", "text/plain", e),
     };
+    // MEDULLA-CONTRACT-R050: `obs.max_batch_records` bounds one OTLP log batch.
+    let max_records = medulla_server_api::knob_config::knobs().obs_max_batch_records;
+    if path == "/v1/logs" && records.len() as u64 > max_records {
+        return log_batch_too_large(format!(
+            "log batch of {} records exceeds obs.max_batch_records = {max_records}",
+            records.len()
+        ));
+    }
     if let Some(tenant) = tenant {
         super::writer::stamp_logs(&mut records, tenant);
     }
@@ -321,6 +340,16 @@ async fn handle_ingest(
             "observability ingest worker failed".to_string(),
         ),
     }
+}
+
+/// The refusal for an oversize OTLP log batch (MEDULLA-CONTRACT-R050): HTTP 413
+/// whose body starts with the stable code `LOG_BATCH_TOO_LARGE`.
+fn log_batch_too_large(detail: String) -> (&'static str, &'static str, String) {
+    (
+        "413 Payload Too Large",
+        "text/plain",
+        format!("LOG_BATCH_TOO_LARGE: {detail}"),
+    )
 }
 
 /// The two no-data control responses [`handle`] answers BEFORE the access-denied gate:

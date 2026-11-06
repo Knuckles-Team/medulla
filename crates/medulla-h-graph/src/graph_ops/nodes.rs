@@ -105,16 +105,59 @@ fn handle_get_node_properties(
     // (see `can_see_node`'s doc) — `node_id` is exactly the
     // one row this fallback is checking, so the live lookup
     // is as cheap as reading a single DashMap entry.
-    let props = g.get_node_properties(node_id).or_else(|| {
-        raw_core
-            .get_node_properties(node_id)
-            .filter(|props| read_authority.can_see_node(props, raw_core.is_schema_node(node_id)))
-    });
+    //
+    // MEDULLA-DURABLE-KERNEL-R086.3: a durable-tier fault on the miss path
+    // answers `DURABLE_READ_UNAVAILABLE`, never an empty result. The fallback
+    // reads only this graph's raw core (graph-scoped `NODES`), and a hidden row
+    // answers exactly like an absent one (MEDULLA-DURABLE-KERNEL-R086.5).
+    let resident = match g.get_node_properties_checked(node_id) {
+        Ok(props) => props,
+        Err(error) => return durable_read_unavailable(req_id, &error),
+    };
+    let props = match resident {
+        Some(props) => Some(props),
+        None => match raw_core.get_node_properties_checked(node_id) {
+            Ok(props) => props.filter(|props| {
+                read_authority.can_see_node(props, raw_core.is_schema_node(node_id))
+            }),
+            Err(error) => return durable_read_unavailable(req_id, &error),
+        },
+    };
+    // MEDULLA-IDENTITY-R023.4: a knowledge unit the caller may not see refuses with the
+    // unit id only. The caller comes from the verified read authority.
+    if let Some(blob) = props.as_ref() {
+        let caller =
+            medulla_server_api::read_scope::ReadCaller::from_authority(Some(read_authority), "");
+        if let Err(refusal) = medulla_server_api::read_scope::check_unit_read(
+            node_id,
+            blob,
+            || Arc::new(g.analysis_snapshot()),
+            &caller,
+        ) {
+            return Response::err(req_id, refusal.to_string());
+        }
+    }
     Response::ok(
         req_id,
         ResultPayload::of_encoded_or_null::<
             medulla_protocol_types::result_contract::graph::GetNodeProperties,
         >(props),
+    )
+}
+
+/// Typed refusal for a durable read-through fault (MEDULLA-DURABLE-KERNEL-R086.3).
+fn durable_read_unavailable(
+    req_id: u64,
+    error: &medulla_graph_core::read_through::ReadThroughError,
+) -> Response {
+    tracing::warn!(
+        node_id = %error.node_id,
+        reason = %error.reason,
+        "durable read-through unavailable"
+    );
+    Response::err(
+        req_id,
+        medulla_types::contract::ServerErrorCode::DurableReadUnavailable.as_str(),
     )
 }
 
@@ -202,6 +245,8 @@ pub(super) async fn try_handle_node_reads(
         Method::GetNodeProperties { node_id } => {
             handle_get_node_properties(req_id, core, raw_core, read_authority, &node_id)
         }
+        // MEDULLA-DURABLE-KERNEL-R095.1001: the agent bus roster read.
+        Method::BusRoster { tenant, now_ms } => super::bus::roster(req_id, core, &tenant, now_ms),
         // CompareAndSetNodeFields/ClaimNext (CONCEPT:MEDULLA-P0-2 bypass guard, L11):
         // GATEWAY_ROUTED — see the AddNode/RemoveNode comment above.
         other => return ControlFlow::Continue(other),
@@ -313,8 +358,13 @@ mod tests {
         struct FixedReadThrough(Vec<u8>);
 
         impl medulla_graph_core::read_through::ReadThrough for FixedReadThrough {
-            fn read_node_blob(&self, node_id: &str) -> Option<Vec<u8>> {
-                (node_id == "shared-node").then(|| self.0.clone())
+            fn read_node_blob(
+                &self,
+                node_id: &str,
+            ) -> medulla_graph_core::read_through::NodeReadOutcome {
+                medulla_graph_core::read_through::NodeReadOutcome::from_option(
+                    (node_id == "shared-node").then(|| self.0.clone()),
+                )
             }
         }
 

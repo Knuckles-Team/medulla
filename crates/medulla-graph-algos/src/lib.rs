@@ -15,6 +15,9 @@ pub mod algorithms;
 mod contract;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod graph_algos;
+/// Graph-guided paging adapter: PageRank / centrality importance scores shaped for a
+/// byte-budgeted tiered cache's importance-scored eviction.
+pub mod graph_importance;
 // CONCEPT:MEDULLA-KG.graphlearn.link-predictor — graph-learning / neuro-symbolic domain.
 // A pure-Rust KAN (Kolmogorov-Arnold) link-predictor over the resident graph: a
 // polynomial-basis learnable edge function (`edge_fn`), a 1–2 layer KAN link-scorer

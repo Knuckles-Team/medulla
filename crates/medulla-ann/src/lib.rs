@@ -80,7 +80,7 @@ pub use recall::{
     RecallReport,
 };
 pub use scatter::{scatter_knn, ScatterKnn, ShardIndex};
-pub use version::{EmbeddingVersion, EmbeddingVersionStore};
+pub use version::{EmbeddingVersion, EmbeddingVersionStore, PromotionApproval, TagRefused};
 
 #[cfg(test)]
 mod tests {

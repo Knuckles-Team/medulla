@@ -805,9 +805,13 @@ pub enum Op {
     /// (`medulla_epistemic::propagate_confidence` walking that row's own support/contradiction/
     /// attack neighbourhood), re-ordering descending — the `CONFIDENCE` UQL keyword with no
     /// argument. Mirrors `Op::Probabilistic`'s "score-then-rank" shape but over the belief
-    /// graph instead of a stored `Distribution`. Gated by `epistemic`.
+    /// graph instead of a stored `Distribution`. With `threshold` (`CONFIDENCE 0.6`,
+    /// MEDULLA-FEDERATED-QUERY-R720.2) rows scoring below it are dropped. Gated by `epistemic`.
     #[cfg(feature = "epistemic")]
-    ConfidenceOp {},
+    ConfidenceOp {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        threshold: Option<f64>,
+    },
     /// TRANSFORM (epistemic, CONCEPT:MEDULLA-KG.epistemic.epistemic-substrate, E2) — the answer to
     /// `EXPLAIN BELIEF <node_id>`: build the recursive justification tree
     /// (`medulla_epistemic::explain_belief`) rooted at `node_id`, flatten it (pre-order, deduped) to
@@ -821,6 +825,17 @@ pub enum Op {
     /// built here (E2 scope is the wire+UQL plan surface). Gated by `epistemic`.
     #[cfg(feature = "epistemic")]
     ExplainBelief { node_id: String },
+    /// TRANSFORM (MEDULLA-FEDERATED-QUERY-R720.2, UQL `DECAY HALF_LIFE <seconds>`) — multiply
+    /// each row's score by `0.5^(age / half_life_secs)`, where age is now minus the row's
+    /// valid time in seconds. An unscored row takes score `1.0` before the decay. A row
+    /// with no valid time refuses the whole program with `UQL_E_DECAY_NO_TIME`.
+    Decay { half_life_secs: f64 },
+    /// TRANSFORM (MEDULLA-FEDERATED-QUERY-R720.3, UQL `CLUSTER BY EMBEDDING K <n>`) — partition
+    /// the rows into `k` clusters by cosine distance over their stored embeddings, seed 0,
+    /// so results repeat. Each row gains the `cluster_id` and `centroid_distance` value
+    /// channels. A row with no vector refuses the whole program with
+    /// `UQL_E_CLUSTER_NO_VECTOR`.
+    ClusterByEmbedding { k: usize },
     /// TRANSFORM (EH-523, UQL `ATTRIBUTE <agg> OF <input> <method>`) — contribution
     /// attribution over the incoming rows as players: each row's value is `input`, a
     /// coalition's value is the `value` aggregate of its members (`v(∅) = 0`), and every
@@ -987,6 +1002,15 @@ pub enum UqlResult {
         columns: Vec<String>,
         rows: Vec<UqlRow>,
         warnings: Vec<String>,
+        /// MEDULLA-FEDERATED-QUERY-R088.1: the graph snapshot revision the rows were
+        /// read from. No hidden-row count is carried: it would leak row existence
+        /// across visibility.
+        #[serde(default)]
+        snapshot_revision: u64,
+        /// MEDULLA-FEDERATED-QUERY-R088.1: the epistemic layer revision of the same
+        /// snapshot; 0 when the build has no epistemic layer.
+        #[serde(default)]
+        knowledge_revision: u64,
     },
     /// `EXPLAIN`: the canonical and the optimized plan, per-stage estimates, and
     /// whether the plan is incrementally maintainable (with the reason when not).
@@ -1015,7 +1039,63 @@ pub enum UqlResult {
         rows: Vec<UqlRow>,
         stages: Vec<UqlStageReport>,
         warnings: Vec<String>,
+        /// MEDULLA-FEDERATED-QUERY-R088.1: the graph snapshot revision the rows were
+        /// read from. No hidden-row count is carried: it would leak row existence
+        /// across visibility.
+        #[serde(default)]
+        snapshot_revision: u64,
+        /// MEDULLA-FEDERATED-QUERY-R088.1: the epistemic layer revision of the same
+        /// snapshot; 0 when the build has no epistemic layer.
+        #[serde(default)]
+        knowledge_revision: u64,
     },
+}
+
+#[cfg(all(test, feature = "query"))]
+mod tests {
+    use super::*;
+
+    // spec: MEDULLA-FEDERATED-QUERY-R088.1
+    #[test]
+    fn uql_header_round_trips_with_defaults() {
+        for result in [
+            UqlResult::Rows {
+                columns: vec!["score".into()],
+                rows: vec![],
+                warnings: vec![],
+                snapshot_revision: 7,
+                knowledge_revision: 3,
+            },
+            UqlResult::Profile {
+                columns: vec![],
+                rows: vec![],
+                stages: vec![],
+                warnings: vec!["w".into()],
+                snapshot_revision: 9,
+                knowledge_revision: 0,
+            },
+        ] {
+            let bytes = rmp_serde::to_vec_named(&result).unwrap();
+            let back: UqlResult = rmp_serde::from_slice(&bytes).unwrap();
+            assert_eq!(back, result);
+        }
+        // A header-less payload (the pre-header row shape) decodes with both
+        // revisions defaulted to 0.
+        let legacy = serde_json::json!({
+            "Rows": {"columns": [], "rows": [], "warnings": []}
+        });
+        let back: UqlResult = serde_json::from_value(legacy).unwrap();
+        assert_eq!(
+            back,
+            UqlResult::Rows {
+                columns: vec![],
+                rows: vec![],
+                warnings: vec![],
+                snapshot_revision: 0,
+                knowledge_revision: 0,
+            }
+        );
+    }
 }
 
 #[cfg(all(test, feature = "query"))]

@@ -392,6 +392,7 @@ fn build_local_method(
         _ => medulla_protocol_types::protocol::Method::NlQuery {
             text: query.to_string(),
             graph: graph.to_string(),
+            history: Vec::new(),
         },
     }
 }

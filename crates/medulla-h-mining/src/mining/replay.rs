@@ -657,6 +657,7 @@ pub(super) fn replay_risk_propagation(core: &GraphCore, method: &Method) -> bool
             edges,
             kind,
             options,
+            ecosystem: options.ecosystem.as_ref(),
         };
         let run = super::impact::run_impact(&inputs);
         super::impact::materialize_assessments(core, &inputs, &run);

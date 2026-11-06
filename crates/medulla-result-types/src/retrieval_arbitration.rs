@@ -8,7 +8,7 @@
 
 use serde::{Deserialize, Serialize};
 
-/// The provenance class of a candidate answer.
+/// The grounding of a candidate answer: parametric or retrieved.
 ///
 /// This is closed so a caller cannot silently introduce a third provenance
 /// class that the R083 arbitration policy does not understand.
@@ -85,18 +85,18 @@ mod tests {
         assert_eq!(decoded.retrieved.answer, "retrieved answer");
     }
 
-    #[test]
     // spec: MEDULLA-DECISION-ENGINE-R010.100.3
+    #[test]
     fn answer_grounding_round_trip() {
-        for (grounding, wire) in [
+        for (value, wire) in [
             (AnswerGrounding::Parametric, "\"parametric\""),
             (AnswerGrounding::Retrieved, "\"retrieved\""),
         ] {
-            let encoded = serde_json::to_string(&grounding).expect("grounding must serialize");
+            let encoded = serde_json::to_string(&value).expect("grounding must serialize");
             assert_eq!(encoded, wire);
             let decoded: AnswerGrounding =
                 serde_json::from_str(&encoded).expect("grounding must round-trip");
-            assert_eq!(decoded, grounding);
+            assert_eq!(decoded, value);
         }
         assert!(serde_json::from_str::<AnswerGrounding>("\"claim\"").is_err());
     }

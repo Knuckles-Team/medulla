@@ -295,9 +295,34 @@ async fn capability_matrix_is_reachable_over_the_wire() {
             let value: serde_json::Value = rmp_serde::from_slice(bytes).unwrap();
             let entries = value["entries"].as_array().expect("entries array");
             assert!(!entries.is_empty(), "capability matrix must not be empty");
+            // MEDULLA-FEDERATED-QUERY-R087.1: the static-export surface is served.
+            assert!(
+                entries.iter().any(|e| e["surface"] == "static_export"),
+                "the matrix must advertise the static_export surface: {entries:?}"
+            );
+            assert!(
+                !value.to_string().to_ascii_lowercase().contains("html"),
+                "the engine has no HTML export surface"
+            );
         }
         other => panic!("expected Raw result, got {other:?}"),
     }
+    // The export format wire contract is exactly PNG, SVG and PDF, snake case.
+    for (format, wire) in [
+        (VizFormat::Png, "png"),
+        (VizFormat::Svg, "svg"),
+        (VizFormat::Pdf, "pdf"),
+    ] {
+        assert_eq!(serde_json::to_value(format).unwrap(), wire);
+        assert_eq!(
+            serde_json::from_value::<VizFormat>(serde_json::json!(wire)).unwrap(),
+            format
+        );
+    }
+    assert!(
+        serde_json::from_value::<VizFormat>(serde_json::json!("html")).is_err(),
+        "no HTML export format exists"
+    );
 }
 
 // spec: MEDULLA-FEDERATED-QUERY-R087.4
@@ -765,5 +790,70 @@ async fn served_render_supports_png_svg_pdf_and_refuses_unknown_dataset() {
             .as_deref()
             .is_some_and(|detail| detail.contains("unavailable")),
         "unknown dataset must expose a typed unavailable diagnostic"
+    );
+
+    // Cross-owner negative case: a second principal cannot read the first
+    // principal's result reference.
+    let owned = VizRenderRequest {
+        spec_json: scatter_spec("ds:r0876-owned"),
+        dataset: Some(VizDatasetSource::InlineColumns {
+            columns: [
+                ("x".to_string(), VizColumnValues::F64(vec![0.0, 1.0])),
+                ("y".to_string(), VizColumnValues::F64(vec![1.0, 0.0])),
+            ]
+            .into_iter()
+            .collect(),
+        }),
+        width_px: 200,
+        height_px: 150,
+        format: VizFormat::Png,
+        max_primitives: 200_000,
+        max_bytes: 50_000_000,
+        dataset_ref: "ds:r0876-owned".to_string(),
+    };
+    let owned = Box::pin(dispatch(
+        &state,
+        test_support::commons_request(
+            SECRET,
+            704,
+            Method::Viz {
+                op: VizOp::Render(owned),
+            },
+        ),
+    ))
+    .await;
+    let result_ref = raw_result(&owned).result_ref;
+    let second_principal = |id: u64, op: VizOp| {
+        common::signed_request_as(
+            SECRET,
+            id,
+            "__commons__",
+            "r0876-second-principal",
+            Method::Viz { op },
+        )
+    };
+    // The second principal is admitted: its own capability read succeeds.
+    let admitted = Box::pin(dispatch(
+        &state,
+        second_principal(705, VizOp::CapabilityMatrix),
+    ))
+    .await;
+    assert!(
+        admitted.error.is_none(),
+        "second principal must be admitted: {:?}",
+        admitted.error
+    );
+    let foreign = Box::pin(dispatch(
+        &state,
+        second_principal(706, VizOp::RenderProvenance { result_ref }),
+    ))
+    .await;
+    assert!(
+        foreign
+            .error
+            .as_deref()
+            .is_some_and(|error| error.contains("ACCESS_DENIED")),
+        "a second principal's result reference must be ACCESS_DENIED: {:?}",
+        foreign.error
     );
 }

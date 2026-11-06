@@ -1,0 +1,319 @@
+//! Decision budgets: one Criterion group `decide/<family>` per registered
+//! question family (MEDULLA-DECISION-ENGINE-R178.1).
+//!
+//! Every group builds its `Decide` request through the served-test kit
+//! fixtures (`medulla_h_decide::decide::stat_test_support`) and drives it
+//! through the verified dispatch boundary, so a group times the served path
+//! (admission, the family hooks, the executor and the sealed record), and a
+//! family that refuses the fixture request times its refusal path.
+//!
+//! Besides the Criterion report, the run writes the budget report that
+//! `scripts/check_decide_budgets.py` compares to `benches/baselines/decide.json`
+//! (R178.2) when `DECIDE_BUDGETS_REPORT` names a path: per group `p50_ms`,
+//! `p99_ms` and `peak_mib` (resident high-water growth during the group).
+//!
+//! Run: `DECIDE_BUDGETS_REPORT=target/decide-budgets.json cargo bench --features full --bench decide_budgets`
+//! The nightly workflow `.github/workflows/nightly-decide-budgets.yml` runs it (R178.3).
+
+use std::collections::BTreeMap;
+use std::time::{Duration, Instant};
+
+use criterion::{criterion_group, Criterion};
+use medulla_agent_types::agent_component::AgentComponentKind;
+use medulla_decision_types::decision::statistical::{DecideRequest, QuestionKind, QuestionSafety};
+use medulla_decision_types::decision::DecisionPolicyRef;
+use medulla_h_decide::decide::stat_test_support::{publish_route_schema, request, Harness, TENANT};
+use medulla_protocol_types::protocol::{Method, Request, Response};
+use medulla_server_api::authority_context::VerifiedRequestContext;
+use medulla_server_api::state::ServerState;
+use medulla_types::claims::{ClaimOp, EvidenceChannel};
+use std::hint::black_box;
+use tokio::runtime::{Builder, Runtime};
+
+/// Every registered family. `family_name` matches exhaustively, so a new
+/// `QuestionKind` fails to compile until it gains a group name there; add it
+/// here in the same change.
+const FAMILIES: &[QuestionKind] = &[
+    QuestionKind::Route,
+    QuestionKind::Rank,
+    QuestionKind::Classify,
+    QuestionKind::ResolveEntity,
+    QuestionKind::SchemaMapping,
+    QuestionKind::TemplateChoice,
+    QuestionKind::RetrievalPlan,
+    QuestionKind::IngestionLane,
+    QuestionKind::EnrichmentSchedule,
+    QuestionKind::PreToolRisk,
+    QuestionKind::ConnectorEventTriage,
+    QuestionKind::ConnectorToolChoice,
+    QuestionKind::ConnectorWriteBack,
+    QuestionKind::ToolSubset,
+    QuestionKind::HarnessConfig,
+    QuestionKind::TaskPlan,
+    QuestionKind::HarnessContrast,
+    QuestionKind::Placement,
+    QuestionKind::ContextBudget,
+    QuestionKind::RoundVerdict,
+    QuestionKind::StageAllocation,
+    QuestionKind::ProbeVerdict,
+    QuestionKind::ItemRecommendation,
+    QuestionKind::LoadSet,
+    QuestionKind::UsageGuidance,
+    QuestionKind::BranchOutcome,
+    QuestionKind::EditConcentration,
+    QuestionKind::ThoughtSearch,
+    QuestionKind::ComparativeAnalysisPlan,
+    QuestionKind::ContextPackage,
+];
+
+/// The samples the budget report takes per group.
+const REPORT_SAMPLES: usize = 200;
+
+/// The group name of one family: its wire (snake_case) name.
+fn family_name(kind: QuestionKind) -> &'static str {
+    match kind {
+        QuestionKind::Route => "route",
+        QuestionKind::Rank => "rank",
+        QuestionKind::Classify => "classify",
+        QuestionKind::ResolveEntity => "resolve_entity",
+        QuestionKind::SchemaMapping => "schema_mapping",
+        QuestionKind::TemplateChoice => "template_choice",
+        QuestionKind::RetrievalPlan => "retrieval_plan",
+        QuestionKind::IngestionLane => "ingestion_lane",
+        QuestionKind::EnrichmentSchedule => "enrichment_schedule",
+        QuestionKind::PreToolRisk => "pre_tool_risk",
+        QuestionKind::ConnectorEventTriage => "connector_event_triage",
+        QuestionKind::ConnectorToolChoice => "connector_tool_choice",
+        QuestionKind::ConnectorWriteBack => "connector_write_back",
+        QuestionKind::ToolSubset => "tool_subset",
+        QuestionKind::HarnessConfig => "harness_config",
+        QuestionKind::TaskPlan => "task_plan",
+        QuestionKind::HarnessContrast => "harness_contrast",
+        QuestionKind::Placement => "placement",
+        QuestionKind::ContextBudget => "context_budget",
+        QuestionKind::RoundVerdict => "round_verdict",
+        QuestionKind::StageAllocation => "stage_allocation",
+        QuestionKind::ProbeVerdict => "probe_verdict",
+        QuestionKind::ItemRecommendation => "item_recommendation",
+        QuestionKind::LoadSet => "load_set",
+        QuestionKind::UsageGuidance => "usage_guidance",
+        QuestionKind::BranchOutcome => "branch_outcome",
+        QuestionKind::EditConcentration => "edit_concentration",
+        QuestionKind::ThoughtSearch => "thought_search",
+        QuestionKind::ComparativeAnalysisPlan => "comparative_analysis_plan",
+        QuestionKind::ContextPackage => "context_package",
+    }
+}
+
+async fn dispatch(h: &Harness, method: Method) -> Response {
+    Box::pin(
+        medulla_server_router::dispatch::request_boundary::dispatch_verified_request(
+            &h.state,
+            Request {
+                id: 178,
+                graph: "__commons__".into(),
+                auth_token: String::new(),
+                agent_id: Some("decider".into()),
+                method,
+            },
+            VerifiedRequestContext::verified_for_test_with_scopes(
+                "decider",
+                TENANT,
+                &["kg:read", "agent:decision-write"],
+            ),
+        ),
+    )
+    .await
+}
+
+/// The served-test kit fixture: one published tool and the route feature
+/// schema; the request is re-kinded per family.
+async fn fixture(kind: QuestionKind) -> (Harness, DecideRequest) {
+    let h = Harness::with_isolation(ServerState::test_isolation("decider")).await;
+    h.publish_test_component(
+        "tool-search",
+        AgentComponentKind::Tool,
+        "web search engine",
+        None::<&()>,
+        None,
+    )
+    .unwrap();
+    let (schema_pin, _) = publish_route_schema(&h);
+    let mut asked = request(
+        &schema_pin,
+        None,
+        DecisionPolicyRef::Default,
+        QuestionSafety::Ordinary,
+    );
+    asked.question.kind = kind;
+    asked.question.question_id = format!("bench.{}", family_name(kind));
+    (h, asked)
+}
+
+fn decide(rt: &Runtime, h: &Harness, asked: &DecideRequest) -> Response {
+    rt.block_on(dispatch(
+        h,
+        Method::Decide {
+            request: Box::new(asked.clone()),
+        },
+    ))
+}
+
+/// Resident high-water mark in MiB (`VmHWM`), 0 where procfs is absent.
+fn high_water_mib() -> f64 {
+    std::fs::read_to_string("/proc/self/status")
+        .ok()
+        .and_then(|status| {
+            status
+                .lines()
+                .find(|line| line.starts_with("VmHWM:"))
+                .and_then(|line| line.split_whitespace().nth(1))
+                .and_then(|kib| kib.parse::<f64>().ok())
+        })
+        .map_or(0.0, |kib| kib / 1024.0)
+}
+
+fn percentile_ms(sorted: &[Duration], p: f64) -> f64 {
+    let idx = ((sorted.len() as f64 - 1.0) * p).round() as usize;
+    sorted[idx].as_secs_f64() * 1000.0
+}
+
+/// Evidence items per claim the `decide/claims` group holds (R652.6).
+const CLAIM_EVIDENCE_ITEMS: usize = 50;
+
+/// One claim operation through the served handler.
+fn claims(rt: &Runtime, h: &Harness, op: ClaimOp) -> Response {
+    let verified = VerifiedRequestContext::verified_for_test_in_tenant("bench", TENANT);
+    rt.block_on(medulla_h_decide::decide::handle_claims(
+        &h.state, 1, &verified, op,
+    ))
+}
+
+/// The `decide/claims` group (MEDULLA-DECISION-ENGINE-R652.6): a claim holding
+/// 50 evidence items is read, its cohort artifact compiled (a replay of the
+/// stored seal) and the sealed artifact read back with its seal verified.
+fn bench_claims(c: &mut Criterion, rt: &Runtime, report: &mut BTreeMap<String, serde_json::Value>) {
+    let h = rt.block_on(Harness::new());
+    let ok = |response: Response| {
+        assert!(
+            response.error.is_none(),
+            "claims bench fixture: {response:?}"
+        );
+        response
+    };
+    ok(claims(
+        rt,
+        &h,
+        ClaimOp::Propose {
+            claim_id: "bench-claim".to_string(),
+        },
+    ));
+    for index in 0..CLAIM_EVIDENCE_ITEMS {
+        ok(claims(
+            rt,
+            &h,
+            ClaimOp::RecordEvidence {
+                evidence_id: format!("bench-e{index}"),
+                claim_id: "bench-claim".to_string(),
+                channel: Some(EvidenceChannel::Outcome),
+                supports: index % 5 != 0,
+                weight_ppm: 20_000,
+                source_digest: format!("sha256:{index:064x}"),
+                stances: BTreeMap::new(),
+                feed: None,
+            },
+        ));
+    }
+    let compile = || ClaimOp::CompileArtifact {
+        artifact_id: "bench-artifact".to_string(),
+        cohort_id: "bench-cohort".to_string(),
+        claim_ids: vec!["bench-claim".to_string()],
+        code_specs: vec!["bench-spec".to_string()],
+        exploration_edges: Vec::new(),
+    };
+    let journey = || {
+        black_box(ok(claims(
+            rt,
+            &h,
+            ClaimOp::Get {
+                claim_id: Some("bench-claim".to_string()),
+                artifact_id: None,
+            },
+        )));
+        black_box(ok(claims(rt, &h, compile())));
+        black_box(ok(claims(
+            rt,
+            &h,
+            ClaimOp::Get {
+                claim_id: None,
+                artifact_id: Some("bench-artifact".to_string()),
+            },
+        )));
+    };
+    let group_name = "decide/claims".to_string();
+    let mut group = c.benchmark_group(&group_name);
+    group.bench_function("served", |b| b.iter(journey));
+    group.finish();
+
+    let before = high_water_mib();
+    let mut samples: Vec<Duration> = (0..REPORT_SAMPLES)
+        .map(|_| {
+            let start = Instant::now();
+            journey();
+            start.elapsed()
+        })
+        .collect();
+    samples.sort();
+    report.insert(
+        group_name,
+        serde_json::json!({
+            "p50_ms": percentile_ms(&samples, 0.50),
+            "p99_ms": percentile_ms(&samples, 0.99),
+            "peak_mib": (high_water_mib() - before).max(0.0),
+        }),
+    );
+}
+
+fn bench_decide(c: &mut Criterion) {
+    let rt = Builder::new_current_thread().enable_all().build().unwrap();
+    let mut report: BTreeMap<String, serde_json::Value> = BTreeMap::new();
+    for kind in FAMILIES {
+        let (h, asked) = rt.block_on(fixture(*kind));
+        let group_name = format!("decide/{}", family_name(*kind));
+        let mut group = c.benchmark_group(&group_name);
+        group.bench_function("served", |b| {
+            b.iter(|| black_box(decide(&rt, &h, &asked)));
+        });
+        group.finish();
+
+        let before = high_water_mib();
+        let mut samples: Vec<Duration> = (0..REPORT_SAMPLES)
+            .map(|_| {
+                let start = Instant::now();
+                black_box(decide(&rt, &h, &asked));
+                start.elapsed()
+            })
+            .collect();
+        samples.sort();
+        report.insert(
+            group_name,
+            serde_json::json!({
+                "p50_ms": percentile_ms(&samples, 0.50),
+                "p99_ms": percentile_ms(&samples, 0.99),
+                "peak_mib": (high_water_mib() - before).max(0.0),
+            }),
+        );
+    }
+    bench_claims(c, &rt, &mut report);
+    if let Ok(path) = std::env::var("DECIDE_BUDGETS_REPORT") {
+        let body = serde_json::to_vec_pretty(&serde_json::json!({ "groups": report })).unwrap();
+        std::fs::write(&path, body).expect("write decide budget report");
+    }
+}
+
+criterion_group!(benches, bench_decide);
+
+fn main() {
+    benches();
+    Criterion::default().configure_from_args().final_summary();
+}

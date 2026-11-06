@@ -16,6 +16,8 @@ use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 
 #[cfg(feature = "redb")]
+mod effect_evidence;
+#[cfg(feature = "redb")]
 mod lease_kind_policy;
 
 /// Already-authorized graph and placement context for one WorkItem transition.
@@ -50,6 +52,9 @@ pub async fn try_handle(ctx: HandleContext<'_>, method: Method) -> Result<Respon
         | Method::PublishCurrentPlan { .. }
         | Method::IssueHostStartGrant { .. }
         | Method::PublishRunCheckpoint { .. }
+        | Method::MarkWorkItemEffectStarted { .. }
+        | Method::RecordEffectReceipt { .. }
+        | Method::SubmitAdmittedRequest { .. }
         | Method::IssueControlLease { .. }
         | Method::TransitionControlLease { .. }
         | Method::PolicyEvolutionStore { .. }
@@ -90,12 +95,29 @@ pub async fn try_handle(ctx: HandleContext<'_>, method: Method) -> Result<Respon
         return Ok(refused);
     }
 
-    let response =
-        match commit_verified_work_item(&ctx, placement_epoch, placement_fence, method).await {
-            Ok(result) => Response::ok(ctx.req_id, result),
-            Err(error) => Response::err(ctx.req_id, error),
-        };
-    Ok(response)
+    #[cfg(feature = "redb")]
+    let audited_op = effect_evidence::audited_effect_op(&method);
+    let committed = commit_verified_work_item(&ctx, placement_epoch, placement_fence, method).await;
+    #[cfg(feature = "redb")]
+    let committed = record_effect_evidence(&ctx, audited_op, committed).await;
+    Ok(match committed {
+        Ok(result) => Response::ok(ctx.req_id, result),
+        Err(error) => Response::err(ctx.req_id, error),
+    })
+}
+
+/// Add the audit row and metrics of a committed start mark or receipt to its
+/// result; every other result passes through.
+#[cfg(feature = "redb")]
+async fn record_effect_evidence(
+    ctx: &HandleContext<'_>,
+    audited_op: Option<&'static str>,
+    committed: Result<medulla_protocol_types::protocol::ResultPayload, String>,
+) -> Result<medulla_protocol_types::protocol::ResultPayload, String> {
+    if let (Some(op), Ok(result)) = (audited_op, committed.as_ref()) {
+        effect_evidence::record(ctx, op, result).await?;
+    }
+    committed
 }
 
 /// Commit one native WorkItem method through the durable MutationBatch path under

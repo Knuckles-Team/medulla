@@ -160,15 +160,48 @@ impl Served {
     }
 
     async fn attach_approved(&self, lease_id: &str) -> Response {
+        self.attach_expecting(lease_id, None).await
+    }
+
+    async fn attach_expecting(&self, lease_id: &str, expected_digest: Option<String>) -> Response {
         let op = GraphSchemaOp::AttachApproved {
             source_id: SOURCE.to_string(),
             contract: contract(),
             approval_lease_id: lease_id.to_string(),
+            expected_digest,
             if_composed_digest: None,
         };
         let method = Method::GraphSchema { op: Box::new(op) };
         self.call(GRAPH, &format!("attach:{lease_id}"), method)
             .await
+    }
+
+    /// Write one node whose properties are `record`.
+    async fn node(&self, node_id: &str, record: Value) {
+        let method = Method::AddNode {
+            node_id: node_id.to_string(),
+            properties_msgpack: rmp_serde::to_vec_named(&record).unwrap(),
+        };
+        let added = self.call(GRAPH, &format!("node:{node_id}"), method).await;
+        assert!(added.error.is_none(), "{:?}", added.error);
+    }
+
+    /// Run `ValidateRepair`, which stores the shadow-ingest report of the candidate.
+    async fn shadow_validate(&self, key: &str) {
+        let op = GraphSchemaOp::ValidateRepair {
+            source_id: SOURCE.to_string(),
+            contract: contract(),
+            if_composed_digest: None,
+        };
+        let method = Method::GraphSchema { op: Box::new(op) };
+        let validated = self.call(GRAPH, key, method).await;
+        assert!(validated.error.is_none(), "{:?}", validated.error);
+    }
+
+    /// A clean current node plus a stored clean report: the state `AttachApproved` needs.
+    async fn clean_shadow(&self) {
+        self.node("person-1", json!({"name": "alice"})).await;
+        self.shadow_validate("shadow-clean").await;
     }
 }
 
@@ -196,6 +229,7 @@ fn candidate() -> String {
 #[tokio::test]
 async fn an_approved_candidate_attaches_under_its_approval_and_records_it() {
     let served = Served::new().await;
+    served.clean_shadow().await;
     served
         .approval("action_approval:ok", &candidate(), true)
         .await;
@@ -210,12 +244,15 @@ async fn an_approved_candidate_attaches_under_its_approval_and_records_it() {
         .iter()
         .find(|source| source.source_id == SOURCE)
         .expect("the approved source is attached");
-    assert_eq!(
-        source.origin,
-        SchemaSourceOriginView::Approved {
-            name: "container-manager-mcp".to_string(),
-            approval_lease_id: "action_approval:ok".to_string(),
-        }
+    assert!(
+        matches!(&source.origin, SchemaSourceOriginView::Approved { name, approval_lease_id, .. }
+            if name == "container-manager-mcp" && approval_lease_id == "action_approval:ok"),
+        "{:?}",
+        source.origin
+    );
+    assert!(
+        matches!(&source.origin, SchemaSourceOriginView::Approved { shadow_report_digest: Some(digest), .. } if digest.len() == 64),
+        "the attach records the shadow report digest as provenance"
     );
 }
 
@@ -286,4 +323,104 @@ async fn validate_repair_renders_and_validates_without_attaching() {
         .dynamic_sources
         .iter()
         .all(|source| source.source_id != SOURCE));
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R102.2
+#[tokio::test]
+async fn schema_repair_requires_real_shadow_ingest_before_activation() {
+    // No report: refused before anything attaches.
+    let served = Served::new().await;
+    served
+        .approval("action_approval:shadow", &candidate(), true)
+        .await;
+    let missing = served.attach_approved("action_approval:shadow").await;
+    assert!(refusal(&missing).starts_with("SCHEMA_REPAIR_SHADOW_MISSING"));
+
+    // A report over an empty graph ingested nothing, which is still missing.
+    served.shadow_validate("shadow-empty").await;
+    let empty = served.attach_approved("action_approval:shadow").await;
+    assert!(refusal(&empty).starts_with("SCHEMA_REPAIR_SHADOW_MISSING"));
+
+    // A current node that breaks the contract is a violation.
+    served.node("person-bad", json!({"title": "no name"})).await;
+    served.shadow_validate("shadow-violating").await;
+    let violating = served.attach_approved("action_approval:shadow").await;
+    assert!(refusal(&violating).starts_with("SCHEMA_REPAIR_SHADOW_VIOLATIONS"));
+    let listed: GraphSchemaSourcesView = decode(
+        served
+            .call(GRAPH, "list-shadow", Method::GraphSchemaList)
+            .await,
+    );
+    assert!(listed
+        .dynamic_sources
+        .iter()
+        .all(|source| source.source_id != SOURCE));
+
+    // A clean report over current data lets the same approval attach.
+    let clean = Served::new().await;
+    clean.clean_shadow().await;
+    clean
+        .approval("action_approval:shadow", &candidate(), true)
+        .await;
+    let committed: GraphSchemaCommitted =
+        decode(clean.attach_approved("action_approval:shadow").await);
+    assert!(committed.changed);
+}
+
+/// Verifies MEDULLA-TYPED-PACKS-R808: Operator-selected schema import with digest check and readback
+// spec: MEDULLA-TYPED-PACKS-R808
+#[tokio::test]
+async fn expected_digest_is_checked_before_the_attach_and_reads_back() {
+    let served = Served::new().await;
+    served.clean_shadow().await;
+    let rendered = super::source(
+        &GraphSchemaOp::ValidateRepair {
+            source_id: SOURCE.to_string(),
+            contract: contract(),
+            if_composed_digest: None,
+        },
+        None,
+    )
+    .unwrap();
+    let digest = rendered.shapes_sha256.unwrap().to_hex();
+
+    // The candidate is unknown when no lease of the tenant covers it.
+    let unknown = served
+        .attach_expecting("action_approval:absent", Some(digest.clone()))
+        .await;
+    assert!(refusal(&unknown).starts_with("SCHEMA_CANDIDATE_UNKNOWN"));
+
+    served
+        .approval("action_approval:digest", &candidate(), true)
+        .await;
+    let wrong = served
+        .attach_expecting("action_approval:digest", Some("0".repeat(64)))
+        .await;
+    assert!(refusal(&wrong).starts_with("SCHEMA_DIGEST_MISMATCH"));
+
+    let attached: GraphSchemaCommitted = decode(
+        served
+            .attach_expecting("action_approval:digest", Some(digest.clone()))
+            .await,
+    );
+    assert!(attached.changed);
+    // The same digest again is a no-op.
+    let again: GraphSchemaCommitted = decode(
+        served
+            .attach_expecting("action_approval:digest", Some(digest.clone()))
+            .await,
+    );
+    assert!(!again.changed);
+
+    let listed: GraphSchemaSourcesView = decode(
+        served
+            .call(GRAPH, "list-digest", Method::GraphSchemaList)
+            .await,
+    );
+    let stored = listed
+        .dynamic_sources
+        .iter()
+        .find(|source| source.source_id == SOURCE)
+        .expect("the selected candidate is attached");
+    assert_eq!(stored.shapes_sha256.as_deref(), Some(digest.as_str()));
 }

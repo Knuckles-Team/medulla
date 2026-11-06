@@ -16,6 +16,7 @@ use std::time::Instant;
 use tracing::Instrument;
 
 use medulla_agent_types::agent_component::AgentComponentKind;
+use medulla_decision_stats::decision::feature_power::FeaturePowerKnobs;
 use medulla_decision_stats::{
     decision::admission::admit, decision::admission::AdmissionRules, decision::admission::Admitted,
     decision::admission::Regime,
@@ -403,6 +404,16 @@ pub(super) fn threshold_assessment(
     })
 }
 
+/// The feature-power knobs the server loaded at startup (`eval.*`).
+fn feature_power_knobs() -> FeaturePowerKnobs {
+    let knobs = medulla_server_api::knob_config::knobs();
+    FeaturePowerKnobs {
+        max_lag: knobs.eval_ic_max_lag as usize,
+        resamples: knobs.eval_bootstrap_resamples as usize,
+        level: knobs.eval_ci_level,
+    }
+}
+
 fn run_eval(inputs: &EvalInputs, request: &DecisionEvalRequest) -> JobRun {
     let admitted = inputs.admitted(request.window);
     let head_digest = content_digest_of(&canonical_body_bytes(&inputs.head)?);
@@ -412,6 +423,7 @@ fn run_eval(inputs: &EvalInputs, request: &DecisionEvalRequest) -> JobRun {
         estimators: request.estimators.as_slice(),
         head_digest: &head_digest,
         policy_digest: &inputs.policy.digest,
+        feature_power: Some(feature_power_knobs()),
     };
     let receipt = evaluate(
         &inputs.head,
@@ -533,9 +545,25 @@ fn submit_job(
                     ));
                 }
             }
-            DecisionJobOutput::Replay { run } => telemetry::replayed(run, started),
+            DecisionJobOutput::Replay { run } => {
+                telemetry::replayed(run, started);
+                telemetry::stage_done(
+                    telemetry::Stage::Replay,
+                    "replay",
+                    &identity.tenant_id,
+                    true,
+                    started,
+                );
+            }
             DecisionJobOutput::Fit { draft, .. } => {
-                telemetry::fitted(draft.n_training, draft.calibration.is_some(), started)
+                telemetry::fitted(draft.n_training, draft.calibration.is_some(), started);
+                telemetry::stage_done(
+                    telemetry::Stage::Learn,
+                    "fit",
+                    &identity.tenant_id,
+                    true,
+                    started,
+                );
             }
         },
         DecisionJobState::Failed { code } => telemetry::refused("DecisionJob", code),
@@ -943,6 +971,7 @@ mod threshold_tests {
             exclusions: LabelExclusions::default(),
             pooled: BoundedVec::default(),
             failed_gates: BoundedVec::default(),
+            feature_power: BoundedVec::default(),
             passed: true,
             synthetic: false,
         }

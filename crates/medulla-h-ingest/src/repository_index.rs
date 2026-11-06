@@ -27,6 +27,9 @@ use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
 
+pub mod ecosystem;
+pub mod enrich;
+
 /// The projection edge a tombstone is reported as; it lowers to a removal.
 const TOMBSTONE_EDGE: &str = "removesFileVersion";
 const ENVELOPE_PREFIX: &str = "repository-index:";
@@ -149,6 +152,28 @@ impl IndexWriteSet {
             .map_err(|error| format!("engine write-set encoding failed: {error}"))?;
         check_commit_budget(&encoded, methods.len())?;
         let digest = Digest256::framed(domain, &[&encoded])?;
+        Ok(IndexWriteSet {
+            envelope_id: format!("{prefix}{}", digest.to_hex()),
+            digest,
+            methods,
+        })
+    }
+}
+
+impl IndexWriteSet {
+    /// Key an engine-lowered write-set by an existing digest: the envelope id
+    /// is `prefix` followed by `digest_hex`, so one source digest names one
+    /// derived envelope and a replay commits nothing new. Refused whole past
+    /// one commit's budget.
+    pub(crate) fn with_digest(
+        prefix: &str,
+        digest_hex: &str,
+        methods: Vec<Method>,
+    ) -> Result<Self, String> {
+        let encoded = rmp_serde::to_vec_named(&methods)
+            .map_err(|error| format!("engine write-set encoding failed: {error}"))?;
+        check_commit_budget(&encoded, methods.len())?;
+        let digest = Digest256::parse(digest_hex)?;
         Ok(IndexWriteSet {
             envelope_id: format!("{prefix}{}", digest.to_hex()),
             digest,

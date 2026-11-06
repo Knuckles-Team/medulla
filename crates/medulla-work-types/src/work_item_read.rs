@@ -53,7 +53,11 @@ pub const RUN_ADMISSION_REQUEST: &str = "run_admission_request";
 pub const WORK_ITEM_CHECKPOINT_REF: &str = "run_checkpoint_ref";
 pub const WORK_ITEM_CHECKPOINT_REVISION: &str = "run_checkpoint_revision";
 pub const WORK_ITEM_CHECKPOINT_DIGEST: &str = "run_checkpoint_digest";
-pub const NATIVE_WORK_ITEM_ROW_KEYS: [&str; 15] = [
+/// The WorkItem-row property that records where the item's external effect
+/// stands (MEDULLA-DURABLE-KERNEL-R820.1).
+pub const WORK_ITEM_EFFECT_PHASE: &str = "effect_phase";
+pub const NATIVE_WORK_ITEM_ROW_KEYS: [&str; 17] = [
+    crate::native_control::WORK_ITEM_LIFECYCLE_REVISION,
     RUN_ADMISSION_REQUEST,
     WORK_ITEM_CHECKPOINT_REF,
     WORK_ITEM_CHECKPOINT_REVISION,
@@ -69,6 +73,7 @@ pub const NATIVE_WORK_ITEM_ROW_KEYS: [&str; 15] = [
     WORK_ITEM_OUTCOME_DIGEST,
     WORK_ITEM_TRACE_REF,
     WORK_ITEM_TOOL_CALL_REFS,
+    WORK_ITEM_EFFECT_PHASE,
 ];
 
 /// `SubmitWorkItem`'s own bound on a WorkItem id, reused for the tenant.
@@ -150,6 +155,223 @@ pub struct RunWorkItemView {
     pub admission: crate::native_control::SubmitWorkItemRequest,
 }
 
+/// Where a WorkItem's external effect stands. `Started` means an effect may
+/// have happened: the item is never dead-lettered and a reclaim keeps its
+/// attempt until a receipt resolves it.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum EffectPhase {
+    #[default]
+    Unstarted,
+    Started,
+    Resolved,
+}
+
+const STORED_EFFECT_PHASE: [(&str, EffectPhase); 3] = [
+    ("unstarted", EffectPhase::Unstarted),
+    ("started", EffectPhase::Started),
+    ("resolved", EffectPhase::Resolved),
+];
+
+impl EffectPhase {
+    /// The stored `effect_phase` text of this phase.
+    pub fn as_stored(self) -> &'static str {
+        STORED_EFFECT_PHASE
+            .iter()
+            .find(|(_, phase)| *phase == self)
+            .map_or("", |(text, _)| text)
+    }
+
+    /// The phase a stored row records; an absent key is `Unstarted`.
+    pub fn from_row(row: &Map<String, Value>) -> Result<Self, String> {
+        match row.get(WORK_ITEM_EFFECT_PHASE).and_then(Value::as_str) {
+            None => Ok(Self::Unstarted),
+            Some(stored) => stored_value(&STORED_EFFECT_PHASE, stored)
+                .ok_or_else(|| format!("WorkItem carries an unrecognized effect_phase '{stored}'")),
+        }
+    }
+}
+
+/// The closed outcome set of one effect receipt.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum EffectOutcome {
+    Applied,
+    NotApplied,
+    Compensated,
+}
+
+impl EffectOutcome {
+    /// The closed label of this outcome, as it is stored and as metrics and
+    /// audit rows spell it.
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::Applied => "applied",
+            Self::NotApplied => "not_applied",
+            Self::Compensated => "compensated",
+        }
+    }
+}
+
+/// The one receipt that resolves a job's external effect. One per job ID.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct EffectReceipt {
+    pub job_id: String,
+    pub request_ref: String,
+    pub principal_ref: String,
+    pub outcome: EffectOutcome,
+    pub receipt_ref: String,
+    pub committed_at: u64,
+}
+
+/// Largest admitted request, a fixed limit.
+pub const MAX_ADMITTED_REQUEST_BYTES: usize = 1024 * 1024;
+
+/// One admitted request, stored once under its `request_ref` and never changed.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct AdmittedRequest {
+    pub request_ref: String,
+    pub tenant: String,
+    pub session_ref: String,
+    pub payload_digest: String,
+    pub bytes: Vec<u8>,
+}
+
+impl AdmittedRequest {
+    /// `sha256:` plus the 64 lowercase hex characters of the SHA-256 of the
+    /// canonical request bytes.
+    pub fn request_ref_of(canonical: &[u8]) -> String {
+        use sha2::{Digest, Sha256};
+        let digest = Sha256::digest(canonical);
+        let mut out = String::with_capacity(7 + 64);
+        out.push_str("sha256:");
+        for byte in digest {
+            out.push_str(&format!("{byte:02x}"));
+        }
+        out
+    }
+}
+
+/// `MarkWorkItemEffectStarted`: the live-claim fence and the row revision the
+/// worker read (MEDULLA-DURABLE-KERNEL-R820.3).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct MarkWorkItemEffectStartedRequest {
+    pub tenant: String,
+    pub work_item_id: String,
+    pub worker_id: String,
+    pub lease_epoch: u64,
+    pub fencing_token: u64,
+    pub expected_revision: u64,
+}
+
+/// `RecordEffectReceipt`: the one receipt of `(work_item_id, attempt)`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct RecordEffectReceiptRequest {
+    pub tenant: String,
+    pub work_item_id: String,
+    pub attempt: u64,
+    pub expected_revision: u64,
+    pub receipt: EffectReceipt,
+}
+
+/// `SubmitAdmittedRequest`: the admitted request of `(work_item_id, attempt)`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct SubmitAdmittedRequestRequest {
+    pub work_item_id: String,
+    pub attempt: u64,
+    pub expected_revision: u64,
+    pub request: AdmittedRequest,
+}
+
+/// The key of one effect record read: `(work_item_id, attempt)` in a tenant.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct EffectRecordKey {
+    pub tenant: String,
+    /// Only `GetAdmittedRequest` reads within a session; receipts ignore it.
+    #[serde(default)]
+    pub session_ref: Option<String>,
+    pub work_item_id: String,
+    pub attempt: u64,
+}
+
+/// What an effect write committed: the item's new row revision, and whether
+/// the call replayed an identical earlier write.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct EffectWriteResult {
+    pub changed_work_item_ids: Vec<String>,
+    pub work_item_id: String,
+    pub attempt: u64,
+    pub revision: u64,
+    pub replayed: bool,
+    /// The stored receipt, for `RecordEffectReceipt`.
+    #[serde(default)]
+    pub receipt: Option<EffectReceipt>,
+}
+
+impl EffectWriteResult {
+    /// `started` for a start mark, the receipt's outcome label for a receipt.
+    pub fn outcome_label(&self) -> &'static str {
+        self.receipt
+            .as_ref()
+            .map_or("started", |receipt| receipt.outcome.label())
+    }
+}
+
+/// The stored form of one admitted request: its digest and the payload ref,
+/// never the bytes (R820.1).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct AdmittedRequestRecord {
+    pub request_ref: String,
+    pub tenant: String,
+    pub session_ref: String,
+    pub payload_ref: String,
+}
+
+impl AdmittedRequest {
+    /// Check the fixed size limit and that `request_ref` is the digest of the
+    /// bytes, then project the stored record.
+    pub fn admit(&self) -> Result<AdmittedRequestRecord, String> {
+        use medulla_types::contract::ServerErrorCode;
+        if self.bytes.len() > MAX_ADMITTED_REQUEST_BYTES {
+            return Err(format!(
+                "{}: admitted request is {} bytes, above {MAX_ADMITTED_REQUEST_BYTES}",
+                ServerErrorCode::AdmittedRequestTooLarge,
+                self.bytes.len()
+            ));
+        }
+        if Self::request_ref_of(&self.bytes) != self.request_ref {
+            return Err(format!(
+                "{}: request bytes do not match request_ref",
+                ServerErrorCode::AdmittedRequestDigestMismatch
+            ));
+        }
+        Ok(AdmittedRequestRecord {
+            request_ref: self.request_ref.clone(),
+            tenant: self.tenant.clone(),
+            session_ref: self.session_ref.clone(),
+            payload_ref: self.payload_digest.clone(),
+        })
+    }
+}
+
 /// The caller's view of one WorkItem row.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -166,6 +388,9 @@ pub struct WorkItemView {
     /// A reader compares two views of the same item by it.
     pub version: u64,
     pub updated_at_ms: u64,
+    /// Where the item's external effect stands.
+    #[serde(default)]
+    pub effect_phase: EffectPhase,
 }
 
 impl WorkItemView {
@@ -201,6 +426,8 @@ impl WorkItemView {
                 .unwrap_or(0)
                 .max(1),
             updated_at_ms: seconds_to_ms(row.get("updated_at").and_then(Value::as_f64)),
+            effect_phase: EffectPhase::from_row(row)
+                .map_err(|error| format!("WorkItem '{work_item_id}': {error}"))?,
         }))
     }
 }

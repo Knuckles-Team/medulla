@@ -73,6 +73,26 @@ fn graph_shard_before_policy_revisions_matches_the_previous_pin() {
     );
 }
 
+// spec: MEDULLA-UNIFIED-DATA-PLANE-R040.3
+#[test]
+fn semantic_index_before_promotion_matches_the_previous_pin() {
+    let predecessor = &SEMANTIC_INDEX_BEFORE_PROMOTION;
+    let contracts: Vec<_> =
+        crate::owner::contract::expected_table_contracts(OwnerLayout::SemanticIndex)
+            .into_iter()
+            .filter(|contract| {
+                contract.ownership == crate::physical::manifest::TableOwnership::Ledger
+                    || predecessor
+                        .owner_tables
+                        .contains(&contract.table_id.as_str())
+            })
+            .collect();
+    assert_eq!(
+        layout_digest_over(OwnerLayout::SemanticIndex, &contracts),
+        SEMANTIC_INDEX_PRE_PROMOTION_DIGEST
+    );
+}
+
 #[test]
 fn the_layout_list_is_complete_and_ordered() {
     for (index, layout) in ALL_LAYOUTS.iter().enumerate() {
@@ -293,4 +313,29 @@ fn predecessor_document_keeps_operator_clauses_when_splitting_sentences() {
         render_predecessor_prose("unchanged table data"),
         "unchanged table data"
     );
+}
+
+// spec: MEDULLA-DURABLE-KERNEL-R820.4
+#[test]
+fn effect_receipt_predecessor_refuses_naming_store_upgrade() {
+    let predecessor = &GRAPH_SHARD_BEFORE_EFFECT_RECEIPTS;
+    assert_eq!(predecessor.owner_tables.len(), 61);
+    assert!(predecessor
+        .owner_tables
+        .contains(&"work_item_run_checkpoints"));
+    assert!(!predecessor
+        .owner_tables
+        .contains(&"work_item_effect_receipts"));
+    assert!(!predecessor
+        .owner_tables
+        .contains(&"work_item_admitted_requests"));
+    let manifest = predecessor_manifest(predecessor);
+    assert_eq!(
+        manifest.layout_digest,
+        GRAPH_SHARD_PRE_EFFECT_RECEIPTS_DIGEST
+    );
+    let error = validate_against_lineage(&manifest).unwrap_err();
+    assert!(error.starts_with("GRAPH_SHARD_FORMAT_UPGRADE_REQUIRED:"));
+    assert!(error.contains(predecessor.label));
+    assert!(error.contains("store-upgrade"), "{error}");
 }

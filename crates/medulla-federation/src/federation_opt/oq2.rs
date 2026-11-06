@@ -91,6 +91,7 @@ pub(crate) fn kind(spec: &ForeignSourceSpec) -> Option<&'static str> {
         ForeignSourceSpec::RemoteEngine { .. }
         | ForeignSourceSpec::HttpJson { .. }
         | ForeignSourceSpec::Sql { .. }
+        | ForeignSourceSpec::SqliteFile { .. }
         | ForeignSourceSpec::Named { .. } => None,
     }
 }

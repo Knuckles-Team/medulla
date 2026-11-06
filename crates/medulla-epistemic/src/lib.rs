@@ -24,6 +24,12 @@
 //! never double-count.
 
 mod adapter;
+// MEDULLA-DECISION-ENGINE-R700.2 — negation and antonym confirmation of opposed claims.
+pub mod antonyms;
+// MEDULLA-DECISION-ENGINE-R700 — belief revision pass kernels.
+pub mod belief_revision;
+// MEDULLA-DECISION-ENGINE-R652 — claim lifecycle, evidence, arbitration and sealing kernels.
+pub mod claims;
 #[cfg(feature = "epistemic-tms")]
 mod incremental;
 mod model;
@@ -89,8 +95,8 @@ pub use typed::{EpistemicNodeIndex, TypedEvidence};
 // selectable by `CausalModelKind`.
 #[cfg(feature = "epistemic-causal")]
 pub use causal::{
-    CategoricalEstimate, CausalEstimate, CausalGraph, CausalModelKind, DiscreteCausalGraph,
-    DiscreteStructuralEquation, StructuralEquation,
+    verify_fit, CategoricalEstimate, CausalEstimate, CausalFitError, CausalGraph, CausalModelKind,
+    DiscreteCausalGraph, DiscreteStructuralEquation, StructuralEquation, MIN_FIT_OBSERVATIONS,
 };
 // EPI-P3-3 — provenance-aware retrieval ranking, see `ranking` module docs.
 #[cfg(feature = "epistemic-causal")]

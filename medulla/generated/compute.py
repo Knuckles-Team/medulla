@@ -12,6 +12,7 @@ from . import solve as _solve
 from ._runtime import (
     OpaqueResult,
     decode_result,
+    expect_count,
     expect_float,
     models,
 )
@@ -3413,6 +3414,63 @@ async def send_finance_kelly_fraction(
         idempotency_key=idempotency_key,
     )
     return expect_float("FinanceKellyFraction", payload)
+
+
+async def send_finance_record_put(
+    client: Any,
+    params: dict[str, Any] | None = None,
+    graph: str | None = None,
+    *,
+    idempotency_key: str | None = None,
+) -> int:
+    """Send one engine-contract request (hand-maintained; mirrors the Rust serde types).
+
+    Method:
+        FinanceRecordPut
+    Authorization:
+        graph:write
+    Result:
+        ResultPayload::Count
+    Errors:
+        - FINANCE_RECORD_VERSION_UNKNOWN
+        - RECORD_DERIVED_READONLY
+        - RECORD_HEAD_CONFLICT
+        - RECORD_SHAPE_INVALID
+        - ACCESS_DENIED
+    """
+    payload = await client._send(
+        "FinanceRecordPut",
+        params,
+        graph,
+        idempotency_key=idempotency_key,
+    )
+    return expect_count("FinanceRecordPut", payload)
+
+
+async def send_finance_record_get(
+    client: Any,
+    params: dict[str, Any] | None = None,
+    graph: str | None = None,
+    *,
+    idempotency_key: str | None = None,
+) -> Any:
+    """Send one engine-contract request (hand-maintained; mirrors the Rust serde types).
+
+    Method:
+        FinanceRecordGet
+    Authorization:
+        graph:read
+    Result:
+        ResultPayload::Raw (the record, or None when absent)
+    Errors:
+        - ACCESS_DENIED
+    """
+    return await client._send(
+        "FinanceRecordGet",
+        params,
+        graph,
+        idempotency_key=idempotency_key,
+    )
 
 
 async def send_finance_position_size(

@@ -64,6 +64,11 @@ struct Args {
     )]
     exact_performance_probe_root: Option<std::path::PathBuf>,
 
+    /// Engine knob `<name>=<value>` (repeatable); overrides `MEDULLA_<NAME>`
+    /// and the default (MEDULLA-CONTRACT-R058).
+    #[arg(long = "knob", value_name = "NAME=VALUE")]
+    knob: Vec<String>,
+
     /// Service configuration shared with the startup steps.
     #[command(flatten)]
     server: server_startup::ServerArgs,
@@ -311,6 +316,41 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
 async fn run_inner() -> Result<(), Box<dyn std::error::Error>> {
     let mut args = Args::parse();
 
+    // MEDULLA-CONTRACT-R058: every knob is read and bounds-checked once, before
+    // any listener binds; a refusal exits non-zero.
+    match medulla_server_api::knob_config::load_knobs(&args.knob, |name| std::env::var(name).ok()) {
+        Ok(knobs) => {
+            #[cfg(feature = "federation")]
+            medulla_federation::sqlite_foreign::set_busy_timeout_ms(
+                knobs.foreign_sqlite_busy_timeout_ms,
+            );
+            // MEDULLA-DURABLE-KERNEL-R800.3: the served answer cache admits answers by the
+            // loaded `kvcache.min_worth` and `kvcache.answer_max_bytes`, before any graph
+            // builds its cache.
+            #[cfg(feature = "result-cache")]
+            medulla_query_cache::result_cache::install_tier_policy(
+                medulla_query_cache::result_cache::TierPolicy {
+                    max_bytes: knobs.kvcache_answer_max_bytes,
+                    min_worth: knobs.kvcache_min_worth,
+                },
+            );
+            medulla_server_api::knob_config::install(knobs)
+        }
+        Err(refusal) => {
+            eprintln!("error: {refusal}");
+            std::process::exit(2);
+        }
+    }
+    match medulla_server_api::knob_config::load_allowed_roots(&args.knob, |name| {
+        std::env::var(name).ok()
+    }) {
+        Ok(roots) => medulla_server_api::knob_config::install_allowed_roots(roots),
+        Err(refusal) => {
+            eprintln!("error: {refusal}");
+            std::process::exit(2);
+        }
+    }
+
     if args.exact_performance_probe {
         return run_exact_performance_probe(args.exact_performance_probe_root.as_deref());
     }
@@ -321,8 +361,14 @@ async fn run_inner() -> Result<(), Box<dyn std::error::Error>> {
     // exporter is layered on top. Off/unset ⇒ byte-for-byte the prior behavior.
     medulla_kernel::otel::init_tracing()?;
 
+    // MEDULLA-FEDERATED-QUERY-R608.2 — reasoning knobs: an out-of-range value refuses startup.
+    medulla_types::scheduler_config::install_reasoning_knobs(
+        medulla_types::scheduler_config::ReasoningKnobs::from_env()?,
+    );
+
     let (socket_path, socket_parent) = resolve_socket_path(args.socket_path.take());
     let socket_mode = server_startup::socket_mode_or_exit(&args.socket_mode);
+    server_startup::bus_participant_ttl_or_exit(args.server.bus_participant_ttl_s);
 
     // ── Security gate: an auth secret and a durable-state directory are mandatory ──
     server_startup::validate_auth_mode(&args, socket_mode)?;
@@ -403,6 +449,8 @@ async fn run_inner() -> Result<(), Box<dyn std::error::Error>> {
         txn_limits,
     );
     server_state.local_anonymous = args.auth_mode == "none";
+    server_state.write_conflict_strategy =
+        server_startup::parse_write_conflict_strategy(&args.write_conflict_strategy);
     let state = Arc::new(RwLock::new(server_state));
 
     // Compose the ordinary process as a real local-placement server before any
@@ -487,6 +535,7 @@ async fn spawn_optional_service_listeners(
     recover_durable_catalog(state).await?;
     medulla_h_admin::connector_pack_projection::spawn(state.clone());
     medulla_h_ingest::repository_enrichment_worker::spawn(state.clone());
+    medulla_h_ingest::repository_index::enrich::spawn(state.clone())?;
     #[cfg(feature = "epistemic-tms")]
     medulla_h_retrieve::reasoning_projection::spawn(state.clone());
     // Sampled authorization denials reach the identity audit trail.
@@ -916,24 +965,36 @@ async fn spawn_iceberg_listener(
     let iceberg_addr = resolve_listener_addr(iceberg_addr_arg, "127.0.0.1:8181");
     #[cfg(feature = "lake-rest")]
     if let Some(ref iceberg_addr) = iceberg_addr {
-        let lake_handle = {
+        // `lake-rest` implies `lake` implies `blob`, so the CAS is always configured
+        // (`Some`) in any build reaching this arm — `blob` is never independently off.
+        let (lake_handle, blob_store) = {
             use medulla_server_lake::lake::LakeStateExt;
-            state.read().await.lake()
+            let s = state.read().await;
+            (s.lake(), s.blob_cursors().map(|b| b.store.clone()))
         };
-        let listener = tokio::net::TcpListener::bind(iceberg_addr).await?;
-        info!(
-            "Iceberg-REST: serving the standards catalog surface on http://{}/v1/config",
-            iceberg_addr
-        );
-        let lake_security_state = state.clone();
-        tokio::spawn(async move {
-            medulla_server_lake::lake::rest::serve_with_security(
-                listener,
-                lake_handle,
-                lake_security_state,
-            )
-            .await;
-        });
+        match blob_store {
+            Some(store) => {
+                let listener = tokio::net::TcpListener::bind(iceberg_addr).await?;
+                info!(
+                    "Iceberg-REST: serving the standards catalog surface on http://{}/v1/config",
+                    iceberg_addr
+                );
+                let lake_security_state = state.clone();
+                tokio::spawn(async move {
+                    medulla_server_lake::lake::rest::serve_with_security(
+                        listener,
+                        lake_handle,
+                        store,
+                        lake_security_state,
+                    )
+                    .await;
+                });
+            }
+            None => tracing::error!(
+                "--iceberg-addr {}: no blob CAS available (the `lake`/`blob` features need a persist dir)",
+                iceberg_addr
+            ),
+        }
     }
     #[cfg(not(feature = "lake-rest"))]
     if iceberg_addr.is_some() {
@@ -994,11 +1055,15 @@ async fn spawn_lake_materialize_sweep(_state: &Arc<tokio::sync::RwLock<ServerSta
                     let outcome = tokio::task::spawn_blocking(move || {
                         let mut drained = 0usize;
                         let mut errors = 0usize;
+                        let mut lineage_events = Vec::new();
                         match tsdb.list_series() {
                             Ok(series) => {
                                 for series_id in series {
                                     match lake_handle.drain_series(store.as_ref(), &tsdb, &series_id) {
-                                        Ok(Some(_)) => drained += 1,
+                                        Ok(Some(report)) => {
+                                            drained += 1;
+                                            lineage_events.push(report.lineage_event);
+                                        }
                                         Ok(None) => {}
                                         Err(e) => {
                                             errors += 1;
@@ -1011,10 +1076,22 @@ async fn spawn_lake_materialize_sweep(_state: &Arc<tokio::sync::RwLock<ServerSta
                             }
                             Err(e) => tracing::warn!("Lake materialize sweep: list_series failed: {e}"),
                         }
-                        (drained, errors)
+                        (drained, errors, lineage_events)
                     })
                     .await;
-                    if let Ok((drained, errors)) = outcome {
+                    if let Ok((drained, errors, lineage_events)) = outcome {
+                        // MEDULLA-UNIFIED-DATA-PLANE-R702.3: the sweep's run events
+                        // reach the lineage graph through `LineageIngest`.
+                        if let Err(error) = medulla_server_lake::lake::lineage::submit_events(
+                            &sweep_state,
+                            &lineage_events,
+                        )
+                        .await
+                        {
+                            tracing::warn!(
+                                "Lake materialize sweep: lineage drain refused: {error}"
+                            );
+                        }
                         if drained > 0 || errors > 0 {
                             tracing::info!(
                                 "Lake materialize sweep: {drained} series drained, {errors} errors"
@@ -1281,6 +1358,8 @@ async fn spawn_redis_listener(
             .as_deref(),
         "127.0.0.1:6379",
     ) {
+        let auth_secret = state.read().await.auth_secret.clone();
+        medulla_wire_msg::redis_wire::validate_startup_policy(&addr, &auth_secret)?;
         let redis_state = state.clone();
         info!("redis-wire: serving Redis RESP protocol on {}", addr);
         tokio::spawn(async move {
@@ -1356,6 +1435,7 @@ async fn spawn_s3_listener(
             .as_deref(),
         "127.0.0.1:9000",
     ) {
+        medulla_wire_msg::s3::validate_startup_policy(&addr, "")?;
         let s3_state = state.clone();
         let selected_blob = {
             state

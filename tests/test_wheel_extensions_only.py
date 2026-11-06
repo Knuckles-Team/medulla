@@ -64,8 +64,10 @@ def test_maturin_builds_extension_modules_and_the_server_is_a_separate_build() -
 def test_each_platform_publishes_on_its_own_behind_the_guard() -> None:
     jobs = _yaml(RELEASE)["jobs"]
     assert "publish-pypi" not in jobs
-    for name in ("build", "build-x86", "build-sdist"):
+    for name in ("build-x86", "build-sdist"):
         assert jobs[name]["needs"] == "guard"
+    assert jobs["server-binary"]["needs"] == "guard"
+    assert jobs["build"]["needs"] == ["guard", "server-binary"]
     legs = [s.get("name", "") for s in jobs["build"]["steps"]]
     smoke = next(i for i, n in enumerate(legs) if n.startswith("Smoke test"))
     publish = next(i for i, n in enumerate(legs) if n.startswith("Publish "))

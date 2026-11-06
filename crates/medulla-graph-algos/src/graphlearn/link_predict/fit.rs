@@ -35,6 +35,7 @@ pub(super) fn fit_link_predictor(
         feat_std,
         alpha: config.alpha,
         train_auc: 0.0,
+        fitted_nodes: Vec::new(),
     };
     model.train_auc = training_auc(&model, ctx, &data.pos, &data.neg);
     model

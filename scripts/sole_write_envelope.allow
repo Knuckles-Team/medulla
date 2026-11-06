@@ -1,0 +1,6 @@
+# MEDULLA-DURABLE-KERNEL-R043.102: direct redb table writes allowed outside
+# crates/medulla-transaction and crates/medulla-storage. One `<path> <reason>`
+# line per file; every entry needs a reason and must still write directly.
+crates/medulla-persistence-ops/src/store_upgrade/tests.rs test fixture seeds raw rows into a closed store to prove upgrade refusals
+crates/medulla-persistence-records/src/agent_library.rs test module corrupts a closed agent library to prove recovery rejects tampered replay rows
+crates/medulla-persistence-tests/src/redb_backend_tests.rs test fixture seeds raw shard rows to prove the backend refuses malformed records

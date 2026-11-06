@@ -129,9 +129,12 @@ fn native_route_target(
         return route;
     }
     match domain.as_deref() {
-        None | Some("GraphState") | Some("Transaction") | Some("WorkItem") | Some("Multisig") => {
-            request_graph.to_string()
-        }
+        None
+        | Some("GraphState")
+        | Some("Transaction")
+        | Some("WorkItem")
+        | Some("Multisig")
+        | Some("FinanceRecordPut") => request_graph.to_string(),
         Some("GraphLifecycle") => native_route_lifecycle_target(request_graph, method),
         Some("ClusterAdmin") | Some("SessionControl") | Some(TRANSACTION_LEDGER_ROUTE) => {
             medulla_raft::raft::placement::PLACEMENT_GRAPH.to_string()

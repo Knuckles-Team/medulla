@@ -199,6 +199,10 @@ method_results! {
     FinanceFactorRank(FinanceFactorRank) => Raw<Vec<finance::FactorRecordResult>>;
     #[cfg(feature = "finance")]
     FinanceDistributionShift(FinanceDistributionShift) => Raw<finance::DistributionShift>;
+    #[cfg(feature = "finance")]
+    FinancePatternClassify(FinancePatternClassify) => Raw<Vec<finance::PatternMatch>>;
+    #[cfg(feature = "finance")]
+    FinanceProfitAttribution(FinanceProfitAttribution) => Raw<finance::AttributionBreakdown>;
     FinanceSabrImpliedVol(FinanceSabrImpliedVol) => Float<f64>;
     FinanceSabrSmile(FinanceSabrSmile) => Raw<Vec<f64>>;
     #[cfg(feature = "finance")]
@@ -245,6 +249,8 @@ method_results! {
     GraphLearnFit(GraphLearnFit) => Json<graphlearn::LinkPredictorFit>;
     #[cfg(feature = "graphlearn")]
     GraphLearnPredict(GraphLearnPredict) => Json<graphlearn::LinkPrediction>;
+    #[cfg(feature = "graphlearn")]
+    GraphLearnPredictNary(GraphLearnPredictNary) => Json<graphlearn::NaryPrediction>;
     #[cfg(feature = "ml-pipeline")]
     MiningPipelineTrain(MiningPipelineTrain) => Json<pipeline::PipelineTrainResult>;
     #[cfg(feature = "ml-pipeline")]

@@ -63,7 +63,8 @@ pub use content::{
 pub use facts::{
     AgentComponentFacts, CostFacts, DeclaredCost, DeclaredLatency, FactQuality, MeasuredFact,
     ModalityFacts, ObservationRef, PriceSource, PromptMode, ShellProficiency, StoppingBehaviour,
-    ToolEffect, ToolFactDeclarer, ToolSideEffects, ToolsetTransport,
+    ToolEffect, ToolFactDeclarer, ToolSideEffects, ToolsetTransport, PROMPT_IDENTITY_INVALID,
+    PROMPT_SCHEMA_REVISION,
 };
 pub use input_capabilities::{ModelInputCapabilities, ModelInputMediaType};
 pub use search::{
@@ -505,6 +506,118 @@ pub struct AgentComponentEntry {
     pub updated_at_ms: u64,
 }
 
+/// The four boundaries at which an agent lifecycle record is validated, each
+/// mapped to the one type that owns it (MEDULLA-DECISION-ENGINE-R168.1).
+pub const LIFECYCLE_BOUNDARIES: &[(&str, &str)] = &[
+    ("construction", "AgentComponentEntry::create"),
+    ("transition", "check_lifecycle_transition"),
+    ("persistence", "AgentLibraryStore"),
+    ("serialization", "AgentLibraryLifecycle"),
+];
+
+/// The allowed lifecycle transitions of one component (MEDULLA-DECISION-ENGINE-R168.2).
+///
+/// `Published -> Published` is a new revision, `Published -> Retired` a
+/// tombstone, `Published -> Withdrawn` a connector pack member no longer
+/// served (only an `mcp:` member), `Withdrawn -> Published` its republish.
+/// `Retired` is terminal. Exhaustive on purpose: a new lifecycle fails to
+/// compile until its row is decided here.
+pub fn check_lifecycle_transition(
+    component_id: &str,
+    prior: AgentLibraryLifecycle,
+    next: AgentLibraryLifecycle,
+) -> Result<(), String> {
+    use crate::agent_library::lifecycle::{
+        LIFECYCLE_RETIRED_TERMINAL, LIFECYCLE_TRANSITION_INVALID, WITHDRAWN_NOT_ALLOWED,
+    };
+    use AgentLibraryLifecycle::{Published, Retired, Withdrawn};
+    match (prior, next) {
+        (Published, Published) | (Published, Retired) | (Withdrawn, Published) => Ok(()),
+        (Published, Withdrawn) if component_id.starts_with("mcp:") => Ok(()),
+        (Published, Withdrawn) => Err(format!(
+            "{WITHDRAWN_NOT_ALLOWED}: only a connector pack member may be withdrawn"
+        )),
+        (Retired, Published) | (Retired, Retired) | (Retired, Withdrawn) => Err(format!(
+            "{LIFECYCLE_RETIRED_TERMINAL}: a retired component cannot change lifecycle"
+        )),
+        (Withdrawn, Withdrawn) | (Withdrawn, Retired) => Err(format!(
+            "{LIFECYCLE_TRANSITION_INVALID}: {prior:?} -> {next:?} is not an allowed transition"
+        )),
+    }
+}
+
+/// Refuse a retained revision chain whose lifecycle states are not a legal path
+/// (MEDULLA-DECISION-ENGINE-R168.4).
+///
+/// The first revision is `Published`; each later revision follows the previous
+/// one by one and by an allowed transition. The engine reports the malformed
+/// state and does not repair or default it.
+pub fn check_lifecycle_chain(entries: &[AgentComponentEntry]) -> Result<(), String> {
+    use crate::agent_library::lifecycle::LIFECYCLE_STATE_MALFORMED;
+    let Some(first) = entries.first() else {
+        return Ok(());
+    };
+    if first.lifecycle != AgentLibraryLifecycle::Published {
+        return Err(format!(
+            "{LIFECYCLE_STATE_MALFORMED}: revision {} of {} starts as {:?}, not published",
+            first.entry_revision, first.component_id, first.lifecycle
+        ));
+    }
+    for pair in entries.windows(2) {
+        let (prior, next) = (&pair[0], &pair[1]);
+        if next.component_id != prior.component_id
+            || next.entry_revision != prior.entry_revision.saturating_add(1)
+        {
+            return Err(format!(
+                "{LIFECYCLE_STATE_MALFORMED}: revision {} of {} does not follow revision {}",
+                next.entry_revision, next.component_id, prior.entry_revision
+            ));
+        }
+        check_lifecycle_transition(&next.component_id, prior.lifecycle, next.lifecycle)?;
+    }
+    Ok(())
+}
+
+/// The evidence class of a lifecycle transition entry (MEDULLA-DECISION-ENGINE-R168.5).
+pub const LIFECYCLE_EVIDENCE_CLASS: &str = "Observation";
+
+/// One accepted lifecycle transition, as the revision stream retains it
+/// (MEDULLA-DECISION-ENGINE-R168.5): the prior lifecycle, the next lifecycle and
+/// the component digest.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct LifecycleTransitionEntry {
+    pub component_id: String,
+    /// The revision that carries the transition.
+    pub entry_revision: u64,
+    pub prior: AgentLibraryLifecycle,
+    pub next: AgentLibraryLifecycle,
+    pub component_digest: String,
+    pub evidence_class: String,
+}
+
+/// The transition entries of one component's revision stream, oldest first.
+///
+/// Every revision after the first is one accepted transition. The chain is
+/// checked first, so a malformed stream yields its refusal and no entries.
+pub fn lifecycle_transition_entries(
+    entries: &[AgentComponentEntry],
+) -> Result<Vec<LifecycleTransitionEntry>, String> {
+    check_lifecycle_chain(entries)?;
+    Ok(entries
+        .windows(2)
+        .map(|pair| LifecycleTransitionEntry {
+            component_id: pair[1].component_id.clone(),
+            entry_revision: pair[1].entry_revision,
+            prior: pair[0].lifecycle,
+            next: pair[1].lifecycle,
+            component_digest: pair[1].definition_digest.clone(),
+            evidence_class: LIFECYCLE_EVIDENCE_CLASS.to_string(),
+        })
+        .collect())
+}
+
 impl AgentComponentEntry {
     pub fn publish(
         draft: AgentComponentDraft,
@@ -570,8 +683,16 @@ impl AgentComponentEntry {
     pub fn retire(&self, entry_revision: u64, retired_at_ms: u64) -> Result<Self, String> {
         self.validate()?;
         if self.lifecycle == AgentLibraryLifecycle::Retired {
-            return Err("agent component entry is already retired".to_string());
+            return Err(format!(
+                "{}: agent component entry is already retired",
+                crate::agent_library::lifecycle::LIFECYCLE_RETIRED_TERMINAL
+            ));
         }
+        check_lifecycle_transition(
+            &self.component_id,
+            self.lifecycle,
+            AgentLibraryLifecycle::Retired,
+        )?;
         if entry_revision <= self.entry_revision {
             return Err("agent component tombstone revision must advance".to_string());
         }
@@ -831,6 +952,8 @@ fn put_facts(hasher: &mut Sha256, facts: &AgentComponentFacts) {
             prompt_mode,
             token_estimate,
             variables,
+            body_sha256,
+            schema_revision,
         } => {
             put_text(
                 hasher,
@@ -841,6 +964,12 @@ fn put_facts(hasher: &mut Sha256, facts: &AgentComponentFacts) {
             );
             hasher.update(token_estimate.to_be_bytes());
             put_names(hasher, variables);
+            // Pins hash only when set, so an unpinned prompt keeps its digest.
+            if let (Some(body), Some(revision)) = (body_sha256, schema_revision) {
+                put_text(hasher, "blueprint_pins");
+                put_text(hasher, body);
+                hasher.update(revision.to_be_bytes());
+            }
         }
         AgentComponentFacts::Tool {
             effect,
@@ -1295,6 +1424,111 @@ fn validate_receipt_digest(request: &AgentComponentPublishRequest) -> Result<(),
     }
 }
 
+/// The versioned graph identity of one blueprint prompt revision.
+///
+/// Derived, never stored: publish assigns `entry_revision`, then
+/// [`PromptBlueprintIdentity::derive`] reads the pins off the facts. Changing
+/// either pin changes the identity.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct PromptBlueprintIdentity {
+    pub tenant_id: String,
+    pub component_id: String,
+    pub entry_revision: u64,
+    pub schema_revision: u32,
+    /// 64 lowercase hex characters.
+    pub body_sha256: String,
+    pub provenance: ComponentProvenance,
+}
+
+impl PromptBlueprintIdentity {
+    /// Derive the identity of a blueprint prompt. Refuses with
+    /// `PROMPT_IDENTITY_INVALID` for non-prompt facts, missing or unpaired
+    /// pins, an unsupported schema revision or invalid ids.
+    pub fn derive(
+        tenant_id: &str,
+        component_id: &str,
+        entry_revision: u64,
+        facts: &AgentComponentFacts,
+        provenance: &ComponentProvenance,
+    ) -> Result<Self, String> {
+        let invalid = |why: &str| format!("{PROMPT_IDENTITY_INVALID}: {why}");
+        let AgentComponentFacts::SystemPrompt {
+            body_sha256,
+            schema_revision,
+            ..
+        } = facts
+        else {
+            return Err(invalid("only a system prompt has a blueprint identity"));
+        };
+        facts::validate_prompt_pins(body_sha256.as_deref(), *schema_revision)?;
+        let (Some(body_sha256), Some(schema_revision)) = (body_sha256, schema_revision) else {
+            return Err(invalid(
+                "a blueprint prompt carries body_sha256 and schema_revision",
+            ));
+        };
+        validate_text("tenant_id", tenant_id).map_err(|e| invalid(&e))?;
+        validate_text("component_id", component_id).map_err(|e| invalid(&e))?;
+        if entry_revision == 0 {
+            return Err(invalid("entry_revision must be assigned by publish"));
+        }
+        provenance.validate().map_err(|e| invalid(&e))?;
+        Ok(Self {
+            tenant_id: tenant_id.to_string(),
+            component_id: component_id.to_string(),
+            entry_revision,
+            schema_revision: *schema_revision,
+            body_sha256: body_sha256.clone(),
+            provenance: provenance.clone(),
+        })
+    }
+
+    /// The identity of a published entry, when it is a pinned blueprint prompt.
+    pub fn of_entry(entry: &AgentComponentEntry) -> Option<Self> {
+        match &entry.facts {
+            AgentComponentFacts::SystemPrompt {
+                body_sha256: Some(_),
+                schema_revision: Some(_),
+                ..
+            } => Self::derive(
+                &entry.tenant_id,
+                &entry.component_id,
+                entry.entry_revision,
+                &entry.facts,
+                &entry.provenance,
+            )
+            .ok(),
+            _ => None,
+        }
+    }
+}
+
+/// Frame the pins of one prompt revision as unambiguous bytes.
+///
+/// Each field is a big-endian `u32` length then its bytes, in a fixed order:
+/// tenant, component, entry revision, schema revision, body hash. Rendering
+/// binds these bytes into its digest and receipt verification recomputes
+/// them, so both sides share this one function.
+pub fn frame_pins(identity: &PromptBlueprintIdentity) -> Vec<u8> {
+    let entry_revision = identity.entry_revision.to_be_bytes();
+    let schema_revision = identity.schema_revision.to_be_bytes();
+    let fields: [&[u8]; 5] = [
+        identity.tenant_id.as_bytes(),
+        identity.component_id.as_bytes(),
+        &entry_revision,
+        &schema_revision,
+        identity.body_sha256.as_bytes(),
+    ];
+    let mut framed = Vec::with_capacity(fields.iter().map(|f| f.len() + 4).sum());
+    for field in fields {
+        let len = u32::try_from(field.len()).unwrap_or(u32::MAX);
+        framed.extend_from_slice(&len.to_be_bytes());
+        framed.extend_from_slice(field);
+    }
+    framed
+}
+
 /// What a committed component mutation returns.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -1304,6 +1538,9 @@ pub struct AgentComponentCommittedResult {
     pub component: AgentComponentEntry,
     pub batch_id: String,
     pub committed_version: u64,
+    /// The derived blueprint identity when the component is a pinned prompt.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt_identity: Option<PromptBlueprintIdentity>,
 }
 
 /// The outbox event one committed component revision emits.
@@ -1348,8 +1585,230 @@ impl AgentComponentOutboxEvent {
 mod tests {
     use super::*;
 
+    // spec: MEDULLA-DECISION-ENGINE-R168.1
+    #[test]
+    fn lifecycle_boundaries_are_listed() {
+        let names: Vec<&str> = LIFECYCLE_BOUNDARIES.iter().map(|(b, _)| *b).collect();
+        assert_eq!(
+            names,
+            ["construction", "transition", "persistence", "serialization"]
+        );
+        let owners: BTreeSet<&str> = LIFECYCLE_BOUNDARIES.iter().map(|(_, t)| *t).collect();
+        assert_eq!(
+            owners.len(),
+            LIFECYCLE_BOUNDARIES.len(),
+            "one type per boundary"
+        );
+        // Construction and serialization keep the lifecycle field.
+        let entry =
+            AgentComponentEntry::publish(draft("server-a", AgentComponentKind::Toolset), 1, 10)
+                .unwrap();
+        let encoded = serde_json::to_string(&entry).unwrap();
+        let restored: AgentComponentEntry = serde_json::from_str(&encoded).unwrap();
+        assert_eq!(restored, entry);
+        restored.validate().unwrap();
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R168.2
+    #[test]
+    fn lifecycle_transition_table() {
+        use crate::agent_library::lifecycle::{
+            LIFECYCLE_RETIRED_TERMINAL, LIFECYCLE_TRANSITION_INVALID, WITHDRAWN_NOT_ALLOWED,
+        };
+        use AgentLibraryLifecycle::{Published, Retired, Withdrawn};
+        let all = [Published, Retired, Withdrawn];
+        for prior in all {
+            for next in all {
+                let pack = check_lifecycle_transition("mcp:pack/tool", prior, next);
+                let native = check_lifecycle_transition("server-a", prior, next);
+                let expected_pack: Result<(), &str> = match (prior, next) {
+                    (Published, Published) | (Published, Retired) | (Published, Withdrawn) => {
+                        Ok(())
+                    }
+                    (Withdrawn, Published) => Ok(()),
+                    (Retired, _) => Err(LIFECYCLE_RETIRED_TERMINAL),
+                    (Withdrawn, Withdrawn) | (Withdrawn, Retired) => {
+                        Err(LIFECYCLE_TRANSITION_INVALID)
+                    }
+                };
+                match expected_pack {
+                    Ok(()) => assert!(pack.is_ok(), "{prior:?} -> {next:?} allowed"),
+                    Err(code) => assert!(
+                        pack.as_ref().unwrap_err().starts_with(code),
+                        "{prior:?} -> {next:?} refuses {code}: {pack:?}"
+                    ),
+                }
+                if (prior, next) == (Published, Withdrawn) {
+                    assert!(native.unwrap_err().starts_with(WITHDRAWN_NOT_ALLOWED));
+                } else {
+                    assert_eq!(native.is_ok(), pack.is_ok(), "{prior:?} -> {next:?}");
+                }
+            }
+        }
+        // The check runs on mutation: retire refuses a retired entry by code.
+        let entry =
+            AgentComponentEntry::publish(draft("server-a", AgentComponentKind::Toolset), 1, 10)
+                .unwrap();
+        let retired = entry.retire(2, 20).unwrap();
+        assert!(retired
+            .retire(3, 30)
+            .unwrap_err()
+            .starts_with(LIFECYCLE_RETIRED_TERMINAL));
+    }
+
+    /// Verifies MEDULLA-DECISION-ENGINE-R168.4: Lifecycle refusals
+    // spec: MEDULLA-DECISION-ENGINE-R168.4
+    #[test]
+    fn malformed_lifecycle_chains_refuse_by_code() {
+        use crate::agent_library::lifecycle::{
+            LIFECYCLE_RETIRED_TERMINAL, LIFECYCLE_STATE_MALFORMED,
+        };
+        let first =
+            AgentComponentEntry::publish(draft("server-a", AgentComponentKind::Toolset), 1, 10)
+                .unwrap();
+        let retired = first.retire(2, 20).unwrap();
+        assert!(check_lifecycle_chain(&[first.clone(), retired.clone()]).is_ok());
+        // A stream cannot start retired.
+        let mut headless = retired.clone();
+        headless.entry_revision = 1;
+        assert!(check_lifecycle_chain(&[headless])
+            .unwrap_err()
+            .starts_with(LIFECYCLE_STATE_MALFORMED));
+        // A gap in the revision numbers.
+        let mut gap = retired.clone();
+        gap.entry_revision = 3;
+        assert!(check_lifecycle_chain(&[first.clone(), gap])
+            .unwrap_err()
+            .starts_with(LIFECYCLE_STATE_MALFORMED));
+        // A revision after the terminal state.
+        let mut resurrected = first.clone();
+        resurrected.entry_revision = 3;
+        assert!(
+            check_lifecycle_chain(&[first.clone(), retired.clone(), resurrected])
+                .unwrap_err()
+                .starts_with(LIFECYCLE_RETIRED_TERMINAL)
+        );
+    }
+
+    /// Verifies MEDULLA-DECISION-ENGINE-R168.5: Lifecycle evidence
+    // spec: MEDULLA-DECISION-ENGINE-R168.5
+    #[test]
+    fn transition_entries_name_both_states_and_the_digest() {
+        let first =
+            AgentComponentEntry::publish(draft("server-a", AgentComponentKind::Toolset), 1, 10)
+                .unwrap();
+        let retired = first.retire(2, 20).unwrap();
+        let entries = lifecycle_transition_entries(&[first.clone(), retired.clone()]).unwrap();
+        assert_eq!(
+            entries,
+            vec![LifecycleTransitionEntry {
+                component_id: "server-a".into(),
+                entry_revision: 2,
+                prior: AgentLibraryLifecycle::Published,
+                next: AgentLibraryLifecycle::Retired,
+                component_digest: retired.definition_digest.clone(),
+                evidence_class: "Observation".into(),
+            }]
+        );
+        // One entry per accepted transition, none for the first revision.
+        assert!(lifecycle_transition_entries(&[first]).unwrap().is_empty());
+    }
+
     /// One named edit to a definition, for the digest-binding table below.
     type NamedMutation<T> = (&'static str, fn(&mut T));
+
+    // spec: MEDULLA-TYPED-PACKS-R001.6
+    #[test]
+    fn prompt_blueprint_identity() {
+        let pinned = |body: char, revision: u32| AgentComponentFacts::SystemPrompt {
+            prompt_mode: PromptMode::Static,
+            token_estimate: 64,
+            variables: Vec::new(),
+            body_sha256: Some(body.to_string().repeat(64)),
+            schema_revision: Some(revision),
+        };
+        let provenance = ComponentProvenance::SourcePackage {
+            package_id: "pkg-a".into(),
+            package_version: "1.0.0".into(),
+        };
+        let identity = PromptBlueprintIdentity::derive(
+            "tenant-a",
+            "prompt:a",
+            3,
+            &pinned('a', 1),
+            &provenance,
+        )
+        .unwrap();
+        assert_eq!(identity.entry_revision, 3);
+        assert_eq!(identity.schema_revision, PROMPT_SCHEMA_REVISION);
+        assert_eq!(identity.body_sha256, "a".repeat(64));
+        let wire = serde_json::to_value(&identity).unwrap();
+        assert_eq!(
+            serde_json::from_value::<PromptBlueprintIdentity>(wire).unwrap(),
+            identity
+        );
+
+        // A pin change changes the identity and the definition digest.
+        let changed = PromptBlueprintIdentity::derive(
+            "tenant-a",
+            "prompt:a",
+            3,
+            &pinned('b', 1),
+            &provenance,
+        )
+        .unwrap();
+        assert_ne!(changed, identity);
+        let mut a = draft("prompt:a", AgentComponentKind::SystemPrompt);
+        a.facts = pinned('a', 1);
+        let mut b = a.clone();
+        b.facts = pinned('b', 1);
+        assert_ne!(
+            AgentComponentEntry::publish(a.clone(), 1, 1)
+                .unwrap()
+                .definition_digest,
+            AgentComponentEntry::publish(b, 1, 1)
+                .unwrap()
+                .definition_digest
+        );
+        let entry = AgentComponentEntry::publish(a, 2, 1).unwrap();
+        assert_eq!(
+            PromptBlueprintIdentity::of_entry(&entry).map(|i| i.entry_revision),
+            Some(2)
+        );
+
+        let refuse = |facts: AgentComponentFacts, id: &str| {
+            let error = PromptBlueprintIdentity::derive("tenant-a", id, 3, &facts, &provenance)
+                .expect_err("must refuse");
+            assert!(error.starts_with(PROMPT_IDENTITY_INVALID), "{error}");
+        };
+        refuse(pinned('a', 2), "prompt:a");
+        refuse(pinned('A', 1), "prompt:a");
+        refuse(pinned('a', 1), "");
+        let mut half = pinned('a', 1);
+        if let AgentComponentFacts::SystemPrompt {
+            schema_revision, ..
+        } = &mut half
+        {
+            *schema_revision = None;
+        }
+        refuse(half.clone(), "prompt:a");
+        let mut unpaired = draft("prompt:a", AgentComponentKind::SystemPrompt);
+        unpaired.facts = half;
+        assert!(unpaired
+            .validate()
+            .unwrap_err()
+            .contains(PROMPT_IDENTITY_INVALID));
+        refuse(
+            AgentComponentFacts::SystemPrompt {
+                prompt_mode: PromptMode::Static,
+                token_estimate: 64,
+                variables: Vec::new(),
+                body_sha256: None,
+                schema_revision: None,
+            },
+            "prompt:a",
+        );
+    }
 
     /// MEDULLA-TYPED-PACKS-R016: package version is provenance, not identity.
     /// New writes mint v4, which ignores it; a stored v3 row still validates.
@@ -1775,6 +2234,8 @@ mod tests {
             prompt_mode: PromptMode::Static,
             token_estimate: 500,
             variables: vec!["topic".into()],
+            body_sha256: None,
+            schema_revision: None,
         };
         let error = broken.validate().expect_err("must be refused");
         assert!(

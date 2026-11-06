@@ -832,6 +832,7 @@ mod tests {
         assert!(decode(&bytes).is_err());
     }
 
+    /// Verifies MEDULLA-FEDERATED-QUERY-R040.5.2: Low-storage ANN: compact graph artifact
     // spec: MEDULLA-FEDERATED-QUERY-R040.5.2
     #[test]
     fn compact_round_trip_preserves_search_and_accounting() {
@@ -1017,6 +1018,7 @@ mod tests {
         }
     }
 
+    /// Verifies MEDULLA-FEDERATED-QUERY-R040.5.3: Low-storage ANN: revision-bound regeneration and rescore
     // spec: MEDULLA-FEDERATED-QUERY-R040.5.3
     #[test]
     fn vectorless_search_validates_provider_vectors_and_queries() {

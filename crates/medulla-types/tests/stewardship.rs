@@ -18,6 +18,7 @@ where
     json
 }
 
+/// Verifies MEDULLA-TYPED-PACKS-R802.1: Model
 // spec: MEDULLA-TYPED-PACKS-R802.1
 #[test]
 fn records_round_trip() {

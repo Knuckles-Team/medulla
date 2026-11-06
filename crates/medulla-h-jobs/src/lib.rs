@@ -9,6 +9,10 @@
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod agent_lifecycle_statechart;
 
+/// MEDULLA-UNIFIED-DATA-PLANE-R700.3: served governed actions.
+#[allow(missing_docs)]
+pub mod action;
+
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod delegation;
@@ -43,6 +47,10 @@ pub mod work_item;
 #[cfg(feature = "redb")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod work_item_read;
+
+/// MEDULLA-DURABLE-KERNEL-R077: served scheduler worker-admission reads.
+#[cfg(feature = "redb")]
+pub mod worker_admission;
 
 // The ambient auth posture these tests run under (MEDULLA-CONTRACT-R056.18).
 #[cfg(test)]

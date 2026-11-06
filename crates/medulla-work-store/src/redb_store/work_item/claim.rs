@@ -117,6 +117,17 @@ pub fn claim_reclaim_expired_lease(
     let attempts = property_u64(props, "attempt");
     let max_attempts = property_u64(props, "max_attempts").max(1);
     let next_epoch = next_claim_epoch(props)?;
+    // An item whose effect may have happened is never dead-lettered: it
+    // returns to `ready` with its attempt unchanged until a receipt resolves
+    // it (MEDULLA-DURABLE-KERNEL-R820.2).
+    if super::cancel::cancel_requested(props) {
+        super::cancel::retire_cancel_requested_lease(props, &None, now_s)?;
+        return Ok(true);
+    }
+    if super::effect::effect_started(props) {
+        reclaim_expired_lease(props, node_id, status, next_epoch);
+        return Ok(false);
+    }
     if attempts >= max_attempts {
         retire_exhausted_lease(props, node_id, status, now_s, next_epoch);
         Ok(true)
@@ -298,7 +309,12 @@ pub fn claim_grant_lease(
     lease_until_s: f64,
 ) -> Result<(u64, u64), String> {
     let epoch = next_claim_epoch(props)?;
-    let attempt = property_u64(props, "attempt").saturating_add(1);
+    // A claim of a `Started` item continues the same attempt.
+    let attempt = if super::effect::effect_started(props) {
+        property_u64(props, "attempt")
+    } else {
+        property_u64(props, "attempt").saturating_add(1)
+    };
     props.insert("status".into(), serde_json::Value::String("leased".into()));
     props.insert(
         "lease_owner".into(),

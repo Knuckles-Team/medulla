@@ -85,9 +85,16 @@ pub fn append_native_work_item_ops(ops: &mut Vec<&'static str>, available: bool)
             "PublishRunCheckpoint",
             "GetRunWorkItem",
             "GetSessionUsage",
+            "GetShardWriterWidth",
             "GetWorkItem",
             "ListWorkItems",
             "GetWorkItemOutcome",
+            // MEDULLA-DURABLE-KERNEL-R820.3: the uncertain-effect protocol.
+            "MarkWorkItemEffectStarted",
+            "RecordEffectReceipt",
+            "SubmitAdmittedRequest",
+            "GetEffectReceipt",
+            "GetAdmittedRequest",
             // graph-os MEDULLA-2: native control leases share the WorkItem kernel.
             "IssueHostStartGrant",
             "IssueControlLease",
@@ -235,21 +242,6 @@ pub async fn dispatch_resource_stats(
 pub fn dispatch_boxed<'a>(
     fut: impl std::future::Future<Output = Response> + Send + 'a,
 ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Response> + Send + 'a>> {
-    Box::pin(fut)
-}
-
-/// As [`dispatch_boxed`], but generic over the future's output type. Used to
-/// erase the concrete type of a dispatch *group* call (whose output is
-/// `ControlFlow<Response, Method>`, not `Response`) at the same per-call
-/// boundary -- `dispatch_request_method`'s own body chains three such group
-/// calls (control plane, data plane, the per-graph fallback) unboxed, so its
-/// own generated state machine embeds all three concrete nested future types
-/// simultaneously. That is the same O(whole call graph) cost `dispatch_boxed`
-/// exists to avoid at the method-dispatch boundary one level up; this gives
-/// `dispatch_request_method` the identical O(1)-per-call erasure.
-pub fn dispatch_boxed_typed<'a, T>(
-    fut: impl std::future::Future<Output = T> + Send + 'a,
-) -> std::pin::Pin<Box<dyn std::future::Future<Output = T> + Send + 'a>> {
     Box::pin(fut)
 }
 
@@ -551,6 +543,7 @@ mod native_resource_capability_tests {
             for op in [
                 "GetRunWorkItem",
                 "GetSessionUsage",
+                "GetShardWriterWidth",
                 "GetWorkItem",
                 "ListWorkItems",
                 "GetWorkItemOutcome",

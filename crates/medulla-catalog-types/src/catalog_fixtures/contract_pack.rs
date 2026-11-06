@@ -104,6 +104,8 @@ pub fn index() -> ConnectorPackIndex {
         PackEntryKind::ModelProfile,
         PackEntryKind::A2aCard,
         PackEntryKind::SkillFile,
+        PackEntryKind::Crosswalk,
+        PackEntryKind::ConceptPath,
     ];
     ConnectorPackIndex {
         schema_version: CONNECTOR_PACK_SCHEMA_VERSION,
@@ -343,6 +345,18 @@ pub fn every_violation_code() -> Vec<PackViolationCode> {
         PackViolationCode::PackMassWithdrawal,
         PackViolationCode::RetiredEntryReturned,
         PackViolationCode::OntologyOrphan,
+        PackViolationCode::CrosswalkSourceUnknown,
+        PackViolationCode::CrosswalkSourceOutOfScope,
+        PackViolationCode::CrosswalkTargetUnknown,
+        PackViolationCode::CrosswalkConflict,
+        PackViolationCode::CrosswalkCategoryConflict,
+        PackViolationCode::CrosswalkLimitExceeded,
+        PackViolationCode::ConceptPathMalformed,
+        PackViolationCode::ConceptPathDuplicateAlias,
+        PackViolationCode::ConceptPathParentConflict,
+        PackViolationCode::ConceptPathIriConflict,
+        PackViolationCode::ConceptPathStaleRevision,
+        PackViolationCode::NutrientIdUnmapped,
     ]
 }
 

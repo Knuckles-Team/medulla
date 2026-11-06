@@ -19,6 +19,7 @@ fn nl(text: &str) -> Method {
     Method::NlQuery {
         text: text.into(),
         graph: "__commons__".into(),
+        history: Vec::new(),
     }
 }
 
@@ -26,6 +27,7 @@ fn nl_explain(text: &str) -> Method {
     Method::NlQueryExplain {
         text: text.into(),
         graph: "__commons__".into(),
+        history: Vec::new(),
     }
 }
 
@@ -33,6 +35,7 @@ fn nl_plan(text: &str) -> Method {
     Method::NlQueryPlan {
         text: text.into(),
         graph: "__commons__".into(),
+        history: Vec::new(),
     }
 }
 

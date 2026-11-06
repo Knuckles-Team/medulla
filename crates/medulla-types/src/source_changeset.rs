@@ -117,6 +117,7 @@ pub struct Changeset {
 mod tests {
     use super::*;
 
+    /// Verifies MEDULLA-SCM-R002.1: Structured trailers on a changeset
     // spec: MEDULLA-SCM-R002.1
     #[test]
     fn trailers_parse_and_render_round_trip() {

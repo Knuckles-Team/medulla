@@ -313,8 +313,14 @@ pub const PRODUCTIONS: &[Production] = &[
     p("source_reliability", Stage, &["SOURCE"], Some(Epistemic),
       "\"SOURCE\" \"RELIABILITY\" id", "SourceReliability{source_id}",
       "MATCH (:Claim) |> SOURCE RELIABILITY 's1'"),
-    p("confidence", Stage, &["CONFIDENCE"], Some(Epistemic), "\"CONFIDENCE\"",
-      "ConfidenceOp{}", "MATCH (:Claim) |> CONFIDENCE |> LIMIT 5"),
+    p("confidence", Stage, &["CONFIDENCE"], Some(Epistemic), "\"CONFIDENCE\" [num]",
+      "ConfidenceOp{threshold} (drops rows scoring below the threshold)", "MATCH (:Claim) |> CONFIDENCE 0.6 |> LIMIT 5"),
+    p("decay", Stage, &["DECAY"], None, "\"DECAY\" \"HALF_LIFE\" num",
+      "Decay{half_life_secs} (score × 0.5^(age / half_life))",
+      "MATCH (:Claim) |> DECAY HALF_LIFE 86400 |> LIMIT 5"),
+    p("cluster", Stage, &["CLUSTER"], None, "\"CLUSTER\" \"BY\" \"EMBEDDING\" \"K\" int",
+      "ClusterByEmbedding{k} (cosine, seed 0; cluster_id, centroid_distance)",
+      "MATCH (:Doc) |> CLUSTER BY EMBEDDING K 3"),
     p("attribute", Stage, &["ATTRIBUTE"], Some(Numeric),
       "\"ATTRIBUTE\" attr_value \"OF\" ( \"SCORE\" | name ) ( \"LINEAR\" \
        | \"SHAPLEY\" [ \"SAMPLES\" int \"SEED\" int ] | \"OWEN\" \"BY\" name )",
@@ -474,6 +480,7 @@ const _: fn() -> medulla_types::wire::OpKind = || medulla_types::wire::OpKind::T
 #[cfg(feature = "probabilistic")]
 const _: fn() -> medulla_types::wire::OpKind = || medulla_types::wire::OpKind::Probabilistic;
 #[cfg(feature = "epistemic")]
-const _: fn() -> medulla_types::wire::Op = || medulla_types::wire::Op::ConfidenceOp {};
+const _: fn() -> medulla_types::wire::Op =
+    || medulla_types::wire::Op::ConfidenceOp { threshold: None };
 #[cfg(feature = "geo")]
 const _: fn() -> medulla_types::wire::OpKind = || medulla_types::wire::OpKind::SpatialScan;

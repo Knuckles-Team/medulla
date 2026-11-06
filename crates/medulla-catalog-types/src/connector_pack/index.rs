@@ -36,6 +36,12 @@ pub enum PackEntryKind {
     // a doc comment would make schemars split this variant out of the enum
     // and the generated Python type would stop being an Enum.
     SkillFile,
+    // One vocabulary crosswalk (MEDULLA-TYPED-PACKS-R071.1.3): the body is a
+    // `VocabularyCrosswalk` JSON record. Plain comment, like its siblings'.
+    Crosswalk,
+    // One proposed canonical concept path (MEDULLA-TYPED-PACKS-R071.100): the
+    // body is a `ConceptPathRecord` JSON record.
+    ConceptPath,
 }
 
 /// Exact identity of the served MCP catalog snapshot this pack came from.
@@ -145,5 +151,65 @@ mod kind_wire_tests {
             serde_json::from_str::<PackEntryKind>("\"resource\"").unwrap(),
             PackEntryKind::Resource
         );
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{ConnectorPackIndex, PackEntry, PackEntryKind};
+
+    fn msgpack_round_trip<T>(value: &T) -> T
+    where
+        T: serde::Serialize + serde::de::DeserializeOwned,
+    {
+        // The named MessagePack encoding `medulla_storage::encode_bounded`
+        // writes for the import index size bound.
+        let bytes = rmp_serde::to_vec_named(value).expect("encode");
+        rmp_serde::from_slice(&bytes).expect("decode")
+    }
+
+    // spec: MEDULLA-TYPED-PACKS-R001.1
+    #[test]
+    fn index_entry_round_trip_and_refusals() {
+        let index = crate::catalog_fixtures::contract_pack::index();
+        assert_eq!(msgpack_round_trip(&index), index);
+        let json = serde_json::to_value(&index).unwrap();
+        assert_eq!(
+            serde_json::from_value::<ConnectorPackIndex>(json.clone()).unwrap(),
+            index
+        );
+        for entry in std::iter::once(&index.server).chain(index.entries.iter()) {
+            assert_eq!(&msgpack_round_trip(entry), entry);
+            assert_eq!(msgpack_round_trip(&entry.kind), entry.kind);
+        }
+        let kinds: std::collections::BTreeSet<PackEntryKind> = std::iter::once(index.server.kind)
+            .chain(index.entries.iter().map(|entry| entry.kind))
+            .collect();
+        assert_eq!(kinds.len(), 11, "the fixture carries every entry kind");
+
+        let mut unknown_kind = json.clone();
+        unknown_kind["entries"][0]["kind"] = serde_json::json!("plugin");
+        assert!(serde_json::from_value::<ConnectorPackIndex>(unknown_kind).is_err());
+        let mut entry_wire = serde_json::to_value(&index.server).unwrap();
+        entry_wire["kind"] = serde_json::json!("manifest");
+        assert!(serde_json::from_value::<PackEntry>(entry_wire).is_err());
+
+        for (field, bad) in [
+            ("schema_version", serde_json::json!("1")),
+            ("server_package_version", serde_json::json!(7)),
+            ("pack_digest", serde_json::json!("not-a-digest")),
+            ("entries", serde_json::json!({})),
+            ("archive", serde_json::json!({ "length": 1 })),
+        ] {
+            let mut malformed = json.clone();
+            malformed[field] = bad;
+            assert!(
+                serde_json::from_value::<ConnectorPackIndex>(malformed).is_err(),
+                "a malformed `{field}` must refuse"
+            );
+        }
+        let mut extra = json;
+        extra["unexpected"] = serde_json::json!(true);
+        assert!(serde_json::from_value::<ConnectorPackIndex>(extra).is_err());
     }
 }

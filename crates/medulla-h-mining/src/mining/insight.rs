@@ -217,7 +217,10 @@ pub(crate) fn handle_risk_propagation(
         model,
         writeback,
     } = request;
-    if nodes.is_empty() {
+    let ecosystem = impact_model(&model).and_then(|(_, options)| options.ecosystem.as_ref());
+    // MEDULLA-SUPPLY-VOCAB-R009.3: an ecosystem run reads the stored
+    // dependency graph, so it needs no request `nodes`.
+    if nodes.is_empty() && ecosystem.is_none() {
         return Response::err(
             req_id,
             "mining: risk_propagation requires non-empty `nodes`",
@@ -230,6 +233,7 @@ pub(crate) fn handle_risk_propagation(
             edges: &edges,
             kind,
             options,
+            ecosystem,
         };
         return handle_impact(req_id, core, &inputs, writeback);
     }

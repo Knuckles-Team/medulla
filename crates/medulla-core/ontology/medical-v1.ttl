@@ -87,8 +87,7 @@
     rdfs:label "Medical & Healthcare Ontology" ;
     rdfs:comment """Healthcare domain ontology. Provides BFO-aligned classes for
 clinical concepts, patient management, and research trials.
-Aligned to SNOMED-CT, ICD-10/11, LOINC, RxNorm, HL7 FHIR, CDISC.""" ;
-    owl:imports <http://knuckles.team/kg/core> .
+Aligned to SNOMED-CT, ICD-10/11, LOINC, RxNorm, HL7 FHIR, CDISC.""" .
 
 :CarePathway a owl:Class ;
     rdfs:label "Care Pathway" ;

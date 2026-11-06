@@ -1172,6 +1172,10 @@ pub fn authentication_refusal(error: &str) -> String {
         }
         return audience.to_string();
     }
+    if error == medulla_server_api::anonymous::OVERSIZE_REFUSAL {
+        // MEDULLA-IDENTITY-R003.2: the bounded anonymous decoder's typed refusal.
+        return error.to_string();
+    }
     if error.starts_with("NODE_MISMATCH:") {
         return "NODE_MISMATCH: Authentication failed".to_string();
     }
@@ -1793,6 +1797,36 @@ pub fn verify_register_identity_signature(
     Ok(())
 }
 
+/// Sign an agent-turn envelope as `signer_id` with its registered key
+/// (MEDULLA-DURABLE-KERNEL-R750.750.1). The signature covers every envelope
+/// field through [`medulla_work_types::agent_turn::AgentTurnEnvelope::digest`].
+pub fn sign_dispatch_carrier(
+    signer_id: &str,
+    key: &str,
+    envelope: medulla_work_types::agent_turn::AgentTurnEnvelope,
+) -> Result<medulla_work_types::agent_turn::DispatchCarrier, String> {
+    let mut mac = HmacSha256::new_from_slice(key.as_bytes()).map_err(|e| e.to_string())?;
+    mac.update(&envelope.digest());
+    let signature = format!("{signer_id}:{}", hex::encode(mac.finalize().into_bytes()));
+    Ok(medulla_work_types::agent_turn::DispatchCarrier {
+        envelope,
+        signature,
+    })
+}
+
+/// A worker's check before it claims a turn: the envelope is well formed and
+/// the signature verifies over its current field values. Returns the signer.
+pub fn verify_dispatch_carrier(
+    carrier: &medulla_work_types::agent_turn::DispatchCarrier,
+) -> Result<String, medulla_work_types::agent_turn::AgentTurnRefusal> {
+    use medulla_work_types::agent_turn::AgentTurnRefusal;
+    carrier.envelope.validate()?;
+    let registry = signer_registry().map_err(|_| AgentTurnRefusal::CarrierSignatureInvalid)?;
+    registry
+        .verify(&carrier.signature, &carrier.envelope.digest())
+        .map_err(|_| AgentTurnRefusal::CarrierSignatureInvalid)
+}
+
 pub fn verify_multisig_mutation_signatures(
     context: &VerifiedRequestContext,
     graph: &str,
@@ -1817,6 +1851,44 @@ pub fn verify_multisig_mutation_signatures(
 
 #[cfg(test)]
 mod tests {
+    /// Verifies MEDULLA-DURABLE-KERNEL-R750.750.1: The signed agent-turn envelope carries the admitted tool subset and the harness decision reference
+    // spec: MEDULLA-DURABLE-KERNEL-R750.750.1
+    #[test]
+    fn dispatch_carrier_verifies_and_any_changed_field_refuses() {
+        use medulla_work_types::agent_turn::AgentTurnEnvelope;
+        let envelope = AgentTurnEnvelope {
+            run_id: "run-1".into(),
+            declares_harness_decision: true,
+            allowed_tool_subset: Some(vec!["read".into()]),
+            decision_record_ref: Some("decision:1".into()),
+            harness_config_digest: Some("c".repeat(64)),
+        };
+        let carrier =
+            super::sign_dispatch_carrier("alice", "rust-unit-operation-signer-key", envelope)
+                .unwrap();
+        assert_eq!(super::verify_dispatch_carrier(&carrier).unwrap(), "alice");
+        let mut subset = carrier.clone();
+        subset.envelope.allowed_tool_subset = Some(vec!["read".into(), "write".into()]);
+        let mut decision = carrier.clone();
+        decision.envelope.decision_record_ref = Some("decision:2".into());
+        let mut config = carrier.clone();
+        config.envelope.harness_config_digest = Some("d".repeat(64));
+        for tampered in [subset, decision, config] {
+            assert_eq!(
+                super::verify_dispatch_carrier(&tampered)
+                    .unwrap_err()
+                    .code(),
+                "CARRIER_SIGNATURE_INVALID"
+            );
+        }
+        let mut missing = carrier;
+        missing.envelope.decision_record_ref = None;
+        assert_eq!(
+            super::verify_dispatch_carrier(&missing).unwrap_err().code(),
+            "ENVELOPE_FIELD_MISSING"
+        );
+    }
+
     use super::*;
     use medulla_protocol_types::protocol::Method;
 

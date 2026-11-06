@@ -374,3 +374,92 @@ fn refusals_render_their_stable_code_first() {
         "POLICY_CAPTURE_DISABLED: "
     );
 }
+
+/// Verifies MEDULLA-DECISION-ENGINE-R010.100.2: Fold existing per-feature refusal enums
+// spec: MEDULLA-DECISION-ENGINE-R010.100.2
+#[test]
+fn outcome_refusal_enums_map_to_folded_codes() {
+    use crate::decision::answer_ranking::AnswerRankingRefusal as Ranking;
+    use crate::decision::context_budget::{ContextBudgetLimit, ContextBudgetRefusal as Budget};
+    use crate::decision::defect_triage::TriageAbstainReason as Triage;
+    use crate::decision::rapid_r056::CertificateRefusal as Certificate;
+    use medulla_decision_types::decision::codes;
+    use medulla_decision_types::decision::record::outcome::DecisionRefusal;
+
+    fn all_folded(refusals: &[&dyn DecisionRefusal]) {
+        let mut seen = std::collections::BTreeSet::new();
+        for refusal in refusals {
+            let code = refusal.code();
+            assert!(
+                codes::FOLDED.contains(&code),
+                "{} is not folded",
+                code.as_str()
+            );
+            assert!(seen.insert(code.as_str()), "{} is shared", code.as_str());
+        }
+    }
+    all_folded(&[
+        &Certificate::ModelDigestMismatch {
+            certified: "a".into(),
+            expected: "b".into(),
+        },
+        &Certificate::BranchBudgetExceeded {
+            branch_count: 2,
+            budget: 1,
+        },
+        &Ranking::VerifierNamed {
+            verifier: "v".into(),
+        },
+        &Ranking::TooFewCandidates { count: 1 },
+        &Ranking::RevisionBoundExceeded {
+            needed: 2,
+            bound: 1,
+        },
+        &Ranking::InvalidRetain { retain_top_k: 0 },
+        &Ranking::DuplicateCandidate {
+            candidate_id: "c".into(),
+        },
+        &Ranking::UnknownCandidate {
+            candidate_id: "c".into(),
+        },
+        &Ranking::DuplicateComparison {
+            first: "a".into(),
+            second: "b".into(),
+        },
+        &Ranking::IncompleteComparisons { missing: 1 },
+        &Budget::BudgetExhausted {
+            limit: ContextBudgetLimit::MaxCost,
+            observed: 1,
+        },
+        &Budget::TooManyItems {
+            max_items: 1,
+            observed: 2,
+        },
+        &Triage::NoSymbolMatch,
+        &Triage::NoOwner,
+        &Triage::InsufficientEvidence,
+    ]);
+    // Every policy refusal keeps its stable code string and registers it.
+    let policy = [
+        PolicyRefusal::InvalidRecord("x".into()),
+        PolicyRefusal::CapabilityMissing,
+        PolicyRefusal::CaptureDisabled,
+        PolicyRefusal::TrainDisabled,
+        PolicyRefusal::LogprobsUnsupported,
+        PolicyRefusal::SamplerMismatch,
+        PolicyRefusal::TrajectoryMissing,
+        PolicyRefusal::TrajectoryLengthMismatch,
+        PolicyRefusal::BlobMissing("x".into()),
+        PolicyRefusal::RecordMissing("x".into()),
+        PolicyRefusal::RunNotSucceeded,
+        PolicyRefusal::CaptureIneligible("x".into()),
+        PolicyRefusal::RecordTampered("x".into()),
+        PolicyRefusal::NativeAuthorityRequired,
+    ];
+    let refs: Vec<&dyn DecisionRefusal> =
+        policy.iter().map(|p| p as &dyn DecisionRefusal).collect();
+    all_folded(&refs);
+    for refusal in &policy {
+        assert_eq!(DecisionRefusal::code(refusal).as_str(), refusal.code());
+    }
+}

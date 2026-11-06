@@ -62,7 +62,8 @@ pub(crate) fn handle_nl_query_plan(
     view: &medulla_graph_core::graph::GraphView,
     req_id: u64,
     foreign_sources: Option<&std::collections::BTreeSet<String>>,
-) -> Result<(String, medulla_exec::algebra::Plan), Response> {
+    history: &[medulla_types::nl_query::NlTurn],
+) -> Result<(String, medulla_exec::algebra::Plan, Option<String>), Response> {
     let planner = crate::nl::resolve_planner()
         .map_err(|e| Response::err(req_id, nl_config_refusal(&e)))?
         .ok_or_else(|| {
@@ -75,6 +76,8 @@ pub(crate) fn handle_nl_query_plan(
                     .to_string(),
             )
         })?;
+    let (text, rewritten) = nl_follow_up(planner.as_ref(), text, history, req_id)?;
+    let text = text.as_str();
     let context = nl_schema_context(view, foreign_sources);
     // MEDULLA-FEDERATED-QUERY-R058.2.1: the SAME typed budget refuses an over-budget
     // answer before it reaches the parser, inside every correction step.
@@ -86,7 +89,29 @@ pub(crate) fn handle_nl_query_plan(
         medulla_nlq::nl::context::DEFAULT_MAX_STEPS,
     )
     .map_err(|e| Response::err(req_id, nl_refusal(&e)))?;
-    Ok((candidate.uql, candidate.plan))
+    Ok((candidate.uql, candidate.plan, rewritten))
+}
+
+/// Bound the earlier turns and rewrite a follow-up into the standalone question
+/// that is planned (MEDULLA-FEDERATED-QUERY-R058.8). Answers the text to plan and
+/// the disclosed rewrite, `Some` exactly when `history` is nonempty.
+#[cfg(feature = "nl-query")]
+pub(crate) fn nl_follow_up(
+    planner: &dyn medulla_nlq::nl::NlPlanner,
+    text: &str,
+    history: &[medulla_types::nl_query::NlTurn],
+    req_id: u64,
+) -> Result<(String, Option<String>), Response> {
+    if history.is_empty() {
+        return Ok((text.to_string(), None));
+    }
+    let max_turns = crate::nl::resolve_max_history_turns()
+        .map_err(|e| Response::err(req_id, nl_config_refusal(&e)))?;
+    medulla_types::nl_query::validate_nl_history(history, max_turns)
+        .map_err(|detail| Response::err(req_id, format!("INVALID_ARGUMENT: NlQuery: {detail}")))?;
+    let rewritten = medulla_nlq::nl::context::rewrite_follow_up(planner, text, history)
+        .map_err(|e| Response::err(req_id, nl_refusal(&e)))?;
+    Ok((rewritten.clone(), Some(rewritten)))
 }
 
 /// The schema the planner may target: what the caller's snapshot stores, with
@@ -138,6 +163,7 @@ pub(crate) fn nl_refusal(error: &medulla_nlq::nl::NlQueryError) -> String {
             "{}: {error}",
             medulla_types::contract::EngineErrorCode::UqlBudgetExceeded.as_str()
         ),
+        E::RewriteFailed(_) => format!("ENGINE_UNAVAILABLE: NlQuery: {error}"),
         E::Ungrounded { steps } => format!(
             "INVALID_ARGUMENT: NlQuery produced invalid UQL: {}",
             ungrounded_detail(steps)
@@ -163,10 +189,12 @@ pub(crate) async fn handle_nl_query(
     ctx: &QueryHandlerCtx<'_>,
     text: String,
     graph: String,
+    history: Vec<medulla_types::nl_query::NlTurn>,
 ) -> Result<Response, Method> {
     let req_id = ctx.req_id;
-    Ok(match run_nl_query(ctx, text, graph).await {
-        Ok((_uql, rows)) => result_response::<query_results::NlQuery>(req_id, &rows),
+    // Plain `NlQuery` answers bare rows and discloses no rewrite (R058.8).
+    Ok(match run_nl_query(ctx, text, graph, history).await {
+        Ok((_uql, rows, _rewritten)) => result_response::<query_results::NlQuery>(req_id, &rows),
         Err(resp) => resp,
     })
 }
@@ -179,12 +207,17 @@ pub(crate) async fn handle_nl_query_explain(
     ctx: &QueryHandlerCtx<'_>,
     text: String,
     graph: String,
+    history: Vec<medulla_types::nl_query::NlTurn>,
 ) -> Result<Response, Method> {
     let req_id = ctx.req_id;
-    Ok(match run_nl_query(ctx, text, graph).await {
-        Ok((uql, rows)) => result_response::<query_results::NlQueryExplain>(
+    Ok(match run_nl_query(ctx, text, graph, history).await {
+        Ok((uql, rows, rewritten_question)) => result_response::<query_results::NlQueryExplain>(
             req_id,
-            &medulla_types::nl_query::NlQueryExplainResult { uql, rows },
+            &medulla_types::nl_query::NlQueryExplainResult {
+                uql,
+                rows,
+                rewritten_question,
+            },
         ),
         Err(resp) => resp,
     })
@@ -200,6 +233,7 @@ pub(crate) async fn handle_nl_query_plan_only(
     ctx: &QueryHandlerCtx<'_>,
     text: String,
     graph: String,
+    history: Vec<medulla_types::nl_query::NlTurn>,
 ) -> Result<Response, Method> {
     let req_id = ctx.req_id;
     let _ = graph;
@@ -216,6 +250,10 @@ pub(crate) async fn handle_nl_query_plan_only(
             ));
         }
         Err(error) => return Ok(Response::err(req_id, nl_config_refusal(&error))),
+    };
+    let (text, rewritten_question) = match nl_follow_up(planner.as_ref(), &text, &history, req_id) {
+        Ok(value) => value,
+        Err(response) => return Ok(response),
     };
     let (uql, plan) = match plan_nl_only(planner.as_ref(), &text, req_id) {
         Ok(value) => value,
@@ -237,6 +275,7 @@ pub(crate) async fn handle_nl_query_plan_only(
             uql,
             plan_digest,
             query_digest,
+            rewritten_question,
         },
     ))
 }
@@ -270,7 +309,8 @@ async fn run_nl_query(
     ctx: &QueryHandlerCtx<'_>,
     text: String,
     graph: String,
-) -> Result<(String, Vec<(String, Option<f32>)>), Response> {
+    history: Vec<medulla_types::nl_query::NlTurn>,
+) -> Result<(String, Vec<(String, Option<f32>)>, Option<String>), Response> {
     let state = ctx.state;
     let req_id = ctx.req_id;
     let core = ctx.core.clone();
@@ -293,7 +333,8 @@ async fn run_nl_query(
     let foreign_sources = nl_foreign_sources(ctx.state, ctx.read_authority).await;
     #[cfg(not(feature = "federation"))]
     let foreign_sources = None;
-    let (uql, plan) = handle_nl_query_plan(&text, &snap, req_id, foreign_sources.as_ref())?;
+    let (uql, plan, rewritten) =
+        handle_nl_query_plan(&text, &snap, req_id, foreign_sources.as_ref(), &history)?;
     // Verified-carrier legs: the committed tsdb scope for `Op::TsScan` fusion
     // (CONCEPT:MEDULLA-KG.query.native-time-series) and the CALLER'S owner-scoped foreign
     // registry (EH-373), so an NL-planned `FOREIGN "<name>"` / `Named` `ForeignScan`
@@ -303,8 +344,9 @@ async fn run_nl_query(
         .map_err(|denied| Response::err(req_id, denied))?;
     // The same off-lock run as `Uql`: persistent vector/lexical/spatial/
     // shape indexes and the caller's owner-scoped foreign registry are bound inside it.
-    match run_unified_off_lock(state, req_id, &core, Arc::new(snap), plan, legs).await? {
-        Ok(rows) => Ok((uql, rows)),
+    let scope = ReadScope::resolve(state, ctx.read_authority, ctx.graph_name).await;
+    match run_unified_off_lock(state, req_id, &core, Arc::new(snap), plan, legs, &scope).await? {
+        Ok(rows) => Ok((uql, rows, rewritten)),
         Err(msg) => Err(Response::err(
             req_id,
             medulla_protocol_types::error_registry::classify_refusal("INVALID_ARGUMENT", "", &msg),

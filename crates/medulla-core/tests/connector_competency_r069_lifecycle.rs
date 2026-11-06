@@ -1,5 +1,5 @@
 //! Registered-source acceptance for the sdlc_lifecycle-v1 term additions
-//! (MEDULLA-CQ-CONN-R069.4 to R069.6, R069.10 to R069.14, R069.20 to R069.23).
+//! (MEDULLA-CQ-CONN-R069.1, R069.4 to R069.26).
 //!
 //! Each test loads the registered `core:sdlc_lifecycle@1` source through the
 //! CoreSpec registry, asserts the added term with its stated domain and range,
@@ -55,6 +55,22 @@ fn lifecycle_ontology() -> Vec<Triple> {
 /// The SHACL companion (MEDULLA-CQ-CONN-R069.11/R069.21 closed vocabularies).
 fn lifecycle_shapes() -> &'static str {
     include_str!("../ontology/sdlc_lifecycle-v1.shapes.ttl")
+}
+
+/// The shapes companion as registered on the `core:sdlc_lifecycle@1` source
+/// (MEDULLA-CQ-CONN-R069.1).
+fn registered_lifecycle_shapes() -> std::sync::Arc<str> {
+    let sources = GraphSchemaSources::default();
+    sources
+        .validate()
+        .expect("the default core catalog validates");
+    sources
+        .core
+        .get("core:sdlc_lifecycle@1")
+        .unwrap_or_else(|| panic!("registered source core:sdlc_lifecycle@1 is missing"))
+        .shapes_ttl
+        .clone()
+        .unwrap_or_else(|| panic!("registered sdlc_lifecycle source has no shapes"))
 }
 
 #[allow(non_snake_case)]
@@ -358,6 +374,281 @@ ex:wt-1 a :Worktree ;
         assert!(
             has_iri(&triples, &term, RDFS_RANGE, &format!("{KG}Branch")),
             "proposalBranch's range is Branch"
+        );
+    }
+
+    // spec: MEDULLA-CQ-CONN-R069.1
+    #[test]
+    fn shapes_module_loads() {
+        let shapes = registered_lifecycle_shapes();
+        let triples = parse_turtle(&shapes).expect("the registered sdlc_lifecycle shapes parse");
+        for shape in ["CodeChangeProposalShape", "WorktreeShape"] {
+            assert!(
+                has_iri(
+                    &triples,
+                    &format!("{KG}{shape}"),
+                    RDF_TYPE,
+                    "http://www.w3.org/ns/shacl#NodeShape"
+                ),
+                "registered sdlc_lifecycle shapes carry {shape}"
+            );
+        }
+    }
+
+    // spec: MEDULLA-CQ-CONN-R069.7
+    #[test]
+    fn blockedBy_declared() {
+        let triples = lifecycle_ontology();
+        let term = format!("{KG}blockedBy");
+        assert!(
+            has_iri(&triples, &term, RDF_TYPE, &format!("{OWL}ObjectProperty")),
+            "blockedBy is declared as owl:ObjectProperty"
+        );
+        assert!(
+            has_iri(&triples, &term, RDFS_DOMAIN, &format!("{KG}Ticket")),
+            "blockedBy's domain is {KG}Ticket"
+        );
+        assert!(
+            has_iri(&triples, &term, RDFS_RANGE, &format!("{KG}Ticket")),
+            "blockedBy's range is {KG}Ticket"
+        );
+    }
+
+    // spec: MEDULLA-CQ-CONN-R069.8
+    #[test]
+    fn assignedTo_declared() {
+        let triples = lifecycle_ontology();
+        let term = format!("{KG}assignedTo");
+        assert!(
+            has_iri(&triples, &term, RDF_TYPE, &format!("{OWL}ObjectProperty")),
+            "assignedTo is declared as owl:ObjectProperty"
+        );
+        assert!(
+            has_iri(&triples, &term, RDFS_DOMAIN, &format!("{KG}Ticket")),
+            "assignedTo's domain is {KG}Ticket"
+        );
+        assert!(
+            has_iri(&triples, &term, RDFS_RANGE, &format!("{KG}Person")),
+            "assignedTo's range is {KG}Person"
+        );
+    }
+
+    // spec: MEDULLA-CQ-CONN-R069.9
+    #[test]
+    fn ticketStatus_declared() {
+        let triples = lifecycle_ontology();
+        let term = format!("{KG}ticketStatus");
+        assert!(
+            has_iri(&triples, &term, RDF_TYPE, &format!("{OWL}DatatypeProperty")),
+            "ticketStatus is declared as owl:DatatypeProperty"
+        );
+        assert!(
+            has_iri(&triples, &term, RDFS_DOMAIN, &format!("{KG}Ticket")),
+            "ticketStatus's domain is {KG}Ticket"
+        );
+        assert!(
+            has_iri(&triples, &term, RDFS_RANGE, &format!("{XSD}string")),
+            "ticketStatus's range is {XSD}string"
+        );
+    }
+
+    // spec: MEDULLA-CQ-CONN-R069.15
+    #[test]
+    fn IterationCycle_declared() {
+        let triples = lifecycle_ontology();
+        let term = format!("{KG}IterationCycle");
+        assert!(
+            has_iri(&triples, &term, RDF_TYPE, &format!("{OWL}Class")),
+            "IterationCycle is declared as owl:Class"
+        );
+    }
+
+    // spec: MEDULLA-CQ-CONN-R069.16
+    #[test]
+    fn inCycle_declared() {
+        let triples = lifecycle_ontology();
+        let term = format!("{KG}inCycle");
+        assert!(
+            has_iri(&triples, &term, RDF_TYPE, &format!("{OWL}ObjectProperty")),
+            "inCycle is declared as owl:ObjectProperty"
+        );
+        assert!(
+            has_iri(&triples, &term, RDFS_DOMAIN, &format!("{KG}Ticket")),
+            "inCycle's domain is {KG}Ticket"
+        );
+        assert!(
+            has_iri(&triples, &term, RDFS_RANGE, &format!("{KG}IterationCycle")),
+            "inCycle's range is {KG}IterationCycle"
+        );
+    }
+
+    // spec: MEDULLA-CQ-CONN-R069.17
+    #[test]
+    fn WorkModule_declared() {
+        let triples = lifecycle_ontology();
+        let term = format!("{KG}WorkModule");
+        assert!(
+            has_iri(&triples, &term, RDF_TYPE, &format!("{OWL}Class")),
+            "WorkModule is declared as owl:Class"
+        );
+    }
+
+    // spec: MEDULLA-CQ-CONN-R069.18
+    #[test]
+    fn inModule_declared() {
+        let triples = lifecycle_ontology();
+        let term = format!("{KG}inModule");
+        assert!(
+            has_iri(&triples, &term, RDF_TYPE, &format!("{OWL}ObjectProperty")),
+            "inModule is declared as owl:ObjectProperty"
+        );
+        assert!(
+            has_iri(&triples, &term, RDFS_DOMAIN, &format!("{KG}Ticket")),
+            "inModule's domain is {KG}Ticket"
+        );
+        assert!(
+            has_iri(&triples, &term, RDFS_RANGE, &format!("{KG}WorkModule")),
+            "inModule's range is {KG}WorkModule"
+        );
+    }
+
+    // spec: MEDULLA-CQ-CONN-R069.19
+    #[test]
+    fn ticketDueDate_declared() {
+        let triples = lifecycle_ontology();
+        let term = format!("{KG}ticketDueDate");
+        assert!(
+            has_iri(&triples, &term, RDF_TYPE, &format!("{OWL}DatatypeProperty")),
+            "ticketDueDate is declared as owl:DatatypeProperty"
+        );
+        assert!(
+            has_iri(&triples, &term, RDFS_DOMAIN, &format!("{KG}Ticket")),
+            "ticketDueDate's domain is {KG}Ticket"
+        );
+        assert!(
+            has_iri(&triples, &term, RDFS_RANGE, &format!("{XSD}date")),
+            "ticketDueDate's range is {XSD}date"
+        );
+    }
+
+    // spec: MEDULLA-CQ-CONN-R069.24
+    #[test]
+    fn cycleState_declared() {
+        let triples = lifecycle_ontology();
+        let term = format!("{KG}cycleState");
+        assert!(
+            has_iri(&triples, &term, RDF_TYPE, &format!("{OWL}DatatypeProperty")),
+            "cycleState is declared as owl:DatatypeProperty"
+        );
+        assert!(
+            has_iri(&triples, &term, RDFS_DOMAIN, &format!("{KG}IterationCycle")),
+            "cycleState's domain is {KG}IterationCycle"
+        );
+        assert!(
+            has_iri(&triples, &term, RDFS_RANGE, &format!("{XSD}string")),
+            "cycleState's range is {XSD}string"
+        );
+
+        // The closed vocabulary lives in the registered SHACL companion: a
+        // valid fixture conforms, a violating fixture fails the shape.
+        let valid = r#"
+@prefix : <http://knuckles.team/kg#> .
+@prefix ex: <http://example.org/cq-conn/> .
+ex:rec-1 a :IterationCycle ;
+    :cycleState "active" .
+"#;
+        let shapes = registered_lifecycle_shapes();
+        let report = medulla_shacl::validate_turtle(&shapes, valid)
+            .expect("valid cycleState fixture parses and validates");
+        assert!(
+            report.conforms,
+            "a cycleState inside the closed vocabulary conforms: {:?}",
+            report.results
+        );
+        let violating = valid.replace("\"active\"", "\"paused\"");
+        let report = medulla_shacl::validate_turtle(&shapes, &violating)
+            .expect("violating cycleState fixture parses before validation");
+        assert!(
+            !report.conforms,
+            "a cycleState outside the closed vocabulary fails the shape"
+        );
+        assert!(
+            report
+                .results
+                .iter()
+                .any(|result| result.path.as_deref() == Some(&format!("<{KG}cycleState>"))),
+            "the violation is reported on the cycleState path: {:?}",
+            report.results
+        );
+    }
+
+    // spec: MEDULLA-CQ-CONN-R069.25
+    #[test]
+    fn pipelineStatus_declared() {
+        let triples = lifecycle_ontology();
+        let term = format!("{KG}pipelineStatus");
+        assert!(
+            has_iri(&triples, &term, RDF_TYPE, &format!("{OWL}DatatypeProperty")),
+            "pipelineStatus is declared as owl:DatatypeProperty"
+        );
+        assert!(
+            has_iri(&triples, &term, RDFS_DOMAIN, &format!("{KG}PipelineRun")),
+            "pipelineStatus's domain is {KG}PipelineRun"
+        );
+        assert!(
+            has_iri(&triples, &term, RDFS_RANGE, &format!("{XSD}string")),
+            "pipelineStatus's range is {XSD}string"
+        );
+
+        // The closed vocabulary lives in the registered SHACL companion: a
+        // valid fixture conforms, a violating fixture fails the shape.
+        let valid = r#"
+@prefix : <http://knuckles.team/kg#> .
+@prefix ex: <http://example.org/cq-conn/> .
+ex:rec-1 a :PipelineRun ;
+    :pipelineStatus "running" .
+"#;
+        let shapes = registered_lifecycle_shapes();
+        let report = medulla_shacl::validate_turtle(&shapes, valid)
+            .expect("valid pipelineStatus fixture parses and validates");
+        assert!(
+            report.conforms,
+            "a pipelineStatus inside the closed vocabulary conforms: {:?}",
+            report.results
+        );
+        let violating = valid.replace("\"running\"", "\"queued\"");
+        let report = medulla_shacl::validate_turtle(&shapes, &violating)
+            .expect("violating pipelineStatus fixture parses before validation");
+        assert!(
+            !report.conforms,
+            "a pipelineStatus outside the closed vocabulary fails the shape"
+        );
+        assert!(
+            report
+                .results
+                .iter()
+                .any(|result| result.path.as_deref() == Some(&format!("<{KG}pipelineStatus>"))),
+            "the violation is reported on the pipelineStatus path: {:?}",
+            report.results
+        );
+    }
+
+    // spec: MEDULLA-CQ-CONN-R069.26
+    #[test]
+    fn pipelineRunOf_declared() {
+        let triples = lifecycle_ontology();
+        let term = format!("{KG}pipelineRunOf");
+        assert!(
+            has_iri(&triples, &term, RDF_TYPE, &format!("{OWL}ObjectProperty")),
+            "pipelineRunOf is declared as owl:ObjectProperty"
+        );
+        assert!(
+            has_iri(&triples, &term, RDFS_DOMAIN, &format!("{KG}PipelineRun")),
+            "pipelineRunOf's domain is {KG}PipelineRun"
+        );
+        assert!(
+            has_iri(&triples, &term, RDFS_RANGE, &format!("{KG}Repository")),
+            "pipelineRunOf's range is {KG}Repository"
         );
     }
 }

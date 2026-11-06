@@ -116,7 +116,7 @@ Story map: US1 attach and understand a source, US2 dialect adapters and conforma
 - [ ] T108 [US4] MEDULLA-UNIFIED-DATA-PLANE-R039.5 End-to-end external read through the authenticated catalog
 - [ ] T109 [US7] MEDULLA-UNIFIED-DATA-PLANE-R040.1 A per-modality retrieval gate blocks promotion of a shared embedding space: Model
 - [ ] T110 [US7] MEDULLA-UNIFIED-DATA-PLANE-R040.2 A per-modality retrieval gate blocks promotion of a shared embedding space: Behavior
-- [ ] T111 [US7] MEDULLA-UNIFIED-DATA-PLANE-R040.3 Wiring: the gate runs before a binding with a new model version goes `Live`
+- [ ] T111 [US7] MEDULLA-UNIFIED-DATA-PLANE-R040.3 Wiring: the gate runs in the activation path before a binding with a new model version goes `Live`
 - [ ] T112 [US7] MEDULLA-UNIFIED-DATA-PLANE-R040.4 Refusal: a blocked promotion leaves the prior version active
 - [ ] T113 [US7] MEDULLA-UNIFIED-DATA-PLANE-R040.5 Evidence: each `PromotionVerdict` is a graph node linked to the model and version
 - [ ] T114 [US7] MEDULLA-UNIFIED-DATA-PLANE-R040.6 Hot-path proof: a regressed image check blocks a served promotion

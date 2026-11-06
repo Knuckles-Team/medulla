@@ -1,5 +1,5 @@
 //! Registered-source acceptance for the infrastructure-v1 term additions
-//! (MEDULLA-CQ-CONN-R068.13 to R068.16).
+//! (MEDULLA-CQ-CONN-R068.2 to R068.27).
 //!
 //! Each test loads the registered `core:infrastructure@1` source through the
 //! CoreSpec registry and asserts the added property with its stated domain and
@@ -56,6 +56,39 @@ fn infrastructure_ontology() -> Vec<Triple> {
 /// The SHACL companion (MEDULLA-CQ-CONN-R068.14 pullCount lower bound).
 fn infrastructure_shapes() -> &'static str {
     include_str!("../ontology/infrastructure-v1.shapes.ttl")
+}
+
+/// Shared kernel term namespace (`kg:` in the infrastructure module).
+const CORE: &str = "http://knuckles.team/kg#";
+
+/// A valid fixture conforms to the SHACL companion; a violating fixture
+/// fails it on `path`.
+fn assert_shape(valid: &str, violating: &str, path: &str) {
+    let prefixes = "@prefix : <http://knuckles.team/kg/infrastructure#> .\n@prefix ex: <http://example.org/cq-conn/> .\n";
+    let report =
+        medulla_shacl::validate_turtle(infrastructure_shapes(), &format!("{prefixes}{valid}"))
+            .expect("valid fixture parses and validates");
+    assert!(
+        report.conforms,
+        "valid fixture conforms: {:?}",
+        report.results
+    );
+    let report =
+        medulla_shacl::validate_turtle(infrastructure_shapes(), &format!("{prefixes}{violating}"))
+            .expect("violating fixture parses before validation");
+    assert!(
+        !report.conforms,
+        "violating fixture fails the shape on {path}"
+    );
+    let expected = format!("<{KG}{path}>");
+    assert!(
+        report
+            .results
+            .iter()
+            .any(|result| result.path.as_deref() == Some(expected.as_str())),
+        "the violation is reported on {path}: {:?}",
+        report.results
+    );
 }
 
 #[allow(non_snake_case)]
@@ -171,6 +204,427 @@ ex:img-2 a :ContainerImage ;
         assert!(
             has_iri(&triples, &term, RDFS_RANGE, &format!("{XSD}dateTime")),
             "unavailableSince's range is xsd:dateTime"
+        );
+    }
+
+    /// Verifies MEDULLA-CQ-CONN-R068.2: AutomationJob
+    // spec: MEDULLA-CQ-CONN-R068.2
+    #[test]
+    fn AutomationJob_declared() {
+        let triples = infrastructure_ontology();
+        let term = format!("{KG}AutomationJob");
+        assert!(
+            has_iri(&triples, &term, RDF_TYPE, &format!("{OWL}Class")),
+            "AutomationJob is declared as owl:Class"
+        );
+        assert_shape(
+            r#"ex:j a :AutomationJob ; :jobStatus "successful" ."#,
+            r#"ex:j a :AutomationJob ."#,
+            "jobStatus",
+        );
+    }
+
+    /// Verifies MEDULLA-CQ-CONN-R068.3: AutomationJobTemplate
+    // spec: MEDULLA-CQ-CONN-R068.3
+    #[test]
+    fn AutomationJobTemplate_declared() {
+        let triples = infrastructure_ontology();
+        let term = format!("{KG}AutomationJobTemplate");
+        assert!(
+            has_iri(&triples, &term, RDF_TYPE, &format!("{OWL}Class")),
+            "AutomationJobTemplate is declared as owl:Class"
+        );
+    }
+
+    /// Verifies MEDULLA-CQ-CONN-R068.4: jobStatus
+    // spec: MEDULLA-CQ-CONN-R068.4
+    #[test]
+    fn jobStatus_declared() {
+        let triples = infrastructure_ontology();
+        let term = format!("{KG}jobStatus");
+        assert!(
+            has_iri(&triples, &term, RDF_TYPE, &format!("{OWL}DatatypeProperty")),
+            "jobStatus is declared as owl:DatatypeProperty"
+        );
+        assert!(
+            has_iri(&triples, &term, RDFS_DOMAIN, &format!("{KG}AutomationJob")),
+            "jobStatus's domain is KG:AutomationJob"
+        );
+        assert!(
+            has_iri(&triples, &term, RDFS_RANGE, &format!("{XSD}string")),
+            "jobStatus's range is XSD:string"
+        );
+        assert_shape(
+            r#"ex:j a :AutomationJob ; :jobStatus "failed" ."#,
+            r#"ex:j a :AutomationJob ; :jobStatus "exploded" ."#,
+            "jobStatus",
+        );
+    }
+
+    /// Verifies MEDULLA-CQ-CONN-R068.5: ranAgainstHost
+    // spec: MEDULLA-CQ-CONN-R068.5
+    #[test]
+    fn ranAgainstHost_declared() {
+        let triples = infrastructure_ontology();
+        let term = format!("{KG}ranAgainstHost");
+        assert!(
+            has_iri(&triples, &term, RDF_TYPE, &format!("{OWL}ObjectProperty")),
+            "ranAgainstHost is declared as owl:ObjectProperty"
+        );
+        assert!(
+            has_iri(&triples, &term, RDFS_DOMAIN, &format!("{KG}AutomationJob")),
+            "ranAgainstHost's domain is KG:AutomationJob"
+        );
+        assert!(
+            has_iri(&triples, &term, RDFS_RANGE, &format!("{KG}Host")),
+            "ranAgainstHost's range is KG:Host"
+        );
+    }
+
+    /// Verifies MEDULLA-CQ-CONN-R068.6: routeHostname
+    // spec: MEDULLA-CQ-CONN-R068.6
+    #[test]
+    fn routeHostname_declared() {
+        let triples = infrastructure_ontology();
+        let term = format!("{KG}routeHostname");
+        assert!(
+            has_iri(&triples, &term, RDF_TYPE, &format!("{OWL}DatatypeProperty")),
+            "routeHostname is declared as owl:DatatypeProperty"
+        );
+        assert!(
+            has_iri(&triples, &term, RDFS_DOMAIN, &format!("{KG}ProxyRoute")),
+            "routeHostname's domain is KG:ProxyRoute"
+        );
+        assert!(
+            has_iri(&triples, &term, RDFS_RANGE, &format!("{XSD}string")),
+            "routeHostname's range is XSD:string"
+        );
+        assert_shape(
+            r#"ex:r a :ProxyRoute ; :routeHostname "a.example" ."#,
+            r#"ex:r a :ProxyRoute ."#,
+            "routeHostname",
+        );
+    }
+
+    /// Verifies MEDULLA-CQ-CONN-R068.7: upstreamAddress
+    // spec: MEDULLA-CQ-CONN-R068.7
+    #[test]
+    fn upstreamAddress_declared() {
+        let triples = infrastructure_ontology();
+        let term = format!("{KG}upstreamAddress");
+        assert!(
+            has_iri(&triples, &term, RDF_TYPE, &format!("{OWL}DatatypeProperty")),
+            "upstreamAddress is declared as owl:DatatypeProperty"
+        );
+        assert!(
+            has_iri(&triples, &term, RDFS_DOMAIN, &format!("{KG}ProxyRoute")),
+            "upstreamAddress's domain is KG:ProxyRoute"
+        );
+        assert!(
+            has_iri(&triples, &term, RDFS_RANGE, &format!("{XSD}string")),
+            "upstreamAddress's range is XSD:string"
+        );
+    }
+
+    /// Verifies MEDULLA-CQ-CONN-R068.9: alertSeverity
+    // spec: MEDULLA-CQ-CONN-R068.9
+    #[test]
+    fn alertSeverity_declared() {
+        let triples = infrastructure_ontology();
+        let term = format!("{KG}alertSeverity");
+        assert!(
+            has_iri(&triples, &term, RDF_TYPE, &format!("{OWL}DatatypeProperty")),
+            "alertSeverity is declared as owl:DatatypeProperty"
+        );
+        assert!(
+            has_iri(&triples, &term, RDFS_DOMAIN, &format!("{CORE}Alert")),
+            "alertSeverity's domain is CORE:Alert"
+        );
+        assert!(
+            has_iri(&triples, &term, RDFS_RANGE, &format!("{XSD}string")),
+            "alertSeverity's range is XSD:string"
+        );
+    }
+
+    /// Verifies MEDULLA-CQ-CONN-R068.10: alertState
+    // spec: MEDULLA-CQ-CONN-R068.10
+    #[test]
+    fn alertState_declared() {
+        let triples = infrastructure_ontology();
+        let term = format!("{KG}alertState");
+        assert!(
+            has_iri(&triples, &term, RDF_TYPE, &format!("{OWL}DatatypeProperty")),
+            "alertState is declared as owl:DatatypeProperty"
+        );
+        assert!(
+            has_iri(&triples, &term, RDFS_DOMAIN, &format!("{CORE}Alert")),
+            "alertState's domain is CORE:Alert"
+        );
+        assert!(
+            has_iri(&triples, &term, RDFS_RANGE, &format!("{XSD}string")),
+            "alertState's range is XSD:string"
+        );
+    }
+
+    /// Verifies MEDULLA-CQ-CONN-R068.11: firingSince
+    // spec: MEDULLA-CQ-CONN-R068.11
+    #[test]
+    fn firingSince_declared() {
+        let triples = infrastructure_ontology();
+        let term = format!("{KG}firingSince");
+        assert!(
+            has_iri(&triples, &term, RDF_TYPE, &format!("{OWL}DatatypeProperty")),
+            "firingSince is declared as owl:DatatypeProperty"
+        );
+        assert!(
+            has_iri(&triples, &term, RDFS_DOMAIN, &format!("{CORE}Alert")),
+            "firingSince's domain is CORE:Alert"
+        );
+        assert!(
+            has_iri(&triples, &term, RDFS_RANGE, &format!("{XSD}dateTime")),
+            "firingSince's range is XSD:dateTime"
+        );
+    }
+
+    /// Verifies MEDULLA-CQ-CONN-R068.17: desiredReplicas
+    // spec: MEDULLA-CQ-CONN-R068.17
+    #[test]
+    fn desiredReplicas_declared() {
+        let triples = infrastructure_ontology();
+        let term = format!("{KG}desiredReplicas");
+        assert!(
+            has_iri(&triples, &term, RDF_TYPE, &format!("{OWL}DatatypeProperty")),
+            "desiredReplicas is declared as owl:DatatypeProperty"
+        );
+        assert!(
+            has_iri(&triples, &term, RDFS_DOMAIN, &format!("{KG}ContainerStack")),
+            "desiredReplicas's domain is KG:ContainerStack"
+        );
+        assert!(
+            has_iri(&triples, &term, RDFS_RANGE, &format!("{XSD}integer")),
+            "desiredReplicas's range is XSD:integer"
+        );
+        assert_shape(
+            r#"ex:s a :ContainerStack ; :desiredReplicas 3 ."#,
+            r#"ex:s a :ContainerStack ; :desiredReplicas -1 ."#,
+            "desiredReplicas",
+        );
+    }
+
+    /// Verifies MEDULLA-CQ-CONN-R068.18: runningReplicas
+    // spec: MEDULLA-CQ-CONN-R068.18
+    #[test]
+    fn runningReplicas_declared() {
+        let triples = infrastructure_ontology();
+        let term = format!("{KG}runningReplicas");
+        assert!(
+            has_iri(&triples, &term, RDF_TYPE, &format!("{OWL}DatatypeProperty")),
+            "runningReplicas is declared as owl:DatatypeProperty"
+        );
+        assert!(
+            has_iri(&triples, &term, RDFS_DOMAIN, &format!("{KG}ContainerStack")),
+            "runningReplicas's domain is KG:ContainerStack"
+        );
+        assert!(
+            has_iri(&triples, &term, RDFS_RANGE, &format!("{XSD}integer")),
+            "runningReplicas's range is XSD:integer"
+        );
+        assert_shape(
+            r#"ex:s a :ContainerStack ; :runningReplicas 0 ."#,
+            r#"ex:s a :ContainerStack ; :runningReplicas -2 ."#,
+            "runningReplicas",
+        );
+    }
+
+    /// Verifies MEDULLA-CQ-CONN-R068.19: stackSourceRepository
+    // spec: MEDULLA-CQ-CONN-R068.19
+    #[test]
+    fn stackSourceRepository_declared() {
+        let triples = infrastructure_ontology();
+        let term = format!("{KG}stackSourceRepository");
+        assert!(
+            has_iri(&triples, &term, RDF_TYPE, &format!("{OWL}ObjectProperty")),
+            "stackSourceRepository is declared as owl:ObjectProperty"
+        );
+        assert!(
+            has_iri(&triples, &term, RDFS_DOMAIN, &format!("{KG}ContainerStack")),
+            "stackSourceRepository's domain is KG:ContainerStack"
+        );
+        assert!(
+            has_iri(&triples, &term, RDFS_RANGE, &format!("{CORE}Repository")),
+            "stackSourceRepository's range is CORE:Repository"
+        );
+    }
+
+    /// Verifies MEDULLA-CQ-CONN-R068.20: ManagementEnvironment
+    // spec: MEDULLA-CQ-CONN-R068.20
+    #[test]
+    fn ManagementEnvironment_declared() {
+        let triples = infrastructure_ontology();
+        let term = format!("{KG}ManagementEnvironment");
+        assert!(
+            has_iri(&triples, &term, RDF_TYPE, &format!("{OWL}Class")),
+            "ManagementEnvironment is declared as owl:Class"
+        );
+    }
+
+    /// Verifies MEDULLA-CQ-CONN-R068.21: pendingUpdateCount
+    // spec: MEDULLA-CQ-CONN-R068.21
+    #[test]
+    fn pendingUpdateCount_declared() {
+        let triples = infrastructure_ontology();
+        let term = format!("{KG}pendingUpdateCount");
+        assert!(
+            has_iri(&triples, &term, RDF_TYPE, &format!("{OWL}DatatypeProperty")),
+            "pendingUpdateCount is declared as owl:DatatypeProperty"
+        );
+        assert!(
+            has_iri(
+                &triples,
+                &term,
+                RDFS_DOMAIN,
+                &format!("{KG}OperatingSystem")
+            ),
+            "pendingUpdateCount's domain is KG:OperatingSystem"
+        );
+        assert!(
+            has_iri(&triples, &term, RDFS_RANGE, &format!("{XSD}integer")),
+            "pendingUpdateCount's range is XSD:integer"
+        );
+        assert_shape(
+            r#"ex:o a :OperatingSystem ; :pendingUpdateCount 4 ."#,
+            r#"ex:o a :OperatingSystem ; :pendingUpdateCount -4 ."#,
+            "pendingUpdateCount",
+        );
+    }
+
+    /// Verifies MEDULLA-CQ-CONN-R068.22: uptimeSeconds
+    // spec: MEDULLA-CQ-CONN-R068.22
+    #[test]
+    fn uptimeSeconds_declared() {
+        let triples = infrastructure_ontology();
+        let term = format!("{KG}uptimeSeconds");
+        assert!(
+            has_iri(&triples, &term, RDF_TYPE, &format!("{OWL}DatatypeProperty")),
+            "uptimeSeconds is declared as owl:DatatypeProperty"
+        );
+        assert!(
+            has_iri(
+                &triples,
+                &term,
+                RDFS_DOMAIN,
+                &format!("{KG}OperatingSystem")
+            ),
+            "uptimeSeconds's domain is KG:OperatingSystem"
+        );
+        assert!(
+            has_iri(&triples, &term, RDFS_RANGE, &format!("{XSD}integer")),
+            "uptimeSeconds's range is XSD:integer"
+        );
+    }
+
+    /// Verifies MEDULLA-CQ-CONN-R068.23: recordType
+    // spec: MEDULLA-CQ-CONN-R068.23
+    #[test]
+    fn recordType_declared() {
+        let triples = infrastructure_ontology();
+        let term = format!("{KG}recordType");
+        assert!(
+            has_iri(&triples, &term, RDF_TYPE, &format!("{OWL}DatatypeProperty")),
+            "recordType is declared as owl:DatatypeProperty"
+        );
+        assert!(
+            has_iri(&triples, &term, RDFS_DOMAIN, &format!("{KG}DnsRecord")),
+            "recordType's domain is KG:DnsRecord"
+        );
+        assert!(
+            has_iri(&triples, &term, RDFS_RANGE, &format!("{XSD}string")),
+            "recordType's range is XSD:string"
+        );
+    }
+
+    /// Verifies MEDULLA-CQ-CONN-R068.24: recordValue
+    // spec: MEDULLA-CQ-CONN-R068.24
+    #[test]
+    fn recordValue_declared() {
+        let triples = infrastructure_ontology();
+        let term = format!("{KG}recordValue");
+        assert!(
+            has_iri(&triples, &term, RDF_TYPE, &format!("{OWL}DatatypeProperty")),
+            "recordValue is declared as owl:DatatypeProperty"
+        );
+        assert!(
+            has_iri(&triples, &term, RDFS_DOMAIN, &format!("{KG}DnsRecord")),
+            "recordValue's domain is KG:DnsRecord"
+        );
+        assert!(
+            has_iri(&triples, &term, RDFS_RANGE, &format!("{XSD}string")),
+            "recordValue's range is XSD:string"
+        );
+    }
+
+    /// Verifies MEDULLA-CQ-CONN-R068.25: lastConnectionStatus
+    // spec: MEDULLA-CQ-CONN-R068.25
+    #[test]
+    fn lastConnectionStatus_declared() {
+        let triples = infrastructure_ontology();
+        let term = format!("{KG}lastConnectionStatus");
+        assert!(
+            has_iri(&triples, &term, RDF_TYPE, &format!("{OWL}DatatypeProperty")),
+            "lastConnectionStatus is declared as owl:DatatypeProperty"
+        );
+        assert!(
+            has_iri(&triples, &term, RDFS_DOMAIN, &format!("{KG}Host")),
+            "lastConnectionStatus's domain is KG:Host"
+        );
+        assert!(
+            has_iri(&triples, &term, RDFS_RANGE, &format!("{XSD}string")),
+            "lastConnectionStatus's range is XSD:string"
+        );
+    }
+
+    /// Verifies MEDULLA-CQ-CONN-R068.26: lastConnectionError
+    // spec: MEDULLA-CQ-CONN-R068.26
+    #[test]
+    fn lastConnectionError_declared() {
+        let triples = infrastructure_ontology();
+        let term = format!("{KG}lastConnectionError");
+        assert!(
+            has_iri(&triples, &term, RDF_TYPE, &format!("{OWL}DatatypeProperty")),
+            "lastConnectionError is declared as owl:DatatypeProperty"
+        );
+        assert!(
+            has_iri(&triples, &term, RDFS_DOMAIN, &format!("{KG}Host")),
+            "lastConnectionError's domain is KG:Host"
+        );
+        assert!(
+            has_iri(&triples, &term, RDFS_RANGE, &format!("{XSD}string")),
+            "lastConnectionError's range is XSD:string"
+        );
+    }
+
+    /// Verifies MEDULLA-CQ-CONN-R068.27: stackInEnvironment
+    // spec: MEDULLA-CQ-CONN-R068.27
+    #[test]
+    fn stackInEnvironment_declared() {
+        let triples = infrastructure_ontology();
+        let term = format!("{KG}stackInEnvironment");
+        assert!(
+            has_iri(&triples, &term, RDF_TYPE, &format!("{OWL}ObjectProperty")),
+            "stackInEnvironment is declared as owl:ObjectProperty"
+        );
+        assert!(
+            has_iri(&triples, &term, RDFS_DOMAIN, &format!("{KG}ContainerStack")),
+            "stackInEnvironment's domain is KG:ContainerStack"
+        );
+        assert!(
+            has_iri(
+                &triples,
+                &term,
+                RDFS_RANGE,
+                &format!("{KG}ManagementEnvironment")
+            ),
+            "stackInEnvironment's range is KG:ManagementEnvironment"
         );
     }
 }

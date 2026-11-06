@@ -74,6 +74,13 @@ fn finance_is_a_core_module_within_the_catalog_bound_and_the_corpus_stays_cohere
         ("StrategySpec", "0000031"),
         ("StrategyRun", "0000031"),
         ("LeverageTerms", "0000031"),
+        ("FinanceReceipt", "0000031"),
+        ("TradeJournalEntry", "0000031"),
+        ("BiasAudit", "0000031"),
+        ("SentimentFusion", "0000031"),
+        ("GeopoliticalRisk", "0000031"),
+        ("StrategyCard", "0000031"),
+        ("DebateRound", "0000015"),
     ];
     for (class, category) in placed {
         assert!(
@@ -89,7 +96,7 @@ fn finance_is_a_core_module_within_the_catalog_bound_and_the_corpus_stays_cohere
 fn every_finance_class_is_mapped_and_nothing_external_is_imported() {
     let triples = medulla_rdf::mapping::parse_turtle(FINANCE).unwrap();
     let declared = declared_classes(&triples);
-    assert_eq!(declared.len(), 28);
+    assert_eq!(declared.len(), 35);
     let unmapped = unmapped_classes(&triples);
     assert!(unmapped.is_empty(), "unmapped classes {unmapped:?}");
     let imports: BTreeSet<&str> = triples
@@ -214,7 +221,14 @@ fn finance_shapes_are_their_own_document() {
             "StrategySpec",
             "StrategyRun",
             "LeverageTerms",
+            "FinanceReceipt",
             "FinanceAlgorithm",
+            "DebateRound",
+            "TradeJournalEntry",
+            "BiasAudit",
+            "SentimentFusion",
+            "GeopoliticalRisk",
+            "StrategyCard",
         ],
     );
 }
@@ -447,6 +461,125 @@ mod shapes {
         "\"finance-v2\"",
         "\"finance-v2\"",
     );
+
+    // spec: MEDULLA-FINANCE-PRIMITIVES-R751.750
+    #[test]
+    fn research_records_accept_valid_and_refuse_missing_fields() {
+        assert_matrix(
+            "DebateRound",
+            &[
+                field("debateId", "\"d-1\"", "\"d-2\"", "5"),
+                field("roundIndex", "1", "2", "\"one\""),
+                field("debateSide", "\"bull\"", "\"bear\"", "\"neutral\""),
+                field("debateArgument", "\"rates fall\"", "\"rates rise\"", "5"),
+            ],
+            &[("debateSide", &["bull", "bear"])],
+        );
+        assert!(!conforms(&node(
+            "DebateRound",
+            &[
+                ("debateId", "\"d-1\""),
+                ("roundIndex", "0"),
+                ("debateSide", "\"bull\""),
+                ("debateArgument", "\"a\""),
+            ]
+        )));
+        assert_matrix(
+            "TradeJournalEntry",
+            &[
+                field("journalId", "\"j-1\"", "\"j-2\"", "5"),
+                field(
+                    "entryAt",
+                    "\"2026-09-24T00:00:00Z\"^^xsd:dateTime",
+                    "\"2026-09-25T00:00:00Z\"^^xsd:dateTime",
+                    "\"yesterday\"",
+                ),
+                field("journalRationale", "\"trend\"", "\"value\"", "5"),
+                optional(field("strategyRunRef", "\"run-1\"", "\"run-2\"", "5")),
+            ],
+            &[],
+        );
+        assert_matrix(
+            "BiasAudit",
+            &[
+                field("biasKind", "\"recency\"", "\"confirmation\"", "\"hunch\""),
+                field(
+                    "biasFinding",
+                    "\"weighted the last week\"",
+                    "\"other\"",
+                    "5",
+                ),
+            ],
+            &[(
+                "biasKind",
+                &["recency", "confirmation", "loss_aversion", "overconfidence"],
+            )],
+        );
+        assert_matrix(
+            "SentimentFusion",
+            &[
+                field("subjectListing", "\"l-1\"", "\"l-2\"", "5"),
+                field(
+                    "sentimentScore",
+                    "\"-0.25\"^^xsd:decimal",
+                    "\"0.5\"^^xsd:decimal",
+                    "\"abc\"",
+                ),
+                field(
+                    "researchKernelVersion",
+                    "\"research-1\"",
+                    "\"research-2\"",
+                    "5",
+                ),
+            ],
+            &[],
+        );
+        assert!(!conforms(&node(
+            "SentimentFusion",
+            &[
+                ("subjectListing", "\"l-1\""),
+                ("sentimentScore", "\"1.5\"^^xsd:decimal"),
+                ("researchKernelVersion", "\"research-1\""),
+            ]
+        )));
+        assert_matrix(
+            "GeopoliticalRisk",
+            &[
+                field("geoRegion", "\"emea\"", "\"apac\"", "5"),
+                field(
+                    "geoRiskScore",
+                    "\"0.75\"^^xsd:decimal",
+                    "\"0.5\"^^xsd:decimal",
+                    "\"abc\"",
+                ),
+                field(
+                    "researchKernelVersion",
+                    "\"research-1\"",
+                    "\"research-2\"",
+                    "5",
+                ),
+            ],
+            &[],
+        );
+        assert!(!conforms(&node(
+            "GeopoliticalRisk",
+            &[
+                ("geoRegion", "\"emea\""),
+                ("geoRiskScore", "\"-0.1\"^^xsd:decimal"),
+                ("researchKernelVersion", "\"research-1\""),
+            ]
+        )));
+        assert_matrix(
+            "StrategyCard",
+            &[
+                field("cardId", "\"c-1\"", "\"c-2\"", "5"),
+                field("strategySpecRef", "\"spec-1\"", "\"spec-2\"", "5"),
+                field("licenceClass", "\"open\"", "\"restricted\"", "\"free\""),
+                field("cardSummary", "\"momentum\"", "\"mean reversion\"", "5"),
+            ],
+            &[("licenceClass", &["open", "restricted", "proprietary"])],
+        );
+    }
 
     // spec: MEDULLA-FINANCE-PRIMITIVES-R004.2.1.1
     #[test]
@@ -752,5 +885,42 @@ mod shapes {
             record.push((name, bad));
             assert!(!conforms(&node("LeverageTerms", &record)), "{name}={bad}");
         }
+    }
+
+    // spec: MEDULLA-FINANCE-PRIMITIVES-R011.4
+    #[test]
+    fn finance_receipt_shape_acceptance() {
+        assert_matrix(
+            "FinanceReceipt",
+            &[
+                field(
+                    "receiptKind",
+                    "\"alert_delivery\"",
+                    "\"schedule_run\"",
+                    "\"cfd\"",
+                ),
+                field(
+                    "receiptState",
+                    "\"claimed\"",
+                    "\"completed\"",
+                    "\"pending\"",
+                ),
+                field("tenantKey", "\"tenant-1\"", "\"tenant-2\"", "5"),
+                field("idempotencyKey", "\"key-1\"", "\"key-2\"", "\"\""),
+                field(
+                    "recordedAt",
+                    "\"2026-09-24T00:00:00Z\"^^xsd:dateTime",
+                    "\"2026-09-25T00:00:00Z\"^^xsd:dateTime",
+                    "\"yesterday\"",
+                ),
+            ],
+            &[
+                (
+                    "receiptKind",
+                    &["alert_delivery", "schedule_run", "dca_proposal"],
+                ),
+                ("receiptState", &["claimed", "completed"]),
+            ],
+        );
     }
 }

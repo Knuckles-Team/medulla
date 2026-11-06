@@ -46,7 +46,25 @@ pub(crate) struct IcebergCommit {
     pub lsn: Lsn,
     pub timestamp_ms: i64,
     pub schema_id: i32,
+    pub binding: Option<PublicationBinding>,
 }
+
+/// The graph position a published snapshot is bound to
+/// (MEDULLA-FEDERATED-QUERY-R079.3). It lands in the snapshot summary under
+/// [`GRAPH_VERSION_KEY`] and [`SOURCE_LSN_KEY`], so a catalog reader can correlate
+/// the snapshot with the committed graph version and the source log position.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct PublicationBinding {
+    /// The committed graph version the snapshot was materialized at.
+    pub graph_version: u64,
+    /// The source log position the materialized rows were read up to.
+    pub source_lsn: u64,
+}
+
+/// Snapshot summary key holding the committed graph version.
+pub const GRAPH_VERSION_KEY: &str = "medulla.graph-version";
+/// Snapshot summary key holding the source log position.
+pub const SOURCE_LSN_KEY: &str = "medulla.source-lsn";
 
 pub(crate) struct IcebergBuildContext<'a> {
     pub schema_versions: &'a [(i32, LakeSchema)],
@@ -73,6 +91,7 @@ fn projected_commit(
             lsn,
             timestamp_ms,
             schema_id,
+            binding: None,
         })
 }
 
@@ -155,6 +174,10 @@ fn snapshot_value(
         "manifest-list": manifest_list_path(ctx.location, commit.lsn.value() as i64),
         "schema-id": commit.schema_id,
     });
+    if let Some(binding) = commit.binding {
+        value["summary"][GRAPH_VERSION_KEY] = json!(binding.graph_version.to_string());
+        value["summary"][SOURCE_LSN_KEY] = json!(binding.source_lsn.to_string());
+    }
     if let Some(parent_lsn) = parent {
         value["parent-snapshot-id"] = json!(parent_lsn.value() as i64);
     }
@@ -213,6 +236,33 @@ fn name_mapping(schema: Option<&LakeSchema>) -> String {
     serde_json::to_string(&mapping).unwrap_or_else(|_| "[]".to_string())
 }
 
+/// The first partition field id; Iceberg numbers partition fields from 1000.
+pub const FIRST_PARTITION_FIELD_ID: i32 = 1000;
+
+/// The fields of the one partition spec (MEDULLA-UNIFIED-DATA-PLANE-R039.4): one
+/// `identity` field over the partition column, or none for an unpartitioned table.
+/// Shared with the Avro manifest header so both name the same spec.
+pub(crate) fn partition_spec_fields(schema: Option<&LakeSchema>) -> Value {
+    match schema.and_then(LakeSchema::partition_source) {
+        Some((field, source_id)) => json!([{
+            "source-id": source_id,
+            "field-id": FIRST_PARTITION_FIELD_ID,
+            "name": field.name,
+            "transform": "identity",
+        }]),
+        None => json!([]),
+    }
+}
+
+/// `last-partition-id`: 999 (none assigned) unpartitioned, 1000 with the one field.
+fn last_partition_id(schema: Option<&LakeSchema>) -> i32 {
+    if schema.and_then(LakeSchema::partition_source).is_some() {
+        FIRST_PARTITION_FIELD_ID
+    } else {
+        FIRST_PARTITION_FIELD_ID - 1
+    }
+}
+
 fn metadata_document(
     ctx: &IcebergBuildContext<'_>,
     schema: Option<&LakeSchema>,
@@ -245,8 +295,8 @@ fn metadata_document(
         "current-schema-id": current_schema_id,
         "schemas": schemas,
         "default-spec-id": 0,
-        "partition-specs": [ { "spec-id": 0, "fields": [] } ],
-        "last-partition-id": 999,
+        "partition-specs": [ { "spec-id": 0, "fields": partition_spec_fields(schema) } ],
+        "last-partition-id": last_partition_id(schema),
         "default-sort-order-id": 0,
         "sort-orders": [ { "order-id": 0, "fields": [] } ],
         "properties": {

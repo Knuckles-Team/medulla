@@ -10,15 +10,17 @@
 
 use super::agent_library_upgrade::{
     inspect_agent_library_mcp_catalog_upgrade, inspect_graph_shard_upgrade,
-    upgrade_agent_library_mcp_catalog, upgrade_graph_shard, GraphShardSource,
+    inspect_semantic_index_promotion_upgrade, upgrade_agent_library_mcp_catalog,
+    upgrade_graph_shard, upgrade_semantic_index_promotion, GraphShardSource,
     OwnerLayoutUpgradeReport,
 };
 use super::identity::PhysicalStoreIdentity;
 use super::layout::OwnerLayout;
 use super::lineage::{
     layout_predecessors, AGENT_LIBRARY_BEFORE_MCP_CATALOG, GRAPH_SHARD_BEFORE_AUDIT_REQUESTS,
-    GRAPH_SHARD_BEFORE_CURRENT_PLANS, GRAPH_SHARD_BEFORE_ENRICHMENT,
-    GRAPH_SHARD_BEFORE_RUN_CHECKPOINTS, SQL_BEFORE_DURABLE_ANN, SQL_BEFORE_SOURCE_CHECKPOINTS,
+    GRAPH_SHARD_BEFORE_CURRENT_PLANS, GRAPH_SHARD_BEFORE_EFFECT_RECEIPTS,
+    GRAPH_SHARD_BEFORE_ENRICHMENT, GRAPH_SHARD_BEFORE_RUN_CHECKPOINTS,
+    SEMANTIC_INDEX_BEFORE_PROMOTION, SQL_BEFORE_DURABLE_ANN, SQL_BEFORE_SOURCE_CHECKPOINTS,
 };
 use super::persisted_layout::{read_persisted_manifest, LayoutPredecessor};
 use super::sql_checkpoint_upgrade::{
@@ -138,6 +140,17 @@ macro_rules! offline_upgrade {
 /// reports them.
 pub static OFFLINE_STORE_UPGRADES: &[OfflineStoreUpgrade] = &[
     offline_upgrade!(
+        GRAPH_SHARD_BEFORE_EFFECT_RECEIPTS,
+        |path, identity, integrity, options| inspect_graph_shard_upgrade(
+            path,
+            identity,
+            integrity,
+            options,
+            GraphShardSource::BeforeEffectReceipts
+        ),
+        upgrade_graph_shard
+    ),
+    offline_upgrade!(
         GRAPH_SHARD_BEFORE_RUN_CHECKPOINTS,
         |path, identity, integrity, options| inspect_graph_shard_upgrade(
             path,
@@ -195,6 +208,11 @@ pub static OFFLINE_STORE_UPGRADES: &[OfflineStoreUpgrade] = &[
             GraphShardSource::BeforeAuditRequests
         ),
         upgrade_graph_shard
+    ),
+    offline_upgrade!(
+        SEMANTIC_INDEX_BEFORE_PROMOTION,
+        inspect_semantic_index_promotion_upgrade,
+        upgrade_semantic_index_promotion
     ),
 ];
 
