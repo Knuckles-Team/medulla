@@ -3838,6 +3838,7 @@ components:
       - "tests/federated"
       - "tests/finance_alert_outbox_served.rs"
       - "tests/finance_receipt_served.rs"
+      - "tests/federation"
       - "tests/finance_records_served.rs"
       - "tests/finance_served_research_records.rs"
       - "tests/finance_served_numeric_kernels.rs"
