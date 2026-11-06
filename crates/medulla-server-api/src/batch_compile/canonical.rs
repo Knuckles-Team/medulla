@@ -665,6 +665,13 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         // EH-408/EH-409: self-translates into a request-graph `BatchUpdate`,
         // which carries its own domain.
         | Method::TelemetryDerive { .. }
+        // MEDULLA-UNIFIED-DATA-PLANE-R760.3: incident writes self-translate into a
+        // request-graph `BatchUpdate`; the two reads commit nothing.
+        | Method::IncidentRecordAnomaly { .. }
+        | Method::IncidentCorrelate { .. }
+        | Method::IncidentEvidence { .. }
+        | Method::IncidentRelatedClaims { .. }
+        | Method::IncidentSetStatus { .. }
         | Method::WriteBack { .. }
         | Method::DecisionFit { .. }
         | Method::DecisionEval { .. }

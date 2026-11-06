@@ -422,6 +422,10 @@ pub fn requires_write(method: &Method) -> bool {
                 | Method::DocumentDelete { .. }
                 | Method::LineageIngest { .. }
                 | Method::TelemetryDerive { .. }
+                // MEDULLA-UNIFIED-DATA-PLANE-R760.3: incident writes.
+                | Method::IncidentRecordAnomaly { .. }
+                | Method::IncidentCorrelate { .. }
+                | Method::IncidentSetStatus { .. }
                 | Method::Reconcile { .. }
                 | Method::ApplyMutation { .. }
                 | Method::ApplyMultisigMutation { .. }

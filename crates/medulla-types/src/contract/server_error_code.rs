@@ -7,6 +7,7 @@ closed_error_codes! {
     /// Existing server refusal vocabulary pending typed handler migration.
     pub enum ServerErrorCode {
         AbortedAtomicGraphBatch => "ABORTED_ATOMIC_GRAPH_BATCH",
+        AnomalyResourceRequired => "ANOMALY_RESOURCE_REQUIRED",
         ArchiveDigestMismatch => "ARCHIVE_DIGEST_MISMATCH",
         ArchiveMissing => "ARCHIVE_MISSING",
         RunAdmissionUnavailable => "RUN_ADMISSION_UNAVAILABLE",
@@ -167,6 +168,8 @@ closed_error_codes! {
         IdentityUnstamped => "IDENTITY_UNSTAMPED",
         IdentityWeakPassword => "IDENTITY_WEAK_PASSWORD",
         ImporterMismatch => "IMPORTER_MISMATCH",
+        IncidentNotFound => "INCIDENT_NOT_FOUND",
+        IncidentStatusSkip => "INCIDENT_STATUS_SKIP",
         Internal => "INTERNAL",
         InvalidConfiguration => "INVALID_CONFIGURATION",
         InvalidFacts => "INVALID_FACTS",
@@ -284,6 +287,7 @@ closed_error_codes! {
         TaskQueueNameBlank => "TASK_QUEUE_NAME_BLANK",
         TelemetryUnavailable => "TELEMETRY_UNAVAILABLE",
         TelemetryWindowTooLarge => "TELEMETRY_WINDOW_TOO_LARGE",
+        TenantScopeRequired => "TENANT_SCOPE_REQUIRED",
         Timeout => "TIMEOUT",
         TranscriptBaseConflict => "TRANSCRIPT_BASE_CONFLICT",
         TranscriptEventConflict => "TRANSCRIPT_EVENT_CONFLICT",

@@ -178,6 +178,34 @@ $($variants)*
         policy_msgpack: Vec<u8>,
     },
 
+    // ── Served incidents (MEDULLA-UNIFIED-DATA-PLANE-R760.3) ───────────────
+    /// Record one anomaly in the caller's tenant (from the verified carrier)
+    /// and correlate it into an open incident over `window_ms`.
+    IncidentRecordAnomaly {
+        anomaly: medulla_types::incident::AnomalyReading,
+        window_ms: u64,
+    },
+    /// Correlate a set of anomalies in one pass: grouped by entity and
+    /// `window_ms` bucket, each group opens or joins an open incident.
+    IncidentCorrelate {
+        anomalies: Vec<medulla_types::incident::AnomalyReading>,
+        window_ms: u64,
+    },
+    /// One incident of the caller's tenant with its evidence. Read-only.
+    IncidentEvidence { incident_id: String },
+    /// The `Claim` nodes with an `about` edge to an entity in the incident's
+    /// evidence. Read-only.
+    IncidentRelatedClaims {
+        incident_id: String,
+        #[serde(default)]
+        limit: Option<u32>,
+    },
+    /// Move an incident one status forward (open -> acknowledged -> resolved).
+    IncidentSetStatus {
+        incident_id: String,
+        status: medulla_types::incident::IncidentStatus,
+    },
+
     // ── Dataset lineage (MEDULLA-UNIFIED-DATA-PLANE-R702.3) ─────────────────
     /// Drain lineage run events into the request graph: each event maps to
     /// content-addressed `Dataset` nodes and `derivesInto` edges; an event that

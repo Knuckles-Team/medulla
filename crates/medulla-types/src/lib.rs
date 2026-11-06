@@ -18,6 +18,8 @@ pub mod attached_source_governance;
 // MEDULLA-UNIFIED-DATA-PLANE-R014.1 — typed model distinguishing the MySQL and
 // MariaDB attached-source dialect entries. See module docs.
 pub mod attached_source_dialect;
+// MEDULLA-UNIFIED-DATA-PLANE-R760 — the served incident records.
+pub mod incident;
 // MEDULLA-UNIFIED-DATA-PLANE-R014.2.1 — MySQL/MariaDB adapter skeleton: typed
 // connection config → sqlx-shaped driver config, with a connect refusal
 // path that needs no live database. Binlog/GTID capture and the per-engine

@@ -114,6 +114,10 @@ pub(crate) const ACCESS_RS_MUTATES_UNCONDITIONAL: &[&str] = &[
     "StartTrajectory",
     // EH-408/EH-409: always writes (one BatchUpdate of derived facts).
     "TelemetryDerive",
+    // MEDULLA-UNIFIED-DATA-PLANE-R760.3: like `TelemetryDerive`.
+    "IncidentRecordAnomaly",
+    "IncidentCorrelate",
+    "IncidentSetStatus",
     "SupersedeEdge",
     "SweepExpired",
     "UpdateResourceHost",
@@ -336,6 +340,10 @@ pub(crate) const NATIVE_GRAPHREDB_DURABLE: &[&str] = &[
     // EH-408/EH-409: derived facts self-translate into ONE `BatchUpdate`
     // against the request graph, the same lowering shape as `FleetCatalog`.
     "TelemetryDerive",
+    // MEDULLA-UNIFIED-DATA-PLANE-R760.3: like `TelemetryDerive`.
+    "IncidentRecordAnomaly",
+    "IncidentCorrelate",
+    "IncidentSetStatus",
     "Sql",
     // EH-351: create/refresh/drop commit the edge-index registration and its
     // generations in the tenant SQL catalog natively, as `Sql` DDL does.
@@ -510,6 +518,10 @@ pub(crate) const AUDIT_RS_AUDITED: &[&str] = &[
     "RbacElevation",
     // EH-408/EH-409: defense-in-depth marker, like `FleetCatalog`.
     "TelemetryDerive",
+    // MEDULLA-UNIFIED-DATA-PLANE-R760.3: like `TelemetryDerive`.
+    "IncidentRecordAnomaly",
+    "IncidentCorrelate",
+    "IncidentSetStatus",
     // Defense-in-depth markers; the durable record is the identity store's
     // hash-chained audit trail, written in the same rbac.redb image as the
     // change it records.
@@ -593,6 +605,10 @@ pub(crate) const CDC_RS_EMITS_CDC: &[&str] = &[
     "PolicyEvolution",
     // EH-408/EH-409: defense-in-depth marker, like `FleetCatalog`.
     "TelemetryDerive",
+    // MEDULLA-UNIFIED-DATA-PLANE-R760.3: like `TelemetryDerive`.
+    "IncidentRecordAnomaly",
+    "IncidentCorrelate",
+    "IncidentSetStatus",
     "RemoveEdge",
     "RemoveNode",
     "RunDatalogReasoning",

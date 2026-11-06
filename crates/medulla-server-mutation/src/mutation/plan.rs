@@ -871,6 +871,9 @@ fn cluster_mutation_route_admin(method: &Method) -> Option<ClusterMutationRoute>
             | Method::FleetCatalog { .. }
             | Method::PolicyEvolution { .. }
             | Method::TelemetryDerive { .. }
+            | Method::IncidentRecordAnomaly { .. }
+            | Method::IncidentCorrelate { .. }
+            | Method::IncidentSetStatus { .. }
     ) {
         return Some(ClusterMutationRoute::VolatileControl);
     }
