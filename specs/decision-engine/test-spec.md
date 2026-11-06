@@ -2098,3 +2098,16 @@ Every row below has a planned test at its exact post-split path; the row text na
 | `MEDULLA-DECISION-ENGINE-R814.8` | `tests/decide/test_prompt_candidates_served.py::test_non_canonical_prompt_is_refused_with_field_path` |
 | `MEDULLA-DECISION-ENGINE-R822` | `crates/medulla-h-decide/src/decide/stat_calibration.rs::fit_isotonic` |
 | `MEDULLA-DECISION-ENGINE-R828` | `crates/medulla-server-api/src/api/conflict_decider.rs::branch_merge_conflicts_route_through_the_conflict_decider_seam` |
+| `MEDULLA-DECISION-ENGINE-R134.111.14` | `crates/medulla-decision-types/src/decision/task_plan/tests.rs::control_steps_round_trip_and_refuse_two_kinds` |
+| `MEDULLA-DECISION-ENGINE-R134.111.15` | `crates/medulla-decision-types/src/decision/task_plan/tests.rs::control_checks_refuse_planted_faults` |
+| `MEDULLA-DECISION-ENGINE-R134.111.16` | `crates/medulla-h-decide/src/decide/stat_tests/task_plan_tests.rs::control_refusals_name_the_task` |
+| `MEDULLA-DECISION-ENGINE-R134.111.17` | `crates/medulla-decision-types/src/decision/task_plan/tests.rs::control_fields_change_the_digest` |
+| `MEDULLA-DECISION-ENGINE-R134.111.18` | `tests/decide/test_task_plan_served.py::test_control_steps_served` |
+| `MEDULLA-DECISION-ENGINE-R180` | `crates/medulla-h-decide/src/decide/stat_tests/process_decision_tests.rs::decide_routes_table_and_branch` |
+| `MEDULLA-DECISION-ENGINE-R180.1` | `crates/medulla-decision-types/src/decision/process_decision.rs::tests::requests_round_trip` |
+| `MEDULLA-DECISION-ENGINE-R180.2` | `crates/medulla-decision-stats/src/decision/dmn_eval.rs::tests::every_hit_policy_matches_its_fixture` |
+| `MEDULLA-DECISION-ENGINE-R180.3` | `crates/medulla-decision-stats/src/decision/branch_select.rs::tests::branch_kinds_take_the_right_arms` |
+| `MEDULLA-DECISION-ENGINE-R180.4` | `crates/medulla-h-decide/src/decide/stat_tests/process_decision_tests.rs::decide_routes_table_and_branch` |
+| `MEDULLA-DECISION-ENGINE-R180.5` | `crates/medulla-h-decide/src/decide/stat_tests/process_decision_tests.rs::decision_refusals_name_the_rule` |
+| `MEDULLA-DECISION-ENGINE-R180.6` | `crates/medulla-h-decide/src/decide/stat_tests/process_decision_tests.rs::premises_cite_rules_and_inputs` |
+| `MEDULLA-DECISION-ENGINE-R180.7` | `tests/decide/test_process_decision_served.py::test_table_and_branch_served` |

@@ -60,6 +60,17 @@ The user is an operator of a run that reads outside content. The outcome is that
 
 Independent test: the bound tests of `MEDULLA-SRC-AUTH-R010.6` and `MEDULLA-SRC-AUTH-R011.6` run this story through served methods.
 
+### User Story 6 - Keep the graph as system of record while a secondary source syncs two ways (Priority: P2)
+
+The user is an operator who connects a process engine, an architecture tool or a metadata store as a federated secondary. The outcome is that changes flow both ways and a conflict follows a declared rule.
+
+**Acceptance scenarios**
+
+1. **Given** three synced records, **When** one changes in the source, one in the graph and one on both sides, **Then** sync applies one, proposes one outbound and records one conflict.
+2. **Given** a conflict under `system_of_record_wins`, **When** sync runs, **Then** the graph value stays and an outbound proposal carries it.
+
+Independent test: the bound tests of `MEDULLA-SRC-AUTH-R012.9` run this story through the served method.
+
 ### Edge Cases
 
 - An authority row under a `Pack` or `Ingestion` origin never takes effect.
@@ -81,6 +92,7 @@ Independent test: the bound tests of `MEDULLA-SRC-AUTH-R010.6` and `MEDULLA-SRC-
 - **FR-008**: Rows copy data only under a declared, reasoned acceleration policy; the default is virtual. Rows: `MEDULLA-SRC-AUTH-R008`.
 - **FR-009**: A source trust role orders sources before rank. Rows: `MEDULLA-SRC-AUTH-R010`.
 - **FR-010**: Content that enters a run carries a stored trust mark that cannot be lowered without approval. Rows: `MEDULLA-SRC-AUTH-R011`.
+- **FR-011**: A federated secondary source syncs two ways with the graph as system of record, under a declared conflict rule and without a second store. Rows: `MEDULLA-SRC-AUTH-R012`.
 
 ## Success Criteria
 
@@ -113,4 +125,5 @@ This spec is the single owner of the authority vocabulary (`vg:SourceAuthority`,
 | FR-008 | plan.md, Vocabulary | T-008 | PENDING |
 | FR-009 | plan.md, Source trust role | T-010 | PENDING |
 | FR-010 | plan.md, Untrusted taint mark | T-011 | PENDING |
+| FR-011 | plan.md, Two-way sync with a federated secondary (R012) | T-012 | PENDING |
 | SC-001 | plan.md, Worked example | T-009 | PENDING |

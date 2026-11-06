@@ -136,6 +136,7 @@ Independent test: the bound tests of `MEDULLA-DECISION-ENGINE-R133.1` run this s
 - **FR-014**: Connector prompts as system-prompt candidates. Rows: `MEDULLA-DECISION-ENGINE-R814`, `MEDULLA-DECISION-ENGINE-R177`, `MEDULLA-DECISION-ENGINE-R815`.
 - **FR-015**: Usage ledger and price catalog. Rows: `MEDULLA-DECISION-ENGINE-R801`, `MEDULLA-DECISION-ENGINE-R802`, `MEDULLA-DECISION-ENGINE-R803`.
 - **FR-016**: Evolution-tuned decision knobs. Rows: `MEDULLA-DECISION-ENGINE-R179`, `MEDULLA-DECISION-ENGINE-R178`, `MEDULLA-DECISION-ENGINE-R812`.
+- **FR-017**: Task plans carry branch, join, decision and approval-wait steps, and process decisions evaluate DMN tables and gateway branches. Rows: `MEDULLA-DECISION-ENGINE-R134.111.14`, `MEDULLA-DECISION-ENGINE-R180`.
 
 ## Success Criteria
 

@@ -70,6 +70,21 @@ The rules below bind every row.
 
 Data entities are in [data-model.md](data-model.md). The shortest served proof is in [quickstart.md](quickstart.md). Each seam to another repository has a document in `contracts/`.
 
+### Standard process and decision vocabulary (R014)
+
+Six core terms describe every process. `:ProcessModel` exists in `enterprise-v1.ttl`. `:ProcessStep` and `:ProcessGate` come from `MEDULLA-CQ-ORCH-R700.2`. R014.1 adds `:ProcessEventNode`, `:ProcessSequenceFlow` and `:ProcessLane` to `orchestration-v1.ttl`. `bpmn-v1.ttl` and `dmn-v1.ttl` hold the BPMN 2.0 and DMN element classes; each class subclasses one core term and neither file uses `owl:imports`. DMN rolls up to the new core terms `:DecisionLogic` and `:DecisionRule` under `:Policy`. The step binding properties (`:usesTool`, `:hasPrompt`, `:evaluatesDecision`, `:approverRole`, `:toolArguments`) are read by the process plan of `MEDULLA-CQ-ORCH-R704`. Both files and their shapes register as core schema sources beside the `archimate` entry of `crates/medulla-graph-core/src/graph/schema_sources.rs` (:889).
+
+| Core term | BPMN 2.0 classes | DMN classes |
+|---|---|---|
+| `:ProcessModel` | Process, Collaboration | none |
+| `:ProcessStep` | ten task kinds, CallActivity, SubProcess | none |
+| `:ProcessGate` | five gateway kinds | none |
+| `:ProcessEventNode` | five event kinds | none |
+| `:ProcessSequenceFlow` | SequenceFlow | none |
+| `:ProcessLane` | Lane | none |
+| `:DecisionLogic` | none | Definitions, Decision, DecisionTable |
+| `:DecisionRule` | none | Rule |
+
 ## Phase 2: Task approach
 
 `tasks.md` holds one task per leaf row in table order, producer first. An ontology term precedes the shape that constrains it, a shape precedes the admission that applies it, and an admission precedes the query that reads it. A row lands in one slice with its caller, so no type lands without a production caller. Tasks of different stories run in parallel; a task with no `Depends on:` row carries `[P]`.

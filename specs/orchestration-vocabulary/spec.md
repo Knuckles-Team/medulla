@@ -96,6 +96,16 @@ The user is an improvement loop. The outcome is that component versions, adopted
 
 Independent test: the bound tests of `MEDULLA-ORCH-VOCAB-R801.7`, `MEDULLA-ORCH-VOCAB-R802.2` run this story through a production entry point.
 
+### User Story 9 - Read standard process and decision models through core terms (Priority: P2)
+
+The user is an analyst or a planner. The outcome is that BPMN 2.0 and DMN elements answer queries for the six core process terms.
+
+**Acceptance scenarios**
+
+1. **Given** a user task and a gateway as `bpmn:` nodes, **When** a query asks for core classes, **Then** both return. The shapes refuse a flow without a target.
+
+Independent test: the bound tests of `MEDULLA-ORCH-VOCAB-R014.8` run this story through a production entry point.
+
 ### Edge Cases
 
 - An unknown measurement stays unknown and never becomes zero or true.
@@ -115,6 +125,7 @@ Independent test: the bound tests of `MEDULLA-ORCH-VOCAB-R801.7`, `MEDULLA-ORCH-
 - **FR-006**: Spec folders and policy sources become typed nodes; policy activates only behind review. Rows: `MEDULLA-ORCH-VOCAB-R012`, `MEDULLA-ORCH-VOCAB-R806`.
 - **FR-007**: Organization, team, definition and workflow records are graph facts with named selection rules. Rows: `MEDULLA-ORCH-VOCAB-R750`, `MEDULLA-ORCH-VOCAB-R751`, `MEDULLA-ORCH-VOCAB-R800`, `MEDULLA-ORCH-VOCAB-R808`, `MEDULLA-ORCH-VOCAB-R809`.
 - **FR-008**: Harness components and the improvement library keep versioned, evidenced history. Rows: `MEDULLA-ORCH-VOCAB-R801`, `MEDULLA-ORCH-VOCAB-R802`, `MEDULLA-ORCH-VOCAB-R810`.
+- **FR-009**: BPMN 2.0 and DMN classes and the step binding properties roll up to six core process terms. Rows: `MEDULLA-ORCH-VOCAB-R014`.
 
 ## Success Criteria
 
@@ -126,6 +137,7 @@ Independent test: the bound tests of `MEDULLA-ORCH-VOCAB-R801.7`, `MEDULLA-ORCH-
 - **SC-006**: A replay of a stored trace names the first differing step. Rows: `MEDULLA-ORCH-VOCAB-R013.6`.
 - **SC-007**: A policy rule that contradicts an invariant is never activated. Rows: `MEDULLA-ORCH-VOCAB-R012.7.3`.
 - **SC-008**: A published definition revision is never changed by an edit. Rows: `MEDULLA-ORCH-VOCAB-R800.3`, `MEDULLA-ORCH-VOCAB-R800.4`.
+- **SC-009**: Every `bpmn:` and `dmn:` class has exactly one core ancestor. Rows: `MEDULLA-ORCH-VOCAB-R014.2`, `MEDULLA-ORCH-VOCAB-R014.3`.
 
 ## Assumptions
 

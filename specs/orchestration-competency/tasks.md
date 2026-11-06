@@ -74,3 +74,43 @@ Producer first: ontology terms, shapes and authority mappings, then fixtures and
 - [ ] T068 [US6] MEDULLA-CQ-ORCH-R701.5 Process model import evidence
 - [ ] T069 [US6] MEDULLA-CQ-ORCH-R701.6 Process model import hot-path proof
 - [ ] T070 [US2] MEDULLA-CQ-ORCH-R012 Served proof of the execution question from onboarded connector operations
+- [ ] T071 [US7] MEDULLA-CQ-ORCH-R702.1 Process document records
+- [ ] T072 [US7] MEDULLA-CQ-ORCH-R702.2 BPMN 2.0 reader
+- [ ] T073 [US7] MEDULLA-CQ-ORCH-R702.3 BPMN document to graph mapping
+- [ ] T074 [US7] MEDULLA-CQ-ORCH-R702.4 DMN reader
+- [ ] T075 [US7] MEDULLA-CQ-ORCH-R702.5 DMN document to graph mapping
+- [ ] T076 [US7] MEDULLA-CQ-ORCH-R702.6 BPMN 2.0 writer
+- [ ] T077 [US7] MEDULLA-CQ-ORCH-R702.7 DMN writer
+- [ ] T078 [US7] MEDULLA-CQ-ORCH-R702.8 Stored workflow to deployable BPMN
+- [ ] T079 [US7] MEDULLA-CQ-ORCH-R702.9 Process document import wiring
+- [ ] T080 [US7] MEDULLA-CQ-ORCH-R702.10 BPMN export wiring
+- [ ] T081 [US7] MEDULLA-CQ-ORCH-R702.11 DMN export wiring
+- [ ] T082 [US7] MEDULLA-CQ-ORCH-R702.12 Process document refusal
+- [ ] T083 [US7] MEDULLA-CQ-ORCH-R702.13 Process document evidence
+- [ ] T084 [US7] MEDULLA-CQ-ORCH-R702.14 BPMN round-trip hot-path proof
+- [ ] T085 [US7] MEDULLA-CQ-ORCH-R702.15 DMN round-trip hot-path proof
+- [ ] T086 [US7] MEDULLA-CQ-ORCH-R703.1 Process engine data location
+- [ ] T087 [US7] MEDULLA-CQ-ORCH-R703.2 Process sync adapter
+- [ ] T088 [US7] MEDULLA-CQ-ORCH-R703.3 Process sync and deploy wiring
+- [ ] T089 [US7] MEDULLA-CQ-ORCH-R703.4 Process sync refusal
+- [ ] T090 [US7] MEDULLA-CQ-ORCH-R703.5 Process sync evidence
+- [ ] T091 [US7] MEDULLA-CQ-ORCH-R703.6 Process sync conflict proof
+- [ ] T092 [US7] MEDULLA-CQ-ORCH-R703.7 Process sync and deploy hot-path proof
+- [ ] T093 [US8] MEDULLA-CQ-ORCH-R704.1 Process plan request and binding records
+- [ ] T094 [US8] MEDULLA-CQ-ORCH-R704.2 Explicit step bindings from the graph
+- [ ] T095 [US8] MEDULLA-CQ-ORCH-R704.3 Ranked fallback for unbound steps
+- [ ] T096 [US8] MEDULLA-CQ-ORCH-R704.4 Workflow to task plan
+- [ ] T097 [US8] MEDULLA-CQ-ORCH-R704.5 Process plan family wiring
+- [ ] T098 [US8] MEDULLA-CQ-ORCH-R704.6 Process plan refusal
+- [ ] T099 [US8] MEDULLA-CQ-ORCH-R704.7 Process plan evidence
+- [ ] T100 [US8] MEDULLA-CQ-ORCH-R704.8 Process plan hot-path proof
+- [ ] T101 [US4] MEDULLA-CQ-ORCH-R705.1 Ontology-driven element and relationship mapping
+- [ ] T102 [US4] MEDULLA-CQ-ORCH-R705.2 Architecture exchange records
+- [ ] T103 [US4] MEDULLA-CQ-ORCH-R705.3 Open Exchange Format reader
+- [ ] T104 [US4] MEDULLA-CQ-ORCH-R705.4 Exchange document to graph mapping
+- [ ] T105 [US4] MEDULLA-CQ-ORCH-R705.5 Open Exchange Format writer
+- [ ] T106 [US4] MEDULLA-CQ-ORCH-R705.6 Architecture exchange wiring
+- [ ] T107 [US4] MEDULLA-CQ-ORCH-R705.7 Architecture sync adapter
+- [ ] T108 [US4] MEDULLA-CQ-ORCH-R705.8 Architecture exchange refusal
+- [ ] T109 [US4] MEDULLA-CQ-ORCH-R705.9 Architecture exchange evidence
+- [ ] T110 [US4] MEDULLA-CQ-ORCH-R705.10 Architecture exchange hot-path proof

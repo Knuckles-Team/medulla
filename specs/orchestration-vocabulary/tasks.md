@@ -151,3 +151,11 @@ Each task line reads `- [ ] T001 [P] [US1] <ID> description`. One task per leaf 
 - [ ] T146 [P] [US7] MEDULLA-ORCH-VOCAB-R808 AgentDefinition carries a knowledge scope
 - [ ] T147 [US7] MEDULLA-ORCH-VOCAB-R809 Lossless versioned workflow RDF export and import
 - [ ] T148 [P] [US8] MEDULLA-ORCH-VOCAB-R810 Store run-bound visual observation records
+- [ ] T149 [US9] MEDULLA-ORCH-VOCAB-R014.1 Core event, flow and lane terms
+- [ ] T150 [US9] MEDULLA-ORCH-VOCAB-R014.2 BPMN 2.0 element classes
+- [ ] T151 [US9] MEDULLA-ORCH-VOCAB-R014.3 DMN decision classes
+- [ ] T152 [US9] MEDULLA-ORCH-VOCAB-R014.4 Process step binding properties
+- [ ] T153 [US9] MEDULLA-ORCH-VOCAB-R014.5 BPMN shapes
+- [ ] T154 [US9] MEDULLA-ORCH-VOCAB-R014.6 DMN shapes
+- [ ] T155 [US9] MEDULLA-ORCH-VOCAB-R014.7 Register the BPMN and DMN sources
+- [ ] T156 [US9] MEDULLA-ORCH-VOCAB-R014.8 Process vocabulary hot-path proof
