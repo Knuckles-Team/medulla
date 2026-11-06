@@ -154,6 +154,7 @@ pub enum PackToolMode {
 mod tests {
     use super::*;
 
+    /// Verifies MEDULLA-TYPED-PACKS-R045.1: Annotation type carries side effects, declarer and schema size
     // spec: MEDULLA-TYPED-PACKS-R045.1, MEDULLA-TYPED-PACKS-R001.2
     #[test]
     fn new_fields_roundtrip() {
@@ -194,6 +195,7 @@ mod tests {
         }
     }
 
+    /// Verifies MEDULLA-TYPED-PACKS-R045.2: Absent facts take safe defaults, never zero
     // spec: MEDULLA-TYPED-PACKS-R045.2
     #[test]
     fn absent_facts_take_safe_defaults() {
@@ -220,6 +222,7 @@ mod tests {
         assert!(!certified.read_only_unproven());
     }
 
+    /// Verifies MEDULLA-TYPED-PACKS-R045.4: Admission refuses an unknown side-effect or declarer value
     // spec: MEDULLA-TYPED-PACKS-R045.4
     #[test]
     fn unknown_closed_values_are_refused_naming_the_field() {

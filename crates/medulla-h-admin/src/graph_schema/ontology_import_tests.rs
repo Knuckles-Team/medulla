@@ -126,6 +126,7 @@ fn history_keeps_the_newest_bounded_entries() {
     assert_eq!(history.first().unwrap().revision, 2);
 }
 
+/// Verifies MEDULLA-TYPED-PACKS-R103.4: Runtime ontology import refusals
 // spec: MEDULLA-TYPED-PACKS-R103.4
 #[test]
 fn ontology_import_refusals_leave_schema_unchanged() {

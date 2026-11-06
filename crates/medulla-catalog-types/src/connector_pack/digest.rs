@@ -453,6 +453,7 @@ mod harness_tool_fact_tests {
         agent_component::ToolFactDeclarer, agent_component::ToolSideEffects,
     };
 
+    /// Verifies MEDULLA-TYPED-PACKS-R045.3: The annotation digest covers the new fields without moving old vectors
     // spec: MEDULLA-TYPED-PACKS-R045.3
     #[test]
     fn absent_new_fields_keep_golden_vectors() {

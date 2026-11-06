@@ -890,6 +890,7 @@ mod tests {
         }
     }
 
+    /// Verifies MEDULLA-TYPED-PACKS-R001.7: Prompt payload validation
     // spec: MEDULLA-TYPED-PACKS-R001.7
     #[test]
     fn prompt_blueprint_schema_refusals() {
