@@ -1,7 +1,9 @@
 """The uncertain-effect protocol over the authenticated native TCP wire."""
 
 import hashlib
+import socket
 import time
+import urllib.request
 import uuid
 
 import pytest
@@ -27,6 +29,51 @@ def effect_client(request):
     )
 
 
+@pytest.fixture
+def metered_client(request, monkeypatch):
+    """The effect client of a server that also serves its metrics endpoint."""
+    from decide import test_run_work_item_served as served
+
+    with socket.socket(socket.AF_INET) as probe:
+        probe.bind(("127.0.0.1", 0))
+        address = "{}:{}".format(*probe.getsockname())
+    served_env = served.strict_server_env
+    monkeypatch.setattr(
+        served,
+        "strict_server_env",
+        lambda *a, **k: served_env(*a, **k) | {"GRAPH_SERVICE_METRICS_ADDR": address},
+    )
+    client_iter = served.authenticated_plan_client.__pytest_wrapped__.obj(
+        request.getfixturevalue("tmp_path")
+    )
+    client = next(client_iter)
+    client.metrics_url = "http://" + address + "/metrics"
+    yield client
+    client_iter.close()
+
+
+def _scrape(client) -> dict[str, float]:
+    """Every sample line of the metrics endpoint, keyed by series."""
+    with urllib.request.urlopen(client.metrics_url, timeout=10) as response:
+        text = response.read().decode()
+    return {
+        line.rsplit(" ", 1)[0]: float(line.rsplit(" ", 1)[1])
+        for line in text.splitlines()
+        if line and not line.startswith("#")
+    }
+
+
+def _audit_lines(client) -> list[str]:
+    """The event lines of the audit chain, oldest first."""
+    lines = []
+    for seq in range(1, 200):
+        try:
+            lines.append(client.admin.audit_read_event(seq)["event_line"])
+        except EngineResponseError:
+            break
+    return lines
+
+
 def _item(client, stem: str) -> str:
     now = int(time.time() * 1000)
     request = _submit_request()
@@ -48,7 +95,9 @@ def _item(client, stem: str) -> str:
     return client.work_items.submit(request)["work_item_id"]
 
 
-def _claim(client, item: str, stem: str) -> dict:
+def _claim(
+    client, item: str, stem: str, lease_ms: int = 30_000, key: str = "claim"
+) -> dict:
     claim = client.work_items.claim(
         {
             "schema_version": "1",
@@ -59,10 +108,10 @@ def _claim(client, item: str, stem: str) -> dict:
             "fairness_group": None,
             "worker_ref": "worker-" + stem,
             "now_ms": int(time.time() * 1000),
-            "lease_ms": 30_000,
+            "lease_ms": lease_ms,
             "max_tenant_in_flight": 4096,
         },
-        idempotency_key=stem + ":claim",
+        idempotency_key=f"{stem}:{key}",
     )
     assert claim["claimed"] is True
     return claim
@@ -294,3 +343,102 @@ def test_refusals_leave_state_unchanged(effect_client):
         )
         == receipt
     )
+
+
+def _uncertain_run(client, stem: str) -> tuple[str, dict]:
+    """Claim an item, admit its request, mark it started and record a receipt."""
+    item = _item(client, stem)
+    claim = _claim(client, item, stem)
+    attempt = claim.get("attempt", 1)
+    admitted = _admitted(b'{"call":"send"}')
+    client.work_items.submit_admitted_request(
+        work_item_id=item,
+        attempt=attempt,
+        expected_revision=_view(client, item)["version"],
+        request=admitted,
+    )
+    started = client.work_items.mark_effect_started(
+        tenant=TEST_TENANT,
+        work_item_id=item,
+        worker_id=claim["lease_holder_ref"],
+        lease_epoch=claim["lease_epoch"],
+        fencing_token=claim["fencing_token"],
+        expected_revision=_view(client, item)["version"],
+    )
+    client.work_items.record_effect_receipt(
+        tenant=TEST_TENANT,
+        work_item_id=item,
+        attempt=attempt,
+        expected_revision=started["revision"],
+        receipt=_receipt(item, admitted["request_ref"], claim["lease_holder_ref"]),
+    )
+    return item, claim
+
+
+# spec: MEDULLA-DURABLE-KERNEL-R820.5
+@pytest.mark.spec("MEDULLA-DURABLE-KERNEL-R820.5")
+def test_audit_and_metrics_after_uncertain_run(metered_client):
+    client = metered_client
+    before = _scrape(client)
+    item, claim = _uncertain_run(client, uuid.uuid4().hex)
+    attempt = claim.get("attempt", 1)
+
+    lines = [line for line in _audit_lines(client) if item in line]
+    assert len(lines) == 2, lines
+    assert any("MarkWorkItemEffectStarted" in line for line in lines)
+    assert any("RecordEffectReceipt" in line for line in lines)
+    for line in lines:
+        assert f"{item}:{attempt}:" in line
+        assert "send" not in line  # no request parameters in the audit row
+
+    after = _scrape(client)
+    total = "medulla_work_item_uncertain_effects_total"
+    for outcome in ("started", "applied"):
+        series = f'{total}{{outcome="{outcome}"}}'
+        assert after[series] == before.get(series, 0.0) + 1
+    # The receipt closed the item the mark opened.
+    assert after["medulla_work_item_uncertain_open"] == before.get(
+        "medulla_work_item_uncertain_open", 0.0
+    )
+
+
+# spec: MEDULLA-DURABLE-KERNEL-R820.6
+@pytest.mark.spec("MEDULLA-DURABLE-KERNEL-R820.6")
+def test_started_item_never_dead_letters(effect_client):
+    client = effect_client
+    stem = uuid.uuid4().hex
+    item = _item(client, stem)
+    # The item admits one attempt; the lease is short so it expires under us.
+    claim = _claim(client, item, stem, lease_ms=1_500)
+    attempt = claim.get("attempt", 1)
+    admitted = _admitted(b'{"call":"send"}')
+    client.work_items.submit_admitted_request(
+        work_item_id=item,
+        attempt=attempt,
+        expected_revision=_view(client, item)["version"],
+        request=admitted,
+    )
+    client.work_items.mark_effect_started(
+        tenant=TEST_TENANT,
+        work_item_id=item,
+        worker_id=claim["lease_holder_ref"],
+        lease_epoch=claim["lease_epoch"],
+        fencing_token=claim["fencing_token"],
+        expected_revision=_view(client, item)["version"],
+    )
+
+    time.sleep(2.0)  # the lease expires past the attempt ceiling
+    reclaimed = _claim(client, item, stem, key="again")
+    view = _view(client, item)
+    assert view["effect_phase"] == "started"
+    assert view["status"] != "dead_letter"
+    assert reclaimed.get("attempt", attempt) == attempt
+
+    client.work_items.record_effect_receipt(
+        tenant=TEST_TENANT,
+        work_item_id=item,
+        attempt=attempt,
+        expected_revision=view["version"],
+        receipt=_receipt(item, admitted["request_ref"], reclaimed["lease_holder_ref"]),
+    )
+    assert _view(client, item)["effect_phase"] == "resolved"

@@ -892,6 +892,10 @@ pub use outbox::{outbox_dead_lettered, set_outbox_head};
 mod store_migration;
 pub use store_migration::store_migration_step;
 
+// Uncertain-effect series (MEDULLA-DURABLE-KERNEL-R820.5).
+mod work_item;
+pub use work_item::{work_item_uncertain_effect, work_item_uncertain_open_add};
+
 // ── No-op shims (feature `metrics` disabled) ─────────────────────────────
 #[cfg(not(feature = "metrics"))]
 mod noop;

@@ -203,6 +203,18 @@ pub enum EffectOutcome {
     Compensated,
 }
 
+impl EffectOutcome {
+    /// The closed label of this outcome, as it is stored and as metrics and
+    /// audit rows spell it.
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::Applied => "applied",
+            Self::NotApplied => "not_applied",
+            Self::Compensated => "compensated",
+        }
+    }
+}
+
 /// The one receipt that resolves a job's external effect. One per job ID.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -310,6 +322,15 @@ pub struct EffectWriteResult {
     /// The stored receipt, for `RecordEffectReceipt`.
     #[serde(default)]
     pub receipt: Option<EffectReceipt>,
+}
+
+impl EffectWriteResult {
+    /// `started` for a start mark, the receipt's outcome label for a receipt.
+    pub fn outcome_label(&self) -> &'static str {
+        self.receipt
+            .as_ref()
+            .map_or("started", |receipt| receipt.outcome.label())
+    }
 }
 
 /// The stored form of one admitted request: its digest and the payload ref,
