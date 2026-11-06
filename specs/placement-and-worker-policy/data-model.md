@@ -58,4 +58,12 @@ Governing plan: [plan.md](plan.md). This file lists the types, vocabulary and se
 ## State machine types
 
 - Rows `MEDULLA-PLACEMENT-R780`, `MEDULLA-PLACEMENT-R781`, `MEDULLA-PLACEMENT-R782`, `MEDULLA-PLACEMENT-R783`: each machine type stores one state field and exposes one `apply` (or `step`) function that returns `TransitionRefused` for an illegal transition.
-- Removed fields: the dual-truth flags and literals named in the rows (for example `terminal`, `tombstone`, `reclaimed`, `cancel_requested`, `active`, `revoked`, `destination_installed`).
+- Deleted fields: the dual-truth flags and literals named in the rows (for example `terminal`, `tombstone`, `reclaimed`, `cancel_requested`, `active`, `revoked`, `destination_installed`).
+
+### State machine fields
+
+- `LaneHoldMachine`. States: `Absent`, `Active`, `Released`, `Expired`, `CleanupPending`, `Cleaned`. Persisted state: `state` (new field of the hold record, enum `HoldState`, `crates/medulla-result-types/src/epistemic_operations/development_state.rs:23`). `cleanup_hold_id` is data and never a flag.
+- `ResourceReservationMachine`. States: `Absent`, `Reserved`, `Released`, `Reclaimed`, `Expired`, `Superseded`. Persisted state: `state` (enum `ResourceReservationRecordState`, `crates/medulla-result-types/src/epistemic_operations/resource_core.rs:32`). `tombstone` is deleted and `is_terminal` is derived.
+- `CapacityLeaseMachine`. States: `Active`, `Released`, `Reclaimed`. Persisted state: `status` (enum `CapacityLeaseState`, `crates/medulla-mutation-types/src/capacity_lease.rs:195`). `renewed_count` is data. `effective_status(now)` derives the Expired view.
+- `ControlLeaseMachine`. States: `Active`, `Consumed`, `Revoked`, `Expired`. Persisted state: `status` (enum `ControlLeaseStatus`, `crates/medulla-work-types/src/control_lease.rs`). `Expired` is the stored sweeper result. `effective_status(now)` derives it for reads before the sweep.
+- `MembershipShrinkMachine`. States: `Proposed`, `DrainRequested`, `Drained`, `LearnerCaughtUp`, `LeadershipTransferred`, `SafetyChecked`, `RemovalCommitted`, `Completed`, `Aborted`. Persisted state: `phase` (enum `MembershipShrinkPhase`, `crates/medulla-raft/src/raft/membership_shrink.rs:26`), persisted in the shrink journal. `terminal()` is derived.

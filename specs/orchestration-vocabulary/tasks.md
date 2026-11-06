@@ -167,9 +167,12 @@ Each task line reads `- [ ] T001 [P] [US1] <ID> description`. One task per leaf 
 - [ ] T162 [US9] MEDULLA-ORCH-VOCAB-R811.3 Add state-machine shapes
 - [ ] T163 [US9] MEDULLA-ORCH-VOCAB-R811.4 Add the typed transition refusal
 - [ ] T164 [US9] MEDULLA-ORCH-VOCAB-R811.5 Register the source and prove the served pass-through
+- [ ] T171 [US9] MEDULLA-ORCH-VOCAB-R811.6 Pack extension rule and conformance
+- [ ] T172 [US9] MEDULLA-ORCH-VOCAB-R811.7 Competency question: what can happen next to X
 - [ ] T165 [US9] MEDULLA-ORCH-VOCAB-R812 WorkItem queue row is one explicit state machine
 - [ ] T166 [US9] MEDULLA-ORCH-VOCAB-R812.1 Work item transition function and edge table
 - [ ] T167 [US9] MEDULLA-ORCH-VOCAB-R812.2 Route every work item writer through apply and drop the legacy literal
 - [ ] T168 [US9] MEDULLA-ORCH-VOCAB-R812.3 Describe the work item machine in the ontology
 - [ ] T169 [US9] MEDULLA-ORCH-VOCAB-R812.4 Serve the typed refusal for work item transitions
+- [ ] T173 [US9] MEDULLA-ORCH-VOCAB-R812.5 Export the work item state vocabulary
 - [ ] T170 [US9] MEDULLA-ORCH-VOCAB-R813 Lane work item derives terminal from status

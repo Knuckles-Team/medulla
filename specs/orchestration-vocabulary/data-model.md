@@ -47,4 +47,8 @@ This file names the records and graph terms that the rows add. Each entity has o
 ## State machine types
 
 - Rows `MEDULLA-ORCH-VOCAB-R811`, `MEDULLA-ORCH-VOCAB-R812`, `MEDULLA-ORCH-VOCAB-R813`: each machine type stores one state field and exposes one `apply` (or `step`) function that returns `TransitionRefused` for an illegal transition.
-- Removed fields: the dual-truth flags and literals named in the rows (for example `terminal`, `tombstone`, `reclaimed`, `cancel_requested`, `active`, `revoked`, `destination_installed`).
+- Deleted fields: the dual-truth flags and literals named in the rows (for example `terminal`, `tombstone`, `reclaimed`, `cancel_requested`, `active`, `revoked`, `destination_installed`).
+
+### State machine fields
+
+- `WorkItemMachine`. States: `Submitted`, `Ready`, `Leased`, `Running`, `Succeeded`, `Failed`, `Cancelled`, `DeadLetter`. Persisted state: `status` (stored text of `WorkItemStatus`, `crates/medulla-work-types/src/work_item_read.rs:88`). `is_terminal` and `lease_is_live(now)` are derived.

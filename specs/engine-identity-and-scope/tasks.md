@@ -68,7 +68,11 @@ One task per leaf row of `requirements.md`, producers first: issuer trust and RB
 - [ ] T062 [US7] MEDULLA-IDENTITY-R712 Credential resolution observes without refreshing
 - [ ] T063 [US7] MEDULLA-IDENTITY-R713 Original session reference inspection
 - [ ] T064 [US7] MEDULLA-IDENTITY-R720 Governed change adopts the elevation edge table
+- [ ] T069 [US7] MEDULLA-IDENTITY-R720.1 Governed change transition function
+- [ ] T070 [US7] MEDULLA-IDENTITY-R720.2 Describe the governed change machine in the ontology
 - [ ] T065 [US7] MEDULLA-IDENTITY-R721 User status is one explicit state machine
 - [ ] T066 [US7] MEDULLA-IDENTITY-R721.1 Every user status write goes through transition_status
 - [ ] T067 [US7] MEDULLA-IDENTITY-R721.2 Derive active and revoked, and describe the machine
 - [ ] T068 [US7] MEDULLA-IDENTITY-R722 Describe the RBAC elevation machine in the ontology
+- [ ] T071 [US7] MEDULLA-IDENTITY-R722.1 Describe the RBAC elevation machine in the ontology
+- [ ] T072 [US7] MEDULLA-IDENTITY-R722.2 Elevation refusals are typed

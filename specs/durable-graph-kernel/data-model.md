@@ -20,4 +20,8 @@ A MutationBatch commits graph, table, KV and time-series members together or non
 ## State machine types
 
 - Rows `MEDULLA-DURABLE-KERNEL-R872`: each machine type stores one state field and exposes one `apply` (or `step`) function that returns `TransitionRefused` for an illegal transition.
-- Removed fields: the dual-truth flags and literals named in the rows (for example `terminal`, `tombstone`, `reclaimed`, `cancel_requested`, `active`, `revoked`, `destination_installed`).
+- Deleted fields: the dual-truth flags and literals named in the rows (for example `terminal`, `tombstone`, `reclaimed`, `cancel_requested`, `active`, `revoked`, `destination_installed`).
+
+### State machine fields
+
+- `SemanticIndexUpgradeMachine`. States: `Inspect`, `Installing`, `Installed`. Persisted state: `phase` (enum `UpgradePhase`, replacing `destination_installed: bool` at `crates/medulla-h-retrieve/src/semantic_index_runtime/upgrade.rs:132`).

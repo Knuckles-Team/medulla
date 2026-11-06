@@ -45,4 +45,8 @@ The derived stage is not a record. `derive_stage` computes it on each read (R019
 ## State machine types
 
 - Rows `MEDULLA-SDLC-R030`: each machine type stores one state field and exposes one `apply` (or `step`) function that returns `TransitionRefused` for an illegal transition.
-- Removed fields: the dual-truth flags and literals named in the rows (for example `terminal`, `tombstone`, `reclaimed`, `cancel_requested`, `active`, `revoked`, `destination_installed`).
+- Deleted fields: the dual-truth flags and literals named in the rows (for example `terminal`, `tombstone`, `reclaimed`, `cancel_requested`, `active`, `revoked`, `destination_installed`).
+
+### State machine fields
+
+- `DefectMachine`. States: `New`, `Triaged`, `Fixing`, `Fixed`, `Verified`, `Closed`, `Rejected`. Persisted state: `status` (enum `DefectStatus`, `crates/medulla-source-types/src/lifecycle.rs:256`).

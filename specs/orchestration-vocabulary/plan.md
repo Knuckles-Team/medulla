@@ -139,3 +139,9 @@ none
 ### Explicit state machines
 
 Organization constitution Article XXXI requires a closed set of states, one transition function and a typed refusal for each machine. Rows `MEDULLA-ORCH-VOCAB-R811`, `MEDULLA-ORCH-VOCAB-R812`, `MEDULLA-ORCH-VOCAB-R813` apply it here. Each machine returns `TransitionRefused` (MEDULLA-ORCH-VOCAB-R811.4), stores its state in one field, and is described in `crates/medulla-core/ontology/state-machines-v1.ttl` with classes that roll up to the core state-machine classes. The change is a hard cutover: the old literals, flags and inferred states are deleted in the same release.
+
+#### Machine wiring
+
+- `WorkItemMachine`: entry point served `ClaimWorkItem`, `RenewWorkItemLease`, `CommitWorkItem`, `CancelWorkItem` and `DeferWorkItem` → the store writers `claim.rs`, `lease.rs`, `commit.rs`, `cancel.rs` and `submit.rs` under `crates/medulla-work-store/src/redb_store/work_item/` → `WorkItemStatus::apply` in `crates/medulla-work-types/src/work_item_machine.rs` → stored state field. Attach points: `claim.rs:58,91,302,494`, `lease.rs:70`, `commit.rs:78,98,163`, `cancel.rs:136,296`. Wiring row: MEDULLA-ORCH-VOCAB-R812.2. Hot-path proof row: MEDULLA-ORCH-VOCAB-R812.4.
+- Core vocabulary: entry point server bootstrap → `crates/medulla-graph-core/src/graph/schema_sources.rs` (core spec list, beside `bpmn`) → `state-machines-v1.ttl` and its shapes. Wiring row: MEDULLA-ORCH-VOCAB-R811.5. Hot-path proof row: `test_illegal_transition_returns_all_four_fields` of MEDULLA-ORCH-VOCAB-R811.5 and `test_ready_work_item_lists_claim_and_cancel` of MEDULLA-ORCH-VOCAB-R811.7.
+- Lane work item: lane store writers → `WorkItemStatus::apply` of R812.1 → lane row `status` (`types.rs:29`). Wiring row: MEDULLA-ORCH-VOCAB-R813. Hot-path proof row: `terminal_is_derived_from_status` of MEDULLA-ORCH-VOCAB-R813.

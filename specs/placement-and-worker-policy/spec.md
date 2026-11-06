@@ -40,6 +40,7 @@ Given a three-host inventory and five services with one service needing a capabi
 - FR-006: The tenant client follows the engine's placement route and opens a graph only with one (MEDULLA-PLACEMENT-R611).
 - FR-007: Claims are paced by priority class and schedule ticks run once per window under a fenced leader (MEDULLA-PLACEMENT-R750, MEDULLA-PLACEMENT-R751).
 - FR-008: A placement plan assigns services to hosts within capacity or abstains with a typed reason (MEDULLA-PLACEMENT-R700).
+- FR-009: Each lifecycle is an explicit state machine. It has one transition function and one stored state field. It refuses with a typed record and has an ontology description (MEDULLA-PLACEMENT-R780, MEDULLA-PLACEMENT-R781, MEDULLA-PLACEMENT-R782, MEDULLA-PLACEMENT-R783).
 - SC-001: The seven overlapping ingest-worker rows retire to the ingest-worker spec and no duplicate policy constant remains (MEDULLA-PLACEMENT-R002.6, MEDULLA-PLACEMENT-R002.7, MEDULLA-PLACEMENT-R002.8, MEDULLA-PLACEMENT-R002.9, MEDULLA-PLACEMENT-R002.10, MEDULLA-PLACEMENT-R002.11, MEDULLA-PLACEMENT-R002.12, MEDULLA-PLACEMENT-R002.15).
 
 ## Scope and interfaces
@@ -72,6 +73,7 @@ Owned: `QuestionKind::Placement`, placement vocabulary, `stat_placement.rs`, pro
 | FR-006 | plan.md Project Structure | T-007 | PENDING |
 | FR-007 | plan.md Project Structure | T-008 | PENDING |
 | FR-008 | plan.md Project Structure | T-009 | PENDING |
+| FR-009 | plan.md Machine wiring | MEDULLA-PLACEMENT-R780 to MEDULLA-PLACEMENT-R783 | PENDING |
 
 ## Open questions
 

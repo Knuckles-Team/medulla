@@ -332,3 +332,9 @@ none
 ### Explicit state machines
 
 Organization constitution Article XXXI requires a closed set of states, one transition function and a typed refusal for each machine. Rows `MEDULLA-IDENTITY-R720`, `MEDULLA-IDENTITY-R721`, `MEDULLA-IDENTITY-R722` apply it here. Each machine returns `TransitionRefused` (MEDULLA-ORCH-VOCAB-R811.4), stores its state in one field, and is described in `crates/medulla-core/ontology/state-machines-v1.ttl` with classes that roll up to the core state-machine classes. The change is a hard cutover: the old literals, flags and inferred states are deleted in the same release.
+
+#### Machine wiring
+
+- `GovernedChangeMachine`: entry point served governed change methods → `GovernedStatus::apply` → `GovernedStatus::apply` in `crates/medulla-mutation-types/src/governed_change.rs`, the one assign site → stored state field. Attach points: `governed_change.rs:472,512,549`. Wiring row: MEDULLA-IDENTITY-R720.1. Hot-path proof row: `no_writer_sets_state_outside_apply` of MEDULLA-IDENTITY-R720.1.
+- `UserStatusMachine`: entry point served identity methods → `transition_status` → `UserStatus::apply` in `crates/medulla-identity-types/src/identity/model.rs`, called only by `transition_status` in `crates/medulla-identity-types/src/identity/store/users.rs:259` → stored state field. Attach points: `store/users.rs:259`, `store/modes.rs:398`, `store/auth.rs:87`. Wiring row: MEDULLA-IDENTITY-R721.1. Hot-path proof row: `no_write_bypasses_transition_status` of MEDULLA-IDENTITY-R721.1.
+- `RbacElevationMachine`: entry point served elevation methods → `move_to` → `ElevationLedger::move_to` at `crates/medulla-identity-types/src/rbac_elevation/ledger.rs:133`, the one assign site (`:137`) → stored state field. Attach points: `rbac_elevation/ledger.rs:133,137`. Wiring row: MEDULLA-IDENTITY-R722.2. Hot-path proof row: `no_writer_sets_state_outside_apply` of MEDULLA-IDENTITY-R722.2.

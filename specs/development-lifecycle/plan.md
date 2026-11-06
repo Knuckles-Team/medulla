@@ -290,3 +290,7 @@ The decisions this spec consumes stay inside medulla: `MEDULLA-DECISION-ENGINE-R
 ### Explicit state machines
 
 Organization constitution Article XXXI requires a closed set of states, one transition function and a typed refusal for each machine. Rows `MEDULLA-SDLC-R030` apply it here. Each machine returns `TransitionRefused` (MEDULLA-ORCH-VOCAB-R811.4), stores its state in one field, and is described in `crates/medulla-core/ontology/state-machines-v1.ttl` with classes that roll up to the core state-machine classes. The change is a hard cutover: the old literals, flags and inferred states are deleted in the same release.
+
+#### Machine wiring
+
+- `DefectMachine`: entry point served defect methods → `crates/medulla-core/src/lifecycle/defect.rs` → `DefectStatus::apply` in `crates/medulla-source-types/src/defect_machine.rs`, beside the enum so the trait impl stays in the defining crate; `crates/medulla-core/src/lifecycle/defect.rs` calls it → stored state field. Attach points: `defect.rs:84,132,141`. Wiring row: MEDULLA-SDLC-R030.1. Hot-path proof row: `no_writer_sets_state_outside_apply` of MEDULLA-SDLC-R030.1.
