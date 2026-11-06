@@ -368,5 +368,6 @@ closed_error_codes! {
         EvidenceNoChannel => "EVIDENCE_NO_CHANNEL",
         EvidenceWeightOutOfRange => "EVIDENCE_WEIGHT_OUT_OF_RANGE",
         ArtifactSealViolation => "ARTIFACT_SEAL_VIOLATION",
+        LayerCycle => "LAYER_CYCLE",
     }
 }

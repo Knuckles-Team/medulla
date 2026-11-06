@@ -299,7 +299,7 @@ ann-redb = ["medulla-server/ann-redb", "medulla-wire/ann-redb", "medulla-h-query
 # the mutation gateway (`src/server/mutation.rs`) is server-only, so the binary
 # linking the MethodPolicy ledger is exactly the `server` build, matching every other
 # server-only dependency in this list.
-server = ["medulla-resource-store/server", "medulla-lane-store/server", "medulla-server/server", "medulla-wire/server", "medulla-wire-msg/server", "medulla-h-admin/server", "medulla-h-txn/server", "medulla-h-query/server", "medulla-h-decide/server", "medulla-h-jobs/server", "medulla-h-ingest/server", "medulla-h-graph/server", "medulla-h-compute/server", "medulla-raft/server", "medulla-persistence/server", "medulla-server-api/server", "medulla-store/server", "medulla-kernel/server", "dep:tokio", "dep:clap", "dep:tracing-subscriber", "dep:async-trait", "dep:medulla-capabilities", "medulla-persistence-ops/server", "medulla-federation/server", "medulla-server-store-tests/server", "medulla-persistence-tests/server"]
+server = ["dep:medulla-enrich", "medulla-resource-store/server", "medulla-lane-store/server", "medulla-server/server", "medulla-wire/server", "medulla-wire-msg/server", "medulla-h-admin/server", "medulla-h-txn/server", "medulla-h-query/server", "medulla-h-decide/server", "medulla-h-jobs/server", "medulla-h-ingest/server", "medulla-h-graph/server", "medulla-h-compute/server", "medulla-raft/server", "medulla-persistence/server", "medulla-server-api/server", "medulla-store/server", "medulla-kernel/server", "dep:tokio", "dep:clap", "dep:tracing-subscriber", "dep:async-trait", "dep:medulla-capabilities", "medulla-persistence-ops/server", "medulla-federation/server", "medulla-server-store-tests/server", "medulla-persistence-tests/server"]
 # Pure-Rust TLS/mTLS for the native MessagePack TCP service. The one main build
 # includes it so remote-engine deployments can terminate TLS in the binary.
 server-tls = ["medulla-server/server-tls", "medulla-h-admin/server-tls", "server", "dep:rustls", "dep:tokio-rustls"]
@@ -1851,6 +1851,7 @@ medulla-raft = { path = "crates/medulla-raft" }
 medulla-h-compute = { path = "crates/medulla-h-compute" }
 medulla-h-graph = { path = "crates/medulla-h-graph" }
 medulla-h-ingest = { path = "crates/medulla-h-ingest" }
+medulla-enrich = { path = "crates/medulla-enrich", optional = true }
 medulla-h-jobs = { path = "crates/medulla-h-jobs" }
 medulla-h-decide = { path = "crates/medulla-h-decide" }
 medulla-h-query = { path = "crates/medulla-h-query" }
