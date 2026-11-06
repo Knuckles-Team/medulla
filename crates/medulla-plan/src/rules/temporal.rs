@@ -99,7 +99,7 @@ impl TemporalRule {
                 return Err(invalid("body predicates join with `&`"));
             }
         }
-        if (tokens.len() - 4) % 2 == 0 {
+        if (tokens.len() - 4).is_multiple_of(2) {
             return Err(invalid("rule body ends with `&`"));
         }
         Ok(Self {
