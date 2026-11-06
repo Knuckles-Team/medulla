@@ -21,8 +21,7 @@
 
 <http://knuckles.team/kg/life> a owl:Ontology ;
     rdfs:label "World Model — Life" ;
-    rdfs:comment "Organisms and taxa (taxa as individuals), biological and pathological processes, anatomy hooks and organism occurrence observations; BFO-placed and mapped to COB, NCBITaxon/Darwin Core/TAXRANK, GO, OGMS, UBERON and Wikidata." ;
-    owl:imports <http://knuckles.team/kg/core> .
+    rdfs:comment "Organisms and taxa (taxa as individuals), biological and pathological processes, anatomy hooks and organism occurrence observations; BFO-placed and mapped to COB, NCBITaxon/Darwin Core/TAXRANK, GO, OGMS, UBERON and Wikidata." .
 
 # ── Organisms and taxonomy ────────────────────────────────────────────────────────
 

@@ -279,8 +279,7 @@
     rdfs:comment """Vendor-neutral Technology Reference Model: a TechnologyProduct/
     Standard portfolio, deployed AssetInstances, and the TechnologyRisk findings
     (lifecycle/EOL/vulnerability) the KG reasons over across LeanIX, ServiceNow CMDB,
-    and ERPNext. CONCEPT:KG-2.9.""" ;
-    owl:imports <http://knuckles.team/kg/core> .
+    and ERPNext. CONCEPT:KG-2.9.""" .
 
 :PeerGroup a owl:Class ;
     rdfs:label "Peer Group" ;
@@ -350,3 +349,17 @@
     rdfs:subPropertyOf :targetValue ;
     rdfs:domain :Objective ;
     rdfs:range xsd:float .
+
+# ── Core rooting (MEDULLA-TYPED-PACKS-R071.2) ───────────────────────────────────
+# Every class of this module above reaches the core class kg:DomainEntity through rdfs:subClassOf.
+<http://knuckles.team/kg#Assessment> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#ComparisonCriterion> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#Cost> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#License> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#PeerGroup> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#Recommendation> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#TRMRequest> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#TechnologyProduct> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#TechnologyRisk> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#TechnologyStandard> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#TotalCostOfOwnership> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .

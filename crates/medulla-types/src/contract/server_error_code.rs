@@ -212,6 +212,7 @@ closed_error_codes! {
         ModeTransitionForbidden => "MODE_TRANSITION_FORBIDDEN",
         OntologyCoreConflict => "ONTOLOGY_CORE_CONFLICT",
         OntologyDigestMismatch => "ONTOLOGY_DIGEST_MISMATCH",
+        OntologyPackImportsCore => "ONTOLOGY_PACK_IMPORTS_CORE",
         OntologyRevisionConflict => "ONTOLOGY_REVISION_CONFLICT",
         OutboxOwnerUnavailable => "OUTBOX_OWNER_UNAVAILABLE",
         OutboxOwnerUnknown => "OUTBOX_OWNER_UNKNOWN",

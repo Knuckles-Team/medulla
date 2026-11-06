@@ -19,8 +19,7 @@
 
 <http://knuckles.team/kg/finance> a owl:Ontology ;
     rdfs:label "Finance — Markets and Trend Signals" ;
-    rdfs:comment "Financial instruments, trading venues and listings; OHLCV bar series held in the time-series store; versioned indicator specifications, the per-series signal state and the trend-flip records it emits; macro-policy events and backtest-run provenance records; trading strategies, signals, debates, exchange backends, order audit records, positions and risk snapshots. Informational only: no class here authorises an order." ;
-    owl:imports <http://knuckles.team/kg/core> .
+    rdfs:comment "Financial instruments, trading venues and listings; OHLCV bar series held in the time-series store; versioned indicator specifications, the per-series signal state and the trend-flip records it emits; macro-policy events and backtest-run provenance records; trading strategies, signals, debates, exchange backends, order audit records, positions and risk snapshots. Informational only: no class here authorises an order." .
 
 # ── Instruments, venues and listings ──────────────────────────────────────────────
 

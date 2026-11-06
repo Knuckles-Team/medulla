@@ -10,8 +10,7 @@
 
 <http://knuckles.team/kg/connector-seed> a owl:Ontology ;
     rdfs:label "Connector seed graph" ;
-    rdfs:comment "Identity, catalog and reference/index facts established when a connector pack is imported." ;
-    owl:imports <http://knuckles.team/kg/core> .
+    rdfs:comment "Identity, catalog and reference/index facts established when a connector pack is imported." .
 
 seed:SeedSubject a owl:Class ;
     rdfs:label "Seed subject" ;
@@ -26,3 +25,8 @@ seed:fromSeed a owl:ObjectProperty ;
     rdfs:domain seed:SeedSubject ;
     rdfs:range seed:SeedRevision ;
     rdfs:comment "The seed revision that established a seed subject." .
+
+# ── Core rooting (MEDULLA-TYPED-PACKS-R071.2) ───────────────────────────────────
+# Every class of this module above reaches the core class kg:DomainEntity through rdfs:subClassOf.
+<http://knuckles.team/kg/connector-seed#SeedRevision> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/connector-seed#SeedSubject> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .

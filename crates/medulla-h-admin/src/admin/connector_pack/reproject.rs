@@ -45,6 +45,7 @@ pub(crate) static INJECT_BLOB_UNAVAILABLE: std::sync::Mutex<Option<String>> =
 struct PackProjectionDocuments {
     shapes: Vec<crate::graph_schema::PackSchemaDocument>,
     ontologies: Vec<crate::graph_schema::PackSchemaDocument>,
+    crosswalks: Vec<crate::graph_schema::PackSchemaDocument>,
 }
 
 pub(crate) async fn serve(
@@ -187,6 +188,7 @@ async fn commit_schema_projection(
         &plan.record_id,
         documents.shapes,
         documents.ontologies,
+        documents.crosswalks,
         verified.idempotency_key(),
     )
     .await
@@ -274,8 +276,10 @@ fn projection_documents_from_store(
 ) -> Result<PackProjectionDocuments, String> {
     let mut shapes = Vec::new();
     let mut ontologies = Vec::new();
+    let mut crosswalks = Vec::new();
     let mut shapes_length = 0usize;
     let mut ontology_length = 0usize;
+    let mut crosswalk_length = 0usize;
     for body in bodies {
         let bytes = medulla_server_blob::blob::engine_bodies::read_engine_body(
             store,
@@ -290,13 +294,18 @@ fn projection_documents_from_store(
         let (target, total_length) = match body.kind {
             PackEntryKind::Ontology => (&mut ontologies, &mut ontology_length),
             PackEntryKind::Shapes => (&mut shapes, &mut shapes_length),
+            PackEntryKind::Crosswalk => (&mut crosswalks, &mut crosswalk_length),
             _ => {
                 return Err("CORRUPT_CONNECTOR_PACK: projection contains a non-schema body".into())
             }
         };
         push_schema_document(target, total_length, &body.uri, text)?;
     }
-    Ok(PackProjectionDocuments { shapes, ontologies })
+    Ok(PackProjectionDocuments {
+        shapes,
+        ontologies,
+        crosswalks,
+    })
 }
 
 /// A body read that failed without its own stable code is a chunk store

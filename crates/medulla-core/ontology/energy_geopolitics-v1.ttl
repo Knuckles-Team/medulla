@@ -132,7 +132,6 @@
     ns1:title "Energy & Geopolitics Domain Extension" ;
     dc:license <https://opensource.org/licenses/MIT> ;
     rdfs:comment "Domain extension for energy supply chains, geopolitics, and associated risk analysis." ;
-    owl:imports <http://knuckles.team/kg/core> ;
     prov:wasGeneratedBy <http://knuckles.team/agents/ontology-builder> .
 
 :InfrastructureEntity a owl:Class ;

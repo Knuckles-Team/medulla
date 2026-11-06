@@ -168,8 +168,7 @@ Enables cross-domain reasoning: voice messages → tasks → calendar
 events → incident correlation.
 
 Standards alignment: schema:Event, iCalendar (RFC 5545),
-W3C PROV-O provenance.""" ;
-    owl:imports <http://knuckles.team/kg/core> .
+W3C PROV-O provenance.""" .
 
 :FileShare a owl:Class ;
     rdfs:label "File Share" ;
