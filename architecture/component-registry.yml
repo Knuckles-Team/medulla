@@ -2335,6 +2335,7 @@ components:
       - "crates/medulla-sqlite-format/src/schema.rs"
       - "crates/medulla-sqlite-format/src/value.rs"
       - "crates/medulla-sqlite-format/src/varint.rs"
+      - "crates/medulla-sqlite-format/src/wal.rs"
       - "crates/medulla-sqlite-format/src/writer.rs"
     public_contract_roots:
       - "crates/medulla-lake/src/lib.rs"
@@ -4078,6 +4079,7 @@ components:
       - "tests/test_ci_change_scope.py"
       - "tests/test_merge_safe_registries.py"
       - "tests/attached_conformance.rs"
+      - "tests/attached_sqlite_served.rs"
       - "tests/test_ci_parity.py"
       - "tests/test_no_crate_level_lint_allows.py"
       - "tests/test_ci_light_gates_topology.py"

@@ -68,6 +68,10 @@ pub mod federation_trino;
 #[cfg(feature = "federation")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod mirror_target;
+/// A live SQLite file as a foreign source, read through the lock-free WAL snapshot
+/// reader (MEDULLA-UNIFIED-DATA-PLANE-R015.2.2.3).
+#[cfg(feature = "federation")]
+pub mod sqlite_foreign;
 #[cfg(all(any(test, feature = "test-support"), feature = "federation"))]
 pub mod test_guard;
 // The federation foreign-scan + compose-join-with-local proofs (CONCEPT:MEDULLA-KG.query.query-federation):

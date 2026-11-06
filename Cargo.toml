@@ -1991,6 +1991,13 @@ medulla-server-router = { path = "crates/medulla-server-router" }
 name = "attached_conformance"
 path = "tests/attached_conformance.rs"
 
+# MEDULLA-UNIFIED-DATA-PLANE-R015.2.2: attached SQLite file source (watermark capture and
+# the live read under a concurrent writer).
+[[test]]
+name = "attached_sqlite_served"
+path = "tests/attached_sqlite_served.rs"
+required-features = ["federation", "durable"]
+
 [[bench]]
 name = "write_coalescer_bench"
 path = "benches/write_coalescer_bench.rs"
