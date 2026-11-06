@@ -5156,6 +5156,7 @@ dependencies = [
  "medulla-compute",
  "medulla-core",
  "medulla-graph-core",
+ "medulla-kvcache",
  "medulla-modality",
  "medulla-semantic-index",
  "medulla-types",
@@ -5873,7 +5874,6 @@ name = "medulla-kvcache"
 version = "0.1.0"
 dependencies = [
  "lz4_flex 0.14.0",
- "medulla-compute",
  "medulla-graph-algos",
  "medulla-graph-core",
  "medulla-modality",
@@ -6414,6 +6414,7 @@ dependencies = [
 name = "medulla-query-cache"
 version = "0.1.0"
 dependencies = [
+ "medulla-kvcache",
  "medulla-protocol-types",
  "parking_lot",
  "tracing",

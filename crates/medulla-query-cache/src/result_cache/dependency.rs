@@ -1,6 +1,8 @@
 use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
 
+use medulla_kvcache::LookupOutcome;
+
 use crate::dep_scope::{DepProbe, DepSet};
 
 use super::ResultCache;
@@ -73,7 +75,31 @@ impl ResultCache {
         actor_scope_hash: u64,
         probe: impl Into<DepProbe<'a>>,
     ) -> Option<Vec<u8>> {
-        let probe = probe.into();
+        self.get_dep_gated(query_hash, actor_scope_hash, probe.into(), None)
+    }
+
+    /// [`get_dep`](Self::get_dep) for an entry stored through
+    /// [`admit_dep`](Self::admit_dep): a hit needs the dependency check AND the tier
+    /// policy. The policy sees the current generation of each dimension the entry
+    /// depends on; an entry whose generation advanced, or that the policy never
+    /// admitted for `tenant`, is dropped and misses.
+    pub fn get_dep_admitted<'a>(
+        &self,
+        tenant: &str,
+        query_hash: u128,
+        actor_scope_hash: u64,
+        probe: impl Into<DepProbe<'a>>,
+    ) -> Option<Vec<u8>> {
+        self.get_dep_gated(query_hash, actor_scope_hash, probe.into(), Some(tenant))
+    }
+
+    fn get_dep_gated(
+        &self,
+        query_hash: u128,
+        actor_scope_hash: u64,
+        probe: DepProbe<'_>,
+        tenant: Option<&str>,
+    ) -> Option<Vec<u8>> {
         if self.cap == 0 {
             self.misses
                 .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
@@ -118,6 +144,40 @@ impl ResultCache {
             );
             self.maybe_log_rate();
             return None;
+        }
+        if let Some(tenant) = tenant {
+            let admitted = {
+                let deps = inner
+                    .dependency
+                    .map
+                    .get(&key)
+                    .map(|entry| entry.deps.clone());
+                let mut policy = self.policy.lock();
+                for dim in deps.iter().flat_map(|deps| deps.dims()) {
+                    if let Some(generation) = probe.generation(dim) {
+                        policy.advance_generation(
+                            super::admission::generation_source(dim),
+                            generation,
+                        );
+                    }
+                }
+                matches!(
+                    policy.lookup_outcome(
+                        tenant,
+                        &super::admission::policy_digest(query_hash, actor_scope_hash),
+                        0
+                    ),
+                    LookupOutcome::Hit(_)
+                )
+            };
+            if !admitted {
+                inner.dependency.recency.remove(&old_tick);
+                inner.dependency.map.remove(&key);
+                drop(inner);
+                self.misses
+                    .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                return None;
+            }
         }
         let bytes = {
             let entry = inner
