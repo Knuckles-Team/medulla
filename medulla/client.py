@@ -6533,7 +6533,7 @@ class EdgeClient:
             self._client, {"source_id": source_id, "target_id": target_id}
         )
 
-    async def invalidate(
+    async def invalidate_edge(
         self,
         source_id: str,
         target_id: str,
@@ -6558,7 +6558,7 @@ class EdgeClient:
             },
         )
 
-    async def supersede(
+    async def supersede_edge(
         self,
         source_id: str,
         target_id: str,
@@ -6589,6 +6589,28 @@ class EdgeClient:
                 "tx_now": int(tx_now),
             },
         )
+
+    async def as_of(
+        self,
+        seed: str,
+        ts: int,
+        *,
+        axis: Literal["valid", "tx"] = "valid",
+        then: str = "",
+        params: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Run ``seed`` as of instant ``ts`` on one time axis, then ``then``.
+
+        ``seed`` is the UQL text before the as-of stage, for example
+        ``MATCH (:Doc) WHERE year = 2020``; ``then`` holds the stages that must
+        follow it, for example ``TRAVERSE CITES``, so a traversal follows only the
+        edges visible at ``ts``. The helper inserts the UQL ``Op::AsOf`` stage:
+        ``AS OF @ts`` keeps edges with ``valid_from <= ts < valid_until`` and
+        ``AS OF TX @ts`` keeps edges with ``tx_from <= ts < tx_to``. Returns the
+        :meth:`QueryClient.uql` result.
+        """
+        text = _as_of_uql(seed, ts, axis, then)
+        return await self._client.query.uql(text, params)
 
     async def has(self, source_id: str, target_id: str) -> bool:
         return await _gen.graph.send_has_edge(
@@ -17437,6 +17459,20 @@ def _uql_row(columns: list[str], row: dict[str, Any]) -> dict[str, Any]:
 
 def _uql_rows(columns: list[str], rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [_uql_row(columns, row) for row in rows]
+
+
+_AS_OF_AXIS_KEYWORD = {"valid": "AS OF", "tx": "AS OF TX"}
+
+
+def _as_of_uql(seed: str, ts: int, axis: str, then: str) -> str:
+    """Build ``seed |> AS OF [TX] @ts [|> then]`` (the UQL ``Op::AsOf`` stage)."""
+    keyword = _AS_OF_AXIS_KEYWORD.get(axis)
+    if keyword is None or int(ts) < 0:
+        raise ValueError(
+            f"as-of needs axis in {sorted(_AS_OF_AXIS_KEYWORD)} and ts >= 0"
+        )
+    stages = [seed.strip(), f"{keyword} @{int(ts)}", then.strip()]
+    return " |> ".join(stage for stage in stages if stage)
 
 
 def _uql_result(result: dict[str, Any]) -> dict[str, Any]:
