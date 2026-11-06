@@ -56,3 +56,5 @@ pub mod ontology_codegen;
 /// fallback path structurally unrepresentable.
 pub mod persist_lock;
 pub mod registry;
+/// MEDULLA-INCREMENTAL-VIEWS-R005.1 — the process-global view status board.
+pub mod view_status;
