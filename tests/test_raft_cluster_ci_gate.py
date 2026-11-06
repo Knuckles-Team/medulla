@@ -45,12 +45,16 @@ def test_gates_variants_job_builds_and_tests_raft_under_cluster_features(
     raft_lib_step = next(
         step
         for step in steps
-        if "raft::" in step.get("run", "") and "--lib" in _run_tokens(step)
+        if "--lib" in _run_tokens(step) and "medulla-raft" in _run_tokens(step)
     )
     tokens = _run_tokens(raft_lib_step)
     assert "cargo" in tokens and "test" in tokens
+    # The raft unit tests live in the raft crates, selected by package.
+    assert {"medulla-raft", "medulla-raft-xshard", "medulla-server-consensus"} <= set(
+        tokens
+    )
     features_idx = tokens.index("--features")
-    features = set(tokens[features_idx + 1].split(","))
+    features = {f.rsplit("/", 1)[-1] for f in tokens[features_idx + 1].split(",")}
     assert {"cluster", "harness", "calvin"} <= features
 
 
