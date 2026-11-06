@@ -626,6 +626,7 @@ mod tests {
     }
 
     // spec: MEDULLA-INCREMENTAL-VIEWS-R001.2
+    /// Verifies MEDULLA-INCREMENTAL-VIEWS-R001.2: Compile or name the first unsupported op
     #[test]
     fn compile_rejects_unsupported_ops_with_index() {
         // Traverse → fallback, naming its index.
@@ -711,6 +712,7 @@ mod tests {
     }
 
     // spec: MEDULLA-INCREMENTAL-VIEWS-R001.1
+    /// Verifies MEDULLA-INCREMENTAL-VIEWS-R001.1: Signed row deltas
     #[test]
     fn scan_add_update_remove_matches_recompute() {
         let plan = Plan::new(vec![Op::Scan {
