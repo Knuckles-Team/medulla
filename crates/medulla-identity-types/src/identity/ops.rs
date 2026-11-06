@@ -1,6 +1,6 @@
 //! The `Method::Identity` operation family: the identity store's ops.
 //!
-//! Grouped into eight families so each dispatcher stays a small exhaustive
+//! Grouped into nine families so each dispatcher stays a small exhaustive
 //! match. On the wire an op is one object carrying both tags:
 //! `{"family": "user", "op": "create", "request": {...}}`.
 //!
@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 use super::access::IdpConfig;
 use super::approval_key::{ApprovalKeyLookup, ApprovalKeyRegistration, ApprovalKeyRevocation};
 use super::config::ModeTransition;
+use super::delegation::DelegationRecordWrite;
 use super::requests::{
     ApiKeyIssue, ApiKeyUse, AuthenticateRequest, CreateUserRequest, ExternalLogin,
     InitializeRequest, LinkRequest, OneTimeTokenIssue, PasswordChange, PasswordResetIssue,
@@ -382,6 +383,7 @@ macro_rules! in_family {
             IdentityOp::Mfa($op) => $body,
             IdentityOp::Access($op) => $body,
             IdentityOp::Idp($op) => $body,
+            IdentityOp::Delegation($op) => $body,
         }
     };
 }
@@ -399,6 +401,7 @@ pub enum IdentityOp {
     Mfa(MfaOp),
     Access(AccessOp),
     Idp(IdpOp),
+    Delegation(DelegationOp),
 }
 
 impl IdentityOp {
@@ -543,6 +546,24 @@ impl AccessOp {
             Self::ChangeUserRole { .. } => meta("change_user_role", true, OpAuthority::Admin),
             Self::ListRoles => meta("list_roles", false, OpAuthority::Read),
             Self::ListGroups => meta("list_groups", false, OpAuthority::Read),
+        }
+    }
+}
+
+/// WorkItem delegation records (MEDULLA-IDENTITY-R701).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "op", rename_all = "snake_case", deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum DelegationOp {
+    Record { request: DelegationRecordWrite },
+    Revoke { request: ObjectRef },
+}
+
+impl DelegationOp {
+    fn meta(&self) -> OpMeta {
+        match self {
+            Self::Record { .. } => meta("record_delegation", true, OpAuthority::Admin),
+            Self::Revoke { .. } => meta("revoke_delegation", true, OpAuthority::Admin),
         }
     }
 }

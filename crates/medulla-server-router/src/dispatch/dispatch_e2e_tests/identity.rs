@@ -23,6 +23,7 @@ use super::super::test_support::{
 };
 
 mod approval_keys;
+mod delegation_record;
 mod refusal_contract;
 mod resolution_context;
 mod revocation;

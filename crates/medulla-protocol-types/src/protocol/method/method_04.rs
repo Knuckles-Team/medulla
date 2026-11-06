@@ -533,6 +533,14 @@ $($variants)*
         agent_id: String,
     },
 
+    /// Read one WorkItem's delegation record (MEDULLA-IDENTITY-R701): its
+    /// current standing, and whether the principal is active and holds the tool
+    /// scope. Resolves under the verified request tenant; an unknown id and a
+    /// foreign-tenant id both refuse `DELEGATION_UNKNOWN`. Gated `identity:read`.
+    GetDelegationRecord {
+        work_item_id: String,
+    },
+
     /// Would `agent_id`'s own request of `access` on the REQUEST graph be
     /// admitted right now? Answers from the same isolation/RBAC decision the
     /// engine applies to that principal's requests, so a service that acts on

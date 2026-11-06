@@ -142,7 +142,7 @@ pub fn derive(op: &mut IdentityOp, stamp: &mut IdentityStamp, env: &StampEnv<'_>
         IdentityOp::Session(op) => derive_session(op, stamp),
         IdentityOp::Token(op) => derive_token(op, stamp, env),
         IdentityOp::Mfa(op) => derive_mfa(op, stamp, env),
-        IdentityOp::Access(_) => Ok(()),
+        IdentityOp::Access(_) | IdentityOp::Delegation(_) => Ok(()),
         IdentityOp::Idp(op) => {
             // A first-seen directory subject becomes a new principal.
             if matches!(op, IdpOp::Provision { .. }) {

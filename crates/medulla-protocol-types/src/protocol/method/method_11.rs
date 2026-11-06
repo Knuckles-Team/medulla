@@ -178,6 +178,12 @@ $($variants)*
         policy_msgpack: Vec<u8>,
     },
 
+    /// The caller tenant's stored metrics as `{name: latest value}` over the last
+    /// `telemetry.snapshot_window` seconds (MEDULLA-ORCH-VOCAB-R804). `tenant`
+    /// must be the verified request tenant, otherwise `ACCESS_DENIED`. Read-only;
+    /// derives nothing. Gated `telemetry:read`.
+    GetTelemetrySnapshot { tenant: String },
+
     // ── Served incidents (MEDULLA-UNIFIED-DATA-PLANE-R760.3) ───────────────
     /// Record one anomaly in the caller's tenant (from the verified carrier)
     /// and correlate it into an open incident over `window_ms`.
