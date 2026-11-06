@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""Compare a decision-budget run to its stored baseline (MEDULLA-DECISION-ENGINE-R178.2).
+"""Compare a decision-budget run to its stored baseline.
+
+Spec: MEDULLA-DECISION-ENGINE-R178.2.
 
 A run report and the baseline (`benches/baselines/decide.json`) are keyed by
 Criterion group (`decide/<family>`), each with `p50_ms`, `p99_ms` and
@@ -54,7 +56,8 @@ def check(run: dict[str, Any], baseline: dict[str, Any]) -> list[str]:
             if base is not None and value > float(base) * (1.0 + tolerance):
                 pct = (value / float(base) - 1.0) * 100.0
                 findings.append(
-                    f"{group}: {metric} {value:g} regressed {pct:.1f}% over baseline {float(base):g}"
+                    f"{group}: {metric} {value:g} regressed {pct:.1f}% "
+                    f"over baseline {float(base):g}"
                 )
     return findings
 

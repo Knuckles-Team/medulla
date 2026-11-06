@@ -224,6 +224,9 @@ fn is_camel_case(name: &str) -> bool {
         && name.chars().all(|c| c.is_ascii_alphanumeric())
 }
 
+/// One naming rule: the names it covers, its rule id, and its predicate.
+type NamingCheck<'a> = (&'a BTreeSet<String>, &'static str, fn(&str) -> bool);
+
 /// Classes must be PascalCase and properties camelCase, in O(names).
 ///
 /// Findings are sorted by subject; their severity follows `mode`.
@@ -232,7 +235,7 @@ pub fn lint_names(
     properties: &BTreeSet<String>,
     mode: NamingMode,
 ) -> Vec<NamingFinding> {
-    let checks: [(&BTreeSet<String>, &str, fn(&str) -> bool); 2] = [
+    let checks: [NamingCheck<'_>; 2] = [
         (classes, "class_pascal_case", is_pascal_case),
         (properties, "property_camel_case", is_camel_case),
     ];

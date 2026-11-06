@@ -18,7 +18,10 @@ builder verifies the WebAssembly header and refuses an import section, then
 ``--check`` compares both client copies byte for byte and reports their SHA-256
 digests. The generated-artifact ledger separately pins the committed SHA-256
 for each copy. Regeneration updates those existing pins with the module bytes.
-No post-link executable or archive is needed.
+The linked module is then shrunk by binaryen ``wasm-opt -Oz`` from one pinned
+release archive (``BINARYEN_URL``), fetched into the cargo target directory and
+refused unless its SHA-256 equals ``BINARYEN_SHA256``; the same pinned binary
+gives the same bytes on every host.
 
 ``--export-dir`` saves the fresh module and a SHA-256/source/build provenance
 sidecar before checking committed copies, without weakening the freshness gate.
@@ -31,9 +34,12 @@ import argparse
 import hashlib
 import json
 import os
+import platform
 import re
 import subprocess
 import sys
+import tarfile
+import urllib.request
 from collections.abc import Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -80,6 +86,57 @@ BUILD_COMMAND = (
 )
 
 
+BINARYEN_VERSION = "version_132"
+BINARYEN_URL = (
+    "https://github.com/WebAssembly/binaryen/releases/download/"
+    f"{BINARYEN_VERSION}/binaryen-{BINARYEN_VERSION}-x86_64-linux.tar.gz"
+)
+BINARYEN_SHA256 = "195ddc94f9bc89f45abdabb0b9eea86023d727ba90eac8b35b80f2544fc30572"
+# The features rustc's wasm32-unknown-unknown target enables by default; wasm-opt
+# must accept every instruction the linker emitted.
+WASM_FEATURES = (
+    "--enable-bulk-memory",
+    "--enable-sign-ext",
+    "--enable-mutable-globals",
+    "--enable-nontrapping-float-to-int",
+    "--enable-multivalue",
+    "--enable-reference-types",
+)
+WASM_OPT_PASSES = ("-Oz", "--strip-debug", "--strip-producers")
+
+
+def wasm_opt(target_dir: Path) -> Path:
+    """Return the pinned wasm-opt, fetching and verifying its archive once."""
+
+    if platform.system() != "Linux" or platform.machine() != "x86_64":
+        raise RuntimeError("the pinned binaryen archive is x86_64 Linux only")
+    home = target_dir / f"binaryen-{BINARYEN_VERSION}"
+    binary = home / BINARYEN_VERSION / "bin" / "wasm-opt"
+    if binary.is_file():
+        return binary
+    home.mkdir(parents=True, exist_ok=True)
+    with urllib.request.urlopen(BINARYEN_URL, timeout=300) as response:
+        archive = response.read()
+    if _sha256(archive) != BINARYEN_SHA256:
+        raise RuntimeError(
+            f"binaryen archive sha256={_sha256(archive)} != {BINARYEN_SHA256}"
+        )
+    tarball = home / "binaryen.tar.gz"
+    tarball.write_bytes(archive)
+    with tarfile.open(tarball) as bundle:
+        bundle.extractall(home, filter="data")
+    return binary
+
+
+def optimize(module: Path, target_dir: Path) -> bytes:
+    """Shrink the linked module with the pinned ``wasm-opt -Oz``."""
+
+    optimized = module.with_suffix(".opt.wasm")
+    command = [str(wasm_opt(target_dir)), *WASM_FEATURES, *WASM_OPT_PASSES]
+    subprocess.run([*command, str(module), "-o", str(optimized)], check=True)
+    return optimized.read_bytes()
+
+
 def build(root: Path, target_dir: Path) -> bytes:
     """Compile the Rust codec and return its import-free WebAssembly bytes."""
 
@@ -98,7 +155,7 @@ def build(root: Path, target_dir: Path) -> bytes:
     flags, _, _ = encoded_rustflags(env, checkout=root, target=TARGET)
     env["CARGO_ENCODED_RUSTFLAGS"] = flags
     subprocess.run(list(BUILD_COMMAND), cwd=root, env=env, check=True)
-    module = (target_dir / TARGET / PROFILE / MODULE).read_bytes()
+    module = optimize(target_dir / TARGET / PROFILE / MODULE, target_dir)
     verify_no_imports(module)
     return module
 
