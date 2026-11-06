@@ -197,6 +197,8 @@ mod tests {
         assert_eq!(&back, value);
     }
 
+    // spec: MEDULLA-DURABLE-KERNEL-R071
+    /// Verifies MEDULLA-DURABLE-KERNEL-R071: Typed durable task-queue model with refusals
     #[test]
     fn each_type_round_trips_and_each_refusal_has_its_code() {
         let ok = enqueue();

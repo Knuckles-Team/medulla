@@ -55,6 +55,7 @@ fn two_scoring_stages_keep_both_channels() {
 }
 
 // spec: MEDULLA-INCREMENTAL-VIEWS-R001.8
+/// Verifies MEDULLA-INCREMENTAL-VIEWS-R001.8: EXPLAIN reports maintainability
 #[test]
 fn explain_reports_stages_estimates_and_incrementality() {
     let (view, semantic) = fixture();
