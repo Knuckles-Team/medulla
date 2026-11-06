@@ -109,9 +109,11 @@ fn origin_view(
         Origin::Approved {
             name,
             approval_lease_id,
+            shadow_report_digest,
         } => View::Approved {
             name: name.clone(),
             approval_lease_id: approval_lease_id.clone(),
+            shadow_report_digest: shadow_report_digest.clone(),
         },
     }
 }

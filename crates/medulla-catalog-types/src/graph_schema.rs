@@ -104,6 +104,11 @@ pub enum GraphSchemaOp {
         source_id: String,
         contract: repair::RecordContract,
         approval_lease_id: String,
+        /// MEDULLA-TYPED-PACKS-R808: the digest (64 lowercase hex characters) of the
+        /// rendered candidate the operator selected. The engine compares it with the
+        /// candidate's own document digest before it attaches.
+        #[serde(default)]
+        expected_digest: Option<String>,
         #[serde(default)]
         if_composed_digest: Option<String>,
     },
@@ -231,10 +236,12 @@ fn validate_operation_payload(operation: &GraphSchemaOp) -> Result<(), String> {
             source_id,
             contract,
             approval_lease_id,
+            expected_digest,
             ..
         } => {
             approval::validate_approved_source_id(source_id)?;
             approval::validate_approval_lease_id(approval_lease_id)?;
+            validate_expected_digest(expected_digest.as_deref())?;
             contract.validate()
         }
         GraphSchemaOp::ValidateRepair {
@@ -245,6 +252,22 @@ fn validate_operation_payload(operation: &GraphSchemaOp) -> Result<(), String> {
             approval::validate_approved_source_id(source_id)?;
             contract.validate()
         }
+    }
+}
+
+/// `expected_digest` is 64 lowercase hexadecimal characters.
+fn validate_expected_digest(expected: Option<&str>) -> Result<(), String> {
+    let Some(expected) = expected else {
+        return Ok(());
+    };
+    let canonical = expected.len() == 64
+        && expected
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte));
+    if canonical {
+        Ok(())
+    } else {
+        Err("invalid expected_digest: 64 lowercase hexadecimal characters".to_string())
     }
 }
 
@@ -344,6 +367,10 @@ pub enum SchemaSourceOriginView {
     Approved {
         name: String,
         approval_lease_id: String,
+        /// Digest of the shadow-ingest report the attach was admitted under
+        /// (MEDULLA-DECISION-ENGINE-R102.2).
+        #[serde(default)]
+        shadow_report_digest: Option<String>,
     },
 }
 
@@ -433,6 +460,16 @@ closed_error_codes! {
         TermCursorInvalid => "SCHEMA_TERM_CURSOR_INVALID",
         /// A `GraphSchemaClasses` page size outside its bounds.
         TermPageInvalid => "SCHEMA_TERM_PAGE_INVALID",
+        /// `AttachApproved` named a candidate that no approval lease of the caller covers.
+        CandidateUnknown => "SCHEMA_CANDIDATE_UNKNOWN",
+        /// The operator's expected digest is not the candidate's document digest.
+        DigestMismatch => "SCHEMA_DIGEST_MISMATCH",
+        /// A different candidate digest is already attached under the same key.
+        SourceDrift => "SCHEMA_SOURCE_DRIFT",
+        /// `AttachApproved` found no stored shadow-ingest report for the candidate.
+        RepairShadowMissing => "SCHEMA_REPAIR_SHADOW_MISSING",
+        /// The stored shadow-ingest report holds violations or ingested no node.
+        RepairShadowViolations => "SCHEMA_REPAIR_SHADOW_VIOLATIONS",
     }
 }
 
