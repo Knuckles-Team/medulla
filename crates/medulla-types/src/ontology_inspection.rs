@@ -75,6 +75,26 @@ pub struct OntologyPropertyView {
     pub symmetric: bool,
 }
 
+/// One committed vocabulary crosswalk, as plain strings: `medulla-types` cannot
+/// name the pack record type (MEDULLA-TYPED-PACKS-R071.1.3, R071.1.5).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct OntologyCrosswalkView {
+    /// The GraphSchema source the record was committed under.
+    pub source_id: String,
+    pub source_class_iri: String,
+    pub target_class_iri: String,
+    /// The relation's wire name (`skos_exact_match`, ...).
+    pub relation: String,
+    /// The source vocabulary revision: the composed schema digest of its side.
+    pub source_revision: String,
+    /// The target vocabulary revision: the composed schema digest of its side.
+    pub target_vocabulary_revision: String,
+    pub origin: String,
+    /// SHA-256, 64 lowercase hex characters.
+    pub crosswalk_digest: String,
+}
+
 /// What `OntologyInspect` read: the vocabulary, SHACL targets and identity of a
 /// set of ontology/shapes documents.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -100,4 +120,12 @@ pub struct OntologyInspection {
     pub datatype_properties: Vec<OntologyPropertyView>,
     /// Named `sh:targetClass` objects, sorted.
     pub shape_target_classes: Vec<String>,
+    /// The crosswalks of the inspected sources, sorted by source, target and
+    /// source id. Empty for inline documents.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub crosswalks: Vec<OntologyCrosswalkView>,
+    /// Whether the report reads committed GraphSchema sources. Inline
+    /// inspection is `false` and never claims activation.
+    #[serde(default)]
+    pub committed: bool,
 }

@@ -87,8 +87,7 @@
 
 <http://knuckles.team/kg/documentation> a owl:Ontology ;
     rdfs:label "Governed documentation projection ontology" ;
-    rdfs:comment "Metadata-only Markdown projection with source revision, digest, provenance, lifecycle and temporal state." ;
-    owl:imports <http://knuckles.team/kg/core> .
+    rdfs:comment "Metadata-only Markdown projection with source revision, digest, provenance, lifecycle and temporal state." .
 
 :DocumentationEvidence a owl:Class ;
     rdfs:label "Documentation provenance evidence" ;
@@ -144,3 +143,9 @@
     rdfs:comment "The status string of an ArchiveBox :ArchiveResult (succeeded, failed, skipped)." ;
     rdfs:domain :ArchiveResult ;
     rdfs:range xsd:string .
+
+# ── Core rooting (MEDULLA-TYPED-PACKS-R071.2) ───────────────────────────────────
+# Every class of this module above reaches the core class kg:Artifact through rdfs:subClassOf.
+<http://knuckles.team/kg#ArchiveResult> rdfs:subClassOf <http://knuckles.team/kg#Artifact> .
+<http://knuckles.team/kg#DocumentationEvidence> rdfs:subClassOf <http://knuckles.team/kg#Artifact> .
+<http://knuckles.team/kg#DocumentationRevision> rdfs:subClassOf <http://knuckles.team/kg#Artifact> .

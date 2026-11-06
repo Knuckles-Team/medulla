@@ -13,20 +13,20 @@ use medulla_catalog_types::connector_pack::{PackEntry, PackEntryKind};
 
 /// The composed vocabulary one import validates against.
 #[derive(Debug, Default)]
-pub(super) struct PinnedVocabulary {
+pub(crate) struct PinnedVocabulary {
     /// Composed schema digest of the core catalog: the pinned revision.
-    pub(super) revision: String,
+    pub(crate) revision: String,
     /// Every composed class with its upper (BFO) category.
-    pub(super) categories: BTreeMap<String, String>,
+    pub(crate) categories: BTreeMap<String, String>,
     /// Classes of the core catalog: the authorized source set.
-    pub(super) core_classes: BTreeSet<String>,
+    pub(crate) core_classes: BTreeSet<String>,
     /// Named direct `rdfs:subClassOf` parents of each composed class.
-    pub(super) parents: BTreeMap<String, BTreeSet<String>>,
+    pub(crate) parents: BTreeMap<String, BTreeSet<String>>,
 }
 
 impl PinnedVocabulary {
     /// Every strict ancestor of `class` in the composed hierarchy.
-    pub(super) fn ancestors(&self, class: &str) -> BTreeSet<String> {
+    pub(crate) fn ancestors(&self, class: &str) -> BTreeSet<String> {
         let mut found = BTreeSet::new();
         let mut pending = vec![class.to_string()];
         while let Some(next) = pending.pop() {
@@ -120,10 +120,6 @@ mod compose {
         all: &[&PackEntry],
     ) -> Result<PinnedVocabulary, String> {
         let core_sources = GraphSchemaSources::default();
-        let revision = core_sources.composed_digest().to_hex();
-        let core = medulla_server_api::schema_compose::validate_and_compose(&core_sources)?;
-        let (core_classes, _) = hierarchy(&core.ontology);
-
         let mut documents = Vec::new();
         for entry in all.iter().filter(|e| e.kind == PackEntryKind::Ontology) {
             let bytes = super::super::validation::section_bytes(archive, &entry.body)?;
@@ -148,7 +144,21 @@ mod compose {
             )?;
             sources.attach_dynamic(format!("pack:{}", request.index.connector.as_str()), source)?;
         }
-        let composed = medulla_server_api::schema_compose::validate_and_compose(&sources)?;
+        pin_composed(&GraphSchemaSources::default(), &sources)
+    }
+
+    /// Read the pinned vocabulary from `sources`: the revision and the
+    /// authorized source set come from the core catalog, the classes, upper
+    /// categories and hierarchy from the composed schema. The import and the
+    /// activation of a pack both pin through here.
+    pub(crate) fn pin_composed(
+        core_sources: &GraphSchemaSources,
+        sources: &GraphSchemaSources,
+    ) -> Result<PinnedVocabulary, String> {
+        let revision = core_sources.composed_digest().to_hex();
+        let core = medulla_server_api::schema_compose::validate_and_compose(core_sources)?;
+        let (core_classes, _) = hierarchy(&core.ontology);
+        let composed = medulla_server_api::schema_compose::validate_and_compose(sources)?;
         let (classes, parents) = hierarchy(&composed.ontology);
         let categories = classes
             .iter()
@@ -165,6 +175,8 @@ mod compose {
 
 #[cfg(feature = "shacl")]
 pub(super) use compose::pin;
+#[cfg(feature = "shacl")]
+pub(crate) use compose::pin_composed;
 
 #[cfg(not(feature = "shacl"))]
 pub(super) fn pin(
