@@ -23,6 +23,7 @@ name = "medulla_jobs"
 [dependencies]
 medulla-types = { path = "../medulla-types" }
 medulla-core = { path = "../medulla-core" }
+medulla-resource = { path = "../medulla-resource" }
 # RF-RULING-004: `medulla-storage` is the sole physical owner of `jobs.redb` (declared
 # `OwnerLayout::Jobs`) and `medulla-transaction` the sole writer. Unconditional for the
 # same reason `redb` is: durability is this crate's whole reason to exist, so no
@@ -48,6 +49,7 @@ tempfile = "3"
 # Already a dev-dependency of medulla-plan (crates/medulla-plan/Cargo.toml) — reused here for
 # DE7's replay-determinism property test, not a new crates.io dependency.
 proptest = "1"
+criterion = "0.8"
 # `tests/replay_determinism.rs` opens its stores through `medulla_jobs::dev_scope_grant`,
 # which is gated on `cfg(any(test, feature = "dev-scope-grant"))`. `cfg(test)` is set
 # only while compiling this crate's OWN unit tests -- an integration test links the
@@ -67,3 +69,11 @@ medulla-jobs = { path = ".", features = ["dev-scope-grant"] }
 # build must not be able to link one.
 dev-scope-grant = []
 default = []
+
+# MEDULLA-PLACEMENT-R750.753 nightly hot-path proof: claim pacing over 64
+# concurrent classes; p50 < 2 us, p99 < 10 us, memory < 1 MiB.
+# Run: `cargo bench -p medulla-jobs claim_pacing`.
+[[bench]]
+name = "claim_pacing"
+path = "benches/claim_pacing.rs"
+harness = false

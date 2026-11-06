@@ -29,9 +29,10 @@
 //! edge (e.g. checkpointing a `Cancelled` job) is a hard `Err`, never a silent
 //! overwrite — a durable job record's history should never appear to un-happen.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Mutex;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use medulla_mutation_types::mutation_scope::DurabilityDomain;
@@ -46,6 +47,7 @@ use medulla_protocol_types::mutation_batch::MutationEnvelope;
 use medulla_protocol_types::mutation_batch::MutationOperation;
 use medulla_protocol_types::mutation_batch::VersionExpectation;
 use medulla_protocol_types::protocol::Method;
+use medulla_resource::admission::{ClaimPacer, PriorityClass, MAX_JOB_PRIORITY};
 use medulla_storage::{
     JobsOwner, OwnedStoreHandle, PhysicalStoreIdentity, ScopeGrantVerifier, ScopedRead,
     StorageKernel,
@@ -127,6 +129,25 @@ impl Default for TenantJobQuota {
     }
 }
 
+/// Per-class claim pacing bucket sizes (MEDULLA-PLACEMENT-R750.753). The server
+/// fills these from the `claim_pacing.*` knobs at store open.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ClaimPacing {
+    /// `(capacity, refill_per_s)` indexed like [`PriorityClass::ALL`].
+    pub per_class: [(u32, u32); 4],
+}
+
+impl Default for ClaimPacing {
+    fn default() -> Self {
+        Self {
+            per_class: [(64, 32); 4],
+        }
+    }
+}
+
+/// One tenant's pacers, one bucket per priority class.
+type TenantPacers = [ClaimPacer; 4];
+
 /// A fenced assignment returned by the distributed scheduler.
 #[derive(Clone, Debug)]
 pub struct WorkerClaim {
@@ -147,6 +168,11 @@ pub enum JobError {
         state: &'static str,
         reason: &'static str,
     },
+    /// The tenant's claim pacer for the job's class had no token (`CLAIM_PACED`);
+    /// the job stays queued.
+    ClaimPaced,
+    /// A job priority above 100 or below 0 (`PRIORITY_OUT_OF_RANGE`).
+    PriorityOutOfRange(i32),
 }
 
 impl std::fmt::Display for JobError {
@@ -163,6 +189,10 @@ impl std::fmt::Display for JobError {
                 f,
                 "invalid transition on job {job_id} in state {state}: {reason}"
             ),
+            JobError::ClaimPaced => write!(f, "claim paced; the job stays queued"),
+            JobError::PriorityOutOfRange(value) => {
+                write!(f, "job priority {value} is outside 0 to {MAX_JOB_PRIORITY}")
+            }
         }
     }
 }
@@ -392,6 +422,9 @@ pub struct JobStore {
     owner: OwnedStoreHandle<JobsOwner>,
     /// No-rand monotonic id source (mirrors `src/server/txn.rs::TxnIdGen`): `"job-<hex>"`.
     next_id: AtomicU64,
+    /// Claim pacing bucket sizes and the per-tenant pacers they size. The pacers
+    /// are keyed by the opaque tenant index key and live only in memory.
+    pacing: Mutex<(ClaimPacing, BTreeMap<String, TenantPacers>)>,
 }
 
 impl JobStore {
@@ -445,10 +478,42 @@ impl JobStore {
             mutations,
             owner,
             next_id: AtomicU64::new(0),
+            pacing: Mutex::new((ClaimPacing::default(), BTreeMap::new())),
         };
         let next_id = initialize_scheduler_indexes(&store)?;
         store.next_id.store(next_id, Ordering::Relaxed);
         Ok(store)
+    }
+
+    /// Replace the claim pacing bucket sizes; existing pacers restart full.
+    pub fn set_claim_pacing(&self, config: ClaimPacing) {
+        let mut state = self.pacing.lock().unwrap_or_else(|e| e.into_inner());
+        *state = (config, BTreeMap::new());
+    }
+
+    /// Whether the tenant's pacer admits one claim of `class` now, after
+    /// recording whether any foreground job is queued.
+    fn pace_claim(
+        &self,
+        tenant: &str,
+        class: PriorityClass,
+        foreground_queued: bool,
+        now_ms: i64,
+    ) -> bool {
+        let now = u64::try_from(now_ms).unwrap_or(0);
+        let mut guard = self.pacing.lock().unwrap_or_else(|e| e.into_inner());
+        let (config, pacers) = &mut *guard;
+        let config = *config;
+        let tenant_pacers = pacers.entry(tenant_index_key(tenant)).or_insert_with(|| {
+            PriorityClass::ALL.map(|c| {
+                let (capacity, refill) = config.per_class[c as usize];
+                ClaimPacer::new(u64::from(capacity), u64::from(refill), now)
+            })
+        });
+        for pacer in tenant_pacers.iter_mut() {
+            pacer.set_foreground_active(foreground_queued);
+        }
+        tenant_pacers[class as usize].try_claim(class, now)
     }
 
     /// One kernel-issued scoped read over this store's bound serving scope.
@@ -584,6 +649,7 @@ impl JobStore {
     /// Submit a new job — the `Submitted` entry point. Returns the durable record
     /// (including its server-issued `job_id`).
     pub fn submit(&self, spec: SubmitSpec) -> Result<AnalyticsJob> {
+        validate_priority(&spec.policy)?;
         validate_placement(&spec.policy)?;
         let now = now_ms();
         let job = AnalyticsJob {
@@ -619,6 +685,7 @@ impl JobStore {
         batch: &MutationBatch,
         committed_at_ms: u64,
     ) -> Result<(AnalyticsJob, bool)> {
+        validate_priority(&spec.policy)?;
         validate_placement(&spec.policy)?;
         let write = self.mutations.open_write(&self.owner).map_err(redb_err)?;
         match write.begin(batch).map_err(redb_err)? {
@@ -792,6 +859,18 @@ impl JobStore {
             // un-committed aborts it.
             return Ok(None);
         };
+        let queued_foreground = foreground_queued(&write)?;
+        if !self.pace_claim(
+            &job.policy.tenant,
+            priority_class(job.policy.priority),
+            queued_foreground,
+            now_ms,
+        ) {
+            if let Some(batch) = reconcile_batch {
+                self.mutations.commit(write, &batch).map_err(redb_err)?;
+            }
+            return Err(JobError::ClaimPaced);
+        }
         let starts_attempt = !matches!(&job.state, JobState::Publishing { .. });
         job.lease_epoch = job.lease_epoch.saturating_add(1);
         if starts_attempt {
@@ -1859,6 +1938,31 @@ fn adjust_tenant_total(
         totals.insert(key.as_str(), next).map_err(redb_err)?;
     }
     Ok(())
+}
+
+/// Enqueue refuses a priority outside 0 to 100 with `PRIORITY_OUT_OF_RANGE`.
+fn validate_priority(policy: &JobPolicy) -> Result<()> {
+    if (0..=i32::from(MAX_JOB_PRIORITY)).contains(&policy.priority) {
+        Ok(())
+    } else {
+        Err(JobError::PriorityOutOfRange(policy.priority))
+    }
+}
+
+/// The pacing class of a stored job priority.
+fn priority_class(priority: i32) -> PriorityClass {
+    PriorityClass::from_priority(priority.clamp(0, i32::from(MAX_JOB_PRIORITY)) as u8)
+}
+
+/// Whether any ready job sits in the foreground band (75 to 100).
+fn foreground_queued(wtx: &AdmittedMutation<'_, JobsOwner>) -> Result<bool> {
+    let ready = wtx.open_read_table(JOB_READY).map_err(redb_err)?;
+    let low = (priority_rank(i32::from(MAX_JOB_PRIORITY)), i64::MIN, "");
+    let high = (priority_rank(75), i64::MAX, "\u{10ffff}");
+    let mut rows = ready.range_inclusive(low, high).map_err(redb_err)?;
+    let first = rows.next().transpose().map_err(redb_err)?.is_some();
+    drop(rows);
+    Ok(first)
 }
 
 fn priority_rank(priority: i32) -> u32 {
@@ -3438,12 +3542,96 @@ mod tests {
         );
     }
 
+    // spec: MEDULLA-PLACEMENT-R750.753
+    #[test]
+    fn claim_pacing_pauses_background_under_foreground_and_refusals_are_typed() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = open_dev_store_in_dir(dir.path()).unwrap();
+        let mut out_of_range = spec("g1", 1);
+        out_of_range.policy.priority = 101;
+        assert!(matches!(
+            store.submit(out_of_range),
+            Err(JobError::PriorityOutOfRange(101))
+        ));
+
+        let mut foreground = spec("g1", 2);
+        foreground.policy.priority = 90;
+        foreground.policy.placement.required_capabilities = vec!["accelerator".to_string()];
+        let foreground = store.submit(foreground).unwrap();
+        let background = store.submit(spec("g1", 3)).unwrap();
+
+        // A foreground job is queued, so the background claim is paced and the
+        // job stays queued.
+        let paced = store.claim_next("worker:a", &[], now_ms(), 30_000, TenantJobQuota::default());
+        assert!(matches!(paced, Err(JobError::ClaimPaced)));
+        assert!(matches!(
+            store.get(&background.job_id).unwrap().state,
+            JobState::Submitted
+        ));
+
+        // The foreground claim is not throttled; afterwards the background claim runs.
+        let accelerated = vec!["accelerator".to_string()];
+        let claim = store
+            .claim_next(
+                "worker:b",
+                &accelerated,
+                now_ms(),
+                30_000,
+                TenantJobQuota::default(),
+            )
+            .unwrap()
+            .unwrap();
+        assert_eq!(claim.job.job_id, foreground.job_id);
+        let claim = store
+            .claim_next("worker:a", &[], now_ms(), 30_000, TenantJobQuota::default())
+            .unwrap()
+            .unwrap();
+        assert_eq!(claim.job.job_id, background.job_id);
+    }
+
+    // spec: MEDULLA-PLACEMENT-R750.753
+    #[test]
+    fn claim_pacing_bucket_exhaustion_leaves_the_job_queued() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = open_dev_store_in_dir(dir.path()).unwrap();
+        store.set_claim_pacing(ClaimPacing {
+            per_class: [(1, 1); 4],
+        });
+        let mut first = spec("g1", 1);
+        first.policy.priority = 60;
+        let first = store.submit(first).unwrap();
+        let mut second = spec("g1", 2);
+        second.policy.priority = 60;
+        let second = store.submit(second).unwrap();
+        let quota = TenantJobQuota {
+            max_active: 8,
+            max_reserved_cpu_ms: u64::MAX,
+        };
+        let at = now_ms();
+        let claim = store
+            .claim_next("worker:a", &[], at, 30_000, quota)
+            .unwrap()
+            .unwrap();
+        assert_eq!(claim.job.job_id, first.job_id);
+        let paced = store.claim_next("worker:b", &[], at, 30_000, quota);
+        assert!(matches!(paced, Err(JobError::ClaimPaced)));
+        assert!(matches!(
+            store.get(&second.job_id).unwrap().state,
+            JobState::Submitted
+        ));
+        let later = store
+            .claim_next("worker:b", &[], at + 1_000, 30_000, quota)
+            .unwrap()
+            .unwrap();
+        assert_eq!(later.job.job_id, second.job_id);
+    }
+
     #[test]
     fn ready_index_preserves_priority_then_fifo_selection() {
         let dir = tempfile::tempdir().unwrap();
         let store = open_dev_store_in_dir(dir.path()).unwrap();
         let mut low = spec("g1", 1);
-        low.policy.priority = -10;
+        low.policy.priority = 0;
         let low = store.submit(low).unwrap();
         let mut high = spec("g1", 2);
         high.policy.priority = 25;
@@ -3471,7 +3659,9 @@ mod tests {
         gpu.policy.priority = 100;
         gpu.policy.placement.required_capabilities = vec!["accelerator".to_string()];
         let gpu = store.submit(gpu).unwrap();
-        let ordinary = store.submit(spec("g1", 2)).unwrap();
+        let mut ordinary = spec("g1", 2);
+        ordinary.policy.priority = 50;
+        let ordinary = store.submit(ordinary).unwrap();
 
         let rtx = store.scoped_read().unwrap();
         let capability_rows = rtx.open_owner_table(JOB_READY_BY_CAPABILITY).unwrap();

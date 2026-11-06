@@ -40,26 +40,24 @@ pub const BREAKER_TRANSITION_WITHOUT_OUTCOME: &str = "BREAKER_TRANSITION_WITHOUT
 /// The closed set of work priority classes, highest first.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum PriorityClass {
-    Interactive,
     Foreground,
+    Normal,
+    Low,
     Background,
-    Maintenance,
 }
 
+/// The highest integer job priority; a larger value is refused at enqueue.
+pub const MAX_JOB_PRIORITY: u8 = 100;
+
 impl PriorityClass {
-    pub const ALL: [Self; 4] = [
-        Self::Interactive,
-        Self::Foreground,
-        Self::Background,
-        Self::Maintenance,
-    ];
+    pub const ALL: [Self; 4] = [Self::Foreground, Self::Normal, Self::Low, Self::Background];
 
     pub fn as_str(self) -> &'static str {
         match self {
-            Self::Interactive => "interactive",
             Self::Foreground => "foreground",
+            Self::Normal => "normal",
+            Self::Low => "low",
             Self::Background => "background",
-            Self::Maintenance => "maintenance",
         }
     }
 
@@ -71,8 +69,20 @@ impl PriorityClass {
             .ok_or_else(|| AdmissionError::new(UNKNOWN_PRIORITY_CLASS, format!("{name:?}")))
     }
 
+    /// The class of an integer job priority through the fixed bands: 0 to 24
+    /// is `background`, 25 to 49 `low`, 50 to 74 `normal`, 75 and above
+    /// `foreground`. Enqueue refuses a value above [`MAX_JOB_PRIORITY`].
+    pub fn from_priority(priority: u8) -> Self {
+        match priority {
+            0..=24 => Self::Background,
+            25..=49 => Self::Low,
+            50..=74 => Self::Normal,
+            _ => Self::Foreground,
+        }
+    }
+
     fn is_background(self) -> bool {
-        matches!(self, Self::Background | Self::Maintenance)
+        matches!(self, Self::Low | Self::Background)
     }
 }
 
@@ -464,13 +474,13 @@ mod tests {
             CognitiveDecision::Admit
         );
         assert_eq!(
-            scheduler.request(process("ui", PriorityClass::Interactive), 50),
+            scheduler.request(process("ui", PriorityClass::Foreground), 50),
             CognitiveDecision::Preempt {
                 victim: "bg".into()
             }
         );
         assert_eq!(
-            scheduler.request(process("bg2", PriorityClass::Maintenance), 60),
+            scheduler.request(process("bg2", PriorityClass::Low), 60),
             CognitiveDecision::Refuse
         );
 
@@ -490,12 +500,9 @@ mod tests {
         assert!(pacer.try_claim(PriorityClass::Foreground, 0));
         pacer.set_foreground_active(false);
         assert!(pacer.try_claim(PriorityClass::Background, 0));
+        assert!(!pacer.try_claim(PriorityClass::Normal, 0), "bucket empty");
         assert!(
-            !pacer.try_claim(PriorityClass::Interactive, 0),
-            "bucket empty"
-        );
-        assert!(
-            pacer.try_claim(PriorityClass::Interactive, 1_000),
+            pacer.try_claim(PriorityClass::Normal, 1_000),
             "refilled by the injected clock"
         );
 
@@ -540,5 +547,23 @@ mod tests {
             breaker.state, before,
             "a refused transition changes nothing"
         );
+    }
+
+    // spec: MEDULLA-PLACEMENT-R750.753
+    #[test]
+    fn priority_bands_map_to_the_four_classes() {
+        let bands = [
+            (0, PriorityClass::Background),
+            (24, PriorityClass::Background),
+            (25, PriorityClass::Low),
+            (49, PriorityClass::Low),
+            (50, PriorityClass::Normal),
+            (74, PriorityClass::Normal),
+            (75, PriorityClass::Foreground),
+            (MAX_JOB_PRIORITY, PriorityClass::Foreground),
+        ];
+        for (priority, class) in bands {
+            assert_eq!(PriorityClass::from_priority(priority), class);
+        }
     }
 }

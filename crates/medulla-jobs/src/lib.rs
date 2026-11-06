@@ -81,5 +81,6 @@ pub use model::{
 };
 pub use result::{ReproducibilityManifest, ResultColumn, TypedJobResult};
 pub use store::{
-    analytics_job_scope_identity, JobError, JobStore, SubmitSpec, TenantJobQuota, WorkerClaim,
+    analytics_job_scope_identity, ClaimPacing, JobError, JobStore, SubmitSpec, TenantJobQuota,
+    WorkerClaim,
 };

@@ -53,6 +53,8 @@ closed_error_codes! {
         ChunkConfigInvalid => "CHUNK_CONFIG_INVALID",
         CommitQueueFull => "COMMIT_QUEUE_FULL",
         CitationOutsideText => "CITATION_OUTSIDE_TEXT",
+        ClaimPaced => "CLAIM_PACED",
+        PriorityOutOfRange => "PRIORITY_OUT_OF_RANGE",
         ClientSessionPrincipalMismatch => "CLIENT_SESSION_PRINCIPAL_MISMATCH",
         ClusterConfigurationInvalid => "CLUSTER_CONFIGURATION_INVALID",
         ClusterDiscoveryIncomplete => "CLUSTER_DISCOVERY_INCOMPLETE",

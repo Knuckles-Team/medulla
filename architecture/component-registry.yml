@@ -2139,6 +2139,7 @@ components:
       - "crates/medulla-jobs/src/lib.rs"
       - "crates/medulla-statechart/src/lib.rs"
     test_roots:
+      - "crates/medulla-jobs/benches"
       - "crates/medulla-jobs/tests"
       - "crates/medulla-statechart/tests"
     generated_roots: []
@@ -4050,6 +4051,7 @@ components:
       - "tests/workflows/__init__.py"
       - "tests/workflows/test_registry_served.py"
       - "tests/jobs/test_association_submit_served.py"
+      - "tests/jobs/test_claim_pacing_served.py"
       - "tests/test_mining.py"
       - "tests/test_modality_stream_clients.py"
       - "tests/test_msgpack.rs"
