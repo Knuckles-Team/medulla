@@ -906,3 +906,15 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T900 [US6] MEDULLA-DECISION-ENGINE-R826 Ingest shortfall allocation family
 - [ ] T901 [US6] MEDULLA-DECISION-ENGINE-R827 Revert or fix-forward family
 - [ ] T902 [US6] MEDULLA-DECISION-ENGINE-R828 Branch merge conflict winner family (ResolveConflict)
+- [ ] T903 [US7] MEDULLA-DECISION-ENGINE-R134.111.14 Branch, join, decision and approval-wait step model
+- [ ] T904 [US7] MEDULLA-DECISION-ENGINE-R134.111.15 Static checks for control steps
+- [ ] T905 [US7] MEDULLA-DECISION-ENGINE-R134.111.16 Control step refusal
+- [ ] T906 [US7] MEDULLA-DECISION-ENGINE-R134.111.17 Control step schema and digest
+- [ ] T907 [US7] MEDULLA-DECISION-ENGINE-R134.111.18 Control step hot-path proof
+- [ ] T908 [US7] MEDULLA-DECISION-ENGINE-R180.1 Process decision model
+- [ ] T909 [US7] MEDULLA-DECISION-ENGINE-R180.2 Decision table evaluation
+- [ ] T910 [US7] MEDULLA-DECISION-ENGINE-R180.3 Branch selection
+- [ ] T911 [US7] MEDULLA-DECISION-ENGINE-R180.4 Process decision family wiring
+- [ ] T912 [US7] MEDULLA-DECISION-ENGINE-R180.5 Process decision refusal
+- [ ] T913 [US7] MEDULLA-DECISION-ENGINE-R180.6 Process decision evidence
+- [ ] T914 [US7] MEDULLA-DECISION-ENGINE-R180.7 Process decision hot-path proof

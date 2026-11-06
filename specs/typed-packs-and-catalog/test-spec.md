@@ -802,3 +802,13 @@ Each line binds one row to its proving test. A test marked planned does not exis
 - `MEDULLA-TYPED-PACKS-R807`: `tests/packs/test_conformance_evidence_served.py::test_evidence_written_read_revoked_and_tenant_scoped`
 - `MEDULLA-TYPED-PACKS-R808`: `tests/graph_schema_digest_served.rs::mismatch_and_drift_are_refused_and_digest_reads_back`
 - `MEDULLA-TYPED-PACKS-R809`: `tests/ontology/test_canonical_hash_served.py::test_reordered_serializations_hash_equal`
+- `MEDULLA-TYPED-PACKS-R110`: `tests/open_metadata_sync_served.rs::metadata_sync_round_trips_terms_assets_and_lineage`
+- `MEDULLA-TYPED-PACKS-R110.1`: `crates/medulla-rdf/tests/open_metadata.rs::mapped_types_resolve_one_class`
+- `MEDULLA-TYPED-PACKS-R110.2`: `crates/medulla-catalog-types/src/open_metadata.rs::tests::record_round_trips_and_refuses_unknown_fields`
+- `MEDULLA-TYPED-PACKS-R110.3`: `crates/medulla-catalog-types/src/open_metadata/tests.rs::inbound_maps_term_asset_and_lineage`
+- `MEDULLA-TYPED-PACKS-R110.4`: `crates/medulla-catalog-types/src/open_metadata/tests.rs::outbound_carries_expected_version`
+- `MEDULLA-TYPED-PACKS-R110.5`: `tests/open_metadata_sync_served.rs::sync_reads_terms_and_writes_catalog_nodes`
+- `MEDULLA-TYPED-PACKS-R110.6`: `tests/open_metadata_sync_served.rs::unmapped_types_are_listed_and_skipped`
+- `MEDULLA-TYPED-PACKS-R110.7`: `tests/open_metadata_sync_served.rs::nodes_keep_guid_version_and_source`
+- `MEDULLA-TYPED-PACKS-R110.8`: `tests/open_metadata_sync_served.rs::concurrent_term_edit_is_a_conflict_and_catalog_wins`
+- `MEDULLA-TYPED-PACKS-R110.9`: `tests/competency/test_open_metadata_sync_served.py::test_metadata_sync_then_write_back`

@@ -46,17 +46,70 @@ Every row below names a test that does not exist yet. The test file and function
 | T-032 | MEDULLA-CQ-ORCH-R700.4 | L3 | `tests/process_compile_served.rs::compile_refusals_leave_state_unchanged` | Process compile refusal proves its row as stated in requirements.md |
 | T-033 | MEDULLA-CQ-ORCH-R700.5 | L3 | `tests/process_compile_served.rs::replay_reproduces_recorded_digest` | Process compile evidence proves its row as stated in requirements.md |
 | T-034 | MEDULLA-CQ-ORCH-R700.6 | L4 | `tests/competency/test_process_compile_served.py::test_cycle_without_gate_refused` | Process compile hot-path proof proves its row as stated in requirements.md |
-| T-035 | MEDULLA-CQ-ORCH-R701.1 | L1 | `crates/medulla-types/src/process_import.rs::tests::imported_process_round_trips` | Imported process model and gate classification proves its row as stated in requirements.md |
-| T-036 | MEDULLA-CQ-ORCH-R701.2 | L1 | `crates/medulla-core/tests/process_import.rs::import_export_round_trip_is_lossless` | Process model import and export behaviour proves its row as stated in requirements.md |
+| T-035 | MEDULLA-CQ-ORCH-R701.1 | L1 | `crates/medulla-types/src/process_import.rs::tests::canonical_workflow_round_trips` | Canonical workflow records proves its row as stated in requirements.md |
+| T-036 | MEDULLA-CQ-ORCH-R701.2 | L1 | `crates/medulla-core/tests/process_import.rs::canonical_ids_and_digest_are_stable` | Canonical form rules, admission and export proves its row as stated in requirements.md |
 | T-037 | MEDULLA-CQ-ORCH-R701.3 | L3 | `tests/process_import_served.rs::import_stores_versioned_workflow_and_export_reads_it` | Process model import and export wiring proves its row as stated in requirements.md |
-| T-038 | MEDULLA-CQ-ORCH-R701.4 | L3 | `tests/process_import_served.rs::import_refusals_leave_state_unchanged` | Process model import refusal proves its row as stated in requirements.md |
+| T-038 | MEDULLA-CQ-ORCH-R701.4 | L3 | `tests/process_import_served.rs::import_refusals_leave_state_unchanged` | Process model import and export refusal proves its row as stated in requirements.md |
 | T-039 | MEDULLA-CQ-ORCH-R701.5 | L3 | `tests/process_import_served.rs::stored_steps_keep_source_ids` | Process model import evidence proves its row as stated in requirements.md |
 | T-040 | MEDULLA-CQ-ORCH-R701.6 | L4 | `tests/competency/test_governance_roundtrip_served.py::test_roundtrip_preserves_gates` | Process model import hot-path proof proves its row as stated in requirements.md |
 | T-041 | MEDULLA-CQ-ORCH-R012 | L3 | `tests/orchestration/test_orchestration_competency_served.py::test_execute_task_names_onboarded_operations_with_provenance` | Served proof of the execution question from onboarded connector operations proves its row as stated in requirements.md |
+| T-042 | MEDULLA-CQ-ORCH-R702 | L3 | `tests/process_exchange_served.rs::bpmn_import_export_import_keeps_digest` | BPMN 2.0 and DMN documents import natively and export round-trip safe (rollup) proves its row as stated in requirements.md |
+| T-043 | MEDULLA-CQ-ORCH-R702.1 | L1 | `crates/medulla-types/src/process_exchange.rs::tests::document_records_round_trip` | Process document records proves its row as stated in requirements.md |
+| T-044 | MEDULLA-CQ-ORCH-R702.2 | L1 | `crates/medulla-core/tests/process_exchange.rs::bpmn_reader_keeps_every_element` | BPMN 2.0 reader proves its row as stated in requirements.md |
+| T-045 | MEDULLA-CQ-ORCH-R702.3 | L1 | `crates/medulla-core/tests/process_exchange.rs::bpmn_mapping_is_deterministic` | BPMN document to graph mapping proves its row as stated in requirements.md |
+| T-046 | MEDULLA-CQ-ORCH-R702.4 | L1 | `crates/medulla-core/tests/process_exchange.rs::dmn_reader_keeps_tables_and_requirements` | DMN reader proves its row as stated in requirements.md |
+| T-047 | MEDULLA-CQ-ORCH-R702.5 | L1 | `crates/medulla-core/tests/process_exchange.rs::dmn_mapping_keeps_rule_order` | DMN document to graph mapping proves its row as stated in requirements.md |
+| T-048 | MEDULLA-CQ-ORCH-R702.6 | L1 | `crates/medulla-core/tests/process_exchange.rs::bpmn_write_then_read_keeps_digest` | BPMN 2.0 writer proves its row as stated in requirements.md |
+| T-049 | MEDULLA-CQ-ORCH-R702.7 | L1 | `crates/medulla-core/tests/process_exchange.rs::dmn_write_then_read_keeps_digest` | DMN writer proves its row as stated in requirements.md |
+| T-050 | MEDULLA-CQ-ORCH-R702.8 | L1 | `crates/medulla-core/tests/process_exchange.rs::workflow_exports_as_deployable_bpmn` | Stored workflow to deployable BPMN proves its row as stated in requirements.md |
+| T-051 | MEDULLA-CQ-ORCH-R702.9 | L3 | `tests/process_exchange_served.rs::import_writes_model_in_one_batch` | Process document import wiring proves its row as stated in requirements.md |
+| T-052 | MEDULLA-CQ-ORCH-R702.10 | L3 | `tests/process_exchange_served.rs::export_reads_model_and_workflow` | BPMN export wiring proves its row as stated in requirements.md |
+| T-053 | MEDULLA-CQ-ORCH-R702.11 | L3 | `tests/process_exchange_served.rs::dmn_export_reads_definitions` | DMN export wiring proves its row as stated in requirements.md |
+| T-054 | MEDULLA-CQ-ORCH-R702.12 | L3 | `tests/process_exchange_served.rs::document_refusals_leave_state_unchanged` | Process document refusal proves its row as stated in requirements.md |
+| T-055 | MEDULLA-CQ-ORCH-R702.13 | L3 | `tests/process_exchange_served.rs::model_keeps_document_and_canonical_digests` | Process document evidence proves its row as stated in requirements.md |
+| T-056 | MEDULLA-CQ-ORCH-R702.14 | L4 | `tests/competency/test_process_exchange_served.py::test_bpmn_round_trip_keeps_digest` | BPMN round-trip hot-path proof proves its row as stated in requirements.md |
+| T-057 | MEDULLA-CQ-ORCH-R702.15 | L4 | `tests/competency/test_process_exchange_served.py::test_dmn_round_trip_keeps_digest` | DMN round-trip hot-path proof proves its row as stated in requirements.md |
+| T-058 | MEDULLA-CQ-ORCH-R703 | L3 | `tests/process_sync_served.rs::sync_imports_changed_definitions_and_deploy_queues_proposal` | Process engine sync and deploy proves its rollup |
+| T-059 | MEDULLA-CQ-ORCH-R703.1 | L2 | `crates/medulla-rdf/tests/process_sync.rs::engine_location_row_passes_shapes` | Process engine data location proves its row as stated in requirements.md |
+| T-060 | MEDULLA-CQ-ORCH-R703.2 | L1 | `crates/medulla-core/tests/process_exchange.rs::process_adapter_keys_and_digests_are_stable` | Process sync adapter proves its row as stated in requirements.md |
+| T-061 | MEDULLA-CQ-ORCH-R703.3 | L3 | `tests/process_sync_served.rs::deploy_queues_one_proposal_with_the_document_digest` | Process sync and deploy wiring proves its row as stated in requirements.md |
+| T-062 | MEDULLA-CQ-ORCH-R703.4 | L3 | `tests/process_sync_served.rs::sync_refusals_queue_nothing` | Process sync refusal proves its row as stated in requirements.md |
+| T-063 | MEDULLA-CQ-ORCH-R703.5 | L3 | `tests/process_sync_served.rs::imported_model_cites_source_record` | Process sync evidence proves its row as stated in requirements.md |
+| T-064 | MEDULLA-CQ-ORCH-R703.6 | L3 | `tests/process_sync_served.rs::both_sides_changed_records_conflict_and_graph_wins` | Process sync conflict proof proves its row as stated in requirements.md |
+| T-065 | MEDULLA-CQ-ORCH-R703.7 | L4 | `tests/competency/test_process_sync_served.py::test_sync_then_deploy_releases_change_set` | Process sync and deploy hot-path proof proves its row as stated in requirements.md |
+| T-066 | MEDULLA-CQ-ORCH-R704 | L3 | `crates/medulla-h-decide/src/decide/stat_tests/process_plan_tests.rs::decide_routes_process_plan` | Compiled process workflows become agent DAG plans (rollup) proves its row as stated in requirements.md |
+| T-067 | MEDULLA-CQ-ORCH-R704.1 | L1 | `crates/medulla-decision-types/src/decision/process_plan.rs::tests::binding_records_round_trip` | Process plan request and binding records proves its row as stated in requirements.md |
+| T-068 | MEDULLA-CQ-ORCH-R704.2 | L1 | `crates/medulla-compute/src/process_plan/tests.rs::explicit_bindings_follow_graph_links` | Explicit step bindings from the graph proves its row as stated in requirements.md |
+| T-069 | MEDULLA-CQ-ORCH-R704.3 | L1 | `crates/medulla-compute/src/process_plan/tests.rs::ranked_fallback_respects_min_score` | Ranked fallback for unbound steps proves its row as stated in requirements.md |
+| T-070 | MEDULLA-CQ-ORCH-R704.4 | L1 | `crates/medulla-compute/src/process_plan/tests.rs::workflow_maps_to_canonical_plan` | Workflow to task plan proves its row as stated in requirements.md |
+| T-071 | MEDULLA-CQ-ORCH-R704.5 | L3 | `crates/medulla-h-decide/src/decide/stat_tests/process_plan_tests.rs::decide_routes_process_plan` | Process plan family wiring proves its row as stated in requirements.md |
+| T-072 | MEDULLA-CQ-ORCH-R704.6 | L3 | `crates/medulla-h-decide/src/decide/stat_tests/process_plan_tests.rs::process_plan_refusals_name_the_step` | Process plan refusal proves its row as stated in requirements.md |
+| T-073 | MEDULLA-CQ-ORCH-R704.7 | L3 | `crates/medulla-h-decide/src/decide/stat_tests/process_plan_tests.rs::premises_cite_each_binding` | Process plan evidence proves its row as stated in requirements.md |
+| T-074 | MEDULLA-CQ-ORCH-R704.8 | L4 | `tests/decide/test_process_plan_served.py::test_process_plan_binds_every_step_kind` | Process plan hot-path proof proves its row as stated in requirements.md |
+| T-075 | MEDULLA-CQ-ORCH-R705 | L3 | `tests/architecture_exchange_served.rs::export_then_import_keeps_canonical_digest` | Architecture exchange and sync proves its rollup |
+| T-076 | MEDULLA-CQ-ORCH-R705.1 | L2 | `crates/medulla-rdf/tests/architecture_exchange.rs::mapped_classes_resolve_one_type` | Ontology-driven element and relationship mapping proves its row as stated in requirements.md |
+| T-077 | MEDULLA-CQ-ORCH-R705.2 | L1 | `crates/medulla-types/src/archimate_exchange.rs::tests::exchange_records_round_trip` | Architecture exchange records proves its row as stated in requirements.md |
+| T-078 | MEDULLA-CQ-ORCH-R705.3 | L1 | `crates/medulla-core/tests/architecture_exchange.rs::reader_keeps_views_and_refuses_invalid_relationship` | Open Exchange Format reader proves its row as stated in requirements.md |
+| T-079 | MEDULLA-CQ-ORCH-R705.4 | L1 | `crates/medulla-core/tests/architecture_exchange.rs::mapping_updates_known_and_proposes_name_matches` | Exchange document to graph mapping proves its row as stated in requirements.md |
+| T-080 | MEDULLA-CQ-ORCH-R705.5 | L1 | `crates/medulla-core/tests/architecture_exchange.rs::write_then_read_keeps_digest` | Open Exchange Format writer proves its row as stated in requirements.md |
+| T-081 | MEDULLA-CQ-ORCH-R705.6 | L3 | `tests/architecture_exchange_served.rs::import_writes_one_batch_and_export_reads_it` | Architecture exchange wiring proves its row as stated in requirements.md |
+| T-082 | MEDULLA-CQ-ORCH-R705.7 | L1 | `crates/medulla-core/tests/architecture_exchange.rs::adapter_keys_elements_by_identifier` | Architecture sync adapter proves its row as stated in requirements.md |
+| T-083 | MEDULLA-CQ-ORCH-R705.8 | L3 | `tests/architecture_exchange_served.rs::exchange_refusals_leave_state_unchanged` | Architecture exchange refusal proves its row as stated in requirements.md |
+| T-084 | MEDULLA-CQ-ORCH-R705.9 | L3 | `tests/architecture_exchange_served.rs::nodes_keep_identifier_and_document_digest` | Architecture exchange evidence proves its row as stated in requirements.md |
+| T-085 | MEDULLA-CQ-ORCH-R705.10 | L4 | `tests/competency/test_architecture_exchange_served.py::test_export_import_and_sync_round_trip` | Architecture exchange hot-path proof proves its row as stated in requirements.md |
+| T-086 | MEDULLA-CQ-ORCH-R701.7 | L1 | `crates/medulla-core/tests/process_import.rs::bpmn_classes_map_through_annotations` | BPMN maps onto the canonical form through class annotations proves its row as stated in requirements.md |
+| T-087 | MEDULLA-CQ-ORCH-R701.8 | L1 | `crates/medulla-core/tests/process_import.rs::losses_are_listed_never_dropped` | Round-trip and loss rules proves its row as stated in requirements.md |
+| T-088 | MEDULLA-CQ-ORCH-R701.9 | L3 | `tests/process_equivalence_served.rs::bpmn_and_epc_give_one_workflow_and_one_plan` | Cross-source equivalence proof proves its row as stated in requirements.md |
+| T-089 | MEDULLA-CQ-ORCH-R701.9 | L4 | `tests/competency/test_process_equivalence_served.py::test_bpmn_and_epc_plan_digests_match` | Cross-source equivalence proof proves its row through the served client |
+| T-090 | MEDULLA-CQ-ORCH-R701.10 | L2 | `crates/medulla-rdf/tests/process_sync.rs::aris_location_row_passes_shapes` | Process sources are declared in the ontology proves its row as stated in requirements.md |
+| T-091 | MEDULLA-CQ-ORCH-R703.8 | L4 | `tests/competency/test_process_sync_served.py::test_aris_repository_sync_then_deploy` | ARIS repository sync hot-path proof proves its row as stated in requirements.md |
+| T-092 | MEDULLA-CQ-ORCH-R703.8 | L4 | `tests/competency/test_process_sync_served.py::test_unconfigured_aris_source_is_unavailable` | An unconfigured ARIS source is unavailable, never an empty success |
+| T-093 | MEDULLA-CQ-ORCH-R704.9 | L1 | `crates/medulla-compute/src/process_plan/tests.rs::plan_code_names_no_source_format` | The plan reads only the canonical form proves its row as stated in requirements.md |
+| T-094 | MEDULLA-CQ-ORCH-R704.9 | L1 | `crates/medulla-compute/src/process_plan/tests.rs::equal_canonical_digest_gives_equal_plan_digest` | Equal canonical digests give equal plan digests |
 
 ## Negative and boundary cases
 
-A source that is not connected: typed abstention naming the source. A planted-invalid shape input: rejected. A part of the composed answer without data: a typed abstention for that part only, never a dropped field. Cross-tenant requests: empty answers or `ACCESS_DENIED` before any read. A refusal of the compiler, the importer or the architecture view changes no durable state.
+A source that is not connected: typed abstention naming the source. A planted-invalid shape input: rejected. A part of the composed answer without data: a typed abstention for that part only, never a dropped field. Cross-tenant requests: empty answers or `ACCESS_DENIED` before any read. A refusal of the compiler, the importer or the architecture view changes no durable state. A strict export to a format that cannot hold a construct refuses `PROCESS_EXPORT_LOSSY` and lists every loss; a non-strict export lists them and never drops one silently. An unconfigured ARIS connector is `SOURCE_UNAVAILABLE` with its typed code, never an empty success.
 
 ## Quality and release proof
 

@@ -15,6 +15,7 @@ Governing spec: [spec.md](spec.md). No live credential is part of the PR gate; a
 | T-009 | SC-001 | End to end | Recorded responses; swap two ranks; same query text | Different `sources_used`, equal query text, non-empty provenance | PENDING |
 | T-010 | FR-009 | Unit and served | Live-truth and historical sources in conflict; inspiration-only source with a current-state question | Live source wins; `RoleInsufficient` abstention | PENDING |
 | T-011 | FR-010 | Unit and served | Tool-result node; lowering write without and with approval | Stored `untrusted`; refusal; approved lowering | PENDING |
+| T-012 | FR-011 | Unit and served | Three records, each changed on one or both sides | Applied, proposed and conflict counts of one | PENDING |
 
 Negative cases that must exist: an origin-approved rank-1 declaration with a connected, approved rank-2 alternate must abstain when rank 1 is unconnected or its mapping is unapproved and `allowFallback` is false; the same fixtures may select rank 2 only when rank 1 explicitly enables fallback, with `FallbackFrom` recorded. Also test a caller who cannot see the registered source; a connector self-claim; an equal-rank tie; a copy served for a virtual row.
 
@@ -46,3 +47,16 @@ Each entry below is planned. The test file or function does not exist in the tre
 - `MEDULLA-SRC-AUTH-R007.4`: `tests/federated/test_source_coverage_served.py::test_report_sources_used_equal_audit` (planned, L3) and `crates/medulla-virtual-graph/src/supply_chain_impact.rs::tests::sources_used_equals_audit` (planned, L2).
 - `MEDULLA-SRC-AUTH-R009.4`: `tests/federated/test_source_coverage_served.py::test_swapping_authority_rank_changes_sources_used` (planned, L3).
 - `MEDULLA-SRC-AUTH-R801`: `tests/policy_source_served.rs::stale_review_leaves_policy_unchanged` (planned, L3).
+
+### MEDULLA-SRC-AUTH-R012 tests
+
+- `MEDULLA-SRC-AUTH-R012`: `tests/federated/test_source_sync_served.py::test_two_way_sync_applies_proposes_and_records_conflicts` (planned, L3): the test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-SRC-AUTH-R012.1`: `crates/medulla-rdf/tests/source_sync.rs::sync_terms_resolve` (planned, L2): the test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-SRC-AUTH-R012.2`: `crates/medulla-rdf/tests/source_sync.rs::sync_shapes_refuse_planted_faults` (planned, L2): the test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-SRC-AUTH-R012.3`: `crates/medulla-virtual-graph/src/source_sync.rs::tests::reconcile_covers_every_case` (planned, L1): the test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-SRC-AUTH-R012.4`: `crates/medulla-virtual-graph/src/source_sync.rs::tests::state_rides_the_inbound_batch` (planned, L1): the test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-SRC-AUTH-R012.5`: `crates/medulla-h-graph/src/graph_ops/source_sync_tests.rs::outbound_change_queues_one_proposal` (planned, L3): the test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-SRC-AUTH-R012.6`: `crates/medulla-h-graph/src/graph_ops/source_sync_tests.rs::sync_applies_inbound_and_writes_state_once` (planned, L3): the test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-SRC-AUTH-R012.7`: `crates/medulla-h-graph/src/graph_ops/source_sync_tests.rs::sync_refusals_leave_state_unchanged` (planned, L3): the test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-SRC-AUTH-R012.8`: `crates/medulla-h-graph/src/graph_ops/source_sync_tests.rs::report_lists_conflicts_with_both_digests` (planned, L3): the test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-SRC-AUTH-R012.9`: `tests/federated/test_source_sync_served.py::test_two_way_sync_applies_proposes_and_records_conflicts` (planned, L4): the test does not exist yet; the owning change adds it at this exact path.

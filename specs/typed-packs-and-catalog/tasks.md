@@ -66,8 +66,8 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T060 [US2] MEDULLA-TYPED-PACKS-R039 Mass-withdrawal guard requires an explicit admin override
 - [ ] T061 [US2] MEDULLA-TYPED-PACKS-R040 Validation stops at a bounded violation count
 - [ ] T062 [US2] MEDULLA-TYPED-PACKS-R041 Write-time refusal codes for pack import conflicts
-- [ ] T062.1 [US2] MEDULLA-TYPED-PACKS-R041.1 An undecodable stored pack row refuses with a typed code
-- [ ] T062.2 [US2] MEDULLA-TYPED-PACKS-R041.2 An import replaces undecodable stored pack rows, audited
+- [ ] T317 [US2] MEDULLA-TYPED-PACKS-R041.1 An undecodable stored pack row refuses with a typed code
+- [ ] T318 [US2] MEDULLA-TYPED-PACKS-R041.2 An import replaces undecodable stored pack rows, audited
 - [ ] T063 [US2] MEDULLA-TYPED-PACKS-R042.1 Native capability annotation admission
 - [ ] T064 [US2] MEDULLA-TYPED-PACKS-R042.2 Served capability claim and refusal proof
 - [ ] T065 [US2] MEDULLA-TYPED-PACKS-R043 Modality annotations on pack entries
@@ -313,3 +313,12 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T305 [US7] MEDULLA-TYPED-PACKS-R807 Connector conformance evidence record and read method
 - [ ] T306 [US7] MEDULLA-TYPED-PACKS-R808 Operator-selected schema import with digest check and readback
 - [ ] T307 [US7] MEDULLA-TYPED-PACKS-R809 Served canonical hash of a Turtle payload
+- [ ] T308 [US8] MEDULLA-TYPED-PACKS-R110.1 Open metadata type mapping
+- [ ] T309 [US8] MEDULLA-TYPED-PACKS-R110.2 Open metadata record model
+- [ ] T310 [US8] MEDULLA-TYPED-PACKS-R110.3 Inbound open metadata mapping
+- [ ] T311 [US8] MEDULLA-TYPED-PACKS-R110.4 Outbound open metadata payload
+- [ ] T312 [US8] MEDULLA-TYPED-PACKS-R110.5 Open metadata sync adapter wiring
+- [ ] T313 [US8] MEDULLA-TYPED-PACKS-R110.6 Open metadata refusal
+- [ ] T314 [US8] MEDULLA-TYPED-PACKS-R110.7 Open metadata evidence
+- [ ] T315 [US8] MEDULLA-TYPED-PACKS-R110.8 Open metadata conflict proof
+- [ ] T316 [US8] MEDULLA-TYPED-PACKS-R110.9 Open metadata hot-path proof

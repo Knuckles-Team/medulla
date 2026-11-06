@@ -59,3 +59,12 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T053 [US5] MEDULLA-SRC-AUTH-R011.5 Evidence
 - [ ] T054 [US5] MEDULLA-SRC-AUTH-R011.6 Hot-path proof for the trust mark
 - [ ] T055 [US2] MEDULLA-SRC-AUTH-R801 Reviewed policy source bound to the active policy
+- [ ] T056 [US6] MEDULLA-SRC-AUTH-R012.1 Sync role vocabulary
+- [ ] T057 [US6] MEDULLA-SRC-AUTH-R012.2 Sync role shapes
+- [ ] T058 [US6] MEDULLA-SRC-AUTH-R012.3 Three-way reconcile rule and adapter trait
+- [ ] T059 [US6] MEDULLA-SRC-AUTH-R012.4 Sync state as graph facts
+- [ ] T060 [US6] MEDULLA-SRC-AUTH-R012.5 Outbound proposals through the write-back queue
+- [ ] T061 [US6] MEDULLA-SRC-AUTH-R012.6 Source sync wiring
+- [ ] T062 [US6] MEDULLA-SRC-AUTH-R012.7 Source sync refusal
+- [ ] T063 [US6] MEDULLA-SRC-AUTH-R012.8 Source sync evidence
+- [ ] T064 [US6] MEDULLA-SRC-AUTH-R012.9 Source sync hot-path proof

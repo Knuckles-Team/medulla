@@ -568,6 +568,10 @@ Masking enforcement lives in MEDULLA-FEDERATED-QUERY-R706. Quality scores live i
 MEDULLA-UNIFIED-DATA-PLANE-R762. Approval admission lives in arbora; the record and the reviewer
 choice stay here.
 
+### Open metadata federation (R110)
+
+The catalog of R106 is the system of record. An open-metadata store is a federated secondary through `MEDULLA-SRC-AUTH-R012`; nothing is copied outside the catalog's own nodes. The `cat:openMetadataType` annotation maps open metadata type names to catalog classes, so the ontology drives the mapping. `OpenMetadataRecord` mirrors the open metadata (OMRS) instance header: GUID, type name and version. Inbound sync writes `cat:externalGuid` and `cat:externalVersion`. Outbound proposals carry the last synced version as the expected version. The connector refuses a write over a concurrent store change. The next sync records the conflict. Call path: `Method::SourceSync` → `handle_source_sync` → `OpenMetadataSyncAdapter` (`crates/medulla-catalog-types/src/open_metadata/adapter.rs`). The open-metadata connector `egeria-mcp` owns the pack sources and the version-checked write sink; R110 names its rows.
+
 ## Phase 2: Task approach
 
 `tasks.md` holds one task per leaf row, grouped by user story and ordered producer first: a model row precedes the rows that wire it. A row lands in one slice with its caller, so no type lands without a production caller. Tasks that edit the shared dispatch file or `metadata_catalog-v1.ttl` run in series; tasks in different crates run in parallel.

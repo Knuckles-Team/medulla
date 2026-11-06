@@ -70,6 +70,34 @@ The rules below bind every row.
 
 Data entities are in [data-model.md](data-model.md). The shortest served proof is in [quickstart.md](quickstart.md). Each seam to another repository has a document in `contracts/`.
 
+### Standard process and decision vocabulary (R014)
+
+Six core terms describe every process. `:ProcessModel` exists in `enterprise-v1.ttl`. `:ProcessStep` and `:ProcessGate` come from `MEDULLA-CQ-ORCH-R700.2`. R014.1 adds `:ProcessEventNode`, `:ProcessSequenceFlow` and `:ProcessLane` to `orchestration-v1.ttl`. `:ProcessStep`, `:ProcessGate` and `:ProcessEventNode` subclass the existing `:TaskStep`; flows and lanes subclass `:Concept`. `bpmn-v1.ttl` and `dmn-v1.ttl` hold the BPMN 2.0 and DMN element classes in the core namespace. Their `:Bpmn` and `:Dmn` IRIs are the ones the process engine connector pack already declares, so one term has one IRI. Each class subclasses one core term and neither file uses `owl:imports`. DMN rolls up to the new core terms `:DecisionLogic` and `:DecisionRule` under `:Policy`. The step binding properties (`:usesTool`, `:hasPrompt`, `:evaluatesDecision`, `:approverRole`, `:toolArguments`) are read by the process plan of `MEDULLA-CQ-ORCH-R704`. Both files and their shapes register as core schema sources beside the `archimate` entry of `crates/medulla-graph-core/src/graph/schema_sources.rs` (:889).
+
+| Core term | BPMN 2.0 classes | DMN classes |
+|---|---|---|
+| `:ProcessModel` | `:BpmnProcess`, `:BpmnDefinitions` | none |
+| `:ProcessStep` | `:BpmnTask` and its kinds, `:BpmnSubProcess`, `:BpmnCallActivity` | none |
+| `:ProcessGate` | `:BpmnGateway` and its five kinds | none |
+| `:ProcessEventNode` | `:BpmnEvent` and its five kinds | none |
+| `:ProcessSequenceFlow` | `:BpmnSequenceFlow` | none |
+| `:ProcessLane` | `:BpmnLane` | none |
+| `:DecisionLogic` | none | `:DmnDecisionRequirements`, `:DmnDecision`, `:DmnDecisionTable` |
+| `:DecisionRule` | none | `:DmnRule` |
+
+One abstraction over process sources (owner, 2026-11-06). R014.9 adds the annotation `:dagNodeKind`, the IRI the `camunda-mcp` and `aris-mcp` packs already use, and `:canonicalGateKind`. Every flow-node class of every source states with them the canonical step kind it becomes; `MEDULLA-CQ-ORCH-R701` turns that into one canonical workflow and `MEDULLA-CQ-ORCH-R704` into one agent DAG. R014.10 keeps the three core EPC terms as shared IRIs and leaves every other EPC class to the ARIS pack, which extends them by subclassing.
+
+| Canonical kind | BPMN classes | EPC classes (ARIS pack) |
+|---|---|---|
+| `start`, `end` | start and end events | start and end events (no incoming or no outgoing flow) |
+| `human` | user and manual tasks | function carried out by an organisational element with no IT support |
+| `agent` | service, script, send and plain tasks; intermediate throw events | IT-supported or unspecified function |
+| `decision` | business rule task | function linked to a business rule |
+| `call` | sub-process, call activity | process interface |
+| `wait`, `boundary` | receive task, intermediate catch event, event-based gateway; boundary event | none (export loss, `MEDULLA-CQ-ORCH-R701.8`) |
+| `branch`, `fork`, `join` with `xor`, `and`, `or` | exclusive, parallel and inclusive gateways | XOR, AND and OR rule operators |
+| `state` (source only, folded) | none | intermediate event |
+
 ## Phase 2: Task approach
 
 `tasks.md` holds one task per leaf row in table order, producer first. An ontology term precedes the shape that constrains it, a shape precedes the admission that applies it, and an admission precedes the query that reads it. A row lands in one slice with its caller, so no type lands without a production caller. Tasks of different stories run in parallel; a task with no `Depends on:` row carries `[P]`.

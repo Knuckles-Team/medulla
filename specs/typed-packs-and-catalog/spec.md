@@ -91,6 +91,17 @@ The user is a contributor. The outcome is a pack kind or catalog method added th
 
 Independent test: the bound tests of `MEDULLA-TYPED-PACKS-R067` run this story through a production entry point.
 
+### User Story 8 - Sync the metadata catalog with an open-metadata store (Priority: P2)
+
+The user is a data steward. The outcome is that glossary terms, assets, classifications and lineage flow both ways with the catalog as system of record.
+
+**Acceptance scenarios**
+
+1. **Given** recorded glossary terms, assets and lineage of an open-metadata store, **When** sync runs, **Then** the catalog holds them with their GUID and version, and unmapped types are listed.
+2. **Given** a term edited on both sides, **When** sync runs, **Then** sync records one conflict and proposes the catalog value back.
+
+Independent test: the bound tests of `MEDULLA-TYPED-PACKS-R110.9` run this story through the served method.
+
 ### Edge Cases
 
 - A pack whose digest differs only by archive layout or package version keeps the same semantic digest.
@@ -114,6 +125,7 @@ Independent test: the bound tests of `MEDULLA-TYPED-PACKS-R067` run this story t
 - **FR-009**: Metadata-catalog vocabulary, glossary and dashboards. Rows: `MEDULLA-TYPED-PACKS-R108`, `MEDULLA-TYPED-PACKS-R801`, `MEDULLA-TYPED-PACKS-R109`.
 - **FR-010**: Object model, edit chain and classification claims. Rows: `MEDULLA-TYPED-PACKS-R650`, `MEDULLA-TYPED-PACKS-R651`, `MEDULLA-TYPED-PACKS-R652`.
 - **FR-011**: Skill-graph packs and skill packages. Rows: `MEDULLA-TYPED-PACKS-R100`, `MEDULLA-TYPED-PACKS-R700`, `MEDULLA-TYPED-PACKS-R701`.
+- **FR-012**: The open-metadata store is a federated secondary of the metadata catalog, synced two ways with version-checked write-back. Rows: `MEDULLA-TYPED-PACKS-R110`.
 
 ## Success Criteria
 

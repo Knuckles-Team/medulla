@@ -223,6 +223,19 @@ Decision: the mark is a stored fact with inheritance. Rejected alternative: a pe
 
 Cross-repository: the harness carries the mark through context assembly and decides nothing about it; Medulla only stores and returns it.
 
+### Two-way sync with a federated secondary (R012)
+
+The graph is the one system of record; this is the one-engine rule applied to sync. A `vg:SourceAuthority` row may name a connected source as `federated_secondary` for a class, with a direction and a conflict rule. `SourceSync` reads the secondary through the pack-source foreign read of `MEDULLA-FEDERATED-QUERY-R722.10`; the engine opens no URL. `reconcile` compares three digests per record: the last synced digest from `vg:SyncState`, the graph digest and the source digest.
+
+| Graph changed | Source changed | Action |
+|---|---|---|
+| no | no | `Unchanged` |
+| no | yes | `ApplyInbound` in the sync `MutationBatch` |
+| yes | no | `ProposeOutbound` through `Decide` `ConnectorWriteBack` and the queue of `MEDULLA-DECISION-ENGINE-R615` |
+| yes | yes | `Conflict`; `system_of_record_wins` also proposes the graph value, `hold_for_review` proposes nothing |
+
+Sync state lives as `vg:SyncState` graph facts in the same batch as the inbound change, so no second database exists. The engine never writes to a source: arbora approves a proposal (`ARBORA-OPS-R865`) and the connector sink executes the released change set (`SCION-GOVERNED-WRITEBACK-R006`). Format adapters implement `SyncAdapter`: processes (`MEDULLA-CQ-ORCH-R703.2`), architecture models (`MEDULLA-CQ-ORCH-R705.7`) and open metadata (`MEDULLA-TYPED-PACKS-R110.5`). Call path: `Method::SourceSync` → `crates/medulla-h-graph/src/graph_ops/source_sync.rs::handle_source_sync` → `reconcile` (`crates/medulla-virtual-graph/src/source_sync.rs`) → one `MutationBatch` and the queued proposals.
+
 ## Phase 2: Task approach
 
 `tasks.md` has one task per leaf row. Order: vocabulary and shapes (R001, R002), the approval path (R003), selection and its order (R004 to R006, R008), the audit (R007), roles and trust marks (R010, R011), then the served method and its journeys (R004.6.1, R009.4). Rows on different files run in parallel.
