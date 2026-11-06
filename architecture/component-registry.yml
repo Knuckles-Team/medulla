@@ -3810,6 +3810,7 @@ components:
       - "tests/test_check_decide_budgets.py"
       - "tests/adopt_workitem_authenticated_replay.rs"
       - "tests/agent_bus_served.rs"
+      - "tests/kvcache_http_served.rs"
       - "tests/adopt_workitem_metadata_cas_lifecycle.rs"
       - "tests/test_adr_unified_data_plane.py"
       - "tests/advanced_crossmodal_roundtrip.rs"

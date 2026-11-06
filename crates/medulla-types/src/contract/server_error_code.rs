@@ -186,6 +186,7 @@ closed_error_codes! {
         KnobUnknown => "KNOB_UNKNOWN",
         KvBlockDigestMismatch => "KV_BLOCK_DIGEST_MISMATCH",
         KvColdWriteFailed => "KV_COLD_WRITE_FAILED",
+        KvModelVersionMismatch => "KV_MODEL_VERSION_MISMATCH",
         MalformedBody => "MALFORMED_BODY",
         MalformedIndex => "MALFORMED_INDEX",
         MethodNotYetServed => "METHOD_NOT_YET_SERVED",
