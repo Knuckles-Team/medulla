@@ -374,6 +374,14 @@ def _assert_runner_budget(workflow: Path, name: str, job: dict) -> None:
         # This compiles tiny fixtures, never the full release workspace.
         assert job["runs-on"] == "ubuntu-24.04-arm"
         assert job.get("timeout-minutes") == 10
+    elif (workflow.name, name) in {
+        ("nightly-decide-budgets.yml", "decide-budgets"),
+        ("nightly-finance-budgets.yml", "finance-budgets"),
+    }:
+        # Main-only nightly release-profile benchmarks: one bench build plus
+        # the measured run, never a pull request.
+        assert job["if"] == "github.ref == 'refs/heads/main'"
+        assert job.get("timeout-minutes") == 180
     elif (workflow.name, name) == ("macos-release-probe.yml", "probe"):
         assert job["runs-on"] == "${{ matrix.runner }}"
         assert job.get("timeout-minutes") == 15
@@ -393,6 +401,7 @@ def _assert_runner_budget(workflow: Path, name: str, job: dict) -> None:
             "gates-plan-fuzz",
             "python-server",
             "python-suite",
+            "no-auth-uds",
             "gates-pyo3",
             "clippy-release-profiles",
             "ci",
@@ -822,6 +831,7 @@ def test_tag_pipeline_builds_checks_and_publishes_only() -> None:
     jobs = doc["jobs"]
     assert set(jobs) == {
         "guard",
+        "method-codec",
         "server-binary",
         "build",
         "build-x86",
@@ -832,7 +842,7 @@ def test_tag_pipeline_builds_checks_and_publishes_only() -> None:
         "verify-pypi",
         "github-release",
     }
-    for name in ("server-binary", "build-x86", "build-sdist"):
+    for name in ("method-codec", "server-binary", "build-x86", "build-sdist"):
         assert jobs[name]["needs"] == "guard"
     assert jobs["build"]["needs"] == ["guard", "server-binary"]
     guard = jobs["guard"]

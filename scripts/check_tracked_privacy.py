@@ -443,8 +443,11 @@ _HOST_IDENTITY_RE = re.compile(r"(?i)\bssh://(?!\$\{)[^\s/@]+@")
 # every shape it occurs in. See
 # tests/test_documentation_privacy.py::
 # test_public_surface_allows_requirement_id_citations for the regression.
+# A requirement number that opens a snake_case identifier (the bench target
+# ``r613_finance_primitives`` a spec row names) is an identifier, not a host
+# alias, so the lookahead also excludes ``_``.
 _MACHINE_HOST_ID_RE = re.compile(
-    r"(?i)(?<![a-z0-9-(])(?:rw?|host)[0-9]{3,}(?![a-z0-9])"
+    r"(?i)(?<![a-z0-9-(])(?:rw?|host)[0-9]{3,}(?![a-z0-9_])"
 )
 
 # EH-312 (2026-09-19): this workspace's own standing convention (CLAUDE.md /

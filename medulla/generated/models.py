@@ -22885,6 +22885,7 @@ class SparqlResult(BaseModel):
 
     proofs: list[SparqlRowProof]
     rows: list[list[str | None]]
+    spatial: list[SparqlSpatialUse] = Field(default_factory=list)
     vars: list[str]
 
 
@@ -22894,6 +22895,13 @@ class SparqlRowProof(BaseModel):
     coverage: SparqlProofCoverage
     row: Annotated[int, Field(ge=0)]
     witnesses: list[SparqlWitnessTriple]
+
+
+class SparqlSpatialUse(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    function: str
+    index_used: bool
 
 
 class SparqlUpdateReport(BaseModel):
@@ -29924,6 +29932,7 @@ __all__ = [
     "SparqlProofCoverage",
     "SparqlResult",
     "SparqlRowProof",
+    "SparqlSpatialUse",
     "SparqlUpdateReport",
     "SparqlWitnessTriple",
     "SpatialOpKind",

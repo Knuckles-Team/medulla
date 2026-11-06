@@ -28,6 +28,7 @@ def test_only_server_and_nemesis_binaries_remain_and_tools_are_dispatched() -> N
         "migrate-shards",
         "medulla-rf019-observe",
         "lake-fixture-export",
+        "raft-flake-budget",
     ):
         assert f'"{name}" =>' in dispatcher
     main = (REPO / "src/main.rs").read_text()

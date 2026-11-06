@@ -55,10 +55,11 @@ def test_route_call_removal_fails_closed() -> None:
     module = _gate_module()
     parts = module.sources()
     target = "crates/medulla-server-router/src/dispatch/router.rs"
+    # The handler registry calls each plane handler inside its `PlaneHandler`.
+    call = "Box::pin(dispatch_service_control_methods(ctx, method))"
+    assert call in parts[target]
     parts[target] = parts[target].replace(
-        "dispatch_service_control_methods(ctx, method).await?",
-        "removed_dispatch_service_control_methods(ctx, method).await?",
-        1,
+        call, "Box::pin(removed_dispatch_service_control_methods(ctx, method))", 1
     )
     with pytest.raises(
         SystemExit, match="dispatch_service_control_methods call missing"

@@ -82,7 +82,7 @@ impl MetastoreClient for FakeMetastore {
         match self.reachable {
             true => Ok(self.table.clone()),
             false => Err(MetastoreError::SourceUnreachable {
-                source_label: "https://hms.internal:9083".into(),
+                source_label: "https://metastore.example.invalid:9083".into(),
             }),
         }
     }
@@ -276,7 +276,10 @@ fn metastore_refusals() {
         let error = provider(&client, &files, 8).scan("").unwrap_err();
         assert_eq!(error.code(), code);
         assert_eq!(files.opens.get(), 0, "{code} read a data file");
-        assert!(!error.to_string().contains("hms.internal"), "{error}");
+        assert!(
+            !error.to_string().contains("metastore.example.invalid"),
+            "{error}"
+        );
     }
 }
 

@@ -11,6 +11,7 @@ use std::ffi::OsString;
 mod lake_fixture_export;
 #[cfg(feature = "redb")]
 mod migrate_shards;
+mod raft_flake_budget;
 #[cfg(feature = "redb")]
 mod restore;
 #[cfg(feature = "ann-redb")]
@@ -22,6 +23,7 @@ const TOOLS: &[&str] = &[
     "migrate-shards",
     "medulla-rf019-observe",
     "lake-fixture-export",
+    "raft-flake-budget",
 ];
 
 #[cfg(not(all(feature = "redb", feature = "ann-redb", feature = "lake")))]
@@ -59,6 +61,7 @@ pub(crate) fn run_if_requested() {
         "lake-fixture-export" => lake_fixture_export::run(argv),
         #[cfg(not(feature = "lake"))]
         "lake-fixture-export" => missing_feature("lake-fixture-export", "lake"),
+        "raft-flake-budget" => raft_flake_budget::run(argv),
         _ => return,
     }
     // Slim builds route every tool to `missing_feature` (diverges), so this is

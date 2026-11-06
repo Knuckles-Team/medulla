@@ -4,7 +4,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 import yaml
+
+pytestmark = pytest.mark.no_engine
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = ROOT / ".github/workflows/ci.yml"
@@ -30,10 +33,14 @@ REQUIRED_BLOCKING_JOBS = [
     "python-kernels",
     "python-server",
     "python-suite",
+    "no-auth-uds",
     "tts-piper-inference",
     "language-clients",
     "quality-advisory",
 ]
+# Main-push gates the aggregate requires only outside pull requests: they skip
+# on a pull request (a PR needs only `ci`) and must succeed on every push.
+MAIN_PUSH_REQUIRED_JOBS = {"no-auth-uds"}
 MAIN_ONLY_JOBS = {
     "gates",
     "gates-plan-fuzz",
@@ -101,6 +108,7 @@ def test_all_native_scope_consumers_keep_the_changes_output_edge() -> None:
         "python-kernels",
         "python-server",
         "python-suite",
+        "no-auth-uds",
         "tts-piper-inference",
         "language-clients",
         "quality-advisory",
@@ -124,7 +132,7 @@ def test_all_native_scope_consumers_keep_the_changes_output_edge() -> None:
 
 def test_main_only_and_path_gated_jobs_skip_on_pull_requests() -> None:
     jobs = _jobs()
-    for name in MAIN_ONLY_JOBS:
+    for name in MAIN_ONLY_JOBS | MAIN_PUSH_REQUIRED_JOBS:
         assert jobs[name]["if"] == (
             "needs.changes.outputs.code == 'true' && "
             "github.event_name != 'pull_request'"
@@ -177,6 +185,9 @@ def test_ci_required_is_the_fail_closed_branch_protection_aggregate() -> None:
             f"${{{{ needs.changes.outputs.{gate} }}}}"
         )
     assert '"$EVENT_NAME" == pull_request' in run
+    for job_name in MAIN_PUSH_REQUIRED_JOBS:
+        env_name = job_name.upper().replace("-", "_") + "_RESULT"
+        assert f'results+=("{job_name}=${env_name}")' in run
     assert "accepted path-gate skip" in run
     assert "expected skipped for documentation-only scope" in run
     assert "failures=()" in run

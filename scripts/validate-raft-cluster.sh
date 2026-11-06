@@ -29,8 +29,8 @@
 #         repeat_index, result ("pass" or "fail"), trace (the repeat's log, kept for a failed repeat),
 #         plus returncode and test. The generated status reads these records.
 # Retry budget (R014.3.2): a failed unloaded run is retried only as the
-#         `raft_flake_budget` bin decides (RAFT_RETRY_MAX, default 1; RAFT_FLAKE_BUDGET_BIN
-#         overrides the bin command). Past the budget it prints RAFT_RETRY_BUDGET_EXHAUSTED.
+#         `medulla-server raft-flake-budget` tool decides (RAFT_RETRY_MAX, default 1;
+#         RAFT_FLAKE_BUDGET_BIN overrides the tool command). Past the budget it prints RAFT_RETRY_BUDGET_EXHAUSTED.
 # Exit:   0 = all proofs green; non-zero = a proof failed (see output).
 # ----------------------------------------------------------------------------
 set -euo pipefail
@@ -82,7 +82,7 @@ fi
 if [[ -n "${RAFT_FLAKE_BUDGET_BIN:-}" ]]; then
   read -r -a BUDGET_BIN <<<"${RAFT_FLAKE_BUDGET_BIN}"
 else
-  BUDGET_BIN=(cargo run -q --features "${FEATURES}" --bin raft_flake_budget --)
+  BUDGET_BIN=(cargo run -q --features "${FEATURES}" --bin medulla-server -- raft-flake-budget)
 fi
 attempt=1
 while :; do

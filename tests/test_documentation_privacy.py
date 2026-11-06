@@ -109,7 +109,8 @@ def test_public_surface_allows_requirement_id_citations(tmp_path: Path) -> None:
     docs_dir = tmp_path / "docs"
     docs_dir.mkdir()
     (docs_dir / "clean.md").write_text(
-        "see `MEDULLA-UNIFIED-DATA-PLANE-R001` and `MEDULLA-DECISION-ENGINE-R118`\n",
+        "see `MEDULLA-UNIFIED-DATA-PLANE-R001` and `MEDULLA-DECISION-ENGINE-R118`\n"
+        "bench `benches/r613_finance_primitives.rs`\n",
         encoding="utf-8",
     )
     (docs_dir / "leak.md").write_text("reported from host123\n", encoding="utf-8")

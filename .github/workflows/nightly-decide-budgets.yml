@@ -1,9 +1,10 @@
 name: Nightly decide budgets
 
 # MEDULLA-DECISION-ENGINE-R178.3: run the per-family decision benchmark
-# (`benches/decide_budgets.rs`, R178.1) at 03:00 UTC on main, check its
-# report against the stored baseline with `scripts/check_decide_budgets.py`
-# (R178.2), upload the report, and fail on a regression or a budget breach.
+# (`benches/decide_budgets.rs`, MEDULLA-DECISION-ENGINE-R178.1) at 03:00 UTC
+# on main, check its report against the stored baseline with
+# `scripts/check_decide_budgets.py` (MEDULLA-DECISION-ENGINE-R178.2), upload
+# the report, and fail on a regression or a budget breach.
 
 on:
   schedule:
@@ -29,7 +30,7 @@ jobs:
 
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: "3.14"
+          python-version-file: .python-version
 
       - id: rust-toolchain
         uses: ./.github/actions/pinned-rust-toolchain

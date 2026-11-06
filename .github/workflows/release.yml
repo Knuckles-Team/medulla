@@ -104,7 +104,7 @@ jobs:
   # two independent canonical builds must be byte-identical and within the
   # MAX_BYTES budget. Nothing is committed (MEDULLA-SDLC-R020.1).
   method-codec:
-    timeout-minutes: 60
+    timeout-minutes: ${{ github.event_name == 'pull_request' && 10 || 60 }}
     needs: guard
     if: >-
       github.repository == 'Knuckles-Team/medulla'

@@ -1,7 +1,7 @@
-//! `raft_flake_budget` — the retry-budget decision for `scripts/validate-raft-cluster.sh`
-//! (MEDULLA-DURABLE-KERNEL-R014.3.2).
+//! `medulla-server raft-flake-budget` — the retry-budget decision for
+//! `scripts/validate-raft-cluster.sh` (MEDULLA-DURABLE-KERNEL-R014.3.2).
 //!
-//! The script calls this bin after a failed cluster-proof attempt. The bin replays the
+//! The script calls this tool after a failed cluster-proof attempt. The tool replays the
 //! failures through [`DiagnosticRetryLog::record_failure`] under the declared
 //! [`FlakeBudget`] and prints the decision for the named attempt:
 //!
@@ -10,7 +10,7 @@
 //! * `refused RAFT_RETRY_BUDGET_EXHAUSTED attempt=<n>` (exit 3) otherwise.
 //!
 //! Usage:
-//!   raft_flake_budget --attempt <n> --exit-code <rc>
+//!   medulla-server raft-flake-budget --attempt <n> --exit-code <rc>
 //!       [--max-retries 1] [--backoff-ms 1000] [--max-backoff-ms 30000]
 //!
 //! A malformed argument or budget exits 2.
@@ -28,7 +28,7 @@ struct Opts {
     max_backoff_ms: u64,
 }
 
-fn parse() -> Result<Opts, String> {
+fn parse(argv: Vec<std::ffi::OsString>) -> Result<Opts, String> {
     let mut attempt = None;
     let mut exit_code = None;
     let mut opts = Opts {
@@ -38,7 +38,11 @@ fn parse() -> Result<Opts, String> {
         backoff_ms: 1_000,
         max_backoff_ms: 30_000,
     };
-    let mut args = std::env::args().skip(1);
+    // argv[0] is the subcommand name.
+    let mut args = argv
+        .into_iter()
+        .skip(1)
+        .map(|arg| arg.to_string_lossy().into_owned());
     while let Some(flag) = args.next() {
         let value = args.next().ok_or_else(|| format!("{flag} needs a value"))?;
         let bad = |error: std::num::ParseIntError| format!("{flag} {value}: {error}");
@@ -88,14 +92,14 @@ fn decide(opts: &Opts) -> Result<(String, i32), String> {
     })
 }
 
-fn main() {
-    match parse().and_then(|opts| decide(&opts)) {
+pub(crate) fn run(argv: Vec<std::ffi::OsString>) {
+    match parse(argv).and_then(|opts| decide(&opts)) {
         Ok((line, code)) => {
             println!("{line}");
             std::process::exit(code);
         }
         Err(error) => {
-            eprintln!("raft_flake_budget: {error}");
+            eprintln!("medulla-server raft-flake-budget: {error}");
             std::process::exit(USAGE_EXIT);
         }
     }
