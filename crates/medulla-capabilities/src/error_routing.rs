@@ -186,6 +186,7 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "EMBEDDING_DIMENSION_MISMATCH",
             "EMBEDDING_UNAVAILABLE",
             "ENRICHMENT_UNAVAILABLE",
+            "RUNG_OUTRANKED",
             "WEB_BACKEND_INVALID",
         ],
     ),

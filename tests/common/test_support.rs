@@ -285,6 +285,39 @@ pub fn durable_state(auth_secret: &str, isolation: IsolationLayer) -> SharedStat
     state_with(auth_secret, isolation, persist_dir, persistence)
 }
 
+/// A restarted engine on `persist_dir` in read-through mode
+/// (MEDULLA-DURABLE-KERNEL-R086.8): the catalog is recovered and the durable
+/// read-through attached the way `src/main.rs` does at boot, and nothing is
+/// loaded into RAM, so an evicted node is served only by its durable lookup.
+/// Differs from [`durable_state`], which offers `load_all` recovery only.
+#[cfg(feature = "redb")]
+pub async fn durable_state_read_through(
+    auth_secret: &str,
+    isolation: IsolationLayer,
+    persist_dir: &str,
+) -> SharedState {
+    let backend = open_redb_backend(persist_dir.to_string()).expect("open durable backend");
+    let state = state_with(
+        auth_secret,
+        isolation,
+        Some(persist_dir.to_string()),
+        Some(backend.clone()),
+    );
+    backend
+        .load_catalog(&state)
+        .await
+        .expect("recover the durable catalog");
+    let factory = Arc::new(
+        medulla_persistence::read_through::BackendReadThroughFactory::new(backend.clone()),
+    );
+    state
+        .write()
+        .await
+        .registry
+        .set_read_through_factory(factory);
+    state
+}
+
 #[cfg(feature = "tsdb")]
 pub fn state_with_tsdb(
     auth_secret: &str,
