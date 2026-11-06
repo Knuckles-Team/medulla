@@ -334,14 +334,20 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         "RegisterForeignSource",
         &["FOREIGN_SOURCE_POLICY_UNBOOTSTRAPPED"],
     ),
+    // MEDULLA-FEDERATED-QUERY-R006.1: temporal rule-derivation refusals.
     // MEDULLA-FEDERATED-QUERY-R053.100 / R053.700 / R053.701: foreign Cypher,
     // Trino and Spark refusals on the served `Uql` FOREIGN path.
     (
         "Uql",
         &[
             "CYPHER_KEY_INVALID",
+            "DERIVED_BOUND_MALFORMED",
+            "DERIVED_ORIGIN_MISSING",
+            "DERIVED_WINDOW_CONFLICT",
+            "DERIVED_WRITE_UNAUTHORIZED",
             "FENCE_FIELD_MISSING",
             "PRESET_UNAVAILABLE",
+            "RULE_VERSION_UNSUPPORTED",
             "SNAPSHOT_UNKNOWN",
         ],
     ),

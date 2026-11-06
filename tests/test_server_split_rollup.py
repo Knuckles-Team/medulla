@@ -52,6 +52,12 @@ UPPER_LAYER = tuple(
 )
 
 
+# Crates a lower layer must never name (R056.4, R056.6).
+_FACADE_AND_ROUTER = {"medulla-server", "medulla-server-router", "medulla-wire"}
+_ABOVE_RAFT = _FACADE_AND_ROUTER
+_ABOVE_PERSISTENCE = _FACADE_AND_ROUTER | {"medulla-raft"}
+
+
 def _declares_module(crate: str, module: str) -> bool:
     pattern = re.compile(rf"^\s*(pub(\([a-z:]+\))?\s+)?mod\s+{module}\b", re.MULTILINE)
     return any(
@@ -63,6 +69,8 @@ def _declares_module(crate: str, module: str) -> bool:
 @pytest.mark.spec("MEDULLA-CONTRACT-R056")
 @pytest.mark.spec("MEDULLA-CONTRACT-R056.2")
 @pytest.mark.spec("MEDULLA-CONTRACT-R056.3")
+@pytest.mark.spec("MEDULLA-CONTRACT-R056.4")
+@pytest.mark.spec("MEDULLA-CONTRACT-R056.6")
 @pytest.mark.spec("MEDULLA-CONTRACT-R056.8")
 def test_backbone_crates_exist_and_depend_only_downward() -> None:
     members = _members()
@@ -86,6 +94,25 @@ def test_backbone_crates_exist_and_depend_only_downward() -> None:
     assert not _declares_module("medulla-store", "store_authority")
     assert not _declares_module("medulla-server-api", "store_authority")
     assert not _declares_module("medulla-persistence", "store_authority")
+    # R056.6: persistence sits on kernel, store and server-api; it names no replication,
+    # wire, server facade, router or handler crate.
+    persistence_deps = _path_deps("medulla-persistence")
+    assert {"medulla-kernel", "medulla-store", "medulla-server-api"} <= persistence_deps
+    assert not persistence_deps & _ABOVE_PERSISTENCE, (
+        persistence_deps & _ABOVE_PERSISTENCE
+    )
+    assert not {d for d in persistence_deps if d.startswith("medulla-h-")}
+    # R056.4: replication sits above server-api and persistence; it names no wire,
+    # server facade, router or handler crate.
+    raft_deps = _path_deps("medulla-raft")
+    assert {
+        "medulla-kernel",
+        "medulla-store",
+        "medulla-server-api",
+        "medulla-persistence",
+    } <= raft_deps
+    assert not raft_deps & _ABOVE_RAFT, raft_deps & _ABOVE_RAFT
+    assert not {d for d in raft_deps if d.startswith("medulla-h-")}
     # R056.8: the four seam handler crates hold no edge to each other.
     for crate in SEAM_HANDLERS:
         assert crate in members, crate

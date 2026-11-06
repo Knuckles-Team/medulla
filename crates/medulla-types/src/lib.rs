@@ -178,6 +178,8 @@ pub mod entity_link_proposal;
 pub mod contract;
 // MEDULLA-INCREMENTAL-VIEWS-R002.1 — the signed-row Z-set delta of incremental views.
 pub mod delta;
+// MEDULLA-FEDERATED-QUERY-R006.1 — origin record of a temporal rule-derived fact.
+pub mod derived_fact;
 // MEDULLA-DURABLE-KERNEL-R032 — the native primary-key fast-path routing decision
 // (pgwire/MySQL/MSSQL point operations that bypass DataFusion planning).
 // Pure serde, no dep.
