@@ -4,6 +4,9 @@
 //! Included by `#[path]` from each bench target, so both measure the identical
 //! write pattern: `n` authoritative (commit-before-ack) `record_durable` writes
 //! from concurrent tasks into ONE redb backend.
+// Included by `#[path]` into several targets; each uses a subset (the
+// `tests/common/test_support.rs` convention).
+#![allow(dead_code)]
 
 use std::sync::Arc;
 

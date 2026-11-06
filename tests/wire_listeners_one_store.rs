@@ -124,8 +124,7 @@ async fn unauthenticated_sessions_refuse() {
     .await;
     let pg_refusal = test_support::connect_pgwire_with_password(&pg, "wrong", USER, "__commons__")
         .await
-        .err()
-        .expect("pgwire refuses a wrong password");
+        .expect_err("pgwire refuses a wrong password");
     assert!(
         pg_refusal.as_db_error().is_some(),
         "PostgreSQL error response: {pg_refusal}"

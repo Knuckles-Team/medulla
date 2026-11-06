@@ -1,5 +1,8 @@
 //! A process-wide `tracing` layer that records every closed span's name and fields
 //! and every event's fields, so served tests can assert the evidence a handler emits.
+// Included by `#[path]` into several targets; each uses a subset (the
+// `tests/common/test_support.rs` convention).
+#![allow(dead_code)]
 
 use std::collections::BTreeMap;
 use std::sync::{Mutex, OnceLock};

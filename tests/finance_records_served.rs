@@ -425,7 +425,9 @@ async fn research_entries_round_trip_and_refuse() {
         .await;
     assert!(evidence.error.is_none(), "{evidence:?}");
     let components = r#"[{"source":"news","score":0.5,"weight":2.0,"evidenceRef":"ev_1"}]"#;
-    let entries: [(FinanceRecordKind, &str, Vec<(&str, &str)>); 5] = [
+    // (kind, record id, field overrides)
+    type Entry<'a> = (FinanceRecordKind, &'a str, Vec<(&'a str, &'a str)>);
+    let entries: [Entry<'_>; 5] = [
         (
             FinanceRecordKind::DebateRound,
             "d9_r1",

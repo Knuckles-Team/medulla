@@ -485,7 +485,7 @@ async fn live_validation_obeys_read_authority() {
         let s = state.read().await;
         s.registry.get("agent:worker1").unwrap().core.clone()
     };
-    let nodes_before = core.get_nodes().into_iter().count();
+    let nodes_before = core.get_nodes().len();
     let after_hidden = live(4, Some("worker1")).await;
     assert_eq!(outcomes(&after_hidden), outcomes(&before_hidden));
 
@@ -515,7 +515,7 @@ async fn live_validation_obeys_read_authority() {
     assert!(outcomes(&shex_report(&inline)).iter().all(|(_, ok)| !ok));
 
     // Read-only: no row added or removed.
-    assert_eq!(core.get_nodes().into_iter().count(), nodes_before);
+    assert_eq!(core.get_nodes().len(), nodes_before);
 }
 
 const PERSON_IRI: &str = "http://example.org/PersonShape";

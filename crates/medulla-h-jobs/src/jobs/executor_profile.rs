@@ -8,9 +8,6 @@ use std::collections::HashMap;
 use medulla_compute::sketch::{HyperLogLog, HLL_DEFAULT_PRECISION};
 use medulla_types::profile::{ColumnProfile, HistogramBucket, ProfileMethod, TopValue};
 
-/// Refusal code: the dataset lies outside the caller's tenant or row-security
-/// scope (MEDULLA-UNIFIED-DATA-PLANE-R761.4).
-pub(super) const PROFILE_FORBIDDEN: &str = "PROFILE_FORBIDDEN";
 /// Refusal code: the source supports neither aggregate pushdown nor sampling
 /// (MEDULLA-UNIFIED-DATA-PLANE-R761.4).
 pub(super) const PROFILE_UNSUPPORTED: &str = "PROFILE_UNSUPPORTED";
@@ -367,5 +364,21 @@ mod tests {
         let refusal = profile_column(&none, "c", &cfg).unwrap_err();
         assert_eq!(refusal.code, PROFILE_UNSUPPORTED);
         assert!(refusal.to_string().starts_with("PROFILE_UNSUPPORTED: "));
+    }
+
+    // spec: MEDULLA-UNIFIED-DATA-PLANE-R761.2
+    #[test]
+    fn each_pushdown_dialect_quotes_its_identifiers() {
+        assert!(ProfileDialect::Mysql.pushes_aggregates());
+        assert!(ProfileDialect::Postgres.pushes_aggregates());
+        assert!(!ProfileDialect::Other.pushes_aggregates());
+        assert_eq!(
+            aggregate_statement(ProfileDialect::Mysql, "orders", "a`b"),
+            "SELECT COUNT(*), COUNT(`a``b`), MIN(`a``b`), MAX(`a``b`) FROM `orders`"
+        );
+        assert_eq!(
+            aggregate_statement(ProfileDialect::Postgres, "orders", "a\"b"),
+            "SELECT COUNT(*), COUNT(\"a\"\"b\"), MIN(\"a\"\"b\"), MAX(\"a\"\"b\") FROM \"orders\""
+        );
     }
 }

@@ -362,7 +362,9 @@ fn production_eviction_retains_unconfirmed_candidates() {
 }
 
 async fn unconfirmed_candidates_body() {
-    let faults: [Option<fn(usize) -> Result<Vec<bool>, String>>; 4] = [
+    // A presence probe: `n` candidates in, one confirmation each (or a fault) out.
+    type PresenceFault = fn(usize) -> Result<Vec<bool>, String>;
+    let faults: [Option<PresenceFault>; 4] = [
         None,
         Some(|_| Err("injected presence fault".to_string())),
         Some(|n| Ok(vec![true; n.saturating_sub(1)])),
