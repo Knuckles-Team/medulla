@@ -27,7 +27,7 @@ pub(crate) fn is_epistemic_op(op: &Op) -> bool {
     matches!(
         op,
         Op::ExplainBelief { .. }
-            | Op::ConfidenceOp {}
+            | Op::ConfidenceOp { .. }
             | Op::SourceReliability { .. }
             | Op::BeliefAsOf { .. }
             | Op::SupportedBy { .. }
@@ -117,7 +117,7 @@ pub fn apply(op: &Op, input: RowSet, ctx: &PlanCtx) -> Result<RowSet, String> {
         | Op::SupportedBy { .. }
         | Op::BeliefAsOf { .. }
         | Op::SourceReliability { .. }
-        | Op::ConfidenceOp {}
+        | Op::ConfidenceOp { .. }
         | Op::ExplainBelief { .. } => apply_epistemic(op, input, ctx),
 
         // SOURCE/FUSE (time-series, CONCEPT:MEDULLA-KG.query.multi-rate-sensor-stream /
@@ -457,7 +457,7 @@ pub(super) fn apply_epistemic(op: &Op, input: RowSet, ctx: &PlanCtx) -> Result<R
         Op::SourceReliability { source_id } => {
             super::reliability::source_reliability_op(ctx, input, source_id)
         }
-        Op::ConfidenceOp {} => Ok(confidence_op(ctx, input)),
+        Op::ConfidenceOp { threshold } => Ok(confidence_op(ctx, input, *threshold)),
         Op::ExplainBelief { node_id } => Ok(explain_belief_op(ctx, input, node_id)),
         _ => unreachable!("apply routed a non epistemic Op here"),
     }

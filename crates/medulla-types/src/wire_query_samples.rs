@@ -232,7 +232,7 @@ pub fn uql_sample_op(kind: OpKind) -> Op {
             source_id: "s1".into(),
         },
         #[cfg(feature = "epistemic")]
-        OpKind::ConfidenceOp => Op::ConfidenceOp {},
+        OpKind::ConfidenceOp => Op::ConfidenceOp { threshold: None },
         #[cfg(feature = "epistemic")]
         OpKind::ExplainBelief => Op::ExplainBelief {
             node_id: "c1".into(),
