@@ -347,7 +347,7 @@ pub(crate) fn apply_pack_source(
 /// member URI, then render a deterministic N-Triples/Turtle union. Sorting the
 /// URI first makes pack archive order irrelevant; parsing before union is what
 /// prevents two local `_:b0` labels from becoming one RDF node.
-fn compose_pack_documents(
+pub(crate) fn compose_pack_documents(
     kind: &str,
     mut documents: Vec<PackSchemaDocument>,
 ) -> Result<Option<Arc<str>>, String> {

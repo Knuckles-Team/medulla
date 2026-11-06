@@ -5267,6 +5267,7 @@ dependencies = [
  "tokio-rustls",
  "tracing",
  "tracing-subscriber",
+ "unicode-normalization",
 ]
 
 [[package]]
@@ -7572,6 +7573,7 @@ version = "0.1.0"
 dependencies = [
  "hex",
  "medulla-catalog-types",
+ "medulla-identity-types",
  "medulla-types",
  "rmp-serde",
  "schemars 1.2.3",
