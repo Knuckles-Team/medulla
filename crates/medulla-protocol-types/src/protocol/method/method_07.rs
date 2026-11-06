@@ -363,6 +363,14 @@ $($variants)*
         source_ids: Vec<String>,
     },
 
+    /// The canonical hash of a Turtle payload (MEDULLA-TYPED-PACKS-R809): the
+    /// payload is canonicalized with RDFC-1.0 and the SHA-256 digest of the
+    /// canonical N-Quads is returned as 64 lowercase hex characters, stable
+    /// under prefix changes, statement order and blank-node relabelling. Returns
+    /// a `Json` `OntologyCanonicalHashResult`. An unparsable or oversized payload
+    /// is refused `TURTLE_INVALID`. Read-only; writes nothing. Handler gated `rdf`.
+    OntologyCanonicalHash { turtle: String },
+
 
     /// X5-enforce (CONCEPT:MEDULLA-KG.ontology.rdf-update-guard) — (re)register a graph's
     /// SHACL shapes as WRITE-TIME closed-world integrity constraints (ICV, reusing

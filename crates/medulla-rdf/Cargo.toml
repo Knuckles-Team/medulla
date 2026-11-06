@@ -21,7 +21,7 @@ name = "medulla_rdf"
 [features]
 default = []
 # W1 — RDF term model + Turtle/N-Triples parse+serialize (oxrdf + oxttl). Pure Rust.
-rdf = ["dep:oxrdf", "dep:oxttl", "medulla-types/rdf"]
+rdf = ["dep:oxrdf", "dep:oxttl", "dep:sha2", "medulla-types/rdf", "oxrdf/rdfc-10"]
 # W2 — SPARQL 1.1 algebra (spargebra). Parser + algebra ONLY; we provide the
 # evaluator (compile, not embed). Pure Rust (peg is a build-time PEG generator).
 sparql = ["rdf", "dep:spargebra", "dep:regex", "medulla-types/sparql"]

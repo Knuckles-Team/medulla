@@ -313,6 +313,10 @@ async fn try_handle_validation(
                 .await,
             )
         }
+        #[cfg(feature = "rdf")]
+        Method::OntologyCanonicalHash { turtle } => {
+            Some(super::ontology_hash::handle_ontology_canonical_hash(req_id, turtle))
+        }
         #[cfg(feature = "shacl")]
         Method::OntologyInspect {
             documents,

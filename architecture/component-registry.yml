@@ -4088,6 +4088,7 @@ components:
       - "tests/test_quantum_hardware_provider_feature_gates.py"
       - "tests/test_query_cypher.py"
       - "tests/test_query_sql.py"
+      - "tests/ontology/test_canonical_hash_served.py"
       - "tests/test_rdf_client.py"
       - "tests/test_reasoning.py"
       - "tests/test_reasoning_client.py"

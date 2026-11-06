@@ -124,6 +124,8 @@ const DOMAIN_PREFIXES: &[(&str, &[&str])] = &[
     ),
 ];
 const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
+    // MEDULLA-TYPED-PACKS-R809: an unparsable or oversized Turtle payload.
+    ("OntologyCanonicalHash", &["TURTLE_INVALID"]),
     // MEDULLA-IDENTITY-R008.4/R008.5: the stored run-scope bound.
     (
         "AgentAssemble",

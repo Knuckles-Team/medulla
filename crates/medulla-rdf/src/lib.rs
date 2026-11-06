@@ -27,6 +27,10 @@ pub use oxrdf;
 #[cfg(feature = "rdf")]
 pub mod mapping;
 
+/// Served canonical hash of a Turtle payload (MEDULLA-TYPED-PACKS-R809).
+#[cfg(feature = "rdf")]
+pub mod ontology_hash;
+
 /// Pure connector-pack RDF preprocessing shared with admission.
 #[cfg(feature = "rdf")]
 pub mod pack;

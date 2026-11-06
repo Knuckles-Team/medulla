@@ -34,6 +34,8 @@ mod validation;
 mod inspect;
 #[cfg(all(feature = "shacl", feature = "nl-query"))]
 pub use inspect::composed_ontology_properties;
+#[cfg(feature = "rdf")]
+mod ontology_hash;
 #[cfg(feature = "shacl")]
 mod typed_triples;
 
