@@ -689,6 +689,10 @@ async fn t20_served_supersession_closes_prior_links_successor_and_refuses_replay
     .await;
     assert!(prior.error.is_none(), "AddEdge: {prior:?}");
 
+    let before_ms = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .expect("clock after epoch")
+        .as_millis() as u64;
     let first = call(&state, 5, graph, supersede_edge_method()).await;
     assert!(first.error.is_none(), "first SupersedeEdge: {first:?}");
 
@@ -703,13 +707,16 @@ async fn t20_served_supersession_closes_prior_links_successor_and_refuses_replay
         .find(|value| value["relationship"] == "LIKES")
         .expect("closed prior relationship must remain in history");
     assert_eq!(prior_properties["valid_until"].as_u64(), Some(200));
-    assert_eq!(prior_properties["tx_to"].as_u64(), Some(250));
     let successor_properties = properties
         .iter()
         .find(|value| value["relationship"] == "DISLIKES")
         .expect("successor relationship must be present");
     assert_eq!(successor_properties["valid_from"].as_u64(), Some(200));
-    assert_eq!(successor_properties["tx_from"].as_u64(), Some(250));
+    // MEDULLA-DURABLE-KERNEL-R078: the engine clock, not the caller's
+    // `tx_now: 250`, stamps the close and the successor -- one instant.
+    let tx_to = prior_properties["tx_to"].as_u64().expect("prior tx_to");
+    assert!(tx_to >= before_ms, "engine time stamps tx_to: {tx_to}");
+    assert_eq!(successor_properties["tx_from"].as_u64(), Some(tx_to));
     assert_eq!(successor_properties["supersedes"], "a:b:LIKES");
 
     let second = call(&state, 6, graph, supersede_edge_method()).await;

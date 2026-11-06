@@ -95,6 +95,19 @@ async fn roster(state: &test_support::SharedState, id: u64, now_ms: u64) -> BusR
     )
 }
 
+/// The test isolation plus `root` as a second graph writer, so a foreign
+/// heartbeat reaches the bus handler instead of the graph ACL.
+fn isolation() -> medulla_isolation::isolation::IsolationLayer {
+    let mut isolation = common::current_isolation();
+    isolation.register_agent(medulla_types::acl::AgentIdentity {
+        agent_id: "root".to_string(),
+        role: medulla_types::acl::AgentRole::System,
+        teams: Vec::new(),
+        roles: Vec::new(),
+    });
+    isolation
+}
+
 async fn fresh() -> (
     std::path::PathBuf,
     test_support::SharedPersistence,
@@ -104,7 +117,7 @@ async fn fresh() -> (
         SECRET,
         ENCRYPTION_KEY,
         "agent-bus-served",
-        common::current_isolation(),
+        isolation(),
         GRAPH,
     )
     .await
@@ -229,10 +242,14 @@ async fn bus_refusals_write_nothing() {
     assert!(error_code(&refused).starts_with("BUS_FIELD_TOO_LARGE"));
 
     // A heartbeat naming another principal's session.
-    let mut other = common::context_for(common::TEST_AGENT);
-    other.principal = "someone-else".to_string();
+    // A signed request's principal is its signer, so the other principal is
+    // a second provisioned signer.
+    let other = common::context_for("root");
     let refused = send_as(&state, 8, other, heartbeat("s-1", NOW + 5)).await;
-    assert!(error_code(&refused).starts_with("BUS_SESSION_FOREIGN"));
+    assert!(
+        error_code(&refused).starts_with("BUS_SESSION_FOREIGN"),
+        "{refused:?}"
+    );
 
     // Another tenant sees none of these rows.
     let mut foreign = common::context_for(common::TEST_AGENT);
@@ -296,10 +313,15 @@ async fn roster_survives_restart() {
     .await;
     let restarted = test_support::state_with(
         SECRET,
-        common::current_isolation(),
+        isolation(),
         Some(dir_s.clone()),
-        Some(reopened),
+        Some(reopened.clone()),
     );
+    // A restarted engine recovers its durable graphs before it serves.
+    reopened
+        .load_all(&restarted)
+        .await
+        .expect("reload durable graphs");
     let after = roster(&restarted, 201, NOW + 100).await;
     assert_eq!(
         rmp_serde::to_vec_named(&after).unwrap(),

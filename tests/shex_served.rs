@@ -79,9 +79,14 @@ async fn wire_report_preserves_shape_map() {
         .iter()
         .map(|result| result["node"].as_str().expect("node"))
         .collect();
+    // The wire carries each focus node in its N-Triples lexical form
+    // (`ShexNodeResult::node`), the form the direct validator reports.
     assert_eq!(
         nodes,
-        pairs.iter().map(|(node, _)| *node).collect::<Vec<_>>(),
+        pairs
+            .iter()
+            .map(|(node, _)| format!("<{node}>"))
+            .collect::<Vec<_>>(),
         "results keep shape-map order and node lexical form"
     );
     for result in results {

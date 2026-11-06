@@ -226,13 +226,14 @@ pub(super) async fn try_handle(
     let method = stamped.as_ref().unwrap_or(method);
     let route = route_for(method);
     match route_handler(route) {
-        RouteHandler::Core => try_handle_core(ctx, plan, method, route).await,
+        RouteHandler::Core => try_handle_core(tenant_id, ctx, plan, method, route).await,
         RouteHandler::Admin => try_handle_admin(state, tenant_id, ctx, plan, method, route).await,
         RouteHandler::None => None,
     }
 }
 
 async fn try_handle_core(
+    tenant_id: &str,
     ctx: &MutationCtx<'_>,
     plan: &MutationPlan,
     method: &Method,
@@ -242,7 +243,7 @@ async fn try_handle_core(
         Route::Coalescable => try_handle_coalescable(ctx, plan, method).await,
         Route::NodeState => try_handle_node_state(ctx, plan, method).await,
         Route::Memory => try_handle_memory(ctx, plan, method).await,
-        Route::Bus => try_handle_bus(ctx, plan, method).await,
+        Route::Bus => try_handle_bus(tenant_id, ctx, plan, method).await,
         Route::Scene => try_handle_scene(ctx, plan, method).await,
         Route::Trajectory => try_handle_trajectory(ctx, plan, method).await,
         _ => None,
@@ -383,21 +384,25 @@ async fn try_handle_node_state(
 }
 
 async fn try_handle_bus(
+    tenant_id: &str,
     ctx: &MutationCtx<'_>,
     plan: &MutationPlan,
     method: &Method,
 ) -> Option<Response> {
     use crate::graph_ops::bus;
     let response = match method {
-        Method::BusRegister { participant, .. } => bus::register(ctx, plan, participant).await,
+        Method::BusRegister {
+            participant,
+            principal,
+        } => bus::register(ctx, plan, tenant_id, participant, principal).await,
         Method::SyncMemorySnapshot { request, .. } => {
             super::memory_snapshot::sync(ctx, plan, request).await
         }
         Method::BusHeartbeat {
             session_ref,
             now_ms,
-            ..
-        } => bus::heartbeat(ctx, plan, session_ref, *now_ms).await,
+            principal,
+        } => bus::heartbeat(ctx, plan, tenant_id, session_ref, *now_ms, principal).await,
         _ => return None,
     };
     Some(response)

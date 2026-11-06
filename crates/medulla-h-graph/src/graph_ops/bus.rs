@@ -51,8 +51,14 @@ fn refuse(req_id: u64, code: ServerErrorCode, detail: impl std::fmt::Display) ->
     Response::err(req_id, format!("{}: {detail}", code.as_str()))
 }
 
-fn principal_of(ctx: &MutationCtx<'_>) -> String {
-    ctx.caller.unwrap_or("anonymous").to_string()
+/// The acting principal: the verified principal the request boundary stamped
+/// on the method, else the transport caller (an unauthenticated local mode).
+fn principal_of(ctx: &MutationCtx<'_>, stamped: &str) -> String {
+    if stamped.is_empty() {
+        ctx.caller.unwrap_or("anonymous").to_string()
+    } else {
+        stamped.to_string()
+    }
 }
 
 /// The stored participant of `session_ref`, if this tenant holds one.
@@ -79,17 +85,21 @@ pub fn is_live(now_ms: u64, last_seen_ms: u64, ttl_s: u64) -> bool {
     now_ms.saturating_sub(last_seen_ms) <= ttl_s.saturating_mul(1000)
 }
 
+/// `BusRegister` under the verified `tenant` (the request tenant, never the
+/// opaque carrier scope, so `BusRoster` finds the row by the same tenant).
 pub(crate) async fn register(
     ctx: &MutationCtx<'_>,
     plan: &MutationPlan,
+    tenant: &str,
     participant: &BusParticipant,
+    principal: &str,
 ) -> Response {
     let mut participant = participant.clone();
-    participant.tenant = ctx.tenant_scope.to_string();
+    participant.tenant = tenant.to_string();
     if let Err(detail) = participant.check_bounds() {
         return refuse(ctx.req_id, ServerErrorCode::BusFieldTooLarge, detail);
     }
-    let principal = principal_of(ctx);
+    let principal = principal_of(ctx, principal);
     match lookup(ctx.core, &participant.session_ref) {
         Some((held, owner)) if held.tenant != participant.tenant || owner != principal => {
             return refuse(
@@ -100,8 +110,7 @@ pub(crate) async fn register(
         }
         Some(_) => {}
         None => {
-            if tenant_participants(ctx.core, ctx.tenant_scope).len() >= MAX_PARTICIPANTS_PER_TENANT
-            {
+            if tenant_participants(ctx.core, tenant).len() >= MAX_PARTICIPANTS_PER_TENANT {
                 return refuse(
                     ctx.req_id,
                     ServerErrorCode::BusRosterFull,
@@ -126,8 +135,10 @@ pub(crate) async fn register(
 pub(crate) async fn heartbeat(
     ctx: &MutationCtx<'_>,
     plan: &MutationPlan,
+    tenant: &str,
     session_ref: &str,
     now_ms: u64,
+    principal: &str,
 ) -> Response {
     if session_ref.is_empty() || session_ref.len() > MAX_SESSION_REF_BYTES {
         return refuse(
@@ -136,11 +147,11 @@ pub(crate) async fn heartbeat(
             format!("session_ref must be 1..={MAX_SESSION_REF_BYTES} bytes"),
         );
     }
-    let principal = principal_of(ctx);
+    let principal = principal_of(ctx, principal);
     let Some((held, owner)) = lookup(ctx.core, session_ref) else {
         return Response::ok(ctx.req_id, ResultPayload::Bool(false));
     };
-    if held.tenant != ctx.tenant_scope || owner != principal {
+    if held.tenant != tenant || owner != principal {
         return refuse(
             ctx.req_id,
             ServerErrorCode::BusSessionForeign,
