@@ -20,6 +20,7 @@ use medulla_protocol_types::result_contract::ingestion::{
     IncidentSetStatus as IncidentSetStatusResult,
 };
 use medulla_server_api::authority_context::VerifiedRequestContext;
+use medulla_server_api::carrier::GraphReadAuthority;
 use medulla_server_api::state::ServerState;
 use medulla_server_graph::dispatch::graph_pipeline::dispatch_graph_op;
 use medulla_server_graph::dispatch::shared::{timed_read, typed_response};
@@ -105,12 +106,14 @@ pub async fn handle_incident_related_claims(
     limit: Option<u32>,
 ) -> Response {
     let result = async {
-        let (graph, authority) = load(state, &target).await?;
+        let (loaded, authority) = load(state, &target).await?;
         let tenant = Some(target.verified.tenant());
         let record = authority.evidence(tenant, &incident_id).map_err(refusal)?;
         let limit = limit
             .unwrap_or(DEFAULT_CLAIM_LIMIT)
             .clamp(1, MAX_CLAIM_LIMIT) as usize;
+        // Claims come back only through the caller's row-filtered projection.
+        let graph = loaded.read.project_core(&loaded.core);
         Ok(related_claims(&graph, record, limit))
     }
     .await;
@@ -158,12 +161,18 @@ fn refusal(error: IncidentRefusal) -> String {
     }
 }
 
+/// The authoritative request graph and the caller's row-read authority over it.
+struct LoadedGraph {
+    core: Arc<GraphCore>,
+    read: GraphReadAuthority,
+}
+
 /// The request graph and an authority over the verified tenant's unresolved
 /// served incidents visible to the caller.
 async fn load(
     state: &Arc<RwLock<ServerState>>,
     target: &IncidentTarget<'_>,
-) -> Result<(Arc<GraphCore>, IncidentAuthority), String> {
+) -> Result<(LoadedGraph, IncidentAuthority), String> {
     let tenant = target.verified.tenant();
     if tenant.trim().is_empty() {
         return Err(IncidentRefusal::TenantScopeRequired.code().to_string());
@@ -186,7 +195,14 @@ async fn load(
         })
         .filter_map(|(_, properties)| incident_record(&properties))
         .filter(|record| record.tenant == tenant && record.status != IncidentStatus::Resolved);
-    Ok((core.clone(), IncidentAuthority::load(records)))
+    let incidents = IncidentAuthority::load(records);
+    Ok((
+        LoadedGraph {
+            core,
+            read: authority,
+        },
+        incidents,
+    ))
 }
 
 fn incident_record(properties: &[u8]) -> Option<IncidentRecord> {
