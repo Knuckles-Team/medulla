@@ -72,22 +72,6 @@ fn parse_log_filter(directives: Option<&str>) -> tracing_subscriber::filter::Tar
         .unwrap_or_else(info)
 }
 
-#[cfg(test)]
-mod log_filter_tests {
-    use super::parse_log_filter;
-    use tracing::Level;
-
-    #[test]
-    fn rust_log_directives_raise_one_target_and_default_to_info() {
-        let unset = parse_log_filter(None);
-        assert!(unset.would_enable("medulla_types::response", &Level::INFO));
-        assert!(!unset.would_enable("medulla_types::response", &Level::DEBUG));
-        let raised = parse_log_filter(Some("info,medulla_types::response=debug"));
-        assert!(raised.would_enable("medulla_types::response", &Level::DEBUG));
-        assert!(!raised.would_enable("other", &Level::DEBUG));
-    }
-}
-
 /// Build the OTLP batch exporter and install a Registry carrying BOTH the fmt
 /// layer and the `tracing-opentelemetry` export layer (CONCEPT:MEDULLA-OS.observability.otlp-span-export).
 #[cfg(feature = "otel")]
@@ -128,4 +112,20 @@ fn init_with_otel(endpoint: &str) -> Result<(), Box<dyn std::error::Error>> {
         .with(otel_layer)
         .try_init()?;
     Ok(())
+}
+
+#[cfg(test)]
+mod log_filter_tests {
+    use super::parse_log_filter;
+    use tracing::Level;
+
+    #[test]
+    fn rust_log_directives_raise_one_target_and_default_to_info() {
+        let unset = parse_log_filter(None);
+        assert!(unset.would_enable("medulla_types::response", &Level::INFO));
+        assert!(!unset.would_enable("medulla_types::response", &Level::DEBUG));
+        let raised = parse_log_filter(Some("info,medulla_types::response=debug"));
+        assert!(raised.would_enable("medulla_types::response", &Level::DEBUG));
+        assert!(!raised.would_enable("other", &Level::DEBUG));
+    }
 }

@@ -262,8 +262,8 @@ def test_crosswalk_evidence_matches_committed_records() -> None:
                     "source_ids": [],
                 },
             )
-            assert inline.committed is False  # type: ignore[attr-defined]
-            assert list(inline.crosswalks) == []  # type: ignore[attr-defined]
+            assert inline.committed is False
+            assert list(inline.crosswalks) == []
 
             connector = _connector("xwalk-evidence")
             records = {
