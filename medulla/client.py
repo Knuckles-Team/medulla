@@ -9074,6 +9074,31 @@ class FinanceClient:
             )
         ).payload
 
+    # ── Served finance records (MEDULLA-FINANCE-PRIMITIVES-R004.3.3.2) ────
+    async def record_put(
+        self,
+        kind: str,
+        schema_version: str,
+        record: dict[str, Any],
+        expected_head: int | None = None,
+    ) -> int:
+        """Put one finance-v1 record; the engine validates version, tenant and shape."""
+        return await _gen.compute.send_finance_record_put(
+            self._client,
+            {
+                "kind": kind,
+                "schema_version": schema_version,
+                "record": record,
+                "expected_head": expected_head,
+            },
+        )
+
+    async def record_get(self, kind: str, record_id: str) -> Any:
+        """Read one finance-v1 record under the verified tenant (None when absent)."""
+        return await _gen.compute.send_finance_record_get(
+            self._client, {"kind": kind, "record_id": record_id}
+        )
+
     # ── Position sizing
     # (CONCEPT:MEDULLA-KG.domains.market-microstructure-sizing-backtest)
     # ─────────────────────────────
