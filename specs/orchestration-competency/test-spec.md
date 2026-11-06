@@ -53,6 +53,8 @@ Every row below names a test that does not exist yet. The test file and function
 | T-039 | MEDULLA-CQ-ORCH-R701.5 | L3 | `tests/process_import_served.rs::stored_steps_keep_source_ids` | Process model import evidence proves its row as stated in requirements.md |
 | T-040 | MEDULLA-CQ-ORCH-R701.6 | L4 | `tests/competency/test_governance_roundtrip_served.py::test_roundtrip_preserves_gates` | Process model import hot-path proof proves its row as stated in requirements.md |
 | T-041 | MEDULLA-CQ-ORCH-R012 | L3 | `tests/orchestration/test_orchestration_competency_served.py::test_execute_task_names_onboarded_operations_with_provenance` | Served proof of the execution question from onboarded connector operations proves its row as stated in requirements.md |
+| T-041.1 | MEDULLA-CQ-ORCH-R012.1 | L4 | `tests/orchestration/test_orchestration_competency_served.py::test_steps_carry_contract_params_results_and_refusals` | Each step carries the contract's tool, order, params, result fields and refusal codes |
+| T-041.2 | MEDULLA-CQ-ORCH-R012.2 | L4 | `tests/orchestration/test_orchestration_competency_served.py::test_step_names_linked_skill_and_agent_prompt` | Each step names its linked skill and the task's agent prompts |
 
 ## Negative and boundary cases
 

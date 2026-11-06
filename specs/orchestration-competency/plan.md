@@ -131,3 +131,4 @@ Gates for any change under these rows: `cargo test -p medulla-rdf --test orchest
 - arbora intent-surface probes: `ARBORA-FLEET-R052.4` (consumer rows R009.1 to R009.6) and `ARBORA-FLEET-R056`; contract `contracts/arbora-intent-probes.md`.
 - arbora acceptance scenario for the execution plan: `ARBORA-ACCEPTANCE-R006.7` (consumer row R012); contract `contracts/arbora-execution-scenario.md`.
 - meristem consumer of the architecture view: `MERISTEM-HARNESS-CYCLE-R026.1` (provider row R010.3); contract `contracts/meristem-architecture-view.md`.
+- scion-sdk contract vocabulary: `SCION-CONNECTOR-CONTROL-R916.3` provides the served `contracts.ttl` (consumer rows R012.1 and R012.2); contract `contracts/scion-surface-contracts.md`.

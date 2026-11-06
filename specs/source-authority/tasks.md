@@ -58,4 +58,5 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T052 [US5] MEDULLA-SRC-AUTH-R011.4 Refusal
 - [ ] T053 [US5] MEDULLA-SRC-AUTH-R011.5 Evidence
 - [ ] T054 [US5] MEDULLA-SRC-AUTH-R011.6 Hot-path proof for the trust mark
+- [ ] T056 [US5] MEDULLA-SRC-AUTH-R012 Imported data locations become proposed authority rows
 - [ ] T055 [US2] MEDULLA-SRC-AUTH-R801 Reviewed policy source bound to the active policy

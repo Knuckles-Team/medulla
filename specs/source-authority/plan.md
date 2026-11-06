@@ -250,3 +250,4 @@ none
 
 - Sources used and why block: `MEDULLA-SRC-AUTH-R007.4` provides, `ARBORA-FLEET-R052.3` consumes. Contract: [arbora-sources-used-block.md](contracts/arbora-sources-used-block.md).
 - Policy source binding after human review: `MEDULLA-SRC-AUTH-R801` provides, `ARBORA-OPS-R050.2.1` consumes. Contract: [arbora-policy-source-bind.md](contracts/arbora-policy-source-bind.md).
+- Connector data locations: `SCION-CONNECTOR-CONTROL-R916.3` provides the `sc:DataLocation` individuals and `PIPE-GATES-R014.7` requires them; `MEDULLA-SRC-AUTH-R012` consumes them. Contract: [scion-data-locations.md](contracts/scion-data-locations.md).

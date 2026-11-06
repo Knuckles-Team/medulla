@@ -46,3 +46,7 @@ Each entry below is planned. The test file or function does not exist in the tre
 - `MEDULLA-SRC-AUTH-R007.4`: `tests/federated/test_source_coverage_served.py::test_report_sources_used_equal_audit` (planned, L3) and `crates/medulla-virtual-graph/src/supply_chain_impact.rs::tests::sources_used_equals_audit` (planned, L2).
 - `MEDULLA-SRC-AUTH-R009.4`: `tests/federated/test_source_coverage_served.py::test_swapping_authority_rank_changes_sources_used` (planned, L3).
 - `MEDULLA-SRC-AUTH-R801`: `tests/policy_source_served.rs::stale_review_leaves_policy_unchanged` (planned, L3).
+
+### MEDULLA-SRC-AUTH-R012 tests
+
+- `MEDULLA-SRC-AUTH-R012`: `crates/medulla-rdf/tests/source_authority_fixture.rs::data_location_yields_a_proposed_pack_row` (planned, L2): the test does not exist yet; the owning change adds it at this exact path.

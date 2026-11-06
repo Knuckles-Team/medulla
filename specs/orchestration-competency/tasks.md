@@ -74,3 +74,5 @@ Producer first: ontology terms, shapes and authority mappings, then fixtures and
 - [ ] T068 [US6] MEDULLA-CQ-ORCH-R701.5 Process model import evidence
 - [ ] T069 [US6] MEDULLA-CQ-ORCH-R701.6 Process model import hot-path proof
 - [ ] T070 [US2] MEDULLA-CQ-ORCH-R012 Served proof of the execution question from onboarded connector operations
+- [ ] T071 [US2] MEDULLA-CQ-ORCH-R012.1 Steps come from imported tool-use contracts
+- [ ] T072 [US2] MEDULLA-CQ-ORCH-R012.2 The guiding skill and agent prompt come from imported links
