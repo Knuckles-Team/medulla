@@ -693,3 +693,32 @@ pub(super) async fn seed_server_only_import(
         other => panic!("legacy fixture import did not land: {other:?}"),
     }
 }
+
+/// BUG-009 (2.27.11): ConnectorPack status answers while another task holds
+/// the process-wide `ServerState` lock. Before the fix every ConnectorPack
+/// call took `state.write()` just to clone the open store handle, so a status
+/// read queued behind any long state holder; at boot that held arbora's
+/// semantic-content check past its RPC deadline.
+#[tokio::test]
+async fn status_answers_while_the_server_state_lock_is_held() {
+    let served = Served::new();
+    bind(&served, "bug009-status", ADMIN).await;
+    let held = served.state.read().await;
+    let response = tokio::time::timeout(
+        std::time::Duration::from_secs(10),
+        served.pack(
+            "bug009-status-read",
+            ConnectorPackOp::Status {
+                request: eg_types::connector_pack::ConnectorPackStatusRequest {
+                    tenant_id: TENANT.to_string(),
+                    connector: ResourceId::new("bug009-status").unwrap(),
+                },
+            },
+        ),
+    )
+    .await
+    .expect("status must not queue on the ServerState write lock");
+    drop(held);
+    let status: eg_types::connector_pack::ConnectorPackStatus = ok("Status", response);
+    assert!(status.head.is_none());
+}

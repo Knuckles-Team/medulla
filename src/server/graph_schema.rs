@@ -130,6 +130,7 @@ pub(crate) async fn commit_pack_projection(
             "PACK_PROJECTION_GRAPH_NOT_MATERIALIZED: projection graph is incomplete".into(),
         );
     }
+    prevalidate_pack_projection(&entry.core, connector, record_id, &shapes, &ontologies).await?;
     #[cfg(feature = "streaming")]
     let cdc = state.read().await.cdc.clone();
     let method = Method::GraphSchema {
@@ -295,6 +296,71 @@ pub(crate) fn apply_pack_source(
 ) -> Result<eg_types::graph_schema::GraphSchemaCommitted, String> {
     use eg_types::graph_schema::GraphSchemaCommitted;
 
+    let (sources, changed) = pack_candidate_sources(
+        &core.schema_sources(),
+        connector,
+        record_id,
+        shapes,
+        ontologies,
+        if_composed_digest,
+    )?;
+    compose::validate_entering_schema(&sources)?;
+    if changed {
+        core.install_schema_sources(Arc::new(sources.clone()));
+    }
+    Ok(GraphSchemaCommitted {
+        schema_version: eg_types::graph_schema::GRAPH_SCHEMA_RESULT_SCHEMA_VERSION,
+        graph: graph_name.to_string(),
+        composed_digest: sources.composed_digest().to_hex(),
+        graph_version: core.version().saturating_add(u64::from(changed)),
+        changed,
+    })
+}
+
+/// Decide the entering-schema check for a pack projection on the BLOCKING pool,
+/// before the commit kernel runs.
+///
+/// Composition (the terminology tableau) and the full-ABox tableau are CPU
+/// work that grows with the pack's ontology. Run inline inside the commit
+/// closure they held a tokio worker for minutes on a large pack (BUG-009), and
+/// every request queued behind that worker or behind the state lock stalled.
+/// The verdict lands on the content-keyed compiled entry (and its ABox memo),
+/// so the authoritative check inside [`apply_pack_source`] is then a cache hit.
+/// A refusal here is the refusal the commit would produce for the same bytes.
+/// If the graph's sources change in between, the in-commit check recomputes,
+/// so correctness never depends on this warm-up.
+async fn prevalidate_pack_projection(
+    core: &Arc<GraphCore>,
+    connector: &eg_types::contract::ResourceId,
+    record_id: &str,
+    shapes: &[PackSchemaDocument],
+    ontologies: &[PackSchemaDocument],
+) -> Result<(), String> {
+    let (candidate, _) = pack_candidate_sources(
+        &core.schema_sources(),
+        connector,
+        record_id,
+        shapes.to_vec(),
+        ontologies.to_vec(),
+        None,
+    )?;
+    tokio::task::spawn_blocking(move || compose::validate_entering_schema(&candidate).map(drop))
+        .await
+        .map_err(|error| format!("pack projection schema validation task failed: {error}"))?
+}
+
+/// The graph's schema sources with `connector`'s pack source attached, and
+/// whether the attach changed them. Pure: shared by [`apply_pack_source`] and
+/// the off-runtime pre-validation in [`commit_pack_projection`], so both
+/// validate byte-identical sources under one `composed_digest`.
+fn pack_candidate_sources(
+    current: &crate::graph::GraphSchemaSources,
+    connector: &eg_types::contract::ResourceId,
+    record_id: &str,
+    shapes: Vec<PackSchemaDocument>,
+    ontologies: Vec<PackSchemaDocument>,
+    if_composed_digest: Option<&str>,
+) -> Result<(crate::graph::GraphSchemaSources, bool), String> {
     if record_id.is_empty() {
         return Err("ATTACH_PACK_SCHEMA_INVALID: pack record id is empty".to_string());
     }
@@ -302,7 +368,7 @@ pub(crate) fn apply_pack_source(
         eg_types::contract::Digest256::parse(expected)
             .map_err(|error| format!("invalid if_composed_digest: {error}"))?;
     }
-    let mut sources = (*core.schema_sources()).clone();
+    let mut sources = current.clone();
     if let Some(expected) = if_composed_digest {
         let actual = sources.composed_digest().to_hex();
         if expected != actual {
@@ -324,17 +390,7 @@ pub(crate) fn apply_pack_source(
     )?;
     let source_id = format!("pack:{}", connector.as_str());
     let changed = sources.attach_dynamic(source_id, source)?;
-    compose::validate_entering_schema(&sources)?;
-    if changed {
-        core.install_schema_sources(Arc::new(sources.clone()));
-    }
-    Ok(GraphSchemaCommitted {
-        schema_version: eg_types::graph_schema::GRAPH_SCHEMA_RESULT_SCHEMA_VERSION,
-        graph: graph_name.to_string(),
-        composed_digest: sources.composed_digest().to_hex(),
-        graph_version: core.version().saturating_add(u64::from(changed)),
-        changed,
-    })
+    Ok((sources, changed))
 }
 
 /// Parse each pack member independently, scope its blank nodes by immutable

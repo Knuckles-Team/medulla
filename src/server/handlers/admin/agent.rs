@@ -97,9 +97,8 @@ async fn ensure_agent_library(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
 ) -> Result<Arc<crate::server::persistence::agent_library::AgentLibraryStore>, Response> {
-    let mut guard = state.write().await;
-    guard
-        .ensure_agent_library()
+    crate::server::state::shared_agent_library(state)
+        .await
         .map_err(|error| Response::err(req_id, error))
 }
 

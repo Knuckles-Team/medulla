@@ -90,7 +90,7 @@ pub(crate) async fn handle_connector_pack(
 async fn agent_library_store(
     state: &Arc<RwLock<ServerState>>,
 ) -> Result<Arc<crate::server::persistence::agent_library::AgentLibraryStore>, String> {
-    state.write().await.ensure_agent_library()
+    crate::server::state::shared_agent_library(state).await
 }
 
 /// Read one connector's head, member counts, last receipt and warnings.
@@ -119,7 +119,12 @@ async fn serve_status(
             Ok(store) => store,
             Err(error) => return Response::err(req_id, error),
         };
-        match store.connector_pack_status(&request.tenant_id, &request.connector) {
+        let (tenant_id, connector) = (request.tenant_id.clone(), request.connector.clone());
+        let status = crate::server::dispatch::blocking_task("connector pack status", move || {
+            store.connector_pack_status(&tenant_id, &connector)
+        })
+        .await;
+        match status {
             Ok(mut status) => {
                 if !verified.allows_action("agent:pack-control") {
                     status.importer = None;
@@ -306,7 +311,13 @@ async fn preflight_import(
     validate_import_identity(verified, request)?;
     let store = agent_library_store(state).await?;
     let status =
-        store.connector_pack_status(&request.context.tenant_id, &request.index.connector)?;
+        // An import replaces stored rows that no longer decode (BUG-008);
+        // every other read refuses them with PACK_RECORD_UNDECODABLE.
+        store.connector_pack_status_with(
+            &request.context.tenant_id,
+            &request.index.connector,
+            crate::server::persistence::connector_pack::undecodable::UndecodableRows::Replace,
+        )?;
     authorize_importer(&store, verified, &request.index.connector)?;
     if let Some(result) = replay_or_unchanged(request, &status)? {
         return Ok(Preflight::Unchanged(result));

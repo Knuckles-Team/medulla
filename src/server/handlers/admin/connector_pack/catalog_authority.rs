@@ -43,7 +43,7 @@ async fn read_catalog(
         CatalogRead::AttesterOwner => require_catalog_owner_read(verified, &request.tenant_id)?,
     }
     let scope = verified.tenant_local_catalog_partition_digest(&request.server_name)?;
-    let store = state.write().await.ensure_agent_library()?;
+    let store = crate::server::state::shared_agent_library(state).await?;
     let binding = match access {
         CatalogRead::RequestBinding | CatalogRead::RequestOwner => {
             store.mcp_catalog_binding_status(verified.tenant(), &request.server_name, scope)?
@@ -279,7 +279,7 @@ pub(super) async fn admit_catalog_write(
     let guard = crate::server::mutation_batch::lock_graph("__commons__").await;
     let context = observed.context.clone();
     verify_observed_registration(state, verified, observed).await?;
-    let store = state.write().await.ensure_agent_library()?;
+    let store = crate::server::state::shared_agent_library(state).await?;
     let context = crate::server::handlers::admin::agent::bind_agent_library_context(
         &store,
         req_id,

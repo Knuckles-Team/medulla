@@ -157,6 +157,7 @@ closed_error_codes! {
         PackProjectionNoHead => "PACK_PROJECTION_NO_HEAD",
         PackProjectionPolicyUnbootstrapped => "PACK_PROJECTION_POLICY_UNBOOTSTRAPPED",
         PackProjectionPreviouslyFailed => "PACK_PROJECTION_PREVIOUSLY_FAILED",
+        PackRecordUndecodable => "PACK_RECORD_UNDECODABLE",
         PackRevisionNotVisible => "PACK_REVISION_NOT_VISIBLE",
         PackTooLarge => "PACK_TOO_LARGE",
         RaftNotConfigured => "RAFT_NOT_CONFIGURED",

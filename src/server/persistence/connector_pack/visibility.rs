@@ -47,7 +47,7 @@ pub(crate) fn pack_component_visible(
         return Ok(false);
     };
     let row: ConnectorPackHeadRow =
-        crate::server::persistence::agent_row::decode(&bytes, "connector pack head")?;
+        super::undecodable::decode_stored(&bytes, "connector pack head")?;
     Ok(row.head.visible_record_id.as_deref() == Some(row.head.record_id.as_str()))
 }
 

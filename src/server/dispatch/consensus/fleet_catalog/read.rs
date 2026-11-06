@@ -128,7 +128,7 @@ const COMPONENTS_UNAVAILABLE: &str =
 
 #[cfg(feature = "redb")]
 async fn component_store(state: &Arc<RwLock<ServerState>>) -> Result<ComponentStore, String> {
-    state.write().await.ensure_agent_library()
+    crate::server::state::shared_agent_library(state).await
 }
 
 #[cfg(not(feature = "redb"))]

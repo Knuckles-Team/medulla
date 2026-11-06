@@ -109,7 +109,7 @@ impl AgentLibraryStore {
             .map_err(|error| error.to_string())?
             .ok_or_else(|| "PACK_HEAD_CONFLICT: connector has no current pack head".to_string())?;
         let head: ConnectorPackHeadRow =
-            crate::server::persistence::agent_row::decode(head_row.value(), "connector pack head")?;
+            super::undecodable::decode_stored(head_row.value(), "connector pack head")?;
         let current_ref = PackHeadRef {
             binding_revision: head.head.binding_revision,
             pack_digest: head.head.pack_digest,
@@ -132,7 +132,7 @@ impl AgentLibraryStore {
             if uri != receipt.registration.resource_uri {
                 continue;
             }
-            current_member = Some(crate::server::persistence::agent_row::decode::<
+            current_member = Some(super::undecodable::decode_stored::<
                 ConnectorPackMemberRow,
             >(value.value(), "connector pack member")?);
             break;
@@ -298,7 +298,7 @@ fn current_head(
         .get((tenant, connector.as_str()))
         .map_err(|error| error.to_string())?
         .ok_or_else(|| "PACK_HEAD_CONFLICT: connector has no current pack head".to_string())?;
-    crate::server::persistence::agent_row::decode(row.value(), "connector pack head")
+    super::undecodable::decode_stored(row.value(), "connector pack head")
 }
 
 fn current_member(
@@ -321,7 +321,7 @@ fn current_member(
             continue;
         }
         let member: ConnectorPackMemberRow =
-            crate::server::persistence::agent_row::decode(value.value(), "connector pack member")?;
+            super::undecodable::decode_stored(value.value(), "connector pack member")?;
         if member.last_record_id != head.head.record_id
             || member.lifecycle != eg_types::agent_library::AgentLibraryLifecycle::Published
         {

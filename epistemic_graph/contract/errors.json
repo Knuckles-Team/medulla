@@ -1341,6 +1341,12 @@
     },
     {
       "class": "server",
+      "code": "PACK_RECORD_UNDECODABLE",
+      "http_status_hint": 400,
+      "retryable": false
+    },
+    {
+      "class": "server",
       "code": "PACK_REVISION_NOT_VISIBLE",
       "http_status_hint": 400,
       "retryable": false

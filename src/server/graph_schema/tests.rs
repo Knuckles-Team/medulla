@@ -462,3 +462,72 @@ fn pack_member_failures_name_the_exact_uri_and_enforce_each_bound() {
     assert!(error.contains("shapes://test/oversized.ttl"));
     assert!(error.contains("TOO_LARGE"));
 }
+
+/// BUG-009 (2.27.11): a pack projection decides its entering-schema check on
+/// the blocking pool before the commit kernel runs, and the verdict lands on
+/// the content-keyed compiled entry, so the in-commit check of the same
+/// sources is a cache hit rather than a second tableau on a runtime worker.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn pack_projection_prevalidation_memoizes_the_entering_schema_verdict() {
+    let core = Arc::new(GraphCore::new());
+    let connector = eg_types::contract::ResourceId::new("bug009-prevalidate").unwrap();
+    let ontology = Arc::<str>::from(
+        "@prefix owl: <http://www.w3.org/2002/07/owl#> . @prefix ex: <http://example/bug009/> . ex:Prevalidated a owl:Class .",
+    );
+    let documents = vec![pack_document(
+        "ontology://bug009-prevalidate/a.ttl",
+        Arc::clone(&ontology),
+    )];
+    let record_id = "pack:bug009-prevalidate:1:aaaa";
+
+    prevalidate_pack_projection(&core, &connector, record_id, &[], &documents)
+        .await
+        .unwrap();
+    let (candidate, changed) = pack_candidate_sources(
+        &core.schema_sources(),
+        &connector,
+        record_id,
+        Vec::new(),
+        documents.clone(),
+        None,
+    )
+    .unwrap();
+    assert!(changed);
+    let composed = compose::validate_and_compose(&candidate).unwrap();
+    assert!(
+        *composed.abox_consistent.lock(),
+        "prevalidation must leave the ABox verdict on the shared compiled entry"
+    );
+    let committed = apply_pack_source(
+        &core,
+        "pack__bug009",
+        &connector,
+        record_id,
+        Vec::new(),
+        documents,
+        None,
+    )
+    .unwrap();
+    assert!(committed.changed);
+    assert_eq!(committed.composed_digest, candidate.composed_digest().to_hex());
+
+    // A refusal is the refusal the commit would give for the same bytes.
+    let broken = vec![pack_document(
+        "ontology://bug009-prevalidate/broken.ttl",
+        Arc::from("this is not turtle"),
+    )];
+    let error = prevalidate_pack_projection(&core, &connector, record_id, &[], &broken)
+        .await
+        .unwrap_err();
+    let commit_error = apply_pack_source(
+        &core,
+        "pack__bug009",
+        &connector,
+        record_id,
+        Vec::new(),
+        broken,
+        None,
+    )
+    .unwrap_err();
+    assert_eq!(error, commit_error);
+}

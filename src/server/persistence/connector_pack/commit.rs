@@ -67,6 +67,13 @@ impl AgentLibraryStore {
             noun: "connector pack",
         };
         self.commit_pack_write(&plan.context, identity, effects, |write, staged| {
+            // BUG-008: undecodable stored rows of this connector are replaced by
+            // this admitted import, never read under an old shape.
+            super::undecodable::replace_undecodable_rows(
+                write,
+                &plan.record.tenant_id,
+                plan.record.connector.as_str(),
+            )?;
             let receipt = import_receipt(&plan, staged)?;
             apply_pack_rows(write, &plan, &receipt)?;
             Ok(PackImportResult::Imported {
@@ -436,13 +443,14 @@ fn compare_head(
             plan.record.connector.as_str(),
         ))
         .map_err(|error| error.to_string())?
-        .map(|value| {
-            crate::server::persistence::agent_row::decode::<ConnectorPackHeadRow>(
+        // An undecodable head is replaced by this import (BUG-008), so it
+        // compares as absent.
+        .and_then(|value| {
+            crate::server::persistence::agent_row::try_decode::<ConnectorPackHeadRow>(
                 value.value(),
-                "connector pack head",
             )
-        })
-        .transpose()?;
+            .ok()
+        });
     let actual_head = actual.as_ref().map(|row| PackHeadRef {
         binding_revision: row.head.binding_revision,
         pack_digest: row.head.pack_digest,

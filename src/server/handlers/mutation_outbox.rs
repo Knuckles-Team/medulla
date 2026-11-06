@@ -197,7 +197,7 @@ async fn resolve_native(
 ) -> Result<Owner, String> {
     match (store, scope) {
         (NativeOutboxStore::AgentLibrary, _) => Ok(Owner::AgentLibrary {
-            store: state.write().await.ensure_agent_library()?,
+            store: crate::server::state::shared_agent_library(state).await?,
             tenant_id: verified.tenant().to_string(),
         }),
         (NativeOutboxStore::Jobs, _) => jobs_owner(state).await,

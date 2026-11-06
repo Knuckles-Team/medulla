@@ -588,6 +588,40 @@ impl ServerState {
     }
 }
 
+/// The Agent Library handle for an async request or worker path, WITHOUT queueing
+/// on the process-wide `ServerState` write lock when the handle is already open.
+///
+/// A read guard adopts an open handle. The first open runs on the blocking pool
+/// outside every state guard, serialized by the shared open slot, and only the
+/// publish takes a short write. Before 2.27.11 the ConnectorPack handlers took
+/// `state.write()` on every call just to clone this `Arc`, so a status read
+/// queued behind any long state holder (BUG-009).
+#[cfg(feature = "redb")]
+pub(crate) async fn shared_agent_library(
+    state: &Arc<tokio::sync::RwLock<ServerState>>,
+) -> Result<Arc<crate::server::persistence::agent_library::AgentLibraryStore>, String> {
+    let (persist_dir, slot) = {
+        let guard = state.read().await;
+        if let Some(store) = guard.agent_library.as_ref() {
+            return Ok(Arc::clone(store));
+        }
+        let persist_dir = guard
+            .persist_dir
+            .clone()
+            .ok_or_else(|| "Agent Library requires a configured persist directory".to_string())?;
+        (persist_dir, Arc::clone(&guard.agent_library_open))
+    };
+    let opened = tokio::task::spawn_blocking(move || open_shared_agent_library(&slot, &persist_dir))
+        .await
+        .map_err(|error| format!("agent library open task failed: {error}"))??;
+    let mut guard = state.write().await;
+    if let Some(existing) = guard.agent_library.as_ref() {
+        return Ok(Arc::clone(existing));
+    }
+    guard.agent_library = Some(Arc::clone(&opened));
+    Ok(opened)
+}
+
 /// Open one physical Agent Library handle across request and background paths.
 #[cfg(feature = "redb")]
 pub(crate) fn open_shared_agent_library(
