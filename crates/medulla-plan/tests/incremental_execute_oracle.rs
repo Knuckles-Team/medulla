@@ -356,6 +356,8 @@ mod window {
         // spec: MEDULLA-INCREMENTAL-VIEWS-R001.4
         /// Verifies MEDULLA-INCREMENTAL-VIEWS-R001.4: Tumbling window aggregates equal the executor
         /// WindowAgg incremental == real `exec::window_aggregate` recompute, every step.
+        /// WindowAgg incremental == real `exec::window_aggregate` recompute, every step
+        /// (sum, mean and count buckets; retracts included).
         #[test]
         fn window_matches_execute(
             plan in arb_window_plan(),

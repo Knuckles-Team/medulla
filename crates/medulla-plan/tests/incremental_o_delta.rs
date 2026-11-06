@@ -60,6 +60,7 @@ fn scan_filter() -> Plan {
 
 // spec: MEDULLA-INCREMENTAL-VIEWS-R001.5
 /// Verifies MEDULLA-INCREMENTAL-VIEWS-R001.5: Maintenance cost follows the delta, not the view
+/// Touch count per single-row delta stays constant as the view grows 100x.
 #[test]
 fn maintenance_cost_is_o_delta_not_o_view() {
     let rungs = [1_000usize, 10_000, 100_000];
