@@ -108,6 +108,10 @@ closed_error_codes! {
         Decisions => "DECISIONS",
         DecisionLogTooLarge => "DECISION_LOG_TOO_LARGE",
         DeltaWeightOverflow => "DELTA_WEIGHT_OVERFLOW",
+        DerivedBoundMalformed => "DERIVED_BOUND_MALFORMED",
+        DerivedOriginMissing => "DERIVED_ORIGIN_MISSING",
+        DerivedWindowConflict => "DERIVED_WINDOW_CONFLICT",
+        DerivedWriteUnauthorized => "DERIVED_WRITE_UNAUTHORIZED",
         ElevationActorUnstamped => "ELEVATION_ACTOR_UNSTAMPED",
         ElevationCollision => "ELEVATION_COLLISION",
         ElevationConflict => "ELEVATION_CONFLICT",
@@ -400,5 +404,6 @@ closed_error_codes! {
         QueryUnscopable => "QUERY_UNSCOPABLE",
         UnitOutOfScope => "UNIT_OUT_OF_SCOPE",
         LayerCycle => "LAYER_CYCLE",
+        RuleVersionUnsupported => "RULE_VERSION_UNSUPPORTED",
     }
 }
