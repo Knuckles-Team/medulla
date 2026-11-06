@@ -64,6 +64,9 @@ impl Method {
             | Self::PublishCurrentPlan { .. }
             | Self::IssueHostStartGrant { .. }
             | Self::PublishRunCheckpoint { .. }
+            | Self::MarkWorkItemEffectStarted { .. }
+            | Self::RecordEffectReceipt { .. }
+            | Self::SubmitAdmittedRequest { .. }
             | Self::IssueControlLease { .. }
             | Self::TransitionControlLease { .. }
             | Self::PolicyEvolutionStore { .. }

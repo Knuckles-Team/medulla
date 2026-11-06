@@ -50,6 +50,9 @@ pub async fn try_handle(ctx: HandleContext<'_>, method: Method) -> Result<Respon
         | Method::PublishCurrentPlan { .. }
         | Method::IssueHostStartGrant { .. }
         | Method::PublishRunCheckpoint { .. }
+        | Method::MarkWorkItemEffectStarted { .. }
+        | Method::RecordEffectReceipt { .. }
+        | Method::SubmitAdmittedRequest { .. }
         | Method::IssueControlLease { .. }
         | Method::TransitionControlLease { .. }
         | Method::PolicyEvolutionStore { .. }

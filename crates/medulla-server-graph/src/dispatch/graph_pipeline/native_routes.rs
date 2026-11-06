@@ -283,6 +283,12 @@ async fn route_work_item_reads(
             tenant,
             work_item_id,
         },
+        Method::GetEffectReceipt { request } => {
+            medulla_h_jobs::work_item_read::WorkItemRead::EffectReceipt(request)
+        }
+        Method::GetAdmittedRequest { request } => {
+            medulla_h_jobs::work_item_read::WorkItemRead::AdmittedRequest(request)
+        }
         Method::ListControlLeases { request } => {
             medulla_h_jobs::work_item_read::WorkItemRead::ControlLeases(request)
         }
