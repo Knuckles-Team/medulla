@@ -72,18 +72,18 @@ Data entities are in [data-model.md](data-model.md). The shortest served proof i
 
 ### Standard process and decision vocabulary (R014)
 
-Six core terms describe every process. `:ProcessModel` exists in `enterprise-v1.ttl`. `:ProcessStep` and `:ProcessGate` come from `MEDULLA-CQ-ORCH-R700.2`. R014.1 adds `:ProcessEventNode`, `:ProcessSequenceFlow` and `:ProcessLane` to `orchestration-v1.ttl`. `bpmn-v1.ttl` and `dmn-v1.ttl` hold the BPMN 2.0 and DMN element classes; each class subclasses one core term and neither file uses `owl:imports`. DMN rolls up to the new core terms `:DecisionLogic` and `:DecisionRule` under `:Policy`. The step binding properties (`:usesTool`, `:hasPrompt`, `:evaluatesDecision`, `:approverRole`, `:toolArguments`) are read by the process plan of `MEDULLA-CQ-ORCH-R704`. Both files and their shapes register as core schema sources beside the `archimate` entry of `crates/medulla-graph-core/src/graph/schema_sources.rs` (:889).
+Six core terms describe every process. `:ProcessModel` exists in `enterprise-v1.ttl`. `:ProcessStep` and `:ProcessGate` come from `MEDULLA-CQ-ORCH-R700.2`. R014.1 adds `:ProcessEventNode`, `:ProcessSequenceFlow` and `:ProcessLane` to `orchestration-v1.ttl`. `:ProcessStep`, `:ProcessGate` and `:ProcessEventNode` subclass the existing `:TaskStep`; flows and lanes subclass `:Concept`. `bpmn-v1.ttl` and `dmn-v1.ttl` hold the BPMN 2.0 and DMN element classes in the core namespace. Their `:Bpmn` and `:Dmn` IRIs are the ones the process engine connector pack already declares, so one term has one IRI. Each class subclasses one core term and neither file uses `owl:imports`. DMN rolls up to the new core terms `:DecisionLogic` and `:DecisionRule` under `:Policy`. The step binding properties (`:usesTool`, `:hasPrompt`, `:evaluatesDecision`, `:approverRole`, `:toolArguments`) are read by the process plan of `MEDULLA-CQ-ORCH-R704`. Both files and their shapes register as core schema sources beside the `archimate` entry of `crates/medulla-graph-core/src/graph/schema_sources.rs` (:889).
 
 | Core term | BPMN 2.0 classes | DMN classes |
 |---|---|---|
-| `:ProcessModel` | Process, Collaboration | none |
-| `:ProcessStep` | ten task kinds, CallActivity, SubProcess | none |
-| `:ProcessGate` | five gateway kinds | none |
-| `:ProcessEventNode` | five event kinds | none |
-| `:ProcessSequenceFlow` | SequenceFlow | none |
-| `:ProcessLane` | Lane | none |
-| `:DecisionLogic` | none | Definitions, Decision, DecisionTable |
-| `:DecisionRule` | none | Rule |
+| `:ProcessModel` | `:BpmnProcess`, `:BpmnDefinitions` | none |
+| `:ProcessStep` | `:BpmnTask` and its kinds, `:BpmnSubProcess`, `:BpmnCallActivity` | none |
+| `:ProcessGate` | `:BpmnGateway` and its five kinds | none |
+| `:ProcessEventNode` | `:BpmnEvent` and its five kinds | none |
+| `:ProcessSequenceFlow` | `:BpmnSequenceFlow` | none |
+| `:ProcessLane` | `:BpmnLane` | none |
+| `:DecisionLogic` | none | `:DmnDecisionRequirements`, `:DmnDecision`, `:DmnDecisionTable` |
+| `:DecisionRule` | none | `:DmnRule` |
 
 ## Phase 2: Task approach
 

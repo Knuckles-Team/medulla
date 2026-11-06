@@ -102,7 +102,7 @@ The user is an analyst or a planner. The outcome is that BPMN 2.0 and DMN elemen
 
 **Acceptance scenarios**
 
-1. **Given** a user task and a gateway as `bpmn:` nodes, **When** a query asks for core classes, **Then** both return. The shapes refuse a flow without a target.
+1. **Given** a user task and a gateway as `:Bpmn` nodes, **When** a query asks for core classes, **Then** both return. The shapes refuse a flow without a target.
 
 Independent test: the bound tests of `MEDULLA-ORCH-VOCAB-R014.8` run this story through a production entry point.
 
@@ -137,7 +137,7 @@ Independent test: the bound tests of `MEDULLA-ORCH-VOCAB-R014.8` run this story 
 - **SC-006**: A replay of a stored trace names the first differing step. Rows: `MEDULLA-ORCH-VOCAB-R013.6`.
 - **SC-007**: A policy rule that contradicts an invariant is never activated. Rows: `MEDULLA-ORCH-VOCAB-R012.7.3`.
 - **SC-008**: A published definition revision is never changed by an edit. Rows: `MEDULLA-ORCH-VOCAB-R800.3`, `MEDULLA-ORCH-VOCAB-R800.4`.
-- **SC-009**: Every `bpmn:` and `dmn:` class has exactly one core ancestor. Rows: `MEDULLA-ORCH-VOCAB-R014.2`, `MEDULLA-ORCH-VOCAB-R014.3`.
+- **SC-009**: Every `:Bpmn` and `:Dmn` class has exactly one core ancestor. Rows: `MEDULLA-ORCH-VOCAB-R014.2`, `MEDULLA-ORCH-VOCAB-R014.3`.
 
 ## Assumptions
 
