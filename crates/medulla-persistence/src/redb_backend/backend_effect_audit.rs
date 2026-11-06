@@ -1,7 +1,7 @@
 //! The operation-audit row of one committed uncertain-effect write
 //! (MEDULLA-DURABLE-KERNEL-R820.5).
 //!
-//! One row per start mark and per receipt: the job ID, the item revision, the
+//! One reservation+outcome pair per start mark and per receipt: the job ID, the item revision, the
 //! attempt, the outcome and the time. Never the request parameters, never a
 //! credential; the revision, outcome and time are bound by `params_sha256`.
 
@@ -75,9 +75,19 @@ impl RedbBackend {
         graph_fname: &str,
         entry: EffectAudit<'_>,
     ) -> Result<(), String> {
+        // The operation audit is two-phase: an outcome closes a reservation
+        // made under the same request identity, so each committed write is
+        // exactly one reservation+outcome pair (MEDULLA-DURABLE-KERNEL-R820.5).
         #[cfg(feature = "security")]
-        self.audit_append(graph_fname, effect_audit_event(&entry))
-            .await?;
+        {
+            let outcome = effect_audit_event(&entry);
+            let reservation = medulla_store::redb_store::OperationAuditEvent {
+                status: "reserved".to_string(),
+                ..outcome.clone()
+            };
+            self.audit_append(graph_fname, reservation).await?;
+            self.audit_append(graph_fname, outcome).await?;
+        }
         #[cfg(not(feature = "security"))]
         let _ = (graph_fname, entry);
         Ok(())

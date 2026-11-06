@@ -57,12 +57,15 @@ async fn audit(
     let Some(redb) = ctx.persistence.as_ref().and_then(|p| p.as_redb()) else {
         return Ok(());
     };
-    let principal = ctx.verified_context.principal_persistence_id();
+    // The same carrier scopes `AuditAppend` writes and `AuditReadEvent` reads
+    // under, so the pair is readable by the tenant that made it.
+    let authority =
+        medulla_server_api::carrier::CarrierAuthority::from_verified(ctx.verified_context)?;
     redb.audit_effect_write(
         &medulla_kernel::persist::sanitize(ctx.graph_name),
         medulla_persistence::redb_backend::EffectAudit {
-            tenant: ctx.verified_context.tenant(),
-            principal: &principal,
+            tenant: authority.tenant_scope(),
+            principal: authority.actor_scope(),
             op,
             result,
             now_ms: medulla_kernel::kernel::dispatch_support::authoritative_now_ms(),
