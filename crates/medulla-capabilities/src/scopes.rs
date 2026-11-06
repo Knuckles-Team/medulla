@@ -64,6 +64,8 @@ pub const SCOPES: &[ScopeEntry] = &[
     entry("admin:policy-evolution-store", Admin, "engine"),
     entry("admin:sqlite-file", Admin, "engine"),
     entry("agent:assemble-read", User, "engine"),
+    entry("agent:claim-read", User, "engine"),
+    entry("agent:claim-write", User, "engine"),
     entry("agent:component-read", User, "engine"),
     entry("agent:component-write", User, "engine"),
     entry("agent:decision-evaluate", User, "engine"),

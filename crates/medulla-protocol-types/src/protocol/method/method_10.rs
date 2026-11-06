@@ -94,6 +94,12 @@ $($variants)*
     DecisionLog {
         op: Box<medulla_decision_types::decision::statistical::log::DecisionLogOp>,
     },
+    /// Research claims: propose, advance along the lifecycle, record evidence
+    /// on five channels, compile a sealed research artifact and read them back.
+    /// The `Claims` handler is the single writer of claim state.
+    Claims {
+        op: Box<medulla_types::claims::ClaimOp>,
+    },
     /// General bounded 0-1 integer programme with an independently verifiable
     /// certificate. Pure compute: no store, no clock, no float.
     Solve {

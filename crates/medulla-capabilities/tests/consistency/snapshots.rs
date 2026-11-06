@@ -136,6 +136,7 @@ pub(crate) const ACCESS_RS_MUTATES_CONDITIONAL: &[&str] = &[
     // shape as the four agent layers below: `requires_write` delegates to the
     // op's own `is_mutation()`, while the registry row carries the conservative
     // `mutates = true` upper bound.
+    "Claims",
     "ConnectorPack",
     "DecisionEval",
     "DecisionFit",

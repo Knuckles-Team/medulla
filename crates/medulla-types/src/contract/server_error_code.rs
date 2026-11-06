@@ -362,5 +362,11 @@ closed_error_codes! {
         PolicyRunNotSucceeded => "POLICY_RUN_NOT_SUCCEEDED",
         PolicyCaptureIneligible => "POLICY_CAPTURE_INELIGIBLE",
         PolicyRecordTampered => "POLICY_RECORD_TAMPERED",
+        ClaimIllegalTransition => "CLAIM_ILLEGAL_TRANSITION",
+        ClaimGuardNotMet => "CLAIM_GUARD_NOT_MET",
+        ClaimNotFound => "CLAIM_NOT_FOUND",
+        EvidenceNoChannel => "EVIDENCE_NO_CHANNEL",
+        EvidenceWeightOutOfRange => "EVIDENCE_WEIGHT_OUT_OF_RANGE",
+        ArtifactSealViolation => "ARTIFACT_SEAL_VIOLATION",
     }
 }

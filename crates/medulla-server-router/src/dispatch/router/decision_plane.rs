@@ -137,6 +137,12 @@ async fn dispatch_decision_methods(
             })
             .await
         }
+        Method::Claims { op } => {
+            dispatch_boxed(async {
+                medulla_h_decide::decide::handle_claims(state, req.id, verified_context, *op).await
+            })
+            .await
+        }
         Method::Solve { request } => {
             dispatch_boxed(async { medulla_h_decide::solve::handle_solve(req.id, *request).await })
                 .await
