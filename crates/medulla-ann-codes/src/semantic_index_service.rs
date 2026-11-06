@@ -848,6 +848,7 @@ mod source_scan;
 mod source_turn;
 mod source_types;
 mod stage_lifecycle;
+pub use stage_lifecycle::S6Completion;
 #[cfg(test)]
 mod test_fixture;
 #[cfg(test)]

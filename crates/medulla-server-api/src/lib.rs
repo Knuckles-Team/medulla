@@ -53,6 +53,8 @@ pub mod identity_view;
 
 /// Typed server-config knob loader (MEDULLA-CONTRACT-R058).
 pub mod knob_config;
+/// Semantic model config of the embedding promotion gate (MEDULLA-UNIFIED-DATA-PLANE-R040.3).
+pub mod semantic_model_config;
 
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[cfg(any(feature = "server", feature = "redb"))]

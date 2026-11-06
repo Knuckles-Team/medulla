@@ -413,7 +413,9 @@ pub fn load_knobs(
             ));
         };
         let name = name.trim();
-        if name != FOREIGN_SQLITE_ALLOWED_ROOTS && !KNOB_TABLE.iter().any(|spec| spec.name == name)
+        if name != FOREIGN_SQLITE_ALLOWED_ROOTS
+            && name != crate::semantic_model_config::SEMANTIC_MODEL_CONFIG
+            && !KNOB_TABLE.iter().any(|spec| spec.name == name)
         {
             return Err(refusal(
                 ServerErrorCode::KnobUnknown,

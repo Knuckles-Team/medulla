@@ -23,6 +23,8 @@ mod contracts;
 mod dispatch;
 #[path = "semantic_index/reads.rs"]
 mod reads;
+#[path = "semantic_index/s6.rs"]
+mod s6;
 #[path = "semantic_index/source.rs"]
 mod source;
 #[path = "semantic_index/worker.rs"]
@@ -48,6 +50,8 @@ use medulla_server_api::carrier::CarrierAuthority;
 use medulla_server_api::state::ServerState;
 
 pub(super) struct SemanticIndexContext<'a> {
+    #[cfg_attr(not(feature = "blob"), allow(dead_code))]
+    pub(super) state: &'a Arc<RwLock<ServerState>>,
     pub(super) req_id: u64,
     pub(super) authority: &'a CarrierAuthority,
     pub(super) persist_dir: &'a Path,
@@ -73,6 +77,7 @@ pub async fn handle_semantic_index(
     };
     let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     let context = SemanticIndexContext {
+        state,
         req_id,
         authority: &authority,
         persist_dir: &persist_dir,

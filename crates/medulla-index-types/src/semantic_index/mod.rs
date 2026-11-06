@@ -8,6 +8,7 @@
 //! Clustered mutation remains unavailable until SQL ACL/schema ordering is an
 //! authoritative, fail-closed prerequisite at the later activation slice.
 
+mod activation;
 mod codec;
 #[cfg(test)]
 mod codec_tests;
@@ -29,6 +30,10 @@ mod stage;
 mod state;
 mod tombstone;
 
+pub use activation::{
+    SemanticImageBlobRef, SemanticProbeResult, SemanticS6Activation, MAX_SEMANTIC_IMAGE_BYTES,
+    MAX_SEMANTIC_PROBE_IDS, MAX_SEMANTIC_PROBE_QUERIES, MAX_SEMANTIC_PROBE_RESULTS,
+};
 pub use codec::{
     SEMANTIC_ACTIVE_POINTER_SCHEMA, SEMANTIC_ANN_INDEX_MANIFEST_SCHEMA,
     SEMANTIC_AUTHORIZATION_RECEIPT_SCHEMA, SEMANTIC_BINDING_STATE_TRANSITION_SCHEMA,

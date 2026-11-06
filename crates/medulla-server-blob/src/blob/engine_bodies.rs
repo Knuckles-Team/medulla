@@ -222,6 +222,27 @@ pub fn read_engine_body(
     )
 }
 
+/// Read one blob body the caller uploaded under `owner_scope`, checking the
+/// manifest owner, declared length and the whole body's SHA-256 before any
+/// byte is returned (MEDULLA-UNIFIED-DATA-PLANE-R040.6: the S6 ANN image).
+pub fn read_owned_body(
+    store: &dyn super::store::ChunkStore,
+    owner_scope: &str,
+    manifest_digest: &str,
+    expected_sha256: Digest256,
+    expected_length: u64,
+    max_bytes: usize,
+) -> Result<Vec<u8>, String> {
+    read_body_for_owner(
+        store,
+        owner_scope,
+        manifest_digest,
+        expected_sha256,
+        expected_length,
+        max_bytes,
+    )
+}
+
 /// Read a repository source only under its tenant and repository namespace,
 /// checking the complete raw SHA-256 before any worker can use the bytes.
 pub fn read_repository_body(

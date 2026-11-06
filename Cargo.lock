@@ -5656,6 +5656,7 @@ dependencies = [
  "medulla-rdf",
  "medulla-server-api",
  "medulla-server-auth",
+ "medulla-server-blob",
  "medulla-storage",
  "medulla-test-ambient-auth",
  "medulla-text",

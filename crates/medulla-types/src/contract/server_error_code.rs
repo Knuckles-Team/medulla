@@ -269,6 +269,7 @@ closed_error_codes! {
         PatternWindowShort => "PATTERN_WINDOW_SHORT",
         PresetUnavailable => "PRESET_UNAVAILABLE",
         PromotionBlocked => "PROMOTION_BLOCKED",
+        SemanticImageUnavailable => "SEMANTIC_IMAGE_UNAVAILABLE",
         RaftNotConfigured => "RAFT_NOT_CONFIGURED",
         RaftRetryBudgetExhausted => "RAFT_RETRY_BUDGET_EXHAUSTED",
         ReasoningProjectionRejectFailed => "REASONING_PROJECTION_REJECT_FAILED",

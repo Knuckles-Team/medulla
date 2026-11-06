@@ -40,11 +40,23 @@ pub(super) async fn handle(ctx: &SemanticIndexContext<'_>, op: SemanticIndexOp) 
             transition,
             artifact,
             successor,
+            activation,
             ..
-        } => {
-            complete_generation_stage(ctx, *lease, *transition, *artifact, successor.map(|v| *v))
+        } => match activation {
+            Some(activation) => {
+                super::s6::complete(ctx, *lease, *transition, *artifact, *activation).await
+            }
+            None => {
+                complete_generation_stage(
+                    ctx,
+                    *lease,
+                    *transition,
+                    *artifact,
+                    successor.map(|v| *v),
+                )
                 .await
-        }
+            }
+        },
         SemanticIndexOp::CompleteSqlSourceStage {
             lease,
             transition,
@@ -113,7 +125,7 @@ async fn claim(
 
 /// Run `work` on the blocking pool for a lease that is the caller's own; a
 /// foreign lease is refused before any work runs.
-async fn on_own_lease<T, F>(
+pub(super) async fn on_own_lease<T, F>(
     ctx: &SemanticIndexContext<'_>,
     lease: medulla_mutation_types::mutation_scope::MutationOutboxLease,
     work: F,

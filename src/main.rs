@@ -350,6 +350,18 @@ async fn run_inner() -> Result<(), Box<dyn std::error::Error>> {
             std::process::exit(2);
         }
     }
+    match medulla_server_api::semantic_model_config::load_semantic_model_config(
+        &args.knob,
+        |name| std::env::var(name).ok(),
+    ) {
+        Ok(config) => {
+            medulla_server_api::semantic_model_config::install_semantic_model_config(config)
+        }
+        Err(refusal) => {
+            eprintln!("error: {refusal}");
+            std::process::exit(2);
+        }
+    }
 
     if args.exact_performance_probe {
         return run_exact_performance_probe(args.exact_performance_probe_root.as_deref());

@@ -30,8 +30,8 @@ use super::identity::{validate_generation, validate_text};
 use super::{
     SemanticBinding, SemanticBindingDraft, SemanticBindingState, SemanticGenerationArtifact,
     SemanticIndexCommand, SemanticIndexError, SemanticIndexFilter, SemanticIndexRequest,
-    SemanticQueueClass, SemanticSqlSourceManifestDraft, SemanticStageArtifact, SemanticStageIntent,
-    SemanticStageTransition,
+    SemanticQueueClass, SemanticS6Activation, SemanticSqlSourceManifestDraft,
+    SemanticStageArtifact, SemanticStageIntent, SemanticStageTransition,
 };
 use medulla_mutation_types::mutation_scope::MutationOutboxLease;
 use medulla_mutation_types::mutation_scope::MutationOutboxRecord;
@@ -250,7 +250,8 @@ pub enum SemanticIndexOp {
     },
     /// Complete S3 or S5 and persist its canonical lexical/ANN manifest in the
     /// same owner mutation as the transition, checkpoint, successor and lease
-    /// acknowledgement.
+    /// acknowledgement; or complete S6 with its `activation` payload, which
+    /// runs the promotion gate before the generation goes `Live`.
     CompleteGenerationStage {
         tenant_id: String,
         binding_id: String,
@@ -258,6 +259,10 @@ pub enum SemanticIndexOp {
         transition: Box<SemanticStageTransition>,
         artifact: Box<SemanticGenerationArtifact>,
         successor: Option<Box<SemanticStageIntent>>,
+        /// S6 only: the ANN image blob, the S6 checkpoint and the S4/S5 probe
+        /// results (MEDULLA-UNIFIED-DATA-PLANE-R040.6). Absent for S3 and S5.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        activation: Option<Box<SemanticS6Activation>>,
     },
     /// Complete an S1 source transition. No source row travels: the engine
     /// re-reads the authoritative, ACL-checked SQL page itself and converts its
@@ -634,11 +639,15 @@ impl SemanticIndexOp {
                 lease,
                 transition,
                 successor,
+                activation,
                 ..
             } => {
                 validate_lease(lease)?;
                 transition.validate()?;
-                validate_successor(successor)
+                validate_successor(successor)?;
+                activation
+                    .as_deref()
+                    .map_or(Ok(()), SemanticS6Activation::validate)
             }
             Self::CompleteSqlSourceStage {
                 lease,

@@ -75,6 +75,7 @@ mod binding_read;
 mod checkpoint;
 mod completion;
 mod door;
+mod image_body;
 mod persist;
 mod predecessor;
 mod promotion;
@@ -168,6 +169,7 @@ pub use topics::{
     SEMANTIC_QUEUE_CLASSES,
 };
 
+pub use image_body::{decode_image_body, encode_image_body};
 pub use promotion::{PromotionBlocked, PROMOTION_BLOCKED};
 
 pub const SEMANTIC_STAGE_RECEIPT_TOPIC: &str = "engine.semantic-index.stage-receipt.v1";

@@ -149,6 +149,48 @@ impl SemanticIndexService {
             .complete_generation_stage(lease, transition, artifact, successor, now_ms)
     }
 
+    /// Install the engine-owned model config the promotion gate reads
+    /// (MEDULLA-UNIFIED-DATA-PLANE-R040.3); refuses `PROMOTION_BLOCKED` on a
+    /// config whose probe set is missing or does not match its pinned digest.
+    pub fn install_model_config(
+        &self,
+        config: medulla_types::embedding_promotion::SemanticModelConfig,
+    ) -> Result<(), SemanticCodeError> {
+        self.store.install_model_config(config)
+    }
+
+    /// The served S6 completion (MEDULLA-UNIFIED-DATA-PLANE-R040.6, D110): store
+    /// each S4/S5 probe measurement the worker reports, then activate through
+    /// [`Self::activate_s6`], whose promotion gate judges those records before
+    /// the generation goes `Live`.
+    pub fn complete_s6_stage(
+        &self,
+        lease: &MutationOutboxLease,
+        transition: &SemanticStageTransition,
+        artifact: &SemanticGenerationArtifact,
+        activation: S6Completion<'_>,
+        now_ms: u64,
+    ) -> Result<SemanticMutationReceipt, SemanticCodeError> {
+        let generation = activation.checkpoint.generation;
+        for probe in activation.probes {
+            self.store.record_probe_measurement(
+                probe.stage,
+                generation,
+                probe.modality,
+                &probe.retrieved,
+                now_ms,
+            )?;
+        }
+        self.activate_s6(
+            lease,
+            transition,
+            activation.checkpoint,
+            artifact,
+            activation.image,
+            now_ms,
+        )
+    }
+
     pub fn release_stage_lease(
         &self,
         lease: &MutationOutboxLease,
@@ -193,4 +235,12 @@ impl SemanticIndexService {
             .finalize_generation(lease, transition, checkpoint, artifact, image, now_ms)?;
         Ok(receipt)
     }
+}
+
+/// The verified inputs of one served S6 completion: the S6 checkpoint, the ANN
+/// image the engine read from its blob, and the worker's probe results.
+pub struct S6Completion<'a> {
+    pub checkpoint: &'a SemanticGenerationCheckpoint,
+    pub image: &'a SemanticGenerationImage,
+    pub probes: &'a [medulla_index_types::semantic_index::SemanticProbeResult],
 }

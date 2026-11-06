@@ -316,7 +316,7 @@ redb = ["medulla-raft-xshard/redb", "medulla-server/redb", "medulla-wire/redb", 
 # `blob.redb`) + `server` (the streaming protocol rides the Tokio transport). The
 # native redb-CAS links NO object-store SDK — that remains isolated behind the
 # explicit `blob-s3` source feature below. `blob` is included in the one main build.
-blob = ["medulla-server-served-tests/blob", "medulla-server/blob", "medulla-server-router/blob", "medulla-server-graph/blob", "medulla-h-admin/blob", "medulla-h-decide/blob", "medulla-h-ingest/blob", "medulla-raft/blob", "medulla-server-api/blob", "medulla-server-blob/blob", "server", "redb", "medulla-types/blob", "dep:chrono", "medulla-protocol-types/blob"]
+blob = ["medulla-server-served-tests/blob", "medulla-h-retrieve/blob", "medulla-server/blob", "medulla-server-router/blob", "medulla-server-graph/blob", "medulla-h-admin/blob", "medulla-h-decide/blob", "medulla-h-ingest/blob", "medulla-raft/blob", "medulla-server-api/blob", "medulla-server-blob/blob", "server", "redb", "medulla-types/blob", "dep:chrono", "medulla-protocol-types/blob"]
 # Generic namespaced Key→Value surface (CONCEPT:MEDULLA-022): the `Method::Kv*` ops over a
 # redb-backed `(namespace, key) -> bytes` store, so the engine is a drop-in KV store.
 # Pulls `server` (the handler routes through the Tokio dispatch) + `redb` (the durable

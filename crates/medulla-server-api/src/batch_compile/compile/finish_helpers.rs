@@ -151,21 +151,34 @@ pub(super) fn compiled_outbox(
         }
     }
     if let Some(input_digest) = outbox_plan.semantic_source_dirty_input {
-        let source_scope_digest = medulla_index_types::semantic_index::SemanticDigest::from_bytes(
-            *identity.binding_digest().as_bytes(),
-        );
-        let intent = medulla_index_types::semantic_index::SemanticSourceDirtyIntent::new(
-            source_scope_digest,
-            input_digest,
-        );
-        outbox.push(MutationOutboxIntent {
-            topic: medulla_index_types::semantic_index::SEMANTIC_SOURCE_DIRTY_TOPIC.to_string(),
-            key: batch_id.to_string(),
-            payload: intent.to_canonical_cbor().map_err(|error| {
-                format!("semantic source-dirty intent encoding rejected: {error:?}")
-            })?,
-            headers: BTreeMap::new(),
-        });
+        outbox.push(queue_reembed(identity, batch_id, input_digest)?);
     }
     Ok(outbox)
+}
+
+/// The re-embed work item of a SQL write (MEDULLA-UNIFIED-DATA-PLANE-R040.6,
+/// D110): one typed source-dirty intent on the existing semantic stage queue.
+/// The external stage worker drains it through S1-S5 and completes S6 with
+/// `CompleteGenerationStage`, whose promotion gate runs before the
+/// re-embedded generation goes `Live`.
+fn queue_reembed(
+    identity: &MutationScopeIdentity,
+    batch_id: &str,
+    input_digest: medulla_index_types::semantic_index::SemanticDigest,
+) -> Result<MutationOutboxIntent, String> {
+    let source_scope_digest = medulla_index_types::semantic_index::SemanticDigest::from_bytes(
+        *identity.binding_digest().as_bytes(),
+    );
+    let intent = medulla_index_types::semantic_index::SemanticSourceDirtyIntent::new(
+        source_scope_digest,
+        input_digest,
+    );
+    Ok(MutationOutboxIntent {
+        topic: medulla_index_types::semantic_index::SEMANTIC_SOURCE_DIRTY_TOPIC.to_string(),
+        key: batch_id.to_string(),
+        payload: intent.to_canonical_cbor().map_err(|error| {
+            format!("semantic source-dirty intent encoding rejected: {error:?}")
+        })?,
+        headers: BTreeMap::new(),
+    })
 }

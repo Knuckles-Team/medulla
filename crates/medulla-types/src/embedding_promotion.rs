@@ -15,6 +15,7 @@ use sha2::{Digest, Sha256};
 /// The closed set of modalities a promotion check covers.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum PromotionModality {
     Text,
     Image,
@@ -155,6 +156,7 @@ impl SemanticModelConfig {
 
 /// The S4 and S5 stages a probe measurement belongs to.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum PromotionStage {
     #[serde(rename = "S4")]
     Vector,
