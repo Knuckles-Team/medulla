@@ -348,6 +348,7 @@ mod tests {
     /// MEDULLA-INCREMENTAL-VIEWS-R002.3: a delta the circuit refuses demotes the view to
     /// recompute mode with the typed reason code, and the view reads as stale.
     // spec: MEDULLA-INCREMENTAL-VIEWS-R002.3
+    /// Verifies MEDULLA-INCREMENTAL-VIEWS-R002.3: Wiring: the circuit consolidates before it folds.
     #[test]
     fn apply_failure_demotes_with_typed_reason() {
         use medulla_types::delta::ZRow;
@@ -384,6 +385,7 @@ mod tests {
     }
 
     // spec: MEDULLA-INCREMENTAL-VIEWS-R001.6
+    /// Verifies MEDULLA-INCREMENTAL-VIEWS-R001.6: Define, change and read are wired
     #[test]
     fn apply_delta_maintains_incremental_view_end_to_end() {
         use medulla_types::wire::{Op, Plan, Pred};
@@ -457,6 +459,7 @@ mod tests {
     }
 
     // spec: MEDULLA-INCREMENTAL-VIEWS-R001.7
+    /// Verifies MEDULLA-INCREMENTAL-VIEWS-R001.7: A fallback keeps a typed reason
     #[test]
     fn note_fallback_records_queryable_reason() {
         // The first-class fallback: an unsupported-op plan is Recompute mode AND exposes
