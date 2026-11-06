@@ -14,6 +14,9 @@ pub mod asr;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod blob;
 
+/// Producing-rung recording and overwrite resistance for ingest producers
+/// (MEDULLA-DECISION-ENGINE-R080.2).
+pub mod ingestion_rung;
 /// Dataset lineage ingest (MEDULLA-UNIFIED-DATA-PLANE-R702.3).
 pub mod lineage;
 /// Served meeting transcript revisions and summaries

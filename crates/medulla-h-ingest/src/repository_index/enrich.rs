@@ -31,6 +31,13 @@ use serde::{Deserialize, Serialize};
 
 use super::ecosystem::{DEPENDS_ON_PACKAGE, IN_LAYER, LAYER_TYPE, PACKAGE_TYPE};
 use super::IndexWriteSet;
+use crate::ingestion_rung::{outranked, rung_label, PRODUCING_RUNG};
+use medulla_decision_outcome_types::decision::ingestion_ladder::ProvenanceRung;
+
+/// The rung community-derived feature facts are produced under.
+const FEATURE_RUNG: ProvenanceRung = ProvenanceRung::StatisticalOrCommunity;
+/// The rung structurally detected design-pattern facts are produced under.
+const PATTERN_RUNG: ProvenanceRung = ProvenanceRung::SymbolResolution;
 
 /// The second envelope's id prefix: `repository-enrich:<index digest>`.
 pub const ENVELOPE_PREFIX: &str = "repository-enrich:";
@@ -394,12 +401,39 @@ fn add_edge(source: String, target: String, relationship: &str) -> Result<Method
 }
 
 /// Lower one run's output to the methods of the enrichment envelope.
+///
+/// Each derived node carries the rung that produced it (`producing_rung`), and a
+/// candidate whose subject already holds a fact from a strictly lower rung is
+/// left out with its edges and counted as refused (MEDULLA-DECISION-ENGINE-R080.2).
+/// `stored` answers the rung of the fact stored on a subject.
 fn lower_output(
     item: &FollowOn,
     facts: &CommittedFacts,
     output: &EnrichOutput,
     report: &EnrichRunReport,
+    stored: &dyn Fn(&str) -> Option<ProvenanceRung>,
 ) -> Result<Vec<Method>, String> {
+    let pattern_id_of = |pattern: medulla_enrich::code::DesignPattern| {
+        let name = serde_json::to_value(pattern)
+            .ok()
+            .and_then(|value| value.as_str().map(str::to_string))
+            .unwrap_or_default();
+        (format!("design-pattern:{name}"), name)
+    };
+    let mut left_out = BTreeSet::new();
+    for feature in &output.features {
+        let id = feature.id.as_str();
+        if outranked(stored(id), FEATURE_RUNG) {
+            left_out.insert(id.to_string());
+        }
+    }
+    for hit in &output.patterns {
+        let (id, _) = pattern_id_of(hit.pattern);
+        if outranked(stored(&id), PATTERN_RUNG) {
+            left_out.insert(id);
+        }
+    }
+    let refused = report.rung_conflicts_refused + left_out.len() as u64;
     let run_id = format!("repository-enrich-run:{}", item.index_digest);
     let mut methods = vec![add_node(
         run_id.clone(),
@@ -411,21 +445,22 @@ fn lower_output(
             ("patterns", report.patterns.to_string()),
             ("features", report.features.to_string()),
             ("tests_flagged", report.tests_flagged.to_string()),
-            (
-                "rung_conflicts_refused",
-                report.rung_conflicts_refused.to_string(),
-            ),
+            ("rung_conflicts_refused", refused.to_string()),
             ("packages", facts.packages.len().to_string()),
             ("layers", facts.layers.len().to_string()),
         ],
     )?];
     for feature in &output.features {
         let feature_id = feature.id.as_str().to_string();
+        if left_out.contains(&feature_id) {
+            continue;
+        }
         methods.push(add_node(
             feature_id.clone(),
             &[
                 ("type", FEATURE_TYPE.to_string()),
                 ("members", feature.members.len().to_string()),
+                (PRODUCING_RUNG, rung_label(FEATURE_RUNG)),
             ],
         )?);
         methods.push(add_edge(
@@ -445,15 +480,18 @@ fn lower_output(
     }
     let mut patterns = BTreeSet::new();
     for hit in &output.patterns {
-        let pattern = serde_json::to_value(hit.pattern)
-            .ok()
-            .and_then(|value| value.as_str().map(str::to_string))
-            .unwrap_or_default();
-        let pattern_id = format!("design-pattern:{pattern}");
+        let (pattern_id, pattern) = pattern_id_of(hit.pattern);
+        if left_out.contains(&pattern_id) {
+            continue;
+        }
         if patterns.insert(pattern_id.clone()) {
             methods.push(add_node(
                 pattern_id.clone(),
-                &[("type", PATTERN_TYPE.to_string()), ("name", pattern)],
+                &[
+                    ("type", PATTERN_TYPE.to_string()),
+                    ("name", pattern),
+                    (PRODUCING_RUNG, rung_label(PATTERN_RUNG)),
+                ],
             )?);
         }
         methods.push(add_edge(
@@ -470,8 +508,13 @@ fn lower_output(
 
 /// Run the enrichment of one claimed follow-on work item over its committed
 /// index envelope and lower the output as the `repository-enrich:<digest>`
-/// write-set. R601.3, R602.3 and R603.3 attach their hooks here.
-pub fn run_after_commit(index: &ChangeEnvelope, item: &FollowOn) -> Result<IndexWriteSet, String> {
+/// write-set. R601.3, R602.3 and R603.3 attach their hooks here. `stored`
+/// answers the rung of the fact already stored on a subject.
+pub fn run_after_commit(
+    index: &ChangeEnvelope,
+    item: &FollowOn,
+    stored: &dyn Fn(&str) -> Option<ProvenanceRung>,
+) -> Result<IndexWriteSet, String> {
     if index.envelope_id != item.index_envelope_id() {
         return Err("CONFLICT: repository enrichment read the wrong index envelope".into());
     }
@@ -479,7 +522,7 @@ pub fn run_after_commit(index: &ChangeEnvelope, item: &FollowOn) -> Result<Index
     let (output, report) =
         medulla_enrich::code::enrich_repository(&facts.input, &TestQualityThresholds::default())
             .map_err(|error| error.to_string())?;
-    let methods = lower_output(item, &facts, &output, &report)?;
+    let methods = lower_output(item, &facts, &output, &report, stored)?;
     IndexWriteSet::with_digest(ENVELOPE_PREFIX, &item.index_digest, methods)
 }
 
@@ -639,9 +682,25 @@ mod worker {
             .ok_or("CONFLICT: repository enrichment index envelope is not committed")?
             .envelope;
         let run_item = item.clone();
+        let core = state
+            .read()
+            .await
+            .registry
+            .get(graph)
+            .ok_or("CONFLICT: repository enrichment graph was retired")?
+            .core
+            .clone();
         let write_set = tokio::time::timeout(
             Duration::from_millis(timeout_ms),
-            tokio::task::spawn_blocking(move || run_after_commit(&index, &run_item)),
+            tokio::task::spawn_blocking(move || {
+                // The stored fact on the same subject decides each candidate.
+                let stored = |id: &str| {
+                    let bytes = core.get_node_properties(id)?;
+                    let value = medulla_types::msgpack::decode_property_value(&bytes).ok()?;
+                    crate::ingestion_rung::stored_rung(&value)
+                };
+                run_after_commit(&index, &run_item, &stored)
+            }),
         )
         .await
         .map_err(|_| format!("UNAVAILABLE: repository enrichment exceeded {timeout_ms} ms"))?

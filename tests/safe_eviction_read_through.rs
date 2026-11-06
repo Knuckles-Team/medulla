@@ -1,6 +1,6 @@
 //! Safe eviction and durable read-through through the served `EvictLRU` and
 //! `GetNodeProperties` methods over a redb-backed `ServerState`
-//! (MEDULLA-DURABLE-KERNEL-R086.2, R086.3, R086.5, R086.6).
+//! (MEDULLA-DURABLE-KERNEL-R086.2, R086.3, R086.5, R086.6, R086.8, R086.9).
 
 #![cfg(feature = "redb")]
 
@@ -413,4 +413,172 @@ async fn unconfirmed_candidates_body() {
             "case {case}: every candidate stays resident"
         );
     }
+}
+
+/// Reopen `dir` after the first engine let go of its durable file lock, in
+/// read-through mode: no `load_all`, no eager graph recovery.
+async fn restart_read_through(
+    dir: &std::path::Path,
+    backend: test_support::SharedPersistence,
+    state: test_support::SharedState,
+) -> test_support::SharedState {
+    state.write().await.persistence = None;
+    drop(state);
+    test_support::reopen_after_sole_reference(
+        backend,
+        || Ok::<(), String>(()),
+        "release the durable backend before the restart",
+    )
+    .await;
+    test_support::durable_state_read_through(
+        SECRET,
+        common::current_isolation(),
+        &dir.to_string_lossy(),
+    )
+    .await
+}
+
+/// Write `count` nodes `<prefix><index>` through `BatchUpdate`, in blocks.
+async fn write_nodes(state: &test_support::SharedState, graph: &str, count: usize, first_id: u64) {
+    const BLOCK: usize = 5_000;
+    let mut written = 0;
+    let mut id = first_id;
+    while written < count {
+        let end = (written + BLOCK).min(count);
+        let ops: Vec<serde_json::Value> = (written..end)
+            .map(|i| {
+                serde_json::json!({
+                    "op": "add_node",
+                    "id": format!("k{i:06}"),
+                    "properties": {"type": "Row", "i": i},
+                })
+            })
+            .collect();
+        test_support::call_ok(
+            state,
+            SECRET,
+            id,
+            graph,
+            Method::BatchUpdate {
+                operations_msgpack: test_support::json_bytes(serde_json::Value::Array(ops)),
+            },
+        )
+        .await;
+        written = end;
+        id += 1;
+    }
+}
+
+// spec: MEDULLA-DURABLE-KERNEL-R086.8
+#[test]
+fn restarted_engine_reads_an_evicted_node() {
+    test_support::on_engine(restarted_engine_body);
+}
+
+async fn restarted_engine_body() {
+    const NODE_COUNT: usize = 1_000;
+    const RESIDENT_BOUND: usize = 16;
+    let (dir, backend, state) = durable("medulla-evict-restart", GRAPH).await;
+    attach_read_through(&state, &backend).await;
+    write_nodes(&state, GRAPH, NODE_COUNT, 10).await;
+    let target = "k000500";
+    let committed = props(&get(&state, 400, GRAPH, target).await).expect("committed properties");
+    assert_eq!(
+        evicted_count(&evict(&state, 410, GRAPH, 1).await),
+        (NODE_COUNT - 1) as u64
+    );
+
+    let restarted = restart_read_through(&dir, backend, state).await;
+    let read = props(&get(&restarted, 500, GRAPH, target).await).expect("evicted node reads back");
+    assert_eq!(read, committed, "exact committed properties after restart");
+    let resident = core(&restarted, GRAPH).node_count();
+    assert!(
+        resident <= RESIDENT_BOUND,
+        "the read-through never recovers the graph into RAM: {resident} resident of {NODE_COUNT}"
+    );
+    let backend = restarted.write().await.persistence.take().expect("backend");
+    close(dir, backend, restarted).await;
+}
+
+// spec: MEDULLA-DURABLE-KERNEL-R086.9
+#[test]
+fn served_safe_eviction_read_through_journey() {
+    test_support::on_engine(journey_body);
+}
+
+async fn journey_body() {
+    const NODE_COUNT: usize = 100_000;
+    const SAMPLE: usize = 1_000;
+    const P99_BUDGET: std::time::Duration = std::time::Duration::from_millis(5);
+    let (dir, backend, state) = durable("medulla-evict-journey", GRAPH).await;
+    attach_read_through(&state, &backend).await;
+    test_support::call_ok(
+        &state,
+        SECRET,
+        2,
+        OTHER,
+        Method::CreateGraph {
+            graph_name: OTHER.to_string(),
+            graph_type: medulla_protocol_types::protocol::GraphType::Global,
+        },
+    )
+    .await;
+
+    // Write acknowledgment: every batch was acknowledged before the next step.
+    write_nodes(&state, GRAPH, NODE_COUNT, 10).await;
+    let resident_before = core(&state, GRAPH).node_count();
+    assert_eq!(resident_before, NODE_COUNT);
+    let fname = medulla_kernel::persist::sanitize(GRAPH);
+    let probe = "k054321";
+    let committed = props(&get(&state, 400, GRAPH, probe).await).expect("committed properties");
+    // Backend outcome: the durable row exists before eviction.
+    assert!(backend
+        .read_node(&fname, probe)
+        .await
+        .expect("durable read")
+        .is_some());
+
+    assert_eq!(
+        evicted_count(&evict(&state, 410, GRAPH, 1).await),
+        (NODE_COUNT - 1) as u64
+    );
+    let resident_after = core(&state, GRAPH).node_count();
+    assert_eq!(resident_after, 1, "residency after eviction");
+
+    // Scope: the same node id in another graph is not served.
+    assert!(
+        props(&get(&state, 420, OTHER, probe).await).is_none(),
+        "an evicted read never crosses graphs"
+    );
+
+    // Cold reads: sorted sample, p99 recorded.
+    let mut samples = Vec::with_capacity(SAMPLE);
+    for n in 0..SAMPLE {
+        let node = format!("k{:06}", (n * 97) % NODE_COUNT);
+        let started = std::time::Instant::now();
+        let response = get(&state, 1_000 + n as u64, GRAPH, &node).await;
+        samples.push(started.elapsed());
+        assert!(
+            props(&response).is_some(),
+            "{node} reads from the durable tier"
+        );
+    }
+    samples.sort();
+    let p99 = samples[(SAMPLE * 99 / 100).min(SAMPLE - 1)];
+    eprintln!("cold read p99 over {SAMPLE} evicted nodes of {NODE_COUNT}: {p99:?}");
+    assert!(
+        p99 <= P99_BUDGET,
+        "cold read p99 {p99:?} exceeds the {P99_BUDGET:?} budget"
+    );
+    assert!(
+        core(&state, GRAPH).node_count() <= resident_after,
+        "cold reads never repopulate RAM"
+    );
+
+    // Restart read.
+    let restarted = restart_read_through(&dir, backend, state).await;
+    let read = props(&get(&restarted, 5_000, GRAPH, probe).await).expect("restart read");
+    assert_eq!(read, committed, "restart read returns the committed bytes");
+    let backend = restarted.write().await.persistence.take().expect("backend");
+    close(dir, backend, restarted).await;
 }

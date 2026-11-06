@@ -248,6 +248,7 @@ closed_error_codes! {
         RepositoryBatchTooLarge => "REPOSITORY_BATCH_TOO_LARGE",
         ReservedGraphName => "RESERVED_GRAPH_NAME",
         ResultTooLarge => "RESULT_TOO_LARGE",
+        RungOutranked => "RUNG_OUTRANKED",
         SchemaInconsistent => "SCHEMA_INCONSISTENT",
         ScoreEvidenceMissing => "SCORE_EVIDENCE_MISSING",
         ScoreRangeInvalid => "SCORE_RANGE_INVALID",

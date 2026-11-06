@@ -20,6 +20,7 @@ medulla-audio = { path = "../medulla-audio", optional = true }
 medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-compute = { path = "../medulla-compute" }
 medulla-core = { path = "../medulla-core" }
+medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types" }
 medulla-document = { path = "../medulla-document", optional = true }
 medulla-enrich = { path = "../medulla-enrich" }
 medulla-image = { path = "../medulla-image", optional = true }
