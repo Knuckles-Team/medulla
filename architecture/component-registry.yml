@@ -3942,6 +3942,8 @@ components:
       - "tests/test_concept_parity.py"
       - "tests/test_configure_rust_path_remap.py"
       - "tests/test_connector_pack_planted.py"
+      - "tests/connector_competency/cases.py"
+      - "tests/connector_competency/test_cases_schema.py"
       - "tests/typed_packs/test_model_harness_facts.py"
       - "tests/typed_packs/test_catalog_competency_queries.py"
       - "tests/typed_packs/test_concept_path_admission_served.py"
