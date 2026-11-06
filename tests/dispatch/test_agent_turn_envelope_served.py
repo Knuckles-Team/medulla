@@ -66,6 +66,7 @@ def _envelope(run_id: str, **fields) -> dict:
 # spec: MEDULLA-DURABLE-KERNEL-R750.750.1
 @pytest.mark.spec("MEDULLA-DURABLE-KERNEL-R750.750.1")
 def test_signed_envelope_carries_subset_and_decision_ref(queue_client):
+    """Verifies MEDULLA-DURABLE-KERNEL-R750.750.1: signed envelope fields."""
     client = queue_client
     stem = uuid.uuid4().hex
     ok = "env-ok-" + stem

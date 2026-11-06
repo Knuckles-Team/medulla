@@ -128,6 +128,7 @@ def test_full_queue_stale_head_and_bad_capability_refuse(queue_client):
 # spec: MEDULLA-DURABLE-KERNEL-R750.753
 @pytest.mark.spec("MEDULLA-DURABLE-KERNEL-R750.753")
 def test_cancel_reaches_leased_worker_on_renew(queue_client):
+    """Verifies MEDULLA-DURABLE-KERNEL-R750.753: hot-path proof."""
     client = queue_client
     stem = uuid.uuid4().hex
     now = int(time.time() * 1000)
