@@ -106,6 +106,10 @@ pub(super) fn prepare(
     if !violations.is_empty() {
         return rejected(request, violations);
     }
+    validate_vocabulary_entries(request, archive, &all, &mut violations);
+    if !violations.is_empty() {
+        return rejected(request, violations);
+    }
 
     let prior_by_uri = members_by_uri(&prior);
     let entries_by_uri = entries_by_uri(&all);
@@ -137,6 +141,31 @@ pub(super) fn prepare(
     }
     plan.withdraw_absent(prior, &all)?;
     plan.finish(warnings)
+}
+
+/// `crosswalk` and `concept_path` entries resolve against the pinned vocabulary
+/// (MEDULLA-TYPED-PACKS-R071.1.3, R071.1.4, R071.100); a pack without them
+/// never composes a schema.
+fn validate_vocabulary_entries(
+    request: &ConnectorPackImportRequest,
+    archive: &[u8],
+    all: &[&PackEntry],
+    violations: &mut Vec<PackViolation>,
+) {
+    if !super::vocabulary::needs_vocabulary(all) {
+        return;
+    }
+    match super::vocabulary::pin(request, archive, all) {
+        Ok(vocabulary) => {
+            super::crosswalk::validate_crosswalk_entries(archive, all, &vocabulary, violations);
+            super::concept_path::validate_concept_paths(archive, all, &vocabulary, violations);
+        }
+        Err(error) => violations.push(violation(
+            PackViolationCode::OntologyInvalid,
+            None,
+            &format!("the pack's vocabulary does not compose: {error}"),
+        )),
+    }
 }
 
 fn pack_entries(request: &ConnectorPackImportRequest) -> Vec<&PackEntry> {

@@ -59,6 +59,8 @@ pub fn entry_kind_token(kind: PackEntryKind) -> &'static str {
         PackEntryKind::ModelProfile => "model_profile",
         PackEntryKind::A2aCard => "a2a_card",
         PackEntryKind::SkillFile => "skill_file",
+        PackEntryKind::Crosswalk => "crosswalk",
+        PackEntryKind::ConceptPath => "concept_path",
     }
 }
 
