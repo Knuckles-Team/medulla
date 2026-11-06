@@ -1,6 +1,6 @@
 {
-  "_comment": "CONCEPT:MEDULLA-KG.query.perf-recall-ci-gate — committed perf/recall regression thresholds for the medulla-plan hybrid_queries bench, consumed by scripts/bench_gate.py. The recall floor is the TIGHT, deterministic gate (fixed dataset + fixed HNSW params). The per-bench p50 ceilings (nanoseconds) are DELIBERATELY generous (~10-100x a warm local run) so ordinary CI-machine variance never trips them — they only catch a CATASTROPHIC algorithmic regression (e.g. an accidental O(n^2) blowup in a leg). A bench absent under the run's feature set is skipped, not failed.",
-  "recall_floor": 0.80,
+  "_comment": "CONCEPT:MEDULLA-KG.query.perf-recall-ci-gate \u2014 committed perf/recall regression thresholds for the medulla-plan hybrid_queries bench, consumed by scripts/bench_gate.py. The recall floor is the TIGHT, deterministic gate (fixed dataset + fixed HNSW params). The per-bench p50 ceilings (nanoseconds) are DELIBERATELY generous (~10-100x a warm local run) so ordinary CI-machine variance never trips them \u2014 they only catch a CATASTROPHIC algorithmic regression (e.g. an accidental O(n^2) blowup in a leg). A bench absent under the run's feature set is skipped, not failed.",
+  "recall_floor": 0.8,
   "latency_p50_ns_max": {
     "match_traverse_rank": 300000000,
     "vector_search_k10": 80000000,
@@ -11,6 +11,18 @@
     "cold_reopen_read": 500000000,
     "warm_read": 50000000,
     "live_artifact_refresh": 5000000
+  },
+  "finance_r613": {
+    "_comment": "MEDULLA-FINANCE-PRIMITIVES-R613.6: p99 budgets in ms for the r613_finance_primitives report (target/finance-r613-report.json). baseline_p99_ms is the stored run a later run may exceed by at most regression_tolerance; null until the pinned bench lane records one.",
+    "regression_tolerance": 0.1,
+    "p99_ms_max": {
+      "r613/schedule_1000": 2.0,
+      "r613/regime_1m": 250.0
+    },
+    "baseline_p99_ms": {
+      "r613/schedule_1000": null,
+      "r613/regime_1m": null
+    }
   },
   "latency_p99_ns_max": {
     "access_check_256": 1000000,
