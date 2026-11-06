@@ -22,7 +22,7 @@ use medulla_server_blob::blob::BlobCursors;
 mod annotations;
 mod catalog_attributes;
 mod concept_path;
-mod crosswalk;
+pub(crate) mod crosswalk;
 mod desired;
 mod facts;
 mod front_matter;
@@ -30,7 +30,7 @@ mod json;
 mod planning;
 mod skill_files;
 mod validation;
-mod vocabulary;
+pub(crate) mod vocabulary;
 
 #[cfg(test)]
 use json::{json_size, parse_bounded_json, MAX_JSON_DEPTH};

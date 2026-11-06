@@ -11,6 +11,8 @@ use medulla_catalog_types::domain_pack::{
     VocabularyCrosswalkError,
 };
 
+use medulla_types::contract::ServerErrorCode;
+
 use super::validation::{section_bytes, violation};
 use super::vocabulary::PinnedVocabulary;
 
@@ -30,10 +32,7 @@ pub(super) fn validate_crosswalk_entries(
     for entry in all.iter().filter(|e| e.kind == PackEntryKind::Crosswalk) {
         let parsed = section_bytes(archive, &entry.body)
             .map_err(|error| error.to_string())
-            .and_then(|bytes| {
-                serde_json::from_slice::<VocabularyCrosswalk>(bytes)
-                    .map_err(|error| error.to_string())
-            });
+            .and_then(|bytes| parse_record(bytes));
         match parsed {
             Ok(record) => records.push((entry.uri.as_str(), record)),
             Err(error) => violations.push(violation(
@@ -47,17 +46,55 @@ pub(super) fn validate_crosswalk_entries(
         return;
     }
     let set: Vec<VocabularyCrosswalk> = records.iter().map(|(_, record)| record.clone()).collect();
-    let context = context_of(&set, vocabulary);
-    if let Err(error) = validate_crosswalks(&set, &context) {
-        let (code, iri) = classify(&error);
-        let uri = iri.and_then(|iri| {
+    if let Err(refusal) = validate_set(&set, vocabulary) {
+        let uri = refusal.iri.as_deref().and_then(|iri| {
             records
                 .iter()
                 .find(|(_, r)| r.source_class_iri == iri || r.target_class_iri == iri)
                 .map(|(uri, _)| *uri)
         });
-        violations.push(violation(code, uri, &error.to_string()));
+        violations.push(violation(refusal.pack, uri, &refusal.message));
     }
+}
+
+/// One crosswalk body: the JSON of a `VocabularyCrosswalk`.
+pub(crate) fn parse_record(bytes: &[u8]) -> Result<VocabularyCrosswalk, String> {
+    serde_json::from_slice::<VocabularyCrosswalk>(bytes).map_err(|error| error.to_string())
+}
+
+/// A refused crosswalk set: the pack violation code of the import, the
+/// registered server code of an activation, the offending IRI and the text.
+#[derive(Debug)]
+pub(crate) struct CrosswalkRefusal {
+    pub(crate) pack: PackViolationCode,
+    pub(crate) server: ServerErrorCode,
+    pub(crate) iri: Option<String>,
+    pub(crate) message: String,
+}
+
+impl CrosswalkRefusal {
+    /// The refusal as an activation error string: `<CODE>: <message>`.
+    pub(crate) fn activation_error(&self) -> String {
+        format!("{}: {}", self.server.as_str(), self.message)
+    }
+}
+
+/// Validate a crosswalk set against the pinned vocabulary. Used by the import
+/// and again by the pack activation, so both refuse the same records.
+pub(crate) fn validate_set(
+    set: &[VocabularyCrosswalk],
+    vocabulary: &PinnedVocabulary,
+) -> Result<(), CrosswalkRefusal> {
+    let context = context_of(set, vocabulary);
+    validate_crosswalks(set, &context).map_err(|error| {
+        let (pack, server, iri) = classify(&error);
+        CrosswalkRefusal {
+            pack,
+            server,
+            iri: iri.map(str::to_string),
+            message: error.to_string(),
+        }
+    })
 }
 
 /// The pinned context: revision, class categories, selected sources and the
@@ -87,24 +124,46 @@ fn context_of(set: &[VocabularyCrosswalk], vocabulary: &PinnedVocabulary) -> Cro
     }
 }
 
-fn classify(error: &VocabularyCrosswalkError) -> (PackViolationCode, Option<&str>) {
+fn classify(
+    error: &VocabularyCrosswalkError,
+) -> (PackViolationCode, ServerErrorCode, Option<&str>) {
     use VocabularyCrosswalkError as E;
     match error {
-        E::SourceUnknown { source_iri, .. } => {
-            (PackViolationCode::CrosswalkSourceUnknown, Some(source_iri))
-        }
-        E::SourceOutOfScope { source_iri, .. } => (
-            PackViolationCode::CrosswalkSourceOutOfScope,
+        E::SourceUnknown { source_iri, .. } => (
+            PackViolationCode::CrosswalkSourceUnknown,
+            ServerErrorCode::CrosswalkSourceUnknown,
             Some(source_iri),
         ),
-        E::TargetUnknown(iri) => (PackViolationCode::CrosswalkTargetUnknown, Some(iri)),
-        E::Conflict { source_iri, .. } => (PackViolationCode::CrosswalkConflict, Some(source_iri)),
+        E::SourceOutOfScope { source_iri, .. } => (
+            PackViolationCode::CrosswalkSourceOutOfScope,
+            ServerErrorCode::CrosswalkSourceOutOfScope,
+            Some(source_iri),
+        ),
+        E::TargetUnknown(iri) => (
+            PackViolationCode::CrosswalkTargetUnknown,
+            ServerErrorCode::CrosswalkTargetUnknown,
+            Some(iri),
+        ),
+        E::Conflict { source_iri, .. } => (
+            PackViolationCode::CrosswalkConflict,
+            ServerErrorCode::CrosswalkConflict,
+            Some(source_iri),
+        ),
         E::CategoryConflict { target_iri, .. } => (
             PackViolationCode::CrosswalkCategoryConflict,
+            ServerErrorCode::CrosswalkCategoryConflict,
             Some(target_iri),
         ),
-        E::LimitExceeded { iri, .. } => (PackViolationCode::CrosswalkLimitExceeded, Some(iri)),
-        _ => (PackViolationCode::MalformedBody, None),
+        E::LimitExceeded { iri, .. } => (
+            PackViolationCode::CrosswalkLimitExceeded,
+            ServerErrorCode::CrosswalkLimitExceeded,
+            Some(iri),
+        ),
+        _ => (
+            PackViolationCode::MalformedBody,
+            ServerErrorCode::MalformedBody,
+            None,
+        ),
     }
 }
 
@@ -121,7 +180,11 @@ mod tests {
         };
         assert_eq!(
             classify(&unknown),
-            (PackViolationCode::CrosswalkSourceUnknown, Some("urn:a"))
+            (
+                PackViolationCode::CrosswalkSourceUnknown,
+                ServerErrorCode::CrosswalkSourceUnknown,
+                Some("urn:a")
+            )
         );
         let limit = VocabularyCrosswalkError::LimitExceeded {
             bound: "mappings",

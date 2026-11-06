@@ -20,7 +20,7 @@
 <http://knuckles.team/kg/nutrition> a owl:Ontology ;
     rdfs:label "World Model — Nutrition" ;
     rdfs:comment "Chemical entities and nutrients (ChEBI terms as individuals), foods, consumption, nutritional requirements as dispositions borne by organisms, published reference intakes and food composition; mapped to ChEBI, FoodOn, RO and Wikidata." ;
-    owl:imports <http://knuckles.team/kg/core>, <http://knuckles.team/kg/life> .
+    owl:imports <http://knuckles.team/kg/life> .
 
 # ── Chemistry, food and nutrition ─────────────────────────────────────────────────
 
@@ -183,3 +183,12 @@
 :WorkoutSession a owl:Class ;
     rdfs:label "Workout Session" ;
     rdfs:comment "A performed instance of a :WorkoutRoutine, with prov:endedAtTime." .
+
+# ── Core rooting (MEDULLA-TYPED-PACKS-R071.2) ───────────────────────────────────
+# Every class of this module above reaches the core class kg:DomainEntity through rdfs:subClassOf.
+<http://knuckles.team/kg#Exercise> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#MealPlanEntry> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#Recipe> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#ShoppingListItem> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#WorkoutRoutine> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#WorkoutSession> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .

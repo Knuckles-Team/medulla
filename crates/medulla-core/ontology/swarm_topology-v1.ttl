@@ -18,7 +18,7 @@
 <http://knuckles.team/kg/swarm> a owl:Ontology ;
     rdfs:label "Swarm topology" ;
     rdfs:comment "Topology classes, slot roles, stop rules and task-shape admissibility for swarm decisions." ;
-    owl:imports <http://knuckles.team/kg/core> , <http://knuckles.team/kg/orchestration> .
+    owl:imports <http://knuckles.team/kg/orchestration> .
 
 # --- Properties -------------------------------------------------------------
 
@@ -120,3 +120,36 @@ swarm:NeedsIndependentCheck a owl:Class ;
     rdfs:comment "Every admitted topology must carry a verifier slot (enforced as the `verify` row)." ;
     rdfs:subClassOf swarm:TaskShape , egowl:NeedsIndependentCheck ,
         [ a owl:Restriction ; owl:onProperty swarm:admits ; owl:someValuesFrom swarm:CritiqueLoop ] .
+
+# ── Core rooting (MEDULLA-TYPED-PACKS-R071.2) ───────────────────────────────────
+# Every class of this module above reaches the core class kg:DomainEntity through rdfs:subClassOf.
+<http://knuckles.team/kg/swarm#Aggregator> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/swarm#BudgetStop> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/swarm#Child> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/swarm#Council> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/swarm#CritiqueLoop> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/swarm#DeadlineStop> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/swarm#Debate> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/swarm#DecomposableTask> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/swarm#FanOutJoin> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/swarm#Hierarchy> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/swarm#IndependentSubtasks> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/swarm#LeaseDemand> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/swarm#MaxRoundsStop> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/swarm#NeedsIndependentCheck> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/swarm#NeedsNegotiation> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/swarm#Parent> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/swarm#Peer> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/swarm#PeerTeam> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/swarm#Pipeline> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/swarm#QuorumStop> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/swarm#SequentialDependency> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/swarm#Single> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/swarm#Slot> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/swarm#SlotRole> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/swarm#StopRule> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/swarm#SupervisorWorkers> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/swarm#TaskShape> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/swarm#Topology> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/swarm#Verifier> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/swarm#VerifierPassStop> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .

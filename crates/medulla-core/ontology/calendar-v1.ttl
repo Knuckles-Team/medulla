@@ -29,8 +29,7 @@
 
 <http://knuckles.team/kg/calendar> a owl:Ontology ;
     rdfs:label "Calendar / Scheduling Ontology" ;
-    rdfs:comment "Calendar events as KG entities (CONCEPT:KG-2.9)." ;
-    owl:imports <http://knuckles.team/kg/core> .
+    rdfs:comment "Calendar events as KG entities (CONCEPT:KG-2.9)." .
 
 :CalendarEvent a owl:Class ;
     rdfs:label "Calendar Event" ;

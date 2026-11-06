@@ -191,3 +191,8 @@ runtime. CONCEPT:KG-2.41.""" ;
             owl:cardinality "1"^^xsd:nonNegativeInteger ;
             owl:onProperty :functionKind ],
         bfo:0000015 .
+
+# ── Core rooting (MEDULLA-TYPED-PACKS-R071.2) ───────────────────────────────────
+# Every class of this module above reaches the core class kg:DomainEntity through rdfs:subClassOf.
+<http://knuckles.team/kg#Chunk> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg#Marking> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
