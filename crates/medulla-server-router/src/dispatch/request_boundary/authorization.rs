@@ -117,6 +117,26 @@ fn required_bus_scope(method: &Method) -> Option<&'static str> {
     }
 }
 
+/// Stamp a bus write with the verified tenant and principal
+/// (MEDULLA-DURABLE-KERNEL-R095.1002): `BusRegister` stores both on the
+/// participant row and `BusHeartbeat` checks the session against them, so a
+/// caller can never claim another tenant or principal through the body.
+pub(super) fn stamp_bus_identity(method: &mut Method, verified_context: &VerifiedRequestContext) {
+    match method {
+        Method::BusRegister {
+            participant,
+            principal,
+        } => {
+            participant.tenant = verified_context.tenant().to_owned();
+            *principal = verified_context.principal().to_owned();
+        }
+        Method::BusHeartbeat { principal, .. } => {
+            *principal = verified_context.principal().to_owned();
+        }
+        _ => {}
+    }
+}
+
 /// Refuse a bus method without its scope before any lookup; writes nothing.
 fn enforce_bus_scope(
     req: &Request,

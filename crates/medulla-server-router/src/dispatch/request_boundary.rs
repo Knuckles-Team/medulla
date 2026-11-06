@@ -327,6 +327,11 @@ async fn dispatch_preamble_checks(
             state_machine_authorized,
         ),
     );
+    // MEDULLA-DURABLE-KERNEL-R095.1002: a bus write names the verified tenant
+    // and principal, never the request fields; a replica applies the stamp.
+    if !state_machine_authorized {
+        authorization::stamp_bus_identity(&mut req.method, verified_context);
+    }
     let method_policy = medulla_capabilities::policy(&req.method);
     let action = method_policy.authz_action;
     let identity_bootstrap =

@@ -54,6 +54,11 @@ async fn graph(state: &test_support::SharedState, name: &str, strategy: MergeStr
 
 /// One `AddNode` envelope for `node` carrying `properties`, stamped with
 /// `expected` as its graph version expectation. `tag` keeps envelope ids unique.
+///
+/// Each envelope carries its own source object (`source:<tag>`, first version,
+/// governed by its own policy row), so the only staleness under test is the
+/// graph-version expectation; the per-object content-version chain is
+/// MEDULLA-DURABLE-KERNEL-R084's neighbour and is not exercised here.
 fn envelope(tag: &str, node: &str, properties: Value, expected: u64) -> Method {
     let mut draft =
         medulla_server_graph::dispatch::change_envelope_draft::tests::draft_for(TENANT, properties);
@@ -65,9 +70,14 @@ fn envelope(tag: &str, node: &str, properties: Value, expected: u64) -> Method {
     {
         *node_id = node.to_owned();
     }
-    draft.content_version.object_id = node.to_owned();
+    let source = format!("source:{tag}");
+    draft.content_version.object_id = source.clone();
     draft.policies[0].object_id = node.to_owned();
     draft.policies[0].policy_id = format!("policy:{tag}");
+    let mut source_policy = draft.policies[0].clone();
+    source_policy.object_id = source;
+    source_policy.policy_id = format!("policy:{tag}:source");
+    draft.policies.push(source_policy);
     Method::ApplyChangeEnvelopeDraft {
         draft: Box::new(draft),
     }
