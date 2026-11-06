@@ -220,7 +220,7 @@ fn vectors_cover_every_wire_method_and_round_trip() {
         wire_methods().len(),
         "every wire method has a vector"
     );
-    for (domain, rows) in &vectors {
+    for (domain, rows) in vectors.iter() {
         let methods: Vec<&str> = rows
             .iter()
             .filter_map(|row| row["method"].as_str())
