@@ -24,6 +24,10 @@
 //! never double-count.
 
 mod adapter;
+// MEDULLA-DECISION-ENGINE-R700.2 — negation and antonym confirmation of opposed claims.
+pub mod antonyms;
+// MEDULLA-DECISION-ENGINE-R700 — belief revision pass kernels.
+pub mod belief_revision;
 // MEDULLA-DECISION-ENGINE-R652 — claim lifecycle, evidence, arbitration and sealing kernels.
 pub mod claims;
 #[cfg(feature = "epistemic-tms")]
