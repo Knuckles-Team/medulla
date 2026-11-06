@@ -31,6 +31,7 @@ async fn spawn_bolt(state: test_support::SharedState) -> String {
     addr
 }
 
+/// Verifies MEDULLA-DURABLE-KERNEL-R860.2: Bolt listener.
 // spec: MEDULLA-DURABLE-KERNEL-R860.2
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn run_returns_records() {
