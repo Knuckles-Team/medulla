@@ -254,7 +254,16 @@ pub(super) async fn try_handle_node_reads(
             prefix,
             limit,
             cursor,
-        } => super::memory_snapshot::list(req_id, core, &prefix, limit, cursor.as_deref()),
+        } => {
+            let secret = ctx.state.read().await.auth_secret.clone();
+            let scope = super::memory_snapshot::ListScope {
+                secret: &secret,
+                authority: read_authority,
+                graph_name: ctx.graph_name,
+                now_s: super::memory_snapshot::now_s(),
+            };
+            super::memory_snapshot::list(req_id, core, &scope, &prefix, limit, cursor.as_deref())
+        }
         // CompareAndSetNodeFields/ClaimNext (CONCEPT:MEDULLA-P0-2 bypass guard, L11):
         // GATEWAY_ROUTED — see the AddNode/RemoveNode comment above.
         other => return ControlFlow::Continue(other),

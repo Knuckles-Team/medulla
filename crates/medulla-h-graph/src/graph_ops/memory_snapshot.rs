@@ -7,6 +7,7 @@
 //! and writes nothing. The rows and the compare-and-set live in
 //! `medulla_core::memory_snapshot_store`, shared with durable replay.
 
+use super::memory_cursor;
 use medulla_core::memory_snapshot_store as store;
 use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
@@ -15,8 +16,8 @@ use medulla_server_mutation::mutation::{MutationCtx, MutationPlan};
 use medulla_server_ops::api::ingest::graph::commit_gateway;
 use medulla_types::contract::Digest256;
 use medulla_types::memory_sync::{
-    decide, Decision, DocId, MemorySnapshotList, MemorySyncError, MemorySyncRefusal, SyncOutcome,
-    SyncRequest, SyncStamp,
+    decide, Decision, DocId, ListCursor, MemorySnapshotList, MemorySyncError, MemorySyncRefusal,
+    SyncOutcome, SyncRequest, SyncStamp,
 };
 
 /// `limit` default and maximum of `ListMemorySnapshots`.
@@ -53,28 +54,90 @@ pub(crate) fn read(req_id: u64, core: &GraphCore, doc_id: &str, revision: Option
     }
 }
 
-/// `ListMemorySnapshots`: heads in `doc_id` order, at most `limit`. A cursor
-/// needs the signed token of R085.2 and is refused until that row lands.
+/// Wall-clock seconds, the clock cursor expiry is judged on.
+pub(crate) fn now_s() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|elapsed| elapsed.as_secs())
+        .unwrap_or(0)
+}
+
+/// The caller and filter one `ListMemorySnapshots` page is bound to.
+pub(crate) struct ListScope<'a> {
+    pub secret: &'a str,
+    pub authority: &'a medulla_server_api::carrier::GraphReadAuthority,
+    pub graph_name: &'a str,
+    pub now_s: u64,
+}
+
+/// `ListMemorySnapshots`: heads in `doc_id` order, at most `limit`, resumed
+/// after the signed cursor's `doc_id` (R085.2). The page reads the caller's
+/// visible view only, so it carries no hidden count, id or digest.
 pub(crate) fn list(
     req_id: u64,
     core: &GraphCore,
+    scope: &ListScope<'_>,
     prefix: &str,
     limit: Option<u32>,
     cursor: Option<&str>,
 ) -> Response {
-    if cursor.is_some() {
-        return refuse(req_id, MemorySyncRefusal::CursorInvalid);
+    let limit = limit.unwrap_or(DEFAULT_LIMIT).clamp(1, MAX_LIMIT);
+    match list_page(core, scope, prefix, limit, cursor) {
+        Ok(page) => payload(
+            req_id,
+            ResultPayload::of::<results::ListMemorySnapshots>(page),
+        ),
+        Err(code) => refuse(req_id, code),
     }
-    let limit = limit.unwrap_or(DEFAULT_LIMIT).clamp(1, MAX_LIMIT) as usize;
-    let mut heads = store::list_heads(core, prefix);
-    heads.truncate(limit);
-    payload(
-        req_id,
-        ResultPayload::of::<results::ListMemorySnapshots>(MemorySnapshotList {
-            heads,
-            next_cursor: None,
-        }),
-    )
+}
+
+fn list_page(
+    core: &GraphCore,
+    scope: &ListScope<'_>,
+    prefix: &str,
+    limit: u32,
+    cursor: Option<&str>,
+) -> Result<MemorySnapshotList, MemorySyncRefusal> {
+    let carrier = scope
+        .authority
+        .carrier()
+        .ok_or(MemorySyncRefusal::NotAvailable)?;
+    let binding = memory_cursor::CursorBinding {
+        tenant: carrier.tenant_scope(),
+        graph_incarnation: scope.graph_name,
+        principal: carrier.agent_id(),
+        policy_digest: carrier.authority_digest(),
+        prefix,
+        limit,
+    };
+    let ttl_s = medulla_server_api::knob_config::knobs().memory_sync_cursor_ttl_s;
+    let after = cursor
+        .map(|token| memory_cursor::decode(scope.secret, &binding, token, scope.now_s, ttl_s))
+        .transpose()?;
+    let mut heads: Vec<_> = store::list_heads(core, prefix)
+        .into_iter()
+        .filter(|head| {
+            after
+                .as_deref()
+                .is_none_or(|last| head.doc_id.as_str() > last)
+        })
+        .take(limit as usize + 1)
+        .collect();
+    let more = heads.len() > limit as usize;
+    heads.truncate(limit as usize);
+    let next_cursor = match (more, heads.last()) {
+        (true, Some(last)) => Some(
+            ListCursor::new(memory_cursor::encode(
+                scope.secret,
+                &binding,
+                last.doc_id.as_str(),
+                scope.now_s,
+            ))
+            .map_err(|error| error.code)?,
+        ),
+        _ => None,
+    };
+    Ok(MemorySnapshotList { heads, next_cursor })
 }
 
 fn outcome_response(req_id: u64, outcome: SyncOutcome) -> Response {
