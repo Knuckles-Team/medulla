@@ -61,9 +61,20 @@ macro_rules! canonical_id_type {
     ($name:ident, $maximum:expr, $label:literal) => {
         #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
         #[serde(transparent)]
-        #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-        #[cfg_attr(feature = "contract-schema", schemars(transparent))]
         pub struct $name(String);
+        /// The schema states the non-empty bound the decoder enforces.
+        #[cfg(feature = "contract-schema")]
+        impl schemars::JsonSchema for $name {
+            fn inline_schema() -> bool {
+                true
+            }
+            fn schema_name() -> std::borrow::Cow<'static, str> {
+                std::borrow::Cow::Borrowed(stringify!($name))
+            }
+            fn json_schema(_generator: &mut schemars::SchemaGenerator) -> schemars::Schema {
+                schemars::json_schema!({ "type": "string", "minLength": 1 })
+            }
+        }
         impl $name {
             pub fn new(value: impl Into<String>) -> Result<Self, String> {
                 let value = value.into();
@@ -227,9 +238,20 @@ macro_rules! closed_token_type {
     ($name:ident, $label:literal, [$($value:literal),+ $(,)?]) => {
         #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
         #[serde(transparent)]
-        #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-        #[cfg_attr(feature = "contract-schema", schemars(transparent))]
         pub struct $name(String);
+        /// The schema names the closed set the decoder accepts.
+        #[cfg(feature = "contract-schema")]
+        impl schemars::JsonSchema for $name {
+            fn inline_schema() -> bool {
+                true
+            }
+            fn schema_name() -> std::borrow::Cow<'static, str> {
+                std::borrow::Cow::Borrowed(stringify!($name))
+            }
+            fn json_schema(_generator: &mut schemars::SchemaGenerator) -> schemars::Schema {
+                schemars::json_schema!({ "type": "string", "enum": [$($value),+] })
+            }
+        }
         impl $name {
             pub fn new(value: impl Into<String>) -> Result<Self, String> {
                 let value = value.into();
