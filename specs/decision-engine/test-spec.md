@@ -1263,7 +1263,7 @@ Each test below is planned: its path is the post-split location and its name is 
 | `MEDULLA-DECISION-ENGINE-R044.2.2` | `crates/medulla-h-decide/src/decide/stat_tests/a2a_route_tests.rs::inbound_task_routes_through_a_recorded_decision` | L3 |
 | `MEDULLA-DECISION-ENGINE-R050.2` | `tests/test_generated_models.py::test_model_input_capabilities_round_trip_and_refuse_unknown_mime` | L3 |
 | `MEDULLA-DECISION-ENGINE-R050.3` | `crates/medulla-h-admin/src/admin/connector_pack/tests/model_input_capabilities.rs::four_media_types_at_128_parts_import` | L1/L2 |
-| `MEDULLA-DECISION-ENGINE-R054.1` | `crates/medulla-capabilities/tests/decision_ontology.rs::generated_decision_ontology_matches_committed_files` | L1/L2 |
+| `MEDULLA-DECISION-ENGINE-R054.1` | `crates/medulla-capabilities/tests/decision_ontology.rs::generated_decision_ontology_is_byte_stable_and_covers_every_contract_class` | L1/L2 |
 | `MEDULLA-DECISION-ENGINE-R066.4` | `crates/medulla-h-decide/src/decide/stat_tests/retention_tests.rs::graph_summaries_expire_on_policy_window` | L3 |
 | `MEDULLA-DECISION-ENGINE-R072.100` | `crates/medulla-h-decide/src/decide/stat_tests/telemetry_tests.rs::served_decide_emits_one_span_per_stage` | L3 |
 | `MEDULLA-DECISION-ENGINE-R073.6` | `crates/medulla-h-graph/src/graph_ops/participant_memory_tests.rs::each_memory_change_emits_one_atomic_event` | L1/L2 |

@@ -8,24 +8,23 @@ WebAssembly module with no imports; this script builds it for
 identity-neutral path remaps the release wheels use, and places one copy in
 each client directory (Go's ``//go:embed`` cannot reach outside its module).
 
-``--check`` rebuilds and fails unless both committed copies are byte-identical
-to the fresh module, so a wire change in medulla-types cannot ride past a stale
-client codec. Needs the pinned toolchain's ``wasm32-unknown-unknown`` target
-(``rustup target add wasm32-unknown-unknown``).
+The module is never committed (MEDULLA-SDLC-R020.1): it is built where it is
+consumed -- the language-clients CI job runs this script before ``go test`` and
+``npm test``, and a Go or JavaScript release packs the bytes this script writes.
+Both client copies are gitignored. Needs the pinned toolchain's
+``wasm32-unknown-unknown`` target (``rustup target add wasm32-unknown-unknown``).
 
 The Rust ``method-codec`` profile supplies the module bytes directly. The
-builder verifies the WebAssembly header and refuses an import section, then
-``--check`` compares both client copies byte for byte and reports their SHA-256
-digests. The generated-artifact ledger separately pins the committed SHA-256
-for each copy. Regeneration updates those existing pins with the module bytes.
+builder verifies the WebAssembly header and refuses an import section. Two
+independent canonical builds must be byte-identical and within ``MAX_BYTES``
+(MEDULLA-CONTRACT-R006.2) before any copy is written.
 The linked module is then shrunk by binaryen ``wasm-opt -Oz`` from one pinned
 release archive (``BINARYEN_URL``), fetched into the cargo target directory and
 refused unless its SHA-256 equals ``BINARYEN_SHA256``; the same pinned binary
 gives the same bytes on every host.
 
 ``--export-dir`` saves the fresh module and a SHA-256/source/build provenance
-sidecar before checking committed copies, without weakening the freshness gate.
-Failed builds clear old exports and never advertise a completed fresh export.
+sidecar. Failed builds clear old exports and never advertise a completed export.
 """
 
 from __future__ import annotations
@@ -35,7 +34,6 @@ import hashlib
 import json
 import os
 import platform
-import re
 import subprocess
 import sys
 import tarfile
@@ -43,8 +41,6 @@ import urllib.request
 from collections.abc import Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING
-
-import tomllib
 
 if TYPE_CHECKING:
     from configure_rust_path_remap import encoded_rustflags
@@ -54,24 +50,15 @@ else:
     except ModuleNotFoundError:  # imported as a package in tests
         from scripts.configure_rust_path_remap import encoded_rustflags
 
-try:
-    import generated_artifacts
-except ModuleNotFoundError:  # imported as a package in tests
-    from scripts import generated_artifacts
-
 ROOT = Path(__file__).resolve().parents[1]
 TARGET = "wasm32-unknown-unknown"
 PROFILE = "method-codec"
 MODULE = "medulla_method_codec.wasm"
 CLIENT_DIRS = ("clients/go", "clients/js")
 PROVENANCE = "medulla_method_codec.provenance.json"
-# The committed canonical-qualification evidence (MEDULLA-CONTRACT-R006.2): the
-# digests of two independent canonical builds and the measured size.
-COMMITTED_PROVENANCE = Path("clients") / PROVENANCE
 # Fixed release gate (MEDULLA-CONTRACT-R006): lowered, never raised.
 MAX_BYTES = 10_946_464
 CANONICAL_BUILDS = 2
-_DIGEST = re.compile(r"[0-9a-f]{64}")
 BUILD_COMMAND = (
     "cargo",
     "build",
@@ -197,87 +184,10 @@ def verify_no_imports(module: bytes) -> None:
             raise ValueError("method codec must have zero WebAssembly imports")
 
 
-def _check_artifact_pins(root: Path) -> bool:
-    """Require both client copies to match their reviewed ledger hashes."""
+def write(root: Path, module: bytes, rebuild: bytes | None = None) -> int:
+    """Qualify two canonical builds, then place the module in every client."""
 
-    verified, problems = generated_artifacts.verify(root)
-    required = {f"{client}/{MODULE}" for client in CLIENT_DIRS}
-    for path in sorted(required - verified):
-        problems.append(f"missing verified pin: {path}")
-    for problem in problems:
-        print(f"REFUSED: {problem}", file=sys.stderr)
-    return not problems
-
-
-def _check_client_copies(root: Path, module: bytes) -> bool:
-    """Require both embedded copies to equal the freshly built module."""
-
-    stale = []
-    for client in CLIENT_DIRS:
-        path = root / client / MODULE
-        committed = path.read_bytes() if path.exists() else b""
-        if committed != module:
-            stale.append(f"{client}/{MODULE} sha256={_sha256(committed)}")
-    if stale:
-        print(
-            f"STALE: fresh {MODULE} sha256={_sha256(module)} differs from "
-            + "; ".join(stale)
-            + " -- run scripts/build_method_codec_wasm.py",
-            file=sys.stderr,
-        )
-    return not stale
-
-
-def qualification(builds: Sequence[bytes]) -> dict[str, object]:
-    """The canonical-qualification record of independent builds of one module."""
-
-    return {
-        "canonical_build_sha256": [_sha256(module) for module in builds],
-        "size_bytes": len(builds[0]),
-        "max_bytes": MAX_BYTES,
-    }
-
-
-def _check_qualification(root: Path, module: bytes) -> bool:
-    """Require two equal canonical-build digests of the fresh module within budget."""
-
-    problems = []
-    if len(module) > MAX_BYTES:
-        problems.append(f"{MODULE} is {len(module)} bytes, over MAX_BYTES={MAX_BYTES}")
-    path = root / COMMITTED_PROVENANCE
-    try:
-        record = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, ValueError) as exc:
-        problems.append(f"unreadable {COMMITTED_PROVENANCE}: {exc}")
-        record = {}
-    digests = record.get("canonical_build_sha256") if isinstance(record, dict) else None
-    if not (
-        isinstance(digests, list)
-        and len(digests) == CANONICAL_BUILDS
-        and all(isinstance(d, str) and _DIGEST.fullmatch(d) for d in digests)
-    ):
-        problems.append(
-            f"{COMMITTED_PROVENANCE} must hold {CANONICAL_BUILDS} canonical-build "
-            "SHA-256 digests in 64 lowercase hex characters"
-        )
-    elif set(digests) != {_sha256(module)}:
-        problems.append(
-            f"{COMMITTED_PROVENANCE} canonical builds {digests} differ from the "
-            f"fresh sha256={_sha256(module)}"
-        )
-    if isinstance(record, dict) and record.get("size_bytes") != len(module):
-        problems.append(
-            f"{COMMITTED_PROVENANCE} size_bytes={record.get('size_bytes')} is not "
-            f"the measured {len(module)}"
-        )
-    for problem in problems:
-        print(f"REFUSED: {problem}", file=sys.stderr)
-    return not problems
-
-
-def check(root: Path, module: bytes, rebuild: bytes | None = None) -> int:
-    """Require fresh bytes, reviewed pins and the two-build qualification record."""
-
+    verify_no_imports(module)
     if rebuild is not None and rebuild != module:
         print(
             f"REFUSED: two canonical builds differ: sha256={_sha256(module)} "
@@ -285,85 +195,18 @@ def check(root: Path, module: bytes, rebuild: bytes | None = None) -> int:
             file=sys.stderr,
         )
         return 1
-    if not _check_client_copies(root, module) or not _check_artifact_pins(root):
-        return 1
-    if not _check_qualification(root, module):
-        return 1
-    print(
-        f"OK: {MODULE} sha256={_sha256(module)} ({len(module)} bytes) in every client"
-    )
-    return 0
-
-
-def _validate_codec_entries(root: Path, required: set[str]) -> None:
-    """Require the existing reviewed codec paths and reproducibility contract."""
-
-    entries = generated_artifacts.load(root)
-    for path in required:
-        entry = entries.get(path)
-        if (
-            entry is None
-            or entry.path != path
-            or entry.reproducer != "python3 scripts/build_method_codec_wasm.py --check"
-            or entry.proven_by != "language-clients"
-        ):
-            raise generated_artifacts.LedgerError(
-                f"unexpected codec ledger entry: {path}"
-            )
-
-
-def _updated_artifact_pins(root: Path, module: bytes) -> str:
-    """Prepare only the existing codec pins; reject unexpected ledger changes."""
-
-    required = {f"{client}/{MODULE}" for client in CLIENT_DIRS}
-    _validate_codec_entries(root, required)
-    ledger = root / generated_artifacts.LEDGER
-    if ledger.is_symlink():
-        raise generated_artifacts.LedgerError("codec ledger must not be a symlink")
-    original = ledger.read_text(encoding="utf-8")
-    expected = tomllib.loads(original)
-    hashes = []
-    for raw in expected["artifact"]:
-        if raw["path"] in required:
-            raw["sha256"] = _sha256(module)
-        hashes.append(raw["sha256"])
-    # Preserve comments and formatting. Only the ordinary one-line hash fields
-    # are editable; semantic equality below refuses ambiguous/multiline layouts.
-    pattern = re.compile(r'(?m)^(sha256\s*=\s*["\'])([0-9a-f]{64})(["\'])')
-    matches = list(pattern.finditer(original))
-    if len(matches) != len(hashes):
-        raise generated_artifacts.LedgerError("unsupported ledger hash layout")
-    updated = original
-    for match, digest in reversed(list(zip(matches, hashes, strict=True))):
-        updated = updated[: match.start(2)] + digest + updated[match.end(2) :]
-    if tomllib.loads(updated) != expected:
-        raise generated_artifacts.LedgerError("refused unexpected ledger changes")
-    return updated
-
-
-def write(root: Path, module: bytes, rebuild: bytes | None = None) -> int:
-    """Place the fresh module, its existing pins and its qualification record."""
-
-    verify_no_imports(module)
-    builds = [module, module if rebuild is None else rebuild]
-    if builds[1] != module:
-        print("REFUSED: two canonical builds differ", file=sys.stderr)
-        return 1
-    try:
-        ledger = _updated_artifact_pins(root, module)
-        for client in CLIENT_DIRS:
-            if (root / client / MODULE).is_symlink():
-                raise generated_artifacts.LedgerError("codec must not be a symlink")
-    except generated_artifacts.LedgerError as exc:
-        print(f"REFUSED: {exc}", file=sys.stderr)
+    if len(module) > MAX_BYTES:
+        print(
+            f"REFUSED: {MODULE} is {len(module)} bytes, over MAX_BYTES={MAX_BYTES}",
+            file=sys.stderr,
+        )
         return 1
     for client in CLIENT_DIRS:
+        if (root / client / MODULE).is_symlink():
+            print(f"REFUSED: {client}/{MODULE} must not be a symlink", file=sys.stderr)
+            return 1
+    for client in CLIENT_DIRS:
         (root / client / MODULE).write_bytes(module)
-    (root / generated_artifacts.LEDGER).write_text(ledger, encoding="utf-8")
-    (root / COMMITTED_PROVENANCE).write_text(
-        json.dumps(qualification(builds), indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
     clients = ", ".join(CLIENT_DIRS)
     print(f"wrote {MODULE} sha256={_sha256(module)} ({len(module)} bytes) to {clients}")
     return 0
@@ -414,9 +257,6 @@ def export(root: Path, directory: Path, module: bytes) -> None:
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--check", action="store_true", help="fail on a stale committed module"
-    )
-    parser.add_argument(
         "--target-dir",
         type=Path,
         default=None,
@@ -425,7 +265,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument(
         "--export-dir",
         type=Path,
-        help="export fresh WASM and provenance before checking committed copies",
+        help="also export the fresh WASM and its provenance to this directory",
     )
     args = parser.parse_args(argv)
     if args.export_dir:
@@ -440,8 +280,6 @@ def main(argv: Sequence[str] | None = None) -> int:
     rebuild = build(ROOT, (target_dir / "method-codec-requalify").resolve())
     if args.export_dir:
         export(ROOT, args.export_dir, module)
-    if args.check:
-        return check(ROOT, module, rebuild)
     return write(ROOT, module, rebuild)
 
 

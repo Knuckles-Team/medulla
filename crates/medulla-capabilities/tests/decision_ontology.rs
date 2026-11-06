@@ -1,29 +1,33 @@
-//! MEDULLA-DECISION-ENGINE-R054.1: the committed decision ontology and shapes are
-//! exactly what the generator emits.
+//! MEDULLA-DECISION-ENGINE-R054.1: the decision ontology and shapes are derived
+//! from the contract schemas at build time, never committed (MEDULLA-SDLC-R020.1).
+//! This test asserts the properties directly instead of diffing a stored copy.
 #![cfg(feature = "contract-schema")]
 
 use medulla_capabilities::decision_ontology::{decision_ontology_ttl, decision_shapes_ttl};
 
-const ONTOLOGY: &str = include_str!("../../medulla-core/ontology/decision.ttl");
-const SHAPES: &str = include_str!("../../medulla-core/ontology/decision.shapes.ttl");
+const CLASSES: [&str; 4] = [
+    "DecideRequest",
+    "DecisionEvalOp",
+    "DecisionFitOp",
+    "StatisticalDecisionRecord",
+];
 
 // spec: MEDULLA-DECISION-ENGINE-R054.1
 #[test]
-fn generated_decision_ontology_matches_committed_files() {
-    if std::env::var_os("MEDULLA_REGENERATE_DECISION_ONTOLOGY").is_some() {
-        let dir = concat!(env!("CARGO_MANIFEST_DIR"), "/../medulla-core/ontology");
-        std::fs::write(format!("{dir}/decision.ttl"), decision_ontology_ttl()).unwrap();
-        std::fs::write(format!("{dir}/decision.shapes.ttl"), decision_shapes_ttl()).unwrap();
-        return;
+fn generated_decision_ontology_is_byte_stable_and_covers_every_contract_class() {
+    let ontology = decision_ontology_ttl();
+    let shapes = decision_shapes_ttl();
+    assert_eq!(ontology, decision_ontology_ttl(), "ontology is byte-stable");
+    assert_eq!(shapes, decision_shapes_ttl(), "shapes are byte-stable");
+    for class in CLASSES {
+        assert!(
+            ontology.contains(&format!(":{class} a owl:Class")),
+            "{class} is an owl:Class"
+        );
+        assert!(shapes.contains(class), "{class} has a shape");
     }
-    assert_eq!(
-        ONTOLOGY,
-        decision_ontology_ttl(),
-        "decision.ttl is stale: rerun with MEDULLA_REGENERATE_DECISION_ONTOLOGY=1"
-    );
-    assert_eq!(
-        SHAPES,
-        decision_shapes_ttl(),
-        "decision.shapes.ttl is stale: rerun with MEDULLA_REGENERATE_DECISION_ONTOLOGY=1"
+    assert!(
+        shapes.contains("sh:property"),
+        "shapes carry property constraints"
     );
 }

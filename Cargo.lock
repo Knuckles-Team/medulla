@@ -5181,6 +5181,7 @@ dependencies = [
  "dashmap",
  "hex",
  "medulla-catalog-types",
+ "medulla-decision-types",
  "medulla-index-types",
  "medulla-modality",
  "medulla-mutation-types",

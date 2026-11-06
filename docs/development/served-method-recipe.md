@@ -91,18 +91,13 @@ Optional hand-written convenience, as `NlQueryExplain` did: a wrapper in
 `medulla/client.py` (finance wrappers are near `kelly_fraction`) that calls the
 generated `_gen.compute.send_finance_x(...)`.
 
-## 5. Rebuild the method-codec wasm and update its pin
+## 5. Nothing to regenerate
 
-```
-python3 scripts/build_method_codec_wasm.py --target-dir "$CARGO_TARGET_DIR"
-```
-
-This rewrites `clients/go/medulla_method_codec.wasm`, `clients/js/medulla_method_codec.wasm` and the two
-sha256 pins in `.config/generated-artifacts.toml`. CI runs it with `--check`.
-
-Do not commit the output of `python3 scripts/gen_api_docs.py --write`: `docs/api/` and
-`docs/openapi.json` drift from the base branch independently of the method. After a run,
-restore both with `git checkout -- docs/api docs/openapi.json`.
+No generated artifact is committed (MEDULLA-SDLC-R020.1). The method-codec wasm the Go and
+JavaScript clients embed is built by `python3 scripts/build_method_codec_wasm.py` where it is
+consumed (the language-clients CI job, or locally before `go test` / `npm test`), and the
+decision ontology is rendered by `medulla-graph-core`'s `build.rs`. A method change needs no
+follow-up regeneration commit.
 
 ## 6. Served integration test
 
@@ -126,8 +121,7 @@ cargo test --locked --features "server,security,finance" --test finance_served_<
 - In the row's `specs/<spec>/requirements.md`, name the served method and the test file in
   the `.3` row. Leave `status.json` alone: the spec status tooling generates it.
 - Stage explicit paths only: `medulla/`, `crates/`, `src/server`,
-  `tests/<file>`, `clients/*/medulla_method_codec.wasm`, `.config/generated-artifacts.toml`,
-  the spec file. Commit with a `Spec: <ROW-ID>` trailer.
+  `tests/<file>`, the spec file. Commit with a `Spec: <ROW-ID>` trailer.
   Delete `target-isolated/` at the end of the lane.
 
 ## Rows this recipe does not fit

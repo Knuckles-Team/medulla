@@ -37,3 +37,26 @@ Governing plan: [plan.md](plan.md). Each entry resolves one Phase 0 unknown of t
 **Decision.** In mode `development` the loop records `would_dispatch` for an unprompted slice and starts nothing. The owner reads these records and then approves promotion to `evolving`.
 
 **Technique.** Run the decision in shadow before it acts. The shadow record holds the same evidence as a real dispatch, so the owner can compare it with the work the owner would choose.
+
+## 6. Which generated artifacts are committed, who consumes them, and where each is produced (MEDULLA-SDLC-R020.1)
+
+Inventory of every ledger entry and every tracked file with a generated header or a
+rewrite-and-compare test, as of this change. Decision: produce each at its point of use or
+delete it; replace a snapshot that only diffs against itself with a test of the property.
+
+| Path | Generator | Consumer | Why it was committed | Decision |
+|------|-----------|----------|----------------------|----------|
+| `clients/go/medulla_method_codec.wasm` | `scripts/build_method_codec_wasm.py` | Go client `//go:embed` (tests in CI) | embed cannot reach outside the module | built in CI and release before `go test`; gitignored |
+| `clients/js/medulla_method_codec.wasm` | same | JS client at load time (tests in CI) | no build step in the package | built in CI and release before `npm test`; gitignored |
+| `.config/generated-artifacts.toml`, `scripts/generated_artifacts.py` | hand pins | sanitizer exemption, `--check` | pinned the two wasm copies | deleted with the copies |
+| `crates/medulla-core/ontology/decision.ttl`, `decision.shapes.ttl` | decision ontology generator | engine schema sources (`include_str!`) | read at compile time | `medulla-graph-core/build.rs` renders into `OUT_DIR` |
+| `tests/fixtures/wire_vectors/*.json` (rewrite switch only; no file tracked) | wire-vector test | the test itself | compare-to-self | computed and asserted in the test |
+| `tests/fixtures/method_policy_registry_v1.json` | none (hand snapshot) | one golden test | compare-to-self | deleted; the computed test already asserts the rows |
+| `docs/operations/owner-store-formats.md` | `gen_owner_store_formats` example | runbook link | operator reference | example prints it on demand; test asserts the rendering |
+| `docs/reference/skill-graph.generated.md` | cross-repo skill-graph builder | docs nav only | slice of a corpus published elsewhere | deleted; no in-repo consumer |
+| `docs/concept_reservations.yaml` | external concept tool | nobody in this repository | aggregate of fragments | deleted |
+
+Not generated, kept: `medulla/generated/*.py` (hand-maintained wire models; the directory name
+is historical), `tests/fixtures/decision/assembly_golden.json` (cross-language input the Python
+verifier reads; it changes only with a record-version change), insta plan snapshots and numeric
+reference fixtures (expected outputs, not derived copies), and `vendor/` upstream sources.

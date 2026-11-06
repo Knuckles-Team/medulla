@@ -1357,14 +1357,16 @@ fn core_specs() -> &'static [CoreSpec] {
         },
         // MEDULLA-DECISION-ENGINE-R054.1: the decision contract's ontology and
         // shapes, generated from its JSON schemas by
-        // `medulla_capabilities::decision_ontology` and committed.
+        // `medulla_decision_types::ontology`, rendered by `build.rs` into
+        // `OUT_DIR` (MEDULLA-SDLC-R020.1: never committed).
         CoreSpec {
             module: "decision",
             version: 1,
-            shapes: Some(include_str!(
-                "../../../medulla-core/ontology/decision.shapes.ttl"
-            )),
-            ontology: Some(include_str!("../../../medulla-core/ontology/decision.ttl")),
+            shapes: Some(include_str!(concat!(
+                env!("OUT_DIR"),
+                "/decision.shapes.ttl"
+            ))),
+            ontology: Some(include_str!(concat!(env!("OUT_DIR"), "/decision.ttl"))),
         },
     ];
     SPECS

@@ -1,7 +1,8 @@
 default_language_version:
   python: python3
-# Automatic pre-push is the bounded local publication gate: generated-artifact
-# freshness, formatting/lint, lock/contract checks, and targeted smoke only.
+# Automatic pre-push is the bounded local publication gate: formatting/lint,
+# lock/contract checks, and targeted smoke only. No generated artifact is
+# committed, so there is no freshness hook (MEDULLA-SDLC-R020.1).
 # Exhaustive scanners/censuses, full feature matrices, wheel builds, integration
 # suites are manual-only locally; hosted CI runs this same config
 # (`pre-commit run --all-files`) and remains the exhaustive authority. Install both commit and push hooks with:

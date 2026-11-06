@@ -118,3 +118,9 @@ Static context, signing, secret-leakage and method-body vector tests use Node's
 built-in test runner (`npm test`, run in CI by ci.yml job `language-clients`).
 The repository does not yet provide a live Node engine harness for transport-level
 integration tests.
+
+## Building the method codec
+
+`medulla_method_codec.wasm` is not committed (MEDULLA-SDLC-R020.1). Build it from the
+repository root before running the tests or packing a release:
+`python3 scripts/build_method_codec_wasm.py` (needs `rustup target add wasm32-unknown-unknown`).

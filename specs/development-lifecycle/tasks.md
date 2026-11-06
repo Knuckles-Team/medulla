@@ -117,3 +117,4 @@ Compile slot: Medulla only, one cargo lane host-wide at a time.
 - [ ] T110 [US6] MEDULLA-SDLC-R019.14 Wiring: served delivery methods.
 - [ ] T111 [US6] MEDULLA-SDLC-R019.15 Hot-path proof: served delivery journey.
 - [X] T112 [P] MEDULLA-SDLC-R020 Concurrent changes merge without registry conflicts.
+- [X] T113 [P] MEDULLA-SDLC-R020.1 No generated artifact is committed; no freshness gate.

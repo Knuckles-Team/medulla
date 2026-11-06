@@ -1,15 +1,13 @@
-"""Golden and adversarial checks for the current method-policy registry."""
+"""Computed and adversarial checks for the current method-policy registry."""
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 import pytest
 
 from scripts.method_policy_inventory import (
     EXPECTED_CFG_ROWS,
-    EXPECTED_DOMAIN_MODULES,
     MethodPolicyInventoryError,
     load_capability_sources,
     parse_method_policy_table,
@@ -18,24 +16,10 @@ from scripts.method_policy_inventory import (
 pytestmark = pytest.mark.no_engine
 
 ROOT = Path(__file__).resolve().parents[1]
-FIXTURE = ROOT / "tests/fixtures/method_policy_registry_v1.json"
 
 
 def _rows():
     return parse_method_policy_table(load_capability_sources(ROOT))
-
-
-def test_domain_registry_matches_current_golden() -> None:
-    rows = _rows()
-    fixture = json.loads(FIXTURE.read_text(encoding="utf-8"))
-
-    assert fixture["schema"] == "eg-method-policy-registry/v1"
-    assert fixture["domain_order"] == list(EXPECTED_DOMAIN_MODULES)
-    assert fixture["cfg_rows"] == [
-        {"name": row.name, "feature": row.cfg_feature}
-        for row in rows
-        if row.cfg_feature is not None
-    ]
 
 
 def test_registry_is_unique_complete_and_domain_ordered() -> None:

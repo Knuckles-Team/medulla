@@ -173,7 +173,9 @@ medulla-server store-upgrade apply "${GRAPH_SERVICE_PERSIST_DIR:?}" --confirm
 `20` (a store this build neither opens nor upgrades) or `30` (a store can not be
 read, as after an unclean shutdown). `apply` is safe to run on every deployment: with
 nothing to upgrade it changes no store and exits `0`. The upgrades and the full
-procedure are listed in [owner-store formats](owner-store-formats.md).
+procedure are printed by
+`cargo run -p medulla-storage --example gen_owner_store_formats`, rendered from the
+layout lineage registry in `crates/medulla-storage/src/owner/lineage.rs`.
 
 Restore validates all aggregate counts against the copied stores. Coordinator
 receipt/idempotency/child links must remain internally bound, and private prepared

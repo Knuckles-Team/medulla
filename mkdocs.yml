@@ -90,5 +90,4 @@ nav:
       - HelixDB comparison: benchmarks-helix.md
       - Quality terms: quality-gate-terms.md
       - Ecosystem glossary: glossary.md
-      - Skill graph reference: reference/skill-graph.generated.md
   - For AI agents: https://github.com/Knuckles-Team/medulla/blob/main/AGENTS.md

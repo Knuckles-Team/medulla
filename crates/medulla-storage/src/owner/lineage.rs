@@ -481,13 +481,14 @@ pub(crate) fn refuse_lineage_file(path: &Path, layout: OwnerLayout) -> Result<()
     Ok(())
 }
 
-/// The operator documentation of every layout's format history, generated
-/// from this registry (`docs/operations/owner-store-formats.md`).
+/// The operator documentation of every layout's format history, rendered from
+/// this registry on demand and never committed (MEDULLA-SDLC-R020.1):
+/// `cargo run -p medulla-storage --example gen_owner_store_formats` prints it.
 pub fn render_owner_store_formats() -> String {
     let mut out = String::from(
         "# Owner-store formats\n\n\
-         Generated from `crates/medulla-storage/src/owner/lineage.rs`; do not edit by hand.\n\
-         Regenerate with `cargo run -p medulla-storage --example gen_owner_store_formats`.\n\n\
+         Rendered from `crates/medulla-storage/src/owner/lineage.rs` by \
+         `cargo run -p medulla-storage --example gen_owner_store_formats`.\n\n\
          Every durable owner file records the digest of its exact table layout. A file whose \
          layout is a declared predecessor below is refused on ordinary open with the named \
          error. SQL and immediate pre-MCP Agent Library predecessors have explicit offline, data-preserving upgrades. \
