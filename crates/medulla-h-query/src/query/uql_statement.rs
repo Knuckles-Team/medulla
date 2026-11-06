@@ -101,9 +101,11 @@ pub(crate) async fn handle_uql(
         ctx.state,
         req_id,
         ctx.core,
-        snap,
-        binding,
-        legs,
+        UnifiedRead {
+            snap,
+            plan: binding,
+            legs,
+        },
         &scope,
         move |_plan, plan_ctx| {
             let mut result = medulla_plan::uql::serve::run_statement(&stmt_for_run, plan_ctx)?;

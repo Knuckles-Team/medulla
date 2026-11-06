@@ -8,6 +8,7 @@
 //! a tenant digest, the event, the worth and the refusal reason; it never holds a
 //! key, a value or a tenant name.
 
+use medulla_kernel::lock_recovery::LockRecovery;
 use std::collections::{BTreeMap, VecDeque};
 use std::sync::{Mutex, OnceLock};
 
@@ -56,9 +57,7 @@ impl PolicyMetrics {
     fn lock(&self) -> std::sync::MutexGuard<'_, State> {
         // A poisoned lock only means another thread panicked mid-record; the counters
         // are still valid integers, so keep serving them.
-        self.state
-            .lock()
-            .unwrap_or_else(|poison| poison.into_inner())
+        self.state.lock_recovering("kvcache metrics counters")
     }
 
     /// Total decisions of `event` in `tier`.

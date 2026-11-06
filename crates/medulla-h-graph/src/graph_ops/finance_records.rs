@@ -435,9 +435,12 @@ fn resolve_evidence<'a>(
 /// One research record after validation: the JSON it stores, the Turtle scalars
 /// its shape checks and the evidence ids it cites.
 #[cfg(all(feature = "finance", feature = "shacl"))]
+type ShapeCheck = (&'static str, String, Vec<(&'static str, String)>);
+
+#[cfg(all(feature = "finance", feature = "shacl"))]
 struct ResearchRecord {
     stored: serde_json::Value,
-    checks: Vec<(&'static str, String, Vec<(&'static str, String)>)>,
+    checks: Vec<ShapeCheck>,
     evidence: Vec<String>,
 }
 

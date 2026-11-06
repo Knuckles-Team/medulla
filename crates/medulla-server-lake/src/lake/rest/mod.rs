@@ -828,16 +828,6 @@ mod tests {
         }
     }
 
-    fn current_snapshot(metadata: &Value) -> &Value {
-        let current_id = &metadata["current-snapshot-id"];
-        metadata["snapshots"]
-            .as_array()
-            .expect("Iceberg snapshots array")
-            .iter()
-            .find(|snapshot| &snapshot["snapshot-id"] == current_id)
-            .expect("current-snapshot-id references an emitted snapshot")
-    }
-
     /// Every existing (pre-W03) unit test call site of `handle()` runs with no
     /// live carrier — the exact behavior `serve()` (non-security) had before this
     /// lane; kept as a helper so those tests read unchanged.

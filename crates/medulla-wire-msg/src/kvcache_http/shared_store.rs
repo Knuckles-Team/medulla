@@ -48,6 +48,7 @@
 //! `hits`/`misses`/`hit_rate`), plus a per-op `trace` carrying the block hash, hit/miss,
 //! and the instance id (so cross-instance reuse is visible in logs).
 
+use medulla_kernel::lock_recovery::LockRecovery;
 use std::collections::HashSet;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
@@ -344,8 +345,7 @@ impl SharedKvStoreBackend {
         // The ledger holds counters and heap entries only; a panic elsewhere leaves it
         // consistent enough to keep serving.
         self.policy
-            .lock()
-            .unwrap_or_else(|poison| poison.into_inner())
+            .lock_recovering("kvcache shared-store policy ledger")
     }
 
     /// The meta a block of `bytes` is admitted under. With no claim the rebuild cost is

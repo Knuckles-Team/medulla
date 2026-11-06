@@ -593,6 +593,22 @@ pub fn bound_registry(foreign: &Option<OwnedForeignRegistry>) -> Option<&Foreign
     foreign.as_ref().map(OwnedForeignRegistry::registry)
 }
 
+/// An operation-bound spec that declares a search index must declare a valid one
+/// (`SEARCH_CAPABILITY_INVALID`, MEDULLA-UNIFIED-DATA-PLANE-R038.5.1).
+fn validate_search_capability(spec: &ForeignSourceSpec) -> Result<(), String> {
+    let capabilities = match spec {
+        ForeignSourceSpec::Api { capabilities, .. }
+        | ForeignSourceSpec::Mcp { capabilities, .. }
+        | ForeignSourceSpec::A2a { capabilities, .. }
+        | ForeignSourceSpec::GraphQl { capabilities, .. } => capabilities,
+        _ => return Ok(()),
+    };
+    match capabilities.search {
+        Some(search) => search.validate().map_err(|refusal| refusal.to_string()),
+        None => Ok(()),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     //! EH-373 catalog-level proofs: `(owner, name)` keying, per-owner resolution, and
@@ -789,21 +805,5 @@ mod tests {
                 .expect("an allowed SQL destination must still register");
             assert!(catalog.spec_for(&a, "ok_sql").is_some());
         }
-    }
-}
-
-/// An operation-bound spec that declares a search index must declare a valid one
-/// (`SEARCH_CAPABILITY_INVALID`, MEDULLA-UNIFIED-DATA-PLANE-R038.5.1).
-fn validate_search_capability(spec: &ForeignSourceSpec) -> Result<(), String> {
-    let capabilities = match spec {
-        ForeignSourceSpec::Api { capabilities, .. }
-        | ForeignSourceSpec::Mcp { capabilities, .. }
-        | ForeignSourceSpec::A2a { capabilities, .. }
-        | ForeignSourceSpec::GraphQl { capabilities, .. } => capabilities,
-        _ => return Ok(()),
-    };
-    match capabilities.search {
-        Some(search) => search.validate().map_err(|refusal| refusal.to_string()),
-        None => Ok(()),
     }
 }
