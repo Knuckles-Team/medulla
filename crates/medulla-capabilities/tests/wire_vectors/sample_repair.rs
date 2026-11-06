@@ -45,6 +45,7 @@ fn repair_pass(
     for rung in 0..LADDER_RUNGS {
         let mut trial = sample.clone();
         for (index, pointer) in leaves.iter().enumerate() {
+            let before = trial.pointer(pointer).cloned();
             step(&mut trial, pointer, rung);
             match decode(&trial) {
                 Ok(()) => return Some(Ok(trial)),
@@ -52,11 +53,20 @@ fn repair_pass(
                     let kept = minimise(sample, trial, &leaves[..index], decode);
                     return Some(Err((kept, next)));
                 }
+                Err(next) if next != error => revert(&mut trial, pointer, before),
                 Err(_) => {}
             }
         }
     }
     None
+}
+
+/// Put back a leaf whose step broke it (a type error, or an error quoting the new value),
+/// so the rest of the prefix is tried against the error being repaired, not that one.
+fn revert(trial: &mut Value, pointer: &str, before: Option<Value>) {
+    if let (Some(leaf), Some(before)) = (trial.pointer_mut(pointer), before) {
+        *leaf = before;
+    }
 }
 
 /// Revert each earlier stepped leaf whose revert leaves the decoder's answer unchanged.
@@ -234,6 +244,19 @@ mod tests {
         assert_eq!(repaired["id"], "1");
         assert_eq!(repaired["digest"], "0".repeat(64));
         assert_eq!(repaired["ratio"]["denominator"], 1);
+        // A u8 leaf that sorts before the failing digest must not stay at 2^32.
+        let bounded = |value: &Value| {
+            if value["a_count"].as_u64().is_some_and(|n| n > 255) {
+                return Err("invalid value: integer `4294967296`, expected u8".to_string());
+            }
+            match value["b_digest"].as_str().map(str::len) {
+                Some(64) => Ok(()),
+                _ => Err("digest must be 32 bytes of hex".to_string()),
+            }
+        };
+        let repaired = repair(json!({"a_count": 0, "b_digest": ""}), bounded).unwrap();
+        assert_eq!(repaired["b_digest"], "0".repeat(64));
+        assert!(repaired["a_count"].as_u64().is_some_and(|n| n <= 255));
         let cross_field = |value: &Value| match (value.get("current"), value.get("previous")) {
             (None, _) => Err("missing field `current`".to_string()),
             (Some(current), Some(previous)) if current == previous => Err("must differ".into()),
