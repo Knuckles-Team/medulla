@@ -16,6 +16,7 @@ method_results! {
     visit_cluster;
     CreateGraph(CreateGraph) => Json<GraphCreated>;
     DeleteGraph(DeleteGraph) => Json<GraphDeleted>;
+    CreateBranch(CreateBranch) => Json<medulla_types::branch::Branch>;
     ListGraphs(ListGraphs) => Json<Vec<GraphListing>>;
     Reshard(Reshard) => Json<ShardReshardReport>;
     CatalogAssign(CatalogAssign) => Bool<bool>;

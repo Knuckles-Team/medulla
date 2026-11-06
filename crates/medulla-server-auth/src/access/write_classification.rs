@@ -456,6 +456,8 @@ pub fn requires_write(method: &Method) -> bool {
                 // RF-ADR-010: committing a decision record writes one
                 // component revision into the agent-library owner.
                 | Method::DecisionCommit { .. }
+                // MEDULLA-BRANCH-MERGE-R001: one branch registry row.
+                | Method::CreateBranch { .. }
                 | Method::DeleteGraph { .. }
                 | Method::ClaimNext { .. }
                 | Method::MintWorkItemClaimCapability { .. }
