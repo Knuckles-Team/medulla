@@ -47,6 +47,7 @@ pub mod replay;
 pub mod retrieval;
 pub mod scorer;
 mod targets;
+pub mod thought_search;
 pub mod track_record;
 pub mod trajectory;
 pub mod web_fetch_selection;

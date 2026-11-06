@@ -60,6 +60,9 @@ const FAMILIES: &[QuestionKind] = &[
     QuestionKind::UsageGuidance,
     QuestionKind::BranchOutcome,
     QuestionKind::EditConcentration,
+    QuestionKind::ThoughtSearch,
+    QuestionKind::ComparativeAnalysisPlan,
+    QuestionKind::ContextPackage,
 ];
 
 /// The samples the budget report takes per group.
@@ -95,6 +98,9 @@ fn family_name(kind: QuestionKind) -> &'static str {
         QuestionKind::UsageGuidance => "usage_guidance",
         QuestionKind::BranchOutcome => "branch_outcome",
         QuestionKind::EditConcentration => "edit_concentration",
+        QuestionKind::ThoughtSearch => "thought_search",
+        QuestionKind::ComparativeAnalysisPlan => "comparative_analysis_plan",
+        QuestionKind::ContextPackage => "context_package",
     }
 }
 
