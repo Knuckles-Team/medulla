@@ -41,6 +41,36 @@ fn default_memory_per_worker_bytes() -> u64 {
     DEFAULT_MEMORY_PER_WORKER_BYTES
 }
 
+/// Default bound of one repository enrichment run in milliseconds
+/// (MEDULLA-REPO-INGEST-R600.3).
+pub const DEFAULT_ENRICH_TIMEOUT_MS: u64 = 5_000;
+/// Inclusive bounds of `enrich_timeout_ms`.
+pub const ENRICH_TIMEOUT_MS_BOUNDS: (u64, u64) = (100, 600_000);
+/// Environment key overriding `enrich_timeout_ms` at startup.
+pub const ENV_ENRICH_TIMEOUT_MS: &str = "MEDULLA_ENRICH_TIMEOUT_MS";
+
+fn default_enrich_timeout_ms() -> u64 {
+    DEFAULT_ENRICH_TIMEOUT_MS
+}
+
+/// The startup value of `enrich_timeout_ms`: the default, or the
+/// `MEDULLA_ENRICH_TIMEOUT_MS` override; out of range refuses startup.
+pub fn enrich_timeout_ms_from(
+    lookup: impl Fn(&str) -> Option<String>,
+) -> Result<u64, InvalidSchedulerConfig> {
+    let value = match lookup(ENV_ENRICH_TIMEOUT_MS) {
+        Some(raw) => raw
+            .trim()
+            .parse()
+            .map_err(|_| InvalidSchedulerConfig::InvalidEnvValue(ENV_ENRICH_TIMEOUT_MS))?,
+        None => DEFAULT_ENRICH_TIMEOUT_MS,
+    };
+    if !(ENRICH_TIMEOUT_MS_BOUNDS.0..=ENRICH_TIMEOUT_MS_BOUNDS.1).contains(&value) {
+        return Err(InvalidSchedulerConfig::EnrichTimeoutOutOfRange);
+    }
+    Ok(value)
+}
+
 /// Default bound on the containers of one architecture view (MEDULLA-CQ-ORCH-R010.2).
 pub const DEFAULT_ARCHITECTURE_VIEW_MAX_CONTAINERS: u32 = 512;
 /// Accepted range of `architecture_view_max_containers`.
@@ -75,6 +105,9 @@ pub struct SchedulerConfig {
     /// Above this many containers an architecture view is refused as too large.
     #[serde(default = "default_architecture_view_max_containers")]
     pub architecture_view_max_containers: u32,
+    /// Bound of one repository enrichment run, in milliseconds.
+    #[serde(default = "default_enrich_timeout_ms")]
+    pub enrich_timeout_ms: u64,
 }
 
 /// Invalid scheduler policy, refused before it can govern admission.
@@ -87,6 +120,7 @@ pub enum InvalidSchedulerConfig {
     OversubscribedFloors { total_workers: u32 },
     HydrationScopeCapOutOfRange,
     HydrationSplitTargetOutOfRange,
+    EnrichTimeoutOutOfRange,
     InvalidEnvValue(&'static str),
 }
 
@@ -120,6 +154,11 @@ impl std::fmt::Display for InvalidSchedulerConfig {
                 "scheduler hydration_split_target_files must be within [{}, {}]",
                 HYDRATION_SPLIT_TARGET_FILES_BOUNDS.0, HYDRATION_SPLIT_TARGET_FILES_BOUNDS.1
             ),
+            Self::EnrichTimeoutOutOfRange => write!(
+                f,
+                "scheduler enrich_timeout_ms must be within [{}, {}]",
+                ENRICH_TIMEOUT_MS_BOUNDS.0, ENRICH_TIMEOUT_MS_BOUNDS.1
+            ),
             Self::InvalidEnvValue(key) => write!(f, "{key} must be an unsigned integer"),
         }
     }
@@ -149,6 +188,11 @@ impl SchedulerConfig {
         if !ARCHITECTURE_VIEW_MAX_CONTAINERS_RANGE.contains(&self.architecture_view_max_containers)
         {
             return Err(InvalidSchedulerConfig::ArchitectureViewMaxContainersOutOfRange);
+        }
+        if !(ENRICH_TIMEOUT_MS_BOUNDS.0..=ENRICH_TIMEOUT_MS_BOUNDS.1)
+            .contains(&self.enrich_timeout_ms)
+        {
+            return Err(InvalidSchedulerConfig::EnrichTimeoutOutOfRange);
         }
         let mut available = self.total_workers;
         for (lane, floor) in &self.lane_floors {
@@ -184,6 +228,9 @@ impl SchedulerConfig {
                     .parse()
                     .map_err(|_| InvalidSchedulerConfig::InvalidEnvValue(key))?;
             }
+        }
+        if lookup(ENV_ENRICH_TIMEOUT_MS).is_some() {
+            self.enrich_timeout_ms = enrich_timeout_ms_from(&lookup)?;
         }
         self.validate()
     }

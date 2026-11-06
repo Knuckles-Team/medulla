@@ -399,5 +399,6 @@ closed_error_codes! {
         ArtifactSealViolation => "ARTIFACT_SEAL_VIOLATION",
         QueryUnscopable => "QUERY_UNSCOPABLE",
         UnitOutOfScope => "UNIT_OUT_OF_SCOPE",
+        LayerCycle => "LAYER_CYCLE",
     }
 }
