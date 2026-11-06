@@ -6,7 +6,10 @@ use std::time::Instant;
 
 use medulla_types::wire::ForeignSourceSpec;
 
-use super::budget::{BUDGET_EXCEEDED, REQUIRES_KEYS, RESULT_INCOMPLETE};
+use super::budget::{
+    BUDGET_EXCEEDED, REPLICA_LAG_EXCEEDED, REQUIRES_KEYS, RESULT_INCOMPLETE, SNAPSHOT_UNAVAILABLE,
+    SOURCE_WRITE_FORBIDDEN,
+};
 use super::capability::{
     FullFetch, LimitPushdown, PageRequest, Paging, RemoteRequest, SourceCapabilities,
 };
@@ -14,12 +17,14 @@ use super::http::PAGE_SIZE;
 use super::limiter;
 use super::remote::RemoteFetch;
 use super::session::FederationSession;
+use super::snapshot::{Consistency, SnapshotHandle};
 use super::strategy::{choose_join, BatchSizer, JoinInputs, JoinStrategy};
-use super::trace::{FetchStrategy, FragmentTrace};
+use super::trace::{FetchStrategy, FragmentExecutionMode, FragmentTrace};
 use super::{fuse_foreign, stats};
 use crate::federation::ForeignSourceRegistry;
 use medulla_exec::algebra::Op;
 use medulla_exec::rowset::RowSet;
+use medulla_types::metadata_acceleration::SnapshotSemantics;
 
 /// `Op::ForeignScan { source, join }`: a source read (`join == false`, or an empty input) or
 /// a foreign∩local join, optimized unless `MEDULLA_FEDERATION_OPT=0`.
@@ -42,7 +47,8 @@ pub(crate) fn foreign_scan(
         ));
     };
     with_session(session, |session| {
-        let fragment = Fragment::new(remote.as_ref(), session);
+        let mut fragment = Fragment::new(remote.as_ref(), session);
+        fragment.bind_snapshot(source)?;
         if join && !input.is_empty() {
             let fetched = fragment.join(&input)?;
             let kept = input.intersect_keep_order(&fetched.rows.id_set());
@@ -87,9 +93,16 @@ fn with_session<R>(
 
 /// Is `error` one of the optimizer's typed refusals (never retried or fallen back from)?
 fn is_refusal(error: &str) -> bool {
-    [BUDGET_EXCEEDED, REQUIRES_KEYS, RESULT_INCOMPLETE]
-        .iter()
-        .any(|code| error.starts_with(code))
+    [
+        BUDGET_EXCEEDED,
+        REQUIRES_KEYS,
+        RESULT_INCOMPLETE,
+        SNAPSHOT_UNAVAILABLE,
+        REPLICA_LAG_EXCEEDED,
+        SOURCE_WRITE_FORBIDDEN,
+    ]
+    .iter()
+    .any(|code| error.starts_with(code))
 }
 
 /// The rows a fragment read and its trace, before the residual decides what is kept.
@@ -104,6 +117,11 @@ impl Read {
     fn finish(mut self, session: &FederationSession) -> RowSet {
         let rows = std::mem::take(&mut self.rows);
         self.record(session, rows)
+    }
+
+    #[cfg(test)]
+    pub(super) fn finish_for_test(self, session: &FederationSession) -> RowSet {
+        self.finish(session)
     }
 
     /// Finish the trace with what the plan keeps, record it, and hand the kept rows on.
@@ -121,6 +139,9 @@ pub(super) struct Fragment<'r, 's> {
     remote: &'r dyn RemoteFetch,
     session: &'s FederationSession,
     caps: SourceCapabilities,
+    /// The snapshot every fragment of this source reads, once bound.
+    snapshot: Option<SnapshotSemantics>,
+    consistency: Consistency,
 }
 
 impl<'r, 's> Fragment<'r, 's> {
@@ -130,11 +151,62 @@ impl<'r, 's> Fragment<'r, 's> {
             remote,
             session,
             caps,
+            snapshot: None,
+            consistency: Consistency::Snapshot,
         }
     }
 
+    /// Give this fragment its query's one snapshot of the source (MEDULLA-UNIFIED-DATA-PLANE-R038.3.3).
+    /// Only a query with two or more fragments of `source` needs one. The first fragment opens it;
+    /// later fragments adopt the held connection. A source without snapshots refuses with
+    /// `SNAPSHOT_UNAVAILABLE` unless the caller accepted `consistency: per_fragment`. A refusal
+    /// issues no source statement.
+    pub(super) fn bind_snapshot(&mut self, source: &ForeignSourceSpec) -> Result<(), String> {
+        if self.session.fragments_of(source) < 2 {
+            return Ok(());
+        }
+        let fingerprint = self.remote.fingerprint();
+        if let Some(handle) = self.session.snapshot_of(&fingerprint) {
+            if let Some(conn) = handle.conn {
+                self.remote.adopt_snapshot(conn);
+            }
+            self.snapshot = Some(handle.semantics);
+            return Ok(());
+        }
+        let opened = if self.caps.snapshot_reads {
+            self.remote.open_snapshot(&self.session.snapshot_bound())?
+        } else {
+            None
+        };
+        let Some(semantics) = opened else {
+            return match self.session.consistency() {
+                Consistency::PerFragment => {
+                    self.consistency = Consistency::PerFragment;
+                    Ok(())
+                }
+                Consistency::Snapshot => Err(format!(
+                    "{SNAPSHOT_UNAVAILABLE}: the source cannot give two fragments of one query a single snapshot; request consistency=per_fragment to accept separate reads"
+                )),
+            };
+        };
+        self.session.hold_snapshot(
+            fingerprint,
+            SnapshotHandle {
+                semantics: semantics.clone(),
+                conn: self.remote.held_snapshot(),
+            },
+        );
+        self.snapshot = Some(semantics);
+        Ok(())
+    }
+
     fn trace(&self, strategy: FetchStrategy) -> FragmentTrace {
-        FragmentTrace::new(self.remote.label(), strategy)
+        let mut trace =
+            FragmentTrace::new(self.remote.label(), strategy, FragmentExecutionMode::Live);
+        trace.snapshot = self.snapshot.clone();
+        trace.consistency = self.consistency;
+        trace.read_at_ms = super::cache::now_ms();
+        trace
     }
 
     /// A source read: every row, or the first `hint` rows when the source takes a limit.
@@ -365,6 +437,7 @@ impl<'r, 's> Fragment<'r, 's> {
         let attempt = fetch_one(self.remote, self.session, self.caps, request);
         trace.requests += attempt.requests;
         trace.rows_fetched += attempt.rows;
+        attempt.note_route(trace);
         attempt.result
     }
 }
@@ -375,6 +448,8 @@ struct Attempt {
     requests: u32,
     rows: usize,
     result: Result<RowSet, String>,
+    /// The checkpoint of the stored copy that answered, when one did.
+    copy: Option<String>,
 }
 
 impl Attempt {
@@ -383,7 +458,18 @@ impl Attempt {
             requests: 0,
             rows: 0,
             result: Err(error),
+            copy: None,
         }
+    }
+
+    /// Fold this attempt's route into the fragment trace: a copy-served attempt sets the
+    /// fragment's mode to `copy` with the copy's watermark and row count.
+    fn note_route(&self, trace: &mut FragmentTrace) {
+        let Some(watermark) = &self.copy else { return };
+        trace.mode = FragmentExecutionMode::Copy;
+        trace.watermark = Some(watermark.clone());
+        let served = self.result.as_ref().map_or(0, RowSet::len) as u64;
+        trace.copy_rows = Some(trace.copy_rows.unwrap_or(0) + served);
     }
 }
 
@@ -411,6 +497,9 @@ fn fetch_round(
 fn account(trace: &mut FragmentTrace, attempts: &[Attempt]) {
     trace.requests += attempts.iter().map(|a| a.requests).sum::<u32>();
     trace.rows_fetched += attempts.iter().map(|a| a.rows).sum::<usize>();
+    for attempt in attempts {
+        attempt.note_route(trace);
+    }
 }
 
 fn fetch_one(
@@ -433,6 +522,7 @@ fn fetch_one(
                 requests: 0,
                 rows: 0,
                 result: Ok(rows),
+                copy: scope.watermark_of(name).or_else(|| Some(String::new())),
             };
         }
     }
@@ -459,6 +549,7 @@ fn fetch_one(
         requests: 1,
         rows,
         result,
+        copy: None,
     }
 }
 

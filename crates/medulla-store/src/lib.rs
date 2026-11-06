@@ -55,6 +55,9 @@ macro_rules! work_item_resource_writes {
 /// named alias so the `&[MeasurementBatch]` params don't trip the `type_complexity` lint.
 pub type MeasurementBatch = (String, usize, u64, Vec<String>, Vec<(i64, Vec<f64>)>);
 
+#[cfg(feature = "statechart")]
+pub mod claim_statechart;
+
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[cfg(feature = "statechart")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)

@@ -30,6 +30,8 @@ pub(crate) const ACCESS_RS_MUTATES_UNCONDITIONAL: &[&str] = &[
     "BrokerNackTag",
     "BrokerReject",
     "BrokerRenewTag",
+    "BusHeartbeat",
+    "BusRegister",
     "CancelWorkItem",
     "CasWorkItemMetadata",
     "PublishCurrentPlan",
@@ -104,11 +106,18 @@ pub(crate) const ACCESS_RS_MUTATES_UNCONDITIONAL: &[&str] = &[
     "SqlSourceBatch",
     "SourceIngest",
     "EnrichDocument",
+    "MeetingSummaryCommit",
+    "MeetingSummaryContext",
+    "MeetingTranscriptRevision",
     "DocumentDelete",
     "LineageIngest",
     "StartTrajectory",
     // EH-408/EH-409: always writes (one BatchUpdate of derived facts).
     "TelemetryDerive",
+    // MEDULLA-UNIFIED-DATA-PLANE-R760.3: like `TelemetryDerive`.
+    "IncidentRecordAnomaly",
+    "IncidentCorrelate",
+    "IncidentSetStatus",
     "SupersedeEdge",
     "SweepExpired",
     "UpdateResourceHost",
@@ -127,6 +136,7 @@ pub(crate) const ACCESS_RS_MUTATES_CONDITIONAL: &[&str] = &[
     // shape as the four agent layers below: `requires_write` delegates to the
     // op's own `is_mutation()`, while the registry row carries the conservative
     // `mutates = true` upper bound.
+    "Claims",
     "ConnectorPack",
     "DecisionEval",
     "DecisionFit",
@@ -197,6 +207,8 @@ pub(crate) const MUTATION_APPLY_DURABLE_GRAPHREDB: &[&str] = &[
     "AddTriples",
     "AppendStep",
     "BatchUpdate",
+    "BusHeartbeat",
+    "BusRegister",
     "CancelWorkItem",
     "CasWorkItemMetadata",
     "PublishCurrentPlan",
@@ -283,6 +295,9 @@ pub(crate) const NATIVE_GRAPHREDB_DURABLE: &[&str] = &[
     "DecaySweep",
     "DeleteGraph",
     "EvictLRU",
+    // MEDULLA-FINANCE-PRIMITIVES-R004.3.2: an admitted record put self-translates
+    // into `Method::AddNode`, which carries the durable effect.
+    "FinanceRecordPut",
     "FromMsgpack",
     "GraphQl",
     "IcvConfigure",
@@ -318,11 +333,18 @@ pub(crate) const NATIVE_GRAPHREDB_DURABLE: &[&str] = &[
     // applier or native command; this inventory records that adapter lowering.
     "SourceIngest",
     "EnrichDocument",
+    "MeetingSummaryCommit",
+    "MeetingSummaryContext",
+    "MeetingTranscriptRevision",
     "DocumentDelete",
     "LineageIngest",
     // EH-408/EH-409: derived facts self-translate into ONE `BatchUpdate`
     // against the request graph, the same lowering shape as `FleetCatalog`.
     "TelemetryDerive",
+    // MEDULLA-UNIFIED-DATA-PLANE-R760.3: like `TelemetryDerive`.
+    "IncidentRecordAnomaly",
+    "IncidentCorrelate",
+    "IncidentSetStatus",
     "Sql",
     // EH-351: create/refresh/drop commit the edge-index registration and its
     // generations in the tenant SQL catalog natively, as `Sql` DDL does.
@@ -405,6 +427,8 @@ pub(crate) const AUDIT_RS_AUDITED: &[&str] = &[
     "BrokerNackTag",
     "BrokerReject",
     "BrokerRenewTag",
+    "BusHeartbeat",
+    "BusRegister",
     "CancelWorkItem",
     "CasWorkItemMetadata",
     "PublishCurrentPlan",
@@ -495,6 +519,10 @@ pub(crate) const AUDIT_RS_AUDITED: &[&str] = &[
     "RbacElevation",
     // EH-408/EH-409: defense-in-depth marker, like `FleetCatalog`.
     "TelemetryDerive",
+    // MEDULLA-UNIFIED-DATA-PLANE-R760.3: like `TelemetryDerive`.
+    "IncidentRecordAnomaly",
+    "IncidentCorrelate",
+    "IncidentSetStatus",
     // Defense-in-depth markers; the durable record is the identity store's
     // hash-chained audit trail, written in the same rbac.redb image as the
     // change it records.
@@ -512,6 +540,9 @@ pub(crate) const AUDIT_RS_AUDITED: &[&str] = &[
     "RunDatalogReasoning",
     "SourceIngest",
     "EnrichDocument",
+    "MeetingSummaryCommit",
+    "MeetingSummaryContext",
+    "MeetingTranscriptRevision",
     "DocumentDelete",
     "LineageIngest",
     "SetPose",
@@ -575,11 +606,18 @@ pub(crate) const CDC_RS_EMITS_CDC: &[&str] = &[
     "PolicyEvolution",
     // EH-408/EH-409: defense-in-depth marker, like `FleetCatalog`.
     "TelemetryDerive",
+    // MEDULLA-UNIFIED-DATA-PLANE-R760.3: like `TelemetryDerive`.
+    "IncidentRecordAnomaly",
+    "IncidentCorrelate",
+    "IncidentSetStatus",
     "RemoveEdge",
     "RemoveNode",
     "RunDatalogReasoning",
     "SourceIngest",
     "EnrichDocument",
+    "MeetingSummaryCommit",
+    "MeetingSummaryContext",
+    "MeetingTranscriptRevision",
     "DocumentDelete",
     "LineageIngest",
     #[cfg(feature = "modality-serving")]

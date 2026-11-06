@@ -528,3 +528,83 @@ fn invalidate_renewal(
         }
     }
 }
+
+fn liveness(
+    store: &mut IdentityStore,
+    reference: &str,
+    tenant: &str,
+    now: u64,
+) -> Result<IdentityReply, IdentityRefusal> {
+    let op = IdentityOp::Session(SessionOp::Liveness {
+        session_ref: reference.into(),
+        tenant: tenant.into(),
+    });
+    assert!(!op.is_mutation());
+    apply_kept(store, &op, &broker(), now)
+}
+
+// spec: MEDULLA-IDENTITY-R709
+#[test]
+fn liveness_reports_live_revoked_expired_and_not_session_bound() {
+    let mut store = opened();
+    store.api_keys.insert(
+        "key:one".into(),
+        ApiKeyRecord {
+            key_id: "key:one".into(),
+            principal_id: "usr:alice".into(),
+            secret_hash: "secret-hash".into(),
+            scopes: BTreeSet::new(),
+            created_at_ms: NOW,
+            expires_at_ms: NOW + 1_000_000,
+            last_used_at_ms: None,
+            revoked_at_ms: None,
+        },
+    );
+    let before = store.clone();
+    let state = |reply: IdentityReply| match reply {
+        IdentityReply::SessionLiveness(state) => state,
+        other => panic!("expected liveness, got {other:?}"),
+    };
+    // The fake clock: NOW + 1 is inside both bounds.
+    let live = state(liveness(&mut store, "ses:one", "tenant-one", NOW + 1).unwrap());
+    assert_eq!(live, SessionLiveness::Live);
+    // Observing never touches last-seen or idle expiry.
+    assert_eq!(store, before);
+    let idle = before.sessions["hash-two"].idle_expires_at_ms;
+    let expired = state(liveness(&mut store, "ses:two", "tenant-one", idle).unwrap());
+    assert_eq!(expired, SessionLiveness::Expired);
+    let key = state(liveness(&mut store, "key:one", "tenant-one", NOW + 1).unwrap());
+    assert_eq!(key, SessionLiveness::NotSessionBound);
+    assert_eq!(store, before);
+    store.revoke_session("hash-one", NOW + 2, "logout");
+    let revoked = state(liveness(&mut store, "ses:one", "tenant-one", NOW + 3).unwrap());
+    assert_eq!(revoked, SessionLiveness::Revoked);
+    // A revoked session stays revoked after its expiry.
+    let late = state(liveness(&mut store, "ses:one", "tenant-one", idle + 1).unwrap());
+    assert_eq!(late, SessionLiveness::Revoked);
+    // The closed reply carries only the state token on the wire.
+    let wire = serde_json::to_value(IdentityReply::<()>::SessionLiveness(
+        SessionLiveness::NotSessionBound,
+    ))
+    .unwrap();
+    assert_eq!(
+        wire,
+        serde_json::json!({"kind": "session_liveness", "value": "not_session_bound"})
+    );
+    // Unknown and cross-tenant references refuse with the typed code.
+    for (reference, tenant) in [("ses:missing", "tenant-one"), ("ses:one", "tenant-two")] {
+        let refusal = liveness(&mut store, reference, tenant, NOW + 3).unwrap_err();
+        assert_eq!(refusal, IdentityRefusal::SessionReferenceUnknown);
+        assert_eq!(refusal.as_str(), "SESSION_REFERENCE_UNKNOWN");
+    }
+    let mut caller = broker();
+    caller.session_tenant = Some("tenant-two".into());
+    let op = IdentityOp::Session(SessionOp::Liveness {
+        session_ref: "ses:one".into(),
+        tenant: "tenant-one".into(),
+    });
+    assert_eq!(
+        apply_kept(&mut store, &op, &caller, NOW + 3).unwrap_err(),
+        IdentityRefusal::SessionReferenceUnknown
+    );
+}

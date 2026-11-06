@@ -93,7 +93,12 @@ async fn commit(
         "decision:commit",
         true,
     )?;
-    let written = store.commit_decision_record(context, &record, &expected_catalog_digest)?;
+    let written = super::telemetry::stage(
+        super::telemetry::Stage::Commit,
+        "assembly",
+        verified.tenant(),
+        || store.commit_decision_record(context, &record, &expected_catalog_digest),
+    )?;
     super::assemble::audit_line("decision-commit", &record, verified);
     Ok(medulla_decision_types::decision::DecisionCommitResult {
         schema_version: medulla_decision_types::decision::DECISION_COMMIT_RESULT_SCHEMA_VERSION,

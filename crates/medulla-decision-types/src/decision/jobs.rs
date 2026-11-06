@@ -368,6 +368,10 @@ pub struct DecisionEvalReceipt {
     /// Every promotion gate that failed, by name. Empty exactly when `passed`.
     #[serde(default)]
     pub failed_gates: BoundedVec<String, 16>,
+    /// Per-feature predictive power (MEDULLA-DECISION-ENGINE-R117.1.2). Omitted
+    /// when empty, so a receipt that measured none keeps its bytes.
+    #[serde(default, skip_serializing_if = "BoundedVec::is_empty")]
+    pub feature_power: BoundedVec<super::replay::FeaturePowerReport, 32>,
     pub passed: bool,
     pub synthetic: bool,
 }

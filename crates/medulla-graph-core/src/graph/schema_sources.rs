@@ -85,10 +85,45 @@ pub use medulla_catalog_types::graph_schema::{
     OntologyRevisionEntry, MAX_ONTOLOGY_REVISION_HISTORY,
 };
 
+/// What a schema source's vocabulary may describe in a connector seed graph
+/// (MEDULLA-TYPED-PACKS-R104.4). Only `Domain` vocabulary is bulk data and is
+/// refused in a seed triple; the importer assigns it, an archive never carries it.
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    Default,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    serde::Serialize,
+    serde::Deserialize,
+)]
+#[serde(rename_all = "snake_case")]
+pub enum SchemaSourceRole {
+    Identity,
+    Catalog,
+    Reference,
+    #[default]
+    Domain,
+}
+
+impl SchemaSourceRole {
+    /// Whether a seed triple may use a predicate declared by a source of this role.
+    pub fn allows_seed_predicates(self) -> bool {
+        !matches!(self, Self::Domain)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct GraphSchemaSource {
     pub origin: SchemaSourceOrigin,
+    /// Seed-graph role; engine-owned core vocabulary is `Reference`, every
+    /// other source starts as `Domain` until the importer says otherwise.
+    #[serde(default)]
+    pub role: SchemaSourceRole,
     pub shapes_ttl: Option<Arc<str>>,
     pub ontology_ttl: Option<Arc<str>>,
     pub shapes_sha256: Option<Digest256>,
@@ -123,14 +158,26 @@ impl GraphSchemaSource {
         let ontology_sha256 = ontology_ttl
             .as_deref()
             .map(|document| Digest256::sha256(document.as_bytes()));
+        let role = if matches!(&origin, SchemaSourceOrigin::Core { .. }) {
+            SchemaSourceRole::Reference
+        } else {
+            SchemaSourceRole::Domain
+        };
         Ok(Self {
             origin,
+            role,
             shapes_ttl,
             ontology_ttl,
             shapes_sha256,
             ontology_sha256,
             attached_at_ms,
         })
+    }
+
+    /// The same source with the seed-graph `role` the importer assigns.
+    pub fn with_role(mut self, role: SchemaSourceRole) -> Self {
+        self.role = role;
+        self
     }
 
     pub fn validate(&self) -> Result<(), String> {
@@ -836,6 +883,16 @@ fn core_specs() -> &'static [CoreSpec] {
                 "../../../medulla-core/ontology/enterprise-v1.ttl"
             )),
         },
+        // The enterprise SHACL shapes are their own core source, the same
+        // pattern as orchestration-shapes and finance-shapes.
+        CoreSpec {
+            module: "enterprise-shapes",
+            version: 1,
+            shapes: Some(include_str!(
+                "../../../medulla-core/ontology/enterprise-v1.shapes.ttl"
+            )),
+            ontology: None,
+        },
         CoreSpec {
             module: "governance-shapes",
             version: 1,
@@ -971,6 +1028,16 @@ fn core_specs() -> &'static [CoreSpec] {
             ontology: Some(include_str!(
                 "../../../medulla-core/ontology/identity-v1.ttl"
             )),
+        },
+        // The identity SHACL shapes are their own core source, the same
+        // pattern as orchestration-shapes and finance-shapes.
+        CoreSpec {
+            module: "identity-shapes",
+            version: 1,
+            shapes: Some(include_str!(
+                "../../../medulla-core/ontology/identity-v1.shapes.ttl"
+            )),
+            ontology: None,
         },
         CoreSpec {
             module: "infrastructure",
@@ -1406,12 +1473,10 @@ mod tests {
         )
         .unwrap();
         let mut sources = GraphSchemaSources::default();
-        assert!(
-            sources
-                .attach_dynamic("admin:oversized".to_string(), source)
-                .unwrap_err()
-                .contains("exceeds")
-        );
+        assert!(sources
+            .attach_dynamic("admin:oversized".to_string(), source)
+            .unwrap_err()
+            .contains("exceeds"));
         assert!(sources.dynamic.is_empty());
     }
 
@@ -1472,16 +1537,12 @@ mod tests {
             0,
         )
         .unwrap();
-        assert!(
-            sources
-                .attach_dynamic("core:forged@1".to_string(), core)
-                .is_err()
-        );
-        assert!(
-            sources
-                .attach_dynamic("pack:wrong".to_string(), admin_source("wrong", 0))
-                .is_err()
-        );
+        assert!(sources
+            .attach_dynamic("core:forged@1".to_string(), core)
+            .is_err());
+        assert!(sources
+            .attach_dynamic("pack:wrong".to_string(), admin_source("wrong", 0))
+            .is_err());
         let mismatched_pack = GraphSchemaSource::new(
             SchemaSourceOrigin::Pack {
                 connector: "actual".to_string(),
@@ -1492,16 +1553,12 @@ mod tests {
             0,
         )
         .unwrap();
-        assert!(
-            sources
-                .attach_dynamic("pack:claimed".to_string(), mismatched_pack)
-                .is_err()
-        );
-        assert!(
-            sources
-                .attach_dynamic("admin:claimed".to_string(), admin_source("actual", 0))
-                .is_err()
-        );
+        assert!(sources
+            .attach_dynamic("pack:claimed".to_string(), mismatched_pack)
+            .is_err());
+        assert!(sources
+            .attach_dynamic("admin:claimed".to_string(), admin_source("actual", 0))
+            .is_err());
         assert!(sources.dynamic.is_empty());
     }
 
@@ -1534,22 +1591,16 @@ mod tests {
         let mut sources = GraphSchemaSources::default();
         let ontology_a = "@prefix owl: <http://www.w3.org/2002/07/owl#> . # a";
         let ontology_b = "@prefix owl: <http://www.w3.org/2002/07/owl#> . # b";
-        assert!(
-            sources
-                .attach_dynamic("pack:github".to_string(), pack("r2", ontology_a))
-                .unwrap()
-        );
-        assert!(
-            !sources
-                .attach_dynamic("pack:github".to_string(), pack("r2", ontology_a))
-                .unwrap()
-        );
-        assert!(
-            sources
-                .attach_dynamic("pack:github".to_string(), pack("r1", ontology_b))
-                .unwrap_err()
-                .contains("SCHEMA_SOURCE_REGRESSION")
-        );
+        assert!(sources
+            .attach_dynamic("pack:github".to_string(), pack("r2", ontology_a))
+            .unwrap());
+        assert!(!sources
+            .attach_dynamic("pack:github".to_string(), pack("r2", ontology_a))
+            .unwrap());
+        assert!(sources
+            .attach_dynamic("pack:github".to_string(), pack("r1", ontology_b))
+            .unwrap_err()
+            .contains("SCHEMA_SOURCE_REGRESSION"));
         let numeric_pack = |record_id: &str, document: &'static str| {
             GraphSchemaSource::new(
                 SchemaSourceOrigin::Pack {
@@ -1562,38 +1613,28 @@ mod tests {
             )
             .unwrap()
         };
-        assert!(
-            sources
-                .attach_dynamic(
-                    "pack:numeric".to_string(),
-                    numeric_pack("pack:numeric:2:aaaa", ontology_a),
-                )
-                .unwrap()
-        );
-        assert!(
-            sources
-                .attach_dynamic(
-                    "pack:numeric".to_string(),
-                    numeric_pack("pack:numeric:10:bbbb", ontology_b),
-                )
-                .unwrap()
-        );
-        assert!(
-            sources
-                .attach_dynamic("ingest:cmdb".to_string(), ingest(2, ontology_a))
-                .unwrap()
-        );
-        assert!(
-            sources
-                .attach_dynamic("ingest:cmdb".to_string(), ingest(1, ontology_b))
-                .unwrap_err()
-                .contains("SCHEMA_SOURCE_REGRESSION")
-        );
-        assert!(
-            sources
-                .attach_dynamic("ingest:cmdb".to_string(), ingest(3, ontology_b))
-                .unwrap()
-        );
+        assert!(sources
+            .attach_dynamic(
+                "pack:numeric".to_string(),
+                numeric_pack("pack:numeric:2:aaaa", ontology_a),
+            )
+            .unwrap());
+        assert!(sources
+            .attach_dynamic(
+                "pack:numeric".to_string(),
+                numeric_pack("pack:numeric:10:bbbb", ontology_b),
+            )
+            .unwrap());
+        assert!(sources
+            .attach_dynamic("ingest:cmdb".to_string(), ingest(2, ontology_a))
+            .unwrap());
+        assert!(sources
+            .attach_dynamic("ingest:cmdb".to_string(), ingest(1, ontology_b))
+            .unwrap_err()
+            .contains("SCHEMA_SOURCE_REGRESSION"));
+        assert!(sources
+            .attach_dynamic("ingest:cmdb".to_string(), ingest(3, ontology_b))
+            .unwrap());
     }
 
     #[test]
@@ -1612,45 +1653,37 @@ mod tests {
         };
         let mut sources = GraphSchemaSources::default();
         let ontology = "@prefix owl: <http://www.w3.org/2002/07/owl#> .";
-        assert!(
-            sources
-                .attach_dynamic(
-                    "pack:graph-os".to_string(),
-                    pack("pack:graph-os:1:aaaa", Some(ontology)),
-                )
-                .unwrap()
-        );
-        assert!(
-            sources
-                .attach_dynamic(
-                    "pack:graph-os".to_string(),
-                    pack("pack:graph-os:2:bbbb", None),
-                )
-                .unwrap()
-        );
+        assert!(sources
+            .attach_dynamic(
+                "pack:graph-os".to_string(),
+                pack("pack:graph-os:1:aaaa", Some(ontology)),
+            )
+            .unwrap());
+        assert!(sources
+            .attach_dynamic(
+                "pack:graph-os".to_string(),
+                pack("pack:graph-os:2:bbbb", None),
+            )
+            .unwrap());
         let tombstone = sources.dynamic.get("pack:graph-os").unwrap();
         assert!(tombstone.shapes_ttl.is_none() && tombstone.ontology_ttl.is_none());
-        assert!(
-            sources
-                .attach_dynamic(
-                    "pack:graph-os".to_string(),
-                    pack("pack:graph-os:1:cccc", Some(ontology)),
-                )
-                .unwrap_err()
-                .contains("SCHEMA_SOURCE_REGRESSION")
-        );
+        assert!(sources
+            .attach_dynamic(
+                "pack:graph-os".to_string(),
+                pack("pack:graph-os:1:cccc", Some(ontology)),
+            )
+            .unwrap_err()
+            .contains("SCHEMA_SOURCE_REGRESSION"));
     }
 
     #[test]
     fn core_catalog_cannot_be_partially_installed() {
         let mut sources = GraphSchemaSources::default();
         sources.core.pop_first();
-        assert!(
-            sources
-                .validate()
-                .unwrap_err()
-                .contains("immutable catalog")
-        );
+        assert!(sources
+            .validate()
+            .unwrap_err()
+            .contains("immutable catalog"));
     }
 
     #[test]
@@ -1721,7 +1754,11 @@ mod tests {
             ),
             (
                 "enterprise",
-                "7ec8ca794b81774227d8a660c1cd2cafd25230921d3b0eb89ee2690b2fd67a27",
+                "78a7fcc27e4f1067979a8684b479c623e193c1bd3947d54f8d81559470952851",
+            ),
+            (
+                "enterprise-shapes",
+                "df333980776e43addf5473dc9e875fd465b491e5a1e424bddf42f4eb22d9910d",
             ),
             (
                 "governance-shapes",
@@ -1745,7 +1782,11 @@ mod tests {
             ),
             (
                 "identity",
-                "b32a277c15f100d26175c2a1a24af63151a50b8f6fb54f953cbc66626c1c8828",
+                "afe61400366cc8781758ffb804c989adc0f44f2031e2db09be3cff03ff237358",
+            ),
+            (
+                "identity-shapes",
+                "753ea0407a1f691351684761e2f500e3d3df3e611e5a8c249befc740350efdf8",
             ),
             (
                 "infrastructure",
@@ -1773,7 +1814,7 @@ mod tests {
             ),
             (
                 "process_intelligence",
-                "5bcd57f2f092c49158cc3b61d51566b0ce60674efe7ba0642b38c98a0ace6d0d",
+                "b16945235367ae4271649cd351e4ef6ce3174b3979189e8fc0ad7c46d659dde7",
             ),
             (
                 "sdd",
@@ -1801,7 +1842,7 @@ mod tests {
             ),
             (
                 "retrieval",
-                "0ed0901d7f65bf09a8c00f3a168672f21d8e10db827b65a6d3be467c39f43d26",
+                "8619ae4a42a9545427ce72d1fe61744977d337037937ef62b96305c732aa6767",
             ),
             (
                 "sdlc_lifecycle",
@@ -1829,7 +1870,7 @@ mod tests {
             ),
             (
                 "nutrition",
-                "06772fb766c86eda3c3acf70dda010a948f6917c496415a0df1a64ae2dac27ad",
+                "d0874f95836d54e5d556d53edadae85aa3a892c2028b3236a28d6c06997c7d37",
             ),
             (
                 "world-model-shapes",
@@ -1878,7 +1919,7 @@ mod tests {
             ),
             (
                 "virtual-graph",
-                "cbcec36092637964d49faf2178d3930bb2a0a32d7d0586b9b4acadf9fc2eaa57",
+                "c8fb6b85d5a7d25a1ee72288ff2ee3bf6e144f748f7ae5b123a76ac038665e94",
             ),
             (
                 "virtual-graph-shapes",

@@ -648,3 +648,289 @@ fn a_limit_hint_is_dropped_when_occurrences_disagree() {
         "an occurrence without a limit"
     );
 }
+
+// ── EXPLAIN route and per-query snapshots (MEDULLA-UNIFIED-DATA-PLANE-R038.2.3, R038.3.x) ──
+
+mod snapshot_reads {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::{Arc, Mutex};
+
+    use medulla_exec::algebra::Op;
+    use medulla_exec::rowset::RowSet;
+    use medulla_types::wire::ForeignSourceSpec;
+
+    use super::super::capability::{RemoteRequest, SourceCapabilities};
+    use super::super::remote::{Identity, RemoteFetch};
+    use super::super::run::Fragment;
+    use super::super::snapshot::{Consistency, SnapshotBound, SnapshotConn};
+    use super::super::stats::fingerprint;
+    use super::super::{
+        render_trace, FederationSession, FetchStrategy, FragmentExecutionMode, FragmentTrace,
+        REPLICA_LAG_EXCEEDED, SNAPSHOT_UNAVAILABLE, SOURCE_WRITE_FORBIDDEN,
+    };
+    use medulla_types::metadata_acceleration::{SnapshotIsolation, SnapshotSemantics};
+
+    fn spec() -> ForeignSourceSpec {
+        ForeignSourceSpec::Named {
+            name: "orders".into(),
+        }
+    }
+
+    fn two_fragment_session() -> FederationSession {
+        let session = FederationSession::from_env();
+        let scan = || Op::ForeignScan {
+            source: Box::new(spec()),
+            join: false,
+        };
+        session.prepare(&[scan(), scan()]);
+        session
+    }
+
+    /// The versioned table's rows are named by the version a read saw.
+    struct PinnedRead {
+        version: usize,
+        statements: Arc<AtomicUsize>,
+    }
+
+    impl SnapshotConn for PinnedRead {
+        fn run(&self, _statement: &str) -> Result<RowSet, String> {
+            self.statements.fetch_add(1, Ordering::SeqCst);
+            Ok(RowSet::from_ids([format!("v{}", self.version)]))
+        }
+    }
+
+    /// A fake transactional source over a table whose version a writer can bump.
+    struct Versioned {
+        identity: Identity,
+        table_version: Arc<AtomicUsize>,
+        statements: Arc<AtomicUsize>,
+        transactional: bool,
+        replica_lag_ms: Option<u64>,
+        held: Mutex<Option<Arc<dyn SnapshotConn>>>,
+    }
+
+    impl Versioned {
+        fn new(table_version: &Arc<AtomicUsize>, statements: &Arc<AtomicUsize>) -> Self {
+            Self {
+                identity: Identity {
+                    label: "sql#0badf00d".into(),
+                    fingerprint: fingerprint(b"versioned"),
+                    cache_name: None,
+                },
+                table_version: Arc::clone(table_version),
+                statements: Arc::clone(statements),
+                transactional: true,
+                replica_lag_ms: None,
+                held: Mutex::new(None),
+            }
+        }
+    }
+
+    impl RemoteFetch for Versioned {
+        fn capabilities(&self) -> SourceCapabilities {
+            let caps = SourceCapabilities::fetch_only();
+            if self.transactional {
+                caps.with_snapshot_reads()
+            } else {
+                caps
+            }
+        }
+        fn identity(&self) -> &Identity {
+            &self.identity
+        }
+        fn fetch(&self, _request: &RemoteRequest) -> Result<RowSet, String> {
+            let held = self.held.lock().unwrap().clone();
+            match held {
+                Some(conn) => conn.run("SELECT id FROM t"),
+                None => {
+                    self.statements.fetch_add(1, Ordering::SeqCst);
+                    let version = self.table_version.load(Ordering::SeqCst);
+                    Ok(RowSet::from_ids([format!("v{version}")]))
+                }
+            }
+        }
+        fn open_snapshot(
+            &self,
+            bound: &SnapshotBound,
+        ) -> Result<Option<SnapshotSemantics>, String> {
+            if self
+                .replica_lag_ms
+                .is_some_and(|lag| lag > bound.replica_lag_bound_ms)
+            {
+                return Err(format!("{REPLICA_LAG_EXCEEDED}: replay lag over the bound"));
+            }
+            let version = self.table_version.load(Ordering::SeqCst);
+            *self.held.lock().unwrap() = Some(Arc::new(PinnedRead {
+                version,
+                statements: Arc::clone(&self.statements),
+            }));
+            Ok(Some(SnapshotSemantics {
+                isolation: SnapshotIsolation::RepeatableRead,
+                snapshot_token: format!("snap-{version}"),
+                replica_lag_bound_ms: bound.replica_lag_bound_ms,
+            }))
+        }
+        fn held_snapshot(&self) -> Option<Arc<dyn SnapshotConn>> {
+            self.held.lock().unwrap().clone()
+        }
+        fn adopt_snapshot(&self, conn: Arc<dyn SnapshotConn>) {
+            *self.held.lock().unwrap() = Some(conn);
+        }
+    }
+
+    fn read_ids(remote: &Versioned, session: &FederationSession) -> Vec<String> {
+        let mut fragment = Fragment::new(remote, session);
+        fragment.bind_snapshot(&spec()).unwrap();
+        fragment.source(None).unwrap().rows.ids()
+    }
+
+    // spec: MEDULLA-UNIFIED-DATA-PLANE-R038.3.2
+    #[test]
+    fn fragments_share_snapshot() {
+        let (table, statements) = (Arc::new(AtomicUsize::new(0)), Arc::new(AtomicUsize::new(0)));
+        let session = two_fragment_session();
+        let first = read_ids(&Versioned::new(&table, &statements), &session);
+        table.fetch_add(1, Ordering::SeqCst); // a writer commits between the two fragments
+        let second = read_ids(&Versioned::new(&table, &statements), &session);
+        assert_eq!(first, vec!["v0".to_string()]);
+        assert_eq!(second, first, "both fragments read the same version");
+        let unbound = Versioned::new(&table, &statements);
+        assert_eq!(
+            unbound.fetch(&RemoteRequest::full()).unwrap().ids(),
+            vec!["v1".to_string()],
+            "a read outside the snapshot sees the commit"
+        );
+    }
+
+    // spec: MEDULLA-UNIFIED-DATA-PLANE-R038.3.3
+    #[test]
+    fn foreign_scan_opens_snapshot() {
+        let (table, statements) = (Arc::new(AtomicUsize::new(0)), Arc::new(AtomicUsize::new(0)));
+        let remote = Versioned::new(&table, &statements);
+        assert!(remote.capabilities().snapshot_reads);
+        assert!(!SourceCapabilities::fetch_only().snapshot_reads);
+        assert!(
+            !SourceCapabilities::single_full_fetch(
+                super::super::capability::KeyLookup::Unsupported,
+                super::super::capability::LimitPushdown::Unsupported
+            )
+            .snapshot_reads
+        );
+        // One fragment of a source needs no snapshot.
+        let single = FederationSession::from_env();
+        single.prepare(&[Op::ForeignScan {
+            source: Box::new(spec()),
+            join: false,
+        }]);
+        Fragment::new(&remote, &single)
+            .bind_snapshot(&spec())
+            .unwrap();
+        assert!(remote.held_snapshot().is_none());
+        // Two fragments open it once.
+        let session = two_fragment_session();
+        Fragment::new(&remote, &session)
+            .bind_snapshot(&spec())
+            .unwrap();
+        assert!(remote.held_snapshot().is_some());
+        assert!(session.snapshot_of(&remote.fingerprint()).is_some());
+    }
+
+    // spec: MEDULLA-UNIFIED-DATA-PLANE-R038.3.4
+    #[test]
+    fn snapshot_refusals() {
+        let (table, statements) = (Arc::new(AtomicUsize::new(0)), Arc::new(AtomicUsize::new(0)));
+        // No snapshot: two fragments of a source without snapshot_reads.
+        let mut plain = Versioned::new(&table, &statements);
+        plain.transactional = false;
+        let session = two_fragment_session();
+        let error = Fragment::new(&plain, &session)
+            .bind_snapshot(&spec())
+            .unwrap_err();
+        assert!(error.starts_with(SNAPSHOT_UNAVAILABLE), "{error}");
+        // The caller may accept per-fragment reads, and the trace records it.
+        session.set_consistency(Consistency::PerFragment);
+        let mut fragment = Fragment::new(&plain, &session);
+        fragment.bind_snapshot(&spec()).unwrap();
+        let read = fragment.source(None).unwrap();
+        assert_eq!(read.trace.consistency, Consistency::PerFragment);
+        assert!(render_trace(&[read.trace]).contains("consistency=per_fragment"));
+        statements.store(0, Ordering::SeqCst);
+        // Stale replica.
+        let mut stale = Versioned::new(&table, &statements);
+        stale.replica_lag_ms = Some(60_000);
+        let session = two_fragment_session();
+        session.set_snapshot_bound(SnapshotBound {
+            replica_lag_bound_ms: 1_000,
+            statement_timeout_ms: 5_000,
+        });
+        let error = Fragment::new(&stale, &session)
+            .bind_snapshot(&spec())
+            .unwrap_err();
+        assert!(error.starts_with(REPLICA_LAG_EXCEEDED), "{error}");
+        // A write statement is refused before any connection is used.
+        #[cfg(feature = "federation-sql")]
+        {
+            use medulla_exec::sql_text::SqlDialect;
+            let error = super::super::sql::ensure_select("DELETE FROM t", SqlDialect::Postgres)
+                .unwrap_err();
+            assert!(error.starts_with(SOURCE_WRITE_FORBIDDEN), "{error}");
+        }
+        let _ = SOURCE_WRITE_FORBIDDEN;
+        assert_eq!(
+            statements.load(Ordering::SeqCst),
+            0,
+            "no refusal ran a source statement"
+        );
+    }
+
+    // spec: MEDULLA-UNIFIED-DATA-PLANE-R038.3.5
+    #[test]
+    fn provenance_names_snapshot() {
+        let (table, statements) = (Arc::new(AtomicUsize::new(0)), Arc::new(AtomicUsize::new(0)));
+        let session = two_fragment_session();
+        for _ in 0..2 {
+            let remote = Versioned::new(&table, &statements);
+            let mut fragment = Fragment::new(&remote, &session);
+            fragment.bind_snapshot(&spec()).unwrap();
+            fragment.source(None).unwrap().finish_for_test(&session);
+            table.fetch_add(1, Ordering::SeqCst);
+        }
+        let trace = session.trace();
+        assert_eq!(trace.len(), 2);
+        let tokens: Vec<_> = trace
+            .iter()
+            .map(|t| {
+                t.snapshot
+                    .as_ref()
+                    .expect("snapshot named")
+                    .snapshot_token
+                    .clone()
+            })
+            .collect();
+        assert_eq!(tokens[0], tokens[1], "one token per source per query");
+        assert_eq!(trace[0].source, "sql#0badf00d");
+        assert!(trace.iter().all(|t| t.read_at_ms > 0));
+        assert!(render_trace(&trace).contains("snapshot=snap-0 isolation=repeatable_read"));
+    }
+
+    // spec: MEDULLA-UNIFIED-DATA-PLANE-R038.2.3
+    #[test]
+    fn trace_names_route_per_fragment() {
+        let live = FragmentTrace::new(
+            "sql#0badf00d".into(),
+            FetchStrategy::FullFetch,
+            FragmentExecutionMode::Live,
+        );
+        let mut copy = FragmentTrace::new(
+            "http-json#feedbeef".into(),
+            FetchStrategy::FullFetch,
+            FragmentExecutionMode::Copy,
+        );
+        copy.watermark = Some("lsn-7".into());
+        copy.copy_rows = Some(3);
+        let rendered = render_trace(&[live, copy]);
+        let lines: Vec<_> = rendered.lines().collect();
+        assert!(lines[0].ends_with("mode=live"), "{}", lines[0]);
+        assert!(lines[1].ends_with("mode=copy"), "{}", lines[1]);
+    }
+}

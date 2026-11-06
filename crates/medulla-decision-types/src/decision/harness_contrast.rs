@@ -54,6 +54,10 @@ closed_error_codes! {
         VersionUnknown => "HARNESS_COMPONENT_VERSION_UNKNOWN",
         /// A candidate count over eight.
         TooManyCandidates => "HARNESS_CONTRAST_TOO_MANY_CANDIDATES",
+        /// Every delta was zero or negative; the current harness is kept.
+        NoImprovement => "HARNESS_CONTRAST_NO_IMPROVEMENT",
+        /// A candidate was never probed, so its delta is not evidence.
+        InsufficientEvidence => "HARNESS_CONTRAST_INSUFFICIENT_EVIDENCE",
     }
 }
 
@@ -155,6 +159,35 @@ pub enum HarnessContrastRefusal {
     VersionUnknown,
     /// The named evidence does not agree with the stored runs.
     TraceMismatch,
+}
+
+impl crate::decision::record::outcome::DecisionRefusal for HarnessContrastRefusal {
+    fn code(&self) -> crate::decision::record::outcome::RefusalCode {
+        crate::decision::record::outcome::RefusalCode::new(HarnessContrastRefusal::code(*self))
+    }
+
+    fn detail(&self) -> String {
+        HarnessContrastRefusal::code(*self).to_string()
+    }
+}
+
+impl crate::decision::record::outcome::DecisionRefusal for HarnessContrastAbstainReason {
+    fn code(&self) -> crate::decision::record::outcome::RefusalCode {
+        crate::decision::record::outcome::RefusalCode::new(
+            match self {
+                Self::NoImprovement => HarnessContrastErrorCode::NoImprovement,
+                Self::TraceMismatch => HarnessContrastErrorCode::TraceMismatch,
+                Self::InsufficientEvidence => HarnessContrastErrorCode::InsufficientEvidence,
+            }
+            .as_str(),
+        )
+    }
+
+    fn detail(&self) -> String {
+        crate::decision::record::outcome::DecisionRefusal::code(self)
+            .as_str()
+            .to_string()
+    }
 }
 
 impl HarnessContrastRefusal {

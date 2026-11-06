@@ -25,6 +25,7 @@ pub mod outcome;
 pub mod placement;
 pub mod retrieval;
 pub mod retrieval_adapter;
+pub mod retrieval_drift;
 pub mod retrieval_generation;
 pub mod retrieval_plan;
 pub mod retrieval_pointer;
@@ -137,6 +138,9 @@ pub enum QuestionKind {
     BranchOutcome,
     /// Edit concentration checks over a declared rolling round window (MEDULLA-DECISION-ENGINE-R173).
     EditConcentration,
+    /// Bounded multi-step reasoning search (MEDULLA-DECISION-ENGINE-R750.750):
+    /// which frontier leaves to expand next, or a stop with the best-so-far node.
+    ThoughtSearch,
     /// A budgeted comparative-analysis plan (MEDULLA-DECISION-ENGINE-R139.1).
     /// See `decision::comparative_analysis`.
     ComparativeAnalysisPlan,

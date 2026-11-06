@@ -178,6 +178,15 @@ pub(crate) trait RevisionLayer {
 
     fn revision_definition(entry: &Self::Entry) -> RevisionDefinition<'_>;
     fn validate_entry(entry: &Self::Entry) -> Result<(), String>;
+    /// Validate a whole retained chain read from storage; the layer refuses a
+    /// malformed lifecycle path here rather than repairing it.
+    /// The refusal for a publish over a retired record.
+    fn resurrect_refusal() -> String {
+        format!("retired {}s cannot be resurrected", Self::NOUN)
+    }
+    fn validate_chain(_entries: &[Self::Entry]) -> Result<(), String> {
+        Ok(())
+    }
     fn verb(kind: Self::Kind) -> RevisionVerb;
     /// Build, validate and encode the layer's outbox event for one revision.
     fn encode_outbox_event(
@@ -231,7 +240,7 @@ pub(super) fn apply_revision_rows<L: RevisionLayer>(
             .ok_or_else(|| format!("{} head points to a missing revision", L::NOUN))?;
         let current = decode_revision::<L>(current.value())?;
         if L::revision_definition(&current).lifecycle == AgentLibraryLifecycle::Retired {
-            return Err(format!("retired {}s cannot be resurrected", L::NOUN));
+            return Err(L::resurrect_refusal());
         }
     }
     if revisions
@@ -392,6 +401,7 @@ pub(super) fn read_revision_history<L: RevisionLayer>(
         require_physical_key::<L>(&entry, row_tenant, row_record, row_revision)?;
         entries.push(entry);
     }
+    L::validate_chain(&entries)?;
     Ok((head, entries))
 }
 
