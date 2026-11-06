@@ -148,6 +148,26 @@ pub async fn route_graph_scoped_domains(
     // materializes `:PredictedEdge`/`:EdgeFunction` nodes into the core. A method
     // whose feature is off falls through to the graph_ops not-available catch-all.
     #[cfg(feature = "graphlearn")]
+    let method = match method {
+        Method::GraphLearnPredictNary {
+            request,
+            source,
+            expected_graph_revision,
+        } => {
+            return Ok(
+                medulla_server_api::handlers::graphlearn::handle_predict_nary(
+                    req_id,
+                    core,
+                    read_authority.as_ref(),
+                    request,
+                    source,
+                    expected_graph_revision,
+                ),
+            );
+        }
+        other => other,
+    };
+    #[cfg(feature = "graphlearn")]
     let method =
         match medulla_server_api::handlers::graphlearn::try_handle(req_id, core.clone(), method) {
             Ok(r) => return Ok(r),

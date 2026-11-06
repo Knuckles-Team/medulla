@@ -229,7 +229,9 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         // Wire-unconditional, same reason as `datascience` above: `full` does not
         // list `graphlearn`, but `medulla-capabilities` forces `medulla-types/graphlearn` on
         // regardless.
-        Method::GraphLearnPredict { .. } | Method::GraphLearnFit { .. } => {
+        Method::GraphLearnPredict { .. }
+        | Method::GraphLearnPredictNary { .. }
+        | Method::GraphLearnFit { .. } => {
             default_mutation_domain(surface)
         }
         // Wire-unconditional, same reason as `datascience` above: `medulla-capabilities`

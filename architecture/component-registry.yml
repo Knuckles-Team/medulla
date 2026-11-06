@@ -3880,6 +3880,7 @@ components:
       - "tests/safe_eviction_read_through.rs"
       - "tests/sealed_record_guard.rs"
       - "tests/semantic_arch_gate_src.rs"
+      - "tests/graphlearn_nary_served.rs"
       - "tests/served_mining_tsdb_scan.rs"
       - "tests/served_query_completeness.rs"
       - "tests/uql_dag_served.rs"

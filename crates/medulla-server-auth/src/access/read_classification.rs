@@ -117,6 +117,7 @@ pub(super) const RLS_ROUTED: &[&str] = &[
     "GetSubgraph",
     "GetSuccessors",
     "GraphColoring",
+    "GraphLearnPredictNary",
     "HasEdge",
     "HasNode",
     "HasNodesBatch",
