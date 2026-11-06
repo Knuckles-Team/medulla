@@ -84,6 +84,7 @@ _CALLS_B = [
 ]
 
 
+# Verifies MEDULLA-REPO-INGEST-R600.3: Wiring.
 @pytest.mark.spec("MEDULLA-REPO-INGEST-R600.3")
 def test_enrich_runs_once_after_index_commit(clean_graph) -> None:
     first = _index(clean_graph, "repo-enrich", _CALLS_A)
