@@ -375,6 +375,7 @@ fn identity_payload_digest(
 mod current_plan_identity_tests {
     use super::*;
 
+    /// Verifies MEDULLA-DURABLE-KERNEL-R028.5.3: Attachment replay and recovery
     // spec: MEDULLA-DURABLE-KERNEL-R028.5.3
     #[test]
     fn publication_attachment_changes_content_not_retry_identity() {

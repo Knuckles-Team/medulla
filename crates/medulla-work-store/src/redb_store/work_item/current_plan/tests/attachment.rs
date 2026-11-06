@@ -10,6 +10,7 @@ fn attached_request(revision: u64) -> PublishCurrentPlanRequest {
     request
 }
 
+/// Verifies MEDULLA-DURABLE-KERNEL-R028.5.2: Attachment is immutable once bound
 // spec: MEDULLA-DURABLE-KERNEL-R028.5.2
 #[test]
 fn current_plan_attachment_is_immutable_and_scaffold_updates_preserve_it() {
