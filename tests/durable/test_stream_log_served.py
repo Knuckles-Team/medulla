@@ -37,6 +37,10 @@ def _read(rpc, ok, sock, from_offset, limit=0):
 
 
 def test_order_cursor_and_restart(tmp_path):
+    """Verifies MEDULLA-DURABLE-KERNEL-R869.
+
+    Replayable append-only stream log with offset reads.
+    """
     from test_native_no_auth_served import ok, rpc, server
 
     with server(tmp_path) as sock:

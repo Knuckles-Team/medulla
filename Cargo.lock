@@ -5381,6 +5381,7 @@ dependencies = [
  "medulla-compute",
  "medulla-core",
  "medulla-finance",
+ "medulla-finance-quant",
  "medulla-graph-algos",
  "medulla-graph-core",
  "medulla-isolation",
