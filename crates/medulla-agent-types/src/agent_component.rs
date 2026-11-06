@@ -1656,6 +1656,7 @@ mod tests {
             .starts_with(LIFECYCLE_RETIRED_TERMINAL));
     }
 
+    /// Verifies MEDULLA-DECISION-ENGINE-R168.4: Lifecycle refusals
     // spec: MEDULLA-DECISION-ENGINE-R168.4
     #[test]
     fn malformed_lifecycle_chains_refuse_by_code() {
@@ -1689,6 +1690,7 @@ mod tests {
         );
     }
 
+    /// Verifies MEDULLA-DECISION-ENGINE-R168.5: Lifecycle evidence
     // spec: MEDULLA-DECISION-ENGINE-R168.5
     #[test]
     fn transition_entries_name_both_states_and_the_digest() {

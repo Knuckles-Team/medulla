@@ -23,6 +23,9 @@ pub mod batch_compile;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod carrier;
 
+/// `ClientSession` record admission (MEDULLA-IDENTITY-R705).
+pub mod client_session;
+
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod compute;

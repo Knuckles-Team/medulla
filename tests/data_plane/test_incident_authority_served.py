@@ -8,6 +8,7 @@ refused, never used.
 from __future__ import annotations
 
 import os
+import time
 
 import msgpack
 import pytest
@@ -115,3 +116,37 @@ async def test_five_methods_served_under_caller_tenant(start_medulla_server) -> 
             await other._send("IncidentEvidence", {"incident_id": incident_id}, GRAPH)
     finally:
         await other.close()
+
+
+ANOMALIES = 10_000
+ENTITIES = 100
+P99_BUDGET_MS = 25.0
+
+
+@pytest.mark.spec("MEDULLA-UNIFIED-DATA-PLANE-R760.6")
+@pytest.mark.asyncio
+async def test_anomalies_correlate_into_one_incident(start_medulla_server) -> None:
+    from medulla.client import MedullaClient
+
+    client = await MedullaClient.connect(
+        socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+        verified_context=request_context(),
+    )
+    try:
+        prefix = f"svc:r760-6-{os.getpid()}-"
+        readings = [
+            _reading(f"{prefix}{i % ENTITIES}", i // ENTITIES) for i in range(ANOMALIES)
+        ]
+        started = time.perf_counter()
+        joined = _body(
+            await client._send(
+                "IncidentCorrelate",
+                {"anomalies": readings, "window_ms": 60_000},
+                GRAPH,
+            )
+        )
+        elapsed_ms = (time.perf_counter() - started) * 1_000.0
+        assert len(joined["incident_ids"]) == ENTITIES, "one incident per signature"
+        assert elapsed_ms < P99_BUDGET_MS, f"correlate took {elapsed_ms:.1f} ms"
+    finally:
+        await client.close()

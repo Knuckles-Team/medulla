@@ -347,6 +347,10 @@ medulla-stream = { path = "../medulla-stream", optional = true }
 # (no DataFusion); `redb-store` adds pure-Rust redb (no C dep, no pyo3). A default/Pi build
 # links none of it. medulla-tsdb does NOT depend on medulla-plan — no dependency cycle.
 medulla-tsdb = { path = "../medulla-tsdb", optional = true }
+# MEDULLA-FEDERATED-QUERY-R006.1: the temporal-rule mutation builder reuses the
+# `ApplyMutation` request types and the authority scope they are bound to.
+medulla-identity-types = { path = "../medulla-identity-types" }
+medulla-mutation-types = { path = "../medulla-mutation-types" }
 serde = { version = "1.0", features = ["derive"] }
 # `float_roundtrip`: UQL's JSON literals (`JSON '[…]'`, JSONPath/CEP values) must parse back to
 # the EXACT f64 the printer wrote (UQL-06 print/parse identity). serde_json's default float

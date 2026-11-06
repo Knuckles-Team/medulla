@@ -249,6 +249,8 @@ method_results! {
     GraphLearnFit(GraphLearnFit) => Json<graphlearn::LinkPredictorFit>;
     #[cfg(feature = "graphlearn")]
     GraphLearnPredict(GraphLearnPredict) => Json<graphlearn::LinkPrediction>;
+    #[cfg(feature = "graphlearn")]
+    GraphLearnPredictNary(GraphLearnPredictNary) => Json<graphlearn::NaryPrediction>;
     #[cfg(feature = "ml-pipeline")]
     MiningPipelineTrain(MiningPipelineTrain) => Json<pipeline::PipelineTrainResult>;
     #[cfg(feature = "ml-pipeline")]

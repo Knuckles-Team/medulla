@@ -32,6 +32,7 @@ if TYPE_CHECKING:
     from .client import MedullaClient
 
 PLACEMENT_STALE = "PLACEMENT_STALE"
+PLACEMENT_NOT_GRANTED = "PLACEMENT_NOT_GRANTED"
 
 # The engine's canonical resource-id alphabet and size (``ResourceId``).
 MAX_TENANT_ID_BYTES = 1_024
@@ -49,6 +50,23 @@ class PlacementStaleError(ValueError):
     def __init__(self, detail: str) -> None:
         super().__init__(f"{PLACEMENT_STALE}: {detail}")
         self.detail = detail
+
+
+class PlacementNotGrantedError(PermissionError):
+    """A node holds no placement route for the tenant (MEDULLA-PLACEMENT-R611.7).
+
+    Raised before any segment of the tenant graph is fetched from the shared root.
+    """
+
+    code = PLACEMENT_NOT_GRANTED
+
+    def __init__(self, tenant: str, partition: str) -> None:
+        super().__init__(
+            f"{PLACEMENT_NOT_GRANTED}: no placement route for tenant {tenant!r} "
+            f"partition {partition!r}"
+        )
+        self.tenant = tenant
+        self.partition = partition
 
 
 @dataclass(frozen=True)
@@ -268,6 +286,19 @@ class TenantPool(Generic[ClientT]):
     def tenants(self) -> list[str]:
         return list(self._clients)
 
+    async def open_routed(
+        self, directory: PlacementDirectory, tenant: str, partition: str
+    ) -> ClientT:
+        """Open a tenant graph from the shared root only with a placement route
+        (MEDULLA-PLACEMENT-R611.7). A tenant without a placed route with at
+        least one endpoint refuses ``PLACEMENT_NOT_GRANTED`` before the factory
+        (which fetches segments) runs."""
+        validate_tenant_id(tenant)
+        route = await directory.route(tenant, partition)
+        if not route.get("placed") or not route.get("endpoints"):
+            raise PlacementNotGrantedError(tenant, partition)
+        return await self.acquire(tenant)
+
 
 @dataclass
 class PlacementMetrics:
@@ -298,6 +329,7 @@ class PlacementDirectory:
         self._breakers: dict[str, Breaker] = {}
         self._tenant_pool = tenant_pool
         self._snapshot: dict[str, Any] | None = None
+        self._routes: dict[tuple[str, str], dict[str, Any]] = {}
         self._routing_epoch = 0
         self._stale_rejects = 0
         self._snapshots_accepted = 0
@@ -364,6 +396,17 @@ class PlacementDirectory:
             route = await self._fetch_route(tenant, partition)
         self._routing_epoch = max(self._routing_epoch, route["epoch"])
         self._routes_accepted += 1
+        self._routes[(tenant, partition)] = route
+        return route
+
+    def cached_route(self, tenant: str, partition: str) -> dict[str, Any] | None:
+        """The last accepted engine route for ``(tenant, partition)``, or
+        ``None`` when none is held or its epoch is below the routing epoch.
+        A local dict lookup: it never contacts the engine and never computes a
+        route (MEDULLA-PLACEMENT-R611.6 hot path)."""
+        route = self._routes.get((tenant, partition))
+        if route is None or route["epoch"] < self._routing_epoch:
+            return None
         return route
 
     async def shard_topology(

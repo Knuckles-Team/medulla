@@ -78,6 +78,9 @@ pub mod corpus_retrieval;
 /// Plan is `query`-gated.
 pub mod uql;
 
+/// Temporal rule derivation with a persisted origin chain (MEDULLA-FEDERATED-QUERY-R006.1).
+pub mod rules;
+
 // MEDULLA-FEDERATED-QUERY-R651.1 — query understanding model (filters, intent, expansion port types).
 pub mod query_understanding;
 // MEDULLA-FEDERATED-QUERY-R652.1 — rerank scorer port, calibration curve and receipt types.

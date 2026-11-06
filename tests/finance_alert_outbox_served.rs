@@ -210,6 +210,7 @@ async fn alert_door_accepts_four_kinds() {
     );
 }
 
+/// Verifies MEDULLA-FINANCE-PRIMITIVES-R011.2.2: Finance event atomic commit
 // spec: MEDULLA-FINANCE-PRIMITIVES-R011.2.2
 #[tokio::test(flavor = "multi_thread")]
 async fn alert_and_outbox_commit_atomically() {
@@ -245,6 +246,7 @@ async fn alert_and_outbox_commit_atomically() {
         .all(|(key, _)| key != "alert-atomic-refused"));
 }
 
+/// Verifies MEDULLA-FINANCE-PRIMITIVES-R011.3: Finance delivery replay
 // spec: MEDULLA-FINANCE-PRIMITIVES-R011.3
 #[tokio::test(flavor = "multi_thread")]
 async fn replay_preserves_one_outbox_fact() {
@@ -255,7 +257,11 @@ async fn replay_preserves_one_outbox_fact() {
         assert!(first.error.is_none(), "{:?}", first.error_detail);
         let second = served.raise(envelope(kind, &id)).await;
         assert!(second.error.is_none(), "{:?}", second.error_detail);
-        assert_eq!(first.result, second.result, "{kind:?}");
+        assert!(
+            first.result.is_some()
+                && format!("{:?}", first.result) == format!("{:?}", second.result),
+            "{kind:?}"
+        );
     }
     let facts = served.claim("finance.alert.price").await;
     assert_eq!(facts.len(), 4, "one outbox fact per event id: {facts:?}");

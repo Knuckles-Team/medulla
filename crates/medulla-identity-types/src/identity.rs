@@ -31,6 +31,7 @@ mod access;
 mod approval_key;
 mod audit;
 mod config;
+mod delegation;
 mod denials;
 mod model;
 mod ops;
@@ -61,15 +62,18 @@ pub use config::{
     AuthMode, IdentityConfig, LocalFallback, ModeTransition, RegistrationPolicy,
     DEFAULT_PASSWORD_MIN_CHARS, MAX_PASSWORD_CHARS,
 };
+pub use delegation::{
+    DelegationRecord, DelegationRecordWrite, DelegationStanding, DelegationState,
+};
 pub use denials::{DenialSample, DenialSampler, MAX_DENIAL_SAMPLES};
 pub use model::{
     ApiKeyRecord, ExternalIdentity, OneTimeToken, PasswordCredential, SessionRecord, TokenPurpose,
     TotpRecord, UserKind, UserRecord, UserStatus, WebauthnRecord,
 };
 pub use ops::{
-    AccessOp, ConfigOp, CredentialOp, IdentityOp, IdpOp, MfaOp, OpAuthority, OpMeta, SessionOp,
-    TokenOp, UserOp, IDENTITY_ADMIN_SCOPE, IDENTITY_AUTHENTICATE_SCOPE, IDENTITY_PROVISION_SCOPE,
-    IDENTITY_READ_SCOPE, IDENTITY_SELF_SCOPE,
+    AccessOp, ConfigOp, CredentialOp, DelegationOp, IdentityOp, IdpOp, MfaOp, OpAuthority, OpMeta,
+    SessionOp, TokenOp, UserOp, IDENTITY_ADMIN_SCOPE, IDENTITY_AUTHENTICATE_SCOPE,
+    IDENTITY_PROVISION_SCOPE, IDENTITY_READ_SCOPE, IDENTITY_SELF_SCOPE,
 };
 pub use ownership::{
     plan_digest, GrantPlanEntry, GraphOwnershipSignals, InvalidOwnership, OwnershipDisposition,

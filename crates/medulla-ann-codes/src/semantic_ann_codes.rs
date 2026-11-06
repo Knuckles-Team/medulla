@@ -77,6 +77,7 @@ mod completion;
 mod door;
 mod persist;
 mod predecessor;
+mod promotion;
 pub(crate) mod reconciliation;
 mod reconciliation_codec;
 mod record;
@@ -167,6 +168,8 @@ pub use topics::{
     SEMANTIC_QUEUE_CLASSES,
 };
 
+pub use promotion::{PromotionBlocked, PROMOTION_BLOCKED};
+
 pub const SEMANTIC_STAGE_RECEIPT_TOPIC: &str = "engine.semantic-index.stage-receipt.v1";
 
 pub const SEMANTIC_BINDING_STATE_TOPIC: &str = "engine.semantic-index.binding-state.v1";
@@ -243,6 +246,10 @@ pub struct SemanticCodeStore {
     door: ServingDoor,
     tenant: String,
     binding: String,
+    /// The engine-owned model config the promotion gate reads
+    /// (MEDULLA-UNIFIED-DATA-PLANE-R040.3).
+    model_config:
+        std::sync::RwLock<Option<medulla_types::embedding_promotion::SemanticModelConfig>>,
 }
 
 impl std::fmt::Debug for SemanticCodeStore {
@@ -260,6 +267,7 @@ impl SemanticCodeStore {
             door,
             tenant: tenant.to_string(),
             binding: binding.to_string(),
+            model_config: std::sync::RwLock::new(None),
         }
     }
 

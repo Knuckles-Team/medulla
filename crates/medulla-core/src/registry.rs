@@ -1370,7 +1370,7 @@ use material::{
     snapshot_changed,
 };
 pub use reserved::{
-    FOREIGN_SOURCE_RESOURCE_PREFIX, RESERVED_RBAC_RESOURCE_PREFIXES, validate_graph_name,
+    validate_graph_name, FOREIGN_SOURCE_RESOURCE_PREFIX, RESERVED_RBAC_RESOURCE_PREFIXES,
 };
 
 /// Register one graph's server-layer indexes. Spatial indexes are derived entirely
@@ -1717,12 +1717,10 @@ mod tests {
         let manifest = reg.materialization_handle(name).unwrap();
 
         handle.core.mark_dirty();
-        assert!(
-            manifest
-                .write()
-                .unwrap()
-                .advance_committed_version(handle.core.version())
-        );
+        assert!(manifest
+            .write()
+            .unwrap()
+            .advance_committed_version(handle.core.version()));
         assert_eq!(
             reg.materialization_manifest(name)
                 .unwrap()

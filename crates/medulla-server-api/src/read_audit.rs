@@ -55,6 +55,7 @@ impl ReadAuditSink {
 mod tests {
     use super::*;
 
+    /// Verifies MEDULLA-IDENTITY-R610.5: Evidence: read and claim audit sink
     // spec: MEDULLA-IDENTITY-R610.5
     #[tokio::test]
     async fn full_queue_refuses_with_audit_unavailable() {

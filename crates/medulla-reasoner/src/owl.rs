@@ -61,6 +61,7 @@ mod budget;
 pub(crate) mod disjoint;
 mod filler;
 mod fresh;
+mod retract;
 
 pub use budget::{BudgetExhausted, DerivationBudget};
 
@@ -1295,6 +1296,59 @@ pub struct Reasoner {
     meter: budget::StepMeter,
     /// `S(A)` members CR-sub/CR-some⁺ have not yet run over (`owl/fresh.rs`).
     fresh: BTreeMap<String, BTreeSet<String>>,
+    /// Reverse index from a cause to the derivations that cite it. The key is an axiom
+    /// label or a premise rendered `sub|sup`; the value lists the derived keys in `just`
+    /// (class subsumptions and `R:<role>` pairs). `retract_axioms` walks it.
+    dependents: HashMap<String, Vec<(String, String)>>,
+}
+
+/// The `dependents` key of a premise or derived entry: `sub|sup`.
+fn cause_key(entry: &(String, String)) -> String {
+    format!("{}|{}", entry.0, entry.1)
+}
+
+/// The `just` key of a derived role pair `(a, b) ∈ R(role)`.
+fn role_entry(role: &str, a: &str, b: &str) -> (String, String) {
+    (format!("R:{role}"), format!("{a}->{b}"))
+}
+
+/// One derivation about to be recorded: the rule, its axioms and class premises, and the
+/// role pairs it consumed (kept out of `premises` so proof trees stay over subsumptions).
+struct Derivation {
+    rule: &'static str,
+    axioms: Vec<String>,
+    premises: Vec<(String, String)>,
+    roles: Vec<(String, String)>,
+}
+
+impl Reasoner {
+    /// Record `j` as the justification of `key` (first derivation wins) and index it.
+    fn store_justification(&mut self, key: (String, String), d: Derivation) {
+        if self.just.contains_key(&key) {
+            return;
+        }
+        self.index_justification(&key, &d);
+        self.just.insert(
+            key,
+            Justification {
+                rule: d.rule,
+                axioms: d.axioms,
+                premises: d.premises,
+            },
+        );
+    }
+
+    /// Add `key` under every axiom label, premise and role pair its derivation cites.
+    fn index_justification(&mut self, key: &(String, String), d: &Derivation) {
+        let causes = d
+            .axioms
+            .iter()
+            .cloned()
+            .chain(d.premises.iter().chain(&d.roles).map(cause_key));
+        for cause in causes {
+            self.dependents.entry(cause).or_default().push(key.clone());
+        }
+    }
 }
 
 impl Reasoner {
@@ -1399,6 +1453,13 @@ impl Reasoner {
     ///   and ranges they transfer; the relation `R` is never inverted, because
     ///   `A ⊑ ∃r.B` does not entail `B ⊑ ∃r⁻.A`.
     fn saturate(&mut self) {
+        self.fresh = self.s.clone();
+        self.run_completion();
+    }
+
+    /// The fixpoint over the current `fresh` frontier ([`Reasoner::saturate`] makes every
+    /// member fresh; [`Reasoner::retract_axioms`] seeds only the over-deleted region).
+    fn run_completion(&mut self) {
         let (sub_index, conj_axioms, some_rhs, some_lhs) = self.index_gcis();
 
         // disjoint pairs by class for CR-disjoint.
@@ -1409,7 +1470,6 @@ impl Reasoner {
         let sub_roles = self.ont.sub_roles.clone();
         let nothing = iri(OWL_NOTHING);
 
-        self.fresh = self.s.clone();
         let mut changed = true;
         let mut guard = 0;
         while changed && guard < 100_000 && !self.meter.exhausted() {
@@ -1525,13 +1585,15 @@ impl Reasoner {
             let Concept::Named(dn) = d else { continue };
             let conf = self.cur_conf(a, b) * axiom_conf;
             if self.add_role_weighted(r, a, dn, conf) {
-                self.just
-                    .entry((format!("R:{r}"), format!("{a}->{dn}")))
-                    .or_insert(Justification {
+                self.store_justification(
+                    role_entry(r, a, dn),
+                    Derivation {
                         rule: "CR-some⁺",
                         axioms: vec![label.clone()],
                         premises: vec![(a.to_string(), b.to_string())],
-                    });
+                        roles: Vec::new(),
+                    },
+                );
                 changed = true;
             }
         }
@@ -1645,14 +1707,13 @@ impl Reasoner {
             for (e, label, axiom_conf) in rules {
                 let Concept::Named(en) = e else { continue };
                 let conf = self.cur_rconf(r, a, b) * self.cur_conf(b, d) * axiom_conf;
-                if self.add_sub(
-                    a,
-                    en,
-                    "CR-some⁻",
-                    vec![label.clone()],
-                    vec![(b.to_string(), d.clone())],
-                    conf,
-                ) {
+                let derivation = Derivation {
+                    rule: "CR-some⁻",
+                    axioms: vec![label.clone()],
+                    premises: vec![(b.to_string(), d.clone())],
+                    roles: vec![role_entry(r, a, b)],
+                };
+                if self.add_sub_deriving(a, en, derivation, conf) {
                     changed = true;
                 }
             }
@@ -1667,26 +1728,32 @@ impl Reasoner {
             return false;
         }
         let conf = self.cur_rconf(r, a, b) * self.cur_conf(b, nothing);
-        self.add_sub(
-            a,
-            nothing,
-            "CR-bot",
-            vec![],
-            vec![(b.to_string(), nothing.to_string())],
-            conf,
-        )
+        let derivation = Derivation {
+            rule: "CR-bot",
+            axioms: Vec::new(),
+            premises: vec![(b.to_string(), nothing.to_string())],
+            roles: vec![role_entry(r, a, b)],
+        };
+        self.add_sub_deriving(a, nothing, derivation, conf)
     }
 
     /// CR-subrole: `(a,b) ∈ R(r)`, `r ⊑ s` ⇒ `(a,b) ∈ R(s)`.
     fn apply_cr_subrole(&mut self, sub_roles: &[(String, String, String, f64)]) -> bool {
         let mut changed = false;
-        for (r, sup, _label, axiom_conf) in sub_roles {
+        for (r, sup, label, axiom_conf) in sub_roles {
             let Some(pairs) = self.r.get(r).cloned() else {
                 continue;
             };
             for (a, b) in pairs {
                 let conf = self.cur_rconf(r, &a, &b) * axiom_conf;
                 if self.add_role_weighted(sup, &a, &b, conf) {
+                    let derivation = Derivation {
+                        rule: "CR-subrole",
+                        axioms: vec![label.clone()],
+                        premises: Vec::new(),
+                        roles: vec![role_entry(r, &a, &b)],
+                    };
+                    self.store_justification(role_entry(sup, &a, &b), derivation);
                     changed = true;
                 }
             }
@@ -1721,6 +1788,13 @@ impl Reasoner {
             for c in cs {
                 let conf = self.cur_rconf(r1, a, b) * self.cur_rconf(r2, b, c) * ch.conf;
                 if self.add_role_weighted(&ch.sup, a, c, conf) {
+                    let derivation = Derivation {
+                        rule: "CR-chain",
+                        axioms: vec![ch.label.clone()],
+                        premises: Vec::new(),
+                        roles: vec![role_entry(r1, a, b), role_entry(r2, b, c)],
+                    };
+                    self.store_justification(role_entry(&ch.sup, a, c), derivation);
                     changed = true;
                 }
             }
@@ -1764,6 +1838,18 @@ impl Reasoner {
         premises: Vec<(String, String)>,
         conf: f64,
     ) -> bool {
+        let roles = Vec::new();
+        let derivation = Derivation {
+            rule,
+            axioms,
+            premises,
+            roles,
+        };
+        self.add_sub_deriving(a, b, derivation, conf)
+    }
+
+    /// [`Reasoner::add_sub`] for a derivation that also consumed role pairs.
+    fn add_sub_deriving(&mut self, a: &str, b: &str, derivation: Derivation, conf: f64) -> bool {
         let present = self.s.get(a).is_some_and(|s| s.contains(b));
         if !present && !self.meter.charge() {
             return false;
@@ -1774,13 +1860,7 @@ impl Reasoner {
             .or_default()
             .insert(b.to_string());
         if added && a != b {
-            self.just
-                .entry((a.to_string(), b.to_string()))
-                .or_insert(Justification {
-                    rule,
-                    axioms,
-                    premises,
-                });
+            self.store_justification((a.to_string(), b.to_string()), derivation);
         }
         let mut changed = added;
         if self.weighted {
@@ -3105,6 +3185,108 @@ fn normalize_target_class(target_class: &str) -> String {
 mod tests {
     use super::*;
     use medulla_rdf::mapping::parse_turtle;
+
+    const PREFIXES: &str = "@prefix ex: <http://example.org/> .\n\
+@prefix owl: <http://www.w3.org/2002/07/owl#> .\n\
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n";
+
+    fn turtle(statements: &[String]) -> Vec<Triple> {
+        parse_turtle(&format!("{PREFIXES}{}", statements.join("\n"))).unwrap()
+    }
+
+    fn restriction(role: usize, filler: usize) -> String {
+        format!(
+            "[ a owl:Restriction ; owl:onProperty ex:r{role} ; owl:someValuesFrom ex:C{filler} ]"
+        )
+    }
+
+    /// One random axiom statement over a small signature: the shapes of EL⁺ completion.
+    fn random_statement(rng: &mut rand_chacha::ChaCha8Rng) -> String {
+        use rand::Rng;
+        let (a, b) = (rng.gen_range(0..10), rng.gen_range(0..10));
+        let role = rng.gen_range(0..3);
+        match rng.gen_range(0..5) {
+            0 | 1 => format!("ex:C{a} rdfs:subClassOf ex:C{b} ."),
+            2 => format!("ex:C{a} rdfs:subClassOf {} .", restriction(role, b)),
+            3 => format!("{} rdfs:subClassOf ex:C{b} .", restriction(role, a)),
+            _ => format!("ex:r{role} rdfs:subPropertyOf ex:r{} .", (role + 1) % 3),
+        }
+    }
+
+    fn non_empty_roles(cls: &Classification) -> BTreeMap<String, BTreeSet<(String, String)>> {
+        cls.roles
+            .iter()
+            .filter(|(_, pairs)| !pairs.is_empty())
+            .map(|(r, pairs)| (r.clone(), pairs.clone()))
+            .collect()
+    }
+
+    #[test]
+    // spec: MEDULLA-INCREMENTAL-VIEWS-R011.4
+    fn dependents_index_matches_justifications() {
+        let statements: Vec<String> = [
+            "ex:A rdfs:subClassOf ex:B .",
+            "ex:B rdfs:subClassOf ex:C .",
+            "ex:C rdfs:subClassOf ex:r0 .",
+            "ex:D rdfs:subClassOf [ a owl:Restriction ; owl:onProperty ex:r0 ; owl:someValuesFrom ex:A ] .",
+            "ex:r0 rdfs:subPropertyOf ex:r1 .",
+        ]
+        .map(String::from)
+        .to_vec();
+        let mut reasoner = Reasoner::from_triples(&turtle(&statements));
+        let cls = reasoner.classify();
+        assert!(!cls.justifications.is_empty());
+        let causes = |j: &Justification| -> Vec<String> {
+            j.axioms
+                .iter()
+                .cloned()
+                .chain(j.premises.iter().map(cause_key))
+                .collect()
+        };
+        for (key, just) in &cls.justifications {
+            for cause in causes(just) {
+                let listed = reasoner.dependents.get(&cause);
+                assert!(
+                    listed.is_some_and(|l| l.contains(key)),
+                    "{key:?} under {cause}"
+                );
+            }
+        }
+        for derived in reasoner.dependents.values().flatten() {
+            assert!(cls.justifications.contains_key(derived), "{derived:?}");
+        }
+    }
+
+    #[test]
+    // spec: MEDULLA-INCREMENTAL-VIEWS-R011.5
+    fn retract_equals_fresh_run_randomized() {
+        use rand::{Rng, SeedableRng};
+        let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(0x5eed_11_5);
+        for _ in 0..40 {
+            let statements: Vec<String> = (0..rng.gen_range(6..24))
+                .map(|_| random_statement(&mut rng))
+                .collect();
+            let (removed, kept): (Vec<String>, Vec<String>) = statements
+                .iter()
+                .cloned()
+                .partition(|_| rng.gen_range(0..3) == 0);
+            let mut reasoner = Reasoner::from_triples(&turtle(&statements));
+            reasoner.classify();
+            let retracted = reasoner.retract_axioms(&turtle(&removed));
+            let fresh = Reasoner::from_triples(&turtle(&kept)).classify();
+            assert_eq!(
+                retracted.subsumers, fresh.subsumers,
+                "{statements:?} - {removed:?}"
+            );
+            assert_eq!(non_empty_roles(&retracted), non_empty_roles(&fresh));
+            for ((sub, _), just) in &retracted.justifications {
+                for premise in &just.premises {
+                    let held = retracted.subsumers.get(&premise.0);
+                    assert!(held.is_some_and(|s| s.contains(&premise.1)), "{sub}");
+                }
+            }
+        }
+    }
 
     #[test]
     fn tableau_instance_merge_is_deterministic_filtered_and_deduplicated() {

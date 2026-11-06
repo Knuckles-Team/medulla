@@ -89,6 +89,7 @@ pub(crate) async fn commit_pack_projection(
     record_id: &str,
     shapes: Vec<PackSchemaDocument>,
     ontologies: Vec<PackSchemaDocument>,
+    crosswalks: Vec<PackSchemaDocument>,
     idempotency_key: &str,
 ) -> Result<medulla_catalog_types::graph_schema::GraphSchemaCommitted, String> {
     let graph_name = pack_projection_graph_name(verified.tenant(), connector)?;
@@ -173,6 +174,7 @@ pub(crate) async fn commit_pack_projection(
                 &record_id,
                 shapes,
                 ontologies,
+                crosswalks,
                 None,
             )
             .and_then(ResultPayload::of::<medulla_protocol_types::result_contract::reasoning::GraphSchema>)
@@ -303,6 +305,7 @@ async fn handle_attach_pack_gateway(
             &resolved.record_id,
             resolved.shapes,
             resolved.ontologies,
+            resolved.crosswalks,
             expected_digest.as_deref(),
         )
         .and_then(
@@ -327,6 +330,7 @@ pub(crate) fn apply_pack_source(
     record_id: &str,
     shapes: Vec<PackSchemaDocument>,
     ontologies: Vec<PackSchemaDocument>,
+    crosswalks: Vec<PackSchemaDocument>,
     if_composed_digest: Option<&str>,
 ) -> Result<medulla_catalog_types::graph_schema::GraphSchemaCommitted, String> {
     use medulla_catalog_types::graph_schema::GraphSchemaCommitted;
@@ -349,6 +353,7 @@ pub(crate) fn apply_pack_source(
     }
     let shapes_ttl = compose_pack_documents("SHAPES", shapes)?;
     let ontology_ttl = compose_pack_documents("ONTOLOGY", ontologies)?;
+    let records = parse_pack_crosswalks(&crosswalks)?;
     let source = medulla_graph_core::graph::GraphSchemaSource::new(
         medulla_graph_core::graph::SchemaSourceOrigin::Pack {
             connector: connector.as_str().to_string(),
@@ -357,10 +362,12 @@ pub(crate) fn apply_pack_source(
         shapes_ttl,
         ontology_ttl,
         0,
-    )?;
+    )?
+    .with_crosswalks(records.clone());
     let source_id = format!("pack:{}", connector.as_str());
     let changed = sources.attach_dynamic(source_id, source)?;
     medulla_server_api::schema_compose::validate_entering_schema(&sources)?;
+    revalidate_pack_crosswalks(&sources, &records)?;
     if changed {
         core.install_schema_sources(Arc::new(sources.clone()));
     }
@@ -373,11 +380,62 @@ pub(crate) fn apply_pack_source(
     })
 }
 
+/// The crosswalk records of a pack head, in canonical order. A body that is not
+/// a crosswalk record refuses activation (MEDULLA-TYPED-PACKS-R071.1.3).
+fn parse_pack_crosswalks(
+    documents: &[PackSchemaDocument],
+) -> Result<Vec<medulla_catalog_types::domain_pack::VocabularyCrosswalk>, String> {
+    let mut records = Vec::with_capacity(documents.len());
+    for document in documents {
+        let record =
+            crate::admin::connector_pack::import::crosswalk::parse_record(document.body.as_bytes())
+                .map_err(|error| {
+                    format!(
+                        "{}: crosswalk member '{}': {error}",
+                        medulla_types::contract::ServerErrorCode::MalformedBody.as_str(),
+                        document.uri
+                    )
+                })?;
+        records.push(record);
+    }
+    records.sort_by(|left, right| {
+        (
+            &left.source_class_iri,
+            &left.target_class_iri,
+            &left.content_digest,
+        )
+            .cmp(&(
+                &right.source_class_iri,
+                &right.target_class_iri,
+                &right.content_digest,
+            ))
+    });
+    Ok(records)
+}
+
+/// Re-validate the head's crosswalks against the composed schema before they
+/// become active, with the same rules the import applied.
+fn revalidate_pack_crosswalks(
+    sources: &medulla_graph_core::graph::GraphSchemaSources,
+    records: &[medulla_catalog_types::domain_pack::VocabularyCrosswalk],
+) -> Result<(), String> {
+    use crate::admin::connector_pack::import::{crosswalk, vocabulary};
+
+    if records.is_empty() {
+        return Ok(());
+    }
+    let pinned = vocabulary::pin_composed(
+        &medulla_graph_core::graph::GraphSchemaSources::default(),
+        sources,
+    )?;
+    crosswalk::validate_set(records, &pinned).map_err(|refusal| refusal.activation_error())
+}
+
 /// Parse each pack member independently, scope its blank nodes by immutable
 /// member URI, then render a deterministic N-Triples/Turtle union. Sorting the
 /// URI first makes pack archive order irrelevant; parsing before union is what
 /// prevents two local `_:b0` labels from becoming one RDF node.
-fn compose_pack_documents(
+pub(crate) fn compose_pack_documents(
     kind: &str,
     mut documents: Vec<PackSchemaDocument>,
 ) -> Result<Option<Arc<str>>, String> {

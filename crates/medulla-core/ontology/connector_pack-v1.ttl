@@ -18,7 +18,7 @@
 <http://knuckles.team/kg/connector-pack> a owl:Ontology ;
     rdfs:label "Connector pack" ;
     rdfs:comment "The ingest contract and connector surface of one typed connector pack: contract terms specialised from the virtual-graph vocabulary, and the connector, feature, tool, prompt and skill surface linked to the domain classes it serves." ;
-    owl:imports <http://knuckles.team/kg/core>, <http://knuckles.team/kg/virtual-graph>, <http://knuckles.team/kg/capability>, <http://knuckles.team/kg/orchestration> .
+    owl:imports <http://knuckles.team/kg/virtual-graph>, <http://knuckles.team/kg/capability>, <http://knuckles.team/kg/orchestration> .
 
 # --- Ingest contract (MEDULLA-TYPED-PACKS-R101.1) --------------------------------
 
@@ -267,3 +267,14 @@ cp:componentId a owl:DatatypeProperty ;
     rdfs:comment "The stable identity the engine stamps on one surface node: a tool, prompt, skill or server member." ;
     rdfs:domain [ a owl:Class ; owl:unionOf (cp:Connector cp:Tool cp:Prompt cp:Skill) ] ;
     rdfs:range xsd:string .
+
+# ── Core rooting (MEDULLA-TYPED-PACKS-R071.2) ───────────────────────────────────
+# Every class of this module above reaches the core class kg:DomainEntity through rdfs:subClassOf.
+<http://knuckles.team/kg/connector-pack#AccessPolicy> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/connector-pack#CursorPolicy> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/connector-pack#Feature> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/connector-pack#FieldMapping> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/connector-pack#KeyRule> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/connector-pack#PrivacyClass> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/connector-pack#ProvenanceRequirement> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .
+<http://knuckles.team/kg/connector-pack#SourceObject> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .

@@ -3,14 +3,14 @@
 //! quotes, back-quotes, unicode, reserved words, negative zero and extreme magnitudes.
 
 use medulla_types::wire::{
-    CmpOp, EdgeDir, JsonPathOp, Op, OpKind, Plan, Pred, PredKind, PredLiteral, TimeAxis,
-    uql_sample_op, uql_sample_pred,
+    uql_sample_op, uql_sample_pred, CmpOp, EdgeDir, JsonPathOp, Op, OpKind, Plan, Pred, PredKind,
+    PredLiteral, TimeAxis,
 };
 use proptest::prelude::*;
 
 use medulla_uql::{canonicalize, parse};
 
-use super::contract::{BUILDER_ONLY, not_in_build};
+use super::contract::{not_in_build, BUILDER_ONLY};
 
 /// The refusal a variant without a faithful printer spelling fails the build test with
 /// (MEDULLA-FEDERATED-QUERY-R728).

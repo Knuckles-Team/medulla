@@ -203,6 +203,18 @@ pub enum EffectOutcome {
     Compensated,
 }
 
+impl EffectOutcome {
+    /// The closed label of this outcome, as it is stored and as metrics and
+    /// audit rows spell it.
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::Applied => "applied",
+            Self::NotApplied => "not_applied",
+            Self::Compensated => "compensated",
+        }
+    }
+}
+
 /// The one receipt that resolves a job's external effect. One per job ID.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -243,6 +255,120 @@ impl AdmittedRequest {
             out.push_str(&format!("{byte:02x}"));
         }
         out
+    }
+}
+
+/// `MarkWorkItemEffectStarted`: the live-claim fence and the row revision the
+/// worker read (MEDULLA-DURABLE-KERNEL-R820.3).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct MarkWorkItemEffectStartedRequest {
+    pub tenant: String,
+    pub work_item_id: String,
+    pub worker_id: String,
+    pub lease_epoch: u64,
+    pub fencing_token: u64,
+    pub expected_revision: u64,
+}
+
+/// `RecordEffectReceipt`: the one receipt of `(work_item_id, attempt)`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct RecordEffectReceiptRequest {
+    pub tenant: String,
+    pub work_item_id: String,
+    pub attempt: u64,
+    pub expected_revision: u64,
+    pub receipt: EffectReceipt,
+}
+
+/// `SubmitAdmittedRequest`: the admitted request of `(work_item_id, attempt)`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct SubmitAdmittedRequestRequest {
+    pub work_item_id: String,
+    pub attempt: u64,
+    pub expected_revision: u64,
+    pub request: AdmittedRequest,
+}
+
+/// The key of one effect record read: `(work_item_id, attempt)` in a tenant.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct EffectRecordKey {
+    pub tenant: String,
+    /// Only `GetAdmittedRequest` reads within a session; receipts ignore it.
+    #[serde(default)]
+    pub session_ref: Option<String>,
+    pub work_item_id: String,
+    pub attempt: u64,
+}
+
+/// What an effect write committed: the item's new row revision, and whether
+/// the call replayed an identical earlier write.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct EffectWriteResult {
+    pub changed_work_item_ids: Vec<String>,
+    pub work_item_id: String,
+    pub attempt: u64,
+    pub revision: u64,
+    pub replayed: bool,
+    /// The stored receipt, for `RecordEffectReceipt`.
+    #[serde(default)]
+    pub receipt: Option<EffectReceipt>,
+}
+
+impl EffectWriteResult {
+    /// `started` for a start mark, the receipt's outcome label for a receipt.
+    pub fn outcome_label(&self) -> &'static str {
+        self.receipt
+            .as_ref()
+            .map_or("started", |receipt| receipt.outcome.label())
+    }
+}
+
+/// The stored form of one admitted request: its digest and the payload ref,
+/// never the bytes (R820.1).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct AdmittedRequestRecord {
+    pub request_ref: String,
+    pub tenant: String,
+    pub session_ref: String,
+    pub payload_ref: String,
+}
+
+impl AdmittedRequest {
+    /// Check the fixed size limit and that `request_ref` is the digest of the
+    /// bytes, then project the stored record.
+    pub fn admit(&self) -> Result<AdmittedRequestRecord, String> {
+        use medulla_types::contract::ServerErrorCode;
+        if self.bytes.len() > MAX_ADMITTED_REQUEST_BYTES {
+            return Err(format!(
+                "{}: admitted request is {} bytes, above {MAX_ADMITTED_REQUEST_BYTES}",
+                ServerErrorCode::AdmittedRequestTooLarge,
+                self.bytes.len()
+            ));
+        }
+        if Self::request_ref_of(&self.bytes) != self.request_ref {
+            return Err(format!(
+                "{}: request bytes do not match request_ref",
+                ServerErrorCode::AdmittedRequestDigestMismatch
+            ));
+        }
+        Ok(AdmittedRequestRecord {
+            request_ref: self.request_ref.clone(),
+            tenant: self.tenant.clone(),
+            session_ref: self.session_ref.clone(),
+            payload_ref: self.payload_digest.clone(),
+        })
     }
 }
 

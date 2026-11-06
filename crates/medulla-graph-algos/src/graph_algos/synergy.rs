@@ -83,6 +83,7 @@ mod tests {
         x.to_string()
     }
 
+    /// Verifies MEDULLA-FEDERATED-QUERY-R607.8: Behavior: synergy
     // spec: MEDULLA-FEDERATED-QUERY-R607.8
     #[test]
     fn two_community_bridge_ranks_first() {

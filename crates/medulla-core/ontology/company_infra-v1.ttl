@@ -132,8 +132,7 @@ The trading classes (strategies, signals, debates, exchange backends,
 orders, positions and risk snapshots) live in the finance module.
 
 CONCEPT:ECO-4.13 — Company Infrastructure Orchestration""" ;
-    owl:imports <http://knuckles.team/kg/core>,
-        <http://knuckles.team/kg/company> .
+    owl:imports <http://knuckles.team/kg/company> .
 
 :deployedOn a owl:ObjectProperty ;
     rdfs:label "deployed on" ;

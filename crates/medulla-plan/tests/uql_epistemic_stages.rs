@@ -71,6 +71,41 @@ fn confidence_asof_decay() {
     assert_eq!(confident.len(), 3);
     assert!(confident.rows().iter().all(|r| r.score.is_some()));
 
+    // CONFIDENCE <threshold> drops the rows scoring below it.
+    let top = confident
+        .rows()
+        .iter()
+        .filter_map(|r| r.score)
+        .fold(0.0_f32, f32::max);
+    let bottom = confident
+        .rows()
+        .iter()
+        .filter_map(|r| r.score)
+        .fold(1.0_f32, f32::min);
+    let all = plan(&format!(
+        "MATCH (:Claim) |> CONFIDENCE {}",
+        f64::from(bottom)
+    ))
+    .execute(&ctx)
+    .unwrap();
+    assert_eq!(
+        all.len(),
+        3,
+        "a threshold at the lowest score keeps every row"
+    );
+    let none = plan("MATCH (:Claim) |> CONFIDENCE 1")
+        .execute(&ctx)
+        .unwrap();
+    assert!(none.rows().iter().all(|r| r.score.unwrap_or(0.0) >= 1.0));
+    assert!(top <= 1.0);
+    assert_eq!(
+        plan("MATCH (:Claim) |> CONFIDENCE 0.6").ops[1],
+        Op::ConfidenceOp {
+            threshold: Some(0.6)
+        }
+    );
+    assert!(medulla_uql::parse("MATCH (:Claim) |> CONFIDENCE 2").is_err());
+
     // BELIEF AS OF reads the transaction-time state: `late` is not yet recorded at 100.
     let at_100 = plan("MATCH (:Claim) |> BELIEF AS OF @100")
         .execute(&ctx)

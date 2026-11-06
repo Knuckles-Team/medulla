@@ -33,6 +33,9 @@ pub struct WorkItemApplyRequest<'args, 'table, 'crypto> {
     pub command_sequences: &'args mut NativeSequenceRows<'table>,
     pub committed_at_ms: u64,
     pub crypto: DurableCrypto<'crypto>,
+    /// The R820.1 effect tables, keyed `(graph, work_item_id, attempt)`.
+    pub effect_receipts: &'args mut super::effect::EffectTable<'table>,
+    pub admitted_requests: &'args mut super::effect::EffectTable<'table>,
 }
 
 pub fn apply_work_item_rows(
@@ -53,8 +56,45 @@ pub fn apply_work_item_rows(
         command_sequences,
         committed_at_ms,
         crypto,
+        effect_receipts,
+        admitted_requests,
     } = request;
     match method {
+        Method::MarkWorkItemEffectStarted { request } => {
+            effect_result::<
+                medulla_protocol_types::result_contract::coordination::MarkWorkItemEffectStarted,
+            >(super::effect::apply_mark_effect_started_row(
+                graph,
+                request,
+                nodes,
+                committed_at_ms,
+                crypto,
+            ))
+        }
+        Method::RecordEffectReceipt { request } => {
+            effect_result::<
+                medulla_protocol_types::result_contract::coordination::RecordEffectReceipt,
+            >(super::effect::apply_record_effect_receipt_row(
+                graph,
+                request,
+                nodes,
+                effect_receipts,
+                admitted_requests,
+                committed_at_ms,
+                crypto,
+            ))
+        }
+        Method::SubmitAdmittedRequest { request } => {
+            effect_result::<
+                medulla_protocol_types::result_contract::coordination::SubmitAdmittedRequest,
+            >(super::effect::apply_submit_admitted_request_row(
+                graph,
+                request,
+                nodes,
+                admitted_requests,
+                crypto,
+            ))
+        }
         Method::ClaimWorkItem { request } => {
             apply_claim_work_item_row(graph, request, nodes, native_work_items, crypto)
         }
@@ -194,4 +234,16 @@ pub fn apply_work_item_rows(
             }),
         },
     }
+}
+
+/// Wrap one effect write in its typed result payload.
+fn effect_result<C>(
+    written: Result<medulla_work_types::work_item_read::EffectWriteResult, String>,
+) -> Result<Option<medulla_protocol_types::protocol::ResultPayload>, String>
+where
+    C: medulla_protocol_types::result_contract::MethodResult<
+        Body = medulla_work_types::work_item_read::EffectWriteResult,
+    >,
+{
+    medulla_protocol_types::protocol::ResultPayload::of::<C>(written?).map(Some)
 }

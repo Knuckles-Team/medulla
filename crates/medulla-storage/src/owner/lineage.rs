@@ -208,6 +208,30 @@ pub const GRAPH_SHARD_BEFORE_RUN_CHECKPOINTS: LayoutPredecessor = LayoutPredeces
     file_name: "graph-*.redb",
 };
 
+// Frozen census of the last layout before work-item effect receipts and
+// admitted requests (R820.1).
+const GRAPH_SHARD_TABLES_BEFORE_EFFECT_RECEIPTS: &[&str] = super::graph_shard::graph_shard_table_names!(
+    "repository_enrichment_budgets",
+    "repository_enrichment_policy_revisions",
+    "repository_enrichment_supersessions",
+    "repository_enrichment_parks",
+    "audit_requests",
+    "work_item_current_plans",
+    "work_item_run_checkpoints",
+);
+/// The `3d32...` digest every graph shard carried before the effect tables.
+pub const GRAPH_SHARD_PRE_EFFECT_RECEIPTS_DIGEST: [u8; 32] = [
+    0x3d, 0x32, 0xd0, 0x52, 0xbb, 0xa3, 0x44, 0xa0, 0x0e, 0xcd, 0xb4, 0xbd, 0x0a, 0xed, 0xed, 0xaa,
+    0xdf, 0x6d, 0x55, 0xe8, 0x6f, 0xe0, 0xd1, 0xe4, 0x35, 0x75, 0xe1, 0x70, 0x5c, 0x78, 0xfc, 0x51,
+];
+pub const GRAPH_SHARD_BEFORE_EFFECT_RECEIPTS: LayoutPredecessor = LayoutPredecessor {
+    layout: OwnerLayout::GraphShard,
+    label: "graph shard before work-item effect receipts and admitted requests",
+    owner_tables: GRAPH_SHARD_TABLES_BEFORE_EFFECT_RECEIPTS,
+    data_lost: "none; run `store-upgrade` (the explicit offline layout upgrade). Normal open refuses this predecessor.",
+    file_name: "graph-*.redb",
+};
+
 /// Earlier graph-shard layout before the node-payload scrub cursor (EH-384).
 const GRAPH_SHARD_TABLES_BEFORE_STORAGE_SCRUB: &[&str] = GRAPH_SHARD_TABLES_BEFORE_ENRICHMENT
     .split_at(GRAPH_SHARD_TABLES_BEFORE_ENRICHMENT.len() - 1)
@@ -260,6 +284,44 @@ pub const GRAPH_SHARD_BEFORE_STORAGE_SCRUB: LayoutPredecessor = LayoutPredecesso
     file_name: "graph-*.redb",
 };
 
+/// The SemanticIndex owner tables before the promotion-gate records
+/// (MEDULLA-UNIFIED-DATA-PLANE-R040.3), in registry order.
+const SEMANTIC_INDEX_TABLES_BEFORE_PROMOTION: &[&str] = &[
+    "semantic_bindings",
+    "semantic_binding_heads",
+    "semantic_stage_transitions",
+    "semantic_binding_state_transitions",
+    "semantic_source_progress",
+    "semantic_active_pointers",
+    "semantic_dead_letters",
+    "semantic_tombstones",
+    "semantic_sql_source_manifests",
+    "semantic_graph_projection_manifests",
+    "semantic_authorization_receipts",
+    "semantic_generation_checkpoints",
+    "semantic_generation_checkpoint_heads",
+    "semantic_lexical_manifests",
+    "semantic_ann_manifests",
+    "semantic_vectors",
+    "eg_ann",
+];
+
+/// The frozen layout digest of [`SEMANTIC_INDEX_BEFORE_PROMOTION`]: the
+/// SemanticIndex pin before the promotion-gate tables.
+pub const SEMANTIC_INDEX_PRE_PROMOTION_DIGEST: [u8; 32] = [
+    0x30, 0x08, 0xd8, 0x72, 0x6d, 0x15, 0xa8, 0x64, 0xda, 0xf6, 0xc7, 0x23, 0x00, 0x41, 0x52, 0xfc,
+    0x61, 0xbb, 0x40, 0xbc, 0x8d, 0xe0, 0xfe, 0xa4, 0x86, 0xdf, 0xda, 0xac, 0xe0, 0xc9, 0x85, 0xd8,
+];
+
+/// A semantic index owner file from before the promotion-gate records.
+pub const SEMANTIC_INDEX_BEFORE_PROMOTION: LayoutPredecessor = LayoutPredecessor {
+    layout: OwnerLayout::SemanticIndex,
+    label: "semantic index before promotion-gate records",
+    owner_tables: SEMANTIC_INDEX_TABLES_BEFORE_PROMOTION,
+    data_lost: "none; an explicit offline layout upgrade is required. Normal open refuses this predecessor.",
+    file_name: "semantic_*.redb",
+};
+
 /// Every predecessor of `layout` this build refuses by name, oldest first.
 ///
 /// Exhaustive on purpose: a new layout must state that it has none.
@@ -270,6 +332,7 @@ pub fn layout_predecessors(layout: OwnerLayout) -> &'static [LayoutPredecessor] 
             AGENT_LIBRARY_BEFORE_MCP_CATALOG,
         ],
         OwnerLayout::Blob => &[BLOB_BEFORE_HOLDERS],
+        OwnerLayout::SemanticIndex => &[SEMANTIC_INDEX_BEFORE_PROMOTION],
         OwnerLayout::Sql => &[SQL_BEFORE_SOURCE_CHECKPOINTS, SQL_BEFORE_DURABLE_ANN],
         OwnerLayout::LedgerOnly
         | OwnerLayout::Rbac
@@ -277,7 +340,6 @@ pub fn layout_predecessors(layout: OwnerLayout) -> &'static [LayoutPredecessor] 
         | OwnerLayout::Statechart
         | OwnerLayout::TimeSeries
         | OwnerLayout::Kv
-        | OwnerLayout::SemanticIndex
         | OwnerLayout::PathIndex
         | OwnerLayout::RequestReplay
         | OwnerLayout::VizProvenance
@@ -292,6 +354,7 @@ pub fn layout_predecessors(layout: OwnerLayout) -> &'static [LayoutPredecessor] 
             GRAPH_SHARD_BEFORE_AUDIT_REQUESTS,
             GRAPH_SHARD_BEFORE_CURRENT_PLANS,
             GRAPH_SHARD_BEFORE_RUN_CHECKPOINTS,
+            GRAPH_SHARD_BEFORE_EFFECT_RECEIPTS,
         ],
     }
 }
@@ -339,7 +402,7 @@ pub fn pinned_layout_digest(layout: OwnerLayout) -> &'static str {
         OwnerLayout::Kv => "48b6464ad5960bd14fc0976119b689c0016be63e8cc8be72df4e7030ed593f9e",
         OwnerLayout::Blob => "982e463fd13db3ec48fbdda77249ecaefed3b9174276c61ac7cd2eb206c47d6b",
         OwnerLayout::SemanticIndex => {
-            "3008d8726d15a864daf6c723004152fc61bb40bc8de0fea486dfdaace0c985d8"
+            "b2cdb28a67aab60a08142133a035765520c6ba94a1a2921aafca0ed9bc000bac"
         }
         OwnerLayout::Sql => "7435c69e2de7052a351a89f17ccb4a988f92189f09d523ee7f8e088607924398",
         OwnerLayout::PathIndex => {
@@ -360,7 +423,7 @@ pub fn pinned_layout_digest(layout: OwnerLayout) -> &'static str {
             "0561a2a2ae13f067bf01a4c94d6cbaeb280aaefa56c68036a1f01da92cba8431"
         }
         OwnerLayout::GraphShard => {
-            "3d32d052bba344a00ecdb4bd0aededaadf6d55e86fe0d1e43575e1705c78fc51"
+            "f8363959e3fba482e98be4e5cda91b82b26e1958d215be023a2abef6944f71ed"
         }
         OwnerLayout::AgentLibrary => {
             "e112d8118e4e62b002799b84bba8c69162e477071861a81d3893277736727ea0"

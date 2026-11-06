@@ -379,8 +379,7 @@ Culture, Humanities & Philosophy, Sports & Recreation), each with a first layer
 of sub-domains, expressed as a SKOS concept scheme. Documents are classified onto
 the most specific node they justify; deeper, context-derived sub-topics attach as
 skos:narrower beneath the nearest node here, so the whole ingested corpus
-organizes under one worldview instead of floating per-document tags.""" ;
-    owl:imports <http://knuckles.team/kg/core> .
+organizes under one worldview instead of floating per-document tags.""" .
 
 :topic-mathematics a :Topic,
         :WorldViewDomain ;

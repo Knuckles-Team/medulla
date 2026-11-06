@@ -72,13 +72,12 @@ fn raw_result(resp: &Response) -> DecodedVizRenderResponse {
 }
 
 fn scatter_spec(dataset_ref: &str) -> serde_json::Value {
-    let spec = ViewSpec::new(vec![
-        MarkSpec::new(MarkKind::Scatter, dataset_ref).with_encodings(Encodings {
+    let spec = ViewSpec::new(vec![MarkSpec::new(MarkKind::Scatter, dataset_ref)
+        .with_encodings(Encodings {
             x: Some(EncodingSpec::field("x")),
             y: Some(EncodingSpec::field("y")),
             ..Default::default()
-        }),
-    ]);
+        })]);
     serde_json::to_value(&spec).unwrap()
 }
 
@@ -502,11 +501,9 @@ async fn a_second_request_omitting_dataset_reuses_the_persistently_ingested_data
     .await;
     let payload2 = raw_result(&resp2);
     assert_eq!(payload2.content_type, "image/svg+xml");
-    assert!(
-        String::from_utf8(payload2.bytes)
-            .unwrap()
-            .starts_with("<svg")
-    );
+    assert!(String::from_utf8(payload2.bytes)
+        .unwrap()
+        .starts_with("<svg"));
     assert_eq!(payload2.view_result["row_count"], serde_json::json!(30));
 }
 

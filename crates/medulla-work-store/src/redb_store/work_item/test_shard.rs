@@ -100,6 +100,8 @@ pub fn apply(
             command_sequences: &mut graph.command_sequences,
             committed_at_ms: now_ms,
             crypto: DurableCrypto::none(),
+            effect_receipts: &mut graph.effect_receipts,
+            admitted_requests: &mut graph.admitted_requests,
         })
         .map(|result| result.expect("a WorkItem-family write always answers"))
     })

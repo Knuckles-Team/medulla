@@ -35,6 +35,8 @@ pub mod mysql_mariadb_connection;
 pub mod asr_wire;
 // MEDULLA-FEDERATED-QUERY-R608.1 — causal model fit verdict (`CausalVerify`).
 pub mod causal_wire;
+// MEDULLA-DECISION-ENGINE-R700.1 — belief revision wire types.
+pub mod belief_revision;
 // MEDULLA-DECISION-ENGINE-R652.1 — research claims, evidence and sealed artifacts.
 pub mod claims;
 // MEDULLA-FEDERATED-QUERY-R086.100.1 — ordered n-ary inductive link prediction model.
@@ -63,6 +65,7 @@ pub mod code_health;
 // crate (a wire type, not a decision type), and the evidence class they cite.
 pub mod context_facts;
 pub mod evidence_class;
+pub mod external_schema;
 pub mod ontology_diff;
 // MEDULLA-UNIFIED-DATA-PLANE-R019.3.1 — typed conformance-entry constructor for the
 // MongoDB/DocumentDB adapter, over the generic R022.1 report entry. Pure
@@ -178,6 +181,8 @@ pub mod entity_link_proposal;
 pub mod contract;
 // MEDULLA-INCREMENTAL-VIEWS-R002.1 — the signed-row Z-set delta of incremental views.
 pub mod delta;
+// MEDULLA-FEDERATED-QUERY-R006.1 — origin record of a temporal rule-derived fact.
+pub mod derived_fact;
 // MEDULLA-DURABLE-KERNEL-R032 — the native primary-key fast-path routing decision
 // (pgwire/MySQL/MSSQL point operations that bypass DataFusion planning).
 // Pure serde, no dep.

@@ -1,5 +1,7 @@
 //! MEDULLA-DURABLE-KERNEL-R080.2: served `SupersedeEdge` refuses a missing or
 //! closed prior edge with its registered code and leaves history unchanged.
+//! MEDULLA-DURABLE-KERNEL-R078: the engine stamps transaction time and refuses an
+//! inverted valid interval.
 #![cfg(all(feature = "server", feature = "security"))]
 
 mod common;
@@ -134,4 +136,165 @@ async fn second_supersession_refuses_with_edge_already_closed_and_history_is_unc
         "closed prior must refuse with EDGE_ALREADY_CLOSED: {second:?}"
     );
     assert_eq!(edge_snapshot(&state, graph).await, after_first);
+}
+
+fn now_ms() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_millis() as u64
+}
+
+fn edge_blob(value: serde_json::Value) -> Vec<u8> {
+    rmp_serde::to_vec_named(&value).unwrap()
+}
+
+fn stamps(blob: &[u8]) -> serde_json::Value {
+    medulla_types::msgpack::decode_property_value(blob).unwrap()
+}
+
+// spec: MEDULLA-DURABLE-KERNEL-R078
+#[tokio::test]
+async fn engine_stamps_tx_time_and_refuses_an_inverted_interval() {
+    let state = state();
+    let graph = "bitemporal-r078";
+    assert!(create_graph(&state, 1, graph).await.error.is_none());
+    add_node(&state, 2, graph, "a").await;
+    add_node(&state, 3, graph, "b").await;
+
+    let before = now_ms();
+    for (id, props) in [
+        (
+            4,
+            serde_json::json!({"relationship": "LIKES", "valid_from": 100, "tx_from": 1}),
+        ),
+        (
+            5,
+            serde_json::json!({"relationship": "KNOWS", "tx_from": 1}),
+        ),
+    ] {
+        let added = call(
+            &state,
+            id,
+            graph,
+            Method::AddEdge {
+                source_id: "a".to_string(),
+                target_id: "b".to_string(),
+                properties_msgpack: edge_blob(props),
+            },
+        )
+        .await;
+        assert!(added.error.is_none(), "AddEdge: {added:?}");
+    }
+    // The caller's tx_now is replaced by the engine clock before the method is logged.
+    let invalidated = call(
+        &state,
+        6,
+        graph,
+        Method::InvalidateEdge {
+            source_id: "a".to_string(),
+            target_id: "b".to_string(),
+            relationship: "LIKES".to_string(),
+            invalid_at: 500,
+            tx_now: 7,
+        },
+    )
+    .await;
+    assert!(
+        invalidated.error.is_none(),
+        "InvalidateEdge: {invalidated:?}"
+    );
+    let after = now_ms();
+
+    let (blobs, ledger, edge_count) = edge_snapshot(&state, graph).await;
+    let likes = stamps(&blobs[0]);
+    let knows = stamps(&blobs[1]);
+    let within = |value: &serde_json::Value| {
+        let t = value.as_u64().expect("stamp is a number");
+        (before..=after).contains(&t)
+    };
+    assert_eq!(likes["valid_from"], 100, "caller valid_from is kept");
+    assert!(within(&likes["tx_from"]), "engine tx_from: {likes}");
+    assert_eq!(likes["valid_until"], 500);
+    assert!(within(&likes["tx_to"]), "engine tx_to: {likes}");
+    assert_eq!(
+        knows["valid_from"], knows["tx_from"],
+        "valid_from defaults to tx_now"
+    );
+    assert!(within(&knows["tx_from"]), "engine tx_from: {knows}");
+
+    // An inverted interval refuses and writes nothing.
+    let inverted = call(
+        &state,
+        7,
+        graph,
+        Method::AddEdge {
+            source_id: "a".to_string(),
+            target_id: "b".to_string(),
+            properties_msgpack: edge_blob(serde_json::json!({
+                "relationship": "TRUSTS", "valid_from": 900, "valid_until": 800,
+            })),
+        },
+    )
+    .await;
+    assert!(
+        inverted
+            .refusal_text()
+            .is_some_and(|text| text.starts_with("VALIDITY_INVERTED")),
+        "inverted AddEdge: {inverted:?}"
+    );
+    let too_early = call(
+        &state,
+        8,
+        graph,
+        Method::InvalidateEdge {
+            source_id: "a".to_string(),
+            target_id: "b".to_string(),
+            relationship: "KNOWS".to_string(),
+            invalid_at: 0,
+            tx_now: 0,
+        },
+    )
+    .await;
+    assert!(
+        too_early
+            .refusal_text()
+            .is_some_and(|text| text.starts_with("VALIDITY_INVERTED")),
+        "inverted InvalidateEdge: {too_early:?}"
+    );
+    let (_, ledger_after, count_after) = edge_snapshot(&state, graph).await;
+    assert_eq!((ledger_after, count_after), (ledger.clone(), edge_count));
+
+    // Replaying the logged methods over a fresh core reproduces every stamp.
+    let replayed = medulla_graph_core::graph::GraphCore::new();
+    for node in ["a", "b"] {
+        replayed.add_node(node.to_string(), edge_blob(serde_json::json!({})));
+    }
+    for entry in &ledger {
+        let parts: Vec<&str> = entry.split('|').collect();
+        match parts.as_slice() {
+            ["ADD_EDGE", source, target, hex] => medulla_server_api::mutation_apply::apply(
+                &replayed,
+                &Method::AddEdge {
+                    source_id: source.to_string(),
+                    target_id: target.to_string(),
+                    properties_msgpack: hex::decode(hex).unwrap(),
+                },
+            ),
+            ["INVALIDATE_EDGE", source, target, relationship, invalid_at, tx_now] => {
+                medulla_server_api::mutation_apply::apply(
+                    &replayed,
+                    &Method::InvalidateEdge {
+                        source_id: source.to_string(),
+                        target_id: target.to_string(),
+                        relationship: relationship.to_string(),
+                        invalid_at: invalid_at.parse().unwrap(),
+                        tx_now: tx_now.parse().unwrap(),
+                    },
+                )
+            }
+            _ => {}
+        }
+    }
+    assert_eq!(replayed.get_edge_properties("a", "b"), blobs);
 }

@@ -20,7 +20,9 @@ fn sqlite3_bin() -> OsString {
     let bin = std::env::var_os("MEDULLA_SQLITE3").unwrap_or_else(|| OsString::from("sqlite3"));
     match Command::new(&bin).arg("--version").output() {
         Ok(out) if out.status.success() => bin,
-        other => panic!("these tests need the real sqlite3 CLI, but {bin:?} is not runnable ({other:?})"),
+        other => {
+            panic!("these tests need the real sqlite3 CLI, but {bin:?} is not runnable ({other:?})")
+        }
     }
 }
 
@@ -165,7 +167,12 @@ fn live_file_reads_and_capture_under_concurrent_writer() {
         .map(|r| {
             (
                 r.id.parse().unwrap(),
-                format!("{}|{}|{}", r.id, r.columns["w"], r.columns["v"].as_str().unwrap()),
+                format!(
+                    "{}|{}|{}",
+                    r.id,
+                    r.columns["w"],
+                    r.columns["v"].as_str().unwrap()
+                ),
             )
         })
         .collect();

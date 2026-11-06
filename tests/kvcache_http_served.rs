@@ -87,7 +87,9 @@ async fn two_consumers_share_one_block_and_a_version_mismatch_refuses() {
 
     // Client A puts the block; client B (its own connection) gets the same bytes.
     assert_eq!(
-        call(&addr, "PUT", "prefix-1", &model_v1, &page).await.status,
+        call(&addr, "PUT", "prefix-1", &model_v1, &page)
+            .await
+            .status,
         201
     );
     let read = call(&addr, "GET", "prefix-1", &model_v1, b"").await;

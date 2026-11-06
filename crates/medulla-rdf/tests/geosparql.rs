@@ -89,6 +89,7 @@ fn topology_matches_kernel() {
 
 /// MEDULLA-FEDERATED-QUERY-R709.7: the R-tree path and the scan path return the same rows for
 /// every spatial function over 1,000 fixtures, after inserts and after deletes.
+/// Verifies MEDULLA-FEDERATED-QUERY-R709.7: Per-graph spatial index over geo literals
 // spec: MEDULLA-FEDERATED-QUERY-R709.7
 #[test]
 fn indexed_and_scanned_results_are_equal() {

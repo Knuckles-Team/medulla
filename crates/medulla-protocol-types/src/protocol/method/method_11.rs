@@ -28,6 +28,30 @@ $($variants)*
         tenant: String,
         work_item_id: String,
     },
+    /// Record, under the live claim, that the worker is about to cause an
+    /// external effect (MEDULLA-DURABLE-KERNEL-R820.3). Scope `work:write`.
+    MarkWorkItemEffectStarted {
+        request: medulla_work_types::work_item_read::MarkWorkItemEffectStartedRequest,
+    },
+    /// Resolve a started effect with its one receipt for `(work_item_id,
+    /// attempt)`. An identical replay returns the stored receipt.
+    RecordEffectReceipt {
+        request: medulla_work_types::work_item_read::RecordEffectReceiptRequest,
+    },
+    /// Store the admitted request's digest and payload ref once under
+    /// `(work_item_id, attempt)`.
+    SubmitAdmittedRequest {
+        request: medulla_work_types::work_item_read::SubmitAdmittedRequestRequest,
+    },
+    /// The receipt of `(work_item_id, attempt)`, or `null`. Scope `work:read`.
+    GetEffectReceipt {
+        request: medulla_work_types::work_item_read::EffectRecordKey,
+    },
+    /// The admitted request's digest and payload ref, or `null` when absent
+    /// or another tenant's or session's. Scope `work:read`.
+    GetAdmittedRequest {
+        request: medulla_work_types::work_item_read::EffectRecordKey,
+    },
     /// One bounded page of `tenant`'s WorkItems, optionally of one `kind`.
     /// Pages by the limit / scan / byte bounds of `AgentComponent.Search`; an
     /// empty page may still carry `next_cursor`. The cursor is opaque and
@@ -178,6 +202,12 @@ $($variants)*
         policy_msgpack: Vec<u8>,
     },
 
+    /// The caller tenant's stored metrics as `{name: latest value}` over the last
+    /// `telemetry.snapshot_window` seconds (MEDULLA-ORCH-VOCAB-R804). `tenant`
+    /// must be the verified request tenant, otherwise `ACCESS_DENIED`. Read-only;
+    /// derives nothing. Gated `telemetry:read`.
+    GetTelemetrySnapshot { tenant: String },
+
     // ── Served incidents (MEDULLA-UNIFIED-DATA-PLANE-R760.3) ───────────────
     /// Record one anomaly in the caller's tenant (from the verified carrier)
     /// and correlate it into an open incident over `window_ms`.
@@ -204,6 +234,19 @@ $($variants)*
     IncidentSetStatus {
         incident_id: String,
         status: medulla_types::incident::IncidentStatus,
+    },
+
+    // ── Governed actions (MEDULLA-UNIFIED-DATA-PLANE-R700.3) ───────────────
+    /// Validate and register one action spec in the request graph's registry.
+    ActionRegister {
+        spec: medulla_work_types::action_spec::ActionSpec,
+    },
+    /// Submit typed parameters to a registered action: a failing criterion
+    /// applies no effect; a passing submission applies every effect in one
+    /// batch. Either way the run is recorded.
+    ActionSubmit {
+        action: String,
+        params: std::collections::BTreeMap<String, medulla_work_types::action_spec::ParamValue>,
     },
 
     // ── Dataset lineage (MEDULLA-UNIFIED-DATA-PLANE-R702.3) ─────────────────
@@ -327,6 +370,28 @@ $($variants)*
     /// [`medulla_types::document_ops`].
     DocumentDelete {
         request: Box<medulla_types::document_ops::DocumentDeleteRequest>,
+    },
+
+    // ── Data products (MEDULLA-TYPED-PACKS-R805.1) ──────────────────────────
+    /// Register one data product with its contract in the `rbac.redb` policy
+    /// store, keyed by tenant and product id. `tenant` must equal the verified
+    /// request tenant. See [`medulla_types::data_product`].
+    DataProductRegister {
+        tenant: String,
+        product: medulla_types::data_product::DataProduct,
+        contract: medulla_types::data_product::DataContract,
+    },
+    /// Open one access request against a registered product (state `pending`).
+    AccessRequestOpen {
+        tenant: String,
+        request: medulla_types::data_product::AccessRequest,
+    },
+    /// Approve or reject the pending access request of `principal` for `product`.
+    AccessRequestDecide {
+        tenant: String,
+        product: String,
+        principal: String,
+        approve: bool,
     },
         ]);
     };

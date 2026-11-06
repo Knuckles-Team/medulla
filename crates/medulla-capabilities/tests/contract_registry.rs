@@ -229,6 +229,7 @@ fn session_usage_requires_the_shared_usage_read_scope() {
     assert_eq!(descriptor.policy.authz_action, "usage:read");
 }
 
+/// Verifies MEDULLA-UNIFIED-DATA-PLANE-R760.3: Wiring: five served methods over the incident authority
 // spec: MEDULLA-UNIFIED-DATA-PLANE-R760.3
 #[test]
 fn incident_methods_listed() {

@@ -367,12 +367,13 @@ async fn schema_repair_requires_real_shadow_ingest_before_activation() {
     assert!(committed.changed);
 }
 
+/// Verifies MEDULLA-TYPED-PACKS-R808: Operator-selected schema import with digest check and readback
 // spec: MEDULLA-TYPED-PACKS-R808
 #[tokio::test]
 async fn expected_digest_is_checked_before_the_attach_and_reads_back() {
     let served = Served::new().await;
     served.clean_shadow().await;
-    let rendered = approved::source(
+    let rendered = super::source(
         &GraphSchemaOp::ValidateRepair {
             source_id: SOURCE.to_string(),
             contract: contract(),

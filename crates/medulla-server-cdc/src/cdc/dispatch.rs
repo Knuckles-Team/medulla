@@ -275,6 +275,9 @@ fn telemetry_derive_marker_event_id(method: &Method) -> Option<&'static str> {
         Method::IncidentRecordAnomaly { .. }
         | Method::IncidentCorrelate { .. }
         | Method::IncidentSetStatus { .. } => Some("__incident"),
+        // MEDULLA-UNIFIED-DATA-PLANE-R700.3: the action outbox topics.
+        Method::ActionRegister { .. } => Some("__action_register"),
+        Method::ActionSubmit { .. } => Some("__action_completed"),
         _ => None,
     }
 }

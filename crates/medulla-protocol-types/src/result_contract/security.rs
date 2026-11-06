@@ -220,6 +220,7 @@ method_results! {
     // `null` when no identity is registered for the agent; an identity holding no
     // roles is a present identity with an empty `roles` list.
     GetIdentity(GetIdentity) => Json<Option<AgentIdentity>>;
+    GetDelegationRecord(GetDelegationRecord) => Json<medulla_identity_types::identity::DelegationState>;
     CheckAccess(CheckAccess) => Json<AccessDecision>;
     // Every identity op answers one tagged reply; no reply variant can
     // carry a hash, token or sealed secret.

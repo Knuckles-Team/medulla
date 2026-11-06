@@ -69,6 +69,7 @@ fn controlled_cache(
     )
 }
 
+/// Verifies MEDULLA-DURABLE-KERNEL-R083.5: Tier ladder from accelerator memory to durable storage
 // spec: MEDULLA-DURABLE-KERNEL-R083.5
 #[test]
 fn demote_then_promote_keeps_bytes() {
@@ -98,6 +99,7 @@ fn demote_then_promote_keeps_bytes() {
     assert_eq!(cache.stats().drops, 0);
 }
 
+/// Verifies MEDULLA-DURABLE-KERNEL-R083.8: Tier refusals
 // spec: MEDULLA-DURABLE-KERNEL-R083.8
 #[test]
 fn cold_write_failure_and_digest_mismatch_refuse() {

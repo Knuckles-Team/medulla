@@ -14,12 +14,20 @@ pub const NARY_ARITY_INVALID: &str = "NARY_ARITY_INVALID";
 /// Registered `ServerErrorCode` refusal for a candidate set above `graphlearn.nary_max_candidates`.
 pub const NARY_CONSTRAINT_INVALID: &str = "NARY_CONSTRAINT_INVALID";
 
+/// Registered `ServerErrorCode` refusal for a member that resolves to no node of the source.
+pub const NARY_SOURCE_UNRESOLVED: &str = "NARY_SOURCE_UNRESOLVED";
+/// Registered `ServerErrorCode` refusal for a member the caller's row-level-security snapshot hides.
+pub const NARY_SOURCE_UNAUTHORIZED: &str = "NARY_SOURCE_UNAUTHORIZED";
+/// Registered `ServerErrorCode` refusal for a pinned graph revision that no longer matches.
+pub const NARY_REVISION_STALE: &str = "NARY_REVISION_STALE";
+
 /// Smallest admitted tuple arity; unary and binary tuples refuse.
 pub const NARY_MIN_ARITY: usize = 3;
 
 /// How a hypothesis was reached.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum NaryEvidenceClass {
     /// Every member was seen when the model was fitted.
     ObservedNeighbourhood,
@@ -83,6 +91,12 @@ pub enum NaryRefusal {
     },
     #[error("NARY_CONSTRAINT_INVALID: {count} candidates exceed the bound {max}")]
     TooManyCandidates { count: usize, max: usize },
+    #[error("NARY_SOURCE_UNRESOLVED: a member resolves to no node of the source")]
+    SourceUnresolved,
+    #[error("NARY_SOURCE_UNAUTHORIZED: a member is not visible to the caller")]
+    SourceUnauthorized,
+    #[error("NARY_REVISION_STALE: pinned graph revision {expected} but the graph is at {actual}")]
+    RevisionStale { expected: u64, actual: u64 },
 }
 
 impl NaryRefusal {
@@ -91,6 +105,9 @@ impl NaryRefusal {
         match self {
             Self::ArityInvalid { .. } => NARY_ARITY_INVALID,
             Self::TooManyCandidates { .. } => NARY_CONSTRAINT_INVALID,
+            Self::SourceUnresolved => NARY_SOURCE_UNRESOLVED,
+            Self::SourceUnauthorized => NARY_SOURCE_UNAUTHORIZED,
+            Self::RevisionStale { .. } => NARY_REVISION_STALE,
         }
     }
 }
@@ -98,6 +115,7 @@ impl NaryRefusal {
 /// Ordered n-ary prediction request. No `writeback` field: results are hypotheses only.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct NaryRequest {
     /// The fitted model blob returned by `GraphLearnFit`.
     pub model: serde_json::Value,
@@ -160,6 +178,7 @@ impl NaryRequest {
 
 /// One scored ordered tuple. Read-only: it is never written back to the graph.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct NaryHypothesis {
     /// The tuple in request member order.
     pub tuple: Vec<String>,
@@ -252,7 +271,13 @@ mod tests {
     #[test]
     fn nary_refusals_are_registered_server_error_codes() {
         use crate::contract::ServerErrorCode;
-        for code in [NARY_ARITY_INVALID, NARY_CONSTRAINT_INVALID] {
+        for code in [
+            NARY_ARITY_INVALID,
+            NARY_CONSTRAINT_INVALID,
+            NARY_SOURCE_UNRESOLVED,
+            NARY_SOURCE_UNAUTHORIZED,
+            NARY_REVISION_STALE,
+        ] {
             assert!(
                 ServerErrorCode::ALL
                     .iter()

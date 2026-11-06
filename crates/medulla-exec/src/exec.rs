@@ -178,6 +178,11 @@ pub struct PlanCtx<'a> {
     /// The caller's visible decision log for a `DECISIONS` source (EH-066); `None` makes
     /// that source a typed error. Bound per request by the served path.
     pub decisions: Option<&'a dyn DecisionSource>,
+    /// MEDULLA-DURABLE-KERNEL-R079: the instants an `AS OF` stage of the plan pins, per
+    /// axis. A traversal follows, and an emitted edge row passes, only edges live at the
+    /// pinned instants. `None` (the default) pins nothing. [`execute`] and the DAG
+    /// executor derive it from the plan's `Op::AsOf` stages.
+    pub as_of_pin: Option<AsOfPin>,
     /// CONCEPT:MEDULLA-KG.query.reason-decay-in-plan — the wall-clock `(now, default_half_life)`
     /// that makes an `Op::Reason` compute TIME-DECAYED OWL confidence IN-PLAN, so a single
     /// fused plan can BOTH bi-temporal `AsOf`-reselect liveness AND Ebbinghaus-decay-reweight
@@ -377,11 +382,18 @@ impl<'a> PlanCtx<'a> {
             #[cfg(feature = "owl")]
             shape_source: None,
             decisions: None,
+            as_of_pin: None,
             #[cfg(feature = "epistemic")]
             belief_policy: None,
             #[cfg(feature = "geo")]
             spatial: None,
         }
+    }
+
+    /// Pin the instants edges must be live at (MEDULLA-DURABLE-KERNEL-R079).
+    pub fn with_as_of_pin(mut self, pin: Option<AsOfPin>) -> Self {
+        self.as_of_pin = pin;
+        self
     }
 
     /// Pin the "now" a `DECAY` stage measures age against (epoch milliseconds).
@@ -543,6 +555,14 @@ impl<'a> PlanCtx<'a> {
 ///     contract), or Lane B's rayon-morsel `ParallelDriver` when the opt-in `par-runtime`
 ///     feature is built and the environment asks for it.
 pub fn execute(plan: &Plan, ctx: &PlanCtx) -> Result<RowSet, String> {
+    let pinned;
+    let ctx = match AsOfPin::of_ops(plan.ops.iter()) {
+        Some(pin) if ctx.as_of_pin.is_none() => {
+            pinned = ctx.clone().with_as_of_pin(Some(pin));
+            &pinned
+        }
+        _ => ctx,
+    };
     let optimized = plan_optimize(plan.clone(), ctx);
     #[cfg(feature = "federation")]
     if let Some(foreign) = ctx.federation {
@@ -771,7 +791,15 @@ fn traverse_op(
     max: usize,
     input: RowSet,
 ) -> Result<RowSet, String> {
-    let reached = bfs_reached_bounded(ctx.view, &input.ids(), rel, min, max, &ctx.budget)?;
+    let reached = bfs_reached_bounded(
+        ctx.view,
+        &input.ids(),
+        rel,
+        min,
+        max,
+        ctx.as_of_pin,
+        &ctx.budget,
+    )?;
     Ok(RowSet::from_ids(reached))
 }
 
@@ -962,6 +990,50 @@ fn scan_label(view: &GraphView, label: &str) -> RowSet {
 }
 
 // ── the temporal AS OF leg — bi-temporal point-in-time filter (KG-2.250) ────────
+
+/// MEDULLA-DURABLE-KERNEL-R079: the instants a plan's `AS OF` stages pin, one per axis.
+/// An edge is visible when its windows (assembled by
+/// [`medulla_epistemic::BiTemporalRecord::from_properties`]) are live at every
+/// pinned instant; an axis with no pin is not filtered.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct AsOfPin {
+    pub valid: Option<u64>,
+    pub tx: Option<u64>,
+}
+
+impl AsOfPin {
+    /// The pin of a plan's `AS OF` stages (the last stage of an axis wins); `None`
+    /// when the plan has none.
+    pub fn of_ops<'o>(ops: impl Iterator<Item = &'o Op>) -> Option<Self> {
+        let mut pin = Self::default();
+        let mut any = false;
+        for op in ops {
+            if let Op::AsOf { ts, axis } = op {
+                let ts = Some(ts.max(0.0) as u64);
+                match axis {
+                    TimeAxis::Valid => pin.valid = ts,
+                    TimeAxis::Transaction => pin.tx = ts,
+                }
+                any = true;
+            }
+        }
+        any.then_some(pin)
+    }
+
+    /// Whether an edge version with these stored properties is visible under the pin.
+    pub fn admits(&self, properties: &serde_json::Map<String, serde_json::Value>) -> bool {
+        medulla_epistemic::BiTemporalRecord::from_properties(properties)
+            .live_at(self.valid, self.tx)
+    }
+}
+
+/// An optional pin admits an edge version; no pin admits every version.
+pub(crate) fn pin_admits(
+    pin: Option<AsOfPin>,
+    properties: &serde_json::Map<String, serde_json::Value>,
+) -> bool {
+    pin.is_none_or(|p| p.admits(properties))
+}
 
 /// True when the fact in `blob` is live at instant `ts` on the chosen timeline.
 /// Half-open window `[from, until)` in epoch seconds: a missing `from` means
@@ -2217,10 +2289,25 @@ fn belief_as_of_op(ctx: &PlanCtx, input: RowSet, ts: f64) -> RowSet {
 /// `CONFIDENCE` (`Op::ConfidenceOp`) — re-score EACH row in `input` by its OWN propagated
 /// belief confidence, ranked descending (CONCEPT:MEDULLA-KG.epistemic.epistemic-substrate).
 #[cfg(feature = "epistemic")]
-fn confidence_op(ctx: &PlanCtx, input: RowSet) -> RowSet {
+fn confidence_op(ctx: &PlanCtx, input: RowSet, threshold: Option<f64>) -> RowSet {
     let bg = medulla_epistemic::BeliefGraph::from_graph_view(ctx.view);
     let policy = belief_policy(ctx);
-    rescore_by_confidence(&bg, input, &policy)
+    let scored = rescore_by_confidence(&bg, input, &policy);
+    match threshold {
+        None => scored,
+        Some(t) => {
+            let kept: Vec<(String, f32)> = scored
+                .rows()
+                .iter()
+                .filter_map(|r| {
+                    r.score
+                        .filter(|s| f64::from(*s) >= t)
+                        .map(|s| (r.id.clone(), s))
+                })
+                .collect();
+            RowSet::from_scored(kept)
+        }
+    }
 }
 
 /// Re-score every row in `input` by its own propagated belief confidence, ranked
@@ -2598,7 +2685,7 @@ pub fn bfs_reached(
     min: usize,
     max: usize,
 ) -> Vec<String> {
-    bfs_reached_checked(view, seeds, rel, min, max, |_| Ok(()))
+    bfs_reached_checked(view, seeds, rel, min, max, None, |_| Ok(()))
         .expect("the unbounded traversal callback cannot refuse")
 }
 
@@ -2610,9 +2697,10 @@ fn bfs_reached_bounded(
     rel: &str,
     min: usize,
     max: usize,
+    pin: Option<AsOfPin>,
     budget: &crate::budget::Budget,
 ) -> Result<Vec<String>, String> {
-    bfs_reached_checked(view, seeds, rel, min, max, |visited| {
+    bfs_reached_checked(view, seeds, rel, min, max, pin, |visited| {
         budget.check_traversal(visited)
     })
 }
@@ -2623,6 +2711,7 @@ fn bfs_reached_checked<F>(
     rel: &str,
     min: usize,
     max: usize,
+    pin: Option<AsOfPin>,
     mut check_visited: F,
 ) -> Result<Vec<String>, String>
 where
@@ -2650,7 +2739,7 @@ where
             {
                 let from_id = &view.graph[edge.source()];
                 let to_id = &view.graph[edge.target()];
-                if !rel_matches(view, from_id, to_id, rel) {
+                if !rel_matches(view, from_id, to_id, rel, pin) {
                     continue;
                 }
                 let nbr = edge.target();
@@ -2676,7 +2765,7 @@ where
 /// Does the stored edge `(from→to)` carry relationship `rel`? Reads the edge's
 /// canonical `relationship` property. An ordinary `type` property is payload and
 /// is never reinterpreted as edge identity.
-fn rel_matches(view: &GraphView, from: &str, to: &str, rel: &str) -> bool {
+fn rel_matches(view: &GraphView, from: &str, to: &str, rel: &str, pin: Option<AsOfPin>) -> bool {
     let Some(blobs) = view
         .edge_properties
         .get(&(from.to_string(), to.to_string()))
@@ -2686,8 +2775,11 @@ fn rel_matches(view: &GraphView, from: &str, to: &str, rel: &str) -> bool {
     blobs.iter().any(|b| {
         medulla_types::msgpack::decode_property_value(b.as_slice())
             .ok()
-            .map(|v| v.get("relationship").and_then(|x| x.as_str()) == Some(rel))
-            .unwrap_or(false)
+            .and_then(|v| v.as_object().cloned())
+            .is_some_and(|props| {
+                props.get("relationship").and_then(|x| x.as_str()) == Some(rel)
+                    && pin_admits(pin, &props)
+            })
     })
 }
 

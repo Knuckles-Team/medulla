@@ -47,6 +47,9 @@ struct Publication<'a> {
     image_identity: &'a ImageIdentity,
     mutation: &'a SemanticIndexMutation,
     mutation_bytes: &'a [u8],
+    /// The passing promotion verdict this activation stores, when the gate
+    /// applied (MEDULLA-UNIFIED-DATA-PLANE-R040.3).
+    promotion: Option<&'a medulla_types::embedding_promotion::PromotionVerdict>,
 }
 
 impl SemanticCodeStore {
@@ -96,6 +99,17 @@ impl SemanticCodeStore {
                 .stage_receipt_for_batch(&batch_id, true)
                 .map_err(SemanticCodeError::Corrupt);
         }
+        // MEDULLA-UNIFIED-DATA-PLANE-R040.3/.4: the promotion gate runs before
+        // a generation with a new model version goes `Live`. A block stores
+        // its verdict in its own commit and leaves the prior generation live.
+        let promotion = match self.promotion_gate(&read, &binding, intent.generation)? {
+            Ok(verdict) => verdict,
+            Err(blocked) => {
+                drop(read);
+                return Err(self.refuse_blocked_promotion(blocked, now_ms));
+            }
+        };
+        drop(read);
         let (mutation_bytes, mutation_digest) = mutation_row(&mutation)?;
         let subject = format!("generation:{}", intent.generation);
         let outbox = vec![stage_receipt_event(transition)?];
@@ -107,6 +121,7 @@ impl SemanticCodeStore {
             image_identity: &image_identity,
             mutation: &mutation,
             mutation_bytes: &mutation_bytes,
+            promotion: promotion.as_ref(),
         };
         self.commit_maintenance(
             MetadataMutation {
@@ -204,7 +219,11 @@ impl SemanticCodeStore {
         let mut pointers = rows.open_table(SEMANTIC_POINTERS).map_err(kernel_error)?;
         replace_bytes(&mut pointers, (tenant, binding), &pointer_bytes)?;
         drop(pointers);
-        self.write_generation_image(rows, intent.generation, publication)
+        self.write_generation_image(rows, intent.generation, publication)?;
+        match publication.promotion {
+            Some(verdict) => self.record_promotion_in_write(rows, verdict, publication.image),
+            None => Ok(()),
+        }
     }
 
     /// Move the leased generation's binding to `Live`, demoting the generation
