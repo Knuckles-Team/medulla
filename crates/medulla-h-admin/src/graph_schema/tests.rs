@@ -280,12 +280,14 @@ fn internal_pack_projection_owns_identity_and_rejects_regression() {
         "pack__graph-os",
         &connector,
         "pack:graph-os:1:aaaa",
-        Vec::new(),
-        vec![pack_document(
-            "ontology://graph-os/a.ttl",
-            Arc::clone(&ontology_a),
-        )],
-        Vec::new(),
+        PackSourceDocuments {
+            shapes: Vec::new(),
+            ontologies: vec![pack_document(
+                "ontology://graph-os/a.ttl",
+                Arc::clone(&ontology_a),
+            )],
+            crosswalks: Vec::new(),
+        },
         None,
     )
     .unwrap();
@@ -309,12 +311,14 @@ fn internal_pack_projection_owns_identity_and_rejects_regression() {
         "pack__graph-os",
         &connector,
         "pack:graph-os:1:aaaa",
-        Vec::new(),
-        vec![pack_document(
-            "ontology://graph-os/a.ttl",
-            Arc::clone(&ontology_a),
-        )],
-        Vec::new(),
+        PackSourceDocuments {
+            shapes: Vec::new(),
+            ontologies: vec![pack_document(
+                "ontology://graph-os/a.ttl",
+                Arc::clone(&ontology_a),
+            )],
+            crosswalks: Vec::new(),
+        },
         Some(&first.composed_digest),
     )
     .unwrap();
@@ -327,9 +331,11 @@ fn internal_pack_projection_owns_identity_and_rejects_regression() {
         "pack__graph-os",
         &connector,
         "pack:graph-os:0:bbbb",
-        Vec::new(),
-        vec![pack_document("ontology://graph-os/b.ttl", ontology_b)],
-        Vec::new(),
+        PackSourceDocuments {
+            shapes: Vec::new(),
+            ontologies: vec![pack_document("ontology://graph-os/b.ttl", ontology_b)],
+            crosswalks: Vec::new(),
+        },
         None,
     )
     .unwrap_err();
@@ -349,12 +355,14 @@ fn internal_pack_projection_withdrawal_retains_record_high_water() {
         "pack__test",
         &connector,
         "pack:agent-utilities:1:aaaa",
-        Vec::new(),
-        vec![pack_document(
-            "ontology://agent-utilities/a.ttl",
-            Arc::clone(&ontology),
-        )],
-        Vec::new(),
+        PackSourceDocuments {
+            shapes: Vec::new(),
+            ontologies: vec![pack_document(
+                "ontology://agent-utilities/a.ttl",
+                Arc::clone(&ontology),
+            )],
+            crosswalks: Vec::new(),
+        },
         None,
     )
     .unwrap();
@@ -363,9 +371,11 @@ fn internal_pack_projection_withdrawal_retains_record_high_water() {
         "pack__test",
         &connector,
         "pack:agent-utilities:2:bbbb",
-        Vec::new(),
-        Vec::new(),
-        Vec::new(),
+        PackSourceDocuments {
+            shapes: Vec::new(),
+            ontologies: Vec::new(),
+            crosswalks: Vec::new(),
+        },
         None,
     )
     .unwrap();
@@ -386,10 +396,12 @@ fn internal_pack_projection_withdrawal_retains_record_high_water() {
         "pack__test",
         &connector,
         "pack:agent-utilities:1:cccc",
-        Vec::new(),
-        vec![pack_document("ontology://agent-utilities/a.ttl", ontology)],
-        Vec::new(),
-        None,
+        PackSourceDocuments {
+            shapes: Vec::new(),
+            ontologies: vec![pack_document("ontology://agent-utilities/a.ttl", ontology)],
+            crosswalks: Vec::new()
+        },
+        None
     )
     .unwrap_err()
     .contains("SCHEMA_SOURCE_REGRESSION"));
@@ -496,9 +508,11 @@ fn attach_pack_into_a_spare_graph_copies_a_static_snapshot() {
         "tenant-a-spare",
         &connector,
         "pack:graph-os:1:aaaa",
-        Vec::new(),
-        vec![pack_document("ontology://graph-os/a.ttl", Arc::clone(&v1))],
-        Vec::new(),
+        PackSourceDocuments {
+            shapes: Vec::new(),
+            ontologies: vec![pack_document("ontology://graph-os/a.ttl", Arc::clone(&v1))],
+            crosswalks: Vec::new(),
+        },
         None,
     )
     .unwrap();
@@ -518,9 +532,11 @@ fn attach_pack_into_a_spare_graph_copies_a_static_snapshot() {
         &reserved_name,
         &connector,
         "pack:graph-os:2:bbbb",
-        Vec::new(),
-        vec![pack_document("ontology://graph-os/a.ttl", Arc::clone(&v2))],
-        Vec::new(),
+        PackSourceDocuments {
+            shapes: Vec::new(),
+            ontologies: vec![pack_document("ontology://graph-os/a.ttl", Arc::clone(&v2))],
+            crosswalks: Vec::new(),
+        },
         None,
     )
     .unwrap();

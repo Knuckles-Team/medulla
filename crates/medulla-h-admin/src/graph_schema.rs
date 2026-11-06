@@ -181,9 +181,11 @@ pub(crate) async fn commit_pack_projection(
                 &result_graph_name,
                 &connector,
                 &record_id,
-                documents.shapes,
-                documents.ontologies,
-                documents.crosswalks,
+                PackSourceDocuments {
+                    shapes: documents.shapes,
+                    ontologies: documents.ontologies,
+                    crosswalks: documents.crosswalks,
+                },
                 None,
             )?;
             write_pack_surface(core, &result_graph_name, documents.surface.as_deref())?;
@@ -336,9 +338,11 @@ async fn handle_attach_pack_gateway(
             &graph_name,
             &connector,
             &resolved.record_id,
-            resolved.shapes,
-            resolved.ontologies,
-            resolved.crosswalks,
+            PackSourceDocuments {
+                shapes: resolved.shapes,
+                ontologies: resolved.ontologies,
+                crosswalks: resolved.crosswalks,
+            },
             expected_digest.as_deref(),
         )
         .and_then(
@@ -346,6 +350,13 @@ async fn handle_attach_pack_gateway(
         )
     })
     .await
+}
+
+/// The engine-owned documents one pack record attaches.
+pub(crate) struct PackSourceDocuments {
+    pub(crate) shapes: Vec<PackSchemaDocument>,
+    pub(crate) ontologies: Vec<PackSchemaDocument>,
+    pub(crate) crosswalks: Vec<PackSchemaDocument>,
 }
 
 /// Install one ConnectorPack semantic projection under its reserved source.
@@ -361,12 +372,15 @@ pub(crate) fn apply_pack_source(
     graph_name: &str,
     connector: &medulla_types::contract::ResourceId,
     record_id: &str,
-    shapes: Vec<PackSchemaDocument>,
-    ontologies: Vec<PackSchemaDocument>,
-    crosswalks: Vec<PackSchemaDocument>,
+    documents: PackSourceDocuments,
     if_composed_digest: Option<&str>,
 ) -> Result<medulla_catalog_types::graph_schema::GraphSchemaCommitted, String> {
     use medulla_catalog_types::graph_schema::GraphSchemaCommitted;
+    let PackSourceDocuments {
+        shapes,
+        ontologies,
+        crosswalks,
+    } = documents;
 
     if record_id.is_empty() {
         return Err("ATTACH_PACK_SCHEMA_INVALID: pack record id is empty".to_string());

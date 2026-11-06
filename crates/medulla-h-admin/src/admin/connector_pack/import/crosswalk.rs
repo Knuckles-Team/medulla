@@ -32,7 +32,7 @@ pub(super) fn validate_crosswalk_entries(
     for entry in all.iter().filter(|e| e.kind == PackEntryKind::Crosswalk) {
         let parsed = section_bytes(archive, &entry.body)
             .map_err(|error| error.to_string())
-            .and_then(|bytes| parse_record(bytes));
+            .and_then(parse_record);
         match parsed {
             Ok(record) => records.push((entry.uri.as_str(), record)),
             Err(error) => violations.push(violation(
