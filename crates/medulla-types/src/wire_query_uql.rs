@@ -416,7 +416,9 @@ pub fn uql_op(op: &Op) -> Printed {
         #[cfg(feature = "epistemic")]
         Op::SourceReliability { source_id } => keyword_quoted("SOURCE RELIABILITY", source_id),
         #[cfg(feature = "epistemic")]
-        Op::ConfidenceOp {} => fixed("CONFIDENCE"),
+        Op::ConfidenceOp { threshold: None } => fixed("CONFIDENCE"),
+        #[cfg(feature = "epistemic")]
+        Op::ConfidenceOp { threshold: Some(t) } => Ok(format!("CONFIDENCE {}", uql_num(*t)?)),
         #[cfg(feature = "epistemic")]
         Op::ExplainBelief { node_id } => keyword_quoted("EXPLAIN BELIEF", node_id),
         Op::Attribute {

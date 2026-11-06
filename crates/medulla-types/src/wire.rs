@@ -378,7 +378,7 @@ mod epistemic_tests {
             Op::SourceReliability {
                 source_id: "src1".into(),
             },
-            Op::ConfidenceOp {},
+            Op::ConfidenceOp { threshold: None },
             Op::ExplainBelief {
                 node_id: "c1".into(),
             },

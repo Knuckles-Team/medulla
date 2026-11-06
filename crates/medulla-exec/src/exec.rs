@@ -2289,10 +2289,25 @@ fn belief_as_of_op(ctx: &PlanCtx, input: RowSet, ts: f64) -> RowSet {
 /// `CONFIDENCE` (`Op::ConfidenceOp`) — re-score EACH row in `input` by its OWN propagated
 /// belief confidence, ranked descending (CONCEPT:MEDULLA-KG.epistemic.epistemic-substrate).
 #[cfg(feature = "epistemic")]
-fn confidence_op(ctx: &PlanCtx, input: RowSet) -> RowSet {
+fn confidence_op(ctx: &PlanCtx, input: RowSet, threshold: Option<f64>) -> RowSet {
     let bg = medulla_epistemic::BeliefGraph::from_graph_view(ctx.view);
     let policy = belief_policy(ctx);
-    rescore_by_confidence(&bg, input, &policy)
+    let scored = rescore_by_confidence(&bg, input, &policy);
+    match threshold {
+        None => scored,
+        Some(t) => {
+            let kept: Vec<(String, f32)> = scored
+                .rows()
+                .iter()
+                .filter_map(|r| {
+                    r.score
+                        .filter(|s| f64::from(*s) >= t)
+                        .map(|s| (r.id.clone(), s))
+                })
+                .collect();
+            RowSet::from_scored(kept)
+        }
+    }
 }
 
 /// Re-score every row in `input` by its own propagated belief confidence, ranked

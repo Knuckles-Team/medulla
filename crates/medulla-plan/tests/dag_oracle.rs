@@ -300,7 +300,7 @@ fn epistemic_ops_dag_matches_linear() {
         }],
         &ctx,
     );
-    assert_dag_matches_linear(vec![Op::ConfidenceOp {}], &ctx);
+    assert_dag_matches_linear(vec![Op::ConfidenceOp { threshold: None }], &ctx);
     assert_dag_matches_linear(
         vec![
             Op::Scan {

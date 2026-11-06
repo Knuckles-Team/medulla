@@ -805,9 +805,13 @@ pub enum Op {
     /// (`medulla_epistemic::propagate_confidence` walking that row's own support/contradiction/
     /// attack neighbourhood), re-ordering descending — the `CONFIDENCE` UQL keyword with no
     /// argument. Mirrors `Op::Probabilistic`'s "score-then-rank" shape but over the belief
-    /// graph instead of a stored `Distribution`. Gated by `epistemic`.
+    /// graph instead of a stored `Distribution`. With `threshold` (`CONFIDENCE 0.6`,
+    /// MEDULLA-FEDERATED-QUERY-R720.2) rows scoring below it are dropped. Gated by `epistemic`.
     #[cfg(feature = "epistemic")]
-    ConfidenceOp {},
+    ConfidenceOp {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        threshold: Option<f64>,
+    },
     /// TRANSFORM (epistemic, CONCEPT:MEDULLA-KG.epistemic.epistemic-substrate, E2) — the answer to
     /// `EXPLAIN BELIEF <node_id>`: build the recursive justification tree
     /// (`medulla_epistemic::explain_belief`) rooted at `node_id`, flatten it (pre-order, deduped) to
