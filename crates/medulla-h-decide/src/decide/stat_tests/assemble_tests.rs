@@ -162,6 +162,7 @@ async fn assemble(h: &Harness, request: AssemblyRequest) -> Result<AssemblyResul
 }
 
 // spec: MEDULLA-DECISION-ENGINE-R815
+/// Verifies MEDULLA-DECISION-ENGINE-R815: Model media capability on the model selection answer.
 #[tokio::test]
 async fn model_media_capability_and_unknown_code() {
     // A capable model: the answer carries its revision and declaration.
