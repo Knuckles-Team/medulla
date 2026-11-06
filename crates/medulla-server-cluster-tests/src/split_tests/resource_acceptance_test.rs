@@ -1357,50 +1357,117 @@ async fn race_public_reservation_calls(
     )
 }
 
-async fn wait_for_node_leader(cluster: &Cluster, node_id: NodeId, expected_leader: NodeId) {
-    let deadline = tokio::time::Instant::now() + Duration::from_secs(10);
-    while tokio::time::Instant::now() < deadline {
-        let multi = cluster
-            .members
-            .get(&node_id)
-            .and_then(|member| member.started.as_ref())
-            .map(|started| started.multi.clone())
-            .expect("node is running while waiting for its leader view");
-        if let Some(group) = multi.group_for_graph(GRAPH).await {
-            if group.current_leader().await == Some(expected_leader) {
-                return;
-            }
-        }
-        tokio::time::sleep(Duration::from_millis(100)).await;
-    }
-    panic!("node {node_id} did not learn leader {expected_leader}");
+/// Several 4-8 s election rounds plus a reopened member's catch-up on a host at
+/// load 50+: generous, because the wait ends on the observable condition, not on
+/// the deadline.
+const LEADER_SETTLE_TIMEOUT: Duration = Duration::from_secs(60);
+/// One ReadIndex barrier attempt; a starved heartbeat round can take seconds.
+const LEADER_BARRIER_TIMEOUT: Duration = Duration::from_secs(5);
+
+fn live_multi(
+    cluster: &Cluster,
+    node_id: NodeId,
+) -> Option<Arc<medulla_raft::raft::multi::MultiRaft>> {
+    cluster
+        .members
+        .get(&node_id)
+        .and_then(|member| member.started.as_ref())
+        .map(|started| started.multi.clone())
 }
 
+/// The one node that currently SERVES the graph group: its own Raft metrics say
+/// Leader and its ReadIndex barrier just confirmed a quorum, which is exactly the
+/// check an authority read makes before answering.
+async fn serving_graph_leader(cluster: &Cluster) -> Option<NodeId> {
+    for node_id in cluster.live_ids() {
+        let Some(multi) = live_multi(cluster, node_id) else {
+            continue;
+        };
+        let Some(routed) = multi.handle_for_graph(GRAPH).await else {
+            continue;
+        };
+        let is_leader = matches!(
+            openraft::async_runtime::watch::WatchReceiver::borrow_watched(
+                &routed.handle.raft.metrics()
+            )
+            .state,
+            openraft::ServerState::Leader
+        );
+        if !is_leader {
+            continue;
+        }
+        let barrier = tokio::time::timeout(
+            LEADER_BARRIER_TIMEOUT,
+            routed
+                .handle
+                .raft
+                .ensure_linearizable(openraft::ReadPolicy::ReadIndex),
+        )
+        .await;
+        if matches!(barrier, Ok(Ok(_))) {
+            return Some(node_id);
+        }
+    }
+    None
+}
+
+/// Wait until the graph group has a serving leader that every live member (except
+/// `unreachable`) also names, and return it. Leadership may move while a host is
+/// loaded (starved heartbeats, a reopened member's election timer), so callers
+/// act on the returned id, never on an id observed before the wait.
+async fn settled_graph_leader(cluster: &Cluster, unreachable: &[NodeId]) -> NodeId {
+    let deadline = tokio::time::Instant::now() + LEADER_SETTLE_TIMEOUT;
+    let mut last = String::from("no serving leader");
+    while tokio::time::Instant::now() < deadline {
+        if let Some(leader) = serving_graph_leader(cluster).await {
+            let mut lagging = Vec::new();
+            for node_id in cluster.live_ids() {
+                if unreachable.contains(&node_id) {
+                    continue;
+                }
+                let view = match live_multi(cluster, node_id) {
+                    Some(multi) => match multi.group_for_graph(GRAPH).await {
+                        Some(group) => group.current_leader().await,
+                        None => None,
+                    },
+                    None => None,
+                };
+                if view != Some(leader) {
+                    lagging.push((node_id, view));
+                }
+            }
+            if lagging.is_empty() {
+                return leader;
+            }
+            last = format!("serving leader {leader}; members not following it: {lagging:?}");
+        }
+        tokio::time::sleep(Duration::from_millis(150)).await;
+    }
+    panic!("graph group did not settle on one serving leader: {last}");
+}
+
+/// Move graph leadership to `target` and return once `target` is the settled,
+/// serving leader. A transfer can be overtaken by an election under load, so it
+/// is re-issued from whichever node leads until the target holds it.
 #[cfg(feature = "redb")]
-async fn transfer_graph_leader(cluster: &Cluster, from: NodeId, target: NodeId) {
-    let state = state_for(cluster, from);
-    let multi = state
-        .read()
-        .await
-        .multi_raft()
-        .expect("reopened member has MultiRaft authority");
-    let routed = multi
-        .handle_for_graph(GRAPH)
-        .await
-        .expect("reopened member has the graph Raft group");
-    assert_eq!(
-        routed.handle.current_leader().await,
-        Some(from),
-        "leadership transfer must start from the current leader"
-    );
-    routed
-        .handle
-        .raft
-        .trigger()
-        .transfer_leader(target)
-        .await
-        .expect("transfer graph leadership to the reopened member");
-    wait_for_node_leader(cluster, target, target).await;
+async fn transfer_graph_leader(cluster: &Cluster, target: NodeId) {
+    let deadline = tokio::time::Instant::now() + LEADER_SETTLE_TIMEOUT;
+    while tokio::time::Instant::now() < deadline {
+        let current = settled_graph_leader(cluster, &[]).await;
+        if current == target {
+            return;
+        }
+        let multi = live_multi(cluster, current).expect("settled leader is running");
+        let routed = multi
+            .handle_for_graph(GRAPH)
+            .await
+            .expect("settled leader has the graph Raft group");
+        // A refusal here means leadership moved between the settle and the
+        // trigger; the next round re-resolves it.
+        let _ = routed.handle.raft.trigger().transfer_leader(target).await;
+        tokio::time::sleep(Duration::from_millis(500)).await;
+    }
+    panic!("graph leadership did not move to node {target}");
 }
 
 fn decode_host_result(
@@ -1894,11 +1961,7 @@ async fn drive_public_release_after_failover(
     // row.  This is the public execution-handoff evidence: the exact query must be
     // answered by the authority that currently owns the placement, while a real
     // follower must redirect the same query instead of serving a stale snapshot.
-    let current_leader = cluster
-        .wait_for_leader(Duration::from_secs(15))
-        .await
-        .expect("current leader remains discoverable after release");
-    wait_for_node_leader(cluster, current_leader, current_leader).await;
+    let current_leader = settled_graph_leader(cluster, &[stale_follower]).await;
     let queried_release = dispatch_method(
         cluster,
         current_leader,
@@ -1922,7 +1985,8 @@ async fn drive_public_release_after_failover(
     assert_ne!(stale_follower, current_leader);
     // The caller isolated this follower after proving it held the pre-release
     // reservation. Its public query must therefore redirect rather than serve
-    // that stale local row as authority.
+    // that stale local row as authority. Cut off, it can only name the leader it
+    // followed when it was isolated.
     wait_for_backend_active_reservation(cluster, stale_follower, 1).await;
     assert_redirect(
         dispatch_method(
@@ -1932,7 +1996,7 @@ async fn drive_public_release_after_failover(
             reservation_query_method(&release_request, unix_ms()),
         )
         .await,
-        current_leader,
+        leader,
     );
 
     let status = decode_status_result(dispatch_status(cluster, current_leader, 25).await, 1);
@@ -2206,16 +2270,16 @@ async fn native_resource_public_dispatch_readindex_and_failover_scenario() {
     );
     ensure_commons_graph(&cluster).await;
     attach_multi_raft(&cluster).await;
-    let leader = cluster
-        .wait_for_leader(Duration::from_secs(15))
-        .await
-        .expect("initial leader elected");
+    let leader = settled_graph_leader(&cluster, &[]).await;
 
     // The public signed dispatch boundary returns the exact native result produced
     // by the committed WorkItem-domain command, not a generic Raft acknowledgement.
     decode_host_result(dispatch_host_update(&cluster, leader, 1, 1).await, 1);
     let (reserve_request, reserved) = drive_public_work_item_resource_setup(&cluster, leader).await;
 
+    // Re-resolve after the setup writes: every member names the serving leader,
+    // so the follower picked below redirects to it.
+    let leader = settled_graph_leader(&cluster, &[]).await;
     let follower = cluster
         .all_ids()
         .into_iter()
@@ -2224,7 +2288,6 @@ async fn native_resource_public_dispatch_readindex_and_failover_scenario() {
     // Wait only for durable follower apply before asserting the public redirect;
     // this direct backend poll is synchronization, not public evidence.
     wait_for_backend_revision(&cluster, follower, 1).await;
-    wait_for_node_leader(&cluster, follower, leader).await;
 
     // Both a native write and a native authority read must route to the placement
     // leader.  The read leg is intentionally checked before failover so it cannot
@@ -2235,10 +2298,7 @@ async fn native_resource_public_dispatch_readindex_and_failover_scenario() {
     assert_active_status(&status);
 
     cluster.kill(leader).await.expect("kill initial leader");
-    let new_leader = cluster
-        .wait_for_leader_excluding(leader, Duration::from_secs(20))
-        .await
-        .expect("survivor elected after leader failure");
+    let new_leader = settled_graph_leader(&cluster, &[]).await;
     assert_ne!(new_leader, leader);
     // Election visibility and state-machine apply are separate observations in
     // the in-process harness. Wait for the active hold through the public
@@ -2246,16 +2306,23 @@ async fn native_resource_public_dispatch_readindex_and_failover_scenario() {
     // predate the reservation entry and does not prove the hold was applied.
     wait_for_public_active_status(&cluster, new_leader, 1).await;
 
-    let stale_follower = cluster
-        .live_ids()
-        .into_iter()
-        .find(|node_id| *node_id != new_leader)
-        .expect("a follower remains after failover");
-    // Establish that the selected follower has the pre-release hold and knows
-    // the current leader before isolating it. The isolation leaves the second
-    // survivor available, so the release still has a quorum to commit.
-    wait_for_backend_active_reservation(&cluster, stale_follower, 1).await;
-    wait_for_node_leader(&cluster, stale_follower, new_leader).await;
+    // Establish that the selected follower has the pre-release hold and follows
+    // the serving leader before isolating it. The isolation leaves the other
+    // survivors available, so the release still has a quorum to commit. The
+    // leader is re-resolved after the hold is visible, so neither id is a
+    // snapshot older than the isolation.
+    let (new_leader, stale_follower) = loop {
+        let serving = settled_graph_leader(&cluster, &[]).await;
+        let follower = cluster
+            .live_ids()
+            .into_iter()
+            .find(|node_id| *node_id != serving)
+            .expect("a follower remains after failover");
+        wait_for_backend_active_reservation(&cluster, follower, 1).await;
+        if settled_graph_leader(&cluster, &[]).await == serving {
+            break (serving, follower);
+        }
+    };
     medulla_raft::raft::network::partition::isolate(stale_follower);
 
     let released = drive_public_release_after_failover(
@@ -2277,13 +2344,10 @@ async fn native_resource_public_dispatch_readindex_and_failover_scenario() {
     // its typed result; the surviving second follower applies the same row. The
     // host revision follows the release, so the restarted node must catch up both
     // the new telemetry and the terminal reservation tombstone.
+    // The healed member rejoins with whatever term it reached while cut off, so
+    // the serving leader is re-resolved instead of assumed.
+    let new_leader = settled_graph_leader(&cluster, &[]).await;
     decode_host_result(dispatch_host_update(&cluster, new_leader, 5, 2).await, 2);
-    let survivor = cluster
-        .all_ids()
-        .into_iter()
-        .find(|node_id| *node_id != leader && *node_id != new_leader)
-        .expect("one follower survives alongside the new leader");
-    assert_eq!(survivor, stale_follower);
     // The direct follower poll only waits for catch-up.  The public leader status
     // read below is the evidence returned to an engine client.
     wait_for_backend_reservation_state(
@@ -2313,12 +2377,8 @@ async fn native_resource_public_dispatch_readindex_and_failover_scenario() {
         ResourceReservationSummaryState::Released,
     )
     .await;
-    let current_leader = cluster
-        .wait_for_leader(Duration::from_secs(20))
-        .await
-        .expect("current leader remains discoverable after restart");
+    let current_leader = settled_graph_leader(&cluster, &[]).await;
     if current_leader == leader {
-        wait_for_node_leader(&cluster, leader, leader).await;
         let status = decode_status_result(dispatch_status(&cluster, leader, 7).await, 2);
         assert_released_status(&status);
         let queried = dispatch_method(
@@ -2336,7 +2396,6 @@ async fn native_resource_public_dispatch_readindex_and_failover_scenario() {
         );
         assert_eq!(queried.lifecycle_revision, released.lifecycle_revision);
     } else {
-        wait_for_node_leader(&cluster, leader, current_leader).await;
         assert_redirect(dispatch_status(&cluster, leader, 7).await, current_leader);
         let status = decode_status_result(dispatch_status(&cluster, current_leader, 8).await, 2);
         assert_released_status(&status);
@@ -2385,10 +2444,7 @@ async fn kg_delegate_public_dispatch_replicates_and_replays_after_failover_scena
     ensure_commons_graph(&cluster).await;
     let entry = seed_delegation_library(&cluster).await;
     attach_multi_raft(&cluster).await;
-    let leader = cluster
-        .wait_for_leader(Duration::from_secs(15))
-        .await
-        .expect("initial leader elected");
+    let leader = settled_graph_leader(&cluster, &[]).await;
 
     let accepted_method = delegation_method(&entry);
     let accepted_deadline = match &accepted_method {
@@ -2435,13 +2491,15 @@ async fn kg_delegate_public_dispatch_replicates_and_replays_after_failover_scena
          attempt nonce before native replay, got: {refusal}"
     );
 
+    // Re-resolve after the admission: every member names the serving leader, so
+    // the follower picked below redirects to it.
+    let leader = settled_graph_leader(&cluster, &[]).await;
     let follower = cluster
         .all_ids()
         .into_iter()
         .find(|node_id| *node_id != leader)
         .expect("a follower exists");
     wait_for_graph_node(&cluster, follower, DELEGATE_WORK_ITEM).await;
-    wait_for_node_leader(&cluster, follower, leader).await;
     assert_redirect(
         dispatch_method(&cluster, follower, 2, accepted_method.clone()).await,
         leader,
@@ -2524,10 +2582,8 @@ async fn kg_delegate_public_dispatch_replicates_and_replays_after_failover_scena
     // live handle(s) after cleanup".
     drop(leader_backend);
     cluster.kill(leader).await.expect("kill initial leader");
-    let new_leader = cluster
-        .wait_for_leader_excluding(leader, Duration::from_secs(20))
-        .await
-        .expect("survivor elected after leader failure");
+    let new_leader = settled_graph_leader(&cluster, &[]).await;
+    assert_ne!(new_leader, leader);
     let replayed = decode_delegation_result(
         dispatch_method(
             &cluster,
@@ -2566,13 +2622,11 @@ async fn kg_delegate_public_dispatch_replicates_and_replays_after_failover_scena
     ensure_commons_graph(&cluster).await;
     attach_multi_raft(&cluster).await;
     wait_for_graph_node(&cluster, leader, DELEGATE_WORK_ITEM).await;
-    wait_for_node_leader(&cluster, leader, new_leader).await;
     assert!(
         cluster.has_node_in(leader, GRAPH, DELEGATE_WORK_ITEM).await,
         "reopened member must retain the replicated WorkItem"
     );
-    transfer_graph_leader(&cluster, new_leader, leader).await;
-    wait_for_node_leader(&cluster, new_leader, leader).await;
+    transfer_graph_leader(&cluster, leader).await;
     let reopened = decode_delegation_result(
         dispatch_method(
             &cluster,
