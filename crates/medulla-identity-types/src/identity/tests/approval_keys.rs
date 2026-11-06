@@ -218,6 +218,7 @@ fn registration_message_has_exact_domain_lengths_and_revision_binding() {
 }
 
 // spec: MEDULLA-TYPED-PACKS-R085.5.1
+/// Verifies MEDULLA-IDENTITY-R711: Registered human approval keys
 // spec: MEDULLA-IDENTITY-R711
 #[test]
 fn delegated_broker_cannot_attest_or_revoke_but_may_read_public_facts() {

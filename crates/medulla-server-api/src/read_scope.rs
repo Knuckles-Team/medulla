@@ -320,6 +320,7 @@ mod tests {
         }
     }
 
+    /// Verifies MEDULLA-IDENTITY-R023.3: Wiring: visible-unit filter on the served read path
     // spec: MEDULLA-IDENTITY-R023.3
     #[test]
     fn view_is_narrowed_to_visible_units() {
@@ -337,6 +338,7 @@ mod tests {
         assert!(!c.view.has_node("shared") && !c.view.has_node("private"));
     }
 
+    /// Verifies MEDULLA-IDENTITY-R610.4: Refusal: unscopable read query
     // spec: MEDULLA-IDENTITY-R610.4
     #[test]
     fn plan_without_variable_is_unscopable() {
@@ -345,6 +347,7 @@ mod tests {
         assert_eq!(refused.code(), "QUERY_UNSCOPABLE");
     }
 
+    /// Verifies MEDULLA-IDENTITY-R023.4: Refusal: point read outside scope
     // spec: MEDULLA-IDENTITY-R023.4
     #[test]
     fn hidden_unit_point_read_names_id_only() {
