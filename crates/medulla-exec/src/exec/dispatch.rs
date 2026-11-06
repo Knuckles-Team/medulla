@@ -258,6 +258,7 @@ fn apply_graph_navigation(op: &Op, input: RowSet, ctx: &PlanCtx) -> Result<RowSe
             let filter = expand::EdgeFilter {
                 rel: rel.as_deref(),
                 preds: edge_preds,
+                pin: ctx.as_of_pin,
             };
             expand::expand_op(ctx.view, &input, *dir, (*min, *max), &filter, &ctx.budget)
         }

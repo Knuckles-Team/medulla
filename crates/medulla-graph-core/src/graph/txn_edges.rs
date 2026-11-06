@@ -371,7 +371,19 @@ impl<'a> GraphTxn<'a> {
                 "{code}: prior edge {prior_source} -> {prior_target} ({prior_relationship}) {state}"
             ));
         }
-        self.add_edge(new_source, new_target, new_properties_msgpack)
+        // MEDULLA-DURABLE-KERNEL-R079: the new version opens its windows where the
+        // prior closed: `valid_from` = the supersession's valid instant, `tx_from` =
+        // its transaction instant.
+        let opened = match decode_property_value(&new_properties_msgpack) {
+            Ok(serde_json::Value::Object(mut map)) => {
+                map.insert("valid_from".into(), serde_json::json!(valid_at));
+                map.insert("tx_from".into(), serde_json::json!(tx_now));
+                rmp_serde::to_vec_named(&serde_json::Value::Object(map))
+                    .map_err(|e| format!("supersede edge: re-encode properties: {e}"))?
+            }
+            _ => new_properties_msgpack,
+        };
+        self.add_edge(new_source, new_target, opened)
     }
 }
 
