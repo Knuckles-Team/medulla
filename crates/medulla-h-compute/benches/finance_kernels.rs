@@ -6,13 +6,21 @@
 //! p50 under 25 ms, p99 under 60 ms, peak memory under 48 MiB, regression above 10
 //! percent fails the nightly run.
 //!
+//! MEDULLA-FINANCE-PRIMITIVES-R901.6: group `finance/aml_screen_100k` loops 100k
+//! `banking::screen_transaction` calls per iteration (the served route screens one
+//! transaction per call). Budgets in the optimized profile: loop p50 under 20 ms, p99
+//! under 50 ms, peak resident growth under 8 MiB; the same 10 percent regression rule
+//! applies through the shared thresholds entry.
+//!
 //! Run: `cargo bench -p medulla-h-compute --features finance --bench finance_kernels`.
 
 use criterion::{criterion_group, criterion_main, Criterion};
+use medulla_finance::banking::{self, AmlRule};
 use medulla_finance_quant::pattern::{classify, PatternKnobs};
 
 const SERIES: usize = 500;
 const BARS: usize = 1_000;
+const AML_CALLS: i64 = 100_000;
 
 /// A deterministic pseudo-random walk of `BARS` OHLC bars.
 fn series(seed: u64) -> [Vec<f64>; 4] {
@@ -60,5 +68,26 @@ fn bench_pattern(c: &mut Criterion) {
     });
 }
 
-criterion_group!(benches, bench_pattern);
+fn bench_aml_screen(c: &mut Criterion) {
+    let rule = AmlRule {
+        rule_id: "ctr".into(),
+        version: 1,
+        threshold_minor: 10_000,
+    };
+    c.bench_function("finance/aml_screen_100k", |b| {
+        b.iter(|| {
+            let mut alerts = 0usize;
+            for amount in 1..=AML_CALLS {
+                let screened = banking::screen_transaction(
+                    std::hint::black_box(&rule),
+                    std::hint::black_box(amount % 20_000 + 1),
+                );
+                alerts += usize::from(screened.expect("valid input").is_some());
+            }
+            std::hint::black_box(alerts)
+        })
+    });
+}
+
+criterion_group!(benches, bench_pattern, bench_aml_screen);
 criterion_main!(benches);

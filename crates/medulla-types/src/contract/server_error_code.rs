@@ -228,6 +228,7 @@ closed_error_codes! {
         SeedTooLarge => "SEED_TOO_LARGE",
         SeedTurtleInvalid => "SEED_TURTLE_INVALID",
         SelectionUnavailable => "SELECTION_UNAVAILABLE",
+        SessionReferenceUnknown => "SESSION_REFERENCE_UNKNOWN",
         SnapshotUnknown => "SNAPSHOT_UNKNOWN",
         SourceApprovalMismatch => "SOURCE_APPROVAL_MISMATCH",
         SourceApprovalNotAdmitted => "SOURCE_APPROVAL_NOT_ADMITTED",

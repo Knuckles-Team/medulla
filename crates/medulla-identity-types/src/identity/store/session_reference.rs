@@ -2,7 +2,8 @@
 
 use super::{ApplyContext, IdentityStore};
 use crate::identity::{
-    IdentityRefusal, IdentityReply, IdentityStamp, SessionRecord, SessionRecordProjection, UserKind,
+    IdentityRefusal, IdentityReply, IdentityStamp, SessionLiveness, SessionRecord,
+    SessionRecordProjection, UserKind,
 };
 
 impl IdentityStore {
@@ -96,5 +97,49 @@ impl IdentityStore {
             idle_expires_at_ms: session.idle_expires_at_ms,
             mfa_at_ms: session.mfa_at_ms,
         }))
+    }
+
+    /// The stored state of one session reference, judged from stored expiry and
+    /// revocation only. Reads nothing but the reference and the tenant: it
+    /// never takes or returns a token and never touches last-seen or expiry.
+    /// An API-key id or an external-identity link key answers
+    /// `not_session_bound`; any other unknown reference, or one bound to a
+    /// different tenant than the request and the caller's deployment tenant,
+    /// refuses `SESSION_REFERENCE_UNKNOWN`.
+    pub(super) fn session_liveness(
+        &self,
+        reference: &str,
+        tenant: &str,
+        stamp: &IdentityStamp,
+        now_ms: u64,
+    ) -> Result<SessionLiveness, IdentityRefusal> {
+        if reference.is_empty()
+            || stamp
+                .session_tenant
+                .as_deref()
+                .is_some_and(|caller| caller != tenant)
+        {
+            return Err(IdentityRefusal::SessionReferenceUnknown);
+        }
+        let mut matches = self
+            .sessions
+            .values()
+            .filter(|session| session.session_ref.as_deref() == Some(reference));
+        let Some(session) = matches.next() else {
+            if self.api_keys.contains_key(reference) || self.links.contains_key(reference) {
+                return Ok(SessionLiveness::NotSessionBound);
+            }
+            return Err(IdentityRefusal::SessionReferenceUnknown);
+        };
+        if matches.next().is_some() || session.session_tenant.as_deref() != Some(tenant) {
+            return Err(IdentityRefusal::SessionReferenceUnknown);
+        }
+        Ok(if session.revoked_at_ms.is_some() {
+            SessionLiveness::Revoked
+        } else if session.is_live(now_ms) {
+            SessionLiveness::Live
+        } else {
+            SessionLiveness::Expired
+        })
     }
 }
