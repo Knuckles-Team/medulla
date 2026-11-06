@@ -15,6 +15,8 @@ JSON = "application/json"
 TURTLE = "text/turtle"
 MARKDOWN = "text/markdown"
 ONTOLOGY_BASE = "https://synthetic.example/ontology"
+_CORE_ROOT = "http://knuckles.team/kg#DomainEntity"
+
 _PREFIXES = (
     "@prefix owl: <http://www.w3.org/2002/07/owl#> .\n"
     "@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n"
@@ -118,7 +120,11 @@ def namespace(connector: str, file: str) -> str:
 def _classes(connector: str, file: str, count: int) -> str:
     ns = namespace(connector, file)
     lines = [_PREFIXES, f"<{ns[:-1]}> a owl:Ontology .\n"]
-    lines.append(f'<{ns}C0000> a owl:Class ; rdfs:label "C0" .\n')
+    # Every pack class must reach a parent-catalog class (MEDULLA-TYPED-PACKS-R105.1).
+    lines.append(
+        f"<{ns}C0000> a owl:Class ; rdfs:subClassOf <{_CORE_ROOT}> ; "
+        'rdfs:label "C0" .\n'
+    )
     lines += [
         f"<{ns}C{i:04d}> a owl:Class ; rdfs:subClassOf <{ns}C0000> ; "
         f'rdfs:label "C{i}" .\n'
