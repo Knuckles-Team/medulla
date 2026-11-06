@@ -781,6 +781,7 @@ mod tests {
         }
         assert_eq!(operation_scope("PATCH", &["v1", "namespaces"]), None);
     }
+    use medulla_lake::schema::{LakeField, LakeSchema, LakeType};
     use medulla_server_blob::blob::store::RedbChunkStore;
     use medulla_tsdb::point::Point;
     use medulla_tsdb::store::SeriesStore;
