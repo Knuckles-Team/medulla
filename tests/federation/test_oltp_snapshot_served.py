@@ -1,7 +1,10 @@
 """MEDULLA-UNIFIED-DATA-PLANE-R038.3 served acceptance: one snapshot per source.
 
 Drives ``Method::SparqlVirtual`` over an R2RML mapping of a PostgreSQL source while a
-second connection commits an extra row between the two scans.
+second connection commits an extra row between the two scans. A query with two
+fragments of one source needs a single snapshot; a source that cannot give one (a
+plain HTTP/JSON source) refuses the query with ``SNAPSHOT_UNAVAILABLE`` before any
+request reaches the source.
 """
 
 from __future__ import annotations
@@ -10,6 +13,8 @@ import threading
 import time
 
 import pytest
+
+from medulla.client import EngineResponseError
 
 MAPPING = """
 @prefix rr: <http://www.w3.org/ns/r2rml#> .
@@ -69,3 +74,26 @@ def test_fragments_share_one_snapshot(clean_graph, pg_source):
     assert pg_source.execute("SELECT count(*) FROM snap_base") == "4"
     # The engine stores zero source rows.
     assert clean_graph.rdf.sparql("SELECT ?s WHERE { ?s ?p ?o }") == []
+
+
+def scan(name: str) -> dict[str, object]:
+    return {"ForeignScan": {"source": {"Named": {"name": name}}, "join": False}}
+
+
+@pytest.mark.spec("MEDULLA-UNIFIED-DATA-PLANE-R038.3.4")
+def test_snapshot_refusals(clean_graph):
+    clean_graph.query.register_foreign_source(
+        "no-snapshot-source",
+        {
+            "HttpJson": {
+                "url": "https://source.example.test/rows",
+                "json_path": "",
+                "field_map": {"id": "id"},
+            }
+        },
+    )
+    with pytest.raises(EngineResponseError) as refused:
+        clean_graph.query.unified(
+            [scan("no-snapshot-source"), scan("no-snapshot-source")]
+        )
+    assert "SNAPSHOT_UNAVAILABLE" in str(refused.value)
