@@ -126,6 +126,7 @@ pub(super) const RLS_ROUTED: &[&str] = &[
     "ListGraphs",
     "ListRegisteredServers",
     "ListTriggers",
+    "LiveArtifactGet",
     "MatchOntologyTerms",
     "MaterializationStatus",
     "MineClassifyFit",

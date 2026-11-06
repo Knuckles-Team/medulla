@@ -202,6 +202,8 @@ pub(crate) use sql_dispatch::*;
 mod sql_catalog;
 pub(crate) use sql_catalog::*;
 #[cfg(feature = "query")]
+mod live_artifact;
+#[cfg(feature = "query")]
 mod uql_statement;
 
 #[cfg(test)]

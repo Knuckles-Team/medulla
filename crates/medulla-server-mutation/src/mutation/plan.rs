@@ -181,6 +181,10 @@ pub const GATEWAY_ROUTED: &[&str] = &[
     "Sql",
     "CypherQuery",
     "GraphQl",
+    // MEDULLA-FEDERATED-QUERY-R701.3: the live-artifact writes run in the query handler over
+    // the staged graph, like the query-surface writes above.
+    "LiveArtifactPut",
+    "LiveArtifactRefresh",
     // ── L11 rollout batch 4: native RDF write surface (GraphRedb-durable,
     // audited) — routed via `commit_conditional_mutation_async` at the rdf
     // dispatch site because parsing and graph projection require `state`.
@@ -478,6 +482,8 @@ fn query_method_name(m: &Method) -> Option<&'static str> {
     match m {
         Method::Sql { .. } => Some("Sql"),
         Method::CypherQuery { .. } => Some("CypherQuery"),
+        Method::LiveArtifactPut { .. } => Some("LiveArtifactPut"),
+        Method::LiveArtifactRefresh { .. } => Some("LiveArtifactRefresh"),
         #[cfg(feature = "graphql")]
         Method::GraphQl { .. } => Some("GraphQl"),
         _ => None,
