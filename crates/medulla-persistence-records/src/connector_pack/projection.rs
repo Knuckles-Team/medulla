@@ -34,6 +34,36 @@ pub struct PackProjectionBody {
     pub length: u64,
 }
 
+/// One tool, prompt, skill or server member of the pack head, as the surface
+/// projection reads it (MEDULLA-TYPED-PACKS-R102.2). A withdrawn member stays
+/// listed so its node keeps `cp:lifecycle "withdrawn"`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PackSurfaceMember {
+    pub uri: String,
+    pub kind: medulla_catalog_types::connector_pack::PackEntryKind,
+    pub component_id: String,
+    pub entry_revision: u64,
+    pub lifecycle: AgentLibraryLifecycle,
+}
+
+impl PackSurfaceMember {
+    /// The member of a surface kind, or `None` for a schema or file member.
+    fn of(member: &ConnectorPackMemberRow) -> Option<Self> {
+        use medulla_catalog_types::connector_pack::PackEntryKind as Kind;
+        matches!(
+            member.kind,
+            Kind::McpServer | Kind::Tool | Kind::Prompt | Kind::Skill
+        )
+        .then(|| Self {
+            uri: member.uri.clone(),
+            kind: member.kind,
+            component_id: member.component_id.clone(),
+            entry_revision: member.entry_revision,
+            lifecycle: member.lifecycle,
+        })
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ConnectorPackProjectionPlan {
     pub tenant_id: String,
@@ -44,6 +74,15 @@ pub struct ConnectorPackProjectionPlan {
     pub bodies: Vec<PackProjectionBody>,
     /// Held declarations pinned to the current tenant/head, never executable bindings.
     pub source_registrations: Vec<medulla_catalog_types::connector_pack::PackSourceRegistration>,
+    /// The surface members of the head, sorted by URI.
+    pub surface: Vec<PackSurfaceMember>,
+}
+
+impl ConnectorPackProjectionPlan {
+    /// The pack digest of the head this plan projects.
+    pub fn pack_digest(&self) -> &Digest256 {
+        &self.head.pack_digest
+    }
 }
 
 impl AgentLibraryStore {
@@ -78,6 +117,7 @@ impl AgentLibraryStore {
 
         let mut bodies = Vec::new();
         let mut source_registrations = Vec::new();
+        let mut surface = Vec::new();
         for row in members
             .range((tenant_id, connector.as_str(), "")..)
             .map_err(|error| error.to_string())?
@@ -89,6 +129,7 @@ impl AgentLibraryStore {
             }
             let member: ConnectorPackMemberRow =
                 crate::agent_row::decode(value.value(), "connector pack member")?;
+            surface.extend(PackSurfaceMember::of(&member));
             if !matches!(
                 member.kind,
                 medulla_catalog_types::connector_pack::PackEntryKind::Ontology
@@ -145,6 +186,7 @@ impl AgentLibraryStore {
             });
         }
         bodies.sort_by(|left, right| left.uri.cmp(&right.uri));
+        surface.sort_by(|left, right| left.uri.cmp(&right.uri));
         Ok(ConnectorPackProjectionPlan {
             tenant_id: tenant_id.to_string(),
             connector: connector.clone(),
@@ -156,6 +198,7 @@ impl AgentLibraryStore {
             record_id: head.head.record_id,
             bodies,
             source_registrations,
+            surface,
         })
     }
 
@@ -489,6 +532,7 @@ pub mod tests {
             record_id: "pack-record-demo-7".into(),
             bodies: Vec::new(),
             source_registrations: Vec::new(),
+            surface: Vec::new(),
         }
     }
 

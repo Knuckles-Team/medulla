@@ -11,13 +11,12 @@ use medulla_catalog_types::connector_pack::PackViolationCode;
 use medulla_rdf::oxrdf::{Graph, Literal, NamedNode, Subject, Term, Triple};
 use serde_json::Value;
 
-const CP: &str = "http://knuckles.team/kg/connector-pack#";
+use crate::admin::connector_pack::surface_vocab::{CONNECTOR_BASE, CP, RDF_TYPE};
+
 const CONTRACT_BASE: &str = "http://knuckles.team/kg/connector-pack/contract/";
-const CONNECTOR_BASE: &str = "http://knuckles.team/kg/connector-pack/connector/";
-const RDF_TYPE: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 
 /// Percent-encode one IRI path segment (RFC 3986 unreserved characters stay).
-fn segment(value: &str) -> String {
+pub(super) fn segment(value: &str) -> String {
     let mut out = String::with_capacity(value.len());
     for byte in value.bytes() {
         if byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'.' | b'_' | b'~') {

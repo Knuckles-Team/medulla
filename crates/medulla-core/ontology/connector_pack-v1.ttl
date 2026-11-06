@@ -268,6 +268,24 @@ cp:componentId a owl:DatatypeProperty ;
     rdfs:domain [ a owl:Class ; owl:unionOf (cp:Connector cp:Tool cp:Prompt cp:Skill) ] ;
     rdfs:range xsd:string .
 
+cp:entryRevision a owl:DatatypeProperty ;
+    rdfs:label "entry revision" ;
+    rdfs:comment "The pack entry revision the engine stamps on one surface node (MEDULLA-TYPED-PACKS-R102.6)." ;
+    rdfs:domain [ a owl:Class ; owl:unionOf (cp:Connector cp:Tool cp:Prompt cp:Skill) ] ;
+    rdfs:range xsd:integer .
+
+cp:packDigest a owl:DatatypeProperty ;
+    rdfs:label "pack digest" ;
+    rdfs:comment "The SHA-256 pack digest (64 lowercase hex characters) of the head one surface node was projected from (MEDULLA-TYPED-PACKS-R102.6)." ;
+    rdfs:domain [ a owl:Class ; owl:unionOf (cp:Connector cp:Tool cp:Prompt cp:Skill) ] ;
+    rdfs:range xsd:string .
+
+cp:lifecycle a owl:DatatypeProperty ;
+    rdfs:label "lifecycle" ;
+    rdfs:comment "Whether one surface node's member is active, retired or withdrawn in the pack head; a withdrawn member keeps its node (MEDULLA-TYPED-PACKS-R102.2)." ;
+    rdfs:domain [ a owl:Class ; owl:unionOf (cp:Connector cp:Tool cp:Prompt cp:Skill) ] ;
+    rdfs:range xsd:string .
+
 # ── Core rooting (MEDULLA-TYPED-PACKS-R071.2) ───────────────────────────────────
 # Every class of this module above reaches the core class kg:DomainEntity through rdfs:subClassOf.
 <http://knuckles.team/kg/connector-pack#AccessPolicy> rdfs:subClassOf <http://knuckles.team/kg#DomainEntity> .

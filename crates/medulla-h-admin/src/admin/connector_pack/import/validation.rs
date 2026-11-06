@@ -17,6 +17,11 @@ use medulla_persistence_records::connector_pack::CONNECTOR_DECLARATION_URI;
 use super::facts::uri_prefix;
 use super::json::parse_bounded_json;
 
+#[cfg(feature = "rdf")]
+mod core_classes;
+#[cfg(feature = "rdf")]
+mod surface;
+
 pub(super) fn validate_index(
     request: &ConnectorPackImportRequest,
     archive: &[u8],
@@ -590,6 +595,11 @@ fn finish_validation(validator: &mut IndexValidator<'_>) {
         validator.reject(code, None, detail);
     }
     flag_ontology_orphans(validator);
+    #[cfg(feature = "rdf")]
+    {
+        core_classes::flag_core_conflicts(validator);
+        surface::check_surface(validator);
+    }
 }
 
 /// How the deployment treats a pack ontology class with no subclass path to the
@@ -624,11 +634,18 @@ fn orphan_policy() -> OrphanPolicy {
 /// fit in one kibibyte.
 #[cfg(feature = "rdf")]
 fn orphan_detail(orphans: &[String]) -> String {
-    let mut detail = format!(
+    let lead = format!(
         "{} class(es) have no rdfs:subClassOf path to the parent catalog: ",
         orphans.len()
     );
-    for (index, class) in orphans.iter().enumerate() {
+    class_list_detail(&lead, orphans)
+}
+
+/// `lead`, then as many of `classes` as fit in one kibibyte.
+#[cfg(feature = "rdf")]
+fn class_list_detail(lead: &str, classes: &[String]) -> String {
+    let mut detail = lead.to_string();
+    for (index, class) in classes.iter().enumerate() {
         let item = if index == 0 {
             class.clone()
         } else {
