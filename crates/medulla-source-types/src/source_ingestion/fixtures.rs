@@ -51,6 +51,8 @@ pub fn request() -> SourceIngestionRequest {
         authoritative_live_ids: None,
         empty_authoritative_approval: None,
         withdrawals: BoundedVec::new(Vec::new()).expect("bounded source withdrawals"),
+        kind: Default::default(),
+        extension: None,
     })
     .expect("valid source ingestion request")
 }

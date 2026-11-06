@@ -186,6 +186,8 @@ mod tests {
             authoritative_live_ids: None,
             empty_authoritative_approval: None,
             withdrawals: BoundedVec::new(Vec::new()).unwrap(),
+            kind: Default::default(),
+            extension: None,
         })
         .unwrap()
     }
