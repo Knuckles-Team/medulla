@@ -2323,6 +2323,8 @@ components:
       - "crates/medulla-lake/src/delta.rs"
       - "crates/medulla-lake/src/iceberg.rs"
       - "crates/medulla-lake/src/iceberg_avro.rs"
+      - "crates/medulla-lake/src/metastore.rs"
+      - "crates/medulla-lake/src/metastore/scan.rs"
       - "crates/medulla-lake/src/parquet_io.rs"
       - "crates/medulla-lake/src/schema.rs"
       - "crates/medulla-lake/src/snapshot.rs"

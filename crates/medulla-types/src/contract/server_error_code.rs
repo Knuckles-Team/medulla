@@ -446,5 +446,9 @@ closed_error_codes! {
         EffectReceiptMismatch => "EFFECT_RECEIPT_MISMATCH",
         GraphShardFormatUpgradeRequired => "GRAPH_SHARD_FORMAT_UPGRADE_REQUIRED",
         WorkItemClaimStale => "WORK_ITEM_CLAIM_STALE",
+        MetastoreSpecInvalid => "METASTORE_SPEC_INVALID",
+        PartitionLimitExceeded => "PARTITION_LIMIT_EXCEEDED",
+        SchemaIncompatible => "SCHEMA_INCOMPATIBLE",
+        UnsupportedTableLayout => "UNSUPPORTED_TABLE_LAYOUT",
     }
 }
