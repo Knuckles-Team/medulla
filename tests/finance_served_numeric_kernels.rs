@@ -255,7 +255,7 @@ async fn factor_rank_abstains_on_thin_input() {
     );
 }
 
-fn schedule(slices: u32, risk_aversion: f64) -> Method {
+fn schedule(slices: usize, risk_aversion: f64) -> Method {
     Method::FinanceExecutionSchedule {
         symbol: "AAPL".into(),
         total_shares: 1_000.0,
