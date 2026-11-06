@@ -86,7 +86,7 @@ pub async fn handle_incident_evidence(
     incident_id: String,
 ) -> Response {
     let result = async {
-        let (_, _, authority) = load(state, &target).await?;
+        let (_, authority) = load(state, &target).await?;
         let tenant = Some(target.verified.tenant());
         authority
             .evidence(tenant, &incident_id)
@@ -128,7 +128,7 @@ pub async fn handle_incident_set_status(
     status: IncidentStatus,
 ) -> Response {
     let result = async {
-        let (_, _, mut authority) = load(state, &target).await?;
+        let (_, mut authority) = load(state, &target).await?;
         let tenant = Some(target.verified.tenant());
         authority
             .set_status(tenant, &incident_id, status)
@@ -145,7 +145,7 @@ async fn correlate(
     anomalies: Vec<AnomalyReading>,
     window_ms: u64,
 ) -> Result<IncidentWriteReceipt, String> {
-    let (_, _, mut authority) = load(state, target).await?;
+    let (_, mut authority) = load(state, target).await?;
     let tenant = Some(target.verified.tenant());
     let touched = authority
         .correlate(tenant, anomalies, window_ms)
