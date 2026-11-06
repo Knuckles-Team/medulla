@@ -24,6 +24,8 @@
 //! never double-count.
 
 mod adapter;
+// MEDULLA-DECISION-ENGINE-R652 — claim lifecycle, evidence, arbitration and sealing kernels.
+pub mod claims;
 #[cfg(feature = "epistemic-tms")]
 mod incremental;
 mod model;

@@ -21,6 +21,7 @@ mod document_ops;
 mod gateway;
 mod graph_access;
 mod graph_dispatch;
+mod meeting_transcript;
 // MEDULLA-UNIFIED-DATA-PLANE-R702.3 — the served lineage drain.
 mod lineage_ingest;
 #[cfg(all(feature = "raft", feature = "modality-serving"))]

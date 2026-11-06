@@ -108,10 +108,51 @@ fn enforce_controller_scope(
     ))
 }
 
+/// The scope a served agent bus method needs (MEDULLA-DURABLE-KERNEL-R095.1003).
+fn required_bus_scope(method: &Method) -> Option<&'static str> {
+    match method {
+        Method::BusRegister { .. } | Method::BusHeartbeat { .. } => Some("bus:write"),
+        Method::BusRoster { .. } => Some("bus:read"),
+        _ => None,
+    }
+}
+
+/// Refuse a bus method without its scope before any lookup; writes nothing.
+fn enforce_bus_scope(
+    req: &Request,
+    verified_context: &VerifiedRequestContext,
+) -> Result<(), Response> {
+    let Some(required_scope) = required_bus_scope(&req.method) else {
+        return Ok(());
+    };
+    if let Method::BusRoster { tenant, .. } = &req.method {
+        if tenant != verified_context.tenant() {
+            medulla_kernel::metrics::access_denied();
+            return Err(Response::err(
+                req.id,
+                "ACCESS_DENIED: BusRoster tenant must match verified request tenant",
+            ));
+        }
+    }
+    if verified_context.allows_action(required_scope) || verified_context.allows_action("kg:admin")
+    {
+        return Ok(());
+    }
+    medulla_kernel::metrics::access_denied();
+    Err(Response::err(
+        req.id,
+        format!(
+            "{}: bus method requires scope '{required_scope}'",
+            medulla_types::contract::ServerErrorCode::BusScopeRequired.as_str()
+        ),
+    ))
+}
+
 fn check_resource_and_capacity_controller_scope(
     req: &Request,
     verified_context: &VerifiedRequestContext,
 ) -> Result<(), Response> {
+    enforce_bus_scope(req, verified_context)?;
     // Resource authority is checked BEFORE capacity authority; a request that
     // violates both must keep reporting the resource refusal.
     enforce_controller_scope(

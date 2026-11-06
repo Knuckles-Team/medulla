@@ -56,7 +56,8 @@ pub const WORK_ITEM_CHECKPOINT_DIGEST: &str = "run_checkpoint_digest";
 /// The WorkItem-row property that records where the item's external effect
 /// stands (MEDULLA-DURABLE-KERNEL-R820.1).
 pub const WORK_ITEM_EFFECT_PHASE: &str = "effect_phase";
-pub const NATIVE_WORK_ITEM_ROW_KEYS: [&str; 16] = [
+pub const NATIVE_WORK_ITEM_ROW_KEYS: [&str; 17] = [
+    crate::native_control::WORK_ITEM_LIFECYCLE_REVISION,
     RUN_ADMISSION_REQUEST,
     WORK_ITEM_CHECKPOINT_REF,
     WORK_ITEM_CHECKPOINT_REVISION,

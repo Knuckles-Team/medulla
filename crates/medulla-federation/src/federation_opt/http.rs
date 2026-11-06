@@ -171,6 +171,8 @@ impl RemoteFetch for HttpRemote<'_> {
                 FullFetch::Allowed
             },
             rate: SourceRate::new(2, 4),
+            snapshot_reads: false,
+            search_push: false,
         }
     }
 

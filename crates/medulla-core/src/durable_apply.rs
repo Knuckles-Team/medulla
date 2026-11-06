@@ -116,7 +116,44 @@ pub fn apply(core: &GraphCore, m: &Method) {
     if apply_broker_streams(core, m) {
         return;
     }
+    if apply_agent_bus(core, m) {
+        return;
+    }
     let _ = apply_memory(core, m);
+}
+
+/// Agent bus roster rows (MEDULLA-DURABLE-KERNEL-R095.1001): the logged method
+/// carries the engine-stamped tenant, principal and request clock, so replay
+/// rebuilds the same participant node byte for byte.
+fn apply_agent_bus(core: &GraphCore, m: &Method) -> bool {
+    use medulla_types::agent_bus::{participant_node_id, BusParticipant};
+    match m {
+        Method::BusRegister {
+            participant,
+            principal,
+        } => {
+            core.add_node(
+                participant_node_id(&participant.session_ref),
+                participant.to_node_props(principal),
+            );
+            true
+        }
+        Method::BusHeartbeat {
+            session_ref,
+            now_ms,
+            ..
+        } => {
+            let id = participant_node_id(session_ref);
+            if let Some(props) = core
+                .get_node_properties(&id)
+                .and_then(|bytes| BusParticipant::heartbeat_props(&bytes, *now_ms))
+            {
+                core.add_node(id, props);
+            }
+            true
+        }
+        _ => false,
+    }
 }
 
 fn apply_base_graph(core: &GraphCore, m: &Method) -> bool {

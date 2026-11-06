@@ -192,7 +192,8 @@
 :ScholarlyPaper a owl:Class ;
     rdfs:label "Scholarly Paper" ;
     rdfs:comment "A scholarly paper with its citations and publication year (ScholarX paper)." ;
-    rdfs:subClassOf :Document .
+    rdfs:subClassOf :Document  ;
+    rdfs:subClassOf :ResearchPaper .
 
 :resourceUrl a owl:DatatypeProperty ;
     rdfs:label "resource URL" ;
@@ -220,9 +221,9 @@
 
 :cites a owl:ObjectProperty ;
     rdfs:label "cites" ;
-    rdfs:comment "Links a scholarly paper to a paper it cites." ;
-    rdfs:domain :ScholarlyPaper ;
-    rdfs:range :ScholarlyPaper .
+    rdfs:comment "Links a research paper to a paper it cites." ;
+    rdfs:domain :ResearchPaper ;
+    rdfs:range :ResearchPaper .
 
 :publicationYear a owl:DatatypeProperty ;
     rdfs:label "publication year" ;
@@ -241,3 +242,9 @@
     rdfs:comment "Share of sessions with dead clicks on the web resource in the measured window." ;
     rdfs:domain :WebResource ;
     rdfs:range xsd:decimal .
+
+:changesResource a owl:ObjectProperty ;
+    rdfs:label "changes resource" ;
+    rdfs:comment "Links a merged :Change to the :WebResource page it altered." ;
+    rdfs:domain :Change ;
+    rdfs:range :WebResource .

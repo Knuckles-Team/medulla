@@ -156,6 +156,16 @@ impl<'a> DepProbe<'a> {
     pub fn is_valid(&self, deps: &DepSet, computed_at: u64) -> bool {
         is_valid_at(self.clock, deps, computed_at, self.embedding_generation)
     }
+
+    /// The generation of one graph dimension: the graph version of its last write
+    /// (or of the coarse floor), which only moves forward. An embedding generation
+    /// is not a graph dimension and has none.
+    pub fn generation(&self, dim: &Dim) -> Option<u64> {
+        match dim {
+            Dim::EmbeddingGeneration(_) => None,
+            graph => Some(last_write_version(self.clock, std::slice::from_ref(graph))),
+        }
+    }
 }
 
 impl<'a> From<&'a DepClock> for DepProbe<'a> {

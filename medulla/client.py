@@ -42,6 +42,8 @@ from .generated.server_registry import (
     RegisteredServerListRequest,
     RegisteredServerView,
 )
+from .otlp_logs import OtlpLogBatch
+from .otlp_logs import ingest_otlp_logs as _ingest_otlp_logs
 from .placement import PlacementDirectory
 from .policy_evolution import PolicyEvolutionClient
 from .work_market import GapClient, WorkMarketClient
@@ -16752,6 +16754,18 @@ class MedullaClient:
         self._close_writer_once()
         with contextlib.suppress(asyncio.CancelledError, Exception):
             await asyncio.wait_for(self._writer.wait_closed(), _CLOSE_TIMEOUT)
+
+    async def ingest_otlp_logs(
+        self, batch: OtlpLogBatch | dict[str, Any], *, obs_addr: str
+    ) -> dict[str, Any]:
+        """Ingest one OTLP log batch through the engine's ``--obs-addr`` listener.
+
+        ``batch`` is an :class:`~medulla.otlp_logs.OtlpLogBatch` (or a mapping
+        validated into one); an oversize or malformed batch raises
+        ``pydantic.ValidationError`` before sending, and the engine refuses a
+        batch above 4 MiB as ``LOG_BATCH_TOO_LARGE`` (MEDULLA-CONTRACT-R050).
+        """
+        return await _ingest_otlp_logs(batch, obs_addr=obs_addr)
 
     async def close(self) -> None:
         """Idempotent shutdown (GOC-81 W02).

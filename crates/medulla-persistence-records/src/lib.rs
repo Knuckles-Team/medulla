@@ -49,5 +49,7 @@ pub mod guardrail_rule;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod fleet_components;
 #[cfg(feature = "redb")]
+pub mod usage_ledger;
+#[cfg(feature = "redb")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod write_back;

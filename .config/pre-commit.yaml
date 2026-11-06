@@ -389,6 +389,13 @@ repos:
     pass_filenames: false
     always_run: true
     stages: [pre-push, manual]  # whole-repo scan (MEDULLA-CONTRACT-R053.7.1)
+  - id: sole-write-envelope
+    name: Sole write envelope gate (no direct redb table write outside the transaction crates)
+    entry: python3 scripts/check_sole_write_envelope.py
+    language: system
+    pass_filenames: false
+    always_run: true
+    stages: [pre-push, manual]  # whole-repo scan
   - id: current-only-architecture
     name: Current-only mutation/projection persistence architecture gate
     entry: python3 scripts/check_current_only_architecture.py

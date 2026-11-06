@@ -77,6 +77,9 @@ pub const GATEWAY_ROUTED: &[&str] = &[
     "Reparent",
     "StartTrajectory",
     "AppendStep",
+    // MEDULLA-DURABLE-KERNEL-R095.1002: agent bus roster rows on the request graph.
+    "BusRegister",
+    "BusHeartbeat",
     "AddEmbedding",
     "InvalidateEdge",
     "SupersedeEdge",
@@ -98,6 +101,10 @@ pub const GATEWAY_ROUTED: &[&str] = &[
     // one gateway so it is ordered, audited and CDC-emitted with every other
     // write to that graph.
     "GraphSchema",
+    // MEDULLA-FINANCE-PRIMITIVES-R004.3.2: the served finance record put is
+    // admitted (version gate, kind policy, tenant, SHACL shape, head) and then
+    // commits as the one `AddNode` upsert through this gateway.
+    "FinanceRecordPut",
     "PruneByLifecycle",
     "BatchUpdate",
     "ClearLedger",
@@ -206,6 +213,9 @@ fn memory_method_name(m: &Method) -> Option<&'static str> {
         Method::DecayMemories { .. } => Some("DecayMemories"),
         Method::EvictBelow { .. } => Some("EvictBelow"),
         Method::Maintain { .. } => Some("Maintain"),
+        Method::BusRegister { .. } => Some("BusRegister"),
+        Method::BusHeartbeat { .. } => Some("BusHeartbeat"),
+        Method::BusRoster { .. } => Some("BusRoster"),
         _ => None,
     }
 }
@@ -544,6 +554,7 @@ const METHOD_NAME_RESOLVERS: &[fn(&Method) -> Option<&'static str>] = &[
     native_local_only_method_name,
     native_local_only_decision_method_name,
     write_back_method_name,
+    finance_record_method_name,
 ];
 
 /// Extract a `Method` variant's name as a `&'static str`, covering exactly
@@ -643,6 +654,7 @@ pub const LOCAL_ONLY_METHODS: &[&str] = &[
     "AgentTemplate",
     "ConnectorPack",
     "WriteBack",
+    "Claims",
     "DecisionCommit",
     "DecisionEval",
     "DecisionFit",
@@ -650,6 +662,10 @@ pub const LOCAL_ONLY_METHODS: &[&str] = &[
     "MutationOutbox",
     "EdgeIndex",
     "SqlSourceBatch",
+    // The finance record head check reads the stored head and commits the
+    // admitted upsert through the process-local owner; no replicated command
+    // carries the admission yet (MEDULLA-FINANCE-PRIMITIVES-R004.3.2).
+    "FinanceRecordPut",
 ];
 
 /// The local-only names that are NOT gateway-routed.
@@ -672,6 +688,7 @@ fn native_local_only_method_name(m: &Method) -> Option<&'static str> {
 /// [`native_local_only_method_name`]).
 fn native_local_only_decision_method_name(m: &Method) -> Option<&'static str> {
     match m {
+        Method::Claims { .. } => Some("Claims"),
         Method::DecisionCommit { .. } => Some("DecisionCommit"),
         Method::DecisionEval { .. } => Some("DecisionEval"),
         Method::DecisionFit { .. } => Some("DecisionFit"),
@@ -688,6 +705,14 @@ fn native_local_only_decision_method_name(m: &Method) -> Option<&'static str> {
 fn write_back_method_name(m: &Method) -> Option<&'static str> {
     match m {
         Method::WriteBack { .. } => Some("WriteBack"),
+        _ => None,
+    }
+}
+
+/// Resolve the served finance record put (MEDULLA-FINANCE-PRIMITIVES-R004.3.2).
+fn finance_record_method_name(m: &Method) -> Option<&'static str> {
+    match m {
+        Method::FinanceRecordPut { .. } => Some("FinanceRecordPut"),
         _ => None,
     }
 }
@@ -783,6 +808,9 @@ fn cluster_mutation_route_admin(method: &Method) -> Option<ClusterMutationRoute>
             | Method::SourceIngest { .. }
             | Method::IndexRepository { .. }
             | Method::EnrichDocument { .. }
+            | Method::MeetingSummaryCommit { .. }
+            | Method::MeetingSummaryContext { .. }
+            | Method::MeetingTranscriptRevision { .. }
             | Method::DocumentDelete { .. }
             | Method::LineageIngest { .. }
     ) {
@@ -845,6 +873,9 @@ fn cluster_mutation_route_admin(method: &Method) -> Option<ClusterMutationRoute>
             | Method::FleetCatalog { .. }
             | Method::PolicyEvolution { .. }
             | Method::TelemetryDerive { .. }
+            | Method::IncidentRecordAnomaly { .. }
+            | Method::IncidentCorrelate { .. }
+            | Method::IncidentSetStatus { .. }
     ) {
         return Some(ClusterMutationRoute::VolatileControl);
     }
