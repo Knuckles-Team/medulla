@@ -134,3 +134,6 @@ Producer first: ontology terms, shapes and authority mappings, then fixtures and
 - [ ] T126 [US2] MEDULLA-CQ-ORCH-R811.4 Convert stored jobs to the machine shape and prove it served. Size: M, 2 PRs, 5 hours.
 - [ ] T127 [US2] MEDULLA-CQ-ORCH-R810.3 Route the broker writers through apply, function by function. Size: M, 2 PRs, 5 hours.
 - [ ] T128 [US2] MEDULLA-CQ-ORCH-R810.4 Convert stored broker messages and prove the served path. Size: S, 1 PR, 4 hours.
+- [ ] T129 [US1] MEDULLA-CQ-ORCH-R820.1 Answer which harness sessions worked on this workspace and what each left
+- [ ] T130 [US1] MEDULLA-CQ-ORCH-R820.2 Answer which skills and agents a coding harness receives
+- [ ] T131 [US1] MEDULLA-CQ-ORCH-R820 Coding harness competency questions
