@@ -523,7 +523,10 @@ mod tests {
             );
             let counter = |key: &str| props[key].as_u64().unwrap_or(0);
             let next = counter("lease_epoch").max(counter("fencing_token")) + 1;
-            assert!(next > epoch.max(token) + 1, "the grant moves past the reclaim fence");
+            assert!(
+                next > epoch.max(token) + 1,
+                "the grant moves past the reclaim fence"
+            );
             assert_eq!(
                 claim_grant_lease(&mut props, "new-worker", 1.0e9, 1.0e9 + 1.0),
                 Ok((next, 2))
