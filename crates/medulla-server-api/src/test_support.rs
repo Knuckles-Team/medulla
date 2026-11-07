@@ -8,8 +8,9 @@ pub fn decode_raw_response<T: serde::de::DeserializeOwned>(
 ) -> T {
     assert!(
         response.error.is_none(),
-        "{label} was refused: {:?}",
-        response.error
+        "{label} was refused: {:?} {:?}",
+        response.error,
+        response.error_detail
     );
     let Some(medulla_protocol_types::protocol::ResultPayload::Raw(bytes)) = response.result else {
         panic!("{label} did not return a raw typed result");
