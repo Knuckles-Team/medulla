@@ -1361,7 +1361,7 @@ def _spawn_engine(
         # it the engine refuses to start ("MEDULLA_REQUIRE_OIDC requires
         # OIDC identity binding ... but no usable OIDC verifier is configured")
         # in this sealed certification sandbox, which has no Keycloak/OIDC
-        # provider. Mirrors `certify_exact_fault_restart.py`'s `Engine.start`
+        # provider. Mirrors `campaign_fault_restart.py`'s `Engine.start`
         # and `tests/conftest.py`'s `strict_server_env` (same rationale).
         "MEDULLA_REQUIRE_OIDC": "false",
         "MEDULLA_AUDIENCE": authority.context["audience"],

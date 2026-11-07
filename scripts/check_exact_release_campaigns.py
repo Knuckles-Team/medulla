@@ -236,7 +236,9 @@ def _check_protocol_campaign(
             data_paths = _literal_set(tree, "DATA_PATHS")
             wire_features = set(_literal(tree, "WIRE_FEATURES").values())
             listener_env = set(_literal(tree, "LISTENER_ENV").values())
-            launcher_tree = ast.parse(_read("scripts/certify_exact_fault_restart.py"))
+            launcher_tree = ast.parse(
+                _read("tests/release_campaigns/campaign_fault_restart.py")
+            )
             allowed_listener_env = _literal_set(
                 launcher_tree, "EXACT_OPTIONAL_LISTENER_ENV"
             )

@@ -5,8 +5,8 @@ never locates or builds an executable and never starts campaigns concurrently.
 
 The opt-in signal is the DEDICATED ``MEDULLA_EXACT_CERTIFICATION=1``
 flag, deliberately independent of ``MEDULLA_TEST_BINARY``/``_SHA256``
-(see ``test_durable_crash.py``'s module docstring for why: those two are also
-the routine BUG-045 perf-optimization pair set on every ordinary run, so
+(see ``release_campaigns/test_fault_restart.py``'s docstring for why: those two
+are also the routine BUG-045 perf-optimization pair set on every ordinary run, so
 gating this expensive release-gate campaign on their presence made an
 ordinary fast run hard-fail here by accident).
 """
@@ -115,6 +115,10 @@ def _run_exact_campaign(
     completed = subprocess.run(
         command,
         cwd=ROOT,
+        env={
+            **os.environ,
+            "PYTHONPATH": str(ROOT / "tests" / "release_campaigns"),
+        },
         check=False,
         capture_output=True,
         text=True,

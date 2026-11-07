@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import Any
 
 import msgpack
-from certify_exact_fault_restart import (
+from campaign_fault_restart import (
     SECOND_TENANT,
     TENANT,
     CertificationError,

@@ -58,9 +58,8 @@ repos:
     # errors and are quarantined exactly, rather than hiding both directories.
     args: ["--ignore-missing-imports", "--explicit-package-bases"]
     exclude: |
-      (?x)^(?:vendor/.*|scripts/(?:
+      (?x)^(?:vendor/.*|tests/release_campaigns/campaign_.*|scripts/(?:
         bounded_test_runner|
-        certify_exact_fault_restart|
         certify_exact_knowledge_batch|
         certify_exact_multimodal|
         certify_exact_performance|
@@ -369,7 +368,7 @@ repos:
   # ~0.5-0.8s (an O(candidates x file-size) helper was re-searching all of
   # dispatch.rs per candidate). Pure stdlib, no cargo/build, safe for the
   # commit stage. `check_mounted_kernel.py` and `check_exact_fault_restart_
-  # harness.py`'s sibling `certify_exact_fault_restart.py` release-gate path
+  # harness.py`'s sibling `campaign_fault_restart.py` release-gate path
   # are deliberately NOT wired here -- see scripts/check_mounted_kernel.py's
   # own module docstring for the former (deploy-time artifact, not a commit-
   # time property; wiring it to pre-commit would red every commit on a

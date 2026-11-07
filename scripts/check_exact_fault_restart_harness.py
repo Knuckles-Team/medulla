@@ -61,7 +61,8 @@ def _without_module_docstring(source: str) -> str:
 
     A "forbidden token" substring scan over a whole file also matches prose in
     the module docstring EXPLAINING why the code deliberately avoids that token
-    -- exactly the shape `tests/test_durable_crash.py`'s docstring takes,
+    -- exactly the shape `tests/release_campaigns/test_fault_restart.py`'s docstring
+    takes,
     documenting why the wrapper does NOT invoke `cargo` directly by using the
     word "cargo" to say so. Only the leading docstring is blanked (replaced with
     equal-length whitespace, so reported positions/line numbers of anything
@@ -146,7 +147,7 @@ def _literal_string_set(tree: ast.AST, name: str) -> set[str]:
 
 
 def _read_harness() -> tuple[str, ast.AST | None]:
-    harness = _read("scripts/certify_exact_fault_restart.py")
+    harness = _read("tests/release_campaigns/campaign_fault_restart.py")
     try:
         tree = ast.parse(harness)
     except SyntaxError as error:
@@ -391,14 +392,14 @@ def _check_store_contract() -> list[str]:
 
 def _check_exact_artifact_contract() -> list[str]:
     errors: list[str] = []
-    test = _read("tests/test_durable_crash.py")
+    test = _read("tests/release_campaigns/test_fault_restart.py")
     conftest = _read("tests/conftest.py")
     _require(
         test,
         {
             "MEDULLA_TEST_BINARY",
             "MEDULLA_TEST_BINARY_SHA256",
-            "certify_exact_fault_restart.py",
+            "campaign_fault_restart.py",
             'matrix_cases": 60',
             "pytest.mark.exact_artifact",
         },

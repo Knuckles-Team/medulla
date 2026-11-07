@@ -142,13 +142,14 @@ python_files = ["test_*.py"]
 # sys.path[0]). Removes the need for a per-test `sys.path.insert` + `# noqa:
 # E402` pair just to reach a sibling script module — see AGENTS.md /
 # CHECKPOINT F11 for the fuller rationale.
-pythonpath = ["scripts"]
+pythonpath = ["scripts", "tests/release_campaigns"]
 addopts = ["-v", "--tb=short"]
 markers = [
     "concept(id): tag a test with the ecosystem CONCEPT id it covers",
     "exact_artifact: opt-in exact-binary process-fault/restart certification",
     "nightly: budget benchmark run by the nightly job, never by a PR",
     "no_engine: static test that must not build or start the shared native engine",
+    "release_campaign: exact-artifact release campaign (opt in with MEDULLA_EXACT_CERTIFICATION=1; run as pytest -m release_campaign -k <name>)",
     "spec(id): binds a test to a spec requirement ID",
 ]
 
