@@ -885,7 +885,9 @@ ex:parent a owl:AsymmetricProperty .
         // (MEDULLA-TYPED-PACKS-R071.2), the generated decision module's core parents (+4),
         // the nutrition schema.org mappings (+6) and the vocabulary landed since.
         // +1856: the state-machine vocabulary (state-machines-v1.ttl) joins the core corpus.
-        assert_eq!(composed.ontology.len(), 20_617);
+        // +57 (MEDULLA-IDENTITY-R723): the workstream record class, its properties and the
+        // attachedTo session link in identity-v1.ttl.
+        assert_eq!(composed.ontology.len(), 20_674);
 
         let ontology_subjects: BTreeSet<String> = composed
             .ontology
