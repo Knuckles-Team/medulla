@@ -4,6 +4,9 @@ Four release gates run the supplied engine artifact without discovering or
 building a replacement. They require an executable path, the artifact's lowercase
 SHA-256, and a new absolute evidence destination. A symlink, digest mismatch, missing artifact,
 or pre-existing evidence file fails before certification begins.
+Each campaign is a `release_campaign` pytest (`pytest -m release_campaign -k <name>`) in
+`tests/release_campaigns/`, opted in with `MEDULLA_EXACT_CERTIFICATION=1`; the evidence
+directory is `MEDULLA_CAMPAIGN_EVIDENCE_DIR`.
 
 The artifact must be the current `full` tier. These campaigns intentionally fail when
 a full-tier listener, served modality, KnowledgeBatch family, or reasoning feature is
@@ -49,10 +52,11 @@ artifact or reduced to a document-only smoke test.
 ## Protocol authorization and read isolation
 
 ```bash
-python scripts/certify_exact_protocol_authorization.py \
-  --binary "${ENGINE_BINARY:?}" \
-  --binary-sha256 "${ENGINE_BINARY_SHA256:?}" \
-  --output "${PROTOCOL_EVIDENCE:?}"
+MEDULLA_EXACT_CERTIFICATION=1 \
+MEDULLA_TEST_BINARY="${ENGINE_BINARY:?}" \
+MEDULLA_TEST_BINARY_SHA256="${ENGINE_BINARY_SHA256:?}" \
+MEDULLA_CAMPAIGN_EVIDENCE_DIR="${PROTOCOL_EVIDENCE_DIR:?}" \
+  pytest -m release_campaign -k protocol_authorization
 ```
 
 The harness enables the native RPC service plus PostgreSQL, MySQL, MSSQL, SQLite,

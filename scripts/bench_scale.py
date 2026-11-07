@@ -108,7 +108,7 @@ def _bench_context(agent: str) -> dict[str, object]:
     """Minimal, self-delegated identity for this unauthenticated benchmark
     connection -- `verified_context` has no default (a real deployment always
     supplies one), so a bench harness needs its own, just like
-    `certify_exact_protocol_authorization.py`'s `_peer_context`."""
+    `campaign_protocol_authorization.py`'s `_peer_context`."""
     return {
         "principal": agent,
         "tenant": "bench",

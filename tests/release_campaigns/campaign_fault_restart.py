@@ -344,7 +344,7 @@ class ExactEngine:
                 # `{signer_id: key}` form fail closed (no roles, no System grant),
                 # so this sandbox's own genesis `bootstrap_system_identity` -- an
                 # `AgentRole::System` self-registration -- is denied under it.
-                # `certify_exact_protocol_authorization.py` reuses this exact
+                # `campaign_protocol_authorization.py` reuses this exact
                 # engine sandbox and additionally registers a peer carrying
                 # `PEER_ROLE`, so that role is enumerated here too.
                 "MEDULLA_SIGNER_KEYS_JSON": json.dumps(
