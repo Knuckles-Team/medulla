@@ -411,6 +411,7 @@ closed_error_codes! {
         CarrierSignatureInvalid => "CARRIER_SIGNATURE_INVALID",
         ChildTargetTerminal => "CHILD_TARGET_TERMINAL",
         EnvelopeFieldMissing => "ENVELOPE_FIELD_MISSING",
+        ChangeEnvelopeContextMismatch => "CHANGE_ENVELOPE_CONTEXT_MISMATCH",
         RevisionConflict => "REVISION_CONFLICT",
         LifecycleTransitionInvalid => "LIFECYCLE_TRANSITION_INVALID",
         LifecycleRetiredTerminal => "LIFECYCLE_RETIRED_TERMINAL",
