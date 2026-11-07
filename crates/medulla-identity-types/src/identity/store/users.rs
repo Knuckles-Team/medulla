@@ -252,6 +252,10 @@ impl IdentityStore {
             .users
             .get(&request.principal_id)
             .ok_or(IdentityRefusal::NotFound)?;
+        if user.status == request.status {
+            // Asking for the status a principal already has is a replay: no edge fires.
+            return Ok(IdentityReply::Done { changed: true });
+        }
         let event = user
             .status
             .event_to(request.status)
