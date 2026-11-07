@@ -150,7 +150,7 @@ impl CypherKeyInvalid {
 
 /// The openCypher `EscapedSymbolicName` production: a backtick, then any run of
 /// characters where a backtick appears only doubled, then a closing backtick.
-/// The build gate (`scripts/check_cypher_render.sh`) applies it to every
+/// The build gate (the `key_quoting_fixtures` test in CI) applies it to every
 /// rendered fixture; any unquoted or malformed key fails.
 pub fn is_escaped_symbolic_name(text: &str) -> bool {
     let Some(inner) = text

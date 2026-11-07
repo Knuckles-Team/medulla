@@ -4136,6 +4136,7 @@ components:
       - "tests/test_rustfmt_scope.py"
       - "tests/test_scanner_distribution.py"
       - "tests/test_scanner_wrappers.py"
+      - "tests/test_scripts_are_thin.py"
       - "tests/test_security_sanitizer_contract.py"
       - "tests/test_third_party_source_policy.py"
       - "tests/test_secret_history_full_range.py"
