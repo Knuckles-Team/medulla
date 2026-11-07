@@ -28,6 +28,23 @@ def _kind() -> dict:
     }
 
 
+def _claim_own(client, slot: str, capabilities: list[str], job_id: str) -> dict:
+    """Claim until this test's job comes up.
+
+    A worker's claim also matches capability-free jobs, so one an earlier test
+    of this shared engine left queued can come up first, at either priority;
+    each such job is cancelled until `job_id` is claimed.
+    """
+
+    for _ in range(16):
+        claimed = client.jobs.worker_claim(slot, capabilities)
+        assert claimed is not None
+        if claimed["job"]["job_id"] == job_id:
+            return claimed
+        client.jobs.cancel(claimed["job"]["job_id"])
+    raise AssertionError(f"{job_id} was not claimed within 16 claims")
+
+
 @pytest.mark.spec("MEDULLA-PLACEMENT-R750.753")
 def test_background_claims_pause_under_foreground_load(clean_graph):
     nonce = uuid.uuid4().hex
@@ -55,22 +72,14 @@ def test_background_claims_pause_under_foreground_load(clean_graph):
         clean_graph.jobs.worker_claim(f"pacing-slot-{nonce}", [background_cap])
 
     # The foreground job is not throttled.
-    claimed = clean_graph.jobs.worker_claim(f"pacing-slot-{nonce}", [foreground_cap])
-    assert claimed is not None
-    assert claimed["job"]["job_id"] == foreground["job_id"]
+    _claim_own(
+        clean_graph, f"pacing-slot-{nonce}", [foreground_cap], foreground["job_id"]
+    )
 
     # No foreground job is queued any more, so the background claim proceeds.
-    # A capability-free job an earlier test of this engine left queued is also
-    # compatible with the claim; it is cancelled until this test's job comes up.
-    for _ in range(16):
-        claimed = clean_graph.jobs.worker_claim(
-            f"pacing-slot-{nonce}", [background_cap]
-        )
-        assert claimed is not None
-        if claimed["job"]["job_id"] == background["job_id"]:
-            break
-        clean_graph.jobs.cancel(claimed["job"]["job_id"])
-    assert claimed["job"]["job_id"] == background["job_id"]
+    _claim_own(
+        clean_graph, f"pacing-slot-{nonce}", [background_cap], background["job_id"]
+    )
 
 
 @pytest.mark.spec("MEDULLA-PLACEMENT-R750.753")
