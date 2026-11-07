@@ -190,6 +190,7 @@ pub(super) async fn try_handle_node_reads(
     method: Method,
 ) -> ControlFlow<Response, Method> {
     let GraphOpsContext {
+        state: ctx_state,
         req_id,
         read_authority,
         core,
@@ -211,7 +212,8 @@ pub(super) async fn try_handle_node_reads(
             // BEFORE building the Vec, and return a typed, catchable error instead of
             // the pathological frame. The bounded reads (`GetNodesByLabel`, per-id)
             // are intentionally unaffected.
-            if let Some(msg) = oversize_dump_error(g.node_count(), max_response_nodes()) {
+            let cap = ctx_state.read().await.max_response_nodes;
+            if let Some(msg) = oversize_dump_error(g.node_count(), cap) {
                 return ControlFlow::Break(Response::err(req_id, msg));
             }
             let nodes: Vec<(String, serde_json::Value)> = g

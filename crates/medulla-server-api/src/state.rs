@@ -35,26 +35,6 @@ pub const MAX_BATCH_IDS: usize = 100_000;
 /// pagination) INSTEAD of building the pathological frame.
 pub const DEFAULT_MAX_RESPONSE_NODES: usize = 50_000;
 
-/// One positive-`usize` served-response bound, read from the environment ONCE into
-/// `cache` and reused thereafter.
-///
-/// Zero, absent and non-parsable values resolve to `default`: a served response bound
-/// cannot be disabled, and the node and edge caps cannot drift on what they accept or
-/// on how many times they read the environment.
-fn cached_positive_usize_from_env(
-    cache: &'static std::sync::OnceLock<usize>,
-    variable: &str,
-    default: usize,
-) -> usize {
-    *cache.get_or_init(|| {
-        std::env::var(variable)
-            .ok()
-            .and_then(|value| value.parse::<usize>().ok())
-            .filter(|value| *value > 0)
-            .unwrap_or(default)
-    })
-}
-
 /// Parse a positive runtime limit directly from the environment.
 ///
 /// Unlike the served-response caps above, runtime maintenance limits are read
@@ -68,16 +48,13 @@ where
     medulla_types::runtime_limit::positive_from_env(variable, default)
 }
 
-/// Resolve the `GetNodes` full-dump node cap, read ONCE from
-/// `MEDULLA_MAX_RESPONSE_NODES` (CONCEPT:MEDULLA-KG.ingest.resets-socket-so-assimilation). Cached in a
-/// `OnceLock` so the env var is parsed a single time at first use, matching the
-/// "read once at startup" discipline without threading a new field through every
-/// `ServerState` construction site. Zero, absent, and non-parsable values resolve
-/// to [`DEFAULT_MAX_RESPONSE_NODES`]; the served response bound cannot be disabled.
-pub fn max_response_nodes() -> usize {
-    static CAP: std::sync::OnceLock<usize> = std::sync::OnceLock::new();
-    cached_positive_usize_from_env(
-        &CAP,
+/// Resolve the `GetNodes` full-dump node cap from `MEDULLA_MAX_RESPONSE_NODES`
+/// (CONCEPT:MEDULLA-KG.ingest.resets-socket-so-assimilation). [`ServerState::new`]
+/// reads it once into [`ServerState::max_response_nodes`]; the handlers read the
+/// field. Zero, absent, and non-parsable values resolve to
+/// [`DEFAULT_MAX_RESPONSE_NODES`]; the served response bound cannot be disabled.
+pub fn max_response_nodes_from_env() -> usize {
+    medulla_types::runtime_limit::positive_from_env(
         "MEDULLA_MAX_RESPONSE_NODES",
         DEFAULT_MAX_RESPONSE_NODES,
     )
@@ -133,15 +110,12 @@ pub(crate) fn placement_authority_kind(
     }
 }
 
-/// Resolve the `GetEdges` full-dump edge cap, read ONCE from
-/// `MEDULLA_MAX_RESPONSE_EDGES` — the edge-count sibling of
-/// [`max_response_nodes`]. Cached in a `OnceLock` so the env var is parsed a
-/// single time at first use. Zero, absent, and non-parsable values resolve to
-/// [`DEFAULT_MAX_RESPONSE_EDGES`]; the served response bound cannot be disabled.
-pub fn max_response_edges() -> usize {
-    static CAP: std::sync::OnceLock<usize> = std::sync::OnceLock::new();
-    cached_positive_usize_from_env(
-        &CAP,
+/// Resolve the `GetEdges` full-dump edge cap from `MEDULLA_MAX_RESPONSE_EDGES`,
+/// the edge-count sibling of [`max_response_nodes_from_env`]; held by
+/// [`ServerState::max_response_edges`]. Zero, absent, and non-parsable values
+/// resolve to [`DEFAULT_MAX_RESPONSE_EDGES`].
+pub fn max_response_edges_from_env() -> usize {
+    medulla_types::runtime_limit::positive_from_env(
         "MEDULLA_MAX_RESPONSE_EDGES",
         DEFAULT_MAX_RESPONSE_EDGES,
     )
@@ -281,6 +255,11 @@ pub struct ServerState {
     /// rejects an absent identity before this accounting map is reached; there is
     /// no shared empty or unauthenticated bucket.
     pub txn_max_per_agent: usize,
+    /// Cap on a `GetNodes` full-graph dump, read from the environment when the
+    /// state is built (`MEDULLA_MAX_RESPONSE_NODES`).
+    pub max_response_nodes: usize,
+    /// Cap on a `GetEdges` full-graph dump (`MEDULLA_MAX_RESPONSE_EDGES`).
+    pub max_response_edges: usize,
     /// Streamed content-addressed BLOB substrate (CONCEPT:MEDULLA-KG.storage.blob-namespace), feature `blob`.
     /// Holds the CAS chunk store + the open upload/fetch cursors (DashMap keyed by a
     /// server-issued cursor id, with a TTL reaper like `open_txns`). `Some` when the
@@ -509,6 +488,8 @@ impl ServerState {
             txn_ttl_secs: 300,
             txn_max_per_graph: 256,
             txn_max_per_agent: 256,
+            max_response_nodes: max_response_nodes_from_env(),
+            max_response_edges: max_response_edges_from_env(),
             #[cfg(feature = "blob")]
             blob: None,
             #[cfg(feature = "blob")]

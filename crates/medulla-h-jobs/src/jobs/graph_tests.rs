@@ -131,7 +131,16 @@ mod mine_associate_submission_tests {
     }
 
     fn govern(kind: JobKind) -> Result<(JobKind, String, String, serde_json::Value), Response> {
-        govern_job_kind(&authority(), 82, "policy:test", "", kind, &mut Vec::new())
+        govern_job_kind(
+            &authority(),
+            82,
+            kind,
+            JobGovernance {
+                policy_fingerprint: "policy:test",
+                purpose: "",
+                required_capabilities: &mut Vec::new(),
+            },
+        )
     }
 
     fn mining_kind(support: f64, confidence: f64, algorithm: &str) -> JobKind {
