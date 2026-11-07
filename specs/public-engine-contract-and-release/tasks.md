@@ -114,3 +114,4 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T106 [US1] MEDULLA-CONTRACT-R001.3.9 Wire vectors for the security method domain
 - [ ] T107 [US1] MEDULLA-CONTRACT-R001.3.10 Wire vectors for the storage method domain
 - [ ] T108 [US1] MEDULLA-CONTRACT-R001.3.11 Wire vectors for the transactions method domain
+- [ ] T111 [US1] MEDULLA-CONTRACT-R059 The Python client is a thin layer over the served catalog.

@@ -263,3 +263,6 @@ Each entry below is planned. The test file or function does not exist in the tre
 - `MEDULLA-SDLC-R019.15`: `tests/sdlc/test_delivery_served.py::test_slice_to_merged_proposal_through_feedback` (planned, L4): proves: the journey opens a delivery for one slice. The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-SDLC-R020`: `tests/test_merge_safe_registries.py::test_append_only_registries_merge_as_union_and_no_exact_method_count` (L2): proves: two changes that each add a distinct entry to an append-only registry merge with no conflict, and no exact method count is pinned.
 - `MEDULLA-SDLC-R020.1`: `tests/test_no_committed_generated_artifacts.py` (L2): proves: no cut generated path is tracked, no tracked file carries a generated header, and no freshness gate or rewrite switch remains.
+- `MEDULLA-SDLC-R021`: `tests/test_crate_layers.py::test_crate_dependencies_follow_layers` (L2) (planned): proves: Crate dependencies follow declared stability layers.
+- `MEDULLA-SDLC-R022`: `tests/test_scripts_are_thin.py::test_no_script_holds_check_logic` (L2) (planned): proves: Repository scripts hold no gate or certification logic.
+- `MEDULLA-SDLC-R023`: `crates/medulla-server-api/tests/server_context.rs::two_contexts_in_one_process_do_not_share_replay_state` (L2) (planned): proves: Process-wide state is explicit.
