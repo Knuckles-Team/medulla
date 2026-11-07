@@ -361,8 +361,12 @@ pub fn commons_request(auth_secret: &str, id: u64, method: Method) -> Request {
 }
 
 pub fn fresh_dir(prefix: &str) -> std::path::PathBuf {
+    // Two tests of one binary can start in the same clock tick; the sequence keeps each
+    // test's redb startup directory (and its lock) its own.
+    static SEQ: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let seq = SEQ.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
     let dir = std::env::temp_dir().join(format!(
-        "{prefix}-{}-{}",
+        "{prefix}-{}-{seq}-{}",
         std::process::id(),
         std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
