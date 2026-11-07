@@ -1062,7 +1062,8 @@ ex:parent a owl:AsymmetricProperty .
             // +230 (measured): the 210 core-rooting edges of MEDULLA-TYPED-PACKS-R071.2
             // and 20 named placements in the vocabulary of the +739 total above
             // (the decision module's core parents among them).
-            962
+            // +90 (measured): the state-machine vocabulary's class edges (MEDULLA-ORCH-VOCAB-R811.1).
+            1052
         );
     }
 
