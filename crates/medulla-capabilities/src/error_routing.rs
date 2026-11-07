@@ -750,6 +750,27 @@ fn add_typed_handler_errors(d: &MethodDescriptor, codes: &mut BTreeSet<&'static 
     }
 }
 
+/// The served methods that move an explicit state machine (MEDULLA-ORCH-VOCAB-R811.8,
+/// organization constitution Article XXXI). Each may answer the typed record
+/// `{code: TRANSITION_REFUSED, machine, from, event, reason}`.
+pub const MACHINE_METHODS: &[&str] = &[
+    "SubmitWorkItem",
+    "ClaimWorkItem",
+    "CancelWorkItem",
+    "ReleaseWorkItemResources",
+    "ReleaseCapacity",
+    "ResourceReservationStatus",
+    "AnalyticsJob",
+    "BrokerConsume",
+    "BrokerAck",
+    "BrokerReject",
+    "BrokerAckTag",
+    "BrokerNackTag",
+];
+
+/// The wire code of a refused machine transition.
+pub const TRANSITION_REFUSED: &str = "TRANSITION_REFUSED";
+
 /// Include shared boundary refusals and the typed codes that a method's
 /// handler family can return. A sorted set keeps the generated API stable.
 pub fn method_error_set(d: &MethodDescriptor) -> Vec<&'static str> {
@@ -758,6 +779,9 @@ pub fn method_error_set(d: &MethodDescriptor) -> Vec<&'static str> {
     add_server_errors(d, &mut codes);
     add_owner_errors(d, &mut codes);
     add_typed_handler_errors(d, &mut codes);
+    if MACHINE_METHODS.contains(&d.id.as_str()) {
+        codes.insert(TRANSITION_REFUSED);
+    }
     codes.into_iter().collect()
 }
 
@@ -784,6 +808,34 @@ pub fn method_allows_error(method: &str, code: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::method_allows_error;
+
+    // spec: MEDULLA-ORCH-VOCAB-R811.8
+
+    #[test]
+    fn every_machine_method_lists_transition_refused() {
+        let served: std::collections::BTreeSet<&str> = crate::method_descriptors()
+            .map(|descriptor| descriptor.id.as_str())
+            .collect();
+        for method in super::MACHINE_METHODS {
+            assert!(served.contains(method), "{method} is not a served method");
+            assert!(
+                method_allows_error(method, super::TRANSITION_REFUSED),
+                "{method} moves a machine but its contract lacks TRANSITION_REFUSED"
+            );
+        }
+        for method in served {
+            if !super::MACHINE_METHODS.contains(&method) {
+                assert!(
+                    !method_allows_error(method, super::TRANSITION_REFUSED),
+                    "{method} is not a machine method but lists TRANSITION_REFUSED"
+                );
+            }
+        }
+        assert_eq!(
+            super::TRANSITION_REFUSED,
+            medulla_types::transition_refused::TRANSITION_REFUSED
+        );
+    }
 
     #[test]
     fn connector_and_foreign_refusals_are_routed_to_their_served_methods() {
