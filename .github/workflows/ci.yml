@@ -8,7 +8,7 @@ name: CI
 #
 # Pull requests run ONE job, `CI` (spec MEDULLA-CONTRACT-R053.7): pre-commit on the
 # changed files, the spec-trailer check, and cargo clippy + nextest on the
-# affected crates only (scripts/ci_affected_crates.py: owning packages of the
+# affected crates only (cargo xtask ci-affected-crates: owning packages of the
 # changed files plus their reverse dependencies). A same-repository pull request
 # runs on the warm self-hosted runners (vars.MEDULLA_WARM_CI_RUNNER, group medulla-warm, never for dependabot) with a
 # persistent cargo target and a local-disk sccache outside the checkout; a fork
@@ -98,7 +98,7 @@ jobs:
           HEAD: ${{ github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail
-          python3 scripts/ci_change_scope.py --path-gates --event "$EVENT" --base "$BASE" --head "$HEAD" | tee -a "$GITHUB_OUTPUT"
+          cargo --locked xtask ci-change-scope --path-gates --event "$EVENT" --base "$BASE" --head "$HEAD" | tee -a "$GITHUB_OUTPUT"
 
   # ── Dependency and source-history security checks. ─────────────────────
   security:
@@ -1486,13 +1486,13 @@ jobs:
         run: |
           set -euo pipefail
           git diff --name-only "$BASE...$HEAD" > "$RUNNER_TEMP/changed.txt"
-          python3 scripts/ci_change_scope.py --event pull_request --base "$BASE" --head "$HEAD" | grep '^code=' | tee "$RUNNER_TEMP/scope.txt"
+          cargo --locked xtask ci-change-scope --event pull_request --base "$BASE" --head "$HEAD" | grep '^code=' | tee "$RUNNER_TEMP/scope.txt"
           cat "$RUNNER_TEMP/scope.txt" >> "$GITHUB_OUTPUT"
           # A docs/spec diff is spec-only only when no workspace package reads
           # a changed path (MEDULLA-CONTRACT-R053.7.2): a later code=true wins.
           if grep -q '^code=false' "$RUNNER_TEMP/scope.txt"; then
             cargo metadata --format-version 1 --no-deps --locked > "$RUNNER_TEMP/cargo-metadata.json"
-            if python3 scripts/ci_affected_crates.py "$RUNNER_TEMP/cargo-metadata.json" < "$RUNNER_TEMP/changed.txt" | grep -q .; then
+            if cargo --locked xtask ci-affected-crates "$RUNNER_TEMP/cargo-metadata.json" < "$RUNNER_TEMP/changed.txt" | grep -q .; then
               echo "code=true" >> "$GITHUB_OUTPUT"
             fi
           fi
@@ -1556,13 +1556,13 @@ jobs:
           set -euo pipefail
           git diff --name-only "$BASE...$HEAD" > "$RUNNER_TEMP/changed.txt"
           cat "$RUNNER_TEMP/changed.txt"
-          python3 scripts/ci_change_scope.py --event pull_request --base "$BASE" --head "$HEAD" | grep '^code=' | tee "$RUNNER_TEMP/scope.txt"
+          cargo --locked xtask ci-change-scope --event pull_request --base "$BASE" --head "$HEAD" | grep '^code=' | tee "$RUNNER_TEMP/scope.txt"
           cat "$RUNNER_TEMP/scope.txt" >> "$GITHUB_OUTPUT"
           # Same answer as pr-scope: a changed path read by a package's sources
           # selects that package, so the diff is not spec-only.
           echo "crates=false" >> "$GITHUB_OUTPUT"
           cargo metadata --format-version 1 --no-deps --locked > "$RUNNER_TEMP/cargo-metadata.json"
-          if python3 scripts/ci_affected_crates.py "$RUNNER_TEMP/cargo-metadata.json" < "$RUNNER_TEMP/changed.txt" | grep -q .; then
+          if cargo --locked xtask ci-affected-crates "$RUNNER_TEMP/cargo-metadata.json" < "$RUNNER_TEMP/changed.txt" | grep -q .; then
             echo "crates=true" >> "$GITHUB_OUTPUT"
             echo "code=true" >> "$GITHUB_OUTPUT"
           fi
@@ -1688,7 +1688,7 @@ jobs:
         run: |
           set -euo pipefail
           cargo metadata --format-version 1 --no-deps --locked > "$RUNNER_TEMP/cargo-metadata.json"
-          python3 scripts/ci_affected_crates.py "$RUNNER_TEMP/cargo-metadata.json" < "$RUNNER_TEMP/changed.txt" > "$RUNNER_TEMP/cargo-runs.txt"
+          cargo --locked xtask ci-affected-crates "$RUNNER_TEMP/cargo-metadata.json" < "$RUNNER_TEMP/changed.txt" > "$RUNNER_TEMP/cargo-runs.txt"
           cat "$RUNNER_TEMP/cargo-runs.txt"
           if [ -s "$RUNNER_TEMP/cargo-runs.txt" ]; then echo "rust=true" >> "$GITHUB_OUTPUT"; else echo "rust=false" >> "$GITHUB_OUTPUT"; fi
       - name: Install librdkafka/Cyrus-SASL build headers

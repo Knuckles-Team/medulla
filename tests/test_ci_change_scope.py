@@ -14,8 +14,6 @@ import pytest
 import tomllib
 import yaml
 
-from scripts import ci_change_scope as scope
-
 pytestmark = pytest.mark.no_engine
 ROOT = Path(__file__).resolve().parents[1]
 NATIVE_SETUP = "./.github/actions/native-validation-setup"
@@ -66,150 +64,20 @@ def raw(
     return f":{old} {new} abc def {status}\0{path}\0".encode()
 
 
-@pytest.mark.parametrize(
-    "path",
-    ["README.md", "docs/guide.md", "specs/demo/spec.md", "specs/demo/status.json"],
-)
-def test_documentation_only_diff(path: str) -> None:
-    assert scope.documentation_diff(raw(path))
-    assert scope.documentation_diff(raw(path, new="000000", status="D"))
-    assert scope.documentation_diff(raw(path, old="000000", status="A"))
-
-
-@pytest.mark.parametrize(
-    "path",
-    [
-        "src/lib.rs",
-        "Cargo.lock",
-        ".config/pre-commit.yaml",
-        ".github/workflows/ci.yml",
-        "docs/plugin.py",
-        "specs/build.rs",
-        ".specify/scripts/setup.sh",
-        "docs/data.json",
-        "crates/runtime/fixture.md",
-        "architecture/component-registry.yml",
-    ],
-)
-def test_unknown_or_executable_content_runs_code(path: str) -> None:
-    assert not scope.documentation_diff(raw(path))
-
-
-@pytest.mark.parametrize("mode", ["100755", "120000", "160000"])
-def test_executable_symlink_and_submodule_modes_run_code(mode: str) -> None:
-    assert not scope.documentation_diff(raw("docs/guide.md", old=mode))
-    assert not scope.documentation_diff(raw("docs/guide.md", new=mode))
-
-
-def test_code_renamed_to_docs_still_runs_code() -> None:
-    # --no-renames exposes both the removed source and new destination.
-    assert not scope.documentation_diff(
-        raw("src/old.rs", new="000000", status="D")
-        + raw("docs/new.md", old="000000", status="A")
-    )
-
-
-@pytest.mark.parametrize("data", [b"", b"broken", b"\0", b":bad\0docs/a.md\0"])
-def test_incomplete_diff_runs_code(data: bytes) -> None:
-    assert not scope.documentation_diff(data)
-
-
-@pytest.mark.parametrize(
-    ("paths", "selected"),
-    [
-        (["src/lib.rs"], set()),
-        (["crates/medulla-sql/src/lib.rs"], set()),
-        (["clients/js/index.mjs"], {"clients"}),
-        (["crates/medulla-types/src/lib.rs"], {"clients"}),
-        (["crates/medulla-asr-whisper/src/lib.rs"], {"whisper"}),
-        (["crates/medulla-audio/src/lib.rs"], {"whisper", "tts"}),
-        (["crates/medulla-tts-piper/src/lib.rs"], {"tts"}),
-        (["pyproject.toml"], {"packaging"}),
-        (["crates/medulla-pyengine/src/lib.rs"], {"packaging"}),
-        (["crates/medulla-core/ontology/core.ttl"], {"ontology"}),
-        (["src/server/graph_schema/compose.rs"], {"ontology"}),
-        (
-            ["Cargo.lock"],
-            {"clients", "whisper", "tts", "packaging", "ontology"},
-        ),
-        (
-            [".github/workflows/ci.yml"],
-            {"clients", "whisper", "tts", "packaging", "ontology"},
-        ),
-        (
-            ["scripts/ci_change_scope.py"],
-            {"clients", "whisper", "tts", "packaging", "ontology"},
-        ),
-    ],
-)
-def test_path_gates_select_only_the_changed_surfaces(
-    paths: list[str], selected: set[str]
-) -> None:
-    gates = scope.gates_for_paths(paths)
-    assert set(gates) == set(scope.PATH_GATES)
-    assert {gate for gate, on in gates.items() if on} == selected
-
-
-@pytest.mark.parametrize("event", ["push", "workflow_dispatch", "schedule", ""])
-def test_non_pr_events_run_every_path_gate(event: str) -> None:
-    assert all(scope.path_gates(event, "a" * 40, "b" * 40).values())
-
-
-def test_unavailable_history_runs_every_path_gate(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    def missing(*args: object, **kwargs: object) -> None:
-        raise subprocess.CalledProcessError(128, "git")
-
-    monkeypatch.setattr(scope.subprocess, "run", missing)
-    assert all(scope.path_gates("pull_request", "a" * 40, "b" * 40).values())
-    assert all(scope.path_gates("pull_request", "", "b" * 40).values())
-
-
 def test_local_scope_job_publishes_code_and_every_path_gate() -> None:
     jobs = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text())["jobs"]
     changes = jobs["changes"]
     assert "uses" not in changes
-    assert set(changes["outputs"]) == {"code", *scope.PATH_GATES}
+    assert set(changes["outputs"]) == {
+        "code",
+        "clients",
+        "whisper",
+        "ontology",
+        "tts",
+        "packaging",
+    }
     run = changes["steps"][-1]["run"]
-    assert "scripts/ci_change_scope.py --path-gates" in run
-
-
-@pytest.mark.parametrize("event", ["push", "workflow_dispatch", "merge_group", ""])
-def test_non_pr_events_always_run_full_validation(event: str) -> None:
-    assert scope.requires_code(event, "a" * 40, "b" * 40)
-
-
-def test_invalid_or_missing_history_runs_code(monkeypatch: pytest.MonkeyPatch) -> None:
-    assert scope.requires_code("pull_request", "", "b" * 40)
-
-    def missing(*args: object, **kwargs: object) -> None:
-        raise subprocess.CalledProcessError(128, "git")
-
-    monkeypatch.setattr(scope.subprocess, "run", missing)
-    assert scope.requires_code("pull_request", "a" * 40, "b" * 40)
-
-
-def test_complete_git_diff_has_no_api_file_limit(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    def diff(
-        command: list[str], **kwargs: object
-    ) -> subprocess.CompletedProcess[bytes]:
-        assert command == [
-            "git",
-            "diff",
-            "--raw",
-            "--no-renames",
-            "-z",
-            f"{'a' * 40}...{'b' * 40}",
-        ]
-        return subprocess.CompletedProcess(
-            command, 0, raw("docs/a.md") * 301 + raw("src/a.rs")
-        )
-
-    monkeypatch.setattr(scope.subprocess, "run", diff)
-    assert scope.requires_code("pull_request", "a" * 40, "b" * 40)
+    assert "cargo --locked xtask ci-change-scope --path-gates" in run
 
 
 def test_workflow_keeps_security_and_spec_checks_and_full_publication() -> None:
@@ -332,51 +200,13 @@ def local_gate_repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     return gate, git
 
 
-@pytest.mark.parametrize("mode", ["100755", "120000", "160000"])
-def test_normalized_document_modes_keep_real_git_ranges_conservative(
-    local_gate_repo, mode: str
-) -> None:
-    _, git = local_gate_repo
-    path = "docs/guide.md"
-    git("update-index", "--chmod=+x", path)
-    git("commit", "-qm", "executable documentation baseline")
-    executable = git("rev-parse", "HEAD")
-    git("update-index", "--chmod=-x", path)
-    git("commit", "-qm", "normalize documentation mode")
-    normalized = git("rev-parse", "HEAD")
-    assert git("rev-parse", f"{executable}:{path}") == git(
-        "rev-parse", f"{normalized}:{path}"
-    )
-    assert scope.requires_code("pull_request", executable, normalized)
-
-    Path(path).write_text("updated prose\n")
-    git("add", path)
-    git("commit", "-qm", "ordinary documentation edit")
-    prose = git("rev-parse", "HEAD")
-    assert not scope.requires_code("pull_request", normalized, prose)
-    assert scope.requires_code("pull_request", executable, prose)
-
-    if mode == "100755":
-        git("update-index", "--chmod=+x", path)
-    elif mode == "120000":
-        Path(path).unlink()
-        Path(path).symlink_to("elsewhere")
-        git("add", path)
-    else:
-        git("update-index", "--add", "--cacheinfo", f"160000,{prose},{path}")
-    git("commit", "-qm", "non-document mode requires full CI")
-    head = git("rev-parse", "HEAD")
-    assert git("ls-tree", head, path).split()[0] == mode
-    assert scope.requires_code("pull_request", prose, head)
-
-
 def test_local_scope_reuses_parser_without_broadening_ci(local_gate_repo) -> None:
     gate, git = local_gate_repo
     Path(gate.SKILL).write_text("updated\n")
     git("add", gate.SKILL)
     assert gate.can_skip("staged", [gate.SKILL])
-    assert not scope.documentation_diff(raw(gate.SKILL))
-    assert scope.documentation_diff(raw(gate.SKILL), gate.local_document)
+    assert not gate.documentation_diff(raw(gate.SKILL))
+    assert gate.documentation_diff(raw(gate.SKILL), gate.local_document)
     assert not gate.can_skip("staged", [gate.SKILL, "src/lib.rs"])
     assert not gate.can_skip("staged", [])
     assert not gate.can_skip("all-files", [gate.SKILL])
