@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 
 pub mod bpmn_lower;
 pub mod bpmn_read;
+pub mod bpmn_write;
 pub mod workflow_bpmn;
 
 pub use medulla_types::process_exchange::ProcessExchangeError;
@@ -25,6 +26,9 @@ pub struct BpmnDocument {
     pub collaborations: Vec<BpmnCollaboration>,
     /// Elements outside every process (diagram interchange, extensions).
     pub preserved: Vec<PreservedXml>,
+    /// The prefixed namespaces the root declares (prefix to IRI), so that a
+    /// written document keeps its preserved fragments well formed.
+    pub namespaces: BTreeMap<String, String>,
 }
 
 /// One `process` with its lanes, flow nodes and sequence flows.
