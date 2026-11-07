@@ -32,16 +32,6 @@ CAMPAIGNS = (
             "status": "pass",
         },
     ),
-    (
-        "knowledge-batch",
-        SCRIPTS / "certify_exact_knowledge_batch.py",
-        {"families": 7, "requirements": 7, "snapshot_cases": 7, "status": "pass"},
-    ),
-    (
-        "reasoning-repair",
-        SCRIPTS / "certify_exact_reasoning_repair.py",
-        {"cases": 9, "status": "pass"},
-    ),
 )
 
 

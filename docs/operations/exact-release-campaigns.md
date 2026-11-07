@@ -78,10 +78,11 @@ terminal authorities.
 ## Seven-family KnowledgeBatch
 
 ```bash
-python scripts/certify_exact_knowledge_batch.py \
-  --binary "${ENGINE_BINARY:?}" \
-  --binary-sha256 "${ENGINE_BINARY_SHA256:?}" \
-  --output "${KNOWLEDGE_BATCH_EVIDENCE:?}"
+MEDULLA_EXACT_CERTIFICATION=1 \
+MEDULLA_TEST_BINARY="${ENGINE_BINARY:?}" \
+MEDULLA_TEST_BINARY_SHA256="${ENGINE_BINARY_SHA256:?}" \
+MEDULLA_CAMPAIGN_EVIDENCE_DIR="${KNOWLEDGE_BATCH_EVIDENCE_DIR:?}" \
+  pytest -m release_campaign -k knowledge_batch
 ```
 
 The exact family inventory is graph, SQL, RDF, vector, time series, job, and
@@ -102,10 +103,11 @@ snapshot binding.
 ## Reasoning restart, retraction, and repair
 
 ```bash
-python scripts/certify_exact_reasoning_repair.py \
-  --binary "${ENGINE_BINARY:?}" \
-  --binary-sha256 "${ENGINE_BINARY_SHA256:?}" \
-  --output "${REASONING_EVIDENCE:?}"
+MEDULLA_EXACT_CERTIFICATION=1 \
+MEDULLA_TEST_BINARY="${ENGINE_BINARY:?}" \
+MEDULLA_TEST_BINARY_SHA256="${ENGINE_BINARY_SHA256:?}" \
+MEDULLA_CAMPAIGN_EVIDENCE_DIR="${REASONING_EVIDENCE_DIR:?}" \
+  pytest -m release_campaign -k reasoning_repair
 ```
 
 The nine-case campaign covers projection lag and convergence, restart equality,

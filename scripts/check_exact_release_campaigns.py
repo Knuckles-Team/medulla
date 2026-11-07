@@ -220,8 +220,8 @@ def _load_campaign_trees(errors: list[str]) -> dict[str, ast.AST | None]:
         for relative in (
             "tests/release_campaigns/campaign_protocol_authorization.py",
             "scripts/certify_exact_multimodal.py",
-            "scripts/certify_exact_knowledge_batch.py",
-            "scripts/certify_exact_reasoning_repair.py",
+            "tests/release_campaigns/campaign_knowledge_batch.py",
+            "tests/release_campaigns/campaign_reasoning_repair.py",
         )
     }
 
@@ -382,8 +382,8 @@ def main() -> int:
     trees = _load_campaign_trees(errors)
     protocol_relative = "tests/release_campaigns/campaign_protocol_authorization.py"
     multimodal_relative = "scripts/certify_exact_multimodal.py"
-    batch_relative = "scripts/certify_exact_knowledge_batch.py"
-    reasoning_relative = "scripts/certify_exact_reasoning_repair.py"
+    batch_relative = "tests/release_campaigns/campaign_knowledge_batch.py"
+    reasoning_relative = "tests/release_campaigns/campaign_reasoning_repair.py"
     _check_protocol_campaign(trees[protocol_relative], errors)
     _check_multimodal_campaign(trees[multimodal_relative], errors)
     _check_batch_campaign(trees[batch_relative], errors)

@@ -296,7 +296,7 @@
       "scales": [64, 256, 1024],
       "repetitions": 5,
       "resource_bounds": {"maximum_elapsed_ms": 120000, "maximum_peak_rss_mib": 2048, "maximum_output_bytes": 1048576},
-      "implementation_refs": ["crates/medulla-retrieval/src/knowledge_batch.rs", "scripts/certify_exact_knowledge_batch.py"],
+      "implementation_refs": ["crates/medulla-retrieval/src/knowledge_batch.rs", "tests/release_campaigns/campaign_knowledge_batch.py"],
       "rows": [
         {"row_id": "G37-HP-042", "equivalence_checks": ["projection_matches_name_reference", "missing_reordered_duplicate_cases_checked"], "thresholds": {"maximum_work_units": 100000000, "maximum_work_growth_ratio": 24, "maximum_peak_memory_bytes": 2147483648, "maximum_memory_growth_ratio": 24, "maximum_latency_p99_ms": 60000, "maximum_latency_growth_ratio": 45}}
       ]

@@ -43,7 +43,7 @@ from typing import Any
 # local source win the resolution. `importlib.import_module` (a function
 # call, not an `import` statement) reaches it without requiring this
 # late-bound sys.path entry to precede a plain top-of-file import.
-REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPOSITORY_ROOT))
 SyncMedullaClient = importlib.import_module("medulla.client").SyncMedullaClient
 
