@@ -32,7 +32,7 @@ gates:
   # A manifest/toolchain change makes the helper check every tracked Rust file
   # read-only because formatting configuration is workspace-wide.
   - name: rustfmt-scope
-    command: [python3, scripts/check_rustfmt_scope.py, --base, main]
+    command: [pipelines-hook, rustfmt-scope, --base, main]
     tier: fast
     timeout: 300
     baseline_timeout: 600
@@ -44,7 +44,6 @@ gates:
       - '**/*.toml'
       - '.config/pre-commit.yaml'
       - '.mergequeue.yaml'
-      - 'scripts/check_rustfmt_scope.py'
 
   # The one gate the engine lane applied by hand. `--all-features` because the
   # workspace's crates are feature-gated and a merge can break a crate that only

@@ -199,7 +199,7 @@ jobs:
           key: ${{ steps.cargo-deny-cache.outputs.cache-primary-key }}
       - name: Rust dependency advisory gate
         if: needs.changes.outputs.code != 'false'
-        run: bash scripts/check_cargo_advisories.sh
+        run: uvx --from 'git+https://github.com/Knuckles-Team/pipelines@main' pipelines-hook cargo-advisories
 
       - name: Universal served-read RLS and carrier-ownership contract
         run: python3 scripts/check_universal_read_rls.py

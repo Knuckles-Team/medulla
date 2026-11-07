@@ -4139,7 +4139,6 @@ components:
       - "tests/test_response_guard.py"
       - "tests/test_rust_exhaustive_match.py"
       - "tests/test_rust_lexer.py"
-      - "tests/test_rustfmt_scope.py"
       - "tests/test_scanner_distribution.py"
       - "tests/test_scanner_wrappers.py"
       - "tests/test_scripts_are_thin.py"
