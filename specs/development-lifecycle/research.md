@@ -60,7 +60,6 @@ Not generated, kept: `medulla/generated/*.py` (hand-maintained wire models; the 
 is historical), `tests/fixtures/decision/assembly_golden.json` (cross-language input the Python
 verifier reads; it changes only with a record-version change), insta plan snapshots and numeric
 reference fixtures (expected outputs, not derived copies), and `vendor/` upstream sources.
-The decisions this spec consumes stay inside medulla: `MEDULLA-DECISION-ENGINE-R134.111`, `R705`, `R654`, `R811`, `R817`, `R805` and `R179`.
 
 ### R022 census of the scripts directory (lane scripts-a, 2026-11-07)
 
@@ -83,7 +82,6 @@ Destinations: pipelines mode (generic check, PIPE- row + hook mode), crate test 
 |---|---|---|---|
 | `_git_subprocess_env.py` | pipelines mode | none | 4952 |
 | `_kernel_build.py` | xtask (build/release/bench tooling) | scripts/build_numeric_kernel.py, scripts/build_pyengine_kernel.py | 5478 |
-| `all_features_validation_gate.sh` | delete-as-dead | none (test only) | 916 |
 | `bench_gate.py` | xtask (build/release/bench tooling) | .github/workflows/ci.yml, Cargo.toml, architecture/component-registry.yml, benches/r613_finance_primitives.rs, | 9430 |
 | `bench_helix_compare.py` | xtask (build/release/bench tooling) | architecture/component-registry.yml, docs/benchmarks-helix.md, scripts/helix_compare/__init__.py, tests/test_b | 6181 |
 | `bench_scale.py` | xtask (build/release/bench tooling) | CONTRIBUTING.md, docs/benchmarks.md, tests/test_bench_scale_internal.py, tests/test_bench_scale_smoke.py | 11519 |
@@ -122,7 +120,6 @@ Destinations: pipelines mode (generic check, PIPE- row + hook mode), crate test 
 | `check_kiss_census.py` | pipelines mode | .config/pre-commit.yaml, docs/quality-gate-terms.md, tests/test_kiss_fork.py, tests/test_scanner_distribution. | 9812 |
 | `check_kiss_staged.sh` | B | .config/kiss.toml, .config/pre-commit.yaml, docs/quality-gate-terms.md, scripts/kiss_diff_scope.py, tests/test | 18820 |
 | `check_mint_lease_call_sites.py` | B | .config/pre-commit.yaml, crates/medulla-isolation/src/isolation/policy_lease.rs, tests/test_architecture_gate_ | 13422 |
-| `check_mounted_kernel.py` | delete-as-dead | none | 6307 |
 | `check_no_pyo3.sh` | pipelines mode | CONTRIBUTING.md, Cargo.toml, architecture/component-registry.yml, crates/medulla-numeric/Cargo.toml, crates/me | 6475 |
 | `check_orphan_modules.py` | B | .config/kiss.toml, .config/pre-commit.yaml, tests/test_orphan_modules_gate.py | 13747 |
 | `check_p2_analytics_reasoning_architecture.py` | B | .config/pre-commit.yaml, docs/architecture/distributed-analytics-reasoning.md, tests/test_e1_guard_wiring.py,  | 10082 |
@@ -142,7 +139,6 @@ Destinations: pipelines mode (generic check, PIPE- row + hook mode), crate test 
 | `ci_affected_crates.py` | crate test / xtask | .github/workflows/ci.yml, architecture/component-registry.yml, tests/test_ci_affected_crates.py | 8565 |
 | `ci_change_scope.py` | crate test / xtask | .github/workflows/ci.yml, architecture/component-registry.yml, tests/test_ci_change_scope.py | 6521 |
 | `ci_parity.sh` | pipelines mode | .config/pre-commit.yaml, AGENTS.md, medulla/skills/medulla-development/SKILL.md, scripts/check_cluster_extras_ | 1401 |
-| `clippy_census.py` | delete-as-dead | none (test only) | 4694 |
 | `compare_wheel_reproducibility.py` | xtask (wheel/sdist) | .github/workflows/medulla-release-recovery.yml, .github/workflows/release.yml, .github/workflows/repro-diagnos | 15703 |
 | `configure_arm64_linker.sh` | xtask (build/release/bench tooling) | .github/actions/release-maturin/action.yml, .github/workflows/arm64-linker-probe.yml, tests/test_arm64_linker. | 1588 |
 | `configure_macos_linker.sh` | xtask (build/release/bench tooling) | .github/workflows/ci.yml, .github/workflows/macos-release-probe.yml, .github/workflows/release.yml, tests/test | 1341 |
@@ -164,7 +160,6 @@ Destinations: pipelines mode (generic check, PIPE- row + hook mode), crate test 
 | `kiss_diff_scope.py` | B | architecture/component-registry.yml, docs/quality-gate-terms.md, scripts/check_kiss_staged.sh, tests/test_kiss | 11030 |
 | `kiss_fork.py` | pipelines mode | architecture/component-registry.yml, docs/quality-gate-terms.md, scripts/check_kiss_staged.sh, scripts/install | 3177 |
 | `list_scanner_sources.py` | pipelines mode | .config/pre-commit.yaml, scripts/check_kiss_census.py | 3144 |
-| `measurement_lite.py` | delete-as-dead | none (test only) | 9457 |
 | `medulla_coverage_report.sh` | xtask (build/release/bench tooling) | scripts/check_tracked_privacy.py, scripts/medulla_coverage_zero_report.py | 6859 |
 | `medulla_coverage_zero_report.py` | xtask (build/release/bench tooling) | scripts/medulla_coverage_report.sh | 24997 |
 | `method_families.py` | B | architecture/component-registry.yml | 2502 |
@@ -178,15 +173,12 @@ Destinations: pipelines mode (generic check, PIPE- row + hook mode), crate test 
 | `push_gate_evidence.py` | pipelines mode | .config/pre-commit.yaml, architecture/component-registry.yml, docs/architecture/index.md, docs/architecture/pu | 41493 |
 | `python_suite_artifact.sh` | xtask (build/release/bench tooling) | .github/workflows/ci.yml, tests/test_release_python_suite_contract.py | 1398 |
 | `raft_cpu_load.py` | xtask (build/release/bench tooling) | scripts/validate-raft-cluster.sh, tests/test_validate_raft_cluster.py | 8403 |
-| `record_association_order_fixture.py` | delete-as-dead | none | 3186 |
 | `recovery` | xtask (build/release/bench tooling) | .github/workflows/medulla-arm64-recovery.yml, .github/workflows/medulla-release-recovery-dispatch.yml, .github | 3706 |
 | `release_build_metadata.py` | xtask (build/release/bench tooling) | .github/workflows/medulla-release-x86.yml, tests/test_normal_release_publication.py | 2330 |
 | `release_publication_recovery.json` | xtask (build/release/bench tooling) | .github/workflows/release-publication-recovery.yml, tests/test_release_publication_recovery.py | 2035 |
 | `release_publication_recovery.py` | xtask (build/release/bench tooling) | .github/workflows/release-publication-recovery.yml, architecture/component-registry.yml, tests/test_release_fu | 10025 |
 | `release_wheel_smoke.sh` | xtask (build/release/bench tooling) | .github/workflows/ci.yml, .github/workflows/medulla-release-x86.yml, .github/workflows/release.yml, tests/test | 2171 |
 | `report_complexity_terms.py` | B | .config/pre-commit.yaml, docs/quality-gate-terms.md | 6033 |
-| `run_agent_utilities_gate.py` | delete-as-dead | none | 3696 |
-| `run_shards.sh` | delete-as-dead | none | 2362 |
 | `rust_callgraph.py` | B | scripts/check_p2_modality_architecture.py, scripts/check_universal_read_rls.py | 4117 |
 | `rust_context.py` | B | none | 12606 |
 | `rust_exhaustive_match.py` | B | architecture/component-registry.yml, crates/medulla-sql-lang/src/sql/classify.rs, docs/quality-gate-terms.md,  | 15925 |
