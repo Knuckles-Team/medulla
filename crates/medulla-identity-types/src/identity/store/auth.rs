@@ -8,7 +8,7 @@
 
 use super::super::audit::{AuditRecord, IdentityEvent};
 use super::super::config::{AuthMode, LocalFallback};
-use super::super::model::{PasswordCredential, UserKind, UserStatus};
+use super::super::model::{PasswordCredential, UserKind, UserStatus, UserStatusEvent};
 use super::super::ops::CredentialOp;
 use super::super::requests::{AuthenticateRequest, PasswordSet};
 use super::super::stamp::IdentityStamp;
@@ -82,9 +82,15 @@ impl IdentityStore {
                 generation,
             },
         );
+        // MEDULLA-IDENTITY-R721.1 U05: a credential that need not change completes a reset.
         if let Some(user) = self.users.get_mut(principal_id) {
-            if user.status == UserStatus::PendingReset && !must_change {
-                user.status = UserStatus::Active;
+            if user.status == UserStatus::PendingReset {
+                if let Ok(next) = user
+                    .status
+                    .apply(UserStatusEvent::CompleteReset, |_| !must_change)
+                {
+                    user.status = next;
+                }
             }
         }
     }
