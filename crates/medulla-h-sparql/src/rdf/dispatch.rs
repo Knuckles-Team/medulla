@@ -177,23 +177,21 @@ async fn visible_pack_graphs(
             return Ok(Vec::new());
         };
         let tenant = carrier.log_owner().0;
-        let state = state.read().await;
-        let Some(persist_dir) = state.persist_dir.as_deref() else {
-            return Ok(Vec::new());
+        let names = {
+            let state = state.read().await;
+            let Some(persist_dir) = state.persist_dir.as_deref() else {
+                return Ok(Vec::new());
+            };
+            medulla_persistence_records::agent_library::open_shared_agent_library(
+                &state.agent_library_open,
+                persist_dir,
+            )
+            .and_then(|store| store.visible_connector_pack_graphs(tenant))?
         };
-        let names = medulla_persistence_records::agent_library::open_shared_agent_library(
-            &state.agent_library_open,
-            persist_dir,
-        )
-        .and_then(|store| store.visible_connector_pack_graphs(tenant))?;
-        Ok(names
-            .into_iter()
-            .filter(|name| name != graph_name)
-            .filter_map(|name| {
-                let core = state.registry.get(&name)?.core.clone();
-                Some((name, core))
-            })
-            .collect())
+        // The head table names the pack graphs; a graph that is cold (after a restart none
+        // is resident) opens on this first query rather than being skipped.
+        let names = names.into_iter().filter(|name| name != graph_name).collect();
+        Ok(medulla_server_api::api::reentry::resident_graph_cores(state, names).await)
     }
     #[cfg(not(feature = "redb"))]
     {

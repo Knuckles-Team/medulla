@@ -711,6 +711,28 @@ fn control_lease_machine_classes_extend_core() {
     sm::assert_extends_core("ControlLease");
 }
 
+// spec: MEDULLA-PLACEMENT-R780.2
+#[test]
+fn lane_hold_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_result_types::epistemic_operations::LANE_HOLD_MACHINE);
+}
+// spec: MEDULLA-PLACEMENT-R780.2
+#[test]
+fn lane_hold_machine_classes_extend_core() {
+    sm::assert_extends_core("LaneHold");
+}
+
+// spec: MEDULLA-PLACEMENT-R783.5
+#[test]
+fn partition_move_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_raft::raft::placement::PARTITION_MOVE_MACHINE);
+}
+// spec: MEDULLA-PLACEMENT-R783.5
+#[test]
+fn partition_move_machine_classes_extend_core() {
+    sm::assert_extends_core("PartitionMove");
+}
+
 // spec: MEDULLA-PLACEMENT-R781.2
 #[test]
 fn resource_reservation_machine_matches_edge_table() {

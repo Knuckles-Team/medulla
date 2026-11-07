@@ -108,6 +108,10 @@ use medulla_protocol_types::protocol::Method;
 use medulla_server_api::state::ServerState;
 
 mod move_journal;
+mod partition_move;
+pub use partition_move::{
+    PartitionKind, PartitionMove, PartitionMoveEvent, PARTITION_MOVE_MACHINE,
+};
 
 pub(crate) use move_journal::PlacementFence;
 pub use move_journal::{MoveStage, PartitionMoveJournal};
@@ -934,31 +938,26 @@ impl PlacementCatalog {
             .ok_or_else(|| {
                 format!("no placement entry for tenant '{tenant}' range {range:?} — assign/split it first")
             })?;
-        match entry.state {
-            PartitionState::Active if entry.group != target => {}
-            PartitionState::Moving {
-                target: active_target,
-            } if active_target == target => {
-                return Ok(PendingWrite {
-                    _guard: guard,
-                    operation_id: new_operation_id(),
-                    methods: Vec::new(),
-                    epoch: entry.epoch,
-                    epoch_allocation: None,
-                    require_success: false,
-                });
-            }
-            PartitionState::Moving { .. } => {
-                return Err("partition already has a move to another target".to_string())
-            }
-            PartitionState::Active => {
-                return Err("partition move target already owns the partition".to_string())
-            }
+        let moving = entry
+            .apply_move(PartitionMove::StartMove { target })
+            .map_err(|_| match entry.state {
+                PartitionState::Moving { .. } => {
+                    "partition already has a move to another target".to_string()
+                }
+                PartitionState::Active => {
+                    "partition move target already owns the partition".to_string()
+                }
+            })?;
+        if moving == entry {
+            return Ok(PendingWrite {
+                _guard: guard,
+                operation_id: new_operation_id(),
+                methods: Vec::new(),
+                epoch: entry.epoch,
+                epoch_allocation: None,
+                require_success: false,
+            });
         }
-        let moving = PlacementEntry {
-            state: PartitionState::Moving { target },
-            ..entry.clone()
-        };
         let epoch = moving.epoch;
         Ok(PendingWrite {
             _guard: guard,
@@ -992,15 +991,9 @@ impl PlacementCatalog {
             .ok_or_else(|| {
                 format!("no placement entry for tenant '{tenant}' range {range:?} to cut over")
             })?;
-        if entry.state != (PartitionState::Moving { target }) {
-            return Err("partition is not moving to the requested target".to_string());
-        }
-        let cut = PlacementEntry {
-            key: entry.key.clone(),
-            group: target,
-            epoch,
-            state: PartitionState::Active,
-        };
+        let cut = entry
+            .apply_move(PartitionMove::FenceCutover { target, epoch })
+            .map_err(|_| "partition is not moving to the requested target".to_string())?;
         Ok(PendingWrite {
             _guard: guard,
             operation_id: new_operation_id(),
@@ -1029,16 +1022,13 @@ impl PlacementCatalog {
             .into_iter()
             .find(|entry| entry.key.range_start == range.0 && entry.key.range_end == range.1)
             .ok_or_else(|| "partition move no longer has a placement entry".to_string())?;
-        if entry.group != source
-            || entry.epoch != original_epoch
-            || entry.state != (PartitionState::Moving { target })
-        {
-            return Err("partition move passed its rollback fence".to_string());
-        }
-        let active = PlacementEntry {
-            state: PartitionState::Active,
-            ..entry.clone()
-        };
+        let active = entry
+            .apply_move(PartitionMove::AbortMove {
+                source,
+                target,
+                original_epoch,
+            })
+            .map_err(|_| "partition move passed its rollback fence".to_string())?;
         Ok(PendingWrite {
             _guard: guard,
             operation_id: new_operation_id(),

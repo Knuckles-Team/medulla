@@ -316,9 +316,6 @@ impl IdentityStore {
         }
         super::super::text::identifier(&request.issuer_kid)?;
         self.check_transition(config.mode, request.to)?;
-        if (config.mode, request.to) == (AuthMode::External, AuthMode::Local) {
-            self.mark_credentialless_pending_reset();
-        }
         self.revoke_all_sessions();
         let next = IdentityConfig {
             mode: request.to,
@@ -381,20 +378,6 @@ impl IdentityStore {
             admins.contains(link.principal_id.as_str())
                 && self.idps.get(&link.idp_id).is_some_and(|idp| idp.enabled)
         })
-    }
-
-    /// Leaving `external`: an active human with no local credential must set
-    /// one before signing in again. The account and its links are kept.
-    fn mark_credentialless_pending_reset(&mut self) {
-        let passwords = &self.passwords;
-        for user in self.users.values_mut() {
-            let needs_reset = user.kind == UserKind::Human
-                && user.status.is_active()
-                && !passwords.contains_key(&user.principal_id);
-            if needs_reset {
-                user.status = UserStatus::PendingReset;
-            }
-        }
     }
 
     fn update_policy(

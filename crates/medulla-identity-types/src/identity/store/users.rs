@@ -3,7 +3,10 @@
 use std::collections::BTreeSet;
 
 use super::super::audit::IdentityEvent;
-use super::super::model::{UserKind, UserRecord, UserStatus};
+use super::super::model::{
+    UserKind, UserRecord, UserStatus, UserStatusEvent, USER_STATUS_GUARD_DIRECTORY_REPROVISION,
+    USER_STATUS_GUARD_NEW_CREDENTIAL_SET, USER_STATUS_GUARD_NOT_LAST_ACTIVE_ADMINISTRATOR,
+};
 use super::super::ops::UserOp;
 use super::super::requests::{CreateUserRequest, UserStatusChange, UserUpdate};
 use super::super::requests_admin::{ListQuery, MAX_PAGE};
@@ -236,15 +239,24 @@ impl IdentityStore {
         Ok(IdentityReply::Done { changed: true })
     }
 
-    /// Change a status. Leaving `active` revokes every session and API key,
-    /// and the last active administrator can never be taken out of service.
+    /// Change a status to `request.status` along the one operator edge that reaches it.
+    /// Leaving `active` revokes every session and API key, and the last active
+    /// administrator can never be taken out of service.
     fn set_status(
         &mut self,
         request: &UserStatusChange,
         stamp: &IdentityStamp,
         now_ms: u64,
     ) -> Result<IdentityReply, IdentityRefusal> {
-        self.transition_status(&request.principal_id, request.status, now_ms)?;
+        let user = self
+            .users
+            .get(&request.principal_id)
+            .ok_or(IdentityRefusal::NotFound)?;
+        let event = user
+            .status
+            .event_to(request.status)
+            .ok_or(IdentityRefusal::PreconditionFailed)?;
+        self.transition_status(&request.principal_id, event, now_ms)?;
         self.audit_event(
             stamp,
             now_ms,
@@ -254,27 +266,39 @@ impl IdentityStore {
         Ok(IdentityReply::Done { changed: true })
     }
 
-    /// Move a principal to `status`. Leaving `active` revokes every session
-    /// and API key; the last active administrator is never taken out.
+    /// MEDULLA-IDENTITY-R721.1: the one writer of a user's status. It fires `event` on
+    /// `UserStatusMachine`; a refused edge changes nothing. Leaving `active` revokes every
+    /// session and API key.
     pub(crate) fn transition_status(
         &mut self,
         principal_id: &str,
-        status: UserStatus,
+        event: UserStatusEvent,
         now_ms: u64,
     ) -> Result<(), IdentityRefusal> {
         let user = self
             .users
             .get(principal_id)
             .ok_or(IdentityRefusal::NotFound)?;
-        let leaving = user.status.is_active() && !status.is_active();
-        if leaving && self.is_last_active_admin(principal_id) {
-            return Err(IdentityRefusal::PreconditionFailed);
-        }
+        let from = user.status;
+        let credential_set = self
+            .passwords
+            .get(principal_id)
+            .is_some_and(|credential| !credential.must_change);
+        let directory_sourced = user.source != "local";
+        let last_admin = self.is_last_active_admin(principal_id);
+        let status = from
+            .apply(event, |guard| match guard {
+                USER_STATUS_GUARD_NOT_LAST_ACTIVE_ADMINISTRATOR => !last_admin,
+                USER_STATUS_GUARD_NEW_CREDENTIAL_SET => credential_set,
+                USER_STATUS_GUARD_DIRECTORY_REPROVISION => directory_sourced,
+                _ => false,
+            })
+            .map_err(|_| IdentityRefusal::PreconditionFailed)?;
         if let Some(user) = self.users.get_mut(principal_id) {
             user.status = status;
             user.disabled_at_ms = (!status.is_active()).then_some(now_ms);
         }
-        if leaving {
+        if from.is_active() && !status.is_active() {
             self.revoke_principal_sessions(principal_id, now_ms, "status_change");
             self.revoke_principal_api_keys(principal_id, now_ms);
         }

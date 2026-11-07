@@ -19,7 +19,11 @@ fn production_sources(dirs: &[PathBuf]) -> Vec<(PathBuf, String)> {
             continue;
         }
         // The cutover tests themselves name the patterns they scan for.
-        if path.components().any(|part| part.as_os_str() == "tests") {
+        // A test module is a `tests` directory or a `tests.rs` / `*_tests.rs` file, which a
+        // `#[cfg(test)] mod` declaration in its parent compiles only under test.
+        let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or_default();
+        let test_file = stem == "tests" || stem.ends_with("_tests");
+        if test_file || path.components().any(|part| part.as_os_str() == "tests") {
             continue;
         }
         let text = std::fs::read_to_string(&path).unwrap();

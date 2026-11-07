@@ -486,7 +486,7 @@ fn seed_valid_development_lane_hold(
         retained_disk_bytes: 0,
         active_count_charged: false,
         quota_charge: charge,
-        state: DevelopmentLaneHoldState::Aborted,
+        state: DevelopmentLaneHoldState::Absent,
         attempt: 1,
         lease_epoch: 1,
         fencing_token: 1,

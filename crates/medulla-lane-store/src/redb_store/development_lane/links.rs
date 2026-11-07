@@ -237,8 +237,7 @@ fn lane_graph_key(graph: &str) -> Result<(), String> {
 }
 
 /// Every stored hold whose WorkItem link is still authoritative, bound-checked
-/// before any of its identifiers is used as a lookup key. `Absent` and
-/// `Aborted` holds carry no link and are skipped.
+/// before any of its identifiers is used as a lookup key. `Absent` holds carry no link and are skipped.
 fn linked_holds<T>(holds: &T, crypto: DurableCrypto<'_>) -> Result<Vec<DurableLaneHold>, String>
 where
     T: LaneRows<(&'static str, &'static str), &'static [u8]>,
@@ -247,10 +246,7 @@ where
     holds.visit_scope_rows(&mut |_: (&str, &str), value: &[u8]| {
         let row: DurableLaneHold = resource_decode(value, crypto)?;
         durable_hold_bounds(&row)?;
-        if !matches!(
-            row.hold.state,
-            DevelopmentLaneHoldState::Absent | DevelopmentLaneHoldState::Aborted
-        ) {
+        if row.hold.state != DevelopmentLaneHoldState::Absent {
             linked.push(row);
         }
         Ok(true)
@@ -391,13 +387,9 @@ pub fn checkpoint_terminal_outcome_matches(row: &DurableLaneHold, status: &str) 
 
 pub fn checkpoint_lifecycle_status_matches(row: &DurableLaneHold, status: &str) -> bool {
     match row.hold.state {
-        DevelopmentLaneHoldState::Allocating
-        | DevelopmentLaneHoldState::Active
-        | DevelopmentLaneHoldState::Submitted => checkpoint_live_status_matches(row, status),
-        // Released is a terminal retained state in the durable vocabulary; it
-        // carries the same exact outcome mapping as CleanupPending, and both
-        // still hold their retained charge.
-        DevelopmentLaneHoldState::CleanupPending | DevelopmentLaneHoldState::Released => {
+        DevelopmentLaneHoldState::Active => checkpoint_live_status_matches(row, status),
+        // CleanupPending still holds its retained charge.
+        DevelopmentLaneHoldState::CleanupPending => {
             checkpoint_terminal_outcome_matches(row, status) && row.hold.retained_disk_bytes != 0
         }
         DevelopmentLaneHoldState::Expired => checkpoint_expired_status_matches(row, status),
@@ -406,7 +398,7 @@ pub fn checkpoint_lifecycle_status_matches(row: &DurableLaneHold, status: &str) 
         DevelopmentLaneHoldState::Cleaned => {
             checkpoint_terminal_outcome_matches(row, status) && row.hold.retained_disk_bytes == 0
         }
-        DevelopmentLaneHoldState::Aborted | DevelopmentLaneHoldState::Absent => true,
+        DevelopmentLaneHoldState::Absent => true,
     }
 }
 

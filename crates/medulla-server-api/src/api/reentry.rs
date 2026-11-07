@@ -292,7 +292,26 @@ pub trait DispatchApi: Send + Sync {
         graph: &'a str,
     ) -> SeamFuture<'a, ()>;
 
-    /// Create an internal global graph through the authoritative lifecycle path.
+    /// The resident cores of the named graphs, opening each cold one first and skipping a name no
+/// graph answers to. After a restart no pack graph is resident until a read asks for it
+/// (MEDULLA-MEDIA-VOCAB-R655), so a reader that unions graphs resolves them through here
+/// instead of looking them up in the resident registry alone.
+pub async fn resident_graph_cores(
+    state: &Arc<RwLock<ServerState>>,
+    names: Vec<String>,
+) -> Vec<(String, Arc<medulla_graph_core::graph::GraphCore>)> {
+    let mut cores = Vec::with_capacity(names.len());
+    for name in names {
+        ensure_graph_resident(state, &name).await;
+        let core = state.read().await.registry.get(&name).map(|entry| entry.core.clone());
+        if let Some(core) = core {
+            cores.push((name, core));
+        }
+    }
+    cores
+}
+
+/// Create an internal global graph through the authoritative lifecycle path.
     fn ensure_internal_global_graph<'a>(
         &'a self,
         state: &'a Arc<RwLock<ServerState>>,

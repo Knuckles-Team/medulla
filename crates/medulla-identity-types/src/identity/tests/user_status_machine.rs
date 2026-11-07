@@ -182,18 +182,75 @@ fn edge_u12_pending_verification_deprovision() {
 // spec: MEDULLA-IDENTITY-R721.1
 
 #[test]
+fn edge_u13_deprovisioned_reprovision() {
+    edge_case(
+        "U13",
+        UserStatus::Deprovisioned,
+        UserStatusEvent::Reprovision,
+        UserStatus::Active,
+    );
+}
+
+// spec: MEDULLA-IDENTITY-R721.1
+
+#[test]
+fn deprovisioned_is_not_terminal() {
+    assert!(USER_STATUS_MACHINE.terminals.is_empty());
+    assert!(!USER_STATUS_MACHINE.is_terminal(UserStatus::Deprovisioned));
+}
+
+// spec: MEDULLA-IDENTITY-R721.1
+
+#[test]
+fn only_the_directory_fires_reprovision_by_target() {
+    assert_eq!(
+        UserStatus::Deprovisioned.event_to(UserStatus::Active),
+        None,
+        "an operator status change never reaches the directory edge"
+    );
+    assert_eq!(
+        UserStatus::Disabled.event_to(UserStatus::Active),
+        Some(UserStatusEvent::Enable)
+    );
+}
+
+// spec: MEDULLA-IDENTITY-R721.1
+
+#[test]
+fn no_write_bypasses_transition_status() {
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/identity/store");
+    let mut offenders = Vec::new();
+    for entry in std::fs::read_dir(root).unwrap() {
+        let path = entry.unwrap().path();
+        let text = std::fs::read_to_string(&path).unwrap();
+        let name = path.file_name().unwrap().to_string_lossy().into_owned();
+        if name == "users.rs" {
+            continue;
+        }
+        let writes = text
+            .match_indices(".status =")
+            .any(|(at, hit)| !text[at + hit.len()..].starts_with('='));
+        if writes {
+            offenders.push(name);
+        }
+    }
+    assert!(offenders.is_empty(), "status written outside transition_status: {offenders:?}");
+}
+
+// spec: MEDULLA-IDENTITY-R721.1
+
+#[test]
 fn every_illegal_pair_is_refused() {
     let machine = &USER_STATUS_MACHINE;
     let pairs = illegal_pairs();
     assert!(!pairs.is_empty());
     for (state, event) in pairs {
         let refused = state.apply(event, |_| true).unwrap_err();
-        let expected = if machine.is_terminal(state) {
-            TransitionRefusalReason::TerminalState
-        } else {
-            TransitionRefusalReason::IllegalTransition
-        };
-        assert_eq!(refused.reason, expected, "{state:?} {event:?}");
+        assert_eq!(
+            refused.reason,
+            TransitionRefusalReason::IllegalTransition,
+            "{state:?} {event:?}"
+        );
     }
     for &terminal in machine.terminals {
         for &event in machine.events {
@@ -220,7 +277,7 @@ fn refusal_carries_machine_from_event() {
 #[test]
 fn every_transition_and_refusal_is_covered() {
     let machine = &USER_STATUS_MACHINE;
-    assert_eq!(machine.edges.len(), 12);
+    assert_eq!(machine.edges.len(), 13);
     assert_eq!(machine.states.len(), 5);
     let mut ids: Vec<_> = machine.edges.iter().map(|e| e.id).collect();
     ids.dedup();

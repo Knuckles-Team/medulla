@@ -436,6 +436,38 @@ mod admission_tests {
         let _ = std::fs::remove_dir_all(&dir);
     }
 
+    /// MEDULLA-MEDIA-VOCAB-R655: after a restart no pack graph is resident, yet the SPARQL
+    /// union must still see it. A graph the head table names opens on the first resolve; a
+    /// name no graph answers to is skipped.
+    // spec: MEDULLA-MEDIA-VOCAB-R655
+    #[tokio::test(flavor = "multi_thread")]
+    async fn cold_pack_graphs_open_on_first_union_resolve() {
+        let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
+        let dir = std::env::temp_dir().join(format!("medulla-pack-union-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let dir_s = dir.to_string_lossy().to_string();
+        let state = redb_state(&dir_s).await;
+
+        create(&state, 1, "pack__cold").await;
+        add_node(&state, 100, "pack__cold", "individual").await;
+        {
+            let mut s = state.write().await;
+            assert!(s.registry.evict_resident("pack__cold"));
+        }
+        assert!(!state.read().await.registry.is_resident("pack__cold"));
+
+        let cores = medulla_server_api::api::reentry::resident_graph_cores(
+            &state,
+            vec!["pack__cold".to_string(), "pack__missing".to_string()],
+        )
+        .await;
+        assert_eq!(cores.len(), 1, "the unknown name is skipped, the cold one opened");
+        assert_eq!(cores[0].0, "pack__cold");
+        assert_eq!(cores[0].1.node_count(), 1, "the cold graph's data came back");
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
     /// CONCEPT:MEDULLA-KG.sharding.paged-lazy-open (L38 "paged adjacency") — the literal "no full rehydrate"
     /// proof: `open_lazy_paged` with a small `page_size` over a REAL redb-backed
     /// `RedbBackend::read_graph_material_page_blocking` materializes ONLY that page's

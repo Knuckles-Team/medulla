@@ -108,23 +108,27 @@ const SCHEMA_NAMESPACES: [&str; 4] = [
     "http://www.w3.org/ns/shacl#",
 ];
 
-/// Every triple about a named individual the pack ontologies describe: a subject
-/// typed with at least one class outside the schema namespaces, and not a
-/// surface member (the engine stamps those).
+/// The named individuals among `triples`: subjects typed with at least one class outside the
+/// schema namespaces, and not a surface member (the engine stamps those).
+fn individual_subjects(triples: &[Triple]) -> std::collections::HashSet<&NamedOrBlankNode> {
+    triples
+        .iter()
+        .filter(|triple| {
+            triple.predicate.as_str() == RDF_TYPE
+                && matches!(&triple.subject, NamedOrBlankNode::NamedNode(node) if !is_member_uri(node.as_str()))
+                && matches!(&triple.object, Term::NamedNode(class)
+                    if !SCHEMA_NAMESPACES.iter().any(|ns| class.as_str().starts_with(ns)))
+        })
+        .map(|triple| &triple.subject)
+        .collect()
+}
+
+/// Every triple about a named individual the pack ontologies describe.
 fn declared_individuals(ontologies: &[PackSchemaDocument]) -> Result<Vec<Triple>, String> {
     let mut individuals = Vec::new();
     for document in ontologies {
         let triples = medulla_rdf::mapping::parse_turtle(&document.body)?;
-        let subjects: std::collections::HashSet<&NamedOrBlankNode> = triples
-            .iter()
-            .filter(|triple| {
-                triple.predicate.as_str() == RDF_TYPE
-                    && matches!(&triple.subject, NamedOrBlankNode::NamedNode(node) if !is_member_uri(node.as_str()))
-                    && matches!(&triple.object, Term::NamedNode(class)
-                        if !SCHEMA_NAMESPACES.iter().any(|ns| class.as_str().starts_with(ns)))
-            })
-            .map(|triple| &triple.subject)
-            .collect();
+        let subjects = individual_subjects(&triples);
         individuals.extend(
             triples
                 .iter()
@@ -159,26 +163,32 @@ pub(super) fn surface_triples(
 
 /// Write the surface document into the pack graph, inside the graph gateway.
 ///
-/// The nodes the document names are replaced, not merged: every `cp:` triple a
-/// node held from an earlier head goes first, and every triple of an individual
-/// the document names, so a changed revision, digest, lifecycle or individual
-/// value never leaves its old value beside the new one.
+/// The projection of a newer head replaces the older one in this one commit
+/// (MEDULLA-MEDIA-VOCAB-R655). Every `cp:` triple a node the document names held from an
+/// earlier head goes first, and every triple of every individual the graph holds, whether or
+/// not the new head still names it, so a changed value never leaves its old value beside the
+/// new one and an individual the new head dropped disappears. A head with no surface and no
+/// individuals (`None`) clears the individuals too.
 pub(crate) fn write_surface(
     core: &medulla_graph_core::graph::GraphCore,
     graph: &str,
     surface: Option<&str>,
 ) -> Result<(), String> {
-    let Some(document) = surface else {
-        return Ok(());
+    let fresh = match surface {
+        Some(document) => medulla_rdf::mapping::parse_ntriples(document)?,
+        None => Vec::new(),
     };
-    let fresh = medulla_rdf::mapping::parse_ntriples(document)?;
     let nodes: std::collections::HashSet<_> = fresh.iter().map(|t| t.subject.clone()).collect();
-    let stale: Vec<Triple> = medulla_rdf::mapping::export_triples(core, graph)?
+    let existing = medulla_rdf::mapping::export_triples(core, graph)?;
+    let held: std::collections::HashSet<NamedOrBlankNode> =
+        individual_subjects(&existing).into_iter().cloned().collect();
+    let stale: Vec<Triple> = existing
         .into_iter()
         .filter(|t| {
-            nodes.contains(&t.subject)
-                && (t.predicate.as_str().starts_with(CP)
-                    || !matches!(&t.subject, NamedOrBlankNode::NamedNode(node) if is_member_uri(node.as_str())))
+            held.contains(&t.subject)
+                || (nodes.contains(&t.subject)
+                    && (t.predicate.as_str().starts_with(CP)
+                        || !matches!(&t.subject, NamedOrBlankNode::NamedNode(node) if is_member_uri(node.as_str()))))
         })
         .collect();
     medulla_rdf::update::remove_triples(core, &stale);
@@ -205,5 +215,43 @@ mod tests {
         assert!(triples
             .iter()
             .all(|t| t.subject.to_string() == "<http://knuckles.team/kg#amount_a>"));
+    }
+
+    fn individuals(ids: &[&str]) -> String {
+        let mut document = String::new();
+        for id in ids {
+            document.push_str(&format!(
+                "<http://knuckles.team/kg#{id}> <{RDF_TYPE}> <http://knuckles.team/kg#NutrientAmount> .\n\
+                 <http://knuckles.team/kg#{id}> <http://knuckles.team/kg#nutrientId> \"1003\" .\n"
+            ));
+        }
+        document
+    }
+
+    fn subjects_of(core: &medulla_graph_core::graph::GraphCore) -> Vec<String> {
+        let mut out: Vec<String> = medulla_rdf::mapping::export_triples(core, "pack")
+            .unwrap()
+            .iter()
+            .map(|t| t.subject.to_string())
+            .collect();
+        out.sort();
+        out.dedup();
+        out
+    }
+
+    // spec: MEDULLA-MEDIA-VOCAB-R655
+    #[test]
+    fn a_newer_head_drops_the_individuals_it_no_longer_names() {
+        let core = medulla_graph_core::graph::GraphCore::new();
+        write_surface(&core, "pack", Some(&individuals(&["amount_a", "amount_b"]))).unwrap();
+        assert_eq!(subjects_of(&core).len(), 2);
+        write_surface(&core, "pack", Some(&individuals(&["amount_a"]))).unwrap();
+        assert_eq!(
+            subjects_of(&core),
+            vec!["<http://knuckles.team/kg#amount_a>".to_string()],
+            "amount_b was dropped from the newer head"
+        );
+        write_surface(&core, "pack", None).unwrap();
+        assert!(subjects_of(&core).is_empty(), "a head with no individuals clears them");
     }
 }

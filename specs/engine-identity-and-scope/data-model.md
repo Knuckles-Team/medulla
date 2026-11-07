@@ -65,5 +65,5 @@ A term is reused from an open vocabulary when an equivalent exists; otherwise it
 ### State machine fields
 
 - `GovernedChangeMachine`. States: `Proposed`, `Approved`, `Consumed`, `Revoked`, `Expired`. Persisted state: `status` (enum `GovernedStatus`, `crates/medulla-mutation-types/src/governed_change.rs:117`). `effective_status(now)` derives time expiry for reads.
-- `UserStatusMachine`. States: `Active`, `Disabled`, `PendingReset`, `PendingVerification`, `Deprovisioned`. Persisted state: `status` (enum `UserStatus`, `crates/medulla-identity-types/src/identity/model.rs:22`). `active` and `revoked` are derived from it.
+- `UserStatusMachine`. States: `Active`, `Disabled`, `PendingReset`, `PendingVerification`, `Deprovisioned` (not terminal; the directory re-provisions it). Persisted state: `status` (enum `UserStatus`, `crates/medulla-identity-types/src/identity/model.rs`). The directory `active` input and the session `revoked` flag are kept.
 - `RbacElevationMachine`. States: `Requested`, `Active`, `Revoked`, `Expired`. Persisted state: `status` (enum `ElevationStatus`, `crates/medulla-identity-types/src/rbac_elevation/ledger.rs:31`). `is_live` is derived.

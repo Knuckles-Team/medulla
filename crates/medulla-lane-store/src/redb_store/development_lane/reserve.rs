@@ -17,7 +17,7 @@ use super::{DurableLaneHold, DurableLanePolicy};
 use medulla_protocol_types::protocol::DevelopmentLaneWorkItemKind;
 use medulla_resource_store::redb_store::resource::resource_decode;
 use medulla_result_types::epistemic_operations::DevelopmentLaneHold;
-use medulla_result_types::epistemic_operations::DevelopmentLaneHoldState;
+use medulla_result_types::epistemic_operations::{DevelopmentLaneHoldState, HoldEvent};
 use medulla_result_types::epistemic_operations::DevelopmentLaneIntent;
 use medulla_result_types::epistemic_operations::DevelopmentLaneIntentHostTargetKind;
 use medulla_result_types::epistemic_operations::DevelopmentLaneQuotaPolicy;
@@ -350,12 +350,9 @@ pub fn apply_reserve(
         retained_disk_bytes: 0,
         active_count_charged: true,
         quota_charge: empty_charge(policy_revision),
-        // No filesystem effect is performed by this checkpoint.  Persisting
-        // `Allocating` without a native activate/abort/reconcile transition
-        // would strand an authority row after a crash, so reserve commits the
-        // database-side hold directly as Active.  RMDD-09's guarded effect
-        // adapter will add the later two-phase activation protocol.
-        state: DevelopmentLaneHoldState::Active,
+        // No filesystem effect is performed by this checkpoint, so the hold has no
+        // intermediate state: the Reserve edge (H01) takes it from Absent to Active below.
+        state: DevelopmentLaneHoldState::Absent,
         attempt: request.attempt,
         lease_epoch: request.lease_epoch,
         fencing_token: request.fencing_token,
@@ -373,6 +370,11 @@ pub fn apply_reserve(
         cleanup_fencing_token: None,
         tombstone: false,
     };
+    // H01: the admission gate below decides whether this hold is ever persisted.
+    hold.state = hold
+        .state
+        .apply(HoldEvent::Reserve, |_| true)
+        .map_err(|refused| refused.to_string())?;
     hold.quota_charge = hold_charge(&hold, hold.hold_revision, policy_revision);
 
     let worktree_key = worktree_key(&hold);
