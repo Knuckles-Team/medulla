@@ -33,3 +33,21 @@ def test_no_caller_names_a_script_that_was_moved_out() -> None:
                 if not (ROOT / "scripts" / name).is_file():
                     missing.append(f"{caller.relative_to(ROOT)}: scripts/{name}")
     assert not missing, missing
+
+
+@pytest.mark.spec("MEDULLA-SDLC-R007")
+def test_staged_scanners_are_separate_hooks() -> None:
+    """Each staged scanner is its own hook and no combiner hook or script exists."""
+
+    text = (ROOT / ".config" / "pre-commit.yaml").read_text()
+    ids = set(re.findall(r"^\s*- id:\s*(\S+)", text, re.M))
+    for hook in (
+        "complexity-staged",
+        "kiss-changed-rust",
+        "dupehound-changed-functions",
+        "jscpd-differential",
+        "guardrail-tracked-privacy",
+    ):
+        assert hook in ids, hook
+    assert "quality-gates" not in ids
+    assert not (ROOT / "scripts" / "check_quality_gates.py").exists()

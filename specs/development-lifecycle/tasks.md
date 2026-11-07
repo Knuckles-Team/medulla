@@ -51,7 +51,7 @@ Compile slot: Medulla only, one cargo lane host-wide at a time.
 - [ ] T044 [US1] MEDULLA-SDLC-R006.5 Evidence: rules, versions and limits.
 - [ ] T045 [US1] MEDULLA-SDLC-R006.6 Hot-path proof: served trace journey.
 - [ ] T046 [US1] MEDULLA-SDLC-R006.7 Model: trace limits are knobs.
-- [ ] T047 [US5] MEDULLA-SDLC-R007 Combined quality-gate script.
+- [ ] T047 [US5] MEDULLA-SDLC-R007 Each staged scanner is its own pre-commit hook.
 - [ ] T048 [US5] MEDULLA-SDLC-R008 Zero-backlog census gates.
 - [ ] T049 [US2] MEDULLA-SDLC-R009 Governed documentation projection.
 - [ ] T050 [US5] MEDULLA-SDLC-R010 Landing gate runs the complete test suite.

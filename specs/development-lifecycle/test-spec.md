@@ -50,7 +50,7 @@ Governing spec: [spec.md](spec.md).
 | `MEDULLA-SDLC-R006.5` | Evidence: rules, versions and limits | `tests/test_sdlc_trace_served.py::test_edges_name_rules` (planned), `crates/medulla-core/tests/lifecycle_trace.rs::edges_carry_rule_and_version` (planned) |
 | `MEDULLA-SDLC-R006.6` | Hot-path proof: served trace journey | `tests/test_sdlc_trace_served.py::test_trace_journey_depth_four` (planned) |
 | `MEDULLA-SDLC-R006.7` | Model: trace limits are knobs | `crates/medulla-types/tests/lifecycle_records.rs::trace_limits_come_from_knobs` (planned), `tests/test_sdlc_trace_served.py::test_competency_questions_answer` (planned) |
-| `MEDULLA-SDLC-R007` | Combined quality-gate script | `tests/test_quality_gate_script.py::test_exit_code_follows_every_scanner` |
+| `MEDULLA-SDLC-R007` | Each staged scanner is its own pre-commit hook | `tests/test_scripts_are_thin.py::test_staged_scanners_are_separate_hooks` |
 | `MEDULLA-SDLC-R008` | Zero-backlog census gates | `tests/test_ci_parity.py::test_parity_exit_follows_every_stage` (planned) |
 | `MEDULLA-SDLC-R009` | Governed documentation projection | `tests/test_spec_projection_served.py::test_spec_document_projects_sections_with_spans` (planned) |
 | `MEDULLA-SDLC-R010` | Landing gate runs the complete test suite | `tests/test_ci_full_suite.py::test_gate_fails_when_a_discovered_test_has_no_verdict` (planned) |
