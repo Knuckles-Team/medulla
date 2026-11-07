@@ -4675,6 +4675,7 @@ dependencies = [
  "medulla-types",
  "parking_lot",
  "petgraph",
+ "quick-xml 0.41.0",
  "rayon",
  "redb",
  "rmp-serde",
@@ -4682,6 +4683,7 @@ dependencies = [
  "serde_json",
  "sha2 0.10.9",
  "tracing",
+ "unicode-normalization",
 ]
 
 [[package]]

@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+    xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+    xmlns:ext="urn:example:extension" id="defs1">
+  <bpmn:collaboration id="collab1">
+    <bpmn:participant id="p1" processRef="proc1"/>
+  </bpmn:collaboration>
+  <bpmn:process id="proc1" name="Every kind">
+    <bpmn:laneSet id="ls1">
+      <bpmn:lane id="lane1" name="Finance">
+        <bpmn:flowNodeRef>user1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>manual1</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="start1" name="Start"><bpmn:messageEventDefinition id="md1" messageRef="invoice"/></bpmn:startEvent>
+    <bpmn:task id="task1" name="Task"/>
+    <bpmn:userTask id="user1" name="User &amp; review">
+      <bpmn:extensionElements><ext:form key="f1"/></bpmn:extensionElements>
+    </bpmn:userTask>
+    <bpmn:manualTask id="manual1" name="Manual"/>
+    <bpmn:serviceTask id="service1" name="Service"/>
+    <bpmn:scriptTask id="script1" name="Script"/>
+    <bpmn:sendTask id="send1" name="Send"/>
+    <bpmn:receiveTask id="receive1" name="Receive"/>
+    <bpmn:businessRuleTask id="rule1" name="Rule" decisionRef="limits"/>
+    <bpmn:subProcess id="sub1" name="Sub"><bpmn:task id="inner1"/></bpmn:subProcess>
+    <bpmn:callActivity id="call1" name="Call" calledElement="payment"/>
+    <bpmn:exclusiveGateway id="xor1" name="Amount?" default="flow3"/>
+    <bpmn:parallelGateway id="and1"/>
+    <bpmn:inclusiveGateway id="or1"/>
+    <bpmn:eventBasedGateway id="ev1"/>
+    <bpmn:complexGateway id="cx1"/>
+    <bpmn:intermediateCatchEvent id="catch1" name="Wait"><bpmn:timerEventDefinition id="td1"><bpmn:timeDuration>PT1H</bpmn:timeDuration></bpmn:timerEventDefinition></bpmn:intermediateCatchEvent>
+    <bpmn:intermediateThrowEvent id="throw1" name="Notify"/>
+    <bpmn:boundaryEvent id="boundary1" attachedToRef="user1"><bpmn:errorEventDefinition id="ed1"/></bpmn:boundaryEvent>
+    <bpmn:endEvent id="end1" name="End"/>
+    <bpmn:sequenceFlow id="flow1" sourceRef="start1" targetRef="xor1"/>
+    <bpmn:sequenceFlow id="flow2" name="high" sourceRef="xor1" targetRef="user1">
+      <bpmn:conditionExpression>amount &gt; 1000</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow3" sourceRef="xor1" targetRef="end1"/>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="diagram1"><bpmndi:BPMNPlane id="plane1" bpmnElement="proc1"/></bpmndi:BPMNDiagram>
+</bpmn:definitions>
