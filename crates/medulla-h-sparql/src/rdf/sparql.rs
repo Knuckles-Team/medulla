@@ -24,7 +24,9 @@ impl SparqlProofMode {
     }
 }
 
-/// Evaluate a SPARQL SELECT against the caller-visible graph snapshot. `proj` is the
+/// Evaluate a SPARQL SELECT against the caller-visible graph snapshot, its default
+/// graph unioned with the caller-filtered view of each of the tenant's visible pack
+/// graphs in `packs` (MEDULLA-MEDIA-VOCAB-R655). `proj` is the
 /// request's LPG→RDF projection: an empty `base_iri` keeps the identity projection; a
 /// caller-supplied namespace and convention project the live property graph into
 /// that vocabulary.
@@ -32,17 +34,52 @@ impl SparqlProofMode {
 pub(super) async fn handle_sparql(
     req_id: u64,
     core: Arc<GraphCore>,
+    packs: Vec<(String, Arc<GraphCore>)>,
     query: String,
     proj: medulla_rdf::sparql::Projection,
     mode: SparqlProofMode,
     #[cfg(feature = "security")] caller: &str,
     #[cfg(feature = "security")] rls: &Arc<medulla_isolation::isolation::IsolationLayer>,
 ) -> Response {
+    // Each pack view is taken before the key is built, so the key names the exact
+    // pack versions the evaluation reads; a pack write changes the key.
+    let pack_views: Vec<(String, Arc<GraphView>, u64)> = packs
+        .iter()
+        .map(|(name, pack)| {
+            #[cfg(feature = "result-cache")]
+            let (view, version) = sparql_snapshot(
+                pack,
+                #[cfg(feature = "security")]
+                caller,
+                #[cfg(feature = "security")]
+                rls,
+            );
+            #[cfg(not(feature = "result-cache"))]
+            let (view, version) = (
+                sparql_snapshot_uncached(
+                    pack,
+                    #[cfg(feature = "security")]
+                    caller,
+                    #[cfg(feature = "security")]
+                    rls,
+                ),
+                pack.version(),
+            );
+            (name.clone(), view, version)
+        })
+        .collect();
     #[cfg(feature = "result-cache")]
-    let cache_key = format!(
-        "{query}\u{0}{:?}\u{0}{}\u{0}{mode:?}",
-        proj.base_iri, proj.camel_type
-    );
+    let cache_key = {
+        let mut key = format!(
+            "{query}\u{0}{:?}\u{0}{}\u{0}{mode:?}",
+            proj.base_iri, proj.camel_type
+        );
+        for (name, _, version) in &pack_views {
+            key.push_str(&format!("\u{0}{name}@{version}"));
+        }
+        key
+    };
+    let pack_views: Vec<Arc<GraphView>> = pack_views.into_iter().map(|(_, view, _)| view).collect();
     #[cfg(feature = "result-cache")]
     let hash = sparql_cache_hash(
         &cache_key,
@@ -71,7 +108,7 @@ pub(super) async fn handle_sparql(
     );
     evaluate_sparql(
         req_id,
-        snap,
+        (snap, pack_views),
         (query, proj, mode),
         #[cfg(feature = "result-cache")]
         core,
@@ -169,15 +206,20 @@ fn sparql_snapshot_uncached(
 
 async fn evaluate_sparql(
     req_id: u64,
-    snap: Arc<GraphView>,
+    (snap, pack_views): (Arc<GraphView>, Vec<Arc<GraphView>>),
     (query, proj, mode): (String, medulla_rdf::sparql::Projection, SparqlProofMode),
     #[cfg(feature = "result-cache")] core: Arc<GraphCore>,
     #[cfg(feature = "result-cache")] hash: u128,
     #[cfg(feature = "result-cache")] version: u64,
 ) -> Response {
     match compute_off_lock(req_id, move || {
+        let merged = (!pack_views.is_empty()).then(|| {
+            medulla_rdf::sparql::merge_views(
+                std::iter::once(&*snap).chain(pack_views.iter().map(|view| &**view)),
+            )
+        });
         run_sparql(
-            &medulla_rdf::sparql::Dataset::new(&snap, Vec::new()),
+            &medulla_rdf::sparql::Dataset::new(merged.as_ref().unwrap_or(&snap), Vec::new()),
             &query,
             &proj,
             mode,

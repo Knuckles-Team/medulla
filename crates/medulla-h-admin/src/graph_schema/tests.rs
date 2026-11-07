@@ -1,4 +1,5 @@
 use super::*;
+use medulla_catalog_types::connector_pack::ids::pack_projection_graph_name;
 use medulla_catalog_types::graph_schema::GraphSchemaOp;
 
 fn pack_document(uri: &str, body: Arc<str>) -> PackSchemaDocument {
