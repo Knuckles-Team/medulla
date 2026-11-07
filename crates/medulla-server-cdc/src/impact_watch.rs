@@ -246,7 +246,8 @@ async fn submit(
             watch.id
         )))
     } else {
-        service_context(&watch.id, as_of_ms)
+        let server = state.read().await.context.clone();
+        service_context(&server, &watch.id, as_of_ms)
             .map_err(|error| format!("service identity unavailable: {error}"))?
     };
     let request = medulla_protocol_types::protocol::Request {
@@ -267,10 +268,12 @@ async fn submit(
 /// The service identity one watch run writes as; its operation key names the watch
 /// and the as-of time, so a retried run replays instead of writing twice.
 pub(crate) fn service_context(
+    server: &medulla_server_api::server_context::ServerContext,
     watch_id: &str,
     as_of_ms: u64,
 ) -> Result<VerifiedRequestContext, String> {
     let service = VerifiedRequestContext::authenticated_fixed_service_actor(
+        server,
         WATCH_SERVICE,
         &["mining:write"],
     )?;

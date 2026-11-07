@@ -74,6 +74,7 @@ mod tests {
     fn the_granted_principal_is_the_principal_the_worker_signs_as() {
         let signer =
             medulla_server_api::authority_context::VerifiedRequestContext::authenticated_fixed_service_actor(
+                &medulla_server_api::server_context::ServerContext::fixture(),
                 super::super::worker::CONSUMER,
                 &["kg:write"],
             )

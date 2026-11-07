@@ -762,7 +762,10 @@ mod worker {
         item: &FollowOn,
     ) -> Result<VerifiedRequestContext, String> {
         let key = item.enrich_envelope_id();
-        let anonymous = state.read().await.local_anonymous;
+        let (anonymous, server) = {
+            let state = state.read().await;
+            (state.local_anonymous, state.context.clone())
+        };
         #[cfg(feature = "security")]
         if !anonymous {
             let mut state = state.write().await;
@@ -780,6 +783,7 @@ mod worker {
             VerifiedRequestContext::anonymous_local(Some(key))
         } else {
             let service = VerifiedRequestContext::authenticated_fixed_service_actor(
+                &server,
                 SERVICE,
                 // `ApplyChangeEnvelope` authorizes `ingest:write`.
                 &["graph:write", "ingest:write", "repository:enrich:commit"],

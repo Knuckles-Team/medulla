@@ -177,6 +177,9 @@ pub struct ServerState {
     pub isolation: IsolationLayer,
     pub channels: ChannelManager,
     pub auth_secret: String,
+    /// The explicit process state of this server (MEDULLA-SDLC-R023): the
+    /// request-context policy and the replay ledger.
+    pub context: Arc<crate::server_context::ServerContext>,
     /// Explicit local anonymous store mode; never inferred from an empty secret.
     pub local_anonymous: bool,
     pub persist_dir: Option<String>,
@@ -469,13 +472,18 @@ impl ServerState {
         );
     }
 
-    pub fn new(auth_secret: impl Into<String>, isolation: IsolationLayer) -> Self {
+    pub fn new(
+        auth_secret: impl Into<String>,
+        isolation: IsolationLayer,
+        context: Arc<crate::server_context::ServerContext>,
+    ) -> Self {
         Self {
             seams: Default::default(),
             registry: GraphRegistry::default(),
             isolation,
             channels: ChannelManager::default(),
             auth_secret: auth_secret.into(),
+            context,
             local_anonymous: false,
             write_conflict_strategy: Default::default(),
             persist_dir: None,
@@ -541,8 +549,13 @@ impl ServerState {
     /// dependants of the library, so their fixtures cannot use a `pub(crate)`
     /// test-only constructor.
     #[doc(hidden)]
+    #[cfg(any(test, feature = "test-support"))]
     pub fn new_for_test(auth_secret: impl Into<String>, isolation: IsolationLayer) -> Self {
-        let state = Self::new(auth_secret, isolation);
+        let state = Self::new(
+            auth_secret,
+            isolation,
+            crate::server_context::ServerContext::shared_for_tests(),
+        );
         #[cfg(feature = "raft")]
         let state = {
             let mut state = state;
@@ -605,7 +618,11 @@ mod construction_tests {
     /// transaction bounds, empty registries, and a CDC hub under `streaming`.
     #[test]
     fn new_composes_documented_limits_and_empty_registries() {
-        let state = ServerState::new("secret", IsolationLayer::new());
+        let state = ServerState::new(
+            "secret",
+            IsolationLayer::new(),
+            std::sync::Arc::new(crate::server_context::ServerContext::fixture()),
+        );
         assert_eq!(state.auth_secret, "secret");
         assert_eq!(state.max_in_flight.available_permits(), 16);
         assert_eq!(state.read_admission.available_permits(), 16);

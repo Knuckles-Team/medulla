@@ -48,7 +48,7 @@ use medulla_server_api::http1::HttpMessage;
 use medulla_server_api::http1::RequestLimits;
 use medulla_server_api::state::ServerState;
 use medulla_server_auth::access::check_graph_access;
-use medulla_server_auth::auth::verify_request_with_security_dir;
+use medulla_server_auth::auth::verify_request;
 
 /// Environment/CLI address used by `main.rs` to opt into this listener.
 pub const GRAPHQL_ADDR_ENV: &str = "MEDULLA_GRAPHQL_ADDR";
@@ -191,19 +191,17 @@ async fn handle_conn(
 
     // Copy only the immutable authentication inputs while holding state. The replay
     // ledger commit and signature verification run after releasing the state lock.
-    let (secret, security_dir) = {
+    let (secret, server) = {
         let state = state.read().await;
-        (state.auth_secret.clone(), state.persist_dir.clone())
+        (state.auth_secret.clone(), state.context.clone())
     };
-    let verified =
-        match verify_request_with_security_dir(&secret, &request, security_dir.as_deref()) {
-            Ok(context) => context,
-            Err(_) => {
-                medulla_kernel::metrics::auth_failure();
-                return write_simple(&mut stream, "401 Unauthorized", "authentication required")
-                    .await;
-            }
-        };
+    let verified = match verify_request(&server, &secret, &request) {
+        Ok(context) => context,
+        Err(_) => {
+            medulla_kernel::metrics::auth_failure();
+            return write_simple(&mut stream, "401 Unauthorized", "authentication required").await;
+        }
+    };
 
     // `Method::GraphQl` is a query-or-mutation family in the capability ledger. A
     // successfully parsed LiveQuery below is provably read-only, so apply the ledger's
@@ -871,9 +869,9 @@ mod tests {
 
         let mut tampered = request.clone();
         tampered.graph = "agent:actor-b".into();
-        assert!(verify_request_with_security_dir("graphql-test-secret", &tampered, None).is_err());
-        let verified =
-            verify_request_with_security_dir("graphql-test-secret", &request, None).unwrap();
+        let server = medulla_server_api::server_context::ServerContext::fixture();
+        assert!(verify_request(&server, "graphql-test-secret", &tampered).is_err());
+        let verified = verify_request(&server, "graphql-test-secret", &request).unwrap();
         assert_eq!(verified.agent_id(), "actor-a");
         assert_eq!(verified.tenant(), "tenant-shared");
     }

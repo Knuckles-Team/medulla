@@ -354,7 +354,9 @@ async fn run_query(
     // and KV-cache bearer/JWT routes: one implementation, three routes). No
     // configured credential, or an invalid one, still denies (fail closed) —
     // see AGENTS.md (A18) for the before/after across every auxiliary surface.
+    let server = state.read().await.context.clone();
     let carrier = medulla_server_auth::auth::mint_fixed_service_carrier(
+        &server,
         bearer.is_some_and(|credential| credential.verify(authorization_header)),
         "sparql-http-client",
         &["kg:read"],

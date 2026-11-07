@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Check the server crate graph against the split standard (MEDULLA-CONTRACT-R056).
+"""Check the crate graph against the split standard and the stability layers.
 
-Two checks, each a function returning one finding per violation (empty means
+Three checks, each a function returning one finding per violation (empty means
 pass):
 
 * ``no_contract_modules`` (R056.1): no server or persistence crate holds a
@@ -10,11 +10,14 @@ pass):
 * ``features_map_one_to_one`` (R056.16): every handler crate
   (``medulla-h-*``) and wire crate (``medulla-wire*``) is an optional
   dependency of ``medulla-server``, and its ``full`` feature enables each one.
+* ``layer_findings`` (MEDULLA-SDLC-R021): every workspace crate sits in exactly
+  one layer of ``architecture/crate-layers.yml`` and depends only on crates of
+  its own or an earlier layer.
 
 The crate set comes from ``cargo metadata`` when cargo is on the path, else
 from the workspace members in the root ``Cargo.toml``.
 
-Usage: check_crate_graph.py [--root PATH]. Exit status 0 when both pass.
+Usage: check_crate_graph.py [--root PATH]. Exit status 0 when all pass.
 """
 
 from __future__ import annotations
@@ -26,8 +29,10 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
 import tomllib
+import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 SERVER_CRATE_PREFIXES = ("medulla-server", "medulla-persistence")
@@ -38,6 +43,8 @@ MOD_DECL = re.compile(
     rf"^\s*(?:pub(?:\([^)]*\))?\s+)?mod\s+{FORBIDDEN_MODULE}\b", re.MULTILINE
 )
 SPLIT_CRATE = re.compile(r"^medulla-(?:h-[a-z0-9-]+|wire(?:-[a-z0-9-]+)?)$")
+LAYERS_FILE = Path("architecture/crate-layers.yml")
+LAYERED_TABLES = ("dependencies", "build-dependencies")
 
 
 def workspace_crates(root: Path) -> dict[str, Path]:
@@ -65,6 +72,9 @@ def workspace_crates(root: Path) -> dict[str, Path]:
         if cargo.is_file():
             name = tomllib.loads(cargo.read_text(encoding="utf-8"))["package"]["name"]
             crates[name] = path
+    root_package = manifest.get("package", {}).get("name")
+    if root_package:
+        crates[root_package] = root
     return crates
 
 
@@ -137,16 +147,64 @@ def features_map_one_to_one(root: Path = ROOT) -> list[str]:
     return findings
 
 
+def _layered_dependencies(manifest: dict[str, Any]) -> set[str]:
+    """Names of the crates a manifest depends on outside its dev-dependencies."""
+    tables: list[dict[str, Any]] = [manifest.get(table, {}) for table in LAYERED_TABLES]
+    for target in manifest.get("target", {}).values():
+        tables += [target.get(table, {}) for table in LAYERED_TABLES]
+    names: set[str] = set()
+    for table in tables:
+        for key, spec in table.items():
+            renamed = spec.get("package") if isinstance(spec, dict) else None
+            names.add(renamed or key)
+    return names
+
+
+def layer_findings(root: Path = ROOT) -> list[str]:
+    """R021: each crate sits in one layer and depends on its own or an earlier one."""
+    # spec: MEDULLA-SDLC-R021
+    layers_path = root / LAYERS_FILE
+    if not layers_path.is_file():
+        return [f"{LAYERS_FILE}: the crate layers file is missing"]
+    layers = yaml.safe_load(layers_path.read_text(encoding="utf-8"))["layers"]
+    crates = workspace_crates(root)
+    findings: list[str] = []
+    rank: dict[str, int] = {}
+    for index, layer in enumerate(layers):
+        for crate in layer["crates"]:
+            if crate in rank:
+                findings.append(f"{LAYERS_FILE}: {crate} sits in more than one layer")
+            elif crate not in crates:
+                findings.append(f"{LAYERS_FILE}: {crate} is not a workspace crate")
+            rank.setdefault(crate, index)
+    for name, path in sorted(crates.items()):
+        if name not in rank:
+            findings.append(f"{LAYERS_FILE}: {name} sits in no layer")
+            continue
+        manifest = tomllib.loads((path / "Cargo.toml").read_text(encoding="utf-8"))
+        for dependency in sorted(_layered_dependencies(manifest) & rank.keys()):
+            if rank[dependency] > rank[name]:
+                findings.append(
+                    f"{name} ({layers[rank[name]]['name']}) depends on {dependency} "
+                    f"({layers[rank[dependency]]['name']}), a later layer"
+                )
+    return findings
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--root", type=Path, default=ROOT)
     args = parser.parse_args(argv)
-    findings = no_contract_modules(args.root) + features_map_one_to_one(args.root)
+    findings = (
+        no_contract_modules(args.root)
+        + features_map_one_to_one(args.root)
+        + layer_findings(args.root)
+    )
     for finding in findings:
         print(f"FAIL {finding}")
     if findings:
         return 1
-    print("crate graph: no contract modules; features map one to one")
+    print("crate graph: no contract modules; features map one to one; layers hold")
     return 0
 
 

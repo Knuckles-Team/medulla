@@ -327,8 +327,12 @@ fn agent_library_signed_route_uses_wire_nonce_and_idempotency() {
             idempotency_key: "wire-agent-library-key",
         },
     );
-    let verified =
-        medulla_server_auth::auth::verify_request("agent-library-test-secret", &request).unwrap();
+    let verified = medulla_server_auth::auth::verify_request(
+        &medulla_server_api::server_context::ServerContext::fixture(),
+        "agent-library-test-secret",
+        &request,
+    )
+    .unwrap();
     let context = match request.method {
         medulla_protocol_types::protocol::Method::AgentLibrary {
             op: AgentLibraryOp::Publish { request },

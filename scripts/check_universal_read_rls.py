@@ -821,7 +821,7 @@ def main() -> None:
         all(
             (
                 "Authorization: Bearer eg2.<verified-envelope>" in graphql_sse,
-                "verify_request_with_security_dir" in graphql_sse,
+                "verify_request(&server, &secret, &request)" in graphql_sse,
                 "GraphReadAuthority::from_verified" in graphql_sse,
                 "check_graph_access(" in graphql_sse,
                 "authority.filter_view(&mut view);" in graphql_sse,

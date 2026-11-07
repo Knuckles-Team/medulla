@@ -426,7 +426,8 @@ async fn caller_cannot_choose_session_record_provenance() {
     assert_eq!(
         stamp.session_tenant,
         medulla_server_identity::dispatch::identity_store::resolution_context::record_tenant(
-            &context
+            &medulla_server_api::server_context::ServerContext::fixture(),
+            &context,
         )
     );
     assert_ne!(

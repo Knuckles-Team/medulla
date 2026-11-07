@@ -91,6 +91,9 @@ pub mod routed_write_coalescer;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod service_grant;
 
+/// The server's explicit process state (MEDULLA-SDLC-R023).
+pub mod server_context;
+
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod state;

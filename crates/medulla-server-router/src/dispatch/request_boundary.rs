@@ -137,13 +137,18 @@ pub async fn dispatch_authenticated_broker_actor(
     actor_ref: &str,
 ) -> Response {
     let request_id = req.id;
-    let context = match VerifiedRequestContext::authenticated_broker_actor(actor_ref, request_id) {
-        Ok(context) => context,
-        Err(error) => {
-            medulla_kernel::metrics::auth_failure();
-            return method_errors::enforce((&req.method).into(), Response::err(request_id, error));
-        }
-    };
+    let server = state.read().await.context.clone();
+    let context =
+        match VerifiedRequestContext::authenticated_broker_actor(&server, actor_ref, request_id) {
+            Ok(context) => context,
+            Err(error) => {
+                medulla_kernel::metrics::auth_failure();
+                return method_errors::enforce(
+                    (&req.method).into(),
+                    Response::err(request_id, error),
+                );
+            }
+        };
     dispatch_with_context(state, req, Some(context)).await
 }
 
@@ -153,7 +158,8 @@ pub async fn dispatch_authenticated_local_query(
     state: &Arc<RwLock<ServerState>>,
     req: Request,
 ) -> Response {
-    let context = match VerifiedRequestContext::authenticated_local_query(req.id) {
+    let server = state.read().await.context.clone();
+    let context = match VerifiedRequestContext::authenticated_local_query(&server, req.id) {
         Ok(context) => context,
         Err(error) => {
             return method_errors::enforce((&req.method).into(), Response::err(req.id, error));

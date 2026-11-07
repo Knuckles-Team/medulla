@@ -1437,22 +1437,18 @@ impl WireSession {
     /// The first request fixes the connection actor; later requests must carry
     /// the same verified actor and current graph.
     pub async fn authenticate_request(&self, request: &Request) -> WireResult<()> {
-        let (secret, persist_dir) = {
+        let (secret, server) = {
             let state = self.state.read().await;
-            (state.auth_secret.clone(), state.persist_dir.clone())
+            (state.auth_secret.clone(), state.context.clone())
         };
-        let context = medulla_server_auth::auth::verify_request_with_security_dir(
-            &secret,
-            request,
-            persist_dir.as_deref(),
-        )
-        .map_err(|message| {
-            medulla_kernel::metrics::auth_failure();
-            WireError {
-                code: "28000".to_string(),
-                message,
-            }
-        })?;
+        let context = medulla_server_auth::auth::verify_request(&server, &secret, request)
+            .map_err(|message| {
+                medulla_kernel::metrics::auth_failure();
+                WireError {
+                    code: "28000".to_string(),
+                    message,
+                }
+            })?;
         let verified_authority = CarrierAuthority::from_verified(&context).map_err(|message| {
             medulla_kernel::metrics::access_denied();
             WireError {
@@ -1492,9 +1488,12 @@ impl WireSession {
         protocol: &str,
         actor: &str,
     ) -> WireResult<()> {
-        let secret = self.state.read().await.auth_secret.clone();
+        let (secret, server) = {
+            let state = self.state.read().await;
+            (state.auth_secret.clone(), state.context.clone())
+        };
         let context = medulla_server_api::authority_context::VerifiedRequestContext::authenticated_sql_wire_actor(
-            &secret, protocol, actor,
+            &server, &secret, protocol, actor,
         )
         .map_err(|message| WireError {
             code: "28000".to_string(),

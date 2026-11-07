@@ -9,10 +9,10 @@ use medulla_identity_types::{
     identity::IdentityStamp, identity::IdentityStore, identity::PrincipalResolution,
     identity::SessionOp, identity::TokenOp, identity::UserOp,
 };
-use medulla_server_api::authority_context::request_context_policy;
 use medulla_server_api::authority_context::RequestContextPolicy;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::identity_view::identity_actor;
+use medulla_server_api::server_context::ServerContext;
 use medulla_server_api::state::ServerState;
 use medulla_server_identity::dispatch::elevation::ElevationStampAuthority;
 use medulla_server_identity::dispatch::identity_store::resolution_context::*;
@@ -478,7 +478,7 @@ async fn successful_session_resolution_runs_boundary_store_and_public_response()
     assert!(uuid::Uuid::parse_str(&record.session_ref[4..]).is_ok());
     assert_eq!(
         record.tenant,
-        request_context_policy().unwrap().expected_tenant
+        RequestContextPolicy::fixture().expected_tenant
     );
     assert_eq!(record.principal_id, BOOTSTRAP_PRINCIPAL);
     let repeated = send_op(&state, live_broker(), session_request()).await;
@@ -500,7 +500,7 @@ async fn successful_session_resolution_runs_boundary_store_and_public_response()
     );
     assert_eq!(
         value.request_context.policy_version,
-        request_context_policy().unwrap().expected_policy_version
+        RequestContextPolicy::fixture().expected_policy_version
     );
 }
 
@@ -682,9 +682,10 @@ async fn pending_mfa_refusal_preserves_a_completable_ceremony_after_touch() {
 #[test]
 fn session_record_creation_requires_matching_deployment_context() {
     let valid = live_broker();
-    let expected = request_context_policy().unwrap();
+    let expected = RequestContextPolicy::fixture();
+    let server = ServerContext::fixture();
     assert_eq!(
-        record_tenant(&valid).as_deref(),
+        record_tenant(&server, &valid).as_deref(),
         Some(expected.expected_tenant.as_str())
     );
     for field in ["tenant", "audience", "policy_version"] {
@@ -695,7 +696,7 @@ fn session_record_creation_requires_matching_deployment_context() {
             _ => claims.policy_version = "obsolete-policy".into(),
         }
         let mismatched = VerifiedRequestContext::from_verified_claims(claims, "test-only".into());
-        assert!(record_tenant(&mismatched).is_none());
+        assert!(record_tenant(&server, &mismatched).is_none());
     }
 }
 

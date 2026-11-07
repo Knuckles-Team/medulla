@@ -166,16 +166,12 @@ const HANDOFF_FLOOR_KEY: &str = "handoff_floor";
 const HANDOFF_PREFIX: &str = "handoff/";
 /// The first key after every `handoff/` key (`'0'` follows `'/'`).
 #[cfg(feature = "security")]
-#[cfg(any(test, not(feature = "request-policy-fixture")))]
 const HANDOFF_END: &str = "handoff0";
 #[cfg(feature = "security")]
-#[cfg(any(test, not(feature = "request-policy-fixture")))]
 const REPLAY_PHYSICAL_STORE: &str = "epistemic-graph:request-replay";
 #[cfg(feature = "security")]
-#[cfg(any(test, not(feature = "request-policy-fixture")))]
 const REPLAY_SCOPE_RESOURCE: &str = "request-replay";
 #[cfg(feature = "security")]
-#[cfg(any(test, not(feature = "request-policy-fixture")))]
 const REPLAY_SCOPE_INCARNATION: &str = "request-replay:v1";
 
 /// Durable replay adapter used by secure mode (EH-533).
@@ -223,7 +219,6 @@ pub struct RedbReplayLedger {
 
 #[cfg(feature = "security")]
 impl RedbReplayLedger {
-    #[cfg(any(test, not(feature = "request-policy-fixture")))]
     pub(crate) fn open(dir: &std::path::Path) -> Result<Self, String> {
         let path = dir.join("request-replay.redb");
         let durable = medulla_store::sidecar_store::SidecarStore::open(
@@ -296,7 +291,6 @@ impl RedbReplayLedger {
 /// envelope a previous incarnation could have accepted is refused. Runs as a
 /// maintenance write so a fresh file gets its table created.
 #[cfg(feature = "security")]
-#[cfg(any(test, not(feature = "request-policy-fixture")))]
 fn restore(
     durable: &medulla_store::sidecar_store::SidecarStore<medulla_storage::RequestReplayOwner>,
 ) -> Result<(u64, NonceWindow), String> {
@@ -324,7 +318,6 @@ fn restore(
 
 /// Reads the sealed handoff into a window and deletes it (rows + floor key).
 #[cfg(feature = "security")]
-#[cfg(any(test, not(feature = "request-policy-fixture")))]
 fn take_handoff(
     table: &mut redb::Table<'_, &'static str, u64>,
     floor: u64,
@@ -357,80 +350,6 @@ impl ReplayLedger for RedbReplayLedger {
             .lock_recovering("replay ledger window")
             .admit(presented))
     }
-}
-
-#[cfg(all(feature = "security", not(test)))]
-static LEDGER: std::sync::OnceLock<Result<RedbReplayLedger, String>> = std::sync::OnceLock::new();
-
-/// Graceful shutdown: hand the process's replay window to the next
-/// incarnation (see [`RedbReplayLedger::seal`]), so a clean restart does not
-/// refuse fresh envelopes signed in the last second this one accepted. A
-/// no-op when the ledger was never opened. Returns the nonces handed off.
-#[cfg(all(feature = "security", not(test)))]
-pub fn seal_request_replay_ledger() -> Result<usize, String> {
-    match LEDGER.get() {
-        Some(Ok(ledger)) => ledger.seal(),
-        _ => Ok(0),
-    }
-}
-
-/// Without the durable ledger there is nothing to hand off.
-#[cfg(any(not(feature = "security"), test))]
-pub fn seal_request_replay_ledger() -> Result<usize, String> {
-    Ok(0)
-}
-
-#[cfg(all(
-    feature = "security",
-    not(test),
-    not(feature = "request-policy-fixture")
-))]
-pub fn durable_replay_ledger(state_dir: Option<&str>) -> Result<&'static RedbReplayLedger, String> {
-    match LEDGER.get_or_init(|| {
-        let dir = std::env::var("MEDULLA_SECURITY_STATE_DIR")
-            .ok()
-            .map(|v| v.trim().to_string())
-            .filter(|v| !v.is_empty())
-            .or_else(|| state_dir.map(str::to_string))
-            .ok_or_else(|| {
-                "secure request context requires MEDULLA_SECURITY_STATE_DIR or a persist directory"
-                    .to_string()
-            })?;
-        RedbReplayLedger::open(std::path::Path::new(&dir))
-    }) {
-        Ok(ledger) => Ok(ledger),
-        Err(message) => Err(message.clone()),
-    }
-}
-
-/// Test builds of the crates that moved out of this one (`request-policy-fixture`) use the
-/// in-memory window, exactly as the in-crate `cfg(test)` build does: the durable ledger is one
-/// process-wide handle on its first caller's directory, which a parallel test process cannot share.
-#[cfg(all(not(test), feature = "request-policy-fixture"))]
-pub fn durable_replay_ledger(
-    _state_dir: Option<&str>,
-) -> Result<&'static dyn ReplayLedger, String> {
-    static MEMORY: std::sync::OnceLock<ReplayCache> = std::sync::OnceLock::new();
-    Ok(MEMORY.get_or_init(ReplayCache::new))
-}
-
-#[cfg(all(
-    not(feature = "security"),
-    not(test),
-    not(feature = "request-policy-fixture")
-))]
-pub fn durable_replay_ledger(
-    _state_dir: Option<&str>,
-) -> Result<&'static dyn ReplayLedger, String> {
-    Err("secure request context requires the security feature".to_string())
-}
-
-#[cfg(test)]
-pub fn durable_replay_ledger(
-    _state_dir: Option<&str>,
-) -> Result<&'static dyn ReplayLedger, String> {
-    static LEDGER: std::sync::OnceLock<ReplayCache> = std::sync::OnceLock::new();
-    Ok(LEDGER.get_or_init(ReplayCache::new))
 }
 
 #[cfg(test)]

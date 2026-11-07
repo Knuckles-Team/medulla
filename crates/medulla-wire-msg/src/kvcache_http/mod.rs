@@ -613,7 +613,12 @@ fn release_outcome_response(outcome: ReleaseOutcome) -> KvResponse {
 
 /// Route + execute one request → a [`KvResponse`]. Pure (sync) so it is fully
 /// unit-testable without a socket (CONCEPT:MEDULLA-KG.backend.is-configured-so-co).
-fn handle(store: &KvCacheStore, auth: &KvAuth, req: &HttpMessage) -> KvResponse {
+fn handle(
+    server: &medulla_server_api::server_context::ServerContext,
+    store: &KvCacheStore,
+    auth: &KvAuth,
+    req: &HttpMessage,
+) -> KvResponse {
     let credential_verified = authorized(auth, &req.headers);
     if !credential_verified {
         return KvResponse::error(
@@ -629,6 +634,7 @@ fn handle(store: &KvCacheStore, auth: &KvAuth, req: &HttpMessage) -> KvResponse 
     // iff no carrier was minted; here it can only be minted once `authorized`
     // passed).
     let carrier = medulla_server_auth::auth::mint_fixed_service_carrier(
+        server,
         credential_verified,
         "kvcache-client",
         &["kg:read", "kg:write"],
@@ -870,7 +876,8 @@ pub async fn serve_with_security(
     let _ = metrics::global();
     let store = Arc::new(resolve_store(&state).await?);
     let auth = resolve_auth()?;
-    serve_with_store_inner(addr, store, auth).await
+    let server = state.read().await.context.clone();
+    serve_with_store_inner(addr, store, auth, server).await
 }
 
 /// Select the KV-cache backend from `MEDULLA_KVCACHE_BACKEND`
@@ -970,6 +977,7 @@ async fn serve_with_store_inner(
     addr: &str,
     store: Arc<KvCacheStore>,
     auth: KvAuth,
+    server: Arc<medulla_server_api::server_context::ServerContext>,
 ) -> std::io::Result<()> {
     let listener = TcpListener::bind(addr).await?;
     medulla_server_api::api::dispatch_support::require_loopback_listener(&listener)?;
@@ -981,6 +989,7 @@ async fn serve_with_store_inner(
         let (mut stream, _peer) = listener.accept().await?;
         let store = store.clone();
         let auth = auth.clone();
+        let server = server.clone();
         tokio::spawn(async move {
             let resp = match tokio::time::timeout(
                 HTTP_READ_TIMEOUT,
@@ -988,7 +997,7 @@ async fn serve_with_store_inner(
             )
             .await
             {
-                Ok(Some(req)) => handle(&store, &auth, &req),
+                Ok(Some(req)) => handle(&server, &store, &auth, &req),
                 _ => KvResponse::error("400 Bad Request", "InvalidRequest", "malformed"),
             };
             let head = format!(
@@ -1106,11 +1115,18 @@ mod tests {
         let auth = KvAuth::Static("sekret".into());
         // No Authorization → 401.
         assert_eq!(
-            handle(&s, &auth, &req("GET", "/kv/stats", b"", &[])).status,
+            handle(
+                &medulla_server_api::server_context::ServerContext::fixture(),
+                &s,
+                &auth,
+                &req("GET", "/kv/stats", b"", &[])
+            )
+            .status,
             "401 Unauthorized"
         );
         // Correct bearer → accepted.
         let ok = handle(
+            &medulla_server_api::server_context::ServerContext::fixture(),
             &s,
             &auth,
             &req(
@@ -1124,6 +1140,7 @@ mod tests {
         // Wrong token → 401.
         assert_eq!(
             handle(
+                &medulla_server_api::server_context::ServerContext::fixture(),
                 &s,
                 &auth,
                 &req("GET", "/kv/stats", b"", &[("authorization", "Bearer nope")])
@@ -1144,12 +1161,18 @@ mod tests {
 
         // Unauthenticated: no bearer token at all → denied (401, from the bearer
         // guard itself — the carrier gate downstream is never even reached).
-        let denied = handle(&s, &auth, &req("GET", "/kv/stats", b"", &[]));
+        let denied = handle(
+            &medulla_server_api::server_context::ServerContext::fixture(),
+            &s,
+            &auth,
+            &req("GET", "/kv/stats", b"", &[]),
+        );
         assert_eq!(denied.status, "401 Unauthorized");
 
         // Authenticated: a correct bearer token → the bearer guard AND the A18
         // carrier gate both pass, reaching the real stats response.
         let allowed = handle(
+            &medulla_server_api::server_context::ServerContext::fixture(),
             &s,
             &auth,
             &req(
@@ -1557,11 +1580,23 @@ mod tests {
         let s = store();
         let auth = KvAuth::Static("sekret".into());
         assert_eq!(
-            handle(&s, &auth, &req("DELETE", "/kv/snapshot/1", b"", &[])).status,
+            handle(
+                &medulla_server_api::server_context::ServerContext::fixture(),
+                &s,
+                &auth,
+                &req("DELETE", "/kv/snapshot/1", b"", &[])
+            )
+            .status,
             "401 Unauthorized"
         );
         assert_eq!(
-            handle(&s, &auth, &req("DELETE", "/kv/branch/1", b"", &[])).status,
+            handle(
+                &medulla_server_api::server_context::ServerContext::fixture(),
+                &s,
+                &auth,
+                &req("DELETE", "/kv/branch/1", b"", &[])
+            )
+            .status,
             "401 Unauthorized"
         );
     }

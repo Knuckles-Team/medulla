@@ -47,7 +47,11 @@ pub async fn make_state(
     isolation: IsolationLayer,
     auth_secret: &str,
 ) -> Arc<RwLock<ServerState>> {
-    let mut state = ServerState::new(auth_secret, isolation);
+    // The harness composes its state the way `main` does, over its own directory.
+    let context = medulla_server_api::server_context::ServerContext::build(Some(dir), &|name| {
+        std::env::var(name).ok()
+    });
+    let mut state = ServerState::new(auth_secret, isolation, Arc::new(context));
     state.persist_dir = Some(dir.to_string());
     state.persistence = Some(backend);
     state.max_in_flight = Arc::new(tokio::sync::Semaphore::new(64));

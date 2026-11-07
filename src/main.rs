@@ -424,7 +424,14 @@ async fn run_inner() -> Result<(), Box<dyn std::error::Error>> {
     // open failure is fatal at boot (loud + early).
     let stores = server_startup::open_durable_stores(args.persist_dir.as_deref(), &host_capacity);
     let persistence_shutdown = stores.persistence.clone();
+    // MEDULLA-SDLC-R023: the process state is built once, here, from the
+    // environment, and handed to every listener through the server state.
+    let server_context = Arc::new(medulla_server_api::server_context::ServerContext::build(
+        args.persist_dir.as_deref(),
+        &|name| std::env::var(name).ok(),
+    ));
     let isolation = server_startup::open_isolation_layer(
+        &server_context,
         &args.auth_secret,
         args.persist_dir.as_deref(),
         args.auth_mode == "none",
@@ -442,7 +449,11 @@ async fn run_inner() -> Result<(), Box<dyn std::error::Error>> {
     debug_assert!(socket_parent.is_none());
 
     let mut server_state = server_startup::compose_server_state(
-        ServerState::new(std::mem::take(&mut args.auth_secret), isolation),
+        ServerState::new(
+            std::mem::take(&mut args.auth_secret),
+            isolation,
+            Arc::clone(&server_context),
+        ),
         args.persist_dir.take(),
         stores,
         &limits,
@@ -505,7 +516,7 @@ async fn run_inner() -> Result<(), Box<dyn std::error::Error>> {
 
     // Graceful shutdown: the accept loop has exited, so flush any bounded writer
     // work that had not yet crossed its acknowledgement barrier.
-    server_startup::flush_durable_state(persistence_shutdown);
+    server_startup::flush_durable_state(&server_context, persistence_shutdown);
     Ok(())
 }
 

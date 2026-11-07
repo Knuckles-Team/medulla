@@ -891,7 +891,12 @@ fn split_bucket_key(path: &str) -> (String, String) {
 
 /// Route + execute one S3 request → an [`S3Response`]. Pure (sync) so it is fully
 /// unit-testable without a socket (CONCEPT:MEDULLA-KG.ontology.object-put-get-head).
-fn handle(store: &S3Store, auth: &S3Auth, req: &S3Request) -> S3Response {
+fn handle(
+    server: &medulla_server_api::server_context::ServerContext,
+    store: &S3Store,
+    auth: &S3Auth,
+    req: &S3Request,
+) -> S3Response {
     // A18: SigV4 IS this surface's own carrier proof — mint the engine-owned
     // authority only after it succeeds, through the ONE shared helper every
     // auxiliary surface uses (`medulla_server::auth::mint_fixed_service_carrier`,
@@ -903,6 +908,7 @@ fn handle(store: &S3Store, auth: &S3Auth, req: &S3Request) -> S3Response {
     // custom prose — unlike the KV-cache/observability surfaces, which own
     // their own wire protocol).
     let carrier = medulla_server_auth::auth::mint_fixed_service_carrier(
+        server,
         authorized(auth, req),
         "s3-api-client",
         &["kg:read", "kg:write"],
@@ -1132,7 +1138,8 @@ pub async fn serve_with_blob_store(
             .map_err(std::io::Error::other)?,
     );
     let auth = resolve_auth()?;
-    serve_with_store_inner(addr, store, auth).await
+    let server = state.read().await.context.clone();
+    serve_with_store_inner(addr, store, auth, server).await
 }
 
 /// Serve using the blob authority already composed into `ServerState`.
@@ -1179,6 +1186,7 @@ async fn serve_with_store_inner(
     addr: &str,
     store: Arc<S3Store>,
     auth: S3Auth,
+    server: Arc<medulla_server_api::server_context::ServerContext>,
 ) -> std::io::Result<()> {
     let listener = TcpListener::bind(addr).await?;
     medulla_server_api::api::dispatch_support::require_loopback_listener(&listener)?;
@@ -1191,10 +1199,11 @@ async fn serve_with_store_inner(
         let (mut stream, _peer) = listener.accept().await?;
         let store = store.clone();
         let auth = auth.clone();
+        let server = server.clone();
         tokio::spawn(async move {
             let resp =
                 match tokio::time::timeout(HTTP_READ_TIMEOUT, read_request(&mut stream)).await {
-                    Ok(Some(req)) => handle(&store, &auth, &req),
+                    Ok(Some(req)) => handle(&server, &store, &auth, &req),
                     _ => S3Response::error("400 Bad Request", "InvalidRequest", "malformed"),
                 };
             let head = format!(
@@ -1447,12 +1456,18 @@ mod tests {
             secret_key: "shh".into(),
         };
         // No Authorization header → 403.
-        let r = handle(&store, &auth, &req("GET", "/", b"", &[]));
+        let r = handle(
+            &medulla_server_api::server_context::ServerContext::fixture(),
+            &store,
+            &auth,
+            &req("GET", "/", b"", &[]),
+        );
         assert_eq!(r.status, "403 Forbidden");
         // Merely naming the correct access key and adding any Signature is not
         // authentication; the former incomplete signature path accepted this forgery.
         let good = "AWS4-HMAC-SHA256 Credential=AKIA_TEST/20130524/us-east-1/s3/aws4_request, SignedHeaders=host, Signature=abc123";
         let r = handle(
+            &medulla_server_api::server_context::ServerContext::fixture(),
             &store,
             &auth,
             &req("GET", "/", b"", &[("authorization", good)]),
@@ -1462,6 +1477,7 @@ mod tests {
         let bad =
             "AWS4-HMAC-SHA256 Credential=WRONG/20130524/us-east-1/s3/aws4_request, Signature=abc";
         let r = handle(
+            &medulla_server_api::server_context::ServerContext::fixture(),
             &store,
             &auth,
             &req("GET", "/", b"", &[("authorization", bad)]),
@@ -1542,7 +1558,12 @@ mod tests {
         };
 
         // Unauthenticated: no Authorization header at all → still denied.
-        let denied = handle(&store, &auth, &req("GET", "/", b"", &[]));
+        let denied = handle(
+            &medulla_server_api::server_context::ServerContext::fixture(),
+            &store,
+            &auth,
+            &req("GET", "/", b"", &[]),
+        );
         assert_eq!(denied.status, "403 Forbidden");
 
         // Authenticated: a REAL SigV4 signature over this exact request → allowed
@@ -1550,6 +1571,7 @@ mod tests {
         // the AccessDenied error the stub always returned).
         let (authorization, host, payload_hash, amz_date) = sign_sigv4(&auth, "GET", "/", "", b"");
         let allowed = handle(
+            &medulla_server_api::server_context::ServerContext::fixture(),
             &store,
             &auth,
             &req(

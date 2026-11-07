@@ -412,9 +412,10 @@ async fn dispatch_get_delegation_record(
     context: &VerifiedRequestContext,
     work_item_id: &str,
 ) -> Response {
+    let server = state.read().await.context.clone();
     let Some(tenant) =
         medulla_server_identity::dispatch::identity_store::resolution_context::record_tenant(
-            context,
+            &server, context,
         )
     else {
         return Response::err(
