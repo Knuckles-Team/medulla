@@ -918,3 +918,4 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T912 [US7] MEDULLA-DECISION-ENGINE-R180.5 Process decision refusal
 - [ ] T913 [US7] MEDULLA-DECISION-ENGINE-R180.6 Process decision evidence
 - [ ] T914 [US7] MEDULLA-DECISION-ENGINE-R180.7 Process decision hot-path proof
+- [ ] T915 [US6] MEDULLA-DECISION-ENGINE-R829 Connector decision-point catalog and option heuristics in Decide
