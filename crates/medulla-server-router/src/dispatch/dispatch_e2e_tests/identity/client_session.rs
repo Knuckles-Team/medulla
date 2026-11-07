@@ -32,6 +32,22 @@ fn mismatch(response: &Response) -> bool {
 async fn client_session_node_round_trip_and_principal_mismatch_refused() {
     // spec: MEDULLA-IDENTITY-R705
     let state = state();
+    // An admitted node write commits through the authoritative MutationBatch,
+    // which needs a persistence backend.
+    #[cfg(feature = "redb")]
+    {
+        state.write().await.persistence = Some(std::sync::Arc::new(
+            medulla_persistence::redb_backend::RedbBackend::open(
+                medulla_server_api::api::dispatch_support::unique_temp_dir(
+                    "medulla-client-session-dispatch",
+                )
+                .to_string_lossy()
+                .into_owned(),
+                256,
+            )
+            .expect("open client-session test redb backend"),
+        ));
+    }
     // The graph ACL admits only registered principals with write on the
     // shared graph; both callers write their session node there, so the
     // principal rule alone decides each case.

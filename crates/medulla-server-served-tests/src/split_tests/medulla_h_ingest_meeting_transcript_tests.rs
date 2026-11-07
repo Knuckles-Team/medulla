@@ -25,6 +25,9 @@ use medulla_types::meeting_transcript::{
 const SECRET: &str = "meeting-transcript-served-fixture-secret"; // sanitizer:ignore
 /// The fixed `cfg(test)` request-context tenant.
 const TENANT: &str = "tenant-shared";
+/// A writer from another tenant: signed with the deployment secret, but a
+/// principal this tenant's provisioned policy does not admit.
+const FOREIGN_PRINCIPAL: &str = "meeting-transcript-foreign-writer";
 const PRINCIPAL: &str = "meeting-transcript-writer";
 const MEETING: &str = "meeting-1";
 
@@ -35,15 +38,38 @@ fn state(dir: &std::path::Path) -> Arc<RwLock<medulla_server_api::state::ServerS
         medulla_server_api::state::ServerState::test_isolation(PRINCIPAL),
     );
     state.persist_dir = Some(dir.to_string_lossy().into_owned());
+    // Every revision, context and summary commits through ApplyChangeEnvelope,
+    // which needs a configured persistence backend.
+    state.persistence = Some(Arc::new(
+        medulla_persistence::redb_backend::RedbBackend::open(
+            dir.to_string_lossy().into_owned(),
+            64,
+        )
+        .expect("open the transcript test backend"),
+    ));
+    // Every request names the tenant graph; the engine never creates a graph
+    // on a write, so the fixture creates it.
+    state
+        .registry
+        .create_graph(
+            TENANT,
+            medulla_protocol_types::protocol::GraphType::Global,
+            None,
+        )
+        .expect("create the tenant graph");
     Arc::new(RwLock::new(state))
 }
 
 fn signed(id: u64, method: Method) -> Request {
+    signed_as(PRINCIPAL, id, method)
+}
+
+fn signed_as(principal: &str, id: u64, method: Method) -> Request {
     let context = RequestContextClaims {
-        principal: PRINCIPAL.to_string(),
+        principal: principal.to_string(),
         tenant: TENANT.to_string(),
         audience: "medulla-test".to_string(),
-        agent_id: PRINCIPAL.to_string(),
+        agent_id: principal.to_string(),
         scopes: vec!["*".to_string()],
         delegation: Vec::new(),
         policy_version: "policy-test".to_string(),
@@ -53,7 +79,7 @@ fn signed(id: u64, method: Method) -> Request {
         id,
         graph: TENANT.to_string(),
         auth_token: String::new(),
-        agent_id: Some(PRINCIPAL.to_string()),
+        agent_id: Some(principal.to_string()),
         method,
     };
     request.auth_token = compute_verified_envelope_token(
@@ -510,11 +536,17 @@ async fn transcript_finalize_context_commit_round_trip() {
 
     // A cross-tenant request refuses with ACCESS_DENIED before any write.
     let before = snapshot(&state, 610).await;
-    let mut foreign = signed(620, commit_request(receipt(&context, "local"), &span, 10));
-    foreign.graph = "tenant-other".to_string();
+    // The request is signed as the foreign writer itself: re-addressing a request
+    // signed for this tenant's writer fails the envelope signature first.
+    let foreign = signed_as(
+        FOREIGN_PRINCIPAL,
+        620,
+        commit_request(receipt(&context, "local"), &span, 10),
+    );
     let denied = medulla_server_router::dispatch::request_boundary::dispatch(&state, foreign).await;
-    assert!(refusal("cross-tenant", &denied).contains("ACCESS_DENIED"));
-    assert!(!refusal("cross-tenant", &denied).contains("TENANT_DENIED"));
+    let text = refusal("cross-tenant", &denied);
+    assert!(text.contains("ACCESS_DENIED"), "{text}");
+    assert!(!text.contains("TENANT_DENIED"), "{text}");
     assert_eq!(snapshot(&state, 630).await, before, "cross-tenant wrote");
 
     let committed: MeetingSummaryCommitReceipt = ok(
