@@ -233,6 +233,45 @@ pub async fn dispatch_transaction_methods_arm_5(ctx: DispatchCtx<'_>, method: Me
     }
 }
 
+/// The first envelope field that differs from the verified request carrying
+/// it: graph, tenant, request number, then actor. A native (non-graph)
+/// mutation scope reports no graph name at all; comparing `Option<&str>`
+/// against `Some(graph)` fails closed on `None` instead of coercing it into an
+/// empty-string match. The idempotency key and policy need no comparison: the
+/// request boundary mints the envelope's authority from this same verified
+/// context, and the real policy revision is inside the stable replay identity,
+/// where a change conflicts rather than merely mismatching here.
+fn envelope_context_mismatch(
+    envelope: &medulla_protocol_types::change_envelope::ChangeEnvelope,
+    graph: &str,
+    req_id: u64,
+    verified: &medulla_server_api::authority_context::VerifiedRequestContext,
+) -> Option<&'static str> {
+    let identity = &envelope.mutation.identity;
+    if identity
+        .scope()
+        .graph_name()
+        .map(medulla_mutation_types::mutation_scope::LogicalName::as_str)
+        != Some(graph)
+    {
+        return Some("graph");
+    }
+    if identity.tenant().as_str() != verified.claims().tenant {
+        return Some("tenant");
+    }
+    if medulla_protocol_types::mutation_batch::batch_request_number(&envelope.mutation)
+        != Some(req_id)
+    {
+        return Some("request number");
+    }
+    if medulla_server_api::batch_compile::batch_actor(&envelope.mutation)
+        != Some(verified.principal_persistence_id().as_str())
+    {
+        return Some("actor");
+    }
+    None
+}
+
 pub async fn dispatch_change_envelope_methods_arm_0(
     ctx: DispatchCtx<'_>,
     method: Method,
@@ -252,38 +291,16 @@ pub async fn dispatch_change_envelope_methods_arm_0(
                 let req_agent_id = req.agent_id.clone();
                 let req_graph = req.graph.clone();
                 {
-                    let claims = verified_context.claims();
-                    // A native (non-graph) mutation scope reports no graph name at all.
-                    // Comparing `Option<&str>` against `Some(req_graph)` fails closed on
-                    // `None` instead of ever coercing it into an empty-string/sentinel
-                    // match against the requested graph.
-                    if envelope
-                        .mutation
-                        .identity
-                        .scope()
-                        .graph_name()
-                        .map(medulla_mutation_types::mutation_scope::LogicalName::as_str)
-                        != Some(req_graph.as_str())
-                        || envelope.mutation.identity.tenant().as_str() != claims.tenant
-                        || medulla_protocol_types::mutation_batch::batch_request_number(
-                            &envelope.mutation,
-                        ) != Some(req_id)
-                        || medulla_server_api::batch_compile::batch_actor(&envelope.mutation)
-                            != Some(verified_context.principal_persistence_id().as_str())
-                    // The idempotency key cross-check is GONE: the batch's key
-                    // now lives inside the envelope's authority, which the
-                    // request boundary mints from this same verified context, so
-                    // comparing them would compare a value against itself. The
-                    // policy comparison goes with it -- `policy_fingerprint` was
-                    // an always-`None` `Option<String>`, so it could only ever
-                    // have refused every caller-supplied envelope; the real
-                    // policy revision is inside the stable replay identity, where
-                    // a change conflicts rather than merely mismatching here.
+                    if let Some(field) =
+                        envelope_context_mismatch(&envelope, &req_graph, req_id, verified_context)
                     {
                         return Response::err(
-                    req_id,
-                    "ApplyChangeEnvelope context does not match the verified request authority",
-                );
+                            req_id,
+                            format!(
+                                "CHANGE_ENVELOPE_CONTEXT_MISMATCH: the envelope's {field} does not \
+                                 match the verified request authority"
+                            ),
+                        );
                     }
                     dispatch_graph_op(
                         state,

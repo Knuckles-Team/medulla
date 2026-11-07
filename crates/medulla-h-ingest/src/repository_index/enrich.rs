@@ -804,6 +804,17 @@ mod worker {
         write_set: crate::repository_index::IndexWriteSet,
     ) -> Result<(), String> {
         let verified = service_context(state, item).await?;
+        // The follow-on recorded the index commit's opaque carrier tenant
+        // scope; the envelope apply boundary binds an envelope to the verified
+        // caller's own tenant. The work item must belong to that tenant, and
+        // the envelope is compiled under it.
+        let carrier = medulla_server_api::carrier::CarrierAuthority::from_verified(&verified)?;
+        if carrier.tenant_scope() != item.scope.tenant {
+            return Err(
+                "REPOSITORY_ENRICH_TENANT_MISMATCH: the follow-on work item belongs to another tenant"
+                    .into(),
+            );
+        }
         let graph_version = state
             .read()
             .await
@@ -815,7 +826,7 @@ mod worker {
         let ctx = crate::repository_index::IndexCommitContext {
             request_id: 0,
             graph_name: graph,
-            tenant_scope: &item.scope.tenant,
+            tenant_scope: verified.tenant(),
             verified: &verified,
             graph_version,
             placement_epoch: 0,

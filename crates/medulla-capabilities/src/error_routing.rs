@@ -214,7 +214,13 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         &["GUARDRAIL_SCOPE_TOO_LARGE", "MALFORMED_GUARDRAIL_RULE"],
     ),
     // `ChangeEnvelope::validate` refuses carried engine-internal/native operations.
-    ("ApplyChangeEnvelope", &["CARRIER_INNER_METHOD_REFUSED"]),
+    (
+        "ApplyChangeEnvelope",
+        &[
+            "CARRIER_INNER_METHOD_REFUSED",
+            "CHANGE_ENVELOPE_CONTEXT_MISMATCH",
+        ],
+    ),
     (
         "ApplyChangeEnvelopeDraft",
         &["CARRIER_INNER_METHOD_REFUSED"],
