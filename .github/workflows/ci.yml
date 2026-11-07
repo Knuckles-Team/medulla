@@ -197,6 +197,11 @@ jobs:
         with:
           path: ${{ runner.temp }}/medulla-cargo-deny
           key: ${{ steps.cargo-deny-cache.outputs.cache-primary-key }}
+      - name: Install uv (the advisory gate is a pipelines-hook mode)
+        if: needs.changes.outputs.code != 'false'
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: '0.11.7'
       - name: Rust dependency advisory gate
         if: needs.changes.outputs.code != 'false'
         run: uvx --from 'git+https://github.com/Knuckles-Team/pipelines@main' pipelines-hook cargo-advisories
