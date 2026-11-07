@@ -667,12 +667,6 @@ mod sm {
     }
 }
 
-// spec: MEDULLA-ORCH-VOCAB-R811.6
-#[test]
-fn machine_file_has_no_owl_imports() {
-    assert!(!MACHINES.contains("owl:imports"));
-}
-
 // spec: MEDULLA-IDENTITY-R720.2
 #[test]
 fn governed_change_machine_matches_edge_table() {

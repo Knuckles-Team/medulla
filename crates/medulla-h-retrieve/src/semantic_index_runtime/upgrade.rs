@@ -1499,7 +1499,8 @@ mod tests {
             .find(|e| e.id == id)
             .unwrap();
         assert_eq!((edge.from, edge.event, edge.to), (from, event, to));
-        assert_eq!(from.apply(event, |_| true), Ok(to));
+        // Only this edge's guard holds, so a sibling edge on the same event cannot fire.
+        assert_eq!(from.apply(event, |g| Some(g) == edge.guard), Ok(to));
         if edge.guard.is_some() {
             let refused = from.apply(event, |_| false).unwrap_err();
             assert_eq!(refused.reason, TransitionRefusalReason::GuardFailed);
