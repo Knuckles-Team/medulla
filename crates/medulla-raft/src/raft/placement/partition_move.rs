@@ -224,7 +224,9 @@ mod tests {
     #[test]
     fn edge_p01_active_start_move() {
         let active = entry(7, 11, PartitionState::Active);
-        let moving = active.apply_move(PartitionMove::StartMove { target: 9 }).unwrap();
+        let moving = active
+            .apply_move(PartitionMove::StartMove { target: 9 })
+            .unwrap();
         assert_eq!(moving.state, PartitionState::Moving { target: 9 });
         assert_eq!((moving.group, moving.epoch), (7, 11), "no epoch bump");
         let refused = active
@@ -237,7 +239,9 @@ mod tests {
     #[test]
     fn edge_p02_moving_start_move_replays() {
         let moving = entry(7, 11, PartitionState::Moving { target: 9 });
-        let replay = moving.apply_move(PartitionMove::StartMove { target: 9 }).unwrap();
+        let replay = moving
+            .apply_move(PartitionMove::StartMove { target: 9 })
+            .unwrap();
         assert_eq!(replay, moving, "the replay writes nothing");
         let refused = moving
             .apply_move(PartitionMove::StartMove { target: 10 })
@@ -250,11 +254,20 @@ mod tests {
     fn edge_p03_moving_fence_cutover() {
         let moving = entry(7, 11, PartitionState::Moving { target: 9 });
         let cut = moving
-            .apply_move(PartitionMove::FenceCutover { target: 9, epoch: 12 })
+            .apply_move(PartitionMove::FenceCutover {
+                target: 9,
+                epoch: 12,
+            })
             .unwrap();
-        assert_eq!((cut.group, cut.epoch, cut.state), (9, 12, PartitionState::Active));
+        assert_eq!(
+            (cut.group, cut.epoch, cut.state),
+            (9, 12, PartitionState::Active)
+        );
         let refused = moving
-            .apply_move(PartitionMove::FenceCutover { target: 8, epoch: 12 })
+            .apply_move(PartitionMove::FenceCutover {
+                target: 8,
+                epoch: 12,
+            })
             .unwrap_err();
         assert_eq!(refused.reason, TransitionRefusalReason::GuardFailed);
     }
@@ -269,7 +282,10 @@ mod tests {
             original_epoch,
         };
         let back = moving.apply_move(abort(7, 9, 11)).unwrap();
-        assert_eq!((back.group, back.epoch, back.state), (7, 11, PartitionState::Active));
+        assert_eq!(
+            (back.group, back.epoch, back.state),
+            (7, 11, PartitionState::Active)
+        );
         for bad in [abort(6, 9, 11), abort(7, 9, 10), abort(7, 8, 11)] {
             let refused = moving.apply_move(bad).unwrap_err();
             assert_eq!(refused.reason, TransitionRefusalReason::GuardFailed);
@@ -284,8 +300,15 @@ mod tests {
         assert!(machine.terminals.is_empty());
         let active = entry(7, 11, PartitionState::Active);
         for event in [
-            PartitionMove::FenceCutover { target: 9, epoch: 12 },
-            PartitionMove::AbortMove { source: 7, target: 9, original_epoch: 11 },
+            PartitionMove::FenceCutover {
+                target: 9,
+                epoch: 12,
+            },
+            PartitionMove::AbortMove {
+                source: 7,
+                target: 9,
+                original_epoch: 11,
+            },
         ] {
             let refused = active.apply_move(event).unwrap_err();
             assert_eq!(refused.reason, TransitionRefusalReason::IllegalTransition);

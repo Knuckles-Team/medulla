@@ -17,12 +17,12 @@ use super::{DurableLaneHold, DurableLanePolicy};
 use medulla_protocol_types::protocol::DevelopmentLaneWorkItemKind;
 use medulla_resource_store::redb_store::resource::resource_decode;
 use medulla_result_types::epistemic_operations::DevelopmentLaneHold;
-use medulla_result_types::epistemic_operations::{DevelopmentLaneHoldState, HoldEvent};
 use medulla_result_types::epistemic_operations::DevelopmentLaneIntent;
 use medulla_result_types::epistemic_operations::DevelopmentLaneIntentHostTargetKind;
 use medulla_result_types::epistemic_operations::DevelopmentLaneQuotaPolicy;
 use medulla_result_types::epistemic_operations::DevelopmentLaneReserveRequest;
 use medulla_result_types::epistemic_operations::ResourceReservationRecordState;
+use medulla_result_types::epistemic_operations::{DevelopmentLaneHoldState, HoldEvent};
 use medulla_storage::ScopedOwnerTableMut;
 use medulla_store::redb_store::DurableCrypto;
 

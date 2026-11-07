@@ -152,11 +152,7 @@ mod tests {
     use medulla_types::transition_refused::TransitionRefusalReason;
 
     fn edge_case(id: &str, from: HoldState, event: HoldEvent, to: HoldState) {
-        let edge = LANE_HOLD_MACHINE
-            .edges
-            .iter()
-            .find(|e| e.id == id)
-            .unwrap();
+        let edge = LANE_HOLD_MACHINE.edges.iter().find(|e| e.id == id).unwrap();
         assert_eq!((edge.from, edge.event, edge.to), (from, event, to));
         assert_eq!(from.apply(event, |_| true), Ok(to));
         let refused = from.apply(event, |_| false).unwrap_err();
@@ -166,7 +162,12 @@ mod tests {
     // spec: MEDULLA-PLACEMENT-R780.1
     #[test]
     fn edge_h01_absent_reserve() {
-        edge_case("H01", HoldState::Absent, HoldEvent::Reserve, HoldState::Active);
+        edge_case(
+            "H01",
+            HoldState::Absent,
+            HoldEvent::Reserve,
+            HoldState::Active,
+        );
     }
 
     // spec: MEDULLA-PLACEMENT-R780.1
@@ -183,7 +184,12 @@ mod tests {
     // spec: MEDULLA-PLACEMENT-R780.1
     #[test]
     fn edge_h03_active_expire() {
-        edge_case("H03", HoldState::Active, HoldEvent::Expire, HoldState::Expired);
+        edge_case(
+            "H03",
+            HoldState::Active,
+            HoldEvent::Expire,
+            HoldState::Expired,
+        );
     }
 
     // spec: MEDULLA-PLACEMENT-R780.1
@@ -200,13 +206,23 @@ mod tests {
     // spec: MEDULLA-PLACEMENT-R780.1
     #[test]
     fn edge_h05_expired_cleanup() {
-        edge_case("H05", HoldState::Expired, HoldEvent::Cleanup, HoldState::Cleaned);
+        edge_case(
+            "H05",
+            HoldState::Expired,
+            HoldEvent::Cleanup,
+            HoldState::Cleaned,
+        );
     }
 
     // spec: MEDULLA-PLACEMENT-R780.1
     #[test]
     fn edge_h06_active_renew() {
-        edge_case("H06", HoldState::Active, HoldEvent::Renew, HoldState::Active);
+        edge_case(
+            "H06",
+            HoldState::Active,
+            HoldEvent::Renew,
+            HoldState::Active,
+        );
     }
 
     // spec: MEDULLA-PLACEMENT-R780.1
@@ -232,7 +248,9 @@ mod tests {
             }
         }
         // A finish of a Cleaned hold is refused: Cleaned is terminal.
-        assert!(HoldState::Cleaned.apply(HoldEvent::Finish, |_| true).is_err());
+        assert!(HoldState::Cleaned
+            .apply(HoldEvent::Finish, |_| true)
+            .is_err());
     }
 
     // spec: MEDULLA-PLACEMENT-R780.1

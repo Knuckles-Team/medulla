@@ -19,9 +19,9 @@ use medulla_resource_store::redb_store::resource::resource_encode;
 use medulla_result_types::epistemic_operations::DevelopmentLaneCleanupCompleteRequest;
 use medulla_result_types::epistemic_operations::DevelopmentLaneHold;
 use medulla_result_types::epistemic_operations::DevelopmentLaneHoldHostTargetKind;
-use medulla_result_types::epistemic_operations::{DevelopmentLaneHoldState, HoldEvent};
 use medulla_result_types::epistemic_operations::DevelopmentLaneQuotaCharge;
 use medulla_result_types::epistemic_operations::DevelopmentLaneQuotaUpdateRequest;
+use medulla_result_types::epistemic_operations::{DevelopmentLaneHoldState, HoldEvent};
 use medulla_storage::ScopedOwnerTableMut;
 use medulla_store::redb_store::DurableCrypto;
 

@@ -190,7 +190,10 @@ async fn visible_pack_graphs(
         };
         // The head table names the pack graphs; a graph that is cold (after a restart none
         // is resident) opens on this first query rather than being skipped.
-        let names = names.into_iter().filter(|name| name != graph_name).collect();
+        let names = names
+            .into_iter()
+            .filter(|name| name != graph_name)
+            .collect();
         Ok(medulla_server_api::api::reentry::resident_graph_cores(state, names).await)
     }
     #[cfg(not(feature = "redb"))]

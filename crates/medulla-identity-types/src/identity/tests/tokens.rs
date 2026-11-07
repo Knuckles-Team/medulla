@@ -309,7 +309,11 @@ fn leaving_external_leaves_credentialless_humans_untouched() {
     });
     apply_kept(&mut store, &back, &admin(), NOW).unwrap();
     let erin = store.resolve("usr:jit-erin", &TestRegistry).unwrap();
-    assert_eq!(erin.status, UserStatus::Active, "no mass reset on a mode switch");
+    assert_eq!(
+        erin.status,
+        UserStatus::Active,
+        "no mass reset on a mode switch"
+    );
     assert!(
         store.manages("usr:jit-erin"),
         "the account and its link are kept"

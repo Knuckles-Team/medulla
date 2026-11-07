@@ -180,8 +180,10 @@ pub(crate) fn write_surface(
     };
     let nodes: std::collections::HashSet<_> = fresh.iter().map(|t| t.subject.clone()).collect();
     let existing = medulla_rdf::mapping::export_triples(core, graph)?;
-    let held: std::collections::HashSet<NamedOrBlankNode> =
-        individual_subjects(&existing).into_iter().cloned().collect();
+    let held: std::collections::HashSet<NamedOrBlankNode> = individual_subjects(&existing)
+        .into_iter()
+        .cloned()
+        .collect();
     let stale: Vec<Triple> = existing
         .into_iter()
         .filter(|t| {
@@ -252,6 +254,9 @@ mod tests {
             "amount_b was dropped from the newer head"
         );
         write_surface(&core, "pack", None).unwrap();
-        assert!(subjects_of(&core).is_empty(), "a head with no individuals clears them");
+        assert!(
+            subjects_of(&core).is_empty(),
+            "a head with no individuals clears them"
+        );
     }
 }

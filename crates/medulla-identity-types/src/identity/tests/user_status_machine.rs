@@ -234,7 +234,10 @@ fn no_write_bypasses_transition_status() {
             offenders.push(name);
         }
     }
-    assert!(offenders.is_empty(), "status written outside transition_status: {offenders:?}");
+    assert!(
+        offenders.is_empty(),
+        "status written outside transition_status: {offenders:?}"
+    );
 }
 
 // spec: MEDULLA-IDENTITY-R721.1

@@ -52,8 +52,7 @@ pub fn finish_state_name(state: DevelopmentLaneFinishRequestTerminalState) -> &'
 
 /// A live hold must be tombstone-free and in one of the pre-terminal states.
 pub fn hold_not_live(hold: &DevelopmentLaneHold) -> bool {
-    hold.tombstone
-        || !matches!(hold.state, DevelopmentLaneHoldState::Active)
+    hold.tombstone || !matches!(hold.state, DevelopmentLaneHoldState::Active)
 }
 
 /// Is the WorkItem pre-image not a leased/running lifecycle row for this

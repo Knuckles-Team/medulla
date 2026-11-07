@@ -461,9 +461,17 @@ mod admission_tests {
             vec!["pack__cold".to_string(), "pack__missing".to_string()],
         )
         .await;
-        assert_eq!(cores.len(), 1, "the unknown name is skipped, the cold one opened");
+        assert_eq!(
+            cores.len(),
+            1,
+            "the unknown name is skipped, the cold one opened"
+        );
         assert_eq!(cores[0].0, "pack__cold");
-        assert_eq!(cores[0].1.node_count(), 1, "the cold graph's data came back");
+        assert_eq!(
+            cores[0].1.node_count(),
+            1,
+            "the cold graph's data came back"
+        );
 
         let _ = std::fs::remove_dir_all(&dir);
     }

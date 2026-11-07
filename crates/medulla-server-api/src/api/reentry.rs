@@ -442,7 +442,12 @@ pub async fn resident_graph_cores(
     let mut cores = Vec::with_capacity(names.len());
     for name in names {
         ensure_graph_resident(state, &name).await;
-        let core = state.read().await.registry.get(&name).map(|entry| entry.core.clone());
+        let core = state
+            .read()
+            .await
+            .registry
+            .get(&name)
+            .map(|entry| entry.core.clone());
         if let Some(core) = core {
             cores.push((name, core));
         }

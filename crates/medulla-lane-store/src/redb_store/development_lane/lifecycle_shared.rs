@@ -3,10 +3,10 @@ use super::types::LaneDecision;
 use super::{DurableLaneHold, DurableLanePolicy};
 use medulla_result_types::epistemic_operations::DevelopmentLaneFinishRequest;
 use medulla_result_types::epistemic_operations::DevelopmentLaneHold;
-use medulla_result_types::epistemic_operations::HoldEvent;
 use medulla_result_types::epistemic_operations::DevelopmentLaneObserveRequest;
 use medulla_result_types::epistemic_operations::DevelopmentLaneQuotaPolicy;
 use medulla_result_types::epistemic_operations::DevelopmentLaneRenewRequest;
+use medulla_result_types::epistemic_operations::HoldEvent;
 use medulla_storage::ScopedOwnerTableMut;
 use medulla_store::redb_store::DurableCrypto;
 
