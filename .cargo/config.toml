@@ -51,7 +51,7 @@
 # personal checkout without it installed should override with
 # `CARGO_BUILD_RUSTC_WRAPPER=` (empty) rather than editing this file.
 [alias]
-xtask = "run --quiet --package xtask --"
+xtask = "run --quiet --package medulla-xtask --"
 
 [build]
 target-dir = "target-isolated"

@@ -172,7 +172,7 @@ layers:
       - medulla-server-identity
       - medulla-server-router
   - name: adapters
-    summary: "Outer adapters: the facade package, the Python engine and the cross-crate test harnesses."
+    summary: "Outer adapters: the facade package, the Python engine, the cross-crate test harnesses and the repository tooling (`cargo xtask`), which no crate depends on."
     crates:
       - medulla-engine
       - medulla-persistence-tests
@@ -183,3 +183,4 @@ layers:
       - medulla-sql-tests
       - medulla-store-apply-tests
       - medulla-test-ambient-auth
+      - medulla-xtask

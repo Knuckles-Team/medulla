@@ -102,6 +102,7 @@ Each group below describes responsibility; it does not declare a new deployable 
 | Request handlers (domain-owned dispatch) | `medulla-h-admin`, `medulla-h-compute`, `medulla-h-decide`, `medulla-h-graph`, `medulla-h-ingest`, `medulla-h-jobs`, `medulla-h-mining`, `medulla-h-packs`, `medulla-h-query`, `medulla-h-retrieve`, `medulla-h-sparql`, `medulla-h-txn` |
 | Server runtime, wire protocols and dispatch | `medulla-server`, `medulla-server-api`, `medulla-server-auth`, `medulla-server-blob`, `medulla-server-cdc`, `medulla-server-consensus`, `medulla-server-graph`, `medulla-server-identity`, `medulla-server-lake`, `medulla-server-mutation`, `medulla-server-obs`, `medulla-server-ops`, `medulla-server-router`, `medulla-wire`, `medulla-wire-core`, `medulla-wire-msg` |
 | Test-only crates | `medulla-persistence-tests`, `medulla-server-cluster-tests`, `medulla-server-served-tests`, `medulla-server-store-tests`, `medulla-sql-tests`, `medulla-store-apply-tests`, `medulla-test-ambient-auth` |
+| Repository checks and CI tools (`cargo xtask`) | `medulla-xtask` (`tools/xtask`) |
 | Native visualization | `medulla-viz-core`, `medulla-viz-columnstore`, `medulla-viz-kernels`, `medulla-viz-export`, `medulla-viz-graph-tiles` |
 | Optional quantum processing | `medulla-quantum-core`, `medulla-quantum-gates`, `medulla-quantum-sim`, `medulla-quantum-hardware`, `medulla-quantum-jobs`, `medulla-quantum-workloads` |
 
