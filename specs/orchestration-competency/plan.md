@@ -185,6 +185,20 @@ Gates for any change under these rows: `cargo test -p medulla-rdf --test orchest
 - `BrokerMessageMachine`: entry point served broker publish, consume and ack methods → `consume_scan.rs` → `MessageState::apply` in `crates/medulla-core/src/broker/message_machine.rs` → stored state field. Attach points: `broker.rs:344,466` and `consume_scan.rs:86,110-132`. Wiring row: MEDULLA-CQ-ORCH-R810.1. Hot-path proof row: the cutover scan `no_writer_sets_state_outside_apply` of MEDULLA-CQ-ORCH-R810.1.
 - `AnalyticsJobMachine`: entry point served analytics job methods → the job store in `crates/medulla-jobs/src/store.rs` → `JobState::step` in `crates/medulla-jobs/src/job_machine.rs` → stored state field. Attach points: the 16 `job.state =` sites in `store.rs` (lines 810 to 2255) and the reclaim at `:1279`. Wiring row: MEDULLA-CQ-ORCH-R811.2. Hot-path proof row: `no_site_sets_state_outside_step` of MEDULLA-CQ-ORCH-R811.2.
 
+### Writers and stored data of the job and broker machines (R811.3, R811.4, R810.3, R810.4)
+
+Pre-untangled design, one line per answer.
+
+- Owner. Medulla: `crates/medulla-jobs` and `crates/medulla-core/src/broker`. The served surface is `Method::AnalyticsJob` and the broker gateway.
+- Cohesion. The machine and its transition function sit beside the store that persists the state; no other crate assigns the field.
+- Dependency direction. Stores call the machine; the machine imports only `medulla-types` (for `TransitionRefused`).
+- Interface depth. One function per machine (`JobState::step`, `MessageState::apply`). The state field is private to the store module.
+- Special cases. None. The lapsed-lease and cancel-request cases are edges (J13 to J15, B06), not branches.
+- State. The explicit machines of R810 and R811; this row family removes the dual truths (`cancel_requested`, `lease`, `not_before_ms`, `reclaimed`).
+- Environment. None.
+
+Order: R811.1, R811.3 (three PRs), R811.4; R810.1, R810.3, R810.4. The two families are independent and run in parallel. A stored-shape change runs its migration at store open and is recorded in the migration ledger, so a restart converts once.
+
 ## Cross-repo seams
 
 - arbora intent-surface probes: `ARBORA-FLEET-R052.4` (consumer rows R009.1 to R009.6) and `ARBORA-FLEET-R056`; contract `contracts/arbora-intent-probes.md`.

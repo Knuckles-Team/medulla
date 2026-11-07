@@ -124,3 +124,10 @@ Compile slot: Medulla only, one cargo lane host-wide at a time.
 - [ ] T117 [US1] MEDULLA-SDLC-R021 Crate dependencies follow declared stability layers.
 - [ ] T118 [US1] MEDULLA-SDLC-R022 Repository scripts hold no gate or certification logic.
 - [ ] T119 [US1] MEDULLA-SDLC-R023 Process-wide state is explicit.
+- [ ] T124 MEDULLA-SDLC-R021.1 Crate layers live in the coupling gate policy. Size: S, 1 PR, 3 hours.
+- [ ] T125 MEDULLA-SDLC-R021.2 The slice map test guards every move. Size: S, 1 PR, 3 hours.
+- [ ] T126 MEDULLA-SDLC-R021.3 Move the query plan AST and wire DTOs to medulla-query-types. Size: L, 4 PRs, 1.5 days.
+- [ ] T127 MEDULLA-SDLC-R021.4 Move access control to medulla-identity-types. Size: S, 1 PR, 4 hours.
+- [ ] T128 MEDULLA-SDLC-R021.5 Move the domain modules into their owning slices. Size: L, 6 PRs, 2 days.
+- [ ] T129 MEDULLA-SDLC-R021.6 Create the finance and ingestion slices. Size: M, 2 PRs, 6 hours.
+- [ ] T130 MEDULLA-SDLC-R021.7 No crate re-exports another crate's items. Size: M, 2 PRs, 6 hours.

@@ -202,6 +202,49 @@ flowchart LR
   A -->|owner approval on head| R[arbora arm call]
 ```
 
+#### Crate layers and the type slices (R021)
+
+The layer order follows the dependency graph as it stands, most stable first: `contract` (wire and value types, the domain type slices, the capability ledger, the method codec), `kernels` (pure domain logic and modality kernels; no storage), `storage` (key-value store, transactions, caches, tables), `graph-core` (graph model, isolation, core facade), `engine` (compute, reasoning, the query front ends, planner, executor and the stores over the graph core), `service` (server API, authentication, persistence, change capture, mutation, operations, consensus), `handlers` (one crate per method family, and the wire listeners), `server` (router and server composition) and `adapters` (facade package, Python engine, cross-crate test harnesses). Storage sits below the graph core because `medulla-graph-core` builds on `medulla-storage` and `medulla-transaction`; persistence sits in `service` because `medulla-persistence` builds on `medulla-server-api`. On the day of filing the 151 crates hold this order with no upward edge, so the gate starts green with no allowance list.
+
+The layers file names every crate. The gate reads the `[dependencies]` and `[build-dependencies]` tables, plain and per target, and follows a renamed dependency to its package. Dev-dependencies are not layered: a test may reach upward (`medulla-types` dev-depends on the domain slices that sit above it).
+
+`medulla-types` keeps only what nearly every dependent uses: `contract` (identifiers, error codes, crypto, collections; 72 users) and `msgpack` (66 users), plus the value data model (`types`) and the small cursor and limit vocabularies. Everything else moves to the slice of its domain. The query plan AST and its wire DTOs (`wire` and its `wire_*` files, `series_expr`, `rdf_report`, `nl_query`, `search_source`) go to a new `medulla-query-types`. Access control (`acl`) then goes to `medulla-identity-types`; it moves after `wire`, because `wire_query_modalities` reads it and `medulla-types` cannot depend on a slice above it. The remaining domain modules go to the existing slice that owns the domain (source, catalog, agent, work, decision) or to a new slice when no slice owns it (finance, ingestion). Each Cargo feature that gates a moved type moves with it, and `medulla-protocol-types` forwards the feature. Each move is one change that updates every caller, adds no re-export and leaves no alias. A dependent then names only the slices it uses. The rule that no crate re-exports another crate's items is checked once the moves are done: on the day of filing 154 `pub use medulla_*` lines remain, 61 of them in `medulla-store`.
+
+#### Explicit server state (R023)
+
+`ServerContext` (`crates/medulla-server-api/src/server_context.rs`) owns the state that a process-wide static holds today. `src/main.rs` builds it once, `ServerContext::build(persist_dir, env)`, with the environment passed in as a lookup function, so the library reads no environment variable. `ServerState` holds it as `context: Arc<ServerContext>`, and every listener, handler and worker reaches it through the state it already holds. A test builds its own context with `ServerContext::fixture()`.
+
+The first two fields set the pattern. The request-context policy is a `Result<RequestContextPolicy, String>`, resolved when the context is built; a missing variable stays a refusal at startup validation and on each request, as today. The replay ledger is a per-context lazy cell: the durable ledger opens on its first use under the context's state directory, so a server without authentication creates no ledger file, as today. `seal_replay_ledger` hands the window off at graceful shutdown. Each consumer takes the context as a parameter: `verify_request_with_security_dir(secret, req, dir)` becomes `verify_request_in(context, secret, req)`, and the `VerifiedRequestContext` constructors for service, broker, local-query, SQL-wire, Iceberg and replicated actors take `&ServerContext`. Two contexts in one process share no replay window, which the bound test proves. The fixture and test variants keep their current behaviour inside `build` (fixed policy triple, in-memory window) until the test fixtures build their contexts directly; the `request-policy-fixture` feature is then deleted.
+
+The remaining statics follow the same move, one change per group, in this order: the `medulla-server-api` caches and samplers (`denial_sample`, `icv_guard`, `identity_view`, `read_audit`, `schema_compose`, `txn` fences, `routed_write_coalescer` locks, `state` caps), then the knob install (`knob_config::INSTALLED`, which `ServerContext::build` takes as an argument instead), then the statics of the other crates by crate, server first.
+
+#### Split of medulla-types: the module map and the order (R021.1 to R021.7)
+
+Pre-untangled design for the rows R021.1 to R021.7, one line per answer.
+
+- Owner. Medulla, the crate layer `contract`. A module goes to the slice that owns its domain by the spec named in its header comment.
+- Cohesion. Types that change for one domain sit together; the 101 dependants of `medulla-types` then name only the slices they use.
+- Dependency direction. Every slice depends on `medulla-types` only, plus `medulla-identity-types` for `medulla-query-types`. No slice depends on a slice above it, and the coupling gate checks it.
+- Interface depth. A slice exports its modules by path. No crate re-exports another crate's items (R021.7).
+- Special cases. None. Each module takes the same rule; the overrides are listed in the table.
+- State. None. These are data types.
+- Environment. None.
+
+The order is: guard test (R021.2), policy move (R021.1), query types (R021.3), access control (R021.4), domain slices (R021.5), new slices (R021.6), re-export removal (R021.7). The lane compiles each group with `cargo check --workspace --all-targets --all-features` on a warm slot and runs the full test suite once after R021.6 (the split is all-or-nothing). The map below is the source of truth for every move; a module absent from it is a bug in the map.
+
+| Destination crate | Modules | Count | Lines |
+|---|---|---|---|
+| `medulla-query-types` | `asr_wire`, `causal_wire`, `derived_fact`, `document_ops`, `graphlearn_nary`, `nl_query`, `plan_cache_key`, `quantum`, `rdf_report`, `search_source`, `sensitive_detect`, `series_expr`, `solve_scalar`, `telemetry_derive`, `topology`, `viz`, `wire`, `wire_datascience`, `wire_mining`, `wire_pipeline`, `wire_query_attribution`, `wire_query_core`, `wire_query_kinds`, `wire_query_modalities`, `wire_query_samples`, `wire_query_uql`, `wire_query_uql_modal`, `wire_query_uql_pred`, `wire_streaming` | 29 | 8259 |
+| `medulla-identity-types` | `acl` | 1 | 376 |
+| `medulla-mutation-types` | `atomic_primitive`, `benchmark_claim`, `branch`, `cross_store_scope`, `fast_path`, `graph_change_feed`, `health_incident`, `hot_store_engine`, `memory_sync`, `mirror_sink`, `pg_operational_surface`, `pipeline_batch`, `restore_drill`, `retention_cleanup`, `retention_policy`, `rule_correction`, `workload_class`, `write_conflict` | 18 | 3390 |
+| `medulla-work-types` | `agent_bus`, `run_observation`, `scheduler_config`, `statechart`, `step_verdict`, `task_queue` | 6 | 1408 |
+| `medulla-decision-types` | `belief_revision`, `claims`, `context_facts`, `correction`, `failure_patterns`, `loops`, `source_toc`, `usage` | 8 | 1903 |
+| `medulla-catalog-types` | `architecture_view`, `asset_usage`, `attached_source_dialect`, `attached_source_governance`, `consolidation_isolation`, `data_product`, `dialect_conformance`, `document_conformance`, `embedding_promotion`, `engine_capabilities`, `entity_link_proposal`, `external_schema`, `glossary`, `gramps_baseline_digest`, `gramps_cutover_gate`, `gramps_gap_fix`, `gramps_pilot_phase`, `immich_pilot_phase`, `incident`, `metadata_acceleration`, `mysql_mariadb_connection`, `ontology_diff`, `ontology_edit`, `ontology_inspection`, `pg_diff_baseline`, `pgrx_spike`, `pgrx_spike_review`, `pitr_schedule`, `profile`, `quality`, `replay_conformance`, `schema_context`, `schema_inference`, `shared_db_platform`, `stewardship`, `virtual_graph_view`, `warehouse_conformance`, `warehouse_federation`, `web_source` | 39 | 7092 |
+| `medulla-source-types` | `meeting_transcript`, `source_changeset`, `source_symbol_edit` | 3 | 477 |
+| `medulla-finance-types` | `finance_event_envelope`, `finance_research`, `finance_wallet_trust`, `wire_finance` | 4 | 973 |
+| `medulla-ingestion-types` | `code_health`, `data_prep_declaration`, `extracted_fact`, `ingest_capabilities`, `ingest_drain`, `ingest_readback`, `ingest_rules`, `ingestion_wire`, `knowledge_atom`, `knowledge_stream`, `ontology_proposal`, `skill_plan`, `source_governance` | 13 | 2472 |
+| `medulla-types` (stays) | `concept_id`, `contract`, `delta`, `durability_class`, `durable_unit`, `evidence_class`, `keyset_page`, `lease_vocab`, `modality`, `msgpack`, `runtime_limit`, `tenant_cursor`, `types`, `transition_refused`, `test_support` | 13 | 2219 |
+
 ### Interfaces and data model
 
 - `RecordRelease { tenant, repo, version, ref, changeset_head, artifact_digests }` returns the sealed release record.

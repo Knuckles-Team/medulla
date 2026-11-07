@@ -130,3 +130,7 @@ Producer first: ontology terms, shapes and authority mappings, then fixtures and
 - [ ] T122 [US2] MEDULLA-CQ-ORCH-R811 Analytics job is one explicit state machine
 - [ ] T123 [US2] MEDULLA-CQ-ORCH-R811.1 Analytics job transition function
 - [ ] T124 [US2] MEDULLA-CQ-ORCH-R811.2 Route all job writers through step and describe the machine
+- [ ] T125 [US2] MEDULLA-CQ-ORCH-R811.3 Route the sixteen job writers through step, site by site. Size: M, 3 PRs, 6 hours.
+- [ ] T126 [US2] MEDULLA-CQ-ORCH-R811.4 Convert stored jobs to the machine shape and prove it served. Size: M, 2 PRs, 5 hours.
+- [ ] T127 [US2] MEDULLA-CQ-ORCH-R810.3 Route the broker writers through apply, function by function. Size: M, 2 PRs, 5 hours.
+- [ ] T128 [US2] MEDULLA-CQ-ORCH-R810.4 Convert stored broker messages and prove the served path. Size: S, 1 PR, 4 hours.

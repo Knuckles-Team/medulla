@@ -134,6 +134,20 @@ none
 - Core vocabulary: entry point server bootstrap → `crates/medulla-graph-core/src/graph/schema_sources.rs` (core spec list, beside `bpmn`) → `state-machines-v1.ttl` and its shapes. Wiring row: MEDULLA-ORCH-VOCAB-R811.5. Hot-path proof row: `test_illegal_transition_returns_all_four_fields` of MEDULLA-ORCH-VOCAB-R811.5 and `test_ready_work_item_lists_claim_and_cancel` of MEDULLA-ORCH-VOCAB-R811.7.
 - Lane work item: lane store writers → `WorkItemStatus::apply` of R812.1 → lane row `status` (`types.rs:29`). Wiring row: MEDULLA-ORCH-VOCAB-R813. Hot-path proof row: `terminal_is_derived_from_status` of MEDULLA-ORCH-VOCAB-R813.
 
+### TransitionRefused on the served path (R811.8)
+
+Pre-untangled design, one line per answer.
+
+- Owner. Medulla, `medulla-capabilities` (the method error sets) and each handler crate.
+- Cohesion. The list of machine methods and their error set sit in one const, so the contract cannot drift from the handlers.
+- Dependency direction. Handlers return the record; the mapper adds the code to the method set; nothing imports a handler.
+- Interface depth. One const and one wire object.
+- Special cases. None. All eight methods take the same append.
+- State. The refusal is the typed edge of every machine row that cites R811.
+- Environment. None.
+
+Order: after R811.5 and the three machine rows named in the dependency list.
+
 ## Cross-repo seams
 
 - Run-trace metric reads: `MEDULLA-ORCH-VOCAB-R010.1` provides, `ARBORA-OPS-R021.4.4` consumes. Contract: [arbora-run-metrics.md](contracts/arbora-run-metrics.md).

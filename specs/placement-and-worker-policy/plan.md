@@ -182,6 +182,20 @@ Focused `cargo test` on the named files per row; `spec-status` and `spec-decompo
 - `ShardDrainMachine`: entry point the drain controller → `ShardDrain::apply` → `DrainPhase::apply` in `crates/medulla-raft-xshard/src/drain.rs`, called by `ShardDrain::next_phase` and `recover_after_restart` → drain journal. Wiring row: MEDULLA-PLACEMENT-R783.4. Hot-path proof row: `no_writer_sets_state_outside_apply` of MEDULLA-PLACEMENT-R783.4.
 - Sibling raft machines: MEDULLA-PLACEMENT-R783.3 holds the inventory. The partition move edge table is MEDULLA-PLACEMENT-R783.5; its implementation waits for the state-shape choice. `PlacementState` and `MovePhase` have no phase writer outside tests, so they have no edge table yet.
 
+### Removing the reservation tombstone (R781.3, R781.4)
+
+Pre-untangled design, one line per answer.
+
+- Owner. Medulla, `crates/medulla-resource-store` and the result types in `medulla-result-types`.
+- Cohesion. The state and its derived terminal flag are one fact; the field goes, the method `is_terminal` stays.
+- Dependency direction. The store depends on the result types; the result types depend on nothing above.
+- Interface depth. Callers ask `state.is_terminal()`; they read no second field.
+- Special cases. None. Replay of a terminal row is decided from the state, as for every machine.
+- State. The explicit machine of R781.1; this row removes the second source of truth.
+- Environment. None.
+
+Order: R781.1, R781.3, R781.4. The served wire type changes with R781.3, so the generated schema and clients rebuild at build.
+
 ## Cross-repo seams
 
 | Seam | Provider | Consumer |

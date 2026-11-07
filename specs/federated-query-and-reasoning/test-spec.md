@@ -1089,3 +1089,6 @@ Each entry names the test the row binds once its code lands; the path is the pos
 | Planned | `MEDULLA-FEDERATED-QUERY-R731` | `tests/query/test_latency_classes_served.py::test_interactive_budget_refuses_and_analytical_runs_as_job` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R732` | `tests/query/test_planner_evolution_served.py::test_recorded_plans_train_a_challenger_that_promotes_only_on_improvement` |
 | Behavior | `MEDULLA-FEDERATED-QUERY-R722.7` | `crates/medulla-h-admin/src/admin/connector_pack/tests/source_approval.rs::approve_source_requires_current_head_and_contract_digest` |
+| Behavior | `MEDULLA-FEDERATED-QUERY-R733` | `crates/medulla-uql/tests/group_stage.rs::group_by_label_counts_rows`, `crates/medulla-uql/tests/group_stage.rs::unknown_field_is_refused` and `tests/query/test_uql_group_served.py::test_node_type_counts_over_the_wire` (L2, L4). |
+| Behavior | `MEDULLA-FEDERATED-QUERY-R734` | `crates/medulla-uql/tests/order_skip_stage.rs::order_is_stable_with_row_id_tiebreak` and `crates/medulla-uql/tests/order_skip_stage.rs::skip_past_the_cap_is_refused` (L2). |
+| Behavior | `MEDULLA-FEDERATED-QUERY-R735` | `crates/medulla-uql/tests/edges_source.rs::edges_rows_carry_source_target_rel_and_properties` and `tests/query/test_uql_edges_served.py::test_edge_rows_respect_edge_read_scope` (L2, L4). |
