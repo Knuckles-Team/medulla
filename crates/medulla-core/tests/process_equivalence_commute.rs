@@ -7,7 +7,7 @@
 
 use std::path::{Path, PathBuf};
 
-use medulla_core::process_exchange::bpmn_lower::{bpmn_source_graph, BPMN_KIND_ANNOTATIONS};
+use medulla_core::process_exchange::bpmn_lower::{bpmn_kind_annotations, bpmn_source_graph};
 use medulla_core::process_exchange::bpmn_read::{parse_bpmn, BpmnLimits};
 use medulla_core::process_exchange::workflow_bpmn::workflow_to_bpmn;
 use medulla_core::process_import::{
@@ -39,14 +39,16 @@ fn read_json(name: &str, suffix: &str) -> CanonicalWorkflow {
 fn from_bpmn_bytes(bytes: &[u8]) -> Result<CanonicalWorkflow, String> {
     let doc = parse_bpmn(bytes, BpmnLimits::default()).map_err(|e| e.to_string())?;
     let graph = bpmn_source_graph(&doc).map_err(|e| e.to_string())?;
-    compile_process(&graph, BPMN_KIND_ANNOTATIONS).map_err(|e| e.to_string())
+    compile_process(&graph, bpmn_kind_annotations().map_err(|e| e.to_string())?)
+        .map_err(|e| e.to_string())
 }
 
 /// Canonical to BPMN and back to canonical.
 fn via_bpmn(workflow: &CanonicalWorkflow) -> Result<CanonicalWorkflow, String> {
     let doc = workflow_to_bpmn(workflow).map_err(|e| e.to_string())?;
     let graph = bpmn_source_graph(&doc).map_err(|e| e.to_string())?;
-    compile_process(&graph, BPMN_KIND_ANNOTATIONS).map_err(|e| e.to_string())
+    compile_process(&graph, bpmn_kind_annotations().map_err(|e| e.to_string())?)
+        .map_err(|e| e.to_string())
 }
 
 /// Canonical to EPC and back to canonical.

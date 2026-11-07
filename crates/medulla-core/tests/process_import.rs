@@ -399,3 +399,67 @@ fn canonicalize_is_the_composition_of_the_stages() {
         assert_eq!(admit_canonical(&composed).unwrap(), composed);
     }
 }
+
+// spec: MEDULLA-CQ-ORCH-R701.7
+#[test]
+fn bpmn_classes_map_through_annotations() {
+    use medulla_core::process_exchange::bpmn_lower::bpmn_kind_annotations;
+    use medulla_core::process_exchange::BPMN_NODE_KINDS;
+    let annotations = bpmn_kind_annotations().unwrap();
+    let expected = [
+        ("task", StepKind::Agent, None),
+        ("userTask", StepKind::Human, None),
+        ("manualTask", StepKind::Human, None),
+        ("serviceTask", StepKind::Agent, None),
+        ("scriptTask", StepKind::Agent, None),
+        ("sendTask", StepKind::Agent, None),
+        ("receiveTask", StepKind::Wait, None),
+        ("businessRuleTask", StepKind::Decision, None),
+        ("subProcess", StepKind::Call, None),
+        ("callActivity", StepKind::Call, None),
+        ("exclusiveGateway", StepKind::Branch, Some(GateKind::Xor)),
+        ("parallelGateway", StepKind::Fork, Some(GateKind::And)),
+        ("inclusiveGateway", StepKind::Fork, Some(GateKind::Or)),
+        ("eventBasedGateway", StepKind::Wait, Some(GateKind::Xor)),
+        ("startEvent", StepKind::Start, None),
+        ("endEvent", StepKind::End, None),
+        ("intermediateCatchEvent", StepKind::Wait, None),
+        ("intermediateThrowEvent", StepKind::Agent, None),
+        ("boundaryEvent", StepKind::Boundary, None),
+    ];
+    for kind in BPMN_NODE_KINDS {
+        let graph = SourceGraph {
+            name: "one".into(),
+            system: ProcessSourceSystem::Bpmn20,
+            model_id: "m".into(),
+            nodes: vec![SourceNode {
+                element_id: "n".into(),
+                class: kind.to_string(),
+                label: "n".into(),
+                role: None,
+                reference: None,
+            }],
+            edges: Vec::new(),
+            annex: Vec::new(),
+        };
+        match expected.iter().find(|(name, _, _)| name == kind) {
+            Some((_, step, gate)) => {
+                let lowered = lower(&graph, annotations).unwrap();
+                assert_eq!(lowered.steps[0].kind, *step, "{kind}");
+                assert_eq!(lowered.steps[0].gate, *gate, "{kind}");
+            }
+            None => {
+                assert_eq!(*kind, "complexGateway");
+                assert!(matches!(
+                    lower(&graph, annotations),
+                    Err(ImportError::UnmappedElement { element_type }) if element_type == "complexGateway"
+                ));
+            }
+        }
+    }
+    let lowering = include_str!("../src/process_exchange/bpmn_lower.rs");
+    assert!(
+        !lowering.contains("StepKind::"),
+        "no BPMN class is mapped in code"
+    );
+}

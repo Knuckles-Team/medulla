@@ -955,3 +955,15 @@
 <http://knuckles.team/kg#StatechartInstance> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
 <http://knuckles.team/kg#TaskClass> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
 <http://knuckles.team/kg#Workflow> rdfs:subClassOf <http://purl.obolibrary.org/obo/BFO_0000001> .
+
+# MEDULLA-ORCH-VOCAB-R014.9: what a source class's nodes become in the
+# canonical workflow. Values: start, end, human, agent, decision, branch,
+# fork, join, wait, call, boundary; graph and the source-only state never
+# reach a canonical step. :canonicalGateKind is and, or or xor.
+:dagNodeKind a owl:AnnotationProperty ;
+    rdfs:label "DAG node kind" ;
+    rdfs:comment "The canonical step kind the nodes of a source class become." .
+
+:canonicalGateKind a owl:AnnotationProperty ;
+    rdfs:label "canonical gate kind" ;
+    rdfs:comment "The gate (and, or, xor) of a split, a join or an event-based wait." .

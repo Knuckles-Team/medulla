@@ -1,8 +1,10 @@
 //! The BPMN source's format mapping (MEDULLA-CQ-ORCH-R701.7, R701.11): the
 //! parsed document viewed as a source graph, and the kind annotations of the
-//! BPMN classes. Lower reads kinds only through these annotations.
+//! BPMN classes, read from the ontology (`bpmn-v1.ttl`). Lower reads kinds
+//! only through these annotations; no class is mapped in code.
 
 use std::collections::HashMap;
+use std::sync::OnceLock;
 
 use medulla_types::process_import::{
     AnnexEntry, GateKind, ImportError, KindAnnotation, LoweredFlow, ProcessSourceSystem,
@@ -11,37 +13,105 @@ use medulla_types::process_import::{
 
 use super::{BpmnDocument, BpmnNode};
 
-const fn annotate(class: &'static str, kind: StepKind, gate: Option<GateKind>) -> KindAnnotation {
-    KindAnnotation {
-        class,
-        kind: Some(kind),
-        gate,
-    }
+/// The core namespace of the BPMN classes and the two annotations.
+const KG: &str = "http://knuckles.team/kg#";
+
+/// The BPMN class vocabulary (MEDULLA-ORCH-VOCAB-R014.2, R014.9).
+const BPMN_VOCABULARY: &str = include_str!("../../ontology/bpmn-v1.ttl");
+
+/// The BPMN element local name of a `:Bpmn<Name>` class (`:BpmnUserTask`
+/// is `userTask`).
+fn element_name(class_iri: &str) -> Option<String> {
+    let name = class_iri.strip_prefix(KG)?.strip_prefix("Bpmn")?;
+    let mut chars = name.chars();
+    let first = chars.next()?;
+    Some(first.to_ascii_lowercase().to_string() + chars.as_str())
 }
 
-/// `:dagNodeKind` and `:canonicalGateKind` of each BPMN class. A complex
-/// gateway has none and refuses `UnmappedElement`.
-pub const BPMN_KIND_ANNOTATIONS: &[KindAnnotation] = &[
-    annotate("userTask", StepKind::Human, None),
-    annotate("manualTask", StepKind::Human, None),
-    annotate("task", StepKind::Agent, None),
-    annotate("serviceTask", StepKind::Agent, None),
-    annotate("scriptTask", StepKind::Agent, None),
-    annotate("sendTask", StepKind::Agent, None),
-    annotate("intermediateThrowEvent", StepKind::Agent, None),
-    annotate("businessRuleTask", StepKind::Decision, None),
-    annotate("receiveTask", StepKind::Wait, None),
-    annotate("intermediateCatchEvent", StepKind::Wait, None),
-    annotate("eventBasedGateway", StepKind::Wait, Some(GateKind::Xor)),
-    annotate("subProcess", StepKind::Call, None),
-    annotate("callActivity", StepKind::Call, None),
-    annotate("boundaryEvent", StepKind::Boundary, None),
-    annotate("startEvent", StepKind::Start, None),
-    annotate("endEvent", StepKind::End, None),
-    annotate("exclusiveGateway", StepKind::Branch, Some(GateKind::Xor)),
-    annotate("parallelGateway", StepKind::Fork, Some(GateKind::And)),
-    annotate("inclusiveGateway", StepKind::Fork, Some(GateKind::Or)),
-];
+fn closed_value<T: serde::de::DeserializeOwned>(value: &str) -> Result<T, ImportError> {
+    serde_json::from_value(serde_json::Value::String(value.to_string())).map_err(|_| {
+        ImportError::NotCanonical {
+            reason: format!("bpmn-v1.ttl carries the unknown kind value {value}"),
+        }
+    })
+}
+
+fn read_annotations() -> Result<Vec<KindAnnotation>, ImportError> {
+    let mut kind: HashMap<String, String> = HashMap::new();
+    let mut gate: HashMap<String, String> = HashMap::new();
+    let mut parent: HashMap<String, String> = HashMap::new();
+    let mut classes: Vec<String> = Vec::new();
+    for triple in oxttl::TurtleParser::new().for_reader(BPMN_VOCABULARY.as_bytes()) {
+        let triple = triple.map_err(|error| ImportError::NotCanonical {
+            reason: format!("bpmn-v1.ttl: {error}"),
+        })?;
+        let oxrdf::NamedOrBlankNode::NamedNode(subject) = &triple.subject else {
+            continue;
+        };
+        let subject = subject.as_str().to_string();
+        let predicate = triple.predicate.as_str();
+        match (&triple.object, predicate) {
+            (oxrdf::Term::Literal(value), p) if p == format!("{KG}dagNodeKind") => {
+                kind.insert(subject, value.value().to_string());
+            }
+            (oxrdf::Term::Literal(value), p) if p == format!("{KG}canonicalGateKind") => {
+                gate.insert(subject, value.value().to_string());
+            }
+            (oxrdf::Term::NamedNode(object), "http://www.w3.org/2000/01/rdf-schema#subClassOf") => {
+                parent.insert(subject, object.as_str().to_string());
+            }
+            (oxrdf::Term::NamedNode(object), "http://www.w3.org/1999/02/22-rdf-syntax-ns#type")
+                if object.as_str() == "http://www.w3.org/2002/07/owl#Class" =>
+            {
+                classes.push(subject);
+            }
+            _ => {}
+        }
+    }
+    let nearest = |map: &HashMap<String, String>, class: &str| {
+        let mut current = Some(class.to_string());
+        let mut hops = 0;
+        while let Some(iri) = current {
+            if let Some(value) = map.get(&iri) {
+                return Some(value.clone());
+            }
+            hops += 1;
+            current = parent.get(&iri).cloned().filter(|_| hops < 32);
+        }
+        None
+    };
+    let mut annotations = Vec::new();
+    for class in &classes {
+        let (Some(element), Some(value)) = (element_name(class), nearest(&kind, class)) else {
+            continue;
+        };
+        annotations.push(KindAnnotation {
+            class: Box::leak(element.into_boxed_str()),
+            kind: if value == "state" {
+                None
+            } else {
+                Some(closed_value::<StepKind>(&value)?)
+            },
+            gate: nearest(&gate, class)
+                .map(|g| closed_value::<GateKind>(&g))
+                .transpose()?,
+        });
+    }
+    Ok(annotations)
+}
+
+/// The `:dagNodeKind` and `:canonicalGateKind` of every BPMN class, read
+/// once from `bpmn-v1.ttl` along each class's `rdfs:subClassOf` closure. A
+/// class without a kind (a complex gateway) is absent and so refuses
+/// `UnmappedElement`.
+pub fn bpmn_kind_annotations() -> Result<&'static [KindAnnotation], ImportError> {
+    static ANNOTATIONS: OnceLock<Result<Vec<KindAnnotation>, ImportError>> = OnceLock::new();
+    ANNOTATIONS
+        .get_or_init(read_annotations)
+        .as_ref()
+        .map(Vec::as_slice)
+        .map_err(Clone::clone)
+}
 
 /// The trigger an event names: the first reference of its first event
 /// definition, else the definition kind (`timer`, `signal`, ...).
