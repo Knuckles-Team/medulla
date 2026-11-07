@@ -5,7 +5,6 @@
 
 mod build_profiles;
 mod repo_root_parity;
-mod spec_paths;
 #[cfg(test)]
 mod tempdir;
 
@@ -30,11 +29,6 @@ const CHECKS: &[Check] = &[
         name: repo_root_parity::NAME,
         summary: repo_root_parity::SUMMARY,
         run: repo_root_parity::run,
-    },
-    Check {
-        name: spec_paths::NAME,
-        summary: spec_paths::SUMMARY,
-        run: spec_paths::run,
     },
 ];
 

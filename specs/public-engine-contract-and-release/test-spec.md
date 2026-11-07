@@ -116,7 +116,7 @@ One row per leaf requirement. A planned test names the exact path that the row a
 | `MEDULLA-CONTRACT-R056.7` | `tests/test_server_split_rollup.py::test_backbone_crates_exist_and_depend_only_downward` | L3 | Test: each handler crate's served tests pass with a registry holding only that handler (L3). |
 | `MEDULLA-CONTRACT-R056.8` | `tests/test_server_split_rollup.py::test_backbone_crates_exist_and_depend_only_downward` | L3 | Test: the acyclic workspace resolution and each crate's served tests (L3). |
 | `MEDULLA-CONTRACT-R056.9` | `tests/test_server_split_rollup.py::test_backbone_crates_exist_and_depend_only_downward` | L1 | Test: each wire feature builds alone and its protocol tests pass (L1). |
-| `MEDULLA-CONTRACT-R056.10` | `tools/xtask/src/spec_paths.rs::tests::a_missing_path_is_a_finding` | L1 | fails when a spec row names a file that does not exist. |
+| `MEDULLA-CONTRACT-R056.10` | PIPE-GATES-R093 `tests/test_spec_row_paths.py::test_a_missing_path_is_a_finding` (pipelines repository) | L1 | fails when a changed spec row names a file that does not exist and is not marked planned. |
 | `MEDULLA-CONTRACT-R056.11` | `tests/test_workspace_members_exist.py::test_every_workspace_member_exists_on_disk` | L1 | Test: every crate listed in the workspace members exists on disk (cargo metadata resolves). |
 | `MEDULLA-CONTRACT-R056.12` | `tests/test_release_full_wheel_contract.py::test_runner_jobs_keep_build_budget_and_bounded_authorization` | L2 | Test: the workspace build passes on the landed commit, and the pull request links the train run. |
 | `MEDULLA-CONTRACT-R056.13` | `tests/test_server_split_rollup.py::test_backbone_crates_exist_and_depend_only_downward` | L1 | Test: the workspace builds with no dependency cycle. |

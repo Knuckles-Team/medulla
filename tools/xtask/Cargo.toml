@@ -6,5 +6,4 @@ publish = false
 description = "Repository checks and certification campaigns, one subcommand each (cargo xtask <name>)."
 
 [dependencies]
-regex = "1"
 toml_edit = { version = "0.25", default-features = false, features = ["parse"] }
