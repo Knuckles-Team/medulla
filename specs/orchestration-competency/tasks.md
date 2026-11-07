@@ -77,6 +77,8 @@ Producer first: ontology terms, shapes and authority mappings, then fixtures and
 - [ ] T112 [US6] MEDULLA-CQ-ORCH-R701.8 Round-trip and loss rules
 - [ ] T113 [US6] MEDULLA-CQ-ORCH-R701.10 Process sources are declared in the ontology
 - [ ] T114 [US6] MEDULLA-CQ-ORCH-R701.9 Cross-source equivalence proof
+- [ ] T119 [US6] MEDULLA-CQ-ORCH-R701.11 Process compilation has four named stages, each with one typed form
+- [ ] T120 [US6] MEDULLA-CQ-ORCH-R701.12 A commuting-diagram fixture proves that the source formats converge
 - [ ] T070 [US2] MEDULLA-CQ-ORCH-R012 Served proof of the execution question from onboarded connector operations
 - [ ] T071 [US7] MEDULLA-CQ-ORCH-R702.1 Process document records
 - [ ] T072 [US7] MEDULLA-CQ-ORCH-R702.2 BPMN 2.0 reader

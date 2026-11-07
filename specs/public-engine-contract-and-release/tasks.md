@@ -81,6 +81,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T073 [US3] MEDULLA-CONTRACT-R053.11 The server image is built from the `medulla` wheel
 - [ ] T074 [US3] MEDULLA-CONTRACT-R053.12 One version and a build-only dispatch
 - [ ] T075 [US3] MEDULLA-CONTRACT-R053.13 Retain the validated wheel for installed acceptance
+- [ ] T111 [US3] MEDULLA-CONTRACT-R053.14 Building one tag twice gives byte-identical artifacts: the release fixed point
 - [ ] T076 [US1] MEDULLA-CONTRACT-R054 The engine serves its method descriptors and scope registry
 - [ ] T077 [US4] MEDULLA-CONTRACT-R055 Decision reachability gate
 - [ ] T078 [US5] MEDULLA-CONTRACT-R056.1 Step 0: the server contract wave is removed before any move

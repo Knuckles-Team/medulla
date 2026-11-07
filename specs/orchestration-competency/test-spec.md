@@ -102,6 +102,10 @@ Every row below names a test that does not exist yet. The test file and function
 | T-088 | MEDULLA-CQ-ORCH-R701.9 | L3 | `tests/process_equivalence_served.rs::bpmn_and_epc_give_one_workflow_and_one_plan` | Cross-source equivalence proof proves its row as stated in requirements.md |
 | T-089 | MEDULLA-CQ-ORCH-R701.9 | L4 | `tests/competency/test_process_equivalence_served.py::test_bpmn_and_epc_plan_digests_match` | Cross-source equivalence proof proves its row through the served client |
 | T-090 | MEDULLA-CQ-ORCH-R701.10 | L2 | `crates/medulla-rdf/tests/process_sync.rs::aris_location_row_passes_shapes` | Process sources are declared in the ontology proves its row as stated in requirements.md |
+| T-095 | MEDULLA-CQ-ORCH-R701.11 | L1 | `crates/medulla-core/tests/process_import.rs::each_stage_reads_only_the_previous_form` | Each stage takes the previous typed form, allocation is idempotent and no stage names a source format |
+| T-096 | MEDULLA-CQ-ORCH-R701.11 | L1 | `crates/medulla-core/tests/process_import.rs::canonicalize_is_the_composition_of_the_stages` | Canonicalize equals emit of allocate of lowered |
+| T-097 | MEDULLA-CQ-ORCH-R701.12 | L1 | `crates/medulla-core/tests/process_equivalence_commute.rs::every_fixture_square_commutes` | The four digest equalities hold for every fixture |
+| T-098 | MEDULLA-CQ-ORCH-R701.12 | L1 | `crates/medulla-core/tests/process_equivalence_commute.rs::a_broken_square_names_fixture_equality_and_digests` | A broken square names the fixture, the equality and both digests |
 | T-091 | MEDULLA-CQ-ORCH-R703.8 | L4 | `tests/competency/test_process_sync_served.py::test_aris_repository_sync_then_deploy` | ARIS repository sync hot-path proof proves its row as stated in requirements.md |
 | T-092 | MEDULLA-CQ-ORCH-R703.8 | L4 | `tests/competency/test_process_sync_served.py::test_unconfigured_aris_source_is_unavailable` | An unconfigured ARIS source is unavailable, never an empty success |
 | T-093 | MEDULLA-CQ-ORCH-R704.9 | L1 | `crates/medulla-compute/src/process_plan/tests.rs::plan_code_names_no_source_format` | The plan reads only the canonical form proves its row as stated in requirements.md |

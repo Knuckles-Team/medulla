@@ -124,6 +124,22 @@ Data flow, import: `Method::ProcessDocumentImport` → `handle_process_document_
 
 Sync: the graph is the system of record. Each process source is a federated secondary declared by one `vg:SourceAuthority` row: the process engine, also the execution location (R703.1), and the ARIS repository (R701.10). Records compare on the canonical digest, so a process changed in either format is detected the same way (R703.2). `ProcessModelSync` runs the two-way mechanism of `MEDULLA-SRC-AUTH-R012` with `ProcessSyncAdapter`. The connector's pack source serves the definition documents at sync time through the foreign read path. `ProcessModelDeploy` exports a model and queues one governed write-back proposal; arbora approves it and the connector sink deploys the released change set. Rows R702 and R703.
 
+### Process compilation stages (MEDULLA-CQ-ORCH-R701.11, R701.12)
+
+Process compilation has four stages: Parse, Lower, Allocate and Emit. Each stage is a pure function from one typed form to the next: source document, `LoweredProcess`, `AllocatedProcess`, `CanonicalWorkflow`. The BPMN path enters at `parse_bpmn` and runs through `compile_process`. The EPC path enters at `admit_canonical`, which runs Allocate and Emit again over the canonical form that the adapter produced. Research notes are in `research.md`.
+
+Pre-untangled design for these rows, one line per answer.
+
+- Owner. `crates/medulla-core/src/process_import.rs` owns the stages; `crates/medulla-types/src/process_import.rs` owns the forms. A source owns only its Parse and its format mapping.
+- Cohesion. Allocate and Emit change together with R701.2 rules 3 to 5, so they sit beside `canonicalize`. Parse stays with each source.
+- Dependency direction. Emit depends on Allocate, Allocate on Lower, Lower on the ontology view. No stage imports a source type.
+- Interface depth. Three public stage functions and four forms. Kahn ordering, key sorting and hashing stay private.
+- Special cases. None per source. A new source adds a Parse and a mapping, and no branch in a stage.
+- State. A stage holds no state. The forms are immutable values.
+- Environment. The only setting is `process_import_max_elements` of R701.2.
+
+Two call sites. `allocate` and `emit` are called by `compile_process` for BPMN and by `admit_canonical` for EPC. The commuting-diagram fixture of R701.12 drives both.
+
 ### Process plans
 
 `Decide` with `QuestionKind::ProcessPlan` translates one stored workflow into one `TaskPlanProposal` and passes it through `plan_explicit_tasks`, the one canonicalizer of `MEDULLA-DECISION-ENGINE-R134.111`. The translation is not a planner. It reads only the canonical form, never a source format (R704.9). Order comes from the workflow's flows. Bindings come from graph links first. On an `agent` step `:usesTool` gives a tool step and `:hasPrompt` an agent step. A `decision` step gives a decision step, and a `human` step gives an approval wait. The only choice is the ranked fallback for an unbound task, which the `ToolRelevance` family makes. Gateways become branch and join steps of `MEDULLA-DECISION-ENGINE-R134.111.14`; branch choice at run time is `MEDULLA-DECISION-ENGINE-R180`. Row R704.
