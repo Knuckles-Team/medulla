@@ -201,6 +201,10 @@ impl std::fmt::Display for ImportError {
 
 impl std::error::Error for ImportError {}
 
+/// Annex construct: BPMN diagram interchange or extension XML, restored on
+/// a BPMN re-export (MEDULLA-CQ-ORCH-R702.8).
+pub const ANNEX_BPMN_PRESERVED_XML: &str = "bpmn-preserved-xml";
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -1,7 +1,10 @@
 //! Native BPMN 2.0 read and export (MEDULLA-CQ-ORCH-R702.2, R702.8).
 
 use medulla_core::process_exchange::bpmn_read::{parse_bpmn, BpmnLimits};
+use medulla_core::process_exchange::workflow_bpmn::workflow_to_bpmn;
 use medulla_core::process_exchange::{ProcessExchangeError, BPMN_NODE_KINDS};
+use medulla_core::process_import::canonicalize;
+use medulla_types::process_import::{LoweredFlow, LoweredStep, ProcessSourceSystem, StepKind};
 
 const EVERY_KIND: &[u8] = include_bytes!("fixtures/process_exchange/every_kind.bpmn");
 
@@ -86,5 +89,81 @@ fn bpmn_reader_refuses_entities_namespaces_and_limits() {
     assert!(matches!(
         parse_bpmn(broken, BpmnLimits::default()),
         Err(ProcessExchangeError::Malformed { line: 2, .. })
+    ));
+}
+
+fn lowered(id: &str, kind: StepKind, label: &str, role: Option<&str>) -> LoweredStep {
+    LoweredStep {
+        element_id: id.into(),
+        kind,
+        gate: None,
+        label: label.into(),
+        role: role.map(Into::into),
+        reference: None,
+    }
+}
+
+fn is_xml_name(id: &str) -> bool {
+    let mut chars = id.chars();
+    chars
+        .next()
+        .is_some_and(|c| c.is_ascii_alphabetic() || c == '_')
+        && chars.all(|c| c.is_ascii_alphanumeric() || matches!(c, '_' | '-' | '.'))
+}
+
+// spec: MEDULLA-CQ-ORCH-R702.8
+#[test]
+fn workflow_exports_as_deployable_bpmn() {
+    let steps = vec![
+        lowered("a", StepKind::Human, "Review", Some("Finance")),
+        lowered("b", StepKind::Agent, "Book", None),
+        lowered("c", StepKind::Decision, "Check", Some("Finance")),
+    ];
+    let flows = ["a:b", "b:c"]
+        .iter()
+        .map(|pair| {
+            let (source, target) = pair.split_once(':').unwrap();
+            LoweredFlow {
+                source: source.into(),
+                target: target.into(),
+                condition: None,
+                default: false,
+            }
+        })
+        .collect();
+    let workflow = canonicalize(
+        "Book invoice",
+        ProcessSourceSystem::ArisEpc,
+        "m",
+        steps,
+        flows,
+    )
+    .unwrap();
+    let doc = workflow_to_bpmn(&workflow).unwrap();
+    let process = &doc.processes[0];
+    let count = |kind: &str| process.nodes.iter().filter(|n| n.kind == kind).count();
+    assert_eq!(count("startEvent"), 1);
+    assert_eq!(count("endEvent"), 1);
+    assert_eq!(count("userTask"), 1);
+    assert_eq!(count("serviceTask"), 1);
+    assert_eq!(count("businessRuleTask"), 1);
+    assert_eq!(process.lanes.len(), 1);
+    assert_eq!(process.lanes[0].flow_node_refs.len(), 2);
+    assert_eq!(process.flows.len(), 4);
+    for id in process
+        .nodes
+        .iter()
+        .map(|n| n.id.as_str())
+        .chain(process.flows.iter().map(|f| f.id.as_str()))
+        .chain([doc.id.as_str(), process.id.as_str()])
+    {
+        assert!(is_xml_name(id), "{id} is a valid XML name");
+    }
+    let mut empty = workflow.clone();
+    empty.steps.clear();
+    empty.flows.clear();
+    assert!(matches!(
+        workflow_to_bpmn(&empty),
+        Err(ProcessExchangeError::NotDeployable { .. })
     ));
 }
