@@ -4,6 +4,7 @@
 //! repository needs is a `pipelines-hook` mode instead and does not belong here.
 
 mod build_profiles;
+mod decide_budgets;
 mod repo_root_parity;
 mod sdist_completeness;
 mod spec_paths;
@@ -27,6 +28,11 @@ const CHECKS: &[Check] = &[
         name: build_profiles::NAME,
         summary: build_profiles::SUMMARY,
         run: build_profiles::run,
+    },
+    Check {
+        name: decide_budgets::NAME,
+        summary: decide_budgets::SUMMARY,
+        run: decide_budgets::run,
     },
     Check {
         name: repo_root_parity::NAME,

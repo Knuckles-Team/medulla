@@ -8,7 +8,7 @@
 //! family that refuses the fixture request times its refusal path.
 //!
 //! Besides the Criterion report, the run writes the budget report that
-//! `scripts/check_decide_budgets.py` compares to `benches/baselines/decide.json`
+//! `cargo xtask decide-budgets` compares to `benches/baselines/decide.json`
 //! (R178.2) when `DECIDE_BUDGETS_REPORT` names a path: per group `p50_ms`,
 //! `p99_ms` and `peak_mib` (resident high-water growth during the group).
 //!

@@ -14047,6 +14047,7 @@ dependencies = [
  "base64 0.22.1",
  "flate2",
  "regex",
+ "serde_json",
  "sha2 0.10.9",
  "tar",
  "toml_edit",

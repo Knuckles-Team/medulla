@@ -17,7 +17,7 @@
 //! under 25 ms, p99 under 60 ms, peak resident growth under 8 MiB (`VmHWM`, the probe
 //! of MEDULLA-DECISION-ENGINE-R178.1). When `FINANCE_BUDGETS_REPORT` names a path the run
 //! writes `p50_ms`, `p99_ms` and `peak_mib` per group, which
-//! `scripts/check_decide_budgets.py --baseline benches/baselines/finance.json` compares
+//! `cargo xtask decide-budgets --baseline benches/baselines/finance.json` compares
 //! to the budgets and the stored baseline (a regression above 10 percent fails). The
 //! nightly workflow `.github/workflows/nightly-finance-budgets.yml` runs it. It never
 //! gates a pull request.
