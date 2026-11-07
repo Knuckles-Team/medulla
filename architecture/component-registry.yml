@@ -4103,6 +4103,7 @@ components:
       - "tests/test_release_python_suite_contract.py"
       - "tests/test_ci_change_scope.py"
       - "tests/test_merge_safe_registries.py"
+      - "tests/test_crate_layers.py"
       - "tests/attached_conformance.rs"
       - "tests/attached_sqlite_served.rs"
       - "tests/test_ci_parity.py"
