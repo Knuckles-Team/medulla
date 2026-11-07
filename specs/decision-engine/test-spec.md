@@ -2098,6 +2098,7 @@ Every row below has a planned test at its exact post-split path; the row text na
 | `MEDULLA-DECISION-ENGINE-R814.8` | `tests/decide/test_prompt_candidates_served.py::test_non_canonical_prompt_is_refused_with_field_path` |
 | `MEDULLA-DECISION-ENGINE-R822` | `crates/medulla-h-decide/src/decide/stat_calibration.rs::fit_isotonic` |
 | `MEDULLA-DECISION-ENGINE-R828` | `crates/medulla-server-api/src/api/conflict_decider.rs::branch_merge_conflicts_route_through_the_conflict_decider_seam` |
+| `MEDULLA-DECISION-ENGINE-R829` | `crates/medulla-h-decide/src/decide/stat_tests/connector_toolchoice_tests.rs::catalog_serves_connector_points_and_unknown_id_abstains` |
 | `MEDULLA-DECISION-ENGINE-R134.111.14` | `crates/medulla-decision-types/src/decision/task_plan/tests.rs::control_steps_round_trip_and_refuse_two_kinds` |
 | `MEDULLA-DECISION-ENGINE-R134.111.15` | `crates/medulla-decision-types/src/decision/task_plan/tests.rs::control_checks_refuse_planted_faults` |
 | `MEDULLA-DECISION-ENGINE-R134.111.16` | `crates/medulla-h-decide/src/decide/stat_tests/task_plan_tests.rs::control_refusals_name_the_task` |
