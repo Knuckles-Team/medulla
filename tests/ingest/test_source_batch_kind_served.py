@@ -5,7 +5,6 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from medulla.client import EngineResponseError
 from medulla.generated.source_ingestion import (
     SourceBatchKind,
     SourceIngestionRequest,
@@ -23,8 +22,14 @@ BASE = {
 
 @pytest.mark.spec("MEDULLA-INGEST-WORKER-R902.3.1")
 def test_mismatched_kind_is_refused(clean_graph):
+    # The kind/extension rule is enforced by the typed request decoder the
+    # engine and the client share, so the request is refused before it is
+    # sent: the client names it as an invalid engine request with the code.
     mismatched = {**BASE, "kind": "access"}
-    with pytest.raises(EngineResponseError, match="SOURCE_BATCH_KIND_MISMATCH"):
+    with pytest.raises(
+        ValueError,
+        match="is not a valid engine request: .*SOURCE_BATCH_KIND_MISMATCH",
+    ):
         clean_graph._send("SourceIngest", {"request": mismatched})
 
 

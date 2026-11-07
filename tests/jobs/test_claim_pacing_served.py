@@ -28,6 +28,40 @@ def _kind() -> dict:
     }
 
 
+def _release(client, slot: str, claimed: dict) -> None:
+    """Cancel a claimed job and confirm it as its worker.
+
+    A cancel request alone leaves a leased job active, holding one of the
+    tenant's active-job slots until its lease runs out.
+    """
+
+    job_id = claimed["job"]["job_id"]
+    client.jobs.cancel(job_id)
+    client.jobs.worker_cancel(job_id, slot, claimed["lease"]["epoch"])
+
+
+def _claim_own(
+    client, slot: str, capabilities: list[str], job_id: str
+) -> tuple[dict, str]:
+    """Claim until this test's job comes up.
+
+    A worker's claim also matches capability-free jobs, so one an earlier test
+    of this shared engine left queued can come up first, at either priority;
+    each such job is released until `job_id` is claimed. Every attempt claims
+    from its own worker slot: a slot that already holds a lease is answered
+    with that lease again. Returns the claim and the slot that holds it.
+    """
+
+    for attempt in range(16):
+        worker = f"{slot}-{attempt}"
+        claimed = client.jobs.worker_claim(worker, capabilities)
+        assert claimed is not None
+        if claimed["job"]["job_id"] == job_id:
+            return claimed, worker
+        _release(client, worker, claimed)
+    raise AssertionError(f"{job_id} was not claimed within 16 claims")
+
+
 @pytest.mark.spec("MEDULLA-PLACEMENT-R750.753")
 def test_background_claims_pause_under_foreground_load(clean_graph):
     nonce = uuid.uuid4().hex
@@ -55,22 +89,23 @@ def test_background_claims_pause_under_foreground_load(clean_graph):
         clean_graph.jobs.worker_claim(f"pacing-slot-{nonce}", [background_cap])
 
     # The foreground job is not throttled.
-    claimed = clean_graph.jobs.worker_claim(f"pacing-slot-{nonce}", [foreground_cap])
-    assert claimed is not None
-    assert claimed["job"]["job_id"] == foreground["job_id"]
+    claimed, worker = _claim_own(
+        clean_graph,
+        f"pacing-foreground-slot-{nonce}",
+        [foreground_cap],
+        foreground["job_id"],
+    )
+    # Release the proven foreground job so it holds no tenant active slot.
+    _release(clean_graph, worker, claimed)
 
     # No foreground job is queued any more, so the background claim proceeds.
-    # A capability-free job an earlier test of this engine left queued is also
-    # compatible with the claim; it is cancelled until this test's job comes up.
-    for _ in range(16):
-        claimed = clean_graph.jobs.worker_claim(
-            f"pacing-slot-{nonce}", [background_cap]
-        )
-        assert claimed is not None
-        if claimed["job"]["job_id"] == background["job_id"]:
-            break
-        clean_graph.jobs.cancel(claimed["job"]["job_id"])
-    assert claimed["job"]["job_id"] == background["job_id"]
+    claimed, worker = _claim_own(
+        clean_graph,
+        f"pacing-background-slot-{nonce}",
+        [background_cap],
+        background["job_id"],
+    )
+    _release(clean_graph, worker, claimed)
 
 
 @pytest.mark.spec("MEDULLA-PLACEMENT-R750.753")

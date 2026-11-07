@@ -19,7 +19,6 @@ from typing import Any
 
 import msgpack
 import pytest
-from conftest import request_context
 from ontology_pack_support import connect
 
 from medulla.client import EngineResponseError, MedullaClient
@@ -172,26 +171,19 @@ def test_import_edit_chain_revert_and_sealed_refusal() -> None:
         await client.rdf.revert_edit(iri, idempotency_key=f"r:{uuid.uuid4().hex}")
         chain = await edits_of(client, iri)
         assert len(chain) == 4
-        # A second tenant keeps its own chain, in a graph of its own: it sees
-        # none of the first tenant's edits and its import starts a new chain.
-        context = request_context()
-        context["tenant"] = "tenant-edits-b"
-        other_graph = f"edits-b-{uuid.uuid4().hex[:8]}"
-        other = await MedullaClient.connect(
-            socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
-            verified_context=context,
-            graph_name=other_graph,
-        )
+        # A second tenant graph keeps its own chain: the deployment binds one
+        # request-context tenant, so the second tenant is a graph of its own.
+        # It sees none of the first graph's edits and its import starts a new
+        # chain.
+        other, other_graph = await connect_isolated_graph()
         try:
-            await other.tenants.create(other_graph)
             assert await edits_of(other, iri) == []
             await import_body(other, "edits-e", iri, class_body(iri, "Alpha"))
             own = await edits_of(other, iri)
             assert [e["kind"] for e in own] == ["add"]
             assert own[0]["prev_digest"] is None
-            await other.tenants.delete(other_graph)
         finally:
-            await other.close()
+            await close_isolated_graph(other, other_graph)
         # A sealed edit refuses a revert.
         governed, graph = await connect_isolated_graph()
         try:

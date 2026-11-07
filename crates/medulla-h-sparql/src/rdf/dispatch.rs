@@ -32,7 +32,9 @@ pub async fn try_handle(
     }
     #[cfg(feature = "sparql")]
     if let Some(response) = try_handle_sparql(
+        state,
         req_id,
+        (graph_name, read_authority),
         core.clone(),
         &method,
         #[cfg(feature = "security")]
@@ -120,7 +122,9 @@ async fn try_handle_rdf(
 
 #[cfg(feature = "sparql")]
 async fn try_handle_sparql(
+    state: &Arc<RwLock<ServerState>>,
     req_id: u64,
+    (graph_name, read_authority): (&str, Option<&GraphReadAuthority>),
     core: Arc<GraphCore>,
     method: &Method,
     #[cfg(feature = "security")] caller: &str,
@@ -133,20 +137,68 @@ async fn try_handle_sparql(
             type_convention,
             explain,
         } => Some(
-            super::sparql::handle_sparql(
-                req_id,
-                core,
-                query.clone(),
-                medulla_rdf::sparql::Projection::from_wire(base_iri, type_convention),
-                super::sparql::SparqlProofMode::of(*explain),
-                #[cfg(feature = "security")]
-                caller,
-                #[cfg(feature = "security")]
-                rls,
-            )
-            .await,
+            match visible_pack_graphs(state, graph_name, read_authority).await {
+                Err(error) => Response::err(req_id, error),
+                Ok(packs) => {
+                    super::sparql::handle_sparql(
+                        req_id,
+                        (core, packs),
+                        query.clone(),
+                        medulla_rdf::sparql::Projection::from_wire(base_iri, type_convention),
+                        super::sparql::SparqlProofMode::of(*explain),
+                        #[cfg(feature = "security")]
+                        caller,
+                        #[cfg(feature = "security")]
+                        rls,
+                    )
+                    .await
+                }
+            },
         ),
         _ => None,
+    }
+}
+
+/// The resident pack graphs of the caller's verified tenant, which the served
+/// SPARQL default graph unions (MEDULLA-MEDIA-VOCAB-R655): a connector pack's
+/// ontology individuals live in its own `pack__<digest>` graph, so a query on any
+/// other graph sees them only through this union. A caller without verified
+/// tenant authority, or a deployment without a persistence directory, sees none;
+/// an Agent Library that cannot be read refuses the query.
+#[cfg(feature = "sparql")]
+async fn visible_pack_graphs(
+    state: &Arc<RwLock<ServerState>>,
+    graph_name: &str,
+    read_authority: Option<&GraphReadAuthority>,
+) -> Result<Vec<(String, Arc<GraphCore>)>, String> {
+    #[cfg(feature = "redb")]
+    {
+        let Some(carrier) = read_authority.and_then(GraphReadAuthority::carrier) else {
+            return Ok(Vec::new());
+        };
+        let tenant = carrier.log_owner().0;
+        let state = state.read().await;
+        let Some(persist_dir) = state.persist_dir.as_deref() else {
+            return Ok(Vec::new());
+        };
+        let names = medulla_persistence_records::agent_library::open_shared_agent_library(
+            &state.agent_library_open,
+            persist_dir,
+        )
+        .and_then(|store| store.visible_connector_pack_graphs(tenant))?;
+        Ok(names
+            .into_iter()
+            .filter(|name| name != graph_name)
+            .filter_map(|name| {
+                let core = state.registry.get(&name)?.core.clone();
+                Some((name, core))
+            })
+            .collect())
+    }
+    #[cfg(not(feature = "redb"))]
+    {
+        let _ = (state, graph_name, read_authority);
+        Ok(Vec::new())
     }
 }
 

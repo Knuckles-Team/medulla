@@ -720,6 +720,67 @@ impl AgentLibraryStateExt for medulla_server_api::state::ServerState {
     }
 }
 
+/// The Agent Library handle for an async request or worker path, WITHOUT queueing
+/// on the process-wide `ServerState` write lock when the handle is already open.
+///
+/// A read guard adopts an open handle. The first open (a recovery scan on a
+/// store without its clean marker) runs on the blocking pool outside every state
+/// guard, serialized by the shared open slot, and only the publish takes a short
+/// write. Every ConnectorPack call used to take `state.write()` just to clone
+/// this `Arc`, so a status read queued behind any long state holder and the
+/// first call after boot opened the store under that lock on a runtime worker
+/// (BUG-009).
+pub async fn shared_agent_library(
+    state: &Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
+) -> Result<Arc<AgentLibraryStore>, String> {
+    let (persist_dir, slot) = {
+        let guard = state.read().await;
+        if let Some(store) = guard.agent_library() {
+            return Ok(store);
+        }
+        let persist_dir = guard
+            .persist_dir
+            .clone()
+            .ok_or_else(|| "Agent Library requires a configured persist directory".to_string())?;
+        (persist_dir, Arc::clone(&guard.agent_library_open))
+    };
+    let opened =
+        tokio::task::spawn_blocking(move || open_shared_agent_library(&slot, &persist_dir))
+            .await
+            .map_err(|error| format!("agent library open task failed: {error}"))??;
+    let mut guard = state.write().await;
+    if let Some(existing) = guard.agent_library() {
+        return Ok(existing);
+    }
+    guard.set_agent_library(Some(Arc::clone(&opened)));
+    Ok(opened)
+}
+
+/// Release the process's Agent Library handles at graceful shutdown so the
+/// store closes and writes its clean-shutdown marker; the next boot then skips
+/// the O(rows) recovery scan (BUG-009). Returns whether this was the last
+/// handle; a handle still held elsewhere closes when that holder drops it.
+pub async fn close_agent_library(
+    state: &Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
+) -> bool {
+    let (published, slot) = {
+        let mut guard = state.write().await;
+        let published = guard.agent_library.take();
+        let slot = guard.agent_library_open.lock().take();
+        (published, slot)
+    };
+    let handle = slot.or(published);
+    let Some(handle) = handle else {
+        return true;
+    };
+    // The published handle and the slot are the same allocation; both are taken.
+    let last = Arc::strong_count(&handle) == 1;
+    tokio::task::spawn_blocking(move || drop(handle))
+        .await
+        .map(|()| last)
+        .unwrap_or(false)
+}
+
 /// Open one physical Agent Library handle across request and background paths.
 pub fn open_shared_agent_library(
     slot: &Mutex<Option<medulla_server_api::state::ErasedHandle>>,
@@ -739,6 +800,42 @@ pub fn open_shared_agent_library(
 
 #[cfg(test)]
 mod shared_open_tests {
+    /// BUG-009: graceful shutdown releases the Agent Library handles, so the
+    /// store closes with its clean-shutdown marker and the next boot skips the
+    /// O(rows) recovery scan; the async path opens it off the runtime.
+    #[test]
+    fn shutdown_close_leaves_the_clean_marker() {
+        let directory = tempfile::tempdir().unwrap();
+        let mut state = medulla_server_api::state::ServerState::new_for_test(
+            "bug009-secret",
+            medulla_server_api::state::ServerState::test_isolation("bug009-agent"),
+        );
+        state.persist_dir = Some(directory.path().to_str().unwrap().to_owned());
+        let state = std::sync::Arc::new(tokio::sync::RwLock::new(state));
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .build()
+            .unwrap();
+        let last = runtime.block_on(async {
+            let first = super::shared_agent_library(&state).await.unwrap();
+            let again = super::shared_agent_library(&state).await.unwrap();
+            assert!(std::sync::Arc::ptr_eq(&first, &again), "one shared handle");
+            drop((first, again));
+            super::close_agent_library(&state).await
+        });
+        assert!(last, "shutdown held the last Agent Library handle");
+        let marker = directory
+            .path()
+            .join(format!("{}.clean", super::AGENT_LIBRARY_FILE));
+        assert!(
+            marker.exists(),
+            "a cleanly closed store carries its clean marker"
+        );
+        runtime.block_on(async {
+            assert!(state.read().await.agent_library.is_none());
+            assert!(state.read().await.agent_library_open.lock().is_none());
+        });
+    }
+
     #[test]
     fn concurrent_agent_library_opens_share_one_handle() {
         let directory = tempfile::tempdir().unwrap();

@@ -272,7 +272,9 @@ fn evidence_id(incident_id: &str, reading: &AnomalyReading) -> String {
     format!("anom-{}", &hex_digest(&key)[..32])
 }
 
-/// Commit every incident in `ids` and its evidence as ONE `BatchUpdate`.
+/// Commit the incidents the call changed and the evidence it added as ONE
+/// `BatchUpdate`; `ids` is what the call answers. Evidence already committed
+/// is not rewritten, so a replayed batch writes nothing.
 async fn commit(
     state: &Arc<RwLock<ServerState>>,
     target: &IncidentTarget<'_>,
@@ -280,7 +282,7 @@ async fn commit(
     ids: Vec<String>,
 ) -> Result<IncidentWriteReceipt, String> {
     let (operations, nodes_written) = incident_operations(
-        authority.records(&ids),
+        authority.changes(),
         target.verified.tenant(),
         target.verified.agent_id(),
     )?;
@@ -311,15 +313,16 @@ fn stamp(properties: &mut Map<String, Value>, tenant: &str, agent: &str) {
     properties.insert("_owner".into(), agent.into());
 }
 
-/// Upserts for each incident node, its evidence nodes, then the edges.
+/// Upserts for each changed incident node, its added evidence nodes, then
+/// the edges.
 fn incident_operations<'a>(
-    records: impl Iterator<Item = &'a IncidentRecord>,
+    records: impl Iterator<Item = (&'a IncidentRecord, &'a [AnomalyReading])>,
     tenant: &str,
     agent: &str,
 ) -> Result<(Vec<Value>, u64), String> {
     let mut nodes = Vec::new();
     let mut edges = Vec::new();
-    for record in records {
+    for (record, added) in records {
         let body = serde_json::to_string(record)
             .map_err(|_| "incident record encoding failed".to_string())?;
         let mut properties = Map::new();
@@ -333,7 +336,7 @@ fn incident_operations<'a>(
         );
         stamp(&mut properties, tenant, agent);
         nodes.push(json!({"op": "upsert_node", "id": record.id, "properties": properties}));
-        for reading in &record.evidence {
+        for reading in added {
             let id = evidence_id(&record.id, reading);
             let mut properties = Map::new();
             properties.insert("type".into(), HEALTH_ANOMALY_TYPE.into());
@@ -390,8 +393,12 @@ mod tests {
     #[test]
     fn one_batch_carries_the_incident_and_its_evidence() {
         let record = record();
-        let (operations, nodes) =
-            incident_operations(std::iter::once(&record), "acme", "agent-1").unwrap();
+        let (operations, nodes) = incident_operations(
+            std::iter::once((&record, record.evidence.as_slice())),
+            "acme",
+            "agent-1",
+        )
+        .unwrap();
         assert_eq!(nodes, 2);
         assert_eq!(operations.len(), 3);
         assert_eq!(operations[0]["properties"]["tenant_id"], "acme");
@@ -403,5 +410,16 @@ mod tests {
             record
         );
         assert_eq!(operations[2]["op"], "upsert_edge");
+    }
+
+    // spec: MEDULLA-UNIFIED-DATA-PLANE-R760.6
+    #[test]
+    fn a_status_only_change_rewrites_no_evidence() {
+        let record = record();
+        let (operations, nodes) =
+            incident_operations(std::iter::once((&record, &[][..])), "acme", "agent-1").unwrap();
+        assert_eq!(nodes, 1);
+        assert_eq!(operations.len(), 1);
+        assert_eq!(operations[0]["id"], record.id.as_str());
     }
 }

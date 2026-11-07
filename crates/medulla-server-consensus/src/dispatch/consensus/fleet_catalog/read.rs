@@ -1,8 +1,6 @@
 //! Fleet catalog reads: one consistent view of the `__commons__` records, then
 //! the connector-pack components those records make visible.
 
-#[cfg(feature = "redb")]
-use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 use medulla_server_graph::dispatch::shared::timed_read;
 use std::collections::BTreeMap;
 
@@ -134,7 +132,7 @@ const COMPONENTS_UNAVAILABLE: &str =
 
 #[cfg(feature = "redb")]
 async fn component_store(state: &Arc<RwLock<ServerState>>) -> Result<ComponentStore, String> {
-    state.write().await.ensure_agent_library()
+    medulla_persistence_records::agent_library::shared_agent_library(state).await
 }
 
 #[cfg(not(feature = "redb"))]

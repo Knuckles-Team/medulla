@@ -148,6 +148,12 @@ impl<D: OwnerDomain> SidecarStore<D> {
         })
     }
 
+    /// Close the owner file now (see [`StorageKernel::close`]); every later
+    /// read or write of this store is refused. Idempotent.
+    pub fn close(&self) {
+        self.kernel.close();
+    }
+
     /// One scoped read over this owner file.
     pub fn read(&self) -> Result<ScopedRead<'_, D>, String> {
         self.kernel.read_scope(&self.owner)

@@ -543,7 +543,7 @@ async fn boot_listener_binds_before_the_projection_drain_completes() {
     // head's ontology is committed into the projection graph's durable schema
     // sources — read straight from the authoritative snapshot, not a helper.
     {
-        let graph = medulla_h_admin::graph_schema::pack_projection_graph_name(
+        let graph = medulla_catalog_types::connector_pack::ids::pack_projection_graph_name(
             TENANT,
             &ResourceId::new(CONNECTOR).unwrap(),
         )

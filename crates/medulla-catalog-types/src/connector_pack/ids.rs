@@ -16,6 +16,28 @@ use super::index::PackEntryKind;
 /// The prefix every pack-owned component id carries.
 pub const PACK_COMPONENT_ID_PREFIX: &str = "mcp:";
 
+const PACK_PROJECTION_GRAPH_DOMAIN: &[u8] = b"eg/connector-pack-projection-graph/v1";
+
+/// Tenant-safe, non-reversible physical graph identity for one connector pack.
+///
+/// Both inputs are canonical identifiers from verified/typed authority.  The
+/// physical name exposes neither tenant nor connector and the framed digest
+/// preserves their boundary, while the logical GraphSchema key inside that
+/// graph remains the human-readable `pack:<connector>`.
+pub fn pack_projection_graph_name(
+    tenant_id: &str,
+    connector: &medulla_types::contract::ResourceId,
+) -> Result<String, String> {
+    medulla_types::contract::TenantId::new(tenant_id).map_err(|error| {
+        format!("invalid verified tenant for connector pack projection: {error}")
+    })?;
+    let digest = medulla_types::contract::Digest256::framed(
+        PACK_PROJECTION_GRAPH_DOMAIN,
+        &[tenant_id.as_bytes(), connector.as_str().as_bytes()],
+    )?;
+    Ok(format!("pack__{}", digest.to_hex()))
+}
+
 const HEX: &[u8; 16] = b"0123456789ABCDEF";
 
 /// Percent-encode `name` under the pack's unreserved set.

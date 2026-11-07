@@ -1,4 +1,5 @@
 use super::*;
+use medulla_catalog_types::connector_pack::ids::pack_projection_graph_name;
 use medulla_catalog_types::graph_schema::GraphSchemaOp;
 
 fn pack_document(uri: &str, body: Arc<str>) -> PackSchemaDocument {
@@ -622,4 +623,85 @@ fn attach_validates_its_own_writes_and_never_scans_existing_data() {
     .unwrap_err();
     assert!(error.starts_with("ONTOLOGY_INCONSISTENT"), "{error}");
     assert_eq!(core.schema_sources(), before);
+}
+
+/// BUG-009: a pack projection decides its entering-schema check on the blocking
+/// pool before the commit kernel runs, and the verdict lands on the
+/// content-keyed compiled entry, so the in-commit check of the same sources is a
+/// cache hit rather than a second tableau on a runtime worker.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn pack_projection_prevalidation_memoizes_the_entering_schema_verdict() {
+    let core = Arc::new(GraphCore::new());
+    let connector = medulla_types::contract::ResourceId::new("bug009-prevalidate").unwrap();
+    let ontology = Arc::<str>::from(
+        "@prefix owl: <http://www.w3.org/2002/07/owl#> . @prefix ex: <http://example/bug009/> . ex:Prevalidated a owl:Class .",
+    );
+    let documents = |ontologies: Vec<PackSchemaDocument>| PackProjectionDocuments {
+        shapes: Vec::new(),
+        ontologies,
+        crosswalks: Vec::new(),
+        surface: None,
+    };
+    let source = |ontologies: Vec<PackSchemaDocument>| PackSourceDocuments {
+        shapes: Vec::new(),
+        ontologies,
+        crosswalks: Vec::new(),
+    };
+    let good = vec![pack_document(
+        "ontology://bug009-prevalidate/a.ttl",
+        Arc::clone(&ontology),
+    )];
+    let record_id = "pack:bug009-prevalidate:1:aaaa";
+
+    prevalidate_pack_projection(&core, &connector, record_id, &documents(good.clone()))
+        .await
+        .unwrap();
+    let (candidate, changed, _) = pack_candidate_sources(
+        &core.schema_sources(),
+        &connector,
+        record_id,
+        source(good.clone()),
+        None,
+    )
+    .unwrap();
+    assert!(changed);
+    let composed = medulla_server_api::schema_compose::validate_and_compose(&candidate).unwrap();
+    assert!(
+        composed.abox_verified(),
+        "prevalidation must leave the ABox verdict on the shared compiled entry"
+    );
+    let committed = apply_pack_source(
+        &core,
+        "pack__bug009",
+        &connector,
+        record_id,
+        source(good),
+        None,
+    )
+    .unwrap();
+    assert!(committed.changed);
+    assert_eq!(
+        committed.composed_digest,
+        candidate.composed_digest().to_hex()
+    );
+
+    // A refusal is the refusal the commit would give for the same bytes.
+    let broken = vec![pack_document(
+        "ontology://bug009-prevalidate/broken.ttl",
+        Arc::from("this is not turtle"),
+    )];
+    let error =
+        prevalidate_pack_projection(&core, &connector, record_id, &documents(broken.clone()))
+            .await
+            .unwrap_err();
+    let commit_error = apply_pack_source(
+        &core,
+        "pack__bug009",
+        &connector,
+        record_id,
+        source(broken),
+        None,
+    )
+    .unwrap_err();
+    assert_eq!(error, commit_error);
 }

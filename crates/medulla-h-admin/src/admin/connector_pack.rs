@@ -6,8 +6,6 @@
 //! inheriting one. Each arm's target is owned by a different package after S1,
 //! which is why they are separate functions rather than one body.
 
-#[cfg(feature = "redb")]
-use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 #[cfg(all(feature = "blob", feature = "redb"))]
 use medulla_server_blob::blob::BlobStateExt;
 use std::sync::Arc;
@@ -96,7 +94,7 @@ pub async fn handle_connector_pack(
 async fn agent_library_store(
     state: &Arc<RwLock<ServerState>>,
 ) -> Result<Arc<medulla_persistence_records::agent_library::AgentLibraryStore>, String> {
-    state.write().await.ensure_agent_library()
+    medulla_persistence_records::agent_library::shared_agent_library(state).await
 }
 
 /// Read one connector's head, member counts, last receipt and warnings.
@@ -125,7 +123,14 @@ async fn serve_status(
             Ok(store) => store,
             Err(error) => return Response::err(req_id, error),
         };
-        match store.connector_pack_status(&request.tenant_id, &request.connector) {
+        // The store read is synchronous redb work: off the async runtime (BUG-009).
+        let (tenant_id, connector) = (request.tenant_id.clone(), request.connector.clone());
+        let status = medulla_server_api::api::dispatch_support::blocking_task(
+            "connector pack status",
+            move || store.connector_pack_status(&tenant_id, &connector),
+        )
+        .await;
+        match status {
             Ok(mut status) => {
                 if !verified.allows_action("agent:pack-control") {
                     status.importer = None;

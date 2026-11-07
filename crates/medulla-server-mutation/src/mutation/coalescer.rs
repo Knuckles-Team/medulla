@@ -369,6 +369,14 @@ where
         // No coalescer configured: identical to the ordinary path.
         return commit_mutation(ctx, plan, method, apply).await;
     };
+    // A replicated apply commits in place. The coalescer runs the job on its
+    // worker task, which is outside the apply's task-local scope, so the commit
+    // there would no longer see the state-machine authorization (and would
+    // re-check the graph ACL against the one-way principal fingerprint, which
+    // no policy knows). Raft already serializes the group's applies.
+    if super::consensus_apply_is_authorized() {
+        return commit_mutation(ctx, plan, method, apply).await;
+    }
     let response = commit_via_coalescer(ctx, plan, method, apply, coalescer).await;
     advance_authoritative_manifest(ctx, plan, &response);
     response

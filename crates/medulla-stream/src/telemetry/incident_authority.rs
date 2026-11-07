@@ -83,6 +83,22 @@ fn severity(evidence: &[AnomalyReading]) -> IncidentSeverity {
 pub struct IncidentAuthority {
     incidents: BTreeMap<String, IncidentRecord>,
     open_by_signature: HashMap<(String, String), String>,
+    /// Incidents this authority changed since it was loaded (opened, joined
+    /// by a new reading, or moved a status): the only ones a commit writes.
+    changed: BTreeSet<String>,
+    /// Per incident, the evidence readings added since load: the only
+    /// evidence a commit writes. Readings already held are never rewritten.
+    added: BTreeMap<String, Vec<AnomalyReading>>,
+}
+
+/// The identity of one reading inside an incident: the key its evidence node
+/// id is derived from. A second reading with the same key is the same evidence.
+fn reading_key(reading: &AnomalyReading) -> (String, String, u64) {
+    (
+        reading.entity_ref.clone(),
+        reading.signal.clone(),
+        reading.at_ms,
+    )
 }
 
 impl IncidentAuthority {
@@ -109,9 +125,20 @@ impl IncidentAuthority {
         ids.iter().filter_map(|id| self.incidents.get(id))
     }
 
+    /// Every incident changed since load, with the evidence readings added to
+    /// it since load (empty for a status-only change), in id order.
+    pub fn changes(&self) -> impl Iterator<Item = (&IncidentRecord, &[AnomalyReading])> {
+        self.changed.iter().filter_map(|id| {
+            let added = self.added.get(id).map(Vec::as_slice).unwrap_or(&[]);
+            self.incidents.get(id).map(|record| (record, added))
+        })
+    }
+
     /// Correlate `anomalies` for `tenant`: one pass groups them by entity
     /// and `window_ms` bucket; each group opens an incident or joins the open
-    /// incident with the same signature. Returns the touched incident ids.
+    /// incident with the same signature. A reading the incident already holds
+    /// (same entity, signal and time) is skipped, so a replayed batch changes
+    /// nothing. Returns every incident the readings correlated into.
     pub fn correlate(
         &mut self,
         tenant: Option<&str>,
@@ -146,12 +173,30 @@ impl IncidentAuthority {
         evidence: Vec<AnomalyReading>,
     ) -> String {
         let key = (tenant.to_string(), signature.clone());
-        if let Some(id) = self.open_by_signature.get(&key) {
-            let record = self.incidents.get_mut(id).expect("indexed incident exists");
-            record.evidence.extend(evidence);
+        if let Some(id) = self.open_by_signature.get(&key).cloned() {
+            let record = self
+                .incidents
+                .get_mut(&id)
+                .expect("indexed incident exists");
+            let mut held: BTreeSet<_> = record.evidence.iter().map(reading_key).collect();
+            let fresh: Vec<AnomalyReading> = evidence
+                .into_iter()
+                .filter(|a| held.insert(reading_key(a)))
+                .collect();
+            if fresh.is_empty() {
+                return id;
+            }
+            record.evidence.extend(fresh.iter().cloned());
             record.severity = record.severity.max(severity(&record.evidence));
-            return id.clone();
+            self.added.entry(id.clone()).or_default().extend(fresh);
+            self.changed.insert(id.clone());
+            return id;
         }
+        let mut held = BTreeSet::new();
+        let evidence: Vec<AnomalyReading> = evidence
+            .into_iter()
+            .filter(|a| held.insert(reading_key(a)))
+            .collect();
         let opened_at_ms = evidence.iter().map(|a| a.at_ms).min().unwrap_or(0);
         // Content-derived, so a fresh authority over loaded incidents never
         // reuses the id of a committed one.
@@ -169,6 +214,8 @@ impl IncidentAuthority {
             evidence,
             status_history: vec![IncidentStatus::Open],
         };
+        self.added.insert(id.clone(), record.evidence.clone());
+        self.changed.insert(id.clone());
         self.incidents.insert(id.clone(), record);
         self.open_by_signature.insert(key, id.clone());
         id
@@ -202,6 +249,7 @@ impl IncidentAuthority {
         let record = self.incidents.get_mut(id).expect("checked above");
         record.status = to;
         record.status_history.push(to);
+        self.changed.insert(id.to_string());
         if to == IncidentStatus::Resolved {
             let key = (record.tenant.clone(), record.signature_digest.clone());
             self.open_by_signature.remove(&key);
@@ -297,6 +345,45 @@ mod tests {
             )
             .unwrap();
         assert_ne!(&fresh[0], id, "a resolved incident is not reused");
+    }
+
+    // spec: MEDULLA-UNIFIED-DATA-PLANE-R760.6
+    #[test]
+    fn a_replayed_batch_adds_no_evidence_and_changes_nothing() {
+        let batch: Vec<AnomalyReading> = (0..1_000u64)
+            .map(|i| reading(&format!("svc:{}", i % 10), "latency", 300.0, i / 10))
+            .collect();
+        let mut first = IncidentAuthority::default();
+        let ids = first
+            .correlate(Some("acme"), batch.clone(), 60_000)
+            .unwrap();
+        assert_eq!(ids.len(), 10);
+        let added: usize = first.changes().map(|(_, added)| added.len()).sum();
+        assert_eq!(added, 1_000);
+
+        let committed: Vec<IncidentRecord> = first.records(&ids).cloned().collect();
+        let mut replay = IncidentAuthority::load(committed);
+        let again = replay.correlate(Some("acme"), batch, 60_000).unwrap();
+        assert_eq!(again, ids, "the readings correlate into the same incidents");
+        assert_eq!(replay.changes().count(), 0, "a replay rewrites nothing");
+        assert!(replay
+            .records(&ids)
+            .all(|record| record.evidence.len() == 100));
+
+        let joined = replay
+            .correlate(
+                Some("acme"),
+                vec![
+                    reading("svc:3", "latency", 300.0, 5),
+                    reading("svc:3", "latency", 300.0, 500),
+                ],
+                60_000,
+            )
+            .unwrap();
+        let changes: Vec<_> = replay.changes().collect();
+        assert_eq!(changes.len(), 1);
+        assert_eq!(changes[0].0.id, joined[0]);
+        assert_eq!(changes[0].1.len(), 1, "only the unseen reading is added");
     }
 
     // spec: MEDULLA-UNIFIED-DATA-PLANE-R760.4

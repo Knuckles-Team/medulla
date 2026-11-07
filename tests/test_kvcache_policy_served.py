@@ -224,11 +224,11 @@ def test_policy_admits_hot_answer_and_refuses_cold_one(policy_engine) -> None:
     client, base = policy_engine
     client.graph.clear()
     client.nodes.add("served-hot-1", {"type": "ServedHot", "title": "small"})
-    padding = "x" * 8_000
+    # An answer row carries the node id, not its properties, so the cold answer
+    # is made large through long ids: about 120 KB for a few milliseconds of work.
+    padding = "x" * 2_000
     for index in range(60):
-        client.nodes.add(
-            f"served-cold-{index}", {"type": "ServedCold", "body": padding}
-        )
+        client.nodes.add(f"served-cold-{index}-{padding}", {"type": "ServedCold"})
 
     with _delta(base, "answer") as hot:
         client.query.uql("MATCH (:ServedHot)")

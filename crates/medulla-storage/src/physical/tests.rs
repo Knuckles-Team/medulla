@@ -241,7 +241,7 @@ fn persisted_root_digest_tampering_is_rejected_on_read() {
     let store = open_store(&dir.path().join("native.redb"), &identity);
     let mut bytes = encode_bounded(store.incarnation(), "test root").unwrap();
     *bytes.last_mut().unwrap() ^= 0x01;
-    let wtx = store.database().begin_write().unwrap();
+    let wtx = store.database().unwrap().begin_write().unwrap();
     wtx.open_table(STORE_ROOT)
         .unwrap()
         .insert("root", bytes.as_slice())
@@ -257,7 +257,7 @@ fn extra_root_rows_are_rejected_by_every_store_entry_path() {
     let identity = native_identity("tenant-a", "incarnation:blob:1");
     let store = open_store(&path, &identity);
     let bytes = encode_bounded(store.incarnation(), "test root").unwrap();
-    let wtx = store.database().begin_write().unwrap();
+    let wtx = store.database().unwrap().begin_write().unwrap();
     wtx.open_table(STORE_ROOT)
         .unwrap()
         .insert("shadow-root", bytes.as_slice())
@@ -294,7 +294,7 @@ fn strict_create_materializes_manifest_without_a_serving_binding() {
     let physical = PhysicalStoreIdentity::new("physical:blob:test").unwrap();
     let store = create_physical(&path, physical.clone(), None, OwnerLayout::Blob).unwrap();
 
-    let rtx = store.database().begin_read().unwrap();
+    let rtx = store.database().unwrap().begin_read().unwrap();
     assert_eq!(rtx.open_table(OWNER_MANIFEST).unwrap().len().unwrap(), 1);
     assert_eq!(rtx.open_table(SCOPE_BINDINGS).unwrap().len().unwrap(), 0);
     drop(rtx);
@@ -318,7 +318,7 @@ fn strict_open_rejects_missing_or_extra_owner_manifest_rows() {
         let path = dir.path().join("strict.redb");
         let physical = PhysicalStoreIdentity::new("physical:blob:test").unwrap();
         let store = create_physical(&path, physical.clone(), None, OwnerLayout::Blob).unwrap();
-        let wtx = store.database().begin_write().unwrap();
+        let wtx = store.database().unwrap().begin_write().unwrap();
         let mut manifest = wtx.open_table(OWNER_MANIFEST).unwrap();
         if extra {
             let bytes = manifest.get("manifest").unwrap().unwrap().value().to_vec();
@@ -403,7 +403,7 @@ fn adoption_streams_more_than_one_hundred_thousand_scope_bindings() {
         OwnerLayout::LedgerOnly,
     )
     .unwrap();
-    let write = store.database().begin_write().unwrap();
+    let write = store.database().unwrap().begin_write().unwrap();
     {
         let mut bindings = write.open_table(SCOPE_BINDINGS).unwrap();
         let mut versions = write.open_table(VERSIONS).unwrap();
@@ -464,7 +464,7 @@ fn strict_backup_copies_owner_rows_and_reopens_with_stable_evidence() {
         PhysicalStoreIdentity::new("physical:kv:destination:epoch-two").unwrap();
     let store = create_physical(&source_path, source_physical, None, OwnerLayout::Kv).unwrap();
     let source_authority = owner_authority_digest(&store).unwrap();
-    let write = store.database().begin_write().unwrap();
+    let write = store.database().unwrap().begin_write().unwrap();
     write
         .open_table(KV_ROWS)
         .unwrap()
@@ -515,7 +515,7 @@ fn strict_backup_copies_owner_rows_and_reopens_with_stable_evidence() {
         strict_evidence_of(&second_reopened).unwrap(),
         second_evidence
     );
-    let read = second_reopened.database.begin_read().unwrap();
+    let read = second_reopened.database().unwrap().begin_read().unwrap();
     let table = read.open_table(KV_ROWS).unwrap();
     assert_eq!(
         table
@@ -560,7 +560,7 @@ fn cached_manifest_epoch_is_revalidated_before_owner_authority_use() {
     )
     .unwrap();
 
-    let write = store.database().begin_write().unwrap();
+    let write = store.database().unwrap().begin_write().unwrap();
     let mut manifest =
         validate_manifest_write(&write, &store.manifest().physical_identity, OwnerLayout::Kv)
             .unwrap();
@@ -600,7 +600,7 @@ fn shared_blob_read_revalidates_root_and_closed_table_registry() {
             b"verified",
         )
         .unwrap();
-        let write = store.database().begin_write().unwrap();
+        let write = store.database().unwrap().begin_write().unwrap();
         if extra_root {
             write
                 .open_table(STORE_ROOT)
@@ -1115,4 +1115,28 @@ fn reopening_a_bound_store_writes_nothing() {
         header(&path),
         "re-binding a bound scope must not touch the file"
     );
+}
+
+/// MEDULLA-DURABLE-KERNEL-R006.3: closing a store that is still shared
+/// releases its redb handle, so the file reopens with no repair, and every
+/// later transaction on the closed handle is refused.
+#[test]
+fn close_releases_a_shared_store_file_cleanly() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("closed.redb");
+    let store = std::sync::Arc::new(open_store(
+        &path,
+        &kv_identity("tenant-a", "incarnation:close"),
+    ));
+    let shared = std::sync::Arc::clone(&store);
+    store.close();
+    store.close();
+    assert_eq!(
+        shared.begin_read().err().as_deref(),
+        Some(crate::physical::root::STORE_CLOSED)
+    );
+    assert!(shared.database().is_err());
+    redb::ReadOnlyDatabase::open(&path).expect("a closed store reopens with no repair");
+    assert!(reopen_store(&path).is_ok());
+    drop(shared);
 }

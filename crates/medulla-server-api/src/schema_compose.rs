@@ -47,6 +47,14 @@ pub struct ComposedSchema {
     pub(crate) abox_consistent: parking_lot::Mutex<bool>,
 }
 
+impl ComposedSchema {
+    /// Whether the full-ABox tableau has already accepted this composition, so
+    /// the next entering-schema check of the same sources is a memo hit.
+    pub fn abox_verified(&self) -> bool {
+        *self.abox_consistent.lock()
+    }
+}
+
 /// The validated composition of `sources`, compiled at most once per content
 /// identity (`composed_digest`, see [`compiled`]) and shared by every graph
 /// that composes the same schema.
@@ -929,7 +937,13 @@ ex:parent a owl:AsymmetricProperty .
         // connector-pack shapes companion.
         // +2: the connector-seed and virtual-graph catalog imports.
         // -40 (MEDULLA-TYPED-PACKS-R071.2): no module imports the core document.
-        assert_eq!(imports, 79);
+        // Measured 81, not 119 - 40: the content module's core import was among
+        // the 40 removed, but content is not in the core catalog, so it never
+        // reached the composed corpus (-39 composed); and 119 was itself one
+        // below the 120 composed imports of that corpus. The composed imports are
+        // every `owl:imports` the catalogued modules declare (82 in the shipped
+        // files less content's one).
+        assert_eq!(imports, 81);
         // +20 (EH-408/409/410): infrastructure :BehaviourObservation,
         // :ConformanceViolation, :Deployment, :K8sService and :SwarmService,
         // 4 axioms each; +5: the :scheduledBy property. +24 (EH-410): the six feed
@@ -963,7 +977,9 @@ ex:parent a owl:AsymmetricProperty .
         // +55: the media-tag vocabulary, all semantic axioms (MEDULLA-MEDIA-VOCAB-R001.100.1).
         // +1: the :ScholarlyPaper → :ResearchPaper subclass axiom (R002.5.4).
         // +210 (MEDULLA-TYPED-PACKS-R071.2): the core-rooting `rdfs:subClassOf` axioms.
-        assert_eq!(semantic_axioms, 17_793);
+        // +737: the semantic share of the +739 total above (the other 2 are the
+        // import edges); headers are unchanged at 150 triples.
+        assert_eq!(semantic_axioms, 18_530);
 
         let count_type = |object: &str| {
             composed
@@ -1042,7 +1058,10 @@ ex:parent a owl:AsymmetricProperty .
             // +7: the connector-competency class placements (archimate, documentation,
             // infrastructure, process-intelligence).
             // +1: :MediaTag specializes :Observation (MEDULLA-MEDIA-VOCAB-R001.100.1).
-            732
+            // +230 (measured): the 210 core-rooting edges of MEDULLA-TYPED-PACKS-R071.2
+            // and 20 named placements in the vocabulary of the +739 total above
+            // (the decision module's core parents among them).
+            962
         );
     }
 

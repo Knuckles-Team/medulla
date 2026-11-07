@@ -55,7 +55,6 @@ pub mod worker {
     use medulla_mutation_types::mutation_scope::MutationOutboxLease;
     use medulla_transaction::{OutboxClaimBudget, OutboxClaimOutcome, OutboxRejectReason};
 
-    use medulla_persistence_records::agent_library::AgentLibraryStateExt;
     use medulla_persistence_records::agent_library::AgentLibraryStore;
     use medulla_server_api::authority_context::VerifiedRequestContext;
     use medulla_server_api::outbox_operator::OutboxWrite;
@@ -153,27 +152,7 @@ pub mod worker {
     async fn open_agent_library(
         state: &Arc<RwLock<ServerState>>,
     ) -> Result<Arc<AgentLibraryStore>, String> {
-        if let Some(store) = state.read().await.agent_library() {
-            return Ok(store);
-        }
-        let (persist_dir, slot) = {
-            let guard = state.read().await;
-            let persist_dir = guard.persist_dir.clone().ok_or_else(|| {
-                "Agent Library requires a configured persist directory".to_string()
-            })?;
-            (persist_dir, Arc::clone(&guard.agent_library_open))
-        };
-        let opened = medulla_persistence_records::agent_library::open_shared_agent_library(
-            &slot,
-            &persist_dir,
-        )?;
-        let mut guard = state.write().await;
-        if let Some(existing) = guard.agent_library() {
-            return Ok(existing);
-        }
-        guard.set_agent_library(Some(Arc::clone(&opened)));
-        tracing::info!("connector pack projection: opened the Agent Library store");
-        Ok(opened)
+        medulla_persistence_records::agent_library::shared_agent_library(state).await
     }
 
     async fn claim(
@@ -356,7 +335,10 @@ pub mod worker {
     ) -> Result<(), String> {
         #[cfg(feature = "security")]
         {
-            let graph = crate::graph_schema::pack_projection_graph_name(tenant, &record.connector)?;
+            let graph = medulla_catalog_types::connector_pack::ids::pack_projection_graph_name(
+                tenant,
+                &record.connector,
+            )?;
             super::grant::ensure(&mut state.write().await.isolation, &graph)
         }
         #[cfg(not(feature = "security"))]

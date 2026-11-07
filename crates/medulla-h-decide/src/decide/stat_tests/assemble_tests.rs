@@ -26,6 +26,7 @@ use medulla_server_api::state::ServerState;
 use medulla_types::contract::BoundedVec;
 
 const TENANT: &str = "tenant-media";
+const ASKER: &str = "asker";
 
 struct Harness {
     _dir: tempfile::TempDir,
@@ -35,9 +36,11 @@ struct Harness {
 
 async fn harness() -> Harness {
     let dir = tempfile::tempdir().unwrap();
+    // The graph ACL admits only a principal the provisioned policy knows
+    // (`topology_read::graph_core` checks read on the request graph).
     let mut server = ServerState::new_for_test(
         "assemble-media-test-secret",
-        medulla_isolation::isolation::IsolationLayer::new(),
+        ServerState::test_isolation(ASKER),
     );
     server.persist_dir = Some(dir.path().to_string_lossy().into_owned());
     let state = Arc::new(RwLock::new(server));
@@ -100,7 +103,8 @@ fn publish(
         .expect("publishes");
 }
 
-/// One model (declaring `capabilities`), one prompt, one skill, one ontology.
+/// One model (declaring `capabilities`), one prompt, one tool, one skill and
+/// one ontology: every slot of a runnable agent (`one:tool` is at least one).
 fn seed(store: &AgentLibraryStore, capabilities: Option<ModelInputCapabilities>) {
     publish(
         store,
@@ -122,6 +126,7 @@ fn seed(store: &AgentLibraryStore, capabilities: Option<ModelInputCapabilities>)
     );
     publish(store, 3, ("skill-a", AgentComponentKind::Skill), None);
     publish(store, 4, ("ontology-a", AgentComponentKind::Ontology), None);
+    publish(store, 5, ("tool-a", AgentComponentKind::Tool), None);
 }
 
 fn request(required: Vec<ModelInputMediaType>) -> AssemblyRequest {
@@ -135,6 +140,7 @@ fn request(required: Vec<ModelInputMediaType>) -> AssemblyRequest {
             kinds: BoundedVec::new(vec![
                 AgentComponentKind::ModelProfile,
                 AgentComponentKind::SystemPrompt,
+                AgentComponentKind::Tool,
                 AgentComponentKind::Skill,
                 AgentComponentKind::Ontology,
             ])
@@ -163,7 +169,24 @@ async fn assemble(h: &Harness, request: AssemblyRequest) -> Result<AssemblyResul
                 .expect("create the request graph");
         }
     }
-    let verified = VerifiedRequestContext::verified_for_test_in_tenant("asker", TENANT);
+    let verified = VerifiedRequestContext::verified_for_test_in_tenant(ASKER, TENANT);
+    // The candidate set must lie inside the asker's stored run-scope bound
+    // (MEDULLA-IDENTITY-R008.1/R008.4); an absent bound refuses every tool.
+    {
+        let state = h.state.read().await;
+        let core = &state.registry.get("default").expect("request graph").core;
+        let policy = serde_json::json!({
+            "type": medulla_isolation::isolation::RUN_SCOPE_POLICY_CLASS,
+            "allowed_tools": ["model-a", "prompt-a", "tool-a", "skill-a", "ontology-a"],
+            "allowed_graphs": ["default"],
+        });
+        core.add_node(
+            medulla_isolation::isolation::run_scope_policy_iri(
+                &verified.principal_persistence_id(),
+            ),
+            rmp_serde::to_vec_named(&policy).expect("encode the run-scope policy"),
+        );
+    }
     let response =
         super::super::assemble::handle_agent_assemble(&h.state, 1, ("default", &verified), request)
             .await;

@@ -234,6 +234,40 @@ impl AgentLibraryStore {
         })
     }
 
+    /// The physical pack graph names of every connector of `tenant_id` whose
+    /// head has a completed projection, in connector order. A committed head
+    /// that never projected has no readable pack graph, so it is skipped; a
+    /// head whose newer record is still projecting keeps its visible graph.
+    /// The served SPARQL default graph unions these graphs
+    /// (MEDULLA-MEDIA-VOCAB-R655).
+    pub fn visible_connector_pack_graphs(&self, tenant_id: &str) -> Result<Vec<String>, String> {
+        let read = self.read()?;
+        let heads = read.open_owner_table(medulla_storage::CONNECTOR_PACK_HEADS)?;
+        let mut graphs = Vec::new();
+        for row in heads
+            .range((tenant_id, "")..)
+            .map_err(|error| error.to_string())?
+        {
+            let (key, value) = row.map_err(|error| error.to_string())?;
+            let (row_tenant, connector) = key.value();
+            if row_tenant != tenant_id {
+                break;
+            }
+            let head: ConnectorPackHeadRow =
+                undecodable::decode_stored(value.value(), "connector pack head")?;
+            if head.head.visible_record_id.is_none() {
+                continue;
+            }
+            let connector = ResourceId::new(connector).map_err(|error| error.to_string())?;
+            graphs.push(
+                medulla_catalog_types::connector_pack::ids::pack_projection_graph_name(
+                    tenant_id, &connector,
+                )?,
+            );
+        }
+        Ok(graphs)
+    }
+
     /// Current durable membership rows for one connector, in URI order.
     ///
     /// Import planning uses this snapshot to derive withdrawals and to reject
@@ -631,6 +665,16 @@ pub mod tests {
         assert!(status.last_receipt.is_none());
         assert_eq!(status.members, PackMemberCounts::default());
         assert_eq!(status.projection, PackProjectionState::None);
+    }
+
+    #[test]
+    fn a_tenant_without_pack_heads_has_no_pack_graphs() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = AgentLibraryStore::open(dir.path().to_str().unwrap()).unwrap();
+        assert!(store
+            .visible_connector_pack_graphs("tenant-a")
+            .unwrap()
+            .is_empty());
     }
 
     #[test]

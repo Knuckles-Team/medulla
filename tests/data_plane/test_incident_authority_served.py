@@ -120,6 +120,7 @@ async def test_five_methods_served_under_caller_tenant(start_medulla_server) -> 
 
 ANOMALIES = 10_000
 ENTITIES = 100
+# MEDULLA-UNIFIED-DATA-PLANE-R760.6 states this budget for the release profile.
 P99_BUDGET_MS = 25.0
 
 
@@ -133,20 +134,25 @@ async def test_anomalies_correlate_into_one_incident(start_medulla_server) -> No
         verified_context=request_context(),
     )
     try:
+        profile = (await client.health())["build_profile"]
         prefix = f"svc:r760-6-{os.getpid()}-"
         readings = [
             _reading(f"{prefix}{i % ENTITIES}", i // ENTITIES) for i in range(ANOMALIES)
         ]
+        request = {"anomalies": readings, "window_ms": 60_000}
         started = time.perf_counter()
-        joined = _body(
-            await client._send(
-                "IncidentCorrelate",
-                {"anomalies": readings, "window_ms": 60_000},
-                GRAPH,
-            )
-        )
+        joined = _body(await client._send("IncidentCorrelate", request, GRAPH))
         elapsed_ms = (time.perf_counter() - started) * 1_000.0
         assert len(joined["incident_ids"]) == ENTITIES, "one incident per signature"
-        assert elapsed_ms < P99_BUDGET_MS, f"correlate took {elapsed_ms:.1f} ms"
+        # One write: each incident node and each reading's evidence node.
+        assert joined["nodes_written"] == ENTITIES + ANOMALIES
+        if profile == "release":
+            assert elapsed_ms < P99_BUDGET_MS, f"correlate took {elapsed_ms:.1f} ms"
+
+        # The same readings again join the same incidents and write nothing:
+        # evidence an incident already holds is never rewritten.
+        replay = _body(await client._send("IncidentCorrelate", request, GRAPH))
+        assert sorted(replay["incident_ids"]) == sorted(joined["incident_ids"])
+        assert replay["nodes_written"] == 0
     finally:
         await client.close()

@@ -63,11 +63,23 @@ impl Subscriber for Sink {
 // spec: MEDULLA-DECISION-ENGINE-R072.100
 #[tokio::test]
 async fn served_decide_emits_one_span_per_stage() {
+    // tracing-core treats a process with at most one live registered
+    // dispatcher as "just one" and then computes a new callsite's interest
+    // from the REGISTERING thread's default only. With this test's scoped
+    // subscriber the only live one, a parallel test thread that first hits
+    // `medulla.decide.method` caches it as never-enabled, and the span is
+    // never created here. A second dispatcher kept alive for the whole test
+    // binary keeps every registration on the path that asks all live
+    // dispatchers, this one included.
+    static ANCHOR: std::sync::LazyLock<tracing::Dispatch> = std::sync::LazyLock::new(|| {
+        tracing::Dispatch::new(tracing::subscriber::NoSubscriber::default())
+    });
+    std::sync::LazyLock::force(&ANCHOR);
     let capture = std::sync::Arc::new(Capture::default());
     let dispatch = tracing::Dispatch::new(Sink(capture.clone()));
     let _guard = tracing::dispatcher::set_default(&dispatch);
-    // Another test thread may have registered the stage callsites while no
-    // subscriber wanted them; recompute their interest with this one in place.
+    // Callsites registered before this subscriber existed: recompute their
+    // interest with it in place.
     tracing::callsite::rebuild_interest_cache();
 
     let h = Harness::new().await;

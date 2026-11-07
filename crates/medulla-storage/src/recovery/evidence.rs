@@ -191,7 +191,7 @@ pub(crate) fn backup_strict_recovery_store_of(
         manifest.layout,
     )?;
     let mut wtx = target
-        .database()
+        .database()?
         .begin_write()
         .map_err(|error| error.to_string())?;
     wtx.set_durability(redb::Durability::Immediate)

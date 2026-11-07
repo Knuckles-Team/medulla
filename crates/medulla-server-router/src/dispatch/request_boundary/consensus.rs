@@ -176,7 +176,6 @@ async fn precheck_finance_record_put_on_leader(
         .map_err(|error| Response::err(req.id, error))?;
     medulla_h_graph::graph_ops::precheck_replicated_put(
         &core,
-        verified_context.tenant(),
         authority.tenant_scope(),
         &req.method,
     )

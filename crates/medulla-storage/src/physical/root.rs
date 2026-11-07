@@ -13,6 +13,11 @@ use redb::{Database, ReadTransaction, ReadableDatabase, TableHandle, WriteTransa
 use std::path::PathBuf;
 use std::sync::Arc;
 
+/// A panic while holding a store handle lock may have left the handle half-updated;
+/// refuse to continue with it rather than recover silently (clippy.toml forbids
+/// `PoisonError::into_inner`).
+const STORE_LOCK_POISONED: &str = "store handle lock poisoned: a panic occurred while it was held";
+
 // NOTE: bare `mutation_batches`/`mutation_idempotency`/`mutation_outbox` are
 // DELIBERATELY NOT listed here. Those exact names are still the live,
 // currently-written table names of `medulla`'s own pre-`medulla-mutation-store`
@@ -127,7 +132,9 @@ pub(crate) struct StoreHandle {
 /// This is the whole physical authority. It is never handed to a consumer; the
 /// kernel issues scoped read, snapshot and write capabilities over it instead.
 pub(crate) struct PhysicalStore {
-    pub(crate) database: Database,
+    /// `None` once [`Self::close`] released the file; every later open of a
+    /// transaction is refused as [`STORE_CLOSED`].
+    database: std::sync::RwLock<Option<Database>>,
     pub(crate) handle: StoreHandle,
     physical_path: PathBuf,
     private_integrity: Option<Arc<dyn PrivatePayloadIntegrity>>,
@@ -149,8 +156,26 @@ pub(crate) struct PhysicalStore {
     /// Clean-shutdown marker (R006.3). MUST stay the last field: its `Drop`
     /// has to run after `database` has been dropped. A live `ValidatedWrite`
     /// holds a second handle, which can only delay that `Drop`, never run it
-    /// before the database drops.
-    marker: Option<Arc<CleanMarker>>,
+    /// before the database drops. [`Self::close`] releases it right after the
+    /// database for the same reason.
+    marker: std::sync::Mutex<Option<Arc<CleanMarker>>>,
+}
+
+/// Refusal for a transaction begun on a store [`PhysicalStore::close`] released.
+pub(crate) const STORE_CLOSED: &str = "the owner store was closed at shutdown";
+
+/// A borrowed open database: the read guard over [`PhysicalStore`]'s handle,
+/// held only while a transaction is begun on it.
+pub(crate) struct OpenDatabase<'a>(std::sync::RwLockReadGuard<'a, Option<Database>>);
+
+impl std::ops::Deref for OpenDatabase<'_> {
+    type Target = Database;
+
+    fn deref(&self) -> &Database {
+        self.0
+            .as_ref()
+            .expect("an OpenDatabase is only built over an open handle")
+    }
 }
 
 /// Where one physical open spent its time, and whether it skipped the O(data)
@@ -169,8 +194,21 @@ impl PhysicalStore {
             recovery_scan_skipped: marker.skipped_scan(),
             ..report
         };
-        self.marker = Some(Arc::new(marker));
+        self.marker = std::sync::Mutex::new(Some(Arc::new(marker)));
         self
+    }
+
+    /// Release the redb handle so the file closes cleanly now, not at process
+    /// exit: redb clears its recovery flag on drop, and the clean-shutdown
+    /// marker is written once the last marker handle drops after it. A store
+    /// still shared through an `Arc` that is never dropped (a served backend's
+    /// side stores) would otherwise leave the file flagged for repair.
+    /// Idempotent; a transaction begun later is refused as [`STORE_CLOSED`].
+    pub(crate) fn close(&self) {
+        let database = self.database.write().expect(STORE_LOCK_POISONED).take();
+        drop(database);
+        let marker = self.marker.lock().expect(STORE_LOCK_POISONED).take();
+        drop(marker);
     }
 
     pub(crate) fn validated_manifest_bytes(&self) -> &std::sync::OnceLock<Vec<u8>> {
@@ -181,8 +219,12 @@ impl PhysicalStore {
         self.open_report
     }
 
-    pub(crate) fn database(&self) -> &Database {
-        &self.database
+    pub(crate) fn database(&self) -> Result<OpenDatabase<'_>, String> {
+        let guard = self.database.read().expect(STORE_LOCK_POISONED);
+        if guard.is_none() {
+            return Err(STORE_CLOSED.to_string());
+        }
+        Ok(OpenDatabase(guard))
     }
 
     pub(crate) fn incarnation(&self) -> &StoreIncarnation {
@@ -210,7 +252,7 @@ impl PhysicalStore {
             .in_scope(|| self.validate_write_authority(&transaction))?;
         Ok(ValidatedWrite {
             transaction,
-            marker: self.marker.clone(),
+            marker: self.marker.lock().expect(STORE_LOCK_POISONED).clone(),
         })
     }
 
@@ -239,7 +281,7 @@ impl PhysicalStore {
     fn begin_durable_write(&self) -> Result<WriteTransaction, String> {
         let _phase = tracing::debug_span!("commit_phase", phase = "redb_begin_write").entered();
         let mut transaction = self
-            .database
+            .database()?
             .begin_write()
             .map_err(|error| error.to_string())?;
         transaction
@@ -249,7 +291,7 @@ impl PhysicalStore {
     }
 
     pub(crate) fn begin_read(&self) -> Result<ReadTransaction, String> {
-        self.database
+        self.database()?
             .begin_read()
             .map_err(|error| error.to_string())
     }
@@ -278,7 +320,7 @@ impl PhysicalStore {
         owner_manifest: OwnerManifest,
     ) -> Self {
         Self {
-            database,
+            database: std::sync::RwLock::new(Some(database)),
             handle,
             physical_path,
             private_integrity,
@@ -287,7 +329,7 @@ impl PhysicalStore {
             validations: WriteValidationCounters::default(),
             open_report: OpenReport::default(),
             validated_manifest_bytes: std::sync::OnceLock::new(),
-            marker: None,
+            marker: std::sync::Mutex::new(None),
         }
     }
 
