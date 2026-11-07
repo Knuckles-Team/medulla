@@ -43,7 +43,11 @@ def test_plain_labels_accepted_cap_enforced(clean_graph):
     assert payload.count(b"eg:") >= DISTINCT_ITEM_LIMIT
     record = json.dumps(job, default=str).encode() + payload
     assert not any(label.encode() in record for label in labels)
+    # Cancel and confirm as the worker, so the job holds no tenant active slot.
     clean_graph.jobs.cancel(job["job_id"])
+    clean_graph.jobs.worker_cancel(
+        job["job_id"], f"slot-{capability}", claimed["lease"]["epoch"]
+    )
 
     too_many = [*labels, "plain label overflow"]
     with pytest.raises(
