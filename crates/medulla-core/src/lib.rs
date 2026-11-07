@@ -57,6 +57,8 @@ pub mod ontology_codegen;
 /// MEDULLA-PYENGINE-PLAN.md` §9.2 Gate A / BUG-PE-003) that makes an unconfigured silent
 /// fallback path structurally unrepresentable.
 pub mod persist_lock;
+// MEDULLA-CQ-ORCH-R702: native BPMN 2.0 read and export.
+pub mod process_exchange;
 // MEDULLA-CQ-ORCH-R701.2: canonical process form, admission and export.
 pub mod process_import;
 /// Quality rule compilation, scoring and failure tracking (MEDULLA-UNIFIED-DATA-PLANE-R762.2).
