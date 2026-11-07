@@ -12,8 +12,8 @@ use std::collections::{BTreeMap, BinaryHeap, HashMap};
 use medulla_types::contract::Digest256;
 use medulla_types::process_import::{
     CanonicalFlow, CanonicalStep, CanonicalWorkflow, GateKind, ImportError, LoweredFlow,
-    LoweredStep, ProcessSourceSystem, SourceTrace, StepKind, PROCESS_CANONICAL_SCHEMA,
-    PROCESS_IMPORT_SCHEMA_VERSION,
+    LoweredStep, ProcessLoss, ProcessSourceSystem, SourceTrace, StepKind, LOSS_ANNEX_NOT_HELD,
+    PROCESS_CANONICAL_SCHEMA, PROCESS_IMPORT_SCHEMA_VERSION,
 };
 use serde_json::Value;
 use unicode_normalization::UnicodeNormalization;
@@ -412,17 +412,100 @@ pub fn admit_canonical_with_limit(
     Ok(computed)
 }
 
-/// Export a stored workflow toward `target`. The annex is kept for a
-/// same-source export; the losses for another target come from
-/// MEDULLA-CQ-ORCH-R701.8.
+/// Export a stored workflow toward `target`: the annex is kept for a
+/// same-source export and every construct the target cannot hold is listed
+/// in `losses` (MEDULLA-CQ-ORCH-R701.8). Steps, flows and digest are kept.
 pub fn export_canonical(
     workflow: &CanonicalWorkflow,
     target: ProcessSourceSystem,
 ) -> CanonicalWorkflow {
     let mut out = workflow.clone();
-    out.losses.clear();
+    out.losses = losses_for(workflow, target);
     if target != workflow.source.system {
         out.annex.clear();
     }
     out
+}
+
+/// The wire code of a strict export that would lose a construct.
+pub const PROCESS_EXPORT_LOSSY: &str = "PROCESS_EXPORT_LOSSY";
+
+/// A strict export refused because the target cannot hold every construct.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ProcessExportLossy {
+    pub losses: Vec<ProcessLoss>,
+}
+
+impl ProcessExportLossy {
+    pub fn code(&self) -> &'static str {
+        PROCESS_EXPORT_LOSSY
+    }
+}
+
+fn treatment(target: ProcessSourceSystem, construct: &str) -> Option<&'static str> {
+    target
+        .inexpressible()
+        .iter()
+        .find(|(name, _)| *name == construct)
+        .map(|(_, treatment)| *treatment)
+}
+
+/// Every construct of `workflow` that `target` cannot hold, one loss each,
+/// never a silent drop (MEDULLA-CQ-ORCH-R701.8).
+pub fn losses_for(workflow: &CanonicalWorkflow, target: ProcessSourceSystem) -> Vec<ProcessLoss> {
+    let loss = |element: &str, construct: &str, treatment: &str| ProcessLoss {
+        schema_version: PROCESS_IMPORT_SCHEMA_VERSION,
+        element: element.to_string(),
+        construct: construct.to_string(),
+        target,
+        treatment: treatment.to_string(),
+    };
+    let mut losses = Vec::new();
+    if target != workflow.source.system {
+        let held = target.annex_constructs();
+        for entry in &workflow.annex {
+            if !held.contains(&entry.construct.as_str()) {
+                losses.push(loss(
+                    &entry.element_id,
+                    &entry.construct,
+                    LOSS_ANNEX_NOT_HELD,
+                ));
+            }
+        }
+    }
+    for step in &workflow.steps {
+        let construct = match (step.kind, step.gate) {
+            (StepKind::Wait, None) => "wait",
+            (StepKind::Wait, Some(_)) => "event-based-wait",
+            (StepKind::Boundary, _) => "boundary",
+            (StepKind::Decision, _) => "decision",
+            _ => continue,
+        };
+        if let Some(treatment) = treatment(target, construct) {
+            losses.push(loss(&step.id, construct, treatment));
+        }
+    }
+    for flow in workflow.flows.iter().filter(|f| f.default) {
+        if let Some(treatment) = treatment(target, "default-flow") {
+            let element = format!("{}->{}", flow.source, flow.target);
+            losses.push(loss(&element, "default-flow", treatment));
+        }
+    }
+    losses
+}
+
+/// Export with `strict`: refuse `PROCESS_EXPORT_LOSSY` with the losses
+/// instead of returning a lossy export.
+pub fn export_canonical_strict(
+    workflow: &CanonicalWorkflow,
+    target: ProcessSourceSystem,
+    strict: bool,
+) -> Result<CanonicalWorkflow, ProcessExportLossy> {
+    let exported = export_canonical(workflow, target);
+    if strict && !exported.losses.is_empty() {
+        return Err(ProcessExportLossy {
+            losses: exported.losses,
+        });
+    }
+    Ok(exported)
 }

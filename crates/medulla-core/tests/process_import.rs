@@ -1,8 +1,12 @@
 //! Canonical process form (MEDULLA-CQ-ORCH-R701.2 and the stages of R701.11).
 
-use medulla_core::process_import::{admit_canonical, canonicalize, lower_rules, normalize_text};
+use medulla_core::process_import::{
+    admit_canonical, canonicalize, export_canonical, export_canonical_strict, lower_rules,
+    normalize_text,
+};
 use medulla_types::process_import::{
     AnnexEntry, GateKind, ImportError, LoweredFlow, LoweredStep, ProcessSourceSystem, StepKind,
+    ANNEX_EPC_ATTACHMENT, ANNEX_EPC_STATE_EVENT,
 };
 
 fn step(id: &str, kind: StepKind, gate: Option<GateKind>, label: &str) -> LoweredStep {
@@ -181,4 +185,46 @@ fn text_is_nfc_and_degree_gives_split_and_join() {
             .count()
             == 2
     );
+}
+
+// spec: MEDULLA-CQ-ORCH-R701.8
+#[test]
+fn losses_are_listed_never_dropped() {
+    let steps = vec![
+        step("e1", StepKind::Start, None, "Invoice received"),
+        step("e2", StepKind::Wait, None, "Payment due"),
+        step("e3", StepKind::Decision, None, "Check limits"),
+        step("e4", StepKind::End, None, "Done"),
+    ];
+    let flows = vec![flow("e1", "e2"), flow("e2", "e3"), flow("e3", "e4")];
+    let mut workflow = canonicalize("P", ProcessSourceSystem::ArisEpc, "m", steps, flows).unwrap();
+    for (n, construct) in [ANNEX_EPC_STATE_EVENT, ANNEX_EPC_ATTACHMENT]
+        .iter()
+        .enumerate()
+    {
+        workflow.annex.push(AnnexEntry {
+            schema_version: 1,
+            after: Some("s1".into()),
+            before: Some("s2".into()),
+            construct: construct.to_string(),
+            element_id: format!("x{n}"),
+            label: "kept".into(),
+            type_num: None,
+        });
+    }
+
+    let to_bpmn = export_canonical(&workflow, ProcessSourceSystem::Bpmn20);
+    assert_eq!(to_bpmn.losses.len(), 2, "one loss per annex entry");
+    assert!(to_bpmn.annex.is_empty());
+    assert_eq!(admit_canonical(&to_bpmn).unwrap().digest, workflow.digest);
+    let refused =
+        export_canonical_strict(&workflow, ProcessSourceSystem::Bpmn20, true).unwrap_err();
+    assert_eq!(refused.code(), "PROCESS_EXPORT_LOSSY");
+    assert_eq!(refused.losses, to_bpmn.losses);
+
+    let same = export_canonical(&workflow, ProcessSourceSystem::ArisEpc);
+    assert_eq!(same.annex, workflow.annex, "same source keeps the annex");
+    let treatments: Vec<&str> = same.losses.iter().map(|l| l.treatment.as_str()).collect();
+    assert_eq!(treatments, ["typed-trigger", "decision-table"]);
+    assert_eq!(admit_canonical(&same).unwrap().digest, workflow.digest);
 }

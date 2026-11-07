@@ -205,6 +205,48 @@ impl std::error::Error for ImportError {}
 /// a BPMN re-export (MEDULLA-CQ-ORCH-R702.8).
 pub const ANNEX_BPMN_PRESERVED_XML: &str = "bpmn-preserved-xml";
 
+/// Annex construct: an intermediate EPC state event.
+pub const ANNEX_EPC_STATE_EVENT: &str = "epc-state-event";
+/// Annex construct: an EPC event after a split that carries an arm condition.
+pub const ANNEX_EPC_CONDITION_EVENT: &str = "epc-condition-event";
+/// Annex construct: an EPC attachment other than performer, IT support or rule.
+pub const ANNEX_EPC_ATTACHMENT: &str = "epc-attachment";
+
+/// The canonical constructs EPC cannot express, and the one treatment the
+/// EPC adapter applies to each (MEDULLA-CQ-ORCH-R701.8).
+pub const EPC_EXPORT_TREATMENTS: &[(&str, &str)] = &[
+    ("wait", "typed-trigger"),
+    ("boundary", "boundary-event"),
+    ("default-flow", "default-flow"),
+    ("event-based-wait", "event-based-gateway"),
+    ("decision", "decision-table"),
+];
+
+/// The treatment of an annex entry a target cannot hold.
+pub const LOSS_ANNEX_NOT_HELD: &str = "annex-not-held";
+
+impl ProcessSourceSystem {
+    /// The annex constructs this source keeps for its own re-export.
+    pub fn annex_constructs(self) -> &'static [&'static str] {
+        match self {
+            Self::ArisEpc => &[
+                ANNEX_EPC_STATE_EVENT,
+                ANNEX_EPC_CONDITION_EVENT,
+                ANNEX_EPC_ATTACHMENT,
+            ],
+            Self::Bpmn20 => &[ANNEX_BPMN_PRESERVED_XML],
+        }
+    }
+
+    /// The canonical constructs this format cannot express, with treatments.
+    pub fn inexpressible(self) -> &'static [(&'static str, &'static str)] {
+        match self {
+            Self::ArisEpc => EPC_EXPORT_TREATMENTS,
+            Self::Bpmn20 => &[],
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
