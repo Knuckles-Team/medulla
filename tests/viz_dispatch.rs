@@ -29,8 +29,10 @@ mod common;
 mod test_support;
 
 use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
+use medulla_query_types::viz::{
+    VizColumnValues, VizDatasetSource, VizFormat, VizOp, VizRenderRequest,
+};
 use medulla_server_router::dispatch::request_boundary::dispatch;
-use medulla_types::viz::{VizColumnValues, VizDatasetSource, VizFormat, VizOp, VizRenderRequest};
 use medulla_viz_core::{EncodingSpec, Encodings, MarkKind, MarkSpec, ViewSpec};
 
 const SECRET: &str = "served-viz-dispatch-secret";

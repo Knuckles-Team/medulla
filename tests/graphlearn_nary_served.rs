@@ -14,9 +14,9 @@ use serde_json::json;
 use medulla_protocol_types::protocol::{
     GraphLearnParams, GraphSource, Method, Request, Response, ResultPayload,
 };
+use medulla_query_types::graphlearn_nary::NaryRequest;
 use medulla_server_router::dispatch::request_boundary::dispatch;
 use medulla_types::acl::AgentRole;
-use medulla_types::graphlearn_nary::NaryRequest;
 
 const SECRET: &str = "served-graphlearn-nary-secret";
 const COMMONS_USER_ROLE: &str = "commons-user";

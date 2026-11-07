@@ -34,7 +34,6 @@ REMAINING = (
     "acl",
     "agent_bus",
     "architecture_view",
-    "asr_wire",
     "asset_usage",
     "atomic_primitive",
     "attached_source_dialect",
@@ -42,7 +41,6 @@ REMAINING = (
     "belief_revision",
     "benchmark_claim",
     "branch",
-    "causal_wire",
     "claims",
     "code_health",
     "consolidation_isolation",
@@ -51,10 +49,8 @@ REMAINING = (
     "cross_store_scope",
     "data_prep_declaration",
     "data_product",
-    "derived_fact",
     "dialect_conformance",
     "document_conformance",
-    "document_ops",
     "embedding_promotion",
     "engine_capabilities",
     "entity_link_proposal",
@@ -71,7 +67,6 @@ REMAINING = (
     "gramps_gap_fix",
     "gramps_pilot_phase",
     "graph_change_feed",
-    "graphlearn_nary",
     "health_incident",
     "hot_store_engine",
     "immich_pilot_phase",
@@ -89,7 +84,6 @@ REMAINING = (
     "metadata_acceleration",
     "mirror_sink",
     "mysql_mariadb_connection",
-    "nl_query",
     "ontology_diff",
     "ontology_edit",
     "ontology_inspection",
@@ -100,10 +94,8 @@ REMAINING = (
     "pgrx_spike_review",
     "pipeline_batch",
     "pitr_schedule",
-    "plan_cache_key",
     "profile",
     "quality",
-    "quantum",
     "rdf_report",
     "replay_conformance",
     "restore_drill",
@@ -115,7 +107,6 @@ REMAINING = (
     "schema_context",
     "schema_inference",
     "search_source",
-    "sensitive_detect",
     "series_expr",
     "shared_db_platform",
     "skill_plan",
@@ -128,11 +119,8 @@ REMAINING = (
     "step_verdict",
     "stewardship",
     "task_queue",
-    "telemetry_derive",
-    "topology",
     "usage",
     "virtual_graph_view",
-    "viz",
     "warehouse_conformance",
     "warehouse_federation",
     "web_source",
@@ -190,3 +178,26 @@ def test_each_moved_module_lives_in_exactly_one_slice() -> None:
             owners[module].append(crate)
     shared = {module: crates for module, crates in owners.items() if len(crates) > 1}
     assert shared == {}
+
+
+QUERY_MODULES = (
+    "asr_wire",
+    "causal_wire",
+    "derived_fact",
+    "document_ops",
+    "graphlearn_nary",
+    "nl_query",
+    "plan_cache_key",
+    "quantum",
+    "sensitive_detect",
+    "telemetry_derive",
+    "topology",
+    "viz",
+)
+
+
+@pytest.mark.spec("MEDULLA-SDLC-R021.3")
+def test_query_modules_live_only_in_the_query_slice() -> None:
+    assert _modules("medulla-query-types") >= set(QUERY_MODULES)
+    for crate in ("medulla-types", *SLICES[1:]):
+        assert _modules(crate) & set(QUERY_MODULES) == set(), crate

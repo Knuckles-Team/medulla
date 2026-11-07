@@ -36,6 +36,7 @@ medulla-server-api = { path = "../medulla-server-api" }
 medulla-storage = { path = "../medulla-storage", optional = true }
 medulla-store = { path = "../medulla-store" }
 medulla-types = { path = "../medulla-types" }
+medulla-query-types = { path = "../medulla-query-types" }
 medulla-video = { path = "../medulla-video", optional = true }
 rmp-serde = "1.3"
 serde = { version = "1.0", features = ["derive", "rc"] }

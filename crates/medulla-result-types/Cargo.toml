@@ -13,6 +13,7 @@ path = "src/lib.rs"
 
 [dependencies]
 medulla-types = { path = "../medulla-types" }
+medulla-query-types = { path = "../medulla-query-types" }
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1.0"
 thiserror = "2.0"
@@ -26,9 +27,9 @@ medulla-mutation-types = { path = "../medulla-mutation-types" }
 
 [features]
 wire-contract = ["finance", "datascience", "mining", "graphlearn", "ml-pipeline", "query", "compute-dist", "medulla-types/wire-contract", "medulla-mutation-types/wire-contract"]
-wire-complete = ["wire-contract", "medulla-types/wire-complete", "medulla-mutation-types/wire-complete"]
+wire-complete = ["wire-contract", "medulla-query-types/wire-complete", "medulla-mutation-types/wire-complete"]
 compute-dist = ["medulla-types/compute-dist"]
-contract-schema = ["dep:schemars", "medulla-types/contract-schema", "medulla-mutation-types/contract-schema"]
+contract-schema = ["dep:schemars", "medulla-types/contract-schema", "medulla-query-types/contract-schema", "medulla-mutation-types/contract-schema"]
 datascience = ["medulla-types/datascience"]
 finance = ["medulla-types/finance"]
 graphlearn = ["datascience", "medulla-types/graphlearn"]

@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use medulla_types::viz::VizFormat;
+use medulla_query_types::viz::VizFormat;
 
 #[cfg(feature = "viz")]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

@@ -44,7 +44,7 @@ impl SplitMix64 {
 
 /// A deterministic seeded random graph: node ids `0..node_count`, `edge_count`
 /// edges among them (no self-loops; dedup not required — mirrors
-/// `medulla_types::viz::VizDatasetSource::SyntheticGraph`'s own documented shape).
+/// `medulla_query_types::viz::VizDatasetSource::SyntheticGraph`'s own documented shape).
 fn synthetic_graph(node_count: u64, edge_count: u64, seed: u64) -> Vec<(u32, u32)> {
     let mut rng = SplitMix64::new(seed);
     let mut edges = Vec::with_capacity(edge_count as usize);

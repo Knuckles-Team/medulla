@@ -44,7 +44,7 @@ pub struct PredictedLink {
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct NaryPrediction {
     /// Hypotheses in descending score order; ties keep request order.
-    pub hypotheses: Vec<medulla_types::graphlearn_nary::NaryHypothesis>,
+    pub hypotheses: Vec<medulla_query_types::graphlearn_nary::NaryHypothesis>,
     pub n_hypotheses: usize,
     /// Order-sensitive digest of the request that produced them.
     pub request_digest: String,

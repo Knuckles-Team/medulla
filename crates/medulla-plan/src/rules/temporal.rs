@@ -23,12 +23,12 @@ use medulla_mutation_types::mutation::{
     MutationDomain, MutationEffect, MutationPayload, MutationPrecondition, RecordMutation,
     RecordTarget, RequestedMutationResult,
 };
+use medulla_query_types::derived_fact::{
+    derived_fact_id, DerivedFact, DerivedFactRecord, OriginKind, TEMPORAL_RULES_VERSION,
+};
 use medulla_types::contract::{
     BoundedVec, Digest256, EngineErrorCode, OpaqueId, RecordBytes, ResourceId, SchemaId,
     ServerErrorCode,
-};
-use medulla_types::derived_fact::{
-    derived_fact_id, DerivedFact, DerivedFactRecord, OriginKind, TEMPORAL_RULES_VERSION,
 };
 
 /// Schema id of the persisted derived-fact record.

@@ -384,9 +384,9 @@ $($variants)*
     /// atomic batch that also writes one content-free `DocumentDeletion`
     /// record. Refuses with `DOCUMENT_NOT_FOUND`, `DOCUMENT_HAS_REFERENCES` or
     /// `CASCADE_TOO_LARGE` and then changes nothing. See
-    /// [`medulla_types::document_ops`].
+    /// [`medulla_query_types::document_ops`].
     DocumentDelete {
-        request: Box<medulla_types::document_ops::DocumentDeleteRequest>,
+        request: Box<medulla_query_types::document_ops::DocumentDeleteRequest>,
     },
 
     // ── Memory snapshots (MEDULLA-DURABLE-KERNEL-R085.4) ────────────────────

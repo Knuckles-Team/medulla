@@ -420,7 +420,7 @@ $($variants)*
     #[cfg(feature = "graphlearn")]
     GraphLearnPredictNary {
         /// Model, ordered candidate tuples, relation constraints and `top_k`.
-        request: medulla_types::graphlearn_nary::NaryRequest,
+        request: medulla_query_types::graphlearn_nary::NaryRequest,
         /// The subgraph providing the structural features and the member vertices.
         source: GraphSource,
         /// Pin the graph revision (the `graph_revision` of an earlier hypothesis);

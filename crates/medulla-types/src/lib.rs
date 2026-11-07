@@ -30,22 +30,10 @@ pub mod incident;
 // path that needs no live database. Binlog/GTID capture and the per-engine
 // conformance entries are R014.2.2+.
 pub mod mysql_mariadb_connection;
-// CONCEPT:MEDULLA-KG.compute.native-asr-whisper-provider — the native-ASR agent-facing wire op
-// (`AsrOp`), gated `asr-native`. Lives here (not in `medulla-asr-whisper`), for the
-// SAME reason `quantum.rs` lives here rather than in `medulla-quantum-core`: `medulla-types`
-// is the bottom-of-DAG crate every wire consumer already depends on, while the
-// heavy provider crate sits above the facade. Pure serde — no dep on `medulla-audio`/
-// `medulla-asr-whisper`.
-#[cfg(feature = "asr-native")]
-pub mod asr_wire;
-// MEDULLA-FEDERATED-QUERY-R608.1 — causal model fit verdict (`CausalVerify`).
-pub mod causal_wire;
 // MEDULLA-DECISION-ENGINE-R700.1 — belief revision wire types.
 pub mod belief_revision;
 // MEDULLA-DECISION-ENGINE-R652.1 — research claims, evidence and sealed artifacts.
 pub mod claims;
-// MEDULLA-FEDERATED-QUERY-R086.100.1 — ordered n-ary inductive link prediction model.
-pub mod graphlearn_nary;
 // MEDULLA-DURABLE-KERNEL-R076.1 — authoritative scheduler policy data and validation.
 pub mod scheduler_config;
 // MEDULLA-DECISION-ENGINE-R653.1 — improvement-loop records and the `Loops` op body.
@@ -62,8 +50,6 @@ pub mod extracted_fact;
 pub mod source_governance;
 // MEDULLA-INGEST-WORKER-R900.4/R901.4/R902.4/R903.4/R904.4/R701.2/R701.4/R002.4/R003.4 — pure ingest refusal rules.
 pub mod ingest_rules;
-// MEDULLA-TYPED-PACKS-R803.1 — typed sensitive-data detector and detection records.
-pub mod sensitive_detect;
 // MEDULLA-TYPED-PACKS-R804.1 — ontology revision difference and impact records.
 pub mod code_health;
 // MEDULLA-DECISION-ENGINE-R152.1 — the `ContextFacts` wire types, shared with the protocol
@@ -172,8 +158,6 @@ pub mod pg_diff_baseline;
 // catalog, refusing to answer for a table absent from the catalog. Pure
 // data; wiring the real query entry point is a later child.
 pub mod schema_context;
-// MEDULLA-FEDERATED-QUERY-R058.2.2.1 — the disclosed NL query result (executed UQL + rows).
-pub mod nl_query;
 // MEDULLA-MEDIA-VOCAB-R001.101.1 — meeting transcript revisions and summary
 // contracts. Pure serde.
 pub mod meeting_transcript;
@@ -186,8 +170,6 @@ pub mod entity_link_proposal;
 pub mod contract;
 // MEDULLA-INCREMENTAL-VIEWS-R002.1 — the signed-row Z-set delta of incremental views.
 pub mod delta;
-// MEDULLA-FEDERATED-QUERY-R006.1 — origin record of a temporal rule-derived fact.
-pub mod derived_fact;
 // MEDULLA-TYPED-PACKS-R651.1 — append-only ontology edit chain records.
 pub mod ontology_edit;
 // MEDULLA-DURABLE-KERNEL-R032 — the native primary-key fast-path routing decision
@@ -245,9 +227,6 @@ pub mod retention_policy;
 // MEDULLA-DURABLE-KERNEL-R094.1 — hierarchical concept-ID grammar and path claims.
 pub mod concept_id;
 
-// MEDULLA-DURABLE-KERNEL-R041 — the SQL plan cache key (statement digest + schema
-// version) and its lookup decision. Pure, no dep beyond `contract::Digest256`.
-pub mod plan_cache_key;
 // MEDULLA-DURABLE-KERNEL-R042 — a published benchmark report's typed superiority
 // claim and the refusal for an unpublished-configuration or non-passing one.
 pub mod benchmark_claim;
@@ -279,13 +258,6 @@ pub mod finance_research;
 // `Method::WalletKeyTrustGet`.
 pub mod finance_wallet_trust;
 pub mod solve_scalar;
-// CONCEPT:MEDULLA-KG.compute.quantum-agent-api — the agent-facing quantum control-plane
-// wire op (`QuantumOp`), gated `quantum`. Lives here (not in `medulla-quantum-core`,
-// which sits ABOVE this crate in the DAG) for the SAME reason `jobs`/`statechart`
-// do: `protocol::Method::Quantum` carries it over the wire, and `protocol` is
-// bottom-of-DAG. Pure serde — no dep on `medulla-quantum-core`.
-#[cfg(feature = "quantum")]
-pub mod quantum;
 // Typed RDF input and the ontology inspection view, so orchestration callers
 // never build or parse RDF text themselves.
 pub mod ontology_inspection;
@@ -304,12 +276,10 @@ pub mod source_symbol_edit;
 pub mod source_toc;
 #[cfg(feature = "statechart")]
 pub mod statechart;
-pub mod telemetry_derive;
 pub mod web_source;
 // MEDULLA-FEDERATED-QUERY-R607.1 — topology analytics result model.
 #[cfg(any(test, feature = "test-support"))]
 pub mod test_support;
-pub mod topology;
 pub mod types;
 // The opaque tenant-bound keyset cursor shared by every paged read
 // (`AgentComponent.Search`, `ListWorkItems`).
@@ -321,8 +291,6 @@ pub mod graph_change_feed;
 // MEDULLA-TYPED-PACKS-R802.1/R805.1 — governance record models: stewardship and
 // data products. Pure data and field validation; served wiring lands in later children.
 pub mod data_product;
-// MEDULLA-UNIFIED-DATA-PLANE-R651.1 — document delete request and receipt.
-pub mod document_ops;
 // MEDULLA-TYPED-PACKS-R801.1 — business glossary term model (SKOS projection).
 pub mod glossary;
 pub mod stewardship;
@@ -340,8 +308,6 @@ pub mod consolidation_isolation;
 // child.
 pub mod immich_pilot_phase;
 pub mod usage;
-#[cfg(feature = "viz")]
-pub mod viz;
 pub mod wire;
 
 // CONCEPT:MEDULLA-KG.query.compound-predicate-decode — the serializable compound-WHERE predicate AST lives at the

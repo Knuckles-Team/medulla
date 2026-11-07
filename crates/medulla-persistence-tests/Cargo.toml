@@ -34,6 +34,7 @@ medulla-store = { path = "../medulla-store" }
 medulla-transaction = { path = "../medulla-transaction" }
 medulla-tsdb = { path = "../medulla-tsdb" }
 medulla-types = { path = "../medulla-types" }
+medulla-query-types = { path = "../medulla-query-types" }
 parking_lot = "0.12"
 redb = { workspace = true }
 rmp-serde = "1.3"
@@ -79,7 +80,7 @@ sparql = ["medulla-persistence/sparql", "medulla-protocol-types/sparql", "medull
 tsdb = ["medulla-persistence/tsdb", "medulla-server-api/tsdb", "medulla-store/tsdb", "medulla-store-apply/tsdb", "medulla-server-ops/tsdb", "redb", "server", "medulla-server/tsdb"]
 jobs = ["medulla-persistence/jobs", "medulla-protocol-types/jobs", "medulla-agent-types/jobs", "medulla-capabilities/jobs", "medulla-server-api/jobs", "medulla-types/jobs", "medulla-work-types/jobs", "medulla-server-ops/jobs", "query", "redb", "server", "medulla-server/jobs"]
 statechart = ["medulla-persistence/statechart", "medulla-protocol-types/statechart", "medulla-capabilities/statechart", "medulla-server-api/statechart", "medulla-store/statechart", "medulla-types/statechart", "medulla-store-apply/statechart", "medulla-work-store/statechart", "server", "medulla-server/statechart"]
-viz = ["medulla-persistence/viz", "medulla-protocol-types/viz", "medulla-capabilities/viz", "medulla-server-api/viz", "medulla-types/viz", "medulla-server/viz"]
+viz = ["medulla-persistence/viz", "medulla-protocol-types/viz", "medulla-capabilities/viz", "medulla-server-api/viz", "medulla-query-types/viz", "medulla-server/viz"]
 modality-serving = ["medulla-persistence/modality-serving", "medulla-protocol-types/modality-serving", "medulla-capabilities/modality-serving", "medulla-kernel/modality-serving", "medulla-server-api/modality-serving", "medulla-types/modality-serving", "medulla-server-ops/modality-serving", "medulla-server-auth/modality-serving", "redb", "security", "server", "medulla-server/modality-serving"]
 asr-whisper = ["medulla-persistence/asr-whisper", "medulla-server-api/asr-whisper", "server", "medulla-server/asr-whisper"]
 knowledge-batch = ["medulla-persistence/knowledge-batch", "medulla-protocol-types/knowledge-batch", "medulla-capabilities/knowledge-batch", "medulla-kernel/knowledge-batch", "medulla-server-api/knowledge-batch", "medulla-types/knowledge-batch", "medulla-server-ops/knowledge-batch", "query", "redb", "medulla-server/knowledge-batch"]

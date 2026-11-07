@@ -37,6 +37,7 @@ medulla-server-api = { path = "../medulla-server-api" }
 medulla-stream = { path = "../medulla-stream", optional = true }
 medulla-tsdb = { path = "../medulla-tsdb", optional = true }
 medulla-types = { path = "../medulla-types" }
+medulla-query-types = { path = "../medulla-query-types" }
 parking_lot = "0.12"
 redb = { workspace = true, optional = true }
 rmp-serde = "1.3"

@@ -12,6 +12,7 @@ name = "medulla_epistemic"
 [dependencies]
 # Bottom of the DAG: the stored typed model + Distribution value.
 medulla-types = { path = "../medulla-types" }
+medulla-query-types = { path = "../medulla-query-types" }
 # The GraphView snapshot the propagation walk runs over (read-only, off-lock).
 medulla-core = { path = "../medulla-core" }
 # The conjugate Bayesian backend — `probabilistic::bayesian_update` IS the

@@ -13,6 +13,7 @@ path = "src/lib.rs"
 
 [dependencies]
 medulla-types = { path = "../medulla-types" }
+medulla-query-types = { path = "../medulla-query-types" }
 oxiri = "0.2.11"
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1.0"
@@ -27,8 +28,8 @@ medulla-work-types = { path = "../medulla-work-types" }
 
 [features]
 wire-contract = ["medulla-types/wire-contract", "medulla-mutation-types/wire-contract", "medulla-agent-types/wire-contract"]
-wire-complete = ["wire-contract", "medulla-types/wire-complete", "medulla-mutation-types/wire-complete", "medulla-agent-types/wire-complete"]
-contract-schema = ["dep:schemars", "medulla-types/contract-schema", "medulla-mutation-types/contract-schema", "medulla-agent-types/contract-schema", "medulla-work-types/contract-schema"]
+wire-complete = ["wire-contract", "medulla-query-types/wire-complete", "medulla-mutation-types/wire-complete", "medulla-agent-types/wire-complete"]
+contract-schema = ["dep:schemars", "medulla-types/contract-schema", "medulla-query-types/contract-schema", "medulla-mutation-types/contract-schema", "medulla-agent-types/contract-schema", "medulla-work-types/contract-schema"]
 test-support = ["medulla-types/test-support", "medulla-agent-types/test-support", "medulla-work-types/test-support"]
 
 [dev-dependencies]

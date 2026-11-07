@@ -33,6 +33,7 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
+use medulla_query_types::telemetry_derive::TelemetryDeriveReceipt;
 use medulla_server_obs::{obs::LogRecord, obs::ObsState, obs::ObsStateExt};
 use medulla_stream::telemetry::{
     AnomalyRule, IncidentRule, MetricRole, ResolutionPolicy, RollupPolicy, TelemetryPolicy,
@@ -40,7 +41,6 @@ use medulla_stream::telemetry::{
 use medulla_stream::{CepPattern, EventMatcher, Window};
 use medulla_tsdb::point::Point;
 use medulla_tsdb::traces::Span;
-use medulla_types::telemetry_derive::TelemetryDeriveReceipt;
 use serde_json::json;
 
 const SECRET: &str = "served-telemetry-facts-secret";

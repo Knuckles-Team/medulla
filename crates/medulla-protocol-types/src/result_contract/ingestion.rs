@@ -8,21 +8,21 @@ use medulla_index_types::{
     semantic_index::SemanticStageIntent, semantic_index::SemanticStageLeasePage,
     semantic_index::SemanticStageTransition,
 };
+#[cfg(feature = "asr-native")]
+use medulla_query_types::asr_wire::AsrTranscription;
+#[cfg(feature = "quantum")]
+use medulla_query_types::quantum::{
+    QuantumExpectationResult, QuantumQaoaResult, QuantumRankResult,
+};
+use medulla_query_types::telemetry_derive::TelemetryDeriveReceipt;
 use medulla_source_types::{
     source_ingestion::SourceIngestStatus as SourceIngestStatusBody,
     source_ingestion::SourceIngestionReceipt,
 };
-#[cfg(feature = "asr-native")]
-use medulla_types::asr_wire::AsrTranscription;
 use medulla_types::incident::{IncidentRecord, IncidentRelatedClaim, IncidentWriteReceipt};
-use medulla_types::telemetry_derive::TelemetryDeriveReceipt;
 use medulla_types::{
     ingestion_wire::DiscoverHit, ingestion_wire::IndexResult, ingestion_wire::ParseResult,
     ingestion_wire::ScreenObservationResult,
-};
-#[cfg(feature = "quantum")]
-use medulla_types::{
-    quantum::QuantumExpectationResult, quantum::QuantumQaoaResult, quantum::QuantumRankResult,
 };
 #[cfg(feature = "modality-serving")]
 mod modality;
@@ -65,7 +65,7 @@ method_results! {
     MeetingSummaryContext(MeetingSummaryContext) => Raw<medulla_types::meeting_transcript::MeetingSummaryContext>;
     MeetingSummaryCommit(MeetingSummaryCommit) => Raw<medulla_types::meeting_transcript::MeetingSummaryCommitReceipt>;
     // MEDULLA-UNIFIED-DATA-PLANE-R651.3/.5: what one committed cascade deleted.
-    DocumentDelete(DocumentDelete) => Raw<medulla_types::document_ops::DocumentDeleteReceipt>;
+    DocumentDelete(DocumentDelete) => Raw<medulla_query_types::document_ops::DocumentDeleteReceipt>;
     // EH-408 / EH-409: counts plus the id of every fact node written.
     TelemetryDerive(TelemetryDerive) => Raw<TelemetryDeriveReceipt>;
     // MEDULLA-ORCH-VOCAB-R804: the tenant's latest stored metric values by name.

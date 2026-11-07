@@ -283,6 +283,7 @@ units = [
   "medulla-method-codec",
   "medulla-mutation-types",
   "medulla-protocol-types",
+  "medulla-query-types",
   "medulla-result-types",
   "medulla-source-types",
   "medulla-types",

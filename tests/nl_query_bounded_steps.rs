@@ -11,7 +11,7 @@ mod test_support;
 use std::sync::Arc;
 
 use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
-use medulla_types::nl_query::{NlQueryPlanResult, NlTurn};
+use medulla_query_types::nl_query::{NlQueryPlanResult, NlTurn};
 
 const SECRET: &str = "nl-query-bounded-steps-secret";
 const GRAPH: &str = "__commons__";

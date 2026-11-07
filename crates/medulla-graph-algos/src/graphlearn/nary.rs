@@ -10,7 +10,7 @@
 
 use std::collections::HashSet;
 
-use medulla_types::graphlearn_nary::NaryEvidenceClass;
+use medulla_query_types::graphlearn_nary::NaryEvidenceClass;
 
 use super::link_predict::{FeatureCtx, KanLinkModel};
 

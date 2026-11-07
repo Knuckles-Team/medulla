@@ -20,7 +20,7 @@ $($variants)*
     /// `crate::viz`'s module doc.
     #[cfg(feature = "viz")]
     Viz {
-        op: medulla_types::viz::VizOp,
+        op: medulla_query_types::viz::VizOp,
     },
 
 
@@ -414,7 +414,7 @@ $($variants)*
         /// Earlier turns, oldest first (MEDULLA-FEDERATED-QUERY-R058.8). A nonempty
         /// history rewrites a follow-up `text` to a standalone question before planning.
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
-        history: Vec<medulla_types::nl_query::NlTurn>,
+        history: Vec<medulla_query_types::nl_query::NlTurn>,
     },
     /// `NlQuery` that also discloses the generated query (MEDULLA-FEDERATED-QUERY-R058.2.2.1):
     /// the SAME request, planner, budget, parse, authority and rows as `NlQuery`, answered
@@ -427,7 +427,7 @@ $($variants)*
         /// Earlier turns, oldest first (MEDULLA-FEDERATED-QUERY-R058.8). A nonempty
         /// history rewrites a follow-up `text` to a standalone question before planning.
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
-        history: Vec<medulla_types::nl_query::NlTurn>,
+        history: Vec<medulla_query_types::nl_query::NlTurn>,
     },
     /// Plan a natural-language request without executing it
     /// (MEDULLA-FEDERATED-QUERY-R058.2.2.2). The result contains the exact
@@ -441,7 +441,7 @@ $($variants)*
         /// Earlier turns, oldest first (MEDULLA-FEDERATED-QUERY-R058.8). A nonempty
         /// history rewrites a follow-up `text` to a standalone question before planning.
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
-        history: Vec<medulla_types::nl_query::NlTurn>,
+        history: Vec<medulla_query_types::nl_query::NlTurn>,
     },
 
 

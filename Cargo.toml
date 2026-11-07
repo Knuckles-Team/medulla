@@ -400,7 +400,7 @@ program-optimization = ["medulla-server-store-tests/program-optimization", "medu
 # stays excluded -- it gates nothing but a reserved, unimplemented trait slot, so
 # folding it in would cost nothing but would also prove nothing; it joins `full`
 # once V3a/V6 GPU work actually lands behind it.
-viz = ["medulla-server/viz", "medulla-wire/viz", "medulla-h-query/viz", "medulla-h-jobs/viz", "medulla-h-compute/viz", "medulla-raft/viz", "medulla-persistence/viz", "medulla-server-api/viz", "dep:medulla-viz-core", "medulla-types/viz", "medulla-capabilities?/viz", "medulla-protocol-types/viz", "medulla-persistence-tests/viz"]
+viz = ["medulla-server/viz", "medulla-wire/viz", "medulla-h-query/viz", "medulla-h-jobs/viz", "medulla-h-compute/viz", "medulla-raft/viz", "medulla-persistence/viz", "medulla-server-api/viz", "dep:medulla-viz-core", "medulla-query-types/viz", "medulla-capabilities?/viz", "medulla-protocol-types/viz", "medulla-persistence-tests/viz"]
 viz-gpu-export = ["viz"]
 # GOC-34 (`OWNER-VOICE-TTS`) -- native Piper-ONNX text-to-speech PROVIDER behind the
 # frozen `medulla-audio::tts` wire contract (crates/medulla-audio/src/tts.rs, itself validation-
@@ -500,7 +500,7 @@ modality-serving = ["medulla-server/modality-serving", "medulla-server-router/mo
 # `--features asr-whisper`). NOT graph-scoped (a transcription reads no persisted
 # graph state) — self-routes in `dispatch.rs`, ahead of the per-graph
 # `dispatch_graph_op` chain, exactly like `quantum-agent-api`/`viz-static-export`.
-asr-whisper = ["medulla-server/asr-whisper", "medulla-server-router/asr-whisper", "medulla-wire/asr-whisper", "medulla-h-query/asr-whisper", "medulla-h-jobs/asr-whisper", "medulla-h-ingest/asr-whisper", "medulla-raft/asr-whisper", "medulla-persistence/asr-whisper", "medulla-server-api/asr-whisper", "server", "dep:medulla-asr-whisper", "medulla-audio/asr", "medulla-types/asr-native", "medulla-capabilities/asr-native", "medulla-protocol-types/asr-native", "medulla-persistence-tests/asr-whisper"]
+asr-whisper = ["medulla-server/asr-whisper", "medulla-server-router/asr-whisper", "medulla-wire/asr-whisper", "medulla-h-query/asr-whisper", "medulla-h-jobs/asr-whisper", "medulla-h-ingest/asr-whisper", "medulla-raft/asr-whisper", "medulla-persistence/asr-whisper", "medulla-server-api/asr-whisper", "server", "dep:medulla-asr-whisper", "medulla-audio/asr", "medulla-query-types/asr-native", "medulla-capabilities/asr-native", "medulla-protocol-types/asr-native", "medulla-persistence-tests/asr-whisper"]
 # Read-only SQL query surface (CONCEPT:KG-2.178). Pulls medulla-query + DataFusion/Arrow
 # and is included in the one main build.
 # `redb` is REQUIRED, not incidental: RF-RULING-006 opens the SQL catalog through
@@ -1429,7 +1429,7 @@ quantum-jobs-federation = ["quantum-jobs", "federation", "medulla-quantum-jobs/f
 # surface reachable from graph-os/agent-utilities at all -- `quantum`/`quantum-sim`
 # alone remain Rust-internal, no wire protocol Method, no KG concept mapping.
 quantum-agent-api = ["medulla-server/quantum-agent-api", "medulla-server-router/quantum-agent-api", "medulla-wire/quantum-agent-api", "medulla-h-query/quantum-agent-api", "medulla-h-jobs/quantum-agent-api", "medulla-h-compute/quantum-agent-api",
-    "medulla-raft/quantum-agent-api", "medulla-persistence/quantum-agent-api", "medulla-server-api/quantum-agent-api", "quantum-sim", "server", "medulla-types/quantum", "medulla-capabilities/quantum", "medulla-protocol-types/quantum"]
+    "medulla-raft/quantum-agent-api", "medulla-persistence/quantum-agent-api", "medulla-server-api/quantum-agent-api", "quantum-sim", "server", "medulla-query-types/quantum", "medulla-capabilities/quantum", "medulla-protocol-types/quantum"]
 
 [dependencies]
 medulla-cypher = { path = "crates/medulla-cypher" }
@@ -1453,6 +1453,7 @@ chrono = { version = "0.4", optional = true, default-features = false, features 
 medulla-resource = { path = "crates/medulla-resource" }
 medulla-kernel = { path = "crates/medulla-kernel" }
 medulla-types = { path = "crates/medulla-types" }
+medulla-query-types = { path = "crates/medulla-query-types" }
 medulla-core = { path = "crates/medulla-core" }
 # The exact-performance probe is part of the digest-bound full server binary and
 # exercises the native ANN implementations directly. Keep this edge behind the

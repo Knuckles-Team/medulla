@@ -35,8 +35,8 @@ use medulla_server_obs::obs::ObsStateExt;
 use std::sync::Arc;
 
 use medulla_protocol_types::result_contract::ingestion::TelemetryDerive as TelemetryDeriveResult;
+use medulla_query_types::telemetry_derive::TelemetryDeriveReceipt;
 use medulla_stream::telemetry::{derive_facts, fact_graph, TelemetryFacts, TelemetryPolicy};
-use medulla_types::telemetry_derive::TelemetryDeriveReceipt;
 use tokio::sync::RwLock;
 
 use medulla_protocol_types::protocol::Method;

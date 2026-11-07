@@ -62,7 +62,7 @@ pub(crate) fn handle_nl_query_plan(
     view: &medulla_graph_core::graph::GraphView,
     req_id: u64,
     foreign_sources: Option<&std::collections::BTreeSet<String>>,
-    history: &[medulla_types::nl_query::NlTurn],
+    history: &[medulla_query_types::nl_query::NlTurn],
 ) -> Result<(String, medulla_exec::algebra::Plan, Option<String>), Response> {
     let planner = crate::nl::resolve_planner()
         .map_err(|e| Response::err(req_id, nl_config_refusal(&e)))?
@@ -99,7 +99,7 @@ pub(crate) fn handle_nl_query_plan(
 pub(crate) fn nl_follow_up(
     planner: &dyn medulla_nlq::nl::NlPlanner,
     text: &str,
-    history: &[medulla_types::nl_query::NlTurn],
+    history: &[medulla_query_types::nl_query::NlTurn],
     req_id: u64,
 ) -> Result<(String, Option<String>), Response> {
     if history.is_empty() {
@@ -107,7 +107,7 @@ pub(crate) fn nl_follow_up(
     }
     let max_turns = crate::nl::resolve_max_history_turns()
         .map_err(|e| Response::err(req_id, nl_config_refusal(&e)))?;
-    medulla_types::nl_query::validate_nl_history(history, max_turns)
+    medulla_query_types::nl_query::validate_nl_history(history, max_turns)
         .map_err(|detail| Response::err(req_id, format!("INVALID_ARGUMENT: NlQuery: {detail}")))?;
     let rewritten = medulla_nlq::nl::context::rewrite_follow_up(planner, text, history)
         .map_err(|e| Response::err(req_id, nl_refusal(&e)))?;
@@ -189,7 +189,7 @@ pub(crate) async fn handle_nl_query(
     ctx: &QueryHandlerCtx<'_>,
     text: String,
     graph: String,
-    history: Vec<medulla_types::nl_query::NlTurn>,
+    history: Vec<medulla_query_types::nl_query::NlTurn>,
 ) -> Result<Response, Method> {
     let req_id = ctx.req_id;
     // Plain `NlQuery` answers bare rows and discloses no rewrite (R058.8).
@@ -207,13 +207,13 @@ pub(crate) async fn handle_nl_query_explain(
     ctx: &QueryHandlerCtx<'_>,
     text: String,
     graph: String,
-    history: Vec<medulla_types::nl_query::NlTurn>,
+    history: Vec<medulla_query_types::nl_query::NlTurn>,
 ) -> Result<Response, Method> {
     let req_id = ctx.req_id;
     Ok(match run_nl_query(ctx, text, graph, history).await {
         Ok((uql, rows, rewritten_question)) => result_response::<query_results::NlQueryExplain>(
             req_id,
-            &medulla_types::nl_query::NlQueryExplainResult {
+            &medulla_query_types::nl_query::NlQueryExplainResult {
                 uql,
                 rows,
                 rewritten_question,
@@ -233,7 +233,7 @@ pub(crate) async fn handle_nl_query_plan_only(
     ctx: &QueryHandlerCtx<'_>,
     text: String,
     graph: String,
-    history: Vec<medulla_types::nl_query::NlTurn>,
+    history: Vec<medulla_query_types::nl_query::NlTurn>,
 ) -> Result<Response, Method> {
     let req_id = ctx.req_id;
     let _ = graph;
@@ -271,7 +271,7 @@ pub(crate) async fn handle_nl_query_plan_only(
     };
     Ok(result_response::<query_results::NlQueryPlan>(
         req_id,
-        &medulla_types::nl_query::NlQueryPlanResult {
+        &medulla_query_types::nl_query::NlQueryPlanResult {
             uql,
             plan_digest,
             query_digest,
@@ -309,7 +309,7 @@ async fn run_nl_query(
     ctx: &QueryHandlerCtx<'_>,
     text: String,
     graph: String,
-    history: Vec<medulla_types::nl_query::NlTurn>,
+    history: Vec<medulla_query_types::nl_query::NlTurn>,
 ) -> Result<(String, Vec<(String, Option<f32>)>, Option<String>), Response> {
     let state = ctx.state;
     let req_id = ctx.req_id;
