@@ -6,6 +6,7 @@
 mod analysis;
 mod build_profiles;
 mod canonical_property_schema;
+mod orphan_modules;
 mod p2_analytics_reasoning_architecture;
 mod p2_modality_architecture;
 mod repo_root_parity;
@@ -34,6 +35,11 @@ const CHECKS: &[Check] = &[
         name: canonical_property_schema::NAME,
         summary: canonical_property_schema::SUMMARY,
         run: canonical_property_schema::run,
+    },
+    Check {
+        name: orphan_modules::NAME,
+        summary: orphan_modules::SUMMARY,
+        run: orphan_modules::run,
     },
     Check {
         name: p2_analytics_reasoning_architecture::NAME,

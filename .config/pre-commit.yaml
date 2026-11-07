@@ -434,7 +434,7 @@ repos:
   # reported the 163 KB of orphaned source that is now compiled.
   - id: orphan-modules
     name: Every tracked Rust file is compiled by some cargo target
-    entry: python3 scripts/check_orphan_modules.py
+    entry: cargo xtask orphan-modules
     language: system
     pass_filenames: false
     always_run: true
