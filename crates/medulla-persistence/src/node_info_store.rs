@@ -324,6 +324,14 @@ pub struct NodeInfoStore {
 }
 
 impl NodeInfoStore {
+    /// Close the durable node-info file on graceful shutdown; a later durable
+    /// write is refused. A no-op without durable backing. Idempotent.
+    pub fn close(&self) {
+        if let Some(durable) = &self.durable {
+            durable.close();
+        }
+    }
+
     /// A non-durable store (tests / a build without `redb`). Mutations are
     /// visible immediately but do NOT survive a restart.
     pub fn in_memory() -> Self {

@@ -66,6 +66,14 @@ pub struct ClusterHierarchyStore {
 }
 
 impl ClusterHierarchyStore {
+    /// Close the durable cluster-hierarchy file on graceful shutdown; a later durable
+    /// write is refused. A no-op without durable backing. Idempotent.
+    pub fn close(&self) {
+        if let Some(durable) = &self.durable {
+            durable.close();
+        }
+    }
+
     /// A cache with no durable backing — entries are visible immediately but do
     /// NOT survive a restart. Used by test/memory backends.
     pub fn in_memory() -> Self {

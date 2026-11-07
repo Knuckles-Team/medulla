@@ -613,7 +613,7 @@ fn the_ann_code_table_is_keyed_by_generation_so_two_can_coexist() {
     let path = dir.path().join("semantic.redb");
     let physical = PhysicalStoreIdentity::new("physical:test:semantic-ann").unwrap();
     let store = create_physical(&path, physical, None, OwnerLayout::SemanticIndex).unwrap();
-    let wtx = store.database().begin_write().unwrap();
+    let wtx = store.database().unwrap().begin_write().unwrap();
     {
         let mut codes = wtx.open_table(ANN_CODES).unwrap();
         for generation in [1u64, 2] {
@@ -629,7 +629,7 @@ fn the_ann_code_table_is_keyed_by_generation_so_two_can_coexist() {
     }
     wtx.commit().unwrap();
 
-    let rtx = store.database().begin_read().unwrap();
+    let rtx = store.database().unwrap().begin_read().unwrap();
     let codes = rtx.open_table(ANN_CODES).unwrap();
     for generation in [1u64, 2] {
         assert_eq!(
@@ -647,13 +647,13 @@ fn the_ann_code_table_is_keyed_by_generation_so_two_can_coexist() {
 
     // Retiring one generation is a bounded range over its own prefix and leaves
     // the serving generation whole.
-    let wtx = store.database().begin_write().unwrap();
+    let wtx = store.database().unwrap().begin_write().unwrap();
     {
         let mut codes = wtx.open_table(ANN_CODES).unwrap();
         codes.retain(|key, _| key.2 != 1).unwrap();
     }
     wtx.commit().unwrap();
-    let rtx = store.database().begin_read().unwrap();
+    let rtx = store.database().unwrap().begin_read().unwrap();
     let codes = rtx.open_table(ANN_CODES).unwrap();
     assert!(codes
         .get(("tenant-a", "binding-a", 1, "codes"))
@@ -673,7 +673,7 @@ fn open_rejects_unknown_normal_and_multimap_tables() {
         let physical = PhysicalStoreIdentity::new("physical:test:closed-world").unwrap();
         let store =
             create_physical(&path, physical.clone(), None, OwnerLayout::LedgerOnly).unwrap();
-        let wtx = store.database().begin_write().unwrap();
+        let wtx = store.database().unwrap().begin_write().unwrap();
         if multimap {
             let definition: MultimapTableDefinition<&str, &str> =
                 MultimapTableDefinition::new("undeclared_multimap");
@@ -695,7 +695,7 @@ fn write_rejects_missing_or_wrong_type_without_recreating_table() {
         let path = dir.path().join("wrong-table.redb");
         let physical = PhysicalStoreIdentity::new("physical:test:wrong-table").unwrap();
         let store = create_physical(&path, physical, None, OwnerLayout::Kv).unwrap();
-        let wtx = store.database().begin_write().unwrap();
+        let wtx = store.database().unwrap().begin_write().unwrap();
         wtx.delete_table(KV).unwrap();
         if wrong_type {
             let wrong: TableDefinition<&str, &str> = TableDefinition::new("kv");
@@ -703,7 +703,7 @@ fn write_rejects_missing_or_wrong_type_without_recreating_table() {
         }
         wtx.commit().unwrap();
         assert!(store.begin_write().is_err());
-        let rtx = store.database().begin_read().unwrap();
+        let rtx = store.database().unwrap().begin_read().unwrap();
         let names = rtx
             .list_tables()
             .unwrap()
