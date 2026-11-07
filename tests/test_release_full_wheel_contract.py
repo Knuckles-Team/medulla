@@ -302,6 +302,7 @@ def test_incomplete_fallback_artifacts_cannot_be_published() -> None:
         "build",
         "publish-x86",
         "build-sdist",
+        "release-fixed-point",
     }
     source_steps = jobs["build-sdist"]["steps"]
     assert any(
@@ -602,6 +603,7 @@ def test_tag_pipeline_builds_checks_and_publishes_only() -> None:
         "publish-x86",
         "server-image",
         "server-manifest",
+        "release-fixed-point",
         "verify-pypi",
         "github-release",
     }

@@ -431,15 +431,28 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version-file: '.python-version'
+      - name: Bind build time to the source revision
+        run: echo "SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)" >> "$GITHUB_ENV"
       - name: Build source archive without native compilation
         run: |
           python -m pip install 'maturin==1.14.1'
           maturin sdist --out dist-sdist
           cargo --locked xtask sdist-completeness dist-sdist/*.tar.gz
+      # Release fixed point (MEDULLA-CONTRACT-R053.14): a second sdist from the
+      # same pinned inputs must be byte-identical before anything is published.
+      - name: Build reproduction source archive
+        run: |
+          maturin sdist --out dist-sdist-reproduction
+          cmp dist-sdist/*.tar.gz dist-sdist-reproduction/*.tar.gz
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: source-distribution
           path: dist-sdist/*.tar.gz
+          if-no-files-found: error
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: source-distribution-reproduction
+          path: dist-sdist-reproduction/*.tar.gz
           if-no-files-found: error
       - name: Publish the source distribution to PyPI
         if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
@@ -520,24 +533,85 @@ jobs:
         run: |
           set -euo pipefail
           version="$(python3 -c "import re,sys;print(re.search(r'^medulla-([0-9][^-]*)-', sys.argv[1]).group(1))" "$(basename docker/wheels/medulla-*.whl)")"
+          SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)"
+          export SOURCE_DATE_EPOCH
+          # Pinned time and rewritten layer timestamps make the image a function
+          # of its inputs (MEDULLA-CONTRACT-R053.14).
           docker buildx build --file docker/Dockerfile --target runtime \
             --platform "$PLATFORM" --build-arg "EGS_VERSION=${version}" \
+            --build-arg "SOURCE_DATE_EPOCH=${SOURCE_DATE_EPOCH}" \
             --metadata-file "$RUNNER_TEMP/meta.json" \
-            --output "type=image,name=${IMAGE},push-by-digest=true,name-canonical=true,push=true" .
-          digest="$(python3 -c "import json,sys;print(json.load(open(sys.argv[1]))['containerimage.digest'])" "$RUNNER_TEMP/meta.json")"
-          mkdir -p "$RUNNER_TEMP/digests"
-          echo "${digest}" > "$RUNNER_TEMP/digests/${{ matrix.arch }}"
+            --output "type=image,name=${IMAGE},push-by-digest=true,name-canonical=true,push=true,rewrite-timestamp=true" .
+          # Reproduction build from empty cache; computed by digest, never pushed.
+          docker buildx build --no-cache --file docker/Dockerfile --target runtime \
+            --platform "$PLATFORM" --build-arg "EGS_VERSION=${version}" \
+            --build-arg "SOURCE_DATE_EPOCH=${SOURCE_DATE_EPOCH}" \
+            --metadata-file "$RUNNER_TEMP/meta-reproduction.json" \
+            --output "type=image,name=${IMAGE},push-by-digest=true,name-canonical=true,push=false,rewrite-timestamp=true" .
+          mkdir -p "$RUNNER_TEMP/digests" "$RUNNER_TEMP/digests-reproduction"
+          for pass in "" "-reproduction"; do
+            python3 -c "import json,sys;print(json.load(open(sys.argv[1]))['containerimage.digest'])" \
+              "$RUNNER_TEMP/meta${pass}.json" > "$RUNNER_TEMP/digests${pass}/${{ matrix.arch }}"
+          done
           echo "version=${version}" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: server-digest-${{ matrix.arch }}
           path: ${{ runner.temp }}/digests/${{ matrix.arch }}
           if-no-files-found: error
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: server-reproduction-digest-${{ matrix.arch }}
+          path: ${{ runner.temp }}/digests-reproduction/${{ matrix.arch }}
+          if-no-files-found: error
+
+  # Release fixed point (MEDULLA-CONTRACT-R053.14): the sdist and each server
+  # image were built twice from the same pinned inputs; every publish job below
+  # needs both builds to agree by name and digest.
+  release-fixed-point:
+    name: Release fixed point
+    needs: [build-sdist, server-image]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: source-distribution
+          path: primary
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: source-distribution-reproduction
+          path: reproduction
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: server-digest-*
+          merge-multiple: true
+          path: digests-primary
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: server-reproduction-digest-*
+          merge-multiple: true
+          path: digests-reproduction
+      - name: Compare both builds by name and digest
+        run: |
+          set -euo pipefail
+          for pass in primary reproduction; do
+            for file in digests-"$pass"/*; do
+              echo "server-$(basename "$file") $(cat "$file")"
+            done > "images-$pass.txt"
+          done
+          python3 scripts/compare_release_artifacts.py primary reproduction \
+            --primary-images images-primary.txt --reproduction-images images-reproduction.txt
 
   # One tag list for linux/amd64 + linux/arm64 under the medulla-server image name.
   server-manifest:
     name: server image manifest
-    needs: server-image
+    needs: [server-image, release-fixed-point]
     runs-on: ubuntu-latest
     timeout-minutes: 360
     permissions:
@@ -573,9 +647,9 @@ jobs:
   verify-pypi:
     timeout-minutes: 360
     name: Verify every distribution reached PyPI
-    needs: [build, publish-x86, build-sdist]
+    needs: [build, publish-x86, build-sdist, release-fixed-point]
     runs-on: ubuntu-latest
-    if: ${{ always() && github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
+    if: ${{ always() && needs.release-fixed-point.result == 'success' && github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
     permissions:
       contents: read
     steps:
@@ -637,7 +711,7 @@ jobs:
   github-release:
     timeout-minutes: 5
     name: GitHub release with PyPI links
-    needs: [verify-pypi, method-codec]
+    needs: [verify-pypi, method-codec, release-fixed-point]
     runs-on: ubuntu-latest
     if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
     permissions:
