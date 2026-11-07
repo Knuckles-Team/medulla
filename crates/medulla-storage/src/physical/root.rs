@@ -13,6 +13,11 @@ use redb::{Database, ReadTransaction, ReadableDatabase, TableHandle, WriteTransa
 use std::path::PathBuf;
 use std::sync::Arc;
 
+/// A panic while holding a store handle lock may have left the handle half-updated;
+/// refuse to continue with it rather than recover silently (clippy.toml forbids
+/// `PoisonError::into_inner`).
+const STORE_LOCK_POISONED: &str = "store handle lock poisoned: a panic occurred while it was held";
+
 // NOTE: bare `mutation_batches`/`mutation_idempotency`/`mutation_outbox` are
 // DELIBERATELY NOT listed here. Those exact names are still the live,
 // currently-written table names of `medulla`'s own pre-`medulla-mutation-store`
@@ -200,17 +205,9 @@ impl PhysicalStore {
     /// side stores) would otherwise leave the file flagged for repair.
     /// Idempotent; a transaction begun later is refused as [`STORE_CLOSED`].
     pub(crate) fn close(&self) {
-        let database = self
-            .database
-            .write()
-            .unwrap_or_else(std::sync::PoisonError::into_inner)
-            .take();
+        let database = self.database.write().expect(STORE_LOCK_POISONED).take();
         drop(database);
-        let marker = self
-            .marker
-            .lock()
-            .unwrap_or_else(std::sync::PoisonError::into_inner)
-            .take();
+        let marker = self.marker.lock().expect(STORE_LOCK_POISONED).take();
         drop(marker);
     }
 
@@ -223,10 +220,7 @@ impl PhysicalStore {
     }
 
     pub(crate) fn database(&self) -> Result<OpenDatabase<'_>, String> {
-        let guard = self
-            .database
-            .read()
-            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        let guard = self.database.read().expect(STORE_LOCK_POISONED);
         if guard.is_none() {
             return Err(STORE_CLOSED.to_string());
         }
@@ -258,11 +252,7 @@ impl PhysicalStore {
             .in_scope(|| self.validate_write_authority(&transaction))?;
         Ok(ValidatedWrite {
             transaction,
-            marker: self
-                .marker
-                .lock()
-                .unwrap_or_else(std::sync::PoisonError::into_inner)
-                .clone(),
+            marker: self.marker.lock().expect(STORE_LOCK_POISONED).clone(),
         })
     }
 
