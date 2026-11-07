@@ -41,6 +41,7 @@ EXPECTED_RUST_SOURCES = frozenset(
         "crates/medulla-result-types/src/epistemic_operations/development_quota.rs",
         "crates/medulla-result-types/src/epistemic_operations/development_state.rs",
         "crates/medulla-result-types/src/epistemic_operations/development_transition.rs",
+        "crates/medulla-result-types/src/epistemic_operations/hold_machine.rs",
         "crates/medulla-result-types/src/epistemic_operations/placement_operations.rs",
         "crates/medulla-result-types/src/epistemic_operations/resource_core.rs",
         "crates/medulla-result-types/src/epistemic_operations/resource_host.rs",

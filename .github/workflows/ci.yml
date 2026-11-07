@@ -288,7 +288,7 @@ jobs:
         run: python3 scripts/cargo_test_rescue.py cargo test -p medulla-types -p medulla-core -p medulla-compute --all-features --no-fail-fast
       - name: Lint (generated Cypher property keys are quoted)
         env: *medulla-validation-compiler-cache-env
-        run: cargo test --locked -p medulla-federation --features federation --lib federation_cypher_unbound::tests::key_quoting_fixtures -- --exact
+        run: python3 scripts/cargo_test_rescue.py cargo test --locked -p medulla-federation --features federation --lib federation_cypher_unbound::tests::key_quoting_fixtures -- --exact
       # The canonical-ledger profile selects every Method variant. The ordinary
       # feature-selected registry is intentionally smaller.
       - name: Test (canonical capability policy)
