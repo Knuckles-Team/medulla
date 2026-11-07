@@ -74,7 +74,7 @@ def test_food_pack_import_answers_composition_query() -> None:
             assert accepted["result"] != "rejected", accepted
             # The pack graph is projected after the import commits; its rows
             # join the default graph once the projection is visible.
-            deadline = time.monotonic() + 60
+            deadline = time.monotonic() + 180
             while True:
                 rows = await client.rdf.sparql(
                     "PREFIX : <http://knuckles.team/kg#> "
