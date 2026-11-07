@@ -340,7 +340,10 @@ pub mod worker {
     ) -> Result<(), String> {
         #[cfg(feature = "security")]
         {
-            let graph = crate::graph_schema::pack_projection_graph_name(tenant, &record.connector)?;
+            let graph = medulla_catalog_types::connector_pack::ids::pack_projection_graph_name(
+                tenant,
+                &record.connector,
+            )?;
             super::grant::ensure(&mut state.write().await.isolation, &graph)
         }
         #[cfg(not(feature = "security"))]

@@ -59,7 +59,7 @@ async fn project(served: &Served) {
 
 /// Every triple of the connector's pack graph; empty before it exists.
 async fn pack_triples(served: &Served, connector: &str) -> Vec<Triple> {
-    let graph = crate::graph_schema::pack_projection_graph_name(
+    let graph = medulla_catalog_types::connector_pack::ids::pack_projection_graph_name(
         TENANT,
         &ResourceId::new(connector).unwrap(),
     )

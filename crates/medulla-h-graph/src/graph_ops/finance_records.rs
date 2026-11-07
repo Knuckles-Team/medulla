@@ -114,7 +114,6 @@ fn stored_props(
 #[cfg(all(feature = "finance", feature = "shacl"))]
 pub(super) fn admit_put(
     core: &GraphCore,
-    tenant_id: &str,
     tenant_scope: &str,
     method: &Method,
 ) -> Result<(Method, u64), String> {
@@ -138,7 +137,12 @@ pub(super) fn admit_put(
             format!("{} records are derived by the engine", kind.class_name()),
         ));
     }
-    if record.tenant != tenant_id {
+    // Compared by the opaque carrier scope, not the raw name: replicated apply
+    // runs under a context that carries only the leader's tenant scope
+    // (`VerifiedRequestContext::replicated_mutation`), so a raw comparison
+    // refused every replicated put on apply. On the leader the two agree,
+    // because `tenant_scope` is the scope of the verified tenant.
+    if medulla_server_api::carrier::tenant_scope_of(&record.tenant) != tenant_scope {
         return Err(format!(
             "ACCESS_DENIED: a {} record for another tenant cannot be written",
             kind.class_name()
@@ -211,17 +215,16 @@ pub(super) fn admit_put(
 ))]
 pub fn precheck_replicated_put(
     core: &GraphCore,
-    tenant_id: &str,
     tenant_scope: &str,
     method: &Method,
 ) -> Result<(), String> {
     #[cfg(all(feature = "finance", feature = "shacl"))]
     {
-        admit_put(core, tenant_id, tenant_scope, method).map(|_| ())
+        admit_put(core, tenant_scope, method).map(|_| ())
     }
     #[cfg(not(all(feature = "finance", feature = "shacl")))]
     {
-        let _ = (core, tenant_id, tenant_scope, method);
+        let _ = (core, tenant_scope, method);
         Err(
             "METHOD_NOT_YET_SERVED: FinanceRecordPut needs the finance and shacl features"
                 .to_string(),
@@ -256,9 +259,7 @@ pub(super) async fn handle_record(
             record_id = record.record_id.as_str(),
             outcome = tracing::field::Empty,
         );
-        let response = commit_put(ctx, tenant_id, method)
-            .instrument(span.clone())
-            .await;
+        let response = commit_put(ctx, method).instrument(span.clone()).await;
         span.record(
             "outcome",
             if response.error.is_none() {
@@ -316,8 +317,8 @@ pub(super) fn refuse_invalid_receipt(req_id: u64, method: &Method) -> Option<Res
 /// the one `BatchUpdate` (record node plus `derivedFrom` edges) for a research
 /// record, both through the gateway as one atomic mutation.
 #[cfg(all(feature = "finance", feature = "shacl"))]
-async fn commit_put(ctx: &MutationCtx<'_>, tenant_id: &str, method: &Method) -> Response {
-    let (write, head) = match admit_put(ctx.core, tenant_id, ctx.tenant_scope, method) {
+async fn commit_put(ctx: &MutationCtx<'_>, method: &Method) -> Response {
+    let (write, head) = match admit_put(ctx.core, ctx.tenant_scope, method) {
         Ok(admitted) => admitted,
         Err(error) => return Response::err(ctx.req_id, error),
     };

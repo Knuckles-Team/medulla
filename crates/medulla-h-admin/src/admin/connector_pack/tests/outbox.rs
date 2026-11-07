@@ -390,7 +390,7 @@ async fn projected_schema(
     served: &Served,
     connector: &str,
 ) -> std::sync::Arc<medulla_graph_core::graph::GraphSchemaSources> {
-    let graph = crate::graph_schema::pack_projection_graph_name(
+    let graph = medulla_catalog_types::connector_pack::ids::pack_projection_graph_name(
         TENANT,
         &ResourceId::new(connector).unwrap(),
     )

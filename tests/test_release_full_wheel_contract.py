@@ -386,7 +386,7 @@ def _assert_runner_budget(workflow: Path, name: str, job: dict) -> None:
         assert job["runs-on"] == "${{ matrix.runner }}"
         assert job.get("timeout-minutes") == 15
         assert {row["runner"] for row in job["strategy"]["matrix"]["include"]} == {
-            "macos-14",
+            "macos-15",
         }
     else:
         # Native compilation jobs retain the longer PR build budget, including

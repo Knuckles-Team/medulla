@@ -263,7 +263,7 @@ impl<'a> Dataset<'a> {
 /// (node ids are unique per graph so the first cell wins; edge blob-lists concatenate).
 /// Only the SPARQL-scanned maps are populated — the topology (`graph`/`node_map`) is not
 /// needed by the pattern matcher, which reads `node_properties`/`edge_properties` only.
-fn merge_views<'v>(views: impl Iterator<Item = &'v GraphView>) -> GraphView {
+pub fn merge_views<'v>(views: impl Iterator<Item = &'v GraphView>) -> GraphView {
     let mut out = GraphView::default();
     for v in views {
         for (k, cell) in &v.node_properties {
