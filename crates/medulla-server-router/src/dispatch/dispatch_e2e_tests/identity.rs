@@ -29,6 +29,7 @@ mod refusal_contract;
 mod resolution_context;
 mod revocation;
 mod stale_verdict;
+mod workstream;
 
 fn context(principal: &str, scopes: &[&str]) -> VerifiedRequestContext {
     verified(principal, scopes, &[])
