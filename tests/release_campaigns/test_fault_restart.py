@@ -1,8 +1,8 @@
 """Exact-artifact process-fault and restart certification.
 
-The certification implementation lives in
-``scripts/certify_exact_fault_restart.py`` so release pipelines can run it
-without pytest or the suite's shared engine fixture.  This wrapper is opt-in: no
+The certification implementation lives in ``campaign_fault_restart.py`` beside
+this module; the other release campaigns import it as their launcher.  Run it as
+``pytest -m release_campaign -k fault_restart``.  This test is opt-in: no
 artifact means the ordinary source suite skips it, while a partially configured
 or invalid explicit artifact is a hard failure rather than a skip or fallback.
 
@@ -28,10 +28,10 @@ from pathlib import Path
 
 import pytest
 
-pytestmark = pytest.mark.exact_artifact
+pytestmark = [pytest.mark.exact_artifact, pytest.mark.release_campaign]
 
-ROOT = Path(__file__).resolve().parents[1]
-HARNESS = ROOT / "scripts" / "certify_exact_fault_restart.py"
+ROOT = Path(__file__).resolve().parents[2]
+HARNESS = Path(__file__).resolve().parent / "campaign_fault_restart.py"
 
 
 @pytest.mark.timeout(3600)

@@ -21,7 +21,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from certify_exact_fault_restart import (
+from campaign_fault_restart import (
     AGENT_ID,
     GRAPH,
     CertificationError,

@@ -5,17 +5,20 @@ not search for an engine, invoke Cargo, use a source-tree build, or downgrade to
 smaller feature set. Both the executable and its lowercase SHA-256 are mandatory.
 
 ```bash
-python scripts/certify_exact_fault_restart.py \
-  --binary "${ENGINE_BINARY:?}" \
-  --binary-sha256 "${ENGINE_BINARY_SHA256:?}" \
-  --output "${CERTIFICATION_EVIDENCE:?}"
+MEDULLA_EXACT_CERTIFICATION=1 \
+MEDULLA_TEST_BINARY="${ENGINE_BINARY:?}" \
+MEDULLA_TEST_BINARY_SHA256="${ENGINE_BINARY_SHA256:?}" \
+  pytest -m release_campaign -k fault_restart
 ```
+
+The campaign implementation is `tests/release_campaigns/campaign_fault_restart.py`; it
+still accepts `--binary`, `--binary-sha256` and `--output` when run directly.
 
 An unavailable, non-executable, symlinked, or digest-mismatched artifact fails
 before a server starts. The evidence destination must be new, preventing a failed
 rerun from leaving an older successful artifact that can be mistaken for the
-current result. The pytest wrapper is opt-in through
-`MEDULLA_TEST_BINARY` and
+current result. The pytest test is opt-in through
+`MEDULLA_EXACT_CERTIFICATION=1` and needs `MEDULLA_TEST_BINARY` and
 `MEDULLA_TEST_BINARY_SHA256`; supplying only one, or supplying an
 invalid artifact, is a test failure rather than a skip.
 

@@ -4,6 +4,9 @@ Four release gates run the supplied engine artifact without discovering or
 building a replacement. They require an executable path, the artifact's lowercase
 SHA-256, and a new absolute evidence destination. A symlink, digest mismatch, missing artifact,
 or pre-existing evidence file fails before certification begins.
+Each campaign is a `release_campaign` pytest (`pytest -m release_campaign -k <name>`) in
+`tests/release_campaigns/`, opted in with `MEDULLA_EXACT_CERTIFICATION=1`; the evidence
+directory is `MEDULLA_CAMPAIGN_EVIDENCE_DIR`.
 
 The artifact must be the current `full` tier. These campaigns intentionally fail when
 a full-tier listener, served modality, KnowledgeBatch family, or reasoning feature is
@@ -12,12 +15,13 @@ absent; they do not downgrade to a smaller feature set.
 ## Four served production modalities
 
 ```bash
-python scripts/certify_exact_multimodal.py \
-  --binary "${ENGINE_BINARY:?}" \
-  --binary-sha256 "${ENGINE_BINARY_SHA256:?}" \
-  --performance-evidence "${G37_JSON_EVIDENCE:?}" \
-  --performance-evidence-sha256 "${G37_JSON_EVIDENCE_SHA256:?}" \
-  --output "${MULTIMODAL_EVIDENCE:?}"
+MEDULLA_EXACT_CERTIFICATION=1 \
+MEDULLA_TEST_BINARY="${ENGINE_BINARY:?}" \
+MEDULLA_TEST_BINARY_SHA256="${ENGINE_BINARY_SHA256:?}" \
+MEDULLA_PERFORMANCE_EVIDENCE="${G37_JSON_EVIDENCE:?}" \
+MEDULLA_PERFORMANCE_EVIDENCE_SHA256="${G37_JSON_EVIDENCE_SHA256:?}" \
+MEDULLA_CAMPAIGN_EVIDENCE_DIR="${MULTIMODAL_EVIDENCE_DIR:?}" \
+  pytest -m release_campaign -k multimodal
 ```
 
 The G-14 campaign requires document, image, audio, and video from the exact `full`
@@ -49,10 +53,11 @@ artifact or reduced to a document-only smoke test.
 ## Protocol authorization and read isolation
 
 ```bash
-python scripts/certify_exact_protocol_authorization.py \
-  --binary "${ENGINE_BINARY:?}" \
-  --binary-sha256 "${ENGINE_BINARY_SHA256:?}" \
-  --output "${PROTOCOL_EVIDENCE:?}"
+MEDULLA_EXACT_CERTIFICATION=1 \
+MEDULLA_TEST_BINARY="${ENGINE_BINARY:?}" \
+MEDULLA_TEST_BINARY_SHA256="${ENGINE_BINARY_SHA256:?}" \
+MEDULLA_CAMPAIGN_EVIDENCE_DIR="${PROTOCOL_EVIDENCE_DIR:?}" \
+  pytest -m release_campaign -k protocol_authorization
 ```
 
 The harness enables the native RPC service plus PostgreSQL, MySQL, MSSQL, SQLite,
@@ -74,10 +79,11 @@ terminal authorities.
 ## Seven-family KnowledgeBatch
 
 ```bash
-python scripts/certify_exact_knowledge_batch.py \
-  --binary "${ENGINE_BINARY:?}" \
-  --binary-sha256 "${ENGINE_BINARY_SHA256:?}" \
-  --output "${KNOWLEDGE_BATCH_EVIDENCE:?}"
+MEDULLA_EXACT_CERTIFICATION=1 \
+MEDULLA_TEST_BINARY="${ENGINE_BINARY:?}" \
+MEDULLA_TEST_BINARY_SHA256="${ENGINE_BINARY_SHA256:?}" \
+MEDULLA_CAMPAIGN_EVIDENCE_DIR="${KNOWLEDGE_BATCH_EVIDENCE_DIR:?}" \
+  pytest -m release_campaign -k knowledge_batch
 ```
 
 The exact family inventory is graph, SQL, RDF, vector, time series, job, and
@@ -98,10 +104,11 @@ snapshot binding.
 ## Reasoning restart, retraction, and repair
 
 ```bash
-python scripts/certify_exact_reasoning_repair.py \
-  --binary "${ENGINE_BINARY:?}" \
-  --binary-sha256 "${ENGINE_BINARY_SHA256:?}" \
-  --output "${REASONING_EVIDENCE:?}"
+MEDULLA_EXACT_CERTIFICATION=1 \
+MEDULLA_TEST_BINARY="${ENGINE_BINARY:?}" \
+MEDULLA_TEST_BINARY_SHA256="${ENGINE_BINARY_SHA256:?}" \
+MEDULLA_CAMPAIGN_EVIDENCE_DIR="${REASONING_EVIDENCE_DIR:?}" \
+  pytest -m release_campaign -k reasoning_repair
 ```
 
 The nine-case campaign covers projection lag and convergence, restart equality,
@@ -114,21 +121,23 @@ acknowledgement. A support removal must flip a belief and survive a second resta
 
 ## Pytest release entry point
 
-The opt-in wrapper runs the four campaigns serially against one explicitly supplied
+All four campaigns (and the fault/restart campaign) are `release_campaign` tests under
+`tests/release_campaigns/`; pytest runs them serially against one explicitly supplied
 artifact:
 
 ```bash
+MEDULLA_EXACT_CERTIFICATION=1 \
 MEDULLA_TEST_BINARY="${ENGINE_BINARY:?}" \
 MEDULLA_TEST_BINARY_SHA256="${ENGINE_BINARY_SHA256:?}" \
 MEDULLA_PERFORMANCE_EVIDENCE="${G37_JSON_EVIDENCE:?}" \
 MEDULLA_PERFORMANCE_EVIDENCE_SHA256="${G37_JSON_EVIDENCE_SHA256:?}" \
-python -m pytest tests/test_exact_release_campaigns.py -q
+python -m pytest -m release_campaign -q
 ```
 
-Supplying neither environment variable skips the opt-in wrapper. Supplying only one,
-or supplying an invalid artifact, fails. The shared suite engine is not started for an
-exact-artifact-only selection, so the campaign does not compile another binary or run
-two engine instances concurrently.
+Without `MEDULLA_EXACT_CERTIFICATION=1` the campaigns skip. With it, a missing
+environment variable or an invalid artifact fails. The shared suite engine is not
+started for an exact-artifact-only selection, so the campaign does not compile another
+binary or run two engine instances concurrently.
 
 ## Evidence and cleanup
 

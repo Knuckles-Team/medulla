@@ -43,7 +43,7 @@ from typing import Any
 # local source win the resolution. `importlib.import_module` (a function
 # call, not an `import` statement) reaches it without requiring this
 # late-bound sys.path entry to precede a plain top-of-file import.
-REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPOSITORY_ROOT))
 SyncMedullaClient = importlib.import_module("medulla.client").SyncMedullaClient
 
@@ -344,7 +344,7 @@ class ExactEngine:
                 # `{signer_id: key}` form fail closed (no roles, no System grant),
                 # so this sandbox's own genesis `bootstrap_system_identity` -- an
                 # `AgentRole::System` self-registration -- is denied under it.
-                # `certify_exact_protocol_authorization.py` reuses this exact
+                # `campaign_protocol_authorization.py` reuses this exact
                 # engine sandbox and additionally registers a peer carrying
                 # `PEER_ROLE`, so that role is enumerated here too.
                 "MEDULLA_SIGNER_KEYS_JSON": json.dumps(

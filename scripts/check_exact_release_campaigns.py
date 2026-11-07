@@ -218,10 +218,10 @@ def _load_campaign_trees(errors: list[str]) -> dict[str, ast.AST | None]:
     return {
         relative: _check_harness_baseline(relative, _read(relative), errors)
         for relative in (
-            "scripts/certify_exact_protocol_authorization.py",
-            "scripts/certify_exact_multimodal.py",
-            "scripts/certify_exact_knowledge_batch.py",
-            "scripts/certify_exact_reasoning_repair.py",
+            "tests/release_campaigns/campaign_protocol_authorization.py",
+            "tests/release_campaigns/campaign_multimodal.py",
+            "tests/release_campaigns/campaign_knowledge_batch.py",
+            "tests/release_campaigns/campaign_reasoning_repair.py",
         )
     }
 
@@ -236,7 +236,9 @@ def _check_protocol_campaign(
             data_paths = _literal_set(tree, "DATA_PATHS")
             wire_features = set(_literal(tree, "WIRE_FEATURES").values())
             listener_env = set(_literal(tree, "LISTENER_ENV").values())
-            launcher_tree = ast.parse(_read("scripts/certify_exact_fault_restart.py"))
+            launcher_tree = ast.parse(
+                _read("tests/release_campaigns/campaign_fault_restart.py")
+            )
             allowed_listener_env = _literal_set(
                 launcher_tree, "EXACT_OPTIONAL_LISTENER_ENV"
             )
@@ -351,9 +353,17 @@ def _check_feature_contract(errors: list[str]) -> None:
 
 
 def _check_release_wrapper(errors: list[str]) -> None:
-    wrapper = _read("tests/test_exact_release_campaigns.py")
-    if "cargo" in wrapper or "resolve_engine_binary" in wrapper:
-        errors.append("exact release pytest wrapper discovers or builds an artifact")
+    wrappers = [ROOT / "tests" / "release_campaigns" / "campaign_runner.py"]
+    wrappers.extend(sorted((ROOT / "tests" / "release_campaigns").glob("test_*.py")))
+    for wrapper in wrappers:
+        # test_fault_restart.py is held by check_exact_fault_restart_harness.py.
+        if not wrapper.is_file() or wrapper.name == "test_fault_restart.py":
+            continue
+        text = wrapper.read_text(encoding="utf-8")
+        if "cargo" in text or "resolve_engine_binary" in text:
+            errors.append(
+                f"{wrapper.name}: exact release wrapper discovers or builds an artifact"
+            )
 
 
 def _report(errors: list[str]) -> int:
@@ -369,10 +379,10 @@ def _report(errors: list[str]) -> int:
 def main() -> int:
     errors: list[str] = []
     trees = _load_campaign_trees(errors)
-    protocol_relative = "scripts/certify_exact_protocol_authorization.py"
-    multimodal_relative = "scripts/certify_exact_multimodal.py"
-    batch_relative = "scripts/certify_exact_knowledge_batch.py"
-    reasoning_relative = "scripts/certify_exact_reasoning_repair.py"
+    protocol_relative = "tests/release_campaigns/campaign_protocol_authorization.py"
+    multimodal_relative = "tests/release_campaigns/campaign_multimodal.py"
+    batch_relative = "tests/release_campaigns/campaign_knowledge_batch.py"
+    reasoning_relative = "tests/release_campaigns/campaign_reasoning_repair.py"
     _check_protocol_campaign(trees[protocol_relative], errors)
     _check_multimodal_campaign(trees[multimodal_relative], errors)
     _check_batch_campaign(trees[batch_relative], errors)

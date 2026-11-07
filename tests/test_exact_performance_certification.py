@@ -13,12 +13,12 @@ from typing import Any
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-SCRIPT = ROOT / "scripts" / "certify_exact_performance.py"
+SCRIPT = ROOT / "tests" / "release_campaigns" / "campaign_performance.py"
 pytestmark = pytest.mark.exact_artifact
 
 
 def _load_harness():
-    spec = importlib.util.spec_from_file_location("certify_exact_performance", SCRIPT)
+    spec = importlib.util.spec_from_file_location("campaign_performance", SCRIPT)
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module

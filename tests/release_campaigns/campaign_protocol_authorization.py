@@ -22,7 +22,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from certify_exact_fault_restart import (
+from campaign_fault_restart import (
     AGENT_ID,
     AUDIENCE,
     CERTIFIER_ALLOWED_ROLES,
@@ -51,7 +51,7 @@ PEER_ROLE = "exact-matrix-reader"
 # import with an obvious message instead of at `register_identity` with the
 # deliberately-indistinguishable "signer is not authorized" denial.
 assert PEER_ROLE in CERTIFIER_ALLOWED_ROLES, (
-    f"{PEER_ROLE!r} must be listed in certify_exact_fault_restart."
+    f"{PEER_ROLE!r} must be listed in campaign_fault_restart."
     "CERTIFIER_ALLOWED_ROLES or the engine sandbox will refuse to register it"
 )
 SOCKET_TIMEOUT_SECONDS = 3.0

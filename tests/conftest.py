@@ -194,8 +194,9 @@ def _prebuilt_test_binary() -> str | None:
     in this same checkout, or a CI artifact) can point `MEDULLA_TEST_BINARY`
     at it to skip the Cargo build+run entirely. Optional
     `MEDULLA_TEST_BINARY_SHA256` verifies its integrity the same way the
-    exact-artifact certification tests already do (`test_durable_crash.py`,
-    `test_exact_release_campaigns.py`) — unset ⇒ no digest check, just an
+    exact-artifact certification tests already do
+    (`release_campaigns/test_fault_restart.py`,
+    `test_multimodal.py`) — unset ⇒ no digest check, just an
     executable-file check. Unset/invalid/missing ⇒ ``None`` and the caller falls
     back to today's cargo build+run, unchanged.
     """

@@ -13,8 +13,10 @@ import pytest
 pytestmark = pytest.mark.no_engine
 
 ROOT = Path(__file__).resolve().parents[1]
-HARNESS = ROOT / "scripts" / "certify_exact_multimodal.py"
-WRAPPER = ROOT / "tests" / "test_exact_release_campaigns.py"
+CAMPAIGNS = ROOT / "tests" / "release_campaigns"
+HARNESS = CAMPAIGNS / "campaign_multimodal.py"
+WRAPPER = CAMPAIGNS / "test_multimodal.py"
+RUNNER = CAMPAIGNS / "campaign_runner.py"
 
 
 def _literal(tree: ast.AST, name: str) -> object:
@@ -82,9 +84,9 @@ def test_multimodal_campaign_binds_only_the_supplied_artifact() -> None:
 
 
 def test_serial_exact_wrapper_requires_multimodal_summary() -> None:
-    source = WRAPPER.read_text(encoding="utf-8")
+    source = WRAPPER.read_text(encoding="utf-8") + RUNNER.read_text(encoding="utf-8")
 
-    assert "certify_exact_multimodal.py" in source
+    assert "campaign_multimodal.py" in source
     assert '"modalities": 4' in source
     assert '"dimensions_per_modality": 12' in source
     assert '"fault_cases": 16' in source
