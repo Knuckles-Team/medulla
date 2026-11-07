@@ -121,6 +121,11 @@ pub struct IsolationLayer {
     /// load redb. `Arc` keeps [`IsolationLayer`] `Clone`.
     #[cfg(feature = "security")]
     persist: Option<std::sync::Arc<dyn crate::rbac_persist::RbacPolicyStore>>,
+    /// The bounded, rate-limited sample of this layer's authorization denials
+    /// (MEDULLA-SDLC-R023). Clones of one layer share it; two layers built
+    /// apart share nothing.
+    #[cfg(feature = "security")]
+    denials: std::sync::Arc<std::sync::Mutex<medulla_identity_types::identity::DenialSampler>>,
 }
 
 /// Extract the tenant slug from a graph name built by `agent-utilities`'

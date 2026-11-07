@@ -20,6 +20,8 @@ impl IsolationLayer {
             persist: Some(std::sync::Arc::new(
                 crate::rbac_persist::MemoryRbacStore::new(),
             )),
+            #[cfg(feature = "security")]
+            denials: Default::default(),
         }
     }
 
@@ -67,6 +69,7 @@ impl IsolationLayer {
             identity_bootstrap,
             persist_revision,
             persist: Some(store),
+            denials: Default::default(),
         })
     }
 
