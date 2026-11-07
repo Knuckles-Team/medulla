@@ -2099,6 +2099,9 @@ Every row below has a planned test at its exact post-split path; the row text na
 | `MEDULLA-DECISION-ENGINE-R822` | `crates/medulla-h-decide/src/decide/stat_calibration.rs::fit_isotonic` |
 | `MEDULLA-DECISION-ENGINE-R828` | `crates/medulla-server-api/src/api/conflict_decider.rs::branch_merge_conflicts_route_through_the_conflict_decider_seam` |
 | `MEDULLA-DECISION-ENGINE-R829` | `crates/medulla-h-decide/src/decide/stat_tests/connector_toolchoice_tests.rs::catalog_serves_connector_points_and_unknown_id_abstains` |
+| `MEDULLA-DECISION-ENGINE-R829.1` | `crates/medulla-h-decide/src/decide/stat_tests/connector_toolchoice_tests.rs::catalog_serves_the_five_rank_points_and_unknown_id_abstains` and `crates/medulla-h-decide/src/decide/stat_tests/connector_toolchoice_tests.rs::more_than_two_thousand_candidates_are_refused` (L3). |
+| `MEDULLA-DECISION-ENGINE-R829.2` | `crates/medulla-h-decide/src/decide/features/capability_text.rs::tests::name_match_counts_double_and_rare_terms_weigh_more` and `crates/medulla-h-decide/src/decide/features/capability_text.rs::tests::semantic_absent_when_embedding_model_not_ready` (L2). |
+| `MEDULLA-DECISION-ENGINE-R829.3` | `tests/decide/test_capability_rank_served.py::test_named_system_and_object_rank_first_in_a_large_catalog` and `tests/decide/test_capability_rank_served.py::test_p99_ceiling_holds_on_a_warm_slot` (L4). |
 | `MEDULLA-DECISION-ENGINE-R134.111.14` | `crates/medulla-decision-types/src/decision/task_plan/tests.rs::control_steps_round_trip_and_refuse_two_kinds` |
 | `MEDULLA-DECISION-ENGINE-R134.111.15` | `crates/medulla-decision-types/src/decision/task_plan/tests.rs::control_checks_refuse_planted_faults` |
 | `MEDULLA-DECISION-ENGINE-R134.111.16` | `crates/medulla-h-decide/src/decide/stat_tests/task_plan_tests.rs::control_refusals_name_the_task` |

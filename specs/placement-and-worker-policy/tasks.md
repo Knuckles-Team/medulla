@@ -86,3 +86,5 @@ Each task line reads `- [ ] T001 [P] [US1] <ID>-R012.4 description`. `[P]` marks
 - [ ] T080 [US4] MEDULLA-PLACEMENT-R783.1 Describe the raft membership-shrink machine in the ontology
 - [ ] T081 [US4] MEDULLA-PLACEMENT-R783.2 Membership-shrink refusals are typed
 - [ ] T082 [US4] MEDULLA-PLACEMENT-R783.3 Inventory the sibling raft machines
+- [ ] T083 [US4] MEDULLA-PLACEMENT-R781.3 Delete the tombstone field from the record and the result. Size: M, 2 PRs, 5 hours.
+- [ ] T084 [US4] MEDULLA-PLACEMENT-R781.4 Convert stored reservation records. Size: S, 1 PR, 3 hours.

@@ -176,3 +176,4 @@ Each task line reads `- [ ] T001 [P] [US1] <ID> description`. One task per leaf 
 - [ ] T169 [US9] MEDULLA-ORCH-VOCAB-R812.4 Serve the typed refusal for work item transitions
 - [ ] T173 [US9] MEDULLA-ORCH-VOCAB-R812.5 Export the work item state vocabulary
 - [ ] T170 [US9] MEDULLA-ORCH-VOCAB-R813 Lane work item derives terminal from status
+- [ ] T174 [US9] MEDULLA-ORCH-VOCAB-R811.8 Every served machine method returns TransitionRefused through the error mapper. Size: M, 2 PRs, 5 hours.

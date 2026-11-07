@@ -124,3 +124,10 @@ Compile slot: Medulla only, one cargo lane host-wide at a time.
 - [ ] T114 MEDULLA-SDLC-R030 Defect lifecycle is one explicit state machine
 - [ ] T115 MEDULLA-SDLC-R030.1 Defect transition function and edge table
 - [ ] T116 MEDULLA-SDLC-R030.2 Describe the defect machine in the ontology
+- [ ] T117 MEDULLA-SDLC-R021.1 Crate layers live in the coupling gate policy. Size: S, 1 PR, 3 hours.
+- [ ] T118 MEDULLA-SDLC-R021.2 The slice map test guards every move. Size: S, 1 PR, 3 hours.
+- [ ] T119 MEDULLA-SDLC-R021.3 Move the query plan AST and wire DTOs to medulla-query-types. Size: L, 4 PRs, 1.5 days.
+- [ ] T120 MEDULLA-SDLC-R021.4 Move access control to medulla-identity-types. Size: S, 1 PR, 4 hours.
+- [ ] T121 MEDULLA-SDLC-R021.5 Move the domain modules into their owning slices. Size: L, 6 PRs, 2 days.
+- [ ] T122 MEDULLA-SDLC-R021.6 Create the finance and ingestion slices. Size: M, 2 PRs, 6 hours.
+- [ ] T123 MEDULLA-SDLC-R021.7 No crate re-exports another crate's items. Size: M, 2 PRs, 6 hours.

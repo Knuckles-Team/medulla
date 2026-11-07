@@ -116,6 +116,20 @@ none
 - `Method::ConnectorPack` arm (`decision_plane.rs:161`) to `project_head` (`crates/medulla-h-admin/src/admin/connector_pack/reproject.rs:74`), which leaves an outbox row for the capability feed of `MEDULLA-DECISION-ENGINE-R172.7.2`.
 - Obsolete paths to delete: the per-kind `if` chains in `stat_decide.rs` and `candidates.rs` once the family registry lands.
 
+### Capability ranking catalog (R829.1 to R829.3)
+
+Pre-untangled design, one line per answer.
+
+- Owner. Medulla `crates/medulla-h-decide`. Consumers send candidates and a fallback; they hold no scorer.
+- Cohesion. The feature computation sits beside the rank family; the five question ids share it.
+- Dependency direction. The family reads the catalog table and the feature module; the SDK and arbora call the served method only.
+- Interface depth. One served method, `Decide`, with five new question ids.
+- Special cases. None. A tool, a skill and an operation differ by the question id and nothing else.
+- State. None.
+- Environment. The two weights are knobs of the feature.
+
+Order: R829.1, R829.2, R829.3.
+
 ## Cross-repo seams
 
 - Served web page selection: `MEDULLA-DECISION-ENGINE-R802.3` provides, `ARBORA-OPS-R067` consumes. Contract: [arbora-served-operations.md](contracts/arbora-served-operations.md).

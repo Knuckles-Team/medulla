@@ -1197,6 +1197,20 @@ Code shapes: new logic goes into the new files listed in Project Structure. No f
 - SPARQL update: `Method::ApplyMutation` with event type `SPARQL_HTTP_UPDATE_EVENT` → `dispatch_sparql_http_update` (`router.rs:102`) → `coordinated_sparql_http_update` (`crates/medulla-server-graph/src/dispatch/sparql_update.rs:806`). There is no `Method::SparqlUpdate`.
 - Obsolete paths to delete: the legacy query-text method retired by `MEDULLA-FEDERATED-QUERY-R020`, and every `src/server/...` path that predates the crate split.
 
+### UQL aggregate, order, skip and edge source (R733 to R735)
+
+Pre-untangled design, one line per answer.
+
+- Owner. Medulla, `crates/medulla-uql` (grammar) and the executor crate.
+- Cohesion. Each construct is one production, one plan node and one executor arm; the grammar table is the single source of the EBNF block, the natural-language prompt and the expected-token lists.
+- Dependency direction. The parser depends on the plan AST in `medulla-query-types`; the executor depends on the AST.
+- Interface depth. Four keywords: GROUP, ORDER, SKIP, EDGES.
+- Special cases. None. A web view needs no engine method of its own; it sends UQL text.
+- State. None; queries are stateless.
+- Environment. The group cap and skip cap are knobs of this feature.
+
+Order: R733, then R734 and R735 in parallel.
+
 ## Cross-repo seams
 
 - `ARBORA-OPS-R006` serves the methods of this spec as operations, with `ARBORA-OPS-R883` binding new methods and `ARBORA-OPS-R857` serving the SPARQL endpoint. Provider rows: `MEDULLA-FEDERATED-QUERY-R650.3`, `MEDULLA-FEDERATED-QUERY-R707`. Contract: [contracts/arbora-served-operations.md](contracts/arbora-served-operations.md).

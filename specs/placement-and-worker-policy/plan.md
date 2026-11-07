@@ -181,6 +181,20 @@ Focused `cargo test` on the named files per row; `spec-status` and `spec-decompo
 - `MembershipShrinkMachine`: entry point the shrink controller → `advance` and `abort` → `advance` (`:210`) and `abort` (`:240`) in `crates/medulla-raft/src/raft/membership_shrink.rs` → stored state field. Attach points: `membership_shrink.rs:210,240`. Wiring row: MEDULLA-PLACEMENT-R783.2. Hot-path proof row: `no_writer_sets_state_outside_apply` of MEDULLA-PLACEMENT-R783.2.
 - Sibling raft machines: inventory only in MEDULLA-PLACEMENT-R783.3; the edge tables are not yet extracted.
 
+### Removing the reservation tombstone (R781.3, R781.4)
+
+Pre-untangled design, one line per answer.
+
+- Owner. Medulla, `crates/medulla-resource-store` and the result types in `medulla-result-types`.
+- Cohesion. The state and its derived terminal flag are one fact; the field goes, the method `is_terminal` stays.
+- Dependency direction. The store depends on the result types; the result types depend on nothing above.
+- Interface depth. Callers ask `state.is_terminal()`; they read no second field.
+- Special cases. None. Replay of a terminal row is decided from the state, as for every machine.
+- State. The explicit machine of R781.1; this row removes the second source of truth.
+- Environment. None.
+
+Order: R781.1, R781.3, R781.4. The served wire type changes with R781.3, so the generated schema and clients rebuild at build.
+
 ## Cross-repo seams
 
 | Seam | Provider | Consumer |
