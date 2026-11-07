@@ -19,7 +19,7 @@ The committed contracts are:
   covering every one of the 54 implemented ledger rows exactly once.
 - `docs/architecture/hot-path-complexity.md`: the stable `G37-HP-001` through
   `G37-HP-054` row identities and their qualified source-level bounds.
-- `scripts/certify_exact_performance.py`: the serialized release harness and
+- `tests/release_campaigns/campaign_performance.py`: the serialized release harness and
   path-safe JSON/Markdown evidence renderer.
 
 ## What it proves
@@ -110,20 +110,20 @@ exercises administrative, job, and modality surfaces in the same process.
 ```
 
 Supply the executable, its independently recorded digest, external configuration,
-Linux-native work root, and two new evidence targets explicitly:
+and a new evidence directory explicitly (the work root is the test's temporary
+directory, which must be on the Linux-native filesystem):
 
 ```bash
-python3 scripts/certify_exact_performance.py \
-  --engine-binary "$ENGINE_BINARY" \
-  --engine-sha256 "$ENGINE_SHA256" \
-  --authority-config "$G37_AUTHORITY_CONFIG" \
-  --work-root "$G37_LINUX_WORK_ROOT" \
-  --json-output "$G37_JSON_EVIDENCE" \
-  --markdown-output "$G37_MARKDOWN_EVIDENCE"
+MEDULLA_EXACT_CERTIFICATION=1 \
+MEDULLA_TEST_BINARY="$ENGINE_BINARY" \
+MEDULLA_TEST_BINARY_SHA256="$ENGINE_SHA256" \
+MEDULLA_PERFORMANCE_AUTHORITY_CONFIG="$G37_AUTHORITY_CONFIG" \
+MEDULLA_CAMPAIGN_EVIDENCE_DIR="$G37_EVIDENCE_DIR" \
+  pytest -m release_campaign -k performance
 ```
 
 The work root must be on the Linux-native WSL filesystem, not a mounted host
-volume. Evidence files must not already exist. The harness always stops its engine
+volume (set `TMPDIR` accordingly). Evidence files must not already exist. The harness always stops its engine
 and removes the private database, staged executable, socket, and logs after the
 measurement. Evidence contains only artifact and contract digests, aggregate
 measurements, abstract hardware class, threshold decisions, and coverage counts.

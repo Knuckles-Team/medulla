@@ -62,6 +62,26 @@ def required_env(*, performance: bool = False) -> ExactCertificationEnv:
     return env
 
 
+def run_harness(
+    harness: Path, args: list[str], *, timeout: int = 1100
+) -> subprocess.CompletedProcess[str]:
+    """Run one campaign harness as a subprocess from the repository root."""
+    return subprocess.run(
+        [sys.executable, str(harness), *args],
+        cwd=ROOT,
+        env={**os.environ, "PYTHONPATH": str(HERE)},
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+    )
+
+
+def evidence_dir(tmp_path: Path) -> Path:
+    """MEDULLA_CAMPAIGN_EVIDENCE_DIR keeps the evidence (destinations must be new)."""
+    return Path(_env("MEDULLA_CAMPAIGN_EVIDENCE_DIR") or tmp_path)
+
+
 def run_campaign(
     name: str,
     harness: Path,
@@ -72,28 +92,17 @@ def run_campaign(
     timeout: int = 1100,
 ) -> dict[str, Any]:
     """Run one harness against the exact artifact; return its evidence."""
-    # MEDULLA_CAMPAIGN_EVIDENCE_DIR keeps the evidence (the destination must be new).
-    evidence_dir = Path(_env("MEDULLA_CAMPAIGN_EVIDENCE_DIR") or tmp_path)
-    evidence_path = evidence_dir / f"exact-{name}.json"
-    completed = subprocess.run(
-        [
-            sys.executable,
-            str(harness),
-            "--binary",
-            env.binary,
-            "--binary-sha256",
-            env.digest,
-            "--output",
-            str(evidence_path),
-            *extra_args,
-        ],
-        cwd=ROOT,
-        env={**os.environ, "PYTHONPATH": str(HERE)},
-        check=False,
-        capture_output=True,
-        text=True,
-        timeout=timeout,
-    )
+    evidence_path = evidence_dir(tmp_path) / f"exact-{name}.json"
+    args = [
+        "--binary",
+        env.binary,
+        "--binary-sha256",
+        env.digest,
+        "--output",
+        str(evidence_path),
+        *extra_args,
+    ]
+    completed = run_harness(harness, args, timeout=timeout)
     assert completed.returncode == 0, f"{name} exact certification failed"
     evidence: dict[str, Any] = json.loads(evidence_path.read_text(encoding="utf-8"))
     return evidence

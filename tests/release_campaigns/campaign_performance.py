@@ -39,7 +39,7 @@ from typing import Any
 
 import msgpack
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_DATASET = ROOT / "protocols" / "performance" / "v1" / "dataset.json"
 DEFAULT_THRESHOLDS = ROOT / "protocols" / "performance" / "v1" / "thresholds.json"
 DEFAULT_SCENARIOS = ROOT / "protocols" / "performance" / "v1" / "scenarios.json"
