@@ -229,6 +229,8 @@ fn illegal_pairs() -> Vec<(GovernedStatus, GovernedEvent)> {
     out
 }
 
+// spec: MEDULLA-IDENTITY-R720.1
+
 #[test]
 fn edge_g01_proposed_approve() {
     edge_case(
@@ -238,6 +240,8 @@ fn edge_g01_proposed_approve() {
         GovernedStatus::Approved,
     );
 }
+
+// spec: MEDULLA-IDENTITY-R720.1
 
 #[test]
 fn edge_g02_proposed_revoke() {
@@ -249,6 +253,8 @@ fn edge_g02_proposed_revoke() {
     );
 }
 
+// spec: MEDULLA-IDENTITY-R720.1
+
 #[test]
 fn edge_g03_proposed_lapse() {
     edge_case(
@@ -258,6 +264,8 @@ fn edge_g03_proposed_lapse() {
         GovernedStatus::Expired,
     );
 }
+
+// spec: MEDULLA-IDENTITY-R720.1
 
 #[test]
 fn edge_g04_approved_consume() {
@@ -269,6 +277,8 @@ fn edge_g04_approved_consume() {
     );
 }
 
+// spec: MEDULLA-IDENTITY-R720.1
+
 #[test]
 fn edge_g05_approved_revoke() {
     edge_case(
@@ -279,6 +289,8 @@ fn edge_g05_approved_revoke() {
     );
 }
 
+// spec: MEDULLA-IDENTITY-R720.1
+
 #[test]
 fn edge_g06_approved_lapse() {
     edge_case(
@@ -288,6 +300,8 @@ fn edge_g06_approved_lapse() {
         GovernedStatus::Expired,
     );
 }
+
+// spec: MEDULLA-IDENTITY-R720.1
 
 #[test]
 fn every_illegal_pair_is_refused() {
@@ -309,6 +323,8 @@ fn every_illegal_pair_is_refused() {
         }
     }
 }
+
+// spec: MEDULLA-IDENTITY-R720.1
 
 #[test]
 fn refusal_carries_machine_from_event() {
@@ -339,6 +355,8 @@ fn direct_state_writes<'a>(source: &'a str, field: &str, ty: &str) -> Vec<&'a st
     out
 }
 
+// spec: MEDULLA-IDENTITY-R720.1
+
 #[test]
 fn no_writer_sets_state_outside_apply() {
     let path = concat!(env!("CARGO_MANIFEST_DIR"), "/src/governed_change.rs");
@@ -349,6 +367,8 @@ fn no_writer_sets_state_outside_apply() {
         "direct state writes in src/governed_change.rs: {writes:?}"
     );
 }
+
+// spec: MEDULLA-IDENTITY-R720.1
 
 #[test]
 fn every_transition_and_refusal_is_covered() {

@@ -1524,6 +1524,8 @@ mod tests {
         out
     }
 
+    // spec: MEDULLA-DURABLE-KERNEL-R872.1
+
     #[test]
     fn edge_x01_inspect_begin_install() {
         edge_case(
@@ -1534,6 +1536,8 @@ mod tests {
         );
     }
 
+    // spec: MEDULLA-DURABLE-KERNEL-R872.1
+
     #[test]
     fn edge_x02_installing_finish_install() {
         edge_case(
@@ -1543,6 +1547,8 @@ mod tests {
             UpgradePhase::Installed,
         );
     }
+
+    // spec: MEDULLA-DURABLE-KERNEL-R872.1
 
     #[test]
     fn every_illegal_pair_is_refused() {
@@ -1565,6 +1571,8 @@ mod tests {
         }
     }
 
+    // spec: MEDULLA-DURABLE-KERNEL-R872.1
+
     #[test]
     fn refusal_carries_machine_from_event() {
         let refused = UpgradePhase::Inspect
@@ -1575,6 +1583,8 @@ mod tests {
         assert_eq!(refused.event, "FinishInstall");
         assert_eq!(refused.code().as_str(), "TRANSITION_REFUSED");
     }
+
+    // spec: MEDULLA-DURABLE-KERNEL-R872.1
 
     #[test]
     fn every_transition_and_refusal_is_covered() {
@@ -1600,6 +1610,8 @@ mod tests {
             }
         }
     }
+
+    // spec: MEDULLA-DURABLE-KERNEL-R872.1
 
     #[test]
     fn no_writer_sets_state_outside_apply() {

@@ -298,6 +298,8 @@ fn illegal_pairs() -> Vec<(ControlLeaseStatus, ControlLeaseEvent)> {
     out
 }
 
+// spec: MEDULLA-PLACEMENT-R782.3
+
 #[test]
 fn edge_l01_active_consume() {
     edge_case(
@@ -307,6 +309,8 @@ fn edge_l01_active_consume() {
         ControlLeaseStatus::Consumed,
     );
 }
+
+// spec: MEDULLA-PLACEMENT-R782.3
 
 #[test]
 fn edge_l02_active_revoke() {
@@ -318,6 +322,8 @@ fn edge_l02_active_revoke() {
     );
 }
 
+// spec: MEDULLA-PLACEMENT-R782.3
+
 #[test]
 fn edge_l03_active_reclaim() {
     edge_case(
@@ -327,6 +333,8 @@ fn edge_l03_active_reclaim() {
         ControlLeaseStatus::Expired,
     );
 }
+
+// spec: MEDULLA-PLACEMENT-R782.3
 
 #[test]
 fn edge_l04_consumed_revoke() {
@@ -338,6 +346,8 @@ fn edge_l04_consumed_revoke() {
     );
 }
 
+// spec: MEDULLA-PLACEMENT-R782.3
+
 #[test]
 fn edge_l05_consumed_reclaim() {
     edge_case(
@@ -347,6 +357,8 @@ fn edge_l05_consumed_reclaim() {
         ControlLeaseStatus::Expired,
     );
 }
+
+// spec: MEDULLA-PLACEMENT-R782.3
 
 #[test]
 fn every_illegal_pair_is_refused() {
@@ -368,6 +380,8 @@ fn every_illegal_pair_is_refused() {
         }
     }
 }
+
+// spec: MEDULLA-PLACEMENT-R782.3
 
 #[test]
 fn refusal_carries_machine_from_event() {
@@ -398,6 +412,8 @@ fn direct_state_writes<'a>(source: &'a str, field: &str, ty: &str) -> Vec<&'a st
     out
 }
 
+// spec: MEDULLA-PLACEMENT-R782.3
+
 #[test]
 fn no_writer_sets_state_outside_apply() {
     let path = concat!(
@@ -408,6 +424,8 @@ fn no_writer_sets_state_outside_apply() {
     let writes = direct_state_writes(&source, "status", "ControlLeaseStatus");
     assert!(writes.is_empty(), "direct state writes in ../medulla-work-store/src/redb_store/work_item/control_lease.rs: {writes:?}");
 }
+
+// spec: MEDULLA-PLACEMENT-R782.3
 
 #[test]
 fn every_transition_and_refusal_is_covered() {

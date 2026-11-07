@@ -35,6 +35,8 @@ fn illegal_pairs() -> Vec<(UserStatus, UserStatusEvent)> {
     out
 }
 
+// spec: MEDULLA-IDENTITY-R721.1
+
 #[test]
 fn edge_u01_active_disable() {
     edge_case(
@@ -44,6 +46,8 @@ fn edge_u01_active_disable() {
         UserStatus::Disabled,
     );
 }
+
+// spec: MEDULLA-IDENTITY-R721.1
 
 #[test]
 fn edge_u02_disabled_enable() {
@@ -55,6 +59,8 @@ fn edge_u02_disabled_enable() {
     );
 }
 
+// spec: MEDULLA-IDENTITY-R721.1
+
 #[test]
 fn edge_u03_active_require_reset() {
     edge_case(
@@ -64,6 +70,8 @@ fn edge_u03_active_require_reset() {
         UserStatus::PendingReset,
     );
 }
+
+// spec: MEDULLA-IDENTITY-R721.1
 
 #[test]
 fn edge_u04_disabled_require_reset() {
@@ -75,6 +83,8 @@ fn edge_u04_disabled_require_reset() {
     );
 }
 
+// spec: MEDULLA-IDENTITY-R721.1
+
 #[test]
 fn edge_u05_pending_reset_complete_reset() {
     edge_case(
@@ -84,6 +94,8 @@ fn edge_u05_pending_reset_complete_reset() {
         UserStatus::Active,
     );
 }
+
+// spec: MEDULLA-IDENTITY-R721.1
 
 #[test]
 fn edge_u06_pending_reset_disable() {
@@ -95,6 +107,8 @@ fn edge_u06_pending_reset_disable() {
     );
 }
 
+// spec: MEDULLA-IDENTITY-R721.1
+
 #[test]
 fn edge_u07_pending_verification_verify() {
     edge_case(
@@ -104,6 +118,8 @@ fn edge_u07_pending_verification_verify() {
         UserStatus::Active,
     );
 }
+
+// spec: MEDULLA-IDENTITY-R721.1
 
 #[test]
 fn edge_u08_pending_verification_disable() {
@@ -115,6 +131,8 @@ fn edge_u08_pending_verification_disable() {
     );
 }
 
+// spec: MEDULLA-IDENTITY-R721.1
+
 #[test]
 fn edge_u09_active_deprovision() {
     edge_case(
@@ -124,6 +142,8 @@ fn edge_u09_active_deprovision() {
         UserStatus::Deprovisioned,
     );
 }
+
+// spec: MEDULLA-IDENTITY-R721.1
 
 #[test]
 fn edge_u10_disabled_deprovision() {
@@ -135,6 +155,8 @@ fn edge_u10_disabled_deprovision() {
     );
 }
 
+// spec: MEDULLA-IDENTITY-R721.1
+
 #[test]
 fn edge_u11_pending_reset_deprovision() {
     edge_case(
@@ -145,6 +167,8 @@ fn edge_u11_pending_reset_deprovision() {
     );
 }
 
+// spec: MEDULLA-IDENTITY-R721.1
+
 #[test]
 fn edge_u12_pending_verification_deprovision() {
     edge_case(
@@ -154,6 +178,8 @@ fn edge_u12_pending_verification_deprovision() {
         UserStatus::Deprovisioned,
     );
 }
+
+// spec: MEDULLA-IDENTITY-R721.1
 
 #[test]
 fn every_illegal_pair_is_refused() {
@@ -176,6 +202,8 @@ fn every_illegal_pair_is_refused() {
     }
 }
 
+// spec: MEDULLA-IDENTITY-R721.1
+
 #[test]
 fn refusal_carries_machine_from_event() {
     let refused = UserStatus::Active
@@ -186,6 +214,8 @@ fn refusal_carries_machine_from_event() {
     assert_eq!(refused.event, "Enable");
     assert_eq!(refused.code().as_str(), "TRANSITION_REFUSED");
 }
+
+// spec: MEDULLA-IDENTITY-R721.1
 
 #[test]
 fn every_transition_and_refusal_is_covered() {

@@ -42,6 +42,8 @@ fn illegal_pairs() -> Vec<(ResourceReservationRecordState, ReservationEvent)> {
     out
 }
 
+// spec: MEDULLA-PLACEMENT-R781.1
+
 #[test]
 fn edge_v01_absent_reserve() {
     edge_case(
@@ -51,6 +53,8 @@ fn edge_v01_absent_reserve() {
         ResourceReservationRecordState::Reserved,
     );
 }
+
+// spec: MEDULLA-PLACEMENT-R781.1
 
 #[test]
 fn edge_v02_reserved_release() {
@@ -62,6 +66,8 @@ fn edge_v02_reserved_release() {
     );
 }
 
+// spec: MEDULLA-PLACEMENT-R781.1
+
 #[test]
 fn edge_v03_reserved_reclaim() {
     edge_case(
@@ -71,6 +77,8 @@ fn edge_v03_reserved_reclaim() {
         ResourceReservationRecordState::Reclaimed,
     );
 }
+
+// spec: MEDULLA-PLACEMENT-R781.1
 
 #[test]
 fn edge_v04_reserved_expire() {
@@ -82,6 +90,8 @@ fn edge_v04_reserved_expire() {
     );
 }
 
+// spec: MEDULLA-PLACEMENT-R781.1
+
 #[test]
 fn edge_v05_reserved_supersede() {
     edge_case(
@@ -91,6 +101,8 @@ fn edge_v05_reserved_supersede() {
         ResourceReservationRecordState::Superseded,
     );
 }
+
+// spec: MEDULLA-PLACEMENT-R781.1
 
 #[test]
 fn every_illegal_pair_is_refused() {
@@ -112,6 +124,8 @@ fn every_illegal_pair_is_refused() {
         }
     }
 }
+
+// spec: MEDULLA-PLACEMENT-R781.1
 
 #[test]
 fn refusal_carries_machine_from_event() {
@@ -145,6 +159,8 @@ fn direct_state_writes<'a>(source: &'a str, field: &str, ty: &str) -> Vec<&'a st
     out
 }
 
+// spec: MEDULLA-PLACEMENT-R781.1
+
 #[test]
 fn no_writer_sets_state_outside_apply() {
     let path = concat!(
@@ -168,6 +184,8 @@ fn no_writer_sets_state_outside_apply() {
         "direct state writes in src/redb_store/resource/codec.rs: {writes:?}"
     );
 }
+
+// spec: MEDULLA-PLACEMENT-R781.1
 
 #[test]
 fn every_transition_and_refusal_is_covered() {

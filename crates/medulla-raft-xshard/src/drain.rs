@@ -798,6 +798,8 @@ mod tests {
         out
     }
 
+    // spec: MEDULLA-PLACEMENT-R783.4
+
     #[test]
     fn edge_dr01_proposed_request_admission_stop() {
         drain_edge_case(
@@ -807,6 +809,8 @@ mod tests {
             DrainPhase::AdmissionStopRequested,
         );
     }
+
+    // spec: MEDULLA-PLACEMENT-R783.4
 
     #[test]
     fn edge_dr02_admission_stop_requested_confirm_admission_stopped() {
@@ -818,6 +822,8 @@ mod tests {
         );
     }
 
+    // spec: MEDULLA-PLACEMENT-R783.4
+
     #[test]
     fn edge_dr03_admission_stopped_observe_drain() {
         drain_edge_case(
@@ -827,6 +833,8 @@ mod tests {
             DrainPhase::DrainObserved,
         );
     }
+
+    // spec: MEDULLA-PLACEMENT-R783.4
 
     #[test]
     fn edge_dr04_drain_observed_request_shrink() {
@@ -838,6 +846,8 @@ mod tests {
         );
     }
 
+    // spec: MEDULLA-PLACEMENT-R783.4
+
     #[test]
     fn edge_dr05_shrink_requested_commit_shrink() {
         drain_edge_case(
@@ -847,6 +857,8 @@ mod tests {
             DrainPhase::ShrinkCommitted,
         );
     }
+
+    // spec: MEDULLA-PLACEMENT-R783.4
 
     #[test]
     fn edge_dr06_shrink_committed_complete() {
@@ -858,6 +870,8 @@ mod tests {
         );
     }
 
+    // spec: MEDULLA-PLACEMENT-R783.4
+
     #[test]
     fn edge_dr07_shrink_committed_report_post_shrink_failure() {
         drain_edge_case(
@@ -867,6 +881,8 @@ mod tests {
             DrainPhase::RollbackRequired,
         );
     }
+
+    // spec: MEDULLA-PLACEMENT-R783.4
 
     #[test]
     fn edge_dr08_rollback_required_commit_rollback() {
@@ -878,6 +894,8 @@ mod tests {
         );
     }
 
+    // spec: MEDULLA-PLACEMENT-R783.4
+
     #[test]
     fn edge_dr09_shrink_committed_restart() {
         drain_edge_case(
@@ -887,6 +905,8 @@ mod tests {
             DrainPhase::RollbackRequired,
         );
     }
+
+    // spec: MEDULLA-PLACEMENT-R783.4
 
     #[test]
     fn edge_dr10_admission_stop_requested_restart() {
@@ -898,6 +918,8 @@ mod tests {
         );
     }
 
+    // spec: MEDULLA-PLACEMENT-R783.4
+
     #[test]
     fn edge_dr11_admission_stopped_restart() {
         drain_edge_case(
@@ -907,6 +929,8 @@ mod tests {
             DrainPhase::RecoveryRequired,
         );
     }
+
+    // spec: MEDULLA-PLACEMENT-R783.4
 
     #[test]
     fn edge_dr12_drain_observed_restart() {
@@ -918,6 +942,8 @@ mod tests {
         );
     }
 
+    // spec: MEDULLA-PLACEMENT-R783.4
+
     #[test]
     fn edge_dr13_shrink_requested_restart() {
         drain_edge_case(
@@ -927,6 +953,8 @@ mod tests {
             DrainPhase::RecoveryRequired,
         );
     }
+
+    // spec: MEDULLA-PLACEMENT-R783.4
 
     #[test]
     fn every_illegal_pair_is_refused() {
@@ -948,6 +976,8 @@ mod tests {
             }
         }
     }
+
+    // spec: MEDULLA-PLACEMENT-R783.4
 
     #[test]
     fn refusal_carries_machine_from_event() {
@@ -978,6 +1008,8 @@ mod tests {
         out
     }
 
+    // spec: MEDULLA-PLACEMENT-R783.4
+
     #[test]
     fn no_writer_sets_state_outside_apply() {
         let path = concat!(env!("CARGO_MANIFEST_DIR"), "/src/drain.rs");
@@ -988,6 +1020,8 @@ mod tests {
             "direct state writes in src/drain.rs: {writes:?}"
         );
     }
+
+    // spec: MEDULLA-PLACEMENT-R783.4
 
     #[test]
     fn every_transition_and_refusal_is_covered() {

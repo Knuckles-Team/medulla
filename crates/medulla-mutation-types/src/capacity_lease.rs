@@ -721,6 +721,8 @@ mod tests {
         out
     }
 
+    // spec: MEDULLA-PLACEMENT-R782.1
+
     #[test]
     fn edge_c01_active_renew() {
         capacity_edge_case(
@@ -730,6 +732,8 @@ mod tests {
             CapacityLeaseState::Active,
         );
     }
+
+    // spec: MEDULLA-PLACEMENT-R782.1
 
     #[test]
     fn edge_c02_active_release() {
@@ -741,6 +745,8 @@ mod tests {
         );
     }
 
+    // spec: MEDULLA-PLACEMENT-R782.1
+
     #[test]
     fn edge_c03_active_reclaim() {
         capacity_edge_case(
@@ -750,6 +756,8 @@ mod tests {
             CapacityLeaseState::Reclaimed,
         );
     }
+
+    // spec: MEDULLA-PLACEMENT-R782.1
 
     #[test]
     fn every_illegal_pair_is_refused() {
@@ -771,6 +779,8 @@ mod tests {
             }
         }
     }
+
+    // spec: MEDULLA-PLACEMENT-R782.1
 
     #[test]
     fn refusal_carries_machine_from_event() {
@@ -801,6 +811,8 @@ mod tests {
         out
     }
 
+    // spec: MEDULLA-PLACEMENT-R782.1
+
     #[test]
     fn no_writer_sets_state_outside_apply() {
         let path = concat!(env!("CARGO_MANIFEST_DIR"), "/src/capacity_lease.rs");
@@ -818,6 +830,8 @@ mod tests {
         let writes = direct_state_writes(&source, "state", "CapacityLeaseState");
         assert!(writes.is_empty(), "direct state writes in ../medulla-resource-store/src/redb_store/capacity_lease.rs: {writes:?}");
     }
+
+    // spec: MEDULLA-PLACEMENT-R782.1
 
     #[test]
     fn every_transition_and_refusal_is_covered() {

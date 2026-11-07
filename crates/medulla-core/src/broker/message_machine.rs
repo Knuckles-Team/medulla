@@ -228,6 +228,8 @@ mod tests {
         out
     }
 
+    // spec: MEDULLA-CQ-ORCH-R810.1
+
     #[test]
     fn edge_b01_pending_claim() {
         edge_case(
@@ -237,6 +239,8 @@ mod tests {
             MessageState::Claimed,
         );
     }
+
+    // spec: MEDULLA-CQ-ORCH-R810.1
 
     #[test]
     fn edge_b02_claimed_ack() {
@@ -248,6 +252,8 @@ mod tests {
         );
     }
 
+    // spec: MEDULLA-CQ-ORCH-R810.1
+
     #[test]
     fn edge_b03_claimed_nack_retry() {
         edge_case(
@@ -257,6 +263,8 @@ mod tests {
             MessageState::Pending,
         );
     }
+
+    // spec: MEDULLA-CQ-ORCH-R810.1
 
     #[test]
     fn edge_b04_claimed_nack_dead() {
@@ -268,6 +276,8 @@ mod tests {
         );
     }
 
+    // spec: MEDULLA-CQ-ORCH-R810.1
+
     #[test]
     fn edge_b05_claimed_nack_retry() {
         edge_case(
@@ -277,6 +287,8 @@ mod tests {
             MessageState::DeadLettered,
         );
     }
+
+    // spec: MEDULLA-CQ-ORCH-R810.1
 
     #[test]
     fn edge_b06_claimed_lease_lapse() {
@@ -288,6 +300,8 @@ mod tests {
         );
     }
 
+    // spec: MEDULLA-CQ-ORCH-R810.1
+
     #[test]
     fn edge_b07_pending_expire() {
         edge_case(
@@ -298,6 +312,8 @@ mod tests {
         );
     }
 
+    // spec: MEDULLA-CQ-ORCH-R810.1
+
     #[test]
     fn edge_b08_claimed_expire() {
         edge_case(
@@ -307,6 +323,8 @@ mod tests {
             MessageState::Expired,
         );
     }
+
+    // spec: MEDULLA-CQ-ORCH-R810.1
 
     #[test]
     fn every_illegal_pair_is_refused() {
@@ -329,6 +347,8 @@ mod tests {
         }
     }
 
+    // spec: MEDULLA-CQ-ORCH-R810.1
+
     #[test]
     fn refusal_carries_machine_from_event() {
         let refused = MessageState::Pending
@@ -339,6 +359,8 @@ mod tests {
         assert_eq!(refused.event, "Ack");
         assert_eq!(refused.code().as_str(), "TRANSITION_REFUSED");
     }
+
+    // spec: MEDULLA-CQ-ORCH-R810.1
 
     #[test]
     fn every_transition_and_refusal_is_covered() {

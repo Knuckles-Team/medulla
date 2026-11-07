@@ -647,6 +647,8 @@ mod tests {
         out
     }
 
+    // spec: MEDULLA-IDENTITY-R722.2
+
     #[test]
     fn edge_e01_requested_approve() {
         edge_case(
@@ -656,6 +658,8 @@ mod tests {
             ElevationStatus::Active,
         );
     }
+
+    // spec: MEDULLA-IDENTITY-R722.2
 
     #[test]
     fn edge_e02_requested_revoke() {
@@ -667,6 +671,8 @@ mod tests {
         );
     }
 
+    // spec: MEDULLA-IDENTITY-R722.2
+
     #[test]
     fn edge_e03_requested_lapse() {
         edge_case(
@@ -676,6 +682,8 @@ mod tests {
             ElevationStatus::Expired,
         );
     }
+
+    // spec: MEDULLA-IDENTITY-R722.2
 
     #[test]
     fn edge_e04_active_revoke() {
@@ -687,6 +695,8 @@ mod tests {
         );
     }
 
+    // spec: MEDULLA-IDENTITY-R722.2
+
     #[test]
     fn edge_e05_active_lapse() {
         edge_case(
@@ -696,6 +706,8 @@ mod tests {
             ElevationStatus::Expired,
         );
     }
+
+    // spec: MEDULLA-IDENTITY-R722.2
 
     #[test]
     fn every_illegal_pair_is_refused() {
@@ -717,6 +729,8 @@ mod tests {
             }
         }
     }
+
+    // spec: MEDULLA-IDENTITY-R722.2
 
     #[test]
     fn refusal_carries_machine_from_event() {
@@ -747,6 +761,8 @@ mod tests {
         out
     }
 
+    // spec: MEDULLA-IDENTITY-R722.2
+
     #[test]
     fn no_writer_sets_state_outside_apply() {
         let path = concat!(env!("CARGO_MANIFEST_DIR"), "/src/rbac_elevation/ledger.rs");
@@ -757,6 +773,8 @@ mod tests {
             "direct state writes in src/rbac_elevation/ledger.rs: {writes:?}"
         );
     }
+
+    // spec: MEDULLA-IDENTITY-R722.2
 
     #[test]
     fn every_transition_and_refusal_is_covered() {

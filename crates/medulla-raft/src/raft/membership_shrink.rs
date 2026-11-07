@@ -753,6 +753,8 @@ mod tests {
         out
     }
 
+    // spec: MEDULLA-PLACEMENT-R783.2
+
     #[test]
     fn edge_s01_proposed_request_drain() {
         shrink_edge_case(
@@ -762,6 +764,8 @@ mod tests {
             MembershipShrinkPhase::DrainRequested,
         );
     }
+
+    // spec: MEDULLA-PLACEMENT-R783.2
 
     #[test]
     fn edge_s02_drain_requested_confirm_drained() {
@@ -773,6 +777,8 @@ mod tests {
         );
     }
 
+    // spec: MEDULLA-PLACEMENT-R783.2
+
     #[test]
     fn edge_s03_drained_confirm_learner_caught_up() {
         shrink_edge_case(
@@ -782,6 +788,8 @@ mod tests {
             MembershipShrinkPhase::LearnerCaughtUp,
         );
     }
+
+    // spec: MEDULLA-PLACEMENT-R783.2
 
     #[test]
     fn edge_s04_learner_caught_up_confirm_leadership_transferred() {
@@ -793,6 +801,8 @@ mod tests {
         );
     }
 
+    // spec: MEDULLA-PLACEMENT-R783.2
+
     #[test]
     fn edge_s05_leadership_transferred_confirm_safety() {
         shrink_edge_case(
@@ -802,6 +812,8 @@ mod tests {
             MembershipShrinkPhase::SafetyChecked,
         );
     }
+
+    // spec: MEDULLA-PLACEMENT-R783.2
 
     #[test]
     fn edge_s06_safety_checked_commit_removal() {
@@ -813,6 +825,8 @@ mod tests {
         );
     }
 
+    // spec: MEDULLA-PLACEMENT-R783.2
+
     #[test]
     fn edge_s07_removal_committed_complete() {
         shrink_edge_case(
@@ -822,6 +836,8 @@ mod tests {
             MembershipShrinkPhase::Completed,
         );
     }
+
+    // spec: MEDULLA-PLACEMENT-R783.2
 
     #[test]
     fn edge_s08_proposed_abort() {
@@ -833,6 +849,8 @@ mod tests {
         );
     }
 
+    // spec: MEDULLA-PLACEMENT-R783.2
+
     #[test]
     fn edge_s09_drain_requested_abort() {
         shrink_edge_case(
@@ -842,6 +860,8 @@ mod tests {
             MembershipShrinkPhase::Aborted,
         );
     }
+
+    // spec: MEDULLA-PLACEMENT-R783.2
 
     #[test]
     fn edge_s10_drained_abort() {
@@ -853,6 +873,8 @@ mod tests {
         );
     }
 
+    // spec: MEDULLA-PLACEMENT-R783.2
+
     #[test]
     fn edge_s11_learner_caught_up_abort() {
         shrink_edge_case(
@@ -862,6 +884,8 @@ mod tests {
             MembershipShrinkPhase::Aborted,
         );
     }
+
+    // spec: MEDULLA-PLACEMENT-R783.2
 
     #[test]
     fn edge_s12_leadership_transferred_abort() {
@@ -873,6 +897,8 @@ mod tests {
         );
     }
 
+    // spec: MEDULLA-PLACEMENT-R783.2
+
     #[test]
     fn edge_s13_safety_checked_abort() {
         shrink_edge_case(
@@ -883,6 +909,8 @@ mod tests {
         );
     }
 
+    // spec: MEDULLA-PLACEMENT-R783.2
+
     #[test]
     fn edge_s14_removal_committed_abort() {
         shrink_edge_case(
@@ -892,6 +920,8 @@ mod tests {
             MembershipShrinkPhase::Aborted,
         );
     }
+
+    // spec: MEDULLA-PLACEMENT-R783.2
 
     #[test]
     fn every_illegal_pair_is_refused() {
@@ -913,6 +943,8 @@ mod tests {
             }
         }
     }
+
+    // spec: MEDULLA-PLACEMENT-R783.2
 
     #[test]
     fn refusal_carries_machine_from_event() {
@@ -943,6 +975,8 @@ mod tests {
         out
     }
 
+    // spec: MEDULLA-PLACEMENT-R783.2
+
     #[test]
     fn no_writer_sets_state_outside_apply() {
         let path = concat!(env!("CARGO_MANIFEST_DIR"), "/src/raft/membership_shrink.rs");
@@ -953,6 +987,8 @@ mod tests {
             "direct state writes in src/raft/membership_shrink.rs: {writes:?}"
         );
     }
+
+    // spec: MEDULLA-PLACEMENT-R783.2
 
     #[test]
     fn every_transition_and_refusal_is_covered() {

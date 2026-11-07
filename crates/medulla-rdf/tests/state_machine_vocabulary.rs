@@ -667,105 +667,128 @@ mod sm {
     }
 }
 
+// spec: MEDULLA-ORCH-VOCAB-R811.6
 #[test]
 fn machine_file_has_no_owl_imports() {
     assert!(!MACHINES.contains("owl:imports"));
 }
 
+// spec: MEDULLA-IDENTITY-R720.2
 #[test]
 fn governed_change_machine_matches_edge_table() {
     sm::assert_matches(&medulla_mutation_types::governed_change::GOVERNED_CHANGE_MACHINE);
 }
+// spec: MEDULLA-IDENTITY-R720.2
 #[test]
 fn governed_change_machine_classes_extend_core() {
     sm::assert_extends_core("GovernedChange");
 }
 
+// spec: MEDULLA-IDENTITY-R721.2
 #[test]
 fn user_status_machine_matches_edge_table() {
     sm::assert_matches(&medulla_identity_types::identity::USER_STATUS_MACHINE);
 }
+// spec: MEDULLA-IDENTITY-R721.2
 #[test]
 fn user_status_machine_classes_extend_core() {
     sm::assert_extends_core("UserStatus");
 }
 
+// spec: MEDULLA-IDENTITY-R722.1
 #[test]
 fn rbac_elevation_machine_matches_legal_table() {
     sm::assert_matches(&medulla_identity_types::rbac_elevation::RBAC_ELEVATION_MACHINE);
 }
+// spec: MEDULLA-IDENTITY-R722.1
 #[test]
 fn rbac_elevation_machine_classes_extend_core() {
     sm::assert_extends_core("RbacElevation");
 }
 
+// spec: MEDULLA-PLACEMENT-R782.2
 #[test]
 fn control_lease_machine_matches_edge_table() {
     sm::assert_matches(&medulla_work_types::control_lease::CONTROL_LEASE_MACHINE);
 }
+// spec: MEDULLA-PLACEMENT-R782.2
 #[test]
 fn control_lease_machine_classes_extend_core() {
     sm::assert_extends_core("ControlLease");
 }
 
+// spec: MEDULLA-PLACEMENT-R781.2
 #[test]
 fn resource_reservation_machine_matches_edge_table() {
     sm::assert_matches(&medulla_result_types::epistemic_operations::RESOURCE_RESERVATION_MACHINE);
 }
+// spec: MEDULLA-PLACEMENT-R781.2
 #[test]
 fn resource_reservation_machine_classes_extend_core() {
     sm::assert_extends_core("ResourceReservation");
 }
 
+// spec: MEDULLA-PLACEMENT-R783.1
 #[test]
 fn membership_shrink_machine_matches_transition_is_valid() {
     sm::assert_matches(&medulla_raft::raft::membership_shrink::MEMBERSHIP_SHRINK_MACHINE);
 }
+// spec: MEDULLA-PLACEMENT-R783.1
 #[test]
 fn membership_shrink_machine_classes_extend_core() {
     sm::assert_extends_core("MembershipShrink");
 }
 
+// spec: MEDULLA-CQ-ORCH-R810.2
 #[test]
 fn broker_message_machine_matches_edge_table() {
     sm::assert_matches(&medulla_core::broker::message_machine::BROKER_MESSAGE_MACHINE);
 }
+// spec: MEDULLA-CQ-ORCH-R810.2
 #[test]
 fn broker_message_machine_classes_extend_core() {
     sm::assert_extends_core("BrokerMessage");
 }
 
+// spec: MEDULLA-SDLC-R030.2
 #[test]
 fn defect_machine_matches_edge_table() {
     sm::assert_matches(&medulla_source_types::defect_machine::DEFECT_MACHINE);
 }
+// spec: MEDULLA-SDLC-R030.2
 #[test]
 fn defect_machine_classes_extend_core() {
     sm::assert_extends_core("Defect");
 }
 
+// spec: MEDULLA-DURABLE-KERNEL-R872.2
 #[test]
 fn semantic_index_upgrade_machine_matches_edge_table() {
     sm::assert_matches(&medulla_h_retrieve::semantic_index_runtime::SEMANTIC_INDEX_UPGRADE_MACHINE);
 }
+// spec: MEDULLA-DURABLE-KERNEL-R872.2
 #[test]
 fn semantic_index_upgrade_machine_classes_extend_core() {
     sm::assert_extends_core("SemanticIndexUpgrade");
 }
 
+// spec: MEDULLA-PLACEMENT-R783.4
 #[test]
 fn shard_drain_machine_matches_edge_table() {
     sm::assert_matches(&medulla_raft_xshard::drain::SHARD_DRAIN_MACHINE);
 }
+// spec: MEDULLA-PLACEMENT-R783.4
 #[test]
 fn shard_drain_machine_classes_extend_core() {
     sm::assert_extends_core("ShardDrain");
 }
 
+// spec: MEDULLA-PLACEMENT-R782.2
 #[test]
 fn capacity_lease_machine_matches_edge_table() {
     sm::assert_matches(&medulla_mutation_types::capacity_lease::CAPACITY_LEASE_MACHINE);
 }
+// spec: MEDULLA-PLACEMENT-R782.2
 #[test]
 fn capacity_lease_machine_classes_extend_core() {
     sm::assert_extends_core("CapacityLease");

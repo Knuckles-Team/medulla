@@ -230,6 +230,8 @@ mod tests {
         out
     }
 
+    // spec: MEDULLA-SDLC-R030.1
+
     #[test]
     fn edge_d01_new_triage() {
         edge_case(
@@ -239,6 +241,8 @@ mod tests {
             DefectStatus::Triaged,
         );
     }
+
+    // spec: MEDULLA-SDLC-R030.1
 
     #[test]
     fn edge_d02_triaged_start_fix() {
@@ -250,6 +254,8 @@ mod tests {
         );
     }
 
+    // spec: MEDULLA-SDLC-R030.1
+
     #[test]
     fn edge_d03_fixing_fix() {
         edge_case(
@@ -259,6 +265,8 @@ mod tests {
             DefectStatus::Fixed,
         );
     }
+
+    // spec: MEDULLA-SDLC-R030.1
 
     #[test]
     fn edge_d04_fixed_verify() {
@@ -270,6 +278,8 @@ mod tests {
         );
     }
 
+    // spec: MEDULLA-SDLC-R030.1
+
     #[test]
     fn edge_d05_verified_close() {
         edge_case(
@@ -279,6 +289,8 @@ mod tests {
             DefectStatus::Closed,
         );
     }
+
+    // spec: MEDULLA-SDLC-R030.1
 
     #[test]
     fn edge_d06_new_reject() {
@@ -290,6 +302,8 @@ mod tests {
         );
     }
 
+    // spec: MEDULLA-SDLC-R030.1
+
     #[test]
     fn edge_d07_triaged_reject() {
         edge_case(
@@ -299,6 +313,8 @@ mod tests {
             DefectStatus::Rejected,
         );
     }
+
+    // spec: MEDULLA-SDLC-R030.1
 
     #[test]
     fn edge_d08_closed_reopen() {
@@ -310,6 +326,8 @@ mod tests {
         );
     }
 
+    // spec: MEDULLA-SDLC-R030.1
+
     #[test]
     fn edge_d09_rejected_reopen() {
         edge_case(
@@ -319,6 +337,8 @@ mod tests {
             DefectStatus::New,
         );
     }
+
+    // spec: MEDULLA-SDLC-R030.1
 
     #[test]
     fn every_illegal_pair_is_refused() {
@@ -340,6 +360,8 @@ mod tests {
             }
         }
     }
+
+    // spec: MEDULLA-SDLC-R030.1
 
     #[test]
     fn refusal_carries_machine_from_event() {
@@ -370,6 +392,8 @@ mod tests {
         out
     }
 
+    // spec: MEDULLA-SDLC-R030.1
+
     #[test]
     fn no_writer_sets_state_outside_apply() {
         let path = concat!(
@@ -383,6 +407,8 @@ mod tests {
             "direct state writes in ../medulla-core/src/lifecycle/defect.rs: {writes:?}"
         );
     }
+
+    // spec: MEDULLA-SDLC-R030.1
 
     #[test]
     fn every_transition_and_refusal_is_covered() {
