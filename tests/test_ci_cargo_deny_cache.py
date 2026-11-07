@@ -71,5 +71,5 @@ def test_cargo_deny_cache_is_versioned_verified_and_main_only():
         "${{ steps.cargo-deny-cache.outputs.cache-primary-key }}"
     )
 
-    assert advisory["run"] == "bash scripts/check_cargo_advisories.sh"
+    assert advisory["run"].endswith("pipelines-hook cargo-advisories")
     assert "continue-on-error" not in advisory

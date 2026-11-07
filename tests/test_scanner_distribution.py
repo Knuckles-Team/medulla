@@ -146,7 +146,7 @@ def _assert_security_and_build_jobs(jobs):
     advisory_steps = [
         step
         for step in security["steps"]
-        if step.get("run") == "bash scripts/check_cargo_advisories.sh"
+        if step.get("run", "").endswith("pipelines-hook cargo-advisories")
     ]
     assert len(advisory_steps) == 1
     assert "continue-on-error" not in advisory_steps[0]
@@ -236,8 +236,7 @@ def test_advisory_gate_wires_exact_cargo_deny_version_check():
     advisory_hook = _hooks()["cargo-deny-advisories"]
     assert advisory_hook["files"] == (
         r"^(Cargo\.lock|Cargo\.toml|crates/.*/Cargo\.toml|\.config/deny\.toml|"
-        r"\.config/cargo-audit-allow\.txt|pyproject\.toml|scripts/scanner_contract\.py|"
-        r"scripts/check_cargo_advisories\.sh)$"
+        r"\.config/cargo-audit-allow\.txt|pyproject\.toml|scripts/scanner_contract\.py)$"
     )
     precommit_source = (REPO / ".config" / "pre-commit.yaml").read_text(
         encoding="utf-8"
@@ -245,13 +244,13 @@ def test_advisory_gate_wires_exact_cargo_deny_version_check():
     assert "Not yet mirrored into rust-ci.yml" not in precommit_source
     assert "pre-commit-only per" not in precommit_source
 
-    gate = (REPO / "scripts/check_cargo_advisories.sh").read_text(encoding="utf-8")
-    assert "load_contract().cargo_deny_version" in gate
-    assert '!= "cargo-deny $EXPECTED_CARGO_DENY_VERSION"' in gate
-    assert '"$CARGO_DENY_BIN" --config "$DENY_TOML" check advisories' in gate
+    assert advisory_hook["entry"] == "pipelines-hook cargo-advisories"
+    pinned = tomllib.loads((REPO / "pyproject.toml").read_text(encoding="utf-8"))[
+        "tool"
+    ]
     assert (
-        "cargo install --locked --version $EXPECTED_CARGO_DENY_VERSION cargo-deny"
-        in gate
+        pinned["pipelines_hooks"]["cargo_advisories"]["cargo_deny_version"]
+        == pinned["medulla"]["scanners"]["cargo_deny_version"]
     )
 
 

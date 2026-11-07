@@ -488,14 +488,14 @@ repos:
   # rust-ci gate 1 — scoped, pinned, check-only format guard. Never invoke
   # `cargo fmt --all` from a developer or merge track: an auto-applying
   # workspace formatter rewrites unrelated files in another lane's worktree.
-  # `check_rustfmt_scope.py` receives only changed Rust paths and invokes the
+  # `pipelines-hook rustfmt-scope` receives only changed Rust paths and invokes the
   # exact channel from rust-toolchain.toml. A Cargo/rustfmt/toolchain manifest
   # change widens the read-only check to all tracked Rust files.
   - id: rustfmt-scope
     name: rustfmt (pinned, changed files, check-only)
-    entry: python3 scripts/check_rustfmt_scope.py
+    entry: pipelines-hook rustfmt-scope
     language: system
-    files: '(^|/)(Cargo\.toml|rust-toolchain\.toml|rustfmt\.toml)$|\.rs$|^\.config/pre-commit\.yaml$|^\.mergequeue\.yaml$|^scripts/check_rustfmt_scope\.py$'
+    files: '(^|/)(Cargo\.toml|rust-toolchain\.toml|rustfmt\.toml)$|\.rs$|^\.config/pre-commit\.yaml$|^\.mergequeue\.yaml$'
     pass_filenames: true
     stages: [pre-push, manual]
   # The shipped-feature Clippy compile is manual-only; hosted CI runs it as part
@@ -663,9 +663,9 @@ repos:
   # when the dependency surface changes.
   - id: cargo-deny-advisories
     name: cargo deny check advisories (Rust dependency CVE gate)
-    entry: scripts/check_cargo_advisories.sh
+    entry: pipelines-hook cargo-advisories
     language: system
-    files: ^(Cargo\.lock|Cargo\.toml|crates/.*/Cargo\.toml|\.config/deny\.toml|\.config/cargo-audit-allow\.txt|pyproject\.toml|scripts/scanner_contract\.py|scripts/check_cargo_advisories\.sh)$
+    files: ^(Cargo\.lock|Cargo\.toml|crates/.*/Cargo\.toml|\.config/deny\.toml|\.config/cargo-audit-allow\.txt|pyproject\.toml|scripts/scanner_contract\.py)$
     pass_filenames: false
   # crates.io-only dependency edict (AGENTS.md, "crates.io-only Rust dependency
   # edict"): fails if any Cargo.toml adds a `git = ` source or an
@@ -679,7 +679,7 @@ repos:
   # green again.
   - id: check-crates-io-only
     name: crates.io-only Rust dependency edict
-    entry: python3 scripts/check_crates_io_only.py
+    entry: pipelines-hook crates-io-only
     language: system
     files: ^(Cargo\.lock|Cargo\.toml|crates/.*/Cargo\.toml)$
     pass_filenames: false

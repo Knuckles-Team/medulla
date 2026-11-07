@@ -3,7 +3,7 @@
 #
 # Format:  RUSTSEC-YYYY-NNNN expires=YYYY-MM-DD # justification (>=12 chars)
 #
-# `scripts/check_cargo_advisories.sh` (the pre-commit hook) enforces:
+# `pipelines-hook cargo-advisories` (the pre-commit hook) enforces:
 #   * every line here must have a matching `[advisories].ignore` entry in
 #     `.config/deny.toml` (and vice versa) -- the two files may never drift apart;
 #   * an expired line fails the gate even if still listed in .config/deny.toml --

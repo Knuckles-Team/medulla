@@ -260,6 +260,13 @@ distribution = "medulla"
 pages_url = "https://knuckles-team.github.io/medulla/"
 mcp_server = false
 
+[tool.pipelines_hooks.rustfmt_scope]
+guard_files = [".mergequeue.yaml", ".config/pre-commit.yaml"]
+
+[tool.pipelines_hooks.cargo_advisories]
+# Equals [tool.medulla.scanners] cargo_deny_version; tests/test_scanner_distribution.py pins the pair.
+cargo_deny_version = "0.20.2"
+
 [tool.pipelines_hooks.ste]
 paths = ["README.md", "AGENTS.md", "CLAUDE.md", "CONTRIBUTING.md", "CHANGELOG.md", "docs", "specs"]
 exempt = ["vendor/*"]
