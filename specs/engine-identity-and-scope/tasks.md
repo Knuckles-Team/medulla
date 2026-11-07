@@ -15,6 +15,7 @@ One task per leaf row of `requirements.md`, producers first: issuer trust and RB
 - [ ] T009 [US2] MEDULLA-IDENTITY-R003.7 Wiring: served transition method and offline conversion
 - [ ] T010 [US2] MEDULLA-IDENTITY-R003.8 Hot-path proof: mode round trip over the wire
 - [ ] T011 [US4] MEDULLA-IDENTITY-R004 Generated scope registry classifies every capability scope
+- [ ] T074 [US4] MEDULLA-IDENTITY-R004.1 Register the web interface scopes and bind the compute reads
 - [ ] T012 [US4] MEDULLA-IDENTITY-R005 Semantic workers use one identity across queue classes
 - [ ] T013 [US4] MEDULLA-IDENTITY-R006 Tenant roles read the shared commons graph
 - [ ] T014 [US4] MEDULLA-IDENTITY-R007 Scopes `identity:admin`, `loops:read` and `loops:control` are registered in the engine contract
