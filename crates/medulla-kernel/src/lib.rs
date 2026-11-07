@@ -71,9 +71,8 @@ pub mod crypto;
 pub mod sealed_guard;
 
 // Per-graph write coalescer (CONCEPT:MEDULLA-KG.sharding.per-graph-write-coalescer): batches concurrent single-op
-// writes to one graph into a single topology-lock acquisition. Tokio-based, so it
-// lives in the server-gated top-level crate.
-#[cfg(feature = "server")]
+// writes to one graph into a single topology-lock acquisition. Tokio-based (tokio is an
+// unconditional dependency), so it is not feature-gated.
 pub mod write_coalescer;
 
 // Hardware capacity auto-detection (CONCEPT:AU-KG.backend.b-auto-size). Derives the concurrency / buffer /
@@ -84,17 +83,16 @@ pub mod write_coalescer;
 pub mod autosize;
 
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
-#[cfg(feature = "server")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod channels;
 
-/// Moved from the facade (MEDULLA-CONTRACT-R056).
-#[cfg(feature = "server")]
+/// Moved from the facade (MEDULLA-CONTRACT-R056). Server-independent: `store_authority`
+/// (`redb`) and `persist` consume it, so it is not gated on `server`.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod kernel;
 
-/// Moved from the facade (MEDULLA-CONTRACT-R056).
-#[cfg(feature = "server")]
+/// Moved from the facade (MEDULLA-CONTRACT-R056). Server-independent: `work-store` and the
+/// `kernel` persistence facade use it without the `server` feature.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod persist;
 

@@ -9,7 +9,7 @@ use medulla_types::wire::Op;
 
 use super::Parser;
 use crate::diag::UqlError;
-#[cfg(any(feature = "text", feature = "owl"))]
+#[cfg(any(feature = "text", feature = "owl", feature = "epistemic"))]
 use crate::lexer::Tok;
 
 impl<'a> Parser<'a> {
