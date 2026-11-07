@@ -4,6 +4,8 @@
 //! One node per tool, prompt, skill and server member. The engine stamps the
 //! node's type, `cp:componentId`, entry revision, pack digest and lifecycle;
 //! the declared surface links come from the pack's ontology documents.
+//! The individuals those documents describe (MEDULLA-MEDIA-VOCAB-R655) ride the
+//! same document, so served SPARQL answers questions about pack data.
 //! Projection writes the result into the pack graph beside the schema source.
 
 use std::sync::Arc;
@@ -15,7 +17,7 @@ use medulla_persistence_records::connector_pack::projection::{
 };
 use medulla_rdf::oxrdf::{Literal, NamedNode, NamedOrBlankNode, Term, Triple};
 
-use crate::admin::connector_pack::surface_vocab::{link_object, CP, RDF_TYPE};
+use crate::admin::connector_pack::surface_vocab::{is_member_uri, link_object, CP, RDF_TYPE};
 use crate::graph_schema::PackSchemaDocument;
 
 const XSD_INTEGER: &str = "http://www.w3.org/2001/XMLSchema#integer";
@@ -97,21 +99,60 @@ fn declared_links(ontologies: &[PackSchemaDocument]) -> Result<Vec<Triple>, Stri
     Ok(links)
 }
 
-/// The surface of `plan`'s head as an N-Triples document, or `None` when the
-/// head has no surface member.
+/// Namespaces whose classes type schema terms, not data: a subject typed only
+/// with these is vocabulary the schema source already carries.
+const SCHEMA_NAMESPACES: [&str; 4] = [
+    "http://www.w3.org/2002/07/owl#",
+    "http://www.w3.org/2000/01/rdf-schema#",
+    "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+    "http://www.w3.org/ns/shacl#",
+];
+
+/// Every triple about a named individual the pack ontologies describe: a subject
+/// typed with at least one class outside the schema namespaces, and not a
+/// surface member (the engine stamps those).
+fn declared_individuals(ontologies: &[PackSchemaDocument]) -> Result<Vec<Triple>, String> {
+    let mut individuals = Vec::new();
+    for document in ontologies {
+        let triples = medulla_rdf::mapping::parse_turtle(&document.body)?;
+        let subjects: std::collections::HashSet<&NamedOrBlankNode> = triples
+            .iter()
+            .filter(|triple| {
+                triple.predicate.as_str() == RDF_TYPE
+                    && matches!(&triple.subject, NamedOrBlankNode::NamedNode(node) if !is_member_uri(node.as_str()))
+                    && matches!(&triple.object, Term::NamedNode(class)
+                        if !SCHEMA_NAMESPACES.iter().any(|ns| class.as_str().starts_with(ns)))
+            })
+            .map(|triple| &triple.subject)
+            .collect();
+        individuals.extend(
+            triples
+                .iter()
+                .filter(|triple| subjects.contains(&triple.subject))
+                .cloned(),
+        );
+    }
+    Ok(individuals)
+}
+
+/// The surface of `plan`'s head and the individuals its ontologies describe as
+/// one N-Triples document, or `None` when the head has neither.
 pub(super) fn surface_triples(
     plan: &ConnectorPackProjectionPlan,
     ontologies: &[PackSchemaDocument],
 ) -> Result<Option<Arc<str>>, String> {
-    if plan.surface.is_empty() {
+    let mut triples = Vec::new();
+    if !plan.surface.is_empty() {
+        let digest = plan.pack_digest().to_hex();
+        for member in &plan.surface {
+            triples.extend(stamped(member, &digest)?);
+        }
+        triples.extend(declared_links(ontologies)?);
+    }
+    triples.extend(declared_individuals(ontologies)?);
+    if triples.is_empty() {
         return Ok(None);
     }
-    let digest = plan.pack_digest().to_hex();
-    let mut triples = Vec::new();
-    for member in &plan.surface {
-        triples.extend(stamped(member, &digest)?);
-    }
-    triples.extend(declared_links(ontologies)?);
     let document = medulla_rdf::mapping::to_ntriples(&triples)?;
     Ok(Some(Arc::from(document)))
 }
@@ -119,8 +160,9 @@ pub(super) fn surface_triples(
 /// Write the surface document into the pack graph, inside the graph gateway.
 ///
 /// The nodes the document names are replaced, not merged: every `cp:` triple a
-/// node held from an earlier head goes first, so a changed revision, digest or
-/// lifecycle never leaves its old value beside the new one.
+/// node held from an earlier head goes first, and every triple of an individual
+/// the document names, so a changed revision, digest, lifecycle or individual
+/// value never leaves its old value beside the new one.
 pub(crate) fn write_surface(
     core: &medulla_graph_core::graph::GraphCore,
     graph: &str,
@@ -133,9 +175,35 @@ pub(crate) fn write_surface(
     let nodes: std::collections::HashSet<_> = fresh.iter().map(|t| t.subject.clone()).collect();
     let stale: Vec<Triple> = medulla_rdf::mapping::export_triples(core, graph)?
         .into_iter()
-        .filter(|t| nodes.contains(&t.subject) && t.predicate.as_str().starts_with(CP))
+        .filter(|t| {
+            nodes.contains(&t.subject)
+                && (t.predicate.as_str().starts_with(CP)
+                    || !matches!(&t.subject, NamedOrBlankNode::NamedNode(node) if is_member_uri(node.as_str())))
+        })
         .collect();
     medulla_rdf::update::remove_triples(core, &stale);
     medulla_rdf::update::insert_triples(core, &fresh)?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn individuals_are_projected_and_schema_terms_are_not() {
+        let body = "@prefix : <http://knuckles.team/kg#> .\n\
+            @prefix owl: <http://www.w3.org/2002/07/owl#> .\n\
+            :Extra a owl:Class .\n\
+            :amount_a a :NutrientAmount ; :nutrientId \"1003\" .\n";
+        let documents = [PackSchemaDocument {
+            uri: "ontology://food/foods".to_string(),
+            body: Arc::from(body),
+        }];
+        let triples = declared_individuals(&documents).unwrap();
+        assert_eq!(triples.len(), 2, "{triples:?}");
+        assert!(triples
+            .iter()
+            .all(|t| t.subject.to_string() == "<http://knuckles.team/kg#amount_a>"));
+    }
 }
