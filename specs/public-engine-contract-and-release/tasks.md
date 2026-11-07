@@ -19,8 +19,8 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T013 [US2] MEDULLA-CONTRACT-R006.2 Complete canonical qualification of the codec artifact
 - [ ] T014 [US2] MEDULLA-CONTRACT-R006.3 Export fresh typed contracts for parity repair
 - [ ] T015 [US4] MEDULLA-CONTRACT-R007 Dispatch decomposition test is current and runs in CI
-- [ ] T016 [US4] MEDULLA-CONTRACT-R008.1 Typed resolved-checkout parity contract (producer-first split of R008)
-- [ ] T017 [US4] MEDULLA-CONTRACT-R008.2 check_five_repo_parity.py CLI wires in the typed parity contract
+- [ ] T016 [US4] MEDULLA-CONTRACT-R008.1 Resolved-checkout parity contract (producer-first split of R008)
+- [ ] T017 [US4] MEDULLA-CONTRACT-R008.2 The repo-root-parity xtask command wires in the parity contract
 - [ ] T018 [US4] MEDULLA-CONTRACT-R009 CI runs the full root Python test suite
 - [ ] T019 [US4] MEDULLA-CONTRACT-R010 Complexity gate scores exhaustive matches by arm body, not count
 - [ ] T020 [US4] MEDULLA-CONTRACT-R011.1 Fan-out host-group manifest is structurally valid before any gate work is dispatched

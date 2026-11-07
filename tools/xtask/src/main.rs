@@ -3,6 +3,12 @@
 //! One module per check; each module exposes `NAME`, `SUMMARY` and `run`. A check that every
 //! repository needs is a `pipelines-hook` mode instead and does not belong here.
 
+mod build_profiles;
+mod repo_root_parity;
+mod spec_paths;
+#[cfg(test)]
+mod tempdir;
+
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
@@ -14,7 +20,23 @@ struct Check {
 }
 
 /// Every registered check, in the order `cargo xtask --list` prints them.
-const CHECKS: &[Check] = &[];
+const CHECKS: &[Check] = &[
+    Check {
+        name: build_profiles::NAME,
+        summary: build_profiles::SUMMARY,
+        run: build_profiles::run,
+    },
+    Check {
+        name: repo_root_parity::NAME,
+        summary: repo_root_parity::SUMMARY,
+        run: repo_root_parity::run,
+    },
+    Check {
+        name: spec_paths::NAME,
+        summary: spec_paths::SUMMARY,
+        run: spec_paths::run,
+    },
+];
 
 /// The workspace root: the parent of `tools/`, found from this crate's manifest directory.
 fn workspace_root() -> PathBuf {
