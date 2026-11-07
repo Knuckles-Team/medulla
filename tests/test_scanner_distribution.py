@@ -207,8 +207,8 @@ def test_ci_uses_central_exact_python_version():
     for filename, name, step in setup_steps:
         _assert_python_source(filename, name, step)
 
-    root_hygiene = (REPO / "scripts/check_root_hygiene.py").read_text(encoding="utf-8")
-    assert '".python-version"' in root_hygiene
+    layout = (REPO / ".config/repo-layout.toml").read_text(encoding="utf-8")
+    assert '".python-version"' in layout
 
 
 def _assert_python_source(filename: str, name: str, step: dict) -> None:

@@ -526,7 +526,7 @@ def test_static_inventory_hooks_scope_their_complete_input_universes() -> None:
         ".python-version",
     ):
         assert re.search(registry["files"], path)
-    for path in ("src/server/mod.rs", "README.md", "scripts/check_root_hygiene.py"):
+    for path in ("src/server/mod.rs", "README.md", "scripts/ci_parity.sh"):
         assert not re.search(registry["files"], path)
 
     pinned = hooks["pinned-reference-resolution"]
