@@ -2,7 +2,7 @@
 """Remove console executables (``*.data/scripts/*``) from wheels.
 
 The ``medulla`` wheel installs no console scripts: the native server is
-package data at ``medulla/_bin/medulla-server`` (``scripts/inject_server_binary.py``),
+package data at ``medulla/_bin/medulla-server`` (``cargo xtask inject-server-binary``),
 never a ``<dist>.data/scripts/`` member. Every path that builds a publishable or
 gated wheel calls this after folding the native modules, as a safety net against a
 build change that emits one. The PEP 517 backend (``build_backend.py``) uses the same

@@ -291,7 +291,7 @@ repos:
     language: system
     pass_filenames: false
     always_run: true
-    stages: [pre-push, manual]  # whole-repo scan (MEDULLA-CONTRACT-R053.7.1)
+    stages: [manual]  # compiles: `cargo xtask checks` runs it in CI
   - id: epistemic-operations-protocol
     name: Epistemic Operations manifest ⇄ Rust DTO parity
     entry: python3 scripts/check_epistemic_operations_protocol.py
@@ -321,21 +321,21 @@ repos:
     language: system
     pass_filenames: false
     always_run: true
-    stages: [pre-push, manual]  # whole-repo scan (MEDULLA-CONTRACT-R053.7.1)
+    stages: [manual]  # compiles: `cargo xtask checks` runs it in CI
   - id: p2-modality-architecture
     name: P2 modality architecture gate
     entry: cargo xtask p2-modality-architecture
     language: system
     pass_filenames: false
     always_run: true
-    stages: [pre-push, manual]  # whole-repo scan (MEDULLA-CONTRACT-R053.7.1)
+    stages: [manual]  # compiles: `cargo xtask checks` runs it in CI
   - id: p2-analytics-reasoning-architecture
     name: P2 analytics and reasoning architecture gate
     entry: cargo xtask p2-analytics-reasoning-architecture
     language: system
     pass_filenames: false
     always_run: true
-    stages: [pre-push, manual]  # whole-repo scan (MEDULLA-CONTRACT-R053.7.1)
+    stages: [manual]  # compiles: `cargo xtask checks` runs it in CI
   # Currently RED on main pending w3-medulla-ci-green landing (D-EGCG-1: ROS2 CDC does
   # not fail closed under active row ownership, fix built+verified in that lane's
   # worktree, not yet merged). Wiring it here is deliberate, not a mistake: this
@@ -382,11 +382,11 @@ repos:
     stages: [pre-push, manual]  # whole-repo scan (MEDULLA-CONTRACT-R053.7.1)
   - id: sole-write-envelope
     name: Sole write envelope gate (no direct redb table write outside the transaction crates)
-    entry: python3 scripts/check_sole_write_envelope.py
+    entry: cargo xtask sole-write-envelope
     language: system
     pass_filenames: false
     always_run: true
-    stages: [pre-push, manual]  # whole-repo scan
+    stages: [manual]  # compiles: `cargo xtask checks` runs it in CI
   - id: current-only-architecture
     name: Current-only mutation/projection persistence architecture gate
     entry: python3 scripts/check_current_only_architecture.py
@@ -413,7 +413,7 @@ repos:
     language: system
     pass_filenames: false
     always_run: true
-    stages: [pre-push, manual]  # whole-repo scan (MEDULLA-CONTRACT-R053.7.1)
+    stages: [manual]  # compiles: `cargo xtask checks` runs it in CI
   # ── WIRING gates ──────────────────────────────────────────────────────────
   # Every gate above this block measures code SHAPE: complexity, size,
   # duplication, layering, lint. Each of the four below measures whether a
@@ -435,18 +435,18 @@ repos:
     language: system
     pass_filenames: false
     always_run: true
-    stages: [pre-push, manual]  # whole-repo scan (MEDULLA-CONTRACT-R053.7.1)
+    stages: [manual]  # compiles: `cargo xtask checks` runs it in CI
   - id: registry-test-ownership
     name: Every tracked tests/ file is owned in the component registry
-    entry: python3 scripts/check_registry_test_ownership.py
+    entry: cargo xtask registry-test-ownership
     language: system
     # The scanner's complete input universe is the tracked tests/ tree, the
     # registry/tool configuration it reads, and the scanner itself. A new test
     # under tests/ still selects it, while unrelated Rust/docs changes do not
     # spend a full pass.
-    files: ^(tests/|architecture/component-registry\.yml$|scripts/check_registry_test_ownership\.py$|\.config/pre-commit\.yaml$|pyproject\.toml$|uv\.lock$|\.python-version$)
+    files: ^(tests/|architecture/component-registry\.yml$|tools/xtask/src/registry_test_ownership\.rs$|\.config/pre-commit\.yaml$|pyproject\.toml$|uv\.lock$|\.python-version$)
     pass_filenames: false
-    stages: [pre-commit, pre-push, manual]
+    stages: [manual]  # compiles: `cargo xtask checks` runs it in CI
   - id: durable-table-registration-push
     name: Every durable table is in the owner registry, manifest and census
     entry: python3 -m scripts.source_gate_scope --scope push --scanner durable-table-registration
@@ -703,10 +703,10 @@ repos:
   # it never ran the fold + normalize + audit + completeness chain
   # release-build.yml's "Normalize and audit primary wheel" / "Require a
   # complete primary wheel" steps run (normalize_wheel_sbom.py →
-  # normalize_wheel_build_paths.py → check_wheel_privacy.py →
+  # normalize_wheel_build_paths.py → cargo xtask wheel-privacy →
   # cargo xtask wheel-completeness). That gap is exactly how a wheel privacy
   # audit failure (5 `privileged-home-prefix` leaks) shipped past every local
-  # gate straight into CI: nothing local ever ran check_wheel_privacy.py at
+  # gate straight into CI: nothing local ever ran `cargo xtask wheel-privacy` at
   # all. scripts/wheel_privacy_gate.sh now runs the full sequence (mirroring
   # w4-engine-down run_gates.sh reproduction of release-build.yml's exact
   # steps), folding a matching
@@ -753,12 +753,12 @@ repos:
     # build failure still fails the gate loudly and says so -- it simply no
     # longer masquerades as the whole suite timing out.
     # The suite is gated DIFFERENTIALLY against tests/integration_failure_baseline.txt
-    # rather than on absolute green -- see scripts/check_integration_baseline.py
+    # rather than on absolute green -- see tools/xtask/src/integration_baseline.rs
     # for why, and for the three ways it still fails (a new failure, a baselined
     # test that starts passing, an entry past its review-by date). Absolute green
     # here would block every push on 17 failures that predate any branch under
     # test and were only invisible because this gate could not run at all.
-    entry: bash -c 'export MATURIN_PEP517_ARGS="--profile dev"; test_target="tests"; for d in tests/unit test/unit tests test; do if [ -d "$d" ]; then test_target="$d"; break; fi; done; if [ -z "$MEDULLA_TEST_BINARY" ]; then cargo build --features full --bin medulla-server || { echo "REFUSED - cannot build medulla-server for the integration suite" >&2; exit 1; }; for d in "$CARGO_TARGET_DIR" target-isolated target; do if [ -n "$d" ] && [ -x "$d/debug/medulla-server" ]; then MEDULLA_TEST_BINARY="$(cd "$d/debug" && pwd)/medulla-server"; break; fi; done; if [ -z "$MEDULLA_TEST_BINARY" ]; then echo "REFUSED - built medulla-server but cannot find it under CARGO_TARGET_DIR/target-isolated/target" >&2; exit 1; fi; export MEDULLA_TEST_BINARY; fi; if [ -f uv.lock ]; then uv run --all-extras python scripts/check_integration_baseline.py -- "$test_target" -q --tb=short -m "not slow" --timeout=60; else python scripts/check_integration_baseline.py -- "$test_target" -q --tb=short -m "not slow" --timeout=60; fi'
+    entry: bash -c 'export MATURIN_PEP517_ARGS="--profile dev"; test_target="tests"; for d in tests/unit test/unit tests test; do if [ -d "$d" ]; then test_target="$d"; break; fi; done; if [ -z "$MEDULLA_TEST_BINARY" ]; then cargo build --features full --bin medulla-server || { echo "REFUSED - cannot build medulla-server for the integration suite" >&2; exit 1; }; for d in "$CARGO_TARGET_DIR" target-isolated target; do if [ -n "$d" ] && [ -x "$d/debug/medulla-server" ]; then MEDULLA_TEST_BINARY="$(cd "$d/debug" && pwd)/medulla-server"; break; fi; done; if [ -z "$MEDULLA_TEST_BINARY" ]; then echo "REFUSED - built medulla-server but cannot find it under CARGO_TARGET_DIR/target-isolated/target" >&2; exit 1; fi; export MEDULLA_TEST_BINARY; fi; if [ -f uv.lock ]; then uv run --all-extras cargo xtask integration-baseline -- "$test_target" -q --tb=short -m "not slow" --timeout=60; else cargo xtask integration-baseline -- "$test_target" -q --tb=short -m "not slow" --timeout=60; fi'
     language: system
     types: [python]
     pass_filenames: false

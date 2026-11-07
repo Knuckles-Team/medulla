@@ -258,7 +258,7 @@ for its platform at `medulla/_bin/medulla-server` (`.exe` on Windows).
 - `.github/actions/folded-wheel` builds it with `scripts/build_release_server.sh`
   (`--profile release-server --features full,ast-extended`; inside the manylinux
   container on Linux, natively on macOS and Windows) and folds it in with
-  `scripts/inject_server_binary.py`. `cargo xtask wheel-completeness --require-server-binary`
+  `cargo xtask inject-server-binary`. `cargo xtask wheel-completeness --require-server-binary`
   requires it. Build it on a build host, never on a workstation. The `release-server`
   Cargo profile is size-optimised with `panic = "unwind"`.
 - `medulla/server_binary.py` `resolve_server_binary()` returns the packaged path only and

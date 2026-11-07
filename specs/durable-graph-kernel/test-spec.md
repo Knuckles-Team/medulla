@@ -726,7 +726,7 @@ Each entry names a test that does not exist yet. The path is the exact post-spli
 | `MEDULLA-DURABLE-KERNEL-R800.6` | `tests/test_kvcache_policy_served.py::test_policy_admits_hot_answer_and_refuses_cold_one` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R800.5` | `tests/test_kvcache_policy_served.py::test_stats_report_policy_counters_and_trace` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R868` | `tools/xtask/src/orphan_modules.rs::tests::the_unwired_topic_log_and_agent_peer_code_is_gone` (planned) |
-| `MEDULLA-DURABLE-KERNEL-R043.102` | `tests/test_sole_write_envelope.py::test_direct_write_is_reported_and_allowlist_needs_reason` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R043.102` | `tools/xtask/src/sole_write_envelope.rs::tests::direct_write_is_reported_and_allowlist_needs_reason` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R862`, `MEDULLA-DURABLE-KERNEL-R862.1`, `MEDULLA-DURABLE-KERNEL-R862.3` | `tests/test_store_copy_restore.py::test_copied_bundle_restores_and_serves` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R862.3` | `tests/test_store_copy_restore.py::test_rebound_copy_serves` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R030.1.1`, `MEDULLA-DURABLE-KERNEL-R030.1.4` | `tests/test_work_item_capability_client.py::test_host_start_grant_round_trip` (planned) |

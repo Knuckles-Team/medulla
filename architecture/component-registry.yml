@@ -458,8 +458,8 @@ reverifications:
       lists is therefore SILENTLY IGNORED, not failed -- a real coverage hole, exactly because
       `medulla.binary-composition`'s `test_roots` (added in reverification_id 2) is an explicit,
       static enumeration of what existed at edit time, not a live query. CLOSED with a new,
-      small, EG-repo-local gate (not a workspace-checker edit): `scripts/
-      check_registry_test_ownership.py`, wired as pre-commit hook `registry-test-ownership`
+      small, EG-repo-local gate (not a workspace-checker edit): `cargo xtask
+      registry-test-ownership`, wired as pre-commit hook `registry-test-ownership`
       (`.config/pre-commit.yaml`, same `stages`/`always_run` shape as the existing
       `orphan-modules` hook it sits beside -- there was no existing EG gate that already read
       this registry file to extend). It parses the registry, unions every path-bearing field
@@ -468,12 +468,12 @@ reverifications:
       `git ls-files -- tests`, and fails listing any file not covered. PROVEN against a planted
       file, twice: once manually (`echo ... > tests/planted_unowned_test_zzz.rs; git add`; the
       gate reported exactly that one path and exited 1; removed, gate returned to exit 0 with
-      the prior count) and once in `tests/test_check_registry_test_ownership.py` (7 tests, a
+      the prior count) and once in `tools/xtask/src/registry_test_ownership.rs` (7 tests, a
       synthetic throwaway git repo per test -- never the real one -- so the fixture's pass/fail
       assertions hold regardless of what the real registry claims on any future day; one test
       drives the actual CLI entry point end-to-end via subprocess, matching the pattern
       `tests/test_kiss_staged.py` already uses for its own hook). The new script's own test
-      file (`tests/test_check_registry_test_ownership.py`) was, fittingly, caught by its own
+      file (`tools/xtask/src/registry_test_ownership.rs`) was, fittingly, caught by its own
       gate the first time it was staged -- added to `medulla.binary-composition`'s `test_roots`
       enumeration like any other new root test file, which is exactly the previously-silent
       step this gate now enforces.
@@ -3929,10 +3929,8 @@ components:
       - "tests/test_strip_wheel_executables.py"
       - "tests/test_ontology_package.py"
       - "tests/test_gate_base_ref.py"
-      - "tests/test_check_registry_test_ownership.py"
       - "tests/test_check_registry_test_ownership_completeness.py"
       - "tests/test_check_duplication_no_suppression.py"
-      - "tests/test_check_fanout_host_groups.py"
       - "tests/test_client_capability_contract.py"
       - "tests/test_client_no_auth.py"
       - "tests/test_client_recipient_binding.py"
@@ -4043,7 +4041,6 @@ components:
       - "tests/test_init_dynamics.py"
       - "tests/test_inject_numeric_kernel.py"
       - "tests/test_inject_pyengine.py"
-      - "tests/test_integration_baseline.py"
       - "tests/test_isolation.py"
       - "tests/test_kiss_config_keys.py"
       - "tests/test_kiss_diff_scope.py"
@@ -4079,7 +4076,6 @@ components:
       - "tests/test_otlp_log_client_served.py"
       - "tests/test_pb_clients.py"
       - "tests/test_persisted_mutation_contract.py"
-      - "tests/test_sole_write_envelope.py"
       - "tests/test_pinned_reference_resolution.py"
       - "tests/test_pipelining.py"
       - "tests/test_placement_r611.py"

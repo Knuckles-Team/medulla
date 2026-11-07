@@ -2,19 +2,16 @@
 
 from __future__ import annotations
 
+import shutil
+import subprocess
 import sys
 import zipfile
 from collections.abc import Iterable
+from dataclasses import dataclass
 from pathlib import Path, PurePosixPath, PureWindowsPath
 
 import pytest
 
-from scripts.check_wheel_privacy import (
-    _address_is_neutral,
-    audit_wheel,
-    runtime_deny_prefixes,
-)
-from scripts.check_wheel_privacy import main as audit_main
 from scripts.configure_rust_path_remap import (
     UNIT_SEPARATOR,
     encoded_rustflags,
@@ -33,6 +30,51 @@ from scripts.normalize_wheel_sbom import normalize_wheel
 # `test_build_backend.py` and `test_release_full_wheel_contract.py` (the other
 # static release-artifact test files) already declare.
 pytestmark = pytest.mark.no_engine
+
+
+@dataclass(frozen=True)
+class Finding:
+    artifact: int
+    member_id: str
+    category: str
+
+
+@dataclass(frozen=True)
+class AuditResult:
+    findings: tuple[Finding, ...]
+    member_count: int | None
+
+
+def audit_wheel(
+    path: Path,
+    *,
+    deny_prefixes: Iterable[str] = (),
+    environ: dict[str, str] | None = None,
+) -> AuditResult:
+    """Audit one wheel with `cargo xtask wheel-privacy` in an explicit environment."""
+    if shutil.which("cargo") is None:
+        pytest.skip("cargo is needed to run the wheel privacy audit")
+    command = ["cargo", "--locked", "xtask", "wheel-privacy", "--isolated-env"]
+    for name, value in (environ or {}).items():
+        command += ["--env", f"{name}={value}"]
+    for prefix in deny_prefixes:
+        command += ["--deny-prefix", prefix]
+    root = Path(__file__).resolve().parents[1]
+    done = subprocess.run(
+        [*command, str(path)], cwd=root, capture_output=True, text=True, check=False
+    )
+    findings = tuple(
+        Finding(int(a.split("=")[1]), m.split("=")[1], c.split("=")[1])
+        for a, m, c in (
+            line.split(" ", 2)
+            for line in done.stderr.splitlines()
+            if line.startswith("artifact=")
+        )
+    )
+    members = None
+    if done.returncode == 0 and "member(s)" in done.stdout:
+        members = int(done.stdout.split(", ")[1].split(" ")[0])
+    return AuditResult(findings, members)
 
 
 def _neutral_metadata(*, body: str = "") -> bytes:
@@ -277,7 +319,6 @@ def test_cargo_target_dir_is_remapped_and_denied_at_runtime():
     remaps = path_remaps({"CARGO_TARGET_DIR": str(target)})
 
     assert (str(target), "/build/cargo-target") in remaps
-    assert str(target) in runtime_deny_prefixes({"CARGO_TARGET_DIR": str(target)})
 
 
 def test_privileged_container_roots_are_always_denied_even_with_no_environment():
@@ -310,125 +351,6 @@ def test_privileged_container_roots_survive_alongside_environment_roots():
     assert (str(checkout), "/build/source") in remaps
     assert ("/root", "/build/home") in remaps
     assert ("/github/home", "/build/home") in remaps
-
-
-def test_sanitized_wheel_allows_third_party_attribution_emails(tmp_path: Path):
-    wheel = _wheel(
-        tmp_path,
-        {
-            "fixture_package-1.0.0.dist-info/METADATA": _neutral_metadata(
-                body="License attribution: Contributor <third.party@example.org>\n"
-            ),
-            "fixture_package-1.0.0.dist-info/sbom.spdx.json": (
-                b'{"supplier":"third.party@example.org","source":"/build/source"}'
-            ),
-            "fixture_package/native.so": b"ELF\x00/build/cargo/registry\x00",
-        },
-    )
-
-    result = audit_wheel(wheel, environ={})
-
-    assert result.member_count == 3
-    assert not result.findings
-
-
-@pytest.mark.parametrize(
-    ("member", "payload", "expected"),
-    [
-        (
-            "fixture_package/native.so",
-            str(PurePosixPath("/", "home", "fixture-builder", "source"))
-            .encode()
-            .join((b"ELF\x00", b"\x00")),
-            "posix-home-prefix",
-        ),
-        (
-            "fixture_package/sbom.cdx.json",
-            str(
-                PurePosixPath(
-                    "/", "mnt", "z", "Users", "fixture-builder", "Workspace", "source"
-                )
-            ).encode(),
-            "wsl-home-prefix",
-        ),
-        (
-            "fixture_package/native.pdb",
-            str(
-                PureWindowsPath(
-                    "Z:/", "Users", "fixture-builder", "Workspace", "source"
-                )
-            ).encode("utf-16le"),
-            "windows-home-prefix",
-        ),
-    ],
-)
-def test_wheel_members_are_scanned_regardless_of_content_type(
-    tmp_path: Path,
-    member: str,
-    payload: bytes,
-    expected: str,
-):
-    wheel = _wheel(
-        tmp_path,
-        {
-            "fixture_package-1.0.0.dist-info/METADATA": _neutral_metadata(),
-            member: payload,
-        },
-    )
-
-    assert expected in _categories(wheel)
-
-
-def test_runtime_prefix_detects_nonstandard_build_root(tmp_path: Path):
-    build_root = PurePosixPath("/", "var", "lib", "fixture-builder", "source")
-    wheel = _wheel(
-        tmp_path,
-        {
-            "fixture_package-1.0.0.dist-info/METADATA": _neutral_metadata(),
-            "fixture_package/native.so": f"ELF\x00{build_root}/src/lib.rs".encode(),
-        },
-    )
-
-    assert "runtime-build-prefix" in _categories(
-        wheel,
-        deny_prefixes=(str(build_root),),
-    )
-
-
-def test_runtime_prefix_requires_a_path_boundary(tmp_path: Path):
-    build_root = PurePosixPath("/", "root")
-    wheel = _wheel(
-        tmp_path,
-        {
-            "fixture_package-1.0.0.dist-info/METADATA": _neutral_metadata(),
-            "fixture_package/native.so": b"ELF\x00/build/source/src/root_cause.rs\x00",
-        },
-    )
-
-    assert "runtime-build-prefix" not in _categories(
-        wheel,
-        deny_prefixes=(str(build_root),),
-    )
-
-
-@pytest.mark.parametrize(
-    "member",
-    (
-        "fixture_package/__pycache__/module.cpython-312.pyc",
-        "fixture_package/module.pyc",
-        "fixture_package/module.pyo",
-    ),
-)
-def test_python_bytecode_members_are_rejected(tmp_path: Path, member: str):
-    wheel = _wheel(
-        tmp_path,
-        {
-            "fixture_package-1.0.0.dist-info/METADATA": _neutral_metadata(),
-            member: b"compiled-python-cache",
-        },
-    )
-
-    assert "python-bytecode-member" in _categories(wheel)
 
 
 def test_build_path_normalizer_rewrites_native_payload_and_rebuilds_record(
@@ -501,9 +423,7 @@ def test_build_path_normalizer_rewrites_cargo_target_dir(tmp_path: Path):
     )
     environ = {"CARGO_TARGET_DIR": str(target)}
 
-    assert "runtime-build-prefix" in _categories(
-        wheel, deny_prefixes=runtime_deny_prefixes(environ)
-    )
+    assert "runtime-build-prefix" in _categories(wheel, deny_prefixes=(str(target),))
     assert normalize_wheel_build_paths(wheel, environ=environ) == 1
     assert not audit_wheel(wheel, environ=environ).findings
 
@@ -739,85 +659,6 @@ def test_sbom_home_alias_is_not_shaped_like_a_posix_home_path(tmp_path: Path):
     assert not audit_wheel(wheel, environ={}).findings
 
 
-def test_absolute_path_file_is_rejected_even_when_prefix_is_neutral(tmp_path: Path):
-    wheel = _wheel(
-        tmp_path,
-        {
-            "fixture_package-1.0.0.dist-info/METADATA": _neutral_metadata(),
-            "fixture_package.pth": b"/build/source\n",
-        },
-    )
-
-    assert _categories(wheel) == {"absolute-pth-reference"}
-
-
-def test_only_core_metadata_identity_fields_must_be_neutral(tmp_path: Path):
-    metadata = (
-        b"Metadata-Version: 2.4\n"
-        b"Name: fixture-package\n"
-        b"Version: 1.0.0\n"
-        b"Author-email: Fixture Identity <fixture.identity@example.org>\n"
-        b"\n"
-        b"Attribution: Third Party <third.party@example.org>\n"
-    )
-    wheel = _wheel(
-        tmp_path,
-        {"fixture_package-1.0.0.dist-info/METADATA": metadata},
-    )
-
-    assert _categories(wheel) == {"first-party-metadata-identity"}
-
-
-def test_findings_before_a_corrupt_member_survive_the_invalid_wheel_finding(
-    tmp_path: Path,
-):
-    """A member that fails part-way (CRC mismatch) must not discard what the
-    audit already found: the leaking archive comment, the earlier leaking
-    member, and the member count reached so far all stay in the result."""
-
-    comment_leak = PurePosixPath("/", "home", "fixture-commenter", "src")
-    member_leak = PurePosixPath("/", "home", "fixture-builder", "work", "x")
-    corrupt_payload = b"stored-payload-whose-crc-will-not-match"
-    wheel = tmp_path / "fixture_package-1.0.0-py3-none-any.whl"
-    with zipfile.ZipFile(wheel, "w", zipfile.ZIP_STORED) as archive:
-        archive.comment = str(comment_leak).encode()
-        archive.writestr("a_leaking.so", f"ELF\x00{member_leak}\x00".encode())
-        archive.writestr("b_corrupt.so", corrupt_payload)
-    raw = bytearray(wheel.read_bytes())
-    offset = raw.index(corrupt_payload)
-    raw[offset] ^= 0xFF
-    wheel.write_bytes(bytes(raw))
-
-    result = audit_wheel(wheel, environ={})
-
-    assert result.member_count == 2
-    categories = sorted(finding.category for finding in result.findings)
-    assert categories == ["invalid-wheel", "posix-home-prefix", "posix-home-prefix"]
-    assert {finding.member_id for finding in result.findings} >= {
-        "archive-comment",
-        "archive-index",
-    }
-
-
-def test_cli_never_echoes_a_sensitive_prefix(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
-):
-    build_root = PurePosixPath("/", "var", "lib", "fixture-builder", "source")
-    wheel = _wheel(
-        tmp_path,
-        {
-            "fixture_package-1.0.0.dist-info/METADATA": _neutral_metadata(),
-            "fixture_package/native.so": f"ELF\x00{build_root}/src/lib.rs".encode(),
-        },
-    )
-
-    assert audit_main([str(wheel), "--deny-prefix", str(build_root)]) == 1
-    captured = capsys.readouterr()
-    assert str(build_root) not in captured.out
-    assert str(build_root) not in captured.err
-    assert "category=runtime-build-prefix" in captured.err
-
-
 def test_build_path_normalizer_closes_source_before_replacing_on_windows(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ):
@@ -977,9 +818,3 @@ def test_deterministic_link_flag_is_not_duplicated_when_already_present() -> Non
         target="x86_64-pc-windows-msvc",
     )
     assert flags.split("\x1f").count("-Clink-arg=/Brepro") == 1
-
-
-def test_role_address_is_neutral() -> None:
-    """The organizational role address names no person and PyPI accepts it."""
-    assert _address_is_neutral("Repository Maintainers", "maintainers@knuckles.team")
-    assert not _address_is_neutral("Repository Maintainers", "someone@knuckles.team")

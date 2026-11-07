@@ -393,6 +393,9 @@ mod tests {
     #[test]
     fn the_unwired_topic_log_and_agent_peer_code_is_gone() {
         let root = crate::workspace_root();
+        if !root.join(".git").exists() {
+            return; // a shipped source tree has no tracked-file list to read
+        }
         let receipt = run_gate(&root).unwrap();
         assert!(
             receipt.roots.is_empty(),

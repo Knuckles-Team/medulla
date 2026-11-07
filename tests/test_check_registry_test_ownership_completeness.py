@@ -3,10 +3,8 @@ this repository's real `architecture/component-registry.yml`, so the
 pre-commit test-ownership hook (part of MEDULLA-CONTRACT-R023's full clean run)
 cannot fail on an unclaimed file.
 
-Unlike `tests/test_check_registry_test_ownership.py` (which proves the
-checker's logic against synthetic registries/trees), this binds the spec by
-running the real checker against the real, currently tracked repository
-state.
+The checker is `cargo xtask registry-test-ownership`; its real-tree case is a
+Rust test in tools/xtask. This file keeps the registry-shape case.
 """
 
 from __future__ import annotations
@@ -15,17 +13,9 @@ from pathlib import Path
 
 import pytest
 import yaml
-from check_registry_test_ownership import unowned_test_files
 
 ROOT = Path(__file__).resolve().parents[1]
 pytestmark = pytest.mark.no_engine
-
-
-@pytest.mark.spec("MEDULLA-CONTRACT-R023.1")
-def test_current_tracked_tests_tree_has_no_unowned_files() -> None:
-    registry_path = ROOT / "architecture" / "component-registry.yml"
-    _files, unowned = unowned_test_files(ROOT, registry_path)
-    assert unowned == []
 
 
 @pytest.mark.spec("MEDULLA-CONTRACT-R023.1", "MEDULLA-DURABLE-KERNEL-R014.2")

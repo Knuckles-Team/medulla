@@ -4,7 +4,7 @@ description: >-
   features `full,ast-extended`) for MEDULLA_WHEEL_TARGET exactly once and leave
   it, with its sha256, in dist-server-bin/. release.yml runs this in one job per
   platform and uploads the result; both folded-wheel passes of that platform then
-  fold those exact bytes (scripts/fetch_server_binary.py). On Linux the server is
+  fold those exact bytes (cargo xtask fetch-server-binary). On Linux the server is
   compiled inside the same manylinux container as the engine wheel, so it keeps
   the pinned glibc baseline. Reads MEDULLA_WHEEL_TARGET, MEDULLA_WHEEL_MANYLINUX
   and MEDULLA_WHEEL_JOBS_ARG from the calling job's environment.
@@ -85,4 +85,6 @@ runs:
 
     - name: Record the server checksum
       shell: bash
-      run: python scripts/fetch_server_binary.py record dist-server-bin
+      env:
+        CARGO_TARGET_DIR: ${{ runner.temp }}/xtask-target
+      run: cargo --locked xtask fetch-server-binary record dist-server-bin

@@ -8,7 +8,7 @@ name: CI
 #
 # Pull requests run ONE job, `CI` (spec MEDULLA-CONTRACT-R053.7): pre-commit on the
 # changed files, the spec-trailer check, and cargo clippy + nextest on the
-# affected crates only (scripts/ci_affected_crates.py: owning packages of the
+# affected crates only (cargo xtask ci-affected-crates: owning packages of the
 # changed files plus their reverse dependencies). A same-repository pull request
 # runs on the warm self-hosted runners (vars.MEDULLA_WARM_CI_RUNNER, group medulla-warm, never for dependabot) with a
 # persistent cargo target and a local-disk sccache outside the checkout; a fork
@@ -98,7 +98,7 @@ jobs:
           HEAD: ${{ github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail
-          python3 scripts/ci_change_scope.py --path-gates --event "$EVENT" --base "$BASE" --head "$HEAD" | tee -a "$GITHUB_OUTPUT"
+          cargo --locked xtask ci-change-scope --path-gates --event "$EVENT" --base "$BASE" --head "$HEAD" | tee -a "$GITHUB_OUTPUT"
 
   # ── Dependency and source-history security checks. ─────────────────────
   security:
@@ -309,8 +309,8 @@ jobs:
       - &medulla-locked-pytest
         name: Install locked pytest for generated-client checks
         run: uv pip install --python "$(command -v python3)" pytest==9.1.1 iniconfig==2.3.1 packaging==26.3 pluggy==1.7.0 pygments==2.21.0
-      - name: Sole write envelope gate (MEDULLA-DURABLE-KERNEL-R043.102)
-        run: python3 scripts/check_sole_write_envelope.py
+      - name: Repository checks (cargo xtask checks)
+        run: cargo --locked xtask checks
       - name: Epistemic Operations manifest ⇄ Rust DTO parity
         run: python3 scripts/check_epistemic_operations_protocol.py
 
@@ -401,7 +401,9 @@ jobs:
       - name: Normalize retained native build paths (numeric kernel wheel)
         run: python scripts/normalize_wheel_build_paths.py numdist-gates/*.whl
       - name: Audit numeric kernel wheel for retained build identity
-        run: python scripts/check_wheel_privacy.py numdist-gates/*.whl
+        env:
+          CARGO_TARGET_DIR: ${{ runner.temp }}/xtask-target
+        run: cargo --locked xtask wheel-privacy numdist-gates/*.whl
       # The base wheel is the medulla-pyengine PyO3 crate plus the pure-Python package
       # (`[tool.maturin] manifest-path`), the SAME build the release folds the numeric
       # module into. It compiles only extension modules -- no server crate or bin
@@ -417,10 +419,12 @@ jobs:
       - name: Strip console executables from the gates wheel (executable-free wheel)
         run: python scripts/strip_wheel_executables.py dist-gates/*.whl
       - name: Normalize and audit the folded gates wheel
+        env:
+          CARGO_TARGET_DIR: ${{ runner.temp }}/xtask-target
         run: |
           python scripts/normalize_wheel_sbom.py dist-gates/*.whl
           python scripts/normalize_wheel_build_paths.py dist-gates/*.whl
-          python scripts/check_wheel_privacy.py dist-gates/*.whl
+          cargo --locked xtask wheel-privacy dist-gates/*.whl
       - name: Require a complete gates wheel (numeric + engine kernels + no executables + RECORD)
         env:
           CARGO_TARGET_DIR: ${{ runner.temp }}/xtask-target
@@ -523,7 +527,7 @@ jobs:
           sha256sum Cargo.lock rust-toolchain.toml pyproject.toml \
             .github/workflows/ci.yml scripts/inject_numeric_kernel.py \
             scripts/strip_wheel_executables.py scripts/normalize_wheel_sbom.py \
-            scripts/normalize_wheel_build_paths.py scripts/check_wheel_privacy.py \
+            scripts/normalize_wheel_build_paths.py tools/xtask/src/wheel_privacy.rs \
             tools/xtask/src/wheel_completeness.rs > "$bundle/build-recipe.sha256"
           (cd "$bundle" && sha256sum source.sha source.tree build-recipe.sha256 \
             medulla-*.whl > SHA256SUMS)
@@ -1486,13 +1490,13 @@ jobs:
         run: |
           set -euo pipefail
           git diff --name-only "$BASE...$HEAD" > "$RUNNER_TEMP/changed.txt"
-          python3 scripts/ci_change_scope.py --event pull_request --base "$BASE" --head "$HEAD" | grep '^code=' | tee "$RUNNER_TEMP/scope.txt"
+          cargo --locked xtask ci-change-scope --event pull_request --base "$BASE" --head "$HEAD" | grep '^code=' | tee "$RUNNER_TEMP/scope.txt"
           cat "$RUNNER_TEMP/scope.txt" >> "$GITHUB_OUTPUT"
           # A docs/spec diff is spec-only only when no workspace package reads
           # a changed path (MEDULLA-CONTRACT-R053.7.2): a later code=true wins.
           if grep -q '^code=false' "$RUNNER_TEMP/scope.txt"; then
             cargo metadata --format-version 1 --no-deps --locked > "$RUNNER_TEMP/cargo-metadata.json"
-            if python3 scripts/ci_affected_crates.py "$RUNNER_TEMP/cargo-metadata.json" < "$RUNNER_TEMP/changed.txt" | grep -q .; then
+            if cargo --locked xtask ci-affected-crates "$RUNNER_TEMP/cargo-metadata.json" < "$RUNNER_TEMP/changed.txt" | grep -q .; then
               echo "code=true" >> "$GITHUB_OUTPUT"
             fi
           fi
@@ -1556,13 +1560,13 @@ jobs:
           set -euo pipefail
           git diff --name-only "$BASE...$HEAD" > "$RUNNER_TEMP/changed.txt"
           cat "$RUNNER_TEMP/changed.txt"
-          python3 scripts/ci_change_scope.py --event pull_request --base "$BASE" --head "$HEAD" | grep '^code=' | tee "$RUNNER_TEMP/scope.txt"
+          cargo --locked xtask ci-change-scope --event pull_request --base "$BASE" --head "$HEAD" | grep '^code=' | tee "$RUNNER_TEMP/scope.txt"
           cat "$RUNNER_TEMP/scope.txt" >> "$GITHUB_OUTPUT"
           # Same answer as pr-scope: a changed path read by a package's sources
           # selects that package, so the diff is not spec-only.
           echo "crates=false" >> "$GITHUB_OUTPUT"
           cargo metadata --format-version 1 --no-deps --locked > "$RUNNER_TEMP/cargo-metadata.json"
-          if python3 scripts/ci_affected_crates.py "$RUNNER_TEMP/cargo-metadata.json" < "$RUNNER_TEMP/changed.txt" | grep -q .; then
+          if cargo --locked xtask ci-affected-crates "$RUNNER_TEMP/cargo-metadata.json" < "$RUNNER_TEMP/changed.txt" | grep -q .; then
             echo "crates=true" >> "$GITHUB_OUTPUT"
             echo "code=true" >> "$GITHUB_OUTPUT"
           fi
@@ -1671,12 +1675,14 @@ jobs:
           SCOPE_SKIP: ${{ steps.gates-scope.outputs.skip-hooks }}
           BASE: ${{ github.event.pull_request.base.sha }}
           HEAD: ${{ github.event.pull_request.head.sha }}
-          WHOLE_REPO_HOOKS: vulture check-bumpversion canonical-property-schema epistemic-operations-protocol no-version-suffixes dispatch-decomposition p2-modality-architecture p2-analytics-reasoning-architecture universal-read-rls-architecture exact-release-campaigns-architecture persisted-mutation-contract sole-write-envelope current-only-architecture exact-fault-restart-harness-architecture mint-lease-call-sites orphan-modules durable-table-registration-push security-sanitizer guardrail-tracked-privacy check-root-hygiene check-gitignore-convergence
+          WHOLE_REPO_HOOKS: vulture check-bumpversion epistemic-operations-protocol no-version-suffixes universal-read-rls-architecture exact-release-campaigns-architecture persisted-mutation-contract current-only-architecture exact-fault-restart-harness-architecture durable-table-registration-push security-sanitizer guardrail-tracked-privacy check-root-hygiene check-gitignore-convergence
         run: |
           set -euo pipefail
           for hook in $WHOLE_REPO_HOOKS; do
             SKIP="${SCOPE_SKIP}" pre-commit run "$hook" --config .config/pre-commit.yaml --hook-stage pre-push --from-ref "$BASE" --to-ref "$HEAD" --show-diff-on-failure
           done
+      - name: Repository checks (cargo xtask checks)
+        run: cargo --locked xtask checks
       - name: Spec trailers
         if: ${{ !cancelled() }}
         run: uvx --from 'git+https://github.com/Knuckles-Team/pipelines@main' pipelines-hook spec-trailers --base-ref "origin/${{ github.base_ref }}"
@@ -1686,7 +1692,7 @@ jobs:
         run: |
           set -euo pipefail
           cargo metadata --format-version 1 --no-deps --locked > "$RUNNER_TEMP/cargo-metadata.json"
-          python3 scripts/ci_affected_crates.py "$RUNNER_TEMP/cargo-metadata.json" < "$RUNNER_TEMP/changed.txt" > "$RUNNER_TEMP/cargo-runs.txt"
+          cargo --locked xtask ci-affected-crates "$RUNNER_TEMP/cargo-metadata.json" < "$RUNNER_TEMP/changed.txt" > "$RUNNER_TEMP/cargo-runs.txt"
           cat "$RUNNER_TEMP/cargo-runs.txt"
           if [ -s "$RUNNER_TEMP/cargo-runs.txt" ]; then echo "rust=true" >> "$GITHUB_OUTPUT"; else echo "rust=false" >> "$GITHUB_OUTPUT"; fi
       - name: Install librdkafka/Cyrus-SASL build headers

@@ -3,10 +3,6 @@
 from __future__ import annotations
 
 import os
-import stat
-import subprocess
-import sys
-import zipfile
 from pathlib import Path
 
 import pytest
@@ -20,7 +16,6 @@ RELEASE = ROOT / ".github/workflows/release.yml"
 CI = ROOT / ".github/workflows/ci.yml"
 ACTION = ROOT / ".github/actions/folded-wheel/action.yml"
 BUILD_SCRIPT = ROOT / "scripts/build_release_server.sh"
-INJECT = ROOT / "scripts/inject_server_binary.py"
 SMOKE = ROOT / "scripts/release_wheel_smoke.sh"
 DOCKERFILE = ROOT / "docker/Dockerfile"
 # The retired second distribution (its project and wheel names) and its import.
@@ -80,7 +75,7 @@ def test_folded_wheel_builds_the_server_per_target_and_folds_it_in() -> None:
     swap = steps[names.index("Add swap for the server link")]
     assert "runner.environment == 'github-hosted'" in swap["if"]
     fold = steps[names.index("Fold the server executable into the medulla wheel")]
-    assert "scripts/inject_server_binary.py" in fold["run"]
+    assert "xtask inject-server-binary" in fold["run"]
     assert "medulla-server(\\.exe)?" in fold["run"]
     order = [
         names.index(n)
@@ -105,57 +100,6 @@ def test_folded_wheel_builds_the_server_per_target_and_folds_it_in() -> None:
     assert "aarch64-unknown-linux-gnu | *-apple-darwin)" in script
     assert "CARGO_PROFILE_RELEASE_SERVER_LTO=thin" in script
     assert os.access(BUILD_SCRIPT, os.X_OK)
-
-
-def _wheel(path: Path, members: dict[str, bytes]) -> Path:
-    with zipfile.ZipFile(path, "w") as archive:
-        for name, data in members.items():
-            archive.writestr(name, data)
-        archive.writestr("medulla-1.0.dist-info/RECORD", "")
-    return path
-
-
-@pytest.mark.spec("MEDULLA-CONTRACT-R053.9")
-@pytest.mark.parametrize("exe", ["medulla-server", "medulla-server.exe"])
-def test_inject_places_an_executable_server_member_and_rewrites_record(
-    tmp_path: Path, exe: str
-) -> None:
-    wheel = _wheel(
-        tmp_path / "medulla-1.0-cp39-abi3-linux_x86_64.whl",
-        {
-            "medulla/__init__.py": b"",
-            "medulla/_bin/medulla-server": b"stale",
-        },
-    )
-    binary = tmp_path / exe
-    binary.write_bytes(b"\x7fELF server")
-    for _ in range(2):  # idempotent: a second fold replaces the member
-        subprocess.run(
-            [sys.executable, str(INJECT), str(wheel), str(binary)], check=True
-        )
-    with zipfile.ZipFile(wheel) as archive:
-        members = [i for i in archive.infolist() if "/_bin/" in i.filename]
-        record = archive.read("medulla-1.0.dist-info/RECORD").decode()
-        assert [i.filename for i in members] == [f"medulla/_bin/{exe}"]
-        mode = members[0].external_attr >> 16
-        assert stat.S_ISREG(mode) and mode & 0o777 == 0o755
-        assert archive.read(f"medulla/_bin/{exe}") == b"\x7fELF server"
-        assert f"medulla/_bin/{exe},sha256=" in record
-        assert record.rstrip().endswith("medulla-1.0.dist-info/RECORD,,")
-
-
-@pytest.mark.spec("MEDULLA-CONTRACT-R053.9")
-def test_inject_refuses_anything_but_the_server_executable(tmp_path: Path) -> None:
-    wheel = _wheel(tmp_path / "medulla-1.0-py3-none-any.whl", {"medulla/x.py": b""})
-    other = tmp_path / "nemesis"
-    other.write_bytes(b"x")
-    done = subprocess.run(
-        [sys.executable, str(INJECT), str(wheel), str(other)],
-        capture_output=True,
-        text=True,
-    )
-    assert done.returncode != 0
-    assert "not a medulla-server executable" in done.stderr
 
 
 @pytest.mark.spec("MEDULLA-CONTRACT-R053.9")

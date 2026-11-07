@@ -6,7 +6,7 @@
 # release workflow. Before this script, `.config/pre-commit.yaml`'s
 # `wheel-smoke` hook built the main wheel and stopped — it never ran
 # normalize_wheel_sbom.py / normalize_wheel_build_paths.py /
-# check_wheel_privacy.py / cargo xtask wheel-completeness at all, so a
+# cargo xtask wheel-privacy / cargo xtask wheel-completeness at all, so a
 # privileged-home-prefix leak in the wheel (the operator's second live example
 # this lane closes) was invisible to every local gate and reached CI first.
 #
@@ -78,7 +78,7 @@ echo "=== normalize retained native build paths ==="
 python3 scripts/normalize_wheel_build_paths.py "$SERVER_WHEEL"
 
 echo "=== audit wheel for retained build/home identity (the w3-wheel-privacy gate) ==="
-python3 scripts/check_wheel_privacy.py "$SERVER_WHEEL"
+cargo --locked xtask wheel-privacy "$SERVER_WHEEL"
 
 echo "=== require a complete wheel (kernel + executable binary + RECORD) ==="
 cargo --locked xtask wheel-completeness "$SERVER_WHEEL"

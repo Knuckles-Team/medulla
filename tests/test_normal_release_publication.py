@@ -10,13 +10,6 @@ from unittest.mock import patch
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
-SPEC = importlib.util.spec_from_file_location(
-    "verify_release_tag", ROOT / "scripts/verify_release_tag.py"
-)
-assert SPEC is not None and SPEC.loader is not None
-TAG = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(TAG)
-
 METADATA_SPEC = importlib.util.spec_from_file_location(
     "release_build_metadata", ROOT / "scripts/release_build_metadata.py"
 )
@@ -177,7 +170,7 @@ class ReleasePublication(unittest.TestCase):
         self.assertLess(smoke, publish)
         action = (ROOT / ".github/actions/publish-distribution/action.yml").read_text()
         self.assertIn("--skip-existing", action)
-        self.assertIn("scripts/verify_release_tag.py", action)
+        self.assertIn("xtask verify-release-tag", action)
 
     def test_same_run_artifacts_and_no_blind_skip(self):
         self._assert_publish_jobs_use_same_run_artifacts()
@@ -259,23 +252,6 @@ class ReleasePublication(unittest.TestCase):
                 for step in hosted_steps
             )
         )
-
-    def test_annotated_and_lightweight_tag(self):
-        ref = "refs/tags/v2.27.0"
-        source = "a" * 40
-        TAG.verify(source + "\t" + ref, ref, source)
-        TAG.verify(
-            "b" * 40 + "\t" + ref + "\n" + source + "\t" + ref + "^{}", ref, source
-        )
-        for lines in (
-            "",
-            "b" * 40 + "\t" + ref,
-            source + "\t" + ref + "\n" + source + "\t" + ref,
-        ):
-            with self.assertRaises(ValueError):
-                TAG.verify(lines, ref, source)
-        with self.assertRaises(ValueError):
-            TAG.verify(source + "\trefs/heads/main", "refs/heads/main", source)
 
 
 if __name__ == "__main__":
