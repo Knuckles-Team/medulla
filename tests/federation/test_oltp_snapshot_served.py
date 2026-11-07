@@ -19,11 +19,11 @@ from medulla.client import EngineResponseError
 MAPPING = """
 @prefix rr: <http://www.w3.org/ns/r2rml#> .
 @prefix ex: <http://example.org/> .
-<#A> a rr:TriplesMap ;
+<http://example.org/map/A> a rr:TriplesMap ;
   rr:logicalTable [ rr:tableName "snap_a" ] ;
   rr:subjectMap [ rr:template "http://example.org/a/{id}" ] ;
   rr:predicateObjectMap [ rr:predicate ex:aName ; rr:objectMap [ rr:column "name" ] ] .
-<#B> a rr:TriplesMap ;
+<http://example.org/map/B> a rr:TriplesMap ;
   rr:logicalTable [ rr:tableName "snap_b" ] ;
   rr:subjectMap [ rr:template "http://example.org/b/{id}" ] ;
   rr:predicateObjectMap [ rr:predicate ex:bName ; rr:objectMap [ rr:column "name" ] ] .

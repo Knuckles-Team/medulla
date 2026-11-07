@@ -52,8 +52,11 @@ def test_import_ontology_vector() -> None:
             "weather", "http://example.org/onto", 2, graph="tenant"
         )
     )
-    assert committed == COMMITTED
-    assert withdrawn == COMMITTED
+    # The typed view carries every GraphSchemaCommitted field; a graph with no
+    # ontology edits answers without an edit head (MEDULLA-TYPED-PACKS-R651.5).
+    view = {**COMMITTED, "edit_head": None}
+    assert committed == view
+    assert withdrawn == view
     import_op = {
         "op": "import_ontology",
         "connector": "weather",
