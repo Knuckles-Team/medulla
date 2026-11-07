@@ -14069,8 +14069,10 @@ dependencies = [
  "serde_json",
  "serde_yaml_ng",
  "sha2 0.10.9",
+ "syn 2.0.119",
  "tar",
  "toml_edit",
+ "walkdir",
  "zip",
 ]
 

@@ -510,7 +510,7 @@ def test_static_inventory_hooks_scope_their_complete_input_universes() -> None:
     registry = hooks["registry-test-ownership"]
     assert registry["files"] == (
         r"^(tests/|architecture/component-registry\.yml$|"
-        r"scripts/check_registry_test_ownership\.py$|\.config/pre-commit\.yaml$|"
+        r"tools/xtask/src/registry_test_ownership\.rs$|\.config/pre-commit\.yaml$|"
         r"pyproject\.toml$|uv\.lock$|\.python-version$)"
     )
     assert not registry.get("always_run", False)
@@ -519,7 +519,7 @@ def test_static_inventory_hooks_scope_their_complete_input_universes() -> None:
         "tests/new_gate.py",
         "tests/nested/fixture.rs",
         "architecture/component-registry.yml",
-        "scripts/check_registry_test_ownership.py",
+        "tools/xtask/src/registry_test_ownership.rs",
         ".config/pre-commit.yaml",
         "pyproject.toml",
         "uv.lock",

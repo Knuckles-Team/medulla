@@ -33,7 +33,7 @@ orphan_allowed          = []
 # re-enabled `doc == 0` on every /// -- 84k findings) to [test]
 # orphan_detection, enforced only by the coverage-linked `kiss test`.
 # `kiss check` no longer reports orphans; the compiler-derived
-# `orphan-modules` hook (scripts/check_orphan_modules.py) is the gate.
+# `orphan-modules` hook (`cargo xtask orphan-modules`) is the gate.
 # scripts/kiss_config_keys.py refuses any key kiss would drop a table for.
 
 [test]

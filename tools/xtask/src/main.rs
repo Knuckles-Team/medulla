@@ -3,9 +3,16 @@
 //! One module per check; each module exposes `NAME`, `SUMMARY` and `run`. A check that every
 //! repository needs is a `pipelines-hook` mode instead and does not belong here.
 
+mod analysis;
 mod build_profiles;
+mod canonical_property_schema;
 mod decide_budgets;
+mod dispatch_decomposition;
 mod fanout_host_groups;
+mod mint_lease_call_sites;
+mod orphan_modules;
+mod p2_analytics_reasoning_architecture;
+mod p2_modality_architecture;
 mod registry_test_ownership;
 mod repo_root_parity;
 mod sdist_completeness;
@@ -23,6 +30,10 @@ struct Check {
     name: &'static str,
     summary: &'static str,
     run: fn(&Path, &[String]) -> Result<(), String>,
+    /// Needs an argument or an artifact (or is not yet green), so `checks` lists it but does not run it.
+    standalone: bool,
+    /// Reads the tracked-file list, so `checks` skips it in a tree that has no `.git`.
+    needs_git: bool,
 }
 
 /// Every registered check, in the order `cargo xtask --list` prints them.
@@ -31,46 +42,106 @@ const CHECKS: &[Check] = &[
         name: build_profiles::NAME,
         summary: build_profiles::SUMMARY,
         run: build_profiles::run,
+        standalone: false,
+        needs_git: false,
+    },
+    Check {
+        name: canonical_property_schema::NAME,
+        summary: canonical_property_schema::SUMMARY,
+        run: canonical_property_schema::run,
+        standalone: false,
+        needs_git: false,
     },
     Check {
         name: decide_budgets::NAME,
         summary: decide_budgets::SUMMARY,
         run: decide_budgets::run,
+        standalone: true,
+        needs_git: false,
+    },
+    Check {
+        name: dispatch_decomposition::NAME,
+        summary: dispatch_decomposition::SUMMARY,
+        run: dispatch_decomposition::run,
+        standalone: false,
+        needs_git: false,
     },
     Check {
         name: fanout_host_groups::NAME,
         summary: fanout_host_groups::SUMMARY,
         run: fanout_host_groups::run,
+        standalone: false,
+        needs_git: false,
+    },
+    Check {
+        name: mint_lease_call_sites::NAME,
+        summary: mint_lease_call_sites::SUMMARY,
+        run: mint_lease_call_sites::run,
+        standalone: false,
+        needs_git: false,
+    },
+    Check {
+        name: orphan_modules::NAME,
+        summary: orphan_modules::SUMMARY,
+        run: orphan_modules::run,
+        standalone: false,
+        needs_git: true,
+    },
+    Check {
+        name: p2_analytics_reasoning_architecture::NAME,
+        summary: p2_analytics_reasoning_architecture::SUMMARY,
+        run: p2_analytics_reasoning_architecture::run,
+        standalone: false,
+        needs_git: false,
+    },
+    Check {
+        name: p2_modality_architecture::NAME,
+        summary: p2_modality_architecture::SUMMARY,
+        run: p2_modality_architecture::run,
+        standalone: false,
+        needs_git: false,
     },
     Check {
         name: registry_test_ownership::NAME,
         summary: registry_test_ownership::SUMMARY,
         run: registry_test_ownership::run,
+        standalone: false,
+        needs_git: true,
     },
     Check {
         name: repo_root_parity::NAME,
         summary: repo_root_parity::SUMMARY,
         run: repo_root_parity::run,
+        standalone: true,
+        needs_git: false,
     },
     Check {
         name: sdist_completeness::NAME,
         summary: sdist_completeness::SUMMARY,
         run: sdist_completeness::run,
+        standalone: true,
+        needs_git: false,
     },
     Check {
         name: sole_write_envelope::NAME,
         summary: sole_write_envelope::SUMMARY,
         run: sole_write_envelope::run,
+        standalone: false,
+        needs_git: false,
     },
     Check {
         name: spec_paths::NAME,
         summary: spec_paths::SUMMARY,
         run: spec_paths::run,
+        standalone: true,
+        needs_git: false,
     },
     Check {
         name: wheel_completeness::NAME,
         summary: wheel_completeness::SUMMARY,
         run: wheel_completeness::run,
+        standalone: true,
+        needs_git: false,
     },
 ];
 
@@ -88,6 +159,9 @@ fn main() -> ExitCode {
     let Some(name) = args.first() else {
         return usage();
     };
+    if name == "checks" {
+        return run_all(&workspace_root());
+    }
     if name == "--list" || name == "help" || name == "--help" {
         return usage();
     }
@@ -104,10 +178,43 @@ fn main() -> ExitCode {
     }
 }
 
+/// `cargo xtask checks`: every repository check, one verdict line each; fails if any fails.
+fn run_all(root: &Path) -> ExitCode {
+    let mut failed = Vec::new();
+    let has_git = root.join(".git").exists();
+    for check in CHECKS.iter().filter(|c| !c.standalone) {
+        if check.needs_git && !has_git {
+            eprintln!("xtask checks: {:<32} skipped (no .git)", check.name);
+            continue;
+        }
+        match (check.run)(root, &[]) {
+            Ok(()) => eprintln!("xtask checks: {:<32} ok", check.name),
+            Err(message) => {
+                eprintln!("{message}\nxtask checks: {:<32} FAIL", check.name);
+                failed.push(check.name);
+            }
+        }
+    }
+    if failed.is_empty() {
+        return ExitCode::SUCCESS;
+    }
+    eprintln!(
+        "xtask checks: {} failed: {}",
+        failed.len(),
+        failed.join(", ")
+    );
+    ExitCode::FAILURE
+}
+
 fn usage() -> ExitCode {
-    eprintln!("usage: cargo xtask <check> [args]\n\nchecks:");
+    eprintln!("usage: cargo xtask <check> [args]\n       cargo xtask checks   (every check that needs no argument)\n\nchecks:");
     for check in CHECKS {
-        eprintln!("  {:<32} {}", check.name, check.summary);
+        let note = if check.standalone {
+            " [standalone: not run by `checks`]"
+        } else {
+            ""
+        };
+        eprintln!("  {:<32} {}{note}", check.name, check.summary);
     }
     ExitCode::from(2)
 }

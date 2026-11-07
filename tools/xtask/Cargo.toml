@@ -14,4 +14,6 @@ serde_yaml_ng = "0.10"
 sha2 = "0.10"
 tar = { version = "0.4", default-features = false }
 toml_edit = { version = "0.25", default-features = false, features = ["parse"] }
+syn = { version = "2", default-features = false, features = ["full", "parsing", "derive", "printing", "clone-impls", "visit"] }
+walkdir = "2"
 zip = { version = "2", default-features = false, features = ["deflate-flate2", "flate2"] }
