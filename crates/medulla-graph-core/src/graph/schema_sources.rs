@@ -1468,7 +1468,7 @@ mod tests {
     fn core_catalog_has_one_version_per_module_and_is_outside_dynamic_quota() {
         let sources = GraphSchemaSources::default();
         sources.validate().unwrap();
-        assert_eq!(sources.core.len(), 60);
+        assert_eq!(sources.core.len(), 62);
         assert!(sources.dynamic.is_empty());
         assert!(sources.core.keys().all(|id| id.starts_with("core:")));
     }
@@ -1852,7 +1852,7 @@ mod tests {
             // MEDULLA-ORCH-VOCAB-R811.5: the core state-machine vocabulary and shapes.
             (
                 "state_machines",
-                "7efc5eb2b7bcd7c7f6a24f97cdf5a84c1ba8718b7148812f0d76a9cdf17a4052",
+                "d1e853728f9f2603ecc3e65cc5d0e61a211bf5c6e60f7f87ef73616450cae3df",
             ),
             (
                 "state_machines-shapes",
