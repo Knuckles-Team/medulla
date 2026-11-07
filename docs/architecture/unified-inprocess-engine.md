@@ -447,7 +447,7 @@ near-mechanical copy of `scripts/inject_numeric_kernel.py` — same `_find_kerne
 lift (searching for a module basename starting with `engine` instead of `numeric`), same
 `RECORD` rewrite, same mode-preservation fix for the console-script executable bit. Both
 injections compose freely (order does not matter, since each only reads/rewrites the
-target wheel's `RECORD`, never the other's extension). `scripts/check_wheel_completeness.py`
+target wheel's `RECORD`, never the other's extension). `cargo xtask wheel-completeness`
 (which already asserts the numeric kernel ships) gets a matching assertion for the engine
 extension once §11's packaging work lands.
 
@@ -590,7 +590,7 @@ surface. In priority order:
    single-tenant self-contained deployment.
 5. **Packaging.** `scripts/inject_pyengine.py` (mirrors `inject_numeric_kernel.py`),
    wired into `.github/workflows/release-build.yml` alongside the existing numeric-kernel
-   fold-in step, plus a `scripts/check_wheel_completeness.py` assertion that the shipped
+   fold-in step, plus a `cargo xtask wheel-completeness` assertion that the shipped
    wheel contains `medulla/engine*.so` whenever the release build opts into
    `pyo3-engine` (this is a **W-B/W-C-adjacent** follow-up, not this workstream's build —
    W-A's job was proving the crate and the pattern compile and work, not shipping a

@@ -9,6 +9,7 @@ mod sdist_completeness;
 mod spec_paths;
 #[cfg(test)]
 mod tempdir;
+mod wheel_completeness;
 
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
@@ -41,6 +42,11 @@ const CHECKS: &[Check] = &[
         name: spec_paths::NAME,
         summary: spec_paths::SUMMARY,
         run: spec_paths::run,
+    },
+    Check {
+        name: wheel_completeness::NAME,
+        summary: wheel_completeness::SUMMARY,
+        run: wheel_completeness::run,
     },
 ];
 

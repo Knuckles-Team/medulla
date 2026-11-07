@@ -422,7 +422,9 @@ jobs:
           python scripts/normalize_wheel_build_paths.py dist-gates/*.whl
           python scripts/check_wheel_privacy.py dist-gates/*.whl
       - name: Require a complete gates wheel (numeric + engine kernels + no executables + RECORD)
-        run: python scripts/check_wheel_completeness.py --require-engine-kernel dist-gates/*.whl
+        env:
+          CARGO_TARGET_DIR: ${{ runner.temp }}/xtask-target
+        run: cargo --locked xtask wheel-completeness --require-engine-kernel dist-gates/*.whl
       - name: Record the exact wheel before installation
         run: |
           set -euo pipefail
@@ -522,7 +524,7 @@ jobs:
             .github/workflows/ci.yml scripts/inject_numeric_kernel.py \
             scripts/strip_wheel_executables.py scripts/normalize_wheel_sbom.py \
             scripts/normalize_wheel_build_paths.py scripts/check_wheel_privacy.py \
-            scripts/check_wheel_completeness.py > "$bundle/build-recipe.sha256"
+            tools/xtask/src/wheel_completeness.rs > "$bundle/build-recipe.sha256"
           (cd "$bundle" && sha256sum source.sha source.tree build-recipe.sha256 \
             medulla-*.whl > SHA256SUMS)
       - name: Upload validated wheel for installed acceptance

@@ -13,7 +13,7 @@ import pytest
 
 from scripts.inject_numeric_kernel import inject
 
-# Pure zip-file surgery, exactly like sibling test_check_wheel_completeness.py
+# Pure zip-file surgery, exactly like sibling test_wheel_suite_selection.py
 # -- never needs the shared native engine (see conftest.py's session-scoped
 # `start_medulla_server` fixture, which this marker exempts this
 # module from triggering). BUG-PE-018: this was the module that hung a

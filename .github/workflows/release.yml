@@ -471,7 +471,9 @@ jobs:
           name: wheel-linux-x86_64
           path: dist
       - name: Require a complete wheel before upload
-        run: python scripts/check_wheel_completeness.py --require-engine-kernel dist/*.whl
+        env:
+          CARGO_TARGET_DIR: ${{ runner.temp }}/xtask-target
+        run: cargo --locked xtask wheel-completeness --require-engine-kernel dist/*.whl
       - name: Publish linux-x86_64 to PyPI
         uses: ./.github/actions/publish-distribution
         with:

@@ -95,7 +95,7 @@ def test_folded_wheel_builds_the_server_per_target_and_folds_it_in() -> None:
     ]
     assert order == sorted(order)
     complete = next(
-        s["run"] for s in steps if "check_wheel_completeness" in s.get("run", "")
+        s["run"] for s in steps if "xtask wheel-completeness" in s.get("run", "")
     )
     assert "--require-server-binary" in complete
     script = BUILD_SCRIPT.read_text()

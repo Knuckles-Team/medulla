@@ -250,7 +250,7 @@ def test_release_wheels_are_rebuilt_and_compared_reproducibly() -> None:
         "scripts/normalize_wheel_build_paths.py",
         "scripts/check_wheel_privacy.py",
         "scripts/inject_server_binary.py",
-        "scripts/check_wheel_completeness.py --require-engine-kernel",
+        "xtask wheel-completeness --require-engine-kernel",
     ):
         assert wheel_pass.count(script) == 1, script
     # The `gates` job folds its OWN numeric kernel into a real wheel
@@ -293,7 +293,7 @@ def test_incomplete_fallback_artifacts_cannot_be_published() -> None:
         for step in steps
         if step.get("name") == "Require a complete wheel before upload"
     )
-    assert "check_wheel_completeness.py --require-engine-kernel dist/*.whl" in gate
+    assert "xtask wheel-completeness --require-engine-kernel dist/*.whl" in gate
     names = [step.get("name", "") for step in steps]
     assert names.index("Require a complete wheel before upload") < names.index(
         "Publish linux-x86_64 to PyPI"

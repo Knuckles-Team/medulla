@@ -702,13 +702,13 @@ repos:
   # release-build.yml's "Normalize and audit primary wheel" / "Require a
   # complete primary wheel" steps run (normalize_wheel_sbom.py →
   # normalize_wheel_build_paths.py → check_wheel_privacy.py →
-  # check_wheel_completeness.py). That gap is exactly how a wheel privacy
+  # cargo xtask wheel-completeness). That gap is exactly how a wheel privacy
   # audit failure (5 `privileged-home-prefix` leaks) shipped past every local
   # gate straight into CI: nothing local ever ran check_wheel_privacy.py at
   # all. scripts/wheel_privacy_gate.sh now runs the full sequence (mirroring
   # w4-engine-down run_gates.sh reproduction of release-build.yml's exact
   # steps), folding a matching
-  # medulla-numeric kernel wheel in first so check_wheel_completeness.py's
+  # medulla-numeric kernel wheel in first so the wheel-completeness check's
   # numeric-kernel-present invariant is checkable too, not just privacy.
   - id: wheel-smoke
     name: wheel smoke + privacy/completeness audit — maturin build + fold + normalize + audit (HEAVY — manual)
