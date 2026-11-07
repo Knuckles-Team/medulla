@@ -103,6 +103,71 @@ pub struct LoweredFlow {
     pub default: bool,
 }
 
+/// One element of a source document viewed as a graph: the input of Lower
+/// (MEDULLA-CQ-ORCH-R701.11). `class` is the source element class; Lower
+/// reads its kind only through a [`KindAnnotation`].
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SourceNode {
+    pub element_id: String,
+    pub class: String,
+    pub label: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub role: Option<String>,
+    #[serde(rename = "ref", default, skip_serializing_if = "Option::is_none")]
+    pub reference: Option<String>,
+}
+
+/// The source document as a typed graph, with the annex its parse kept.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SourceGraph {
+    pub name: String,
+    pub system: ProcessSourceSystem,
+    pub model_id: String,
+    pub nodes: Vec<SourceNode>,
+    pub edges: Vec<LoweredFlow>,
+    #[serde(default)]
+    pub annex: Vec<AnnexEntry>,
+}
+
+/// The step kind and gate a source class carries (`:dagNodeKind`,
+/// `:canonicalGateKind`). `kind: None` is the source-only kind `state`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct KindAnnotation {
+    pub class: &'static str,
+    pub kind: Option<StepKind>,
+    pub gate: Option<GateKind>,
+}
+
+/// The output of Lower: steps and flows with no canonical id yet.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct LoweredProcess {
+    pub name: String,
+    pub system: ProcessSourceSystem,
+    pub model_id: String,
+    pub steps: Vec<LoweredStep>,
+    pub flows: Vec<LoweredFlow>,
+    #[serde(default)]
+    pub annex: Vec<AnnexEntry>,
+}
+
+/// The output of Allocate: canonical ids `s1` to `sn` and sorted flows.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct AllocatedProcess {
+    pub name: String,
+    pub system: ProcessSourceSystem,
+    pub model_id: String,
+    pub steps: Vec<CanonicalStep>,
+    pub flows: Vec<CanonicalFlow>,
+    /// Step id to source element id.
+    pub elements: BTreeMap<String, String>,
+    #[serde(default)]
+    pub annex: Vec<AnnexEntry>,
+}
+
 /// The system a canonical workflow was imported from.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]

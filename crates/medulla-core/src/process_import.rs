@@ -1,19 +1,23 @@
-//! Canonical form rules, admission and export (MEDULLA-CQ-ORCH-R701.2).
+//! Process compilation (MEDULLA-CQ-ORCH-R701.2, R701.8, R701.11).
 //!
-//! Every process source lowers its document to [`LoweredStep`]s and
-//! [`LoweredFlow`]s and ends in [`canonicalize`]. Admission
-//! ([`admit_canonical`]) recomputes the canonical ids and the digest of a
-//! stated canonical document and refuses one that differs. No function here
-//! names a source format.
+//! Four stages, each a pure function from one typed form to the next: a
+//! source's Parse gives its source document, viewed as a [`SourceGraph`];
+//! [`lower`] gives a [`LoweredProcess`] (rules 1, 2 and 6); [`allocate`]
+//! gives an [`AllocatedProcess`] (rules 3 and 4); [`emit`] gives the
+//! [`CanonicalWorkflow`] (rule 5). [`canonicalize`] is `emit(allocate(x))`.
+//! Admission ([`admit_canonical`]) runs Allocate and Emit again over a stated
+//! canonical document and refuses a difference. No stage names a source
+//! format: a source adds a Parse and its kind annotations only.
 
 use std::cmp::Reverse;
 use std::collections::{BTreeMap, BinaryHeap, HashMap};
 
 use medulla_types::contract::Digest256;
 use medulla_types::process_import::{
-    CanonicalFlow, CanonicalStep, CanonicalWorkflow, GateKind, ImportError, LoweredFlow,
-    LoweredStep, ProcessLoss, ProcessSourceSystem, SourceTrace, StepKind, LOSS_ANNEX_NOT_HELD,
-    PROCESS_CANONICAL_SCHEMA, PROCESS_IMPORT_SCHEMA_VERSION,
+    AllocatedProcess, AnnexEntry, CanonicalFlow, CanonicalStep, CanonicalWorkflow, GateKind,
+    ImportError, KindAnnotation, LoweredFlow, LoweredProcess, LoweredStep, ProcessLoss,
+    ProcessSourceSystem, SourceGraph, SourceNode, SourceTrace, StepKind, ANNEX_EPC_STATE_EVENT,
+    LOSS_ANNEX_NOT_HELD, PROCESS_CANONICAL_SCHEMA, PROCESS_IMPORT_SCHEMA_VERSION,
 };
 use serde_json::Value;
 use unicode_normalization::UnicodeNormalization;
@@ -33,7 +37,7 @@ fn normalize_opt(text: Option<&str>) -> Option<String> {
 /// Rules 1 and 2 over a source graph: normalize text and derive split and
 /// join steps from degree. A gate that both joins and splits becomes a join
 /// step, one flow and a split step (`<element id>#split`).
-pub fn lower_rules(
+fn lower_rules(
     steps: Vec<LoweredStep>,
     flows: Vec<LoweredFlow>,
 ) -> (Vec<LoweredStep>, Vec<LoweredFlow>) {
@@ -252,15 +256,116 @@ pub fn workflow_digest(steps: &[CanonicalStep], flows: &[CanonicalFlow]) -> Stri
     Digest256::sha256(text.as_bytes()).to_hex()
 }
 
-/// Assign canonical ids, sort flows and compute the digest of a lowered
-/// process. `name`, `source` system and model id pass through.
-pub fn canonicalize(
-    name: &str,
-    system: ProcessSourceSystem,
-    model_id: &str,
-    steps: Vec<LoweredStep>,
-    flows: Vec<LoweredFlow>,
-) -> Result<CanonicalWorkflow, ImportError> {
+/// Lower: the source graph to [`LoweredProcess`]. Each node takes its kind
+/// and gate from the annotation of its class; a class without one refuses
+/// `UnmappedElement`. Then rules 1, 2 and 6: text is normalized, split and
+/// join come from degree, and a `state` node folds into the flow that passes
+/// it, as the arm condition after a split, else as an annex entry.
+pub fn lower(
+    graph: &SourceGraph,
+    annotations: &[KindAnnotation],
+) -> Result<LoweredProcess, ImportError> {
+    let mut steps = Vec::with_capacity(graph.nodes.len());
+    let mut states: HashMap<&str, &SourceNode> = HashMap::new();
+    for node in &graph.nodes {
+        let annotation = annotations
+            .iter()
+            .find(|a| a.class == node.class)
+            .ok_or_else(|| ImportError::UnmappedElement {
+                element_type: node.class.clone(),
+            })?;
+        match annotation.kind {
+            Some(kind) => steps.push(LoweredStep {
+                element_id: node.element_id.clone(),
+                kind,
+                gate: annotation.gate,
+                label: node.label.clone(),
+                role: node.role.clone(),
+                reference: node.reference.clone(),
+            }),
+            None => {
+                states.insert(node.element_id.as_str(), node);
+            }
+        }
+    }
+    let mut annex = graph.annex.clone();
+    let flows = fold_states(&graph.edges, &states, &mut annex)?;
+    let (steps, flows) = lower_rules(steps, flows);
+    Ok(LoweredProcess {
+        name: normalize_text(&graph.name),
+        system: graph.system,
+        model_id: graph.model_id.clone(),
+        steps,
+        flows,
+        annex,
+    })
+}
+
+/// Rule 6: replace each in-flow, `state`, out-flow chain by one flow.
+fn fold_states(
+    edges: &[LoweredFlow],
+    states: &HashMap<&str, &SourceNode>,
+    annex: &mut Vec<AnnexEntry>,
+) -> Result<Vec<LoweredFlow>, ImportError> {
+    if states.is_empty() {
+        return Ok(edges.to_vec());
+    }
+    let mut out_degree: HashMap<&str, usize> = HashMap::new();
+    for edge in edges {
+        *out_degree.entry(edge.source.as_str()).or_default() += 1;
+    }
+    let mut flows = Vec::new();
+    for edge in edges
+        .iter()
+        .filter(|e| !states.contains_key(e.source.as_str()))
+    {
+        let mut flow = edge.clone();
+        let mut seen = 0usize;
+        while let Some(state) = states.get(flow.target.as_str()) {
+            seen += 1;
+            let next: Vec<&LoweredFlow> = edges
+                .iter()
+                .filter(|e| e.source == state.element_id)
+                .collect();
+            if next.len() != 1 || seen > states.len() {
+                return Err(ImportError::NotCanonical {
+                    reason: format!("state {} has {} out-flows", state.element_id, next.len()),
+                });
+            }
+            let after_split = out_degree.get(flow.source.as_str()).copied().unwrap_or(0) >= 2;
+            if after_split && flow.condition.is_none() {
+                flow.condition = Some(state.label.clone());
+            } else {
+                annex.push(AnnexEntry {
+                    schema_version: PROCESS_IMPORT_SCHEMA_VERSION,
+                    after: Some(flow.source.clone()),
+                    before: Some(next[0].target.clone()),
+                    construct: ANNEX_EPC_STATE_EVENT.to_string(),
+                    element_id: state.element_id.clone(),
+                    label: state.label.clone(),
+                    type_num: None,
+                });
+            }
+            flow.target = next[0].target.clone();
+            flow.default |= next[0].default;
+        }
+        flows.push(flow);
+    }
+    Ok(flows)
+}
+
+/// Allocate: canonical ids `s1` to `sn` in Kahn order and sorted flows
+/// (rules 3 and 4). Idempotent: allocating the lowered form of an allocated
+/// process gives that process again.
+pub fn allocate(lowered: LoweredProcess) -> Result<AllocatedProcess, ImportError> {
+    let LoweredProcess {
+        name,
+        system,
+        model_id,
+        steps,
+        flows,
+        annex,
+    } = lowered;
     let order = allocate_order(&steps, &flows)?;
     let mut position = vec![0usize; steps.len()];
     for (n, &i) in order.iter().enumerate() {
@@ -300,7 +405,7 @@ pub fn canonicalize(
         })
         .collect();
     sorted.sort();
-    let canonical_flows: Vec<CanonicalFlow> = sorted
+    let canonical_flows = sorted
         .into_iter()
         .map(|(s, t, condition, default)| CanonicalFlow {
             source: format!("s{s}"),
@@ -309,58 +414,102 @@ pub fn canonicalize(
             default,
         })
         .collect();
-    let digest = workflow_digest(&canonical_steps, &canonical_flows);
-    Ok(CanonicalWorkflow {
-        schema_version: PROCESS_IMPORT_SCHEMA_VERSION,
-        schema: PROCESS_CANONICAL_SCHEMA.to_string(),
-        name: normalize_text(name),
+    Ok(AllocatedProcess {
+        name,
+        system,
+        model_id,
         steps: canonical_steps,
         flows: canonical_flows,
-        digest,
-        source: SourceTrace {
-            schema_version: PROCESS_IMPORT_SCHEMA_VERSION,
-            system,
-            model_id: model_id.to_string(),
-            elements,
-        },
-        annex: Vec::new(),
-        losses: Vec::new(),
+        elements,
+        annex,
     })
 }
 
-/// The lowered form of a stated canonical document: each step keyed by its
-/// source element id (else its step id), each flow by those keys.
-fn lowered_of(doc: &CanonicalWorkflow) -> (Vec<LoweredStep>, Vec<LoweredFlow>) {
+/// The lowered form of an allocated process: each step keyed by its source
+/// element id, so that `allocate(relower(&allocate(x)?))` equals `allocate(x)`.
+pub fn relower(allocated: &AllocatedProcess) -> LoweredProcess {
     let element = |id: &str| {
-        doc.source
+        allocated
             .elements
             .get(id)
             .cloned()
             .unwrap_or_else(|| id.to_string())
     };
-    let steps = doc
-        .steps
-        .iter()
-        .map(|s| LoweredStep {
-            element_id: element(&s.id),
-            kind: s.kind,
-            gate: s.gate,
-            label: s.label.clone(),
-            role: s.role.clone(),
-            reference: s.reference.clone(),
-        })
-        .collect();
-    let flows = doc
-        .flows
-        .iter()
-        .map(|f| LoweredFlow {
-            source: element(&f.source),
-            target: element(&f.target),
-            condition: f.condition.clone(),
-            default: f.default,
-        })
-        .collect();
-    (steps, flows)
+    LoweredProcess {
+        name: allocated.name.clone(),
+        system: allocated.system,
+        model_id: allocated.model_id.clone(),
+        steps: allocated
+            .steps
+            .iter()
+            .map(|s| LoweredStep {
+                element_id: element(&s.id),
+                kind: s.kind,
+                gate: s.gate,
+                label: s.label.clone(),
+                role: s.role.clone(),
+                reference: s.reference.clone(),
+            })
+            .collect(),
+        flows: allocated
+            .flows
+            .iter()
+            .map(|f| LoweredFlow {
+                source: element(&f.source),
+                target: element(&f.target),
+                condition: f.condition.clone(),
+                default: f.default,
+            })
+            .collect(),
+        annex: allocated.annex.clone(),
+    }
+}
+
+/// Emit: the digest (rule 5), the source trace and the annex.
+pub fn emit(allocated: AllocatedProcess) -> CanonicalWorkflow {
+    let digest = workflow_digest(&allocated.steps, &allocated.flows);
+    CanonicalWorkflow {
+        schema_version: PROCESS_IMPORT_SCHEMA_VERSION,
+        schema: PROCESS_CANONICAL_SCHEMA.to_string(),
+        name: allocated.name,
+        steps: allocated.steps,
+        flows: allocated.flows,
+        digest,
+        source: SourceTrace {
+            schema_version: PROCESS_IMPORT_SCHEMA_VERSION,
+            system: allocated.system,
+            model_id: allocated.model_id,
+            elements: allocated.elements,
+        },
+        annex: allocated.annex,
+        losses: Vec::new(),
+    }
+}
+
+/// `emit(allocate(lowered))`; no other path builds a canonical workflow.
+pub fn canonicalize(lowered: LoweredProcess) -> Result<CanonicalWorkflow, ImportError> {
+    Ok(emit(allocate(lowered)?))
+}
+
+/// The whole compile of one source graph: Lower, Allocate, Emit.
+pub fn compile_process(
+    graph: &SourceGraph,
+    annotations: &[KindAnnotation],
+) -> Result<CanonicalWorkflow, ImportError> {
+    canonicalize(lower(graph, annotations)?)
+}
+
+/// The allocated form a stated canonical document claims.
+fn allocated_of(doc: &CanonicalWorkflow) -> AllocatedProcess {
+    AllocatedProcess {
+        name: doc.name.clone(),
+        system: doc.source.system,
+        model_id: doc.source.model_id.clone(),
+        steps: doc.steps.clone(),
+        flows: doc.flows.clone(),
+        elements: doc.source.elements.clone(),
+        annex: doc.annex.clone(),
+    }
 }
 
 /// Admit a stated canonical document with the default element limit.
@@ -368,8 +517,8 @@ pub fn admit_canonical(doc: &CanonicalWorkflow) -> Result<CanonicalWorkflow, Imp
     admit_canonical_with_limit(doc, DEFAULT_PROCESS_IMPORT_MAX_ELEMENTS)
 }
 
-/// Recompute the canonical ids and the digest of `doc` and refuse a
-/// document that differs. Annex and losses pass through, outside the digest.
+/// Run Allocate and Emit again over a stated canonical document and refuse
+/// a difference. Annex and losses pass through, outside the digest.
 pub fn admit_canonical_with_limit(
     doc: &CanonicalWorkflow,
     max_elements: u64,
@@ -387,29 +536,26 @@ pub fn admit_canonical_with_limit(
             ),
         });
     }
-    let (steps, flows) = lowered_of(doc);
-    let mut computed = canonicalize(
-        &doc.name,
-        doc.source.system,
-        &doc.source.model_id,
-        steps,
-        flows,
-    )?;
-    if computed.steps != doc.steps || computed.flows != doc.flows || computed.name != doc.name {
+    let stated = allocated_of(doc);
+    let mut recomputed = allocate(relower(&stated))?;
+    if recomputed.steps != stated.steps
+        || recomputed.flows != stated.flows
+        || normalize_text(&doc.name) != doc.name
+    {
         return Err(ImportError::NotCanonical {
             reason: "steps, flows or name differ from their canonical form".into(),
         });
     }
-    if computed.digest != doc.digest {
+    recomputed.elements = stated.elements;
+    let mut admitted = emit(recomputed);
+    if admitted.digest != doc.digest {
         return Err(ImportError::DigestMismatch {
             stated: doc.digest.clone(),
-            computed: computed.digest,
+            computed: admitted.digest,
         });
     }
-    computed.source.elements = doc.source.elements.clone();
-    computed.annex = doc.annex.clone();
-    computed.losses = doc.losses.clone();
-    Ok(computed)
+    admitted.losses = doc.losses.clone();
+    Ok(admitted)
 }
 
 /// Export a stored workflow toward `target`: the annex is kept for a

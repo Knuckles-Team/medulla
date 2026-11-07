@@ -4,7 +4,9 @@ use medulla_core::process_exchange::bpmn_read::{parse_bpmn, BpmnLimits};
 use medulla_core::process_exchange::workflow_bpmn::workflow_to_bpmn;
 use medulla_core::process_exchange::{ProcessExchangeError, BPMN_NODE_KINDS};
 use medulla_core::process_import::canonicalize;
-use medulla_types::process_import::{LoweredFlow, LoweredStep, ProcessSourceSystem, StepKind};
+use medulla_types::process_import::{
+    LoweredFlow, LoweredProcess, LoweredStep, ProcessSourceSystem, StepKind,
+};
 
 const EVERY_KIND: &[u8] = include_bytes!("fixtures/process_exchange/every_kind.bpmn");
 
@@ -131,13 +133,14 @@ fn workflow_exports_as_deployable_bpmn() {
             }
         })
         .collect();
-    let workflow = canonicalize(
-        "Book invoice",
-        ProcessSourceSystem::ArisEpc,
-        "m",
+    let workflow = canonicalize(LoweredProcess {
+        name: "Book invoice".into(),
+        system: ProcessSourceSystem::ArisEpc,
+        model_id: "m".into(),
         steps,
         flows,
-    )
+        annex: Vec::new(),
+    })
     .unwrap();
     let doc = workflow_to_bpmn(&workflow).unwrap();
     let process = &doc.processes[0];
