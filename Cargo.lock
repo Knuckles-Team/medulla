@@ -8395,6 +8395,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "medulla-xtask"
+version = "0.0.0"
+dependencies = [
+ "base64 0.22.1",
+ "flate2",
+ "regex",
+ "serde_json",
+ "serde_yaml_ng",
+ "sha2 0.10.9",
+ "syn 2.0.119",
+ "tar",
+ "toml_edit",
+ "walkdir",
+ "zip",
+]
+
+[[package]]
 name = "memchr"
 version = "2.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -14065,23 +14082,6 @@ name = "xml-rs"
 version = "0.8.29"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e450f9b2ed1dff33c94c12589a87338689467b9c4f5d8a5710bd09a847d2c8a7"
-
-[[package]]
-name = "xtask"
-version = "0.0.0"
-dependencies = [
- "base64 0.22.1",
- "flate2",
- "regex",
- "serde_json",
- "serde_yaml_ng",
- "sha2 0.10.9",
- "syn 2.0.119",
- "tar",
- "toml_edit",
- "walkdir",
- "zip",
-]
 
 [[package]]
 name = "xxhash-rust"
