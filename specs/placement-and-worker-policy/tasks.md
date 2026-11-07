@@ -72,3 +72,17 @@ Each task line reads `- [ ] T001 [P] [US1] <ID>-R012.4 description`. `[P]` marks
 - [ ] T066 [US4] MEDULLA-PLACEMENT-R751.757 Skip, never queue.
 - [ ] T067 [US4] MEDULLA-PLACEMENT-R751.758 Run observability.
 - [ ] T068 [US4] MEDULLA-PLACEMENT-R751.759 Wiring and hot-path proof: owned schedule lifecycle.
+- [ ] T069 [US4] MEDULLA-PLACEMENT-R780 Development lane hold is one explicit state machine
+- [ ] T070 [US4] MEDULLA-PLACEMENT-R780.1 Hold transition function
+- [ ] T071 [US4] MEDULLA-PLACEMENT-R780.2 Terminal work item releases the hold by event, and the machine is described
+- [ ] T072 [US4] MEDULLA-PLACEMENT-R781 Resource reservation derives tombstone from its state machine
+- [ ] T077 [US4] MEDULLA-PLACEMENT-R781.1 Reservation transition function and tombstone cutover
+- [ ] T078 [US4] MEDULLA-PLACEMENT-R781.2 Describe the reservation machine in the ontology
+- [ ] T073 [US4] MEDULLA-PLACEMENT-R782 Capacity lease is one explicit state machine
+- [ ] T074 [US4] MEDULLA-PLACEMENT-R782.1 Capacity lease transition function
+- [ ] T075 [US4] MEDULLA-PLACEMENT-R782.2 Describe the capacity lease machine in the ontology
+- [ ] T079 [US4] MEDULLA-PLACEMENT-R782.3 Control lease transition function
+- [ ] T076 [US4] MEDULLA-PLACEMENT-R783 Describe the raft membership-shrink machine in the ontology
+- [ ] T080 [US4] MEDULLA-PLACEMENT-R783.1 Describe the raft membership-shrink machine in the ontology
+- [ ] T081 [US4] MEDULLA-PLACEMENT-R783.2 Membership-shrink refusals are typed
+- [ ] T082 [US4] MEDULLA-PLACEMENT-R783.3 Inventory the sibling raft machines

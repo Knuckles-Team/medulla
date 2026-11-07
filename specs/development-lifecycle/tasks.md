@@ -121,3 +121,6 @@ Compile slot: Medulla only, one cargo lane host-wide at a time.
 - [ ] T114 [US1] MEDULLA-SDLC-R021 Crate dependencies follow declared stability layers.
 - [ ] T115 [US1] MEDULLA-SDLC-R022 Repository scripts hold no gate or certification logic.
 - [ ] T116 [US1] MEDULLA-SDLC-R023 Process-wide state is explicit.
+- [ ] T114 MEDULLA-SDLC-R030 Defect lifecycle is one explicit state machine
+- [ ] T115 MEDULLA-SDLC-R030.1 Defect transition function and edge table
+- [ ] T116 MEDULLA-SDLC-R030.2 Describe the defect machine in the ontology

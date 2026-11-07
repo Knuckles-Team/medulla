@@ -164,6 +164,11 @@ Gates for any change under these rows: `cargo test -p medulla-rdf --test orchest
 - Process plans: `crates/medulla-server-router/src/dispatch/router/decision_plane.rs:112` → `handle_decide` (`crates/medulla-h-decide/src/decide/stat_decide.rs:60`) → the new family `crates/medulla-h-decide/src/decide/family/process_plan.rs`.
 - Obsolete paths to delete: none.
 
+### Machine wiring
+
+- `BrokerMessageMachine`: entry point served broker publish, consume and ack methods → `consume_scan.rs` → `MessageState::apply` in `crates/medulla-core/src/broker/message_machine.rs` → stored state field. Attach points: `broker.rs:344,466` and `consume_scan.rs:86,110-132`. Wiring row: MEDULLA-CQ-ORCH-R810.1. Hot-path proof row: the cutover scan `no_writer_sets_state_outside_apply` of MEDULLA-CQ-ORCH-R810.1.
+- `AnalyticsJobMachine`: entry point served analytics job methods → the job store in `crates/medulla-jobs/src/store.rs` → `JobState::step` in `crates/medulla-jobs/src/job_machine.rs` → stored state field. Attach points: the 16 `job.state =` sites in `store.rs` (lines 810 to 2255) and the reclaim at `:1279`. Wiring row: MEDULLA-CQ-ORCH-R811.2. Hot-path proof row: `no_site_sets_state_outside_step` of MEDULLA-CQ-ORCH-R811.2.
+
 ## Cross-repo seams
 
 - arbora intent-surface probes: `ARBORA-FLEET-R052.4` (consumer rows R009.1 to R009.6) and `ARBORA-FLEET-R056`; contract `contracts/arbora-intent-probes.md`.
@@ -174,3 +179,7 @@ Gates for any change under these rows: `cargo test -p medulla-rdf --test orchest
 - Connectors: the process engine connector `camunda-mcp` (`MEDULLA-CQ-ORCH-R703`), the ARIS connector `aris-mcp` (`MEDULLA-CQ-ORCH-R701` and `R703`) and the architecture-modelling connector `archimate-mcp` (`MEDULLA-CQ-ORCH-R705`); contract `contracts/connector-process-and-architecture-sync.md` names their rows.
 - Process source contract: provider `MEDULLA-CQ-ORCH-R701`, consumers `camunda-mcp` and `aris-mcp`; contract `contracts/process-source-canonical.md`.
 - scion-sdk contract vocabulary: `SCION-CONNECTOR-CONTROL-R916.3` provides the served `contracts.ttl` (consumer rows R012.1 and R012.2); contract `contracts/scion-surface-contracts.md`.
+
+### Explicit state machines
+
+Organization constitution Article XXXI requires a closed set of states, one transition function and a typed refusal for each machine. Rows `MEDULLA-CQ-ORCH-R810`, `MEDULLA-CQ-ORCH-R811` apply it here. Each machine returns `TransitionRefused` (MEDULLA-ORCH-VOCAB-R811.4), stores its state in one field, and is described in `crates/medulla-core/ontology/state-machines-v1.ttl` with classes that roll up to the core state-machine classes. The change is a hard cutover: the old literals, flags and inferred states are deleted in the same release.

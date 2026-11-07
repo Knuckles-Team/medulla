@@ -1116,9 +1116,17 @@ none
 - Supersession: `Method::SupersedeEdge` to `crates/medulla-h-graph/src/graph_ops/gateway_graph.rs::apply_supersede_edge` (`MEDULLA-DURABLE-KERNEL-R080`).
 - Obsolete paths to delete: the dispatch queue duplicates named by `MEDULLA-DURABLE-KERNEL-R866` once the task queue facade lands.
 
+### Machine wiring
+
+- `SemanticIndexUpgradeMachine`: entry point the semantic index upgrade runtime → `upgrade.rs` → `UpgradePhase::apply` in `crates/medulla-h-retrieve/src/semantic_index_runtime/upgrade.rs` → stored state field. Attach points: `upgrade.rs:132,752`. Wiring row: MEDULLA-DURABLE-KERNEL-R872.1. Hot-path proof row: `no_writer_sets_state_outside_apply` of MEDULLA-DURABLE-KERNEL-R872.1.
+
 ## Cross-repo seams
 
 - Task queue and worker registry: `MEDULLA-DURABLE-KERNEL-R072` provides, `SCION-SOURCE-INGEST-R011` consumes (the runner in `scion_sdk/runner/`). Contract: [task-queue-worker-client.md](contracts/task-queue-worker-client.md).
 - Committed graph change feed: `MEDULLA-DURABLE-KERNEL-R043.100` provides, `ARBORA-OPS-R062` consumes. Contract: [graph-change-feed.md](contracts/graph-change-feed.md).
 - Run checkpoint and memory references: `MEDULLA-DURABLE-KERNEL-R028.1` provides, `ARBORA-A2A-R001.2` consumes. Contract: [run-checkpoint.md](contracts/run-checkpoint.md).
 - Host-start grant: `MEDULLA-DURABLE-KERNEL-R030.1` provides, `ARBORA-HOST-R010.7.1` consumes. Contract: [host-start-grant.md](contracts/host-start-grant.md).
+
+### Explicit state machines
+
+Organization constitution Article XXXI requires a closed set of states, one transition function and a typed refusal for each machine. Rows `MEDULLA-DURABLE-KERNEL-R872` apply it here. Each machine returns `TransitionRefused` (MEDULLA-ORCH-VOCAB-R811.4), stores its state in one field, and is described in `crates/medulla-core/ontology/state-machines-v1.ttl` with classes that roll up to the core state-machine classes. The change is a hard cutover: the old literals, flags and inferred states are deleted in the same release.

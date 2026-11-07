@@ -321,6 +321,12 @@ none
 - `Method::ApplyMutation` to `compile_methods` (`crates/medulla-server-api/src/batch_compile/compile.rs:124`), which gains `identity_metadata::admit`.
 - Obsolete paths to delete: none; every row adds to an existing path.
 
+### Machine wiring
+
+- `GovernedChangeMachine`: entry point served governed change methods → `GovernedStatus::apply` → `GovernedStatus::apply` in `crates/medulla-mutation-types/src/governed_change.rs`, the one assign site → stored state field. Attach points: `governed_change.rs:472,512,549`. Wiring row: MEDULLA-IDENTITY-R720.1. Hot-path proof row: `no_writer_sets_state_outside_apply` of MEDULLA-IDENTITY-R720.1.
+- `UserStatusMachine`: entry point served identity methods → `transition_status` → `UserStatus::apply` in `crates/medulla-identity-types/src/identity/model.rs`, called only by `transition_status` in `crates/medulla-identity-types/src/identity/store/users.rs:259` → stored state field. Attach points: `store/users.rs:259`, `store/modes.rs:398`, `store/auth.rs:87`. Wiring row: MEDULLA-IDENTITY-R721.1. Hot-path proof row: `no_write_bypasses_transition_status` of MEDULLA-IDENTITY-R721.1.
+- `RbacElevationMachine`: entry point served elevation methods → `move_to` → `ElevationLedger::move_to` at `crates/medulla-identity-types/src/rbac_elevation/ledger.rs:133`, the one assign site (`:137`) → stored state field. Attach points: `rbac_elevation/ledger.rs:133,137`. Wiring row: MEDULLA-IDENTITY-R722.2. Hot-path proof row: `no_writer_sets_state_outside_apply` of MEDULLA-IDENTITY-R722.2.
+
 ## Cross-repo seams
 
 - Identity mode transition and credential operations: `MEDULLA-IDENTITY-R003` and `MEDULLA-IDENTITY-R707` provide, `ARBORA-IDENTITY-R014` consumes. Contract: [identity-mode-and-credentials.md](contracts/identity-mode-and-credentials.md).
@@ -328,3 +334,7 @@ none
 - Graph ownership plan and apply: `MEDULLA-IDENTITY-R700` provides, `ARBORA-IDENTITY-R652` consumes. Contract: [graph-ownership-grants.md](contracts/graph-ownership-grants.md).
 - Session reference, liveness, approval keys and credential observation: `MEDULLA-IDENTITY-R708` to `MEDULLA-IDENTITY-R713` provide, `ARBORA-IDENTITY-R029.6` consumes. Contract: [session-and-approval-operations.md](contracts/session-and-approval-operations.md).
 - Resource access decision and client session vocabulary: `MEDULLA-IDENTITY-R704` and `MEDULLA-IDENTITY-R705` provide, `ARBORA-IDENTITY-R019.3` and `ARBORA-IDENTITY-R026.2` consume. Contract: [resource-access-and-client-session.md](contracts/resource-access-and-client-session.md).
+
+### Explicit state machines
+
+Organization constitution Article XXXI requires a closed set of states, one transition function and a typed refusal for each machine. Rows `MEDULLA-IDENTITY-R720`, `MEDULLA-IDENTITY-R721`, `MEDULLA-IDENTITY-R722` apply it here. Each machine returns `TransitionRefused` (MEDULLA-ORCH-VOCAB-R811.4), stores its state in one field, and is described in `crates/medulla-core/ontology/state-machines-v1.ttl` with classes that roll up to the core state-machine classes. The change is a hard cutover: the old literals, flags and inferred states are deleted in the same release.
