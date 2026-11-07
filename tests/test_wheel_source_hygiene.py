@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ast
 import base64
+import csv
 import hashlib
 import json
 import os
@@ -15,7 +16,6 @@ from pathlib import Path
 import pytest
 import tomllib
 
-from scripts.check_wheel_completeness import check_wheel
 from scripts.check_wheel_privacy import audit_wheel
 from scripts.inject_numeric_kernel import inject
 from scripts.normalize_wheel_sbom import normalize_wheel
@@ -230,6 +230,24 @@ def _assert_injected_wheel_is_clean_and_complete(server_wheel: Path) -> None:
         assert not _has_bytecode_cache_entry(names)
 
 
+def _record_is_consistent(wheel: Path) -> bool:
+    """Every non-RECORD member has a RECORD row with its sha256 and size."""
+    with zipfile.ZipFile(wheel) as archive:
+        record = next(n for n in archive.namelist() if n.endswith(".dist-info/RECORD"))
+        rows = {
+            r[0]: r for r in csv.reader(archive.read(record).decode().splitlines()) if r
+        }
+        for info in archive.infolist():
+            if info.is_dir() or info.filename == record:
+                continue
+            data = archive.read(info.filename)
+            digest = base64.urlsafe_b64encode(hashlib.sha256(data).digest()).decode()
+            expected = (f"sha256={digest.rstrip('=')}", str(len(data)))
+            if info.filename not in rows or tuple(rows[info.filename][1:3]) != expected:
+                return False
+    return True
+
+
 def _assert_release_composition_gates_pass(
     server_wheel: Path, fixture: Path, before: dict[Path, bytes]
 ) -> None:
@@ -237,7 +255,7 @@ def _assert_release_composition_gates_pass(
     # privacy gate; this also proves the rewritten archive keeps a valid RECORD.
     strip_executables(server_wheel)
     assert normalize_wheel(server_wheel, environ={}, checkout=fixture) >= 0
-    assert check_wheel(server_wheel) == []
+    assert _record_is_consistent(server_wheel)
     assert not audit_wheel(server_wheel, environ={}).findings
     assert {path: path.read_bytes() for path in before} == before
 

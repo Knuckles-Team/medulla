@@ -7,7 +7,7 @@
 //! group `media_facts`.
 //!
 //! When `DECIDE_BUDGETS_REPORT` names a report written by the `decide_budgets` bench,
-//! the group is merged into it, so `scripts/check_decide_budgets.py` reports it
+//! the group is merged into it, so `cargo xtask decide-budgets` reports it
 //! against `benches/baselines/decide.json` in the same nightly run (R178.3).
 //! Benchmarks never gate a PR.
 //!

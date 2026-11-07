@@ -3,7 +3,7 @@ name: Nightly decide budgets
 # MEDULLA-DECISION-ENGINE-R178.3: run the per-family decision benchmark
 # (`benches/decide_budgets.rs`, MEDULLA-DECISION-ENGINE-R178.1) at 03:00 UTC
 # on main, check its report against the stored baseline with
-# `scripts/check_decide_budgets.py` (MEDULLA-DECISION-ENGINE-R178.2), upload
+# `cargo xtask decide-budgets` (MEDULLA-DECISION-ENGINE-R178.2), upload
 # the report, and fail on a regression or a budget breach.
 
 on:
@@ -49,7 +49,7 @@ jobs:
         run: cargo bench --bench media_facts
 
       - name: Check the report against the baseline
-        run: python scripts/check_decide_budgets.py target/decide-budgets.json
+        run: cargo --locked xtask decide-budgets target/decide-budgets.json
 
       - name: Upload the report
         if: always()

@@ -2,7 +2,7 @@
 set -euo pipefail
 python -m pip install --upgrade pip
 # Install the BARE wheel — NO compatibility extra. The native kernel retired its
-# interpreter-side NumPy dependency; `check_wheel_completeness.py` rejects both
+# interpreter-side NumPy dependency; `cargo xtask wheel-completeness` rejects both
 # base and extra-gated NumPy metadata. Keep this smoke test independent from the
 # developer-only parity environment below.
 pip install --force-reinstall "$(ls dist/medulla-*.whl)"

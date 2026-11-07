@@ -2,7 +2,7 @@ name: Nightly finance budgets
 
 # MEDULLA-FINANCE-PRIMITIVES-R900.6: run the finance kernel benchmark group `finance/shift_100k`
 # (`crates/medulla-h-compute/benches/finance_kernels.rs`) at 03:00 UTC on main, check its
-# report against the stored baseline with `scripts/check_decide_budgets.py`
+# report against the stored baseline with `cargo xtask decide-budgets`
 # (`benches/baselines/finance.json`), upload the report, and fail on a regression or a budget breach.
 
 on:
@@ -40,7 +40,7 @@ jobs:
         run: cargo bench -p medulla-h-compute --features finance --bench finance_kernels -- finance/shift_100k
 
       - name: Check the report against the baseline
-        run: python scripts/check_decide_budgets.py target/finance-budgets.json --baseline benches/baselines/finance.json
+        run: cargo --locked xtask decide-budgets target/finance-budgets.json --baseline benches/baselines/finance.json
 
       - name: Upload the report
         if: always()

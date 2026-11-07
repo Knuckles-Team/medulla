@@ -33,7 +33,7 @@ from scripts.compare_wheel_reproducibility import main as compare_main
 
 # This suite exercises only the static comparison script against in-memory zip
 # fixtures -- no native engine involved. Matches the adjacent release-artifact
-# test modules (test_wheel_privacy.py, test_check_wheel_completeness.py).
+# test modules (test_wheel_privacy.py, test_wheel_suite_selection.py).
 pytestmark = pytest.mark.no_engine
 
 WHEEL_NAME = "medulla-9.9.9-py3-none-any.whl"

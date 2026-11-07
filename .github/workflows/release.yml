@@ -435,7 +435,7 @@ jobs:
         run: |
           python -m pip install 'maturin==1.14.1'
           maturin sdist --out dist-sdist
-          python scripts/check_sdist_completeness.py dist-sdist/*.tar.gz
+          cargo --locked xtask sdist-completeness dist-sdist/*.tar.gz
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: source-distribution
@@ -471,7 +471,9 @@ jobs:
           name: wheel-linux-x86_64
           path: dist
       - name: Require a complete wheel before upload
-        run: python scripts/check_wheel_completeness.py --require-engine-kernel dist/*.whl
+        env:
+          CARGO_TARGET_DIR: ${{ runner.temp }}/xtask-target
+        run: cargo --locked xtask wheel-completeness --require-engine-kernel dist/*.whl
       - name: Publish linux-x86_64 to PyPI
         uses: ./.github/actions/publish-distribution
         with:

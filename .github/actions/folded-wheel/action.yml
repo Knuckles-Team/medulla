@@ -187,7 +187,9 @@ runs:
     # downloaded artifacts as the actual publish boundary.
     - name: Require a complete wheel (numeric + engine kernels + server + RECORD)
       shell: bash
-      run: python scripts/check_wheel_completeness.py --require-engine-kernel --require-server-binary dist-${{ inputs.pass }}/*.whl
+      env:
+        CARGO_TARGET_DIR: ${{ runner.temp }}/xtask-target
+      run: cargo --locked xtask wheel-completeness --require-engine-kernel --require-server-binary dist-${{ inputs.pass }}/*.whl
 
     # Container builds create root-owned target files; hand them back so the
     # cache save (a post step of the restore above) can read and prune them.

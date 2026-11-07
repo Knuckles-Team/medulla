@@ -75,4 +75,4 @@ tests/test_query_sql.py::test_sql_empty_result  # owner=@genius review-by=2026-0
 # scripts alike are unchanged since origin/main.
 tests/test_bounded_test_runner_contract.py::test_constrained_gate_routes_every_test_phase_through_runner  # owner=@genius review-by=2026-09-19 note=gate-selftest-drift
 tests/test_push_gate_evidence.py::test_subset_reuse_is_only_the_declared_clippy_proof  # owner=@genius review-by=2026-09-19 note=gate-selftest-drift
-tests/test_check_wheel_completeness.py::test_static_wheel_suite_selection_does_not_start_engine  # owner=@genius review-by=2026-09-19 note=gate-selftest-drift
+tests/test_wheel_suite_selection.py::test_static_wheel_suite_selection_does_not_start_engine  # owner=@genius review-by=2026-09-19 note=gate-selftest-drift

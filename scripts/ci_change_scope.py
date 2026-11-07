@@ -123,7 +123,7 @@ PATH_GATES: dict[str, tuple[str, ...]] = {
         "scripts/normalize_wheel_sbom.py",
         "scripts/normalize_wheel_build_paths.py",
         "scripts/check_wheel_privacy.py",
-        "scripts/check_wheel_completeness.py",
+        "tools/xtask/src/wheel_completeness.rs",
         "scripts/configure_rust_path_remap.py",
         *_TOOLCHAIN_PATHS,
     ),

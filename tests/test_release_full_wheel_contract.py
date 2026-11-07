@@ -3,19 +3,16 @@
 from __future__ import annotations
 
 import hashlib
-import io
 import os
 import re
 import shutil
 import subprocess
 import sys
-import tarfile
 from pathlib import Path
 
 import pytest
 import tomllib
 import yaml
-from check_sdist_completeness import _backend_sources, required_sources, validate
 
 pytestmark = pytest.mark.no_engine
 
@@ -253,7 +250,7 @@ def test_release_wheels_are_rebuilt_and_compared_reproducibly() -> None:
         "scripts/normalize_wheel_build_paths.py",
         "scripts/check_wheel_privacy.py",
         "scripts/inject_server_binary.py",
-        "scripts/check_wheel_completeness.py --require-engine-kernel",
+        "xtask wheel-completeness --require-engine-kernel",
     ):
         assert wheel_pass.count(script) == 1, script
     # The `gates` job folds its OWN numeric kernel into a real wheel
@@ -296,7 +293,7 @@ def test_incomplete_fallback_artifacts_cannot_be_published() -> None:
         for step in steps
         if step.get("name") == "Require a complete wheel before upload"
     )
-    assert "check_wheel_completeness.py --require-engine-kernel dist/*.whl" in gate
+    assert "xtask wheel-completeness --require-engine-kernel dist/*.whl" in gate
     names = [step.get("name", "") for step in steps]
     assert names.index("Require a complete wheel before upload") < names.index(
         "Publish linux-x86_64 to PyPI"
@@ -308,7 +305,7 @@ def test_incomplete_fallback_artifacts_cannot_be_published() -> None:
     }
     source_steps = jobs["build-sdist"]["steps"]
     assert any(
-        "check_sdist_completeness.py" in step.get("run", "") for step in source_steps
+        "xtask sdist-completeness" in step.get("run", "") for step in source_steps
     )
     assert not (REPO / ".github" / "workflows" / "pipeline.yml").exists()
     # The two-workflow redesign folded the former release-build.yml (this
@@ -517,167 +514,6 @@ def test_ci_concurrency_supersedes_older_runs_per_pr_only() -> None:
     assert "github.ref" in group
 
 
-def _source_archive(
-    tmp_path, *, omitted="", version="2.27.1", unsafe=False, extra_members=()
-):
-    path = tmp_path / "medulla-2.27.1.tar.gz"
-    entries = {
-        "Cargo.toml": '[package]\nversion = "2.27.1"\n',
-        "PKG-INFO": f"Name: medulla\nVersion: {version}\n",
-        "crates/leaf/src/lib.rs": "pub fn leaf() {}",
-        "build.rs": "fn main() {}",
-        "crates/leaf/assets/viz_interactive_client.html": "<main>client</main>",
-    }
-    if unsafe:
-        entries["../escape"] = "outside"
-    with tarfile.open(path, "w:gz") as output:
-        for name, text in entries.items():
-            if name == omitted:
-                continue
-            data = text.encode()
-            item = tarfile.TarInfo(f"medulla-2.27.1/{name}")
-            item.size = len(data)
-            output.addfile(item, io.BytesIO(data))
-        for name, text, kind in extra_members:
-            item = tarfile.TarInfo(f"medulla-2.27.1/{name}")
-            item.type = kind
-            data = text.encode()
-            item.size = len(data) if item.isfile() else 0
-            output.addfile(item, io.BytesIO(data) if item.isfile() else None)
-    return path
-
-
-def test_accepts_complete_sources(tmp_path):
-    validate(
-        _source_archive(tmp_path), {"Cargo.toml", "crates/leaf/src/lib.rs"}, "2.27.1"
-    )
-
-
-@pytest.mark.parametrize(
-    "kwargs,match",
-    [
-        ({"omitted": "crates/leaf/src/lib.rs"}, "missing source"),
-        ({"version": "2.27.0"}, "metadata identity"),
-        ({"unsafe": True}, "unsafe"),
-    ],
-)
-def test_rejects_incomplete_or_misidentified_sources(tmp_path, kwargs, match):
-    with pytest.raises(ValueError, match=match):
-        validate(
-            _source_archive(tmp_path, **kwargs),
-            {"Cargo.toml", "crates/leaf/src/lib.rs"},
-            "2.27.1",
-        )
-
-
-@pytest.mark.parametrize("shipped", [False, True])
-def test_sdist_declared_license_file_must_ship(tmp_path, shipped):
-    # PyPI answers 400 to an sdist whose PKG-INFO `License-File` is absent.
-    path = tmp_path / "medulla-2.27.1.tar.gz"
-    entries = {
-        "Cargo.toml": '[package]\nversion = "2.27.1"\n',
-        "PKG-INFO": "Name: medulla\nVersion: 2.27.1\nLicense-File: LICENSE\n",
-    }
-    if shipped:
-        entries["LICENSE"] = "MIT"
-    with tarfile.open(path, "w:gz") as output:
-        for name, text in entries.items():
-            item = tarfile.TarInfo(f"medulla-2.27.1/{name}")
-            item.size = len(text.encode())
-            output.addfile(item, io.BytesIO(text.encode()))
-    if shipped:
-        validate(path, {"Cargo.toml"}, "2.27.1")
-    else:
-        with pytest.raises(ValueError, match="License-File"):
-            validate(path, {"Cargo.toml"}, "2.27.1")
-
-
-@pytest.mark.parametrize(
-    "alias",
-    [
-        "./Cargo.toml",
-        "nested/../Cargo.toml",
-        "nested//Cargo.toml",
-        "nested/./Cargo.toml",
-        "nested\\Cargo.toml",
-        "/Cargo.toml",
-        "",
-    ],
-)
-def test_sdist_rejects_noncanonical_member_aliases(tmp_path, alias):
-    archive = _source_archive(
-        tmp_path,
-        extra_members=[
-            (alias, '[package]\nversion = "0.0.0"\n', tarfile.REGTYPE),
-        ],
-    )
-    with pytest.raises(ValueError, match="noncanonical"):
-        validate(archive, {"Cargo.toml"}, "2.27.1")
-
-
-@pytest.mark.parametrize(
-    "extras",
-    [
-        [("Cargo.toml", "", tarfile.DIRTYPE)],
-        [("folder", "", tarfile.DIRTYPE), ("folder", "", tarfile.DIRTYPE)],
-        [("folder", "", tarfile.DIRTYPE), ("folder", "file", tarfile.REGTYPE)],
-        [
-            ("folder", "file", tarfile.REGTYPE),
-            ("folder/child", "child", tarfile.REGTYPE),
-        ],
-        [
-            ("folder/child", "child", tarfile.REGTYPE),
-            ("folder", "file", tarfile.REGTYPE),
-        ],
-    ],
-)
-def test_sdist_rejects_directory_identity_collisions(tmp_path, extras):
-    with pytest.raises(ValueError, match="duplicate|collision"):
-        validate(
-            _source_archive(tmp_path, extra_members=extras), {"Cargo.toml"}, "2.27.1"
-        )
-
-
-def test_sdist_accepts_canonical_directory_entries(tmp_path):
-    archive = _source_archive(
-        tmp_path,
-        extra_members=[
-            ("", "", tarfile.DIRTYPE),
-            ("folder", "", tarfile.DIRTYPE),
-            ("folder/source.rs", "pub fn source() {}", tarfile.REGTYPE),
-        ],
-    )
-    validate(archive, {"Cargo.toml", "folder/source.rs"}, "2.27.1")
-
-
-def test_sdist_requires_root_build_script(tmp_path):
-    # A root crate that maturin builds ships its build script ...
-    (tmp_path / "Cargo.toml").write_text(
-        '[package]\nname = "fixture"\nversion = "1.0.0"\n'
-    )
-    (tmp_path / "build.rs").write_text("fn main() {}")
-    assert "build.rs" in required_sources(tmp_path)
-    with pytest.raises(ValueError, match="build.rs"):
-        validate(_source_archive(tmp_path, omitted="build.rs"), {"build.rs"}, "2.27.1")
-
-
-def test_extensions_only_sdist_inputs_are_the_real_build_inputs():
-    # maturin builds crates/medulla-pyengine, so the root crate is not an sdist input,
-    # but the in-tree PEP 517 backend and the helpers it imports are.
-    required = required_sources(REPO)
-    assert not {"build.rs", "src/lib.rs", "src/main.rs"} & required
-    assert not any(name.startswith(("benches/", ".cargo/")) for name in required)
-    assert {
-        "build_backend.py",
-        "scripts/configure_rust_path_remap.py",
-        "scripts/inject_numeric_kernel.py",
-        "scripts/normalize_wheel_build_paths.py",
-        "scripts/normalize_wheel_sbom.py",
-        "scripts/strip_wheel_executables.py",
-        "crates/medulla-pyengine/Cargo.toml",
-    } <= required
-
-
 def test_sdist_backend_imports_from_declared_isolated_source_tree(tmp_path):
     """The in-tree PEP 517 backend must import from the files shipped in sdist.
 
@@ -692,7 +528,14 @@ def test_sdist_backend_imports_from_declared_isolated_source_tree(tmp_path):
         for entry in project["tool"]["maturin"]["include"]
         if isinstance(entry, dict) and entry.get("format") == "sdist"
     }
-    closure = _backend_sources(REPO)
+    closure = {"build_backend.py"}
+    pending = ["build_backend.py"]
+    while pending:
+        for line in (REPO / pending.pop()).read_text(encoding="utf-8").splitlines():
+            match = re.match(r"\s*from scripts\.(\w+) import", line)
+            if match and f"scripts/{match[1]}.py" not in closure:
+                closure.add(f"scripts/{match[1]}.py")
+                pending.append(f"scripts/{match[1]}.py")
     assert closure <= includes
 
     isolated = tmp_path / "sdist"
@@ -738,86 +581,6 @@ def test_server_build_adds_swap_and_thin_links_aarch64():
     assert "export CARGO_PROFILE_RELEASE_SERVER_CODEGEN_UNITS=16" in script
     release = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))["jobs"]
     assert "build-server" not in release
-
-
-def test_sdist_inventory_includes_explicit_manifest_inputs(tmp_path):
-    manifest = tmp_path / "Cargo.toml"
-    manifest.write_text("""[package]
-name = "fixture"
-version = "1.0.0"
-build = "tools/prepare.input"
-readme = "PACKAGE.txt"
-license-file = "LICENSE.txt"
-[lib]
-path = "library/entry.input"
-[[bin]]
-name = "server"
-path = "programs/server.input"
-[[example]]
-name = "example"
-path = "examples/entry.input"
-[[bench]]
-name = "bench"
-path = "benches/entry.input"
-[[test]]
-name = "test"
-path = "integration/entry.input"
-""")
-    leaf = tmp_path / "crates/leaf"
-    leaf.mkdir(parents=True)
-    (leaf / "Cargo.toml").write_text('[package]\nname = "leaf"\nversion = "1.0.0"\n')
-    (leaf / "build.rs").write_text("fn main() {}")
-    expected = {
-        "build.rs",
-        "tools/prepare.input",
-        "PACKAGE.txt",
-        "LICENSE.txt",
-        "library/entry.input",
-        "programs/server.input",
-        "examples/entry.input",
-        "benches/entry.input",
-        "integration/entry.input",
-        "crates/leaf/build.rs",
-    }
-    assert expected <= required_sources(tmp_path)
-
-
-def test_sdist_requires_compiled_html_asset(tmp_path):
-    asset = "crates/leaf/assets/viz_interactive_client.html"
-    leaf = tmp_path / "crates/leaf/assets"
-    leaf.mkdir(parents=True)
-    (leaf / "viz_interactive_client.html").write_text("<main>client</main>")
-    (tmp_path / "crates/leaf/Cargo.toml").write_text(
-        '[package]\nname = "leaf"\nversion = "1.0.0"\n'
-    )
-    (tmp_path / "Cargo.toml").write_text("[workspace]\n")
-    assert asset in required_sources(tmp_path)
-    validate(_source_archive(tmp_path), {asset}, "2.27.1")
-    with pytest.raises(ValueError, match="viz_interactive_client.html"):
-        validate(_source_archive(tmp_path, omitted=asset), {asset}, "2.27.1")
-
-
-@pytest.mark.parametrize("asset", ["client.html", "shader.wgsl", "lookup.bin"])
-def test_sdist_inventory_has_no_native_asset_suffix_filter(tmp_path, asset):
-    (tmp_path / "Cargo.toml").write_text(
-        '[package]\nname = "fixture"\nversion = "1.0.0"\n'
-    )
-    directory = tmp_path / "src"
-    directory.mkdir()
-    (directory / asset).write_bytes(b"build input")
-    assert f"src/{asset}" in required_sources(tmp_path)
-
-
-def test_sdist_requires_engine_composition_helper(tmp_path):
-    required = required_sources(REPO)
-    assert "scripts/inject_numeric_kernel.py" in required
-    assert "scripts/inject_pyengine.py" not in required
-    with pytest.raises(ValueError, match="inject_numeric_kernel.py"):
-        validate(
-            _source_archive(tmp_path),
-            {"scripts/inject_numeric_kernel.py"},
-            "2.27.1",
-        )
 
 
 @pytest.mark.spec("MEDULLA-CONTRACT-R053.7")

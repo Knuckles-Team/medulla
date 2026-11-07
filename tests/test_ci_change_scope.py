@@ -650,7 +650,7 @@ def test_locked_pytest_uses_test_interpreter_and_lock() -> None:
     [
         (
             "gates-wheel",
-            "9227ffb01a93a6cd06424e12c8b118b6322b5835a5176691be1db9d81c7d5704",
+            "c767a9cd3d521a20700bb19d34680f6e2ca696e0a50f98b1ffedab59c15f84e7",
         ),
         (
             "gates-whisper",
@@ -857,7 +857,7 @@ def test_validated_wheel_packaging_refuses_invalid_inputs(
         "Cargo.lock rust-toolchain.toml pyproject.toml .github/workflows/ci.yml "
         "scripts/inject_numeric_kernel.py scripts/strip_wheel_executables.py "
         "scripts/normalize_wheel_sbom.py scripts/normalize_wheel_build_paths.py "
-        "scripts/check_wheel_privacy.py scripts/check_wheel_completeness.py"
+        "scripts/check_wheel_privacy.py tools/xtask/src/wheel_completeness.rs"
     ).split()
     for name in recipes:
         path = repo / name

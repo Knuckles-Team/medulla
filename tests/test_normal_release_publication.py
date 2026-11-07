@@ -75,10 +75,10 @@ class ReleasePublication(unittest.TestCase):
             if "maturin sdist" in step.get("run", "")
         )
         command = source_steps[build]["run"]
-        self.assertIn("scripts/check_sdist_completeness.py", command)
+        self.assertIn("xtask sdist-completeness", command)
         self.assertLess(
             command.index("maturin sdist"),
-            command.index("scripts/check_sdist_completeness.py"),
+            command.index("xtask sdist-completeness"),
         )
         upload = next(
             index
@@ -94,7 +94,7 @@ class ReleasePublication(unittest.TestCase):
         validate = next(
             index
             for index, step in enumerate(steps)
-            if "scripts/check_sdist_completeness.py" in step.get("run", "")
+            if "xtask sdist-completeness" in step.get("run", "")
         )
         publish = next(
             index

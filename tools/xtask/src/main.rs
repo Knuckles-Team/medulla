@@ -4,9 +4,12 @@
 //! repository needs is a `pipelines-hook` mode instead and does not belong here.
 
 mod build_profiles;
+mod decide_budgets;
 mod repo_root_parity;
+mod sdist_completeness;
 #[cfg(test)]
 mod tempdir;
+mod wheel_completeness;
 
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
@@ -26,9 +29,24 @@ const CHECKS: &[Check] = &[
         run: build_profiles::run,
     },
     Check {
+        name: decide_budgets::NAME,
+        summary: decide_budgets::SUMMARY,
+        run: decide_budgets::run,
+    },
+    Check {
         name: repo_root_parity::NAME,
         summary: repo_root_parity::SUMMARY,
         run: repo_root_parity::run,
+    },
+    Check {
+        name: sdist_completeness::NAME,
+        summary: sdist_completeness::SUMMARY,
+        run: sdist_completeness::run,
+    },
+    Check {
+        name: wheel_completeness::NAME,
+        summary: wheel_completeness::SUMMARY,
+        run: wheel_completeness::run,
     },
 ];
 
