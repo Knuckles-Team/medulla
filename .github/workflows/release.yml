@@ -158,7 +158,7 @@ jobs:
             target: x86_64-pc-windows-msvc
             jobs: 4
           - name: macos-aarch64
-            runner: macos-14
+            runner: macos-15
             target: aarch64-apple-darwin
             jobs: 2
             optional: true
@@ -262,7 +262,7 @@ jobs:
           # Linux and Windows wheels, which ARE the supported install targets.
           # `continue-on-error` keeps the leg reported but non-blocking.
           - name: macos-aarch64
-            runner: macos-14
+            runner: macos-15
             target: aarch64-apple-darwin
             maturin_args: ""
             jobs: 2
