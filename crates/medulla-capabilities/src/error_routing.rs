@@ -435,6 +435,7 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "CLIENT_SESSION_PRINCIPAL_MISMATCH",
             "COMMIT_QUEUE_FULL",
             "REPLAY_NONCE_CONSUMED",
+            "WORKSTREAM_PRINCIPAL_MISMATCH",
         ],
     ),
     ("CypherQuery", &["REPLAY_NONCE_CONSUMED"]),

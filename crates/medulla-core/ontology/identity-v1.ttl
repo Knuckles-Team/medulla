@@ -95,13 +95,13 @@
     rdfs:label "principal" ;
     rdfs:comment "The verified caller that opened the session; a write naming another principal is refused unless the caller holds identity:admin." ;
     skos:closeMatch prov:wasAssociatedWith ;
-    rdfs:domain :ClientSession ;
+    rdfs:domain [ a owl:Class ; owl:unionOf ( :ClientSession :Workstream ) ] ;
     rdfs:range xsd:string .
 
 :tenant a owl:DatatypeProperty ;
     rdfs:label "tenant" ;
     rdfs:comment "The tenant the session belongs to; reads filter by it." ;
-    rdfs:domain :ClientSession ;
+    rdfs:domain [ a owl:Class ; owl:unionOf ( :ClientSession :Workstream ) ] ;
     rdfs:range xsd:string .
 
 :session_id a owl:DatatypeProperty ;
@@ -128,6 +128,54 @@
     rdfs:comment "Session end, milliseconds since the Unix epoch; unbound while the session is open." ;
     skos:closeMatch prov:endedAtTime ;
     rdfs:domain :ClientSession ;
+    rdfs:range xsd:long .
+
+# ── Workstream record (MEDULLA-IDENTITY-R723) ───────────────────────────────────
+:Workstream a owl:Class ;
+    rdfs:label "Workstream" ;
+    rdfs:comment "Joins the client sessions of one principal on one workspace digest; the node id is workstream:<tenant>:<workspace_digest>. The workspace root path is never stored. Mapped to PROV as a close match of prov:Collection." ;
+    skos:closeMatch prov:Collection ;
+    rdfs:subClassOf :Session .
+
+:workspace_digest a owl:DatatypeProperty ;
+    rdfs:label "workspace digest" ;
+    rdfs:comment "The digest of the workspace root path; the path itself is never stored." ;
+    rdfs:domain :Workstream ;
+    rdfs:range xsd:string .
+
+:opened_at_ms a owl:DatatypeProperty ;
+    rdfs:label "opened at (ms)" ;
+    rdfs:comment "First attach to the workstream, milliseconds since the Unix epoch." ;
+    skos:closeMatch prov:generatedAtTime ;
+    rdfs:domain :Workstream ;
+    rdfs:range xsd:long .
+
+:last_active_ms a owl:DatatypeProperty ;
+    rdfs:label "last active (ms)" ;
+    rdfs:comment "The latest attach or checkpoint, milliseconds since the Unix epoch." ;
+    rdfs:domain :Workstream ;
+    rdfs:range xsd:long .
+
+:attachedTo a owl:ObjectProperty ;
+    rdfs:label "attached to" ;
+    rdfs:comment "Links a client session to the workstream it joined; the edge carries harness, attached_at_ms and detached_at_ms." ;
+    skos:closeMatch prov:hadMember ;
+    rdfs:domain :ClientSession ;
+    rdfs:range :Workstream .
+
+:harness a owl:DatatypeProperty ;
+    rdfs:label "harness" ;
+    rdfs:comment "The coding harness profile of the attached session (an attachedTo edge property)." ;
+    rdfs:range xsd:string .
+
+:attached_at_ms a owl:DatatypeProperty ;
+    rdfs:label "attached at (ms)" ;
+    rdfs:comment "Attach time of the session, milliseconds since the Unix epoch (an attachedTo edge property)." ;
+    rdfs:range xsd:long .
+
+:detached_at_ms a owl:DatatypeProperty ;
+    rdfs:label "detached at (ms)" ;
+    rdfs:comment "Detach time of the session; unbound while attached (an attachedTo edge property)." ;
     rdfs:range xsd:long .
 
 # ── Core rooting (MEDULLA-TYPED-PACKS-R071.2) ───────────────────────────────────

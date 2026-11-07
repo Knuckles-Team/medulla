@@ -157,6 +157,9 @@ fn graph_os_scope_classes_and_owners_match_the_api_contract() {
         ("mcp:admin", ScopeClass::Admin, "graph-os"),
         ("approvals:read", ScopeClass::Approver, "graph-os"),
         ("approvals:decide", ScopeClass::Approver, "graph-os"),
+        // MEDULLA-IDENTITY-R723: the workstream operations of the door.
+        ("workstream:read", ScopeClass::User, "graph-os"),
+        ("workstream:write", ScopeClass::User, "graph-os"),
     ] {
         let entry = scope_entry(scope).expect("GraphOS API scope is registered");
         assert_eq!(entry.class, class, "{scope}");

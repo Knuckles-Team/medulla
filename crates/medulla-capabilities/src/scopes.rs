@@ -275,6 +275,9 @@ pub const SCOPES: &[ScopeEntry] = &[
     entry("work:write", User, "engine"),
     // MEDULLA-DECISION-ENGINE-R166.3: the workflow registry.
     entry("workflow:registry", User, "engine"),
+    // MEDULLA-IDENTITY-R723: the workstream operations served by the door.
+    entry("workstream:read", User, "graph-os"),
+    entry("workstream:write", User, "graph-os"),
 ];
 
 /// The registry entry of `scope`.

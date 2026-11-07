@@ -389,6 +389,7 @@ closed_error_codes! {
         WebSelectionQueryMissing => "WEB_SELECTION_QUERY_MISSING",
         WebSelectionTooManyCandidates => "WEB_SELECTION_TOO_MANY_CANDIDATES",
         WorkflowDigestInvalid => "WORKFLOW_DIGEST_INVALID",
+        WorkstreamPrincipalMismatch => "WORKSTREAM_PRINCIPAL_MISMATCH",
         WorkflowIdMissing => "WORKFLOW_ID_MISSING",
         WorkflowIdentityUnknown => "WORKFLOW_IDENTITY_UNKNOWN",
         WorkflowUnauthorized => "WORKFLOW_UNAUTHORIZED",

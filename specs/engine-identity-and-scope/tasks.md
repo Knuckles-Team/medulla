@@ -76,4 +76,4 @@ One task per leaf row of `requirements.md`, producers first: issuer trust and RB
 - [ ] T068 [US7] MEDULLA-IDENTITY-R722 Describe the RBAC elevation machine in the ontology
 - [ ] T071 [US7] MEDULLA-IDENTITY-R722.1 Describe the RBAC elevation machine in the ontology
 - [ ] T072 [US7] MEDULLA-IDENTITY-R722.2 Elevation refusals are typed
-- [ ] T073 [US6] MEDULLA-IDENTITY-R723 Declare the Workstream record and the attachedTo session link
+- [x] T073 [US6] MEDULLA-IDENTITY-R723 Declare the Workstream record and the attachedTo session link
