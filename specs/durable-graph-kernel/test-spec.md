@@ -672,7 +672,7 @@ Each entry names a test that does not exist yet. The path is the exact post-spli
 | `MEDULLA-DURABLE-KERNEL-R028.5.4` | `current_plan.rs::publish` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R028.5.1` | `current_plan.rs::validate_publication` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R028.4.2`, `MEDULLA-DURABLE-KERNEL-R028.4.4` | `run_owner.rs::read_admission` (planned) |
-| `MEDULLA-DURABLE-KERNEL-R700` | `src/server/retention_cleanup.rs::cleanup_graph` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R700` | `crates/medulla-h-graph/src/graph_ops/retention_cleanup.rs::cleanup_graph` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R028.4.3` | `tests/adopt_workitem_authenticated_replay.rs::conversation_turn_admission_replays_and_conflicts` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R028.3` | `tests/adopt_workitem_authenticated_replay.rs::fenced_cas_ignores_caller_clock` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R028.4.4` | `tests/adopt_workitem_authenticated_replay.rs::run_admission_replay_after_restart_and_after_upgrade` (planned) |
