@@ -10,10 +10,10 @@ use medulla_identity_types::{
 use medulla_types::acl::RequestContextClaims;
 
 use super::ElevationStampAuthority;
-use medulla_server_api::authority_context::request_context_policy;
 use medulla_server_api::authority_context::RequestContextPolicy;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::identity_view::identity_actor;
+use medulla_server_api::server_context::ServerContext;
 use medulla_server_api::state::ServerState;
 
 // Use the existing closed error vocabulary: Response::err must preserve these
@@ -36,8 +36,10 @@ pub fn apply_and_compose(
     if matches!(op, IdentityOp::User(UserOp::Resolve { .. })) {
         return Err(NO_PROVENANCE.to_string());
     }
+    let server = std::sync::Arc::clone(&state.context);
     let policy = if issuing {
-        let policy = request_context_policy()
+        let policy = server
+            .request_policy()
             .map_err(|_| IdentityRefusal::PreconditionFailed.to_string())?;
         authorize_resolution(
             state.isolation.rbac().identity_store(),
@@ -84,8 +86,8 @@ pub fn apply_and_compose(
 
 // Metadata provenance only: failure omits the record binding and does not
 // change the credential operation's existing validation or result.
-pub fn record_tenant(context: &VerifiedRequestContext) -> Option<String> {
-    let policy = request_context_policy().ok()?;
+pub fn record_tenant(server: &ServerContext, context: &VerifiedRequestContext) -> Option<String> {
+    let policy = server.request_policy().ok()?;
     validate_policy(context.claims(), policy).ok()?;
     Some(policy.expected_tenant.clone())
 }

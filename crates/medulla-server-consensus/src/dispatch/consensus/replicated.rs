@@ -45,7 +45,8 @@ pub async fn apply_replicated_native(
             medulla_work_store::redb_store::work_item_capability::AUTHORITY_UNAVAILABLE,
         );
     }
-    let context = match VerifiedRequestContext::replicated_mutation(authority) {
+    let server = state.read().await.context.clone();
+    let context = match VerifiedRequestContext::replicated_mutation(&server, authority) {
         Ok(context) => context,
         Err(error) => return Response::err(request_id, error),
     };

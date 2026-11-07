@@ -11,7 +11,8 @@ use medulla_types::acl::RequestContextClaims;
 use medulla_types::contract::{Digest256, Nonce};
 use sha2::Sha256;
 use std::collections::HashSet;
-use std::sync::OnceLock;
+
+use crate::server_context::ServerContext;
 
 type HmacSha256 = Hmac<Sha256>;
 
@@ -100,9 +101,10 @@ impl VerifiedRequestContext {
     /// intentionally unavailable here; followers operate on their one-way scopes.
     #[cfg(feature = "raft")]
     pub fn replicated_mutation(
+        server: &ServerContext,
         authority: &crate::api::persistence::RaftMutationContext,
     ) -> Result<Self, String> {
-        let policy = request_context_policy()?;
+        let policy = server.request_policy()?;
         Ok(Self::from_verified_claims_with_nonce(
             RequestContextClaims {
                 principal: authority.principal_fingerprint.clone(),
@@ -323,14 +325,18 @@ impl VerifiedRequestContext {
     /// Build the authenticated in-process context used only after an auxiliary broker
     /// protocol has verified its own credential and converted the principal to
     /// a secret-keyed opaque actor reference.
-    pub fn authenticated_broker_actor(actor_ref: &str, request_id: u64) -> Result<Self, String> {
+    pub fn authenticated_broker_actor(
+        server: &ServerContext,
+        actor_ref: &str,
+        request_id: u64,
+    ) -> Result<Self, String> {
         let digest = actor_ref
             .strip_prefix("broker:actor:hmac-sha256:")
             .ok_or_else(|| "broker actor reference is invalid".to_string())?;
         if digest.len() != 64 || !digest.bytes().all(|byte| byte.is_ascii_hexdigit()) {
             return Err("broker actor reference is invalid".to_string());
         }
-        let policy = request_context_policy()?;
+        let policy = server.request_policy()?;
         Ok(Self::from_verified_claims(
             RequestContextClaims {
                 principal: actor_ref.to_string(),
@@ -352,8 +358,11 @@ impl VerifiedRequestContext {
     /// External traffic reaches this path only after its carrier has passed the
     /// adapter's authentication gate; the service identity must also be present
     /// in durable RBAC policy and receives read scope only.
-    pub fn authenticated_local_query(request_id: u64) -> Result<Self, String> {
-        let policy = request_context_policy()?;
+    pub fn authenticated_local_query(
+        server: &ServerContext,
+        request_id: u64,
+    ) -> Result<Self, String> {
+        let policy = server.request_policy()?;
         Ok(Self::from_verified_claims(
             RequestContextClaims {
                 principal: "service:local-query".to_string(),
@@ -379,10 +388,11 @@ impl VerifiedRequestContext {
     /// pass ONLY after their own gate has already succeeded — this never
     /// authenticates anything itself.
     pub fn authenticated_fixed_service_actor(
+        server: &ServerContext,
         service: &str,
         scopes: &[&str],
     ) -> Result<Self, String> {
-        let policy = request_context_policy()?;
+        let policy = server.request_policy()?;
         let principal = format!("service:{service}");
         Ok(Self::from_verified_claims(
             RequestContextClaims {
@@ -445,9 +455,10 @@ impl VerifiedRequestContext {
     /// [`Self::authenticated_fixed_service_actor`] never re-authenticates.
     #[cfg(feature = "oidc")]
     pub fn authenticated_iceberg_bearer(
+        server: &ServerContext,
         verified: &crate::oidc::VerifiedTokenClaims,
     ) -> Result<Self, String> {
-        let policy = request_context_policy()?;
+        let policy = server.request_policy()?;
         let subject = verified.subject.trim();
         if subject.is_empty() {
             return Err("verified Iceberg-REST bearer is missing a subject".to_string());
@@ -502,6 +513,7 @@ impl VerifiedRequestContext {
     /// configured tenant/audience/policy.  The principal stored downstream is a
     /// secret-keyed opaque reference, never the login name.
     pub fn authenticated_sql_wire_actor(
+        server: &ServerContext,
         secret: &str,
         protocol: &str,
         agent_id: &str,
@@ -525,7 +537,7 @@ impl VerifiedRequestContext {
             hex::encode(mac.finalize().into_bytes())
         );
         let idempotency_key = format!("native-sql-session:{protocol}:{principal}");
-        let policy = request_context_policy()?;
+        let policy = server.request_policy()?;
         Ok(Self::from_verified_claims(
             RequestContextClaims {
                 principal,
@@ -672,51 +684,28 @@ pub struct RequestContextPolicy {
 }
 
 impl RequestContextPolicy {
-    pub fn from_env() -> Result<Self, String> {
-        fn configured(name: &str) -> Result<String, String> {
-            std::env::var(name)
-                .ok()
+    /// Resolve the policy from configuration; `lookup` reads one variable.
+    pub fn from_lookup(lookup: &dyn Fn(&str) -> Option<String>) -> Result<Self, String> {
+        let configured = |name: &str| {
+            lookup(name)
                 .map(|v| v.trim().to_string())
                 .filter(|v| !v.is_empty())
                 .ok_or_else(|| format!("secure request context requires {name}"))
-        }
+        };
         Ok(RequestContextPolicy {
             expected_audience: configured("MEDULLA_AUDIENCE")?,
             expected_tenant: configured("MEDULLA_TENANT")?,
             expected_policy_version: configured("MEDULLA_POLICY_VERSION")?,
         })
     }
-}
 
-#[cfg(not(any(test, feature = "request-policy-fixture")))]
-pub fn request_context_policy() -> Result<&'static RequestContextPolicy, String> {
-    static POLICY: OnceLock<Result<RequestContextPolicy, String>> = OnceLock::new();
-    match POLICY.get_or_init(RequestContextPolicy::from_env) {
-        Ok(policy) => Ok(policy),
-        Err(message) => Err(message.clone()),
-    }
-}
-
-/// Test builds of the crates that moved out of this one run under the fixed triple unless the
-/// environment provisions a policy (the feature is enabled only through their dev-dependencies).
-#[cfg(all(not(test), feature = "request-policy-fixture"))]
-pub fn request_context_policy() -> Result<&'static RequestContextPolicy, String> {
-    static POLICY: OnceLock<RequestContextPolicy> = OnceLock::new();
-    Ok(POLICY.get_or_init(|| {
-        RequestContextPolicy::from_env().unwrap_or_else(|_| RequestContextPolicy {
+    /// The fixed policy every test context runs under.
+    #[cfg(any(test, feature = "test-support"))]
+    pub fn fixture() -> Self {
+        RequestContextPolicy {
             expected_audience: "medulla-test".to_string(),
             expected_tenant: "tenant-shared".to_string(),
             expected_policy_version: "policy-test".to_string(),
-        })
-    }))
-}
-
-#[cfg(test)]
-pub fn request_context_policy() -> Result<&'static RequestContextPolicy, String> {
-    static POLICY: OnceLock<RequestContextPolicy> = OnceLock::new();
-    Ok(POLICY.get_or_init(|| RequestContextPolicy {
-        expected_audience: "medulla-test".to_string(),
-        expected_tenant: "tenant-shared".to_string(),
-        expected_policy_version: "policy-test".to_string(),
-    }))
+        }
+    }
 }

@@ -165,7 +165,11 @@ async fn terminal_response_uses_raw_typed_result_and_verified_nonce() {
         "terminal".into(),
         Some(Nonce::from_bytes([9; 32])),
     );
-    let mut state = ServerState::new("test", medulla_isolation::isolation::IsolationLayer::new());
+    let mut state = ServerState::new(
+        "test",
+        medulla_isolation::isolation::IsolationLayer::new(),
+        std::sync::Arc::new(medulla_server_api::server_context::ServerContext::fixture()),
+    );
     state.persist_dir = Some(fixture.directory.to_str().unwrap().into());
     let state = Arc::new(RwLock::new(state));
     let request = fixture.request("bob");

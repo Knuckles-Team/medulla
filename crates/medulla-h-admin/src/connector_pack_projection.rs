@@ -97,16 +97,18 @@ pub mod worker {
         state: &Arc<RwLock<ServerState>>,
         subscribed: &AtomicBool,
     ) -> Result<bool, String> {
-        let tenant = if state.read().await.local_anonymous {
+        let (anonymous, server) = {
+            let state = state.read().await;
+            (state.local_anonymous, state.context.clone())
+        };
+        let tenant = if anonymous {
             // Deployment authority owns the namespace; no signer/OIDC policy
             // exists (or is consulted) for an isolated anonymous store.
             VerifiedRequestContext::anonymous_local(None)
                 .tenant()
                 .to_string()
         } else {
-            medulla_server_api::authority_context::request_context_policy()?
-                .expected_tenant
-                .clone()
+            server.request_policy()?.expected_tenant.clone()
         };
         let store = open_agent_library(state).await?;
         if !subscribed.load(Ordering::Acquire) {
@@ -292,12 +294,15 @@ pub mod worker {
         if head.visible_record_id.as_deref() == Some(head.record_id.as_str()) {
             return Ok(false);
         }
-        let anonymous = state.read().await.local_anonymous;
+        let (anonymous, server) = {
+            let state = state.read().await;
+            (state.local_anonymous, state.context.clone())
+        };
         let plan = store.prepare_connector_pack_projection(tenant, &record.connector)?;
         let verified = if anonymous {
             VerifiedRequestContext::anonymous_local(Some(format!("{CONSUMER}:{}", plan.record_id)))
         } else {
-            service_context(&plan.record_id)?
+            service_context(&server, &plan.record_id)?
         };
         let context =
             medulla_persistence_records::agent_library::context::bind_agent_library_context(
@@ -348,8 +353,12 @@ pub mod worker {
     /// The engine service identity the worker projects under. Its operation
     /// key is the record it projects, so a re-delivered row replays the
     /// projection commit rather than writing a second one.
-    fn service_context(record_id: &str) -> Result<VerifiedRequestContext, String> {
+    fn service_context(
+        server: &medulla_server_api::server_context::ServerContext,
+        record_id: &str,
+    ) -> Result<VerifiedRequestContext, String> {
         let service = VerifiedRequestContext::authenticated_fixed_service_actor(
+            server,
             CONSUMER,
             &["kg:read", "kg:write"],
         )?;

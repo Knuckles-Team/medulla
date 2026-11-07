@@ -297,7 +297,11 @@ mod foreign_state_tests {
 
     #[test]
     fn untouched_state_has_an_empty_catalog() {
-        let state = ServerState::new("secret", IsolationLayer::new());
+        let state = ServerState::new(
+            "secret",
+            IsolationLayer::new(),
+            std::sync::Arc::new(medulla_server_api::server_context::ServerContext::fixture()),
+        );
         assert!(state.foreign_sources().is_empty());
     }
 }

@@ -40,12 +40,11 @@ use medulla_protocol_types::protocol::build_context_operation_signature_bytes;
 use medulla_protocol_types::protocol::build_envelope_v2_bytes;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Request;
-use medulla_server_api::request_replay::durable_replay_ledger;
 use medulla_server_api::request_replay::PresentedNonce;
 use medulla_server_api::request_replay::ReplayLedger;
 use medulla_server_api::{
-    authority_context::request_context_policy, authority_context::RequestContextPolicy,
-    authority_context::VerifiedRequestContext,
+    authority_context::RequestContextPolicy, authority_context::VerifiedRequestContext,
+    server_context::ServerContext,
 };
 use medulla_types::acl::AgentRole;
 use medulla_types::acl::RequestContextClaims;
@@ -78,6 +77,7 @@ const ENVELOPE_V2_PREFIX: &str = "eg2.";
 /// Returns `None` on a failed or absent credential (fail closed); the caller
 /// denies through [`medulla_server::access::unauthenticated_carrier_denied`].
 pub fn mint_fixed_service_carrier(
+    server: &ServerContext,
     credential_verified: bool,
     service: &str,
     scopes: &[&str],
@@ -85,7 +85,7 @@ pub fn mint_fixed_service_carrier(
     if !credential_verified {
         return None;
     }
-    VerifiedRequestContext::authenticated_fixed_service_actor(service, scopes)
+    VerifiedRequestContext::authenticated_fixed_service_actor(server, service, scopes)
         .ok()
         .and_then(|context| {
             medulla_server_api::carrier::CarrierAuthority::from_verified(&context).ok()
@@ -103,10 +103,11 @@ pub fn mint_fixed_service_carrier(
 /// gate every other auxiliary surface uses.
 #[cfg(feature = "oidc")]
 pub fn mint_iceberg_carrier(
+    server: &ServerContext,
     verified: Option<&medulla_server_api::oidc::VerifiedTokenClaims>,
 ) -> Option<medulla_server_api::carrier::CarrierAuthority> {
     let verified = verified?;
-    VerifiedRequestContext::authenticated_iceberg_bearer(verified)
+    VerifiedRequestContext::authenticated_iceberg_bearer(server, verified)
         .ok()
         .and_then(|context| {
             medulla_server_api::carrier::CarrierAuthority::from_verified(&context).ok()
@@ -1188,21 +1189,37 @@ pub fn authentication_refusal(error: &str) -> String {
 
 /// Top-level authentication gate. Only the current verified context envelope
 /// is accepted.
-pub fn verify_request(secret: &str, req: &Request) -> Result<VerifiedRequestContext, String> {
-    verify_request_with_security_dir(secret, req, None)
+pub fn verify_request(
+    server: &ServerContext,
+    secret: &str,
+    req: &Request,
+) -> Result<VerifiedRequestContext, String> {
+    if secret.is_empty() {
+        return Err(
+            "secure request context requires a non-empty authentication secret".to_string(),
+        );
+    }
+    if !req.auth_token.starts_with(ENVELOPE_V2_PREFIX) {
+        return Err("Authentication failed".to_string());
+    }
+    let policy = server.request_policy()?;
+    let replay = server.replay_ledger()?;
+    verify_envelope_v2_with(secret, req, policy, replay)
 }
 
+/// Validate the secure request-context configuration of `server` and open its
+/// durable replay ledger before any listener is opened.
 pub fn validate_verified_context_startup(
+    server: &ServerContext,
     secret: &str,
-    state_dir: Option<&str>,
 ) -> Result<(), String> {
     if secret.is_empty() {
         return Err(
             "secure request context requires a non-empty authentication secret".to_string(),
         );
     }
-    request_context_policy()?;
-    durable_replay_ledger(state_dir)?;
+    server.request_policy()?;
+    server.replay_ledger()?;
     signer_registry()?;
     // A partially configured OIDC identity binding (issuer set without
     // audience/JWKS URL) fails server startup here, same as every other
@@ -1229,24 +1246,6 @@ pub fn validate_verified_context_startup(
             .to_string());
     }
     Ok(())
-}
-
-pub fn verify_request_with_security_dir(
-    secret: &str,
-    req: &Request,
-    state_dir: Option<&str>,
-) -> Result<VerifiedRequestContext, String> {
-    if secret.is_empty() {
-        return Err(
-            "secure request context requires a non-empty authentication secret".to_string(),
-        );
-    }
-    if !req.auth_token.starts_with(ENVELOPE_V2_PREFIX) {
-        return Err("Authentication failed".to_string());
-    }
-    let policy = request_context_policy()?;
-    let replay = durable_replay_ledger(state_dir)?;
-    verify_envelope_v2_with(secret, req, policy, replay)
 }
 
 // ── Detached identity / multisig verification (NE-065 / NE-066) ───────────
@@ -3070,18 +3069,21 @@ mod tests {
     #[test]
     fn native_sql_authority_is_keyed_opaque_and_protocol_bound() {
         let pg = VerifiedRequestContext::authenticated_sql_wire_actor(
+            &medulla_server_api::server_context::ServerContext::fixture(),
             "secret-a",
             "pgwire",
             "local-login",
         )
         .unwrap();
         let mysql = VerifiedRequestContext::authenticated_sql_wire_actor(
+            &medulla_server_api::server_context::ServerContext::fixture(),
             "secret-a",
             "mysql-wire",
             "local-login",
         )
         .unwrap();
         let other_key = VerifiedRequestContext::authenticated_sql_wire_actor(
+            &medulla_server_api::server_context::ServerContext::fixture(),
             "secret-b",
             "pgwire",
             "local-login",
@@ -3093,14 +3095,19 @@ mod tests {
         assert_ne!(pg.principal(), mysql.principal());
         assert_ne!(pg.principal(), other_key.principal());
         assert!(VerifiedRequestContext::authenticated_sql_wire_actor(
+            &medulla_server_api::server_context::ServerContext::fixture(),
             "secret-a",
             "unknown-wire",
             "local-login"
         )
         .is_err());
-        assert!(
-            VerifiedRequestContext::authenticated_sql_wire_actor("secret-a", "pgwire", "").is_err()
-        );
+        assert!(VerifiedRequestContext::authenticated_sql_wire_actor(
+            &medulla_server_api::server_context::ServerContext::fixture(),
+            "secret-a",
+            "pgwire",
+            "",
+        )
+        .is_err());
     }
 
     // ── OIDC identity binding (primary eg2. protocol, feature `oidc`) ─────
@@ -3584,11 +3591,14 @@ mod tests {
 
         #[test]
         fn matching_tenant_mints_a_real_carrier_and_is_allowed() {
-            // The `#[cfg(test)]` `request_context_policy()` fixture's tenant is
+            // The `RequestContextPolicy::fixture()` policy's tenant is
             // "tenant-shared" (see its definition above) — the SAME deployment
             // tenant every other test in this file authenticates against.
             let claims = verified("agent:reader", Some("tenant-shared"), full_scopes());
-            let carrier = crate::auth::mint_iceberg_carrier(Some(&claims));
+            let carrier = crate::auth::mint_iceberg_carrier(
+                &medulla_server_api::server_context::ServerContext::fixture(),
+                Some(&claims),
+            );
             assert!(
                 carrier.is_some(),
                 "a bearer whose verified tenant matches this deployment must mint a carrier"
@@ -3602,7 +3612,10 @@ mod tests {
             // never open a CarrierAuthority against this one (BUG-222's own
             // acceptance bar: "bearer for a different tenant -> 403").
             let claims = verified("agent:reader", Some("tenant-other"), full_scopes());
-            let carrier = crate::auth::mint_iceberg_carrier(Some(&claims));
+            let carrier = crate::auth::mint_iceberg_carrier(
+                &medulla_server_api::server_context::ServerContext::fixture(),
+                Some(&claims),
+            );
             assert!(
                 carrier.is_none(),
                 "a cross-tenant bearer must never mint a carrier"
@@ -3618,7 +3631,11 @@ mod tests {
             // `bind_verified_identity`'s identical requirement for the
             // primary `eg2.` protocol) — must fail closed, not default-admit.
             let claims = verified("agent:reader", None, full_scopes());
-            assert!(crate::auth::mint_iceberg_carrier(Some(&claims)).is_none());
+            assert!(crate::auth::mint_iceberg_carrier(
+                &medulla_server_api::server_context::ServerContext::fixture(),
+                Some(&claims)
+            )
+            .is_none());
         }
 
         #[test]
@@ -3627,13 +3644,21 @@ mod tests {
             // expiry verification upstream) — the `None` case `carrier_denied`
             // passes through when a request has no `Authorization` header or
             // an invalid one.
-            assert!(crate::auth::mint_iceberg_carrier(None).is_none());
+            assert!(crate::auth::mint_iceberg_carrier(
+                &medulla_server_api::server_context::ServerContext::fixture(),
+                None
+            )
+            .is_none());
         }
 
         #[test]
         fn empty_subject_mints_no_carrier() {
             let claims = verified("   ", Some("tenant-shared"), full_scopes());
-            assert!(crate::auth::mint_iceberg_carrier(Some(&claims)).is_none());
+            assert!(crate::auth::mint_iceberg_carrier(
+                &medulla_server_api::server_context::ServerContext::fixture(),
+                Some(&claims)
+            )
+            .is_none());
         }
 
         #[test]
@@ -3644,8 +3669,16 @@ mod tests {
             // bearers must not collapse onto the identical carrier identity.
             let a = verified("agent:alice", Some("tenant-shared"), full_scopes());
             let b = verified("agent:bob", Some("tenant-shared"), full_scopes());
-            let carrier_a = crate::auth::mint_iceberg_carrier(Some(&a)).expect("alice carrier");
-            let carrier_b = crate::auth::mint_iceberg_carrier(Some(&b)).expect("bob carrier");
+            let carrier_a = crate::auth::mint_iceberg_carrier(
+                &medulla_server_api::server_context::ServerContext::fixture(),
+                Some(&a),
+            )
+            .expect("alice carrier");
+            let carrier_b = crate::auth::mint_iceberg_carrier(
+                &medulla_server_api::server_context::ServerContext::fixture(),
+                Some(&b),
+            )
+            .expect("bob carrier");
             assert_ne!(carrier_a.actor_scope(), carrier_b.actor_scope());
             assert!(!carrier_a.is_admin());
             assert!(!carrier_b.is_admin());
@@ -3663,8 +3696,11 @@ mod tests {
         #[test]
         fn read_only_bearer_mints_a_carrier_that_cannot_write() {
             let claims = verified("agent:reader", Some("tenant-shared"), &["kg:read"]);
-            let carrier = crate::auth::mint_iceberg_carrier(Some(&claims))
-                .expect("kg:read alone is a valid, recognized, non-empty scope claim");
+            let carrier = crate::auth::mint_iceberg_carrier(
+                &medulla_server_api::server_context::ServerContext::fixture(),
+                Some(&claims),
+            )
+            .expect("kg:read alone is a valid, recognized, non-empty scope claim");
             assert!(carrier.can_read(), "kg:read must still grant read");
             assert!(
                 !carrier.can_write(),
@@ -3679,8 +3715,11 @@ mod tests {
             // projection and not a one-directional patch: a bearer minted with
             // ONLY kg:write must not silently also receive kg:read.
             let claims = verified("agent:writer", Some("tenant-shared"), &["kg:write"]);
-            let carrier = crate::auth::mint_iceberg_carrier(Some(&claims))
-                .expect("kg:write alone is a valid, recognized, non-empty scope claim");
+            let carrier = crate::auth::mint_iceberg_carrier(
+                &medulla_server_api::server_context::ServerContext::fixture(),
+                Some(&claims),
+            )
+            .expect("kg:write alone is a valid, recognized, non-empty scope claim");
             assert!(carrier.can_write());
             assert!(!carrier.can_read());
         }
@@ -3690,8 +3729,11 @@ mod tests {
             // The one case that matches today's pre-fix behavior byte for
             // byte: a bearer actually issued both scopes keeps both.
             let claims = verified("agent:full", Some("tenant-shared"), full_scopes());
-            let carrier =
-                crate::auth::mint_iceberg_carrier(Some(&claims)).expect("both scopes present");
+            let carrier = crate::auth::mint_iceberg_carrier(
+                &medulla_server_api::server_context::ServerContext::fixture(),
+                Some(&claims),
+            )
+            .expect("both scopes present");
             assert!(carrier.can_read());
             assert!(carrier.can_write());
         }
@@ -3704,7 +3746,11 @@ mod tests {
             // default to the old hardcoded both-scopes grant.
             let claims = verified("agent:noscope", Some("tenant-shared"), &[]);
             assert!(
-                crate::auth::mint_iceberg_carrier(Some(&claims)).is_none(),
+                crate::auth::mint_iceberg_carrier(
+                    &medulla_server_api::server_context::ServerContext::fixture(),
+                    Some(&claims)
+                )
+                .is_none(),
                 "a bearer with no scope claim at all must be denied entirely, not \
                  default-granted kg:read/kg:write"
             );
@@ -3723,7 +3769,11 @@ mod tests {
                 &["kg:read", "some-other-issuers-custom-scope"],
             );
             assert!(
-                crate::auth::mint_iceberg_carrier(Some(&claims)).is_none(),
+                crate::auth::mint_iceberg_carrier(
+                    &medulla_server_api::server_context::ServerContext::fixture(),
+                    Some(&claims)
+                )
+                .is_none(),
                 "an unrecognized scope token must deny the bearer outright, not just \
                  fail to grant the token it doesn't understand"
             );
@@ -3800,7 +3850,11 @@ mod tests {
             // projection, not a shortcut to admin authority — granting that
             // would be a NEW privilege NE-048 never intended to add.
             let claims = verified("agent:wouldbeadmin", Some("tenant-shared"), &["kg:admin"]);
-            assert!(crate::auth::mint_iceberg_carrier(Some(&claims)).is_none());
+            assert!(crate::auth::mint_iceberg_carrier(
+                &medulla_server_api::server_context::ServerContext::fixture(),
+                Some(&claims)
+            )
+            .is_none());
         }
     }
 }
@@ -3823,11 +3877,7 @@ impl RequestAuthorityExt for medulla_server_api::state::ServerState {
         if self.local_anonymous {
             medulla_server_api::anonymous::request_authority(request)
         } else {
-            verify_request_with_security_dir(
-                &self.auth_secret,
-                request,
-                self.persist_dir.as_deref(),
-            )
+            verify_request(&self.context, &self.auth_secret, request)
         }
     }
 }
@@ -3842,6 +3892,7 @@ mod default_state_authority_tests {
         let state = medulla_server_api::state::ServerState::new(
             "synthetic-test-secret",
             medulla_isolation::isolation::IsolationLayer::new(),
+            std::sync::Arc::new(medulla_server_api::server_context::ServerContext::fixture()),
         );
         let request = Request {
             id: 1,

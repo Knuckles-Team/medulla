@@ -373,6 +373,7 @@ mod tests {
     fn same_verified_actor_shares_catalog_across_native_protocols() {
         let pg = CarrierAuthority::from_verified(
             &VerifiedRequestContext::authenticated_sql_wire_actor(
+                &medulla_server_api::server_context::ServerContext::fixture(),
                 "native-test-key",
                 "pgwire",
                 "actor-a",
@@ -382,6 +383,7 @@ mod tests {
         .unwrap();
         let mysql = CarrierAuthority::from_verified(
             &VerifiedRequestContext::authenticated_sql_wire_actor(
+                &medulla_server_api::server_context::ServerContext::fixture(),
                 "native-test-key",
                 "mysql-wire",
                 "actor-a",

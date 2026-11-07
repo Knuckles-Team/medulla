@@ -48,7 +48,7 @@ use medulla_server_api::carrier::CarrierAuthority;
 use medulla_server_api::carrier::GraphReadAuthority;
 use medulla_server_api::state::ServerState;
 use medulla_server_auth::access::check_graph_access;
-use medulla_server_auth::auth::verify_request_with_security_dir;
+use medulla_server_auth::auth::verify_request;
 use medulla_server_mutation::mutation::MutationCtx;
 use medulla_server_mutation::mutation::MutationPlan;
 
@@ -229,17 +229,16 @@ async fn authenticate_session(
             "authentication failed",
         ));
     }
-    let (secret, persist_dir) = {
+    let (secret, server) = {
         let state = state.read().await;
-        (state.auth_secret.clone(), state.persist_dir.clone())
+        (state.auth_secret.clone(), state.context.clone())
     };
-    let verified = verify_request_with_security_dir(&secret, &request, persist_dir.as_deref())
-        .map_err(|_| {
-            BoltFailure::client(
-                "Neo.ClientError.Security.Unauthorized",
-                "authentication failed",
-            )
-        })?;
+    let verified = verify_request(&server, &secret, &request).map_err(|_| {
+        BoltFailure::client(
+            "Neo.ClientError.Security.Unauthorized",
+            "authentication failed",
+        )
+    })?;
     CarrierAuthority::from_verified(&verified).map_err(|_| {
         BoltFailure::client(
             "Neo.ClientError.Security.Unauthorized",

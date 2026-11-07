@@ -138,10 +138,10 @@ mod direct_wire_security_tests {
 /// Validate secure request-context configuration and initialize its durable
 /// replay adapter before listeners are opened.
 pub fn validate_verified_request_context_startup(
+    server: &medulla_server_api::server_context::ServerContext,
     secret: &str,
-    state_dir: Option<&str>,
 ) -> Result<(), String> {
-    medulla_server_auth::auth::validate_verified_context_startup(secret, state_dir)
+    medulla_server_auth::auth::validate_verified_context_startup(server, secret)
 }
 // CDC -> Kafka sink (CA-11, feature `cdc-kafka`, off by default). Reserved and EMPTY
 // until CA-11 implements it; landed by CA-17's single feature-stub commit so CA-11 never

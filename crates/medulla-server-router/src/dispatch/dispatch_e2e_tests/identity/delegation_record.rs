@@ -75,7 +75,11 @@ async fn write_read_revoke_and_foreign_tenant_read() {
         let response = send(&state, context, op).await;
         assert!(response.error.is_none(), "{:?}", response.error);
     }
-    let tenant = record_tenant(&reader()).expect("verified tenant");
+    let tenant = record_tenant(
+        &medulla_server_api::server_context::ServerContext::fixture(),
+        &reader(),
+    )
+    .expect("verified tenant");
 
     for op in [
         record_op("wi_1", &tenant),

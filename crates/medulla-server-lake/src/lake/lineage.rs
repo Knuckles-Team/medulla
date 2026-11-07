@@ -294,7 +294,10 @@ pub async fn submit_events(
         .iter()
         .map(|event| to_lineage_event(event, ended_at_ms))
         .collect();
-    let anonymous = state.read().await.local_anonymous;
+    let (anonymous, server) = {
+        let state = state.read().await;
+        (state.local_anonymous, state.context.clone())
+    };
     #[cfg(feature = "security")]
     if !anonymous {
         medulla_server_api::service_grant::ServiceGraphGrant {
@@ -309,6 +312,7 @@ pub async fn submit_events(
         VerifiedRequestContext::anonymous_local(Some(session))
     } else {
         let service = VerifiedRequestContext::authenticated_fixed_service_actor(
+            &server,
             LINEAGE_SERVICE,
             &["ingest:write"],
         )?;

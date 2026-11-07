@@ -326,7 +326,10 @@ async fn submit(
     graph: &str,
     method: Method,
 ) -> Result<(), String> {
-    let anonymous = state.read().await.local_anonymous;
+    let (anonymous, server) = {
+        let state = state.read().await;
+        (state.local_anonymous, state.context.clone())
+    };
     #[cfg(feature = "security")]
     if !anonymous {
         grant::ensure(&mut state.write().await.isolation, graph)?;
@@ -335,6 +338,7 @@ async fn submit(
         VerifiedRequestContext::anonymous_local(Some(format!("{MIGRATION_SERVICE}:{graph}")))
     } else {
         let service = VerifiedRequestContext::authenticated_fixed_service_actor(
+            &server,
             MIGRATION_SERVICE,
             &["kg:read", "kg:write"],
         )?;

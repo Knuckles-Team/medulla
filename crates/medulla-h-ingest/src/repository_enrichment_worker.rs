@@ -206,7 +206,10 @@ mod worker {
         if !medulla_persistence::cold_offload::lazy_open(state, graph, cap, page_size).await {
             return Err("CONFLICT: repository enrichment graph could not be opened".into());
         }
-        let anonymous = state.read().await.local_anonymous;
+        let (anonymous, server) = {
+            let state = state.read().await;
+            (state.local_anonymous, state.context.clone())
+        };
         #[cfg(feature = "security")]
         if !anonymous {
             let mut state = state.write().await;
@@ -231,6 +234,7 @@ mod worker {
             VerifiedRequestContext::anonymous_local(Some(page_key.to_string()))
         } else {
             let service = VerifiedRequestContext::authenticated_fixed_service_actor(
+                &server,
                 SERVICE,
                 &["work:submit", "repository:enrichment:submit"],
             )?;

@@ -108,10 +108,14 @@ pub async fn serve_with_security(
 /// secret this protocol was never meant to carry.
 struct IcebergCredential {
     validator: JwtValidator,
+    /// The server context whose policy names this deployment's tenant.
+    server: Arc<medulla_server_api::server_context::ServerContext>,
 }
 
-fn resolve_iceberg_credential() -> Result<Option<IcebergCredential>, String> {
-    Ok(JwtValidator::from_env_iceberg()?.map(|validator| IcebergCredential { validator }))
+fn resolve_iceberg_credential(
+    server: Arc<medulla_server_api::server_context::ServerContext>,
+) -> Result<Option<IcebergCredential>, String> {
+    Ok(JwtValidator::from_env_iceberg()?.map(|validator| IcebergCredential { validator, server }))
 }
 
 /// Extract the raw bearer token from an `Authorization: Bearer <token>` header, if
@@ -163,8 +167,12 @@ fn resolve_carrier(
     if state.is_none() {
         return Ok(None);
     }
-    let verified = verify_bearer(credential, headers);
-    let carrier = medulla_server_auth::auth::mint_iceberg_carrier(verified.as_ref());
+    let Some(credential) = credential else {
+        return Err(());
+    };
+    let verified = verify_bearer(Some(credential), headers);
+    let carrier =
+        medulla_server_auth::auth::mint_iceberg_carrier(&credential.server, verified.as_ref());
     if medulla_server_api::carrier::unauthenticated_carrier_denied(carrier.as_ref()) {
         Err(())
     } else {
@@ -363,8 +371,8 @@ async fn serve_inner(
     // without its mandatory audience/JWKS URL) or no issuer at all both leave
     // `credential` `None`, so every request is denied — fail closed, never a
     // startup crash of the whole server process.
-    let credential = if security_state.is_some() {
-        match resolve_iceberg_credential() {
+    let credential = if let Some(state) = &security_state {
+        match resolve_iceberg_credential(state.read().await.context.clone()) {
             Ok(credential) => credential,
             Err(error) => {
                 tracing::error!("Iceberg-REST OAuth2 bearer verifier misconfigured: {error}");
@@ -678,7 +686,7 @@ fn handle_oauth_token(
     let verified = credential.validator.validate_claims(&token);
     match verified
         .as_ref()
-        .and_then(|v| medulla_server_auth::auth::mint_iceberg_carrier(Some(v)))
+        .and_then(|v| medulla_server_auth::auth::mint_iceberg_carrier(&credential.server, Some(v)))
     {
         Some(_carrier) => (
             "200 OK",
@@ -1883,6 +1891,7 @@ mod tests {
             );
             IcebergCredential {
                 validator: JwtValidator::from_parts(ISSUER, AUDIENCE, keys),
+                server: Arc::new(medulla_server_api::server_context::ServerContext::fixture()),
             }
         }
 
@@ -1924,9 +1933,12 @@ mod tests {
             let credential = credential();
             let token = sign_with_scope("agent:reader", "tenant-shared", 300, "");
             let verified = verify_bearer(Some(&credential), &headers_with_bearer(&token));
-            let minted = verified
-                .as_ref()
-                .and_then(|v| medulla_server_auth::auth::mint_iceberg_carrier(Some(v)));
+            let minted = verified.as_ref().and_then(|v| {
+                medulla_server_auth::auth::mint_iceberg_carrier(
+                    &medulla_server_api::server_context::ServerContext::fixture(),
+                    Some(v),
+                )
+            });
             assert!(
                 minted.is_none(),
                 "a bearer with an empty scope claim must not mint a carrier"
@@ -1998,16 +2010,20 @@ mod tests {
             let matching = sign("agent:reader", "tenant-shared", 300);
             let verified_matching =
                 verify_bearer(Some(&credential), &headers_with_bearer(&matching)).unwrap();
-            assert!(
-                medulla_server_auth::auth::mint_iceberg_carrier(Some(&verified_matching)).is_some()
-            );
+            assert!(medulla_server_auth::auth::mint_iceberg_carrier(
+                &medulla_server_api::server_context::ServerContext::fixture(),
+                Some(&verified_matching)
+            )
+            .is_some());
 
             let other_tenant = sign("agent:reader", "tenant-other", 300);
             let verified_other =
                 verify_bearer(Some(&credential), &headers_with_bearer(&other_tenant)).unwrap();
-            assert!(
-                medulla_server_auth::auth::mint_iceberg_carrier(Some(&verified_other)).is_none()
-            );
+            assert!(medulla_server_auth::auth::mint_iceberg_carrier(
+                &medulla_server_api::server_context::ServerContext::fixture(),
+                Some(&verified_other)
+            )
+            .is_none());
         }
 
         /// W03: `/v1/oauth/tokens` gives an already-verifying bearer the SAME

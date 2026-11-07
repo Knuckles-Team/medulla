@@ -323,9 +323,12 @@ pub fn detect_capacity_and_log_startup(
 
 /// Flush any bounded writer work that had not yet crossed its acknowledgement
 /// barrier once the accept loop has exited.
-pub fn flush_durable_state(persistence: Persistence) {
+pub fn flush_durable_state(
+    server: &medulla_server_api::server_context::ServerContext,
+    persistence: Persistence,
+) {
     info!("Accept loop stopped — flushing durable state");
-    match medulla_server_api::request_replay::seal_request_replay_ledger() {
+    match server.seal_replay_ledger() {
         Ok(handed_off) => info!("Request replay window handed off ({handed_off} nonces)"),
         Err(error) => tracing::warn!(
             "Request replay handoff failed; the next start refuses the last accepted second: {error}"
@@ -711,6 +714,7 @@ pub fn compose_server_state(
 /// before any row is exposed.
 #[cfg(feature = "security")]
 pub fn open_isolation_layer(
+    server: &medulla_server_api::server_context::ServerContext,
     auth_secret: &str,
     persist_dir: Option<&str>,
     anonymous: bool,
@@ -747,7 +751,7 @@ pub fn open_isolation_layer(
         info!("Explicit anonymous local-owner authority ACTIVE; no authentication credentials accepted");
         return isolation;
     }
-    if let Err(error) = crate::validate_verified_request_context_startup(auth_secret, persist_dir) {
+    if let Err(error) = crate::validate_verified_request_context_startup(server, auth_secret) {
         exit_with(
             format_args!("invalid verified request-context configuration: {error}"),
             1,
