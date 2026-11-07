@@ -3281,9 +3281,15 @@ mod tests {
         use rand::{Rng, SeedableRng};
         let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(0x05ee_d115);
         for _ in 0..40 {
-            let statements: Vec<String> = (0..rng.gen_range(6..24))
+            let mut statements: Vec<String> = (0..rng.gen_range(6..24))
                 .map(|_| random_statement(&mut rng))
                 .collect();
+            // An ontology is a set of axioms: retracting a statement removes the
+            // axiom however often it was stated, so a repeat must not land on the
+            // kept side of the partition as well (the oracle would keep an axiom
+            // the retraction rightly removed).
+            let mut seen = BTreeSet::new();
+            statements.retain(|statement| seen.insert(statement.clone()));
             let (removed, kept): (Vec<String>, Vec<String>) = statements
                 .iter()
                 .cloned()

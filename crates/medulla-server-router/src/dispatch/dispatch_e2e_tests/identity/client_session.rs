@@ -66,7 +66,10 @@ async fn client_session_node_round_trip_and_principal_mismatch_refused() {
             "{node_id} {principal}: {response:?}"
         );
         if !refused {
-            assert!(response.error.is_none(), "{:?}", response.error);
+            assert!(
+                response.error.is_none(),
+                "{node_id} {principal}: {response:?}"
+            );
         }
     }
 }

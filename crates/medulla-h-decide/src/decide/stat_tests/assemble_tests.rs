@@ -26,6 +26,7 @@ use medulla_server_api::state::ServerState;
 use medulla_types::contract::BoundedVec;
 
 const TENANT: &str = "tenant-media";
+const ASKER: &str = "asker";
 
 struct Harness {
     _dir: tempfile::TempDir,
@@ -35,9 +36,11 @@ struct Harness {
 
 async fn harness() -> Harness {
     let dir = tempfile::tempdir().unwrap();
+    // The graph ACL admits only a principal the provisioned policy knows
+    // (`topology_read::graph_core` checks read on the request graph).
     let mut server = ServerState::new_for_test(
         "assemble-media-test-secret",
-        medulla_isolation::isolation::IsolationLayer::new(),
+        ServerState::test_isolation(ASKER),
     );
     server.persist_dir = Some(dir.path().to_string_lossy().into_owned());
     let state = Arc::new(RwLock::new(server));
@@ -163,7 +166,7 @@ async fn assemble(h: &Harness, request: AssemblyRequest) -> Result<AssemblyResul
                 .expect("create the request graph");
         }
     }
-    let verified = VerifiedRequestContext::verified_for_test_in_tenant("asker", TENANT);
+    let verified = VerifiedRequestContext::verified_for_test_in_tenant(ASKER, TENANT);
     let response =
         super::super::assemble::handle_agent_assemble(&h.state, 1, ("default", &verified), request)
             .await;
