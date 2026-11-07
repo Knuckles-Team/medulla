@@ -354,7 +354,8 @@ async fn try_handle_delivery(
                 (queue.clone(), node_id.clone(), *requeue, *now_ms);
             commit_gateway(ctx, plan, method, move |core| {
                 let outcome =
-                    medulla_core::broker::broker_reject(core, &queue, &node_id, requeue, now_ms);
+                    medulla_core::broker::broker_reject(core, &queue, &node_id, requeue, now_ms)
+                        .map_err(|refused| refused.to_string())?;
                 Ok(ResultPayload::scalar::<results::BrokerReject>(outcome))
             })
             .await
