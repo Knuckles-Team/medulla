@@ -82,3 +82,17 @@ fn two_contexts_in_one_process_do_not_share_denial_samples() {
         "the drain emptied the shared sampler"
     );
 }
+
+// spec: MEDULLA-SDLC-R023
+#[test]
+fn two_states_in_one_process_do_not_share_response_caps() {
+    use medulla_isolation::isolation::IsolationLayer;
+    use medulla_server_api::state::ServerState;
+    let mut a = ServerState::new_for_test("secret-a", IsolationLayer::new());
+    let b = ServerState::new_for_test("secret-b", IsolationLayer::new());
+    let before = (b.max_response_nodes, b.max_response_edges);
+    a.max_response_nodes = 7;
+    a.max_response_edges = 9;
+    assert_eq!((b.max_response_nodes, b.max_response_edges), before);
+    assert_eq!((a.max_response_nodes, a.max_response_edges), (7, 9));
+}

@@ -94,7 +94,12 @@ pub(super) async fn try_handle_edge_reads(
     ctx: GraphOpsContext<'_>,
     method: Method,
 ) -> ControlFlow<Response, Method> {
-    let GraphOpsContext { req_id, core, .. } = ctx;
+    let GraphOpsContext {
+        state: ctx_state,
+        req_id,
+        core,
+        ..
+    } = ctx;
     ControlFlow::Break(match method {
         Method::HasEdge {
             source_id,
@@ -114,7 +119,8 @@ pub(super) async fn try_handle_edge_reads(
             // return a typed, catchable error instead of the pathological
             // gigabyte-scale frame. `GetEdgesPage` (bounded pagination) is
             // intentionally unaffected.
-            if let Some(msg) = oversize_edge_dump_error(g.edge_count(), max_response_edges()) {
+            let cap = ctx_state.read().await.max_response_edges;
+            if let Some(msg) = oversize_edge_dump_error(g.edge_count(), cap) {
                 return ControlFlow::Break(Response::err(req_id, msg));
             }
             Response::ok(req_id, ResultPayload::EdgeList(g.get_edges()))
