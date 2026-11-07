@@ -42,8 +42,6 @@ use medulla_server_api::state::ServerState;
 use medulla_server_mutation::mutation::MutationCtx;
 use medulla_server_mutation::mutation::MutationPlan;
 
-const PACK_PROJECTION_GRAPH_DOMAIN: &[u8] = b"eg/connector-pack-projection-graph/v1";
-
 /// One exact semantic member selected from a committed ConnectorPack record.
 /// Keeping URI and body together preserves the per-file RDF blank-node scope;
 /// callers must never concatenate Turtle documents before this boundary.
@@ -64,26 +62,6 @@ pub(crate) struct PackProjectionDocuments {
     pub(crate) surface: Option<Arc<str>>,
 }
 
-/// Tenant-safe, non-reversible physical graph identity for one connector pack.
-///
-/// Both inputs are canonical identifiers from verified/typed authority.  The
-/// physical name exposes neither tenant nor connector and the framed digest
-/// preserves their boundary, while the logical GraphSchema key inside that
-/// graph remains the human-readable `pack:<connector>`.
-pub fn pack_projection_graph_name(
-    tenant_id: &str,
-    connector: &medulla_types::contract::ResourceId,
-) -> Result<String, String> {
-    medulla_types::contract::TenantId::new(tenant_id).map_err(|error| {
-        format!("invalid verified tenant for connector pack projection: {error}")
-    })?;
-    let digest = medulla_types::contract::Digest256::framed(
-        PACK_PROJECTION_GRAPH_DOMAIN,
-        &[tenant_id.as_bytes(), connector.as_str().as_bytes()],
-    )?;
-    Ok(format!("pack__{}", digest.to_hex()))
-}
-
 /// Commit the semantic projection of one ConnectorPack head.
 ///
 /// This is the server-level companion to [`apply_pack_source`].  ConnectorPack
@@ -101,7 +79,10 @@ pub(crate) async fn commit_pack_projection(
     documents: PackProjectionDocuments,
     idempotency_key: &str,
 ) -> Result<medulla_catalog_types::graph_schema::GraphSchemaCommitted, String> {
-    let graph_name = pack_projection_graph_name(verified.tenant(), connector)?;
+    let graph_name = medulla_catalog_types::connector_pack::ids::pack_projection_graph_name(
+        verified.tenant(),
+        connector,
+    )?;
     #[cfg(feature = "raft")]
     if state.read().await.multi_raft.is_some() {
         return Err(
