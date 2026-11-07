@@ -245,6 +245,15 @@ impl StorageKernel {
         .map(Self::from_store)
     }
 
+    /// Close the owner file now: release its redb handle and write the
+    /// clean-shutdown marker, even while this kernel (or the mutation
+    /// authority it issued) is still shared. Every later read or write over
+    /// this kernel is refused. Graceful shutdown calls this for stores whose
+    /// owners outlive the serving loop. Idempotent.
+    pub fn close(&self) {
+        self.store.close();
+    }
+
     /// Phase split of this open and whether it skipped the recovery scan.
     pub fn open_report(&self) -> crate::physical::root::OpenReport {
         self.store.open_report()
@@ -377,7 +386,7 @@ impl StorageKernel {
         self.store.validate_physical_root()?;
         let read = self
             .store
-            .database
+            .database()?
             .begin_read()
             .map_err(|error| error.to_string())?;
         let manifest = validate_manifest_read(

@@ -122,11 +122,21 @@ async fn health_response(state: &Arc<RwLock<ServerState>>, req_id: u64) -> Respo
                 uptime_s,
                 mem_bytes,
                 version: medulla_version::VERSION.to_string(),
+                build_profile: build_profile().to_string(),
                 graph_lifecycle: lifecycle,
                 ops: served_ops.into_iter().map(str::to_string).collect(),
             },
         ),
     )
+}
+
+/// The cargo profile of this binary, as `Health` reports it.
+const fn build_profile() -> &'static str {
+    if cfg!(debug_assertions) {
+        "debug"
+    } else {
+        "release"
+    }
 }
 
 /// Registry methods whose handler needs a server feature the method registry

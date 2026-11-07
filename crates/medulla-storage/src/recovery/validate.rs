@@ -38,7 +38,7 @@ pub(crate) fn validate_live_recovery_store(
 ) -> Result<RecoveryStoreCounts, String> {
     store.validate_physical_root()?;
     let rtx = store
-        .database()
+        .database()?
         .begin_read()
         .map_err(|error| error.to_string())?;
     // The declared owner census is part of "is this store recoverable": a file

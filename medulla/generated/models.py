@@ -7039,6 +7039,7 @@ class HeadKind(str, Enum):
 class HealthReport(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    build_profile: str
     graph_lifecycle: GraphLifecycleHealth
     mem_bytes: Annotated[int, Field(ge=0)]
     ops: list[str]

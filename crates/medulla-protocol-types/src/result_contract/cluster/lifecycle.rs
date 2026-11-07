@@ -93,6 +93,10 @@ pub struct HealthReport {
     pub uptime_s: u64,
     pub mem_bytes: u64,
     pub version: String,
+    /// The cargo profile this engine binary was built with: `release` or
+    /// `debug`. A latency budget a spec row states for the release profile is
+    /// asserted only against a `release` engine.
+    pub build_profile: String,
     pub graph_lifecycle: GraphLifecycleHealth,
     pub ops: Vec<String>,
 }

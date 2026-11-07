@@ -76,7 +76,7 @@ fn stage_merge(
     epoch: u64,
 ) -> Result<StrictRecoveryEvidence, String> {
     let mut write = target
-        .database()
+        .database()?
         .begin_write()
         .map_err(|error| error.to_string())?;
     write
@@ -445,7 +445,7 @@ mod tests {
         let identity = PhysicalStoreIdentity::new("semantic-partition-test").unwrap();
         let store =
             create_physical(&path, identity.clone(), None, OwnerLayout::SemanticIndex).unwrap();
-        let write = store.database().begin_write().unwrap();
+        let write = store.database().unwrap().begin_write().unwrap();
         write
             .open_table(SEMANTIC_BINDINGS)
             .unwrap()

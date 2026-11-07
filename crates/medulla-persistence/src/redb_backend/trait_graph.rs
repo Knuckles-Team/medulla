@@ -132,6 +132,12 @@ macro_rules! persistence_graph {
             for shard in &self.shards {
                 shard.shutdown();
             }
+            // The side stores close here too: the backend is shared through
+            // `Arc`s that outlive the serving loop, so their files would
+            // otherwise stay open, flagged for repair, until process exit.
+            self.admin_mutations.close();
+            self.node_info.close();
+            self.cluster_hierarchy.close();
         }
 
         #[cfg(feature = "security")]

@@ -61,7 +61,7 @@ pub(crate) fn backup_recovery_store_of(
     )?;
     let rtx = source.begin_read()?;
     let mut wtx = target
-        .database()
+        .database()?
         .begin_write()
         .map_err(|error| error.to_string())?;
     wtx.set_durability(redb::Durability::Immediate)
